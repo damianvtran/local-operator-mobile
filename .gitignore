@@ -1,0 +1,81 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+.pnpm-debug.log*
+
+# Expo / React Native
+.expo/
+.expo-shared/
+expo-env.d.ts
+web-build/
+.metro-health-check*
+*.tsbuildinfo
+
+# Build outputs
+dist/
+build/
+artifacts/
+*.ipa
+*.apk
+*.aab
+*.app
+*.dSYM/
+*.dSYM.zip
+
+# iOS
+ios/Pods/
+ios/build/
+ios/DerivedData/
+Pods/
+*.xcuserstate
+xcuserdata/
+*.hmap
+
+# Android
+android/.gradle/
+android/build/
+android/app/build/
+android/.cxx/
+.gradle/
+.kotlin/
+.cxx/
+local.properties
+captures/
+
+# Signing material — never commit; release signing runs in CI from secrets
+*.jks
+*.keystore
+*.p12
+*.p8
+*.mobileprovision
+*.provisionprofile
+*.pem
+google-services.json
+GoogleService-Info.plist
+
+# Environment files
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# Testing and coverage
+coverage/
+test-results/
+playwright-report/
+.maestro/output/
+maestro-output/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
