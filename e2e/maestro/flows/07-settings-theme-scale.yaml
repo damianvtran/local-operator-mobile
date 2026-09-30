@@ -1,0 +1,56 @@
+# S11 / F-10 — settings, and the two appearance dimensions the audit scores.
+#
+# The theme and text-scale switches are also what the web matrix captures, so this
+# flow is the native half of the same evidence: what the web harness proves about
+# layout at 200 % and in both themes, this proves about the device render.
+appId: ${APP_ID}
+name: "S11 settings, theme and text scale"
+env:
+  APP_ID: com.radient.localoperator.mobile
+---
+- launchApp:
+    clearState: true
+- runFlow: "01-first-run-sign-in.yaml"
+---
+- tapOn:
+    id: "settings-button"
+- extendedWaitUntil:
+    visible:
+      id: "settings-screen"
+    timeout: 15000
+- takeScreenshot: "11-00-settings"
+# Connection, theme, text scale, diagnostics, sign out — the sections ADR 0003
+# and flows.md §10 name. A missing section is a finding, so each is asserted.
+- assertVisible:
+    id: "settings-section-connection"
+- assertVisible:
+    id: "settings-section-appearance"
+- assertVisible:
+    id: "settings-section-diagnostics"
+- assertVisible:
+    id: "settings-sign-out"
+- takeScreenshot: "11-01-sections"
+- tapOn:
+    id: "settings-theme-dark"
+- takeScreenshot: "11-02-theme-dark"
+- tapOn:
+    id: "settings-theme-light"
+- takeScreenshot: "11-03-theme-light"
+# 200 % text: the check that matters most for a transcript-heavy UI.
+- tapOn:
+    id: "settings-text-scale-200"
+- takeScreenshot: "11-04-text-200"
+- back
+- takeScreenshot: "11-05-list-at-200"
+- tapOn:
+    id: "session-row-6714def86197"
+- takeScreenshot: "11-06-session-at-200"
+- assertVisible:
+    id: "session-composer"
+- takeScreenshot: "11-07-composer-reachable-at-200"
+- back
+- tapOn:
+    id: "settings-button"
+- tapOn:
+    id: "settings-text-scale-100"
+- takeScreenshot: "11-08-back-to-100"
