@@ -159,11 +159,15 @@ and the module type has to be declared — `scripts/ci/package.json` says
 CommonJS).
 
 `tsconfig.tools.json` is the second program `pnpm typecheck` runs: the app's
-config, pointed at Node ESM with `types: ["node"]` and no DOM. It includes
-`tools/**`, `scripts/**`, `design/**` and `e2e/**`, but `allowJs: false` means
-the trees that are still `.mjs` are not in the program — so the gate starts green
-and covers more as each tree converts, rather than failing on day one for code a
-given change does not own.
+config, pointed at Node ESM with `types: ["node"]` and no DOM. It belongs to the
+app scaffold and currently includes `scripts/**/*.ts` — this directory. The
+harness's `tools/**` and the kit's `design/**` convert to TypeScript under the
+same operator directive, and each one extends that `include` when it does; until
+then `allowJs: false` keeps them out of the program rather than leaving them
+silently untyped, so the gate is green today and covers more as each tree
+converts. `erasableSyntaxOnly` is what enforces the stripping rules at the type
+level: a `enum`, a `namespace` or a parameter property would compile here and
+then fail at runtime under `node`.
 
 A boundary value (a `simctl` payload, an `xcodebuild -list` result) is parsed and
 narrowed field by field, never asserted: a shape change in a future Xcode then

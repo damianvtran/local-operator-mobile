@@ -56,6 +56,9 @@ permissions:
 env:
   # Expo's floor is Node 22.13+ / 24.3+; 24 is what the repository is developed
   # on, so CI runs the version the app is written against.
+  # Node >= 24, and it is not a preference: every tool in this repository is
+  # TypeScript executed directly, which needs native type stripping (unflagged
+  # from Node 23.6). On anything older the gates do not run at all.
   NODE_VERSION: "24"
 
 jobs:
@@ -164,7 +167,9 @@ jobs:
           echo "chrome: $(/Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome --version 2>&1 | head -1)"
 
       - name: Styling layer is current with the tokens
-        run: node scripts/build-theme.mjs --check
+        # Through the package script, not a path: the file was `.mjs` when this
+        # was written and is `.ts` now, and a rename should not touch CI.
+        run: pnpm theme:check
 
       - name: Contrast contract (tokens.json, both themes)
         run: node design/tokens/contrast-contract.mjs

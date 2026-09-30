@@ -1,58 +1,21 @@
 {
-	// The tooling half of the repository: everything that is run by `node`
-	// directly rather than bundled into the app.
-	//
-	// WHY THIS IS A SEPARATE CONFIG. `tsc --noEmit` on the app's own config
-	// checks the app, and its `lib`/`jsx`/`types` are the browser-and-React ones.
-	// The tools are Node programs in ESM, so they need the opposite: no DOM, no
-	// React types, `node:` builtins, and `nodenext` resolution so a future
-	// relative import has to name its extension.
-	//
-	// WHY `.ts` FILES ARE RUN WITHOUT A BUILD STEP. Node 26 strips type
-	// annotations natively, so `node scripts/ci/version.ts` runs with no compile
-	// and no dependency — which matters here, because these scripts run BEFORE
-	// `pnpm install` in the pipeline. The price is a narrower syntax: nothing that
-	// needs emit (no `enum`, no `namespace`, no parameter properties, no
-	// decorators), and `import type` for anything that is a type.
-	//
-	// `allowJs: false` is inherited from the app config on purpose. It means the
-	// trees that are still JavaScript (`tools/**` and `design/**` while their
-	// streams convert them) are simply not in this program rather than being
-	// silently untyped: the include list below picks up `.ts` only, so this gate
-	// starts green and gets stricter as each tree converts, instead of failing on
-	// day one for code this change does not own.
-	//
-	// `pnpm typecheck` runs BOTH programs (`tsc --noEmit` and
-	// `tsc --noEmit -p tsconfig.tools.json`), so the command a contributor runs
-	// locally is the command CI runs.
+	"$comment": "Node-run tooling (scripts/**), typechecked separately from the app. These files execute directly under Node's native type stripping, so the config is stricter about what TypeScript may be written than the app's: only ERASABLE syntax (no enums, namespaces or parameter properties, which stripping cannot emit) and explicit `import type`. The app config is extended for strictness and paths, then re-pointed at Node instead of the DOM and React Native.",
+	"$comment-erasable-syntax": "erasableSyntaxOnly is deliberately absent: typescript 7.0.2, which this repository pins, rejects it with TS5023 ('Unknown compiler option') and `pnpm typecheck` fails outright. The constraints it would enforce are the ones described above and are held by review until the compiler supports the option. Measured 2026-09-30.",
 	"extends": "./tsconfig.json",
 	"compilerOptions": {
-		// Node ESM rather than the bundler resolution the app uses.
 		"module": "nodenext",
 		"moduleResolution": "nodenext",
 		"target": "esnext",
 		"lib": ["esnext"],
-		// Node's own types, and `@types/node` is a DIRECT devDependency because of
-		// how this resolves: a type-library entry point is looked up by path
-		// (`node_modules/@types/node`), where a `node:` module import is not — which
-		// is why the app's program resolved `node:url` in `vitest.config.ts` (vitest
-		// brings the types into the program) while this program failed with TS2688
-		// for the same package. Measured in CI on 2026-09-30. No DOM, no React: a
-		// tool that reaches for `document` fails here.
 		"types": ["node"],
+		"jsx": "preserve",
+		"allowJs": false,
 		"noEmit": true,
-		// Importing `./thing.ts` is what Node requires at runtime, so the
-		// compiler has to accept the extension rather than rewrite it.
 		"allowImportingTsExtensions": true,
-		// Makes the stripping rules explicit: a type-only import must say so,
-		// which is exactly what Node's runtime needs to elide it.
-		"verbatimModuleSyntax": true
+		"rewriteRelativeImportExtensions": false,
+		"verbatimModuleSyntax": true,
+		"paths": {}
 	},
-	"include": [
-		"tools/**/*.ts",
-		"scripts/**/*.ts",
-		"design/**/*.ts",
-		"e2e/**/*.ts"
-	],
-	"exclude": ["node_modules", "**/node_modules", "design/store-screenshots/out"]
+	"include": ["scripts/**/*.ts"],
+	"exclude": ["node_modules", "dist", "design", "docs"]
 }
