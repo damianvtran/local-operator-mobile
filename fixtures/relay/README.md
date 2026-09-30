@@ -95,6 +95,9 @@ pending-approval frame.
 | `pair-no-code.json`, `pair-bad-spki.json`, `pair-status-unknown-device.json`, `pair-status-bad-id.json` | `POST /api/pair`, `GET /api/pair/{id}` | 403 / 200 | |
 | `transcribe-missing-audio.json`, `transcribe-bad-mime.json`, `transcribe-413-declared.json` | `POST /api/transcribe` | 422 / 413 | the 413 was produced by declaring a 30 MB `Content-Length` on a raw socket |
 | `projects-empty.json` | `GET /api/projects` | 200 | |
+| `mark-png.json` | `HEAD /mark.png` | 200 | the brand asset, deliberately unauthenticated |
+| `command-set-effort-bad.json`, `command-set-model-unknown.json`, `command-slash-unknown.json` | `POST …/command` | 422 / 200 / 422 | three refusals a model sheet and a slash sheet must render |
+| `prompt-image-2.json`, `prompt-image-3.json` | `POST …/command` (`prompt` with one image) | 200 | the second was sent with a payload that could not be decoded, and the relay **still answered `200 prompt admitted`** while dropping the attachment — the evidence behind the contract's “image ingest is best-effort and silent” note |
 | `list-after-wake.json` | `GET /api/sessions` | 200 | a row that left `previous` and returned to `active` |
 
 ### SSE frames (`sse/`)

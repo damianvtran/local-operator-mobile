@@ -113,7 +113,7 @@ Priority follows #1598's own suggested order, adjusted for what a phone can show
 | Parity guard | new TUI panel with no mobile counterpart is flagged | `P1` (cross-cutting) | Still open upstream; the native repo should carry its own version of the check once the feature set settles |
 
 Also worth knowing: the relay already exposes a feature-flag map
-(`capabilities.features`, live `fixtures/relay/sessions-empty.json`) and the web
+(`capabilities.features`, live `fixtures/relay/http/sessions-empty.json`) and the web
 client reads none of it — a native client can use it to gate Phase-N surfaces by
 relay build rather than by app version.
 
@@ -155,7 +155,7 @@ one per open conversation).
 
 ## 3. The row and projection fields a state machine reads
 
-`SessionSummary` (live `fixtures/relay/sse-list-frame.json`):
+`SessionSummary` (live `fixtures/relay/sse/sse-list-frame.json`):
 
 ```
 session_id, section ("active"|"previous"), pinned, conversation_name, cwd,
@@ -164,7 +164,7 @@ subagents_running (number|null), subagents_queued (number|null), todos_open,
 mtime, created_at, completion_kind, unseen
 ```
 
-`SessionProjection` (live `fixtures/relay/sse-projection-seed.json`):
+`SessionProjection` (live `fixtures/relay/sse/sse-projection-seed.json`):
 
 ```
 session_id, pid, kind, conversation_name, cwd, model_label, model_selector,
@@ -176,7 +176,7 @@ subagent_cost_knowledge, cost_knowledge, context_tokens, context_window,
 context_is_estimate, version
 ```
 
-`attention` (live `fixtures/relay/sse-attention-complete.json`):
+`attention` (live `fixtures/relay/sse/sse-attention-complete.json`):
 
 ```
 conversation_id, completion_token (string|null), anchor_id (string|null),
@@ -202,7 +202,7 @@ side of that contract (`contract.md` §5, `docs/mobile.md` §Retry-envelope):
   drop the recovery affordance.
 - A retry replays the **same UUID**, and the relay answers
   `200 {"ok": true, "detail": "already admitted"}` (live
-  `fixtures/relay/command-prompt-duplicate.json`).
+  `fixtures/relay/http/command-prompt-duplicate.json`).
 - A retained envelope must be **surfaced**: the web client shows the retained
   instruction's first line and a "Retry earlier instruction" action, and blocks
   a new send while one is unresolved.

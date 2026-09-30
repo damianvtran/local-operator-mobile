@@ -27,7 +27,7 @@ Provenance of every claim is one of:
 | Bind | `127.0.0.1` only, never wider | `service.py:88-96` (uvicorn `host="127.0.0.1"`), `docs/mobile.md` §Security invariants |
 | Default port | `4098` (`DEFAULT_PORT`), overridable with `--port`; the operator's install owns 4098 via its supervisor | `daemon.py:114`, `cli.py:621-623` |
 | Real-time channel | **HTTP + SSE only, and snapshots/repaints only — no WebSocket and no deltas, deliberately**: an identity proxy answers an unauthenticated request with a redirect, which a WebSocket handshake cannot follow | `docs/mobile.md` §Security invariants |
-| Protocol version | `5` — reported by `/healthz` as `version` | `types.py:66` (re-exported from `session/runtime/types.py`), live `fixtures/relay/healthz.json` |
+| Protocol version | `5` — reported by `/healthz` as `version` | `types.py:66` (re-exported from `session/runtime/types.py`), live `fixtures/relay/http/healthz.json` |
 | Wire encoding | JSON, UTF-8. SSE frames use the `event:`/`data:` pair with a blank-line terminator | `daemon.py:4664-4665` |
 | Keep-alive | uvicorn `timeout_keep_alive=75` (SSE holds a connection open by design) | `service.py:94-95` |
 
@@ -41,18 +41,18 @@ Provenance of every claim is one of:
 2. **Login is a form POST, and it 303s.** `POST /login` with
    `application/x-www-form-urlencoded` body `password=<password>` → `303` to `/`
    with `Set-Cookie`. Wrong password → `401` **HTML**, not JSON. — code
-   `daemon.py:3349-3372`; live `fixtures/relay/login-success.json`,
+   `daemon.py:3349-3372`; live `fixtures/relay/http/login-success.json`,
    `login-wrong-password.json`
 3. **Failure shape splits by audience.** An unauthenticated `/api/*` request gets
    `401 {"error": "authentication required"}`; any other path gets `303` to
    `/login`. A native client must therefore never treat "got HTML back" as a
    transport bug — it is the login redirect. — code `daemon.py:3307-3322`; live
-   `fixtures/relay/unauth-api-sessions.json`, `unauth-index.json`
+   `fixtures/relay/http/unauth-api-sessions.json`, `unauth-index.json`
 
 Cookie attributes: `HttpOnly`, `SameSite=Lax`, `Path=/`, `Max-Age=2592000`;
 `Secure` **only** when the request arrived over TLS (the tunnel case), because
 plain-loopback first-run must still be able to set it. — `daemon.py:3362-3371`,
-live `fixtures/relay/login-success.json`.
+live `fixtures/relay/http/login-success.json`.
 
 > **Native-client consequence.** `HttpOnly` is irrelevant off-browser, but
 > `SameSite=Lax` and the `Secure`-when-TLS rule are both real: over a personal
@@ -68,7 +68,7 @@ Every non-`GET/HEAD/OPTIONS` request is checked before anything else:
 - `Sec-Fetch-Site: cross-site` → same `403`;
 - **no `Origin` header at all is allowed** — which is what lets a native client
   (and `curl`) mutate without inventing an `Origin`. — code
-  `daemon.py:3293-3310`; live `fixtures/relay/mutation-cross-origin.json` (`403`)
+  `daemon.py:3293-3310`; live `fixtures/relay/http/mutation-cross-origin.json` (`403`)
   and `command-no-origin-post.json` (`200`)
 
 ### 1.3 What the relay does *not* set
@@ -76,7 +76,7 @@ Every non-`GET/HEAD/OPTIONS` request is checked before anything else:
 `secure_cookie()` (`daemon.py:3324-3329`) sets `Cache-Control: no-store` and is
 **never called** — grep finds its definition only. Consequence, **verified live**:
 JSON API responses carry **no `Cache-Control` at all**
-(`fixtures/relay/sessions-empty.json` has no such header), so they are
+(`fixtures/relay/http/sessions-empty.json` has no such header), so they are
 heuristically cacheable by any intermediary. A native client must not rely on
 the relay to forbid caching: set its own no-store policy for API responses.
 The routes that *do* set cache headers are the SSE streams
@@ -162,7 +162,7 @@ client must keep:
 - `dist` reports whether the web bundle is present on this build. A client that
   does not need the web bundle must not treat `dist: false` as unhealthy.
 - Always `200` while the process is up; there is no partial-health shape.
-- — code `daemon.py:3336-3342`; live `fixtures/relay/healthz.json`
+- — code `daemon.py:3336-3342`; live `fixtures/relay/http/healthz.json`
 
 ### 3.2 `GET /api/sessions` — the session list
 
@@ -189,7 +189,7 @@ transports** (`daemon.py:3410-3416`). The phone's home screen reads the SSE one.
   and absence means the same as `available: false`** (`daemon.py:3422-3432`).
 - `capabilities.features` is a lazy, memoised flag dict; a missing key means
   "this build does not have it", never an error (`daemon.py:1465-1488`).
-  Live sample: `fixtures/relay/sessions-empty.json`.
+  Live sample: `fixtures/relay/http/sessions-empty.json`.
 
 `SessionSummary` — every key, with optionality:
 
@@ -236,7 +236,7 @@ top-level `degraded` array above; **there is no per-row degraded flag**.
 - A durable store that cannot be walked answers `degraded: ["sessions"]`
   **with an empty list** — never a silent "you have no conversations"
   (`daemon.py:4695-4699`).
-- Live `fixtures/relay/past-with-rows.json`, `past-empty.json`.
+- Live `fixtures/relay/http/past-with-rows.json`, `past-empty.json`.
 
 ### 3.4 `GET /api/sessions/search?q=&limit=`
 
@@ -252,7 +252,7 @@ top-level `degraded` array above; **there is no per-row degraded flag**.
   conversation, not on its name/id — the UI is expected to mark those so the hit
   does not look arbitrary (`web/src/types.ts:393-395`).
 - `query` is echoed so a late response can be matched to its request.
-- Live `fixtures/relay/search-hit.json`, `search-empty.json`.
+- Live `fixtures/relay/http/search-hit.json`, `search-empty.json`.
 
 ### 3.5 `GET /api/sessions/{id}/history?before=&limit=`
 
@@ -264,7 +264,7 @@ top-level `degraded` array above; **there is no per-row degraded flag**.
   the entries immediately older than it, chronological within the page
   (`daemon.py:3724-3733`). Without `before` the page is the tail.
 - `limit` default `80`, clamped `1..200`; non-numeric falls back to `80`
-  (`daemon.py:3746-3750`); live `fixtures/relay/history-bad-limit.json` shows
+  (`daemon.py:3746-3750`); live `fixtures/relay/http/history-bad-limit.json` shows
   `limit=abc` answered `200` with a default-sized page, not a 400.
 - Unknown id → `404 {"error": "unknown session"}`. A live generation **or** a
   durable user session qualifies; other ids 404 so the route cannot be used to
@@ -273,13 +273,13 @@ top-level `degraded` array above; **there is no per-row degraded flag**.
   (`durable_only=True`); for a live one it may fold through the loaded cache.
 - Entry objects are the `TranscriptEntry` shape (§6.1) with `details` populated
   for tool rows; images are references, exactly as on the projection.
-- Live `fixtures/relay/history-ok.json`, `history-unknown.json`.
+- Live `fixtures/relay/http/history-ok.json`, `history-unknown.json`.
 
 ### 3.6 `GET /api/sessions/{id}/image?entry=&i=`
 
 - Returns raw image bytes with the stored mime type and
   `Cache-Control: public, max-age=31536000, immutable`. — code
-  `daemon.py:3796-3800`; live `fixtures/relay/image-ok.json`
+  `daemon.py:3796-3800`; live `fixtures/relay/http/image-ok.json`
 - Content key is `(entry id, image-only index)`: `entry` is a globally unique
   message uuid, `i` counts **image blocks only** (a text caption does not shift
   it). The `pid` in the path only routes; a recycled pid maps to a different
@@ -305,7 +305,7 @@ top-level `degraded` array above; **there is no per-row degraded flag**.
   **plus** `transcript`, `todos`, the full `prompt`, the full launch message id,
   and `version` (the daemon epoch). — code `daemon.py:3671-3688`,
   `capture_subagent_details` `daemon.py:2159-2260`; live
-  `fixtures/relay/subagent-unknown.json` for the miss
+  `fixtures/relay/http/subagent-unknown.json` for the miss
 - The aggregate roster rides the projection **stripped** (`prompt`, `result_text`,
   `error_text`, `transcript`, `todos` emptied) and re-materialised only on this
   route, because the roster is re-sent ~30×/s (`daemon.py:2240-2260`).
@@ -329,7 +329,7 @@ top-level `degraded` array above; **there is no per-row degraded flag**.
 - TUI chrome is excluded by name: `exit`, `quit`, `clear` are absent because they
   are meaningless on a phone (`daemon.py:3228-3249`).
 - Cached in-process after the first call (`daemon.py:3231`).
-- Live `fixtures/relay/commands.json`.
+- Live `fixtures/relay/http/commands.json`.
 
 ### 3.9 `GET /api/models`
 
@@ -357,7 +357,7 @@ top-level `degraded` array above; **there is no per-row degraded flag**.
 - The response is **gzipped when the client sends `Accept-Encoding: gzip` and the
   body is ≥ 1024 bytes**; gzip is applied per-route, never as middleware, because
   middleware would buffer the SSE stream (`daemon.py:4817-4902`).
-- Live `fixtures/relay/models.json` (empty catalogue on an isolated run with no
+- Live `fixtures/relay/http/models.json` (empty catalogue on an isolated run with no
   provider credentials).
 
 ### 3.10 `GET /api/directories`
@@ -371,7 +371,7 @@ top-level `degraded` array above; **there is no per-row degraded flag**.
   only; `tmp` is the resolved system temp dir (on macOS `/private/tmp`, not
   `/tmp`) so it matches the spawn gate's resolved comparison
   (`daemon.py:4262-4271,4754-4800`).
-- Live `fixtures/relay/directories.json` — the sample is an isolated run, so
+- Live `fixtures/relay/http/directories.json` — the sample is an isolated run, so
   `recent` is empty.
 
 ### 3.11 `/login`, `/logout`, `/mark.png`, `/`, `/assets/*`
@@ -385,7 +385,7 @@ top-level `degraded` array above; **there is no per-row degraded flag**.
   (`Max-Age=0`), and `Clear-Site-Data: "storage"`. It is **not** auth-gated and
   does not check CSRF — a native client calling it must expect to be logged out
   regardless of the cookie it presented. — code `daemon.py:3374-3381`; live
-  `fixtures/relay/logout.json`
+  `fixtures/relay/http/logout.json`
 - `GET /mark.png` → the brand mark, public because the login page needs it before
   a cookie exists, `Cache-Control: no-store` (a phone that cached a 404 from a
   build without the asset kept showing a broken image) — `daemon.py:3383-3394`.
@@ -394,7 +394,7 @@ top-level `degraded` array above; **there is no per-row degraded flag**.
   when `dist/` is absent. **A native client never calls this**, but it is the
   fastest way to tell "the daemon is up but has no web bundle" apart from "the
   daemon is down". — code `daemon.py:3396-3408`; live
-  `fixtures/relay/index-authed-no-dist.json`
+  `fixtures/relay/http/index-authed-no-dist.json`
 - `/assets/*` is a `StaticFiles` mount resolved **at app build time**: a rebuilt
   bundle needs `lop mobile restart` to appear, which is the documented upgrade
   path (`daemon.py:4642-4652`).
@@ -430,7 +430,7 @@ Status mapping, which a client should map onto its own retry policy:
 | `504` | `{"error": "session did not answer"}` | runtime accepted but missed the 15 s reply window | ambiguous — keep the command, retry |
 | `500`/`503` | route-specific | see the individual routes | |
 
-— code `daemon.py:3924-3953`; live `fixtures/relay/command-*.json`.
+— code `daemon.py:3924-3953`; live `fixtures/relay/http/command-*.json`.
 
 > `422` and `502`/`504` are **not** interchangeable: only `502/504` leave the
 > delivery outcome unknown. `422` is a pre-admission refusal and the retained
@@ -476,7 +476,7 @@ not build UI on them:
 | `new_conversation` | `422 {"error": "start a new session from the session list"}` |
 | `resume_session` | `422 {"error": "pick the session from the session list instead"}` |
 
-— live `fixtures/relay/op-new-conversation.json`, `op-resume-session.json`; the
+— live `fixtures/relay/http/op-new-conversation.json`, `op-resume-session.json`; the
 supported paths are `POST /api/sessions/start` and `POST /api/sessions/resume`.
 
 Other live refusals worth pinning as copy: `422 {"error": "unknown op: 'frobnicate'"}`
@@ -516,7 +516,7 @@ Request `{"cwd"?: string, "provider"?: string, "model_id"?: string}`;
 - `cwd` is expanded and **resolved**, then must be an existing directory **under
   the owner's home or under the resolved temp dir**; anything else →
   `400 {"error": "not an allowed start directory: <raw>"}` (live
-  `fixtures/relay/start-bad-cwd.json`). Both bounds are resolved so a symlinked
+  `fixtures/relay/http/start-bad-cwd.json`). Both bounds are resolved so a symlinked
   `/tmp` still matches (`daemon.py:4764-4773`).
 - Success: `{"ok": true, "pid": <int>, "session_id": "<12 hex>"}`, where
   `session_id` is minted **before** the spawn so the child, the response and the
@@ -533,7 +533,7 @@ Request `{"cwd"?: string, "provider"?: string, "model_id"?: string}`;
   (`daemon.py:3059-3062`).
 - **Idempotent per session id while a start is in flight**: concurrent callers
   await the same task (`daemon.py:3019-3042`).
-- Live `fixtures/relay/start-session.json`, `start-session-2.json`.
+- Live `fixtures/relay/http/start-session.json`, `start-session-2.json`.
 
 ### 4.5 `POST /api/sessions/resume`
 
@@ -541,7 +541,7 @@ Request `{"session_id": string}`.
 
 - Missing/blank → `400 {"error": "session_id is required"}`;
   unknown → `404 {"error": "no such past session: <id>"}` (live
-  `fixtures/relay/resume-no-id.json`, `resume-unknown.json`).
+  `fixtures/relay/http/resume-no-id.json`, `resume-unknown.json`).
 - Success: `{"ok": true, "pid": <int>, "session_id": "<same id>"}`. The resumed
   runtime's cwd is `Path.home()`, **not** the conversation's recorded cwd
   (`daemon.py:4230-4231`) — the client must not promise that resuming restores
@@ -674,7 +674,7 @@ failures flow through `mobile_projects.ProjectRouteError` →
 (`daemon.py:4441-4446`). Shapes mirror the desktop wire models
 (`web/src/types.ts:479-582`); `ProjectMilestone.status` is **derived**
 server-side (`completed|overdue|upcoming`) and must not be recomputed by the
-client. Live `fixtures/relay/projects-empty.json`.
+client. Live `fixtures/relay/http/projects-empty.json`.
 
 ---
 
@@ -740,7 +740,7 @@ The runtime's ack carries both the sentence and the flag:
 — `session/runtime/server.py:5830-5866`. The relay maps an ack to
 `{"ok": true, "detail": "<detail>"}` (`daemon.py:3953`), so **the `duplicate`
 flag itself is not visible over HTTP**; a client sees `detail == "already
-admitted"`. Live `fixtures/relay/command-prompt-duplicate.json` — the identical
+admitted"`. Live `fixtures/relay/http/command-prompt-duplicate.json` — the identical
 `command_id` sent twice returned `200 {"ok": true, "detail": "already admitted"}`
 and **no second row appeared in the transcript** (`command-prompt-ok.json` then
 the duplicate; the projection showed one user row).
@@ -803,7 +803,7 @@ data: {"session_id": "…", …}
   `SSE_KEEPALIVE_S = 25 s` with no frame, and it arrives as a bare line plus a
   blank line — it carries no `event:` name. — code `daemon.py:105,3489-3490,
   3529-3530`; live, captured at t≈28.9 s of quiet in
-  `fixtures/relay/sse-keepalive.txt`
+  `fixtures/relay/sse/sse-keepalive.txt`
 - Response headers on both streams: `content-type: text/event-stream;
   charset=utf-8`, `cache-control: no-cache, no-transform`,
   `x-accel-buffering: no` (the last is what turns buffering off at
@@ -861,7 +861,7 @@ process replacements* (`_projection_generations`, `daemon.py:2153-2340`).
 **A projection's `pid` can be `0`.** A durable re-materialisation (the fold after
 a runtime died) is published with `pid: 0` and `kind: "daemon"`, and its
 `ended`/`degraded` fields are **both `false`**. Live proof:
-`fixtures/relay/sse-projection-durable-after-death.json`, captured ~5 s after the
+`fixtures/relay/sse/sse-projection-durable-after-death.json`, captured ~5 s after the
 runtime was SIGKILLed — the last frame for that session had `pid: 0`, the
 transcript from disk, and `ended: false`. The list stream, one frame later, moved
 the row to `section: "previous"`.
