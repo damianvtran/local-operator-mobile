@@ -1,0 +1,3 @@
+# Rendered frames land here. The templates (.html) are committed; the output is
+# scratch, produced by design/preview/capture.mjs --target frames.
+out/
