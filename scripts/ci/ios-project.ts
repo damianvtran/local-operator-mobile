@@ -46,13 +46,13 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
  * is not the shape this tool knows how to read. */
 const parseSchemes = (value: unknown): string[] | null => {
 	if (!isRecord(value)) return null;
-	const container = isRecord(value["workspace"])
-		? value["workspace"]
-		: isRecord(value["project"])
-			? value["project"]
+	const container = isRecord(value.workspace)
+		? value.workspace
+		: isRecord(value.project)
+			? value.project
 			: null;
 	if (!container) return null;
-	const schemes = container["schemes"];
+	const schemes = container.schemes;
 	if (!Array.isArray(schemes)) return null;
 	return schemes.filter(
 		(scheme): scheme is string => typeof scheme === "string",
