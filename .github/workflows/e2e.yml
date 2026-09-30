@@ -1,36 +1,39 @@
-name: E2E (mock relay and Maestro)
+name: E2E (mock relay, audit and Maestro)
 
-# The native end-to-end layer: a real emulator, a real installed app, real flows.
+# The end-to-end and design-audit layers, wired to the harness that owns them.
 #
-# IT CANNOT BLOCK A PULL REQUEST IT CANNOT RUN, and that is the whole design
-# here. The layers below it need a harness that is a deliverable in its own right
-# (ADR 0003, "Mock relay" and "Native E2E"), and until that lands the jobs are
-# SKIPPED — which GitHub renders as `skipped`, not as a green tick, so an absent
-# suite can never be read as a passing one. A `harness` job does the detection and
-# says in its summary exactly which directory is missing and which stream owns it.
+# EVERY COMMAND BELOW IS TAKEN FROM `docs/e2e/ci-notes.md` (the harness's own
+# note to the job that owns `.github/**`) AND ITS TOOLS' USAGE BLOCKS, not from a
+# guess: `tools/mock-relay/verify.mjs`, `tools/visual/capture.mjs`,
+# `tools/audit/audit.mjs`, `e2e/run-canary.mjs`, `e2e/maestro/config.yaml`. The
+# harness is plain Node with no dependencies, so most of this job needs a
+# checkout and nothing else.
 #
-# ONE RETRY, ONLY HERE (ADR 0004). Emulators are the flake-prone end of the
-# pipeline, so the flow set gets a second attempt — and the second attempt writes
-# to a DIFFERENT JUnit file, so a retry that passes is visible as a retry rather
-# than indistinguishable from a clean first run. Nothing outside this workflow
-# retries.
+# IT CANNOT BLOCK A PULL REQUEST IT CANNOT RUN. The harness arrives in its own
+# change, and until it is on the ref under test the jobs are SKIPPED — which
+# GitHub renders as `skipped`, never as a green tick, so an absent suite cannot
+# be read as a passing one. A `harness` job does the detection and says in its
+# summary exactly which piece is missing.
 #
-# THE HARNESS CONTRACT, stated here because this file is where it is consumed.
-# Stream C's audit harness is wired in when it satisfies this:
-#   * a workspace package at `e2e/mock-relay` with a `ci` script that boots the
-#     mock relay, serves the web export, drives it in installed headless Chrome
-#     (never a downloaded browser), and writes the a11y report and frames into
-#     `e2e/mock-relay/report/`;
-#   * Maestro flows under `e2e/maestro/**/*.yaml` that run against that mock
-#     relay, per ADR 0003's high-value flow set.
-# Anything narrower is fine to change; the point is that CI names a contract
-# instead of guessing at one.
+# ONE RETRY, AND ONLY FOR THE FLOWS (ADR 0004). Maestro gets `--retry`, which the
+# harness's own config asks CI to pass, and the retry is reported separately so a
+# flake is visible as a flake. Nothing else in the repository retries.
+#
+# WHAT IS DELIBERATELY NOT HERE, rather than quietly missing:
+#   * the **re-capture diff** (ADR 0003, §6 of the harness notes). It needs an
+#     isolated `lop mobile` and therefore the Python toolchain, and the script
+#     ADR 0003 requires does not exist yet — there is nothing to wire.
+#   * **Maestro on an iOS simulator.** The harness documents the invocation, and
+#     the flows are platform-parameterised, but the emulator job is the most
+#     expensive thing this repository runs and it should be green for a while
+#     before a second copy of it exists on macOS minutes. It is a follow-up, not
+#     a silent gap: docs/ci.md says so too.
 
 on:
   workflow_dispatch:
   schedule:
-    # Nightly, off-peak: the emulator job is the most expensive thing in the
-    # repository and the least useful on a branch nobody is waiting for.
+    # Nightly, off-peak: the emulator job is the slowest thing here and the least
+    # useful on a branch nobody is waiting for.
     - cron: "17 3 * * *"
   push:
     branches:
@@ -47,13 +50,18 @@ permissions:
 env:
   NODE_VERSION: "24"
   JAVA_VERSION: "17"
-  # Pinned explicitly. The Maestro installer accepts a version and defaults to
-  # "latest", and a mobile-e2e job that silently changes its driver between two
-  # runs is a job whose failures cannot be attributed to anything.
+  # Pinned explicitly. The Maestro installer accepts a version and otherwise
+  # installs "latest", and a mobile-e2e job whose driver changes silently between
+  # two runs is a job whose failures cannot be attributed to anything.
   MAESTRO_VERSION: "2.11.0"
   # Android 16, which is what Google requires of new apps and updates since
   # 2026-08-31 (ADR 0004).
   MAESTRO_API_LEVEL: "36"
+  # The scenario the mock relay is started with, named in ONE place so the
+  # capture, the audit and the flows all describe the same state — the harness
+  # notes are explicit that running them against different states makes the
+  # numbers mean nothing. `idle` is the relay's own default.
+  MOCK_RELAY_SCENARIO: idle
 
 jobs:
   harness:
@@ -61,8 +69,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
+      relay: ${{ steps.detect.outputs.relay }}
+      audit: ${{ steps.detect.outputs.audit }}
+      canary: ${{ steps.detect.outputs.canary }}
       maestro: ${{ steps.detect.outputs.maestro }}
-      mock_relay: ${{ steps.detect.outputs.mock_relay }}
     steps:
       - uses: actions/checkout@v7
 
@@ -70,38 +80,59 @@ jobs:
         id: detect
         run: |
           set -euo pipefail
+          check() { [ -f "$1" ] && echo true || echo false; }
+          relay=$(check tools/mock-relay/verify.mjs)
+          audit=$(check tools/audit/audit.mjs)
+          canary=$(check e2e/run-canary.mjs)
+          [ -f tools/visual/capture.mjs ] || audit=false
           maestro=false
-          mock_relay=false
-          if [ -d e2e/maestro ] && [ -n "$(find e2e/maestro -name '*.yaml' -o -name '*.yml' | head -1)" ]; then
-            maestro=true
+          if [ -d e2e/maestro ]; then
+            maestro=$(find e2e/maestro -name '*.yaml' -print -quit | grep -q . && echo true || echo false)
           fi
-          if [ -f e2e/mock-relay/package.json ]; then
-            mock_relay=true
-          fi
-          echo "maestro=$maestro" >> "$GITHUB_OUTPUT"
-          echo "mock_relay=$mock_relay" >> "$GITHUB_OUTPUT"
+          for pair in relay=$relay audit=$audit canary=$canary maestro=$maestro; do
+            echo "$pair" >> "$GITHUB_OUTPUT"
+          done
           {
             echo "## End-to-end harness"
             echo
-            echo "| layer | present |"
+            echo "| piece | present |"
             echo "|---|---|"
+            echo "| mock relay contract test (\`tools/mock-relay/verify.mjs\`) | $relay |"
+            echo "| capture + audit (\`tools/visual/capture.mjs\`, \`tools/audit/audit.mjs\`) | $audit |"
+            echo "| instrument canary (\`e2e/run-canary.mjs\`) | $canary |"
             echo "| Maestro flows (\`e2e/maestro/**/*.yaml\`) | $maestro |"
-            echo "| Mock relay (\`e2e/mock-relay/package.json\`) | $mock_relay |"
             echo
-            if [ "$maestro" = false ] || [ "$mock_relay" = false ]; then
-              echo "An absent layer is reported as \`skipped\` rather than as a pass."
-              echo "ADR 0003 assigns this harness to its own stream; the contract CI"
-              echo "consumes is named at the top of \`.github/workflows/e2e.yml\`."
+            if [ "$relay" = false ] || [ "$audit" = false ] || [ "$canary" = false ] || [ "$maestro" = false ]; then
+              echo "A missing piece is reported as \`skipped\`, which is honest; a green"
+              echo "tick on a suite that did not run would not be. The harness is"
+              echo "developed in its own change (ADR 0003); \`docs/e2e/ci-notes.md\` is"
+              echo "the contract this workflow consumes."
             fi
           } >> "$GITHUB_STEP_SUMMARY"
-          echo "maestro=$maestro mock-relay=$mock_relay"
+          echo "relay=$relay audit=$audit canary=$canary maestro=$maestro"
 
-  mock-relay:
-    name: Mock relay (web target frames and a11y)
+  mock-relay-contract:
+    name: Mock relay contract (229 assertions, seconds)
     needs: harness
-    if: needs.harness.outputs.mock_relay == 'true'
+    if: needs.harness.outputs.relay == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      # No pnpm, no install, no Chrome: this tool drives the relay it lives beside
+      # and asserts the wire contract against the captured fixture corpus. It is
+      # the mock's own proof, which is what keeps the mock from drifting away
+      # from the relay it re-implements.
+      - name: Assert the mock relay's contract
+        run: node tools/mock-relay/verify.mjs
+
+  web-audit:
+    name: Web target — frames, audit and the canary
+    needs: harness
+    if: needs.harness.outputs.audit == 'true'
+    runs-on: ubuntu-latest
+    # The capture matrix is minutes; the bound is the diagnosis, not the budget.
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v7
 
@@ -115,24 +146,90 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Run the mock-relay harness
-        # The harness drives the app's OWN web export and the INSTALLED Chrome —
-        # no downloaded browser and no bundled Chromium, matching ADR 0003's layer
-        # 2 and the sibling repository's rules.
-        run: pnpm --filter ./e2e/mock-relay run ci
+      - name: Export the web target
+        # The harness drives the EXPORT, not a dev server: the export is what a
+        # reviewer's bundle would be, and a dev server's on-the-fly transform is a
+        # second variable in a job whose whole point is reproducibility.
+        run: pnpm export:web
 
-      - name: Upload the frames, the a11y report and the captured pairs
+      - name: Start the mock relay on an ephemeral port
+        # One relay per job, on a port the OS picks (never the operator's own
+        # 4098), printing the port alone on stdout. Diagnostics go to a file: a
+        # background process holding the step's stdout open is how a CI job hangs.
+        run: |
+          set -euo pipefail
+          node tools/mock-relay/relay.mjs \
+            --scenario "${{ env.MOCK_RELAY_SCENARIO }}" \
+            --print-port --quiet \
+            < /dev/null > "$RUNNER_TEMP/relay.port" 2> "$RUNNER_TEMP/relay.err" &
+          echo $! > "$RUNNER_TEMP/relay.pid"
+          for _ in $(seq 1 60); do
+            port=$(head -1 "$RUNNER_TEMP/relay.port" 2>/dev/null || true)
+            case "$port" in ''|*[!0-9]*) sleep 0.5 ;; *) break ;; esac
+          done
+          port=$(head -1 "$RUNNER_TEMP/relay.port")
+          case "$port" in ''|*[!0-9]*) echo "::error::the mock relay never printed a port"; cat "$RUNNER_TEMP/relay.err"; exit 1 ;; esac
+          echo "MOCK_RELAY_URL=http://127.0.0.1:$port" >> "$GITHUB_ENV"
+          echo "mock relay: http://127.0.0.1:$port (pid $(cat "$RUNNER_TEMP/relay.pid"))"
+
+      - name: Capture the frames
+        # `--relay` is what supplies the scenario list and session ids, so the
+        # capture and the audit describe the SAME state (the harness notes are
+        # explicit about that coupling). Frames are written outside the
+        # repository and uploaded — never committed (ADR 0003).
+        run: |
+          node tools/visual/capture.mjs \
+            --dir dist --out "$RUNNER_TEMP/frames" \
+            --relay "$MOCK_RELAY_URL" \
+            --consecutive --yes
+
+      - name: Audit the frames against the rubric
+        # Exits non-zero on any FAIL row. BLOCKED rows are reported and counted
+        # rather than failing the job — an app whose type ignores the root
+        # font-size is a finding for the review thread, not a broken harness.
+        run: |
+          node tools/audit/audit.mjs \
+            --manifest "$RUNNER_TEMP/frames/manifest.json" \
+            --out "$RUNNER_TEMP/audit"
+
+      - name: Run the canary
+        if: needs.harness.outputs.canary == 'true'
+        # The gate that stops the audit rotting into a rubber stamp: the fixture
+        # page declares its own defects, so this fails if the audit stops catching
+        # them, starts failing the clean page, or if the harness's own scale
+        # dimension goes inert.
+        run: node e2e/run-canary.mjs
+
+      - name: Stop the mock relay
+        if: always()
+        run: |
+          if [ -f "$RUNNER_TEMP/relay.pid" ]; then
+            pid=$(cat "$RUNNER_TEMP/relay.pid")
+            # By exact pid, and only the one this job started.
+            kill "$pid" 2>/dev/null || true
+            for _ in $(seq 1 20); do kill -0 "$pid" 2>/dev/null || break; sleep 0.25; done
+            kill -9 "$pid" 2>/dev/null || true
+          fi
+          echo "relay stopped; any remaining listener on the port was never this job's"
+
+      - name: Upload the frames, the manifest and the audit report
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: mock-relay-report
-          path: e2e/mock-relay/report
+          name: audit-frames
+          path: |
+            ${{ runner.temp }}/frames
+            ${{ runner.temp }}/audit
           retention-days: 30
 
-  maestro:
-    name: Maestro (Android emulator)
+  maestro-android:
+    name: Maestro flows on an Android 16 emulator
     needs: harness
-    if: needs.harness.outputs.maestro == 'true'
+    # NIGHTLY AND ON DEMAND, not per push: the harness's own note says "nightly and
+    # release gate", and ADR 0003's risk table limits emulator flows for the same
+    # reason — they are the slowest, flakiest part of the pipeline and the least
+    # informative on a branch somebody is iterating on.
+    if: needs.harness.outputs.maestro == 'true' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
     timeout-minutes: 75
     steps:
@@ -153,20 +250,10 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Assert the harness can reach the mock relay
-        # The flows run against the mock relay, not a real one: a real relay
-        # needs the operator's `lop mobile serve`, a password and a tunnel, none
-        # of which belong in CI (ADR 0003 layer 3).
-        run: |
-          set -euo pipefail
-          test -f e2e/mock-relay/package.json
-          pnpm --filter ./e2e/mock-relay run ci --help >/dev/null 2>&1 || \
-            echo "note: the mock-relay package has no --help; it is still started by the flows' setup"
-
       - name: Build the debug APK to install on the emulator
-        # Built in this job rather than downloaded from the Android workflow: a
+        # Built here rather than downloaded from the Android workflow: a
         # cross-workflow artefact download couples two independent triggers, and
-        # the debug APK is exactly what a flow should be run against.
+        # the debug APK is exactly what the flows should run against.
         run: |
           set -euo pipefail
           pnpm exec expo prebuild --platform android --clean --no-install
@@ -174,7 +261,6 @@ jobs:
           ./gradlew assembleDebug --no-daemon
 
       - name: Restore the Android AVD
-        id: avd-cache
         uses: actions/cache@v6
         with:
           path: |
@@ -183,15 +269,46 @@ jobs:
           key: ${{ runner.os }}-avd-${{ env.MAESTRO_API_LEVEL }}-${{ hashFiles('e2e/maestro/**') }}
 
       - name: Install the pinned Maestro CLI
-        # The installer is the one `curl | bash` this repository allows (ADR
-        # 0004), and MAESTRO_VERSION is what keeps it from being "latest".
+        # The one `curl | bash` this repository allows (ADR 0004), and
+        # MAESTRO_VERSION is what keeps it from being "latest".
         run: |
           set -euo pipefail
           export MAESTRO_VERSION
           curl -fsSL "https://get.maestro.mobile.dev" | bash
           echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
 
-      - name: Run the flows on the emulator
+      - name: Write the relay password the flows are given
+        # Generated per run into a 0600 file rather than committed as a literal,
+        # which is what the harness asks for: a flow carrying a literal password
+        # could not be committed at all.
+        run: |
+          set -euo pipefail
+          umask 077
+          node -e 'process.stdout.write(require("node:crypto").randomBytes(24).toString("base64url"))' > "$RUNNER_TEMP/relay-password"
+          echo "relay password: $(wc -c < "$RUNNER_TEMP/relay-password") bytes, mode $(stat -c '%a' "$RUNNER_TEMP/relay-password")"
+
+      - name: Start the mock relay for the flows
+        run: |
+          set -euo pipefail
+          node tools/mock-relay/relay.mjs \
+            --scenario "${{ env.MOCK_RELAY_SCENARIO }}" \
+            --password "$(cat "$RUNNER_TEMP/relay-password")" \
+            --print-port --quiet \
+            < /dev/null > "$RUNNER_TEMP/relay.port" 2> "$RUNNER_TEMP/relay.err" &
+          echo $! > "$RUNNER_TEMP/relay.pid"
+          for _ in $(seq 1 60); do
+            port=$(head -1 "$RUNNER_TEMP/relay.port" 2>/dev/null || true)
+            case "$port" in ''|*[!0-9]*) sleep 0.5 ;; *) break ;; esac
+          done
+          port=$(head -1 "$RUNNER_TEMP/relay.port")
+          case "$port" in ''|*[!0-9]*) echo "::error::the mock relay never printed a port"; cat "$RUNNER_TEMP/relay.err"; exit 1 ;; esac
+          echo "MOCK_RELAY_URL=http://127.0.0.1:$port" >> "$GITHUB_ENV"
+          # The emulator reaches the host's loopback through 10.0.2.2, which is why
+          # the flows are given the URL rather than reaching for localhost.
+          echo "RELAY_URL_FOR_DEVICE=http://10.0.2.2:$port" >> "$GITHUB_ENV"
+          echo "mock relay: http://127.0.0.1:$port (pid $(cat "$RUNNER_TEMP/relay.pid"))"
+
+      - name: Run the flows
         id: flows
         uses: reactivecircus/android-emulator-runner@c9c93e6ba9c4194322e114c40970d5983d9a07cc # v2.38.0
         with:
@@ -199,42 +316,39 @@ jobs:
           target: google_apis
           arch: x86_64
           avd-name: lo-mobile-e2e
-          # Reuse the cached AVD when the cache hit: creating one is minutes, and
-          # booting a cached one is seconds.
           force-avd-creation: false
           emulator-options: >-
             -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect
             -no-snapshot-save
           disable-animations: true
-          # A spelling checker that underlines as you type is a known source of
-          # Maestro text-input flakiness; the action can turn it off.
+          # A spell checker underlining as you type is a known source of text-input
+          # flakiness.
           disable-spellchecker: true
           script: |
             set -euo pipefail
             adb install -r android/app/build/outputs/apk/debug/app-debug.apk
-            maestro test e2e/maestro \
-              --format junit \
-              --output "$RUNNER_TEMP/maestro-run.xml" \
-              --test-output-dir "$RUNNER_TEMP/maestro-screenshots"
+            maestro --config e2e/maestro/config.yaml test --retry 1 \
+              -e APP_ID=com.radient.localoperator.mobile \
+              -e RELAY_URL="$RELAY_URL_FOR_DEVICE" \
+              -e RELAY_PASSWORD="$(cat "$RUNNER_TEMP/relay-password")" \
+              -e SESSION_ID=6714def86197 \
+              -e MAESTRO_SCREENSHOTS="$RUNNER_TEMP/maestro-screenshots"
 
-      - name: Retry the flows once, into a separate result file
-        if: failure() && steps.flows.outcome == 'failure'
-        # The one retry the ADR allows, and only for the emulator flows. The
-        # result lands in its own file so a green retry stays legible as a retry.
+      - name: Stop the mock relay
+        if: always()
         run: |
-          echo "::warning::the Maestro flow set failed on the first attempt; retrying once. Both JUnit files are uploaded, so a pass on the retry is visible as a retry."
-          adb wait-for-device
-          maestro test e2e/maestro \
-            --format junit \
-            --output "$RUNNER_TEMP/maestro-retry.xml" \
-            --test-output-dir "$RUNNER_TEMP/maestro-screenshots-retry"
+          if [ -f "$RUNNER_TEMP/relay.pid" ]; then
+            pid=$(cat "$RUNNER_TEMP/relay.pid")
+            kill "$pid" 2>/dev/null || true
+            for _ in $(seq 1 20); do kill -0 "$pid" 2>/dev/null || break; sleep 0.25; done
+            kill -9 "$pid" 2>/dev/null || true
+          fi
+          rm -f "$RUNNER_TEMP/relay-password"
 
-      - name: Upload the per-step screenshots and both result files
+      - name: Upload the per-step screenshots
         if: always()
         uses: actions/upload-artifact@v7
         with:
           name: maestro-screenshots
-          path: |
-            ${{ runner.temp }}/maestro-screenshots
-            ${{ runner.temp }}/maestro-retry.xml
+          path: ${{ runner.temp }}/maestro-screenshots
           retention-days: 30
