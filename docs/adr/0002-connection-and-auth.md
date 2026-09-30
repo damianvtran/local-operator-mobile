@@ -54,13 +54,13 @@ Two facts drive most of the design:
 
 | Constraint | Source |
 |---|---|
-| Mutations require an exact `Origin` equal to the request's own origin | `index.ts:122-131` (edge), `daemon.py:2334-2355` (relay) |
+| Mutations require an exact `Origin` equal to the request's own origin | `index.ts:122-131` (edge), `daemon.py:2335-2355` (relay) |
 | `Sec-Fetch-Site: cross-site`/`same-site` non-navigations are rejected at the edge | `index.ts:129-130` |
 | Request bodies are capped at 10 MiB at the edge and the gateway | `index.ts:10`, `gateway.py:31` |
 | SSE is cut every 60 s by the gateway lease and must be reconnected | `gateway.py:34`, `:578-594` |
 | The relay pushes **full snapshots** (`event: projection`), never deltas, with a monotonic `version` per projection epoch | `daemon.py:3071-3072`, `types.py:SessionProjection.version` |
 | The relay sends `: keepalive` every 25 s when idle | `daemon.py:76-79`, `:2517-2518` |
-| Session endpoints are per-IP rate limited (5/s, burst 20) with a global budget | `internal/tunnels/service.go:96-125` |
+| Session endpoints are per-IP rate limited (5/s, burst 20) with a global budget | `internal/tunnels/service.go:96-110` |
 | The grant lives 5 minutes; the tunnel refresh handle is opaque, **not rotated**, and lives 30 days absolute | `internal/tunnels/session.go:199-210`, `:159-176` |
 | Radient OAuth access token lives 1 hour; the OAuth refresh token is **rotated on every use** and rolls 90 days | `internal/services/auth_service.go:452-455`, `:704-720` |
 
@@ -71,7 +71,7 @@ redirect URIs — `http://localhost/callback`, `http://127.0.0.1/callback`,
 `http://[::1]/callback` — and `validOAuthRedirect` accepts, for native clients,
 an `http` redirect on a loopback **literal** host whose *path and query match* and
 which supplies its **own port** (`~/radient-ml/agent-server/internal/repositories/oauth_client_migration.go`,
-`~/radient-ml/agent-server/internal/services/oauth_redirect.go:64-92`). An exact
+`~/radient-ml/agent-server/internal/services/oauth_redirect.go:66-92`). An exact
 `https` match is the only other accepted form. Custom schemes are not accepted at
 all.
 
@@ -162,16 +162,16 @@ API's envelope — `{"msg": …, "result": …}` — and `result` is what we rea
 - **`GET /v1/tunnels`** returns every tunnel for the account, each with
   `id, name, device_id, gateway_port, enabled, version, hostname, harnesses[],
   status, created_at, updated_at, revoked_at` and an embedded `billing` object
-  (`internal/tunnels/service.go:222-236`, `model.go:28-46`).
+  (`internal/tunnels/service.go:222-236`, `model.go:27-46`).
 - **Harness selection:** pick the harness with `id == "local-operator"` and
   `enabled == true`; its `hostname` is the tunnel origin
-  (`model.go:18-22`). A tunnel whose only enabled harness is `opencode` is not a
+  (`model.go:17-22`). A tunnel whose only enabled harness is `opencode` is not a
   Local Operator target and is shown as such.
 - **Multi-computer:** a tunnel is a computer (`device_id`, `name`). The picker
   lists them by name with status, most recently updated first, and remembers the
   last one used. There is no cross-device grouping beyond what the API provides,
   and we do not invent one.
-- **Status mapping** (`internal/tunnels/service.go:302`, `:460-472`):
+- **Status mapping** (`internal/tunnels/service.go:302`, `:466-472`):
   `active` → ready; `disabled` → off; `suspended` → suspended (billing);
   `pending`/`reconciling` → provisioning; `revoking`/`deleted` → gone;
   `error` → needs attention. Only `active` is dialable — the control plane
@@ -179,7 +179,7 @@ API's envelope — `{"msg": …, "result": …}` — and `result` is what we rea
 - **Billing** (`BillingStatus`, `service.go:24-32`): show `eligible`, `active`,
   `monthly_price_usd`, `balance_usd`, `amount_due_usd`, `next_charge_at`. A
   tunnel with `eligible: false` produces **402 “tunnel billing is inactive”** at
-  session-code time (`session.go:71-74`), so the app must surface this *before*
+  session-code time (`session.go:75-77`), so the app must surface this *before*
   the user tries and fails: a banner with the quote and a link to
   `https://console.radienthq.com/dashboard/tunnels`.
 - **No tunnel at all:** the app offers two distinct paths and says plainly which
@@ -194,7 +194,7 @@ API's envelope — `{"msg": …, "result": …}` — and `result` is what we rea
     running on the computer; nothing the phone does can start it.
 - **“Is the computer actually up?”** is answered by request outcomes rather than a
   health field: the gateway's health route is pinned to a loopback Host
-  (`gateway.py:99-113`) and cannot be reached through the tunnel. The usable
+  (`gateway.py:462-480`) and cannot be reached through the tunnel. The usable
   signals are in §5.
 - **QR codes are not needed on this path** — the phone discovers the hostname
   itself. On the custom path (§6) a QR of the base URL (never the password) is a
@@ -205,7 +205,7 @@ API's envelope — `{"msg": …, "result": …}` — and `result` is what we rea
 Because the app holds a Radient OAuth access token, it can mint its own tunnel
 session with **zero changes to Radient**: the public session endpoints are
 reachable from the internet and are not gated behind the Worker
-(`internal/tunnels/service.go:104-115`).
+(`internal/tunnels/service.go:108-113`).
 
 ```
 1. POST https://api.radienthq.com/v1/tunnels/session/code           (Bearer OAuth access token)
@@ -231,7 +231,7 @@ hostname with `token_use: tunnel_access` and a 5-minute life
 | Refresh fails with 401/`invalid_grant` | Re-mint with a fresh OAuth access token (refresh the OAuth token first if it is near expiry) |
 | Tunnel refresh handle is > 25 days old | Re-mint silently in the background — the handle is **absolute, non-rotating, 30 days** (`session.go:159-176`), so it cannot be extended and there is no server-side “keep alive” |
 | OAuth refresh fails (401/400) | Sign-in screen, with the tunnel session preserved until the user acts |
-| Any 429 | Exponential backoff with jitter; the session endpoints are per-IP limited to 5/s burst 20 (`service.go:96-125`) and a stampede takes out refresh for everyone on that IP |
+| Any 429 | Exponential backoff with jitter; the session endpoints are per-IP limited to 5/s burst 20 (`service.go:96-110`) and a stampede takes out refresh for everyone on that IP |
 
 The refresh handle never rotating is a feature for us — no rotation race across
 app foreground/background — and the 30-day absolute bound is the one place the
@@ -286,7 +286,7 @@ route (`lop_mobile`) where the cookie jar *is* the right tool.
 | Custom URL | `Cookie: lop_mobile=<value>`, `Origin: <base origin>` | same |
 
 - `Origin` is required *by the relay itself* for mutations, not only by the edge
-  (`daemon.py:2334-2355`), and both compare an exact string. Send it on every
+  (`daemon.py:2335-2355`), and both compare an exact string. Send it on every
   request; it costs nothing and removes a class of 403s.
 - **Never** set `Sec-Fetch-*` headers: a `cross-site`/`same-site` value that is not
   a navigation is rejected at the edge, and native clients have no reason to
@@ -320,7 +320,7 @@ received `Set-Cookie`). **Spike S2** settles whether we can capture the value
 ourselves; if we cannot, the jar path is the design, not the fallback.
 
 **Redirects.** Use `redirect: 'manual'` on `/login`: the daemon answers a successful
-form login with `303 → /` plus `Set-Cookie` (`daemon.py:2400-2425`), and a failure
+form login with `303 → /` plus `Set-Cookie` (`daemon.py:2391-2416`), and a failure
 with 401 and an HTML error page. Following the redirect is pointless (the app never
 renders the relay's HTML) and on the tunnel route a 303 to `/_radient/login` is a
 diagnostic, not something to follow.
@@ -334,7 +334,7 @@ diagnostic, not something to follow.
   `EventSource`: it is not in React Native, and its built-in retry is immediate on
   some server-close shapes — the relay's own web client documents this and
   implements manual backoff for exactly that reason
-  (`~/local-operator/local_operator/mobile/web/src/store.ts:1-12`, `:108-155`).
+  (`~/local-operator/local_operator/mobile/web/src/store.ts:1-12`, `:104-160`).
 - **Treat the 60-second cut as expected, not as an error.** The gateway's lease
   (`gateway.py:34`, `:578-594`) ends the stream cleanly; the client reopens at once
   with a small random jitter, and does not paint a “reconnecting” state for a
@@ -344,9 +344,9 @@ diagnostic, not something to follow.
   `version` for its epoch; on reconnect, drop frames older than the last rendered
   one and accept the first frame of the new connection unconditionally (the relay
   reconciles epochs itself, and its own client implements exactly this
-  `awaitingSnapshot` rule — `store.ts:222-243`).
+  `awaitingSnapshot` rule — `store.ts:215-245`).
 - **Keep the last good projection while disconnected** and mark it stale rather
-  than blanking the screen (`store.ts:236-243`). A flapping tunnel must not erase
+  than blanking the screen (`store.ts:250-258`). A flapping tunnel must not erase
   the transcript the user is reading.
 - **Command delivery uses the relay's retry envelope**, not a naive POST retry: an
   instruction whose outcome is unknown (transport failure, or HTTP 502/504/408) is
@@ -361,15 +361,15 @@ diagnostic, not something to follow.
 |---|---|---|---|
 | `401` + `X-Radient-Login` | edge (`index.ts:317-323`) | tunnel session expired | Silent re-mint; a second failure goes to sign-in |
 | `503` `text/plain` “Tunnel temporarily unavailable” | edge (`index.ts:330`) | **the computer is offline** or its connector is down | “Computer offline” with retry |
-| `503` JSON `{detail, reason, error}` | gateway (`gateway.py:405-429`) | connector is up but refusing | Show `detail` verbatim — it is written for a phone — plus the console link for `authorization_refused`/`tunnel_not_authorized` |
-| `502` JSON `{"error":"local harness unavailable"}` | gateway (`gateway.py:551-553`) | the **relay daemon** is down | “Start the relay on your computer” |
-| `404` JSON `{"error":"unknown tunnel host"}` | gateway (`gateway.py:117-118`) | tunnel/harness changed or was removed | Re-run discovery |
+| `503` JSON `{detail, reason, error}` | gateway (`gateway.py:397-430`) | connector is up but refusing | Show `detail` verbatim — it is written for a phone — plus the console link for `authorization_refused`/`tunnel_not_authorized` |
+| `502` JSON `{"error":"local harness unavailable"}` | gateway (`gateway.py:557-558`) | the **relay daemon** is down | “Start the relay on your computer” |
+| `404` JSON `{"error":"unknown tunnel host"}` | gateway (`gateway.py:483-484`) | tunnel/harness changed or was removed | Re-run discovery |
 | `403` “Same-origin request required” | edge (`index.ts:128`) | we failed to send `Origin` | Diagnostics-only; never user-facing copy |
 | `401` JSON `{"error":"authentication required"}` | relay (`daemon.py:2362-2364`) | custom route: password changed / cookie cleared | Re-prompt for the password |
 | `429` | API | rate limited | Back off with jitter |
 
 The `reason` vocabulary is stable and enumerated
-(`gateway.py:64-92`): `control_plane_unreachable`, `authorization_refused`,
+(`gateway.py:73-95`): `control_plane_unreachable`, `authorization_refused`,
 `tunnel_not_authorized`, `authorization_lease_pending`, `login_required`. Map each
 to a distinct action, and fall back to `detail` for a reason a future relay adds.
 
@@ -388,7 +388,7 @@ then an authenticated cookie.
    (so the resulting cookie is stored by the platform jar; §4).
 3. `303` → signed in; `401` → wrong password (the relay answers 401 with the login
    page and an inline error). There is **no Bearer/Basic alternative**: the relay's
-   only credential is the cookie (`daemon.py:2330-2366`; `basic_auth_header_user`
+   only credential is the cookie (`daemon.py:2330-2365`; `basic_auth_header_user`
    in `auth.py:486-490` is not wired to any route).
 4. Everything after this is the same API and the same SSE handling as the tunnel
    route; only the header policy differs.
@@ -405,10 +405,10 @@ Caveats to state in the product copy rather than discover in the field:
   supporting it means driving a second browser-session flow with the proxy's own
   cookies, which is a separate decision with its own ADR.
 - **Proxies that rewrite `Host`** break the relay's exact-origin mutation check
-  (`daemon.py:2334-2355`); this surfaces as a 403, and the diagnostics screen should
+  (`daemon.py:2335-2355`); this surfaces as a 403, and the diagnostics screen should
   say why.
 - The relay sets `Secure` only when the request arrived over TLS
-  (`daemon.py:2427-2433`), so a plain-HTTP LAN route does work today — but that is
+  (`daemon.py:2416-2424`), so a plain-HTTP LAN route does work today — but that is
   a statement about the relay, not an endorsement.
 
 ## 6. Threat model notes
@@ -436,7 +436,7 @@ transcript” affordance that has no warning).
 strip list still names `lop_mobile_session` (`index.ts:257`) while the relay has set
 `lop_mobile` since `auth.py:98`. Nothing leaks today — the gateway rebuilds the
 `Cookie` header from an allow-list that does not include `cookie`
-(`gateway.py:237-247`, `:445-456`) — so this is defense-in-depth hygiene in the
+(`gateway.py:235-247`, `:445-456`) — so this is defense-in-depth hygiene in the
 Local Operator and Radient repositories, not a defect in this app. It is recorded
 here because this ADR is where the cookie names are enumerated, and a future reader
 adding a proxy on the deployed edge will want the stale name gone.
