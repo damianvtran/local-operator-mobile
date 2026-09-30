@@ -277,13 +277,16 @@ assert the stored value is byte-identical to the seed and that no write occurred
 same test table covers the mirror case (`refresh_token: "…"` replaces it), because a
 guard that refuses everything is as broken as one that accepts everything.
 
-**Alternative considered and rejected:** let the platform cookie jar hold
-`__Host-radient-grant`/`__Host-radient-refresh` by using `credentials: 'include'`
-and never touching the values. It works mechanically, but it puts the app's
-single most important credential in a store we cannot read, cannot inspect for
-expiry, cannot refresh in the background, and cannot clear selectively on logout.
-Owning the tokens explicitly is more code and far more testable. §4 covers the one
-route (`lop_mobile`) where the cookie jar *is* the right tool.
+**Why the jar is not used on this route.** The tokens are not collected from a
+browser session: the app mints them with its own PKCE exchange against the public
+session endpoints and receives them in a JSON body (§3 above), so there is no
+`Set-Cookie` to harvest and no browser identity to inherit. Sending the grant as an
+explicit `Cookie` header is therefore not an alternative to the platform jar — it is
+the only way to present a credential the app itself holds. It also happens to be the
+right property: the token is inspectable (expiry), refreshable in the background,
+and clearable on logout, none of which is true of a value sealed inside the jar.
+§4 covers the one route (`lop_mobile`, on the custom flow) where the jar *is* the
+right tool, because there the cookie genuinely does come from a login response.
 
 **Refresh is ours; the edge's renewal is for browsers.** The app calls
 `POST https://api.radienthq.com/v1/tunnels/session/refresh {refresh_token, hostname}`
