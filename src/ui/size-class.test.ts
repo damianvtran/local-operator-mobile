@@ -53,4 +53,20 @@ describe("layoutFor", () => {
 		// 834x1112 is regular width but under the split width: one column, capped.
 		expect(layoutFor(834, 1112).split).toBe(false);
 	});
+	it("drives the cap opt-out from the same two values the split uses", () => {
+		/* `Screen`'s `capColumn={!split}` reads exactly these, so this pins the pair
+		 *  a reviewer argues with: the split sizes DO carry a measure (the cap moves
+		 *  from the screen into the detail pane), and every single-column size keeps
+		 *  its own — including a landscape phone, which is wide enough to lose the
+		 *  cap by accident and must not. */
+		/* 1024x768 is read as LANDSCAPE by the width rule (1024 > 768) and therefore
+		 *  takes the landscape-tablet measure, not the portrait one. Worth stating:
+		 *  the only sizes that split today are LANDSCAPE tablets — a true portrait
+		 *  tablet (768x1024) is under `SPLIT_MIN_WIDTH` and stays one column. */
+		expect(layoutFor(1024, 768)).toMatchObject({ split: true, measure: 640 });
+		expect(layoutFor(1366, 1024)).toMatchObject({ split: true, measure: 640 });
+		expect(layoutFor(768, 1024)).toMatchObject({ split: false, measure: 560 });
+		expect(layoutFor(844, 390)).toMatchObject({ split: false, measure: 640 });
+		expect(layoutFor(390, 844).measure).toBeNull();
+	});
 });

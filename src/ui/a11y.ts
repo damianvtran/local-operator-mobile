@@ -172,6 +172,10 @@ export const CONTROL = {
 	sessionsConnectAction: "sessions-connect-action",
 	sessionsNewAction: "sessions-new-action",
 	pastSearchClear: "past-search-clear",
+	splitPaneStart: "split-pane-start",
+	splitPaneEnd: "split-pane-end",
+	splitBody: "split-body",
+	sessionsDetailColumn: "sessions-detail-column",
 	/* --- the list, past-list and new-session controls the flows address. --- */
 	newSessionCwd: "new-session-cwd",
 	newSessionModel: "new-session-model",

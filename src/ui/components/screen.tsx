@@ -30,6 +30,15 @@ export type ScreenProps = {
 	headerLeading?: ReactNode;
 	/** Screens that own their own scrolling (the transcript) pass false. */
 	scroll?: boolean;
+	/** `false` leaves the readable-measure cap OFF, for a screen that owns a
+	 *  multi-pane layout: a split screen puts a list and a detail side by side, and
+	 *  a cap on the WHOLE screen squeezes both (measured: a 560 pt column centred in
+	 *  a 1366 pt tablet is a phone layout stretched, which is the gap the design
+	 *  round flagged). The screen then applies the readable measure to its own
+	 *  content column — `maxColumnWidth` stays the one source of the numbers, so
+	 *  this is an opt-out of the cap, never a second measure. Defaults `true`:
+	 *  every other screen is byte-for-byte unchanged. */
+	capColumn?: boolean;
 	testID?: string;
 };
 
@@ -50,6 +59,7 @@ export const Screen = ({
 	headerAction,
 	headerLeading,
 	scroll = true,
+	capColumn = true,
 	testID,
 }: ScreenProps) => {
 	const insets = useSafeAreaInsets();
@@ -59,7 +69,10 @@ export const Screen = ({
 	 * implementations of one rule. `width: "100%"` is load-bearing: with
 	 * `alignSelf: center` alone the container shrink-wraps its children. */
 	const viewport = useWindowDimensions();
-	const columnWidth = maxColumnWidth(viewport);
+	/* With the cap opted out the screen is full-bleed — header included, which is
+	 *  what a two-pane screen wants: the panes start at the screen edge and the
+	 *  readable measure lives INSIDE the pane that holds prose. */
+	const columnWidth = capColumn ? maxColumnWidth(viewport) : null;
 	const column = columnWidth
 		? {
 				width: "100%" as const,

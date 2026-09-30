@@ -20,7 +20,7 @@ import {
 import { homeShortened } from "@/lib/format";
 import { useUiStore } from "@/state/ui-store";
 import { CONTROL, EMPTY, REGION, ROLE, SCREEN, sessionRowId } from "@/ui/a11y";
-import { SplitView } from "@/ui/components/adaptive";
+import { ReadableColumn, SplitView } from "@/ui/components/adaptive";
 import { Avatar, initialsOf } from "@/ui/components/avatar";
 import { Badge } from "@/ui/components/badge";
 import { Banner } from "@/ui/components/banner";
@@ -35,7 +35,7 @@ import { Screen } from "@/ui/components/screen";
 import { SectionHeader } from "@/ui/components/section-header";
 import { Sheet } from "@/ui/components/sheet";
 import { Skeleton } from "@/ui/components/skeleton";
-import { TOUCH_FLOOR } from "@/ui/layout";
+import { TOUCH_FLOOR, useLayout } from "@/ui/layout";
 import { LARGE_TEXT_SCALE } from "@/ui/text-scale";
 import { useTextScale } from "@/ui/text-scale-provider";
 
@@ -64,6 +64,10 @@ export default function Sessions() {
 	const { refreshList, retry, relay, refusal, busy, streamHealth } =
 		useConnection();
 	const showToast = useUiStore((state) => state.showToast);
+	/* The split decision, read once: the SAME value drives the cap opt-out below and
+	 *  `SplitView`'s own choice, so the two cannot disagree about whether this screen
+	 *  has two panes. */
+	const layout = useLayout();
 
 	const sessions = useListState((state) => state.sessions);
 	const degraded = useListState((state) => state.degraded);
@@ -205,6 +209,13 @@ export default function Sessions() {
 			title="Sessions"
 			testID={SCREEN.sessions}
 			scroll={false}
+			/* The cap comes OFF only when the split is real: on a phone (and on a
+			 *  landscape phone, which is wide but short) `SplitView` renders one pane
+			 *  and the readable measure still applies, so the single-column layout is
+			 *  untouched. With two panes the measure belongs INSIDE the detail pane —
+			 *  a cap on the whole screen is what squeezed a tablet into a 560 pt
+			 *  column in the middle of 1366 pt. */
+			capColumn={!layout.split}
 			headerAction={
 				<View className="flex-row items-center gap-1">
 					{waiting > 0 ? (
@@ -341,17 +352,23 @@ export default function Sessions() {
 				}
 				detail={null}
 				emptyDetail={
-					<View className="flex-1 items-center justify-center gap-2 px-8">
-						<Text
-							className="text-heading text-ink"
-							accessibilityRole={ROLE.header}
-						>
-							Choose a session
-						</Text>
-						<Text className="text-body text-ink-muted text-center">
-							Its transcript, composer and approval cards open here.
-						</Text>
-					</View>
+					/* The readable measure lives INSIDE the detail pane, not on the
+					 *  screen: with the cap opted out above, this is the only thing
+					 *  keeping a transcript in a 1,046 pt pane from becoming a 1,046 pt
+					 *  line. D2's session view renders under this column when it lands. */
+					<ReadableColumn testID={CONTROL.sessionsDetailColumn}>
+						<View className="flex-1 items-center justify-center gap-2 px-8">
+							<Text
+								className="text-heading text-ink"
+								accessibilityRole={ROLE.header}
+							>
+								Choose a session
+							</Text>
+							<Text className="text-body text-ink-muted text-center">
+								Its transcript, composer and approval cards open here.
+							</Text>
+						</View>
+					</ReadableColumn>
 				}
 			/>
 
