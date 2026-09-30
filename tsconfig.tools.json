@@ -32,8 +32,13 @@
 		"moduleResolution": "nodenext",
 		"target": "esnext",
 		"lib": ["esnext"],
-		// Node globals and the `node:` builtin module types. No DOM, no React:
-		// a tool that reaches for `document` should fail here.
+		// Node's own types, and `@types/node` is a DIRECT devDependency because of
+		// how this resolves: a type-library entry point is looked up by path
+		// (`node_modules/@types/node`), where a `node:` module import is not — which
+		// is why the app's program resolved `node:url` in `vitest.config.ts` (vitest
+		// brings the types into the program) while this program failed with TS2688
+		// for the same package. Measured in CI on 2026-09-30. No DOM, no React: a
+		// tool that reaches for `document` fails here.
 		"types": ["node"],
 		"noEmit": true,
 		// Importing `./thing.ts` is what Node requires at runtime, so the

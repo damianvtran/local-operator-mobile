@@ -23,11 +23,6 @@ on:
   push:
     tags:
       - "v*"
-    # SCRATCH (verification only): a branch push exercises the version job and the
-    # credential gate without a tag. `main` is deliberately NOT here — a release
-    # workflow that fired on every merge would build and upload on every merge.
-    branches:
-      - feat/ci-cd-verify
   workflow_dispatch:
     inputs:
       tag:
