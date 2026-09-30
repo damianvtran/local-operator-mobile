@@ -16,7 +16,7 @@ name: Release
 #
 # There is NO VERSION BUMP IN THE REPOSITORY. `pyproject.toml`'s analogue here is
 # `app.config.ts`, whose version is a placeholder that CI overrides from the tag
-# (see scripts/ci/version.mjs and docs/ci.md, "Versioning"). A maintainer tags;
+# (see scripts/ci/version.ts and docs/ci.md, "Versioning"). A maintainer tags;
 # nothing is edited to release.
 
 on:
@@ -82,10 +82,10 @@ jobs:
           if [ -n "${DISPATCH_TAG:-}" ]; then
             # A hand-run release names its tag, because `github.ref_name` on a
             # `workflow_dispatch` is the branch the run was started from.
-            node scripts/ci/version.mjs --write --ref-type tag --ref-name "$DISPATCH_TAG"
+            node scripts/ci/version.ts --write --ref-type tag --ref-name "$DISPATCH_TAG"
             echo "tag=$DISPATCH_TAG" >> "$GITHUB_OUTPUT"
           else
-            node scripts/ci/version.mjs --write
+            node scripts/ci/version.ts --write
             echo "tag=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
           fi
           {
@@ -93,7 +93,7 @@ jobs:
             echo
             echo "| | |"
             echo "|---|---|"
-            echo "| version | \`$(node scripts/ci/version.mjs --ref-type tag --ref-name "${{ github.ref_name }}" --run-number "${{ github.run_number }}" | head -1 | cut -d= -f2)\` |"
+            echo "| version | \`$(node scripts/ci/version.ts --ref-type tag --ref-name "${{ github.ref_name }}" --run-number "${{ github.run_number }}" | head -1 | cut -d= -f2)\` |"
             echo "| versionCode / CFBundleVersion | \`${{ github.run_number }}\` |"
           } >> "$GITHUB_STEP_SUMMARY"
 
@@ -120,7 +120,7 @@ jobs:
           APPLE_ASC_ISSUER_ID: ${{ secrets.APPLE_ASC_ISSUER_ID }}
           APPLE_ASC_PRIVATE_KEY_BASE64: ${{ secrets.APPLE_ASC_PRIVATE_KEY_BASE64 }}
         run: |
-          node scripts/ci/check-secrets.mjs --mode release --need ANDROID_KEYSTORE_BASE64,ANDROID_KEYSTORE_PASSWORD,ANDROID_KEY_ALIAS,ANDROID_KEY_PASSWORD,PLAY_SERVICE_ACCOUNT_JSON_BASE64,APPLE_TEAM_ID,APPLE_ASC_KEY_ID,APPLE_ASC_ISSUER_ID,APPLE_ASC_PRIVATE_KEY_BASE64
+          node scripts/ci/check-secrets.ts --mode release --need ANDROID_KEYSTORE_BASE64,ANDROID_KEYSTORE_PASSWORD,ANDROID_KEY_ALIAS,ANDROID_KEY_PASSWORD,PLAY_SERVICE_ACCOUNT_JSON_BASE64,APPLE_TEAM_ID,APPLE_ASC_KEY_ID,APPLE_ASC_ISSUER_ID,APPLE_ASC_PRIVATE_KEY_BASE64
 
   gate:
     name: Full gate
@@ -161,7 +161,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Derive the version from the tag
-        run: node scripts/ci/version.mjs --write --ref-type tag --ref-name "${{ needs.version.outputs.tag }}"
+        run: node scripts/ci/version.ts --write --ref-type tag --ref-name "${{ needs.version.outputs.tag }}"
 
       - name: Generate the native project
         run: pnpm exec expo prebuild --platform android --clean --no-install
@@ -250,7 +250,7 @@ jobs:
       - name: Derive the version from the tag
         env:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-        run: node scripts/ci/version.mjs --write --ref-type tag --ref-name "${{ needs.version.outputs.tag }}"
+        run: node scripts/ci/version.ts --write --ref-type tag --ref-name "${{ needs.version.outputs.tag }}"
 
       - name: Generate the native project
         env:
@@ -259,7 +259,7 @@ jobs:
 
       - name: Resolve the workspace and scheme
         id: project
-        run: node scripts/ci/ios-project.mjs --root ios
+        run: node scripts/ci/ios-project.ts --root ios
 
       - name: Decode the App Store Connect API key
         env:
@@ -357,7 +357,7 @@ jobs:
           path: artifacts
 
       - name: Generate the release notes from the conventional commits
-        run: node scripts/ci/release-notes.mjs --to "${{ needs.version.outputs.tag }}" --out notes.md
+        run: node scripts/ci/release-notes.ts --to "${{ needs.version.outputs.tag }}" --out notes.md
 
       - name: Create the GitHub Release with the three artefacts
         env:

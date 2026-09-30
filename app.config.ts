@@ -57,7 +57,9 @@ const BUNDLE_ID = "com.localoperator.mobile";
  * upload. Monotonicity rides on the build number instead, which is what both
  * stores actually compare. docs/ci.md, "Versioning", has the whole rule. */
 const version = process.env.LOCAL_OPERATOR_MOBILE_VERSION ?? "0.0.0";
-const buildNumber = Number(process.env.LOCAL_OPERATOR_MOBILE_VERSION_CODE ?? "0");
+const buildNumber = Number(
+	process.env.LOCAL_OPERATOR_MOBILE_VERSION_CODE ?? "0",
+);
 
 const config: ExpoConfig = {
 	name: "Local Operator",
@@ -80,7 +82,9 @@ const config: ExpoConfig = {
 		// than a conditional value, so an unset variable is genuinely ABSENT from the
 		// config instead of present and empty.
 		...(buildNumber > 0 ? { buildNumber: String(buildNumber) } : {}),
-		...(process.env.APPLE_TEAM_ID ? { appleTeamId: process.env.APPLE_TEAM_ID } : {}),
+		...(process.env.APPLE_TEAM_ID
+			? { appleTeamId: process.env.APPLE_TEAM_ID }
+			: {}),
 		// iOS 26 renders icons through Liquid Glass; the three appearances are
 		// authored assets (brand-kit § 6.4). The tinted variant is greyscale by
 		// definition — a coloured one is wrong, not merely worse.

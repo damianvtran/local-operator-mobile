@@ -2,9 +2,9 @@
 /**
  * Generate release notes from the conventional commits since the previous tag.
  *
- *     node scripts/ci/release-notes.mjs --to v1.2.3
- *     node scripts/ci/release-notes.mjs --from v1.2.2 --to v1.2.3
- *     node scripts/ci/release-notes.mjs --to v1.2.3 --out "$RUNNER_TEMP/notes.md"
+ *     node scripts/ci/release-notes.ts --to v1.2.3
+ *     node scripts/ci/release-notes.ts --from v1.2.2 --to v1.2.3
+ *     node scripts/ci/release-notes.ts --to v1.2.3 --out "$RUNNER_TEMP/notes.md"
  *
  * Why not `gh release create --generate-notes`. GitHub's generator groups by
  * pull request, which reads well when every change arrived as one — but this
@@ -18,7 +18,7 @@
  * change. The commits they carry are on the first-parent path and are what the
  * notes are built from.
  *
- * No third-party dependency: this runs before `pnpm install`.
+ * Run directly by Node (type-stripping, no build step, no dependency).
  */
 
 import { execFileSync } from "node:child_process";
@@ -28,8 +28,10 @@ import { writeFileSync } from "node:fs";
  * `!` marks a breaking change and is pulled out of `scope`. */
 const COMMIT = /^(?<type>[a-z]+)(?:\((?<scope>[^)]*)\))?(?<bang>!)?: (?<subject>.+)$/;
 
+type Section = { title: string; types: string[] };
+
 /** Sections in the order a reader wants them, with the type each one collects. */
-const SECTIONS = [
+const SECTIONS: Section[] = [
 	{ title: "Features", types: ["feat"] },
 	{ title: "Fixes", types: ["fix", "revert"] },
 	{ title: "Performance", types: ["perf"] },
@@ -40,13 +42,26 @@ const SECTIONS = [
 	{ title: "Styling", types: ["style"] },
 ];
 
-const arg = (name, fallback) => {
+type Commit = {
+	sha: string;
+	short: string;
+	type: string | null;
+	scope: string | null;
+	breaking: boolean;
+	summary: string;
+};
+
+/** Read `--name value`, falling back to `fallback`. */
+const arg = (name: string, fallback: string): string => {
 	const i = process.argv.indexOf(`--${name}`);
 	return i === -1 ? fallback : (process.argv[i + 1] ?? fallback);
 };
 
-const git = (...args) =>
-	execFileSync("git", args, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
+const git = (...args: string[]): string =>
+	execFileSync("git", args, {
+		encoding: "utf8",
+		stdio: ["ignore", "pipe", "pipe"],
+	}).trim();
 
 const to = arg("to", "HEAD");
 let from = arg("from", "");
@@ -67,39 +82,39 @@ const range = from ? `${from}..${to}` : to;
 /* `--no-merges` (see the header) and a tab separator, because a subject can
  * contain any other character and a notes generator that mis-splits a one-line
  * commit is the kind of bug nobody reports. */
-const raw = git("log", "--no-merges", "--pretty=%H%x09%s", range);
-const commits = raw
+const commits: Commit[] = git("log", "--no-merges", "--pretty=%H%x09%s", range)
 	.split("\n")
 	.filter(Boolean)
 	.map((line) => {
-		const [sha, subject] = line.split("\t");
-		return { sha, subject, short: (sha ?? "").slice(0, 7) };
+		const tab = line.indexOf("\t");
+		const sha = tab === -1 ? line : line.slice(0, tab);
+		const subject = tab === -1 ? "" : line.slice(tab + 1);
+		const groups = COMMIT.exec(subject)?.groups;
+		return {
+			sha,
+			short: sha.slice(0, 7),
+			type: groups?.type ?? null,
+			scope: groups?.scope ?? null,
+			breaking: Boolean(groups?.bang),
+			summary: groups?.subject ?? subject,
+		};
 	});
 
-const parsed = commits.map((commit) => {
-	const match = COMMIT.exec(commit.subject);
-	return {
-		...commit,
-		type: match?.groups?.type ?? null,
-		scope: match?.groups?.scope ?? null,
-		breaking: Boolean(match?.groups?.bang),
-		summary: match?.groups?.subject ?? commit.subject,
-	};
-});
+const known = new Set(SECTIONS.flatMap((section) => section.types));
+const unreleased = commits.filter(
+	(commit) => commit.type === null || !known.has(commit.type),
+);
 
-const known = new Set(SECTIONS.flatMap((s) => s.types));
-const unreleased = parsed.filter((c) => c.type === null || !known.has(c.type));
-
-const bullet = (commit) => {
+const bullet = (commit: Commit): string => {
 	const scope = commit.scope ? `**${commit.scope}:** ` : "";
 	return `- ${scope}${commit.summary} (${commit.short})`;
 };
 
-const lines = [];
+const lines: string[] = [];
 if (from) lines.push(`Changes since ${from}.`, "");
 else lines.push("First release.", "");
 
-const breaking = parsed.filter((c) => c.breaking);
+const breaking = commits.filter((commit) => commit.breaking);
 if (breaking.length > 0) {
 	lines.push("## Breaking changes", "");
 	for (const commit of breaking) lines.push(bullet(commit));
@@ -107,7 +122,9 @@ if (breaking.length > 0) {
 }
 
 for (const section of SECTIONS) {
-	const items = parsed.filter((c) => c.type && section.types.includes(c.type));
+	const items = commits.filter(
+		(commit) => commit.type !== null && section.types.includes(commit.type),
+	);
 	if (items.length === 0) continue;
 	lines.push(`## ${section.title}`, "");
 	for (const commit of items) lines.push(bullet(commit));
