@@ -58,6 +58,13 @@ export const Segmented = <T extends string>({
 					accessibilityRole={ROLE.radio}
 					accessibilityLabel={option.label}
 					accessibilityState={state({ selected, disabled })}
+					// react-native-web does not read `accessibilityState`, so on the web
+					// build a radio with only that had no checked state at all and a
+					// screen reader could not tell which value was chosen (measured:
+					// `aria-checked` was absent, before and after a click). `aria-checked`
+					// is the ARIA state for role=radio; native ignores it in favour of the
+					// state above, so the two are written together, not chosen between.
+					aria-checked={selected}
 					disabled={disabled}
 					testID={option.testID}
 					onPress={() => onChange(option.value)}

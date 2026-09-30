@@ -12,6 +12,7 @@ import {
 
 import { CONTROL, ROLE } from "@/ui/a11y";
 import { useReducedMotion, useTokenColor } from "@/ui/appearance";
+import { Heading } from "@/ui/components/heading";
 import { IconButton } from "@/ui/components/icon-button";
 import { useShadow } from "@/ui/elevation";
 import { effectiveDuration, parseCubicBezier } from "@/ui/motion";
@@ -139,12 +140,9 @@ export const Sheet = ({
 					}}
 				>
 					<View className="flex-row items-center gap-2 px-4 py-3">
-						<Text
-							className="flex-1 text-title text-ink"
-							accessibilityRole={ROLE.header}
-						>
+						<Heading level={2} className="flex-1 text-title text-ink">
 							{title}
-						</Text>
+						</Heading>
 						<IconButton
 							accessibilityLabel="Close"
 							testID={CONTROL.sheetClose}

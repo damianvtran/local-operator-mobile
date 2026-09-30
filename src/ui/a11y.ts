@@ -55,6 +55,7 @@ export const SCREEN = {
 	past: "past-sessions-screen",
 	newSession: "new-session-screen",
 	settings: "settings-screen",
+	notFound: "not-found-screen",
 } as const;
 
 /**
@@ -73,6 +74,7 @@ export const EMPTY = {
 	past: "past-empty",
 	newSession: "new-session-empty",
 	settingsConnection: "settings-connection-empty",
+	notFound: "not-found-empty",
 } as const;
 
 /**
@@ -91,6 +93,7 @@ export const CONTROL = {
 	welcomeContinue: "welcome-continue",
 	sessionsNew: "sessions-new",
 	sessionsSettings: "sessions-settings",
+	notFoundHome: "not-found-home",
 
 	// The back affordance each pushed screen puts in its header. Named per screen
 	// because two screens are on the navigation stack at once during a transition.

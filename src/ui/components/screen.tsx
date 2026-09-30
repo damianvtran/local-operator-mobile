@@ -1,8 +1,8 @@
 import type { ReactNode } from "react";
-import { ScrollView, Text, View } from "react-native";
+import { ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { ROLE } from "@/ui/a11y";
+import { Heading } from "@/ui/components/heading";
 
 /**
  * A screen: the canvas ground, the safe-area insets, and an opaque header
@@ -55,13 +55,13 @@ export const Screen = ({
 		>
 			<View className="h-14 flex-row items-center gap-2 px-4">
 				{headerLeading}
-				<Text
+				<Heading
+					level={1}
 					className="flex-1 text-display text-ink"
-					accessibilityRole={ROLE.header}
 					numberOfLines={1}
 				>
 					{title}
-				</Text>
+				</Heading>
 				{headerAction}
 			</View>
 			{scroll ? (

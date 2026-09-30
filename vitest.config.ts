@@ -19,14 +19,23 @@ export default defineConfig({
 		environment: "node",
 		include: ["src/**/*.test.ts", "scripts/**/*.test.ts"],
 		globals: false,
+		// react-native-web ships untranspiled ESM; Node must go through Vite for it.
+		server: { deps: { inline: [/react-native-web/] } },
 		// `github-actions` is the reporter's actual name, and the CI branch is real:
 		// the local shell has `CI` set, so a wrong name here fails every run rather
 		// than only the pipeline.
 		reporters: process.env.CI ? ["github-actions", "dot"] : ["default"],
 	},
 	resolve: {
-		alias: {
-			"@": fileURLToPath(new URL("./src", import.meta.url)),
-		},
+		alias: [
+			// Rendering a primitive in Node needs a `react-native` that is not Flow source:
+			// react-native-web is what the web target ships, so a test through it asserts
+			// the DOM a browser user actually gets. Pure-logic tests never import it.
+			{ find: /^react-native$/, replacement: "react-native-web" },
+			{
+				find: "@",
+				replacement: fileURLToPath(new URL("./src", import.meta.url)),
+			},
+		],
 	},
 });

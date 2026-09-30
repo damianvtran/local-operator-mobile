@@ -26,6 +26,12 @@ const BrandMark = ({ size, color }: { size: number; color: string }) => (
 		// Decorative here: the headline below carries the meaning, and a screen
 		// reader announcing "image" before it would be noise.
 		accessibilityElementsHidden
+		// `aria-hidden` is what hides it on the WEB build: react-native-web copies
+		// `importantForAccessibility` onto the <svg> verbatim as an attribute no
+		// assistive technology reads, so the decorative mark was announced as an
+		// unnamed graphic on every empty state. The two native props stay for
+		// device screen readers.
+		aria-hidden
 		importantForAccessibility="no"
 	>
 		<Circle cx={490} cy={355} r={78} stroke={color} strokeWidth={35} />

@@ -2,6 +2,7 @@ import { spawnSync } from "node:child_process";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 /**
@@ -10,15 +11,14 @@ import { describe, expect, it } from "vitest";
  * properties. `tsconfig.tools.json` turns that into a compile error with
  * `erasableSyntaxOnly`.
  *
- * A config flag is easy to delete without anyone noticing what it guarded (a CI
- * branch once removed it after mistaking an older `tsc`'s TS5023 for a defect in
- * the pinned one), so this test exercises the gate itself: it asks the pinned
- * compiler to check a file containing each construct, through the real tools
- * config, and requires the rejection. It fails if the flag is removed, and it
- * fails if the resolved compiler stops supporting it.
+ * A config flag is easy to delete without anyone noticing what it guarded, so
+ * this test exercises the gate itself: it asks the pinned compiler to check a
+ * file containing each construct, through the real tools config, and requires the
+ * rejection. It fails if the flag is removed, and it fails if the resolved
+ * compiler stops supporting it.
  */
 
-const root = new URL("../", import.meta.url).pathname;
+const root = fileURLToPath(new URL("../", import.meta.url));
 const tsc = join(root, "node_modules/.bin/tsc");
 
 /** Decorators are not covered by the flag; Node itself rejects them as a syntax

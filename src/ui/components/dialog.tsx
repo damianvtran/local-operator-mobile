@@ -3,6 +3,7 @@ import { Modal, Pressable, Text, View } from "react-native";
 import { CONTROL, ROLE } from "@/ui/a11y";
 import { useTokenColor } from "@/ui/appearance";
 import { Button } from "@/ui/components/button";
+import { Heading } from "@/ui/components/heading";
 import { useShadow } from "@/ui/elevation";
 import { DIALOG_SURFACE_CLASS } from "@/ui/variants";
 
@@ -63,9 +64,9 @@ export const Dialog = ({
 					onPress={onCancel}
 				/>
 				<View className={DIALOG_SURFACE_CLASS} style={{ ...shadow }}>
-					<Text className="text-title text-ink" accessibilityRole={ROLE.header}>
+					<Heading level={2} className="text-title text-ink">
 						{title}
-					</Text>
+					</Heading>
 					<Text className="mt-2 text-body-sm text-ink-muted">{body}</Text>
 					<View className="mt-4 flex-row justify-end gap-2">
 						<Button

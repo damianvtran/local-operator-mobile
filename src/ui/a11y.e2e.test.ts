@@ -1,5 +1,6 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import { CONTROL, EMPTY, isKnownIdentifier, SCREEN } from "@/ui/a11y";
@@ -14,7 +15,7 @@ import { CONTROL, EMPTY, isKnownIdentifier, SCREEN } from "@/ui/a11y";
  * internally consistent. This test reads the flows themselves.
  */
 
-const root = new URL("../../", import.meta.url).pathname;
+const root = fileURLToPath(new URL("../../", import.meta.url));
 const flowsDir = join(root, "e2e/maestro");
 
 const walk = (dir: string): string[] =>

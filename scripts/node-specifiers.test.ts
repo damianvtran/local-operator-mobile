@@ -1,5 +1,6 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 /**
@@ -14,7 +15,7 @@ import { describe, expect, it } from "vitest";
  * `src/` are resolved at run time by the hook in `scripts/lib/load-src.ts`.
  */
 
-const dir = new URL(".", import.meta.url).pathname;
+const dir = fileURLToPath(new URL(".", import.meta.url));
 
 const walk = (folder: string): string[] =>
 	readdirSync(folder).flatMap((name) => {

@@ -19,6 +19,7 @@ export { Chip } from "@/ui/components/chip";
 export { Dialog } from "@/ui/components/dialog";
 export { Divider } from "@/ui/components/divider";
 export { EmptyState } from "@/ui/components/empty-state";
+export { Heading } from "@/ui/components/heading";
 export { IconButton } from "@/ui/components/icon-button";
 export { Input } from "@/ui/components/input";
 export { ListRow } from "@/ui/components/list-row";

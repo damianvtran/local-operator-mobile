@@ -2,7 +2,13 @@ import { Text, View } from "react-native";
 
 import { CONTROL, EMPTY, SCREEN } from "@/ui/a11y";
 import { useTheme } from "@/ui/appearance";
-import { Divider, EmptyState, Screen, Segmented } from "@/ui/components";
+import {
+	Divider,
+	EmptyState,
+	Heading,
+	Screen,
+	Segmented,
+} from "@/ui/components";
 
 /**
  * Settings (docs/ux/flows.md F-10): connection, theme, diagnostics, sign out.
@@ -21,9 +27,9 @@ export default function Settings() {
 	return (
 		<Screen title="Settings" testID={SCREEN.settings}>
 			<View className="gap-3">
-				<Text className="text-heading text-ink" accessibilityRole="header">
+				<Heading level={2} className="text-heading text-ink">
 					Appearance
-				</Text>
+				</Heading>
 				<Segmented
 					label="Theme"
 					testID={CONTROL.settingsTheme}
@@ -47,9 +53,9 @@ export default function Settings() {
 			</View>
 
 			<View className="gap-3">
-				<Text className="text-heading text-ink" accessibilityRole="header">
+				<Heading level={2} className="text-heading text-ink">
 					Connection
-				</Text>
+				</Heading>
 				<EmptyState
 					headline="Not connected."
 					next="Your computers, the route you are on, and signing out appear here."
