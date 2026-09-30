@@ -30,7 +30,7 @@ What the app has to do, in the order the constraint binds:
    is not the tunnel origin and forwards a per-request assertion
    (`~/radient-ml/agent-server/edge/tunnel-worker/src/index.ts:122-131`, `:246-259`),
    and the relay itself rejects a cross-origin mutation
-   (`~/local-operator/local_operator/mobile/daemon.py:2334-2355`).
+   (`~/local-operator/local_operator/mobile/daemon.py:2335-2355`).
 3. **Do browser-based sign-in**, because the identity providers behind Radient
    (Google, Microsoft) block embedded WebViews — sign-in must run in the system
    browser session (`ASWebAuthenticationSession` on iOS, Chrome Custom Tabs on
@@ -101,7 +101,7 @@ Against the criteria:
 - **C3** — Tailwind-for-React-Native is a solved, competitive space on this stack
   (see the styling decision below).
 - **C4** — highest of any option: the protocol types, the SSE reconnect wrapper
-  (`web/src/store.ts:109-160`), the defensive normalisation (`store.ts:57-71`) and
+  (`web/src/store.ts:107-160`), the defensive normalisation (`store.ts:44-58`) and
   the markdown/tool-row renderers are all TypeScript already.
 - **C5** — first-party modules: `expo-web-browser` (`openAuthSessionAsync` →
   `ASWebAuthenticationSession` on iOS, Custom Tabs on Android),
