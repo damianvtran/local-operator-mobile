@@ -1,6 +1,6 @@
 DRAFT — not submitted. Remove this line before uploading to a store.
 
-Local Operator drives the agent sessions running on your computer.
+Local Operator on your phone drives the agent sessions running on your computer.
 
 You start work on your machine. Then you leave the desk. This app is how you keep the work going: it shows you what each session is doing and lets you answer it.
 
