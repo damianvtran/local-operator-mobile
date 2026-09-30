@@ -18,10 +18,10 @@
  *   5. `fixtures/relay/*.json`               — captured responses from an
  *                                              isolated daemon (see README).
  *
- * Citations are `file:line` against local-operator **`52c1df35`** — read them with
- * `git show 52c1df35:<path>`, never from the shared checkout's working tree,
- * which currently carries another session's staged, partially-reverted
- * `local_operator/mobile/daemon.py` (3,696 lines in the tree vs 5,278 at HEAD),
+ * Citations are `file:line` against local-operator **`fc851a94e`** — read them with
+ * `git show fc851a94e:<path>`, never from the shared checkout's working tree,
+ * which carries another session's staged, partially-reverted
+ * `local_operator/mobile/daemon.py` (3,696 lines in the tree vs 5,381 at HEAD),
  * so tree line numbers are wrong for every daemon citation here.
  *
  * TWO RULES THAT APPLY TO EVERY DECLARATION BELOW:
@@ -45,7 +45,7 @@
 
 /** `types.py:523-542`. The unknown-kind path is deliberate: a client that does
  *  not know a newer kind must render it as *something* (the web client renders
- *  `reasoning` and unknown kinds as nothing — `web/src/transcript.tsx:258-259`),
+ *  `reasoning` and unknown kinds as nothing — `web/src/transcript.tsx:259-260`),
  *  never crash. */
 export type EntryKind =
   | "user"
@@ -178,7 +178,7 @@ export interface TodoPhase {
 
 /** One roster row (`types.py:636-677`). `transcript`/`todos` are ALWAYS empty in
  *  the aggregate projection — the relay strips them and serves them only for the
- *  active route (`daemon.py:2330-2340`); fetch them from the subagent detail
+ *  active route (`daemon.py:2380-2390`); fetch them from the subagent detail
  *  route. */
 export interface SubagentRow {
   job_id: string;
@@ -208,7 +208,7 @@ export interface SubagentRow {
 }
 
 /** `GET /api/sessions/{id}/agents/{job_id}` returns the cached FULL detail plus
- *  the epoch it was captured at (`daemon.py:2318`, `web/src/types.ts:178-180`). */
+ *  the epoch it was captured at (`daemon.py:2368`, `web/src/types.ts:178-180`). */
 export interface SubagentDetail extends SubagentRow {
   version: number;
 }
@@ -248,11 +248,11 @@ export interface PendingRequest {
 /* ----------------------------------------------------------------- attention */
 
 /** The completion-attention record, read from the shared `AttentionStore` and
- *  attached to every projection frame (`daemon.py:1790`; `web/src/types.ts:206-213`).
+ *  attached to every projection frame (`daemon.py:1825`; `web/src/types.ts:206-213`).
  *
  *  This is how a client learns a turn ENDED and whether it was seen — transcript
  *  activity and heartbeat freshness are explicitly NOT the signal
- *  (`daemon.py:1003-1006`). */
+ *  (`daemon.py:1034-1037`). */
 export interface CompletionAttention {
   /** `session/<session_id>`. */
   conversation_id: string;
@@ -265,9 +265,9 @@ export interface CompletionAttention {
   /** `[revision, ...]` — the store's own revision counter; not a projection
    *  epoch. */
   revision: [number, number];
-  /** Present on captured frames: `reason`, `cause`, `notify` (`daemon.py:1822-1855`).
+  /** Present on captured frames: `reason`, `cause`, `notify` (`daemon.py:1857-1890`).
    *  `cause` is what `is_deliberate_cause` reads to tell a deliberate stop from a
-   *  cut-off (`daemon.py:1835-1837`). */
+   *  cut-off (`daemon.py:1870-1872`). */
   reason?: string;
   cause?: string;
   notify?: boolean;
@@ -280,7 +280,7 @@ export interface CompletionAttention {
 export interface SessionProjection {
   session_id: string;
   /** The runtime's pid, or **0** on a durable rebuild with no live process
-   *  (observed live: `fixtures/relay/sse-projection-durable-after-death.json`). */
+   *  (observed live: `fixtures/relay/sse/sse-projection-durable-after-death.json`). */
   pid: number;
   kind: string;
   conversation_name: string;
@@ -308,13 +308,21 @@ export interface SessionProjection {
   cut_off: boolean;
   /** User messages waiting for the turn boundary (`types.py:855`). */
   queued_count: number;
-  /** Process gone; history still resumable. **Never observed as `true` over the
-   *  relay** — see `contract.md` §6.5 and §8.2. Use the list row's `section`. */
+  /** Process gone; history still resumable. **Round 1 of this draft said this
+   *  was never published `true` — that was correct at `52c1df35` and is wrong
+   *  now.** #1784 (`fc851a94e`) sets it on the durable rebuild a caller built
+   *  from a PROVED death (`daemon.py:2603,2647,2773`), and every live frame
+   *  clears it (`daemon.py:1668`). `fixtures/relay/sse/sse_projection_ended.json`
+   *  is a captured `ended: true` frame with `pid: 0`;
+   *  `sse-projection-durable-after-death.json` is the same event at the old ref,
+   *  where it read `false`. */
   ended: boolean;
-  /** Record fresh but the control socket is unreachable. **Never observed as
-   *  `true` over the relay** — the daemon tracks this on its own entry
-   *  (`daemon.py:2554`) but only ever writes `false` into a published frame.
-   *  `subagents_running: null` on the list row is the honest signal. */
+  /** Record fresh but the control socket is unreachable. Mirrored from the
+   *  entry onto the payload peers are served (`_mirror_dial_health`,
+   *  `daemon.py:2030`, called on a failed dial and on a dropped reader), and
+   *  cleared by the next live frame (`daemon.py:1667`). The `wedged` scan
+   *  branch raises it on the *entry* (`daemon.py:2619-2620`), which is what the
+   *  summary row reads; the payload mirror follows a dial/reader failure. */
   degraded: boolean;
   /** The render tail: at most `PROJECTION_TRANSCRIPT_LIMIT = 80` entries, with
    *  the conversation's opening user message pinned at the head
@@ -346,7 +354,7 @@ export interface SessionProjection {
   /** The projection epoch. Drop a repaint whose `version` is lower inside one
    *  fenced source; re-seed without comparison on reconnect (`contract.md` §6.5). */
   version: number;
-  /** Attached by the relay on every published frame (`daemon.py:1790`). */
+  /** Attached by the relay on every published frame (`daemon.py:1825`). */
   attention: CompletionAttention;
 }
 
@@ -354,7 +362,7 @@ export interface SessionProjection {
 
 /** One row of the list. Section is the SHARED `active` rule, not "a live entry
  *  exists" — a durable-only conversation with an unseen completion is Active on
- *  every surface (`daemon.py:929-935`, `daemon.py:351-463`). */
+ *  every surface (`daemon.py:958-964`, `daemon.py:351-463`). */
 export interface SessionSummary {
   session_id: string;
   section: "active" | "previous";
@@ -367,35 +375,48 @@ export interface SessionSummary {
   streaming: boolean;
   needs_attention: boolean;
   /** A turn finished while nobody was viewing the session and it has not been
-   *  opened since. Cleared by `POST /seen` (`daemon.py:1006`). */
+   *  opened since. Cleared by `POST /seen` (`daemon.py:1037`). */
   unseen: boolean;
   pending_kind: "approval" | "ask" | "";
   /** The runtime's own phrase while it is draining after a signal. RANKED, not
-   *  drawn: mark from this rather than from the counts (`daemon.py:944-953`). */
+   *  drawn: mark from this rather than from the counts (`daemon.py:973-982`). */
   leaving: string;
   /** The build pair while an idle runtime swaps to the build on disk — alive and
-   *  accepting messages that will run (`daemon.py:955-961`). */
+   *  accepting messages that will run (`daemon.py:984-990`). */
   updating: string;
   /** **`null` = "not reported", never `0`.** The relay reports `null` for a row
    *  it cannot vouch for (degraded dial, stale heartbeat, leaving runtime) — so
-   *  a client hides both marks on `null` (`daemon.py:974-991`). */
+   *  a client hides both marks on `null` (`daemon.py:1003-1020`). */
   subagents_running: number | null;
   subagents_queued: number | null;
-  /** Open todos: `pending` + `blocked` (`daemon.py:992-997`). */
+  /** The daemon's receipt that this session's PROCESS IS GONE: the conversation
+   *  is over and its history stays resumable (`daemon.py:906-914,1021`). True
+   *  only for an end THIS daemon observed — a durable-only row reports `false`,
+   *  measured in `fixtures/relay/probes/durable-only-row.json`, and that `false`
+   *  is "not observed to end", never "running". Absent on a relay older than
+   *  `fc851a94e`; read absence exactly like `unseen`'s — as `false`. */
+  ended?: boolean;
+  /** The relay's own dial to this session is down: record fresh, socket
+   *  unreachable, so nothing the row shows is being confirmed right now
+   *  (`daemon.py:906-914,1022`). Measured to fire ~48 s into a frozen runtime
+   *  (`fixtures/relay/probes/degraded-row-signal.json`); it is cleared by the
+   *  next live frame, so clear the affordance on the flag, not on a timer. */
+  degraded?: boolean;
+  /** Open todos: `pending` + `blocked` (`daemon.py:1023-1028`). */
   todos_open: number;
   mtime: number;
   /** The same value the rank used, so wire and order cannot disagree about a
-   *  row's birth (`daemon.py:998-1002`). */
+   *  row's birth (`daemon.py:1029-1033`). */
   created_at: number;
   /** The attention record's `kind` for this conversation (`""` when none). */
   completion_kind: string;
 }
 
-/** Capabilities ride the SAME list frames (`daemon.py:3410-3443`): one answer,
+/** Capabilities ride the SAME list frames (`daemon.py:3485-3518`): one answer,
  *  two transports. `features` is the lifted feature-flag dict; an absent key
  *  means "this build does not have it", never an error. `stt` decides whether a
  *  phone shows a mic — an OLD relay omits the whole object, and absence reads
- *  exactly like `available: false` (`web/src/types.ts:425-439`). */
+ *  exactly like `available: false` (`web/src/types.ts:437-451`). */
 export interface SttCapability {
   available: boolean;
   path: string | null;
@@ -408,7 +429,7 @@ export interface Capabilities {
 }
 
 /** The payload of `GET /api/sessions` and of every `sessions` SSE frame —
- *  byte-identical by construction (`daemon.py:3410-3443`). */
+ *  byte-identical by construction (`daemon.py:3485-3518`). */
 export interface SessionListFrame {
   sessions: SessionSummary[];
   /** Degradation markers for the DURABLE half of the listing, not for a
@@ -422,14 +443,14 @@ export interface SessionListFrame {
 /* ------------------------------------------------------------- side payloads */
 
 /** `GET /api/sessions/past`. `forked` marks a fork still wearing its parent's
- *  title — otherwise byte-identical to the parent row (`daemon.py:4668-4702`). */
+ *  title — otherwise byte-identical to the parent row (`daemon.py:4756-4790`). */
 export interface PastSession {
   id: string;
   name: string;
   mtime: number;
   forked: boolean;
   /** Present only on search results: the row matched on what was SAID, not on
-   *  its name/id (`daemon.py:4705-4751`). */
+   *  its name/id (`daemon.py:4793-4839`). */
   body_match?: boolean;
 }
 
@@ -448,7 +469,7 @@ export interface HistoryResponse {
   has_more: boolean;
 }
 
-/** `GET /api/commands` (`daemon.py:3228-3250`). TUI chrome (`exit`, `quit`,
+/** `GET /api/commands` (`daemon.py:3303-3325`). TUI chrome (`exit`, `quit`,
  *  `clear`) is excluded because it is meaningless on a phone. */
 export interface SlashCommand {
   name: string;
@@ -459,8 +480,8 @@ export interface SlashCommand {
 
 /** One row of `GET /api/models`. **The array order IS the ranking** (direct
  *  providers first, newest version first, aggregators last) — re-sorting or
- *  regrouping throws that away (`daemon.py:4958-4999`,
- *  `web/src/types.ts:352-387`). */
+ *  regrouping throws that away (`daemon.py:5046-5087`,
+ *  `web/src/types.ts:364-399`). */
 export interface ModelEntry {
   selector: string;
   provider: string;
@@ -475,8 +496,8 @@ export interface ModelEntry {
   aggregated?: boolean;
 }
 
-/** `GET /api/directories` (`daemon.py:4262-4271`). `tmp` is the RESOLVED temp
- *  dir, which the start gate also compares against (`daemon.py:4754-4774`). */
+/** `GET /api/directories` (`daemon.py:4350-4359`). `tmp` is the RESOLVED temp
+ *  dir, which the start gate also compares against (`daemon.py:4842-4862`). */
 export interface Directories {
   home: string;
   recent: string[];
@@ -485,7 +506,7 @@ export interface Directories {
 
 /* --------------------------------------------------------------- command ops */
 
-/** A pasted/dropped image on the wire (`web/src/types.ts:412-416`). */
+/** A pasted/dropped image on the wire (`web/src/types.ts:424-428`). */
 export interface PromptImage {
   data_b64: string;
   mime_type: string;
@@ -494,7 +515,7 @@ export interface PromptImage {
 /** How a message was produced (mobile STT). Sent explicitly by clients that
  *  compute it; ABSENT is the legacy reading — a producer that did not know the
  *  vocabulary. The relay forwards it only to an owner that advertised the
- *  capability (`daemon.py:2786-2793`, `types.py:82-107`). */
+ *  capability (`daemon.py:2861-2868`, `types.py:82-107`). */
 export type InputMode = "typed" | "dictated" | "mixed";
 
 /** The body of `POST /api/sessions/{id}/command`. The `op` field is popped and
@@ -504,7 +525,7 @@ export type InputMode = "typed" | "dictated" | "mixed";
  *  Ops the relay accepts from HTTP and their exact required fields: */
 export type CommandOp =
   /** Durable, idempotent user turn. `command_id` must be a UUID and is
-   *  MANDATORY over HTTP (`daemon.py:3864-3869`). `text` may be empty only when
+   *  MANDATORY over HTTP (`daemon.py:3952-3957`). `text` may be empty only when
    *  an image carries data. */
   | {
       op: "prompt";
@@ -535,17 +556,17 @@ export type CommandOp =
   | { op: "set_effort"; effort: string }
   /** The off-terminal subset of slash commands. Many are refused with
    *  `422 "<name> is terminal-only here"` — use `slash_result` for the routed
-   *  form (`web/src/types.ts:456-463`). */
+   *  form (`web/src/types.ts:468-475`). */
   | { op: "slash"; command: string; args: string }
   /** The ROUTED slash op (authority-bearing; may be refused with
    *  `AUTHORITY_REFUSAL_CODES`). Answers with the command's typed outcome. */
   | { op: "slash_result"; command: string; args: string; images?: PromptImage[] }
   /** REFUSED over the relay: `422 "start a new session from the session list"`
-   *  (live `fixtures/relay/op-new-conversation.json`). Use
+   *  (live `fixtures/relay/http/op-new-conversation.json`). Use
    *  `POST /api/sessions/start`. */
   | { op: "new_conversation" }
   /** REFUSED over the relay: `422 "pick the session from the session list
-   *  instead"` (live `fixtures/relay/op-resume-session.json`). Use
+   *  instead"` (live `fixtures/relay/http/op-resume-session.json`). Use
    *  `POST /api/sessions/resume`. */
   | { op: "resume_session"; session_id: string }
   | {
@@ -571,7 +592,7 @@ export type CommandOp =
 /** A command body plus the optional stage-D signature fields. The relay DROPS
  *  `operator_cap` from any HTTP body (it mints its own when it is the spawner),
  *  and ADMITS these three — a signature over a challenge this runtime minted for
- *  this connection, action and request id (`daemon.py:3817-3850`). */
+ *  this connection, action and request id (`daemon.py:3905-3938`). */
 export type SignedCommand = CommandOp & {
   operator_sig?: string;
   operator_key_id?: string;
@@ -592,7 +613,7 @@ export interface CommandAck {
  *  only where the client must DECIDE rather than display — the authority
  *  refusals (`operator_authority_required`, `operator_authority_unconfigured`),
  *  the superseded completion token, `stt_unavailable`, and the project route's
- *  typed refusals (`daemon.py:3936-3950, 3582-3588, 4390-4394, 4441-4447`). */
+ *  typed refusals (`daemon.py:4024-4038, 3582-3588, 4390-4394, 4441-4447`). */
 export interface ApiError {
   error: string;
   code?: string;

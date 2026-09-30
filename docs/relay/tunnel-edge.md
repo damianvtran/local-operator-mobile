@@ -8,10 +8,10 @@ different errors, and one behaviour that shapes the whole SSE client — the
 
 Provenance:
 
-- **local-operator** citations are `file:line` against **`52c1df35`**
+- **local-operator** citations are `file:line` against **`fc851a94e`**
   (`local_operator/tunnels/gateway.py` → `gateway.py`), read with
-  `git show 52c1df35:<path>`. Read the ref, not the shared checkout's working
-  tree: it currently carries another session's staged, partially-reverted
+  `git show fc851a94e:<path>`. Read the ref, not the shared checkout's working
+  tree: it carries another session's staged, partially-reverted
   `local_operator/mobile/daemon.py`, so tree line numbers are wrong.
 - **Radient** citations are `radient-ml:<path>:<line>`, meaning
   `~/radient-ml/agent-server/<path>`; the edge worker is
@@ -321,7 +321,7 @@ code or vendor documentation.**
 | Cloudflare error **1033** (typically HTTP **530**) | No healthy `cloudflared` instance — the machine is asleep, the connector is stopped, or the job is not loaded ([Cloudflare: error 1033](https://developers.cloudflare.com/support/troubleshooting/http-status-codes/cloudflare-1xxx-errors/error-1033/)). local-operator records this exact field failure, ~7 h of it, while the connector was simply not running (`local_operator/launchd.py:738-746`) | **"Your computer is offline"** with the machine-side remedy; poll with backoff; never re-auth |
 | Cloudflare **502** "Unable to reach the origin service" | The connector is up but the local gateway is not listening/crashed ([Cloudflare common errors](https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/troubleshoot-tunnels/common-errors/)) | Same "offline" family, different copy: the tunnel is running but the local relay isn't answering — a local, fixable fault |
 | DNS failure after a tunnel is suspended or revoked | The control plane replaces ingress with `http_status:404` and **deletes the DNS records** (`radient-ml:internal/tunnels/cloudflare.go:152-163,287-295`) | "This tunnel no longer exists" + a console link. Terminal; do not retry |
-| SSE buffered / not streaming | Cloudflare proxies buffer unless the origin sets `Content-Type: text/event-stream` ([Cloudflare common errors](https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/troubleshoot-tunnels/common-errors/)); the relay does set it (`daemon.py:3505`) | If frames arrive in bursts, suspect a proxy on the path — but on the supported path this should not happen |
+| SSE buffered / not streaming | Cloudflare proxies buffer unless the origin sets `Content-Type: text/event-stream` ([Cloudflare common errors](https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/troubleshoot-tunnels/common-errors/)); the relay does set it (`daemon.py:3593`) | If frames arrive in bursts, suspect a proxy on the path — but on the supported path this should not happen |
 
 ### 5.2 The edge worker (bodies are `text/plain; charset=utf-8`)
 

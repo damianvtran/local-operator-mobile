@@ -23,7 +23,13 @@ wrong wire.
 Read [`../../docs/relay/contract.md`](../../docs/relay/contract.md) for what each
 sample means; this file is only about provenance and reproduction.
 
-The tree is currently **96 fixtures — 92 live, 4 synthetic** — plus this README.
+The tree is currently **102 fixtures — 98 live, 4 synthetic** — plus this README.
+
+**Two refs are represented, deliberately.** The bulk of the live captures were
+taken at local-operator `52c1df35`; the session-state receipts (`ended`,
+`degraded`) were added by #1784, so the captures that show them are taken at
+`fc851a94e`. Each file's `provenance.relay_ref` names its own, and no capture was
+restamped to look newer than it is.
 
 ## Provenance
 
@@ -112,6 +118,9 @@ pending-approval frame.
 | `operator-challenge-bad-action.json`, `operator-challenge-unknown-session.json` | `POST …/operator/challenge` | 422 / 409 | |
 | `pair-no-code.json`, `pair-bad-spki.json`, `pair-status-unknown-device.json`, `pair-status-bad-id.json` | `POST /api/pair`, `GET /api/pair/{id}` | 403 / 200 | |
 | `transcribe-missing-audio.json`, `transcribe-bad-mime.json`, `transcribe-413-declared.json` | `POST /api/transcribe` | 422 / 413 | the 413 was produced by declaring a 30 MB `Content-Length` on a raw socket |
+| `provenance` | object | **required in every fixture** — `kind` (`live`/`synthetic`), `relay_ref`, `captured_at`/`how` for live, `modelled_on`/`why` for synthetic. The in-file field, not the path, is the authority |
+| `list_row_live.json` | `GET /api/sessions` | 200 | the "before" sample for the ended pair: a running session's row (`ended: false`, `subagents_running: 0`) |
+| `list_row_ended.json` | `GET /api/sessions` | 200 | the same row ~8 s after its runtime was SIGKILLed: **`ended: true`**, `subagents_running: null`, and `section: "active"` because the completion is still unseen |
 | `projects-empty.json` | `GET /api/projects` | 200 | |
 | `mark-png.json` | `HEAD /mark.png` | 200 | the brand asset, deliberately unauthenticated |
 | `command-set-effort-bad.json`, `command-set-model-unknown.json`, `command-slash-unknown.json` | `POST …/command` | 422 / 200 / 422 | three refusals a model sheet and a slash sheet must render |
@@ -129,6 +138,7 @@ pending-approval frame.
 | `sse-projection-queued-steer.json` | `projection` | `queued_count: 1`, a `steer` row, and the tool skipped by steering |
 | `sse-projection-durable-after-death.json` | `projection` | the final frame after the runtime was SIGKILLed: `pid: 0`, `ended: false` — see the contract's §6.5 warning |
 | `sse-attention-complete.json` | — | the `attention` object of a completed turn |
+| `sse_projection_ended.json` | — | the frame published after a runtime was SIGKILLed, at `fc851a94e`: **`pid: 0`, `ended: true`**, transcript folded from disk (compare `sse-projection-durable-after-death.json`, the same event at `52c1df35` where `ended` read `false`) |
 | `sse-keepalive.json` | — | the literal keep-alive bytes in its `literal` field (`": keepalive\n\n"`), kept as a string so the sample stays byte-exact while still carrying a provenance marker |
 
 ### Gateway constants (`gateway/`)
@@ -141,7 +151,10 @@ pending-approval frame.
 
 | File | Notes |
 | --- | --- |
-| `wedged-row-signal.json` | A 75-second poll of `GET /api/sessions` while the session runtime's process was frozen with `SIGSTOP`: the row's `subagents_running` goes `0` → `null` at the 45-second heartbeat timeout while `section` stays `active`. The measurement behind the contract's §6.5 rule that a stalled conversation is detected by a *field change*, not by a `degraded` flag |
+| `wedged-row-signal.json` | A 75-second poll of `GET /api/sessions` while the session runtime's process was frozen with `SIGSTOP` (**captured at `52c1df35`**): the row's `subagents_running` goes `0` → `null` at the 45-second heartbeat timeout while `section` stays `active`, and no flag exists to read. The measurement behind the rule that a stalled conversation on an *older* relay is detected by a field change |
+| `degraded-row-signal.json` | The same freeze **at `fc851a94e`**, where the receipt exists: counts `null` at ~45 s, `degraded: true` at ~48 s, staying true through 10 s after `SIGCONT` — so the flag is cleared by observing it go `false`, never by a timer |
+| `degraded-never-fires-unstamped.json` | The negative result that makes the receipt safe to rely on: a runtime frozen before it had ever reported a beat never reaches the wedged state, so `degraded` stays `false` **while the counts are already `null`**. "false + null" must not be read as healthy |
+| `durable-only-row.json` | One conversation read from the daemon that ran it, then from a second daemon on the same isolated home after the runtime was killed: the row is durable-only, and reports `ended: false`, `degraded: false` because nothing registered with that daemon — the relay refuses to infer an end it did not observe |
 
 ### Synthetic (`synthetic/`)
 

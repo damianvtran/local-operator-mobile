@@ -4,14 +4,19 @@ Everything the native client must do against the relay, derived from the code
 rather than from prose.
 
 > **Which tree these citations are against.** Every `file:line` in this document
-> is against local-operator **`52c1df35` (2026-09-29)**, reachable with
-> `git -C <local-operator> show 52c1df35:<path>`. Do **not** re-check them in the
-> shared checkout's working tree: another session currently has a staged,
-> partially-reverted `local_operator/mobile/daemon.py` there (3,696 lines in the
-> tree against 5,278 at `HEAD`), so a tree read returns wrong line numbers for
-> every daemon citation here. Nothing under `local_operator/mobile` or
-> `local_operator/tunnels` changed between `52c1df35` and `5bfff4a6`, so the same
-> numbers hold on current `origin/main`; fetch before trusting a tracking ref.
+> is against local-operator **`fc851a94e` (2026-09-30)** — the merge of #1784,
+> which added the session-state receipts (§3.2, §6.5) — reachable with
+> `git -C <local-operator> show fc851a94e:<path>`. Do **not** re-check them in the
+> shared checkout's working tree: it carries another session's staged,
+> partially-reverted `local_operator/mobile/daemon.py` (3,696 lines in the tree
+> against 5,381 at `HEAD`), so a tree read returns wrong line numbers for every
+> daemon citation here. Fetch before trusting a tracking ref.
+>
+> **Ref-pinned, and relocated once.** Round 1 of this document cited `52c1df35`;
+> every citation was then re-resolved to `fc851a94e` by line map, and each one
+> checked to land on a line whose text is byte-identical across the two refs, so
+> nothing changed meaning in the move. An older copy of this file carries the old
+> numbers.
 
 Paths are relative to the local-operator repository root:
 `local_operator/mobile/daemon.py` → `daemon.py`; `local_operator/mobile/web/src/api.ts`
@@ -35,7 +40,7 @@ Provenance of every claim is one of:
 | Default port | `4098` (`DEFAULT_PORT`), overridable with `--port`; the operator's install owns 4098 via its supervisor | `daemon.py:114`, `cli.py:621-623` |
 | Real-time channel | **HTTP + SSE only, and snapshots/repaints only — no WebSocket and no deltas, deliberately**: an identity proxy answers an unauthenticated request with a redirect, which a WebSocket handshake cannot follow | `docs/mobile.md` §Security invariants |
 | Protocol version | `5` — reported by `/healthz` as `version` | `types.py:66` (re-exported from `session/runtime/types.py`), live `fixtures/relay/http/healthz.json` |
-| Wire encoding | JSON, UTF-8. SSE frames use the `event:`/`data:` pair with a blank-line terminator | `daemon.py:4664-4665` |
+| Wire encoding | JSON, UTF-8. SSE frames use the `event:`/`data:` pair with a blank-line terminator | `daemon.py:4752-4753` |
 | Keep-alive | uvicorn `timeout_keep_alive=75` (SSE holds a connection open by design) | `service.py:94-95` |
 
 ### 1.1 The three auth rules every client must implement
@@ -48,17 +53,17 @@ Provenance of every claim is one of:
 2. **Login is a form POST, and it 303s.** `POST /login` with
    `application/x-www-form-urlencoded` body `password=<password>` → `303` to `/`
    with `Set-Cookie`. Wrong password → `401` **HTML**, not JSON. — code
-   `daemon.py:3349-3372`; live `fixtures/relay/http/login-success.json`,
+   `daemon.py:3424-3447`; live `fixtures/relay/http/login-success.json`,
    `login-wrong-password.json`
 3. **Failure shape splits by audience.** An unauthenticated `/api/*` request gets
    `401 {"error": "authentication required"}`; any other path gets `303` to
    `/login`. A native client must therefore never treat "got HTML back" as a
-   transport bug — it is the login redirect. — code `daemon.py:3307-3322`; live
+   transport bug — it is the login redirect. — code `daemon.py:3382-3397`; live
    `fixtures/relay/http/unauth-api-sessions.json`, `unauth-index.json`
 
 Cookie attributes: `HttpOnly`, `SameSite=Lax`, `Path=/`, `Max-Age=2592000`;
 `Secure` **only** when the request arrived over TLS (the tunnel case), because
-plain-loopback first-run must still be able to set it. — `daemon.py:3362-3371`,
+plain-loopback first-run must still be able to set it. — `daemon.py:3437-3446`,
 live `fixtures/relay/http/login-success.json`.
 
 > **Native-client consequence.** `HttpOnly` is irrelevant off-browser, but
@@ -75,12 +80,12 @@ Every non-`GET/HEAD/OPTIONS` request is checked before anything else:
 - `Sec-Fetch-Site: cross-site` → same `403`;
 - **no `Origin` header at all is allowed** — which is what lets a native client
   (and `curl`) mutate without inventing an `Origin`. — code
-  `daemon.py:3293-3310`; live `fixtures/relay/http/mutation-cross-origin.json` (`403`)
+  `daemon.py:3368-3385`; live `fixtures/relay/http/mutation-cross-origin.json` (`403`)
   and `command-no-origin-post.json` (`200`)
 
 ### 1.3 What the relay does *not* set
 
-`secure_cookie()` (`daemon.py:3324-3329`) sets `Cache-Control: no-store` and is
+`secure_cookie()` (`daemon.py:3399-3404`) sets `Cache-Control: no-store` and is
 **never called** — grep finds its definition only. Consequence, **verified live**:
 JSON API responses carry **no `Cache-Control` at all**
 (`fixtures/relay/http/sessions-empty.json` has no such header), so they are
@@ -89,54 +94,54 @@ the relay to forbid caching: set its own no-store policy for API responses.
 The routes that *do* set cache headers are the SSE streams
 (`no-cache, no-transform` plus `X-Accel-Buffering: no`), the image endpoint
 (`public, max-age=31536000, immutable`), and the SPA shell / mark / login page
-(`no-store`). — code `daemon.py:3393,3407,3507,3537,3799`
+(`no-store`). — code `daemon.py:3468,3407,3507,3537,3799`
 
 ---
 
 ## 2. Route table
 
-`build_app` at `daemon.py:3258`; the table itself at `daemon.py:4587-4637`.
+`build_app` at `daemon.py:3333`; the table itself at `daemon.py:4675-4725`.
 `auth` column: **gate** = the `gate()` split above; **public** = no cookie.
 
 | Method | Path | Auth | Handler |
 | --- | --- | --- | --- |
-| GET | `/healthz` | public | `daemon.py:3336-3342` |
-| GET | `/login` | public (redirects when authed) | `daemon.py:3344-3347` |
-| POST | `/login` | public | `daemon.py:3349-3372` |
-| GET | `/logout` | public | `daemon.py:3374-3381` |
-| GET | `/` | gate | `daemon.py:3396-3408` |
-| GET | `/assets/*` | **public** (StaticFiles mount) | `daemon.py:4645-4652` |
-| GET | `/mark.png` | public | `daemon.py:3383-3394` |
-| GET | `/api/sessions` | gate | `daemon.py:3445-3449` |
-| GET | `/api/sessions/events` | gate | SSE, `daemon.py:3514-3538` |
-| POST | `/api/sessions/start` | gate | `daemon.py:4151-4192` |
-| GET | `/api/sessions/past` | gate | `daemon.py:4273-4283` |
-| POST | `/api/sessions/resume` | gate | `daemon.py:4194-4235` |
-| GET | `/api/sessions/search` | gate | `daemon.py:4237-4260` |
-| GET | `/api/directories` | gate | `daemon.py:4262-4271` |
-| GET | `/api/sessions/{id}/events` | gate | SSE, `daemon.py:3451-3512` |
-| POST | `/api/sessions/{id}/seen` | gate | `daemon.py:3540-3594` |
-| POST | `/api/sessions/{id}/pin` | gate | `daemon.py:3596-3669` |
-| POST | `/api/sessions/{id}/command` | gate | `daemon.py:3802-3953` |
-| POST | `/api/sessions/{id}/operator/challenge` | gate | `daemon.py:3955-4029` |
-| GET | `/api/sessions/{id}/history` | gate | `daemon.py:3724-3759` |
-| GET | `/api/sessions/{id}/image` | gate | `daemon.py:3761-3800` |
-| GET | `/api/sessions/{id}/agents/{job_id}` | gate | `daemon.py:3671-3688` |
-| GET | `/api/sessions/{id}/agents/{job_id}/history` | gate | `daemon.py:3690-3722` |
-| POST | `/api/pair` | gate | `daemon.py:4031-4099` |
-| GET | `/api/pair/{device_id}` | gate | `daemon.py:4101-4143` |
-| GET | `/api/commands` | gate | `daemon.py:4145-4149` |
-| GET | `/api/models` | gate | `daemon.py:4285-4296` |
-| POST | `/api/transcribe` | gate | `daemon.py:4298-4420` |
-| GET | `/api/projects` | gate | `daemon.py:4449-4458` |
-| POST | `/api/projects` | gate | `daemon.py:4460-4475` |
-| GET | `/api/projects/{key}` | gate | `daemon.py:4477-4491` |
-| PATCH | `/api/projects/{key}` | gate | `daemon.py:4493-4510` |
-| DELETE | `/api/projects/{key}` | gate | `daemon.py:4512-4528` |
-| POST | `/api/projects/{key}/milestones` | gate | `daemon.py:4530-4542` |
-| DELETE | `/api/projects/{key}/milestones/{name}` | gate | `daemon.py:4544-4556` |
-| POST | `/api/projects/{key}/links` | gate | `daemon.py:4558-4570` |
-| DELETE | `/api/projects/{key}/links/{session_id}` | gate | `daemon.py:4572-4584` |
+| GET | `/healthz` | public | `daemon.py:3411-3417` |
+| GET | `/login` | public (redirects when authed) | `daemon.py:3419-3422` |
+| POST | `/login` | public | `daemon.py:3424-3447` |
+| GET | `/logout` | public | `daemon.py:3449-3456` |
+| GET | `/` | gate | `daemon.py:3471-3483` |
+| GET | `/assets/*` | **public** (StaticFiles mount) | `daemon.py:4733-4740` |
+| GET | `/mark.png` | public | `daemon.py:3458-3469` |
+| GET | `/api/sessions` | gate | `daemon.py:3520-3524` |
+| GET | `/api/sessions/events` | gate | SSE, `daemon.py:3602-3626` |
+| POST | `/api/sessions/start` | gate | `daemon.py:4239-4280` |
+| GET | `/api/sessions/past` | gate | `daemon.py:4361-4371` |
+| POST | `/api/sessions/resume` | gate | `daemon.py:4282-4323` |
+| GET | `/api/sessions/search` | gate | `daemon.py:4325-4348` |
+| GET | `/api/directories` | gate | `daemon.py:4350-4359` |
+| GET | `/api/sessions/{id}/events` | gate | SSE, `daemon.py:3526-3600` |
+| POST | `/api/sessions/{id}/seen` | gate | `daemon.py:3628-3682` |
+| POST | `/api/sessions/{id}/pin` | gate | `daemon.py:3684-3757` |
+| POST | `/api/sessions/{id}/command` | gate | `daemon.py:3890-4041` |
+| POST | `/api/sessions/{id}/operator/challenge` | gate | `daemon.py:4043-4117` |
+| GET | `/api/sessions/{id}/history` | gate | `daemon.py:3812-3847` |
+| GET | `/api/sessions/{id}/image` | gate | `daemon.py:3849-3888` |
+| GET | `/api/sessions/{id}/agents/{job_id}` | gate | `daemon.py:3759-3776` |
+| GET | `/api/sessions/{id}/agents/{job_id}/history` | gate | `daemon.py:3778-3810` |
+| POST | `/api/pair` | gate | `daemon.py:4119-4187` |
+| GET | `/api/pair/{device_id}` | gate | `daemon.py:4189-4231` |
+| GET | `/api/commands` | gate | `daemon.py:4233-4237` |
+| GET | `/api/models` | gate | `daemon.py:4373-4384` |
+| POST | `/api/transcribe` | gate | `daemon.py:4386-4508` |
+| GET | `/api/projects` | gate | `daemon.py:4537-4546` |
+| POST | `/api/projects` | gate | `daemon.py:4548-4563` |
+| GET | `/api/projects/{key}` | gate | `daemon.py:4565-4579` |
+| PATCH | `/api/projects/{key}` | gate | `daemon.py:4581-4598` |
+| DELETE | `/api/projects/{key}` | gate | `daemon.py:4600-4616` |
+| POST | `/api/projects/{key}/milestones` | gate | `daemon.py:4618-4630` |
+| DELETE | `/api/projects/{key}/milestones/{name}` | gate | `daemon.py:4632-4644` |
+| POST | `/api/projects/{key}/links` | gate | `daemon.py:4646-4658` |
+| DELETE | `/api/projects/{key}/links/{session_id}` | gate | `daemon.py:4660-4672` |
 
 There is **no `GET /api/sessions/{id}`** — a single session's state arrives only
 over its SSE stream or as a row of `/api/sessions`. A client that wants
@@ -147,12 +152,12 @@ its seed frame (§4.2).
 
 Errors are `{"error": "<human sentence>"}` — the sentence is the copy the relay
 intends a surface to show. Where the *category* matters the body adds a machine
-`code` beside it (`daemon.py:3936-3950` for command refusals; `daemon.py:3582-3588`
-for the superseded-token 409; `daemon.py:4446` for project refusals). Rules the
+`code` beside it (`daemon.py:4024-4038` for command refusals; `daemon.py:3670-3676`
+for the superseded-token 409; `daemon.py:4534` for project refusals). Rules the
 client must keep:
 
 - **Never parse the sentence to decide.** Use the status plus `code`; the prose
-  has already been rewritten twice on the relay side (`daemon.py:3937-3945`).
+  has already been rewritten twice on the relay side (`daemon.py:4025-4033`).
 - A non-JSON error body means "no more than the status" (`web/src/api.ts:82-92`).
 
 ---
@@ -170,12 +175,12 @@ client must keep:
 - `dist` reports whether the web bundle is present on this build. A client that
   does not need the web bundle must not treat `dist: false` as unhealthy.
 - Always `200` while the process is up; there is no partial-health shape.
-- — code `daemon.py:3336-3342`; live `fixtures/relay/http/healthz.json`
+- — code `daemon.py:3411-3417`; live `fixtures/relay/http/healthz.json`
 
 ### 3.2 `GET /api/sessions` — the session list
 
 **This endpoint and the `sessions` SSE event are the same payload on two
-transports** (`daemon.py:3410-3416`). The phone's home screen reads the SSE one.
+transports** (`daemon.py:3485-3491`). The phone's home screen reads the SSE one.
 
 ```jsonc
 {
@@ -190,13 +195,13 @@ transports** (`daemon.py:3410-3416`). The phone's home screen reads the SSE one.
 
 - `degraded` is **present on every frame and empty when nothing is wrong**, so a
   client can tell "nothing to report" from "this build is too old to know"
-  (`daemon.py:3418-3421`). The names are `"sessions"` (the durable store could not
+  (`daemon.py:3493-3496`). The names are `"sessions"` (the durable store could not
   be walked) and `"attention"` (the completion-receipt store could not be read)
   — `daemon.py:146,717-743`.
 - `capabilities.stt` gates the voice mic: **an older relay omits the key entirely
-  and absence means the same as `available: false`** (`daemon.py:3422-3432`).
+  and absence means the same as `available: false`** (`daemon.py:3497-3507`).
 - `capabilities.features` is a lazy, memoised flag dict; a missing key means
-  "this build does not have it", never an error (`daemon.py:1465-1488`).
+  "this build does not have it", never an error (`daemon.py:1496-1519`).
   Live sample: `fixtures/relay/http/sessions-empty.json`.
 
 `SessionSummary` — every key, with optionality:
@@ -204,18 +209,20 @@ transports** (`daemon.py:3410-3416`). The phone's home screen reads the SSE one.
 | Field | Type | Notes |
 | --- | --- | --- |
 | `session_id` | string | durable conversation identity (12 hex chars for phone-started sessions) |
-| `section` | `"active" \| "previous"` | the **shared** catalogue `active` rule, not "a live process exists" — a durable conversation with an unseen completion is `active` on every surface (`daemon.py:929-934`) |
+| `section` | `"active" \| "previous"` | the **shared** catalogue `active` rule, not "a live process exists" — a durable conversation with an unseen completion is `active` on every surface (`daemon.py:958-963`) |
 | `pinned` | bool | read from the shared `sidebar-pins.json` store; absence on an older relay means `false` |
 | `conversation_name` | string | projection name, else the record's, else the durable row's; `""` when unnamed |
 | `cwd` | string | |
 | `model_label` | string | display label, e.g. `test/mock` |
 | `streaming` | bool | |
-| `leaving` | string | the record's own phrase when a runtime was **signalled** and is draining; `""` otherwise. Additive (`daemon.py:944-952`) |
-| `updating` | string | the build pair while an idle runtime moves to the build on disk; `""` otherwise. Additive (`daemon.py:955-961`) |
-| `needs_attention` | bool | an approval/ask is waiting (`daemon.py:962`) |
+| `leaving` | string | the record's own phrase when a runtime was **signalled** and is draining; `""` otherwise. Additive (`daemon.py:973-981`) |
+| `updating` | string | the build pair while an idle runtime moves to the build on disk; `""` otherwise. Additive (`daemon.py:984-990`) |
+| `needs_attention` | bool | an approval/ask is waiting (`daemon.py:991`) |
 | `pending_kind` | `"approval" \| "ask" \| ""` | |
-| `subagents_running` | `int \| null` | **`null` means "not reported" and must never be read as `0`** — the relay returns `null` for a session it cannot vouch for (degraded dial, stale heartbeat, leaving runtime) (`daemon.py:466-529,966-991`) |
-| `subagents_queued` | `int \| null` | same terms as above, deliberately (`web/src/types.ts:330-336`) |
+| `subagents_running` | `int \| null` | **`null` means "not reported" and must never be read as `0`** — the relay returns `null` for a session it cannot vouch for (degraded dial, stale heartbeat, leaving runtime) (`daemon.py:466-529,1041-1066`) |
+| `subagents_queued` | `int \| null` | same terms as above, deliberately (`web/src/types.ts:342-348`) |
+| `ended` | bool | **the session-state receipts (#1784).** True only for a row whose process THIS daemon watched die: an entry for this id exists and is ended and no live one does. **False for a durable-only row** — a conversation nothing has registered since boot — because the relay has not observed that end and will not guess (`daemon.py:906-914,1021`). Absent on a relay older than `fc851a94e`; a client MUST read absence as `false` |
+| `degraded` | bool | **the receipt that the relay's own dial is down**: the record is fresh but the control socket is unreachable, so nothing this row shows is being confirmed right now (`daemon.py:906-914,1022`). False by construction for a durable-only row. Absent on an older relay, absence = `false` |
 | `todos_open` | int | `pending` + `blocked` across all phases |
 | `mtime` | float (epoch s) | |
 | `created_at` | float (epoch s) | optional on older relays |
@@ -224,9 +231,10 @@ transports** (`daemon.py:3410-3416`). The phone's home screen reads the SSE one.
 
 Ordering: rows come back **already ordered** by the shared catalogue rank
 (tier, wake band, birth, id); the client only groups them into
-★ Pinned / Active / Previous and must not re-sort (`daemon.py:1016`, `docs/mobile.md`
+★ Pinned / Active / Previous and must not re-sort (`daemon.py:1047`, `docs/mobile.md`
 §session list). The per-row `degraded`-style marker on the listing is the
-top-level `degraded` array above; **there is no per-row degraded flag**.
+top-level `degraded` array above; **the row's own health is `ended`/`degraded`,
+which are per-row booleans** (`daemon.py:906-914`).
 
 ### 3.3 `GET /api/sessions/past`
 
@@ -237,13 +245,13 @@ top-level `degraded` array above; **there is no per-row degraded flag**.
 ```
 
 - **The route takes no query parameters** — `limit` is fixed at 20 in the handler
-  call (`daemon.py:4273-4283`), even though `_past_sessions(limit=20)` accepts
+  call (`daemon.py:4361-4371`), even though `_past_sessions(limit=20)` accepts
   one. A client cannot page this list.
 - `forked: true` marks a fork still wearing its parent's title, so it and its
-  parent are byte-identical rows separable only by id (`daemon.py:4668-4702`).
+  parent are byte-identical rows separable only by id (`daemon.py:4756-4790`).
 - A durable store that cannot be walked answers `degraded: ["sessions"]`
   **with an empty list** — never a silent "you have no conversations"
-  (`daemon.py:4695-4699`).
+  (`daemon.py:4783-4787`).
 - Live `fixtures/relay/http/past-with-rows.json`, `past-empty.json`.
 
 ### 3.4 `GET /api/sessions/search?q=&limit=`
@@ -255,10 +263,10 @@ top-level `degraded` array above; **there is no per-row degraded flag**.
 ```
 
 - `limit` default `40`, clamped to `1..200`; a non-numeric limit falls back to
-  `40` rather than erroring (`daemon.py:4254-4258`).
+  `40` rather than erroring (`daemon.py:4342-4346`).
 - `body_match: true` means the row matched only on what was *said* in the
   conversation, not on its name/id — the UI is expected to mark those so the hit
-  does not look arbitrary (`web/src/types.ts:393-395`).
+  does not look arbitrary (`web/src/types.ts:405-407`).
 - `query` is echoed so a late response can be matched to its request.
 - Live `fixtures/relay/http/search-hit.json`, `search-empty.json`.
 
@@ -270,13 +278,13 @@ top-level `degraded` array above; **there is no per-row degraded flag**.
 
 - `before` = the id of the **oldest entry the client already holds**; the page is
   the entries immediately older than it, chronological within the page
-  (`daemon.py:3724-3733`). Without `before` the page is the tail.
+  (`daemon.py:3812-3821`). Without `before` the page is the tail.
 - `limit` default `80`, clamped `1..200`; non-numeric falls back to `80`
-  (`daemon.py:3746-3750`); live `fixtures/relay/http/history-bad-limit.json` shows
+  (`daemon.py:3834-3838`); live `fixtures/relay/http/history-bad-limit.json` shows
   `limit=abc` answered `200` with a default-sized page, not a 400.
 - Unknown id → `404 {"error": "unknown session"}`. A live generation **or** a
   durable user session qualifies; other ids 404 so the route cannot be used to
-  probe arbitrary paths (`daemon.py:3739-3745`).
+  probe arbitrary paths (`daemon.py:3827-3833`).
 - For a durable-only conversation the fold is disk-only
   (`durable_only=True`); for a live one it may fold through the loaded cache.
 - Entry objects are the `TranscriptEntry` shape (§6.1) with `details` populated
@@ -287,12 +295,12 @@ top-level `degraded` array above; **there is no per-row degraded flag**.
 
 - Returns raw image bytes with the stored mime type and
   `Cache-Control: public, max-age=31536000, immutable`. — code
-  `daemon.py:3796-3800`; live `fixtures/relay/http/image-ok.json`
+  `daemon.py:3884-3888`; live `fixtures/relay/http/image-ok.json`
 - Content key is `(entry id, image-only index)`: `entry` is a globally unique
   message uuid, `i` counts **image blocks only** (a text caption does not shift
   it). The `pid` in the path only routes; a recycled pid maps to a different
   session whose transcript lacks that uuid, which is why `immutable` is safe
-  (`daemon.py:3761-3777`).
+  (`daemon.py:3849-3865`).
 - Statuses: `400 {"error": "entry id is required"}` when `entry` is missing,
   `400 {"error": "bad image index"}` on a non-numeric `i`,
   `404 {"error": "no such image"}` when the block does not resolve (including an
@@ -300,23 +308,23 @@ top-level `degraded` array above; **there is no per-row degraded flag**.
   generation. — live `image-missing-entry-param.json`,
   `image-bad-index.json`, `image-unknown-entry.json`
 - **The image endpoint requires a live generation**: `_entry_for_session` is the
-  only lookup (`daemon.py:3782-3784`), unlike `/history` which also accepts a
+  only lookup (`daemon.py:3870-3872`), unlike `/history` which also accepts a
   durable user session. A transcript preview for a **previous** conversation
   therefore cannot render attachments — the client must degrade those to a
   placeholder rather than a broken-image icon.
 - Bytes are read back out of the on-disk transcript and base64-decoded; an
-  undecodable payload is a logged warning and a `404` (`daemon.py:1925-1970`).
+  undecodable payload is a logged warning and a `404` (`daemon.py:1960-2005`).
 
 ### 3.7 `GET /api/sessions/{id}/agents/{job_id}` and `…/history`
 
 - Detail returns the **full cached descendant state**: every `SubagentRow` field
   **plus** `transcript`, `todos`, the full `prompt`, the full launch message id,
-  and `version` (the daemon epoch). — code `daemon.py:3671-3688`,
-  `capture_subagent_details` `daemon.py:2159-2260`; live
+  and `version` (the daemon epoch). — code `daemon.py:3759-3776`,
+  `capture_subagent_details` `daemon.py:2209-2310`; live
   `fixtures/relay/http/subagent-unknown.json` for the miss
 - The aggregate roster rides the projection **stripped** (`prompt`, `result_text`,
   `error_text`, `transcript`, `todos` emptied) and re-materialised only on this
-  route, because the roster is re-sent ~30×/s (`daemon.py:2240-2260`).
+  route, because the roster is re-sent ~30×/s (`daemon.py:2290-2310`).
 - `…/history?before=&limit=` pages one child's transcript, never the root's;
   `limit` default `80`, clamped `1..200`; same body as `/history`.
 - Misses: detail → `404 {"error": "unknown subagent"}`; history →
@@ -324,7 +332,7 @@ top-level `degraded` array above; **there is no per-row degraded flag**.
   unknown) — live `subagent-history-unknown.json`.
 - The history route proves the child belongs to this root lineage before reading
   disk; child transcripts are deliberately not public root routes
-  (`daemon.py:3690-3709`).
+  (`daemon.py:3778-3797`).
 
 ### 3.8 `GET /api/commands`
 
@@ -335,8 +343,8 @@ top-level `degraded` array above; **there is no per-row degraded flag**.
 
 - `arguments` ∈ `"none" | "optional" | "required"` (lowercased `ArgumentMode`).
 - TUI chrome is excluded by name: `exit`, `quit`, `clear` are absent because they
-  are meaningless on a phone (`daemon.py:3228-3249`).
-- Cached in-process after the first call (`daemon.py:3231`).
+  are meaningless on a phone (`daemon.py:3303-3324`).
+- Cached in-process after the first call (`daemon.py:3306`).
 - Live `fixtures/relay/http/commands.json`.
 
 ### 3.9 `GET /api/models`
@@ -350,21 +358,21 @@ top-level `degraded` array above; **there is no per-row degraded flag**.
 - **The array order IS the ranking** — direct-connected providers first, newest
   version first, aggregators last, computed server-side by the same `rank_rows`
   the desktop picker uses. Re-sorting or regrouping client-side throws that away
-  (`web/src/types.ts:352-370`, `daemon.py:5002-5131`).
+  (`web/src/types.ts:364-382`, `daemon.py:5090-5219`).
 - `name` is the display string; `label` is the parity contract (equal to
   `selector` when no name can be vouched for). Render `name`.
 - `connected` = the provider has a credential that can run this model now;
   `aggregated` = the provider resells it.
 - Field set is deliberately only what a surface renders — earlier revisions
   shipped `routed`, `context_window`, `input_price`, `output_price` and cost
-  159 KB of a 301 KB response on a mobile link (`web/src/types.ts:365-370`).
+  159 KB of a 301 KB response on a mobile link (`web/src/types.ts:377-382`).
 - Failure → `502 {"error": "…"}` when the catalogue cannot be produced but at
   least one admitted provider has no listings
-  (`daemon.py:5111-5130`); an unreadable credential store falls back to the
-  **cached** catalogue rather than failing (`daemon.py:5059-5084`).
+  (`daemon.py:5199-5218`); an unreadable credential store falls back to the
+  **cached** catalogue rather than failing (`daemon.py:5147-5172`).
 - The response is **gzipped when the client sends `Accept-Encoding: gzip` and the
   body is ≥ 1024 bytes**; gzip is applied per-route, never as middleware, because
-  middleware would buffer the SSE stream (`daemon.py:4817-4902`).
+  middleware would buffer the SSE stream (`daemon.py:4905-4990`).
 - Live `fixtures/relay/http/models.json` (empty catalogue on an isolated run with no
   provider credentials).
 
@@ -378,34 +386,34 @@ top-level `degraded` array above; **there is no per-row degraded flag**.
   recently active agents from the on-disk registry, deduped, live directories
   only; `tmp` is the resolved system temp dir (on macOS `/private/tmp`, not
   `/tmp`) so it matches the spawn gate's resolved comparison
-  (`daemon.py:4262-4271,4754-4800`).
+  (`daemon.py:4350-4359,4754-4800`).
 - Live `fixtures/relay/http/directories.json` — the sample is an isolated run, so
   `recent` is empty.
 
 ### 3.11 `/login`, `/logout`, `/mark.png`, `/`, `/assets/*`
 
 - `GET /login` → the server-rendered password form (HTML, ~14 KB), or a `303` to
-  `/` when already authenticated (`daemon.py:3344-3347`). **This page is the only
+  `/` when already authenticated (`daemon.py:3419-3422`). **This page is the only
   login UI the product ships**; it also carries an inline script that wipes
   `lo-mobile-command:*` / `lo-mobile-draft:*` from browser storage, which is the
   WebKit-safe half of logout (`docs/mobile.md` §Retry-envelope).
 - `GET /logout` → `303` to `/login`, `Set-Cookie` clearing `lop_mobile`
   (`Max-Age=0`), and `Clear-Site-Data: "storage"`. It is **not** auth-gated and
   does not check CSRF — a native client calling it must expect to be logged out
-  regardless of the cookie it presented. — code `daemon.py:3374-3381`; live
+  regardless of the cookie it presented. — code `daemon.py:3449-3456`; live
   `fixtures/relay/http/logout.json`
 - `GET /mark.png` → the brand mark, public because the login page needs it before
   a cookie exists, `Cache-Control: no-store` (a phone that cached a 404 from a
-  build without the asset kept showing a broken image) — `daemon.py:3383-3394`.
+  build without the asset kept showing a broken image) — `daemon.py:3458-3469`.
 - `GET /` → the SPA shell with `no-store`, or `503` plain text
   `mobile web bundle not built — run: cd local_operator/mobile/web && pnpm install && pnpm build`
   when `dist/` is absent. **A native client never calls this**, but it is the
   fastest way to tell "the daemon is up but has no web bundle" apart from "the
-  daemon is down". — code `daemon.py:3396-3408`; live
+  daemon is down". — code `daemon.py:3471-3483`; live
   `fixtures/relay/http/index-authed-no-dist.json`
 - `/assets/*` is a `StaticFiles` mount resolved **at app build time**: a rebuilt
   bundle needs `lop mobile restart` to appear, which is the documented upgrade
-  path (`daemon.py:4642-4652`).
+  path (`daemon.py:4730-4740`).
 
 ---
 
@@ -414,17 +422,17 @@ top-level `degraded` array above; **there is no per-row degraded flag**.
 ### 4.1 `POST /api/sessions/{id}/command` — the single command endpoint
 
 Every mutation travels here, mirroring the registrant's dispatch so the auth gate
-lives in one place (`daemon.py:3802-3805`). Body: `{"op": "<op>", ...fields}`.
+lives in one place (`daemon.py:3890-3893`). Body: `{"op": "<op>", ...fields}`.
 
 Handler order (this order is the contract):
 
 1. `gate()` (auth + same-origin).
 2. Body must be a JSON **object** → otherwise `400 {"error": "request body must be an object"}`; unparseable JSON → `400 {"error": "invalid JSON"}`. — live `command-body-not-object.json`, `command-bad-json.json`
-3. `operator_cap` and `operator_handshake` are **dropped from any body** — they are machine-held proof material, and a value arriving over HTTP can only be a forgery. Dropped rather than refused so a client learns nothing about their shape. — code `daemon.py:3817-3824`
-4. `operator_sig`, `operator_cert`, `operator_key_id` **are** admitted (stage D): the phone may sign a challenge the runtime minted for its own connection (`daemon.py:3825-3850`).
+3. `operator_cap` and `operator_handshake` are **dropped from any body** — they are machine-held proof material, and a value arriving over HTTP can only be a forgery. Dropped rather than refused so a client learns nothing about their shape. — code `daemon.py:3905-3912`
+4. `operator_sig`, `operator_cert`, `operator_key_id` **are** admitted (stage D): the phone may sign a challenge the runtime minted for its own connection (`daemon.py:3913-3938`).
 5. `op` must be a non-empty string → `422 {"error": "op must be a non-empty string"}`.
 6. `validate_control_frame` runs the per-op shape checks (§4.3).
-7. `prompt`/`steer` additionally must satisfy `ContinuationCommand.from_json` — **identity is mandatory over HTTP even though protocol-v2 loopback clients remain valid** (`daemon.py:3864-3869`).
+7. `prompt`/`steer` additionally must satisfy `ContinuationCommand.from_json` — **identity is mandatory over HTTP even though protocol-v2 loopback clients remain valid** (`daemon.py:3952-3957`).
 8. Dispatch.
 
 Status mapping, which a client should map onto its own retry policy:
@@ -438,7 +446,7 @@ Status mapping, which a client should map onto its own retry policy:
 | `504` | `{"error": "session did not answer"}` | runtime accepted but missed the 15 s reply window | ambiguous — keep the command, retry |
 | `500`/`503` | route-specific | see the individual routes | |
 
-— code `daemon.py:3924-3953`; live (the `command-*.json` captures under `fixtures/relay/http/`).
+— code `daemon.py:4012-4041`; live (the `command-*.json` captures under `fixtures/relay/http/`).
 
 > `422` and `502`/`504` are **not** interchangeable: only `502/504` leave the
 > delivery outcome unknown. `422` is a pre-admission refusal and the retained
@@ -474,7 +482,7 @@ Ops the phone can reach, with the shape the relay validates:
 | `peer_message` | `{text, mode: mailbox\|steer, wake?, sender?}` | inbound cross-session message |
 | `peer_set_model` | `{provider, model_id, sender?}` | |
 | `variables` | `{action: list\|set\|update\|delete, key, value, type}` | session code memory |
-| `credential`, `register_secret_redaction`, `complete_aside`, `adopt_aside`, `stop`, `retire_if_pristine` | see `daemon.py:3830-3950` | reachable but not phone-surface |
+| `credential`, `register_secret_redaction`, `complete_aside`, `adopt_aside`, `stop`, `retire_if_pristine` | see `daemon.py:3918-4038` | reachable but not phone-surface |
 
 **Two ops are typed in the client but refused by the relay** — a native app must
 not build UI on them:
@@ -525,22 +533,22 @@ Request `{"cwd"?: string, "provider"?: string, "model_id"?: string}`;
   the owner's home or under the resolved temp dir**; anything else →
   `400 {"error": "not an allowed start directory: <raw>"}` (live
   `fixtures/relay/http/start-bad-cwd.json`). Both bounds are resolved so a symlinked
-  `/tmp` still matches (`daemon.py:4764-4773`).
+  `/tmp` still matches (`daemon.py:4852-4861`).
 - Success: `{"ok": true, "pid": <int>, "session_id": "<12 hex>"}`, where
   `session_id` is minted **before** the spawn so the child, the response and the
-  first SSE frame all agree (`daemon.py:4178-4181`).
+  first SSE frame all agree (`daemon.py:4266-4269`).
 - The session is spawned as a **supervised child process** running
   `python -m local_operator.session.runtime.process`, so a daemon restart costs
-  the phone its view, never the session its work (`daemon.py:3044-3057`).
+  the phone its view, never the session its work (`daemon.py:3119-3132`).
 - The call waits up to `SESSION_START_TIMEOUT_S = 30 s` for the child to publish
   its discovery record; a child that exits first →
   `500 {"error": "session exited before becoming ready; check mobile logs"}`
   (`daemon.py:110,3121-3135`).
 - An observer daemon (`LO_MOBILE_NO_DIAL=1`) refuses:
   `RuntimeError("observer daemon cannot start sessions")` → `500`
-  (`daemon.py:3059-3062`).
+  (`daemon.py:3134-3137`).
 - **Idempotent per session id while a start is in flight**: concurrent callers
-  await the same task (`daemon.py:3019-3042`).
+  await the same task (`daemon.py:3094-3117`).
 - Live `fixtures/relay/http/start-session.json`, `start-session-2.json`.
 
 ### 4.5 `POST /api/sessions/resume`
@@ -552,10 +560,10 @@ Request `{"session_id": string}`.
   `fixtures/relay/http/resume-no-id.json`, `resume-unknown.json`).
 - Success: `{"ok": true, "pid": <int>, "session_id": "<same id>"}`. The resumed
   runtime's cwd is `Path.home()`, **not** the conversation's recorded cwd
-  (`daemon.py:4230-4231`) — the client must not promise that resuming restores
+  (`daemon.py:4318-4319`) — the client must not promise that resuming restores
   the working directory; if the user then wants another cwd, that is `move`.
 - A session already live is adopted rather than duplicated
-  (`daemon.py:3063-3078`).
+  (`daemon.py:3138-3153`).
 
 ### 4.6 `POST /api/sessions/{id}/seen` — the unread acknowledgement
 
@@ -570,19 +578,19 @@ Request `{"completion_token": "<uuid>"}`.
 | an unknown token | `409 {"error": "unknown completion token"}` |
 | success | `200 {"ok": true, "attention": <state>}` |
 
-— code `daemon.py:3540-3594`; live `seen-missing-token.json`,
+— code `daemon.py:3628-3682`; live `seen-missing-token.json`,
 `seen-unknown-session.json`, `seen-real-token.json`.
 
 The token is the `attention.completion_token` the projection carried. On the
 superseded branch the remedy differs: re-read the projection and acknowledge the
-token it now names (`daemon.py:3574-3588`). A success invalidates the listing
+token it now names (`daemon.py:3662-3676`). A success invalidates the listing
 cache and wakes the list stream so the next paint already shows the truth
-(`daemon.py:3591-3593`).
+(`daemon.py:3679-3681`).
 
 ### 4.7 `POST /api/sessions/{id}/pin` — the shared pin store
 
 Request `{"pinned": <bool>}` — **desired state, not a toggle**, so a retried
-request cannot flip the pin back (`daemon.py:3596-3611`).
+request cannot flip the pin back (`daemon.py:3684-3699`).
 
 | Case | Response |
 | --- | --- |
@@ -591,12 +599,12 @@ request cannot flip the pin back (`daemon.py:3596-3611`).
 | `pinned: true` but the conversation has **no durable folder yet** | `409 {"error": "no saved messages yet — pin it after you send one"}` |
 | success | `200 {"ok": true, "pinned": <state read back>}` |
 
-— code `daemon.py:3618-3669`; live `pin-true.json`, `pin-not-bool.json`,
+— code `daemon.py:3706-3757`; live `pin-true.json`, `pin-not-bool.json`,
 `pin-unknown.json`.
 
 The body of a `200` is **the state the store read back**, not the state that was
 asked for, so a caller cannot be told a pin the reader pruned
-(`daemon.py:3667-3669`). Both branches are the same file the TUI's `F10` and the
+(`daemon.py:3755-3757`). Both branches are the same file the TUI's `F10` and the
 desktop action write (`sidebar-pins.json`), so a pin is one fact across three
 surfaces.
 
@@ -607,7 +615,7 @@ Request `{"action": "loosen"|"approve", "request_id"?: string}`.
 - Authority-bearing fields (`operator_cap`, `operator_sig`, `operator_key_id`,
   `operator_cert`) are stripped from **this** body only: this endpoint's whole
   output is a challenge, so a body carrying proof material is a caller confusing
-  two endpoints (`daemon.py:3987-3995`).
+  two endpoints (`daemon.py:4075-4083`).
 - Success: `{"challenge": "<hex>", "expires_s": <int>, "session_id": "...",
   "action": "...", "request_id": "..."}`.
 - `422 {"error": "action must be 'loosen' or 'approve'"}`; `409 {"error":
@@ -620,8 +628,8 @@ Request `{"action": "loosen"|"approve", "request_id"?: string}`.
   relay's own persistent connection to that session — a challenge minted
   anywhere else is refused by the runtime. Sign it and present the signature on
   the **command** route, which is the one narrowed to admit it. A second
-  presentation of the same challenge finds nothing (`daemon.py:3955-3975`,
-  `daemon.py:3835-3843`).
+  presentation of the same challenge finds nothing (`daemon.py:4043-4063`,
+  `daemon.py:3923-3931`).
 
 ### 4.9 `POST /api/pair` and `GET /api/pair/{device_id}`
 
@@ -629,7 +637,7 @@ Request `{"action": "loosen"|"approve", "request_id"?: string}`.
   point, "name"?: string}`. A wrong code and no live code are answered
   **identically** with `403 {"error": "that pairing code is not valid"}` — the
   distinction would tell a guesser whether a pairing window is open
-  (`daemon.py:4064-4071`). A malformed `spki` → `422 {"error": "spki must be an
+  (`daemon.py:4152-4159`). A malformed `spki` → `422 {"error": "spki must be an
   uncompressed P-256 public point, base64url"}`; a revoked device →
   `403 {"error": "this device has been revoked"}`; success →
   `{"ok": true, "device_id": "<hex>"}`.
@@ -638,7 +646,7 @@ Request `{"action": "loosen"|"approve", "request_id"?: string}`.
   `{"paired": true, "device_id", "certificate", "operator_key_id", "scope",
   "exp", "name", "authority_ready"}` when paired. `authority_ready` is false
   between `lop operator init` and `lop operator install` — the state an older
-  UI lied about (`daemon.py:4120-4143`).
+  UI lied about (`daemon.py:4208-4231`).
 - A non-hex device id is **not** an error: live `pair-status-bad-id.json` returns
   `200 {"paired": false}`. Only an id that parses as hex but fails the store
   raises `422 {"error": "bad device id"}`.
@@ -679,8 +687,8 @@ client shows a mic at all (§3.2).
 A non-object body → `400 {"error": "request body must be an object"}`. All
 failures flow through `mobile_projects.ProjectRouteError` →
 `{"error": <message>, "code": <code>}` with the error's own status
-(`daemon.py:4441-4446`). Shapes mirror the desktop wire models
-(`web/src/types.ts:479-582`); `ProjectMilestone.status` is **derived**
+(`daemon.py:4529-4534`). Shapes mirror the desktop wire models
+(`web/src/types.ts:491-594`); `ProjectMilestone.status` is **derived**
 server-side (`completed|overdue|upcoming`) and must not be recomputed by the
 client. Live `fixtures/relay/http/projects-empty.json`.
 
@@ -722,11 +730,11 @@ Status → action, as the client must read it:
 ### 5.2 Relay side: the same id, twice
 
 - Over HTTP, `prompt`/`steer` **must** carry a UUID `command_id`
-  (`daemon.py:3864-3869`); without one the request is a `422`.
+  (`daemon.py:3952-3957`); without one the request is a `422`.
 - The relay forwards the frame; it does not itself de-duplicate. It fits the
   frame to the socket first and raises `OversizedRequest` (a `ValueError` → `422`)
   *before* registering a pending future, so a refusal never leaves a parked
-  request behind (`daemon.py:2771-2786`, `attach_client.py:323-368`).
+  request behind (`daemon.py:2846-2861`, `attach_client.py:323-368`).
 
 ### 5.3 Runtime side: the durable identity ledger
 
@@ -746,7 +754,7 @@ The runtime's ack carries both the sentence and the flag:
 ```
 
 — `session/runtime/server.py:5830-5866`. The relay maps an ack to
-`{"ok": true, "detail": "<detail>"}` (`daemon.py:3953`), so **the `duplicate`
+`{"ok": true, "detail": "<detail>"}` (`daemon.py:4041`), so **the `duplicate`
 flag itself is not visible over HTTP**; a client sees `detail == "already
 admitted"`. Live `fixtures/relay/http/command-prompt-duplicate.json` — the identical
 `command_id` sent twice returned `200 {"ok": true, "detail": "already admitted"}`
@@ -776,10 +784,10 @@ framing.
 
 - Frames: `event: sessions` + `data: <the same body as GET /api/sessions>`.
 - Opens with one immediate frame, then one per list change. — code
-  `daemon.py:3514-3538`
+  `daemon.py:3602-3626`
 - Changes that wake it: a projection arriving from a runtime (which bumps a row's
   streaming/attention), a session appearing/disappearing, a pin written, a
-  `/seen` acknowledgement (`daemon.py:1019-1037,3593,3666`).
+  `/seen` acknowledgement (`daemon.py:1050-1068,3593,3666`).
 
 ### 6.2 `GET /api/sessions/{id}/events` — one session's projection
 
@@ -787,15 +795,15 @@ framing.
 - The **seed frame**: the current projection is sent immediately so a
   reconnecting client renders without waiting for a change. If no live entry
   exists, the daemon folds the durable transcript and seeds from that
-  (`daemon.py:3474-3484`).
+  (`daemon.py:3549-3572`).
 - Then one frame per change, where "change" is any runtime frame the relay folds
   — i.e. **roughly every streaming token batch**, not per token
-  (`daemon.py:3485-3488`).
+  (`daemon.py:3573-3576`).
 - The subscriber's queue is `maxsize=8`; when it is full the **oldest** frame is
-  dropped and the newest pushed (`daemon.py:3463`, `_fan_out` `daemon.py:1973-1998`).
+  dropped and the newest pushed (`daemon.py:3538`, `_fan_out` `daemon.py:2008-2048`).
   A snapshot protocol can afford that; a delta protocol could not.
 - On the last subscriber leaving, the relay tells the runtime `unwatch` and
-  prunes the projection generation (`daemon.py:3492-3501`).
+  prunes the projection generation (`daemon.py:3580-3589`).
 
 ### 6.3 Framing, keep-alives and headers
 
@@ -815,10 +823,10 @@ data: {"session_id": "…", …}
 - Response headers on both streams: `content-type: text/event-stream;
   charset=utf-8`, `cache-control: no-cache, no-transform`,
   `x-accel-buffering: no` (the last is what turns buffering off at
-  nginx-family proxies) — `daemon.py:3503-3512,3534-3538`.
+  nginx-family proxies) — `daemon.py:3591-3600,3534-3538`.
 - `SessionEventResponse` explicitly closes its body iterator in a `finally`, so a
   cancelled proxy stream does not leave an unseen subscriber pinning a viewer
-  forever (`daemon.py:3274-3284`).
+  forever (`daemon.py:3349-3359`).
 
 ### 6.4 Reconnect and resync
 
@@ -827,7 +835,7 @@ resync protocol. The rules that make that safe:
 
 - **One writer per session at a time is not required** — the stream is
   read-only, and multiple subscribers are normal (`first_watcher` only decides
-  whether to tell the runtime it is being watched, `daemon.py:3465-3473`).
+  whether to tell the runtime it is being watched, `daemon.py:3540-3548`).
 - A reconnecting client should treat its **first frame after reconnect as
   authoritative** even if its `version` looks older than the last one it held:
   the web client resets its ordering guard exactly there
@@ -842,18 +850,18 @@ resync protocol. The rules that make that safe:
 
 `SessionProjection.version` is **not** a per-process counter: it is an epoch the
 daemon computes so that a session's projections order monotonically *across
-process replacements* (`_projection_generations`, `daemon.py:2153-2340`).
+process replacements* (`_projection_generations`, `daemon.py:2203-2390`).
 
 - The daemon identifies a runtime generation by `(pid, started_at, control_key)`
   — pid alone is reusable, and the control key is regenerated per registration
-  (`daemon.py:2196-2205`).
+  (`daemon.py:2246-2255`).
 - `epoch = max(state.epoch + 1, projection.version)` on a generation change;
-  otherwise `epoch = offset + projection.version` (`daemon.py:2265-2290`).
+  otherwise `epoch = offset + projection.version` (`daemon.py:2315-2340`).
 - A frame from a **retired** identity is fenced: `_StaleProjection` is raised and
-  the frame is dropped (`daemon.py:2211-2224`). The retired set is bounded to the
-  last 8 identities (`daemon.py:2284-2288`).
+  the frame is dropped (`daemon.py:2261-2274`). The retired set is bounded to the
+  last 8 identities (`daemon.py:2334-2338`).
 - A **durable fold carries no process identity**, so it re-materialises at the
-  retained epoch and never reopens a generation (`daemon.py:2238-2250`). That is
+  retained epoch and never reopens a generation (`daemon.py:2288-2300`). That is
   what makes `/history`, subagent detail and a reconnecting SSE succeed after the
   payload was evicted, instead of fencing to a 500.
 - The retained projection map is bounded: `MAX_RETAINED_SESSION_PROJECTIONS = 64`,
@@ -867,39 +875,80 @@ process replacements* (`_projection_generations`, `daemon.py:2153-2340`).
 > (`web/src/store.ts:270-286`).
 
 **A projection's `pid` can be `0`.** A durable re-materialisation (the fold after
-a runtime died) is published with `pid: 0` and `kind: "daemon"`, and its
-`ended`/`degraded` fields are **both `false`**. Live proof:
-`fixtures/relay/sse/sse-projection-durable-after-death.json`, captured ~5 s after the
-runtime was SIGKILLed — the last frame for that session had `pid: 0`, the
-transcript from disk, and `ended: false`. The list stream, one frame later, moved
-the row to `section: "previous"`.
+a runtime died) is published with `pid: 0` and `kind: "daemon"`, and it carries the
+session's disk transcript. Live proof (captured at `52c1df35`):
+`fixtures/relay/sse/sse-projection-durable-after-death.json`, the frame published
+after the runtime was SIGKILLed — `pid: 0`, the transcript from disk, and the list
+stream, one frame later, moving the row to `section: "previous"`. **On
+`fc851a94e` that same frame also carries `ended: true`** (see the receipts below);
+the committed capture predates the receipts, so its `ended` reads `false`, which is
+what the build at that ref published.
 
-> **Consequence for the app.** `ended` and `degraded` on the projection are
-> effectively **not usable signals** over the relay: `projection.degraded` is
-> assigned `False` on every write path the relay owns
-> (`daemon.py:1301,1633,3902`) while the flag exists only on the *entry*
-> (`entry.degraded`, set on a wedged registration, `daemon.py:2531`); and the
-> durable frame after a death carries `ended: false` too. A native client must
-> derive liveness from **the listing row** (`section`, `subagents_running: null`,
-> vanishing `streaming`) and from **SSE silence**, not from those two fields.
+### 6.5.1 The session-state receipts (`ended`, `degraded`)
 
-**Measured: `subagents_running: null` is the relay's unreachable-runtime signal.**
-With the runtime's process frozen (`SIGSTOP`, so the record stays published and
-the socket stays open but nothing beats), the list row was polled every 5 s
-(`fixtures/relay/probes/wedged-row-signal.json`):
+**This corrects round 1 of this document.** At `52c1df35` the two projection
+fields were declared but never published `true`, and the round-1 text here said
+so; that was accurate then and is **wrong now**. #1784 (`fc851a94e`) made the
+relay tell the truth about session state, on both transports:
 
-| Time since freeze | `subagents_running` | `section` | `streaming` |
-| --- | --- | --- | --- |
-| 5–35 s | `0` | `active` | `false` |
-| 40–75 s | `null` | `active` | `false` |
+| Where | Field | True when | False when | Cleared by |
+| --- | --- | --- | --- | --- |
+| summary row | `ended` | an entry for this id exists, is ended, and no live entry for it does — a death **this daemon observed** (`daemon.py:906-914`) | **a durable-only row**: nothing has registered since boot, so the relay will not guess an end it did not see | a fresh registration for that id (`active` wins) |
+| summary row | `degraded` | the live entry's own dial is down — record fresh, socket unreachable (`daemon.py:906-914`) | a durable-only row, by construction | the next successful dial |
+| projection | `ended` | the frame was built by a caller that **proved** the session's end: the scan's `stale` pivot (`daemon.py:2603`), the record-vanished branch (`daemon.py:2647`), or a wake that settled without a live host (`daemon.py:2773`) | a durable rebuild that was not told, and every live frame | the next live frame (`incoming.ended = False`, `daemon.py:1668`) |
+| projection | `degraded` | the entry's dial is down, **mirrored onto the payload peers are served** (`_mirror_dial_health`, `daemon.py:2030`, called on a failed dial at `daemon.py:1569` and on a dropped reader at `daemon.py:1704`) | as above | the next live frame (`incoming.degraded = False`, `daemon.py:1667`) |
 
-The transition happens at `HEARTBEAT_TIMEOUT_S = 45 s`
-(`session/runtime/types.py:416-417`; `_advertisable_counts` refuses to report
-counts for a registration it cannot vouch for, `daemon.py:512-519`). Note what
-does **not** change: the row stays `active`, and no `degraded` marker appears
-anywhere. So a "this conversation is unreachable" affordance must key on
-**`subagents_running` flipping to `null`** against a row that previously
-reported `0` — a two-sample comparison, not a flag.
+Three rules a client must take from that table:
+
+1. **Absence means `false`.** Both summary keys exist on every row of a current
+   relay; on a relay older than `fc851a94e` they are absent entirely, and the
+   reading is the same as `false` — the rolling-upgrade rule `unseen` and `pinned`
+   already follow.
+2. **A durable-only row says `false`, not "unknown"**, deliberately: a
+   conversation nothing has registered since boot was not observed to end. A
+   client that reads `ended: false` there as "still running" makes the same guess
+   the relay refuses to make; the honest render for such a row is the durable
+   listing's own facts (name, age, last activity), not a liveness claim. **This is
+   measured, and it is the strongest version of the point**: with a runtime dead
+   and a daemon that never saw it live, the row reports `ended: false`,
+   `degraded: false` and `subagents_running: null`
+   (`fixtures/relay/probes/durable-only-row.json`). Durable rows also come back
+   **thinner** — `model_label` is `""` where a live row says `test/mock`, and
+   `cwd` is empty after a death — so a client must not render a durable-only row
+   through a layout that assumes those fields are populated.
+3. **The summary's flags drive the list; the projection's drive the session
+   view.** They agree because both derive from the same entry state — but a
+   durable rebuild *without* caller knowledge is `false` on the projection while
+   the summary may be `true`, so the list can legitimately be one pass ahead of a
+   seed frame.
+
+**Measured at `fc851a94e`: the degraded receipt fires at the heartbeat timeout.**
+A phone-started session whose runtime was frozen with `SIGSTOP` (record still
+published, socket open, nothing beating), polled from `GET /api/sessions` every
+3 s (`fixtures/relay/probes/degraded-row-signal.json`):
+
+| Since the freeze | `subagents_running` | `degraded` | `ended` | `section` |
+| --- | --- | --- | --- | --- |
+| 0–42 s | `0` | `false` | `false` | `active` |
+| ~45 s | `null` | `false` | `false` | `active` |
+| ~48 s onward (incl. 10 s after `SIGCONT`) | `null` | **`true`** | `false` | `active` |
+
+So the order is: the counts stop being advertisable at the 45 s timeout
+(`HEARTBEAT_TIMEOUT_S`, `session/runtime/types.py:416-417`, via
+`_advertisable_counts`, `daemon.py:512-519`), and the row's `degraded` flag
+follows within a scan interval (`daemon.py:2619-2620`). Two caveats this capture
+earns: the flag clears on the next **successful dial**, which was not observed
+within 10 s of `SIGCONT` here — a client should clear its "not answering"
+affordance from the flag going `false`, never on a timer — and the receipt needs a
+record that was **stamped**: a runtime frozen before its first beat reads as fresh
+and never reaches the wedged state (observed in a second run of the same probe).
+
+**The round-1 measurement remains the fallback for older relays.** At `52c1df35`
+the only wire evidence that a conversation had stopped answering was that same
+*field change*: `subagents_running` went `0` → `null` at the 45 s timeout while
+`section` stayed `active` and no flag appeared anywhere
+(`fixtures/relay/probes/wedged-row-signal.json`). A client must therefore keep
+both readings: flag first, count-change for a relay that predates the receipt.
 
 ### 6.6 Payload size, and why frames get degraded
 
@@ -945,8 +994,8 @@ reported `0` — a two-sample comparison, not a flag.
 | `stop_reason` | string | `""` until a turn ends, then `completed` \| `aborted` |
 | `cut_off` | bool | whether the `aborted` turn was cut off rather than stopped on purpose; **additive**, older relays omit it |
 | `queued_count` | int | user messages waiting for a turn boundary |
-| `ended` | bool | declared, but see §6.5 — not usable over the relay |
-| `degraded` | bool | declared, but see §6.5 — never published `true` |
+| `ended` | bool | the daemon's receipt that this session's process is **gone** — `true` on the durable rebuild after a death the scan proved (`daemon.py:2603,2647,2773`), `false` on every live frame and on a rebuild nobody told. See §6.5.1 |
+| `degraded` | bool | the relay's dial to this session is **down**: record fresh, socket unreachable. Mirrored onto the payload peers are served (`daemon.py:2030`) and cleared by the next live frame (`daemon.py:1667`). See §6.5.1 |
 | `transcript` | TranscriptEntry[] | tail, ≤ 80 rows |
 | `todos` | TodoPhase[] | one implicit `"Todos"` phase carries a flat list and renders headerless |
 | `subagents` | SubagentRow[] | **stripped** aggregate; sorted `running` first then by `job_id` |
@@ -959,13 +1008,13 @@ reported `0` — a two-sample comparison, not a flag.
 | `cost_knowledge` | string | `unknown\|exact\|partial\|floor` for the parent figure |
 | `context_tokens`, `context_window`, `context_is_estimate` | int, int, bool (all nullable) | `context_window` `null`/`0` = unknown, so no percentage is possible; the client spells `12.4k/—` |
 | `version` | int | the epoch (§6.5) |
-| `attention` | object | added by the frame builder, not the dataclass (`daemon.py:1790`); `{conversation_id, completion_token, anchor_id, kind, reason, cause, notify, unseen, revision}` |
+| `attention` | object | added by the frame builder, not the dataclass (`daemon.py:1825`); `{conversation_id, completion_token, anchor_id, kind, reason, cause, notify, unseen, revision}` |
 
 The frame builder additionally **fills** `stop_reason`/`cut_off` from the durable
 attention record when the fold never saw a turn end (a runtime killed mid-turn),
 and appends a `notice` transcript row for `error`/`interrupted`/`closed`/`retired`
 outcomes with the sentence and severity taken from `harness/rows.py`
-(`daemon.py:1764-1869`). A client must not synthesise such a row itself.
+(`daemon.py:1799-1904`). A client must not synthesise such a row itself.
 
 `TranscriptEntry` — `types.py:551-600`:
 
@@ -1025,9 +1074,10 @@ The canonical list a test matrix should cover, each with how it is reached:
 | **unread** | row `unseen: true`, `completion_kind: "complete"` |
 | **subagent running/queued** | roster rows with `status`, plus the parent row's `subagents_running`/`subagents_queued` (**`null` = not reported**) |
 | **leaving / updating** | the row's `leaving` / `updating` strings, additive fields |
-| **degraded dial** | **not directly signalled** — `entry.degraded` never reaches the projection (§6.5); infer from `subagents_running: null` plus SSE silence plus a row that stops changing |
-| **wedged runtime** | heartbeat older than `HEARTBEAT_TIMEOUT_S = 45 s`; **measured**: the listing row's `subagents_running` flips `0` → `null` while `section` stays `active` (fixtures/relay/probes/wedged-row-signal.json, §6.5) |
-| **ended** | the runtime is reaped; the row flips to `section: "previous"` and one final durable frame is published with `pid: 0`, `ended: false` (live `sse-projection-durable-after-death.json`) |
+| **degraded dial (not answering)** | row `degraded: true`, projection `degraded: true` (§6.5.1; live `fixtures/relay/probes/wedged-row-signal.json`) — and on a relay older than `fc851a94e`, nothing at all, so the fallback is `subagents_running: null` plus SSE silence |
+| **wedged runtime** | heartbeat older than `HEARTBEAT_TIMEOUT_S = 45 s` → the scan marks the registration wedged and the row reports `degraded: true` (`daemon.py:2619-2620`); **measured at both refs** in `fixtures/relay/probes/wedged-row-signal.json` |
+| **ended** | row `ended: true`, plus one final durable frame with `pid: 0` and `ended: true` (live: `fixtures/relay/http/list_row_ended.json` and `fixtures/relay/sse/sse_projection_ended.json` for `fc851a94e`; `sse-projection-durable-after-death.json` is the same event at `52c1df35`, where the frame read `ended: false`). **`ended` does not imply `section: "previous"`**: the section is the shared catalogue rule, so a died conversation whose completion nobody acknowledged is still `active` — measured in the same capture (`ended: true`, `section: "active"`, `unseen: true`) |
+| **durable-only row** | a conversation nothing has registered since boot: `ended: false` and `degraded: false` **by construction**, not by observation (`daemon.py:906-914`) — render it from the durable listing's facts and make no liveness claim |
 | **woken** | `prompt` on a durable-only conversation returns `200 {"detail": "prompt admitted"}` and the relay spawns a host process (live `command-prompt-wake-durable.json`, `list-after-wake.json`) |
 | **auth lost** | `401 {"error": "authentication required"}` on any `/api/*`; on an SSE stream, the 401 is **not visible to EventSource** — a native client must check the status itself or it will retry forever |
 | **command refusal** | `422` with prose (+ optional `code`), or `502`/`504` for the ambiguous pair |
@@ -1037,8 +1087,7 @@ The canonical list a test matrix should cover, each with how it is reached:
 ## 8. Known gaps and risks to design around
 
 1. **No per-session HTTP GET.** Single-session state is SSE-only or listing-only.
-2. **`ended` / `degraded` are unusable over the relay** (§6.5). Do not build a
-   banner on them; build it on `section` + silence.
+2. **`ended`/`degraded` are ref-dependent** (§6.5.1). Against `fc851a94e`+ they are real receipts on both the row and the projection; against an older relay they are absent (read as `false`) and the only evidence a conversation stopped answering is `subagents_running` flipping to `null`. A client must be built for both, because the app will meet relays it did not ship with — that is exactly the compatibility mechanism the fields' additive defaults exist for.
 3. **No `Cache-Control` on JSON API responses** (`secure_cookie` is dead code,
    §1.3). The client must own its caching policy.
 4. **`/api/sessions/past` cannot be paged** (no `limit` parameter, §3.3).
