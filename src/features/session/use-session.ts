@@ -20,6 +20,7 @@ import {
 	connectionView,
 	KEEPALIVE_GRACE_S,
 	RECONNECT_DEADLINE_MS,
+	reconnectDelay,
 	relaySentence,
 } from "@/features/session/connection-view";
 import {
@@ -76,6 +77,11 @@ export interface SessionRuntime {
 	reload: () => void;
 }
 
+/** Whether a stream failure is one to reconnect through rather than surface.
+ *  Read from the error layer's own decision, never re-derived from a status. */
+const isTransient = (error: RelayError): boolean =>
+	error.retry === "after-backoff" || error.retry === "same-id";
+
 export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 	// The route slot is a plain module value, so a change to it has to re-render
 	// this hook explicitly. `useSyncExternalStore` is the whole subscription: the
@@ -111,7 +117,12 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 	const reconnectRef = useRef<() => void>(() => undefined);
 	const rereadRef = useRef<() => void>(() => undefined);
 	const streamRef = useRef<{ stop: () => void } | null>(null);
+	/** A pending reconnect after a transient drop; cleared whenever the stream is. */
+	const retryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const lastFrameAt = useRef<number | null>(null);
+	/** Which session the current `lastFrameAt` reading belongs to, so a reconnect for
+	 *  the SAME session keeps it and a session change does not inherit it. */
+	const ageOwner = useRef<string | null>(null);
 
 	/* ------------------------------------------------------------- the stream */
 	useEffect(() => {
@@ -122,19 +133,37 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 			}
 			// A reload replaces the stream: leaving the old one open would put two
 			// subscribers on one projection and let a stale frame overtake a fresh one.
+			if (retryTimer.current !== null) clearTimeout(retryTimer.current);
+			retryTimer.current = null;
 			streamRef.current?.stop();
+			// The age is only reset for a session this screen has not shown before. It must
+			// NOT be reset per reconnect: `ageS` is "how long since anything arrived", and a
+			// stream that reconnects silently would otherwise reset the one reading `C3`
+			// fires on, so `C3` could never appear for the failure it exists for. A frame
+			// retires the age honestly, because a frame is news.
+			if (ageOwner.current !== sessionId) {
+				ageOwner.current = sessionId;
+				lastFrameAt.current = null;
+			}
 			sessions.getState().beginStream(sessionId);
-			lastFrameAt.current = null;
 			setError(null);
 			const stream = endpoints.sessionStream(sessionId, {
 				onFrame: (frame) => {
 					if (frame.kind !== "projection") return;
 					lastFrameAt.current = Date.now();
+					retries.current = 0;
 					sessions.getState().applyFrame(sessionId, frame.data);
 					setLoading(false);
 					// Any frame proves the path is alive, so a deadline that fired is
 					// retired by the next frame rather than by a timer of its own.
-					setFacts((current) => ({ ...current, ageMs: 0, overdue: false }));
+					setFacts((current) => ({
+						...current,
+						ageMs: 0,
+						overdue: false,
+						// The drop is over the moment a frame lands: without this, C2's
+						// "Reconnecting…" would outlive the reconnect it announced.
+						lastEnd: current.lastEnd === "error" ? undefined : current.lastEnd,
+					}));
 				},
 				onState: (status) => {
 					setFacts((current) => ({
@@ -147,6 +176,36 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 					}));
 				},
 				onError: (streamError) => {
+					/* `sse.ts` stops its loop on ANY error, by design: "a caller that
+					 * wants to retry a transient failure restarts the loop itself", so a
+					 * persistent 401 cannot become an infinite reconnect. This is that
+					 * caller, and the error's own `retry` directive is the decision —
+					 * one reading of one failure, made in `errors.ts`.
+					 *
+					 * A transient drop (`after-backoff` / `same-id`) is reconnected here
+					 * and presented as `C2`, NOT as a refusal: the first captured drop
+					 * painted "The relay can't be reached right now / Check again" over
+					 * a stream the relay was still serving, and left the reader to
+					 * reconnect by hand. Only a failure the reader must resolve (a 401, a
+					 * typed gateway refusal, a client bug) stops and surfaces. */
+					if (isTransient(streamError)) {
+						setFacts((current) => ({
+							...current,
+							state: "connecting",
+							lastEnd: "error",
+							overdue: false,
+						}));
+						const delay = reconnectDelay(
+							retries.current,
+							streamError.retryAfterMs,
+						);
+						retries.current += 1;
+						retryTimer.current = setTimeout(
+							() => reconnectRef.current(),
+							delay,
+						);
+						return;
+					}
 					sessions.getState().endStream(sessionId);
 					setError(streamError);
 					setFacts((current) => ({
@@ -162,11 +221,17 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 		reconnectRef.current = connect;
 		connect();
 		return () => {
+			if (retryTimer.current !== null) clearTimeout(retryTimer.current);
+			retryTimer.current = null;
 			streamRef.current?.stop();
 			streamRef.current = null;
 			sessions.getState().endStream(sessionId);
 		};
 	}, [endpoints, sessionId]);
+
+	/** Consecutive failed reconnects, for the backoff. Reset by any delivered frame,
+	 *  so one blip does not leave the next one waiting fifteen seconds. */
+	const retries = useRef(0);
 
 	/* --------------------------------------------------- the reconnect deadline */
 	useEffect(() => {

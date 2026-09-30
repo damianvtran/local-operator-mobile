@@ -57,6 +57,37 @@ export const KEEPALIVE_GRACE_S = 75;
  */
 export const RECONNECT_DEADLINE_MS = 5_000;
 
+/**
+ * How long to wait before reconnecting a dropped stream.
+ *
+ * Doubling from one second to the ceiling the web client uses (`store.ts`:
+ * `BACKOFF_MIN_MS` 1000 → `BACKOFF_MAX_MS` 15000). A fixed retry against a relay
+ * that is down for hours is a hot loop against a phone's radio and its battery;
+ * the ceiling keeps a long outage cheap, while the first retry still lands inside
+ * the second a reader expects. `retryAfterMs` — the gateway's own advice for a
+ * typed refusal — always wins when the error carries one, because the server
+ * knows its own recovery time better than a curve does.
+ *
+ * `attempts` is the count of consecutive failures, reset by any delivered frame.
+ */
+export const RECONNECT_BACKOFF_MIN_MS = 1_000;
+export const RECONNECT_BACKOFF_MAX_MS = 15_000;
+
+export const reconnectDelay = (
+	attempts: number,
+	retryAfterMs: number | undefined,
+): number => {
+	if (retryAfterMs !== undefined) return retryAfterMs;
+	/* Clamped before the shift: `2 ** 40` is fine in JavaScript but the guard keeps a
+	 * counter that somehow ran away from producing `Infinity` and a `setTimeout`
+	 * that never fires. */
+	const steps = Math.min(Math.max(attempts, 0), 8);
+	return Math.min(
+		RECONNECT_BACKOFF_MAX_MS,
+		RECONNECT_BACKOFF_MIN_MS * 2 ** steps,
+	);
+};
+
 /** A snapshot older than this is old, and `C3` says so (same derivation as the
  *  silence window: both answer "is this still live"). */
 export const STALE_SNAPSHOT_AGE_S = KEEPALIVE_GRACE_S;

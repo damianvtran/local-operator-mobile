@@ -4,6 +4,7 @@ import {
 	type ConnectionViewInput,
 	connectionView,
 	KEEPALIVE_GRACE_S,
+	reconnectDelay,
 } from "@/features/session/connection-view";
 import { RelayError } from "@/relay";
 import type { ProjectionEntry } from "@/state";
@@ -26,6 +27,34 @@ const ENTRY: ProjectionEntry = {
 	version: 1,
 	droppedFrames: 0,
 };
+
+describe("the reconnect backoff", () => {
+	it("doubles from a second, and stops at the web client's ceiling", () => {
+		// A hot retry against a relay that is down for hours is a radio and a battery
+		// bill, and an unbounded one is a user staring at nothing. Both ends are the
+		// rule, so both are pinned.
+		expect(reconnectDelay(0, undefined)).toBe(1_000);
+		expect(reconnectDelay(1, undefined)).toBe(2_000);
+		expect(reconnectDelay(3, undefined)).toBe(8_000);
+		expect(reconnectDelay(4, undefined)).toBe(15_000);
+		expect(reconnectDelay(40, undefined)).toBe(15_000);
+	});
+
+	it("takes the gateway's own advice over the curve", () => {
+		// `authorization_deferred` carries 120 s, `authorization_lease_pending` 5 s:
+		// the server knows its own recovery time better than a doubling curve does.
+		expect(reconnectDelay(0, 120_000)).toBe(120_000);
+		expect(reconnectDelay(7, 5_000)).toBe(5_000);
+	});
+
+	it("never returns a delay a timer would ignore", () => {
+		for (const attempts of [-1, 0, 1, 8, 1_000, Number.MAX_SAFE_INTEGER]) {
+			const delay = reconnectDelay(attempts, undefined);
+			expect(Number.isFinite(delay)).toBe(true);
+			expect(delay).toBeGreaterThan(0);
+		}
+	});
+});
 
 const input = (
 	overrides: Partial<ConnectionViewInput> = {},
