@@ -7,6 +7,14 @@ baseline the native app must beat. Read-only; nothing in that repo was changed.
 - **Code read:** `origin/main` at `5bfff4a61` (2026-09-29): `src/screens/*`,
   `src/components/*`, `src/store.ts`, `src/api.ts`, `src/router.ts`,
   `docs/mobile.md`.
+
+  **Citation ref — read this before checking a line number.** Every citation in
+  this document is against that *committed* ref, obtained with
+  `git -C ~/local-operator show origin/main:<path>`. The `~/local-operator`
+  working tree is mid-edit by another session, and line numbers there are **61
+  lines off** from `origin/main` in `docs/mobile.md` — round 1 of the review that
+  caught this recorded exactly that failure. Read the ref, not the tree
+  (`AGENTS.md`, "Read the committed ref, not the working tree").
 - **Evidence read:** PR #1777 (merged, "UX batch 1", review/design/UX/QA rounds)
   and PR #1784 (**open** at the time of reading, "UX batch 2") via
   `gh pr view <n> --comments`.
@@ -57,7 +65,7 @@ Each is something the native app should reproduce or consciously improve.
 3. **Never lose a typed instruction.** Drafts persist per session
    (`lo-mobile-draft:`), and an instruction whose delivery is *unknown* is kept
    as a retry envelope with a stable UUID so the daemon de-duplicates
-   (`docs/mobile.md` L196-232; `continuation-command.ts`) **[code]**. Offline
+   (`docs/mobile.md` L257-294 at `origin/main`; `continuation-command.ts`) **[code]**. Offline
    send produced "Couldn't send this instruction. Try again." with the text
    preserved and a *Retry earlier instruction* button **[measured]**.
 4. **Honest, quiet session-state vocabulary.** `approval`/`question` in danger
@@ -82,9 +90,21 @@ Each is something the native app should reproduce or consciously improve.
    drill-down **[code]**.
 9. **Per-session composer with slash sheet, model/effort chips, attach (images),
    voice dictation, stop/steer/resume morphing** **[code]**.
-10. **31 palettes from one contract**, with a contrast contract of 1209
-    assertions (`check-themes`) **[PR]**. The native app should inherit the
-    design-kit tokens, not this palette list (see the brand stream).
+10. **31 palettes from one contract** **[code]**. `pnpm check-themes` is
+    `node scripts/generate-theme-css.mjs --check`
+    (`local_operator/mobile/web/package.json` L13 at `origin/main`): it checks
+    that every palette defines every role and that the generated stylesheet is
+    current. It contains **no contrast maths**. The executable that does the
+    contrast work, `scripts/contrast-contract.mjs`, is *named* by
+    `themes/palette-contract.ts` (L34, L38 at `origin/main`) but **does not exist
+    at that ref** — only `check-bundle.mjs`, `generate-theme-css.mjs`,
+    `inline-mark.mjs` and `palette-source.mjs` ship there. It arrives on open PR
+    #1784, whose rounds report `Contrast contract holds: 1209 assertions across
+    31 themes`, a figure that **moves inside that same PR** (1209 → 1333 when
+    `elevated` was added to the pair set). So: cite the PR round, never the
+    script, and treat the count as unfixed until #1784 merges. The native app
+    should inherit the design-kit tokens, not this palette list (see the brand
+    stream).
 
 ## 3. Pain points a native redesign should fix
 
@@ -114,10 +134,13 @@ verdict. IDs (`R1…`) are referenced from `flows.md` and `principles.md`.
   records that no logout control exists; logout is a server route
   (`/logout`) reached by URL **[code]**. Store review requires an in-app
   sign-out/account-deletion path (see `flows.md` §10).
-- **R5 - MINOR: SSE is cut every 60 s on the Radient route** (gateway
-  `MAX_STREAM_SECONDS = 60`). The client reconnects, but the seam is not
-  designed: no "still live" affordance and no proof the repaint is gapless.
-  Native must treat the 60 s cut as a normal heartbeat, not an error.
+- **R5 - MINOR: SSE is cut every 60 s on the Radient route**
+  (`MAX_STREAM_SECONDS = 60`, `gateway.py` L34 at `origin/main`; the timeout is at
+  L678). The client reconnects on its own backoff, and the reconnect is
+  indistinguishable from a real failure from the user's side. Native must treat
+  the 60 s cut as a **normal rotation** — invisible, immediate, re-synced from a
+  fresh snapshot — and reserve a visible state for a genuinely failed reconnect.
+  `flows.md` §9 states this as `C1` (rotation, invisible) vs `C2` (reconnecting)
 
 ### Discoverability & first run
 
@@ -140,17 +163,21 @@ verdict. IDs (`R1…`) are referenced from `flows.md` and `principles.md`.
 ### Steering & trust
 
 - **R10 - MAJOR: approvals raised by a terminal session cannot be answered from
-  the phone** (deliberate v1 boundary, `docs/mobile.md` L189-194) - the phone
+  the phone** (deliberate v1 boundary, `docs/mobile.md` L250 at `origin/main`) - the phone
   "shows the wait and says so". This is the top reason people open a
   remote-control app (competitive-research §9.3). Not fixable client-side; the
   native app must state it plainly and the backlog should track the protocol.
 - **R11 - MINOR: stop and steer share one button slot** that morphs with turn
   state (`aria-label` changes send→steer→stop). The queue is invisible
   (competitors: Replit's queue drawer). No confirmation on stop.
-- **R12 - MINOR: "remember this choice" is an unlabelled 16 px checkbox** in the
-  approval card: `<input type=checkbox class="size-4">` has no accessible name
-  and is 16×16 **[measured: nameless control + sub-24 target]**. Its scope
-  ("this command"? "this tool"? "this session"?) is not stated.
+- **R12 - MINOR: "remember this choice" does not name its scope.** The approval
+  card's remember control reads `remember this choice` and never says *which*
+  choice: this command, this tool, this session? The row is a 44 px `min-h-11`
+  `<label>` wrapping the checkbox, so it is a fine tap target and the input does
+  take the label's text as its accessible name (`pending-card.tsx` L423-433 at
+  `origin/main`) — this is a *copy* finding, not an accessibility one. Replace it
+  with the scope ("Always allow `bash` in this session") or a one-line
+  explanation under it.
 - **R13 - NIT: copy uses developer notation** (`~`, raw ids in refusals). #1784
   fixed several (U25/U26) **[PR]**; the native copy pass must keep that
   standard from the start.
@@ -194,7 +221,7 @@ run (`lsof -i :<port>` = 0).
 |---|---|---|
 | E1 | Interactive controls < 44 px on `#/` and `#/new` at 390×844 (post-#1777 bundle) | 0 |
 | E2 | Same on the pre-#1777 bundle (older worktree) | 9 list rows at 34 px; back/pin 32 px; `or type another path…` 36 px |
-| E3 | Controls with no accessible name on a pending approval | 2: the 16 px "remember" checkbox; the hidden file input |
+| E3 | Controls with no accessible name on a pending approval | 0. Two candidates were re-checked and neither is a defect: the remember checkbox is wrapped in a 44 px `min-h-11` `<label>` that gives it its name, and the only other input is `<input type="file" class="hidden">` — `display: none`, so it is out of the accessibility tree by construction. **This corrects round 1's E3, which reported the first of those as nameless by testing the element's own text rather than its label association.** |
 | E4 | Text scan for `reconnect`/`offline` at t+1/3/6/12 s after killing the daemon (session view) | never present |
 | E5 | Offline `send` | `Couldn't send this instruction. Try again.` + draft + `Retry earlier instruction`; stop button still shown |
 | E6 | Horizontal overflow at root font 16 / 24 / 32 px on list | 390 / 390 / **489** (viewport 390) |

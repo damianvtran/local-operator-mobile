@@ -8,8 +8,14 @@ and each one traces to either the competitive research
 (`docs/mobile.md`, `docs/tunnels.md`, `local_operator/tunnels/gateway.py`).
 
 They are ordered so the earlier ones outrank the later ones when they conflict.
-`P-n` ids are cited by `flows.md` (which flow each principle governs) and by
-`audit-rubric.md` (which checks enforce it).
+Both back-links are real and were checked: `flows.md` §0 carries a flow →
+principle index and each flow's heading names the principles it satisfies, and
+`audit-rubric.md` names the governing principle on every check.
+
+**Citation ref.** Line citations are against the committed refs:
+`~/local-operator` at `origin/main` = `5bfff4a61` (2026-09-29), read with
+`git show origin/main:<path>`; the working tree is mid-edit by another session and
+its numbers differ.
 
 ## P-1. The phone is a remote control, not an IDE
 
@@ -67,7 +73,8 @@ envelope with a stable id so the relay de-duplicates; the UI distinguishes
 "rejected" (fix your input) from "unknown" (retry is safe) from "sent".
 
 *Evidence:* the current client already gets this right (retry envelope +
-`lo-mobile-draft:` keys, `docs/mobile.md` L196-232) and it is one of the few
+`lo-mobile-draft:` keys, `docs/mobile.md` L257-294 at `origin/main`) and it is
+one of the few
 things a redesign must not regress; Happy advertises offline machines with
 last-seen and persistent drafts for the same reason.
 
@@ -186,15 +193,21 @@ no accessible name (R12, **[measured]**).
 
 ## P-12. Nothing leaves the phone that does not have to
 
-The relay is loopback-only; the tunnel is the identity boundary; the phone holds
-credentials in the platform keystore and talks only to the user's own computer
-(from the app, never through a third party). Telemetry is off by default, and a
-user can see and clear everything the app stored locally.
+The relay binds loopback only; the tunnel is the identity boundary; the phone
+holds credentials in the platform keystore and talks **only to the relay the user
+chose, and to the computer behind it** — no other server, and never a third-party
+analytics endpoint. Telemetry is off by default, and a user can see and clear
+everything the app stored locally.
 
 *Consequence:* no analytics SDK in v1; the demo mode uses bundled data and touches
 no network; *Clear local data* exists; the privacy screen states exactly what the
-relay can see (the relay is not content-blind — it serves the transcript — so the
-copy says that rather than implying end-to-end encryption it does not have).
+relay can see. That last one is the sentence to get right: on the Radient route
+the phone's traffic terminates at the edge before it reaches the computer
+(`edge/tunnel-worker/src/index.ts`: the 303/401 branch, then
+`forward(request, url, id, grant, env)`), and the relay itself serves the
+transcript, so the copy says **not end-to-end encrypted** plainly rather than
+implying it. "Talks only to your own computer" would be false, and it is exactly
+the kind of false comfort a privacy screen must not sell.
 
 *Evidence:* Happy's zero-knowledge story is its central claim and its docs are
 explicit about it; Local Operator's privacy copy must be equally explicit about

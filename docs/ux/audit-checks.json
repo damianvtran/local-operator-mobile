@@ -1,0 +1,338 @@
+{
+ "schema": 1,
+ "what_this_is": "Machine-readable form of docs/ux/audit-rubric.md. The markdown is the spec (what to do, how to verify, pass criteria); this file is the index the harness and its own unit tests load.",
+ "citation_ref": "origin/main 5bfff4a61 (2026-09-29)",
+ "severity_ladder": [
+  "BLOCKER",
+  "MAJOR",
+  "MINOR",
+  "NIT"
+ ],
+ "severity_caps": {
+  "MINOR": 5,
+  "NIT": 5
+ },
+ "release_gate": {
+  "blockers_on_head": 0,
+  "majors_on_head": 0,
+  "requires_artifacts": true,
+  "scored_per": "screen x state"
+ },
+ "states_are_named_in": "flows.md section 9 (C1-C7, W1-W5)",
+ "principles_unchecked": [],
+ "checks": [
+  {
+   "id": "U-01",
+   "title": "Touch-target size",
+   "method": "automated",
+   "principles": [
+    "P-2",
+    "P-11"
+   ]
+  },
+  {
+   "id": "U-02",
+   "title": "Contrast, body text",
+   "method": "automated",
+   "principles": [
+    "P-11"
+   ]
+  },
+  {
+   "id": "U-03",
+   "title": "Contrast, non-text carriers",
+   "method": "automated",
+   "principles": [
+    "P-3",
+    "P-11"
+   ]
+  },
+  {
+   "id": "U-04",
+   "title": "Font scale to 200 %",
+   "method": "automated",
+   "principles": [
+    "P-11"
+   ]
+  },
+  {
+   "id": "U-05",
+   "title": "Safe areas",
+   "method": "automated",
+   "principles": [
+    "P-2",
+    "P-11"
+   ]
+  },
+  {
+   "id": "U-06",
+   "title": "Horizontal overflow",
+   "method": "automated",
+   "principles": [
+    "P-11"
+   ]
+  },
+  {
+   "id": "U-07",
+   "title": "Clipped text",
+   "method": "automated",
+   "principles": [
+    "P-11"
+   ]
+  },
+  {
+   "id": "U-08",
+   "title": "Overlap",
+   "method": "automated",
+   "principles": [
+    "P-11"
+   ]
+  },
+  {
+   "id": "U-09",
+   "title": "Accessible name",
+   "method": "automated",
+   "principles": [
+    "P-11"
+   ]
+  },
+  {
+   "id": "U-10",
+   "title": "Label-in-name",
+   "method": "automated",
+   "principles": [
+    "P-11"
+   ]
+  },
+  {
+   "id": "U-11",
+   "title": "Heading/landmark order",
+   "method": "automated",
+   "principles": [
+    "P-11"
+   ]
+  },
+  {
+   "id": "U-12",
+   "title": "Focus order",
+   "method": "automated",
+   "principles": [
+    "P-2",
+    "P-11"
+   ]
+  },
+  {
+   "id": "U-13",
+   "title": "Motion",
+   "method": "automated",
+   "principles": [
+    "P-11"
+   ]
+  },
+  {
+   "id": "U-14",
+   "title": "Haptics",
+   "method": "automated",
+   "principles": [
+    "P-2",
+    "P-8"
+   ]
+  },
+  {
+   "id": "U-15",
+   "title": "Latency feedback",
+   "method": "automated",
+   "principles": [
+    "P-5",
+    "P-9"
+   ]
+  },
+  {
+   "id": "U-16",
+   "title": "Stream liveness, and the rotation that is not a fault",
+   "method": "automated",
+   "principles": [
+    "P-5",
+    "P-9"
+   ]
+  },
+  {
+   "id": "U-17",
+   "title": "Cold-start time",
+   "method": "automated",
+   "principles": [
+    "P-9"
+   ]
+  },
+  {
+   "id": "U-18",
+   "title": "Every string names the computer when it matters",
+   "method": "manual-walk",
+   "principles": [
+    "P-5",
+    "P-10"
+   ]
+  },
+  {
+   "id": "U-19",
+   "title": "Errors are recoverable and worded for the user",
+   "method": "manual-walk",
+   "principles": [
+    "P-5",
+    "P-6",
+    "P-10"
+   ]
+  },
+  {
+   "id": "U-20",
+   "title": "Vocabulary matches the terminal and the relay",
+   "method": "manual-walk",
+   "principles": [
+    "P-10"
+   ]
+  },
+  {
+   "id": "U-21",
+   "title": "No jargon noun, no adjective doing a verb's job",
+   "method": "manual-walk",
+   "principles": [
+    "P-10"
+   ]
+  },
+  {
+   "id": "U-22",
+   "title": "Empty states say what the screen is for",
+   "method": "manual-walk",
+   "principles": [
+    "P-5"
+   ]
+  },
+  {
+   "id": "U-23",
+   "title": "Confirmations are proportionate",
+   "method": "manual-walk",
+   "principles": [
+    "P-2"
+   ]
+  },
+  {
+   "id": "U-24",
+   "title": "Disabled controls explain themselves",
+   "method": "manual-walk",
+   "principles": [
+    "P-9"
+   ]
+  },
+  {
+   "id": "U-25",
+   "title": "No dead ends",
+   "method": "manual-walk",
+   "principles": [
+    "P-1",
+    "P-2"
+   ]
+  },
+  {
+   "id": "U-26",
+   "title": "The feature is discoverable without the docs",
+   "method": "manual-walk",
+   "principles": [
+    "P-3"
+   ]
+  },
+  {
+   "id": "U-27",
+   "title": "Connection honesty, rotation included",
+   "method": "manual-walk",
+   "principles": [
+    "P-5",
+    "P-9"
+   ]
+  },
+  {
+   "id": "U-28",
+   "title": "Re-auth ladder",
+   "method": "manual-walk",
+   "principles": [
+    "P-4",
+    "P-5"
+   ]
+  },
+  {
+   "id": "U-29",
+   "title": "Ambiguous send",
+   "method": "manual-walk",
+   "principles": [
+    "P-4"
+   ]
+  },
+  {
+   "id": "U-30",
+   "title": "Keyboard avoidance",
+   "method": "manual-walk",
+   "principles": [
+    "P-2"
+   ]
+  },
+  {
+   "id": "U-31",
+   "title": "One-handed reach",
+   "method": "manual-walk",
+   "principles": [
+    "P-2"
+   ]
+  },
+  {
+   "id": "U-32",
+   "title": "Interruption safety",
+   "method": "manual-walk",
+   "principles": [
+    "P-4"
+   ]
+  },
+  {
+   "id": "U-33",
+   "title": "Theme and personalisation axes",
+   "method": "manual-walk",
+   "principles": [
+    "P-11"
+   ]
+  },
+  {
+   "id": "U-34",
+   "title": "Slow/flaky network",
+   "method": "manual-walk",
+   "principles": [
+    "P-5",
+    "P-9"
+   ]
+  },
+  {
+   "id": "U-35",
+   "title": "Multi-computer correctness",
+   "method": "manual-walk",
+   "principles": [
+    "P-5",
+    "P-10"
+   ]
+  },
+  {
+   "id": "U-36",
+   "title": "The pending decision is reachable",
+   "method": "manual-walk",
+   "principles": [
+    "P-2",
+    "P-7"
+   ]
+  },
+  {
+   "id": "U-37",
+   "title": "Local data is visible and clearable",
+   "method": "manual-walk",
+   "principles": [
+    "P-4",
+    "P-12"
+   ]
+  }
+ ]
+}

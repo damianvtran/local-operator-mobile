@@ -4,7 +4,16 @@ Step-by-step specs for the Local Operator mobile app: every state a screen can b
 in, what the user can do, and the *intent* of the copy (exact strings are the
 designer's to finalise; the intent and the facts each string must carry are
 fixed here). Flows are ordered as a user meets them. `F-n` ids are referenced by
-`principles.md` and by the audit harness.
+`principles.md` and by the audit harness; each flow's governing principles are
+listed in §0's table so the back-link is real in both directions.
+
+**Citation ref.** Every line citation in this document is against the *committed*
+ref, not a working tree: `~/local-operator` at `origin/main` = `5bfff4a61`
+(2026-09-29), and `~/radient-ml/agent-server` at its `origin/main`. Read them with
+`git show origin/main:<path> | sed -n '<line>p'`. A working tree may be mid-edit by
+another session, which silently shifts line numbers — see `AGENTS.md`, "Read the
+committed ref, not the working tree". Where a number is expected to move, the
+text says so.
 
 Conventions used below:
 
@@ -59,6 +68,25 @@ Screen names (final): **Computers** (host list), **Sessions** (session list),
 **Session**, **Subagent**, **New session**, **Past sessions**, **Projects**,
 **Settings**, **Set up a computer**, **Sign in**.
 
+### Flow → principle index
+
+The principles each flow is written to satisfy (`principles.md`). This is the
+half of the link the rubric cannot make on its own: a flow is where a principle
+becomes a screen.
+
+| Flow | Screen(s) | Principles |
+|---|---|---|
+| F-1 sign-in and discovery | Sign in, Computers | P-1, P-5, P-6, P-10, P-12 |
+| F-2 no tunnel yet | Set up a computer | P-2, P-5, P-6, P-10 |
+| F-3 custom URL + password | Set up a computer | P-5, P-6, P-8, P-12 |
+| F-4 computers and the switcher | Computers, Settings › Computers | P-3, P-5, P-10 |
+| F-5 session list | Sessions | P-1, P-3, P-5, P-9 |
+| F-6 session view | Session, sheets, pending card | P-1, P-2, P-4, P-7, P-8, P-9 |
+| F-7 subagents | Subagent | P-3, P-10 |
+| F-8 new / past / projects | New session, Past sessions, Projects | P-1, P-2, P-10 |
+| F-9 connection states | all | P-4, P-5, P-6, P-9 |
+| F-10 settings, demo mode | Settings | P-8, P-10, P-11, P-12 |
+
 ## 1. F-1 First run → signed in → connected
 
 Steps:
@@ -92,7 +120,7 @@ Copy intent for the button: it is an action on their account, so say what they
 get: *Sign in with Radient* is right; "Continue with…", "Authorize", "Connect
 account" are not.
 
-## 2. F-2 No tunnel yet → the one command → live wait → connected
+## 2. F-2 No tunnel yet → create one on the computer → live wait → connected
 
 This is the highest-leverage flow in the product: today a user who has signed in
 but has no tunnel hits a dead end.
@@ -102,21 +130,71 @@ but has no tunnel hits a dead end.
    to run a connector and stay awake. *Copy intent:* "your computer", "stays
    awake and connected", "your code stays on it". No metaphor, and the word
    "tunnel" does not appear in the first sentence.
-2. **Two ways, one screen, one recommended.**
-   - **(a) Command to run on the computer** — the short command
-     `lop tunnel connect` (after `lop login radient`), shown in a monospace block
-     with a *Copy* button. Plus the TUI alternative, `/mobile enable`, for
-     people who live in the terminal.
-   - **(b) "I already have a tunnel"** → F-3.
-3. **Live wait for the connector.** Immediately after the copy, the screen
-   switches to a waiting state that actually polls the tunnel's status through
-   the Radient control plane (owner token). This is the state that must not be a
-   dead end.
-   - *States:* waiting / **connector seen, not yet authorized** / connected /
-     timed out (2-3 min) / user backgrounded the app.
-   - *Waiting copy:* "Waiting for `<computer name>` …" plus a live line naming
-     the last thing observed: "Not seen yet", "Connector connected — finishing
-     setup", "Ready".
+2. **Three ways, and the commands are not interchangeable.** Getting this wrong
+   is the one way F-2 can ship copy that errors for exactly the user it exists to
+   rescue: `lop tunnel connect` **attaches a tunnel that already exists** and
+   refuses with `Supply the tunnel ID shown in the Radient console.` when there
+   is none (`local_operator/tunnels/cli.py` L519-521 at `origin/main`). So the
+   screen offers creation, attachment, and *neither* as three distinct routes:
+
+   - **(a) Create one on the computer — recommended, no console needed.**
+     In a terminal:
+     ```sh
+     lop login radient          # once, if not already signed in
+     lop tunnel create          # + --accept-monthly-price <quoted USD> if activation is required
+     lop tunnel install         # installs the connector service
+     ```
+     In the TUI, the same lifecycle in two commands: `/mobile billing` shows the
+     quote, eligibility and balance; `/mobile enable <amount>` then creates the
+     tunnel and installs its connector. (`mobile_action` maps `enable` to
+     `tunnel create` when no config exists, or `tunnel configure --enable` when
+     one does, followed by `tunnel install` — `cli.py` L729-745 at
+     `origin/main`.)
+
+     **The app composes the exact command.** The owner token can read
+     `GET /v1/tunnels/billing` (`eligible`, `monthly_price_usd`, `balance_usd`,
+     `amount_due_usd` — `internal/tunnels/service.go` L24-31 at that repo's
+     `origin/main`), so the copy block
+     carries the *real* quoted amount instead of a placeholder. It has to: both
+     `--accept-monthly-price` and `/mobile enable` take the quoted number, and a
+     user who has not run the billing step has no way to know it.
+   - **(b) Attach a tunnel that already exists** (created in the Radient
+     console): `lop tunnel connect <tunnel-id>`, with the id the console shows.
+     This is the **only** path where `connect` is the right command.
+   - **(c) "I already have a tunnel address"** — a non-Radient tunnel, or a plain
+     URL and the relay password → F-3.
+3. **Live wait for the connector — and it waits on things it can actually see.**
+   The screen switches to the waiting state as soon as (a)'s command is copied.
+   It observes two signals, in this order, and names whichever it has:
+
+   1. **The tunnel's row in the control plane** — `GET /v1/tunnels` with the
+      owner token. `status` moves `pending` (`internal/tunnels/service.go` L310)
+      → `active` (L476), through `revoking` (L447), `reconciling` (L453), `error`
+      (L468), `deleted` (L474), `disabled` (L478) and `suspended` (L480) — all at
+      that repo's `origin/main`, which is **8 lines ahead of its working tree**
+      and is the only place these numbers are true — and `billing` fills in.
+   2. **The host answering through the relay** — an `https://<host>/healthz`
+      request returns the relay's health JSON once the connector is up and
+      forwarding. The daemon's health gate is *deliberately unauthenticated*
+      (`docs/mobile.md` L115-131 at `origin/main`), which is what makes this a
+      usable signal rather than another credential dance.
+
+   What the phone **cannot** see, and must not pretend to: the connector's own
+   local state (`running` / `parked`, `lop tunnel status`) lives on the computer,
+   and the console's word for it is not exposed to the owner-token API. So every
+   waiting line names something *observed* — "Radient has the tunnel", "Your
+   computer answered" — never "setting up…".
+
+   - *States, named for the rubric:* `W1` waiting (nothing observed yet) · `W2`
+     **tunnel active, host not answering yet** (the common middle state: the row
+     is `active` before the connector finishes installing) · `W3` connected
+     (health answered) · `W4` timed out (2-3 min with nothing) · `W5` waiting
+     while the app is backgrounded (pause polling, resume on foreground).
+   - *Waiting copy:* "Setting up `<computer name>`…" plus a live line naming the
+     last thing observed: `W1` "Nothing yet — run the command above", `W2`
+     "Radient has the tunnel. Waiting for your computer.", `W3` "Ready." — the
+     backticked placeholder is a slot the app fills with the computer's name, not
+     literal copy.
    - *Success:* flip to the Computers list with the new computer, then straight
      into F-4's connected state (if it is the first computer, go to F-5).
    - *Timeout copy:* keep the command visible (the user may still be typing it),
@@ -316,42 +394,95 @@ not only in the parent's count.
   own note). Editing milestones from the phone is worth having because it is the
   one project operation a decision makes urgent.
 
-## 9. F-9 Connection loss, re-auth, and computer-side refusals
+## 9. F-9 Connection states: rotation, loss, re-auth, refusals
 
-Three distinct causes, three distinct screens. Making them one screen is the
-mistake the current client makes (R1/R2).
+Seven named states. The names matter: the audit rubric scores *these* ids, so a
+harness failure can say which state it saw without a paragraph of prose. The
+first one is the one everybody gets wrong.
 
-1. **Phone lost the network** (the app knows: reachability + SSE error).
-   - Slipped banner under the header on the Session screen, and a muted line in
-     the Sessions list: "Offline. Messages will send when you're back."
-   - **Copy intent:** say what will happen, not what broke. The draft and queue
-     are preserved; the send button stays but explains the queue behaviour on
-     tap.
-2. **The Radient session expired (edge 401 / `X-Radient-Login`).** The edge
-   answers HTML GETs with a 303 to the login page and everything else with 401 +
-   `X-Radient-Login: /_radient/login`. A native app must not follow a browser
-   redirect: on 401 with that header, present *Sign in again* (system browser,
-   same PKCE flow, silent when the refresh token is still valid — the refresh
-   token is opaque and lasts 30 days, so this should be rare).
-   - *Copy:* "Your Radient session expired. Sign in to reconnect to
-     `<computer>`." One button. After success, return to exactly the screen the
-     user was on, with the transcript intact.
-   - **Never** clear drafts on an auth blip; only on an explicit sign-out or
-     identity change (the web client's rule, kept).
-3. **The computer can't be reached (503 with a typed reason).** The gateway
-   already ships one honest sentence per cause (`RELAY_DETAIL` in
-   `local_operator/tunnels/gateway.py`): `control_plane_unreachable`,
-   `authorization_refused`, `tunnel_not_authorized`, `authorization_lease_pending`,
-   `login_required`. The app should **render those sentences verbatim** (they are
-   the product's own vocabulary, already reviewed) with one addition: a *Check
-   again* button, and, where the remedy is on the console, an *Open console*
-   button.
-   - *Degraded session (daemon up, session socket not answering):* the row and
-     the header say "not answering" — the session is still listed, its history
-     still readable, and it is explicitly **not** the same as ended.
-   - *Ended session:* distinct copy, offering resume.
-   - **Invariant:** never show a spinner forever. Every request has a deadline
-     and a stated failure.
+| id | State | Trigger | What the user sees | Typical duration |
+|---|---|---|---|---|
+| `C1` | **Rotation** | the gateway's own 60 s stream cut | **nothing at all** | invisible |
+| `C2` | Reconnecting | a transport error, or no frame after a rotation | one inline line, resolved in seconds; never a modal, never a flash for `C1` | < 5 s |
+| `C3` | Degraded | no keepalive past the grace window, or a snapshot that is old | "Not answering — last update `<n>`s ago", with the last snapshot still readable | until answered |
+| `C4` | Phone offline | no network route at all | "Offline. Messages will send when you're back." | until online |
+| `C5` | Re-auth | edge 401 + `X-Radient-Login` | "Your Radient session expired. Sign in to reconnect to `<computer>`." + one button | until signed in |
+| `C6` | Relay refusal | 503 + a typed `RELAY_DETAIL` reason | the gateway's own sentence + one remedy | cause-dependent |
+| `C7` | Computer asleep / connector stopped | the host stops answering; the control plane still lists the tunnel | the computer's card says it is not answering, with its last-seen time | until the computer returns |
+
+### `C1` — the 60 s rotation is normal, and must be invisible
+
+The gateway deliberately ends every relayed SSE response at
+`MAX_STREAM_SECONDS = 60` (`local_operator/tunnels/gateway.py` L34 at
+`origin/main`; the timeout at L678). On the Radient route that orderly close
+arrives **once a minute, forever**. Its consequences are the whole of this
+section:
+
+- **The client reconnects immediately on an orderly close.** No backoff, no
+  user-visible state, and no "reconnecting" flash — a one-minute flicker on a
+  long turn is worse than no indicator at all, because it teaches the user to
+  ignore the indicator that matters.
+- **Every reconnect re-syncs from a fresh snapshot**, and a stale repaint is
+dropped rather than merged: the projection's `version` orders epochs monotonically
+  across process replacements (`docs/mobile.md` L257-294 at `origin/main`). The
+  client never merges deltas — every push is a full repaint (`docs/mobile.md`
+  L149-235).
+- **Only a *failed* reconnect is a state.** `C2` is entered when the transport
+  errors, or when a rotation's replacement does not produce a snapshot, and it is
+  left the moment one lands.
+- **A cut is not a signal.** `current-relay-audit.md` R5 states the rule the
+  current client already follows; the native client inherits it.
+
+**Loss is defined by absence, never by an error.** The gateway sends keepalives
+on a 15 s cadence (`gateway.py` L676), so `C3` is "no keepalive and no
+snapshot past the grace window" — pick ~20 s and state it in the code, so the
+threshold is one number in one place. Marking *any* SSE error as loss is the bug
+this section exists to prevent.
+
+### `C4` — the phone lost the network
+
+- Slipped banner under the header on the Session screen, and a muted line in the
+  Sessions list.
+- **Copy intent:** say what will happen, not what broke. The draft and the queue
+  are preserved; the send button stays and explains the queue behaviour on tap.
+
+### `C5` — the Radient session expired (edge 401 / `X-Radient-Login`)
+
+The edge answers HTML `GET`s with a 303 to the login page and everything else
+with 401 + `X-Radient-Login: /_radient/login`. A native app must not follow a
+browser redirect: on 401 carrying that header, present *Sign in again* (system
+browser, the same PKCE flow, silent when the refresh token is still valid — the
+refresh token is opaque, 30-day absolute and not rotated, so this should be
+rare).
+
+- *Copy:* "Your Radient session expired. Sign in to reconnect to `<computer>`."
+  One button. After success, return to exactly the screen the user was on, with
+  the transcript intact.
+- **Never** clear drafts on an auth blip; only on an explicit sign-out or an
+  identity change (the web client's rule, kept — `api.ts` L64-70 at
+  `origin/main`).
+
+### `C6` — the computer can't be reached (503 with a typed reason)
+
+The gateway already ships one honest sentence per cause (`RELAY_DETAIL` in
+`gateway.py` L106 at `origin/main`): `control_plane_unreachable`,
+`authorization_refused`, `tunnel_not_authorized`, `authorization_lease_pending`,
+`login_required`. The app **renders those sentences verbatim** — they are the
+product's own vocabulary, already reviewed — and adds a *Check again* button,
+plus *Open console* where the remedy lives there.
+
+- **Invariant:** never show a spinner forever. Every request has a deadline and a
+  stated failure.
+
+### `C3` / `C7` — degraded vs asleep, and vs ended
+
+- *Degraded session* (daemon up, the session's own socket not answering): the row
+  and the header say "not answering". The session stays listed, its history stays
+  readable, and it is explicitly **not** the same as ended.
+- *Computer asleep / connector stopped* (`C7`): the computer's card says so, with
+  last-seen; sessions stay visible from cache, marked as not live.
+- *Ended session*: distinct copy, offering resume.
+
 
 ## 10. F-10 Settings
 
