@@ -618,9 +618,27 @@ export const ConnectionProvider = ({
 	}, []);
 
 	const removeCustomRoute = useCallback(async () => {
+		const active = connectionStore.getState().route;
+		/* Removing the tunnel also ENDS it, when it is the live one.
+		 *
+		 * Clearing storage alone left Settings saying "Connected directly to
+		 * <the address you just removed>" until the reader navigated away — the screen
+		 * reads the live route, and the live route was still in the store (QA round 1).
+		 * Signing out first is the same order `signOut` uses: the relay's session is
+		 * closed politely before the route it belongs to disappears. */
+		if (active?.mode === "custom") {
+			await signOutOfCustomRoute(active).catch(() => undefined);
+			stopStream();
+			clientRef.current = null;
+			tokensRef.current = null;
+			retryRef.current = null;
+			listStore.getState().reset();
+			connectionStore.getState().endRoute();
+			if (mountedRef.current) setLastError(null);
+		}
 		await removeSavedTunnel();
 		setSavedTunnel(null);
-	}, []);
+	}, [stopStream]);
 
 	const tunnelStoragePersistent = useCallback(
 		async () => Platform.OS !== "web",

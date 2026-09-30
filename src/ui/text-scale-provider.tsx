@@ -7,6 +7,7 @@ import {
 	scaledTextVariables,
 	TEXT_SCALE_PERCENTS,
 	type TextScalePreference,
+	type TextUnit,
 } from "@/ui/text-scale";
 
 /**
@@ -114,25 +115,29 @@ export function useTextScale(): TextScale {
 	 * still exactly once. */
 	const scale = resolveTextScale(preference, 1);
 
+	/* ONE rule, in the one place the factor is decided: the emitted value never
+	 * carries the platform's factor, and the unit selects which mechanism applies it
+	 * (`TextUnit` in `text-scale.ts` carries the reasoning and the measurements).
+	 * `rem` on the web hands it to the browser's root font size; `px` everywhere else
+	 * hands it to nobody — React Native's own text scaling applies it on native, and an
+	 * explicit preference REPLACES the browser's on web rather than compounding. */
+	const unit: TextUnit =
+		Platform.OS === "web" && preference === "system" ? "rem" : "px";
+
 	const variables = useMemo(
-		() =>
-			scaledTextVariables(
-				scale,
-				Platform.OS === "web" ? "rem" : "px",
-				/* The root font size does the multiplying on the web; native has no such
-				 *  mechanism, so the same factor is applied to the values instead. It is
-				 *  passed even on the web because the chrome cap needs to know it — but
-				 *  never so the cap can bound it. */
-				platformScale,
-			),
-		[scale, platformScale],
+		() => scaledTextVariables(scale, unit),
+		[scale, unit],
 	);
 
-	/* What a reader actually gets, on both platforms: the preference times the
-	 * platform's own factor — web through the root font size, native through the
-	 * values. This is the number every `LARGE_TEXT_SCALE` layout decision is made
-	 * against, so it has to describe the rendered result, not one input to it. */
-	const effectiveScale = scale * platformScale;
+	/* What a reader actually gets, which is what every `LARGE_TEXT_SCALE` layout
+	 * decision is made against — so it describes the rendered result rather than one
+	 * input to it. An explicit preference REPLACES the browser's factor on web (that is
+	 * the `px` unit's whole point); everywhere else the platform's factor sits on top of
+	 * the preference, applied by the browser's root font size or by React Native. */
+	const effectiveScale =
+		Platform.OS === "web" && preference !== "system"
+			? scale
+			: scale * platformScale;
 
 	return {
 		scale,

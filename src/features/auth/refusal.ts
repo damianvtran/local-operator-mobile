@@ -59,21 +59,10 @@ const REMEDY: Partial<Record<ErrorSurface, string>> = {
  *  - `none` never reaches here: a failure with no surface is one the caller
  *    handles silently, and showing it would be the app inventing a problem.
  */
-/**
- * The surface's own value for "the connection itself failed" (`connection`), which
- * PR #7's remediation adds and this branch's `ErrorSurface` union does not carry
- * yet. It is named here so the map below is COMPLETE rather than merely exhaustive
- * over the older union: a new surface upstream breaks this file's types until it
- * has copy, which is the point — the alternative is a failure that maps to
- * `undefined` and renders nothing.
- */
-type ConnectionSurface = "connection";
-
-/** `ErrorSurface` → `RefusalKind`, exhaustively. */
-const KIND: Record<
-	Exclude<ErrorSurface, "none"> | ConnectionSurface,
-	RefusalKind
-> = {
+/** `ErrorSurface` → `RefusalKind`, exhaustively over the CURRENT union: a surface
+ *  added upstream breaks this file's types until it has copy, which is the point —
+ *  the alternative is a failure that maps to `undefined` and renders nothing. */
+const KIND: Record<Exclude<ErrorSurface, "none">, RefusalKind> = {
 	"computer-offline": "computer-offline",
 	"relay-stopped": "relay-stopped",
 	"tunnel-gone": "tunnel-gone",
@@ -95,9 +84,13 @@ const KIND: Record<
  * answer can change). The error's own kind is what distinguishes them, so it is
  * read here rather than in the surface's copy table.
  *
- * Read BY NAME for the same reason as `tunnel-verdict.ts`: this branch's
- * `RelayErrorKind` union predates those literals, and the refinement has to hold
- * on both sides of the rebase.
+ * The two kinds are read from the error rather than from the surface table because
+ *  the SURFACE cannot tell them apart — both arrive as `connection` — not because the
+ *  union is missing anything: `RelayErrorKind` carries `certificate-rejected` and
+ *  `host-unresolved` by name (`src/relay/errors.ts`), and `ErrorSurface` carries
+ *  `connection`. (An earlier comment here claimed the opposite, from the state of the
+ *  branch before the rebase; the next author should fold this into a switch over the
+ *  union rather than believe that.)
  */
 function refineConnectionKind(error: RelayError | null): RefusalKind | null {
 	if (!error) return null;

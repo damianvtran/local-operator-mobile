@@ -197,3 +197,58 @@ describe("verdictSentence", () => {
 		).toMatch(/lop mobile status/);
 	});
 });
+
+describe("the rendered sentence, through the real classifier", () => {
+	/* The finding this pins (review M1 / QA Q-02): the verdict's `detail` was built
+	 *  from `error.summary` — the loggable `"<kind> <status> <reason>"` line — so an
+	 *  offline Alert read "computer-offline 503 Tunnel temporarily unavailable On that
+	 *  computer: lop mobile status". The hand-built verdicts above could not catch it,
+	 *  because they never passed through `classify`. These do. */
+	it("gives a refusal the guidance instead, with no kind and no status in it", () => {
+		// `forbidden` is the one verdict that does not render the relay's words: its
+		// sentence says what is likely in front of the tunnel and what to allow.
+		const sentence = verdictSentence(
+			classify(new RelayError("origin-refused", "refused", { status: 403 })),
+		);
+		expect(sentence).toContain("access policy");
+		expect(sentence).not.toContain("origin-refused");
+		// The sentence names a loopback ADDRESS on purpose, so addresses and ports are
+		// stripped before looking for a bare status code — the same normalisation the
+		// "never shows a status code" case above uses.
+		const prose = sentence
+			.replace(/\b\d{1,3}(?:\.\d{1,3}){3}\b/g, "ADDRESS")
+			.replace(/:\d+/g, ":PORT");
+		expect(prose).not.toMatch(/\b[1-5]\d{2}\b/);
+	});
+
+	it("carries the relay's own words, and neither the kind nor a status code", () => {
+		const cases: Array<[RelayError, string]> = [
+			[
+				new RelayError("computer-offline", "Tunnel temporarily unavailable", {
+					status: 503,
+				}),
+				"Tunnel temporarily unavailable",
+			],
+			[
+				new RelayError("relay-down", "The relay is not answering", {
+					status: 502,
+				}),
+				"The relay is not answering",
+			],
+			[
+				new RelayError("too-large", "That message is too large", {
+					status: 413,
+				}),
+				"That message is too large",
+			],
+		];
+		// `forbidden` carries the taxonomy's own guidance rather than the detail; it is
+		// checked separately below, so it is not in the table.
+		for (const [error, expected] of cases) {
+			const sentence = verdictSentence(classify(error));
+			expect(sentence).toContain(expected);
+			expect(sentence).not.toContain(error.kind);
+			expect(sentence).not.toMatch(/\b[1-5]\d{2}\b/);
+		}
+	});
+});

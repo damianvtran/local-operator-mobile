@@ -35,8 +35,6 @@ export type InputProps = {
 	autoFocus?: boolean;
 	onSubmitEditing?: () => void;
 	returnKeyType?: TextInputProps["returnKeyType"];
-	/** Optional: the control's own identifier is the fallback, so a screen
-	 *  that does not name a control is still addressable. */
 	testID: string;
 };
 

@@ -27,8 +27,6 @@ export type IconButtonProps = {
 	/** Adds `border-control` where the icon alone does not carry the affordance. */
 	outlined?: boolean;
 	accessibilityHint?: string;
-	/** Optional: the control's own identifier is the fallback, so a screen
-	 *  that does not name a control is still addressable. */
 	testID: string;
 };
 

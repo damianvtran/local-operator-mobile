@@ -201,11 +201,12 @@ export default function Sessions() {
 					accessibilityLabel={`${listLabel(computers, tunnelId, route)} — choose a computer`}
 					onPress={() => router.push("/tunnels")}
 					testID={CONTROL.computersButton}
-					/* `min-h-11`: the control meets the 44 pt floor itself rather than being
-					 *  recorded as the rubric's dense-list exception, which it was in the
-					 *  audit (a 36 pt hit area) — a switcher a thumb has to aim at is not a
-					 *  dense row of text. */
-					className="min-h-11 min-w-0 flex-1 justify-center"
+					/* The floor is the PLATFORM's: 44 on iOS, 48 wherever `Platform.OS`
+					 *  is not iOS — which includes the web/audit profile this build is
+					 *  measured on, where `min-h-11` left the switcher at 44 (QA round 1).
+					 *  A switcher a thumb has to aim at is not a dense row of text. */
+					className="min-w-0 flex-1 justify-center"
+					style={{ minHeight: TOUCH_FLOOR }}
 				>
 					<Text
 						className="text-label text-ink-muted"

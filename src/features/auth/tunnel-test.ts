@@ -6,16 +6,27 @@
  * Node (it needs `@/connection`). It is therefore proven outside-in, against the
  * mock relay, in the capture harness.
  *
- * **Verified against the mock relay**, in the harness: success, wrong password
- * (401), cross-origin refusal (403), computer offline (503), a TLS failure and an
- * unreachable host — see the PR for the frames and the commands.
+ * **How it is verified, stated precisely.** The six outcomes are driven through the
+ * real path by `tunnel-test.test.ts`, with a transport stub standing in for the
+ * network (the transport is the part under test *by* the stub): success, a refused
+ * password (401), an access-policy refusal (403), a sleeping computer or stopped
+ * daemon (503/502), a request that never completes (timeout) and a transport failure
+ * (the `unreachable` sentence). Two of the taxonomy's outcomes — `tls` and `host` —
+ * CANNOT be distinguished on the web target: Chrome withholds the reason from a
+ * rejected `fetch`, so both arrive as an untyped transport failure there. Their
+ * sentences are reachable only from a native build, and this host has no simulator,
+ * so they are unevidenced on web and NOT RUN on native. That is a limitation of the
+ * instrument, not a claim about the code.
+ *
+ * This file previously claimed all six were verified in the harness. It was not true
+ * of the taxonomy (QA measured five different faults all rendering "That password was
+ * not accepted.", because a dead guard below rethrew every failure as
+ * `relay-unauthorized`), so the claim is replaced by the above.
  */
 
 import {
-	type CustomRoute,
 	canSendRelayPassword,
 	createRelayClient,
-	signInToCustomRoute,
 	validateCustomBaseUrl,
 } from "@/connection";
 import {
@@ -50,12 +61,19 @@ async function withTimeout<T>(work: Promise<T>, ms: number): Promise<T> {
  * "the relay answered 303" cannot be read there, and the honest question is
  * whether the LIST route answers.
  */
-export async function runTunnelTest(input: {
-	url: string;
-	password: string;
-	allowInsecure: boolean;
-	timeoutMs?: number;
-}): Promise<TunnelTestResult> {
+export async function runTunnelTest(
+	input: {
+		url: string;
+		password: string;
+		allowInsecure: boolean;
+		timeoutMs?: number;
+	},
+	/** The transport, injectable for tests only — production passes nothing and the
+	 *  client uses `fetch`. Without this seam the branching below (which fault becomes
+	 *  which verdict) can only be exercised against a live relay, and the bug it just
+	 *  had was exactly a branch nothing could reach. */
+	deps: { fetchImpl?: typeof globalThis.fetch } = {},
+): Promise<TunnelTestResult> {
 	const validated = validateCustomBaseUrl(input.url, {
 		allowInsecure: input.allowInsecure,
 	});
@@ -69,26 +87,36 @@ export async function runTunnelTest(input: {
 	const route = validated.route;
 	const timeoutMs = input.timeoutMs ?? TUNNEL_TEST_TIMEOUT_MS;
 	try {
-		const client = createRelayClient({ route, timeoutMs });
+		const client = createRelayClient({
+			route,
+			timeoutMs,
+			...(deps.fetchImpl ? { fetchImpl: deps.fetchImpl } : {}),
+		});
 		/* A route that needs no password is tested by reading the list directly: the
 		 *  login form would be a redirect to a page this app never renders. */
 		if (canSendRelayPassword(route) && input.password.length > 0) {
-			await withTimeout(
-				signInToCustomRoute(route, input.password).then((result) => {
-					/* An unreadable status is not a failure — the list read below is the
-					 *  verdict either way, exactly as the sign-in screen does it. */
-					if (
-						!result.signedIn &&
-						result.detail &&
-						!result.detail.includes("HTTP 0")
-					) {
-						throw new RelayError("relay-unauthorized", result.detail, {
-							detail: result.detail,
-						});
-					}
-				}),
+			const outcome = await withTimeout(
+				client.login(input.password),
 				timeoutMs,
 			);
+			/* A refusal the relay STATES is the verdict; anything else falls through to
+			 *  the list read below, which is the shape this app uses everywhere else.
+			 *
+			 *  What this replaces, and why it was a defect: the previous guard threw
+			 *  `relay-unauthorized` for every failure whose `detail` did not contain
+			 *  `"HTTP 0"` — a string nothing produces — so a whole-relay 503, a 403
+			 *  access policy, a rejected certificate, an unresolvable host and a timeout
+			 *  were ALL rethrown as "wrong password" and the taxonomy's own sentences
+			 *  were unreachable from this screen. QA measured exactly that on five
+			 *  faults. `verified` is the honest discriminator: it is true when the
+			 *  outcome came from the admission read rather than from a status the
+			 *  platform showed, which is the browser's opaque-redirect case — there the
+			 *  list read is the verdict, never a guess about the password. */
+			if (!outcome.signedIn && !outcome.verified) {
+				throw new RelayError("relay-unauthorized", "password refused", {
+					detail: outcome.detail ?? "That password was not accepted.",
+				});
+			}
 		}
 		const frame = await withTimeout(client.sessions(), timeoutMs);
 		return {

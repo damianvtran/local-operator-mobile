@@ -219,21 +219,16 @@ export const CONTROL = {
 	refusalSignIn: "refusal-sign-in",
 	refusalRetry: "refusal-retry",
 	refusalAnotherAddress: "refusal-another-address",
-	/* --- the list, past-list and new-session controls the flows address. --- */
-
-	/* --- the list, past-list and new-session controls the flows address. --- */
-
-	/* --- the list, past-list and new-session controls the flows address. --- */
-
 	/* --- the controls this slice's screens render, named one by one. A screen with
 	 * two controls cannot share an identifier: Maestro's `id:` matching would pick one
 	 * arbitrarily and the failure would read as a flaky flow. --- */
 
-	/* --- the session view (stream D2), adopted into the shared vocabulary ---
-	/* Named and declared here so one file owns the contract: these are the names
-	/* the session view's screens, composer, cards and panels render, and the names
-	/* its Maestro flows select. Without them in the one vocabulary the two halves of
-	/* the check in `a11y.e2e.test.ts` have nothing to agree about. */
+	/* --- the session view (stream D2), adopted into the shared vocabulary.
+	 *
+	 * Named and declared here so one file owns the contract: these are the names the
+	 * session view's screens, composer, cards and panels render, and the names its
+	 * Maestro flows select. Without them in the one vocabulary the two halves of the
+	 * check in `a11y.e2e.test.ts` have nothing to agree about. --- */
 	composerSend: "composer-send",
 	composerStop: "composer-stop",
 	composerAttach: "composer-attach",
@@ -328,9 +323,12 @@ export const IDENTIFIERS: readonly string[] = [
 
 /**
  * Families of parameterised identifiers, declared as their literal prefix
- * (`"session-row-"` for `session-row-<id>`). Empty until a screen renders one: the
- * shell has no list rows or per-computer rows yet, and a family is added in the
- * same change as the control that carries it.
+ * (`"session-row-"` for `session-row-<id>`).
+ *
+ * A family is added in the same change as the control that carries it, and the
+ * session view's ten arrived with its vocabulary above — so this list is no longer
+ * the shell's two or three, and a name that appears here without a builder or a
+ * renderer is the drift the families exist to prevent.
  */
 export const IDENTIFIER_FAMILIES: readonly string[] = [
 	/* The wave-2 slice's parameterised identifiers: one row per session or
@@ -484,6 +482,13 @@ export const sessionRowId = (sessionId: string): string =>
  *  rather than in a template literal at the call site (the e2e check reads this
  *  file for every name a flow may use). */
 export const pastRowId = (sessionId: string): string => `past-row-${sessionId}`;
+
+/** The copy action for one command block, by the step's label — declared here so the
+ *  builder lives with the vocabulary rather than being spelled at the call site
+ *  (`command-block.tsx` had `` `command-${label}` `` inline, a second copy of an
+ *  identifier the flows select). */
+export const commandCopyId = (label: string): string =>
+	`command-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
 
 export const tunnelCommandCopyId = (label: string): string =>
 	`tunnel-copy-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;

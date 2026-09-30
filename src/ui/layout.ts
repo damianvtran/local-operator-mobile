@@ -1,7 +1,7 @@
 import { Platform, useWindowDimensions } from "react-native";
 
 import { type Layout, layoutFor } from "@/ui/size-class";
-import { TOUCH_TARGET } from "@/ui/tokens.gen";
+import { touchFloorFor } from "@/ui/variants";
 
 /**
  * The adaptive layout vocabulary, in ONE place.
@@ -34,8 +34,9 @@ import { TOUCH_TARGET } from "@/ui/tokens.gen";
  * choosing the larger value cannot be wrong — a control a thumb cannot miss is
  * not a platform violation.
  */
-export const TOUCH_FLOOR =
-	Platform.OS === "ios" ? TOUCH_TARGET.ios : TOUCH_TARGET.android;
+export const TOUCH_FLOOR = touchFloorFor(
+	Platform.OS === "ios" ? "ios" : "other",
+);
 
 /**
  * The numbers the token build does not carry yet.

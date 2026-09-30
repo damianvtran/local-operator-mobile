@@ -2,7 +2,7 @@ import * as Clipboard from "expo-clipboard";
 import { useState } from "react";
 import { Text, View } from "react-native";
 
-import { ROLE, tunnelCommandCopyId } from "@/ui/a11y";
+import { commandCopyId, ROLE, tunnelCommandCopyId } from "@/ui/a11y";
 import { Button } from "@/ui/components/button";
 
 /**
@@ -68,7 +68,7 @@ export const CommandBlock = ({
 				<Text
 					selectable
 					className="text-mono-sm text-ink"
-					testID={testID ?? `command-${label}`}
+					testID={testID ?? commandCopyId(label)}
 				>
 					{command}
 				</Text>

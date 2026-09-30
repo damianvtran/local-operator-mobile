@@ -30,12 +30,24 @@
 
 /** Join class names, dropping falsy entries. Local by design: `clsx` is not in
  * the shared dependency set, and this is all of it that the app needs. */
+import { TOUCH_TARGET } from "@/ui/tokens.gen";
+
 export const cx = (
 	...parts: Array<string | false | null | undefined>
 ): string => parts.filter(Boolean).join(" ");
 
-/** The touch floor every interactive control meets (tokens.json § size.touchTarget). */
-export const TOUCH_FLOOR = 44;
+/**
+ * The touch floor, as a RULE rather than as a number.
+ *
+ * There were two constants called `TOUCH_FLOOR` in this kit — this one at 44, and
+ * `layout.ts`'s platform-aware 48-on-web/Android — which is the shape that has
+ * already bitten it once: a control importing the wrong one is a 44 pt target on the
+ * build the audit measures. The rule lives here, where a Node test can read it
+ * (`layout.ts` imports `react-native`, so no unit test may import it), and
+ * `layout.ts` is the only thing that reads the platform.
+ */
+export const touchFloorFor = (platform: "ios" | "other"): number =>
+	platform === "ios" ? TOUCH_TARGET.ios : TOUCH_TARGET.android;
 
 export type ControlState = {
 	pressed?: boolean;
@@ -47,9 +59,6 @@ export type ControlState = {
 /** Hit slop that brings a smaller visual box up to the 44pt floor. The hit area
  * may never overlap another control's, so this is only used where the control
  * has at least 6pt of clear space around it. */
-export const slopToFloor = (visualSize: number): number =>
-	Math.max(0, Math.ceil((TOUCH_FLOOR - visualSize) / 2));
-
 /* -------------------------------------------------------------------------- */
 /* Button                                                                     */
 /* -------------------------------------------------------------------------- */

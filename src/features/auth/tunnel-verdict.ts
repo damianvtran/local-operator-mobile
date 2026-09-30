@@ -83,19 +83,11 @@ export function transportKind(
 }
 
 /**
- * The two outcomes PR #7's remediation added — `certificate-rejected` and
- * `host-unresolved` — read BY NAME, because this branch is stacked on #7 as it
- * stood and its `RelayErrorKind` union does not carry those literals yet (a `case`
- * label for them would not compile here). Reading them from a string-keyed table
- * keeps the verdict right on BOTH sides of the rebase; once the rebased union has
- * them they fold into the switch in `classify` and this table goes away. What it
- * protects is the distinction the review asked for: a rejected certificate and an
- * unresolvable host must never render the same sentence.
+ * The two transport roles `RelayErrorKind` now carries by name
+ * (`certificate-rejected`, `host-unresolved`). Read through this set so the switch
+ * below stays exhaustive over the union without pretending those two arms do not
+ * exist.
  */
-const BRIDGED_KIND: Record<string, { kind: "tls" | "host" }> = {
-	"certificate-rejected": { kind: "tls" },
-	"host-unresolved": { kind: "host" },
-};
 
 /** The one-line sentence beside each verdict, in the app's voice: no status code,
  *  no apology, and a remedy where one exists. */
@@ -134,33 +126,40 @@ export function verdictSentence(verdict: TunnelTestVerdict): string {
 /** Maps a `RelayError` (or a transport failure) onto a verdict. Pure. */
 export function classify(error: unknown): TunnelTestVerdict {
 	if (error instanceof RelayError) {
-		/* The two kinds this branch's union does not carry yet (see BRIDGED_KIND). */
-		const bridged = BRIDGED_KIND[error.kind];
-		if (bridged) return { kind: bridged.kind, detail: error.summary };
+		/* Every `detail` below is `displayableMessage`, never `summary`: the summary is
+		 *  the ONE loggable line (`"<kind> <status> <reason>"`) and it is what two of
+		 *  these verdicts RENDER — so a reader was shown "computer-offline 503 Tunnel
+		 *  temporarily unavailable". The relay layer's own accessor is the copy a screen
+		 *  may show, and the taxonomy already forbids a status code in reader copy. */
+		const detail = error.displayableMessage;
 		switch (error.kind) {
+			case "certificate-rejected":
+				return { kind: "tls", detail };
+			case "host-unresolved":
+				return { kind: "host", detail };
 			case "relay-unauthorized":
 			case "radiant-login-required":
 				return { kind: "password" };
 			case "origin-refused":
-				return { kind: "forbidden", detail: error.summary };
+				return { kind: "forbidden", detail };
 			case "computer-offline":
 			case "gateway-refused":
 			case "relay-down":
 				return {
 					kind: "offline",
-					detail: error.summary,
+					detail,
 					remedy: "On that computer: lop mobile status",
 				};
 			case "unknown-tunnel":
-				return { kind: "unreachable", detail: error.summary };
+				return { kind: "unreachable", detail };
 			case "transport":
 				/* A transport RelayError wraps a rejected fetch, and its `cause` is
 				 *  where the platform's wording lives — the only thing separating a
 				 *  rejected certificate from an unresolvable name from a socket that
 				 *  never answered. */
-				return fromTransport(error.cause ?? error, error.summary);
+				return fromTransport(error.cause ?? error, detail);
 			default:
-				return { kind: "refused", detail: error.summary };
+				return { kind: "refused", detail };
 		}
 	}
 	return fromTransport(error, null);

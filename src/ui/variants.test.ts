@@ -12,8 +12,7 @@ import {
 	segmentedItemClasses,
 	segmentedLabelWeight,
 	skeletonClasses,
-	slopToFloor,
-	TOUCH_FLOOR,
+	touchFloorFor,
 } from "@/ui/variants";
 
 /**
@@ -92,11 +91,29 @@ describe("button", () => {
 		}
 	});
 
-	it("meets the touch floor, and meets it by slop at the one size below it", () => {
-		expect(BUTTON_VISUAL_HEIGHT.md).toBeGreaterThanOrEqual(TOUCH_FLOOR);
-		expect(BUTTON_VISUAL_HEIGHT.icon).toBe(TOUCH_FLOOR);
-		expect(BUTTON_VISUAL_HEIGHT.sm).toBeLessThan(TOUCH_FLOOR);
-		expect(slopToFloor(BUTTON_VISUAL_HEIGHT.sm)).toBe(6);
+	it("states the floor per platform, which is the only floor rule in the kit", () => {
+		/* One rule, two numbers, and the number a control needs depends on the
+		 *  platform it renders on — the web build the audit measures takes 48, iOS 44.
+		 *  This replaced a duplicate `TOUCH_FLOOR = 44` whose only effect could be a
+		 *  control importing the wrong one. */
+		expect(touchFloorFor("ios")).toBe(44);
+		expect(touchFloorFor("other")).toBe(48);
+	});
+
+	it("keeps the visual sizes as designed, with the BOX raised to the floor", () => {
+		/* The visual height is the pill; the pressable box is what a thumb and the
+		 *  audit's target check see, and `button.tsx` raises it to `TOUCH_FLOOR`. `sm`
+		 *  is the one size below the floor, and it is below on purpose. */
+		// The visual is the pill as designed: `md` and `icon` sit at the iOS floor, and
+		// the BOX (not this) is what the platform floor raises — 48 wherever Platform.OS
+		// is not iOS, which includes the web build the audit measures.
+		expect(BUTTON_VISUAL_HEIGHT.md).toBeGreaterThanOrEqual(
+			touchFloorFor("ios"),
+		);
+		expect(BUTTON_VISUAL_HEIGHT.icon).toBeGreaterThanOrEqual(
+			touchFloorFor("ios"),
+		);
+		expect(BUTTON_VISUAL_HEIGHT.sm).toBeLessThan(touchFloorFor("ios"));
 	});
 
 	it("never emits a no-op when both pressed and disabled are true", () => {

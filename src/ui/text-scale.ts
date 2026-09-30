@@ -125,9 +125,9 @@ const CHROME_SCALE_CAP = 1.5;
  * settings. `px` there would freeze the type at whatever the app decided and make
  * the platform setting inert, which is exactly what the first audit measured:
  * `rootFontSize` 16 px, median text height identical at 100 %, 150 % and 200 %.
- * On native there is no root font size to multiply — `PixelRatio.getFontScale()`
- * is applied by `useTypeScale()` — and a scaled sp-equivalent is what px already
- * is there, so the unit stays px.
+ * On native there is no root font size to multiply, and React Native applies
+ * `PixelRatio.getFontScale()` to a `fontSize` itself — see `TextUnit` below, which is
+ * the one place that decision is written down.
  */
 export type TextUnit = "px" | "rem";
 
@@ -150,28 +150,14 @@ const CHROME_STEPS: ReadonlySet<TypeStepName> = new Set<TypeStepName>([
 export function scaledTextVariables(
 	scale: number,
 	/** The unit the platform's text scaling acts on. The caller decides — this
-	 *  module holds no platform at all — and `rem` is what makes the browser's own
-	 *  font-size setting (and the harness's simulated one) reach the glyphs. */
+	 *  module holds no platform at all — and the CHOICE is what selects which
+	 *  mechanism applies the platform's factor (see `TextUnit` above). */
 	unit: TextUnit = "rem",
-	/**
-	 * The factor the platform will apply ON TOP of these values — the browser's
-	 * root font size on web, `1` where the caller has already folded it into
-	 * `scale`.
-	 *
-	 * It is here because a cap has to bound what RENDERS. Capping the preference
-	 * alone leaves the platform free to multiply the cap back out: a 28 pt title
-	 * capped to 1.5 and then rendered in a 32 px root font came out at 3x, which is
-	 * why "Settings" still ellipsised on a 320 pt phone after the first fix.
-	 */
-	platformFactor = 1,
 ): Record<string, string> {
 	const factor = clampTextScale(scale);
-	const platform = Math.max(platformFactor, 1);
 	const out: Record<string, string> = {};
 	for (const name of Object.keys(TYPE_STEPS) as TypeStepName[]) {
 		const step = TYPE_STEPS[name];
-		/* Chrome caps at `CHROME_SCALE_CAP` of its authored size IN PIXELS, so the
-		 * cap is divided back out of the platform's factor. */
 		/* The cap bounds the PREFERENCE, never the platform.
 		 *
 		 * Capping the combined factor (what this did first) pins a chrome step at
@@ -185,12 +171,12 @@ export function scaledTextVariables(
 		 * about the size the APP chose, so it applies to the preference; a reader
 		 * whose browser or OS is at 200 % asked for 200 %, and the ramp is theirs.
 		 *
-		 * `platform` is applied to the value only for `px` (native), where there is
-		 * no root font size to carry it; in `rem` the unit does that multiplication,
-		 * so putting it in the value as well is the squaring this file warns about. */
-		const stepFactor =
-			(CHROME_STEPS.has(name) ? Math.min(factor, CHROME_SCALE_CAP) : factor) *
-			(unit === "px" ? platform : 1);
+		 * The step factor is the preference alone. The platform's factor is applied by
+		 * the platform, exactly once — see `TextUnit` above, which is the one place
+		 * that rule and its measurements live. */
+		const stepFactor = CHROME_STEPS.has(name)
+			? Math.min(factor, CHROME_SCALE_CAP)
+			: factor;
 		out[`--text-${name}`] = `${round(step.size * stepFactor, unit)}${unit}`;
 	}
 	return out;

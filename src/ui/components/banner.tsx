@@ -26,8 +26,6 @@ export type BannerProps = {
 		label: string;
 		onPress: () => void;
 		loading?: boolean;
-		/** Optional: the control's own identifier is the fallback, so a screen
-		 *  that does not name a control is still addressable. */
 		testID: string;
 	};
 	testID: string;

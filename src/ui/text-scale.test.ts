@@ -82,19 +82,40 @@ describe("scaledTextVariables", () => {
 	});
 });
 
-describe("the cap bounds the preference, never the platform", () => {
-	it("lets the platform's own factor through every role, chrome included", () => {
-		/* The reading this pins: the harness's dimension is the ROOT FONT SIZE, so a
-		 *  cell at 200 % must double every role. Capping the combined factor pinned
-		 *  chrome at 1.5x, and on a chrome-heavy screen (Settings) that is most of the
-		 *  text — the run reported a median of 1.40x and failed the cell by name. */
-		const web = scaledTextVariables(1, "rem", 2);
-		expect(Number.parseFloat(web["--text-display"] ?? "") * 16 * 2).toBeCloseTo(
-			TYPE_STEPS.display.size * 2,
+describe("the value never carries the platform's factor", () => {
+	it("emits the preference alone, in `rem` for the browser to multiply", () => {
+		/* The web path with a `system` preference: the unit does the multiplying, so the
+		 *  value is the authored size and a browser at 200 % doubles every role. Capping
+		 *  the combined factor instead pinned chrome at 1.5x, and on a chrome-heavy screen
+		 *  (Settings) that is most of the text — the run reported a median of 1.40x and
+		 *  failed the cell by name. */
+		const web = scaledTextVariables(1, "rem");
+		expect(Number.parseFloat(web["--text-body"] ?? "") * 16).toBeCloseTo(
+			TYPE_STEPS.body.size,
 			1,
 		);
-		expect(Number.parseFloat(web["--text-meta"] ?? "") * 16 * 2).toBeCloseTo(
-			TYPE_STEPS.meta.size * 2,
+		expect(Number.parseFloat(web["--text-display"] ?? "") * 16).toBeCloseTo(
+			TYPE_STEPS.display.size,
+			1,
+		);
+	});
+
+	it("emits `px` values that nothing multiplies — neither the browser nor RN twice", () => {
+		/* Two audiences, one property, and this is the test the blocker needed:
+		 *  - web with an EXPLICIT preference: the preference REPLACES the browser's
+		 *    factor, which is only true if the value carries no platform factor;
+		 *  - native: React Native scales a `fontSize` by `PixelRatio.getFontScale()`
+		 *    itself (`allowFontScaling` is left on by design), so a value that carried
+		 *    the factor too would square it — measured at 64 px for an authored 16 pt
+		 *    body on a platform at 2, with both caps bypassed. */
+		const explicit = scaledTextVariables(1.5, "px");
+		expect(Number.parseFloat(explicit["--text-body"] ?? "")).toBeCloseTo(
+			TYPE_STEPS.body.size * 1.5,
+			1,
+		);
+		const system = scaledTextVariables(1, "px");
+		expect(Number.parseFloat(system["--text-body"] ?? "")).toBeCloseTo(
+			TYPE_STEPS.body.size,
 			1,
 		);
 	});
@@ -102,25 +123,12 @@ describe("the cap bounds the preference, never the platform", () => {
 	it("still caps what the APP chooses, which is what the cap is for", () => {
 		// An in-app 200 % preference: content doubles, chrome stops at 1.5x, because
 		// the app chose those sizes and a 28 pt title is already large.
-		const preferred = scaledTextVariables(2, "rem", 1);
+		const preferred = scaledTextVariables(2, "rem");
 		expect(
 			Number.parseFloat(preferred["--text-display"] ?? "") * 16,
 		).toBeCloseTo(TYPE_STEPS.display.size * 1.5, 1);
 		expect(Number.parseFloat(preferred["--text-body"] ?? "") * 16).toBeCloseTo(
 			TYPE_STEPS.body.size * 2,
-			1,
-		);
-	});
-
-	it("applies the platform factor in the value only where the unit cannot", () => {
-		// Native has no root font size, so `px` values carry the factor themselves.
-		const native = scaledTextVariables(1, "px", 2);
-		expect(Number.parseFloat(native["--text-body"] ?? "")).toBeCloseTo(
-			TYPE_STEPS.body.size * 2,
-			1,
-		);
-		expect(Number.parseFloat(native["--text-display"] ?? "")).toBeCloseTo(
-			TYPE_STEPS.display.size * 2,
 			1,
 		);
 	});

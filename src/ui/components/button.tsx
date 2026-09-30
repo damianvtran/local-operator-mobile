@@ -34,8 +34,6 @@ export type ButtonProps = {
 	accessibilityHint?: string;
 	/** Required: a control with no identifier cannot be reached by an E2E flow,
 	 * and a shared default would put the same one on every button of a screen. */
-	/** Optional: the control's own identifier is the fallback, so a screen
-	 *  that does not name a control is still addressable. */
 	testID: string;
 };
 

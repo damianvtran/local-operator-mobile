@@ -24,6 +24,20 @@ const walk = (dir: string): string[] =>
 		return statSync(path).isDirectory() ? walk(path) : [path];
 	});
 
+/**
+ * Comments out of a source file before asking "is this identifier rendered".
+ *
+ * Without this the check is satisfied by a mention: proven on the last round's head,
+ * where declaring an identifier and referring to it inside a `//` comment passed the
+ * guard while nothing rendered it. A leading `*` also drops the JSDoc line, and block
+ * comments are removed whole.
+ */
+const stripComments = (text: string): string =>
+	text
+		.replace(/\/\*[\s\S]*?\*\//g, "")
+		.replace(/^\s*\*.*$/gm, "")
+		.replace(/\/\/.*$/gm, "");
+
 /** `id: "x"` and `- id: x` selectors, quoted or not. Text selectors and regexes
  * are not identifiers and are deliberately not matched. */
 const TESTID_LITERAL = /\btestID\s*[:=]\s*(?:"[^"]*"|\{\s*[`"']|["'`])/;
@@ -134,6 +148,26 @@ describe("the Maestro flows against src/ui/a11y.ts", () => {
 	);
 });
 
+describe("the rendered check reads code, not prose", () => {
+	it("drops a mention that lives in a comment", () => {
+		/* The failure this closes, reproduced on the last head: a declared identifier
+		 *  with no renderer passed the check as soon as a scanned file mentioned it in a
+		 *  comment, which is precisely the "selector no flow can ever hit" the check
+		 *  exists to catch. */
+		const source = [
+			"// CONTROL.scratchProbeId is planned for a later pass",
+			"/* CONTROL.otherProbe too */",
+			" * CONTROL.jSDocProbe in a doc block",
+			"const real = { testID: CONTROL.settingsBack };",
+		].join("\n");
+		const stripped = stripComments(source);
+		expect(stripped).not.toContain("scratchProbeId");
+		expect(stripped).not.toContain("otherProbe");
+		expect(stripped).not.toContain("jSDocProbe");
+		expect(stripped).toContain("CONTROL.settingsBack");
+	});
+});
+
 describe("the routes and primitives against src/ui/a11y.ts", () => {
 	const sources = [
 		...walk(join(root, "app")),
@@ -163,7 +197,7 @@ describe("the routes and primitives against src/ui/a11y.ts", () => {
 	it("references every declared identifier from at least one route or primitive", () => {
 		// A declared-but-unrendered identifier is a selector no flow can ever hit,
 		// and it would still satisfy the flow check above.
-		const rendered = sources.map(({ text }) => text).join("\n");
+		const rendered = sources.map(({ text }) => stripComments(text)).join("\n");
 		const unused = Object.entries({ SCREEN, EMPTY, CONTROL, SURFACE }).flatMap(
 			([group, ids]) =>
 				Object.keys(ids)

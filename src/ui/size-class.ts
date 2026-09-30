@@ -1,3 +1,4 @@
+import { maxColumnWidth } from "@/ui/column";
 import { LAYOUT } from "@/ui/tokens.gen";
 
 /**
@@ -81,13 +82,12 @@ export function layoutFor(width: number, height: number): Layout {
 }
 
 function measureFor(width: number, height: number): number | null {
-	if (width >= LAYOUT.tabletBreakpoint) {
-		return width > height
-			? LAYOUT.contentMaxWidthTabletLandscape
-			: LAYOUT.contentMaxWidthTablet;
-	}
-	if (width > height && width > LAYOUT.contentMaxWidthLandscapePhone) {
-		return LAYOUT.contentMaxWidthLandscapePhone;
-	}
-	return null;
+	/* Delegated, not re-derived. This was a second implementation of the same rule
+	 *  and it disagreed with the first at exactly the size the rule exists for:
+	 *  `column.ts` classifies a device by its SHORTER side (a phone on its side is
+	 *  still a phone) and returns 620 for 844x390, while this returned 640 by looking
+	 *  at the width. `Screen` renders through `column.ts` and `ReadableColumn` through
+	 *  `layout.measure`, so the disagreement was one screen away from putting a 640 pt
+	 *  column inside a 620 pt cap. One implementation now, and this one is a call. */
+	return maxColumnWidth({ width, height });
 }

@@ -66,7 +66,7 @@ describe("layoutFor", () => {
 		expect(layoutFor(1024, 768)).toMatchObject({ split: true, measure: 640 });
 		expect(layoutFor(1366, 1024)).toMatchObject({ split: true, measure: 640 });
 		expect(layoutFor(768, 1024)).toMatchObject({ split: false, measure: 560 });
-		expect(layoutFor(844, 390)).toMatchObject({ split: false, measure: 640 });
+		expect(layoutFor(844, 390)).toMatchObject({ split: false, measure: 620 });
 		expect(layoutFor(390, 844).measure).toBeNull();
 	});
 });
