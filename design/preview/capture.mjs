@@ -44,10 +44,32 @@ const arg = (name, fallback = null) => {
 	return i === -1 ? fallback : (process.argv[i + 1] ?? true);
 };
 
+/** Injected into every preview capture: animations and transitions disabled.
+ *
+ * Why this is required rather than cosmetic. The sheet draws real animated
+ * affordances (the streaming shimmer, the working-line spinner), and a still of
+ * an animation has NO fixed phase — the committed frames differed from run to
+ * run from the moment the capture reached the sections that animate, which is
+ * why `--check` failed on the two full-height sheets while the 844-tall
+ * viewport frames (header, grounds, ink — nothing animated) matched byte for
+ * byte. Disabling them makes each still the RESTING frame of every animation,
+ * which is also exactly what the reduced-motion contract renders, so the
+ * committed artefact is one a reader can compare against. */
+const FREEZE_CSS = `*, *::before, *::after {
+	animation: none !important;
+	transition: none !important;
+}`;
+
 const target = arg("target", "preview");
 /* `--probe <selector>` prints each match's box and computed background. See the
  * use in `openPage` for why a capture tool needs this. */
 const probe = arg("probe", null);
+/* `--check` re-renders every committed capture and compares it with the file in
+ * the tree instead of writing. See the block above `save()`. */
+const check = process.argv.includes("--check");
+/* `--keep-scratch` leaves the per-run scratch tree (the verify copies and any
+ * frames rendered in check mode) in place for inspection instead of deleting it. */
+const keepScratch = process.argv.includes("--keep-scratch");
 
 /* ---- Chrome ------------------------------------------------------------ */
 
@@ -252,6 +274,33 @@ const openPage = async ({ file, width, height, dpr, theme = null, extraCss = "" 
 	return {
 		state: JSON.parse(state.value),
 		metrics: JSON.parse(result.value),
+		/* Grow the emulated viewport to the document's own height and capture THAT,
+		 * instead of asking for a beyond-viewport clip.
+		 *
+		 * The clip path is not reproducible: the same page captured twice with
+		 * `captureBeyondViewport: true` at a 15003-pixel height came back
+		 * byte-identical on one run and different on the next, because Chrome tiles
+		 * a very tall capture and the tile boundaries land differently run to run.
+		 * A committed artefact whose bytes cannot be reproduced cannot be checked,
+		 * which is what made the new `--check` fail on whichever of the two full
+		 * sheets happened to differ that run. A single-tile viewport capture at the
+		 * full height is deterministic, and this sheet uses no `vh` units, so a tall
+		 * viewport changes nothing about the layout. */
+		resize: async (height) => {
+			await send("Emulation.setDeviceMetricsOverride", {
+				width,
+				height,
+				deviceScaleFactor: dpr,
+				mobile: true,
+				screenWidth: width,
+				screenHeight: height,
+			});
+			await send("Runtime.evaluate", {
+				expression:
+					"new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))",
+				awaitPromise: true,
+			});
+		},
 		shot: async ({ clip = null } = {}) => {
 			const { data } = await send("Page.captureScreenshot", {
 				format: "png",
@@ -298,7 +347,85 @@ if (fontDir && !existsSync(fontCssPath)) {
 
 /* ---- 2. the kit sheet -------------------------------------------------- */
 
+/* ---- committed-output verification -------------------------------------
+ *
+ * `--check` re-renders every committed capture and compares it with the file in
+ * the tree, so the previews and the Play feature graphic have the same kind of
+ * gate the icons have. Without it, these five PNGs were committed artefacts
+ * with no way to tell whether they still matched their source page — the exact
+ * shape of the round-1 MAJOR on `build-icons.mjs --check`.
+ *
+ * Comparison is BYTE-level first. Chrome's encoder is deterministic for the
+ * same page, viewport and flags, so a byte match is the common case; where bytes
+ * differ, the images are decoded and compared pixel-by-pixel, and the output
+ * says which of the two comparisons passed. A missing decoder is a FAILURE,
+ * never a pass, because "could not prove it differs" and "it differs" must not
+ * look the same in a log.
+ */
+
+const alphaTool = () =>
+	["magick", "convert"].find((bin) => {
+		try {
+			execFileSync(bin, ["--version"], { stdio: "ignore" });
+			return true;
+		} catch {
+			return false;
+		}
+	});
+
+const pixelsIdentical = (a, b) => {
+	const bin = alphaTool();
+	if (!bin) return null;
+	try {
+		execFileSync(bin, ["compare", "-metric", "AE", a, b, "null:"], {
+			stdio: ["ignore", "pipe", "pipe"],
+		});
+		return true;
+	} catch (e) {
+		const said = String(e.stderr ?? "").trim();
+		if (/^\d+/.test(said)) return false;
+		return null;
+	}
+};
+
+const stale = (path, why) => {
+	console.error(`stale: ${path} — ${why}`);
+	process.exitCode = 1;
+};
+
+/** In generation mode: write. In `--check`: compare against the committed file
+ * and report the strongest comparison that passed. */
+const save = (pngBuffer, outPath, { reencode = null } = {}) => {
+	if (!check) {
+		writeFileSync(outPath, pngBuffer);
+		previewTargets.push(outPath);
+		if (reencode) reencode(outPath);
+		return;
+	}
+	const fresh = `${scratchVerify}/${outPath.split("/").pop()}`;
+	writeFileSync(fresh, pngBuffer);
+	if (reencode) reencode(fresh);
+	if (!existsSync(outPath)) return stale(outPath, "missing");
+	if (readFileSync(fresh).equals(readFileSync(outPath))) {
+		console.log(`  ${outPath.split("/").pop()}: byte-identical`);
+		return verified.push(outPath);
+	}
+	if (pixelsIdentical(fresh, outPath) === true) {
+		console.log(
+			`  ${outPath.split("/").pop()}: pixels identical (bytes differ — either encoder metadata or a real content change of sub-threshold pixels)`,
+		);
+		return verified.push(outPath);
+	}
+	stale(
+		outPath,
+		"does not match a fresh render of its own page (bytes and pixels both differ, or no decoder is available to prove the pixels match)",
+	);
+};
+
 const previewTargets = [];
+const verified = [];
+const scratchVerify = `${scratch}/verify`;
+mkdirSync(scratchVerify, { recursive: true });
 
 if (target === "preview" || target === "all") {
 	const outDir = new URL("../../docs/design/preview/", here).pathname;
@@ -310,21 +437,21 @@ if (target === "preview" || target === "all") {
 			height: 844,
 			dpr: 3,
 			theme,
+			extraCss: FREEZE_CSS,
 		});
 		/* The required frame: exactly the phone viewport at 390x844 @3x, which is
 		 * what the app's own screenshots are taken at. */
 		const viewport = await pagep.shot();
 		const viewportPath = `${outDir}kit-${theme}-390x844@3x.png`;
-		writeFileSync(viewportPath, viewport);
-		previewTargets.push(viewportPath);
+		save(viewport, viewportPath);
 		/* And the whole sheet in one image, because the review needs the parts
-		 * that are below the fold on a 844-tall screen. */
-		const full = await pagep.shot({
-			clip: { x: 0, y: 0, width: 390, height: pagep.metrics.h },
-		});
+		 * that are below the fold on a 844-tall screen. Captured by growing the
+		 * viewport to the document height rather than with a beyond-viewport clip —
+		 * see `resize()` for why the clip was not reproducible. */
+		await pagep.resize(pagep.metrics.h);
+		const full = await pagep.shot();
 		const fullPath = `${outDir}kit-${theme}-full@3x.png`;
-		writeFileSync(fullPath, full);
-		previewTargets.push(fullPath);
+		save(full, fullPath);
 		console.log(
 			`${theme}: viewport ${viewport.length} B, full sheet ${pagep.metrics.h}pt -> ${full.length} B`,
 		);
@@ -347,47 +474,41 @@ if (target === "feature" || target === "all") {
 	const png = await pagep.shot();
 	const outPath = new URL("app-icon/store/play-feature-graphic-1024x500.png", root).pathname;
 	/* Play requires JPEG or 24-bit PNG with NO alpha channel, and the capture
-	 * always comes back RGBA. Rather than depend on ImageMagick here, the
-	 * requirement is checked and reported: a maintainer who has `magick` runs
-	 * the one-liner the message prints. */
-	const hasAlpha = (() => {
-		/* PNG colour type is byte 25 of the IHDR chunk: 6 = RGBA, 2 = RGB. */
-		return png[25] === 6;
-	})();
-	writeFileSync(outPath, png);
+	 * always comes back RGBA. The strip is part of the artefact, so it is applied
+	 * to the fresh render too when checking — otherwise the comparison would be
+	 * between two different encodings and would always fail. */
+	const stripAlpha = (path) => {
+		const bin = alphaTool();
+		if (!bin) {
+			console.warn(
+				`warning: no ImageMagick, so ${path} may keep an alpha channel — run \`magick ${path} -alpha off PNG24:${path}\``,
+			);
+			process.exitCode = 1;
+			return;
+		}
+		execFileSync(bin, [path, "-alpha", "off", `PNG24:${path}`], { stdio: "pipe" });
+		const bytes = readFileSync(path);
+		if (bytes[25] === 6) {
+			console.error(`PROBLEM: ${path} is still RGBA after the strip`);
+			process.exitCode = 1;
+		}
+	};
+	const hasAlpha = png[25] === 6; /* PNG colour type: 6 = RGBA, 2 = RGB (byte 25 of IHDR) */
 	console.log(
 		`feature graphic: ${png.length} B, alpha channel: ${hasAlpha ? "present" : "none"}`,
 	);
-	if (hasAlpha) {
-		const bin = ["magick", "convert"].find((b) => {
-			try {
-				execFileSync(b, ["--version"], { stdio: "ignore" });
-				return true;
-			} catch {
-				return false;
-			}
-		});
-		if (bin) {
-			execFileSync(bin, [outPath, "-alpha", "off", `PNG24:${outPath}`], { stdio: "pipe" });
-			const fixed = readFileSync(outPath);
-			console.log(
-				`feature graphic: stripped alpha with ${bin} -> colour type ${fixed[25] === 6 ? "still RGBA (PROBLEM)" : "24-bit RGB"}`,
-			);
-			if (fixed[25] === 6) process.exitCode = 1;
-		} else {
-			console.warn(
-				`warning: no ImageMagick, so ${outPath} still has an alpha channel — run \`magick ${outPath} -alpha off PNG24:${outPath}\``,
-			);
-			process.exitCode = 1;
-		}
-	}
-	previewTargets.push(outPath);
+	save(png, outPath, { reencode: hasAlpha ? stripAlpha : null });
 }
 
 /* ---- 4. store-screenshot frames --------------------------------------- */
 
 if (target === "frames" || target === "all") {
-	const outDir = new URL("store-screenshots/out/", root).pathname;
+	/* Frames are scratch output, not committed artefacts, so `--check` renders
+	 * them only to assert their SIZES against the store specs — the templates are
+	 * what is committed, and the frames are what an implementation pass fills in. */
+	const outDir = check
+		? `${scratch}/frames`
+		: new URL("store-screenshots/out/", root).pathname;
 	mkdirSync(outDir, { recursive: true });
 	const specs = [
 		["iphone-6.9", 1320, 2868, 1],
@@ -403,7 +524,7 @@ if (target === "frames" || target === "all") {
 			theme: "dark",
 		});
 		const png = await pagep.shot();
-		const path = `${outDir}${name}.png`;
+		const path = `${outDir}/${name}.png`;
 		writeFileSync(path, png);
 		const { width: w, height: h } = pngDimensions(png);
 		const ok = w === width && h === height;
@@ -452,4 +573,20 @@ if (left > 0) {
 	console.log("teardown: 0 processes left, profile removed");
 }
 
-if (previewTargets.length) console.log(`\nwrote:\n${previewTargets.map((p) => `  ${p}`).join("\n")}`);
+/* ---- report ------------------------------------------------------------ */
+
+if (check) {
+	if (process.exitCode) {
+		console.error(
+			`\n${verified.length} of ${verified.length + 1} committed captures verified; the rest did not match`,
+		);
+		process.exit(1);
+	}
+	console.log(
+		`${verified.length} committed captures verified against a fresh render (no files written)`,
+	);
+	console.log("captures are current");
+	if (!keepScratch) rmSync(scratch, { recursive: true, force: true });
+} else if (previewTargets.length) {
+	console.log(`\nwrote:\n${previewTargets.map((p) => `  ${p}`).join("\n")}`);
+}

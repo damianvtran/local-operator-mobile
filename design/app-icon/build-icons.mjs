@@ -31,7 +31,7 @@
  */
 
 import { execFileSync } from "node:child_process";
-import { mkdirSync, writeFileSync, readFileSync, existsSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 
 const here = new URL(".", import.meta.url);
 /* Every call site writes `design/app-icon/...` because those are the paths a
@@ -73,6 +73,14 @@ const markGroup = (colour, strokeWidth = null) => `
 	</g>`;
 
 const MARK_VIEWBOX = "285 253 520 520";
+/** Round a canvas coordinate for the emitted SVG.
+ *
+ * A float artefact is not a rendering bug — Icon Composer reads the numbers — but
+ * `15.999999999999998` in a committed SVG shows up in every future diff of that
+ * file, and a transform a human has to decode is a transform nobody reviews. Two
+ * decimals is well under a device pixel at a 1024 canvas. */
+const coord = (n) => String(Math.round(n * 100) / 100);
+
 /** The artwork's own aspect, used to centre it: the viewBox is already cropped
  * to the mark plus even padding, so a square render centred in a square canvas
  * is centred on the mark. */
@@ -81,7 +89,7 @@ const svg = ({ size, ground, mark, markScale = 1, transparent = false }) => {
 	return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 100 100">
 	<title>Local Operator</title>
 	${transparent ? "" : `<rect x="0" y="0" width="100" height="100" fill="${ground}"/>`}
-	<svg x="${inset * 100}" y="${inset * 100}" width="${markScale * 100}" height="${markScale * 100}"
+	<svg x="${coord(inset * 100)}" y="${coord(inset * 100)}" width="${coord(markScale * 100)}" height="${coord(markScale * 100)}"
 	     viewBox="${MARK_VIEWBOX}" fill="none">${markGroup(mark)}</svg>
 </svg>`;
 };
@@ -125,59 +133,146 @@ const alphaTool = () =>
 	});
 
 const forceAlphaChannel = (pngPath) => {
-	if (check) return;
 	const bin = alphaTool();
 	if (!bin) {
 		console.warn(
-			`warning: no ImageMagick, so ${pngPath} may lack the alpha CHANNEL Play asks for — run \`magick ${pngPath} -alpha set PNG32:${pngPath}\``,
+			`warning: no ImageMagick, so ${pngPath} cannot be re-encoded as PNG32 — Play asks for a 32-bit PNG WITH an alpha channel (\`magick ${pngPath} -alpha set PNG32:${pngPath}\`)`,
 		);
-		return;
+		return false;
 	}
-	const target = out(pngPath);
-	execFileSync(bin, [target, "-alpha", "set", `PNG32:${target}`], { stdio: "pipe" });
+	execFileSync(bin, [pngPath, "-alpha", "set", `PNG32:${pngPath}`], { stdio: "pipe" });
+	return true;
 };
 
 const renderer = findRenderer();
-if (!renderer && !check) {
+if (!renderer) {
+	/* No rasterizer means `--check` CANNOT verify the PNGs, which is a failure
+	   of the instrument rather than a pass — the whole point of M1 in the round-1
+	   review. Generation needs it for the same reason, so both paths stop. */
 	console.error(
-		"No SVG rasterizer found. One of these is required to regenerate the icon PNGs:\n" +
+		"No SVG rasterizer found. One of these is required to generate the icon PNGs " +
+			"and to verify them in --check mode (verifying means re-rendering and comparing):\n" +
 			RENDERERS.map((r) => `  ${r.bin.padEnd(14)} ${r.install}`).join("\n") +
-			"\n\nThe committed PNGs are already in the tree — this is only needed to regenerate them.",
+			"\n\nThe committed PNGs are already in the tree — this is only needed to regenerate them " +
+			"or to check them.",
 	);
-	process.exit(1);
+	process.exit(2);
 }
 
 /* ---- the build -------------------------------------------------------- */
 
-const scratch = `${process.env.LOCAL_OPERATOR_SCRATCHPAD ?? "/tmp"}/lo-icons`;
+const scratch = `${process.env.LOCAL_OPERATOR_SCRATCHPAD ?? "/tmp"}/lo-icons-${process.pid}`;
 mkdirSync(scratch, { recursive: true });
 
 const written = [];
+const problems = [];
+const verified = [];
+
+/** Record a check failure. Every one of these prints the path AND the reason,
+ * because "stale" without a path is the message that made the first version of
+ * this gate useless. */
+const stale = (path, why) => {
+	problems.push(`${path} — ${why}`);
+	process.exitCode = 1;
+};
 
 const write = (path, contents) => {
 	const target = out(path);
 	if (check) {
-		const current = existsSync(target) ? readFileSync(target, "utf8") : null;
-		if (current !== contents) {
-			console.error(`stale: ${path} — run \`node design/app-icon/build-icons.mjs\``);
-			process.exitCode = 1;
-		}
-		return;
+		if (!existsSync(target)) return stale(path, "missing");
+		const current = readFileSync(target, "utf8");
+		if (current !== contents) return stale(path, "different text");
+		return verified.push(`${path} (text)`);
 	}
 	mkdirSync(new URL(".", new URL(out(path), "file://")).pathname, { recursive: true });
 	writeFileSync(target, contents);
 	written.push(path);
 };
 
-/** Render one SVG string to a PNG at `size`, asserting the result is the size
- * that was asked for. A rasterizer that silently clamps (ImageMagick's SVG
- * delegate has done exactly that) would otherwise ship a wrong-sized icon. */
-const render = (svgString, pngPath, size) => {
-	if (check) return;
-	const svgPath = `${scratch}/${pngPath.replaceAll("/", "_")}.svg`;
+/* A rasterizer that silently clamps (ImageMagick's SVG delegate has done
+ * exactly that) would otherwise ship a wrong-sized icon, so every render is
+ * measured after it is produced. */
+const pngSize = (path) => {
+	const b = readFileSync(path);
+	if (b.length < 24 || b.readUInt32BE(0) !== 0x89504e47)
+		return { width: 0, height: 0 };
+	return { width: b.readUInt32BE(16), height: b.readUInt32BE(20) };
+};
+
+/** Pixel-identical rather than byte-identical, for the one asset an external
+ * tool re-encodes. Returns `true`/`false`, or `null` when no ImageMagick is
+ * available to decode with — and `null` is treated as a FAILURE by the caller,
+ * never as a pass. */
+const pixelsIdentical = (a, b) => {
+	const bin = alphaTool();
+	if (!bin) return null;
+	try {
+		execFileSync(bin, ["compare", "-metric", "AE", a, b, "null:"], {
+			stdio: ["ignore", "pipe", "pipe"],
+		});
+		return true; /* exit 0 = zero differing pixels */
+	} catch (e) {
+		/* `compare` exits 1 and prints the count of differing pixels on stderr
+		   when the images differ, which is a real difference, not a tool error. */
+		const said = String(e.stderr ?? "");
+		if (/^\s*\d+\s*$/.test(said.trim()) || /^\s*\d+\s*\(/.test(said.trim())) return false;
+		return null;
+	}
+};
+
+/**
+ * Render one SVG string and reconcile it with the committed PNG.
+ *
+ * In generation mode the render lands in the tree. In `--check` mode it lands
+ * in the scratch dir and is compared against the committed file, so the gate
+ * verifies the PIXELS a reader will see rather than the text of an SVG.
+ *
+ * The first version of this function returned immediately under `--check`, so
+ * `--check` never opened a PNG: replacing all sixteen committed icons with
+ * `\x89PNG...CORRUPTED` still printed "icon assets are current" and exited 0.
+ * A gate that cannot fail is worse than no gate, and the failure mode is
+ * documented in this repository's own rules ("a dead instrument returns a
+ * reading, not an error").
+ */
+const render = (svgString, pngPath, size, { reencodeAlpha = false } = {}) => {
+	const target = out(pngPath);
+	const stem = pngPath.replaceAll("/", "_");
+	const svgPath = `${scratch}/${stem}.svg`;
+	const scratchPng = `${scratch}/${stem}`;
 	writeFileSync(svgPath, svgString);
-	mkdirSync(new URL(".", new URL(out(pngPath), "file://")).pathname, { recursive: true });
-	execFileSync(renderer.bin, renderer.args(svgPath, out(pngPath), size), { stdio: "pipe" });
+	execFileSync(renderer.bin, renderer.args(svgPath, scratchPng, size), { stdio: "pipe" });
+
+	/* The Play icon is re-encoded after rendering (see `forceAlphaChannel`), and
+	 * the re-encode is part of the artefact. Applying it to the scratch render
+	 * too is what makes the comparison apples-to-apples. */
+	if (reencodeAlpha && !forceAlphaChannel(scratchPng))
+		return stale(pngPath, "cannot reproduce: no ImageMagick to re-encode the alpha channel");
+
+	const { width, height } = pngSize(scratchPng);
+	if (width !== size || height !== size)
+		return stale(
+			pngPath,
+			`the renderer produced ${width}x${height}, not ${size}x${size} (a rasterizer that clamps silently) — the check cannot trust its own output`,
+		);
+
+	if (check) {
+		if (!existsSync(target)) return stale(pngPath, "missing");
+		const fresh = readFileSync(scratchPng);
+		const committed = readFileSync(target);
+		if (fresh.equals(committed)) return verified.push(`${pngPath} (byte-identical)`);
+		/* Bytes differ, which is expected for exactly one asset: an external
+		   encoder's PNG metadata is not reproducible. Decode both and compare
+		   pixels before calling it stale, and say WHICH comparison passed. */
+		if (pixelsIdentical(scratchPng, target) === true)
+			return verified.push(`${pngPath} (pixels identical; bytes differ by encoder metadata)`);
+		return stale(
+			pngPath,
+			`does not match a fresh render of its own SVG (bytes differ and pixels differ, or no decoder is available to prove the pixels match)`,
+		);
+	}
+
+	mkdirSync(new URL(".", new URL(target, "file://")).pathname, { recursive: true });
+	writeFileSync(target, readFileSync(scratchPng));
 	written.push(pngPath);
 };
 
@@ -238,7 +333,7 @@ for (const [name, ground, mark] of [
 	     Flat and opaque on purpose: depth, blur, specular and refraction belong to
 	     Icon Composer, not to the source art. -->
 	${ground ? `<rect width="100" height="100" fill="${ground}"/>` : ""}
-	${mark ? `<svg x="${(1 - IOS_MARK_SCALE) * 50}" y="${(1 - IOS_MARK_SCALE) * 50}" width="${IOS_MARK_SCALE * 100}" height="${IOS_MARK_SCALE * 100}" viewBox="${MARK_VIEWBOX}" fill="none">${markGroup(mark)}</svg>` : ""}
+	${mark ? `<svg x="${coord((1 - IOS_MARK_SCALE) * 50)}" y="${coord((1 - IOS_MARK_SCALE) * 50)}" width="${coord(IOS_MARK_SCALE * 100)}" height="${coord(IOS_MARK_SCALE * 100)}" viewBox="${MARK_VIEWBOX}" fill="none">${markGroup(mark)}</svg>` : ""}
 </svg>
 `,
 	);
@@ -336,15 +431,30 @@ write(
 	"design/app-icon/store/play-icon-512.svg",
 	svg({ size: 512, ground: C.androidBackground, mark: C.androidMark, markScale: 0.62 }),
 );
-render(readFileSync(out("design/app-icon/store/play-icon-512.svg"), "utf8"), "design/app-icon/store/play-icon-512.png", 512);
-forceAlphaChannel("design/app-icon/store/play-icon-512.png");
+render(readFileSync(out("design/app-icon/store/play-icon-512.svg"), "utf8"), "design/app-icon/store/play-icon-512.png", 512, {
+	reencodeAlpha: true,
+});
 
 /* ---- report ---------------------------------------------------------- */
 
-if (written.length === 0 && !check) console.log("nothing to do");
+/* Clean up the scratch renders. They are per-pid, so leaving them would quietly
+ * accumulate a 33-file tree in the session scratchpad on every run. */
+const cleanup = () => rmSync(scratch, { recursive: true, force: true });
+
 if (check) {
-	if (process.exitCode) console.error("icon assets are stale");
-	else console.log("icon assets are current");
-	process.exit(process.exitCode ?? 0);
+	for (const line of problems) console.error(`stale: ${line}`);
+	if (problems.length) {
+		console.error(
+			`\n${problems.length} of ${problems.length + verified.length} generated files do not match their source ` +
+				`— run \`node design/app-icon/build-icons.mjs\``,
+		);
+		process.exit(1);
+	}
+	console.log(`${verified.length} generated files verified against a fresh derivation (renderer: ${renderer.bin})`);
+	console.log("icon assets are current");
+	cleanup();
+	process.exit(0);
 }
+if (written.length === 0) console.log("nothing to do");
 console.log(`wrote ${written.length} files (renderer: ${renderer.bin})`);
+cleanup();

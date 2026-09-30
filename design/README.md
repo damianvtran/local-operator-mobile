@@ -18,19 +18,44 @@ Prose lives in `docs/design/`: [`brand-kit.md`](../docs/design/brand-kit.md) is
 the why, [`components.md`](../docs/design/components.md) is the per-primitive
 spec.
 
-## The four commands
+## The gates and the generators
+
+The three `--check` commands are **gates**: each must exit 0, and each re-derives
+its artefact and compares it with the committed file, so a stale or damaged asset
+fails the run instead of passing quietly.
 
 ```sh
-node design/tokens/contrast-contract.mjs          # the colour gate; must exit 0
-node design/tokens/build-preset.mjs               # regenerate the preset + preview CSS
-node design/tokens/build-preset.mjs --check       # fail if the generated files are stale
-node design/preview/capture.mjs                   # capture the preview sheet (both themes)
+node design/tokens/contrast-contract.mjs           # colour gate; 1056 assertions over both themes
+node design/tokens/build-preset.mjs                # regenerate the preset + the preview's CSS
+node design/tokens/build-preset.mjs --check        # gate: preset and preview CSS match tokens.json
+node design/app-icon/build-icons.mjs               # regenerate every icon/splash/store PNG
+node design/app-icon/build-icons.mjs --check       # gate: re-renders all 33 files and compares them
+node design/preview/capture.mjs                    # capture the preview sheet, both themes
+node design/preview/capture.mjs --check            # gate: re-renders the 5 committed captures, compares
 ```
 
-`node design/app-icon/build-icons.mjs` regenerates the icon and splash PNGs; it
-needs an SVG rasterizer (`rsvg-convert` or ImageMagick) and says so with install
-lines if it cannot find one. The PNGs are committed, so building the app never
-needs it.
+Each gate compares **bytes**, falling back to a decoded **pixel** comparison where
+an external encoder makes the bytes non-reproducible, reports which of the two
+passed, and treats a missing decoder as a failure rather than a pass. `build-icons
+--check` and `capture --check` therefore need the same tools their generators
+need (an SVG rasterizer; Chrome) and say so, in install lines, when one is
+missing.
+
+`design/app-icon/build-icons.mjs` needs an SVG rasterizer (`rsvg-convert` or
+ImageMagick); `design/preview/capture.mjs` needs the installed Google Chrome,
+headless. Both generators' outputs are committed, so building the app needs
+neither.
+
+### The committed preview frames are the resting frames
+
+`capture.mjs` injects `animation: none; transition: none` into every capture. An
+animated affordance — the streaming shimmer, the working-line spinner — has no
+fixed phase in a still, so a committed still of one is a different image every
+run and cannot be checked at all (that is exactly how the capture gate's first
+version failed on the full-height sheets while the 844-tall frames matched).
+Freezing renders each animation at its **resting frame**, which is also what the
+reduced-motion contract draws, so the committed PNGs are reproducible and
+diffable.
 
 ## Conventions
 

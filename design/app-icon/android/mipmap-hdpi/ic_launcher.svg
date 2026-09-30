@@ -1,7 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="72" height="72" viewBox="0 0 100 100">
 	<title>Local Operator</title>
 	<rect x="0" y="0" width="100" height="100" fill="#22201c"/>
-	<svg x="14.000000000000002" y="14.000000000000002" width="72" height="72"
+	<svg x="14" y="14" width="72" height="72"
 	     viewBox="285 253 520 520" fill="none">
 	<g stroke="#f1eee6" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" fill="none">
 		<circle cx="490" cy="355" r="78" stroke-width="35" />

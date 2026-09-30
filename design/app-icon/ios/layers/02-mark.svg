@@ -4,7 +4,7 @@
 	     Flat and opaque on purpose: depth, blur, specular and refraction belong to
 	     Icon Composer, not to the source art. -->
 	
-	<svg x="15.999999999999998" y="15.999999999999998" width="68" height="68" viewBox="285 253 520 520" fill="none">
+	<svg x="16" y="16" width="68" height="68" viewBox="285 253 520 520" fill="none">
 	<g stroke="#f1eee6" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" fill="none">
 		<circle cx="490" cy="355" r="78" stroke-width="35" />
 		<circle cx="720" cy="326" r="42" stroke-width="29" />

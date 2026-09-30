@@ -25,8 +25,8 @@ Three artefacts already exist. This kit is a *port*, not a fourth opinion.
 
 | Artefact | What it is | How this kit uses it |
 |---|---|---|
-| `~/local-operator-site/docs/design-kit/` | The marketing site's system: tokens, typography, components, motion, voice, and the executable `contrast-contract.mjs` | The **register** — the warm-paper grounds, the accent and semantic triples, the two shadows, the motion durations and easings, the contrast floors, and the contract script's shape |
-| `~/local-operator-ui/docs/branding.md` + `src/renderer/src/shared/themes/palettes/local-operator.ts` | The desktop app's 59-theme system and its two brand palettes, `localOperatorDark` and `localOperatorLight` | The **palette and the role names**. These are the app's own brand palettes and they ship here verbatim |
+| `~/local-operator-site/docs/design-kit/` | The marketing site's system: tokens, typography, components, motion, voice, and the executable `contrast-contract.mjs` | The **register** — the warm-paper grounds, the semantic triples, the two shadows, the motion durations and easings, the contrast floors, and the contract script's shape. Its light accent is the one value NOT taken, and § 2.1 gives the measurement |
+| `~/local-operator-ui/docs/branding.md` + `src/renderer/src/shared/themes/palettes/local-operator.ts` | The desktop app's 59-theme system and its two brand palettes, `localOperatorDark` and `localOperatorLight` | The **palette and the role names**, including the accent ramp in full. These are the app's own brand palettes and they ship here verbatim |
 | `~/local-operator/local_operator/mobile/web/src/` | The shipped phone web client (React + Tailwind v4) | The **phone-shaped decisions** — the touch floors, the 16pt input floor, the machine-voice split, the 44px control height, the streaming shimmer, the diff row tint |
 
 The precedence rule, inherited from the desktop app and unchanged here: **on the
@@ -149,11 +149,40 @@ designed as a brand artefact:
    neutral notice). Deriving a fourth semantic for a new palette is how a fourth
    hue gets invented by accident; taking the one that already exists does not.
 
-**What is taken from the site instead:** the accent WASH values as the faintest
-tint, the line weights (`hairline` decorative, `border-control` structural), the
-two shadows, the motion tokens, the radii cap ("nothing above 16px; an
-out-of-scale value renders a square corner rather than silently working"), and
-the scroll/segment conventions.
+**What is taken from the site instead:** the semantic triples, the accent WASH
+values as the faintest tint, the line weights (`hairline` decorative,
+`border-control` structural), the two shadows, the motion tokens, the radii cap
+("nothing above 16px; an out-of-scale value renders a square corner rather than
+silently working"), and the scroll/segment conventions.
+
+#### The one value the two sources disagree on, and why the app's wins
+
+The **light accent** is the single divergence, and it is recorded rather than
+smoothed over. The site ships `#177b45` for that role; this app ships the desktop
+app's `#137742`. Measured on 2026-09-29 against this role set, the site's value
+fails the contract on two of the app's grounds:
+
+| Pair | Site `#177b45` | App `#137742` | Floor |
+|---|---|---|---|
+| accent on `sunken` | **4.27** ✗ | 4.51 | 4.5 |
+| accent on `row-selected` | **4.29** ✗ | 4.53 | 4.5 |
+| accent on `canvas` | 4.55 | 4.81 | 4.5 |
+| accent on `surface` | 4.87 | 5.14 | 4.5 |
+
+**The cause is the ground ramp, not the hue.** The desktop app's light ramp is
+deliberately wider than the site's — the desktop branding doc names exactly two
+sanctioned deviations from the kit, and this is the first: a page renders one
+surface where this app stacks four, so the site's near-white ladder made a panel
+on canvas and a popover on that panel the same pixel to the eye. A link colour
+solved for one page ground therefore does not clear the four grounds plus two row
+states this app has, and `sunken`/`row-selected` are exactly where it lands
+short. The dark accents agree between the two sources (`#38c96a`), so this is a
+light-theme question only.
+
+Reconciling it means changing one of the two ramps, not shipping `#177b45` into
+the app; anyone who wants the site's green here has to bring the grounds that
+made it work with it. `tokens.json § $meta.accentDivergence` carries the same
+measurement next to the values.
 
 ### 2.2 The four grounds, and the ladder
 
@@ -513,6 +542,13 @@ remains, the danger pulse stops and the word `approval` remains, the spinner
 stops and a static ellipsis plus a polite live region remain, the skeleton keeps
 its lifted resting tone (which is lifted *precisely so* a still frame still
 reads as a placeholder).
+
+**The kit's own committed frames are captured with motion off**, so every still
+in `docs/design/preview/` is the resting frame of each animation. That is not a
+convenience: an animation has no fixed phase in a still, so a committed capture
+of one is a different image every run and cannot be diffed at all — which is how
+the capture gate first failed on the full-height sheets while the 844-tall frames
+matched byte for byte. See `design/README.md`.
 
 **Elevation.** Two shadows and no more: `overlay` (a sheet, a dialog, a popover —
 an object that leaves the flow) and `frame` (an image shown as a matted object).
