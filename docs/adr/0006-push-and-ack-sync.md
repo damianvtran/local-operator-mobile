@@ -536,26 +536,33 @@ publication cursor (Q9), and why §3.4's content-derived key has something to mi
 
 | Record | Fields | Why it is the minimum |
 |---|---|---|
-| **Device** | `device_id`, `platform`, the push token, `environment` (`sandbox`/`production` — only the app knows which build it is), app build, `created_at`, `last_seen_at`, **`credential_live`**, **`revoked_at`** (the tombstone) | token rotation and revocation are the whole of device management; **the two flags are the two states §4 defines — `revoked_at` set means "refuse re-registration", `credential_live` false means "no delivery until this device authenticates again"** |
+| **Device** | `device_id`, `platform`, the push token, `environment` (`sandbox`/`production` — only the app knows which build it is), app build, `created_at`, `last_seen_at`, **`credential_live`**, and the state markers **`revoked_at` / `unpaired_at` / `expired_at`** | token rotation and revocation are the whole of device management; **the markers are the states §4 defines, and §4's precedence (revoked > unpaired > expired) is what every reader of the row — the register route, `list`, the delivery gate — resolves, so one row cannot be read two ways** |
 | **Account → devices** | account id → live device ids | routing; the account already exists (`GET /v1/me`, `tunnels/api.py:144-170`) |
 | **Computer → devices** | the connector's tunnel identity → the devices registered for *that* machine | a user with three machines must not be pushed about machine C's work while paired to A |
 | **Delivery** | `(device_id, conversation_handle, emit_id)` → sent/attempted, provider id, response code, **kept 14 days** | the record of what was pushed: it is what makes re-delivery idempotent, a revocation testable and the cloud's own alerts meaningful. **It is not returned to the machine** (§3.1) |
+| **Credential (per device)** | `credential_live` + `last_authenticated_at`, **reported by the relay** on every authenticated request that names its device (`X-Lop-Device`, §3.1/§4) | the second limb of §4 rule 2: **the cookie is the relay's to see and nobody else's**, so the relay *evaluates* and the cloud *enforces*. The cloud cannot compute this from a registration, and without the report the rule would be unenforceable exactly where it is asserted |
 | **Credentials** | the APNs `.p8` key id + team id; the FCM service account | the reason the cloud has to exist at all |
 
 **What the cloud must NOT hold:** transcripts, conversation names, session ids, working
 directories, model names, prompt text, **read state or read history**, and **no unread
 count** (§1.5). §4 says what it does learn, honestly, including the residue.
 
-**Two retention rules the cloud owns, and one honest gap** (both from the cloud ops note,
-[`docs/push-cloud-ops.md`](../push-cloud-ops.md), *proposal* — PR #15): delivery records are
-kept **14 days**, and a device with **no authenticated request for 60 days is dropped** as a
-tombstone rather than a ban (last-seen is the device's last authenticated call — the app reading
-unread on launch, foreground or connect — not its last delivery; the drop rule and the 60/hour
-per-computer ceiling are the ops note's design, not this ADR's). **The gap, stated rather than
-discovered later:** the machine's registry (§3.1) does not see that drop, so a device can appear
-paired in the app's Settings while push is paused for it, until it next opens the app. Settings
-must not claim otherwise, and the honest sentence is the ops note's own: "push may resume the
-next time this device opens the app".
+**Two retention rules this ADR adopts, and one honest gap** (designed in the cloud ops note,
+[`docs/push-cloud-ops.md`](../push-cloud-ops.md), PR #15 — the note stays the operational
+runbook; the rules are the ADR's, and the note's text is being aligned to them): delivery records
+are kept **14 days**, and a device with **no authenticated request for 60 days has its row
+dropped entirely — no marker** *(corrected in this pass: the earlier draft called this a
+tombstone, which is the one thing it must not be — a tombstone refuses re-registration, and this
+drop is explicitly "rather than a ban")*. So it is §4's **absent** state: the app re-registers on
+its next launch, which that state allows by definition. Last-seen is the device's last
+*authenticated* call — the app reading unread on launch, foreground or connect — not its last
+delivery; the 60/hour per-computer ceiling stays the note's operational limit, not a state rule.
+**The gap, stated rather than discovered later:** the machine's registry (§3.1) does not see that
+drop, so a device can appear paired in the app's Settings while push is paused for it, until it
+next opens the app. Settings must not claim otherwise, and §4's "notifications never stop
+silently" is the rule that closes it: every stop — the drop, a rotation, a lapsed cookie — is
+either repaired (the drop, by re-registering) or reported (the suspension) the next time the
+device reaches the relay, and none is left silent.
 
 **The attention push is not "the same route with a flag" for idempotency purposes** (review
 M4): a completion event and a correction are different deliveries with different keys (§3.4).
@@ -707,24 +714,32 @@ POST /api/push/register
 // rows. THE TOKEN IS FORWARDED AND NOT STORED ON THE MACHINE — the relay keeps the cloud's
 // device_id and the metadata a Settings list needs.
 //
-// REFUSED when this `install_id`'s row carries `revoked_at` — a tombstone from an explicit
-// revoke (§4):
-//   403 {"code": "device_revoked", "error": "this device was revoked on this computer"}
-// Silence would be worse than the refusal: the app must be able to say "this device is
-// revoked — re-pair it" instead of showing a registered device that never receives anything.
+// REFUSED when this `install_id`'s row carries a marker that forbids registering (§4, and the
+// precedence there is revoked > unpaired > expired):
+//   403 {"code": "device_revoked",  "error": "this device was revoked on this computer"}
+//   403 {"code": "device_unpaired", "error": "this computer is no longer paired"}
+// `expired_at` does NOT refuse — re-registering IS the act that clears it (authenticate, then
+// register). Silence would be worse than any of the three: the app must be able to say which
+// state it is in instead of showing a registered device that never receives anything.
 //
 // AND REGISTRATION IS ONLY HALF OF DELIVERY (§4 rule 2): the cloud delivers to a device only
-// while its registration is backed by a live credential. Registering happens on an
-// authenticated relay session, and records the credential epoch it was made under; the machine
-// compares that epoch with the current one on every emit. `revoked_at` is NOT set by a
-// password rotation — see §4, because the two states are deliberately different.
+// while its registration is backed by a live credential — and that flag is the RELAY's to
+// compute, because the cookie is the relay's to see. Every authenticated request that names its
+// device (`X-Lop-Device: <install_id>`, additive) reports `credential_live` +
+// `last_authenticated_at` to the cloud (§2.2); a rotation emits one credential-change event and
+// the cloud pauses fan-out for that computer's devices until each device's next authenticated
+// request. Registering records the credential epoch, and the machine compares it on every emit.
+// A rotation sets `expired_at`, NOT `revoked_at` — see §4: the two states are deliberately
+// different.
 ```
 
 **List this computer's devices** *(new)* — what the phone's Settings renders:
 
 ```jsonc
 GET /api/push/devices → {"devices": [{"device_id":"…","platform":"ios","name":"…",
-                                       "app_version":"…","registered_at":…,"last_seen_at":…}]}
+                                       "app_version":"…","registered_at":…,"last_seen_at":…,
+                                       "state":"live|expired|unpaired|revoked"}],
+                        "precedence":"revoked > unpaired > expired"}    // §4's one vocabulary
 ```
 
 **Revoke / deregister** *(new)*. This is the **revoke** path of §4: it drops the cloud's token
@@ -965,62 +980,95 @@ paths, and the honest limits of each:
 3. **Rotating the relay password** invalidates every device's `lop_mobile` cookie at once —
    the cookie key is derived from the password (`docs/relay/contract.md`:48-52, ADR 0002 §6) —
    so it cuts a stolen device off from the relay immediately, and (with rule 2 below) it stops
-   **push delivery** to that device too, without revoking anything. **It is not a revoke**, which
+   **push delivery** to that device too, without revoking anything, and the marker it writes is
+   **`expired_at`** — never `revoked_at` — reported to the cloud as one credential-change event so
+   fan-out pauses until each device authenticates again (rule 2). **It is not a revoke**, which
    is why (1)/(2) are still required for a stolen phone: the device returns the moment it can
    authenticate, and so would a thief who learned the new password. The app's copy must not
    conflate the two.
 4. **Server-side per-token revocation** and **dead-token deletion** (APNs `410 Unregistered` /
    FCM `UNREGISTERED`) — deletion is not optional: an accumulating token table is a privacy
-   liability and a cost.
-5. **Unpairing a computer** revokes every device bound to it — one tombstone each, rule 1 —
-   because a device paired only to A has no business being pushed about B, and because a
-   deregistration the user was told about must not be reversible by the device itself.
+   liability and a cost. **This is the *absent* state below, never a tombstone** (rule 3): the row
+   goes, no marker is written, and re-registration is allowed and expected.
+5. **Unpairing a computer** cuts off every device bound to it — one **`unpaired_at`** marker
+   each: durable like a tombstone, but *named for what actually happened* (rule 1) — because a
+   device paired only to A has no business being pushed about B, and because a deregistration the
+   user was told about must not be reversible by the device itself. The app's copy distinguishes
+   the two: a revoke says the **device** was revoked, this says the **computer** left.
 
-**The four device states, and the rule that closes the stolen-phone gap (P4; the ops note's
+**The five device states, and the rule that closes the stolen-phone gap (P4; the ops note's
 round-4 finding, which read the register route as consulting nothing).** A device is in exactly
 one of these states, and the state decides *both* whether it receives anything *and* whether its
 row may be registered again:
 
-| State | Token | `revoked_at` | May register again? | Entered by |
+| State | Marker | Token | May register again? | Entered by |
 |---|---|---|---|---|
-| **Live** | present | unset | — (it is registered) | `POST /api/push/register` on an authenticated session, recording the credential epoch it was made under |
-| **Credential-dead** | kept | **unset** | **yes**, by authenticating again | a **relay-password rotation** (path 3) — the machine marks every device of that computer credential-dead and reports the rotation once |
-| **Revoked** | dropped | **set** (tombstone) | **no** — refused | an explicit revoke: path 1, path 2, or an unpair (path 5) |
-| **Absent** | dropped with the row | — | **yes** | a provider's dead-token signal (path 4: APNs `410`, FCM `UNREGISTERED`) |
+| **Live** | none | present | — (it is registered) | `POST /api/push/register` on an authenticated session, recording the credential epoch it was made under |
+| **Expired** | `expired_at` | kept | **yes**, by authenticating again | the **credential lapses**: a relay-password rotation (path 3) or the `lop_mobile` cookie's own TTL — **evaluated by the relay** (rule 2), the only component that sees the cookie |
+| **Unpaired** | `unpaired_at` | dropped | **no**, until that computer is paired again | unpairing the **computer** (path 5): the devices bound to it go with it |
+| **Revoked** | `revoked_at` | dropped | **no**, until it is un-revoked | an explicit revoke of *this device*: path 1 or path 2 |
+| **Absent** | — (no row at all) | dropped with the row | **yes** | a provider dead-token (path 4) or the 60-day idle drop (§2.2) |
+
+**The precedence is `revoked` > `unpaired` > `expired`, and the names are shared vocabulary with
+the cloud ops note** — the register route (§3.1), `GET /api/push/devices` (`list`) and the
+delivery gate all resolve the *same* precedence on the *same* markers, so no two surfaces can read
+one row as two different states. A row may carry more than one marker (a device revoked, and then
+its computer unpaired); the winner decides both what the route answers and what the user is told.
 
 Three rules follow, and together they are the whole of the revocation semantics:
 
 1. **A revoke TOMBSTONES.** The token goes (there is nothing left to deliver to) and the row stays
    with `revoked_at` set. **`POST /api/push/register` refuses a device whose row carries
    `revoked_at`** (`403 {"code": "device_revoked"}`) — that refusal is what makes a revoke stick
-   for the same `install_id` instead of being undone by the next app launch. Unpair-driven
-   deregistration is therefore **durable**: a device that was unpaired cannot re-register itself
-   while Settings is telling the user the revoke is pending.
-2. **Delivery requires BOTH a registered device AND a live credential for it.** The registration
-   is only half: the cloud delivers while `credential_live` holds, and a **relay-password
-   rotation** clears it for *every* device of that computer so nothing is delivered until the
-   device authenticates with the new password (path 3 said the rotation does not revoke the
-   token — this is what it does instead). **Rotation does NOT set `revoked_at`**, deliberately: it
-   is not a decision about the device, and the device is welcome back the moment it can
-   authenticate (`credential_live = true` again on its next registration); a revoke *is* such a
-   decision. **Both sides check it** — the machine will not emit for a credential-dead device and
-   the cloud will not deliver to one — so a single lost call cannot open the gap.
+   for the same `install_id` instead of being undone by the next app launch. **An unpair is
+   durable in the same way, under its own marker**: the device's row carries `unpaired_at`, the
+   register route answers `403 {"code": "device_unpaired"}`, and the app says *which computer*
+   left instead of claiming a revoke nobody performed. Neither marker is cleared by the device
+   itself; both are cleared by a deliberate act (below).
+2. **Delivery requires BOTH a registered device AND a live credential for it — and the evaluator
+   is the relay.** The registration is only half. The relay is the only component that ever sees
+   the `lop_mobile` cookie, so it *evaluates* the second half and *reports* it; the cloud holds the
+   flag and *enforces* it, because it cannot compute it. Concretely: every authenticated relay
+   request that names its device (`X-Lop-Device: <install_id>`, additive) marks that device live
+   and reports `credential_live` + `last_authenticated_at` to the cloud (§2.2); **a rotation emits
+   one credential-change event** — observable machine-side, which is what makes it reliable — and
+   the cloud **pauses fan-out for that computer's devices until each device's next authenticated
+   relay request**. The machine's emit path checks the credential epoch as the second lock, so a
+   single lost call cannot open the gap. **Rotation sets `expired_at`, never `revoked_at`**: it is
+   not a decision about the device, the token is kept, and the device is welcome back the moment
+   it authenticates — which clears `expired_at` and restores `credential_live`.
 3. **Dead-token deletion is a DIFFERENT state (path 4), not a revoke.** APNs `410` / FCM
    `UNREGISTERED` is a *provider signal* about a token (uninstalled app, rotated token), not a
-   decision by the user: the row is deleted, **no `revoked_at` is written**, and re-registration
-   is allowed and expected. Conflating the two would either refuse a legitimate reinstall or let a
-   stolen device back in, depending on which way it was conflated.
+   decision by the user: the row is deleted, **no marker is written**, and re-registration is
+   allowed and expected. The 60-day idle drop (§2.2) is this same state for the same reason.
+   Conflating either with a revoke would refuse a legitimate reinstall; conflating a revoke with
+   them would let a stolen device back in.
 
-**How a device comes back.** Only by an explicit act: `POST /api/push/devices/{id}/unrevoke`
-*(new — §3.1)* on the machine, or the same action from the Radient account. That clears
-`revoked_at` and nothing else — the token was dropped, so the app must register again, which
-requires a live credential, which requires the user's password. Settings shows the row as
-**revoked** with "re-pair this device to restore" rather than hiding it, because a device the
-user cannot see is a device they cannot un-revoke.
+**How a device comes back.** By an explicit act, and *which* act depends on the marker —
+`revoked_at` → `POST /api/push/devices/{id}/unrevoke` *(new — §3.1)* on the machine, or the same
+action from the Radient account; `unpaired_at` → pair that computer again (the pairing flow clears
+it for every device that was bound to it), or `unrevoke` that device explicitly; `expired_at` →
+nothing to clear: authenticate to the relay with the current password and re-register. In every
+case **the marker's clearing restores no token** — the app must register again, and registering
+needs a live credential. Settings shows each row with its state and the action that clears it
+("re-pair this device", "pair this computer again", "sign in again to resume") rather than hiding
+a device the user cannot see or un-revoke.
+
+**Notifications never stop silently (this pass's second half).** All three ways delivery stops —
+a rotation, a lapsed cookie, the 60-day drop — are invisible from the app's side until it next
+reaches the relay, which is exactly why the trigger is the relay's own `401`: on the next launch,
+foreground or connect, the app learns the state from the failed call and says so in the state's
+own words — "notifications are paused for this device until you sign in again" (expired), "this
+device was revoked on <computer>" (revoked), "this computer is no longer paired" (unpaired) — and
+for a dropped row, where re-registration is allowed, the honest sentence is the ops note's own:
+"push may resume the next time this device opens the app". **No surface may report a device as
+receiving pushes while any of these markers is set**, the mirror of the rule below about never
+claiming notifications stopped everywhere while a revoke is pending.
 
 **The residual, stated rather than implied.** The tombstone is indexed by `install_id`, and a
 freshly installed app mints a **new** one — so what stops a re-installed stolen device is the
-*credential* rule, not the tombstone: to register at all it must authenticate to the machine with
+*credential* rule — **evaluated by the relay and enforced by the cloud** (rule 2) — not the
+tombstone: to register at all it must authenticate to the machine with
 the relay password (`/login`; the cookie key is derived from that password,
 `docs/relay/contract.md`:48-52). **The honest remedy is revoke AND rotate**, which is why the
 app's Settings copy says so — a revoke offers "also change this computer's password to cut it off
@@ -1196,7 +1244,8 @@ week, L ≈ more, with an unknown tail):
 | **Conversation handle + listing field + resolve route** (§4, S2) | daemon-core | **S** | an HMAC mint, one field on the aggregate, one resolve route |
 | **Interface freeze** (§3, S3) | all three | **S** | the §3 shapes, refusal shapes, fixtures in this repo's `fixtures/` (ADR 0003's pattern) |
 | **Device registry, register/list/deregister routes, no token stored** (§3.1, S4) | daemon-core | **S–M** | durable record, cloud id, Settings list, the generic deregister |
-| **Device lifecycle: live / credential-dead / revoked (tombstone) / absent (dead token), the register route's `revoked_at` refusal, the credential rule on the emit path, the rotation report, un-revoke** (§3.1, §4, S4a) | daemon-core | **S–M** | the four states are one table in code, not four booleans read ad hoc; register refused `403 device_revoked` on a tombstone; a dead token deletes its row with **no** marker and re-registers cleanly; a rotation flips `credential_live` false for every device of the computer, the machine stops emitting for them **and** the cloud stops delivering (assert both), `revoked_at` stays unset, and the device returns by registering with the new password; un-revoke clears the tombstone and leaves the token absent |
+| **Device lifecycle: live / expired (`expired_at`) / unpaired (`unpaired_at`) / revoked (`revoked_at`) / absent (no row), the shared precedence revoked > unpaired > expired, the register route's two refusals, the emit-side epoch check, un-revoke** (§3.1, §4, S4a) | daemon-core | **S–M** | the states are one table in code, not five booleans read ad hoc, and the register route, `list` and the emit path resolve the **same** precedence (asserted); `403 device_revoked` on a tombstone and `403 device_unpaired` on an unpaired row, while `expired_at` re-registers; a dead token or the 60-day drop deletes the row with **no** marker and re-registers cleanly; `unrevoke` clears the tombstone and leaves the token absent |
+| **Credential-live evaluation and the credential-change event** (the relay evaluates, the cloud enforces, `X-Lop-Device` on authenticated requests, one event per rotation, fan-out paused until each device's next authenticated request) (§3.1, §4 rule 2, S4c) | daemon-core + Radient-cloud | **S–M** | after a rotation **no** device of that computer is delivered to (observed at the provider stub) while the machine also refuses to emit for it — and each resumes on its own next authenticated request, not on the rotation's; a device that never authenticates again stays paused, which is the point |
 | **Push worker: two cursors + baseline, acknowledgement-map diff, gates, presence deferral, catch-up, bounded queue that advances only on the cloud's `202`** (§2.1-§2.3, S5) | daemon-core | **M** | the store is done; the risk is the gates and the cursor, not the volume |
 | **Attention emit: structural detection (`revision()` equality as the trigger, then the acknowledgement map and the supersede cursor say which conversation moved), `/seen` nudge that consumes the change, `exclude` on the wire** (§3.1, S6) | daemon-core | **S** | reuses the loop that already reads `revision()` |
 | **App: notifications module, permissions, channels, badge management, handle resolution, `+native-intent` + route, unpair UI, Settings copy, FOSS gating** (§5-§6, S8/S9/S11) | app | **M–L** | a new native module, a new lifecycle path, a new route, a new settings surface, and a build-flavour story: the largest single diff |
@@ -1256,7 +1305,7 @@ order this ADR *decides*, and the reason:
 | **Reordered/duplicated pushes** | APNs may reorder and coalesce; Android may drop in Doze | the badge is never carried (§1.5) — the class is removed, not defended |
 | **A heal swallowed by idempotency** | same token, new content, and a naive key drops the correction | **two** things: the emit key carries the record's content (§3.4), **and** a heal is read on the supersede cursor (`superseded_since`) rather than on the publication cursor (§2.1), so the key is actually minted. A test that a heal produces a distinct key *and* that it is emitted |
 | **Privacy regression by drift** (someone adds a field) | the payload table is the allow-list, and the tempting additions are the leaky ones (a name, a snippet, a counter) | the cloud contract rejects unknown fields (`extra="forbid"`, the house pattern in `docs/design/descriptive-notifications.md`); a test asserting the builder never reads `body_is_snippet`/`body_is_failure` inputs |
-| **Revocation that does not revoke** | a stolen phone that keeps buzzing is the worst user-visible failure here | all five paths in §4 exercised **against the four states and the three rules**: a register refused on `revoked_at`, a provider dead-token deleting its row with no refusal marker, a rotation that clears `credential_live` on both sides **without** setting `revoked_at`, and the account-side path exercised with the machine offline |
+| **Revocation that does not revoke** | a stolen phone that keeps buzzing is the worst user-visible failure here | all five paths in §4 exercised **against the five states, the shared precedence and the three rules**: a register refused on `revoked_at` and on `unpaired_at` with both codes, an `expired_at` row allowed to re-register, a provider dead-token and a 60-day drop deleting their rows with **no** marker, a rotation that pauses delivery on both sides **without** setting `revoked_at` (S4c, asserted in both directions), and the account-side path exercised with the machine offline |
 | **Acknowledge-by-accident** (a new automatic path clearing marks) | the rule is one sentence in §1.3 and easy to violate | a delivered push, a wake and a foreground change all leave `unseen` untouched; `claim_delivery` never advances the read watermark (`attention.py:2391-2393`) |
 | **Cloud outage** | a machine whose pushes fail must not stall or retry forever | bounded queue, same-key retries, drop with one log line; the machine's state is unaffected |
 | **The licence/FOSS promise** | shipping Firebase linkage into the default flavour is a real constraint, not a formality | the `foss` flavour is a slice with its own build, and CI proves the default flavour is the only one with the module |
