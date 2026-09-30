@@ -1,18 +1,9 @@
-import { EMPTY, SCREEN } from "@/ui/a11y";
-import { EmptyState, Screen } from "@/ui/components";
+import OwnTunnel from "@/features/auth/own-tunnel";
 
 /**
- * A custom tunnel URL plus the relay password (docs/ux/flows.md F-3). The form
- * needs the custom-route connection profile, so this route is the shell only.
+ * `/custom` is the address-and-password screen's original URL (F-3), kept as an
+ * alias so every existing link — the sign-in panel, a refusal surface, a deep
+ * link — still lands on the guided flow rather than a second, thinner
+ * implementation of it. `/own-tunnel` is the canonical URL; one screen serves both.
  */
-export default function CustomRoute() {
-	return (
-		<Screen title="Custom route" testID={SCREEN.customRoute}>
-			<EmptyState
-				headline="Point the app at a tunnel URL."
-				next="You will need the relay password that `lop mobile serve` printed."
-				testID={EMPTY.customRoute}
-			/>
-		</Screen>
-	);
-}
+export default OwnTunnel;

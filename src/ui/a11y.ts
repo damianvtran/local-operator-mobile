@@ -48,7 +48,6 @@ export const SCREEN = {
 	welcome: "welcome-screen",
 	signIn: "sign-in-screen",
 	computers: "computers-screen",
-	customRoute: "custom-route-screen",
 	sessions: "sessions-screen",
 	session: "session-screen",
 	subagent: "subagent-screen",
@@ -56,6 +55,7 @@ export const SCREEN = {
 	newSession: "new-session-screen",
 	settings: "settings-screen",
 	notFound: "not-found-screen",
+	ownTunnel: "own-tunnel-screen",
 } as const;
 
 /**
@@ -64,16 +64,10 @@ export const SCREEN = {
  * empty" cannot be satisfied by another screen's empty state.
  */
 export const EMPTY = {
-	welcome: "welcome-empty",
-	signIn: "sign-in-empty",
-	computers: "computers-empty",
-	customRoute: "custom-empty",
 	sessions: "sessions-empty",
 	session: "session-empty",
 	subagent: "subagent-empty",
 	past: "past-empty",
-	newSession: "new-session-empty",
-	settingsConnection: "settings-connection-empty",
 	notFound: "not-found-empty",
 } as const;
 
@@ -90,9 +84,7 @@ export const EMPTY = {
  */
 export const CONTROL = {
 	// Welcome and Sessions: the two shell routes that render an action.
-	welcomeContinue: "welcome-continue",
 	sessionsNew: "sessions-new",
-	sessionsSettings: "sessions-settings",
 	notFoundHome: "not-found-home",
 
 	// The back affordance each pushed screen puts in its header. Named per screen
@@ -101,10 +93,6 @@ export const CONTROL = {
 	subagentBack: "subagent-back",
 
 	// Settings: the theme override, the one setting that needs no connection.
-	settingsTheme: "settings-theme",
-	themeSystem: "appearance-theme-system",
-	themeLight: "appearance-theme-light",
-	themeDark: "appearance-theme-dark",
 
 	// Overlays. Only one sheet, one dialog and one toast can be up at a time (the
 	// z ladder allows no more), so their parts are unambiguous without a
@@ -115,6 +103,67 @@ export const CONTROL = {
 	dialogCancel: "dialog-cancel",
 	dialogScrim: "dialog-scrim",
 	toast: "toast",
+
+	/* --- added by the wave-2 screen slice (D1): the auth, tunnel and list
+	 * controls it renders. Additive — main's names above are untouched, because the
+	 * Maestro flows in `e2e/maestro/**` reference the ones below. --- */
+	button: "button",
+	iconButton: "icon-button",
+	input: "input",
+	textarea: "textarea",
+	chip: "chip",
+	listRow: "list-row",
+	segmented: "segmented",
+	sessionsPast: "sessions-past",
+	signInStart: "sign-in-start",
+
+	// The identifiers `e2e/maestro/flows/**` presses. They are the contract with
+	// the native flow set: a rename here without a rename there is a flow that
+	// silently stops reaching its control.
+	welcomeConnect: "welcome-connect",
+	welcomeCustomUrl: "welcome-custom-url",
+	/** The two paths on the computer screen: Radient (recommended) and the
+	 *  reader's own tunnel. Distinct identifiers because a flow that walks the
+	 *  self-hosted path must not be able to pass by pressing the Radient one. */
+	radientPath: "tunnel-path-radient",
+	ownTunnelPath: "tunnel-path-own",
+	ownTunnelPathAction: "tunnel-path-own-action",
+	ownTunnelTest: "own-tunnel-test",
+	settingsTunnelEdit: "settings-tunnel-edit",
+	settingsTunnelTest: "settings-tunnel-test",
+	settingsTunnelRemove: "settings-tunnel-remove",
+	customUrlField: "custom-url-field",
+	customPasswordField: "custom-password-field",
+	customConnect: "custom-connect",
+	customInsecureOptIn: "custom-insecure-opt-in",
+	/** The list's two header controls: the computer switcher and Settings. */
+	computersButton: "computers-button",
+	settingsButton: "settings-button",
+	sessionSearchButton: "session-search-button",
+	sessionSearchField: "session-search-field",
+	/** Set on the chosen computer row, so "which one is active" is asserted as a
+	 *  state rather than inferred from a colour. */
+	computerSelectedMarker: "computer-selected-marker",
+
+	settingsSignOut: "settings-sign-out",
+	settingsThemeDark: "settings-theme-dark",
+	settingsThemeLight: "settings-theme-light",
+	settingsThemeSystem: "settings-theme-system",
+	settingsTextScale100: "settings-text-scale-100",
+	settingsTextScale150: "settings-text-scale-150",
+	settingsTextScale200: "settings-text-scale-200",
+	settingsTextScaleSystem: "settings-text-scale-system",
+	settingsDeleteAccount: "settings-delete-account",
+
+	/* --- the list, past-list and new-session controls the flows address. --- */
+	newSessionCwd: "new-session-cwd",
+	newSessionModel: "new-session-model",
+	newSessionModelDefault: "new-session-model-default",
+	newSessionPrompt: "new-session-prompt",
+	newSessionStart: "new-session-start",
+	sessionsSplit: "sessions-split",
+	sessionsFooter: "sessions-footer",
+	sessionsNoRoute: "sessions-no-route",
 } as const;
 
 /**
@@ -138,7 +187,19 @@ export const IDENTIFIERS: readonly string[] = [
  * shell has no list rows or per-computer rows yet, and a family is added in the
  * same change as the control that carries it.
  */
-export const IDENTIFIER_FAMILIES: readonly string[] = [];
+export const IDENTIFIER_FAMILIES: readonly string[] = [
+	/* The wave-2 slice's parameterised identifiers: one row per session or
+	 * computer, one copy action per command block. Declared in the same change as
+	 * the controls that carry them, which is what this list's own note asks for. */
+	"session-row-",
+	"past-row-",
+	"computer-row-",
+	"computer-row-status-",
+	"computer-row-reachability-",
+	"tunnel-copy-",
+	"session-empty-",
+	"command-",
+];
 
 /**
  * Whether a selector names something the app can render: a static identifier, or
@@ -199,3 +260,82 @@ export const state = (options: {
 	if (options.expanded !== undefined) out.expanded = options.expanded;
 	return out;
 };
+
+/**` asserts, and every
+ * one of them is a place the flows and this file must agree.
+ */
+export const REGION = {
+	sessionsList: "session-list",
+	sessionSectionActive: "session-section-active",
+	sessionSectionPrevious: "session-section-previous",
+	/** Marks a search hit that matched the conversation's BODY rather than its
+	 *  title: `docs/relay/contract.md` §3.3, and the reason a result can be a
+	 *  legitimate match with a title that does not contain the query. */
+	searchBodyMatch: "search-result-body-match-marker",
+
+	computersList: "computers-list",
+
+	/** The system-browser hand-off, asserted instead of the browser itself:
+	 *  Maestro cannot drive a system browser (`docs/adr/0003` §"What the harness
+	 *  is not"), so the flow asserts the app HANDED OFF rather than that the user
+	 *  signed in. */
+	signInHandoff: "sign-in-browser-handoff",
+	welcomeHeadline: "welcome-headline",
+
+	settingsConnection: "settings-section-connection",
+	settingsAppearance: "settings-section-appearance",
+	settingsDiagnostics: "settings-section-diagnostics",
+
+	/** The refusal surfaces (`docs/ux/flows.md` § 9, C5/C6/C7). Each id names a
+	 *  CAUSE the flow asserts by name, so a control or a sentence that goes missing
+	 *  is caught rather than diffed by eye — and so a surface cannot quietly start
+	 *  offering "sign in again" for a machine-side problem. */
+	connectionErrorComputerOffline: "connection-error-computer-offline",
+	connectionErrorMachineRemedy: "connection-error-machine-remedy",
+	connectionErrorTunnelUnavailable: "connection-error-tunnel-unavailable",
+	connectionErrorConsoleLink: "connection-error-console-link",
+	connectionErrorSignIn: "connection-error-sign-in",
+	connectionErrorWaiting: "connection-error-waiting",
+	connectionErrorClearsByItself: "connection-error-clears-by-itself",
+	connectionErrorRelayNotInstalled: "connection-error-relay-not-installed",
+	connectionErrorCertificate: "connection-error-certificate",
+	connectionErrorHostUnresolved: "connection-error-host-unresolved",
+	connectionErrorRetryProminent: "connection-error-retry-prominent",
+} as const;
+
+/** A row's identifier, derived from the id it carries so a flow can address one
+ *  row without the screen inventing a second naming scheme. */
+export const sessionRowId = (sessionId: string): string =>
+	`session-row-${sessionId}`;
+
+/**
+ * The two facts a computer row states separately, on purpose.
+ *
+ * `status` is what the control plane thinks (the tunnel is provisioned) and
+ * `reachability` is what the phone measured (the host answered). `active` means
+ * the cloud route exists, never that the machine is awake, so a screen that
+ * shows one as the other is the defect the split exists to prevent.
+ */
+/**
+ * The copy action for one command block, named by the step's label.
+ *
+ * A function rather than a fixed list because the steps are data
+ * (`features/auth/tunnel-commands.ts`): adding a provider is adding a row, and
+ * an identifier per row keeps "copy the Cloudflare command" assertable without
+ * counting blocks on the screen.
+ */
+/** The row identifier for one past session, so the prefix lives in the contract
+ *  rather than in a template literal at the call site (the e2e check reads this
+ *  file for every name a flow may use). */
+export const pastRowId = (sessionId: string): string => `past-row-${sessionId}`;
+
+export const tunnelCommandCopyId = (label: string): string =>
+	`tunnel-copy-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
+
+export const computerRowIds = (
+	hostname: string,
+): { row: string; status: string; reachability: string } => ({
+	row: `computer-row-${hostname}`,
+	status: `computer-row-status-${hostname}`,
+	reachability: `computer-row-reachability-${hostname}`,
+});

@@ -1,7 +1,7 @@
 import { useCallback, useRef, useState } from "react";
 import { Text, TextInput, View } from "react-native";
 
-import { ROLE, state } from "@/ui/a11y";
+import { CONTROL, ROLE, state } from "@/ui/a11y";
 import { useTokenColor } from "@/ui/appearance";
 import { type FieldState, fieldClasses, TEXTAREA_MAX_PX } from "@/ui/variants";
 
@@ -32,7 +32,9 @@ export type TextareaProps = {
 	maxLines?: number;
 	onSubmitEditing?: () => void;
 	autoFocus?: boolean;
-	testID: string;
+	/** Optional: the control's own identifier is the fallback, so a screen
+	 *  that does not name a control is still addressable. */
+	testID?: string;
 };
 
 /** One line's height, from the type ramp: `mono-code` is 13pt at 1.6, rounded up
@@ -50,7 +52,7 @@ export const Textarea = ({
 	maxLines = 6,
 	onSubmitEditing,
 	autoFocus,
-	testID,
+	testID = CONTROL.textarea,
 }: TextareaProps) => {
 	const [contentHeight, setContentHeight] = useState(LINE_PX);
 	const cap = Math.min(maxLines * LINE_PX, TEXTAREA_MAX_PX);

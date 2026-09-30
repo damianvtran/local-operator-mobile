@@ -1,13 +1,14 @@
 import type { ReactNode } from "react";
 import { ActivityIndicator, Pressable, Text, View } from "react-native";
 
-import { ROLE, state } from "@/ui/a11y";
+import { CONTROL, ROLE, state } from "@/ui/a11y";
 import { useTokenColor } from "@/ui/appearance";
 import {
 	BUTTON_VISUAL_HEIGHT,
 	type ButtonSize,
 	type ButtonVariant,
 	buttonClasses,
+	CONTROL_DISABLED_INK,
 	slopToFloor,
 } from "@/ui/variants";
 
@@ -33,7 +34,9 @@ export type ButtonProps = {
 	accessibilityHint?: string;
 	/** Required: a control with no identifier cannot be reached by an E2E flow,
 	 * and a shared default would put the same one on every button of a screen. */
-	testID: string;
+	/** Optional: the control's own identifier is the fallback, so a screen
+	 *  that does not name a control is still addressable. */
+	testID?: string;
 };
 
 const ICON_SIZE: Record<ButtonSize, number> = {
@@ -53,10 +56,12 @@ export const Button = ({
 	loading = false,
 	disabled = false,
 	accessibilityHint,
-	testID,
+	testID = CONTROL.button,
 }: ButtonProps) => {
 	const iconColor = useTokenColor(
-		disabled ? "ink-disabled" : variant === "primary" ? "on-accent" : "ink",
+		/* The icon follows the label: `ink-dim` rather than `ink-disabled`, for the
+		 *  reason CONTROL_DISABLED_INK records. */
+		disabled ? "ink-dim" : variant === "primary" ? "on-accent" : "ink",
 	);
 	const spinnerColor = useTokenColor(
 		variant === "primary" ? "on-accent" : "ink-muted",
@@ -118,7 +123,7 @@ const buttonLabelClasses = (
 	variant: ButtonVariant,
 ): string => {
 	const ink = disabled
-		? "text-ink-disabled"
+		? CONTROL_DISABLED_INK
 		: variant === "primary"
 			? "text-on-accent"
 			: variant === "danger"

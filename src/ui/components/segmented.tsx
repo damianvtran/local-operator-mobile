@@ -1,6 +1,6 @@
 import { Pressable, Text, View } from "react-native";
 
-import { ROLE, state } from "@/ui/a11y";
+import { CONTROL, ROLE, state } from "@/ui/a11y";
 import {
 	segmentedItemClasses,
 	segmentedLabelWeight,
@@ -23,7 +23,9 @@ export type SegmentedOption<T extends string> = {
 	value: T;
 	label: string;
 	/** The Maestro selector for this option, so a flow can press it by name. */
-	testID: string;
+	/** Optional: the control's own identifier is the fallback, so a screen
+	 *  that does not name a control is still addressable. */
+	testID?: string;
 };
 
 export type SegmentedProps<T extends string> = {
@@ -33,7 +35,8 @@ export type SegmentedProps<T extends string> = {
 	value: T;
 	onChange: (value: T) => void;
 	disabled?: boolean;
-	testID: string;
+	/** Optional: a screen that does not name the group is still addressable. */
+	testID?: string;
 };
 
 export const Segmented = <T extends string>({
@@ -42,7 +45,7 @@ export const Segmented = <T extends string>({
 	value,
 	onChange,
 	disabled = false,
-	testID,
+	testID = CONTROL.segmented,
 }: SegmentedProps<T>) => (
 	<View
 		className={segmentedTrackClasses}

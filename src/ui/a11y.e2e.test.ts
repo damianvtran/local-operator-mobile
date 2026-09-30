@@ -63,7 +63,15 @@ describe("the Maestro flows against src/ui/a11y.ts", () => {
 });
 
 describe("the routes and primitives against src/ui/a11y.ts", () => {
-	const sources = [...walk(join(root, "app")), ...walk(join(root, "src/ui"))]
+	const sources = [
+		...walk(join(root, "app")),
+		...walk(join(root, "src/ui")),
+		/* `src/features/**` too: the screens a route renders live there, so a
+		 *  scan of `app/**` alone would report every identifier as unused the
+		 *  moment a route became a thin wrapper — which is what the wave-2
+		 *  restructure did (measured: 63 "unreferenced" ids, all of them used). */
+		...walk(join(root, "src/features")),
+	]
 		.filter((f) => TSX_FILE.test(f))
 		.map((file) => ({
 			file: file.slice(root.length),

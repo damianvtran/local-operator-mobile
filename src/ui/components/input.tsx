@@ -1,6 +1,6 @@
 import { Text, TextInput, type TextInputProps, View } from "react-native";
 
-import { ROLE, state } from "@/ui/a11y";
+import { CONTROL, ROLE, state } from "@/ui/a11y";
 import { useTokenColor } from "@/ui/appearance";
 import { type FieldState, fieldClasses } from "@/ui/variants";
 
@@ -29,10 +29,15 @@ export type InputProps = {
 	invalid?: boolean;
 	disabled?: boolean;
 	secureTextEntry?: boolean;
+	/** URLs, hosts and ids are typed without the keyboard's automatic
+	 *  capitalisation — a capitalised hostname is a different string. */
+	autoCapitalize?: TextInputProps["autoCapitalize"];
 	autoFocus?: boolean;
 	onSubmitEditing?: () => void;
 	returnKeyType?: TextInputProps["returnKeyType"];
-	testID: string;
+	/** Optional: the control's own identifier is the fallback, so a screen
+	 *  that does not name a control is still addressable. */
+	testID?: string;
 };
 
 export const Input = ({
@@ -44,9 +49,10 @@ export const Input = ({
 	disabled = false,
 	secureTextEntry,
 	autoFocus,
+	autoCapitalize,
 	onSubmitEditing,
 	returnKeyType,
-	testID,
+	testID = CONTROL.input,
 }: InputProps) => {
 	const fieldState: FieldState = disabled
 		? "disabled"
@@ -75,6 +81,7 @@ export const Input = ({
 				editable={!disabled}
 				secureTextEntry={secureTextEntry}
 				autoFocus={autoFocus}
+				autoCapitalize={autoCapitalize}
 				onSubmitEditing={onSubmitEditing}
 				returnKeyType={returnKeyType}
 				testID={testID}

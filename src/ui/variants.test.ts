@@ -71,7 +71,13 @@ describe("button", () => {
 
 	it("changes colour rather than opacity when disabled (anti-pattern 4)", () => {
 		const disabled = buttonClasses("primary", "md", { disabled: true });
-		expect(disabled).toContain("text-ink-disabled");
+		/* The ink is `ink-dim`, not `ink-disabled`: the audit measures a disabled
+		 * label at 2.16-2.96:1 against every surface it can sit on, and a label that
+		 * NAMES the action has to stay readable — the state is carried by the fill and
+		 * the border. (This assertion used to pin `text-ink-disabled`, which is how a
+		 * sub-3:1 disabled label survived a passing test.) */
+		expect(disabled).toContain("text-ink-dim");
+		expect(disabled).not.toContain("text-ink-disabled");
 		expect(disabled).not.toMatch(/opacity-/);
 		// The failure the rule exists for: an opacity fade also fades the GROUND, so
 		// the same button renders two unspecified colours on two surfaces.

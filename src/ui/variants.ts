@@ -82,6 +82,15 @@ const BUTTON_TEXT: Record<ButtonSize, string> = {
 };
 
 /** Visual box height per size, so a caller can ask for the matching hit slop. */
+/** The ink a DISABLED control's label uses.
+ *
+ * `ink-dim`, not `ink-disabled`: measured against every surface a disabled control
+ * can sit on, `ink-disabled` reads 2.16-2.96:1 — under the 3:1 floor for large text
+ * and well under 4.5:1 for a label, and a label NAMES the action. The state is
+ * carried by the fill and the border, not by making the words unreadable.
+ */
+export const CONTROL_DISABLED_INK = "text-ink-dim";
+
 export const BUTTON_VISUAL_HEIGHT: Record<ButtonSize, number> = {
 	sm: 32,
 	md: 44,
@@ -103,24 +112,24 @@ const BUTTON_VARIANTS: Record<
 		// `accent-active` — one further colour step, at `instant` (80ms).
 		pressed: "bg-accent-active border-transparent text-on-accent",
 		// Fill `sunken`, ink `ink-disabled`.
-		disabled: "bg-sunken border-transparent text-ink-disabled",
+		disabled: `bg-sunken border-transparent ${CONTROL_DISABLED_INK}`,
 	},
 	outline: {
 		rest: "bg-surface border-border-control text-ink",
 		pressed: "bg-elevated border-border-control text-ink",
-		disabled: "bg-surface border-hairline text-ink-disabled",
+		disabled: `bg-surface border-hairline ${CONTROL_DISABLED_INK}`,
 	},
 	quiet: {
 		rest: "bg-transparent border-transparent text-ink-muted",
 		pressed: "bg-elevated border-transparent text-ink",
-		disabled: "bg-transparent border-transparent text-ink-disabled",
+		disabled: `bg-transparent border-transparent ${CONTROL_DISABLED_INK}`,
 	},
 	danger: {
 		rest: "bg-danger-wash border-danger-border text-danger",
 		// "same fill, heavier border": the border takes the semantic ink, which is
 		// the only step available without inventing a colour the kit does not have.
 		pressed: "bg-danger-wash border-danger text-danger",
-		disabled: "bg-transparent border-transparent text-ink-disabled",
+		disabled: `bg-transparent border-transparent ${CONTROL_DISABLED_INK}`,
 	},
 };
 
@@ -161,7 +170,7 @@ export const iconButtonClasses = (
 		// caller opts in.
 		options.outlined ? "border-border-control" : "border-transparent",
 		state.disabled
-			? "bg-transparent text-ink-disabled"
+			? `bg-transparent ${CONTROL_DISABLED_INK}`
 			: state.pressed
 				? "bg-elevated text-ink"
 				: "bg-transparent text-ink-muted",
@@ -187,7 +196,7 @@ export const fieldClasses = (
 		"min-h-11 rounded-sm border px-3 py-2 text-body text-ink web:outline-none";
 	switch (state) {
 		case "disabled":
-			return cx(base, "bg-sunken border-hairline text-ink-disabled");
+			return cx(base, `bg-sunken border-hairline ${CONTROL_DISABLED_INK}`);
 		case "invalid":
 			// "error is not a button state" but it IS a field state: the border takes
 			// `danger` and the message sits adjacent in `body-sm`, never colour alone.
@@ -293,7 +302,7 @@ export const chipClasses = (state: ControlState = {}): string =>
  */
 export const chipLabelClasses = (state: ControlState = {}): string =>
 	state.disabled
-		? "text-ink-disabled"
+		? `${CONTROL_DISABLED_INK}`
 		: state.selected
 			? "text-accent-active dark:text-accent-hover"
 			: "text-ink-muted";
@@ -476,7 +485,7 @@ export const segmentedItemClasses = (state: ControlState = {}): string =>
 	cx(
 		"min-h-11 flex-1 flex-row items-center justify-center rounded-sm px-3",
 		state.disabled
-			? "bg-transparent text-ink-disabled"
+			? `bg-transparent ${CONTROL_DISABLED_INK}`
 			: state.selected
 				? "bg-accent-muted text-accent-active dark:text-accent-hover"
 				: "bg-transparent text-ink-muted",
