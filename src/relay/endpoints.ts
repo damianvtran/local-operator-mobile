@@ -538,9 +538,11 @@ export class RelayEndpoints {
 		const { signal, ...connectionOptions } = options;
 		const connection = new SseConnection({
 			...connectionOptions,
-			/* The stream's own budget is the gateway's lease, so the HTTP layer's
-			 * per-request timeout is disabled here; the watchdog is what detects a dead
-			 * socket (`sse.ts`). */
+			/* The stream's body is the gateway's lease, so the HTTP layer's deadline bounds
+			 * only the RESPONSE here — `http.ts` clears it when the headers arrive and the
+			 * watchdog is what then detects a dead socket (`sse.ts`). It is not disabled
+			 * outright: a connector that never answers at all has to fail rather than leave
+			 * the connect phase pending for ever, and the watchdog cannot see that phase. */
 			open: async (abortSignal) => {
 				const response: RelayStreamResponse = await this.http.stream({
 					method: "GET",

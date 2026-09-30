@@ -87,9 +87,13 @@ export interface ConnectionActions {
 	 *  because that is the state the user is actually in. */
 	/** Takes the typed error's decision fields. They are all optional because a
 	 *  caller may have only a `kind`-less failure in hand (an endpoint that threw a
-	 *  plain `RelayError` with no surface). */
+	 *  plain `RelayError` with no surface). A caller holding a `RelayError` passes
+	 *  `displayableMessage`, which is the taxonomy's sanitised copy — `detail` is the
+	 *  classifier's own field and is only a fallback, because it can be empty or
+	 *  markup while the sentence is not. */
 	noteFailure: (error: {
 		surface?: ErrorSurface | null;
+		displayableMessage?: string | null;
 		detail?: string | null;
 		retryAfterMs?: number | null;
 	}) => void;
@@ -173,7 +177,12 @@ export function createConnectionStore() {
 		noteFailure(error) {
 			const surface = error.surface ?? "none";
 			set({
-				detail: error.detail ?? null,
+				/* Through the taxonomy's copy accessor rather than the raw `detail`: it
+				 * sanitises — never a runtime diagnostic, an empty proxy body or markup — so
+				 * a screen reading the snapshot cannot render `""` or an HTML error page.
+				 * `surface` stays the signal for a client bug, where the answer is a retry
+				 * affordance rather than a sentence. */
+				detail: error.displayableMessage ?? error.detail ?? null,
 				surface,
 				retryAfterMs: error.retryAfterMs ?? null,
 				phase: surface === "sign-in" ? "signed-out" : "refused",

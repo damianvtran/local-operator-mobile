@@ -139,6 +139,12 @@ describe("a stream that goes silent is reopened, not abandoned", () => {
 		const states: StreamStatus[] = [];
 		const frames: DecodedFrame[] = [];
 		const errors: unknown[] = [];
+		/* The retry delay is measured where the class ASKS for it rather than by wall
+		 * clock (review round 4, m4): with the floor removed the loop simply reconnects
+		 * instantly and a duration assertion would still pass, which is how the defect
+		 * survived the round that fixed it. `random` is a mid draw here, so the number
+		 * recorded is the floor PLUS its jitter — the two halves of the formula. */
+		const delays: number[] = [];
 		const connection = new SseConnection({
 			open: async (signal) => {
 				const response = await fetch(`http://127.0.0.1:${port}/stream`, {
@@ -156,8 +162,16 @@ describe("a stream that goes silent is reopened, not abandoned", () => {
 			onFrame: (frame) => void frames.push(frame),
 			onState: (status) => void states.push(status),
 			onError: (error) => void errors.push(error),
-			random: () => 0,
+			random: () => 0.5,
 			silenceMs: 30_000,
+			/* Only the SHORT timers are fast-forwarded: the reopen jitter and the backoff
+			 * are what this file measures, while the silence watchdog's 30 s has to keep
+			 * real time or every stream would look silent instantly. */
+			setTimeout: (handler, ms) => {
+				if (ms > STREAM_RETRY_MAX_MS) return setTimeout(handler, ms);
+				delays.push(ms);
+				return setTimeout(handler, 0);
+			},
 		});
 		connection.start();
 		await vi.waitFor(
@@ -170,6 +184,10 @@ describe("a stream that goes silent is reopened, not abandoned", () => {
 
 		expect(stillRunning).toBe(true);
 		expect(requests).toBeGreaterThanOrEqual(2);
+		/* The delay the loop asked for is the base plus half of it as jitter — not
+		 * `random() * ms`, which with any draw came back in a FRACTION of the intended
+		 * wait (and with a zero draw, instantly). */
+		expect(delays[0]).toBe(Math.round(STREAM_RETRY_BASE_MS * 1.5));
 		/* The reset is reported as a stall whose leg ended in an error, carrying the
 		 * cause, and the loop then reopened and delivered the second connection's
 		 * seed frame. */
@@ -208,6 +226,12 @@ describe("a stream that goes silent is reopened, not abandoned", () => {
 
 		const states: StreamStatus[] = [];
 		const errors: unknown[] = [];
+		/* Every delay the loop asked for, recorded at the seam it already exposes
+		 * (review round 4, m4). With `random: () => 0` the floor is the whole value, so
+		 * this is exactly what `backoff` promised — and with the floor removed the loop
+		 * would ask for 0 each time and this assertion reddens, which a duration
+		 * assertion could not do. */
+		const delays: number[] = [];
 		const connection = new SseConnection({
 			open: async (signal) => {
 				const response = await fetch(`http://127.0.0.1:${port}/stream`, {
@@ -227,12 +251,23 @@ describe("a stream that goes silent is reopened, not abandoned", () => {
 			onError: (error) => void errors.push(error),
 			random: () => 0,
 			silenceMs: 30_000,
+			setTimeout: (handler, ms) => {
+				if (ms > STREAM_RETRY_MAX_MS) return setTimeout(handler, ms);
+				delays.push(ms);
+				return setTimeout(handler, 0);
+			},
 		});
 		connection.start();
 		await vi.waitFor(() => expect(errors.length).toBe(1), { timeout: 20_000 });
 
 		expect(connection.isRunning).toBe(false);
 		expect(requests).toBe(STREAM_RETRY_MAX_ATTEMPTS);
+		expect(delays).toEqual([
+			STREAM_RETRY_BASE_MS,
+			STREAM_RETRY_BASE_MS * 2,
+			STREAM_RETRY_BASE_MS * 4,
+			STREAM_RETRY_BASE_MS * 8,
+		]);
 		const last = states.at(-1);
 		expect(last?.state).toBe("closed");
 		expect(last?.lastEnd).toBe("error");

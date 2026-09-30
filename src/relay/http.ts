@@ -215,6 +215,17 @@ export class RelayHttpClient {
 				text,
 				redirectHidden: isOpaqueRedirect(response),
 			};
+		} catch (cause) {
+			/* The body is inside the deadline (see `open`), so a deadline that fires
+			 * during the read, a caller's abort, and a reset mid-body all arrive here.
+			 * None of them produced an answer, so the taxonomy's own rule applies: a
+			 * `transport` failure, whose envelope is kept because the delivery is
+			 * unknown. Without this the caller saw a raw `AbortError` from the platform
+			 * rather than a classified failure. */
+			throw transportError(
+				cause,
+				`${this.diagnostic} ${request.method} ${redactPath(request.path)} body`,
+			);
 		} finally {
 			await release();
 		}
@@ -236,14 +247,40 @@ export class RelayHttpClient {
 		const auth = await this.auth();
 		const headers = buildHeaders(auth, request);
 		const controller = new AbortController();
-		const timeout =
-			request.streaming || this.timeoutMs <= 0
-				? undefined
-				: setTimeout(() => controller.abort(), this.timeoutMs);
+		/* One deadline, and WHO it covers differs by response class — the distinction
+		 * is the whole point of this option:
+		 *
+		 * - a NON-STREAM read is bounded from dispatch until its body has been read,
+		 *   which is what `release()` marks. A proxy that answers with headers and then
+		 *   stalls the body is an ordinary shape, and clearing the deadline when the
+		 *   headers arrived left the caller pending for ever (QA round 4, Q1: still
+		 *   pending at 30 s against a 500 ms deadline);
+		 * - a STREAM is bounded only until the response arrives, and the deadline is
+		 *   cleared just before this returns it: its body is deliberately long-lived
+		 *   and `sse.ts`'s silence watchdog owns everything after the headers. Keeping
+		 *   the deadline armed there would cut a healthy stream at the deadline;
+		 *   leaving it unarmed *until* the response arrives would let a connector that
+		 *   never answers hang the connect phase, which the watchdog cannot see.
+		 *
+		 * A refusal body (the non-2xx arm below) is read with the deadline still armed
+		 * for both classes: it is a short read, and it is what turns a 503 into the
+		 * gateway's own sentence. */
+		const deadline =
+			this.timeoutMs > 0
+				? setTimeout(() => controller.abort(), this.timeoutMs)
+				: undefined;
 		/* The caller's signal wins: a route switch must be able to abort an in-flight
-		 * request even while our own deadline is pending. */
+		 * request — including its BODY, which is why this listener now outlives the
+		 * response and is removed by `release()` rather than here. */
 		const onExternalAbort = () => controller.abort();
 		request.signal?.addEventListener("abort", onExternalAbort, { once: true });
+		const clearDeadline = () => {
+			if (deadline !== undefined) clearTimeout(deadline);
+		};
+		const detach = () => {
+			clearDeadline();
+			request.signal?.removeEventListener("abort", onExternalAbort);
+		};
 
 		let response: Response;
 		try {
@@ -261,19 +298,21 @@ export class RelayHttpClient {
 				signal: controller.signal,
 			});
 		} catch (cause) {
+			detach();
 			throw transportError(
 				cause,
 				`${this.diagnostic} ${request.method} ${redactPath(request.path)}`,
 			);
-		} finally {
-			if (timeout !== undefined) clearTimeout(timeout);
-			request.signal?.removeEventListener("abort", onExternalAbort);
 		}
 
 		const facts = responseFacts(response);
 		await this.onResponse?.(facts);
 
 		const release = async () => {
+			/* Called when the caller is finished with this response — after the body is
+			 * read, or when a stream tears down — so it is also where the deadline and
+			 * the caller's abort listener stop applying. Both are idempotent. */
+			detach();
 			try {
 				await response.body?.cancel();
 			} catch {
@@ -316,6 +355,11 @@ export class RelayHttpClient {
 				`${this.diagnostic} ${request.method} ${redactPath(request.path)}`,
 			);
 		}
+
+		/* The stream's body is the long-lived part: from here on its deadline is
+		 * `sse.ts`'s silence watchdog, not this timer. The abort LISTENER stays
+		 * attached so a route switch still tears the stream down. */
+		if (request.streaming) clearDeadline();
 
 		return { response, release };
 	}
@@ -376,6 +420,13 @@ export class RelayHttpClient {
 				mimeType: response.headers.get("content-type"),
 				bytes: new Uint8Array(buffer),
 			};
+		} catch (cause) {
+			/* As in `raw`: a body read is inside the deadline, and a failure here
+			 * produced no answer. */
+			throw transportError(
+				cause,
+				`${this.diagnostic} ${request.method} ${redactPath(request.path)} body`,
+			);
 		} finally {
 			await release();
 		}

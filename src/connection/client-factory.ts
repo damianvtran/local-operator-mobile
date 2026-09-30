@@ -30,6 +30,7 @@ import {
 	RelayEndpoints,
 	RelayHttpClient,
 	type RelayResponseFactsWithHeaders,
+	TRANSPORT_SENTENCE,
 } from "../relay";
 import {
 	type CustomRoute,
@@ -130,17 +131,14 @@ export async function signInToCustomRoute(
 	}
 }
 
-/** The sentence for a failure this boundary caught. The taxonomy's own copy when it
- *  has one — a gateway `detail`, a rejected certificate, a name that did not resolve
- *  — so a screen never has to invent one. A plain `transport` is the exception: its
- *  message is the RUNTIME's ("fetch failed", "connect ECONNREFUSED …") and that is
- *  a diagnostic, not copy, so it gets a sentence of its own instead of reaching a
- *  user's screen. */
+/** The sentence for a failure this boundary caught. It reads the taxonomy's ONE copy
+ *  accessor, so this boundary cannot publish `""` for a body-less 502, markup for a
+ *  proxy's error page, or a runtime's own words for a `transport` failure (review
+ *  round 4, M1) — a screen calling this has no `try`/`catch`, so what it returns is
+ *  what a user reads. A failure that never got as far as the taxonomy is, by
+ *  definition, one the request never reached the relay for. */
 function refusalSentence(cause: unknown): string {
-	if (!isRelayError(cause)) return "The relay could not be reached.";
-	if (cause.detail) return cause.detail;
-	if (cause.kind === "transport") return "The relay could not be reached.";
-	return cause.message;
+	return isRelayError(cause) ? cause.displayableMessage : TRANSPORT_SENTENCE;
 }
 
 /** What a sign-out established. */

@@ -23,15 +23,25 @@
  *   its outcome — one request, one id, one admitted instruction;
  * - a second call carrying DIFFERENT bytes waits for the unresolved send and then
  *   runs normally. "Wait" must not become "silently drop what the user typed".
- * - unless the send it waited on failed AMBIGUOUSLY: its delivery is unknown and
- *   its envelope is still held, so a different instruction must not take that slot.
- *   `holdNew` would hand it the held envelope and the wire would carry the earlier
- *   instruction's bytes again — de-duplicated, so nothing runs twice, but the
- *   caller's own draft would be replaced by one it never issued. The waiter is
- *   refused with `ambiguous-delivery` instead, naming the unresolved instruction,
- *   and the composer re-offers the draft. A DEFINITIVE failure clears the envelope
- *   and the waiter proceeds with a fresh id, which is why the two kinds are
- *   distinguished rather than lumped together.
+ * - unless the send it waited on OVERLAPPED it and failed AMBIGUOUSLY: its delivery
+ *   is unknown and its envelope is still held, so a different instruction must not
+ *   take that slot. `holdNew` would hand it the held envelope and the wire would
+ *   carry the earlier instruction's bytes again — de-duplicated, so nothing runs
+ *   twice, but the caller's own draft would be replaced by one it never issued.
+ *   The waiter is refused with `ambiguous-delivery` instead, naming the unresolved
+ *   instruction, and the composer re-offers the draft. A DEFINITIVE failure clears
+ *   the envelope and the waiter proceeds with a fresh id, which is why the two kinds
+ *   are distinguished rather than lumped together.
+ *
+ * **That refusal needs the two calls to overlap, and saying so is part of the
+ * contract.** A LATE re-send — the ordinary composer flow, where the user edits and
+ * taps again after the first failure has already surfaced — does not take that path
+ * at all: the ambiguous send has left the registry by then, `holdNew` hands back the
+ * held envelope, and the result is `reusedPreviousDraft: true` with the EARLIER
+ * instruction on the wire. The safety property holds there too, by a different
+ * mechanism: `hold` writes an envelope's id and its bytes together and only `runSend`
+ * sends them, so no path puts different bytes under the earlier id. What the composer
+ * owes the user in both cases is a visible affordance for `reusedPreviousDraft`.
  *
  * The join window is the request's own lifetime (the HTTP layer's 20 s deadline),
  * which keeps it narrow on purpose: two identical sends further apart than that
@@ -130,7 +140,10 @@ function begin(
 				!settled.ok &&
 				settled.error.envelope === "keep"
 			) {
-				return { ok: false, error: unresolvedPredecessor(settled.error) };
+				return {
+					ok: false,
+					error: unresolvedPredecessor(settled.error, input.sessionId),
+				};
 			}
 		}
 		try {
@@ -165,14 +178,22 @@ function outcomeOf(settled: Settled): SendResult {
  *  earlier instruction's id for other bytes, or it would mint a second id while the
  *  first may still be admitted. `envelope: "keep"` is deliberate — the held
  *  envelope belongs to the unresolved instruction and the caller's next move is to
- *  retry THAT one (same id, de-duplicated) or discard it. */
-function unresolvedPredecessor(cause: RelayError): RelayError {
+ *  retry THAT one (same id, de-duplicated) or discard it.
+ *
+ * `retry: "never"` is stated explicitly for this caller rather than left to the
+ * taxonomy's row: `same-id` is right for a caller that minted an envelope, and this
+ * one never did — the instruction to retry is the held one, which the diagnostic
+ * names. A retry here would be a NEW instruction, not a replay. */
+function unresolvedPredecessor(
+	cause: RelayError,
+	sessionId: string,
+): RelayError {
 	return new RelayError(
 		"ambiguous-delivery",
 		"an earlier instruction on this session has an unknown outcome, so this one was not sent",
 		{
-			diagnostic:
-				"a different instruction waited on a send whose delivery is unknown",
+			diagnostic: `a different instruction waited for a send whose delivery is unknown; the instruction to retry is the one held for session ${sessionId}`,
+			retry: "never",
 			envelope: "keep",
 			cause,
 		},

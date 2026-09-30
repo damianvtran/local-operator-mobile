@@ -127,6 +127,13 @@ describe("a certificate the app will not trust, and a name that does not resolve
 		expect(rejected.surface).toBe("connection");
 		/* Retrying the same certificate cannot help, and the taxonomy says so. */
 		expect(rejected.retry).toBe("never");
+		/* And the envelope is KEPT: the request reached nothing and produced no answer,
+		 * so a persisted command's delivery is unknown — replaying it is free (the relay
+		 * de-duplicates) while discarding an instruction the user typed is not. The
+		 * directive the docs state is asserted here rather than left to `defaultEnvelopeFor`
+		 * (review round 4, n1). */
+		expect(rejected.envelope).toBe("keep");
+		expect(rejected.displayableMessage).toBe(rejected.message);
 		/* The runtime's own diagnosis is kept on the error for a diagnostics view — and
 		 * it is what the classifier read to reach that verdict. */
 		expect(causeChain(rejected)).toMatch(/certificate|CERT_/i);
@@ -148,6 +155,8 @@ describe("a certificate the app will not trust, and a name that does not resolve
 		/* A resolver timeout can clear by itself; a name that does not exist cannot,
 		 * so the caller is allowed one automatic attempt and then has to act. */
 		expect(host.retry).toBe("after-backoff");
+		expect(host.envelope).toBe("keep");
+		expect(host.displayableMessage).toBe(host.message);
 
 		/* The whole point: one catch, two answers a user can tell apart. */
 		expect(rejected.kind).not.toBe(host.kind);

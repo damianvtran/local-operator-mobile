@@ -311,6 +311,99 @@ describe("transport errors name the failure without leaking a URL", () => {
 		expect(error.diagnostic).not.toContain("q=");
 	});
 
+	it("keeps a timeout that merely mentions a certificate a transport failure", () => {
+		/* Review round 4, m1. The text arm used to match the bare word `/certificate/`,
+		 * so this timeout became `certificate-rejected`: told NEVER to retry, and sent
+		 * to the route-settings surface instead of the retry one. The arm is anchored to
+		 * rejection phrasing; the CODE arm is what carries the real classification. */
+		const timeout = transportError(
+			new Error("the certificate story is long; the request timed out"),
+			"relay POST /login",
+		);
+		expect(timeout.kind).toBe("transport");
+		expect(timeout.surface).toBe("retry");
+		expect(timeout.retry).toBe("same-id");
+	});
+
+	it("still classifies a genuine certificate rejection, from the message or the code", () => {
+		for (const cause of [
+			new Error("unable to verify the first certificate"),
+			new Error("self-signed certificate in certificate chain"),
+			Object.assign(new Error("bad certificate"), {
+				code: "DEPTH_ZERO_SELF_SIGNED_CERT",
+			}),
+		]) {
+			expect(transportError(cause).kind).toBe("certificate-rejected");
+		}
+	});
+
+	it("classifies a DNS failure from the code and the message, without a resolver", () => {
+		/* Review round 4, n3. The end-to-end case drives a real `.invalid` name, which
+		 * couples it to the runner's resolver — a filter that synthesises an answer for
+		 * `.invalid` would turn that assertion into a different failure mode. This is the
+		 * same decision at the level the classification is actually made. */
+		const notFound = Object.assign(
+			new Error("getaddrinfo ENOTFOUND tunnel.invalid"),
+			{ code: "ENOTFOUND" },
+		);
+		const resolverTimeout = Object.assign(new Error("EAI_AGAIN"), {
+			code: "EAI_AGAIN",
+		});
+		expect(transportError(notFound).kind).toBe("host-unresolved");
+		expect(transportError(resolverTimeout).kind).toBe("host-unresolved");
+		/* And the message alone, for a runtime that sends no code at all. */
+		expect(
+			transportError(new Error("getaddrinfo ENOTFOUND tunnel.invalid")).kind,
+		).toBe("host-unresolved");
+		/* A code the classifier must NOT read as DNS. */
+		expect(
+			transportError(
+				Object.assign(new Error("connect ECONNREFUSED 127.0.0.1:9"), {
+					code: "ECONNREFUSED",
+				}),
+			).kind,
+		).toBe("transport");
+	});
+
+	it("publishes a sentence a screen can show, for every way a body can be junk", () => {
+		/* Review round 4, M1/Q2: `displayableMessage` is the one copy accessor, and
+		 * these are the four values it must never hand back — a runtime's own words for a
+		 * `transport` failure, an empty body, and markup. Each is driven through the real
+		 * classifier rather than by constructing an error by hand. */
+		const transport = transportError(
+			new Error("fetch failed"),
+			"relay GET /healthz",
+		);
+		expect(transport.displayableMessage).toBe(
+			"The relay could not be reached.",
+		);
+		expect(transport.displayableMessage).not.toContain("fetch failed");
+
+		const emptyBody = relayErrorFromResponse(facts(502, {}, ""));
+		expect(emptyBody.kind).toBe("ambiguous-delivery");
+		expect(emptyBody.displayableMessage).toBe("bad gateway");
+
+		const markup = relayErrorFromResponse(
+			facts(
+				502,
+				{ "content-type": "text/html" },
+				"<html><body>502 Bad Gateway</body></html>",
+			),
+		);
+		expect(markup.displayableMessage).toBe("bad gateway");
+		expect(markup.displayableMessage).not.toContain("<");
+
+		const gatewayBody = relayErrorFromResponse(
+			facts(
+				502,
+				{ "content-type": "application/json" },
+				'{"error":"local harness unavailable"}',
+			),
+		);
+		expect(gatewayBody.kind).toBe("relay-down");
+		expect(gatewayBody.displayableMessage).toBe("local harness unavailable");
+	});
+
 	it("keeps a 429 retryable, with its Retry-After, without keeping the envelope", () => {
 		const error = rateLimitedError(3_000);
 		expect(error.kind).toBe("rate-limited");

@@ -59,6 +59,8 @@ convention:
 | Only `startRoute` / `endRoute` change the active route | `state/connection-store.ts` |
 | The retry envelope is written by one module, and nothing else decides keep/clear | `relay/retry-envelope.ts` |
 | Two sends on one session in the same tick are ONE instruction | `relay/send-command.ts` (single-flight) |
+| The copy a screen shows comes from ONE accessor | `relay/errors.ts` (`displayableMessage`) |
+| One request is under one deadline, and what it covers depends on the response class | `relay/http.ts` (`open` / `release`) |
 
 What single-flight does with a second call, in full, because the three cases are
 different and a caller has to be able to tell them apart:
@@ -68,8 +70,8 @@ different and a caller has to be able to tell them apart:
   discarded — the joiner's own bytes are what is being sent).
 - **Different bytes** → it waits for the send in flight and then runs normally, with
   its own id. Waiting must not become dropping.
-- **Different bytes, and the send it waited on failed AMBIGUOUSLY** (its delivery is
-  unknown, so its envelope is still held) → it is REFUSED with
+- **Different bytes, and the send it waited on OVERLAPPED it and failed AMBIGUOUSLY**
+  (its delivery is unknown, so its envelope is still held) → it is REFUSED with
   `ambiguous-delivery`, naming the unresolved instruction, and nothing of its own
   reaches the wire. The store's reuse rule would otherwise hand it the held
   envelope, putting the earlier instruction's bytes on the wire again under the
@@ -78,6 +80,24 @@ different and a caller has to be able to tell them apart:
   unresolved instruction (same id, de-duplicated) or discarding it is the user's
   choice. A DEFINITIVE failure clears the envelope, so that waiter proceeds with a
   fresh id.
+
+**The refusal fires only while the first send is unresolved**, which is what the
+third bullet is conditional on. A LATE re-send — the ordinary composer flow, where
+the user edits and taps again after the first failure has already surfaced — does not
+take that path: the ambiguous send has left the registry, `holdNew` hands back the
+held envelope, and the result is `reusedPreviousDraft: true` with the EARLIER
+instruction on the wire and the caller's draft unsent. The safety property holds
+there too, by a different mechanism: `hold` writes an envelope's id and its bytes
+together and only `runSend` sends them, so different bytes never travel under the
+earlier id. Both paths owe the user the same affordance — a visible
+`reusedPreviousDraft`, and the held draft still in the composer.
+
+**Wire ONE store per session.** The registry is keyed by the envelope store, so two
+stores for one session that send the same bytes in the same tick produce two POSTs
+and two `command_id`s. That is deliberate — a `WeakMap` keyed by store is what keeps
+two routes (or two tests) from queueing behind each other — but it means the
+double-tap protection follows the STORE, not the session. A screen that builds a
+store per render loses the guard.
 
 ### Compatibility: the receipts, and absent fields
 
@@ -187,6 +207,35 @@ Two rules the table encodes, both of which are expensive to get wrong:
   were never `true` on any published frame, and the contract's §6.5 said so; the
   schema tests pin the receipt, the absence-as-`false` reading, and the durable
   rebuild pair, so the old reading cannot silently return.
+
+## The two deadlines, and the one sentence a screen may show
+
+**A request is under one deadline, and what it covers depends on the response
+class** (`relay/http.ts`):
+
+- a **short read** (`json`/`raw`/`bytes`) is bounded from dispatch until its body has
+  been read. A proxy that answers with headers and then stalls the body is an
+  ordinary shape, and clearing the deadline when the headers arrived left the caller
+  pending for ever — for `sendPersistedCommand` that is the composer waiting with the
+  envelope held and the outcome never reported;
+- a **stream's** body is deliberately not bounded: the deadline is cleared when the
+  response arrives, and `sse.ts`'s silence watchdog owns everything after the
+  headers. It is still bounded UP TO the response, because a connector that accepts
+  the connection and never answers would otherwise sit in `connecting` for ever — the
+  watchdog only starts once headers exist.
+
+A failure in either phase is a `transport` failure: no answer arrived, so the
+delivery is unknown and the envelope is kept.
+
+**`displayableMessage` is the only accessor a screen may render.** It refuses the
+four things that are not copy — a `transport` failure's message (the runtime's own
+words: "fetch failed", "This operation was aborted", "connect ECONNREFUSED …"), an
+empty body, a markup body (a proxy's HTML error page), and nothing at all — and falls
+back to the sentence the classifier wrote for that status and kind. `message` is the
+classifier's field and `diagnostic` is for logs; a screen that reads either directly
+is how `""` or `<html><body>502 Bad Gateway</body></html>` reaches a user. A CLIENT
+bug (`surface: "diagnostic"`) is a separate question and is read from `surface`: the
+answer there is a retry affordance rather than a sentence.
 
 ## Insecure and unsupported connections
 

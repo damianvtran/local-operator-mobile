@@ -61,14 +61,17 @@ export interface FixtureRelayOptions {
 	cutStreamAfterMs?: number;
 	/** Hold the FIRST stream open and silent (headers, then nothing). */
 	silentFirstStream?: boolean;
-	/** Answer `POST /login` with a refusal instead of the password flow: either a
-	 *  corpus fixture path (the captured `http/login-cross-origin.json` is the
-	 *  relay's own 403 for a page whose `Origin` is not the relay's) or a bare
-	 *  status, for a refusal the corpus has no capture of (a gateway `502`, which is
-	 *  not a body the client parses). A real relay answers this gate BEFORE it looks
-	 *  at a password, which is why it is a server option rather than a test's
-	 *  password. */
-	loginRefusal?: string | number;
+	/** Answer `POST /login` with a refusal instead of the password flow: a corpus
+	 *  fixture path (the captured `http/login-cross-origin.json` is the relay's own 403
+	 *  for a page whose `Origin` is not the relay's), a bare status, or an explicit
+	 *  `{status, body, contentType}` for a shape the corpus has no capture of — a
+	 *  proxy's body-less or HTML 502 is the one that matters, because neither is a
+	 *  sentence. A real relay answers this gate BEFORE it looks at a password, which is
+	 *  why it is a server option rather than a test's password. */
+	loginRefusal?:
+		| string
+		| number
+		| { status: number; body?: string; contentType?: string };
 	/** For the Nth (1-based) `POST …/command`, act on it and drop the connection
 	 *  before answering — a lost acknowledgement. */
 	dropAckOnCommand?: number;
@@ -173,21 +176,29 @@ export async function startFixtureRelay(
 		const { auth } = options;
 		if (auth.mode === "custom" && path === "/login") {
 			if (options.loginRefusal !== undefined) {
-				if (typeof options.loginRefusal === "number") {
-					response.writeHead(options.loginRefusal);
+				const refusal = options.loginRefusal;
+				if (typeof refusal === "object") {
+					response.writeHead(refusal.status, {
+						"content-type": refusal.contentType ?? "text/plain",
+					});
+					response.end(refusal.body ?? "");
+					return;
+				}
+				if (typeof refusal === "number") {
+					response.writeHead(refusal);
 					response.end();
 					return;
 				}
-				const refusal = loadFixture<{
+				const fixture = loadFixture<{
 					status?: number;
 					headers?: Record<string, string>;
 					body?: unknown;
-				}>(options.loginRefusal);
-				response.writeHead(refusal.status ?? 403, {
+				}>(refusal);
+				response.writeHead(fixture.status ?? 403, {
 					"content-type":
-						refusal.headers?.["content-type"] ?? "application/json",
+						fixture.headers?.["content-type"] ?? "application/json",
 				});
-				response.end(JSON.stringify(refusal.body ?? {}));
+				response.end(JSON.stringify(fixture.body ?? {}));
 				return;
 			}
 			const password = new URLSearchParams(raw).get("password");

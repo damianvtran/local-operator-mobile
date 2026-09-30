@@ -327,11 +327,25 @@ export class RelayError extends Error {
 		if (init.cause !== undefined) this.cause = init.cause;
 	}
 
-	/** The copy a screen may show, or `undefined` when this build must not show
-	 *  copy at all (a client bug) — the caller then offers a retry instead. */
-	get displayableMessage(): string | undefined {
-		if (this.surface === "diagnostic") return undefined;
-		return this.detail ?? this.serverError ?? this.message;
+	/** The copy a screen may show — the ONE accessor for it, and it is always a
+	 *  sentence. It refuses the three things that are not copy: a `transport`
+	 *  failure's message (the RUNTIME's own words), an empty body, and a body that is
+	 *  markup. Every other kind carries a sentence this build wrote, so a screen that
+	 *  reads this never renders `""` or `<html><body>502 Bad Gateway</body></html>`
+	 *  for a proxy's answer (review round 4, M1/Q2). A screen that must not show copy
+	 *  at all is the `surface: "diagnostic"` case — a client bug — and that is read
+	 *  from `surface`, not from this returning nothing. */
+	get displayableMessage(): string {
+		if (this.kind === "transport") return TRANSPORT_SENTENCE;
+		return (
+			[this.detail, this.serverError, this.message]
+				.map((value) => value?.trim() ?? "")
+				.find((value) => value !== "" && !value.startsWith("<")) ??
+			/* Last resort, and unreachable for every arm this build writes — each one
+			 * falls back to a sentence of its own when the body said nothing usable.
+			 * It exists so this accessor cannot hand back an empty string. */
+			TRANSPORT_SENTENCE
+		);
 	}
 
 	/** One loggable line. Carries no token, no hostname, no transcript text. */
@@ -369,8 +383,16 @@ const DNS_CODES = new Set(["EAI_AGAIN", "ENOTFOUND", "ERR_NAME_NOT_RESOLVED"]);
 
 /* Where a runtime sends no code, its MESSAGE is the only signal, and it is a
  * weaker one — so these match words that cannot mean anything else. `getaddrinfo`
- * appears in the code's own message, which is why it is here as well as `ENOTFOUND`. */
-const CERTIFICATE_TEXT = /certificate|self[- ]signed/i;
+ * appears in the code's own message, which is why it is here as well as `ENOTFOUND`.
+ *
+ * The certificate arm is ANCHORED to rejection phrasing and does not match the bare
+ * word: `/certificate/` classified "the certificate story is long; the request timed
+ * out" as a rejected certificate, which tells a caller NEVER to retry a failure that
+ * a retry would clear (review round 4, m1). Every negative case that survived is the
+ * one this arm no longer takes: `ETIMEDOUT`, `ECONNREFUSED`, `EPROTO`, a bare
+ * "fetch failed", and any timeout that merely mentions certificates. */
+const CERTIFICATE_TEXT =
+	/self[- ]signed|certificate (is |has )?(expired|invalid|untrusted|rejected|revoked)|unable to (verify|get issuer)/i;
 const DNS_TEXT =
 	/getaddrinfo|ENOTFOUND|name not resolved|could not be resolved/i;
 
@@ -432,6 +454,26 @@ export function transportError(
 		);
 	}
 	return new RelayError("transport", message, { cause, diagnostic });
+}
+
+/** The sentence for a failure whose message is the RUNTIME's own words rather than
+ *  copy — "fetch failed", "This operation was aborted", "connect ECONNREFUSED …".
+ *  Published by `displayableMessage`, which is the one accessor a screen may read. */
+export const TRANSPORT_SENTENCE = "The relay could not be reached.";
+
+/** Body text a screen could be shown, when there is any.
+ *
+ * An EMPTY body and a markup body are both ordinary — a proxy's 502 answers with
+ * nothing, or with an HTML error page — and neither is a sentence: the first renders
+ * as nothing at all, the second puts `<html><body>502 Bad Gateway</body></html>` on a
+ * phone. `undefined` sends the caller to its own written copy, which is why every
+ * text arm below asks this rather than slicing the raw body: a `slice` of an empty
+ * string is a string, so the written sentence used to be unreachable and the message
+ * was empty (review round 4, M1). */
+function readableBodyText(text: string): string | undefined {
+	const trimmed = text.trim();
+	if (trimmed === "" || trimmed.startsWith("<")) return undefined;
+	return trimmed.slice(0, 200);
 }
 
 /**
@@ -594,7 +636,7 @@ export function relayErrorFromResponse(
 			}
 			return new RelayError(
 				"rejected",
-				serverError ?? text.slice(0, 200) ?? "not found",
+				serverError ?? readableBodyText(text) ?? "not found",
 				common,
 			);
 		case 503: {
@@ -620,7 +662,7 @@ export function relayErrorFromResponse(
 			}
 			return new RelayError(
 				"computer-offline",
-				text.trim().slice(0, 200) || "tunnel temporarily unavailable",
+				readableBodyText(text) ?? "tunnel temporarily unavailable",
 				common,
 			);
 		}
@@ -637,7 +679,7 @@ export function relayErrorFromResponse(
 			}
 			return new RelayError(
 				"ambiguous-delivery",
-				serverError ?? text.slice(0, 200) ?? "bad gateway",
+				serverError ?? readableBodyText(text) ?? "bad gateway",
 				common,
 			);
 		}
@@ -651,7 +693,7 @@ export function relayErrorFromResponse(
 		default:
 			return new RelayError(
 				"rejected",
-				serverError ?? text.slice(0, 200) ?? `unexpected status ${status}`,
+				serverError ?? readableBodyText(text) ?? `unexpected status ${status}`,
 				common,
 			);
 	}

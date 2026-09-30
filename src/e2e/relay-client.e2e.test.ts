@@ -20,6 +20,7 @@ import {
 	type CustomRoute,
 	createRelayClient,
 	signInToCustomRoute,
+	signOutOfCustomRoute,
 	type TunnelSession,
 } from "../connection";
 import {
@@ -46,6 +47,12 @@ const relays: FixtureRelay[] = [];
 afterEach(async () => {
 	for (const relay of relays.splice(0)) await relay.close();
 });
+
+/** A custom route for a fixture relay: a URL and a relay password, no Radient
+ * account and no tunnel — the supported self-hosted route. */
+function customRouteFor(baseUrl: string): CustomRoute {
+	return { mode: "custom", baseUrl, allowInsecure: true };
+}
 
 async function relayWith(
 	options: Parameters<typeof startFixtureRelay>[0],
@@ -239,14 +246,63 @@ describe("custom route: password login and the cookie jar", () => {
 		});
 	});
 
+	it("returns the sign-out verdict to the helper's caller, on both transports", async () => {
+		/* Review round 4, m3: the helper's contract changed from `void` to a verdict,
+		 * and the two fields answer different questions — `signedOut` (did the relay
+		 * end it) and `verified` (did a STATUS say so, or a read the platform forced us
+		 * into). Node shows the 303; a browser hides it behind an opaque redirect. A
+		 * screen needs the second case to warn that the cookie may still be live. */
+		const nodeJar = createCookieJarFetch();
+		const nodeRelay = await relayWith({ auth: { mode: "custom" } });
+		await signInToCustomRoute(
+			customRouteFor(nodeRelay.baseUrl),
+			"correct horse",
+			{
+				fetchImpl: nodeJar.fetch,
+			},
+		);
+		expect(
+			await signOutOfCustomRoute(customRouteFor(nodeRelay.baseUrl), {
+				fetchImpl: nodeJar.fetch,
+			}),
+		).toEqual({ signedOut: true, verified: false });
+
+		const browserJar = createCookieJarFetch();
+		const browserRelay = await relayWith({ auth: { mode: "custom" } });
+		await signInToCustomRoute(
+			customRouteFor(browserRelay.baseUrl),
+			"correct horse",
+			{
+				fetchImpl: browserJar.fetch,
+			},
+		);
+		expect(
+			await signOutOfCustomRoute(customRouteFor(browserRelay.baseUrl), {
+				fetchImpl: browserRedirectFetch(browserJar.fetch),
+			}),
+		).toEqual({ signedOut: true, verified: true });
+	});
+
+	it("reports a sign-out it could not verify at all, rather than throwing", async () => {
+		/* The catch path: nothing listening. `signedOut: false` is the honest answer —
+		 * the caller then clears its own private state and says so. */
+		const relay = await relayWith({ auth: { mode: "custom" } });
+		const url = relay.baseUrl;
+		await relay.close();
+		expect(
+			await signOutOfCustomRoute(customRouteFor(url), {
+				fetchImpl: createCookieJarFetch().fetch,
+			}),
+		).toEqual({ signedOut: false, verified: false });
+	});
+
 	it("gives every failure back as a verdict through the helper a screen calls", async () => {
 		/* Review round 3, R3-1: this boundary publishes `ok: true` unconditionally, so
 		 * it must never reject — an unhandled rejection is not a refusal the user can
 		 * act on. These are the five ways the sign-in can fail or succeed on a page,
 		 * including the relay's own cross-origin gate, which a browser meets first. */
 		const jar = createCookieJarFetch();
-		const routeFor = (baseUrl: string) =>
-			({ mode: "custom", baseUrl, allowInsecure: true }) satisfies CustomRoute;
+		const routeFor = customRouteFor;
 
 		/* 1. The relay's 403 for a foreign `Origin` — the corpus's own capture. */
 		const crossOrigin = await relayWith({
@@ -265,18 +321,46 @@ describe("custom route: password login and the cookie jar", () => {
 				.error,
 		});
 
-		/* 2. A gateway 502 — a status, not a refusal the client parses. */
-		const gatewayDown = await relayWith({
-			auth: { mode: "custom" },
-			loginRefusal: 502,
+		/* 2. A gateway 502 — a status, not a refusal the client parses. Three bodies a
+		 * proxy really sends, because the sentence has to be showable in each of them:
+		 * this is the case that published an EMPTY string and then raw markup before the
+		 * boundary read the taxonomy's copy accessor (review round 4, M1). */
+		const badge = async (
+			refusal: NonNullable<
+				Parameters<typeof startFixtureRelay>[0]["loginRefusal"]
+			>,
+		) => {
+			const relay = await relayWith({
+				auth: { mode: "custom" },
+				loginRefusal: refusal,
+			});
+			return signInToCustomRoute(routeFor(relay.baseUrl), "correct horse", {
+				fetchImpl: jar.fetch,
+			});
+		};
+		expect(await badge(502)).toEqual({
+			ok: true,
+			signedIn: false,
+			detail: "bad gateway",
 		});
-		const relayDown = await signInToCustomRoute(
-			routeFor(gatewayDown.baseUrl),
-			"correct horse",
-			{ fetchImpl: jar.fetch },
-		);
-		expect(relayDown.ok).toBe(true);
-		expect(relayDown.signedIn).toBe(false);
+		expect(
+			await badge({
+				status: 502,
+				body: "<html><body>502 Bad Gateway</body></html>",
+				contentType: "text/html",
+			}),
+		).toEqual({ ok: true, signedIn: false, detail: "bad gateway" });
+		expect(
+			await badge({
+				status: 502,
+				body: '{"error":"local harness unavailable"}',
+				contentType: "application/json",
+			}),
+		).toEqual({
+			ok: true,
+			signedIn: false,
+			detail: "local harness unavailable",
+		});
 
 		/* 3. A wrong password: the visible 401, with the route's own sentence. */
 		const wrongPassword = await relayWith({ auth: { mode: "custom" } });
