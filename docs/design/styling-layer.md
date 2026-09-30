@@ -1,0 +1,78 @@
+# The styling layer
+
+How the design kit's tokens become the utilities the app is styled with, and the
+two things about that pipeline that are easy to get wrong. ADR 0001 § "Styling
+sub-decision" is the decision record; this is the implementation note, written
+after the scaffold pass measured the failure modes rather than assuming them.
+
+## The pipeline
+
+```
+design/tokens/tokens.json          the only source of colour, type and space
+        │
+        ├─ design/tokens/build-preset.mjs ──▶ tailwind-preset.js   (framework-agnostic)
+        │
+        └─ scripts/build-theme.mjs ──┬─▶ src/ui/theme.css          (the styling layer)
+                                     └─▶ src/ui/tokens.gen.ts      (the same values, typed)
+
+src/ui/variants.ts    variant × size × state → class names, as pure functions
+src/ui/components/    the primitives, which render what variants.ts returns
+```
+
+`scripts/build-theme.mjs` reads the flattened role set from
+`design/tokens/tailwind-preset.js` and **fails** if its own flattening disagrees,
+so the app cannot quietly disagree with the kit about what `surface` means. Both
+generated files are committed; `pnpm theme:check` fails when either is stale.
+
+Colour roles resolve through `--color-<role>` custom properties. A component
+names a role (`bg-surface`, `text-ink-muted`, `border-control`) and never a hue —
+`useTokenColor()` exists only for the two APIs that cannot take a class name, a
+vector icon's `color` prop and native chrome.
+
+## Uniwind, and the web target
+
+The ADR chose Uniwind (Tailwind v4) with NativeWind v4 as the fallback. **The
+fallback was not taken**: `expo export --platform web` renders the token layer
+truthfully, which is the check the ADR set, and the local design and UX rounds
+depend on that. Verified 2026-09-29 by exporting, serving `dist/`, and capturing
+390×844 at dpr 3 in installed headless Chrome in both themes: `canvas` and `ink`
+resolve to the right roles, the type ramp applies, and the OS appearance and the
+in-app override each take effect.
+
+Two defects were found on the way, and both are worth knowing because neither
+reports itself as an error.
+
+### 1. The CSS entry must be the file the bundle imports
+
+`metro.config.js`'s `cssEntryFile` and the module the app imports have to be the
+**same document**. Tailwind only compiles the CSS the bundle pulls in, so splitting
+them — the token declarations in the imported module, the `@import`/`@source`
+directives in a file nothing imports — produced an export where every custom
+property was present and **not one utility class was**, and `expo export` still
+reported success. The screen rendered completely unstyled. This is why
+`src/ui/theme.css` carries both the directives and the declarations, and why there
+is no second file.
+
+### 2. One missing file upstream takes the whole web bundle down
+
+Uniwind replaces react-native-web's component modules with its own shims: its Metro
+resolver rewrites a resolution that lands on
+`react-native-web/dist/exports/<Name>/index.js` into `uniwind/components/<Name>`
+for every name in its `SUPPORTED_COMPONENTS` list. That list contains
+`InputAccessoryView`, and uniwind 1.12.0 ships only the **native** shim for it
+(`src/components/native/InputAccessoryView.tsx`) — there is no web one, so
+`exports["./components/*"]` points at a file that does not exist. The resolver then
+throws, and because react-native-web's own `dist/index.js` re-exports that
+component, the entire `--platform web` bundle fails with
+`Unable to resolve module ./exports/InputAccessoryView`.
+
+`metro.config.js` carries a documented guard that restores Metro's own resolution
+when uniwind declines to resolve, and warns when it does. For this component that
+is also the correct answer: react-native-web renders it as `UnimplementedView`.
+Nothing in the app imports `InputAccessoryView`; it is in the graph only because
+react-native-web's index re-exports it.
+
+**When to revisit:** the warning is the signal. If uniwind ships the missing shim
+the guard is dead code and should go, and a *different* module appearing in that
+warning is not benign — it means a component the app does use silently fell back to
+the unshimmed react-native-web version.
