@@ -343,6 +343,37 @@ const refusalView = (
 	const message = relaySentence(error);
 	const name = computerName(input.computerLabel);
 
+	/* A typed gateway refusal is `C6` whatever its surface says, because the flows'
+	 * C6 row is "503 + a typed `RELAY_DETAIL` reason → the gateway's own sentence +
+	 * one remedy", and `reason` is exactly what makes it typed. Routing these by
+	 * surface alone put `control_plane_unreachable` under `C7` — the computer
+	 * asleep — when its own sentence says the computer could not reach RADIENT,
+	 * which is a different fault with a different fix. The surface still chooses
+	 * the REMEDY: the console where the fix lives there, a retry where the cause
+	 * clears by itself. */
+	if (error.kind === "gateway-refused" && error.reason !== undefined) {
+		const isConsole = error.surface === "console";
+		return view("C6", message ?? "The relay refused this request.", "danger", {
+			action: isConsole
+				? {
+						kind: "console",
+						label: "Open console",
+						testID: "connection-error-console-link",
+					}
+				: {
+						kind: "retry",
+						label: "Check again",
+						testID: "connection-error-retry-prominent",
+					},
+			testIDs: [
+				...(isConsole
+					? ["connection-error-console-link"]
+					: ["connection-error-retry-prominent"]),
+				...waitingAnchors(error),
+			],
+		});
+	}
+
 	switch (error.surface) {
 		case "sign-in":
 			/* The edge's 401 with `X-Radient-Login`: the CONNECTOR was reached, so

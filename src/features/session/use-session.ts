@@ -78,9 +78,14 @@ export interface SessionRuntime {
 }
 
 /** Whether a stream failure is one to reconnect through rather than surface.
- *  Read from the error layer's own decision, never re-derived from a status. */
+ *
+ * Keyed on the KIND, not on the `retry` directive: a typed gateway refusal
+ * carries the server's own sentence and a remedy, so it must be shown (`C6`),
+ * and reconnecting through it would both hide that sentence and fight a relay
+ * that is refusing on purpose. `after-backoff` is true for a plain transport
+ * drop AND for `authorization_deferred`; only the first is silent. */
 const isTransient = (error: RelayError): boolean =>
-	error.retry === "after-backoff" || error.retry === "same-id";
+	error.kind === "transport" || error.kind === "ambiguous-delivery";
 
 export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 	// The route slot is a plain module value, so a change to it has to re-render

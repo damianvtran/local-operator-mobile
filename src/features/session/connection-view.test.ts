@@ -224,6 +224,28 @@ describe("C6 — a typed refusal renders the gateway's own sentence", () => {
 		expect(view.text).not.toContain("Load failed");
 	});
 
+	it("never routes a typed refusal by its surface, which would move the fault", () => {
+		// The gateway names this one `control_plane_unreachable`, and its own sentence
+		// says the COMPUTER could not reach Radient. The surface for that reason is
+		// `computer-offline`, whose copy is "‹computer› isn't answering" — a different
+		// fault (the computer asleep) with a different fix. The sentence wins.
+		const view = connectionView(
+			input({
+				error: new RelayError("gateway-refused", "503", {
+					status: 503,
+					detail:
+						"This computer could not reach Radient to renew the relay authorization.",
+					reason: "control_plane_unreachable",
+				}),
+				computerLastSeenS: 30,
+			}),
+		);
+		expect(view.id).toBe("C6");
+		expect(view.text).toContain("could not reach Radient");
+		expect(view.text).not.toContain("isn’t answering");
+		expect(view.action?.kind).toBe("retry");
+	});
+
 	it("never puts a bare status code on screen", () => {
 		const view = connectionView(
 			input({
