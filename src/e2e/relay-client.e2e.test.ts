@@ -16,12 +16,18 @@
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { createRelayClient, type TunnelSession } from "../connection";
+import {
+	type CustomRoute,
+	createRelayClient,
+	signInToCustomRoute,
+	type TunnelSession,
+} from "../connection";
 import {
 	type DecodedFrame,
 	memoryEnvelopeStore,
 	type RelayError,
 	RetryEnvelopeStore,
+	type SendCommandInput,
 	type StreamStatus,
 	sendPersistedCommand,
 } from "../relay";
@@ -34,6 +40,7 @@ import {
 	startFixtureRelay,
 } from "../testing/fixture-relay";
 import { loadFixture } from "../testing/fixtures";
+import { browserRedirectFetch } from "../testing/opaque-redirect-fetch";
 
 const relays: FixtureRelay[] = [];
 afterEach(async () => {
@@ -102,6 +109,18 @@ function customClient(relay: FixtureRelay) {
 	return { client, jar };
 }
 
+/** The same client with the platform's own quirk in front of it: a browser hides
+ *  every redirect (`redirect: 'manual'` answers an opaque response). The jar and
+ *  the server are real; only the redirect is hidden, exactly as Chrome hides it. */
+function browserClient(relay: FixtureRelay) {
+	const jar = createCookieJarFetch();
+	const client = createRelayClient({
+		route: { mode: "custom", baseUrl: relay.baseUrl, allowInsecure: true },
+		fetchImpl: browserRedirectFetch(jar.fetch),
+	});
+	return { client, jar };
+}
+
 function radientClient(
 	relay: FixtureRelay,
 	session = tunnelSession(),
@@ -132,11 +151,11 @@ describe("custom route: password login and the cookie jar", () => {
 		});
 
 		const wrong = await client.login("not the password");
-		expect(wrong).toEqual({ status: 401, signedIn: false });
+		expect(wrong).toEqual({ status: 401, signedIn: false, verified: false });
 		expect(jar.names()).toEqual([]);
 
 		const ok = await client.login("correct horse");
-		expect(ok).toEqual({ status: 303, signedIn: true });
+		expect(ok).toEqual({ status: 303, signedIn: true, verified: false });
 		expect(jar.names()).toEqual(["lop_mobile"]);
 
 		const list = await client.sessions();
@@ -155,6 +174,91 @@ describe("custom route: password login and the cookie jar", () => {
 		await expect(client.sessions()).rejects.toMatchObject({
 			kind: "relay-unauthorized",
 		});
+	});
+
+	it("reports the hidden redirect's outcome by verifying admission, not by reading a status", async () => {
+		/* QA round 3, Q1: in Chrome this same sign-in returned `ERR kind=rejected
+		 * status=0 msg=""` while the cookie had been set, so a signed-in user was told
+		 * their login failed. Node cannot produce that shape, so the platform boundary
+		 * does; the verification read it triggers is a real one. */
+		const relay = await relayWith({ auth: { mode: "custom" } });
+		const { client, jar } = browserClient(relay);
+
+		const outcome = await client.login("correct horse");
+		expect(outcome).toEqual({ status: 303, signedIn: true, verified: true });
+		expect(jar.names()).toEqual(["lop_mobile"]);
+
+		/* The verification was the gated read itself, carrying the jar's cookie. */
+		const gated = relay.requests.filter((r) => r.path === "/api/sessions");
+		expect(gated).toHaveLength(1);
+		expect(String(gated[0]?.headers.cookie).startsWith("lop_mobile=")).toBe(
+			true,
+		);
+		/* And the session is genuinely usable afterwards. */
+		await expect(client.sessions()).resolves.toMatchObject({
+			sessions: expect.any(Array),
+		});
+	});
+
+	it("reports a refusal through the taxonomy when the cookie never lands", async () => {
+		/* The blind path can also refuse: the redirect happens but the session is still
+		 * not admitted (a proxy eating the `Set-Cookie`, a jar that dropped it). The
+		 * sentence must come from the taxonomy, not from the status 0 the platform
+		 * showed. */
+		const relay = await relayWith({ auth: { mode: "custom" } });
+		const client = createRelayClient({
+			route: { mode: "custom", baseUrl: relay.baseUrl, allowInsecure: true },
+			/* No jar: the cookie the login set is never presented again. */
+			fetchImpl: browserRedirectFetch(globalThis.fetch),
+		});
+
+		const outcome = await client.login("correct horse");
+		expect(outcome.signedIn).toBe(false);
+		expect(outcome.verified).toBe(true);
+		expect(outcome.status).toBe(401);
+		expect(outcome.detail).toBe(
+			(fixtureBody("http/unauth-api-sessions.json") as { error: string }).error,
+		);
+	});
+
+	it("verifies that a logout actually ended the session", async () => {
+		const relay = await relayWith({ auth: { mode: "custom" } });
+		const { client } = browserClient(relay);
+		await client.login("correct horse");
+
+		const outcome = await client.logout();
+		expect(outcome).toEqual({ status: 303, signedOut: true, verified: true });
+		await expect(client.sessions()).rejects.toMatchObject({
+			kind: "relay-unauthorized",
+		});
+	});
+
+	it("drives the helper the screens call, on both transports", async () => {
+		/* `signInToCustomRoute` delegates to the client, so there is one implementation
+		 * of the hidden-redirect decision. What is worth asserting is that it reports
+		 * the client's outcome on both transports: the visible refusal keeps the route's
+		 * own sentence, and the browser's opaque redirect still signs the user in. */
+		const relay = await relayWith({ auth: { mode: "custom" } });
+		const route = {
+			mode: "custom",
+			baseUrl: relay.baseUrl,
+			allowInsecure: true,
+		} satisfies CustomRoute;
+		const jar = createCookieJarFetch();
+
+		const wrong = await signInToCustomRoute(route, "not the password", {
+			fetchImpl: browserRedirectFetch(jar.fetch),
+		});
+		expect(wrong).toEqual({
+			ok: true,
+			signedIn: false,
+			detail: "That password was not accepted.",
+		});
+
+		const browser = await signInToCustomRoute(route, "correct horse", {
+			fetchImpl: browserRedirectFetch(jar.fetch),
+		});
+		expect(browser).toEqual({ ok: true, signedIn: true });
 	});
 
 	it("reads the read-only routes through the real schemas", async () => {
@@ -372,6 +476,83 @@ describe("a prompt sent once, acknowledged never, and replayed", () => {
 		expect([...relay.admitted.values()]).toEqual([1]);
 		/* A definitive acknowledgement ended the ambiguity. */
 		expect(await envelopes.peek(FIXTURE_SESSION_ID)).toBeNull();
+	});
+});
+
+/* --------------------------------------- two sends in the same tick */
+
+describe("a double-tap that lands before the composer can disable send", () => {
+	it("is ONE instruction: the second caller joins the send in flight", async () => {
+		/* QA round 3, Q2, measured against the real daemon: two concurrent calls each
+		 * minted a `command_id` and the prompt RAN TWICE. `holdNew` reads the envelope
+		 * slot before it writes it, so two calls in one tick both saw it empty. */
+		const relay = await relayWith({ auth: { mode: "custom" } });
+		const { client } = customClient(relay);
+		await client.login("correct horse");
+		const envelopes = new RetryEnvelopeStore({ store: memoryEnvelopeStore() });
+
+		const draft: SendCommandInput = {
+			client,
+			envelopes,
+			sessionId: FIXTURE_SESSION_ID,
+			op: "prompt",
+			text: "double-tap",
+		};
+		const [first, second] = await Promise.all([
+			sendPersistedCommand(draft),
+			sendPersistedCommand(draft),
+		]);
+
+		/* One request crossed the wire, carrying one id, and the relay admitted ONE
+		 * instruction — which is the whole point of the envelope. */
+		const commands = relay.requests.filter((r) => r.path.endsWith("/command"));
+		expect(commands).toHaveLength(1);
+		expect([...relay.admitted.values()]).toEqual([1]);
+		/* Both callers are told the same outcome. `reusedPreviousDraft` stays false:
+		 * the joiner's own bytes are the ones that were sent, so nothing was dropped
+		 * and there is nothing to warn the user about. */
+		expect(second.commandId).toBe(first.commandId);
+		expect(second.detail).toBe("prompt admitted");
+		expect(first.reusedPreviousDraft).toBe(false);
+		expect(second.reusedPreviousDraft).toBe(false);
+	});
+
+	it("keeps two DIFFERENT drafts as two instructions, one after the other", async () => {
+		/* Waiting must not become dropping: two different drafts in one tick are two
+		 * things the user meant, so the second is sent — after the first, never
+		 * interleaved with it in the single envelope slot. */
+		const relay = await relayWith({ auth: { mode: "custom" } });
+		const { client } = customClient(relay);
+		await client.login("correct horse");
+		const envelopes = new RetryEnvelopeStore({ store: memoryEnvelopeStore() });
+
+		const [first, second] = await Promise.all([
+			sendPersistedCommand({
+				client,
+				envelopes,
+				sessionId: FIXTURE_SESSION_ID,
+				op: "prompt",
+				text: "first draft",
+			}),
+			sendPersistedCommand({
+				client,
+				envelopes,
+				sessionId: FIXTURE_SESSION_ID,
+				op: "prompt",
+				text: "second draft",
+			}),
+		]);
+
+		const commands = relay.requests.filter((r) => r.path.endsWith("/command"));
+		expect(commands).toHaveLength(2);
+		expect(relay.admitted.size).toBe(2);
+		expect(first.commandId).not.toBe(second.commandId);
+		/* Both bodies crossed the wire, in the order they were meant: `objectContaining`
+		 * so each is matched as a request body rather than re-asserted field by field. */
+		expect(commands.map((request) => request.body)).toEqual([
+			expect.objectContaining({ text: "first draft" }),
+			expect.objectContaining({ text: "second draft" }),
+		]);
 	});
 });
 

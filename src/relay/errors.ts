@@ -114,9 +114,16 @@ export interface RelayErrorInit {
 }
 
 /**
- * The gateway's refusal vocabulary (`gateway.py:73-95`, dumped from the module
- * into `fixtures/relay/gateway/gateway-refusal-constants.json`). Each one maps
- * to a different action, which is why they are not collapsed into one error.
+ * The gateway's refusal vocabulary (`gateway.py:66-95` at `52c1df35`, the ref the
+ * fixture corpus itself records; dumped from the module into
+ * `fixtures/relay/gateway/gateway-refusal-constants.json`). Each one maps to a
+ * different action, which is why they are not collapsed into one error.
+ *
+ * The ref is named on purpose. Line numbers drift between releases, and one review
+ * round grepped a stale working copy of the reference checkout, found nothing and
+ * reported this reason as deleted — while it is declared at `gateway.py:76` and
+ * has been since the release that introduced it. A citation that names a ref can
+ * be re-checked with `git show <ref>:local_operator/tunnels/gateway.py`.
  */
 export const GATEWAY_REASONS = [
 	"control_plane_unreachable",
@@ -141,7 +148,8 @@ export function isGatewayReason(value: unknown): value is GatewayReason {
 
 /** Per-reason handling: the surface, whether an automatic retry is wanted, and
  *  how long to wait. `authorization_deferred` is the only reason the gateway
- *  itself annotates with `Retry-After: 120` (`gateway.py:504-518`), and the
+ *  itself annotates with `Retry-After` (`gateway.py:503-518` at `52c1df35`, in
+ *  `refusal_headers`, whose value is `DEFERRAL_WINDOW_S = 120` at `:66`), and the
  *  gateway's code deliberately keeps it distinct from "signed out" — so a client
  *  that says "sign in again" for it is misreading the machine. */
 const REASON_POLICY: Record<

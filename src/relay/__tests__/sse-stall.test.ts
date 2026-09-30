@@ -13,7 +13,14 @@ import type { AddressInfo } from "node:net";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { loadFixture } from "../../testing/fixtures";
-import { type DecodedFrame, SseConnection, type StreamStatus } from "../index";
+import {
+	type DecodedFrame,
+	SseConnection,
+	STREAM_RETRY_BASE_MS,
+	STREAM_RETRY_MAX_MS,
+	type StreamStatus,
+	streamRetryDelayMs,
+} from "../index";
 
 const projection = loadFixture<{ event: string; data: unknown }>(
 	"sse/sse-projection-live-idle.json",
@@ -99,14 +106,28 @@ describe("a stream that goes silent is reopened, not abandoned", () => {
 		expect(beforeStop.at(-1)?.attempt).toBe(2);
 	});
 
-	it("still ends the loop with the error when the transport genuinely fails", async () => {
-		/* The other half of the flag: without it, treating every abort as a stall
-		 * would swallow a real failure. A server that resets the socket mid-body is
-		 * not the watchdog's doing and must reach onError. */
+	it("reopens after a mid-body reset and resyncs, instead of stopping", async () => {
+		/* The other half of the flag: the WATCHDOG did not abort here — the server
+		 * destroyed the socket mid-body, which is what a phone changing networks looks
+		 * like from inside the app. The stream is broken, not gone, so the loop reopens
+		 * on the stall/rotation path rather than stopping and leaving a screen to
+		 * restart it. */
+		let requests = 0;
 		const server = createServer((request, response) => {
-			response.writeHead(200, { "content-type": "text/event-stream" });
+			requests += 1;
+			response.writeHead(200, {
+				"content-type": "text/event-stream",
+				"cache-control": "no-store",
+			});
 			response.flushHeaders();
-			setTimeout(() => request.socket.destroy(), 20);
+			if (requests === 1) {
+				/* Headers, then a hard reset mid-body. */
+				setTimeout(() => request.socket.destroy(), 20);
+				return;
+			}
+			response.write(
+				`event: ${projection.event}\ndata: ${JSON.stringify(projection.data)}\n\n`,
+			);
 		});
 		servers.push(server);
 		await new Promise<void>((resolve) =>
@@ -114,6 +135,8 @@ describe("a stream that goes silent is reopened, not abandoned", () => {
 		);
 		const { port } = server.address() as AddressInfo;
 
+		const states: StreamStatus[] = [];
+		const frames: DecodedFrame[] = [];
 		const errors: unknown[] = [];
 		const connection = new SseConnection({
 			open: async (signal) => {
@@ -129,13 +152,43 @@ describe("a stream that goes silent is reopened, not abandoned", () => {
 					},
 				};
 			},
-			onFrame: () => undefined,
+			onFrame: (frame) => void frames.push(frame),
+			onState: (status) => void states.push(status),
 			onError: (error) => void errors.push(error),
 			random: () => 0,
 			silenceMs: 30_000,
 		});
 		connection.start();
-		await vi.waitFor(() => expect(errors.length).toBe(1), { timeout: 5_000 });
-		expect(connection.isRunning).toBe(false);
+		await vi.waitFor(
+			() => expect(frames.some((f) => f.kind === "projection")).toBe(true),
+			{ timeout: 5_000 },
+		);
+		const beforeStop = [...states];
+		const stillRunning = connection.isRunning;
+		connection.stop();
+
+		expect(stillRunning).toBe(true);
+		expect(requests).toBeGreaterThanOrEqual(2);
+		/* The reset is reported as a stall whose leg ended in an error, carrying the
+		 * cause, and the loop then reopened and delivered the second connection's
+		 * seed frame. */
+		const stalled = beforeStop.find((status) => status.state === "stalled");
+		expect(stalled?.lastEnd).toBe("error");
+		expect(stalled?.lastError?.kind).toBe("transport");
+		expect(beforeStop.at(-1)?.state).toBe("open");
+		expect(beforeStop.at(-1)?.attempt).toBe(2);
+		/* A reset is routine on a phone, so it is not a user-visible failure: nothing
+		 * reaches onError and the loop never reports itself closed while the caller
+		 * still wants it. */
+		expect(errors).toEqual([]);
+		expect(beforeStop.some((status) => status.state === "closed")).toBe(false);
+	});
+
+	it("spaces consecutive failures out instead of retrying flat out", () => {
+		expect(streamRetryDelayMs(1)).toBe(STREAM_RETRY_BASE_MS);
+		expect(streamRetryDelayMs(2)).toBe(STREAM_RETRY_BASE_MS * 2);
+		expect(streamRetryDelayMs(3)).toBe(STREAM_RETRY_BASE_MS * 4);
+		expect(streamRetryDelayMs(0)).toBe(STREAM_RETRY_BASE_MS);
+		expect(streamRetryDelayMs(50)).toBe(STREAM_RETRY_MAX_MS);
 	});
 });

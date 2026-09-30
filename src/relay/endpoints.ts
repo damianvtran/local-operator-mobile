@@ -35,6 +35,7 @@ import {
 	type PromptImage,
 	parsePayload,
 } from "../contracts";
+import { isRelayError, type RelayError } from "./errors";
 import type { RelayHttpClient, RelayStreamResponse } from "./http";
 import {
 	type DecodedFrame,
@@ -62,6 +63,27 @@ export interface StartSessionRequest {
 	cwd?: string;
 	provider?: string;
 	model_id?: string;
+}
+
+/**
+ * What `POST /login` establishes, on both transports.
+ *
+ * On native and in Node the relay's own status answers this (`303` signed in,
+ * `401` refused). A browser with `redirect: 'manual'` returns an opaque redirect
+ * instead — `status` 0, no body — so the answer is derived from a follow-up read
+ * of a gated route and `verified` says so. A caller that reports the mechanism to
+ * a user (a diagnostics screen) reads `verified`; a caller that only branches on
+ * `signedIn` does not have to care which transport it is on. */
+export interface LoginOutcome {
+	/** `303` signed in, `401` refused. */
+	status: number;
+	signedIn: boolean;
+	/** True when the outcome came from verifying admission rather than from a
+	 *  status the platform showed this client. */
+	verified: boolean;
+	/** The taxonomy's sentence for a refusal, when it has one — the relay's own
+	 *  words, not a status number. */
+	detail?: string;
 }
 
 export interface ImageBytes {
@@ -330,7 +352,7 @@ export class RelayEndpoints {
 	 * password form" and "am I already signed in".
 	 */
 	async loginPage(): Promise<{ status: number; isForm: boolean }> {
-		const { status, text } = await this.http.raw({
+		const { status, text, redirectHidden } = await this.http.raw({
 			method: "GET",
 			path: "/login",
 			/* `303` means already signed in, which is a state this probe reports rather
@@ -338,6 +360,12 @@ export class RelayEndpoints {
 			 * tolerated so a proxy's refusal still reaches the caller as a status. */
 			accept: [303, 401],
 		});
+		if (redirectHidden) {
+			/* The browser hid the `303 → /` that means "already signed in". This probe's
+			 * whole job is to report that state, so it is verified rather than assumed. */
+			const admission = await this.admission();
+			return { status: admission.admitted ? 303 : 401, isForm: false };
+		}
 		return { status, isForm: status === 200 && text.includes("<form") };
 	}
 
@@ -351,11 +379,15 @@ export class RelayEndpoints {
 	 *
 	 * `credentials: 'include'` is the ROUTE's policy, supplied by the caller's
 	 * `RequestAuth`; this function only shapes the body.
+	 *
+	 * On a browser this route's status is unreadable: `redirect: 'manual'` there
+	 * returns an opaque redirect, so a successful sign-in would otherwise be reported
+	 * as a failure with an empty message (measured in Chrome; Node, native and the
+	 * smoke script all see the real `303`, which is why no Node-side test caught it).
+	 * `admission()` is how the outcome is established instead.
 	 */
-	async login(
-		password: string,
-	): Promise<{ status: number; signedIn: boolean }> {
-		const { status } = await this.http.raw({
+	async login(password: string): Promise<LoginOutcome> {
+		const { status, redirectHidden } = await this.http.raw({
 			method: "POST",
 			path: "/login",
 			form: { password },
@@ -363,23 +395,97 @@ export class RelayEndpoints {
 			 * are outcomes to read, not exceptions to throw. */
 			accept: [303, 401],
 		});
-		/* 303 is success. 200 would mean the daemon answered the form again (it
-		 * renders the page with an inline error on a wrong password, as a 401), so
-		 * anything other than 303 is not a signed-in session. */
-		return { status, signedIn: status === 303 };
+		if (!redirectHidden) {
+			/* 303 is success. 200 would mean the daemon answered the form again (it
+			 * renders the page with an inline error on a wrong password, as a 401), so
+			 * anything other than 303 is not a signed-in session. */
+			return { status, signedIn: status === 303, verified: false };
+		}
+		/* A browser hid the redirect. The route has exactly two answers — `303 → /`
+		 * and `401` with the form — so a redirect that happened is the success SHAPE,
+		 * but "a redirect happened" is not proof the cookie was accepted, and this is
+		 * the one route where that difference decides whether the user is let in or
+		 * told their password is wrong. Verify, then report. */
+		const admission = await this.admission();
+		if (admission.admitted) {
+			return { status: 303, signedIn: true, verified: true };
+		}
+		/* The refusal's sentence comes from the taxonomy, which is the one place a
+		 * status becomes copy — not from a status this client could not even read. */
+		const detail = admission.refusal?.detail ?? admission.refusal?.message;
+		return {
+			status: 401,
+			signedIn: false,
+			verified: true,
+			...(detail ? { detail } : {}),
+		};
+	}
+
+	/**
+	 * Asks a route only an admitted session can answer whether this client is
+	 * admitted, for the one case the transport will not say: a browser with
+	 * `redirect: 'manual'` returns an opaque redirect instead of a status, so "did
+	 * that password work?" has to be asked again in a way the platform cannot hide.
+	 *
+	 * `GET /api/sessions` is that route: the relay gates it on the same cookie, so a
+	 * `200` is admission and its `401` is the taxonomy's own refusal, classified by
+	 * `errors.ts` rather than by a status read here.
+	 *
+	 * A failure to ASK — offline, a `503`, a body the schema rejects — is
+	 * deliberately not a refusal: telling a user their password was wrong when the
+	 * network was down is a worse lie than the status-0 reading this replaces, so it
+	 * propagates.
+	 */
+	private async admission(): Promise<{
+		admitted: boolean;
+		refusal?: RelayError;
+	}> {
+		try {
+			await this.http.json("sessionListFrame", {
+				method: "GET",
+				path: "/api/sessions",
+			});
+			return { admitted: true };
+		} catch (cause) {
+			const error = isRelayError(cause) ? cause : undefined;
+			if (
+				error &&
+				(error.kind === "relay-unauthorized" ||
+					error.kind === "radiant-login-required")
+			) {
+				return { admitted: false, refusal: error };
+			}
+			throw cause;
+		}
 	}
 
 	/** `GET /logout`: clears the relay's cookie. Not auth-gated, and it does not
 	 *  check CSRF — a client calling it must expect to be signed out. The local
 	 *  private state is this app's own job to clear; native has no
 	 *  `Clear-Site-Data`. */
-	async logout(): Promise<{ status: number }> {
-		const { status } = await this.http.raw({
+	async logout(): Promise<{
+		status: number;
+		signedOut: boolean;
+		verified: boolean;
+	}> {
+		const { status, redirectHidden } = await this.http.raw({
 			method: "GET",
 			path: "/logout",
 			accept: [303, 401],
 		});
-		return { status };
+		if (!redirectHidden) {
+			return { status, signedOut: status === 303, verified: false };
+		}
+		/* The same blind spot as `login`, inverted: verify that the session is GONE.
+		 * A read that still succeeds means the sign-out did not take. The caller's own
+		 * clearing happens either way (`signOutOfCustomRoute`), but it must not also
+		 * claim a success the relay never confirmed. */
+		const admission = await this.admission();
+		return {
+			status: admission.admitted ? 200 : 303,
+			signedOut: !admission.admitted,
+			verified: true,
+		};
 	}
 
 	/** `GET /api/sessions/events`: the list stream. Frames are the same payload as

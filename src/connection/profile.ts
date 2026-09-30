@@ -243,6 +243,13 @@ export function routeLabel(route: RouteProfile): string {
  * Custom route: the jar owns `lop_mobile` (`credentials: 'include'`), because
  * reading `Set-Cookie` back is the uncertain part on iOS and the jar is the
  * design rather than the fallback.
+ *
+ * **The tunnel branch only works outside a browser.** `Cookie` and `Origin` are
+ * forbidden header names in `fetch`: a browser drops this header without an error,
+ * the edge sees no grant, and the `401` it returns reads as an expired session. So
+ * the Radient route is native-only by construction, the web target is a
+ * design/audit surface over the custom route, and a route picker on web must not
+ * offer Radient. See `docs/relay-client.md`.
  */
 export function requestAuthFor(
 	route: RouteProfile,

@@ -254,6 +254,46 @@ async function main(): Promise<number> {
 		return `detail="${sent.detail}", command_id=${sent.commandId.slice(0, 8)}…`;
 	});
 
+	await step("concurrent-send", async () => {
+		/* Two sends in the same tick, which is what a double-tap that lands before the
+		 * composer can disable its button looks like. Measured against a real daemon
+		 * they used to mint two `command_id`s and the prompt RAN TWICE (QA round 3,
+		 * Q2). The proof is the daemon's own transcript, not the client's bookkeeping. */
+		const text = `concurrent probe ${randomUUID().slice(0, 8)}`;
+		const shared = new relay.RetryEnvelopeStore({
+			store: relay.memoryEnvelopeStore(),
+		});
+		const [first, second] = await Promise.all([
+			relay.sendPersistedCommand({
+				client,
+				envelopes: shared,
+				sessionId,
+				op: "prompt",
+				text,
+			}),
+			relay.sendPersistedCommand({
+				client,
+				envelopes: shared,
+				sessionId,
+				op: "prompt",
+				text,
+			}),
+		]);
+		if (first.commandId !== second.commandId) {
+			throw new Error(
+				`two command ids for one instruction: ${first.commandId} and ${second.commandId}`,
+			);
+		}
+		const page = await client.history(sessionId, { limit: 50 });
+		const copies = page.entries.filter((entry) => entry.text === text).length;
+		if (copies !== 1) {
+			throw new Error(
+				`the daemon recorded ${copies} copies of the prompt, expected 1`,
+			);
+		}
+		return `one command_id ${first.commandId.slice(0, 8)}…, transcript holds 1 copy`;
+	});
+
 	await step("command-duplicate", async () => {
 		const commandId = randomUUID();
 		const body = {

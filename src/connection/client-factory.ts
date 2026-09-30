@@ -15,13 +15,20 @@
  * | Credential | our own `Cookie` header carrying the grant alone | the platform jar's `lop_mobile` |
  * | Jar | `credentials: 'omit'` | `credentials: 'include'` |
  * | `Set-Cookie` | ignored: the app refreshes through the control plane on its own schedule | the jar's business |
+ *
+ * **The Radient route is native-only, and that is a property of the browser, not a
+ * gap here.** `Cookie` and `Origin` are forbidden header names in `fetch`, so a
+ * browser drops both silently: the edge receives no grant and no origin and answers
+ * a `401` that reads to the user as "the tunnel session expired". No client-side
+ * change can fix that — there is no way to set a forbidden header from a page — so
+ * the web target is a design/audit surface over the CUSTOM route, and a route
+ * picker must not offer Radient there. See `docs/relay-client.md`.
  */
 
 import {
 	RelayEndpoints,
 	RelayHttpClient,
 	type RelayResponseFactsWithHeaders,
-	resolveFetch,
 } from "../relay";
 import {
 	type CustomRoute,
@@ -81,43 +88,31 @@ export interface CustomRouteSignIn {
 /**
  * Signs in to a custom route.
  *
- * `POST /login` with a form body, `redirect: 'manual'` and `credentials:
- * 'include'`: the daemon answers `303 → /` with `Set-Cookie` on success and `401`
- * with an HTML page on failure, and there is deliberately no Bearer or Basic
- * alternative — the relay's only credential is that cookie. Following the redirect
- * would be pointless (the app never renders the relay's HTML).
+ * The request is the relay client's (`RelayEndpoints.login`), not a second copy of
+ * it: the status a browser hides, the taxonomy's refusal copy and the admission
+ * verification are one implementation, in `src/relay/`. A parallel raw-fetch
+ * version here would have to re-derive exactly that, and would silently diverge on
+ * the web target — which is what this replaced.
  *
- * The response's `Set-Cookie` is NOT read here; on iOS the platform may keep it out
- * of the visible header dictionary, and the jar is the design rather than the
- * fallback (`ADR 0002` §4, spike S2).
+ * `CustomRouteSignIn.detail` prefers the taxonomy's sentence (the web path, where
+ * the transport shows no status) and falls back to the route's own words for the
+ * refusal a caller can see.
  */
 export async function signInToCustomRoute(
 	route: CustomRoute,
 	password: string,
 	options: { fetchImpl?: typeof globalThis.fetch } = {},
 ): Promise<CustomRouteSignIn> {
-	const fetchImpl = resolveFetch(options.fetchImpl);
-	const response = await fetchImpl(`${route.baseUrl}/login`, {
-		method: "POST",
-		headers: {
-			"content-type": "application/x-www-form-urlencoded",
-			accept: "text/html, application/json",
-			origin: route.baseUrl,
-		},
-		body: new URLSearchParams({ password }).toString(),
-		/* The jar stores `lop_mobile`; that is the point of this route. */
-		credentials: "include",
-		redirect: "manual",
-		cache: "no-store",
+	const client = createRelayClient({
+		route,
+		...(options.fetchImpl ? { fetchImpl: options.fetchImpl } : {}),
 	});
-	if (response.status === 303) return { ok: true, signedIn: true };
+	const outcome = await client.login(password);
+	if (outcome.signedIn) return { ok: true, signedIn: true };
 	return {
 		ok: true,
 		signedIn: false,
-		detail:
-			response.status === 401
-				? "That password was not accepted."
-				: `The relay answered HTTP ${response.status}.`,
+		detail: outcome.detail ?? "That password was not accepted.",
 	};
 }
 
@@ -130,15 +125,12 @@ export async function signOutOfCustomRoute(
 	route: CustomRoute,
 	options: { fetchImpl?: typeof globalThis.fetch } = {},
 ): Promise<void> {
-	const fetchImpl = resolveFetch(options.fetchImpl);
+	const client = createRelayClient({
+		route,
+		...(options.fetchImpl ? { fetchImpl: options.fetchImpl } : {}),
+	});
 	try {
-		await fetchImpl(`${route.baseUrl}/logout`, {
-			method: "GET",
-			headers: { origin: route.baseUrl },
-			credentials: "include",
-			redirect: "manual",
-			cache: "no-store",
-		});
+		await client.logout();
 	} catch {
 		/* A relay that is already gone is a sign-out that already happened. The local
 		 * clearing is the caller's next step either way. */

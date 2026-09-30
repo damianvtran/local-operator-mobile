@@ -55,6 +55,22 @@ export const ROTATION_MIN_OPEN_MS = 50_000;
 /** Jitter on a normal rotation. Small on purpose: this is not backoff, it is
  *  de-synchronising reconnects from many devices behind one connector. */
 const ROTATION_JITTER_MS = 250;
+/** Backoff after a body that FAILED mid-stream (a TCP reset, a socket error). The
+ *  first retry is a quarter second — imperceptible to a user, and enough to stop a
+ *  reset that repeats from becoming a hot loop — doubling per consecutive failure
+ *  up to the cap. A failure to OPEN still stops the loop, so this delay can never
+ *  hide a relay that is gone: a retry that cannot open ends the loop there. */
+export const STREAM_RETRY_BASE_MS = 250;
+export const STREAM_RETRY_MAX_MS = 5_000;
+
+/** The gap before a retry after `failures` consecutive mid-stream failures: the
+ *  base doubled per failure, capped. Exported because it is an algorithm worth
+ *  pinning without watching a clock — a test that timed the loop against the wall
+ *  clock would be measuring the machine as much as the client. */
+export function streamRetryDelayMs(failures: number): number {
+	const step = Math.max(1, Math.trunc(failures));
+	return Math.min(STREAM_RETRY_BASE_MS * 2 ** (step - 1), STREAM_RETRY_MAX_MS);
+}
 
 /* ------------------------------------------------------------------ framing */
 
@@ -286,6 +302,11 @@ export interface StreamStatus {
 	/** Why the last open ended: a clean EOF (rotation or an early gateway stop) or
 	 *  an error. */
 	lastEnd?: "eof" | "error" | "stopped";
+	/** The failure that ended the last open, when one did. Carried in the STATUS
+	 *  rather than through `onError` because a mid-stream failure reconnects rather
+	 *  than stopping: a screen must be able to stay on "reconnecting" for a phone
+	 *  that changed networks while a diagnostics surface still sees the cause. */
+	lastError?: RelayError;
 }
 
 export interface SseConnectionOptions {
@@ -344,6 +365,9 @@ export class SseConnection {
 	private jitterTimer: TimerHandle | undefined;
 	private running = false;
 	private attempt = 0;
+	/** Consecutive mid-stream failures, which space the retries out. Reset as soon
+	 *  as a leg delivers a real frame. */
+	private failures = 0;
 	private openedAt = 0;
 	private lastStatus: StreamStatus = { state: "idle", attempt: 0 };
 
@@ -368,6 +392,7 @@ export class SseConnection {
 		if (this.running) return;
 		this.running = true;
 		this.attempt = 0;
+		this.failures = 0;
 		void this.run();
 	}
 
@@ -440,6 +465,10 @@ export class SseConnection {
 					 * dead the moment the parser's comment handling changed. */
 					this.armSilenceWatchdog(controller);
 					for (const frame of frames.push(value)) {
+						/* A real frame (not a keep-alive comment, which arrives as an empty
+						 * event) means this leg is genuinely working, so the next failure retries
+						 * from the short delay instead of inheriting an earlier backoff. */
+						if (frame.event !== "") this.failures = 0;
 						this.handle(frame);
 					}
 				}
@@ -463,15 +492,26 @@ export class SseConnection {
 
 			const openMs = this.options.now() - this.openedAt;
 			if (ended === "error" && error) {
-				this.running = false;
+				/* The body failed mid-stream: a TCP reset, a socket error after the headers
+				 * arrived. That is a broken CONNECTION — not a lease rotation, and not an
+				 * authentication failure, because a `401` arrives at `open` and stops the
+				 * loop there. So the loop self-heals exactly as a silence stall does, with
+				 * consecutive failures spacing the retries instead of retrying flat out.
+				 *
+				 * The error rides the STATE, not `onError`: the stream is reconnecting, not
+				 * failed, and a screen that paints a failure for a phone that changed
+				 * networks is the flash rule 1 exists to prevent. A caller that wants to
+				 * report something reads `lastEnd`/`lastError` from the status. */
+				this.failures += 1;
 				this.emit({
-					state: "closed",
+					state: "stalled",
 					attempt: this.attempt,
 					lastOpenMs: openMs,
 					lastEnd: "error",
+					lastError: error,
 				});
-				this.options.onError?.(error);
-				return;
+				await this.pause(streamRetryDelayMs(this.failures));
+				continue;
 			}
 
 			/* A clean EOF. Long ones are the lease expiring (normal); short ones mean

@@ -31,6 +31,11 @@
  *   no caller can grow a dependency on one.
  * - **A timeout is a transport error, not an ambiguous success.** There is no
  *   path here that turns an unanswered request into a `2xx`.
+ * - **A redirect the platform hid is an outcome, never a `0`.** A browser with
+ *   `redirect: 'manual'` answers a form login with an opaque redirect (`status` 0,
+ *   no headers, no body) instead of the relay's `303`; `isOpaqueRedirect` names
+ *   that shape so no endpoint has to re-discover it (see `endpoints.login`, which
+ *   verifies admission rather than trusting it).
  */
 
 import {
@@ -124,11 +129,34 @@ export interface RelayStreamResponse {
 	release: () => Promise<void>;
 }
 
-/* Hoisted: the base URL is normalised once per client, not per request. */
+/* Hoisted: matched per request. */
 const TRAILING_SLASHES = /\/+$/;
 
 const CONTENT_TYPE_JSON = "application/json";
 const CONTENT_TYPE_FORM = "application/x-www-form-urlencoded";
+
+function isRedirectStatus(status: number): boolean {
+	return status >= 300 && status < 400;
+}
+
+/**
+ * True when the platform handed back a redirect it refuses to describe.
+ *
+ * `fetch(url, { redirect: 'manual' })` in a browser answers an opaque redirect:
+ * `type: 'opaqueredirect'`, `status` 0, no headers and no body — the target is
+ * cross-origin as far as the CORS model is concerned, so its URL and its status
+ * are unreadable by design. Node's undici and `expo/fetch` return the real `303`,
+ * which is why the fixture suite, the native app and `scripts/relay-smoke.ts` all
+ * see the truth while a browser user sees `0`. Without this check the relay's
+ * successful form login is classified as a failure with an empty message.
+ *
+ * `status === 0` is tested alongside the type because a polyfill may omit `type`.
+ * Nothing else on this wire answers 0: a genuine transport failure REJECTS the
+ * promise rather than returning a statusless response.
+ */
+export function isOpaqueRedirect(response: Response): boolean {
+	return response.type === "opaqueredirect" || response.status === 0;
+}
 
 export class RelayHttpClient {
 	private readonly baseUrl: string;
@@ -166,6 +194,10 @@ export class RelayHttpClient {
 		status: number;
 		headers: RelayResponseFactsWithHeaders;
 		text: string;
+		/** True when the platform hid a redirect, so `status` is 0 and neither the
+		 *  headers nor the body say what the server actually answered. The endpoint
+		 *  decides what that means; see `endpoints.login`. */
+		redirectHidden: boolean;
 	}> {
 		const { response, release } = await this.open(request);
 		try {
@@ -174,6 +206,7 @@ export class RelayHttpClient {
 				status: response.status,
 				headers: responseFacts(response),
 				text,
+				redirectHidden: isOpaqueRedirect(response),
 			};
 		} finally {
 			await release();
@@ -242,7 +275,25 @@ export class RelayHttpClient {
 			}
 		};
 
-		if (!response.ok && !request.accept?.includes(response.status)) {
+		if (isOpaqueRedirect(response)) {
+			/* A redirect the platform hid. A route that declared a redirect among the
+			 * outcomes it READS (`accept` carries a 3xx, as `/login` and `/logout` do)
+			 * gets the response back and decides for itself — `endpoints.login` verifies
+			 * admission with a follow-up read instead of trusting this. Anywhere else a
+			 * hidden redirect is a transport failure: there is no status, no body and no
+			 * header to classify, and saying so is the only honest sentence available. */
+			if (!(request.accept ?? []).some(isRedirectStatus)) {
+				await release();
+				throw new RelayError(
+					"transport",
+					"the platform hid a redirect this route does not expect",
+					{
+						status: 0,
+						diagnostic: `${this.diagnostic} ${request.method} ${redactPath(request.path)}`,
+					},
+				);
+			}
+		} else if (!response.ok && !request.accept?.includes(response.status)) {
 			/* Read the body for the taxonomy: the gateway's refusal carries the only
 			 * sentence written for a phone, and losing it turns a fixable state into
 			 * "something went wrong". A body that cannot be read still classifies. */

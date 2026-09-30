@@ -22,11 +22,13 @@ src/contracts/     the wire: types.gen.ts (the relay's dataclasses, mirrored)
 src/relay/         the protocol, UI-free and navigation-free
                    errors.ts     (status → typed error → three decisions)
                    http.ts       (headers, cookies, redirects, caching, timeouts)
-                   sse.ts        (framing, keep-alives, the 60 s rotation, the fence)
+                   sse.ts        (framing, keep-alives, the 60 s rotation, the fence,
+                                  and what each way of ending is worth)
                    endpoints.ts  (one typed function per route)
                    platform-fetch.ts (the bound global fetch; see "Browser traps")
                    retry-envelope.ts (the persisted-command rules)
-                   send-command.ts   (hold → send → settle, written once)
+                   send-command.ts   (hold → send → settle, written once, and
+                                      single-flight per session)
 src/testing/       stand-ins for the platform, never imported by product code
                    cookie-jar-fetch.ts (the OS cookie jar, for Node)
                    fixture-relay.ts    (a real HTTP server replaying fixtures/relay)
@@ -56,6 +58,7 @@ convention:
 | A token is read in exactly two places — the HTTP layer and the refresh scheduler | `connection/storage.ts` is the only keystore reader |
 | Only `startRoute` / `endRoute` change the active route | `state/connection-store.ts` |
 | The retry envelope is written by one module, and nothing else decides keep/clear | `relay/retry-envelope.ts` |
+| Two sends on one session in the same tick are ONE instruction | `relay/send-command.ts` (single-flight) |
 
 ### Compatibility: the receipts, and absent fields
 
@@ -121,12 +124,13 @@ surface is decided here so three screens cannot each invent their own reading of
 | no response at all | `transport` | `retry` | same id | keep |
 | a `2xx` whose body does not match its schema | `malformed-frame` | `none` | same id | keep |
 
-The gateway's `reason` vocabulary (`gateway.py:73-95`), mapped to distinct
+The gateway's `reason` vocabulary (`gateway.py:66-95` at `52c1df35`, the ref the
+fixture corpus was dumped from), mapped to distinct
 surfaces rather than one "something went wrong":
 
 | `reason` | surface | what the user is told |
 | --- | --- | --- |
-| `authorization_deferred` | `retry` | paused; clears by itself in about two minutes (the only reason with `Retry-After: 120`) |
+| `authorization_deferred` | `retry` | paused; clears by itself in about two minutes (the only reason with `Retry-After: 120`, which is `DEFERRAL_WINDOW_S` in `gateway.py:66` and is emitted by `refusal_headers()` at `gateway.py:503-518`) |
 | `authorization_lease_pending` | `retry` | usually clears in seconds |
 | `control_plane_unreachable` | `computer-offline` | that computer cannot reach Radient |
 | `authorization_refused` | `console` | Radient refused it: sign in again on that computer, or check billing |
@@ -261,6 +265,31 @@ authenticated `GET` → SSE → revoke), a thin driver over the same modules, an
 is deliberately not run by CI or by this repository's tests. Without
 `RADIENT_ACCESS_TOKEN` it prints `NO CREDENTIALS — not run here` and exits 2.
 
+## How a stream ends, and what the client does about it
+
+Every way a stream ends is one of four, and only the last one stops the loop:
+
+| The leg ended because | `lastEnd` | published state | what happens next |
+| --- | --- | --- | --- |
+| the gateway's ~60 s lease cut it | `eof` | `rotating` | reopens at once, reseeds from the first frame |
+| a ~35 s silence tripped the watchdog | `eof` | `stalled` | reopens at once, reseeds |
+| the socket was reset or errored mid-body | `error` | `stalled`, carrying `lastError` | reopens after a backoff, reseeds |
+| the OPEN failed (a `401`, an unknown tunnel, a relay that is down) | — | `closed` | stops and calls `onError` |
+
+Two consequences worth stating because they are deliberate:
+
+- **A mid-stream reset is a broken connection, not a lease rotation.** A phone that
+  changes networks gets a `transport` error from the body reader; the loop reopens
+  on the same path a stall takes, with consecutive failures doubling the delay from
+  `STREAM_RETRY_BASE_MS` to `STREAM_RETRY_MAX_MS`. It cannot spin: an open that
+  fails still ends the loop, so a retry that cannot reach the relay stops and
+  reports instead of retrying forever.
+- **`onError` means "stopped", and only that.** A reconnecting stream reports its
+  cause through the state (`lastEnd`, and `lastError` for an error-ended leg) so a
+  screen stays on "reconnecting" for a transient failure while a diagnostics view
+  still sees what happened. A failure to re-ESTABLISH is what ends the loop, and
+  that is the one an `onError` handler will see.
+
 ## Browser traps the Node tests could not see
 
 **`fetch` is brand-checked in a browser.** `window.fetch` called with any receiver
@@ -279,3 +308,27 @@ the handle would switch on the edge's transparent refresh, which re-sets both
 cookies on a proxied response; the app ignores every `Set-Cookie` and refreshes
 through the control plane on its own schedule. The handle is sent to the control
 plane, and to the edge only by the optional logout fallback.
+
+**A browser hides the redirect a form login answers with, so admission is
+verified instead of read.** `fetch(url, { redirect: 'manual' })` in a browser
+returns an OPAQUE redirect — `type: 'opaqueredirect'`, `status` 0, no headers, no
+body — because the target counts as cross-origin under the CORS model. Node's
+undici and `expo/fetch` return the real `303`, so the fixture suite, the device
+and the smoke script all saw a success while a browser user was told
+`kind: rejected, status 0` after a sign-in that had in fact set the cookie.
+`relay/http.ts` names that shape (`isOpaqueRedirect`), and the two endpoints whose
+outcome it hides act on it: `login()`/`logout()` verify with a follow-up read of a
+route only an admitted session can answer (`GET /api/sessions`), take the refusal's
+sentence from the taxonomy, and report how they know it — `LoginOutcome.verified`,
+and `logout()`'s `signedOut`. A refusal the transport COULD see is unchanged: a
+wrong password is still a plain `401`.
+
+**The Radient route cannot work from a page at all, and that is the browser's
+rule, not a missing feature.** `Cookie` and `Origin` are forbidden header names in
+`fetch`: a page cannot set them, so the client's own grant header and tunnel origin
+are dropped silently, the edge receives neither, and its `401` reads to the user as
+"tunnel session expired". Nothing in this client can fix that, and the fix is not
+in the client: the Radient route is **native-only**, and the web target is a
+design/audit surface which uses the **custom** route. A route picker must not offer
+Radient on web. This is asserted where the header policy is applied
+(`connection/profile.ts`, `connection/client-factory.ts`).
