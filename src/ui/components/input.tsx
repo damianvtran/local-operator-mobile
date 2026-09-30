@@ -1,6 +1,6 @@
 import { Text, TextInput, type TextInputProps, View } from "react-native";
 
-import { CONTROL, ROLE, state } from "@/ui/a11y";
+import { ROLE, state } from "@/ui/a11y";
 import { useTokenColor } from "@/ui/appearance";
 import { type FieldState, fieldClasses } from "@/ui/variants";
 
@@ -37,7 +37,7 @@ export type InputProps = {
 	returnKeyType?: TextInputProps["returnKeyType"];
 	/** Optional: the control's own identifier is the fallback, so a screen
 	 *  that does not name a control is still addressable. */
-	testID?: string;
+	testID: string;
 };
 
 export const Input = ({
@@ -52,7 +52,7 @@ export const Input = ({
 	autoCapitalize,
 	onSubmitEditing,
 	returnKeyType,
-	testID = CONTROL.input,
+	testID,
 }: InputProps) => {
 	const fieldState: FieldState = disabled
 		? "disabled"

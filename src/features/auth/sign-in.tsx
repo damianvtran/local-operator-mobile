@@ -32,6 +32,7 @@ export default function SignIn() {
 			testID={SCREEN.signIn}
 			headerLeading={
 				<Button
+					testID={CONTROL.signInBack}
 					label="Back"
 					onPress={() => router.back()}
 					variant="quiet"

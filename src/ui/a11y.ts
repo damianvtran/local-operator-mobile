@@ -19,6 +19,8 @@
 
 /** The values React Native accepts for `accessibilityRole`. */
 export const ROLE = {
+	/* Accessibility roles this slice renders. `button` is in the ARIA set and
+	 *  is what a Pressable that acts as one must announce. */
 	button: "button",
 	link: "link",
 	header: "header",
@@ -76,11 +78,20 @@ export const EMPTY = {
  * `<screen-or-surface>-<what it does>`.
  *
  * There is deliberately NO generic entry (`button`, `input`, `list-row`). The
- * primitives take `testID` as a REQUIRED prop, so a screen with two buttons cannot
- * fall back to two identical `"button"` identifiers — Maestro's `id:` matching
- * would then pick one arbitrarily, and the failure reads as a flaky flow rather
- * than a naming mistake. A control that a later stream adds gets its name here in
- * the same change that renders it.
+ * interactive primitives (`Button`, `IconButton`, `Input`, `Textarea`, `Chip`,
+ * `ListRow`, `Segmented`, `Banner`) and an empty state's action take `testID` as a
+ * REQUIRED prop, so a screen with two buttons cannot fall back to two identical
+ * `"button"` identifiers — Maestro's `id:` matching would then pick one
+ * arbitrarily, and the failure reads as a flaky flow rather than a naming mistake.
+ * A control gets its name here in the same change that renders it; a control whose
+ * identity is data (a row, a per-computer status) uses the `<role>-<id>` shape and
+ * is declared as a family in `IDENTIFIER_FAMILIES` below.
+ *
+ * ONE vocabulary is shared by the app and the flows. The names the Maestro flows
+ * in `e2e/maestro/**` press are declared here under their own comment, and
+ * `a11y.e2e.test.ts` walks `app/**`, `src/ui/**` and `src/features/**` to check
+ * both directions: every declared identifier is rendered by something, and no
+ * identifier is typed as a literal where a constant exists.
  */
 export const CONTROL = {
 	// Welcome and Sessions: the two shell routes that render an action.
@@ -107,13 +118,6 @@ export const CONTROL = {
 	/* --- added by the wave-2 screen slice (D1): the auth, tunnel and list
 	 * controls it renders. Additive — main's names above are untouched, because the
 	 * Maestro flows in `e2e/maestro/**` reference the ones below. --- */
-	button: "button",
-	iconButton: "icon-button",
-	input: "input",
-	textarea: "textarea",
-	chip: "chip",
-	listRow: "list-row",
-	segmented: "segmented",
 	sessionsPast: "sessions-past",
 	signInStart: "sign-in-start",
 
@@ -155,6 +159,19 @@ export const CONTROL = {
 	settingsTextScaleSystem: "settings-text-scale-system",
 	settingsDeleteAccount: "settings-delete-account",
 
+	/* --- the controls this slice's screens render, named one at a time: two
+	 * controls on one screen must not share an identifier (Maestro's `id:` matching
+	 * would pick arbitrarily), and `e2e/maestro/**` addresses the flow vocabulary
+	 * declared above. --- */
+	setupUseThisComputer: "setup-use-this-computer",
+	newSessionCreate: "new-session-create",
+	computersRetryAction: "computers-retry-action",
+	settingsThemeGroup: "settings-theme-group",
+	computersBanner: "computers-banner",
+	sessionsClearSearchAction: "sessions-clear-search-action",
+	sessionsConnectAction: "sessions-connect-action",
+	sessionsNewAction: "sessions-new-action",
+	pastSearchClear: "past-search-clear",
 	/* --- the list, past-list and new-session controls the flows address. --- */
 	newSessionCwd: "new-session-cwd",
 	newSessionModel: "new-session-model",
@@ -164,6 +181,48 @@ export const CONTROL = {
 	sessionsSplit: "sessions-split",
 	sessionsFooter: "sessions-footer",
 	sessionsNoRoute: "sessions-no-route",
+
+	computersUseThisComputer: "computers-use-this-computer",
+	computersStartAgain: "computers-start-again",
+	computersRefresh: "computers-refresh",
+	ownTunnelBack: "own-tunnel-back",
+	setupCreateTunnel: "setup-create-tunnel",
+	setupTunnelId: "setup-tunnel-id",
+	signInTryAgain: "sign-in-try-again",
+	signInUseAddress: "sign-in-use-address",
+	signInTryAnyway: "sign-in-try-anyway",
+	signInBack: "sign-in-back",
+	newSessionBack: "new-session-back",
+	newSessionHomeChip: "new-session-home-chip",
+	newSessionPathChip: "new-session-path-chip",
+	pastBack: "past-back",
+	pastSearchField: "past-search-field",
+	pastSearch: "past-search",
+	pastRetry: "past-retry",
+	pastBackToSessions: "past-back-to-sessions",
+	sessionsDegradedBanner: "sessions-degraded-banner",
+	sessionsComputers: "sessions-computers",
+	sessionOpenCurrent: "session-open-current",
+	sessionOpenPrevious: "session-open-previous",
+	settingsTunnelCancel: "settings-tunnel-cancel",
+	settingsBack: "settings-back",
+	settingsUseComputer: "settings-use-computer",
+	settingsRefresh: "settings-refresh",
+	settingsAddComputer: "settings-add-computer",
+	settingsTextScaleGroup: "settings-text-scale-group",
+	settingsRetryLastAction: "settings-retry-last-action",
+	refusalSignIn: "refusal-sign-in",
+	refusalRetry: "refusal-retry",
+	refusalAnotherAddress: "refusal-another-address",
+	/* --- the list, past-list and new-session controls the flows address. --- */
+
+	/* --- the list, past-list and new-session controls the flows address. --- */
+
+	/* --- the list, past-list and new-session controls the flows address. --- */
+
+	/* --- the controls this slice's screens render, named one by one. A screen with
+	 * two controls cannot share an identifier: Maestro's `id:` matching would pick one
+	 * arbitrarily and the failure would read as a flaky flow. --- */
 } as const;
 
 /**

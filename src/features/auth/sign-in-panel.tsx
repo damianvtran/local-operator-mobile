@@ -1,7 +1,7 @@
 import { useRouter } from "expo-router";
 import { Text, View } from "react-native";
 
-import { REGION } from "@/ui/a11y";
+import { CONTROL, REGION } from "@/ui/a11y";
 import { Button } from "@/ui/components/button";
 import { Shimmer } from "@/ui/components/shimmer";
 
@@ -98,12 +98,26 @@ export const SignInPanel = ({
 			</View>
 
 			{state.kind === "cancelled" || state.kind === "failed" ? (
-				<Button label="Try again" onPress={onStart} variant="outline" />
+				<Button
+					label="Try again"
+					onPress={onStart}
+					variant="outline"
+					testID={CONTROL.signInTryAgain}
+				/>
 			) : null}
 			{state.kind === "unavailable" ? (
 				<>
-					<Button label="Use an address and password" onPress={useAddress} />
-					<Button label="Try again anyway" onPress={onStart} variant="quiet" />
+					<Button
+						label="Use an address and password"
+						onPress={useAddress}
+						testID={CONTROL.signInUseAddress}
+					/>
+					<Button
+						label="Try again anyway"
+						onPress={onStart}
+						variant="quiet"
+						testID={CONTROL.signInTryAnyway}
+					/>
 				</>
 			) : null}
 		</View>

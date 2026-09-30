@@ -1,5 +1,4 @@
 import { Text, View } from "react-native";
-import { CONTROL } from "@/ui/a11y";
 
 import { Button } from "@/ui/components/button";
 import { bannerClasses, bannerGlyph, bannerInkClasses } from "@/ui/variants";
@@ -29,9 +28,9 @@ export type BannerProps = {
 		loading?: boolean;
 		/** Optional: the control's own identifier is the fallback, so a screen
 		 *  that does not name a control is still addressable. */
-		testID?: string;
+		testID: string;
 	};
-	testID?: string;
+	testID: string;
 };
 
 export const Banner = ({ tone, message, action, testID }: BannerProps) => (

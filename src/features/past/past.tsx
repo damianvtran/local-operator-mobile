@@ -110,6 +110,7 @@ export default function PastSessions() {
 			testID={SCREEN.past}
 			headerLeading={
 				<Button
+					testID={CONTROL.pastBack}
 					label="Back"
 					onPress={() => router.back()}
 					variant="quiet"
@@ -121,6 +122,7 @@ export default function PastSessions() {
 				<View className="flex-row items-end gap-2">
 					<View className="flex-1">
 						<Input
+							testID={CONTROL.pastSearchField}
 							label="Search past conversations"
 							value={query}
 							onChangeText={setQuery}
@@ -130,6 +132,7 @@ export default function PastSessions() {
 						/>
 					</View>
 					<Button
+						testID={CONTROL.pastSearch}
 						label="Search"
 						onPress={() => void onSearch()}
 						loading={searching}
@@ -161,7 +164,11 @@ export default function PastSessions() {
 						{error}
 					</Alert>
 					<View className="pt-3">
-						<Button label="Try again" onPress={() => void load(query)} />
+						<Button
+							label="Try again"
+							onPress={() => void load(query)}
+							testID={CONTROL.pastRetry}
+						/>
 					</View>
 				</View>
 			) : items.length === 0 ? (
@@ -177,6 +184,7 @@ export default function PastSessions() {
 							: "Conversations you have finished will be listed here, and you can pick one up again."
 					}
 					action={{
+						testID: CONTROL.pastSearchClear,
 						label: query.trim() ? "Clear the search" : "Back to sessions",
 						onPress: () => {
 							if (query.trim()) {
@@ -235,6 +243,7 @@ export default function PastSessions() {
 											</Text>
 										) : null}
 										<Button
+											testID={CONTROL.pastBackToSessions}
 											label={opening === item.id ? "opening…" : "Resume"}
 											onPress={() => void resume(item)}
 											loading={opening === item.id}

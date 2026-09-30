@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { Pressable, View } from "react-native";
 
-import { CONTROL, ROLE, state } from "@/ui/a11y";
+import { ROLE, state } from "@/ui/a11y";
 import { useTokenColor } from "@/ui/appearance";
 import { TOUCH_FLOOR } from "@/ui/layout";
 import { iconButtonClasses } from "@/ui/variants";
@@ -29,7 +29,7 @@ export type IconButtonProps = {
 	accessibilityHint?: string;
 	/** Optional: the control's own identifier is the fallback, so a screen
 	 *  that does not name a control is still addressable. */
-	testID?: string;
+	testID: string;
 };
 
 export const IconButton = ({
@@ -40,7 +40,7 @@ export const IconButton = ({
 	disabled = false,
 	outlined = false,
 	accessibilityHint,
-	testID = CONTROL.iconButton,
+	testID,
 }: IconButtonProps) => {
 	const color = useTokenColor(disabled ? "ink-disabled" : "ink-muted");
 

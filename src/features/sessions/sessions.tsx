@@ -185,7 +185,11 @@ export default function Sessions() {
 			) : null}
 
 			{degradedMessage ? (
-				<Banner tone="warning" message={degradedMessage} />
+				<Banner
+					tone="warning"
+					message={degradedMessage}
+					testID={CONTROL.sessionsDegradedBanner}
+				/>
 			) : null}
 			{staleMessage ? (
 				<Text className="text-body-sm text-ink-dim">{staleMessage}</Text>
@@ -377,6 +381,7 @@ export default function Sessions() {
 					</View>
 					<View className="flex-1">
 						<Button
+							testID={CONTROL.sessionsComputers}
 							label="Computers"
 							onPress={() => router.push("/tunnels")}
 							variant="quiet"
@@ -394,6 +399,7 @@ export default function Sessions() {
 			>
 				<View className="gap-2 pb-4">
 					<Button
+						testID={CONTROL.sessionOpenCurrent}
 						label={menuTarget?.pinned ? "Unpin" : "Pin to the top"}
 						onPress={() => {
 							const target = menuTarget;
@@ -403,6 +409,7 @@ export default function Sessions() {
 						variant="outline"
 					/>
 					<Button
+						testID={CONTROL.sessionOpenPrevious}
 						label="Open"
 						onPress={() => {
 							const target = menuTarget;
@@ -525,7 +532,11 @@ const ListEmpty = ({
 			<EmptyState
 				headline="Nothing matches that."
 				next="Search covers the loaded sessions' names, ids and folders."
-				action={{ label: "Clear the search", onPress: () => undefined }}
+				action={{
+					label: "Clear the search",
+					onPress: () => undefined,
+					testID: CONTROL.sessionsClearSearchAction,
+				}}
 			/>
 		);
 	}
@@ -534,7 +545,11 @@ const ListEmpty = ({
 			<EmptyState
 				headline="No computer is connected yet."
 				next="This app drives the sessions on your own computer, so it needs one first."
-				action={{ label: "Connect a computer", onPress: onConnect }}
+				action={{
+					label: "Connect a computer",
+					onPress: onConnect,
+					testID: CONTROL.sessionsConnectAction,
+				}}
 				testID={CONTROL.sessionsNoRoute}
 			/>
 		);
@@ -543,7 +558,11 @@ const ListEmpty = ({
 		<EmptyState
 			headline="No sessions yet."
 			next="A session is one conversation with the agent on your machine. Start one and it will appear here."
-			action={{ label: "New session", onPress: onNew }}
+			action={{
+				label: "New session",
+				onPress: onNew,
+				testID: CONTROL.sessionsNewAction,
+			}}
 			testID={EMPTY.sessions}
 		/>
 	);

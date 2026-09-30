@@ -142,6 +142,7 @@ export default function NewSession() {
 			testID={SCREEN.newSession}
 			headerLeading={
 				<Button
+					testID={CONTROL.newSessionBack}
 					label="Back"
 					onPress={() => router.back()}
 					variant="quiet"
@@ -170,6 +171,7 @@ export default function NewSession() {
 							<View className="flex-row flex-wrap gap-2">
 								{directories ? (
 									<Chip
+										testID={CONTROL.newSessionHomeChip}
 										label="Home"
 										selected={cwd === directories.home}
 										onPress={() => setCwd(directories.home)}
@@ -178,6 +180,7 @@ export default function NewSession() {
 								) : null}
 								{directories?.recent.map((recent) => (
 									<Chip
+										testID={CONTROL.newSessionPathChip}
 										key={recent}
 										label={shortFolder(recent)}
 										selected={cwd === recent}
@@ -270,6 +273,7 @@ export default function NewSession() {
 					{/* Ordered as the relay ranked them, never re-sorted. */}
 					{models.map((entry) => (
 						<Button
+							testID={CONTROL.newSessionCreate}
 							key={entry.selector}
 							label={entry.label ?? entry.name}
 							onPress={() => {

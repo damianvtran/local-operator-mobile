@@ -81,9 +81,20 @@ export const ConnectionPill = ({
 
 	return (
 		<View
-			className={`flex-row items-center gap-2 self-start rounded-sm px-2 py-1 ${
+			/* `max-w-full` and a shrinking label, because the message is a SENTENCE
+			 *  ("Not answering. The relay has stopped...") and not a word: measured at
+			 *  200 % on a 320 pt phone the row grew to 554 pt and the label to 492 pt,
+			 *  clipped by the viewport (U-06, 18 rows across the settings cells). The
+			 *  dot must not shrink — it is the state mark — so the label takes the
+			 *  remaining width and wraps instead. */
+			className={`max-w-full flex-row items-center gap-2 self-start rounded-sm px-2 py-1 ${
 				state === "connected" ? "" : `border ${PILL_CLASS[state]}`
 			}`}
+			/* Inline, not only the class: the class pipeline is where this went
+			 *  wrong once already (the row measured 554 pt in a 320 pt viewport with
+			 *  `max-w-full` in its class list), and a status line that can exceed the
+			 *  screen is a clipped sentence either way. */
+			style={{ maxWidth: "100%", minWidth: 0 }}
 			// `polite`, and never `assertive`: this is a status that changes on its own,
 			// and interrupting a reader mid-sentence for a reconnect is exactly the
 			// interruption the 60-second rotation would cause once a minute.
@@ -95,7 +106,7 @@ export const ConnectionPill = ({
 			 *  word, glyph or accessible name, and it is right to: to a reader who cannot
 			 *  see it, this box says nothing — including when it is the only mark. */}
 			<View
-				className="h-1.5 w-1.5 rounded-full"
+				className="h-1.5 w-1.5 shrink-0 rounded-full"
 				style={{ backgroundColor: dotColor }}
 				/* Named, not hidden. U-03 refuses a semantic colour with no word,
 				 *  glyph or accessible name, and hiding the mark only moved the problem:
@@ -106,7 +117,12 @@ export const ConnectionPill = ({
 			/>
 			{text.length > 0 ? (
 				<Text
-					className={`text-meta ${INK_CLASS[state]}`}
+					/* The flex constraints, in an inline style as well as the class list:
+					 *  this is where the fix first failed silently — the row measured
+					 *  554 pt inside a 320 pt viewport while carrying `max-w-full` and
+					 *  `flex-1` as classes, and every sibling inherited that width. */
+					style={{ flexShrink: 1, minWidth: 0 }}
+					className={`min-w-0 flex-1 text-meta ${INK_CLASS[state]}`}
 					accessibilityRole={ROLE.text}
 				>
 					{text}

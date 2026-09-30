@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { Pressable, Text, View } from "react-native";
 
-import { CONTROL, ROLE, state } from "@/ui/a11y";
+import { ROLE, state } from "@/ui/a11y";
 import { chipClasses, chipLabelClasses } from "@/ui/variants";
 
 /**
@@ -25,7 +25,7 @@ export type ChipProps = {
 	leadingIcon?: ReactNode;
 	/** Optional: the control's own identifier is the fallback, so a screen
 	 *  that does not name a control is still addressable. */
-	testID?: string;
+	testID: string;
 };
 
 export const Chip = ({
@@ -35,7 +35,7 @@ export const Chip = ({
 	disabled = false,
 	accessibilityHint,
 	leadingIcon,
-	testID = CONTROL.chip,
+	testID,
 }: ChipProps) => (
 	<Pressable
 		accessibilityRole={ROLE.button}

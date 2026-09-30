@@ -91,6 +91,7 @@ export default function OwnTunnel() {
 			testID={SCREEN.ownTunnel}
 			headerLeading={
 				<Button
+					testID={CONTROL.ownTunnelBack}
 					label="Back"
 					onPress={() => router.back()}
 					variant="quiet"

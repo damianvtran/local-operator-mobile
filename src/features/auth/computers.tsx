@@ -249,9 +249,18 @@ const WaitPanel = ({
 
 			<View className="gap-2">
 				{state.kind === "w3" ? (
-					<Button label="Use this computer" onPress={onUse} />
+					<Button
+						label="Use this computer"
+						onPress={onUse}
+						testID={CONTROL.computersUseThisComputer}
+					/>
 				) : null}
-				<Button label="Start again" onPress={onStop} variant="quiet" />
+				<Button
+					label="Start again"
+					onPress={onStop}
+					variant="quiet"
+					testID={CONTROL.computersStartAgain}
+				/>
 			</View>
 		</View>
 	);
@@ -328,6 +337,7 @@ export default function Computers() {
 			headerAction={
 				!empty ? (
 					<Button
+						testID={CONTROL.computersRefresh}
 						label="Refresh"
 						onPress={() => void refreshComputers()}
 						variant="quiet"
@@ -354,9 +364,14 @@ export default function Computers() {
 			 *  between stale and blank. */}
 			{!refusal && computers.length > 0 && detail ? (
 				<Banner
+					testID={CONTROL.computersBanner}
 					tone="warning"
 					message={detail}
-					action={{ label: "Retry", onPress: () => void refreshComputers() }}
+					action={{
+						label: "Retry",
+						onPress: () => void refreshComputers(),
+						testID: CONTROL.computersRetryAction,
+					}}
 				/>
 			) : null}
 

@@ -91,6 +91,7 @@ export default function Settings() {
 			testID={SCREEN.settings}
 			headerLeading={
 				<Button
+					testID={CONTROL.settingsBack}
 					label="Back"
 					onPress={() => router.back()}
 					variant="quiet"
@@ -161,6 +162,7 @@ export default function Settings() {
 										<Badge label="active" tone="success" mono />
 									) : (
 										<Button
+											testID={CONTROL.settingsUseComputer}
 											label="Use"
 											onPress={() => {
 												/* Switching routes is the picker's job, so this hands
@@ -180,6 +182,7 @@ export default function Settings() {
 					 *  399 px (`U-06`, measured). Wrapping keeps both reachable. */}
 					<View className="flex-row flex-wrap gap-2 pt-1">
 						<Button
+							testID={CONTROL.settingsRefresh}
 							label="Refresh"
 							onPress={() => void refreshComputers()}
 							variant="outline"
@@ -187,6 +190,7 @@ export default function Settings() {
 							loading={busy}
 						/>
 						<Button
+							testID={CONTROL.settingsAddComputer}
 							label="Add a computer"
 							onPress={() => router.push("/tunnels")}
 							variant="quiet"
@@ -207,6 +211,7 @@ export default function Settings() {
 				<View className="gap-3" testID={REGION.settingsAppearance}>
 					<SectionHeader label="Appearance" />
 					<Segmented<ThemePreference>
+						testID={CONTROL.settingsThemeGroup}
 						label="Theme"
 						value={theme}
 						onChange={setPreference}
@@ -229,6 +234,7 @@ export default function Settings() {
 						]}
 					/>
 					<Segmented
+						testID={CONTROL.settingsTextScaleGroup}
 						label="Text size"
 						value={textScale.preference}
 						onChange={textScale.setPreference}
@@ -280,6 +286,7 @@ export default function Settings() {
 					</Text>
 					{refusal ? (
 						<Button
+							testID={CONTROL.settingsRetryLastAction}
 							label="Try the last action again"
 							onPress={() => void retry()}
 							variant="outline"
@@ -373,6 +380,10 @@ const DiagnosticRow = ({ label, value }: { label: string; value: string }) => (
 			className="flex-1 text-right text-mono-sm text-ink-dim"
 			accessibilityRole={ROLE.text}
 			numberOfLines={2}
+			/* `minWidth: 0` lets this column shrink below its content's width — the
+			 *  one lever RN-web honours on every platform for a flex child (`overflow-
+			 *  Wrap` is web-only and is not in the `TextStyle` type). */
+			style={{ minWidth: 0 }}
 		>
 			{value}
 		</Text>

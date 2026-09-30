@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Pressable, Text, View } from "react-native";
 
 import { useConnectorWait } from "@/features/auth/connector-wait";
-import { ROLE } from "@/ui/a11y";
+import { CONTROL, ROLE } from "@/ui/a11y";
 import { Alert } from "@/ui/components/alert";
 import { Button } from "@/ui/components/button";
 import { Card } from "@/ui/components/card";
@@ -117,6 +117,7 @@ export const SetupComputer = ({
 					</Text>
 					<CommandBlock label="TUI" command={tuiCommands()} />
 					<Button
+						testID={CONTROL.setupCreateTunnel}
 						label={waiting ? "Watching for it" : "I've run it — connect it"}
 						onPress={onWaitForConnector}
 						loading={waiting}
@@ -136,6 +137,7 @@ export const SetupComputer = ({
 						exists — it will not create one.
 					</Text>
 					<Input
+						testID={CONTROL.setupTunnelId}
 						label="Tunnel id"
 						value={tunnelId}
 						onChangeText={setTunnelId}
@@ -200,7 +202,13 @@ export const ConnectorWaitPanel = ({
 					? `Waiting for ${hostname.split("-")[0]}-lop to answer. The cloud route existing is not the same as your computer being up.`
 					: "Waiting for your computer to answer."}
 			</Text>
-			{onUse ? <Button label="Use this computer" onPress={onUse} /> : null}
+			{onUse ? (
+				<Button
+					label="Use this computer"
+					onPress={onUse}
+					testID={CONTROL.setupUseThisComputer}
+				/>
+			) : null}
 		</View>
 	);
 };

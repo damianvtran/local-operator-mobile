@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { ActivityIndicator, Pressable, Text, View } from "react-native";
 
-import { CONTROL, ROLE, state } from "@/ui/a11y";
+import { ROLE, state } from "@/ui/a11y";
 import { useTokenColor } from "@/ui/appearance";
 import {
 	BUTTON_VISUAL_HEIGHT,
@@ -36,7 +36,7 @@ export type ButtonProps = {
 	 * and a shared default would put the same one on every button of a screen. */
 	/** Optional: the control's own identifier is the fallback, so a screen
 	 *  that does not name a control is still addressable. */
-	testID?: string;
+	testID: string;
 };
 
 const ICON_SIZE: Record<ButtonSize, number> = {
@@ -56,7 +56,7 @@ export const Button = ({
 	loading = false,
 	disabled = false,
 	accessibilityHint,
-	testID = CONTROL.button,
+	testID,
 }: ButtonProps) => {
 	const iconColor = useTokenColor(
 		/* The icon follows the label: `ink-dim` rather than `ink-disabled`, for the

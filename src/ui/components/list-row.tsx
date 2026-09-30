@@ -8,7 +8,7 @@ import {
 } from "react-native";
 
 import { countLabel } from "@/lib/format";
-import { CONTROL, ROLE, state } from "@/ui/a11y";
+import { ROLE, state } from "@/ui/a11y";
 import { useReducedMotion, useTokenColor } from "@/ui/appearance";
 import { Shimmer } from "@/ui/components/shimmer";
 import {
@@ -64,7 +64,7 @@ export type ListRowProps = {
 	onPress: () => void;
 	/** Optional: the control's own identifier is the fallback, so a screen
 	 *  that does not name a control is still addressable. */
-	testID?: string;
+	testID: string;
 };
 
 export const ListRow = ({
@@ -81,7 +81,7 @@ export const ListRow = ({
 	degraded = false,
 	selected = false,
 	onPress,
-	testID = CONTROL.listRow,
+	testID,
 }: ListRowProps) => {
 	const attention = listRowIndicator({
 		ready: true,

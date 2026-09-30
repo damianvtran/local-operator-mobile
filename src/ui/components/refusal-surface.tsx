@@ -1,7 +1,7 @@
 import { AlertTriangle } from "lucide-react-native";
 import { Text, View } from "react-native";
 
-import { REGION, ROLE } from "@/ui/a11y";
+import { CONTROL, REGION, ROLE } from "@/ui/a11y";
 import { useTokenColor } from "@/ui/appearance";
 import { Button } from "@/ui/components/button";
 
@@ -188,13 +188,18 @@ export const RefusalSurface = ({
 				onRetry ? (
 					<View testID={REGION.connectionErrorRetryProminent}>
 						<Button
+							testID={CONTROL.refusalSignIn}
 							label={kind === "retry" ? "Try now" : "Try again"}
 							onPress={onRetry}
 						/>
 					</View>
 				) : null}
 				{kind === "sign-in" && onSignIn ? (
-					<Button label="Sign in again" onPress={onSignIn} />
+					<Button
+						label="Sign in again"
+						onPress={onSignIn}
+						testID={CONTROL.refusalRetry}
+					/>
 				) : null}
 				{(kind === "console" || kind === "tunnel-gone") && onOpenConsole ? (
 					<Button
@@ -206,6 +211,7 @@ export const RefusalSurface = ({
 				) : null}
 				{onUseAnotherAddress ? (
 					<Button
+						testID={CONTROL.refusalAnotherAddress}
 						label="Use another address"
 						onPress={onUseAnotherAddress}
 						variant="quiet"

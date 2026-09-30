@@ -226,6 +226,7 @@ export const OwnTunnelSettings = () => {
 							testID={CONTROL.customConnect}
 						/>
 						<Button
+							testID={CONTROL.settingsTunnelCancel}
 							label="Cancel"
 							onPress={() => setEditing(false)}
 							variant="quiet"

@@ -73,7 +73,7 @@ export type EmptyStateProps = {
 	headline: string;
 	/** The action the reader can take. Required: see the note above. */
 	next: string;
-	action?: { label: string; onPress: () => void; testID?: string };
+	action?: { label: string; onPress: () => void; testID: string };
 	testID?: string;
 };
 
