@@ -1,9 +1,26 @@
-# F-6 / S8 — answer a pending approval, then a pending ask.
+# F-6/S8 — answer a pending approval, then a pending ask.
 #
 # The relay's `approval` and `ask` scenarios pin both card shapes, including the
-# multi-question ask and the destructive-command detail. This flow answers one of
+# multi-question ask and the destructive-command detail. The flow answers one of
 # each and asserts the card *leaves*: a card that stays after an answer is the
 # defect that reads as a hung app.
+#
+# Both cards are unrendered in the scaffold — the projection store does not exist —
+# so this flow currently carries markers only. It is kept as the specification of
+# what the cards must be assertable by, which is what makes the gap trackable.
+#
+# IDENTIFIERS: every `id:` in this file is in `src/ui/a11y.ts` — the scaffold's
+# own contract, which `src/ui/a11y.e2e.test.ts` checks these flows against. A step
+# the app cannot serve yet is a commented marker, not a selector:
+#
+#     Marker spelling: `# BLOCKED: needs <the-identifier> from <the-screen>`
+#
+# The marker names the identifier a step waits on and the screen that would own
+# it, so the gap is visible in review and the test can require that every marked
+# id is genuinely one the app does not render. An invented selector would fail on
+# the first assertion and read as a flaky flow.
+#
+# CI-only: needs a booted simulator or emulator and an app build (ADR 0003).
 appId: ${APP_ID}
 name: "F-6 approval and ask"
 env:
@@ -12,48 +29,36 @@ env:
 ---
 - launchApp:
     clearState: true
-- runFlow: "01-first-run-sign-in.yaml"
----
-- tapOn:
-    id: "session-row-${SESSION_ID}"
-- extendedWaitUntil:
-    visible:
-      id: "pending-card"
-    timeout: 15000
-- takeScreenshot: "08-00-approval-card"
-# The detail is a destructive command: the card must present it verbatim, and the
-# destination must be named rather than implied.
 - assertVisible:
-    id: "pending-card-detail"
-- assertVisible:
-    id: "pending-card-destructive-marker"
-- takeScreenshot: "08-01-card-detail"
-- tapOn:
-    id: "pending-card-approve"
-- takeScreenshot: "08-02-approved"
-- extendedWaitUntil:
-    notVisible:
-      id: "pending-card"
-    timeout: 15000
-- takeScreenshot: "08-03-card-cleared"
-# The ask: a secret free-text question with options offered.
-- tapOn:
-    id: "session-row-${SESSION_ID}"
-- extendedWaitUntil:
-    visible:
-      id: "ask-card"
-    timeout: 15000
-- takeScreenshot: "08-04-ask-card"
-- assertVisible:
-    id: "ask-question-1-of-2"
-- tapOn:
-    id: "ask-option-0"
-- takeScreenshot: "08-05-option-chosen"
-- tapOn:
-    id: "ask-submit"
-- takeScreenshot: "08-06-submitted"
-- extendedWaitUntil:
-    notVisible:
-      id: "ask-card"
-    timeout: 15000
-- takeScreenshot: "08-07-ask-cleared"
+    id: "sessions-screen"
+# BLOCKED: needs session-row-<id> from sessions
+# - tapOn:
+#     id: "session-row-${SESSION_ID}"
+# BLOCKED: needs pending-card from session
+# - extendedWaitUntil:
+#     visible:
+#       id: "pending-card"
+#     timeout: 15000
+# BLOCKED: needs pending-card-detail from session
+# - assertVisible:
+#     id: "pending-card-detail"
+# BLOCKED: needs pending-card-destructive-marker from session
+# - assertVisible:
+#     id: "pending-card-destructive-marker"
+# BLOCKED: needs pending-card-approve from session
+# - tapOn:
+#     id: "pending-card-approve"
+# BLOCKED: needs ask-card from session
+# - extendedWaitUntil:
+#     visible:
+#       id: "ask-card"
+#     timeout: 15000
+# BLOCKED: needs ask-question-1-of-2 from session
+# - assertVisible:
+#     id: "ask-question-1-of-2"
+# BLOCKED: needs ask-option-0 from session
+# - tapOn:
+#     id: "ask-option-0"
+# BLOCKED: needs ask-submit from session
+# - tapOn:
+#     id: "ask-submit"

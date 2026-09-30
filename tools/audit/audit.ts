@@ -2,7 +2,7 @@
  * The audit checker: run the mechanical half of the design/UX rubric over a
  * captured state matrix, and write a report a review round can answer.
  *
- * It consumes a manifest from `tools/visual/capture.mjs`, re-drives the *same*
+ * It consumes a manifest from `tools/visual/capture.ts`, re-drives the *same*
  * URLs in installed headless Chrome (so the check is over the real render, not
  * over a saved PNG), extracts geometry and the accessibility tree over CDP, and
  * emits one row per check × cell with the measured number and the frame it came
@@ -39,7 +39,7 @@ import { launchChrome } from "../lib/chrome.ts";
 import { serveDir } from "../lib/static-server.ts";
 import { PRE_PAINT_PROBE } from "../visual/matrix.ts";
 import type { AuditState, CheckRow } from "./checks.ts";
-import { runChecks } from "./checks.ts";
+import { runChecks, SUB_RULE_TEXT } from "./checks.ts";
 import { floorsFromTokens } from "./color.ts";
 import { EXTRACT_PROBE, flattenAxTree } from "./probe.ts";
 
@@ -186,6 +186,9 @@ export function paletteProvenance(
 
 /** One captured cell, as the audit reads it out of the manifest. */
 interface AuditRecord {
+	/** Whether the capture run judged this frame's text-scale pair live. */
+	scaleLive?: boolean | null;
+
 	/** The frame stem, used in progress and failure lines. */
 	name?: string;
 	screen: string;
@@ -240,7 +243,7 @@ async function auditCell(
 		],
 	});
 	// The real insets, so the app's own env() resolves them (see
-	// tools/visual/capture.mjs § applySafeAreaInsets).
+	// tools/visual/capture.ts § applySafeAreaInsets).
 	let insetsOverride: { applied: boolean; reason: string | null } = {
 		applied: false,
 		reason: null,
@@ -313,6 +316,8 @@ export interface AuditOptions {
 	settleMs: number;
 	/** Hard bound per cell; a cell that exceeds it is a BLOCKED row, not a hang. */
 	cellTimeoutMs: number;
+	/** Rules to silence, as `U-05-top` or `U-04`. A mutation self-test hook. */
+	blind: string[];
 	quiet: boolean;
 	/** A Chrome profile directory to use; the default is a fresh temporary one. */
 	profile?: string | undefined;
@@ -356,6 +361,16 @@ async function withDeadline<T>(
 }
 
 export async function runAudit(options: AuditOptions) {
+	/**
+	 * Every row as produced, before any blinding, so the specs can be judged once
+	 * the whole run is done.
+	 *
+	 * The first version asked per cell whether the CELL had produced a row for the
+	 * rule, so a cell whose insets made the rule not-applicable marked the spec
+	 * unmatched and the run exited 2 on a blind that had in fact blinded eight rows.
+	 * Whether a rule exists is a property of the run, not of one cell.
+	 */
+	const unblinded: Array<{ check: string; measured?: string | null }> = [];
 	const manifestPath = options.manifest;
 	const rawManifest: unknown = JSON.parse(readFileSync(manifestPath, "utf8"));
 	const manifest = asRecord(rawManifest);
@@ -445,11 +460,25 @@ export async function runAudit(options: AuditOptions) {
 				continue;
 			}
 			const state = attempted.value;
+			// A cell whose declared state was never reached is not measurable, and its
+			// rows are BLOCKED rather than PASS/FAIL: the harness re-drives the same URL,
+			// so it renders the same fallback screen, and a check that "passed" there is
+			// a reading about the fallback screen wearing the state's name. The capture
+			// harness already fails these cells by name; this is the audit saying the
+			// same thing about its own rows.
+			// `unreadyCells` is a TOP-LEVEL manifest key, not a `meta` field.
+			const notMeasurable = manifest.unreadyCells;
+			const cellWasUnready =
+				Array.isArray(notMeasurable) && notMeasurable.includes(record.name);
 			const produced = runChecks(state, {
 				floors,
 				semantic: { ...semantic },
 				checks,
-				scaleIsLive: meta.textScaleLive === true,
+				// The scale dimension is judged PER CELL by the capture harness, and the
+				// run-level flag is only a fallback for a manifest written before that
+				// existed. A cell whose own pair was inert must not be told it has a live
+				// dimension because some other screen's was.
+				scaleIsLive: record.scaleLive ?? meta.textScaleLive === true,
 				// The palette's absence is a *failed check*, not a silent skip: with no
 				// colours to match, a colour-only status node cannot be found, and a
 				// PASS there is a reading the instrument did not earn.
@@ -457,7 +486,37 @@ export async function runAudit(options: AuditOptions) {
 					? null
 					: `${palette.reason ?? "no palette"}`,
 			});
-			for (const row of produced) {
+			// The blinding hook, applied at the moment a row is produced.
+			//
+			// This exists so the canary's own coverage can be attacked: `verify.ts`
+			// blinds one rule at a time and requires the canary to fail, which is the
+			// only way to prove a sub-rule is actually asserted. A blinded row is
+			// rewritten to PASS and says so, and a blinded run is never evidence —
+			// but a hook that silently did nothing would make the self-test vacuous,
+			// so an unmatched spec is reported rather than ignored.
+			const measured = cellWasUnready
+				? produced.map((row) => ({
+						...row,
+						verdict: "BLOCKED" as const,
+						blockedKind: "state-not-reached" as const,
+						detail:
+							`${row.detail ?? ""} — this cell did not reach the state it declares in the ` +
+							"capture run, so the row describes the fallback screen",
+					}))
+				: produced;
+			const blinded = measured.map((row) => {
+				const spec = options.blind.find((candidate) =>
+					matchesBlind(row, [candidate]),
+				);
+				// The measurement is LEFT ALONE and the reason is a field of its own:
+				// rewriting `measured` destroyed the number the row exists to report,
+				// which is the one thing a blind must not do.
+				return spec === undefined
+					? row
+					: { ...row, verdict: "PASS" as const, blind: spec };
+			});
+			for (const row of measured) unblinded.push(row);
+			for (const row of blinded) {
 				rows.push({
 					...row,
 					screen: record.screen,
@@ -512,7 +571,14 @@ export async function runAudit(options: AuditOptions) {
 	// check that does not apply to a cell (U-04 on a 100% frame) is expected and
 	// does not make a run incomplete; one that could not measure (no palette, no
 	// control in the frame) does.
-	const gaps = blocked.filter((r) => r.blockedKind === "unmeasurable");
+	// `state-not-reached` counts as a gap too: a cell that never rendered the state it
+	// declares measured nothing, and a run whose rows are all of that kind must not
+	// exit 0. The other kinds ("not-applicable") are genuinely conditional — U-04
+	// outside a 200% frame cannot apply — and stay non-failing.
+	const gaps = blocked.filter(
+		(r) =>
+			r.blockedKind === "unmeasurable" || r.blockedKind === "state-not-reached",
+	);
 	const report: AuditReport = {
 		generatedAt: new Date().toISOString(),
 		buildDir: meta.buildDir,
@@ -543,7 +609,44 @@ export async function runAudit(options: AuditOptions) {
 		`${JSON.stringify(report, null, 2)}\n`,
 	);
 	writeFileSync(join(outDir, "audit-report.md"), renderMarkdown(report));
+	for (const spec of options.blind) {
+		if (!unblinded.some((row) => matchesBlind(row, [spec])))
+			blindUnmatched.add(spec);
+	}
+
 	return report;
+}
+
+/**
+ * Rules silenced this run, and the specs that matched nothing.
+ *
+ * `--blind` is a mutation hook for the canary's coverage, not a release switch:
+ * a spec that silences nothing means the self-test proved nothing, so it is
+ * reported and treated as a failure by the caller rather than passing quietly.
+ */
+const blindUnmatched = new Set<string>();
+
+/**
+ * Whether a spec silences this row: `U-04` the whole check, `U-05-top` one rule.
+ *
+ * A sub-rule spec matches on the row's own words for that rule (`top edge …`,
+ * `overflow-x: hidden`), because that text is what distinguishes the independent
+ * branches — matching on the check id alone would blind both.
+ */
+function matchesBlind(
+	row: { check: string; measured?: string | null },
+	specs: string[],
+): boolean {
+	for (const spec of specs) {
+		const [check, sub] = spec.split(":");
+		if (check === undefined || row.check !== check) continue;
+		if (sub === undefined) return true;
+		// The patterns live in `checks.ts` because the canary's per-defect assertion
+		// reads the same table; a second copy here is a copy that drifts.
+		const pattern = SUB_RULE_TEXT[`${check}:${sub}`];
+		if (pattern !== undefined && pattern.test(row.measured ?? "")) return true;
+	}
+	return false;
 }
 
 /** The markdown report: one row per finding, plus the per-check totals. */
@@ -644,7 +747,7 @@ if (isMain) {
 	if (bool(flags, "help") || !manifest) {
 		console.log(
 			[
-				"usage: node tools/audit/audit.mjs --manifest <frames>/manifest.json [options]",
+				"usage: node tools/audit/audit.ts --manifest <frames>/manifest.json [options]",
 				"",
 				"  --manifest <path>   the capture harness's manifest.json",
 				"  --out <dir>         where the report goes (default: beside the manifest)",
@@ -655,6 +758,9 @@ if (isMain) {
 				"  --tokens <path>     tokens.json for the floors (default <repo>/design/tokens/tokens.json)",
 				"  --settle <ms>       boot budget per cell (default 1200)",
 				"  --cell-timeout <s>  hard bound per cell; a cell that exceeds it is a BLOCKED row (default 45)",
+				"  --blind <rule>      silence one rule (U-04, U-05-top, U-07-x). A mutation",
+				"                      self-test hook for the canary's own coverage; a blinded",
+				"                      run is not evidence, and a spec that matches no row fails.",
 				"  --quiet             no progress lines",
 				"",
 				"exit: 0 all clear · 1 FAIL · 2 refused to run · 3 no FAIL but a check could not measure",
@@ -671,6 +777,7 @@ if (isMain) {
 			tokens: str(flags, "tokens", undefined),
 			settleMs: num(flags, "settle", 1200),
 			cellTimeoutMs: num(flags, "cell-timeout", 45) * 1000,
+			blind: csv(flags, "blind"),
 			quiet: bool(flags, "quiet"),
 			profile: str(flags, "profile", undefined),
 		});
@@ -686,6 +793,15 @@ if (isMain) {
 			`${report.blocked} BLOCKED (${report.unmeasurable} unmeasurable) · ` +
 			`palette ${report.palette.loaded ? "loaded" : "MISSING"}`,
 	);
+	if (blindUnmatched.size > 0) {
+		// A blind that silences nothing proves nothing, so it fails rather than
+		// letting the mutation self-test read as a pass it did not earn.
+		console.error(
+			`audit: --blind matched no row: ${[...blindUnmatched].join(", ")}. ` +
+				"The rule name or its sub-rule spelling is wrong, or the check produced no row.",
+		);
+		process.exit(2);
+	}
 	if (report.failures > 0) process.exit(1);
 	// A run with a gap is not a pass: the scaffold's un-scalable text produced a
 	// BLOCKED-only report that exited 0 before this rule existed. A check that

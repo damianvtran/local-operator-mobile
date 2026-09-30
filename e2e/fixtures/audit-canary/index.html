@@ -7,6 +7,11 @@
   `/clean` path so the same fixture proves both directions:
 
     /defects   the audit must FAIL, naming exactly the ids in the table
+
+  A marker names the INDEPENDENT RULE, not the check: `U-05-top` and `U-05-left`
+  are separate rules inside one check, and a run that blinds either alone still
+  has to fail. A marker per check would let a dead sub-rule pass, which is how
+  three of them were found dead in review.
     /clean     the audit must PASS every check
 
   An instrument that cannot fail is worthless, so this page is the instrument's
@@ -25,9 +30,14 @@
   | #dense-pair           | U-01  | 28x28 controls 10pt apart — the rubric's EXCEPTION   |
   | #low-contrast         | U-02  | ink #a8a296 on ground #f2ede3                        |
   | #status-dot           | U-03  | colour-only status: no word, glyph or name           |
-  | #full-bleed           | U-05  | content at y=0 while the top inset is 59pt           |
+  | #full-bleed           | U-05-top    | content at y=0 under the top inset             |
+  | #footer-flush         | U-05-bottom | a pinned bar flush to the home indicator       |
+  | #side-left            | U-05-left   | a bar flush to the left edge (landscape)       |
+  | #side-right           | U-05-right  | a bar flush to the right edge (landscape)      |
   | #too-wide             | U-06  | a 480px block in a 320px viewport                    |
-  | #clipped              | U-07  | two lines of text in a 16px-tall overflow:hidden box |
+  | #clipped              | U-07-y | two lines of text in a 16px-tall overflow:hidden box |
+  | #clipped-x            | U-07-x | a line wider than its box, clipped horizontally      |
+  | #scale-clip           | U-04  | a px-height box that only clips once text scales     |
   | #unnamed-icon         | U-09  | an icon button with no accessible name               |
   | #label-mismatch       | U-10  | visible "Approve", accessible name "Confirm"         |
 -->
@@ -62,13 +72,41 @@
 		color: var(--ink);
 		font: 1rem/1.5 ui-sans-serif, system-ui, sans-serif;
 		/* The rubric's own words: the header's top padding is the inset, and the
-		   content's bottom padding is max(inset.bottom, 8). */
-		padding: var(--lo-inset-top, 0px) 16px max(var(--lo-inset-bottom, 0px), 8px);
+		   content's bottom padding is max(inset.bottom, 8).
+		   The SIDE insets are load-bearing in landscape, where the notch moves to an
+		   edge: the clean path must clear them, or a 16px padding puts every element
+		   inside a 59pt inset and the clean page fails U-05's side rules. That is a
+		   real finding this fixture had, invisible until a landscape cell ran. */
+		padding: var(--lo-inset-top, 0px)
+			max(var(--lo-inset-right, 0px), 16px)
+			max(var(--lo-inset-bottom, 0px), 8px)
+			max(var(--lo-inset-left, 0px), 16px);
 	}
 	/* The pinned-footer pair: content behind a fixed bar would trip the overlap
 	   check on the clean page, so the flow leaves room for its own artefact. */
 	body { padding-bottom: calc(max(var(--lo-inset-bottom, 0px), 8px) + 56px); }
 	.footer-bar { position: fixed; left: 0; right: 0; height: 40px; padding: 8px; background: var(--surface); border-top: 1px solid var(--border); }
+	/* The landscape cases: in landscape the notch moves to a SIDE, so the same
+	   content that clears the top band in portrait sits inside a 59pt left/right
+	   inset. Vertically centred so they do not also trip the top or bottom rule —
+	   one defect per element is what lets the canary name the rule it caught. */
+	.side-bar { position: fixed; top: 45%; width: 60px; height: 32px; padding: 4px; background: var(--surface); border: 1px solid var(--border); }
+	/* Pin-over-scroll: an opaque bar anchored to the bottom edge over content that
+	   scrolls beneath it. This is the pattern the U-08 rule must NOT report, and
+	   the reason the rule cannot key on the CSS keyword — react-native-web paints
+	   its pinned footer `absolute`, so `fixed | sticky` missed it and 32 rows on a
+	   correct screen followed. */
+	.scroll-region { height: 90px; overflow: auto; margin: 0 0 8px; }
+	.pinned-footer { position: absolute; left: var(--lo-inset-left, 0px); right: var(--lo-inset-right, 0px); height: 44px; padding: 10px; background: var(--surface); border-top: 1px solid var(--border); }
+	/* The clean case's bar rides at the TOP, clear of both the notch and the
+	   bottom-pinned clean bar. */
+	#good-pinned-footer { border-top: none; border-bottom: 1px solid var(--border); }
+	/* A TRANSLUCENT pinned bar over text: a visible overlap whoever painted it, so
+	   it must still be reported. */
+	.translucent-bar { position: absolute; left: 0; right: 0; height: 40px; background: rgba(178, 58, 49, 0.35); }
+	/* A CONTROL entirely under an opaque pinned bar: unreachable, so reported even
+	   though the bar is opaque and pinned. */
+	.covered-control { position: absolute; left: 12px; width: 60px; height: 32px; }
 	.panel { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 12px; margin: 12px 0; }
 	button { font: inherit; border: 1px solid var(--border); background: var(--surface); color: var(--ink); border-radius: 6px; }
 	/* Clean geometry: 44pt controls, or a padded hit area that reaches 44. */
@@ -144,7 +182,7 @@
 </div>
 
 <!-- U-05: content under the notch band. -->
-<div class="bad" id="full-bleed" data-defect="U-05">This banner sits under the notch.</div>
+<div class="bad" id="full-bleed" data-defect="U-05-top">This banner sits under the notch.</div>
 <div class="good panel" id="good-inset">This panel is padded clear of the inset.</div>
 
 <!-- U-06: horizontal overflow at 320pt. -->
@@ -160,7 +198,7 @@
 <!-- U-07: text clipped by a fixed height. -->
 <div class="bad panel">
 	<h2>U-07 clipped text</h2>
-	<div id="clipped" data-defect="U-07">The first line of a tool result that continues onto a second line and is then cut off by the box.</div>
+	<div id="clipped" data-defect="U-07-y">The first line of a tool result that continues onto a second line and is then cut off by the box.</div>
 </div>
 <div class="good panel">
 	<h2>U-07 clipped text (clean)</h2>
@@ -168,8 +206,66 @@
 </div>
 
 <!-- U-05 bottom: a bar pinned flush to the home indicator. -->
-<div id="footer-flush" class="footer-bar bad" data-defect="U-05" style="bottom: 0">Flush to the home indicator</div>
-<div id="good-footer" class="footer-bar good" style="bottom: var(--lo-inset-bottom, 0px)">Padded clear of it</div>
+<div id="footer-flush" class="footer-bar bad" data-defect="U-05-bottom" style="bottom: 0">Flush to the home indicator</div>
+<div id="good-footer" class="footer-bar good" style="bottom: var(--lo-inset-bottom, 0px); left: var(--lo-inset-left, 0px); right: var(--lo-inset-right, 0px)">Padded clear of it</div>
+
+<!-- U-05 left/right: in landscape the notch is a SIDE inset. These two bars are
+     flush to the left and right edges, which is correct in portrait (insets 0) and
+     a defect in landscape — so the marker names the direction, not the check. -->
+<div class="side-bar bad" id="side-left" data-defect="U-05-left" style="left: 0">Flush left</div>
+<div class="side-bar good" id="good-side-left" style="left: var(--lo-inset-left, 0px)">Clear left</div>
+<div class="side-bar bad" id="side-right" data-defect="U-05-right" style="right: 0">Flush right</div>
+<div class="side-bar good" id="good-side-right" style="right: var(--lo-inset-right, 0px)">Clear right</div>
+
+<!-- U-07 x: the same box clips on the OTHER axis. Two independent rules live in
+     U-07, and this element is why blinding one of them cannot pass. -->
+<div class="bad panel">
+	<h2>U-07 horizontal clip</h2>
+	<div id="clipped-x" data-defect="U-07-x" style="width: 60px; overflow-x: hidden; white-space: nowrap">A line that runs past the box horizontally.</div>
+</div>
+<div class="good panel">
+	<h2>U-07 horizontal clip (clean)</h2>
+	<div id="good-clipped-x" style="width: 60px; overflow-wrap: anywhere">A line that wraps inside the box instead.</div>
+</div>
+
+<!-- U-04: clipped ONLY once the text scales. The box is sized in px and the text
+     in rem, so at 100% the line fits and at 200% it does not. This is the defect
+     the scale dimension exists for, and nothing else in this page depends on it. -->
+<div class="bad panel">
+	<h2>U-04 text scale</h2>
+	<div id="scale-clip" data-defect="U-04" style="height: 26px; overflow: hidden">One short line of text.</div>
+</div>
+<div class="good panel">
+	<h2>U-04 text scale (clean)</h2>
+	<div id="good-scale">One short line of text, in a box that grows with it.</div>
+</div>
+
+<!-- U-08 translucent pinned bar: a VISIBLE overlap, so the rule must report it
+     even though the bar is pinned and anchored to the viewport edge. -->
+<div class="bad panel">
+	<h2>U-08 translucent bar over content</h2>
+	<p id="translucent-under">Text that is legible through the bar above it, which is exactly why this one is a defect.</p>
+	<div id="translucent-bar" class="translucent-bar bad" data-defect="U-08" style="top: 0"></div>
+</div>
+
+<!-- U-08 control under an opaque pinned bar: unreachable, so reported even though
+     the overlay is pinned and opaque. -->
+<div class="bad panel">
+	<h2>U-08 control under a pinned bar</h2>
+	<!-- The region is SCROLLED by the page's own script, so at probe time the button
+	     really is inside the pinned bar's rect. A static layout cannot produce this
+	     state at scroll 0, and a defect that exists only mid-scroll is still a
+	     defect: the user meets it the moment they scroll. -->
+	<div id="covered-scroll" class="scroll-region" style="height: 90px">
+		<p style="height: 180px">Content that pushes the button below the fold of this region.</p>
+		<button id="covered-control" class="control" style="width: 60px; height: 44px">Send</button>
+	</div>
+	<div id="opaque-pin" class="pinned-footer bad" data-defect="U-08" style="position: fixed; bottom: var(--lo-inset-bottom, 0px)">Pinned bar over the control</div>
+	<script>
+		// Scroll the region so its last control sits under the pinned bar.
+		document.getElementById('covered-scroll').scrollTop = 200;
+	</script>
+</div>
 
 <!-- U-08: two meaningful boxes drawn on top of each other. -->
 <div class="bad panel" style="position:relative;height:64px">
@@ -199,5 +295,25 @@
 	<h2>U-10 label in name (clean)</h2>
 	<button class="control" id="label-match" aria-label="Approve the pending command">Approve</button>
 </div>
+<!-- U-08 pin-over-scroll (clean): an opaque footer over a scroll region. The text
+     under it is content passing beneath a pinned bar — the intended design, and the
+     direction this fixture proves must NOT be reported. -->
+<div class="good panel">
+	<h2>U-08 pin over scroll (clean)</h2>
+	<div class="scroll-region">
+		<p>Long settings content that scrolls beneath the pinned footer. This paragraph is
+		deliberately long enough that its box passes under the footer's rect, which is the
+		geometry the check has to exclude when the footer is pinned and opaque.</p>
+	</div>
+	<!-- Anchored to the TOP inset, not the bottom: the clean page already has a
+	     bottom-pinned bar (`#good-footer`), and two pinned opaque bars stacked on
+	     each other IS a defect by the rule below — the fixture must not create one
+	     while proving that pin-over-scroll is fine. -->
+	<div id="good-pinned-footer" class="pinned-footer good" style="top: var(--lo-inset-top, 0px)">Pinned action bar</div>
+</div>
+
+<!-- The page's own bottom padding, so the scroll text above cannot reach another
+     element's box when it spills past its region. -->
+<div class="good" style="height: 120px"></div>
 </body>
 </html>

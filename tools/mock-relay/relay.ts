@@ -4,8 +4,8 @@
  * Implements the relay's documented routes (`docs/relay/contract.md`) and the
  * tunnel edge/gateway refusals (`docs/relay/tunnel-edge.md`) with:
  *
- *   --scenario <name>   pin any state without a real agent (see scenarios.mjs)
- *   --fault <name>      inject a real adversity deterministically (faults.mjs)
+ *   --scenario <name>   pin any state without a real agent (see scenarios.ts)
+ *   --fault <name>      inject a real adversity deterministically (faults.ts)
  *   --record <dir>      write every request+response for assertions
  *
  * Three properties it is built to keep, because a harness without them is worse
@@ -13,7 +13,7 @@
  *
  * 1. **It answers what the real relay answers.** Bodies come from the captured
  *    corpus, not from shapes re-typed here; the auth gate, the cookie format and
- *    the SSE framing are the relay's own (wire.mjs). So the *client's* header,
+ *    the SSE framing are the relay's own (wire.ts). So the *client's* header,
  *    cookie and error paths are exercised rather than bypassed.
  * 2. **A typo fails loudly.** An unknown scenario or fault is an error, never a
  *    silent fallback to a default state — otherwise a harness run "passes"
@@ -60,7 +60,6 @@ import {
 	GATEWAY_FAILURES,
 	gatewayUnavailable,
 	issueCookie,
-	MAX_BODY_BYTES,
 	originVerdict,
 	readCookie,
 	SSE_HEADERS,
@@ -146,7 +145,22 @@ export interface RelayState {
 	faults: FaultSet;
 	startedAt: number;
 	seq: number;
-	requests: RecordedRequest[];
+	/** The rows `--record` would write, i.e. the routes the mock records. */
+	recorded: RecordedRequest[];
+	/**
+	 * Every request the relay SERVED, including the public ones.
+	 *
+	 * This is a counter of traffic, and it is exposed as `requests` because that is
+	 * what a reader expects that name to mean. It used to be the TRANSCRIPT's
+	 * length — the number of rows the mock records, with exactly one call site — so
+	 * a probe that had fetched, streamed and screenshotted could read `requests: 0`
+	 * and "prove" a recovery that never happened. A zero from a dead instrument
+	 * reads exactly like evidence, and this field was one.
+	 *
+	 * Control routes (`/__mock/…`) are excluded: counting the reader would make the
+	 * before/after comparison the capture harness makes a tautology.
+	 */
+	requestsServed: number;
 	/** Command ids that have been admitted: what `already admitted` is about. */
 	admitted: Map<string, { op: string; at: number }>;
 	seenTokens: Set<string>;
@@ -201,7 +215,19 @@ export function createRelay(options: RelayOptions = {}) {
 	})();
 	const scenarios = buildScenarios(fix);
 	const password = options.password ?? DEFAULT_PASSWORD;
-	const maxBodyBytes = options.maxBodyBytes ?? MAX_BODY_BYTES;
+	/**
+	 * The bare relay has NO body ceiling: the 10 MiB cap belongs to the gateway and
+	 * the edge (`docs/relay/tunnel-edge.md`), and the real relay answers an 11 MiB
+	 * command body with `409 session not connected` rather than a refusal. A mock
+	 * that enforced it anyway rejected requests production accepts.
+	 *
+	 * `--max-body-bytes` opts in for a test that wants a ceiling on this process,
+	 * and the `413-oversize` fault sets one to model the gateway.
+	 */
+	const maxBodyBytes =
+		options.maxBodyBytes !== undefined && options.maxBodyBytes > 0
+			? options.maxBodyBytes
+			: null;
 	const record = options.record ?? false;
 
 	// A scenario or fault the registry does not know is a hard error: silently
@@ -210,10 +236,17 @@ export function createRelay(options: RelayOptions = {}) {
 	const state: RelayState = {
 		scenario: options.scenario ?? "idle",
 		world: {},
-		faults: parseFaults(options.faults ?? []),
+		// The registries refuse an unknown name; this refuses an unknown *reason*,
+		// which is the one typo that used to survive startup.
+		faults: (() => {
+			const parsed = parseFaults(options.faults ?? []);
+			assertCapturedFaultsExist(options.faults ?? []);
+			return parsed;
+		})(),
 		startedAt: Date.now(),
 		seq: 0,
-		requests: [],
+		recorded: [],
+		requestsServed: 0,
 		admitted: new Map(),
 		seenTokens: new Set(),
 		pins: new Map(),
@@ -265,6 +298,50 @@ export function createRelay(options: RelayOptions = {}) {
 	 * here once rather than indexed as if it were typed; a missing reason is a
 	 * hard error, since the alternative is a 503 whose body says `undefined`.
 	 */
+	/**
+	 * Fault names that name a captured body, validated at STARTUP.
+	 *
+	 * `--fault 503-<typo>` used to be accepted and then answer `500 no such gateway
+	 * reason` on the first request — the same class of typo the scenario and fault
+	 * registries refuse outright. A mock that starts and then fails per request
+	 * turns a typo into a confusing client-side failure.
+	 */
+	// A function DECLARATION, not a const arrow: it is called while the `state`
+	// object is built, which is above where the gateway helpers are defined, and a
+	// const would be in its temporal dead zone at that point.
+	function assertCapturedFaultsExist(faults: string[]): void {
+		for (const fault of faults) {
+			// The captured-body faults carry their key in the NAME (`503-<reason>`,
+			// `gateway-<key>`), not after an `=`: only the timed faults (`sse-cut-after=6`)
+			// use `=`.
+			const name = (fault.split("=")[0] ?? "").trim();
+			if (name.startsWith("503-")) {
+				const value = name.slice("503-".length);
+				// `gatewayReasons()` is the captured constants' own key list, so the
+				// check cannot drift from the corpus.
+				const reasons = fix.gatewayReasons();
+				if (!reasons.includes(value)) {
+					throw new Error(
+						`unknown 503 reason: '${value}'. Known reasons: ${reasons.join(", ")}`,
+					);
+				}
+				continue;
+			}
+			if (name.startsWith("gateway-")) {
+				const value = name.slice("gateway-".length);
+				if (GATEWAY_FAILURES[value] === undefined) {
+					throw new Error(
+						`unknown gateway failure body: '${value}'. Known keys: ${Object.keys(
+							GATEWAY_FAILURES,
+						)
+							.sort()
+							.join(", ")}`,
+					);
+				}
+			}
+		}
+	}
+
 	const gatewayBody = (key: string): Json => {
 		const body = GATEWAY_FAILURES[key];
 		if (body === undefined)
@@ -435,7 +512,7 @@ export function createRelay(options: RelayOptions = {}) {
 	): RecordedRequest => {
 		state.seq += 1;
 		const row: RecordedRequest = { seq: state.seq, at: nowIso(), ...entry };
-		state.requests.push(row);
+		state.recorded.push(row);
 		return row;
 	};
 
@@ -667,6 +744,14 @@ export function createRelay(options: RelayOptions = {}) {
 		};
 	};
 
+	/** A byte count as the relay's own sentence spells it (`10 MiB`, `64 KiB`). */
+	const formatBytes = (bytes: number): string => {
+		const mib = bytes / (1024 * 1024);
+		if (mib >= 1) return `${Number.isInteger(mib) ? mib : mib.toFixed(1)} MiB`;
+		const kib = bytes / 1024;
+		return `${Number.isInteger(kib) ? kib : kib.toFixed(1)} KiB`;
+	};
+
 	/* --------------------------------------------------------------- routing -- */
 
 	/** Read the whole body, refusing anything above the ceiling. */
@@ -677,7 +762,7 @@ export function createRelay(options: RelayOptions = {}) {
 			req.on("data", (chunk: Buffer) => {
 				size += chunk.length;
 				const bodyCeiling = state.faults.http.oversizeLimit ?? maxBodyBytes;
-				if (size > bodyCeiling) {
+				if (bodyCeiling !== null && size > bodyCeiling) {
 					// Stop *reading* but never destroy the socket: destroying it here
 					// closes the connection before the 413 can be written, and the
 					// client then sees a transport error instead of the gateway's own
@@ -729,6 +814,16 @@ export function createRelay(options: RelayOptions = {}) {
 			return;
 		}
 
+		// The liveness check comes FIRST, and `contract.md` §4.3 is explicit that the
+		// handler order is the contract: the real relay answers an unknown session
+		// with `409 {"error":"session not connected"}` before it ever looks at the op.
+		// The mock used to refuse the op first, so a client could read its 422 and
+		// never see the 409 production sends.
+		if (!projectionFor(sessionId)) {
+			sendFixture(res, "command-unknown-session");
+			return;
+		}
+
 		// Two ops the client may type but the relay refuses: a native app must not
 		// build UI on them.
 		if (op === "new_conversation") {
@@ -737,11 +832,6 @@ export function createRelay(options: RelayOptions = {}) {
 		}
 		if (op === "resume_session") {
 			sendFixture(res, "op-resume-session");
-			return;
-		}
-
-		if (!projectionFor(sessionId)) {
-			sendFixture(res, "command-unknown-session");
 			return;
 		}
 
@@ -849,7 +939,18 @@ export function createRelay(options: RelayOptions = {}) {
 			// is read off the caught value rather than assumed present.
 			const tooLarge = isRecord(error) && error.tooLarge === true;
 			if (tooLarge) {
-				sendJson(res, 413, gatewayBody("413-too-large"));
+				// The captured gateway body names 10 MiB, which is the gateway's own
+				// ceiling — correct when that ceiling is what fired, and a lie when a
+				// test set a smaller one, so the sentence follows the limit in force.
+				const limit = state.faults.http.oversizeLimit ?? maxBodyBytes;
+				const body = gatewayBody("413-too-large");
+				sendJson(
+					res,
+					413,
+					isRecord(body) && typeof limit === "number"
+						? { ...body, error: `request exceeds ${formatBytes(limit)}` }
+						: body,
+				);
 				return;
 			}
 			throw error;
@@ -969,10 +1070,22 @@ export function createRelay(options: RelayOptions = {}) {
 			return res.end();
 		}
 
+		// A known path with the wrong method is a 405, checked BEFORE any handler
+		// runs: doing it at the fall-through let `POST /logout` be answered by the
+		// logout handler itself, so the relay's own refusal never happened.
+		if (methodNotAllowed(pathname, method, res)) return;
+
 		if (pathname === "/logout") {
+			// The real relay answers this on GET only: `POST /logout` is a 405 with
+			// `Allow: GET, HEAD` (contract §3.11 and the route table). The mock used
+			// to accept the POST, which let a client ship a logout the relay refuses.
+			//
+			// `expires` is sent alongside `Max-Age=0`, as the relay does: some clients
+			// read one and ignore the other, and the pair is what makes a cleared
+			// cookie unambiguous.
 			res.writeHead(303, {
 				location: "/login",
-				"set-cookie": `${COOKIE_NAME}=""; Max-Age=0; Path=/; SameSite=lax`,
+				"set-cookie": `${COOKIE_NAME}=""; Max-Age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT; Path=/; SameSite=lax`,
 				"clear-site-data": '"storage"',
 			});
 			return res.end();
@@ -1046,12 +1159,15 @@ export function createRelay(options: RelayOptions = {}) {
 		}
 
 		if (pathname === "/api/sessions/start" && method === "POST") {
-			if (
-				body &&
-				typeof body === "object" &&
-				typeof body.cwd === "string" &&
-				body.cwd.startsWith("/etc")
-			) {
+			// The real relay parses this body as JSON and refuses an empty one with
+			// `400 {"error":"invalid JSON"}`. The mock used to fabricate a start from an
+			// empty body, which made it more lenient than the relay — a client that
+			// sent nothing would look healthy here and fail in production.
+			if (!isRecord(body)) {
+				sendJson(res, 400, errorBody("invalid JSON"));
+				return;
+			}
+			if (typeof body.cwd === "string" && body.cwd.startsWith("/etc")) {
 				sendFixture(res, "start-bad-cwd");
 				return;
 			}
@@ -1135,8 +1251,19 @@ export function createRelay(options: RelayOptions = {}) {
 
 			if (rest === "/events" && method === "GET") {
 				if (!projection) {
-					sendJson(res, 404, errorBody("unknown session"));
-					return;
+					// The real relay does NOT refuse an unknown session here: it opens a
+					// 200 event stream that stays open and sends no frame (measured on a
+					// live relay: 12 s, zero frames, no terminator). A client written
+					// against a 404 would special-case the mock and hang in production,
+					// so the refusal the mock used to invent is gone.
+					// An empty frame SOURCE, not an empty array: `frames` is the pump's
+					// callback, and passing the wrong shape here crashed the relay the
+					// moment a client opened this stream.
+					return openStream(req, res, {
+						kind: "projection",
+						seed: null,
+						frames: () => null,
+					});
 				}
 				const stream: StreamSpec = world.stream ?? { mode: "idle" };
 				const seedProjection = structuredClone(projection);
@@ -1180,6 +1307,21 @@ export function createRelay(options: RelayOptions = {}) {
 			}
 
 			if (rest === "/image" && method === "GET") {
+				// The session is resolved FIRST, as the real relay does: an unknown
+				// session is `404 unknown session` even with the parameter missing, and
+				// the mock's opposite order answered `400 entry id is required`.
+				//
+				// "Resolved" here means the session is one this world can serve at all —
+				// a live projection, or the session the fixture corpus captured an image
+				// for. A live projection alone was too narrow: the captured triple is
+				// served from the corpus, so requiring a projection turned the corpus's
+				// own image into a 404 that no client would ever see.
+				const imageSessionKnown =
+					projection !== undefined || sessionId === capturedImage?.sessionId;
+				if (!imageSessionKnown) {
+					sendJson(res, 404, errorBody("unknown session"));
+					return;
+				}
 				const entry = url.searchParams.get("entry");
 				if (!entry) {
 					sendFixture(res, "image-missing-entry-param");
@@ -1326,15 +1468,76 @@ export function createRelay(options: RelayOptions = {}) {
 				: sendFixture(res, "pair-status-bad-id");
 		}
 
-		// A route the relay does not have: JSON, so a client's error path is the
-		// one under test rather than a 404 HTML page.
-		sendJson(res, 404, errorBody("not found"));
+		// A route the relay does not have: the real relay answers `404 text/plain
+		// "Not Found"`, not JSON. A client that parsed `{error}` off this path works
+		// against the mock and gets plain text in production, which is a divergence
+		// that can only hide a bug.
+		sendText(res, 404, "Not Found", {
+			"content-type": "text/plain; charset=utf-8",
+		});
 		return;
+	};
+
+	/**
+	 * The methods each route answers, so a wrong one is a 405 rather than a 404.
+	 *
+	 * The real relay emits `405 text/plain "Method Not Allowed"` with an `Allow`
+	 * header (measured: `GET /command`, `DELETE /api/sessions`, `POST /logout`),
+	 * and the mock previously never produced a 405 at all — so a client that
+	 * mishandled a method mistmatch could not be caught here.
+	 */
+	const ALLOWED_METHODS: Array<{ match: RegExp; methods: string[] }> = [
+		// Session sub-routes first: `/command` is a POST-only path, so a GET on it
+		// is a 405 and not the generic 404 a coarser table produced.
+		{ match: /^\/api\/sessions\/[^/]+\/command$/, methods: ["POST"] },
+		{ match: /^\/api\/sessions\/(start|resume)$/, methods: ["POST"] },
+		{
+			match: /^\/api\/sessions\/[^/]+\/(events|image|history)$/,
+			methods: ["GET", "HEAD"],
+		},
+		{
+			match: /^\/api\/sessions\/[^/]+\/(pin|seen|transcribe|pair)$/,
+			methods: ["POST"],
+		},
+		{
+			match: /^\/api\/sessions\/[^/]+\/operator\/challenge$/,
+			methods: ["POST"],
+		},
+		{ match: /^\/api\/sessions\/[^/]+$/, methods: ["GET", "HEAD"] },
+		{ match: /^\/api\/sessions$/, methods: ["GET", "HEAD"] },
+		{ match: /^\/api\/commands$/, methods: ["GET", "HEAD"] },
+		{ match: /^\/api\/directories$/, methods: ["GET", "HEAD"] },
+		{ match: /^\/api\/models$/, methods: ["GET", "HEAD"] },
+		{ match: /^\/api\/projects$/, methods: ["GET", "HEAD"] },
+		{ match: /^\/api\/pair$/, methods: ["POST"] },
+		{ match: /^\/healthz$/, methods: ["GET", "HEAD"] },
+		{ match: /^\/login$/, methods: ["GET", "POST"] },
+		{ match: /^\/logout$/, methods: ["GET", "HEAD"] },
+		{ match: /^\/mark\.png$/, methods: ["GET", "HEAD"] },
+		{ match: /^\/$/, methods: ["GET", "HEAD"] },
+		{ match: /^\/assets\/.+$/, methods: ["GET", "HEAD"] },
+	];
+
+	/** `405` with the relay's own text and `Allow` header, or null to continue. */
+	const methodNotAllowed = (
+		pathname: string,
+		method: string,
+		res: ServerResponse,
+	): boolean => {
+		if (method === "HEAD") return false;
+		const route = ALLOWED_METHODS.find((entry) => entry.match.test(pathname));
+		if (route === undefined || route.methods.includes(method)) return false;
+		sendText(res, 405, "Method Not Allowed", {
+			"content-type": "text/plain; charset=utf-8",
+			allow: route.methods.join(", "),
+		});
+		return true;
 	};
 
 	/* ------------------------------------------------------------ the server -- */
 
 	const server = createServer(async (req, res) => {
+		if (!(req.url ?? "/").startsWith("/__mock")) state.requestsServed += 1;
 		const url = new URL(
 			req.url ?? "/",
 			`http://${req.headers.host ?? "127.0.0.1"}`,
@@ -1374,7 +1577,10 @@ export function createRelay(options: RelayOptions = {}) {
 						admittedCommands: state.admitted.size,
 						duplicateDelivered: state.duplicateDelivered,
 						duplicateFramePending: state.duplicateFramePending,
-						requests: state.requests.length,
+						// `requests` is traffic served; `recorded` is the transcript's own
+						// length, named so the two can never be confused again.
+						requests: state.requestsServed,
+						recorded: state.recorded.length,
 						uptimeS: Math.round((Date.now() - state.startedAt) / 1000),
 					});
 				}
@@ -1391,7 +1597,7 @@ export function createRelay(options: RelayOptions = {}) {
 					});
 				}
 				if (pathname === "/__mock/record" && method === "GET") {
-					sendJson(res, 200, { requests: state.requests });
+					sendJson(res, 200, { requests: state.recorded });
 					return;
 				}
 				if (pathname === "/__mock/scenario" && method === "POST") {
@@ -1414,7 +1620,7 @@ export function createRelay(options: RelayOptions = {}) {
 					return;
 				}
 				if (pathname === "/__mock/reset" && method === "POST") {
-					state.requests = [];
+					state.recorded = [];
 					state.admitted = new Map();
 					state.duplicateDelivered = 0;
 					state.duplicateFramePending = false;
@@ -1574,7 +1780,7 @@ export function createRelay(options: RelayOptions = {}) {
 					scenario: state.scenario,
 					faults: state.faults.applied,
 					startedAt: new Date(state.startedAt).toISOString(),
-					requests: state.requests,
+					requests: state.recorded,
 					admittedCommands: [...state.admitted.keys()],
 					seenTokens: [...state.seenTokens],
 					duplicateDelivered: state.duplicateDelivered,
@@ -1629,7 +1835,7 @@ if (isMain) {
 	if (bool(flags, "help")) {
 		console.log(
 			[
-				"usage: node tools/mock-relay/relay.mjs [options]",
+				"usage: node tools/mock-relay/relay.ts [options]",
 				"",
 				"  --port <n>            listen port (default 0: the OS picks; never 4098)",
 				"  --host <addr>         bind address (default 127.0.0.1)",
@@ -1666,7 +1872,9 @@ if (isMain) {
 		scenario: str(flags, "scenario", "idle"),
 		faults: list(flags, "fault"),
 		password: str(flags, "password", DEFAULT_PASSWORD) ?? DEFAULT_PASSWORD,
-		maxBodyBytes: num(flags, "max-body-bytes", MAX_BODY_BYTES),
+		// 0 means "no ceiling on this process", which is the bare relay's real
+		// behaviour; the gateway's cap is modelled by the `413-oversize` fault.
+		maxBodyBytes: num(flags, "max-body-bytes", 0),
 		quiet: bool(flags, "quiet"),
 		record: recordDir ? { dir: recordDir } : false,
 	});

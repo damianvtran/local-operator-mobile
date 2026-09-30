@@ -415,6 +415,47 @@ export const SCREEN_ROOTS: Record<string, string> = {
  * Read back from the page, so a mismatch between "what the cell asked for" and
  * "what the app is showing" is measurable rather than assumed.
  */
+/**
+ * The positive marker each declared state must show, and the markers it must not.
+ *
+ * The readiness guard used to check a route and a screen root, and nothing else —
+ * so a cell declaring `S8/approval` passed while the app rendered the neutral
+ * "not connected yet" screen, with the relay having served it no requests at all.
+ * A screen root says which screen drew; these say which STATE it drew.
+ *
+ * The rule is negative for every state that is not honestly empty: an honest
+ * empty state is a specific screen's `*-empty` marker, so seeing one on a cell
+ * that asked for populated, streaming or error means the state was never reached.
+ * `empty` is the one state where the marker is required rather than forbidden,
+ * which is also what stops a check that only forbids from passing vacuously.
+ */
+export const STATE_MARKERS: {
+	/** Present in the DOM for any screen showing its own empty state. */
+	readonly emptyMarkerSuffix: string;
+	/** Declared states that must NOT show an empty marker. */
+	readonly forbidsEmpty: readonly string[];
+	/** Declared states that MUST show one. */
+	readonly requiresEmpty: readonly string[];
+} = {
+	emptyMarkerSuffix: "-empty",
+	forbidsEmpty: [
+		"populated",
+		"populated-long",
+		"streaming",
+		"pending-approval",
+		"pending-ask",
+		"queued",
+		"subagents",
+		"aborted",
+		"ended",
+		"scroll",
+		"multi",
+		"error",
+		"degraded",
+	],
+	requiresEmpty: ["empty"],
+};
+
 export const READINESS_PROBE = `
 (() => {
   const testIds = Array.from(document.querySelectorAll('[data-testid]'))

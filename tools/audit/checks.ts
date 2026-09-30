@@ -130,7 +130,7 @@ function u01TouchTargets(state: AuditState, floors: Floors): CheckRow[] {
 			measured: `${size}pt (floor ${floor}${state.platform === "android" ? "dp" : "pt"}), gap ${gap === null ? "n/a (no other controls)" : `${gap}pt`}`,
 			detail: denseException
 				? `${node.tag} ${node.rect.w}x${node.rect.h} at ${node.rect.x},${node.rect.y} — below the floor with ${gap === null ? "no neighbouring control" : `${gap}pt of separation`}, recorded as the rubric's exception`
-				: `${node.tag} ${node.rect.w}x${node.rect.h} at ${node.rect.x},${node.rect.y} — ${node.path}`,
+				: `${node.tag} ${node.rect.w}x${node.rect.h} at ${node.rect.x},${node.rect.y} — ${node.path}${offscreenNote(node, state)}`,
 		});
 	}
 	if (rows.length === 0) {
@@ -183,7 +183,7 @@ function u02Contrast(state: AuditState, floors: Floors): CheckRow[] {
 				check: "U-02",
 				verdict: "FAIL",
 				measured: `${ratio}:1 (needs ${needed}:1, ${round(node.fontSize, 1)}px)`,
-				detail: `${node.path} text ${JSON.stringify(node.ownText.slice(0, 40))} on ${node.background}`,
+				detail: `${node.path} text ${JSON.stringify(node.ownText.slice(0, 40))} on ${node.background}${offscreenNote(node, state)}`,
 			});
 		}
 	}
@@ -265,6 +265,31 @@ function u03ColourOnlyStatus(
 		detail: `${node.path}`,
 	}));
 }
+
+/**
+ * The independent rule inside a multi-rule check, recognised by its own words.
+ *
+ * `U-05` has four directions and `U-07` two axes; each is a separate rule that can
+ * die alone, and each reports the same check id. Two things depend on telling them
+ * apart, and both read this table rather than a second copy of the patterns:
+ *
+ *   - the audit's `--blind <check>:<rule>` mutation hook, and
+ *   - the canary's per-defect assertion, which requires a row for THIS rule naming
+ *     the defective element — matching only the check id and the element let a
+ *     blinding of one direction pass, because another direction flagged the same
+ *     element.
+ *
+ * A rule added here without a pattern makes `--blind` refuse the spec, which is the
+ * failure mode that is visible rather than silent.
+ */
+export const SUB_RULE_TEXT: Record<string, RegExp> = {
+	"U-05:top": /^top edge/,
+	"U-05:bottom": /^pinned content/,
+	"U-05:left": /^left edge/,
+	"U-05:right": /^right edge/,
+	"U-07:x": /overflow-x/,
+	"U-07:y": /overflow-y/,
+};
 
 /** U-05 — nothing sits under a notch, a home indicator or an Android gesture bar. */
 function u05SafeAreas(state: AuditState): CheckRow[] {
@@ -446,10 +471,15 @@ function u07ClippedText(state: AuditState): CheckRow[] {
 		rows.push({
 			check: "U-07",
 			verdict: "FAIL",
+			// The axis is named, not just repeated from the computed style: the two
+			// branches of this check are independent rules (a box can clip one axis
+			// and not the other), and a message that reads `(hidden)` for both makes
+			// them indistinguishable in a report — and unblindable in the mutation
+			// self-test, which is how one of them silently died once already.
 			measured: clipsY
-				? `content ${node.scrollHeight}px in a ${node.clientHeight}px box (${node.overflowY})`
-				: `content ${node.scrollWidth}px in a ${node.clientWidth}px box (${node.overflowX})`,
-			detail: `${node.path} ${JSON.stringify(node.ownText.slice(0, 40))}`,
+				? `content ${node.scrollHeight}px in a ${node.clientHeight}px box (overflow-y: ${node.overflowY})`
+				: `content ${node.scrollWidth}px in a ${node.clientWidth}px box (overflow-x: ${node.overflowX})`,
+			detail: `${node.path} ${JSON.stringify(node.ownText.slice(0, 40))}${offscreenNote(node, state)}`,
 		});
 	}
 	if (rows.length === 0) {
@@ -461,6 +491,73 @@ function u07ClippedText(state: AuditState): CheckRow[] {
 		});
 	}
 	return rows;
+}
+
+/**
+ * Whether a node is a PINNED OVERLAY, whatever CSS keyword produced it.
+ *
+ * `position: fixed | sticky` was the first test, and it missed the real case that
+ * mattered: react-native-web renders a pinned footer `absolute`, so a
+ * pin-over-scroll composer was paired with the transcript beneath it and produced
+ * 32 overlap rows on a screen that is correct. The design is not a defect — the
+ * content passes *under* an opaque bar — so the keyword cannot be the test.
+ *
+ * An absolutely-positioned element counts as pinned when it is anchored to a
+ * viewport edge (top or bottom) and is OPAQUE. Opacity is part of the definition
+ * rather than a separate exception: a translucent bar over content IS a visible
+ * overlap, and the caller reports that case.
+ */
+function isPinnedOverlay(node: AuditNode, state: AuditState): boolean {
+	if (node.position === "fixed" || node.position === "sticky") return true;
+	if (node.position !== "absolute") return false;
+	// The band, not the raw edge: a pinned overlay CLEARS the safe-area inset, so
+	// its rect starts at `inset.top` (or ends at `height - inset.bottom`) rather
+	// than at 0. Testing against the raw edge read every correctly-inset pinned bar
+	// as unpinned — which is what re-introduced the false positives this rule
+	// exists to remove.
+	const anchoredTop = node.rect.y <= state.insets.top + 1;
+	const anchoredBottom =
+		node.rect.y + node.rect.h >=
+		state.viewport.height - state.insets.bottom - 1;
+	return anchoredTop || anchoredBottom;
+}
+
+/** Whether a node paints an opaque background of its own (so it can occlude). */
+function isOpaque(node: AuditNode): boolean {
+	const parsed = parseCssColor(node.ownBackground);
+	return parsed !== null && parsed[3] >= 0.999;
+}
+
+/** Whether `inner` sits entirely inside `outer` (a control under a pinned bar). */
+function encloses(outer: AuditNode, inner: AuditNode, slack = 1): boolean {
+	return (
+		inner.rect.x >= outer.rect.x - slack &&
+		inner.rect.y >= outer.rect.y - slack &&
+		inner.rect.x + inner.rect.w <= outer.rect.x + outer.rect.w + slack &&
+		inner.rect.y + inner.rect.h <= outer.rect.y + outer.rect.h + slack
+	);
+}
+
+/**
+ * The note a row carries when its measured region is not in the captured frame.
+ *
+ * A clean-looking frame and a failing row are not a contradiction: the audit
+ * measures the live DOM, which is taller than the viewport, so a finding below the
+ * fold is real and invisible at the same time. Saying so in the row is what stops
+ * a reader concluding the row is wrong.
+ */
+function offscreenNote(node: AuditNode, state: AuditState): string {
+	const { height } = state.viewport;
+	if (node.rect.y >= height) {
+		return ` — the measured region is BELOW THE FOLD (y=${round(node.rect.y, 0)}pt in a ${round(height, 0)}pt viewport), so no frame can show it`;
+	}
+	if (node.rect.y + node.rect.h <= 0) {
+		return " — the measured region is ABOVE the viewport";
+	}
+	if (node.rect.h > height) {
+		return ` — the measured region is taller than the viewport (${round(node.rect.h, 0)}pt in ${round(height, 0)}pt)`;
+	}
+	return "";
 }
 
 /** U-08 — meaningful boxes must not overlap. */
@@ -488,9 +585,24 @@ function u08Overlap(state: AuditState): CheckRow[] {
 			// clearance is U-05's question, so it is excluded here — except against
 			// another pinned element, where two bars on top of each other really is a
 			// defect.
-			const pinnedA = a.position === "fixed" || a.position === "sticky";
-			const pinnedB = b.position === "fixed" || b.position === "sticky";
-			if (pinnedA !== pinnedB) continue;
+			//
+			// Three cases are excluded or reported, and the rule is stated in
+			// docs/e2e/README.md:
+			//   - pinned (any keyword) AND opaque, over non-interactive content:
+			//     excluded, the content simply passes under it;
+			//   - pinned but TRANSLUCENT: reported, because a translucent bar over
+			//     text is a visible overlap whoever painted it;
+			//   - pinned and opaque, but the covered element is a CONTROL entirely
+			//     inside it: reported, because a control the user cannot reach is a
+			//     defect no matter how the overlay was positioned.
+			const pinnedA = isPinnedOverlay(a, state);
+			const pinnedB = isPinnedOverlay(b, state);
+			if (pinnedA !== pinnedB) {
+				const overlay = (pinnedA ? a : b) as AuditNode;
+				const under = (pinnedA ? b : a) as AuditNode;
+				const coversControl = under.interactive && encloses(overlay, under);
+				if (!coversControl && isOpaque(overlay)) continue;
+			}
 			const overlapW =
 				Math.min(a.rect.x + a.rect.w, b.rect.x + b.rect.w) -
 				Math.max(a.rect.x, b.rect.x);
@@ -505,7 +617,7 @@ function u08Overlap(state: AuditState): CheckRow[] {
 				check: "U-08",
 				verdict: "FAIL",
 				measured: `${overlapW}x${overlapH}pt overlap (${round((area / smaller) * 100, 0)}% of the smaller box)`,
-				detail: `${a.path} ∩ ${b.path}`,
+				detail: `${a.path} ∩ ${b.path}${offscreenNote(a, state)}`,
 			});
 		}
 	}

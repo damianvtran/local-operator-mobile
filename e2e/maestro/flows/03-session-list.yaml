@@ -1,13 +1,30 @@
-# F-5 — the session list, including the states the relay can be in.
+# F-5 — the session list.
 #
-# The list is driven by the mock relay's `sessions` scenario, so this flow runs
-# once per state in CI rather than hoping to catch one live. The states it asserts
-# are the ones `docs/relay/contract.md` §7 names and the rubric's S4 row scores:
-# empty, populated, needs-attention, and degraded.
+# The list is driven by the mock relay's `sessions` scenario, so CI runs it once
+# per state rather than hoping to catch one live. The states it must assert are the
+# ones `docs/relay/contract.md` §7 names and the rubric's S4 row scores: empty,
+# populated, needs-attention and degraded.
+#
+# Today the screen renders its empty state from the app's own store, with no relay
+# request at all — so this flow proves the empty state and *records* that the
+# populated and degraded states are unreachable until the list store lands.
 #
 # `subagents_running: null` is the relay's unreachable-runtime signal and is
-# deliberately *not* zero — the assertion below is what stops a screen from
-# painting "0 subagents" over a runtime it cannot vouch for.
+# deliberately not zero. A screen that paints "0 subagents" over a runtime it
+# cannot vouch for is the defect the assertion below exists to catch.
+#
+# IDENTIFIERS: every `id:` in this file is in `src/ui/a11y.ts` — the scaffold's
+# own contract, which `src/ui/a11y.e2e.test.ts` checks these flows against. A step
+# the app cannot serve yet is a commented marker, not a selector:
+#
+#     Marker spelling: `# BLOCKED: needs <the-identifier> from <the-screen>`
+#
+# The marker names the identifier a step waits on and the screen that would own
+# it, so the gap is visible in review and the test can require that every marked
+# id is genuinely one the app does not render. An invented selector would fail on
+# the first assertion and read as a flaky flow.
+#
+# CI-only: needs a booted simulator or emulator and an app build (ADR 0003).
 appId: ${APP_ID}
 name: "F-5 session list"
 env:
@@ -16,32 +33,22 @@ env:
 ---
 - launchApp:
     clearState: true
-- runFlow: "01-first-run-sign-in.yaml"
----
-- assertVisible:
-    id: "session-list"
+- extendedWaitUntil:
+    visible:
+      id: "sessions-screen"
+    timeout: 15000
 - takeScreenshot: "05-00-list"
 - assertVisible:
-    id: "session-row-${SESSION_ID}"
-- takeScreenshot: "05-01-row"
-# Sections: pinned / active / previous. The relay pre-orders rows and the client
-# must not re-sort, so the assertion is on the rendered order, not on a sort.
-- assertVisible:
-    id: "session-section-active"
-- assertVisible:
-    id: "session-section-previous"
-- takeScreenshot: "05-02-sections"
-- tapOn:
-    id: "session-search-button"
-- takeScreenshot: "05-03-search-open"
-- inputText: "hello"
-- takeScreenshot: "05-04-search-results"
-- assertVisible:
-    id: "search-result-body-match-marker"
-- back
-- takeScreenshot: "05-05-list-again"
-- scrollUntilVisible:
-    element:
-      id: "session-row-${SESSION_ID}"
-    direction: DOWN
-- takeScreenshot: "05-06-scrolled-to-row"
+    id: "sessions-empty"
+- takeScreenshot: "05-01-empty-state"
+# Populated rows, sections and search all need the list store and the row
+# identifiers it will carry.
+# BLOCKED: needs session-row-<id> from sessions
+# - assertVisible:
+#     id: "session-row-${SESSION_ID}"
+# BLOCKED: needs session-section-active from sessions
+# - assertVisible:
+#     id: "session-section-active"
+# BLOCKED: needs session-search-button from sessions
+# - tapOn:
+#     id: "session-search-button"

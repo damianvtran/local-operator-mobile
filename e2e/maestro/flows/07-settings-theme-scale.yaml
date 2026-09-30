@@ -1,56 +1,70 @@
-# S11 / F-10 — settings, and the two appearance dimensions the audit scores.
+# S11/F-10 — settings, and the two appearance dimensions the audit scores.
 #
-# The theme and text-scale switches are also what the web matrix captures, so this
-# flow is the native half of the same evidence: what the web harness proves about
-# layout at 200 % and in both themes, this proves about the device render.
+# The theme switch is the shell's own feature — the one setting that needs no
+# connection — so this flow is the native half of the evidence the web matrix
+# captures: what the web harness proves about layout in both themes, this proves
+# about the device render.
+#
+# Text scale is NOT wired: the scaffold has no scale preference, so the 200%
+# assertions are markers. The matrix reports the same gap as an inert
+# text-scale dimension rather than pretending three scales were rendered.
+#
+# IDENTIFIERS: every `id:` in this file is in `src/ui/a11y.ts` — the scaffold's
+# own contract, which `src/ui/a11y.e2e.test.ts` checks these flows against. A step
+# the app cannot serve yet is a commented marker, not a selector:
+#
+#     Marker spelling: `# BLOCKED: needs <the-identifier> from <the-screen>`
+#
+# The marker names the identifier a step waits on and the screen that would own
+# it, so the gap is visible in review and the test can require that every marked
+# id is genuinely one the app does not render. An invented selector would fail on
+# the first assertion and read as a flaky flow.
+#
+# CI-only: needs a booted simulator or emulator and an app build (ADR 0003).
 appId: ${APP_ID}
-name: "S11 settings, theme and text scale"
+name: "S11 settings theme and text scale"
 env:
   APP_ID: com.radient.localoperator.mobile
 ---
 - launchApp:
     clearState: true
-- runFlow: "01-first-run-sign-in.yaml"
----
+- extendedWaitUntil:
+    visible:
+      id: "sessions-screen"
+    timeout: 15000
 - tapOn:
-    id: "settings-button"
+    id: "sessions-settings"
 - extendedWaitUntil:
     visible:
       id: "settings-screen"
     timeout: 15000
 - takeScreenshot: "11-00-settings"
-# Connection, theme, text scale, diagnostics, sign out — the sections ADR 0003
-# and flows.md §10 name. A missing section is a finding, so each is asserted.
 - assertVisible:
-    id: "settings-section-connection"
+    id: "settings-theme"
 - assertVisible:
-    id: "settings-section-appearance"
-- assertVisible:
-    id: "settings-section-diagnostics"
-- assertVisible:
-    id: "settings-sign-out"
-- takeScreenshot: "11-01-sections"
+    id: "appearance-theme-system"
+- takeScreenshot: "11-01-theme-control"
 - tapOn:
-    id: "settings-theme-dark"
+    id: "appearance-theme-dark"
 - takeScreenshot: "11-02-theme-dark"
 - tapOn:
-    id: "settings-theme-light"
+    id: "appearance-theme-light"
 - takeScreenshot: "11-03-theme-light"
-# 200 % text: the check that matters most for a transcript-heavy UI.
 - tapOn:
-    id: "settings-text-scale-200"
-- takeScreenshot: "11-04-text-200"
-- back
-- takeScreenshot: "11-05-list-at-200"
-- tapOn:
-    id: "session-row-6714def86197"
-- takeScreenshot: "11-06-session-at-200"
+    id: "appearance-theme-system"
+- takeScreenshot: "11-04-theme-system"
 - assertVisible:
-    id: "session-composer"
-- takeScreenshot: "11-07-composer-reachable-at-200"
-- back
-- tapOn:
-    id: "settings-button"
-- tapOn:
-    id: "settings-text-scale-100"
-- takeScreenshot: "11-08-back-to-100"
+    id: "settings-connection-empty"
+- takeScreenshot: "11-05-connection-empty"
+# BLOCKED: needs settings-text-scale-200 from settings
+# - tapOn:
+#     id: "settings-text-scale-200"
+# BLOCKED: needs settings-text-scale-100 from settings
+# - tapOn:
+#     id: "settings-text-scale-100"
+# BLOCKED: needs settings-sign-out from settings
+# - assertVisible:
+#     id: "settings-sign-out"
+# BLOCKED: needs settings-section-diagnostics from settings
+# - assertVisible:
+#     id: "settings-section-diagnostics"

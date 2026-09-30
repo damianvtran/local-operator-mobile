@@ -10,7 +10,7 @@ import type { AuditAxNode } from "./checks.ts";
  * in a way that a sequence of live DOM queries is not.
  *
  * The probe deliberately reports *measurements*, never verdicts. Deciding what a
- * number means belongs in `checks.mjs`, where the floors live and where a
+ * number means belongs in `checks.ts`, where the floors live and where a
  * reviewer can read the rule; a probe that decides is a probe nobody can audit.
  */
 

@@ -27,7 +27,7 @@
  *    operator's screen for minutes after the run.
  *
  * Usage:
- *   node tools/visual/capture.mjs --dir <web-build> --out <frames-dir> \
+ *   node tools/visual/capture.ts --dir <web-build> --out <frames-dir> \
  *     [--relay http://127.0.0.1:PORT] [--scenario <name>] [--cells S4/populated,...]
  *     [--devices iphone-15,...] [--themes dark,light] [--scales 100,150,200]
  *     [--consecutive] [--plan] [--yes] [--strict] [--full]
@@ -54,6 +54,7 @@ import {
 	SCALES,
 	SCREEN_ROOTS,
 	SCREENS,
+	STATE_MARKERS,
 	THEMES,
 } from "./matrix.ts";
 
@@ -294,11 +295,14 @@ async function captureCell(
 		state,
 		outDir,
 		settleMs,
+		relayReach,
 	}: {
 		baseUrl: string;
 		state: RelayStateReply | null;
 		outDir: string;
 		settleMs: number;
+		/** Null when this run has no relay, so no claim about it is made. */
+		relayReach: RelayReach | null;
 	},
 ): Promise<CaptureRecord> {
 	const { deviceSpec: device, scaleSpec } = cell;
@@ -398,7 +402,12 @@ async function captureCell(
 	// the wrong screen, which is exactly what the first run of this harness
 	// produced before the relay was proxied.
 	const readiness = asReadiness(await page.evaluate(READINESS_PROBE));
-	const readinessProblems = readinessProblemsFor(cell, path, readiness);
+	const readinessProblems = readinessProblemsFor(
+		cell,
+		path,
+		readiness,
+		relayReach,
+	);
 
 	offConsole();
 	offException();
@@ -637,6 +646,7 @@ function readinessProblemsFor(
 	cell: FramePlan,
 	path: string,
 	readiness: Readiness | null,
+	relay: RelayReach | null,
 ): string[] {
 	if (readiness === null) return ["the page returned no readiness reading"];
 	const problems: string[] = [];
@@ -651,7 +661,90 @@ function readinessProblemsFor(
 			`no '${root}' root in the DOM: the app did not render screen ${cell.screen}`,
 		);
 	}
+	// The STATE, not just the screen. A screen root only says which route drew —
+	// so a cell declaring `S8/approval` used to pass while the app showed the
+	// neutral empty screen, and a "populated" cell passed with `sessions-empty` in
+	// the DOM. That is the reading this block exists to refuse.
+	const emptyMarkers = readiness.testIds.filter((id) =>
+		id.endsWith(STATE_MARKERS.emptyMarkerSuffix),
+	);
+	const state = cell.state;
+	if (STATE_MARKERS.forbidsEmpty.includes(state) && emptyMarkers.length > 0) {
+		problems.push(
+			`the cell declares '${state}' but the app is showing an empty state (${emptyMarkers.join(", ")}): ` +
+				"the state was never reached",
+		);
+	}
+	if (
+		STATE_MARKERS.requiresEmpty.includes(state) &&
+		emptyMarkers.length === 0
+	) {
+		problems.push(
+			`the cell declares '${state}' but no '${STATE_MARKERS.emptyMarkerSuffix}' marker is in the DOM: ` +
+				"the empty state is not what rendered",
+		);
+	}
+	// A cell the RELAY's own registry declared is a state the relay serves, so the
+	// app has to have talked to the relay to render it. A cell named explicitly
+	// (`--cells path:/…`, the canary's own pages) makes no such claim.
+	if (relay !== null && relay.registryBacked && !relay.reached) {
+		problems.push(
+			"the app made no request to the mock relay for this cell, so the state it " +
+				`declares (${state}) cannot have come from the relay`,
+		);
+	}
 	return problems;
+}
+
+/**
+ * Pin the relay to the scenario that serves this cell.
+ *
+ * Without this the harness read `/__mock/state` and `/__mock/scenarios` and then
+ * captured every cell against whatever single scenario the relay happened to be
+ * started with — so a cell labelled `S8/approval` could render an unrelated state
+ * and still pass. A state label is a claim about what the relay serves; this is
+ * what makes it true.
+ */
+async function selectScenario(
+	relayUrl: string,
+	scenario: string,
+): Promise<void> {
+	const res = await fetch(new URL("/__mock/scenario", relayUrl), {
+		method: "POST",
+		headers: { "content-type": "application/json" },
+		body: JSON.stringify({ scenario }),
+	});
+	if (!res.ok) {
+		throw new Error(
+			`the mock relay refused to switch to scenario '${scenario}' (${res.status}): ` +
+				"the cell cannot be captured in the state it declares",
+		);
+	}
+}
+
+/** How many requests the relay has served, for the per-cell reach check. */
+async function relayRequestCount(relayUrl: string): Promise<number | null> {
+	try {
+		const res = await fetch(new URL("/__mock/state", relayUrl));
+		if (!res.ok) return null;
+		const bag = asRecord(await res.json());
+		// `/__mock/state`'s `requests` counts every request the relay served, so a
+		// page that reached it and asked only `/healthz` is counted. It used to be
+		// the transcript's length, which holds only the recorded routes — reading
+		// that made a reachable relay look unreachable.
+		const requests = bag?.requests;
+		return typeof requests === "number" ? requests : null;
+	} catch {
+		return null;
+	}
+}
+
+/** Whether the app reached the relay while this cell was being captured. */
+interface RelayReach {
+	/** The cell was declared by a scenario in the relay's registry. */
+	registryBacked: boolean;
+	/** The relay's served-request count grew while the cell rendered. */
+	reached: boolean;
 }
 
 /** Compare each frame's claimed theme against the token canvas and its twin. */
@@ -920,6 +1013,14 @@ export interface CaptureRecord {
 	readinessProblems: string[];
 	ready: boolean;
 	consoleErrors: string[];
+	/**
+	 * Whether the text-scale dimension was LIVE for this frame's cell, and the
+	 * ratio it was judged on. `null` means the run did not capture both scales for
+	 * this key, so the frame cannot answer a large-text question either way — which
+	 * is a different statement from "measured at 100 %".
+	 */
+	scaleLive?: boolean | null;
+	scaleRatio?: number | null;
 	resolvedTheme?: string | null;
 	canvasColor?: string | null;
 	expectedCanvas?: string | null;
@@ -1017,6 +1118,25 @@ export async function runCapture(options: CaptureOptions) {
 				});
 				break;
 			}
+			// Pin the relay to this cell's state before rendering it, and count what the
+			// relay serves while it renders. A registry-declared cell whose requests
+			// did not grow is a cell the app rendered without asking the relay for
+			// anything — which is exactly the "passed while showing the wrong state"
+			// case, so it is a readiness failure rather than a green frame.
+			let relayReach: RelayReach | null = null;
+			const registryBacked =
+				options.relay !== undefined &&
+				Object.hasOwn(state?.cellScenarios ?? {}, cell.cell);
+			if (registryBacked && options.relay !== undefined) {
+				const scenario = state?.cellScenarios?.[cell.cell]?.[0];
+				if (scenario !== undefined)
+					await selectScenario(options.relay, scenario);
+			}
+			const requestsBefore =
+				options.relay === undefined
+					? null
+					: await relayRequestCount(options.relay);
+
 			// The per-cell bound. A cell whose page never settles used to hang the
 			// whole run; it now fails with the deadline that expired, and the next cell
 			// proceeds.
@@ -1026,6 +1146,7 @@ export async function runCapture(options: CaptureOptions) {
 					state: state ?? null,
 					outDir,
 					settleMs: options.settleMs,
+					relayReach,
 				}),
 				options.cellTimeoutMs,
 				`cell ${cell.cell} on ${cell.device}/${cell.theme}/${cell.scale.id}`,
@@ -1041,6 +1162,34 @@ export async function runCapture(options: CaptureOptions) {
 				continue;
 			}
 			const record = attempted.value;
+			if (options.relay !== undefined) {
+				const requestsAfter = await relayRequestCount(options.relay);
+				relayReach = {
+					registryBacked,
+					reached:
+						requestsBefore === null || requestsAfter === null
+							? registryBacked === false
+							: requestsAfter > requestsBefore,
+				};
+				// The readiness guard ran inside `captureCell`, before this count was
+				// available, so the reach problem is appended here where the relay can
+				// be asked what it served.
+				const reachProblem = readinessProblemsFor(
+					cell,
+					record.path ?? "",
+					record.readiness,
+					relayReach,
+				);
+				for (const problem of reachProblem) {
+					if (
+						problem.includes("no request to the mock relay") &&
+						!record.readinessProblems.includes(problem)
+					) {
+						record.readinessProblems = [...record.readinessProblems, problem];
+						record.ready = false;
+					}
+				}
+			}
 			records.push(record);
 			const mark = record.themeCheck?.themeSource === "os" ? "os" : "q";
 			console.log(
@@ -1080,6 +1229,37 @@ export async function runCapture(options: CaptureOptions) {
 
 	const scaleCheck = verifyTextScale(records);
 
+	// The per-cell half of the scale guard, and the reason it exists: the app does
+	// NOT read the `?lo-text-scale` query parameter — its type roles multiply the
+	// browser's ROOT FONT SIZE — so a run can render every "200 %" cell at 100 %
+	// and still produce a full matrix of confident rows. A run-level median hides
+	// exactly that case, because one responsive screen lifts it while another
+	// screen's cell is inert. So each pair is judged on its own, and an inert cell
+	// is FAILED BY NAME rather than averaged away.
+	const inertScale = new Map(
+		(scaleCheck.perCell ?? [])
+			.filter((entry) => !entry.live)
+			.map((entry) => [entry.key, entry]),
+	);
+	for (const record of records) {
+		const key = `${record.screen}__${record.state}__${record.device}__${record.theme}`;
+		const judged = (scaleCheck.perCell ?? []).find(
+			(entry) => entry.key === key,
+		);
+		record.scaleLive = judged?.live ?? null;
+		record.scaleRatio = judged?.ratio ?? null;
+		if (record.scale === "200" && judged !== undefined && !judged.live) {
+			record.readinessProblems = [
+				...record.readinessProblems,
+				`the text did not scale: median text ${String(record.measurements?.medianTextHeight ?? 0)}px at 200% ` +
+					`against ${String(judged.ratio)}x the 100% cell (needs ≥${String(scaleCheck.liveMinRatio)}x), ` +
+					"so this cell measures 100% and cannot answer a large-text question",
+			];
+			record.ready = false;
+		}
+	}
+	void inertScale;
+
 	// A cell that did not reach its own screen is not evidence, and a set of cells
 	// that produced one identical image is the specific failure this guard exists
 	// for: before the relay was proxied, five `S4` states rendered the
@@ -1112,6 +1292,24 @@ export async function runCapture(options: CaptureOptions) {
 			themeTokens: tokens ?? null,
 			textScaleVerdict: scaleCheck.verdict,
 			textScaleLive: scaleCheck.live === true,
+			// Which cells were measured against a LIVE dimension, by name. A report
+			// that only carried the run-level verdict let a reader take every "200 %"
+			// row at face value while some of them were rendered at 100 %.
+			textScaleLiveCells: (scaleCheck.perCell ?? [])
+				.filter((entry) => entry.live)
+				.map((entry) => entry.key),
+			textScaleInertCells: (scaleCheck.perCell ?? [])
+				.filter((entry) => !entry.live)
+				.map((entry) => entry.key),
+			// Pairs the plan asked for both scales of, against the pairs the guard could
+			// actually judge: the difference is the coverage this run does NOT have.
+			textScalePairsPlanned: new Set(
+				plan.map(
+					(cell) =>
+						`${cell.screen}__${cell.state}__${cell.device}__${cell.theme}`,
+				),
+			).size,
+			textScalePairsMeasured: (scaleCheck.perCell ?? []).length,
 			deviceProfile: DEVICES,
 			scaleProfile: SCALES,
 			screens: SCREENS,
@@ -1122,6 +1320,26 @@ export async function runCapture(options: CaptureOptions) {
 		abandonedCells: abandoned,
 		identicalStates: identicalCells,
 		unreadyCells: unready.map((record) => record.name),
+		/**
+		 * Per-cell measurability, by name, in one place.
+		 *
+		 * A clean-looking frame matrix is NOT coverage, and the difference has to be
+		 * readable without cross-checking anything: a cell whose declared state was
+		 * never reached cannot answer a design, UX or rubric question about that
+		 * state, and its frame is the app's fallback screen. `ready` is the per-frame
+		 * flag; these two lists are the report's own summary of it.
+		 */
+		measurableCells: records
+			.filter((record) => record.ready)
+			.map((record) => record.name),
+		notMeasurableCells: unready.map((record) => ({
+			cell: record.name,
+			why: record.readinessProblems,
+		})),
+		coverageNote:
+			unready.length === 0
+				? "every captured cell reached the state it declares"
+				: `${unready.length} of ${records.length} cells did NOT reach the state they declare: their frames show the app's fallback screen and must not be read as evidence about those states`,
 		textScaleCheck: scaleCheck,
 		postPaintReflow: reflow,
 		records,
@@ -1151,7 +1369,14 @@ export async function runCapture(options: CaptureOptions) {
 		console.log(`UNREADY CELLS (${readinessProblems.length}):`);
 		for (const problem of readinessProblems) console.log(`  - ${problem}`);
 	} else {
-		console.log("readiness: every cell reached the screen it names");
+		console.log(
+			`readiness: every cell reached the screen it names (${records.length}/${records.length} measurable)`,
+		);
+	}
+	if (unready.length > 0) {
+		console.log(
+			`NOT MEASURABLE: ${unready.length} of ${records.length} cells — their frames are the app's fallback screen, not the declared state`,
+		);
 	}
 	if (identicalCells.length) {
 		console.log(
@@ -1219,13 +1444,25 @@ function verifyTextScale(records: CaptureRecord[]) {
 	// A missing middle is the "could not tell" case, not a scale of 1: the
 	// dimension is reported inert rather than assumed live.
 	const median = middle ?? 0;
-	const works = median > 1.2;
+	// The bar is 1.9, not "more than 1.2": a cell at 1.3x is not a 200 % cell, and
+	// treating it as one is how an inert dimension acquires coverage. 2 is what the
+	// matrix asks for; 1.9 tolerates the sub-pixel rounding of a wrapped line.
+	const LIVE_MIN_RATIO = 1.9;
+	const perCell = ratios.map((entry) => ({
+		key: entry.key,
+		ratio: Number(entry.ratio.toFixed(3)),
+		live: entry.ratio >= LIVE_MIN_RATIO,
+	}));
+	const works = median >= LIVE_MIN_RATIO;
+	const inertCells = perCell.filter((entry) => !entry.live);
 	return {
 		medianObservedRatio: Number(median.toFixed(3)),
 		expected: 2,
-		live: works,
+		liveMinRatio: LIVE_MIN_RATIO,
+		live: works && inertCells.length === 0,
+		perCell,
 		verdict: works
-			? `scale dimension is live (median ${median.toFixed(2)}x at 200%)`
+			? `scale dimension is live across ${perCell.length - inertCells.length}/${perCell.length} measured pairs (median ${median.toFixed(2)}x at 200%)`
 			: `scale dimension is INERT (median ${median.toFixed(2)}x at 200%) — three frames per cell ` +
 				"are effectively one, so any U-04 'no clipping at 200%' result from this run is meaningless",
 		ratios,
@@ -1245,7 +1482,7 @@ if (isMain) {
 	if (bool(flags, "help") || !dir || !out) {
 		console.log(
 			[
-				"usage: node tools/visual/capture.mjs --dir <web-build> --out <frames-dir> [options]",
+				"usage: node tools/visual/capture.ts --dir <web-build> --out <frames-dir> [options]",
 				"",
 				"  Both --dir and --out are required: a default output path inside the",
 				"  repository would write a frame tree into it, and frames never belong in",
@@ -1257,7 +1494,8 @@ if (isMain) {
 				"  --cells <a/b,...>   explicit screen/state cells (default: whatever the relay declares)",
 				"  --cell-timeout <s>  hard bound per cell; a cell that exceeds it FAILS with that reason (default 45)",
 				"  --deadline <s>      hard bound for the whole run (default 900); remaining cells are reported BLOCKED",
-				"  --devices <names>   comma list; default all. See matrix.mjs DEVICES",
+				"  --devices <names>   comma list. Default: the `core` tier in matrix.ts DEVICES",
+				"                      (5 profiles) — pass --full for all 19",
 				"  --themes <names>    default dark,light",
 				"  --scales <ids>      default 100,150,200",
 				"  --consecutive       also capture a +250 ms and a settled frame per cell",
@@ -1266,7 +1504,7 @@ if (isMain) {
 				"  --plan              print the frame list and exit without capturing",
 				"  --yes               allow a run above the confirmation threshold",
 				"  --no-strict         report theme problems without failing the run",
-				"  --full              every device × theme × scale cell (same as the defaults)",
+				"  --full              every device × theme × scale cell (matrix.ts `full` tier: 19 profiles)",
 			].join("\n"),
 		);
 		process.exit(dir && out ? 0 : 2);

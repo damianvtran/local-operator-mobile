@@ -27,6 +27,7 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { SUB_RULE_TEXT } from "../tools/audit/checks.ts";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const DEFAULT_WORKTREE = resolve(HERE, "..");
@@ -50,6 +51,8 @@ interface AuditRow {
 	screen?: string;
 	state?: string;
 	measured?: string | null;
+	/** The finding's text: where a row is tied back to the element it caught. */
+	detail?: string | null;
 }
 
 /** The audit report fields this script reads. */
@@ -90,6 +93,24 @@ const readManifest = (path: string): CanaryManifest => {
 };
 
 const worktree = flag("worktree", DEFAULT_WORKTREE);
+/**
+ * A mutation self-test hook: blind one rule and check this canary notices.
+ *
+ * `--blind U-04` silences a whole check, `--blind U-05-top` one independent rule
+ * inside one. It is not a way to get a green run — a blinded run is not evidence
+ * and `verify.ts` uses it only to prove the canary still fails when a rule dies.
+ */
+const blind = args.flatMap((arg, index) =>
+	arg === "--blind" && args[index + 1] !== undefined
+		? [args[index + 1] ?? ""]
+		: [],
+);
+/**
+ * A smaller device/theme/scale set for the mutation self-test, which runs this
+ * script once per blinded rule and cannot afford the full matrix each time. The
+ * landscape device stays in it because U-05's side rules only exist there.
+ */
+const fast = args.includes("--fast");
 // A unique output directory per run, and never a shared fixed name: two canaries
 // — a developer's and CI's, or two shards — otherwise write one manifest and one
 // report over each other mid-run, and each reads the other's numbers.
@@ -140,8 +161,17 @@ const captureStatus = run("capture the canary matrix", npx, [
 	out,
 	"--cells",
 	"path:/defects/defects,path:/clean/clean",
+	// `iphone-15-landscape` is here for U-05's left/right rules: in portrait those
+	// insets are 0, so the two side defects have no fixture input at all and a
+	// blind to either sub-rule used to pass unnoticed.
 	"--devices",
-	"iphone-se,iphone-15",
+	fast
+		? "iphone-15,iphone-15-landscape"
+		: "iphone-se,iphone-15,iphone-15-landscape",
+	// Both themes stay in the fast set: U-03's colour-only status is caught through
+	// the palette, and a defect that only one theme's colours expose would go
+	// missing in the mutation self-test for a reason that has nothing to do with
+	// the rule being blinded.
 	"--themes",
 	"dark,light",
 	"--scales",
@@ -167,6 +197,7 @@ const defectsStatus = run(
 		"--settle",
 		"900",
 		"--quiet",
+		...blind.flatMap((spec) => ["--blind", spec]),
 		...tokenArgs,
 	],
 );
@@ -219,16 +250,86 @@ const defects = readReport(join(out, "audit-report.json"));
 const clean = readReport(join(cleanReportDir, "audit-report.json"));
 const html = readFileSync(join(canaryDir, "index.html"), "utf8");
 
-const declared = [
-	...new Set(
-		[...html.matchAll(/data-defect="([^"]+)"/g)]
-			.map((m) => m[1] ?? "")
-			.filter((id) => id !== ""),
-	),
-]
-	// `U-01-exception` is the rubric's recorded exception, not a defect: the check
-	// must PASS it *by name*, which is a different assertion from catching it.
-	.filter((id) => !id.endsWith("-exception"));
+/**
+ * The fixture's declared defects, each as `<marker>` → `<element id>`.
+ *
+ * A marker names the INDEPENDENT RULE, not the check (`U-05-top`, `U-07-x`), and
+ * the assertion below is per defect rather than per check id. That distinction is
+ * the whole finding this replaced: asserting per check let a check with two rules
+ * keep passing with one of them dead, and let U-04 — which no element declared —
+ * sit unasserted entirely.
+ *
+ * The element id is how a row is tied to the defect it caught: the probe's path
+ * carries `#id`, so a FAIL row for `#clipped-x` names the horizontal rule and not
+ * merely "U-07 somewhere".
+ */
+interface Defect {
+	marker: string;
+	/** The check the marker's rule belongs to (`U-05-top` → `U-05`). */
+	check: string;
+	/** The independent rule inside that check, when the marker names one. */
+	rule: string | null;
+	element: string;
+}
+
+const declaredDefects = (): Defect[] => {
+	const out: Defect[] = [];
+	// Every tag carrying a `data-defect`, with its own `id` read from the same tag.
+	for (const tag of html.matchAll(
+		/<[a-z0-9]+\b[^>]*data-defect="([^"]+)"[^>]*>/gi,
+	)) {
+		const marker = tag[1] ?? "";
+		if (marker === "" || marker.endsWith("-exception")) continue;
+		const element = /\bid="([^"]+)"/.exec(tag[0])?.[1];
+		if (element === undefined) {
+			console.error(
+				`canary: the defect '${marker}' is declared on an element with no id, so nothing ` +
+					"can tie a caught row back to it. Give the element an id.",
+			);
+			process.exit(2);
+		}
+		// A marker is `<check>` (`U-06`) or `<check>-<branch>` (`U-05-top`). The check
+		// id is its first two dash-separated parts — not the first one, which is just
+		// the `U` prefix.
+		const parts = marker.split("-");
+		const check = parts.slice(0, 2).join("-");
+		out.push({
+			marker,
+			check,
+			// The branch, as the `SUB_RULE_TEXT` key spells it: `U-05-top` → `U-05:top`.
+			rule: parts.length > 2 ? `${check}:${parts.slice(2).join("-")}` : null,
+			element,
+		});
+	}
+	return out;
+};
+const declared = declaredDefects();
+// A branch marker with no pattern in `SUB_RULE_TEXT` would fall back to a
+// check-level match and be weaker than it looks; that is a gap in the fixture or
+// in the table, and it is refused rather than downgraded.
+const patternless = declared
+	.filter(
+		(defect) =>
+			defect.rule !== null && SUB_RULE_TEXT[defect.rule] === undefined,
+	)
+	.map((defect) => defect.marker);
+if (patternless.length > 0) {
+	console.error(
+		`canary: no sub-rule pattern for ${patternless.join(", ")}. Add it to SUB_RULE_TEXT in ` +
+			"tools/audit/checks.ts, or the assertion silently weakens to the whole check.",
+	);
+	process.exit(2);
+}
+
+/**
+ * Which declared defects the audit caught, named per DEFECT.
+ *
+ * A defect is caught when a FAIL row exists for its check *and* that row's text
+ * names the defect's element. Matching on the check alone is what let a dead
+ * sub-rule pass.
+ */
+const rowNames = (row: AuditRow): string =>
+	`${row.measured ?? ""} ${row.detail ?? ""}`;
 const caught = [
 	...new Set(
 		defects.rows
@@ -236,17 +337,70 @@ const caught = [
 			.map((r: AuditRow) => r.check),
 	),
 ];
-const missing = declared.filter((id) => !caught.includes(id));
+
+const caughtByElement = declared.filter((defect) => {
+	// The rule's own words, from the table the audit's mutation hook also reads.
+	// Requiring only the check id and the element was too weak: `#full-bleed` is a
+	// full-width pinned bar, so the left-edge rule flags it too, and blinding the
+	// top-edge rule left the element still named by a row of the same check.
+	const pattern =
+		defect.rule === null ? null : (SUB_RULE_TEXT[defect.rule] ?? null);
+	return defects.rows.some(
+		(row: AuditRow) =>
+			row.verdict === "FAIL" &&
+			row.check === defect.check &&
+			(pattern === null || pattern.test(rowNames(row))) &&
+			rowNames(row).includes(`#${defect.element}`),
+	);
+});
+/**
+ * A defect is caught either by the row that names its element, or — for a rule
+ * that reports document-wide (U-06's overflow) or through the accessibility tree
+ * (U-09, whose node carries no DOM id) — by the check itself.
+ *
+ * The fallback is deliberately narrow: it applies only to a marker that names a
+ * whole check, never to a sub-rule. That is the distinction the review drew: a
+ * check with independent branches (`U-05-top` vs `U-05-left`, `U-07-x` vs
+ * `U-07-y`) must be tied to its own element, or blinding one branch passes. The
+ * runner reports which defects were proven at check granularity, so the weaker
+ * of the two assertions is never invisible.
+ */
+const checkLevel = declared.filter(
+	(defect) =>
+		// `marker === check` means the marker names the whole check, not a branch.
+		defect.marker === defect.check && caught.includes(defect.check),
+);
+const caughtDefects = [...new Set([...caughtByElement, ...checkLevel])];
+const caughtByCheckOnly = checkLevel.filter(
+	(d) => !caughtByElement.includes(d),
+);
+const missedDefects = declared
+	.filter((defect) => !caughtDefects.includes(defect))
+	.map((defect) => `${defect.marker} (#${defect.element})`);
 const cleanFails = clean.rows.filter((r: AuditRow) => r.verdict === "FAIL");
 const exceptions = defects.rows.filter(
 	(r: AuditRow) => r.verdict === "EXCEPTION",
 );
 
 console.log("\n=== verdict");
-console.log(`  declared by the fixture: ${declared.join(", ")}`);
+console.log(
+	`  declared by the fixture: ${declared.map((d) => d.marker).join(", ")}`,
+);
 console.log(`  caught by the audit:     ${caught.join(", ")}`);
 console.log(
-	`  missed:                  ${missing.length ? missing.join(", ") : "none"}`,
+	`  caught per defect:       ${caughtDefects.map((d) => d.marker).join(", ") || "none"}`,
+);
+if (caughtByCheckOnly.length > 0) {
+	// Named rather than folded in: these rules report document-wide or through the
+	// accessibility tree, so their evidence is check-level, and a reader deciding
+	// whether this canary covers them needs to know which ones those are.
+	console.log(
+		`  check-level only:        ${caughtByCheckOnly.map((d) => `${d.marker} (#${d.element})`).join(", ")} ` +
+			"— the rule cannot name the element it caught",
+	);
+}
+console.log(
+	`  missed:                  ${missedDefects.length ? missedDefects.join(", ") : "none"}`,
 );
 console.log(
 	`  recorded exceptions:     ${exceptions.length}${exceptions.length ? ` (${exceptions.map((e: AuditRow) => e.measured).join("; ")})` : ""}`,
@@ -264,6 +418,11 @@ const cleanCells = clean.cells ?? 0;
 const cleanRows = clean.rows?.length ?? 0;
 const defectRows = defects.rows?.length ?? 0;
 console.log(`  defect-page cells/rows:  ${defects.cells}/${defectRows}`);
+if (blind.length > 0) {
+	console.log(
+		`  BLINDED: ${blind.join(", ")} — this run is a mutation self-test, not evidence`,
+	);
+}
 console.log(`  clean-page cells/rows:   ${cleanCells}/${cleanRows}`);
 const vacuous = cleanCells === 0 || cleanRows === 0 || defectRows === 0;
 if (vacuous)
@@ -272,7 +431,7 @@ if (vacuous)
 	);
 const ok =
 	!vacuous &&
-	missing.length === 0 &&
+	missedDefects.length === 0 &&
 	cleanFails.length === 0 &&
 	defectsStatus !== 0 &&
 	cleanStatus === 0;

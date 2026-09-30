@@ -8,16 +8,16 @@
  * rather than a green table.
  *
  * The scenario table is driven by the registry itself — every scenario in
- * `scenarios.mjs` is started and its own declared world is asserted against the
+ * `scenarios.ts` is started and its own declared world is asserted against the
  * response — so a scenario added to the registry is verified without touching
  * this file, and a scenario whose shape drifts fails here first.
  *
  * Usage:
- *   node tools/mock-relay/verify.mjs [--fixtures <dir>] [--json <path>]
+ *   node tools/mock-relay/verify.ts [--fixtures <dir>] [--json <path>]
  */
 
 import { spawn, spawnSync } from "node:child_process";
-import { mkdtempSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { connect as netConnect } from "node:net";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
@@ -73,6 +73,16 @@ let group = "";
  * assertions here are properties (`ends within this window`, `is not identical
  * to`) rather than values.
  */
+/**
+ * When the last assertion was recorded, for the watchdog in `main`.
+ *
+ * Module scope because `check` is, and the watchdog reads it: the bound has to be
+ * on SILENCE, not on total runtime — a healthy run of the mutation group takes
+ * fifteen minutes, and a bound that killed it printed nothing at all, hiding the
+ * evidence rather than the hang.
+ */
+let lastProgress = Date.now();
+
 const check = (
 	name: string,
 	actual: unknown,
@@ -83,6 +93,7 @@ const check = (
 		typeof expected === "function"
 			? (expected as (value: unknown) => boolean)(actual)
 			: JSON.stringify(actual) === JSON.stringify(expected);
+	lastProgress = Date.now();
 	results.push({
 		group,
 		name,
@@ -465,12 +476,37 @@ const SID = "6714def86197";
 /* --------------------------------------------------------------- the checks -- */
 
 async function main() {
-	// A watchdog: a verification that hangs reports nothing, and a silent CI job
-	// is worse than a failed one.
-	const watchdog = setTimeout(() => {
-		console.error("verification watchdog: exceeded 10 minutes, aborting");
-		process.exit(3);
-	}, 600_000);
+	// A watchdog that bounds SILENCE, not progress.
+	//
+	// The first version bounded the whole run at 10 minutes, which stopped being
+	// true the moment this file grew a sub-rule mutation group that runs the canary
+	// once per blinded rule: a healthy run that legitimately takes fifteen minutes
+	// was killed with nothing printed, so the bound hid the evidence instead of a
+	// hang. The timer below is reset by every check, so it fires on exactly what it
+	// is for — a step that stops answering — and names the group it stalled in. The
+	// total is bounded too, generously, so a run that dribbles progress forever
+	// still ends.
+	const IDLE_LIMIT_MS = 300_000;
+	const TOTAL_LIMIT_MS = 2_400_000;
+	const started = Date.now();
+	// A check recorded BEFORE the watchdog starts would make the first reading
+	// stale, so the heartbeat is taken from the shared module-level value.
+	lastProgress = Date.now();
+	const watchdog = setTimeout(function tick() {
+		if (Date.now() - lastProgress > IDLE_LIMIT_MS) {
+			console.error(
+				`verification watchdog: no check for ${IDLE_LIMIT_MS / 1000} s while in group '${group}'; aborting`,
+			);
+			process.exit(3);
+		}
+		if (Date.now() - started > TOTAL_LIMIT_MS) {
+			console.error(
+				`verification watchdog: the run passed ${TOTAL_LIMIT_MS / 60000} minutes; aborting`,
+			);
+			process.exit(3);
+		}
+		setTimeout(tick, 5_000).unref?.();
+	}, 5_000);
 	watchdog.unref?.();
 	/* ---- 1. auth gates and cookies ---- */
 	{
@@ -1096,6 +1132,264 @@ async function main() {
 		);
 	}
 
+	/* ---- 3a. the observation surface is a counter, not a transcript ---- */
+	// An instrument that can report zero while traffic flows reads exactly like
+	// evidence, and `/__mock/state`'s `requests` did: it was the transcript's length
+	// (one call site), so a probe that had fetched and streamed read `requests: 0`.
+	// These assertions are the field's own test.
+	group = "mock state surface";
+	{
+		const relay = await startRelay({ scenario: "idle" });
+		const state = async (): Promise<{
+			requests?: number;
+			recorded?: number;
+		}> => {
+			const res = await fetch(new URL("/__mock/state", relay.base));
+			return (await res.json()) as { requests?: number; recorded?: number };
+		};
+		const before = await state();
+		// A public route the transcript never records.
+		await fetch(new URL("/healthz", relay.base));
+		const afterPublic = await state();
+		check(
+			"a served public request moves the counter",
+			(afterPublic.requests ?? 0) > (before.requests ?? 0),
+			true,
+			`before ${String(before.requests)}, after ${String(afterPublic.requests)}`,
+		);
+		check(
+			"and does not appear in the recorded transcript",
+			afterPublic.recorded ?? -1,
+			before.recorded ?? -1,
+		);
+		// Reading the counter is a control route, so it must not move itself.
+		const readA = await state();
+		const readB = await state();
+		check(
+			"reading the state does not move the counter it reports",
+			readB.requests,
+			readA.requests,
+		);
+		check(
+			"the served count exceeds the transcript's",
+			(readB.requests ?? 0) > (readB.recorded ?? 0),
+			true,
+			`requests ${String(readB.requests)}, recorded ${String(readB.recorded)}`,
+		);
+		await relay.stop();
+	}
+
+	/* ---- 3b. the audit's coverage: blind a rule and the canary must notice ---- */
+	// The canary asserts per DEFECT, and this is what proves the assertion is real:
+	// each independent rule is blinded in turn through the audit's own `--blind`
+	// hook, and the canary has to fail naming exactly that defect.
+	//
+	// Why it exists: a canary that asserts per CHECK stays green with one of a
+	// check's two branches dead, and a defect no element declares (U-04) stays
+	// unasserted entirely. Review found three dead sub-rules that way. A rule with
+	// no fixture input at all (U-05's side insets, in portrait) was worse than
+	// dead: it was unexercised by construction, which is why the canary's matrix
+	// now carries a landscape device.
+	group = "sub-rule mutation";
+	{
+		const mutations: Array<{ blind: string; defect: string }> = [
+			{ blind: "U-04", defect: "U-04" },
+			{ blind: "U-05:top", defect: "U-05-top" },
+			{ blind: "U-05:bottom", defect: "U-05-bottom" },
+			{ blind: "U-05:left", defect: "U-05-left" },
+			{ blind: "U-05:right", defect: "U-05-right" },
+			{ blind: "U-07:x", defect: "U-07-x" },
+			{ blind: "U-07:y", defect: "U-07-y" },
+		];
+		for (const mutation of mutations) {
+			const out = join(
+				tmpdir(),
+				`lo-mutation-${mutation.blind.replace(":", "-")}-${Date.now()}`,
+			);
+			const run = spawnSync(
+				process.execPath,
+				[
+					join(WORKTREE, "e2e", "run-canary.ts"),
+					"--fast",
+					"--blind",
+					mutation.blind,
+					"--out",
+					out,
+				],
+				{ encoding: "utf8", timeout: 600_000, env: { ...process.env } },
+			);
+			const output = `${run.stdout ?? ""}${run.stderr ?? ""}`;
+			const missedLine = /^\s*missed:\s*(.+)$/m.exec(output)?.[1]?.trim() ?? "";
+			// The marker carries the element id in parentheses; the defect name is
+			// what the assertion is about.
+			const missed = missedLine
+				.split(",")
+				.map((entry) => entry.trim().replace(/\s*\(#.*\)$/, ""))
+				.filter((entry) => entry !== "" && entry !== "none");
+			check(
+				`blinding ${mutation.blind} makes the canary fail`,
+				run.status !== 0,
+				true,
+				`exit ${run.status}`,
+			);
+			check(
+				`blinding ${mutation.blind} misses exactly ${mutation.defect}`,
+				missed,
+				[mutation.defect],
+			);
+		}
+	}
+
+	/* ---- 3d. the text-scale dimension is live, in BOTH directions ---- */
+	// The app does NOT read the `?lo-text-scale` query parameter: its type roles
+	// multiply the browser ROOT FONT SIZE, so the harness drives that. A harness
+	// that drives a parameter nothing reads renders every "200 %" cell at 100 % and
+	// still reports a full matrix, which is how an earlier large-text result was
+	// produced. The guard is therefore per CELL, and these two captures prove it
+	// discriminates: one page is rem-based, one is px-based, and the same flag has
+	// to pass the first and fail the second by name.
+	group = "text-scale dimension";
+	{
+		const out = join(tmpdir(), `lo-scale-${Date.now()}`);
+		const run = (dir: string): { status: number | null; output: string } => {
+			const result = spawnSync(
+				process.execPath,
+				[
+					join(WORKTREE, "tools", "visual", "capture.ts"),
+					"--dir",
+					dir,
+					"--out",
+					out,
+					"--cells",
+					"path:/inert/inert",
+					"--devices",
+					"iphone-15",
+					"--themes",
+					"dark",
+					"--scales",
+					"100,200",
+					"--yes",
+				],
+				{ encoding: "utf8", timeout: 300_000 },
+			);
+			return {
+				status: result.status,
+				output: `${result.stdout ?? ""}${result.stderr ?? ""}`,
+			};
+		};
+
+		const inert = run(join(WORKTREE, "e2e", "fixtures", "inert-text-scale"));
+		check(
+			"a page whose text ignores the root font size FAILS the guard",
+			inert.status !== 0,
+			true,
+			`exit ${inert.status}`,
+		);
+		check(
+			"and the failing cell is named with its measured ratio",
+			/the text did not scale: median text \d+px at 200% against 1x/.test(
+				inert.output,
+			),
+			true,
+		);
+
+		const live = run(join(WORKTREE, "e2e", "fixtures", "audit-canary"));
+		check(
+			"a rem-based page passes the guard",
+			live.status,
+			0,
+			`exit ${live.status}`,
+		);
+		check(
+			"and the dimension is reported live",
+			/scale dimension is live/.test(live.output),
+			true,
+		);
+
+		rmSync(out, { recursive: true, force: true });
+	}
+
+	/* ---- 3c. the readiness guard, in BOTH directions ---- */
+	// A guard that only fails is as worthless as one that only passes: the fix for
+	// "a cell passed while showing the wrong state" must still pass a cell whose
+	// page really reached the relay in the state it declares. Measured against a
+	// real mock relay, a real static server and real CDP.
+	group = "readiness guard";
+	{
+		const relay = await startRelay({ scenario: "empty" });
+		const out = join(tmpdir(), `lo-readiness-${Date.now()}`);
+		const capture = (
+			dir: string,
+			cells: string,
+		): { status: number | null; output: string } => {
+			const run = spawnSync(
+				process.execPath,
+				[
+					join(WORKTREE, "tools", "visual", "capture.ts"),
+					"--dir",
+					dir,
+					"--out",
+					out,
+					"--cells",
+					cells,
+					"--devices",
+					"iphone-15",
+					"--themes",
+					"dark",
+					"--scales",
+					"100",
+					"--relay",
+					relay.base,
+					"--tokens",
+					join(WORKTREE, "design", "tokens", "tokens.json"),
+					"--yes",
+				],
+				{ encoding: "utf8", timeout: 180_000 },
+			);
+			return {
+				status: run.status,
+				output: `${run.stdout ?? ""}${run.stderr ?? ""}`,
+			};
+		};
+
+		// 1. The app's own build asks the relay for nothing and shows its empty
+		//    screen: a cell declaring a relay-served state must FAIL, naming why.
+		const appDist = join(WORKTREE, "dist");
+		if (existsSync(join(appDist, "index.html"))) {
+			const unready = capture(appDist, "S4/empty");
+			check(
+				"a relay-backed cell the app never served is refused",
+				unready.status !== 0,
+				true,
+				`exit ${unready.status}`,
+			);
+			check(
+				"and the reason names the relay",
+				/no request to the mock relay/.test(unready.output),
+				true,
+			);
+		}
+
+		// 2. A page that reaches the relay AND renders the declared state PASSES.
+		const ready = capture(
+			join(WORKTREE, "e2e", "fixtures", "relay-backed"),
+			"S4/empty",
+		);
+		check(
+			"a cell whose page reached the relay in its declared state is accepted",
+			ready.status,
+			0,
+			`exit ${ready.status}`,
+		);
+		check(
+			"and nothing was reported unready",
+			/UNREADY CELLS/.test(ready.output),
+			false,
+		);
+
+		await relay.stop();
+	}
+
 	/* ---- 4. the fault layer ---- */
 	// Every fault is exercised here, over a real socket, against its declared
 	// effect — this is the surface where the claims previously outran the
@@ -1401,10 +1695,41 @@ async function main() {
 				oversize.status,
 				413,
 			);
+			const captured = GATEWAY_FAILURES["413-too-large"]?.json;
+			// The sentence names the ceiling IN FORCE, so a test-sized limit no longer
+			// reports the gateway's 10 MiB (QA/round-1 note: a 64 KiB trigger answered
+			// "request exceeds 10 MiB"). The shape is still the gateway's own body.
+			const expectedBytes = Number(
+				/(\d+(?:\.\d+)?)\s*(MiB|KiB)/.exec(
+					typeof (captured as { error?: unknown })?.error === "string"
+						? (captured as { error: string }).error
+						: "",
+				)?.[1] ?? "0",
+			);
 			check(
-				"413-oversize: the body is the gateway's own",
-				oversize.json,
-				GATEWAY_FAILURES["413-too-large"]?.json,
+				"413-oversize: the refusal is the gateway's own body with the limit in force",
+				isRecord(oversize.json)
+					? {
+							...(oversize.json as Record<string, unknown>),
+							error: "request exceeds <limit>",
+						}
+					: oversize.json,
+				captured === undefined
+					? undefined
+					: {
+							...(captured as Record<string, unknown>),
+							error: "request exceeds <limit>",
+						},
+			);
+			check(
+				"413-oversize: the sentence names the ceiling that fired, not the gateway's",
+				/request exceeds \d+ KiB/.test(
+					String(
+						(oversize.json as { error?: unknown } | undefined)?.error ?? "",
+					),
+				),
+				true,
+				`gateway sentence says ${expectedBytes}; this one says ${String((oversize.json as { error?: unknown } | undefined)?.error ?? "")}`,
 			);
 			await relay.stop();
 		}

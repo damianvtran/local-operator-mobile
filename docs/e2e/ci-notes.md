@@ -13,20 +13,39 @@ means one job cannot leak processes into the next.
 
 ## The jobs
 
-### 1. Mock-relay contract verification (per push, seconds)
+### 0. Types and the docs (per push, seconds)
 
 ```yaml
-- run: node tools/mock-relay/verify.mjs
+- run: pnpm e2e:typecheck     # tsc -p tools/tsconfig.json: tools/** and e2e/**
+- run: pnpm e2e:docs          # runs every command in docs/e2e/README.md
 ```
 
-229 assertions over the relay's own contract: the auth gates, the cookie format,
+`pnpm typecheck` (the app's own gate) does **not** cover `tools/**` or `e2e/**`:
+`tsconfig.tools.json` includes `scripts/**` only, and those config files belong to
+the app scaffold. `pnpm e2e:typecheck` is the gate for this slice's code, and a
+CI job that runs only `pnpm typecheck` would type-check none of it.
+
+`pnpm e2e:docs` resolves what every documented command names and then runs it, so
+a renamed tool or a stale invocation fails here rather than in a reader's shell.
+
+### 1. Mock-relay contract verification (per push, minutes)
+
+```yaml
+- run: pnpm e2e:relay
+- run: pnpm e2e:divergences
+```
+
+Every assertion the verifier makes over the relay's own contract: the auth gates, the cookie format,
 the same-origin rule, the command endpoint's status mapping, idempotency, the
 read routes, every scenario in the registry and every fault on the wire. It
 exits non-zero on the first failing assertion and prints one line per check.
 
-`verify.mjs` is the instrument's own proof and lives beside the relay it drives.
+`verify.ts` is the instrument's own proof and lives beside the relay it drives.
 It takes no arguments on a normal run: it resolves the repository and the fixture
-corpus from its own location, so it runs from anywhere.
+corpus from its own location, so it runs from anywhere. **It prints its own
+assertion count** (`NNN/NNN checks passed`) and that printed number is the one to
+quote: this file deliberately does not repeat it, because a count typed into a
+doc drifts from the run the first time anyone adds a check.
 
 ### 2. Web build (needs the app's dependencies, per push)
 
@@ -41,29 +60,29 @@ corpus from its own location, so it runs from anywhere.
 
 ```yaml
 - run: |
-    node tools/visual/capture.mjs \
+    node tools/visual/capture.ts \
       --dir dist --out frames \
       --relay ${{ env.MOCK_RELAY_URL }} \
       --consecutive --yes
-- run: node tools/audit/audit.mjs --manifest frames/manifest.json
+- run: pnpm audit:run --manifest frames/manifest.json
 - uses: actions/upload-artifact@v4
   with: { name: audit-frames, path: frames/ }
 ```
 
-`capture.mjs` exits non-zero when a frame's resolved theme does not match the
+`capture.ts` exits non-zero when a frame's resolved theme does not match the
 cell it claims, when a dark/light pair is byte-identical, or when a frame is
 effectively blank — failures a green test suite hides, and the reason the
 `manifest.json` carries each frame's resolved theme and canvas colour rather
 than just a PNG.
 
 An **inert text-scale dimension** is reported in the manifest
-(`meta.textScaleLive: false`) and makes `audit.mjs` report `U-04` as `BLOCKED`
+(`meta.textScaleLive: false`) and makes `audit.ts` report `U-04` as `BLOCKED`
 with that reason, rather than failing the capture job: an app whose type ignores
 the root font-size is a finding for the review thread, not a broken harness. The
 canary is where inertness fails a job, because there it means the instrument
 itself stopped working.
 
-`audit.mjs` exits non-zero on any `FAIL` row. `BLOCKED` rows do not fail the job
+`audit.ts` exits non-zero on any `FAIL` row. `BLOCKED` rows do not fail the job
 — they are reported, counted, and belong in the review thread.
 
 **Run the two against the same mock-relay process the capture used**, started
@@ -73,7 +92,7 @@ the frames do.
 ### 4. The canary (per push, minutes)
 
 ```yaml
-- run: node e2e/run-canary.mjs
+- run: pnpm e2e:canary
 ```
 
 This is the gate that stops the audit from rotting into a rubber stamp: it fails

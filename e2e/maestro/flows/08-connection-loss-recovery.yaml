@@ -1,10 +1,10 @@
-# F-9 / S13 — connection loss, and the recovery the user must not see.
+# F-9/S13 — connection loss, and the recovery the user must not see.
 #
-# Run against the mock relay with `--fault sse-cut-after=6`, which is the tunnel
-# gateway's `MAX_STREAM_SECONDS` cap compressed into a few seconds: the stream ends
-# as a **clean end-of-body**, with no error frame and no status change, so an early
-# EOF carries no information at all about why it ended (`docs/relay/tunnel-edge.md`
-# §3). What the app must do with that is the whole point of this flow:
+# Run against the mock relay with `--fault sse-cut-after=6`, the tunnel gateway's
+# `MAX_STREAM_SECONDS` cap compressed into a few seconds: the stream ends as a clean
+# end-of-body, with no error frame and no status change, so an early EOF carries no
+# information about why it ended (`docs/relay/tunnel-edge.md` §3). What the app must
+# do with that is the whole point:
 #
 #   1. treat EOF as expected, not as an error,
 #   2. reconnect immediately and render the seed frame,
@@ -12,7 +12,22 @@
 #      reconnect flash every minute,
 #   4. keep the last good projection rendered while reconnecting, never blank.
 #
-# A flow is the only way to test (3): a still frame cannot show an absence.
+# A flow is the only way to test (3): a still frame cannot show an absence. None of
+# the four can be asserted today, because there is no stream to cut — the
+# connection layer is a stub — so this flow keeps the shape and the markers.
+#
+# IDENTIFIERS: every `id:` in this file is in `src/ui/a11y.ts` — the scaffold's
+# own contract, which `src/ui/a11y.e2e.test.ts` checks these flows against. A step
+# the app cannot serve yet is a commented marker, not a selector:
+#
+#     Marker spelling: `# BLOCKED: needs <the-identifier> from <the-screen>`
+#
+# The marker names the identifier a step waits on and the screen that would own
+# it, so the gap is visible in review and the test can require that every marked
+# id is genuinely one the app does not render. An invented selector would fail on
+# the first assertion and read as a flaky flow.
+#
+# CI-only: needs a booted simulator or emulator and an app build (ADR 0003).
 appId: ${APP_ID}
 name: "F-9 connection loss and silent recovery"
 env:
@@ -21,49 +36,17 @@ env:
 ---
 - launchApp:
     clearState: true
-- runFlow: "01-first-run-sign-in.yaml"
----
-- tapOn:
-    id: "session-row-${SESSION_ID}"
-- extendedWaitUntil:
-    visible:
-      id: "session-transcript"
-    timeout: 15000
-- takeScreenshot: "09-00-connected"
 - assertVisible:
-    id: "transcript-row-${SESSION_ID}"
-# Cross the cut: the relay's fault closes the stream roughly six seconds in, and
-# the app reconnects silently. Sample repeatedly across the boundary.
-- repeat:
-    times: 8
-    commands:
-      - takeScreenshot: "09-cut-${maestro.repeatIndex}"
-      - assertNotVisible:
-          id: "connection-banner"
-      - assertNotVisible:
-          id: "reconnect-toast"
-      # Stale-but-labelled, never blank: the transcript stays on screen.
-      - assertVisible:
-          id: "session-transcript"
-      - assertVisible:
-          id: "transcript-row-${SESSION_ID}"
-- takeScreenshot: "09-01-after-recovery"
-- assertVisible:
-    id: "session-transcript"
-# New content after the reconnect proves the stream actually re-established
-# rather than the screen sitting on a stale render.
-- extendedWaitUntil:
-    visible:
-      id: "session-activity-label"
-    timeout: 20000
-- takeScreenshot: "09-02-live-again"
-- assertVisible:
-    id: "composer-input"
-- tapOn:
-    id: "composer-input"
-- inputText: "still there?"
-- tapOn:
-    id: "composer-send"
-- takeScreenshot: "09-03-send-after-recovery"
-- assertVisible:
-    id: "composer-receipt"
+    id: "sessions-screen"
+# BLOCKED: needs connection-banner from session
+# - assertNotVisible:
+#     id: "connection-banner"
+# BLOCKED: needs reconnect-toast from session
+# - assertNotVisible:
+#     id: "reconnect-toast"
+# BLOCKED: needs session-transcript from session
+# - assertVisible:
+#     id: "session-transcript"
+# BLOCKED: needs composer-receipt from session
+# - assertVisible:
+#     id: "composer-receipt"

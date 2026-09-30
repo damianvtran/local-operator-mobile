@@ -1,60 +1,56 @@
-# F-1 — first run, sign in, land on the session list.
+# F-1 — first run, the welcome screen and the sign-in screen.
 #
-# Every step takes a screenshot: the design and UX rounds audit this flow from
-# the frames, and a flow that passes without frames proves the app is reachable,
-# not that it is usable. Screenshots land in the run's artefact directory.
+# What this proves today: the app boots to a real screen with its own root and
+# empty state, and the one control the welcome screen owns navigates. What it
+# does not prove is a *session*, because the connection layer is not implemented
+# yet: `src/connection/` and `src/relay/` are stubs, so there is nothing to sign
+# in against and no list to land on.
+#
+# The steps below therefore stop at the sign-in screen, and the connection steps
+# carry the marker their missing identifiers earn.
+#
+# IDENTIFIERS: every `id:` in this file is in `src/ui/a11y.ts` — the scaffold's
+# own contract, which `src/ui/a11y.e2e.test.ts` checks these flows against. A step
+# the app cannot serve yet is a commented marker, not a selector:
+#
+#     Marker spelling: `# BLOCKED: needs <the-identifier> from <the-screen>`
+#
+# The marker names the identifier a step waits on and the screen that would own
+# it, so the gap is visible in review and the test can require that every marked
+# id is genuinely one the app does not render. An invented selector would fail on
+# the first assertion and read as a flaky flow.
 #
 # CI-only: needs a booted simulator or emulator and an app build (ADR 0003).
 appId: ${APP_ID}
-name: "F-1 first run to session list"
+name: "F-1 first run to sign in"
 env:
   APP_ID: com.radient.localoperator.mobile
-  RELAY_URL: http://127.0.0.1:4098
-  SESSION_ID: 6714def86197
-onFlowStart:
-  - takeScreenshot: "01-00-launch"
 ---
-# clearState gives the reproducible cold start ADR 0003 asks for: no stored
-# cookie, no cached projection, so this is genuinely the first run.
 - launchApp:
     clearState: true
-- takeScreenshot: "01-01-welcome"
-- assertVisible:
-    id: "welcome-headline"
-- assertVisible:
-    id: "welcome-connect"
-- takeScreenshot: "01-02-welcome-settled"
-# The Radient path is a system-browser hand-off; Maestro cannot type into the
-# system browser (ADR 0003, "What the harness is not"), so the flow asserts the
-# hand-off *starts* and switches to the direct route for the signed-in part.
-- tapOn:
-    id: "welcome-connect"
-- takeScreenshot: "01-03-handoff-started"
-- assertVisible:
-    id: "sign-in-browser-handoff"
-- back
-- takeScreenshot: "01-04-back-to-welcome"
-- tapOn:
-    id: "welcome-custom-url"
-- assertVisible:
-    id: "custom-url-field"
-- tapOn:
-    id: "custom-url-field"
-- inputText: "${RELAY_URL}"
-- takeScreenshot: "01-05-url-entered"
-- tapOn:
-    id: "custom-password-field"
-- inputText: "${RELAY_PASSWORD}"
-- tapOn:
-    id: "custom-connect"
-- takeScreenshot: "01-06-connecting"
-# The list must be reachable without a manual refresh: the connection screen
-# navigates on the first frame, which is the F-1 success condition.
+- takeScreenshot: "01-00-launch"
 - extendedWaitUntil:
     visible:
-      id: "session-list"
-    timeout: 20000
-- takeScreenshot: "01-07-session-list"
+      id: "welcome-screen"
+    timeout: 15000
 - assertVisible:
-    id: "session-row-${SESSION_ID}"
-- takeScreenshot: "01-08-list-populated"
+    id: "welcome-empty"
+- takeScreenshot: "01-01-welcome"
+- tapOn:
+    id: "welcome-continue"
+- takeScreenshot: "01-02-sign-in"
+- extendedWaitUntil:
+    visible:
+      id: "sign-in-screen"
+    timeout: 15000
+- assertVisible:
+    id: "sign-in-empty"
+- takeScreenshot: "01-03-sign-in-settled"
+# The Radient sign-in control itself does not exist yet: the screen is an empty
+# state with no action, deliberately, so a button that does nothing is not shipped.
+# BLOCKED: needs sign-in-radient from sign-in
+# - tapOn:
+#     id: "sign-in-radient"
+# BLOCKED: needs sign-in-browser-handoff from sign-in
+# - assertVisible:
+#     id: "sign-in-browser-handoff"
