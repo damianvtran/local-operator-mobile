@@ -1,6 +1,6 @@
 ---
 name: "🐞 Bug report"
-about: "Report something that is broken in Local Operator Mobile."
+about: "Report something that is broken in the Local Operator mobile app."
 title: "[Bug] <brief description>"
 labels: ["bug", "needs-triage"]
 ---

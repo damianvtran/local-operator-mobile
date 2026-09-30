@@ -1,6 +1,6 @@
 # Architecture
 
-How the Local Operator Mobile app is put together, and why. This document is the
+How the mobile app is put together, and why. This document is the
 map; the decision records in [`docs/adr/`](./adr/) are the reasoning, and the
 relay's own contract is defined in the Local Operator repository
 ([`docs/mobile.md`](https://github.com/damianvtran/local-operator/blob/main/docs/mobile.md),
