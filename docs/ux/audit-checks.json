@@ -1,7 +1,7 @@
 {
  "schema": 1,
  "what_this_is": "Machine-readable form of docs/ux/audit-rubric.md. The markdown is the spec (what to do, how to verify, pass criteria); this file is the index the harness and its own unit tests load.",
- "citation_ref": "origin/main 5bfff4a61 (2026-09-29)",
+ "citation_ref": "local-operator 5bfff4a61 (2026-09-29); agent-server dcafe85 — read with `git show <sha>:<path>`, never origin/main",
  "severity_ladder": [
   "BLOCKER",
   "MAJOR",

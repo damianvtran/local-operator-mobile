@@ -4,21 +4,23 @@ Scope: the React web client the relay serves today
 (`local_operator/mobile/web/` in the Local Operator repo), judged as the
 baseline the native app must beat. Read-only; nothing in that repo was changed.
 
-- **Code read:** `origin/main` at `5bfff4a61` (2026-09-29): `src/screens/*`,
+- **Code read:** `~/local-operator` at `5bfff4a61` (2026-09-29): `src/screens/*`,
   `src/components/*`, `src/store.ts`, `src/api.ts`, `src/router.ts`,
   `docs/mobile.md`.
 
   **Citation ref — read this before checking a line number.** Every citation in
-  this document is against that *committed* ref, obtained with
-  `git -C ~/local-operator show origin/main:<path>`. The `~/local-operator`
-  working tree is mid-edit by another session, and line numbers there are **61
-  lines off** from `origin/main` in `docs/mobile.md` — round 1 of the review that
-  caught this recorded exactly that failure. Read the ref, not the tree
-  (`AGENTS.md`, "Read the committed ref, not the working tree").
+  this document is against the *committed* ref, **by SHA**: `git -C ~/local-operator
+  show 5bfff4a61:<path>`. Not `origin/main`: it has moved past the pin (it is
+  `c2bd09ea0` now), and the same file differs by tens of lines between the two —
+  `store.ts`'s `DRAFT_PREFIX` is L405 at the pin and L433 on today's `main`. That
+  drift, and the `~/local-operator` working tree's own (61 lines off `docs/mobile.md`
+  there), are the two failures this document's citations have already been caught
+  on. Read the pinned SHA, not the tree and not `main` (`AGENTS.md`, "Read the
+  committed ref, not the working tree").
 - **Evidence read:** PR #1777 (merged, "UX batch 1", review/design/UX/QA rounds)
   and PR #1784 (**open** at the time of reading, "UX batch 2") via
   `gh pr view <n> --comments`.
-- **Walked live:** a bundle built from that `origin/main` and served by the
+- **Walked live:** a bundle built from that pin and served by the
   repo's own synthetic-projection fixture (`scripts/mobile_overflow_fixture.py`,
   isolated HOME, loopback port, no real sessions or daemon touched), driven with
   installed Chrome headless over CDP at 390×844 @2x, 360×780 and 320×568, with
@@ -63,11 +65,12 @@ Each is something the native app should reproduce or consciously improve.
 2. **Secrets are handled honestly.** A secret ask renders a masked field with
    "secret — sent directly, not shown in the transcript" **[measured]**.
 3. **Never lose a typed instruction.** Drafts persist per session under
-   `lo-mobile-draft:` keys (`web/src/store.ts` L433 `DRAFT_PREFIX` at
-   `origin/main`; the same prefix is listed for purge on identity change in
+   `lo-mobile-draft:` keys (`web/src/store.ts` **L405** `DRAFT_PREFIX` at the
+   pinned SHA — L433 on today's `main`, which is where round 3's miscitation came
+   from; the same prefix is listed for purge on identity change in
    `web/src/private-storage.ts` L3), and an instruction whose delivery is *unknown*
    is kept as a retry envelope with a stable UUID so the daemon de-duplicates
-   (`docs/mobile.md` L257-294 at `origin/main`; `continuation-command.ts`) **[code]**. Offline
+   (`docs/mobile.md` L257-294; `continuation-command.ts`) **[code]**. Offline
    send produced "Couldn't send this instruction. Try again." with the text
    preserved and a *Retry earlier instruction* button **[measured]**.
 4. **Honest, quiet session-state vocabulary.** `approval`/`question` in danger
@@ -94,11 +97,11 @@ Each is something the native app should reproduce or consciously improve.
    voice dictation, stop/steer/resume morphing** **[code]**.
 10. **31 palettes from one contract** **[code]**. `pnpm check-themes` is
     `node scripts/generate-theme-css.mjs --check`
-    (`local_operator/mobile/web/package.json` L13 at `origin/main`): it checks
+    (`local_operator/mobile/web/package.json` L13 at the pinned SHA): it checks
     that every palette defines every role and that the generated stylesheet is
     current. It contains **no contrast maths**. The executable that does the
     contrast work, `scripts/contrast-contract.mjs`, is *named* by
-    `themes/palette-contract.ts` (L34, L38 at `origin/main`) but **does not exist
+    `themes/palette-contract.ts` (L34, L38 at the pinned SHA) but **does not exist
     at that ref** — only `check-bundle.mjs`, `generate-theme-css.mjs`,
     `inline-mark.mjs` and `palette-source.mjs` ship there. It arrives on open PR
     #1784, whose rounds report `Contrast contract holds: 1209 assertions across
@@ -137,7 +140,7 @@ verdict. IDs (`R1…`) are referenced from `flows.md` and `principles.md`.
   (`/logout`) reached by URL **[code]**. Store review requires an in-app
   sign-out/account-deletion path (see `flows.md` §10).
 - **R5 - MINOR: SSE is cut every 60 s on the Radient route**
-  (`MAX_STREAM_SECONDS = 60`, `gateway.py` L34 at `origin/main`; the timeout is at
+  (`MAX_STREAM_SECONDS = 60`, `gateway.py` L34 at the pinned SHA; the timeout is at
   L678). The client reconnects on its own backoff, and the reconnect is
   indistinguishable from a real failure from the user's side. Native must treat
   the 60 s cut as a **normal rotation** — invisible, immediate, re-synced from a
@@ -165,7 +168,7 @@ verdict. IDs (`R1…`) are referenced from `flows.md` and `principles.md`.
 ### Steering & trust
 
 - **R10 - MAJOR: approvals raised by a terminal session cannot be answered from
-  the phone** (deliberate v1 boundary, `docs/mobile.md` L250 at `origin/main`) - the phone
+  the phone** (deliberate v1 boundary, `docs/mobile.md` L250 at the pinned SHA) - the phone
   "shows the wait and says so". This is the top reason people open a
   remote-control app (competitive-research §9.3). Not fixable client-side; the
   native app must state it plainly and the backlog should track the protocol.
@@ -177,7 +180,7 @@ verdict. IDs (`R1…`) are referenced from `flows.md` and `principles.md`.
   choice: this command, this tool, this session? The row is a 44 px `min-h-11`
   `<label>` wrapping the checkbox, so it is a fine tap target and the input does
   take the label's text as its accessible name (`pending-card.tsx` L423-433 at
-  `origin/main`) — this is a *copy* finding, not an accessibility one. Replace it
+  the pinned SHA) — this is a *copy* finding, not an accessibility one. Replace it
   with the scope ("Always allow `bash` in this session") or a one-line
   explanation under it.
 - **R13 - NIT: copy uses developer notation** (`~`, raw ids in refusals). #1784

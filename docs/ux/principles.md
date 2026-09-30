@@ -12,10 +12,12 @@ Both back-links are real and were checked: `flows.md` §0 carries a flow →
 principle index, and `audit-rubric.md` names the governing principle on every
 check.
 
-**Citation ref.** Line citations are against the committed refs:
-`~/local-operator` at `origin/main` = `5bfff4a61` (2026-09-29), read with
-`git show origin/main:<path>`; the working tree is mid-edit by another session and
-its numbers differ.
+**Citation ref.** Line citations are against the committed refs **by SHA**:
+`~/local-operator` at `5bfff4a61` (2026-09-29), `~/radient-ml/agent-server` at
+`dcafe852349ebad3421010b06cfc36e61ac9c5bf`. Read them with
+`git show <sha>:<path>` — not `git show origin/main:<path>`, because `main` moves
+under the pin (it is `c2bd09ea0` now, tens of lines away in several of these files),
+and the working tree is a third state again.
 
 ## P-1. The phone is a remote control, not an IDE
 
@@ -73,7 +75,7 @@ envelope with a stable id so the relay de-duplicates; the UI distinguishes
 "rejected" (fix your input) from "unknown" (retry is safe) from "sent".
 
 *Evidence:* the current client already gets this right (drafts under
-`lo-mobile-draft:` keys, `web/src/store.ts` L433 `DRAFT_PREFIX` at `origin/main`;
+`lo-mobile-draft:` keys, `web/src/store.ts` L405 `DRAFT_PREFIX`);
 the retry envelope, `docs/mobile.md` L257-294) and it is one of the few things a
 redesign must not regress; Happy advertises offline machines with last-seen and
 persistent drafts for the same reason.

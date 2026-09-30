@@ -8,12 +8,19 @@ fixed here). Flows are ordered as a user meets them. `F-n` ids are referenced by
 listed in §0's table so the back-link is real in both directions.
 
 **Citation ref.** Every line citation in this document is against the *committed*
-ref, not a working tree: `~/local-operator` at `origin/main` = `5bfff4a61`
-(2026-09-29), and `~/radient-ml/agent-server` at its `origin/main`. Read them with
-`git show origin/main:<path> | sed -n '<line>p'`. A working tree may be mid-edit by
-another session, which silently shifts line numbers — see `AGENTS.md`, "Read the
-committed ref, not the working tree". Where a number is expected to move, the
-text says so.
+ref, **by SHA**: `~/local-operator` at `5bfff4a61` (2026-09-29) and
+`~/radient-ml/agent-server` at `dcafe852349ebad3421010b06cfc36e61ac9c5bf`. Read them
+with `git show 5bfff4a61:<path> | sed -n '<line>p'`.
+
+**Do not read them with `git show origin/main:<path>`.** `origin/main` has moved
+past this pin on both repos — `~/local-operator` is at `c2bd09ea0` as this is
+written — and the same file differs by tens of lines between the two: `store.ts`'s
+`DRAFT_PREFIX` is L405 at the pin and L433 on today's `main`, which is precisely
+the error round 3 of the review caught in this document. A moving ref makes every
+number in a review un-reproducible; a SHA does not. The working tree is a third
+state again and is mid-edit by other sessions — see `AGENTS.md`, "Read the
+committed ref, not the working tree". Where a number is expected to move, the text
+says so.
 
 Conventions used below:
 
@@ -134,7 +141,7 @@ but has no tunnel hits a dead end.
    is the one way F-2 can ship copy that errors for exactly the user it exists to
    rescue: `lop tunnel connect` **attaches a tunnel that already exists** and
    refuses with `Supply the tunnel ID shown in the Radient console.` when there
-   is none (`local_operator/tunnels/cli.py` L519-521 at `origin/main`). So the
+   is none (`local_operator/tunnels/cli.py` L519-521 at the pinned SHA). So the
    screen offers creation, attachment, and *neither* as three distinct routes:
 
    - **(a) Create one on the computer — recommended, no console needed.**
@@ -149,12 +156,12 @@ but has no tunnel hits a dead end.
      tunnel and installs its connector. (`mobile_action` maps `enable` to
      `tunnel create` when no config exists, or `tunnel configure --enable` when
      one does, followed by `tunnel install` — `cli.py` L729-745 at
-     `origin/main`.)
+     the pinned SHA.)
 
      **The app composes the exact command.** The owner token can read
      `GET /v1/tunnels/billing` (`eligible`, `monthly_price_usd`, `balance_usd`,
      `amount_due_usd` — `internal/tunnels/service.go` L24-31 at that repo's
-     `origin/main`), so the copy block
+     the pinned SHA), so the copy block
      carries the *real* quoted amount instead of a placeholder. It has to: both
      `--accept-monthly-price` and `/mobile enable` take the quoted number, and a
      user who has not run the billing step has no way to know it.
@@ -171,12 +178,12 @@ but has no tunnel hits a dead end.
       owner token. `status` moves `pending` (`internal/tunnels/service.go` L310)
       → `active` (L476), through `revoking` (L447), `reconciling` (L453), `error`
       (L468), `deleted` (L474), `disabled` (L478) and `suspended` (L480) — all at
-      that repo's `origin/main`, which is **8 lines ahead of its working tree**
+      that repo's pinned `dcafe85`, whose working tree is **8 lines behind it**
       and is the only place these numbers are true — and `billing` fills in.
    2. **The host answering through the relay** — an `https://<host>/healthz`
       request returns the relay's health JSON once the connector is up and
       forwarding. The daemon's health gate is *deliberately unauthenticated*
-      (`docs/mobile.md` L115-131 at `origin/main`), which is what makes this a
+      (`docs/mobile.md` L115-131 at the pinned SHA), which is what makes this a
       usable signal rather than another credential dance.
 
    What the phone **cannot** see, and must not pretend to: the connector's own
@@ -414,7 +421,7 @@ first one is the one everybody gets wrong.
 
 The gateway deliberately ends every relayed SSE response at
 `MAX_STREAM_SECONDS = 60` (`local_operator/tunnels/gateway.py` L34 at
-`origin/main`; the timeout at L678). On the Radient route that orderly close
+the pinned SHA; the timeout at L678). On the Radient route that orderly close
 arrives **once a minute, forever**. Its consequences are the whole of this
 section:
 
@@ -425,9 +432,9 @@ section:
 - **Every reconnect re-syncs from a fresh snapshot**, and a stale repaint is
 dropped rather than merged: the projection's `version` orders epochs
   monotonically across process replacements (`docs/mobile.md` L257-294 at
-  `origin/main`). The client never merges deltas — that is the phone leg's own
+  the pinned SHA). The client never merges deltas — that is the phone leg's own
   contract: "The phone leg is HTTP + SSE, never WebSocket … Every state push is a
-  snapshot/repaint, not a delta" (`docs/mobile.md` L38-40).
+  snapshot/repaint, not a delta" (`docs/mobile.md` L37-40).
 - **Only a *failed* reconnect is a state.** `C2` is entered when the transport
   errors, or when a rotation's replacement does not produce a snapshot, and it is
   left the moment one lands.
@@ -443,16 +450,32 @@ never remembered:
 
 | what | cadence | where |
 |---|---|---|
-| the relay daemon's SSE keepalive — **the phone leg's own silence budget** | 25 s (`SSE_KEEPALIVE_S = 25.0`, documented as "under the 60 s idle cutoff of common proxies") | `mobile/daemon.py` L103-105 |
+| the relay daemon's SSE keepalive — **the phone leg's own silence budget** | 25 s (`SSE_KEEPALIVE_S = 25.0`, documented as "under the 60 s idle cutoff of common proxies") | `mobile/daemon.py` L104-105 |
 | the encrypted link's keepalive — a *different* transport (daemon ↔ runtime/mesh), not the phone leg | 30 s (`KEEPALIVE_S = 30.0`), with a 120 s idle close (`LINK_IDLE_S`) | `network/wire.py` L67-69 |
 | the gateway's stream cut — the **rotation**, `C1` | 60 s (`MAX_STREAM_SECONDS`, applied as an `asyncio.timeout` around the upstream read) | `tunnels/gateway.py` L34, L678 |
 
 **The gateway emits no keepalive of its own.** It forwards the upstream's bytes
 (`stream()`, `gateway.py` L673-686), and its single mention of the word is a
-comment about the *revoke* path's latency (`L676`, "keepalives are 15s") — a
-number that does not match the daemon's 25 s constant at the pinned ref. Nothing
-in Local Operator emits a 15 s keepalive, so the window must not be derived from
-that comment, even though it is the comment a careful reader finds first.
+comment about the *revoke* path's latency (`L676`, "keepalives are 15s").
+
+**That 15 s is real — it just belongs to another leg.** Local Operator does define
+a 15 s heartbeat, twice, for the harness: `HEARTBEAT_INTERVAL_S = 15.0` in
+`session/runtime/types.py` L416 (re-exported at `mobile/types.py` L59 and used as
+the link's `HEARTBEAT_S` at `network/relay.py` L211), and again in
+`server/utils/sse.py` L70 under the comment *"Keepalive interval. Matches
+Minerva's 15s"*, emitted on the harness's own SSE route as a **dispatchable**
+keepalive frame (`server/routes/sse.py` L189, whose comment reads *"A dispatchable
+keepalive, not a comment: proxies count it as traffic AND the client's stall
+detector can re-arm on it"*). The gateway resolves its upstream as the local
+harness (`gateway.py` L652, L699), so L676's number has a real referent and is
+plausibly accurate about the leg it names.
+
+**It is not the phone leg, and it is not the window's basis.** The slowest healthy
+silence on the phone leg is the daemon's 25 s (`SSE_KEEPALIVE_S`), and 75 s clears
+15 s, 25 s and 30 s alike. So the rule stands — derive the window from the cadence
+of the leg it watches, never from a number found in a comment about another one —
+but the reason is *which surface emits what*, not that a 15 s keepalive does not
+exist.
 
 **The rule, then the number.** The window must be **strictly greater than the
 slowest cadence that must not trip it**, times a margin. An absence window
@@ -500,13 +523,13 @@ rare).
   One button. After success, return to exactly the screen the user was on, with
   the transcript intact.
 - **Never** clear drafts on an auth blip; only on an explicit sign-out or an
-  identity change (the web client's rule, kept — `api.ts` L64-70 at
-  `origin/main`).
+  identity change (the web client's rule, kept — `api.ts` L64-70 at the pinned
+  SHA).
 
 ### `C6` — the computer can't be reached (503 with a typed reason)
 
 The gateway already ships one honest sentence per cause (`RELAY_DETAIL` in
-`gateway.py` L106 at `origin/main`): `control_plane_unreachable`,
+`gateway.py` L106 at the pinned SHA): `control_plane_unreachable`,
 `authorization_refused`, `tunnel_not_authorized`, `authorization_lease_pending`,
 `login_required`. The app **renders those sentences verbatim** — they are the
 product's own vocabulary, already reviewed — and adds a *Check again* button,

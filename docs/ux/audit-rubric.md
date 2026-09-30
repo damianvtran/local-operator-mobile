@@ -7,10 +7,12 @@ what to capture, and the pass criteria, and each is anchored to a principle in
 checks as machine-readable data, so the rubric's own consistency (id uniqueness,
 principle coverage, cap discipline) is unit-testable rather than trusted.
 
-**Citation ref.** Code line citations here are against the committed ref:
-`~/local-operator` at `origin/main` = `5bfff4a61` (2026-09-29), read with
-`git show origin/main:<path>`. The working tree is mid-edit by another session and
-its line numbers differ.
+**Citation ref.** Code line citations here are against the committed refs **by
+SHA**: `~/local-operator` at `5bfff4a61` (2026-09-29) and `~/radient-ml/agent-server`
+at `dcafe852349ebad3421010b06cfc36e61ac9c5bf`. Read them with
+`git show <sha>:<path>` — not `git show origin/main:<path>`: `main` has moved past
+the pin, the working tree is a third state, and both have already produced a wrong
+line number in this document's history.
 
 ## How the harness uses this
 
@@ -100,7 +102,7 @@ a reason**, never skipped silently.
 | U-13 | Motion | Capture consecutive frames during every transition; enable "reduce motion" and repeat | Nothing animates for more than ~400 ms on a state change; under reduce-motion, transitions are instant and nothing loops | P-11 |
 | U-14 | Haptics | Trigger each haptic path and log the call | Haptics fire only on: send accepted, approval answered, error, and destructive confirm — never on scroll, streaming ticks, or navigation. All are suppressed when the OS setting is off | P-2, P-8 |
 | U-15 | Latency feedback | Timestamp tap → first visible acknowledgement, and tap → result, for: open session, send, approve, resume, switch computer, open sheet | Acknowledgement within **100 ms** for every tap; if the result takes > 400 ms, an in-progress state is visible with a name ("Sending…", "Connecting…"), never a bare spinner | P-5, P-9 |
-| U-16 | Stream liveness, and the rotation that is not a fault | With a session streaming, sample the transcript's newest row at a fixed interval across **at least three 60 s rotations** (`MAX_STREAM_SECONDS = 60`, `gateway.py` L34 at `origin/main`). Then two separate faults: (a) kill the relay's connector; (b) hold the socket **open and silent** — no chunk, no close — and watch the state over at least 90 s | Newest content keeps advancing **across every rotation** (`C1`); no `C2`/`C3` appears for a rotation at all. (a) names the state and its reason within the window; (b) raises `C3` **at `KEEPALIVE_GRACE_S = 75` and not before it** — the basis is the daemon's 25 s SSE keepalive (`SSE_KEEPALIVE_S`, `daemon.py` L103-105), so an earlier window would flap against the cadence (`flows.md` §9, "The grace window"). Never on "an SSE error" as such: an orderly close is `C1` | P-5, P-9 |
+| U-16 | Stream liveness, and the rotation that is not a fault | With a session streaming, sample the transcript's newest row at a fixed interval across **at least three 60 s rotations** (`MAX_STREAM_SECONDS = 60`, `gateway.py` L34 at the pinned `5bfff4a61`). Then two separate faults: (a) kill the relay's connector; (b) hold the socket **open and silent** — no chunk, no close — and watch the state over at least 90 s | Newest content keeps advancing **across every rotation** (`C1`); no `C2`/`C3` appears for a rotation at all. (a) names the state and its reason within the window; (b) raises `C3` **at `KEEPALIVE_GRACE_S = 75` and not before it** — the basis is the daemon's 25 s SSE keepalive (`SSE_KEEPALIVE_S`, `daemon.py` L104-105), so an earlier window would flap against the cadence (`flows.md` §9, "The grace window"). Never on "an SSE error" as such: an orderly close is `C1` | P-5, P-9 |
 | U-17 | Cold-start time | Cold launch → first meaningful list from cache, and → first fresh relay frame | Cache render < 1 s; a "updated N ago" marker until fresh data arrives | P-9 |
 
 ## 4. Copy checks (manual, one pass per screen)
@@ -193,7 +195,7 @@ diverge:
 ```json
 {
   "schema": 1,
-  "citation_ref": "origin/main 5bfff4a61 (2026-09-29)",
+  "citation_ref": "local-operator 5bfff4a61 (2026-09-29); agent-server dcafe85",
   "severity_ladder": ["BLOCKER", "MAJOR", "MINOR", "NIT"],
   "severity_caps": { "MINOR": 5, "NIT": 5 },
   "release_gate": {
