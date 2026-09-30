@@ -65,56 +65,54 @@ env:
 
 jobs:
   harness:
-    name: Is the audit harness present?
+    name: Is the audit harness present? (fails if it is not)
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    outputs:
-      relay: ${{ steps.detect.outputs.relay }}
-      audit: ${{ steps.detect.outputs.audit }}
-      canary: ${{ steps.detect.outputs.canary }}
-      maestro: ${{ steps.detect.outputs.maestro }}
     steps:
       - uses: actions/checkout@v7
 
       - name: Detect the harness
+        # A GREEN RUN OF THIS WORKFLOW MUST MEAN THE SUITES RAN. Until this step
+        # could fail, a tree without `tools/` produced `success` with every suite
+        # `skipped` — a green tick on a suite that did not run, which is the
+        # defect class this project treats as a defect (review M1). The harness is
+        # what this workflow exists to run (ADR 0003, `docs/e2e/ci-notes.md`), so
+        # its absence is a failure of the workflow's own premise, and the
+        # annotation names exactly which pieces are missing.
         id: detect
         run: |
           set -euo pipefail
-          check() { [ -f "$1" ] && echo true || echo false; }
-          relay=$(check tools/mock-relay/verify.mjs)
-          audit=$(check tools/audit/audit.mjs)
-          canary=$(check e2e/run-canary.mjs)
-          [ -f tools/visual/capture.mjs ] || audit=false
-          maestro=false
-          if [ -d e2e/maestro ]; then
-            maestro=$(find e2e/maestro -name '*.yaml' -print -quit | grep -q . && echo true || echo false)
-          fi
-          for pair in relay=$relay audit=$audit canary=$canary maestro=$maestro; do
-            echo "$pair" >> "$GITHUB_OUTPUT"
+          missing=()
+          for path in \
+            tools/mock-relay/verify.mjs \
+            tools/visual/capture.mjs \
+            tools/audit/audit.mjs \
+            e2e/run-canary.mjs; do
+            [ -f "$path" ] || missing+=("$path")
           done
+          if ! find e2e/maestro -name '*.yaml' -print -quit 2>/dev/null | grep -q .; then
+            missing+=("e2e/maestro/**/*.yaml")
+          fi
           {
             echo "## End-to-end harness"
             echo
-            echo "| piece | present |"
-            echo "|---|---|"
-            echo "| mock relay contract test (\`tools/mock-relay/verify.mjs\`) | $relay |"
-            echo "| capture + audit (\`tools/visual/capture.mjs\`, \`tools/audit/audit.mjs\`) | $audit |"
-            echo "| instrument canary (\`e2e/run-canary.mjs\`) | $canary |"
-            echo "| Maestro flows (\`e2e/maestro/**/*.yaml\`) | $maestro |"
-            echo
-            if [ "$relay" = false ] || [ "$audit" = false ] || [ "$canary" = false ] || [ "$maestro" = false ]; then
-              echo "A missing piece is reported as \`skipped\`, which is honest; a green"
-              echo "tick on a suite that did not run would not be. The harness is"
-              echo "developed in its own change (ADR 0003); \`docs/e2e/ci-notes.md\` is"
-              echo "the contract this workflow consumes."
+            if [ ${#missing[@]} -eq 0 ]; then
+              echo "Every piece of the harness is present; the suites below ran."
+            else
+              echo "**The harness is not in this tree.** Missing:"
+              echo
+              for path in "${missing[@]}"; do echo "- \`$path\`"; done
             fi
           } >> "$GITHUB_STEP_SUMMARY"
-          echo "relay=$relay audit=$audit canary=$canary maestro=$maestro"
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "::error::the audit harness is not in this tree: ${missing[*]}. This workflow exists to run it (ADR 0003, docs/e2e/ci-notes.md) and it ships in its own change, so this is a real failure of the pipeline rather than a reason to skip: a green conclusion here would claim the mock relay, the frame audit and the canary had run when none of them had."
+            exit 1
+          fi
+          echo "the harness is present in full"
 
   mock-relay-contract:
     name: Mock relay contract (229 assertions, seconds)
     needs: harness
-    if: needs.harness.outputs.relay == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -129,7 +127,6 @@ jobs:
   web-audit:
     name: Web target — frames, audit and the canary
     needs: harness
-    if: needs.harness.outputs.audit == 'true'
     # macOS BECAUSE THE HARNESS' CHROME DISCOVERY IS macOS-ONLY TODAY, and that is
     # a finding rather than a preference: `tools/lib/chrome.mjs` looks for
     # `/Applications/Google Chrome.app/Contents/MacOS/Google Chrome` and fails
@@ -281,7 +278,6 @@ jobs:
 
       - name: Run the canary
         timeout-minutes: 5
-        if: needs.harness.outputs.canary == 'true'
         # The gate that stops the audit rotting into a rubber stamp: the fixture
         # page declares its own defects, so this fails if the audit stops catching
         # them, starts failing the clean page, or if the harness's own scale
@@ -317,7 +313,7 @@ jobs:
     # release gate", and ADR 0003's risk table limits emulator flows for the same
     # reason — they are the slowest, flakiest part of the pipeline and the least
     # informative on a branch somebody is iterating on.
-    if: needs.harness.outputs.maestro == 'true' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 75
     steps:
@@ -442,6 +438,11 @@ jobs:
               -e APP_ID="$APP_ID" \
               -e RELAY_URL="$RELAY_URL_FOR_DEVICE" \
               -e RELAY_PASSWORD="$(cat "$RUNNER_TEMP/relay-password")" \
+              # The harness's own fixture session id, from the corpus the mock
+              # relay serves (`fixtures/relay/**` — the id every captured
+              # projection uses). Named here because a bare constant in a file
+              # that names the source of every other constant is the one that
+              # gets copied somewhere it does not belong.
               -e SESSION_ID=6714def86197 \
               -e MAESTRO_SCREENSHOTS="$RUNNER_TEMP/maestro-screenshots"
 

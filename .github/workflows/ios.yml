@@ -177,7 +177,21 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             build
 
-      - name: Boot the simulator and launch the app
+      - name: Boot the simulator
+        id: boot
+        run: |
+          set -euo pipefail
+          udid="${{ steps.simulator.outputs.udid }}"
+          xcrun simctl boot "$udid" || true
+          xcrun simctl bootstatus "$udid" -b
+          mkdir -p "$RUNNER_TEMP/frames"
+          # The home screen, captured BEFORE anything is installed, so the frame
+          # after launch has something to be different from. Without a baseline, a
+          # screenshot of a black screen or of the springboard is indistinguishable
+          # from a screenshot of the app.
+          xcrun simctl io "$udid" screenshot "$RUNNER_TEMP/frames/ios-baseline.png"
+
+      - name: Install the app, assert the version it carries, and launch it
         # A build that produces a .app which cannot start is not a working app,
         # and this is the cheapest honest way to find that out without a device.
         run: |
@@ -190,17 +204,68 @@ jobs:
           # copy in a workflow is a copy that can disagree with it.
           bundle=$(plutil -extract CFBundleIdentifier raw "$app/Info.plist")
           echo "bundle: $bundle"
-          xcrun simctl boot "$udid" || true
-          xcrun simctl bootstatus "$udid" -b
+
+          # THE VERSION IS READ OUT OF THE ARTEFACT, not out of the environment.
+          # `scripts/ci/version.ts` exports it, `app.config.ts` consumes it, and
+          # this asserts the two ends meet where it matters — the Info.plist of
+          # the built app. An environment variable nothing consumes is the defect
+          # this step exists to catch (review B1 on this pull request).
+          short=$(plutil -extract CFBundleShortVersionString raw "$app/Info.plist")
+          build=$(plutil -extract CFBundleVersion raw "$app/Info.plist")
+          echo "built: CFBundleShortVersionString=$short CFBundleVersion=$build"
+          {
+            echo "| field | built | derived from the ref |"
+            echo "|---|---|---|"
+            echo "| CFBundleShortVersionString | \`$short\` | \`$LOCAL_OPERATOR_MOBILE_VERSION\` |"
+            echo "| CFBundleVersion | \`$build\` | \`$LOCAL_OPERATOR_MOBILE_VERSION_CODE\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ "$short" != "$LOCAL_OPERATOR_MOBILE_VERSION" ]; then
+            echo "::error::the built app carries version '$short' but the ref derived '$LOCAL_OPERATOR_MOBILE_VERSION' — the version did not reach the artefact"
+            exit 1
+          fi
+          if [ "$build" != "$LOCAL_OPERATOR_MOBILE_VERSION_CODE" ]; then
+            echo "::error::the built app carries CFBundleVersion '$build' but the run derived '$LOCAL_OPERATOR_MOBILE_VERSION_CODE'"
+            exit 1
+          fi
+
           xcrun simctl install "$udid" "$app"
           xcrun simctl launch "$udid" "$bundle"
 
-      - name: Capture the frame the app renders
+      - name: Capture the frame the app renders, and assert it rendered and settled
+        # WHAT THIS PROVES, AND WHAT IT DOES NOT. Two byte comparisons: the frame
+        # after launch must differ from the pre-install home screen (so the app
+        # rendered something rather than showing a black screen), and must be
+        # identical to a second capture two seconds later (so the still that gets
+        # uploaded is a settled frame, not a skeleton mid-animation). It is NOT a
+        # judgement about the screen's content — pixel-level auditing against the
+        # design kit's rubric is the audit harness's job (ADR 0003), which needs
+        # `tools/` on the branch. What it does catch is the failure a still cannot:
+        # the app rendering nothing at all, or throwing before it paints.
         run: |
           set -euo pipefail
+          udid="${{ steps.simulator.outputs.udid }}"
           sleep 5
-          mkdir -p "$RUNNER_TEMP/frames"
-          xcrun simctl io "${{ steps.simulator.outputs.udid }}" screenshot "$RUNNER_TEMP/frames/ios-release.png"
+          xcrun simctl io "$udid" screenshot "$RUNNER_TEMP/frames/ios-release.png"
+          sleep 2
+          xcrun simctl io "$udid" screenshot "$RUNNER_TEMP/frames/ios-release+2s.png"
+          if cmp -s "$RUNNER_TEMP/frames/ios-baseline.png" "$RUNNER_TEMP/frames/ios-release.png"; then
+            echo "::error::the frame after launch is byte-identical to the home screen captured before it: the app did not render"
+            exit 1
+          fi
+          if ! cmp -s "$RUNNER_TEMP/frames/ios-release.png" "$RUNNER_TEMP/frames/ios-release+2s.png"; then
+            echo "::error::the frame is still changing two seconds after launch, so the uploaded still is not a settled frame — raise the settle delay in this step rather than uploading a moving target"
+            exit 1
+          fi
+          # The one content signal available without the harness: a JS bundle that
+          # failed to load leaves a fatal in the simulator log while still painting
+          # a red error screen, which would pass both comparisons above.
+          if xcrun simctl spawn "$udid" log show --last 60s --style compact 2>/dev/null \
+            | grep -E 'Unhandled JS Exception|RCTFatal' > "$RUNNER_TEMP/js-fatal.txt"; then
+            echo "::error::the app logged a JavaScript fatal while launching, so the frame it painted is an error screen:"
+            cat "$RUNNER_TEMP/js-fatal.txt"
+            exit 1
+          fi
+          echo "frame: rendered, settled, and no JavaScript fatal in the launch log" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload the frame and the simulator build
         uses: actions/upload-artifact@v7

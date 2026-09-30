@@ -11,10 +11,10 @@ view — what runs, what it needs, and what to do when it goes red.
 
 | Workflow | Trigger | Jobs | What a green run actually proves |
 |---|---|---|---|
-| `ci.yml` | `pull_request`, push to `main`, `workflow_dispatch` | `checks`, `design-kit` | The JavaScript typechecks, lints, formats and its unit tests pass; the generated styling layer matches `design/tokens/tokens.json`; the design kit's contrast contract holds and its committed assets (icons, splash, store art, preview sheet) still re-render from their sources; the web target bundles. |
-| `android.yml` | `pull_request`, push to `main`, `workflow_dispatch` | `changes`, `android`, `internal` (main only) | `expo prebuild` produces the Android project from the config, Gradle assembles a debug APK, and the generated project re-generates byte-identically. On `main`, additionally a signed AAB/APK and, when configured, a Play **internal** track upload. |
-| `ios.yml` | `pull_request`, push to `main`, `workflow_dispatch` | `changes`, `ios`, `internal` (main only) | The app builds for the iOS 26 SDK with Xcode 26 on `macos-26`, **launches on a simulator**, renders a real frame (the simulator build is a Release build, so it has a bundled JS payload and no Metro dependency), and the native project re-generates identically. On `main`, additionally a signed IPA and, when configured, a TestFlight upload. |
-| `e2e.yml` | `pull_request`, push to `main`, nightly, `workflow_dispatch` | `harness`, `mock-relay-contract`, `web-audit`, `maestro-android` | The mock relay still answers its own contract (229 assertions, seconds); the web export is driven in headless Chrome to produce a frame per audit cell and every frame is checked against the design kit's rubric, with the frames and report uploaded; the instrument's own canary proves the audit can still fail. Maestro runs the flow set on an Android 16 emulator — nightly and on demand only, because it is the slowest job here and the harness's own note asks for it that way. Every command comes from `docs/e2e/ci-notes.md` and the tools' usage blocks. |
+| `ci.yml` | `pull_request`, push to `main`, weekly, `workflow_dispatch`, `workflow_call` | `changes`, `checks`, `design-kit` | The JavaScript typechecks (both programs), lints, formats and its unit tests pass; the web target bundles. `design-kit` costs a macOS runner plus a `brew install`, so it is path-gated by the same `changes` pattern the native jobs use — it runs on a pull request only when `design/**`, `docs/design/**`, `src/ui/**`, `scripts/**` or the configs changed, and always on `main`, on the weekly sweep and inside a release gate. Green there means the generated styling layer matches `design/tokens/tokens.json`, the contrast contract holds, and every committed asset and frame re-renders (bytes first, pixels second, with the comparison that passed printed). |
+| `android.yml` | `pull_request`, push to `main`, `workflow_dispatch` | `changes`, `android`, `internal` (main only) | `expo prebuild` produces the Android project from the config, Gradle assembles a debug APK, **the APK's manifest carries the version the ref derives** (`versionName`/`versionCode` read out of the built APK and asserted), and the generated project re-generates byte-identically. On `main`, additionally an AAB/APK whose release certificate is verified **not** to be the debug key, and, when configured, a Play **internal** track upload. |
+| `ios.yml` | `pull_request`, push to `main`, `workflow_dispatch` | `changes`, `ios`, `internal` (main only) | The app builds for the iOS 26 SDK with Xcode 26 on `macos-26`, **launches on a simulator**, and the captured frame **rendered and settled** (it differs from the pre-install home screen, matches a second capture two seconds later, and the launch log carries no JavaScript fatal). The version in the built app's `Info.plist` is asserted against the one the ref derived, and the native project re-generates identically. Content is not judged here — a wrong screen renders just as green. On `main`, additionally a signed IPA and, when configured, a TestFlight upload. |
+| `e2e.yml` | `pull_request`, push to `main`, nightly, `workflow_dispatch` | `harness`, `mock-relay-contract`, `web-audit`, `maestro-android` | **The harness was present and its suites ran** — the detector job FAILS when `tools/` is absent rather than skipping, so a green `e2e` cannot mean "the thing did not run". Then: the mock relay answers its own contract (229 assertions, seconds); the web export is driven in headless Chrome to produce a frame per audit cell, every frame is checked against the design kit's rubric, and the frames and report are uploaded; the instrument's own canary proves the audit can still fail. Maestro runs the flow set on an Android 16 emulator — nightly and on demand only, because it is the slowest job here and the harness's own note asks for it that way; it is the one job allowed to be absent from a green PR run. Every command comes from `docs/e2e/ci-notes.md` and the tools' usage blocks. |
 | `release.yml` | tag `v*` (or `workflow_dispatch` with a tag and `dry_run`) | `version`, `secrets`, `gate` (= `ci.yml`), `android`, `ios`, `publish` | The same gate a pull request runs, both platforms built and signed, a GitHub Release carrying the APK/AAB/IPA, and uploads to the Play internal track and TestFlight. |
 
 Native jobs are **skipped, not failed**, on a change that touches only
@@ -22,6 +22,13 @@ documentation. That decision is implemented inside the workflow by a `changes`
 job that inspects the diff, never by `on.paths`: a workflow excluded by a path
 filter does not skip, it never runs, and a required check that never runs can
 never be satisfied.
+
+One consequence is worth stating plainly, because it is the difference between a
+green tick and a proof: a **skipped** job is never the thing a green run proves.
+The only skip that can appear in a green run by design is the path-gated
+`design-kit` (and the doc-only native skip); the `e2e` detector refuses to skip
+at all, and a run whose `harness` job fails is red, with the missing pieces named
+in the annotation.
 
 ## Third-party actions, and how they are pinned
 
@@ -83,21 +90,55 @@ first point true, and it is the one setting this repository's security depends
 on that is not in the source tree. Add required reviewers to the same
 environment if the release process ever gains a second maintainer.
 
+**OPERATOR ACTION ITEM — `environment: release` protects nothing yet.** The two
+signing jobs declare `environment: release` (`android.yml`, `ios.yml`), which is
+the mechanism for requiring a human approval, restricting the ref, and scoping
+secrets. This repository currently has **no environments configured**, so the
+environment resolves to nothing: the jobs are guarded by their `if:` conditions
+alone. Create the environment with a deployment rule (branches `main`, tags
+`v*`) and, if the signing material should be gated, require reviewers on it —
+until then the release path is protected by the credential check and the tag,
+not by an approval. Verified 2026-09-30: `gh api
+repos/damianvtran/local-operator-mobile/environments` returns **0**.
+
+### What a green run proves, in one place
+
+The pipeline is the only place the native apps are built (ADR 0004), which makes
+it easy to read a green tick as more than it is. The table at the top of this
+document is the per-job answer; these are the limits of it.
+
+- `checks` green says nothing about a native build.
+- The Android debug APK is **debug-signed by design** — the release certificate is
+  checked only in the `internal` job, on a push to `main`.
+- The iOS frame proves the app rendered a settled frame, not that the screen is
+  right; pixel-level judgement is the audit harness's job.
+- `e2e` green is the one that used to be able to mean nothing at all. It cannot
+  now: the detector fails when `tools/` is absent.
+- A `success` on `android.yml`'s or `ios.yml`'s `internal` job means the signed
+  artefact was built **and its certificate checked**, and any store upload that is
+  missing a secret is named as **NOT uploaded** in that job's summary rather than
+  left implied.
+
 ### Fork pull requests
 
 GitHub does not give repository secrets to a `pull_request` run from a fork. So:
 
 - **still runs**: every `checks` and `design-kit` step, the debug APK, the iOS
-  simulator build and its frames, and the whole Maestro/mock-relay layer once the
-  harness lands. A fork contributes a fully tested change.
+  simulator build, its launch and its frame, the mock-relay contract test, and the
+  frame capture plus the audit once the harness lands. A fork contributes a fully
+  tested change.
 - **does not run**: anything that signs or uploads. The steps are skipped, the
   job summary says so in words, and nothing is implied to have been verified.
+  The Maestro flow set is nightly-only for every contributor, fork or not — it
+  runs on `schedule` and `workflow_dispatch`, never on a pull request, because an
+  emulator boot is minutes and the flows are the flakiest part of the pipeline.
 
 A catch worth knowing: `secrets.X != ''` in an `if:` is not a guard against a
 fork — it is a guard against a *missing* secret, and on a `pull_request` from a
 branch in this repository the secrets are present. That is why the gates are
-composed in one place per job (`steps.sign.outputs.enabled`) rather than repeated
-inline, and why the condition includes the event.
+composed in one place per job (`steps.play.outputs.all_present` in `android.yml`,
+`steps.apple.outputs.all_present` in `ios.yml`) rather than repeated inline, and
+why the condition includes the event.
 
 ## Running the same gates locally
 
@@ -190,23 +231,40 @@ The non-tag version is `0.0.0` rather than the ADR's written `0.0.0-dev.<run>`
 because the same string reaches `CFBundleShortVersionString`, and Apple rejects a
 non-numeric short version at upload — which would break the internal TestFlight
 upload on every push to `main`. Monotonicity, the property both stores actually
-enforce, is carried by the build number. The dev string is still reported as
-`display_version` for summaries.
+enforce, is carried by the build number. The dev string is printed as
+`display_version` in the run log and deliberately **not** exported into the job:
+nothing consumes it, and a variable nothing reads is how a version silently stops
+reaching an artefact.
 
 `app.config.ts` reads the derived values from the environment
-(`LOCAL_OPERATOR_MOBILE_VERSION`, `LOCAL_OPERATOR_MOBILE_VERSION_CODE`), which is
-what lets a tag version reach both native projects with nothing committed:
+(`LOCAL_OPERATOR_MOBILE_VERSION`, `LOCAL_OPERATOR_MOBILE_VERSION_CODE`) and writes
+them into `version`, `ios.buildNumber` and `android.versionCode`. An unset
+variable is the local case: the version stays `0.0.0` and no build number is
+written, so a contributor's prebuild behaves exactly as before.
 
 ```sh
 node scripts/ci/version.ts --write   # in CI: sets the two variables for the job
 ```
 
+**THE WIRING IS ASSERTED IN THE ARTEFACT, not in the environment.** An exported
+variable that no generated file consumes is invisible to every other gate here,
+so `android.yml` reads `versionName`/`versionCode` out of the built APK's manifest
+and `ios.yml` reads `CFBundleShortVersionString`/`CFBundleVersion` out of the
+built app's `Info.plist`, and each **fails** when the value is not the one the ref
+derived. That is the check that would have caught the version reaching nothing at
+all.
+
 Android's release signing comes from `plugins/with-android-release-signing.js`, a
 config plugin rather than an edited `android/app/build.gradle`, because `android/`
-is generated and the next `expo prebuild --clean` would discard a hand edit. The
-plugin is what a reviewer reads; the generated Gradle is a build product. Without
-`LO_RELEASE_STORE_FILE` in the environment, `bundleRelease` fails loudly instead
-of signing with the debug key.
+is generated and the next `expo prebuild --clean` would discard a hand edit. It is
+**registered in `app.config.ts`'s `plugins` array**, which is what makes it run on
+every prebuild; a plugin that nothing lists is inert, and the generated project
+then keeps Expo's template release `signingConfig` — the DEBUG keystore — so
+`bundleRelease` produces a debug-signed AAB that Play rejects. The plugin is what
+a reviewer reads; the generated Gradle is a build product. `android.yml`'s
+`internal` job verifies the built APK's certificate with `apksigner` before it
+claims anything was signed, and without `LO_RELEASE_STORE_FILE` in the
+environment `bundleRelease` fails loudly instead of signing with the debug key.
 
 ## Release runbook
 
@@ -249,9 +307,26 @@ OTA is designed in and switched off for v1 (ADR 0004).
 Both platforms build on GitHub-hosted runners, which are **free for standard
 runners in public repositories**. The scarce resource is therefore wall-clock and
 concurrency, not money, and the pipeline is shaped around that: cheap jobs first,
-macOS used for exactly two things (the simulator build and the signed archive,
-plus the design kit's asset gates, which need macOS to reproduce the committed
-PNGs), and the emulator job kept off pull requests until the harness exists.
+and macOS spent only where it is unavoidable.
+
+What that costs, concretely, and how each spend is gated:
+
+| Spend | Runner | Gated by |
+|---|---|---|
+| `checks` (types, tests, lint, web export) | `ubuntu-latest` | every pull request, every `main` push — it is the cheap early signal |
+| `design-kit` (asset re-render, contrast, styling layer) | `macos-26` + `brew install librsvg imagemagick` | the `changes` job: `design/**`, `docs/design/**`, `src/ui/**`, `scripts/**` or the configs; **always** on `main`, on the weekly sweep, and in a release gate |
+| `android` (prebuild, debug APK, determinism) | `ubuntu-latest` | the `changes` job: anything that is not `docs/**` or `*.md` |
+| `ios` (prebuild, pods, simulator build, launch, frame) | `macos-26` | the same `changes` job |
+| `internal` (signed AAB/IPA, store uploads) | both | push to `main` only |
+| `web-audit`, Maestro | `macos-26`, `ubuntu-latest` (KVM) | every PR for the audit; nightly/on-demand for Maestro |
+
+The two macOS spends that used to happen on every pull request — the design kit's
+`brew install` and the iOS build — are now gated by the design and native
+`changes` jobs respectively. A weekly `schedule` on `ci.yml` runs the design kit
+anyway, because those gates compare **re-rendered** artefacts and a rasterizer or
+font on a runner image can drift without this repository changing; without the
+sweep, the first evidence would be a PR that touches nothing design-related and
+still fails.
 
 | Runner | Used for | Notes |
 |---|---|---|

@@ -148,9 +148,13 @@ if (process.argv.includes("--write")) {
 	// Gradle/xcodebuild invocation agree on one version without a committed bump.
 	appendFileSync(
 		envFile,
+		// The two variables `app.config.ts` reads. `display_version` is printed for
+		// the run log and deliberately NOT exported: nothing consumes it, and a
+		// variable in the job environment that no file reads is the shape of bug
+		// this pipeline was reviewed for (the version reaching the artefact is
+		// asserted in android.yml and ios.yml).
 		`LOCAL_OPERATOR_MOBILE_VERSION=${derived.version}\n` +
-			`LOCAL_OPERATOR_MOBILE_VERSION_CODE=${derived.versionCode}\n` +
-			`LOCAL_OPERATOR_MOBILE_VERSION_DISPLAY=${derived.displayVersion}\n`,
+			`LOCAL_OPERATOR_MOBILE_VERSION_CODE=${derived.versionCode}\n`,
 	);
 	appendFileSync(outputFile, `${lines.join("\n")}\n`);
 }

@@ -83,17 +83,21 @@ jobs:
             # A hand-run release names its tag, because `github.ref_name` on a
             # `workflow_dispatch` is the branch the run was started from.
             node scripts/ci/version.ts --write --ref-type tag --ref-name "$DISPATCH_TAG"
-            echo "tag=$DISPATCH_TAG" >> "$GITHUB_OUTPUT"
+            tag="$DISPATCH_TAG"
           else
             node scripts/ci/version.ts --write
-            echo "tag=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+            tag="${{ github.ref_name }}"
           fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          # `$tag`, not `github.ref_name`: on the dispatch path the release tag is
+          # the input, and `github.ref_name` is the BRANCH the run was started on,
+          # so the summary used to print a version derived from the wrong ref.
           {
-            echo "## Release ${{ github.ref_name }}"
+            echo "## Release $tag"
             echo
             echo "| | |"
             echo "|---|---|"
-            echo "| version | \`$(node scripts/ci/version.ts --ref-type tag --ref-name "${{ github.ref_name }}" --run-number "${{ github.run_number }}" | head -1 | cut -d= -f2)\` |"
+            echo "| version | \`$(node scripts/ci/version.ts --ref-type tag --ref-name "$tag" --run-number "${{ github.run_number }}" | head -1 | cut -d= -f2)\` |"
             echo "| versionCode / CFBundleVersion | \`${{ github.run_number }}\` |"
           } >> "$GITHUB_STEP_SUMMARY"
 

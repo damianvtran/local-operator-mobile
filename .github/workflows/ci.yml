@@ -23,8 +23,9 @@ name: CI
 # NO PATH FILTER IN `on.paths`. A workflow excluded by a path filter does not
 # "skip" — it never runs, and a required check that never runs stays pending
 # forever, which is unreachable-for-merge. Expensive jobs are gated by an `if:`
-# on a `changes` job instead (android.yml and ios.yml do this); the jobs in this
-# file are cheap enough to run unconditionally.
+# on a `changes` job instead (android.yml, ios.yml and now this file's
+# `design-kit`, which pays for a macOS runner): the workflow always runs, so a
+# required check always reports, and the skip is visible as a skipped job.
 
 on:
   push:
@@ -38,15 +39,29 @@ on:
   # than a second copy of it. "What shipped == what CI ran" is a property worth
   # having structurally instead of by diligence.
   workflow_call:
+  # A weekly sweep, because the design gates compare RE-RENDERED artefacts and a
+  # rasterizer or font on a runner image can change without this repository
+  # changing. Without it, the first evidence of that drift would be a PR that
+  # touches nothing design-related and still fails.
+  schedule:
+    - cron: "0 6 * * 1"
 
 # One in-flight run per ref. A review cycle pushes repeatedly, and without this
 # every superseded push kept its job set queued. `main` is exempt: an in-flight
 # `main` run is the record for a merge and cancelling it loses that record.
-# `github.workflow` keeps this from cancelling a sibling workflow's run on the
-# same ref.
+#
+# `github.event_name` IS PART OF THE GROUP, and it is what keeps the release gate
+# from cancelling itself. When release.yml calls this workflow, `github.workflow`
+# inside the callee is the CALLER's name, so a group of `workflow-ref` alone is
+# identical to release.yml's own group — GitHub's documented outcome is
+# "Canceling since a deadlock for concurrency group … was detected between 'top
+# level workflow' and …", i.e. the release's `gate` job is cancelled before it
+# starts. The event name makes the call site distinct (`…-workflow_call`).
+# `cancel-in-progress` is scoped to pull requests for the same reason: a tag run
+# is a release in progress, and cancelling it would drop the artefacts.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 # Least privilege: nothing here writes. The release workflow is the one place
 # that elevates, and only for the job that creates a Release.
@@ -62,6 +77,61 @@ env:
   NODE_VERSION: "24"
 
 jobs:
+  changes:
+    name: Does this change touch the design gates' inputs?
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      design: ${{ steps.diff.outputs.design }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # The diff needs the base commit, not just the head.
+          fetch-depth: 0
+
+      - name: Decide whether the macOS design job is worth running
+        # The design gates re-render committed artefacts and compare them, which
+        # needs macOS (the committed PNGs were generated there), `librsvg`,
+        # ImageMagick and a `brew install` — the most expensive thing in this
+        # workflow. Path-gating it is the same trade android.yml and ios.yml
+        # already make (review M4); it still runs on every `main` push, on a
+        # weekly schedule, and inside a release gate, so drift cannot hide.
+        id: diff
+        env:
+          BASE_REF: ${{ github.base_ref }}
+          EVENT: ${{ github.event_name }}
+        run: |
+          set -euo pipefail
+          # Not a pull request: `main` is the record, a hand-run is somebody
+          # asking for this pipeline on purpose, a release gate must cover the
+          # whole gate, and the schedule is the sweep. All of those run it.
+          if [ "$EVENT" != "pull_request" ]; then
+            echo "design=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git fetch --no-tags --depth=1 origin "$BASE_REF"
+          files=$(git diff --name-only "FETCH_HEAD...HEAD")
+          if [ -z "$files" ]; then
+            # An empty diff is not evidence that nothing design-related changed.
+            echo "design=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # The inputs these gates read, and the generators that produce the
+          # files they compare: the token source, the committed assets and
+          # frames, the generated styling layer in `src/ui`, the theme generator,
+          # and the gate scripts themselves. A change confined to anything else
+          # cannot alter a re-render.
+          design=$(printf '%s\n' "$files" \
+            | grep -E '^(design/|docs/design/|src/ui/|scripts/|tailwind\.config\.|package\.json$|pnpm-lock\.yaml$|\.github/workflows/ci\.yml$)' \
+            || true)
+          if [ -n "$design" ]; then
+            echo "design=true" >> "$GITHUB_OUTPUT"
+            printf 'design surfaces touched:\n%s\n' "$(printf '%s\n' "$design" | head -20)"
+          else
+            echo "design=false" >> "$GITHUB_OUTPUT"
+            echo "nothing under design/, docs/design/, src/ui/, scripts/ or the configs changed — the macOS design job is skipped"
+          fi
+
   checks:
     name: Checks (lint, format, types, unit tests, web export)
     runs-on: ubuntu-latest
@@ -125,6 +195,13 @@ jobs:
 
   design-kit:
     name: Design kit (tokens, contrast, icons, preview)
+    needs: changes
+    # Skipped only when a pull request changes none of the gates' inputs (see the
+    # `changes` job), and never on `main`, a release gate, a hand-run or the
+    # weekly sweep. `scripts/build-theme.ts` regenerates `src/ui` from
+    # `design/tokens/tokens.json`, so a styling-layer change is a design change
+    # even when the diff looks like app code.
+    if: github.event_name != 'pull_request' || needs.changes.outputs.design == 'true'
     # macOS ON PURPOSE, and it is a fidelity decision rather than a convenience.
     # The committed PNGs were rendered on macOS (design/README.md records the
     # reference generation), and every one of these gates re-renders the asset
