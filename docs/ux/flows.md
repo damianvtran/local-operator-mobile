@@ -291,12 +291,19 @@ but has no tunnel hits a dead end.
    **needs a decision** › **running** › **new activity** › **ended** ›
    **degraded**.
    - *Decision state:* word `approval` / `question` in danger ink plus a dot.
+     *Queued asks are not part of this mark* — they are counted separately
+     (item 3 below), so an ask never competes with an approval for the row's one
+     state.
    - *Running:* shimmer on the name (never a spinner beside it).
    - *New:* accent word `new`, cleared on open.
    - *Ended:* muted, with resume offered inside the session.
    - *Degraded:* muted "not answering" (see §9).
 3. **Attention badges:** count of sessions needing a decision, on the header
-   and as the app icon badge (§10).
+   and as the app icon badge (§10). *Queued asks get their own count*, from
+   `asks_open`: an ask badge sits beside the decision badge and ranks below it, so
+   "the agent asked something and kept working" never reads as "you are blocking
+   it" ([ADR 0005](../adr/0005-queued-asks.md) §8). **Target state** — nothing
+   changes until the relay publishes the `asks` field.
 4. **Search:** server-side search of live sessions and past conversations; an
    empty field shows recents; keyboard opens with the field (search is a
    first-class action on a phone).

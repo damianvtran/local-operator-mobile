@@ -1098,10 +1098,29 @@ The canonical list a test matrix should cover, each with how it is reached:
    backoff-forever.
 7. **`new_conversation` / `resume_session` command ops are refused**; use the
    dedicated routes (§4.2).
-8. **There is no ask queue on this wire yet.** The projection carries one
-   `pending` slot (§6.7) and the ask path is blocking. A queued, timeout-bounded
-   ask model is designed and frozen elsewhere; §9 states what a client will see,
-   marked clearly as target state.
+8. **`resume` does not restore the conversation's cwd** (it uses the account
+   home, §4.5).
+9. **Image ingest is best-effort and silent.** `image_blocks` (`server.py:119-186`)
+   drops an entry whose base64 is invalid, whose bytes do not sniff as an image,
+   or whose payload cannot be bounded — and the command still answers `200`.
+   A prompt that carried a bad attachment is indistinguishable from one that did
+   not, so the app should verify its own attachments before sending and should
+   not promise delivery in the receipt copy.
+10. **Prompt images are refit to fit one socket line** (`attach_client.py:323-368`):
+    each image is re-encoded (JPEG at full resolution first, downscaling only if
+    needed) so N images fit *together* under `1 << 20` bytes minus measured
+    overhead; only an image that cannot fit at its tightest rung is refused, and
+    the refusal names the attachment by its composer chip number. A native client
+    should bound its own picks (the web client downscales to 1568 px, PNG stays
+    PNG, others JPEG 0.9, ≤ 8 images) rather than relying on the relay's refit.
+11. **The list stream's queue is 8 deep and drops oldest** (§6.2): a client that
+    stalls while consuming will simply miss intermediate frames. That is safe
+    because frames are full repaints — but only if the client renders the newest
+    frame it has, never a queue it believes is complete.
+12. **Nothing here is versioned per route.** The only version marker is
+    `/healthz`'s `version` (`5`) and the per-op `ProtocolVersion` comments in
+    `types.py:428-512`; additive fields are the compatibility mechanism, and the
+    documented rule is that a client must tolerate their absence.
 
 ---
 
@@ -1145,26 +1164,3 @@ Two client-facing facts that are easy to get wrong:
   `asks_open` is the separate count a badge may use.
 
 ---
-8. **`resume` does not restore the conversation's cwd** (it uses the account
-   home, §4.5).
-9. **Image ingest is best-effort and silent.** `image_blocks` (`server.py:119-186`)
-   drops an entry whose base64 is invalid, whose bytes do not sniff as an image,
-   or whose payload cannot be bounded — and the command still answers `200`.
-   A prompt that carried a bad attachment is indistinguishable from one that did
-   not, so the app should verify its own attachments before sending and should
-   not promise delivery in the receipt copy.
-10. **Prompt images are refit to fit one socket line** (`attach_client.py:323-368`):
-    each image is re-encoded (JPEG at full resolution first, downscaling only if
-    needed) so N images fit *together* under `1 << 20` bytes minus measured
-    overhead; only an image that cannot fit at its tightest rung is refused, and
-    the refusal names the attachment by its composer chip number. A native client
-    should bound its own picks (the web client downscales to 1568 px, PNG stays
-    PNG, others JPEG 0.9, ≤ 8 images) rather than relying on the relay's refit.
-11. **The list stream's queue is 8 deep and drops oldest** (§6.2): a client that
-    stalls while consuming will simply miss intermediate frames. That is safe
-    because frames are full repaints — but only if the client renders the newest
-    frame it has, never a queue it believes is complete.
-12. **Nothing here is versioned per route.** The only version marker is
-    `/healthz`'s `version` (`5`) and the per-op `ProtocolVersion` comments in
-    `types.py:428-512`; additive fields are the compatibility mechanism, and the
-    documented rule is that a client must tolerate their absence.

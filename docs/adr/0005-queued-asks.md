@@ -1,10 +1,10 @@
 # ADR 0005 — Queued asks: the app's side of non-blocking, timeout-bounded asks
 
-- **Status:** Proposed
+- **Status:** Proposed (for implementation)
 - **Date:** 2026-09-30
 - **Deciders:** mobile app maintainers
 - **Depends on:** [ADR 0001 — Framework](0001-framework.md), [ADR 0002 — Connection and auth](0002-connection-and-auth.md)
-- **Supersedes:** the terminal-only ask refusal recorded in this repository — [`docs/architecture.md`](../architecture.md) open question 2 and [`docs/ux/current-relay-audit.md` R10](../ux/current-relay-audit.md) — **for asks only**, and only on a relay that publishes the `asks` field (§1, §6). The approval half of both statements stands unchanged.
+- **Supersedes:** nothing at the document level. This ADR changes the app's own ask surface only. The approval-scoped statements it is read against — [`docs/architecture.md`](../architecture.md) open question 2 and [`docs/ux/current-relay-audit.md` R10](../ux/current-relay-audit.md) — are **not** superseded, stay true as written, and are reconciled in §6 rather than overridden.
 - **Related:** [ADR 0003 — E2E and audit harness](0003-e2e-and-audit-harness.md), [ADR 0004 — CI/CD](0004-ci-cd.md); the cross-repository design note `docs/design/ask-nonblocking.md` (Local Operator repository).
 
 **Provenance of code citations.** Every `file:line` in this document is stated at a
@@ -47,10 +47,14 @@ Three things follow from the single slot, and all three are about to change:
    receipt tells it to expect a stop.
 2. **Nothing survives a timeout.** There is no deadline on the wire and no
    terminal state, so "the user never answered" is not a thing the app can render.
-3. **A terminal-hosted session refuses the phone outright.** The relay
-   deliberately refuses an answer on a `tui` session — the phone "shows the wait
-   and says so" ([`current-relay-audit.md`](../ux/current-relay-audit.md) R10,
-   §6 below).
+3. **The app refuses the phone on a terminal-hosted session.** `terminalOnly` is
+   derived from the session's own `kind` (`src/features/session/pending.ts` on
+   `feat/screens-session`, PR #12), so a `tui` session renders no answer control at
+   all and the reader "shows the wait and says so"
+   ([`current-relay-audit.md`](../ux/current-relay-audit.md) R10). R10 and
+   [`architecture.md`](../architecture.md) open question 2 word that boundary for
+   **approvals**, while the app applies it to every pending kind. §6 says what
+   changes for asks — and what does not.
 
 Local Operator is replacing this with a **queued, timeout-bounded** ask: the tool
 returns immediately, the ask is registered in a durable queue on the computer, the
@@ -200,7 +204,7 @@ together, submitted once; the app does not post per-question.
   injects the relay cookie ([`feature-map.md`](../relay/feature-map.md) §1.1). A
   mutation still presents the hand-set `Cookie` and the correct `Origin` with
   `credentials: 'omit'`, and still accepts no `Set-Cookie`
-  ([`tunnel-edge.md`](../relay/tunnel-edge.md):132-138, ADR 0002 §4). Any new
+  ([`tunnel-edge.md`](../relay/tunnel-edge.md):135-142, ADR 0002 §4). Any new
   queue or answer call **inherits those header rules unchanged**; this ADR adds no
   second request layer.
 - Route neutrality is a test obligation, not an aspiration: the E2 evidence matrix
@@ -235,21 +239,33 @@ this ADR: they need a relay-side service, a credential, a privacy surface, and
 they conflict with the FOSS channel as it stands. That RFC will have to settle
 APNs/FCM vs a self-hosted path, and ADR 0004's F-Droid row is one of its inputs.
 
-### 6. `tui`-hosted sessions are answerable through the queue
+### 6. `tui`-hosted sessions: asks are answerable through the queue
 
-Queued asks on a **terminal-hosted** session are answerable **from the phone**,
-up to a **60-second latency bound**. This supersedes the historical terminal-only
-limit for asks — and it is worth being precise about what supersedes what:
+**This is a new decision for asks, not a supersession.** Queued asks on a
+**terminal-hosted** session are answerable **from the phone**, up to a
+**60-second latency bound**, and the app stops applying its terminal-only rule to
+asks. No approval statement changes, and nothing here overrides a document.
 
-- The limit the app's code carries today is derived from the session's own `kind`:
+- **The thing being changed is a rule in the app's own code**, not a document:
   `terminalOnly: input.sessionKind === "tui"` in
-  `src/features/session/pending.ts` on
-  `feat/screens-session` (a module whose header records the R10 rule verbatim).
-  That is **PR #12-scoped**, not yet a fact on `main`.
-  [`feature-map.md`](../relay/feature-map.md) §5 item 3 already records the
-  boundary as stale on the relay side — the TUI host settles its own prompt from
-  the phone today — so the design note is closing a gap the docs had already
-  marked.
+  `src/features/session/pending.ts` on `feat/screens-session` — a module whose
+  header records R10 verbatim — is derived from the session's `kind` and applies
+  to **every** pending kind. That is **PR #12-scoped**, not yet a fact on `main`.
+- **The documents the rule came from are approvals-worded, and already stale for
+  both kinds.** R10 and `architecture.md` open question 2 read "**approvals**
+  raised by a terminal session cannot be answered from the phone", quoting core
+  `docs/mobile.md`. [`feature-map.md`](../relay/feature-map.md) §5 item 3 already
+  records that boundary as stale on the relay side, because the TUI host settles
+  its own prompts from the phone today — `mobile/tui_handle.py:1212`
+  (`approval_answer`, "settle the host's real `ApprovalPrompt` from another front
+  end") and `:1233` (`ask_answer`, "answer the CURRENT question of a live TUI ask
+  picker from the phone"), both at the pin. So on a session with a **live owner**
+  both kinds are already settlable from the phone; what asks lack today is a queue
+  that lets an answer arriving after the picker settled still land.
+- **What this ADR does not do:** it neither supersedes R10 and open question 2 nor
+  settles their conflict with `feature-map.md` §5 item 3. That reconciliation —
+  which is about **approvals** too — is recorded here and left to a documentation
+  pass, because it depends on a relay-side answer this app cannot give.
 - **The mechanism is named, not assumed.** The session's owner is the TUI process
   that adopted it, and that process reconciles the queue like any other surface:
   it picks up an answer the relay appended under its own lock, on the earliest-
@@ -332,9 +348,10 @@ this prose, are what the design round reviews.
   a deadline the phone cannot evaluate.
 - **Push is now a named gap rather than an open question.** Anyone reading the app
   on a phone will find the asks list, not a notification; the copy says so.
-- **The terminal-only refusal narrows from "asks and approvals" to "approvals, and
-  asks with no live owner".** The app must render the refusal sentence the relay
-  gives it either way, so the code path exists in both worlds.
+- **The app's terminal-only rule now has a per-kind answer.** `pending.ts` applies
+  it to every pending kind today; under this ADR it applies to approvals, and an
+  ask is refused only when no live owner can receive the answer (§6). R10 and
+  `architecture.md` open question 2 stay approvals-worded and unamended.
 - **The app adds no dependency for any of this.** No push SDK, no storage engine —
   the whole feature is a projection, a list, a form and three ops.
 
