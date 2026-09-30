@@ -1,0 +1,15 @@
+# PROBE (scratch branch only, never in the pull request). A faithful model of
+# ci.yml called as a reusable workflow: the same group expression the real
+# ci.yml now carries, and a job that prints the group GitHub actually rendered.
+name: Probe callee
+on:
+  workflow_call:
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: false
+jobs:
+  show:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - run: echo "CALLEE-GROUP=${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}"

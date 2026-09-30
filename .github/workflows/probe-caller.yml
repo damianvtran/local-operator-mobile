@@ -1,0 +1,16 @@
+# PROBE (scratch branch only). The same shape as release.yml: a top-level
+# workflow with its own group that calls the reusable one on the same ref.
+name: Probe caller
+on:
+  workflow_dispatch:
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  show:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - run: echo "CALLER-GROUP=${{ github.workflow }}-${{ github.ref }}"
+  callee:
+    uses: ./.github/workflows/probe-callee.yml
