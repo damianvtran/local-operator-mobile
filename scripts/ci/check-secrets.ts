@@ -97,9 +97,15 @@ if (missing.length > 0 && mode === "release") {
 if (missing.length > 0) {
 	// Expected on a fork PR, and on this repository until the first signing
 	// material is configured. Loud, so it is never mistaken for a passing upload.
+	//
+	// The wording matters as much as the exit code: the jobs that produce signed
+	// artefacts are SKIPPED when this reports a gap (they gate on this step's
+	// `all_present`), so a run without credentials has no green tick claiming a
+	// signature — see docs/ci.md, "Secrets".
 	console.log(
-		`::warning::${summary}. The unsigned path still ran; nothing was signed ` +
-			"and nothing was uploaded. A tagged release will FAIL rather than skip.",
+		`::warning::${summary}. The signing jobs are SKIPPED for this push, so ` +
+			"nothing was signed and nothing was uploaded. A tagged release FAILS " +
+			"rather than skipping.",
 	);
 }
 

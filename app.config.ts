@@ -99,6 +99,16 @@ const config: ExpoConfig = {
 		// `CFBundleVersion`. Omitted when there is no build number, so a local
 		// prebuild keeps whatever the template generates.
 		...(buildNumber > 0 ? { buildNumber: String(buildNumber) } : {}),
+		// The Apple team automatic signing resolves against. Omitted when unset, so a
+		// contributor without a team id still prebuilds and Xcode falls back to the
+		// local default. CI sets `APPLE_TEAM_ID` from the repository secret and
+		// `ios.yml` reads this field back out of the resolved config and fails when
+		// the two disagree — the WIRING is the part that was missing (review M4: the
+		// variable sat in a step's environment with no reader anywhere, which is the
+		// same defect class as the version wiring).
+		...(process.env.APPLE_TEAM_ID
+			? { appleTeamId: process.env.APPLE_TEAM_ID }
+			: {}),
 		// iOS 26 renders icons through Liquid Glass; the three appearances are
 		// authored assets (brand-kit § 6.4). The tinted variant is greyscale by
 		// definition — a coloured one is wrong, not merely worse.

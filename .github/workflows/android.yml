@@ -200,12 +200,45 @@ jobs:
             --built "$RUNNER_TEMP/android-built" \
             --regenerated android
 
+  credentials:
+    # ONE POLICY, BOTH PLATFORMS (review M3, QA Q2). Without signing material
+    # there is no signed artefact to produce, so the job that would produce it is
+    # SKIPPED — visible in the job list as a skip, never a green tick on a job that
+    # signed nothing — and this job's own annotation says why. `--mode internal`
+    # warns rather than failing, which is what makes the skip the caller's
+    # decision here and a hard failure inside a release run.
+    name: Are the signing credentials configured?
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      all_present: ${{ steps.check.outputs.all_present }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Check the signing and Play credentials, by name
+        id: check
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          PLAY_SERVICE_ACCOUNT_JSON_BASE64: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON_BASE64 }}
+        run: |
+          node scripts/ci/check-secrets.ts --mode internal --need \
+            ANDROID_KEYSTORE_BASE64,ANDROID_KEYSTORE_PASSWORD,ANDROID_KEY_ALIAS,ANDROID_KEY_PASSWORD,PLAY_SERVICE_ACCOUNT_JSON_BASE64
+
   internal:
     name: Android internal release (signed AAB + APK, Play internal)
-    needs: [changes, android]
+    needs: [changes, android, credentials]
     # `main` only. A pull request never signs — see the header — and a tag is
     # release.yml's.
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    #
+    # AND THE CREDENTIALS MUST EXIST, or the job does not run at all: a job that
+    # skipped its signing steps and concluded `success` would claim an artefact it
+    # never built (QA Q2). `needs.credentials.outputs.all_present` is the single
+    # decision, and the same shape gates the iOS job, so the two platforms cannot
+    # disagree about what "no credentials" means on the same push.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.credentials.outputs.all_present == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 90
     # The environment is where the signing material and the Play service account
@@ -216,6 +249,9 @@ jobs:
     environment: release
     steps:
       - uses: actions/checkout@v7
+        with:
+          # The build number is the commit count of this ref.
+          fetch-depth: 0
 
       - uses: pnpm/action-setup@v6
 
@@ -240,14 +276,19 @@ jobs:
       - name: Generate the native project
         run: pnpm exec expo prebuild --platform android --no-install
 
-      - name: Is the Play service account configured?
-        id: play
+      - name: Assert the signing credentials are present
+        # Belt and braces: the job is only reached when the `credentials` job found
+        # all of them, and this step fails hard rather than warning, so a future
+        # edit that loosens the gate cannot turn into a silently unsigned build.
         env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
           PLAY_SERVICE_ACCOUNT_JSON_BASE64: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON_BASE64 }}
-        # `internal` mode warns rather than fails: a signed build of `main` is
-        # useful on its own, and the store upload is the part that needs the
-        # credential. A tagged release uses `--mode release`, which fails.
-        run: node scripts/ci/check-secrets.ts --mode internal --need PLAY_SERVICE_ACCOUNT_JSON_BASE64
+        run: |
+          node scripts/ci/check-secrets.ts --mode release --need \
+            ANDROID_KEYSTORE_BASE64,ANDROID_KEYSTORE_PASSWORD,ANDROID_KEY_ALIAS,ANDROID_KEY_PASSWORD,PLAY_SERVICE_ACCOUNT_JSON_BASE64
 
       - name: Decode the release keystore
         env:
@@ -309,7 +350,6 @@ jobs:
           retention-days: 30
 
       - name: Decode the Play service account
-        if: steps.play.outputs.all_present == 'true'
         env:
           PLAY_SERVICE_ACCOUNT_JSON_BASE64: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON_BASE64 }}
         run: |
@@ -318,7 +358,6 @@ jobs:
           printf '%s' "$PLAY_SERVICE_ACCOUNT_JSON_BASE64" | base64 --decode > "$RUNNER_TEMP/play-service-account.json"
 
       - name: Upload to the Play internal track (fastlane)
-        if: steps.play.outputs.all_present == 'true'
         env:
           SUPPLY_JSON_KEY: ${{ runner.temp }}/play-service-account.json
           # The AAB, not the APK: Play requires the app bundle for a release, and
@@ -333,14 +372,16 @@ jobs:
         if: always()
         run: rm -f "$RUNNER_TEMP/android-release.keystore" "$RUNNER_TEMP/play-service-account.json"
 
-      - name: Say what was and was not uploaded
+      - name: Say what was built, checked and uploaded
         if: always()
         run: |
           {
             echo "## Android internal release"
             echo
-            echo "- AAB + APK: ${{ steps.signing.outcome == 'success' && 'built, and the release certificate is verified not to be the debug key' || '**NOT verified** — the signing assertion did not pass, so nothing here is claimed to be signed' }}"
-            echo "- Play internal track: ${{ steps.play.outputs.all_present == 'true' && 'uploaded' || '**NOT uploaded** — PLAY_SERVICE_ACCOUNT_JSON_BASE64 is not configured' }}"
+            echo "This job runs only when every signing credential is configured"
+            echo "(its \`credentials\` job decides), so there is no branch here in which"
+            echo "it silently builds an unsigned artefact or skips an upload."
             echo
-            echo "A tagged release FAILS rather than skipping this (release.yml)."
+            echo "- AAB + APK: ${{ steps.signing.outcome == 'success' && 'built, and the release certificate is verified not to be the debug key' || '**NOT verified** — the signing assertion did not pass' }}"
+            echo "- Play internal track: uploaded by the step above"
           } >> "$GITHUB_STEP_SUMMARY"

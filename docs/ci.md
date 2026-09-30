@@ -11,10 +11,10 @@ view — what runs, what it needs, and what to do when it goes red.
 
 | Workflow | Trigger | Jobs | What a green run actually proves |
 |---|---|---|---|
-| `ci.yml` | `pull_request`, push to `main`, weekly, `workflow_dispatch`, `workflow_call` | `changes`, `checks`, `design-kit` | The JavaScript typechecks (both programs), lints, formats and its unit tests pass; the web target bundles. `design-kit` costs a macOS runner plus a `brew install`, so it is path-gated by the same `changes` pattern the native jobs use — it runs on a pull request only when `design/**`, `docs/design/**`, `src/ui/**`, `scripts/**` or the configs changed, and always on `main`, on the weekly sweep and inside a release gate. Green there means the generated styling layer matches `design/tokens/tokens.json`, the contrast contract holds, and every committed asset and frame re-renders (bytes first, pixels second, with the comparison that passed printed). |
+| `ci.yml` | `pull_request`, push to `main`, weekly, `workflow_dispatch`, `workflow_call` | `changes`, `checks`, `design-kit` | The JavaScript typechecks (both programs), lints, formats and its unit tests pass; the web target bundles. `design-kit` costs a macOS runner plus a `brew install`, so it is path-gated by the same `changes` pattern the native jobs use — it runs on a pull request only when `design/**`, `docs/design/**`, `src/ui/**`, `scripts/**` or the configs changed, and always on `main`, on the weekly sweep and inside a release gate. Green there means the generated styling layer matches `design/tokens/tokens.json`, the contrast contract holds, and every committed asset re-renders (bytes first, pixels second, with the comparison that passed printed). **The preview-sheet step reports `NOT VERIFIED` on a clean runner** — it renders with the shipped typefaces (Figtree, JetBrains Mono), which live in a sibling checkout a runner does not have — and that step is green only because it downgrades its claim to a warning rather than failing. Say "design-kit passed" with that caveat, or run the gate locally where the faces exist. |
 | `android.yml` | `pull_request`, push to `main`, `workflow_dispatch` | `changes`, `android`, `internal` (main only) | `expo prebuild` produces the Android project from the config, Gradle assembles a debug APK, **the APK's manifest carries the version the ref derives** (`versionName`/`versionCode` read out of the built APK and asserted), and the generated project re-generates identically (byte for byte, except that Xcode project files are compared with their object identifiers normalized — see below). On `main`, additionally an AAB/APK whose release certificate is verified **not** to be the debug key, and, when configured, a Play **internal** track upload. |
 | `ios.yml` | `pull_request`, push to `main`, `workflow_dispatch` | `changes`, `ios`, `internal` (main only) | The app builds for the iOS 26 SDK with Xcode 26 on `macos-26`, **launches on a simulator**, and the captured frame **rendered something** — it differs from a pre-install capture of the home screen, and the launch log carries no JavaScript fatal (the check that caught a real crash on a head where the app had no routes). The settle delta between two captures two seconds apart is **reported, not asserted**, in pixel-channel bytes: a byte-identity gate was tried and removed because a working UI with a caret moves (measured, run 36727261140). The version in the built app's `Info.plist` is asserted against the one the ref derived, and the native project re-generates identically. Content is not judged here — a wrong screen renders just as green. On `main`, additionally a signed IPA and, when configured, a TestFlight upload. |
-| `e2e.yml` | `pull_request`, push to `main`, nightly, `workflow_dispatch` | `harness`, `mock-relay-contract`, `web-audit`, `maestro-android` | **The harness was present and its suites ran** — the detector job FAILS when `tools/` is absent rather than skipping, so a green `e2e` cannot mean "the thing did not run". Then: the mock relay answers its own contract (229 assertions, seconds); the web export is driven in headless Chrome to produce a frame per audit cell, every frame is checked against the design kit's rubric, and the frames and report are uploaded; the instrument's own canary proves the audit can still fail. Maestro runs the flow set on an Android 16 emulator — nightly and on demand only, because it is the slowest job here and the harness's own note asks for it that way; it is the one job allowed to be absent from a green PR run. Every command comes from `docs/e2e/ci-notes.md` and the tools' usage blocks. |
+| `e2e.yml` | `pull_request`, push to `main`, nightly, `workflow_dispatch` | `harness`, `mock-relay-contract`, `web-audit`, `maestro-android` | **The harness was present and its suites ran** — the `harness` job FAILS when it is absent rather than skipping, so a green `e2e` cannot mean "the thing did not run". Then: `pnpm e2e:relay` (which prints its own assertion count — quote that line, not a number written here), `pnpm e2e:divergences`, `pnpm e2e:typecheck` and `pnpm e2e:docs` (the only typecheck `tools/**` and `e2e/**` get — `pnpm typecheck` covers the app and `scripts/**` only), the web export driven in headless Chrome into a frame per audit cell with every frame checked against the design kit's rubric, and `pnpm e2e:canary`. **Every command goes through the harness's own package scripts**, never a file path, so a rename inside the harness cannot silently disable this workflow. Maestro runs the flow set on an Android 16 emulator — nightly and on demand only, because it is the slowest job here and the harness's own note asks for it that way; it is the one job allowed to be absent from a green PR run. |
 | `release.yml` | tag `v*` (or `workflow_dispatch` with a tag and `dry_run`) | `version`, `secrets`, `gate` (= `ci.yml`), `android`, `ios`, `publish` | The same gate a pull request runs, both platforms built and signed, a GitHub Release carrying the APK/AAB/IPA, and uploads to the Play internal track and TestFlight. |
 
 Native jobs are **skipped, not failed**, on a change that touches only
@@ -101,6 +101,28 @@ until then the release path is protected by the credential check and the tag,
 not by an approval. Verified 2026-09-30: `gh api
 repos/damianvtran/local-operator-mobile/environments` returns **0**.
 
+### What a missing credential means, per platform
+
+One policy, both platforms, decided by a `credentials` job in each workflow:
+
+- **`android.yml`** — without `ANDROID_KEYSTORE_*` and
+  `PLAY_SERVICE_ACCOUNT_JSON_BASE64`, the `internal` job is **skipped**, and the
+  `credentials` job's warning annotation names the missing variables. Nothing is
+  decoded and nothing is built, so the unsigned-path failure this replaces (a
+  zero-byte keystore decoded from an empty secret, which failed the job on every
+  push to `main`) cannot happen.
+- **`ios.yml`** — without the `APPLE_*` variables, the `internal` job is
+  **skipped** the same way, with the same annotation.
+- **A tagged release FAILS rather than skipping** either of them: `release.yml`'s
+  credential check runs first and names every missing variable, so the release
+  path is a hard failure and the pull-request/main paths are a visible skip.
+
+Why a skip rather than a hard failure on `main`: an internal build without signing
+material is impossible, and reding `main` on every push until someone configures a
+keystore is a permanently red gate — the kind people learn to ignore, and the exact
+failure mode the iOS frame check was repaired for. A skipped job is visible in the
+job list, the annotation says why, and a release is still refused outright.
+
 ### What a green run proves, in one place
 
 The pipeline is the only place the native apps are built (ADR 0004), which makes
@@ -116,9 +138,10 @@ document is the per-job answer; these are the limits of it.
 - `e2e` green is the one that used to be able to mean nothing at all. It cannot
   now: the detector fails when `tools/` is absent.
 - A `success` on `android.yml`'s or `ios.yml`'s `internal` job means the signed
-  artefact was built **and its certificate checked**, and any store upload that is
-  missing a secret is named as **NOT uploaded** in that job's summary rather than
-  left implied.
+  artefact was built **and its certificate checked**. It cannot mean anything else,
+  because **the job does not run at all without its credentials** (the policy
+  below), so there is no branch in which it signs nothing and still reports
+  success.
 
 ### Fork pull requests
 
@@ -225,8 +248,24 @@ it to the job:
 | Value | Rule |
 |---|---|
 | version (JS / `app.json` / Android `versionName` / iOS `CFBundleShortVersionString`) | `vX.Y.Z` without the `v` when the ref is a tag; `0.0.0` otherwise |
-| Android `versionCode`, iOS `CFBundleVersion` | `github.run_number` — monotonic across every build of the repository, never reused |
+| Android `versionCode`, iOS `CFBundleVersion`, internal builds | **the commit count of the ref being built** (`git rev-list --count HEAD`) — monotonic as the branch grows, identical for every workflow that builds the same commit, and stored nowhere |
+| Android `versionCode`, iOS `CFBundleVersion`, releases | **`release/build-number.txt`**, read as-is, and the release FAILS unless it is strictly greater than both the value at the previous tag and this commit's count |
 | Release notes | generated from the conventional commits since the previous tag (`scripts/ci/release-notes.ts`) |
+
+**Why the build number is not `github.run_number`** (this was a real defect, fixed
+before the first release): that counter is per **workflow**, not per repository.
+Measured on 2026-09-30, `android.yml`, `ios.yml`, `ci.yml` and `e2e.yml` were all
+at run number 30 while `release.yml` sat at 17 — so a tag cut that day would have
+claimed `versionCode=18` against a 30 already uploaded to the Play internal track
+from `main`, and Play rejects a lower one. The commit count cannot do that: it is
+one number for the whole repository, and every workflow building the same commit
+derives the same value from it. The release's explicit counter is what clears the
+internal builds *and* the previous release, and the failure names the minimum it
+needs (`release/build-number.txt` to `<minimum>` or higher, in the release pull
+request). A re-run of an internal build of the same commit repeats its number —
+Play rejects a duplicate upload — and the remedy is a new commit, or the counter
+bump the release message asks for. That is deliberate: a number that moves while
+the code does not is a number nobody can trace back to a build.
 
 The non-tag version is `0.0.0` rather than the ADR's written `0.0.0-dev.<run>`
 because the same string reaches `CFBundleShortVersionString`, and Apple rejects a
@@ -271,7 +310,15 @@ environment `bundleRelease` fails loudly instead of signing with the debug key.
 
 1. **Confirm `main` is green.** The tag builds the commit you tag; a red `main`
    means the release build has already failed once.
-2. **Tag and push it.**
+2. **Check what the release would claim.** The build number comes from
+   `release/build-number.txt`, and the release refuses to run when it would not
+   outrank the previous release and the internal builds already published from
+   `main`. The version job prints all four numbers in its summary (this release's,
+   an internal build of the same commit, the previous release's, and the floor),
+   and a `workflow_dispatch` with `dry_run: true` prints them without building
+   anything. Raise the counter in a pull request if the run says to.
+
+3. **Tag and push it.**
 
    ```sh
    git switch main && git pull --ff-only
@@ -281,16 +328,16 @@ environment `bundleRelease` fails loudly instead of signing with the debug key.
 
    A tag is the whole instruction. There is no version bump to land first and no
    release branch to cut.
-3. **Watch `release.yml`.** In order: the version is derived, the credential
+4. **Watch `release.yml`.** In order: the version is derived, the credential
    check passes (it names any missing secret and stops), the gate runs, both
    platforms build and sign, the GitHub Release is created with the APK, AAB and
    IPA attached, and only then do the Play and TestFlight uploads run. A release
    that dies half-way still leaves the Release — the artefact a user can install.
-4. **Verify**, in this order: the Release page lists three artefacts; the run
+5. **Verify**, in this order: the Release page lists three artefacts; the run
    summary names the version and build number; the Play internal track shows the
    new `versionCode`; the build appears in App Store Connect. TestFlight
    processing is asynchronous — the job does not wait for it.
-5. **Install the APK** from the Release on an Android device and open it. The
+6. **Install the APK** from the Release on an Android device and open it. The
    artefacts being present is not the same claim as the app working.
 
 **A dry run.** `workflow_dispatch` with a tag and `dry_run: true` runs the version
@@ -319,7 +366,8 @@ What that costs, concretely, and how each spend is gated:
 | `android` (prebuild, debug APK, determinism) | `ubuntu-latest` | the `changes` job: anything that is not `docs/**` or `*.md` |
 | `ios` (prebuild, pods, simulator build, launch, frame) | `macos-26` | the same `changes` job |
 | `internal` (signed AAB/IPA, store uploads) | both | push to `main` only |
-| `web-audit`, Maestro | `macos-26`, `ubuntu-latest` (KVM) | every PR for the audit; nightly/on-demand for Maestro |
+| `web-audit` (frames, rubric, canary) | `ubuntu-latest` | every PR, and it costs no macOS minutes: the harness's Chrome discovery has Linux candidates, which is why it moved off `macos-26` |
+| Maestro flows | `ubuntu-latest` with KVM | nightly and on demand only |
 
 The two macOS spends that used to happen on every pull request — the design kit's
 `brew install` and the iOS build — are now gated by the design and native
@@ -346,7 +394,7 @@ afternoon.
 ## Things this pipeline deliberately does not do
 
 - **It does not run the relay smoke script against a real relay.**
-  `scripts/relay-smoke.mjs` needs a running `lop mobile serve` with a password,
+  `scripts/relay-smoke.ts` needs a running `lop mobile serve` with a password,
   which is a developer's own machine, not a runner. CI's end-to-end layer runs
   against the **mock relay** (ADR 0003, layer 3).
 - **It does not run Maestro on an iOS simulator yet.** The harness documents the invocation and the flows are platform-parameterised, so the wiring is small — but the emulator job should be green for a while before a second copy of it exists on macOS minutes. Follow-up, named here so it is not a silent gap.

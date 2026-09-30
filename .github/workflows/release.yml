@@ -73,7 +73,7 @@ jobs:
           # this one, so the tags have to be here.
           fetch-depth: 0
 
-      - name: Derive the version, versionCode and CFBundleVersion
+      - name: Derive the version and the release build number
         id: derive
         env:
           DISPATCH_TAG: ${{ inputs.tag }}
@@ -82,23 +82,36 @@ jobs:
           if [ -n "${DISPATCH_TAG:-}" ]; then
             # A hand-run release names its tag, because `github.ref_name` on a
             # `workflow_dispatch` is the branch the run was started from.
-            node scripts/ci/version.ts --write --ref-type tag --ref-name "$DISPATCH_TAG"
             tag="$DISPATCH_TAG"
           else
-            node scripts/ci/version.ts --write
             tag="${{ github.ref_name }}"
           fi
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
-          # `$tag`, not `github.ref_name`: on the dispatch path the release tag is
-          # the input, and `github.ref_name` is the BRANCH the run was started on,
-          # so the summary used to print a version derived from the wrong ref.
+
+          # One script decides, and it FAILS (naming the minimum it needs) when the
+          # counter in release/build-number.txt would not outrank both the previous
+          # release and the internal builds already published from this commit's
+          # history. `--write` exports the two variables the app config reads.
+          node scripts/ci/version.ts --write --ref-type tag --ref-name "$tag"
+
+          # The numbers behind the derivation, printed rather than asserted, so a
+          # dry run of this path — which has no store to compare against — shows
+          # what a tag would claim next to what an internal build of the same
+          # commit claims. `github.run_number` is NOT one of them: it is per
+          # workflow, and the release would otherwise claim a number lower than
+          # something main has already uploaded.
+          values=$(node scripts/ci/version.ts --ref-type tag --ref-name "$tag")
+          field() { printf '%s\n' "$values" | sed -n "s/^$1=//p"; }
           {
             echo "## Release $tag"
             echo
             echo "| | |"
             echo "|---|---|"
-            echo "| version | \`$(node scripts/ci/version.ts --ref-type tag --ref-name "$tag" --run-number "${{ github.run_number }}" | head -1 | cut -d= -f2)\` |"
-            echo "| versionCode / CFBundleVersion | \`${{ github.run_number }}\` |"
+            echo "| version | \`$(field version)\` |"
+            echo "| release build number (versionCode / CFBundleVersion) | \`$(field release_build_number)\` |"
+            echo "| an internal build of this commit claims | \`$(field internal_build_number)\` |"
+            echo "| the previous release claimed | \`$(field previous_release_build_number)\` |"
+            echo "| the floor this release had to beat | \`$(field minimum_release_build_number)\` |"
           } >> "$GITHUB_STEP_SUMMARY"
 
   credentials:
@@ -146,6 +159,11 @@ jobs:
     environment: release
     steps:
       - uses: actions/checkout@v7
+        with:
+          # The build number is the commit count of the ref being built, so a
+          # shallow clone would derive a number that is too low — the exact
+          # failure the counter exists to prevent.
+          fetch-depth: 0
 
       - uses: pnpm/action-setup@v6
 
@@ -165,7 +183,13 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Derive the version from the tag
-        run: node scripts/ci/version.ts --write --ref-type tag --ref-name "${{ needs.version.outputs.tag }}"
+        # The tag supplies the version; `release/build-number.txt` supplies the
+        # build number, and the script refuses a tag whose number would not
+        # outrank both the previous release and this commit's count. The tag arrives
+        # through `env:` like every other non-literal in a shell body (review m3).
+        env:
+          TAG: ${{ needs.version.outputs.tag }}
+        run: node scripts/ci/version.ts --write --ref-type tag --ref-name "$TAG"
 
       - name: Generate the native project
         run: pnpm exec expo prebuild --platform android --clean --no-install
@@ -240,6 +264,11 @@ jobs:
     environment: release
     steps:
       - uses: actions/checkout@v7
+        with:
+          # The build number is the commit count of the ref being built, so a
+          # shallow clone would derive a number that is too low — the exact
+          # failure the counter exists to prevent.
+          fetch-depth: 0
 
       - uses: pnpm/action-setup@v6
 
@@ -252,9 +281,14 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Derive the version from the tag
+        # The tag supplies the version; `release/build-number.txt` supplies the
+        # build number, and the script refuses a tag whose number would not
+        # outrank both the previous release and this commit's count. The tag arrives
+        # through `env:` like every other non-literal in a shell body (review m3).
         env:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-        run: node scripts/ci/version.ts --write --ref-type tag --ref-name "${{ needs.version.outputs.tag }}"
+          TAG: ${{ needs.version.outputs.tag }}
+        run: node scripts/ci/version.ts --write --ref-type tag --ref-name "$TAG"
 
       - name: Generate the native project
         env:
@@ -361,29 +395,55 @@ jobs:
           path: artifacts
 
       - name: Generate the release notes from the conventional commits
-        run: node scripts/ci/release-notes.ts --to "${{ needs.version.outputs.tag }}" --out notes.md
+        # Through `env:`, like everything else that is not a literal: a tag is
+        # free text on the dispatch path, and a value interpolated straight into a
+        # shell body is a quoting question nobody wants to re-derive every time
+        # (review m3).
+        env:
+          TAG: ${{ needs.version.outputs.tag }}
+        run: node scripts/ci/release-notes.ts --to "$TAG" --out notes.md
+
+      - name: Stage the release assets under their published names
+        # IN PLACE, inside `artifacts/`. The first version of this step renamed the
+        # downloaded files into the workspace root with a bare `mv`, which emptied
+        # `artifacts/` while the store steps below were still handed the pre-rename
+        # paths — so Play and TestFlight would have failed on EVERY tagged release,
+        # after the GitHub Release had already been created. Reproduced against a
+        # faithful `artifacts/` tree before fixing (QA Q1).
+        #
+        # The product is "Local Operator"; the repository and the bundle id are
+        # internal identifiers and stay as they are. So do the file names a person
+        # downloads: `app-release.apk` tells a reader nothing about which app or
+        # which version it is.
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          mv artifacts/app-release.aab "artifacts/local-operator-${VERSION}.aab"
+          mv artifacts/app-release.apk "artifacts/local-operator-${VERSION}.apk"
+          ipa=$(ls artifacts/*.ipa)
+          mv "$ipa" "artifacts/local-operator-${VERSION}.ipa"
+          for asset in aab apk ipa; do
+            test -s "artifacts/local-operator-${VERSION}.${asset}" || {
+              echo "::error::artifacts/local-operator-${VERSION}.${asset} is missing after staging"
+              exit 1
+            }
+          done
+          ls -l artifacts/
 
       - name: Create the GitHub Release with the three artefacts
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ needs.version.outputs.tag }}
+          VERSION: ${{ needs.version.outputs.version }}
         run: |
           set -euo pipefail
-          # The product is "Local Operator"; the repository and the bundle id are
-          # internal identifiers and stay as they are. So do the names a person
-          # sees on this page: the title of the release, and the files they
-          # download from it — `app-release.apk` tells a reader nothing about
-          # which app or which version it is.
-          version="${{ needs.version.outputs.version }}"
-          keep() { mv "$1" "$2"; }
-          keep "$(ls artifacts/app-release.apk)" "local-operator-${version}.apk"
-          keep "$(ls artifacts/app-release.aab)" "local-operator-${version}.aab"
-          keep "$(ls artifacts/*.ipa)" "local-operator-${version}.ipa"
-          gh release create "${{ needs.version.outputs.tag }}" \
-            --title "Local Operator ${version}" \
+          gh release create "$TAG" \
+            --title "Local Operator $VERSION" \
             --notes-file notes.md \
-            "local-operator-${version}.apk" \
-            "local-operator-${version}.aab" \
-            "local-operator-${version}.ipa"
+            "artifacts/local-operator-${VERSION}.apk" \
+            "artifacts/local-operator-${VERSION}.aab" \
+            "artifacts/local-operator-${VERSION}.ipa"
 
       - name: Decode the Play service account
         env:
@@ -404,7 +464,9 @@ jobs:
       - name: Upload the AAB to the Play internal track (fastlane)
         env:
           SUPPLY_JSON_KEY: ${{ runner.temp }}/play-service-account.json
-          LO_ANDROID_AAB: ${{ github.workspace }}/artifacts/app-release.aab
+          # The SAME path the staging step produced, which is the whole of QA Q1:
+          # the store steps used to be handed the pre-rename location.
+          LO_ANDROID_AAB: ${{ github.workspace }}/artifacts/local-operator-${{ needs.version.outputs.version }}.aab
         run: fastlane android internal
 
       - name: Upload the IPA to TestFlight (fastlane)
@@ -412,6 +474,8 @@ jobs:
           APPLE_ASC_KEY_ID: ${{ secrets.APPLE_ASC_KEY_ID }}
           APPLE_ASC_ISSUER_ID: ${{ secrets.APPLE_ASC_ISSUER_ID }}
           APPLE_ASC_PRIVATE_KEY_PATH: ${{ runner.temp }}/asc-api-key.p8
+          # The directory, not the file: the lane globs `*.ipa` in it, and after the
+          # staging step that directory holds `local-operator-<version>.ipa`.
           LO_IOS_IPA_DIR: ${{ github.workspace }}/artifacts
         run: fastlane ios testflight
 
@@ -421,15 +485,20 @@ jobs:
 
       - name: Release summary
         if: always()
+        env:
+          TAG: ${{ needs.version.outputs.tag }}
+          VERSION: ${{ needs.version.outputs.version }}
+          BUILD_NUMBER: ${{ needs.version.outputs.version_code }}
+          REPOSITORY: ${{ github.repository }}
         run: |
           {
-            echo "## ${{ needs.version.outputs.tag }}"
+            echo "## $TAG"
             echo
             echo "| | |"
             echo "|---|---|"
-            echo "| version | \`${{ needs.version.outputs.version }}\` |"
-            echo "| versionCode / CFBundleVersion | \`${{ needs.version.outputs.version_code }}\` |"
-            echo "| GitHub Release | https://github.com/${{ github.repository }}/releases/tag/${{ needs.version.outputs.tag }} |"
+            echo "| version | \`$VERSION\` |"
+            echo "| release build number (versionCode / CFBundleVersion) | \`$BUILD_NUMBER\` |"
+            echo "| GitHub Release | https://github.com/$REPOSITORY/releases/tag/$TAG |"
             echo
             echo "Attached: signed APK, signed AAB, IPA. Uploaded: Play internal track, TestFlight."
           } >> "$GITHUB_STEP_SUMMARY"

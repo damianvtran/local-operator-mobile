@@ -277,21 +277,31 @@ jobs:
           # differing pair before pushing.
           differing=$( { cmp -l "$RUNNER_TEMP/frame-a.bmp" "$RUNNER_TEMP/frame-b.bmp" || true; } | head -200000 | wc -l | tr -d ' ')
           pct=$(awk -v d="$differing" -v t="$total" 'BEGIN { printf "%.2f", (d / t) * 100 }')
-          echo "settle: $differing of $total channel bytes differ between t+5s and t+7s (${pct}%, capped at 200000)"
+          echo "settle: $differing of $total bytes of the decoded frame differ between t+5s and t+7s (${pct}%, capped at 200000)"
           {
             echo
             echo "| iOS frame | value |"
             echo "|---|---|"
             echo "| differs from the pre-install home screen | yes (asserted) |"
             echo "| javascript fatals in the launch log | none (asserted) |"
-            echo "| settle delta, t+5s vs t+7s | ${pct}% of channel bytes (reported, not asserted) |"
+            echo "| settle delta, t+5s vs t+7s | ${pct}% of the decoded frame's bytes, header included (reported, not asserted) |"
           } >> "$GITHUB_STEP_SUMMARY"
 
           # The one content signal available without the harness: a JS bundle that
           # failed to load leaves a fatal in the simulator log while still painting
           # a red error screen, which would pass the baseline comparison above.
-          if xcrun simctl spawn "$udid" log show --last 60s --style compact 2>/dev/null \
-            | grep -E 'Unhandled JS Exception|RCTFatal' > "$RUNNER_TEMP/js-fatal.txt"; then
+          #
+          # THE READ HAS TO SUCCEED BEFORE ITS CONTENTS MEAN ANYTHING. This used to be
+          # a single pipeline whose output was the `if` condition, so a `log show`
+          # that failed made the grep find nothing and the step pass: fatal present
+          # plus rc=1 read as "no fatal" (review Q5, measured). So the log is read to
+          # a file first, with its status checked, and only then grepped.
+          if ! xcrun simctl spawn "$udid" log show --last 60s --style compact > "$RUNNER_TEMP/launch.log" 2> "$RUNNER_TEMP/launch.log.err"; then
+            echo "::error::could not read the simulator's launch log, so 'no JavaScript fatal' cannot be claimed either way:"
+            cat "$RUNNER_TEMP/launch.log.err"
+            exit 1
+          fi
+          if grep -E 'Unhandled JS Exception|RCTFatal' "$RUNNER_TEMP/launch.log" > "$RUNNER_TEMP/js-fatal.txt"; then
             echo "::error::the app logged a JavaScript fatal while launching, so the frame it painted is an error screen:"
             cat "$RUNNER_TEMP/js-fatal.txt"
             exit 1
@@ -318,12 +328,44 @@ jobs:
             --built "$RUNNER_TEMP/ios-built" \
             --regenerated ios
 
+  credentials:
+    # ONE POLICY, BOTH PLATFORMS (review M3, QA Q2). Without Apple credentials
+    # there is no signed IPA and no TestFlight upload, so the job that would
+    # produce them is SKIPPED — visible in the job list as a skip, never a green
+    # tick on a job that signed nothing — and this job's annotation says why.
+    # `--mode internal` warns rather than failing, which is what makes the skip the
+    # caller's decision here and a hard failure inside a release run.
+    name: Are the Apple credentials configured?
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      all_present: ${{ steps.check.outputs.all_present }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Check the signing and upload credentials, by name
+        id: check
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_ASC_KEY_ID: ${{ secrets.APPLE_ASC_KEY_ID }}
+          APPLE_ASC_ISSUER_ID: ${{ secrets.APPLE_ASC_ISSUER_ID }}
+          APPLE_ASC_PRIVATE_KEY_BASE64: ${{ secrets.APPLE_ASC_PRIVATE_KEY_BASE64 }}
+        run: |
+          node scripts/ci/check-secrets.ts --mode internal --need \
+            APPLE_TEAM_ID,APPLE_ASC_KEY_ID,APPLE_ASC_ISSUER_ID,APPLE_ASC_PRIVATE_KEY_BASE64
+
   internal:
     name: iOS internal release (signed IPA, TestFlight when configured)
-    needs: [changes, ios]
+    needs: [changes, ios, credentials]
     # Only a push to `main`. Never a pull request, never a tag (release.yml owns
     # those) — see the header for why the credentials are scoped to this job.
-    if: needs.changes.outputs.native == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main'
+    #
+    # AND THE CREDENTIALS MUST EXIST, or the job does not run at all: every step
+    # below signs or uploads, and a job that skipped them while concluding
+    # `success` would claim an artefact it never built (QA Q2). The same shape gates
+    # the Android job, so the two platforms cannot disagree about what "no
+    # credentials" means on the same push.
+    if: needs.changes.outputs.native == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.credentials.outputs.all_present == 'true'
     runs-on: macos-26
     timeout-minutes: 90
     # Where the Apple credentials live, and where required reviewers can be
@@ -333,6 +375,9 @@ jobs:
     environment: release
     steps:
       - uses: actions/checkout@v7
+        with:
+          # The build number is the commit count of this ref.
+          fetch-depth: 0
 
       - uses: pnpm/action-setup@v6
 
@@ -350,32 +395,49 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Derive the version from the ref
-        # On `main` this is the placeholder version with a run-number build
+        # On `main` this is the placeholder version with a commit-count build
         # number: both stores compare the build number, and the placeholder is
         # what a non-release build is allowed to be. See docs/ci.md.
         run: node scripts/ci/version.ts --write
 
-      - name: Is the iOS signing material configured?
-        id: apple
+      - name: Assert the signing credentials are present
+        # Belt and braces: the job is only reached when the `credentials` job found
+        # all of them, and this fails hard rather than warning, so an edit that
+        # loosens the gate cannot turn into a silently unsigned build.
         env:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           APPLE_ASC_KEY_ID: ${{ secrets.APPLE_ASC_KEY_ID }}
           APPLE_ASC_ISSUER_ID: ${{ secrets.APPLE_ASC_ISSUER_ID }}
           APPLE_ASC_PRIVATE_KEY_BASE64: ${{ secrets.APPLE_ASC_PRIVATE_KEY_BASE64 }}
-        # `internal` mode: a signed build of `main` is useful on its own and the
-        # TestFlight upload is the part that needs the key, so this warns rather
-        # than failing. A tagged release uses `--mode release`, which fails.
         run: |
-          node scripts/ci/check-secrets.ts --mode internal --need \
+          node scripts/ci/check-secrets.ts --mode release --need \
             APPLE_TEAM_ID,APPLE_ASC_KEY_ID,APPLE_ASC_ISSUER_ID,APPLE_ASC_PRIVATE_KEY_BASE64
 
       - name: Generate the native project
         env:
-          # `app.config.ts` reads the team id from here, so the generated Xcode
-          # project has automatic signing pointed at the right team without the
-          # value being committed to a public repository.
+          # `app.config.ts` reads the team id from here into `ios.appleTeamId`, so
+          # the generated Xcode project has automatic signing pointed at the right
+          # team without the value being committed to a public repository. The step
+          # below asserts that path really is wired (review M4), because a secret in
+          # a step's environment that no file reads is a defect this pipeline has
+          # been reviewed for twice.
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: pnpm exec expo prebuild --platform ios --clean --no-install
+
+      - name: Assert the team id reached the app config
+        # The load-bearing half of M4: it is not enough to set APPLE_TEAM_ID in a
+        # step's environment, the app config has to consume it, so this reads the
+        # config back the same way Expo does and fails if the two are not equal.
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          set -euo pipefail
+          resolved=$(pnpm exec expo config --json | python3 -c 'import json,sys; print(json.load(sys.stdin).get("ios",{}).get("appleTeamId",""))')
+          echo "ios.appleTeamId resolves to '$resolved'"
+          if [ "$resolved" != "$APPLE_TEAM_ID" ]; then
+            echo "::error::the app config does not carry APPLE_TEAM_ID (got '$resolved'), so the generated project would sign against whatever team Xcode guesses"
+            exit 1
+          fi
 
       - name: Install the pods
         run: cd ios && pod install
@@ -390,7 +452,6 @@ jobs:
         run: node scripts/ci/ios-project.ts --root ios
 
       - name: Decode the App Store Connect API key
-        if: steps.apple.outputs.all_present == 'true'
         env:
           APPLE_ASC_PRIVATE_KEY_BASE64: ${{ secrets.APPLE_ASC_PRIVATE_KEY_BASE64 }}
         run: |
@@ -405,7 +466,6 @@ jobs:
         # Generated rather than committed, because the team id is part of it and
         # a committed file would either carry a team id in a public repository or
         # a placeholder that cannot work.
-        if: steps.apple.outputs.all_present == 'true'
         env:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
@@ -426,7 +486,7 @@ jobs:
           plutil -lint "$RUNNER_TEMP/ExportOptions.plist"
 
       - name: Archive and export the IPA
-        if: steps.apple.outputs.all_present == 'true'
+        id: export
         env:
           APPLE_ASC_KEY_ID: ${{ secrets.APPLE_ASC_KEY_ID }}
           APPLE_ASC_ISSUER_ID: ${{ secrets.APPLE_ASC_ISSUER_ID }}
@@ -455,7 +515,6 @@ jobs:
           find "$RUNNER_TEMP/ipa" -name "*.ipa" -print
 
       - name: Upload the IPA
-        if: steps.apple.outputs.all_present == 'true'
         uses: actions/upload-artifact@v7
         with:
           name: ios-ipa
@@ -463,7 +522,6 @@ jobs:
           retention-days: 30
 
       - name: Upload to TestFlight (fastlane)
-        if: steps.apple.outputs.all_present == 'true'
         env:
           APPLE_ASC_KEY_ID: ${{ secrets.APPLE_ASC_KEY_ID }}
           APPLE_ASC_ISSUER_ID: ${{ secrets.APPLE_ASC_ISSUER_ID }}
@@ -478,14 +536,16 @@ jobs:
         if: always()
         run: rm -f "$RUNNER_TEMP/asc-api-key.p8" "$RUNNER_TEMP/ExportOptions.plist"
 
-      - name: Say what was and was not uploaded
+      - name: Say what was built, checked and uploaded
         if: always()
         run: |
           {
             echo "## iOS internal release"
             echo
-            echo "- signed IPA: ${{ steps.apple.outputs.all_present == 'true' && 'built and attached to this run' || '**not built** — the Apple credentials are not configured' }}"
-            echo "- TestFlight: ${{ steps.apple.outputs.all_present == 'true' && 'uploaded' || '**NOT uploaded**' }}"
+            echo "This job runs only when every Apple credential is configured (its"
+            echo "\`credentials\` job decides), so every step below signed or uploaded:"
+            echo "there is no branch here in which it silently builds unsigned."
             echo
-            echo "A tagged release FAILS rather than skipping this (release.yml)."
+            echo "- signed IPA: ${{ steps.export.outcome == 'success' && 'built and attached to this run' || '**NOT verified** — the archive/export step did not pass' }}"
+            echo "- TestFlight: uploaded by the step above"
           } >> "$GITHUB_STEP_SUMMARY"

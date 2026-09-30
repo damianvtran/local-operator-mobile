@@ -2,18 +2,21 @@ name: E2E (mock relay, audit and Maestro)
 
 # The end-to-end and design-audit layers, wired to the harness that owns them.
 #
-# EVERY COMMAND BELOW IS TAKEN FROM `docs/e2e/ci-notes.md` (the harness's own
-# note to the job that owns `.github/**`) AND ITS TOOLS' USAGE BLOCKS, not from a
-# guess: `tools/mock-relay/verify.mjs`, `tools/visual/capture.mjs`,
-# `tools/audit/audit.mjs`, `e2e/run-canary.mjs`, `e2e/maestro/config.yaml`. The
-# harness is plain Node with no dependencies, so most of this job needs a
-# checkout and nothing else.
+# EVERY COMMAND BELOW GOES THROUGH THE HARNESS'S OWN PACKAGE SCRIPTS
+# (`pnpm e2e:relay`, `pnpm audit:capture`, `pnpm e2e:canary`, …), which are the
+# interface `docs/e2e/ci-notes.md` publishes — not through file paths. That is
+# deliberate and it is round 2's M1: this workflow was first written against
+# `tools/**/*.mjs` names the harness had already renamed to `*.ts`, so every
+# command here would have failed the moment the harness merged. A script name
+# survives a rename; a path does not. The harness is plain Node with no
+# dependencies, so most of this workflow needs a checkout and nothing else.
 #
-# IT CANNOT BLOCK A PULL REQUEST IT CANNOT RUN. The harness arrives in its own
-# change, and until it is on the ref under test the jobs are SKIPPED — which
-# GitHub renders as `skipped`, never as a green tick, so an absent suite cannot
-# be read as a passing one. A `harness` job does the detection and says in its
-# summary exactly which piece is missing.
+# A MISSING HARNESS IS A FAILURE, NOT A SKIP. The `harness` job checks for the
+# package scripts and the Maestro flows, and FAILS — naming every missing piece —
+# rather than skipping the suites behind it, because a green conclusion would
+# claim the relay contract, the frame audit and the canary had run when none of
+# them had. Until the harness lands, this workflow is red on every ref, which is
+# the honest state: what it exists to run is not in the tree.
 #
 # ONE RETRY, AND ONLY FOR THE FLOWS (ADR 0004). Maestro gets `--retry`, which the
 # harness's own config asks CI to pass, and the retry is reported separately so a
@@ -74,21 +77,26 @@ jobs:
       - name: Detect the harness
         # A GREEN RUN OF THIS WORKFLOW MUST MEAN THE SUITES RAN. Until this step
         # could fail, a tree without `tools/` produced `success` with every suite
-        # `skipped` — a green tick on a suite that did not run, which is the
-        # defect class this project treats as a defect (review M1). The harness is
-        # what this workflow exists to run (ADR 0003, `docs/e2e/ci-notes.md`), so
-        # its absence is a failure of the workflow's own premise, and the
-        # annotation names exactly which pieces are missing.
+        # `skipped` — a green tick on a suite that did not run (review M1). The
+        # harness is what this workflow exists to run (ADR 0003,
+        # `docs/e2e/ci-notes.md`), so its absence is a failure of the workflow's own
+        # premise.
+        #
+        # IT CHECKS THE HARNESS'S INTERFACE, NOT ITS FILE NAMES, and that is the fix
+        # for round 2's M1: this workflow was written against `*.mjs` paths the
+        # harness had already renamed to `*.ts`, so every command here would have
+        # failed the moment #8 merged and "it resolves itself when #8 lands" was
+        # false. The package scripts (`e2e:relay`, `e2e:typecheck`, `audit:capture`, …)
+        # are the interface #8 documents in `docs/e2e/ci-notes.md`, and they survive a
+        # rename — the same reason every other command in this pipeline goes through
+        # a package script rather than a path.
         id: detect
         run: |
           set -euo pipefail
           missing=()
-          for path in \
-            tools/mock-relay/verify.mjs \
-            tools/visual/capture.mjs \
-            tools/audit/audit.mjs \
-            e2e/run-canary.mjs; do
-            [ -f "$path" ] || missing+=("$path")
+          for script in e2e:relay e2e:divergences e2e:canary e2e:typecheck e2e:docs audit:capture audit:run mock:relay; do
+            node -e "process.exit(require('./package.json').scripts?.[process.argv[1]] ? 0 : 1)" "$script" \
+              || missing+=("package script $script")
           done
           if ! find e2e/maestro -name '*.yaml' -print -quit 2>/dev/null | grep -q .; then
             missing+=("e2e/maestro/**/*.yaml")
@@ -101,43 +109,55 @@ jobs:
             else
               echo "**The harness is not in this tree.** Missing:"
               echo
-              for path in "${missing[@]}"; do echo "- \`$path\`"; done
+              for piece in "${missing[@]}"; do echo "- \`$piece\`"; done
             fi
           } >> "$GITHUB_STEP_SUMMARY"
           if [ ${#missing[@]} -gt 0 ]; then
             echo "::error::the audit harness is not in this tree: ${missing[*]}. This workflow exists to run it (ADR 0003, docs/e2e/ci-notes.md) and it ships in its own change, so this is a real failure of the pipeline rather than a reason to skip: a green conclusion here would claim the mock relay, the frame audit and the canary had run when none of them had."
             exit 1
           fi
-          echo "the harness is present in full"
+          echo "the harness is present in full: its package scripts and its Maestro flows"
 
   mock-relay-contract:
-    name: Mock relay contract (229 assertions, seconds)
+    name: Mock relay contract and divergence checks (seconds)
     needs: harness
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
-      # No pnpm, no install, no Chrome: this tool drives the relay it lives beside
-      # and asserts the wire contract against the captured fixture corpus. It is
-      # the mock's own proof, which is what keeps the mock from drifting away
-      # from the relay it re-implements.
+
+      # pnpm, but no install: the two tools below are plain Node with no
+      # dependencies, and the scripts are how the harness documents them
+      # (`docs/e2e/ci-notes.md` §1). pnpm itself is already on the runner image, the
+      # action just pins the version the lockfile names.
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      # The mock's own proof: every assertion the verifier makes over the relay's
+      # contract, which is what keeps the mock from drifting away from the relay it
+      # re-implements. It prints its own assertion count — read that line rather than
+      # a number written down here, which would drift the first time a check is
+      # added.
       - name: Assert the mock relay's contract
-        run: node tools/mock-relay/verify.mjs
+        run: pnpm e2e:relay
+
+      - name: Assert the harness agrees with the relay where it diverges on purpose
+        run: pnpm e2e:divergences
 
   web-audit:
     name: Web target — frames, audit and the canary
     needs: harness
-    # macOS BECAUSE THE HARNESS' CHROME DISCOVERY IS macOS-ONLY TODAY, and that is
-    # a finding rather than a preference: `tools/lib/chrome.mjs` looks for
-    # `/Applications/Google Chrome.app/Contents/MacOS/Google Chrome` and fails
-    # with "Google Chrome is not installed at …" on a Linux runner, where the same
-    # binary is `google-chrome` on PATH. Measured in CI on 2026-09-30. The frames
-    # and the audit are worth running now rather than after that module grows its
-    # Linux candidates, so this job runs where the harness can find a browser; it
-    # moves back to ubuntu (cheaper and closer to a contributor's machine) the
-    # moment chrome.mjs looks at PATH, and the design kit's own capture script —
-    # which does look at PATH — is the precedent for the fix.
-    runs-on: macos-26
+    # LINUX, not macOS. This job ran on `macos-26` only because the harness's
+    # Chrome discovery was hard-coded to `/Applications/Google Chrome.app/...` and
+    # failed on a Linux runner; `tools/lib/chrome.ts` now tries `/usr/bin/
+    # google-chrome`, `google-chrome-stable` and finally PATH, so the macOS spend
+    # (the pipeline's scarcest resource) is gone. It is unproven until the harness
+    # lands and this job first runs for real — if that run cannot find a browser,
+    # the fix is this one line, and the run will say so rather than pass.
+    runs-on: ubuntu-latest
     # The capture matrix is minutes; the bound is the diagnosis, not the budget.
     timeout-minutes: 45
     steps:
@@ -153,6 +173,18 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Type-check the harness and run its documented commands
+        # Review m2, and the harness's own §0: `pnpm typecheck` covers the app and
+        # `scripts/**`, so `tools/**` and `e2e/**` would otherwise be checked by
+        # nothing. `e2e:typecheck` is their gate, and `e2e:docs` runs every command
+        # `docs/e2e/README.md` names, so a renamed tool or a stale invocation fails
+        # here rather than in a reader's shell. Both need the install this job has
+        # already done.
+        timeout-minutes: 5
+        run: |
+          pnpm e2e:typecheck
+          pnpm e2e:docs
+
       - name: Export the web target
         # The harness drives the EXPORT, not a dev server: the export is what a
         # reviewer's bundle would be, and a dev server's on-the-fly transform is a
@@ -165,7 +197,7 @@ jobs:
         # background process holding the step's stdout open is how a CI job hangs.
         run: |
           set -euo pipefail
-          node tools/mock-relay/relay.mjs \
+          pnpm mock:relay \
             --scenario "${{ env.MOCK_RELAY_SCENARIO }}" \
             --print-port --quiet \
             < /dev/null > "$RUNNER_TEMP/relay.port" 2> "$RUNNER_TEMP/relay.err" &
@@ -181,100 +213,29 @@ jobs:
 
       - name: Capture the frames
         # BOUNDED PER STEP, not just per job. A capture that hangs would otherwise
-        # consume the whole job budget and report nothing: measured on
-        # 2026-09-30, this step ran over 90 minutes inside a 45-minute job
-        # timeout (run 36669731994) without GitHub reaping it, so the run said
-        # only that it was still going. Twenty minutes is several times a
-        # complete matrix on a warm runner, and a fired bound names this step.
+        # consume the whole job budget and report nothing: measured on 2026-09-30,
+        # this step ran over 90 minutes inside a 45-minute job timeout (run
+        # 36669731994) without GitHub reaping it, so the run said only that it was
+        # still going. Twenty minutes is several times a complete matrix on a warm
+        # runner, and a fired bound names this step.
         timeout-minutes: 20
-        # CELLS COME FROM THE RELAY, THROUGH ITS OWN REGISTRY, and the detour is a
-        # finding rather than a preference. `capture.mjs --relay <url>` asks the
-        # relay at `/__mock/state` for `state.cells`, but the relay serves no
-        # such field — its registry is at `/__mock/scenarios` as
-        # `scenarios[].shows` (relay.mjs, the two `__mock` handlers; capture.mjs
-        # `relayState()` and `buildPlan()`). So the documented invocation fails
-        # with "no cells to capture", measured in CI on 2026-09-30, and the
-        # harness's own fallback — `--cells` — is what makes the run possible.
-        # Reading `shows` from the relay keeps the property the harness cares
-        # about (one source of truth for which cells exist, nothing
-        # hand-maintained here) while that mismatch stands. When it is fixed,
-        # dropping the `--cells` argument restores the shorter path.
+        # THE DOCUMENTED INVOCATION, through the harness's own script
+        # (`docs/e2e/ci-notes.md` §3). An earlier version derived the cell list here
+        # and passed `--cells`, working around a mismatch between what the capture
+        # asked the relay for and what the relay served; the harness fixed that at
+        # the source — its own `relayState()` reads the scenario registry — so the
+        # workaround is gone and this is one command with the flags the notes name.
         #
-        # Frames are written outside the repository and uploaded — never
-        # committed (ADR 0003).
-        run: |
-          set -euo pipefail
-          # shellcheck disable=SC2016
-          # The single-quoted script below is JavaScript for node, so its `${cell}`
-          # template literals must NOT be expanded by the shell; shellcheck cannot
-          # know that from the quoting alone.
-          curl -fsS "$MOCK_RELAY_URL/__mock/scenarios" | node --input-type=module -e '
-            import { resolve } from "node:path";
-            import { pathToFileURL } from "node:url";
-
-            let raw = "";
-            process.stdin.on("data", (chunk) => {
-              raw += chunk;
-            });
-            process.stdin.on("end", async () => {
-              const { SCREENS } = await import(
-                pathToFileURL(resolve("tools/visual/matrix.mjs")).href
-              );
-              const known = new Set(Object.keys(SCREENS));
-              const payload = JSON.parse(raw);
-              const cells = new Set();
-              const dropped = new Set();
-              for (const scenario of payload.scenarios ?? []) {
-                for (const cell of scenario.shows ?? []) {
-                  const text = String(cell);
-                  const screen = text.slice(0, text.lastIndexOf("/"));
-                  // `path:<route>` cells point at an ad-hoc page rather than an
-                  // app screen, which is how the canary is driven.
-                  if (screen.startsWith("path:") || known.has(screen)) cells.add(text);
-                  else dropped.add(text);
-                }
-              }
-              if (cells.size === 0) {
-                console.error("the relay and the capture matrix share no cells");
-                process.exit(1);
-              }
-              for (const cell of [...dropped].sort()) console.error(`no screen for cell: ${cell}`);
-              process.stdout.write([...cells].sort().join(","));
-            });
-          ' > "$RUNNER_TEMP/cells.txt" 2> "$RUNNER_TEMP/cells.err"
-          cells=$(cat "$RUNNER_TEMP/cells.txt")
-          count=$(printf "%s" "$cells" | tr ',' '\n' | wc -l | tr -d ' ')
-          dropped=$(wc -l < "$RUNNER_TEMP/cells.err" | tr -d ' ')
-          echo "cells ($count): $cells"
-          if [ "$dropped" != "0" ]; then
-            # Reported, not hidden: the relay's scenario registry and the capture
-            # matrix disagree about which screens exist, and the cells that fall
-            # in the gap are named so the two owners can settle it.
-            cat "$RUNNER_TEMP/cells.err"
-            echo "::warning::$dropped cell(s) the relay declares were skipped: no screen is defined for them in tools/visual/matrix.mjs, so the capture harness cannot render them. Nothing is silently dropped — this line is the list."
-            {
-              echo "## Cells the harness could not render"
-              echo
-              echo '```'
-              cat "$RUNNER_TEMP/cells.err"
-              echo '```'
-            } >> "$GITHUB_STEP_SUMMARY"
-          fi
-          node tools/visual/capture.mjs \
-            --dir dist --out "$RUNNER_TEMP/frames" \
-            --relay "$MOCK_RELAY_URL" \
-            --cells "$cells" \
-            --consecutive --yes
+        # Frames are written outside the repository and uploaded — never committed
+        # (ADR 0003).
+        run: pnpm audit:capture --dir dist --out "$RUNNER_TEMP/frames" --relay "$MOCK_RELAY_URL" --consecutive --yes
 
       - name: Audit the frames against the rubric
         timeout-minutes: 5
         # Exits non-zero on any FAIL row. BLOCKED rows are reported and counted
         # rather than failing the job — an app whose type ignores the root
         # font-size is a finding for the review thread, not a broken harness.
-        run: |
-          node tools/audit/audit.mjs \
-            --manifest "$RUNNER_TEMP/frames/manifest.json" \
-            --out "$RUNNER_TEMP/audit"
+        run: pnpm audit:run --manifest "$RUNNER_TEMP/frames/manifest.json" --out "$RUNNER_TEMP/audit"
 
       - name: Run the canary
         timeout-minutes: 5
@@ -282,7 +243,7 @@ jobs:
         # page declares its own defects, so this fails if the audit stops catching
         # them, starts failing the clean page, or if the harness's own scale
         # dimension goes inert.
-        run: node e2e/run-canary.mjs
+        run: pnpm e2e:canary
 
       - name: Stop the mock relay
         if: always()
@@ -397,7 +358,7 @@ jobs:
       - name: Start the mock relay for the flows
         run: |
           set -euo pipefail
-          node tools/mock-relay/relay.mjs \
+          pnpm mock:relay \
             --scenario "${{ env.MOCK_RELAY_SCENARIO }}" \
             --password "$(cat "$RUNNER_TEMP/relay-password")" \
             --print-port --quiet \

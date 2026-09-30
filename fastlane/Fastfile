@@ -26,7 +26,7 @@
 #
 # A maintainer who has configured none of them can still run every gate in CI:
 # these lanes are only reached from a signed build, and a tagged release that
-# cannot reach them FAILS rather than skipping (see scripts/ci/check-secrets.mjs).
+# cannot reach them FAILS rather than skipping (see scripts/ci/check-secrets.ts).
 #
 # HOW TO RUN THESE LOCALLY. You cannot, meaningfully — both lanes upload to a
 # store, which is why they exist only in CI. To exercise a lane without the
