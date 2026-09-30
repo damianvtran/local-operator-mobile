@@ -1,0 +1,21 @@
+# Which dependency install scripts may run. pnpm 12 refuses to install at all
+# while an entry holds the placeholder `set this to true or false` that
+# `pnpm install` scaffolds when it first skips a script
+# (ERR_PNPM_IGNORED_BUILDS), so a fresh clone and every CI job failed at install.
+#
+# `esbuild` is the only package here with an install script, and it is allowed:
+# its postinstall swaps the JS shim for the platform binary, which vite (vitest)
+# and tsx run. It is an optimisation and the toolchain also works with it denied
+# (measured on darwin-arm64), but allowing it is the conventional setting, matches
+# what CI was run with, and avoids an untested Linux-only difference. Any other
+# package with a script stays denied by default; add it here only after reviewing
+# what the script does.
+allowBuilds:
+  esbuild: true
+minimumReleaseAgeExclude:
+  - expo-constants@57.0.20
+  - expo-modules-core@57.0.20
+  - expo@57.0.26
+  - '@expo/ui@57.0.21'
+  - expo-router@57.0.24
+  - lucide-react-native@1.49.0

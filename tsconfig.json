@@ -1,0 +1,35 @@
+{
+	"extends": "expo/tsconfig.base",
+	"compilerOptions": {
+		"strict": true,
+		"noUncheckedIndexedAccess": true,
+		"noImplicitOverride": true,
+		"exactOptionalPropertyTypes": false,
+		"jsx": "react-jsx",
+		"moduleResolution": "bundler",
+		"module": "esnext",
+		"target": "esnext",
+		"lib": ["esnext", "dom"],
+		"types": ["react"],
+		"allowJs": false,
+		"skipLibCheck": true,
+		"resolveJsonModule": true,
+		"esModuleInterop": true,
+		"isolatedModules": true,
+		"noEmit": true,
+		"paths": {
+			"@/*": ["./src/*"]
+		}
+	},
+	"include": [
+		"src/**/*.ts",
+		"src/**/*.tsx",
+		"app/**/*.ts",
+		"app/**/*.tsx",
+		"*.ts",
+		"*.js",
+		".expo/types/**/*.ts",
+		"expo-env.d.ts"
+	],
+	"exclude": ["node_modules", "dist", "design", "docs"]
+}

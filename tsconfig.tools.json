@@ -1,0 +1,21 @@
+{
+	"$comment": "Node-run tooling (scripts/**), typechecked separately from the app. These files execute directly under Node's native type stripping, so the config is stricter about what TypeScript may be written than the app's: only ERASABLE syntax (no enums, namespaces or parameter properties, which stripping cannot emit) and explicit `import type`. The app config is extended for strictness and paths, then re-pointed at Node instead of the DOM and React Native. The pinned compiler (typescript 7.0.2) accepts `erasableSyntaxOnly` and enforces it; `scripts/erasable-syntax.test.ts` fails if the flag is removed. A `tsc` older than the pin (measured: 5.6.3, from a global install or the npx cache) rejects it with TS5023, so run the gate through `pnpm typecheck`, which resolves the pinned one. RESOLUTION AND LIB: the scripts import `src/`, which the app compiles under bundler resolution and DOM lib (extensionless relative imports, the `Crypto` type), so this config uses the same; `nodenext` reported 199 errors (TS1287/TS1295) in `src/` and `lib: esnext` alone reported the `Crypto` and `readFileSync` overload errors. Bundler resolution does NOT model Node: Node refuses an extensionless relative specifier, so `scripts/**` must spell every relative import with its `.ts` extension, which `scripts/node-specifiers.test.ts` enforces. `src/`'s own extensionless imports are resolved at run time by `scripts/lib/load-src.ts`.",
+	"extends": "./tsconfig.json",
+	"compilerOptions": {
+		"module": "esnext",
+		"moduleResolution": "bundler",
+		"target": "esnext",
+		"lib": ["esnext", "dom"],
+		"types": ["node"],
+		"jsx": "preserve",
+		"allowJs": false,
+		"noEmit": true,
+		"allowImportingTsExtensions": true,
+		"rewriteRelativeImportExtensions": false,
+		"erasableSyntaxOnly": true,
+		"verbatimModuleSyntax": true,
+		"paths": {}
+	},
+	"include": ["scripts/**/*.ts"],
+	"exclude": ["node_modules", "dist", "design", "docs"]
+}
