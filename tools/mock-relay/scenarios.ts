@@ -237,6 +237,7 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 	const liveIdle = fix.projection("sse-projection-live-idle");
 	const seed = fix.projection("sse-projection-seed");
 	const approvalFrame = fix.projection("sse-projection-pending-approval");
+	const richRowsFrame = fix.projection("sse-projection-rich-rows");
 	const queuedFrame = fix.projection("sse-projection-queued-steer");
 	const afterDeath = fix.projection("sse-projection-durable-after-death");
 	const everyKind = fix.projection("sse-projection-every-entry-kind");
@@ -547,6 +548,22 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 		() => ({
 			projections: {
 				[approvalFrame.session_id]: structuredClone(approvalFrame),
+			},
+		}),
+	);
+
+	// The transcript's RICH rows. Without a scenario carrying them, the markdown the
+	// native transcript renders specially — a fenced block (which owns the copy
+	// control), a fenced diff, a table — is in no cell's DOM, so the copy button's box
+	// and states cannot be measured by anything. The rows come from a synthetic
+	// fixture built on a captured envelope; see its `provenance.how`.
+	add(
+		"rich-rows",
+		"A transcript with a fenced code block, a fenced diff and two tables: the rows that own the copy control.",
+		["S5/rich-rows"],
+		() => ({
+			projections: {
+				[richRowsFrame.session_id]: structuredClone(richRowsFrame),
 			},
 		}),
 	);

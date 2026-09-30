@@ -1390,6 +1390,185 @@ async function main() {
 		await relay.stop();
 	}
 
+	/* ---- 3e. the approval round trip ---- */
+	// The mock had no `approval_answer` at all — it answered `command-unknown-op` — so
+	// the pending card's approve/deny/settle path could not be exercised here, only in
+	// a stream's own rig. A control that cannot be exercised against the mock is a
+	// control nobody can verify.
+	group = "approval_answer";
+	{
+		const relay = await startRelay({ scenario: "approval" });
+		const client = makeClient(relay.base);
+		await client.login(PASSWORD);
+		// The projection frames, parsed out of the stream's own text: the pending
+		// request only exists on the wire, and reading it anywhere else would be
+		// reading the mock's internals rather than what a client receives.
+		// The read is AUTHENTICATED and reports whether a frame was parsed at all.
+		// Without both, an unauthenticated or empty stream yields `pending: null` and the
+		// "settled" assertion below would pass because nothing was read — the exact shape
+		// of green reading this harness exists to refuse.
+		const pendingOf = async (): Promise<{
+			seen: boolean;
+			pending: { request_id?: string; kind?: string } | null;
+		}> => {
+			const read = await readStream(relay.base, `/api/sessions/${SID}/events`, {
+				ms: 2500,
+				cookie: client.cookie,
+			}).catch(() => null);
+			// An SSE block is `event: <name>\ndata: <json>\n\n`, so the payload is a LINE
+			// inside the block, not the block's first line. Scanning the frames for the
+			// one that carries `pending` — rather than taking the first — is also what
+			// makes this robust to the list/hello frames that precede the projection.
+			const frames = (read?.text ?? "")
+				.split("\n\n")
+				.map((block) =>
+					block.split("\n").find((line) => line.startsWith("data: ")),
+				)
+				.filter((line): line is string => typeof line === "string")
+				.map((line) => {
+					try {
+						return JSON.parse(line.slice("data: ".length)) as Record<
+							string,
+							unknown
+						>;
+					} catch {
+						return {} as Record<string, unknown>;
+					}
+				});
+			const projection = frames.find((frame) => "pending" in frame);
+			return {
+				seen: frames.length > 0,
+				pending:
+					(projection?.pending as {
+						request_id?: string;
+						kind?: string;
+					} | null) ?? null,
+			};
+		};
+		const firstRead = await pendingOf();
+		check(
+			"the authenticated stream delivers a projection frame",
+			firstRead.seen,
+			true,
+		);
+		const pending = firstRead.pending;
+		check(
+			"the approval scenario really has a pending approval",
+			pending?.kind,
+			"approval",
+		);
+		const requestId = pending?.request_id ?? "";
+
+		const badBool = await client.post(`/api/sessions/${SID}/command`, {
+			op: "approval_answer",
+			request_id: requestId,
+			approved: "yes",
+		});
+		check(
+			"a non-boolean decision is refused with the contract's own sentence",
+			(badBool.json as { error?: unknown } | undefined)?.error,
+			"approved must be a boolean",
+		);
+		check("and it is a 422, a pre-admission refusal", badBool.status, 422);
+
+		const noId = await client.post(`/api/sessions/${SID}/command`, {
+			op: "approval_answer",
+			approved: true,
+		});
+		check("an empty request_id is refused", noId.status, 422);
+
+		const answered = await client.post(`/api/sessions/${SID}/command`, {
+			op: "approval_answer",
+			request_id: requestId,
+			approved: true,
+		});
+		check("a real approval is accepted", answered.status, 200);
+		check(
+			"with the relay's acknowledgement shape",
+			(answered.json as { ok?: unknown; detail?: unknown })?.ok,
+			true,
+		);
+
+		// Settling is what the round trip is FOR: the next projection must carry no
+		// pending request, or a client that never settles the card looks correct.
+		const after = await pendingOf();
+		check(
+			"the stream still delivers frames after the answer",
+			after.seen,
+			true,
+		);
+		check(
+			"and the pending request is settled on the next frame",
+			after.pending,
+			null,
+		);
+		await relay.stop();
+	}
+
+	/* ---- 3f. the reused-draft replay ---- */
+	// The condition the client's `reusedPreviousDraft` path exists for, as a named
+	// scenario instead of a hand-reconstructed pair of requests: an instruction is
+	// admitted and NOT acknowledged, the identical bytes are sent again, and the relay
+	// answers `already admitted` rather than admitting a second one.
+	group = "reused-draft-replay";
+	{
+		const relay = await startRelay({
+			scenario: "idle",
+			faults: ["reused-draft-replay"],
+		});
+		const client = makeClient(relay.base);
+		await client.login(PASSWORD);
+		const commandId = "11111111-2222-4333-8444-999999999999";
+		const body = { op: "prompt", command_id: commandId, text: "ship it" };
+
+		// Bounded by the CLIENT, because the point of this fault is that the relay
+		// never answers: an unbounded wait would hang the verifier, and a wait that
+		// returned an answer would mean the fault is not doing its job.
+		let firstOutcome = "answered";
+		try {
+			const cookie = client.cookie;
+			const res = await fetch(
+				new URL(`/api/sessions/${SID}/command`, relay.base),
+				{
+					method: "POST",
+					redirect: "manual",
+					headers: {
+						"content-type": "application/json",
+						...(cookie === null ? {} : { cookie }),
+					},
+					body: JSON.stringify(body),
+					signal: AbortSignal.timeout(2500),
+				},
+			);
+			firstOutcome = `answered ${res.status}`;
+		} catch (error) {
+			firstOutcome = `no answer (${(error as Error).name})`;
+		}
+		check(
+			"the first send is admitted and never acknowledged",
+			/^no answer/.test(firstOutcome),
+			true,
+			firstOutcome,
+		);
+
+		const second = await client.post(`/api/sessions/${SID}/command`, body);
+		check(
+			"the identical bytes are answered as already admitted",
+			(second.json as { detail?: unknown } | undefined)?.detail,
+			"already admitted",
+		);
+		check(
+			"and exactly one command was admitted",
+			(
+				(await client.get("/__mock/state")).json as {
+					admittedCommands?: number;
+				}
+			)?.admittedCommands,
+			1,
+		);
+		await relay.stop();
+	}
+
 	/* ---- 4. the fault layer ---- */
 	// Every fault is exercised here, over a real socket, against its declared
 	// effect — this is the surface where the claims previously outran the

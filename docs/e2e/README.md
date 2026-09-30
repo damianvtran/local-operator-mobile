@@ -35,10 +35,25 @@ swept by its own profile path afterwards.
 ## Read this before trusting any frame: which cells are measurable
 
 **A frame is not coverage.** Every relay-backed cell — `S5/*` (the session view and
-its streaming, aborted, queued and populated states), `S8/*` (pending approval and
-pending ask) and `S6/*` (subagent detail) — is **NOT MEASURABLE today**, and a
-design, UX or rubric reading drawn from those frames is a reading of the app's
-**not-connected screen**, not of the state the cell names.
+its streaming, aborted, queued and populated states, including the new
+`S5/rich-rows`), `S8/*` (pending approval and pending ask) and `S6/*` (subagent
+detail) — is **NOT MEASURABLE today**, and a design, UX or rubric reading drawn from
+those frames is a reading of the app's **not-connected screen**, not of the state the
+cell names. The number of cells this costs is printed by every run
+(`measurableCells` / `notMeasurableCells` in the manifest, and one line per cell on
+stdout), so the coverage claim is measured rather than asserted.
+
+`S5/rich-rows` is the newest of them: the scenario and its cell exist (so the
+transcript's fenced block, diff and tables are one `--scenario rich-rows` away), but
+the cell renders the same not-connected screen, so the copy control's box is still
+unmeasured and the run fails it by name — the same verdict as its neighbours, by the
+same root cause:
+```
+S5__rich-rows__iphone-15__dark__100: the cell declares 'rich-rows' but the app is
+showing an empty state (session-empty): the state was never reached; the app made no
+request to the mock relay for this cell, so the state it declares (rich-rows) cannot
+have come from the relay
+```
 
 Measured on 2026-09-30, one device, one theme, with the relay recording every
 request it served:
@@ -71,8 +86,32 @@ PASS — and counts them as a gap, so the audit exits non-zero rather than green
 
 The harness lands on the app's session route without taking it through its connect
 flow (sign-in → computer pick → session), so the app is right to render "not
-connected yet" and never talks to the page origin. Two routes were tried and neither
-works from outside the app:
+connected yet" and never talks to the page origin.
+
+**Driving the flow was tried first, because it is the better answer** (it keeps the
+harness app-agnostic and needs nothing from the app). It is not possible on this
+head: the two screens the flow starts from have **no interactive nodes at all**. The
+copy control's absence has a shape here — measured with the app's own build, one
+device and theme:
+
+```
+$ pnpm audit:capture --dir dist --out "$SCRATCH/connect-probe" \
+    --cells path:/custom/custom --cells path:/sign-in/sign-in \
+    --devices iphone-15 --themes dark --scales 100 --yes
+CELL path--custom__custom__iphone-15__dark__100   testIds: custom-route-screen, custom-empty
+CELL path--sign-in__sign-in__iphone-15__dark__100 testIds: sign-in-screen, sign-in-empty
+$ pnpm audit:run --manifest "$SCRATCH/connect-probe/manifest.json" --out "$SCRATCH/connect-audit"
+U-01: BLOCKED | no interactive nodes in this frame     (both cells)
+```
+
+There is no field to type a URL into, no field for the relay password, and no Test
+or Save control: `app/(auth)/custom.tsx` is an `EmptyState` ("The form needs the
+custom-route connection profile, so this route is the shell only") and
+`app/(auth)/sign-in.tsx` deliberately has no button. The step that fails is therefore
+the very first one — *type the relay URL* — and it fails because the control does not
+exist, not because CDP cannot type.
+
+Two other routes were tried and neither works from outside the app:
 
 - **Seeding persisted state** is impossible on this target: the web build's credential
   store is in memory (`src/connection/storage.ts` — `memorySecureStore`, "the honest
@@ -81,13 +120,18 @@ works from outside the app:
 - **Driving the flow by UI** is blocked by the app's own current state: the session
   list has no rows yet, so no flow reaches `/session/<id>` with a live route.
 
-The unblock is an **app-side, web-only seed hook**, and this is the contract the app
-streams need to implement for the matrix to cover those states: on web only, read a
-documented parameter (for example `?lo-seed-route=<relay-url>&lo-seed-session=<id>`)
-at startup and use it as the configured connection, with the app's own configured
-route still winning whenever one exists. Until that exists, every relay-backed cell
-stays **not measured** — which is a statement this harness makes per cell, not a
-pass it hands out.
+So the harness needs ONE of two things from the app, and the first is smaller:
+
+1. **the connect-flow controls** (`app/(auth)/custom.tsx`: a URL field, a password
+   field, a Test control and a Save control) — then the harness drives them over CDP
+   and stays app-agnostic; or
+2. **a web-only seed hook** — read a documented parameter (for example
+   `?lo-seed-route=<relay-url>&lo-seed-session=<id>`) at startup and use it as the
+   configured connection, with the app's own configured route still winning whenever
+   one exists.
+
+Until one of them lands, every relay-backed cell stays **not measured** — a statement
+this harness makes per cell, not a pass it hands out.
 
 ---
 
@@ -252,6 +296,30 @@ Because the scenario table is driven by the registry, a scenario added there is
 verified without editing the script, and one whose shape drifts fails here before
 it can mislead a capture run.
 
+### The control ops the mock answers
+
+`approval_answer` is implemented (it used to fall through to `command-unknown-op`,
+which made the pending card's approve/deny/settle path unexercisable here): the
+contract's own validation (§4.3) — `request_id` a non-empty string, `approved` a
+bool, `remember` a bool when present, each refused `422` with the contract's own
+sentence — and a real settlement, so the next projection frame carries no pending
+request and `GET /__mock/state` reports `approvalsAnswered`. The success detail is
+the mock's own wording: the relay passes the *runtime's* sentence through
+(`daemon.py:4041`), so the shape is what the contract pins, not the words.
+
+Two faults make previously unreachable client paths reachable:
+
+| Fault | The condition it creates |
+|---|---|
+| `reused-draft-replay` | an instruction is admitted and **never acknowledged**, then the identical bytes are sent again and the relay answers `already admitted` — the condition the client's `reusedPreviousDraft` path exists for, and what the composer has to re-offer |
+
+`rich-rows` is a scenario (cell `S5/rich-rows`) whose transcript carries a fenced code
+block, a fenced diff and two tables — the rows that own the copy control — built on a
+captured envelope from a synthetic fixture
+(`fixtures/relay/synthetic/sse-projection-rich-rows.json`, `provenance.kind:
+synthetic`). Without it, no scenario's DOM contained a fenced block, so a control the
+kit's floor applies to was unmeasurable by anything.
+
 ### Known mock/relay divergences
 
 A QA pass drove ~44 request cases through this mock and a real `lop mobile serve`
@@ -287,6 +355,7 @@ the limitation is visible rather than inferred.
 | `POST /__mock/fault` | apply faults to a running relay |
 | `GET /__mock/record` | the transcript rows themselves |
 | `POST /__mock/reset` | clear the transcript |
+| `POST /__mock/shutdown` | stop the process |
 | `POST /__mock/shutdown` | stop the process |
 
 `requests` is a **counter**, and that is a fix rather than a description: it used to

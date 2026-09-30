@@ -440,6 +440,7 @@ export const STATE_MARKERS: {
 	emptyMarkerSuffix: "-empty",
 	forbidsEmpty: [
 		"populated",
+		"rich-rows",
 		"populated-long",
 		"streaming",
 		"pending-approval",

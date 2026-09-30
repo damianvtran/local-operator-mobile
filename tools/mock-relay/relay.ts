@@ -161,6 +161,8 @@ export interface RelayState {
 	 * before/after comparison the capture harness makes a tautology.
 	 */
 	requestsServed: number;
+	/** Approvals settled through `approval_answer`, so a run can assert the round trip. */
+	approvalsAnswered: number;
 	/** Command ids that have been admitted: what `already admitted` is about. */
 	admitted: Map<string, { op: string; at: number }>;
 	seenTokens: Set<string>;
@@ -247,6 +249,7 @@ export function createRelay(options: RelayOptions = {}) {
 		seq: 0,
 		recorded: [],
 		requestsServed: 0,
+		approvalsAnswered: 0,
 		admitted: new Map(),
 		seenTokens: new Set(),
 		pins: new Map(),
@@ -819,6 +822,54 @@ export function createRelay(options: RelayOptions = {}) {
 		// with `409 {"error":"session not connected"}` before it ever looks at the op.
 		// The mock used to refuse the op first, so a client could read its 422 and
 		// never see the 409 production sends.
+		// The approval round trip. Without this op the mock answered
+		// `command-unknown-op`, so the pending card's approve/deny/settle path could not
+		// be exercised against the mock at all — only in a stream's own rig.
+		//
+		// Validation is the contract's (§4.3): `request_id` a non-empty string,
+		// `approved` a bool, `remember` a bool when present. The SUCCESS detail is the
+		// runtime's own sentence passed through by the relay (`daemon.py:4041` returns
+		// the runtime's reply), so this sentence is the mock's — the shape, not the
+		// wording, is what the contract pins.
+		if (op === "approval_answer") {
+			const requestId = body.request_id;
+			if (typeof requestId !== "string" || requestId.trim() === "") {
+				sendJson(res, 422, errorBody("request_id is required"));
+				return;
+			}
+			if (typeof body.approved !== "boolean") {
+				sendJson(res, 422, errorBody("approved must be a boolean"));
+				return;
+			}
+			if (body.remember !== undefined && typeof body.remember !== "boolean") {
+				sendJson(res, 422, errorBody("remember must be a boolean"));
+				return;
+			}
+			// Settling is what makes the round trip observable: the stream's next frame
+			// carries the projection without the pending request, so a client that never
+			// settles the card is caught by a later frame rather than by a poll.
+			const live = world.projections?.[sessionId];
+			const pending = live?.pending;
+			if (live === undefined || pending === undefined || pending === null) {
+				sendJson(res, 200, { ok: true, detail: "no approval was pending" });
+				return;
+			}
+			if (pending.request_id !== requestId) {
+				sendJson(res, 200, {
+					ok: true,
+					detail: "no approval was pending for that request id",
+				});
+				return;
+			}
+			// The web client also sends `question_index` for asks; the relay ignores
+			// unknown fields, so they are ignored here rather than refused.
+			live.pending = null;
+			if ("pending_count" in live) live.pending_count = 0;
+			state.approvalsAnswered += 1;
+			sendJson(res, 200, { ok: true, detail: "approval recorded" });
+			return;
+		}
+
 		if (!projectionFor(sessionId)) {
 			sendFixture(res, "command-unknown-session");
 			return;
@@ -1581,6 +1632,7 @@ export function createRelay(options: RelayOptions = {}) {
 						// length, named so the two can never be confused again.
 						requests: state.requestsServed,
 						recorded: state.recorded.length,
+						approvalsAnswered: state.approvalsAnswered,
 						uptimeS: Math.round((Date.now() - state.startedAt) / 1000),
 					});
 				}

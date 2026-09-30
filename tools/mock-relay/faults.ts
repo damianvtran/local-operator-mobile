@@ -186,6 +186,20 @@ export function parseFaults(names: string[] = []): FaultSet {
 			case "no-ack-forever":
 				out.command.noAckForever = true;
 				break;
+			case "reused-draft-replay":
+				// The condition the client's `reusedPreviousDraft` path exists for: an
+				// instruction is admitted and NOT acknowledged, so a client that keeps its
+				// envelope re-sends the identical bytes, and the relay's second answer is
+				// `already admitted` (contract §5) rather than a new admission. The client
+				// is then holding text the user typed that was never sent as a new
+				// instruction, which is what the composer has to re-offer.
+				//
+				// It is an alias for the no-ack case on purpose: the two are the same wire
+				// behaviour, and the difference is entirely on the client side — which is
+				// exactly why a NAMED fault is worth having, so the two-step sequence can be
+				// asserted rather than reconstructed by hand.
+				out.command.noAckForever = true;
+				break;
 			default: {
 				// `--fault 503-<reason>` and the gateway's other bodies are faults
 				// applied mid-session, so a run can stream first and then be refused.
