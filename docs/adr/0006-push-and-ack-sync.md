@@ -11,16 +11,22 @@
   - [ADR 0005](0005-queued-asks.md) §5 — its "`v1` has **no push notifications**" and its
     pointer ("Push notifications are a separate RFC") are the RFC it predicted, now
     written. Its in-app `asks_open` badge and its honest-copy rule stand unchanged.
-  - [`docs/ux/principles.md`](../ux/principles.md) **P-3**, line 60-61 — "the app badge
-    counts sessions waiting on a decision" is **replaced**: the app badge counts
-    conversations with unread notifications (§1.4). P-3's other consequence — rows carry
-    state in words — is untouched.
+  - [`docs/ux/principles.md`](../ux/principles.md) **P-3**, lines 60-61 — **both halves of the
+    sentence move**, and the Amends block has to say so or it is quoting a line it contradicts.
+    "the app badge counts sessions waiting on a decision" is **replaced**: the app badge counts
+    conversations with unread notifications (§1.4). "a notification names the session and the
+    kind of decision" holds **for local banners only** — never for a push, which carries no name
+    (P2) and no session id (§3.2). P-3's remaining consequence — rows carry state in words — is
+    untouched.
   - [`docs/ux/flows.md`](../ux/flows.md) §301 (F-5 §3, "Attention badges … as the app icon
     badge"): the header badge and the ask badge stay; the **icon** badge changes meaning.
-  - [`docs/ux/flows.md`](../ux/flows.md) §570 (Settings → Notifications): two of its four
-    rows are **not shipped in v1** — quiet hours and "when a session needs a decision" —
-    and the route/master rows are replaced by §2.4's per-computer statement.
-  - **#11's `attentionCount`** (`feat/screens-lists:src/features/sessions/session-projection.ts:61-66`,
+  - [`docs/ux/flows.md`](../ux/flows.md) §570 (the Settings table's **Notifications** row) —
+    a *specification to build*, not a description: **no Settings → Notifications surface exists
+    on `main`, #11 or #12** (their settings sections are Connection / Appearance / Diagnostics /
+    About, verified on all three trees). Two of its four promised rows are **not shipped in v1**
+    — quiet hours and "when a session needs a decision" — and the route/master rows are replaced
+    by §2.4's per-computer statement.
+  - **#11's `attentionCount`** (`feat/screens-lists:src/features/sessions/session-projection.ts:56-70`,
     open PR): it counts `needs_attention` only and says so. It must become the §1.4 count,
     or the row it feeds is a fourth opinion. **Coordination item — #11 is open and this
     document cannot change it** (see `docs/push-plan.md`).
@@ -67,6 +73,7 @@ corrections are named in §9 so a reader can see which ones moved.
 | **local-operator-mobile** | `origin/main` @ `d5bb850fccac4dcfdd80f2e3b352a51107a955bc` (read 2026-09-30) | this repository's own paths; unmerged work named by branch and SHA |
 | **Radient** (control plane, edge, console) | **no code access** — specified here as an *interface*, never as a change to existing code | every cloud route in §3.1 is marked **proposal** |
 | **Apple / Google / Expo platform docs** | read 2026-09-30, cited by URL | vendor behaviour, quoted with the page it came from |
+| **`docs/push-cloud-ops.md`** — this repository, **cross-PR** | PR [#15](https://github.com/damianvtran/local-operator-mobile/pull/15) (`docs/push-cloud-ops`, **open — not on `main` yet**, so the link above resolves only once it merges) | the cloud slice's own ops note, *proposal*. This ADR defers cloud-side operations to it and **the two are reconciled on the ingest shape**: `202 {emit_id, accepted_at}`, accepted and queued (§3.1). Where they could be read differently, §3.1 here governs the wire and the note governs the runbook |
 
 **What is shipped, what is proposed — stated once and used everywhere.** `attention.db` and
 its routes exist and are cited (`attention.py`, `daemon.py`). The three relay routes this
@@ -112,7 +119,7 @@ statement is honest about it.
   history; §2.1 therefore adds a **cursor**, and the store already ships the click-free read
   it needs (`published_since`, `attention.py:1684`).
 - **`revision()` is an equality token, not an order**: "Callers compare the tuple for
-  equality and never interpret the terms" (`attention.py:2129-2150`), and the desktop model
+  equality and never interpret the terms" (`attention.py:2129-2149`), and the desktop model
   adds "NOT a merge key … a heal republishes under the SAME pair … an equal pair [is]
   'possibly changed', never … stale" (`models/desktop_sessions.py:1163-1172`). §3.3 obeys
   that: **nothing in this design drops a push or a frame on the basis of a revision
@@ -212,11 +219,11 @@ The per-conversation state already carries exactly what the badge rule needs (`u
 the machine-wide change detector already exists in the shape that makes an aggregate cheap:
 
 ```
-AttentionStore.revision() -> (MAX(sequence), SUM(acknowledged), supersedes)   attention.py:2129-2150
+AttentionStore.revision() -> (MAX(sequence), SUM(acknowledged), supersedes)   attention.py:2129-2149
 ```
 
 The three terms are deliberate: the first moves on a publish, the second on a read, and the
-third on a **heal** that deliberately moves neither (`attention.py:2000-2010`, `:2129-2150`).
+third on a **heal** that deliberately moves neither (`attention.py:2000-2010`, `:2129-2149`).
 Its contract is equality-only — see Context §1.
 
 **What is missing is one read over the right population.** No route anywhere on the machine
@@ -250,7 +257,10 @@ build does not have it" (`daemon.py:3528-3530`, `docs/relay/contract.md`:203-204
 ```
 
 The app therefore needs no new stream, and an older relay's absence of `unread` means
-"unknown", never 0.
+"unknown", never 0. **The same `degraded` rule applies to this payload, not only to the route**
+(review m4): when `unread.degraded` is non-empty, `unread.count` is **absent** — an app reading
+the field off the stream it already subscribes to is the likelier consumer, so the rule is
+stated where the payload is defined, not only in the route's section.
 
 #### 1.2 The population, decided (P1): the listing's rows, in the listing's snapshot
 
@@ -266,15 +276,19 @@ renders" — against the store's own 171-unseen measurement used as a different 
 (`attention.py:1481-1486`). A store-wide count would make the icon disagree with the list,
 which §1.4 forbids.
 
-**Decision:** the aggregate computes over **exactly the identities the listing serves, in the
-same snapshot**:
+**Decision — one predicate, named once (review QA Q14): the population is the identity set the
+listing's own scan produces, with `is_user_session` applied inside that scan.** It is *not*
+re-derived afterwards from `_durable_user_session_dir`, the per-id detail check
+(`daemon.py:1194-1207`), which additionally requires a `transcript.jsonl` and a well-formed
+name and would put a durable-but-detail-less row in one set and not the other. Everything below
+is that one set, in the listing's snapshot:
 
-- the listing's rows (`recent_session_rows(directory, 100, strict=True)`, `daemon.py:665`,
-  plus live entries) — the same identity set the attention decoration is already built for
+- the listing's rows (`recent_session_rows(directory, 100, strict=True)`, `daemon.py:665`, plus
+  live entries) — the same identity set the attention decoration is already built for
   (`daemon.py:777-813`), so this is one pass over data already in hand, not a second scan;
-- **user-facing sessions only** (`_durable_user_session_dir` / `is_user_session`, the filter
-  the listing applies), which excludes `agent/<id>` identities, subagent-only rows and
-  scheduled origins;
+- **user-facing sessions only** — the listing's own origin filter, `USER_ORIGINS` /
+  `_is_hidden_origin` inside that scan, which excludes `agent/<id>` identities, subagent-only
+  rows and scheduled origins;
 - **excluding deleted conversations** — a conversation with no directory is not a row, so it
   is not a count (and its receipt, if any, is a receipt for something that no longer exists);
 - **bounded by the listing's own bound** (100 recent durable rows + live sessions). An unread
@@ -399,7 +413,7 @@ push, and only for a device that receives one). Recorded, not chosen.
 
 ### 2. The delivery path
 
-#### 2.1 The chain, the owning process, and the cursor
+#### 2.1 The chain, the owning process, and the cursors
 
 ```
   ┌─ the machine ───────────────────────────────────────────────────────────┐
@@ -415,11 +429,11 @@ push, and only for a device that receives one). Recorded, not chosen.
   │                                                                        │
   │  every 2 s (SCAN_INTERVAL_S, daemon.py:92) — the loop that already       │
   │  reads AttentionStore.revision() (daemon.py:2499-2535):                  │
-  │    read NEW publications since the durable cursor, via                  │
-  │    AttentionStore.published_since(cursor)             attention.py:1684  │
-  │    gates: unseen? (§1.1) · notify? (§1.4) · presence-deferral (§2.3)      │
+  │    read NEW publications AND new heals — two cursors:                   │
+  │    published_since / superseded_since(cursor)  attention.py:1684/:1740   │
+  │    diff acknowledgement_map() (attention.py:1780) for acks               │
   │    → OUTBOUND POST to Radient, authenticated as the connector's          │
-  │      credential, Idempotency-Key = the emit key (§3.4)                   │
+  │      credential, Idempotency-Key = emit key (§3.4)                       │
   │      tunnels/api.py:70-125 (the shape already in use)                    │
   └───────────────────────────────────┬─────────────────────────────────────┘
                                       ▼
@@ -431,24 +445,53 @@ push, and only for a device that receives one). Recorded, not chosen.
                             APNs / FCM → the device
 ```
 
-**The cursor, and why the alternative was rejected (review M2).** `unseen` is a LEVEL
-(Context §1), so a worker with no cursor either re-pushes everything after a restart or
-silently drops what arrived while it was down. The desktop feed solved the identical problem
-with `published_since` plus a baseline at subscribe — `baseline_completion_sequence =
-self.store.revision()[0]` (`desktop_feed.py:718`). **This ADR reuses that exact shape: a
-durable `push_cursor` (the last `sequence` considered), a baseline at enablement so turning
-push on does not fire the backlog, and `published_since(cursor)` as the per-tick read.**
+**The cursors, and why the alternative was rejected (round 1 M2; corrected here by round 2's
+M1/M2 and QA Q9).** `unseen` is a LEVEL (Context §1), so a worker with no cursor either
+re-pushes everything after a restart or silently drops what arrived while it was down. The
+desktop feed solved the identical problem, and this ADR reuses its shape exactly (baseline at
+`revision()[0]` on subscribe, `desktop_feed.py:718`; both delta reads, `:931,1188`):
 
-- **Restart:** the cursor is durable, so publications that landed while the daemon was down
-  are still newer than it and are considered on the next tick — a bounded catch-up rather
-  than a flood or a hole.
-- **Catch-up is bounded and coalesced.** More than `BURST_LIMIT`-worth of eligible rows in
-  one catch-up emits **one digest push naming the count**, mirroring the TUI/desktop burst
-  rule (`docs/design/notification-feed.md`, `BURST_LIMIT = 3`).
-- **A suppressed push is retried, then dropped** (§2.3): the presence-deferral is a timer
-  bounded by the deferral window and terminated early by an ack (`unseen` goes false); an
-  emit that the cloud refuses is retried with the *same* idempotency key a bounded number of
-  times, then dropped with one log line. Push is a nudge; nothing depends on it succeeding.
+| Cursor | Read it with | Holds | Why it is needed |
+|---|---|---|---|
+| **publication cursor** | `AttentionStore.published_since(cursor)` (`attention.py:1684`) | the highest `completions.sequence` already **emitted** | new completions |
+| **supersede cursor** | `AttentionStore.superseded_since(cursor)` (`attention.py:1740`) | the highest `supersede_log.seq` already **emitted** | **heals**: an in-place correction moves neither `MAX(sequence)` nor `SUM(acknowledged)`, so the publication cursor can never see it — the store's own docstring says so (`attention.py:1740-1750`) and this is QA round 2's Q9 |
+| **acknowledgement map** | `AttentionStore.acknowledgement_map()` (`attention.py:1780`), diffed against the previous tick | `{conversation: acknowledged}` | the other half of a change: an ack that arrived since the last tick |
+
+**Detection is structural, never a count (round 2 M1).** The previous draft said the worker
+emits "when the count moves down", and that rule cannot see the case it exists for: a tick in
+which a publish and an ack land together leaves the derived count *equal*, so nothing is emitted
+and the phone keeps a stale badge until its next connect — the exact failure the attention emit
+exists to prevent. `revision()` is an **equality** token (Context §1) used as the *trigger* —
+"something durable changed, go and look" — while the two cursors and the map say **which**
+conversation moved. This is why the heal is delivered on the supersede cursor and not on the
+publication cursor (Q9), and why §3.4's content-derived key has something to mint it.
+
+- **A cursor advances only on emit, and "emit" means the cloud's accept (§3.1).** It never
+  advances on consideration. This is what makes a deferred or refused push survive a restart:
+  an item the presence gate deferred (§2.3) is still ahead of its cursor when the daemon comes
+  back and is re-considered rather than lost (round 2 M2).
+- **A cursor never advances past an unemitted item.** The pending backlog *is* the region behind
+  the cursor. It is bounded on both sides: presence-deferred items by the deferral window
+  (5 minutes, §2.3), cloud-refused items by three attempts over ~2 minutes (below); an item that
+  exhausts either bound is dropped with one log line, so the cursor can never be blocked forever
+  by one undeliverable item.
+- **Restart** is therefore a bounded catch-up: everything emitted-but-unaccepted, and everything
+  never emitted, is still ahead of its cursor. Nothing is dropped silently, and nothing already
+  accepted is re-emitted.
+- **Catch-up is bounded and coalesced.** More than `BURST_LIMIT`-worth of eligible rows in one
+  catch-up emits **one digest push naming the count**, mirroring the TUI/desktop burst rule
+  (`docs/design/notification-feed.md`, `BURST_LIMIT = 3`). The cloud has its own guard at a
+  different scale — a per-computer ceiling of 60 events/hour, the excess merged into one digest
+  emit rather than dropped — and the two are independent by design: the machine coalesces what
+  it *holds*, the cloud what it *receives* (`docs/push-cloud-ops.md` §3).
+- **Two retry policies, deliberately not folded into one (round 2 m1).** *(a) The presence
+  deferral* is machine-local: a timer bounded at 5 minutes and terminated early by a real read,
+  so it never leaves the machine at all. *(b) A cloud refusal or timeout* is a wire retry of the
+  **same** idempotency key: three attempts over ~2 minutes, then a drop with one log line
+  (`docs/push-cloud-ops.md` §6). **A daemon restart interrupts (a) and abandons (b)**: (a) is
+  re-considered from the cursor; (b) is given up because the accept-or-not state lives in the
+  cloud, and the machine's only correct move after a restart is to re-emit with the same key —
+  which the cloud's `Idempotency-Key` turns into a duplicate `202`, not a duplicate push.
 - **The considered alternative, and why it is not chosen:** a per-surface watermark in
   `attention.db` itself (`push_delivered`, mirroring `deliveries`, keyed by conversation or
   by device). It is what a naive design reaches for, and it is *defensible* — the argument
@@ -466,12 +509,23 @@ push on does not fire the backlog, and `published_since(cursor)` as the per-tick
 | **Device** | `device_id`, `platform`, the push token, `environment` (`sandbox`/`production` — only the app knows which build it is), app build, `created_at`, `last_seen_at`, `revoked_at` | token rotation and revocation are the whole of device management |
 | **Account → devices** | account id → live device ids | routing; the account already exists (`GET /v1/me`, `tunnels/api.py:144-170`) |
 | **Computer → devices** | the connector's tunnel identity → the devices registered for *that* machine | a user with three machines must not be pushed about machine C's work while paired to A |
-| **Delivery** | `(device_id, conversation_handle, emit_id)` → sent/attempted, provider id, response code | the record of what was pushed: it is what makes re-delivery idempotent and a revocation testable |
+| **Delivery** | `(device_id, conversation_handle, emit_id)` → sent/attempted, provider id, response code, **kept 14 days** | the record of what was pushed: it is what makes re-delivery idempotent, a revocation testable and the cloud's own alerts meaningful. **It is not returned to the machine** (§3.1) |
 | **Credentials** | the APNs `.p8` key id + team id; the FCM service account | the reason the cloud has to exist at all |
 
 **What the cloud must NOT hold:** transcripts, conversation names, session ids, working
 directories, model names, prompt text, **read state or read history**, and **no unread
 count** (§1.5). §4 says what it does learn, honestly, including the residue.
+
+**Two retention rules the cloud owns, and one honest gap** (both from the cloud ops note,
+[`docs/push-cloud-ops.md`](../push-cloud-ops.md), *proposal* — PR #15): delivery records are
+kept **14 days**, and a device with **no authenticated request for 60 days is dropped** as a
+tombstone rather than a ban (last-seen is the device's last authenticated call — the app reading
+unread on launch, foreground or connect — not its last delivery; the drop rule and the 60/hour
+per-computer ceiling are the ops note's design, not this ADR's). **The gap, stated rather than
+discovered later:** the machine's registry (§3.1) does not see that drop, so a device can appear
+paired in the app's Settings while push is paused for it, until it next opens the app. Settings
+must not claim otherwise, and the honest sentence is the ops note's own: "push may resume the
+next time this device opens the app".
 
 **The attention push is not "the same route with a flag" for idempotency purposes** (review
 M4): a completion event and a correction are different deliveries with different keys (§3.4).
@@ -655,12 +709,38 @@ re-reads the projection and retries with the token it now names** — the refusa
 state on purpose (`attention.py:2175-2240`).
 
 **Emit a completion event** *(cloud, proposal)*: `POST /v1/tunnels/{tunnel_id}/push/events`,
-`Idempotency-Key: <emit key, §3.4>`, body = §3.2's `data` minus `emit_id`. Response names the
-devices fanned out to and the per-device result.
+`Idempotency-Key: <emit key, §3.4>`, body = §3.2's `data` (with `emit_id` as the machine's own
+identity for the emit), and the answer is **`202 {emit_id, accepted_at}` — accepted and queued**:
 
-**Emit an attention change** *(cloud, proposal)*: the same route with `type: "attention"` and
-**its own key** (a machine-minted emit sequence, §3.4) — never the completion's key, or the
-cloud treats the correction as a replay and drops it (review M4).
+```jsonc
+POST /v1/tunnels/{tunnel_id}/push/events      (Idempotency-Key: <emit key>)
+→ 202 {"emit_id": "<uuid>", "accepted_at": 1759…}
+```
+
+**The response is an acknowledgement, not a delivery report — and this replaces the previous
+draft's synchronous per-device result** (reconciled with the cloud ops note,
+[`docs/push-cloud-ops.md`](../push-cloud-ops.md) §1, which specifies the same shape and says so
+explicitly). The reasons, so the choice is not just a fit to the note:
+
+- **The outcome is not actionable on the machine.** A device may be offline for hours; "device B
+  did not accept" tells the worker nothing it can *do*, and the badge is right on the app's next
+  read regardless.
+- **A synchronous fan-out would put APNs/FCM latency inside the daemon's 2 s tick**, and would
+  couple the worker's pacing and restart behaviour to a remote call's duration — for information
+  nothing consumes.
+- **The delivery record already exists** (§2.2) and is a cloud-side fact kept for the cloud's own
+  dedupe, revocation and alerts. It is **not part of the machine's contract**: the machine never
+  reads it, and adding that read later is a new route and an ADR amendment (the ops note's own
+  rule — the field table *is* the contract).
+- **What the machine does instead** is what §2.1 specifies: it queues locally against its cursor,
+  treats **2xx as accept** and advances the cursor, retries the same key three times over ~2
+  minutes on a non-2xx or timeout (a retry the cloud dedupes into a duplicate `202`, not a
+  duplicate push), and drops with one log line after that. Push remains a nudge.
+
+**Emit an attention change** *(cloud, proposal)*: the same route, the same `202`, with
+`type: "attention"`, **its own key** (a machine-minted emit sequence, §3.4) — never the
+completion's key, or the cloud treats the correction as a replay and drops it — and an explicit
+**`exclude`** list naming the device that just acted (below).
 
 **Emitted where the read state actually moves (review M4).** The relay sees only its own
 `POST /seen`; acks from the TUI and the desktop are written by other processes straight into
@@ -668,12 +748,19 @@ cloud treats the correction as a replay and drops it (review M4).
 through the store. So attention events are emitted by the **worker**, on a change it detects
 itself, and `revision()` is the detector it already reads (`daemon.py:2499-2535`):
 
-1. the worker persists the `revision()` triple (with the cursor, §2.1) and, when the count
-   moves down on a tick, emits one attention event for the computer (no device exclusion is
-   possible here, which is harmless — a device that receives a correction it does not need
-   simply re-reads);
+1. **on a tick**, the worker compares the `revision()` triple with the one it holds — an
+   **equality** check used as the trigger — and, when it differs, asks the two reads which
+   conversation actually moved: `acknowledgement_map()` diffed against the previous tick (an ack
+   landed) and the supersede cursor (§2.1; a heal landed). It emits **per changed conversation**,
+   never on a derived count (round 2 M1: a tick where a publish and an ack coincide leaves the
+   count equal, so a count rule would miss the correction entirely);
 2. the relay's `/seen` handler additionally nudges the in-process worker with the acking
-   `device_id`, so the common case is immediate and **the acting device is excluded**.
+   `device_id`. **The nudge consumes the change** (round 2 m3): it advances the worker's stored
+   revision map at nudge time, so the same ack cannot be emitted twice — once immediately and
+   once on the next tick — and the emit body carries `"exclude": ["<device_id>"]` so the acting
+   device is skipped while every other device is still corrected. A duplicate that slips through
+   anyway is benign (a correction asking a device to re-read what it already has), but the slice's
+   exit criterion is "at most one emit per ack", not "usually one".
 
 That is the slice that makes the headline scenario — *clear a completion on the desktop and
 the phone's number drops* — actually exist, which no slice did before.
@@ -695,7 +782,8 @@ the phone's number drops* — actually exist, which no slice did before.
             "count": 2 } }
 ```
 
-The attention form carries `{v, type: "attention", computer, count, emit_id}` and
+The attention form carries `{v, type: "attention", computer, count, emit_id, exclude: ["<device_id>"]}`
+and
 `aps: {"content-available": 1}` — a **silent, best-effort wake** (§5). One term is used for it
 throughout: **the attention push**.
 
@@ -706,6 +794,7 @@ throughout: **the attention push**.
 | `completion_token` | the tap's ack is token-bound, and §3.3's guard compares it |
 | `kind` | the title/body differ per outcome; the app must not re-derive it. It is the **store's** vocabulary (`complete, error, interrupted, closed, retired` — `attention.py:1611`), not the composer's: `compose.NotificationKind` lists `retired` and the gate kinds but **not `closed`** (`compose.py:60`), so a push builder keyed to the composer's literal set would silently drop a real outcome |
 | `emit_id` | the machine's own identity for one emit, for dedupe and for the cloud's delivery record. **It replaces the `revision` counters that the previous draft carried** (review M7): an opaque UUID per emit cannot be read as activity volume |
+| `exclude` *(attention only)* | the device that just acted, so the self-correcting push skips it — the one field that makes §3.1's exclusion representable at all (round 2 M3: the claim had no wire field). Absent means "exclude nobody", which is what a tick-detected change sends because it never knows who acked. `(proposal)` like the rest of the attention form |
 | `count` | the number in the notification's **body**, so a user can judge whether to look now. **Deliberate, disclosed leak**: it is the machine's unread count at composition time, and the cloud sees it. (The alternative — body says "A turn finished" and nothing else — is a one-line change; recorded, not chosen) |
 | ~~`aps.badge`~~ | **not sent, ever** (§1.5) |
 | ~~conversation name~~ | **never sent** (P2). Not in the title, not in the body, not in any field. §2.2 says the cloud must not hold it, and `session_names_in_notifications()` gates *local* notifications on the machine (`notify.py:802-820`, **default `True`** at `:820`) — it is not a cloud-facing consent, and it must never be read as one |
@@ -751,8 +840,9 @@ sends the name, and it is the price of P2.
 |---|---|---|
 | `POST /api/push/register` | `(install_id, platform)`; the token is replaced, `device_id` stable | n/a |
 | `POST /api/sessions/{id}/seen` | `completion_token`; a duplicate or delayed receipt converges upward (`MAX(receipts.acknowledged, excluded.acknowledged)`, `attention.py:2247-2249`); a receipt for a superseded token is **refused, not recorded** | a heal keeps the token; the refusal is the app's cue to re-read |
-| completion emit *(cloud, proposal)* | **`sha256(completion_token ‖ anchor_id ‖ kind)`** — the record's *content*, which is exactly what `publish`'s supersede rewrites (`attention.py:2094-2100`) | **a heal changes the key, so the correction is a new delivery and idempotency cannot swallow it** (P5) |
-| attention emit *(cloud, proposal)* | a machine-minted monotone **emit sequence**, persisted with the cursor — never the completion's key | n/a |
+| completion emit *(cloud, proposal)* | **`sha256(completion_token ‖ anchor_id ‖ kind)`** — the record's *content*, which is exactly what `publish`'s supersede rewrites (`attention.py:2094-2100`); the cloud answers `202 {emit_id, accepted_at}` (§3.1) | **a heal changes the key, so the correction is a new delivery and idempotency cannot swallow it** (P5) — **and the key is actually minted, because a heal is read on the supersede cursor** (`superseded_since`, `attention.py:1740`; §2.1). QA round 2's Q9 was exactly this: the distinct key existed in this table while no cursor in §2.1 could see the heal that mints it |
+| attention emit *(cloud, proposal)* | a machine-minted monotone **emit sequence**, persisted with the cursor — never the completion's key | n/a (an ack is not a heal) |
+| the supersede cursor | `superseded_since(seq)` (`attention.py:1740`) — **equality on `supersede_log.seq`** | it is the *only* thing that can see a heal, because a heal moves neither `MAX(sequence)` nor `SUM(acknowledged)` |
 | the badge | **not a wire field at all** (§1.5); it is the machine's count at read time | n/a |
 | `AttentionStore.revision()` | equality only, and it is the machine's own change detector — it never reaches the wire | the heal moves its third term |
 
@@ -914,10 +1004,10 @@ a second policy.
   notifications module and keeps the SSE + local-notification path, and a documented reason
   the row is parked until that flavour exists. (The previous draft attributed the "revisit when
   notifications land" phrasing to `other-channels.md`; it is ADR 0004's row, and it is cited
-  there now — review Q8a.)
+  there now — QA round 1 Q8a.)
 - **The app's own Settings and permission flow is a new requirement, not an existing rule.**
   The previous draft implied the design kit already forbade a bare OS permission prompt; no
-  such rule exists in `docs/design`, `docs/ux`, `docs/adr` or `AGENTS.md` (review Q8b). It is
+  such rule exists in `docs/design`, `docs/ux`, `docs/adr` or `AGENTS.md` (QA round 1 Q8b). It is
   a requirement this ADR sets: the permission is requested in context, with the §2.4 copy
   already on screen, reviewed by the designer in the app slice.
 
@@ -1053,7 +1143,7 @@ order this ADR *decides*, and the reason:
 | **Badge drift from the in-app count** | two implementation sites are the classic way this happens | the §1.2 equality test, on the same snapshot, is a gate not a nicety |
 | **A store-wide population creeping back in** | it is the natural way to write the read, and it is wrong by a factor of ~35 on the operator's own machine (6,392 vs the listing) | the population is one function with the listing's identity set as its input; a test with `agent/` identities and no directories present |
 | **Reordered/duplicated pushes** | APNs may reorder and coalesce; Android may drop in Doze | the badge is never carried (§1.5) — the class is removed, not defended |
-| **A heal swallowed by idempotency** | same token, new content, and a naive key drops the correction | the emit key carries the record's content (§3.4); a test that a heal produces a distinct key |
+| **A heal swallowed by idempotency** | same token, new content, and a naive key drops the correction | **two** things: the emit key carries the record's content (§3.4), **and** a heal is read on the supersede cursor (`superseded_since`) rather than on the publication cursor (§2.1), so the key is actually minted. A test that a heal produces a distinct key *and* that it is emitted |
 | **Privacy regression by drift** (someone adds a field) | the payload table is the allow-list, and the tempting additions are the leaky ones (a name, a snippet, a counter) | the cloud contract rejects unknown fields (`extra="forbid"`, the house pattern in `docs/design/descriptive-notifications.md`); a test asserting the builder never reads `body_is_snippet`/`body_is_failure` inputs |
 | **Revocation that does not revoke** | a stolen phone that keeps buzzing is the worst user-visible failure here | all five paths in §4 exercised; the account-side path is the one that must exist even with the machine offline |
 | **Acknowledge-by-accident** (a new automatic path clearing marks) | the rule is one sentence in §1.3 and easy to violate | a delivered push, a wake and a foreground change all leave `unseen` untouched; `claim_delivery` never advances the read watermark (`attention.py:2391-2393`) |
@@ -1078,15 +1168,27 @@ order this ADR *decides*, and the reason:
   delivery record prove insufficient in practice; the reasons it was not chosen are recorded
   there rather than left for the next reader to rediscover.
 
-**Citation corrections made in remediation round 1** (review Q7), listed so the next reader
-can see what moved: `daemon.py:3689-3691` → **`:3694-3695`** (the SSE wake; `:3689-3691` is
+**Citation corrections made across both remediation rounds, listed so the next reader can see
+what moved.** Round 1's were found by **QA round 1 Q7/Q8** (the review round running beside it
+found no drift of its own — "~20 citations spot-checked, all resolve" — and attributing them to
+it was round 2's Q12): `daemon.py:3689-3691` → **`:3694-3695`** (the SSE wake; `:3689-3691` is
 the 409 body); the superseded 409 → **`:3676-3690`**; `compose.py:84-105` →
 **`:93-113`** (the `body_is_snippet`/`body_is_failure` fields); "a delivered banner does not
 mark anything read" → **`attention.py:2391-2393`**; the TUI's change detection →
 **`app.py:27291-27348`** (it reads `revision()`; `acknowledgement_map()` is the *desktop
 feed's* delta read, `desktop_feed.py:931,1188`); the TUI viewer record is
 **`session/runtime/viewers.py`**, not `desktop_presence.py`; and the "revisit when
-notifications land" sentence is **ADR 0004:178**, not `other-channels.md` (Q8a).
+notifications land" sentence is **ADR 0004:178**, not `other-channels.md` (QA round 1 Q8a).
+
+Round 2's corrections, from the review and QA rounds on `22e2cce`: the pin is labelled **a
+pinned SHA ("`40ca7910e49a`"), not `origin/main`** (QA round 2 Q11 — it is now 12 commits behind,
+and `app.py`/`session_sidebar.py` line numbers shift under it); the citation table now maps
+`models/desktop_sessions.py`, `routes/desktop_sessions.py`, `utils/desktop_sessions.py`,
+`session.py` and `web/src/store.ts`, which were cited without a rule (Q13 / review m2);
+`attention.py:2129-2150` → **`:2129-2149`**, the method's real end (review n1); #11's
+`session-projection.ts:61-66` → **`:56-70`**, the function plus its rationale (review n2); and the
+`scaffold`'s own provenance sentence now attributes the drift to **QA round 1 Q7/Q8**, where it
+belongs (QA round 2 Q12).
 
 ---
 
