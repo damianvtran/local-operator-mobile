@@ -23,6 +23,8 @@ on:
   push:
     tags:
       - "v*"
+    branches:
+      - feat/ci-cd-verify
   workflow_dispatch:
     inputs:
       tag:

@@ -13,16 +13,24 @@
  * workflow independent of that, and printing what it resolved is what makes a
  * surprise visible in the log instead of mysterious.
  *
- * `*.xcworkspace` rather than `*.xcodeproj` on purpose: CocoaPods is what the
- * SDK 57 project uses, and building the project file instead of the workspace
- * silently omits every pod — which fails at link time rather than at configure
- * time. If the workspace is missing, that means `pod install` did not run, and
- * the error says so.
+ * WHY THE SCHEME IS NOT SIMPLY "THE ONLY ONE". A CocoaPods workspace lists a
+ * scheme for every pod it integrates — on this app, measured in CI on
+ * 2026-09-30, `xcodebuild -list` reported 115 of them (EXConstants, Expo,
+ * React-Fabric, Yoga, …) beside the app's own. "More than one scheme" is
+ * therefore this project's normal state, not an ambiguity to refuse. The app's
+ * scheme is the one named after the app's own `.xcodeproj`, which is what
+ * `expo prebuild` generates next to the workspace; a lone candidate is still
+ * accepted, and anything else fails naming what it found rather than building a
+ * pod's scheme — which fails later, in a way that looks like a code problem.
  *
- * `xcodebuild -list -json` is a boundary, so its payload is narrowed rather than
- * asserted.
+ * `*.xcworkspace` rather than `*.xcodeproj` for the BUILD is deliberate:
+ * CocoaPods builds the workspace, and building the project file instead
+ * silently omits every pod. If the workspace is missing, `pod install` did not
+ * run, and the error says so.
  *
- * `--json-file` lets the parsing be exercised on a machine with no Xcode.
+ * `xcodebuild -list -json` is a boundary, so its payload is narrowed rather
+ * than asserted. `--json-file` lets the resolution be exercised on a machine
+ * with no Xcode.
  *
  * Run directly by Node (type-stripping, no build step, no dependency).
  */
@@ -63,11 +71,9 @@ const message = (error: unknown): string =>
 const root = resolve(arg("root", "ios"));
 const jsonFile = arg("json-file", "");
 
-let workspaces: string[];
+let entries: string[];
 try {
-	workspaces = readdirSync(root).filter((name) =>
-		name.endsWith(".xcworkspace"),
-	);
+	entries = readdirSync(root);
 } catch (error) {
 	console.error(
 		`::error::no generated iOS project at ${root} (${message(error)}). ` +
@@ -75,6 +81,8 @@ try {
 	);
 	process.exit(1);
 }
+
+const workspaces = entries.filter((name) => name.endsWith(".xcworkspace"));
 if (workspaces.length === 0) {
 	console.error(
 		`::error::no .xcworkspace in ${root}. The .xcodeproj is not enough: ` +
@@ -89,14 +97,33 @@ if (workspaces.length > 1) {
 	);
 	process.exit(1);
 }
-const [onlyWorkspace] = workspaces;
-if (!onlyWorkspace) {
+const workspaceName = workspaces[0];
+if (workspaceName === undefined) {
 	console.error(
 		"::error::no workspace name survived the check; this is a bug.",
 	);
 	process.exit(1);
 }
-const workspace = join(root, onlyWorkspace);
+const workspace = join(root, workspaceName);
+
+// The app's own project file, whose name the app's scheme shares. `Pods.xcodeproj`
+// is not at this level (it lives inside `Pods/`), so a second project here is
+// something this tool has not seen before and should not guess about.
+const projects = entries.filter((name) => name.endsWith(".xcodeproj"));
+if (projects.length !== 1) {
+	console.error(
+		`::error::expected exactly one .xcodeproj in ${root} and found ` +
+			`${projects.length} (${projects.join(", ") || "none"}); the app's scheme is ` +
+			"resolved from that project's name.",
+	);
+	process.exit(1);
+}
+const projectName = projects[0];
+if (projectName === undefined) {
+	console.error("::error::no project name survived the check; this is a bug.");
+	process.exit(1);
+}
+const appTarget = projectName.replace(/\.xcodeproj$/, "");
 
 let payload: string;
 try {
@@ -130,19 +157,18 @@ if (!schemes) {
 	);
 	process.exit(1);
 }
-if (schemes.length > 1) {
-	// A second scheme is possible once there are app extensions or a test target.
-	// Guessing wrong here would build the wrong thing silently, so this fails and
-	// names them.
+
+const scheme = schemes.includes(appTarget)
+	? appTarget
+	: schemes.length === 1
+		? (schemes[0] ?? null)
+		: null;
+if (scheme === null) {
 	console.error(
-		`::error::the project declares ${schemes.length} schemes (${schemes.join(", ")}); ` +
-			"name the app's scheme in the workflow once there is more than one.",
+		`::error::the workspace declares ${schemes.length} schemes and none is named ` +
+			`${appTarget} (the app project's own name). Candidates: ` +
+			`${schemes.slice(0, 20).join(", ")}${schemes.length > 20 ? ", …" : ""}`,
 	);
-	process.exit(1);
-}
-const [scheme] = schemes;
-if (!scheme) {
-	console.error("::error::no scheme name survived the check; this is a bug.");
 	process.exit(1);
 }
 

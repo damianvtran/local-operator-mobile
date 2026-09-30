@@ -29,6 +29,9 @@ on:
   push:
     branches:
       - main
+      # SCRATCH (verification only): lets the runs fire on this synthesised tree
+      # without opening a pull request. Not part of the proposal.
+      - feat/ci-cd-verify
   pull_request:
   workflow_dispatch:
 
