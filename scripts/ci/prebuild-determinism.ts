@@ -77,7 +77,10 @@ const walk = (root: string): Map<string, Buffer> => {
 			const full = join(dir, entry.name);
 			if (entry.isDirectory()) visit(full);
 			else if (entry.isFile()) {
-				files.set(relative(root, full).split(sep).join("/"), readFileSync(full));
+				files.set(
+					relative(root, full).split(sep).join("/"),
+					readFileSync(full),
+				);
 			}
 		}
 	};
@@ -111,7 +114,8 @@ const problems = [...onlyBuilt, ...onlyRegenerated, ...differing];
 console.log(`built:       ${built} (${a.size} file(s))`);
 console.log(`regenerated: ${regenerated} (${b.size} file(s))`);
 for (const path of onlyBuilt) console.log(`  only in built:       ${path}`);
-for (const path of onlyRegenerated) console.log(`  only in regenerated: ${path}`);
+for (const path of onlyRegenerated)
+	console.log(`  only in regenerated: ${path}`);
 for (const path of differing) console.log(`  differs:             ${path}`);
 
 if (problems.length > 0) {
