@@ -2,7 +2,11 @@
 # workflow with its own group that calls the reusable one on the same ref.
 name: Probe caller
 on:
-  workflow_dispatch:
+  # A push, not a dispatch: `gh workflow run` resolves a workflow by name on the
+  # DEFAULT branch, and these files are scratch — they must never reach main.
+  push:
+    branches:
+      - feat/ci-cd-verify
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
