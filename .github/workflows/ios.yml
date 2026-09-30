@@ -270,7 +270,12 @@ jobs:
           sips -s format bmp "$frames/ios-release.png" --out "$RUNNER_TEMP/frame-a.bmp" >/dev/null
           sips -s format bmp "$frames/ios-release+2s.png" --out "$RUNNER_TEMP/frame-b.bmp" >/dev/null
           total=$(stat -f%z "$RUNNER_TEMP/frame-a.bmp")
-          differing=$(cmp -l "$RUNNER_TEMP/frame-a.bmp" "$RUNNER_TEMP/frame-b.bmp" | head -200000 | wc -l | tr -d ' ')
+          # `cmp -l` EXITS 1 when the files differ — which is precisely the case we
+          # are counting — so it is inside a group whose status is discarded: under
+          # `set -e` with `pipefail` (this workflow sets both) the bare pipeline
+          # aborted the step with no message at all. Verified locally against a
+          # differing pair before pushing.
+          differing=$( { cmp -l "$RUNNER_TEMP/frame-a.bmp" "$RUNNER_TEMP/frame-b.bmp" || true; } | head -200000 | wc -l | tr -d ' ')
           pct=$(awk -v d="$differing" -v t="$total" 'BEGIN { printf "%.2f", (d / t) * 100 }')
           echo "settle: $differing of $total channel bytes differ between t+5s and t+7s (${pct}%, capped at 200000)"
           {
