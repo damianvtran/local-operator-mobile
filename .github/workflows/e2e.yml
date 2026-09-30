@@ -1,0 +1,240 @@
+name: E2E (mock relay and Maestro)
+
+# The native end-to-end layer: a real emulator, a real installed app, real flows.
+#
+# IT CANNOT BLOCK A PULL REQUEST IT CANNOT RUN, and that is the whole design
+# here. The layers below it need a harness that is a deliverable in its own right
+# (ADR 0003, "Mock relay" and "Native E2E"), and until that lands the jobs are
+# SKIPPED — which GitHub renders as `skipped`, not as a green tick, so an absent
+# suite can never be read as a passing one. A `harness` job does the detection and
+# says in its summary exactly which directory is missing and which stream owns it.
+#
+# ONE RETRY, ONLY HERE (ADR 0004). Emulators are the flake-prone end of the
+# pipeline, so the flow set gets a second attempt — and the second attempt writes
+# to a DIFFERENT JUnit file, so a retry that passes is visible as a retry rather
+# than indistinguishable from a clean first run. Nothing outside this workflow
+# retries.
+#
+# THE HARNESS CONTRACT, stated here because this file is where it is consumed.
+# Stream C's audit harness is wired in when it satisfies this:
+#   * a workspace package at `e2e/mock-relay` with a `ci` script that boots the
+#     mock relay, serves the web export, drives it in installed headless Chrome
+#     (never a downloaded browser), and writes the a11y report and frames into
+#     `e2e/mock-relay/report/`;
+#   * Maestro flows under `e2e/maestro/**/*.yaml` that run against that mock
+#     relay, per ADR 0003's high-value flow set.
+# Anything narrower is fine to change; the point is that CI names a contract
+# instead of guessing at one.
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Nightly, off-peak: the emulator job is the most expensive thing in the
+    # repository and the least useful on a branch nobody is waiting for.
+    - cron: "17 3 * * *"
+  push:
+    branches:
+      - main
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: "24"
+  JAVA_VERSION: "17"
+  # Pinned explicitly. The Maestro installer accepts a version and defaults to
+  # "latest", and a mobile-e2e job that silently changes its driver between two
+  # runs is a job whose failures cannot be attributed to anything.
+  MAESTRO_VERSION: "2.11.0"
+  # Android 16, which is what Google requires of new apps and updates since
+  # 2026-08-31 (ADR 0004).
+  MAESTRO_API_LEVEL: "36"
+
+jobs:
+  harness:
+    name: Is the audit harness present?
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      maestro: ${{ steps.detect.outputs.maestro }}
+      mock_relay: ${{ steps.detect.outputs.mock_relay }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Detect the harness
+        id: detect
+        run: |
+          set -euo pipefail
+          maestro=false
+          mock_relay=false
+          if [ -d e2e/maestro ] && [ -n "$(find e2e/maestro -name '*.yaml' -o -name '*.yml' | head -1)" ]; then
+            maestro=true
+          fi
+          if [ -f e2e/mock-relay/package.json ]; then
+            mock_relay=true
+          fi
+          echo "maestro=$maestro" >> "$GITHUB_OUTPUT"
+          echo "mock_relay=$mock_relay" >> "$GITHUB_OUTPUT"
+          {
+            echo "## End-to-end harness"
+            echo
+            echo "| layer | present |"
+            echo "|---|---|"
+            echo "| Maestro flows (\`e2e/maestro/**/*.yaml\`) | $maestro |"
+            echo "| Mock relay (\`e2e/mock-relay/package.json\`) | $mock_relay |"
+            echo
+            if [ "$maestro" = false ] || [ "$mock_relay" = false ]; then
+              echo "An absent layer is reported as \`skipped\` rather than as a pass."
+              echo "ADR 0003 assigns this harness to its own stream; the contract CI"
+              echo "consumes is named at the top of \`.github/workflows/e2e.yml\`."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "maestro=$maestro mock-relay=$mock_relay"
+
+  mock-relay:
+    name: Mock relay (web target frames and a11y)
+    needs: harness
+    if: needs.harness.outputs.mock_relay == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run the mock-relay harness
+        # The harness drives the app's OWN web export and the INSTALLED Chrome —
+        # no downloaded browser and no bundled Chromium, matching ADR 0003's layer
+        # 2 and the sibling repository's rules.
+        run: pnpm --filter ./e2e/mock-relay run ci
+
+      - name: Upload the frames, the a11y report and the captured pairs
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: mock-relay-report
+          path: e2e/mock-relay/report
+          retention-days: 30
+
+  maestro:
+    name: Maestro (Android emulator)
+    needs: harness
+    if: needs.harness.outputs.maestro == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Assert the harness can reach the mock relay
+        # The flows run against the mock relay, not a real one: a real relay
+        # needs the operator's `lop mobile serve`, a password and a tunnel, none
+        # of which belong in CI (ADR 0003 layer 3).
+        run: |
+          set -euo pipefail
+          test -f e2e/mock-relay/package.json
+          pnpm --filter ./e2e/mock-relay run ci --help >/dev/null 2>&1 || \
+            echo "note: the mock-relay package has no --help; it is still started by the flows' setup"
+
+      - name: Build the debug APK to install on the emulator
+        # Built in this job rather than downloaded from the Android workflow: a
+        # cross-workflow artefact download couples two independent triggers, and
+        # the debug APK is exactly what a flow should be run against.
+        run: |
+          set -euo pipefail
+          pnpm exec expo prebuild --platform android --clean --no-install
+          cd android
+          ./gradlew assembleDebug --no-daemon
+
+      - name: Restore the Android AVD
+        id: avd-cache
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/.android/avd
+            ~/.android/adb*
+          key: ${{ runner.os }}-avd-${{ env.MAESTRO_API_LEVEL }}-${{ hashFiles('e2e/maestro/**') }}
+
+      - name: Install the pinned Maestro CLI
+        # The installer is the one `curl | bash` this repository allows (ADR
+        # 0004), and MAESTRO_VERSION is what keeps it from being "latest".
+        run: |
+          set -euo pipefail
+          export MAESTRO_VERSION
+          curl -fsSL "https://get.maestro.mobile.dev" | bash
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+
+      - name: Run the flows on the emulator
+        id: flows
+        uses: reactivecircus/android-emulator-runner@c9c93e6ba9c4194322e114c40970d5983d9a07cc # v2.38.0
+        with:
+          api-level: ${{ env.MAESTRO_API_LEVEL }}
+          target: google_apis
+          arch: x86_64
+          avd-name: lo-mobile-e2e
+          # Reuse the cached AVD when the cache hit: creating one is minutes, and
+          # booting a cached one is seconds.
+          force-avd-creation: false
+          emulator-options: >-
+            -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect
+            -no-snapshot-save
+          disable-animations: true
+          # A spelling checker that underlines as you type is a known source of
+          # Maestro text-input flakiness; the action can turn it off.
+          disable-spellchecker: true
+          script: |
+            set -euo pipefail
+            adb install -r android/app/build/outputs/apk/debug/app-debug.apk
+            maestro test e2e/maestro \
+              --format junit \
+              --output "$RUNNER_TEMP/maestro-run.xml" \
+              --test-output-dir "$RUNNER_TEMP/maestro-screenshots"
+
+      - name: Retry the flows once, into a separate result file
+        if: failure() && steps.flows.outcome == 'failure'
+        # The one retry the ADR allows, and only for the emulator flows. The
+        # result lands in its own file so a green retry stays legible as a retry.
+        run: |
+          echo "::warning::the Maestro flow set failed on the first attempt; retrying once. Both JUnit files are uploaded, so a pass on the retry is visible as a retry."
+          adb wait-for-device
+          maestro test e2e/maestro \
+            --format junit \
+            --output "$RUNNER_TEMP/maestro-retry.xml" \
+            --test-output-dir "$RUNNER_TEMP/maestro-screenshots-retry"
+
+      - name: Upload the per-step screenshots and both result files
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: maestro-screenshots
+          path: |
+            ${{ runner.temp }}/maestro-screenshots
+            ${{ runner.temp }}/maestro-retry.xml
+          retention-days: 30

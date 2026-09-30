@@ -1,0 +1,126 @@
+# fastlane — the store uploader.
+#
+# WHY FASTLANE AND NOT EAS SUBMIT (ADR 0004): fastlane runs in the same job that
+# produced the artefact, with the credentials held by GitHub secrets, and it does
+# not need an Expo account or an EAS project. EAS Submit stays a documented escape
+# hatch and nothing here depends on it.
+#
+# WHAT IS NOT IN THIS FILE, AND NEVER WILL BE: a token, a password, a key, a path
+# to a key, or a team id. Every credential arrives from the environment, and the
+# only names this file knows are the NAMES of the secrets that supply them:
+#
+#   Android
+#     ANDROID_KEYSTORE_BASE64          release keystore, base64 — used by Gradle,
+#                                      not by fastlane
+#     ANDROID_KEYSTORE_PASSWORD        keystore password       (Gradle; -storepass:env)
+#     ANDROID_KEY_ALIAS                key alias               (Gradle)
+#     ANDROID_KEY_PASSWORD             key password            (Gradle)
+#     PLAY_SERVICE_ACCOUNT_JSON_BASE64 Play API service account, base64
+#                                      → decoded by the workflow to SUPPLY_JSON_KEY
+#   iOS
+#     APPLE_TEAM_ID                    Xcode automatic signing + export options
+#     APPLE_ASC_KEY_ID                 App Store Connect API key id
+#     APPLE_ASC_ISSUER_ID              App Store Connect issuer id
+#     APPLE_ASC_PRIVATE_KEY_BASE64     the .p8, base64
+#                                      → decoded to APPLE_ASC_PRIVATE_KEY_PATH
+#
+# A maintainer who has configured none of them can still run every gate in CI:
+# these lanes are only reached from a signed build, and a tagged release that
+# cannot reach them FAILS rather than skipping (see scripts/ci/check-secrets.mjs).
+#
+# HOW TO RUN THESE LOCALLY. You cannot, meaningfully — both lanes upload to a
+# store, which is why they exist only in CI. To exercise a lane without the
+# stores, use the runner's own dry-run where one exists (`supply` validates the
+# AAB against Play before uploading; `pilot` can wait for processing or not).
+# What a contributor CAN do locally is everything upstream of the upload: the
+# gates (`pnpm lint`, `pnpm test`, `pnpm typecheck`, the design gates), the web
+# export, and the simulator/emulator builds through CI. See docs/ci.md.
+#
+# `--verbose` is deliberately never passed: fastlane's verbose output includes
+# the options it was called with, and that is how a token ends up in a log.
+#
+# There is no Appfile on purpose: an Appfile is where a bundle id, an Apple id
+# and a team id are committed, and BOTH lanes are told which artefact to upload
+# and infer the app from it (the AAB's package name, the IPA's bundle id). The
+# team id that Xcode needs arrives as APPLE_TEAM_ID through the app config.
+
+default_platform(:android)
+
+def require_env!(name, why)
+  value = ENV[name]
+  if value.nil? || value.empty?
+    UI.user_error!(
+      "#{name} is not set. #{why} " \
+        "Set it from the secret of the same name (docs/ci.md, \"Secrets\")."
+    )
+  end
+  value
+end
+
+platform :android do
+  desc "Upload an already-built AAB to the Play internal track"
+  lane :internal do
+    aab = require_env!("LO_ANDROID_AAB", "It is the path to the AAB the build job produced.")
+    json_key = require_env!(
+      "SUPPLY_JSON_KEY",
+      "It is the path to a decoded Play service account JSON, written from "\
+        "PLAY_SERVICE_ACCOUNT_JSON_BASE64."
+    )
+
+    UI.user_error!("no AAB at #{aab}") unless File.exist?(aab)
+
+    # `track: "internal"` is the ADR's decision: internal first, always. The
+    # metadata uploads are switched off because this repository keeps no
+    # fastlane metadata directory — the store listing is not content this
+    # pipeline owns, and `supply` would otherwise fail trying to update it.
+    supply(
+      json_key: json_key,
+      aab: aab,
+      track: "internal",
+      skip_upload_metadata: true,
+      skip_upload_images: true,
+      skip_upload_screenshots: true,
+      skip_upload_changelogs: true
+    )
+  end
+end
+
+platform :ios do
+  desc "Upload an already-built IPA to TestFlight (internal testers)"
+  lane :testflight do
+    dir = require_env!("LO_IOS_IPA_DIR", "It is the directory the export wrote the IPA into.")
+    ipas = Dir[File.join(dir, "*.ipa")].sort
+    UI.user_error!("no .ipa in #{dir}") if ipas.empty?
+    # Sorted rather than first-match: if an export ever produces more than one,
+    # the choice has to be deterministic, and an error naming them is better than
+    # a coin toss.
+    UI.user_error!("more than one .ipa in #{dir}: #{ipas.join(", ")}") if ipas.size > 1
+    ipa = ipas.first
+
+    api_key = app_store_connect_api_key(
+      key_id: require_env!("APPLE_ASC_KEY_ID", "It is the App Store Connect API key id."),
+      issuer_id: require_env!("APPLE_ASC_ISSUER_ID", "It is the App Store Connect issuer id."),
+      key_filepath: require_env!(
+        "APPLE_ASC_PRIVATE_KEY_PATH",
+        "It is the path to the decoded .p8, written from APPLE_ASC_PRIVATE_KEY_BASE64."
+      ),
+      # This is an App Store Connect key, not an in-house enterprise one.
+      in_house: false
+    )
+
+    # `distribute_external: false` — external testers need an App Store review of
+    # the first build of a version, which is a human decision (ADR 0004, "Stores
+    # and distribution channels"). Internal testers are the automation's job.
+    #
+    # `skip_waiting_for_build_processing: true` because Apple's processing can
+    # take tens of minutes and holding a runner open for it buys nothing: the
+    # build appears in TestFlight whether or not this job is watching.
+    upload_to_testflight(
+      api_key: api_key,
+      ipa: ipa,
+      distribute_external: false,
+      notify_external_testers: false,
+      skip_waiting_for_build_processing: true
+    )
+  end
+end
