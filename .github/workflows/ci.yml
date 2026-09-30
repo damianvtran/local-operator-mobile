@@ -32,6 +32,9 @@ on:
       # `main` only. A feature branch with an open pull request would otherwise
       # fire a `push` run and a `pull_request` run for one identical result.
       - main
+      # SCRATCH (verification only): lets the runs fire on this synthesised tree
+      # without opening a pull request. Not part of the proposal.
+      - feat/ci-cd-verify
   pull_request:
   workflow_dispatch:
   # Callable, so release.yml can run the SAME gate a pull request runs rather
