@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<title>App Store screenshot frame — iPad 13"</title>
+		<style>
+			/*
+			 * App Store screenshot frame, 13-inch iPad class.
+			 *
+			 * A TEMPLATE, not a screenshot: it draws the canvas at exactly the size
+			 * App Store Connect requires for the iPad class and reserves the app's
+			 * screen area inside it.
+			 *
+			 * Sizes (read 2026-09-29,
+			 * https://developer.apple.com/help/app-store-connect/reference/app-information/screenshot-specifications):
+			 * iPad 13" accepts 2064x2752 or 2048x2732, portrait or landscape. This
+			 * template uses 2064x2752. These are required only if the app runs on
+			 * iPad — see docs/design/brand-kit.md § 7.1.
+			 *
+			 * The slot's aspect matches the canvas exactly (1400 / 1867 = 0.7499 =
+			 * 2064 / 2752), so an app capture scales to fit within it without
+			 * letterboxing. The type is scaled up from the iPhone template's sizes
+			 * by 2064/1320 (1.564x) so the two listings read with the same
+			 * proportions rather than the iPad looking under-typeset.
+			 */
+			* {
+				box-sizing: border-box;
+				margin: 0;
+			}
+
+			html,
+			body {
+				width: 2064px;
+				height: 2752px;
+				overflow: hidden;
+				background: #f2ede3;
+				color: #211e18;
+				font-family: "Figtree", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+				-webkit-font-smoothing: antialiased;
+			}
+
+			.frame {
+				position: relative;
+				width: 2064px;
+				height: 2752px;
+				padding: 0 332px;
+			}
+
+			.band {
+				height: 470px;
+				padding-top: 112px;
+			}
+
+			.eyebrow {
+				font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+				font-size: 62px;
+				font-weight: 500;
+				letter-spacing: 0.08em;
+				text-transform: uppercase;
+				color: #656056;
+			}
+
+			h1 {
+				margin-top: 22px;
+				font-size: 112px;
+				line-height: 1.08;
+				font-weight: 600;
+				letter-spacing: -0.024em;
+				max-width: 1330px;
+			}
+
+			.slot {
+				width: 1400px;
+				height: 1867px;
+				border-radius: 110px;
+				background: #22201c;
+				box-shadow:
+					0 1px 2px rgb(20 17 12 / 0.06),
+					0 24px 48px -24px rgb(20 17 12 / 0.28);
+				overflow: hidden;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				color: #b5afa2;
+			}
+
+			.slot.empty {
+				background: repeating-linear-gradient(
+					45deg,
+					#2b2721,
+					#2b2721 24px,
+					#322d22 24px,
+					#322d22 48px
+				);
+			}
+
+			.slot-label {
+				font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+				font-size: 48px;
+				line-height: 1.6;
+				text-align: center;
+				letter-spacing: 0.02em;
+			}
+
+			footer {
+				display: flex;
+				align-items: center;
+				gap: 30px;
+				height: 415px;
+			}
+
+			.mark {
+				color: #211e18;
+				flex: none;
+			}
+
+			.wordmark {
+				font-size: 88px;
+				font-weight: 600;
+				letter-spacing: -0.012em;
+			}
+
+			.spec {
+				margin-left: auto;
+				font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+				font-size: 40px;
+				color: #656056;
+				text-align: right;
+				line-height: 1.5;
+				white-space: nowrap;
+			}
+		</style>
+	</head>
+	<body>
+		<div class="frame">
+			<div class="band">
+				<p class="eyebrow">01 · Sessions</p>
+				<h1>Every session, on a bigger screen.</h1>
+			</div>
+
+			<!-- Replace with <img src="…" width="1400" height="1867"> once a real
+			     iPad capture exists, and drop the `empty` class. -->
+			<div class="slot empty">
+				<div class="slot-label">
+					app capture<br />
+					1400 × 1867 (2x: 2800 × 3734)<br />
+					aspect 0.7499 = 2064 / 2752
+				</div>
+			</div>
+
+			<footer>
+				<svg class="mark" width="150" height="150" viewBox="285 253 520 520" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+					<circle cx="490" cy="355" r="78" stroke-width="35" />
+					<circle cx="720" cy="326" r="42" stroke-width="29" />
+					<circle cx="368" cy="686" r="41" stroke-width="29" />
+					<path d="M370 645 V545 a90 90 0 0 1 90 -90 h60 a78 78 0 0 1 66 44" stroke-width="33" />
+					<path d="M590 498 V750" stroke-width="33" />
+					<path d="M600 492 C 646 512 686 480 706 400 L 712 378" stroke-width="33" />
+				</svg>
+				<span class="wordmark">Local Operator</span>
+				<span class="spec">
+					App Store · 13"<br />
+					2064 × 2752 @1x<br />
+					alt: 2048 × 2732
+				</span>
+			</footer>
+		</div>
+	</body>
+</html>
