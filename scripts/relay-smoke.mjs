@@ -34,6 +34,8 @@ import { readFileSync } from "node:fs";
 const DEFAULT_TIMEOUT_MS = 15_000;
 /** Keep the stream steps short: this is a smoke run, not a soak. */
 const STREAM_READ_MS = 8_000;
+/** How long a step may wait for the relay to publish something (a completion). */
+const COMPLETION_WAIT_MS = 30_000;
 
 /* --------------------------------------------------------------- tiny harness */
 
@@ -164,6 +166,35 @@ async function readSse(
 	path,
 	{ wantFrames = 1, timeoutMs = STREAM_READ_MS } = {},
 ) {
+	/* `readSseUntil` is `readSse` with a stopping CONDITION, which is what a step
+	 * that must wait for the relay to publish something needs: the session stream's
+	 * seed frame is the projection as of subscribe time, so a step that reads one
+	 * frame sees the state an instant ago, not the state the step is about. */
+	return await readSseInner(config, path, {
+		wantFrames,
+		timeoutMs,
+		stopWhen: null,
+	});
+}
+
+async function readSseUntil(
+	config,
+	path,
+	stopWhen,
+	{ timeoutMs = STREAM_READ_MS } = {},
+) {
+	return await readSseInner(config, path, {
+		wantFrames: Number.MAX_SAFE_INTEGER,
+		timeoutMs,
+		stopWhen,
+	});
+}
+
+async function readSseInner(
+	config,
+	path,
+	{ wantFrames = 1, timeoutMs = STREAM_READ_MS, stopWhen = null } = {},
+) {
 	const init = {
 		method: "GET",
 		redirect: "manual",
@@ -222,7 +253,13 @@ async function readSse(
 					else if (field === "data")
 						event.data = (event.data ? `${event.data}\n` : "") + fieldValue;
 				}
-				if (event.data !== undefined) frames.push(event);
+				if (event.data !== undefined) {
+					frames.push(event);
+					if (stopWhen && stopWhen(event))
+						return { status: response.status, frames, bytes };
+					if (frames.length >= wantFrames)
+						return { status: response.status, frames, bytes };
+				}
 				boundary = buffer.indexOf("\n\n");
 			}
 		}
@@ -686,19 +723,25 @@ async function main() {
 	 * failure. */
 	if (sessionId && run("seen")) {
 		try {
-			const projection = await readSse(
+			/* Wait for the turn to COMPLETE: the token is minted at completion, so
+			 * sampling the seed frame only ever proves that nothing has finished yet.
+			 * The wait is bounded, and exhausting it is a SKIP that says so. */
+			const projection = await readSseUntil(
 				config,
 				`/api/sessions/${sessionId}/events`,
-				{ wantFrames: 1, timeoutMs: STREAM_READ_MS },
+				(event) => {
+					const frame = parseJson(event.data);
+					return Boolean(frame?.attention?.completion_token);
+				},
+				{ timeoutMs: COMPLETION_WAIT_MS },
 			);
-			const body = projection.frames[0]
-				? parseJson(projection.frames[0].data)
-				: null;
+			const last = projection.frames[projection.frames.length - 1];
+			const body = last ? parseJson(last.data) : null;
 			const token = body?.attention?.completion_token ?? null;
 			if (!token) {
 				skip(
 					"seen",
-					"the projection carries no completion_token yet (no turn has completed)",
+					`no completion_token within ${COMPLETION_WAIT_MS}ms: the turn had not completed`,
 				);
 			} else {
 				const seen = await request(config, `/api/sessions/${sessionId}/seen`, {
