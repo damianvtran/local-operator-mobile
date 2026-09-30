@@ -186,6 +186,13 @@ jobs:
           echo "mock relay: http://127.0.0.1:$port (pid $(cat "$RUNNER_TEMP/relay.pid"))"
 
       - name: Capture the frames
+        # BOUNDED PER STEP, not just per job. A capture that hangs would otherwise
+        # consume the whole job budget and report nothing: measured on
+        # 2026-09-30, this step ran over 90 minutes inside a 45-minute job
+        # timeout (run 36669731994) without GitHub reaping it, so the run said
+        # only that it was still going. Twenty minutes is several times a
+        # complete matrix on a warm runner, and a fired bound names this step.
+        timeout-minutes: 20
         # CELLS COME FROM THE RELAY, THROUGH ITS OWN REGISTRY, and the detour is a
         # finding rather than a preference. `capture.mjs --relay <url>` asks the
         # relay at `/__mock/state` for `state.cells`, but the relay serves no
@@ -266,6 +273,7 @@ jobs:
             --consecutive --yes
 
       - name: Audit the frames against the rubric
+        timeout-minutes: 5
         # Exits non-zero on any FAIL row. BLOCKED rows are reported and counted
         # rather than failing the job — an app whose type ignores the root
         # font-size is a finding for the review thread, not a broken harness.
@@ -275,6 +283,7 @@ jobs:
             --out "$RUNNER_TEMP/audit"
 
       - name: Run the canary
+        timeout-minutes: 5
         if: needs.harness.outputs.canary == 'true'
         # The gate that stops the audit rotting into a rubber stamp: the fixture
         # page declares its own defects, so this fails if the audit stops catching
