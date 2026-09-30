@@ -1,9 +1,577 @@
 /**
- * One function per relay route.
+ * One typed function per relay route the app uses.
  *
- * NOT IMPLEMENTED. The protocol stream owns this file. The route list it will
- * cover is in docs/relay/feature-map.md; the wire shapes are in
- * docs/relay/contract.md with captured fixtures under `fixtures/relay/**`, which
- * are the specification rather than a re-derivation.
+ * This module is the protocol's vocabulary: nothing above it constructs a path,
+ * a query string or a method, so a route cannot be called two ways from two
+ * screens. It is deliberately UI-free and navigation-free (it imports
+ * `src/contracts/` and `./http` and nothing else), which is what lets the whole
+ * protocol be exercised in Node — including from `scripts/relay-smoke.mjs`
+ * against a real relay.
+ *
+ * Three conventions, applied uniformly because they are the contract's own:
+ *
+ * - **A limit the caller did not supply is OMITTED; one they did is clamped.**
+ *   The requested page size is the relay's policy to default (`daemon.py:3834-3838`)
+ *   and every captured client request leaves the parameter off when it has no
+ *   opinion (`search-empty.json`, `subagent-history-unknown.json`). Sending our own
+ *   copy of the default would freeze a server-side value into every request, so a
+ *   later change to the relay's default would be overridden by this client rather
+ *   than applied. A supplied value is still clamped to the contract's range, so a
+ *   caller cannot put a value the relay would have to interpret on the wire.
+ * - **Mutations send the ADR's exact bodies.** `pin` carries the desired state
+ *   rather than a toggle (so a retry cannot flip it back), `seen` carries the
+ *   `completion_token` the projection named, and `command` carries an op from
+ *   `commandOpSchema`.
+ * - **Every response is schema-validated before it is returned**, so an endpoint
+ *   returns a typed payload or throws a `RelayError`. There is no path here that
+ *   hands a caller `any`.
  */
-export {};
+
+import type { z } from "zod";
+
+import {
+	type commandOpSchema,
+	type Payload,
+	type PromptImage,
+	parsePayload,
+} from "../contracts";
+import { isRelayError, type RelayError } from "./errors";
+import type { RelayHttpClient, RelayStreamResponse } from "./http";
+import {
+	type DecodedFrame,
+	SseConnection,
+	type SseConnectionOptions,
+} from "./sse";
+
+/** The command bodies the app sends. Derived from the schema, so a body this
+ *  module accepts is one the relay's own shape validation will accept. */
+export type CommandBody = z.input<typeof commandOpSchema>;
+
+export interface HistoryPage {
+	/** The id of the oldest entry the caller already holds, so the page is the
+	 *  entries immediately older than it. Omitted means the tail. */
+	before?: string;
+	limit?: number;
+}
+
+export interface SearchRequest {
+	query: string;
+	limit?: number;
+}
+
+export interface StartSessionRequest {
+	cwd?: string;
+	provider?: string;
+	model_id?: string;
+}
+
+/**
+ * What `POST /login` establishes, on both transports.
+ *
+ * On native and in Node the relay's own status answers this (`303` signed in,
+ * `401` refused). A browser with `redirect: 'manual'` returns an opaque redirect
+ * instead — `status` 0, no body — so the answer is derived from a follow-up read
+ * of a gated route and `verified` says so. A caller that reports the mechanism to
+ * a user (a diagnostics screen) reads `verified`; a caller that only branches on
+ * `signedIn` does not have to care which transport it is on. */
+export interface LoginOutcome {
+	/** What the TRANSPORT reported: `303` signed in, `401` refused, `0` when it
+	 *  showed no status at all (a browser's opaque redirect). It is never
+	 *  synthesised — a number the relay did not send would look authoritative to
+	 *  anything that logs or displays it — so read the verdict from `signedIn` and
+	 *  `verified`, never from this field. */
+	status: number;
+	signedIn: boolean;
+	/** True when the outcome came from verifying admission rather than from a
+	 *  status the platform showed this client. */
+	verified: boolean;
+	/** The taxonomy's sentence for a refusal, when it has one — the relay's own
+	 *  words, not a status number. */
+	detail?: string;
+}
+
+export interface ImageBytes {
+	bytes: Uint8Array;
+	/** The relay's stored mime type; `null` when the response carried none. */
+	mimeType: string | null;
+}
+
+/** The relay's own defaults and clamps (`daemon.py:3746-3750`, `:4254-4258`). */
+export const HISTORY_LIMIT = { default: 80, min: 1, max: 200 } as const;
+export const SEARCH_LIMIT = { default: 40, min: 1, max: 200 } as const;
+
+/**
+ * A page size for the wire, or `undefined` to leave the parameter off.
+ *
+ * **A limit the caller did not supply is OMITTED, not filled in with the
+ * default.** The default is the server's (`daemon.py:3834-3838`), it applies to an
+ * absent parameter, and every capture in the corpus shows a client that omits it
+ * when it has none to pass (`search-empty.json` is `?q=hello`,
+ * `subagent-history-unknown.json` is `/history` with no query) — while the ones
+ * that do pass one show it (`history-ok.json` is `?limit=5`). Sending the default
+ * ourselves would put a value on the wire that the contract says the relay owns,
+ * and would make this client's request differ from the captured client's for no
+ * gain. A limit that IS supplied is still clamped to the documented bounds, so a
+ * caller cannot send garbage the relay would have to interpret.
+ */
+export function wireLimit(
+	value: number | undefined,
+	bounds: { default: number; min: number; max: number },
+): number | undefined {
+	if (value === undefined || !Number.isFinite(value)) return undefined;
+	return Math.min(bounds.max, Math.max(bounds.min, Math.trunc(value)));
+}
+
+function query(params: Record<string, string | number | undefined>): string {
+	const search = new URLSearchParams();
+	for (const [key, value] of Object.entries(params)) {
+		if (value === undefined) continue;
+		search.set(key, String(value));
+	}
+	const text = search.toString();
+	return text.length > 0 ? `?${text}` : "";
+}
+
+/** A stream handle plus the connection driving it. Returning both means a caller
+ *  never has to reach into the connection to stop it, and a diagnostic page can
+ *  read the state without owning the lifecycle. */
+export interface RelayStream {
+	connection: SseConnection;
+	/** Closes the stream and aborts the in-flight request. Idempotent. */
+	stop: () => void;
+}
+
+/**
+ * The relay client. One instance per active route: the base URL and the
+ * credential policy are the route (see `src/connection/client-factory.ts`), so a
+ * route switch builds a new client rather than reconfiguring this one.
+ */
+export class RelayEndpoints {
+	private readonly http: RelayHttpClient;
+
+	constructor(http: RelayHttpClient) {
+		this.http = http;
+	}
+
+	/** The reachability probe. Public, no cookie, and `dist: false` is not a
+	 *  health problem — the native client never needs the web bundle. */
+	async healthz(): Promise<Payload<"healthz">> {
+		return this.http.json("healthz", { method: "GET", path: "/healthz" });
+	}
+
+	/** The session list. The phone's home screen reads the SSE form of the same
+	 *  payload; this exists for the cold-start render and for diagnostics. */
+	async sessions(): Promise<Payload<"sessionListFrame">> {
+		return this.http.json("sessionListFrame", {
+			method: "GET",
+			path: "/api/sessions",
+		});
+	}
+
+	/** Past conversations. **Cannot be paged**: the route takes no `limit`, and a
+	 *  client must not promise "load more" (`contract.md` §3.3). */
+	async pastSessions(): Promise<Payload<"pastSessions">> {
+		return this.http.json("pastSessions", {
+			method: "GET",
+			path: "/api/sessions/past",
+		});
+	}
+
+	/** Full-text search over past conversations. `query` is echoed by the relay so
+	 *  a late answer can be matched to its request. */
+	async searchSessions(
+		request: SearchRequest,
+	): Promise<Payload<"searchSessions">> {
+		return this.http.json("searchSessions", {
+			method: "GET",
+			path: `/api/sessions/search${query({ q: request.query, limit: wireLimit(request.limit, SEARCH_LIMIT) })}`,
+		});
+	}
+
+	/** One page of a session's transcript, older than `before`. */
+	async history(
+		sessionId: string,
+		page: HistoryPage = {},
+	): Promise<Payload<"history">> {
+		return this.http.json("history", {
+			method: "GET",
+			path: `/api/sessions/${encodeURIComponent(sessionId)}/history${query({
+				before: page.before,
+				limit: wireLimit(page.limit, HISTORY_LIMIT),
+			})}`,
+		});
+	}
+
+	/**
+	 * An image block's bytes.
+	 *
+	 * Requires a LIVE generation (`daemon.py:3782-3784`): a previous conversation's
+	 * attachment answers `404 no such image`, so the caller must degrade a previous
+	 * transcript's images to a placeholder rather than showing a broken image.
+	 */
+	async image(
+		sessionId: string,
+		entryId: string,
+		index: number,
+	): Promise<ImageBytes> {
+		const result = await this.http.bytes({
+			method: "GET",
+			path: `/api/sessions/${encodeURIComponent(sessionId)}/image${query({ entry: entryId, i: index })}`,
+		});
+		return { bytes: result.bytes, mimeType: result.mimeType };
+	}
+
+	/** A subagent's full cached detail, including the transcript and todos the
+	 *  aggregate roster strips. */
+	async agentDetail(
+		sessionId: string,
+		jobId: string,
+	): Promise<Payload<"subagentDetail">> {
+		return this.http.json("subagentDetail", {
+			method: "GET",
+			path: `/api/sessions/${encodeURIComponent(sessionId)}/agents/${encodeURIComponent(jobId)}`,
+		});
+	}
+
+	/** One page of a child's own transcript. */
+	async agentHistory(
+		sessionId: string,
+		jobId: string,
+		page: HistoryPage = {},
+	): Promise<Payload<"history">> {
+		return this.http.json("history", {
+			method: "GET",
+			path: `/api/sessions/${encodeURIComponent(sessionId)}/agents/${encodeURIComponent(jobId)}/history${query(
+				{
+					before: page.before,
+					limit: wireLimit(page.limit, HISTORY_LIMIT),
+				},
+			)}`,
+		});
+	}
+
+	/** The off-terminal slash vocabulary, TUI chrome excluded. */
+	async commands(): Promise<Payload<"commands">> {
+		return this.http.json("commands", { method: "GET", path: "/api/commands" });
+	}
+
+	/** The model catalogue. **The array order is the ranking** — render it as
+	 *  given; re-sorting it client-side throws away the server's answer. */
+	async models(): Promise<Payload<"models">> {
+		return this.http.json("models", { method: "GET", path: "/api/models" });
+	}
+
+	/** The new-session directory picker's data. `tmp` is the RESOLVED temp dir the
+	 *  start gate also compares against. */
+	async directories(): Promise<Payload<"directories">> {
+		return this.http.json("directories", {
+			method: "GET",
+			path: "/api/directories",
+		});
+	}
+
+	/** Starts a supervised session. `cwd` must be under the owner's home or the
+	 *  resolved temp dir; anything else is a `400` the caller should surface as a
+	 *  validation error rather than a transport failure. */
+	async startSession(
+		request: StartSessionRequest,
+	): Promise<Payload<"startSession">> {
+		return this.http.json("startSession", {
+			method: "POST",
+			path: "/api/sessions/start",
+			body: request,
+		});
+	}
+
+	/** Resumes a past conversation. **Does NOT restore its cwd** — the runtime
+	 *  starts at the account home (`daemon.py:4230-4231`), so the caller must not
+	 *  promise otherwise. */
+	async resumeSession(sessionId: string): Promise<Payload<"resumeSession">> {
+		return this.http.json("resumeSession", {
+			method: "POST",
+			path: "/api/sessions/resume",
+			body: { session_id: sessionId },
+		});
+	}
+
+	/** Acknowledges one completion's `completion_token`. A superseded token is a
+	 *  `409` whose remedy is to re-read the projection and retry with the token it
+	 *  now names. */
+	async seen(
+		sessionId: string,
+		completionToken: string,
+	): Promise<Payload<"seen">> {
+		return this.http.json("seen", {
+			method: "POST",
+			path: `/api/sessions/${encodeURIComponent(sessionId)}/seen`,
+			body: { completion_token: completionToken },
+		});
+	}
+
+	/** Sets a session's pin to a DESIRED state. The answer is the state the store
+	 *  read back, so the optimist must render that rather than what it asked for. */
+	async pin(sessionId: string, pinned: boolean): Promise<Payload<"pin">> {
+		return this.http.json("pin", {
+			method: "POST",
+			path: `/api/sessions/${encodeURIComponent(sessionId)}/pin`,
+			body: { pinned },
+		});
+	}
+
+	/**
+	 * The single command route every mutation travels through.
+	 *
+	 * `body` is validated against the op union before it is sent, so an op with a
+	 * missing field fails here rather than as a `422` the UI has to explain. For
+	 * `prompt`/`steer` the caller is responsible for reusing the SAME
+	 * `command_id` on a retry — that is `retry-envelope.ts`'s job, and this
+	 * function deliberately does not mint one.
+	 */
+	async command(
+		sessionId: string,
+		body: CommandBody,
+	): Promise<Payload<"commandAck">> {
+		/* Validated before it is sent: the relay's own `validate_control_frame` would
+		 * refuse a malformed op with a prose `422`, and a client that can produce one
+		 * has a bug it should hear about at the call site rather than in a toast. */
+		const validated = parsePayload("commandOp", body);
+		return this.http.json("commandAck", {
+			method: "POST",
+			path: `/api/sessions/${encodeURIComponent(sessionId)}/command`,
+			body: validated,
+		});
+	}
+
+	/** Pings a session's runtime. Answered `{"ok":true,"detail":"pong"}`. */
+	async ping(sessionId: string): Promise<Payload<"commandAck">> {
+		return this.command(sessionId, { op: "ping" });
+	}
+
+	/**
+	 * `GET /login`: the relay's server-rendered password form, or a `303` to `/`
+	 * when the cookie is still valid.
+	 *
+	 * The status is returned rather than the body: the form is HTML the native
+	 * client never renders, and the two facts it needs are "does this relay take a
+	 * password form" and "am I already signed in".
+	 */
+	async loginPage(): Promise<{
+		/** The transport's own report; `0` when it hid the redirect. Never synthesised. */
+		status: number;
+		isForm: boolean;
+		/** Whether this client is already signed in. On a browser the `303` is
+		 *  hidden, so it comes from the same verification read `login()` uses. */
+		signedIn: boolean;
+	}> {
+		const { status, text, redirectHidden } = await this.http.raw({
+			method: "GET",
+			path: "/login",
+			/* `303` means already signed in, which is a state this probe reports rather
+			 * than an error. `401` cannot happen here (the page is public) but is
+			 * tolerated so a proxy's refusal still reaches the caller as a status. */
+			accept: [303, 401],
+		});
+		if (redirectHidden) {
+			/* The browser hid the `303 → /`. This probe's whole job is to report that
+			 * state, so it is verified rather than assumed. */
+			const admission = await this.admission();
+			return { status: 0, isForm: false, signedIn: admission.admitted };
+		}
+		return {
+			status,
+			isForm: status === 200 && text.includes("<form"),
+			signedIn: status === 303,
+		};
+	}
+
+	/**
+	 * `POST /login`: the custom route's only credential path.
+	 *
+	 * `application/x-www-form-urlencoded` and `redirect: 'manual'`, because the
+	 * relay answers `303 → /` on success and `401` with an HTML page on failure.
+	 * Following the redirect would be pointless (there is no HTML to render) and
+	 * on the tunnel route a 303 to `/_radient/login` is a diagnostic.
+	 *
+	 * `credentials: 'include'` is the ROUTE's policy, supplied by the caller's
+	 * `RequestAuth`; this function only shapes the body.
+	 *
+	 * On a browser this route's status is unreadable: `redirect: 'manual'` there
+	 * returns an opaque redirect, so a successful sign-in would otherwise be reported
+	 * as a failure with an empty message (measured in Chrome; Node, native and the
+	 * smoke script all see the real `303`, which is why no Node-side test caught it).
+	 * `admission()` is how the outcome is established instead.
+	 */
+	async login(password: string): Promise<LoginOutcome> {
+		const { status, redirectHidden } = await this.http.raw({
+			method: "POST",
+			path: "/login",
+			form: { password },
+			/* The two statuses this route's login has: 303 success, 401 refusal. Both
+			 * are outcomes to read, not exceptions to throw. */
+			accept: [303, 401],
+		});
+		if (!redirectHidden) {
+			/* 303 is success. 200 would mean the daemon answered the form again (it
+			 * renders the page with an inline error on a wrong password, as a 401), so
+			 * anything other than 303 is not a signed-in session. */
+			return { status, signedIn: status === 303, verified: false };
+		}
+		/* A browser hid the redirect. The route has exactly two answers — `303 → /`
+		 * and `401` with the form — so a redirect that happened is the success SHAPE,
+		 * but "a redirect happened" is not proof the cookie was accepted, and this is
+		 * the one route where that difference decides whether the user is let in or
+		 * told their password is wrong. Verify, then report. */
+		const admission = await this.admission();
+		if (admission.admitted) {
+			/* `status: 0` is the transport's own report, left as it arrived: the
+			 * verdict is `signedIn` + `verified`, which is what a caller acts on. */
+			return { status: 0, signedIn: true, verified: true };
+		}
+		/* The refusal's sentence comes from the taxonomy's ONE copy accessor, which is the
+		 * place a status becomes copy — and the only one that refuses a runtime
+		 * diagnostic, an empty body and markup. */
+		const detail = admission.refusal?.displayableMessage;
+		return {
+			status: 0,
+			signedIn: false,
+			verified: true,
+			...(detail ? { detail } : {}),
+		};
+	}
+
+	/**
+	 * Asks a route only an admitted session can answer whether this client is
+	 * admitted, for the one case the transport will not say: a browser with
+	 * `redirect: 'manual'` returns an opaque redirect instead of a status, so "did
+	 * that password work?" has to be asked again in a way the platform cannot hide.
+	 *
+	 * `GET /api/models` is that route, and it is chosen for what it costs: the
+	 * relay gates it like every other `/api` route, and it answers `{"models":[...]}`
+	 * — 13 bytes against the sessions list's 902 on an isolated 0.64.9 daemon
+	 * (measured, both `401` without the cookie). Admission is a yes/no question
+	 * asked on a control plane the relay rate-limits per IP, so the cheapest gated
+	 * route is the right one.
+	 *
+	 * A failure to ASK — offline, a `503`, a body the schema rejects — is
+	 * deliberately not a refusal: telling a user their password was wrong when the
+	 * network was down is a worse lie than the status-0 reading this replaces, so it
+	 * propagates.
+	 */
+	private async admission(): Promise<{
+		admitted: boolean;
+		refusal?: RelayError;
+	}> {
+		try {
+			await this.http.json("models", {
+				method: "GET",
+				path: "/api/models",
+			});
+			return { admitted: true };
+		} catch (cause) {
+			const error = isRelayError(cause) ? cause : undefined;
+			if (
+				error &&
+				(error.kind === "relay-unauthorized" ||
+					error.kind === "radiant-login-required")
+			) {
+				return { admitted: false, refusal: error };
+			}
+			throw cause;
+		}
+	}
+
+	/** `GET /logout`: clears the relay's cookie. Not auth-gated, and it does not
+	 *  check CSRF — a client calling it must expect to be signed out. The local
+	 *  private state is this app's own job to clear; native has no
+	 *  `Clear-Site-Data`. */
+	async logout(): Promise<{
+		/** The transport's own report; `0` when it showed none. Never synthesised. */
+		status: number;
+		signedOut: boolean;
+		verified: boolean;
+	}> {
+		const { status, redirectHidden } = await this.http.raw({
+			method: "GET",
+			path: "/logout",
+			accept: [303, 401],
+		});
+		if (!redirectHidden) {
+			return { status, signedOut: status === 303, verified: false };
+		}
+		/* The same blind spot as `login`, inverted: verify that the session is GONE.
+		 * A read that still succeeds means the sign-out did not take. The caller's own
+		 * clearing happens either way (`signOutOfCustomRoute`), but it must not also
+		 * claim a success the relay never confirmed — and a caller that reports to the
+		 * user needs to know which happened, which is what `signedOut` is for. */
+		const admission = await this.admission();
+		return {
+			status: 0,
+			signedOut: !admission.admitted,
+			verified: true,
+		};
+	}
+
+	/** `GET /api/sessions/events`: the list stream. Frames are the same payload as
+	 *  `sessions()`, repainted wholesale. */
+	sessionsStream(
+		options: Omit<SseConnectionOptions, "open"> & { signal?: AbortSignal },
+	): RelayStream {
+		return this.stream("/api/sessions/events", options);
+	}
+
+	/** `GET /api/sessions/{id}/events`: one session's projection stream. The relay
+	 *  sends the current projection as the seed frame, which is what makes
+	 *  reconnect-and-resync work without a replay protocol. */
+	sessionStream(
+		sessionId: string,
+		options: Omit<SseConnectionOptions, "open"> & { signal?: AbortSignal },
+	): RelayStream {
+		return this.stream(
+			`/api/sessions/${encodeURIComponent(sessionId)}/events`,
+			options,
+		);
+	}
+
+	private stream(
+		path: string,
+		options: Omit<SseConnectionOptions, "open"> & { signal?: AbortSignal },
+	): RelayStream {
+		const { signal, ...connectionOptions } = options;
+		const connection = new SseConnection({
+			...connectionOptions,
+			/* The stream's body is the gateway's lease, so the HTTP layer's deadline bounds
+			 * only the RESPONSE here — `http.ts` clears it when the headers arrive and the
+			 * watchdog is what then detects a dead socket (`sse.ts`). It is not disabled
+			 * outright: a connector that never answers at all has to fail rather than leave
+			 * the connect phase pending for ever, and the watchdog cannot see that phase. */
+			open: async (abortSignal) => {
+				const response: RelayStreamResponse = await this.http.stream({
+					method: "GET",
+					path,
+					streaming: true,
+					signal: signal ?? abortSignal,
+				});
+				return { reader: response.reader, release: response.release };
+			},
+		});
+		return {
+			connection,
+			stop: () => connection.stop(),
+		};
+	}
+}
+
+/** Decodes a frame without caring which stream it came from. Exported for the
+ *  state layer, which switches on `kind`. */
+export type { DecodedFrame };
+
+/** A convenience wrapper for a caller that has both streams live and needs to
+ *  know which one a frame arrived on. */
+export interface StreamHandlers {
+	onSessions: (frame: Extract<DecodedFrame, { kind: "sessions" }>) => void;
+	onProjection: (frame: Extract<DecodedFrame, { kind: "projection" }>) => void;
+}
+
+/** A single-file re-export of the pieces a caller imports most often, so
+ *  `endpoints.ts` can stay the one name in `src/relay/index.ts`. */
+export type { PromptImage };
