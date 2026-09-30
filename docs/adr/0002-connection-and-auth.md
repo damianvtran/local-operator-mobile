@@ -13,10 +13,15 @@ their line numbers move under you:
 
 | Repository | Revision | How paths are cited |
 |---|---|---|
-| **local-operator** | `fc851a94e` (origin/main) | `local_operator/tunnels/gateway.py` → `gateway.py`; `mobile/daemon.py` → `daemon.py`; `mobile/auth.py` → `auth.py`; `mobile/types.py` → `types.py`; `mobile/web/src/store.ts` → `store.ts`; `providers/oauth/radient.py` → `radient.py`; `docs/mobile.md` and `docs/tunnels.md` by full path |
-| **agent-server** (Radient) | `dcafe852` (origin/main, fetched 2026-09-29) | `edge/tunnel-worker/src/index.ts` → `index.ts`; `internal/tunnels/*.go`, `internal/services/*.go`, `internal/repositories/*.go`, `internal/responses/*.go` → bare file name; `docs/PERSONAL_TUNNELS.md` by full path |
-| **user-console** (Radient console) | `8597fdba` (origin/main) | `src/lib/native-oauth.ts` → `native-oauth.ts` |
-| **expo** | `500d25dea3746c8ceeb751b3c55f432b269be410` (GitHub `main`, 2026-09-29) | full paths under `packages/`; read with `gh api repos/expo/expo/contents/<path>?ref=<sha>`, since there is no local clone to `git show` |
+| **local-operator** | `fc851a94e` (read 2026-09-29; a pinned SHA, not a branch — local-operator's origin/main has moved past it since) | `local_operator/tunnels/gateway.py` → `gateway.py`; `mobile/daemon.py` → `daemon.py`; `mobile/auth.py` → `auth.py`; `mobile/types.py` → `types.py`; `mobile/web/src/store.ts` → `store.ts`; `providers/oauth/radient.py` → `radient.py`; `docs/mobile.md` and `docs/tunnels.md` by full path |
+| **agent-server** (Radient) | `dcafe852` (read 2026-09-29; a pinned SHA — agent-server's origin/main happened to equal it then) | `edge/tunnel-worker/src/index.ts` → `index.ts`; `internal/tunnels/*.go`, `internal/services/*.go`, `internal/repositories/*.go`, `internal/responses/*.go` → bare file name; `docs/PERSONAL_TUNNELS.md` by full path |
+| **user-console** (Radient console) | `8597fdba` (read 2026-09-29; a pinned SHA, not a branch — user-console's origin/main has moved past it since) | `src/lib/native-oauth.ts` → `native-oauth.ts` |
+| **expo** | `500d25dea3746c8ceeb751b3c55f432b269be410` (GitHub `main`, read 2026-09-29; a pinned SHA) | full paths under `packages/`; read with `gh api repos/expo/expo/contents/<path>?ref=<sha>`, since there is no local clone to `git show` |
+
+The SHA is the authority in every row: a branch name only says where the ref was
+when it was read, and these branches moved — at the time of writing local-operator's
+`origin/main` was 8 commits past the pin, user-console's 36 past it, and agent-server's
+happened to sit exactly on it. Re-derive a number at the SHA, never at a branch.
 
 `docs/relay/*` (PR #4) pins agent-server at `2cb7f4a5`, an ancestor of `dcafe852`.
 Each is correct for the ref it names; expect the same file's line numbers to differ
@@ -402,7 +407,7 @@ diagnostic, not something to follow.
   `EventSource`: it is not in React Native, and its built-in retry is immediate on
   some server-close shapes — the relay's own web client documents this and
   implements manual backoff for exactly that reason
-  (`~/local-operator/local_operator/mobile/web/src/store.ts:1-12`, `:104-160`).
+  (`~/local-operator/local_operator/mobile/web/src/store.ts:1-12` for the rationale, `:143-192` for the implementation).
 - **Treat the 60-second cut as expected, not as an error.** The gateway's lease
   (`gateway.py:34`, `:673-686`) ends the stream cleanly. Backoff is explicit, and it
   is deliberately *not* the reference client's rule: **reconnect immediately (0 ms)
