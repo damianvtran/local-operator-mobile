@@ -364,12 +364,22 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
+          # The product is "Local Operator"; the repository and the bundle id are
+          # internal identifiers and stay as they are. So do the names a person
+          # sees on this page: the title of the release, and the files they
+          # download from it — `app-release.apk` tells a reader nothing about
+          # which app or which version it is.
+          version="${{ needs.version.outputs.version }}"
+          keep() { mv "$1" "$2"; }
+          keep "$(ls artifacts/app-release.apk)" "local-operator-${version}.apk"
+          keep "$(ls artifacts/app-release.aab)" "local-operator-${version}.aab"
+          keep "$(ls artifacts/*.ipa)" "local-operator-${version}.ipa"
           gh release create "${{ needs.version.outputs.tag }}" \
-            --title "${{ needs.version.outputs.tag }}" \
+            --title "Local Operator ${version}" \
             --notes-file notes.md \
-            "$(ls artifacts/app-release.apk)" \
-            "$(ls artifacts/app-release.aab)" \
-            "$(ls artifacts/*.ipa)"
+            "local-operator-${version}.apk" \
+            "local-operator-${version}.aab" \
+            "local-operator-${version}.ipa"
 
       - name: Decode the Play service account
         env:
