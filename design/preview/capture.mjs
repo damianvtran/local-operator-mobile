@@ -35,9 +35,13 @@ const repoRoot = new URL("../../", here);
 
 /* Where a preview gets put is the SESSION's scratch when one is set, and the
  * system temp otherwise. Never the repository: a stray profile directory in a
- * worktree is the kind of thing that ends up in a commit. */
+ * worktree is the kind of thing that ends up in a commit.
+ *
+ * The directory carries this process's pid so two runs in one session cannot
+ * delete each other's tree on exit — the same per-pid convention the icon
+ * generator uses. */
 const scratchBase = process.env.LOCAL_OPERATOR_SCRATCHPAD ?? process.env.TMPDIR ?? "/tmp";
-const scratch = `${scratchBase.replace(/\/$/, "")}/lo-mobile-capture`;
+const scratch = `${scratchBase.replace(/\/$/, "")}/lo-mobile-capture-${process.pid}`;
 
 const arg = (name, fallback = null) => {
 	const i = process.argv.indexOf(`--${name}`);
@@ -60,7 +64,6 @@ const FREEZE_CSS = `*, *::before, *::after {
 	transition: none !important;
 }`;
 
-const target = arg("target", "preview");
 /* `--probe <selector>` prints each match's box and computed background. See the
  * use in `openPage` for why a capture tool needs this. */
 const probe = arg("probe", null);
@@ -70,6 +73,19 @@ const check = process.argv.includes("--check");
 /* `--keep-scratch` leaves the per-run scratch tree (the verify copies and any
  * frames rendered in check mode) in place for inspection instead of deleting it. */
 const keepScratch = process.argv.includes("--keep-scratch");
+
+/* `--check` with no explicit target checks EVERY target, and that default is the
+ * point rather than a convenience. The documented gate is
+ * `node design/preview/capture.mjs --check`, and while it defaulted to
+ * `--target preview` it verified four of the five captures this repository
+ * commits — the Play feature graphic was silently outside its scope, so a reader
+ * of `design/README.md` was told five were covered and four were. A gate whose
+ * default scope is narrower than its documentation is the same defect as a gate
+ * that cannot fail, one layer up. Generation keeps its narrower default: writing
+ * the sheet is the common case, and the feature graphic and the frames are
+ * rendered deliberately. */
+const explicitTarget = arg("target", null);
+const target = explicitTarget ?? (check ? "all" : "preview");
 
 /* ---- Chrome ------------------------------------------------------------ */
 
@@ -489,7 +505,13 @@ if (target === "feature" || target === "all") {
 			process.exitCode = 1;
 			return;
 		}
-		execFileSync(bin, [path, "-alpha", "off", `PNG24:${path}`], { stdio: "pipe" });
+		/* Drop the timestamp chunks for the same reason the icon generator does:
+		 * a `tIME` chunk makes a byte gate impossible for no benefit. */
+		execFileSync(
+			bin,
+			[path, "-alpha", "off", "-define", "png:exclude-chunks=time,date", `PNG24:${path}`],
+			{ stdio: "pipe" },
+		);
 		const bytes = readFileSync(path);
 		if (bytes[25] === 6) {
 			console.error(`PROBLEM: ${path} is still RGBA after the strip`);
@@ -569,6 +591,16 @@ const left = (() => {
 	}
 })();
 rmSync(profile, { recursive: true, force: true });
+
+/* Registered at exit rather than called on the success path, because the scratch
+ * tree also survives a FAILING run: the check-mode verify copies and any frames
+ * rendered for their size assertion are written before the verdict, so a
+ * `process.exit(1)` at the end left a whole tree behind on every failure — five
+ * of them accumulated across the first round's failing cases. A cleanup that only
+ * runs when nothing went wrong is the one case that never needs it. */
+process.on("exit", () => {
+	if (!keepScratch) rmSync(scratch, { recursive: true, force: true });
+});
 if (left > 0) {
 	console.error(`PROBLEM: ${left} Chrome process(es) still alive for ${profile}`);
 	process.exitCode = 1;
@@ -590,7 +622,6 @@ if (check) {
 		`${verified.length} committed captures verified against a fresh render (no files written)`,
 	);
 	console.log("captures are current");
-	if (!keepScratch) rmSync(scratch, { recursive: true, force: true });
 } else if (previewTargets.length) {
 	console.log(`\nwrote:\n${previewTargets.map((p) => `  ${p}`).join("\n")}`);
 }

@@ -25,14 +25,23 @@ its artefact and compares it with the committed file, so a stale or damaged asse
 fails the run instead of passing quietly.
 
 ```sh
-node design/tokens/contrast-contract.mjs           # colour gate; 1056 assertions over both themes
-node design/tokens/build-preset.mjs                # regenerate the preset + the preview's CSS
-node design/tokens/build-preset.mjs --check        # gate: preset and preview CSS match tokens.json
-node design/app-icon/build-icons.mjs               # regenerate every icon/splash/store PNG
+node design/tokens/contrast-contract.mjs           # gate: 1056 assertions over both themes
+node design/tokens/build-preset.mjs                # generate: the preset + the preview's CSS
+node design/tokens/build-preset.mjs --check        # gate: those two files match tokens.json
+node design/app-icon/build-icons.mjs               # generate: every icon/splash/store PNG + the SVG layers
 node design/app-icon/build-icons.mjs --check       # gate: re-renders all 33 files and compares them
-node design/preview/capture.mjs                    # capture the preview sheet, both themes
-node design/preview/capture.mjs --check            # gate: re-renders the 5 committed captures, compares
+node design/preview/capture.mjs                    # generate: the preview sheet, both themes
+node design/preview/capture.mjs --check            # gate: EVERY target — the 5 committed captures (4 sheet
+                                                   #   frames + the Play feature graphic) + the 3 frame sizes
+node design/preview/capture.mjs --target feature   # generate: just the Play feature graphic
 ```
+
+**`--check` defaults to every target; generation defaults to the sheet.** That
+asymmetry is deliberate on both sides: a gate whose default scope is narrower than
+this page is the same defect as a gate that cannot fail (the feature graphic sat
+outside `--check`'s default for a round while this page said five captures were
+covered), and rendering the sheet is the common generation case. `--target`
+narrows either mode.
 
 Each gate compares **bytes**, falling back to a decoded **pixel** comparison where
 an external encoder makes the bytes non-reproducible, reports which of the two
@@ -40,6 +49,19 @@ passed, and treats a missing decoder as a failure rather than a pass. `build-ico
 --check` and `capture --check` therefore need the same tools their generators
 need (an SVG rasterizer; Chrome) and say so, in install lines, when one is
 missing.
+
+Two properties the generators hold so the gates can be strict:
+
+- **Both delete their per-run scratch tree on every exit path**, failures
+  included (`process.on("exit")`, not the success branch) — a cleanup that only
+  runs when nothing went wrong is the one case that never needs it, and five
+  abandoned trees accumulated across one round's failing runs before this was
+  fixed. Pass `--keep-scratch` to `capture.mjs` to keep one for inspection.
+- **Both strip the encoder's timestamp chunks** (`png:exclude-chunks=time,date`).
+  ImageMagick writes a `tIME` chunk by default, so re-running the generator a
+  second later produced a different FILE with identical pixels: the Play icon
+  showed as modified after every regeneration and no byte gate could pass on it
+  without the pixel fallback. Encode is now a function of the pixels alone.
 
 `design/app-icon/build-icons.mjs` needs an SVG rasterizer (`rsvg-convert` or
 ImageMagick); `design/preview/capture.mjs` needs the installed Google Chrome,

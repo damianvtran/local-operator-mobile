@@ -140,7 +140,24 @@ const forceAlphaChannel = (pngPath) => {
 		);
 		return false;
 	}
-	execFileSync(bin, [pngPath, "-alpha", "set", `PNG32:${pngPath}`], { stdio: "pipe" });
+	/* `-define png:exclude-chunks=time,date` is what makes this reproducible. The
+	 * encoder writes a `tIME` chunk by default, so re-running the generator one
+	 * second later produced a DIFFERENT file with identical pixels — the committed
+	 * Play icon showed up as modified after every regeneration, and a byte gate
+	 * could never pass on it without the pixel fallback. Dropping the timestamp
+	 * chunks makes the encode a function of the pixels alone. */
+	execFileSync(
+		bin,
+		[
+			pngPath,
+			"-alpha",
+			"set",
+			"-define",
+			"png:exclude-chunks=time,date",
+			`PNG32:${pngPath}`,
+		],
+		{ stdio: "pipe" },
+	);
 	return true;
 };
 
@@ -437,9 +454,15 @@ render(readFileSync(out("design/app-icon/store/play-icon-512.svg"), "utf8"), "de
 
 /* ---- report ---------------------------------------------------------- */
 
-/* Clean up the scratch renders. They are per-pid, so leaving them would quietly
- * accumulate a 33-file tree in the session scratchpad on every run. */
-const cleanup = () => rmSync(scratch, { recursive: true, force: true });
+/* Clean up the scratch renders on EVERY exit path, including the failures.
+ *
+ * This was called at the end of the two success paths, so a stale-file exit(1) or
+ * a missing-rasterizer exit(2) left a full 33-file tree behind, and five had
+ * accumulated before the round-2 review found them. A per-pid directory means
+ * they do not collide, but they do add up: the tree is ~272 KB and the host this
+ * runs on is shared, so `process.on("exit")` is the right place for it, not the
+ * happy path. */
+process.on("exit", () => rmSync(scratch, { recursive: true, force: true }));
 
 if (check) {
 	for (const line of problems) console.error(`stale: ${line}`);
@@ -452,9 +475,7 @@ if (check) {
 	}
 	console.log(`${verified.length} generated files verified against a fresh derivation (renderer: ${renderer.bin})`);
 	console.log("icon assets are current");
-	cleanup();
 	process.exit(0);
 }
 if (written.length === 0) console.log("nothing to do");
 console.log(`wrote ${written.length} files (renderer: ${renderer.bin})`);
-cleanup();
