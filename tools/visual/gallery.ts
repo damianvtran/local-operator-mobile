@@ -13,15 +13,23 @@
  * filesystem, because it gets attached to a pull request as an artifact.
  */
 
-const escape = (value) =>
-	String(value ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const escapeHtml = (value) =>
+	String(value ?? "").replace(
+		/[&<>"']/g,
+		(c) =>
+			({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[
+				c
+			],
+	);
 
 /** A frame is "settled" if it is the plain (non-suffixed) or `-settled` shot. */
 const isSettled = (file) => !/-f0\.png$|-f250\.png$/.test(file);
 
 export function renderGallery(manifest) {
 	const { records, meta } = manifest;
-	const problems = records.flatMap((r) => (r.problems ?? []).map((p) => ({ name: r.name, p })));
+	const problems = records.flatMap((r) =>
+		(r.problems ?? []).map((p) => ({ name: r.name, p })),
+	);
 	const byScreen = new Map();
 	for (const record of records) {
 		const list = byScreen.get(record.screen) ?? [];
@@ -64,21 +72,21 @@ export function renderGallery(manifest) {
 					const earlier = shots.filter((s) => s !== settled);
 					const bad = (record.problems ?? []).length > 0;
 					return `<figure class="${bad ? "bad" : ""}">
-	<img src="frames/${encodeURIComponent(settled?.file ?? "")}" alt="${escape(record.name)}" loading="lazy">
-	${earlier.length ? `<div class="frames">${earlier.map((s) => `<img src="frames/${encodeURIComponent(s.file)}" alt="${escape(s.file)}" loading="lazy">`).join("")}</div>` : ""}
+	<img src="frames/${encodeURIComponent(settled?.file ?? "")}" alt="${escapeHtml(record.name)}" loading="lazy">
+	${earlier.length ? `<div class="frames">${earlier.map((s) => `<img src="frames/${encodeURIComponent(s.file)}" alt="${escapeHtml(s.file)}" loading="lazy">`).join("")}</div>` : ""}
 	<figcaption>
-		<code>${escape(record.name)}</code><br>
-		${escape(record.deviceLabel)} ${record.viewport?.width}×${record.viewport?.height} @${record.viewport?.dpr}x<br>
-		theme <b>${escape(record.resolvedTheme ?? "?")}</b> · canvas <code>${escape(record.canvasColor ?? "?")}</code>
-		${record.expectedCanvas ? ` (expected <code>${escape(record.expectedCanvas)}</code>)` : ""}<br>
-		scale ${escape(record.scale)} · text nodes ${record.measurements?.textNodeCount ?? "?"} · mounted ${record.measurements?.mountedElements ?? "?"}
+		<code>${escapeHtml(record.name)}</code><br>
+		${escapeHtml(record.deviceLabel)} ${record.viewport?.width}×${record.viewport?.height} @${record.viewport?.dpr}x<br>
+		theme <b>${escapeHtml(record.resolvedTheme ?? "?")}</b> · canvas <code>${escapeHtml(record.canvasColor ?? "?")}</code>
+		${record.expectedCanvas ? ` (expected <code>${escapeHtml(record.expectedCanvas)}</code>)` : ""}<br>
+		scale ${escapeHtml(record.scale)} · text nodes ${record.measurements?.textNodeCount ?? "?"} · mounted ${record.measurements?.mountedElements ?? "?"}
 		${earlier.length ? `<br><span class="${earlier.some((s) => s.sha !== settled.sha) ? "warn" : ""}">first frame differs: ${earlier.some((s) => s.sha !== settled.sha) ? "yes" : "no"}</span>` : ""}
 		${record.problems?.length ? `<br><span class="badtext">${record.problems.map(escape).join("<br>")}</span>` : ""}
 	</figcaption>
 </figure>`;
 				})
 				.join("\n");
-			return `<h2>${escape(screen)} — ${escape(list[0]?.screenLabel ?? "")}</h2>\n<div class="grid">${cells}</div>`;
+			return `<h2>${escapeHtml(screen)} — ${escapeHtml(list[0]?.screenLabel ?? "")}</h2>\n<div class="grid">${cells}</div>`;
 		})
 		.join("\n");
 
@@ -88,7 +96,7 @@ export function renderGallery(manifest) {
 ${records
 	.map(
 		(r) =>
-			`<tr><td><code>${escape(r.name.replace(/__(dark|light)__/, "__…__"))}</code></td><td>${escape(r.theme)}</td><td>${escape(r.resolvedTheme ?? "?")}</td><td><code>${escape(r.canvasColor ?? "?")}</code></td><td><code>${escape(r.expectedCanvas ?? "—")}</code></td><td><code>${escape(r.frames?.find(isSettled)?.sha ?? "")}</code></td></tr>`,
+			`<tr><td><code>${escapeHtml(r.name.replace(/__(dark|light)__/, "__…__"))}</code></td><td>${escapeHtml(r.theme)}</td><td>${escapeHtml(r.resolvedTheme ?? "?")}</td><td><code>${escapeHtml(r.canvasColor ?? "?")}</code></td><td><code>${escapeHtml(r.expectedCanvas ?? "—")}</code></td><td><code>${escapeHtml(r.frames?.find(isSettled)?.sha ?? "")}</code></td></tr>`,
 	)
 	.join("\n")}
 </table>`;
@@ -103,15 +111,15 @@ ${records
 </head>
 <body>
 <h1>Capture matrix</h1>
-<p><code>${escape(meta.buildDir)}</code> · relay <code>${escape(meta.relay ?? "—")}</code> · scenario <code>${escape(meta.scenario ?? "—")}</code> · ${escape(meta.capturedAt)}</p>
+<p><code>${escapeHtml(meta.buildDir)}</code> · relay <code>${escapeHtml(meta.relay ?? "—")}</code> · scenario <code>${escapeHtml(meta.scenario ?? "—")}</code> · ${escapeHtml(meta.capturedAt)}</p>
 <div class="summary">
 	<div><b>${records.length}</b> cells</div>
 	<div><b>${records.reduce((n, r) => n + (r.frames?.length ?? 0), 0)}</b> frames</div>
 	<div class="${problems.length ? "fail" : ""}"><b>${problems.length}</b> problems</div>
-	<div><b>${escape(meta.textScaleVerdict ?? "scale: not measured")}</b> text scale</div>
+	<div><b>${escapeHtml(meta.textScaleVerdict ?? "scale: not measured")}</b> text scale</div>
 	<div><b>${records.filter((r) => r.themeApplied === false).length}</b> theme mismatches</div>
 </div>
-${problems.length ? `<h2>Problems</h2><table><tr><th>cell</th><th>problem</th></tr>${problems.map((p) => `<tr><td><code>${escape(p.name)}</code></td><td class="badtext">${escape(p.p)}</td></tr>`).join("")}</table>` : ""}
+${problems.length ? `<h2>Problems</h2><table><tr><th>cell</th><th>problem</th></tr>${problems.map((p) => `<tr><td><code>${escapeHtml(p.name)}</code></td><td class="badtext">${escapeHtml(p.p)}</td></tr>`).join("")}</table>` : ""}
 <h2>Theme resolution, per cell</h2>
 ${themeTable}
 ${figures}

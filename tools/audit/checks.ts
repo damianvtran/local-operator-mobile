@@ -18,10 +18,12 @@
  *    every interactive node has a name.
  */
 
-import { composite, contrastRatio, parseCssColor } from "./color.mjs";
-import { INTERACTIVE_AX_ROLES } from "./probe.mjs";
+import type { Floors } from "./color.ts";
+import { composite, contrastRatio, parseCssColor } from "./color.ts";
+import { INTERACTIVE_AX_ROLES } from "./probe.ts";
 
-const round = (n, dp = 2) => (Number.isFinite(n) ? Number(n.toFixed(dp)) : null);
+const round = (n, dp = 2) =>
+	Number.isFinite(n) ? Number(n.toFixed(dp)) : null;
 
 /**
  * A colour reduced to a comparable key. The probe reports computed colours as
@@ -29,13 +31,20 @@ const round = (n, dp = 2) => (Number.isFinite(n) ? Number(n.toFixed(dp)) : null)
  * would miss every match — the semantic set must be normalised the same way the
  * measured values are.
  */
-const colourKey = (value) => {
+const colourKey = (value: unknown): string | null => {
 	const parsed = typeof value === "string" ? parseCssColor(value) : null;
-	return parsed ? parsed.slice(0, 3).map((c) => Math.round(c * 255)).join(",") : null;
+	return parsed
+		? parsed
+				.slice(0, 3)
+				.map((c) => Math.round(c * 255))
+				.join(",")
+		: null;
 };
 
 /** The semantic palette as a set of comparable colour keys. */
-export function semanticSet(semantic) {
+export function semanticSet(
+	semantic: Record<string, string | null> | SemanticPalette | null | undefined,
+): Set<string> {
 	const out = new Set();
 	for (const value of Object.values(semantic ?? {})) {
 		const key = colourKey(value);
@@ -44,13 +53,31 @@ export function semanticSet(semantic) {
 	return out;
 }
 
+/**
+ * The dense-list window the rubric's U-01 exception describes, in CSS pixels:
+ * a neighbour at least this far away (the ≥ 8 pt spacing it names) and no
+ * further than this (which is what makes the neighbours a list rather than two
+ * unrelated controls on a screen).
+ */
+const DENSE_LIST_MIN_GAP_PT = 8;
+const DENSE_LIST_MAX_GAP_PT = 24;
+
 /** Interactive-but-too-small is the exception the rubric names, so measure the gap. */
-function nearestNeighbourGap(node, others) {
+function nearestNeighbourGap(
+	node: AuditNode,
+	others: AuditNode[],
+): number | null {
 	let best = Infinity;
 	for (const other of others) {
 		if (other === node) continue;
-		const gapX = Math.max(other.rect.x - (node.rect.x + node.rect.w), node.rect.x - (other.rect.x + other.rect.w));
-		const gapY = Math.max(other.rect.y - (node.rect.y + node.rect.h), node.rect.y - (other.rect.y + other.rect.h));
+		const gapX = Math.max(
+			other.rect.x - (node.rect.x + node.rect.w),
+			node.rect.x - (other.rect.x + other.rect.w),
+		);
+		const gapY = Math.max(
+			other.rect.y - (node.rect.y + node.rect.h),
+			node.rect.y - (other.rect.y + other.rect.h),
+		);
 		const gap = Math.max(gapX, gapY, 0);
 		if (gap < best) best = gap;
 	}
@@ -60,24 +87,42 @@ function nearestNeighbourGap(node, others) {
 /* ------------------------------------------------------------------ checks -- */
 
 /** U-01 — every control a thumb aims at is at least 44 pt (48 dp on Android). */
-function u01TouchTargets(state, floors) {
-	const floor = state.platform === "android" ? floors.touch.ios + 4 : floors.touch.minimum;
+function u01TouchTargets(state: AuditState, floors: Floors) {
+	const floor =
+		state.platform === "android" ? floors.touch.ios + 4 : floors.touch.minimum;
 	const slopFloor = Math.min(floors.touch.minimumVisualWithSlop ?? 24, 24);
 	const controls = state.nodes.filter((n) => n.interactive && !n.disabled);
 	if (controls.length === 0) {
-		return [{ check: "U-01", verdict: "BLOCKED", measured: null, detail: "no interactive nodes in this frame" }];
+		return [
+			{
+				check: "U-01",
+				verdict: "BLOCKED",
+				// The frame has no control to measure: the instrument could not answer a
+				// question it was asked, so it reports a gap rather than a pass.
+				blockedKind: "unmeasurable",
+				measured: null,
+				detail: "no interactive nodes in this frame",
+			},
+		];
 	}
 	const rows = [];
 	for (const node of controls) {
 		const size = Math.min(node.rect.w, node.rect.h);
 		if (size >= floor) continue;
 		const gap = nearestNeighbourGap(node, controls);
-		// The rubric's exception is "a dense list *with* ≥ 8 pt spacing". A single
-		// control with nothing to crowd satisfies the spacing half vacuously, so it
-		// is recorded as an exception rather than failed for a gap that does not
-		// exist — and the `n/a` is printed so the reader can see why.
-		const gapOk = gap === null || gap >= 8;
-		const denseException = size >= slopFloor && gapOk;
+		// The rubric's exception is "24 pt is the hard floor **only for controls in
+		// a dense list with ≥ 8 pt spacing**", so BOTH halves must be met: a
+		// neighbour close enough to make the list dense, and at least the stated
+		// separation from it. A lone control satisfies neither — it has no list to
+		// be dense in and no spacing to measure — and granting it the exception is
+		// how a real touch-target failure used to pass: measured on a page holding
+		// one 30x30 button and nothing else, this returned EXCEPTION and the run
+		// exited 0.
+		const denseException =
+			size >= slopFloor &&
+			gap !== null &&
+			gap >= DENSE_LIST_MIN_GAP_PT &&
+			gap <= DENSE_LIST_MAX_GAP_PT;
 		rows.push({
 			check: "U-01",
 			verdict: denseException ? "EXCEPTION" : "FAIL",
@@ -88,17 +133,34 @@ function u01TouchTargets(state, floors) {
 		});
 	}
 	if (rows.length === 0) {
-		const smallest = Math.min(...controls.map((n) => Math.min(n.rect.w, n.rect.h)));
-		rows.push({ check: "U-01", verdict: "PASS", measured: `smallest ${smallest}pt vs floor ${floor}`, detail: `${controls.length} controls` });
+		const smallest = Math.min(
+			...controls.map((n) => Math.min(n.rect.w, n.rect.h)),
+		);
+		rows.push({
+			check: "U-01",
+			verdict: "PASS",
+			measured: `smallest ${smallest}pt vs floor ${floor}`,
+			detail: `${controls.length} controls`,
+		});
 	}
 	return rows;
 }
 
 /** U-02 — body text ≥ 4.5:1 and large text ≥ 3:1, against its *effective* ground. */
-function u02Contrast(state, floors) {
-	const textNodes = state.nodes.filter((n) => n.ownText && n.ownText.length > 0);
+function u02Contrast(state: AuditState, floors: Floors) {
+	const textNodes = state.nodes.filter(
+		(n) => n.ownText && n.ownText.length > 0,
+	);
 	if (textNodes.length === 0) {
-		return [{ check: "U-02", verdict: "BLOCKED", measured: null, detail: "no text nodes in this frame" }];
+		return [
+			{
+				check: "U-02",
+				verdict: "BLOCKED",
+				blockedKind: "unmeasurable",
+				measured: null,
+				detail: "no text nodes in this frame",
+			},
+		];
 	}
 	const rows = [];
 	let worst = { ratio: Infinity, node: null };
@@ -107,7 +169,9 @@ function u02Contrast(state, floors) {
 		const fg = composite(parseCssColor(node.color), ground);
 		const ratio = contrastRatio(fg, ground);
 		if (ratio === null) continue;
-		const large = node.fontSize >= 24 || (node.fontSize >= 18.66 && Number(node.fontWeight) >= 700);
+		const large =
+			node.fontSize >= 24 ||
+			(node.fontSize >= 18.66 && Number(node.fontWeight) >= 700);
 		const needed = large ? floors.largeText : floors.bodyText;
 		if (ratio < worst.ratio) worst = { ratio, node };
 		if (ratio < needed) {
@@ -140,7 +204,26 @@ function u02Contrast(state, floors) {
  * *floors* object as its palette and threw — a signature drift the registry
  * could not catch, and one worth keeping the comment for.
  */
-function u03ColourOnlyStatus(state, floors, semantic) {
+function u03ColourOnlyStatus(
+	state: AuditState,
+	floors: Floors,
+	semantic: Set<string>,
+	paletteMissingReason: string | null,
+): CheckRow[] {
+	// With no palette loaded there is nothing to match against, so no suspect can
+	// be found — and "no suspects" must never read as PASS. The canary's own
+	// defect page passed U-03 on all 16 cells this way.
+	if (semantic.size === 0) {
+		return [
+			{
+				check: "U-03",
+				verdict: "BLOCKED",
+				blockedKind: "unmeasurable",
+				measured: null,
+				detail: `no semantic palette to measure against: ${paletteMissingReason ?? "not supplied"}`,
+			},
+		];
+	}
 	// A dot is not a colour-only status when a *word* sits beside it: "Failed" next
 	// to a red dot is a word carrier, and flagging it would make this check noise.
 	// So the node's nearest container's text is part of the question, and a glyph
@@ -157,7 +240,14 @@ function u03ColourOnlyStatus(state, floors, semantic) {
 		return !hasWord(n);
 	});
 	if (suspects.length === 0) {
-		return [{ check: "U-03", verdict: "PASS", measured: `0 colour-only status nodes of ${state.nodes.length}`, detail: "" }];
+		return [
+			{
+				check: "U-03",
+				verdict: "PASS",
+				measured: `0 colour-only status nodes of ${state.nodes.length}`,
+				detail: "",
+			},
+		];
 	}
 	return suspects.slice(0, 8).map((node) => ({
 		check: "U-03",
@@ -168,10 +258,33 @@ function u03ColourOnlyStatus(state, floors, semantic) {
 }
 
 /** U-05 — nothing sits under a notch, a home indicator or an Android gesture bar. */
-function u05SafeAreas(state) {
+function u05SafeAreas(state: AuditState) {
 	const insets = state.insets;
-	if (!insets || (insets.top === 0 && insets.bottom === 0 && insets.left === 0 && insets.right === 0)) {
-		return [{ check: "U-05", verdict: "BLOCKED", measured: "insets 0", detail: "this device class declares no unsafe edges, so it cannot answer the question" }];
+	if (
+		!insets ||
+		(insets.top === 0 &&
+			insets.bottom === 0 &&
+			insets.left === 0 &&
+			insets.right === 0)
+	) {
+		return [
+			{
+				check: "U-05",
+				verdict: "BLOCKED",
+				// Not-applicable when the device declares no unsafe edge at all (there is
+				// nothing for content to sit under); unmeasurable when the insets could
+				// not be published, which is a gap in the instrument.
+				blockedKind:
+					state.insetsOverride?.applied === false
+						? "unmeasurable"
+						: "not-applicable",
+				measured: "insets 0",
+				detail:
+					state.insetsOverride?.applied === false
+						? `the safe-area override could not be applied: ${state.insetsOverride.reason ?? "unknown"}`
+						: "this device class declares no unsafe edges, so it cannot answer the question",
+			},
+		];
 	}
 	const vw = state.viewport.width;
 	const vh = state.viewport.height;
@@ -179,8 +292,11 @@ function u05SafeAreas(state) {
 	// background or a border. An empty layout wrapper inside the band is not
 	// content, and flagging it is how this check becomes noise nobody reads.
 	const draws = (n) =>
-		Boolean(n.ownText) || n.interactive || n.childImages > 0
-		|| (n.ownBackground && n.ownBackground !== "rgba(0, 0, 0, 0)") || n.borderWidth > 0;
+		Boolean(n.ownText) ||
+		n.interactive ||
+		n.childImages > 0 ||
+		(n.ownBackground && n.ownBackground !== "rgba(0, 0, 0, 0)") ||
+		n.borderWidth > 0;
 	const pinned = (n) => n.position === "fixed" || n.position === "sticky";
 	const rows = [];
 	const considered = state.nodes.filter(draws);
@@ -195,7 +311,13 @@ function u05SafeAreas(state) {
 		// build. The children of such a container are what the rule is about, and
 		// they are judged on their own.
 		const containerLike = h >= vh * 0.6 && w >= vw * 0.9;
-		if (insets.top > 0 && !containerLike && y < insets.top && y + h > 0 && y >= 0) {
+		if (
+			insets.top > 0 &&
+			!containerLike &&
+			y < insets.top &&
+			y + h > 0 &&
+			y >= 0
+		) {
 			rows.push({
 				check: "U-05",
 				verdict: "FAIL",
@@ -221,11 +343,21 @@ function u05SafeAreas(state) {
 			}
 		}
 		if (insets.left > 0 && x < insets.left && x + w > 0) {
-			rows.push({ check: "U-05", verdict: "FAIL", measured: `left edge ${x}pt inside the ${insets.left}pt inset`, detail: node.path });
+			rows.push({
+				check: "U-05",
+				verdict: "FAIL",
+				measured: `left edge ${x}pt inside the ${insets.left}pt inset`,
+				detail: node.path,
+			});
 			continue;
 		}
 		if (insets.right > 0 && vw - (x + w) < insets.right && x < vw) {
-			rows.push({ check: "U-05", verdict: "FAIL", measured: `right edge is inside the ${insets.right}pt inset`, detail: node.path });
+			rows.push({
+				check: "U-05",
+				verdict: "FAIL",
+				measured: `right edge is inside the ${insets.right}pt inset`,
+				detail: node.path,
+			});
 		}
 	}
 	if (rows.length === 0) {
@@ -240,7 +372,7 @@ function u05SafeAreas(state) {
 }
 
 /** U-06 — nothing exceeds the viewport at 100 %, and only a scroll region at 200 %. */
-function u06HorizontalOverflow(state) {
+function u06HorizontalOverflow(state: AuditState) {
 	const rows = [];
 	const docOverflow = state.document.scrollWidth - state.document.clientWidth;
 	if (docOverflow > 1) {
@@ -253,7 +385,9 @@ function u06HorizontalOverflow(state) {
 	}
 	// A node wider than the viewport is only acceptable inside something that
 	// scrolls horizontally *on purpose*; anything else pushes the layout.
-	const offenders = state.nodes.filter((n) => n.rect.x + n.rect.w > state.viewport.width + 1 && n.rect.w > 8);
+	const offenders = state.nodes.filter(
+		(n) => n.rect.x + n.rect.w > state.viewport.width + 1 && n.rect.w > 8,
+	);
 	for (const node of offenders.slice(0, 8)) {
 		rows.push({
 			check: "U-06",
@@ -274,17 +408,22 @@ function u06HorizontalOverflow(state) {
 }
 
 /** U-07 — no clipped text, except deliberate single-line ellipsis with a full value. */
-function u07ClippedText(state) {
+function u07ClippedText(state: AuditState) {
 	const rows = [];
 	for (const node of state.nodes) {
 		if (!node.ownText) continue;
-		const clipsY = node.scrollHeight > node.clientHeight + 1 && /hidden|clip/.test(node.overflowY);
-		const clipsX = node.scrollWidth > node.clientWidth + 1 && /hidden|clip/.test(node.overflowX);
+		const clipsY =
+			node.scrollHeight > node.clientHeight + 1 &&
+			/hidden|clip/.test(node.overflowY);
+		const clipsX =
+			node.scrollWidth > node.clientWidth + 1 &&
+			/hidden|clip/.test(node.overflowX);
 		if (!clipsY && !clipsX) continue;
 		// One line of visually truncated text is allowed only when the full value
 		// is still reachable — either the element is a real control (so the label
 		// is announced) or the ellipsis is the platform's own truncation idiom.
-		const ellipsis = node.textOverflow === "ellipsis" && node.whiteSpace === "nowrap";
+		const ellipsis =
+			node.textOverflow === "ellipsis" && node.whiteSpace === "nowrap";
 		if (ellipsis && node.clientHeight <= node.fontSize * 1.8) {
 			rows.push({
 				check: "U-07",
@@ -304,13 +443,18 @@ function u07ClippedText(state) {
 		});
 	}
 	if (rows.length === 0) {
-		rows.push({ check: "U-07", verdict: "PASS", measured: `${state.nodes.filter((n) => n.ownText).length} text nodes, none clipped`, detail: "" });
+		rows.push({
+			check: "U-07",
+			verdict: "PASS",
+			measured: `${state.nodes.filter((n) => n.ownText).length} text nodes, none clipped`,
+			detail: "",
+		});
 	}
 	return rows;
 }
 
 /** U-08 — meaningful boxes must not overlap. */
-function u08Overlap(state) {
+function u08Overlap(state: AuditState) {
 	// The rubric's rule is pairwise over *text and interactive* boxes, so a label
 	// drawn under a control is caught as well as two controls on top of each
 	// other. Ancestor/descendant pairs are excluded: a container overlaps its own
@@ -323,7 +467,8 @@ function u08Overlap(state) {
 			const b = meaningful[j];
 			// Ancestry, not path prefixes: a container does not overlap its own
 			// child, and a truncated CSS path cannot be trusted to say which is which.
-			if (a.ancestors.includes(b.index) || b.ancestors.includes(a.index)) continue;
+			if (a.ancestors.includes(b.index) || b.ancestors.includes(a.index))
+				continue;
 			// A pinned overlay over scrolling content is the intended design, not an
 			// overlap: a composer rides above a transcript every frame. Its safe-area
 			// clearance is U-05's question, so it is excluded here — except against
@@ -332,8 +477,12 @@ function u08Overlap(state) {
 			const pinnedA = a.position === "fixed" || a.position === "sticky";
 			const pinnedB = b.position === "fixed" || b.position === "sticky";
 			if (pinnedA !== pinnedB) continue;
-			const overlapW = Math.min(a.rect.x + a.rect.w, b.rect.x + b.rect.w) - Math.max(a.rect.x, b.rect.x);
-			const overlapH = Math.min(a.rect.y + a.rect.h, b.rect.y + b.rect.h) - Math.max(a.rect.y, b.rect.y);
+			const overlapW =
+				Math.min(a.rect.x + a.rect.w, b.rect.x + b.rect.w) -
+				Math.max(a.rect.x, b.rect.x);
+			const overlapH =
+				Math.min(a.rect.y + a.rect.h, b.rect.y + b.rect.h) -
+				Math.max(a.rect.y, b.rect.y);
 			if (overlapW <= 1 || overlapH <= 1) continue;
 			const area = overlapW * overlapH;
 			const smaller = Math.min(a.rect.w * a.rect.h, b.rect.w * b.rect.h);
@@ -347,20 +496,42 @@ function u08Overlap(state) {
 		}
 	}
 	if (rows.length === 0) {
-		rows.push({ check: "U-08", verdict: "PASS", measured: `${meaningful.length} text/control boxes, no pair overlapping >25%`, detail: "" });
+		rows.push({
+			check: "U-08",
+			verdict: "PASS",
+			measured: `${meaningful.length} text/control boxes, no pair overlapping >25%`,
+			detail: "",
+		});
 	}
 	return rows.slice(0, 8);
 }
 
 /** U-09 — every interactive node in the accessibility tree carries a name. */
-function u09AccessibleName(state) {
-	const controls = (state.ax ?? []).filter((n) => INTERACTIVE_AX_ROLES.has(n.role));
+function u09AccessibleName(state: AuditState) {
+	const controls = (state.ax ?? []).filter((n) =>
+		INTERACTIVE_AX_ROLES.has(n.role),
+	);
 	if (controls.length === 0) {
-		return [{ check: "U-09", verdict: "BLOCKED", measured: "0 interactive AX nodes", detail: "no interactive nodes to name" }];
+		return [
+			{
+				check: "U-09",
+				verdict: "BLOCKED",
+				blockedKind: "unmeasurable",
+				measured: "0 interactive AX nodes",
+				detail: "no interactive nodes to name",
+			},
+		];
 	}
 	const unnamed = controls.filter((n) => !n.name || n.name.trim() === "");
 	if (unnamed.length === 0) {
-		return [{ check: "U-09", verdict: "PASS", measured: `${controls.length} interactive AX nodes, all named`, detail: "" }];
+		return [
+			{
+				check: "U-09",
+				verdict: "PASS",
+				measured: `${controls.length} interactive AX nodes, all named`,
+				detail: "",
+			},
+		];
 	}
 	return unnamed.slice(0, 10).map((n) => ({
 		check: "U-09",
@@ -377,7 +548,15 @@ function u10LabelInName(state) {
 	// otherwise be reported BLOCKED instead of checked.
 	const controls = state.nodes.filter((n) => n.interactive);
 	if (controls.length === 0) {
-		return [{ check: "U-10", verdict: "BLOCKED", measured: "0 interactive nodes in this frame", detail: "" }];
+		return [
+			{
+				check: "U-10",
+				verdict: "BLOCKED",
+				blockedKind: "unmeasurable",
+				measured: "0 interactive nodes in this frame",
+				detail: "",
+			},
+		];
 	}
 	const rows = [];
 	// Pairing happens in the DOM, on the control's *own* label. The AX tree gives
@@ -385,10 +564,15 @@ function u10LabelInName(state) {
 	// pairing every AX control with the first labelled element on the page is how
 	// this check reported a mismatch on a page where no control was wrong.
 	for (const control of controls) {
-		const visible = (control.ownText || "").toLowerCase().replace(/\s+/g, " ").trim();
+		const visible = (control.ownText || "")
+			.toLowerCase()
+			.replace(/\s+/g, " ")
+			.trim();
 		if (visible.length < 2) continue;
 		if (!control.hasAccessibleName) continue;
-		const name = (control.accessibleName ?? "").toLowerCase().replace(/\s+/g, " ");
+		const name = (control.accessibleName ?? "")
+			.toLowerCase()
+			.replace(/\s+/g, " ");
 		if (name.includes(visible)) continue;
 		rows.push({
 			check: "U-10",
@@ -398,7 +582,13 @@ function u10LabelInName(state) {
 		});
 	}
 	if (rows.length === 0) {
-		rows.push({ check: "U-10", verdict: "PASS", measured: "every labelled control's accessible name contains its visible label", detail: "" });
+		rows.push({
+			check: "U-10",
+			verdict: "PASS",
+			measured:
+				"every labelled control's accessible name contains its visible label",
+			detail: "",
+		});
 	}
 	return rows.slice(0, 8);
 }
@@ -426,39 +616,174 @@ export const CHECKS = {
  * about large-text clipping), and U-07 on the 200 % frames says whether anything
  * clips when it is.
  */
-export function u04Report(state, { scaleIsLive }) {
+export function u04Report(
+	state: AuditState,
+	{ scaleIsLive }: { scaleIsLive: boolean },
+): CheckRow[] {
 	if (state.scale !== "200") {
-		return [{ check: "U-04", verdict: "BLOCKED", measured: `scale ${state.scale}`, detail: "the large-text check reads the 200% frames only" }];
+		return [
+			{
+				check: "U-04",
+				verdict: "BLOCKED",
+				blockedKind: "not-applicable",
+				measured: `scale ${state.scale}`,
+				detail: "the large-text check reads the 200% frames only",
+			},
+		];
+	}
+	if (!scaleIsLive) {
+		// The clipping comparison is computed *after* the guard: on an inert scale
+		// dimension the two samples are identical by construction, so the work ran
+		// and was discarded on every 200% frame of every cell.
+		return [
+			{
+				check: "U-04",
+				verdict: "BLOCKED",
+				// Unmeasurable on purpose: the app's text genuinely does not scale, so
+				// there is no clipping verdict to draw. This is the case that must not
+				// read green — it is a measured app property, not a missing frame.
+				blockedKind: "unmeasurable",
+				measured:
+					"the 200% frames are not distinguishable from the 100% frames",
+				detail:
+					"the text-scale dimension is inert in this build, so no large-text verdict can be drawn from it",
+			},
+		];
 	}
 	const clipped = u07ClippedText(state).filter((r) => r.verdict === "FAIL");
-	if (!scaleIsLive) {
-		return [{
-			check: "U-04",
-			verdict: "BLOCKED",
-			measured: "the 200% frames are not distinguishable from the 100% frames",
-			detail: "the text-scale dimension is inert in this build, so no large-text verdict can be drawn from it",
-		}];
-	}
 	if (clipped.length === 0) {
-		return [{ check: "U-04", verdict: "PASS", measured: "no clipped text at 200%", detail: "" }];
+		return [
+			{
+				check: "U-04",
+				verdict: "PASS",
+				measured: "no clipped text at 200%",
+				detail: "",
+			},
+		];
 	}
 	return clipped.map((row) => ({ ...row, check: "U-04" }));
 }
 
 /** Run every selected check over one extracted state. */
-export function runChecks(state, { floors, semantic, checks, scaleIsLive }) {
+/**
+ * Why a row is BLOCKED — and the distinction is load-bearing, because the two
+ * cases must not share an exit code.
+ *
+ * `not-applicable`: the check does not apply to this cell by design (U-04 reads
+ * the 200% frames only, so on a 100% cell there is nothing to answer). This is
+ * expected, and a run made entirely of these is still a pass.
+ *
+ * `unmeasurable`: the check *could not* answer something it should have — no
+ * semantic palette to compare against, no interactive node in the frame, CDP
+ * refusing the inset override. A run with one of these has a gap, and reporting
+ * it as green is the failure the review round found.
+ */
+export type BlockedKind = "not-applicable" | "unmeasurable";
+
+export interface CheckRow {
+	check: string;
+	verdict: "PASS" | "FAIL" | "EXCEPTION" | "BLOCKED";
+	measured: string | null;
+	detail: string;
+	/** Present only on BLOCKED rows, so the report can tell the two apart. */
+	blockedKind?: BlockedKind;
+}
+
+/** One rendered node the extract probe reports, as the checks read it. */
+export interface AuditNode {
+	tag: string;
+	path: string;
+	interactive: boolean;
+	disabled: boolean;
+	rect: { x: number; y: number; w: number; h: number };
+	ownText?: string;
+	ariaLabel?: string;
+	containerText?: string;
+	childImages?: number;
+	role?: string;
+	accessibleName?: string;
+	semanticBackground?: string | null;
+	semanticBorder?: string | null;
+	semanticColour?: string | null;
+	colour?: string | null;
+	background?: string | null;
+	fontSize?: number;
+	clipped?: boolean;
+	scrollWidth?: number;
+	clientWidth?: number;
+	[key: string]: unknown;
+}
+
+/** The extracted state of one audited cell. */
+export interface AuditState {
+	nodes: AuditNode[];
+	platform: string;
+	scale: string;
+	screen?: string;
+	state?: string;
+	device?: string;
+	theme?: string;
+	frame?: string | null;
+	requestedUrl?: string;
+	documentScrollWidth?: number;
+	documentClientWidth?: number;
+	bodyScrollWidth?: number;
+	medianTextHeight?: number | null;
+	insets?: { top: number; bottom: number; left: number; right: number };
+	insetsOverride?: { applied: boolean; reason: string | null };
+	ax?: unknown[];
+	[key: string]: unknown;
+}
+
+/** What `runChecks` needs. `paletteMissingReason` is not optional in spirit: a
+ *  missing palette must be visible in the report rather than silently skipped. */
+export interface RunChecksOptions {
+	floors: Floors;
+	semantic: Set<string> | Record<string, string | null>;
+	checks: string[];
+	scaleIsLive: boolean;
+	paletteMissingReason?: string | null;
+}
+
+export function runChecks(
+	state: AuditState,
+	{
+		floors,
+		semantic,
+		checks,
+		scaleIsLive,
+		paletteMissingReason = null,
+	}: RunChecksOptions,
+): CheckRow[] {
 	// Accept either the palette object or an already-built set, so a caller cannot
 	// hand this a plain object and get a `TypeError` from inside a check.
-	const semanticKeys = semantic instanceof Set ? semantic : semanticSet(semantic);
+	const semanticKeys =
+		semantic instanceof Set ? semantic : semanticSet(semantic);
 	const rows = [];
 	for (const id of checks) {
 		if (id === "U-04") {
 			rows.push(...u04Report(state, { scaleIsLive }));
 			continue;
 		}
+		if (id === "U-03") {
+			rows.push(
+				...u03ColourOnlyStatus(
+					state,
+					floors,
+					semanticKeys,
+					paletteMissingReason,
+				),
+			);
+			continue;
+		}
 		const check = CHECKS[id];
 		if (!check) {
-			rows.push({ check: id, verdict: "BLOCKED", measured: null, detail: "unknown check id" });
+			rows.push({
+				check: id,
+				verdict: "BLOCKED",
+				measured: null,
+				detail: "unknown check id",
+			});
 			continue;
 		}
 		const produced = check.run(state, floors, semanticKeys);

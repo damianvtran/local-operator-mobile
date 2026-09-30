@@ -35,9 +35,67 @@ import { spawn, spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { browserWebSocketUrl, connect, sleep } from "./cdp.mjs";
+import { browserWebSocketUrl, connect, sleep } from "./cdp.ts";
 
-const CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
+/**
+ * Where the installed Chrome lives, per platform.
+ *
+ * `pgrep`/`pkill` are invoked by NAME rather than by an absolute `/usr/bin`
+ * path for the same reason: that path is macOS's, and a Linux runner puts them
+ * in `/bin`, so a hard-coded prefix would leave the sweep unable to find — or
+ * unable to kill — the processes it started.
+ *
+ * The harness drives the browser the machine already has, in whatever place that
+ * platform puts it — a macOS app bundle, a Linux distribution's launcher on
+ * PATH. A single hard-coded macOS path meant the capture and audit jobs could
+ * only ever run on a developer's laptop, and CI (a Linux runner) failed with
+ * "Google Chrome is not installed at /Applications/...".
+ *
+ * `CHROME_BIN` is honoured first, which is how a runner names a non-standard
+ * install; the candidates after it are tried in order.
+ */
+export function resolveChrome(): { path: string; source: string } | null {
+	const override = process.env.CHROME_BIN;
+	if (override !== undefined && override !== "" && existsSync(override)) {
+		return { path: override, source: "CHROME_BIN" };
+	}
+	const candidates =
+		process.platform === "darwin"
+			? [
+					"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+					"/Applications/Chromium.app/Contents/MacOS/Chromium",
+					`${process.env.HOME ?? ""}/Applications/Google Chrome.app/Contents/MacOS/Google Chrome`,
+				]
+			: [
+					// A Linux runner's usual installs, in the order a distribution's own
+					// packaging would place them.
+					"/usr/bin/google-chrome",
+					"/usr/bin/google-chrome-stable",
+					"/usr/bin/chromium",
+					"/usr/bin/chromium-browser",
+					"/snap/bin/chromium",
+				];
+	for (const candidate of candidates) {
+		if (candidate !== "" && existsSync(candidate))
+			return { path: candidate, source: "platform default" };
+	}
+	// Last resort: whatever is on PATH, which is how a `chromium` in a container
+	// or a version-manager shim is found.
+	const found = spawnSync(
+		"/usr/bin/env",
+		[
+			"sh",
+			"-c",
+			"command -v google-chrome || command -v chromium || command -v chromium-browser",
+		],
+		{
+			encoding: "utf8",
+		},
+	);
+	const path = (found.stdout ?? "").trim().split("\n")[0] ?? "";
+	if (path !== "") return { path, source: "PATH" };
+	return null;
+}
 
 /** Where a throwaway profile goes: this session's scratchpad, else the OS temp dir. */
 export function scratchRoot() {
@@ -52,11 +110,20 @@ export function scratchRoot() {
  * Chrome 152 that flag clamps width at a 500px floor and loses 87px of height,
  * silently, which is how a frame's dimensions get assumed rather than set.
  */
-export async function launchChrome({ profile = scratchRoot(), extraArgs = [], headless = true } = {}) {
-	if (!existsSync(CHROME)) {
+export async function launchChrome({
+	profile = scratchRoot(),
+	extraArgs = [],
+	headless = true,
+}: {
+	profile?: string;
+	extraArgs?: string[];
+	headless?: boolean;
+} = {}) {
+	const chrome = resolveChrome();
+	if (chrome === null) {
 		throw new Error(
-			`Google Chrome is not installed at ${CHROME}. The harness drives the `
-			+ "installed browser only — it must never download or script its own engine.",
+			"No Chrome found (a macOS app bundle, a Linux launcher, or CHROME_BIN). The harness " +
+				"drives the installed browser only — it must never download or script its own engine.",
 		);
 	}
 	const args = [
@@ -76,7 +143,10 @@ export async function launchChrome({ profile = scratchRoot(), extraArgs = [], he
 	// `detached: true` puts Chrome in its own process group. That is what makes
 	// `process.kill(-pid)` safe: the group contains only Chrome and its helpers,
 	// never this Node process (which is what a backgrounded `&` would give you).
-	const child = spawn(CHROME, args, { detached: true, stdio: ["ignore", "pipe", "pipe"] });
+	const child = spawn(chrome.path, args, {
+		detached: true,
+		stdio: ["ignore", "pipe", "pipe"],
+	});
 	let stderr = "";
 	child.stderr.on("data", (chunk) => {
 		stderr = `${stderr}${chunk}`.slice(-4000);
@@ -85,18 +155,24 @@ export async function launchChrome({ profile = scratchRoot(), extraArgs = [], he
 
 	const portFile = join(profile, "DevToolsActivePort");
 	const deadline = Date.now() + 30_000;
-	while (!existsSync(portFile) || readFileSync(portFile, "utf8").trim() === "") {
+	while (
+		!existsSync(portFile) ||
+		readFileSync(portFile, "utf8").trim() === ""
+	) {
 		if (Date.now() > deadline) {
 			// A dev-server-less Chrome writes the port file asynchronously; an
 			// immediate read gets an empty file and the connect fails
 			// intermittently, which reads as a flaky harness. Hence the wait, and
 			// hence a loud failure when the wait expires.
 			await reap(child.pid, profile);
-			throw new Error(`Chrome never wrote DevToolsActivePort (30 s). stderr: ${stderr.slice(-800)}`);
+			throw new Error(
+				`Chrome never wrote DevToolsActivePort (30 s). stderr: ${stderr.slice(-800)}`,
+			);
 		}
 		await sleep(150);
 	}
-	const port = Number(readFileSync(portFile, "utf8").split("\n")[0].trim());
+	const [firstLine = ""] = readFileSync(portFile, "utf8").split("\n");
+	const port = Number(firstLine.trim());
 	const browserWsUrl = await browserWebSocketUrl(port).catch(async (error) => {
 		await reap(child.pid, profile);
 		throw error;
@@ -132,8 +208,11 @@ export async function launchChrome({ profile = scratchRoot(), extraArgs = [], he
  * SIGKILL, and only stop when two consecutive counts are 0 or the deadline
  * passes. The caller still asserts the returned count is 0.
  */
-export async function reap(pid, profile) {
-	if (pid) {
+export async function reap(
+	pid: number | undefined,
+	profile: string,
+): Promise<ReapResult> {
+	if (pid !== undefined) {
 		try {
 			process.kill(-pid, "SIGTERM");
 		} catch {
@@ -154,7 +233,7 @@ export async function reap(pid, profile) {
 	while (Date.now() < deadline && cleanRounds < 2) {
 		// SIGKILL on the second round: a helper that ignored SIGTERM will not
 		// start ignoring SIGKILL, and the count assertion is what matters.
-		spawnSync("/usr/bin/pkill", escalated ? ["-9", "-f", profile] : ["-f", profile]);
+		spawnSync("pkill", escalated ? ["-9", "-f", profile] : ["-f", profile]);
 		escalated = true;
 		await sleep(900);
 		survivors = countProcesses(profile);
@@ -167,7 +246,11 @@ export async function reap(pid, profile) {
 		// A helper still holding a file makes this fail; the process count is the
 		// assertion that matters, and the caller reports it.
 	}
-	return { survivors: countProcesses(profile), profile, rounds: escalated ? 2 : 1 };
+	return {
+		survivors: countProcesses(profile),
+		profile,
+		rounds: escalated ? 2 : 1,
+	};
 }
 
 /**
@@ -175,8 +258,15 @@ export async function reap(pid, profile) {
  * to a path unique to this run, which is what keeps the sweep from reaching any
  * other Chrome — including the operator's. Never sweep by program name.
  */
-export function countProcesses(profile) {
-	const result = spawnSync("/usr/bin/pgrep", ["-f", profile], { encoding: "utf8" });
+export function countProcesses(profile: string): number {
+	const result = spawnSync("pgrep", ["-f", profile], { encoding: "utf8" });
 	if (result.status !== 0) return 0; // pgrep exits 1 when nothing matches: the good case.
 	return result.stdout.split("\n").filter((line) => line.trim() !== "").length;
+}
+
+/** What a teardown sweep observed, returned so a caller can assert on it. */
+export interface ReapResult {
+	survivors: number;
+	profile: string;
+	rounds: number;
 }

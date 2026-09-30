@@ -18,34 +18,68 @@
  * properties and the audit measures content against *those*. They are the
  * documented values for each class, and they are stated here rather than
  * buried in the probe so a reviewer can argue with the number.
+ *
+ * `tier` selects how much of the matrix a run covers. `core` is the sample a
+ * default run captures — the smallest phone, one typical phone and one tablet,
+ * both orientations where they differ — and `full` adds every other size. The
+ * operator's rule for this matrix is that phones come in many sizes and tablets
+ * need both orientations, so the full list is the target and the core list is
+ * the default; a run states which tier it ran, and a cell that was not captured
+ * is reported BLOCKED rather than passed.
  */
-export const DEVICES = {
+export interface DeviceProfile {
+	label: string;
+	width: number;
+	height: number;
+	dpr: number;
+	platform: "ios" | "android";
+	insets: { top: number; bottom: number; left: number; right: number };
+	kind: "phone" | "tablet" | "foldable";
+	orientation: "portrait" | "landscape";
+	tier: "core" | "full";
+	note: string;
+}
+
+/** Tablet breakpoint: at or above this width the layout must earn the space. */
+export const TABLET_MIN_WIDTH = 768;
+
+export const DEVICES: Record<string, DeviceProfile> = {
+	// --- Phones, portrait: the sizes a real fleet has, smallest first. ---
 	"iphone-se": {
-		label: "iPhone SE",
+		label: "iPhone SE (320x568)",
 		width: 320,
 		height: 568,
 		dpr: 2,
 		platform: "ios",
 		insets: { top: 20, bottom: 0, left: 0, right: 0 },
+		kind: "phone",
+		orientation: "portrait",
+		tier: "core",
 		note: "The 320pt floor: no notch, no home indicator, the narrowest phone the app must survive.",
 	},
-	"iphone-15": {
-		label: "iPhone 15",
-		width: 390,
-		height: 844,
-		dpr: 3,
+	"iphone-se2": {
+		label: "iPhone SE 2/3 (375x667)",
+		width: 375,
+		height: 667,
+		dpr: 2,
 		platform: "ios",
-		insets: { top: 59, bottom: 34, left: 0, right: 0 },
-		note: "The default capture device: Dynamic Island, home indicator, 3x.",
+		insets: { top: 20, bottom: 0, left: 0, right: 0 },
+		kind: "phone",
+		orientation: "portrait",
+		tier: "full",
+		note: "The common small iPhone: a rounded 375pt width still with a home button.",
 	},
-	"iphone-max": {
-		label: "iPhone Pro Max",
-		width: 430,
-		height: 932,
+	"android-compact": {
+		label: "Android small (360x640)",
+		width: 360,
+		height: 640,
 		dpr: 3,
-		platform: "ios",
-		insets: { top: 59, bottom: 34, left: 0, right: 0 },
-		note: "The large-phone case: wider rows, longer labels before they wrap.",
+		platform: "android",
+		insets: { top: 24, bottom: 0, left: 0, right: 0 },
+		kind: "phone",
+		orientation: "portrait",
+		tier: "full",
+		note: "A 3x Android at the 48dp touch floor, on the shortest screen in use.",
 	},
 	"android-small": {
 		label: "Android 360x780",
@@ -54,7 +88,121 @@ export const DEVICES = {
 		dpr: 3,
 		platform: "android",
 		insets: { top: 24, bottom: 0, left: 0, right: 0 },
-		note: "The 48dp touch floor applies here, not 44.",
+		kind: "phone",
+		orientation: "portrait",
+		tier: "full",
+		note: "The tall 3x Android: the same width as the compact with 140px more height.",
+	},
+	"iphone-15": {
+		label: "iPhone 15 (390x844)",
+		width: 390,
+		height: 844,
+		dpr: 3,
+		platform: "ios",
+		insets: { top: 59, bottom: 34, left: 0, right: 0 },
+		kind: "phone",
+		orientation: "portrait",
+		tier: "core",
+		note: "The default capture device: Dynamic Island, home indicator, 3x.",
+	},
+	"android-large": {
+		label: "Android large (412x915)",
+		width: 412,
+		height: 915,
+		dpr: 2.6,
+		platform: "android",
+		insets: { top: 24, bottom: 16, left: 0, right: 0 },
+		kind: "phone",
+		orientation: "portrait",
+		tier: "full",
+		note: "A 2.6x Android: the widest phone before the tablet breakpoint.",
+	},
+	"iphone-max": {
+		label: "iPhone Pro Max (430x932)",
+		width: 430,
+		height: 932,
+		dpr: 3,
+		platform: "ios",
+		insets: { top: 59, bottom: 34, left: 0, right: 0 },
+		kind: "phone",
+		orientation: "portrait",
+		tier: "full",
+		note: "The large-phone case: wider rows, longer labels before they wrap.",
+	},
+	// --- Foldables: the cover screen is narrower than any classic phone. ---
+	"fold-cover": {
+		label: "Foldable cover (280x653)",
+		width: 280,
+		height: 653,
+		dpr: 2.6,
+		platform: "android",
+		insets: { top: 24, bottom: 16, left: 0, right: 0 },
+		kind: "foldable",
+		orientation: "portrait",
+		tier: "full",
+		note: "Narrower than the 320pt floor: the case where a two-column row or a long label cannot fit at all.",
+	},
+	"fold-open": {
+		label: "Foldable unfolded (673x841)",
+		width: 673,
+		height: 841,
+		dpr: 2.6,
+		platform: "android",
+		insets: { top: 24, bottom: 16, left: 0, right: 0 },
+		kind: "foldable",
+		orientation: "portrait",
+		tier: "full",
+		note: "Just under the tablet breakpoint: the phone layout must still hold.",
+	},
+	// --- Phones, landscape: the notch moves to a side, the keyboard eats height. ---
+	"iphone-15-landscape": {
+		label: "iPhone 15 landscape (844x390)",
+		width: 844,
+		height: 390,
+		dpr: 3,
+		platform: "ios",
+		insets: { top: 0, bottom: 21, left: 59, right: 59 },
+		kind: "phone",
+		orientation: "landscape",
+		tier: "core",
+		note: "Landscape insets move to left/right; the composer sits above a keyboard that takes half the height.",
+	},
+	"android-large-landscape": {
+		label: "Android large landscape (915x412)",
+		width: 915,
+		height: 412,
+		dpr: 2.6,
+		platform: "android",
+		insets: { top: 0, bottom: 16, left: 24, right: 24 },
+		kind: "phone",
+		orientation: "landscape",
+		tier: "full",
+		note: "The Android landscape case, wider than the iPhone's and with a shallower bottom inset.",
+	},
+	// --- Tablets: both orientations, both platforms. ---
+	"tablet-768": {
+		label: "Tablet portrait (768x1024)",
+		width: 768,
+		height: 1024,
+		dpr: 2,
+		platform: "ios",
+		insets: { top: 24, bottom: 20, left: 0, right: 0 },
+		kind: "tablet",
+		orientation: "portrait",
+		tier: "full",
+		note: "The smallest iPad in portrait: exactly at the breakpoint, so the two-pane decision is visible here first.",
+	},
+	"tablet-768-landscape": {
+		label: "Tablet landscape (1024x768)",
+		width: 1024,
+		height: 768,
+		dpr: 2,
+		platform: "ios",
+		insets: { top: 20, bottom: 20, left: 0, right: 0 },
+		kind: "tablet",
+		orientation: "landscape",
+		tier: "full",
+		note: "The same device rotated: a wide, short viewport where vertical space is the scarce one.",
 	},
 	tablet: {
 		label: "Tablet 834x1112",
@@ -63,9 +211,80 @@ export const DEVICES = {
 		dpr: 2,
 		platform: "ios",
 		insets: { top: 24, bottom: 20, left: 0, right: 0 },
-		note: "iPad-portrait-ish: the split view and the two-column layout.",
+		kind: "tablet",
+		orientation: "portrait",
+		tier: "core",
+		note: "iPad Air portrait: the split view and the two-column layout.",
+	},
+	"tablet-landscape": {
+		label: "Tablet landscape (1112x834)",
+		width: 1112,
+		height: 834,
+		dpr: 2,
+		platform: "ios",
+		insets: { top: 20, bottom: 20, left: 0, right: 0 },
+		kind: "tablet",
+		orientation: "landscape",
+		tier: "core",
+		note: "iPad Air rotated: the layout that must use the extra width deliberately.",
+	},
+	"tablet-pro": {
+		label: "Tablet Pro portrait (1024x1366)",
+		width: 1024,
+		height: 1366,
+		dpr: 2,
+		platform: "ios",
+		insets: { top: 24, bottom: 20, left: 0, right: 0 },
+		kind: "tablet",
+		orientation: "portrait",
+		tier: "full",
+		note: "The largest iPad in portrait: the layout with the most room to waste.",
+	},
+	"tablet-pro-landscape": {
+		label: "Tablet Pro landscape (1366x1024)",
+		width: 1366,
+		height: 1024,
+		dpr: 2,
+		platform: "ios",
+		insets: { top: 20, bottom: 20, left: 0, right: 0 },
+		kind: "tablet",
+		orientation: "landscape",
+		tier: "full",
+		note: "1366px wide: a phone layout stretched across this is a finding, not a pass.",
+	},
+	"android-tablet": {
+		label: "Android tablet portrait (800x1280)",
+		width: 800,
+		height: 1280,
+		dpr: 1.5,
+		platform: "android",
+		insets: { top: 24, bottom: 16, left: 0, right: 0 },
+		kind: "tablet",
+		orientation: "portrait",
+		tier: "full",
+		note: "A 1.5x Android tablet: the density where a 48dp target is 72 device pixels.",
+	},
+	"android-tablet-landscape": {
+		label: "Android tablet landscape (1280x800)",
+		width: 1280,
+		height: 800,
+		dpr: 1.5,
+		platform: "android",
+		insets: { top: 16, bottom: 16, left: 24, right: 24 },
+		kind: "tablet",
+		orientation: "landscape",
+		tier: "full",
+		note: "The Android tablet rotated.",
 	},
 };
+
+/** Device names in the core tier — the default sample a run captures. */
+export const CORE_DEVICES: string[] = Object.entries(DEVICES)
+	.filter(([, device]) => device.tier === "core")
+	.map(([name]) => name);
+
+/** Every device name, in declaration order (smallest to largest). */
+export const ALL_DEVICES: string[] = Object.keys(DEVICES);
 
 export const THEMES = ["dark", "light"];
 
@@ -82,7 +301,7 @@ export const SCALES = [
  * are not part of a URL, so the path here is the route as the web export
  * serves it, not as the file is laid out.
  */
-export const SCREENS = {
+export const SCREENS: Record<string, { label: string; path: string }> = {
 	S1: { label: "Sign in", path: "/sign-in" },
 	"S1-welcome": { label: "Welcome (first run)", path: "/welcome" },
 	S2: { label: "Set up a computer", path: "/tunnels" },
@@ -96,6 +315,7 @@ export const SCREENS = {
 	S9: { label: "Sheets", path: "/session/{sessionId}" },
 	S10: { label: "Past sessions", path: "/past" },
 	S11: { label: "Settings", path: "/settings" },
+	S13: { label: "Refused / unreachable", path: "/tunnels" },
 	S14: { label: "Demo mode", path: "/demo" },
 };
 
@@ -160,7 +380,56 @@ export const PRE_PAINT_PROBE = `
 })();
 `;
 
+/**
+ * The screen-root test identifiers the app declares (`src/ui/a11y.ts`, `SCREEN`).
+ *
+ * The harness reads these to prove the app reached the screen a cell names. The
+ * measurement that matters: before this check existed, five different `S4` states
+ * produced ONE byte-identical image — the app rendered the unauthenticated screen
+ * in every cell and the audit still reported 408 PASS rows. A capture that cannot
+ * tell those apart is not evidence, so a cell whose screen root is missing is a
+ * FAILED cell, not a blank frame.
+ */
+export const SCREEN_ROOTS: Record<string, string> = {
+	S1: "sign-in-screen",
+	"S1-welcome": "welcome-screen",
+	S2: "custom-route-screen",
+	S3: "computers-screen",
+	"S3-custom": "custom-route-screen",
+	S4: "sessions-screen",
+	S5: "session-screen",
+	S6: "subagent-screen",
+	S7: "new-session-screen",
+	S8: "session-screen",
+	S9: "session-screen",
+	S10: "past-sessions-screen",
+	S11: "settings-screen",
+	S13: "computers-screen",
+	S14: "welcome-screen",
+};
+
 /** Read the resolved theme/scale and the app's own canvas colour, per frame. */
+/**
+ * The readiness probe: after a cell settles, what did the app actually render?
+ *
+ * Read back from the page, so a mismatch between "what the cell asked for" and
+ * "what the app is showing" is measurable rather than assumed.
+ */
+export const READINESS_PROBE = `
+(() => {
+  const testIds = Array.from(document.querySelectorAll('[data-testid]'))
+    .map((el) => el.getAttribute('data-testid'))
+    .filter((id) => typeof id === 'string');
+  const text = (document.body && document.body.innerText) ? document.body.innerText.slice(0, 240) : '';
+  return {
+    path: location.pathname,
+    testIds,
+    text,
+    elementCount: document.querySelectorAll('*').length,
+  };
+})();
+`;
+
 export const MEASURE_PROBE = `
 (() => {
   const info = window.__loCapture || {};

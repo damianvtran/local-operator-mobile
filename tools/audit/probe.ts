@@ -215,7 +215,9 @@ export function flattenAxTree(nodes) {
 		if (node.ignored) continue;
 		const role = node.role?.value ?? "";
 		const name = node.name?.value ?? "";
-		const props = Object.fromEntries((node.properties ?? []).map((p) => [p.name, p.value?.value]));
+		const props = Object.fromEntries(
+			(node.properties ?? []).map((p) => [p.name, p.value?.value]),
+		);
 		out.push({
 			nodeId: node.nodeId,
 			backendDOMNodeId: node.backendDOMNodeId,
