@@ -21,6 +21,7 @@ import {
 	existsSync,
 	mkdirSync,
 	mkdtempSync,
+	readFileSync,
 	rmSync,
 	writeFileSync,
 } from "node:fs";
@@ -29,6 +30,12 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { countProcesses, sweepOrphanChrome } from "../lib/chrome.ts";
+import {
+	readinessProblems,
+	requiredStateMarker,
+	SCREEN_MARKER_SUBJECT,
+	seedQuery,
+} from "../lib/readiness.ts";
 
 const args = process.argv.slice(2);
 const flag = (name: string, fallback: string): string => {
@@ -121,12 +128,32 @@ interface RelayHandle {
 	stop: () => Promise<void>;
 }
 
+/**
+ * Narrowing helpers for the parsed bodies this verifier reads.
+ *
+ * The bodies are `unknown`, not `any`: `any` disables checking at every use, which is
+ * how a typo in a fixture key becomes a passing assertion. These four are the whole
+ * vocabulary the verifier needs, and each one is explicit about what it does with a
+ * value of the wrong shape (`bag` and `arr` yield an empty container, so a wrong shape
+ * fails the assertion that follows rather than throwing).
+ */
+const bag = (value: unknown): Record<string, unknown> =>
+	typeof value === "object" && value !== null
+		? (value as Record<string, unknown>)
+		: {};
+const arr = (value: unknown): unknown[] => (Array.isArray(value) ? value : []);
+const str = (value: unknown): string =>
+	typeof value === "string" ? value : "";
+const num = (value: unknown): number =>
+	typeof value === "number" ? value : Number.NaN;
+
 /** A recorded response from `makeClient`, with a timeout surfaced as a value. */
 interface ClientReply {
 	status: number | null;
 	headers: Headers;
 	text: string;
-	json: any;
+	/** The parsed body: `unknown`, narrowed at the point of use by `bag`/`arr`. */
+	json: unknown;
 	timedOut: boolean;
 	error?: string;
 	elapsedMs?: number;
@@ -269,6 +296,8 @@ function makeClient(base: string) {
 		try {
 			json = JSON.parse(text);
 		} catch {
+			// A non-JSON body is a legitimate outcome (the relay answers plain text on
+			// unrouted paths), and the assertions that follow say which one they expect.
 			json = undefined;
 		}
 		return {
@@ -372,8 +401,8 @@ async function readStream(
  * verification on the first torn read, which is worse than reporting the frames
  * that did arrive — the caller asserts on how many there are.
  */
-function framesOf(text: string): Array<{ event: string; data: any }> {
-	const frames: Array<{ event: string; data: any }> = [];
+function framesOf(text: string): Array<{ event: string; data: unknown }> {
+	const frames: Array<{ event: string; data: unknown }> = [];
 	for (const match of text.matchAll(/^event: ([^\n]+)\ndata: (.*)$/gm)) {
 		try {
 			frames.push({
@@ -523,10 +552,10 @@ async function main() {
 
 		const health = await client.get("/healthz");
 		check("GET /healthz is public and 200", health.status, 200);
-		check("healthz carries protocol version 5", health.json.version, 5);
+		check("healthz carries protocol version 5", bag(health.json).version, 5);
 		check(
 			"healthz reports dist:false on a bundle-less relay",
-			health.json.dist,
+			bag(health.json).dist,
 			false,
 		);
 
@@ -591,12 +620,12 @@ async function main() {
 		check("the cookie authenticates /api/sessions", authed.status, 200);
 		check(
 			"list body has sessions + degraded + capabilities",
-			Object.keys(authed.json).sort().join(","),
+			Object.keys(bag(authed.json)).sort().join(","),
 			"capabilities,degraded,sessions",
 		);
 		check(
 			"degraded is present and empty when nothing is wrong",
-			authed.json.degraded,
+			bag(authed.json).degraded,
 			[],
 		);
 
@@ -667,7 +696,7 @@ async function main() {
 		check("prompt without command_id is 422", noId.status, 422);
 		check(
 			"missing command_id gets the missing-case sentence",
-			noId.json.error,
+			bag(noId.json).error,
 			"command_id must be a UUID string",
 		);
 
@@ -679,7 +708,7 @@ async function main() {
 		check("a malformed command_id is 422", badId.status, 422);
 		check(
 			"the malformed case gets a different sentence",
-			badId.json.error,
+			bag(badId.json).error,
 			"command_id must be a valid UUID",
 		);
 
@@ -698,7 +727,7 @@ async function main() {
 		});
 		check(
 			"new_conversation is refused with the relay's own sentence",
-			newConv.json.error,
+			bag(newConv.json).error,
 			"start a new session from the session list",
 		);
 		const resume = await client.post(`/api/sessions/${SID}/command`, {
@@ -706,7 +735,7 @@ async function main() {
 		});
 		check(
 			"resume_session is refused with the relay's own sentence",
-			resume.json.error,
+			bag(resume.json).error,
 			"pick the session from the session list instead",
 		);
 
@@ -738,7 +767,7 @@ async function main() {
 		});
 		check(
 			"a different id is admitted on its own",
-			other.json.detail,
+			bag(other.json).detail,
 			"prompt admitted",
 		);
 
@@ -747,21 +776,21 @@ async function main() {
 		const past = await client.get("/api/sessions/past");
 		check(
 			"past is 200 with sessions + degraded",
-			Object.keys(past.json).sort().join(","),
+			Object.keys(bag(past.json)).sort().join(","),
 			"degraded,sessions",
 		);
 		const search = await client.get("/api/sessions/search?q=hello&limit=5");
-		check("search echoes its query", search.json.query, "hello");
+		check("search echoes its query", bag(search.json).query, "hello");
 		check("search is 200", search.status, 200);
 		const history = await client.get(`/api/sessions/${SID}/history?limit=5`);
 		check(
 			"history is 200 with entries + has_more",
-			Object.keys(history.json).sort().join(","),
+			Object.keys(bag(history.json)).sort().join(","),
 			"entries,has_more",
 		);
 		check(
 			"history page respects limit=5",
-			history.json.entries.length,
+			arr(bag(history.json).entries).length,
 			(n: number) => n <= 5,
 		);
 		const historyUnknown = await client.get(
@@ -781,8 +810,8 @@ async function main() {
 		check("commands is 200", commands.status, 200);
 		check(
 			"the slash list excludes TUI-only chrome",
-			commands.json.commands.some((c: { name: string }) =>
-				["exit", "quit", "clear"].includes(c.name),
+			arr(bag(commands.json).commands).some((c) =>
+				["exit", "quit", "clear"].includes(str(bag(c).name)),
 			),
 			false,
 		);
@@ -791,7 +820,7 @@ async function main() {
 		const directories = await client.get("/api/directories");
 		check(
 			"directories is 200 with home/recent/tmp",
-			Object.keys(directories.json).sort().join(","),
+			Object.keys(bag(directories.json)).sort().join(","),
 			"home,recent,tmp",
 		);
 		const subagentMiss = await client.get(`/api/sessions/${SID}/agents/job-x`);
@@ -886,7 +915,7 @@ async function main() {
 				"pending",
 				"todos",
 				"subagents",
-			].every((k) => k in (projFrames[0]?.data ?? {})),
+			].every((k) => k in bag(projFrames[0]?.data)),
 			true,
 		);
 
@@ -940,12 +969,12 @@ async function main() {
 				check(`scenario '${name}' refuses at the gateway`, res.status, 503);
 				check(
 					`scenario '${name}' carries the reason code`,
-					typeof res.json?.reason,
+					typeof bag(res.json).reason,
 					"string",
 				);
 				check(
 					`scenario '${name}' carries the gateway error field`,
-					res.json?.error,
+					bag(res.json).error,
 					"tunnel authorization unavailable",
 				);
 			}
@@ -976,21 +1005,20 @@ async function main() {
 		}
 
 		const list = await client.get("/api/sessions");
-		const rows = list.json?.sessions ?? [];
+		const rows = arr(bag(list.json).sessions).map((row) => bag(row));
+		const firstRow = bag(rows[0]);
 		let projection = null;
 		if (rows[0]) {
 			const stream = await readStream(
 				relay.base,
-				`/api/sessions/${rows[0].session_id}/events`,
+				`/api/sessions/${str(firstRow.session_id)}/events`,
 				{ ms: 700, cookie: client.cookie },
 			);
 			projection = framesOf(stream.text)[0]?.data ?? null;
 		}
 		check(
 			`scenario '${name}' answers a well-formed list`,
-			Object.keys(list.json ?? {})
-				.sort()
-				.join(","),
+			Object.keys(bag(list.json)).sort().join(","),
 			"capabilities,degraded,sessions",
 		);
 		check(
@@ -998,13 +1026,16 @@ async function main() {
 			rows.length,
 			(n: number) => n >= 0,
 		);
+		const projectionBag = bag(projection);
 		const note =
-			`rows=${rows.length} degraded=[${(list.json?.degraded ?? []).join(",")}]` +
+			`rows=${rows.length} degraded=[${arr(bag(list.json).degraded)
+				.map((d) => str(d))
+				.join(",")}]` +
 			(rows[0]
-				? ` first{section=${rows[0].section} subagents=${JSON.stringify(rows[0].subagents_running)} attn=${rows[0].needs_attention}/${rows[0].pending_kind || "-"} todos=${rows[0].todos_open}`
+				? ` first{section=${str(firstRow.section)} subagents=${JSON.stringify(firstRow.subagents_running)} attn=${str(firstRow.needs_attention)}/${str(firstRow.pending_kind) || "-"} todos=${str(firstRow.todos_open)}`
 				: "") +
 			(projection
-				? ` proj{pid=${projection.pid} streaming=${projection.streaming} rows=${projection.transcript?.length} pending=${projection.pending?.kind ?? "-"} stop=${projection.stop_reason || "-"}}`
+				? ` proj{pid=${str(projectionBag.pid)} streaming=${str(projectionBag.streaming)} rows=${arr(projectionBag.transcript).length} pending=${str(bag(projectionBag.pending).kind) || "-"} stop=${str(projectionBag.stop_reason) || "-"}}`
 				: "");
 		const lastResult = results[results.length - 1];
 		if (lastResult !== undefined) lastResult.note = note;
@@ -1019,11 +1050,12 @@ async function main() {
 				true,
 			);
 		}
-		if (projection && world.projections?.[rows[0]?.session_id]) {
-			const expected = world.projections[rows[0].session_id];
+		const firstSessionId = str(firstRow.session_id);
+		if (projection && world.projections?.[firstSessionId]) {
+			const expected = world.projections[firstSessionId];
 			check(
 				`scenario '${name}' streams the projection it declared`,
-				projection.session_id,
+				str(projectionBag.session_id),
 				expected.session_id,
 			);
 		}
@@ -1213,18 +1245,42 @@ async function main() {
 				tmpdir(),
 				`lo-mutation-${mutation.blind.replace(":", "-")}-${Date.now()}`,
 			);
-			const run = spawnSync(
-				process.execPath,
-				[
-					join(WORKTREE, "e2e", "run-canary.ts"),
-					"--fast",
-					"--blind",
-					mutation.blind,
-					"--out",
-					out,
-				],
-				{ encoding: "utf8", timeout: 600_000, env: { ...process.env } },
-			);
+			// A `--fast` blind canary measures ~2 minutes standalone; the bound is 900 s
+			// because this host runs a fleet, and a bound that fires returns `status: null`
+			// — which is now a named failure, not a pass. The elapsed time goes into the
+			// note either way, so a run that nearly hit the bound is visible rather than
+			// discovered by the next reviewer.
+			const runMutation = (target: string) => {
+				const started = Date.now();
+				const result = spawnSync(
+					process.execPath,
+					[
+						join(WORKTREE, "e2e", "run-canary.ts"),
+						"--fast",
+						"--blind",
+						target,
+						"--out",
+						out,
+					],
+					{ encoding: "utf8", timeout: 900_000, env: { ...process.env } },
+				);
+				return {
+					result,
+					ranFor: `${Math.round((Date.now() - started) / 1000)}s`,
+				};
+			};
+			let { result: run, ranFor } = runMutation(mutation.blind);
+			// A killed run is a HOST event, not a verdict, so it is retried ONCE. The
+			// assertion below still demands `status === 1` and the named defect, so a retry
+			// can never turn a timeout into a pass. Measured 2026-09-30: `U-07:y` came back
+			// SIGTERM at 33 s (not at the 900 s bound) while its six siblings produced
+			// verdicts at 67-177 s, and the same blind run passed standalone in 68 s.
+			const retriedAfterKill = run.status === null && run.signal !== null;
+			if (retriedAfterKill) {
+				const second = runMutation(mutation.blind);
+				run = second.result;
+				ranFor = `${ranFor} then ${second.ranFor}`;
+			}
 			const output = `${run.stdout ?? ""}${run.stderr ?? ""}`;
 			const missedLine = /^\s*missed:\s*(.+)$/m.exec(output)?.[1]?.trim() ?? "";
 			// The marker carries the element id in parentheses; the defect name is
@@ -1233,17 +1289,29 @@ async function main() {
 				.split(",")
 				.map((entry) => entry.trim().replace(/\s*\(#.*\)$/, ""))
 				.filter((entry) => entry !== "" && entry !== "none");
+			// A KILLED canary is not a failed canary. `spawnSync` reports `status: null`
+			// when its own bound fires, and `null !== 0` satisfied the old assertion — so
+			// a mutation could "prove" a rule by never reaching a verdict. A review round
+			// caught exactly that (`U-07:y`, `exit null`) on a loaded host, which is why
+			// this asserts the failure CODE and names a kill as its own outcome.
+			const killed = run.status === null || run.signal !== null;
 			check(
-				`blinding ${mutation.blind} makes the canary fail`,
-				run.status !== 0,
+				`blinding ${mutation.blind} makes the canary fail with a verdict, not a kill`,
+				run.status === 1,
 				true,
-				`exit ${run.status}`,
+				killed
+					? `killed at the 900s bound after ${ranFor} (signal ${String(run.signal)}, status ${String(run.status)})`
+					: `exit ${String(run.status)} after ${ranFor}`,
 			);
 			check(
 				`blinding ${mutation.blind} misses exactly ${mutation.defect}`,
 				missed,
 				[mutation.defect],
 			);
+			// Each mutation writes a whole capture tree under the SHARED OS temp dir. The
+			// loop used to leave every one of them: measured at 168 directories and
+			// 1,048 MB, four fifths of it from this PR's own runs.
+			rmSync(out, { recursive: true, force: true });
 		}
 	}
 
@@ -1659,6 +1727,171 @@ async function main() {
 		rmSync(root, { recursive: true, force: true });
 	}
 
+	/* ---- 3h. the readiness guard, BOTH directions ---- */
+	// Round 2's review executed the hole this group closes: a page with the screen root,
+	// one relay request and NO marker of any kind was accepted for `S4/populated` and
+	// `S4/streaming` (exit 0). The guard's state evidence was one prohibition — "must not
+	// show `*-empty`" — which a page that shows nothing in particular satisfies. The rule
+	// is now affirmative and per state, and its REQUIRED marker is derived from the app's
+	// own contract (`<subject>-<state>`, the convention `sessions-empty` already uses),
+	// so the two cannot drift apart unnoticed.
+	group = "readiness guard";
+	{
+		const base = {
+			askedPath: "/",
+			actualPath: "/",
+			root: "sessions-screen",
+			testIds: [] as string[],
+			relayRegistryBacked: false,
+			relayReached: false,
+		};
+		const markerProblem = (state: string, marker: string) =>
+			`the cell declares '${state}' but the marker '${marker}' is not in the DOM: ` +
+			"nothing in the frame affirms that state, so the cell is NOT MEASURABLE for it";
+
+		check(
+			"a cell whose state marker is present is ready",
+			readinessProblems({
+				...base,
+				screen: "S4",
+				state: "populated",
+				testIds: ["sessions-screen", "sessions-populated"],
+			}),
+			[],
+		);
+		check(
+			"a cell whose state marker is absent fails BY NAME, not by absence",
+			readinessProblems({
+				...base,
+				screen: "S4",
+				state: "populated",
+				testIds: ["sessions-screen"],
+			}),
+			[markerProblem("populated", "sessions-populated")],
+		);
+		check(
+			"and the same page is refused for every state the matrix declares",
+			["streaming", "rich-rows", "pending-approval"].map(
+				(state) =>
+					readinessProblems({
+						...base,
+						screen: "S5",
+						state,
+						root: "session-screen",
+						testIds: ["session-screen"],
+					}).length,
+			),
+			[1, 1, 1],
+		);
+
+		/* the normalisation: a variant requires the marker of the state it renders */
+		check(
+			"a width variant requires its base state's marker",
+			requiredStateMarker("S4", "populated-long"),
+			"sessions-populated",
+		);
+		check(
+			"a scroll variant too",
+			requiredStateMarker("S4", "scroll"),
+			"sessions-populated",
+		);
+		check(
+			"and the pending card is one card across two screens",
+			[
+				requiredStateMarker("S8", "approval"),
+				requiredStateMarker("S5", "pending-approval"),
+			],
+			["session-pending-approval", "session-pending-approval"],
+		);
+		check(
+			"a state with no alias requires its own marker",
+			requiredStateMarker("S5", "subagents"),
+			"session-subagents",
+		);
+		check(
+			"an ad-hoc page makes no state claim, so it needs no app marker",
+			requiredStateMarker("path:/clean/clean", "clean"),
+			null,
+		);
+		check(
+			"the seed hook's parameters are the app-facing names, and nothing is added when unset",
+			[seedQuery("http://127.0.0.1:1234", "abc123"), seedQuery(null, null)],
+			[
+				"lo-seed-route=http%3A%2F%2F127.0.0.1%3A1234&lo-seed-session=abc123",
+				"",
+			],
+		);
+
+		/* the prohibition survives, and the relay reach still applies */
+		check(
+			"a populated cell showing an empty marker is still refused",
+			readinessProblems({
+				...base,
+				screen: "S4",
+				state: "populated",
+				testIds: ["sessions-screen", "sessions-populated", "sessions-empty"],
+			}),
+			[
+				"the cell declares 'populated' but the app is showing an empty state (sessions-empty): " +
+					"the state was never reached",
+			],
+		);
+		check(
+			"a registry-backed cell the relay never served is refused even with its marker",
+			readinessProblems({
+				...base,
+				screen: "S4",
+				state: "populated",
+				testIds: ["sessions-screen", "sessions-populated"],
+				relayRegistryBacked: true,
+			}),
+			[
+				"the app made no request to the mock relay for this cell, so the state it " +
+					"declares (populated) cannot have come from the relay",
+			],
+		);
+		check(
+			"a cell on the wrong route is refused",
+			readinessProblems({
+				...base,
+				screen: "S4",
+				state: "populated",
+				actualPath: "/sign-in",
+				testIds: ["sessions-screen"],
+			})[0],
+			"the app is on '/sign-in' but the cell asked for '/'",
+		);
+
+		/* the harness's marker table must agree with the app's own a11y contract */
+		const a11ySource = readFileSync(
+			// The REPO root from this file's own location, never `--relay`: the contract
+			// under test is the app's, not the mock's.
+			join(REPO, "src", "ui", "a11y.ts"),
+			"utf8",
+		);
+		const emptyIds = new Set(
+			[...a11ySource.matchAll(/"[a-z0-9-]+-empty"/g)].map((m) =>
+				m[0].slice(1, -1),
+			),
+		);
+		check(
+			"the app's a11y module declares empty markers to compare against",
+			emptyIds.size > 5,
+			true,
+		);
+		const mismatched: string[] = [];
+		for (const screen of Object.keys(SCREEN_MARKER_SUBJECT)) {
+			const required = requiredStateMarker(screen, "empty");
+			if (required !== null && !emptyIds.has(required))
+				mismatched.push(`${screen} → ${required}`);
+		}
+		check(
+			"every screen's required empty marker IS the app's own (no second dialect)",
+			mismatched,
+			[],
+		);
+	}
+
 	/* ---- 4. the fault layer ---- */
 	// Every fault is exercised here, over a real socket, against its declared
 	// effect — this is the surface where the claims previously outran the
@@ -1800,9 +2033,7 @@ async function main() {
 				cookie,
 			});
 			const versions = framesOf(stream.text)
-				.map((frame: { data?: { version?: unknown } }) =>
-					Number(frame.data?.version),
-				)
+				.map((frame) => Number(bag(frame.data).version))
 				.filter((version: number) => Number.isFinite(version));
 			const wentBackwards = versions.some(
 				(version, index) => index > 0 && version < (versions[index - 1] ?? 0),
@@ -2026,14 +2257,14 @@ async function main() {
 			});
 			check(
 				"duplicate-delivery: the command is admitted",
-				admitted.json?.detail,
+				bag(admitted.json).detail,
 				"prompt admitted",
 			);
 			const stream = await streamPromise;
 			const state = await client.get("/__mock/state");
 			check(
 				"duplicate-delivery: the transport delivered the frame twice",
-				state.json?.duplicateDelivered,
+				bag(state.json).duplicateDelivered,
 				2,
 			);
 			// Byte-identical: the second delivery is a copy of the first, not a new
@@ -2050,11 +2281,9 @@ async function main() {
 			// projection each tick, so summing over frames would count the same row
 			// repeatedly and prove nothing about de-duplication.
 			const lastFrame = framesOf(raw).at(-1);
-			const rows = (
-				Array.isArray(lastFrame?.data?.transcript)
-					? lastFrame.data.transcript
-					: []
-			).filter((row: { id?: string }) => row?.id === `user-${commandId}`);
+			const rows = arr(bag(lastFrame?.data).transcript).filter(
+				(row) => str(bag(row).id) === `user-${commandId}`,
+			);
 			check(
 				"duplicate-delivery: exactly one transcript row carries the command",
 				rows.length,
@@ -2160,17 +2389,17 @@ async function main() {
 				const refused = await client.get("/api/sessions");
 				check(
 					`503-${reason}: refused 503 with its own reason`,
-					refused.json?.reason,
+					bag(refused.json).reason,
 					reason,
 				);
 				check(
 					`503-${reason}: carries the captured sentence, not an invented one`,
-					refused.json?.detail,
+					bag(refused.json).detail,
 					(details as Record<string, unknown>)[reason],
 				);
 				check(
 					`503-${reason}: names the error the gateway names`,
-					refused.json?.error,
+					bag(refused.json).error,
 					"tunnel authorization unavailable",
 				);
 				await relay.stop();

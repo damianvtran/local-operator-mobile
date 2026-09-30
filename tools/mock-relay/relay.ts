@@ -822,6 +822,17 @@ export function createRelay(options: RelayOptions = {}) {
 		// with `409 {"error":"session not connected"}` before it ever looks at the op.
 		// The mock used to refuse the op first, so a client could read its 422 and
 		// never see the 409 production sends.
+		if (!projectionFor(sessionId)) {
+			sendFixture(res, "command-unknown-session");
+			return;
+		}
+
+		// Ordering matters here and a review round caught it: the relay resolves the
+		// SESSION before it looks at the op (`_entry_for_session` → `except KeyError:
+		// 409`), so a live-but-unknown id is `409 session not connected` for every op.
+		// With this block above the check, the mock answered
+		// `200 {"ok":true,"detail":"no approval was pending"}` for the same request —
+		// lenient exactly where the divergence table promises fidelity.
 		// The approval round trip. Without this op the mock answered
 		// `command-unknown-op`, so the pending card's approve/deny/settle path could not
 		// be exercised against the mock at all — only in a stream's own rig.
@@ -867,11 +878,6 @@ export function createRelay(options: RelayOptions = {}) {
 			if ("pending_count" in live) live.pending_count = 0;
 			state.approvalsAnswered += 1;
 			sendJson(res, 200, { ok: true, detail: "approval recorded" });
-			return;
-		}
-
-		if (!projectionFor(sessionId)) {
-			sendFixture(res, "command-unknown-session");
 			return;
 		}
 

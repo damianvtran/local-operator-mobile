@@ -330,6 +330,28 @@ async function main(): Promise<void> {
 				forResume.status,
 				409,
 			);
+			// The op this PR added sits in the same place in the order. It was BELOW the
+			// liveness check in the first version, which made the mock answer
+			// `200 no approval was pending` for a session the relay refuses — lenient in
+			// exactly the case the round-1 fix had just made faithful.
+			const forApproval = await client.post(
+				`/api/sessions/${UNKNOWN}/command`,
+				{
+					op: "approval_answer",
+					request_id: "dc5bc227dd764cde",
+					approved: true,
+				},
+			);
+			check(
+				"approval_answer on an unknown session is 409 session not connected",
+				forApproval.status,
+				409,
+			);
+			check(
+				"and it is refused for liveness, not for a missing approval",
+				(forApproval.json as { error?: unknown } | undefined)?.error,
+				"session not connected",
+			);
 		}
 
 		/* ---- D3: an empty start body is invalid JSON, not a fabricated start ---- */

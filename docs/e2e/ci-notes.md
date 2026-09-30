@@ -60,7 +60,7 @@ doc drifts from the run the first time anyone adds a check.
 
 ```yaml
 - run: |
-    node tools/visual/capture.ts \
+    pnpm audit:capture \
       --dir dist --out frames \
       --relay ${{ env.MOCK_RELAY_URL }} \
       --consecutive --yes

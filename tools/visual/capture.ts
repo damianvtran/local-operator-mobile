@@ -41,6 +41,7 @@ import { bool, csv, num, parseArgs, str } from "../lib/args.ts";
 import type { CdpPage } from "../lib/cdp.ts";
 import { sleep } from "../lib/cdp.ts";
 import { launchChrome } from "../lib/chrome.ts";
+import { readinessProblems, seedQuery } from "../lib/readiness.ts";
 import { serveDir } from "../lib/static-server.ts";
 import { renderGallery } from "./gallery.ts";
 import {
@@ -54,9 +55,15 @@ import {
 	SCALES,
 	SCREEN_ROOTS,
 	SCREENS,
-	STATE_MARKERS,
 	THEMES,
 } from "./matrix.ts";
+
+/**
+ * Frames whose first screenshot attempt failed and whose retry succeeded, for the
+ * WHOLE run: the frame writer and the run's report are different scopes, so this is
+ * module state reset per run rather than a local of either.
+ */
+let screenshotRetries = 0;
 
 /** Frames above this count are refused without `--yes`: a full matrix is minutes. */
 const CONFIRM_THRESHOLD = 120;
@@ -296,6 +303,7 @@ async function captureCell(
 		outDir,
 		settleMs,
 		relayReach,
+		seed,
 	}: {
 		baseUrl: string;
 		state: RelayStateReply | null;
@@ -303,6 +311,8 @@ async function captureCell(
 		settleMs: number;
 		/** Null when this run has no relay, so no claim about it is made. */
 		relayReach: RelayReach | null;
+		/** The web-only seed hook's parameters, when the run was given any. */
+		seed: { route: string | null; session: string | null };
 	},
 ): Promise<CaptureRecord> {
 	const { deviceSpec: device, scaleSpec } = cell;
@@ -315,6 +325,14 @@ async function captureCell(
 		"lo-inset-left": String(device.insets.left),
 		"lo-inset-right": String(device.insets.right),
 	});
+	// The harness's half of the web-only seed hook (docs/e2e/README.md, option 3):
+	// the parameters go on the page so the app side has nothing to invent. Whether the
+	// app ADOPTS them is decided by the cell's state markers, not by this line.
+	for (const [key, value] of new URLSearchParams(
+		seedQuery(seed.route, seed.session),
+	)) {
+		query.set(key, value);
+	}
 	const path = resolvePath(cell.path, state);
 	const url = `${baseUrl}${path}${path.includes("?") ? "&" : "?"}${query}`;
 
@@ -370,10 +388,28 @@ async function captureCell(
 	const stamp = async (
 		suffix: string,
 	): Promise<{ file: string; sha: string; bytes: number }> => {
-		const shot = await page.send("Page.captureScreenshot", {
-			format: "png",
-			captureBeyondViewport: false,
-		});
+		// `Page.captureScreenshot: Internal error` is transient — it appeared once under
+		// fleet load and passed standalone minutes later — and an aborted capture run is
+		// indistinguishable from a real failure, so one retry happens before a cell is
+		// failed, and the retry is COUNTED rather than hidden: the count lands in the
+		// manifest and on stdout, so a load-flaky frame is visible instead of silent.
+		let shot: Awaited<ReturnType<typeof page.send>>;
+		try {
+			shot = await page.send("Page.captureScreenshot", {
+				format: "png",
+				captureBeyondViewport: false,
+			});
+		} catch (error) {
+			screenshotRetries += 1;
+			await sleep(400);
+			shot = await page.send("Page.captureScreenshot", {
+				format: "png",
+				captureBeyondViewport: false,
+			});
+			console.log(
+				`      retried a transient screenshot failure (${(error as Error).message.slice(0, 120)})`,
+			);
+		}
 		const encoded = typeof shot.data === "string" ? shot.data : "";
 		if (encoded === "") throw new Error("Chrome returned no screenshot data");
 		const buffer = Buffer.from(encoded, "base64");
@@ -397,6 +433,14 @@ async function captureCell(
 		shots.push(await stamp(""));
 	}
 	const measurements = asMeasurements(await page.evaluate(MEASURE_PROBE));
+	// If the harness was asked to seed and the page's own route does not carry the
+	// parameters, the failure is the HARNESS's, not the app's — the opposite direction
+	// from the state markers below, and worth its own sentence so the two are never
+	// confused.
+	const seededButAbsent =
+		seed.route !== null &&
+		measurements !== null &&
+		!String(measurements.route ?? "").includes("lo-seed-route=");
 	// The readiness reading: which route the app settled on and which screen
 	// roots it actually rendered. This is the guard against a green matrix over
 	// the wrong screen, which is exactly what the first run of this harness
@@ -408,6 +452,13 @@ async function captureCell(
 		readiness,
 		relayReach,
 	);
+	if (seededButAbsent) {
+		readinessProblems.push(
+			`the run was told to seed route '${String(seed.route)}' but the page reports ` +
+				`'${String(measurements?.route ?? "")}' without it: the harness's own half of ` +
+				"the seed hook failed",
+		);
+	}
 
 	offConsole();
 	offException();
@@ -447,6 +498,8 @@ export class CaptureFailure extends Error {
 	readonly themeProblems: string[];
 	readonly readinessProblems: string[];
 	readonly identicalStates: string[];
+	/** Chrome processes the run's own teardown left behind; 0 on a clean run. */
+	readonly survivors: number;
 
 	constructor(
 		message: string,
@@ -454,6 +507,7 @@ export class CaptureFailure extends Error {
 			themeProblems: string[];
 			readinessProblems: string[];
 			identicalStates: string[];
+			survivors?: number;
 		},
 	) {
 		super(message);
@@ -461,6 +515,7 @@ export class CaptureFailure extends Error {
 		this.themeProblems = failures.themeProblems;
 		this.readinessProblems = failures.readinessProblems;
 		this.identicalStates = failures.identicalStates;
+		this.survivors = failures.survivors ?? 0;
 	}
 }
 
@@ -616,27 +671,6 @@ function asReadiness(value: unknown): Readiness | null {
 }
 
 /**
- * Does the app's route match the path the cell asked for?
- *
- * Segment-wise, because a cell names a route pattern: `/session/{sessionId}`
- * against the app's `/session/6714def86197` is a match, and a *different* route
- * (`/sign-in`) is not — which is the failure this check exists to catch.
- */
-function routeMatches(asked: string, actual: string): boolean {
-	const segments = (path: string): string[] =>
-		path
-			.replace(/\/$/, "")
-			.split("/")
-			.filter((part) => part !== "");
-	const wanted = segments(asked);
-	const got = segments(actual);
-	if (wanted.length !== got.length) return false;
-	return wanted.every(
-		(segment, index) => segment.startsWith("{") || segment === got[index],
-	);
-}
-
-/**
  * Why a cell is not ready, in the order a reader needs to hear it.
  *
  * A missing reading is itself a failure: the probe runs in the page, so nothing
@@ -649,51 +683,19 @@ function readinessProblemsFor(
 	relay: RelayReach | null,
 ): string[] {
 	if (readiness === null) return ["the page returned no readiness reading"];
-	const problems: string[] = [];
-	if (!routeMatches(path, readiness.path)) {
-		problems.push(
-			`the app is on '${readiness.path}' but the cell asked for '${path}'`,
-		);
-	}
-	const root = SCREEN_ROOTS[cell.screen];
-	if (root !== undefined && !readiness.testIds.includes(root)) {
-		problems.push(
-			`no '${root}' root in the DOM: the app did not render screen ${cell.screen}`,
-		);
-	}
-	// The STATE, not just the screen. A screen root only says which route drew —
-	// so a cell declaring `S8/approval` used to pass while the app showed the
-	// neutral empty screen, and a "populated" cell passed with `sessions-empty` in
-	// the DOM. That is the reading this block exists to refuse.
-	const emptyMarkers = readiness.testIds.filter((id) =>
-		id.endsWith(STATE_MARKERS.emptyMarkerSuffix),
-	);
-	const state = cell.state;
-	if (STATE_MARKERS.forbidsEmpty.includes(state) && emptyMarkers.length > 0) {
-		problems.push(
-			`the cell declares '${state}' but the app is showing an empty state (${emptyMarkers.join(", ")}): ` +
-				"the state was never reached",
-		);
-	}
-	if (
-		STATE_MARKERS.requiresEmpty.includes(state) &&
-		emptyMarkers.length === 0
-	) {
-		problems.push(
-			`the cell declares '${state}' but no '${STATE_MARKERS.emptyMarkerSuffix}' marker is in the DOM: ` +
-				"the empty state is not what rendered",
-		);
-	}
-	// A cell the RELAY's own registry declared is a state the relay serves, so the
-	// app has to have talked to the relay to render it. A cell named explicitly
-	// (`--cells path:/…`, the canary's own pages) makes no such claim.
-	if (relay !== null && relay.registryBacked && !relay.reached) {
-		problems.push(
-			"the app made no request to the mock relay for this cell, so the state it " +
-				`declares (${state}) cannot have come from the relay`,
-		);
-	}
-	return problems;
+	// The rules — affirmative state marker, the `*-empty` prohibition and the relay
+	// reach — live in `lib/readiness.ts`, where both directions can be asserted
+	// without a browser. What stays here is the frame's own facts.
+	return readinessProblems({
+		screen: cell.screen,
+		state: cell.state,
+		askedPath: path,
+		actualPath: readiness.path,
+		root: SCREEN_ROOTS[cell.screen],
+		testIds: readiness.testIds,
+		relayRegistryBacked: relay?.registryBacked ?? false,
+		relayReached: relay?.reached ?? false,
+	});
 }
 
 /**
@@ -990,6 +992,12 @@ export interface CaptureOptions {
 	strict: boolean;
 	profile?: string | undefined;
 	port: number;
+	/**
+	 * The web-only seed hook's parameters (docs/e2e/README.md, option 3). The harness
+	 * puts them on the page; the app side that would adopt them is not built, so a cell
+	 * they do not reach still fails by name.
+	 */
+	seed: { route: string | null; session: string | null };
 }
 
 /** One captured cell and everything the audit and the gallery read off it. */
@@ -1090,6 +1098,8 @@ export async function runCapture(options: CaptureOptions) {
 	const chrome = await launchChrome({ profile: options.profile });
 	const tokens = canvasTokens(options.tokens);
 	const records: CaptureRecord[] = [];
+	screenshotRetries = 0;
+	let reaped: Awaited<ReturnType<typeof chrome.close>> | null = null;
 	/** Cells that produced no frame, and why — never a silent skip. */
 	const abandoned: Array<{ cell: string; reason: string }> = [...unrenderable];
 	/** What a reviewer must not read as a captured matrix. */
@@ -1147,6 +1157,7 @@ export async function runCapture(options: CaptureOptions) {
 					outDir,
 					settleMs: options.settleMs,
 					relayReach,
+					seed: options.seed,
 				}),
 				options.cellTimeoutMs,
 				`cell ${cell.cell} on ${cell.device}/${cell.theme}/${cell.scale.id}`,
@@ -1207,9 +1218,25 @@ export async function runCapture(options: CaptureOptions) {
 			}
 		}
 	} finally {
-		await chrome.close();
+		reaped = await chrome.close();
 		await server.close();
 	}
+
+	// The two-part teardown guarantee is only true if the run that ended normally says
+	// so: this used to discard the count the reap returned while the header claimed the
+	// tool "asserts 0 processes remain". Now the number is printed, and a non-zero count
+	// is a failure of the run rather than a note a reader has to notice.
+	const survivors = reaped?.survivors ?? 0;
+	const sweptOrphans = reaped?.sweep?.swept.length ?? 0;
+	const skippedLive = reaped?.sweep?.skipped.length ?? 0;
+	console.log(
+		`  teardown: ${survivors} process(es) left by this run, ` +
+			`${sweptOrphans} orphan(s) from earlier runs reaped, ` +
+			`${skippedLive} live owner(s) left alone` +
+			(screenshotRetries > 0
+				? `, ${screenshotRetries} screenshot retr(y|ies)`
+				: ""),
+	);
 
 	const themeProblems = verifyThemes(records, tokens);
 	const reflow = records
@@ -1292,6 +1319,14 @@ export async function runCapture(options: CaptureOptions) {
 			themeTokens: tokens ?? null,
 			textScaleVerdict: scaleCheck.verdict,
 			textScaleLive: scaleCheck.live === true,
+			// The teardown reading, in the artifact as well as on stdout: a run that left
+			// processes is visible without re-reading a terminal.
+			teardown: {
+				survivors: reaped?.survivors ?? null,
+				orphansReaped: reaped?.sweep?.swept.length ?? 0,
+				liveOwnersSkipped: reaped?.sweep?.skipped.length ?? 0,
+				screenshotRetries,
+			},
 			// Which cells were measured against a LIVE dimension, by name. A report
 			// that only carried the run-level verdict let a reader take every "200 %"
 			// row at face value while some of them were rendered at 100 %.
@@ -1399,11 +1434,28 @@ export async function runCapture(options: CaptureOptions) {
 		identicalCells.length +
 		abandoned.length;
 	if (strict && blocking > 0) {
+		// A run that leaves processes behind has not finished, whatever its frames
+		// look like: "a run that ends normally leaves nothing behind, and proves it in
+		// its own output" is the README's claim, so the number has to be able to fail
+		// the run that made it.
+		const survivors = reaped?.survivors ?? 0;
+		if (survivors !== 0) {
+			readinessProblems.push(
+				`${survivors} Chrome process(es) survived this run's teardown for ` +
+					`'${reaped?.profile ?? "the run profile"}': the run did not clean up after itself`,
+			);
+		}
 		throw new CaptureFailure(
 			`${themeProblems.length} theme problem(s), ${readinessProblems.length} unready cell(s), ` +
-				`${identicalCells.length} identical-state pair(s), ${abandoned.length} cell(s) with no frame; ` +
+				`${identicalCells.length} identical-state pair(s), ${abandoned.length} cell(s) with no frame, ` +
+				`${survivors} surviving process(es); ` +
 				`see ${join(outDir, "manifest.json")}`,
-			{ themeProblems, readinessProblems, identicalStates: identicalCells },
+			{
+				themeProblems,
+				readinessProblems,
+				identicalStates: identicalCells,
+				survivors,
+			},
 		);
 	}
 	return summary;
@@ -1490,6 +1542,10 @@ if (isMain) {
 				"",
 				"  --dir <path>        the built web target to serve (expo export --platform web)",
 				"  --out <path>        where frames/, manifest.json and index.html go",
+				"  --seed-route <url>  put the web-only seed hook's parameters on every page",
+				"  --seed-session <id> (docs/e2e/README.md option 3). The harness's half only: the",
+				"                      app side that would adopt them is not built, so a cell they",
+				"                      do not reach still fails by name",
 				"  --relay <url>       mock relay base URL; supplies the scenario list and session ids",
 				"  --cells <a/b,...>   explicit screen/state cells (default: whatever the relay declares)",
 				"  --cell-timeout <s>  hard bound per cell; a cell that exceeds it FAILS with that reason (default 45)",
@@ -1536,6 +1592,12 @@ if (isMain) {
 			: SCALES,
 		consecutive: bool(flags, "consecutive"),
 		settleMs: num(flags, "settle", 1200),
+		// The web-only seed hook's parameters: the harness puts them on the page, and the
+		// app side (not built — see the README) would adopt them as its connection.
+		seed: {
+			route: str(flags, "seed-route", "") || null,
+			session: str(flags, "seed-session", "") || null,
+		},
 		// Bounds, in the CLI because CI's job timeout is not this tool's business:
 		// a cell that never settles must fail that cell, and a run that would outlive
 		// its job must stop accounting for itself and write what it has.

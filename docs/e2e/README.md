@@ -14,8 +14,12 @@ they run on a machine that has only Node, pnpm and the installed Google Chrome
 | `tools/lib/doc-commands.ts` | Do the commands on this page actually run? | `pnpm e2e:docs` |
 
 `pnpm e2e:docs` starts, waits for and reaps the commands that serve; it bounds
-each command at 25 minutes (the slowest is `pnpm e2e:relay`), and `--verbose`
-prints every command's output rather than only the failures'. A command this
+each command at 25 minutes, and `--verbose` prints every command's output rather
+than only the failures'. The block that used to be the slowest — the app-build
+capture at ~26 minutes for the full matrix — is now a bounded sample (`--devices
+iphone-15 --themes dark --scales 100,200`) precisely so the gate can pass for the
+reason the block declares, rather than by timing out. `pnpm e2e:relay` is the
+slowest of the remaining blocks at ~13 minutes. A command this
 machine cannot run is skipped **with its reason printed**, and its tool paths and
 script names are still resolved, so a skip cannot hide a renamed file.
 
@@ -120,22 +124,29 @@ Two other routes were tried and neither works from outside the app:
 - **Driving the flow by UI** is blocked by the app's own current state: the session
   list has no rows yet, so no flow reaches `/session/<id>` with a live route.
 
-So the harness needs ONE of two things, and the first already exists — it is just not on
-`main`:
+**The unblock is three things, and only one of them is a merge.** Stated plainly, because
+a reader acts on this paragraph:
 
-1. **The connect-flow controls, which are implemented in PR #11** — the URL field, the
-   relay password field, Test the connection, Save, and the tunnel picker
-   (`src/features/auth/own-tunnel.tsx`, `custom`, `tunnels`, `tunnel-test.ts`). Nothing
-   has to be built for this: **the unblock is waiting for #11 to merge, then re-running
-   the probe** — the flow must be driven rather than a seed hook invented for a flow
-   that already exists. When #11 lands, one run of this matrix should turn the 37
-   relay-backed cells from not-measurable into measurable, and that number is what the
-   instrument is judged on.
-2. **A web-only seed hook** remains the more robust long-term option if #11's controls
-   prove awkward to drive (a form that resists CDP, or a step that needs a real
-   keystore): read a documented parameter at startup (for example
-   `?lo-seed-route=<relay-url>&lo-seed-session=<id>`) and use it as the configured
-   connection, with the app's own configured route always winning when one exists.
+1. **A connection step in the harness — NOT BUILT.** `tools/visual/capture.ts` has no
+   input injection at all: its whole page interaction is `Page.navigate`,
+   `Emulation.setDeviceMetricsOverride` / `setEmulatedMedia` / `setSafeAreaInsetsOverride`
+   and two read-only `evaluate` probes. So a merge alone changes nothing about what this
+   tool does; the driving has to be written (type the URL, type the password, click Test,
+   click Save), or replaced by the hook in (3).
+2. **PR #12 (`feat/screens-session`) for 21 of the 37 cells** — the 14 `S5`, 4 `S8`, 2 `S6`
+   and 1 `S9` cells all render the session view, and on this head
+   `app/(app)/session/[id].tsx` is a placeholder that renders `session-empty` in every
+   state.
+3. **PR #11 (`feat/screens-lists`) for the other 16** — the list, computer and refusal
+   cells (`S2`, `S3`, `S4`, `S10`, `S13`), which need the connection surfaces it owns, plus
+   the connection step from (1) on top.
+
+The alternative to (1) is a **web-only seed hook** — the app reads a documented parameter
+at startup (`?lo-seed-route=<relay-url>&lo-seed-session=<id>`) and uses it as the
+configured connection, with its own configured route always winning when one exists. That
+removes the CDP driving entirely and is the more robust option if #11's form proves awkward
+to drive or needs a real keystore. Either way the number to watch is the same: **37 cells
+move from not-measurable to measurable**, and every run prints how many of them got there.
 
 Until one of them lands, every relay-backed cell stays **not measured** — a statement
 this harness makes per cell, not a pass it hands out.
@@ -329,16 +340,20 @@ kit's floor applies to was unmeasurable by anything.
 
 ### What the harness leaves behind, and what it cannot promise
 
-Every run reaps its own Chrome by pid and profile, asserts the count is zero, and
-reports an error naming the profile if it is not. It also **sweeps** profiles whose
+Every run reaps its own Chrome by pid and profile, asserts the count is zero, reports an
+error naming the profile if it is not, and prints the reading — `teardown: N process(es)
+left by this run, M orphan(s) from earlier runs reaped, K live owner(s) left alone`. A
+non-zero survivor count fails the run, and both numbers land in the manifest's `teardown`
+block, so "a run that ends normally leaves nothing behind, and proves it in its own
+output" is literally what the output does. It also **sweeps** profiles whose
 owner has died: `launchChrome` records `chrome.pid` and `owner.pid` beside the
 profile, and every later run's `close()` reaps any profile in the same root whose
 owner is gone, then removes the directory. The kill is scoped to the profile path —
 never to `chrome` by name, because a name-wide match is how one session's teardown
 killed another session's processes — and a live owner's browser is skipped and
-reported as `skipped`, never touched. A recorded pid is only signalled while its own
-command line still carries that profile path, so a pid the OS has since re-used is not
-killed by mistake.
+reported as `skipped`, never touched. The recorded pid is checked for **liveness** only;
+the signal itself is always scoped to the profile path, so a pid the OS has since re-used
+cannot be killed by mistake — what protects it is the path, not the pid.
 
 The sweep exists because the guarantee it replaces was false: Chrome is spawned
 `detached` (`kill -pgid` is safe then), so a run killed with SIGKILL cannot reap
@@ -424,23 +439,33 @@ node tools/visual/capture.ts --dir e2e/fixtures/audit-canary \
 ```
 
 ```sh
-# A real run against a real build: both themes, three text scales, every cell the
-# relay declares. Build first — `pnpm export:web`, which writes `dist/`.
+# A real run against a real build. Build first — `pnpm export:web`, which writes `dist/`.
+#
+# The device/theme/scale set is EXPLICIT and small on purpose. The full matrix is
+# 962 cells (~26 min at the measured 1.6 s/cell), which no documentation gate may spend
+# on one command, and a run that overruns its own bound abandons most of the matrix and
+# reports it as deadline BLOCKED — which reads like a finding and is not one. So this
+# example is the bounded sample; run `--plan` above for the full count, and drop these
+# three flags for the whole matrix.
 #
 # This command reads the APP's current state, and on 2026-09-30 it exits non-zero
 # with two true findings rather than a harness fault:
 #   * eight `S5/*` states render byte-identically on a phone, so the app cannot yet
 #     distinguish them (the readiness guard's identical-state rule);
-#   * the text-scale guard measures 1.40x at 200% (median text 24px -> 33.6px), below
-#     the 1.9x bar: part of the app's type is rem-based and scales, part is px-based
-#     and does not, so "200%" is not a 200% render yet.
+#   * the text-scale guard measures BELOW its 1.9x bar in every sample measured, and
+#     the exact ratio depends on which rows are on screen: 1.40x (median text 24px ->
+#     33.6px) on a full-matrix sample, 1.21x on the relay-backed cells (33.59px ->
+#     40.59px) and 1.00x on the `path:` cells (33.59px -> 33.59px, inert). Part of the
+#     app's type is rem-based and scales, part is px-based and does not, so "200%" is
+#     not a 200% render yet. Read the per-cell pair, not a run median.
 # `docs:exits 1` records that expectation so this page stays executable. REMOVE the
 # marker (and this comment) once the app satisfies both — a marker that outlives its
 # finding is how a green run stops meaning anything.
 # docs:needs mock-relay web-build
 # docs:exits 1
 node tools/visual/capture.ts --dir <dist> --out "$SCRATCH/frames" \
-  --relay <mock-url> --consecutive --yes
+  --relay <mock-url> --consecutive --yes \
+  --devices iphone-15 --themes dark --scales 100,200
 ```
 
 Output:
@@ -451,6 +476,15 @@ Output:
                         console errors, and the measurements the audit consumes
 <out>/index.html        the whole matrix in one page, with the numbers beside each frame
 ```
+
+### When a frame fails transiently
+
+`Page.captureScreenshot: Internal error` is a transient CDP failure — it appeared once
+under fleet load and the same command passed standalone minutes later — and an aborted
+capture run is indistinguishable from a real one. So one retry happens before a cell is
+failed, and **the retry is counted rather than hidden**: `screenshotRetries` appears in
+the manifest's `teardown` block, and a run that used one says so on stdout. A retry that
+does not succeed still fails the cell.
 
 ### The three things it is built not to get wrong
 
@@ -750,7 +784,12 @@ maestro --config e2e/maestro/config.yaml test \
 **These have not been run.** They need a booted simulator or emulator and a
 native build, and this repository's build-host rules forbid installing Xcode or
 the Android SDK locally; ADR 0004 wires them to CI, and
-[`ci-notes.md`](ci-notes.md) records how. Treat them as unexecuted until CI has
+[`ci-notes.md`](ci-notes.md) records how. **That file is deliberately NOT read by
+`pnpm e2e:docs`**: its snippets are `yaml` workflow fragments rather than shell
+commands, and this branch has no workflow to run them in (PR #10 owns CI). Its shell
+one-liners name `pnpm` scripts, so a rename breaks them loudly rather than silently —
+and the day #10 lands a workflow, that file should move inside the gate. Treat the
+whole file as unexecuted until CI has
 run them, and say so in any QA report rather than implying coverage.
 
 They are also flows, not stills, because some of what F-9 needs to show is an

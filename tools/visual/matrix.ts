@@ -429,33 +429,6 @@ export const SCREEN_ROOTS: Record<string, string> = {
  * `empty` is the one state where the marker is required rather than forbidden,
  * which is also what stops a check that only forbids from passing vacuously.
  */
-export const STATE_MARKERS: {
-	/** Present in the DOM for any screen showing its own empty state. */
-	readonly emptyMarkerSuffix: string;
-	/** Declared states that must NOT show an empty marker. */
-	readonly forbidsEmpty: readonly string[];
-	/** Declared states that MUST show one. */
-	readonly requiresEmpty: readonly string[];
-} = {
-	emptyMarkerSuffix: "-empty",
-	forbidsEmpty: [
-		"populated",
-		"rich-rows",
-		"populated-long",
-		"streaming",
-		"pending-approval",
-		"pending-ask",
-		"queued",
-		"subagents",
-		"aborted",
-		"ended",
-		"scroll",
-		"multi",
-		"error",
-		"degraded",
-	],
-	requiresEmpty: ["empty"],
-};
 
 export const READINESS_PROBE = `
 (() => {
