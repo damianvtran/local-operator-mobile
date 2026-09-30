@@ -65,15 +65,21 @@ this is 0006.
 
 **Provenance of code citations.** Every `file:line` below is stated at a named revision and
 was resolved with `git show <ref>:<path>` — never read from a working tree, because the
-shared checkouts carry other sessions' staged work. **Every citation in this document was
-re-resolved at the pin in remediation round 1**, after **QA round 1's Q7** reported line drift
-and **Q8** reported three unsourced assertions (the review round running beside it found no
-drift of its own: "~20 citations spot-checked, all resolve"). Round 3 re-resolved them again at
-the same pin; the corrections are named in §9 so a reader can see what moved.
+shared checkouts carry other sessions' staged work. **Every citation here has been re-resolved
+at the pin — lines *and* paths — and the one that was wrong is named rather than counted fixed.**
+QA round 1's **Q7** reported line drift and **Q8** three unsourced assertions (the review round
+running beside it found none of its own: "~20 citations spot-checked, all resolve"); rounds 1 and
+3 re-resolved the **line numbers** at the same pin. **QA round 4's Q-F1 then found what those
+passes could not**: the table mapped `resume.py` to `local_operator/session/resume.py`, a path
+that **does not exist at the pin** — the *lines* were right (`local_operator/resume.py`:169,
+:1715) and the *path* was never exercised, so "re-resolved" was true of the lines and false of
+the path. It is fixed in this pass, and every mapping in this table has since been resolved the
+way that catches it — the **path first** (`git cat-file -e <pin>:<path>`), then its lines. The
+corrections are named in §9 so a reader can see what moved.
 
 | Repository | Revision | How paths are cited |
 |---|---|---|
-| **local-operator** | `40ca7910e49a` — **a pinned SHA, and *not* `origin/main`**: it *was* `origin/main` when this document was written and is **16 commits behind** it as measured on **2026-09-30** (`origin/main` = `d5346e173`; it was twelve behind when review round 2 read it, at `061ede7` — the distance moves with the branch, so it is always dated). **Every line number below is stated at `40ca7910e49a`**; re-derive at that ref and expect an offset at a newer one: `app.py`'s `_cmd_notifications` is `:40600` on current main against `:40562` here, and `session_sidebar.py`'s "45%" line `:800` against `:704` | `local_operator/mobile/daemon.py` → `daemon.py`; `local_operator/session/attention.py` → `attention.py`; `local_operator/session/runtime/presence.py` → `presence.py`; `local_operator/session/runtime/viewers.py` → `viewers.py`; `local_operator/server/utils/desktop_feed.py` → `desktop_feed.py`; `local_operator/server/utils/desktop_presence.py` → `desktop_presence.py`; `local_operator/notifications/compose.py` → `compose.py`; `local_operator/tui/app.py` → `app.py`; `local_operator/tui/notify.py` → `notify.py`; `local_operator/tui/widgets/session_sidebar.py` → `session_sidebar.py`; `local_operator/operator/devices.py` → `devices.py`; `local_operator/tunnels/api.py` → `tunnels/api.py`; `local_operator/tunnels/service.py` → `tunnels/service.py`; `local_operator/session/session.py` → `session.py`; `local_operator/session/resume.py` → `resume.py`; `local_operator/server/models/desktop_sessions.py` → `models/desktop_sessions.py`; `local_operator/server/routes/desktop_sessions.py` → `routes/desktop_sessions.py`; `local_operator/server/utils/desktop_sessions.py` → `utils/desktop_sessions.py`; `local_operator/mobile/web/src/store.ts` → `web/src/store.ts`; `local_operator/mobile/install.py` → `mobile/install.py`; `docs/*.md` by full path |
+| **local-operator** | `40ca7910e49a` — **a pinned SHA, and *not* `origin/main`**: it *was* `origin/main` when this document was written and is **16 commits behind** it as measured on **2026-09-30** (`origin/main` = `d5346e173`; it was twelve behind when review round 2 read it, at `061ede7` — the distance moves with the branch, so it is always dated). **Every line number below is stated at `40ca7910e49a`**; re-derive at that ref and expect an offset at a newer one: `app.py`'s `_cmd_notifications` is `:40600` on current main against `:40562` here, and `session_sidebar.py`'s "45%" line `:800` against `:704` | `local_operator/mobile/daemon.py` → `daemon.py`; `local_operator/session/attention.py` → `attention.py`; `local_operator/session/runtime/presence.py` → `presence.py`; `local_operator/session/runtime/viewers.py` → `viewers.py`; `local_operator/server/utils/desktop_feed.py` → `desktop_feed.py`; `local_operator/server/utils/desktop_presence.py` → `desktop_presence.py`; `local_operator/notifications/compose.py` → `compose.py`; `local_operator/tui/app.py` → `app.py`; `local_operator/tui/notify.py` → `notify.py`; `local_operator/tui/widgets/session_sidebar.py` → `session_sidebar.py`; `local_operator/operator/devices.py` → `devices.py`; `local_operator/tunnels/api.py` → `tunnels/api.py`; `local_operator/tunnels/service.py` → `tunnels/service.py`; `local_operator/session/session.py` → `session.py`; `local_operator/resume.py` → `resume.py`; `local_operator/server/models/desktop_sessions.py` → `models/desktop_sessions.py`; `local_operator/server/routes/desktop_sessions.py` → `routes/desktop_sessions.py`; `local_operator/server/utils/desktop_sessions.py` → `utils/desktop_sessions.py`; `local_operator/mobile/web/src/store.ts` → `web/src/store.ts`; `local_operator/mobile/install.py` → `mobile/install.py`; `docs/*.md` by full path |
 | **local-operator-mobile** | `origin/main` @ `d5bb850fccac4dcfdd80f2e3b352a51107a955bc` (read 2026-09-30) | this repository's own paths; unmerged work named by branch and SHA |
 | **Radient** (control plane, edge, console) | **no code access** — specified here as an *interface*, never as a change to existing code | every cloud route in §3.1 is marked **proposal** |
 | **Apple / Google / Expo platform docs** | read 2026-09-30, cited by URL | vendor behaviour, quoted with the page it came from |
@@ -111,7 +117,7 @@ lifecycle and is *never* answered or removed by a completion receipt (`docs/ATTE
 §"Identity and durability"); the phone sees it as `needs_attention` + `pending_kind`
 (`daemon.py:991-992`), and the desktop machine-wide feed deliberately does not carry gates at
 all (`BRIDGE_NOTIFIABLE_KINDS = {"complete", "error", "retired"}`,
-`server/utils/desktop_sessions.py:368`). §1.4 keeps that boundary, and §2.4's Settings
+`utils/desktop_sessions.py:368`). §1.4 keeps that boundary, and §2.4's Settings
 statement is honest about it.
 
 **Two facts about the store that decide §2 and §3**, both the store's own words:
@@ -536,11 +542,11 @@ publication cursor (Q9), and why §3.4's content-derived key has something to mi
 
 | Record | Fields | Why it is the minimum |
 |---|---|---|
-| **Device** | `device_id`, `platform`, the push token, `environment` (`sandbox`/`production` — only the app knows which build it is), app build, `created_at`, `last_seen_at`, **`credential_live`**, and the state markers **`revoked_at` / `unpaired_at` / `expired_at`** | token rotation and revocation are the whole of device management; **the markers are the states §4 defines, and §4's precedence (revoked > unpaired > expired) is what every reader of the row — the register route, `list`, the delivery gate — resolves, so one row cannot be read two ways** |
+| **Device** | `device_id`, `platform`, the push token, `environment` (`sandbox`/`production` — only the app knows which build it is), app build, `created_at`, `last_seen_at`, and the state markers **`revoked_at` / `unpaired_at` / `expired_at`** — **not** `credential_live`, which lives in the Credential row below (`n3`, so one fact has one home) | token rotation and revocation are the whole of device management; **the markers are the states §4 defines, and §4's precedence (revoked > unpaired > expired) is what every reader of the row — the register route, `list`, the delivery gate — resolves, so one row cannot be read two ways** |
 | **Account → devices** | account id → live device ids | routing; the account already exists (`GET /v1/me`, `tunnels/api.py:144-170`) |
 | **Computer → devices** | the connector's tunnel identity → the devices registered for *that* machine | a user with three machines must not be pushed about machine C's work while paired to A |
 | **Delivery** | `(device_id, conversation_handle, emit_id)` → sent/attempted, provider id, response code, **kept 14 days** | the record of what was pushed: it is what makes re-delivery idempotent, a revocation testable and the cloud's own alerts meaningful. **It is not returned to the machine** (§3.1) |
-| **Credential (per device)** | `credential_live` + `last_authenticated_at`, **reported by the relay** on every authenticated request that names its device (`X-Lop-Device`, §3.1/§4) | the second limb of §4 rule 2: **the cookie is the relay's to see and nobody else's**, so the relay *evaluates* and the cloud *enforces*. The cloud cannot compute this from a registration, and without the report the rule would be unenforceable exactly where it is asserted |
+| **Credential (per device)** — **the machine's own record** | `credential_live`, `last_authenticated_at`, and the **per-device key** minted for the device at registration | the second limb of §4 rule 2, and the only place the flag lives. **The machine owns it**: the relay's routes write it as they see the cookie and the emit worker (the same process) reads it, so there is no second copy to disagree with and **no epoch to compare** (round 4 `m1`, QA Q-F3). **The per-device key never leaves the machine** and it is what lets a request move *its own* device's state and no other's (`m3`). What the cloud holds is a **coalesced** copy of the two values, not per-request traffic (`m5`) |
 | **Credentials** | the APNs `.p8` key id + team id; the FCM service account | the reason the cloud has to exist at all |
 
 **What the cloud must NOT hold:** transcripts, conversation names, session ids, working
@@ -627,7 +633,11 @@ work") and never missing a completion, and it is the user's switch to move.
 1. `unseen` for the completion, still true at send time (§3.3's anti-race guard);
 2. `notify` (§1.4; `attention.py:2026-2033` computes it, the store never derives it);
 3. the presence rule above;
-4. the account has at least one live device registered for this computer.
+4. the account has at least one **registered device whose credential is live** — i.e. no
+   `revoked_at` and no `unpaired_at`, and **not** `expired_at` (§4's states, not the pre-state
+   word "live device"): this is the gate the emit-side skip belongs to, and **the worker skips
+   such a device entirely** — no emit is attempted for it, while the event still goes to every
+   other live device of that computer.
 
 **And the ordering property this preserves:** a TUI at the terminal *and* a phone in a pocket
 both get told. Nothing is silenced by the other — and now nothing in this document says
@@ -728,7 +738,16 @@ POST /api/push/register
 // device (`X-Lop-Device: <install_id>`, additive) reports `credential_live` +
 // `last_authenticated_at` to the cloud (§2.2); a rotation emits one credential-change event and
 // the cloud pauses fan-out for that computer's devices until each device's next authenticated
-// request. Registering records the credential epoch, and the machine compares it on every emit.
+// request. The flag is `credential_live` + `last_authenticated_at`, held by the RELAY — the only
+// component that sees the cookie — and read by the emit worker in the same process; there is no
+// separate "credential epoch" (§4 rule 2, round 4 m1 / QA Q-F3). The relay SENDS it coalesced:
+// change-triggered, piggybacked on the next register or emit for this computer, at most once per
+// device per 5 minutes, one credential-change event per rotation.
+//
+// The two refusal codes above and `X-Lop-Device: <install_id>` — a request also presents the
+// per-device key minted here at registration, so a device can move only its own state — are
+// DECIDED relay shapes, not proposals: S3 freezes them and rule 2's enforcement rests on them
+// (round 4 m3).
 // A rotation sets `expired_at`, NOT `revoked_at` — see §4: the two states are deliberately
 // different.
 ```
@@ -745,15 +764,29 @@ GET /api/push/devices → {"devices": [{"device_id":"…","platform":"ios","name
 **Revoke / deregister** *(new)*. This is the **revoke** path of §4: it drops the cloud's token
 and **tombstones the row** (`revoked_at`), so the device cannot silently re-register itself.
 `device_id` may be the caller's own or **another device in this computer's registry** (the
-stolen-phone case, §4):
+stolen-phone case, §4). **Self-targeting is deliberate on this route and only on this route**: a
+device that revokes itself can only reduce its own access, which is safe for anyone holding a
+cookie to do:
 
 ```jsonc
 DELETE /api/push/devices/{device_id}   → {"ok": true}          // revoke: token dropped, row tombstoned
 
-// The way back, and the reason it is explicit rather than automatic (§4, "How a device comes
-// back"): the tombstone is cleared only by a deliberate act, and the token is NOT restored with
-// it — the device must register again, which needs a live credential.
+// THE WAY BACK IS NOT A DEVICE OPERATION (round 4 B1). "On the machine" is not a place the
+// phone's own session can be: the phone's requests travel through the machine's relay, so a
+// revoked phone holding a live cookie could otherwise clear its own tombstone and be Live again
+// without the password — the ADR's own named worst failure, undone by the device it exists to
+// refuse. `unrevoke` is therefore callable ONLY from the machine's operator surface (the local
+// API the CLI/TUI and `lop mobile devices` drive) or from the account console (§4); a device
+// session gets a refusal the app can render, and §4 rule 1's invariant ("neither marker is
+// cleared by the device itself") is asserted, not assumed.
+//
+// It clears the marker that is set — `revoked_at` OR `unpaired_at` (they are different states
+// with different refusals, §4) — and the token is NOT restored with it: the device must register
+// again, which needs a live credential.
 POST /api/push/devices/{device_id}/unrevoke → {"ok": true, "device_id": "…"}
+   // machine-operator surface, or the account console (§4).
+   // From a device session: 403 {"code": "machine_only",
+   //                               "error": "a device cannot restore itself — use the computer or your account"}
 ```
 
 **Fetch unread** *(new, §1.1)*: `GET /api/attention/unread` → the aggregate above. This one
@@ -821,7 +854,7 @@ itself, and `revision()` is the detector it already reads (`daemon.py:2499-2535`
 2. the relay's `/seen` handler additionally nudges the in-process worker with the acking
    `device_id`. **The nudge consumes the change** (round 2 m3; the state defined in round 3 Q3): it advances
    the worker's stored **detector state — the `revision()` triple *and* the
-   `acknowledgement_map()` snapshot**, which are the two things the tick consults — so the same ack
+   `acknowledgement_map()` snapshot**, which are the two things an acknowledgement moves — so the same ack
    cannot be emitted twice, once immediately and once on the next tick — and the emit body carries `"exclude": ["<device_id>"]` so the acting
    device is skipped while every other device is still corrected. **The bound, stated exactly: at
    most one emit per change.** A duplicate is possible only inside one race window — a tick that
@@ -918,9 +951,13 @@ sends the name, and it is the price of P2.
 ### 4. Privacy and security boundaries
 
 **What leaves the machine, exhaustively:** an opaque conversation handle, an opaque computer
-handle, the completion's kind, the completion token, the emit id, and the unread count. **No
-conversation name, no transcript, no snippet, no failure text, no prompt, no working
-directory, no file path, no model name, no tool output, and no read history.**
+handle, the completion's kind, the completion token, the emit id, the unread count — and, per
+**device**, whether its credential is live and when it last authenticated (§4 rule 2, QA round 4
+Q-F4). That last one is **delivery state, not read state**: it says when a device *talked to the
+machine*, never what it read or whether it read anything, which is why it is not the read-history
+stream §2.2 prohibits. **No conversation name, no transcript, no snippet, no failure text, no
+prompt, no working directory, no file path, no model name, no tool output, and no read
+history.**
 
 **The conversation handle: mint, scope, and resolve** (review M10 — this was too vague to
 implement from):
@@ -1003,17 +1040,29 @@ row may be registered again:
 
 | State | Marker | Token | May register again? | Entered by |
 |---|---|---|---|---|
-| **Live** | none | present | — (it is registered) | `POST /api/push/register` on an authenticated session, recording the credential epoch it was made under |
+| **Live** | none | present | — (it is registered) | `POST /api/push/register` on an authenticated session; **the relay mints that device's per-device key here** (§2.2), which is what later lets it move its own state and no other's |
 | **Expired** | `expired_at` | kept | **yes**, by authenticating again | the **credential lapses**: a relay-password rotation (path 3) or the `lop_mobile` cookie's own TTL — **evaluated by the relay** (rule 2), the only component that sees the cookie |
 | **Unpaired** | `unpaired_at` | dropped | **no**, until that computer is paired again | unpairing the **computer** (path 5): the devices bound to it go with it |
 | **Revoked** | `revoked_at` | dropped | **no**, until it is un-revoked | an explicit revoke of *this device*: path 1 or path 2 |
 | **Absent** | — (no row at all) | dropped with the row | **yes** | a provider dead-token (path 4) or the 60-day idle drop (§2.2) |
 
-**The precedence is `revoked` > `unpaired` > `expired`, and the names are shared vocabulary with
-the cloud ops note** — the register route (§3.1), `GET /api/push/devices` (`list`) and the
-delivery gate all resolve the *same* precedence on the *same* markers, so no two surfaces can read
-one row as two different states. A row may carry more than one marker (a device revoked, and then
-its computer unpaired); the winner decides both what the route answers and what the user is told.
+**The precedence is `revoked` > `unpaired` > `expired`** — the register route (§3.1),
+`GET /api/push/devices` (`list`) and the delivery gate all resolve the *same* precedence on the
+*same* markers, so no two surfaces can read one row as two different states. A row may carry more
+than one marker (a device revoked, and then its computer unpaired); the winner decides both what
+the route answers and what the user is told.
+
+**The names, and the note's tense — checked at the note's head, not asserted** (round 4 M1; the
+earlier draft said "shared vocabulary with the cloud ops note" as a fact and it was not true at
+`00de6428`). As of **`30a0f4d`** — `docs/push-cloud-ops.md` (PR #15), read 2026-09-30 — the note
+carries the same five states, the same three markers, the same precedence, `expired_at` for the
+credential lapse including a rotation, tombstoning for revoke *and* unpair, and the absent state
+for the provider dead-token and the 60-day drop: the four divergences the round named are closed.
+**One remains, and it is this ADR's newer rule rather than the note's error:** the note still says
+the relay reports `credential_live` "on each authenticated request", where §4 rule 2 now specifies
+a **coalesced, change-triggered** report (round 4 `m5`); the note's author has been asked to
+re-align that sentence, and until they do, **rule 2 of this ADR is the authority on the rate** and
+the note is the authority on the cloud's handling of it. This is where the agreement is checked.
 
 Three rules follow, and together they are the whole of the revocation semantics:
 
@@ -1025,18 +1074,50 @@ Three rules follow, and together they are the whole of the revocation semantics:
    register route answers `403 {"code": "device_unpaired"}`, and the app says *which computer*
    left instead of claiming a revoke nobody performed. Neither marker is cleared by the device
    itself; both are cleared by a deliberate act (below).
-2. **Delivery requires BOTH a registered device AND a live credential for it — and the evaluator
-   is the relay.** The registration is only half. The relay is the only component that ever sees
-   the `lop_mobile` cookie, so it *evaluates* the second half and *reports* it; the cloud holds the
-   flag and *enforces* it, because it cannot compute it. Concretely: every authenticated relay
-   request that names its device (`X-Lop-Device: <install_id>`, additive) marks that device live
-   and reports `credential_live` + `last_authenticated_at` to the cloud (§2.2); **a rotation emits
-   one credential-change event** — observable machine-side, which is what makes it reliable — and
-   the cloud **pauses fan-out for that computer's devices until each device's next authenticated
-   relay request**. The machine's emit path checks the credential epoch as the second lock, so a
-   single lost call cannot open the gap. **Rotation sets `expired_at`, never `revoked_at`**: it is
-   not a decision about the device, the token is kept, and the device is welcome back the moment
-   it authenticates — which clears `expired_at` and restores `credential_live`.
+2. **Delivery requires BOTH a registered device AND a live credential for it — and *which*
+   credential decides depends on the route the phone is on** (QA round 4 Q-F2; the routes are this
+   repository's own `docs/relay/tunnel-edge.md`:59-76, which the earlier draft of this rule read as
+   if it were one route).
+   - **Direct route.** The app holds the `lop_mobile` cookie, whose key is derived from the relay
+     password (`docs/relay/contract.md`:48-52). The relay is the only component that sees it, so
+     the relay **evaluates** the flag and reports it; the cloud enforces what it is told.
+   - **Radient route.** The edge **strips** `lop_mobile` and the local gateway **injects** it on
+     every request, and the app never sees the password (`tunnel-edge.md`:59-76). The injected
+     cookie is therefore minted per request, carries no per-device secret, and **cannot tell device
+     A from device B**. Here the enforceable half is the **cloud-issued per-device grant**, minted
+     at registration and required for delivery: a revoked or unpaired device's grant is refused
+     cloud-side, and the relay's report is an *auxiliary* signal rather than the lock.
+   **Which protection holds where, plainly:** a freshly installed app is stopped on the **direct**
+   route by the password (it cannot authenticate at all) and on the **Radient** route by the
+   **refused grant** — it has no grant, and the machine's own per-device record is what the grant
+   was minted against. **The honest limit of the Radient route:** there the cloud both mints and
+   refuses the grant, so a cloud that ignored its own record could still fan out. What the machine
+   contributes is real but partial — it never emits for a device it has marked, never refreshes a
+   grant for one, and pauses that computer's fan-out with one credential-change event — and the
+   last word is Radient's, which is the price of buying the last mile from whoever holds the
+   APNs/FCM credentials (§2.4's bargain, stated rather than implied).
+   **The report, and why it cannot flood** (round 4 `m5`): the relay recomputes `credential_live` on
+   every authenticated request but **sends it coalesced and change-triggered** — piggybacked on the
+   next register or emit call for that computer, **at most once per device per 5 minutes**, with a
+   15-minute heartbeat, batched for all of the computer's devices, and **one** credential-change
+   event per rotation. The cloud therefore sees **O(devices) state, never O(requests) traffic**.
+   **What writes what — the relay's routes are the only writer** (`m1`, Q-F3): `expired_at` when a
+   rotation kills the cookies (one machine-side action, §4.3) or when a request arrives carrying a
+   stale cookie — attribution is bound, see the next paragraph — `unpaired_at` on an unpair,
+   `revoked_at` on a revoke. **The emit worker writes no marker at all**: it reads the flag and the
+   markers, skips a device, and emits the event.
+   **Attribution is bound, not asserted** (`m3`): `X-Lop-Device` alone is a *claim*, so a request
+   that moves a device's state must also present the **per-device key minted for it at
+   registration** (machine-side, never sent to the cloud), and a request without it **moves no
+   device's state**. That is what stops a stolen cookie from vouching for another device — and
+   every self-reported action here can only *pause* its own delivery, never restore it, which is
+   why accepting such a report is safe by construction.
+   **There is no credential "epoch"** (`m1`, Q-F3): the earlier draft had the machine compare one,
+   but the relay and the emit worker are the same process, so the flag **is** the machine-side fact
+   and a second counter would be a copy that can disagree with its source.
+   **Rotation sets `expired_at`, never `revoked_at`**: it is not a decision about the device, the
+   token is kept, and the device is welcome back the moment it authenticates — which clears
+   `expired_at` and restores `credential_live`.
 3. **Dead-token deletion is a DIFFERENT state (path 4), not a revoke.** APNs `410` / FCM
    `UNREGISTERED` is a *provider signal* about a token (uninstalled app, rotated token), not a
    decision by the user: the row is deleted, **no marker is written**, and re-registration is
@@ -1044,9 +1125,12 @@ Three rules follow, and together they are the whole of the revocation semantics:
    Conflating either with a revoke would refuse a legitimate reinstall; conflating a revoke with
    them would let a stolen device back in.
 
-**How a device comes back.** By an explicit act, and *which* act depends on the marker —
-`revoked_at` → `POST /api/push/devices/{id}/unrevoke` *(new — §3.1)* on the machine, or the same
-action from the Radient account; `unpaired_at` → pair that computer again (the pairing flow clears
+**How a device comes back — and none of it is the device's own doing** (round 4 B1; §3.1 states
+the same restriction where the route is specified). By an explicit act, on a surface the device
+does not control — **the machine's operator surface** (the CLI/TUI and `lop mobile devices`) **or
+the account console**, which is the second path and the one that works with the machine offline,
+and which is why the account-side revoke/un-revoke surface is a slice of its own in §7:
+`revoked_at` → `POST /api/push/devices/{device_id}/unrevoke` *(new — §3.1)*; `unpaired_at` → pair that computer again (the pairing flow clears
 it for every device that was bound to it), or `unrevoke` that device explicitly; `expired_at` →
 nothing to clear: authenticate to the relay with the current password and re-register. In every
 case **the marker's clearing restores no token** — the app must register again, and registering
@@ -1244,12 +1328,12 @@ week, L ≈ more, with an unknown tail):
 | **Conversation handle + listing field + resolve route** (§4, S2) | daemon-core | **S** | an HMAC mint, one field on the aggregate, one resolve route |
 | **Interface freeze** (§3, S3) | all three | **S** | the §3 shapes, refusal shapes, fixtures in this repo's `fixtures/` (ADR 0003's pattern) |
 | **Device registry, register/list/deregister routes, no token stored** (§3.1, S4) | daemon-core | **S–M** | durable record, cloud id, Settings list, the generic deregister |
-| **Device lifecycle: live / expired (`expired_at`) / unpaired (`unpaired_at`) / revoked (`revoked_at`) / absent (no row), the shared precedence revoked > unpaired > expired, the register route's two refusals, the emit-side epoch check, un-revoke** (§3.1, §4, S4a) | daemon-core | **S–M** | the states are one table in code, not five booleans read ad hoc, and the register route, `list` and the emit path resolve the **same** precedence (asserted); `403 device_revoked` on a tombstone and `403 device_unpaired` on an unpaired row, while `expired_at` re-registers; a dead token or the 60-day drop deletes the row with **no** marker and re-registers cleanly; `unrevoke` clears the tombstone and leaves the token absent |
-| **Credential-live evaluation and the credential-change event** (the relay evaluates, the cloud enforces, `X-Lop-Device` on authenticated requests, one event per rotation, fan-out paused until each device's next authenticated request) (§3.1, §4 rule 2, S4c) | daemon-core + Radient-cloud | **S–M** | after a rotation **no** device of that computer is delivered to (observed at the provider stub) while the machine also refuses to emit for it — and each resumes on its own next authenticated request, not on the rotation's; a device that never authenticates again stays paused, which is the point |
+| **Device lifecycle: live / expired (`expired_at`) / unpaired (`unpaired_at`) / revoked (`revoked_at`) / absent (no row), the shared precedence revoked > unpaired > expired, the register route's two refusals, the emit-side skip, the per-device key minted at registration, un-revoke restricted to the machine and account surfaces** (§3.1, §4, S4a) | daemon-core | **S–M** | the states are one table in code, not five booleans read ad hoc, and the register route, `list` and the emit path resolve the **same** precedence (asserted); `403 device_revoked` on a tombstone and `403 device_unpaired` on an unpaired row, while `expired_at` re-registers; a worker **skips** a device marked or `expired_at` (asserted by observing no emit); a dead token or the 60-day drop deletes the row with **no** marker and re-registers cleanly; **a device's own session gets `403 machine_only` on its own un-revoke** (B1, asserted) while the machine surface and the account console both succeed; a request without the device's key moves no device's state |
+| **Credential-live evaluation and the credential-change event** (the relay evaluates per route — cookie vs cloud grant — the cloud enforces, `X-Lop-Device` **plus the per-device key** on identifying requests, the report **coalesced** rather than per request, one event per rotation, fan-out paused until each device's next authenticated request) (§3.1, §4 rule 2, S4c) | daemon-core + Radient-cloud | **S–M** | after a rotation **no** device of that computer is delivered to (observed at the provider stub) while the machine also refuses to emit for it — and each resumes on its own next authenticated request, not on the rotation's; a device that never authenticates again stays paused, which is the point; **the cloud's seen traffic is bounded by devices, not requests** (asserted: N authenticated requests in a window produce at most one report per device, and none at all when the state did not change); on the Radient route the refusal is observed at the cloud, and on the direct route at the relay |
 | **Push worker: two cursors + baseline, acknowledgement-map diff, gates, presence deferral, catch-up, bounded queue that advances only on the cloud's `202`** (§2.1-§2.3, S5) | daemon-core | **M** | the store is done; the risk is the gates and the cursor, not the volume |
 | **Attention emit: structural detection (`revision()` equality as the trigger, then the acknowledgement map and the supersede cursor say which conversation moved), `/seen` nudge that consumes the change, `exclude` on the wire** (§3.1, S6) | daemon-core | **S** | reuses the loop that already reads `revision()` |
 | **App: notifications module, permissions, channels, badge management, handle resolution, `+native-intent` + route, unpair UI, Settings copy, FOSS gating** (§5-§6, S8/S9/S11) | app | **M–L** | a new native module, a new lifecycle path, a new route, a new settings surface, and a build-flavour story: the largest single diff |
-| **Cloud: registration forward, ingest with idempotency, fan-out, delivery record, routing, revocation, unpair removal** (§2.2, §3.1, §4) | Radient-cloud | **L, and outside our control** | two credentials' worth of setup, a new always-on service, token lifecycle, retry/coalescing, an operational surface |
+| **Cloud: registration forward, ingest with idempotency, fan-out, delivery record, routing, revocation and unpair **tombstones**, the **account-side revoke/un-revoke surface** (works with the machine offline), the per-device grant and its refusal** (§2.2, §3.1, §4) | Radient-cloud | **L, and outside our control** | two credentials' worth of setup, a new always-on service, token lifecycle, retry/coalescing, an operational surface, and the device list a stolen-phone revoke needs |
 
 **The critical path is the cloud-side fan-out**, and it is the only piece we cannot build.
 The **interface freeze (S3) depends only on S1 and S2** — a correction review M11 asked for:
