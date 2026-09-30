@@ -127,15 +127,25 @@ jobs:
       - name: Generate the native project
         run: pnpm exec expo prebuild --platform ios --clean --no-install
 
+      - name: Snapshot the generated project, before anything else touches it
+        # BEFORE `pod install`, and this placement is the whole correctness of the
+        # determinism check. CocoaPods rewrites the generated tree as a matter of
+        # course — it creates `Podfile.lock` and `contents.xcworkspacedata`, and
+        # its post-install hook edits `project.pbxproj` — and the build then
+        # stamps `Info.plist`. Comparing a post-pods tree against a
+        # `prebuild --clean --no-install` regeneration reported five differences,
+        # all of them CocoaPods talking to itself (measured: run 36669424052),
+        # which is the "gate that fails for the wrong reason" this check exists to
+        # avoid. Snapshotted here, the comparison is prebuild against prebuild:
+        # the claim is that the CONFIG reproduces the project, and nothing else.
+        run: cp -R ios "$RUNNER_TEMP/ios-built"
+
       - name: Install the pods
         # Separate from prebuild so each step has one job: prebuild generates,
         # and this resolves the native dependencies. CocoaPods 1.17.0 is on the
         # image; `pod install` is idempotent, so it costs nothing when a
         # Podfile.lock did not change.
         run: cd ios && pod install
-
-      - name: Snapshot the generated project before anything builds in it
-        run: cp -R ios "$RUNNER_TEMP/ios-built"
 
       - name: Resolve the simulator
         id: simulator
