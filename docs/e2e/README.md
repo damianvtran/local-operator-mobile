@@ -120,15 +120,22 @@ Two other routes were tried and neither works from outside the app:
 - **Driving the flow by UI** is blocked by the app's own current state: the session
   list has no rows yet, so no flow reaches `/session/<id>` with a live route.
 
-So the harness needs ONE of two things from the app, and the first is smaller:
+So the harness needs ONE of two things, and the first already exists — it is just not on
+`main`:
 
-1. **the connect-flow controls** (`app/(auth)/custom.tsx`: a URL field, a password
-   field, a Test control and a Save control) — then the harness drives them over CDP
-   and stays app-agnostic; or
-2. **a web-only seed hook** — read a documented parameter (for example
-   `?lo-seed-route=<relay-url>&lo-seed-session=<id>`) at startup and use it as the
-   configured connection, with the app's own configured route still winning whenever
-   one exists.
+1. **The connect-flow controls, which are implemented in PR #11** — the URL field, the
+   relay password field, Test the connection, Save, and the tunnel picker
+   (`src/features/auth/own-tunnel.tsx`, `custom`, `tunnels`, `tunnel-test.ts`). Nothing
+   has to be built for this: **the unblock is waiting for #11 to merge, then re-running
+   the probe** — the flow must be driven rather than a seed hook invented for a flow
+   that already exists. When #11 lands, one run of this matrix should turn the 37
+   relay-backed cells from not-measurable into measurable, and that number is what the
+   instrument is judged on.
+2. **A web-only seed hook** remains the more robust long-term option if #11's controls
+   prove awkward to drive (a form that resists CDP, or a step that needs a real
+   keystore): read a documented parameter at startup (for example
+   `?lo-seed-route=<relay-url>&lo-seed-session=<id>`) and use it as the configured
+   connection, with the app's own configured route always winning when one exists.
 
 Until one of them lands, every relay-backed cell stays **not measured** — a statement
 this harness makes per cell, not a pass it hands out.
@@ -329,7 +336,9 @@ profile, and every later run's `close()` reaps any profile in the same root whos
 owner is gone, then removes the directory. The kill is scoped to the profile path —
 never to `chrome` by name, because a name-wide match is how one session's teardown
 killed another session's processes — and a live owner's browser is skipped and
-reported as `skipped`, never touched.
+reported as `skipped`, never touched. A recorded pid is only signalled while its own
+command line still carries that profile path, so a pid the OS has since re-used is not
+killed by mistake.
 
 The sweep exists because the guarantee it replaces was false: Chrome is spawned
 `detached` (`kill -pgid` is safe then), so a run killed with SIGKILL cannot reap
