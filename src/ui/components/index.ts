@@ -9,14 +9,6 @@
 
 export { CONTROL, LIVE_REGION, ROLE, SCREEN, state } from "@/ui/a11y";
 export { useReducedMotion, useTheme, useTokenColor } from "@/ui/appearance";
-/* D1's adaptive primitives, taken verbatim from `origin/feat/screens-lists`. The
- * two export lines are the only change to this barrel, so the merge into D1's
- * version of the file is trivial. */
-export {
-	PaneHeader,
-	ReadableColumn,
-	SplitView,
-} from "@/ui/components/adaptive";
 export { Alert } from "@/ui/components/alert";
 export { Avatar, initialsOf } from "@/ui/components/avatar";
 export { Badge } from "@/ui/components/badge";

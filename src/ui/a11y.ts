@@ -88,6 +88,40 @@ export const EMPTY = {
  * than a naming mistake. A control that a later stream adds gets its name here in
  * the same change that renders it.
  */
+/**
+ * Non-interactive anchors: the surfaces a flow asserts are PRESENT on a screen.
+ *
+ * Separate from `CONTROL` because they take no gesture — a flow waits for them
+ * (`assertVisible`) rather than tapping them — and separate from `EMPTY` because
+ * they are rendered with content in them, not instead of it. The session view has
+ * several of these and they are load-bearing: a transcript that never appeared and
+ * a transcript that is empty are different failures, and only an identifier tells
+ * them apart.
+ */
+export const SURFACE = {
+	/** The measure-capped content column the transcript and composer share. */
+	sessionColumn: "session-column",
+	/** The header strip: conversation name, context and cost. */
+	sessionContext: "session-context-strip",
+	/** The whole-screen loading state, before the first projection arrives. */
+	sessionLoading: "session-loading",
+	/** The panels rail, on the viewports that get one. */
+	sessionRail: "session-panel-rail",
+	/** The transcript's own empty state, which is NOT the screen's. */
+	sessionTranscriptEmpty: "session-transcript-empty",
+	/** The working line above the composer: what the turn is doing right now. */
+	sessionWorkingLine: "session-working-line",
+	/** The subagent view's breadcrumb back to its parent. */
+	subagentCrumb: "subagent-detail-crumb",
+	/** The subagent view's own failure, loading and content anchors. Its empty
+	 *  state is `EMPTY.subagent`, which names the screen it belongs to. */
+	subagentError: "subagent-detail-error",
+	subagentLoading: "subagent-detail-loading",
+	subagentPrompt: "subagent-detail-prompt",
+	subagentTodos: "subagent-detail-todos",
+	subagentTranscript: "subagent-detail-transcript",
+} as const;
+
 export const CONTROL = {
 	// Welcome and Sessions: the two shell routes that render an action.
 	welcomeContinue: "welcome-continue",
@@ -99,6 +133,10 @@ export const CONTROL = {
 	// because two screens are on the navigation stack at once during a transition.
 	sessionBack: "session-back",
 	subagentBack: "subagent-back",
+
+	/** The session header's panel lever: the one control that opens the subagents
+	 *  sheet on a compact screen, where no rail exists. */
+	sessionSubagents: "session-subagents-chip",
 
 	// Settings: the theme override, the one setting that needs no connection.
 	settingsTheme: "settings-theme",
@@ -130,6 +168,7 @@ export const IDENTIFIERS: readonly string[] = [
 	...Object.values(SCREEN),
 	...Object.values(EMPTY),
 	...Object.values(CONTROL),
+	...Object.values(SURFACE),
 ];
 
 /**
@@ -138,7 +177,12 @@ export const IDENTIFIERS: readonly string[] = [
  * shell has no list rows or per-computer rows yet, and a family is added in the
  * same change as the control that carries it.
  */
-export const IDENTIFIER_FAMILIES: readonly string[] = [];
+export const IDENTIFIER_FAMILIES: readonly string[] = [
+	/** One row of a session's transcript: `transcript-row-<row-id>`. */
+	"transcript-row-",
+	/** One row of a session list: `session-row-<session-id>`. */
+	"session-row-",
+];
 
 /**
  * Whether a selector names something the app can render: a static identifier, or

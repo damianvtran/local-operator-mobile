@@ -1,7 +1,7 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { ArrowLeft } from "lucide-react-native";
 import { useCallback, useMemo, useState } from "react";
-import { ScrollView, Text, View } from "react-native";
+import { Text, View } from "react-native";
 import { Composer } from "@/features/session/components/composer";
 import { ConnectionBanner } from "@/features/session/components/connection-banner";
 import {
@@ -14,7 +14,6 @@ import { SubagentsPanel } from "@/features/session/components/subagents-panel";
 import { TodosPanel } from "@/features/session/components/todos-panel";
 import { TranscriptList } from "@/features/session/components/transcript-list";
 import { WorkingLine } from "@/features/session/components/working-line";
-import { panelRail } from "@/features/session/panel-rail";
 import { pendingView } from "@/features/session/pending";
 import {
 	middleTruncate,
@@ -24,19 +23,14 @@ import {
 } from "@/features/session/projection";
 import { draftSlashQuery, useComposer } from "@/features/session/use-composer";
 import { useSessionRuntime } from "@/features/session/use-session";
-import { SCREEN } from "@/ui/a11y";
+import { CONTROL, EMPTY, SCREEN, SURFACE } from "@/ui/a11y";
 import {
 	Chip,
 	EmptyState,
 	IconButton,
-	ReadableColumn,
 	Screen,
 	Skeleton,
 } from "@/ui/components";
-/* The adaptive vocabulary, from the single place D1 owns: `useLayout` decides the
- * size class and the measure, `SPLIT_PANE_WIDTH` the pane. This screen adds no
- * breakpoint of its own — see `src/features/session/panel-rail.ts`. */
-import { SPLIT_PANE_WIDTH, useLayout } from "@/ui/layout";
 
 /**
  * The session view (`docs/ux/flows.md` F-6): the product's core screen.
@@ -80,10 +74,12 @@ export default function Session() {
 	);
 
 	/* The layout, from D1's hook in `src/ui/layout.ts`. Read once here so the rail,
-	 * the column and the composer all answer to one decision: the rail needs room
-	 * AND content, since an empty rail on a tablet is 360 pt of nothing beside the
-	 * conversation. */
-	const layout = useLayout();
+	 * the column and the composer all answer to one decision: the column cap that
+	 * `Screen` applies. This screen adds no breakpoint of its own — the panels share
+	 * the column rather than taking a rail, because the column cap IS the layout
+	 * (`src/ui/column.ts`), and a rail beside it would be the second column the
+	 * single-column rule exists to prevent.
+	 */
 
 	const [modelsOpen, setModelsOpen] = useState(false);
 	const [effortOpen, setEffortOpen] = useState(false);
@@ -135,28 +131,20 @@ export default function Session() {
 	 * a session name are what distinguish it, so a truncation has to keep both. */
 	const headerTitle = title.length > 0 ? middleTruncate(title, 40) : "session";
 
-	/* One decision, read once, for the rail, the column and the composer alike: the
-	 * rail needs ROOM (D1's split rule plus a full measure beside the pane, in
-	 * `panel-rail.ts`) AND CONTENT, because an empty rail on a tablet is 360 pt of
-	 * nothing beside the conversation. */
-	const showRail = panelRail(layout) && (!todos.empty || !subagents.empty);
-
-	/* The panels, in one place because they render in one of two places: a rail beside
-	 * the transcript on a wide viewport, or beneath it on a phone. Writing them twice
-	 * is how the two layouts come to disagree about the same list. */
+	/* The panels, in one place: they sit between the transcript and the composer.
+	 * One panel at a time, because a phone's column has room for one and a tablet's is
+	 * still one column (`src/ui/column.ts`). */
 	const panels = (
 		<>
 			<TodosPanel
 				todos={todos}
-				// A rail has room for both panels, so the phone's one-at-a-time rule — which
-				// exists to keep the conversation on screen — is not applied there.
-				open={showRail || openPanel === "todos"}
+				open={openPanel === "todos"}
 				onToggle={() => setOpenPanel(openPanel === "todos" ? null : "todos")}
 				heldShut={pending !== null}
 			/>
 			<SubagentsPanel
 				subagents={subagents}
-				open={showRail || openPanel === "subagents"}
+				open={openPanel === "subagents"}
 				onToggle={() =>
 					setOpenPanel(openPanel === "subagents" ? null : "subagents")
 				}
@@ -170,13 +158,13 @@ export default function Session() {
 			<EmptyState
 				headline="This session is not connected yet."
 				next="Open it from the session list once a computer is connected."
-				testID={`session-not-connected-${sessionId}`}
+				testID={EMPTY.session}
 			/>
 		) : runtime.entries.length === 0 && runtime.loading ? (
 			// Loading is a skeleton, never a spinner over a blank column: the three bars
 			// reserve the shape the transcript will take.
 			<View className="px-4 pt-3">
-				<Skeleton lines={3} testID="session-loading" />
+				<Skeleton lines={3} testID={SURFACE.sessionLoading} />
 			</View>
 		) : (
 			<TranscriptList
@@ -189,7 +177,7 @@ export default function Session() {
 					<EmptyState
 						headline="Nothing here yet."
 						next="Send the first message below."
-						testID="session-transcript-empty"
+						testID={SURFACE.sessionTranscriptEmpty}
 					/>
 				}
 			/>
@@ -205,6 +193,7 @@ export default function Session() {
 			headerLeading={
 				<IconButton
 					accessibilityLabel="Back to sessions"
+					testID={CONTROL.sessionBack}
 					onPress={() => router.back()}
 					icon={({ color, size }) => <ArrowLeft color={color} size={size} />}
 				/>
@@ -225,7 +214,7 @@ export default function Session() {
 						// screen by the literal string. Those names belong in `ui/a11y.ts`'s
 						// `CONTROL` — that file is another stream's this wave, so the move is
 						// recorded for the manager rather than made here.
-						testID="session-subagents-chip"
+						testID={CONTROL.sessionSubagents}
 					/>
 				) : null
 			}
@@ -237,7 +226,7 @@ export default function Session() {
 				<View className="flex-row items-center gap-2 border-b border-hairline px-4 py-1">
 					<Text
 						className="text-mono-sm text-ink-dim"
-						testID="session-context-strip"
+						testID={SURFACE.sessionContext}
 					>
 						{Math.round(
 							(projection.context_tokens / projection.context_window) * 100,
@@ -253,130 +242,108 @@ export default function Session() {
 				</View>
 			) : null}
 
-			{/* The transcript and the panels, side by side when there is room for a second
-			    column and stacked when there is not. The main column is MEASURE-CAPPED and
-			    centred: a 1366 pt tablet showing a paragraph 1366 px wide is unreadable, and
-			    the fix is a constrained measure rather than a stretched one. */}
-			<View className={showRail ? "flex-1 flex-row" : "flex-1"}>
-				{showRail ? (
-					<ScrollView
-						className="border-r border-hairline"
-						// `flexGrow: 0` is load-bearing: react-native-web gives every
-						// ScrollView `flexGrow: 1`, so a width alone is only a flex BASIS
-						// and the rail split the free space with the column (measured in
-						// the 1366 pt frame: an 832 pt rail beside a 533 pt transcript).
-						// The pane width is D1's constant, not a number of this screen's.
-						style={{ width: SPLIT_PANE_WIDTH, flexGrow: 0, flexShrink: 0 }}
-						testID="session-panel-rail"
-					>
-						{panels}
-					</ScrollView>
-				) : null}
-				{/* `ReadableColumn` is centred with `alignSelf`, which in a COLUMN means
-				    horizontal centring — the case it was written for, and the case on a
-				    phone. In a ROW the cross axis is vertical, so the same `alignSelf`
-				    drops the default `stretch` and the column collapses to its content
-				    height: the transcript's list then measures an unbounded viewport and
-				    mounts the whole conversation (measured: 524 rows on the
-				    tablet-landscape frame, where every phone mounted 24-51). This
-				    `flex-1` wrapper is the fix — the same one `SplitView` applies to its
-				    own detail child — so the primitive keeps its single definition. */}
-				<View className="flex-1">
-					<ReadableColumn testID="session-column">
-						{transcript}
-						{showRail ? null : panels}
-						{working !== null ? (
-							<WorkingLine
-								activity={working.activity}
-								startedS={working.startedS}
-								testID="session-working-line"
+			{/* The transcript, the panels and the composer, in one measure-capped
+			    column. `Screen` applies the cap (`src/ui/column.ts`): a 1366 pt tablet
+			    showing a paragraph 1366 px wide is unreadable, and the fix is a
+			    constrained measure rather than a stretched one. The panels therefore
+			    STACK inside the measure instead of taking a rail beside it — at 640 pt
+			    a rail would leave ~280 pt of transcript, which is the squeezed column
+			    the cap exists to prevent. */}
+			<View className="flex-1">
+				<View className="flex-1" testID={SURFACE.sessionColumn}>
+					{transcript}
+					{panels}
+					{working !== null ? (
+						<WorkingLine
+							activity={working.activity}
+							startedS={working.startedS}
+							testID={SURFACE.sessionWorkingLine}
+						/>
+					) : null}
+					{pendingViewProps !== null ? (
+						<View className="px-3 pb-1">
+							<PendingCard
+								view={pendingViewProps}
+								busy={composer.sending}
+								error={composer.error}
+								onApprove={(remember) =>
+									composer.answerApproval(
+										pendingViewProps.requestId,
+										true,
+										remember,
+									)
+								}
+								onDeny={(remember) =>
+									composer.answerApproval(
+										pendingViewProps.requestId,
+										false,
+										remember,
+									)
+								}
+								onAnswer={(value) =>
+									composer.answerAsk(
+										pendingViewProps.requestId,
+										value,
+										projection?.pending?.question_index ?? 0,
+									)
+								}
 							/>
-						) : null}
-						{pendingViewProps !== null ? (
-							<View className="px-3 pb-1">
-								<PendingCard
-									view={pendingViewProps}
-									busy={composer.sending}
-									error={composer.error}
-									onApprove={(remember) =>
-										composer.answerApproval(
-											pendingViewProps.requestId,
-											true,
-											remember,
-										)
-									}
-									onDeny={(remember) =>
-										composer.answerApproval(
-											pendingViewProps.requestId,
-											false,
-											remember,
-										)
-									}
-									onAnswer={(value) =>
-										composer.answerAsk(
-											pendingViewProps.requestId,
-											value,
-											projection?.pending?.question_index ?? 0,
-										)
-									}
-								/>
-							</View>
-						) : null}
-						{/* The banner and the composer live INSIDE the measure, not across the
+						</View>
+					) : null}
+					{/* The banner and the composer live INSIDE the measure, not across the
 					    full width: on a tablet a composer 1366 pt wide sits under a 720 pt
 					    transcript and reads as a different surface (QA round 2, Q10). On a
 					    phone the measure is the screen, so nothing moves. */}
-						<ConnectionBanner
-							view={runtime.connection}
-							onAction={(action) => {
-								if (action.kind === "retry") runtime.reload();
-								// A sign-in and a console link are the route screens' work; this
-								// screen has nowhere to put a credential field, so it sends the
-								// reader to the screen that owns it rather than failing silently.
-								if (action.kind === "sign-in") router.push("/welcome");
-								if (action.kind === "console") router.push("/tunnels");
-							}}
-						/>
+					<ConnectionBanner
+						view={runtime.connection}
+						onAction={(action) => {
+							if (action.kind === "retry") runtime.reload();
+							// A sign-in and a console link are the route screens' work; this
+							// screen has nowhere to put a credential field, so it sends the
+							// reader to the screen that owns it rather than failing silently.
+							if (action.kind === "sign-in") router.push("/welcome");
+							if (action.kind === "console") router.push("/tunnels");
+						}}
+					/>
 
-						<Composer
-							controls={composer.controls}
-							draft={composer.draft}
-							onDraftChange={composer.setDraft}
-							images={composer.images}
-							onRemoveImage={composer.removeImage}
-							onAttach={composer.attach}
-							attaching={composer.attaching}
-							onSend={composer.send}
-							onStop={composer.stop}
-							retainedMessage={
-								composer.retained !== null ? COMPOSER_RETAINED : null
-							}
-							notice={composer.notice}
-							onRetry={composer.retry}
-							showResume={
-								projection?.stop_reason === "aborted" && !runtime.streaming
-							}
-							onResume={composer.send}
-							error={pending === null ? composer.error : null}
-							queuedCount={projection?.queued_count ?? 0}
-							modelLabel={chipModelLabel(projection?.model_label ?? "")}
-							effortLabel={
-								projection?.effort.length ? projection.effort : "effort"
-							}
-							onOpenModels={() => setModelsOpen(true)}
-							onOpenEffort={() => setEffortOpen(true)}
-							slashQuery={slash}
-							slashSheet={
-								<SlashSheet
-									visible={slash !== null}
-									onClose={() => undefined}
-									commands={runtime.commands}
-									query={slash ?? ""}
-									onPick={composer.slash}
-								/>
-							}
-						/>
-					</ReadableColumn>
+					<Composer
+						controls={composer.controls}
+						draft={composer.draft}
+						onDraftChange={composer.setDraft}
+						images={composer.images}
+						onRemoveImage={composer.removeImage}
+						onAttach={composer.attach}
+						attaching={composer.attaching}
+						onSend={composer.send}
+						onStop={composer.stop}
+						retainedMessage={
+							composer.retained !== null ? COMPOSER_RETAINED : null
+						}
+						notice={composer.notice}
+						onRetry={composer.retry}
+						showResume={
+							projection?.stop_reason === "aborted" && !runtime.streaming
+						}
+						onResume={composer.send}
+						error={pending === null ? composer.error : null}
+						queuedCount={projection?.queued_count ?? 0}
+						modelLabel={chipModelLabel(projection?.model_label ?? "")}
+						effortLabel={
+							projection?.effort.length ? projection.effort : "effort"
+						}
+						onOpenModels={() => setModelsOpen(true)}
+						onOpenEffort={() => setEffortOpen(true)}
+						slashQuery={slash}
+						slashSheet={
+							<SlashSheet
+								visible={slash !== null}
+								onClose={() => undefined}
+								commands={runtime.commands}
+								query={slash ?? ""}
+								onPick={composer.slash}
+							/>
+						}
+					/>
 				</View>
 			</View>
 

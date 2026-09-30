@@ -9,7 +9,7 @@ import { TranscriptList } from "@/features/session/components/transcript-list";
 import { middleTruncate, projectTodos } from "@/features/session/projection";
 import { useSessionRuntime } from "@/features/session/use-session";
 import { elapsedLabel } from "@/lib/format";
-import { SCREEN } from "@/ui/a11y";
+import { CONTROL, EMPTY, SCREEN, SURFACE } from "@/ui/a11y";
 import {
 	Badge,
 	EmptyState,
@@ -90,6 +90,7 @@ export default function Subagent() {
 			headerLeading={
 				<IconButton
 					accessibilityLabel={`Back to ${parentName}`}
+					testID={CONTROL.subagentBack}
 					onPress={() => router.back()}
 					icon={({ color, size }) => <ArrowLeft color={color} size={size} />}
 				/>
@@ -101,7 +102,7 @@ export default function Subagent() {
 				    distinguish one child from another. */}
 				<View
 					className="border-b border-hairline px-4 pb-1"
-					testID="subagent-detail-crumb"
+					testID={SURFACE.subagentCrumb}
 				>
 					<Text className="text-meta text-ink-dim" numberOfLines={1}>
 						{middleTruncate(parentName, 24)} › {middleTruncate(childId, 12)}
@@ -145,7 +146,7 @@ export default function Subagent() {
 				{detail?.error_text ? (
 					<View
 						className="border-b border-hairline px-4 py-2"
-						testID="subagent-detail-error"
+						testID={SURFACE.subagentError}
 					>
 						<Text className="text-body-sm text-danger">
 							{detail.error_text}
@@ -157,7 +158,7 @@ export default function Subagent() {
 				{detail !== null && detail.prompt.length > 0 ? (
 					<View
 						className="border-b border-hairline px-4 py-2"
-						testID="subagent-detail-prompt"
+						testID={SURFACE.subagentPrompt}
 					>
 						<Text className="pb-0.5 text-meta text-ink-dim">prompt</Text>
 						<Text className="text-body-sm text-ink-muted">{detail.prompt}</Text>
@@ -168,18 +169,18 @@ export default function Subagent() {
 					<EmptyState
 						headline="This subagent is no longer available."
 						next="Its transcript was not kept, or the computer is not answering."
-						testID="subagent-detail-missing"
+						testID={EMPTY.subagent}
 					/>
 				) : detail === null ? (
 					<View className="px-4 py-3">
-						<Skeleton lines={3} testID="subagent-detail-loading" />
+						<Skeleton lines={3} testID={SURFACE.subagentLoading} />
 					</View>
 				) : (
 					<TranscriptList
 						sessionId={`${sessionId}:${childId}`}
 						entries={detail.transcript}
 						streamingRowId={null}
-						testID="subagent-detail-transcript"
+						testID={SURFACE.subagentTranscript}
 						header={
 							detail.result_text.length > 0 ? (
 								<View className="px-4 py-2">
@@ -208,7 +209,7 @@ export default function Subagent() {
 					open
 					onToggle={() => undefined}
 					heldShut={false}
-					testID="subagent-detail-todos"
+					testID={SURFACE.subagentTodos}
 				/>
 			</View>
 		</Screen>
