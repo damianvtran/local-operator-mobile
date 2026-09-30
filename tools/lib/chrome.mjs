@@ -118,7 +118,20 @@ export async function launchChrome({ profile = scratchRoot(), extraArgs = [], he
 	};
 }
 
-/** SIGTERM the group, sweep our own profile, then report how many processes survived. */
+/**
+ * Stop Chrome, sweep this run's own profile, and report what survived.
+ *
+ * The single-sweep shape is not enough, and a measured leak is why: one run's
+ * `close()` reported 0 survivors and its profile directory was removed, yet five
+ * processes wearing that profile path were still alive a moment later. A
+ * headless Chrome tree finishes spawning helpers asynchronously, so a helper can
+ * appear *after* the sweep that was supposed to catch it — and a leaked browser
+ * keeps reaching for the keychain on the operator's screen for minutes.
+ *
+ * So: SIGTERM the group, then sweep and re-count on a bounded loop, escalating to
+ * SIGKILL, and only stop when two consecutive counts are 0 or the deadline
+ * passes. The caller still asserts the returned count is 0.
+ */
 export async function reap(pid, profile) {
 	if (pid) {
 		try {
@@ -132,27 +145,36 @@ export async function reap(pid, profile) {
 			}
 		}
 	}
-	await sleep(1500);
-	// `pgrep -f <profile>` is scoped to a path unique to this run, which is what
-	// keeps the sweep from reaching any other Chrome — including the
-	// operator's. Never sweep by program name.
-	spawnSync("/usr/bin/pkill", ["-f", profile]);
-	await sleep(700);
-	const survivors = countProcesses(profile);
-	if (survivors > 0) {
-		spawnSync("/usr/bin/pkill", ["-9", "-f", profile]);
-		await sleep(500);
+	await sleep(1200);
+
+	const deadline = Date.now() + 8000;
+	let survivors = countProcesses(profile);
+	let cleanRounds = survivors === 0 ? 1 : 0;
+	let escalated = false;
+	while (Date.now() < deadline && cleanRounds < 2) {
+		// SIGKILL on the second round: a helper that ignored SIGTERM will not
+		// start ignoring SIGKILL, and the count assertion is what matters.
+		spawnSync("/usr/bin/pkill", escalated ? ["-9", "-f", profile] : ["-f", profile]);
+		escalated = true;
+		await sleep(900);
+		survivors = countProcesses(profile);
+		cleanRounds = survivors === 0 ? cleanRounds + 1 : 0;
 	}
+
 	try {
 		rmSync(profile, { recursive: true, force: true });
 	} catch {
 		// A helper still holding a file makes this fail; the process count is the
 		// assertion that matters, and the caller reports it.
 	}
-	return { survivors: countProcesses(profile), profile };
+	return { survivors: countProcesses(profile), profile, rounds: escalated ? 2 : 1 };
 }
 
-/** Count live processes matching our profile path. The harness asserts this is 0. */
+/**
+ * Count live processes matching our profile path. `pgrep -f <profile>` is scoped
+ * to a path unique to this run, which is what keeps the sweep from reaching any
+ * other Chrome — including the operator's. Never sweep by program name.
+ */
 export function countProcesses(profile) {
 	const result = spawnSync("/usr/bin/pgrep", ["-f", profile], { encoding: "utf8" });
 	if (result.status !== 0) return 0; // pgrep exits 1 when nothing matches: the good case.
