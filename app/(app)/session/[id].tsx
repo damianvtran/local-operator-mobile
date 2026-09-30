@@ -135,19 +135,23 @@ export default function Session() {
 	/* The panels, in one place because they render in one of two places: a rail beside
 	 * the transcript on a wide viewport, or beneath it on a phone. Writing them twice
 	 * is how the two layouts come to disagree about the same list. */
+	// A rail needs room AND content. An empty rail on a tablet is ~300 pt of nothing
+	// beside the conversation, which is the "wasted space" finding in another form.
+	const showRail = layout.twoPane && (!todos.empty || !subagents.empty);
+
 	const panels = (
 		<>
 			<TodosPanel
 				todos={todos}
 				// A rail has room for both panels, so the phone's one-at-a-time rule — which
 				// exists to keep the conversation on screen — is not applied there.
-				open={layout.twoPane || openPanel === "todos"}
+				open={showRail || openPanel === "todos"}
 				onToggle={() => setOpenPanel(openPanel === "todos" ? null : "todos")}
 				heldShut={pending !== null}
 			/>
 			<SubagentsPanel
 				subagents={subagents}
-				open={layout.twoPane || openPanel === "subagents"}
+				open={showRail || openPanel === "subagents"}
 				onToggle={() =>
 					setOpenPanel(openPanel === "subagents" ? null : "subagents")
 				}
@@ -249,13 +253,17 @@ export default function Session() {
 			    centred: a 1366 pt tablet showing a paragraph 1366 px wide is unreadable, and
 			    the fix is a constrained measure rather than a stretched one. */}
 			<View
-				className={layout.twoPane ? "flex-1 flex-row" : "flex-1"}
+				className={showRail ? "flex-1 flex-row" : "flex-1"}
 				onLayout={onLayout}
 			>
-				{layout.twoPane ? (
+				{showRail ? (
 					<ScrollView
 						className="border-r border-hairline"
-						style={{ width: layout.railPt }}
+						// `flexGrow: 0` is load-bearing: react-native-web gives every
+						// ScrollView `flexGrow: 1`, so a width alone is only a flex BASIS
+						// and the rail split the free space with the column (measured in
+						// the 1366 pt frame: an 832 pt rail beside a 533 pt transcript).
+						style={{ width: layout.railPt, flexGrow: 0, flexShrink: 0 }}
 						testID="session-panel-rail"
 					>
 						{panels}
@@ -263,7 +271,7 @@ export default function Session() {
 				) : null}
 				<ReadableColumn maxWidth={layout.measurePt}>
 					{transcript}
-					{layout.twoPane ? null : panels}
+					{showRail ? null : panels}
 					{working !== null ? (
 						<WorkingLine
 							activity={working.activity}
