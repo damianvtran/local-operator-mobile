@@ -100,14 +100,19 @@ export const parseCssShadow = (
 			`Not a single-layer shadow: "${value}". tokens.json § elevation holds one layer per shadow; a multi-layer value needs its own decision here rather than being approximated.`,
 		);
 	}
-	const [, offsetX, offsetY, blur, spread, colour] = match as unknown as [
-		string,
-		string,
-		string,
-		string,
-		string,
-		string,
-	];
+	// The pattern has five capture groups and all are mandatory, so a successful
+	// match fills them; `noUncheckedIndexedAccess` still types each as possibly
+	// undefined, so narrow rather than assert.
+	const [, offsetX, offsetY, blur, spread, colour] = match;
+	if (
+		offsetX === undefined ||
+		offsetY === undefined ||
+		blur === undefined ||
+		spread === undefined ||
+		colour === undefined
+	) {
+		throw new Error(`Could not read five shadow fields from "${value}"`);
+	}
 	const { hex, opacity } = parseColour(colour);
 	const spreadPx = Number(spread);
 	return {

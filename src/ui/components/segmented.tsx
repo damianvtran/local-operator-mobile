@@ -23,7 +23,7 @@ export type SegmentedOption<T extends string> = {
 	value: T;
 	label: string;
 	/** The Maestro selector for this option, so a flow can press it by name. */
-	testID?: string;
+	testID: string;
 };
 
 export type SegmentedProps<T extends string> = {
@@ -33,7 +33,7 @@ export type SegmentedProps<T extends string> = {
 	value: T;
 	onChange: (value: T) => void;
 	disabled?: boolean;
-	testID?: string;
+	testID: string;
 };
 
 export const Segmented = <T extends string>({
@@ -42,7 +42,7 @@ export const Segmented = <T extends string>({
 	value,
 	onChange,
 	disabled = false,
-	testID = "segmented",
+	testID,
 }: SegmentedProps<T>) => (
 	<View
 		className={segmentedTrackClasses}

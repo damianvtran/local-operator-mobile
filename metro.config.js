@@ -1,4 +1,5 @@
-// Metro configuration.
+// Metro configuration. This stays JavaScript: Metro and Expo load `metro.config.js`
+// with require() before any TypeScript tooling exists, so it cannot be `.ts`.
 //
 // `withUniwindConfig` must be the OUTERMOST wrapper (uniwind docs, metro-config),
 // so it wraps `expo/metro-config`'s default config and must stay last if another
@@ -72,13 +73,20 @@ const uniwind = withUniwindConfig(config, {
  */
 const UNIWIND_MISSING_WEB_SHIM = "exports/InputAccessoryView";
 
+/* The specifier alone is not enough: a suffix match would also swallow a
+ * same-named `exports/InputAccessoryView` from an unrelated package. The gap
+ * exists only where react-native-web's own index re-exports the component, so the
+ * request must also come from inside react-native-web. */
+const isKnownGap = (context, moduleName) =>
+	moduleName.endsWith(UNIWIND_MISSING_WEB_SHIM) &&
+	/[\\/]react-native-web[\\/]/.test(context.originModulePath ?? "");
+
 const uniwindResolveRequest = uniwind.resolver.resolveRequest;
 uniwind.resolver.resolveRequest = (context, moduleName, platform) => {
-	const isKnownGap = moduleName.endsWith(UNIWIND_MISSING_WEB_SHIM);
 	try {
 		return uniwindResolveRequest(context, moduleName, platform);
 	} catch (error) {
-		if (!isKnownGap) throw error;
+		if (!isKnownGap(context, moduleName)) throw error;
 		console.warn(
 			`[metro] uniwind has no web shim for "${moduleName}" (${platform}); ` +
 				"using react-native-web's own module — see metro.config.js. " +

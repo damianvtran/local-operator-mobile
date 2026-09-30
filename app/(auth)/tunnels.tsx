@@ -1,4 +1,4 @@
-import { SCREEN } from "@/ui/a11y";
+import { EMPTY, SCREEN } from "@/ui/a11y";
 import { EmptyState, Screen } from "@/ui/components";
 
 /**
@@ -12,7 +12,7 @@ export default function Computers() {
 			<EmptyState
 				headline="No computers yet."
 				next="Run `lop mobile serve` on the computer you want to control."
-				testID="computers-empty"
+				testID={EMPTY.computers}
 			/>
 		</Screen>
 	);

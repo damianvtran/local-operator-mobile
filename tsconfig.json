@@ -26,7 +26,6 @@
 		"src/**/*.tsx",
 		"app/**/*.ts",
 		"app/**/*.tsx",
-		"scripts/**/*.mjs",
 		"*.ts",
 		"*.js",
 		".expo/types/**/*.ts",

@@ -13,7 +13,8 @@
  * spelled in two files is one file away from a suite that quietly tests nothing.
  *
  * Naming: `<area>-<thing>`, kebab-case, stable forever — these names are
- * referenced by test flows, not by the UI copy.
+ * referenced by test flows, not by the UI copy. Renaming one is a contract change
+ * that the flow check (`a11y.e2e.test.ts`) turns into a failing test.
  */
 
 /** The values React Native accepts for `accessibilityRole`. */
@@ -56,37 +57,104 @@ export const SCREEN = {
 	settings: "settings-screen",
 } as const;
 
-/** Interactive controls. One identifier per control a flow has to reach. */
+/**
+ * The empty state each screen renders while its real content does not exist yet.
+ * One per screen and named after it, so a flow asserting "this screen is honestly
+ * empty" cannot be satisfied by another screen's empty state.
+ */
+export const EMPTY = {
+	welcome: "welcome-empty",
+	signIn: "sign-in-empty",
+	computers: "computers-empty",
+	customRoute: "custom-empty",
+	sessions: "sessions-empty",
+	session: "session-empty",
+	subagent: "subagent-empty",
+	past: "past-empty",
+	newSession: "new-session-empty",
+	settingsConnection: "settings-connection-empty",
+} as const;
+
+/**
+ * Interactive controls: one identifier per control a flow has to reach, named
+ * `<screen-or-surface>-<what it does>`.
+ *
+ * There is deliberately NO generic entry (`button`, `input`, `list-row`). The
+ * primitives take `testID` as a REQUIRED prop, so a screen with two buttons cannot
+ * fall back to two identical `"button"` identifiers — Maestro's `id:` matching
+ * would then pick one arbitrarily, and the failure reads as a flaky flow rather
+ * than a naming mistake. A control that a later stream adds gets its name here in
+ * the same change that renders it.
+ */
 export const CONTROL = {
-	// The shell's own controls.
+	// Welcome and Sessions: the two shell routes that render an action.
+	welcomeContinue: "welcome-continue",
+	sessionsNew: "sessions-new",
+	sessionsSettings: "sessions-settings",
+
+	// The back affordance each pushed screen puts in its header. Named per screen
+	// because two screens are on the navigation stack at once during a transition.
+	sessionBack: "session-back",
+	subagentBack: "subagent-back",
+
+	// Settings: the theme override, the one setting that needs no connection.
+	settingsTheme: "settings-theme",
+	themeSystem: "appearance-theme-system",
 	themeLight: "appearance-theme-light",
 	themeDark: "appearance-theme-dark",
-	themeSystem: "appearance-theme-system",
 
-	// Primitives, addressed generically where a screen will name its own use.
-	button: "button",
-	iconButton: "icon-button",
-	input: "input",
-	textarea: "textarea",
-	chip: "chip",
-	listRow: "list-row",
-	segmented: "segmented",
-	segmentedOption: "segmented-option",
+	// Overlays. Only one sheet, one dialog and one toast can be up at a time (the
+	// z ladder allows no more), so their parts are unambiguous without a
+	// discriminator; the surface itself is named by whichever screen opens it.
 	sheetClose: "sheet-close",
+	sheetScrim: "sheet-scrim",
 	dialogConfirm: "dialog-confirm",
 	dialogCancel: "dialog-cancel",
+	dialogScrim: "dialog-scrim",
 	toast: "toast",
-
-	// Route stubs the later streams fill in; declared here so the names are
-	// agreed before two screens invent two spellings.
-	sessionsNew: "sessions-new",
-	sessionsPast: "sessions-past",
-	sessionsSettings: "sessions-settings",
-	welcomeContinue: "welcome-continue",
-	signInStart: "sign-in-start",
-	customRouteSave: "custom-route-save",
-	retry: "retry",
 } as const;
+
+/**
+ * Every static identifier the app can render, flat, as a Node script reads it.
+ *
+ * This file is the single source of truth for the identifier contract, and it is
+ * plain TypeScript with NO imports on purpose: `node src/ui/a11y.ts` can load it
+ * through type stripping without React Native, the path alias or a bundler. The
+ * end-to-end flows (`e2e/maestro/**`) are YAML that must follow these names, never
+ * the reverse, and the check that they do lives in `a11y.e2e.test.ts`.
+ */
+export const IDENTIFIERS: readonly string[] = [
+	...Object.values(SCREEN),
+	...Object.values(EMPTY),
+	...Object.values(CONTROL),
+];
+
+/**
+ * Families of parameterised identifiers, declared as their literal prefix
+ * (`"session-row-"` for `session-row-<id>`). Empty until a screen renders one: the
+ * shell has no list rows or per-computer rows yet, and a family is added in the
+ * same change as the control that carries it.
+ */
+export const IDENTIFIER_FAMILIES: readonly string[] = [];
+
+/**
+ * Whether a selector names something the app can render: a static identifier, or
+ * a member of a declared family. A flow writes a family member either as a
+ * template (`session-row-${SESSION_ID}`) or as a concrete instance
+ * (`session-row-6714def86197`); both resolve through the literal text before the
+ * first `${`.
+ */
+export const isKnownIdentifier = (
+	selector: string,
+	families: readonly string[] = IDENTIFIER_FAMILIES,
+	statics: readonly string[] = IDENTIFIERS,
+): boolean => {
+	if (statics.includes(selector)) return true;
+	const literal = selector.split("${")[0] ?? selector;
+	return families.some(
+		(family) => literal.startsWith(family) && selector.length > family.length,
+	);
+};
 
 /** Regions whose content changes on its own, and how it should be announced. */
 export const LIVE_REGION = {

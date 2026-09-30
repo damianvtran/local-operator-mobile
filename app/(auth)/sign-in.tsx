@@ -1,4 +1,4 @@
-import { SCREEN } from "@/ui/a11y";
+import { EMPTY, SCREEN } from "@/ui/a11y";
 import { EmptyState, Screen } from "@/ui/components";
 
 /**
@@ -12,7 +12,7 @@ export default function SignIn() {
 			<EmptyState
 				headline="Sign in with Radient."
 				next="Your browser finishes the sign-in, so the app never sees your password."
-				testID="sign-in-empty"
+				testID={EMPTY.signIn}
 			/>
 		</Screen>
 	);

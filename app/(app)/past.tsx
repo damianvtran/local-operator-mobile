@@ -1,4 +1,4 @@
-import { SCREEN } from "@/ui/a11y";
+import { EMPTY, SCREEN } from "@/ui/a11y";
 import { EmptyState, Screen } from "@/ui/components";
 
 /**
@@ -11,7 +11,7 @@ export default function PastSessions() {
 			<EmptyState
 				headline="Nothing here yet."
 				next="Sessions you have finished appear here, and you can search them."
-				testID="past-empty"
+				testID={EMPTY.past}
 			/>
 		</Screen>
 	);

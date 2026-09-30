@@ -59,6 +59,7 @@ export const Dialog = ({
 					style={{ backgroundColor: scrimColour }}
 					accessibilityRole={ROLE.button}
 					accessibilityLabel="Cancel"
+					testID={CONTROL.dialogScrim}
 					onPress={onCancel}
 				/>
 				<View className={DIALOG_SURFACE_CLASS} style={{ ...shadow }}>

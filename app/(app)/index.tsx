@@ -1,7 +1,7 @@
 import { useRouter } from "expo-router";
 import { Settings } from "lucide-react-native";
 
-import { CONTROL, SCREEN } from "@/ui/a11y";
+import { CONTROL, EMPTY, SCREEN } from "@/ui/a11y";
 import { EmptyState, IconButton, Screen } from "@/ui/components";
 
 /**
@@ -33,8 +33,9 @@ export default function Sessions() {
 				action={{
 					label: "New session",
 					onPress: () => router.push("/new"),
+					testID: CONTROL.sessionsNew,
 				}}
-				testID="sessions-empty"
+				testID={EMPTY.sessions}
 			/>
 		</Screen>
 	);

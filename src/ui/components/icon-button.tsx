@@ -26,7 +26,7 @@ export type IconButtonProps = {
 	/** Adds `border-control` where the icon alone does not carry the affordance. */
 	outlined?: boolean;
 	accessibilityHint?: string;
-	testID?: string;
+	testID: string;
 };
 
 export const IconButton = ({

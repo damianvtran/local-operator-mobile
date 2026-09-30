@@ -22,7 +22,12 @@ import { bannerClasses, bannerGlyph, bannerInkClasses } from "@/ui/variants";
 export type BannerProps = {
 	tone: "danger" | "warning";
 	message: string;
-	action?: { label: string; onPress: () => void; loading?: boolean };
+	action?: {
+		label: string;
+		onPress: () => void;
+		loading?: boolean;
+		testID: string;
+	};
 	testID?: string;
 };
 
@@ -43,6 +48,7 @@ export const Banner = ({ tone, message, action, testID }: BannerProps) => (
 			<Button
 				label={action.label}
 				onPress={action.onPress}
+				testID={action.testID}
 				loading={action.loading}
 				variant="quiet"
 				size="sm"

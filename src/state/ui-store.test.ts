@@ -12,7 +12,7 @@ describe("ui-store", () => {
 		expect(useUiStore.getState().themePreference).toBe("system");
 	});
 
-	it("records a manual override", () => {
+	it("records a manual override and lets the reader return to the device", () => {
 		useUiStore.getState().setThemePreference("dark");
 		expect(useUiStore.getState().themePreference).toBe("dark");
 		useUiStore.getState().setThemePreference("system");

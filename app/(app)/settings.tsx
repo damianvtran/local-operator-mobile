@@ -1,6 +1,6 @@
 import { Text, View } from "react-native";
 
-import { CONTROL, SCREEN } from "@/ui/a11y";
+import { CONTROL, EMPTY, SCREEN } from "@/ui/a11y";
 import { useTheme } from "@/ui/appearance";
 import { Divider, EmptyState, Screen, Segmented } from "@/ui/components";
 
@@ -26,7 +26,7 @@ export default function Settings() {
 				</Text>
 				<Segmented
 					label="Theme"
-					testID="settings-theme"
+					testID={CONTROL.settingsTheme}
 					value={preference}
 					onChange={setPreference}
 					options={[
@@ -53,7 +53,7 @@ export default function Settings() {
 				<EmptyState
 					headline="Not connected."
 					next="Your computers, the route you are on, and signing out appear here."
-					testID="settings-connection-empty"
+					testID={EMPTY.settingsConnection}
 				/>
 			</View>
 		</Screen>

@@ -32,7 +32,7 @@ export type TextareaProps = {
 	maxLines?: number;
 	onSubmitEditing?: () => void;
 	autoFocus?: boolean;
-	testID?: string;
+	testID: string;
 };
 
 /** One line's height, from the type ramp: `mono-code` is 13pt at 1.6, rounded up
@@ -50,7 +50,7 @@ export const Textarea = ({
 	maxLines = 6,
 	onSubmitEditing,
 	autoFocus,
-	testID = "textarea",
+	testID,
 }: TextareaProps) => {
 	const [contentHeight, setContentHeight] = useState(LINE_PX);
 	const cap = Math.min(maxLines * LINE_PX, TEXTAREA_MAX_PX);
