@@ -208,6 +208,12 @@ op, history, the side payloads, the unread handshake and logout. Each step print
 `PASS`/`FAIL` with the actual detail; a step that cannot run is `SKIP` with the
 reason and is never counted as a pass.
 
+`--disable-warning=MODULE_TYPELESS_PACKAGE_JSON` only silences the one warning
+Node prints for `src/`: the repository root cannot declare `"type": "module"`
+(`metro.config.js` is loaded with `require`), so its modules are reparsed as ES
+modules and Node says so once. It changes nothing about the run, and it keeps a
+transcript meant for a pull request clean. `--help` prints the recipe.
+
 **Two suites, two questions.** `src/e2e/` (run by `pnpm test`) drives the same
 client over real sockets against a fixture-replay server, so it proves the client
 agrees with the *captured wire* and needs no daemon. The smoke script proves it
@@ -231,7 +237,8 @@ env -i HOME="$ISO" LOCAL_OPERATOR_CONFIG_DIR="$ISO/.local-operator" \
     "$LOP_PY" -m local_operator.mobile.service --port "$PORT" &   # the INSTALLED runtime, read-only
 
 # 2. The run.
-node scripts/relay-smoke.ts --base-url "http://127.0.0.1:$PORT" --password-file "$ISO/pw"
+node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/relay-smoke.ts \
+  --base-url "http://127.0.0.1:$PORT" --password-file "$ISO/pw"
 
 # 3. Reap by pid and delete the root: an isolated daemon left running is a stray
 #    listener, and the root holds a config and a password.

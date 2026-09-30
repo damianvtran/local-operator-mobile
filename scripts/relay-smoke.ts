@@ -30,10 +30,26 @@ interface Config {
 	password: string;
 }
 
+const USAGE =
+	"usage: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/relay-smoke.ts \\\n" +
+	"         --base-url http://127.0.0.1:<port> [--password-file <path>]\n" +
+	"\n" +
+	"  --base-url        the relay to smoke (never port 4098, never a *.radienthq.com host)\n" +
+	"  --password-file   a 0600 file holding the relay password; or RELAY_PASSWORD /\n" +
+	"                    RELAY_BASE_URL / RELAY_PASSWORD_FILE in the environment\n" +
+	"\n" +
+	"  The flag silences Node's MODULE_TYPELESS_PACKAGE_JSON warning for src/ — the\n" +
+	"  repository root cannot be `type: module` (metro.config.js is loaded with\n" +
+	"  require), so each src/ module is reparsed as ESM and warns once.\n";
+
 function configFromArgs(argv: string[]): Config | number {
 	let baseUrl = process.env.RELAY_BASE_URL ?? "";
 	let passwordFile = process.env.RELAY_PASSWORD_FILE ?? "";
 	for (let index = 0; index < argv.length; index += 1) {
+		if (argv[index] === "--help" || argv[index] === "-h") {
+			process.stdout.write(USAGE);
+			return 0;
+		}
 		if (argv[index] === "--base-url") baseUrl = argv[++index] ?? "";
 		else if (argv[index] === "--password-file")
 			passwordFile = argv[++index] ?? "";

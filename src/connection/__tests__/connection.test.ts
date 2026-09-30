@@ -34,6 +34,7 @@ import {
 	isSignedOut,
 	LoopbackUnavailableError,
 	loopbackRedirectUri,
+	mapStatus,
 	memorySecureStore,
 	needsRemint,
 	parseCallbackUrl,
@@ -41,6 +42,7 @@ import {
 	RadientAuthError,
 	type RadientTokens,
 	refreshRadientTokens,
+	refreshTunnelSession,
 	SecureStorage,
 	SecureStorageError,
 	signInWithRadient,
@@ -583,6 +585,26 @@ describe("discovery turns tunnels into computers, honestly", () => {
 
 /* --------------------------------------------------------------- tunnel session */
 
+describe("the console's status vocabulary, which the UI branches on", () => {
+	/* Every word the console can report, mapped through the real function. The
+	 * screen picks its affordance from the result, so an unmapped word silently
+	 * becomes "unknown" and hides a computer the user can actually use. */
+	it.each([
+		["active", "ready"],
+		["ACTIVE", "ready"],
+		["disabled", "off"],
+		["suspended", "suspended"],
+		["pending", "provisioning"],
+		["reconciling", "provisioning"],
+		["revoking", "gone"],
+		["deleted", "gone"],
+		["something-new", "unknown"],
+		[undefined, "unknown"],
+	] as const)("maps %s to %s", (raw, expected) => {
+		expect(mapStatus(raw)).toBe(expected);
+	});
+});
+
 describe("the tunnel session lifecycle", () => {
 	function session(overrides: Partial<TunnelSession> = {}): TunnelSession {
 		return {
@@ -642,6 +664,26 @@ describe("the tunnel session lifecycle", () => {
 			manager.mint({ tunnelId: "t-1", hostname: HOST }),
 		).rejects.toMatchObject({ failure: "oauth" });
 		expect(calls).toHaveLength(0);
+	});
+
+	it("classifies a 429 as rate-limited and carries the Retry-After the limiter sent", async () => {
+		/* The control plane's session endpoints are per-IP limited (5/s burst 20), so
+		 * a cold start that stampedes hurts every device on the address: the wait the
+		 * server asked for has to survive the error, not be re-invented by the caller. */
+		const { fetchImpl } = recordingFetch(
+			() =>
+				new Response('{"error":"rate limited"}', {
+					status: 429,
+					headers: { "content-type": "application/json", "retry-after": "120" },
+				}),
+		);
+		await expect(
+			refreshTunnelSession(session(), { fetchImpl }),
+		).rejects.toMatchObject({
+			failure: "rate-limited",
+			status: 429,
+			retryAfterMs: 120_000,
+		});
 	});
 
 	it("maps a 402 to billing, which is what it means", async () => {

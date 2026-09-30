@@ -11,19 +11,30 @@
  * re-sending under a fresh UUID after an ambiguous failure is exactly the
  * duplicate this envelope exists to prevent.
  *
- * The decision table, in one place, because every keep/clear caller resolves to
- * it and a second ad-hoc rule beside it is the defect this module removes:
+ * **The table itself is NOT here.** It is `defaultEnvelopeFor` in `errors.ts`,
+ * reached through `RelayError.envelope`, because a second copy of it beside the
+ * taxonomy is exactly the defect this module was rebuilt to remove: the two used
+ * to disagree, and the operative path cleared a typed instruction on a `503`.
+ * `dispositionForOutcome` reads that one verdict and this module only stores the
+ * bytes. The rows, for the reader:
  *
- * | Outcome                                  | Envelope |
- * |------------------------------------------|----------|
- * | `200` acknowledgement                    | clear    |
- * | `401`                                    | clear-all (scoped storage is gone with the identity) |
- * | `408`, `502`, `504`                      | **keep** — the acknowledgement may have been lost after a durable admission |
- * | transport failure (no response at all)   | **keep** |
- * | schema failure on the response           | **keep** — admission was never proven either way |
- * | every other 4xx/5xx                      | clear — pre-admission rejection, and replaying it is never useful |
- * | TTL (24 h) or an explicit discard        | clear    |
- * | count bound (8) exceeded                 | evict the oldest, never the active route |
+ * | Outcome                                       | Envelope |
+ * |-----------------------------------------------|----------|
+ * | `200` acknowledgement                         | clear    |
+ * | `401`                                         | clear-all (scoped storage is gone with the identity) |
+ * | `408`, `502`, `504`, an unreadable `2xx`      | **keep** — admission may have happened and only the acknowledgement was lost |
+ * | transport failure (no response at all)        | **keep** |
+ * | `503` (edge text/plain, or every gateway reason), `502` "local harness unavailable" | **keep** — see below |
+ * | every other 4xx/5xx                           | clear — the relay's own pre-admission rejection |
+ * | TTL (24 h) or an explicit discard             | clear    |
+ * | count bound (8) exceeded                      | evict the oldest, never the active route |
+ *
+ * The `503` row **deliberately diverges from `contract.md` §5.1**, which puts
+ * every status outside `408/502/504` in the clear column. The gateway and the
+ * edge sit *upstream* of the relay's `CommandReservations` ledger
+ * (`§5.3`), so their refusal proves nothing about whether an earlier attempt
+ * reached the runtime; the two mistakes are not symmetric, and replaying a
+ * de-duplicated id is free while discarding a typed instruction is not.
  *
  * Two deliberate differences from the web client, both because native storage is
  * not `localStorage`:

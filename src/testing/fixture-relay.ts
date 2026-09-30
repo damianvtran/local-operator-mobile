@@ -68,6 +68,12 @@ export interface FixtureRelayOptions {
 	projectionFrames?: (connection: number) => unknown[];
 	/** From this SSE connection number on, answer the stream open with 401. */
 	rejectStreamsFrom?: number;
+	/** Fixture files to serve by the request each one RECORDS (`request.method` +
+	 *  `request.path`), for the routes this server does not model by hand. The
+	 *  fixtures carry their originating request, so a route table built from them
+	 *  cannot drift from the capture: a client that asks for the wrong path gets a
+	 *  404 here rather than a passing test. First match wins. */
+	replay?: readonly string[];
 }
 
 export interface FixtureRelay {
@@ -107,6 +113,27 @@ export async function startFixtureRelay(
 	let commandCount = 0;
 	let streamCount = 0;
 	const session = { token: "" };
+
+	/* Built once from the fixtures' own recorded requests. */
+	const replayIndex = new Map<
+		string,
+		{ status: number; body: unknown; contentType: string }
+	>();
+	for (const rel of options.replay ?? []) {
+		const file = loadFixture<{
+			status?: number;
+			headers?: Record<string, string>;
+			body?: unknown;
+			request?: { method?: string; path?: string };
+		}>(rel);
+		if (!file.request?.method || !file.request.path) continue;
+		const contentType = file.headers?.["content-type"] ?? "application/json";
+		replayIndex.set(`${file.request.method} ${file.request.path}`, {
+			status: file.status ?? 200,
+			body: file.body,
+			contentType,
+		});
+	}
 
 	const server: Server = createServer(async (request, response) => {
 		const url = new URL(request.url ?? "/", "http://relay.invalid");
@@ -237,6 +264,22 @@ export async function startFixtureRelay(
 				return;
 			}
 		}
+		const replayed = replayIndex.get(`${request.method} ${path}${url.search}`);
+		if (replayed) {
+			response.writeHead(replayed.status, {
+				"content-type": replayed.contentType,
+			});
+			/* A binary fixture's body is a description, not the bytes; the routes
+			 * replayed here are the JSON ones, and the image route is asserted for its
+			 * request rather than its payload. */
+			response.end(
+				replayed.contentType.includes("json")
+					? JSON.stringify(replayed.body)
+					: String(replayed.body ?? ""),
+			);
+			return;
+		}
+
 		json(response, 404, { error: "not found" });
 	});
 

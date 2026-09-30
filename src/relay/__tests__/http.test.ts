@@ -1,3 +1,5 @@
+// biome-ignore-all lint/performance/useTopLevelRegex: a regex literal inside an
+// assertion is not a hot path — there is no per-request work here to hoist out of.
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -260,5 +262,41 @@ describe("a runtime that cannot stream is named, not faked", () => {
 		expect(error).toBeInstanceOf(RelayError);
 		expect(error.kind).toBe("transport");
 		expect(error.message).toContain("cannot stream");
+	});
+});
+
+describe("a runtime with no fetch at all", () => {
+	it("fails at construction, naming the problem, rather than on every request", () => {
+		/* The failure this prevents: the app boots on a platform that never bound the
+		 * global, and every request fails later as a `transport` error — which reads
+		 * as "the relay is unreachable" when the real problem is the build. */
+		vi.stubGlobal("fetch", undefined);
+		try {
+			expect(
+				() =>
+					new RelayHttpClient({
+						baseUrl: TUNNEL_ORIGIN,
+						auth: () => tunnelAuth,
+					}),
+			).toThrow(/no fetch on this runtime/);
+
+			/* An injected implementation is the caller's own function and needs no
+			 * global, so construction still succeeds — the boundary is the fallback. */
+			const injected = (async () =>
+				new Response("{}", {
+					status: 200,
+					headers: { "content-type": "application/json" },
+				})) as unknown as typeof globalThis.fetch;
+			expect(
+				() =>
+					new RelayHttpClient({
+						baseUrl: TUNNEL_ORIGIN,
+						auth: () => tunnelAuth,
+						fetchImpl: injected,
+					}),
+			).not.toThrow();
+		} finally {
+			vi.unstubAllGlobals();
+		}
 	});
 });

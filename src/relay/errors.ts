@@ -14,10 +14,13 @@ const UNKNOWN_TUNNEL = /unknown tunnel/i;
  *
  * - `envelope` — whether a persisted command's delivery is still unknown, which
  *   is the retry-envelope contract (`docs/mobile.md` §Retry-envelope, ported in
- *   `retry-envelope.ts`). It is NOT "should we retry": `502/504/408` and a
- *   transport failure leave the outcome ambiguous and the envelope is kept, a
- *   definitive `4xx` (except 408) or any `5xx` outside that set is a
- *   pre-admission rejection and the envelope is cleared.
+ *   `retry-envelope.ts`). It is NOT "should we retry". `defaultEnvelopeFor` below
+ *   is the ONLY table: keep for `502/504/408`, a transport failure and an
+ *   unreadable `2xx`; keep also for the two upstream refusals — the edge's `503`
+ *   and the gateway's `503 {detail, reason}` and `502 "local harness
+ *   unavailable"` — because those machines sit ahead of the relay's admission
+ *   ledger and cannot know whether an earlier attempt landed (§5.3); clear for the
+ *   relay's own definitive `4xx`; clear-all on `401`.
  * - `retry` — what an automatic retry may do, and after how long.
  *
  * `surface` is the UI's decision, pre-made here so three screens cannot each
@@ -55,8 +58,10 @@ export type RelayErrorKind =
 	/** A 2xx whose body did not match its schema. */
 	| "malformed-frame";
 
-/** Whether a persisted command's outcome is still unknown (keep the envelope)
- *  or has been settled (clear it). Mirrors `retry-envelope.ts`'s rules. */
+/** Whether a persisted command's outcome is still unknown (keep the envelope) or
+ *  has been settled (clear it). **This type's values are decided here and nowhere
+ *  else** (`RelayError.envelope`, defaulted by `defaultEnvelopeFor`);
+ *  `retry-envelope.ts` consumes the verdict rather than re-deriving it. */
 export type EnvelopeDirective = "keep" | "clear" | "clear-all";
 
 /** What an automatic retry may do with this request. */

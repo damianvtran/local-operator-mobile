@@ -33,6 +33,7 @@ import {
 	fixtureBody,
 	startFixtureRelay,
 } from "../testing/fixture-relay";
+import { loadFixture } from "../testing/fixtures";
 
 const relays: FixtureRelay[] = [];
 afterEach(async () => {
@@ -48,6 +49,12 @@ async function relayWith(
 }
 
 const HOSTNAME = "0123456789abcdef0123456789abcdef-lop.radienthq.com";
+/* The second session id and the command id appear in the captures this file
+ * replays: the route table must address the SAME session the sample records, or
+ * the replay index misses and the failure would be the harness's, not the
+ * client's. */
+const OTHER_SESSION = "9ed9e2f534cd";
+const COMMAND_UUID = "cf13127c-6523-4138-a225-0eccdba095da";
 const GRANT = "grant-jwt";
 
 function tunnelSession(overrides: Partial<TunnelSession> = {}): TunnelSession {
@@ -450,5 +457,148 @@ describe("Radient route: exactly what the edge is sent", () => {
 		expect(errors[0]?.status).toBe(401);
 		expect(stream.connection.isRunning).toBe(false);
 		expect(relay.streamOpens.get("/api/sessions/events")).toBe(2);
+	});
+});
+
+/* ------------------------------------------------- the wire, route by route */
+
+/**
+ * Every route the client exposes, checked against the request its own capture
+ * records.
+ *
+ * Each fixture in the corpus carries the request that produced it
+ * (`request.method` + `request.path`, query included), so the capture is the
+ * oracle: the assertion is that the request the SERVER received is the one the
+ * relay's own sample says that route takes. A wrong path, a wrong query or a
+ * renamed body key fails here — which matters because these routes are otherwise
+ * covered only by the daemon-bound smoke script, and a drift would pass CI.
+ */
+const WIRE_ROUTES: {
+	fixture: string;
+	call: (client: ReturnType<typeof customClient>["client"]) => Promise<unknown>;
+	/** The body keys the contract's own sample implies, when the route mutates. */
+	bodyKeys?: string[];
+	expectedBody?: unknown;
+	/** Set when the recorded sample is a refusal: the status it must classify to. */
+	expectFailure?: number;
+}[] = [
+	{
+		fixture: "http/past-with-rows.json",
+		call: (client) => client.pastSessions(),
+	},
+	{
+		fixture: "http/search-hit.json",
+		call: (client) => client.searchSessions({ query: "hello", limit: 5 }),
+	},
+	{
+		/* Also pins the OMISSION: a limit the caller did not give is not sent, which
+		 * the capture shows and the contract leaves to the relay to default. */
+		fixture: "http/history-unknown.json",
+		call: (client) => client.history("ffffffffffff", {}),
+		expectFailure: 404,
+	},
+	{
+		fixture: "http/search-empty.json",
+		call: (client) => client.searchSessions({ query: "hello" }),
+	},
+	{
+		fixture: "http/models.json",
+		call: (client) => client.models(),
+	},
+	{
+		fixture: "http/commands.json",
+		call: (client) => client.commands(),
+	},
+	{
+		fixture: "http/directories.json",
+		call: (client) => client.directories(),
+	},
+	{
+		fixture: "http/history-ok.json",
+		call: (client) => client.history(FIXTURE_SESSION_ID, { limit: 5 }),
+	},
+	{
+		fixture: "http/start-session.json",
+		call: (client) => client.startSession({}),
+	},
+	{
+		/* `pin` sends the DESIRED STATE, not a toggle: the sample's own response
+		 * field is `pinned`, and the relay refuses anything else with a 422. */
+		fixture: "http/pin-true.json",
+		call: (client) => client.pin(FIXTURE_SESSION_ID, true),
+		expectedBody: { pinned: true },
+	},
+	{
+		fixture: "http/seen-real-token.json",
+		call: (client) => client.seen(FIXTURE_SESSION_ID, "token-from-the-frame"),
+		bodyKeys: ["completion_token"],
+	},
+	{
+		fixture: "http/op-ping.json",
+		call: (client) => client.ping(OTHER_SESSION),
+		expectedBody: { op: "ping" },
+	},
+	{
+		fixture: "http/command-prompt-ok.json",
+		call: (client) =>
+			client.command(FIXTURE_SESSION_ID, {
+				op: "prompt",
+				command_id: COMMAND_UUID,
+				text: "hello",
+			}),
+		bodyKeys: ["op", "command_id", "text"],
+	},
+	{
+		/* No success capture exists for the subagent routes; the recorded refusal is
+		 * still the wire fact, so the request is asserted and the 404 classified. */
+		fixture: "http/subagent-unknown.json",
+		call: (client) => client.agentDetail(FIXTURE_SESSION_ID, "job-x"),
+		expectFailure: 404,
+	},
+	{
+		fixture: "http/subagent-history-unknown.json",
+		call: (client) => client.agentHistory(FIXTURE_SESSION_ID, "job-x"),
+		expectFailure: 404,
+	},
+	{
+		fixture: "http/image-ok.json",
+		call: (client) =>
+			client.image(OTHER_SESSION, "723ebb3d-8535-4fb3-9a13-e4399b085e85", 0),
+	},
+];
+
+describe("every route is sent as the relay's own capture records it", () => {
+	it.each(WIRE_ROUTES)("$fixture", async (route) => {
+		const relay = await relayWith({
+			auth: { mode: "custom" },
+			replay: WIRE_ROUTES.map((entry) => entry.fixture),
+		});
+		const { client } = customClient(relay);
+		await client.login("correct horse");
+
+		const recorded = loadFixture<{ request: { method: string; path: string } }>(
+			route.fixture,
+		).request;
+
+		try {
+			await route.call(client);
+		} catch (cause) {
+			const error = cause as { status?: number };
+			if (route.expectFailure === undefined) throw cause;
+			expect(error.status).toBe(route.expectFailure);
+		}
+
+		const sent = relay.requests.at(-1);
+		expect(`${sent?.method} ${sent?.path}`).toBe(
+			`${recorded.method} ${recorded.path}`,
+		);
+		if (route.expectedBody !== undefined) {
+			expect(sent?.body).toEqual(route.expectedBody);
+		}
+		if (route.bodyKeys) {
+			expect(Object.keys(sent?.body as object).sort()).toEqual(
+				[...route.bodyKeys].sort(),
+			);
+		}
 	});
 });

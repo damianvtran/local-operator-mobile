@@ -17,6 +17,12 @@
  *   explicit `.ts`/`.json` paths resolve exactly as Node would.
  * - `src/` must stay strip-clean: no enums, namespaces or constructor parameter
  *   properties, because strip-only mode refuses them.
+ *
+ * One warning is expected and harmless: Node prints `MODULE_TYPELESS_PACKAGE_JSON`
+ * once for `src/`, because the repository root cannot declare `"type": "module"`
+ * (metro.config.js is loaded with `require`) and `scripts/package.json` scopes only
+ * `scripts/`. Pass `--disable-warning=MODULE_TYPELESS_PACKAGE_JSON` when the
+ * transcript is meant to be pasted somewhere; nothing about the run changes.
  */
 
 import { existsSync, statSync } from "node:fs";

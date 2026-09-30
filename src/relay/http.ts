@@ -124,12 +124,8 @@ export interface RelayStreamResponse {
 	release: () => Promise<void>;
 }
 
-/* Hoisted: a request is built on every call, and a cookie header is re-split for
- *  every response that carries one. */
+/* Hoisted: the base URL is normalised once per client, not per request. */
 const TRAILING_SLASHES = /\/+$/;
-/** Splits a combined `Set-Cookie` at a `,` that starts another pair. The
- *  lookahead keeps an `Expires` date's comma intact, because that comma is always
- *  followed by a space and a day name rather than `name=`. */
 
 const CONTENT_TYPE_JSON = "application/json";
 const CONTENT_TYPE_FORM = "application/x-www-form-urlencoded";

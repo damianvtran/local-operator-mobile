@@ -25,7 +25,6 @@ import {
 	RelayHttpClient,
 	type RelayRequest,
 	type RequestAuth,
-	SEARCH_LIMIT,
 } from "../index";
 
 const BASE = "https://tunnel.example.invalid";
@@ -108,7 +107,11 @@ function fixtureBody(rel: string): { status: number; body: unknown } {
 }
 
 describe("reads use the contract's paths and query", () => {
-	it("clamps history's limit to the contract's range instead of sending a value the relay would silently correct", async () => {
+	it("clamps a limit the caller gave, and omits one they did not", async () => {
+		/* Two rules, because they answer different questions: a supplied value is
+		 * corrected into the contract's range, and an absent one stays absent — the
+		 * default is the relay's policy, and every captured client request leaves the
+		 * parameter off when it has none (see `wireLimit`). */
 		const page = fixtureBody("http/history-ok.json").body;
 		const { http, client } = endpoints(() => ({ json: page }));
 		await client.history("6714def86197", { before: "a1b2", limit: 9_999 });
@@ -120,9 +123,7 @@ describe("reads use the contract's paths and query", () => {
 		expect(http.requests[1]?.path).toBe(
 			`/api/sessions/6714def86197/history?limit=${HISTORY_LIMIT.min}`,
 		);
-		expect(http.requests[2]?.path).toBe(
-			`/api/sessions/6714def86197/history?limit=${HISTORY_LIMIT.default}`,
-		);
+		expect(http.requests[2]?.path).toBe("/api/sessions/6714def86197/history");
 	});
 
 	it("escapes a search query rather than concatenating it", async () => {
@@ -130,7 +131,12 @@ describe("reads use the contract's paths and query", () => {
 		const { http, client } = endpoints(() => ({ json: body }));
 		await client.searchSessions({ query: "hello world & more" });
 		expect(http.requests[0]?.path).toContain("q=hello+world+%26+more");
-		expect(http.requests[0]?.path).toContain(`limit=${SEARCH_LIMIT.default}`);
+		/* No limit was given, so none is sent: `search-empty.json` records exactly
+		 * `?q=hello`, and the relay owns the default. */
+		expect(http.requests[0]?.path).not.toContain("limit=");
+		/* A limit that IS given goes on the wire, as `search-hit.json` records. */
+		await client.searchSessions({ query: "hi", limit: 5 });
+		expect(http.requests[1]?.path).toBe("/api/sessions/search?q=hi&limit=5");
 	});
 });
 

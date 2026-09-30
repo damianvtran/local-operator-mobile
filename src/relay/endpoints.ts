@@ -10,11 +10,14 @@
  *
  * Three conventions, applied uniformly because they are the contract's own:
  *
- * - **`limit` is clamped, not rejected.** The relay falls back to its default on
- *   a non-numeric limit rather than erroring (`daemon.py:3746-3750`), and a
- *   client that sends a bad one has a bug it would rather see than hide; so the
- *   bounds are applied here and an out-of-range value is corrected to the
- *   contract's range.
+ * - **A limit the caller did not supply is OMITTED; one they did is clamped.**
+ *   The requested page size is the relay's policy to default (`daemon.py:3834-3838`)
+ *   and every captured client request leaves the parameter off when it has no
+ *   opinion (`search-empty.json`, `subagent-history-unknown.json`). Sending our own
+ *   copy of the default would freeze a server-side value into every request, so a
+ *   later change to the relay's default would be overridden by this client rather
+ *   than applied. A supplied value is still clamped to the contract's range, so a
+ *   caller cannot put a value the relay would have to interpret on the wire.
  * - **Mutations send the ADR's exact bodies.** `pin` carries the desired state
  *   rather than a toggle (so a retry cannot flip it back), `seen` carries the
  *   `completion_token` the projection named, and `command` carries an op from
@@ -71,11 +74,25 @@ export interface ImageBytes {
 export const HISTORY_LIMIT = { default: 80, min: 1, max: 200 } as const;
 export const SEARCH_LIMIT = { default: 40, min: 1, max: 200 } as const;
 
-function clamp(
+/**
+ * A page size for the wire, or `undefined` to leave the parameter off.
+ *
+ * **A limit the caller did not supply is OMITTED, not filled in with the
+ * default.** The default is the server's (`daemon.py:3834-3838`), it applies to an
+ * absent parameter, and every capture in the corpus shows a client that omits it
+ * when it has none to pass (`search-empty.json` is `?q=hello`,
+ * `subagent-history-unknown.json` is `/history` with no query) — while the ones
+ * that do pass one show it (`history-ok.json` is `?limit=5`). Sending the default
+ * ourselves would put a value on the wire that the contract says the relay owns,
+ * and would make this client's request differ from the captured client's for no
+ * gain. A limit that IS supplied is still clamped to the documented bounds, so a
+ * caller cannot send garbage the relay would have to interpret.
+ */
+export function wireLimit(
 	value: number | undefined,
 	bounds: { default: number; min: number; max: number },
-): number {
-	if (value === undefined || !Number.isFinite(value)) return bounds.default;
+): number | undefined {
+	if (value === undefined || !Number.isFinite(value)) return undefined;
 	return Math.min(bounds.max, Math.max(bounds.min, Math.trunc(value)));
 }
 
@@ -141,7 +158,7 @@ export class RelayEndpoints {
 	): Promise<Payload<"searchSessions">> {
 		return this.http.json("searchSessions", {
 			method: "GET",
-			path: `/api/sessions/search${query({ q: request.query, limit: clamp(request.limit, SEARCH_LIMIT) })}`,
+			path: `/api/sessions/search${query({ q: request.query, limit: wireLimit(request.limit, SEARCH_LIMIT) })}`,
 		});
 	}
 
@@ -154,7 +171,7 @@ export class RelayEndpoints {
 			method: "GET",
 			path: `/api/sessions/${encodeURIComponent(sessionId)}/history${query({
 				before: page.before,
-				limit: clamp(page.limit, HISTORY_LIMIT),
+				limit: wireLimit(page.limit, HISTORY_LIMIT),
 			})}`,
 		});
 	}
@@ -201,7 +218,7 @@ export class RelayEndpoints {
 			path: `/api/sessions/${encodeURIComponent(sessionId)}/agents/${encodeURIComponent(jobId)}/history${query(
 				{
 					before: page.before,
-					limit: clamp(page.limit, HISTORY_LIMIT),
+					limit: wireLimit(page.limit, HISTORY_LIMIT),
 				},
 			)}`,
 		});
