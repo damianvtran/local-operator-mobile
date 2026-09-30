@@ -493,6 +493,40 @@ const assertPair = (fg, bg, floor, theme, P, label) => {
 			if (L("sunken") < 80)
 				fail(`light sunken is L* ${L("sunken").toFixed(2)} < 80`);
 		}
+
+		/* The diff tint ladder.
+		 *
+		 * A diff's row tint is not decoration: it is the channel that tells a reader
+		 * scanning a long hunk which lines are new and which are gone, and the
+		 * first sheet this kit rendered had none of it — the dark tints measured
+		 * 1.11:1 against the well they are painted in, which is a step no reader
+		 * can see, so the diff's only channel was its text colour.
+		 *
+		 * The floors are PER THEME and the difference is measured rather than
+		 * stylistic. A tint needs a perceivable step; what makes it perceivable
+		 * differs by where it sits in CIE L*:
+		 *   light, L* ~92: chroma resolves, so a hue difference of 1.04-1.07
+		 *                  luminance reads as two different rows
+		 *   dark,  L* ~10: chroma compresses, so only a luminance step survives
+		 *                  and the band is 1.25-1.45
+		 * Both bands are pinned, so an edit that moves a tint out of its band — in
+		 * either direction — re-opens the reasoning instead of passing silently. */
+		const DIFF_TINTS = [
+			[theme === "dark" ? 1.25 : 1.03, theme === "dark" ? 1.45 : 1.12],
+		];
+		for (const tint of [
+			"diff-add-surface",
+			"diff-remove-surface",
+			"diff-hunk-surface",
+		]) {
+			checks += 1;
+			const got = ratio(P[tint], P.sunken);
+			const [lo, hi] = DIFF_TINTS[0];
+			if (got < lo || got > hi)
+				fail(
+					`${theme}  the diff tint step is unusable: ${tint} on sunken is ${got.toFixed(2)}, outside the ${lo}-${hi} band for ${theme}`,
+				);
+		}
 	}
 }
 
