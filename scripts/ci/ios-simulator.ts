@@ -92,7 +92,7 @@ try {
 }
 
 const devicesByRuntime = parseRuntimes(
-	isRecord(parsed) ? parsed["devices"] : undefined,
+	isRecord(parsed) ? parsed.devices : undefined,
 );
 if (!devicesByRuntime) {
 	console.error(
