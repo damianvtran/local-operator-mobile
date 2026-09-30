@@ -46,7 +46,9 @@ const parseSchemes = (value: unknown): string[] | null => {
 	if (!container) return null;
 	const schemes = container["schemes"];
 	if (!Array.isArray(schemes)) return null;
-	return schemes.filter((scheme): scheme is string => typeof scheme === "string");
+	return schemes.filter(
+		(scheme): scheme is string => typeof scheme === "string",
+	);
 };
 
 /** Read `--name value`, falling back to `fallback`. */
@@ -63,7 +65,9 @@ const jsonFile = arg("json-file", "");
 
 let workspaces: string[];
 try {
-	workspaces = readdirSync(root).filter((name) => name.endsWith(".xcworkspace"));
+	workspaces = readdirSync(root).filter((name) =>
+		name.endsWith(".xcworkspace"),
+	);
 } catch (error) {
 	console.error(
 		`::error::no generated iOS project at ${root} (${message(error)}). ` +
@@ -87,7 +91,9 @@ if (workspaces.length > 1) {
 }
 const [onlyWorkspace] = workspaces;
 if (!onlyWorkspace) {
-	console.error("::error::no workspace name survived the check; this is a bug.");
+	console.error(
+		"::error::no workspace name survived the check; this is a bug.",
+	);
 	process.exit(1);
 }
 const workspace = join(root, onlyWorkspace);
@@ -109,7 +115,9 @@ let parsed: unknown;
 try {
 	parsed = JSON.parse(payload);
 } catch (error) {
-	console.error(`::error::could not parse xcodebuild -list output: ${message(error)}`);
+	console.error(
+		`::error::could not parse xcodebuild -list output: ${message(error)}`,
+	);
 	process.exit(1);
 }
 

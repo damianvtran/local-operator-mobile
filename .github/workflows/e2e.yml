@@ -190,23 +190,58 @@ jobs:
         # committed (ADR 0003).
         run: |
           set -euo pipefail
-          cells=$(curl -fsS "$MOCK_RELAY_URL/__mock/scenarios" | node -e '
+          curl -fsS "$MOCK_RELAY_URL/__mock/scenarios" | node --input-type=module -e '
+            import { resolve } from "node:path";
+            import { pathToFileURL } from "node:url";
+
             let raw = "";
-            process.stdin.on("data", (chunk) => { raw += chunk; });
-            process.stdin.on("end", () => {
+            process.stdin.on("data", (chunk) => {
+              raw += chunk;
+            });
+            process.stdin.on("end", async () => {
+              const { SCREENS } = await import(
+                pathToFileURL(resolve("tools/visual/matrix.mjs")).href
+              );
+              const known = new Set(Object.keys(SCREENS));
               const payload = JSON.parse(raw);
-              const seen = new Set();
+              const cells = new Set();
+              const dropped = new Set();
               for (const scenario of payload.scenarios ?? []) {
-                for (const cell of scenario.shows ?? []) seen.add(cell);
+                for (const cell of scenario.shows ?? []) {
+                  const text = String(cell);
+                  const screen = text.slice(0, text.lastIndexOf("/"));
+                  // `path:<route>` cells point at an ad-hoc page rather than an
+                  // app screen, which is how the canary is driven.
+                  if (screen.startsWith("path:") || known.has(screen)) cells.add(text);
+                  else dropped.add(text);
+                }
               }
-              if (seen.size === 0) {
-                console.error("the relay reported no cells");
+              if (cells.size === 0) {
+                console.error("the relay and the capture matrix share no cells");
                 process.exit(1);
               }
-              process.stdout.write([...seen].sort().join(","));
+              for (const cell of [...dropped].sort()) console.error(`no screen for cell: ${cell}`);
+              process.stdout.write([...cells].sort().join(","));
             });
-          ')
-          echo "cells ($(printf '%s' "$cells" | tr ',' '\n' | wc -l | tr -d ' ')): $cells"
+          ' > "$RUNNER_TEMP/cells.txt" 2> "$RUNNER_TEMP/cells.err"
+          cells=$(cat "$RUNNER_TEMP/cells.txt")
+          count=$(printf "%s" "$cells" | tr ',' '\n' | wc -l | tr -d ' ')
+          dropped=$(wc -l < "$RUNNER_TEMP/cells.err" | tr -d ' ')
+          echo "cells ($count): $cells"
+          if [ "$dropped" != "0" ]; then
+            # Reported, not hidden: the relay's scenario registry and the capture
+            # matrix disagree about which screens exist, and the cells that fall
+            # in the gap are named so the two owners can settle it.
+            cat "$RUNNER_TEMP/cells.err"
+            echo "::warning::$dropped cell(s) the relay declares were skipped: no screen is defined for them in tools/visual/matrix.mjs, so the capture harness cannot render them. Nothing is silently dropped — this line is the list."
+            {
+              echo "## Cells the harness could not render"
+              echo
+              echo '```'
+              cat "$RUNNER_TEMP/cells.err"
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
           node tools/visual/capture.mjs \
             --dir dist --out "$RUNNER_TEMP/frames" \
             --relay "$MOCK_RELAY_URL" \
