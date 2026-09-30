@@ -1645,10 +1645,15 @@ async function main() {
 			true,
 		);
 		check("and its profile stays on disk", existsSync(liveProfile), true);
-		try {
-			process.kill(-(live.pid ?? 0), "SIGKILL");
-		} catch {
-			/* the stand-in exits with the kill attempt */
+		// By pid, not by group: the stand-in is spawned without `detached`, so it is not a
+		// group leader and `kill(-pid)` would miss it and leave a process behind for the
+		// length of its own timer — the same leak this group exists to assert against.
+		if (live.pid !== undefined) {
+			try {
+				process.kill(live.pid, "SIGKILL");
+			} catch {
+				/* already gone */
+			}
 		}
 		await sleep(300);
 		rmSync(root, { recursive: true, force: true });
