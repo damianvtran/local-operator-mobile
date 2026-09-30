@@ -133,7 +133,17 @@ jobs:
     name: Web target — frames, audit and the canary
     needs: harness
     if: needs.harness.outputs.audit == 'true'
-    runs-on: ubuntu-latest
+    # macOS BECAUSE THE HARNESS' CHROME DISCOVERY IS macOS-ONLY TODAY, and that is
+    # a finding rather than a preference: `tools/lib/chrome.mjs` looks for
+    # `/Applications/Google Chrome.app/Contents/MacOS/Google Chrome` and fails
+    # with "Google Chrome is not installed at …" on a Linux runner, where the same
+    # binary is `google-chrome` on PATH. Measured in CI on 2026-09-30. The frames
+    # and the audit are worth running now rather than after that module grows its
+    # Linux candidates, so this job runs where the harness can find a browser; it
+    # moves back to ubuntu (cheaper and closer to a contributor's machine) the
+    # moment chrome.mjs looks at PATH, and the design kit's own capture script —
+    # which does look at PATH — is the precedent for the fix.
+    runs-on: macos-26
     # The capture matrix is minutes; the bound is the diagnosis, not the budget.
     timeout-minutes: 45
     steps:
