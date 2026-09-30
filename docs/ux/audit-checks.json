@@ -18,7 +18,7 @@
   "requires_artifacts": true,
   "scored_per": "screen x state"
  },
- "states_are_named_in": "flows.md section 9 (C1-C7, W1-W5)",
+ "states_are_named_in": "flows.md section 2 (W1-W5) and section 9 (C1-C7)",
  "principles_unchecked": [],
  "checks": [
   {

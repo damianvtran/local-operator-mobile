@@ -404,7 +404,7 @@ first one is the one everybody gets wrong.
 |---|---|---|---|---|
 | `C1` | **Rotation** | the gateway's own 60 s stream cut | **nothing at all** | invisible |
 | `C2` | Reconnecting | a transport error, or no frame after a rotation | one inline line, resolved in seconds; never a modal, never a flash for `C1` | < 5 s |
-| `C3` | Degraded | no keepalive past the grace window, or a snapshot that is old | "Not answering — last update `<n>`s ago", with the last snapshot still readable | until answered |
+| `C3` | Degraded | no chunk past `KEEPALIVE_GRACE_S` (75 s — derived below) on an open stream, or a snapshot that is old | "Not answering — last update `<n>`s ago", with the last snapshot still readable | until answered |
 | `C4` | Phone offline | no network route at all | "Offline. Messages will send when you're back." | until online |
 | `C5` | Re-auth | edge 401 + `X-Radient-Login` | "Your Radient session expired. Sign in to reconnect to `<computer>`." + one button | until signed in |
 | `C6` | Relay refusal | 503 + a typed `RELAY_DETAIL` reason | the gateway's own sentence + one remedy | cause-dependent |
@@ -423,21 +423,62 @@ section:
   long turn is worse than no indicator at all, because it teaches the user to
   ignore the indicator that matters.
 - **Every reconnect re-syncs from a fresh snapshot**, and a stale repaint is
-dropped rather than merged: the projection's `version` orders epochs monotonically
-  across process replacements (`docs/mobile.md` L257-294 at `origin/main`). The
-  client never merges deltas — every push is a full repaint (`docs/mobile.md`
-  L149-235).
+dropped rather than merged: the projection's `version` orders epochs
+  monotonically across process replacements (`docs/mobile.md` L257-294 at
+  `origin/main`). The client never merges deltas — that is the phone leg's own
+  contract: "The phone leg is HTTP + SSE, never WebSocket … Every state push is a
+  snapshot/repaint, not a delta" (`docs/mobile.md` L38-40).
 - **Only a *failed* reconnect is a state.** `C2` is entered when the transport
   errors, or when a rotation's replacement does not produce a snapshot, and it is
   left the moment one lands.
 - **A cut is not a signal.** `current-relay-audit.md` R5 states the rule the
   current client already follows; the native client inherits it.
 
-**Loss is defined by absence, never by an error.** The gateway sends keepalives
-on a 15 s cadence (`gateway.py` L676), so `C3` is "no keepalive and no
-snapshot past the grace window" — pick ~20 s and state it in the code, so the
-threshold is one number in one place. Marking *any* SSE error as loss is the bug
-this section exists to prevent.
+### The grace window, derived rather than guessed
+
+`C3` is *absence*: no chunk at all on an open stream for longer than the grace
+window. The window has one job — be longer than the slowest silence a healthy
+connection can produce — so the cadences around this leg are read off the code,
+never remembered:
+
+| what | cadence | where |
+|---|---|---|
+| the relay daemon's SSE keepalive — **the phone leg's own silence budget** | 25 s (`SSE_KEEPALIVE_S = 25.0`, documented as "under the 60 s idle cutoff of common proxies") | `mobile/daemon.py` L103-105 |
+| the encrypted link's keepalive — a *different* transport (daemon ↔ runtime/mesh), not the phone leg | 30 s (`KEEPALIVE_S = 30.0`), with a 120 s idle close (`LINK_IDLE_S`) | `network/wire.py` L67-69 |
+| the gateway's stream cut — the **rotation**, `C1` | 60 s (`MAX_STREAM_SECONDS`, applied as an `asyncio.timeout` around the upstream read) | `tunnels/gateway.py` L34, L678 |
+
+**The gateway emits no keepalive of its own.** It forwards the upstream's bytes
+(`stream()`, `gateway.py` L673-686), and its single mention of the word is a
+comment about the *revoke* path's latency (`L676`, "keepalives are 15s") — a
+number that does not match the daemon's 25 s constant at the pinned ref. Nothing
+in Local Operator emits a 15 s keepalive, so the window must not be derived from
+that comment, even though it is the comment a careful reader finds first.
+
+**The rule, then the number.** The window must be **strictly greater than the
+slowest cadence that must not trip it**, times a margin. An absence window
+*shorter* than a healthy cadence is the flapping bug this section exists to
+prevent: `C3` appears, the next keepalive clears it, `C3` re-appears, and the user
+learns to ignore the indicator that matters. With the slowest cadence on the leg
+at 25 s — 30 s if the link's cadence is counted as a conservative bound — a 2×
+margin puts the floor at 50-60 s, so:
+
+> **`KEEPALIVE_GRACE_S = 75`.** 3× the daemon's cadence, 2.5× the link's, and
+deliberately **not** a multiple of the 60 s rotation, so a harness reading can
+tell a rotation from silence without arithmetic. One constant, defined beside the
+cadence it derives from, with the table above it as its derivation.
+
+**The window is the last resort, not the detection path.** Every common failure
+presents in seconds, and none of them waits for it:
+
+| failure | how it presents | how fast |
+|---|---|---|
+| the 60 s rotation | the stream *closes* — `C1`: reconnect, then re-sync from a fresh snapshot | immediate |
+| a rotation whose replacement produces nothing | `C2`, from the reconnect's own deadline (pick ~5 s; state it in code) | ~5 s |
+| a transport error (refused, TLS, DNS, reset) | `C2`, from the event itself | immediate |
+| a silent-but-open stream — the pathological case the window exists for | `C3`, from the window | 75 s |
+
+Marking *any* SSE error as loss is the bug this section exists to prevent: an
+orderly close is `C1`, and only silence or a transport failure is a fault.
 
 ### `C4` — the phone lost the network
 

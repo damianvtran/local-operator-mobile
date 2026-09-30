@@ -9,8 +9,8 @@ and each one traces to either the competitive research
 
 They are ordered so the earlier ones outrank the later ones when they conflict.
 Both back-links are real and were checked: `flows.md` §0 carries a flow →
-principle index and each flow's heading names the principles it satisfies, and
-`audit-rubric.md` names the governing principle on every check.
+principle index, and `audit-rubric.md` names the governing principle on every
+check.
 
 **Citation ref.** Line citations are against the committed refs:
 `~/local-operator` at `origin/main` = `5bfff4a61` (2026-09-29), read with
@@ -72,11 +72,11 @@ and offers to retry — it does not silently drop, and it does not double-send.
 envelope with a stable id so the relay de-duplicates; the UI distinguishes
 "rejected" (fix your input) from "unknown" (retry is safe) from "sent".
 
-*Evidence:* the current client already gets this right (retry envelope +
-`lo-mobile-draft:` keys, `docs/mobile.md` L257-294 at `origin/main`) and it is
-one of the few
-things a redesign must not regress; Happy advertises offline machines with
-last-seen and persistent drafts for the same reason.
+*Evidence:* the current client already gets this right (drafts under
+`lo-mobile-draft:` keys, `web/src/store.ts` L433 `DRAFT_PREFIX` at `origin/main`;
+the retry envelope, `docs/mobile.md` L257-294) and it is one of the few things a
+redesign must not regress; Happy advertises offline machines with last-seen and
+persistent drafts for the same reason.
 
 ## P-5. Connection state is stated, never implied
 

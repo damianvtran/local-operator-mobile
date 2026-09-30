@@ -62,9 +62,11 @@ Each is something the native app should reproduce or consciously improve.
    844 px viewport) are documented in the file.
 2. **Secrets are handled honestly.** A secret ask renders a masked field with
    "secret — sent directly, not shown in the transcript" **[measured]**.
-3. **Never lose a typed instruction.** Drafts persist per session
-   (`lo-mobile-draft:`), and an instruction whose delivery is *unknown* is kept
-   as a retry envelope with a stable UUID so the daemon de-duplicates
+3. **Never lose a typed instruction.** Drafts persist per session under
+   `lo-mobile-draft:` keys (`web/src/store.ts` L433 `DRAFT_PREFIX` at
+   `origin/main`; the same prefix is listed for purge on identity change in
+   `web/src/private-storage.ts` L3), and an instruction whose delivery is *unknown*
+   is kept as a retry envelope with a stable UUID so the daemon de-duplicates
    (`docs/mobile.md` L257-294 at `origin/main`; `continuation-command.ts`) **[code]**. Offline
    send produced "Couldn't send this instruction. Try again." with the text
    preserved and a *Retry earlier instruction* button **[measured]**.
