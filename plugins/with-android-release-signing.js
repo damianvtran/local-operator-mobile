@@ -1,4 +1,14 @@
-const { withAppBuildGradle } = require("@expo/config-plugins");
+// This file is JavaScript, not TypeScript, because @expo/config-plugins loads a
+// plugin with `require()` from its own CommonJS context — the one exception to
+// this repository's "TypeScript everywhere" rule, and the exception is the
+// loader, not a preference. Requiring `expo/config-plugins` rather than
+// `@expo/config-plugins` is deliberate too: pnpm links only the declared
+// dependencies at the root, so the transitive package name does not resolve
+// from a plugin file. Measured in CI on 2026-09-30 — `Cannot find module
+// '@expo/config-plugins'` failed the Android build at
+// `:expo-constants:createExpoConfig`. `expo` is a declared dependency and
+// re-exports the same module.
+const { withAppBuildGradle } = require("expo/config-plugins");
 
 /**
  * Give the generated Android project a real `release` signing config.

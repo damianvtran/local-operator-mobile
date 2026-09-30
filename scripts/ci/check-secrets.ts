@@ -2,8 +2,8 @@
 /**
  * Assert that the secrets a build path needs are actually present, by NAME.
  *
- *     node scripts/ci/check-secrets.mjs --mode release  --need ANDROID_KEYSTORE_BASE64,…
- *     node scripts/ci/check-secrets.mjs --mode internal --need ANDROID_KEYSTORE_BASE64,…
+ *     node scripts/ci/check-secrets.ts --mode release  --need ANDROID_KEYSTORE_BASE64,…
+ *     node scripts/ci/check-secrets.ts --mode internal --need ANDROID_KEYSTORE_BASE64,…
  *
  * Why this exists rather than `if: secrets.X != ''` on every step. GitHub does
  * not pass repository secrets to a `pull_request` run from a fork, so every
@@ -20,41 +20,51 @@
  * count, which is enough to tell "unset" from "set to an empty string" — the
  * latter being the failure that looks configured and behaves as absent.
  *
- * No third-party dependency: this runs before `pnpm install`.
+ * Run directly by Node (type-stripping, no build step, no dependency): this runs
+ * before `pnpm install` in every job.
  */
 
 import { appendFileSync } from "node:fs";
 
-const MODES = { release: "release", internal: "internal" };
+const MODES = ["release", "internal"] as const;
+
+type Mode = (typeof MODES)[number];
+
+const isMode = (value: string): value is Mode =>
+	MODES.some((mode) => mode === value);
 
 /** Read `--name value` (or a comma-separated list for `--need`). */
-const arg = (name, fallback) => {
+const arg = (name: string, fallback: string): string => {
 	const i = process.argv.indexOf(`--${name}`);
 	return i === -1 ? fallback : (process.argv[i + 1] ?? fallback);
 };
 
-const mode = arg("mode", "");
+const rawMode = arg("mode", "");
 const need = arg("need", "")
 	.split(",")
-	.map((n) => n.trim())
+	.map((name) => name.trim())
 	.filter(Boolean);
 
-if (!Object.hasOwn(MODES, mode)) {
+if (!isMode(rawMode)) {
 	console.error(
-		`::error::--mode release|internal is required (got ${mode ? `"${mode}"` : "nothing"}). ` +
+		`::error::--mode release|internal is required (got ${rawMode ? `"${rawMode}"` : "nothing"}). ` +
 			"The mode is the whole point: `release` must fail on a missing credential, " +
 			"`internal` must warn and carry on.",
 	);
 	process.exit(1);
 }
+const mode: Mode = rawMode;
+
 if (need.length === 0) {
-	console.error("::error::--need is required: a comma-separated list of variable NAMES.");
+	console.error(
+		"::error::--need is required: a comma-separated list of variable NAMES.",
+	);
 	process.exit(1);
 }
 
-const present = [];
-const empty = [];
-const absent = [];
+const present: string[] = [];
+const empty: string[] = [];
+const absent: string[] = [];
 
 for (const name of need) {
 	const value = process.env[name];
@@ -71,15 +81,16 @@ for (const name of empty) console.log(`present-but-empty: ${name}`);
 for (const name of absent) console.log(`absent: ${name}`);
 
 const missing = [...absent, ...empty];
-const summary = `secrets (${mode}): ${present.length} present, ${missing.length} missing` +
+const summary =
+	`secrets (${mode}): ${present.length} present, ${missing.length} missing` +
 	(missing.length ? ` — ${missing.join(", ")}` : "");
 
-if (missing.length > 0 && mode === MODES.release) {
+if (missing.length > 0 && mode === "release") {
 	console.error(
 		`::error::${summary}. A release cannot proceed without these: the artefact ` +
 			"would be unsigned, or the upload would be skipped, and either is a " +
 			"silently broken release. Set them in the repository's `release` " +
-			"environment (docs/ci.md, \"Secrets\"), then re-run.",
+			'environment (docs/ci.md, "Secrets"), then re-run.',
 	);
 	process.exit(1);
 }
