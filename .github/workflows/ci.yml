@@ -143,13 +143,16 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      # pnpm is here to RUN package scripts, not to install anything: the design
+      # gates are plain `node` programs with no dependencies, which is why this
+      # job still never runs `pnpm install` and stays cheap on a docs-only pull
+      # request. Going through `pnpm <script>` rather than a file path is what
+      # keeps a rename (`build-theme.mjs` → `.ts`) out of CI.
+      - uses: pnpm/action-setup@v6
+
       - uses: actions/setup-node@v7
         with:
           node-version: ${{ env.NODE_VERSION }}
-
-      # The design gates are plain `node` scripts with NO dependencies — they do
-      # not read node_modules — which is why this job never runs `pnpm install`.
-      # That is also what lets it run on a docs-only pull request cheaply.
       - name: Install the rasterizer and ImageMagick
         run: brew install librsvg imagemagick
 
