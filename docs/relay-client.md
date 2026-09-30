@@ -10,7 +10,8 @@ source.
 
 **Nothing in `src/relay/` or `src/connection/` imports from `src/features/` or
 `app/`.** All of it runs in Node, which is why the protocol is testable with
-`pnpm test` and exercisable against a real relay by `scripts/relay-smoke.mjs`.
+`pnpm test` and exercisable against a real relay by `scripts/relay-smoke.ts`,
+which drives the app's own client rather than a copy of it.
 
 ## Module boundaries
 
@@ -23,7 +24,13 @@ src/relay/         the protocol, UI-free and navigation-free
                    http.ts       (headers, cookies, redirects, caching, timeouts)
                    sse.ts        (framing, keep-alives, the 60 s rotation, the fence)
                    endpoints.ts  (one typed function per route)
+                   platform-fetch.ts (the bound global fetch; see "Browser traps")
                    retry-envelope.ts (the persisted-command rules)
+                   send-command.ts   (hold → send → settle, written once)
+src/testing/       stand-ins for the platform, never imported by product code
+                   cookie-jar-fetch.ts (the OS cookie jar, for Node)
+                   fixture-relay.ts    (a real HTTP server replaying fixtures/relay)
+src/e2e/           the outside-in suite: the real client against a real socket
 src/connection/    routes, identity, credentials
                    profile.ts        (RouteProfile: radient | custom)
                    pkce.ts           (S256, and the randomness behind it)
@@ -186,15 +193,26 @@ not re-sort it, which is asserted directly.
 
 ## Running the smoke script
 
-`scripts/relay-smoke.mjs` is plain Node with no dependencies, and deliberately
-duplicates a little of `src/relay/` — a smoke run that shared the client under
-test would only prove the client agrees with itself. It exercises the real relay
-end to end: the public probe, the unauthenticated `401`, the form login and its
-failure arm, a cross-origin `403`, the list on both transports, starting a session,
-the session stream's seed frame, a durable command sent twice, a refused op,
-history, the side payloads, the unread handshake and logout. Each step prints
-`PASS`/`FAIL` with the actual status and byte count; a step that cannot run is
-`SKIP` with the reason, never a silent pass.
+`scripts/relay-smoke.ts` runs the app's REAL client (`createRelayClient`,
+`SseConnection`, `sendPersistedCommand`) against a running relay, so there is one
+implementation of the protocol and the script cannot agree with a private copy of
+it. It is a thin driver: only the sequence and the PASS/FAIL ledger are its own.
+Node built-ins only, run with native type stripping (`node scripts/relay-smoke.ts`);
+`scripts/lib/load-src.ts` is the resolve hook that lets Node load `src/`, whose
+imports are extensionless because Metro and Vite do not need them.
+
+It covers the public probe, the unauthenticated `401`, the form login and its
+failure arm, a cross-origin `403`, the list on both transports, starting a
+session, the session stream's seed frame, a durable command sent twice, a refused
+op, history, the side payloads, the unread handshake and logout. Each step prints
+`PASS`/`FAIL` with the actual detail; a step that cannot run is `SKIP` with the
+reason and is never counted as a pass.
+
+**Two suites, two questions.** `src/e2e/` (run by `pnpm test`) drives the same
+client over real sockets against a fixture-replay server, so it proves the client
+agrees with the *captured wire* and needs no daemon. The smoke script proves it
+agrees with a *live daemon*; a fixture server cannot show that the daemon still
+behaves as its fixtures say. Neither replaces the other.
 
 ```sh
 # 1. An ISOLATED relay. Never the operator's 4098, and never a live tunnel.
@@ -210,10 +228,10 @@ env -i HOME="$ISO" LOCAL_OPERATOR_CONFIG_DIR="$ISO/.local-operator" \
     PATH="$PATH" TERM=xterm-256color \
     LOCAL_OPERATOR_NO_NOTIFICATIONS=1 LOCAL_OPERATOR_NO_DESKTOP_LAUNCH=1 \
     LOP_MOBILE_PASSWORD="$(cat "$ISO/pw")" \
-    <local-operator>/.venv/bin/python -m local_operator.mobile.service --port "$PORT" &
+    "$LOP_PY" -m local_operator.mobile.service --port "$PORT" &   # the INSTALLED runtime, read-only
 
 # 2. The run.
-node scripts/relay-smoke.mjs --base-url "http://127.0.0.1:$PORT" --password-file "$ISO/pw"
+node scripts/relay-smoke.ts --base-url "http://127.0.0.1:$PORT" --password-file "$ISO/pw"
 
 # 3. Reap by pid and delete the root: an isolated daemon left running is a stray
 #    listener, and the root holds a config and a password.
@@ -230,7 +248,27 @@ The script refuses to run against port 4098 or any `*.radienthq.com` host, becau
 those are the operator's live relay and live tunnels.
 
 **The one run this script must NOT make** is against the real Radient edge: it
-needs the operator's account and tunnel. `scripts/radient-connection-check.mjs` is
+needs the operator's account and tunnel. `scripts/radient-connection-check.ts` is
 the credentialed version of that path (discover → mint a tunnel session →
-authenticated `GET` → SSE), and it is deliberately not run by CI or by this
-repository's tests.
+authenticated `GET` → SSE → revoke), a thin driver over the same modules, and it
+is deliberately not run by CI or by this repository's tests. Without
+`RADIENT_ACCESS_TOKEN` it prints `NO CREDENTIALS — not run here` and exits 2.
+
+## Browser traps the Node tests could not see
+
+**`fetch` is brand-checked in a browser.** `window.fetch` called with any receiver
+other than the window throws `TypeError: Illegal invocation` before a request is
+made. Storing the platform function on an object and calling it as
+`this.fetchImpl(...)` supplies exactly that wrong receiver, and the client turned
+the throw into a `transport` error — a plausible "cannot reach the relay" with no
+traffic at all. Node's own `fetch` accepts any receiver, so every Node test
+passed. `relay/platform-fetch.ts` binds the global once, and every fallback to the
+global goes through it. `src/e2e/brand-check.e2e.test.ts` reproduces the browser's
+rule over Node's real fetch and asserts the server *received* the request.
+
+**The refresh handle never rides an ordinary request.** Ordinary tunnel requests
+carry `__Host-radient-grant` alone (ADR 0002 §6, `tunnel-edge.md` §2.1). Presenting
+the handle would switch on the edge's transparent refresh, which re-sets both
+cookies on a proxied response; the app ignores every `Set-Cookie` and refreshes
+through the control plane on its own schedule. The handle is sent to the control
+plane, and to the edge only by the optional logout fallback.

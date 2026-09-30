@@ -36,7 +36,8 @@ const FIXTURE_ROOT = fileURLToPath(
 	new URL("../../fixtures/relay", import.meta.url),
 );
 
-function fixtureBody(rel: string): unknown {
+/** The payload of a captured fixture (`body` for HTTP, `data` for SSE). */
+export function fixtureBody(rel: string): unknown {
 	const file = JSON.parse(readFileSync(join(FIXTURE_ROOT, rel), "utf8")) as {
 		body?: unknown;
 		data?: unknown;
@@ -185,7 +186,10 @@ export async function startFixtureRelay(
 		}
 
 		if (path === "/api/sessions" && request.method === "GET") {
-			json(response, 200, fixtureBody("http/list_row_live.json"));
+			/* The full list frame, not `http/list_row_live.json`: that file is a
+			 * single-row EXCERPT with no `degraded` array, and serving it made the
+			 * client (correctly) reject the body. */
+			json(response, 200, fixtureBody("sse/sse-list-frame.json"));
 			return;
 		}
 		if (path === "/api/sessions/start" && request.method === "POST") {

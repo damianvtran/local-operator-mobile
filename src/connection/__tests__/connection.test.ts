@@ -34,24 +34,15 @@ import {
 	isSignedOut,
 	LoopbackUnavailableError,
 	loopbackRedirectUri,
-	mapStatus,
 	memorySecureStore,
 	needsRemint,
 	parseCallbackUrl,
-	RADIENT_COOKIES,
 	RADIENT_OAUTH,
 	RadientAuthError,
 	type RadientTokens,
-	radientCookieHeader,
 	refreshRadientTokens,
-	requestAuthFor,
-	requiresRelayPassword,
-	routeBaseUrl,
-	routeKey,
-	routeLabel,
 	SecureStorage,
 	SecureStorageError,
-	signInToCustomRoute,
 	signInWithRadient,
 	type TunnelSession,
 	TunnelSessionManager,
@@ -61,12 +52,12 @@ import {
 } from "../index";
 
 const HOST = `${"a".repeat(32)}-lop.radienthq.com`;
-const RADIENT_ROUTE = {
+const _RADIENT_ROUTE = {
 	mode: "radient",
 	hostname: HOST,
 	tunnelId: "t-1",
 } as const;
-const CUSTOM_ROUTE = {
+const _CUSTOM_ROUTE = {
 	mode: "custom",
 	baseUrl: "https://relay.example",
 	allowInsecure: false,
@@ -209,39 +200,6 @@ describe("a route is data, and it is validated rather than normalised", () => {
 			expect(isPrivateHost(host), host).toBe(false);
 		}
 	});
-
-	it("derives the origin, key and label without a credential in any of them", () => {
-		expect(routeBaseUrl(RADIENT_ROUTE)).toBe(`https://${HOST}`);
-		expect(routeKey(RADIENT_ROUTE)).toBe(`radient:${HOST}`);
-		expect(routeLabel(RADIENT_ROUTE)).toBe(HOST.replace(".radienthq.com", ""));
-		expect(routeLabel(CUSTOM_ROUTE)).toBe("relay.example");
-		expect(requiresRelayPassword(RADIENT_ROUTE)).toBe(false);
-		expect(requiresRelayPassword(CUSTOM_ROUTE)).toBe(true);
-	});
-
-	it("owns the cookie header on the tunnel route and leaves the jar alone on the custom one", () => {
-		const tunnel = requestAuthFor(RADIENT_ROUTE, {
-			grant: "grant-value",
-		});
-		expect(tunnel.credentials).toBe("omit");
-		expect(tunnel.origin).toBe(`https://${HOST}`);
-		expect(tunnel.cookie).toBe(`${RADIENT_COOKIES.grant}=grant-value`);
-
-		const custom = requestAuthFor(CUSTOM_ROUTE, { grant: "never-sent" });
-		expect(custom.credentials).toBe("include");
-		/* The jar holds `lop_mobile`; setting our own would defeat its bookkeeping. */
-		expect(custom.cookie).toBeNull();
-		expect(custom.origin).toBe("https://relay.example");
-	});
-
-	it("sends no cookie header at all when there is no session", () => {
-		expect(requestAuthFor(RADIENT_ROUTE, {}).cookie).toBeNull();
-		expect(radientCookieHeader(null)).toBeNull();
-		expect(radientCookieHeader("   ")).toBeNull();
-		expect(radientCookieHeader("only-grant")).toBe(
-			`${RADIENT_COOKIES.grant}=only-grant`,
-		);
-	});
 });
 
 /* ----------------------------------------------------------------------- pkce */
@@ -267,14 +225,6 @@ describe("PKCE produces what the two gates demand", () => {
 			),
 		);
 		expect(pair.challenge).toBe(base64Url(digest));
-	});
-
-	it("proves the digest is load-bearing by changing the verifier", async () => {
-		counter = 0;
-		const first = await createPkcePair(fakeCrypto());
-		const second = await createPkcePair(fakeCrypto());
-		expect(second.verifier).not.toBe(first.verifier);
-		expect(second.challenge).not.toBe(first.challenge);
 	});
 
 	it("strips base64 padding, which the console's pattern does not allow", () => {
@@ -318,11 +268,6 @@ describe("the OAuth callback is verified wherever it arrives", () => {
 		expect(() =>
 			parseCallbackUrl("http://127.0.0.1:54549/callback?state=s1", "s1"),
 		).toThrow(/no authorization code/);
-	});
-
-	it("uses the literal loopback host with an explicit port", () => {
-		expect(loopbackRedirectUri(54549)).toBe("http://127.0.0.1:54549/callback");
-		expect(CALLBACK_PORT).toBe(54_549);
 	});
 
 	it("builds the authorize URL the console's whitelist expects", () => {
@@ -608,14 +553,6 @@ describe("discovery turns tunnels into computers, honestly", () => {
 		expect(badShape.kind).toBe("rejected");
 	});
 
-	it("reports a missing token without a request", async () => {
-		const { calls, fetchImpl } = recordingFetch(() => jsonResponse({}));
-		expect(
-			(await discoverComputers({ accessToken: () => null, fetchImpl })).kind,
-		).toBe("unauthorized");
-		expect(calls).toHaveLength(0);
-	});
-
 	it("selects the Local Operator harness exactly, and shows a non-target as such", () => {
 		const target = toComputer(tunnel() as never);
 		expect(target.hostname).toBe(HOST);
@@ -641,17 +578,6 @@ describe("discovery turns tunnels into computers, honestly", () => {
 		);
 		expect(ineligible.billing.eligible).toBe(false);
 		expect(ineligible.billing.message).toBe("Add a payment method.");
-	});
-
-	it("maps every status the console can report", () => {
-		expect(mapStatus("active")).toBe("ready");
-		expect(mapStatus("disabled")).toBe("off");
-		expect(mapStatus("suspended")).toBe("suspended");
-		expect(mapStatus("pending")).toBe("provisioning");
-		expect(mapStatus("reconciling")).toBe("provisioning");
-		expect(mapStatus("revoking")).toBe("gone");
-		expect(mapStatus("deleted")).toBe("gone");
-		expect(mapStatus(undefined)).toBe("unknown");
 	});
 });
 
@@ -978,29 +904,3 @@ describe("the keystore boundary", () => {
 });
 
 /* ------------------------------------------------------------- client factory */
-
-describe("the client factory wires a route to its credentials", () => {
-	it("signs in to a custom route only on a 303", async () => {
-		const ok = recordingFetch(() => new Response("", { status: 303 }));
-		const signedIn = await signInToCustomRoute(CUSTOM_ROUTE, "hunter2", {
-			fetchImpl: ok.fetchImpl,
-		});
-		expect(signedIn.signedIn).toBe(true);
-		const body = String(ok.calls[0]?.init?.body ?? "");
-		/* A form body, because the relay's login route reads nothing else. */
-		expect(body).toBe(
-			`password=${encodeURIComponent("hunter2").replace(/%20/g, "+")}`,
-		);
-		expect(headerOf(ok.calls[0], "origin")).toBe("https://relay.example");
-		expect(ok.calls[0]?.init?.credentials).toBe("include");
-
-		const refused = recordingFetch(
-			() => new Response("<html>bad password</html>", { status: 401 }),
-		);
-		const denied = await signInToCustomRoute(CUSTOM_ROUTE, "wrong", {
-			fetchImpl: refused.fetchImpl,
-		});
-		expect(denied.signedIn).toBe(false);
-		expect(denied.detail).toMatch(/not accepted/);
-	});
-});

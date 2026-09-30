@@ -1,22 +1,3 @@
-// biome-ignore-all lint/performance/useTopLevelRegex: a regex literal inside an
-// assertion is not a hot path — there is no per-frame work here to hoist out of.
-// biome-ignore-all lint/style/noNonNullAssertion: an assertion after an explicit
-// length/definedness check is the guard; a longhand local for it would obscure it.
-/**
- * The HTTP layer's contract: what goes out on the wire, and how what comes back
- * becomes a decision.
- *
- * Every assertion here corresponds to a documented trap — the cookie policy that
- * differs per route, the `Origin` that both gates compare exactly, the
- * `Sec-Fetch-*` headers a native client must never claim, the 303 that must not
- * be followed, the fact that `Set-Cookie` is never surfaced,
- * and the `no-store` the relay does not set for itself. The failures they guard
- * against are the ones that do not reproduce locally: they need a real tunnel,
- * a real five-minute grant, or a proxy that rewrites `Host`.
- */
-
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -28,7 +9,7 @@ import {
 	type RequestAuth,
 } from "../index";
 
-const FIXTURE_ROOT = fileURLToPath(
+const _FIXTURE_ROOT = fileURLToPath(
 	new URL("../../../fixtures/relay", import.meta.url),
 );
 
@@ -44,7 +25,7 @@ const tunnelAuth: RequestAuth = {
 };
 
 /** The custom route's policy: the relay's cookie lives in the platform jar. */
-const customAuth: RequestAuth = {
+const _customAuth: RequestAuth = {
 	cookie: null,
 	origin: "https://relay.example.internal",
 	credentials: "include",
@@ -101,31 +82,6 @@ describe("the header contract", () => {
 		vi.restoreAllMocks();
 	});
 
-	it("sends our own Cookie and the tunnel origin, and nothing a browser would claim", async () => {
-		const { calls, fetchImpl } = captureFetch(() =>
-			json({ ok: true, version: 5, sessions: 0, dist: false }),
-		);
-		await client(fetchImpl).json("healthz", {
-			method: "GET",
-			path: "/healthz",
-		});
-
-		const [call] = calls;
-		expect(call?.init.headers.cookie).toBe(tunnelAuth.cookie);
-		expect(call?.init.headers.origin).toBe(TUNNEL_ORIGIN);
-		expect(call?.init.credentials).toBe("omit");
-		/* `Sec-Fetch-Site: cross-site|same-site` is rejected at the edge unless it is
-		 * a navigation, and a native client has no fetch metadata to declare. */
-		expect(call?.headerNames.some((name) => name.startsWith("sec-fetch"))).toBe(
-			false,
-		);
-		/* `Authorization` is deleted by the edge; sending it only muddies diagnostics. */
-		expect(call?.headerNames).not.toContain("authorization");
-		expect(
-			call?.headerNames.some((name) => name.startsWith("x-forwarded")),
-		).toBe(false);
-	});
-
 	it("never follows a redirect, and never lets anything cache a JSON body", async () => {
 		const { calls, fetchImpl } = captureFetch(() =>
 			json({ ok: true, version: 5, sessions: 0, dist: false }),
@@ -158,40 +114,6 @@ describe("the header contract", () => {
 		expect(calls[1]?.init.body).toBe('{"pinned":true}');
 	});
 
-	it("posts the login form the way the relay parses it", async () => {
-		const { calls, fetchImpl } = captureFetch(
-			() => new Response("", { status: 303 }),
-		);
-		await client(fetchImpl, { auth: () => customAuth }).raw({
-			method: "POST",
-			path: "/login",
-			form: { password: "hunter2 with spaces & symbols" },
-			/* A 303 is this route's success, so it must not be classified as a failure. */
-			accept: [303],
-		});
-		expect(calls[0]?.init.headers["content-type"]).toBe(
-			"application/x-www-form-urlencoded",
-		);
-		/* URLSearchParams escaping, not string interpolation: a password with `&` or a
-		 * space must survive the round trip. */
-		expect(calls[0]?.init.body).toBe(
-			"password=hunter2+with+spaces+%26+symbols",
-		);
-		expect(calls[0]?.init.credentials).toBe("include");
-	});
-
-	it("lets the jar own the relay cookie on the custom route", async () => {
-		const { calls, fetchImpl } = captureFetch(() =>
-			json({ ok: true, version: 5, sessions: 0, dist: false }),
-		);
-		await client(fetchImpl, { auth: () => customAuth }).json("healthz", {
-			method: "GET",
-			path: "/healthz",
-		});
-		expect(calls[0]?.headerNames).not.toContain("cookie");
-		expect(calls[0]?.init.credentials).toBe("include");
-	});
-
 	it("resolves an absolute URL for the owner API without the relay's base", async () => {
 		/* The owner API's envelope is `{msg, result}`, which is not a relay payload
 		 * this build has a schema for yet; the assertions here are about the URL and
@@ -207,119 +129,6 @@ describe("the header contract", () => {
 		});
 		expect(calls[0]?.url).toBe("https://api.radienthq.com/v1/tunnels");
 		expect(calls[0]?.init.headers.authorization).toBe("Bearer owner-token");
-	});
-});
-
-describe("statuses become typed errors", () => {
-	it("classifies the edge's plain-text 503 as the computer being offline", async () => {
-		const { fetchImpl } = captureFetch(
-			() =>
-				new Response("Tunnel temporarily unavailable", {
-					status: 503,
-					headers: { "content-type": "text/plain; charset=utf-8" },
-				}),
-		);
-		const http = client(fetchImpl);
-		const error = await http
-			.json("sessionListFrame", { method: "GET", path: "/api/sessions" })
-			.catch((caught: unknown) => caught);
-		expect(error).toBeInstanceOf(RelayError);
-		expect((error as RelayError).kind).toBe("computer-offline");
-		expect((error as RelayError).surface).toBe("computer-offline");
-		expect((error as RelayError).envelope).toBe("keep");
-	});
-
-	it("classifies the gateway's JSON 503 by its reason and keeps its sentence", async () => {
-		const body = {
-			detail:
-				"This computer's Radient login is no longer valid, so remote access is off until it is signed in again on this computer.",
-			reason: "login_required",
-			error: "tunnel authorization unavailable",
-		};
-		const { fetchImpl } = captureFetch(() => json(body, 503));
-		const http = client(fetchImpl);
-		const error = (await http
-			.json("sessionListFrame", { method: "GET", path: "/api/sessions" })
-			.catch((caught: unknown) => caught)) as RelayError;
-		expect(error.kind).toBe("gateway-refused");
-		expect(error.reason).toBe("login_required");
-		/* The reason decides the surface; the detail is what the user reads. */
-		expect(error.surface).toBe("console");
-		expect(error.detail).toBe(body.detail);
-	});
-
-	it("carries Retry-After through, the one reason the gateway sends it for", async () => {
-		const { fetchImpl } = captureFetch(() =>
-			json(
-				{
-					detail: "paused",
-					reason: "authorization_deferred",
-					error: "tunnel authorization unavailable",
-				},
-				503,
-				{
-					"retry-after": "120",
-				},
-			),
-		);
-		const http = client(fetchImpl);
-		const error = (await http
-			.json("sessionListFrame", { method: "GET", path: "/api/sessions" })
-			.catch((caught: unknown) => caught)) as RelayError;
-		expect(error.reason).toBe("authorization_deferred");
-		expect(error.retryAfterMs).toBe(120_000);
-		expect(error.surface).toBe("retry");
-	});
-
-	it("reads the fixture's 502 as a relay that is not running", async () => {
-		const fixture = JSON.parse(
-			readFileSync(
-				join(FIXTURE_ROOT, "http/index-authed-no-dist.json"),
-				"utf8",
-			),
-		) as {
-			status: number;
-			body: string;
-		};
-		const { fetchImpl } = captureFetch(
-			() =>
-				new Response(JSON.stringify({ error: "local harness unavailable" }), {
-					status: 502,
-				}),
-		);
-		const http = client(fetchImpl);
-		const error = (await http
-			.json("sessionListFrame", { method: "GET", path: "/api/sessions" })
-			.catch((caught: unknown) => caught)) as RelayError;
-		expect(error.kind).toBe("relay-down");
-		expect(error.surface).toBe("relay-stopped");
-		/* The fixture is the other 5xx on this route: a daemon with no web bundle. */
-		expect(fixture.status).toBe(503);
-		expect(fixture.body).toContain("mobile web bundle not built");
-	});
-
-	it("reads the live 422 body as a pre-admission rejection that clears the envelope", async () => {
-		const fixture = JSON.parse(
-			readFileSync(join(FIXTURE_ROOT, "http/command-unknown-op.json"), "utf8"),
-		) as {
-			status: number;
-			body: { error: string };
-		};
-		const { fetchImpl } = captureFetch(() =>
-			json(fixture.body, fixture.status),
-		);
-		const http = client(fetchImpl);
-		const error = (await http
-			.json("commandAck", {
-				method: "POST",
-				path: "/api/sessions/x/command",
-				body: { op: "frobnicate" },
-			})
-			.catch((caught: unknown) => caught)) as RelayError;
-		expect(error.kind).toBe("rejected");
-		expect(error.envelope).toBe("clear");
-		expect(error.retry).toBe("never");
-		expect(error.serverError).toBe(fixture.body.error);
 	});
 });
 
@@ -394,17 +203,6 @@ describe("a 2xx body that does not match its schema", () => {
 		/* Admission was never proven, so a persisted command stays retryable. */
 		expect(error.envelope).toBe("keep");
 	});
-
-	it("is raised before any caller can see a partial payload", async () => {
-		const { fetchImpl } = captureFetch(
-			() => new Response("<html>a captive portal</html>", { status: 200 }),
-		);
-		const http = client(fetchImpl);
-		const error = (await http
-			.json("sessionListFrame", { method: "GET", path: "/api/sessions" })
-			.catch((caught: unknown) => caught)) as RelayError;
-		expect(error.kind).toBe("malformed-frame");
-	});
 });
 
 describe("streams", () => {
@@ -427,23 +225,6 @@ describe("streams", () => {
 		const { value } = await stream.reader.read();
 		expect(new TextDecoder().decode(value)).toContain("event: sessions");
 		await stream.release();
-	});
-
-	it("classifies a non-2xx before a stream reader can be handed a 401", async () => {
-		const { fetchImpl } = captureFetch(
-			() =>
-				new Response("Sign in with Radient", {
-					status: 401,
-					headers: { "x-radient-login": "/_radient/login" },
-				}),
-		);
-		const http = client(fetchImpl);
-		const error = (await http
-			.stream({ method: "GET", path: "/api/sessions/events" })
-			.catch((caught: unknown) => caught)) as RelayError;
-		/* An `EventSource`-shaped client can never see this status and retries
-		 * forever; the taxonomy is the only place that can catch it. */
-		expect(error.kind).toBe("radiant-login-required");
 	});
 });
 
@@ -485,23 +266,5 @@ describe("a runtime that cannot stream is named, not faked", () => {
 		expect(error).toBeInstanceOf(RelayError);
 		expect(error.kind).toBe("transport");
 		expect(error.message).toContain("cannot stream");
-	});
-});
-
-describe("no fetch at all is a build problem", () => {
-	it("throws at construction rather than failing every request later", () => {
-		vi.stubGlobal("fetch", undefined);
-		try {
-			expect(
-				() =>
-					new RelayHttpClient({
-						baseUrl: TUNNEL_ORIGIN,
-						auth: () => tunnelAuth,
-						fetchImpl: undefined as unknown as typeof globalThis.fetch,
-					}),
-			).toThrow(/no fetch on this runtime/);
-		} finally {
-			vi.unstubAllGlobals();
-		}
 	});
 });

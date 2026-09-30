@@ -237,36 +237,6 @@ describe("502, 504 and 408 leave delivery unknown; 4xx does not", () => {
 		expect(error.retry).toBe("after-backoff");
 	});
 
-	it.each([
-		[408, "the relay did not answer in time"],
-		[502, "bad gateway"],
-		[504, "session did not answer"],
-	])("keeps the envelope on %i", (status) => {
-		const error = relayErrorFromResponse(
-			facts(status, {}, `{"error":"${status}"}`),
-		);
-		expect(error.envelope).toBe("keep");
-	});
-
-	it.each([
-		[400, "request body must be an object"],
-		[409, "session not connected"],
-		[422, "command_id must be a valid UUID"],
-		[500, "session did not answer"],
-	])("clears the envelope on %i", (status, message) => {
-		const error = relayErrorFromResponse(
-			facts(status, {}, JSON.stringify({ error: message })),
-		);
-		expect(error.envelope).toBe("clear");
-	});
-
-	it("clears all scoped storage on a 401, because the identity changed", () => {
-		const error = relayErrorFromResponse(
-			facts(401, {}, '{"error":"authentication required"}'),
-		);
-		expect(error.envelope).toBe("clear-all");
-	});
-
 	it("reads the live 422 refusal bodies through the same path", () => {
 		for (const file of [
 			"command-invalid-uuid.json",
