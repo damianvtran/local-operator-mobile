@@ -2,16 +2,31 @@
 
 - **Status:** Proposed (for implementation)
 - **Date:** 2026-09-30
-- **Deciders:** mobile app maintainers **and** Local Operator (core) maintainers — this
-  record is deliberately cross-repository, because three of its four decisions land in
-  the core, not in this app
+- **Deciders:** the maintaining team (manager call, 2026-09-30, on the product questions
+  listed below) **and** Local Operator (core) maintainers — this record is deliberately
+  cross-repository, because most of its decisions land in the core and in Radient, not in
+  this app
 - **Depends on:** [ADR 0001 — Framework](0001-framework.md), [ADR 0002 — Connection and auth](0002-connection-and-auth.md), [ADR 0004 — CI/CD](0004-ci-cd.md)
-- **Amends:** [ADR 0005](0005-queued-asks.md) §5 — its "`v1` has **no push notifications**"
-  and its forward pointer ("Push notifications are a separate RFC") are **the RFC it
-  predicted, now written**; its in-app `asks_open` badge and its honest-copy rule stand
-  unchanged. Also amends [`docs/ux/flows.md`](../ux/flows.md) §12 **D-1**, whose v1
-  disposition was option (c) "deferred to v1.1, with (a) only"; this ADR decides (b)
-  under a constraint (a) did not have — see §2.
+- **Amends** — the complete list, because this ADR changes what a badge *means*:
+  - [ADR 0005](0005-queued-asks.md) §5 — its "`v1` has **no push notifications**" and its
+    pointer ("Push notifications are a separate RFC") are the RFC it predicted, now
+    written. Its in-app `asks_open` badge and its honest-copy rule stand unchanged.
+  - [`docs/ux/principles.md`](../ux/principles.md) **P-3**, line 60-61 — "the app badge
+    counts sessions waiting on a decision" is **replaced**: the app badge counts
+    conversations with unread notifications (§1.4). P-3's other consequence — rows carry
+    state in words — is untouched.
+  - [`docs/ux/flows.md`](../ux/flows.md) §301 (F-5 §3, "Attention badges … as the app icon
+    badge"): the header badge and the ask badge stay; the **icon** badge changes meaning.
+  - [`docs/ux/flows.md`](../ux/flows.md) §570 (Settings → Notifications): two of its four
+    rows are **not shipped in v1** — quiet hours and "when a session needs a decision" —
+    and the route/master rows are replaced by §2.4's per-computer statement.
+  - **#11's `attentionCount`** (`feat/screens-lists:src/features/sessions/session-projection.ts:61-66`,
+    open PR): it counts `needs_attention` only and says so. It must become the §1.4 count,
+    or the row it feeds is a fourth opinion. **Coordination item — #11 is open and this
+    document cannot change it** (see `docs/push-plan.md`).
+  - [`docs/ux/flows.md`](../ux/flows.md) §12 **D-1** — the v1 disposition was option (c)
+    ("deferred to v1.1, with (a) only"); this ADR decides (b) under a constraint (a) did
+    not have (see §2.4, which narrows what (b) can promise).
 - **Related:** [ADR 0003 — E2E and audit harness](0003-e2e-and-audit-harness.md); this
   repository's [`docs/relay/`](../relay/README.md) contract map; the core's
   [`docs/ATTENTION.md`](https://github.com/damianvtran/local-operator/blob/main/docs/ATTENTION.md),
@@ -19,27 +34,46 @@
   [`docs/design/notification-feed.md`](https://github.com/damianvtran/local-operator/blob/main/docs/design/notification-feed.md);
   the slice plan in [`docs/push-plan.md`](../push-plan.md)
 
+## Product questions decided elsewhere, and recorded here
+
+Review round 1 and QA round 1 on PR [#14](https://github.com/damianvtran/local-operator-mobile/pull/14)
+raised product questions a design document cannot settle by itself. The maintaining team
+decided them on 2026-09-30; they are implemented as stated below, and each site says so:
+
+| # | Decision | Where it lands |
+|---|---|---|
+| **P1** | **The badge population is the app's own list**, not the store's census: user-facing sessions, excluding agent/subagent and scheduled origins and deleted sessions. The aggregate must return that population, and a test asserts the aggregate equals the in-app count. | §1.2, §1.4 |
+| **P2** | **No conversation name ever reaches the cloud**, regardless of the machine's local `session_names_in_notifications()` flag. | §3.2, §4 |
+| **P3** | **The cloud never sets `aps.badge`.** The badge is app-managed from the daemon's count on connect/foreground, cleared on ack; a push may carry the count for the notification's *body*. | §1.5, §3.2 |
+| **P4** | **Registration and revocation go through the machine**, with an account-side revocation path that does not need the machine, and Settings showing the devices paired to that computer with a working unpair. | §3.1, §4 |
+| **P5** | **A heal is a distinct delivery**: the emit key carries the record's content, so idempotency cannot swallow a correction. | §3.4 |
+| **P6** | **The deep link must exist as code**, named to a slice, or be described as unimplemented — never asserted as an existing tier. | §6 |
+
 **Why 0006 and not 0005.** The request that produced this note named
 `docs/adr/0005-push-and-ack-sync.md`. That number is taken: ADR 0005 (queued asks) was
 merged as PR [#13](https://github.com/damianvtran/local-operator-mobile/pull/13) earlier
-the same day. Two records sharing a number is the one thing an ADR index cannot survive,
-so this is 0006.
+the same day. Two records sharing a number is the one thing an ADR index cannot survive, so
+this is 0006.
 
-**Provenance of code citations.** Every `file:line` below is stated at a named revision
-and was resolved with `git show <ref>:<path>` — never read from a working tree, because
-the shared checkouts carry other sessions' staged work:
+**Provenance of code citations.** Every `file:line` below is stated at a named revision and
+was resolved with `git show <ref>:<path>` — never read from a working tree, because the
+shared checkouts carry other sessions' staged work. **Every citation in this document was
+re-resolved at the pin during remediation round 1**, after review round 1 found drift; the
+corrections are named in §9 so a reader can see which ones moved.
 
 | Repository | Revision | How paths are cited |
 |---|---|---|
-| **local-operator** | `40ca7910e49a` (`origin/main`, read 2026-09-30) | `local_operator/mobile/daemon.py` → `daemon.py`; `local_operator/session/attention.py` → `attention.py`; `local_operator/notifications/compose.py` → `compose.py`; `local_operator/operator/devices.py` → `devices.py`; `local_operator/tunnels/api.py` → `tunnels/api.py`; `docs/*.md` by full path |
-| **local-operator-mobile** | `origin/main` @ `d5bb850fccac4dcfdd80f2e3b352a51107a955bc` (read 2026-09-30) | this repository's own paths |
-| **Radient** (control plane, edge, console) | **no code access** — specified here as an *interface*, never as a change to existing code. Where §2 cites an endpoint shape it is a **proposal**, and the shipped-vs-proposed distinction is stated at each site | `internal/…` and `edge/…` appear only where ADR 0001/0002 already pinned them |
+| **local-operator** | `40ca7910e49a` (`origin/main`, read 2026-09-30) | `local_operator/mobile/daemon.py` → `daemon.py`; `local_operator/session/attention.py` → `attention.py`; `local_operator/session/runtime/presence.py` → `presence.py`; `local_operator/session/runtime/viewers.py` → `viewers.py`; `local_operator/server/utils/desktop_feed.py` → `desktop_feed.py`; `local_operator/server/utils/desktop_presence.py` → `desktop_presence.py`; `local_operator/notifications/compose.py` → `compose.py`; `local_operator/tui/app.py` → `app.py`; `local_operator/tui/notify.py` → `notify.py`; `local_operator/tui/widgets/session_sidebar.py` → `session_sidebar.py`; `local_operator/operator/devices.py` → `devices.py`; `local_operator/tunnels/api.py` → `tunnels/api.py`; `local_operator/tunnels/service.py` → `tunnels/service.py`; `docs/*.md` by full path |
+| **local-operator-mobile** | `origin/main` @ `d5bb850fccac4dcfdd80f2e3b352a51107a955bc` (read 2026-09-30) | this repository's own paths; unmerged work named by branch and SHA |
+| **Radient** (control plane, edge, console) | **no code access** — specified here as an *interface*, never as a change to existing code | every cloud route in §3.1 is marked **proposal** |
 | **Apple / Google / Expo platform docs** | read 2026-09-30, cited by URL | vendor behaviour, quoted with the page it came from |
 
-**The wire is not shipped.** Nothing in §3 exists on a relay a client can reach today.
-`attention.db` and its routes do exist and are cited; the push-specific routes, the
-device registry and the aggregate read are **new**, and are proposed here so that the
-core, the cloud and the app can be built against one shape.
+**What is shipped, what is proposed — stated once and used everywhere.** `attention.db` and
+its routes exist and are cited (`attention.py`, `daemon.py`). The three relay routes this
+ADR adds are marked **(new)** and do not exist yet. The cloud routes are marked
+**(proposal)**; there is no Radient repository to read, so they are an interface this
+document specifies, not a description of anything shipped. Vendor behaviour is marked
+**(quoted)** with its URL. Nothing below claims an unshipped thing is shipped.
 
 ---
 
@@ -47,82 +81,120 @@ core, the cloud and the app can be built against one shape.
 
 ### 1. What a "notification" already is on this machine
 
-The word is overloaded, so this ADR fixes it before deciding anything else. On this
-machine there are **three** distinct things, and only one of them is what a push may
-carry:
+The word is overloaded, so this ADR fixes it before deciding anything else. On this machine
+there are **three** distinct things, and only one of them is what a push may carry:
 
 | Thing | Where it lives | Lifecycle |
 |---|---|---|
-| A **completion** | `attention.db`'s `completions` table — one row per settled turn, keyed by a UUID `token`, with `anchor`, `kind`, `reason`, `cause`, `notify`, and an `AUTOINCREMENT` `sequence` (`attention.py:1412-1419`) | published at turn settle, durable, superseded **in place** by a heal (never renumbered) |
-| A **read receipt** | `attention.db`'s `receipts` — `conversation → acknowledged`, the highwater mark of the completions a human has *seen* (`attention.py:1421-1424`) | moved only by `acknowledge`/`acknowledge_many`, token-bound |
-| A **delivery** | `attention.db`'s `deliveries` — `conversation → delivered`, claimed atomically by `claim_delivery` (`attention.py:349-353`, `:2379`) | "somebody was told", which is deliberately **not** the same fact as "somebody read it" (`attention.py:12`; `docs/ATTENTION.md`:142-156) |
+| A **completion** | `attention.db`'s `completions` table — one row per settled turn, keyed by a UUID `token`, with `anchor`, `kind`, `reason`, `cause`, `notify`, and an `AUTOINCREMENT` `sequence` (`attention.py:1412-1419`) | published at turn settle, durable, superseded **in place** by a heal (never renumbered — `attention.py:2000-2010`) |
+| A **read receipt** | `attention.db`'s `receipts` — `conversation → acknowledged`, the highwater mark of the completions a human has *seen* (`attention.py:1421-1424`) | moved only by `acknowledge`/`acknowledge_many`, token-bound (`attention.py:2175`, `:2224-2252`) |
+| A **delivery** | `attention.db`'s `deliveries` — `conversation → delivered`, claimed atomically by `claim_delivery` (`attention.py:349-353`, `:2379-2460`) | "somebody was told", deliberately **not** "somebody read it" (`attention.py:12`; `:2391-2393`) |
 
 `unseen` is *derived*, never stored: a conversation is unread when
-`MAX(completions.sequence) > receipts.acknowledged` (`attention.py:1588-1612`), surfaced
-as `AttentionState.unseen` and mirrored into the relay's `SessionSummary.unseen`
+`MAX(completions.sequence) > receipts.acknowledged` (`attention.py:1588-1612`), surfaced as
+`AttentionState.unseen` and mirrored into the relay's `SessionSummary.unseen`
 (`daemon.py:1051`; `_is_unseen` at `:1099`).
 
 **Pending gates are a fourth, separate thing.** A parked `ask`/`approval` has its own
 lifecycle and is *never* answered or removed by a completion receipt (`docs/ATTENTION.md`
 §"Identity and durability"); the phone sees it as `needs_attention` + `pending_kind`
-(`daemon.py:991-992`), and the desktop machine-wide feed deliberately does not carry
-gates at all (`BRIDGE_NOTIFIABLE_KINDS = {"complete", "error", "retired"}`,
-`server/utils/desktop_sessions.py:368`). §3.2 keeps that boundary.
+(`daemon.py:991-992`), and the desktop machine-wide feed deliberately does not carry gates at
+all (`BRIDGE_NOTIFIABLE_KINDS = {"complete", "error", "retired"}`,
+`server/utils/desktop_sessions.py:368`). §1.4 keeps that boundary, and §2.4's Settings
+statement is honest about it.
+
+**Two facts about the store that decide §2 and §3**, both the store's own words:
+
+- **`unseen` is a LEVEL, not an edge.** "without this, the first observer to upgrade would
+  claim every historical completion still unread and fire a banner for each one (measured on
+  the maintainer's live store: 171 unseen conversations out of 332 completions)"
+  (`attention.py:1481-1486`). Any push design that reads `unseen` as its trigger will push
+  history; §2.1 therefore adds a **cursor**, and the store already ships the click-free read
+  it needs (`published_since`, `attention.py:1684`).
+- **`revision()` is an equality token, not an order**: "Callers compare the tuple for
+  equality and never interpret the terms" (`attention.py:2129-2150`), and the desktop model
+  adds "NOT a merge key … a heal republishes under the SAME pair … an equal pair [is]
+  'possibly changed', never … stale" (`models/desktop_sessions.py:1163-1172`). §3.3 obeys
+  that: **nothing in this design drops a push or a frame on the basis of a revision
+  comparison.**
 
 ### 2. Surfaces already share the read state — that part is done
 
-This is the most important thing this ADR found, and it changes the size of the work.
+**The TUI, the desktop app and the mobile daemon all read and write the same `attention.db`
+under the config root, through the same `AttentionStore`:**
 
-**The TUI, the desktop app and the mobile daemon all read and write the same
-`attention.db` under the config root, through the same `AttentionStore`.** Concretely:
-
-- the **TUI** lists the completions *its sidebar is painting* and clears exactly that set
-  (`local_operator/tui/app.py:40563-40610`, `/notifications read`, token-bound and
-  documented in `docs/ATTENTION.md` §"A gesture may acknowledge what a surface ENUMERATES");
-- the **desktop app** acks per session (`POST /v1/desktop/sessions/{id}/seen`) and in bulk
-  (`POST /v1/desktop/attention/seen`, 1..500 items, `docs/DESKTOP_API.md:570-573`) and learns
-  about every change within ~100 ms from the machine-wide feed
+- the **TUI** lists the completions its sidebar is painting and clears exactly that set —
+  `/notifications` (`app.py:40563-40590`), the write being
+  `AttentionStore(root / "attention.db").acknowledge_many(items)` (`app.py:40741`),
+  token-bound on the pairs it listed;
+- the **desktop app** acks per session (`POST /v1/desktop/sessions/{id}/seen`,
+  `routes/desktop_sessions.py:3428`) and in bulk (`POST /v1/desktop/attention/seen`, 1..500
+  items, `:3462`) and learns about every change within ~100 ms from the machine-wide feed
   (`GET /v1/desktop/events`; one `os.stat` doorbell per tick, `docs/design/notification-feed.md`);
-- the **mobile daemon** acks with `POST /api/sessions/{id}/seen` (`daemon.py:3642-3697`,
+- the **mobile daemon** acks with `POST /api/sessions/{id}/seen` (`daemon.py:3642-3696`,
   route registered at `:4701`) and then invalidates its summaries cache and wakes the list
-  SSE (`:3689-3691`), and every 2 s (`SCAN_INTERVAL_S = 2.0`, `daemon.py:92`) re-reads the
+  SSE (`:3694-3695`), and every 2 s (`SCAN_INTERVAL_S = 2.0`, `daemon.py:92`) re-reads the
   store's own change detector and repaints every watched session (`:2499-2535`).
 
-So **"an ack on one surface clears it on the others" is already true for surfaces attached
-to the same machine**, at the store level, with no cloud involved. What does *not* exist
-is (a) any aggregate of the unread state, and (b) any mechanism by which a *device that is
-not currently connected* learns that something changed. Those are the two things §1 and §2
-add.
+So **"an ack on one surface clears it on the others" is already true for surfaces attached to
+the same machine**, at the store level, with no cloud involved. What does *not* exist is (a)
+any aggregate of the unread state, (b) any mechanism by which a device that is not currently
+connected learns that something changed, and (c) any emission of "the read state moved" that
+covers acks made by the **TUI and the desktop** — the relay only sees its own `/seen`. Those
+three are what §1, §2 and §3 add.
 
-### 3. What the operator asked for
+### 3. The badge means something else today, and this ADR changes that
 
-Proper push; **cross-surface, cross-device acks** with no double badges; **badge count =
-the number of conversations with unread notifications**; a push tap that opens a killed
-app and deep-links to the notifying conversation; and QA across the permutations (app
-open / backgrounded / killed; several devices on one machine and on different machines;
-an ack racing an in-flight push).
+Not a footnote: the icon badge is currently specified and implemented as a **decision**
+count, and the ADR below makes it an **unread** count. The reader should not discover that
+from a diff:
 
-Plus four requirements that arrived with the ask and are folded in below rather than
-restated: the desktop UI and TUI are clients of the **same** ack contract (§1.3); the
-badge rule is exact and must agree with the in-app count (§1.4); the self-hosted path
-degrades to the foreground SSE stream with honest copy (§2.4); and no transcript content
-leaves the machine in any payload (§4).
+- `docs/ux/principles.md:60-61` (P-3): "the app badge counts sessions waiting on a decision";
+- `docs/ux/flows.md:301` (F-5 §3): "count of sessions needing a decision … as the app icon
+  badge";
+- #11's `attentionCount` (`origin/feat/screens-lists:src/features/sessions/session-projection.ts:61-66`):
+  `session.needs_attention ? total + 1 : total`, with a comment saying it is counted "from
+  `needs_attention` and never from `unseen`";
+- the live web client does the same arithmetic client-side:
+  `sessions.filter((s) => s.unseen || s.needs_attention).length`
+  (`mobile/web/src/store.ts:407`, whose own comment at `:385` calls it "THE LIST owns the
+  attention aggregate").
 
-### 4. Two constraints that decide most of what follows
+The operator's rule (§1.4) is "conversations with unread notifications", which is the second
+half of that expression and not the first. **Consequence, stated plainly: a parked approval
+or ask raises no icon badge after this ADR.** It keeps its row mark, its in-app badge and its
+local banner exactly as today (the eligibility ladder is untouched, §2.3), and §1.4 records
+the one-line alternative and what it would cost. The four sites above are in the **Amends**
+list at the top of this document.
+
+### 4. What the operator asked for
+
+Proper push; **cross-surface, cross-device acks** with no double badges; **badge count = the
+number of conversations with unread notifications**; a push tap that opens a killed app and
+deep-links to the notifying conversation; QA permutations across app open / backgrounded /
+killed, several devices on one machine and devices on different machines, and an ack racing
+an in-flight push.
+
+Four requirements are restated here because they are answered point by point below: the
+desktop UI and TUI are clients of the **same** ack contract (§2.2); the badge rule is exact
+and must agree with the in-app count (§1.2, §1.4); the self-hosted path degrades to the
+foreground SSE stream with honest copy (§2.4); and no transcript content leaves the machine
+in any payload (§3.2, §4).
+
+### 5. Two constraints that decide most of what follows
 
 - **The machine is the source of truth, and the app must work without Radient.** The
-  architecture principle is already written down — "the relay is the source of truth; the
-  app is a projection cache" (`docs/architecture.md`:35) — and the app is explicitly
-  designed to run against a self-hosted tunnel or any custom URL with a relay password
-  (ADR 0002 §5). Any design in which the cloud becomes the authority for unread state is
-  therefore not merely a privacy question; it breaks the app's reason to exist.
-- **One machine, one daemon, one store — but many devices.** The daemon is the only
-  always-on process (`RunAtLoad` + `KeepAlive{SuccessfulExit:false}` LaunchAgent,
-  `mobile/install.py:1696-1701`; `Restart=on-failure` on Linux, `:1947`), it binds
-  loopback and is reached through the tunnel, and it owns the store. *N* devices is the
-  normal case, *N* computers is a first-class case (ADR 0002 §"per-computer caches,
-  per-computer credentials"), and the app's answer to the second must not be a cloud
-  account.
+  architecture principle is already written down — "the relay is the source of truth; the app
+  is a projection cache" (`docs/architecture.md`:35) — and the app runs against a
+  self-hosted tunnel or any custom URL with a relay password (ADR 0002 §5). Any design in
+  which the cloud becomes the authority for unread state is not merely a privacy question; it
+  breaks the app's reason to exist.
+- **One machine, one daemon, one store — but many devices.** The daemon is the only always-on
+  process (`RunAtLoad` + `KeepAlive{SuccessfulExit:false}` LaunchAgent,
+  `mobile/install.py:1696-1701`; `Restart=on-failure` on Linux, `:1947`), it binds loopback
+  and is reached through the tunnel, and it owns the store. *N* devices is the normal case,
+  *N* computers is a first-class case (ADR 0002 §"per-computer caches, per-computer
+  credentials"), and the app's answer to the second must not be a cloud account.
 
 ---
 
@@ -130,321 +202,412 @@ leaves the machine in any payload (§4).
 
 ### 1. The source of truth for "unread", and the exact badge rule
 
-**`attention.db` on the machine stays the only authority for unread state.** Everything
-below is derived from it, on the machine, and pushed; nothing in the cloud is ever
-authoritative, and no client may compute the badge from its own local list of
-notifications.
+**`attention.db` on the machine stays the only authority for unread state.** Everything below
+is derived from it, on the machine, and pushed; nothing in the cloud is ever authoritative,
+and no client may compute the badge from its own local list of notifications.
 
-#### 1.1 The model can express "conversations with unread notifications" — but nothing computes it
+#### 1.1 The model expresses "conversations with unread notifications"; one read is missing
 
-The per-conversation state already carries exactly what the badge rule needs
-(`unseen`), and the machine-wide change detector already exists in the shape that makes an
-aggregate cheap:
+The per-conversation state already carries exactly what the badge rule needs (`unseen`), and
+the machine-wide change detector already exists in the shape that makes an aggregate cheap:
 
 ```
 AttentionStore.revision() -> (MAX(sequence), SUM(acknowledged), supersedes)   attention.py:2129-2150
 ```
 
-The three terms are deliberate: the first moves on a publish, the second on a read, and
-the third on a **heal** that deliberately moves neither (a supersede is an in-place
-`UPDATE`, so a corrected record cannot be detected by either watermark,
-`attention.py:2000-2030`). The store's own docstring states the contract: *callers compare
-the tuple for equality and never interpret the terms*.
+The three terms are deliberate: the first moves on a publish, the second on a read, and the
+third on a **heal** that deliberately moves neither (`attention.py:2000-2010`, `:2129-2150`).
+Its contract is equality-only — see Context §1.
 
-**What is missing is one read**: there is no route anywhere on the machine that returns a
-count. (`grep` across `server/routes/` and `mobile/daemon.py` for an unread/unseen count
-returns nothing; the desktop listing's `counts` census is a per-scope row census, a
-different fact — `docs/DESKTOP_API.md`:640-660.)
+**What is missing is one read over the right population.** No route anywhere on the machine
+returns a count (verified by `git grep` across `server/routes/` and `mobile/daemon.py`; the
+desktop listing's `counts` is a per-scope **row census**, a different fact —
+`models/desktop_sessions.py:235-250`), and no `AttentionStore` method is a census (its public
+API is `acknowledge, acknowledge_many, acknowledgement_map, claim_delivery, publish,
+published_since, release_delivery, revision, state, state_many, superseded_since`).
 
-**Decision: add an additive aggregate read on the mobile relay, and nothing else in the
-core's semantics.**
+**Decision: add one additive aggregate read, and one additive field on the list payload, both
+computed by ONE implementation.**
 
 ```jsonc
-GET /api/attention/unread            // new; auth-gated exactly like /api/sessions
+GET /api/attention/unread                                       // (new) auth-gated like /api/sessions
 
-{
-  "count": 2,                        // THE badge number: conversations with unseen == true
-  "revision": [1043, 1041, 7],       // AttentionStore.revision() — an EQUALITY token, not an order
-  "degraded": [],                    // mirrors the listing: ["attention"] when the store could not be read
-  "conversations": [                 // only unread ones; bounded, and the app never needs more than it shows
-    {"session_id": "…", "completion_token": "…", "kind": "complete",
-     "revision": [1043, 1041]}
-  ]
-}
+{ "count": 2,                    // the badge number; absent when `degraded` is non-empty
+  "revision": [1043, 1041, 7],   // AttentionStore.revision(): an EQUALITY token, never an order
+  "degraded": [],                // ["attention"] when the store could not be read
+  "conversations": [             // the SAME population as the listing (§1.2), unread ones only
+    {"session_id": "…", "push_handle": "…", "completion_token": "…", "kind": "complete",
+     "revision": [1043, 1041]}   // the row's existing pair (attention.py:1588-1612), unchanged
+  ]}
 ```
 
-Three properties are load-bearing:
+and, on the list payload the app already subscribes to, a **top-level sibling of `degraded`**
+— *not* inside `capabilities`, which is a feature-flag dict where "a missing key means this
+build does not have it" (`daemon.py:3528-3530`, `docs/relay/contract.md`:203-204):
 
-- **It is additive.** No table changes, no existing semantics move, no existing route
-  changes shape. An older client that never calls it is unaffected, and a newer client
-  against an older relay gets a 404 and falls back to counting the rows it already holds.
-- **`count` counts *conversations*, not completions and not pushes.** A conversation with
-  three unread completions contributes **1** — that is the operator's rule, and it is also
-  what `unseen` already means per conversation.
-- **The revision triple is a change token only.** `AttentionState.revision`
-  (`[sequence, acknowledged]`) is explicitly *not* a merge key: a heal republishes a
-  corrected state under the **same** pair, so a client that dropped an update whose
-  revision did not advance would discard exactly the correction the heal exists to deliver
-  (`server/models/desktop_sessions.py:1163-1172`). Any consumer of this route — and of a
-  push that carries a revision — must therefore treat **equality as "probably unchanged,
-  go and look"**, never as "stale, drop it", and must never order two states by it. The
-  app's own store rule already says the same thing in a different vocabulary: replace
-  wholesale on each snapshot (`docs/architecture.md`:115).
+```jsonc
+{"sessions": [...], "degraded": [...], "unread": {"count": 2, "revision": [1043, 1041, 7], "degraded": []}}
+```
 
-#### 1.2 Eligibility is two flags, and both are the machine's
+The app therefore needs no new stream, and an older relay's absence of `unread` means
+"unknown", never 0.
 
-`unseen` is not the only gate a push must pass:
+#### 1.2 The population, decided (P1): the listing's rows, in the listing's snapshot
 
-- **`notify`** (§14's origin-aware flag, computed *by the session* from the run's trigger
-  record and carried verbatim — the store never derives it, `attention.py:2026-2031`).
-  `notify = 0` means "this completion may be recorded but must not interrupt". Rows written
-  before the field read as `1` through an additive column (`attention.py:1538-1539`), so an
-  upgraded machine behaves exactly as it did.
-- **The machine's own quiet rules** — the settings surface already promises them
-  ("when a turn finishes", quiet hours, and "don't notify while I'm at the computer",
-  `docs/ux/flows.md`:570). The last one has real machinery behind it: the desktop's
-  machine-wide presence and the TUI's viewer records (`server/utils/desktop_presence.py`;
-  `session/runtime/presence.py`).
+This is the finding that most needed a decision, because the two obvious definitions give
+different numbers on a real machine.
 
-**Decision: `notify` is respected by the push path; `unseen` is not narrowed by it.** A
-`notify = 0` completion still counts toward the badge, because the badge must equal what
-the in-app UI shows and the in-app mark is `unseen`, not `notify`. The residue — a quiet
-completion that nobody is looking at raises a badge without a push — is the correct
-reading of the two facts the store keeps apart: *notifying is cheap and reversible,
-marking-read is not* (`attention.py:12`), and a delivered banner does not mark anything
-read (`attention.py:2288-2300`). The alternative (badge = notifiable unread only) is
-rejected because it makes the icon disagree with the row the user is looking at, which is
-the one thing the operator's rule forbids.
+**The store is NOT the population.** It holds identities the app never shows:
+`conversation_identity()` namespaces both `session/<id>` and `agent/<id>`
+(`attention.py:428-431`); `session_sidebar.py:704` records that "45% of [subagent ids] carry
+an unseen receipt"; and `app.py:40571-40578` records the operator's own store as **6,392
+unread conversations, 4,659 of which still have a directory**, "none of which this app
+renders" — against the store's own 171-unseen measurement used as a different example
+(`attention.py:1481-1486`). A store-wide count would make the icon disagree with the list,
+which §1.4 forbids.
+
+**Decision:** the aggregate computes over **exactly the identities the listing serves, in the
+same snapshot**:
+
+- the listing's rows (`recent_session_rows(directory, 100, strict=True)`, `daemon.py:665`,
+  plus live entries) — the same identity set the attention decoration is already built for
+  (`daemon.py:777-813`), so this is one pass over data already in hand, not a second scan;
+- **user-facing sessions only** (`_durable_user_session_dir` / `is_user_session`, the filter
+  the listing applies), which excludes `agent/<id>` identities, subagent-only rows and
+  scheduled origins;
+- **excluding deleted conversations** — a conversation with no directory is not a row, so it
+  is not a count (and its receipt, if any, is a receipt for something that no longer exists);
+- **bounded by the listing's own bound** (100 recent durable rows + live sessions). An unread
+  conversation older than that does not raise the badge; it is still in Past, with its own
+  mark, and this is stated rather than hidden.
+
+**The consequence to accept, written down:** the badge is bounded by the listing, so the
+day-one badge on a machine with a large historical backlog is bounded too (≤ the listing's
+100 + live), instead of the 171/6,392 figures a store-wide count would produce.
+
+**"The two numbers are equal" is a test, not a claim:** one assertion that
+`GET /api/attention/unread → count` equals the number of `unseen: true` rows in the
+`GET /api/sessions` body captured in the same pass. A second assertion that the top-level
+`unread.count` on the list payload equals the route's count. (Review round 1's M8 and QA's
+Q1 are the same finding, and this is its remedy.)
 
 #### 1.3 Where each surface attaches — the shared contract, named
 
-This is the operator's first addition, answered against the code. **There is no new
-per-surface protocol: there is one store, one token-bound ack operation, and one
+**There is no new per-surface protocol: one store, one token-bound ack operation, one
 subscription per surface.**
 
 | Surface | Acks with | Learns about a change through |
 |---|---|---|
-| **TUI** | `/notifications read` → `acknowledge_many` over the rows its sidebar painted (`tui/app.py:40563-40610`) | its 1 s catalog poll and the store's `revision()`/`acknowledgement_map` deltas |
-| **Desktop** | `POST /v1/desktop/sessions/{id}/seen`, and `POST /v1/desktop/attention/seen` for a clear-all (`docs/DESKTOP_API.md:570-573`, `:682`) | `GET /v1/desktop/events` — 100 ms doorbell, `attention` frames per changed session |
-| **Mobile app** | `POST /api/sessions/{id}/seen` with `{completion_token}` (`daemon.py:3642-3697`) | the list SSE (`/api/sessions/events`, woken by the daemon on every ack, `:3689-3691`) while foregrounded, and **push** while backgrounded (new, §2) |
+| **TUI** | `/notifications read` → `acknowledge_many` over the rows its sidebar painted (`app.py:40563-40590`, write at `:40741`) | its catalogue poll (`app.py:27291-27348`, which reads `AttentionStore.revision()` and the attention state) |
+| **Desktop** | `POST /v1/desktop/sessions/{id}/seen` (`routes/desktop_sessions.py:3428`), and `POST /v1/desktop/attention/seen` for a clear-all (`:3462`) | `GET /v1/desktop/events` — 100 ms doorbell; `attention` frames per changed session; `acknowledgement_map()` is its delta read (`desktop_feed.py:931,1188`) |
+| **Mobile app** | `POST /api/sessions/{id}/seen` with `{completion_token}` (`daemon.py:3642-3696`) | the list SSE (`/api/sessions/events`, woken by the daemon on its own ack, `:3694-3695`) while foregrounded, and **push** while backgrounded (new, §2) |
 
-**The minimal addition to make this literally one contract** is *not* a new ack path. It
-is a single shared statement of the rule these three already implement, plus two small
-things: (i) the aggregate read in §1.1 so that every surface derives the same badge number
-from the same read, and (ii) the badged count on the mobile list the app already
-subscribes to — carried on the existing `capabilities` block rather than a new stream
-(`daemon.py:3528-3530`), so it rides frames the app already parses.
-
-**The rule the three surfaces must share, stated once:** *an acknowledgement is
-`(conversation, completion_token)`, it is idempotent, it is refused when the token is not
-the conversation's current completion (`superseded_completion_token`, `attention.py:185`,
-`daemon.py:3691-3699`), and **no automatic path may acknowledge anything** — only a
-gesture, or a result a human actually rendered* (`docs/ATTENTION.md` §"What a frontend can
-acknowledge" and R10). Nothing in the push work is allowed to relax that: **arriving,
-tapping, or being woken by a push is not a read.**
+**The rule the three surfaces share, stated once:** *an acknowledgement is
+`(conversation, completion_token)`, it is idempotent, it is refused when the token is not the
+conversation's current completion (`superseded_completion_token`, `attention.py:185`;
+`daemon.py:3676-3690`), and **no automatic path may acknowledge anything** — only a gesture,
+or a result a human actually rendered* (`docs/ATTENTION.md` §"What a frontend can
+acknowledge" and R10). Nothing in the push work relaxes that: **arriving, tapping, or being
+woken by a push is not a read.**
 
 #### 1.4 The badge rule, exactly
 
-> **The app icon badge = the number of conversations with unread notifications, as
-> reported by the machine the app is connected to, and the in-app count is the same number
-> read from the same route.**
+> **The app icon badge = the number of conversations with unread notifications, over the
+> population in §1.2, as read from the machine the app is connected to. The in-app count is
+> the same number from the same read. The badge is set by the APP (on connect, on foreground,
+> and on an ack); the push never sets it (§1.5).**
 
 Consequences, all deliberate:
 
 - A **conversation with three unread completions counts once.**
-- **Pending asks do not contribute to this number.** They are a different state with a
-  different lifecycle (§Context 1), they are not token-bound (`acknowledge` takes a
-  *completion* token), and the app already badges them in-app with their own count
-  (`asks_open`, ADR 0005 §5; `docs/ux/flows.md`:301-305). *This is the one place where the
-  operator may want to overrule this ADR*: a parked ask with no unread completion raises no
-  icon badge. §9 records the alternative and what it would cost.
-- **The count is never derived from pushes received.** A device that missed ten pushes must
-  show the true badge the next time it can read the machine; a device that received ten
-  pushes for one conversation must show 1.
-- **`count = 0` clears the badge.** On iOS that is `aps.badge = 0` / `setBadgeCountAsync(0)`;
-  on Android it is best-effort by launcher (§5).
-- **When the machine cannot be read, the badge is not updated** and the app says so rather
-  than guessing: a store that could not be read is not an empty pile
-  (`docs/ATTENTION.md` §"Two more things this relaxation depends on"). The `degraded` array
-  in §1.1 is how the app learns which of the two it is looking at — the same contract the
-  listing already ships (`daemon.py:739`, `docs/relay/contract.md`:196-200).
+- **`notify = 0` completions still count.** They are visibly unread in-app (`unseen` is
+  computed without consulting `notify`, `attention.py:1611`), and the badge must equal what
+  the rows show. They never push (§2.3). Note the producers are real and ordinary: `closed`
+  completions are written `notify=False` (`session.py:10635`), and so are quiet wake/monitor
+  rows. The residue — a quiet completion that nobody is looking at raises a badge without a
+  push — is the correct reading of the two facts the store keeps apart (`attention.py:12`,
+  `:2391-2393`).
+- **Pending gates are not in the number** (the P-3 inversion in Context §3). The one-line
+  alternative — count rows where `needs_attention`, from the same listing snapshot — is
+  recorded as a **cheap, re-openable** decision: it is one predicate in the aggregate, and it
+  would restore the old icon meaning at the cost of the operator's stated rule. This ADR
+  takes the operator's rule as given.
+- **The count is never derived from pushes received.** A device that missed ten pushes shows
+  the true badge the next time it can read the machine; a device that received ten pushes for
+  one conversation shows 1.
+- **`count = 0` clears the badge** (`setBadgeCountAsync(0)`; on Android launcher badge
+  support varies — §5).
+- **When the machine cannot be read, the badge is not updated** and the app says so: `count`
+  is **absent** and `degraded` is `["attention"]`, mirroring the listing's existing contract
+  (`daemon.py:739`, `docs/relay/contract.md`:196-200). A store that could not be read is not
+  an empty pile (`docs/ATTENTION.md`).
+- **The badge is cleared on sign-out and on route removal**, and a route with no push at all
+  (§2.4) keeps only the number its last connection read — the app must not leave a stale
+  badge behind claiming work it can no longer see. (Review m1.)
 
-#### 1.5 Cross-*device* is solved here; cross-*machine* is explicitly not
+#### 1.5 The cloud never sets `aps.badge` (P3)
 
-This is the honest scope statement the operator's QA permutation list needs.
+**Decision: no `aps.badge` field is ever sent.** The icon badge is app-managed: set from the
+§1.1 read on connect and on foreground, cleared on ack, and refreshed by a silent wake (§2.3)
+when the OS grants one.
+
+Why this beats the alternative, and it is not a detail:
+
+- `aps.badge` is applied by the OS **with no app code running**, from **whichever push arrived
+  last**. With two machines (the operator's own permutation) the icon would show machine A's
+  count until machine B pushed, then B's — a badge that is never the sum, never the
+  connected computer's, and not reconcilable by any rule this document could state. (Review
+  M1; it is exactly why "per computer" cannot be expressed in an OS-applied integer.)
+- The store's `revision` is equality-only (Context §1), so there is no ordering the cloud
+  could use to drop a stale badge — and inventing one (a cloud-side per-device sequence) is a
+  new cloud-side authority over a machine-owned number.
+- The badge must equal what the in-app list shows (P1). Only the app, holding the list, can
+  guarantee that.
+
+**The tradeoff, stated rather than implied:** a backgrounded — and *especially* a force-quit
+— app cannot set the badge, so the icon shows the count from its **last connection**, and on
+iOS nothing can improve that while the app is not running. A user with two computers will see
+the icon of the computer they last opened. The banner is still fresh: it carries the current
+count in its **body** (§3.2), so the notification itself is never stale even when the icon is.
+
+**What would fix the icon** (and what would change this decision): the OS's own badge is the
+only surface an unused app can update, so any fix means letting a *server* own the number —
+either `aps.badge` from a single account-wide count (which requires uploading, and summing,
+two computers' unread state — the inversion Context §5 forbids), or an iOS Notification
+Service Extension rewriting the number the app last set (it can, but only on an arriving
+push, and only for a device that receives one). Recorded, not chosen.
+
+#### 1.6 Cross-*device* is solved here; cross-*machine* is explicitly not
 
 - **Several devices, one machine — covered.** Every device reads the same store through the
-  same daemon, and every ack wakes the list SSE (`daemon.py:3689-3691`). A backgrounded
-  device is corrected by the silent attention push in §2.3. No double badge: a device's
-  badge is always the machine's number, and an ack on device A makes device B's next read
-  (or wake) return the new number.
+  same daemon, and every ack wakes the list SSE (`daemon.py:3694-3695`). A device that is not
+  connected is corrected by the attention push (§2.3, §3.3). No double badge: a device's badge
+  is the machine's number, and an ack on device A makes device B's next read (or wake) return
+  the new number.
 - **Several machines — *not* merged, by decision.** Two computers are two `attention.db`
-  files, two counts, and no shared identity: the app's model is already per-computer
-  (ADR 0002 §"per-computer caches, per-computer credentials"; `docs/architecture.md`
-  open question 3 / D-3), and a conversation id is only meaningful within the machine that
-  owns it. **Acknowledging a conversation on machine A will not clear it on machine B**,
-  because machine B is not showing the same conversation — it may well have an identically
-  named one. The badge is therefore **per computer**: the icon shows the count of the
-  computer the app is currently on, and a future per-computer badge in the switcher
-  (D-3's surface) is the honest way to show the others.
-- **Why not merge them in the cloud.** Merging requires uploading `(conversation,
-  read-at)` state for every conversation on every machine to Radient — precisely the
-  authority inversion §Context 4 forbids, plus a per-account read history that is worth
-  more to an attacker than anything else this feature touches. **What would change this
-  decision:** an explicit operator decision to accept that upload, at which point it is a
-  new ADR and not a patch to this one.
+  files, two counts and no shared conversation identity (`conversation_identity()` is
+  directory-derived, `attention.py:428-431`, and a conversation id is meaningful only on the
+  machine that owns it). **Acknowledging a conversation on machine A will not clear it on
+  machine B.** The badge is therefore **per computer**: the icon shows the count of the
+  computer the app is currently connected to (§1.5 says so explicitly), and the honest way to
+  show the others is a per-computer count in the app's computer switcher (D-3's surface).
+- **Why not merge them in the cloud.** It requires uploading `(conversation, read-at)` state
+  for every conversation on every machine to Radient — the authority inversion Context §5
+  forbids — plus a per-account read history worth more to an attacker than anything else this
+  feature touches. **What would change this decision:** an explicit operator decision to
+  accept that upload, at which point it is a new ADR and not a patch to this one.
 
 ### 2. The delivery path
 
-#### 2.1 The chain, and the direction of every hop
+#### 2.1 The chain, the owning process, and the cursor
 
 ```
-  ┌─ the machine (the only always-on process) ─────────────────────────────┐
-  │  turn settles → AttentionStore.publish()          attention.py:1959     │
-  │    → new row in attention.db (+ notify flag)                            │
-  │  push worker (in the daemon, ~2 s poll — daemon.py:92 — reusing the     │
-  │  store's equality token as its doorbell, exactly as the desktop feed    │
-  │  reuses os.stat)                                                        │
-  │    gate: unseen?  (§1.1)   notify?  (§1.2)   quiet presence?  (§1.2)    │
-  │    → OUTBOUND POST to Radient, authenticated as the connector,          │
-  │      Idempotency-Key = the completion token    tunnels/api.py:70-125    │
-  └────────────────────────────┬───────────────────────────────────────────┘
-                               │  (the machine never accepts an inbound
-                               │   push control path; it already talks to
-                               ▼   the control plane every ~10 s)
-                    Radient control plane  ← holds: the APNs key, the FCM
-                               │              service account, device tokens,
-                               │              per-account routing, and the
-                               │              record of what was pushed
-                               ▼
-                        APNs  /  FCM
-                               ▼
-                     the device(s) of that account
+  ┌─ the machine ───────────────────────────────────────────────────────────┐
+  │  turn settles → AttentionStore.publish()            attention.py:1959    │
+  │    → a row in attention.db (+ notify flag)                              │
+  │                                                                        │
+  │  THE PUSH WORKER LIVES IN THE MOBILE DAEMON (`lop mobile serve`)        │
+  │  — the always-on process that owns the store and serves the phone       │
+  │  (mobile/install.py:1696-1701, :1947). It is NOT the tunnel service:    │
+  │  that is a separate LaunchAgent whose 10 s control-plane poll           │
+  │  (tunnels/service.py:47) exists for the relay's reachability, and       │
+  │  coupling push to it would mean "stop the tunnel, stop the pushes".     │
+  │                                                                        │
+  │  every 2 s (SCAN_INTERVAL_S, daemon.py:92) — the loop that already       │
+  │  reads AttentionStore.revision() (daemon.py:2499-2535):                  │
+  │    read NEW publications since the durable cursor, via                  │
+  │    AttentionStore.published_since(cursor)             attention.py:1684  │
+  │    gates: unseen? (§1.1) · notify? (§1.4) · presence-deferral (§2.3)      │
+  │    → OUTBOUND POST to Radient, authenticated as the connector's          │
+  │      credential, Idempotency-Key = the emit key (§3.4)                   │
+  │      tunnels/api.py:70-125 (the shape already in use)                    │
+  └───────────────────────────────────┬─────────────────────────────────────┘
+                                      ▼
+  ┌─ Radient (proposal — no repository access) ─────────────────────────────┐
+  │  route per (account → computer → device) · fan out to APNs / FCM         │
+  │  record what was pushed (§2.2) · delete tokens on revocation             │
+  └───────────────────────────────────┬─────────────────────────────────────┘
+                                      ▼
+                            APNs / FCM → the device
 ```
 
-Three properties of this chain are decisions, not accidents:
+**The cursor, and why the alternative was rejected (review M2).** `unseen` is a LEVEL
+(Context §1), so a worker with no cursor either re-pushes everything after a restart or
+silently drops what arrived while it was down. The desktop feed solved the identical problem
+with `published_since` plus a baseline at subscribe — `baseline_completion_sequence =
+self.store.revision()[0]` (`desktop_feed.py:718`). **This ADR reuses that exact shape: a
+durable `push_cursor` (the last `sequence` considered), a baseline at enablement so turning
+push on does not fire the backlog, and `published_since(cursor)` as the per-tick read.**
 
-1. **Outbound-only from the machine.** The connector already reaches the control plane with
-   its own Radient credential and already supports `Idempotency-Key` on every call
-   (`tunnels/api.py:70-125`); the account identity it should be keyed on is already
-   fetchable (`account_id()` → `GET /v1/me`, `:144-170`). Asking the *cloud* to reach into
-   the machine for events instead (a pull) would make a user's laptop serve cloud traffic
-   it does not serve today and would widen the machine's exposure for no gain — rejected.
-2. **The cloud holds no authority and no content.** It is a *transport with a memory of
-   what it sent*, which is exactly what the operator asked for ("the record of what was
-   pushed"). It cannot answer "what is unread", because it cannot read `attention.db`.
-3. **Push requires the Radient path, and that is a limitation of the mechanism, not a
-   policy** — APNs and FCM both require a *server* holding the app's push credentials, and
-   only Radient has them. §2.4 is the plain statement of what that means for a user who
-   does not.
+- **Restart:** the cursor is durable, so publications that landed while the daemon was down
+  are still newer than it and are considered on the next tick — a bounded catch-up rather
+  than a flood or a hole.
+- **Catch-up is bounded and coalesced.** More than `BURST_LIMIT`-worth of eligible rows in
+  one catch-up emits **one digest push naming the count**, mirroring the TUI/desktop burst
+  rule (`docs/design/notification-feed.md`, `BURST_LIMIT = 3`).
+- **A suppressed push is retried, then dropped** (§2.3): the presence-deferral is a timer
+  bounded by the deferral window and terminated early by an ack (`unseen` goes false); an
+  emit that the cloud refuses is retried with the *same* idempotency key a bounded number of
+  times, then dropped with one log line. Push is a nudge; nothing depends on it succeeding.
+- **The considered alternative, and why it is not chosen:** a per-surface watermark in
+  `attention.db` itself (`push_delivered`, mirroring `deliveries`, keyed by conversation or
+  by device). It is what a naive design reaches for, and it is *defensible* — the argument
+  that killed "the phone as a fifth rung" (a lease needs a clock two observers may disagree
+  on, `attention.py:2403-2415`) does not apply, because the worker is a single claimant. It
+  is rejected for a smaller reason than that: the cursor plus the cloud's own per-device
+  delivery record (§2.2) already cover both failure modes, and a second writer inside the
+  machine-global store buys nothing except a new table to migrate, bound and prune. Recorded
+  here so a future reader does not have to rediscover it.
 
-#### 2.2 What the cloud must hold, and nothing more
+#### 2.2 What the cloud holds, and what it must not
 
 | Record | Fields | Why it is the minimum |
 |---|---|---|
-| **Device** | `device_id`, `platform` (`ios`/`android`), push token, `environment` (`sandbox`/`production` — the app cannot know which shipped), app build, `created_at`, `last_seen_at`, `revoked_at` | token rotation and revocation are the whole of device management |
-| **Account → devices** | the Radient account id → its live device ids | routing; the account already exists (`GET /v1/me`) |
-| **Computer → devices** | the connector's tunnel identity → the devices that paired to *that* machine | a user with three machines must not be pushed about machine C's work while only paired to A |
-| **Delivery** | `(device_id, conversation_handle, completion_token)` → sent/attempted, APNs/FCM id, response code | the record of what was pushed: it is what makes a re-delivery idempotent and a revocation testable |
-| **The push credentials** | APNs `.p8` key id + team id; the FCM service account | the reason the cloud has to exist at all |
+| **Device** | `device_id`, `platform`, the push token, `environment` (`sandbox`/`production` — only the app knows which build it is), app build, `created_at`, `last_seen_at`, `revoked_at` | token rotation and revocation are the whole of device management |
+| **Account → devices** | account id → live device ids | routing; the account already exists (`GET /v1/me`, `tunnels/api.py:144-170`) |
+| **Computer → devices** | the connector's tunnel identity → the devices registered for *that* machine | a user with three machines must not be pushed about machine C's work while paired to A |
+| **Delivery** | `(device_id, conversation_handle, emit_id)` → sent/attempted, provider id, response code | the record of what was pushed: it is what makes re-delivery idempotent and a revocation testable |
+| **Credentials** | the APNs `.p8` key id + team id; the FCM service account | the reason the cloud has to exist at all |
 
-**What the cloud must NOT hold:** transcripts, conversation names, session ids,
-working directories, model names, prompt text, or any read-state history. §4 is how the
-conversation identity is kept out too.
+**What the cloud must NOT hold:** transcripts, conversation names, session ids, working
+directories, model names, prompt text, **read state or read history**, and **no unread
+count** (§1.5). §4 says what it does learn, honestly, including the residue.
 
-#### 2.3 Who decides that a push may be raised — and why the phone is not a rung
+**The attention push is not "the same route with a flag" for idempotency purposes** (review
+M4): a completion event and a correction are different deliveries with different keys (§3.4).
 
-This is the subtlest decision in the ADR, and getting it wrong silently silences either the
-desktop or the phone.
+#### 2.3 Who decides that a push may be raised
 
-The core has an **eligibility ladder** for OS banners, and behind it a machine-wide
-arbitration watermark: a surface that is *watching* the session suppresses the banner
-(rung 1); otherwise a notify-capable desktop app claims the completion (rung 2); otherwise
-a running TUI (rung 3); otherwise the runtime itself (rung 4). The claim is
-`claim_delivery`, one durable `deliveries` watermark per **conversation**, and **exactly
-one** surface ever wins (`attention.py:2379-2430`; `docs/ATTENTION.md` §"Who raises the
-banner").
+The core has an **eligibility ladder** for OS banners and behind it a machine-wide
+arbitration watermark: a watching surface suppresses the banner (rung 1); otherwise a
+notify-capable desktop app claims the completion (rung 2); otherwise a running TUI (rung 3);
+otherwise the runtime itself (rung 4). The claim is `claim_delivery`, one durable `deliveries`
+watermark **per conversation**, and **exactly one** surface ever wins (`attention.py:2379-2460`;
+`docs/ATTENTION.md` §"Who raises the banner").
 
-So: **should a push claim?**
+**Decision 1: the phone is not a rung, and `claim_delivery` is untouched.**
 
-**Decision: no. The phone is not a rung, and `claim_delivery` is untouched.** Reasons:
-
-- The watermark is per conversation, so a push that claimed would silence the desktop
-  banner on the same machine — and a *desktop* claim would silence the push for a user who
-  is not at their computer at all. The two audiences are different devices in different
-  places; they are not competing for one screen the way rungs 1–4 are.
-- Making it a fifth rung cannot be fixed by ordering: whichever claim wins, the loser is
-  silenced *for good* (a re-claim returns `False`; there is no lease and no expiry — the
-  accepted cost documented at `attention.py:2400-2420`). A coin-flip between "the banner
-  you needed" and "the phone you needed" is worse than either.
-- It would also break the claim's own invariant that the claimant **is** the deliverer and
-  claims immediately before raising the banner, after its focus gate
+- The watermark is per conversation, so a push that claimed would silence the desktop banner
+  on the same machine — and a *desktop* claim would silence the phone for a user who is not at
+  their computer at all. The two audiences are different devices in different places; they are
+  not competing for one screen the way rungs 1–4 are.
+- It cannot be fixed by ordering: whichever claim wins, the loser is silenced **for that
+  completion** with no lease and no expiry (`attention.py:2403-2420`; QA's probe confirms the
+  compare is per sequence, so a *newer* completion in the same conversation is claimable
+  again). A coin-flip between "the banner you needed" and "the phone you needed" is worse than
+  either.
+- It would break the claim's own invariant that the claimant **is** the deliverer
   (`docs/ATTENTION.md`:148-156).
 
-**What the push worker consults instead**, in order, all machine-local reads:
+**Decision 2: the presence gate is a DEFERRAL, not a suppression — and the TUI viewer record
+is not consulted (review M3).**
 
-1. `unseen` for the completion (still true at send time — this is also the anti-race guard
-   in §3.3);
-2. `notify` (§14's flag);
-3. **the user's own quiet rules**, expressed as the existing presences rather than a new
-   clock: the machine-wide desktop presence (window focused *and* visible *and* not
-   minimised) and the TUI viewer record. If the user is demonstrably at this computer, the
-   push is suppressed and the local banner (rungs 1–4) is free to fire — which is exactly
-   the promise `docs/ux/flows.md`:570 already makes in Settings;
-4. a per-account device set that is non-empty (no paired phone, no work).
+The gate is the user's own promise in Settings ("don't notify while I'm at the computer",
+`docs/ux/flows.md`:570, and principle **P-8**, `docs/ux/principles.md:135`) — implemented from
+the presences that already exist, not from a new clock:
 
-**And the ordering property this preserves:** a TUI at the terminal *and* a phone in a
-pocket both get told. Nothing is silenced by the other.
+- **The signal is the desktop presence only**: a window that is focused AND visible AND not
+  minimised (`desktop_presence.py:84-86`), fresh within its TTL
+  (`PRESENCE_TTL_S = 45.0`, `presence.py:83`). **The TUI viewer record (`viewers.py`) is not
+  consulted**, because the phone is elsewhere: "a TUI is running on this machine" says nothing
+  about whether a *phone in a pocket* should be told, and consulting it is what made this
+  ADR's own "a TUI at the terminal and a phone in a pocket both get told" impossible to hold.
+  The TUI viewer record keeps its existing job — rung 3 of the local banner ladder.
+- **A suppressed push is deferred, not dropped**: the worker re-checks after
+  `PRESENCE_TTL_S` (45 s) while the completion is still `unseen` and still within a bounded
+  window (5 minutes), then emits. The deferral terminates early on an ack, because reading the
+  conversation in the app is exactly what makes `unseen` false. There is no idle or lock
+  signal anywhere in these modules, which is precisely why the gate cannot be a hard
+  suppression: a window left focused would otherwise silence the phone for good — the same
+  failure this ADR uses to reject the claim rung.
+- **The Settings toggle upgrades the deferral to a suppression.** With "don't notify while I'm
+  at the computer" ON, a fresh presence suppresses **outright** (bounded by the window, then
+  dropped). That is the user's own instruction, stated in their own words, and it is the only
+  form in which this design silences a phone.
 
-#### 2.4 A user with no Radient account: push does not work, and the app says so
+**The user-visible consequence, stated plainly:** by default, if you are looking at the
+desktop app when a turn finishes, your phone buzzes **45 seconds later** unless you read the
+completion in the app first. With the toggle on, it does not buzz at all while you are there.
+That is the tradeoff between P-8 ("do not interrupt a user who is already looking at the
+work") and never missing a completion, and it is the user's switch to move.
 
-Plainly, because the operator asked for it plainly:
+**Decision 3: the remaining gates**, in order, all machine-local reads:
 
-> **On a self-hosted route (a custom tunnel, or any URL with a relay password) there is no
-> push, at all, in this design and in any design that uses APNs or FCM.** APNs and FCM
-> both require a server that holds the app's credentials; that server is Radient; a user
-> with no Radient account has no such server. There is no "self-hosted push" that keeps an
-> iOS phone alerted while the app is closed — iOS provides no other wake mechanism, and the
-> app cannot hold a socket in the background. The one exception is a *self-built* push
-> gateway that the user runs against their own Apple/Google developer credentials, which is
-> a product of its own and is not this ADR (recorded in §9).
+1. `unseen` for the completion, still true at send time (§3.3's anti-race guard);
+2. `notify` (§1.4; `attention.py:2026-2033` computes it, the store never derives it);
+3. the presence rule above;
+4. the account has at least one live device registered for this computer.
+
+**And the ordering property this preserves:** a TUI at the terminal *and* a phone in a pocket
+both get told. Nothing is silenced by the other — and now nothing in this document says
+otherwise (review M3's second half).
+
+#### 2.4 Which machines can push at all, and the copy for the ones that cannot
+
+The deciding fact is **the machine's Radient login**, not the app's route (review Q6). A push
+is delivered by a *server* holding the app's credentials; the machine reaches that server with
+the connector's credential; **whether the phone reached the relay over a Radient tunnel or a
+custom URL does not enter the chain at all** — the cloud delivers to APNs/FCM, which is
+outbound from the cloud to the device, and needs no tunnel.
+
+| Machine's Radient login | Push | What the app shows |
+|---|---|---|
+| present | **works** — including for a phone on a custom route or Tailscale, and even with the tunnel stopped | the normal notification settings |
+| absent (the fully self-hosted case: no Radient account anywhere) | **no push, and no design here can add one** — there is no server that may hold APNs/FCM credentials for this app | the honest statement below |
+| present, but the connector's login is dead | pushes stop until it is renewed (`docs/tunnels.md` "A dead Radient login"); the machine says so in `lop tunnel status` | the app cannot see this state today; the Settings line is written for the login case, and the plan carries the "connector parked" row as a follow-up |
+
+**Plainly, because the operator asked for it plainly:** a user who runs no Radient account
+gets **no push at all**, in this design and in any design that uses APNs or FCM, because APNs
+and FCM both require a server holding the app's credentials and that server is Radient. There
+is no self-hosted iOS wake mechanism to substitute. (A self-built push gateway the user runs
+against their own Apple/Google developer credentials is a product of its own; §9 records it
+and this ADR does not design it.)
 
 What the app does instead, and what it must say:
 
-- **While the app is foregrounded**: the SSE list stream and the per-session stream are
-  live (`/api/sessions/events`, `/api/sessions/{id}/events`), the unread marks and the
-  in-app count are correct, and the icon badge is set directly from the aggregate read in
-  §1.1 — no push is involved in any of it.
-- **A local notification for a completion that lands while the app is running** is a
-  legitimate, cheap addition (flows.md D-1 option (a)) and should ship for both routes;
-  it is *not* a substitute and must not be described as one.
+- **While foregrounded**: the SSE list and per-session streams are live
+  (`/api/sessions/events`, `/api/sessions/{id}/events`), the marks and the in-app count are
+  correct, and the icon badge is set directly from the §1.1 read. No push is involved in any
+  of it.
+- **A local notification while the app is running** is a legitimate addition and is a slice of
+  its own (`docs/push-plan.md` S9), for foreground arrivals and for every route. It is *not* a
+  substitute and must not be described as one.
 - **On foreground/resume, a full resync**: the SSE reconnect's snapshot plus a
   `/api/attention/unread` read reconcile the badge and the rows. There is no delta to miss,
-  because the wire is snapshot-based by design (ADR 0002 architecture principle 1).
-- **In Settings the truth is stated once, where the toggle is**, in the Local Operator
-  voice, and it names the *remedy*, not just the limitation. Proposed copy, to be reviewed
-  by the designer in the app slice:
+  because the wire is snapshot-based by design (ADR 0002 principle 1).
+- **The icon badge is not left stale by the route**: it is cleared on sign-out and on route
+  removal (§1.4), and on a machine that cannot push it reflects the last connection only —
+  which §1.5 already discloses.
+- **In Settings the truth is stated once, where the toggle is**, in the Local Operator voice,
+  naming the *remedy*, not the limitation. Proposed copy for the designer to review in the app
+  slice:
 
-  > **Notifications** — *Your phone can be alerted when a turn finishes, but only when this
-  > app has a Radient sign-in to deliver it through. You are using a direct connection, so
-  > alerts only work while Local Operator is open. Sign in to Radient to get them in the
-  > background.*
+  > **Notifications** — *This computer is not signed in to Radient, so pushes have no way to
+  > reach your phone. Sign in on that computer to get alerts while the app is closed; until
+  > then alerts work only while Local Operator is open.*
 
-  and, on the Radient route with no paired computer or notifications denied at the OS
-  level, the matching sentence for that state. Never "you will be notified" when the route
-  cannot deliver one — the rule ADR 0005 §5 already set.
+  and, in the same slot with the machine signed in but notifications denied at the OS level
+  or no device registered, the matching sentence for that state. Never "you will be notified"
+  when the state cannot deliver one — the rule ADR 0005 §5 already set.
+
+**Two Settings rows are not shipped in v1, and the copy must not promise them** (review Q5b):
+**quiet hours** (there is no quiet-hours concept in the core; the platforms' own Focus /
+Do Not Disturb already suppress banners and they are the right owner of it) and **"when a
+session needs a decision"** (gates do not push — §1.4, and the plan's follow-up). Both rows
+are listed in the **Amends** block at the top so the flows document is not left claiming
+otherwise.
 
 ### 3. The ack-sync contract
 
-All operations are on the **mobile relay** unless marked *(cloud)*. Shapes are JSON; every
-one is auth-gated by the existing `lop_mobile` cookie with its 30-day TTL (ADR 0002 §6,
-`docs/relay/contract.md`:48-52).
+All operations are on the **mobile relay** unless marked *(cloud, proposal)*. Shapes are
+JSON; every relay route is auth-gated by the existing `lop_mobile` cookie with its 30-day TTL
+(ADR 0002 §6, `docs/relay/contract.md`:48-52).
 
 #### 3.1 The operations
 
-**Register a device** (new). The app posts the token it got from the platform; the *relay*
-is where it lands, and the relay forwards it, because the relay is the only party with a
-credential on both sides and the only party that can revoke.
+**Register a device** *(new)*. The app posts the token it got from the platform; the **relay**
+is where it lands, and the relay forwards it, because the machine holds the credential and the
+pairing (P4).
 
 ```jsonc
 POST /api/push/register
@@ -456,361 +619,474 @@ POST /api/push/register
 → {"ok": true, "device_id": "…", "registered_at": 1759…}
 
 // Idempotent on (install_id, platform): re-registering with a rotated token REPLACES the
-// token and keeps the device_id, so a device that rotates its push token nightly cannot
-// accumulate rows.
+// token and keeps the device_id, so a device that rotates its push token cannot accumulate
+// rows. THE TOKEN IS FORWARDED AND NOT STORED ON THE MACHINE — the relay keeps the cloud's
+// device_id and the metadata a Settings list needs.
 ```
 
-**Deregister** (new) — the app calls it on sign-out and on "forget this computer"; the
-relay also calls the cloud's delete when a paired computer is removed:
+**List this computer's devices** *(new)* — what the phone's Settings renders:
+
+```jsonc
+GET /api/push/devices → {"devices": [{"device_id":"…","platform":"ios","name":"…",
+                                       "app_version":"…","registered_at":…,"last_seen_at":…}]}
+```
+
+**Deregister** *(new)*. `device_id` may be the caller's own or **another device in this
+computer's registry** (the stolen-phone case, §4):
 
 ```jsonc
 DELETE /api/push/devices/{device_id}   → {"ok": true}
 ```
 
-**Fetch unread** (new, §1.1): `GET /api/attention/unread` → the aggregate above. This one
+**Fetch unread** *(new, §1.1)*: `GET /api/attention/unread` → the aggregate above. This one
 route is what the in-app count, the icon badge and every resync read.
 
-**Ack a conversation** (exists, unchanged): `POST /api/sessions/{id}/seen` with
-`{"completion_token": "…"}` (`daemon.py:3642-3697`). 200 `{ok, attention}`; 422 when the
-token is missing; 409 `{"code": "superseded_completion_token"}` when a newer completion has
-replaced it; 404 unknown session; 401 unauthenticated. **The app must re-read the projection
-and retry with the token it now names** — the refusal carries no state on purpose
-(`attention.py:2175-2240`).
+**Resolve a handle** *(new, §4)*: `GET /api/push/conversation/{handle}` → `{"session_id": "…"}`
+or `404` when the handle is unknown (a rotated key, or a conversation that no longer exists).
+This is what makes a cold tap landable when the conversation is not in the unread set.
 
-**Emit a completion event** (cloud, proposed): `POST /v1/tunnels/{tunnel_id}/push/events`
-with `Idempotency-Key: <completion token>`, body = the payload in §3.2's `data` object
-minus the badge. Response names which devices it fanned out to and the per-device result.
-Idempotency is required by the fan-out: a retry after a timeout must not double-push, and
-the key the machine already has (the completion token, a UUID) is exactly the right one.
+**Ack a conversation** *(exists, unchanged, plus one additive field)*:
+`POST /api/sessions/{id}/seen` with `{"completion_token": "…", "device_id": "…"}`. The
+`device_id` is **additive and optional**: it is how a self-correcting attention push skips
+the device that just acted (§3.3). 200 `{ok, attention}`; 422 missing token
+(`daemon.py:3667-3671`); 409 `{"code": "superseded_completion_token"}` when a newer
+completion replaced it (`:3676-3690`); 404 unknown session; 401 unauthenticated. **The app
+re-reads the projection and retries with the token it now names** — the refusal carries no
+state on purpose (`attention.py:2175-2240`).
 
-**Emit an attention change** (cloud, proposed): the same route with `type: "attention"`,
-sent by the relay when an ack happens on *any* surface, so that the account's other devices
-for that computer can correct their badges.
+**Emit a completion event** *(cloud, proposal)*: `POST /v1/tunnels/{tunnel_id}/push/events`,
+`Idempotency-Key: <emit key, §3.4>`, body = §3.2's `data` minus `emit_id`. Response names the
+devices fanned out to and the per-device result.
 
-#### 3.2 The push payload, and why each field is the minimum
+**Emit an attention change** *(cloud, proposal)*: the same route with `type: "attention"` and
+**its own key** (a machine-minted emit sequence, §3.4) — never the completion's key, or the
+cloud treats the correction as a replay and drops it (review M4).
+
+**Emitted where the read state actually moves (review M4).** The relay sees only its own
+`POST /seen`; acks from the TUI and the desktop are written by other processes straight into
+`attention.db` (`app.py:40741`, `routes/desktop_sessions.py:3428,3462`) and are visible only
+through the store. So attention events are emitted by the **worker**, on a change it detects
+itself, and `revision()` is the detector it already reads (`daemon.py:2499-2535`):
+
+1. the worker persists the `revision()` triple (with the cursor, §2.1) and, when the count
+   moves down on a tick, emits one attention event for the computer (no device exclusion is
+   possible here, which is harmless — a device that receives a correction it does not need
+   simply re-reads);
+2. the relay's `/seen` handler additionally nudges the in-process worker with the acking
+   `device_id`, so the common case is immediate and **the acting device is excluded**.
+
+That is the slice that makes the headline scenario — *clear a completion on the desktop and
+the phone's number drops* — actually exist, which no slice did before.
+
+#### 3.2 The push payload, and what it deliberately does not carry
 
 ```jsonc
-{ "aps": { "alert": {"title": "Local Operator", "body": "A turn finished."},
-           "badge": 2,
-           "thread-id": "<conversation handle>",       // iOS grouping, per conversation
+{ "aps": { "alert": {"title": "Local Operator",
+                     "body": "Task complete · 2 conversations need you"},
+           "thread-id": "<conversation handle>",
            "interruption-level": "active" },
   "data": { "v": 1,
             "type": "completion",                       // "completion" | "attention"
             "computer": "<opaque per-account computer handle>",
-            "conversation": "<opaque per-account conversation handle>",
+            "conversation": "<opaque conversation handle>",
             "completion_token": "<uuid>",
             "kind": "complete|error|interrupted|closed|retired",
-            "revision": "1043:1041",
-            "badge": 2 } }
+            "emit_id": "<uuid, minted by the machine per emit>",
+            "count": 2 } }
 ```
 
-Field-by-field, with the reason each is needed rather than convenient:
+The attention form carries `{v, type: "attention", computer, count, emit_id}` and
+`aps: {"content-available": 1}` — a **silent, best-effort wake** (§5). One term is used for it
+throughout: **the attention push**.
 
-| Field | Why it cannot be dropped |
+| Field | Why it cannot be dropped — or why it is not there |
 |---|---|
-| `type` | a tap on an `attention` push must not deep-link anywhere; it is a badge correction |
-| `conversation` (opaque handle) | the tap must deep-link, the collapse-id must be per conversation, and the *raw* session id must not ride (§4) |
-| `completion_token` | the tap's ack is token-bound, and the guard in §3.3 compares it |
-| `kind` | the title/body differ per outcome, and the app must not re-derive it |
-| `revision` | lets the app ignore a push that describes a state it already holds — as an **equality** check only (§1.1) |
-| `badge` | the operator's rule, computed by the machine, applied at delivery time even if the app never wakes |
-| `computer` | a tap on a multi-computer account must resolve *which* machine, before any session lookup |
+| `type` | a tap on an attention push must not deep-link anywhere; it is a badge correction |
+| `conversation` (handle) | the tap must resolve to a conversation and `apns-collapse-id`/`notification.tag` must collapse per conversation — without the raw session id (§4) |
+| `completion_token` | the tap's ack is token-bound, and §3.3's guard compares it |
+| `kind` | the title/body differ per outcome; the app must not re-derive it. It is the **store's** vocabulary (`complete, error, interrupted, closed, retired` — `attention.py:1611`), not the composer's: `compose.NotificationKind` lists `retired` and the gate kinds but **not `closed`** (`compose.py:60`), so a push builder keyed to the composer's literal set would silently drop a real outcome |
+| `emit_id` | the machine's own identity for one emit, for dedupe and for the cloud's delivery record. **It replaces the `revision` counters that the previous draft carried** (review M7): an opaque UUID per emit cannot be read as activity volume |
+| `count` | the number in the notification's **body**, so a user can judge whether to look now. **Deliberate, disclosed leak**: it is the machine's unread count at composition time, and the cloud sees it. (The alternative — body says "A turn finished" and nothing else — is a one-line change; recorded, not chosen) |
+| ~~`aps.badge`~~ | **not sent, ever** (§1.5) |
+| ~~conversation name~~ | **never sent** (P2). Not in the title, not in the body, not in any field. §2.2 says the cloud must not hold it, and `session_names_in_notifications()` gates *local* notifications on the machine (`notify.py:802-820`, **default `True`** at `:820`) — it is not a cloud-facing consent, and it must never be read as one |
+| ~~`revision`~~ | dropped (M7). The badge comes from a read, not from a push |
+| ~~snippets, error text~~ | **never sent.** The push body is composed from the house constants only (`notify.py:183-192`, `BODY_COMPLETE`/`BODY_ERROR`/…), through a **push-specific builder** — never through the desktop composer's body path (`compose.py:93-113`, whose `body` is a last-assistant-line snippet when the privacy flag allows and whose `body_is_failure` text "may name a provider, a model or a quota"). A builder that reuses `notification_payload()` with its defaults would put model-written text into an APNs payload, so the builder is named as a slice deliverable and asserted against in a test |
 
-**What the payload carries that is deliberately NOT content:**
+**What the notification shows before the app has ever connected** (P2's corollary, and the
+question review M6 asked): the title is `APP_NAME` (`notify.py` uses it when the name is
+unavailable) and the body is the house sentence plus the count. **A conversation name cannot
+appear in a banner on this design** — the machine does not send one and the app has no name
+for a conversation it has never fetched. The name appears the moment the app connects and
+renders the conversation, in the app. This is a real loss against a hypothetical design that
+sends the name, and it is the price of P2.
 
-- **No transcript text, ever** — not a snippet, not a preview, not a tool result.
-- **No model-written text** — the machine composes the push, and the composer's
-  `body_is_snippet` / `body_is_failure` halves must never be sent: a failure envelope may
-  name a provider, a model or a quota (`compose.py`:84-105). The push body is the **house
-  sentence** only.
-- **No conversation name by default.** The machine already has the flag that governs this —
-  `session_names_in_notifications()` (`tui/notify.py:802-820`), whose docstring says exactly
-  why it exists ("not *may we interrupt* but *may we say what about*"). It is the machine's
-  setting, so it applies to every surface including this one; with it off, the title is the
-  app name and the body is a house sentence.
-- **No session id, no cwd, no directory, no model id** — §4.
+#### 3.3 Ordering and the race rules, per permutation
 
-#### 3.3 Ordering and the race rules
-
-The four permutations the operator named, plus the two races, decided:
-
-| Case | What happens | Why it is correct |
+| Permutation | What happens | The rule that makes it safe |
 |---|---|---|
-| **App open** | the list SSE is live; the user opens the conversation, the result is rendered, and the ack is sent token-bound. A push that arrives anyway is not suppressed by the app; it is *irrelevant*, and the icon badge was already the machine's number | no automatic path acks; the rendered-result rule governs (`docs/ATTENTION.md`) |
-| **App backgrounded** | the alert push raises the badge from the machine's count. A tap wakes the app, deep-links (§6), and the ack fires **only after** the completion row is genuinely rendered | identical to the desktop's `guardForegroundReceipts` rule, in the app's own terms |
-| **App killed** | same as backgrounded for delivery. The tap cold-starts the app, the deep link is resolved before the default destination commits (§6), the session is opened (resuming the runtime if needed), the row renders, the ack fires | a killed app cannot be woken silently on iOS, so nothing may depend on a background wake having happened |
-| **Several devices, one machine** | device A acks → the relay writes the receipt and calls the cloud with `type: "attention"` → device B receives a **silent attention push** and re-reads the aggregate | B is corrected even though B never saw the completion |
-| **An ack races an in-flight push** | the push worker re-checks `unseen` for that token immediately before emitting, so an ack landing first suppresses the send entirely. If the push is already at APNs, it still arrives — and the tap lands on the conversation, which then renders **already read**: the app must not re-ack, must not change the badge, and must not show the unread mark | the second check is a read, not a claim, so it cannot break the claim's clock-free predicate; and a push that describes read state is harmless, because the badge is a snapshot that the next read replaces |
-| **A push for a conversation acked seconds earlier on another surface** | the same as above; additionally the device's `revision` equality check means the app does not repaint from the push at all, and its next `/api/attention/unread` read is authoritative | the equality rule, not an order, is what makes this converge (§1.1) |
+| **App foregrounded, watching that conversation** | the completion is in band: the machine suppresses the push by the presence rule (§2.3) and rung 1 suppresses the banner | no notification is raised for a conversation already on screen; the app's own SSE frame carries the new state |
+| **App foregrounded, another conversation** | the app receives the push and `setNotificationHandler` **suppresses the OS banner**, surfacing it in-app instead | one decision, stated: the in-app surface is authoritative while the app runs (review M11's Q2 choice) |
+| **App backgrounded** | an alert push names the kind and the count. A tap wakes the app, resolves the handle (§6), opens the conversation, and the ack fires **only after the completion row is genuinely rendered** | the same rule the desktop states as a foreground-receipt guard, in the app's own terms (`docs/ATTENTION.md` §"What a frontend can acknowledge") |
+| **App killed (iOS force-quit)** | the alert push still arrives and a tap cold-starts the app; **no silent wake is delivered to a force-quit app**, so nothing may depend on one | the design never assumes a background wake on iOS; the badge is corrected on the next connection (§1.5) |
+| **Several devices, one machine** | device A acks → the receipt is written → the worker emits an attention push (excluding A when the nudge path is used) → B wakes, re-reads the count, sets its badge | B is corrected even though B never saw the completion; a wake that never arrives leaves B stale only until its next connect (§1.5) |
+| **Devices on different machines** | each device shows the badge of the computer it is connected to; nothing merges | §1.6's per-computer rule, and §1.5's explicit staleness window — **not** "harmless" |
+| **An ack races an in-flight push** | the worker re-checks `unseen` for that completion immediately before emitting, so an ack landing first suppresses the send. If the push is already at APNs it still arrives; the tap lands on the conversation, which renders **already read**: the app does not re-ack, does not change the badge, does not show an unread mark | the second check is a read, not a claim, so it cannot perturb the claim's clock-free predicate |
+| **A push arrives for a conversation acked seconds ago on another surface** | the app reconciles against the machine: `unseen` is false, so nothing is marked, nothing is acked, and the badge keeps the value the machine returns | the tap is authoritative over the push — a push is a doorbell, not a record |
+| **A heal: a provisional outcome is corrected** (`interrupted` → `complete`) | the *completion push* may already have been sent with the provisional kind; the corrected record is a **new delivery**, because the emit key carries the record's content (§3.4) | the app never trusts a push for state: the conversation it opens shows the machine's current record. The correction exists so the *notification* is not permanently wrong |
+| **A push is reordered or coalesced by APNs/FCM** | the badge is not carried, so ordering cannot corrupt it; a stale banner says only "a turn finished", which is true | §1.5's decision removes the class of bug rather than defending against it |
 
-**Two rules that make the races safe rather than merely rare:**
+**Three rules that carry the whole table:**
 
-- **The badge is a snapshot, never an increment.** A device that applies `badge` from a push
-  has taken the machine's number at composition time; nothing ever does `badge ± 1` on a
-  device, so a missed or duplicated push cannot drift the count — the *increment* design is
-  the one that drifts, and it is rejected here by name.
-- **The tap is authoritative over the push.** Whatever the payload said, the app resolves
-  the conversation from the machine and paints what the machine says now. A push is a
-  doorbell, not a record.
+- **The badge is never incremented and never read from a push.** It is the number the machine
+  returns when the app reads it (§1.4) — so a missed, duplicated, reordered or coalesced push
+  cannot drift the count. The increment design is rejected by name.
+- **The tap is authoritative over the push, and the machine is authoritative over both.**
+- **Nothing drops state on a revision comparison** (Context §1): an equal `revision` means
+  "possibly changed — go and look", never "stale, discard" (review QA Q2's contradiction is
+  resolved here, and in §1.1).
 
-#### 3.4 Idempotency and versions, stated once
+#### 3.4 Idempotency and keys, stated once
 
-| Operation | Idempotent? | Version / token |
+| Operation | Key / idempotency | Heals |
 |---|---|---|
-| `POST /api/push/register` | yes, on `(install_id, platform)` | token replaced, `device_id` stable |
-| `POST /api/sessions/{id}/seen` | **yes** — a delayed or duplicate receipt converges upward (`MAX(receipts.acknowledged, excluded)`, `attention.py:2247-2249`); a receipt for a superseded token is refused, not recorded | `completion_token`, monotone `sequence` |
-| `POST …/push/events` (cloud) | yes, on `Idempotency-Key = completion_token` | the token |
-| the badge | **not idempotent and not meant to be** — it is a replace-whole snapshot carrying the machine's `revision` triple | equality-checked, never ordered |
-| `AttentionStore.revision()` | n/a | `(MAX(sequence), SUM(acknowledged), supersedes)` — equality only |
+| `POST /api/push/register` | `(install_id, platform)`; the token is replaced, `device_id` stable | n/a |
+| `POST /api/sessions/{id}/seen` | `completion_token`; a duplicate or delayed receipt converges upward (`MAX(receipts.acknowledged, excluded.acknowledged)`, `attention.py:2247-2249`); a receipt for a superseded token is **refused, not recorded** | a heal keeps the token; the refusal is the app's cue to re-read |
+| completion emit *(cloud, proposal)* | **`sha256(completion_token ‖ anchor_id ‖ kind)`** — the record's *content*, which is exactly what `publish`'s supersede rewrites (`attention.py:2094-2100`) | **a heal changes the key, so the correction is a new delivery and idempotency cannot swallow it** (P5) |
+| attention emit *(cloud, proposal)* | a machine-minted monotone **emit sequence**, persisted with the cursor — never the completion's key | n/a |
+| the badge | **not a wire field at all** (§1.5); it is the machine's count at read time | n/a |
+| `AttentionStore.revision()` | equality only, and it is the machine's own change detector — it never reaches the wire | the heal moves its third term |
 
 ### 4. Privacy and security boundaries
 
-**What leaves the machine, exhaustively:** the completion's **kind** and **token**, the
-**badge count**, the `revision` pair, an opaque computer handle, an opaque conversation
-handle, and (only when the machine's own flag is on) the conversation's name as the push
-title. Nothing else. No transcript, no prompt, no working directory, no file path, no model
-name, no tool output, no error text, no session id.
+**What leaves the machine, exhaustively:** an opaque conversation handle, an opaque computer
+handle, the completion's kind, the completion token, the emit id, and the unread count. **No
+conversation name, no transcript, no snippet, no failure text, no prompt, no working
+directory, no file path, no model name, no tool output, and no read history.**
 
-**The conversation handle, and what it buys.** The session id (`session_id`, 12 hex chars,
-derived from the conversation's directory) is not a secret, but it is a *stable, guessable
-in principle, globally-meaningful* identifier, and handing it to the cloud would give Radient
-a per-conversation index it has no need for. So the payload carries a **per-account opaque
-handle** minted by the relay (or, where the handle is minted by the cloud, derived under a
-key the cloud rotates) and mapped to a session id **on the machine**. The app resolves
-handle → session id by asking the machine it is already connected to (the list it fetches on
-open carries both). Cost: one small mapping table and one extra read after a cold-start tap.
-Benefit: the cloud cannot count, correlate or name a conversation, and a leaked push log
-reveals that *something* finished on *some* computer.
+**The conversation handle: mint, scope, and resolve** (review M10 — this was too vague to
+implement from):
 
-**Token handling.** Device tokens are opaque strings; the cloud stores them encrypted at
-rest, keyed to the account and the computer; the *machine* stores only the registration it
-forwarded (or nothing but the device id — the recommended split is device registry on the
-cloud, so the machine holds no token at all). The APNs `.p8` and the FCM service account
-live in the cloud's secret store and never in the app or the repository — and, per this
-repository's rules, `google-services.json`/`GoogleService-Info.plist` are **build inputs
+- **Mint**: `handle = base64url(HMAC-SHA256(key, conversation_identity))[:22]`, where `key` is
+  32 random bytes in `<config root>/push-handle.key` (0600), minted on first use. The mapping
+  is a **machine-local HMAC, not a stored table**: nothing to migrate, nothing to prune, and
+  `conversation_identity()` (`attention.py:428-431`) is already the stable input.
+- **Scope**: **per machine**, deliberately not per account. Two machines therefore produce
+  different handles for what a user thinks of as "the same conversation" — which is correct,
+  because §1.6 says they are different conversations.
+- **Where the app gets it**: the aggregate's `conversations[].push_handle` (§1.1) — bounded to
+  the unread rows, so ~22 bytes × the unread count rather than 22 bytes on every list row
+  (the per-row alternative was rejected on frame size, recorded here).
+- **Resolve**: `GET /api/push/conversation/{handle}` (§3.1) for the cold-tap case where the
+  conversation is not unread any more.
+- **Rotation**: deleting the key changes every handle; pending pushes then resolve to 404 and
+  the app falls back to the list (§6 item 5). That is the recovery path, and it is also the
+  only way to break the correlation below.
+
+**What the cloud does learn — the honest version** (review M7; the previous draft claimed the
+cloud "cannot count, correlate or name a conversation", which was false by construction):
+
+- **The cloud can build a per-computer activity timeline**: when a conversation finished, its
+  outcome class, and how often. A stable per-conversation handle is what `thread-id` and
+  collapse require, and it is stable *by design*.
+- **It cannot read or name anything**: no content, no title, no session id, no path.
+- **It cannot correlate across machines or with any Radient-side identity**, because the
+  handle is an HMAC under a machine-local key that never leaves the machine (§4 above) — that
+  is a derived property of the mint, not a promise.
+- **No counters ride the wire**, so it cannot infer how much *unpushed* activity happened
+  (the previous draft's `revision` fields did exactly that — `MAX(sequence)`'s gaps reveal
+  volume and `SUM(acknowledged)` is a timestamped read-history stream; both are gone).
+- **The one disclosed aggregate** is `count` (§3.2): the number of unread conversations on the
+  machine at that moment. It is enough to see "busy day / quiet day" for a computer.
+
+**Token handling.** Device tokens are opaque strings; **the machine never stores them**
+(P4 — the relay forwards the token to the cloud and keeps only the cloud's `device_id` and the
+metadata a Settings list needs: platform, app version, registered/last-seen). The cloud stores
+tokens encrypted at rest, keyed to the account and the computer. The APNs `.p8` and the FCM
+service account live in the cloud's secret store and never in the app or the repository; per
+this repository's rules, `google-services.json` / `GoogleService-Info.plist` are **build inputs
 injected from CI secrets**, never committed (the repo is public; `AGENTS.md`: "Never commit
-tokens, … certificates", and `.env` files are already forbidden).
+tokens, … certificates").
 
-**Revocation, and what a revoked device stops receiving.** Four paths, all of which must
-work:
+**Revocation, and the stolen phone (P4, and review M9's question answered explicitly).** Five
+paths, and the honest limits of each:
 
-1. **App-side sign-out / forget-this-computer** → `DELETE /api/push/devices/{id}` → the
-   cloud deletes the token. The app also deletes its cached projections (ADR 0002 §"Logout
-   is a security control").
-2. **Unpairing a computer** → the relay deregisters every device bound to that computer,
-   because a device paired only to A has no business being pushed about B.
-3. **Server-side** → the account can revoke a device in the cloud; the next fan-out to that
-   token is refused and the device is marked revoked.
-4. **A dead token** → APNs `410 Unregistered` / FCM `UNREGISTERED` deletes it. Deletion is
-   not optional: an accumulating token table is a privacy liability and a cost.
+1. **From the machine** — `lop mobile devices revoke <id>` or the phone's own Settings
+   unpair → `DELETE /api/push/devices/{id}` → the cloud deletes the token. **Requires the
+   machine to be reachable**, which is exactly the case a stolen phone makes unreliable.
+2. **From the Radient account, with no machine involved** — the account's console/API revokes
+   the device and the cloud stops delivering to that token. **This is the primary remedy for a
+   stolen device**, and it needs a Radient-side device list: a **new cloud-side surface of the
+   same class as the blocked account-deletion item** (§7).
+3. **Rotating the relay password** invalidates every device's `lop_mobile` cookie at once —
+   the cookie key is derived from the password (`docs/relay/contract.md`:48-52, ADR 0002 §6) —
+   so it cuts a stolen device off from the relay immediately. **It does not revoke its push
+   token**, which is why (1)/(2) are still required; the app's copy must not conflate them.
+4. **Server-side per-token revocation** and **dead-token deletion** (APNs `410 Unregistered` /
+   FCM `UNREGISTERED`) — deletion is not optional: an accumulating token table is a privacy
+   liability and a cost.
+5. **Unpairing a computer** deregisters every device bound to it, because a device paired only
+   to A has no business being pushed about B.
 
-**Revocation is a security control, so it is stated as one**, in the vocabulary ADR 0002 §6
-already set: a push token copied off a device could keep receiving payloads until the cloud
-is told, and the app must never claim "notifications stopped everywhere" while a revoke is
-still pending — the same rule as its tunnel-session revoke.
+**What a revoked device keeps**: whatever it already cached locally — projections and
+transcripts (ADR 0002 §6) and its `lop_mobile` cookie until the TTL or a password rotation.
+Revocation stops *delivery*; it does not erase the device. The app must never claim
+"notifications stopped everywhere" while a revoke is pending — the same rule ADR 0002 §6 sets
+for the tunnel session.
 
-**When the cloud is unreachable, the machine does nothing dramatic.** The push worker
-queues at most a bounded number of undelivered events with a bounded retry and then
-**drops** them, logging once rather than once per tick; it never blocks a turn, never
-retries forever, and never *needs* to succeed, because **unread state is durable on the
-machine and the badge is correct the moment the app can read it.** A push is a nudge; the
-machine's own state is the product. (The connector's own reauthorization machinery already
-handles the dead-login/refused/unreachable cases for the tunnel as a whole —
-`tunnels/gateway.py`:30-90, `docs/tunnels.md` §"A dead Radient login" — and the push path
-must reuse those verdicts rather than inventing a second vocabulary.)
+**When the cloud is unreachable, the machine does nothing dramatic.** The worker queues a
+bounded number of undelivered events, retries each with the *same* idempotency key a bounded
+number of times, then **drops** it with one log line; it never blocks a turn, never retries
+forever, and never *needs* to succeed, because unread state is durable on the machine and the
+badge is correct the moment the app can read it. A push is a nudge; the machine's own state is
+the product. The connector's own reauthorization machinery already handles the
+dead-login/refused/unreachable cases for the machine's control-plane access as a whole
+(`docs/tunnels.md` "A dead Radient login"), and the worker rides on that rather than inventing
+a second policy.
 
-### 5. iOS and Android platform constraints
+### 5. Platform constraints, and what each one forces
 
-The gaps that actually matter, with the vendor statement each rests on.
-
-**APNs**
+**APNs (quoted, read 2026-09-30)**
 
 - HTTP/2 + token-based auth (a `.p8` key with its key id and team id); `apns-topic` = the
   bundle id ([Sending notification requests to APNs](https://developer.apple.com/documentation/usernotifications/sending-notification-requests-to-apns)).
-- **A badge is delivered by an `apns-push-type: alert` push**, not a background one: Apple's
-  push-type table lists `alert` as "notifications that trigger a user interaction — for
-  example, an alert, **badge**, or sound", while `background` "must not contain any keys
-  that would trigger user interactions" and a background notification "doesn't display an
-  alert, play a sound, or badge your app's icon"
-  ([push types](https://developer.apple.com/documentation/usernotifications/sending-notification-requests-to-apns#Know-when-to-use-push-types),
+- **Alert pushes trigger interaction; background pushes do not.** The push-type table lists
+  `alert` as "notifications that trigger a user interaction — for example, an alert, **badge**,
+  or sound", while `background` "must not contain any keys that would trigger user
+  interactions" and a background notification "doesn't display an alert, play a sound, or badge
+  your app's icon" ([push types](https://developer.apple.com/documentation/usernotifications/sending-notification-requests-to-apns#Know-when-to-use-push-types),
   [background updates](https://developer.apple.com/documentation/usernotifications/pushing-background-updates-to-your-app)).
-  **Therefore:** the completion push is an `alert` push (it carries the badge and the
-  banner), and the cross-device badge correction is an `alert` push whose `aps` carries
-  **only** `badge` — which shows nothing and corrects the number.
-- **Silent wakes are best-effort and cannot be relied on**: background pushes are low
-  priority, are discarded when the app has been force-quit, and Apple advises "don't try to
-  send more than two or three per hour" (same page). **Therefore:** the badge correction is
-  a badge-only alert push (§3.3), and the app *also* reconciles on every foreground/resume.
-- **APNs stores only one notification per bundle id**, and may reorder or coalesce one sent
-  to the same device ([same page](https://developer.apple.com/documentation/usernotifications/sending-notification-requests-to-apns)).
-  **Therefore:** per-conversation coalescing with `apns-collapse-id` (≤ 64 bytes) is the
-  right behaviour, and a burst of completions may legitimately arrive as a subset — the
-  badge and the list are what make that harmless.
-- Payload limit 4 KB; `apns-expiration` decides how long an undelivered push is retained
-  (default in the FCM path: 30 days) — the payload above is ~300 bytes, so there is no
-  reason to compress content into it, which is one more argument for its minimal shape.
+  **Forces:** the completion push is an `alert` push; the attention push is a
+  `content-available` background push, and its correction reaches the icon only through the
+  app, which is exactly what §1.5 decided.
+- **Silent wakes are best-effort and cannot be relied on**: background notifications are low
+  priority, "the system may hold and delay" them, "if something force quits or kills the app,
+  the system discards the held notification", and Apple advises "don't try to send more than
+  two or three per hour" (same page). **Forces:** §3.3's killed-app row and §1.5's staleness
+  window; both are statements about what the app can and cannot guarantee while backgrounded
+  or killed, which review M5 asked for.
+- **APNs stores only one notification per bundle id**, may reorder, and may coalesce
+  (same page). **Forces:** per-conversation coalescing with `apns-collapse-id` (≤ 64 bytes) is
+  the right behaviour, and a burst may legitimately arrive as a subset — harmless, because the
+  badge is not carried (§1.5).
+- Payload limit 4 KB; `apns-expiration` decides how long an undelivered push is retained. The
+  payload above is ~300 bytes, so there is no reason to compress content into it.
 
-**FCM (HTTP v1)**
+**FCM HTTP v1 (quoted)**
 
 - `notification.tag` replaces an existing notification ("Identifier used to replace existing
-  notifications in the notification drawer"), `notification_count` sets the count, and
-  `channel_id` **must name a channel the app has already created** or the message falls back
-  to a default channel ([AndroidNotification](https://firebase.google.com/docs/reference/admin/node/firebase-admin.messaging.androidnotification);
+  notifications in the notification drawer"), `notification_count` sets a count, and
+  `channel_id` **must name a channel the app has already created** or the message falls back to
+  a default channel ([AndroidNotification](https://firebase.google.com/docs/reference/admin/node/firebase-admin.messaging.androidnotification);
   [REST projects.messages](https://firebase.google.com/docs/reference/fcm/rest/v1/projects.messages)).
-  **Therefore:** the app creates one channel per notification class at first run, and the
-  cloud's per-platform payload differs (a field FCM needs and APNs does not is not a leak,
-  it is the transport).
-- **Data-only messages are throttled in Doze and dropped after a force-stop** — the Android
-  analogue of the iOS silent-push caveat, and the reason the badge-only-in-app path exists
-  on both platforms.
-- **Launcher badge support varies**: "Not all Android launchers support application badges.
-  If the launcher does not support icon badges, the method will always resolve to 0"
-  ([Expo Notifications](https://docs.expo.dev/versions/latest/sdk/notifications/)). The app
-  must therefore treat the Android icon badge as best-effort while treating the **in-app**
-  count as exact — which is why §1.4 ties the badge to one route rather than to the OS.
+  **Forces:** the app creates its channels at first run and the cloud's payload differs per
+  platform — a field FCM needs and APNs does not is transport, not leak.
+- **Data-only messages are throttled in Doze and dropped after a force-stop** — Android's
+  analogue of the iOS silent-push caveat.
+- **Launcher badge support varies**: "Not all Android launchers support application badges. If
+  the launcher does not support icon badges, the method will always resolve to 0"
+  ([Expo Notifications](https://docs.expo.dev/versions/latest/sdk/notifications/)). **Forces:**
+  the Android icon badge is best-effort while the **in-app** count is always exact — which is
+  why the in-app count is the contract and the icon is a courtesy.
 
-**Entitlements and capability work each store requires**
+**Capability and account work, per store**
 
-| Store | What must exist before the first build that contains this code |
-|---|---|
-| **Apple** | Push Notifications capability on the App ID; an APNs key (`.p8`) uploaded to the cloud's secret store; the `aps-environment` entitlement (Expo sets `development` and Xcode flips it to `production` in an archive build — [Expo Notifications](https://docs.expo.dev/versions/latest/sdk/notifications/)); Background Modes → *remote-notification* only if we ever need a silent wake (`enableBackgroundRemoteNotifications` in the config plugin); and a profile that includes push. Time-window: an App ID change invalidates provisioning profiles, so it lands before the first TestFlight build that carries the module |
-| **Google** | A Firebase project + `google-services.json` **injected from CI**; a service-account JSON for the v1 send API held by the **cloud** only; Android 13's `POST_NOTIFICATIONS` runtime permission requested with context, not at launch |
-| **Both** | the notification-permission ask has a *reason* on screen before the OS dialog (the app's design kit already forbids a bare OS prompt) |
+- **iOS**: the APNs entitlement and the Push Notifications capability on the App ID and
+  provisioning profile; an App Store Connect `.p8` key held by the cloud. The Expo config
+  plugin sets the APNs entitlement to `development` and Xcode flips it to `production` in an
+  archive ("The iOS APNs entitlement is always set to 'development'. Xcode automatically
+  changes this to 'production' in the archive generated by a release build." — same page). A
+  background wake additionally needs `UIBackgroundModes: remote-notification`, which the same
+  plugin exposes as `enableBackgroundRemoteNotifications`
+  ([configurable properties](https://docs.expo.dev/versions/latest/sdk/notifications/#configurable-properties)).
+- **Android**: the `google-services.json` build input (from a CI secret — never committed), a
+  service account for the v1 send API **held by the cloud and never by the app**, an
+  application channel per notification class, and the `POST_NOTIFICATIONS` runtime permission.
+- **Both**: an Expo config-plugin block, and a **development build** — "push notifications
+  (remote notifications) functionality provided by `expo-notifications` is unavailable in Expo
+  Go on Android from SDK 53", so the app's local iteration story changes with this feature
+  (same page). ADR 0004's job graph gains a notifications-capable build profile.
+- **F-Droid / FOSS channel**: ADR 0004's F-Droid row is **parked** and says F-Droid "requires
+  FOSS-only dependencies and builds from source: React Native's Android build resolves Maven
+  artefacts and ships prebuilt native libraries (Hermes/JSI), and **push notifications would
+  pull in Google Play Services / Firebase**" (`docs/adr/0004-ci-cd.md`:178) and the FOSS rule
+  itself is the first row of `docs/publishing/other-channels.md`:128 ("Google Play Services and
+  Firebase … are strictly forbidden"). **Forces:** a `foss` product flavour that omits the
+  notifications module and keeps the SSE + local-notification path, and a documented reason
+  the row is parked until that flavour exists. (The previous draft attributed the "revisit when
+  notifications land" phrasing to `other-channels.md`; it is ADR 0004's row, and it is cited
+  there now — review Q8a.)
+- **The app's own Settings and permission flow is a new requirement, not an existing rule.**
+  The previous draft implied the design kit already forbade a bare OS permission prompt; no
+  such rule exists in `docs/design`, `docs/ux`, `docs/adr` or `AGENTS.md` (review Q8b). It is
+  a requirement this ADR sets: the permission is requested in context, with the §2.4 copy
+  already on screen, reviewed by the designer in the app slice.
 
-**FOSS channels.** ADR 0004 parks F-Droid and says why: "push notifications would pull in
-Google Play Services / Firebase" ([`0004-ci-cd.md`](0004-ci-cd.md):178,
-[`other-channels.md`](../publishing/other-channels.md):128). **This ADR does not change
-that verdict — it makes it concrete:** the FOSS product flavour must compile push out
-entirely (no Firebase, no `expo-notifications` push path) and keep exactly the §2.4
-degradation, where the app is a foreground SSE client with local notifications. F-Droid's
-row in `other-channels.md` already says "Revisit when notifications land, not before";
-this is that revisit, and its answer is "a flavour, in the app slice, later".
+### 6. Navigation contract: the composer home, the cold-start override, and the deep link that must exist
 
-### 6. Navigation contract: the composer home, and the cold-start override
-
-The operator's navigation requirement is recorded here as a contract, not as a UI slice
-detail, because a push tap's correctness depends on it:
+The operator's navigation requirement is recorded here as a contract, not as a UI slice detail,
+because a push tap's correctness depends on it.
 
 1. **The default destination is a new-chat composer**, with conversations behind a sidebar.
    This comes from the operator, not from this ADR.
-2. **A push cold-start deep link overrides the default destination.** Precedence, stated as
-   an order because `app/`'s routing makes it a real question: *(a)* a notification response
-   present at launch wins; *(b)* then an inbound `localoperator://s/<id>` link; *(c)* then
-   the default (composer home). Nothing else may consume a cold-start destination first —
-   in particular the auth/connection flow must **carry it**, not drop it.
-3. **The response must be consumed exactly once.** `expo-notifications` exposes the launch
-   response through `getLastNotificationResponse()`/`useLastNotificationResponse()` and a
-   foreground listener, and `clearLastNotificationResponse()` exists for exactly this
-   ("May be used when an app selects a route based on the notification response, and it is
-   undesirable to continue selecting the route after the response has already been handled",
+2. **A push cold-start deep link overrides the default destination.** Precedence, as an order
+   because `app/`'s routing makes it a real question: *(a)* a notification response present at
+   launch wins; *(b)* then an inbound `localoperator://s/<id>` link; *(c)* then the default
+   (composer home). Nothing else may consume a cold-start destination first — in particular
+   the auth/connection flow must **carry** it, not drop it.
+3. **The response is consumed exactly once.** `expo-notifications` exposes the launch response
+   through `getLastNotificationResponse()` / `useLastNotificationResponse()` and a foreground
+   listener, and `clearLastNotificationResponse()` exists for exactly this ("May be used when
+   an app selects a route based on the notification response, and it is undesirable to
+   continue selecting the route after the response has already been handled",
    [Expo Notifications](https://docs.expo.dev/versions/latest/sdk/notifications/)). A
    re-render, a theme change or a re-auth must not re-navigate the user into the same
    conversation.
-4. **The destination survives a not-yet-connected app.** A cold start after a tap usually
-   arrives before any session exists: the credential may need a tunnel session minted
-   (ADR 0002 §3). The pending destination is therefore held in `connection-store`-adjacent
-   state and consumed when the connection reaches `live` — never dropped, never replaced by
-   the composer.
-5. **A conversation the device has never seen.** The push carries an opaque handle, so the
-   app must resolve it: fetch the list; if the session is there, open it; if not, fetch the
-   single session; if the computer does not know it at all — the conversation was deleted,
-   or the handle belongs to another machine — **land on the conversations sidebar with one
-   honest sentence** ("That conversation isn't on \<computer\> any more.") and no error
-   state. A cold tap must never dead-end, and must never fabricate an empty transcript
-   screen for a conversation that does not exist.
-6. **Notifying conversation ≠ current screen.** When the user taps a push for conversation
-   B while the app sits on A, the app navigates to B (`router.push`), and the back
-   affordance returns to the composer home. The sidebar's unread marks are the machine's,
-   so the row for B clears the moment the ack lands — not on navigation.
+4. **The destination survives a not-yet-connected app**, and it has a failure path (review
+   m5b): a cold start after a tap usually arrives before any session exists (a tunnel session
+   may need minting, ADR 0002 §3). The pending destination is held in connection-adjacent
+   state and consumed when the connection reaches `live`. If it never does — the computer is
+   offline, the route was removed, sign-in fails — the app lands on the computer list after a
+   bounded wait and says so in one sentence; it must not spin, and it must not silently drop
+   the user on the composer as if nothing had happened.
+5. **A tap for a computer the app is not on switches route — and that clears state.** A route
+   switch aborts in-flight requests, closes streams and clears the projections, because they
+   belong to a different computer (`docs/architecture.md` "Route switch"). The contract:
+   switch first, **then** resolve the handle, and never resolve against the old computer's
+   cache (review m5a).
+6. **A conversation the device has never seen.** The push carries an opaque handle, so the app
+   resolves it: if it is in the current aggregate (§1.1), open it; else
+   `GET /api/push/conversation/{handle}` (§3.1); if the computer does not know it at all — the
+   conversation was deleted, or the handle predates a key rotation — **land on the
+   conversations sidebar with one honest sentence** ("That conversation isn't on \<computer\>
+   any more.") and no error state. A cold tap never dead-ends and never fabricates an empty
+   transcript screen for a conversation that does not exist.
+7. **The deep link must exist as code — it does not today** (P6, review QA's "a proposal in
+   disguise"). `localoperator://` resolves as a scheme
+
+   (`app.config.ts:52-54`), but **there is no `s/<id>` route on `main` and none on #11 or
+   #12**; the only session route is `session/[id]`, and `app/(app)/_layout.tsx:5` calls
+   `localoperator://s/<id>` "a future deep link". So this ADR specifies both halves and names
+   the slice that ships them (`docs/push-plan.md` S8):
+   - a `+native-intent.tsx` at the app root rewriting `localoperator://s/<id>` to
+     `/session/<id>` (the Expo Router hook for exactly this,
+     [Customizing links](https://docs.expo.dev/router/advanced/native-intent/)), for links
+     that carry a session id (shared links, QA fixtures);
+   - and, because a push carries a **handle**, a resolver: handle → session id (§3.1) →
+     `router.push`, with the route switch of item 5 applied first.
+   Until S8 lands, the honest statement is: **the push tap deep link is unimplemented.**
+8. **Notifying conversation ≠ current screen.** Tapping a push for conversation B while the
+   app sits on A navigates to B, and the back affordance returns to the composer home. The
+   sidebar's unread marks are the machine's, so B's row clears when the ack lands — not on
+   navigation.
 
 **Out of scope, explicitly:** the composer's data path (sending, queuing, steering) is
 untouched by this ADR, and in particular **the STT composer readout is not part of this
 work**. STT is being built against the real provider cascade (tunnel-aware, bring-your-own
 providers) in a parallel workstream; this ADR neither designs it nor blocks on it, and the
-navigation change in (1) must not be used as a vehicle for it.
+navigation change in item 1 must not be used as a vehicle for it.
 
-### 7. Cost and effort, and the critical path
+### 7. Cost, effort, and the critical path
 
-Honest sizes for the four pieces, on the scale this repository uses elsewhere (S = a day or
-two of focused work, M = a week, L = more, with an unknown tail):
+Sizes in the scale this repository uses elsewhere (S ≈ a day or two of focused work, M ≈ a
+week, L ≈ more, with an unknown tail):
 
-| Slice | Owner | Size | Why that size |
+| Slice group | Owner | Size | Why |
 |---|---|---|---|
-| **Core: aggregate unread read + badge on the list** | daemon-core | **S** | one read over an existing store, one additive route, one additive field on a payload the app already parses. ~150 lines of core plus tests |
-| **Core: push worker, device registry, eligibility gates** | daemon-core | **M** | the store is done; this is a poll loop reusing the store's equality token, a durable registration record, the three gates in §2.3, a bounded outbound queue with idempotency, and honest logging. The risk is not size, it is the *gates* — they must reuse the presences rather than invent a new suppression rule |
-| **App: notifications module, permissions, badge, deep links, settings copy, FOSS flavour gating** | app | **M–L** | a new native module, entitlements and build inputs (CI implications in ADR 0004), a new lifecycle path (cold start, listener, badge reconciliation), the navigation contract in §6, and the Settings surface. Largest single *diff*, but every piece of it is conventional |
-| **Cloud: device registry, event ingest with idempotency, fan-out to APNs/FCM, delivery record, per-account routing, revocation** | Radient-cloud | **L, and outside our control** | two credentials' worth of setup, a new always-on service, token lifecycle, retry/coalescing, and an operational surface. **Cannot be started before the interfaces in §3 are frozen** |
+| **Aggregate read, population, list field** (§1.1-§1.2, plan S1) | daemon-core | **S** | one pass over identities the listing already has, one route, one field. ~150 lines plus the two equality tests |
+| **Conversation handle + listing field + resolve route** (§4, S2) | daemon-core | **S** | an HMAC mint, one field on the aggregate, one resolve route |
+| **Interface freeze** (§3, S3) | all three | **S** | the §3 shapes, refusal shapes, fixtures in this repo's `fixtures/` (ADR 0003's pattern) |
+| **Device registry, register/list/deregister routes, no token stored** (§3.1, S4) | daemon-core | **S–M** | durable record, cloud id, Settings list, the generic deregister |
+| **Push worker: cursor, baseline, gates, deferral, catch-up, bounded queue** (§2.1-§2.3, S5) | daemon-core | **M** | the store is done; the risk is the gates and the cursor, not the volume |
+| **Attention emit: count-drop detection, `/seen` nudge, device exclusion** (§3.1, S6) | daemon-core | **S** | reuses the loop that already reads `revision()` |
+| **App: notifications module, permissions, channels, badge management, handle resolution, `+native-intent` + route, unpair UI, Settings copy, FOSS gating** (§5-§6, S8/S9/S11) | app | **M–L** | a new native module, a new lifecycle path, a new route, a new settings surface, and a build-flavour story: the largest single diff |
+| **Cloud: registration forward, ingest with idempotency, fan-out, delivery record, routing, revocation, unpair removal** (§2.2, §3.1, §4) | Radient-cloud | **L, and outside our control** | two credentials' worth of setup, a new always-on service, token lifecycle, retry/coalescing, an operational surface |
 
-**The critical path is: the cloud-side fan-out, gated by the two blocked operator items,
-with the core's aggregate read as the piece that must land first because everything
-downstream reads it.**
+**The critical path is the cloud-side fan-out**, and it is the only piece we cannot build.
+The **interface freeze (S3) depends only on S1 and S2** — a correction review M11 asked for:
+the previous draft sequenced the freeze behind the worker, which would have put the cloud
+team behind the daemon's M-sized slice for no reason. The core worker and the app can then be
+built in parallel against frozen shapes and a stub control plane.
 
-That is close to the operator's expectation with one correction worth stating: the *unread
-model* is not the hard half — it already exists and the aggregate over it is small (S). The
-two genuinely hard halves are (i) the **cloud**, which is new, always-on, and not ours to
-write, and (ii) the **eligibility question in §2.3**, which is a design trap rather than a
-volume of work: getting it wrong silences either the desktop banner or the phone for good,
-and it is the one decision in this ADR I would want a second reviewer to attack.
+**One correction to the expectation that "the unread model in core" is the hard half:** the
+store already implements the model; the aggregate over it is S. The genuinely hard halves are
+(i) the **cloud**, new, always-on and not ours, and (ii) the **eligibility and cursor work in
+the worker** (§2.1, §2.3) — a design trap rather than a volume of work, and the one thing in
+this ADR I would want a second reviewer to attack.
 
-**On the blocked operator items.** Two are already recorded: Radient-side **account
-deletion** (checklist A8 — a store-submission blocker, `docs/publishing/checklist.md`:33)
-and the **organisation developer accounts** (A2–A4: D-U-N-S, Apple Developer Program as the
-organisation, Play organisation account). **Push adds a third of the same kind, and it is
-worse than either:**
+**On the blocked operator items.** Two are already recorded: Radient-side **account deletion**
+(checklist A8, a store-submission blocker, `docs/publishing/checklist.md`:33) and the
+**organisation developer accounts** (A2–A4: D-U-N-S, Apple Developer Program as the
+organisation, Play organisation account). **Push adds three more of the same kind:**
 
-- an **APNs key** and an **FCM service account** must be created and held by Radient — a
-  new credential dependency, and one whose loss breaks a user-visible feature rather than a
-  submission;
-- and, unlike A8, the fan-out service is a **runtime** dependency: it must be up, it costs
-  money, it holds personal data (device tokens and a delivery log), and it needs an owner,
-  a deploy story and an on-call story. That is a commitment about Radient the platform, not
-  a feature of this app, and it belongs in the same conversation as A8 rather than beside it.
+- an **APNs key** and an **FCM service account** held by Radient — a new credential
+  dependency whose loss breaks a user-visible feature rather than a submission;
+- **and a console-side device list**, so a user whose phone is stolen can revoke it without the
+  machine (§4 path 2). Same class as A8: a Radient console feature this app cannot ship.
+- **and, unlike A8, the fan-out service is a runtime dependency**: it must be up, it costs
+  money, it holds device tokens and a delivery log, and it needs an owner, a deploy story and
+  an on-call story. That is a commitment about Radient the platform, not a feature of this app,
+  and it belongs in the same conversation as A8 rather than beside it.
 
 ### 8. Sequencing
 
-Full slice table, owners and exit criteria are in [`docs/push-plan.md`](../push-plan.md).
-The order this ADR *decides*, and the reason:
+Full slice table, owners and exit criteria are in [`docs/push-plan.md`](../push-plan.md). The
+order this ADR *decides*, and the reason:
 
-1. **Core: the aggregate read (`/api/attention/unread`) and the badge field.** Nothing else
-   can be specified against a shape that does not exist, and it is independently useful
-   (the app's in-app count can use it with no push at all). **Ships alone, benefits users
-   immediately, needs no cloud.**
-2. **Core: device registry + push worker behind a feature flag**, with the §2.3 gates and
-   the §3.1 emit call pointed at a **stub** control plane in tests, so the whole path is
-   exercisable with no Radient dependency. **This is the slice that proves the design before
-   the cloud exists.**
-3. **Cloud: ingest + fan-out** against the frozen §3 interfaces. Blocked on the operator
-   items in §7; the interface freeze is what the app and core can do *now*.
-4. **App: everything in the app slice**, developed against a stub push (a local
-   `xcrun simctl push` / an FCM test message, and the mock relay from ADR 0003).
-5. **FOSS flavour gating, Settings copy, and the store-submission inputs** (entitlements,
-   CI secrets) — the last mile, and the part with the longest external latency.
+1. **The aggregate read and the population rule (S1).** Nothing else can be specified against
+   a shape that does not exist, and it is independently useful — the app's in-app count and the
+   §1.4 badge work with no push at all. **Ships alone, benefits users immediately, needs no
+   cloud.**
+2. **The handle (S2) and the interface freeze (S3)**, in parallel with the device registry
+   (S4). The freeze depends on S1 and S2 only.
+3. **The push worker (S5) and the attention emit (S6)** behind a feature flag, tested against
+   a **stub** control plane, so the whole path is exercisable with no Radient dependency.
+4. **The cloud (S7)** against the frozen shapes — blocked on the operator items in §7.
+5. **The app (S8-S11)**: module, badge, deep link, Settings, FOSS flavour, and the store inputs
+   (entitlements, CI secrets) — the last mile, and the part with the longest external latency.
 
 ### 9. Risks to watch during rollout, and what would change this decision
 
-| Risk | Watch it with | Mitigation already in the design |
+| Risk | Why it is real | The signal to watch |
 |---|---|---|
-| **Badge drift when wakes are throttled or the app is force-quit** | count, per platform, the deliveries where the badge differs from the machine's number at next foreground; if that is not near zero within seconds of a resume, the correction path is wrong | badge is a snapshot + reconcile-on-resume; Android icon badge labelled best-effort |
-| **A push that should have been suppressed** (user at the computer) | the §2.3 gates are testable in isolation; assert the push worker does *not* emit while a focused desktop presence exists | no new clock, no new lease; reuse the existing presences |
-| **The phone quietly silenced by a desktop claim** (the trap in §2.3) | one test: with a TUI running *and* a device registered, both are told; and with the desktop focused, the banner fires and the push is suppressed *by the presence gate*, not by the watermark | `claim_delivery` untouched |
-| **Revocation that does not revoke** | a revoked token must produce a refused delivery and a deleted row; test all four paths in §4 | deletion on `410`/`UNREGISTERED` |
-| **Acknowledge-by-accident** (a new automatic path clearing marks) | the rule is one sentence in §1.3; a test that a delivered push, a wake, and a foreground change all leave `unseen` untouched | `claim_delivery` never advances the read watermark (`attention.py:2288-2300`) |
-| **Cloud outage** | turn a turn's push into a log line, never a stall; the machine's state must be unaffected | bounded queue, drop, no retry storm |
-| **Privacy regression by drift** (someone adds a field) | the payload table in §3.2 is the allow-list; the cloud contract should reject unknown fields (`extra="forbid"`, the house pattern in `docs/design/descriptive-notifications.md`) | content never leaves; handles not ids |
+| **The seen-vs-claimed confusion** (the single most likely regression) | this ADR adds a second, independent notification channel next to the claim ladder; a future change that reads `deliveries` as "the phone was told" would silently break the banner arbitration | `claim_delivery` and `deliveries` are untouched by every slice; a test that the push path never writes them |
+| **The presence gate silencing a phone for good** | a focused window left behind is the failure mode that killed the claim rung (M3) | the deferral window is bounded and asserted; a test that a suppressed push is emitted after the TTL while `unseen` holds |
+| **Badge drift from the in-app count** | two implementation sites are the classic way this happens | the §1.2 equality test, on the same snapshot, is a gate not a nicety |
+| **A store-wide population creeping back in** | it is the natural way to write the read, and it is wrong by a factor of ~35 on the operator's own machine (6,392 vs the listing) | the population is one function with the listing's identity set as its input; a test with `agent/` identities and no directories present |
+| **Reordered/duplicated pushes** | APNs may reorder and coalesce; Android may drop in Doze | the badge is never carried (§1.5) — the class is removed, not defended |
+| **A heal swallowed by idempotency** | same token, new content, and a naive key drops the correction | the emit key carries the record's content (§3.4); a test that a heal produces a distinct key |
+| **Privacy regression by drift** (someone adds a field) | the payload table is the allow-list, and the tempting additions are the leaky ones (a name, a snippet, a counter) | the cloud contract rejects unknown fields (`extra="forbid"`, the house pattern in `docs/design/descriptive-notifications.md`); a test asserting the builder never reads `body_is_snippet`/`body_is_failure` inputs |
+| **Revocation that does not revoke** | a stolen phone that keeps buzzing is the worst user-visible failure here | all five paths in §4 exercised; the account-side path is the one that must exist even with the machine offline |
+| **Acknowledge-by-accident** (a new automatic path clearing marks) | the rule is one sentence in §1.3 and easy to violate | a delivered push, a wake and a foreground change all leave `unseen` untouched; `claim_delivery` never advances the read watermark (`attention.py:2391-2393`) |
+| **Cloud outage** | a machine whose pushes fail must not stall or retry forever | bounded queue, same-key retries, drop with one log line; the machine's state is unaffected |
+| **The licence/FOSS promise** | shipping Firebase linkage into the default flavour is a real constraint, not a formality | the `foss` flavour is a slice with its own build, and CI proves the default flavour is the only one with the module |
 
 **What would change this decision:**
 
-- **Merging unread state across computers** (§1.5) — needs an explicit operator decision to
-  upload read state; it is a new ADR, not a patch.
-- **Counting pending gates toward the icon badge** (§1.4) — the alternative reading of the
-  operator's rule; it needs the core to give a gate a durable, ackable identity first,
-  because the current ack is completion-token-bound.
-- **A BYO push gateway for self-hosted users** (§2.4) — a product of its own; the honest
-  answer today is "no push on that route", and this ADR would be amended rather than
+- **Merging unread state across computers** (§1.6) — needs an explicit operator decision to
+  upload read state; a new ADR, not a patch.
+- **An account-wide `aps.badge`** — the only way an unused app's icon can be fresh (§1.5);
+  requires uploading counts and letting a server own a machine-owned number.
+- **Counting pending gates toward the icon badge** (§1.4) — one predicate, and it would restore
+  P-3's old meaning.
+- **A BYO push gateway for the fully self-hosted user** (§2.4) — a product of its own; the
+  honest answer today is "no push on that machine", and this ADR is amended rather than
   stretched if that changes.
-- **Radient declining the fan-out service** — then push does not ship on the Radient route
-  either, and §2.4's degradation becomes the whole product. That is a legitimate outcome
-  and it is why the app slice and the core slice are designed to be useful without it.
+- **Radient declining the fan-out service** — then push does not ship on any machine, and
+  §2.4's degradation becomes the whole product. That is a legitimate outcome, and it is why
+  S1-S2 and the worker's stub path are designed to be useful without it.
+- **A per-surface `push_delivered` watermark** (§2.1) — re-openable if the cursor + cloud
+  delivery record prove insufficient in practice; the reasons it was not chosen are recorded
+  there rather than left for the next reader to rediscover.
+
+**Citation corrections made in remediation round 1** (review Q7), listed so the next reader
+can see what moved: `daemon.py:3689-3691` → **`:3694-3695`** (the SSE wake; `:3689-3691` is
+the 409 body); the superseded 409 → **`:3676-3690`**; `compose.py:84-105` →
+**`:93-113`** (the `body_is_snippet`/`body_is_failure` fields); "a delivered banner does not
+mark anything read" → **`attention.py:2391-2393`**; the TUI's change detection →
+**`app.py:27291-27348`** (it reads `revision()`; `acknowledgement_map()` is the *desktop
+feed's* delta read, `desktop_feed.py:931,1188`); the TUI viewer record is
+**`session/runtime/viewers.py`**, not `desktop_presence.py`; and the "revisit when
+notifications land" sentence is **ADR 0004:178**, not `other-channels.md` (Q8a).
 
 ---
 
@@ -819,32 +1095,40 @@ The order this ADR *decides*, and the reason:
 ### Positive
 
 - **The hard half is already built.** Cross-surface acknowledgement, once-only arbitration,
-  token-bound idempotent receipts, a durable store that survives restarts and upgrades, and
-  a three-term change detector that survives in-place heals: all of it exists, is tested,
-  and is shared by three surfaces today. This ADR adds *one route and one field* to that,
-  and no new semantics.
-- **The badge becomes a number nobody can disagree about.** One read, one definition, and
-  the icon and the in-app count are the same number by construction.
-- **The cloud is a dumb pipe with a memory.** It holds no authority, no content, and no
-  read state; the machine can be offline and the badge is still right the moment anything
-  can read it.
-- **The app keeps its reason to exist.** A self-hosted user loses nothing that exists
-  today: they lose a feature they never had, and are told so in one sentence rather than
-  promised an alert.
+  token-bound idempotent receipts, a durable store that survives restarts and upgrades, and a
+  three-term change detector that survives in-place heals: all of it exists and is shared by
+  three surfaces today. This ADR adds one read, one handle, one registry and one worker — no
+  new semantics in the store.
+- **The badge becomes a number nobody can disagree about**, with an equality test rather than
+  a claim, and with a population that is the app's own list.
+- **The cloud is a dumb pipe with a memory.** It holds no authority, no content and no read
+  state, and its learned surface is stated honestly rather than denied.
+- **The design survives its worst platform behaviour**: a force-quit app, a throttled wake, a
+  reordered push, a coalesced burst and an offline machine all leave the *user-visible truth*
+  correct as soon as the app can read the machine.
 
 ### Negative, accepted
 
-- **No push on the self-hosted route, ever** (§2.4). Stated plainly, in the ADR and in
+- **No push on a machine with no Radient login** (§2.4), stated plainly in the ADR and in
   Settings.
-- **No cross-machine unread merge** (§1.5). The badge is per computer.
-- **A per-account opaque handle mapping** (§4) costs a table and a lookup after a cold tap,
-  in exchange for keeping conversation identity out of the cloud.
-- **A new always-on Radient service** (§7), with an owner, a cost and an on-call story.
-- **A new product flavour** (§5): the FOSS build must compile push out.
+- **No cross-machine unread merge** (§1.6).
+- **The icon badge is only as fresh as the app's last connection** (§1.5). The banner carries
+  the fresh number; the icon does not.
+- **The badge changes meaning** (Context §3): a parked approval raises no icon badge, and four
+  existing documents and one open PR must move with it.
+- **No conversation name in a notification** (P2) — the banner is generic until the app opens.
+- **A new always-on Radient service**, a new console surface (device revocation) and two new
+  cloud credentials (§7).
+- **A new product flavour**: the FOSS build compiles push out (§5).
+- **Two Settings rows are not shipped in v1** (quiet hours, decision notifications) and the
+  copy must say so (§2.4).
 
 ### Neutral
 
 - Nothing in `attention.db` changes shape. The additive `notify` column already set the
-  precedent for how this store grows (`attention.py:1538-1539`).
+  precedent (`attention.py:1538-1539`), and the worker's cursor is a file of its own rather
+  than a column.
 - Nothing in this ADR changes ADR 0005's in-app ask badge, its queue authority, or its
   absence-based capability rule.
+- The legacy `mobile-seen.json` store (`mobile/seen.py`) is untouched: it is a one-shot import
+  reader today (`attention.py:1206-1210`) and this ADR neither revives nor removes it.
