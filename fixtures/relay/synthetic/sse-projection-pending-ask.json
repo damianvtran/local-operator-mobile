@@ -1,0 +1,104 @@
+{
+  "provenance": {
+    "kind": "synthetic",
+    "relay_ref": "local-operator 52c1df35",
+    "modelled_on": "PendingRequest(kind='ask') with options, recommended and question_index/question_total",
+    "why": "an ask needs a live model to raise one",
+    "how": "hand-built from the field definitions in local_operator/mobile/types.py and cross-checked against the web client's own test fixtures (local_operator/mobile/web/src/*.test.tsx)"
+  },
+  "event": "projection",
+  "data": {
+    "session_id": "6714def86197",
+    "pid": 4242,
+    "kind": "daemon",
+    "conversation_name": "Refactor the relay client",
+    "cwd": "~/work",
+    "model_label": "anthropic/claude-opus-5",
+    "model_selector": "anthropic/claude-opus-5",
+    "effort": "high",
+    "effort_ladder": [
+      "lo",
+      "med",
+      "hi"
+    ],
+    "streaming": true,
+    "activity": "waiting for your answer",
+    "activity_started_s": null,
+    "stop_reason": "",
+    "cut_off": false,
+    "queued_count": 0,
+    "ended": false,
+    "degraded": false,
+    "transcript": [
+      {
+        "id": "m-1",
+        "kind": "user",
+        "text": "Which credential should I use?",
+        "tool_call_id": "",
+        "tool_name": "",
+        "tool_state": "interrupted",
+        "summary": "",
+        "intent": "",
+        "diff_added": 0,
+        "diff_removed": 0,
+        "elapsed_s": 0.0,
+        "error": "",
+        "details": {},
+        "images": [],
+        "final": true,
+        "text_complete": true
+      }
+    ],
+    "todos": [],
+    "subagents": [],
+    "pending": {
+      "request_id": "req-ask-1",
+      "kind": "ask",
+      "title": "Which credential should I use for the staging API?",
+      "detail": "The tool will read it from memory for this turn only.",
+      "options": [
+        {
+          "label": "Use the stored STAGING_KEY",
+          "description": "Reads the encrypted store; never written to the transcript."
+        },
+        {
+          "label": "Paste a new key",
+          "description": "Used once and forgotten with the session."
+        }
+      ],
+      "secret": true,
+      "question_index": 0,
+      "question_total": 2,
+      "recommended": 0,
+      "persist": false
+    },
+    "pending_count": 2,
+    "usage": {
+      "input_tokens": 18422,
+      "output_tokens": 2100
+    },
+    "cumulative_parent_cost": 12.84,
+    "child_costs": {},
+    "subagent_cost": 3.1,
+    "subagent_cost_knowledge": "exact",
+    "cost_knowledge": "exact",
+    "context_tokens": 41200,
+    "context_window": 200000,
+    "context_is_estimate": false,
+    "version": 412,
+    "attention": {
+      "conversation_id": "session/6714def86197",
+      "completion_token": null,
+      "anchor_id": null,
+      "kind": null,
+      "reason": "",
+      "cause": "",
+      "notify": true,
+      "unseen": false,
+      "revision": [
+        0,
+        0
+      ]
+    }
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "provenance": {
+    "kind": "live",
+    "relay_ref": "local-operator fc851a94e",
+    "captured_at": "2026-09-30",
+    "what": "one conversation read twice: from the daemon that ran it, then from a second daemon on the same isolated home after the runtime was SIGKILLed \u2014 the durable-only row",
+    "how": "two isolated `lop mobile serve` runs on one redirected HOME + LOCAL_OPERATOR_CONFIG_DIR, own ephemeral ports, hosting=test/model_name=mock",
+    "redactions": "paths and home omitted; the session id is throwaway"
+  },
+  "session_id": "40d7552717b4",
+  "row_before_restart": {
+    "session_id": "40d7552717b4",
+    "section": "active",
+    "ended": false,
+    "degraded": false,
+    "subagents_running": 0,
+    "subagents_queued": 0,
+    "streaming": false,
+    "leaving": "",
+    "updating": "",
+    "unseen": true,
+    "completion_kind": "complete",
+    "needs_attention": false,
+    "pending_kind": "",
+    "model_label": "test/mock"
+  },
+  "row_after_restart": {
+    "session_id": "40d7552717b4",
+    "section": "active",
+    "ended": false,
+    "degraded": false,
+    "subagents_running": null,
+    "subagents_queued": null,
+    "streaming": false,
+    "leaving": "",
+    "updating": "",
+    "unseen": true,
+    "completion_kind": "complete",
+    "needs_attention": false,
+    "pending_kind": "",
+    "model_label": ""
+  },
+  "note": "Nothing registered with the second daemon, so the row is durable-only: `ended` is FALSE even though the process is provably gone, and `degraded` is false by construction. `model_label` is empty on the durable row \u2014 a client must render the durable facts it has and make no liveness claim from these two fields."
+}

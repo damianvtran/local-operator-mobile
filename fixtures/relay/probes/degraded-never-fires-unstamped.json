@@ -1,0 +1,134 @@
+{
+  "provenance": {
+    "kind": "live",
+    "relay_ref": "local-operator fc851a94e",
+    "captured_at": "2026-09-30",
+    "what": "the SAME probe run against a runtime frozen before it had ever reported a count: `degraded` never fires and `subagents_running` is `null` from the first sample",
+    "how": "isolated `lop mobile serve` at that ref; SIGSTOPped ~5 s after the prompt was admitted",
+    "redactions": "no home path or personal detail in the sample; the session id is throwaway"
+  },
+  "heartbeat_timeout_s": 45,
+  "session_id": "396fc48d0287",
+  "columns": [
+    "t",
+    "subagents_running",
+    "degraded",
+    "ended",
+    "section"
+  ],
+  "samples": [
+    [
+      5,
+      null,
+      false,
+      false,
+      "active"
+    ],
+    [
+      10,
+      null,
+      false,
+      false,
+      "active"
+    ],
+    [
+      15,
+      null,
+      false,
+      false,
+      "active"
+    ],
+    [
+      20,
+      null,
+      false,
+      false,
+      "active"
+    ],
+    [
+      25,
+      null,
+      false,
+      false,
+      "active"
+    ],
+    [
+      30,
+      null,
+      false,
+      false,
+      "active"
+    ],
+    [
+      35,
+      null,
+      false,
+      false,
+      "active"
+    ],
+    [
+      40,
+      null,
+      false,
+      false,
+      "active"
+    ],
+    [
+      45,
+      null,
+      false,
+      false,
+      "active"
+    ],
+    [
+      50,
+      null,
+      false,
+      false,
+      "active"
+    ],
+    [
+      55,
+      null,
+      false,
+      false,
+      "active"
+    ],
+    [
+      60,
+      null,
+      false,
+      false,
+      "active"
+    ],
+    [
+      65,
+      null,
+      false,
+      false,
+      "active"
+    ],
+    [
+      70,
+      null,
+      false,
+      false,
+      "active"
+    ],
+    [
+      75,
+      null,
+      false,
+      false,
+      "active"
+    ],
+    [
+      80,
+      null,
+      false,
+      false,
+      "active"
+    ]
+  ],
+  "note": "A record whose beat was never stamped reads as FRESH \u2014 a record's beat defaults to now \u2014 so the scan never classifies it wedged and neither receipt appears, while the counts are already `null` because there is no beat to vouch for. This is the caveat the degraded-row capture names: the receipt needs a runtime that reported at least once. A client must not read `degraded: false` plus `subagents_running: null` as healthy."
+}

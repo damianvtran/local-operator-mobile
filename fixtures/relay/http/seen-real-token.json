@@ -1,0 +1,34 @@
+{
+  "provenance": {
+    "kind": "live",
+    "relay_ref": "local-operator 52c1df35",
+    "captured_at": "2026-09-29",
+    "how": "captured from an isolated `lop mobile serve` (redirected HOME + LOCAL_OPERATOR_CONFIG_DIR, own ephemeral port, hosting=test/model_name=mock); see ../README.md",
+    "redactions": "isolated home shown as ~; portal password and cookie signatures absent"
+  },
+  "request": {
+    "method": "POST",
+    "path": "/api/sessions/6714def86197/seen"
+  },
+  "status": 200,
+  "headers": {
+    "content-type": "application/json"
+  },
+  "body": {
+    "ok": true,
+    "attention": {
+      "conversation_id": "session/6714def86197",
+      "completion_token": "cf6b89c0-1fde-4b8f-9032-700119607c60",
+      "anchor_id": "cf13127c65234138a2250eccdba095da",
+      "kind": "complete",
+      "reason": "",
+      "cause": "",
+      "notify": true,
+      "unseen": false,
+      "revision": [
+        2,
+        2
+      ]
+    }
+  }
+}

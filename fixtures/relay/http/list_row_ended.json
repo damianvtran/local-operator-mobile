@@ -1,0 +1,41 @@
+{
+  "provenance": {
+    "kind": "live",
+    "relay_ref": "local-operator fc851a94e",
+    "captured_at": "2026-09-30",
+    "how": "captured from an isolated `lop mobile serve` at that ref (redirected HOME + LOCAL_OPERATOR_CONFIG_DIR, own ephemeral port, hosting=test/model_name=mock); see ../README.md",
+    "redactions": "isolated home shown as ~; portal password and cookie signatures absent",
+    "what": "the SAME row ~8 s after its runtime was SIGKILLed: ended=true, subagents_running=null, and section still 'active' because the completion is unseen"
+  },
+  "request": {
+    "method": "GET",
+    "path": "/api/sessions"
+  },
+  "status": 200,
+  "body": {
+    "sessions": [
+      {
+        "session_id": "e92c11a339eb",
+        "section": "active",
+        "pinned": false,
+        "conversation_name": "Hello from the mock provider",
+        "cwd": "",
+        "model_label": "",
+        "streaming": false,
+        "leaving": "",
+        "updating": "",
+        "needs_attention": false,
+        "pending_kind": "",
+        "subagents_running": null,
+        "subagents_queued": null,
+        "ended": true,
+        "degraded": false,
+        "todos_open": 0,
+        "mtime": 1790731143.680104,
+        "created_at": 1790731141.462768,
+        "completion_kind": "complete",
+        "unseen": true
+      }
+    ]
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "provenance": {
+    "kind": "live",
+    "relay_ref": "local-operator 52c1df35",
+    "captured_at": "2026-09-29",
+    "how": "captured from an isolated `lop mobile serve` (redirected HOME + LOCAL_OPERATOR_CONFIG_DIR, own ephemeral port, hosting=test/model_name=mock); see ../README.md",
+    "redactions": "isolated home shown as ~; portal password and cookie signatures absent",
+    "what": "the gateway's own RELAY_DETAIL/TERMINAL_* and limit literals, dumped from the module rather than transcribed",
+    "method": "import local_operator.tunnels.gateway at 52c1df35 and serialize the constants"
+  },
+  "deferral_window_s": 120,
+  "max_body_bytes": 10485760,
+  "max_stream_seconds": 60,
+  "proof_header": "x-radient-tunnel-assertion",
+  "relay_detail": {
+    "authorization_deferred": "Remote access is paused: the computer running this tunnel is waiting for Radient to confirm a sign-in refresh. It clears by itself within about two minutes; reload this page to check. If it is still paused after that, sign in again on that computer.",
+    "authorization_lease_pending": "The relay has not renewed its authorization yet. This normally clears by itself within a few seconds.",
+    "authorization_refused": "Radient refused this computer's relay authorization check. The Radient login may have expired, or this tunnel's billing may be inactive. Sign in again on that computer, and check billing at https://console.radienthq.com/dashboard/tunnels.",
+    "control_plane_unreachable": "This computer could not reach Radient to renew the relay authorization (its network may be down, or Radient may be unreachable). It reauthorizes by itself once the control plane answers again \u2014 check this computer's network connection if it does not clear.",
+    "login_required": "This computer's Radient login is no longer valid, so remote access is off until it is signed in again on this computer (check this tunnel's billing at https://console.radienthq.com/dashboard/tunnels).",
+    "tunnel_not_authorized": "Radient is not authorizing this tunnel: it was revoked, suspended, disabled, stopped on this computer, or changed in the console. Review it at https://console.radienthq.com/dashboard/tunnels."
+  },
+  "terminal_detail": {
+    "authorization_deferred": "Radient has not confirmed this computer's last sign-in refresh, so the connector is waiting for it to settle rather than sending that request again. It retries every 10 seconds and clears by itself within about two minutes; sign in again only if it persists past that.",
+    "authorization_lease_pending": "The relay has not renewed its authorization yet. It retries every 10 seconds and usually clears a few seconds after the connector starts. Run lop tunnel status again shortly; if it persists, run lop tunnel install.",
+    "authorization_refused": "Radient refused the connector's authorization check, so the relay stopped serving. Signing in again, or checking this tunnel's billing, is what clears it: https://console.radienthq.com/dashboard/tunnels.",
+    "control_plane_unreachable": "This computer could not reach Radient to renew the relay authorization (its network may be down, or Radient may be unreachable). It retries every 10 seconds and reauthorizes by itself once the control plane answers; no local command is needed.",
+    "login_required": "The connector's Radient login is no longer valid, so it stopped and will not retry by itself. Signing in again starts it again on its own."
+  },
+  "terminal_remedy": {
+    "authorization_deferred": "lop tunnel status",
+    "authorization_lease_pending": "lop tunnel status",
+    "authorization_refused": "lop login radient",
+    "control_plane_unreachable": "lop tunnel status",
+    "local_prerequisite": "lop tunnel install",
+    "login_required": "lop login radient",
+    "owner_missing": "lop tunnel configure",
+    "reenrolment_required": "lop tunnel connect",
+    "tunnel_not_authorized": "lop tunnel connect"
+  }
+}
