@@ -132,12 +132,15 @@ jobs:
     # 120-226. The 15-minute job bound this replaces could therefore only ever
     # report a timeout.
     #
-    # THE BOUND COVERS THE JOB'S PARTS, NOT ITS LARGEST ONE (review round 4, m1):
-    # install + the 25-minute step + the divergence check is the arithmetic, and the
-    # install is not bounded by the step bound at all. 40 minutes is that sum with
-    # room, and the install prints its duration so the next person sizing this has a
-    # measurement instead of an estimate.
-    timeout-minutes: 40
+    # THE BOUND COVERS THE JOB'S PARTS, NOT ITS LARGEST ONE (review rounds 4's m1 and
+    # 5's N5-1): the invariant is `install + 25 + 10 < 45`. At 40 the install was
+    # left five minutes, which is the one term with no measurement of its own — the
+    # file's number is 631 packages / ~746 MB — so a slow install would have been
+    # cancelled by the runner's generic maximum-execution-time line instead of a step
+    # naming itself, which is the failure the bound was raised for in the first
+    # place. The install prints its own duration, so the next person sizing this has
+    # a measurement rather than an estimate.
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v7
 

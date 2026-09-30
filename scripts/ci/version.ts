@@ -156,8 +156,18 @@ export const derive = ({
 	// Only advisory when `origin/main` is not present (a local run, or a checkout
 	// that did not fetch it): the release job fetches it explicitly, and every other
 	// caller prints that it could not check rather than inventing a floor.
-	const mainInternal = internalNumberAt(counterPath, "origin/main");
-	const minimum = Math.max(internalNumber, mainInternal ?? internalNumber) + 1;
+	// THE TAG BEING CUT IS EXCLUDED FROM ITS OWN SEARCH. The runbook tags main's
+	// tip, so the tag is an ancestor of `origin/main`: without this exclusion
+	// `lastRelease` accepts the tag itself, `base` becomes the tag's own bumped
+	// counter, and the floor becomes `counter + 1` at every value — a release that
+	// cannot be built, with a message whose remedy moves with the counter (review
+	// round 5's blocker, QA round 4's B1; both reproduced it on a clone).
+	const mainInternal = internalNumberAt(
+		counterPath,
+		"origin/main",
+		isTag ? refName : null,
+	);
+	const minimum = floorFor(internalNumber, mainInternal);
 	if (releaseBuildNumber < minimum) {
 		const tip =
 			mainInternal === null
@@ -212,14 +222,34 @@ const git = (args: string[], quiet = false): string =>
  * that landed after the counter bump claims the same number a tag on the bump
  * commit would, and Play rejects the second upload.
  */
-const internalNumberAt = (path: string, ref: string): number | null => {
+const internalNumberAt = (
+	path: string,
+	ref: string,
+	exclude: string | null,
+): number | null => {
 	try {
-		const { base, commitsSince } = lastRelease(path, ref, null);
+		const { base, commitsSince } = lastRelease(path, ref, exclude);
 		return base + commitsSince;
 	} catch {
 		return null;
 	}
 };
+
+/**
+ * The floor a release has to clear: one above the highest number this scheme could
+ * already have published. It is `max(this commit, main's tip)` rather than just
+ * this commit — an internal build of a commit that landed after the counter bump
+ * claims the same number a tag on the bump commit would, and Play rejects the
+ * second upload.
+ *
+ * ONE FUNCTION, TWO CALLERS, because the two drifted: the release arm enforced the
+ * max while the run summary printed the un-maxed value, which would have been
+ * wrong the first time a tag was not the tip (review round 5, M5-1).
+ */
+export const floorFor = (
+	internal: number,
+	mainInternal: number | null,
+): number => Math.max(internal, mainInternal ?? internal) + 1;
 
 const counterAt = (path: string, ref?: string): number => {
 	const text =
@@ -331,10 +361,14 @@ const lines = [
 // Printed, not exported: they are the numbers behind the derivation, and the
 // table is what makes a dry run of the release path readable ("the number it
 // would claim for main versus for a tag") without a store to compare against.
-const minimum = release.base + release.commitsSince + 1;
+const mainInternal = internalNumberAt(
+	counterPath,
+	"origin/main",
+	refType === "tag" ? refName : null,
+);
 // The same floor the release arm applies, printed so a dry run shows both
 // sides of the comparison (Q4: a tag need not be the tip of `main`).
-const mainInternal = internalNumberAt(counterPath, "origin/main");
+const minimum = floorFor(release.base + release.commitsSince, mainInternal);
 const diagnostics = [
 	`base_release_number=${release.base}`,
 	`base_release_tag=${release.tag ?? "none"}`,

@@ -103,10 +103,10 @@ if (missing.length > 0) {
 	// `all_present`), so a run without credentials has no green tick claiming a
 	// signature — see docs/ci.md, "Secrets".
 	console.log(
-		`::warning::${summary}. The steps that sign and upload need these and ` +
-			"cannot run without them, so this run produces no signed artefact. A " +
-			"tagged release FAILS rather than skipping — see docs/ci.md, " +
-			'"Secrets", for which job does which.',
+		`::warning::${summary}. The jobs that sign and upload gate on this ` +
+			"value, and they cannot produce anything without these: the internal " +
+			"path SKIPS them, and a tagged release FAILS rather than skipping — see " +
+			'docs/ci.md, "Secrets", for which job does which.',
 	);
 }
 
