@@ -302,15 +302,20 @@ export const sessionSummarySchema = z.looseObject({
 	/** Absent on an older relay; the client falls back to `mtime`. */
 	created_at: epochSeconds.optional(),
 	/**
-	 * The session-health receipts (local-operator PR #1784). OPTIONAL on purpose:
-	 * an older relay omits both, and a durable-only row is legitimately false for
-	 * both — so an absent or false receipt is an ordinary session, never an error
-	 * and never a reason to drop the row. Deliberately not `.default(false)`: the
-	 * difference between "the relay told us false" and "this relay is too old to
-	 * know" is the difference between an ended session and an unobserved one.
+	 * The session-health receipts (local-operator PR #1784). On the wire `false`
+	 * means "not observed to have ended" / "not observed to be degraded" — never
+	 * "running": a durable-only row reports both by construction, because nothing
+	 * has registered with that daemon since boot (`probes/durable-only-row.json`).
+	 *
+	 * `.default(false)` is the contract's own instruction — `contract.md` §6.5.1,
+	 * rule 1: "**Absence means `false`.**" — and the same rolling-upgrade reading
+	 * `unseen` and `pinned` already follow. It invents nothing: `false` makes no
+	 * liveness claim, which is precisely what an older relay's silence means, and
+	 * `subagents_running: null` stays the signal that a row is unvouched-for, so a
+	 * durable rebuild with `pid: 0` is still read as stale rather than live.
 	 */
-	ended: z.boolean().optional(),
-	degraded: z.boolean().optional(),
+	ended: z.boolean().default(false),
+	degraded: z.boolean().default(false),
 	/** The attention record's kind for this conversation, or `""` when there is
 	 *  none. Defaulted rather than required: `""` is exactly what "no completion"
 	 *  means, so an older relay that omits it is not an error. */

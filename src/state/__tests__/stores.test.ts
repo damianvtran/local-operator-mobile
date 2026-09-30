@@ -49,14 +49,18 @@ function listFrame(): {
 	return parsePayload("sessionListFrame", fixture.data);
 }
 
-function projection(): SessionProjection {
-	const fixture = JSON.parse(
-		readFileSync(
-			join(FIXTURE_ROOT, "sse/sse-projection-live-idle.json"),
-			"utf8",
-		),
-	) as { data: unknown };
+/** A projection frame from a named capture, parsed through the real schema —
+ *  the fixtures' README is explicit that a sample is fed to the parser under
+ *  test rather than to a hand-written encoder. */
+function projectionFrom(rel: string): SessionProjection {
+	const fixture = JSON.parse(readFileSync(join(FIXTURE_ROOT, rel), "utf8")) as {
+		data: unknown;
+	};
 	return parsePayload("sessionProjection", fixture.data);
+}
+
+function projection(): SessionProjection {
+	return projectionFrom("sse/sse-projection-live-idle.json");
 }
 
 function failure(overrides: {
@@ -357,6 +361,52 @@ describe("the projection store fences per connection and keeps the last snapshot
 
 		/* The listing row's receipt is the other half of the same fact. */
 		expect(isSessionEnded({ entry, listingRow: { ended: true } })).toBe(true);
+	});
+
+	it("reads a durable rebuild as stale, neither live nor ended", () => {
+		/* The contract's two-source case (§6.5): after a runtime died, the rebuild is
+		 * published with `pid: 0` and whatever `ended` the caller knew — `false` at the
+		 * ref this capture came from — and the row for such a conversation says
+		 * `ended: false` too, because nothing has registered with that daemon since
+		 * boot. The honest render is therefore "not live", and `ended` stays false:
+		 * the relay did not observe the death, so neither may the client. */
+		const rebuild = projectionFrom(
+			"sse/sse-projection-durable-after-death.json",
+		);
+		expect(rebuild.pid).toBe(0);
+		expect(rebuild.ended).toBe(false);
+
+		const store = createProjectionStore();
+		store.getState().beginStream(rebuild.session_id);
+		store.getState().applyFrame(rebuild.session_id, rebuild);
+		const entry = readEntry(store.getState(), rebuild.session_id);
+		/* The durable-only row of the same conversation, per the probe: counts the
+		 * relay cannot vouch for, and neither receipt true. */
+		const durableRow = {
+			subagents_running: null,
+			subagents_queued: null,
+			leaving: "",
+			updating: "",
+			ended: false,
+			degraded: false,
+		};
+		expect(isSessionViewStale({ entry, listingRow: durableRow })).toBe(true);
+		expect(isSessionEnded({ entry, listingRow: durableRow })).toBe(false);
+
+		/* The newer ref publishes the same rebuild with `ended: true`, because the
+		 * caller that built the frame PROVED the end — the pair is the whole point
+		 * of the capture pair, so both halves are asserted. */
+		const proven = projectionFrom("sse/sse_projection_ended.json");
+		expect(proven.pid).toBe(0);
+		expect(proven.ended).toBe(true);
+		const provenStore = createProjectionStore();
+		provenStore.getState().beginStream(proven.session_id);
+		provenStore.getState().applyFrame(proven.session_id, proven);
+		expect(
+			isSessionEnded({
+				entry: readEntry(provenStore.getState(), proven.session_id),
+			}),
+		).toBe(true);
 	});
 
 	it("treats a durable-only row (no receipt) as a live session, never as ended", () => {

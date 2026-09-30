@@ -7,7 +7,8 @@
  *
  * The framing cases feed **literal wire bytes** — a frame split at every possible
  * byte boundary, several frames in one chunk, CRLF, multi-line `data:`, and the
- * captured `: keepalive` bytes read from `fixtures/relay/sse/sse-keepalive.txt`.
+ * captured `: keepalive` bytes read from the `literal` field of
+ * `fixtures/relay/sse/sse-keepalive.json`.
  * A hand-written encoder in this file would have tested the encoder, which is
  * exactly the failure the fixtures' README warns about.
  *
@@ -55,10 +56,13 @@ const PROJECTION_FRAME = fixture("sse/sse-projection-live-idle.json") as {
 	event: string;
 	data: unknown;
 };
-const KEEPALIVE_BYTES = readFileSync(
-	join(FIXTURE_ROOT, "sse/sse-keepalive.txt"),
-	"utf8",
-);
+/* The keep-alive sample is JSON with its bytes in a `literal` field, because the
+ * corpus requires a `provenance` marker on every file and `: keepalive\n\n` has
+ * nowhere to carry one. It is still the captured string, fed to the parser as-is
+ * — decoding it into a hand-built frame is the mistake the README names. */
+const KEEPALIVE_BYTES = (
+	fixture("sse/sse-keepalive.json") as { literal: string }
+).literal;
 
 /** A frame's `data`, which is `string | undefined` on the wire type but is always
  *  present on a `data:`-bearing frame. Reading it through one helper keeps the
@@ -170,6 +174,13 @@ describe("framing is robust to how the network chops the bytes", () => {
 });
 
 describe("keep-alives are comments, not frames", () => {
+	it("reads the captured keep-alive bytes as the relay wrote them", () => {
+		/* A byte-exactness guard on the sample itself, not on the parser: the fixture
+		 * is the capture, and a re-typed copy of it would silently stop testing the
+		 * wire. The blank line is part of the sample (`SSE_KEEPALIVE_S` writes both). */
+		expect(KEEPALIVE_BYTES).toBe(": keepalive\n\n");
+	});
+
 	it("treats the captured keep-alive bytes as liveness and not as data", () => {
 		const reader = new SseFrameReader();
 		const frames = reader.push(bytes(KEEPALIVE_BYTES));
@@ -182,9 +193,10 @@ describe("keep-alives are comments, not frames", () => {
 		const reader = new SseFrameReader();
 		reader.push(bytes(KEEPALIVE_BYTES));
 		reader.push(bytes(KEEPALIVE_BYTES));
-		expect(reader.keepaliveCount).toBeGreaterThanOrEqual(0);
-		/* The count is best-effort; liveness itself is measured on chunks, which is
-		 * what the watchdog uses. This asserts the reader never invents data. */
+		/* Exactly two: the count is what tells "no frames because nothing changed"
+		 * from "no frames because the connection died", so it has to be a count and
+		 * not a flag, and a parser that swallowed comments would leave it at zero. */
+		expect(reader.keepaliveCount).toBe(2);
 	});
 
 	it("still frames the data that follows a keep-alive", () => {
@@ -194,7 +206,15 @@ describe("keep-alives are comments, not frames", () => {
 				KEEPALIVE_BYTES + wire(PROJECTION_FRAME.event, PROJECTION_FRAME.data),
 			),
 		]);
-		expect(frames.map((frame) => frame.event)).toEqual(["projection"]);
+		/* Two frames, and the order matters: the comment is reported as ignorable
+		 * liveness and the projection as data. Asserting only the projection would
+		 * pass against a reader that dropped the keep-alive on the floor — which is
+		 * what this reader used to do. */
+		expect(frames.map((frame) => decodeFrame(frame).kind)).toEqual([
+			"ignorable",
+			"projection",
+		]);
+		expect(reader.keepaliveCount).toBe(1);
 	});
 });
 

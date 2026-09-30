@@ -255,7 +255,7 @@ async function readSseInner(
 				}
 				if (event.data !== undefined) {
 					frames.push(event);
-					if (stopWhen && stopWhen(event))
+					if (stopWhen?.(event))
 						return { status: response.status, frames, bytes };
 					if (frames.length >= wantFrames)
 						return { status: response.status, frames, bytes };

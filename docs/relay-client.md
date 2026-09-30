@@ -62,18 +62,31 @@ The relay evolves additively. Two consequences are visible in the schemas:
   digits while `0` is a known zero; `SessionSummary.subagents_running: null` means
   the relay cannot vouch for the row, never "no subagents".
 
-That last point is why the **session-health receipts** (`ended`, `degraded`,
-added by local-operator PR #1784) are OPTIONAL and are *not* defaulted:
+That last point is why the **session-health receipts** (`ended`, `degraded`, added
+by local-operator PR #1784) have exactly one reading, and it is the contract's
+rather than this client's (`docs/relay/contract.md` §6.5.1, rule 1 —
+"**Absence means `false`.**", the rolling-upgrade rule `unseen` and `pinned`
+already follow):
 
-| Row | Reading |
+| On the wire | Reading |
 | --- | --- |
-| `ended: false`, `degraded: false` | live, and the relay vouches for it |
+| `ended: false`, `degraded: false` | nothing was observed to have ended, or to be degraded |
 | `ended: true` | this daemon observed the session end: offer resume, not a composer |
 | `degraded: true` | the record is fresh but the control socket is unreachable: label it, keep the transcript |
-| **absent** (older relay, or a durable-only row) | an ordinary session. It is not an error, not ended, and not degraded |
+| **absent** (a relay older than `fc851a94e`) | `false` |
 
-A `.default(false)` would have collapsed the last row into a claim the relay never
-made. `isSessionEnded` / `isSessionViewStale` (`state/projection-store.ts`) are
+`false` is not a liveness claim, which is why defaulting it invents nothing: a
+durable-only conversation — one nothing has registered with that daemon since
+boot — reports `false` for both by construction, and the honest render for such a
+row is the durable listing's own facts, not "running". `subagents_running: null`
+stays the signal that nothing is being confirmed right now, so a durable rebuild
+published with `pid: 0` reads as stale rather than live while `ended` stays
+`false` — the relay did not observe that death, and neither may the client. That
+pair is asserted from the real captures (`probes/durable-only-row.json`,
+`sse/sse-projection-durable-after-death.json`, and `sse_projection_ended.json`,
+the same rebuild at a ref where the caller had proved the end).
+
+`isSessionEnded` / `isSessionViewStale` (`state/projection-store.ts`) are
 the only places that read them.
 
 ## Error taxonomy → UI state
@@ -122,8 +135,8 @@ Two rules the table encodes, both of which are expensive to get wrong:
   means the user's instruction is lost after it may already have run.
 - **`projection.degraded` / `ended` are readable now** (PR #1784). Before that they
   were never `true` on any published frame, and the contract's §6.5 said so; the
-  schema tests pin both the receipt and its absence so the old reading cannot
-  silently return.
+  schema tests pin the receipt, the absence-as-`false` reading, and the durable
+  rebuild pair, so the old reading cannot silently return.
 
 ## Insecure and unsupported connections
 
@@ -137,6 +150,30 @@ Two rules the table encodes, both of which are expensive to get wrong:
 - Cloudflare Access (or any identity proxy) is deliberately unsupported at v1: it
   would mean driving a second browser-session flow with cookies this app does not
   own.
+
+## The fixture corpus is the specification's second copy
+
+The schemas are tested against every file in `fixtures/relay/` (the tree merged with
+the relay-contract docs), and the walk **fails on any file it has not classified** —
+so a fixture added later cannot slip past unvalidated, and a schema cannot quietly
+stop covering a route. Three parts of that corpus are read for their own rules
+rather than as payloads, and each has an assertion instead of an exemption:
+
+- **`provenance` is checked, not assumed.** Every fixture marks its own origin in
+the file (`kind`, `relay_ref`, and `captured_at`/`how` for a capture or
+`modelled_on`/`why` for a built sample), and the marker is the authority — a
+sample sitting in the wrong directory is a test failure, not a rename to trust.
+- **The probes are data.** `probes/*.json` record a row changing over time, and
+they are what the receipts' rules came from: the counts go unknown at the
+heartbeat timeout and `degraded` follows a scan later, never clears on a timer,
+and a runtime frozen before it ever reported a beat never raises the flag at all
+("false + null" is not health). `probes/durable-only-row.json` also shows a
+**thinner** row after a restart — `model_label: ""`, counts `null` — so a screen
+must not render a durable-only row through a layout that assumes those fields are
+populated.
+- **The ranked model list keeps its order.** `synthetic/models.ranked.json` wraps
+the array, and its README entry says the order **is** the ranking: parsing must
+not re-sort it, which is asserted directly.
 
 ## Known gaps in this slice
 

@@ -49,9 +49,10 @@ function listJsonFiles(dir: string): string[] {
 	)) {
 		const full = join(dir, entry.name);
 		if (entry.isDirectory()) out.push(...listJsonFiles(full));
-		/* Only `.json`: the corpus also holds a README and the raw `: keepalive`
-		 * bytes, and neither is a JSON payload. `sse-keepalive.txt` is exercised by
-		 * the SSE framer test, which is the only thing that can read it correctly. */ else if (
+		/* Only `.json`: the corpus also holds a README, and that is not a payload.
+		 * The captured `: keepalive` bytes live in a JSON file like everything else
+		 * (their `literal` field) so they can carry a provenance marker, and the SSE
+		 * framer test is what feeds them to a parser. */ else if (
 			entry.isFile() &&
 			entry.name.endsWith(".json") &&
 			statSync(full).isFile()
@@ -171,6 +172,21 @@ function classifyHttp(rel: string, fixture: HttpFixture): Classification {
 		};
 	}
 
+	/* --- A row sample inside a response envelope (see the note in the block). --- */
+	if (rel === "http/list_row_live.json" || rel === "http/list_row_ended.json") {
+		/* The file records ONE summary row (its provenance says so) inside an
+		 * `/api/sessions` body, and the body's required `capabilities`/`degraded`
+		 * fields are simply not part of the excerpt. They stay required in the
+		 * schema — the contract declares them and three other captures at the same
+		 * refs carry them — so the excerpt is read for the row it is about rather
+		 * than treated as licence to loosen the list payload. */
+		const sessions = (body as { sessions?: unknown[] } | null)?.sessions;
+		if (!Array.isArray(sessions) || sessions.length !== 1) {
+			throw new Error(`${rel}: expected exactly one row under \`sessions\``);
+		}
+		return { kind: "schema", schema: "sessionSummary", value: sessions[0] };
+	}
+
 	/* --- Every failure body on a route this stream reads is the API error. ---
 	 * Keyed on the body's shape rather than the status, because a few fixtures were
 	 * captured as raw output and carry no status — and because "which schema reads
@@ -242,11 +258,16 @@ function classifyFixture(rel: string, value: unknown): Classification {
 			};
 		}
 		if (rel === "synthetic/models.ranked.json") {
-			return {
-				kind: "schema-list",
-				schema: "modelEntry",
-				values: value as unknown[],
-			};
+			/* The payload is the `models` array, not the file: the wrapper carries the
+			 * provenance marker, and the README is explicit that the array's ORDER is
+			 * the ranking — a client that re-sorts it presents a different model list
+			 * than the relay chose, so `synthetic-models.test`-style ordering is
+			 * asserted next to this classification. */
+			const ranked = (value as { models?: unknown }).models;
+			if (!Array.isArray(ranked)) {
+				throw new Error(`${rel}: expected the models array under \`models\``);
+			}
+			return { kind: "schema-list", schema: "modelEntry", values: ranked };
 		}
 	}
 
@@ -257,10 +278,18 @@ function classifyFixture(rel: string, value: unknown): Classification {
 				"module constants, not a payload; asserted by the gateway-copy test below",
 		};
 	}
-	if (rel === "probes/wedged-row-signal.json") {
+	if (rel === "sse/sse-keepalive.json") {
 		return {
 			kind: "skip",
-			reason: "a probe record (samples over time), not a payload frame",
+			reason:
+				"the captured keep-alive bytes, fed to the framer by relay/__tests__/sse.test.ts",
+		};
+	}
+	if (rel.startsWith("probes/")) {
+		return {
+			kind: "skip",
+			reason:
+				"a probe transcript — excerpts of a row over time, not a payload frame; its rules are asserted in the probe block below",
 		};
 	}
 
@@ -671,7 +700,7 @@ describe("absence and null carry the contract's meaning", () => {
  * `.default(false)` or a required boolean turns every durable-only row either into
  * an error or into a session the app claims it watched die.
  */
-describe("the session-health receipts are optional and never invent a state", () => {
+describe("the receipts read absence as false and never invent a state", () => {
 	const durableOnlyRow = {
 		session_id: "6714def86197",
 		section: "previous",
@@ -690,7 +719,7 @@ describe("the session-health receipts are optional and never invent a state", ()
 		mtime: 1_790_727_370.33,
 	};
 
-	it("parses a durable-only row that carries NO receipt, as an ordinary session", () => {
+	it("reads a row with no receipt as not-ended and not-degraded, per the contract", () => {
 		const frame = parsePayload("sessionListFrame", {
 			sessions: [durableOnlyRow],
 			degraded: [],
@@ -698,10 +727,13 @@ describe("the session-health receipts are optional and never invent a state", ()
 		});
 		const row = frame.sessions[0];
 		expect(row?.session_id).toBe("6714def86197");
-		/* Absent must stay absent — not `false` — so "the relay did not observe this
-		 * conversation end" remains distinguishable from "it told us it ended". */
-		expect(row?.ended).toBeUndefined();
-		expect(row?.degraded).toBeUndefined();
+		/* Absence means `false` (contract.md §6.5.1, rule 1: "**Absence means
+		 * `false`.**"), the rolling-upgrade rule `unseen` and `pinned` already
+		 * follow — so the reading is settled here rather than left as `undefined` for
+		 * every screen to interpret. `false` claims nothing: it is "not observed to
+		 * have ended", and a durable-only row is exactly that. */
+		expect(row?.ended).toBe(false);
+		expect(row?.degraded).toBe(false);
 		expect(row?.completion_kind).toBe("");
 	});
 
@@ -757,6 +789,230 @@ describe("the session-health receipts are optional and never invent a state", ()
 			ended: true,
 		});
 		expect(ended.ended).toBe(true);
+	});
+});
+
+/* ---------------------------------------------------- the corpus's own rules */
+
+/** Reads a fixture. Every file carries its payload at the top level beside the
+ *  `provenance` marker, so nothing is unwrapped here — the two files whose
+ *  payload is a named field are read through that field where they are used. */
+function fixture<T>(rel: string): T {
+	return readJson(join(FIXTURE_ROOT, rel)) as T;
+}
+
+/** A probe transcript's samples, keyed by its own `columns` list. The probes are
+ *  captures of a row changing over time, which is why they are read as data here
+ *  rather than being forced through a payload schema. */
+function probeRows(rel: string): Record<string, unknown>[] {
+	const probe = fixture<{ columns: string[]; samples: unknown[][] }>(rel);
+	return probe.samples.map((sample) => {
+		const row: Record<string, unknown> = {};
+		probe.columns.forEach((column, index) => {
+			row[column] = sample[index];
+		});
+		return row;
+	});
+}
+
+describe("every fixture names its own origin", () => {
+	const files = listJsonFiles(FIXTURE_ROOT).map((path) =>
+		relative(FIXTURE_ROOT, path),
+	);
+
+	it("marks provenance in the file, which outranks the directory it sits in", () => {
+		for (const rel of files) {
+			const provenance = (
+				fixture(rel) as { provenance?: Record<string, unknown> }
+			).provenance;
+			if (provenance === undefined) {
+				throw new Error(`${rel}: no provenance marker`);
+			}
+			const kind = provenance.kind;
+			if (kind !== "live" && kind !== "synthetic") {
+				throw new Error(`${rel}: provenance.kind is ${String(kind)}`);
+			}
+			if (
+				typeof provenance.relay_ref !== "string" ||
+				provenance.relay_ref === ""
+			) {
+				throw new Error(`${rel}: provenance.relay_ref is missing`);
+			}
+			/* The marker is the authority, so the two disagreeing is a defect in the
+			 * tree rather than a licence to trust the path: a hand-built sample sitting
+			 * in a capture's directory is the failure this field exists for. */
+			const implied = rel.startsWith("synthetic/") ? "synthetic" : "live";
+			if (kind !== implied) {
+				throw new Error(
+					`${rel}: provenance.kind is ${kind}, its directory implies ${implied}`,
+				);
+			}
+			/* And each kind declares its own evidence: a capture names when and how it
+			 * was taken, a built sample names what it was modelled on and why. */
+			const declared = Object.keys(provenance);
+			const required =
+				kind === "live" ? ["captured_at", "how"] : ["modelled_on", "why"];
+			for (const field of required) {
+				if (!declared.includes(field)) {
+					throw new Error(`${rel}: a ${kind} fixture must declare ${field}`);
+				}
+			}
+		}
+	});
+
+	it("spans the two relay refs the receipts arrived between", () => {
+		/* The receipts (`ended`, `degraded`) were added after the bulk of the captures,
+		 * so the corpus deliberately holds both refs and each file names its own. A
+		 * suite reading a receipt-bearing fixture has to know which wire it is on. */
+		const refs = new Set(
+			files.map(
+				(rel) =>
+					(fixture(rel) as { provenance: { relay_ref: string } }).provenance
+						.relay_ref,
+			),
+		);
+		expect(refs.size).toBeGreaterThan(1);
+		for (const ref of refs)
+			expect(ref).toMatch(/^local-operator [0-9a-f]{7,9}$/);
+	});
+
+	it("leaves the ranked model list in the order the relay ranked it", () => {
+		/* `models.ranked.json` wraps the array (`{"provenance", "models"}`) and its
+		 * README entry is explicit that the order IS the ranking. Parsing must not
+		 * reorder, and neither may anything downstream: a client that sorts by label
+		 * shows a different top model than the relay chose. */
+		const ranked = fixture<{ models: { selector: string }[] }>(
+			"synthetic/models.ranked.json",
+		).models;
+		const parsed = ranked.map((entry) => parsePayload("modelEntry", entry));
+		expect(parsed.map((entry) => entry.selector)).toEqual(
+			ranked.map((entry) => entry.selector),
+		);
+		expect(parsed.length).toBeGreaterThan(10);
+	});
+});
+
+describe("the probes record what the session receipts mean", () => {
+	it("fires `degraded` after the counts go unknown, and never clears it on a timer", () => {
+		const probe = fixture<{ heartbeat_timeout_s: number }>(
+			"probes/degraded-row-signal.json",
+		);
+		const rows = probeRows("probes/degraded-row-signal.json");
+		expect(rows.length).toBeGreaterThan(20);
+		const vouched = rows.filter((row) => row.subagents_running === 0);
+		const unknown = rows.filter((row) => row.subagents_running === null);
+		expect(vouched.length).toBeGreaterThan(0);
+		expect(unknown.length).toBeGreaterThan(0);
+		/* The counts change first and they change at the timeout — the field is what a
+		 * client on an older relay has to watch. */
+		expect(Number(vouched.at(-1)?.t)).toBeLessThan(probe.heartbeat_timeout_s);
+		expect(Number(unknown[0]?.t)).toBeGreaterThanOrEqual(
+			probe.heartbeat_timeout_s,
+		);
+		for (const row of vouched) expect(row.degraded).toBe(false);
+		const firstNull = rows.findIndex((row) => row.subagents_running === null);
+		const firstDegraded = rows.findIndex((row) => row.degraded === true);
+		expect(firstDegraded).toBeGreaterThan(firstNull);
+		/* Once true it stays true for the rest of the capture, including the samples
+		 * taken after the runtime was resumed: the flag clears by being *observed*
+		 * false, never by a timer, so a screen must not time the badge out itself. */
+		expect(
+			rows.filter((row) => row.phase === "resumed").length,
+		).toBeGreaterThan(0);
+		expect(rows.at(-1)?.degraded).toBe(true);
+		for (const row of rows.slice(firstDegraded))
+			expect(row.degraded).toBe(true);
+		/* A wedged runtime has not ended, and its row does not leave `active`. */
+		for (const row of rows) {
+			expect(row.ended).toBe(false);
+			expect(row.section).toBe("active");
+		}
+	});
+
+	it("does not read `degraded: false` beside unknown counts as healthy", () => {
+		const probe = fixture<{ heartbeat_timeout_s: number }>(
+			"probes/degraded-never-fires-unstamped.json",
+		);
+		const rows = probeRows("probes/degraded-never-fires-unstamped.json");
+		/* The negative result is only a result because it outlasts the timeout: a
+		 * runtime frozen before it ever reported a beat never reaches the wedged
+		 * state, so the receipt never fires while the counts are already unknown. */
+		expect(Number(rows.at(-1)?.t)).toBeGreaterThan(probe.heartbeat_timeout_s);
+		for (const row of rows) {
+			expect(row.subagents_running).toBeNull();
+			expect(row.degraded).toBe(false);
+			expect(row.ended).toBe(false);
+		}
+		/* The distinction the probe exists to protect: unknown (`null`) has to stay
+		 * distinguishable from the healthy `0`, or a stalled conversation renders as
+		 * a quiet one. This is the rule behind the nullable number in the schema. */
+		expect(
+			probeRows("probes/degraded-row-signal.json")[0]?.subagents_running,
+		).toBe(0);
+	});
+
+	it("detects a stalled conversation on a relay that has no receipt at all", () => {
+		const probe = fixture<{
+			heartbeat_timeout_s: number;
+			samples: {
+				t: number;
+				subagents_running: number | null;
+				section: string;
+			}[];
+		}>("probes/wedged-row-signal.json");
+		const live = probe.samples.filter(
+			(sample) => sample.subagents_running === 0,
+		);
+		const stale = probe.samples.filter(
+			(sample) => sample.subagents_running === null,
+		);
+		expect(live.length).toBeGreaterThan(0);
+		expect(stale.length).toBeGreaterThan(0);
+		expect(live.at(-1)?.t).toBeLessThan(probe.heartbeat_timeout_s);
+		expect(stale[0]?.t).toBeLessThanOrEqual(probe.heartbeat_timeout_s);
+		/* Still `active`, still not ended, and this ref's samples carry neither
+		 * receipt — so the field change is the only signal available. */
+		for (const sample of probe.samples) expect(sample.section).toBe("active");
+		expect(probe.samples.some((sample) => "degraded" in sample)).toBe(false);
+	});
+
+	it("keeps a durable-only row ordinary, and an older relay's row parseable", () => {
+		const probe = fixture<{
+			row_before_restart: Record<string, unknown>;
+			row_after_restart: Record<string, unknown>;
+		}>("probes/durable-only-row.json");
+		/* Before: the daemon that ran the conversation vouches for it. After: a second
+		 * daemon on the same home, with nothing registered — so the counts are
+		 * unknown and the relay refuses to infer an end it did not observe. */
+		expect(probe.row_before_restart.subagents_running).toBe(0);
+		expect(probe.row_after_restart.subagents_running).toBeNull();
+		expect(probe.row_after_restart.ended).toBe(false);
+		expect(probe.row_after_restart.degraded).toBe(false);
+		expect(probe.row_after_restart.model_label).toBe("");
+		/* And the row a relay older than the receipts sends still parses. Absence
+		 * reads as `false` — the contract's rolling-upgrade rule — so the check is
+		 * that the reading is settled rather than left `undefined`; the probe's own
+		 * rows cannot serve here, because they are EXCERPTS carrying only the fields
+		 * the receipt touches (no `conversation_name`, `cwd`, `todos_open`, `mtime`),
+		 * so this uses a whole row from the http capture. */
+		const whole = fixture<{ body: { sessions: Record<string, unknown>[] } }>(
+			"http/list_row_live.json",
+		).body.sessions[0];
+		const older = { ...whole };
+		delete older.ended;
+		delete older.degraded;
+		const parsed = safeParsePayload("sessionSummary", older);
+		expect(parsed.ok).toBe(true);
+		if (!parsed.ok) return;
+		expect(parsed.data.ended).toBe(false);
+		expect(parsed.data.degraded).toBe(false);
+		/* The same row with the receipts is read as the relay's own statement, so the
+		 * two cases are distinguishable rather than merged into "probably fine". */
+		const stated = safeParsePayload("sessionSummary", whole);
+		expect(stated.ok).toBe(true);
+		if (!stated.ok) return;
+		expect(stated.data.ended).toBe(false);
+		expect(stated.data.degraded).toBe(false);
 	});
 });
 

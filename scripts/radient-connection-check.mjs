@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+// biome-ignore-all lint/performance/useTopLevelRegex: a regex literal here runs
+// once per hand-run check, not in a loop — hoisting it out would only move it.
 /**
  * `NO CREDENTIALS — not run here.`
  *

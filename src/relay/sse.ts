@@ -86,6 +86,11 @@ export class SseFrameReader {
 	 *  from "no frames because the connection is dead". */
 	private keepalives = 0;
 
+	/** The relay's only comment is its keep-alive (`: keepalive` every 25 s,
+	 *  `SSE_KEEPALIVE_S`). It is reported through `onComment`, NOT through
+	 *  `onEvent` — a comment is not an event, so a counter incremented in the event
+	 *  callback stays at zero and a caller reading it cannot tell a quiet stream
+	 *  from a dead one. That is exactly the bug a `>= 0` assertion hid. */
 	private readonly parser: {
 		feed: (chunk: string) => void;
 		reset: (options?: { consume?: boolean }) => void;
@@ -93,11 +98,14 @@ export class SseFrameReader {
 
 	constructor(private readonly now: () => number = () => Date.now()) {
 		this.parser = createParser({
+			onComment: () => {
+				this.keepalives += 1;
+				this.pending.push({ event: "", data: "", receivedAt: this.now() });
+			},
 			onEvent: (message: EventSourceMessage) => {
-				/* A comment (`: keepalive`) arrives with no `event` and no `data` — the
-				 * parser reports it as an empty message, which is exactly how the
-				 * contract describes it. Counting it here is what keeps the silence
-				 * watchdog honest without a second code path. */
+				/* A block that carries fields but no data (an `id:`-only block, say) is
+				 * the same signal as a comment: the relay said something and nothing
+				 * changed. It is counted as liveness, and it is not a data frame. */
 				if (message.event === undefined && message.data === "") {
 					this.keepalives += 1;
 					this.pending.push({ event: "", data: "", receivedAt: this.now() });
