@@ -22,7 +22,7 @@ import {
 	type ContinuationEnvelope,
 	isRelayError,
 	RetryEnvelopeStore,
-	settleOutcomeFromError,
+	sendPersistedCommand,
 } from "@/relay";
 
 /**
@@ -174,34 +174,36 @@ export const useComposer = (input: {
 					setDraft("");
 					return;
 				}
-				/* The envelope's op belongs to the envelope: `streaming` can change
-				 * between the admission and the acknowledgement, so a retry replays the
-				 * op it was minted with rather than one derived from the current frame. */
-				const envelope = await envelopeStore.holdNew(
+				/* Hold, send and settle live in `@/relay`'s `sendPersistedCommand`: one
+				 * implementation of the rule that a retry replays the SAME `command_id`, with
+				 * the envelope's disposition decided by the error taxonomy rather than here.
+				 * The envelope's op belongs to the envelope — `streaming` can change between
+				 * admission and acknowledgement — so the op passed in is used only when a NEW
+				 * instruction is minted. */
+				const result = await sendPersistedCommand({
+					client: endpoints,
+					envelopes: envelopeStore,
 					sessionId,
 					op,
-					trimmed,
-					payloadImages,
-				);
-				setRetained(envelope);
-				const ack = await endpoints.command(sessionId, {
-					op: envelope.op,
-					command_id: envelope.command_id,
-					text: envelope.text,
-					...(envelope.images ? { images: envelope.images } : {}),
+					text: trimmed,
+					...(payloadImages ? { images: payloadImages } : {}),
 				});
-				void ack;
-				await envelopeStore.settle(sessionId, { kind: "ack" });
 				setRetained(null);
-				// Only clear the visible draft when the acknowledged bytes ARE the
-				// visible draft. If the reader edited while the request was out, the ack
-				// proves the OLD instruction was delivered and says nothing about what is
-				// on screen — so the edit stays, as the next command.
-				if (
+				if (result.reusedPreviousDraft) {
+					/* An EARLIER unresolved instruction was replayed under its own UUID: the
+					 * reader's new text was not what the relay received, so it stays — and they
+					 * are told, because a draft that vanishes without a word is the failure this
+					 * whole mechanism exists to prevent. */
+					setNotice(COMPOSER_COPY.retryAckNotice);
+				} else if (
+					// Only clear the visible draft when the acknowledged bytes ARE the
+					// visible draft. If the reader edited while the request was out, the ack
+					// proves the OLD instruction was delivered and says nothing about what is
+					// on screen — so the edit stays, as the next command.
 					acknowledgedCurrentDraft(
 						{
-							text: envelope.text,
-							...(envelope.images ? { images: envelope.images } : {}),
+							text: trimmed,
+							...(payloadImages ? { images: payloadImages } : {}),
 						},
 						{
 							text: draftRef.current.trim(),
@@ -216,21 +218,12 @@ export const useComposer = (input: {
 				}
 				onSent?.();
 			} catch (failure) {
-				/* The envelope's disposition is decided by the relay error layer, which
-				 * already resolved the status and the gateway's reason vocabulary into
-				 * one of four outcomes. A second reading of the same status here is how
-				 * one failure acquires two rules.
-				 *
-				 * A throw that is NOT a `RelayError` is an unknown failure, so the
-				 * envelope is kept (`transport`) and the reader gets the product's own
-				 * sentence — never `String(exception)`, which is how "Load failed" became
-				 * a shipped first impression (U3). */
+				/* The envelope's disposition is already settled by `sendPersistedCommand`,
+				 * which reads the relay error layer's own `envelope` directive — so this
+				 * handler presents and does not decide. Settling again here would be a second
+				 * reading of one failure, which is how one failure acquires two rules. */
 				if (isRelayError(failure)) {
 					const receipt = receiptForError(failure);
-					await envelopeStore.settle(
-						receipt.kind === "sign-out" ? null : sessionId,
-						settleOutcomeFromError(failure),
-					);
 					setRetained(
 						receipt.kind === "ambiguous"
 							? await envelopeStore.peek(sessionId)
@@ -238,7 +231,6 @@ export const useComposer = (input: {
 					);
 					setError(receipt.message);
 				} else {
-					await envelopeStore.settle(sessionId, { kind: "transport" });
 					setRetained(await envelopeStore.peek(sessionId));
 					setError(ambiguousMessage(streaming));
 				}
@@ -264,14 +256,17 @@ export const useComposer = (input: {
 			setSending(true);
 			setError(null);
 			try {
-				const ack = await endpoints.command(sessionId, {
+				/* The retry IS the replay: `holdNew` returns the stored envelope for this
+				 * session, so this sends the bytes and the UUID it was minted with. */
+				const result = await sendPersistedCommand({
+					client: endpoints,
+					envelopes: envelopeStore,
+					sessionId,
 					op: held.op,
-					command_id: held.command_id,
 					text: held.text,
 					...(held.images ? { images: held.images } : {}),
 				});
-				void ack;
-				await envelopeStore.settle(sessionId, { kind: "ack" });
+				void result;
 				setRetained(null);
 				// The replayed instruction is the ENVELOPE's, so the visible draft is
 				// never the thing that was delivered: it stays for the reader to send.
@@ -279,10 +274,6 @@ export const useComposer = (input: {
 			} catch (failure) {
 				if (isRelayError(failure)) {
 					const receipt = receiptForError(failure);
-					await envelopeStore.settle(
-						receipt.kind === "sign-out" ? null : sessionId,
-						settleOutcomeFromError(failure),
-					);
 					setRetained(
 						receipt.kind === "ambiguous"
 							? await envelopeStore.peek(sessionId)
@@ -290,7 +281,6 @@ export const useComposer = (input: {
 					);
 					setError(receipt.message);
 				} else {
-					await envelopeStore.settle(sessionId, { kind: "transport" });
 					setRetained(await envelopeStore.peek(sessionId));
 					setError(ambiguousMessage(streaming));
 				}
@@ -298,8 +288,7 @@ export const useComposer = (input: {
 				setSending(false);
 			}
 		})();
-		// Same reason as `runSend`: the fallback sentence reads the turn's state.
-	}, [endpoints, sessionId, envelopeStore, streaming]);
+	}, [endpoints, envelopeStore, sessionId, streaming]);
 
 	const stop = useCallback(() => {
 		void (async () => {
