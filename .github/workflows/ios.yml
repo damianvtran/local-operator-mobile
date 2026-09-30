@@ -45,7 +45,7 @@ permissions:
 env:
   NODE_VERSION: "24"
   # The simulator is a pinned input, in one place (ADR 0004, open risks). macOS
-  # runner images track Xcode releases, so `scripts/ci/ios-simulator.mjs` resolves
+  # runner images track Xcode releases, so `scripts/ci/ios-simulator.ts` resolves
   # this name against what the runner actually has, prints what it chose, and
   # warns rather than failing when the image has moved on.
   IOS_SIMULATOR_DEVICE: iPhone 17
@@ -125,7 +125,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Derive the version from the ref
-        run: node scripts/ci/version.mjs --write
+        run: node scripts/ci/version.ts --write
 
       - name: Generate the native project
         run: pnpm exec expo prebuild --platform ios --clean --no-install
@@ -144,7 +144,7 @@ jobs:
         id: simulator
         env:
           DEVICE: ${{ env.IOS_SIMULATOR_DEVICE }}
-        run: node scripts/ci/ios-simulator.mjs --prefer "$DEVICE"
+        run: node scripts/ci/ios-simulator.ts --prefer "$DEVICE"
 
       - name: Resolve the workspace and scheme
         id: project
@@ -153,7 +153,7 @@ jobs:
         # name here is a copy that can disagree with app.config.ts. The script
         # also fails loudly when there is no workspace (which means `pod install`
         # never ran) or when the project declares more than one scheme.
-        run: node scripts/ci/ios-project.mjs --root ios
+        run: node scripts/ci/ios-project.ts --root ios
 
       - name: Build for the simulator (no signing at all)
         # `CODE_SIGNING_ALLOWED=NO` is what lets this run with ZERO secrets. It
@@ -212,7 +212,7 @@ jobs:
         run: |
           set -euo pipefail
           pnpm exec expo prebuild --platform ios --clean --no-install
-          node scripts/ci/prebuild-determinism.mjs \
+          node scripts/ci/prebuild-determinism.ts \
             --built "$RUNNER_TEMP/ios-built" \
             --regenerated ios
 
@@ -251,7 +251,7 @@ jobs:
         # On `main` this is the placeholder version with a run-number build
         # number: both stores compare the build number, and the placeholder is
         # what a non-release build is allowed to be. See docs/ci.md.
-        run: node scripts/ci/version.mjs --write
+        run: node scripts/ci/version.ts --write
 
       - name: Is the iOS signing material configured?
         id: apple
@@ -264,7 +264,7 @@ jobs:
         # TestFlight upload is the part that needs the key, so this warns rather
         # than failing. A tagged release uses `--mode release`, which fails.
         run: |
-          node scripts/ci/check-secrets.mjs --mode internal --need \
+          node scripts/ci/check-secrets.ts --mode internal --need \
             APPLE_TEAM_ID,APPLE_ASC_KEY_ID,APPLE_ASC_ISSUER_ID,APPLE_ASC_PRIVATE_KEY_BASE64
 
       - name: Generate the native project
@@ -285,7 +285,7 @@ jobs:
         # name here is a copy that can disagree with app.config.ts. The script
         # also fails loudly when there is no workspace (which means `pod install`
         # never ran) or when the project declares more than one scheme.
-        run: node scripts/ci/ios-project.mjs --root ios
+        run: node scripts/ci/ios-project.ts --root ios
 
       - name: Decode the App Store Connect API key
         if: steps.apple.outputs.all_present == 'true'

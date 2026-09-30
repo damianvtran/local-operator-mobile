@@ -6,13 +6,34 @@
 - **Depends on:** [ADR 0001 — Framework and styling stack](0001-framework.md)
 - **Related:** [ADR 0003 — E2E and audit harness](0003-e2e-and-audit-harness.md)
 
+**Provenance of code citations.** Every `file:line` in this document is stated at a
+named revision and was resolved with `git show <ref>:<path>` — never read from a
+working tree, because the shared checkouts carry other sessions' staged work and
+their line numbers move under you:
+
+| Repository | Revision | How paths are cited |
+|---|---|---|
+| **local-operator** | `fc851a94e` (read 2026-09-29; a pinned SHA, not a branch — local-operator's origin/main has moved past it since) | `local_operator/tunnels/gateway.py` → `gateway.py`; `mobile/daemon.py` → `daemon.py`; `mobile/auth.py` → `auth.py`; `mobile/types.py` → `types.py`; `mobile/web/src/store.ts` → `store.ts`; `providers/oauth/radient.py` → `radient.py`; `docs/mobile.md` and `docs/tunnels.md` by full path |
+| **agent-server** (Radient) | `dcafe852` (read 2026-09-29; a pinned SHA — agent-server's origin/main happened to equal it then) | `edge/tunnel-worker/src/index.ts` → `index.ts`; `internal/tunnels/*.go`, `internal/services/*.go`, `internal/repositories/*.go`, `internal/responses/*.go` → bare file name; `docs/PERSONAL_TUNNELS.md` by full path |
+| **user-console** (Radient console) | `8597fdba` (read 2026-09-29; a pinned SHA, not a branch — user-console's origin/main has moved past it since) | `src/lib/native-oauth.ts` → `native-oauth.ts` |
+| **expo** | `500d25dea3746c8ceeb751b3c55f432b269be410` (GitHub `main`, read 2026-09-29; a pinned SHA) | full paths under `packages/`; read with `gh api repos/expo/expo/contents/<path>?ref=<sha>`, since there is no local clone to `git show` |
+
+The SHA is the authority in every row: a branch name only says where the ref was
+when it was read, and these branches moved — at the time of writing local-operator's
+`origin/main` was 8 commits past the pin, user-console's 36 past it, and agent-server's
+happened to sit exactly on it. Re-derive a number at the SHA, never at a branch.
+
+`docs/relay/*` (PR #4) pins agent-server at `2cb7f4a5`, an ancestor of `dcafe852`.
+Each is correct for the ref it names; expect the same file's line numbers to differ
+between the two documents by the commits in between.
+
 ## Context
 
 The app is a client for two servers it does not own:
 
 - the **relay** — `lop mobile serve`, an HTTP + SSE server that binds `127.0.0.1`
   only, with a single shared password and a signed cookie
-  (`~/local-operator/local_operator/mobile/daemon.py:3020-3044` for the route
+  (`~/local-operator/local_operator/mobile/daemon.py:4674-4726` for the route
   table; `~/local-operator/local_operator/mobile/auth.py:98` for the cookie name
   `lop_mobile`; `:465-469` for `sign_cookie`, whose value is
   `<expiry>.<hmac-sha256-hex>` over the expiry string);
@@ -44,7 +65,7 @@ Two facts drive most of the design:
    (`index.ts:246-259`). The gateway verifies that proof and, for the
    `local-operator` harness, **injects the relay's own cookie itself**:
    `headers["cookie"] = f"{COOKIE_NAME}={sign_cookie(self.mobile_password)}"`
-   (`gateway.py:451-456`). On the Radient route the phone therefore never needs —
+   (`gateway.py:544-547`). On the Radient route the phone therefore never needs —
    and can never use — the relay password: the gateway supplies it.
 2. **The relay is loopback-only** (`~/local-operator/docs/mobile.md`, "Security
    invariants": every listener binds `127.0.0.1`). A "custom URL" is therefore
@@ -54,15 +75,15 @@ Two facts drive most of the design:
 
 | Constraint | Source |
 |---|---|
-| Mutations require an exact `Origin` equal to the request's own origin | `index.ts:122-131` (edge), `daemon.py:2335-2355` (relay) |
+| Mutations require an exact `Origin` equal to the request's own origin | `index.ts:122-131` (edge), `daemon.py:3368-3386` (relay) |
 | `Sec-Fetch-Site: cross-site`/`same-site` non-navigations are rejected at the edge | `index.ts:129-130` |
-| Request bodies are capped at 10 MiB at the edge and the gateway | `index.ts:10`, `gateway.py:31` |
-| SSE is cut every 60 s by the gateway lease and must be reconnected | `gateway.py:34`, `:578-594` |
-| The relay pushes **full snapshots** (`event: projection`), never deltas, with a monotonic `version` per projection epoch | `daemon.py:3071-3072`, `types.py:SessionProjection.version` |
-| The relay sends `: keepalive` every 25 s when idle | `daemon.py:76-79`, `:2517-2518` |
-| Session endpoints are per-IP rate limited (5/s, burst 20) with a global budget | `internal/tunnels/service.go:96-110` |
+| Request bodies are capped at 10 MiB at the edge and the gateway | `index.ts:10`, `gateway.py:33` |
+| SSE is cut every 60 s by the gateway lease and must be reconnected | `gateway.py:34`, `:673-686` |
+| The relay pushes **full snapshots** (`event: projection`), never deltas, with a monotonic `version` per projection epoch | `daemon.py:4752-4753`, `types.py:SessionProjection.version` |
+| The relay sends `: keepalive` every 25 s when idle | `daemon.py:104-105`, `:2517-2518` |
+| Session endpoints are per-IP rate limited (5/s, burst 20) with a global budget | `internal/tunnels/service.go:102-110` |
 | The grant lives 5 minutes; the tunnel refresh handle is opaque, **not rotated**, and lives 30 days absolute | `internal/tunnels/session.go:199-210`, `:159-176` |
-| Radient OAuth access token lives 1 hour; the OAuth refresh token is **rotated on every use** and rolls 90 days | `internal/services/auth_service.go:452-455`, `:704-720` |
+| Radient OAuth access token lives 1 hour; the OAuth refresh token is **rotated on every use** and rolls 90 days | `internal/services/auth_service.go:492-495`, `:704-720` |
 
 ## 1. Sign-in options for a phone
 
@@ -88,13 +109,13 @@ loopback regex with a required port
 
 - **Requires no Radient change.** Existing client id, existing registered
   redirects, existing scopes (`openid profile email offline_access`).
-- The resulting access token is audienced to `lop` (`auth_service.go:452`), and the
+- The resulting access token is audienced to `lop` (`auth_service.go:492`), and the
   control plane accepts an owner token whose `aud` is in
-  `RADIENT_TUNNEL_JWT_AUDIENCES` (`config.go:86-90`, checked at `service.go:144-155`).
+  `RADIENT_TUNNEL_JWT_AUDIENCES` (`config.go:86-90`, checked at `service.go:143-156`).
   **The deployed value of that variable is UNCONFIRMED.** The mechanism is verified;
   the only occurrences of the value in either repository are a unit-test fixture
-  (`config_test.go:68`) and an e2e fixture in a worktree
-  (`…/tunnel_floor_e2e_test.go:111`), and the docs name the variable without a value
+  (`config_test.go:68`) and an e2e fixture
+  (`cmd/server/tunnel_floor_e2e_test.go:111`, both read at the pinned refs), and the docs name the variable without a value
   (`docs/PERSONAL_TUNNELS.md:47`). The configuration lives outside these repositories,
   so it must be *checked*, not assumed (§7 **S8**). Indirect evidence that it is
   `lop` in production: the same owner middleware guards `POST /:id/connect`
@@ -179,7 +200,7 @@ API's envelope — `{"msg": …, "result": …}` — and `result` is what we rea
   lists them by name with status, most recently updated first, and remembers the
   last one used. There is no cross-device grouping beyond what the API provides,
   and we do not invent one.
-- **Status mapping** (`internal/tunnels/service.go:302`, `:466-472`):
+- **Status mapping** (`internal/tunnels/service.go:310`, `:468-482`):
   `active` → ready; `disabled` → off; `suspended` → suspended (billing);
   `pending`/`reconciling` → provisioning; `revoking`/`deleted` → gone;
   `error` → needs attention. Only `active` is dialable — the control plane
@@ -193,7 +214,7 @@ API's envelope — `{"msg": …, "result": …}` — and `result` is what we rea
 - **No tunnel at all:** the app offers two distinct paths and says plainly which
   needs the computer:
   - *Create here:* `POST /v1/tunnels {name, device_id, gateway_port, harnesses[]}`
-    allocates the hostname and reserves it (`service.go:300-310`), but the
+    allocates the hostname and reserves it (`service.go:305-324`), but the
     **computer** must then run `lop tunnel connect <id>`
     (`~/local-operator/docs/tunnels.md:57-62`). The app shows the id with a copy
     button and the exact command, then polls `GET /v1/tunnels/:id` while the user
@@ -202,7 +223,7 @@ API's envelope — `{"msg": …, "result": …}` — and `result` is what we rea
     running on the computer; nothing the phone does can start it.
 - **“Is the computer actually up?”** is answered by request outcomes rather than a
   health field: the gateway's health route is pinned to a loopback Host
-  (`gateway.py:462-480`) and cannot be reached through the tunnel. The usable
+  (`gateway.py:553-573`) and cannot be reached through the tunnel. The usable
   signals are in §5.
 - **QR codes are not needed on this path** — the phone discovers the hostname
   itself. On the custom path (§6) a QR of the base URL (never the password) is a
@@ -239,7 +260,7 @@ hostname with `token_use: tunnel_access` and a 5-minute life
 | Refresh fails with 401/`invalid_grant` | Re-mint with a fresh OAuth access token (refresh the OAuth token first if it is near expiry) |
 | Tunnel refresh handle is > 25 days old | Re-mint silently in the background — the handle is **absolute, non-rotating, 30 days** (`session.go:159-176`), so it cannot be extended and there is no server-side “keep alive” |
 | OAuth refresh fails (401/400) | Sign-in screen, with the tunnel session preserved until the user acts |
-| Any 429 | Exponential backoff with jitter; the session endpoints are per-IP limited to 5/s burst 20 (`service.go:96-110`) and a stampede takes out refresh for everyone on that IP |
+| Any 429 | Exponential backoff with jitter; the session endpoints are per-IP limited to 5/s burst 20 (`service.go:102-110`) and a stampede takes out refresh for everyone on that IP |
 
 The refresh handle never rotating is a feature for us — no rotation race across
 app foreground/background — and the 30-day absolute bound is the one place the
@@ -259,11 +280,11 @@ tunnel id), and the custom-route set (base URL, password **only if the user opte
 to remember it**, cookie value if we end up owning it — §4).
 
 **Writing a refresh token is guarded, not blind.** A refresh response can succeed
-with an empty `refresh_token`: `auth_service.go:705-722` returns the new handle only
+with an empty `refresh_token`: `auth_service.go:752-770` returns the new handle only
 when the new token row was created, and otherwise answers **HTTP 200 with
 `"refresh_token": ""`** rather than the 401/400 the lifecycle above covers. The
 rotation branch also only revokes the previous row when creation succeeded
-(`:714-716`), so the stored handle is still valid in that case. The rule:
+(`:766-768`), so the stored handle is still valid in that case. The rule:
 
 > A storage write of a refresh token **refuses an empty, absent or non-string
 > value** and keeps the working one; only a non-empty string replaces it.
@@ -291,7 +312,7 @@ right tool, because there the cookie genuinely does come from a login response.
 **Refresh is ours; the edge's renewal is for browsers.** The app calls
 `POST https://api.radienthq.com/v1/tunnels/session/refresh {refresh_token, hostname}`
 itself and stores the returned grant. The Worker's own refresh branch
-(`index.ts:305-313`) only fires when a request arrives carrying a
+(`index.ts:306-316`) only fires when a request arrives carrying a
 `__Host-radient-refresh` cookie, which never happens for us because we send the
 grant as an explicit header — so a browser client behind the same tunnel and this
 app refresh independently, and neither can silently repair the other.
@@ -302,7 +323,7 @@ itself.
 
 1. **Primary, and the only step that matters:** `POST
    https://api.radienthq.com/v1/tunnels/session/logout` with
-   `{refresh_token, hostname}` (`session.go:185-196`) deletes the server-side refresh
+   `{refresh_token, hostname}` (`session.go:185-198`) deletes the server-side refresh
    session. **State this plainly in the code and the copy: a logout that does not
    reach the control plane leaves a copied 30-day handle valid.** The local delete
    in step 4 does not revoke anything.
@@ -318,7 +339,7 @@ itself.
 4. Delete the secure-store items, the cached projections/transcripts, the retry
    envelopes, and any `lop_mobile` cookie left in the platform jar by the custom
    route. Radient's OAuth refresh token can also be revoked server-side
-   (`RevokeToken`, `internal/services/auth_service.go:738-756`); the public route for
+   (`RevokeToken`, `internal/services/auth_service.go:790-808`); the public route for
    it is not verified here — confirm before relying on it, and treat this as optional
    at v1 because deleting the local token already ends this device's access.
 
@@ -332,7 +353,7 @@ itself.
 | Custom URL | `Cookie: ` + the relay's `lop_mobile` value, owned by the platform jar (§ below); `Origin: <base origin>` | same |
 
 - `Origin` is required *by the relay itself* for mutations, not only by the edge
-  (`daemon.py:2335-2355`), and both compare an exact string. Send it on every
+  (`daemon.py:3368-3386`), and both compare an exact string. Send it on every
   request; it costs nothing and removes a class of 403s.
 - **Never** set `Sec-Fetch-*` headers: a `cross-site`/`same-site` value that is not
   a navigation is rejected at the edge, and native clients have no reason to
@@ -372,7 +393,7 @@ received `Set-Cookie`). **Spike S2** settles whether we can capture the value
 ourselves; if we cannot, the jar path is the design, not the fallback.
 
 **Redirects.** Use `redirect: 'manual'` on `/login`: the daemon answers a successful
-form login with `303 → /` plus `Set-Cookie` (`daemon.py:2391-2416`), and a failure
+form login with `303 → /` plus `Set-Cookie` (`daemon.py:3424-3447`), and a failure
 with 401 and an HTML error page. Following the redirect is pointless (the app never
 renders the relay's HTML) and on the tunnel route a 303 to `/_radient/login` is a
 diagnostic, not something to follow.
@@ -386,32 +407,32 @@ diagnostic, not something to follow.
   `EventSource`: it is not in React Native, and its built-in retry is immediate on
   some server-close shapes — the relay's own web client documents this and
   implements manual backoff for exactly that reason
-  (`~/local-operator/local_operator/mobile/web/src/store.ts:1-12`, `:104-160`).
+  (`~/local-operator/local_operator/mobile/web/src/store.ts:1-12` for the rationale, `:143-192` for the implementation).
 - **Treat the 60-second cut as expected, not as an error.** The gateway's lease
-  (`gateway.py:34`, `:578-594`) ends the stream cleanly. Backoff is explicit, and it
+  (`gateway.py:34`, `:673-686`) ends the stream cleanly. Backoff is explicit, and it
   is deliberately *not* the reference client's rule: **reconnect immediately (0 ms)
   after a clean lease cut, and use exponential backoff 1 s → 15 s, reset on any
   successful frame, for every other close** (a transport error, a 5xx, an
   unexplained EOF). The relay's own web client uses 1 s → 15 s for *all* closes
-  including the lease (`store.ts:104-160`, constants at `:104-105`); that is correct
+  including the lease (`store.ts:143-192`, constants at `:143-144`); that is correct
   for a browser tab that may be backgrounded, and wrong for a foregrounded app whose
   streams die on a schedule — waiting a second after a scheduled rotation shows the
   user a gap that did not have to exist. A *silent* stream for more than ~35 s is the
   real failure signal, because the relay keeps the connection warm every 25 s
-  (`daemon.py:79`).
+  (`daemon.py:105`).
 - **Resync by snapshot.** Every push is a full projection with a monotonic
   `version` for its epoch; on reconnect, drop frames older than the last rendered
   one and accept the first frame of the new connection unconditionally (the relay
   reconciles epochs itself, and its own client implements exactly this
-  `awaitingSnapshot` rule — `store.ts:215-245`).
+  `awaitingSnapshot` rule — `store.ts:263-286`).
 - **Keep the last good projection while disconnected** and mark it stale rather
-  than blanking the screen (`store.ts:250-258`). A flapping tunnel must not erase
+  than blanking the screen (`store.ts:296-303`). A flapping tunnel must not erase
   the transcript the user is reading.
 - **Command delivery uses the relay's retry envelope**, not a naive POST retry: an
   instruction whose outcome is unknown (transport failure, or HTTP 502/504/408) is
   persisted with its UUID and replayed with the same UUID, so the relay de-duplicates
   it; a definitive 4xx/5xx rejection clears it. The contract is written out in
-  `~/local-operator/docs/mobile.md:196-232` and implemented in
+  `~/local-operator/docs/mobile.md:257-294` and implemented in
   `web/src/continuation-command.ts` — port the rules, do not re-derive them.
 
 ### Error taxonomy (drives the UI state machine)
@@ -420,17 +441,22 @@ diagnostic, not something to follow.
 |---|---|---|---|
 | `401` + `X-Radient-Login` | edge (`index.ts:317-323`) | tunnel session expired | Refresh once (`/session/refresh`), retry the request once; re-mint only on a second failure, and go to sign-in only if that fails too (§3) |
 | `503` `text/plain` “Tunnel temporarily unavailable” | edge (`index.ts:330`) | **the computer is offline** or its connector is down | “Computer offline” with retry |
-| `503` JSON `{detail, reason, error}` | gateway (`gateway.py:397-430`) | connector is up but refusing | Show `detail` verbatim — it is written for a phone — plus the console link for `authorization_refused`/`tunnel_not_authorized` |
-| `502` JSON `{"error":"local harness unavailable"}` | gateway (`gateway.py:557-558`) | the **relay daemon** is down | “Start the relay on your computer” |
-| `404` JSON `{"error":"unknown tunnel host"}` | gateway (`gateway.py:483-484`) | tunnel/harness changed or was removed | Re-run discovery |
+| `503` JSON `{detail, reason, error}` | gateway (`gateway.py:472-500`) | connector is up but refusing | Show `detail` verbatim — it is written for a phone — plus the console link for `authorization_refused`/`tunnel_not_authorized` |
+| `502` JSON `{"error":"local harness unavailable"}` | gateway (`gateway.py:652-653`) | the **relay daemon** is down | “Start the relay on your computer” |
+| `404` JSON `{"error":"unknown tunnel host"}` | gateway (`gateway.py:575-576`) | tunnel/harness changed or was removed | Re-run discovery |
 | `403` “Same-origin request required” | edge (`index.ts:128`) | we failed to send `Origin` | Diagnostics-only; never user-facing copy |
-| `403` `{“error”:“same-origin request required”}` | gateway (`gateway.py:502`) | the gateway rejected our `Origin`, not the edge | Diagnostics-only: a stale or wrong base URL |
-| `401` `{"error":"valid Radient origin assertion required"}` | gateway (`gateway.py:519-522`) | the edge's origin proof was missing, stale or replayed (`gateway.py:295-356`) | Diagnostics-only, but it means the tunnel route was reached without the edge — a configuration error worth surfacing in the diagnostics screen |
-| `401` JSON `{"error":"authentication required"}` | relay (`daemon.py:2362-2364`) | custom route: password changed / cookie cleared | Re-prompt for the password |
+| `403` `{"error":"same-origin request required"}` | gateway (`gateway.py:595`) | the gateway rejected our `Origin`, not the edge | Diagnostics-only: a stale or wrong base URL |
+| `401` `{"error":"valid Radient origin assertion required"}` | gateway (`gateway.py:614`) | the edge's origin proof was missing, stale or replayed (`gateway.py:360-440`) | Diagnostics-only, but it means the tunnel route was reached without the edge — a configuration error worth surfacing in the diagnostics screen |
+| `401` JSON `{"error":"authentication required"}` | relay (`daemon.py:3395-3396`) | custom route: password changed / cookie cleared | Re-prompt for the password |
 | `429` | API | rate limited | Back off with jitter |
 
+Every JSON body in this table is quoted **compactly**, as it reaches the wire:
+Starlette's `JSONResponse` renders `{"error":"…"}` with no space after the colon,
+while the literals in `gateway.py` are written with one (`gateway.py:576`, `:595`,
+`:614`, `:652`). Match on the status and the `error` key, never on spacing.
+
 The `reason` vocabulary is stable and enumerated
-(`gateway.py:73-95`): `control_plane_unreachable`, `authorization_refused`,
+(`gateway.py:106-146`): `control_plane_unreachable`, `authorization_refused`,
 `tunnel_not_authorized`, `authorization_lease_pending`, `login_required`. Map each
 to a distinct action, and fall back to `detail` for a reason a future relay adds.
 
@@ -442,7 +468,7 @@ then an authenticated cookie.
 1. **Reject a Radient tunnel hostname here.** If the host matches the edge's own
    shape — `/^[a-f0-9]{32}-lop\./` (`index.ts:34`) — send the user to the tunnel flow
    instead of asking for a password: on that origin the gateway answers `/login`
-   itself (`gateway.py:533-534`), so a password typed there is verified by nobody
+   itself (`gateway.py:628-629`), so a password typed there is verified by nobody
    (step 4 makes that concrete). Everything else is classified as *direct*: a custom
    tunnel the user runs, or a plain URL.
 2. Normalise and validate the base URL. Accept `https://…`. Accept `http://…` only
@@ -455,15 +481,15 @@ then an authenticated cookie.
    (so the resulting cookie is stored by the platform jar; §4).
 4. **Verify the login with an authenticated probe, never with the status code.** The
    relay answers a wrong password with `401` + an HTML error page
-   (`daemon.py:2391-2416`) and a right one with `303 → /`, but a *gateway* in front of
+   (`daemon.py:3424-3447`) and a right one with `303 → /`, but a *gateway* in front of
    a `local-operator` harness answers `303 → "/"` for any request to `/login`,
-   before the relay is ever reached (`gateway.py:533-534`) — so on that origin
+   before the relay is ever reached (`gateway.py:628-629`) — so on that origin
    `303` proves nothing. The app therefore follows the login with
    `GET /api/sessions` (or `/healthz` first, then `/api/sessions`): `200` means the
    session is authenticated (by us or by a gateway that injects its own cookie),
    `401` means the password was wrong — regardless of which status the login itself
    returned. There is **no Bearer/Basic alternative**: the relay's only credential is
-   the cookie (`daemon.py:2330-2365`; `basic_auth_header_user` in `auth.py:486-490`
+   the cookie (`daemon.py:3363-3397`; `basic_auth_header_user` in `auth.py:486-490`
    is not wired to any route).
 5. Everything after this is the same API and the same SSE handling as the tunnel
    route; only the header policy differs.
@@ -482,25 +508,82 @@ only honest if the build carries the native change too:
   inject but which cannot express a user-typed host at build time — so the honest
   choice is the app-wide flag **plus** the in-app switch, and a sentence in the
   product copy saying exactly that.
-- **iOS:** an App Transport Security exception. `NSAllowsLocalNetworking` covers
-  `.local`/link-local names but **not** an arbitrary `192.168.x.x` literal, which
-  needs `NSAllowsArbitraryLoadsInWebContent`/`NSExceptionDomains` — i.e. a real ATS
-  exception keyed per host, impossible for a user-typed host at build time. v1
-  therefore **drops plain-`http://` on iOS** and accepts only `https://` there
-  (Tailscale's `tailscale serve`, a Cloudflare tunnel, or any TLS terminator), with
-  the UI saying so instead of offering a switch that cannot work.
+- **iOS:** the same shape, using the key Apple provides for exactly this case:
+  `NSAllowsLocalNetworking = true`, set at build time through the config plugin /
+  `ios.infoPlist`. Apple's documentation for the key says it "controls whether App
+  Transport Security (ATS) allows your app to connect to unqualified domains,
+  `.local` domains, and IP addresses using IPv4 or IPv6", and that on **iOS 17+** —
+  where ATS no longer permits IP-address connections by default — the local
+  networking exception "tells newer versions of the OS to ignore the arbitrary loads
+  key, and enable access to unqualified domains, `.local` domains, and IP addresses
+  that they would otherwise restrict"
+  ([developer.apple.com/documentation/bundleresources/information-property-list/nsapptransportsecurity/nsallowslocalnetworking](https://developer.apple.com/documentation/bundleresources/information-property-list/nsapptransportsecurity/nsallowslocalnetworking),
+  read 2026-09-29). So it is a **single build-time boolean**, not a per-host
+  exception: `NSExceptionDomains` is the per-host mechanism and is *not* what this
+  uses, and `NSAllowsArbitraryLoadsInWebContent` is a WKWebView key with no bearing
+  on a native `fetch` (this app has no WebView in the data path at all). **iOS
+  therefore keeps parity with Android: `http://` on a private-network host is
+  available on both platforms, off by default, behind the same explicit per-connection
+  opt-in.** A previous revision of this ADR dropped `http://` on iOS on the premise
+  that only a per-host exception could enable it; that premise was wrong, and this
+  paragraph replaces it. **Parity is the manager's decision, taken over a recorded
+  objection** — that offering a cleartext LAN path *at all*, on either platform, is a
+  product cost, because the relay password and the transcript then travel in the clear
+  and a warning is easy to click past. The answer that carries the decision: the
+  option is off by default, it is reachable only behind an explicit per-connection
+  opt-in whose copy states the exposure, and without it the app is useless in exactly
+  the situation a tunnel-less user is in (same Wi-Fi, no Radient account). The
+  objection is recorded here so it need not be rediscovered at review.
 - Both changes live in `app.config.ts` + config plugins, are reviewed as native
   configuration, and are asserted in CI by a check on the built artefacts
-  (`usesCleartextTraffic` in the merged Android manifest; `NSAppTransportSecurity`
+  (`usesCleartextTraffic` in the merged Android manifest; `NSAllowsLocalNetworking`
   in the built `Info.plist`) — the same "generated config must match what we think we
   asked for" discipline ADR 0004 already applies to `expo prebuild`.
 
+**One reading of Apple's page that a spike must settle, stated because the page
+carries both.** The same document says, for iOS 17/macOS 14, that "ATS no longer
+allows connections to IP addresses by default. Add individual IP addresses and
+classless inter-domain routing (CIDR) ranges in the `NSExceptionDomains` dictionary",
+and then that the local networking exception "tells newer versions of the OS to ignore
+the arbitrary loads key, and enable access to unqualified domains, `.local` domains,
+**and IP addresses** that they would otherwise restrict". Read together with the
+page's own note — set the key to `YES` "as a declaration of intent … even if you don't
+support older OS versions" — the parity position holds, but the *mechanism* by which a
+literal `192.168.x.x` is permitted on the OS this app actually targets (iOS 26) is not
+something to take from a summary sentence. **Spike S10** settles it on a real build:
+with the key set, a `fetch` to a literal private-IP `http://` base URL succeeds and
+the same request with the key absent fails; if it turns out the key does not permit
+literal private addresses on the current OS, the fallback is a `NSExceptionDomains`
+entry per private CIDR range (`192.168.0.0/16`, `10.0.0.0/8`, `172.16.0.0/12`) — a
+build-time decision that covers the LAN case, though not an arbitrary user-typed host
+outside those ranges — and this ADR gets amended with the result.
+
+**The two platforms are not perfectly symmetric, and the copy should not pretend
+otherwise.** Android's `usesCleartextTraffic` is app-wide — it permits cleartext to
+*any* host — while the iOS key covers unqualified, `.local` and IP-address
+destinations, and its per-CIDR fallback would cover private ranges only. The
+difference does not change the product surface (the switch is described as a LAN
+option on both platforms, which is where it is meant to be used), but it does mean an
+iOS build would refuse a *public* `http://` host that an Android build would allow.
+That asymmetry is stated here rather than discovered as a platform bug.
+
+**What the key does not do, and the cost that remains.** `NSAllowsLocalNetworking`
+permits the connection; it does not secure it, and it is not an arbitrary-loads
+downgrade — `NSAllowsArbitraryLoads` stays off, and the Radient route (https, to a
+public hostname) is unaffected by either key. The cost that remains on this route,
+on both platforms, is that **the relay password and the transcript cross the local
+network in cleartext**: anyone on the same network segment can read them, and a
+hostile DHCP/DNS answer on a public network can point the typed host at an attacker.
+That is why the switch is off by default, why it is described as a LAN-only choice in
+the UI before it is flipped, and why Tailscale's `tailscale serve` (`https://`, no
+cleartext question) stays the recommended self-hosted route.
+
 Caveats to state in the product copy rather than discover in the field:
 
-- **LAN:** plain `http://192.168.x.x:4098` is a LAN-only, cleartext choice; the
-  password crossing it is a real exposure. Android only, and only with the
-  transport-security change above in the build; on iOS the option does not exist and
-  the UI must say why rather than offering a switch that fails.
+- **LAN:** plain `http://192.168.x.x:4098` is a LAN-only, cleartext choice, available
+  on both platforms only when the transport-security keys above are in the build and
+  the user has opted in; the password crossing it is a real exposure, stated in the
+  UI before the switch is flipped.
 - **Tailscale:** `tailscale serve` gives a real `https://` name and is the
   recommended self-hosted route; Funnel publishes it publicly, which raises the
   stakes and deserves its own warning.
@@ -509,10 +592,10 @@ Caveats to state in the product copy rather than discover in the field:
   supporting it means driving a second browser-session flow with the proxy's own
   cookies, which is a separate decision with its own ADR.
 - **Proxies that rewrite `Host`** break the relay's exact-origin mutation check
-  (`daemon.py:2335-2355`); this surfaces as a 403, and the diagnostics screen should
+  (`daemon.py:3368-3386`); this surfaces as a 403, and the diagnostics screen should
   say why.
 - The relay sets `Secure` only when the request arrived over TLS
-  (`daemon.py:2416-2424`), so a plain-HTTP LAN route does work today — but that is
+  (`daemon.py:3449-3456`), so a plain-HTTP LAN route does work today — but that is
   a statement about the relay, not an endorsement.
 
 ## 6. Threat model notes
@@ -548,7 +631,7 @@ revoke a handle that has already been copied to another machine.
 strip list still names `lop_mobile_session` (`index.ts:257`) while the relay has set
 `lop_mobile` since `auth.py:98`. Nothing leaks today — the gateway rebuilds the
 `Cookie` header from an allow-list that does not include `cookie`
-(`gateway.py:235-247`, `:445-456`) — so this is defense-in-depth hygiene in the
+(`gateway.py:310-319`, `:445-456`) — so this is defense-in-depth hygiene in the
 Local Operator and Radient repositories, not a defect in this app. It is recorded
 here because this ADR is where the cookie names are enumerated, and a future reader
 adding a proxy on the deployed edge will want the stale name gone.
@@ -566,10 +649,12 @@ adding a proxy on the deployed edge will want the stale name gone.
 | S7 | A real tunnel, end to end | With a maintainer's own tunnel: sign in, mint, list sessions, stream, answer an approval, logout — captured as raw request/response evidence, hostnames redacted |
 | S8 | **The audience allow-list actually accepts `lop`** (§1, and the one assumption under the whole direct-mint path) | `POST https://api.radienthq.com/v1/tunnels/session/code` with a real `lop`-audienced access token from a live app sign-in: **pass** = any answer other than the audience rejection (400 for a bad body, 404/403 for a tunnel that is not `active`, or 200 with a code); **fail** = `401`…`invalid audience`, which is the exact string `service.go:145-156` returns when `aud ∉ cfg.JWTAudiences`. Run it once as the first thing the implementation does. If it fails, the app either needs `RADIENT_TUNNEL_JWT_AUDIENCES` to include `lop` (a deployment change, no code change) or needs the browser-redirect fallback — and the ADR gets amended with which |
 | S9 | **Logout actually revokes** | With a handle captured before logout: logout, then `POST /v1/tunnels/session/refresh` with that captured handle on another machine — **pass** = `401`…`invalid_grant` (`session.go:159-176`); **fail** = a new grant, which means the revoke never reached the control plane and the primary step is misordered |
+| S10 | **`NSAllowsLocalNetworking` really permits a literal private IP on the target OS** | On a real iOS build (iOS 26, the SDK ADR 0004 requires) with the key set: `GET http://<private-ip>:4098/healthz` succeeds; with the key absent (or the flag off) the same request fails with an ATS error. **Fail** = the key does not cover literal private addresses, in which case the fallback in §5 is a per-CIDR `NSExceptionDomains` entry and the parity claim is amended to name that |
 
-S1–S4 run on a phone or simulator/emulator; S7–S9 are manual, credentialed runs and
-their output belongs in the pull request as redacted evidence, never in a committed
-file. S8 and S9 are the two that must run **before** any of §3 is treated as settled:
+S1–S5 and S10 run on a phone, simulator or emulator and need no credentials (S10
+needs a build with and without the ATS key); S6 is a unit-level test against the mock;
+S7–S9 are manual, credentialed runs, and their output belongs in the pull request as
+redacted evidence, never in a committed file. S8 and S9 are the two that must run **before** any of §3 is treated as settled:
 S8 because every token the app mints depends on it, S9 because a logout that does not
 revoke is a security defect that reads as a success in the UI.
 

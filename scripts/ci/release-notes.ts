@@ -26,8 +26,7 @@ import { writeFileSync } from "node:fs";
 
 /** `type(scope)!: subject` — the conventional-commit grammar, borrowed whole.
  * `!` marks a breaking change and is pulled out of `scope`. */
-const COMMIT =
-	/^(?<type>[a-z]+)(?:\((?<scope>[^)]*)\))?(?<bang>!)?: (?<subject>.+)$/;
+const COMMIT = /^(?<type>[a-z]+)(?:\((?<scope>[^)]*)\))?(?<bang>!)?: (?<subject>.+)$/;
 
 type Section = { title: string; types: string[] };
 
@@ -73,14 +72,7 @@ if (!from) {
 	// repository's first release is exactly that case — so an empty history is a
 	// normal answer here, not an error.
 	try {
-		from = git(
-			"describe",
-			"--tags",
-			"--abbrev=0",
-			"--match",
-			"v[0-9]*",
-			`${to}^`,
-		);
+		from = git("describe", "--tags", "--abbrev=0", "--match", "v[0-9]*", `${to}^`);
 	} catch {
 		from = "";
 	}

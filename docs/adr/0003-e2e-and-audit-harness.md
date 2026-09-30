@@ -6,6 +6,13 @@
 - **Depends on:** [ADR 0001 — Framework](0001-framework.md), [ADR 0002 — Connection and auth](0002-connection-and-auth.md)
 - **Related:** [ADR 0004 — CI/CD](0004-ci-cd.md)
 
+**Provenance.** This document cites documents, vendor pages and file paths rather
+than code lines; where it names a file in a code repository, the revision convention
+is the one stated in [ADR 0002](0002-connection-and-auth.md) — local-operator
+`fc851a94e`, agent-server `dcafe852`, user-console `8597fdba`, expo
+`500d25dea3746c8ceeb751b3c55f432b269be410` — resolved with `git show <ref>:<path>`
+(or the GitHub contents API for expo), never from a working tree.
+
 ## Context
 
 This repository has no Xcode and no Android SDK on the primary development

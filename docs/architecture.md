@@ -9,6 +9,13 @@ relay's own contract is defined in the Local Operator repository
 **Status:** design. Nothing here is implemented yet; where a module name appears, it
 is the agreed shape to build, not a file that exists.
 
+**Provenance.** This document cites documents, vendor pages and file paths rather
+than code lines; where it names a file in a code repository, the revision convention
+is the one stated in [ADR 0002](adr/0002-connection-and-auth.md) — local-operator
+`fc851a94e`, agent-server `dcafe852`, user-console `8597fdba`, expo
+`500d25dea3746c8ceeb751b3c55f432b269be410` — resolved with `git show <ref>:<path>`
+(or the GitHub contents API for expo), never from a working tree.
+
 ## What the app is
 
 A phone-sized remote control for agent sessions that run on the user's own
