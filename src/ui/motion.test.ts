@@ -9,8 +9,17 @@ import {
 
 describe("parseCubicBezier", () => {
 	it("reads the tokens' own easings", () => {
-		expect(parseCubicBezier(EASINGS["out-expo"])).toEqual([0.16, 1, 0.3, 1]);
-		expect(parseCubicBezier(EASINGS["in-out"])).toEqual([0.65, 0, 0.35, 1]);
+		// Every non-linear token must parse to four finite control points with x
+		// inside [0, 1] (a CSS cubic-bezier is invalid otherwise), so a token the
+		// parser cannot read fails here rather than at first animation.
+		for (const [name, easing] of Object.entries(EASINGS)) {
+			if (easing === "linear") continue;
+			const [x1, , x2] = parseCubicBezier(easing);
+			expect(x1, name).toBeGreaterThanOrEqual(0);
+			expect(x1, name).toBeLessThanOrEqual(1);
+			expect(x2, name).toBeGreaterThanOrEqual(0);
+			expect(x2, name).toBeLessThanOrEqual(1);
+		}
 	});
 
 	it("maps `linear` to the identity curve", () => {

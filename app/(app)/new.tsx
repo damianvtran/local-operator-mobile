@@ -1,4 +1,4 @@
-import { SCREEN } from "@/ui/a11y";
+import { EMPTY, SCREEN } from "@/ui/a11y";
 import { EmptyState, Screen } from "@/ui/components";
 
 /**
@@ -12,7 +12,7 @@ export default function NewSession() {
 			<EmptyState
 				headline="Choose where to run."
 				next="The directory list comes from the computer you are connected to."
-				testID="new-session-empty"
+				testID={EMPTY.newSession}
 			/>
 		</Screen>
 	);

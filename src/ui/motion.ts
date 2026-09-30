@@ -35,18 +35,22 @@ export const parseCubicBezier = (
 			`Not a cubic-bezier easing: "${easing}". Motion values come from tokens.json § motion.easing; springs and named easings are not part of the system.`,
 		);
 	}
-	const [, x1, y1, x2, y2] = match as unknown as [
-		string,
-		string,
-		string,
-		string,
-		string,
-	];
-	const values = [x1, y1, x2, y2].map(Number) as [
-		number,
-		number,
-		number,
-		number,
+	// Four mandatory capture groups: narrow the possibly-undefined elements
+	// instead of asserting a tuple the compiler cannot prove.
+	const [, x1, y1, x2, y2] = match;
+	if (
+		x1 === undefined ||
+		y1 === undefined ||
+		x2 === undefined ||
+		y2 === undefined
+	) {
+		throw new Error(`Could not read four control points from "${easing}"`);
+	}
+	const values: [number, number, number, number] = [
+		Number(x1),
+		Number(y1),
+		Number(x2),
+		Number(y2),
 	];
 	if (values.some((value) => !Number.isFinite(value))) {
 		throw new Error(`Non-numeric control point in easing "${easing}"`);

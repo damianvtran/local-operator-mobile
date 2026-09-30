@@ -41,7 +41,7 @@ does today.
 
 ```sh
 pnpm test           # vitest, Node environment — the pure modules
-pnpm typecheck      # tsc --noEmit
+pnpm typecheck      # tsc --noEmit, for the app and for scripts/ (tsconfig.tools.json)
 pnpm lint           # biome check
 pnpm theme:check    # the generated styling layer is current with the tokens
 pnpm contrast:check # the design kit's own contrast contract still holds

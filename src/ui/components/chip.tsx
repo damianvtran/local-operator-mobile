@@ -23,7 +23,7 @@ export type ChipProps = {
 	disabled?: boolean;
 	accessibilityHint?: string;
 	leadingIcon?: ReactNode;
-	testID?: string;
+	testID: string;
 };
 
 export const Chip = ({

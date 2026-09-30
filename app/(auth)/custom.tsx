@@ -1,4 +1,4 @@
-import { SCREEN } from "@/ui/a11y";
+import { EMPTY, SCREEN } from "@/ui/a11y";
 import { EmptyState, Screen } from "@/ui/components";
 
 /**
@@ -11,7 +11,7 @@ export default function CustomRoute() {
 			<EmptyState
 				headline="Point the app at a tunnel URL."
 				next="You will need the relay password that `lop mobile serve` printed."
-				testID="custom-empty"
+				testID={EMPTY.customRoute}
 			/>
 		</Screen>
 	);

@@ -119,6 +119,7 @@ export const Sheet = ({
 						style={{ backgroundColor: scrimColour }}
 						accessibilityRole={ROLE.button}
 						accessibilityLabel="Close"
+						testID={CONTROL.sheetScrim}
 						onPress={onClose}
 					/>
 				</Animated.View>

@@ -17,7 +17,7 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
 	test: {
 		environment: "node",
-		include: ["src/**/*.test.ts", "scripts/**/*.test.mjs"],
+		include: ["src/**/*.test.ts", "scripts/**/*.test.ts"],
 		globals: false,
 		// `github-actions` is the reporter's actual name, and the CI branch is real:
 		// the local shell has `CI` set, so a wrong name here fails every run rather

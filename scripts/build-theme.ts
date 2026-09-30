@@ -1,9 +1,13 @@
-#!/usr/bin/env node
 /**
  * Generate the app's styling layer from the design kit's tokens.
  *
- *     node scripts/build-theme.mjs           # write the generated files
- *     node scripts/build-theme.mjs --check    # fail if they are stale
+ *     node scripts/build-theme.ts           # write the generated files
+ *     node scripts/build-theme.ts --check    # fail if they are stale
+ *
+ * Runs directly under Node's native type stripping (no build step, no `tsx`), so
+ * the file is limited to ERASABLE syntax: no enums, namespaces or parameter
+ * properties, and type-only imports say `import type`. `tsconfig.tools.json`
+ * enforces both with `erasableSyntaxOnly` and `verbatimModuleSyntax`.
  *
  * Two artefacts, one source:
  *
@@ -36,36 +40,145 @@
  */
 import { readFileSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
+import { z } from "zod";
 
 const require = createRequire(import.meta.url);
-const here = new URL(".", import.meta.url);
-const root = new URL("../", here);
+const root = new URL("../", import.meta.url);
 
-const tokens = JSON.parse(
-	readFileSync(new URL("design/tokens/tokens.json", root), "utf8"),
+/* ---- the boundary: what this script needs from the token file -------------
+ *
+ * `tokens.json` is data the design kit owns, so it is PARSED here rather than
+ * typed by assertion. Each schema names only the fields the generator reads; a
+ * token that stops carrying one fails with the path of the missing field instead
+ * of emitting the string "undefined" into a stylesheet. Loose objects: the kit
+ * adds `$note`/`$meta` siblings freely and those are not this script's business.
+ */
+/* A colour is EITHER theme-invariant (`value`) or themed (`light` + `dark`); the
+ * transforms drop the kit's prose fields (`role`) and leave two shapes that TypeScript
+ * can discriminate with `in`, rather than one loose object whose every field is
+ * `unknown`. */
+const colourToken = z.union([
+	z
+		.looseObject({ value: z.string() })
+		.transform((token) => ({ value: token.value })),
+	z
+		.looseObject({ light: z.string(), dark: z.string() })
+		.transform((token) => ({ light: token.light, dark: token.dark })),
+]);
+const typeStep = z.looseObject({
+	size: z.number(),
+	lineHeight: z.number(),
+	weight: z.number(),
+	letterSpacing: z.number(),
+	face: z.string(),
+});
+const control = z.looseObject({
+	height: z.number(),
+	width: z.number().optional(),
+	paddingX: z.number().optional(),
+	minTouch: z.number().optional(),
+	icon: z.number().optional(),
+	gap: z.number().optional(),
+	type: z.string().optional(),
+});
+const elevation = z.looseObject({
+	light: z.string(),
+	dark: z.string(),
+	androidElevation: z.number(),
+});
+const face = z.looseObject({ family: z.string(), fallback: z.string() });
+const tokenFile = z.looseObject({
+	color: z.record(z.string(), z.unknown()),
+	type: z.looseObject({
+		steps: z.record(z.string(), z.unknown()),
+		faces: z.record(z.string(), z.unknown()),
+	}),
+	radius: z.record(z.string(), z.unknown()),
+	size: z.looseObject({
+		controls: z.record(z.string(), z.unknown()),
+		touchTarget: z.looseObject({
+			ios: z.number(),
+			android: z.number(),
+			minimum: z.number(),
+			minimumVisualWithSlop: z.number(),
+		}),
+		list: z.looseObject({
+			rowMinHeight: z.number(),
+			rowTwoLineHeight: z.number(),
+			rowPaddingX: z.number(),
+			rowPaddingY: z.number(),
+			separatorInset: z.number(),
+		}),
+	}),
+	elevation: z.record(z.string(), z.unknown()),
+	z: z.record(z.string(), z.unknown()),
+	motion: z.looseObject({
+		duration: z.record(z.string(), z.unknown()),
+		easing: z.record(z.string(), z.unknown()),
+		reducedMotion: z.looseObject({ floor: z.string() }),
+	}),
+	space: z.looseObject({
+		gutters: z.looseObject({
+			phone: z.number(),
+			"phone-large": z.number(),
+			tablet: z.number(),
+		}),
+		screen: z.looseObject({
+			headerHeight: z.number(),
+			composerMinHeight: z.number(),
+		}),
+		maxContentWidth: z.looseObject({
+			tabletPortrait: z.number(),
+			tabletLandscape: z.number(),
+			landscapePhone: z.number(),
+		}),
+	}),
+});
+
+/** Parse one entry of a record whose keys the kit mixes with `$`-prefixed notes.
+ * A `$` key is documentation and is skipped; anything else must match `schema`. */
+const entries = <T>(
+	record: Record<string, unknown>,
+	schema: z.ZodType<T>,
+	where: string,
+): Array<[string, T]> =>
+	Object.entries(record)
+		.filter(([name]) => !name.startsWith("$"))
+		.map(([name, raw]) => {
+			const parsed = schema.safeParse(raw);
+			if (!parsed.success) {
+				throw new Error(
+					`tokens.json ${where}.${name}: ${parsed.error.message}`,
+				);
+			}
+			return [name, parsed.data];
+		});
+
+const tokens = tokenFile.parse(
+	JSON.parse(readFileSync(new URL("design/tokens/tokens.json", root), "utf8")),
 );
-const preset = require(
-	new URL("design/tokens/tailwind-preset.js", root).pathname,
-);
+const preset = z
+	.looseObject({ colors: z.record(z.string(), z.unknown()) })
+	.parse(require(new URL("design/tokens/tailwind-preset.js", root).pathname));
 
 const check = process.argv.includes("--check");
-const BANNER = "GENERATED by scripts/build-theme.mjs — do not edit by hand.";
+const BANNER = "GENERATED by scripts/build-theme.ts — do not edit by hand.";
 
 /* ---- colour roles ------------------------------------------------------- */
+
+type Colour = z.output<typeof colourToken>;
 
 /** Flatten the token file's colour groups into one namespace, the same way the
  * preset does: `surface.surface` is the role `surface`, `line.border-control` is
  * `border-control`. A `value` token is theme-invariant; anything else carries a
  * `light` and a `dark` (tokens.json `$meta.themeContract`). */
-const colours = {};
+const colours: Record<string, Colour> = {};
 for (const [group, body] of Object.entries(tokens.color)) {
-	if (group.startsWith("$") || typeof body !== "object") continue;
-	for (const [name, token] of Object.entries(body)) {
-		if (name.startsWith("$")) continue;
-		colours[name] =
-			token.value !== undefined
-				? { value: token.value, role: token.role }
-				: { light: token.light, dark: token.dark, role: token.role };
+	if (group.startsWith("$")) continue;
+	const members = z.record(z.string(), z.unknown()).safeParse(body);
+	if (!members.success) continue;
+	for (const [name, token] of entries(members.data, colourToken, group)) {
+		colours[name] = token;
 	}
 }
 
@@ -85,44 +198,50 @@ if (presetRoles.join(",") !== ourRoles.join(",")) {
 	process.exit(1);
 }
 
+type ThemeName = "light" | "dark";
+
 const roles = Object.keys(colours);
-const invariant = roles.filter((r) => colours[r].value !== undefined);
-const varying = roles.filter((r) => colours[r].value === undefined);
-const valueFor = (role, theme) =>
-	colours[role].value !== undefined
-		? colours[role].value
-		: colours[role][theme];
+const isInvariant = (role: string): boolean => {
+	const colour = colours[role];
+	return colour !== undefined && "value" in colour;
+};
+const invariant = roles.filter(isInvariant);
+const varying = roles.filter((role) => !isInvariant(role));
+const THEMES: readonly ThemeName[] = ["light", "dark"];
+const valueFor = (role: string, theme: ThemeName): string => {
+	const colour = colours[role];
+	if (colour === undefined) throw new Error(`Unknown colour role "${role}"`);
+	return "value" in colour ? colour.value : colour[theme];
+};
 
 /** `surface` -> `--color-surface`, the property Uniwind's utilities read. */
-const cssColour = (role) => "--color-" + role;
+const cssColour = (role: string): string => "--color-" + role;
 
 /* ---- the scales --------------------------------------------------------- */
 
-const excluded = new Set(["$note", "assignment"]);
-const typeSteps = {};
-for (const [name, step] of Object.entries(tokens.type.steps)) {
-	if (name.startsWith("$")) continue;
-	typeSteps[name] = step;
-}
-const radii = {};
-for (const [name, value] of Object.entries(tokens.radius)) {
-	if (excluded.has(name) || name.startsWith("$") || typeof value !== "number") {
-		continue;
-	}
-	radii[name] = value;
-}
+const typeSteps = Object.fromEntries(
+	entries(tokens.type.steps, typeStep, "type.steps"),
+);
+// `radius` mixes numbers with a `$note` and an `assignment` table; only the
+// numbers are radii.
+const radii = Object.fromEntries(
+	Object.entries(tokens.radius).filter(
+		(pair): pair is [string, number] =>
+			!pair[0].startsWith("$") && typeof pair[1] === "number",
+	),
+);
 const durations = Object.fromEntries(
-	Object.entries(tokens.motion.duration).filter(([k]) => !k.startsWith("$")),
+	entries(tokens.motion.duration, z.number(), "motion.duration"),
 );
 const easings = Object.fromEntries(
-	Object.entries(tokens.motion.easing).filter(([k]) => !k.startsWith("$")),
+	entries(tokens.motion.easing, z.string(), "motion.easing"),
 );
 const controls = Object.fromEntries(
-	Object.entries(tokens.size.controls).filter(([k]) => !k.startsWith("$")),
+	entries(tokens.size.controls, control, "size.controls"),
 );
 
 /** A unitless letter-spacing token is emitted as `0`, never `0em`. */
-const tracking = (value) => (value === 0 ? "0" : value + "em");
+const tracking = (value: number): string => (value === 0 ? "0" : value + "em");
 
 /* ---- the styling layer -------------------------------------------------- */
 
@@ -139,8 +258,8 @@ const tracking = (value) => (value === 0 ? "0" : value + "em");
  * was never compiled. The symptom is a screen that renders unpositioned and
  * unstyled with no error anywhere.
  */
-const css = () => {
-	const out = [];
+const css = (): string => {
+	const out: string[] = [];
 	out.push("/* " + BANNER);
 	out.push(" *");
 	out.push(
@@ -258,10 +377,19 @@ const css = () => {
 	out.push(
 		"\t/* ---- faces: the kit's three, with their documented fallbacks ---- */",
 	);
-	for (const [name, face] of Object.entries(tokens.type.faces)) {
-		if (name.startsWith("$")) continue;
+	for (const [name, typeface] of entries(
+		tokens.type.faces,
+		face,
+		"type.faces",
+	)) {
 		out.push(
-			"\t--font-" + name + ": '" + face.family + "', " + face.fallback + ";",
+			"\t--font-" +
+				name +
+				": '" +
+				typeface.family +
+				"', " +
+				typeface.fallback +
+				";",
 		);
 	}
 	out.push("}");
@@ -287,7 +415,7 @@ const css = () => {
 	out.push(" */");
 	out.push("@layer theme {");
 	out.push("\t:root {");
-	for (const theme of ["light", "dark"]) {
+	for (const theme of THEMES) {
 		out.push(
 			"\t\t/* " +
 				(theme === "light" ? "Light: the kit's default." : "Dark.") +
@@ -305,11 +433,13 @@ const css = () => {
 	return out.join("\n");
 };
 
+const REDUCED_MOTION_MS = /(\d+)\s*ms/;
+
 /* ---- src/ui/tokens.gen.ts ----------------------------------------------- */
 
-const ts = () => {
-	const out = [];
-	const q = (s) => JSON.stringify(s);
+const ts = (): string => {
+	const out: string[] = [];
+	const q = (value: string): string => JSON.stringify(value);
 	out.push("/* " + BANNER);
 	out.push(" *");
 	out.push(" * The design kit's values as TypeScript, generated from");
@@ -367,7 +497,7 @@ const ts = () => {
 	out.push(
 		"export const PALETTE: Record<ThemeName, Record<ColorRole, string>> = {",
 	);
-	for (const theme of ["light", "dark"]) {
+	for (const theme of THEMES) {
 		out.push("\t" + theme + ": {");
 		for (const role of roles) {
 			out.push("\t\t" + q(role) + ": " + q(valueFor(role, theme)) + ",");
@@ -413,7 +543,7 @@ const ts = () => {
 	out.push("/** The heights a control may declare. */");
 	out.push("export const CONTROL_HEIGHTS = {");
 	for (const [name, control] of Object.entries(controls)) {
-		const parts = [];
+		const parts: string[] = [];
 		parts.push("height: " + control.height);
 		if (control.width !== undefined) parts.push("width: " + control.width);
 		if (control.paddingX !== undefined)
@@ -477,17 +607,24 @@ const ts = () => {
 	out.push(" * of them gets nothing.");
 	out.push(" */");
 	out.push("export const ELEVATIONS = {");
-	for (const [name, elevation] of Object.entries(tokens.elevation)) {
-		if (name.startsWith("$") || typeof elevation !== "object") continue;
+	// `elevation` mixes the two shadow objects with plain-string notes (for example
+	// `androidSurfaceTint`); only the objects are shadows, so the strings are
+	// skipped here rather than failing the schema.
+	const shadows = Object.fromEntries(
+		Object.entries(tokens.elevation).filter(
+			([, value]) => typeof value === "object" && value !== null,
+		),
+	);
+	for (const [name, shadow] of entries(shadows, elevation, "elevation")) {
 		out.push(
 			"\t" +
 				q(name) +
 				": { light: " +
-				q(elevation.light) +
+				q(shadow.light) +
 				", dark: " +
-				q(elevation.dark) +
+				q(shadow.dark) +
 				", androidElevation: " +
-				elevation.androidElevation +
+				shadow.androidElevation +
 				" },",
 		);
 	}
@@ -499,9 +636,8 @@ const ts = () => {
 	out.push(" * stacked that should be a route.");
 	out.push(" */");
 	out.push("export const Z_LEVELS = {");
-	for (const [name, value] of Object.entries(tokens.z)) {
-		if (name.startsWith("$")) continue;
-		out.push("\t" + q(name) + ": " + value + ",");
+	for (const [name, level] of entries(tokens.z, z.number(), "z")) {
+		out.push("\t" + q(name) + ": " + level + ",");
 	}
 	out.push("} as const;");
 	out.push("");
@@ -509,7 +645,7 @@ const ts = () => {
 	 * 120ms …"); the number is read out of it rather than restated here, and a
 	 * token that stops naming a number fails the build instead of emitting a
 	 * constant with no value. */
-	const capMatch = /(\d+)\s*ms/.exec(tokens.motion.reducedMotion.floor);
+	const capMatch = REDUCED_MOTION_MS.exec(tokens.motion.reducedMotion.floor);
 	if (!capMatch) {
 		console.error(
 			"tokens.json § motion.reducedMotion.floor no longer names a ms value; " +
@@ -603,13 +739,13 @@ const ts = () => {
 
 /* ---- write or check ----------------------------------------------------- */
 
-const outputs = [
+const outputs: Array<[string, string]> = [
 	["src/ui/theme.css", css()],
 	["src/ui/tokens.gen.ts", ts()],
 ];
 
 if (check) {
-	const stale = [];
+	const stale: string[] = [];
 	for (const [rel, content] of outputs) {
 		let current = "";
 		try {

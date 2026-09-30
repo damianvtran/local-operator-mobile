@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 
 import {
 	COLOR_ROLES,
-	cssColorVar,
 	PALETTE,
 	resolveColor,
 	resolveTheme,
@@ -113,10 +112,5 @@ describe("the generated palette", () => {
 				resolveColor("accent", "dark"),
 			),
 		).toBeGreaterThanOrEqual(4.5);
-	});
-
-	it("names the CSS custom property after the role", () => {
-		expect(cssColorVar("ink-muted")).toBe("--color-ink-muted");
-		expect(cssColorVar("on-accent")).toBe("--color-on-accent");
 	});
 });

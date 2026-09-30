@@ -64,6 +64,10 @@ export type ButtonSize = "sm" | "md" | "lg" | "icon" | "fab";
 const BUTTON_SIZES: Record<ButtonSize, string> = {
 	sm: "h-8 px-3 gap-1.5",
 	md: "h-11 px-4 gap-2",
+	// `lg` is 50pt (`tokens.json` size.controls.lg.height), the one height that is
+	// not on the 4pt scale, so no `h-*` step exists for it. HAND-WRITTEN: changing
+	// the token regenerates nothing here, and `BUTTON_VISUAL_HEIGHT.lg` below must
+	// move with it.
 	lg: "h-[50px] px-6 gap-2.5",
 	icon: "h-11 w-11",
 	fab: "h-14 w-14",
@@ -285,6 +289,9 @@ export const chipClasses = (state: ControlState = {}): string =>
  */
 export const listRowClasses = (state: ControlState = {}): string =>
 	cx(
+		// 56pt is `tokens.json` size.list.rowMinHeight; `min-h-14` would be the same
+		// number, but the row is specified in pt, so the value is kept literal and
+		// this comment names where it comes from. HAND-WRITTEN like `lg` above.
 		"min-h-[56px] flex-row items-center gap-3 px-4 py-2.5",
 		state.selected
 			? // Selection is never colour alone: the caller also renders the title in

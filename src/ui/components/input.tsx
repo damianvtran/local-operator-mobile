@@ -32,7 +32,7 @@ export type InputProps = {
 	autoFocus?: boolean;
 	onSubmitEditing?: () => void;
 	returnKeyType?: TextInputProps["returnKeyType"];
-	testID?: string;
+	testID: string;
 };
 
 export const Input = ({
@@ -46,7 +46,7 @@ export const Input = ({
 	autoFocus,
 	onSubmitEditing,
 	returnKeyType,
-	testID = "input",
+	testID,
 }: InputProps) => {
 	const fieldState: FieldState = disabled
 		? "disabled"

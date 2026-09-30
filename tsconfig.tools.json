@@ -1,0 +1,21 @@
+{
+	"$comment": "Node-run tooling (scripts/**), typechecked separately from the app. These files execute directly under Node's native type stripping, so the config is stricter about what TypeScript may be written than the app's: only ERASABLE syntax (no enums, namespaces or parameter properties, which stripping cannot emit) and explicit `import type`. The app config is extended for strictness and paths, then re-pointed at Node instead of the DOM and React Native.",
+	"extends": "./tsconfig.json",
+	"compilerOptions": {
+		"module": "nodenext",
+		"moduleResolution": "nodenext",
+		"target": "esnext",
+		"lib": ["esnext"],
+		"types": ["node"],
+		"jsx": "preserve",
+		"allowJs": false,
+		"noEmit": true,
+		"allowImportingTsExtensions": true,
+		"rewriteRelativeImportExtensions": false,
+		"erasableSyntaxOnly": true,
+		"verbatimModuleSyntax": true,
+		"paths": {}
+	},
+	"include": ["scripts/**/*.ts"],
+	"exclude": ["node_modules", "dist", "design", "docs"]
+}

@@ -58,7 +58,7 @@
 	},
 	"overrides": [
 		{
-			"includes": ["scripts/build-theme.mjs"],
+			"includes": ["scripts/build-theme.ts"],
 			"linter": {
 				"rules": {
 					"style": {

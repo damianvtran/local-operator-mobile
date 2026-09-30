@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-
+import { TYPE_STEPS } from "@/ui/tokens.gen";
 import {
 	avatarClasses,
 	BUTTON_VISUAL_HEIGHT,
@@ -9,8 +9,6 @@ import {
 	emptyStateClasses,
 	fieldClasses,
 	listRowIndicator,
-	SHEET_CONTENT_MAX_FRACTION,
-	SHEET_DETENTS,
 	segmentedItemClasses,
 	segmentedLabelWeight,
 	skeletonClasses,
@@ -106,6 +104,9 @@ describe("button", () => {
 
 describe("fields", () => {
 	it("sets every state at the 16pt floor that stops iOS zooming on focus", () => {
+		// Derived from the generated ramp, so a token change that shrinks `body`
+		// below the floor fails here instead of shipping a zooming keyboard.
+		expect(TYPE_STEPS.body.size).toBeGreaterThanOrEqual(16);
 		for (const state of ["rest", "invalid", "disabled"] as const) {
 			expect(fieldClasses(state)).toContain("text-body");
 		}
@@ -153,14 +154,6 @@ describe("badge against chip", () => {
 	});
 });
 
-describe("sheet", () => {
-	it("caps content detents at a fraction of the column, not the viewport", () => {
-		expect(SHEET_DETENTS.content).toBeNull();
-		expect(SHEET_CONTENT_MAX_FRACTION).toBe(0.6);
-		expect(SHEET_DETENTS.half).toBeLessThan(SHEET_DETENTS.full as number);
-	});
-});
-
 describe("skeleton", () => {
 	it("rests on `elevated`, never on `sunken`", () => {
 		// Measured: a `sunken` bar sits at ~1.3:1 and vanishes in a still frame, so
@@ -173,10 +166,12 @@ describe("skeleton", () => {
 
 describe("segmented control", () => {
 	it("never signals selection with colour alone", () => {
-		const selected = segmentedItemClasses({ selected: true });
-		expect(selected).toContain("bg-accent-muted");
-		expect(segmentedLabelWeight(true)).toBe("font-semibold");
-		expect(segmentedLabelWeight(false)).toBe("font-normal");
+		// The tint alone is a ~1.0x luminance difference for a low-vision reader, so
+		// the selected item must differ in a second channel: label weight.
+		expect(segmentedLabelWeight(true)).not.toBe(segmentedLabelWeight(false));
+		expect(segmentedItemClasses({ selected: true })).not.toBe(
+			segmentedItemClasses({ selected: false }),
+		);
 	});
 });
 

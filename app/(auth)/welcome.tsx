@@ -1,6 +1,6 @@
 import { useRouter } from "expo-router";
 
-import { CONTROL, SCREEN } from "@/ui/a11y";
+import { CONTROL, EMPTY, SCREEN } from "@/ui/a11y";
 import { EmptyState, Screen } from "@/ui/components";
 
 /**
@@ -18,8 +18,9 @@ export default function Welcome() {
 				action={{
 					label: "Sign in",
 					onPress: () => router.push("/sign-in"),
+					testID: CONTROL.welcomeContinue,
 				}}
-				testID={CONTROL.welcomeContinue}
+				testID={EMPTY.welcome}
 			/>
 		</Screen>
 	);

@@ -12,14 +12,14 @@ design/tokens/tokens.json          the only source of colour, type and space
         │
         ├─ design/tokens/build-preset.mjs ──▶ tailwind-preset.js   (framework-agnostic)
         │
-        └─ scripts/build-theme.mjs ──┬─▶ src/ui/theme.css          (the styling layer)
+        └─ scripts/build-theme.ts ──┬─▶ src/ui/theme.css          (the styling layer)
                                      └─▶ src/ui/tokens.gen.ts      (the same values, typed)
 
 src/ui/variants.ts    variant × size × state → class names, as pure functions
 src/ui/components/    the primitives, which render what variants.ts returns
 ```
 
-`scripts/build-theme.mjs` reads the flattened role set from
+`scripts/build-theme.ts` reads the flattened role set from
 `design/tokens/tailwind-preset.js` and **fails** if its own flattening disagrees,
 so the app cannot quietly disagree with the kit about what `surface` means. Both
 generated files are committed; `pnpm theme:check` fails when either is stale.

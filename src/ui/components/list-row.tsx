@@ -52,7 +52,7 @@ export type ListRowProps = {
 	 * also takes the accent role. */
 	selected?: boolean;
 	onPress: () => void;
-	testID?: string;
+	testID: string;
 };
 
 export const ListRow = ({
@@ -67,7 +67,7 @@ export const ListRow = ({
 	unread = false,
 	selected = false,
 	onPress,
-	testID = "list-row",
+	testID,
 }: ListRowProps) => {
 	const attention = listRowIndicator({
 		ready: true,

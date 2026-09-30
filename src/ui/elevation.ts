@@ -16,6 +16,6 @@ export const useShadow = (
 	name: keyof typeof ELEVATIONS,
 ): ResolvedShadow | null => {
 	const { theme } = useTheme();
-	const token = ELEVATIONS[name] as ShadowToken;
+	const token: ShadowToken = ELEVATIONS[name];
 	return parseCssShadow(token[theme], token.androidElevation);
 };
