@@ -193,6 +193,102 @@ jobs:
           # whichever job produces them; this is the bundle those rounds load.
           retention-days: 30
 
+  release-staging:
+    name: Release artefact staging (a real upload → download → stage round trip)
+    # WHY THIS JOB EXISTS, and why it is not a unit test. The release path stages
+    # the downloaded artefacts under their published names, and the step before it
+    # depends on WHERE `actions/upload-artifact` puts them: with more than one
+    # `path:` entry it uses their least common ancestor as the artefact root, so two
+    # Gradle outputs under `android/app/build/outputs/...` arrive as
+    # `bundle/release/app-release.aab` and `apk/release/app-release.apk` — not at
+    # `artifacts/` root — and the staging `mv` dies (review round 3, B1, reproduced
+    # with upload-artifact v7's own findFilesToUpload).
+    #
+    # An assertion about a "faithful artefacts tree" cannot discriminate: it encodes
+    # the very layout under test. So this job performs the real round trip — upload
+    # with the release job's own `path:` block, download into `artifacts/`, print
+    # what actually arrived, then run the release's own staging script. It needs no
+    # credentials, so it runs on every pull request, and it fails on the shape this
+    # was written to catch — the first run of this job, on the upload block below
+    # before it was changed, listed `artifacts/bundle/release/app-release.aab` and
+    # `artifacts/apk/release/app-release.apk` and exited 1 in the staging step (the
+    # run is cited in the pull request's evidence table).
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Fake the build outputs the release job uploads
+        # Byte-for-byte the relative paths Gradle writes, as an empty file is enough
+        # to exercise a path question and a 4 KiB file is enough to survive the
+        # round trip.
+        run: |
+          set -euo pipefail
+          mkdir -p android/app/build/outputs/bundle/release \
+                   android/app/build/outputs/apk/release \
+                   "$RUNNER_TEMP/ipa"
+          head -c 4096 /dev/urandom > android/app/build/outputs/bundle/release/app-release.aab
+          head -c 4096 /dev/urandom > android/app/build/outputs/apk/release/app-release.apk
+          head -c 4096 /dev/urandom > "$RUNNER_TEMP/ipa/exported.ipa"
+          find . -name 'app-release.*' -o -name 'exported.ipa' | sort
+
+      - name: Upload them exactly as release.yml does
+        # This block is release.yml's, minus the artefact NAME (a probe artefact must
+        # not be mistakable for a release one). When the release changes how it
+        # uploads, this must change with it — release.yml cites this job.
+        uses: actions/upload-artifact@v7
+        with:
+          name: android-release-probe
+          path: |
+            android/app/build/outputs/bundle/release/app-release.aab
+            android/app/build/outputs/apk/release/app-release.apk
+          retention-days: 1
+
+      - name: Upload the IPA exactly as release.yml does
+        uses: actions/upload-artifact@v7
+        with:
+          name: ios-ipa-probe
+          path: ${{ runner.temp }}/ipa/*.ipa
+          retention-days: 1
+
+      - name: Download them into `artifacts/` exactly as release.yml does
+        uses: actions/download-artifact@v8
+        with:
+          name: android-release-probe
+          path: artifacts
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: ios-ipa-probe
+          path: artifacts
+
+      - name: What actually arrived
+        # Printed before the assertion, because the interesting failure is a layout
+        # mismatch and the listing is what names it.
+        run: |
+          set -euo pipefail
+          echo "--- artifacts/ as the download left it"
+          find artifacts -type f | sort
+
+      - name: Stage them exactly as release.yml does
+        # release.yml runs this same script, so the two cannot drift.
+        run: scripts/ci/stage-release-assets.sh artifacts 1.2.3
+
+      - name: Assert the store steps' paths resolve
+        # The half that the store steps consume: the Fastfile reads
+        # `LO_ANDROID_AAB` by path and globs `LO_IOS_IPA_DIR/*.ipa`, so a staging
+        # step that produced the right names in the wrong place would still fail
+        # there — this asserts the end of the chain, not just the middle.
+        run: |
+          set -euo pipefail
+          export LO_ANDROID_AAB="$PWD/artifacts/local-operator-1.2.3.aab"
+          export LO_IOS_IPA_DIR="$PWD/artifacts"
+          test -s "$LO_ANDROID_AAB" || { echo "::error::LO_ANDROID_AAB does not resolve: $LO_ANDROID_AAB"; exit 1; }
+          ipas=("$LO_IOS_IPA_DIR"/*.ipa)
+          test "${#ipas[@]}" -eq 1 || { echo "::error::the IPA glob found ${#ipas[@]} files, expected 1"; exit 1; }
+          echo "LO_ANDROID_AAB -> $(ls -l "$LO_ANDROID_AAB" | awk '{print $5" bytes"}')"
+          echo "LO_IOS_IPA_DIR -> ${ipas[0]}"
+
   design-kit:
     name: Design kit (tokens, contrast, icons, preview)
     needs: changes
