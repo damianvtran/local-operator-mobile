@@ -1,15 +1,509 @@
 /**
- * The streaming reader: framing, and the reconnect discipline.
+ * The SSE client: framing, keep-alives, the 60-second rotation, and snapshot
+ * resync.
  *
- * NOT IMPLEMENTED. The protocol stream owns this file.
+ * Four rules from the contract shape everything here, and each one exists
+ * because the obvious implementation gets it wrong:
  *
- * What it has to do: the relay speaks HTTP + Server-Sent Events and never
- * WebSocket, pushes whole snapshots rather than deltas, and sits behind a gateway
- * that CUTS ANY STREAM AT 60 SECONDS. So "long-lived stream" is an illusion: the
- * client reopens and resyncs on the next snapshot, and a snapshot is accepted
- * only if it is the first of a connection or newer than what the store holds.
+ * 1. **The 60-second cut is normal.** The gateway's lease
+ *    (`MAX_STREAM_SECONDS = 60`, `gateway.py:34`) ends the body cleanly — no
+ *    error frame, no status change — so an EOF is only *information* if it comes
+ *    early. The client reopens at once with a small jitter and must not paint a
+ *    reconnecting state on the boundary, because a user who sees a flash every
+ *    minute learns to distrust the app.
+ * 2. **Resync is by snapshot, never by replay.** The relay pushes full
+ *    projections with a monotonic `version`, and nothing reads `Last-Event-ID`,
+ *    so recovery is: reopen, render the seed frame the stream opens with.
+ * 3. **The fence is per connection.** `version` may be compared *only* within
+ *    one connection and only after its first frame: the daemon's epoch counter
+ *    restarts across a reconnection, so a lower number after reconnect is a new
+ *    epoch, not a stale frame. Persisting a version across connections is how a
+ *    client blanks a live transcript.
+ * 4. **Silence is the real failure signal.** The relay keeps the connection warm
+ *    every 25 s, so a stream quiet for ~35 s has stopped working even though the
+ *    socket is open. Without a watchdog the UI shows a live conversation that
+ *    will never update.
  *
- * Framing is `eventsource-parser` (pure TypeScript, no DOM), which is why that
- * dependency is in the shared set rather than a hand-rolled framer.
+ * Not `EventSource`: it is absent from React Native, its retry is immediate on
+ * some server-close shapes, and — the decisive reason — a `401` on a stream is
+ * invisible to it, so a stale session retries forever instead of re-authenticating.
  */
-export {};
+
+import { createParser, type EventSourceMessage } from "eventsource-parser";
+
+import {
+	type Payload,
+	type SchemaName,
+	safeParseJsonPayload,
+} from "../contracts";
+import { RelayError, transportError } from "./errors";
+
+/* The timings the client's behaviour is defined against, named so the reader can
+ * match them to the sources: the relay's keep-alive (`daemon.py:105`), the
+ * gateway's stream lease (`gateway.py:34`), and the point at which silence stops
+ * being explainable by jitter (`ADR 0002` §4 "SSE over the 60-second lease"). */
+/** A timer handle as either runtime spells it: the DOM's number, or the object
+ *  Node returns. Both are injectable, so both have to be nameable. */
+type TimerHandle = ReturnType<typeof setTimeout> | number;
+
+export const KEEPALIVE_INTERVAL_MS = 25_000;
+export const GATEWAY_LEASE_MS = 60_000;
+export const STREAM_SILENCE_MS = 35_000;
+/** An open shorter than this cannot be the lease running out, so its EOF means
+ *  the gateway stopped forwarding (lease lapse or revoke) and is reported. */
+export const ROTATION_MIN_OPEN_MS = 50_000;
+/** Jitter on a normal rotation. Small on purpose: this is not backoff, it is
+ *  de-synchronising reconnects from many devices behind one connector. */
+const ROTATION_JITTER_MS = 250;
+
+/* ------------------------------------------------------------------ framing */
+
+/** One framed SSE event, still as text. */
+export interface SseFrame {
+	/** The `event:` name; `""` when the frame carried none. */
+	event: string;
+	/** The joined `data:` payload. */
+	data: string;
+	id?: string;
+	/** Received-at, from the injected clock, so a test can drive rotation. */
+	receivedAt: number;
+}
+
+/**
+ * Turns a byte stream into frames.
+ *
+ * All the wire's awkwardness lives in `eventsource-parser` (fields split across
+ * chunk boundaries, multiple frames per chunk, multi-line `data:`, CRLF and LF
+ * terminators, `: keepalive` comments); this class owns only the byte-to-text
+ * decoding and the clock. Tests feed it *literal* wire bytes — including a frame
+ * split mid-field and a keep-alive — because a hand-written encoder in the test
+ * would stop testing the wire.
+ */
+export class SseFrameReader {
+	private readonly decoder = new TextDecoder("utf-8");
+	private readonly pending: SseFrame[] = [];
+	/** Counts keep-alives so a caller can tell "no frames because nothing changed"
+	 *  from "no frames because the connection is dead". */
+	private keepalives = 0;
+
+	private readonly parser: {
+		feed: (chunk: string) => void;
+		reset: (options?: { consume?: boolean }) => void;
+	};
+
+	constructor(private readonly now: () => number = () => Date.now()) {
+		this.parser = createParser({
+			onEvent: (message: EventSourceMessage) => {
+				/* A comment (`: keepalive`) arrives with no `event` and no `data` — the
+				 * parser reports it as an empty message, which is exactly how the
+				 * contract describes it. Counting it here is what keeps the silence
+				 * watchdog honest without a second code path. */
+				if (message.event === undefined && message.data === "") {
+					this.keepalives += 1;
+					this.pending.push({ event: "", data: "", receivedAt: this.now() });
+					return;
+				}
+				this.pending.push({
+					event: message.event ?? "",
+					data: message.data,
+					id: message.id,
+					receivedAt: this.now(),
+				});
+			},
+		});
+	}
+
+	/** Feeds a chunk and returns whatever frames it completed. A partial frame
+	 *  stays inside the parser; the caller gets nothing rather than half an event. */
+	push(chunk: Uint8Array): SseFrame[] {
+		/* `stream: true` keeps a multi-byte UTF-8 sequence split across chunks
+		 * intact — a transcript carrying an emoji or a CJK character would otherwise
+		 * decode as U+FFFD and corrupt the frame. */
+		this.parser.feed(this.decoder.decode(chunk, { stream: true }));
+		return this.drain();
+	}
+
+	/** Signals end-of-body. A frame the server left unterminated is NOT emitted:
+	 *  the relay always writes a blank line, so an unterminated tail is a cut, and
+	 *  emitting it would mean acting on half an event. */
+	finish(): SseFrame[] {
+		this.parser.feed(this.decoder.decode());
+		return this.drain();
+	}
+
+	get keepaliveCount(): number {
+		return this.keepalives;
+	}
+
+	private drain(): SseFrame[] {
+		const out = this.pending.slice();
+		this.pending.length = 0;
+		return out;
+	}
+}
+
+/* ----------------------------------------------------- typed frame decoding */
+
+/** A `sessions` list frame: the same body as `GET /api/sessions`. */
+export type SessionsFrame = {
+	kind: "sessions";
+	data: Payload<"sessionListFrame">;
+};
+/** One session's projection. */
+export type ProjectionFrame = {
+	kind: "projection";
+	data: Payload<"sessionProjection">;
+};
+/** A keep-alive comment, or an event name this build does not read. */
+export type IgnorableFrame = {
+	kind: "ignorable";
+	event: string;
+	reason: "keepalive" | "unknown-event";
+};
+/** A frame that claimed one of the two known events and did not match its schema. */
+export type MalformedFrame = {
+	kind: "malformed";
+	event: string;
+	error: ReturnType<typeof safeParseJsonPayload>;
+};
+
+export type DecodedFrame =
+	| SessionsFrame
+	| ProjectionFrame
+	| IgnorableFrame
+	| MalformedFrame;
+
+/**
+ * Decodes a framed event into the payload it claims to be.
+ *
+ * An unknown event name is *ignorable*, not malformed: the relay's streams are
+ * additive by contract, and a future third event on the session stream must not
+ * tear down a working client. A frame that names a known event and fails its
+ * schema IS malformed, and the caller decides — the projection store keeps the
+ * last good snapshot and counts the failure rather than blanking the screen.
+ */
+export function decodeFrame(frame: SseFrame): DecodedFrame {
+	if (frame.event === "")
+		return { kind: "ignorable", event: "", reason: "keepalive" };
+	if (frame.event !== "sessions" && frame.event !== "projection") {
+		return { kind: "ignorable", event: frame.event, reason: "unknown-event" };
+	}
+	const schema: SchemaName =
+		frame.event === "sessions" ? "sessionListFrame" : "sessionProjection";
+	const result = safeParseJsonPayload(schema, frame.data);
+	if (!result.ok) {
+		/* The event name is retained so a caller can say which stream misbehaved
+		 * without parsing the error. */
+		const malformed: MalformedFrame = {
+			kind: "malformed",
+			event: frame.event,
+			error: result,
+		};
+		return malformed;
+	}
+	return frame.event === "sessions"
+		? { kind: "sessions", data: result.data as Payload<"sessionListFrame"> }
+		: { kind: "projection", data: result.data as Payload<"sessionProjection"> };
+}
+
+/* ---------------------------------------------------------- the version fence */
+
+export type FenceDecision =
+	| "accepted-snapshot"
+	| "accepted-newer"
+	| "dropped-older";
+
+/**
+ * The resync rule, as a small pure object so it can be tested without a socket.
+ *
+ * It holds exactly one number and one bit, which is the whole point: a client
+ * that persists a version, or compares one across a reconnect, is the bug this
+ * exists to prevent.
+ */
+export class ProjectionFence {
+	private version: number | undefined;
+	private awaitingSnapshot = true;
+
+	/** Called when a connection opens (including the first one): the next frame is
+	 *  authoritative regardless of its version. */
+	reset(): void {
+		this.awaitingSnapshot = true;
+	}
+
+	accept(version: number): FenceDecision {
+		if (this.awaitingSnapshot) {
+			this.awaitingSnapshot = false;
+			this.version = version;
+			return "accepted-snapshot";
+		}
+		if (this.version !== undefined && version < this.version)
+			return "dropped-older";
+		this.version = version;
+		return "accepted-newer";
+	}
+
+	get currentVersion(): number | undefined {
+		return this.version;
+	}
+
+	get needsSnapshot(): boolean {
+		return this.awaitingSnapshot;
+	}
+
+	/** A dropped frame is dropped from the *render*, never from the fence's reading
+	 *  of it: the version that arrived is still the newest seen, so the next frame
+	 *  is compared against it. */
+	note(version: number): void {
+		if (this.awaitingSnapshot) return;
+		if (this.version === undefined || version > this.version)
+			this.version = version;
+	}
+}
+
+/* ------------------------------------------------------- connection lifecycle */
+
+export type StreamState =
+	| "idle"
+	| "connecting"
+	| "open"
+	| "rotating"
+	| "stalled"
+	| "closed";
+
+export interface StreamStatus {
+	state: StreamState;
+	/** Which reopen this is, from 1. Surfaced for diagnostics only; no screen
+	 *  shows it, which is the point of rule 1 in the file header. */
+	attempt: number;
+	/** How long the last connection stayed open, in ms. */
+	lastOpenMs?: number;
+	/** Why the last open ended: a clean EOF (rotation or an early gateway stop) or
+	 *  an error. */
+	lastEnd?: "eof" | "error" | "stopped";
+}
+
+export interface SseConnectionOptions {
+	/** Opens the stream. Called once per attempt; the caller builds the request,
+	 *  so this module never learns which route it is on. */
+	open: (signal: AbortSignal) => Promise<{
+		reader: ReadableStreamDefaultReader<Uint8Array>;
+		release: () => Promise<void>;
+	}>;
+	/** Every decoded frame, in wire order. */
+	onFrame: (frame: DecodedFrame) => void;
+	/** State changes. Deliberately NOT called for a rotation between `open` and
+	 *  `open`: a caller that surfaces every transition would flash on the minute. */
+	onState?: (status: StreamStatus) => void;
+	/** An error that stopped the loop. The caller decides whether to restart; this
+	 *  module never retries a failure it does not understand (a 401 needs a
+	 *  re-mint, a 503 needs the connection state machine). */
+	onError?: (error: RelayError) => void;
+	now?: () => number;
+	random?: () => number;
+	setTimeout?: (handler: () => void, ms: number) => TimerHandle;
+	clearTimeout?: (handle: TimerHandle) => void;
+	/** Overridable so the watchdog and the rotation policy are testable without
+	 *  minute-long waits. */
+	silenceMs?: number;
+}
+
+/**
+ * One SSE stream, kept open across the gateway's lease.
+ *
+ * The loop is single-flight: `start()` opens, reads until EOF or failure, then
+ * reopens after a jitter, until `stop()`. A clean EOF is a rotation — silent,
+ * immediate, and resynced from the seed frame the relay sends — while anything
+ * else ends the loop and reaches `onError`, because a client that keeps
+ * reconnecting through a `401` is the failure the contract calls out by name.
+ */
+export class SseConnection {
+	private readonly options: Required<
+		Pick<SseConnectionOptions, "now" | "random" | "silenceMs">
+	> &
+		SseConnectionOptions;
+	private controller: AbortController | undefined;
+	private silenceTimer: TimerHandle | undefined;
+	private jitterTimer: TimerHandle | undefined;
+	private running = false;
+	private attempt = 0;
+	private openedAt = 0;
+	private lastStatus: StreamStatus = { state: "idle", attempt: 0 };
+
+	constructor(options: SseConnectionOptions) {
+		this.options = {
+			...options,
+			now: options.now ?? (() => Date.now()),
+			random: options.random ?? Math.random,
+			silenceMs: options.silenceMs ?? STREAM_SILENCE_MS,
+		};
+	}
+
+	get isRunning(): boolean {
+		return this.running;
+	}
+
+	get status(): StreamStatus {
+		return this.lastStatus;
+	}
+
+	start(): void {
+		if (this.running) return;
+		this.running = true;
+		this.attempt = 0;
+		void this.run();
+	}
+
+	/** Stops the loop and aborts any open body. Safe to call twice, and safe to
+	 *  call from inside a frame handler (a route switch does). */
+	stop(): void {
+		if (!this.running) return;
+		this.running = false;
+		this.clearTimers();
+		this.controller?.abort();
+		this.controller = undefined;
+		this.emit({ ...this.lastStatus, state: "closed", lastEnd: "stopped" });
+	}
+
+	private clearTimers(): void {
+		const clear = this.options.clearTimeout ?? clearTimeout;
+		if (this.silenceTimer !== undefined) clear(this.silenceTimer);
+		if (this.jitterTimer !== undefined) clear(this.jitterTimer);
+		this.silenceTimer = undefined;
+		this.jitterTimer = undefined;
+	}
+
+	private emit(status: StreamStatus): void {
+		this.lastStatus = status;
+		this.options.onState?.(status);
+	}
+
+	private async run(): Promise<void> {
+		while (this.running) {
+			this.attempt += 1;
+			const controller = new AbortController();
+			this.controller = controller;
+			this.emit({ state: "connecting", attempt: this.attempt });
+
+			let reader: ReadableStreamDefaultReader<Uint8Array>;
+			let release: () => Promise<void>;
+			try {
+				const opened = await this.options.open(controller.signal);
+				reader = opened.reader;
+				release = opened.release;
+			} catch (cause) {
+				/* Opening failed. A caller that wants to retry a transient failure
+				 * restarts the loop itself; this module stops so a persistent 401 cannot
+				 * become an infinite reconnect. */
+				const error = errorFrom(cause, "sse open");
+				this.running = false;
+				this.emit({ state: "closed", attempt: this.attempt, lastEnd: "error" });
+				this.options.onError?.(error);
+				return;
+			}
+
+			this.openedAt = this.options.now();
+			this.emit({ state: "open", attempt: this.attempt });
+			this.armSilenceWatchdog(controller);
+			const frames = new SseFrameReader(this.options.now);
+
+			let ended: "eof" | "error" = "eof";
+			let error: RelayError | undefined;
+			try {
+				for (;;) {
+					const { done, value } = await reader.read();
+					if (done) break;
+					if (!this.running) break;
+					if (!value) continue;
+					/* Any byte at all — including a `: keepalive` comment, which the parser
+					 * may surface as an empty event or may swallow — proves the path is
+					 * alive, so the watchdog is reset on the CHUNK rather than on a decoded
+					 * frame. Keying it on frames would declare a quiet-but-healthy stream
+					 * dead the moment the parser's comment handling changed. */
+					this.armSilenceWatchdog(controller);
+					for (const frame of frames.push(value)) {
+						this.handle(frame);
+					}
+				}
+			} catch (cause) {
+				ended = "error";
+				error = errorFrom(cause, "sse read");
+			} finally {
+				this.clearSilenceTimer();
+				await release().catch(() => undefined);
+			}
+
+			if (!this.running) return;
+
+			const openMs = this.options.now() - this.openedAt;
+			if (ended === "error" && error) {
+				this.running = false;
+				this.emit({
+					state: "closed",
+					attempt: this.attempt,
+					lastOpenMs: openMs,
+					lastEnd: "error",
+				});
+				this.options.onError?.(error);
+				return;
+			}
+
+			/* A clean EOF. Long ones are the lease expiring (normal); short ones mean
+			 * the gateway stopped forwarding, which is worth reporting as a distinct
+			 * state while still reconnecting at once — an early EOF carries no
+			 * information about *why* (`tunnel-edge.md` §3). */
+			const rotation = openMs >= ROTATION_MIN_OPEN_MS;
+			this.emit({
+				state: rotation ? "rotating" : "stalled",
+				attempt: this.attempt,
+				lastOpenMs: openMs,
+				lastEnd: "eof",
+			});
+			await this.pause(rotation ? ROTATION_JITTER_MS : 0);
+		}
+	}
+
+	private handle(frame: SseFrame): void {
+		/* Finished frames only: `finish()` is never called, because a body that ends
+		 * without a blank line was cut mid-event and the parser must not be told the
+		 * wire is complete. */
+		this.options.onFrame(decodeFrame(frame));
+	}
+
+	private armSilenceWatchdog(controller: AbortController): void {
+		this.clearSilenceTimer();
+		const setTimer = this.options.setTimeout ?? setTimeout;
+		this.silenceTimer = setTimer(() => {
+			if (!this.running) return;
+			/* The socket is open and nothing has arrived for ~35 s while the relay
+			 * keep-alives every 25 s: the stream is dead even though it looks alive.
+			 * Aborting turns it into a reopen, which resyncs from a fresh snapshot. */
+			this.emit({ state: "stalled", attempt: this.attempt });
+			controller.abort();
+		}, this.options.silenceMs);
+	}
+
+	private clearSilenceTimer(): void {
+		const clear = this.options.clearTimeout ?? clearTimeout;
+		if (this.silenceTimer !== undefined) clear(this.silenceTimer);
+		this.silenceTimer = undefined;
+	}
+
+	private pause(ms: number): Promise<void> {
+		const jitter = ms > 0 ? Math.floor(this.options.random() * ms) : 0;
+		const setTimer = this.options.setTimeout ?? setTimeout;
+		return new Promise((resolve) => {
+			this.jitterTimer = setTimer(() => {
+				this.jitterTimer = undefined;
+				resolve();
+			}, jitter);
+		});
+	}
+}
+
+/** Normalises anything a stream loop can catch into a `RelayError`, so an
+ *  `onError` handler never has to type-switch on a raw platform error. */
+function errorFrom(cause: unknown, diagnostic: string): RelayError {
+	return cause instanceof RelayError
+		? cause
+		: transportError(cause, diagnostic);
+}
