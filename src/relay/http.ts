@@ -151,8 +151,15 @@ function isRedirectStatus(status: number): boolean {
  * successful form login is classified as a failure with an empty message.
  *
  * `status === 0` is tested alongside the type because a polyfill may omit `type`.
- * Nothing else on this wire answers 0: a genuine transport failure REJECTS the
- * promise rather than returning a statusless response.
+ * Nothing else on this wire answers 0, and the tolerance is bounded on two sides so
+ * it cannot widen later: `open()` only treats a hidden redirect as an outcome when
+ * the route DECLARED a redirect among the statuses it reads (`accept` carries a
+ * 3xx), and the only routes that do — `login`, `logout`, `loginPage` — re-ask a
+ * gated route before believing a success. A status-0 response anywhere else is a
+ * transport failure, which is what `open()` raises for it. A future polyfill (or a
+ * runtime that starts answering 0 for something new) therefore cannot turn a
+ * failure into a signed-in session, and a route that reads 0 without a verification
+ * read is a route whose author has to add one.
  */
 export function isOpaqueRedirect(response: Response): boolean {
 	return response.type === "opaqueredirect" || response.status === 0;

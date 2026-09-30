@@ -26,6 +26,7 @@
  */
 
 import {
+	isRelayError,
 	RelayEndpoints,
 	RelayHttpClient,
 	type RelayResponseFactsWithHeaders,
@@ -94,6 +95,15 @@ export interface CustomRouteSignIn {
  * version here would have to re-derive exactly that, and would silently diverge on
  * the web target — which is what this replaced.
  *
+ * **The contract at this boundary is a VERDICT, never a rejection.** `ok: true` is
+ * unconditional and the return type says so, because this is what a screen calls:
+ * an unhandled rejection is not a refusal the user can act on. `client.login()`
+ * classifies through the taxonomy, which THROWS outside the two statuses the route
+ * answers with — a `403` from the relay's cross-origin gate (the browser surface
+ * this route exists for), a `502`, or no answer at all — so every throw is mapped
+ * back into this shape, carrying the taxonomy's own sentence. Any future
+ * delegation here keeps that: classify, then return.
+ *
  * `CustomRouteSignIn.detail` prefers the taxonomy's sentence (the web path, where
  * the transport shows no status) and falls back to the route's own words for the
  * refusal a caller can see.
@@ -107,32 +117,64 @@ export async function signInToCustomRoute(
 		route,
 		...(options.fetchImpl ? { fetchImpl: options.fetchImpl } : {}),
 	});
-	const outcome = await client.login(password);
-	if (outcome.signedIn) return { ok: true, signedIn: true };
-	return {
-		ok: true,
-		signedIn: false,
-		detail: outcome.detail ?? "That password was not accepted.",
-	};
+	try {
+		const outcome = await client.login(password);
+		if (outcome.signedIn) return { ok: true, signedIn: true };
+		return {
+			ok: true,
+			signedIn: false,
+			detail: outcome.detail ?? "That password was not accepted.",
+		};
+	} catch (cause) {
+		return { ok: true, signedIn: false, detail: refusalSentence(cause) };
+	}
+}
+
+/** The sentence for a failure this boundary caught. The taxonomy's own copy when it
+ *  has one — a gateway `detail`, a rejected certificate, a name that did not resolve
+ *  — so a screen never has to invent one. A plain `transport` is the exception: its
+ *  message is the RUNTIME's ("fetch failed", "connect ECONNREFUSED …") and that is
+ *  a diagnostic, not copy, so it gets a sentence of its own instead of reaching a
+ *  user's screen. */
+function refusalSentence(cause: unknown): string {
+	if (!isRelayError(cause)) return "The relay could not be reached.";
+	if (cause.detail) return cause.detail;
+	if (cause.kind === "transport") return "The relay could not be reached.";
+	return cause.message;
+}
+
+/** What a sign-out established. */
+export interface CustomRouteSignOut {
+	/** True when the relay's session is gone — read from the status where the
+	 *  platform showed one, verified with a read where it hid the redirect. */
+	signedOut: boolean;
+	/** True when the answer came from that verification read rather than a status. */
+	verified: boolean;
 }
 
 /** Signs out of a custom route, which is the relay's own `/logout`: it is not
  *  auth-gated and does not check CSRF, so a client calling it must expect to be
  *  signed out regardless of the cookie it presented. The app's own private state
  *  (envelopes, projections, credentials) is cleared by its callers, because native
- *  has no `Clear-Site-Data`. */
+ *  has no `Clear-Site-Data`.
+ *
+ * The verdict is RETURNED, not discarded: a sign-out the relay did not perform is a
+ * live 30-day cookie in the platform jar, and a screen that warns the user needs to
+ * be able to see that. Like `signInToCustomRoute`, this never rejects — a relay
+ * that is already gone is a sign-out that already happened — and the answer then
+ * says `verified: false` rather than claiming either way. */
 export async function signOutOfCustomRoute(
 	route: CustomRoute,
 	options: { fetchImpl?: typeof globalThis.fetch } = {},
-): Promise<void> {
+): Promise<CustomRouteSignOut> {
 	const client = createRelayClient({
 		route,
 		...(options.fetchImpl ? { fetchImpl: options.fetchImpl } : {}),
 	});
 	try {
-		await client.logout();
+		const outcome = await client.logout();
+		return { signedOut: outcome.signedOut, verified: outcome.verified };
 	} catch {
-		/* A relay that is already gone is a sign-out that already happened. The local
-		 * clearing is the caller's next step either way. */
+		return { signedOut: false, verified: false };
 	}
 }

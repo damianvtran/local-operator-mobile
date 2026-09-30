@@ -17,6 +17,7 @@ import {
 	type DecodedFrame,
 	SseConnection,
 	STREAM_RETRY_BASE_MS,
+	STREAM_RETRY_MAX_ATTEMPTS,
 	STREAM_RETRY_MAX_MS,
 	type StreamStatus,
 	streamRetryDelayMs,
@@ -183,6 +184,63 @@ describe("a stream that goes silent is reopened, not abandoned", () => {
 		expect(errors).toEqual([]);
 		expect(beforeStop.some((status) => status.state === "closed")).toBe(false);
 	});
+
+	it("stops and reports after a bounded number of mid-body failures", async () => {
+		/* The ceiling on the self-healing path (review round 3, R3-3): a handshake that
+		 * keeps succeeding and a body that keeps failing is a route that is gone, and a
+		 * caller has to be told rather than left with an invisible retry loop. The
+		 * answer is the same `closed` + `onError` a failed open produces. */
+		let requests = 0;
+		const server = createServer((request, response) => {
+			requests += 1;
+			response.writeHead(200, {
+				"content-type": "text/event-stream",
+				"cache-control": "no-store",
+			});
+			response.flushHeaders();
+			setTimeout(() => request.socket.destroy(), 5);
+		});
+		servers.push(server);
+		await new Promise<void>((resolve) =>
+			server.listen(0, "127.0.0.1", resolve),
+		);
+		const { port } = server.address() as AddressInfo;
+
+		const states: StreamStatus[] = [];
+		const errors: unknown[] = [];
+		const connection = new SseConnection({
+			open: async (signal) => {
+				const response = await fetch(`http://127.0.0.1:${port}/stream`, {
+					signal,
+				});
+				if (!response.body) throw new Error("no body");
+				const reader = response.body.getReader();
+				return {
+					reader,
+					release: async () => {
+						await reader.cancel().catch(() => undefined);
+					},
+				};
+			},
+			onFrame: () => undefined,
+			onState: (status) => void states.push(status),
+			onError: (error) => void errors.push(error),
+			random: () => 0,
+			silenceMs: 30_000,
+		});
+		connection.start();
+		await vi.waitFor(() => expect(errors.length).toBe(1), { timeout: 20_000 });
+
+		expect(connection.isRunning).toBe(false);
+		expect(requests).toBe(STREAM_RETRY_MAX_ATTEMPTS);
+		const last = states.at(-1);
+		expect(last?.state).toBe("closed");
+		expect(last?.lastEnd).toBe("error");
+		expect(last?.lastError?.kind).toBe("transport");
+		/* And it stays stopped: no further attempts after the verdict. */
+		await new Promise((resolve) => setTimeout(resolve, 200));
+		expect(requests).toBe(STREAM_RETRY_MAX_ATTEMPTS);
+	}, 20_000);
 
 	it("spaces consecutive failures out instead of retrying flat out", () => {
 		expect(streamRetryDelayMs(1)).toBe(STREAM_RETRY_BASE_MS);

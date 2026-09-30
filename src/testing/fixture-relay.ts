@@ -61,9 +61,22 @@ export interface FixtureRelayOptions {
 	cutStreamAfterMs?: number;
 	/** Hold the FIRST stream open and silent (headers, then nothing). */
 	silentFirstStream?: boolean;
+	/** Answer `POST /login` with a refusal instead of the password flow: either a
+	 *  corpus fixture path (the captured `http/login-cross-origin.json` is the
+	 *  relay's own 403 for a page whose `Origin` is not the relay's) or a bare
+	 *  status, for a refusal the corpus has no capture of (a gateway `502`, which is
+	 *  not a body the client parses). A real relay answers this gate BEFORE it looks
+	 *  at a password, which is why it is a server option rather than a test's
+	 *  password. */
+	loginRefusal?: string | number;
 	/** For the Nth (1-based) `POST …/command`, act on it and drop the connection
 	 *  before answering — a lost acknowledgement. */
 	dropAckOnCommand?: number;
+	/** For the Nth (1-based) `POST …/command`, answer the relay's own DEFINITIVE
+	 *  rejection (the corpus's `command-unknown-op.json`, a `422`) and admit nothing.
+	 *  The counterpart of `dropAckOnCommand`: one leaves the delivery unknown, the
+	 *  other proves it never happened, and the retry envelope's rules differ. */
+	rejectCommandOn?: number;
 	/** Projection frames per stream, in order. Defaults to the live-idle capture. */
 	projectionFrames?: (connection: number) => unknown[];
 	/** From this SSE connection number on, answer the stream open with 401. */
@@ -159,6 +172,24 @@ export async function startFixtureRelay(
 
 		const { auth } = options;
 		if (auth.mode === "custom" && path === "/login") {
+			if (options.loginRefusal !== undefined) {
+				if (typeof options.loginRefusal === "number") {
+					response.writeHead(options.loginRefusal);
+					response.end();
+					return;
+				}
+				const refusal = loadFixture<{
+					status?: number;
+					headers?: Record<string, string>;
+					body?: unknown;
+				}>(options.loginRefusal);
+				response.writeHead(refusal.status ?? 403, {
+					"content-type":
+						refusal.headers?.["content-type"] ?? "application/json",
+				});
+				response.end(JSON.stringify(refusal.body ?? {}));
+				return;
+			}
 			const password = new URLSearchParams(raw).get("password");
 			if (password !== (auth.password ?? PASSWORD)) {
 				response.writeHead(401, { "content-type": "text/html" });
@@ -211,6 +242,14 @@ export async function startFixtureRelay(
 			json(response, 200, fixtureBody("sse/sse-list-frame.json"));
 			return;
 		}
+		if (path === "/api/models" && request.method === "GET") {
+			/* Modelled rather than replayed because the CLIENT reads it on the sign-in
+			 * path: `endpoints.admission()` asks the cheapest gated route whether the
+			 * cookie was accepted, so a relay that cannot answer it cannot be signed into
+			 * from a browser at all. */
+			json(response, 200, fixtureBody("http/models.json"));
+			return;
+		}
 		if (path === "/api/sessions/start" && request.method === "POST") {
 			json(response, 200, fixtureBody("http/start-session.json"));
 			return;
@@ -246,6 +285,13 @@ export async function startFixtureRelay(
 				commandCount += 1;
 				const body = parsed as { command_id?: string } | undefined;
 				const id = body?.command_id ?? "";
+				if (options.rejectCommandOn === commandCount) {
+					/* The corpus's own `422`: a DEFINITIVE rejection, answered before the
+					 * ledger is touched, because "never admitted" is what the client's
+					 * envelope disposition reads. */
+					json(response, 422, fixtureBody("http/command-unknown-op.json"));
+					return;
+				}
 				const seenBefore = admitted.has(id);
 				if (!seenBefore) admitted.set(id, 1);
 				/* Acting on the command BEFORE dropping the socket is the point: the

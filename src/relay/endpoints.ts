@@ -75,7 +75,11 @@ export interface StartSessionRequest {
  * a user (a diagnostics screen) reads `verified`; a caller that only branches on
  * `signedIn` does not have to care which transport it is on. */
 export interface LoginOutcome {
-	/** `303` signed in, `401` refused. */
+	/** What the TRANSPORT reported: `303` signed in, `401` refused, `0` when it
+	 *  showed no status at all (a browser's opaque redirect). It is never
+	 *  synthesised — a number the relay did not send would look authoritative to
+	 *  anything that logs or displays it — so read the verdict from `signedIn` and
+	 *  `verified`, never from this field. */
 	status: number;
 	signedIn: boolean;
 	/** True when the outcome came from verifying admission rather than from a
@@ -351,7 +355,14 @@ export class RelayEndpoints {
 	 * client never renders, and the two facts it needs are "does this relay take a
 	 * password form" and "am I already signed in".
 	 */
-	async loginPage(): Promise<{ status: number; isForm: boolean }> {
+	async loginPage(): Promise<{
+		/** The transport's own report; `0` when it hid the redirect. Never synthesised. */
+		status: number;
+		isForm: boolean;
+		/** Whether this client is already signed in. On a browser the `303` is
+		 *  hidden, so it comes from the same verification read `login()` uses. */
+		signedIn: boolean;
+	}> {
 		const { status, text, redirectHidden } = await this.http.raw({
 			method: "GET",
 			path: "/login",
@@ -361,12 +372,16 @@ export class RelayEndpoints {
 			accept: [303, 401],
 		});
 		if (redirectHidden) {
-			/* The browser hid the `303 → /` that means "already signed in". This probe's
-			 * whole job is to report that state, so it is verified rather than assumed. */
+			/* The browser hid the `303 → /`. This probe's whole job is to report that
+			 * state, so it is verified rather than assumed. */
 			const admission = await this.admission();
-			return { status: admission.admitted ? 303 : 401, isForm: false };
+			return { status: 0, isForm: false, signedIn: admission.admitted };
 		}
-		return { status, isForm: status === 200 && text.includes("<form") };
+		return {
+			status,
+			isForm: status === 200 && text.includes("<form"),
+			signedIn: status === 303,
+		};
 	}
 
 	/**
@@ -408,13 +423,15 @@ export class RelayEndpoints {
 		 * told their password is wrong. Verify, then report. */
 		const admission = await this.admission();
 		if (admission.admitted) {
-			return { status: 303, signedIn: true, verified: true };
+			/* `status: 0` is the transport's own report, left as it arrived: the
+			 * verdict is `signedIn` + `verified`, which is what a caller acts on. */
+			return { status: 0, signedIn: true, verified: true };
 		}
 		/* The refusal's sentence comes from the taxonomy, which is the one place a
 		 * status becomes copy — not from a status this client could not even read. */
 		const detail = admission.refusal?.detail ?? admission.refusal?.message;
 		return {
-			status: 401,
+			status: 0,
 			signedIn: false,
 			verified: true,
 			...(detail ? { detail } : {}),
@@ -427,9 +444,12 @@ export class RelayEndpoints {
 	 * `redirect: 'manual'` returns an opaque redirect instead of a status, so "did
 	 * that password work?" has to be asked again in a way the platform cannot hide.
 	 *
-	 * `GET /api/sessions` is that route: the relay gates it on the same cookie, so a
-	 * `200` is admission and its `401` is the taxonomy's own refusal, classified by
-	 * `errors.ts` rather than by a status read here.
+	 * `GET /api/models` is that route, and it is chosen for what it costs: the
+	 * relay gates it like every other `/api` route, and it answers `{"models":[...]}`
+	 * — 13 bytes against the sessions list's 902 on an isolated 0.64.9 daemon
+	 * (measured, both `401` without the cookie). Admission is a yes/no question
+	 * asked on a control plane the relay rate-limits per IP, so the cheapest gated
+	 * route is the right one.
 	 *
 	 * A failure to ASK — offline, a `503`, a body the schema rejects — is
 	 * deliberately not a refusal: telling a user their password was wrong when the
@@ -441,9 +461,9 @@ export class RelayEndpoints {
 		refusal?: RelayError;
 	}> {
 		try {
-			await this.http.json("sessionListFrame", {
+			await this.http.json("models", {
 				method: "GET",
-				path: "/api/sessions",
+				path: "/api/models",
 			});
 			return { admitted: true };
 		} catch (cause) {
@@ -464,6 +484,7 @@ export class RelayEndpoints {
 	 *  private state is this app's own job to clear; native has no
 	 *  `Clear-Site-Data`. */
 	async logout(): Promise<{
+		/** The transport's own report; `0` when it showed none. Never synthesised. */
 		status: number;
 		signedOut: boolean;
 		verified: boolean;
@@ -479,10 +500,11 @@ export class RelayEndpoints {
 		/* The same blind spot as `login`, inverted: verify that the session is GONE.
 		 * A read that still succeeds means the sign-out did not take. The caller's own
 		 * clearing happens either way (`signOutOfCustomRoute`), but it must not also
-		 * claim a success the relay never confirmed. */
+		 * claim a success the relay never confirmed — and a caller that reports to the
+		 * user needs to know which happened, which is what `signedOut` is for. */
 		const admission = await this.admission();
 		return {
-			status: admission.admitted ? 200 : 303,
+			status: 0,
 			signedOut: !admission.admitted,
 			verified: true,
 		};

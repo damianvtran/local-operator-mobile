@@ -60,6 +60,25 @@ convention:
 | The retry envelope is written by one module, and nothing else decides keep/clear | `relay/retry-envelope.ts` |
 | Two sends on one session in the same tick are ONE instruction | `relay/send-command.ts` (single-flight) |
 
+What single-flight does with a second call, in full, because the three cases are
+different and a caller has to be able to tell them apart:
+
+- **Same bytes** → the call JOINs the send in flight and shares its outcome: one
+  request, one `command_id`, and `reusedPreviousDraft: false` (nothing was
+  discarded — the joiner's own bytes are what is being sent).
+- **Different bytes** → it waits for the send in flight and then runs normally, with
+  its own id. Waiting must not become dropping.
+- **Different bytes, and the send it waited on failed AMBIGUOUSLY** (its delivery is
+  unknown, so its envelope is still held) → it is REFUSED with
+  `ambiguous-delivery`, naming the unresolved instruction, and nothing of its own
+  reaches the wire. The store's reuse rule would otherwise hand it the held
+  envelope, putting the earlier instruction's bytes on the wire again under the
+  earlier id — de-duplicated, so nothing runs twice, but the caller's draft would be
+  replaced by one it never issued. The composer re-offers the draft; retrying the
+  unresolved instruction (same id, de-duplicated) or discarding it is the user's
+  choice. A DEFINITIVE failure clears the envelope, so that waiter proceeds with a
+  fresh id.
+
 ### Compatibility: the receipts, and absent fields
 
 The relay evolves additively. Two consequences are visible in the schemas:
@@ -122,7 +141,27 @@ surface is decided here so three screens cannot each invent their own reading of
 | `408` / `502` / `504` | `ambiguous-delivery` | `retry` | same id | keep |
 | any other `4xx`/`5xx` | `rejected` | `none` | never | clear |
 | no response at all | `transport` | `retry` | same id | keep |
+| no response: the certificate was rejected | `certificate-rejected` | `connection` | never | keep |
+| no response: the name did not resolve | `host-unresolved` | `connection` | after backoff | keep |
 | a `2xx` whose body does not match its schema | `malformed-frame` | `none` | same id | keep |
+
+The three "no response" rows are one catch in the code and three different answers
+for a user, which is why they are not collapsed:
+
+- **`certificate-rejected`** — a self-signed, expired or misaddressed certificate
+  on the user's own tunnel. The fix is the certificate, retrying the same one
+  cannot change the answer, and `connection` says the fix belongs to the route's own
+  settings rather than to the computer or an account.
+- **`host-unresolved`** — the address does not resolve: a typo, or a DNS record
+  that is gone. One automatic retry is allowed (a resolver timeout clears by
+  itself) and the sentence still names the address. This is the ordinary failure of
+  a self-hosted tunnel URL, which is a supported route rather than a fallback.
+- **`transport`** — everything else, including a runtime that reports neither a
+  code nor a recognisable message. Its message is the RUNTIME's ("fetch failed"), so
+  it is a diagnostic, and a screen that shows copy uses its own.
+
+All three keep the envelope: a command whose request produced no answer at all has
+an unknown delivery, and replaying is free while discarding is not.
 
 The gateway's `reason` vocabulary (`gateway.py:66-95` at `52c1df35`, the ref the
 fixture corpus was dumped from), mapped to distinct
@@ -279,11 +318,16 @@ Every way a stream ends is one of four, and only the last one stops the loop:
 Two consequences worth stating because they are deliberate:
 
 - **A mid-stream reset is a broken connection, not a lease rotation.** A phone that
-  changes networks gets a `transport` error from the body reader; the loop reopens
-  on the same path a stall takes, with consecutive failures doubling the delay from
-  `STREAM_RETRY_BASE_MS` to `STREAM_RETRY_MAX_MS`. It cannot spin: an open that
-  fails still ends the loop, so a retry that cannot reach the relay stops and
-  reports instead of retrying forever.
+  changes networks gets a `transport`-class error from the body reader; the loop
+  reopens on the same path a stall takes, with the delay DOUBLING per consecutive
+  failure from `STREAM_RETRY_BASE_MS` to `STREAM_RETRY_MAX_MS` — a real floor plus
+  jitter, not the rotation path's `random() * ms`, which can be zero.
+- **That retrying is bounded.** `STREAM_RETRY_MAX_ATTEMPTS` consecutive mid-body
+  failures end the loop through the same `closed` + `onError` a failed open uses
+  (~8 s of backoff). Without it, a route whose handshake succeeds and whose body
+  always fails would reconnect for ever and no caller would ever be told. The count
+  resets on a delivered frame, so a long-lived stream that fails once keeps the full
+  budget.
 - **`onError` means "stopped", and only that.** A reconnecting stream reports its
   cause through the state (`lastEnd`, and `lastError` for an error-ended leg) so a
   screen stays on "reconnecting" for a transient failure while a diagnostics view
@@ -318,10 +362,25 @@ and the smoke script all saw a success while a browser user was told
 `kind: rejected, status 0` after a sign-in that had in fact set the cookie.
 `relay/http.ts` names that shape (`isOpaqueRedirect`), and the two endpoints whose
 outcome it hides act on it: `login()`/`logout()` verify with a follow-up read of a
-route only an admitted session can answer (`GET /api/sessions`), take the refusal's
-sentence from the taxonomy, and report how they know it — `LoginOutcome.verified`,
-and `logout()`'s `signedOut`. A refusal the transport COULD see is unchanged: a
+route only an admitted session can answer (`GET /api/models` — the cheapest gated
+route, 13 bytes against the sessions list's 902, both `401` without the cookie),
+take the refusal's sentence from the taxonomy, and report how they know it —
+`LoginOutcome.verified`, and `logout()`'s `signedOut`. `status` stays the number the
+transport actually reported (`0` here) and is never synthesised: the verdict is
+`signedIn`/`signedOut` plus `verified`, and anything that logs `status` sees a number
+the relay could really have sent. A refusal the transport COULD see is unchanged: a
 wrong password is still a plain `401`.
+
+**A sign-in or sign-out helper returns a VERDICT, and never rejects.**
+`signInToCustomRoute` / `signOutOfCustomRoute` publish `ok: true` unconditionally,
+so every classified failure is mapped back into that shape with the taxonomy's own
+sentence — including the relay's `403` for a page whose `Origin` is not the
+relay's, which is the first gate a browser meets. `signOutOfCustomRoute` RETURNS
+`signedOut`/`verified` rather than discarding them: a sign-out the relay did not
+perform leaves a live 30-day cookie in the platform jar, and a screen that warns
+about that needs to see it. A plain `transport` is the one failure whose taxonomy
+message is a runtime diagnostic, so it is replaced with a sentence of its own
+rather than shown to a user.
 
 **The Radient route cannot work from a page at all, and that is the browser's
 rule, not a missing feature.** `Cookie` and `Origin` are forbidden header names in

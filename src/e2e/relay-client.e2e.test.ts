@@ -180,20 +180,26 @@ describe("custom route: password login and the cookie jar", () => {
 		/* QA round 3, Q1: in Chrome this same sign-in returned `ERR kind=rejected
 		 * status=0 msg=""` while the cookie had been set, so a signed-in user was told
 		 * their login failed. Node cannot produce that shape, so the platform boundary
-		 * does; the verification read it triggers is a real one. */
+		 * does; the verification read it triggers is a real one.
+		 *
+		 * `status` stays 0 — the number the transport actually reported — because the
+		 * verdict is `signedIn` + `verified`, and a synthesised 303 would look
+		 * authoritative to anything that logs it (review round 3, R3-5). */
 		const relay = await relayWith({ auth: { mode: "custom" } });
 		const { client, jar } = browserClient(relay);
 
 		const outcome = await client.login("correct horse");
-		expect(outcome).toEqual({ status: 303, signedIn: true, verified: true });
+		expect(outcome).toEqual({ status: 0, signedIn: true, verified: true });
 		expect(jar.names()).toEqual(["lop_mobile"]);
 
-		/* The verification was the gated read itself, carrying the jar's cookie. */
-		const gated = relay.requests.filter((r) => r.path === "/api/sessions");
+		/* The verification was the gated read itself, carrying the jar's cookie — and
+		 * it is the CHEAPEST gated route, not the 80-row sessions list (R3-7). */
+		const gated = relay.requests.filter((r) => r.path === "/api/models");
 		expect(gated).toHaveLength(1);
 		expect(String(gated[0]?.headers.cookie).startsWith("lop_mobile=")).toBe(
 			true,
 		);
+		expect(relay.requests.some((r) => r.path === "/api/sessions")).toBe(false);
 		/* And the session is genuinely usable afterwards. */
 		await expect(client.sessions()).resolves.toMatchObject({
 			sessions: expect.any(Array),
@@ -215,7 +221,7 @@ describe("custom route: password login and the cookie jar", () => {
 		const outcome = await client.login("correct horse");
 		expect(outcome.signedIn).toBe(false);
 		expect(outcome.verified).toBe(true);
-		expect(outcome.status).toBe(401);
+		expect(outcome.status).toBe(0);
 		expect(outcome.detail).toBe(
 			(fixtureBody("http/unauth-api-sessions.json") as { error: string }).error,
 		);
@@ -227,38 +233,84 @@ describe("custom route: password login and the cookie jar", () => {
 		await client.login("correct horse");
 
 		const outcome = await client.logout();
-		expect(outcome).toEqual({ status: 303, signedOut: true, verified: true });
+		expect(outcome).toEqual({ status: 0, signedOut: true, verified: true });
 		await expect(client.sessions()).rejects.toMatchObject({
 			kind: "relay-unauthorized",
 		});
 	});
 
-	it("drives the helper the screens call, on both transports", async () => {
-		/* `signInToCustomRoute` delegates to the client, so there is one implementation
-		 * of the hidden-redirect decision. What is worth asserting is that it reports
-		 * the client's outcome on both transports: the visible refusal keeps the route's
-		 * own sentence, and the browser's opaque redirect still signs the user in. */
-		const relay = await relayWith({ auth: { mode: "custom" } });
-		const route = {
-			mode: "custom",
-			baseUrl: relay.baseUrl,
-			allowInsecure: true,
-		} satisfies CustomRoute;
+	it("gives every failure back as a verdict through the helper a screen calls", async () => {
+		/* Review round 3, R3-1: this boundary publishes `ok: true` unconditionally, so
+		 * it must never reject — an unhandled rejection is not a refusal the user can
+		 * act on. These are the five ways the sign-in can fail or succeed on a page,
+		 * including the relay's own cross-origin gate, which a browser meets first. */
 		const jar = createCookieJarFetch();
+		const routeFor = (baseUrl: string) =>
+			({ mode: "custom", baseUrl, allowInsecure: true }) satisfies CustomRoute;
 
-		const wrong = await signInToCustomRoute(route, "not the password", {
-			fetchImpl: browserRedirectFetch(jar.fetch),
+		/* 1. The relay's 403 for a foreign `Origin` — the corpus's own capture. */
+		const crossOrigin = await relayWith({
+			auth: { mode: "custom" },
+			loginRefusal: "http/login-cross-origin.json",
 		});
-		expect(wrong).toEqual({
+		const refusedByGate = await signInToCustomRoute(
+			routeFor(crossOrigin.baseUrl),
+			"correct horse",
+			{ fetchImpl: jar.fetch },
+		);
+		expect(refusedByGate).toEqual({
+			ok: true,
+			signedIn: false,
+			detail: (fixtureBody("http/login-cross-origin.json") as { error: string })
+				.error,
+		});
+
+		/* 2. A gateway 502 — a status, not a refusal the client parses. */
+		const gatewayDown = await relayWith({
+			auth: { mode: "custom" },
+			loginRefusal: 502,
+		});
+		const relayDown = await signInToCustomRoute(
+			routeFor(gatewayDown.baseUrl),
+			"correct horse",
+			{ fetchImpl: jar.fetch },
+		);
+		expect(relayDown.ok).toBe(true);
+		expect(relayDown.signedIn).toBe(false);
+
+		/* 3. A wrong password: the visible 401, with the route's own sentence. */
+		const wrongPassword = await relayWith({ auth: { mode: "custom" } });
+		expect(
+			await signInToCustomRoute(routeFor(wrongPassword.baseUrl), "not it", {
+				fetchImpl: jar.fetch,
+			}),
+		).toEqual({
 			ok: true,
 			signedIn: false,
 			detail: "That password was not accepted.",
 		});
 
-		const browser = await signInToCustomRoute(route, "correct horse", {
-			fetchImpl: browserRedirectFetch(jar.fetch),
+		/* 4. Nothing listening at all: no answer to classify. */
+		const closed = await relayWith({ auth: { mode: "custom" } });
+		const closedUrl = closed.baseUrl;
+		await closed.close();
+		expect(
+			await signInToCustomRoute(routeFor(closedUrl), "correct horse", {
+				fetchImpl: jar.fetch,
+			}),
+		).toEqual({
+			ok: true,
+			signedIn: false,
+			detail: "The relay could not be reached.",
 		});
-		expect(browser).toEqual({ ok: true, signedIn: true });
+
+		/* 5. The browser's opaque redirect: signed in, verified. */
+		const browser = await relayWith({ auth: { mode: "custom" } });
+		expect(
+			await signInToCustomRoute(routeFor(browser.baseUrl), "correct horse", {
+				fetchImpl: browserRedirectFetch(jar.fetch),
+			}),
+		).toEqual({ ok: true, signedIn: true });
 	});
 
 	it("reads the read-only routes through the real schemas", async () => {
@@ -553,6 +605,85 @@ describe("a double-tap that lands before the composer can disable send", () => {
 			expect.objectContaining({ text: "first draft" }),
 			expect.objectContaining({ text: "second draft" }),
 		]);
+	});
+
+	it("lets the waiter through with a FRESH id when the send it waited on was rejected definitively", async () => {
+		/* The other half of the rule below: a definitive rejection clears the envelope,
+		 * so the waiter is simply a new instruction — new id, its own text, nothing to
+		 * inherit and nothing lost. */
+		const relay = await relayWith({
+			auth: { mode: "custom" },
+			rejectCommandOn: 1,
+		});
+		const { client } = customClient(relay);
+		await client.login("correct horse");
+		const envelopes = new RetryEnvelopeStore({ store: memoryEnvelopeStore() });
+		const draft: Omit<SendCommandInput, "text"> = {
+			client,
+			envelopes,
+			sessionId: FIXTURE_SESSION_ID,
+			op: "prompt",
+		};
+
+		const first = sendPersistedCommand({ ...draft, text: "rejected draft" });
+		const second = sendPersistedCommand({ ...draft, text: "second draft" });
+
+		await expect(first).rejects.toMatchObject({
+			kind: "rejected",
+			envelope: "clear",
+		});
+		const secondResult = await second;
+		expect(secondResult.reusedPreviousDraft).toBe(false);
+
+		const commands = relay.requests.filter((r) => r.path.endsWith("/command"));
+		expect(commands).toHaveLength(2);
+		/* Only the second is in the ledger, under its OWN id. */
+		expect(relay.admitted.size).toBe(1);
+		expect(relay.admitted.has(secondResult.commandId)).toBe(true);
+		expect(commands.at(-1)?.body).toMatchObject({ text: "second draft" });
+	});
+
+	it("refuses a different instruction while the send it waited on has an UNKNOWN delivery", async () => {
+		/* Review round 3, R3-2. An ambiguous failure keeps the envelope, and the store's
+		 * reuse rule then hands it to the next caller — so a waiter with DIFFERENT bytes
+		 * would have its draft silently replaced by the earlier instruction's (replayed
+		 * under the earlier id, de-duplicated, so nothing runs twice, but the caller
+		 * never sent what it asked to send). It is refused instead, with
+		 * `ambiguous-delivery`, and the composer re-offers the draft. */
+		const relay = await relayWith({
+			auth: { mode: "custom" },
+			dropAckOnCommand: 1,
+		});
+		const { client } = customClient(relay);
+		await client.login("correct horse");
+		const envelopes = new RetryEnvelopeStore({ store: memoryEnvelopeStore() });
+		const draft: Omit<SendCommandInput, "text"> = {
+			client,
+			envelopes,
+			sessionId: FIXTURE_SESSION_ID,
+			op: "prompt",
+		};
+
+		const first = sendPersistedCommand({ ...draft, text: "first draft" });
+		const second = sendPersistedCommand({ ...draft, text: "second draft" });
+
+		await expect(first).rejects.toMatchObject({
+			kind: "transport",
+			envelope: "keep",
+		});
+		await expect(second).rejects.toMatchObject({
+			kind: "ambiguous-delivery",
+			envelope: "keep",
+		});
+
+		/* The second instruction never reached the wire… */
+		const commands = relay.requests.filter((r) => r.path.endsWith("/command"));
+		expect(commands).toHaveLength(1);
+		expect(commands[0]?.body).toMatchObject({ text: "first draft" });
+		/* …and the held envelope is still the first instruction's, so a retry of it
+		 * replays the same id rather than sending something new. */
+		const held = await envelopes.peek(FIXTURE_SESSION_ID);
+		expect(held?.text).toBe("first draft");
 	});
 });
 

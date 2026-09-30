@@ -23,6 +23,15 @@
  *   its outcome — one request, one id, one admitted instruction;
  * - a second call carrying DIFFERENT bytes waits for the unresolved send and then
  *   runs normally. "Wait" must not become "silently drop what the user typed".
+ * - unless the send it waited on failed AMBIGUOUSLY: its delivery is unknown and
+ *   its envelope is still held, so a different instruction must not take that slot.
+ *   `holdNew` would hand it the held envelope and the wire would carry the earlier
+ *   instruction's bytes again — de-duplicated, so nothing runs twice, but the
+ *   caller's own draft would be replaced by one it never issued. The waiter is
+ *   refused with `ambiguous-delivery` instead, naming the unresolved instruction,
+ *   and the composer re-offers the draft. A DEFINITIVE failure clears the envelope
+ *   and the waiter proceeds with a fresh id, which is why the two kinds are
+ *   distinguished rather than lumped together.
  *
  * The join window is the request's own lifetime (the HTTP layer's 20 s deadline),
  * which keeps it narrow on purpose: two identical sends further apart than that
@@ -31,7 +40,7 @@
 
 import type { PromptImage } from "../contracts";
 import type { RelayEndpoints } from "./endpoints";
-import { isRelayError, type RelayError, transportError } from "./errors";
+import { isRelayError, RelayError, transportError } from "./errors";
 import type { ContinuationOp, RetryEnvelopeStore } from "./retry-envelope";
 
 export interface SendResult {
@@ -106,10 +115,24 @@ function begin(
 	payload: string,
 ): InFlightSend {
 	const finished = (async (): Promise<Settled> => {
-		/* A DIFFERENT instruction waits for the unresolved one before it takes the
-		 * single slot. A predecessor's failure is not this caller's failure: the
-		 * envelope rules have already decided what to do with it. */
-		if (predecessor) await predecessor.finished;
+		if (predecessor) {
+			const settled = await predecessor.finished;
+			/* A DIFFERENT instruction must not take the single envelope slot while the
+			 * send it waited on has an UNKNOWN delivery: `holdNew` would return that
+			 * held envelope and put the earlier instruction's bytes on the wire again
+			 * under its id. Nothing runs twice — the relay de-duplicates the replay —
+			 * but the caller that lost the race would have its own draft silently
+			 * replaced by an instruction it never issued, which is the outcome this
+			 * guard makes explicit. A DEFINITIVE failure has already cleared the
+			 * envelope, so that waiter proceeds with a fresh id. */
+			if (
+				predecessor.payload !== payload &&
+				!settled.ok &&
+				settled.error.envelope === "keep"
+			) {
+				return { ok: false, error: unresolvedPredecessor(settled.error) };
+			}
+		}
 		try {
 			return { ok: true, result: await runSend(input) };
 		} catch (cause) {
@@ -135,6 +158,25 @@ function begin(
 function outcomeOf(settled: Settled): SendResult {
 	if (settled.ok) return settled.result;
 	throw settled.error;
+}
+
+/** The outcome for a caller whose DIFFERENT instruction waited on one whose
+ *  delivery is still unknown. It never reaches the wire: either it would reuse the
+ *  earlier instruction's id for other bytes, or it would mint a second id while the
+ *  first may still be admitted. `envelope: "keep"` is deliberate — the held
+ *  envelope belongs to the unresolved instruction and the caller's next move is to
+ *  retry THAT one (same id, de-duplicated) or discard it. */
+function unresolvedPredecessor(cause: RelayError): RelayError {
+	return new RelayError(
+		"ambiguous-delivery",
+		"an earlier instruction on this session has an unknown outcome, so this one was not sent",
+		{
+			diagnostic:
+				"a different instruction waited on a send whose delivery is unknown",
+			envelope: "keep",
+			cause,
+		},
+	);
 }
 
 /**

@@ -31,8 +31,17 @@ const UNKNOWN_TUNNEL = /unknown tunnel/i;
 
 /** What went wrong, at the granularity a screen or a policy switches on. */
 export type RelayErrorKind =
-	/** No response at all: DNS, connection refused, TLS, abort, a dropped stream. */
+	/** No response at all: connection refused, abort, a dropped stream, or a network
+	 *  failure the runtime did not describe. */
 	| "transport"
+	/** The certificate was rejected: self-signed, expired, or issued for another
+	 *  host. Split out of `transport` because the fix is the tunnel's certificate and
+	 *  retrying the same certificate cannot change the answer. */
+	| "certificate-rejected"
+	/** The host did not resolve. Split out of `transport` because the fix is the
+	 *  ADDRESS (a typo, or a DNS record that no longer exists), not a retry — this is
+	 *  the ordinary failure of a self-hosted tunnel URL. */
+	| "host-unresolved"
 	/** Edge 401 carrying `X-Radient-Login`: the tunnel session expired. */
 	| "radiant-login-required"
 	/** Relay 401 `{"error":"authentication required"}` on the custom route. */
@@ -71,6 +80,12 @@ export type RetryDirective = "never" | "same-id" | "after-backoff" | "re-mint";
 export type ErrorSurface =
 	/** Radient sign-in is needed again. */
 	| "sign-in"
+	/** The connection the user CONFIGURED cannot be used as given: its name does not
+	 *  resolve, or its certificate cannot be trusted. Distinct from
+	 *  `computer-offline` (a computer the app knows about that is not answering),
+	 *  because the fix is in the route's own settings — the self-hosted route's
+	 *  address or its certificate. */
+	| "connection"
 	/** The computer (or its connector) is not reachable; offer retry. */
 	| "computer-offline"
 	/** The relay daemon is not running on the computer. */
@@ -191,6 +206,8 @@ function defaultEnvelopeFor(kind: RelayErrorKind): EnvelopeDirective {
 		 * discarding one the user typed costs their work. So they keep the envelope
 		 * too, and the retry is the same id either way. */
 		case "transport":
+		case "certificate-rejected":
+		case "host-unresolved":
 		case "ambiguous-delivery":
 		case "computer-offline":
 		case "relay-down":
@@ -213,6 +230,15 @@ function defaultRetryFor(kind: RelayErrorKind): RetryDirective {
 			/* Replay the SAME id: the command may be admitted already, and the relay
 			 * de-duplicates it rather than running it twice. */
 			return "same-id";
+		case "host-unresolved":
+			/* A resolver timeout clears by itself; a name that does not exist does not.
+			 * `after-backoff` keeps the cheap case automatic and still leaves the user
+			 * with a sentence that names the address. */
+			return "after-backoff";
+		case "certificate-rejected":
+			/* The same certificate presented again gets the same answer. Retrying here
+			 * would be a loop that looks like progress. */
+			return "never";
 		case "rate-limited":
 		case "gateway-refused":
 		case "computer-offline":
@@ -233,6 +259,9 @@ function defaultSurfaceFor(kind: RelayErrorKind): ErrorSurface {
 		case "ambiguous-delivery":
 		case "rate-limited":
 			return "retry";
+		case "certificate-rejected":
+		case "host-unresolved":
+			return "connection";
 		case "radiant-login-required":
 			return "sign-in";
 		case "relay-unauthorized":
@@ -319,15 +348,89 @@ export function isRelayError(value: unknown): value is RelayError {
 	return value instanceof RelayError;
 }
 
-/** A failure with no response: DNS, refused, TLS, abort, a stream that dropped. */
+/** System error codes that mean the CERTIFICATE, not the network. Kept tight: a
+ *  protocol-level TLS complaint (speaking TLS to the wrong port, for instance) is
+ *  not a certificate the user has to fix, so it stays `transport`. */
+const CERTIFICATE_CODES = new Set([
+	"CERT_HAS_EXPIRED",
+	"CERT_NOT_YET_VALID",
+	"CERT_UNTRUSTED",
+	"DEPTH_ZERO_SELF_SIGNED_CERT",
+	"ERR_TLS_CERT_ALTNAME_INVALID",
+	"SELF_SIGNED_CERT_IN_CHAIN",
+	"UNABLE_TO_GET_ISSUER_CERT_LOCALLY",
+	"UNABLE_TO_VERIFY_LEAF_SIGNATURE",
+]);
+
+/** System error codes that mean the NAME did not resolve. `EAI_AGAIN` is a
+ *  resolver timeout, which a later attempt can clear; `ENOTFOUND` usually is not
+ *  — both are the address's problem rather than the network's. */
+const DNS_CODES = new Set(["EAI_AGAIN", "ENOTFOUND", "ERR_NAME_NOT_RESOLVED"]);
+
+/* Where a runtime sends no code, its MESSAGE is the only signal, and it is a
+ * weaker one — so these match words that cannot mean anything else. `getaddrinfo`
+ * appears in the code's own message, which is why it is here as well as `ENOTFOUND`. */
+const CERTIFICATE_TEXT = /certificate|self[- ]signed/i;
+const DNS_TEXT =
+	/getaddrinfo|ENOTFOUND|name not resolved|could not be resolved/i;
+
+/** Every `code` in a rejection's cause chain, nearest first. Node's fetch wraps the
+ *  system error (`TypeError: fetch failed` → `.cause` = the `Error` with the code),
+ *  so one level is the norm and the walk costs nothing. */
+function causeCodes(cause: unknown): string[] {
+	const codes: string[] = [];
+	let current: unknown = cause;
+	for (let depth = 0; depth < 4 && current instanceof Error; depth += 1) {
+		const code = (current as { code?: unknown }).code;
+		if (typeof code === "string") codes.push(code);
+		current = current.cause;
+	}
+	return codes;
+}
+
+/**
+ * A failure with no response: DNS, refused, TLS, abort, a stream that dropped.
+ *
+ * The certificate and DNS arms are split out of `transport` on purpose. All three
+ * reach the same catch, and they need three different answers: a rejected
+ * certificate is the tunnel's own settings and cannot be fixed by retrying, an
+ * unresolvable name means the address is wrong or its DNS record is gone, and only
+ * the rest is a general transport failure. A runtime that reports neither a code
+ * nor a recognisable message stays `transport` — the honest answer when the cause
+ * is unknown, and the one that keeps the retry affordance.
+ */
 export function transportError(
 	cause: unknown,
 	diagnostic?: string,
 ): RelayError {
+	const codes = causeCodes(cause);
 	const message =
 		cause instanceof Error
 			? cause.message
 			: "the request did not reach the relay";
+	if (
+		codes.some((code) => CERTIFICATE_CODES.has(code)) ||
+		CERTIFICATE_TEXT.test(message)
+	) {
+		return new RelayError(
+			"certificate-rejected",
+			"the relay's certificate was rejected",
+			{
+				cause,
+				diagnostic,
+			},
+		);
+	}
+	if (codes.some((code) => DNS_CODES.has(code)) || DNS_TEXT.test(message)) {
+		return new RelayError(
+			"host-unresolved",
+			"that address could not be found",
+			{
+				cause,
+				diagnostic,
+			},
+		);
+	}
 	return new RelayError("transport", message, { cause, diagnostic });
 }
 

@@ -62,6 +62,14 @@ const ROTATION_JITTER_MS = 250;
  *  hide a relay that is gone: a retry that cannot open ends the loop there. */
 export const STREAM_RETRY_BASE_MS = 250;
 export const STREAM_RETRY_MAX_MS = 5_000;
+/** How many consecutive mid-body failures the loop retries before it gives up. A
+ *  relay landscape that completes the handshake and then resets every time would
+ *  otherwise reconnect at `STREAM_RETRY_MAX_MS` for as long as the screen stays
+ *  open, with nothing ever telling a caller the stream is gone. Five attempts is
+ *  ~8 s of backoff — long enough that a phone changing networks is invisible, short
+ *  enough that a broken route becomes a visible error. Reset by a delivered frame,
+ *  so a long-lived stream that fails once keeps the full budget. */
+export const STREAM_RETRY_MAX_ATTEMPTS = 5;
 
 /** The gap before a retry after `failures` consecutive mid-stream failures: the
  *  base doubled per failure, capped. Exported because it is an algorithm worth
@@ -498,11 +506,27 @@ export class SseConnection {
 				 * loop there. So the loop self-heals exactly as a silence stall does, with
 				 * consecutive failures spacing the retries instead of retrying flat out.
 				 *
-				 * The error rides the STATE, not `onError`: the stream is reconnecting, not
-				 * failed, and a screen that paints a failure for a phone that changed
-				 * networks is the flash rule 1 exists to prevent. A caller that wants to
-				 * report something reads `lastEnd`/`lastError` from the status. */
+				 * The error rides the STATE, not `onError`, while the loop is still trying: the
+				 * stream is reconnecting, not failed, and a screen that paints a failure for a
+				 * phone that changed networks is the flash rule 1 exists to prevent. It is
+				 * BOUNDED, though: a handshake that keeps succeeding and a body that keeps
+				 * failing is a route that is gone, so after
+				 * `STREAM_RETRY_MAX_ATTEMPTS` consecutive mid-body failures the loop stops and
+				 * reports through the same `closed` + `onError` path a failed open uses — the
+				 * caller sees an error instead of an invisible retry loop. */
 				this.failures += 1;
+				if (this.failures >= STREAM_RETRY_MAX_ATTEMPTS) {
+					this.running = false;
+					this.emit({
+						state: "closed",
+						attempt: this.attempt,
+						lastOpenMs: openMs,
+						lastEnd: "error",
+						lastError: error,
+					});
+					this.options.onError?.(error);
+					return;
+				}
 				this.emit({
 					state: "stalled",
 					attempt: this.attempt,
@@ -510,7 +534,7 @@ export class SseConnection {
 					lastEnd: "error",
 					lastError: error,
 				});
-				await this.pause(streamRetryDelayMs(this.failures));
+				await this.backoff(streamRetryDelayMs(this.failures));
 				continue;
 			}
 
@@ -557,6 +581,10 @@ export class SseConnection {
 		this.silenceTimer = undefined;
 	}
 
+	/** Reopens at once, up to `ms` later: the delay IS the jitter, because a rotation
+	 *  or a stall should come back immediately and only needs de-synchronising from
+	 *  the other devices behind the same connector. A RETRY after a failure is not
+	 *  that — it needs a floor, and `backoff` is where it gets one. */
 	private pause(ms: number): Promise<void> {
 		const jitter = ms > 0 ? Math.floor(this.options.random() * ms) : 0;
 		const setTimer = this.options.setTimeout ?? setTimeout;
@@ -565,6 +593,24 @@ export class SseConnection {
 				this.jitterTimer = undefined;
 				resolve();
 			}, jitter);
+		});
+	}
+
+	/** Waits AT LEAST `ms`, plus jitter on top.
+	 *
+	 * `pause` cannot be used for this: it schedules the timer at `random() * ms`, so
+	 * a runtime whose `random()` returns 0 (or a low draw) reopens immediately and a
+	 * "backoff" that only ever holds the CAP in the formula is a flat-out retry loop
+	 * in a test and a fast one in production. The delay is the whole point here, so
+	 * the jitter is added to it rather than being it. */
+	private backoff(ms: number): Promise<void> {
+		const jitter = Math.floor(this.options.random() * ms);
+		const setTimer = this.options.setTimeout ?? setTimeout;
+		return new Promise((resolve) => {
+			this.jitterTimer = setTimer(() => {
+				this.jitterTimer = undefined;
+				resolve();
+			}, ms + jitter);
 		});
 	}
 }
