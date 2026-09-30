@@ -130,9 +130,14 @@ jobs:
     # mutation group takes fifteen minutes". A reviewer's own attempt on this host
     # was killed at ~14 minutes *inside* the mutation group, on a machine at load
     # 120-226. The 15-minute job bound this replaces could therefore only ever
-    # report a timeout. 30 minutes is the harness's own 25-minute internal bound
-    # plus room, so the command finishes or names itself.
-    timeout-minutes: 30
+    # report a timeout.
+    #
+    # THE BOUND COVERS THE JOB'S PARTS, NOT ITS LARGEST ONE (review round 4, m1):
+    # install + the 25-minute step + the divergence check is the arithmetic, and the
+    # install is not bounded by the step bound at all. 40 minutes is that sum with
+    # room, and the install prints its duration so the next person sizing this has a
+    # measurement instead of an estimate.
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v7
 
@@ -152,7 +157,12 @@ jobs:
         # repository is careful about (round 3 addendum, measured). Making it
         # explicit keeps the lockfile guarantee and puts the cost inside the budget
         # where it can be seen.
-        run: pnpm install --frozen-lockfile
+        run: |
+          set -euo pipefail
+          start=$(date +%s)
+          pnpm install --frozen-lockfile
+          echo "install took $(( $(date +%s) - start ))s (631 packages / ~746 MB measured on a "
+          echo "cold store; cached, it is seconds). This is part of the job's 40-minute bound."
 
       # The mock's own proof: every assertion the verifier makes over the relay's
       # contract, which is what keeps the mock from drifting away from the relay it
@@ -165,6 +175,9 @@ jobs:
         run: pnpm e2e:relay
 
       - name: Assert the harness agrees with the relay where it diverges on purpose
+        # Bounded like the contract above: a hang here should name this check rather
+        # than leave the job to be cancelled with no output.
+        timeout-minutes: 10
         run: pnpm e2e:divergences
 
   docs-commands:

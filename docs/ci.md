@@ -14,7 +14,7 @@ view — what runs, what it needs, and what to do when it goes red.
 | `ci.yml` | `pull_request`, push to `main`, weekly, `workflow_dispatch`, `workflow_call` | `changes`, `checks`, `design-kit` | The JavaScript typechecks (both programs), lints, formats and its unit tests pass; the web target bundles. `design-kit` costs a macOS runner plus a `brew install`, so it is path-gated by the same `changes` pattern the native jobs use — it runs on a pull request only when `design/**`, `docs/design/**`, `src/ui/**`, `scripts/**` or the configs changed, and always on `main`, on the weekly sweep and inside a release gate. Green there means the generated styling layer matches `design/tokens/tokens.json`, the contrast contract holds, and every committed asset re-renders (bytes first, pixels second, with the comparison that passed printed). **The preview-sheet step reports `NOT VERIFIED` on a clean runner** — it renders with the shipped typefaces (Figtree, JetBrains Mono), which live in a sibling checkout a runner does not have — and that step is green only because it downgrades its claim to a warning rather than failing. Say "design-kit passed" with that caveat, or run the gate locally where the faces exist. |
 | `android.yml` | `pull_request`, push to `main`, `workflow_dispatch` | `changes`, `android`, `internal` (main only) | `expo prebuild` produces the Android project from the config, Gradle assembles a debug APK, **the APK's manifest carries the version the ref derives** (`versionName`/`versionCode` read out of the built APK and asserted), and the generated project re-generates identically (byte for byte, except that Xcode project files are compared with their object identifiers normalized — see below). On `main`, additionally an AAB/APK whose release certificate is verified **not** to be the debug key, and, when configured, a Play **internal** track upload. |
 | `ios.yml` | `pull_request`, push to `main`, `workflow_dispatch` | `changes`, `ios`, `internal` (main only) | The app builds for the iOS 26 SDK with Xcode 26 on `macos-26`, **launches on a simulator**, and the captured frame **rendered something** — it differs from a pre-install capture of the home screen, and the launch log carries no JavaScript fatal (the check that caught a real crash on a head where the app had no routes). The settle delta between two captures two seconds apart is **reported, not asserted**, in pixel-channel bytes: a byte-identity gate was tried and removed because a working UI with a caret moves (measured, run 36727261140). The version in the built app's `Info.plist` is asserted against the one the ref derived, and the native project re-generates identically. Content is not judged here — a wrong screen renders just as green. On `main`, additionally a signed IPA and, when configured, a TestFlight upload. |
-| `e2e.yml` | `pull_request`, push to `main`, nightly, `workflow_dispatch` | `harness`, `mock-relay-contract`, `docs-commands`, `web-audit`, `maestro-android` | **The harness was present and its suites ran** — the `harness` job FAILS when it is absent rather than skipping, so a green `e2e` cannot mean "the thing did not run". Then: `pnpm e2e:relay` in its own job (which prints its own assertion count — quote that line, not a number written here) and `pnpm e2e:divergences`; `pnpm e2e:typecheck` in the audit job (the only typecheck `tools/**` and `e2e/**` get — `pnpm typecheck` covers the app and `scripts/**` only); the web export driven in headless Chrome into a frame per audit cell with every frame checked against the design kit's rubric, and `pnpm e2e:canary`. **Every command goes through the harness's own package scripts**, never a file path, so a rename inside the harness cannot silently disable this workflow. **The bounds come from measurements, not from hope**: `pnpm e2e:relay` is the harness's slowest documented command — its own note says the contract plus the canary's mutation self-test "runs ~18 minutes" and sizes its default bound at 25 (`--timeout 1500`), and a reviewer's attempt on this host was killed at ~14 minutes inside the mutation group at load 120-226 — so that job gets 30 minutes and the step 25, rather than the 15 minutes it had, which could only ever report a timeout. `pnpm e2e:docs` (every command `docs/e2e/README.md` names, the relay one included) runs only in the nightly `docs-commands` job; on a pull request it would double the longest job for no extra coverage. The relay job installs explicitly with `--frozen-lockfile`, because the implicit install pnpm 12 performs before a script (`verify-deps-before-run`) was already happening: measured, a "no install" job pulled 631 packages into a tree that had none. Maestro runs the flow set on an Android 16 emulator — nightly and on demand only, because it is the slowest job here and the harness's own note asks for it that way; it is the one job allowed to be absent from a green PR run. |
+| `e2e.yml` | `pull_request`, push to `main`, nightly, `workflow_dispatch` | `harness`, `mock-relay-contract`, `docs-commands`, `web-audit`, `maestro-android` | **The harness was present and its suites ran** — the `harness` job FAILS when it is absent rather than skipping, so a green `e2e` cannot mean "the thing did not run". Then: `pnpm e2e:relay` in its own job (which prints its own assertion count — quote that line, not a number written here) and `pnpm e2e:divergences`; `pnpm e2e:typecheck` in the audit job (the only typecheck `tools/**` and `e2e/**` get — `pnpm typecheck` covers the app and `scripts/**` only); the web export driven in headless Chrome into a frame per audit cell with every frame checked against the design kit's rubric, and `pnpm e2e:canary`. **Every command goes through the harness's own package scripts**, never a file path, so a rename inside the harness cannot silently disable this workflow. **The bounds come from measurements, not from hope**: `pnpm e2e:relay` is the harness's slowest documented command — its own note says the contract plus the canary's mutation self-test "runs ~18 minutes" and sizes its default bound at 25 (`--timeout 1500`), and a reviewer's attempt on this host was killed at ~14 minutes inside the mutation group at load 120-226 — so that job gets **40 minutes** and the step 25 — the job's bound covers its parts (install + the contract + the divergence check), not its largest one, and the install prints its own duration so the next person sizing this has a measurement — rather than the 15 minutes it had, which could only ever report a timeout. `pnpm e2e:docs` (every command `docs/e2e/README.md` names, the relay one included) runs only in the nightly `docs-commands` job; on a pull request it would double the longest job for no extra coverage. The relay job installs explicitly with `--frozen-lockfile`, because the implicit install pnpm 12 performs before a script (`verify-deps-before-run`) was already happening: measured, a "no install" job pulled 631 packages into a tree that had none. Maestro runs the flow set on an Android 16 emulator — nightly and on demand only, because it is the slowest job here and the harness's own note asks for it that way; it is the one job allowed to be absent from a green PR run. |
 | `release.yml` | tag `v*` (or `workflow_dispatch` with a tag and `dry_run`) | `version`, `secrets`, `gate` (= `ci.yml`), `android`, `ios`, `publish` | The same gate a pull request runs, both platforms built and signed, a GitHub Release carrying the APK/AAB/IPA, and uploads to the Play internal track and TestFlight. |
 
 Native jobs are **skipped, not failed**, on a change that touches only
@@ -74,43 +74,49 @@ runs).
 
 ### Where they live, and why
 
-They are **repository** secrets, and the jobs that use them are the only jobs
-that reference them:
+**Put them in the `release` environment, and configure that environment with two
+deployment rules: a BRANCH rule `main` and a TAG rule `v*`.** Both halves matter:
 
-- `android.yml`/`ios.yml` expose them through jobs that declare
-  `environment: release` and run **only on a push to `main`**. Each signing job is
-  behind that gate, and so is the `credentials` job that decides whether it can
-  run — that job has to read the secrets to answer the question, so it sits inside
-  the same environment rather than resolving them from every pull request (review
-  round 3, M2: it used to run on pull requests, which made this paragraph — and
-  the workflow headers quoting it — false). A pull request cannot reach either
-  job, so a branch pushed here cannot print the key: the security comes from the
-  environment, not from an `if:` on a step.
-- `release.yml` runs only on a tag, and its credential-bearing jobs also declare
-  `environment: release`.
+- GitHub's deployment policies are typed — `type: branch` or `type: tag` — and its
+  own documentation says name patterns "must be configured for branches or tags
+  individually". A *branch* pattern `v*` does **not** cover `refs/tags/v*`, so an
+  environment configured with only `main` refuses `release.yml`'s jobs on a tag
+  ref, and the first tagged release dies at the environment before it signs
+  anything (review round 4, M4-1). The tag rule is what lets the three
+  `environment: release` jobs in `release.yml` run on `refs/tags/v*`.
+- Every job that reads a credential declares `environment: release`: the two
+  signing jobs in `android.yml`/`ios.yml` (which run only on a push to `main`, so
+  the branch rule covers them), the `credentials` gate beside each of them, and
+  `release.yml`'s `credentials`, `android`, `ios` and `publish` jobs (tag refs, so
+  the tag rule covers them).
+- **Environment** secrets are the point of the exercise: only a job that declares
+  the environment can read them, so the deployment rules are what keep signing
+  material out of a pull request that edits a workflow to drop an `if:`. Keeping
+  the same nine as **repository** secrets also works — every job that reads them
+  declares the environment, and a job in an environment sees both scopes — but
+  repository secrets are readable by any workflow a collaborator can push, which
+  is exactly the gap the environment exists to close (QA round 3, Q1).
+
+A pull request cannot reach any of those jobs, so a branch pushed here cannot
+print a key. **Today the mechanism behind that sentence is the `if:` conditions,
+not the environment**, because this repository has no environment configured yet
+— see the action item below. The environment is what makes it an enforced rule
+rather than a workflow convention.
 
 **A cost of that arrangement, stated because it is a choice.** If the environment
 is given required reviewers, the `credentials` gate waits for approval *before* it
 can report, and the signing job waits again — two prompts per `main` push rather
-than one. A review-free environment with the same `main`/`v*` deployment-branch
-rule keeps the same protection against a feature branch reaching the secrets
-without the second prompt, and is the configuration this pipeline expects.
+than one (the gate cannot avoid reading the secrets: that is the question it
+answers). A review-free environment with the same two deployment rules keeps the
+protection against a feature branch reaching the secrets without the second
+prompt, and is the configuration this pipeline expects.
 
-Configure the environment with a **deployment branch rule of `main` and
-`v*` tags** (Settings → Environments → `release`). That rule is what makes the
-first point true, and it is the one setting this repository's security depends
-on that is not in the source tree. Add required reviewers to the same
-environment if the release process ever gains a second maintainer.
-
-**OPERATOR ACTION ITEM — `environment: release` protects nothing yet.** The two
-signing jobs declare `environment: release` (`android.yml`, `ios.yml`), which is
-the mechanism for requiring a human approval, restricting the ref, and scoping
-secrets. This repository currently has **no environments configured**, so the
-environment resolves to nothing: the jobs are guarded by their `if:` conditions
-alone. Create the environment with a deployment rule (branches `main`, tags
-`v*`) and, if the signing material should be gated, require reviewers on it —
-until then the release path is protected by the credential check and the tag,
-not by an approval. Verified 2026-09-30: `gh api
+**OPERATOR ACTION ITEM — `environment: release` protects nothing yet.** Create the
+environment, add a **branch** rule `main` and a **tag** rule `v*`, put the nine
+credentials above in it as **environment secrets**, and decide whether it requires
+reviewers (the paragraph above). Until then the environment resolves to nothing,
+the jobs are guarded by their `if:` conditions alone, and the signing material is
+only as private as the repository's secret scope. Verified 2026-09-30: `gh api
 repos/damianvtran/local-operator-mobile/environments` returns **0**.
 
 ### What a missing credential means, per platform
@@ -282,7 +288,29 @@ the number the release then publishes, and Play rejects the second one. Measured
 on a clone with a `v0.0.1` tag and the counter at 1000: the release claims 1000, a
 `main` push at that commit claims 1000, three commits later 1003, and a tag there
 is rejected until the counter reaches 1004 — the number the failure message
-prints.
+prints. Three consequences worth knowing before the first release:
+
+- **The floor moves with the bump.** The bump is itself a commit, so it raises the
+  floor by one, and any commit after it raises it again. A second refusal is
+  quoting the floor at the new tip, not repeating itself — which is why the tag
+  goes on the bump commit with nothing in between, and why the message and this
+  doc both say to leave a **margin** (ten is plenty for a release pull request) so
+  one bump is enough (QA rounds 2 and 3; the message used to print a number that
+  could never be right on the first try).
+- **`base` is the last ANCESTOR tag, and the commits are counted from the same
+  one.** A tag cut on a sibling branch with a higher version is not a base: the
+  script skips any tag that is not an ancestor of the ref being built, and counts
+  from the tag it accepted. Verified with a `v9.9.9` on a sibling branch beside a
+  `v0.1.0` on the trunk: the trunk build derives from `v0.1.0`. The counter should
+  still only be set on a tag anyone can reach, because the *sort* that picks the
+  first candidate is the version number.
+- **The floor includes `main`'s tip, not just this commit.** Internal builds are
+  published from `main`, so a tag that is not the tip has to clear a later
+  commit's number too — otherwise the tag's number equals one already on the Play
+  track and the upload is refused as a duplicate, after the GitHub Release exists.
+  The release job fetches `origin/main` for exactly this comparison (QA Q4), and
+  prints the number as `main_tip_internal_build_number` — `not-checked` when the
+  ref is absent, never a guessed floor.
 | Release notes | generated from the conventional commits since the previous tag (`scripts/ci/release-notes.ts`) |
 
 **Why the build number is not `github.run_number`** (this was a real defect, fixed
@@ -400,7 +428,7 @@ What that costs, concretely, and how each spend is gated:
 | `ios` (prebuild, pods, simulator build, launch, frame) | `macos-26` | the same `changes` job |
 | `internal` (signed AAB/IPA, store uploads) | both | push to `main` only |
 | `web-audit` (frames, rubric, canary) | `ubuntu-latest` | every PR, and it costs no macOS minutes: the harness's Chrome discovery has Linux candidates, which is why it moved off `macos-26` |
-| `mock-relay-contract` (the relay's contract, ~18 min) | `ubuntu-latest` | every PR. Minutes, not macOS minutes, but the longest job here; it runs once per push, and `pnpm e2e:docs` — which would run it a second time — is nightly and on demand |
+| `mock-relay-contract` (the relay's contract, ~18 min; 40-minute job bound) | `ubuntu-latest` | every PR. Minutes, not macOS minutes, but the longest job here; it runs once per push, and `pnpm e2e:docs` — which would run it a second time — is nightly and on demand |
 | Maestro flows | `ubuntu-latest` with KVM | nightly and on demand only |
 
 The two macOS spends that used to happen on every pull request — the design kit's

@@ -149,17 +149,35 @@ export const derive = ({
 				"compare it, and a run number is not a repository-wide counter.",
 		);
 	}
-	const minimum = internalNumber + 1;
+	// Q4: THE TAG NEED NOT BE THE TIP OF `main`. An internal build of a commit that
+	// landed AFTER the counter bump claims the same number this release would, and
+	// Play rejects the second upload — so the floor is the highest internal number
+	// this scheme could have published from `main`, not just the one at this commit.
+	// Only advisory when `origin/main` is not present (a local run, or a checkout
+	// that did not fetch it): the release job fetches it explicitly, and every other
+	// caller prints that it could not check rather than inventing a floor.
+	const mainInternal = internalNumberAt(counterPath, "origin/main");
+	const minimum = Math.max(internalNumber, mainInternal ?? internalNumber) + 1;
 	if (releaseBuildNumber < minimum) {
+		const tip =
+			mainInternal === null
+				? ""
+				: `, and ${mainInternal} from the tip of origin/main`;
 		throw new Error(
-			`the release build number ${releaseBuildNumber} is not greater than ` +
-				`${internalNumber}, which is what an internal build of this commit ` +
-				`claims (${base} at the last release + ${commitsSinceLastRelease} ` +
-				`commits since). Set ${counterPath} to ${minimum} or higher in the ` +
-				"release pull request, then tag: Play rejects an upload whose " +
-				"versionCode is not strictly greater than one already published.",
+			`the release build number ${releaseBuildNumber} is below the floor of ` +
+				`${minimum}: an internal build of this commit claims ` +
+				`${internalNumber} (${base} at the last release + ` +
+				`${commitsSinceLastRelease} commits since)${tip}. Set ` +
+				`${counterPath} to ${minimum} or higher in the release pull request, ` +
+				"then tag: Play rejects an upload whose versionCode is not strictly " +
+				"greater than one already published. THIS FLOOR MOVES. The bump is " +
+				"itself a commit, so it raises the floor by one, and every commit " +
+				"after it raises it again — a second refusal is quoting the floor at " +
+				'the new tip, not repeating itself. docs/ci.md, "Versioning", ' +
+				"says to leave a margin so one bump is enough.",
 		);
 	}
+
 	const version = tag?.join(".") ?? PLACEHOLDER_VERSION;
 	return {
 		version,
@@ -188,6 +206,21 @@ const git = (args: string[], quiet = false): string =>
 	}).trim();
 
 /** A counter file's value, in the working tree or (with `ref`) at a revision. */
+/**
+ * The internal number a given ref claims, or `null` when the ref cannot be
+ * resolved. Used for the `origin/main` floor (Q4): an internal build of a commit
+ * that landed after the counter bump claims the same number a tag on the bump
+ * commit would, and Play rejects the second upload.
+ */
+const internalNumberAt = (path: string, ref: string): number | null => {
+	try {
+		const { base, commitsSince } = lastRelease(path, ref, null);
+		return base + commitsSince;
+	} catch {
+		return null;
+	}
+};
+
 const counterAt = (path: string, ref?: string): number => {
 	const text =
 		ref === undefined
@@ -299,6 +332,9 @@ const lines = [
 // table is what makes a dry run of the release path readable ("the number it
 // would claim for main versus for a tag") without a store to compare against.
 const minimum = release.base + release.commitsSince + 1;
+// The same floor the release arm applies, printed so a dry run shows both
+// sides of the comparison (Q4: a tag need not be the tip of `main`).
+const mainInternal = internalNumberAt(counterPath, "origin/main");
 const diagnostics = [
 	`base_release_number=${release.base}`,
 	`base_release_tag=${release.tag ?? "none"}`,
@@ -306,6 +342,7 @@ const diagnostics = [
 	`internal_build_number=${release.base + release.commitsSince}`,
 	`release_build_number=${releaseBuildNumber ?? "none"}`,
 	`minimum_release_build_number=${minimum}`,
+	`main_tip_internal_build_number=${mainInternal ?? "not-checked"}`,
 	`counter_file=${counterPath}`,
 ];
 

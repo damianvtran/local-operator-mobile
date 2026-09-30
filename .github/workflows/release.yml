@@ -110,7 +110,8 @@ jobs:
             echo "| version | \`$(field version)\` |"
             echo "| published build number (versionCode / CFBundleVersion) | \`$(field release_build_number)\` |"
             echo "| an internal build of this commit claims | \`$(field internal_build_number)\` |"
-            echo "| the previous release claimed | \`$(field previous_release_build_number)\` |"
+            echo "| the counter at the previous release (the floor it set) | \`$(field base_release_number)\` |"
+            echo "| an internal build from the tip of origin/main claims | \`$(field main_tip_internal_build_number)\` |"
             echo "| the floor this release had to beat | \`$(field minimum_release_build_number)\` |"
           } >> "$GITHUB_STEP_SUMMARY"
 
@@ -118,6 +119,17 @@ jobs:
     name: Every release credential is present
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    # THE ENVIRONMENT, BECAUSE THIS IS WHERE THE SECRETS ARE READ. `docs/ci.md`
+    # tells the operator to create `release` with a `main` branch rule and a `v*`
+    # tag rule and to keep the nine credentials there; a job that reads them but
+    # does not declare the environment sees them EMPTY once they live there, and
+    # `--mode release` hard-fails on the first tag — before any build, and without
+    # the approval prompt that would have surfaced it (QA round 3, Q1; the other
+    # three jobs that touch secrets — `android`, `ios`, `publish` — already declare
+    # it). The tag path is covered by the environment's TAG rule, not its branch
+    # rule: GitHub types these patterns, so `v*` has to be configured as a tag rule
+    # or this job is refused on `refs/tags/v*` (review round 4, M4-1).
+    environment: release
     steps:
       - uses: actions/checkout@v7
 
@@ -181,6 +193,15 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Fetch main, which the build-number floor compares against
+        # The floor is the highest number an internal build could already have
+        # published, and internal builds are published from `main` — so a tag that
+        # is NOT the tip has to clear a later commit's number too, or Play refuses
+        # the duplicate (review round 4 / QA Q4). `origin/main` exists on a
+        # checkout of a tag only if it is fetched, and a missing ref is reported as
+        # "not-checked" rather than guessed.
+        run: git fetch --no-tags --quiet origin +refs/heads/main:refs/remotes/origin/main
 
       - name: Derive the version from the tag
         # The tag supplies the version; `release/build-number.txt` supplies the

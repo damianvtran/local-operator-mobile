@@ -273,6 +273,28 @@ jobs:
         # release.yml runs this same script, so the two cannot drift.
         run: scripts/ci/stage-release-assets.sh artifacts 1.2.3
 
+      - name: Assert the release still uses what this probe exercises
+        # THE SINGLE-SOURCING IS OTHERWISE ONE-DIRECTIONAL (review round 4, n2).
+        # This job proves the composite action and the staging script work; nothing
+        # above proves `release.yml` still calls either of them, so editing the
+        # release back to an inline two-path upload would leave this job green and
+        # bring the round-3 blocker back with its first red run at a tag. Two greps,
+        # and the failure names the file to fix.
+        run: |
+          set -euo pipefail
+          # shellcheck disable=SC2016  # `$VERSION` here is release.yml's own shell
+          # variable, quoted literally so the grep matches the file's text.
+          for expected in \
+            'uses: ./.github/actions/upload-android-release' \
+            'run: scripts/ci/stage-release-assets.sh artifacts "$VERSION"'; do
+            grep -qF "$expected" .github/workflows/release.yml || {
+              echo "::error::release.yml no longer contains: $expected"
+              echo "::error::this probe exercises that shape, so release.yml and the probe have drifted — fix release.yml (or the probe) rather than deleting this check."
+              exit 1
+            }
+          done
+          echo "release.yml still uploads through the shared action and stages through the shared script"
+
       - name: Assert the store steps' paths resolve
         # The half that the store steps consume: the Fastfile reads
         # `LO_ANDROID_AAB` by path and globs `LO_IOS_IPA_DIR/*.ipa`, so a staging
