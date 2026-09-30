@@ -1,0 +1,54 @@
+name: Stage and upload the signed Android artefacts
+description: >
+  Copy this job's two Gradle outputs into one directory and upload that directory
+  as the `android-release` artefact.
+
+  WHY ONE DIRECTORY AND NOT TWO PATHS. `actions/upload-artifact` does not use the
+  workspace as the artefact root when a step names more than one path — it uses
+  their LEAST COMMON ANCESTOR (`findFilesToUpload`, identical in v4…v7). Uploading
+  `android/app/build/outputs/bundle/release/app-release.aab` and
+  `android/app/build/outputs/apk/release/app-release.apk` therefore roots the
+  artefact at `android/app/build/outputs`, and the download materialises
+  `artifacts/bundle/release/app-release.aab` and `artifacts/apk/release/app-release.apk`
+  — not the flat layout `release.yml`'s staging step expects, so every tagged
+  release failed there (review round 3, B1; the round-2 fix had moved the failure
+  one step earlier rather than removing it). Copying into one directory first makes
+  the root that directory, so both entries land at the artefact root, which is the
+  layout the staging step and the store steps were written for.
+
+  This action exists so the release job and `ci.yml`'s `release-staging` probe
+  upload in exactly the same shape: a probe that re-spells the block it is testing
+  cannot catch the block drifting away from it.
+inputs:
+  aab:
+    description: Path to the signed AAB, as Gradle wrote it.
+    required: true
+  apk:
+    description: Path to the signed APK, as Gradle wrote it.
+    required: true
+  name:
+    description: Artefact name to upload under.
+    required: false
+    default: android-release
+runs:
+  using: composite
+  steps:
+    - name: Copy both outputs into one staging directory
+      shell: bash
+      run: |
+        set -euo pipefail
+        staging="$RUNNER_TEMP/android-release"
+        rm -rf "$staging"
+        mkdir -p "$staging"
+        cp "${{ inputs.aab }}" "$staging/app-release.aab"
+        cp "${{ inputs.apk }}" "$staging/app-release.apk"
+        ls -l "$staging"
+    - uses: actions/upload-artifact@v7
+      with:
+        name: ${{ inputs.name }}
+        # A glob rather than the bare directory: with one directory path the root
+        # is that directory either way, and the glob states the intent — these
+        # entries, no subdirectories — so a future change to what Gradle writes
+        # cannot silently add a level to the download layout.
+        path: ${{ runner.temp }}/android-release/*
+        retention-days: 90

@@ -79,12 +79,12 @@ jobs:
           DISPATCH_TAG: ${{ inputs.tag }}
         run: |
           set -euo pipefail
-          if [ -n "${DISPATCH_TAG:-}" ]; then
+          if [ -n "$DISPATCH_TAG" ]; then
             # A hand-run release names its tag, because `github.ref_name` on a
             # `workflow_dispatch` is the branch the run was started from.
             tag="$DISPATCH_TAG"
           else
-            tag="${{ github.ref_name }}"
+            tag="$REF_NAME"
           fi
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
 
@@ -108,7 +108,7 @@ jobs:
             echo "| | |"
             echo "|---|---|"
             echo "| version | \`$(field version)\` |"
-            echo "| release build number (versionCode / CFBundleVersion) | \`$(field release_build_number)\` |"
+            echo "| published build number (versionCode / CFBundleVersion) | \`$(field release_build_number)\` |"
             echo "| an internal build of this commit claims | \`$(field internal_build_number)\` |"
             echo "| the previous release claimed | \`$(field previous_release_build_number)\` |"
             echo "| the floor this release had to beat | \`$(field minimum_release_build_number)\` |"
@@ -243,13 +243,16 @@ jobs:
           fi
 
       - name: Upload the signed artefacts
-        uses: actions/upload-artifact@v7
+        # Through the shared action, which stages both Gradle outputs into one
+        # directory first: naming two paths roots the artefact at their least
+        # common ancestor, which the download turns into
+        # `artifacts/bundle/release/…` (review round 3, B1). `ci.yml`'s
+        # `release-staging` probe uses this same action, so the shape cannot
+        # drift from the step that consumes it.
+        uses: ./.github/actions/upload-android-release
         with:
-          name: android-release
-          path: |
-            android/app/build/outputs/bundle/release/app-release.aab
-            android/app/build/outputs/apk/release/app-release.apk
-          retention-days: 90
+          aab: android/app/build/outputs/bundle/release/app-release.aab
+          apk: android/app/build/outputs/apk/release/app-release.apk
 
       - name: Remove the decoded keystore
         if: always()
@@ -417,19 +420,10 @@ jobs:
         # which version it is.
         env:
           VERSION: ${{ needs.version.outputs.version }}
-        run: |
-          set -euo pipefail
-          mv artifacts/app-release.aab "artifacts/local-operator-${VERSION}.aab"
-          mv artifacts/app-release.apk "artifacts/local-operator-${VERSION}.apk"
-          ipa=$(ls artifacts/*.ipa)
-          mv "$ipa" "artifacts/local-operator-${VERSION}.ipa"
-          for asset in aab apk ipa; do
-            test -s "artifacts/local-operator-${VERSION}.${asset}" || {
-              echo "::error::artifacts/local-operator-${VERSION}.${asset} is missing after staging"
-              exit 1
-            }
-          done
-          ls -l artifacts/
+        # The script, not three inline lines: `ci.yml`'s `release-staging` job runs
+        # the same file against a real upload/download round trip on every pull
+        # request, so a change to either half of this path is caught without a tag.
+        run: scripts/ci/stage-release-assets.sh artifacts "$VERSION"
 
       - name: Create the GitHub Release with the three artefacts
         env:
@@ -497,7 +491,7 @@ jobs:
             echo "| | |"
             echo "|---|---|"
             echo "| version | \`$VERSION\` |"
-            echo "| release build number (versionCode / CFBundleVersion) | \`$BUILD_NUMBER\` |"
+            echo "| published build number (versionCode / CFBundleVersion) | \`$BUILD_NUMBER\` |"
             echo "| GitHub Release | https://github.com/$REPOSITORY/releases/tag/$TAG |"
             echo
             echo "Attached: signed APK, signed AAB, IPA. Uploaded: Play internal track, TestFlight."

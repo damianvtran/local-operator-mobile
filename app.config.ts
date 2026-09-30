@@ -49,10 +49,11 @@ const BUNDLE_ID = "com.localoperator.mobile";
  *
  * Every build path in `.github/workflows` runs `scripts/ci/version.ts --write`
  * before `expo prebuild`, and that script exports these two values into the job:
- * the git tag supplies the human-facing version, and `github.run_number`
- * supplies the build number, because both stores compare the latter and reject a
- * non-monotonic one. Nothing else may set them, or two builds of the same commit
- * could claim the same version.
+ * the git tag supplies the human-facing version, and the build number is the
+ * repository-global sequence `docs/ci.md` documents (an internal build claims the
+ * last release's counter plus the commits since; a release claims the counter
+ * itself) — never `github.run_number`, which is per workflow. Nothing else may set
+ * them, or two builds of the same commit could claim the same version.
  *
  * UNSET IS THE LOCAL CASE, and it is deliberately the previous behaviour: a
  * contributor's `expo start` or local `expo prebuild` sees no variables, so the

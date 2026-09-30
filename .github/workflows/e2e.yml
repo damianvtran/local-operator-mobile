@@ -119,33 +119,96 @@ jobs:
           echo "the harness is present in full: its package scripts and its Maestro flows"
 
   mock-relay-contract:
-    name: Mock relay contract and divergence checks (seconds)
+    name: Mock relay contract and divergence checks
     needs: harness
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # BOUND SIZED FROM A MEASUREMENT, NOT FROM HOPE (review round 3, M3). The
+    # harness documents `pnpm e2e:relay` as its slowest documented command — "the
+    # whole relay contract plus the canary's mutation self-test now runs ~18
+    # minutes — so the default bound is sized to it" (`tools/lib/doc-commands.ts`,
+    # `--timeout 1500`), and `tools/mock-relay/verify.ts` says "a healthy run of the
+    # mutation group takes fifteen minutes". A reviewer's own attempt on this host
+    # was killed at ~14 minutes *inside* the mutation group, on a machine at load
+    # 120-226. The 15-minute job bound this replaces could therefore only ever
+    # report a timeout. 30 minutes is the harness's own 25-minute internal bound
+    # plus room, so the command finishes or names itself.
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
 
-      # pnpm, but no install: the two tools below are plain Node with no
-      # dependencies, and the scripts are how the harness documents them
-      # (`docs/e2e/ci-notes.md` §1). pnpm itself is already on the runner image, the
-      # action just pins the version the lockfile names.
       - uses: pnpm/action-setup@v6
 
       - uses: actions/setup-node@v7
         with:
           node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install dependencies
+        # AN EXPLICIT INSTALL, because an implicit one was already happening: pnpm
+        # 12's `verify-deps-before-run` defaults to `install`, so the "no install"
+        # version of this job ran `pnpm e2e:relay` and pulled 631 packages into a
+        # tree that had none — a 746 MB `node_modules`, created without
+        # `--frozen-lockfile`, which is the one property every other job in this
+        # repository is careful about (round 3 addendum, measured). Making it
+        # explicit keeps the lockfile guarantee and puts the cost inside the budget
+        # where it can be seen.
+        run: pnpm install --frozen-lockfile
 
       # The mock's own proof: every assertion the verifier makes over the relay's
       # contract, which is what keeps the mock from drifting away from the relay it
       # re-implements. It prints its own assertion count — read that line rather than
       # a number written down here, which would drift the first time a check is
-      # added.
+      # added. Bounded inside the job's bound so a hang names this command instead of
+      # leaving a cancelled job with no output.
       - name: Assert the mock relay's contract
+        timeout-minutes: 25
         run: pnpm e2e:relay
 
       - name: Assert the harness agrees with the relay where it diverges on purpose
         run: pnpm e2e:divergences
+
+  docs-commands:
+    name: Every command the harness documents (nightly and on demand)
+    needs: harness
+    # WHY THIS IS NOT ON THE PULL-REQUEST PATH (`if:` below). It runs the whole of
+    # `docs/e2e/README.md`, whose slowest entry is the relay contract — ~18 minutes
+    # by the harness's own note — and that command already has its own job above. On
+    # a pull request the sweep would double the longest job in this workflow for no
+    # extra coverage; nightly it is exactly the check worth having, because it is the
+    # one that fails when a tool is renamed or a documented invocation goes stale
+    # (review m2's other half, and round 3's M3 for the bound).
+    #
+    # It exports the web build first: some documented commands declare a `web-build`
+    # prerequisite, and the harness prints SKIP *with the reason* rather than
+    # pretending — so without a `dist/` the sweep would honestly skip them, which is
+    # less than this job is for.
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Export the web target
+        # Same reason as `web-audit`: the harness drives the export, and the
+        # documented commands that need one are skipped without it.
+        timeout-minutes: 15
+        run: pnpm export:web
+
+      - name: Run every documented command
+        # The command's own default bound is 25 minutes (`--timeout 1500`), which is
+        # what fits inside this job's 60 with the export and the install ahead of it.
+        timeout-minutes: 40
+        run: pnpm e2e:docs
 
   web-audit:
     name: Web target — frames, audit and the canary
@@ -173,17 +236,19 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Type-check the harness and run its documented commands
+      - name: Type-check the harness
         # Review m2, and the harness's own §0: `pnpm typecheck` covers the app and
         # `scripts/**`, so `tools/**` and `e2e/**` would otherwise be checked by
-        # nothing. `e2e:typecheck` is their gate, and `e2e:docs` runs every command
-        # `docs/e2e/README.md` names, so a renamed tool or a stale invocation fails
-        # here rather than in a reader's shell. Both need the install this job has
-        # already done.
-        timeout-minutes: 5
-        run: |
-          pnpm e2e:typecheck
-          pnpm e2e:docs
+        # nothing. This is their gate, and it is seconds.
+        #
+        # `e2e:docs` USED TO RUN HERE AND NO LONGER DOES. It executes every command
+        # `docs/e2e/README.md` names, and the slowest of those is `pnpm e2e:relay` —
+        # ~18 minutes by the harness's own note — so a 5-minute step bound could only
+        # ever report a timeout, while the relay command already has a job of its own
+        # above (review round 3, M3: the command also ran twice per push). The
+        # documented-command sweep still runs, nightly, in `docs-commands`.
+        timeout-minutes: 10
+        run: pnpm e2e:typecheck
 
       - name: Export the web target
         # The harness drives the EXPORT, not a dev server: the export is what a

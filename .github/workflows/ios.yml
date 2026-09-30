@@ -345,6 +345,30 @@ jobs:
     name: Are the Apple credentials configured?
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    # THE SAME ENVIRONMENT, AND THE SAME REF SCOPE, AS THE JOB IT GATES. This job
+    # exists to ask whether the secrets are configured, which means it has to read
+    # them — so it must sit behind the same protection as the signing job, or the
+    # claim in this workflow's header ("not even resolved for a job whose ref the
+    # environment's deployment-branch rule does not allow") stops being true of the
+    # workflow as a whole (review round 3, M2; measured: it ran and passed on the
+    # pull-request runs 36755424255 and 36755424075, outside any environment).
+    #
+    # `if:` as well as `environment:`, because the internal job is `main`-only: on a
+    # pull request there is nothing for this gate to decide, and resolving secrets
+    # to answer a question whose answer cannot change the run is cost with no
+    # benefit. So on a pull request this job does not run, and no secret is resolved
+    # anywhere in this workflow.
+    #
+    # WHAT THE ENVIRONMENT BUYS depends on how the operator configures it, and the
+    # repository has NO environments configured today — so right now it is a no-op
+    # and the secrets are repository-scoped (docs/ci.md, "Secrets"). Once `release`
+    # exists with a `main`/`v*` deployment-branch rule, the credentials stored in it
+    # are unreachable from a feature branch. If it is given required reviewers, this
+    # job will wait for approval BEFORE it can report — the same prompt the signing
+    # job already triggers, twice per release rather than once. A review-free
+    # environment with the same branch rule avoids that at no loss.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    environment: release
     outputs:
       all_present: ${{ steps.check.outputs.all_present }}
     steps:

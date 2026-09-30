@@ -103,7 +103,7 @@ if (missing.length > 0) {
 	// `all_present`), so a run without credentials has no green tick claiming a
 	// signature — see docs/ci.md, "Secrets".
 	console.log(
-		`::warning::${summary}. The signing jobs are SKIPPED for this push, so ` +
+		`::warning::${summary}. The jobs that sign and upload are gated on this ` +
 			"nothing was signed and nothing was uploaded. A tagged release FAILS " +
 			"rather than skipping.",
 	);

@@ -138,7 +138,13 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Derive the version from the ref
-        # `versionCode` is `github.run_number`, which is monotonic across every
+        # `versionCode` is what `scripts/ci/version.ts` derived above, from a
+        # repository-global sequence rather than from `github.run_number` — that
+        # counter is per workflow, so four workflows reached 30 independently while
+        # `release.yml` sat at 17 (measured 2026-09-30; docs/adr/0004-ci-cd.md's
+        # versioning table is the design record and no longer the implementation).
+        # Asserted here, from the built manifest, because the plumbing that carries
+        # it is exactly what review round 1's blocker found not working.
         # build of the repository and never reused — the one property Play
         # enforces at upload time. `--no-install` keeps prebuild from touching
         # the frozen lockfile.
@@ -217,6 +223,30 @@ jobs:
     name: Are the signing credentials configured?
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    # THE SAME ENVIRONMENT, AND THE SAME REF SCOPE, AS THE JOB IT GATES. This job
+    # exists to ask whether the secrets are configured, which means it has to read
+    # them — so it must sit behind the same protection as the signing job, or the
+    # claim in this workflow's header ("not even resolved for a job whose ref the
+    # environment's deployment-branch rule does not allow") stops being true of the
+    # workflow as a whole (review round 3, M2; measured: it ran and passed on the
+    # pull-request runs 36755424255 and 36755424075, outside any environment).
+    #
+    # `if:` as well as `environment:`, because the internal job is `main`-only: on a
+    # pull request there is nothing for this gate to decide, and resolving secrets
+    # to answer a question whose answer cannot change the run is cost with no
+    # benefit. So on a pull request this job does not run, and no secret is resolved
+    # anywhere in this workflow.
+    #
+    # WHAT THE ENVIRONMENT BUYS depends on how the operator configures it, and the
+    # repository has NO environments configured today — so right now it is a no-op
+    # and the secrets are repository-scoped (docs/ci.md, "Secrets"). Once `release`
+    # exists with a `main`/`v*` deployment-branch rule, the secrets stored in it are
+    # unreachable from a feature branch. If it is given required reviewers, this job
+    # will wait for approval BEFORE it can report — the same prompt the signing job
+    # already triggers, twice per release rather than once. A review-free environment
+    # with the same branch rule avoids that at no loss.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    environment: release
     outputs:
       all_present: ${{ steps.check.outputs.all_present }}
     steps:

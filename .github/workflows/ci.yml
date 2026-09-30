@@ -233,16 +233,15 @@ jobs:
           find . -name 'app-release.*' -o -name 'exported.ipa' | sort
 
       - name: Upload them exactly as release.yml does
-        # This block is release.yml's, minus the artefact NAME (a probe artefact must
-        # not be mistakable for a release one). When the release changes how it
-        # uploads, this must change with it — release.yml cites this job.
-        uses: actions/upload-artifact@v7
+        # The release's OWN action, with the artefact name changed (a probe artefact
+        # must not be mistakable for a release one). Single-sourced on purpose: a
+        # probe that re-spells the upload block cannot catch that block drifting
+        # away from the staging step it feeds.
+        uses: ./.github/actions/upload-android-release
         with:
+          aab: android/app/build/outputs/bundle/release/app-release.aab
+          apk: android/app/build/outputs/apk/release/app-release.apk
           name: android-release-probe
-          path: |
-            android/app/build/outputs/bundle/release/app-release.aab
-            android/app/build/outputs/apk/release/app-release.apk
-          retention-days: 1
 
       - name: Upload the IPA exactly as release.yml does
         uses: actions/upload-artifact@v7
@@ -286,7 +285,7 @@ jobs:
           test -s "$LO_ANDROID_AAB" || { echo "::error::LO_ANDROID_AAB does not resolve: $LO_ANDROID_AAB"; exit 1; }
           ipas=("$LO_IOS_IPA_DIR"/*.ipa)
           test "${#ipas[@]}" -eq 1 || { echo "::error::the IPA glob found ${#ipas[@]} files, expected 1"; exit 1; }
-          echo "LO_ANDROID_AAB -> $(ls -l "$LO_ANDROID_AAB" | awk '{print $5" bytes"}')"
+          echo "LO_ANDROID_AAB -> $LO_ANDROID_AAB ($(wc -c < "$LO_ANDROID_AAB") bytes)"
           echo "LO_IOS_IPA_DIR -> ${ipas[0]}"
 
   design-kit:

@@ -14,7 +14,7 @@ view — what runs, what it needs, and what to do when it goes red.
 | `ci.yml` | `pull_request`, push to `main`, weekly, `workflow_dispatch`, `workflow_call` | `changes`, `checks`, `design-kit` | The JavaScript typechecks (both programs), lints, formats and its unit tests pass; the web target bundles. `design-kit` costs a macOS runner plus a `brew install`, so it is path-gated by the same `changes` pattern the native jobs use — it runs on a pull request only when `design/**`, `docs/design/**`, `src/ui/**`, `scripts/**` or the configs changed, and always on `main`, on the weekly sweep and inside a release gate. Green there means the generated styling layer matches `design/tokens/tokens.json`, the contrast contract holds, and every committed asset re-renders (bytes first, pixels second, with the comparison that passed printed). **The preview-sheet step reports `NOT VERIFIED` on a clean runner** — it renders with the shipped typefaces (Figtree, JetBrains Mono), which live in a sibling checkout a runner does not have — and that step is green only because it downgrades its claim to a warning rather than failing. Say "design-kit passed" with that caveat, or run the gate locally where the faces exist. |
 | `android.yml` | `pull_request`, push to `main`, `workflow_dispatch` | `changes`, `android`, `internal` (main only) | `expo prebuild` produces the Android project from the config, Gradle assembles a debug APK, **the APK's manifest carries the version the ref derives** (`versionName`/`versionCode` read out of the built APK and asserted), and the generated project re-generates identically (byte for byte, except that Xcode project files are compared with their object identifiers normalized — see below). On `main`, additionally an AAB/APK whose release certificate is verified **not** to be the debug key, and, when configured, a Play **internal** track upload. |
 | `ios.yml` | `pull_request`, push to `main`, `workflow_dispatch` | `changes`, `ios`, `internal` (main only) | The app builds for the iOS 26 SDK with Xcode 26 on `macos-26`, **launches on a simulator**, and the captured frame **rendered something** — it differs from a pre-install capture of the home screen, and the launch log carries no JavaScript fatal (the check that caught a real crash on a head where the app had no routes). The settle delta between two captures two seconds apart is **reported, not asserted**, in pixel-channel bytes: a byte-identity gate was tried and removed because a working UI with a caret moves (measured, run 36727261140). The version in the built app's `Info.plist` is asserted against the one the ref derived, and the native project re-generates identically. Content is not judged here — a wrong screen renders just as green. On `main`, additionally a signed IPA and, when configured, a TestFlight upload. |
-| `e2e.yml` | `pull_request`, push to `main`, nightly, `workflow_dispatch` | `harness`, `mock-relay-contract`, `web-audit`, `maestro-android` | **The harness was present and its suites ran** — the `harness` job FAILS when it is absent rather than skipping, so a green `e2e` cannot mean "the thing did not run". Then: `pnpm e2e:relay` (which prints its own assertion count — quote that line, not a number written here), `pnpm e2e:divergences`, `pnpm e2e:typecheck` and `pnpm e2e:docs` (the only typecheck `tools/**` and `e2e/**` get — `pnpm typecheck` covers the app and `scripts/**` only), the web export driven in headless Chrome into a frame per audit cell with every frame checked against the design kit's rubric, and `pnpm e2e:canary`. **Every command goes through the harness's own package scripts**, never a file path, so a rename inside the harness cannot silently disable this workflow. Maestro runs the flow set on an Android 16 emulator — nightly and on demand only, because it is the slowest job here and the harness's own note asks for it that way; it is the one job allowed to be absent from a green PR run. |
+| `e2e.yml` | `pull_request`, push to `main`, nightly, `workflow_dispatch` | `harness`, `mock-relay-contract`, `docs-commands`, `web-audit`, `maestro-android` | **The harness was present and its suites ran** — the `harness` job FAILS when it is absent rather than skipping, so a green `e2e` cannot mean "the thing did not run". Then: `pnpm e2e:relay` in its own job (which prints its own assertion count — quote that line, not a number written here) and `pnpm e2e:divergences`; `pnpm e2e:typecheck` in the audit job (the only typecheck `tools/**` and `e2e/**` get — `pnpm typecheck` covers the app and `scripts/**` only); the web export driven in headless Chrome into a frame per audit cell with every frame checked against the design kit's rubric, and `pnpm e2e:canary`. **Every command goes through the harness's own package scripts**, never a file path, so a rename inside the harness cannot silently disable this workflow. **The bounds come from measurements, not from hope**: `pnpm e2e:relay` is the harness's slowest documented command — its own note says the contract plus the canary's mutation self-test "runs ~18 minutes" and sizes its default bound at 25 (`--timeout 1500`), and a reviewer's attempt on this host was killed at ~14 minutes inside the mutation group at load 120-226 — so that job gets 30 minutes and the step 25, rather than the 15 minutes it had, which could only ever report a timeout. `pnpm e2e:docs` (every command `docs/e2e/README.md` names, the relay one included) runs only in the nightly `docs-commands` job; on a pull request it would double the longest job for no extra coverage. The relay job installs explicitly with `--frozen-lockfile`, because the implicit install pnpm 12 performs before a script (`verify-deps-before-run`) was already happening: measured, a "no install" job pulled 631 packages into a tree that had none. Maestro runs the flow set on an Android 16 emulator — nightly and on demand only, because it is the slowest job here and the harness's own note asks for it that way; it is the one job allowed to be absent from a green PR run. |
 | `release.yml` | tag `v*` (or `workflow_dispatch` with a tag and `dry_run`) | `version`, `secrets`, `gate` (= `ci.yml`), `android`, `ios`, `publish` | The same gate a pull request runs, both platforms built and signed, a GitHub Release carrying the APK/AAB/IPA, and uploads to the Play internal track and TestFlight. |
 
 Native jobs are **skipped, not failed**, on a change that touches only
@@ -77,12 +77,24 @@ runs).
 They are **repository** secrets, and the jobs that use them are the only jobs
 that reference them:
 
-- `android.yml`/`ios.yml` expose them through a job that declares
-  `environment: release` and runs **only on a push to `main`**. A pull request
-  cannot reach that job, so a branch pushed here cannot print the key — the
-  security comes from the job, not from an `if:` on a step.
+- `android.yml`/`ios.yml` expose them through jobs that declare
+  `environment: release` and run **only on a push to `main`**. Each signing job is
+  behind that gate, and so is the `credentials` job that decides whether it can
+  run — that job has to read the secrets to answer the question, so it sits inside
+  the same environment rather than resolving them from every pull request (review
+  round 3, M2: it used to run on pull requests, which made this paragraph — and
+  the workflow headers quoting it — false). A pull request cannot reach either
+  job, so a branch pushed here cannot print the key: the security comes from the
+  environment, not from an `if:` on a step.
 - `release.yml` runs only on a tag, and its credential-bearing jobs also declare
   `environment: release`.
+
+**A cost of that arrangement, stated because it is a choice.** If the environment
+is given required reviewers, the `credentials` gate waits for approval *before* it
+can report, and the signing job waits again — two prompts per `main` push rather
+than one. A review-free environment with the same `main`/`v*` deployment-branch
+rule keeps the same protection against a feature branch reaching the secrets
+without the second prompt, and is the configuration this pipeline expects.
 
 Configure the environment with a **deployment branch rule of `main` and
 `v*` tags** (Settings → Environments → `release`). That rule is what makes the
@@ -248,8 +260,29 @@ it to the job:
 | Value | Rule |
 |---|---|
 | version (JS / `app.json` / Android `versionName` / iOS `CFBundleShortVersionString`) | `vX.Y.Z` without the `v` when the ref is a tag; `0.0.0` otherwise |
-| Android `versionCode`, iOS `CFBundleVersion`, internal builds | **the commit count of the ref being built** (`git rev-list --count HEAD`) — monotonic as the branch grows, identical for every workflow that builds the same commit, and stored nowhere |
-| Android `versionCode`, iOS `CFBundleVersion`, releases | **`release/build-number.txt`**, read as-is, and the release FAILS unless it is strictly greater than both the value at the previous tag and this commit's count |
+| Android `versionCode`, iOS `CFBundleVersion`, internal builds | **the last release's counter plus the commits since it** — `base + git rev-list --count <last release tag>..HEAD`, and before the first release simply the commit count of the ref. Monotonic as the branch grows, identical for every workflow building the same commit, and stored nowhere |
+| Android `versionCode`, iOS `CFBundleVersion`, releases | **`release/build-number.txt`**, read as-is, and the release FAILS unless it is strictly greater than what an internal build of the same commit would claim (`base + commits since the last release`) |
+
+**What `release/build-number.txt = 1000` is for, and why the internal arm counts
+from the last release.** Both publishers write into one store sequence — Play
+compares every upload's `versionCode` against everything already on the track —
+so the two arms have to agree on one ordering, and the file is the only value a
+release sets deliberately. `1000` is the first release's number: high enough to
+clear every internal build ever published before it (there were ~85 commits, so
+each of those claimed its own count) and a round number to bump from.
+
+The internal arm counts from the last release rather than from the counter's
+current value, which is what makes the sequence single. An internal build claims
+`base + commits since the last release`; a release claims the counter, which the
+release pull request sets above that same expression. So internal builds climb
+from each release's number up to the next one, and each release stops the climb
+and restarts it higher. Deriving the internal number from the counter's current
+value instead would collide at the bump commit: its internal upload claims exactly
+the number the release then publishes, and Play rejects the second one. Measured
+on a clone with a `v0.0.1` tag and the counter at 1000: the release claims 1000, a
+`main` push at that commit claims 1000, three commits later 1003, and a tag there
+is rejected until the counter reaches 1004 — the number the failure message
+prints.
 | Release notes | generated from the conventional commits since the previous tag (`scripts/ci/release-notes.ts`) |
 
 **Why the build number is not `github.run_number`** (this was a real defect, fixed
@@ -367,6 +400,7 @@ What that costs, concretely, and how each spend is gated:
 | `ios` (prebuild, pods, simulator build, launch, frame) | `macos-26` | the same `changes` job |
 | `internal` (signed AAB/IPA, store uploads) | both | push to `main` only |
 | `web-audit` (frames, rubric, canary) | `ubuntu-latest` | every PR, and it costs no macOS minutes: the harness's Chrome discovery has Linux candidates, which is why it moved off `macos-26` |
+| `mock-relay-contract` (the relay's contract, ~18 min) | `ubuntu-latest` | every PR. Minutes, not macOS minutes, but the longest job here; it runs once per push, and `pnpm e2e:docs` — which would run it a second time — is nightly and on demand |
 | Maestro flows | `ubuntu-latest` with KVM | nightly and on demand only |
 
 The two macOS spends that used to happen on every pull request — the design kit's

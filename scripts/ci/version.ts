@@ -11,45 +11,31 @@
  * `namespace`, no parameter properties, no decorators — anything that would need
  * emit) and nothing else.
  *
- * Why derived rather than committed (ADR 0004, "Versioning"): the tag is the one
- * source of truth; a version bumped inside a pull request is a version two
- * branches can disagree about (the sibling repositories spent hours serialising
- * releases that way); and both stores enforce a monotonic build number at upload
- * time.
+ * THE SCHEME IS DOCUMENTED IN `docs/ci.md`, "Versioning", and that is the copy to
+ * read: it explains why the number is derived rather than committed, why a run
+ * number cannot be one, and what `release/build-number.txt` is for. In short —
  *
- * THE BUILD NUMBER IS A REPOSITORY-GLOBAL COUNTER, WHICH A RUN NUMBER IS NOT.
- * `github.run_number` is "a unique number for each run of a PARTICULAR WORKFLOW"
- * (GitHub's wording), so Android, iOS, CI and E2E each reach 30 independently and
- * `release.yml` sat at 17 — a release cut there would claim a lower `versionCode`
- * than an internal build already uploaded from `main`, and Play rejects a lower
- * one. Measured 2026-09-30: all four workflows at 30, `release.yml` at 17, both
- * artefacts deriving 30. So:
+ *   * an internal build claims `base + commits since the last release`, where
+ *     `base` is the counter at the last `v*` tag (0 before the first release);
+ *   * a release claims the counter in `release/build-number.txt`, and this script
+ *     FAILS unless that number is strictly greater than what an internal build of
+ *     the same commit would claim. The failure names the minimum, so the fix is a
+ *     number rather than a search.
  *
- *   * an internal or pull-request build takes its number from the repository:
- *     the commit count of the ref it builds. Monotonic as the branch grows,
- *     identical for every workflow building the same commit, stored nowhere;
- *   * a RELEASE takes its number from the counter file
- *     (`release/build-number.txt`), which the release pull request bumps, and
- *     this script FAILS unless that number is strictly greater than both the
- *     value at the previous tag and the commit count of the commit being tagged.
- *     The failure names the minimum it needs, so the fix is a number rather than
- *     a search.
+ * Why the internal arm counts from the last release and not from the repository
+ * root or from the counter's own value: both publishers write to one store
+ * sequence, and a release must be strictly above every internal build that came
+ * before it. Counting from the last release makes that true by construction — the
+ * release's number is the bump the internal builds have been climbing toward, and
+ * each release restarts the climb from its own value. Deriving the internal number
+ * from the counter's CURRENT value instead would collide at the bump commit, whose
+ * internal upload claims exactly the counter the release then publishes.
  *
- * A re-run of an internal build of the same commit therefore repeats its number;
- * Play rejects a duplicate upload, so re-publishing needs a new commit — or, for
- * a release, the counter bump the failure message asks for. That is deliberate: a
- * number that changes while the code does not is a number nobody can trace back
- * to a build.
- *
- * WHY THE NON-TAG VERSION IS `0.0.0` AND NOT `0.0.0-dev.<number>`. The ADR writes
- * the JavaScript version as `0.0.0-dev.<run_number>`, but the value that leaves
- * this script is also the one `app.config.ts` writes into the native projects:
- * the same string becomes Android's `versionName` and iOS's
- * `CFBundleShortVersionString`. Apple rejects a non-numeric short version at
- * upload, so a `-dev` suffix would make the internal TestFlight upload fail on
- * every push to `main` — and a build-number-only distinction is exactly what a
- * store wants for an internal build. The dev string is still reported as
- * `display_version`, for summaries. See docs/ci.md, "Versioning".
+ * A re-run of an internal build of the same commit claims the same number; Play
+ * rejects a duplicate upload, so re-publishing needs a new commit — or, for a
+ * release, the counter bump the failure message asks for. That is deliberate: a
+ * number that moves while the code does not is a number nobody can trace to a
+ * build.
  *
  * No third-party dependency: this runs before `pnpm install` in every job, so it
  * must work on a bare checkout.
@@ -65,9 +51,11 @@ const TAG = /^v(?<major>\d+)\.(?<minor>\d+)\.(?<patch>\d+)$/;
 
 const PLACEHOLDER_VERSION = "0.0.0";
 
-/** The committed counter a release reads, and the release pull request bumps.
- * Beside the Fastfile rather than at the repository root: it is release
- * machinery, and `release/` is where a reader looks for it. */
+/**
+ * Where the release counter lives. A committed file rather than a secret, a
+ * store query or a workflow input: it is the one value a release must set
+ * deliberately, and a diff is where a deliberate decision belongs.
+ */
 const DEFAULT_COUNTER = "release/build-number.txt";
 
 export type Derived = {
@@ -80,12 +68,12 @@ export type Derived = {
 export type Ref = {
 	refType: string;
 	refName: string;
-	/** Commit count of the built ref: the build number of a non-release build. */
-	commitCount: number;
-	/** The counter's value, when this ref is a release tag. */
+	/** The counter at the last release tag, or 0 before the first release. */
+	base: number;
+	/** Commits since that tag: the increment an internal build claims. */
+	commitsSinceLastRelease: number;
+	/** The counter's value in this tree, when this ref is a release tag. */
 	releaseBuildNumber: number | null;
-	/** The counter's value at the previous tag, or 0 when there is none. */
-	previousReleaseBuildNumber: number;
 	/** Where the counter lives: named in the failure message, so the fix needs no search. */
 	counterPath: string;
 };
@@ -110,22 +98,25 @@ const parseTag = (refName: string): [number, number, number] | null => {
  * Throws rather than inventing a build number: both stores compare it, so a
  * build without one is not uploadable and a guessed value would be worse than a
  * failed run. It throws just as hard about a release whose number would not
- * outrank what has already been published — that failure is the one that would
- * otherwise arrive from Play, after the GitHub Release exists.
+ * outrank the internal builds already published from `main` — that failure is the
+ * one that would otherwise arrive from Play, after the GitHub Release exists.
  */
 export const derive = ({
 	refType,
 	refName,
-	commitCount,
+	base,
+	commitsSinceLastRelease,
 	releaseBuildNumber,
-	previousReleaseBuildNumber,
 	counterPath,
 }: Ref): Derived => {
-	if (!Number.isSafeInteger(commitCount) || commitCount <= 0) {
+	if (
+		!Number.isSafeInteger(commitsSinceLastRelease) ||
+		commitsSinceLastRelease < 0
+	) {
 		throw new Error(
-			"the commit count of this ref is not a positive integer, so there is no " +
-				"build number to derive. Check out with `fetch-depth: 0`: a shallow " +
-				"clone counts only the commits it fetched.",
+			"the number of commits since the last release is not a non-negative " +
+				"integer, so there is no build number to derive. Check out with " +
+				"`fetch-depth: 0`: a shallow clone counts only the commits it fetched.",
 		);
 	}
 	const isTag = refType === "tag";
@@ -139,44 +130,42 @@ export const derive = ({
 		);
 	}
 
-	let releaseNumber = 0;
-	if (isTag) {
-		if (releaseBuildNumber === null || releaseBuildNumber <= 0) {
-			throw new Error(
-				`a release needs its build number in ${counterPath} — both stores ` +
-					"compare it, and a run number is not a repository-wide counter.",
-			);
-		}
-		const minimum = Math.max(previousReleaseBuildNumber + 1, commitCount + 1);
-		if (releaseBuildNumber < minimum) {
-			throw new Error(
-				`the release build number ${releaseBuildNumber} is not greater than ` +
-					`${minimum}. It has to outrank both the previous release's ` +
-					`${previousReleaseBuildNumber} and this commit's count of ` +
-					`${commitCount} (internal builds use commit counts, so a release ` +
-					`must beat the builds already published from main). Set ` +
-					`${counterPath} to ${minimum} or higher in the release pull ` +
-					"request, then tag.",
-			);
-		}
-		releaseNumber = releaseBuildNumber;
-	}
+	/** What an internal build of this same commit claims. Both arms agree on it,
+	 * and it is the floor a release has to clear. */
+	const internalNumber = base + commitsSinceLastRelease;
 
-	const code = isTag ? releaseNumber : commitCount;
-	if (tag) {
-		const version = tag.join(".");
+	if (!isTag) {
 		return {
-			version,
-			displayVersion: version,
-			versionCode: String(code),
-			fromTag: true,
+			version: PLACEHOLDER_VERSION,
+			displayVersion: `${PLACEHOLDER_VERSION}-dev.${internalNumber}`,
+			versionCode: String(internalNumber),
+			fromTag: false,
 		};
 	}
+
+	if (releaseBuildNumber === null || releaseBuildNumber <= 0) {
+		throw new Error(
+			`a release needs its build number in ${counterPath} — both stores ` +
+				"compare it, and a run number is not a repository-wide counter.",
+		);
+	}
+	const minimum = internalNumber + 1;
+	if (releaseBuildNumber < minimum) {
+		throw new Error(
+			`the release build number ${releaseBuildNumber} is not greater than ` +
+				`${internalNumber}, which is what an internal build of this commit ` +
+				`claims (${base} at the last release + ${commitsSinceLastRelease} ` +
+				`commits since). Set ${counterPath} to ${minimum} or higher in the ` +
+				"release pull request, then tag: Play rejects an upload whose " +
+				"versionCode is not strictly greater than one already published.",
+		);
+	}
+	const version = tag?.join(".") ?? PLACEHOLDER_VERSION;
 	return {
-		version: PLACEHOLDER_VERSION,
-		displayVersion: `${PLACEHOLDER_VERSION}-dev.${code}`,
-		versionCode: String(code),
-		fromTag: false,
+		version,
+		displayVersion: version,
+		versionCode: String(releaseBuildNumber),
+		fromTag: true,
 	};
 };
 
@@ -192,30 +181,11 @@ const message = (error: unknown): string =>
 const git = (args: string[], quiet = false): string =>
 	execFileSync("git", args, {
 		encoding: "utf8",
-		// `describe` with no tags prints `fatal: No names found` on stderr, and that
-		// is a legitimate answer here (there is no previous release to outrank), so
-		// the optional lookups silence it rather than putting a fatal line in the
-		// log of every first release.
+		// Optional lookups (a tag list with no releases in it, a counter file that
+		// a pre-release tag predates) silence stderr rather than putting a fatal
+		// line in the log of a legitimate first release.
 		stdio: ["ignore", "pipe", quiet ? "ignore" : "inherit"],
 	}).trim();
-
-/**
- * The repository-global build number: how many commits this ref has.
- *
- * A shallow clone would count only what it fetched, and silently derive a number
- * that is too low — the exact failure mode this whole scheme exists to prevent —
- * so it is refused rather than corrected.
- */
-const commitCount = (ref: string): number => {
-	if (git(["rev-parse", "--is-shallow-repository"]) === "true") {
-		throw new Error(
-			"this is a shallow clone, so a commit count would be the count of what " +
-				"was fetched rather than of the repository. Check out with " +
-				"`fetch-depth: 0`.",
-		);
-	}
-	return Number(git(["rev-list", "--count", ref]));
-};
 
 /** A counter file's value, in the working tree or (with `ref`) at a revision. */
 const counterAt = (path: string, ref?: string): number => {
@@ -231,47 +201,86 @@ const counterAt = (path: string, ref?: string): number => {
 };
 
 /**
- * The counter's value at the release before this one.
+ * The release this build is measured from: the highest `v*` tag that is an
+ * ancestor of the ref being built, its counter, and the commits since it.
  *
- * `0` when there is no previous tag, and also when that tag predates the counter
- * file's introduction — in which case there is nothing published to outrank and
- * the commit-count floor still applies. Both are printed by the run summary, so
- * which of the two it was is visible rather than assumed.
+ * Resolved from the TAG LIST rather than from `git describe <tag>^` (review round
+ * 3, m2): on the `workflow_dispatch` path the tag is free text that may not exist
+ * yet — `gh release create` would create it — and a tagless lookup returned 0,
+ * silently dropping the one floor the release arm exists to enforce. `git tag -l`
+ * answers for a tag that does not exist by simply not listing it, which is the
+ * honest answer rather than a comparison against nothing.
+ *
+ * `exclude` is the tag being cut, so a release is measured against the release
+ * BEFORE it rather than against itself.
  */
-const previousCounter = (path: string, tag: string): number => {
-	let previousTag: string;
-	try {
-		previousTag = git(["describe", "--tags", "--abbrev=0", `${tag}^`], true);
-	} catch {
-		return 0;
+export const lastRelease = (
+	path: string,
+	ref: string,
+	exclude: string | null,
+): { tag: string | null; base: number; commitsSince: number } => {
+	const tags = git(["tag", "--sort=-v:refname", "-l", "v*"], true)
+		.split("\n")
+		.filter((name) => name !== "" && name !== exclude);
+	for (const candidate of tags) {
+		if (!TAG.test(candidate)) continue;
+		try {
+			// `-v:refname` is a semver-ish sort, not an ancestry test: a tag cut on a
+			// sibling branch would otherwise be treated as this build's base.
+			git(["merge-base", "--is-ancestor", candidate, ref], true);
+		} catch {
+			continue;
+		}
+		let base = 0;
+		try {
+			base = counterAt(path, candidate);
+		} catch {
+			// A tag that predates the counter file: nothing was published to outrank,
+			// so the climb simply starts from zero. Reported as `base=0`, so which of
+			// the two cases it was is visible in the run rather than assumed.
+			base = 0;
+		}
+		return {
+			tag: candidate,
+			base,
+			commitsSince: Number(
+				git(["rev-list", "--count", `${candidate}..${ref}`]),
+			),
+		};
 	}
-	try {
-		return counterAt(path, previousTag);
-	} catch {
-		return 0;
-	}
+	return {
+		tag: null,
+		base: 0,
+		commitsSince: Number(git(["rev-list", "--count", ref])),
+	};
 };
 
 const refType = arg("ref-type", process.env.GITHUB_REF_TYPE ?? "");
 const refName = arg("ref-name", process.env.GITHUB_REF_NAME ?? "");
 const counterPath = arg("counter", DEFAULT_COUNTER);
+const ref = arg("ref", "HEAD");
 
 let derived: Derived;
-let count = 0;
-let previousReleaseBuildNumber = 0;
+let release: { tag: string | null; base: number; commitsSince: number };
 let releaseBuildNumber: number | null = null;
 try {
-	count = commitCount("HEAD");
+	if (git(["rev-parse", "--is-shallow-repository"]) === "true") {
+		throw new Error(
+			"this is a shallow clone, so a commit count would be the count of what " +
+				"was fetched rather than of the repository. Check out with " +
+				"`fetch-depth: 0`.",
+		);
+	}
+	release = lastRelease(counterPath, ref, refType === "tag" ? refName : null);
 	if (refType === "tag") {
 		releaseBuildNumber = counterAt(counterPath);
-		previousReleaseBuildNumber = previousCounter(counterPath, refName);
 	}
 	derived = derive({
 		refType,
 		refName,
-		commitCount: count,
+		base: release.base,
+		commitsSinceLastRelease: release.commitsSince,
 		releaseBuildNumber,
-		previousReleaseBuildNumber,
 		counterPath,
 	});
 } catch (error) {
@@ -288,12 +297,15 @@ const lines = [
 
 // Printed, not exported: they are the numbers behind the derivation, and the
 // table is what makes a dry run of the release path readable ("the number it
-// would publish for main versus for a tag") without a store to compare against.
+// would claim for main versus for a tag") without a store to compare against.
+const minimum = release.base + release.commitsSince + 1;
 const diagnostics = [
-	`internal_build_number=${count}`,
+	`base_release_number=${release.base}`,
+	`base_release_tag=${release.tag ?? "none"}`,
+	`commits_since_last_release=${release.commitsSince}`,
+	`internal_build_number=${release.base + release.commitsSince}`,
 	`release_build_number=${releaseBuildNumber ?? "none"}`,
-	`previous_release_build_number=${previousReleaseBuildNumber}`,
-	`minimum_release_build_number=${Math.max(previousReleaseBuildNumber + 1, count + 1)}`,
+	`minimum_release_build_number=${minimum}`,
 	`counter_file=${counterPath}`,
 ];
 

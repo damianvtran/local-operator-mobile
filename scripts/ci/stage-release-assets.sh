@@ -25,8 +25,17 @@ version="${2:?usage: stage-release-assets.sh <artifacts-dir> <version>}"
 # `app-release.apk` tells a reader nothing about which app or which version it is.
 mv "$dir/app-release.aab" "$dir/local-operator-${version}.aab"
 mv "$dir/app-release.apk" "$dir/local-operator-${version}.apk"
-ipa=$(ls "$dir"/*.ipa)
-mv "$ipa" "$dir/local-operator-${version}.ipa"
+# `nullglob` so a missing IPA is an empty list rather than the literal pattern
+# `...*.ipa`, which would then be renamed to (and tested as) a file that cannot
+# exist — the difference between "the glob found nothing" and "the glob found a
+# file called *.ipa" is the whole value of this assertion.
+shopt -s nullglob
+ipas=("$dir"/*.ipa)
+if [ "${#ipas[@]}" -ne 1 ]; then
+  echo "::error::$dir holds ${#ipas[@]} .ipa files, expected exactly one"
+  exit 1
+fi
+mv "${ipas[0]}" "$dir/local-operator-${version}.ipa"
 
 for asset in aab apk ipa; do
   test -s "$dir/local-operator-${version}.${asset}" || {
