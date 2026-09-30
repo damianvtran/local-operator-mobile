@@ -18,8 +18,8 @@ import {
 import { isSendKey } from "@/features/session/keyboard";
 
 import { CONTROL, composerAttachmentID, ROLE, SURFACE, state } from "@/ui/a11y";
-import { Button, Chip, Textarea } from "@/ui/components";
-import { cx } from "@/ui/variants";
+import { Button, Chip, Skeleton, Textarea } from "@/ui/components";
+import { chipClasses, cx } from "@/ui/variants";
 
 /**
  * A DOM keyboard event, narrowed to what this file reads.
@@ -99,8 +99,12 @@ export type ComposerProps = {
 	/** A refused start or a failed steer, stated beside the control that caused it. */
 	error: string | null;
 	queuedCount: number;
-	modelLabel: string;
-	effortLabel: string;
+	/** `null` until the projection reports one. NOT the noun: a chip labelled
+	 *  "model" is a control that names nothing, which reads as broken rather than as
+	 *  loading, so an unknown label renders the placeholder below (design round
+	 *  1, D6). */
+	modelLabel: string | null;
+	effortLabel: string | null;
 	onOpenModels: () => void;
 	onOpenEffort: () => void;
 	/** False when the selected model has no effort control: the chip is then
@@ -112,6 +116,44 @@ export type ComposerProps = {
 	slashSheet: React.ReactNode;
 	testID: string;
 };
+
+/**
+ * The chip's box while its label is unknown: the same pill, with the kit's
+ * skeleton bar inside it (§ 19 — `elevated`, pulsing, and never a bare spinner).
+ *
+ * It carries the chip's own testID, so a flow that addresses the lever keeps
+ * working the moment the label arrives, and it announces itself as BUSY rather
+ * than as a disabled control with a name — a screen reader hears that the value is
+ * still coming, which is the truth, instead of hearing a control called "model".
+ */
+const ChipPlaceholder = ({
+	label,
+	barClassName,
+	testID,
+}: {
+	label: string;
+	/** The bar's width, sized to the label it stands in for. */
+	barClassName: string;
+	testID: string;
+}) => (
+	/* A `Pressable`, not a `View`, for one measured reason: RN-web emits
+	 * `aria-disabled`/`aria-busy` from `accessibilityState` on its pressable
+	 * primitive and DROPS them on a plain view — so a placeholder built from a View
+	 * renders with no disabled and no busy state at all, which is an accessibility
+	 * regression against the chip it replaces (caught by this PR's own Q3 probe,
+	 * which reads the attribute before tapping). Disabled and without an `onPress`:
+	 * there is nothing to press until the value arrives. */
+	<Pressable
+		accessibilityRole={ROLE.button}
+		accessibilityLabel={label}
+		accessibilityState={state({ disabled: true, busy: true })}
+		className={chipClasses({ disabled: true })}
+		disabled
+		testID={testID}
+	>
+		<Skeleton lines={1} barClassName={cx("h-3 rounded-sm", barClassName)} />
+	</Pressable>
+);
 
 export const Composer = ({
 	controls,
@@ -395,23 +437,39 @@ export const Composer = ({
 					</Text>
 				) : null}
 				<View className="flex-1" />
-				<Chip
-					label={modelLabel}
-					onPress={onOpenModels}
-					accessibilityHint="Choose the model"
-					testID={CONTROL.composerModelChip}
-				/>
-				<Chip
-					label={effortLabel}
-					onPress={onOpenEffort}
-					disabled={!effortAvailable}
-					accessibilityHint={
-						effortAvailable
-							? "Choose the effort"
-							: "This model has no effort control"
-					}
-					testID={CONTROL.composerEffortChip}
-				/>
+				{modelLabel === null ? (
+					<ChipPlaceholder
+						label="Model, loading"
+						barClassName="w-16"
+						testID={CONTROL.composerModelChip}
+					/>
+				) : (
+					<Chip
+						label={modelLabel}
+						onPress={onOpenModels}
+						accessibilityHint="Choose the model"
+						testID={CONTROL.composerModelChip}
+					/>
+				)}
+				{effortLabel === null ? (
+					<ChipPlaceholder
+						label="Effort, loading"
+						barClassName="w-8"
+						testID={CONTROL.composerEffortChip}
+					/>
+				) : (
+					<Chip
+						label={effortLabel}
+						onPress={onOpenEffort}
+						disabled={!effortAvailable}
+						accessibilityHint={
+							effortAvailable
+								? "Choose the effort"
+								: "This model has no effort control"
+						}
+						testID={CONTROL.composerEffortChip}
+					/>
+				)}
 			</View>
 			{/* The receipt anchor `08-connection-loss-recovery` asserts after a send
 			    across a reconnect: it is the composer's own "the instruction left" mark. */}

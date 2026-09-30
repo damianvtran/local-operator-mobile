@@ -54,33 +54,67 @@ export const SubagentsPanel = ({
 }: SubagentsPanelProps) => {
 	if (subagents.empty) return null;
 	const queued = subagents.queued;
+	/* The summary names EVERY state the roster can hold, because the reader
+	 * reconciles it against the rows below: `1/6 running · 1 queued · 1 failed`
+	 * under six rows accounts for three of them, and the arithmetic then reads as a
+	 * bug in the panel (design round 1, D3). Only non-zero clauses appear — `0
+	 * parked` is noise — and the row WRAPS rather than clipping, so a full roster on
+	 * a 320 pt phone costs a second line instead of losing a count.
+	 *
+	 * Order is what a reader acts on: activity, then what is waiting on them, then
+	 * the ends. The failure count keeps the danger ink § 17 protects, and NO clause
+	 * is dimmed — § 17 spells the summary row as "never dimmed", and `ink-dim` is
+	 * dim, which is why the neutral clauses moved up to `ink-muted`. */
+	const clauses = [
+		{
+			key: "running",
+			text: `${subagents.running} running`,
+			inkClass: "text-ink-muted",
+		},
+		{ key: "queued", text: `${queued} queued`, inkClass: "text-ink-muted" },
+		{
+			key: "parked",
+			text: `${subagents.parked} parked`,
+			inkClass: "text-warning",
+		},
+		{
+			key: "failed",
+			text: `${subagents.failed} failed`,
+			inkClass: "text-danger",
+		},
+		{
+			key: "completed",
+			text: `${subagents.completed} done`,
+			inkClass: "text-ink-muted",
+		},
+		{
+			key: "cancelled",
+			text: `${subagents.cancelled} cancelled`,
+			inkClass: "text-ink-muted",
+		},
+	].filter((clause) => !clause.text.startsWith("0 "));
 
 	return (
 		<View className="border-t border-hairline" testID={testID}>
 			<Pressable
 				accessibilityRole={ROLE.button}
-				accessibilityLabel={`Subagents, ${subagents.running} of ${subagents.total} running`}
+				accessibilityLabel={`Subagents, ${subagents.total} agents, ${clauses
+					.map((clause) => clause.text)
+					.join(", ")}`}
 				accessibilityState={state({ expanded: open })}
 				onPress={onToggle}
 				testID={CONTROL.subagentsDisclosure}
 			>
-				<View className="min-h-11 flex-row items-center gap-2 px-4">
+				<View className="min-h-11 flex-row flex-wrap items-center gap-2 px-4 py-1">
 					<Text className="text-mono-sm text-ink-dim">subagents</Text>
-					{/* `running` counts RUNNING children only. The header used to print
-					    running + queued as "N running" beside a separate "M queued", so
-					    one queued child was counted twice (the 390 pt frame read
-					    "2/6 running · 1 queued" against a roster with ONE running). */}
 					<Text className="text-mono-sm text-ink-muted">
-						{subagents.running}/{subagents.total} running
+						{subagents.total} agents
 					</Text>
-					{queued > 0 ? (
-						<Text className="text-meta text-ink-dim">{queued} queued</Text>
-					) : null}
-					{subagents.failed > 0 ? (
-						<Text className="text-meta text-danger">
-							{subagents.failed} failed
+					{clauses.map((clause) => (
+						<Text key={clause.key} className={`text-meta ${clause.inkClass}`}>
+							{clause.text}
 						</Text>
-					) : null}
+					))}
 					<View className="flex-1" />
 					<Text className="text-ink-dim" aria-hidden>
 						{open ? "▾" : "▸"}

@@ -1,7 +1,7 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { ArrowLeft } from "lucide-react-native";
 import { useCallback, useMemo, useState } from "react";
-import { Text, View } from "react-native";
+import { Text, useWindowDimensions, View } from "react-native";
 import { Composer } from "@/features/session/components/composer";
 import { ConnectionBanner } from "@/features/session/components/connection-banner";
 import {
@@ -14,6 +14,7 @@ import { SubagentsPanel } from "@/features/session/components/subagents-panel";
 import { TodosPanel } from "@/features/session/components/todos-panel";
 import { TranscriptList } from "@/features/session/components/transcript-list";
 import { WorkingLine } from "@/features/session/components/working-line";
+import { headerTitleChars } from "@/features/session/header";
 import { pendingView } from "@/features/session/pending";
 import {
 	middleTruncate,
@@ -99,6 +100,14 @@ export default function Session() {
 	// activity, and a placeholder projection would be this screen inventing one.
 	const working = projection === null ? null : workingLine(projection);
 
+	/* The strip exists when it has something true to say: a context read, or a
+	 * roster. Not before — an empty band on every session is noise, and a band
+	 * showing `—` for an unknown number is worse than the noise. */
+	const hasStatus =
+		(projection?.context_tokens != null &&
+			projection?.context_window != null) ||
+		subagents.total > 0;
+
 	const pending = projection?.pending ?? null;
 	const pendingViewProps = useMemo(
 		() =>
@@ -137,8 +146,23 @@ export default function Session() {
 	const title = projection?.conversation_name ?? "";
 	/* The header name is MIDDLE-truncated with a floor, because the shipped web
 	 * client collapsed it to a single glyph at 200 % text (`R14`) — the two ends of
-	 * a session name are what distinguish it, so a truncation has to keep both. */
-	const headerTitle = title.length > 0 ? middleTruncate(title, 40) : "session";
+	 * a session name are what distinguish it, so a truncation has to keep both.
+	 *
+	 * The budget is the ROW's width, not a fixed 40 characters: at a fixed 40 the
+	 * truncation never ran for a real name, so a 25-character name reached the
+	 * layout whole and the platform clipped its tail (`Refactor th…` at 390,
+	 * `Refact…` at 320 — design round 1, D2). `headerTitleChars` derives it from
+	 * the viewport and the same column cap this screen renders inside, and the
+	 * header no longer carries a status chip for the name to compete with. */
+	const { width: viewportWidth, height: viewportHeight } =
+		useWindowDimensions();
+	const headerTitle =
+		title.length > 0
+			? middleTruncate(
+					title,
+					headerTitleChars({ width: viewportWidth, height: viewportHeight }),
+				)
+			: "session";
 
 	/* The panels, in one place: they sit between the transcript and the composer.
 	 * One panel at a time, because a phone's column has room for one and a tablet's is
@@ -210,45 +234,55 @@ export default function Session() {
 					icon={({ color, size }) => <ArrowLeft color={color} size={size} />}
 				/>
 			}
-			headerAction={
-				subagents.total > 0 ? (
-					<Chip
-						// Names the unit it counts, in the panel's own words, so the chip
-						// and the panel header cannot disagree: "1/6 agents" read as a
-						// fraction of something the reader could not see.
-						label={`${subagents.running} of ${subagents.total} running`}
-						onPress={() =>
-							setOpenPanel(openPanel === "subagents" ? null : "subagents")
-						}
-						accessibilityHint="Show the subagents"
-						// The header's panel lever. Its id is the contract's
-						// (`CONTROL.sessionSubagents`), like every other anchor on this
-						// screen: the drill-down flow addresses them by name, so a name
-						// that lives in the contract cannot drift from the flow.
-						testID={CONTROL.sessionSubagents}
-					/>
-				) : null
-			}
+			/* NO header action, deliberately. The subagents chip used to sit here and
+			   took 127 of a 390 pt row — measured — which is why the name was clipped at
+			   every phone width. The chip is status, the context strip is status, and
+			   the strip has room for both (design round 1, D2 and D8). */
 		>
-			{/* The status strip. Only rendered when the wire reports a number: a strip
-			    that showed `—` for unknown would be a row of noise on every session. */}
-			{projection?.context_tokens != null &&
-			projection?.context_window != null ? (
-				<View className="flex-row items-center gap-2 border-b border-hairline px-4 py-1">
-					<Text
-						className="text-mono-sm text-ink-dim"
-						testID={SURFACE.sessionContext}
-					>
-						{Math.round(
-							(projection.context_tokens / projection.context_window) * 100,
-						)}
-						% context
-						{projection.context_is_estimate === true ? " (est.)" : ""}
-					</Text>
-					{projection.cumulative_parent_cost != null ? (
-						<Text className="text-mono-sm text-ink-dim">
-							${projection.cumulative_parent_cost.toFixed(2)}
-						</Text>
+			{/* The status strip: every number the reader needs while reading, in one
+			    band. Only rendered when the wire reports something — a strip that showed
+			    `—` for unknown would be a row of noise on every session. `min-h-11` is
+			    the chip's own touch floor, so moving the chip in here costs no target
+			    size and the band is one row instead of two. */}
+			{hasStatus ? (
+				<View className="min-h-11 flex-row items-center gap-2 border-b border-hairline px-4">
+					{projection?.context_tokens != null &&
+					projection?.context_window != null ? (
+						<>
+							<Text
+								className="text-mono-sm text-ink-dim"
+								testID={SURFACE.sessionContext}
+							>
+								{Math.round(
+									(projection.context_tokens / projection.context_window) * 100,
+								)}
+								% context
+								{projection.context_is_estimate === true ? " (est.)" : ""}
+							</Text>
+							{projection.cumulative_parent_cost != null ? (
+								<Text className="text-mono-sm text-ink-dim">
+									${projection.cumulative_parent_cost.toFixed(2)}
+								</Text>
+							) : null}
+						</>
+					) : null}
+					<View className="flex-1" />
+					{subagents.total > 0 ? (
+						<Chip
+							// Names the unit it counts, in the panel's own words, so the chip
+							// and the panel header cannot disagree: "1/6 agents" read as a
+							// fraction of something the reader could not see.
+							label={`${subagents.running} of ${subagents.total} running`}
+							onPress={() =>
+								setOpenPanel(openPanel === "subagents" ? null : "subagents")
+							}
+							accessibilityHint="Show the subagents"
+							// The panel lever. Its id is the contract's
+							// (`CONTROL.sessionSubagents`), like every other anchor on this
+							// screen: the drill-down flow addresses them by name, so a name
+							// that lives in the contract cannot drift from the flow.
+							testID={CONTROL.sessionSubagents}
+						/>
 					) : null}
 				</View>
 			) : null}
@@ -340,9 +374,22 @@ export default function Session() {
 						error={pending === null ? composer.error : null}
 						queuedCount={projection?.queued_count ?? 0}
 						effortAvailable={effortLadder.length > 0}
-						modelLabel={chipModelLabel(projection?.model_label ?? "")}
+						/* `null` means UNKNOWN, and only an absent projection is unknown. A
+						   present projection that reports no model (or a model with no effort
+						   ladder) is a KNOWN state and says so: making that `null` put a spinner
+						   that never resolves on screen for every model without an effort
+						   control — this PR's own Q3 probe caught it. */
+						modelLabel={
+							projection === null
+								? null
+								: (chipModelLabel(projection.model_label) ?? "n/a")
+						}
 						effortLabel={
-							projection?.effort.length ? projection.effort : "effort"
+							projection === null
+								? null
+								: projection.effort.length > 0
+									? projection.effort
+									: "n/a"
 						}
 						onOpenModels={() => setModelsOpen(true)}
 						onOpenEffort={() => setEffortOpen(true)}
@@ -400,8 +447,11 @@ export default function Session() {
  * there is room to read it; the chip only has to say which model is on. Empty (a
  * session that has not reported one) reads as the word the reader taps to choose.
  */
-const chipModelLabel = (label: string): string => {
-	if (label.length === 0) return "model";
+const chipModelLabel = (label: string): string | null => {
+	// `null`, never the noun: before the first projection the chip would otherwise
+	// read literally "model" — a control that names nothing reads as broken rather
+	// than as loading (design round 1, D6). The composer renders the loading shape.
+	if (label.length === 0) return null;
 	const slash = label.lastIndexOf("/");
 	return slash >= 0 && slash < label.length - 1
 		? label.slice(slash + 1)

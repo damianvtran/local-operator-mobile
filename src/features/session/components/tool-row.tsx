@@ -28,6 +28,23 @@ import { cx } from "@/ui/variants";
  * The args block is dropped for the tools whose args ARE their diff
  * (`write`/`edit`/`apply_patch`/`patch`): showing both says the same thing twice
  * and pushes the diff — the part the reader wants — below the fold.
+ *
+ * **The row's three fills, stated here because the kit does not state them.**
+ * `components.md` § 15 defines the row's anatomy (glyph, name, summary, diff,
+ * elapsed, disclosure) and no fill at all, while this row paints two:
+ * `bg-elevated` while the action is unfinished (`running`, `queued`,
+ * `composing`) and `bg-danger-wash` when it failed; a done row sits on the canvas.
+ * The design round measured all three in the shipped frames and called the result
+ * coherent — an unfinished row is raised, a failed row is red, and the glyph
+ * carries the same fact so colour is never the only channel (§ 2.6) — but flagged
+ * that § 2.2 reserves `elevated` for "sheets, dialogs, popovers, hovered and
+ * pressed rows", so this is an EXTENSION rather than a reading of the kit.
+ *
+ * They are kept deliberately: a long transcript is scanned for "what is still
+ * moving" and "what broke", and a fill answers both without reading glyphs. The
+ * § 15 addition that would make them documented has been routed to the kit's owner
+ * (design round 1, D5) — this comment is the interim record on the component, not
+ * a second spec.
  */
 export type ToolRowProps = {
 	entry: TranscriptEntry;

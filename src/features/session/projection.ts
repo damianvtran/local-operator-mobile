@@ -358,7 +358,13 @@ const SUBAGENT_GLYPHS: Record<
 	running: { glyph: "⟳", inkClass: "text-accent" },
 	completed: { glyph: "✓", inkClass: "text-success" },
 	failed: { glyph: "✗", inkClass: "text-danger" },
-	parked: { glyph: "–", inkClass: "text-warning" },
+	/* `‖` for parked, `–` for cancelled, both as the shipped web client draws
+	 * them. The port had given both the same `–`, so the two end-states were
+	 * indistinguishable — and `–` is the kit's INTERRUPTED glyph (§ 17), which is
+	 * what a parked child is. Parity is the fix rather than a new codepoint: `‖`
+	 * (U+2016) is already proven in the shipped client, and § 17's "survives every
+	 * system font" rule is a rule about not adding characters lightly. */
+	parked: { glyph: "‖", inkClass: "text-warning" },
 	cancelled: { glyph: "–", inkClass: "text-ink-dim" },
 };
 
@@ -393,6 +399,13 @@ export interface SubagentProjection {
 	total: number;
 	queued: number;
 	failed: number;
+	/** The three states the summary used to omit. Named here rather than summed
+	 *  into one "other" bucket: the header's job is to be reconcilable against the
+	 *  roster, and a reader who counts 6 rows under a summary that accounts for 3
+	 *  concludes the panel is lying (design round 1, D3). */
+	parked: number;
+	completed: number;
+	cancelled: number;
 	empty: boolean;
 }
 
@@ -411,10 +424,16 @@ export const projectSubagents = (
 	let running = 0;
 	let queued = 0;
 	let failed = 0;
+	let parked = 0;
+	let completed = 0;
+	let cancelled = 0;
 	for (const row of subagents) {
 		if (row.status === "running") running += 1;
 		if (row.status === "queued") queued += 1;
 		if (row.status === "failed") failed += 1;
+		if (row.status === "parked") parked += 1;
+		if (row.status === "completed") completed += 1;
+		if (row.status === "cancelled") cancelled += 1;
 	}
 	return {
 		rows: subagents.map(subagentRowView),
@@ -424,6 +443,9 @@ export const projectSubagents = (
 		running,
 		queued,
 		failed,
+		parked,
+		completed,
+		cancelled,
 		total: subagents.length,
 		empty: subagents.length === 0,
 	};
