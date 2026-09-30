@@ -1098,6 +1098,53 @@ The canonical list a test matrix should cover, each with how it is reached:
    backoff-forever.
 7. **`new_conversation` / `resume_session` command ops are refused**; use the
    dedicated routes (§4.2).
+8. **There is no ask queue on this wire yet.** The projection carries one
+   `pending` slot (§6.7) and the ask path is blocking. A queued, timeout-bounded
+   ask model is designed and frozen elsewhere; §9 states what a client will see,
+   marked clearly as target state.
+
+---
+
+## 9. Queued asks (pending core land — target state, not shipped)
+
+> **This section is not the relay today.** Everything below is the frozen target
+> contract from the Local Operator repository's design note
+> (`docs/design/ask-nonblocking.md` §4), committed with the core's first
+> implementation pull request. Nothing here is on `fc851a94e` or on any relay a
+> client can reach now. Do not build against it without checking that the relay in
+> front of you publishes `asks`. The decisions for the native app are in
+> [`../adr/0005-queued-asks.md`](../adr/0005-queued-asks.md); the wire itself is
+> defined by the core and **never** here.
+
+What changes, in the terms the rest of this document uses:
+
+| Today (§6.7 / §4.2) | Target state |
+| --- | --- |
+| `SessionProjection.pending` — one `PendingRequest` slot, `pending_count` | unchanged for **approvals**; asks additionally arrive as `SessionProjection.asks: PendingAsk[]` (cap 20 newest, open first) plus `asks_open: int`. `pending`/`pending_count` keep meaning *blocking* requests |
+| `SessionListRow.pending_kind` (`"approval" \| "ask" \| ""`) | unchanged; the row gains `asks_open: int` |
+| `op ask_answer {request_id, value}` | `op ask_respond {ask_id, answers}`, plus `ask_decline {ask_id}` and `ask_dismiss {ask_id}`. A whole-ask body replaces the per-question value — the reason is that the current per-question form silently truncates a multi-select answer to `values[0]` |
+| ask states are implicit (waits, or is answered) | a per-ask `status` the client renders: `open \| answered \| declined \| timed_out \| late \| dismissed \| expired`, folded by the runtime from an append-only log |
+| no deadline | `expires_at`, `timeout_s`, `urgent` per ask; a late answer stays submitable until `expires_at + 7 d`, after which the ask reads `expired` |
+| one terminal transcript kind for an answer | new `EntryKind`s `ask_response` and `ask_timeout`, each with `details` carrying the ask id, the questions and the answers |
+| legacy single-slot mirror | for exactly one core release, when no approval is pending, the **head open ask's first unanswered question** is *also* projected as today's per-question card with `request_id = "<ask_id>.<qidx>"` — so a new core still serves an old app/web client. **Client rule:** once `asks` is present, a client **ignores any `pending_gate` whose `kind == "ask"`**, or the same ask renders twice |
+
+`PendingAsk` (fields a client consumes; the core's §4 governs): `ask_id`,
+`session_id`, `created_at`, `expires_at`, `timeout_s`, `urgent`, `status`,
+`answered_at`, `delivered` (bool — the rows *this* status requires are present;
+sticky), `questions[{id, question, options[{label, description, recommended}],
+multi, secret, persist}]`, `answers` (`{qid: [str]}`; for a secret question the
+array holds the vault key only, **never the value**), `answered_by` (`{surface}`).
+
+Two client-facing facts that are easy to get wrong:
+
+- **The presence of `asks` is the capability flag.** The core publishes the field
+  only while its non-blocking switch is on, so *field present* means "this relay
+  speaks queued asks" — an older relay omits the field exactly as a switched-off
+  core does, and a client must treat both the same way.
+- **Open asks are not session status.** `working`/`idle` stays activity-derived;
+  `asks_open` is the separate count a badge may use.
+
+---
 8. **`resume` does not restore the conversation's cwd** (it uses the account
    home, §4.5).
 9. **Image ingest is best-effort and silent.** `image_blocks` (`server.py:119-186`)

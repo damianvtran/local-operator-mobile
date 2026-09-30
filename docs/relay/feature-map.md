@@ -236,6 +236,8 @@ Recorded because a native client should not inherit a bug as a spec.
    says a TUI-mounted approval is answered at the terminal and the phone only
    shows the wait; `mobile/tui_handle.py:1212-1231` settles the TUI's prompt
    from the phone. The pending card's approve/deny is real on both session kinds.
+   *(For **asks**, this boundary is superseded outright once queued asks land —
+   see §7. The approval half stands.)*
 4. **`/api/sessions/past` takes no `limit`** (`daemon.py:4361-4371`), so a
    client cannot page the history list.
 5. **`resume` and a phone-started session run in the account home**
@@ -326,3 +328,36 @@ provider credentials: run an isolated daemon against a config whose
 last user message triggers tools (`[tool]`, `[bash:N]`, `[refuse]` —
 `local_operator/providers/clients.py:4602-4680`). That is how the tool-call,
 approval, steer and completion states in `fixtures/relay/` were produced.
+
+---
+
+## 7. Queued asks — target state (pending core land, **not shipped**)
+
+> Nothing in this section is on the relay today. It is the frozen target contract
+> from the Local Operator repository's design note
+> (`docs/design/ask-nonblocking.md` §4), and the decisions for this app are in
+> [`../adr/0005-queued-asks.md`](../adr/0005-queued-asks.md);
+> [`contract.md`](contract.md) §9 restates the wire change and marks it the same
+> way. The v1 priorities below are unchanged until the wire lands.
+
+Four rows above change shape when queued asks ship. Each keeps its priority; what
+changes is what the client reads and what it renders:
+
+| Row (in §1) | Today | Target state |
+| --- | --- | --- |
+| **Needs-attention badge** (§1.2, §3 case 6) | `needs_attention`, `pending_kind` (`"approval"`, `"ask"` or `""`) — one mark for both | the approval mark is unchanged; an **ask count** comes from the row's `asks_open`, rendered beside it and ranked below it. The list stops collapsing two different waits into one badge |
+| **Pending card** (§1.5, §3 case 10) | the single `pending` slot, `1 of N` counting every waiting request | unchanged for approvals; an **asks list** carries open asks, and a **response card** carries the Q&A of each terminal one. A client that sees `asks` must **ignore a mirrored `pending_gate` with `kind == "ask"`**, or the same ask draws twice |
+| **Ask answer** (composer → `ask_answer`) | `{request_id, value}` per question — a multi-select answer is silently truncated to its first value | `ask_respond {ask_id, answers}` for the **whole** ask, one form, submitted once; `ask_decline` / `ask_dismiss` beside it |
+| **Terminal transcript rows** (§1.5) | one answer row; no timeout state exists | two new `EntryKind`s, `ask_response` and `ask_timeout`, each expanding to the questions, the answers and the surface that gave them — the same record the agent sees |
+
+Per-ask state a client renders, from the wire `status` and nowhere else:
+`open` · `answered` · `declined` · `timed_out` · `late` · `dismissed` · `expired`.
+Copy is the core's shared copy contract; the app quotes it rather than writing its
+own (ADR 0005 §3).
+
+**Fixtures.** The states in §6's traceability table were captured at
+`fc851a94e`, before this wire existed, so T-17/T-19 and any new ask rows cannot be
+covered from `fixtures/relay/` alone. Until the core publishes `asks`, the
+evidence path is PR [#8](https://github.com/damianvtran/local-operator-mobile/pull/8)'s
+mock relay replaying frames built from the frozen §4 text — which is why E2 waits
+for it rather than guessing a shape.
