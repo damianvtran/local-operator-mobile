@@ -2,7 +2,7 @@
 
 ## Introduction
 
-Thank you for helping keep Local Operator Mobile secure. The app is a remote control for [Local Operator](https://github.com/damianvtran/local-operator) agent sessions running on your own computer — agents that can read files and run code there — so a weakness in the app can be a weakness in the machine it connects to. This policy explains how to report an issue and how we handle it.
+Thank you for helping keep the Local Operator mobile app secure. The app is a remote control for [Local Operator](https://github.com/damianvtran/local-operator) agent sessions running on your own computer — agents that can read files and run code there — so a weakness in the app can be a weakness in the machine it connects to. This policy explains how to report an issue and how we handle it.
 
 ## Supported Versions
 
@@ -47,4 +47,4 @@ For security questions, or help creating an advisory, email [contact@local-opera
 - [GitHub Security Advisories documentation](https://docs.github.com/en/code-security/security-advisories/working-with-repository-security-advisories/creating-a-repository-security-advisory)
 - [Local Operator security policy](https://github.com/damianvtran/local-operator/blob/main/SECURITY.md)
 
-Thank you for helping keep Local Operator Mobile secure.
+Thank you for helping keep the Local Operator mobile app secure.

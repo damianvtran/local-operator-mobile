@@ -2,7 +2,7 @@
 
 - **Status:** Proposed (for implementation)
 - **Date:** 2026-09-29
-- **Deciders:** Local Operator Mobile maintainers
+- **Deciders:** mobile app maintainers
 - **Supersedes:** none
 - **Related:** [ADR 0002 — Connection and authentication](0002-connection-and-auth.md), [ADR 0003 — E2E and audit harness](0003-e2e-and-audit-harness.md), [ADR 0004 — CI/CD](0004-ci-cd.md)
 
@@ -29,7 +29,7 @@ between the two documents by the commits in between.
 
 ## Context
 
-Local Operator Mobile is a **native iOS and Android client** for the `lop mobile`
+The mobile app is a **native iOS and Android client** for the `lop mobile`
 relay that ships with Local Operator (`relay` below). It is a public, MIT-licensed
 repository, written for a small team of maintainers and coding agents, and it must
 be buildable and testable **without a local Xcode or Android SDK** — neither is

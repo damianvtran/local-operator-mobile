@@ -45,26 +45,10 @@ const color = (path: string, theme: "light" | "dark"): string => {
 // operation, and nothing in the app depends on the value.
 const BUNDLE_ID = "com.localoperator.mobile";
 
-/* CI derives the version from the git tag; these two lines are the
- * local-development placeholder (ADR 0004, "Versioning"). `scripts/ci/version.mjs`
- * exports both variables, and every build workflow runs it before
- * `expo prebuild`, so a release's version is never a committed number that two
- * branches can disagree about.
- *
- * The placeholder is numeric (`0.0.0`) and deliberately NOT `0.0.0-dev.<run>`:
- * this value leaves here as Android's `versionName` and iOS's
- * `CFBundleShortVersionString`, and Apple rejects a non-numeric short version at
- * upload. Monotonicity rides on the build number instead, which is what both
- * stores actually compare. docs/ci.md, "Versioning", has the whole rule. */
-const version = process.env.LOCAL_OPERATOR_MOBILE_VERSION ?? "0.0.0";
-const buildNumber = Number(
-	process.env.LOCAL_OPERATOR_MOBILE_VERSION_CODE ?? "0",
-);
-
 const config: ExpoConfig = {
 	name: "Local Operator",
 	slug: "local-operator-mobile",
-	version,
+	version: "0.0.0",
 	// `scheme` is what makes `localoperator://s/<sessionId>` deep links resolve
 	// (docs/ux/flows.md § 11); expo-router derives its linking config from it.
 	scheme: "localoperator",
@@ -77,14 +61,6 @@ const config: ExpoConfig = {
 	ios: {
 		bundleIdentifier: BUNDLE_ID,
 		supportsTablet: true,
-		// CI exports APPLE_TEAM_ID for the signed archive; a contributor without it
-		// still gets a simulator build, which needs no signing at all. Spread rather
-		// than a conditional value, so an unset variable is genuinely ABSENT from the
-		// config instead of present and empty.
-		...(buildNumber > 0 ? { buildNumber: String(buildNumber) } : {}),
-		...(process.env.APPLE_TEAM_ID
-			? { appleTeamId: process.env.APPLE_TEAM_ID }
-			: {}),
 		// iOS 26 renders icons through Liquid Glass; the three appearances are
 		// authored assets (brand-kit § 6.4). The tinted variant is greyscale by
 		// definition — a coloured one is wrong, not merely worse.
@@ -96,9 +72,6 @@ const config: ExpoConfig = {
 	},
 	android: {
 		package: BUNDLE_ID,
-		// Monotonic across every build of the repository and never reused, which is
-		// the one property Play enforces at upload time (ADR 0004).
-		versionCode: buildNumber,
 		adaptiveIcon: {
 			foregroundImage:
 				"./design/app-icon/android/ic_launcher_foreground-432.png",
@@ -120,13 +93,6 @@ const config: ExpoConfig = {
 	},
 	plugins: [
 		"expo-router",
-		// Adds the release signing config the Expo template does not ship. Without
-		// it, `bundleRelease` produces an AAB signed with the debug key, which no
-		// store accepts. The plugin reads the keystore and its passwords from the
-		// environment and leaves the debug build untouched, so a contributor with no
-		// signing material can still build and test the app.
-		// See plugins/with-android-release-signing.js.
-		"./plugins/with-android-release-signing",
 		"expo-secure-store",
 		"expo-web-browser",
 		[

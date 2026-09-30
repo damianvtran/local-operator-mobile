@@ -19,8 +19,8 @@
 		"format:fix": "biome format --write .",
 		"test": "vitest run",
 		"test:watch": "vitest",
-		"theme:build": "node scripts/build-theme.mjs",
-		"theme:check": "node scripts/build-theme.mjs --check",
+		"theme:build": "node scripts/build-theme.ts",
+		"theme:check": "node scripts/build-theme.ts --check",
 		"contrast:check": "node design/tokens/contrast-contract.mjs",
 		"preset:check": "node design/tokens/build-preset.mjs --check"
 	},
@@ -55,8 +55,8 @@
 		"zustand": "5.0.15"
 	},
 	"devDependencies": {
-		"@types/node": "^26.6.3",
 		"@biomejs/biome": "2.5.14",
+		"@types/node": "24.19.0",
 		"@types/react": "^19.3.0",
 		"tailwindcss": "4.3.3",
 		"tsx": "4.23.15",

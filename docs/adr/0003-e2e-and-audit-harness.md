@@ -2,7 +2,7 @@
 
 - **Status:** Proposed (for implementation)
 - **Date:** 2026-09-29
-- **Deciders:** Local Operator Mobile maintainers
+- **Deciders:** mobile app maintainers
 - **Depends on:** [ADR 0001 — Framework](0001-framework.md), [ADR 0002 — Connection and auth](0002-connection-and-auth.md)
 - **Related:** [ADR 0004 — CI/CD](0004-ci-cd.md)
 

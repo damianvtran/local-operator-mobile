@@ -1,4 +1,4 @@
-# Contributing to Local Operator Mobile
+# Contributing to the Local Operator mobile app
 
 Thank you for your interest in contributing! Bug reports, feature ideas, documentation fixes, design feedback, and code are all welcome. By participating in this project you agree to abide by its [Code of Conduct](CODE_OF_CONDUCT.md), and your contributions are licensed under its [MIT License](LICENSE).
 

@@ -2,7 +2,7 @@
 
 - **Status:** Proposed (for implementation)
 - **Date:** 2026-09-29
-- **Deciders:** Local Operator Mobile maintainers
+- **Deciders:** mobile app maintainers
 - **Depends on:** [ADR 0001 — Framework and styling stack](0001-framework.md)
 - **Related:** [ADR 0003 — E2E and audit harness](0003-e2e-and-audit-harness.md)
 
@@ -126,7 +126,7 @@ loopback regex with a required port
   user is in the browser sheet, and the app must land the code whether the code
   arrives on the listener or through the browser session's own callback.
 
-### Option B — a dedicated “Local Operator Mobile” OAuth client with a private-use scheme
+### Option B — a dedicated mobile-app OAuth client with a private-use scheme
 
 Rejected for v1. It is not merely a registration: `validOAuthRedirect` admits only
 `https` exact matches and `native` + loopback `http`, so a private-use scheme needs
