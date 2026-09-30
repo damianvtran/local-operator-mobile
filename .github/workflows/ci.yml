@@ -1,0 +1,192 @@
+name: CI
+
+# The gate every pull request pays for, and the same gate on `main`.
+#
+# WHAT THIS WORKFLOW IS FOR. The primary development machine has no Xcode and no
+# Android SDK, and the native jobs live in android.yml and ios.yml — but the
+# *logic* of this app is JavaScript, and the fastest honest signal on a change is
+# still lint + types + unit tests + the web export. Those four run here, on
+# Linux, in minutes. A change that cannot typecheck or whose tests fail should
+# never be the reason a macOS runner was queued.
+#
+# ACTIONS ARE PINNED TWO WAYS, DELIBERATELY (ADR 0004, "Supply-chain hygiene"):
+#   * `actions/*`, `pnpm/action-setup` and `actions/setup-java` track a major tag
+#     (`checkout@v7`), because GitHub maintains them and a major tag is the
+#     conventional way to consume them;
+#   * every third-party action is pinned to a FULL COMMIT SHA with the release it
+#     corresponds to in a comment, because a compromised third-party action
+#     running in a release job holds the signing key. The SHA is the only pin a
+#     tag cannot be moved out from under.
+# `version` is omitted from pnpm/action-setup on purpose: the action reads
+# `packageManager` from package.json, so the pnpm version has exactly one home.
+#
+# NO PATH FILTER IN `on.paths`. A workflow excluded by a path filter does not
+# "skip" — it never runs, and a required check that never runs stays pending
+# forever, which is unreachable-for-merge. Expensive jobs are gated by an `if:`
+# on a `changes` job instead (android.yml and ios.yml do this); the jobs in this
+# file are cheap enough to run unconditionally.
+
+on:
+  push:
+    branches:
+      # `main` only. A feature branch with an open pull request would otherwise
+      # fire a `push` run and a `pull_request` run for one identical result.
+      - main
+  pull_request:
+  workflow_dispatch:
+  # Callable, so release.yml can run the SAME gate a pull request runs rather
+  # than a second copy of it. "What shipped == what CI ran" is a property worth
+  # having structurally instead of by diligence.
+  workflow_call:
+
+# One in-flight run per ref. A review cycle pushes repeatedly, and without this
+# every superseded push kept its job set queued. `main` is exempt: an in-flight
+# `main` run is the record for a merge and cancelling it loses that record.
+# `github.workflow` keeps this from cancelling a sibling workflow's run on the
+# same ref.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+# Least privilege: nothing here writes. The release workflow is the one place
+# that elevates, and only for the job that creates a Release.
+permissions:
+  contents: read
+
+env:
+  # Expo's floor is Node 22.13+ / 24.3+; 24 is what the repository is developed
+  # on, so CI runs the version the app is written against.
+  NODE_VERSION: "24"
+
+jobs:
+  checks:
+    name: Checks (lint, format, types, unit tests, web export)
+    runs-on: ubuntu-latest
+    # Bounded so a wedged step cannot hold a runner for GitHub's 360-minute
+    # default. A cold run is 4-7 minutes; the bound is the diagnosis, not the
+    # budget.
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      # No `version:` — see the header. The action reads packageManager.
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          # The pnpm store, keyed on the lockfile (ADR 0004, "Caching"). This is
+          # why `pnpm install` here is cheap and why nothing ever runs
+          # `npm install`: a tree installed by npm is a different tree, and the
+          # lockfile is the one this repository has decided to trust.
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Ordered cheapest-and-most-likely-to-fail first, so a red run says what
+      # is wrong in the first screen of output rather than after a test suite.
+      - name: Lint (biome check — linter, formatter and import order)
+        run: pnpm lint
+
+      - name: Format check (biome format)
+        run: pnpm format:check
+
+      - name: Typecheck (tsc --noEmit)
+        run: pnpm typecheck
+
+      - name: Unit tests (vitest, Node environment)
+        run: pnpm test
+
+      - name: Export the web target
+        # The export is also the only build that proves the styling layer
+        # compiles: Tailwind/Uniwind are consumed at bundle time, so a token or
+        # utility that does not resolve fails here and nowhere else.
+        run: pnpm export:web
+
+      - name: Upload the web export
+        uses: actions/upload-artifact@v7
+        with:
+          name: web-export
+          path: dist
+          # The frames and reports a design or UX round needs are uploaded by
+          # whichever job produces them; this is the bundle those rounds load.
+          retention-days: 30
+
+  design-kit:
+    name: Design kit (tokens, contrast, icons, preview)
+    # macOS ON PURPOSE, and it is a fidelity decision rather than a convenience.
+    # The committed PNGs were rendered on macOS (design/README.md records the
+    # reference generation), and every one of these gates re-renders the asset
+    # and compares it against the committed file, falling back from a byte
+    # comparison to a pixel one. Running that comparison under a different
+    # rasterizer and a different font stack would fail for a reason that has
+    # nothing to do with the claim the gate makes, which is how a real gate gets
+    # ignored. The two tools the gates need are not on the image: an SVG
+    # rasterizer (`rsvg-convert`) and ImageMagick 7 (`magick`, whose `compare`
+    # subcommand is what the pixel fallback calls), so both are installed below.
+    runs-on: macos-26
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      # The design gates are plain `node` scripts with NO dependencies — they do
+      # not read node_modules — which is why this job never runs `pnpm install`.
+      # That is also what lets it run on a docs-only pull request cheaply.
+      - name: Install the rasterizer and ImageMagick
+        run: brew install librsvg imagemagick
+
+      - name: Are the tools the gates need actually present?
+        # A gate that cannot run must fail rather than pass quietly, and the
+        # failure has to name the missing tool. `build-icons.mjs --check` and
+        # `capture.mjs --check` both do this themselves; this step makes the
+        # diagnosis visible before either of them runs.
+        run: |
+          for tool in rsvg-convert magick; do
+            if command -v "$tool" >/dev/null 2>&1; then
+              echo "$tool: $("$tool" --version 2>&1 | head -1)"
+            else
+              echo "::error::$tool is missing — the design gates re-render and compare, so they cannot pass without it"
+              exit 1
+            fi
+          done
+          echo "chrome: $(/Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome --version 2>&1 | head -1)"
+
+      - name: Styling layer is current with the tokens
+        run: node scripts/build-theme.mjs --check
+
+      - name: Contrast contract (tokens.json, both themes)
+        run: node design/tokens/contrast-contract.mjs
+
+      - name: Tailwind preset matches tokens.json
+        run: node design/tokens/build-preset.mjs --check
+
+      - name: Icons, launcher, splash and store assets re-render identically
+        run: node design/app-icon/build-icons.mjs --check
+
+      - name: Preview sheet and feature graphic re-render identically
+        # `--check` defaults to every target (design/README.md is explicit that a
+        # gate whose default scope is narrower than the page it documents is the
+        # same defect as one that cannot fail), so this also covers the four
+        # committed frames under docs/design/preview.
+        run: node design/preview/capture.mjs --check
+
+      - name: Render the preview sheet for the review rounds
+        # These are the frames a designer or UX round looks at. They are written
+        # into the tree by the generator and uploaded as an artefact, never
+        # committed from CI — a frame is evidence about a revision, not a file
+        # the repository should carry a second copy of.
+        run: node design/preview/capture.mjs
+
+      - name: Upload the rendered frames
+        uses: actions/upload-artifact@v7
+        with:
+          name: design-previews
+          path: |
+            docs/design/preview/*.png
+            design/app-icon/store/play-feature-graphic-1024x500.png
+          retention-days: 30
