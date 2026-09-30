@@ -190,6 +190,10 @@ jobs:
         # committed (ADR 0003).
         run: |
           set -euo pipefail
+          # shellcheck disable=SC2016
+          # The single-quoted script below is JavaScript for node, so its `${cell}`
+          # template literals must NOT be expanded by the shell; shellcheck cannot
+          # know that from the quoting alone.
           curl -fsS "$MOCK_RELAY_URL/__mock/scenarios" | node --input-type=module -e '
             import { resolve } from "node:path";
             import { pathToFileURL } from "node:url";
