@@ -64,12 +64,14 @@ this is 0006.
 **Provenance of code citations.** Every `file:line` below is stated at a named revision and
 was resolved with `git show <ref>:<path>` — never read from a working tree, because the
 shared checkouts carry other sessions' staged work. **Every citation in this document was
-re-resolved at the pin during remediation round 1**, after review round 1 found drift; the
-corrections are named in §9 so a reader can see which ones moved.
+re-resolved at the pin in remediation round 1**, after **QA round 1's Q7** reported line drift
+and **Q8** reported three unsourced assertions (the review round running beside it found no
+drift of its own: "~20 citations spot-checked, all resolve"). Round 3 re-resolved them again at
+the same pin; the corrections are named in §9 so a reader can see what moved.
 
 | Repository | Revision | How paths are cited |
 |---|---|---|
-| **local-operator** | `40ca7910e49a` (`origin/main`, read 2026-09-30) | `local_operator/mobile/daemon.py` → `daemon.py`; `local_operator/session/attention.py` → `attention.py`; `local_operator/session/runtime/presence.py` → `presence.py`; `local_operator/session/runtime/viewers.py` → `viewers.py`; `local_operator/server/utils/desktop_feed.py` → `desktop_feed.py`; `local_operator/server/utils/desktop_presence.py` → `desktop_presence.py`; `local_operator/notifications/compose.py` → `compose.py`; `local_operator/tui/app.py` → `app.py`; `local_operator/tui/notify.py` → `notify.py`; `local_operator/tui/widgets/session_sidebar.py` → `session_sidebar.py`; `local_operator/operator/devices.py` → `devices.py`; `local_operator/tunnels/api.py` → `tunnels/api.py`; `local_operator/tunnels/service.py` → `tunnels/service.py`; `docs/*.md` by full path |
+| **local-operator** | `40ca7910e49a` — **a pinned SHA, and *not* `origin/main`**: it *was* `origin/main` when this document was written and is **16 commits behind** it as measured on **2026-09-30** (`origin/main` = `d5346e173`; it was twelve behind when review round 2 read it, at `061ede7` — the distance moves with the branch, so it is always dated). **Every line number below is stated at `40ca7910e49a`**; re-derive at that ref and expect an offset at a newer one: `app.py`'s `_cmd_notifications` is `:40600` on current main against `:40562` here, and `session_sidebar.py`'s "45%" line `:800` against `:704` | `local_operator/mobile/daemon.py` → `daemon.py`; `local_operator/session/attention.py` → `attention.py`; `local_operator/session/runtime/presence.py` → `presence.py`; `local_operator/session/runtime/viewers.py` → `viewers.py`; `local_operator/server/utils/desktop_feed.py` → `desktop_feed.py`; `local_operator/server/utils/desktop_presence.py` → `desktop_presence.py`; `local_operator/notifications/compose.py` → `compose.py`; `local_operator/tui/app.py` → `app.py`; `local_operator/tui/notify.py` → `notify.py`; `local_operator/tui/widgets/session_sidebar.py` → `session_sidebar.py`; `local_operator/operator/devices.py` → `devices.py`; `local_operator/tunnels/api.py` → `tunnels/api.py`; `local_operator/tunnels/service.py` → `tunnels/service.py`; `local_operator/session/session.py` → `session.py`; `local_operator/session/resume.py` → `resume.py`; `local_operator/server/models/desktop_sessions.py` → `models/desktop_sessions.py`; `local_operator/server/routes/desktop_sessions.py` → `routes/desktop_sessions.py`; `local_operator/server/utils/desktop_sessions.py` → `utils/desktop_sessions.py`; `local_operator/mobile/web/src/store.ts` → `web/src/store.ts`; `docs/*.md` by full path |
 | **local-operator-mobile** | `origin/main` @ `d5bb850fccac4dcfdd80f2e3b352a51107a955bc` (read 2026-09-30) | this repository's own paths; unmerged work named by branch and SHA |
 | **Radient** (control plane, edge, console) | **no code access** — specified here as an *interface*, never as a change to existing code | every cloud route in §3.1 is marked **proposal** |
 | **Apple / Google / Expo platform docs** | read 2026-09-30, cited by URL | vendor behaviour, quoted with the page it came from |
@@ -156,22 +158,36 @@ Not a footnote: the icon badge is currently specified and implemented as a **dec
 count, and the ADR below makes it an **unread** count. The reader should not discover that
 from a diff:
 
-- `docs/ux/principles.md:60-61` (P-3): "the app badge counts sessions waiting on a decision";
+- `docs/ux/principles.md:60-61` (P-3) — **the whole line**, because both halves move: "the app
+  badge counts sessions waiting on a decision; **a notification names the session and the kind
+  of decision**." The badge half is replaced by §1.4. The notification half holds **for local
+  banners only** and never for a push: P2 sends no name, and no session id rides the wire at all
+  (§3.2), so a push can never name the session — corrected here rather than left standing;
 - `docs/ux/flows.md:301` (F-5 §3): "count of sessions needing a decision … as the app icon
   badge";
-- #11's `attentionCount` (`origin/feat/screens-lists:src/features/sessions/session-projection.ts:61-66`):
+- #11's `attentionCount` (`origin/feat/screens-lists:src/features/sessions/session-projection.ts:56-70`):
   `session.needs_attention ? total + 1 : total`, with a comment saying it is counted "from
   `needs_attention` and never from `unseen`";
 - the live web client does the same arithmetic client-side:
   `sessions.filter((s) => s.unseen || s.needs_attention).length`
-  (`mobile/web/src/store.ts:407`, whose own comment at `:385` calls it "THE LIST owns the
+  (`web/src/store.ts:407`, whose own comment at `:385` calls it "THE LIST owns the
   attention aggregate").
+
+Three more sites say the same thing, and **all three are in the Amends list**: the relay's own
+`docs/mobile.md`:295-298 ("push notifications … not in this pass"), the publishing guide's
+`docs/publishing/other-channels.md`:172-174 ("Push is a v1 non-goal for the relay" — the twin of
+the ADR 0005 §5 sentence that *is* amended), and `docs/ux/current-relay-audit.md`:220-222 (push
+as a non-goal, "use the app icon badge instead"). This repository's own `docs/architecture.md`:299
+is the same claim in the same words and is amended in place — open question 1 now points at this
+ADR.
 
 The operator's rule (§1.4) is "conversations with unread notifications", which is the second
 half of that expression and not the first. **Consequence, stated plainly: a parked approval
 or ask raises no icon badge after this ADR.** It keeps its row mark, its in-app badge and its
 local banner exactly as today (the eligibility ladder is untouched, §2.3), and §1.4 records
-the one-line alternative and what it would cost. The four sites above are in the **Amends**
+the one-line alternative and what it would cost. **All seven of the sites above** — P-3, F-5
+§3, #11's `attentionCount`, `web/src/store.ts:407`, `docs/mobile.md`:295-298,
+`other-channels.md`:172-174 and `current-relay-audit.md`:220-222 — are named in the **Amends**
 list at the top of this document.
 
 ### 4. What the operator asked for
@@ -286,9 +302,9 @@ is that one set, in the listing's snapshot:
 - the listing's rows (`recent_session_rows(directory, 100, strict=True)`, `daemon.py:665`, plus
   live entries) — the same identity set the attention decoration is already built for
   (`daemon.py:777-813`), so this is one pass over data already in hand, not a second scan;
-- **user-facing sessions only** — the listing's own origin filter, `USER_ORIGINS` /
-  `_is_hidden_origin` inside that scan, which excludes `agent/<id>` identities, subagent-only
-  rows and scheduled origins;
+- **user-facing sessions only** — the listing's own origin filter, `USER_ORIGINS`
+  (`resume.py:169`) and `_is_hidden_origin` (`resume.py:1715`), applied inside that scan, which
+  excludes `agent/<id>` identities, subagent-only rows and scheduled origins;
 - **excluding deleted conversations** — a conversation with no directory is not a row, so it
   is not a count (and its receipt, if any, is a receipt for something that no longer exists);
 - **bounded by the listing's own bound** (100 recent durable rows + live sessions). An unread
@@ -758,9 +774,12 @@ itself, and `revision()` is the detector it already reads (`daemon.py:2499-2535`
    `device_id`. **The nudge consumes the change** (round 2 m3): it advances the worker's stored
    revision map at nudge time, so the same ack cannot be emitted twice — once immediately and
    once on the next tick — and the emit body carries `"exclude": ["<device_id>"]` so the acting
-   device is skipped while every other device is still corrected. A duplicate that slips through
-   anyway is benign (a correction asking a device to re-read what it already has), but the slice's
-   exit criterion is "at most one emit per ack", not "usually one".
+   device is skipped while every other device is still corrected. **The bound, stated exactly: at
+   most one emit per change.** A duplicate is possible only inside one race window — a tick that
+   has already read the store before the nudge consumes the change — and it is benign rather than
+   harmful, because a correction only asks a device to re-read state it can already see. The
+   slice's exit criterion is therefore "one emit per change, and a race-window duplicate leaves
+   every device correct", not an absolute this paragraph would then have to take back.
 
 That is the slice that makes the headline scenario — *clear a completion on the desktop and
 the phone's number drops* — actually exist, which no slice did before.
@@ -1086,8 +1105,8 @@ week, L ≈ more, with an unknown tail):
 | **Conversation handle + listing field + resolve route** (§4, S2) | daemon-core | **S** | an HMAC mint, one field on the aggregate, one resolve route |
 | **Interface freeze** (§3, S3) | all three | **S** | the §3 shapes, refusal shapes, fixtures in this repo's `fixtures/` (ADR 0003's pattern) |
 | **Device registry, register/list/deregister routes, no token stored** (§3.1, S4) | daemon-core | **S–M** | durable record, cloud id, Settings list, the generic deregister |
-| **Push worker: cursor, baseline, gates, deferral, catch-up, bounded queue** (§2.1-§2.3, S5) | daemon-core | **M** | the store is done; the risk is the gates and the cursor, not the volume |
-| **Attention emit: count-drop detection, `/seen` nudge, device exclusion** (§3.1, S6) | daemon-core | **S** | reuses the loop that already reads `revision()` |
+| **Push worker: two cursors + baseline, acknowledgement-map diff, gates, presence deferral, catch-up, bounded queue that advances only on the cloud's `202`** (§2.1-§2.3, S5) | daemon-core | **M** | the store is done; the risk is the gates and the cursor, not the volume |
+| **Attention emit: structural detection (`revision()` equality as the trigger, then the acknowledgement map and the supersede cursor say which conversation moved), `/seen` nudge that consumes the change, `exclude` on the wire** (§3.1, S6) | daemon-core | **S** | reuses the loop that already reads `revision()` |
 | **App: notifications module, permissions, channels, badge management, handle resolution, `+native-intent` + route, unpair UI, Settings copy, FOSS gating** (§5-§6, S8/S9/S11) | app | **M–L** | a new native module, a new lifecycle path, a new route, a new settings surface, and a build-flavour story: the largest single diff |
 | **Cloud: registration forward, ingest with idempotency, fan-out, delivery record, routing, revocation, unpair removal** (§2.2, §3.1, §4) | Radient-cloud | **L, and outside our control** | two credentials' worth of setup, a new always-on service, token lifecycle, retry/coalescing, an operational surface |
 
@@ -1181,8 +1200,9 @@ feed's* delta read, `desktop_feed.py:931,1188`); the TUI viewer record is
 notifications land" sentence is **ADR 0004:178**, not `other-channels.md` (QA round 1 Q8a).
 
 Round 2's corrections, from the review and QA rounds on `22e2cce`: the pin is labelled **a
-pinned SHA ("`40ca7910e49a`"), not `origin/main`** (QA round 2 Q11 — it is now 12 commits behind,
-and `app.py`/`session_sidebar.py` line numbers shift under it); the citation table now maps
+pinned SHA ("`40ca7910e49a`"), not `origin/main`** (QA round 2 Q11 — **16 commits behind** as
+measured 2026-09-30, `origin/main` = `d5346e173`, and `app.py`/`session_sidebar.py` line numbers
+shift under it); the citation table now maps
 `models/desktop_sessions.py`, `routes/desktop_sessions.py`, `utils/desktop_sessions.py`,
 `session.py` and `web/src/store.ts`, which were cited without a rule (Q13 / review m2);
 `attention.py:2129-2150` → **`:2129-2149`**, the method's real end (review n1); #11's
