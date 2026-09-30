@@ -388,8 +388,11 @@ const pixelsIdentical = (a, b) => {
 	}
 };
 
+const failures = [];
+
 const stale = (path, why) => {
 	console.error(`stale: ${path} — ${why}`);
+	failures.push(path);
 	process.exitCode = 1;
 };
 
@@ -578,7 +581,8 @@ if (left > 0) {
 if (check) {
 	if (process.exitCode) {
 		console.error(
-			`\n${verified.length} of ${verified.length + 1} committed captures verified; the rest did not match`,
+			`\n${verified.length} of ${verified.length + failures.length} committed captures verified, ` +
+				`${failures.length} stale`,
 		);
 		process.exit(1);
 	}
