@@ -86,23 +86,30 @@ jobs:
 
       # Ordered cheapest-and-most-likely-to-fail first, so a red run says what
       # is wrong in the first screen of output rather than after a test suite.
-      - name: Lint (biome check — linter, formatter and import order)
-        run: pnpm lint
-
-      - name: Format check (biome format)
-        run: pnpm format:check
-
       - name: Typecheck (tsc --noEmit)
         run: pnpm typecheck
 
       - name: Unit tests (vitest, Node environment)
         run: pnpm test
 
+      # LINT RUNS AFTER THE APP'S OWN GATES, and the ordering is deliberate: on a
+      # tree where `tools/**` is still unformatted (the audit harness arrived
+      # without ever meeting biome), a lint failure would otherwise be the first
+      # thing to stop the job — and the run would say nothing about whether the
+      # app typechecks, passes its tests or bundles. A red gate should not hide
+      # the four gates behind it.
+
       - name: Export the web target
         # The export is also the only build that proves the styling layer
         # compiles: Tailwind/Uniwind are consumed at bundle time, so a token or
         # utility that does not resolve fails here and nowhere else.
         run: pnpm export:web
+
+      - name: Lint (biome check — linter, formatter and import order)
+        run: pnpm lint
+
+      - name: Format check (biome format)
+        run: pnpm format:check
 
       - name: Upload the web export
         uses: actions/upload-artifact@v7

@@ -2,9 +2,14 @@
 /**
  * Derive this build's version numbers from the git ref.
  *
- *     node scripts/ci/version.mjs                        # read the GitHub env, print them
- *     node scripts/ci/version.mjs --write                # also export them to the job
- *     node scripts/ci/version.mjs --ref-name v1.2.3 --ref-type tag --run-number 42
+ *     node scripts/ci/version.ts                        # read the GitHub env, print them
+ *     node scripts/ci/version.ts --write                # also export them to the job
+ *     node scripts/ci/version.ts --ref-name v1.2.3 --ref-type tag --run-number 42
+ *
+ * Run directly by Node: Node 26 strips the type annotations, so there is no build
+ * step and no dependency here. That constrains the SYNTAX (no `enum`, no
+ * `namespace`, no parameter properties, no decorators — anything that would need
+ * emit) and nothing else.
  *
  * Why derived rather than committed (ADR 0004, "Versioning"): the tag is the one
  * source of truth; a version bumped inside a pull request is a version two
@@ -25,8 +30,8 @@
  * store wants for an internal build. The dev string is still reported as
  * `display_version`, for summaries. See docs/ci.md, "Versioning".
  *
- * No third-party dependency: this runs before `pnpm install` in every job, so
- * it must work on a bare checkout.
+ * No third-party dependency: this runs before `pnpm install` in every job, so it
+ * must work on a bare checkout.
  */
 
 import { appendFileSync } from "node:fs";
@@ -34,24 +39,45 @@ import { appendFileSync } from "node:fs";
 /** `v1.2.3` is the only accepted tag shape. A moving tag or a suffixed one is a
  * mistake rather than a version, and silently deriving something from it would
  * put a version on a build that no store will accept. */
-const TAG = /^v(\d+)\.(\d+)\.(\d+)$/;
+const TAG = /^v(?<major>\d+)\.(?<minor>\d+)\.(?<patch>\d+)$/;
 
 const PLACEHOLDER_VERSION = "0.0.0";
 
-/** Read `--name value`, falling back to `fallback`. */
-const arg = (name, fallback) => {
-	const i = process.argv.indexOf(`--${name}`);
-	return i === -1 ? fallback : (process.argv[i + 1] ?? fallback);
+export type Derived = {
+	version: string;
+	displayVersion: string;
+	versionCode: string;
+	fromTag: boolean;
+};
+
+export type Ref = {
+	refType: string;
+	refName: string;
+	runNumber: string;
+};
+
+/** The three parts of a tag, or `null` when the ref is not a release tag. */
+const parseTag = (refName: string): [number, number, number] | null => {
+	const groups = TAG.exec(refName)?.groups;
+	if (!groups) return null;
+	const { major, minor, patch } = groups;
+	// `noUncheckedIndexedAccess` makes every named group possibly-undefined, and
+	// that is the truth: a pattern that matched still gives no guarantee about
+	// which groups it captured. Narrow rather than assert.
+	if (major === undefined || minor === undefined || patch === undefined) {
+		return null;
+	}
+	return [Number(major), Number(minor), Number(patch)];
 };
 
 /**
  * The whole rule, as a pure function, so the CLI below is only about wiring.
  *
- * @param {{refType: string, refName: string, runNumber: string}} ref
- * @returns {{version: string, displayVersion: string, versionCode: string, fromTag: boolean}}
+ * Throws rather than inventing a build number: both stores compare it, so a
+ * build without one is not uploadable and a guessed value would be worse than a
+ * failed run.
  */
-export const derive = ({ refType, refName, runNumber }) => {
-	const match = refType === "tag" ? TAG.exec(refName) : null;
+export const derive = ({ refType, refName, runNumber }: Ref): Derived => {
 	const code = Number(runNumber);
 	if (!Number.isSafeInteger(code) || code <= 0) {
 		throw new Error(
@@ -60,9 +86,9 @@ export const derive = ({ refType, refName, runNumber }) => {
 				"Both stores compare it at upload time, so it is never optional.",
 		);
 	}
-	if (match) {
-		const [, major, minor, patch] = match;
-		const version = `${major}.${minor}.${patch}`;
+	const tag = refType === "tag" ? parseTag(refName) : null;
+	if (tag) {
+		const version = tag.join(".");
 		return {
 			version,
 			displayVersion: version,
@@ -78,15 +104,26 @@ export const derive = ({ refType, refName, runNumber }) => {
 	};
 };
 
-const refType = arg("ref-type", process.env.GITHUB_REF_TYPE ?? "");
-const refName = arg("ref-name", process.env.GITHUB_REF_NAME ?? "");
-const runNumber = arg("run-number", process.env.GITHUB_RUN_NUMBER ?? "");
+/** Read `--name value`, falling back to `fallback`. */
+const arg = (name: string, fallback: string): string => {
+	const i = process.argv.indexOf(`--${name}`);
+	return i === -1 ? fallback : (process.argv[i + 1] ?? fallback);
+};
 
-let derived;
+const message = (error: unknown): string =>
+	error instanceof Error ? error.message : String(error);
+
+const ref: Ref = {
+	refType: arg("ref-type", process.env.GITHUB_REF_TYPE ?? ""),
+	refName: arg("ref-name", process.env.GITHUB_REF_NAME ?? ""),
+	runNumber: arg("run-number", process.env.GITHUB_RUN_NUMBER ?? ""),
+};
+
+let derived: Derived;
 try {
-	derived = derive({ refType, refName, runNumber });
+	derived = derive(ref);
 } catch (error) {
-	console.error(`::error::${error.message}`);
+	console.error(`::error::${message(error)}`);
 	process.exit(1);
 }
 

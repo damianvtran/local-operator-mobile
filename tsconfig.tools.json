@@ -1,0 +1,53 @@
+{
+	// The tooling half of the repository: everything that is run by `node`
+	// directly rather than bundled into the app.
+	//
+	// WHY THIS IS A SEPARATE CONFIG. `tsc --noEmit` on the app's own config
+	// checks the app, and its `lib`/`jsx`/`types` are the browser-and-React ones.
+	// The tools are Node programs in ESM, so they need the opposite: no DOM, no
+	// React types, `node:` builtins, and `nodenext` resolution so a future
+	// relative import has to name its extension.
+	//
+	// WHY `.ts` FILES ARE RUN WITHOUT A BUILD STEP. Node 26 strips type
+	// annotations natively, so `node scripts/ci/version.ts` runs with no compile
+	// and no dependency — which matters here, because these scripts run BEFORE
+	// `pnpm install` in the pipeline. The price is a narrower syntax: nothing that
+	// needs emit (no `enum`, no `namespace`, no parameter properties, no
+	// decorators), and `import type` for anything that is a type.
+	//
+	// `allowJs: false` is inherited from the app config on purpose. It means the
+	// trees that are still JavaScript (`tools/**` and `design/**` while their
+	// streams convert them) are simply not in this program rather than being
+	// silently untyped: the include list below picks up `.ts` only, so this gate
+	// starts green and gets stricter as each tree converts, instead of failing on
+	// day one for code this change does not own.
+	//
+	// `pnpm typecheck` runs BOTH programs (`tsc --noEmit` and
+	// `tsc --noEmit -p tsconfig.tools.json`), so the command a contributor runs
+	// locally is the command CI runs.
+	"extends": "./tsconfig.json",
+	"compilerOptions": {
+		// Node ESM rather than the bundler resolution the app uses.
+		"module": "nodenext",
+		"moduleResolution": "nodenext",
+		"target": "esnext",
+		"lib": ["esnext"],
+		// Node globals and the `node:` builtin module types. No DOM, no React:
+		// a tool that reaches for `document` should fail here.
+		"types": ["node"],
+		"noEmit": true,
+		// Importing `./thing.ts` is what Node requires at runtime, so the
+		// compiler has to accept the extension rather than rewrite it.
+		"allowImportingTsExtensions": true,
+		// Makes the stripping rules explicit: a type-only import must say so,
+		// which is exactly what Node's runtime needs to elide it.
+		"verbatimModuleSyntax": true
+	},
+	"include": [
+		"tools/**/*.ts",
+		"scripts/**/*.ts",
+		"design/**/*.ts",
+		"e2e/**/*.ts"
+	],
+	"exclude": ["node_modules", "**/node_modules", "design/store-screenshots/out"]
+}
