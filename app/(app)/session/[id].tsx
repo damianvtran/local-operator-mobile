@@ -272,103 +272,112 @@ export default function Session() {
 						{panels}
 					</ScrollView>
 				) : null}
-				{/* D1's primitive: centred, capped at the layout's own measure, and no
-				    margin at all on a phone (where the measure IS the screen). */}
-				<ReadableColumn testID="session-column">
-					{transcript}
-					{showRail ? null : panels}
-					{working !== null ? (
-						<WorkingLine
-							activity={working.activity}
-							startedS={working.startedS}
-							testID="session-working-line"
-						/>
-					) : null}
-					{pendingViewProps !== null ? (
-						<View className="px-3 pb-1">
-							<PendingCard
-								view={pendingViewProps}
-								busy={composer.sending}
-								error={composer.error}
-								onApprove={(remember) =>
-									composer.answerApproval(
-										pendingViewProps.requestId,
-										true,
-										remember,
-									)
-								}
-								onDeny={(remember) =>
-									composer.answerApproval(
-										pendingViewProps.requestId,
-										false,
-										remember,
-									)
-								}
-								onAnswer={(value) =>
-									composer.answerAsk(
-										pendingViewProps.requestId,
-										value,
-										projection?.pending?.question_index ?? 0,
-									)
-								}
+				{/* `ReadableColumn` is centred with `alignSelf`, which in a COLUMN means
+				    horizontal centring — the case it was written for, and the case on a
+				    phone. In a ROW the cross axis is vertical, so the same `alignSelf`
+				    drops the default `stretch` and the column collapses to its content
+				    height: the transcript's list then measures an unbounded viewport and
+				    mounts the whole conversation (measured: 524 rows on the
+				    tablet-landscape frame, where every phone mounted 24-51). This
+				    `flex-1` wrapper is the fix — the same one `SplitView` applies to its
+				    own detail child — so the primitive keeps its single definition. */}
+				<View className="flex-1">
+					<ReadableColumn testID="session-column">
+						{transcript}
+						{showRail ? null : panels}
+						{working !== null ? (
+							<WorkingLine
+								activity={working.activity}
+								startedS={working.startedS}
+								testID="session-working-line"
 							/>
-						</View>
-					) : null}
-					{/* The banner and the composer live INSIDE the measure, not across the
+						) : null}
+						{pendingViewProps !== null ? (
+							<View className="px-3 pb-1">
+								<PendingCard
+									view={pendingViewProps}
+									busy={composer.sending}
+									error={composer.error}
+									onApprove={(remember) =>
+										composer.answerApproval(
+											pendingViewProps.requestId,
+											true,
+											remember,
+										)
+									}
+									onDeny={(remember) =>
+										composer.answerApproval(
+											pendingViewProps.requestId,
+											false,
+											remember,
+										)
+									}
+									onAnswer={(value) =>
+										composer.answerAsk(
+											pendingViewProps.requestId,
+											value,
+											projection?.pending?.question_index ?? 0,
+										)
+									}
+								/>
+							</View>
+						) : null}
+						{/* The banner and the composer live INSIDE the measure, not across the
 					    full width: on a tablet a composer 1366 pt wide sits under a 720 pt
 					    transcript and reads as a different surface (QA round 2, Q10). On a
 					    phone the measure is the screen, so nothing moves. */}
-					<ConnectionBanner
-						view={runtime.connection}
-						onAction={(action) => {
-							if (action.kind === "retry") runtime.reload();
-							// A sign-in and a console link are the route screens' work; this
-							// screen has nowhere to put a credential field, so it sends the
-							// reader to the screen that owns it rather than failing silently.
-							if (action.kind === "sign-in") router.push("/welcome");
-							if (action.kind === "console") router.push("/tunnels");
-						}}
-					/>
+						<ConnectionBanner
+							view={runtime.connection}
+							onAction={(action) => {
+								if (action.kind === "retry") runtime.reload();
+								// A sign-in and a console link are the route screens' work; this
+								// screen has nowhere to put a credential field, so it sends the
+								// reader to the screen that owns it rather than failing silently.
+								if (action.kind === "sign-in") router.push("/welcome");
+								if (action.kind === "console") router.push("/tunnels");
+							}}
+						/>
 
-					<Composer
-						controls={composer.controls}
-						draft={composer.draft}
-						onDraftChange={composer.setDraft}
-						images={composer.images}
-						onRemoveImage={composer.removeImage}
-						onAttach={composer.attach}
-						attaching={composer.attaching}
-						onSend={composer.send}
-						onStop={composer.stop}
-						retainedMessage={
-							composer.retained !== null ? COMPOSER_RETAINED : null
-						}
-						notice={composer.notice}
-						onRetry={composer.retry}
-						showResume={
-							projection?.stop_reason === "aborted" && !runtime.streaming
-						}
-						onResume={composer.send}
-						error={pending === null ? composer.error : null}
-						queuedCount={projection?.queued_count ?? 0}
-						modelLabel={chipModelLabel(projection?.model_label ?? "")}
-						effortLabel={
-							projection?.effort.length ? projection.effort : "effort"
-						}
-						onOpenModels={() => setModelsOpen(true)}
-						onOpenEffort={() => setEffortOpen(true)}
-						slashQuery={slash}
-						slashSheet={
-							<SlashSheet
-								visible={slash !== null}
-								onClose={() => undefined}
-								commands={runtime.commands}
-								query={slash ?? ""}
-								onPick={composer.slash}
-							/>
-						}
-					/>
-				</ReadableColumn>
+						<Composer
+							controls={composer.controls}
+							draft={composer.draft}
+							onDraftChange={composer.setDraft}
+							images={composer.images}
+							onRemoveImage={composer.removeImage}
+							onAttach={composer.attach}
+							attaching={composer.attaching}
+							onSend={composer.send}
+							onStop={composer.stop}
+							retainedMessage={
+								composer.retained !== null ? COMPOSER_RETAINED : null
+							}
+							notice={composer.notice}
+							onRetry={composer.retry}
+							showResume={
+								projection?.stop_reason === "aborted" && !runtime.streaming
+							}
+							onResume={composer.send}
+							error={pending === null ? composer.error : null}
+							queuedCount={projection?.queued_count ?? 0}
+							modelLabel={chipModelLabel(projection?.model_label ?? "")}
+							effortLabel={
+								projection?.effort.length ? projection.effort : "effort"
+							}
+							onOpenModels={() => setModelsOpen(true)}
+							onOpenEffort={() => setEffortOpen(true)}
+							slashQuery={slash}
+							slashSheet={
+								<SlashSheet
+									visible={slash !== null}
+									onClose={() => undefined}
+									commands={runtime.commands}
+									query={slash ?? ""}
+									onPick={composer.slash}
+								/>
+							}
+						/>
+					</ReadableColumn>
+				</View>
 			</View>
 
 			<ModelSheet
