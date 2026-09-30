@@ -107,6 +107,13 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v7
+        with:
+          # The build number is the commit count of this ref, so a shallow clone
+          # would derive a number that is too low — and the version step below
+          # refuses a shallow clone rather than guessing. Measured on run
+          # 36755424255, where this checkout had no `fetch-depth` and the step
+          # failed with exactly that message.
+          fetch-depth: 0
 
       # No `version:` — pnpm/action-setup reads `packageManager` from
       # package.json, so the pnpm version has exactly one home.
