@@ -98,7 +98,7 @@ loopback regex with a required port
   (`docs/PERSONAL_TUNNELS.md:47`). The configuration lives outside these repositories,
   so it must be *checked*, not assumed (§7 **S8**). Indirect evidence that it is
   `lop` in production: the same owner middleware guards `POST /:id/connect`
-  (`service.go:111-118`), which the desktop `lop tunnel` connector calls on every
+  (`service.go:111`, `:128`), which the desktop `lop tunnel` connector calls on every
   start with its `lop`-audienced token — a connector that works today is evidence the
   audience is accepted, but it is second-hand and S8 makes it first-hand.
 - The cost is the loopback listener: it must be alive for the few seconds the
@@ -561,7 +561,7 @@ adding a proxy on the deployed edge will want the stale name gone.
 | S5 | Backgrounding | Document what happens to the stream when the app is backgrounded on each platform, and whether the projection resyncs correctly on resume — this decides whether “live updates while backgrounded” is a v1 promise or a notification-v2 promise |
 | S6 | Session refresh under rate limits | Forced-expiry tests (expire the grant, then the handle) refresh once, not N times, when several screens request at once |
 | S7 | A real tunnel, end to end | With a maintainer's own tunnel: sign in, mint, list sessions, stream, answer an approval, logout — captured as raw request/response evidence, hostnames redacted |
-| S8 | **The audience allow-list actually accepts `lop`** (§1, and the one assumption under the whole direct-mint path) | `POST https://api.radienthq.com/v1/tunnels/session/code` with a real `lop`-audienced access token from a live app sign-in: **pass** = any answer other than the audience rejection (400 for a bad body, 404/403 for a tunnel that is not `active`, or 200 with a code); **fail** = `401`…`invalid audience`, which is the exact string `service.go:150` returns when `aud ∉ cfg.JWTAudiences`. Run it once as the first thing the implementation does. If it fails, the app either needs `RADIENT_TUNNEL_JWT_AUDIENCES` to include `lop` (a deployment change, no code change) or needs the browser-redirect fallback — and the ADR gets amended with which |
+| S8 | **The audience allow-list actually accepts `lop`** (§1, and the one assumption under the whole direct-mint path) | `POST https://api.radienthq.com/v1/tunnels/session/code` with a real `lop`-audienced access token from a live app sign-in: **pass** = any answer other than the audience rejection (400 for a bad body, 404/403 for a tunnel that is not `active`, or 200 with a code); **fail** = `401`…`invalid audience`, which is the exact string `service.go:145-156` returns when `aud ∉ cfg.JWTAudiences`. Run it once as the first thing the implementation does. If it fails, the app either needs `RADIENT_TUNNEL_JWT_AUDIENCES` to include `lop` (a deployment change, no code change) or needs the browser-redirect fallback — and the ADR gets amended with which |
 | S9 | **Logout actually revokes** | With a handle captured before logout: logout, then `POST /v1/tunnels/session/refresh` with that captured handle on another machine — **pass** = `401`…`invalid_grant` (`session.go:159-176`); **fail** = a new grant, which means the revoke never reached the control plane and the primary step is misordered |
 
 S1–S4 run on a phone or simulator/emulator; S7–S9 are manual, credentialed runs and
