@@ -247,10 +247,16 @@ export function gatewayUnavailable(
 		"content-type": "application/json",
 	};
 	if (reason === "authorization_deferred") headers["retry-after"] = "120";
+	// `reason` is omitted rather than set to `undefined`: the body is JSON, and a
+	// key whose value serialises away would make the refusal depend on whether a
+	// reason was known rather than on the status.
+	const body: Json = { detail, error: "tunnel authorization unavailable" };
+	if (reason !== undefined) (body as Record<string, Json>).reason = reason;
 	return {
 		status: 503,
 		headers,
-		json: { detail, reason, error: "tunnel authorization unavailable" },
+		retryAfterS: reason,
+		json: body,
 	};
 }
 

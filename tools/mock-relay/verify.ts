@@ -40,16 +40,20 @@ const RELAY = join(WORKTREE, "tools", "mock-relay", "relay.ts");
 // The registry and the wire constants are imported rather than re-declared, so
 // this verification cannot drift from the thing it verifies.
 const { loadFixtures } = await import(
-	new URL("./fixtures.ts", import.meta.url)
+	new URL("./fixtures.ts", import.meta.url).href
 );
 const { buildScenarios } = await import(
-	new URL("./scenarios.ts", import.meta.url)
+	new URL("./scenarios.ts", import.meta.url).href
 );
 const { EDGE_REFUSALS, GATEWAY_FAILURES } = await import(
-	new URL("./wire.ts", import.meta.url)
+	new URL("./wire.ts", import.meta.url).href
 );
-const { FAULT_SPECS } = await import(new URL("./faults.ts", import.meta.url));
-const { isRecord } = await import(new URL("../lib/json.ts", import.meta.url));
+const { FAULT_SPECS } = await import(
+	new URL("./faults.ts", import.meta.url).href
+);
+const { isRecord } = await import(
+	new URL("../lib/json.ts", import.meta.url).href
+);
 const PASSWORD = "mock-relay-password";
 
 interface CheckResult {
@@ -241,7 +245,7 @@ function makeClient(base: string) {
 			};
 		}
 		const setCookie = res.headers.getSetCookie?.() ?? [];
-		if (setCookie.length) cookie = setCookie[0].split(";")[0];
+		if (setCookie.length) cookie = (setCookie[0] ?? "").split(";")[0] ?? null;
 		const text = await res.text();
 		let json: unknown;
 		try {
@@ -715,7 +719,7 @@ async function main() {
 		check(
 			"history page respects limit=5",
 			history.json.entries.length,
-			(n) => n <= 5,
+			(n: number) => n <= 5,
 		);
 		const historyUnknown = await client.get(
 			"/api/sessions/ffffffffffff/history",
@@ -734,7 +738,7 @@ async function main() {
 		check("commands is 200", commands.status, 200);
 		check(
 			"the slash list excludes TUI-only chrome",
-			commands.json.commands.some((c) =>
+			commands.json.commands.some((c: { name: string }) =>
 				["exit", "quit", "clear"].includes(c.name),
 			),
 			false,
@@ -787,17 +791,17 @@ async function main() {
 		check("the list stream is 200", sse.status, 200);
 		check(
 			"stream content-type is text/event-stream",
-			sse.headers.get("content-type"),
+			sse.headers?.get("content-type"),
 			"text/event-stream; charset=utf-8",
 		);
 		check(
 			"stream sets no-cache, no-transform",
-			sse.headers.get("cache-control"),
+			sse.headers?.get("cache-control"),
 			"no-cache, no-transform",
 		);
 		check(
 			"stream sets x-accel-buffering: no",
-			sse.headers.get("x-accel-buffering"),
+			sse.headers?.get("x-accel-buffering"),
 			"no",
 		);
 		const listFrames = framesOf(sse.text);
@@ -949,7 +953,7 @@ async function main() {
 		check(
 			`scenario '${name}' declares its own row count`,
 			rows.length,
-			(n) => n >= 0,
+			(n: number) => n >= 0,
 		);
 		const note =
 			`rows=${rows.length} degraded=[${(list.json?.degraded ?? []).join(",")}]` +
@@ -959,7 +963,8 @@ async function main() {
 			(projection
 				? ` proj{pid=${projection.pid} streaming=${projection.streaming} rows=${projection.transcript?.length} pending=${projection.pending?.kind ?? "-"} stop=${projection.stop_reason || "-"}}`
 				: "");
-		results[results.length - 1].note = note;
+		const lastResult = results[results.length - 1];
+		if (lastResult !== undefined) lastResult.note = note;
 
 		// The registry's own row expectations, asserted: a scenario that declares a
 		// pending approval must produce a row that says so, or the fixture and the
@@ -1024,6 +1029,71 @@ async function main() {
 			true,
 		);
 		await relay.stop();
+	}
+
+	/* ---- 4b. bounded work: a wedged cell fails, it does not hang ---- */
+	// The tool that hangs is the tool's defect. Measured on a macOS CI runner: the
+	// capture step ran past a 45-minute job timeout and produced no artifacts,
+	// because a page holding a live stream made the static server's `close()` wait
+	// forever. Both halves are asserted here — the deadline, and the fact that the
+	// run terminates at all.
+	group = "bounded work";
+	{
+		const out = join(tmpdir(), `lo-hang-${Date.now()}`);
+		const started = Date.now();
+		const run = spawnSync(
+			process.execPath,
+			[
+				join(WORKTREE, "tools", "visual", "capture.ts"),
+				"--dir",
+				join(WORKTREE, "e2e", "fixtures", "audit-canary"),
+				"--out",
+				out,
+				"--cells",
+				"path:/hang/hang",
+				"--devices",
+				"iphone-se",
+				"--themes",
+				"dark",
+				"--scales",
+				"100",
+				"--cell-timeout",
+				"5",
+				"--deadline",
+				"60",
+			],
+			{ encoding: "utf8", timeout: 120_000 },
+		);
+		const elapsedMs = Date.now() - started;
+		const output = `${run.stdout ?? ""}${run.stderr ?? ""}`;
+		check(
+			"a wedged cell terminates rather than hanging",
+			run.signal === null,
+			true,
+			`finished in ${(elapsedMs / 1000).toFixed(1)} s`,
+		);
+		check(
+			"the wedged cell fails with the deadline it hit",
+			/did not complete within 5000 ms/.test(output),
+			true,
+		);
+		check(
+			"the run exits non-zero when a cell produced no frame",
+			run.status !== 0,
+			true,
+			`exit ${run.status}`,
+		);
+		check(
+			"the cell is reported as having no frame, not skipped silently",
+			/CELLS WITH NO FRAME/.test(output),
+			true,
+		);
+		check(
+			"the whole run respects its own bound",
+			elapsedMs < 90_000,
+			true,
+			`${(elapsedMs / 1000).toFixed(1)} s against a 60 s deadline`,
+		);
 	}
 
 	/* ---- 4. the fault layer ---- */
@@ -1167,8 +1237,10 @@ async function main() {
 				cookie,
 			});
 			const versions = framesOf(stream.text)
-				.map((frame) => Number(frame.data?.version))
-				.filter((version) => Number.isFinite(version));
+				.map((frame: { data?: { version?: unknown } }) =>
+					Number(frame.data?.version),
+				)
+				.filter((version: number) => Number.isFinite(version));
 			const wentBackwards = versions.some(
 				(version, index) => index > 0 && version < (versions[index - 1] ?? 0),
 			);
@@ -1562,9 +1634,9 @@ async function main() {
 					return [...exercised].some((name) => name.startsWith("gateway-"));
 				return exercised.has(spec.name);
 			};
-			const missing = FAULT_SPECS.filter((spec) => !familyCovered(spec)).map(
-				(spec) => spec.name,
-			);
+			const missing = FAULT_SPECS.filter(
+				(spec: { family?: string; name: string }) => !familyCovered(spec),
+			).map((spec: { name: string }) => spec.name);
 			check(
 				"every fault in the registry is exercised by this file",
 				missing,
@@ -1588,8 +1660,12 @@ async function main() {
 			await startRelay({ scenario: "no-such-scenario" });
 		} catch (error) {
 			failed =
-				/unknown scenario: 'no-such-scenario'/.test(String(error.message)) ||
-				/unknown scenario/.test(String(error.message));
+				/unknown scenario/.test(
+					error instanceof Error ? error.message : String(error),
+				) ||
+				/unknown scenario/.test(
+					error instanceof Error ? error.message : String(error),
+				);
 		}
 		check("an unknown scenario refuses to start", failed, true);
 	}
@@ -1599,8 +1675,12 @@ async function main() {
 			await startRelay({ scenario: "idle", faults: ["no-such-fault"] });
 		} catch (error) {
 			failed =
-				/unknown fault: 'no-such-fault'/.test(String(error.message)) ||
-				/unknown fault/.test(String(error.message));
+				/unknown fault/.test(
+					error instanceof Error ? error.message : String(error),
+				) ||
+				/unknown fault/.test(
+					error instanceof Error ? error.message : String(error),
+				);
 		}
 		check("an unknown fault refuses to start", failed, true);
 	}
@@ -1639,7 +1719,9 @@ async function main() {
 		);
 		check(
 			"the transcript records status codes",
-			transcript.requests.every((r) => typeof r.status === "number"),
+			transcript.requests.every(
+				(r: { status?: unknown }) => typeof r.status === "number",
+			),
 			true,
 		);
 	}
@@ -1664,8 +1746,10 @@ async function main() {
 	console.log(
 		`\n${results.length - failures.length}/${results.length} checks passed; ${failures.length} failed`,
 	);
-	const jsonPath = flag("json", null);
-	if (jsonPath)
+	const jsonPath = process.argv.slice(2).includes("--json")
+		? flag("json", "")
+		: null;
+	if (jsonPath !== null && jsonPath !== "")
 		writeFileSync(
 			jsonPath,
 			`${JSON.stringify({ results, failures: failures.length }, null, 2)}\n`,

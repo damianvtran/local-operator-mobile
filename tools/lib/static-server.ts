@@ -126,17 +126,23 @@ export async function serveDir(
 			req.method === "GET" || req.method === "HEAD"
 				? undefined
 				: await readBody(req);
+		const controller = new AbortController();
+		upstreams.add(controller);
 		try {
 			const upstreamRes = await fetch(
 				`${upstream}${url.pathname}${url.search}`,
 				{
 					method: req.method ?? "GET",
 					headers,
-					body,
+					body: body === undefined ? undefined : new Uint8Array(body),
 					redirect: "manual",
+					signal: controller.signal,
 				},
 			);
-			const out = Buffer.from(await upstreamRes.arrayBuffer());
+			// `Uint8Array`, not `Buffer`: Node's fetch accepts the former as a body and
+			// the DOM `BodyInit` type does not include `Buffer`'s shape, so passing a
+			// Buffer is a type error even though it works at runtime.
+			const out = new Uint8Array(await upstreamRes.arrayBuffer());
 			const outHeaders: Record<string, string> = {};
 			upstreamRes.headers.forEach((value, key) => {
 				// Content-length is recomputed by Node; set-cookie is handled below
@@ -153,11 +159,35 @@ export async function serveDir(
 			);
 			res.end(out);
 		} catch (error) {
+			// An abort is the shutdown path, not a failure to report to the page.
+			if (error instanceof Error && error.name === "AbortError") return;
 			const reason = error instanceof Error ? error.message : String(error);
 			res.writeHead(502, { "content-type": "text/plain" });
 			res.end(`proxy upstream unreachable: ${reason}`);
+		} finally {
+			upstreams.delete(controller);
 		}
 	};
+
+	const upstreams = new Set<AbortController>();
+
+	/** Close within a bound, destroying what is still open rather than waiting. */
+	const closeServer = (): Promise<void> =>
+		new Promise<void>((done) => {
+			let settled = false;
+			const finish = (): void => {
+				if (settled) return;
+				settled = true;
+				done();
+			};
+			server.close(() => finish());
+			// The proxied SSE connections are the ones that never end on their own.
+			server.closeAllConnections?.();
+			for (const controller of upstreams) controller.abort();
+			upstreams.clear();
+			const timer = setTimeout(finish, 2000);
+			timer.unref?.();
+		});
 
 	const server = createServer(async (req, res) => {
 		const url = new URL(
@@ -215,6 +245,20 @@ export async function serveDir(
 		url: `http://${host}:${actual}`,
 		port: actual,
 		proxy: upstream,
-		close: () => new Promise<void>((done) => server.close(() => done())),
+		close: () => closeServer(),
 	};
 }
+
+/**
+ * Close the server, and never wait on a client that will not go away.
+ *
+ * `server.close()` calls back only once every connection has ended, and this
+ * server proxies the relay's event stream — so a page that opened an SSE stream
+ * holds a connection open forever and the callback never fires. That is a hang,
+ * not a slow shutdown: measured in CI, the capture step ran past a 45-minute job
+ * timeout with a completed capture sitting behind a close that could not finish.
+ *
+ * The order that terminates: refuse new connections, drop the open ones, abort
+ * the upstream fetches they were riding, and bound the wait — because even
+ * `closeAllConnections` can be raced by a connection arriving in the same tick.
+ */

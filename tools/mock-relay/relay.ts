@@ -1278,7 +1278,7 @@ export function createRelay(options: RelayOptions = {}) {
 			}
 
 			if (rest === "/command" && method === "POST")
-				return handleCommand(req, res, sessionId, body);
+				return handleCommand(req, res, sessionId, body ?? {});
 
 			const agentMatch = /^\/agents\/([^/]+)(\/history)?$/.exec(rest);
 			if (agentMatch && method === "GET") {

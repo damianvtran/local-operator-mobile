@@ -38,6 +38,7 @@ import { sleep } from "../lib/cdp.ts";
 import { launchChrome } from "../lib/chrome.ts";
 import { serveDir } from "../lib/static-server.ts";
 import { PRE_PAINT_PROBE } from "../visual/matrix.ts";
+import type { AuditState, CheckRow } from "./checks.ts";
 import { runChecks } from "./checks.ts";
 import { floorsFromTokens } from "./color.ts";
 import { EXTRACT_PROBE, flattenAxTree } from "./probe.ts";
@@ -185,6 +186,8 @@ export function paletteProvenance(
 
 /** One captured cell, as the audit reads it out of the manifest. */
 interface AuditRecord {
+	/** The frame stem, used in progress and failure lines. */
+	name?: string;
 	screen: string;
 	screenLabel?: string;
 	state: string;
@@ -205,10 +208,15 @@ function cellQuery(record: AuditRecord): string {
 			record.scale === "100" ? 1 : record.scale === "150" ? 1.5 : 2,
 		),
 	});
-	const insets = record.insets ?? {};
-	for (const side of ["top", "bottom", "left", "right"]) {
-		if (insets[side] !== undefined)
-			query.set(`lo-inset-${side}`, String(insets[side]));
+	const insetsBeforeOverride = record.insets ?? {
+		top: 0,
+		bottom: 0,
+		left: 0,
+		right: 0,
+	};
+	for (const side of ["top", "bottom", "left", "right"] as const) {
+		const value = insetsBeforeOverride[side];
+		if (value !== undefined) query.set(`lo-inset-${side}`, String(value));
 	}
 	return query.toString();
 }
@@ -263,7 +271,20 @@ async function auditCell(
 	const url = `${origin}${record.path}?${cellQuery(record)}`;
 	await page.send("Page.navigate", { url });
 	await sleep(settleMs);
-	const geometry = asRecord(await page.evaluate(EXTRACT_PROBE)) ?? {};
+	// The probe runs in the page, so its reply arrives as `unknown`; the audit
+	// re-drives the same URL the capture used and reads the same fields, so this
+	// is the boundary where the probe's contract is asserted once (below) rather
+	// than at every check.
+	const probeReply = asRecord(await page.evaluate(EXTRACT_PROBE));
+	if (probeReply === undefined) {
+		throw new Error(
+			`the extraction probe returned no object for ${record.screen}/${record.state}`,
+		);
+	}
+	// The probe's reply is the CDP boundary, so its shape is asserted once here:
+	// the cast is justified because the fields it claims are the ones the probe
+	// above this file emits, and every check downstream reads them by name.
+	const geometry = probeReply as unknown as AuditState;
 	const axTree = await page.send("Accessibility.getFullAXTree");
 	const ax = flattenAxTree(Array.isArray(axTree.nodes) ? axTree.nodes : []);
 	return {
@@ -290,6 +311,8 @@ export interface AuditOptions {
 	checks: string[];
 	tokens: string | undefined;
 	settleMs: number;
+	/** Hard bound per cell; a cell that exceeds it is a BLOCKED row, not a hang. */
+	cellTimeoutMs: number;
 	quiet: boolean;
 	/** A Chrome profile directory to use; the default is a fresh temporary one. */
 	profile?: string | undefined;
@@ -297,6 +320,40 @@ export interface AuditOptions {
 
 /** Refused-audit: the exit code 2 path, thrown so the CLI and the API agree. */
 export class AuditRefused extends Error {}
+
+/**
+ * Run `promise`, giving up after `ms` with a named reason.
+ *
+ * The same shape the capture harness uses, for the same measured reason: a tool
+ * that can hang reports nothing, and both of these drive a real browser over
+ * pages this process does not control.
+ */
+async function withDeadline<T>(
+	promise: Promise<T>,
+	ms: number,
+	what: string,
+): Promise<{ ok: true; value: T } | { ok: false; reason: string }> {
+	let timer: ReturnType<typeof setTimeout> | undefined;
+	const expiry = new Promise<{ ok: false; reason: string }>((resolve) => {
+		timer = setTimeout(
+			() =>
+				resolve({
+					ok: false,
+					reason: `${what} did not complete within ${ms} ms`,
+				}),
+			ms,
+		);
+		timer.unref?.();
+	});
+	try {
+		return await Promise.race([
+			promise.then((value) => ({ ok: true as const, value })),
+			expiry,
+		]);
+	} finally {
+		if (timer !== undefined) clearTimeout(timer);
+	}
+}
 
 export async function runAudit(options: AuditOptions) {
 	const manifestPath = options.manifest;
@@ -359,13 +416,38 @@ export async function runAudit(options: AuditOptions) {
 		await page.send("Accessibility.enable");
 		for (const record of records) {
 			index += 1;
-			const state = await auditCell(page, record, {
-				origin: server.url,
-				settleMs: options.settleMs,
-			});
+			// Per-cell bound, for the same reason the capture has one: the audit
+			// re-drives every cell in a browser, and a page that never settles would
+			// otherwise park the whole job. A cell that expires is reported as a
+			// BLOCKED row naming the bound, never as a silent skip.
+			const attempted = await withDeadline(
+				auditCell(page, record, {
+					origin: server.url,
+					settleMs: options.settleMs,
+				}),
+				options.cellTimeoutMs,
+				`cell ${record.screen}/${record.state} on ${record.device}`,
+			);
+			if (!attempted.ok) {
+				rows.push({
+					check: "RUN",
+					verdict: "BLOCKED",
+					blockedKind: "unmeasurable",
+					measured: null,
+					detail: attempted.reason,
+					screen: record.screen,
+					state: record.state,
+					device: record.device,
+					theme: record.theme,
+					scale: record.scale,
+				});
+				console.error(`  ${String(record.name)}: ${attempted.reason}`);
+				continue;
+			}
+			const state = attempted.value;
 			const produced = runChecks(state, {
 				floors,
-				semantic,
+				semantic: { ...semantic },
 				checks,
 				scaleIsLive: meta.textScaleLive === true,
 				// The palette's absence is a *failed check*, not a silent skip: with no
@@ -450,6 +532,7 @@ export async function runAudit(options: AuditOptions) {
 		summary: Object.fromEntries([...summary.entries()].sort()),
 		failures: failures.length,
 		blocked: blocked.length,
+		/** BLOCKED rows that could not measure something they should have. */
 		unmeasurable: gaps.length,
 		verdict:
 			failures.length > 0 ? "FAIL" : gaps.length > 0 ? "INCOMPLETE" : "PASS",
@@ -489,6 +572,8 @@ export interface AuditReport {
 	>;
 	failures: number;
 	blocked: number;
+	/** BLOCKED rows that could not measure something they should have. */
+	unmeasurable: number;
 	verdict: string;
 }
 
@@ -551,7 +636,8 @@ export function renderMarkdown(report: AuditReport) {
 /* -------------------------------------------------------------------- CLI -- */
 
 const isMain =
-	process.argv[1] && import.meta.url.endsWith(process.argv[1].split("/").pop());
+	process.argv[1] &&
+	import.meta.url.endsWith(process.argv[1].split("/").pop() ?? "");
 if (isMain) {
 	const { flags } = parseArgs(process.argv.slice(2));
 	const manifest = str(flags, "manifest", undefined);
@@ -568,6 +654,7 @@ if (isMain) {
 				"  --allow-blocked     exit 0 even when a check could not measure (local only, never CI)",
 				"  --tokens <path>     tokens.json for the floors (default <repo>/design/tokens/tokens.json)",
 				"  --settle <ms>       boot budget per cell (default 1200)",
+				"  --cell-timeout <s>  hard bound per cell; a cell that exceeds it is a BLOCKED row (default 45)",
 				"  --quiet             no progress lines",
 				"",
 				"exit: 0 all clear · 1 FAIL · 2 refused to run · 3 no FAIL but a check could not measure",
@@ -583,6 +670,7 @@ if (isMain) {
 			checks: csv(flags, "checks"),
 			tokens: str(flags, "tokens", undefined),
 			settleMs: num(flags, "settle", 1200),
+			cellTimeoutMs: num(flags, "cell-timeout", 45) * 1000,
 			quiet: bool(flags, "quiet"),
 			profile: str(flags, "profile", undefined),
 		});

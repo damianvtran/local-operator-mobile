@@ -31,6 +31,7 @@
  *     [--relay http://127.0.0.1:PORT] [--scenario <name>] [--cells S4/populated,...]
  *     [--devices iphone-15,...] [--themes dark,light] [--scales 100,150,200]
  *     [--consecutive] [--plan] [--yes] [--strict] [--full]
+ *     [--cell-timeout <s>] [--deadline <s>]
  */
 
 import { createHash } from "node:crypto";
@@ -58,6 +59,32 @@ import {
 
 /** Frames above this count are refused without `--yes`: a full matrix is minutes. */
 const CONFIRM_THRESHOLD = 120;
+
+/**
+ * Replace the page target after a cell wedged.
+ *
+ * A fresh target is the only reliable way past a page holding a live stream on a
+ * socket the harness no longer controls: closing the old one is what stops it
+ * speaking, and the new one starts the next cell from a blank document.
+ */
+async function recoverPage(
+	chrome: Awaited<ReturnType<typeof launchChrome>>,
+	page: CdpPage,
+): Promise<CdpPage> {
+	try {
+		await page.send("Target.closeTarget", { targetId: page.targetId });
+	} catch {
+		// A target wedged beyond answering is closed by the browser when the profile
+		// is torn down; the new target is what the next cell needs.
+	}
+	const next = await chrome.page();
+	await next.send("Page.enable");
+	await next.send("Runtime.enable");
+	await next.send("Page.addScriptToEvaluateOnNewDocument", {
+		source: PRE_PAINT_PROBE,
+	});
+	return next;
+}
 
 const sha = (buffer: Buffer): string =>
 	createHash("sha256").update(buffer).digest("hex").slice(0, 16);
@@ -140,6 +167,7 @@ function buildPlan({
 	themes,
 	scales,
 	consecutive,
+	unrenderable,
 }: BuildPlanOptions): FramePlan[] {
 	const plan: FramePlan[] = [];
 	const cellsToUse = cells.length ? cells : (state?.cells ?? []);
@@ -166,10 +194,16 @@ function buildPlan({
 		const screen = explicitPath
 			? { label: explicitPath, path: explicitPath }
 			: SCREENS[screenId];
-		if (!screen)
-			throw new Error(
-				`unknown screen id '${screenId}' in cell '${cell}' (see matrix.mjs § SCREENS)`,
-			);
+		if (!screen) {
+			// A cell the relay's registry declares for a screen this harness has no
+			// route for is REPORTED, not thrown on: the registry is the relay's and
+			// grows independently, so one unrenderable cell must not abort a run that
+			// can still capture the other thirty-one. It is listed in the manifest as
+			// BLOCKED, which is the same rule the audit applies to a check it cannot
+			// answer — a missing cell is never a silent pass.
+			unrenderable.push({ cell, reason: `no route for screen '${screenId}'` });
+			continue;
+		}
 		for (const deviceName of devices) {
 			const device = DEVICES[deviceName];
 			if (!device) throw new Error(`unknown device '${deviceName}'`);
@@ -262,7 +296,7 @@ async function captureCell(
 		settleMs,
 	}: {
 		baseUrl: string;
-		state: RelayStateReply;
+		state: RelayStateReply | null;
 		outDir: string;
 		settleMs: number;
 	},
@@ -418,6 +452,43 @@ export class CaptureFailure extends Error {
 		this.themeProblems = failures.themeProblems;
 		this.readinessProblems = failures.readinessProblems;
 		this.identicalStates = failures.identicalStates;
+	}
+}
+
+/**
+ * Run `promise`, and give up on it after `ms` with a named reason.
+ *
+ * Every cell is bounded, and the reason is a *value* rather than a thrown
+ * message: a cell that never settles must be recorded as a FAILED cell with the
+ * deadline it hit, because a capture run that silently skips a cell and one that
+ * hangs both leave a reviewer with no frame and no explanation. The timer is
+ * unref'd so a resolved promise does not keep the process alive.
+ */
+async function withDeadline<T>(
+	promise: Promise<T>,
+	ms: number,
+	what: string,
+): Promise<{ ok: true; value: T } | { ok: false; reason: string }> {
+	let timer: ReturnType<typeof setTimeout> | undefined;
+	const expiry = new Promise<{ ok: false; reason: string }>((resolve) => {
+		timer = setTimeout(
+			() =>
+				resolve({
+					ok: false,
+					reason: `${what} did not complete within ${ms} ms`,
+				}),
+			ms,
+		);
+		timer.unref?.();
+	});
+	try {
+		const winner = await Promise.race([
+			promise.then((value) => ({ ok: true as const, value })),
+			expiry,
+		]);
+		return winner;
+	} finally {
+		if (timer !== undefined) clearTimeout(timer);
 	}
 }
 
@@ -677,6 +748,8 @@ const asStringArray = (value: unknown): string[] | undefined =>
 /** What `buildPlan` needs to enumerate frames. */
 interface BuildPlanOptions {
 	state: RelayStateReply | null;
+	/** Collected, not thrown: see the note in the loop below. */
+	unrenderable: Array<{ cell: string; reason: string }>;
 	cells: string[];
 	devices: string[];
 	themes: string[];
@@ -758,7 +831,10 @@ function rgbEquals(
 	if (!computed || !hex) return null;
 	const match = /^rgba?\((\d+),\s*(\d+),\s*(\d+)/.exec(computed);
 	if (!match) return computed.toLowerCase() === hex.toLowerCase();
-	const toHex = (n) => Number(n).toString(16).padStart(2, "0");
+	const toHex = (n: string | undefined): string =>
+		Number(n ?? "0")
+			.toString(16)
+			.padStart(2, "0");
 	return (
 		`#${toHex(match[1])}${toHex(match[2])}${toHex(match[3])}` ===
 		hex.toLowerCase()
@@ -811,6 +887,10 @@ export interface CaptureOptions {
 	scales: Array<{ id: string; factor: number }>;
 	consecutive: boolean;
 	settleMs: number;
+	/** Hard bound per cell; a cell that exceeds it is a FAILED cell, not a hang. */
+	cellTimeoutMs: number;
+	/** Hard bound for the whole run, checked between cells. */
+	deadlineMs: number;
 	tokens: string;
 	plan: boolean;
 	yes: boolean;
@@ -859,9 +939,11 @@ export async function runCapture(options: CaptureOptions) {
 		);
 	}
 
+	const unrenderable: Array<{ cell: string; reason: string }> = [];
 	const plan = buildPlan({
 		state,
 		cells: options.cells,
+		unrenderable,
 		devices: options.devices,
 		themes: options.themes,
 		scales: options.scales,
@@ -907,11 +989,15 @@ export async function runCapture(options: CaptureOptions) {
 	const chrome = await launchChrome({ profile: options.profile });
 	const tokens = canvasTokens(options.tokens);
 	const records: CaptureRecord[] = [];
+	/** Cells that produced no frame, and why — never a silent skip. */
+	const abandoned: Array<{ cell: string; reason: string }> = [...unrenderable];
+	/** What a reviewer must not read as a captured matrix. */
+	const cellsCaptured = plan.length - unrenderable.length;
 	const startedAt = Date.now();
 	let index = 0;
 
 	try {
-		const page = await chrome.page();
+		let page = await chrome.page();
 		await page.send("Page.enable");
 		await page.send("Runtime.enable");
 		await page.send("Page.addScriptToEvaluateOnNewDocument", {
@@ -920,12 +1006,41 @@ export async function runCapture(options: CaptureOptions) {
 
 		for (const cell of plan) {
 			index += 1;
-			const record = await captureCell(page, cell, {
-				baseUrl: server.url,
-				state,
-				outDir,
-				settleMs: options.settleMs,
-			});
+			if (Date.now() - startedAt > options.deadlineMs) {
+				// The overall bound: a run that would exceed its job's own timeout stops
+				// accounting for itself and reports what it captured, rather than being
+				// killed with nothing written. Measured in CI: the step ran past a
+				// 45-minute job timeout and produced no artifacts at all.
+				abandoned.push({
+					cell: cell.cell,
+					reason: `the run passed its ${Math.round(options.deadlineMs / 1000)} s deadline with ${plan.length - index + 1} cell(s) left`,
+				});
+				break;
+			}
+			// The per-cell bound. A cell whose page never settles used to hang the
+			// whole run; it now fails with the deadline that expired, and the next cell
+			// proceeds.
+			const attempted = await withDeadline(
+				captureCell(page, cell, {
+					baseUrl: server.url,
+					state: state ?? null,
+					outDir,
+					settleMs: options.settleMs,
+				}),
+				options.cellTimeoutMs,
+				`cell ${cell.cell} on ${cell.device}/${cell.theme}/${cell.scale.id}`,
+			);
+			if (!attempted.ok) {
+				abandoned.push({ cell: cell.cell, reason: attempted.reason });
+				console.log(
+					`[${index}/${plan.length}] ${cell.cell} on ${cell.device} — FAILED: ${attempted.reason}`,
+				);
+				// The page may be wedged with a live stream; a fresh target keeps the
+				// next cell from inheriting it.
+				page = await recoverPage(chrome, page);
+				continue;
+			}
+			const record = attempted.value;
 			records.push(record);
 			const mark = record.themeCheck?.themeSource === "os" ? "os" : "q";
 			console.log(
@@ -989,6 +1104,10 @@ export async function runCapture(options: CaptureOptions) {
 			plannedFrames,
 			framesPerCell,
 			tier: options.tier,
+			cellsPlanned: plan.length,
+			cellsCaptured,
+			cellTimeoutMs: options.cellTimeoutMs,
+			deadlineMs: options.deadlineMs,
 			devicesCaptured: options.devices,
 			themeTokens: tokens ?? null,
 			textScaleVerdict: scaleCheck.verdict,
@@ -999,6 +1118,8 @@ export async function runCapture(options: CaptureOptions) {
 		},
 		themeProblems,
 		readinessProblems,
+		/** Cells with no frame: unrenderable screens and cells that hit a deadline. */
+		abandonedCells: abandoned,
 		identicalStates: identicalCells,
 		unreadyCells: unready.map((record) => record.name),
 		textScaleCheck: scaleCheck,
@@ -1040,12 +1161,23 @@ export async function runCapture(options: CaptureOptions) {
 	}
 
 	const strict = options.strict !== false;
+	if (abandoned.length) {
+		console.log(
+			`CELLS WITH NO FRAME (${abandoned.length}) — each is BLOCKED, never a silent pass:`,
+		);
+		for (const entry of abandoned)
+			console.log(`  - ${entry.cell}: ${entry.reason}`);
+	}
 	const blocking =
-		themeProblems.length + readinessProblems.length + identicalCells.length;
+		themeProblems.length +
+		readinessProblems.length +
+		identicalCells.length +
+		abandoned.length;
 	if (strict && blocking > 0) {
 		throw new CaptureFailure(
 			`${themeProblems.length} theme problem(s), ${readinessProblems.length} unready cell(s), ` +
-				`${identicalCells.length} identical-state pair(s); see ${join(outDir, "manifest.json")}`,
+				`${identicalCells.length} identical-state pair(s), ${abandoned.length} cell(s) with no frame; ` +
+				`see ${join(outDir, "manifest.json")}`,
 			{ themeProblems, readinessProblems, identicalStates: identicalCells },
 		);
 	}
@@ -1059,7 +1191,7 @@ export async function runCapture(options: CaptureOptions) {
  * and reports the observed ratio, so the *dimension* can be shown to work before
  * any U-04 finding is trusted.
  */
-function verifyTextScale(records) {
+function verifyTextScale(records: CaptureRecord[]) {
 	const perDevice = new Map();
 	for (const record of records) {
 		const key = `${record.screen}__${record.state}__${record.device}__${record.theme}`;
@@ -1081,9 +1213,12 @@ function verifyTextScale(records) {
 			live: false,
 		};
 	}
-	const median = ratios.map((r) => r.ratio).sort((a, b) => a - b)[
+	const middle = ratios.map((r) => r.ratio).sort((a, b) => a - b)[
 		Math.floor(ratios.length / 2)
 	];
+	// A missing middle is the "could not tell" case, not a scale of 1: the
+	// dimension is reported inert rather than assumed live.
+	const median = middle ?? 0;
 	const works = median > 1.2;
 	return {
 		medianObservedRatio: Number(median.toFixed(3)),
@@ -1100,7 +1235,8 @@ function verifyTextScale(records) {
 /* -------------------------------------------------------------------- CLI -- */
 
 const isMain =
-	process.argv[1] && import.meta.url.endsWith(process.argv[1].split("/").pop());
+	process.argv[1] &&
+	import.meta.url.endsWith(process.argv[1].split("/").pop() ?? "");
 if (isMain) {
 	const { flags } = parseArgs(process.argv.slice(2));
 	const repoRoot = new URL("../../", import.meta.url).pathname;
@@ -1119,6 +1255,8 @@ if (isMain) {
 				"  --out <path>        where frames/, manifest.json and index.html go",
 				"  --relay <url>       mock relay base URL; supplies the scenario list and session ids",
 				"  --cells <a/b,...>   explicit screen/state cells (default: whatever the relay declares)",
+				"  --cell-timeout <s>  hard bound per cell; a cell that exceeds it FAILS with that reason (default 45)",
+				"  --deadline <s>      hard bound for the whole run (default 900); remaining cells are reported BLOCKED",
 				"  --devices <names>   comma list; default all. See matrix.mjs DEVICES",
 				"  --themes <names>    default dark,light",
 				"  --scales <ids>      default 100,150,200",
@@ -1160,16 +1298,19 @@ if (isMain) {
 			: SCALES,
 		consecutive: bool(flags, "consecutive"),
 		settleMs: num(flags, "settle", 1200),
-		tokens: str(
-			flags,
-			"tokens",
+		// Bounds, in the CLI because CI's job timeout is not this tool's business:
+		// a cell that never settles must fail that cell, and a run that would outlive
+		// its job must stop accounting for itself and write what it has.
+		cellTimeoutMs: num(flags, "cell-timeout", 45) * 1000,
+		deadlineMs: num(flags, "deadline", 900) * 1000,
+		tokens:
+			str(flags, "tokens", join(repoRoot, "design", "tokens", "tokens.json")) ??
 			join(repoRoot, "design", "tokens", "tokens.json"),
-		),
 		plan: bool(flags, "plan"),
 		yes: bool(flags, "yes"),
 		strict: !bool(flags, "no-strict"),
 		profile: str(flags, "profile", undefined),
 		port: num(flags, "port", 0),
 	});
-	if (summary?.dryRun) process.exit(0);
+	if ("dryRun" in summary && summary.dryRun) process.exit(0);
 }

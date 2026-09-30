@@ -22,7 +22,7 @@ import type { Floors } from "./color.ts";
 import { composite, contrastRatio, parseCssColor } from "./color.ts";
 import { INTERACTIVE_AX_ROLES } from "./probe.ts";
 
-const round = (n, dp = 2) =>
+const round = (n: number, dp = 2): number | null =>
 	Number.isFinite(n) ? Number(n.toFixed(dp)) : null;
 
 /**
@@ -43,12 +43,13 @@ const colourKey = (value: unknown): string | null => {
 
 /** The semantic palette as a set of comparable colour keys. */
 export function semanticSet(
-	semantic: Record<string, string | null> | SemanticPalette | null | undefined,
+	/** Either the palette object or an already-built colour-key set. */
+	semantic: Set<string> | Record<string, string | null> | null | undefined,
 ): Set<string> {
-	const out = new Set();
+	const out = new Set<string>();
 	for (const value of Object.values(semantic ?? {})) {
 		const key = colourKey(value);
-		if (key) out.add(key);
+		if (key !== null) out.add(key);
 	}
 	return out;
 }
@@ -87,7 +88,7 @@ function nearestNeighbourGap(
 /* ------------------------------------------------------------------ checks -- */
 
 /** U-01 — every control a thumb aims at is at least 44 pt (48 dp on Android). */
-function u01TouchTargets(state: AuditState, floors: Floors) {
+function u01TouchTargets(state: AuditState, floors: Floors): CheckRow[] {
 	const floor =
 		state.platform === "android" ? floors.touch.ios + 4 : floors.touch.minimum;
 	const slopFloor = Math.min(floors.touch.minimumVisualWithSlop ?? 24, 24);
@@ -105,7 +106,7 @@ function u01TouchTargets(state: AuditState, floors: Floors) {
 			},
 		];
 	}
-	const rows = [];
+	const rows: CheckRow[] = [];
 	for (const node of controls) {
 		const size = Math.min(node.rect.w, node.rect.h);
 		if (size >= floor) continue;
@@ -147,7 +148,7 @@ function u01TouchTargets(state: AuditState, floors: Floors) {
 }
 
 /** U-02 — body text ≥ 4.5:1 and large text ≥ 3:1, against its *effective* ground. */
-function u02Contrast(state: AuditState, floors: Floors) {
+function u02Contrast(state: AuditState, floors: Floors): CheckRow[] {
 	const textNodes = state.nodes.filter(
 		(n) => n.ownText && n.ownText.length > 0,
 	);
@@ -162,8 +163,11 @@ function u02Contrast(state: AuditState, floors: Floors) {
 			},
 		];
 	}
-	const rows = [];
-	let worst = { ratio: Infinity, node: null };
+	const rows: CheckRow[] = [];
+	let worst: { ratio: number; node: AuditNode | null } = {
+		ratio: Infinity,
+		node: null,
+	};
 	for (const node of textNodes) {
 		const ground = parseCssColor(node.background);
 		const fg = composite(parseCssColor(node.color), ground);
@@ -228,7 +232,7 @@ function u03ColourOnlyStatus(
 	// to a red dot is a word carrier, and flagging it would make this check noise.
 	// So the node's nearest container's text is part of the question, and a glyph
 	// in the label is accepted the same way the rubric's own wording allows.
-	const hasWord = (node) => {
+	const hasWord = (node: AuditNode): boolean => {
 		const container = (node.containerText ?? "").trim();
 		return /[A-Za-z]{3,}/.test(container);
 	};
@@ -236,7 +240,12 @@ function u03ColourOnlyStatus(
 		if (n.interactive) return false;
 		if (n.ownText || n.ariaLabel || n.childImages > 0) return false;
 		const draws = [n.semanticBackground, n.semanticBorder, n.semanticColour];
-		if (!draws.some((c) => c && semantic.has(colourKey(c)))) return false;
+		if (
+			!draws.some(
+				(c) => typeof c === "string" && semantic.has(colourKey(c) ?? ""),
+			)
+		)
+			return false;
 		return !hasWord(n);
 	});
 	if (suspects.length === 0) {
@@ -258,7 +267,7 @@ function u03ColourOnlyStatus(
 }
 
 /** U-05 — nothing sits under a notch, a home indicator or an Android gesture bar. */
-function u05SafeAreas(state: AuditState) {
+function u05SafeAreas(state: AuditState): CheckRow[] {
 	const insets = state.insets;
 	if (
 		!insets ||
@@ -291,14 +300,15 @@ function u05SafeAreas(state: AuditState) {
 	// A node only *counts* here if it draws something: text, a control, a
 	// background or a border. An empty layout wrapper inside the band is not
 	// content, and flagging it is how this check becomes noise nobody reads.
-	const draws = (n) =>
+	const draws = (n: AuditNode): boolean =>
 		Boolean(n.ownText) ||
 		n.interactive ||
 		n.childImages > 0 ||
 		(n.ownBackground && n.ownBackground !== "rgba(0, 0, 0, 0)") ||
 		n.borderWidth > 0;
-	const pinned = (n) => n.position === "fixed" || n.position === "sticky";
-	const rows = [];
+	const pinned = (n: AuditNode): boolean =>
+		n.position === "fixed" || n.position === "sticky";
+	const rows: CheckRow[] = [];
 	const considered = state.nodes.filter(draws);
 	for (const node of considered) {
 		const { y, h, x, w } = node.rect;
@@ -372,8 +382,8 @@ function u05SafeAreas(state: AuditState) {
 }
 
 /** U-06 — nothing exceeds the viewport at 100 %, and only a scroll region at 200 %. */
-function u06HorizontalOverflow(state: AuditState) {
-	const rows = [];
+function u06HorizontalOverflow(state: AuditState): CheckRow[] {
+	const rows: CheckRow[] = [];
 	const docOverflow = state.document.scrollWidth - state.document.clientWidth;
 	if (docOverflow > 1) {
 		rows.push({
@@ -408,8 +418,8 @@ function u06HorizontalOverflow(state: AuditState) {
 }
 
 /** U-07 — no clipped text, except deliberate single-line ellipsis with a full value. */
-function u07ClippedText(state: AuditState) {
-	const rows = [];
+function u07ClippedText(state: AuditState): CheckRow[] {
+	const rows: CheckRow[] = [];
 	for (const node of state.nodes) {
 		if (!node.ownText) continue;
 		const clipsY =
@@ -454,17 +464,21 @@ function u07ClippedText(state: AuditState) {
 }
 
 /** U-08 — meaningful boxes must not overlap. */
-function u08Overlap(state: AuditState) {
+function u08Overlap(state: AuditState): CheckRow[] {
 	// The rubric's rule is pairwise over *text and interactive* boxes, so a label
 	// drawn under a control is caught as well as two controls on top of each
 	// other. Ancestor/descendant pairs are excluded: a container overlaps its own
 	// child by construction, and counting those would fail every nested layout.
 	const meaningful = state.nodes.filter((n) => n.ownText || n.interactive);
-	const rows = [];
+	const rows: CheckRow[] = [];
 	for (let i = 0; i < meaningful.length; i += 1) {
 		for (let j = i + 1; j < meaningful.length; j += 1) {
 			const a = meaningful[i];
 			const b = meaningful[j];
+			// A hole in the list (an element that left the DOM between the probe and
+			// this loop) is skipped rather than reported as an overlap against
+			// `undefined`, which would name no element in the finding.
+			if (a === undefined || b === undefined) continue;
 			// Ancestry, not path prefixes: a container does not overlap its own
 			// child, and a truncated CSS path cannot be trusted to say which is which.
 			if (a.ancestors.includes(b.index) || b.ancestors.includes(a.index))
@@ -507,9 +521,9 @@ function u08Overlap(state: AuditState) {
 }
 
 /** U-09 — every interactive node in the accessibility tree carries a name. */
-function u09AccessibleName(state: AuditState) {
+function u09AccessibleName(state: AuditState): CheckRow[] {
 	const controls = (state.ax ?? []).filter((n) =>
-		INTERACTIVE_AX_ROLES.has(n.role),
+		INTERACTIVE_AX_ROLES.has(n.role ?? ""),
 	);
 	if (controls.length === 0) {
 		return [
@@ -542,11 +556,11 @@ function u09AccessibleName(state: AuditState) {
 }
 
 /** U-10 — the accessible name contains the visible label, so "tap approve" works. */
-function u10LabelInName(state) {
+function u10LabelInName(state: AuditState): CheckRow[] {
 	// The guard is on the *DOM's* interactive nodes, because the pairing below is
 	// done there; a page whose AX tree is empty but whose DOM has controls would
 	// otherwise be reported BLOCKED instead of checked.
-	const controls = state.nodes.filter((n) => n.interactive);
+	const controls = state.nodes.filter((n: AuditNode) => n.interactive);
 	if (controls.length === 0) {
 		return [
 			{
@@ -558,7 +572,7 @@ function u10LabelInName(state) {
 			},
 		];
 	}
-	const rows = [];
+	const rows: CheckRow[] = [];
 	// Pairing happens in the DOM, on the control's *own* label. The AX tree gives
 	// names but not the node identity a visible label can be attached to, and
 	// pairing every AX control with the first labelled element on the page is how
@@ -597,7 +611,20 @@ function u10LabelInName(state) {
  * The check registry. `needs` declares what a check requires so the runner can
  * mark it BLOCKED rather than pass it when a state cannot answer.
  */
-export const CHECKS = {
+/** The check registry, keyed by rubric id. */
+export const CHECKS: Record<
+	string,
+	{
+		label: string;
+		/** Checks take what they need; a check that ignores `floors` simply omits it. */
+		run: (
+			state: AuditState,
+			floors: Floors,
+			semantic: Set<string>,
+			paletteMissingReason: string | null,
+		) => CheckRow[];
+	}
+> = {
 	"U-01": { label: "Touch-target size", run: u01TouchTargets },
 	"U-02": { label: "Contrast, body text", run: u02Contrast },
 	"U-03": { label: "Contrast, non-text carriers", run: u03ColourOnlyStatus },
@@ -661,7 +688,7 @@ export function u04Report(
 			},
 		];
 	}
-	return clipped.map((row) => ({ ...row, check: "U-04" }));
+	return clipped.map((row) => ({ ...row, check: "U-04" }) as CheckRow);
 }
 
 /** Run every selected check over one extracted state. */
@@ -689,49 +716,107 @@ export interface CheckRow {
 	blockedKind?: BlockedKind;
 }
 
-/** One rendered node the extract probe reports, as the checks read it. */
+/**
+ * One rendered node the extract probe reports.
+ *
+ * Every field the probe emits is declared, with the type it actually carries:
+ * a field left to the index signature becomes `unknown`, and every read then
+ * needs a fallback that can never run — a *document width* of 0 because a field
+ * was missing would pass an overflow check it should fail. `null` is used where
+ * the probe genuinely reports a missing computed value (`getAttribute` for an
+ * absent role), which is a different thing from a field that is not there.
+ */
 export interface AuditNode {
+	index: number;
 	tag: string;
 	path: string;
+	ancestors: number[];
+	role: string | null;
+	ariaLabel: string | null;
+	hasAccessibleName: boolean;
+	accessibleName: string;
+	visibleLabel: string;
+	text: string;
+	ownText: string;
+	rect: {
+		x: number;
+		y: number;
+		w: number;
+		h: number;
+		right: number;
+		bottom: number;
+	};
+	fontSize: number;
+	fontWeight: string;
+	color: string;
+	background: string | null;
+	ownBackground: string;
+	position: string;
+	display: string;
+	overflowX: string;
+	overflowY: string;
+	textOverflow: string;
+	whiteSpace: string;
+	scrollWidth: number;
+	scrollHeight: number;
+	clientWidth: number;
+	clientHeight: number;
+	borderWidth: number;
+	padding: { top: number; bottom: number; left: number; right: number };
 	interactive: boolean;
 	disabled: boolean;
-	rect: { x: number; y: number; w: number; h: number };
-	ownText?: string;
-	ariaLabel?: string;
-	containerText?: string;
-	childImages?: number;
-	role?: string;
-	accessibleName?: string;
-	semanticBackground?: string | null;
-	semanticBorder?: string | null;
-	semanticColour?: string | null;
-	colour?: string | null;
-	background?: string | null;
-	fontSize?: number;
-	clipped?: boolean;
-	scrollWidth?: number;
-	clientWidth?: number;
-	[key: string]: unknown;
+	isControl: boolean;
+	childImages: number;
+	containerText: string;
+	hasGlyph: boolean;
+	semanticColour: string;
+	semanticBackground: string;
+	semanticBorder: string;
 }
 
-/** The extracted state of one audited cell. */
+/**
+ * The extracted state of one audited cell.
+ *
+ * The fields the probe always emits are required here rather than optional, and
+ * that is deliberate: an optional field makes every use site invent a fallback
+ * (`?? 0`) that can never run, and a check reading a *document width* of 0
+ * because a field was absent would pass an overflow check it should fail.
+ */
 export interface AuditState {
 	nodes: AuditNode[];
 	platform: string;
 	scale: string;
+	url: string;
+	viewport: { width: number; height: number; dpr: number };
+	document: {
+		scrollWidth: number;
+		clientWidth: number;
+		scrollHeight: number;
+		clientHeight: number;
+		bodyScrollWidth: number;
+	};
+	insets: { top: number; bottom: number; left: number; right: number };
+	textScale: string;
+	theme: string;
+	canvas: { root: string; body: string };
+	nodeCount: number;
+	ax: AuditAxNode[];
+	/** Injected by the audit runner rather than by the probe. */
+	frame?: string | null;
+	requestedUrl?: string;
 	screen?: string;
 	state?: string;
 	device?: string;
-	theme?: string;
-	frame?: string | null;
-	requestedUrl?: string;
-	documentScrollWidth?: number;
-	documentClientWidth?: number;
-	bodyScrollWidth?: number;
 	medianTextHeight?: number | null;
-	insets?: { top: number; bottom: number; left: number; right: number };
 	insetsOverride?: { applied: boolean; reason: string | null };
-	ax?: unknown[];
+}
+
+/** One node from the accessibility tree, as `flattenAxTree` reports it. */
+export interface AuditAxNode {
+	role?: string;
+	name?: string;
+	interactive?: boolean;
+	ignored?: boolean;
 	[key: string]: unknown;
 }
 
@@ -759,7 +844,7 @@ export function runChecks(
 	// hand this a plain object and get a `TypeError` from inside a check.
 	const semanticKeys =
 		semantic instanceof Set ? semantic : semanticSet(semantic);
-	const rows = [];
+	const rows: CheckRow[] = [];
 	for (const id of checks) {
 		if (id === "U-04") {
 			rows.push(...u04Report(state, { scaleIsLive }));
@@ -786,7 +871,12 @@ export function runChecks(
 			});
 			continue;
 		}
-		const produced = check.run(state, floors, semanticKeys);
+		const produced = check.run(
+			state,
+			floors,
+			semanticKeys,
+			paletteMissingReason,
+		);
 		rows.push(...(Array.isArray(produced) ? produced : [produced]));
 	}
 	return rows;

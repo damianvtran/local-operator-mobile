@@ -13,24 +13,66 @@
  * filesystem, because it gets attached to a pull request as an artifact.
  */
 
-const escapeHtml = (value) =>
-	String(value ?? "").replace(
-		/[&<>"']/g,
-		(c) =>
-			({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[
-				c
-			],
-	);
+/**
+ * Escape text for HTML.
+ *
+ * The map is typed as a lookup with an explicit fallback rather than an index
+ * into an object literal: under `noUncheckedIndexedAccess` a bare index is
+ * `string | undefined`, and the result is interpolated into the page.
+ */
+const ESCAPES: Record<string, string> = {
+	"&": "&amp;",
+	"<": "&lt;",
+	">": "&gt;",
+	'"': "&quot;",
+	"'": "&#39;",
+};
+
+const escapeHtml = (value: unknown): string =>
+	String(value ?? "").replace(/[&<>"']/g, (c) => ESCAPES[c] ?? c);
 
 /** A frame is "settled" if it is the plain (non-suffixed) or `-settled` shot. */
-const isSettled = (file) => !/-f0\.png$|-f250\.png$/.test(file);
+const isSettled = (file: string): boolean =>
+	!/-f0\.png$|-f250\.png$/.test(file);
 
-export function renderGallery(manifest) {
+/** One record as the gallery reads it, from the manifest the capture wrote. */
+interface GalleryRecord {
+	name: string;
+	screen: string;
+	screenLabel?: string;
+	state?: string;
+	device?: string;
+	deviceLabel?: string;
+	theme?: string;
+	scale?: string;
+	cell?: string;
+	resolvedTheme?: string | null;
+	canvasColor?: string | null;
+	expectedCanvas?: string | null;
+	measurements?: { textNodeCount?: number; mountedElements?: number } | null;
+	frames?: Array<{ file: string; sha: string; bytes: number }>;
+	problems?: string[];
+	viewport?: { width: number; height: number; dpr: number };
+	themeApplied?: boolean | null;
+	/** The cell's own state marker, so the gallery can show which cells were not captured. */
+	ready?: boolean;
+	readinessProblems?: string[];
+}
+
+interface GalleryManifest {
+	records: GalleryRecord[];
+	meta: Record<string, unknown>;
+	themeProblems?: string[];
+	readinessProblems?: string[];
+	identicalStates?: string[];
+}
+
+export function renderGallery(manifest: GalleryManifest): string {
 	const { records, meta } = manifest;
-	const problems = records.flatMap((r) =>
-		(r.problems ?? []).map((p) => ({ name: r.name, p })),
+	const problems = records.flatMap((r: GalleryRecord) =>
+		(r.problems ?? []).map((p: string) => ({ name: r.name, p })),
 	);
-	const byScreen = new Map();
+	const byScreen = new Map<string, GalleryRecord[]>();
 	for (const record of records) {
 		const list = byScreen.get(record.screen) ?? [];
 		list.push(record);
@@ -80,7 +122,7 @@ export function renderGallery(manifest) {
 		theme <b>${escapeHtml(record.resolvedTheme ?? "?")}</b> · canvas <code>${escapeHtml(record.canvasColor ?? "?")}</code>
 		${record.expectedCanvas ? ` (expected <code>${escapeHtml(record.expectedCanvas)}</code>)` : ""}<br>
 		scale ${escapeHtml(record.scale)} · text nodes ${record.measurements?.textNodeCount ?? "?"} · mounted ${record.measurements?.mountedElements ?? "?"}
-		${earlier.length ? `<br><span class="${earlier.some((s) => s.sha !== settled.sha) ? "warn" : ""}">first frame differs: ${earlier.some((s) => s.sha !== settled.sha) ? "yes" : "no"}</span>` : ""}
+		${earlier.length ? `<br><span class="${earlier.some((s) => s.sha !== (settled?.sha ?? "")) ? "warn" : ""}">first frame differs: ${earlier.some((s) => s.sha !== (settled?.sha ?? "")) ? "yes" : "no"}</span>` : ""}
 		${record.problems?.length ? `<br><span class="badtext">${record.problems.map(escape).join("<br>")}</span>` : ""}
 	</figcaption>
 </figure>`;
@@ -96,7 +138,7 @@ export function renderGallery(manifest) {
 ${records
 	.map(
 		(r) =>
-			`<tr><td><code>${escapeHtml(r.name.replace(/__(dark|light)__/, "__…__"))}</code></td><td>${escapeHtml(r.theme)}</td><td>${escapeHtml(r.resolvedTheme ?? "?")}</td><td><code>${escapeHtml(r.canvasColor ?? "?")}</code></td><td><code>${escapeHtml(r.expectedCanvas ?? "—")}</code></td><td><code>${escapeHtml(r.frames?.find(isSettled)?.sha ?? "")}</code></td></tr>`,
+			`<tr><td><code>${escapeHtml(r.name.replace(/__(dark|light)__/, "__…__"))}</code></td><td>${escapeHtml(r.theme)}</td><td>${escapeHtml(r.resolvedTheme ?? "?")}</td><td><code>${escapeHtml(r.canvasColor ?? "?")}</code></td><td><code>${escapeHtml(r.expectedCanvas ?? "—")}</code></td><td><code>${escapeHtml(r.frames?.find((f) => isSettled(f.file))?.sha ?? "")}</code></td></tr>`,
 	)
 	.join("\n")}
 </table>`;

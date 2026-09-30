@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hang — the capture must fail this cell, not wait on it</title>
+<style>body { font: 16px/1.5 system-ui; background: #f2ede3; color: #22201c; padding: 24px; }</style>
+</head>
+<body>
+<h1>A page that never settles</h1>
+<p>Two adversities at once, both real: the main thread is blocked, and an event
+stream is opened and never closed.</p>
+<ol>
+	<li>The script below spins forever, so anything the harness evaluates in this
+	    page — the readiness probe, the measurement probe, any CDP call that needs
+	    the renderer — never comes back.</li>
+	<li>An <code>EventSource</code> is opened against the relay's session stream,
+	    which is a connection that never ends. The static server proxies it, so a
+	    shutdown that waits for open connections waits forever.</li>
+</ol>
+<p>Neither is a reason for a capture run to hang: the per-cell deadline must fail
+this cell with a named reason, and the run must terminate and exit non-zero.</p>
+<script>
+	// 2. A live stream the page never closes.
+	try {
+		new EventSource('/api/sessions/events');
+	} catch {
+		// A browser without EventSource still leaves the blocked thread below.
+	}
+	// 1. Block the main thread. Nothing in this page will answer again.
+	while (true) {
+		// Deliberately unbounded: this page exists to prove the harness bounds it.
+	}
+</script>
+</body>
+</html>

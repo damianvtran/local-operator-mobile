@@ -1,3 +1,4 @@
+import type { AuditAxNode } from "./checks.ts";
 /**
  * The in-page extraction the audit runs over each captured state.
  *
@@ -209,14 +210,31 @@ export const INTERACTIVE_AX_ROLES = new Set([
  * `ignored: true` — which is precisely how the rubric wants a decorative icon
  * treated, and a check that counted ignored nodes would flag every one of them.
  */
-export function flattenAxTree(nodes) {
-	const out = [];
-	for (const node of nodes ?? []) {
+export function flattenAxTree(nodes: unknown[]): AuditAxNode[] {
+	const out: AuditAxNode[] = [];
+	for (const raw of nodes ?? []) {
+		// The AX tree is a CDP payload: each node is narrowed here rather than
+		// assumed, so a protocol change shows up as a missing field rather than as
+		// `undefined` reaching a check.
+		if (typeof raw !== "object" || raw === null) continue;
+		const node = raw as {
+			ignored?: boolean;
+			nodeId?: number;
+			backendDOMNodeId?: number;
+			role?: { value?: unknown };
+			name?: { value?: unknown };
+			properties?: Array<{ name?: string; value?: { value?: unknown } }>;
+		};
 		if (node.ignored) continue;
-		const role = node.role?.value ?? "";
-		const name = node.name?.value ?? "";
+		const role = typeof node.role?.value === "string" ? node.role.value : "";
+		const name = typeof node.name?.value === "string" ? node.name.value : "";
 		const props = Object.fromEntries(
-			(node.properties ?? []).map((p) => [p.name, p.value?.value]),
+			(node.properties ?? []).map(
+				(p: { name?: string; value?: { value?: unknown } }) => [
+					p.name,
+					p.value?.value,
+				],
+			),
 		);
 		out.push({
 			nodeId: node.nodeId,
