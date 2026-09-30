@@ -22,7 +22,9 @@
  * Run directly by Node (type-stripping, no build step, no dependency).
  */
 
-import { readdirSync, readFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { mkdtempSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join, relative, sep } from "node:path";
 
 /** Directory and file names that are build output or machine-local state. */
@@ -117,6 +119,59 @@ for (const path of onlyBuilt) console.log(`  only in built:       ${path}`);
 for (const path of onlyRegenerated)
 	console.log(`  only in regenerated: ${path}`);
 for (const path of differing) console.log(`  differs:             ${path}`);
+
+/**
+ * Why a file differs, so the next step is a reading rather than a guess.
+ *
+ * The gate used to name the path and nothing else, which is not enough to act on:
+ * a `project.pbxproj` that differs can mean a plugin is not idempotent, a build
+ * wrote into the source tree, or a generator is non-deterministic, and the fix is
+ * different for each. Text files get a bounded unified diff; binary files get
+ * their sizes, because a diff of those is noise.
+ */
+const explainDifference = (
+	label: string,
+	left: Buffer,
+	right: Buffer,
+): void => {
+	if (left.includes(0) || right.includes(0)) {
+		console.log(
+			`    ${label}: binary, ${left.length} bytes built vs ${right.length} regenerated`,
+		);
+		return;
+	}
+	const dir = mkdtempSync(join(tmpdir(), "cng-diff-"));
+	const leftPath = join(dir, "built");
+	const rightPath = join(dir, "regenerated");
+	writeFileSync(leftPath, left);
+	writeFileSync(rightPath, right);
+	let output = "";
+	try {
+		execFileSync("diff", ["-u", leftPath, rightPath], { encoding: "utf8" });
+	} catch (error) {
+		// `diff` exits 1 precisely when the files differ, which is why we are here.
+		output = (error as { stdout?: string }).stdout ?? "";
+	}
+	const changed = output
+		.split("\n")
+		.filter(
+			(line) =>
+				line.startsWith("+") || line.startsWith("-") || line.startsWith("@@"),
+		);
+	const shown = changed.slice(0, 40);
+	for (const line of shown) console.log(`    ${line}`);
+	if (changed.length > shown.length) {
+		console.log(`    … ${changed.length - shown.length} more changed line(s)`);
+	}
+};
+
+for (const path of differing) {
+	const left = a.get(path);
+	const right = b.get(path);
+	if (left !== undefined && right !== undefined) {
+		explainDifference(path, left, right);
+	}
+}
 
 if (problems.length > 0) {
 	console.error(
