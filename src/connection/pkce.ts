@@ -68,6 +68,8 @@ interface ExpoCryptoModule {
 }
 
 async function expoCryptoModule(): Promise<ExpoCryptoModule> {
+	/* Lazy, so Node (which has WebCrypto) never loads the native module; the
+	 * declared interface is the subset used, and every member is optional-checked. */
 	return (await import("expo-crypto")) as unknown as ExpoCryptoModule;
 }
 
@@ -91,6 +93,8 @@ async function defaultSha256(input: Uint8Array): Promise<Uint8Array> {
 	const web = webCrypto();
 	if (web?.subtle) {
 		return new Uint8Array(
+			/* `Uint8Array<ArrayBufferLike>` is not assignable to `BufferSource` in the
+			 * current lib typings although WebCrypto accepts it; the bytes are ours. */
 			await web.subtle.digest("SHA-256", input as unknown as ArrayBuffer),
 		);
 	}
@@ -124,7 +128,9 @@ export function base64Url(bytes: Uint8Array): string {
 	const base64 =
 		typeof btoa === "function"
 			? btoa(String.fromCharCode(...bytes))
-			: (
+			: /* Hermes without `btoa`: `Buffer` is the fallback, absent from the DOM
+				 * lib's typings, so its one method used is declared. */
+				(
 					globalThis as unknown as {
 						Buffer: {
 							from(input: Uint8Array): { toString(encoding: string): string };

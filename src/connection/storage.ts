@@ -360,6 +360,9 @@ export function memorySecureStore(
  * without a stub of the native module.
  */
 export async function expoSecureStore(): Promise<SecureStoreAdapter> {
+	/* Lazy import so Node (tests, scripts) never loads the native module. The
+	 * compiler cannot know the module's shape until it resolves at runtime, so the
+	 * subset used is declared here and each function is checked before it is called. */
 	const module = (await import("expo-secure-store")) as unknown as {
 		getItemAsync: (
 			key: string,
@@ -387,6 +390,9 @@ export async function expoSecureStore(): Promise<SecureStoreAdapter> {
 /** The accessibility level every write uses, read from the platform so a future
  *  Expo rename fails at the import rather than silently downgrading. */
 export async function thisDeviceOnlyAccessibility(): Promise<string> {
+	/* Lazy import so Node (tests, scripts) never loads the native module. The
+	 * compiler cannot know the module's shape until it resolves at runtime, so the
+	 * subset used is declared here and each function is checked before it is called. */
 	const module = (await import("expo-secure-store")) as unknown as {
 		WHEN_UNLOCKED_THIS_DEVICE_ONLY: string;
 	};

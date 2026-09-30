@@ -105,6 +105,10 @@ export function safeParsePayload<K extends SchemaName>(
 	value: unknown,
 ): ParseResult<K> {
 	const result = SCHEMAS[payload].safeParse(value);
+	/* Needed: `SCHEMAS[payload]` is indexed by a generic key, so zod's inferred
+	 * output is a union over every schema and cannot be narrowed to `Payload<K>` by
+	 * the compiler. `SchemaSatisfiesWire` (schemas.ts) checks each schema's output
+	 * against its wire type at compile time, so the cast cannot hide a drift. */
 	if (result.success) return { ok: true, data: result.data as Payload<K> };
 	return {
 		ok: false,

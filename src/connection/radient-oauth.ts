@@ -187,6 +187,9 @@ async function postJson(
 	}
 	let body: TokenResponse = {};
 	try {
+		/* A boundary cast onto a type whose every field is `unknown`: it asserts only
+		 * "this is an object", and `tokensFromResponse` narrows each field it reads
+		 * (typeof checks) before using it, so no value is trusted by the cast. */
 		body = (await response.json()) as TokenResponse;
 	} catch {
 		body = {};

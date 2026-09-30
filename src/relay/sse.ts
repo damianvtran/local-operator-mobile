@@ -212,6 +212,10 @@ export function decodeFrame(frame: SseFrame): DecodedFrame {
 		};
 		return malformed;
 	}
+	/* The casts are needed, not decorative: `safeParseJsonPayload` returns a union
+	 * over every registered schema, and the event name selected which schema ran,
+	 * which the compiler cannot correlate with the result. The data was validated by
+	 * that schema a line above, so the cast only names what zod already proved. */
 	return frame.event === "sessions"
 		? { kind: "sessions", data: result.data as Payload<"sessionListFrame"> }
 		: { kind: "projection", data: result.data as Payload<"sessionProjection"> };
@@ -260,15 +264,6 @@ export class ProjectionFence {
 	get needsSnapshot(): boolean {
 		return this.awaitingSnapshot;
 	}
-
-	/** A dropped frame is dropped from the *render*, never from the fence's reading
-	 *  of it: the version that arrived is still the newest seen, so the next frame
-	 *  is compared against it. */
-	note(version: number): void {
-		if (this.awaitingSnapshot) return;
-		if (this.version === undefined || version > this.version)
-			this.version = version;
-	}
 }
 
 /* ------------------------------------------------------- connection lifecycle */
@@ -302,8 +297,15 @@ export interface SseConnectionOptions {
 	}>;
 	/** Every decoded frame, in wire order. */
 	onFrame: (frame: DecodedFrame) => void;
-	/** State changes. Deliberately NOT called for a rotation between `open` and
-	 *  `open`: a caller that surfaces every transition would flash on the minute. */
+	/** Every state change, including the `connecting` → `open` pair of each reopen.
+	 *
+	 *  A caller that paints every transition would flash on the minute, so a screen
+	 *  should map states to a label (`rotating` is not an outage) rather than show
+	 *  them. A caller that owns a `ProjectionFence` MUST call the store's
+	 *  `beginStream` on EVERY `open`, not only the first: the fence is per
+	 *  connection, and a reopen's seed frame carries a version unrelated to the last
+	 *  connection's, so an un-reset fence would drop it as "older" and freeze the
+	 *  view on stale data. `src/e2e/relay-client.e2e.test.ts` wires it this way. */
 	onState?: (status: StreamStatus) => void;
 	/** An error that stopped the loop. The caller decides whether to restart; this
 	 *  module never retries a failure it does not understand (a 401 needs a

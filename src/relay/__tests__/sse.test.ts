@@ -293,17 +293,6 @@ describe("the snapshot fence, which must not blank a live transcript", () => {
 		fence.reset();
 		expect(fence.accept(1)).toBe("accepted-snapshot");
 	});
-
-	it("keeps the newest version it has seen for a caller that needs to report it", () => {
-		const fence = new ProjectionFence();
-		fence.accept(5);
-		fence.note(9);
-		expect(fence.currentVersion).toBe(9);
-		/* A frame older than the noted version is still dropped, and the note does not
-		 * move backwards. */
-		expect(fence.accept(6)).toBe("dropped-older");
-		expect(fence.currentVersion).toBe(9);
-	});
 });
 
 /* --------------------------------------------------------------- connection */

@@ -143,6 +143,9 @@ export function parseCallbackUrl(
 
 /** The `expo-web-browser` session, imported lazily so Node never resolves it. */
 export async function createSystemBrowserSession(): Promise<AuthBrowserSession> {
+	/* Lazy import for the same reason as the keystore: Node never loads the native
+	 * module. The shape is declared for the subset used and each member is checked
+	 * for presence before it is called. */
 	const module = (await import("expo-web-browser")) as unknown as {
 		openAuthSessionAsync: (
 			url: string,
