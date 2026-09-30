@@ -1,5 +1,0 @@
-{
-	"$comment": "Scopes ES-module semantics to the Node-run tooling in this directory only. The repo root stays CommonJS because metro.config.js is loaded by Metro with require(); without this file Node has to guess the module type of scripts/*.ts, reparses them, and warns (MODULE_TYPELESS_PACKAGE_JSON), and tsc refuses `import` under verbatimModuleSyntax.",
-	"private": true,
-	"type": "module"
-}
