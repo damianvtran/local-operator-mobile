@@ -194,8 +194,23 @@ export interface ConnectionViewInput {
  * surfacing it was a shipped first impression of a failure (U3). This is the one
  * place that decides, so a screen cannot accidentally be the exception.
  */
-export const relaySentence = (error: RelayError): string | undefined =>
-	error.detail ?? error.serverError;
+/**
+ * The sentence a screen may show for a failure.
+ *
+ * `displayableMessage` IS the accessor for this — the error layer's own, which
+ * publishes a sentence for every arm it writes and refuses the three things that
+ * are not copy (a runtime's prose, an empty body, and a body that is markup).
+ * Reading `detail`/`serverError` here instead was a second interpretation of the
+ * same fields, and it lost the sentences that live on the MESSAGE: a rejected
+ * certificate and an unresolved host both carry their own copy there, so the
+ * screen fell back to "The relay could not be reached." for two failures whose
+ * remedies are different — the one thing an address-level failure must say is
+ * which address, or which certificate.
+ */
+export const relaySentence = (error: RelayError): string | undefined => {
+	const sentence = error.displayableMessage.trim();
+	return sentence === "" ? undefined : sentence;
+};
 
 /** `Ns`, `Nm Ss`, `Nh` — the register the transcript already uses. */
 const agoLabel = (seconds: number): string => {
@@ -293,6 +308,21 @@ export const connectionView = (input: ConnectionViewInput): ConnectionView => {
 		return view("C2", "The connection dropped. Reconnecting…", "warning");
 	}
 	if (input.stream === "connecting" && input.reconnectExpired) {
+		return view("C2", "Reconnecting…", "warning");
+	}
+
+	/* ---- C2 again: an OPEN stream that has produced no frame at all. ----
+	 * The flows table's second C2 trigger is "no frame after a rotation", and an
+	 * open socket that has sent nothing past the reconnect deadline is that case
+	 * with the socket still up: the silence watchdog will reopen it, but until the
+	 * window elapses the reader gets no state at all — an open stream with an empty
+	 * transcript, which looks like loading forever. `ageS === null` is the fact that
+	 * says "not one frame since this connection opened". */
+	if (
+		input.stream === "open" &&
+		input.ageS === null &&
+		input.reconnectExpired
+	) {
 		return view("C2", "Reconnecting…", "warning");
 	}
 
@@ -515,6 +545,43 @@ const refusalView = (
 					testID: "connection-error-retry-prominent",
 				},
 			});
+
+		case "connection":
+			/* The two address-level failures. They are distinct because their REMEDIES
+			 * are, and one of them must not offer a retry at all: a rejected
+			 * certificate presents the same certificate again (`retry: "never"`), so a
+			 * "Check again" control would be a loop that looks like progress — the
+			 * failure the design kit calls a control that cannot work. Its remedy is
+			 * on the computer, which is where the console is. An unresolved host may
+			 * be a resolver timeout that clears by itself (`after-backoff`), so it
+			 * keeps the retry, and says which address it could not find. */
+			return view(
+				"C6",
+				message ?? "The relay could not be reached.",
+				"danger",
+				{
+					action:
+						error.retry === "never"
+							? {
+									kind: "console",
+									label: "Open console",
+									testID: "connection-error-console-link",
+								}
+							: {
+									kind: "retry",
+									label: "Check again",
+									testID: "connection-error-retry-prominent",
+								},
+					testIDs: [
+						error.retry === "never"
+							? "connection-error-certificate-rejected"
+							: "connection-error-host-unresolved",
+						...(error.retry === "never"
+							? ["connection-error-console-link"]
+							: ["connection-error-retry-prominent"]),
+					],
+				},
+			);
 
 		case "none":
 			/* The caller handles it silently. Falling through to `null` lets a later

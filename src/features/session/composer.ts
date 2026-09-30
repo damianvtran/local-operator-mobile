@@ -19,7 +19,6 @@
  */
 
 import type { PromptImage } from "@/contracts";
-import { relaySentence } from "@/features/session/connection-view";
 import type { ContinuationOp, RelayError } from "@/relay";
 
 /* ------------------------------------------------------------------- copy */
@@ -47,6 +46,9 @@ export const COMPOSER_COPY = {
 	retryDisabledHint: "Resolve the earlier instruction first.",
 	/** A positive outcome, so it renders in the success roles, never the danger
 	 *  container the failure alert uses (D11). */
+	/** The reuse case: the typed text was NOT sent as a new instruction. */
+	reusedDraftNotice:
+		"An earlier message was still unsent, so it went first. Your new text was not sent — it is below, ready when you are.",
 	retryAckNotice:
 		"Earlier instruction delivered. Your edited draft is ready to send.",
 	/** The resume affordance, driven by `stop_reason === "aborted"` (the wire
@@ -187,7 +189,13 @@ export const receiptForError = (error: RelayError): SendReceipt => {
 	 * relay-supplied sentence gets the product's words instead.
 	 */
 	const message =
-		relaySentence(error) ??
+		/* Deliberately NOT `relaySentence`/`displayableMessage` here: that accessor
+		 * falls back to `error.message`, and for this path the fallback is the
+		 * composer's OWN sentence for the op — a receipt that reads "Load failed" was a
+		 * shipped first impression (U3). The banner's copy is a different question from
+		 * a receipt's, so it is a different call. */
+		error.detail ??
+		error.serverError ??
 		(error.kind === "ambiguous-delivery"
 			? COMPOSER_COPY.steerError
 			: COMPOSER_COPY.continuationError);

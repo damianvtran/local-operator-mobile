@@ -12,16 +12,15 @@ import {
 } from "@/features/session/composer";
 import {
 	clearDraft,
-	deviceStore,
 	readDraft,
 	writeDraft,
 } from "@/features/session/device-storage";
+import { envelopeStoreFor } from "@/features/session/envelope-store";
 import type { SessionRelaySource } from "@/features/session/relay-source";
 import { parseSlashDraft, slashQuery } from "@/features/session/slash";
 import {
 	type ContinuationEnvelope,
 	isRelayError,
-	RetryEnvelopeStore,
 	sendPersistedCommand,
 } from "@/relay";
 
@@ -89,10 +88,10 @@ export const useComposer = (input: {
 	const { sessionId, source, streaming, ended, onSent } = input;
 	const endpoints = source.endpoints;
 
-	const envelopeStore = useMemo(
-		() => new RetryEnvelopeStore({ store: deviceStore }),
-		[],
-	);
+	/* ONE store per session, shared process-wide: two instances on one session
+	 * would each mint an id for the same typed instruction, which is the duplicate
+	 * POST the retry envelope exists to prevent. See `envelope-store.ts`. */
+	const envelopeStore = envelopeStoreFor(sessionId);
 
 	const [draft, setDraftState] = useState("");
 	const [images, setImages] = useState<PromptImage[]>([]);
@@ -191,10 +190,12 @@ export const useComposer = (input: {
 				setRetained(null);
 				if (result.reusedPreviousDraft) {
 					/* An EARLIER unresolved instruction was replayed under its own UUID: the
-					 * reader's new text was not what the relay received, so it stays — and they
-					 * are told, because a draft that vanishes without a word is the failure this
-					 * whole mechanism exists to prevent. */
-					setNotice(COMPOSER_COPY.retryAckNotice);
+					 * text the reader just typed was NOT sent as a new instruction, so it is
+					 * re-offered — left exactly as they left it, in the composer, with a
+					 * notice that says it was not sent. A draft that vanishes without a word
+					 * is the failure this mechanism exists to prevent; the same applies to a
+					 * draft that looks sent and is not. */
+					setNotice(COMPOSER_COPY.reusedDraftNotice);
 				} else if (
 					// Only clear the visible draft when the acknowledged bytes ARE the
 					// visible draft. If the reader edited while the request was out, the ack

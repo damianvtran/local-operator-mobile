@@ -246,6 +246,65 @@ describe("C6 — a typed refusal renders the gateway's own sentence", () => {
 		expect(view.action?.kind).toBe("retry");
 	});
 
+	it("renders a rejected certificate and an unresolved host distinctly, and offers no retry it cannot honour", () => {
+		// `certificate-rejected` is `retry: "never"` — the same certificate presented
+		// again gets the same answer, so a retry control here is a loop that looks
+		// like progress. `host-unresolved` is `after-backoff`: a resolver timeout
+		// clears by itself, so it keeps the retry. The two must not read as one
+		// failure, because their remedies are different.
+		const certificate = connectionView(
+			input({
+				error: new RelayError(
+					"certificate-rejected",
+					"the relay's certificate was rejected",
+				),
+			}),
+		);
+		expect(certificate.id).toBe("C6");
+		expect(certificate.action?.kind).toBe("console");
+		expect(certificate.testIDs).toContain(
+			"connection-error-certificate-rejected",
+		);
+		expect(certificate.testIDs).not.toContain(
+			"connection-error-retry-prominent",
+		);
+
+		const host = connectionView(
+			input({
+				error: new RelayError(
+					"host-unresolved",
+					"that address could not be found",
+				),
+			}),
+		);
+		expect(host.id).toBe("C6");
+		expect(host.action?.kind).toBe("retry");
+		expect(host.testIDs).toContain("connection-error-host-unresolved");
+		expect(host.text).toContain("address");
+	});
+
+	it("says it is reconnecting when an OPEN stream has produced no frame at all", () => {
+		// A socket that connected and says nothing is the flows table's second C2
+		// trigger ("no frame after a rotation") with the socket still up. Without this
+		// the reader gets an empty transcript and no state — which reads as loading
+		// forever, however healthy the transport looks.
+		const view = connectionView(
+			input({ stream: "open", ageS: null, reconnectExpired: true }),
+		);
+		expect(view.id).toBe("C2");
+		expect(view.text).toMatch(/reconnecting/i);
+	});
+
+	it("stays silent for an open stream inside the deadline", () => {
+		// The other half of the rule: an open stream that has not yet produced a frame
+		// is a normal first load, and a banner there would flash on every open.
+		expect(
+			connectionView(
+				input({ stream: "open", ageS: null, reconnectExpired: false }),
+			).id,
+		).toBeNull();
+	});
+
 	it("never puts a bare status code on screen", () => {
 		const view = connectionView(
 			input({
