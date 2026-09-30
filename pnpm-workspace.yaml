@@ -1,0 +1,30 @@
+# Workspace settings for pnpm 12.
+#
+# WHY `allowBuilds` IS A BOOLEAN AND NOT THE PLACEHOLDER pnpm SCAFFOLDS.
+# `pnpm install` writes an entry here when it ignores a dependency's build
+# script, with the value `set this to true or false` — a placeholder a human is
+# meant to replace. pnpm 12 then refuses to load a config that still holds the
+# string, and the failure is not local to the entry: EVERY command fails with
+# `ERR_PNPM_IGNORED_BUILDS`, including `pnpm install --frozen-lockfile`, so a
+# clean checkout could not install at all. Measured in CI on 2026-09-30: the
+# install step of every job died on it.
+#
+# `esbuild` is `true` because it genuinely needs its install script: it places
+# the platform-specific binary that vitest and tsx execute. Allowing the build is
+# the whole point of the entry — a script this repository cannot review line by
+# line, but one without which the test runner does not start.
+allowBuilds:
+  esbuild: true
+
+# The supply-chain delay (`minimumReleaseAge`, pnpm's default) is a good default
+# and is kept; these are the packages published inside the window that the app is
+# pinned to, and the list is the record of that decision. A dependency added here
+# is a decision to trust a release early, so it belongs in review rather than in
+# a local install that happened to need it.
+minimumReleaseAgeExclude:
+  - expo-constants@57.0.20
+  - expo-modules-core@57.0.20
+  - expo@57.0.26
+  - '@expo/ui@57.0.21'
+  - expo-router@57.0.24
+  - lucide-react-native@1.49.0
