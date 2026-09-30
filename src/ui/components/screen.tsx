@@ -1,7 +1,8 @@
 import type { ReactNode } from "react";
-import { ScrollView, View } from "react-native";
+import { ScrollView, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { maxColumnWidth } from "@/ui/column";
 import { Heading } from "@/ui/components/heading";
 
 /**
@@ -39,6 +40,21 @@ export const Screen = ({
 	testID,
 }: ScreenProps) => {
 	const insets = useSafeAreaInsets();
+	const viewport = useWindowDimensions();
+	// The column cap, and the centring that comes with it: a capped column pinned
+	// to the left is a ragged page, and the kit's rule is cap AND centre
+	// (components.md § 22). `width: 100%` is load-bearing rather than decoration:
+	// with `alignSelf: center` alone the container shrink-wraps its children, so the
+	// column measures the prose instead of the cap and rows stop filling it
+	// (measured at 844 wide: 497 px of 620).
+	const columnWidth = maxColumnWidth(viewport);
+	const column = columnWidth
+		? {
+				width: "100%" as const,
+				maxWidth: columnWidth,
+				alignSelf: "center" as const,
+			}
+		: undefined;
 	return (
 		<View
 			className="flex-1 bg-canvas"
@@ -72,13 +88,19 @@ export const Screen = ({
 					// with the rest of the phone blank, and the empty state's own
 					// `justify-center` has nothing to centre within. A list that is taller
 					// than the viewport is unaffected.
-					contentContainerClassName="grow px-4 pb-6"
+					// `pt-2` is `space.screen.top` (8): without it the first content box sits
+					// flush against the 56 px header, so a page title reads as a bar label and
+					// crowds the first section heading (measured gap: 0 px).
+					contentContainerClassName="grow px-4 pt-2 pb-6"
+					contentContainerStyle={column}
 					keyboardShouldPersistTaps="handled"
 				>
 					{children}
 				</ScrollView>
 			) : (
-				<View className="flex-1">{children}</View>
+				<View className="flex-1" style={column}>
+					{children}
+				</View>
 			)}
 		</View>
 	);

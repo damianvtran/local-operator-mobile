@@ -34,7 +34,10 @@ export const Badge = ({
 }: BadgeProps) => (
 	<View className={badgeClasses(tone)} testID={testID}>
 		<Text
-			className={`${mono ? "text-mono-label uppercase" : "text-meta"} ${badgeInkClasses(tone)}`}
+			// `leading-4` on BOTH variants, because the two steps' own line heights
+			// differ by 3.6 px and the kit caps a badge at 22: the label box has to be
+			// bound once (16 px) for the mono and the sans badge to be the same height.
+			className={`leading-4 ${mono ? "text-mono-label uppercase" : "text-meta"} ${badgeInkClasses(tone)}`}
 		>
 			{label}
 		</Text>

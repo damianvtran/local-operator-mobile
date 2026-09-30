@@ -65,6 +65,11 @@ export const Segmented = <T extends string>({
 					// is the ARIA state for role=radio; native ignores it in favour of the
 					// state above, so the two are written together, not chosen between.
 					aria-checked={selected}
+					// `flex-1` belongs HERE, on the touchable, not on the pill inside it: the
+					// touchable is the track's flex child, so a class on the inner view sizes
+					// nothing and the options collapse to their labels, leaving the rest of
+					// the well empty (measured at 390: 191 px of labels in a 358 px track).
+					className="flex-1"
 					disabled={disabled}
 					testID={option.testID}
 					onPress={() => onChange(option.value)}

@@ -169,6 +169,69 @@
 }
 
 /*
+ * The faces, and the two bindings that make them apply.
+ *
+ * A `--font-*` variable renders nothing on its own: a family has to be
+ * declared (@font-face, below) and then NAMED by the text that uses it. Two
+ * bindings name it, and both are needed:
+ *
+ *   1. the default voice, so text that names no step is still the app's face
+ *      rather than the platform's;
+ *   2. each step's own face, because the ramp's machine voice is mono and a
+ *      step that names no family renders an identifier in the sans face.
+ *
+ * The second binding is hand-written rather than a `--text-*` theme key
+ * because Tailwind's `text-<step>` utility reads only the step's
+ * `--line-height`, `--letter-spacing` and `--font-weight` — there is no
+ * family slot, so a step CANNOT carry its face that way (measured against
+ * tailwindcss 4.3.3, whose text utility resolves exactly those suffixes).
+ */
+@font-face {
+	font-family: 'Figtree';
+	font-style: normal;
+	font-display: swap;
+	font-weight: 300 900;
+	src: url('/fonts/figtree-variable-latin.woff2') format('woff2-variations');
+	unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+@font-face {
+	font-family: 'JetBrains Mono';
+	font-style: normal;
+	font-display: swap;
+	font-weight: 100 800;
+	src: url('/fonts/jetbrains-mono-variable-latin.woff2') format('woff2-variations');
+	unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+
+/* The default voice. `*` rather than `body`: react-native-web hands each text
+ * node a platform stack of its own, and that value is INHERITED rather than
+ * declared, so declaring the family on the node itself is what beats it. A
+ * `base` rule also loses to every utility, which is what lets a mono step
+ * override it below.
+ */
+@layer base {
+	* {
+		font-family: var(--font-sans);
+	}
+}
+
+/* Each step names its own face, from that step's own `face` token. */
+@layer utilities {
+	.text-display { font-family: var(--font-sans); }
+	.text-title { font-family: var(--font-sans); }
+	.text-heading { font-family: var(--font-sans); }
+	.text-body-lg { font-family: var(--font-sans); }
+	.text-body { font-family: var(--font-sans); }
+	.text-body-sm { font-family: var(--font-sans); }
+	.text-meta { font-family: var(--font-sans); }
+	.text-label { font-family: var(--font-sans); }
+	.text-mono { font-family: var(--font-mono); }
+	.text-mono-sm { font-family: var(--font-mono); }
+	.text-mono-code { font-family: var(--font-mono); }
+	.text-mono-label { font-family: var(--font-mono); }
+}
+
+/*
  * The theme swap.
  *
  * Uniwind resolves `dark:` variants and theme variables from the active

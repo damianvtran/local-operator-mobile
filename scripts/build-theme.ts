@@ -38,7 +38,7 @@
  * that emit template literals are how a generator ends up silently emitting half
  * of itself, so the emitted output never contains a backtick.
  */
-import { readFileSync, writeFileSync } from "node:fs";
+import { copyFileSync, readFileSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 import { z } from "zod";
@@ -87,7 +87,14 @@ const elevation = z.looseObject({
 	dark: z.string(),
 	androidElevation: z.number(),
 });
-const face = z.looseObject({ family: z.string(), fallback: z.string() });
+const face = z.looseObject({
+	family: z.string(),
+	fallback: z.string(),
+	// `axes` is the variable font's own weight range (`wght 300-900`), which the
+	// generated `@font-face` has to state: a range that disagrees with the file makes
+	// the browser synthesise a weight instead of selecting the real one.
+	axes: z.string(),
+});
 const tokenFile = z.looseObject({
 	color: z.record(z.string(), z.unknown()),
 	type: z.looseObject({
@@ -398,6 +405,84 @@ const css = (): string => {
 	out.push("}");
 	out.push("");
 	out.push("/*");
+	out.push(" * The faces, and the two bindings that make them apply.");
+	out.push(" *");
+	out.push(
+		" * A `--font-*` variable renders nothing on its own: a family has to be",
+	);
+	out.push(
+		" * declared (@font-face, below) and then NAMED by the text that uses it. Two",
+	);
+	out.push(" * bindings name it, and both are needed:");
+	out.push(" *");
+	out.push(
+		" *   1. the default voice, so text that names no step is still the app's face",
+	);
+	out.push(" *      rather than the platform's;");
+	out.push(
+		" *   2. each step's own face, because the ramp's machine voice is mono and a",
+	);
+	out.push(
+		" *      step that names no family renders an identifier in the sans face.",
+	);
+	out.push(" *");
+	out.push(
+		" * The second binding is hand-written rather than a `--text-*` theme key",
+	);
+	out.push(" * because Tailwind's `text-<step>` utility reads only the step's");
+	out.push(
+		" * `--line-height`, `--letter-spacing` and `--font-weight` — there is no",
+	);
+	out.push(
+		" * family slot, so a step CANNOT carry its face that way (measured against",
+	);
+	out.push(
+		" * tailwindcss 4.3.3, whose text utility resolves exactly those suffixes).",
+	);
+	out.push(" */");
+	for (const webFont of webFaces) {
+		out.push("@font-face {");
+		out.push("\tfont-family: '" + webFont.family + "';");
+		out.push("\tfont-style: normal;");
+		out.push("\tfont-display: swap;");
+		out.push("\tfont-weight: " + webFont.weights + ";");
+		out.push("\tsrc: url('" + webFont.url + "') format('woff2-variations');");
+		out.push("\tunicode-range: " + LATIN_UNICODE_RANGE + ";");
+		out.push("}");
+	}
+	out.push("");
+	out.push(
+		"/* The default voice. `*` rather than `body`: react-native-web hands each text",
+	);
+	out.push(
+		" * node a platform stack of its own, and that value is INHERITED rather than",
+	);
+	out.push(
+		" * declared, so declaring the family on the node itself is what beats it. A",
+	);
+	out.push(
+		" * `base` rule also loses to every utility, which is what lets a mono step",
+	);
+	out.push(" * override it below.");
+	out.push(" */");
+	out.push("@layer base {");
+	out.push("\t* {");
+	out.push("\t\tfont-family: var(--font-sans);");
+	out.push("\t}");
+	out.push("}");
+	out.push("");
+	out.push(
+		"/* Each step names its own face, from that step's own `face` token. */",
+	);
+	out.push("@layer utilities {");
+	for (const [name, step] of Object.entries(typeSteps)) {
+		out.push(
+			"\t.text-" + name + " { font-family: var(--font-" + step.face + "); }",
+		);
+	}
+	out.push("}");
+	out.push("");
+	out.push("/*");
 	out.push(" * The theme swap.");
 	out.push(" *");
 	out.push(
@@ -435,6 +520,111 @@ const css = (): string => {
 	out.push("");
 	return out.join("\n");
 };
+
+/* ---- the faces, as the web target needs them ------------------------------
+ *
+ * The kit's faces are vendored under `design/fonts` and served by Expo from
+ * `public/fonts`: everything in `public/` is copied to the export root verbatim,
+ * which is why the served copy is VERIFIED below rather than assumed.
+ *
+ * The weight RANGES come from the token file's own `axes`, never from here. A
+ * range that disagrees with the file makes the browser synthesise a weight
+ * instead of selecting the real one, and nothing reports it.
+ */
+type WebFace = {
+	family: string;
+	/** The vendored file, the source of truth. */
+	file: string;
+	/** Where the served copy goes. `public/` is copied to the export ROOT, so the
+	 * URL a browser asks for drops the `public` segment — writing `public/` into
+	 * the URL is a 404 and a silent fallback to the platform face. */
+	destination: string;
+	/** The path in that URL. */
+	url: string;
+	weights: string;
+};
+
+/** The variable file per face, and the name it is served under. */
+const FONT_FILES: Record<string, string> = {
+	sans: "figtree-variable-latin.woff2",
+	mono: "jetbrains-mono-variable-latin.woff2",
+};
+
+/** The latin subset's own ranges, taken from the files' own declarations in
+ * `@fontsource-variable/*`: the faces are partitioned by script, so a wrong range
+ * means the browser downloads a file that cannot render the text and quietly
+ * falls back to the platform face for those characters alone. */
+const LATIN_UNICODE_RANGE = [
+	"U+0000-00FF",
+	"U+0131",
+	"U+0152-0153",
+	"U+02BB-02BC",
+	"U+02C6",
+	"U+02DA",
+	"U+02DC",
+	"U+0304",
+	"U+0308",
+	"U+0329",
+	"U+2000-206F",
+	"U+20AC",
+	"U+2122",
+	"U+2191",
+	"U+2193",
+	"U+2212",
+	"U+2215",
+	"U+FEFF",
+	"U+FFFD",
+].join(",");
+
+const SERVED_FONTS = "public/fonts";
+
+/** `wght 300-900` -> `300 900`, the form `@font-face` wants. */
+const weightRange = (axes: string, faceName: string): string => {
+	const range = /wght\s+(\d+)\s*-\s*(\d+)/.exec(axes);
+	if (!range) {
+		throw new Error(
+			"type.faces." +
+				faceName +
+				".axes is " +
+				JSON.stringify(axes) +
+				", which has no `wght <min>-<max>`, so the @font-face weight range cannot be written",
+		);
+	}
+	return range[1] + " " + range[2];
+};
+
+const webFaces: WebFace[] = entries(
+	tokens.type.faces,
+	face,
+	"type.faces",
+).flatMap(([name, typeface]) => {
+	const file = FONT_FILES[name];
+	if (!file) {
+		// A face the ramp does not use is not vendored here. The kit's third face
+		// (Fraunces, the store listing and splash face) is declared in tokens.json
+		// but no type step names it, so an @font-face for it would be a download
+		// nothing can use — and the assets that DO render it are built by the
+		// design kit, not by this generator. A face a STEP names is different: a
+		// missing file there is a silent fallback to the platform font.
+		if (Object.values(typeSteps).some((step) => step.face === name)) {
+			throw new Error(
+				"type.faces." +
+					name +
+					" is named by a type step but has no vendored file; add it to FONT_FILES and to design/fonts",
+			);
+		}
+		return [];
+	}
+	return [
+		{
+			family: typeface.family,
+			file: "design/fonts/" + file,
+			destination: SERVED_FONTS + "/" + file,
+			url: "/fonts/" + file,
+			weights: weightRange(typeface.axes, name),
+		},
+	];
+});
 
 const REDUCED_MOTION_MS = /(\d+)\s*ms/;
 
@@ -747,6 +937,42 @@ const outputs: Array<[string, string]> = [
 	["src/ui/tokens.gen.ts", ts()],
 ];
 
+/**
+ * The served copies of the vendored faces.
+ *
+ * `@font-face` can only point at a URL, and the file has to be somewhere Expo
+ * serves verbatim — so the generated stylesheet and this copy have to agree. A
+ * copy that drifts is a face that silently fails to load and falls back to the
+ * platform font, which is exactly the defect this generates the rules for, so it
+ * is checked rather than trusted.
+ */
+const copyFaces = (): void => {
+	for (const webFont of webFaces) {
+		copyFileSync(
+			new URL(webFont.file, root),
+			new URL(webFont.destination, root),
+		);
+	}
+};
+
+const staleFaces = (): string[] =>
+	webFaces
+		.filter((webFont) => {
+			try {
+				return (
+					readFileSync(new URL(webFont.destination, root)).compare(
+						readFileSync(new URL(webFont.file, root)),
+					) !== 0
+				);
+			} catch {
+				return true;
+			}
+		})
+		.map(
+			(webFont) =>
+				webFont.destination + " is missing or differs from " + webFont.file,
+		);
+
 if (check) {
 	const stale: string[] = [];
 	for (const [rel, content] of outputs) {
@@ -759,6 +985,7 @@ if (check) {
 		}
 		if (current !== content) stale.push(rel + " is stale");
 	}
+	stale.push(...staleFaces());
 	if (stale.length) {
 		console.error(
 			stale.join(" and ") +
@@ -773,8 +1000,13 @@ if (check) {
 for (const [rel, content] of outputs) {
 	writeFileSync(new URL(rel, root), content);
 }
+copyFaces();
 console.log(
-	"wrote src/ui/theme.css and src/ui/tokens.gen.ts — " +
+	"wrote src/ui/theme.css and src/ui/tokens.gen.ts, and " +
+		webFaces.length +
+		" face(s) into " +
+		SERVED_FONTS +
+		" — " +
 		roles.length +
 		" colour roles (" +
 		varying.length +

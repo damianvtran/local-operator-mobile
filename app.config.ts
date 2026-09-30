@@ -107,7 +107,31 @@ const config: ExpoConfig = {
 				resizeMode: "contain",
 			},
 		],
-		"expo-font",
+		[
+			"expo-font",
+			{
+				// The kit's faces, embedded in the native binary rather than fetched at
+				// runtime: a client of a relay on the user's own computer can be launched
+				// with no network at all, and a font that has to be downloaded is a
+				// screen in the platform's face on first run.
+				//
+				// One file per WEIGHT, not the variable file, because React Native selects
+				// a face by family + weight rather than by a variation axis, and the
+				// upstream Figtree variable file additionally names its family
+				// "Figtree Light" (its typographic family is `Figtree`, its family record is
+				// not), which is a family a style asking for `Figtree` never matches.
+				// The weights are exactly the ones the type ramp uses, so no step renders a
+				// synthesised weight. The web target uses the woff2 files instead — see
+				// `design/fonts/README.md`.
+				fonts: [
+					"./design/fonts/Figtree-Regular.ttf",
+					"./design/fonts/Figtree-Medium.ttf",
+					"./design/fonts/Figtree-SemiBold.ttf",
+					"./design/fonts/JetBrainsMono-Regular.ttf",
+					"./design/fonts/JetBrainsMono-SemiBold.ttf",
+				],
+			},
+		],
 		"expo-image",
 	],
 	experiments: {

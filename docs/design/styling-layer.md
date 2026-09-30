@@ -29,6 +29,39 @@ names a role (`bg-surface`, `text-ink-muted`, `border-control`) and never a hue 
 `useTokenColor()` exists only for the two APIs that cannot take a class name, a
 vector icon's `color` prop and native chrome.
 
+## The faces: a variable is not a face
+
+`--font-sans` and `--font-mono` were emitted from the start, and every screen still
+rendered in the platform face — while the kit's own reference stills render
+Figtree, so the look that was approved and the look that shipped were two different
+faces. Three things are needed for a face to appear, and each one failed on its own:
+
+1. **The file.** No font file was in the repository and the export contained no
+   `@font-face` rule, so `'Figtree'` resolved to nothing and the stack fell through
+   to `system-ui`. Fixed by vendoring both faces (`design/fonts`) and generating the
+   `@font-face` rules, with the weight range read from the token file's own `axes`.
+   The served copy under `public/fonts` is verified by `pnpm theme:check`.
+2. **A binding that names the family.** react-native-web hands every text node a
+   platform stack, so a variable alone changes nothing; `* { font-family:
+   var(--font-sans) }` in the `base` layer is the default voice, and a rule on the
+   node itself is what beats an inherited value.
+3. **The step's own face.** The machine voice never rendered: `text-mono`,
+   `text-mono-sm`, `text-mono-code` and `text-mono-label` carried no family, so every
+   chip, badge, list-row and banner identifier was sans. Tailwind's `text-<step>`
+   utility reads only `--line-height`, `--letter-spacing` and `--font-weight` from a
+   step's theme entry — there is **no family slot**, so a step cannot carry its face
+   that way. The generated layer therefore writes one `@layer utilities` rule per
+   step, from that step's own `face` token, which is also what makes the mono steps
+   mono on a device.
+
+Native needs its own handling of the same question: the family must be named in the
+style, which is what those per-step rules do for text that uses a step.
+
+**When to revisit:** if Tailwind gains a family slot on the text steps, the per-step
+rules collapse into the step declarations and the note above goes with them.
+
+---
+
 ## Uniwind, and the web target
 
 The ADR chose Uniwind (Tailwind v4) with NativeWind v4 as the fallback. **The
