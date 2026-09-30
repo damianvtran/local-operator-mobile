@@ -32,9 +32,17 @@
  */
 
 import { spawn, spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import {
+	existsSync,
+	mkdtempSync,
+	readdirSync,
+	readFileSync,
+	rmSync,
+	statSync,
+	writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { browserWebSocketUrl, connect, sleep } from "./cdp.ts";
 
 /**
@@ -153,6 +161,15 @@ export async function launchChrome({
 	});
 	child.unref();
 
+	// Two pid files, because a sweep run by a LATER process has to answer two
+	// questions without guessing: whose profile is this (`owner.pid`, so a live run's
+	// Chrome is never touched) and which process to kill (`chrome.pid`). Written before
+	// the port wait so a profile that never became ready is still traceable.
+	if (child.pid !== undefined) {
+		writeFileSync(join(profile, "chrome.pid"), String(child.pid));
+		writeFileSync(join(profile, "owner.pid"), String(process.pid));
+	}
+
 	const portFile = join(profile, "DevToolsActivePort");
 	const deadline = Date.now() + 30_000;
 	while (
@@ -189,7 +206,14 @@ export async function launchChrome({
 		},
 		async close() {
 			await client.close();
-			return reap(child.pid, profile);
+			const reaped = await reap(child.pid, profile);
+			// Then the profiles a KILLED earlier run left in the same root. `reap` is
+			// thorough but it cannot run when this process is killed outright, which is
+			// how orphans are made; sweeping the profile's parent root here is what makes
+			// the leak self-healing instead of permanent. Live owners are skipped, so a
+			// concurrent run sharing the root is never touched.
+			const sweep = sweepOrphanChrome(dirname(profile));
+			return { ...reaped, sweep };
 		},
 	};
 }
@@ -264,9 +288,118 @@ export function countProcesses(profile: string): number {
 	return result.stdout.split("\n").filter((line) => line.trim() !== "").length;
 }
 
+/**
+ * Reap Chrome a KILLED run left behind, and the profile directories with it.
+ *
+ * `reap()` is the normal path and it is thorough, but it cannot run when this process
+ * is killed outright (SIGKILL, a cancelled job): Chrome is spawned `detached`, so it
+ * does not die with its parent and re-parents to pid 1, holding the profile and its
+ * memory for as long as the machine is up. Measured 2026-09-30: four such browsers,
+ * four to seven hours old, from cancelled `doc-commands` gate runs, each still running
+ * the throwaway profile of a run that had finished.
+ *
+ * So the sweep is what a LATER run does about it, and it is deliberately both:
+ *  - conservative about ownership — a profile whose `owner.pid` is still alive is
+ *    skipped, so two runs sharing a root never kill each other;
+ *  - scoped to the profile path, never to "chrome" by name: an unscoped name match is
+ *    how one session's teardown killed another session's processes.
+ *
+ * The pid-reuse guard matters as much as the kill: a recorded pid can belong to an
+ * unrelated process by the time the sweep runs, so the process is only signalled when
+ * its own command line still carries this profile path.
+ *
+ * @param root a directory to search for `chrome-*` profiles at any depth (bounded).
+ */
+export function sweepOrphanChrome(root: string): {
+	swept: number[];
+	profiles: string[];
+	skipped: string[];
+} {
+	const swept: number[] = [];
+	const profiles: string[] = [];
+	const skipped: string[] = [];
+	const stack: Array<{ dir: string; depth: number }> = [
+		{ dir: root, depth: 0 },
+	];
+	while (stack.length > 0) {
+		const { dir, depth } = stack.pop() as { dir: string; depth: number };
+		let entries: string[] = [];
+		try {
+			entries = readdirSync(dir);
+		} catch {
+			continue;
+		}
+		for (const entry of entries) {
+			const child = join(dir, entry);
+			// A PROFILE is recognised before anything else, and it is a directory: checked
+			// the other way round, `chrome-*` is pushed as a directory to descend into and
+			// every profile is silently skipped — which is exactly what a first revision
+			// did, and what the two-direction assertion in `verify` exists to catch.
+			if (!entry.startsWith("chrome-")) {
+				if (depth < 3 && !entry.startsWith(".")) {
+					try {
+						if (statSync(child).isDirectory()) {
+							stack.push({ dir: child, depth: depth + 1 });
+						}
+					} catch {
+						/* unreadable entry: not ours to reason about */
+					}
+				}
+				continue;
+			}
+			let chromePid = 0;
+			let ownerPid = 0;
+			try {
+				chromePid = Number(
+					readFileSync(join(child, "chrome.pid"), "utf8").trim(),
+				);
+				ownerPid = Number(
+					readFileSync(join(child, "owner.pid"), "utf8").trim(),
+				);
+			} catch {
+				// A profile with no recorded owner predates the pid files. Its Chrome
+				// cannot be identified safely, so it is reported rather than killed.
+				if (countProcesses(child) > 0) skipped.push(child);
+				continue;
+			}
+			if (isAlive(ownerPid)) {
+				skipped.push(child);
+				continue;
+			}
+			if (countProcesses(child) > 0 && isAlive(chromePid)) {
+				spawnSync("pkill", ["-9", "-f", child]);
+				if (countProcesses(child) > 0) spawnSync("pkill", ["-9", "-f", child]);
+				swept.push(chromePid);
+			}
+			if (countProcesses(child) === 0) {
+				try {
+					rmSync(child, { recursive: true, force: true });
+					profiles.push(child);
+				} catch {
+					/* a profile the OS is still holding: next sweep */
+				}
+			}
+		}
+	}
+	return { swept, profiles, skipped };
+}
+
+/** True when a pid exists (`kill -0`), which is all the owner check needs. */
+function isAlive(pid: number): boolean {
+	if (!Number.isInteger(pid) || pid <= 0) return false;
+	try {
+		process.kill(pid, 0);
+		return true;
+	} catch {
+		return false;
+	}
+}
+
 /** What a teardown sweep observed, returned so a caller can assert on it. */
 export interface ReapResult {
 	survivors: number;
 	profile: string;
 	rounds: number;
+	/** Orphans from KILLED earlier runs in the same root, reaped alongside this one. */
+	sweep?: { swept: number[]; profiles: string[]; skipped: string[] };
 }

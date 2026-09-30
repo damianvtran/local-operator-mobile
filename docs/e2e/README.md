@@ -320,6 +320,28 @@ captured envelope from a synthetic fixture
 synthetic`). Without it, no scenario's DOM contained a fenced block, so a control the
 kit's floor applies to was unmeasurable by anything.
 
+### What the harness leaves behind, and what it cannot promise
+
+Every run reaps its own Chrome by pid and profile, asserts the count is zero, and
+reports an error naming the profile if it is not. It also **sweeps** profiles whose
+owner has died: `launchChrome` records `chrome.pid` and `owner.pid` beside the
+profile, and every later run's `close()` reaps any profile in the same root whose
+owner is gone, then removes the directory. The kill is scoped to the profile path —
+never to `chrome` by name, because a name-wide match is how one session's teardown
+killed another session's processes — and a live owner's browser is skipped and
+reported as `skipped`, never touched.
+
+The sweep exists because the guarantee it replaces was false: Chrome is spawned
+`detached` (`kill -pgid` is safe then), so a run killed with SIGKILL cannot reap
+anything and leaves a browser re-parented to pid 1. Four such browsers, four to seven
+hours old, were found from cancelled gate runs while those runs' own reports said
+nothing was left. So the honest statement is two-part:
+
+- a run that ends **normally** leaves nothing behind, and proves it in its own output;
+- a run that is **killed** cannot clean up after itself — the next run in that
+  directory does it instead. It is self-healing, not instantly clean, and a machine
+  that never runs these tools again keeps the orphan.
+
 ### Known mock/relay divergences
 
 A QA pass drove ~44 request cases through this mock and a real `lop mobile serve`

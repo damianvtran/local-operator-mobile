@@ -17,11 +17,18 @@
  */
 
 import { spawn, spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import {
+	existsSync,
+	mkdirSync,
+	mkdtempSync,
+	rmSync,
+	writeFileSync,
+} from "node:fs";
 import { connect as netConnect } from "node:net";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { countProcesses, sweepOrphanChrome } from "../lib/chrome.ts";
 
 const args = process.argv.slice(2);
 const flag = (name: string, fallback: string): string => {
@@ -1567,6 +1574,84 @@ async function main() {
 			1,
 		);
 		await relay.stop();
+	}
+
+	/* ---- 3g. the orphan sweep ---- */
+	// `reap()` cannot run when its own process is killed and Chrome is spawned
+	// detached, so a cancelled run leaves a browser and its profile behind — measured
+	// 2026-09-30: four of them, four to seven hours old, from cancelled gate runs. The
+	// sweep is what a LATER run does about it, and BOTH directions are asserted here
+	// because a sweep that kills a live run's browser is worse than the leak.
+	//
+	// The stand-in is a process whose command line carries the profile path, which is
+	// exactly what the sweep matches on; driving a real Chrome would test the browser,
+	// not the sweep.
+	group = "orphan sweep";
+	{
+		const root = join(
+			process.env.LOCAL_OPERATOR_SCRATCHPAD ?? tmpdir(),
+			`sweep-probe-${process.pid}`,
+		);
+		const standIn = (profile: string) =>
+			spawn(
+				process.execPath,
+				[
+					"-e",
+					"setTimeout(() => {}, 300000)",
+					"--",
+					`--user-data-dir=${profile}`,
+				],
+				{ stdio: "ignore" },
+			);
+
+		// (1) an orphan: its owner is gone.
+		const dead = spawnSync(process.execPath, ["-e", "process.exit(0)"]);
+		const orphanProfile = join(root, "chrome-orphan");
+		mkdirSync(orphanProfile, { recursive: true });
+		const orphan = standIn(orphanProfile);
+		writeFileSync(join(orphanProfile, "chrome.pid"), String(orphan.pid));
+		writeFileSync(join(orphanProfile, "owner.pid"), String(dead.pid));
+		await sleep(300);
+		check(
+			"the orphan stand-in is running before the sweep",
+			countProcesses(orphanProfile) > 0,
+			true,
+		);
+		const swept = sweepOrphanChrome(root);
+		check(
+			"a profile whose owner is gone has its process killed",
+			countProcesses(orphanProfile),
+			0,
+		);
+		check("and its directory is removed", existsSync(orphanProfile), false);
+		check("and the sweep reports what it reaped", swept.swept.length, 1);
+
+		// (2) a LIVE owner: the same shape, and the sweep must not touch it.
+		const liveProfile = join(root, "chrome-live");
+		mkdirSync(liveProfile, { recursive: true });
+		const live = standIn(liveProfile);
+		writeFileSync(join(liveProfile, "chrome.pid"), String(live.pid));
+		writeFileSync(join(liveProfile, "owner.pid"), String(process.pid));
+		await sleep(300);
+		const second = sweepOrphanChrome(root);
+		check(
+			"a live owner's browser is left alone",
+			countProcesses(liveProfile) > 0,
+			true,
+		);
+		check(
+			"and it is reported as skipped, not reaped",
+			second.skipped.length > 0,
+			true,
+		);
+		check("and its profile stays on disk", existsSync(liveProfile), true);
+		try {
+			process.kill(-(live.pid ?? 0), "SIGKILL");
+		} catch {
+			/* the stand-in exits with the kill attempt */
+		}
+		await sleep(300);
+		rmSync(root, { recursive: true, force: true });
 	}
 
 	/* ---- 4. the fault layer ---- */

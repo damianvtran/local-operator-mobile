@@ -45,6 +45,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { bool, num, parseArgs, str } from "./args.ts";
+import { sweepOrphanChrome } from "./chrome.ts";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO = resolve(HERE, "..", "..");
@@ -507,6 +508,11 @@ async function main(): Promise<void> {
 			}
 		}
 	} finally {
+		// The gate runs commands that launch Chrome, and a CANCELLED gate leaves those
+		// browsers behind: they are spawned detached and cannot reap themselves when their
+		// parent is killed. Sweeping the run directory covers the orderly case; the
+		// self-healing case is every later run's `close()`, which sweeps the same root.
+		if (values.$SCRATCH !== undefined) sweepOrphanChrome(values.$SCRATCH);
 		if (relay !== null && relay.pid > 0) {
 			try {
 				process.kill(relay.pid, "SIGKILL");
