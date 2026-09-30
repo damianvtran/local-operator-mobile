@@ -349,6 +349,12 @@ States to specify for every element below: **loading** (history fetch),
    `1 of N` badge, masked field for secrets, and now with a **labelled**
    remember choice that names its scope ("Always allow `bash` in this
    session").
+   - *Queued asks (target state, not shipped).* Once the relay publishes the
+     `asks` field, this card keeps its job for **approvals** and asks move to
+     their own surface — a count badge on the row, an asks list, and a response
+     card per answer; a card is a slot and a queue is a list. See
+     [ADR 0005](../adr/0005-queued-asks.md). Nothing here changes until that wire
+     lands.
 6. **Composer:** multiline field (44 pt minimum), attach (photo library /
    camera / files), model + effort chips, send/steer/stop as one morphing
    primary control with an explicit label, and a **queue indicator** when a
@@ -601,6 +607,10 @@ honest option.)
   deferred to v1.1 and shipped with (a) only. **Recommendation:** (c) for the
   first store release, with the notification settings screen present but honest
   that notifications only work while the app is running.
+  *Settled for v1 by [ADR 0005](../adr/0005-queued-asks.md) §5:* no push, an
+  in-app ask badge, a refetch on foreground, and copy that says the app cannot
+  alert while backgrounded. The option list above survives as the agenda for the
+  push RFC, which is where (a) and (b) get decided.
 - **D-2 - Radient mobile OAuth client.** The phone needs either a loopback
   listener during sign-in (allowed today for `127.0.0.1`/`localhost`/`[::1]`
   with any port) or Radient registering a native client (private-use scheme per
