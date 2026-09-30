@@ -1,4 +1,4 @@
-Local Operator mobile — font licences
+Local Operator app — font licences
 
 The three typefaces the mobile app ships are all licensed under the SIL Open
 Font License, Version 1.1. The OFL permits bundling, embedding in an installed

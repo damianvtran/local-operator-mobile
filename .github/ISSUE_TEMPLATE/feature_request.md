@@ -1,6 +1,6 @@
 ---
 name: "✨ Feature request"
-about: "Suggest an idea for Local Operator Mobile."
+about: "Suggest an idea for the Local Operator mobile app."
 title: "[Feature] <brief description>"
 labels: ["enhancement"]
 ---

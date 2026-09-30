@@ -254,7 +254,7 @@ what an on-device OAuth loopback listener uses.
   can report offensive content "without needing to exit the app"
   (<https://support.google.com/googleplay/android-developer/answer/13985936>,
   read 2026-09-29). This policy is written for apps whose *users* prompt a
-  generative model inside the app. Local Operator Mobile renders text and code
+  generative model inside the app. The Local Operator app renders text and code
   produced by a model running on **the user's own computer**, on the user's own
   machine — it is a client, not a generator. The honest reading is that the
   policy is not engaged; the defensible position if asked is that the model call

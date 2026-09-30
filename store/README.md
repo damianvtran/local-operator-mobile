@@ -157,11 +157,11 @@ are counted in **bytes**, because that is what Apple limits.
 | `ios/subtitle.txt` | 30 | 28 | 2 |
 | `ios/keywords.txt` | 100 bytes | 84 | 16 |
 | `ios/promotional_text.txt` | 170 | 162 | 8 |
-| `ios/description.txt` | 4,000 | 2,633 | 1,367 |
+| `ios/description.txt` | 4,000 | 2,613 | 1,387 |
 | `ios/release_notes.txt` | 4,000 | 367 | 3,633 |
 | `android/title.txt` | 30 | 14 | 16 |
 | `android/short_description.txt` | 80 | 65 | 15 |
-| `android/full_description.txt` | 4,000 | 2,381 | 1,619 |
+| `android/full_description.txt` | 4,000 | 2,361 | 1,639 |
 | `android/changelogs/default.txt` | 500 | 365 | 135 |
 
 Two of those numbers move as the copy is finished:
