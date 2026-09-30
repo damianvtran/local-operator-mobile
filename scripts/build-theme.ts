@@ -38,8 +38,15 @@
  * that emit template literals are how a generator ends up silently emitting half
  * of itself, so the emitted output never contains a backtick.
  */
-import { copyFileSync, readFileSync, writeFileSync } from "node:fs";
+import {
+	copyFileSync,
+	readdirSync,
+	readFileSync,
+	rmSync,
+	writeFileSync,
+} from "node:fs";
 import { createRequire } from "node:module";
+import { basename } from "node:path";
 import { fileURLToPath } from "node:url";
 import { z } from "zod";
 
@@ -447,7 +454,9 @@ const css = (): string => {
 		out.push("\tfont-display: swap;");
 		out.push("\tfont-weight: " + webFont.weights + ";");
 		out.push("\tsrc: url('" + webFont.url + "') format('woff2-variations');");
-		out.push("\tunicode-range: " + LATIN_UNICODE_RANGE + ";");
+		if (webFont.unicodeRange) {
+			out.push("\tunicode-range: " + webFont.unicodeRange + ";");
+		}
 		out.push("}");
 	}
 	out.push("");
@@ -541,19 +550,11 @@ type WebFace = {
 	destination: string;
 	/** The path in that URL. */
 	url: string;
+	/** Present only for a file that is a SUBSET of the character set. */
+	unicodeRange?: string;
 	weights: string;
 };
 
-/** The variable file per face, and the name it is served under. */
-const FONT_FILES: Record<string, string> = {
-	sans: "figtree-variable-latin.woff2",
-	mono: "jetbrains-mono-variable-latin.woff2",
-};
-
-/** The latin subset's own ranges, taken from the files' own declarations in
- * `@fontsource-variable/*`: the faces are partitioned by script, so a wrong range
- * means the browser downloads a file that cannot render the text and quietly
- * falls back to the platform face for those characters alone. */
 const LATIN_UNICODE_RANGE = [
 	"U+0000-00FF",
 	"U+0131",
@@ -575,6 +576,30 @@ const LATIN_UNICODE_RANGE = [
 	"U+FEFF",
 	"U+FFFD",
 ].join(",");
+
+/**
+ * The variable file per face, and the name it is served under.
+ *
+ * `unicodeRange` is set only where the served file is a SUBSET of the character
+ * set. The mono face is not one: the machine voice prints the state glyphs
+ * (`✓ ✗`, components.md § 9 and § 21) and those sit outside the latin subset —
+ * measured with the range bypassed by an injected face, the latin file did not
+ * contain them either, so widening the range alone would have left them in the
+ * platform's symbol font. One file that covers everything the face must print
+ * beats a subset plus a second face just for the glyphs.
+ */
+const FONT_FILES: Record<string, { file: string; unicodeRange?: string }> = {
+	sans: {
+		file: "figtree-variable-latin.woff2",
+		unicodeRange: LATIN_UNICODE_RANGE,
+	},
+	mono: { file: "jetbrains-mono-variable.woff2" },
+};
+
+/** The latin subset's own ranges, taken from the files' own declarations in
+ * `@fontsource-variable/*`: the faces are partitioned by script, so a wrong range
+ * means the browser downloads a file that cannot render the text and quietly
+ * falls back to the platform face for those characters alone. */
 
 const SERVED_FONTS = "public/fonts";
 
@@ -598,8 +623,8 @@ const webFaces: WebFace[] = entries(
 	face,
 	"type.faces",
 ).flatMap(([name, typeface]) => {
-	const file = FONT_FILES[name];
-	if (!file) {
+	const entry = FONT_FILES[name];
+	if (!entry) {
 		// A face the ramp does not use is not vendored here. The kit's third face
 		// (Fraunces, the store listing and splash face) is declared in tokens.json
 		// but no type step names it, so an @font-face for it would be a download
@@ -618,9 +643,10 @@ const webFaces: WebFace[] = entries(
 	return [
 		{
 			family: typeface.family,
-			file: "design/fonts/" + file,
-			destination: SERVED_FONTS + "/" + file,
-			url: "/fonts/" + file,
+			file: "design/fonts/" + entry.file,
+			destination: SERVED_FONTS + "/" + entry.file,
+			url: "/fonts/" + entry.file,
+			unicodeRange: entry.unicodeRange,
 			weights: weightRange(typeface.axes, name),
 		},
 	];
@@ -946,7 +972,19 @@ const outputs: Array<[string, string]> = [
  * platform font, which is exactly the defect this generates the rules for, so it
  * is checked rather than trusted.
  */
+const servedNames = (): Set<string> =>
+	new Set(webFaces.map((webFont) => basename(webFont.destination)));
+
 const copyFaces = (): void => {
+	const expected = servedNames();
+	for (const stale of readdirSync(new URL(SERVED_FONTS, root))) {
+		// This directory is entirely this generator's output, so a file it no longer
+		// names is a face from before a rename — and it would ship in the export as
+		// dead weight (measured: the mono latin subset, replaced by the full file).
+		if (stale.endsWith(".woff2") && !expected.has(stale)) {
+			rmSync(new URL(SERVED_FONTS + "/" + stale, root));
+		}
+	}
 	for (const webFont of webFaces) {
 		copyFileSync(
 			new URL(webFont.file, root),
@@ -955,8 +993,8 @@ const copyFaces = (): void => {
 	}
 };
 
-const staleFaces = (): string[] =>
-	webFaces
+const staleFaces = (): string[] => [
+	...webFaces
 		.filter((webFont) => {
 			try {
 				return (
@@ -971,7 +1009,17 @@ const staleFaces = (): string[] =>
 		.map(
 			(webFont) =>
 				webFont.destination + " is missing or differs from " + webFont.file,
-		);
+		),
+	...(() => {
+		const expected = servedNames();
+		return readdirSync(new URL(SERVED_FONTS, root))
+			.filter((name) => name.endsWith(".woff2") && !expected.has(name))
+			.map(
+				(name) =>
+					SERVED_FONTS + "/" + name + " is not named by any face in FONT_FILES",
+			);
+	})(),
+];
 
 if (check) {
 	const stale: string[] = [];

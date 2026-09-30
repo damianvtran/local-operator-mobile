@@ -20,8 +20,11 @@ import {
 export type BadgeProps = {
 	label: string;
 	tone?: SemanticTone;
-	/** `mono-label` for an uppercase machine string, so the machine voice is
-	 * consistent with every other machine string in the app. */
+	/** `mono-label` for a machine string (a version, an id), so the machine voice is
+	 * the same as every other machine string here. The label's CASE is preserved:
+	 * a badge that uppercased it rendered an identifier wrong (`v0.62.0` became
+	 * `V0.62.0`), and case is part of what an identifier says. A word that should be
+	 * upper case is the caller's copy to write that way. */
 	mono?: boolean;
 	testID?: string;
 };
@@ -37,7 +40,7 @@ export const Badge = ({
 			// `leading-4` on BOTH variants, because the two steps' own line heights
 			// differ by 3.6 px and the kit caps a badge at 22: the label box has to be
 			// bound once (16 px) for the mono and the sans badge to be the same height.
-			className={`leading-4 ${mono ? "text-mono-label uppercase" : "text-meta"} ${badgeInkClasses(tone)}`}
+			className={`leading-4 ${mono ? "text-mono-label" : "text-meta"} ${badgeInkClasses(tone)}`}
 		>
 			{label}
 		</Text>

@@ -266,16 +266,37 @@ export const badgeInkClasses = (tone: SemanticTone = "neutral"): string => {
 /**
  * A chip IS interactive — it opens a sheet — and carries a machine word (model,
  * effort), so its type is `mono-sm` and its target is the full 44pt.
+ *
+ * The ink is NOT here: this is the wrapper's fill, border and geometry. A label's
+ * colour has to be on the label (`chipLabelClasses`) — see that function for why.
  */
 export const chipClasses = (state: ControlState = {}): string =>
 	cx(
 		"min-h-11 flex-row items-center gap-1.5 rounded-sm border px-3",
 		state.disabled
-			? "bg-surface border-hairline text-ink-disabled"
+			? "bg-surface border-hairline"
 			: state.selected
-				? "bg-accent-muted border-accent-border text-accent-active dark:text-accent-hover"
-				: "bg-surface border-border-control text-ink-muted",
+				? "bg-accent-muted border-accent-border"
+				: "bg-surface border-border-control",
 	);
+
+/**
+ * The chip label's ink, per § 6: `ink-muted` at rest, `accent-active` (light) /
+ * `accent-hover` (dark) when selected, disabled when it cannot be used.
+ *
+ * It is expressed on the TEXT rather than left to the wrapper, because a
+ * react-native-web Text declares its own `color: black` and therefore does not
+ * inherit one: a chip whose label named no ink role rendered black on the chip's
+ * own `surface` fill — 1.41:1 in the dark theme, i.e. effectively invisible. The
+ * same trap is documented at `buttonLabelClasses` in button.tsx; a primitive whose
+ * label names no ink role is the defect, so every new one needs this helper.
+ */
+export const chipLabelClasses = (state: ControlState = {}): string =>
+	state.disabled
+		? "text-ink-disabled"
+		: state.selected
+			? "text-accent-active dark:text-accent-hover"
+			: "text-ink-muted";
 
 /* -------------------------------------------------------------------------- */
 /* ListRow                                                                    */

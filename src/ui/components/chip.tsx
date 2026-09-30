@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { Pressable, Text, View } from "react-native";
 
 import { ROLE, state } from "@/ui/a11y";
-import { chipClasses } from "@/ui/variants";
+import { chipClasses, chipLabelClasses } from "@/ui/variants";
 
 /**
  * A chip: interactive, and it opens something (docs/design/components.md § 6).
@@ -47,7 +47,11 @@ export const Chip = ({
 		{({ pressed }) => (
 			<View className={chipClasses({ selected, disabled, pressed })}>
 				{leadingIcon ? <View pointerEvents="none">{leadingIcon}</View> : null}
-				<Text className="text-mono-sm">{label}</Text>
+				<Text
+					className={`text-mono-sm ${chipLabelClasses({ selected, disabled })}`}
+				>
+					{label}
+				</Text>
 			</View>
 		)}
 	</Pressable>

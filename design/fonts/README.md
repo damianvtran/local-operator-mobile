@@ -7,8 +7,8 @@ the files.
 
 | File | Face | Weight | Consumer |
 |---|---|---|---|
-| `figtree-variable-latin.woff2` | Figtree (variable) | 300–900 | the web target |
-| `jetbrains-mono-variable-latin.woff2` | JetBrains Mono (variable) | 100–800 | the web target |
+| `figtree-variable-latin.woff2` | Figtree (variable, latin) | 300–900 | the web target |
+| `jetbrains-mono-variable.woff2` | JetBrains Mono (variable, full) | 100–800 | the web target |
 | `Figtree-Regular.ttf` | Figtree | 400 | iOS, Android |
 | `Figtree-Medium.ttf` | Figtree | 500 | iOS, Android |
 | `Figtree-SemiBold.ttf` | Figtree | 600 | iOS, Android |
@@ -17,13 +17,21 @@ the files.
 
 ## Why two formats
 
-The web target needs a file a browser can fetch: the woff2 variable files are the
-latin subsets the marketing site already ships (`@fontsource-variable/figtree`,
-`@fontsource-variable/jetbrains-mono`), 20 KB and 40 KB. `scripts/build-theme.ts`
-copies them to `public/fonts/` — which Expo serves at `/fonts/…` — and emits the
-matching `@font-face` rules into `src/ui/theme.css`. The copy is verified by
-`pnpm theme:check`: a served file that drifts from its source is a face that
-silently falls back to the platform font.
+The web target needs a file a browser can fetch. Figtree's is the latin subset the
+marketing site already ships (`@fontsource-variable/figtree`, 20 KB); JetBrains
+Mono's is the **full-charset** variable file (111 KB), not the latin subset the site
+ships (40 KB), because the machine voice prints the state glyphs — `✓` `✗` on a
+banner, an alert and a toast — and those are outside the latin subset. Measured, and
+the measurement is why the subset was dropped rather than given a wider
+`unicode-range`: with the range bypassed by an injected face, the latin file still
+rendered the glyphs from the platform's symbol font, so it does not contain them.
+A wider range alone would not have fixed it.
+
+`scripts/build-theme.ts` copies both files to `public/fonts/` — which Expo serves at
+`/fonts/…` — and emits the matching `@font-face` rules into `src/ui/theme.css`,
+stating the subset range only for the face that is a subset. The copy is verified by
+`pnpm theme:check`: a served file that drifts from its source is a face that silently
+falls back to the platform font.
 
 Native needs files the packager can embed, and React Native picks a face by
 **family and weight**, not by a variation axis. So the native half is one static
@@ -41,10 +49,10 @@ weight instances avoid the question entirely.
 | Face | Source | Version |
 |---|---|---|
 | Figtree | `github.com/erikdkennedy/figtree`, `fonts/ttf/` (statics) and `fonts/variable/` | upstream `master`, read 2026-09-30 |
-| JetBrains Mono | `github.com/JetBrains/JetBrainsMono`, `fonts/ttf/` | upstream `master`, read 2026-09-30 |
+| JetBrains Mono | `github.com/JetBrains/JetBrainsMono`, `fonts/ttf/` (statics) and `fonts/webfonts/` (variable woff2) | upstream `master`, read 2026-09-30 |
 
-The woff2 subsets were copied from the installed `@fontsource-variable` packages in
-the marketing site checkout, so the app and the site render the same files.
+Figtree's woff2 subset was copied from the installed `@fontsource-variable` package in
+the marketing site checkout, so the app and the site render the same file for it.
 
 What was verified before vendoring (and how, so it can be repeated): each TTF's
 `name` table was parsed for the family, subfamily and PostScript records, which is

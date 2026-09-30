@@ -69,7 +69,7 @@ export const Screen = ({
 			}}
 			testID={testID}
 		>
-			<View className="h-14 flex-row items-center gap-2 px-4">
+			<View className="h-14 flex-row items-center gap-2 px-4" style={column}>
 				{headerLeading}
 				<Heading
 					level={1}
