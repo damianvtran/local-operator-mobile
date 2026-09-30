@@ -18,11 +18,9 @@
  * failure ends the loop with the error rather than retrying forever.
  */
 
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
-import { fileURLToPath } from "node:url";
-
 import { describe, expect, it, vi } from "vitest";
+
+import { loadFixture } from "../../testing/fixtures";
 
 import {
 	type DecodedFrame,
@@ -34,25 +32,17 @@ import {
 	type StreamStatus,
 } from "../index";
 
-const FIXTURE_ROOT = fileURLToPath(
-	new URL("../../../fixtures/relay", import.meta.url),
-);
-
-function fixture(rel: string): unknown {
-	return JSON.parse(readFileSync(join(FIXTURE_ROOT, rel), "utf8")) as unknown;
-}
-
 /** A frame's literal wire bytes, built from the captured `data` — the same text
  *  the relay emits, so the reader is fed the wire and not a re-encoding of it. */
 function wire(event: string, data: unknown): string {
 	return `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
 }
 
-const LIST_FRAME = fixture("sse/sse-list-frame.json") as {
+const LIST_FRAME = loadFixture("sse/sse-list-frame.json") as {
 	event: string;
 	data: unknown;
 };
-const PROJECTION_FRAME = fixture("sse/sse-projection-live-idle.json") as {
+const PROJECTION_FRAME = loadFixture("sse/sse-projection-live-idle.json") as {
 	event: string;
 	data: unknown;
 };
@@ -61,7 +51,7 @@ const PROJECTION_FRAME = fixture("sse/sse-projection-live-idle.json") as {
  * nowhere to carry one. It is still the captured string, fed to the parser as-is
  * — decoding it into a hand-built frame is the mistake the README names. */
 const KEEPALIVE_BYTES = (
-	fixture("sse/sse-keepalive.json") as { literal: string }
+	loadFixture("sse/sse-keepalive.json") as { literal: string }
 ).literal;
 
 /** A frame's `data`, which is `string | undefined` on the wire type but is always

@@ -1,5 +1,3 @@
-import { fileURLToPath } from "node:url";
-
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -8,10 +6,6 @@ import {
 	type RelayRequest,
 	type RequestAuth,
 } from "../index";
-
-const _FIXTURE_ROOT = fileURLToPath(
-	new URL("../../../fixtures/relay", import.meta.url),
-);
 
 const TUNNEL_ORIGIN =
 	"https://aaaaaaaabbbbbbbbccccccccdddddddd-lop.radienthq.com";

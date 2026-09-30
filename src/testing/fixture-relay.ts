@@ -20,7 +20,6 @@
  * server actually saw.
  */
 
-import { readFileSync } from "node:fs";
 import {
 	createServer,
 	type IncomingHttpHeaders,
@@ -29,19 +28,12 @@ import {
 	type ServerResponse,
 } from "node:http";
 import type { AddressInfo } from "node:net";
-import { join } from "node:path";
-import { fileURLToPath } from "node:url";
 
-const FIXTURE_ROOT = fileURLToPath(
-	new URL("../../fixtures/relay", import.meta.url),
-);
+import { loadFixture } from "./fixtures";
 
 /** The payload of a captured fixture (`body` for HTTP, `data` for SSE). */
 export function fixtureBody(rel: string): unknown {
-	const file = JSON.parse(readFileSync(join(FIXTURE_ROOT, rel), "utf8")) as {
-		body?: unknown;
-		data?: unknown;
-	};
+	const file = loadFixture<{ body?: unknown; data?: unknown }>(rel);
 	return file.body ?? file.data;
 }
 

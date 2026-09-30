@@ -21,12 +21,14 @@
  *    schema, because the screen looks confident.
  */
 
-import { readdirSync, readFileSync, statSync } from "node:fs";
-import { join, relative } from "node:path";
-import { fileURLToPath } from "node:url";
+import { relative } from "node:path";
 
 import { describe, expect, it } from "vitest";
-
+import {
+	FIXTURE_ROOT,
+	listFixtureJsonFiles,
+	loadFixture,
+} from "../../testing/fixtures";
 import {
 	completionAttentionSchema,
 	gatewayRefusalReasonSchema,
@@ -37,34 +39,6 @@ import {
 	type SchemaName,
 	safeParsePayload,
 } from "../index";
-
-const FIXTURE_ROOT = fileURLToPath(
-	new URL("../../../fixtures/relay", import.meta.url),
-);
-
-function listJsonFiles(dir: string): string[] {
-	const out: string[] = [];
-	for (const entry of readdirSync(dir, { withFileTypes: true }).sort((a, b) =>
-		a.name.localeCompare(b.name),
-	)) {
-		const full = join(dir, entry.name);
-		if (entry.isDirectory()) out.push(...listJsonFiles(full));
-		/* Only `.json`: the corpus also holds a README, and that is not a payload.
-		 * The captured `: keepalive` bytes live in a JSON file like everything else
-		 * (their `literal` field) so they can carry a provenance marker, and the SSE
-		 * framer test is what feeds them to a parser. */ else if (
-			entry.isFile() &&
-			entry.name.endsWith(".json") &&
-			statSync(full).isFile()
-		)
-			out.push(full);
-	}
-	return out;
-}
-
-function readJson(path: string): unknown {
-	return JSON.parse(readFileSync(path, "utf8")) as unknown;
-}
 
 /** A fixture is either validated against a named schema or explicitly excluded
  *  with the reason it is not a JSON payload this stream reads. */
@@ -299,12 +273,12 @@ function classifyFixture(rel: string, value: unknown): Classification {
 }
 
 describe("the fixture corpus is fully classified", () => {
-	const files = listJsonFiles(FIXTURE_ROOT).map((path) =>
+	const files = listFixtureJsonFiles().map((path) =>
 		relative(FIXTURE_ROOT, path),
 	);
 	const classified = files.map((rel) => ({
 		rel,
-		result: classifyFixture(rel, readJson(join(FIXTURE_ROOT, rel))),
+		result: classifyFixture(rel, loadFixture(rel)),
 	}));
 
 	it("classifies every committed fixture exactly once", () => {
@@ -359,17 +333,13 @@ describe("the fixture corpus is fully classified", () => {
 
 describe("payloads the fixtures cannot reach", () => {
 	it("parses the attention record on its own", () => {
-		const attention = readJson(
-			join(FIXTURE_ROOT, "sse/sse-attention-complete.json"),
-		);
+		const attention = loadFixture("sse/sse-attention-complete.json");
 		const parsed = completionAttentionSchema.safeParse(attention);
 		expect(parsed.success).toBe(true);
 	});
 
 	it("keeps every gateway reason the constants file names inside the enum", () => {
-		const constants = readJson(
-			join(FIXTURE_ROOT, "gateway/gateway-refusal-constants.json"),
-		) as {
+		const constants = loadFixture("gateway/gateway-refusal-constants.json") as {
 			relay_detail: Record<string, string>;
 		};
 		const reasons = Object.keys(constants.relay_detail);
@@ -396,9 +366,9 @@ describe("payloads the fixtures cannot reach", () => {
 /* ------------------------------------------------------------------ malformed */
 
 const VALID_PROJECTION = (() => {
-	const frame = readJson(
-		join(FIXTURE_ROOT, "sse/sse-projection-live-idle.json"),
-	) as { data: unknown };
+	const frame = loadFixture("sse/sse-projection-live-idle.json") as {
+		data: unknown;
+	};
 	return frame.data as Record<string, unknown>;
 })();
 
@@ -584,12 +554,12 @@ describe("malformed frames are rejected, never coerced", () => {
 		[
 			"a projection frame carrying the sessions event name",
 			"projectionStreamFrame",
-			readJson(join(FIXTURE_ROOT, "sse/sse-list-frame.json")),
+			loadFixture("sse/sse-list-frame.json"),
 		],
 		[
 			"a sessions frame carrying projection data",
 			"sessionsStreamFrame",
-			readJson(join(FIXTURE_ROOT, "sse/sse-projection-live-idle.json")),
+			loadFixture("sse/sse-projection-live-idle.json"),
 		],
 	];
 
@@ -625,7 +595,7 @@ describe("absence and null carry the contract's meaning", () => {
 
 	it("defaults an absent pin to the state that cannot reorder a row", () => {
 		const summary = (
-			readJson(join(FIXTURE_ROOT, "http/sessions-empty.json")) as {
+			loadFixture("http/sessions-empty.json") as {
 				body: { sessions: unknown[] };
 			}
 		).body;
@@ -776,9 +746,9 @@ describe("the receipts read absence as false and never invent a state", () => {
 	});
 
 	it("accepts the receipts on a projection frame, where they are the fresher source", () => {
-		const projection = readJson(
-			join(FIXTURE_ROOT, "sse/sse-projection-live-idle.json"),
-		) as { data: Record<string, unknown> };
+		const projection = loadFixture("sse/sse-projection-live-idle.json") as {
+			data: Record<string, unknown>;
+		};
 		const degraded = parsePayload("sessionProjection", {
 			...projection.data,
 			degraded: true,
@@ -798,7 +768,7 @@ describe("the receipts read absence as false and never invent a state", () => {
  *  `provenance` marker, so nothing is unwrapped here — the two files whose
  *  payload is a named field are read through that field where they are used. */
 function fixture<T>(rel: string): T {
-	return readJson(join(FIXTURE_ROOT, rel)) as T;
+	return loadFixture<T>(rel);
 }
 
 /** A probe transcript's samples, keyed by its own `columns` list. The probes are
@@ -816,7 +786,7 @@ function probeRows(rel: string): Record<string, unknown>[] {
 }
 
 describe("every fixture names its own origin", () => {
-	const files = listJsonFiles(FIXTURE_ROOT).map((path) =>
+	const files = listFixtureJsonFiles().map((path) =>
 		relative(FIXTURE_ROOT, path),
 	);
 
@@ -1029,7 +999,7 @@ describe("the json boundary", () => {
 	});
 
 	it("parses a real healthz body", () => {
-		const fixture = readJson(join(FIXTURE_ROOT, "http/healthz.json")) as {
+		const fixture = loadFixture("http/healthz.json") as {
 			body: unknown;
 		};
 		const parsed = parseJsonPayload("healthz", JSON.stringify(fixture.body));
@@ -1041,9 +1011,9 @@ describe("a projection from a relay that predates an additive field", () => {
 	it("still parses, and reads the missing cut_off flag as false", () => {
 		/* `cut_off` is additive (`contract.md` §6.7). Requiring it made a relay one
 		 * release behind blank the whole session view over one absent flag. */
-		const captured = readJson(
-			join(FIXTURE_ROOT, "sse/sse-projection-live-idle.json"),
-		) as { data: Record<string, unknown> };
+		const captured = loadFixture("sse/sse-projection-live-idle.json") as {
+			data: Record<string, unknown>;
+		};
 		const { cut_off: _dropped, ...older } = captured.data;
 		const parsed = safeParsePayload("sessionProjection", older);
 		expect(parsed.ok).toBe(true);

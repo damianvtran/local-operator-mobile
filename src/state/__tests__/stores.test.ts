@@ -12,15 +12,12 @@
  * from the receipts local-operator PR #1784 added.
  */
 
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
-import { fileURLToPath } from "node:url";
-
 import { describe, expect, it } from "vitest";
 
 import type { SessionProjection, SessionSummary } from "../../contracts";
 import { parsePayload } from "../../contracts";
 import type { ErrorSurface } from "../../relay";
+import { loadFixture } from "../../testing/fixtures";
 import {
 	createConnectionStore,
 	createListStore,
@@ -34,18 +31,12 @@ import {
 	sessionTitle,
 } from "../index";
 
-const FIXTURE_ROOT = fileURLToPath(
-	new URL("../../../fixtures/relay", import.meta.url),
-);
-
 function listFrame(): {
 	sessions: SessionSummary[];
 	degraded: string[];
 	capabilities: Record<string, unknown>;
 } {
-	const fixture = JSON.parse(
-		readFileSync(join(FIXTURE_ROOT, "sse/sse-list-frame.json"), "utf8"),
-	) as { data: unknown };
+	const fixture = loadFixture<{ data: unknown }>("sse/sse-list-frame.json");
 	return parsePayload("sessionListFrame", fixture.data);
 }
 
@@ -53,9 +44,7 @@ function listFrame(): {
  *  the fixtures' README is explicit that a sample is fed to the parser under
  *  test rather than to a hand-written encoder. */
 function projectionFrom(rel: string): SessionProjection {
-	const fixture = JSON.parse(readFileSync(join(FIXTURE_ROOT, rel), "utf8")) as {
-		data: unknown;
-	};
+	const fixture = loadFixture<{ data: unknown }>(rel);
 	return parsePayload("sessionProjection", fixture.data);
 }
 

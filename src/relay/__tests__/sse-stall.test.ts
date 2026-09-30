@@ -8,22 +8,16 @@
  * and then nothing, and the client reads it with the platform `fetch`.
  */
 
-import { readFileSync } from "node:fs";
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
-import { join } from "node:path";
-import { fileURLToPath } from "node:url";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
-
+import { loadFixture } from "../../testing/fixtures";
 import { type DecodedFrame, SseConnection, type StreamStatus } from "../index";
 
-const FIXTURE_ROOT = fileURLToPath(
-	new URL("../../../fixtures/relay", import.meta.url),
+const projection = loadFixture<{ event: string; data: unknown }>(
+	"sse/sse-projection-live-idle.json",
 );
-const projection = JSON.parse(
-	readFileSync(join(FIXTURE_ROOT, "sse/sse-projection-live-idle.json"), "utf8"),
-) as { event: string; data: unknown };
 
 const servers: Server[] = [];
 afterEach(async () => {

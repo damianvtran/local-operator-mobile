@@ -14,11 +14,9 @@
  * same bytes the relay actually sends rather than against a hand-written body.
  */
 
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
-import { fileURLToPath } from "node:url";
-
 import { describe, expect, it } from "vitest";
+
+import { fixtureText, loadFixture } from "../../testing/fixtures";
 
 import {
 	GATEWAY_REASONS,
@@ -28,10 +26,6 @@ import {
 	relayErrorFromResponse,
 	transportError,
 } from "../index";
-
-const FIXTURE_ROOT = fileURLToPath(
-	new URL("../../../fixtures/relay", import.meta.url),
-);
 
 function facts(
 	status: number,
@@ -49,10 +43,7 @@ function facts(
 }
 
 const _GATEWAY_CONSTANTS = JSON.parse(
-	readFileSync(
-		join(FIXTURE_ROOT, "gateway/gateway-refusal-constants.json"),
-		"utf8",
-	),
+	fixtureText("gateway/gateway-refusal-constants.json"),
 ) as {
 	relay_detail: Record<string, string>;
 	max_body_bytes: number;
@@ -133,10 +124,7 @@ describe("the 503s, which are three different machines", () => {
 
 	it("reads the gateway's JSON 503 as a refusal, and keeps its sentence for the user", () => {
 		const constants = JSON.parse(
-			readFileSync(
-				join(FIXTURE_ROOT, "gateway/gateway-refusal-constants.json"),
-				"utf8",
-			),
+			fixtureText("gateway/gateway-refusal-constants.json"),
 		) as { relay_detail: Record<string, string> };
 		const reason = "authorization_refused";
 		const detail = constants.relay_detail[reason] ?? "";
@@ -218,10 +206,7 @@ describe("the 503s, which are three different machines", () => {
 describe("502, 504 and 408 leave delivery unknown; 4xx does not", () => {
 	it("reads the gateway's 502 as a relay that is not running, keeping the envelope", () => {
 		const fixture = JSON.parse(
-			readFileSync(
-				join(FIXTURE_ROOT, "http/command-unknown-session.json"),
-				"utf8",
-			),
+			fixtureText("http/command-unknown-session.json"),
 		) as {
 			body: unknown;
 		};
@@ -243,12 +228,10 @@ describe("502, 504 and 408 leave delivery unknown; 4xx does not", () => {
 			"command-unknown-op.json",
 			"op-prompt-images-not-list.json",
 		]) {
-			const fixture = JSON.parse(
-				readFileSync(join(FIXTURE_ROOT, "http", file), "utf8"),
-			) as {
+			const fixture = loadFixture<{
 				status: number;
 				body: { error: string; code?: string };
-			};
+			}>(`http/${file}`);
 			const error = relayErrorFromResponse(
 				facts(fixture.status, {}, JSON.stringify(fixture.body)),
 			);
@@ -291,9 +274,7 @@ describe("a tunnel that is gone is terminal, not a retry", () => {
 	});
 
 	it("leaves an ordinary 404 as a plain rejection so a missing session is not mistaken for a dead tunnel", () => {
-		const fixture = JSON.parse(
-			readFileSync(join(FIXTURE_ROOT, "http/history-unknown.json"), "utf8"),
-		) as {
+		const fixture = JSON.parse(fixtureText("http/history-unknown.json")) as {
 			status: number;
 			body: { error: string };
 		};

@@ -15,13 +15,9 @@
  * so the schemas and the routes cannot disagree.
  */
 
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
-import { fileURLToPath } from "node:url";
-
 import { describe, expect, it } from "vitest";
-
 import { parsePayload } from "../../contracts";
+import { loadFixture } from "../../testing/fixtures";
 import {
 	HISTORY_LIMIT,
 	RelayEndpoints,
@@ -31,10 +27,6 @@ import {
 	type RequestAuth,
 	SEARCH_LIMIT,
 } from "../index";
-
-const FIXTURE_ROOT = fileURLToPath(
-	new URL("../../../fixtures/relay", import.meta.url),
-);
 
 const BASE = "https://tunnel.example.invalid";
 const auth: RequestAuth = {
@@ -111,10 +103,7 @@ function endpoints(
 }
 
 function fixtureBody(rel: string): { status: number; body: unknown } {
-	const raw = JSON.parse(readFileSync(join(FIXTURE_ROOT, rel), "utf8")) as {
-		status?: number;
-		body: unknown;
-	};
+	const raw = loadFixture<{ status?: number; body: unknown }>(rel);
 	return { status: raw.status ?? 200, body: raw.body };
 }
 
