@@ -154,9 +154,9 @@ strips the type annotations, so there is no build step and no dependency, which
 matters because these scripts run before `pnpm install`. The constraints that
 follow are real ones: nothing that needs emit (no `enum`, no `namespace`, no
 parameter properties, no decorators), `import type` for anything that is a type,
-and the module type has to be declared — `scripts/ci/package.json` says
+and the module type has to be declared — `scripts/package.json` says
 `"type": "module"` because the root manifest cannot (`metro.config.js` is
-CommonJS).
+CommonJS), and that one file covers everything under `scripts/`.
 
 `tsconfig.tools.json` is the second program `pnpm typecheck` runs: the app's
 config, pointed at Node ESM with `types: ["node"]` and no DOM. It belongs to the
