@@ -21,9 +21,14 @@ export default defineConfig({
 		globals: false,
 		// react-native-web ships untranspiled ESM; Node must go through Vite for it.
 		server: { deps: { inline: [/react-native-web/] } },
-		// `github-actions` is the reporter's actual name, and the CI branch is real:
-		// the local shell has `CI` set, so a wrong name here fails every run rather
-		// than only the pipeline.
+		// The name is `github-actions`, NOT `github`: vitest 5 resolves an unknown
+		// reporter as a module path, so `github` kills the run before a single test
+		// with "Failed to load custom Reporter from github" (reproduced: rc=1, while
+		// `--reporter=github-actions` is accepted). CI sets `CI`, so that name is
+		// load-bearing for the pipeline even though the annotations are cosmetic
+		// locally — `dot` stays alongside it to keep the local summary readable.
+		// A wrong name here still exits non-zero on a red suite, so it can never
+		// turn a failure into a pass; it turns a run into no run.
 		reporters: process.env.CI ? ["github-actions", "dot"] : ["default"],
 	},
 	resolve: {
