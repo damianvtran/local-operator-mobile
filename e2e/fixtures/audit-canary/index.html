@@ -1,0 +1,203 @@
+<!doctype html>
+<!--
+  The audit canary.
+
+  Every deliberate defect below is mapped to the rubric check that must catch it
+  (`docs/ux/audit-rubric.md` §3), and every defect has a clean counterpart on the
+  `/clean` path so the same fixture proves both directions:
+
+    /defects   the audit must FAIL, naming exactly the ids in the table
+    /clean     the audit must PASS every check
+
+  An instrument that cannot fail is worthless, so this page is the instrument's
+  own test: if a check stops working, the defect stops being caught and
+  `e2e/run-canary.sh` reports it. `data-defect` carries the expected id, so the
+  canary's runner asserts against the fixture's own declaration rather than a
+  second hand-written list.
+
+  Themes come from the capture harness (`data-lo-theme`, `--lo-inset-*`), so the
+  page renders the real palette's canvas and the theme check stays honest: the
+  canvas colours below are the design tokens' `surface.canvas` for each theme.
+
+  | defect element        | check | what is wrong                                        |
+  |-----------------------|-------|------------------------------------------------------|
+  | #small-target         | U-01  | a 16x16 button, below even the slop floor            |
+  | #dense-pair           | U-01  | 28x28 controls 10pt apart — the rubric's EXCEPTION   |
+  | #low-contrast         | U-02  | ink #a8a296 on ground #f2ede3                        |
+  | #status-dot           | U-03  | colour-only status: no word, glyph or name           |
+  | #full-bleed           | U-05  | content at y=0 while the top inset is 59pt           |
+  | #too-wide             | U-06  | a 480px block in a 320px viewport                    |
+  | #clipped              | U-07  | two lines of text in a 16px-tall overflow:hidden box |
+  | #unnamed-icon         | U-09  | an icon button with no accessible name               |
+  | #label-mismatch       | U-10  | visible "Approve", accessible name "Confirm"         |
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Audit canary</title>
+<style>
+	:root {
+		--canvas: #f2ede3;
+		--surface: #f7f5ee;
+		--ink: #211e18;
+		--ink-muted: #4e4940;
+		--accent: #137742;
+		--danger: #b23a31;
+		--border: #857f70;
+	}
+	:root[data-lo-theme="dark"] {
+		--canvas: #22201c;
+		--surface: #2b2721;
+		--ink: #f1eee6;
+		--ink-muted: #c2bcaf;
+		--accent: #38c96a;
+		--danger: #ef8078;
+		--border: #837c6d;
+	}
+	html, body { margin: 0; padding: 0; }
+	body {
+		font-size: 1rem;
+		background: var(--canvas);
+		color: var(--ink);
+		font: 1rem/1.5 ui-sans-serif, system-ui, sans-serif;
+		/* The rubric's own words: the header's top padding is the inset, and the
+		   content's bottom padding is max(inset.bottom, 8). */
+		padding: var(--lo-inset-top, 0px) 16px max(var(--lo-inset-bottom, 0px), 8px);
+	}
+	/* The pinned-footer pair: content behind a fixed bar would trip the overlap
+	   check on the clean page, so the flow leaves room for its own artefact. */
+	body { padding-bottom: calc(max(var(--lo-inset-bottom, 0px), 8px) + 56px); }
+	.footer-bar { position: fixed; left: 0; right: 0; height: 40px; padding: 8px; background: var(--surface); border-top: 1px solid var(--border); }
+	.panel { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 12px; margin: 12px 0; }
+	button { font: inherit; border: 1px solid var(--border); background: var(--surface); color: var(--ink); border-radius: 6px; }
+	/* Clean geometry: 44pt controls, or a padded hit area that reaches 44. */
+	.control { min-height: 44px; min-width: 44px; padding: 0 16px; }
+	.icon-only { min-height: 44px; min-width: 44px; padding: 0 12px; display: inline-flex; align-items: center; gap: 8px; }
+	.bad, .good { display: none; }
+	html[data-mode="defects"] .bad { display: block; }
+	html[data-mode="clean"] .good { display: block; }
+	/* ---- defects ---- */
+	#small-target { width: 16px; height: 16px; padding: 0; }
+	#dense-pair { display: flex; gap: 10px; }
+	#dense-pair button { width: 28px; height: 28px; padding: 0; }
+	#low-contrast { background: #f2ede3; color: #a8a296; padding: 8px; }
+	#status-dot { display: inline-block; width: 12px; height: 12px; border-radius: 50%; background: var(--danger); border: none; }
+	#full-bleed { position: absolute; top: 0; left: 0; right: 0; padding: 4px; background: var(--surface); }
+	#too-wide { width: 480px; height: 20px; background: var(--surface); border: 1px solid var(--border); }
+	#clipped { height: 16px; overflow: hidden; background: var(--surface); }
+	#unnamed-icon { width: 44px; height: 44px; padding: 0; }
+	.status { display: inline-flex; align-items: center; gap: 6px; }
+</style>
+<script>
+  // Mode and pre-paint theme/scale come from the URL, so a cell is reproducible
+  // from its own address. The harness also sets these on the document before
+  // this runs; reading them here keeps the canary usable by hand.
+  (() => {
+    const params = new URLSearchParams(location.search);
+    const clean = location.pathname.includes('clean');
+    document.documentElement.dataset.mode = clean ? 'clean' : 'defects';
+    // The harness sets data-lo-theme before first paint; a hand-run may not.
+    if (!document.documentElement.dataset.loTheme) {
+      document.documentElement.dataset.loTheme = params.get('lo-theme') || 'light';
+    }
+  })();
+</script>
+</head>
+<body>
+<h1>Audit canary</h1>
+<p class="panel">A page whose defects are known, used to prove the audit checker fails.</p>
+
+<!-- U-01: below even the 24pt slop floor, and isolated, so it cannot take the exception. -->
+<div class="bad panel">
+	<h2>U-01 touch target</h2>
+	<button id="small-target" data-defect="U-01" aria-label="Small target">x</button>
+	<div id="dense-pair" data-defect="U-01-exception" style="margin-top: 24px">
+		<button aria-label="First dense control">1</button>
+		<button aria-label="Second dense control">2</button>
+	</div>
+</div>
+<div class="good panel">
+	<h2>U-01 touch target (clean)</h2>
+	<button class="control" id="good-target" aria-label="Properly sized target">Properly sized</button>
+</div>
+
+<!-- U-02: the ink fails 4.5:1 on its own ground. -->
+<div class="bad panel">
+	<h2>U-02 contrast</h2>
+	<p id="low-contrast" data-defect="U-02">This sentence is deliberately too faint to read comfortably.</p>
+</div>
+<div class="good panel">
+	<h2>U-02 contrast (clean)</h2>
+	<p id="good-contrast">This sentence carries the palette's ink on its own surface.</p>
+</div>
+
+<!-- U-03: a status carried by colour alone. -->
+<div class="bad panel">
+	<h2>U-03 colour-only status</h2>
+	<!-- No word and no glyph: the dot is the entire status. -->
+	<p><span id="status-dot" data-defect="U-03"></span></p>
+</div>
+<div class="good panel">
+	<h2>U-03 colour-only status (clean)</h2>
+	<p class="status" id="good-status"><span class="status-dot" style="width:12px;height:12px;border-radius:50%;background:var(--danger)"></span> Failed</p>
+</div>
+
+<!-- U-05: content under the notch band. -->
+<div class="bad" id="full-bleed" data-defect="U-05">This banner sits under the notch.</div>
+<div class="good panel" id="good-inset">This panel is padded clear of the inset.</div>
+
+<!-- U-06: horizontal overflow at 320pt. -->
+<div class="bad panel">
+	<h2>U-06 overflow</h2>
+	<div id="too-wide" data-defect="U-06"></div>
+</div>
+<div class="good panel">
+	<h2>U-06 overflow (clean)</h2>
+	<div id="good-width" style="max-width:100%;height:20px;background:var(--surface);border:1px solid var(--border)"></div>
+</div>
+
+<!-- U-07: text clipped by a fixed height. -->
+<div class="bad panel">
+	<h2>U-07 clipped text</h2>
+	<div id="clipped" data-defect="U-07">The first line of a tool result that continues onto a second line and is then cut off by the box.</div>
+</div>
+<div class="good panel">
+	<h2>U-07 clipped text (clean)</h2>
+	<div id="good-clipped">The first line of a tool result that continues onto a second line and has room to show all of it.</div>
+</div>
+
+<!-- U-05 bottom: a bar pinned flush to the home indicator. -->
+<div id="footer-flush" class="footer-bar bad" data-defect="U-05" style="bottom: 0">Flush to the home indicator</div>
+<div id="good-footer" class="footer-bar good" style="bottom: var(--lo-inset-bottom, 0px)">Padded clear of it</div>
+
+<!-- U-08: two meaningful boxes drawn on top of each other. -->
+<div class="bad panel" style="position:relative;height:64px">
+	<h2>U-08 overlap</h2>
+	<div id="overlap-a" data-defect="U-08" style="position:absolute;top:32px;left:0;width:140px;height:40px;background:var(--surface);border:1px solid var(--border);padding:4px">Alpha</div>
+	<div id="overlap-b" data-defect="U-08" style="position:absolute;top:42px;left:20px;width:140px;height:40px;background:var(--surface);border:1px solid var(--border);padding:4px">Beta</div>
+</div>
+
+<!-- U-09: an icon button with no accessible name. -->
+<div class="bad panel">
+	<h2>U-09 accessible name</h2>
+	<button id="unnamed-icon" data-defect="U-09"><svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8" fill="var(--accent)"/></svg></button>
+</div>
+<div class="good panel">
+	<h2>U-09 accessible name (clean)</h2>
+	<button class="icon-only" id="named-icon" aria-label="Approve the command">
+		<svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8" fill="var(--accent)"/></svg>
+	</button>
+</div>
+
+<!-- U-10: the accessible name does not contain the visible label. -->
+<div class="bad panel">
+	<h2>U-10 label in name</h2>
+	<button class="control" id="label-mismatch" data-defect="U-10" aria-label="Confirm">Approve</button>
+</div>
+<div class="good panel">
+	<h2>U-10 label in name (clean)</h2>
+	<button class="control" id="label-match" aria-label="Approve the pending command">Approve</button>
+</div>
+</body>
+</html>

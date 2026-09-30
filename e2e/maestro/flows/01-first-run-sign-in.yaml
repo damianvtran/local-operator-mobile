@@ -1,0 +1,60 @@
+# F-1 — first run, sign in, land on the session list.
+#
+# Every step takes a screenshot: the design and UX rounds audit this flow from
+# the frames, and a flow that passes without frames proves the app is reachable,
+# not that it is usable. Screenshots land in the run's artefact directory.
+#
+# CI-only: needs a booted simulator or emulator and an app build (ADR 0003).
+appId: ${APP_ID}
+name: "F-1 first run to session list"
+env:
+  APP_ID: com.radient.localoperator.mobile
+  RELAY_URL: http://127.0.0.1:4098
+  SESSION_ID: 6714def86197
+onFlowStart:
+  - takeScreenshot: "01-00-launch"
+---
+# clearState gives the reproducible cold start ADR 0003 asks for: no stored
+# cookie, no cached projection, so this is genuinely the first run.
+- launchApp:
+    clearState: true
+- takeScreenshot: "01-01-welcome"
+- assertVisible:
+    id: "welcome-headline"
+- assertVisible:
+    id: "welcome-connect"
+- takeScreenshot: "01-02-welcome-settled"
+# The Radient path is a system-browser hand-off; Maestro cannot type into the
+# system browser (ADR 0003, "What the harness is not"), so the flow asserts the
+# hand-off *starts* and switches to the direct route for the signed-in part.
+- tapOn:
+    id: "welcome-connect"
+- takeScreenshot: "01-03-handoff-started"
+- assertVisible:
+    id: "sign-in-browser-handoff"
+- back
+- takeScreenshot: "01-04-back-to-welcome"
+- tapOn:
+    id: "welcome-custom-url"
+- assertVisible:
+    id: "custom-url-field"
+- tapOn:
+    id: "custom-url-field"
+- inputText: "${RELAY_URL}"
+- takeScreenshot: "01-05-url-entered"
+- tapOn:
+    id: "custom-password-field"
+- inputText: "${RELAY_PASSWORD}"
+- tapOn:
+    id: "custom-connect"
+- takeScreenshot: "01-06-connecting"
+# The list must be reachable without a manual refresh: the connection screen
+# navigates on the first frame, which is the F-1 success condition.
+- extendedWaitUntil:
+    visible:
+      id: "session-list"
+    timeout: 20000
+- takeScreenshot: "01-07-session-list"
+- assertVisible:
+    id: "session-row-${SESSION_ID}"
+- takeScreenshot: "01-08-list-populated"

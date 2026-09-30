@@ -1,0 +1,69 @@
+# F-9 / S13 — connection loss, and the recovery the user must not see.
+#
+# Run against the mock relay with `--fault sse-cut-after=6`, which is the tunnel
+# gateway's `MAX_STREAM_SECONDS` cap compressed into a few seconds: the stream ends
+# as a **clean end-of-body**, with no error frame and no status change, so an early
+# EOF carries no information at all about why it ended (`docs/relay/tunnel-edge.md`
+# §3). What the app must do with that is the whole point of this flow:
+#
+#   1. treat EOF as expected, not as an error,
+#   2. reconnect immediately and render the seed frame,
+#   3. **not** show a connection state on the boundary — a user must not see a
+#      reconnect flash every minute,
+#   4. keep the last good projection rendered while reconnecting, never blank.
+#
+# A flow is the only way to test (3): a still frame cannot show an absence.
+appId: ${APP_ID}
+name: "F-9 connection loss and silent recovery"
+env:
+  APP_ID: com.radient.localoperator.mobile
+  SESSION_ID: 6714def86197
+---
+- launchApp:
+    clearState: true
+- runFlow: "01-first-run-sign-in.yaml"
+---
+- tapOn:
+    id: "session-row-${SESSION_ID}"
+- extendedWaitUntil:
+    visible:
+      id: "session-transcript"
+    timeout: 15000
+- takeScreenshot: "09-00-connected"
+- assertVisible:
+    id: "transcript-row-${SESSION_ID}"
+# Cross the cut: the relay's fault closes the stream roughly six seconds in, and
+# the app reconnects silently. Sample repeatedly across the boundary.
+- repeat:
+    times: 8
+    commands:
+      - takeScreenshot: "09-cut-${maestro.repeatIndex}"
+      - assertNotVisible:
+          id: "connection-banner"
+      - assertNotVisible:
+          id: "reconnect-toast"
+      # Stale-but-labelled, never blank: the transcript stays on screen.
+      - assertVisible:
+          id: "session-transcript"
+      - assertVisible:
+          id: "transcript-row-${SESSION_ID}"
+- takeScreenshot: "09-01-after-recovery"
+- assertVisible:
+    id: "session-transcript"
+# New content after the reconnect proves the stream actually re-established
+# rather than the screen sitting on a stale render.
+- extendedWaitUntil:
+    visible:
+      id: "session-activity-label"
+    timeout: 20000
+- takeScreenshot: "09-02-live-again"
+- assertVisible:
+    id: "composer-input"
+- tapOn:
+    id: "composer-input"
+- inputText: "still there?"
+- tapOn:
+    id: "composer-send"
+- takeScreenshot: "09-03-send-after-recovery"
+- assertVisible:
+    id: "composer-receipt"

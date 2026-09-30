@@ -1,0 +1,61 @@
+# F-6 — the session view: transcript, streaming, and a steer.
+#
+# Run against the mock relay's `streaming` scenario, which advances the assistant
+# row frame by frame and then settles. The point of the flow is the *settled*
+# state: a client that streams correctly but never settles leaves a shimmer on a
+# finished turn, and that is only visible if the flow waits for it and looks.
+appId: ${APP_ID}
+name: "F-6 session view and steer"
+env:
+  APP_ID: com.radient.localoperator.mobile
+  SESSION_ID: 6714def86197
+---
+- launchApp:
+    clearState: true
+- runFlow: "01-first-run-sign-in.yaml"
+---
+- tapOn:
+    id: "session-row-${SESSION_ID}"
+- extendedWaitUntil:
+    visible:
+      id: "session-transcript"
+    timeout: 15000
+- takeScreenshot: "06-00-session-open"
+- assertVisible:
+    id: "session-composer"
+- takeScreenshot: "06-01-idle"
+# Streaming: the relay's scenario starts a turn; the live region must announce
+# the state change, and the row must advance.
+- tapOn:
+    id: "composer-input"
+- inputText: "run it [bash:20]"
+- tapOn:
+    id: "composer-send"
+- takeScreenshot: "06-02-sent"
+- extendedWaitUntil:
+    visible:
+      id: "transcript-row-streaming"
+    timeout: 15000
+- takeScreenshot: "06-03-streaming"
+- assertVisible:
+    id: "session-activity-label"
+- takeScreenshot: "06-04-activity-named"
+# A steer while the turn runs: the receipt must appear, and the queued count
+# must be visible before the turn ends.
+- tapOn:
+    id: "composer-input"
+- inputText: "also check the ledger"
+- tapOn:
+    id: "composer-send"
+- takeScreenshot: "06-05-steer-sent"
+- assertVisible:
+    id: "queued-message-chip"
+- takeScreenshot: "06-06-queued"
+# Settled: no shimmer, no spinner, and the newest row is complete.
+- extendedWaitUntil:
+    notVisible:
+      id: "transcript-row-streaming"
+    timeout: 30000
+- takeScreenshot: "06-07-settled"
+- assertNotVisible:
+    id: "streaming-shimmer"

@@ -1,0 +1,59 @@
+# F-6 / S8 — answer a pending approval, then a pending ask.
+#
+# The relay's `approval` and `ask` scenarios pin both card shapes, including the
+# multi-question ask and the destructive-command detail. This flow answers one of
+# each and asserts the card *leaves*: a card that stays after an answer is the
+# defect that reads as a hung app.
+appId: ${APP_ID}
+name: "F-6 approval and ask"
+env:
+  APP_ID: com.radient.localoperator.mobile
+  SESSION_ID: 6714def86197
+---
+- launchApp:
+    clearState: true
+- runFlow: "01-first-run-sign-in.yaml"
+---
+- tapOn:
+    id: "session-row-${SESSION_ID}"
+- extendedWaitUntil:
+    visible:
+      id: "pending-card"
+    timeout: 15000
+- takeScreenshot: "08-00-approval-card"
+# The detail is a destructive command: the card must present it verbatim, and the
+# destination must be named rather than implied.
+- assertVisible:
+    id: "pending-card-detail"
+- assertVisible:
+    id: "pending-card-destructive-marker"
+- takeScreenshot: "08-01-card-detail"
+- tapOn:
+    id: "pending-card-approve"
+- takeScreenshot: "08-02-approved"
+- extendedWaitUntil:
+    notVisible:
+      id: "pending-card"
+    timeout: 15000
+- takeScreenshot: "08-03-card-cleared"
+# The ask: a secret free-text question with options offered.
+- tapOn:
+    id: "session-row-${SESSION_ID}"
+- extendedWaitUntil:
+    visible:
+      id: "ask-card"
+    timeout: 15000
+- takeScreenshot: "08-04-ask-card"
+- assertVisible:
+    id: "ask-question-1-of-2"
+- tapOn:
+    id: "ask-option-0"
+- takeScreenshot: "08-05-option-chosen"
+- tapOn:
+    id: "ask-submit"
+- takeScreenshot: "08-06-submitted"
+- extendedWaitUntil:
+    notVisible:
+      id: "ask-card"
+    timeout: 15000
+- takeScreenshot: "08-07-ask-cleared"
