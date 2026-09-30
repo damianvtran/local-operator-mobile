@@ -1,0 +1,10 @@
+DRAFT — not submitted. Remove this line before uploading to a store.
+
+First release.
+
+- Follow every session on your computer from your phone.
+- Read the transcript as it streams, including tool calls and results.
+- Answer approvals and questions without walking back to the desk.
+- Steer a running session, or stop it.
+- Switch a session's model and reasoning effort.
+- Start a new session in a folder you pick, and resume a past one.
