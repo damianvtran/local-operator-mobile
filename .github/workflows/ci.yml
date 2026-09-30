@@ -49,7 +49,7 @@ on:
 # same ref.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+  cancel-in-progress: false  # SCRATCH: serialise this branch
 
 # Least privilege: nothing here writes. The release workflow is the one place
 # that elevates, and only for the job that creates a Release.
