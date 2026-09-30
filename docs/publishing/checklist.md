@@ -63,7 +63,7 @@ this list is the plan, and it is ordered so that the long-lead items start first
 
 | # | Item | Blocking | Source |
 | --- | --- | --- | --- |
-| C1 | **Demo mode** that runs with no computer, no tunnel and no account, exercising the session list, transcript, approvals, composer, subagents and past sessions. This is the review-access plan (§ E) and the screenshot source | **yes** | `apple-app-store.md` § 3.1 |
+| C1 | **Demo mode** that runs with no computer, no tunnel and no account, exercising the session list, transcript, approvals, composer, subagents and past sessions. This is the review-access plan (§ E) and the screenshot source. The App Review request must name the **security obligation** that 2.1(a) requires (exposing a live agent on a machine we control to an unknown reviewer), because that clause grants the demo-mode route only "due to legal or security obligations", and only with prior approval | **yes** | `apple-app-store.md` § 3.1 |
 | C2 | **iOS screenshots**: 6.9" iPhone (1260×2736 or 1290×2796 or 1320×2868 portrait), **6.5" required if 6.9" is not supplied**; iPad 13" (2064×2752 / 2048×2732 portrait) required if the app runs on iPad. 1–10 images, PNG/JPG, **no alpha** | yes | `apple-app-store.md` § 9.2 |
 | C3 | **Android screenshots**: at least 2 across device types (4 recommended, ≥ 1080 px, 9:16 portrait); tablet screenshots use **16:9 landscape**; all between 1080 and 7680 px, aspect ratio no more than 2:1 | yes | `google-play.md` § 9 |
 | C4 | **Android feature graphic** 1024×500, JPEG or 24-bit PNG **without alpha**, and the **512×512 icon** (§ B5) | yes | `google-play.md` § 9 |
@@ -93,8 +93,8 @@ this list is the plan, and it is ordered so that the long-lead items start first
 
 | # | Item | Blocking | Source |
 | --- | --- | --- | --- |
-| E1 | **Demo mode**, or a demo account that never expires — Apple 2.1 accepts a built-in demo mode only with prior approval, so request it in the submission notes | yes | `apple-app-store.md` § 3.1 |
-| E2 | **Review notes** (≤ 4,000 bytes) explaining what the app is, that its content is produced on the user's own computer, and how to reach every screen in demo mode. Apple requires **specific** descriptions of new functionality (2.3.1(a)) | yes | `apple-app-store.md` § 11 |
+| E1 | **Demo mode**, or a demo account that never expires — Apple 2.1 accepts a built-in demo mode only with prior approval, and only "due to legal or security obligations". The request must name the obligation, not the convenience, or it reads as a preference and fails | yes | `apple-app-store.md` § 3.1 |
+| E2 | **Review notes** (≤ 4,000 bytes) explaining what the app is, that its content is produced on the user's own computer, and how to reach every screen in demo mode. Apple requires **specific** descriptions of new functionality (2.3.1(a)). One sentence in here must state the 2.1(a) security obligation that justifies demo mode in lieu of a demo account | yes | `apple-app-store.md` § 3.1, § 11 |
 | E3 | **Play reviewer access details** — reusable, location-independent, valid at all times, English | yes | <https://support.google.com/googleplay/android-developer/answer/15748846> |
 | E4 | **Pre-launch report credentials** so Google's crawler can pass the sign-in screen | yes | `google-play.md` § 10 |
 | E5 | **A written answer, in the notes, to the question a reviewer will ask first**: is this a remote-desktop client under 4.2.7, or something else? The app renders the relay's own API and does not mirror a screen | yes | `apple-app-store.md` § 3.3 |
@@ -110,7 +110,7 @@ this list is the plan, and it is ordered so that the long-lead items start first
 | F2 | **iOS signing assets as secrets**: distribution certificate (`.p12`), provisioning profile, App Store Connect API key for uploads. Never in the repository | yes | `apple-app-store.md` § 9.3 |
 | F3 | **Android upload keystore as a secret**, RSA ≥ 2048 bits, plus its passwords; Play App Signing enabled so the app signing key is Google's and the upload key is resettable | yes | `google-play.md` § 3 |
 | F4 | **Same upload key used for Play, GitHub Releases and any F-Droid entry** so sideloaded installs keep updating | yes | `other-channels.md` § 8 |
-| F5 | **`fastlane` metadata upload** wired to `store/ios/metadata` and `store/android/metadata` (`deliver` / `supply` layouts), so listing copy is reviewed in a pull request rather than typed into a console | no | `store/README.md` |
+| F5 | **`fastlane` metadata upload** wired to `store/ios/metadata` and `store/android/metadata` (`deliver` / `supply` layouts), so listing copy is reviewed in a pull request rather than typed into a console. The upload **must strip the `DRAFT:` marker conditionally** (see `store/README.md`): `head -n +3` never removes it, and `tail -n +3` would empty a one-line field if any future file arrived unmarked | no | `store/README.md` |
 | F6 | **Release workflow**: tag → build → sign → upload → attach the APK to the GitHub Release. F-Droid or IzzyOnDroid only after that is boring | yes | `other-channels.md` § 3 |
 | F7 | **A no-Xcode/no-SDK local path** — the repository's own rule — so contributors and agents without a toolchain can still run the app's logic under Node or in the web target | no | `AGENTS.md` |
 

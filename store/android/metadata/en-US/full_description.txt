@@ -1,3 +1,5 @@
+DRAFT — not submitted. Remove this line before uploading to a store.
+
 Local Operator Mobile drives the agent sessions running on your computer.
 
 You start work on your machine. Then you leave the desk. This app is how you keep the work going: it shows you what each session is doing and lets you answer it.
@@ -21,7 +23,10 @@ Local Operator's mobile relay runs on your computer and only ever listens locall
 - Or point the app at any tunnel or URL you run yourself, and sign in with the relay password.
 
 YOUR FILES STAY ON YOUR COMPUTER
-The agents run on your computer, with your files and your tools. This app is a client: it does not move your work anywhere. Nothing is uploaded, and there is no second copy of your project in the cloud.
+The agents run on your computer, with your files and your tools. Your project stays there: this app never asks for a copy of it and there is no second copy in the cloud.
+
+WHAT TRAVELS TO THE PHONE
+This app is a client for the relay, so the session's transcript does travel to your phone through the tunnel you chose. That includes what the agent writes and what its tools return. On a Radient tunnel the traffic passes through Radient's edge on the way to your computer; on a tunnel you run yourself, it goes only where you pointed it.
 
 FREE AND OPEN SOURCE
 Local Operator Mobile is MIT licensed, and so is the Local Operator agent it talks to. You can read the code, build it yourself, or run it from a tunnel you control.

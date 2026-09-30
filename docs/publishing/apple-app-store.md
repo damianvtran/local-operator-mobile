@@ -107,9 +107,15 @@ Three options, in the order they should be considered:
    session to search, and a model sheet. The web client already carries fixtures
    for exactly these screens (`local_operator/mobile/web/src/fixtures`), so the
    content can be shared rather than invented.
-   - Guideline 2.1 requires **prior approval by Apple** for a demo mode *in lieu
-     of* a demo account. That approval is asked for in the review notes. Budget a
-     review round for it.
+   - Guideline 2.1(a) grants the demo-mode route only "if you are unable to
+     provide a demo account **due to legal or security obligations**", and
+     requires **prior approval by Apple**. So the request has to name the
+     obligation, not a preference: a demo account on a relay we host would mean
+     exposing a live agent executing code on a machine we control to an unknown
+     reviewer — a security obligation we cannot accept — which is why a demo
+     mode is the applicable route rather than the convenient one. That approval
+     is asked for in the review notes, and the review notes have to say it in
+     those terms. Budget a review round for it.
    - The same demo mode earns its keep twice: it is also the fixture for the
      design and UX harnesses in `docs/ux/`, and the only way screenshots can be
      captured on a machine with no tunnel.
@@ -122,7 +128,10 @@ Three options, in the order they should be considered:
    reviewer is inside the app but sees zero sessions, because a Radient account
    does not give them a computer running `lop`.
 
-**Ship option 1, and say so in the review notes in one sentence.**
+**Ship option 1, and say so in the review notes in one sentence that names the
+security obligation, not the convenience**: a demo account would require exposing
+a live agent executing code on a machine we control, so 2.1(a)'s security route
+is the applicable one.
 
 ### 3.2 Guideline 4.2 — Minimum functionality
 
