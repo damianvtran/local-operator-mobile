@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<title>Google Play phone screenshot frame</title>
+		<style>
+			/*
+			 * Google Play phone screenshot frame, 1080x1920 (9:16 portrait).
+			 *
+			 * A TEMPLATE, not a screenshot.
+			 *
+			 * Google's requirements and recommendations (read 2026-09-29,
+			 * https://support.google.com/googleplay/android-developer/answer/9866151):
+			 *   - REQUIRED: at least 2 screenshots across different device types,
+			 *     JPEG or 24-bit PNG with NO alpha, each side between 320 and 3840 px,
+			 *     and no side more than twice the other's length. 1080x1920 satisfies
+			 *     all three.
+			 *   - RECOMMENDED (and required to be eligible for the large promotional
+			 *     formats): at least 4 screenshots at a minimum of 1080 px on the
+			 *     short side, 9:16 portrait.
+			 *   - Content: show the real app experience; keep taglines under 20% of
+			 *     the image; no device frames are required for phones (they are
+			 *     forbidden for Wear OS); and no ranking, award or price claims.
+			 *
+			 * So this frame is deliberately nearly full-bleed: the app area takes
+			 * 1700 of the 1920 (88.5%) and the caption band is 220 (11.5%), which
+			 * keeps any tagline under the 20% guidance. The caption is placed in the
+			 * BOTTOM band rather than the top because Play crops and overlays the
+			 * top of a screenshot in some surfaces.
+			 *
+			 * The slot's aspect (1080 / 1700 = 0.635) is wider than a real phone
+			 * screen (0.46), and that is intentional: Play scales the whole image to
+			 * the browsing device, and a slot that matched a 19.5:9 screen exactly
+			 * would leave no caption room at all at this canvas height. Feed it a
+			 * capture cropped to the slot's aspect rather than scaled down with
+			 * bars: the export step belongs to the implementation phase, and the
+			 * slot label says the exact numbers.
+			 */
+			* {
+				box-sizing: border-box;
+				margin: 0;
+			}
+
+			html,
+			body {
+				width: 1080px;
+				height: 1920px;
+				overflow: hidden;
+				background: #22201c;
+				color: #f1eee6;
+				font-family: "Figtree", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+				-webkit-font-smoothing: antialiased;
+			}
+
+			.frame {
+				width: 1080px;
+				height: 1920px;
+			}
+
+			/* The app screen, full-bleed to the frame's edges: no rounded corner, no
+			 * side margin. Play shows screenshots at unpredictable sizes and a
+			 * device mockup inside them is the thing Google's guidance warns against
+			 * ("exclude additional text that is not part of your core app
+			 * experience"). */
+			.slot {
+				width: 1080px;
+				height: 1700px;
+				overflow: hidden;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				color: #b5afa2;
+			}
+
+			.slot.empty {
+				background: repeating-linear-gradient(
+					45deg,
+					#2b2721,
+					#2b2721 24px,
+					#322d22 24px,
+					#322d22 48px
+				);
+			}
+
+			.slot-label {
+				font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+				font-size: 34px;
+				line-height: 1.7;
+				text-align: center;
+				letter-spacing: 0.02em;
+			}
+
+			.caption {
+				height: 220px;
+				display: flex;
+				align-items: center;
+				gap: 22px;
+				padding: 0 48px;
+				background: #14110c;
+			}
+
+			.mark {
+				color: #f1eee6;
+				flex: none;
+			}
+
+			.caption-text {
+				font-size: 46px;
+				font-weight: 600;
+				letter-spacing: -0.012em;
+			}
+
+			.spec {
+				margin-left: auto;
+				font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+				font-size: 24px;
+				color: #b5afa2;
+				text-align: right;
+				line-height: 1.5;
+			}
+		</style>
+	</head>
+	<body>
+		<div class="frame">
+			<!-- Replace with <img src="…" width="1080" height="1700"> once a real
+			     capture exists, and drop the `empty` class. -->
+			<div class="slot empty">
+				<div class="slot-label">
+					app capture<br />
+					1080 × 1700 (3x: 3240 × 5100)<br />
+					required: ≥ 2 shots, ≥ 1080 short side, 9:16,<br />
+					24-bit PNG with NO alpha
+				</div>
+			</div>
+
+			<!-- 220 of 1920 = 11.5% of the image, inside Google's 20% tagline
+			     guidance. -->
+			<div class="caption">
+				<svg class="mark" width="76" height="76" viewBox="285 253 520 520" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+					<circle cx="490" cy="355" r="78" stroke-width="35" />
+					<circle cx="720" cy="326" r="42" stroke-width="29" />
+					<circle cx="368" cy="686" r="41" stroke-width="29" />
+					<path d="M370 645 V545 a90 90 0 0 1 90 -90 h60 a78 78 0 0 1 66 44" stroke-width="33" />
+					<path d="M590 498 V750" stroke-width="33" />
+					<path d="M600 492 C 646 512 686 480 706 400 L 712 378" stroke-width="33" />
+				</svg>
+				<span class="caption-text">Local Operator</span>
+				<span class="spec">
+					Play · phone<br />
+					1080 × 1920 @1x
+				</span>
+			</div>
+		</div>
+	</body>
+</html>

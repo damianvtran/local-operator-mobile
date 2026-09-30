@@ -1,0 +1,3 @@
+# Written by design/preview/capture.mjs when a sibling checkout is present; never
+# committed, because it holds absolute paths to one machine's font files.
+fonts.local.css

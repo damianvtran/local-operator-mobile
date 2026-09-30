@@ -1,0 +1,1445 @@
+<!doctype html>
+<html lang="en" class="preview-scale">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Local Operator · mobile design kit preview</title>
+
+		<script>
+			/*
+			 * The theme is applied BEFORE the first paint, from the query string.
+			 *
+			 * This is not a preview convenience: it is the rule the app's theme
+			 * provider has to follow too. A provider that sets the theme in an effect
+			 * (or after the first render) paints a light frame first, and on a phone
+			 * that flash is the entire screen for a frame or two. An earlier version
+			 * of the capture script set the class through the DevTools protocol after
+			 * the load event and produced two byte-identical "dark" and "light"
+			 * captures — the flash, caught in a screenshot.
+			 */
+			const theme = new URLSearchParams(location.search).get("theme");
+			if (theme === "dark") document.documentElement.classList.add("theme-dark");
+		</script>
+
+		<!-- The role variables, emitted from design/tokens/tokens.json by
+		     design/tokens/build-preset.mjs. The sheet is styled by that file
+		     alone, so a token changed in the source shows up here on the next
+		     build rather than drifting out of the preview. -->
+		<link rel="stylesheet" href="tokens.generated.css" />
+
+		<!-- Optional, gitignored, and written by design/preview/capture.mjs when
+		     the sibling site checkout is present: it @font-face's the real
+		     Figtree and JetBrains Mono woff2 files so this sheet renders the
+		     shipped typefaces. Everywhere else the link 404s silently and the
+		     sheet falls back to the platform UI face — which is also what the
+		     app does if a font fails to load. -->
+		<link rel="stylesheet" href="fonts.local.css" />
+
+		<style>
+			/*
+			 * The preview sheet.
+			 *
+			 * What this file is FOR: it is the artefact a design review looks at.
+			 * A token file and a component table can both be internally
+			 * consistent and still produce a surface that reads badly, so the
+			 * kit ships one page that renders the system's decisions together —
+			 * grounds next to ink, the accent spent on the one action that earns
+			 * it, a real session row, a real tool row, the approval card — and
+			 * the review happens on the rendering, not on the tables.
+			 *
+			 * What it is NOT: a component implementation. It is hand-written CSS
+			 * on top of the role variables, with no framework, because the
+			 * toolchain is not chosen yet (docs/design/brand-kit.md § 9). The
+			 * Tailwind preset exists alongside it for the app; this sheet proves
+			 * the tokens and the proportions, not the utility classes.
+			 *
+			 * Layout: one phone column, 390 wide, sections separated by the
+			 * between-sections tier (48) and components by the
+			 * between-components tier (16-24). Nothing here carries its own
+			 * outer margin — the column owns the gap, per the brand kit's rule.
+			 */
+
+			* {
+				box-sizing: border-box;
+			}
+
+			html,
+			body {
+				margin: 0;
+				background: var(--lo-canvas);
+				color: var(--lo-ink);
+				font-family:
+					"Figtree Variable", ui-sans-serif, system-ui, -apple-system,
+					"Segoe UI", Roboto, sans-serif;
+				-webkit-font-smoothing: antialiased;
+				text-rendering: optimizeLegibility;
+			}
+
+			.column {
+				width: 390px;
+				padding: 0 16px 40px;
+				margin: 0 auto;
+			}
+
+			/* ---- section scaffolding ---------------------------------------- */
+
+			section {
+				margin-top: 48px;
+			}
+
+			.eyebrow {
+				font-family:
+					"JetBrains Mono Variable", ui-monospace, SFMono-Regular, Menlo,
+					monospace;
+				font-size: 12px;
+				font-weight: 500;
+				letter-spacing: 0.08em;
+				text-transform: uppercase;
+				color: var(--lo-ink-dim);
+				margin: 0 0 8px;
+			}
+
+			h2 {
+				font-size: 20px;
+				line-height: 1.3;
+				font-weight: 600;
+				letter-spacing: -0.012em;
+				margin: 0 0 4px;
+			}
+
+			.note {
+				font-size: 14px;
+				line-height: 1.45;
+				color: var(--lo-ink-muted);
+				margin: 0 0 16px;
+			}
+
+			/* ---- 0. header --------------------------------------------------- */
+
+			header {
+				display: flex;
+				align-items: center;
+				gap: 10px;
+				padding: 24px 0 20px;
+				border-bottom: 1px solid var(--lo-hairline);
+			}
+
+			.mark {
+				color: var(--lo-ink);
+				flex: none;
+			}
+
+			.wordmark {
+				font-size: 17px;
+				font-weight: 600;
+				letter-spacing: -0.006em;
+			}
+
+			.header-meta {
+				margin-left: auto;
+				font-family:
+					"JetBrains Mono Variable", ui-monospace, SFMono-Regular, Menlo,
+					monospace;
+				font-size: 12px;
+				color: var(--lo-ink-dim);
+				text-align: right;
+				line-height: 1.4;
+			}
+
+			/* ---- 1. grounds -------------------------------------------------- */
+
+			.grounds {
+				display: grid;
+				grid-template-columns: 1fr 1fr;
+				gap: 12px;
+			}
+
+			.ground {
+				border: 1px solid var(--lo-hairline);
+				border-radius: 10px;
+				padding: 12px;
+				min-height: 84px;
+				display: flex;
+				flex-direction: column;
+				justify-content: flex-end;
+			}
+
+			.ground b {
+				font-family:
+					"JetBrains Mono Variable", ui-monospace, SFMono-Regular, Menlo,
+					monospace;
+				font-size: 12px;
+				font-weight: 400;
+				display: block;
+			}
+
+			.ground span {
+				font-size: 12px;
+				color: var(--lo-ink-muted);
+			}
+
+			.g-canvas {
+				background: var(--lo-canvas);
+			}
+			.g-surface {
+				background: var(--lo-surface);
+			}
+			.g-elevated {
+				background: var(--lo-elevated);
+			}
+			.g-sunken {
+				background: var(--lo-sunken);
+			}
+
+			/* ---- 2. ink ------------------------------------------------------ */
+
+			.ink-list {
+				background: var(--lo-surface);
+				border: 1px solid var(--lo-hairline);
+				border-radius: 10px;
+				padding: 4px 12px;
+			}
+
+			.ink-row {
+				display: flex;
+				align-items: baseline;
+				gap: 12px;
+				padding: 10px 0;
+				border-top: 1px solid var(--lo-hairline);
+			}
+
+			.ink-row:first-child {
+				border-top: 0;
+			}
+
+			.ink-role {
+				font-family:
+					"JetBrains Mono Variable", ui-monospace, SFMono-Regular, Menlo,
+					monospace;
+				font-size: 12px;
+				color: var(--lo-ink-dim);
+				width: 96px;
+				flex: none;
+			}
+
+			.ink-sample {
+				font-size: 16px;
+				line-height: 1.5;
+			}
+
+			.i-ink {
+				color: var(--lo-ink);
+			}
+			.i-muted {
+				color: var(--lo-ink-muted);
+			}
+			.i-dim {
+				color: var(--lo-ink-dim);
+			}
+			.i-disabled {
+				color: var(--lo-ink-disabled);
+			}
+
+			/* ---- 3. accent budget -------------------------------------------- */
+
+			.budget {
+				display: flex;
+				flex-direction: column;
+				gap: 16px;
+			}
+
+			.budget-row {
+				display: flex;
+				align-items: center;
+				gap: 12px;
+			}
+
+			.budget-label {
+				font-size: 14px;
+				color: var(--lo-ink-muted);
+			}
+
+			.btn {
+				display: inline-flex;
+				align-items: center;
+				justify-content: center;
+				gap: 8px;
+				min-height: 44px;
+				padding: 0 16px;
+				border-radius: 6px;
+				border: 1px solid transparent;
+				font-size: 15px;
+				font-weight: 600;
+				font-family: inherit;
+				letter-spacing: -0.005em;
+				cursor: pointer;
+			}
+
+			.btn-primary {
+				background: var(--lo-accent);
+				color: var(--lo-on-accent);
+			}
+			.btn-outline {
+				background: var(--lo-surface);
+				border-color: var(--lo-border-control);
+				color: var(--lo-ink);
+			}
+			.btn-quiet {
+				background: transparent;
+				color: var(--lo-ink-muted);
+			}
+			.btn-danger {
+				background: var(--lo-danger-wash);
+				border-color: var(--lo-danger-border);
+				color: var(--lo-danger);
+			}
+			.btn-sm {
+				min-height: 32px;
+				padding: 0 12px;
+				font-size: 13px;
+			}
+
+			.chip {
+				display: inline-flex;
+				align-items: center;
+				gap: 6px;
+				min-height: 32px;
+				padding: 0 10px;
+				border-radius: 6px;
+				border: 1px solid var(--lo-border-control);
+				background: var(--lo-surface);
+				color: var(--lo-ink-muted);
+				font-family:
+					"JetBrains Mono Variable", ui-monospace, SFMono-Regular, Menlo,
+					monospace;
+				font-size: 12px;
+			}
+
+			.chip-on {
+				background: var(--lo-accent-muted);
+				border-color: var(--lo-accent-border);
+				color: var(--lo-accent-active);
+			}
+
+			a.link {
+				color: var(--lo-accent);
+				text-decoration: underline;
+				text-underline-offset: 3px;
+			}
+
+			.icon-btn {
+				display: inline-flex;
+				align-items: center;
+				justify-content: center;
+				width: 44px;
+				height: 44px;
+				border-radius: 6px;
+				border: 1px solid var(--lo-border-control);
+				background: var(--lo-surface);
+				color: var(--lo-ink);
+			}
+
+			/* ---- 4. semantics and the diff ---------------------------------- */
+
+			.sem-list {
+				display: flex;
+				flex-direction: column;
+				gap: 8px;
+			}
+
+			.sem {
+				display: flex;
+				align-items: center;
+				gap: 8px;
+				border-radius: 10px;
+				padding: 10px 12px;
+				font-size: 14px;
+				border: 1px solid;
+			}
+
+			.sem b {
+				font-weight: 600;
+			}
+
+			.sem code {
+				font-family:
+					"JetBrains Mono Variable", ui-monospace, SFMono-Regular, Menlo,
+					monospace;
+				font-size: 12px;
+			}
+
+			.s-success {
+				background: var(--lo-success-wash);
+				border-color: var(--lo-success-border);
+				color: var(--lo-ink);
+			}
+			.s-success b {
+				color: var(--lo-success);
+			}
+			.s-warning {
+				background: var(--lo-warning-wash);
+				border-color: var(--lo-warning-border);
+				color: var(--lo-ink);
+			}
+			.s-warning b {
+				color: var(--lo-warning);
+			}
+			.s-danger {
+				background: var(--lo-danger-wash);
+				border-color: var(--lo-danger-border);
+				color: var(--lo-ink);
+			}
+			.s-danger b {
+				color: var(--lo-danger);
+			}
+			.s-info {
+				background: var(--lo-info-wash);
+				border-color: var(--lo-info-border);
+				color: var(--lo-ink);
+			}
+			.s-info b {
+				color: var(--lo-info);
+			}
+
+			.diff {
+				background: var(--lo-sunken);
+				border-radius: 6px;
+				padding: 8px 0;
+				margin-top: 12px;
+				font-family:
+					"JetBrains Mono Variable", ui-monospace, SFMono-Regular, Menlo,
+					monospace;
+				font-size: 13px;
+				line-height: 1.6;
+				overflow: hidden;
+			}
+
+			.diff div {
+				padding: 0 10px;
+				/* `pre-wrap`, not `pre`: the shipped phone client wraps diff lines
+				 * (`whitespace-pre-wrap` on the diff block in
+				 * local_operator/mobile/web/src/components/tool-row.tsx), because a
+				 * horizontally-scrolled diff on a phone is a gesture the reader has no
+				 * cue to perform. The preview matches the client, not the desktop app. */
+				white-space: pre-wrap;
+				word-break: break-word;
+			}
+
+			.d-hunk {
+				background: var(--lo-diff-hunk-surface);
+				color: var(--lo-diff-hunk);
+			}
+			.d-add {
+				background: var(--lo-diff-add-surface);
+				color: var(--lo-diff-add);
+			}
+			.d-del {
+				background: var(--lo-diff-remove-surface);
+				color: var(--lo-diff-remove);
+			}
+			.d-ctx {
+				color: var(--lo-diff-context);
+			}
+
+			/* ---- 5. type scale ---------------------------------------------- */
+
+			.scale {
+				background: var(--lo-surface);
+				border: 1px solid var(--lo-hairline);
+				border-radius: 10px;
+				padding: 4px 12px;
+			}
+
+			.scale-row {
+				padding: 12px 0;
+				border-top: 1px solid var(--lo-hairline);
+			}
+
+			.scale-row:first-child {
+				border-top: 0;
+			}
+
+			.scale-label {
+				font-family:
+					"JetBrains Mono Variable", ui-monospace, SFMono-Regular, Menlo,
+					monospace;
+				font-size: 12px;
+				color: var(--lo-ink-dim);
+				display: block;
+				margin-bottom: 4px;
+			}
+
+			.t-display {
+				font-size: var(--preview-text-display);
+				line-height: var(--preview-text-display-lh);
+				font-weight: var(--preview-text-display-weight);
+				letter-spacing: var(--preview-text-display-tracking);
+				margin: 0;
+			}
+			.t-title {
+				font-size: var(--preview-text-title);
+				line-height: var(--preview-text-title-lh);
+				font-weight: var(--preview-text-title-weight);
+				letter-spacing: var(--preview-text-title-tracking);
+				margin: 0;
+			}
+			.t-heading {
+				font-size: var(--preview-text-heading);
+				line-height: var(--preview-text-heading-lh);
+				font-weight: var(--preview-text-heading-weight);
+				margin: 0;
+			}
+			.t-body-lg {
+				font-size: var(--preview-text-body-lg);
+				line-height: var(--preview-text-body-lg-lh);
+				margin: 0;
+			}
+			.t-body {
+				font-size: var(--preview-text-body);
+				line-height: var(--preview-text-body-lh);
+				margin: 0;
+			}
+			.t-body-sm {
+				font-size: var(--preview-text-body-sm);
+				line-height: var(--preview-text-body-sm-lh);
+				margin: 0;
+			}
+			.t-meta {
+				font-size: var(--preview-text-meta);
+				line-height: var(--preview-text-meta-lh);
+				font-weight: var(--preview-text-meta-weight);
+				margin: 0;
+				color: var(--lo-ink-muted);
+			}
+			.t-label {
+				font-size: var(--preview-text-label);
+				font-weight: var(--preview-text-label-weight);
+				margin: 0;
+			}
+			.t-mono {
+				font-family:
+					"JetBrains Mono Variable", ui-monospace, SFMono-Regular, Menlo,
+					monospace;
+				font-size: var(--preview-text-mono);
+				line-height: var(--preview-text-mono-lh);
+				margin: 0;
+				color: var(--lo-ink-muted);
+			}
+			.t-mono-sm {
+				font-family:
+					"JetBrains Mono Variable", ui-monospace, SFMono-Regular, Menlo,
+					monospace;
+				font-size: var(--preview-text-mono-sm);
+				line-height: var(--preview-text-mono-sm-lh);
+				margin: 0;
+				color: var(--lo-ink-dim);
+			}
+			.t-mono-label {
+				font-family:
+					"JetBrains Mono Variable", ui-monospace, SFMono-Regular, Menlo,
+					monospace;
+				font-size: var(--preview-text-mono-label);
+				letter-spacing: 0.08em;
+				text-transform: uppercase;
+				color: var(--lo-ink-dim);
+				margin: 0;
+			}
+
+			/* ---- 6. controls ------------------------------------------------- */
+
+			.controls {
+				display: flex;
+				flex-direction: column;
+				gap: 12px;
+			}
+
+			.controls-row {
+				display: flex;
+				align-items: center;
+				gap: 12px;
+				flex-wrap: wrap;
+			}
+
+			/* ---- 7. session rows --------------------------------------------- */
+
+			.rows {
+				background: var(--lo-surface);
+				border: 1px solid var(--lo-hairline);
+				border-radius: 10px;
+				padding: 4px;
+			}
+
+			.row {
+				display: flex;
+				flex-direction: column;
+				gap: 2px;
+				padding: 10px 8px;
+				border-radius: 10px;
+			}
+
+			.row + .row {
+				box-shadow: 0 -1px 0 var(--lo-hairline);
+			}
+
+			.row-hover {
+				background: var(--lo-row-hover);
+			}
+			.row-selected {
+				background: var(--lo-row-selected);
+			}
+
+			.row-top {
+				display: flex;
+				align-items: center;
+				gap: 8px;
+			}
+
+			.slot {
+				width: 12px;
+				height: 12px;
+				flex: none;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+			}
+
+			.dot {
+				width: 6px;
+				height: 6px;
+				border-radius: 9999px;
+				display: block;
+			}
+
+			.dot-attention {
+				background: var(--lo-danger);
+			}
+			.dot-new {
+				background: var(--lo-accent);
+			}
+
+			.spinner {
+				width: 12px;
+				height: 12px;
+				border-radius: 9999px;
+				border: 2px solid var(--lo-hairline);
+				border-top-color: var(--lo-accent);
+				animation: spin 0.8s linear infinite;
+			}
+
+			@keyframes spin {
+				to {
+					transform: rotate(360deg);
+				}
+			}
+
+			.row-name {
+				font-size: 14px;
+				font-weight: 500;
+				line-height: 1.45;
+				min-width: 0;
+				flex: 1;
+				overflow: hidden;
+				text-overflow: ellipsis;
+				white-space: nowrap;
+			}
+
+			/* The streaming shimmer: a highlight that travels ACROSS the
+			   glyphs, which reads as work flowing through the words. It is the
+			   only looping animation on this row, and it is paint-only, so it
+			   costs no geometry (the reserved indicator slot is what keeps every
+			   title at the same x). */
+			.shimmer {
+				background-image: linear-gradient(
+					100deg,
+					var(--lo-ink-dim) 40%,
+					var(--lo-accent) 50%,
+					var(--lo-ink-dim) 60%
+				);
+				background-size: 200% 100%;
+				-webkit-background-clip: text;
+				background-clip: text;
+				-webkit-text-fill-color: transparent;
+				animation: shimmer 1.6s linear infinite;
+			}
+
+			@keyframes shimmer {
+				0% {
+					background-position: 200% 0;
+				}
+				100% {
+					background-position: -200% 0;
+				}
+			}
+
+			.row-meta {
+				display: flex;
+				align-items: baseline;
+				gap: 8px;
+			}
+
+			.mono-sm {
+				font-family:
+					"JetBrains Mono Variable", ui-monospace, SFMono-Regular, Menlo,
+					monospace;
+				font-size: 12px;
+				line-height: 1.45;
+				color: var(--lo-ink-dim);
+			}
+
+			.mono-sm.push {
+				margin-left: auto;
+			}
+
+			.danger-text {
+				color: var(--lo-danger);
+			}
+
+			.success-text {
+				color: var(--lo-success);
+			}
+
+			/* ---- 8. transcript ---------------------------------------------- */
+
+			.transcript {
+				display: flex;
+				flex-direction: column;
+				gap: 16px;
+			}
+
+			.bubble-user {
+				align-self: flex-end;
+				max-width: 85%;
+				background: var(--lo-surface);
+				border: 1px solid var(--lo-hairline);
+				border-left: 2px solid var(--lo-accent);
+				border-radius: 10px;
+				padding: 6px 12px;
+				font-size: 16px;
+				line-height: 1.5;
+			}
+
+			.assistant {
+				font-size: 17px;
+				line-height: 1.5;
+			}
+
+			.assistant p {
+				margin: 0 0 8px;
+			}
+
+			.assistant p:last-child {
+				margin-bottom: 0;
+			}
+
+			.assistant code {
+				font-family:
+					"JetBrains Mono Variable", ui-monospace, SFMono-Regular, Menlo,
+					monospace;
+				font-size: 0.9em;
+				background: var(--lo-sunken);
+				border-radius: 2px;
+				padding: 1px 4px;
+			}
+
+			.tool-row {
+				display: flex;
+				align-items: baseline;
+				gap: 8px;
+				padding: 6px 0;
+				border-bottom: 1px solid var(--lo-hairline);
+			}
+
+			.glyph {
+				flex: none;
+				font-family:
+					"JetBrains Mono Variable", ui-monospace, SFMono-Regular, Menlo,
+					monospace;
+				font-size: 13px;
+			}
+
+			.g-done {
+				color: var(--lo-success);
+			}
+			.g-failed {
+				color: var(--lo-danger);
+			}
+			.g-running {
+				color: var(--lo-accent);
+			}
+			.g-queued {
+				color: var(--lo-ink-dim);
+			}
+
+			.tool-name {
+				font-family:
+					"JetBrains Mono Variable", ui-monospace, SFMono-Regular, Menlo,
+					monospace;
+				font-size: 12px;
+				color: var(--lo-ink-muted);
+				flex: none;
+			}
+
+			.tool-summary {
+				font-size: 14px;
+				line-height: 1.45;
+				color: var(--lo-ink-dim);
+				min-width: 0;
+				flex: 1;
+				overflow: hidden;
+				text-overflow: ellipsis;
+				white-space: nowrap;
+			}
+
+			.notice {
+				display: flex;
+				align-items: baseline;
+				gap: 8px;
+				font-size: 14px;
+				line-height: 1.45;
+				color: var(--lo-ink-muted);
+			}
+
+			.notice b {
+				color: var(--lo-warning);
+				font-weight: 600;
+			}
+
+			/* ---- 9. approval card ------------------------------------------- */
+
+			.approval {
+				background: var(--lo-accent-wash);
+				border: 1px solid var(--lo-accent-border);
+				border-radius: 10px;
+				padding: 10px;
+				display: flex;
+				flex-direction: column;
+				gap: 8px;
+			}
+
+			.approval-meta {
+				display: flex;
+				align-items: center;
+				justify-content: space-between;
+				font-family:
+					"JetBrains Mono Variable", ui-monospace, SFMono-Regular, Menlo,
+					monospace;
+				font-size: 12px;
+				color: var(--lo-accent-active);
+			}
+
+			.approval-title {
+				font-size: 16px;
+				font-weight: 500;
+			}
+
+			.approval-detail {
+				font-size: 14px;
+				line-height: 1.45;
+				color: var(--lo-ink-muted);
+				margin: 0;
+			}
+
+			.approval-actions {
+				display: flex;
+				gap: 8px;
+			}
+
+			.approval-actions .btn {
+				flex: 1;
+			}
+
+			/* ---- 10. composer ----------------------------------------------- */
+
+			.composer {
+				background: var(--lo-canvas);
+				border-top: 1px solid var(--lo-hairline);
+				padding-top: 12px;
+				display: flex;
+				flex-direction: column;
+				gap: 8px;
+			}
+
+			.composer-field {
+				display: flex;
+				align-items: flex-end;
+				gap: 8px;
+			}
+
+			.field {
+				flex: 1;
+				min-width: 0;
+				background: var(--lo-elevated);
+				border: 1px solid var(--lo-border-control);
+				border-radius: 10px;
+				padding: 8px 12px;
+				/* 16px, not 14: below this iOS zooms the page on focus and the
+				   whole layout moves under the user's thumb. This is a floor,
+				   not a preference. */
+				font-size: 16px;
+				line-height: 1.4;
+				color: var(--lo-ink-dim);
+			}
+
+			.round {
+				width: 44px;
+				height: 44px;
+				border-radius: 9999px;
+				flex: none;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				font-size: 18px;
+				border: 1px solid transparent;
+			}
+
+			.round-stop {
+				border-color: var(--lo-danger-border);
+				color: var(--lo-danger);
+				background: transparent;
+				font-size: 13px;
+			}
+
+			.round-send {
+				background: var(--lo-accent);
+				color: var(--lo-on-accent);
+			}
+
+			.composer-chips {
+				display: flex;
+				align-items: center;
+				gap: 8px;
+			}
+
+			.composer-chips .spacer {
+				flex: 1;
+			}
+
+			.chip-quiet {
+				border-color: transparent;
+				background: transparent;
+				color: var(--lo-ink-dim);
+			}
+
+			/* ---- 11. motion and icons ---------------------------------------- */
+
+			.motion {
+				background: var(--lo-surface);
+				border: 1px solid var(--lo-hairline);
+				border-radius: 10px;
+				padding: 4px 12px;
+			}
+
+			.motion-row {
+				display: flex;
+				align-items: baseline;
+				gap: 12px;
+				padding: 10px 0;
+				border-top: 1px solid var(--lo-hairline);
+			}
+
+			.motion-row:first-child {
+				border-top: 0;
+			}
+
+			.motion-role {
+				font-family:
+					"JetBrains Mono Variable", ui-monospace, SFMono-Regular, Menlo,
+					monospace;
+				font-size: 12px;
+				color: var(--lo-ink-dim);
+				width: 92px;
+				flex: none;
+			}
+
+			.motion-meter {
+				flex: 1;
+				height: 6px;
+				border-radius: 2px;
+				background: var(--lo-sunken);
+				overflow: hidden;
+			}
+
+			.motion-fill {
+				/* `display: block` is load-bearing, and its absence is the bug that made
+				 * this section lie. A `<span>` with `width: 11%` and `height: 100%` is an
+				 * INLINE box, and width and height do not apply to inline boxes: every
+				 * meter rendered as a bare track, and `.motion-fill` measured 0x0 by
+				 * `getBoundingClientRect` while still reporting the accent background —
+				 * which is why the crop read as "dark" rather than as obviously broken.
+				 * Diagnosed with `capture.mjs --probe ".motion-meter, .motion-fill"`. */
+				display: block;
+				height: 100%;
+				border-radius: 2px;
+				background: var(--lo-accent);
+			}
+
+			.motion-ms {
+				font-family:
+					"JetBrains Mono Variable", ui-monospace, SFMono-Regular, Menlo,
+					monospace;
+				font-size: 12px;
+				color: var(--lo-ink-muted);
+				width: 52px;
+				text-align: right;
+				flex: none;
+			}
+
+			.icons {
+				display: flex;
+				align-items: flex-end;
+				gap: 20px;
+				padding: 16px;
+				background: var(--lo-surface);
+				border: 1px solid var(--lo-hairline);
+				border-radius: 10px;
+				color: var(--lo-ink-muted);
+			}
+
+			.icon-slot {
+				display: flex;
+				flex-direction: column;
+				align-items: center;
+				gap: 6px;
+			}
+
+			.icon-slot span {
+				font-family:
+					"JetBrains Mono Variable", ui-monospace, SFMono-Regular, Menlo,
+					monospace;
+				font-size: 12px;
+				color: var(--lo-ink-dim);
+			}
+
+			.footer {
+				margin-top: 48px;
+				padding-top: 16px;
+				border-top: 1px solid var(--lo-hairline);
+				font-size: 12px;
+				line-height: 1.5;
+				color: var(--lo-ink-dim);
+			}
+
+			@media (prefers-reduced-motion: reduce) {
+				*,
+				*::before,
+				*::after {
+					animation-duration: 0.01ms !important;
+					animation-iteration-count: 1 !important;
+					transition-duration: 0.01ms !important;
+				}
+			}
+		</style>
+	</head>
+
+	<body>
+		<div class="column">
+			<header>
+				<svg
+					class="mark"
+					width="28"
+					height="28"
+					viewBox="285 253 520 520"
+					fill="none"
+					stroke="currentColor"
+					stroke-linecap="round"
+					stroke-linejoin="round"
+					aria-hidden="true"
+				>
+					<circle cx="490" cy="355" r="78" stroke-width="35" />
+					<circle cx="720" cy="326" r="42" stroke-width="29" />
+					<circle cx="368" cy="686" r="41" stroke-width="29" />
+					<path d="M370 645 V545 a90 90 0 0 1 90 -90 h60 a78 78 0 0 1 66 44" stroke-width="33" />
+					<path d="M590 498 V750" stroke-width="33" />
+					<path d="M600 492 C 646 512 686 480 706 400 L 712 378" stroke-width="33" />
+				</svg>
+				<span class="wordmark">Local Operator</span>
+				<span class="header-meta">mobile kit 0.1.0<br />390 × 844 · dpr 3</span>
+			</header>
+
+			<!-- 1 ------------------------------------------------------------------>
+			<section>
+				<p class="eyebrow">01 · ground</p>
+				<h2>Four grounds</h2>
+				<p class="note">
+					Elevation for in-flow content is a background step, never a shadow. Panel
+					radius 10, cards and rows sit on <em>surface</em>.
+				</p>
+				<div class="grounds">
+					<div class="ground g-canvas"><b>canvas</b><span>page ground</span></div>
+					<div class="ground g-surface"><b>surface</b><span>cards, rows</span></div>
+					<div class="ground g-elevated"><b>elevated</b><span>sheets, pressed</span></div>
+					<div class="ground g-sunken"><b>sunken</b><span>wells, diffs</span></div>
+				</div>
+			</section>
+
+			<!-- 2 ------------------------------------------------------------------>
+			<section>
+				<p class="eyebrow">02 · ink</p>
+				<h2>Four ink weights</h2>
+				<p class="note">
+					One ramp, three legible weights and one disabled. Emphasis is weight or
+					colour, never a fourth size.
+				</p>
+				<div class="ink-list">
+					<div class="ink-row">
+						<span class="ink-role">ink</span>
+						<span class="ink-sample i-ink">The agent is running on your machine.</span>
+					</div>
+					<div class="ink-row">
+						<span class="ink-role">ink-muted</span>
+						<span class="ink-sample i-muted">Writes to your project directory.</span>
+					</div>
+					<div class="ink-row">
+						<span class="ink-role">ink-dim</span>
+						<span class="ink-sample i-dim">~/local-operator · sonnet-5 · 4m 12s</span>
+					</div>
+					<div class="ink-row">
+						<span class="ink-role">ink-disabled</span>
+						<span class="ink-sample i-disabled">Disabled, and not the only cue</span>
+					</div>
+				</div>
+			</section>
+
+			<!-- 3 ------------------------------------------------------------------>
+			<section>
+				<p class="eyebrow">03 · accent budget</p>
+				<h2>One green, spent carefully</h2>
+				<p class="note">
+					The accent means <em>this is the action</em> or <em>the agent is working</em>.
+					It is never decoration, and the mark never takes it.
+				</p>
+				<div class="budget">
+					<div class="budget-row">
+						<button class="btn btn-primary">Send</button>
+						<span class="budget-label">the one primary on screen</span>
+					</div>
+					<div class="budget-row">
+						<button class="btn btn-outline">Deny</button>
+						<button class="btn btn-quiet">Cancel</button>
+						<button class="btn btn-danger btn-sm">Delete</button>
+					</div>
+					<div class="budget-row">
+						<span class="chip chip-on">opus-4.6</span>
+						<span class="chip">effort · high</span>
+						<button class="icon-btn" aria-label="Attach">
+							<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+						</button>
+					</div>
+					<div class="budget-row">
+						<span class="budget-label">
+							The transcript link is the accent as text: <a class="link" href="#0">open the run log</a>.
+						</span>
+					</div>
+				</div>
+			</section>
+
+			<!-- 4 ------------------------------------------------------------------>
+			<section>
+				<p class="eyebrow">04 · semantics &amp; diff</p>
+				<h2>State, and the evidence of a change</h2>
+				<p class="note">
+					Every semantic carries a word, not just a colour. A diff's tint is the
+					role's wash, so a long hunk stays readable instead of becoming a colour
+					field.
+				</p>
+				<div class="sem-list">
+					<div class="sem s-success"><b>✓ 3 passed</b><code>pytest tests/unit -q</code></div>
+					<div class="sem s-danger"><b>✗ 1 failed</b><code>tests/unit/test_tokens.py</code></div>
+					<div class="sem s-warning"><b>! Unsaved work</b> — the session is waiting on a decision</div>
+					<div class="sem s-info"><b>· Reconnected</b> — the stream was cut at 60s and resumed</div>
+				</div>
+				<div class="diff">
+					<div class="d-hunk">@@ -12,7 +12,7 @@ export const accent = {</div>
+					<div class="d-ctx">  "role": "links, active state",</div>
+					<div class="d-del">- "light": "#137742",</div>
+					<div class="d-add">+ "light": "#137742", "dark": "#38c96a",</div>
+				</div>
+			</section>
+
+			<!-- 5 ------------------------------------------------------------------>
+			<section>
+				<p class="eyebrow">05 · type</p>
+				<h2>The mobile scale</h2>
+				<p class="note">
+					The register is the desktop app's, not the site's: no hero, so the largest
+					routine step is a page title. Mono is the machine voice and nothing else.
+				</p>
+				<div class="scale">
+					<div class="scale-row">
+						<span class="scale-label">display · 28 / 600</span>
+						<p class="t-display">Sessions</p>
+					</div>
+					<div class="scale-row">
+						<span class="scale-label">title · 20 / 600</span>
+						<p class="t-title">rebuild the token pipeline</p>
+					</div>
+					<div class="scale-row">
+						<span class="scale-label">heading · 17 / 600</span>
+						<p class="t-heading">Subagents</p>
+					</div>
+					<div class="scale-row">
+						<span class="scale-label">body-lg · 17 / 400 — the transcript</span>
+						<p class="t-body-lg">
+							I checked the two palettes and both clear the floor on every ground.
+						</p>
+					</div>
+					<div class="scale-row">
+						<span class="scale-label">body · 16 / 400 — inputs and prose</span>
+						<p class="t-body">Send a message, or attach an image to describe it.</p>
+					</div>
+					<div class="scale-row">
+						<span class="scale-label">body-sm · 14 / 400 — rows</span>
+						<p class="t-body-sm">Writes to your project directory and runs the tests.</p>
+					</div>
+					<div class="scale-row">
+						<span class="scale-label">meta · 12 / 500</span>
+						<p class="t-meta">approval · 2 options · waiting 40s</p>
+					</div>
+					<div class="scale-row">
+						<span class="scale-label">mono · 13 — machine voice</span>
+						<p class="t-mono">~/local-operator/local_operator/mobile/daemon.py</p>
+					</div>
+					<div class="scale-row">
+						<span class="scale-label">mono-label · 12 — badges, meta</span>
+						<p class="t-mono-label">0.59.11 · arm64</p>
+					</div>
+				</div>
+			</section>
+
+			<!-- 6 ------------------------------------------------------------------>
+			<section>
+				<p class="eyebrow">06 · session list</p>
+				<h2>One reserved slot, four states</h2>
+				<p class="note">
+					Every title starts at the same x because the indicator slot never changes
+					size. Attention beats working, and the word travels with the colour.
+				</p>
+				<div class="rows">
+					<div class="row row-hover">
+						<div class="row-top">
+							<span class="slot"><span class="dot dot-attention"></span></span>
+							<span class="row-name">token pipeline</span>
+							<span class="mono-sm danger-text">approval</span>
+						</div>
+						<div class="row-meta">
+							<span class="mono-sm">~/local-operator</span>
+							<span class="mono-sm push">sonnet-5</span>
+						</div>
+					</div>
+					<div class="row">
+						<div class="row-top">
+							<span class="slot"><span class="spinner"></span></span>
+							<span class="row-name shimmer">mobile design system</span>
+							<span class="mono-sm">2 agents</span>
+							<span class="mono-sm">3 todos</span>
+						</div>
+						<div class="row-meta">
+							<span class="mono-sm">~/local-operator-mobile</span>
+							<span class="mono-sm push">opus-4.6</span>
+						</div>
+					</div>
+					<div class="row">
+						<div class="row-top">
+							<span class="slot"><span class="dot dot-new"></span></span>
+							<span class="row-name">release window</span>
+							<span class="mono-sm">new</span>
+						</div>
+						<div class="row-meta">
+							<span class="mono-sm">~/local-operator</span>
+							<span class="mono-sm push">sonnet-5</span>
+						</div>
+					</div>
+					<div class="row row-selected">
+						<div class="row-top">
+							<span class="slot"></span>
+							<span class="row-name">favicon sweep</span>
+						</div>
+						<div class="row-meta">
+							<span class="mono-sm">~/local-operator-site</span>
+							<span class="mono-sm push">haiku-4</span>
+						</div>
+					</div>
+				</div>
+			</section>
+
+			<!-- 7 ------------------------------------------------------------------>
+			<section>
+				<p class="eyebrow">07 · transcript</p>
+				<h2>What the agent did, and what it cost</h2>
+				<p class="note">
+					A tool row is one line: state glyph, mono name, summary, diff counts,
+					elapsed. The state glyph is a text glyph, so it survives every system font.
+				</p>
+				<div class="transcript">
+					<div class="bubble-user">Rebuild the token pipeline and run the contract.</div>
+					<div class="assistant">
+						<p>
+							I regenerated the preset from <code>tokens.json</code> and ran the
+							contract. Two pairs needed a decision, both recorded.
+						</p>
+					</div>
+					<div class="tool-row">
+						<span class="glyph g-done">✓</span>
+						<span class="tool-name">read</span>
+						<span class="tool-summary">design/tokens/tokens.json</span>
+						<span class="mono-sm">0.4s</span>
+					</div>
+					<div class="tool-row">
+						<span class="glyph g-done">✓</span>
+						<span class="tool-name">edit</span>
+						<span class="tool-summary">design/tokens/tailwind-preset.js</span>
+						<span class="mono-sm"><span class="success-text">+18</span> <span class="danger-text">−4</span></span>
+						<span class="mono-sm">1.2s</span>
+					</div>
+					<div class="tool-row">
+						<span class="glyph g-running">⟳</span>
+						<span class="tool-name">bash</span>
+						<span class="tool-summary">node design/tokens/contrast-contract.mjs</span>
+						<span class="mono-sm">12s</span>
+					</div>
+					<div class="tool-row">
+						<span class="glyph g-queued">⋯</span>
+						<span class="tool-name">subagent</span>
+						<span class="tool-summary">qa-tester · write the matrix</span>
+					</div>
+					<div class="tool-row">
+						<span class="glyph g-failed">✗</span>
+						<span class="tool-name">bash</span>
+						<span class="tool-summary">magick montage … (no font)</span>
+						<span class="mono-sm">0.9s</span>
+					</div>
+					<div class="notice">
+						<span class="glyph">!</span>
+						<span><b>Compaction</b> — older turns were summarised to make room.</span>
+					</div>
+				</div>
+			</section>
+
+			<!-- 8 ------------------------------------------------------------------>
+			<section>
+				<p class="eyebrow">08 · decision</p>
+				<h2>The approval card</h2>
+				<p class="note">
+					A question for the user is the only thing that needs a decision, so it is
+					the most prominent object on the screen — and the controls never scroll
+					out of reach.
+				</p>
+				<div class="approval">
+					<div class="approval-meta">
+						<span>approval requested</span>
+						<span>bash</span>
+					</div>
+					<div class="approval-title">Run the test suite?</div>
+					<p class="approval-detail">
+						<code>timeout 2400 .venv/bin/python -m pytest tests/unit -q</code>
+						<br />
+						Runs on your machine. Takes about 12 minutes.
+					</p>
+					<div class="approval-actions">
+						<button class="btn btn-primary">Approve</button>
+						<button class="btn btn-danger">Deny</button>
+					</div>
+				</div>
+			</section>
+
+			<!-- 9 ------------------------------------------------------------------>
+			<section>
+				<p class="eyebrow">09 · composer</p>
+				<h2>Send, steer, stop</h2>
+				<p class="note">
+					While the session streams, send becomes <em>steer</em> and a stop control
+					appears beside it. The field is 16pt so iOS does not zoom on focus.
+				</p>
+				<div class="composer">
+					<div class="composer-field">
+						<div class="field">Message Local Operator…</div>
+						<div class="round round-stop" aria-label="stop">■</div>
+						<div class="round round-send" aria-label="steer">↑</div>
+					</div>
+					<div class="composer-chips">
+						<span class="mono-sm">2 queued</span>
+						<span class="spacer"></span>
+						<span class="chip chip-quiet">opus-4.6</span>
+						<span class="chip chip-quiet">high</span>
+					</div>
+				</div>
+			</section>
+
+			<!-- 10 ----------------------------------------------------------------->
+			<section>
+				<p class="eyebrow">10 · motion</p>
+				<h2>Durations, and one pen for icons</h2>
+				<p class="note">
+					Colour changes are fast; anything that covers content earns the extra 60 ms.
+					No spring, no bounce, anywhere. Icons are one stroke weight at five sizes.
+				</p>
+				<div class="motion">
+					<div class="motion-row">
+						<span class="motion-role">instant</span>
+						<span class="motion-meter"><span class="motion-fill" style="width: 11%"></span></span>
+						<span class="motion-ms">80ms</span>
+					</div>
+					<div class="motion-row">
+						<span class="motion-role">fast</span>
+						<span class="motion-meter"><span class="motion-fill" style="width: 17%"></span></span>
+						<span class="motion-ms">120ms</span>
+					</div>
+					<div class="motion-row">
+						<span class="motion-role">base</span>
+						<span class="motion-meter"><span class="motion-fill" style="width: 26%"></span></span>
+						<span class="motion-ms">180ms</span>
+					</div>
+					<div class="motion-row">
+						<span class="motion-role">slow</span>
+						<span class="motion-meter"><span class="motion-fill" style="width: 34%"></span></span>
+						<span class="motion-ms">240ms</span>
+					</div>
+					<div class="motion-row">
+						<span class="motion-role">reveal</span>
+						<span class="motion-meter"><span class="motion-fill" style="width: 46%"></span></span>
+						<span class="motion-ms">320ms</span>
+					</div>
+					<div class="motion-row">
+						<span class="motion-role">beat</span>
+						<span class="motion-meter"><span class="motion-fill" style="width: 100%"></span></span>
+						<span class="motion-ms">700ms</span>
+					</div>
+				</div>
+				<div class="icons" style="margin-top: 12px">
+					<span class="icon-slot">
+						<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 12h16M12 4v16"/></svg>
+						<span>12</span>
+					</span>
+					<span class="icon-slot">
+						<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 12h16M12 4v16"/></svg>
+						<span>14</span>
+					</span>
+					<span class="icon-slot">
+						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 12h16M12 4v16"/></svg>
+						<span>16</span>
+					</span>
+					<span class="icon-slot">
+						<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 12h16M12 4v16"/></svg>
+						<span>20</span>
+					</span>
+					<span class="icon-slot">
+						<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 12h16M12 4v16"/></svg>
+						<span>24</span>
+					</span>
+					<span class="icon-slot" style="margin-left: auto">
+						<span class="dot dot-attention"></span>
+						<span>dot</span>
+					</span>
+				</div>
+			</section>
+
+			<p class="footer">
+				Rendered by <span class="mono-sm">design/preview/index.html</span> from
+				<span class="mono-sm">design/tokens/tokens.json</span> via
+				<span class="mono-sm">tokens.generated.css</span>. Contrast is asserted by
+				<span class="mono-sm">design/tokens/contrast-contract.mjs</span>; the
+				component specs are in <span class="mono-sm">docs/design/components.md</span>.
+			</p>
+		</div>
+	</body>
+</html>

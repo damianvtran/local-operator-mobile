@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<title>Google Play feature graphic — 1024×500</title>
+		<style>
+			/*
+			 * Google Play feature graphic, 1024x500.
+			 *
+			 * Requirements (read 2026-09-29,
+			 * https://support.google.com/googleplay/android-developer/answer/9866151):
+			 *   - REQUIRED to publish a listing: JPEG or 24-bit PNG, NO alpha, and
+			 *     exactly 1024x500.
+			 *   - Keep the focal point toward the CENTRE and keep key elements out of
+			 *     the edge cut-off zones, which some Play formats crop.
+			 *   - "Avoid using pure white, black, or dark gray as these colors can
+			 *     easily blend in with Google Play's background."
+			 *
+			 * Those two content rules are why this graphic is on the brand's WARM
+			 * PAPER ground (#f2ede3) rather than the app's dark canvas: Play's own
+			 * surface is white in light mode and near-black in dark mode, so a warm
+			 * off-white reads as a deliberate object on Play's white and stays
+			 * distinct from it, where pure white would disappear. It is also why the
+			 * mark and headline sit inside a 120 px inset rather than at the edges:
+			 * that strip is the cut-off zone.
+			 *
+			 * A 2px accent rule is the only place the green appears. It is there
+			 * because the graphic without it is two-tone and reads as a document;
+			 * with it, it reads as this product. It is not a decoration the kit
+			 * would otherwise allow on a surface, and it is the *edge* of the
+			 * composition rather than a fill.
+			 *
+			 * DELETE the `.spec` line before uploading the rendered PNG: it is a
+			 * note to whoever renders this template, not part of the listing, and
+			 * Google's content rules exclude text that is not part of the app
+			 * experience.
+			 *
+			 * The dedicated drawing is deliberately NOT a shrunken app screenshot:
+			 * Google's guidance is to avoid overloading the graphic with fine detail
+			 * that will not be visible at listing scale, and a 1024x500 crop of a
+			 * 390-wide phone UI is exactly that failure.
+			 */
+			* {
+				box-sizing: border-box;
+				margin: 0;
+			}
+
+			html,
+			body {
+				width: 1024px;
+				height: 500px;
+				overflow: hidden;
+				background: #f2ede3;
+				color: #211e18;
+				font-family: "Figtree", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+				-webkit-font-smoothing: antialiased;
+			}
+
+			.graphic {
+				position: relative;
+				width: 1024px;
+				height: 500px;
+				display: flex;
+				flex-direction: column;
+				justify-content: center;
+				align-items: center;
+				/* The 120px inset keeps every element out of the edge cut-off
+				 * zones some Play formats crop. */
+				padding: 0 120px;
+				text-align: center;
+			}
+
+			.mark {
+				color: #211e18;
+				flex: none;
+			}
+
+			h1 {
+				margin-top: 22px;
+				font-size: 62px;
+				line-height: 1.06;
+				font-weight: 600;
+				letter-spacing: -0.024em;
+				max-width: 800px;
+			}
+
+			p.sub {
+				margin-top: 20px;
+				font-size: 26px;
+				line-height: 1.4;
+				color: #4e4940;
+			}
+
+			/* The one accent in the composition, and the edge of it. */
+			.rule {
+				position: absolute;
+				left: 0;
+				right: 0;
+				bottom: 0;
+				height: 6px;
+				background: #137742;
+			}
+
+			.spec {
+				position: absolute;
+				left: 120px;
+				bottom: 26px;
+				font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+				font-size: 17px;
+				color: #656056;
+			}
+		</style>
+	</head>
+	<body>
+		<div class="graphic">
+			<svg class="mark" width="104" height="104" viewBox="285 253 520 520" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+				<circle cx="490" cy="355" r="78" stroke-width="35" />
+				<circle cx="720" cy="326" r="42" stroke-width="29" />
+				<circle cx="368" cy="686" r="41" stroke-width="29" />
+				<path d="M370 645 V545 a90 90 0 0 1 90 -90 h60 a78 78 0 0 1 66 44" stroke-width="33" />
+				<path d="M590 498 V750" stroke-width="33" />
+				<path d="M600 492 C 646 512 686 480 706 400 L 712 378" stroke-width="33" />
+			</svg>
+			<h1>Your agents run on your machine.</h1>
+			<p class="sub">Sessions, approvals and todos from your phone.</p>
+			<span class="spec">1024 × 500 · 24-bit PNG, no alpha · focal point inside a 120px inset</span>
+			<div class="rule"></div>
+		</div>
+	</body>
+</html>

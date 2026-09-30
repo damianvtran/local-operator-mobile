@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<title>App Store screenshot frame — iPhone 6.9"</title>
+		<style>
+			/*
+			 * App Store screenshot frame, 6.9-inch iPhone class.
+			 *
+			 * This file is a TEMPLATE, not a screenshot. It draws the canvas at
+			 * exactly the size App Store Connect requires and reserves the app's
+			 * screen area inside it, so the implementation phase drops a real app
+			 * capture into the marked slot and gets a correctly-sized asset.
+			 *
+			 * Why the app area is inset rather than full-bleed: App Store Connect
+			 * validates the IMAGE, and only 1260x2736 / 1290x2796 / 1320x2868 are
+			 * accepted for this class. A frame that stacked a caption band on top
+			 * of a native-size capture would be 1320x(2868 + band) and would be
+			 * rejected on upload. So the caption lives in the canvas's margins and
+			 * the app is scaled into the slot.
+			 *
+			 * The slot's aspect matches a modern iPhone screen exactly:
+			 *      slot 1000 x 2172  ==  0.4603  ==  1320 / 2868
+			 * so the app capture scales to fit with no letterboxing at all.
+			 *
+			 * Sources for the sizes (read 2026-09-29):
+			 *   https://developer.apple.com/help/app-store-connect/reference/app-information/screenshot-specifications
+			 */
+			* {
+				box-sizing: border-box;
+				margin: 0;
+			}
+
+			html,
+			body {
+				width: 1320px;
+				height: 2868px;
+				overflow: hidden;
+				background: #f2ede3;
+				color: #211e18;
+				font-family: "Figtree", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+				-webkit-font-smoothing: antialiased;
+			}
+
+			.frame {
+				position: relative;
+				width: 1320px;
+				height: 2868px;
+				padding: 0 160px;
+			}
+
+			/* The caption band. 380px of the 2868 is a comfortable headline
+			 * measure: an eyebrow at 44, a two-line headline at 84 with 1.08
+			 * leading, and 60 of air above the slot. */
+			.band {
+				height: 380px;
+				padding-top: 92px;
+			}
+
+			.eyebrow {
+				font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+				font-size: 40px;
+				font-weight: 500;
+				letter-spacing: 0.08em;
+				text-transform: uppercase;
+				color: #656056;
+			}
+
+			h1 {
+				margin-top: 18px;
+				font-size: 84px;
+				line-height: 1.08;
+				font-weight: 600;
+				letter-spacing: -0.024em;
+				max-width: 940px;
+			}
+
+			/* The app screen slot. Dashed while empty: a placeholder that looks
+			 * finished is a placeholder that ships. */
+			.slot {
+				width: 1000px;
+				height: 2172px;
+				border-radius: 88px;
+				background: #22201c;
+				box-shadow:
+					0 1px 2px rgb(20 17 12 / 0.06),
+					0 24px 48px -24px rgb(20 17 12 / 0.28);
+				overflow: hidden;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				color: #b5afa2;
+			}
+
+			.slot.empty {
+				background: repeating-linear-gradient(
+					45deg,
+					#2b2721,
+					#2b2721 24px,
+					#322d22 24px,
+					#322d22 48px
+				);
+			}
+
+			.slot-label {
+				font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+				font-size: 38px;
+				line-height: 1.6;
+				text-align: center;
+				letter-spacing: 0.02em;
+			}
+
+			footer {
+				display: flex;
+				align-items: center;
+				gap: 24px;
+				height: 316px;
+			}
+
+			.mark {
+				color: #211e18;
+				flex: none;
+			}
+
+			.wordmark {
+				font-size: 56px;
+				font-weight: 600;
+				letter-spacing: -0.012em;
+			}
+
+			.spec {
+				margin-left: auto;
+				font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+				font-size: 30px;
+				color: #656056;
+				text-align: right;
+				line-height: 1.5;
+				/* Three short lines that cannot wrap. The first version read
+				 * "App Store · 6.9\" iPhone class" and the phrase wrapped mid-label,
+				 * which reads as a layout bug in an asset about to be uploaded. */
+				white-space: nowrap;
+			}
+		</style>
+	</head>
+	<body>
+		<div class="frame">
+			<!-- 1 -------------------------------------------------------------------->
+			<div class="band">
+				<p class="eyebrow">01 · Sessions</p>
+				<h1>Every session on your machine, in your pocket.</h1>
+			</div>
+
+			<!-- 2 -------------------------------------------------------------------->
+			<!-- Replace this element with <img src="…" width="1000" height="2172"> once
+			     a real capture exists, and drop the `empty` class. 1000x2172 is the
+			     slot; a capture at 3x (3000x6516) fits it exactly at no scale. -->
+			<div class="slot empty">
+				<div class="slot-label">
+					app capture<br />
+					1000 × 2172 (3x: 3000 × 6516)<br />
+					aspect 0.4603 = 1320 / 2868
+				</div>
+			</div>
+
+			<!-- 3 -------------------------------------------------------------------->
+			<footer>
+				<svg class="mark" width="96" height="96" viewBox="285 253 520 520" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+					<circle cx="490" cy="355" r="78" stroke-width="35" />
+					<circle cx="720" cy="326" r="42" stroke-width="29" />
+					<circle cx="368" cy="686" r="41" stroke-width="29" />
+					<path d="M370 645 V545 a90 90 0 0 1 90 -90 h60 a78 78 0 0 1 66 44" stroke-width="33" />
+					<path d="M590 498 V750" stroke-width="33" />
+					<path d="M600 492 C 646 512 686 480 706 400 L 712 378" stroke-width="33" />
+				</svg>
+				<span class="wordmark">Local Operator</span>
+				<span class="spec">
+					App Store · 6.9"<br />
+					1320 × 2868 @1x<br />
+					alt: 1290×2796, 1260×2736
+				</span>
+			</footer>
+		</div>
+	</body>
+</html>
