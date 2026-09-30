@@ -100,14 +100,55 @@ try {
 	process.exit(1);
 }
 
+/**
+ * The parts of a generated file that are legitimately different every run.
+ *
+ * An Xcode project addresses every object by a 24-hex-character identifier, and
+ * Expo's generator MINTS FRESH ONES each time it runs — measured on 2026-09-30,
+ * run 36737644701: the five font resource references and their Resources group
+ * came back with different identifiers while every path, build phase and setting
+ * was identical. Byte-identity is therefore not a property the generator has, and
+ * a gate that demanded it could only ever be red. Structural identity is the
+ * property that matters: the same files, phases and settings, with the identifiers
+ * treated as the opaque handles they are.
+ *
+ * This is deliberately narrow. Only `*.pbxproj` is normalized, and only inside
+ * that file — every other generated file is still compared byte for byte, and a
+ * real difference inside a project file (a missing reference, a changed path, a
+ * dropped build phase) still fails, because those lines do not contain an
+ * identifier and so are untouched by the substitution.
+ */
+const XCODE_OBJECT_ID = /\b[0-9A-F]{24}\b/g;
+const normalize = (path: string, content: Buffer): Buffer =>
+	path.endsWith(".pbxproj")
+		? Buffer.from(
+				content.toString("utf8").replace(XCODE_OBJECT_ID, "<object-id>"),
+			)
+		: content;
+
+let normalizedCount = 0;
+const normalizedDiffering = new Map<string, [Buffer, Buffer]>();
 const onlyBuilt: string[] = [];
 const onlyRegenerated: string[] = [];
 const differing: string[] = [];
 
 for (const [path, content] of a) {
 	const other = b.get(path);
-	if (other === undefined) onlyBuilt.push(path);
-	else if (!content.equals(other)) differing.push(path);
+	if (other === undefined) {
+		onlyBuilt.push(path);
+		continue;
+	}
+	const left = normalize(path, content);
+	const right = normalize(path, other);
+	if (!left.equals(right)) {
+		differing.push(path);
+		normalizedDiffering.set(path, [left, right]);
+	} else if (!content.equals(other)) {
+		normalizedCount += 1;
+		console.log(
+			`  identifier-only difference: ${path} (Xcode object identifiers, normalized)`,
+		);
+	}
 }
 for (const path of b.keys()) if (!a.has(path)) onlyRegenerated.push(path);
 
@@ -166,11 +207,9 @@ const explainDifference = (
 };
 
 for (const path of differing) {
-	const left = a.get(path);
-	const right = b.get(path);
-	if (left !== undefined && right !== undefined) {
-		explainDifference(path, left, right);
-	}
+	const pair = normalizedDiffering.get(path);
+	if (pair === undefined) continue;
+	explainDifference(path, pair[0], pair[1]);
 }
 
 if (problems.length > 0) {
@@ -184,4 +223,8 @@ if (problems.length > 0) {
 	process.exit(1);
 }
 
-console.log("native project: regenerates byte-identical to the built tree.");
+console.log(
+	normalizedCount > 0
+		? `native project: regenerates identically (${normalizedCount} file(s) differed only in Xcode object identifiers, which the generator mints fresh each run).`
+		: "native project: regenerates byte-identical to the built tree.",
+);
