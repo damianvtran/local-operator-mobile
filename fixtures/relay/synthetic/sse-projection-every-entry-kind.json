@@ -1,4 +1,11 @@
 {
+  "provenance": {
+    "kind": "synthetic",
+    "relay_ref": "local-operator 52c1df35",
+    "modelled_on": "one row of every TranscriptEntry kind plus a full SubagentRow roster and phased todos",
+    "why": "needs a real model to emit subagent, ask and reasoning rows",
+    "how": "hand-built from the field definitions in local_operator/mobile/types.py and cross-checked against the web client's own test fixtures (local_operator/mobile/web/src/*.test.tsx)"
+  },
   "event": "projection",
   "data": {
     "session_id": "6714def86197",

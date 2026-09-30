@@ -13,7 +13,9 @@ native v1:
 - **P2** — deliberately after v1 (matches #1598's phase 5 and its non-goals).
 
 Citations: `web/src/…` is `local_operator/mobile/web/src/…` in local-operator
-@ `52c1df35`; `daemon.py` is `local_operator/mobile/daemon.py`. The web client's
+@ **`52c1df35`** (`git show 52c1df35:<path>`; the shared checkout's working tree
+currently carries another session's staged `daemon.py`, so do not read citations
+from it), and `daemon.py` is `local_operator/mobile/daemon.py`. The web client's
 feature inventory below was audited file-by-file; where the shipped client and
 the docs disagree, the code wins and the disagreement is recorded in §5.
 
@@ -66,7 +68,7 @@ the docs disagree, the code wins and the disagreement is recorded in §5.
 | Pending echo row | Paint the message immediately, reconcile by `command_id` | local + `command_id` | Never resolves twice; withdrawn on failure; the retained-envelope retry is a different affordance (§4) |
 | Stop | `abort` while streaming | `{op:"abort"}` | On an idle session it answers `200 "no turn was running"` (live) |
 | Resume affordance | After an interrupted turn | `stop_reason`, `cut_off` | `stop_reason === "aborted"` gates the whole affordance; `cut_off:true` says the harness cut the turn rather than the user. Copy must be "turn cut off" vs "interrupted" |
-| Seen handshake | Opening a conversation clears its unread mark, but only once the completion row is genuinely visible | `POST /api/sessions/{id}/seen` `{completion_token}` | The token comes off `attention.completion_token`. `409` + `code: "superseded"` when a newer completion has replaced it (live `seen-real-token.json`). The web client refuses to acknowledge until the anchor row is on screen and the app has focus (`web/src/use-completion-view.ts:48-62`) |
+| Seen handshake | Opening a conversation clears its unread mark, but only once the completion row is genuinely visible | `POST /api/sessions/{id}/seen` `{completion_token}` | The token comes off `attention.completion_token`. `409` + `code: "superseded"` when a newer completion has replaced it (live `fixtures/relay/http/seen-real-token.json`). The web client refuses to acknowledge until the anchor row is on screen and the app has focus (`web/src/use-completion-view.ts:48-62`) |
 | Pin from the header | Same store as the list long-press | `POST …/pin` | Both surfaces read the same optimistic mark so the ☆ and the section cannot disagree |
 
 ### 1.4 Composer detail (`P0` unless noted)
@@ -135,17 +137,17 @@ one per open conversation).
 | 6 | **Needs attention** | `needs_attention: true`, `pending_kind: "approval"|"ask"` | Badge on the row; the pending card pinned above the composer |
 | 7 | **Streaming / working** | `streaming: true`, `activity`, `activity_started_s` | Shimmer on the row; the working line on the session screen |
 | 8 | **Queued steer** | `queued_count > 0` | "N queued" near the composer; the pending echo says "queued — sends when this step finishes" |
-| 9 | **Pending approval** | `pending.kind === "approval"`, `pending_count` | Card above the composer: title (`bash`), `detail` (`run: sleep 20`), approve/deny, `remember`; "1 of N" when `pending_count > 1` (live `sse-projection-pending-approval.json`) |
+| 9 | **Pending approval** | `pending.kind === "approval"`, `pending_count` | Card above the composer: title (`bash`), `detail` (`run: sleep 20`), approve/deny, `remember`; "1 of N" when `pending_count > 1` (live `fixtures/relay/sse/sse-projection-pending-approval.json`) |
 | 10 | **Pending ask** | `pending.kind === "ask"` | Question, options with their consequence lines, "Question 1 of 2", masked paste field when `secret` and the "not stored in transcript" affordance; `persist` is the save intent |
 | 11 | **Subagent running** | roster `status: "running"|"queued"|"parked"`; row `subagents_running`/`subagents_queued` | Chip on the row and the panel; `null` counts mean "not reported" — hide the chip, never show 0 |
 | 12 | **Leaving** | row `leaving` (a phrase) | A signalled runtime finishing in-flight work. The web client uses it only to suppress the subagent chip; a phone row should say "Leaving…" |
 | 13 | **Updating** | row `updating` (a build pair) | An idle runtime moving to the build on disk — **it still accepts messages**; the row must not look idle |
 | 14 | **Wedged** | heartbeat older than 45 s (`session/runtime/types.py:416-417`) | **Not observable through the relay** — see §5.2. Treat as "stopped responding" after SSE silence |
-| 15 | **Ended** | runtime reaped; the row moves to `section: "previous"`, one final durable frame is published | Offer resume. **`ended` is `false` even in that final frame** (live `sse-projection-durable-after-death.json`), and the web client renders nothing at all — a native client should key on `section` and offer resume from the durable transcript |
+| 15 | **Ended** | runtime reaped; the row moves to `section: "previous"`, one final durable frame is published | Offer resume. **`ended` is `false` even in that final frame** (live `fixtures/relay/sse/sse-projection-durable-after-death.json`), and the web client renders nothing at all — a native client should key on `section` and offer resume from the durable transcript |
 | 16 | **Aborted / interrupted** | `stop_reason === "aborted"`, `cut_off` | "interrupted — tap to resume" / "turn cut off — tap to resume" |
 | 17 | **Completed turn** | `stop_reason === "completed"`, `attention.kind === "complete"` | No affordance; the completion notice row appears in the transcript |
 | 18 | **Attention kinds beyond complete** | `attention.kind ∈ {error, interrupted, closed, retired}` | The relay appends a `notice` row whose text and severity come from `harness/rows.py` (`daemon.py:1838-1863`); `error`/`retired` also set `stop_reason: "aborted"` and `cut_off` |
-| 19 | **Provisional wake** | a prompt accepted on a durable-only conversation | The row moves to Active at once and the conversation is re-materialised; the relay spawns a host process (live `command-prompt-wake-durable.json`) |
+| 19 | **Provisional wake** | a prompt accepted on a durable-only conversation | The row moves to Active at once and the conversation is re-materialised; the relay spawns a host process (live `fixtures/relay/http/command-prompt-wake-durable.json`) |
 | 20 | **Degraded session (socket unreachable, record fresh)** | `entry.degraded` — **never published** | Not observable; see §5.2 |
 | 21 | **Unauthenticated** | `401` on any `/api/*` | Return to the unlock screen after clearing private state |
 | 22 | **Command refused** | `422` (prose, sometimes + `code`), `409` not connected, `502`/`504` ambiguous | The web client's ladder: retry-and-keep-the-text on 502/504/408, hand the text back on a pre-admission 4xx, and name the retained instruction |
@@ -208,8 +210,8 @@ side of that contract (`contract.md` §5, `docs/mobile.md` §Retry-envelope):
   a new send while one is unresolved.
 
 `new_conversation` and `resume_session` exist in `ControlOp` but are **refused**
-over the phone-facing relay route (live `op-new-conversation.json`,
-`op-resume-session.json`) — the app uses `POST /api/sessions/start` and
+over the phone-facing relay route (live `fixtures/relay/http/op-new-conversation.json`,
+`fixtures/relay/http/op-resume-session.json`) — the app uses `POST /api/sessions/start` and
 `POST /api/sessions/resume` instead.
 
 ---
@@ -228,7 +230,7 @@ Recorded because a native client should not inherit a bug as a spec.
    heartbeat timeout while `section` stays `active`
    (`fixtures/relay/probes/wedged-row-signal.json`, [`contract.md`](contract.md)
    §6.5). `ended` likewise arrives `false` in the final durable
-   frame published after a death (live `sse-projection-durable-after-death.json`).
+   frame published after a death (live `fixtures/relay/sse/sse-projection-durable-after-death.json`).
    **A native client must derive "gone" from `section: "previous"` plus silence,
    and should say so in its own copy.** `docs/mobile.md`'s claim that "the phone
    card flips to *ended*, offering resume" describes behaviour that does not
@@ -266,54 +268,54 @@ the real wire rather than a hand-written mock.
 
 | ID | Surface | Relay route | State / case | Priority | Fixture |
 | --- | --- | --- | --- | --- | --- |
-| T-01 | Health probe | `GET /healthz` | reachable, no cookie | P0 | `healthz.json` |
-| T-02 | Auth gate | `GET /api/sessions` | anonymous → `401` JSON | P0 | `unauth-api-sessions.json` |
-| T-03 | Browser gate | `GET /` | anonymous → `303 /login` | P0 | `unauth-index.json` |
-| T-04 | Login | `POST /login` | wrong password → `401` HTML | P0 | `login-wrong-password.json` |
-| T-05 | Login | `POST /login` | success → `303` + cookie attrs | P0 | `login-success.json` |
-| T-06 | Same-origin rule | any mutation | foreign `Origin` → `403` | P0 | `mutation-cross-origin.json` |
-| T-07 | Same-origin rule | any mutation | no `Origin` → allowed (native path) | P0 | `command-no-origin-post.json` |
-| T-08 | List stream | SSE `/api/sessions/events` | seed frame + empty list | P0 | `sse-list-frame.json`, `sessions-empty.json` |
-| T-09 | List stream | SSE | keep-alive after 25 s quiet | P0 | `sse-keepalive.txt` |
-| T-10 | List rows | SSE | degraded listing marker | P1 | `past-empty.json` (`degraded: []`) |
-| T-11 | Session stream | SSE `/{id}/events` | seed frame on open | P0 | `sse-projection-seed.json` |
-| T-12 | Session stream | SSE | live idle frame | P0 | `sse-projection-live-idle.json` |
-| T-13 | Command: prompt | `POST /command` | admitted | P0 | `command-prompt-ok.json` |
-| T-14 | Command: prompt | `POST /command` | retry with same UUID → `already admitted` | P0 | `command-prompt-duplicate.json` |
-| T-15 | Command: prompt | `POST /command` | unknown session → `409` | P0 | `command-unknown-session.json` |
-| T-16 | Command: steer | `POST /command` | queued steer, `queued_count` rises | P0 | `command-steer-queued.json` |
-| T-17 | Approval | `POST /command` | pending card reaches the client | P0 | `sse-projection-pending-approval.json` |
-| T-18 | Approval answer | `POST /command` | bad shape → `422` | P0 | `command-approval-bad-shape.json` |
-| T-19 | Ask answer | `POST /command` | bad shape → `422` | P0 | `op-steer-bad-input-mode.json` (shape-422 shape) |
-| T-20 | Abort | `POST /command` | idle → `200 no turn was running` | P0 | `command-abort.json` |
-| T-21 | Resume affordance | SSE | `stop_reason: aborted` + `cut_off` | P0 | `sse-projection-durable-after-death.json` |
-| T-22 | Seen handshake | `POST /{id}/seen` | real token → `200` | P0 | `seen-real-token.json` |
-| T-23 | Seen handshake | `POST /{id}/seen` | missing token → `422` | P0 | `seen-missing-token.json` |
-| T-24 | Seen handshake | `POST /{id}/seen` | unknown session → `404` | P0 | `seen-unknown-session.json` |
-| T-25 | Pin | `POST /{id}/pin` | `{pinned:true}` → `200` read-back | P0 | `pin-true.json` |
-| T-26 | Pin | `POST /{id}/pin` | truthy non-bool → `422` | P0 | `pin-not-bool.json` |
-| T-27 | Pin | `POST /{id}/pin` | unknown session → `404` | P0 | `pin-unknown.json` |
-| T-28 | History | `GET /{id}/history` | page + `has_more` | P0 | `history-ok.json` |
-| T-29 | History | `GET /{id}/history` | unknown session → `404` | P0 | `history-unknown.json` |
-| T-30 | Images | `GET /{id}/image` | real attachment → bytes, immutable | P1 | `image-ok.json` |
-| T-31 | Images | `GET /{id}/image` | bad index → `404`; missing `entry` → `400` | P1 | `image-bad-index.json`, `image-missing-entry-param.json` |
-| T-32 | Subagents | `GET /{id}/agents/{job}` | unknown job → `404` | P1 | `subagent-unknown.json` |
-| T-33 | Subagents | `GET …/agents/{job}/history` | unknown → `404` | P1 | `subagent-history-unknown.json` |
-| T-34 | Slash list | `GET /api/commands` | non-empty, `arguments` enum | P0 | `commands.json` |
-| T-35 | Models | `GET /api/models` | success (may be `[]` without credentials) and `502` | P0 | `models.json` |
-| T-36 | Directories | `GET /api/directories` | home + recent + tmp | P0 | `directories.json` |
-| T-37 | New session | `POST /api/sessions/start` | allowed cwd → `{ok,pid,session_id}` | P0 | `start-session.json` |
-| T-38 | New session | `POST /api/sessions/start` | outside home/tmp → `400` | P0 | `start-bad-cwd.json` |
-| T-39 | Resume | `POST /api/sessions/resume` | unknown id → `404`; missing id → `400` | P0 | `resume-unknown.json`, `resume-no-id.json` |
-| T-40 | Search | `GET /api/sessions/search` | hit + `body_match` | P1 | `search-hit.json` |
-| T-41 | Past list | `GET /api/sessions/past` | rows + `forked` | P0 | `past-with-rows.json` |
-| T-42 | Projections | `GET /api/projects` | empty and populated | P2 | `projects-empty.json` |
-| T-43 | Voice input | `POST /api/transcribe` | missing audio → `422`; bad mime → `422`; too large → `413` | P1 | `transcribe-missing-audio.json`, `transcribe-bad-mime.json`, `transcribe-413-declared.json` |
-| T-44 | Signing flow | `POST /{id}/operator/challenge` | bad action → `422`; no session → `409` | P1 | `operator-challenge-bad-action.json`, `operator-challenge-unknown-session.json` |
-| T-45 | Pairing | `POST /api/pair`, `GET /api/pair/{id}` | bad code → `403`; unknown device → `paired:false` | P1 | `pair-no-code.json`, `pair-status-unknown-device.json` |
-| T-46 | Logout | `GET /logout` | `303` + cookie cleared + `Clear-Site-Data` | P0 | `logout.json` |
-| T-47 | Wake | `POST /command` on a durable-only conversation | `200 prompt admitted`, row returns to Active | P1 | `command-prompt-wake-durable.json`, `list-after-wake.json` |
-| T-48 | Refused ops | `POST /command` | `new_conversation` / `resume_session` refused; `422` shape validation set | P1 | `op-new-conversation.json`, `op-resume-session.json`, `command-unknown-op.json` |
+| T-01 | Health probe | `GET /healthz` | reachable, no cookie | P0 | `fixtures/relay/http/healthz.json` |
+| T-02 | Auth gate | `GET /api/sessions` | anonymous → `401` JSON | P0 | `fixtures/relay/http/unauth-api-sessions.json` |
+| T-03 | Browser gate | `GET /` | anonymous → `303 /login` | P0 | `fixtures/relay/http/unauth-index.json` |
+| T-04 | Login | `POST /login` | wrong password → `401` HTML | P0 | `fixtures/relay/http/login-wrong-password.json` |
+| T-05 | Login | `POST /login` | success → `303` + cookie attrs | P0 | `fixtures/relay/http/login-success.json` |
+| T-06 | Same-origin rule | any mutation | foreign `Origin` → `403` | P0 | `fixtures/relay/http/mutation-cross-origin.json` |
+| T-07 | Same-origin rule | any mutation | no `Origin` → allowed (native path) | P0 | `fixtures/relay/http/command-no-origin-post.json` |
+| T-08 | List stream | SSE `/api/sessions/events` | seed frame + empty list | P0 | `fixtures/relay/sse/sse-list-frame.json`, `fixtures/relay/http/sessions-empty.json` |
+| T-09 | List stream | SSE | keep-alive after 25 s quiet | P0 | `fixtures/relay/sse/sse-keepalive.json` |
+| T-10 | List rows | SSE | degraded listing marker | P1 | `fixtures/relay/http/past-empty.json` (`degraded: []`) |
+| T-11 | Session stream | SSE `/{id}/events` | seed frame on open | P0 | `fixtures/relay/sse/sse-projection-seed.json` |
+| T-12 | Session stream | SSE | live idle frame | P0 | `fixtures/relay/sse/sse-projection-live-idle.json` |
+| T-13 | Command: prompt | `POST /command` | admitted | P0 | `fixtures/relay/http/command-prompt-ok.json` |
+| T-14 | Command: prompt | `POST /command` | retry with same UUID → `already admitted` | P0 | `fixtures/relay/http/command-prompt-duplicate.json` |
+| T-15 | Command: prompt | `POST /command` | unknown session → `409` | P0 | `fixtures/relay/http/command-unknown-session.json` |
+| T-16 | Command: steer | `POST /command` | queued steer, `queued_count` rises | P0 | `fixtures/relay/http/command-steer-queued.json` |
+| T-17 | Approval | `POST /command` | pending card reaches the client | P0 | `fixtures/relay/sse/sse-projection-pending-approval.json` |
+| T-18 | Approval answer | `POST /command` | bad shape → `422` | P0 | `fixtures/relay/http/command-approval-bad-shape.json` |
+| T-19 | Ask answer | `POST /command` | bad shape → `422` | P0 | `fixtures/relay/http/op-steer-bad-input-mode.json` (shape-422 shape) |
+| T-20 | Abort | `POST /command` | idle → `200 no turn was running` | P0 | `fixtures/relay/http/command-abort.json` |
+| T-21 | Resume affordance | SSE | `stop_reason: aborted` + `cut_off` | P0 | `fixtures/relay/sse/sse-projection-durable-after-death.json` |
+| T-22 | Seen handshake | `POST /{id}/seen` | real token → `200` | P0 | `fixtures/relay/http/seen-real-token.json` |
+| T-23 | Seen handshake | `POST /{id}/seen` | missing token → `422` | P0 | `fixtures/relay/http/seen-missing-token.json` |
+| T-24 | Seen handshake | `POST /{id}/seen` | unknown session → `404` | P0 | `fixtures/relay/http/seen-unknown-session.json` |
+| T-25 | Pin | `POST /{id}/pin` | `{pinned:true}` → `200` read-back | P0 | `fixtures/relay/http/pin-true.json` |
+| T-26 | Pin | `POST /{id}/pin` | truthy non-bool → `422` | P0 | `fixtures/relay/http/pin-not-bool.json` |
+| T-27 | Pin | `POST /{id}/pin` | unknown session → `404` | P0 | `fixtures/relay/http/pin-unknown.json` |
+| T-28 | History | `GET /{id}/history` | page + `has_more` | P0 | `fixtures/relay/http/history-ok.json` |
+| T-29 | History | `GET /{id}/history` | unknown session → `404` | P0 | `fixtures/relay/http/history-unknown.json` |
+| T-30 | Images | `GET /{id}/image` | real attachment → bytes, immutable | P1 | `fixtures/relay/http/image-ok.json` |
+| T-31 | Images | `GET /{id}/image` | bad index → `404`; missing `entry` → `400` | P1 | `fixtures/relay/http/image-bad-index.json`, `fixtures/relay/http/image-missing-entry-param.json` |
+| T-32 | Subagents | `GET /{id}/agents/{job}` | unknown job → `404` | P1 | `fixtures/relay/http/subagent-unknown.json` |
+| T-33 | Subagents | `GET …/agents/{job}/history` | unknown → `404` | P1 | `fixtures/relay/http/subagent-history-unknown.json` |
+| T-34 | Slash list | `GET /api/commands` | non-empty, `arguments` enum | P0 | `fixtures/relay/http/commands.json` |
+| T-35 | Models | `GET /api/models` | success (may be `[]` without credentials) and `502` | P0 | `fixtures/relay/http/models.json` |
+| T-36 | Directories | `GET /api/directories` | home + recent + tmp | P0 | `fixtures/relay/http/directories.json` |
+| T-37 | New session | `POST /api/sessions/start` | allowed cwd → `{ok,pid,session_id}` | P0 | `fixtures/relay/http/start-session.json` |
+| T-38 | New session | `POST /api/sessions/start` | outside home/tmp → `400` | P0 | `fixtures/relay/http/start-bad-cwd.json` |
+| T-39 | Resume | `POST /api/sessions/resume` | unknown id → `404`; missing id → `400` | P0 | `fixtures/relay/http/resume-unknown.json`, `fixtures/relay/http/resume-no-id.json` |
+| T-40 | Search | `GET /api/sessions/search` | hit + `body_match` | P1 | `fixtures/relay/http/search-hit.json` |
+| T-41 | Past list | `GET /api/sessions/past` | rows + `forked` | P0 | `fixtures/relay/http/past-with-rows.json` |
+| T-42 | Projections | `GET /api/projects` | empty and populated | P2 | `fixtures/relay/http/projects-empty.json` |
+| T-43 | Voice input | `POST /api/transcribe` | missing audio → `422`; bad mime → `422`; too large → `413` | P1 | `fixtures/relay/http/transcribe-missing-audio.json`, `fixtures/relay/http/transcribe-bad-mime.json`, `fixtures/relay/http/transcribe-413-declared.json` |
+| T-44 | Signing flow | `POST /{id}/operator/challenge` | bad action → `422`; no session → `409` | P1 | `fixtures/relay/http/operator-challenge-bad-action.json`, `fixtures/relay/http/operator-challenge-unknown-session.json` |
+| T-45 | Pairing | `POST /api/pair`, `GET /api/pair/{id}` | bad code → `403`; unknown device → `paired:false` | P1 | `fixtures/relay/http/pair-no-code.json`, `fixtures/relay/http/pair-status-unknown-device.json` |
+| T-46 | Logout | `GET /logout` | `303` + cookie cleared + `Clear-Site-Data` | P0 | `fixtures/relay/http/logout.json` |
+| T-47 | Wake | `POST /command` on a durable-only conversation | `200 prompt admitted`, row returns to Active | P1 | `fixtures/relay/http/command-prompt-wake-durable.json`, `fixtures/relay/http/list-after-wake.json` |
+| T-48 | Refused ops | `POST /command` | `new_conversation` / `resume_session` refused; `422` shape validation set | P1 | `fixtures/relay/http/op-new-conversation.json`, `fixtures/relay/http/op-resume-session.json`, `fixtures/relay/http/command-unknown-op.json` |
 | T-49 | Tunnel edge | gateway + edge | 401/403/413/502/503 shapes and the 60 s stream cut | P0 | see [`tunnel-edge.md`](tunnel-edge.md) — needs a tunnel, not covered by the daemon fixtures |
 
 ### How to build more fixtures

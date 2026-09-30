@@ -1,4 +1,13 @@
 {
+  "provenance": {
+    "kind": "live",
+    "relay_ref": "local-operator 52c1df35",
+    "captured_at": "2026-09-29",
+    "how": "captured from an isolated `lop mobile serve` (redirected HOME + LOCAL_OPERATOR_CONFIG_DIR, own ephemeral port, hosting=test/model_name=mock); see ../README.md",
+    "redactions": "isolated home shown as ~; portal password and cookie signatures absent",
+    "what": "a 75 s poll of GET /api/sessions while the session runtime's process was frozen with SIGSTOP",
+    "method": "SIGSTOP the runtime pid at t=0, poll the listing row every 5 s, SIGCONT at t=75"
+  },
   "probe": "wedged runtime (SIGSTOP) \u2014 which listing field changes, and when",
   "method": "one isolated daemon (mock provider); the session runtime process was sent SIGSTOP at t=0 and SIGCONT at t=75; GET /api/sessions polled every 5 s; the row for the frozen session is shown",
   "heartbeat_timeout_s": 45,

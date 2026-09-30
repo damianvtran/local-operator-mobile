@@ -1,4 +1,11 @@
 {
+  "provenance": {
+    "kind": "synthetic",
+    "relay_ref": "local-operator 52c1df35",
+    "modelled_on": "PendingRequest(kind='ask') with options, recommended and question_index/question_total",
+    "why": "an ask needs a live model to raise one",
+    "how": "hand-built from the field definitions in local_operator/mobile/types.py and cross-checked against the web client's own test fixtures (local_operator/mobile/web/src/*.test.tsx)"
+  },
   "event": "projection",
   "data": {
     "session_id": "6714def86197",

@@ -1,4 +1,11 @@
 {
+  "provenance": {
+    "kind": "live",
+    "relay_ref": "local-operator 52c1df35",
+    "captured_at": "2026-09-29",
+    "how": "captured from an isolated `lop mobile serve` (redirected HOME + LOCAL_OPERATOR_CONFIG_DIR, own ephemeral port, hosting=test/model_name=mock); see ../README.md",
+    "redactions": "isolated home shown as ~; portal password and cookie signatures absent"
+  },
   "conversation_id": "session/6714def86197",
   "completion_token": "45e4844a-3ee9-4319-9ede-f3e0490d2938",
   "anchor_id": "cba5a100c2de4cd580769f7d008edb15",

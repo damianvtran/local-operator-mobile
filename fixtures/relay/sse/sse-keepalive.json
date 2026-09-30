@@ -1,0 +1,12 @@
+{
+  "provenance": {
+    "kind": "live",
+    "relay_ref": "local-operator 52c1df35",
+    "captured_at": "2026-09-29",
+    "how": "captured from an isolated `lop mobile serve` (redirected HOME + LOCAL_OPERATOR_CONFIG_DIR, own ephemeral port, hosting=test/model_name=mock); see ../README.md",
+    "redactions": "isolated home shown as ~; portal password and cookie signatures absent",
+    "what": "the exact bytes a quiet SSE stream emits every 25 s (SSE_KEEPALIVE_S = 25.0)"
+  },
+  "literal": ": keepalive\n\n",
+  "note": "the payload is the `literal` field verbatim, including its trailing blank line; feed that string to the parser under test"
+}

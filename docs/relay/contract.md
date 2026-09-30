@@ -1,10 +1,17 @@
 # The `lop mobile` relay wire contract
 
 Everything the native client must do against the relay, derived from the code
-rather than from prose. Line citations are against **local-operator
-`origin/main` @ `52c1df35` (2026-09-29)**; no file under `local_operator/mobile`
-or `local_operator/tunnels` changed between that revision and `5bfff4a6`, so the
-citations resolve on current `main` too.
+rather than from prose.
+
+> **Which tree these citations are against.** Every `file:line` in this document
+> is against local-operator **`52c1df35` (2026-09-29)**, reachable with
+> `git -C <local-operator> show 52c1df35:<path>`. Do **not** re-check them in the
+> shared checkout's working tree: another session currently has a staged,
+> partially-reverted `local_operator/mobile/daemon.py` there (3,696 lines in the
+> tree against 5,278 at `HEAD`), so a tree read returns wrong line numbers for
+> every daemon citation here. Nothing under `local_operator/mobile` or
+> `local_operator/tunnels` changed between `52c1df35` and `5bfff4a6`, so the same
+> numbers hold on current `origin/main`; fetch before trusting a tracking ref.
 
 Paths are relative to the local-operator repository root:
 `local_operator/mobile/daemon.py` → `daemon.py`; `local_operator/mobile/web/src/api.ts`
@@ -106,6 +113,7 @@ The routes that *do* set cache headers are the SSE streams
 | GET | `/api/sessions/past` | gate | `daemon.py:4273-4283` |
 | POST | `/api/sessions/resume` | gate | `daemon.py:4194-4235` |
 | GET | `/api/sessions/search` | gate | `daemon.py:4237-4260` |
+| GET | `/api/directories` | gate | `daemon.py:4262-4271` |
 | GET | `/api/sessions/{id}/events` | gate | SSE, `daemon.py:3451-3512` |
 | POST | `/api/sessions/{id}/seen` | gate | `daemon.py:3540-3594` |
 | POST | `/api/sessions/{id}/pin` | gate | `daemon.py:3596-3669` |
@@ -430,7 +438,7 @@ Status mapping, which a client should map onto its own retry policy:
 | `504` | `{"error": "session did not answer"}` | runtime accepted but missed the 15 s reply window | ambiguous — keep the command, retry |
 | `500`/`503` | route-specific | see the individual routes | |
 
-— code `daemon.py:3924-3953`; live `fixtures/relay/http/command-*.json`.
+— code `daemon.py:3924-3953`; live (the `command-*.json` captures under `fixtures/relay/http/`).
 
 > `422` and `502`/`504` are **not** interchangeable: only `502/504` leave the
 > delivery outcome unknown. `422` is a pre-admission refusal and the retained
@@ -444,7 +452,7 @@ verbatim): `prompt admitted`, `already admitted`, `steering queued`,
 
 ### 4.2 The op vocabulary
 
-`ControlOp` in `types.py:428-497` is the **relay↔runtime** vocabulary; the
+`ControlOp` in `types.py:428-512` is the **relay↔runtime** vocabulary; the
 phone-facing subset is enforced by `validate_control_frame` (`types.py:208-427`).
 Ops the phone can reach, with the shape the relay validates:
 
@@ -803,7 +811,7 @@ data: {"session_id": "…", …}
   `SSE_KEEPALIVE_S = 25 s` with no frame, and it arrives as a bare line plus a
   blank line — it carries no `event:` name. — code `daemon.py:105,3489-3490,
   3529-3530`; live, captured at t≈28.9 s of quiet in
-  `fixtures/relay/sse/sse-keepalive.txt`
+  `fixtures/relay/sse/sse-keepalive.json` (its `literal` field is the exact bytes)
 - Response headers on both streams: `content-type: text/event-stream;
   charset=utf-8`, `cache-control: no-cache, no-transform`,
   `x-accel-buffering: no` (the last is what turns buffering off at
@@ -909,9 +917,16 @@ reported `0` — a two-sample comparison, not a flag.
 - Subagent roster rows: launch prompt preview 1 000, `result_text` 200,
   `error_text` 2 000 (`projection.py:160-181`). The full prompt/result/transcript
   are reachable only through the detail route (§3.7).
-- The hard ceiling is the control socket's `_MAX_LINE_BYTES = 1 << 20`; a frame
-  over it is dropped, and a flood of drops starves the daemon loop for **every**
-  session (`projection.py:193-199`, `attach_client.py:144-148`).
+- The soft cap is `PROJECTION_FRAME_SOFT_CAP_BYTES = 700_000`, and the
+  drop-flood argument behind it is `projection.py:188-199`; the **hard** ceiling
+  is the control socket's `_MAX_LINE_BYTES = 1 << 20` at
+  `session/runtime/server.py:266`, mirrored by the sender's own
+  `_READ_LIMIT_BYTES = 1 << 20` (`attach_client.py:144-148`) — the two numbers
+  must stay equal, because the writer refuses to exceed what the reader will
+  accept. A frame over the limit is dropped, and a flood of drops starves the
+  daemon loop for **every** session. **Trap:** `session/runtime/viewer_server.py:76`
+  defines a *different* `_MAX_LINE_BYTES = 64 * 1024` for another socket — a
+  16× smaller ceiling; sizing a payload from that one is wrong.
 
 ### 6.7 What a projection frame carries
 

@@ -2,10 +2,28 @@
 
 Real and synthetic wire samples for the native client's tests. Every file here
 is either **captured from a running relay** (live) or **constructed from the type
-definitions** (synthetic), and each says which in the index below.
+definitions** (synthetic) — and **every file says which in its own top-level
+`provenance` object**, so a sample that is vendored or renamed on its own still
+carries its origin:
+
+```json
+"provenance": {
+  "kind": "live",            // or "synthetic"
+  "relay_ref": "local-operator 52c1df35",
+  "captured_at": "2026-09-29", // live only
+  "how": "..."                 // live: how it was captured; synthetic: how it was built
+}
+```
+
+The `provenance` field is the authority. The directory a file sits in and the
+index below are conveniences; **if the two ever disagree, the field wins** — a
+hand-built sample mistaken for a captured one is how a test starts asserting the
+wrong wire.
 
 Read [`../../docs/relay/contract.md`](../../docs/relay/contract.md) for what each
 sample means; this file is only about provenance and reproduction.
+
+The tree is currently **96 fixtures — 92 live, 4 synthetic** — plus this README.
 
 ## Provenance
 
@@ -111,7 +129,7 @@ pending-approval frame.
 | `sse-projection-queued-steer.json` | `projection` | `queued_count: 1`, a `steer` row, and the tool skipped by steering |
 | `sse-projection-durable-after-death.json` | `projection` | the final frame after the runtime was SIGKILLed: `pid: 0`, `ended: false` — see the contract's §6.5 warning |
 | `sse-attention-complete.json` | — | the `attention` object of a completed turn |
-| `sse-keepalive.txt` | — | the literal keep-alive bytes (`: keepalive` + blank line) |
+| `sse-keepalive.json` | — | the literal keep-alive bytes in its `literal` field (`": keepalive\n\n"`), kept as a string so the sample stays byte-exact while still carrying a provenance marker |
 
 ### Gateway constants (`gateway/`)
 
@@ -137,16 +155,19 @@ test fixtures (`local_operator/mobile/web/src/*.test.tsx`) for shape.
 | `sse-projection-every-entry-kind.json` | one row of **every** `EntryKind` (user, reasoning, assistant, tool in all six `ToolState`s, steer, peer_message, notice in all three severities plus a wake, compaction, parent_message, subagent_message), a two-phase todo list with a blocked item, and a six-status subagent roster (running, queued, parked, completed, failed, cancelled) |
 | `sse-projection-pending-ask.json` | a secret ask with options, a recommended index, and `question_index: 0` of `question_total: 2` |
 | `sse-projection-pending-approval-example.json` | an approval whose detail is a destructive command, with the tool row still `composing` |
-| `models.ranked.json` | a realistic ranked `/api/models` array (the order **is** the ranking — a client must not re-sort it) |
+| `models.ranked.json` | a realistic ranked `/api/models` payload, wrapped as `{"provenance": …, "models": [...]}` (the array order **is** the ranking — a client must not re-sort it) |
 
 ## Using these in tests
 
-- The HTTP files are whole-response records: `{request: {method, path}, status,
-  headers: {...}, body: <parsed>}`. Only a subset of headers is kept (the ones a
-  client must act on).
-- The SSE files are `{event, data}` pairs; `sse-keepalive.txt` is raw text. Feed
-  `data` through the parser under test — never through a second hand-written
-  encoder, or the test stops testing the wire.
+- The HTTP files are whole-response records:
+  `{provenance, request: {method, path}, status, headers: {...}, body: <parsed>}`.
+  Only a subset of headers is kept (the ones a client must act on).
+- The SSE files are `{provenance, event, data}`; `sse-keepalive.json` carries its
+  payload as the `literal` string, and `synthetic/models.ranked.json` as the
+  `models` array. Feed that payload through the parser under test — never through
+  a second hand-written encoder, or the test stops testing the wire.
+- **Check `provenance.kind` in the test, not the path.** A suite that reads a
+  fixture by name after a rename is the case this field exists for.
 - `version` values in the frames are the real epoch counter from the captured
   runs, so they are **not** a monotonic sequence across files; a test that needs
   ordering should renumber them.

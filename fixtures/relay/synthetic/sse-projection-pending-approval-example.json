@@ -1,4 +1,11 @@
 {
+  "provenance": {
+    "kind": "synthetic",
+    "relay_ref": "local-operator 52c1df35",
+    "modelled_on": "PendingRequest(kind='approval') with a composing tool row",
+    "why": "a second, human-chosen example beside the captured approval frame",
+    "how": "hand-built from the field definitions in local_operator/mobile/types.py and cross-checked against the web client's own test fixtures (local_operator/mobile/web/src/*.test.tsx)"
+  },
   "event": "projection",
   "data": {
     "session_id": "6714def86197",

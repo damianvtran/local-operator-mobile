@@ -18,7 +18,11 @@
  *   5. `fixtures/relay/*.json`               — captured responses from an
  *                                              isolated daemon (see README).
  *
- * Citations are `file:line` against local-operator `origin/main` @ 52c1df35.
+ * Citations are `file:line` against local-operator **`52c1df35`** — read them with
+ * `git show 52c1df35:<path>`, never from the shared checkout's working tree,
+ * which currently carries another session's staged, partially-reverted
+ * `local_operator/mobile/daemon.py` (3,696 lines in the tree vs 5,278 at HEAD),
+ * so tree line numbers are wrong for every daemon citation here.
  *
  * TWO RULES THAT APPLY TO EVERY DECLARATION BELOW:
  *
