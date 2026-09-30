@@ -172,9 +172,25 @@ export function scaledTextVariables(
 		const step = TYPE_STEPS[name];
 		/* Chrome caps at `CHROME_SCALE_CAP` of its authored size IN PIXELS, so the
 		 * cap is divided back out of the platform's factor. */
-		const stepFactor = CHROME_STEPS.has(name)
-			? Math.min(factor * platform, CHROME_SCALE_CAP) / platform
-			: factor;
+		/* The cap bounds the PREFERENCE, never the platform.
+		 *
+		 * Capping the combined factor (what this did first) pins a chrome step at
+		 * 1.5x no matter what the platform asked for, and on a chrome-heavy screen —
+		 * Settings, whose diagnostics and section labels are `meta`/`mono-label` —
+		 * those steps are most of the text. Measured on the harness's own cell: a
+		 * median over all text of 24 px at 100 % and 33.59 px at 200 %, i.e. 1.40x,
+		 * below the harness's 1.9x bar, so the dimension failed by name as INERT
+		 * while every content role had in fact doubled. The typographic rule the cap
+		 * exists for (a 28 pt screen title does not need to become 56) is a rule
+		 * about the size the APP chose, so it applies to the preference; a reader
+		 * whose browser or OS is at 200 % asked for 200 %, and the ramp is theirs.
+		 *
+		 * `platform` is applied to the value only for `px` (native), where there is
+		 * no root font size to carry it; in `rem` the unit does that multiplication,
+		 * so putting it in the value as well is the squaring this file warns about. */
+		const stepFactor =
+			(CHROME_STEPS.has(name) ? Math.min(factor, CHROME_SCALE_CAP) : factor) *
+			(unit === "px" ? platform : 1);
 		out[`--text-${name}`] = `${round(step.size * stepFactor, unit)}${unit}`;
 	}
 	return out;

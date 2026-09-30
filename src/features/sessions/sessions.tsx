@@ -59,6 +59,46 @@ import { useTextScale } from "@/ui/text-scale-provider";
  *     own status, and the connection layer never reports a rotation — so nothing
  *     here can flash once a minute.
  */
+const ActionBar = ({ onMeasure }: { onMeasure: (height: number) => void }) => {
+	const router = useRouter();
+
+	return (
+		<View
+			className="gap-2 px-4 pb-2 pt-2"
+			testID={CONTROL.sessionsFooter}
+			accessibilityRole="none"
+			/* A bar over content has to be MEASURED: whoever it overlaps pads by this
+			 *  height, and the 320 pt @ 200 % frame showed the cost of guessing — a row
+			 *  cut in half by the primary action. */
+			onLayout={(event) => onMeasure(event.nativeEvent.layout.height)}
+		>
+			<Button
+				label="New session"
+				onPress={() => router.push("/new")}
+				testID={CONTROL.sessionsNew}
+			/>
+			<View className="flex-row gap-2">
+				<View className="flex-1">
+					<Button
+						label="Past"
+						onPress={() => router.push("/past")}
+						variant="quiet"
+						testID={CONTROL.sessionsPast}
+					/>
+				</View>
+				<View className="flex-1">
+					<Button
+						testID={CONTROL.sessionsComputers}
+						label="Computers"
+						onPress={() => router.push("/tunnels")}
+						variant="quiet"
+					/>
+				</View>
+			</View>
+		</View>
+	);
+};
+
 export default function Sessions() {
 	const router = useRouter();
 	const { refreshList, retry, relay, refusal, busy, streamHealth } =
@@ -175,6 +215,19 @@ export default function Sessions() {
 						{listLabel(computers, tunnelId, route)}
 					</Text>
 				</Pressable>
+				{/* The list pane's own action, and only when the pane exists: with the bar on
+				 *  the detail side, the list would otherwise have no way to start a session.
+				 *  On a phone this renders nothing and the pinned bar is exactly what it
+				 *  was. */}
+				{layout.split ? (
+					<Button
+						label="New"
+						size="sm"
+						variant="quiet"
+						onPress={() => router.push("/new")}
+						testID={CONTROL.sessionsNewInPane}
+					/>
+				) : null}
 			</View>
 
 			{searching ? (
@@ -204,6 +257,20 @@ export default function Sessions() {
 	/* F-5 step 1's own list of controls, in the SCREEN header rather than in the
 	 * list's, so the list's header row has one thing to fit (the switcher) and 200 %
 	 * text cannot squeeze the label to nothing. */
+	const detailColumn = (
+		<ReadableColumn testID={CONTROL.sessionsDetailColumn}>
+			<View className="flex-1 items-center justify-center gap-2 px-8">
+				<Text className="text-heading text-ink" accessibilityRole={ROLE.header}>
+					Choose a session
+				</Text>
+				<Text className="text-body text-ink-muted text-center">
+					Its transcript, composer and approval cards open here.
+				</Text>
+			</View>
+			{layout.split ? <ActionBar onMeasure={setFooterHeight} /> : null}
+		</ReadableColumn>
+	);
+
 	return (
 		<Screen
 			title="Sessions"
@@ -291,7 +358,9 @@ export default function Sessions() {
 						accessibilityRole="none"
 						testID={REGION.sessionsList}
 						contentContainerClassName="grow px-4"
-						contentContainerStyle={{ paddingBottom: footerHeight + 16 }}
+						contentContainerStyle={{
+							paddingBottom: layout.split ? 16 : footerHeight + 16,
+						}}
 						data={items}
 						keyExtractor={(item) => item.key}
 						ListHeaderComponent={header}
@@ -350,62 +419,16 @@ export default function Sessions() {
 						}
 					/>
 				}
-				detail={null}
-				emptyDetail={
-					/* The readable measure lives INSIDE the detail pane, not on the
-					 *  screen: with the cap opted out above, this is the only thing
-					 *  keeping a transcript in a 1,046 pt pane from becoming a 1,046 pt
-					 *  line. D2's session view renders under this column when it lands. */
-					<ReadableColumn testID={CONTROL.sessionsDetailColumn}>
-						<View className="flex-1 items-center justify-center gap-2 px-8">
-							<Text
-								className="text-heading text-ink"
-								accessibilityRole={ROLE.header}
-							>
-								Choose a session
-							</Text>
-							<Text className="text-body text-ink-muted text-center">
-								Its transcript, composer and approval cards open here.
-							</Text>
-						</View>
-					</ReadableColumn>
-				}
+				detail={layout.split ? detailColumn : null}
+				emptyDetail={detailColumn}
 			/>
 
-			<View
-				className="gap-2 px-4 pb-2 pt-2"
-				testID={CONTROL.sessionsFooter}
-				accessibilityRole="none"
-				/* The footer is a fixed bar over a scrolling list, so its height is
-				 * MEASURED and the list is padded by it: without that the last row sits
-				 * under the buttons, which the 320 pt @ 200 % frame showed as a row cut in
-				 * half by the primary action. */
-				onLayout={(event) => setFooterHeight(event.nativeEvent.layout.height)}
-			>
-				<Button
-					label="New session"
-					onPress={() => router.push("/new")}
-					testID={CONTROL.sessionsNew}
-				/>
-				<View className="flex-row gap-2">
-					<View className="flex-1">
-						<Button
-							label="Past"
-							onPress={() => router.push("/past")}
-							variant="quiet"
-							testID={CONTROL.sessionsPast}
-						/>
-					</View>
-					<View className="flex-1">
-						<Button
-							testID={CONTROL.sessionsComputers}
-							label="Computers"
-							onPress={() => router.push("/tunnels")}
-							variant="quiet"
-						/>
-					</View>
-				</View>
-			</View>
+			{/* The action bar belongs to the DETAIL pane when there is one: "New session"
+			 *  and its neighbours act on the transcript side of the screen, and pinned
+			 *  across the whole screen it drew a 1,366 pt bar under both panes — the layout
+			 *  a designer reads as a phone bar stretched. The list pane keeps its own way
+			 *  in, in its pane header. */}
+			{layout.split ? null : <ActionBar onMeasure={setFooterHeight} />}
 
 			{/* Long-press rather than a swipe: the same action, a gesture a reader
 			 *  discovers by trying it, and a sheet that names what it is about to do. */}

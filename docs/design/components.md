@@ -44,6 +44,16 @@ Two of them are load-bearing on a phone:
 |---|---|---|
 | Minimum hit area | **44pt iOS / 48dp Android** | `tokens.json § size.touchTarget`. The shipped client already uses `min-h-11` (44px) for every button and chip |
 | A visually smaller control gets **slop**, not a smaller target | pad to 44 | A 12pt status dot may sit inside a 44pt hit area, and hit areas may never overlap |
+
+**Slop is native-only, and that is why the box is the floor here.**
+`react-native-web` implements `hitSlop` on the legacy `Touchable` and **not** on
+`Pressable`, which is what this kit uses — so on the web build a control that reached
+the floor only through slop had no slop at all. Measured: Button `sm` (32 pt visual)
+was a 32 pt target in every web frame, and the audit's target-size checks saw it
+correctly, because they can only see the box. The rule that follows: a control below
+the floor gets **real box geometry** (padding, or a floor-height pressable with the
+pill centred inside it), and slop is an extra only where a control genuinely cannot
+afford the box on native.
 | Any text field is set at **≥16pt** | `type.steps.body` = 16 | Below 16, iOS zooms the page on focus, which moves the layout under the reader's thumb |
 
 ---

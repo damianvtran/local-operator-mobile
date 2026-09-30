@@ -1,7 +1,7 @@
 import { useRouter } from "expo-router";
 import { Text, View } from "react-native";
 
-import { CONTROL, REGION } from "@/ui/a11y";
+import { CONTROL, REGION, SURFACE } from "@/ui/a11y";
 import { Button } from "@/ui/components/button";
 import { Shimmer } from "@/ui/components/shimmer";
 
@@ -28,7 +28,7 @@ export const SignInPanel = ({
 	state,
 	onStart,
 	onUseAddress,
-	testID = "sign-in-panel",
+	testID = SURFACE.signInPanel,
 }: {
 	state: SignInState;
 	onStart: () => void;

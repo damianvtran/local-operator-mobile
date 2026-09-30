@@ -176,6 +176,7 @@ export const CONTROL = {
 	splitPaneEnd: "split-pane-end",
 	splitBody: "split-body",
 	sessionsDetailColumn: "sessions-detail-column",
+	sessionsNewInPane: "sessions-new-in-pane",
 	/* --- the list, past-list and new-session controls the flows address. --- */
 	newSessionCwd: "new-session-cwd",
 	newSessionModel: "new-session-model",
@@ -227,6 +228,31 @@ export const CONTROL = {
 	/* --- the controls this slice's screens render, named one by one. A screen with
 	 * two controls cannot share an identifier: Maestro's `id:` matching would pick one
 	 * arbitrarily and the failure would read as a flaky flow. --- */
+
+	/* --- the session view (stream D2), adopted into the shared vocabulary ---
+	/* Named and declared here so one file owns the contract: these are the names
+	/* the session view's screens, composer, cards and panels render, and the names
+	/* its Maestro flows select. Without them in the one vocabulary the two halves of
+	/* the check in `a11y.e2e.test.ts` have nothing to agree about. */
+	composerSend: "composer-send",
+	composerStop: "composer-stop",
+	composerAttach: "composer-attach",
+	composerResume: "composer-resume",
+	composerInput: "composer-input",
+	composerRetry: "composer-retry",
+	composerModelChip: "composer-model-chip",
+	composerEffortChip: "composer-effort-chip",
+	slashFilter: "slash-filter",
+	pendingApprove: "pending-approve",
+	pendingDeny: "pending-deny",
+	pendingRemember: "pending-remember",
+	pendingAskSubmit: "pending-ask-submit",
+	todosDisclosure: "todos-disclosure",
+	subagentsDisclosure: "subagents-disclosure",
+	connectionRetry: "connection-retry",
+	connectionSignIn: "connection-sign-in",
+	connectionConsole: "connection-console",
+	codeBlockCopy: "code-block-copy",
 } as const;
 
 /**
@@ -238,10 +264,66 @@ export const CONTROL = {
  * end-to-end flows (`e2e/maestro/**`) are YAML that must follow these names, never
  * the reverse, and the check that they do lives in `a11y.e2e.test.ts`.
  */
+/**
+ * Surfaces a flow asserts rather than presses.
+ *
+ * A `CONTROL` is something a reader acts on; a `SURFACE` is something a flow must
+ * see EXIST — the transcript region, the composer's receipt, the one banner that
+ * says which connection state the app is in. Keeping them apart is what stops the
+ * vocabulary from filling with names nobody can press, and it lets the flows assert
+ * a state ("the certificate was rejected") without inventing a control for it.
+ */
+export const SURFACE = {
+	sessionTranscript: "session-transcript",
+	sessionComposer: "session-composer",
+	sessionColumn: "session-column",
+	sessionContext: "session-context",
+	sessionLoading: "session-loading",
+	sessionTranscriptEmpty: "session-transcript-empty",
+	sessionWorkingLine: "session-working-line",
+	composerNotice: "composer-notice",
+	composerError: "composer-error",
+	composerRetained: "composer-retained",
+	composerReceipt: "composer-receipt",
+	composerDisabledReason: "composer-disabled-reason",
+	queuedMessageChip: "queued-message-chip",
+	connectionBanner: "connection-banner",
+	connectionWaiting: "connection-waiting",
+	connectionClearsByItself: "connection-clears-by-itself",
+	connectionCertificateRejected: "connection-certificate-rejected",
+	connectionHostUnresolved: "connection-host-unresolved",
+	connectionComputerOffline: "connection-computer-offline",
+	connectionMachineRemedy: "connection-machine-remedy",
+	connectionRelayNotInstalled: "connection-relay-not-installed",
+	connectionTunnelUnavailable: "connection-tunnel-unavailable",
+	modelSheet: "model-sheet",
+	effortSheet: "effort-sheet",
+	slashSheet: "slash-sheet",
+	todosPanel: "todos-panel",
+	todosBody: "todos-body",
+	subagentsPanel: "subagents-panel",
+	subagentsBody: "subagents-body",
+	subagentRunning: "subagent-running",
+	pendingCardBody: "pending-card-body",
+	pendingCardDetail: "pending-card-detail",
+	pendingCardDestructiveMarker: "pending-card-destructive-marker",
+	pendingCardAnswer: "pending-card-answer",
+	pendingCardError: "pending-card-error",
+	transcriptStreaming: "transcript-streaming",
+
+	/* The three surfaces whose components carry a DEFAULT identifier rather than
+	/* taking one from a caller: a literal default is a second spelling of an id the
+	/* flows select, which is exactly what the contract exists to prevent. */
+	connectionPill: "connection-pill",
+	refusalSurface: "connection-refusal",
+	signInPanel: "sign-in-panel",
+} as const;
+
 export const IDENTIFIERS: readonly string[] = [
 	...Object.values(SCREEN),
 	...Object.values(EMPTY),
 	...Object.values(CONTROL),
+	...Object.values(SURFACE),
 ];
 
 /**
@@ -262,6 +344,17 @@ export const IDENTIFIER_FAMILIES: readonly string[] = [
 	"tunnel-copy-",
 	"session-empty-",
 	"command-",
+	/* The session view's own parameterised identifiers, adopted with its block above. */
+	"transcript-row-",
+	"transcript-image-",
+	"model-option-",
+	"effort-rung-",
+	"slash-command-",
+	"composer-attachment-",
+	"subagent-chip-",
+	"todos-row-",
+	"ask-question-",
+	"ask-option-",
 ];
 
 /**

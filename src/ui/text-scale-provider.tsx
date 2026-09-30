@@ -109,27 +109,30 @@ export function useTextScale(): TextScale {
 	 * browser's root font size multiplies every size by itself. Multiplying here as
 	 * well squares it — measured: the harness's 200 % captured at a median text
 	 * height of 4.00x before this line existed. On native there is no root font
-	 * size to do the work, so `PixelRatio.getFontScale()` is applied here. */
-	const scale =
-		Platform.OS === "web"
-			? resolveTextScale(preference, 1)
-			: resolveTextScale(preference, platformScale);
+	 * size to do the work, so the factor is applied to the values instead — by
+	 * `scaledTextVariables` for `px`, which is a different place from this line but
+	 * still exactly once. */
+	const scale = resolveTextScale(preference, 1);
 
 	const variables = useMemo(
 		() =>
 			scaledTextVariables(
 				scale,
 				Platform.OS === "web" ? "rem" : "px",
-				/* The root font size does the multiplying on the web; native has already
-				 *  folded the platform value into `scale`. */
-				Platform.OS === "web" ? platformScale : 1,
+				/* The root font size does the multiplying on the web; native has no such
+				 *  mechanism, so the same factor is applied to the values instead. It is
+				 *  passed even on the web because the chrome cap needs to know it — but
+				 *  never so the cap can bound it. */
+				platformScale,
 			),
 		[scale, platformScale],
 	);
 
-	/* On the web the root font size multiplies whatever the variables say; on
-	 * native `scale` already has the platform's factor folded in. */
-	const effectiveScale = Platform.OS === "web" ? scale * platformScale : scale;
+	/* What a reader actually gets, on both platforms: the preference times the
+	 * platform's own factor — web through the root font size, native through the
+	 * values. This is the number every `LARGE_TEXT_SCALE` layout decision is made
+	 * against, so it has to describe the rendered result, not one input to it. */
+	const effectiveScale = scale * platformScale;
 
 	return {
 		scale,

@@ -1,7 +1,7 @@
 import { AlertTriangle } from "lucide-react-native";
 import { Text, View } from "react-native";
 
-import { CONTROL, REGION, ROLE } from "@/ui/a11y";
+import { CONTROL, REGION, ROLE, SURFACE } from "@/ui/a11y";
 import { useTokenColor } from "@/ui/appearance";
 import { Button } from "@/ui/components/button";
 
@@ -133,7 +133,7 @@ export const RefusalSurface = ({
 	onSignIn,
 	onUseAnotherAddress,
 	onOpenConsole,
-	testID = "connection-refusal",
+	testID = SURFACE.refusalSurface,
 }: RefusalSurfaceProps) => {
 	const danger = useTokenColor("danger");
 	const waitSeconds = retryAfterMs ? Math.round(retryAfterMs / 1000) : null;

@@ -1,6 +1,6 @@
 import { Text, View } from "react-native";
 
-import { ROLE } from "@/ui/a11y";
+import { ROLE, SURFACE } from "@/ui/a11y";
 import { useTokenColor } from "@/ui/appearance";
 
 /**
@@ -74,7 +74,7 @@ const DOT_ROLE: Record<
 export const ConnectionPill = ({
 	state,
 	message,
-	testID = "connection-pill",
+	testID = SURFACE.connectionPill,
 }: ConnectionPillProps) => {
 	const dotColor = useTokenColor(DOT_ROLE[state]);
 	const text = message ?? DEFAULT_MESSAGE[state];
