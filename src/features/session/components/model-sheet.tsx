@@ -1,7 +1,7 @@
 import { Pressable, ScrollView, Text, View } from "react-native";
 
 import type { ModelEntry } from "@/contracts";
-import { ROLE, state } from "@/ui/a11y";
+import { effortRungID, modelOptionID, ROLE, SURFACE, state } from "@/ui/a11y";
 import { Sheet } from "@/ui/components";
 import { cx } from "@/ui/variants";
 
@@ -68,7 +68,7 @@ export const ModelSheet = ({
 			visible={visible}
 			onClose={onClose}
 			title="model"
-			testID="model-sheet"
+			testID={SURFACE.modelSheet}
 		>
 			<ScrollView className="max-h-96">
 				{groups.map((group) => (
@@ -93,7 +93,7 @@ export const ModelSheet = ({
 										onPick(model);
 										onClose();
 									}}
-									testID={`model-option-${model.model_id}`}
+									testID={modelOptionID(model.model_id)}
 								>
 									<View className="min-h-11 flex-row items-center gap-2 px-3">
 										<Text
@@ -160,7 +160,7 @@ export const EffortSheet = ({
 		visible={visible}
 		onClose={onClose}
 		title="effort"
-		testID="effort-sheet"
+		testID={SURFACE.effortSheet}
 	>
 		<View className="py-1">
 			{ladder.map((rung) => (
@@ -173,7 +173,7 @@ export const EffortSheet = ({
 						onPick(rung);
 						onClose();
 					}}
-					testID={`effort-rung-${rung}`}
+					testID={effortRungID(rung)}
 				>
 					<View className="min-h-11 flex-row items-center gap-2 px-3">
 						<View

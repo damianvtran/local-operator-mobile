@@ -28,6 +28,10 @@ const ENTRY: ProjectionEntry = {
 	droppedFrames: 0,
 };
 
+/** The reconnect sentence, hoisted: a regex literal inside an assertion is
+ * rebuilt on every call, which the lint rule flags (`useTopLevelRegex`). */
+const RECONNECTING = /reconnecting/i;
+
 describe("the reconnect backoff", () => {
 	it("doubles from a second, and stops at the web client's ceiling", () => {
 		// A hot retry against a relay that is down for hours is a radio and a battery
@@ -292,7 +296,7 @@ describe("C6 — a typed refusal renders the gateway's own sentence", () => {
 			input({ stream: "open", ageS: null, reconnectExpired: true }),
 		);
 		expect(view.id).toBe("C2");
-		expect(view.text).toMatch(/reconnecting/i);
+		expect(view.text).toMatch(RECONNECTING);
 	});
 
 	it("stays silent for an open stream inside the deadline", () => {

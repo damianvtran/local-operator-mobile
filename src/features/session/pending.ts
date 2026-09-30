@@ -23,6 +23,7 @@
  */
 
 import type { PendingRequest } from "@/contracts";
+import { askOptionID, askQuestionID } from "@/ui/a11y";
 
 /** Approval, or ask. The two share a frame and disagree about their controls. */
 export type PendingKind = "approval" | "ask";
@@ -62,6 +63,9 @@ export interface PendingView {
 	rememberLabel: string;
 	/** True for a terminal session: the phone shows the wait and offers nothing. */
 	terminalOnly: boolean;
+	/** The sentence the card shows instead of controls, or `null` when it can be
+	 *  answered from here. */
+	boundarySentence: string | null;
 	/** The detail is a command that will execute on the reader's machine. */
 	runsOnComputer: boolean;
 	/** The detail matched a known-destructive pattern, so the sentence hardens. */
@@ -136,6 +140,9 @@ export interface PendingViewInput {
 	pending: PendingRequest;
 	/** The projection's `kind`: `tui` is the terminal-owned session. */
 	sessionKind: string;
+	/** The projection's `ended` receipt: the daemon watched this session's process
+	 *  die. A request cannot still be answerable then, whatever its `kind`. */
+	ended: boolean;
 	/** How many decisions are waiting, for the `1 of N` badge. */
 	pendingCount: number;
 	/** The computer's label, for the risk sentence. */
@@ -144,10 +151,27 @@ export interface PendingViewInput {
 	cwd: string;
 }
 
+/**
+ * Why a request cannot be answered from this screen, in the reader's terms.
+ *
+ * Two different boundaries with one behaviour and two sentences: a session the
+ * reader's own terminal is driving (the relay answers it at the terminal — `R10`),
+ * and a session that has ENDED. Saying "waiting in your terminal" to a reader whose
+ * session is over names the wrong cause, and the cause is the only thing this card
+ * has left to give them.
+ */
+export const PENDING_BOUNDARY_COPY = {
+	terminal:
+		"This approval is waiting in your terminal. Answer it there and this card will clear.",
+	ended:
+		"This session has ended, so this request can no longer be answered here.",
+} as const;
+
 export const pendingView = (input: PendingViewInput): PendingView => {
 	const { pending } = input;
 	const kind: PendingKind = pending.kind === "ask" ? "ask" : "approval";
 	const tool = pending.title.length > 0 ? pending.title : "this tool";
+	const terminalKind = input.sessionKind === "tui";
 	const destructive =
 		kind === "approval" && isDestructiveDetail(pending.detail);
 	return {
@@ -167,7 +191,7 @@ export const pendingView = (input: PendingViewInput): PendingView => {
 				: null,
 		questionTestID:
 			pending.question_total > 1
-				? `ask-question-${pending.question_index + 1}-of-${pending.question_total}`
+				? askQuestionID(pending.question_index + 1, pending.question_total)
 				: null,
 		options: pending.options.map((option, index) => ({
 			label: option.label,
@@ -176,7 +200,7 @@ export const pendingView = (input: PendingViewInput): PendingView => {
 			// `recommended` is an index into the options AS CARRIED, and a client that
 			// re-sorted them and kept the index would mark the wrong one.
 			recommended: pending.recommended === index,
-			testID: `ask-option-${index}`,
+			testID: askOptionID(index),
 		})),
 		freeText: pending.options.length === 0,
 		secret: pending.secret,
@@ -184,7 +208,21 @@ export const pendingView = (input: PendingViewInput): PendingView => {
 		// actually grants. "this session" is the true scope — a remember choice is
 		// stored per session on the runtime, not globally.
 		rememberLabel: `Always allow \`${tool}\` in this session`,
-		terminalOnly: input.sessionKind === "tui",
+		/* The wire fact, cited rather than guessed: the committed capture of an ended
+		 * session's frame carries `pending: null, pending_count: 0`
+		 * (`fixtures/relay/sse/sse_projection_ended.json`, captured 2026-09-30 at
+		 * `fc851a94e`), so a pending request outliving `ended` is not something the
+		 * relay produces today. The gate is here anyway because the failure it
+		 * prevents is unbounded in the bad direction: an ended session's approval
+		 * rendered WITH controls offers the reader a button that can only refuse,
+		 * and `ended` is the reliable signal that nothing can be answered — more
+		 * reliable than `kind`, which a non-`tui` session also has. */
+		terminalOnly: input.sessionKind === "tui" || input.ended,
+		boundarySentence: input.ended
+			? PENDING_BOUNDARY_COPY.ended
+			: terminalKind
+				? PENDING_BOUNDARY_COPY.terminal
+				: null,
 		runsOnComputer:
 			kind === "approval" &&
 			(isExecutionDetail(pending.detail, pending.title) || destructive),

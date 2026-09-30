@@ -114,6 +114,29 @@ describe("the send/steer morph", () => {
 			ended: true,
 		});
 		expect(ended.primary.disabled).toBe(true);
+		// And it SAYS so, and what the reader can do instead. A dead control with no
+		// reason is the "control that cannot work" pattern this feature exists to
+		// avoid (review round 1, M4): `disabledReason` was computed for the retained
+		// case and read by nobody, so the ended case had no copy anywhere at all.
+		expect(ended.disabledReason).toBe(COMPOSER_COPY.endedSession);
+		expect(ended.disabledReason).toContain("ended");
+		// The two reasons are distinct: an unresolved instruction is a different
+		// problem from a session that is over, and each names its own remedy.
+		expect(ended.disabledReason).not.toBe(COMPOSER_COPY.retryDisabledHint);
+	});
+
+	it("keeps the ended reason ahead of the retained one", () => {
+		// Both can be true at once. The ended state is the one that explains why the
+		// retry cannot help either, so it is the sentence the reader gets.
+		const both = composerControls({
+			streaming: false,
+			hasDraft: true,
+			hasImages: false,
+			sending: false,
+			envelopePending: true,
+			ended: true,
+		});
+		expect(both.disabledReason).toBe(COMPOSER_COPY.endedSession);
 	});
 });
 

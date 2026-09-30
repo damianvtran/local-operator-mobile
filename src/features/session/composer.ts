@@ -51,6 +51,12 @@ export const COMPOSER_COPY = {
 		"An earlier message was still unsent, so it went first. Your new text was not sent — it is below, ready when you are.",
 	retryAckNotice:
 		"Earlier instruction delivered. Your edited draft is ready to send.",
+	/** A session whose process the daemon watched die (`projection.ended`, the
+	 *  session-state receipt). Nothing can be sent to it, and the reader is told
+	 *  what they can do instead — a dead control with no explanation is the
+	 *  "control that cannot work" pattern this feature exists to avoid. */
+	endedSession:
+		"This session has ended. Start a new one from the sessions list.",
 	/** The resume affordance, driven by `stop_reason === "aborted"` (the wire
 	 *  fact), never by `streaming` — a turn that completes also stops streaming,
 	 *  and only an aborted one should offer to resume. */
@@ -148,7 +154,11 @@ export const composerControls = (
 		},
 		stopVisible: input.streaming,
 		sending: input.sending,
-		disabledReason: blocked ? COMPOSER_COPY.retryDisabledHint : null,
+		disabledReason: input.ended
+			? COMPOSER_COPY.endedSession
+			: blocked
+				? COMPOSER_COPY.retryDisabledHint
+				: null,
 	};
 };
 
@@ -189,13 +199,21 @@ export const receiptForError = (error: RelayError): SendReceipt => {
 	 * relay-supplied sentence gets the product's words instead.
 	 */
 	const message =
-		/* Deliberately NOT `relaySentence`/`displayableMessage` here: that accessor
-		 * falls back to `error.message`, and for this path the fallback is the
-		 * composer's OWN sentence for the op — a receipt that reads "Load failed" was a
-		 * shipped first impression (U3). The banner's copy is a different question from
-		 * a receipt's, so it is a different call. */
-		error.detail ??
-		error.serverError ??
+		/* The two relay-supplied fields, filtered the way the error layer's own
+		 * accessor filters them (`relay/errors.ts` `displayableMessage`): trimmed,
+		 * EMPTY rejected, and markup rejected. `??` alone was weaker than the rule
+		 * this cites — it does not fall through on `""`, and an HTML body
+		 * (`<html><body>502 Bad Gateway</body></html>`) is an ordinary relay answer
+		 * the accessor's docblock names explicitly.
+		 *
+		 * Deliberately NOT the accessor itself: it falls back to `error.message`, and
+		 * for this path the fallback is the composer's OWN sentence for the op — a
+		 * receipt that reads "Load failed" was a shipped first impression (U3). The
+		 * banner's copy is a different question from a receipt's, so it is a
+		 * different call. */
+		[error.detail, error.serverError]
+			.map((value) => value?.trim() ?? "")
+			.find((value) => value !== "" && !value.startsWith("<")) ??
 		(error.kind === "ambiguous-delivery"
 			? COMPOSER_COPY.steerError
 			: COMPOSER_COPY.continuationError);

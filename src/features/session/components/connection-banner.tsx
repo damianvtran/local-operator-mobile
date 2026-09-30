@@ -4,7 +4,7 @@ import type {
 	ConnectionAction,
 	ConnectionView,
 } from "@/features/session/connection-view";
-import { ROLE } from "@/ui/a11y";
+import { ROLE, SURFACE } from "@/ui/a11y";
 import { Button } from "@/ui/components";
 import { cx } from "@/ui/variants";
 
@@ -69,7 +69,7 @@ export const ConnectionBanner = ({
 	return (
 		<View
 			className={cx("border-t px-4 py-2", TONE_CLASSES[view.tone])}
-			testID="connection-banner"
+			testID={SURFACE.connectionBanner}
 			accessibilityRole={ROLE.alert}
 			accessibilityLiveRegion="polite"
 		>

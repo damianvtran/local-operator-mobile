@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import type { SlashCommand } from "@/contracts";
@@ -7,6 +9,7 @@ import {
 	parseSlashDraft,
 	slashQuery,
 	slashTap,
+	slashTapRequest,
 	tapFillsOnly,
 } from "@/features/session/slash";
 
@@ -101,6 +104,68 @@ describe("filtering is a ranked subsequence match", () => {
 		expect(
 			filterCommands(catalogue, "").map((row) => row.command.name),
 		).toEqual(["rename", "review", "resume", "cost"]);
+	});
+});
+
+/**
+ * The relay's own catalogue, committed as a fixture: 46 commands, 24 of which take
+ * no argument and therefore run on a tap (`fixtures/relay/http/commands.json`).
+ * Read from the fixture rather than hand-written here, because the class that broke
+ * is defined by the CATALOGUE, not by this file's idea of it.
+ */
+const CATALOGUE: SlashCommand[] = JSON.parse(
+	readFileSync(
+		fileURLToPath(
+			new URL("../../../fixtures/relay/http/commands.json", import.meta.url),
+		),
+		"utf8",
+	),
+).body.commands;
+
+describe("a tap sends the command it named, never the token typed so far (Q1)", () => {
+	const runsImmediately = CATALOGUE.filter((c) => c.arguments === "none");
+
+	it("covers the class that broke: every no-argument command in the relay's catalogue", () => {
+		expect(runsImmediately.length).toBe(24);
+		expect(CATALOGUE.length).toBe(46);
+	});
+
+	it("sends the WHOLE command for every one of them", () => {
+		// The defect: the reader types `/he`, the sheet filters, they tap `/help`, and
+		// the request on the wire carried `command: "he"` — the partial token — because
+		// the send path re-parsed the draft ref, which React had assigned during the
+		// render that preceded the tap.
+		for (const entry of runsImmediately) {
+			const request = slashTapRequest(entry);
+			expect(request, entry.name).toEqual({
+				command: entry.name,
+				args: "",
+			});
+			// And explicitly not the prefix a reader would have typed to reach the row.
+			const typedSoFar = `/${entry.name}`.slice(0, 3);
+			expect(request?.command, entry.name).not.toBe(
+				typedSoFar.replace("/", ""),
+			);
+		}
+	});
+
+	it("sends nothing for a command that takes text: that tap only fills the field", () => {
+		for (const entry of CATALOGUE.filter((c) => c.arguments !== "none")) {
+			expect(slashTapRequest(entry), entry.name).toBeNull();
+			expect(slashTap(entry).submit, entry.name).toBe(false);
+		}
+	});
+
+	it("is derived from the command, so a draft cannot change what a tap sends", () => {
+		// The property the fix buys: two different drafts, one request.
+		const help = CATALOGUE.find((c) => c.name === "help");
+		expect(help).toBeDefined();
+		if (help === undefined) return;
+		const fromEmpty = slashTapRequest(help);
+		const withPartialToken = slashTapRequest(help);
+		expect(fromEmpty).toEqual(withPartialToken);
+		expect(parseSlashDraft("/he")).toEqual({ command: "he", args: "" });
+		expect(fromEmpty).not.toEqual(parseSlashDraft("/he"));
 	});
 });
 

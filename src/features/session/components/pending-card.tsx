@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
 
 import type { PendingView } from "@/features/session/pending";
-import { ROLE, state } from "@/ui/a11y";
+import { CONTROL, ROLE, SURFACE, state } from "@/ui/a11y";
 import { Button } from "@/ui/components";
 import { cx, TOUCH_FLOOR } from "@/ui/variants";
 
@@ -92,13 +92,14 @@ export const PendingCard = ({
 			</View>
 
 			{/* Region 2 — the content, scrollable and bounded. */}
-			<ScrollView className="max-h-64" testID={`${rootTestID}-body`}>
-				{view.terminalOnly ? (
-					/* The honest terminal boundary. One sentence, no control: the
-					   approval belongs to the terminal that raised it. */
+			<ScrollView className="max-h-64" testID={SURFACE.pendingCardBody}>
+				{view.boundarySentence !== null ? (
+					/* The honest boundary. One sentence, no control: either the approval
+					   belongs to the reader's terminal, or the session is over. The
+					   sentence is the projection's, so the two cases cannot drift into
+					   saying the same thing. */
 					<Text className="pb-1 text-body-sm text-ink-muted">
-						This approval is waiting in your terminal. Answer it there and this
-						card will clear.
+						{view.boundarySentence}
 					</Text>
 				) : null}
 				{view.questionLabel !== null ? (
@@ -118,7 +119,7 @@ export const PendingCard = ({
 				{view.detail.length > 0 ? (
 					<Text
 						className="whitespace-pre-wrap text-body-sm text-ink-muted"
-						testID="pending-card-detail"
+						testID={SURFACE.pendingCardDetail}
 					>
 						{view.detail}
 					</Text>
@@ -130,7 +131,7 @@ export const PendingCard = ({
 							"pt-1 text-meta",
 							view.destructive ? "text-danger" : "text-ink-dim",
 						)}
-						testID="pending-card-destructive-marker"
+						testID={SURFACE.pendingCardDestructiveMarker}
 					>
 						{view.riskLabel}
 					</Text>
@@ -197,7 +198,7 @@ export const PendingCard = ({
 							style={{ fontSize: 16 }}
 							editable={!busy}
 							multiline={false}
-							testID={`${rootTestID}-answer`}
+							testID={SURFACE.pendingCardAnswer}
 							accessibilityLabel={view.title || "Your answer"}
 						/>
 						{view.secret ? (
@@ -221,7 +222,7 @@ export const PendingCard = ({
 									onPress={() => onApprove?.(remember)}
 									disabled={busy}
 									loading={busy}
-									testID="pending-card-approve"
+									testID={CONTROL.pendingApprove}
 								/>
 							</View>
 							<View className="flex-1">
@@ -230,7 +231,7 @@ export const PendingCard = ({
 									variant="danger"
 									onPress={() => onDeny?.(remember)}
 									disabled={busy}
-									testID="pending-card-deny"
+									testID={CONTROL.pendingDeny}
 								/>
 							</View>
 						</View>
@@ -242,7 +243,7 @@ export const PendingCard = ({
 							accessibilityState={{ checked: remember, disabled: busy }}
 							disabled={busy}
 							onPress={() => setRemember((current) => !current)}
-							testID="pending-card-remember"
+							testID={CONTROL.pendingRemember}
 						>
 							<View className="min-h-11 flex-row items-center gap-2">
 								<View
@@ -271,7 +272,7 @@ export const PendingCard = ({
 						onPress={() => onAnswer?.(answerValue)}
 						disabled={answerDisabled}
 						loading={busy}
-						testID="ask-submit"
+						testID={CONTROL.pendingAskSubmit}
 					/>
 				)}
 				{/* The refusal lands in the pinned region for the same reason the
@@ -279,7 +280,7 @@ export const PendingCard = ({
 				{error !== null ? (
 					<Text
 						className="pt-1.5 text-body-sm text-danger"
-						testID={`${rootTestID}-error`}
+						testID={SURFACE.pendingCardError}
 					>
 						{error}
 					</Text>

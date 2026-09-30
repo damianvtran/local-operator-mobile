@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import type { PendingRequest } from "@/contracts";
-import { isDestructiveDetail, pendingView } from "@/features/session/pending";
+import {
+	isDestructiveDetail,
+	PENDING_BOUNDARY_COPY,
+	pendingView,
+} from "@/features/session/pending";
 
 /**
  * The pending card's rules, all three of which are findings from the shipped
@@ -26,14 +30,34 @@ const pending = (overrides: Partial<PendingRequest> = {}): PendingRequest => ({
 const view = (
 	overrides: Partial<PendingRequest> = {},
 	sessionKind = "daemon",
+	ended = false,
 ) =>
 	pendingView({
 		pending: pending(overrides),
 		sessionKind,
+		ended,
 		pendingCount: 1,
 		computerLabel: "Studio desktop",
 		cwd: "~/work",
 	});
+
+describe("the ended boundary", () => {
+	it("offers no control for a session that has ended, and says which boundary it is", () => {
+		// The relay's own capture of an ended frame carries `pending: null`, so this
+		// is the defensive half of the rule — but the failure it prevents is a card
+		// that offers an answer to a session that can no longer accept one, and the
+		// sentence must name the END rather than the terminal, because that is the
+		// cause the reader has to work with.
+		const ended = view({}, "daemon", true);
+		expect(ended.terminalOnly).toBe(true);
+		expect(ended.boundarySentence).toBe(PENDING_BOUNDARY_COPY.ended);
+		expect(ended.boundarySentence).not.toBe(PENDING_BOUNDARY_COPY.terminal);
+		// A live session still gets its controls and no boundary sentence at all.
+		const live = view();
+		expect(live.terminalOnly).toBe(false);
+		expect(live.boundarySentence).toBeNull();
+	});
+});
 
 describe("the terminal boundary (R10)", () => {
 	it("offers no control for a session owned by the reader's terminal", () => {
@@ -86,6 +110,7 @@ describe("the card's counts and shapes", () => {
 			pendingView({
 				pending: pending(),
 				sessionKind: "daemon",
+				ended: false,
 				pendingCount: 3,
 				computerLabel: "c",
 				cwd: "~/w",
@@ -146,6 +171,7 @@ describe("the destructive sentence", () => {
 		const noCwd = pendingView({
 			pending: pending({ detail: "run: rm -rf build" }),
 			sessionKind: "daemon",
+			ended: false,
 			pendingCount: 1,
 			computerLabel: "Studio desktop",
 			cwd: "",

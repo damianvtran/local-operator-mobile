@@ -2,12 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
 
 import type { SlashCommand } from "@/contracts";
-import {
-	argumentHint,
-	filterCommands,
-	slashTap,
-} from "@/features/session/slash";
-import { ROLE } from "@/ui/a11y";
+import { argumentHint, filterCommands } from "@/features/session/slash";
+import { CONTROL, ROLE, SURFACE, slashCommandID } from "@/ui/a11y";
 import { Sheet } from "@/ui/components";
 
 /**
@@ -32,7 +28,10 @@ export type SlashSheetProps = {
 	query: string;
 	loading?: boolean;
 	/** `submit` runs the command immediately; otherwise the fill waits for text. */
-	onPick: (fill: string, submit: boolean) => void;
+	/** The command the reader tapped. The caller derives both the draft effect and
+	 *  the request from it (`slashTap`/`slashTapRequest`), never from the draft — the
+	 *  ref still holds the pre-tap text at that moment. */
+	onPick: (command: SlashCommand) => void;
 };
 
 export const SlashSheet = ({
@@ -63,7 +62,7 @@ export const SlashSheet = ({
 			visible={visible}
 			onClose={onClose}
 			title="commands"
-			testID="slash-sheet"
+			testID={SURFACE.slashSheet}
 		>
 			<TextInput
 				className="mx-2 mb-1 min-h-11 rounded-sm border border-control bg-surface px-3 text-body text-ink"
@@ -75,7 +74,7 @@ export const SlashSheet = ({
 				autoCapitalize="none"
 				autoCorrect={false}
 				style={{ fontSize: 16 }}
-				testID="slash-filter"
+				testID={CONTROL.slashFilter}
 				accessibilityLabel="Filter commands"
 			/>
 			<ScrollView className="max-h-72">
@@ -87,11 +86,10 @@ export const SlashSheet = ({
 							accessibilityRole={ROLE.button}
 							accessibilityLabel={`/${command.name}, ${command.description}`}
 							onPress={() => {
-								const tap = slashTap(command);
-								onPick(tap.fill, tap.submit);
+								onPick(command);
 								onClose();
 							}}
-							testID={`slash-command-${command.name}`}
+							testID={slashCommandID(command.name)}
 						>
 							<View className="min-h-11 flex-row items-center gap-2 px-3">
 								<Text className="shrink-0 font-mono text-mono-sm text-ink">

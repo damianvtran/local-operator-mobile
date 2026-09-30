@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import type { PromptImage } from "@/contracts";
+import type { PromptImage, SlashCommand } from "@/contracts";
 import { pickImage } from "@/features/session/attach";
 import {
 	acknowledgedCurrentDraft,
@@ -17,7 +17,12 @@ import {
 } from "@/features/session/device-storage";
 import { envelopeStoreFor } from "@/features/session/envelope-store";
 import type { SessionRelaySource } from "@/features/session/relay-source";
-import { parseSlashDraft, slashQuery } from "@/features/session/slash";
+import {
+	parseSlashDraft,
+	slashQuery,
+	slashTap,
+	slashTapRequest,
+} from "@/features/session/slash";
 import {
 	type ContinuationEnvelope,
 	isRelayError,
@@ -64,8 +69,10 @@ export interface ComposerState {
 	/** Replays the retained instruction under its own UUID. */
 	retry: () => void;
 	stop: () => void;
-	/** Runs or fills a slash command from the sheet. */
-	slash: (fill: string, submit: boolean) => void;
+	/** Runs or fills a slash command the reader tapped in the sheet. It takes the
+	 *  COMMAND, not the text it would produce: the request is derived from the
+	 *  command, so a tap cannot send whatever the draft happened to hold. */
+	slash: (command: SlashCommand) => void;
 	answerApproval: (
 		requestId: string,
 		approved: boolean,
@@ -377,11 +384,25 @@ export const useComposer = (input: {
 	}, []);
 
 	const slash = useCallback(
-		(fill: string, submit: boolean) => {
-			setDraft(fill);
-			if (submit) void runSend("prompt");
+		(command: SlashCommand) => {
+			const tap = slashTap(command);
+			setDraft(tap.fill);
+			if (!tap.submit) return;
+			/* The run-immediately arm. It sends the request the COMMAND names, never a
+			 * re-parse of the draft: the draft ref is assigned during render, so it
+			 * still holds the pre-tap text here, and re-parsing it sent the partial
+			 * token the reader had typed (`/he`) for a tap on `/help` — 24 of the
+			 * relay's 46 commands (QA round 1, Q1). A slash request carries no
+			 * attachment, which is the same rule the typed path applies. */
+			const request = slashTapRequest(command);
+			if (request === null || endpoints === null) return;
+			void endpoints.command(sessionId, {
+				op: "slash",
+				command: request.command,
+				args: request.args,
+			});
 		},
-		[setDraft, runSend],
+		[endpoints, sessionId, setDraft],
 	);
 
 	const controls = useMemo(

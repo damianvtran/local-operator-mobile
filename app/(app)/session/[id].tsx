@@ -73,18 +73,20 @@ export default function Session() {
 		null,
 	);
 
-	/* The layout, from D1's hook in `src/ui/layout.ts`. Read once here so the rail,
-	 * the column and the composer all answer to one decision: the column cap that
-	 * `Screen` applies. This screen adds no breakpoint of its own — the panels share
-	 * the column rather than taking a rail, because the column cap IS the layout
-	 * (`src/ui/column.ts`), and a rail beside it would be the second column the
-	 * single-column rule exists to prevent.
-	 */
-
 	const [modelsOpen, setModelsOpen] = useState(false);
 	const [effortOpen, setEffortOpen] = useState(false);
 
 	const projection = runtime.projection;
+
+	/* The effort ladder, read once: the chip's availability and the sheet's rows are
+	 * the same fact, and an empty ladder means the selected model has no effort
+	 * control — a sheet with no rows and nothing to press is the dead-end modal the
+	 * QA round found (Q3). */
+	const effortLadder = useMemo(
+		() => projection?.effort_ladder ?? [],
+		[projection?.effort_ladder],
+	);
+
 	const todos = useMemo(
 		() => projectTodos(projection?.todos ?? []),
 		[projection?.todos],
@@ -105,6 +107,7 @@ export default function Session() {
 				: pendingView({
 						pending,
 						sessionKind: projection?.kind ?? "",
+						ended: projection?.ended === true,
 						pendingCount: projection?.pending_count ?? 1,
 						// The computer's name is not known on this route (the route profile is
 						// the connection layer's, and a hostname is not a name a reader uses), so
@@ -113,7 +116,13 @@ export default function Session() {
 						computerLabel: "",
 						cwd: projection?.cwd ?? "",
 					}),
-		[pending, projection?.kind, projection?.pending_count, projection?.cwd],
+		[
+			pending,
+			projection?.kind,
+			projection?.ended,
+			projection?.pending_count,
+			projection?.cwd,
+		],
 	);
 
 	const slash = draftSlashQuery(composer.draft);
@@ -137,12 +146,14 @@ export default function Session() {
 	const panels = (
 		<>
 			<TodosPanel
+				testID={SURFACE.todosPanel}
 				todos={todos}
 				open={openPanel === "todos"}
 				onToggle={() => setOpenPanel(openPanel === "todos" ? null : "todos")}
 				heldShut={pending !== null}
 			/>
 			<SubagentsPanel
+				testID={SURFACE.subagentsPanel}
 				subagents={subagents}
 				open={openPanel === "subagents"}
 				onToggle={() =>
@@ -168,6 +179,7 @@ export default function Session() {
 			</View>
 		) : (
 			<TranscriptList
+				testID={SURFACE.sessionTranscript}
 				sessionId={sessionId}
 				entries={runtime.entries}
 				streamingRowId={runtime.streamingRowId}
@@ -209,11 +221,10 @@ export default function Session() {
 							setOpenPanel(openPanel === "subagents" ? null : "subagents")
 						}
 						accessibilityHint="Show the subagents"
-						// A literal rather than a `CONTROL` entry: this id is a contract with the
-						// drill-down flow, and the same flow addresses every other anchor on this
-						// screen by the literal string. Those names belong in `ui/a11y.ts`'s
-						// `CONTROL` — that file is another stream's this wave, so the move is
-						// recorded for the manager rather than made here.
+						// The header's panel lever. Its id is the contract's
+						// (`CONTROL.sessionSubagents`), like every other anchor on this
+						// screen: the drill-down flow addresses them by name, so a name
+						// that lives in the contract cannot drift from the flow.
 						testID={CONTROL.sessionSubagents}
 					/>
 				) : null
@@ -307,6 +318,7 @@ export default function Session() {
 					/>
 
 					<Composer
+						testID={SURFACE.sessionComposer}
 						controls={composer.controls}
 						draft={composer.draft}
 						onDraftChange={composer.setDraft}
@@ -327,6 +339,7 @@ export default function Session() {
 						onResume={composer.send}
 						error={pending === null ? composer.error : null}
 						queuedCount={projection?.queued_count ?? 0}
+						effortAvailable={effortLadder.length > 0}
 						modelLabel={chipModelLabel(projection?.model_label ?? "")}
 						effortLabel={
 							projection?.effort.length ? projection.effort : "effort"
@@ -362,9 +375,9 @@ export default function Session() {
 			/>
 
 			<EffortSheet
-				visible={effortOpen}
+				visible={effortOpen && effortLadder.length > 0}
 				onClose={() => setEffortOpen(false)}
-				ladder={projection?.effort_ladder ?? []}
+				ladder={effortLadder}
 				selected={projection?.effort ?? ""}
 				onPick={(effort) => {
 					void runtime.source.endpoints?.command(sessionId, {

@@ -1,6 +1,13 @@
 // biome-ignore-all lint/suspicious/noArrayIndexKey: every list in this file is regenerated from the same source on each render (a parsed string, a diff, a todo phase), so position IS the identity — the case React's own key docs exempt. A content-derived key would be recomputed every frame to produce the same value.
-import { useMemo } from "react";
-import { Image, Pressable, ScrollView, Text, View } from "react-native";
+import { useEffect, useMemo, useRef } from "react";
+import {
+	Image,
+	Platform,
+	Pressable,
+	ScrollView,
+	Text,
+	View,
+} from "react-native";
 
 import type { PromptImage } from "@/contracts";
 import {
@@ -9,9 +16,38 @@ import {
 	type ComposerControls,
 } from "@/features/session/composer";
 
-import { ROLE, state } from "@/ui/a11y";
+import { CONTROL, composerAttachmentID, ROLE, SURFACE, state } from "@/ui/a11y";
 import { Button, Chip, Textarea } from "@/ui/components";
 import { cx } from "@/ui/variants";
+
+/**
+ * A DOM keyboard event, narrowed to what this file reads.
+ *
+ * `Textarea` deliberately owns no keys — its docstring says the key handling
+ * "belongs where the send action lives" — and it forwards no key prop, so on the web
+ * build the only place to install the handler is this subtree: a keydown bubbles
+ * from the field to the composer's own root, and the target comparison keeps the
+ * sheet's filter field out of it.
+ */
+type WebKeyEvent = {
+	key: string;
+	shiftKey: boolean;
+	/** True while an IME is composing: Enter there commits a candidate, not a message. */
+	isComposing?: boolean;
+	target: unknown;
+	preventDefault: () => void;
+};
+type WebFieldNode = {
+	addEventListener: (
+		type: string,
+		listener: (event: WebKeyEvent) => void,
+	) => void;
+	removeEventListener: (
+		type: string,
+		listener: (event: WebKeyEvent) => void,
+	) => void;
+	querySelector: (selector: string) => unknown;
+};
 
 /**
  * The composer (`docs/design/components.md` § 12).
@@ -57,10 +93,14 @@ export type ComposerProps = {
 	effortLabel: string;
 	onOpenModels: () => void;
 	onOpenEffort: () => void;
+	/** False when the selected model has no effort control: the chip is then
+	 *  disabled with the reason, because `EffortSheet`'s own docstring says an
+	 *  empty ladder is the caller's to handle rather than a sheet to open. */
+	effortAvailable: boolean;
 	/** A leading `/` opens the sheet; `null` keeps it shut. */
 	slashQuery: string | null;
 	slashSheet: React.ReactNode;
-	testID?: string;
+	testID: string;
 };
 
 export const Composer = ({
@@ -84,17 +124,63 @@ export const Composer = ({
 	effortLabel,
 	onOpenModels,
 	onOpenEffort,
+	effortAvailable,
 	slashQuery,
 	slashSheet,
-	testID = "session-composer",
+	testID,
 }: ComposerProps) => {
 	const attachmentSummary = useMemo(
 		() => images.map(attachmentLabel).join(" · "),
 		[images],
 	);
 
+	/* The handler the listener calls, kept in a ref: re-attaching the listener on
+	 * every render (to capture the current closure) is the other way to do this, and
+	 * it drops keydowns in the gap between removing and adding. */
+	const sendRef = useRef(onSend);
+	const canSendRef = useRef(false);
+	useEffect(() => {
+		sendRef.current = onSend;
+		canSendRef.current = !controls.primary.disabled && !attaching;
+	}, [onSend, controls.primary.disabled, attaching]);
+
+	const rootRef = useRef<View | null>(null);
+	useEffect(() => {
+		/* Enter sends, Shift+Enter inserts a newline — on a hardware keyboard, on
+		 * both platforms. On web that is a `keydown` the field would otherwise spend
+		 * on a newline (a multiline `TextInput` is a `<textarea>`, and `onSubmitEditing`
+		 * never fires for one — measured: the draft became "…\n" and nothing reached
+		 * the wire). On native the same rule is the platform's own return key, which is
+		 * why the Textarea gets `returnKeyType="send"` and `onSubmitEditing`; a touch
+		 * keyboard keeps its newline gesture, which is the only way to type one. */
+		if (Platform.OS !== "web") return;
+		// `View`'s ref is the DOM element on react-native-web; the cast is the whole
+		// of the platform bridge, and `WebFieldNode` names only what is read from it.
+		const node = rootRef.current as unknown as WebFieldNode | null;
+		if (node === null || typeof node.addEventListener !== "function") return;
+		const onKeyDown = (event: WebKeyEvent) => {
+			if (
+				event.key !== "Enter" ||
+				event.shiftKey ||
+				event.isComposing === true
+			) {
+				return;
+			}
+			const field = node.querySelector("textarea, input");
+			if (field === null || field !== event.target) return;
+			event.preventDefault();
+			if (canSendRef.current) sendRef.current();
+		};
+		node.addEventListener("keydown", onKeyDown);
+		return () => node.removeEventListener("keydown", onKeyDown);
+	}, []);
+
 	return (
-		<View className="border-t border-hairline px-3 pt-1.5 pb-2" testID={testID}>
+		<View
+			ref={rootRef}
+			className="border-t border-hairline px-3 pt-1.5 pb-2"
+			testID={testID}
+		>
 			{/* Attachments, above the field: an attachment changes what send means, so it
 			    is read before the control that is pressed. */}
 			{images.length > 0 ? (
@@ -107,7 +193,7 @@ export const Composer = ({
 									accessibilityRole={ROLE.button}
 									accessibilityLabel={`Remove attachment ${index + 1}`}
 									onPress={() => onRemoveImage(index)}
-									testID={`composer-attachment-${index}`}
+									testID={composerAttachmentID(index)}
 								>
 									<View className="overflow-hidden rounded-sm border border-control">
 										<Image
@@ -140,7 +226,7 @@ export const Composer = ({
 						variant="outline"
 						size="sm"
 						onPress={onResume}
-						testID="composer-resume"
+						testID={CONTROL.composerResume}
 					/>
 				</View>
 			) : null}
@@ -150,7 +236,7 @@ export const Composer = ({
 					<Text
 						className="text-body-sm text-success"
 						accessibilityLiveRegion="polite"
-						testID="composer-notice"
+						testID={SURFACE.composerNotice}
 					>
 						{notice}
 					</Text>
@@ -163,7 +249,7 @@ export const Composer = ({
 						className="text-body-sm text-danger"
 						accessibilityRole={ROLE.alert}
 						accessibilityLiveRegion="assertive"
-						testID="composer-retained"
+						testID={SURFACE.composerRetained}
 					>
 						{retainedMessage}
 					</Text>
@@ -173,14 +259,9 @@ export const Composer = ({
 							variant="outline"
 							size="sm"
 							onPress={onRetry}
-							testID="composer-retry"
+							testID={CONTROL.composerRetry}
 						/>
 					</View>
-					{/* U4: name why the primary is dead while the retry is unresolved, so a
-					    disabled ↑ reads as intentional rather than as a broken button. */}
-					<Text className="pt-1.5 text-meta text-danger">
-						{COMPOSER_COPY.retryDisabledHint}
-					</Text>
 				</View>
 			) : null}
 
@@ -189,11 +270,24 @@ export const Composer = ({
 					<Text
 						className="text-body-sm text-danger"
 						accessibilityLiveRegion="assertive"
-						testID="composer-error"
+						testID={SURFACE.composerError}
 					>
 						{error}
 					</Text>
 				</View>
+			) : null}
+
+			{/* U4: name why the primary is dead, whatever the reason — an unresolved
+			    instruction or a session that has ended — so a disabled ↑ reads as
+			    intentional rather than as a broken button. The sentence is the
+			    projection's, and this is the only place it is rendered. */}
+			{controls.disabledReason !== null ? (
+				<Text
+					className="pb-1 text-meta text-ink-muted"
+					testID={SURFACE.composerDisabledReason}
+				>
+					{controls.disabledReason}
+				</Text>
 			) : null}
 
 			<View className="flex-row items-end gap-2">
@@ -204,7 +298,10 @@ export const Composer = ({
 						onChangeText={onDraftChange}
 						placeholder={COMPOSER_COPY.placeholder}
 						maxLines={6}
-						testID="composer-input"
+						// The hardware keyboard's own submit on native, where the
+						// `keydown` listener above cannot run.
+						onSubmitEditing={onSend}
+						testID={CONTROL.composerInput}
 					/>
 				</View>
 				<Pressable
@@ -213,7 +310,7 @@ export const Composer = ({
 					accessibilityState={state({ busy: attaching, disabled: attaching })}
 					disabled={attaching}
 					onPress={onAttach}
-					testID="composer-attach"
+					testID={CONTROL.composerAttach}
 				>
 					<View className="h-11 w-11 items-center justify-center rounded-full border border-control">
 						<Text className="text-ink-muted" aria-hidden>
@@ -226,7 +323,7 @@ export const Composer = ({
 						accessibilityRole={ROLE.button}
 						accessibilityLabel="Stop the running turn"
 						onPress={onStop}
-						testID="composer-stop"
+						testID={CONTROL.composerStop}
 					>
 						<View className="h-11 w-11 items-center justify-center rounded-full border border-danger-border">
 							<Text className="text-danger" aria-hidden>
@@ -247,7 +344,7 @@ export const Composer = ({
 					})}
 					disabled={controls.primary.disabled}
 					onPress={onSend}
-					testID="composer-send"
+					testID={CONTROL.composerSend}
 				>
 					<View
 						className={cx(
@@ -275,7 +372,7 @@ export const Composer = ({
 				{queuedCount > 0 ? (
 					<Text
 						className="text-mono-sm text-ink-dim"
-						testID="queued-message-chip"
+						testID={SURFACE.queuedMessageChip}
 					>
 						{queuedCount} queued
 					</Text>
@@ -285,18 +382,23 @@ export const Composer = ({
 					label={modelLabel}
 					onPress={onOpenModels}
 					accessibilityHint="Choose the model"
-					testID="composer-model-chip"
+					testID={CONTROL.composerModelChip}
 				/>
 				<Chip
 					label={effortLabel}
 					onPress={onOpenEffort}
-					accessibilityHint="Choose the effort"
-					testID="composer-effort-chip"
+					disabled={!effortAvailable}
+					accessibilityHint={
+						effortAvailable
+							? "Choose the effort"
+							: "This model has no effort control"
+					}
+					testID={CONTROL.composerEffortChip}
 				/>
 			</View>
 			{/* The receipt anchor `08-connection-loss-recovery` asserts after a send
 			    across a reconnect: it is the composer's own "the instruction left" mark. */}
-			<View testID="composer-receipt" aria-hidden />
+			<View testID={SURFACE.composerReceipt} aria-hidden />
 			{slashQuery !== null ? slashSheet : null}
 		</View>
 	);

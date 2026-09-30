@@ -1,7 +1,7 @@
 import { Pressable, ScrollView, Text, View } from "react-native";
 
 import type { SubagentProjection } from "@/features/session/projection";
-import { ROLE, state } from "@/ui/a11y";
+import { CONTROL, ROLE, SURFACE, state } from "@/ui/a11y";
 import { cx } from "@/ui/variants";
 
 /**
@@ -22,7 +22,7 @@ export type SubagentsPanelProps = {
 	onToggle: () => void;
 	/** Tapping a child opens its own route. */
 	onOpenAgent: (jobId: string) => void;
-	testID?: string;
+	testID: string;
 };
 
 /** The deepest indentation the layout can afford. Beyond this a chain is a
@@ -50,7 +50,7 @@ export const SubagentsPanel = ({
 	open,
 	onToggle,
 	onOpenAgent,
-	testID = "subagents-panel",
+	testID,
 }: SubagentsPanelProps) => {
 	if (subagents.empty) return null;
 	const queued = subagents.queued;
@@ -62,7 +62,7 @@ export const SubagentsPanel = ({
 				accessibilityLabel={`Subagents, ${subagents.running} of ${subagents.total} running`}
 				accessibilityState={state({ expanded: open })}
 				onPress={onToggle}
-				testID={`${testID}-header`}
+				testID={CONTROL.subagentsDisclosure}
 			>
 				<View className="min-h-11 flex-row items-center gap-2 px-4">
 					<Text className="text-mono-sm text-ink-dim">subagents</Text>
@@ -88,7 +88,7 @@ export const SubagentsPanel = ({
 				</View>
 			</Pressable>
 			{open ? (
-				<ScrollView className="max-h-64" testID={`${testID}-body`}>
+				<ScrollView className="max-h-64" testID={SURFACE.subagentsBody}>
 					{subagents.rows.map((row) => (
 						<Pressable
 							key={row.jobId}
@@ -121,7 +121,7 @@ export const SubagentsPanel = ({
 									{/* The running marker `07-subagent-drilldown` asserts by name. It is a
 									    sibling of the label rather than a wrapper, so it adds no geometry. */}
 									{row.status === "running" ? (
-										<View testID="subagent-status-running" aria-hidden />
+										<View testID={SURFACE.subagentRunning} aria-hidden />
 									) : null}
 								</View>
 								{/* `elapsed === null` renders NOTHING — no clock, not `0s`: a roster with

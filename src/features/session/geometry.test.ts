@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 
 import {
 	estimateVisibleRows,
-	TARGET_MOUNTED_ROWS,
 	windowPolicy,
 } from "@/features/session/windowing";
 
@@ -12,14 +11,21 @@ import {
  * conversation long enough to matter.
  *
  * The LAYOUT is deliberately NOT unit-tested here, and that is a decision rather
- * than an omission. The adaptive vocabulary lives in `src/ui/layout.ts`, which
- * imports `react-native` — and vitest cannot parse react-native's Flow source, so
- * any test that imports it fails to load rather than failing an assertion (measured:
- * `Parse failure: Flow is not supported`). The layout is therefore verified where it
- * actually renders: the capture rig measures the rail's and the transcript's real
- * pixel widths on every device and fails the frame when the invariant is broken,
- * which is evidence a hand-built literal could not give. That rig check exists
- * because a unit test did not catch an 833 pt rail beside a 533 pt transcript.
+ * than an omission. On this head the layout is `Screen`'s measure cap plus
+ * `src/ui/column.ts` (`maxColumnWidth`, which IS importable and has its own test):
+ * the screen stacks its panels inside one capped column, so there is no pane
+ * arithmetic of this feature's to test. Anything that imports `react-native` cannot
+ * be unit-tested at all — vitest cannot parse RN's Flow source, so such a file fails
+ * to LOAD rather than failing an assertion (measured: `Parse failure: Flow is not
+ * supported`) — which is why the primitives' geometry is not asserted here.
+ *
+ * The invariants that a still frame cannot show are therefore verified where they
+ * render: the capture rig measures every frame's real widths (transcript, composer,
+ * the column cap) and its mounted-row budget, and fails the frame when one is
+ * broken. That rig check exists because a unit test did not catch an 833 pt rail
+ * beside a 533 pt transcript, and because 524 rows mounted looks identical to 51 in
+ * a screenshot. When #11 restores the two-pane layout, the rail's own width becomes
+ * a rig invariant again and the tablet class gets its own measured rows below.
  */
 
 /**
@@ -57,17 +63,44 @@ const VIEWPORTS: [
 	["Android tablet 1280x800", 1280, 800, "tablet"],
 ];
 
+/**
+ * The mounted-row ceilings, per device class, as literals — see the assertion below
+ * for why they are not computed. Measured on this head at each class's largest
+ * viewport: `foldable` 60 (673x841, the same as the budget), `phone` 66 (Pro Max
+ * 430x932, where `MIN_WINDOW_SIZE` forces a third screen over a 22-row viewport),
+ * `tablet` 96 (iPad Pro 1024x1366). The budget itself is 60.
+ */
+const PHONE_MOUNTED_BUDGET = 72;
+const MOUNTED_CEILING: Record<DeviceClass, number> = {
+	foldable: 60,
+	phone: PHONE_MOUNTED_BUDGET,
+	tablet: 96,
+};
+
 describe("the transcript's render window", () => {
 	it("mounts a window, not the conversation", () => {
 		// The relay's own long-transcript scenario is 520 rows. The property that
 		// matters is that the mounted count is bounded by the viewport rather than by
 		// the transcript, and that it never falls below what fills the screen.
-		for (const [label, _width, height] of VIEWPORTS) {
+		for (const [label, _width, height, kind] of VIEWPORTS) {
 			const visible = estimateVisibleRows(height);
 			const policy = windowPolicy(height, 520);
+			// The CEILING is a literal per device class, not the policy's own formula.
+			// Asserting `max(TARGET, visible * 3)` compared the policy against itself:
+			// every term came from the code under test, so a policy that stayed
+			// internally consistent and over budget passed — measured, raising
+			// TARGET_MOUNTED_ROWS to 200 keeps the old assertion true while mounting 200
+			// rows. These are the numbers this app commits to, measured at each class's
+			// largest viewport.
 			expect(policy.estimatedMountedRows, label).toBeLessThanOrEqual(
-				Math.max(TARGET_MOUNTED_ROWS, visible * 3),
+				MOUNTED_CEILING[kind],
 			);
+			// And it is not a bare restatement of the budget: a phone is inside it.
+			if (kind !== "tablet") {
+				expect(policy.estimatedMountedRows, label).toBeLessThanOrEqual(
+					PHONE_MOUNTED_BUDGET,
+				);
+			}
 			expect(policy.estimatedMountedRows, label).toBeGreaterThanOrEqual(
 				Math.min(520, visible),
 			);

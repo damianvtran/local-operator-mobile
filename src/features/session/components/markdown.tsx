@@ -9,8 +9,8 @@ import {
 	View,
 } from "react-native";
 
-import { ROLE } from "@/ui/a11y";
-import { cx } from "@/ui/variants";
+import { CONTROL, ROLE } from "@/ui/a11y";
+import { cx, TOUCH_FLOOR } from "@/ui/variants";
 
 /**
  * Assistant markdown, rendered without a markdown library.
@@ -23,6 +23,7 @@ import { cx } from "@/ui/variants";
  * and inline code/bold/italic — and everything else is passed through as text.
  *
  * Passing unknown syntax through VERBATIM is the important half. A renderer that
+
  * drops what it does not understand silently shortens the model's answer, and the
  * reader has no way to know a line is missing. So an unrecognised construct
  * becomes a paragraph of its own source, which is ugly and honest.
@@ -234,6 +235,18 @@ const CodeBlock = ({
 		<Pressable
 			accessibilityRole={ROLE.button}
 			accessibilityLabel={`Copy ${language || "code"} block`}
+			// The visual is the block itself, whose height follows its content — a
+			// one-line block measures 27 pt (QA round 1, Q4), under the 44 pt floor.
+			// The kit's rule is "a visually smaller control gets slop, not a smaller
+			// target", and slop is what `Button` uses — but react-native-web's
+			// `Pressable` does NOT implement `hitSlop` (only the legacy `Touchable`
+			// does; measured in `react-native-web/dist/exports/Pressable`), so on the
+			// build this app ships today the slop would be inert and the target would
+			// stay 27 pt where it can be measured. The spec's other remedy is to pad the
+			// box, so the floor is met by the box on both platforms: one rule, no
+			// platform branch.
+			style={{ minHeight: TOUCH_FLOOR }}
+			testID={CONTROL.codeBlockCopy}
 			onPress={() => {
 				// Copy on tap (`components.md` § 14). The confirmation is local and
 				// transient, because a toast for a copy would replace a real message.

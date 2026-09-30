@@ -8,6 +8,7 @@ import {
 	classifyEntry,
 	transcriptRowTestID,
 } from "@/features/session/projection";
+import { SURFACE, transcriptImageID } from "@/ui/a11y";
 import { cx } from "@/ui/variants";
 
 /**
@@ -71,7 +72,7 @@ export const TranscriptRow = ({
 	const anchors = (
 		<>
 			{streaming ? (
-				<View testID="transcript-row-streaming" aria-hidden />
+				<View testID={SURFACE.transcriptStreaming} aria-hidden />
 			) : null}
 		</>
 	);
@@ -125,7 +126,7 @@ export const TranscriptRow = ({
 									index={image.index}
 									mimeType={image.mime_type}
 									load={loadImage}
-									testID={`transcript-image-${entry.id}-${image.index}`}
+									testID={transcriptImageID(entry.id, image.index)}
 								/>
 							))}
 						</View>

@@ -30,9 +30,9 @@
  * No React, no React Native.
  */
 
-import type { ErrorSurface, StreamState } from "@/relay";
-import { isRelayError, type RelayError } from "@/relay";
+import type { ErrorSurface, RelayError, StreamState } from "@/relay";
 import type { ConnectionPhase, ProjectionEntry } from "@/state";
+import { CONTROL, SURFACE } from "@/ui/a11y";
 
 /**
  * The grace window for `C3`, derived rather than guessed (flows.md § 9).
@@ -255,9 +255,9 @@ export const connectionView = (input: ConnectionViewInput): ConnectionView => {
 					action: {
 						kind: "sign-in",
 						label: "Sign in again",
-						testID: "connection-error-sign-in",
+						testID: CONTROL.connectionSignIn,
 					},
-					testIDs: ["connection-error-sign-in"],
+					testIDs: [CONTROL.connectionSignIn],
 				},
 			);
 		}
@@ -274,21 +274,18 @@ export const connectionView = (input: ConnectionViewInput): ConnectionView => {
 					? {
 							kind: "console",
 							label: "Open console",
-							testID: "connection-error-console-link",
+							testID: CONTROL.connectionConsole,
 						}
 					: {
 							kind: "retry",
 							label: "Check again",
-							testID: "connection-error-retry-prominent",
+							testID: CONTROL.connectionRetry,
 						},
 				testIDs: isMachine
-					? [
-							"connection-error-computer-offline",
-							"connection-error-machine-remedy",
-						]
+					? [SURFACE.connectionComputerOffline, SURFACE.connectionMachineRemedy]
 					: isConsole
-						? ["connection-error-console-link"]
-						: ["connection-error-retry-prominent"],
+						? [CONTROL.connectionConsole]
+						: [CONTROL.connectionRetry],
 			},
 		);
 	}
@@ -346,7 +343,7 @@ export const connectionView = (input: ConnectionViewInput): ConnectionView => {
 				action: {
 					kind: "retry",
 					label: "Check again",
-					testID: "connection-error-retry-prominent",
+					testID: CONTROL.connectionRetry,
 				},
 			},
 		);
@@ -388,17 +385,17 @@ const refusalView = (
 				? {
 						kind: "console",
 						label: "Open console",
-						testID: "connection-error-console-link",
+						testID: CONTROL.connectionConsole,
 					}
 				: {
 						kind: "retry",
 						label: "Check again",
-						testID: "connection-error-retry-prominent",
+						testID: CONTROL.connectionRetry,
 					},
 			testIDs: [
 				...(isConsole
-					? ["connection-error-console-link"]
-					: ["connection-error-retry-prominent"]),
+					? [CONTROL.connectionConsole]
+					: [CONTROL.connectionRetry]),
 				...waitingAnchors(error),
 			],
 		});
@@ -417,9 +414,9 @@ const refusalView = (
 					action: {
 						kind: "sign-in",
 						label: "Sign in again",
-						testID: "connection-error-sign-in",
+						testID: CONTROL.connectionSignIn,
 					},
-					testIDs: ["connection-error-sign-in"],
+					testIDs: [CONTROL.connectionSignIn],
 				},
 			);
 
@@ -436,11 +433,11 @@ const refusalView = (
 					action: {
 						kind: "retry",
 						label: "Check again",
-						testID: "connection-error-retry-prominent",
+						testID: CONTROL.connectionRetry,
 					},
 					testIDs: [
-						"connection-error-computer-offline",
-						"connection-error-machine-remedy",
+						SURFACE.connectionComputerOffline,
+						SURFACE.connectionMachineRemedy,
 					],
 				},
 			);
@@ -454,11 +451,11 @@ const refusalView = (
 					action: {
 						kind: "console",
 						label: "Open console",
-						testID: "connection-error-console-link",
+						testID: CONTROL.connectionConsole,
 					},
 					testIDs: [
-						"connection-error-relay-not-installed",
-						"connection-error-console-link",
+						SURFACE.connectionRelayNotInstalled,
+						CONTROL.connectionConsole,
 					],
 				},
 			);
@@ -472,11 +469,11 @@ const refusalView = (
 					action: {
 						kind: "console",
 						label: "Open console",
-						testID: "connection-error-console-link",
+						testID: CONTROL.connectionConsole,
 					},
 					testIDs: [
-						"connection-error-tunnel-unavailable",
-						"connection-error-console-link",
+						SURFACE.connectionTunnelUnavailable,
+						CONTROL.connectionConsole,
 					],
 				},
 			);
@@ -494,9 +491,9 @@ const refusalView = (
 					action: {
 						kind: "console",
 						label: "Open console",
-						testID: "connection-error-console-link",
+						testID: CONTROL.connectionConsole,
 					},
-					testIDs: ["connection-error-console-link", ...waitingAnchors(error)],
+					testIDs: [CONTROL.connectionConsole, ...waitingAnchors(error)],
 				},
 			);
 
@@ -509,12 +506,9 @@ const refusalView = (
 					action: {
 						kind: "retry",
 						label: "Check again",
-						testID: "connection-error-retry-prominent",
+						testID: CONTROL.connectionRetry,
 					},
-					testIDs: [
-						"connection-error-retry-prominent",
-						...waitingAnchors(error),
-					],
+					testIDs: [CONTROL.connectionRetry, ...waitingAnchors(error)],
 				},
 			);
 
@@ -529,9 +523,9 @@ const refusalView = (
 					action: {
 						kind: "sign-in",
 						label: "Enter password",
-						testID: "connection-error-sign-in",
+						testID: CONTROL.connectionSignIn,
 					},
-					testIDs: ["connection-error-sign-in"],
+					testIDs: [CONTROL.connectionSignIn],
 				},
 			);
 
@@ -542,67 +536,54 @@ const refusalView = (
 				action: {
 					kind: "retry",
 					label: "Check again",
-					testID: "connection-error-retry-prominent",
+					testID: CONTROL.connectionRetry,
 				},
 			});
 
-		case "connection":
+		case "connection": {
 			/* The two address-level failures. They are distinct because their REMEDIES
-			 * are, and one of them must not offer a retry at all: a rejected
-			 * certificate presents the same certificate again (`retry: "never"`), so a
-			 * "Check again" control would be a loop that looks like progress — the
-			 * failure the design kit calls a control that cannot work. Its remedy is
-			 * on the computer, which is where the console is. An unresolved host may
-			 * be a resolver timeout that clears by itself (`after-backoff`), so it
-			 * keeps the retry, and says which address it could not find. */
+			 * are, and one of them must not offer a retry at all: a rejected certificate
+			 * presents the same certificate again, so a "Check again" control would be a
+			 * loop that looks like progress — the failure the design kit calls a control
+			 * that cannot work. Its remedy is in the route's own settings, which is where
+			 * the console is. An unresolved host may be a resolver timeout that clears by
+			 * itself, so it keeps the retry, and says which address it could not find.
+			 *
+			 * The decision reads the KIND, not `retry`: the directive is a POLICY the
+			 * error layer allows a caller to override, and this screen's rule is about
+			 * the failure itself — a certificate that was rejected is rejected whatever
+			 * a caller asks for. */
+			const certificate = error.kind === "certificate-rejected";
 			return view(
 				"C6",
 				message ?? "The relay could not be reached.",
 				"danger",
 				{
-					action:
-						error.retry === "never"
-							? {
-									kind: "console",
-									label: "Open console",
-									testID: "connection-error-console-link",
-								}
-							: {
-									kind: "retry",
-									label: "Check again",
-									testID: "connection-error-retry-prominent",
-								},
+					action: certificate
+						? {
+								kind: "console",
+								label: "Open console",
+								testID: CONTROL.connectionConsole,
+							}
+						: {
+								kind: "retry",
+								label: "Check again",
+								testID: CONTROL.connectionRetry,
+							},
 					testIDs: [
-						error.retry === "never"
-							? "connection-error-certificate-rejected"
-							: "connection-error-host-unresolved",
-						...(error.retry === "never"
-							? ["connection-error-console-link"]
-							: ["connection-error-retry-prominent"]),
+						certificate
+							? SURFACE.connectionCertificateRejected
+							: SURFACE.connectionHostUnresolved,
+						certificate ? CONTROL.connectionConsole : CONTROL.connectionRetry,
 					],
 				},
 			);
+		}
 
 		case "none":
 			/* The caller handles it silently. Falling through to `null` lets a later
 			 * rule (a real silence, a real drop) speak instead of this one. */
 			return null;
-
-		default:
-			return view(
-				"C6",
-				isRelayError(error) && message
-					? message
-					: "The relay can’t be reached right now.",
-				"warning",
-				{
-					action: {
-						kind: "retry",
-						label: "Check again",
-						testID: "connection-error-retry-prominent",
-					},
-				},
-			);
 	}
 };
 
@@ -611,5 +592,5 @@ const refusalView = (
 const waitingAnchors = (error: RelayError): string[] =>
 	error.reason === "authorization_deferred" ||
 	error.reason === "authorization_lease_pending"
-		? ["connection-error-waiting", "connection-error-clears-by-itself"]
+		? [SURFACE.connectionWaiting, SURFACE.connectionClearsByItself]
 		: [];

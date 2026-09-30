@@ -2,7 +2,7 @@
 import { Pressable, ScrollView, Text, View } from "react-native";
 
 import type { TodoProjection } from "@/features/session/projection";
-import { ROLE, state } from "@/ui/a11y";
+import { CONTROL, ROLE, SURFACE, state, todosRowID } from "@/ui/a11y";
 import { cx } from "@/ui/variants";
 
 /**
@@ -27,7 +27,7 @@ export type TodosPanelProps = {
 	onToggle: () => void;
 	/** Held shut while a decision is pending: the body does not render. */
 	heldShut: boolean;
-	testID?: string;
+	testID: string;
 };
 
 export const TodosPanel = ({
@@ -35,7 +35,7 @@ export const TodosPanel = ({
 	open,
 	onToggle,
 	heldShut,
-	testID = "todos-panel",
+	testID,
 }: TodosPanelProps) => {
 	// Nothing to say. An empty header would claim a list the session does not have.
 	if (todos.empty) return null;
@@ -48,7 +48,7 @@ export const TodosPanel = ({
 				accessibilityLabel={`Tasks, ${todos.done} of ${todos.total} done`}
 				accessibilityState={state({ expanded, disabled: heldShut })}
 				onPress={onToggle}
-				testID={`${testID}-header`}
+				testID={CONTROL.todosDisclosure}
 			>
 				<View className="min-h-11 flex-row items-center gap-2 px-4">
 					<Text
@@ -75,7 +75,7 @@ export const TodosPanel = ({
 			{expanded ? (
 				// Capped and internally scrollable: the panel must never be able to push
 				// the composer off screen (the v1 rule in F-6.3).
-				<ScrollView className="max-h-64" testID={`${testID}-body`}>
+				<ScrollView className="max-h-64" testID={SURFACE.todosBody}>
 					{todos.phases.map((phase) => (
 						<View key={phase.name} className="pb-1">
 							{/* A phase named exactly `Todos` is the TUI's implicit carrier and
@@ -90,7 +90,7 @@ export const TodosPanel = ({
 								<View
 									key={`${phase.name}-${index}`}
 									className="min-h-8 flex-row items-start gap-2 px-4 py-1"
-									testID={`${testID}-row-${index}`}
+									testID={todosRowID(index)}
 								>
 									<Text
 										className={cx("w-4 text-mono-sm", row.inkClass)}

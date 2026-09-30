@@ -60,6 +60,28 @@ export const slashTap = (
 		: { fill: `/${command.name}`, submit: true };
 
 /**
+ * The request a tap on a command row SENDS, or `null` when the tap only fills.
+ *
+ * This exists so the send path cannot be derived from the DRAFT. The tap fills the
+ * field and submits in one gesture, and a send reads the draft through a ref that
+ * React assigns during render — so at that moment it still holds the text from
+ * before the tap, and re-parsing it sent the token the reader had typed so far
+ * (`/he`) instead of the command they tapped (`/help`). 24 of the relay's 46
+ * commands take no argument and are therefore in that class. Deriving the request
+ * from the COMMAND removes the draft from the question entirely (QA round 1, Q1).
+ */
+export const slashTapRequest = (
+	command: SlashCommand,
+): { command: string; args: string } | null => {
+	const tap = slashTap(command);
+	if (!tap.submit) return null;
+	const parsed = parseSlashDraft(tap.fill);
+	return parsed === null
+		? null
+		: { command: parsed.command, args: parsed.args };
+};
+
+/**
  * The visible argument hint, or `null`.
  *
  * `…` for a command that requires one, echoing the web client: it is the one

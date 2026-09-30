@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
-import { CONTROL, EMPTY, isKnownIdentifier, SCREEN } from "@/ui/a11y";
+import { CONTROL, EMPTY, isKnownIdentifier, SCREEN, SURFACE } from "@/ui/a11y";
 
 /**
  * The identifier contract, checked from the outside in.
@@ -26,9 +26,18 @@ const walk = (dir: string): string[] =>
 
 /** `id: "x"` and `- id: x` selectors, quoted or not. Text selectors and regexes
  * are not identifiers and are deliberately not matched. */
-const TESTID_LITERAL = /\btestID=(?:"[^"]*"|\{\s*[`"'])/;
+/** `testID="x"` in JSX, and `testID: "x"` in a view object: both are a second
+ * spelling of an identifier, and the second is how a projection module carries the
+ * C1-C7 anchors. Quoted or template only — `testID={CONSTANT}`, `testID={testID}`
+ * and the `testID: string` type annotation are all fine; text selectors and regexes
+ * are deliberately not matched. */
+const TESTID_LITERAL = /\btestID=(?:"[^"]*"|\{\s*[`"'])|\btestID:\s*[`"']/;
 const YAML_FILE = /\.ya?ml$/;
-const TSX_FILE = /\.tsx$/;
+/** Source that renders: `.tsx` AND `.ts`, because a projection module's view
+ * objects carry identifiers too. */
+const SOURCE_FILE = /\.[jt]sx?$/;
+/** Tests are not source: one may quote a literal in prose, and this file does. */
+const TEST_FILE = /\.test\.[jt]sx?$/;
 const ID_LINE = /^\s*(?:-\s*)?id:\s*["']?([^"'\s#]+)["']?\s*(?:#.*)?$/;
 
 const referencedIds = (): Map<string, string[]> => {
@@ -63,8 +72,19 @@ describe("the Maestro flows against src/ui/a11y.ts", () => {
 });
 
 describe("the routes and primitives against src/ui/a11y.ts", () => {
-	const sources = [...walk(join(root, "app")), ...walk(join(root, "src/ui"))]
-		.filter((f) => TSX_FILE.test(f))
+	/* The scan set is every tree that renders UI, and it is the whole point of the
+	 * check: scoped to `app/**` + `src/ui/**` it could not see a single one of the
+	 * session stream's screens, which live in `src/features/**` — measured on the
+	 * rebased head, 49 selectors outside the contract with the old scope and 0
+	 * after it was widened (a selector in a feature component is exactly as
+	 * flow-visible as one in a route: Maestro reads the platform's accessibility
+	 * tree, which does not care which directory rendered it). */
+	const sources = [
+		...walk(join(root, "app")),
+		...walk(join(root, "src/ui")),
+		...walk(join(root, "src/features")),
+	]
+		.filter((f) => SOURCE_FILE.test(f) && !TEST_FILE.test(f))
 		.map((file) => ({
 			file: file.slice(root.length),
 			text: readFileSync(file, "utf8"),
@@ -84,7 +104,7 @@ describe("the routes and primitives against src/ui/a11y.ts", () => {
 		// A declared-but-unrendered identifier is a selector no flow can ever hit,
 		// and it would still satisfy the flow check above.
 		const rendered = sources.map(({ text }) => text).join("\n");
-		const unused = Object.entries({ SCREEN, EMPTY, CONTROL }).flatMap(
+		const unused = Object.entries({ SCREEN, EMPTY, CONTROL, SURFACE }).flatMap(
 			([group, ids]) =>
 				Object.keys(ids)
 					.filter(

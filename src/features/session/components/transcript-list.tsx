@@ -10,6 +10,7 @@ import {
 import type { TranscriptEntry } from "@/contracts";
 import { TranscriptRow } from "@/features/session/components/transcript-row";
 import { windowPolicy } from "@/features/session/windowing";
+import { transcriptRowID } from "@/ui/a11y";
 
 /**
  * The transcript: virtualised, tail-following, and never blank.
@@ -47,7 +48,7 @@ export type TranscriptListProps = {
 	empty?: React.ReactElement | null;
 	/** Rendered above the rows, inside the scroller: the status strip. */
 	header?: React.ReactNode;
-	testID?: string;
+	testID: string;
 };
 
 /** How close to the bottom still counts as "at the tail", in points. A finger
@@ -72,7 +73,7 @@ export const TranscriptList = ({
 	onOpenAgent,
 	empty,
 	header,
-	testID = "session-transcript",
+	testID,
 }: TranscriptListProps) => {
 	const listRef = useRef<FlatList<TranscriptEntry>>(null);
 	const atTail = useRef(true);
@@ -163,7 +164,7 @@ export const TranscriptList = ({
 					 *
 					 * Zero-size and hidden from the accessibility tree: it is an anchor, and a
 					 * screen reader should not announce it. */}
-					<View testID={`transcript-row-${sessionId}`} aria-hidden />
+					<View testID={transcriptRowID(sessionId)} aria-hidden />
 					{header}
 				</>
 			}

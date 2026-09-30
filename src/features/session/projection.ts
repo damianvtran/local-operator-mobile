@@ -32,6 +32,7 @@ import type {
 	TranscriptEntry,
 } from "@/contracts";
 import { elapsedLabel } from "@/lib/format";
+import { subagentChipID, transcriptRowID } from "@/ui/a11y";
 
 /* ------------------------------------------------------------------ row kinds */
 
@@ -231,10 +232,10 @@ export const workingLine = (
 
 /** The per-row anchor the Maestro flows address. */
 export const transcriptRowTestID = (entry: TranscriptEntry): string =>
-	`transcript-row-${entry.id}`;
+	transcriptRowID(entry.id);
 
 /**
- * The row the `transcript-row-streaming` anchor belongs to: the LAST row, and
+ * The row the streaming marker (`SURFACE.transcriptStreaming`) belongs to: the LAST
  * only while the turn is actually streaming.
  *
  * Both halves are load-bearing. Flow 04 waits for this id to appear and then
@@ -382,7 +383,7 @@ export const subagentRowView = (row: SubagentRow): SubagentRowView => {
 		// length. Capped by the renderer rather than here, so the derivation stays
 		// a statement about the wire.
 		depth: row.ancestors.length,
-		testID: `subagent-chip-${row.job_id}`,
+		testID: subagentChipID(row.job_id),
 	};
 };
 
