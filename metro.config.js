@@ -36,7 +36,8 @@ const uniwind = withUniwindConfig(config, {
 });
 
 /*
- * Guard for an upstream packaging gap in uniwind 1.12.0.
+ * Guard for an upstream packaging gap in uniwind 1.12.0, scoped to the ONE module
+ * it affects.
  *
  * Uniwind replaces react-native-web's own component modules with its own web
  * shims: its metro resolver rewrites a resolution that lands on
@@ -44,46 +45,47 @@ const uniwind = withUniwindConfig(config, {
  * for every name in its SUPPORTED_COMPONENTS list. That list contains
  * `InputAccessoryView`, but the package ships only the NATIVE shim for it
  * (`src/components/native/InputAccessoryView.tsx`) and no web one, so
- * `exports["./components/*"]` resolves to
+ * `exports["./components/*"]` points at
  * `dist/module/components/web/InputAccessoryView.js`, which does not exist.
  *
- * Metro then returns null for that request — and because react-native-web's own
- * `dist/index.js` re-exports `InputAccessoryView`, this single missing file
+ * Metro then throws — the resolver THROWS rather than returning null, which is why
+ * this needs a try/catch and not just a null check — and because react-native-web's
+ * own `dist/index.js` re-exports `InputAccessoryView`, that single missing file
  * fails the WHOLE web bundle: `expo export --platform web` dies with
- * "Unable to resolve module ./exports/InputAccessoryView". Measured 2026-09-29
- * with uniwind 1.12.0 / expo 57.0.26 / react-native-web 0.21.3; a plain
- * `getDefaultConfig` bundle of the same tree exports cleanly, so uniwind's
- * redirect is the cause and not the tree.
+ * "Unable to resolve module ./exports/InputAccessoryView". Measured 2026-09-29 with
+ * uniwind 1.12.0 / expo 57.0.26 / react-native-web 0.21.3.
  *
- * The guard restores Metro's own resolution when, and only when, uniwind
- * declines to resolve. For this component that is also the correct answer:
- * react-native-web renders it as its own `UnimplementedView`, which is exactly
- * what an unimplemented component should be. It warns rather than failing
- * silently, so the day uniwind ships the missing shim the warning is the signal
- * that this block can go — and if a future gap is NOT benign, the warning names
- * the module instead of hiding it.
+ * WHAT THIS DISABLES, exactly: for this one specifier the app gets
+ * react-native-web's own module instead of a uniwind shim. `InputAccessoryView` is
+ * a keyboard accessory bar, and react-native-web renders it as `UnimplementedView`
+ * — renders nothing. There is no uniwind behaviour being lost behind it, because
+ * uniwind ships no web implementation for it to lose. Nothing in `app/` or `src/`
+ * imports the component; it is in the graph only because react-native-web's index
+ * re-exports every component it has.
+ *
+ * WHY IT IS SCOPED RATHER THAN GENERAL: a blanket "fall back whenever uniwind
+ * declines" would turn any FUTURE uniwind resolution failure into a silent
+ * downgrade — a component the app does use would lose its class-name handling and
+ * the web target would stop being a truthful preview of the app while still
+ * reporting a successful export. Scoped this way, any other failure still fails
+ * the build loudly, which is the behaviour a reviewer wants.
  */
+const UNIWIND_MISSING_WEB_SHIM = "exports/InputAccessoryView";
+
 const uniwindResolveRequest = uniwind.resolver.resolveRequest;
 uniwind.resolver.resolveRequest = (context, moduleName, platform) => {
-	let resolved;
+	const isKnownGap = moduleName.endsWith(UNIWIND_MISSING_WEB_SHIM);
 	try {
-		resolved = uniwindResolveRequest(context, moduleName, platform);
+		return uniwindResolveRequest(context, moduleName, platform);
 	} catch (error) {
-		// Uniwind's redirect throws here rather than returning null, so an
-		// unguarded call takes the whole bundle down with it.
+		if (!isKnownGap) throw error;
 		console.warn(
-			`[metro] uniwind threw resolving "${moduleName}" (${platform}): ` +
-				`${error?.message ?? error}. ` +
-				"Using Metro's own resolution — see the guard in metro.config.js",
+			`[metro] uniwind has no web shim for "${moduleName}" (${platform}); ` +
+				"using react-native-web's own module — see metro.config.js. " +
+				"This is the InputAccessoryView gap, not a new one.",
 		);
 		return context.resolveRequest(context, moduleName, platform);
 	}
-	if (resolved != null) return resolved;
-	console.warn(
-		`[metro] uniwind declined to resolve "${moduleName}" (${platform}); ` +
-			"using Metro's own resolution — see the guard in metro.config.js",
-	);
-	return context.resolveRequest(context, moduleName, platform);
 };
 
 module.exports = uniwind;

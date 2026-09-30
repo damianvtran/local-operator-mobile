@@ -66,13 +66,21 @@ throws, and because react-native-web's own `dist/index.js` re-exports that
 component, the entire `--platform web` bundle fails with
 `Unable to resolve module ./exports/InputAccessoryView`.
 
-`metro.config.js` carries a documented guard that restores Metro's own resolution
-when uniwind declines to resolve, and warns when it does. For this component that
-is also the correct answer: react-native-web renders it as `UnimplementedView`.
-Nothing in the app imports `InputAccessoryView`; it is in the graph only because
-react-native-web's index re-exports it.
+`metro.config.js` carries a guard scoped to **that one specifier**: when uniwind
+throws on `InputAccessoryView`, Metro's own resolution is used instead, and a
+warning is printed. For this component that is also the correct answer —
+react-native-web renders it as `UnimplementedView`, and uniwind ships no web
+implementation for it to shadow. Nothing in `app/` or `src/` imports it; it is in
+the graph only because react-native-web's index re-exports every component.
+
+**Why the guard is scoped rather than general.** A blanket "fall back whenever
+uniwind declines" would convert any *future* uniwind failure into a silent
+downgrade: a component the app does use would lose its class-name handling, the
+screen would render unstyled, and `expo export` would still report success. That is
+the one failure mode of this pipeline that does not announce itself. Scoped this
+way, any other failure fails the build loudly.
 
 **When to revisit:** the warning is the signal. If uniwind ships the missing shim
-the guard is dead code and should go, and a *different* module appearing in that
-warning is not benign — it means a component the app does use silently fell back to
-the unshimmed react-native-web version.
+the guard is dead code and should go; a warning that ever names a *different*
+module cannot happen while the guard is scoped — the build will fail instead, and
+that failure is the signal that a component the app uses has hit the same gap.
