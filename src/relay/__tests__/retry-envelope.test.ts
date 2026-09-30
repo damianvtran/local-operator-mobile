@@ -17,18 +17,18 @@ import { describe, expect, it } from "vitest";
 
 import {
 	type ContinuationEnvelope,
-	dispositionForOutcome,
-	dispositionForStatus,
 	ENVELOPE_KEY_PREFIX,
 	ENVELOPE_TTL_MS,
 	envelopeKey,
-	isAmbiguousDeliveryStatus,
 	isValidEnvelope,
 	MAX_PENDING_ENVELOPES,
 	MAX_STORED_ENVELOPE_CHARS,
+	malformedFrameError,
 	memoryEnvelopeStore,
 	RetryEnvelopeStore,
+	relayErrorFromResponse,
 	sessionIdFromKey,
+	transportError,
 } from "../index";
 
 const SESSION = "6714def86197";
@@ -95,68 +95,178 @@ describe("the identity of the body is its uuid", () => {
 	});
 });
 
-describe("the keep/clear table", () => {
-	it("keeps across transport failure, which proves nothing about admission", () => {
-		expect(dispositionForOutcome({ kind: "transport" })).toBe("kept");
-		expect(dispositionForOutcome({ kind: "frame-error" })).toBe("kept");
-	});
-
-	it("keeps the acknowledgement-loss statuses, because admission may have happened", () => {
-		expect(isAmbiguousDeliveryStatus(408)).toBe(true);
-		expect(isAmbiguousDeliveryStatus(502)).toBe(true);
-		expect(isAmbiguousDeliveryStatus(504)).toBe(true);
-		for (const status of [408, 502, 504]) {
-			expect(dispositionForStatus(status), String(status)).toBe("kept");
-		}
-	});
-
-	it("clears on every other status, because a pre-admission refusal proves the command never ran", () => {
-		/* 401 is deliberately absent: it clears ALL scoped storage, not just this
-		 * conversation's envelope, and has its own test below. */
-		for (const status of [
-			200, 201, 400, 403, 404, 409, 413, 422, 429, 500, 501, 503, 505,
-		]) {
-			expect(dispositionForStatus(status), String(status)).toBe("cleared");
-		}
-		expect(isAmbiguousDeliveryStatus(500)).toBe(false);
-		expect(isAmbiguousDeliveryStatus(503)).toBe(false);
-	});
-
-	it("clears the envelope on a transport-level 401 through clear-all, because the identity changed", async () => {
-		const { envelopes, backing } = store();
-		await envelopes.hold(SESSION, envelope());
-		/* The scoped storage is gone with the session: logout clears everything
-		 * rather than this one conversation. */
-		const disposition = await envelopes.settle(SESSION, {
-			kind: "http-status",
-			status: 401,
-		});
-		expect(disposition).toBe("cleared-all");
-		expect(await backing.keys()).toEqual([]);
-	});
-
-	it("keeps the envelope on a 502 and clears it on a 422, end to end", async () => {
-		const { envelopes } = store();
-		await envelopes.hold(SESSION, envelope());
-		expect(
-			await envelopes.settle(SESSION, { kind: "http-status", status: 502 }),
-		).toBe("kept");
-		expect(await envelopes.peek(SESSION)).not.toBeNull();
-		expect(
-			await envelopes.settle(SESSION, { kind: "http-status", status: 422 }),
-		).toBe("cleared");
-		expect(await envelopes.peek(SESSION)).toBeNull();
-	});
-
-	it("keeps the envelope when the acknowledgement arrives but its body cannot be read", async () => {
-		/* Admission is unproven in both directions, and the two mistakes are not
-		 * symmetric: replaying a deduplicated command is free, losing an instruction
-		 * is not. */
-		const { envelopes } = store();
-		await envelopes.hold(SESSION, envelope());
-		expect(await envelopes.settle(SESSION, { kind: "frame-error" })).toBe(
-			"kept",
+/* The contract's status/reason matrix (`contract.md` §5.1 plus the gateway's
+ * refusal vocabulary), driven through the REAL path a command takes: a response is
+ * classified by `relayErrorFromResponse`, settled against a real store holding a
+ * real envelope, and the assertion is on what is left in storage. Nothing here
+ * calls a disposition function directly, so the classifier and the store cannot
+ * drift apart without a row failing.
+ *
+ * The rule for the rows: KEEP whenever delivery is unknown (a lost acknowledgement,
+ * a proxy or connector that may or may not have forwarded it); CLEAR when the relay
+ * itself answered a definitive refusal or acknowledgement. Replaying costs nothing
+ * because the relay de-duplicates the same `command_id`; discarding costs the
+ * user's typed instruction. */
+describe("what happens to a stored command for each answer the client can get", () => {
+	function answer(
+		status: number,
+		options: { body?: string; headers?: Record<string, string> } = {},
+	) {
+		const headers = new Map(
+			Object.entries(options.headers ?? {}).map(([k, v]) => [
+				k.toLowerCase(),
+				v,
+			]),
 		);
+		return relayErrorFromResponse({
+			status,
+			header: (name: string) => headers.get(name.toLowerCase()) ?? null,
+			text: options.body ?? "",
+		});
+	}
+
+	const gatewayRefusal = (reason: string) =>
+		answer(503, {
+			body: JSON.stringify({ detail: "refused", reason, error: "unavailable" }),
+			headers: { "content-type": "application/json" },
+		});
+
+	const KEPT = "kept";
+	const CLEARED = "cleared";
+	const CLEARED_ALL = "cleared-all";
+
+	const matrix: [string, () => ReturnType<typeof answer>, string][] = [
+		// What the RELAY answers (§5.1): a definitive end of this id's ambiguity.
+		[
+			"400 bad request",
+			() => answer(400, { body: '{"error":"bad"}' }),
+			CLEARED,
+		],
+		[
+			"403 same-origin refusal",
+			() => answer(403, { body: '{"error":"x"}' }),
+			CLEARED,
+		],
+		[
+			"404 unknown session",
+			() => answer(404, { body: '{"error":"unknown session"}' }),
+			CLEARED,
+		],
+		[
+			"409 not connected",
+			() => answer(409, { body: '{"error":"session not connected"}' }),
+			CLEARED,
+		],
+		[
+			"413 body limit",
+			() => answer(413, { body: '{"error":"too large"}' }),
+			CLEARED,
+		],
+		[
+			"422 pre-admission refusal",
+			() => answer(422, { body: '{"error":"unknown op"}' }),
+			CLEARED,
+		],
+		[
+			"429 rate limited",
+			() => answer(429, { body: '{"error":"slow down"}' }),
+			CLEARED,
+		],
+		[
+			"500 relay error",
+			() => answer(500, { body: '{"error":"boom"}' }),
+			CLEARED,
+		],
+		// The identity that owned the scoped storage is gone.
+		[
+			"401 relay password",
+			() => answer(401, { body: '{"error":"authentication required"}' }),
+			CLEARED_ALL,
+		],
+		[
+			"401 edge, tunnel session expired",
+			() => answer(401, { headers: { "x-radient-login": "/_radient/login" } }),
+			CLEARED_ALL,
+		],
+		// Lost-acknowledgement statuses: admission may have happened.
+		["408 timeout", () => answer(408, { body: '{"error":"timeout"}' }), KEPT],
+		["502 proxy error", () => answer(502, { body: "Bad Gateway" }), KEPT],
+		[
+			"504 gateway timeout",
+			() => answer(504, { body: '{"error":"no answer"}' }),
+			KEPT,
+		],
+		// The gateway/edge sit upstream of the relay's de-duplication, so a refusal
+		// from them proves nothing about whether an earlier attempt landed.
+		[
+			"502 relay daemon down",
+			() => answer(502, { body: '{"error":"local harness unavailable"}' }),
+			KEPT,
+		],
+		[
+			"503 edge, computer offline",
+			() => answer(503, { body: "Tunnel temporarily unavailable" }),
+			KEPT,
+		],
+		...[
+			"authorization_deferred",
+			"authorization_lease_pending",
+			"control_plane_unreachable",
+			"authorization_refused",
+			"tunnel_not_authorized",
+			"login_required",
+		].map((reason): [string, () => ReturnType<typeof answer>, string] => [
+			`503 gateway refusal: ${reason}`,
+			() => gatewayRefusal(reason),
+			KEPT,
+		]),
+		// No answer at all, or a 2xx whose body could not be read.
+		[
+			"transport failure",
+			() => transportError(new TypeError("fetch failed"), "x"),
+			KEPT,
+		],
+		[
+			"unreadable 2xx body",
+			() => malformedFrameError("commandAck", new Error("bad"), 200),
+			KEPT,
+		],
+	];
+
+	it.each(matrix)("%s", async (_name, produce, expected) => {
+		const { envelopes } = store();
+		await envelopes.hold(SESSION, envelope());
+		const result = await envelopes.settle(SESSION, {
+			kind: "failed",
+			error: produce(),
+		});
+		expect(result).toBe(expected);
+		/* What the user feels: the typed instruction is either still there to replay
+		 * under its original id, or gone. */
+		const remaining = await envelopes.peek(SESSION);
+		if (expected === KEPT) expect(remaining?.command_id).toBe(UUID);
+		else expect(remaining).toBeNull();
+	});
+
+	it("clears only the settled conversation on a definitive answer, and every conversation on a 401", async () => {
+		const { envelopes } = store();
+		await envelopes.hold(SESSION, envelope());
+		await envelopes.hold(OTHER_SESSION, envelope({ text: "other" }));
+		await envelopes.settle(SESSION, { kind: "failed", error: answer(422) });
+		expect(await envelopes.peek(SESSION)).toBeNull();
+		expect(await envelopes.peek(OTHER_SESSION)).not.toBeNull();
+		await envelopes.settle(OTHER_SESSION, {
+			kind: "failed",
+			error: answer(401, { headers: { "x-radient-login": "/_radient/login" } }),
+		});
+		expect(await envelopes.peek(OTHER_SESSION)).toBeNull();
+	});
+
+	it("clears on a definitive acknowledgement, including 'already admitted'", async () => {
+		const { envelopes } = store();
+		await envelopes.hold(SESSION, envelope());
+		expect(await envelopes.settle(SESSION, { kind: "ack" })).toBe(CLEARED);
+		expect(await envelopes.peek(SESSION)).toBeNull();
 	});
 });
 
@@ -311,5 +421,36 @@ describe("validation", () => {
 			}),
 		).toBe(false);
 		expect(isValidEnvelope(null)).toBe(false);
+	});
+});
+
+describe("holding a new draft while an earlier one is unresolved", () => {
+	it("reports that the stored envelope was reused, so the new text is not silently dropped", async () => {
+		const { envelopes } = store();
+		const first = await envelopes.holdNew(SESSION, "prompt", "first draft");
+		expect(first.reused).toBe(false);
+
+		/* Delivery of the first is still unknown (nothing settled it). A second,
+		 * different message arrives. The stored bytes must win — the same UUID has
+		 * to keep meaning the same body — but the caller must be told, or the
+		 * composer replays "first draft" as though it were the new text. */
+		const second = await envelopes.holdNew(
+			SESSION,
+			"prompt",
+			"a different draft",
+		);
+		expect(second.reused).toBe(true);
+		expect(second.envelope.command_id).toBe(first.envelope.command_id);
+		expect(second.envelope.text).toBe("first draft");
+	});
+
+	it("starts fresh once the earlier envelope is settled", async () => {
+		const { envelopes } = store();
+		const first = await envelopes.holdNew(SESSION, "prompt", "first draft");
+		await envelopes.settle(SESSION, { kind: "ack" });
+		const next = await envelopes.holdNew(SESSION, "prompt", "second draft");
+		expect(next.reused).toBe(false);
+		expect(next.envelope.command_id).not.toBe(first.envelope.command_id);
+		expect(next.envelope.text).toBe("second draft");
 	});
 });

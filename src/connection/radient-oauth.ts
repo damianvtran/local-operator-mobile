@@ -22,6 +22,7 @@
  * token from expiring mid-request on a slow link.
  */
 
+import { resolveFetch } from "../relay/platform-fetch";
 import {
 	type AuthBrowserSession,
 	type CallbackListener,
@@ -71,12 +72,12 @@ export type RadientAuthFailure =
 
 export class RadientAuthError extends Error {
 	override readonly name = "RadientAuthError";
-	constructor(
-		readonly failure: RadientAuthFailure,
-		message: string,
-		readonly status?: number,
-	) {
+	readonly failure: RadientAuthFailure;
+	readonly status?: number;
+	constructor(failure: RadientAuthFailure, message: string, status?: number) {
 		super(message);
+		this.failure = failure;
+		if (status !== undefined) this.status = status;
 	}
 }
 
@@ -138,7 +139,7 @@ function tokensFromResponse(
 			? body.expires_in
 			: 3600;
 	const refresh =
-		typeof body.refresh_token === "string" && body.refresh_token.length > 0
+		typeof body.refresh_token === "string" && body.refresh_token.trim() !== ""
 			? body.refresh_token
 			: previousRefresh;
 	const labelSource =
@@ -166,7 +167,7 @@ async function postJson(
 	deps: RadientOAuthDeps,
 	what: string,
 ): Promise<TokenResponse> {
-	const fetchImpl = deps.fetchImpl ?? globalThis.fetch;
+	const fetchImpl = resolveFetch(deps.fetchImpl);
 	let response: Response;
 	try {
 		response = await fetchImpl(url, {

@@ -26,7 +26,6 @@ import {
 	CALLBACK_PORT,
 	type CallbackListener,
 	createPkcePair,
-	createRelayClient,
 	discoverComputers,
 	exchangeCode,
 	grantNeedsRefresh,
@@ -44,7 +43,6 @@ import {
 	RadientAuthError,
 	type RadientTokens,
 	radientCookieHeader,
-	radientCookiesFrom,
 	refreshRadientTokens,
 	requestAuthFor,
 	requiresRelayPassword,
@@ -224,13 +222,10 @@ describe("a route is data, and it is validated rather than normalised", () => {
 	it("owns the cookie header on the tunnel route and leaves the jar alone on the custom one", () => {
 		const tunnel = requestAuthFor(RADIENT_ROUTE, {
 			grant: "grant-value",
-			refresh: "handle-value",
 		});
 		expect(tunnel.credentials).toBe("omit");
 		expect(tunnel.origin).toBe(`https://${HOST}`);
-		expect(tunnel.cookie).toBe(
-			`${RADIENT_COOKIES.grant}=grant-value; ${RADIENT_COOKIES.refresh}=handle-value`,
-		);
+		expect(tunnel.cookie).toBe(`${RADIENT_COOKIES.grant}=grant-value`);
 
 		const custom = requestAuthFor(CUSTOM_ROUTE, { grant: "never-sent" });
 		expect(custom.credentials).toBe("include");
@@ -241,7 +236,8 @@ describe("a route is data, and it is validated rather than normalised", () => {
 
 	it("sends no cookie header at all when there is no session", () => {
 		expect(requestAuthFor(RADIENT_ROUTE, {}).cookie).toBeNull();
-		expect(radientCookieHeader(null, null)).toBeNull();
+		expect(radientCookieHeader(null)).toBeNull();
+		expect(radientCookieHeader("   ")).toBeNull();
 		expect(radientCookieHeader("only-grant")).toBe(
 			`${RADIENT_COOKIES.grant}=only-grant`,
 		);
@@ -462,6 +458,26 @@ describe("token refresh keeps a rotated refresh token", () => {
 			{ fetchImpl, now: () => 0 },
 		);
 		expect(tokens.refresh).toBe("rt1");
+	});
+
+	it("keeps the working refresh token when the response sends an empty one (HTTP 200)", async () => {
+		/* `auth_service.go:752-770` answers 200 with `"refresh_token": ""` when no new
+		 * token row was created. Writing that blank over the stored value is a silent
+		 * loss of the credential the day-25 re-mint depends on. */
+		for (const empty of ["", "   "]) {
+			const { fetchImpl } = recordingFetch(() =>
+				jsonResponse({
+					access_token: "at2",
+					refresh_token: empty,
+					expires_in: 3600,
+				}),
+			);
+			const tokens = await refreshRadientTokens(
+				{ ...TOKENS, refresh: "rt1" },
+				{ fetchImpl, now: () => 0 },
+			);
+			expect(tokens.refresh, JSON.stringify(empty)).toBe("rt1");
+		}
 	});
 
 	it("classifies invalid_grant as a sign-in and anything else as retryable", async () => {
@@ -716,6 +732,76 @@ describe("the tunnel session lifecycle", () => {
 		).rejects.toMatchObject({ failure: "billing", status: 402 });
 	});
 
+	it("keeps the handle's existing expiry when a refresh response omits it", async () => {
+		/* The handle is non-rotating and absolute, so a silent response changes
+		 * nothing about it. Defaulting to 0 declared a valid 30-day handle dead and
+		 * sent the user to sign-in. */
+		const { fetchImpl } = recordingFetch(() =>
+			jsonResponse({
+				access_token: "grant2",
+				refresh_token: "handle",
+				expires_in: 300,
+			}),
+		);
+		const original = session({ refreshExpiresAt: 2_000_000_000 });
+		const manager = new TunnelSessionManager({
+			fetchImpl,
+			now: () => 999_000,
+			crypto: fakeCrypto(),
+			oauthAccessToken: async () => "oat",
+			initial: original,
+		});
+		const refreshed = await manager.refresh();
+		expect(refreshed.refreshExpiresAt).toBe(2_000_000_000);
+		expect(handleExpired(refreshed, () => 999_000)).toBe(false);
+	});
+
+	it("does not let a refresh that started before a re-mint overwrite the newer session", async () => {
+		let releaseRefresh: (() => void) | undefined;
+		const refreshGate = new Promise<void>((resolve) => {
+			releaseRefresh = resolve;
+		});
+		const { fetchImpl } = recordingFetch(async (url) => {
+			if (url.includes("/session/refresh")) {
+				await refreshGate;
+				return jsonResponse({
+					access_token: "stale-grant",
+					refresh_token: "old-handle",
+					expires_in: 300,
+				});
+			}
+			if (url.includes("/session/code")) {
+				return jsonResponse({
+					code: "one-time",
+					state: "s",
+					callback_uri: url,
+				});
+			}
+			return jsonResponse({
+				access_token: "new-grant",
+				refresh_token: "new-handle",
+				expires_in: 300,
+				refresh_expires_in: 2_500_000,
+			});
+		});
+		const manager = new TunnelSessionManager({
+			fetchImpl,
+			now: () => 5_000,
+			crypto: fakeCrypto(),
+			oauthAccessToken: async () => "oat",
+			initial: session({ refreshHandle: "old-handle" }),
+		});
+		const inFlight = manager.refresh();
+		/* The refresh request is now parked at the server. A re-mint lands first. */
+		await manager.remint();
+		expect(manager.current?.refreshHandle).toBe("new-handle");
+		releaseRefresh?.();
+		const result = await inFlight;
+		expect(result.refreshHandle).toBe("new-handle");
+		expect(manager.current?.grant).toBe("new-grant");
+		expect(manager.current?.refreshHandle).toBe("new-handle");
+	});
+
 	it("single-flights concurrent refreshes, so a cold start does not stampede a 5/s limiter", async () => {
 		let refreshes = 0;
 		const { fetchImpl } = recordingFetch((url) => {
@@ -894,74 +980,6 @@ describe("the keystore boundary", () => {
 /* ------------------------------------------------------------- client factory */
 
 describe("the client factory wires a route to its credentials", () => {
-	it("reads the edge's refreshed cookies out of Set-Cookie", () => {
-		const cookies = radientCookiesFrom([
-			`${RADIENT_COOKIES.grant}=new-grant; Path=/; Secure; HttpOnly`,
-			`${RADIENT_COOKIES.refresh}=new-handle; Path=/; Secure; HttpOnly`,
-			"unrelated=1; Path=/",
-		]);
-		expect(cookies.grant).toBe("new-grant");
-		expect(cookies.refresh).toBe("new-handle");
-		expect(radientCookiesFrom(["unrelated=1"])).toEqual({});
-	});
-
-	it("builds a client whose request carries the current grant, read per request", async () => {
-		let current: TunnelSession | null = {
-			grant: "g1",
-			refreshHandle: "h1",
-			grantExpiresAt: 0,
-			refreshExpiresAt: 0,
-			hostname: HOST,
-			tunnelId: "t-1",
-			mintedAt: 0,
-		};
-		const { calls, fetchImpl } = recordingFetch(() =>
-			jsonResponse({ ok: true, version: 5, sessions: 0, dist: false }),
-		);
-		const client = createRelayClient({
-			route: RADIENT_ROUTE,
-			tunnelSession: () => current,
-			fetchImpl,
-		});
-		await client.healthz();
-		current = { ...current, grant: "g2" };
-		await client.healthz();
-		expect(headerOf(calls[0], "cookie")).toBe(
-			`${RADIENT_COOKIES.grant}=g1; ${RADIENT_COOKIES.refresh}=h1`,
-		);
-		expect(headerOf(calls[1], "cookie")).toBe(
-			`${RADIENT_COOKIES.grant}=g2; ${RADIENT_COOKIES.refresh}=h1`,
-		);
-		/* The edge's transparent refresh re-sets both cookies; a client that only
-		 * read them at sign-in would hit a hard 401 five minutes later. */
-		expect(headerOf(calls[0], "origin")).toBe(`https://${HOST}`);
-	});
-
-	it("hands a refreshed cookie pair to the caller instead of swallowing it", async () => {
-		const seen: string[][] = [];
-		const { fetchImpl } = recordingFetch(
-			() =>
-				new Response(
-					JSON.stringify({ ok: true, version: 5, sessions: 0, dist: false }),
-					{
-						status: 200,
-						headers: {
-							"content-type": "application/json",
-							"set-cookie": `${RADIENT_COOKIES.grant}=rotated; Path=/; Secure`,
-						},
-					},
-				),
-		);
-		const client = createRelayClient({
-			route: RADIENT_ROUTE,
-			tunnelSession: () => null,
-			onRadientCookies: (cookies) => void seen.push([...cookies]),
-			fetchImpl,
-		});
-		await client.healthz();
-		expect(seen).toEqual([[`${RADIENT_COOKIES.grant}=rotated`]]);
-	});
-
 	it("signs in to a custom route only on a 303", async () => {
 		const ok = recordingFetch(() => new Response("", { status: 303 }));
 		const signedIn = await signInToCustomRoute(CUSTOM_ROUTE, "hunter2", {

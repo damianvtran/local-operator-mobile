@@ -28,7 +28,7 @@
  */
 
 import { z } from "zod";
-
+import { resolveFetch } from "../relay/platform-fetch";
 import { RADIENT_API_BASE } from "./discovery";
 import { type CryptoDeps, createPkcePair, randomState } from "./pkce";
 import { RADIENT_COOKIES } from "./profile";
@@ -91,14 +91,20 @@ export type TunnelSessionFailure =
 
 export class TunnelSessionError extends Error {
 	override readonly name = "TunnelSessionError";
+	readonly failure: TunnelSessionFailure;
+	readonly status?: number;
+	/** Set from `Retry-After` when the server sent one. */
+	readonly retryAfterMs?: number;
 	constructor(
-		readonly failure: TunnelSessionFailure,
+		failure: TunnelSessionFailure,
 		message: string,
-		readonly status?: number,
-		/** Set from `Retry-After` when the server sent one. */
-		readonly retryAfterMs?: number,
+		status?: number,
+		retryAfterMs?: number,
 	) {
 		super(message);
+		this.failure = failure;
+		if (status !== undefined) this.status = status;
+		if (retryAfterMs !== undefined) this.retryAfterMs = retryAfterMs;
 	}
 }
 
@@ -135,7 +141,7 @@ async function postSession(
 	deps: TunnelSessionDeps,
 	bearer?: string,
 ): Promise<unknown> {
-	const fetchImpl = deps.fetchImpl ?? globalThis.fetch;
+	const fetchImpl = resolveFetch(deps.fetchImpl);
 	let response: Response;
 	try {
 		response = await fetchImpl(url, {
@@ -313,10 +319,15 @@ export async function refreshTunnelSession(
 		grant: tokens.data.access_token,
 		grantExpiresAt:
 			refreshedAt + (tokens.data.expires_in ?? GRANT_SECONDS) * 1000,
-		/* The server's remaining window is authoritative; the local `mintedAt` is
-		 * never used to extend it. */
+		/* The server's remaining window is authoritative when it sends one; the local
+		 * `mintedAt` is never used to extend it. When it is silent, the handle is
+		 * the SAME non-rotating one, so its existing absolute expiry still holds —
+		 * defaulting to 0 would declare a valid 30-day handle dead and send the user
+		 * to sign-in, the exact forced sign-in the day-25 re-mint prevents. */
 		refreshExpiresAt:
-			refreshedAt + (tokens.data.refresh_expires_in ?? 0) * 1000,
+			tokens.data.refresh_expires_in !== undefined
+				? refreshedAt + tokens.data.refresh_expires_in * 1000
+				: session.refreshExpiresAt,
 	};
 }
 
@@ -333,7 +344,7 @@ export async function revokeTunnelSession(
 	session: TunnelSession,
 	deps: TunnelSessionDeps = {},
 ): Promise<{ revoked: boolean; via: "tunnel" | "control-plane" | "none" }> {
-	const fetchImpl = deps.fetchImpl ?? globalThis.fetch;
+	const fetchImpl = resolveFetch(deps.fetchImpl);
 	try {
 		const response = await fetchImpl(
 			`https://${session.hostname}/_radient/logout`,
@@ -437,7 +448,10 @@ export class TunnelSessionManager {
 	private refreshInFlight: Promise<TunnelSession> | null = null;
 	private remintInFlight: Promise<TunnelSession> | null = null;
 
-	constructor(private readonly deps: TunnelSessionManagerDeps) {
+	private readonly deps: TunnelSessionManagerDeps;
+
+	constructor(deps: TunnelSessionManagerDeps) {
+		this.deps = deps;
 		this.session = deps.initial ?? null;
 	}
 
@@ -482,6 +496,13 @@ export class TunnelSessionManager {
 	private async runRefresh(current: TunnelSession): Promise<TunnelSession> {
 		try {
 			const refreshed = await refreshTunnelSession(current, this.deps);
+			/* Compare-and-set: `current` was read before the request went out. If a
+			 * re-mint (or a fresh sign-in) replaced the session while this refresh
+			 * was in flight, adopting the result would resurrect the OLD handle and
+			 * its `mintedAt` over the newer session. The newer one wins. */
+			if (this.session !== current && this.session !== null) {
+				return this.session;
+			}
 			await this.adopt(refreshed);
 			return refreshed;
 		} catch (error) {

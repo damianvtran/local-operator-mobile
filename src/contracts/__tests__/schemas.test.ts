@@ -1036,3 +1036,18 @@ describe("the json boundary", () => {
 		expect(parsed.version).toBe(5);
 	});
 });
+
+describe("a projection from a relay that predates an additive field", () => {
+	it("still parses, and reads the missing cut_off flag as false", () => {
+		/* `cut_off` is additive (`contract.md` §6.7). Requiring it made a relay one
+		 * release behind blank the whole session view over one absent flag. */
+		const captured = readJson(
+			join(FIXTURE_ROOT, "sse/sse-projection-live-idle.json"),
+		) as { data: Record<string, unknown> };
+		const { cut_off: _dropped, ...older } = captured.data;
+		const parsed = safeParsePayload("sessionProjection", older);
+		expect(parsed.ok).toBe(true);
+		if (!parsed.ok) return;
+		expect(parsed.data.cut_off).toBe(false);
+	});
+});

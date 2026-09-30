@@ -21,16 +21,11 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import {
-	dispositionForOutcome,
-	dispositionForStatus,
 	GATEWAY_REASONS,
-	isAmbiguousDeliveryStatus,
 	parseRetryAfter,
-	RelayError,
 	type RelayResponseFacts,
 	rateLimitedError,
 	relayErrorFromResponse,
-	settleOutcomeFromError,
 	transportError,
 } from "../index";
 
@@ -251,7 +246,6 @@ describe("502, 504 and 408 leave delivery unknown; 4xx does not", () => {
 			facts(status, {}, `{"error":"${status}"}`),
 		);
 		expect(error.envelope).toBe("keep");
-		expect(isAmbiguousDeliveryStatus(status)).toBe(true);
 	});
 
 	it.each([
@@ -264,7 +258,6 @@ describe("502, 504 and 408 leave delivery unknown; 4xx does not", () => {
 			facts(status, {}, JSON.stringify({ error: message })),
 		);
 		expect(error.envelope).toBe("clear");
-		expect(isAmbiguousDeliveryStatus(status)).toBe(false);
 	});
 
 	it("clears all scoped storage on a 401, because the identity changed", () => {
@@ -378,38 +371,6 @@ describe("transport errors name the failure without leaking a URL", () => {
 		 * command's delivery ambiguous (408/502/504), so the envelope still clears
 		 * and the user is never shown a retry affordance for a rejected command. */
 		expect(error.envelope).toBe("clear");
-		expect(isAmbiguousDeliveryStatus(429)).toBe(false);
-	});
-});
-
-describe("the retry table and the envelope table agree", () => {
-	it("derives the envelope outcome from the error the endpoint threw", () => {
-		expect(
-			settleOutcomeFromError(
-				new RelayError("ambiguous-delivery", "x", { status: 504 }),
-			),
-		).toEqual({
-			kind: "http-status",
-			status: 504,
-		});
-		expect(settleOutcomeFromError(new RelayError("transport", "x"))).toEqual({
-			kind: "transport",
-		});
-		expect(
-			settleOutcomeFromError(
-				new RelayError("malformed-frame", "x", { status: 200 }),
-			),
-		).toEqual({ kind: "frame-error" });
-	});
-
-	it("agrees with the raw status table", () => {
-		for (const status of [
-			200, 400, 401, 403, 404, 408, 409, 422, 429, 500, 502, 503, 504,
-		]) {
-			expect(dispositionForOutcome({ kind: "http-status", status })).toBe(
-				dispositionForStatus(status),
-			);
-		}
 	});
 });
 

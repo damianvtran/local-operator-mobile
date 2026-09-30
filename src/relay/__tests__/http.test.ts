@@ -9,7 +9,7 @@
  * Every assertion here corresponds to a documented trap — the cookie policy that
  * differs per route, the `Origin` that both gates compare exactly, the
  * `Sec-Fetch-*` headers a native client must never claim, the 303 that must not
- * be followed, the `Set-Cookie` from *every* response that the edge relies on,
+ * be followed, the fact that `Set-Cookie` is never surfaced,
  * and the `no-store` the relay does not set for itself. The failures they guard
  * against are the ones that do not reproduce locally: they need a real tunnel,
  * a real five-minute grant, or a proxy that rewrites `Host`.
@@ -26,8 +26,6 @@ import {
 	RelayHttpClient,
 	type RelayRequest,
 	type RequestAuth,
-	readSetCookies,
-	splitCombinedSetCookie,
 } from "../index";
 
 const FIXTURE_ROOT = fileURLToPath(
@@ -409,50 +407,6 @@ describe("a 2xx body that does not match its schema", () => {
 	});
 });
 
-describe("Set-Cookie, which the edge relies on us persisting", () => {
-	it("hands every Set-Cookie to onResponse, including on a failure", async () => {
-		const seen: string[][] = [];
-		const headers = new Headers({ "x-radient-login": "/_radient/login" });
-		/* Two separate `set-cookie` headers, which is how the edge actually sends
-		 * them: a combined header is the fallback `readSetCookies` handles. */
-		headers.append("set-cookie", "__Host-radient-grant=old; Path=/; Secure");
-		headers.append("set-cookie", "__Host-radient-refresh=new; Path=/; Secure");
-		const { fetchImpl } = captureFetch(
-			() => new Response("nope", { status: 401, headers }),
-		);
-		const http = client(fetchImpl, {
-			onResponse: (facts) => void seen.push([...facts.setCookies]),
-		});
-		await http
-			.json("sessionListFrame", { method: "GET", path: "/api/sessions" })
-			.catch(() => undefined);
-		expect(seen).toEqual([
-			[
-				"__Host-radient-grant=old; Path=/; Secure",
-				"__Host-radient-refresh=new; Path=/; Secure",
-			],
-		]);
-	});
-
-	it("reads a combined header and prefers the standard accessor", () => {
-		const headers = new Headers();
-		headers.append("set-cookie", "a=1; Path=/");
-		headers.append("set-cookie", "b=2; Path=/");
-		const values = readSetCookies(headers);
-		expect(values).toContain("a=1; Path=/");
-		expect(values).toContain("b=2; Path=/");
-	});
-
-	it("splits a combined value without breaking an Expires date", () => {
-		const combined =
-			"a=1; Expires=Wed, 21 Oct 2026 07:28:00 GMT; Path=/, b=2; Path=/";
-		expect(splitCombinedSetCookie(combined)).toEqual([
-			"a=1; Expires=Wed, 21 Oct 2026 07:28:00 GMT; Path=/",
-			"b=2; Path=/",
-		]);
-	});
-});
-
 describe("streams", () => {
 	it("returns a reader without consuming the body, so frames survive", async () => {
 		const { fetchImpl } = captureFetch(
@@ -545,7 +499,7 @@ describe("no fetch at all is a build problem", () => {
 						auth: () => tunnelAuth,
 						fetchImpl: undefined as unknown as typeof globalThis.fetch,
 					}),
-			).toThrow(/fetch implementation/);
+			).toThrow(/no fetch on this runtime/);
 		} finally {
 			vi.unstubAllGlobals();
 		}

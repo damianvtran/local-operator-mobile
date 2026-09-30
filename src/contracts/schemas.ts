@@ -253,7 +253,10 @@ export const sessionProjectionSchema = z.looseObject({
 	/** `null` withholds the digits; `0` is a known zero. */
 	activity_started_s: z.number().nullable(),
 	stop_reason: z.string(),
-	cut_off: z.boolean(),
+	/** Additive (`contract.md` §6.7): a relay older than the field omits it, and a
+	 *  missing flag must not fail the whole projection and blank the session view.
+	 *  Absent reads as `false`, the contract's own reading. */
+	cut_off: z.boolean().default(false),
 	queued_count: z.number().int(),
 	/** Never observed `true` over the relay; do not build a banner on it. */
 	ended: z.boolean(),

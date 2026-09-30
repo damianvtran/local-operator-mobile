@@ -29,8 +29,9 @@ const SCHEME_PREFIX = /^https?:\/\//;
 
 export const RADIENT_HOST_PATTERN = /^[a-f0-9]{32}-(lop|oc)\.radienthq\.com$/;
 
-/** The edge's cookie names. Both are `__Host-` prefixed, so a re-serialising
- *  client must not add a `Domain` attribute (`tunnel-edge.md` §2.1). */
+/** The edge's cookie names. Both are `__Host-` prefixed, so a client must not add
+ *  a `Domain` attribute (`tunnel-edge.md` §2.1). The refresh name exists for the
+ *  optional edge logout only; no ordinary request carries it. */
 export const RADIENT_COOKIES = {
 	grant: "__Host-radient-grant",
 	refresh: "__Host-radient-refresh",
@@ -232,13 +233,20 @@ export function routeLabel(route: RouteProfile): string {
  * its own `__Host-radient-*` pair — which is why the grant value is read straight
  * out of the secure store instead of a jar.
  *
+ * **Only the grant is ever sent on an ordinary request** (`tunnel-edge.md` §2.1:
+ * "exactly one cookie"; ADR 0002 §6: the refresh handle goes to the control plane
+ * only). Presenting the handle is what switches on the edge's transparent
+ * refresh, which re-sets both cookies on a proxied response and would hand the
+ * app's 30-day credential to a code path it cannot inspect, schedule or revoke.
+ * The app refreshes on its own schedule through the control plane instead.
+ *
  * Custom route: the jar owns `lop_mobile` (`credentials: 'include'`), because
  * reading `Set-Cookie` back is the uncertain part on iOS and the jar is the
  * design rather than the fallback.
  */
 export function requestAuthFor(
 	route: RouteProfile,
-	credentials: { grant?: string | null; refresh?: string | null } = {},
+	credentials: { grant?: string | null } = {},
 ): RequestAuth {
 	if (route.mode === "custom") {
 		/* No cookie header at all: setting one would defeat the jar's bookkeeping,
@@ -246,23 +254,21 @@ export function requestAuthFor(
 		return { cookie: null, origin: routeOrigin(route), credentials: "include" };
 	}
 	return {
-		cookie: radientCookieHeader(credentials.grant, credentials.refresh),
+		cookie: radientCookieHeader(credentials.grant),
 		origin: routeOrigin(route),
 		credentials: "omit",
 	};
 }
 
-/** Builds the `Cookie` header value for the tunnel route. Exported for the smoke
- *  script and for tests, which need to see the exact bytes without holding a
- *  token. */
+/** The `Cookie` header for an ordinary tunnel request: the grant, alone. An empty
+ *  or whitespace-only grant is absent, not a value — sending
+ *  `__Host-radient-grant=` would present a blank credential the edge answers with
+ *  a 401 that looks like an expired session. */
 export function radientCookieHeader(
 	grant: string | null | undefined,
-	refresh?: string | null,
 ): string | null {
-	const parts: string[] = [];
-	if (grant) parts.push(`${RADIENT_COOKIES.grant}=${grant}`);
-	if (refresh) parts.push(`${RADIENT_COOKIES.refresh}=${refresh}`);
-	return parts.length > 0 ? parts.join("; ") : null;
+	const value = grant?.trim();
+	return value ? `${RADIENT_COOKIES.grant}=${value}` : null;
 }
 
 /** True when a route can carry the relay password at all. Named for the check a

@@ -1,0 +1,297 @@
+/**
+ * A real HTTP server that plays the relay by replaying `fixtures/relay/**`.
+ *
+ * It exists so the app's own client can be driven over an actual socket without a
+ * `lop` daemon: every response body here is a captured fixture, never a value the
+ * test author typed, so a drift between the client and the wire fails a test
+ * instead of being agreed with. PR #8 ships a fuller typed mock relay; until it is
+ * on `main` this minimal server stands in, and the suite only needs its base URL,
+ * so swapping the peer is a one-line change in `startFixtureRelay`'s caller.
+ *
+ * Auth mirrors the two routes' real rules:
+ *
+ * - `custom`: `POST /login` with the right password answers `303` and sets
+ *   `lop_mobile`; every `/api` route then requires that cookie (`401` otherwise).
+ * - `radient`: the edge is modelled as a gate that requires EXACTLY
+ *   `__Host-radient-grant=<grant>` in the `Cookie` header and `Origin` equal to
+ *   the tunnel origin — so the exact bytes the client sends are what is checked.
+ *
+ * Every request is recorded (method, path, headers) so a test can assert what the
+ * server actually saw.
+ */
+
+import { readFileSync } from "node:fs";
+import {
+	createServer,
+	type IncomingHttpHeaders,
+	type IncomingMessage,
+	type Server,
+	type ServerResponse,
+} from "node:http";
+import type { AddressInfo } from "node:net";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const FIXTURE_ROOT = fileURLToPath(
+	new URL("../../fixtures/relay", import.meta.url),
+);
+
+function fixtureBody(rel: string): unknown {
+	const file = JSON.parse(readFileSync(join(FIXTURE_ROOT, rel), "utf8")) as {
+		body?: unknown;
+		data?: unknown;
+	};
+	return file.body ?? file.data;
+}
+
+/* Hoisted: matched on every request the server handles. */
+const SESSION_ROUTE =
+	/^\/api\/sessions\/([^/]+)\/(events|command|history|seen)$/;
+
+export const FIXTURE_SESSION_ID = "6714def86197";
+const PASSWORD = "correct horse";
+const COOKIE_NAME = "lop_mobile";
+
+export interface RecordedRequest {
+	method: string;
+	path: string;
+	headers: IncomingHttpHeaders;
+	body: unknown;
+}
+
+export interface FixtureRelayOptions {
+	/** `custom`: cookie login. `radient`: exact grant cookie + tunnel origin. */
+	auth:
+		| { mode: "custom"; password?: string }
+		| { mode: "radient"; grant: string; origin: string };
+	/** Close each SSE body after this many ms, as the gateway's lease does. */
+	cutStreamAfterMs?: number;
+	/** Hold the FIRST stream open and silent (headers, then nothing). */
+	silentFirstStream?: boolean;
+	/** For the Nth (1-based) `POST …/command`, act on it and drop the connection
+	 *  before answering — a lost acknowledgement. */
+	dropAckOnCommand?: number;
+	/** Projection frames per stream, in order. Defaults to the live-idle capture. */
+	projectionFrames?: (connection: number) => unknown[];
+	/** From this SSE connection number on, answer the stream open with 401. */
+	rejectStreamsFrom?: number;
+}
+
+export interface FixtureRelay {
+	baseUrl: string;
+	requests: RecordedRequest[];
+	/** How many times each command_id was ADMITTED (a replay is not a second one). */
+	admitted: Map<string, number>;
+	/** SSE connections opened, per path. */
+	streamOpens: Map<string, number>;
+	close(): Promise<void>;
+}
+
+function readBody(request: IncomingMessage): Promise<string> {
+	return new Promise((resolve) => {
+		const chunks: Buffer[] = [];
+		request.on("data", (chunk: Buffer) => chunks.push(chunk));
+		request.on("end", () => resolve(Buffer.concat(chunks).toString("utf8")));
+	});
+}
+
+function json(response: ServerResponse, status: number, body: unknown): void {
+	response.writeHead(status, { "content-type": "application/json" });
+	response.end(JSON.stringify(body));
+}
+
+function sse(event: string, data: unknown): string {
+	return `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
+}
+
+export async function startFixtureRelay(
+	options: FixtureRelayOptions,
+): Promise<FixtureRelay> {
+	const requests: RecordedRequest[] = [];
+	const admitted = new Map<string, number>();
+	const streamOpens = new Map<string, number>();
+	const sockets = new Set<import("node:net").Socket>();
+	let commandCount = 0;
+	let streamCount = 0;
+	const session = { token: "" };
+
+	const server: Server = createServer(async (request, response) => {
+		const url = new URL(request.url ?? "/", "http://relay.invalid");
+		const path = url.pathname;
+		const raw = await readBody(request);
+		let parsed: unknown;
+		try {
+			parsed = raw ? JSON.parse(raw) : undefined;
+		} catch {
+			parsed = raw;
+		}
+		requests.push({
+			method: request.method ?? "GET",
+			path: url.pathname + url.search,
+			headers: request.headers,
+			body: parsed,
+		});
+
+		if (path === "/healthz") {
+			json(response, 200, fixtureBody("http/healthz.json"));
+			return;
+		}
+
+		const { auth } = options;
+		if (auth.mode === "custom" && path === "/login") {
+			const password = new URLSearchParams(raw).get("password");
+			if (password !== (auth.password ?? PASSWORD)) {
+				response.writeHead(401, { "content-type": "text/html" });
+				response.end("<!doctype html><title>login</title>");
+				return;
+			}
+			session.token = `${Date.now()}.signature`;
+			response.writeHead(303, {
+				location: "/",
+				"set-cookie": `${COOKIE_NAME}=${session.token}; HttpOnly; Max-Age=2592000; Path=/; SameSite=lax`,
+			});
+			response.end();
+			return;
+		}
+		if (auth.mode === "custom" && path === "/logout") {
+			session.token = "";
+			response.writeHead(303, {
+				location: "/login",
+				"set-cookie": `${COOKIE_NAME}=""; Max-Age=0; Path=/`,
+			});
+			response.end();
+			return;
+		}
+
+		/* The gate. Custom: the jar's cookie. Radient: exact bytes. */
+		const cookie = request.headers.cookie ?? "";
+		const authorised =
+			auth.mode === "custom"
+				? session.token !== "" &&
+					cookie.includes(`${COOKIE_NAME}=${session.token}`)
+				: cookie === `__Host-radient-grant=${auth.grant}` &&
+					request.headers.origin === auth.origin;
+		if (!authorised) {
+			if (auth.mode === "radient") {
+				response.writeHead(401, {
+					"x-radient-login": "/_radient/login",
+					"content-type": "text/plain",
+				});
+				response.end("Sign in with Radient to access this tunnel");
+			} else {
+				json(response, 401, fixtureBody("http/unauth-api-sessions.json"));
+			}
+			return;
+		}
+
+		if (path === "/api/sessions" && request.method === "GET") {
+			json(response, 200, fixtureBody("http/list_row_live.json"));
+			return;
+		}
+		if (path === "/api/sessions/start" && request.method === "POST") {
+			json(response, 200, fixtureBody("http/start-session.json"));
+			return;
+		}
+		if (path === "/api/sessions/events") {
+			openStream(request, response, path, (connection) => [
+				sse("sessions", fixtureBody("sse/sse-list-frame.json")),
+				...(connection < 0 ? [] : []),
+			]);
+			return;
+		}
+		const sessionRoute = path.match(SESSION_ROUTE);
+		if (sessionRoute) {
+			const [, , action] = sessionRoute;
+			if (action === "events") {
+				openStream(request, response, path, (connection) =>
+					(options.projectionFrames
+						? options.projectionFrames(connection)
+						: [fixtureBody("sse/sse-projection-live-idle.json")]
+					).map((frame) => sse("projection", frame)),
+				);
+				return;
+			}
+			if (action === "history") {
+				json(response, 200, fixtureBody("http/history-ok.json"));
+				return;
+			}
+			if (action === "seen") {
+				json(response, 200, fixtureBody("http/seen-real-token.json"));
+				return;
+			}
+			if (action === "command") {
+				commandCount += 1;
+				const body = parsed as { command_id?: string } | undefined;
+				const id = body?.command_id ?? "";
+				const seenBefore = admitted.has(id);
+				if (!seenBefore) admitted.set(id, 1);
+				/* Acting on the command BEFORE dropping the socket is the point: the
+				 * relay admitted it, and only the acknowledgement was lost. */
+				if (options.dropAckOnCommand === commandCount) {
+					request.socket.destroy();
+					return;
+				}
+				json(
+					response,
+					200,
+					seenBefore
+						? fixtureBody("http/command-prompt-duplicate.json")
+						: fixtureBody("http/command-prompt-ok.json"),
+				);
+				return;
+			}
+		}
+		json(response, 404, { error: "not found" });
+	});
+
+	function openStream(
+		request: IncomingMessage,
+		response: ServerResponse,
+		path: string,
+		framesFor: (connection: number) => string[],
+	): void {
+		streamCount += 1;
+		const connection = streamCount;
+		streamOpens.set(path, (streamOpens.get(path) ?? 0) + 1);
+		if (
+			options.rejectStreamsFrom !== undefined &&
+			connection >= options.rejectStreamsFrom
+		) {
+			response.writeHead(401, {
+				"x-radient-login": "/_radient/login",
+				"content-type": "text/plain",
+			});
+			response.end("Sign in with Radient to access this tunnel");
+			return;
+		}
+		response.writeHead(200, {
+			"content-type": "text/event-stream",
+			"cache-control": "no-store",
+		});
+		response.flushHeaders();
+		if (options.silentFirstStream && connection === 1) return;
+		for (const frame of framesFor(connection)) response.write(frame);
+		if (options.cutStreamAfterMs !== undefined) {
+			const timer = setTimeout(() => response.end(), options.cutStreamAfterMs);
+			request.on("close", () => clearTimeout(timer));
+		}
+	}
+
+	server.on("connection", (socket) => {
+		sockets.add(socket);
+		socket.on("close", () => sockets.delete(socket));
+	});
+	await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+	const { port } = server.address() as AddressInfo;
+
+	return {
+		baseUrl: `http://127.0.0.1:${port}`,
+		requests,
+		admitted,
+		streamOpens,
+		close: async () => {
+			for (const socket of sockets) socket.destroy();
+			await new Promise<void>((resolve) => server.close(() => resolve()));
+		},
+	};
+}

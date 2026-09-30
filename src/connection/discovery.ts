@@ -24,6 +24,7 @@
  */
 
 import { z } from "zod";
+import { resolveFetch } from "../relay/platform-fetch";
 
 /* Hoisted: discovery runs on every cold start and after every re-auth. */
 const TRAILING_SLASHES = /\/+$/;
@@ -207,7 +208,7 @@ export async function discoverComputers(
 	const token = await deps.accessToken();
 	if (!token) return { kind: "unauthorized" };
 
-	const fetchImpl = deps.fetchImpl ?? globalThis.fetch;
+	const fetchImpl = resolveFetch(deps.fetchImpl);
 	const base = (deps.baseUrl ?? RADIENT_API_BASE).replace(TRAILING_SLASHES, "");
 
 	let response: Response;

@@ -12,19 +12,19 @@
  *
  * | | Radient tunnel | Custom URL |
  * | --- | --- | --- |
- * | Credential | our own `__Host-radient-*` `Cookie` header | the platform jar's `lop_mobile` |
+ * | Credential | our own `Cookie` header carrying the grant alone | the platform jar's `lop_mobile` |
  * | Jar | `credentials: 'omit'` | `credentials: 'include'` |
- * | `Set-Cookie` | persisted from every response (the edge re-sets both on a transparent refresh) | the jar's business |
+ * | `Set-Cookie` | ignored: the app refreshes through the control plane on its own schedule | the jar's business |
  */
 
 import {
 	RelayEndpoints,
 	RelayHttpClient,
 	type RelayResponseFactsWithHeaders,
+	resolveFetch,
 } from "../relay";
 import {
 	type CustomRoute,
-	RADIENT_COOKIES,
 	type RouteProfile,
 	requestAuthFor,
 	routeBaseUrl,
@@ -37,9 +37,6 @@ export interface RouteCredentials {
 	/** The current tunnel session, or `null` when there is none yet. Read on every
 	 *  request, never captured. */
 	tunnelSession?: () => TunnelSession | null;
-	/** Called when the edge hands back refreshed `__Host-radient-*` cookies, so a
-	 *  transparent refresh is not thrown away. Never logs the value. */
-	onRadientCookies?: (cookies: readonly string[]) => void | Promise<void>;
 }
 
 export interface CreateRelayClientOptions extends RouteCredentials {
@@ -51,82 +48,24 @@ export interface CreateRelayClientOptions extends RouteCredentials {
 	onResponse?: (facts: RelayResponseFactsWithHeaders) => void | Promise<void>;
 }
 
-/** Extracts a cookie's value from a `Set-Cookie` pair, by exact name. Used to read
- *  back the edge's refreshed grant and refresh handle. Exported for tests. */
-export function cookieValue(pair: string, name: string): string | null {
-	const [head] = pair.split(";");
-	if (!head) return null;
-	const separator = head.indexOf("=");
-	if (separator === -1) return null;
-	return head.slice(0, separator).trim() === name
-		? head.slice(separator + 1).trim()
-		: null;
-}
-
-/**
- * Reads both of the edge's cookies out of a response's `Set-Cookie` list.
- *
- * Returns only values that were actually present, so a caller can update the
- * stored set without inventing an empty one — the edge re-sets both on a
- * transparent refresh, but a normal response sets neither.
- */
-export function radientCookiesFrom(setCookies: readonly string[]): {
-	grant?: string;
-	refresh?: string;
-} {
-	const out: { grant?: string; refresh?: string } = {};
-	for (const pair of setCookies) {
-		const grant = cookieValue(pair, RADIENT_COOKIES.grant);
-		if (grant !== null) out.grant = grant;
-		const refresh = cookieValue(pair, RADIENT_COOKIES.refresh);
-		if (refresh !== null) out.refresh = refresh;
-	}
-	return out;
-}
-
 /** Builds the relay client for a route. */
 export function createRelayClient(
 	options: CreateRelayClientOptions,
 ): RelayEndpoints {
-	const { route, tunnelSession, onRadientCookies, onResponse } = options;
+	const { route, tunnelSession, onResponse } = options;
 	const http = new RelayHttpClient({
 		baseUrl: routeBaseUrl(route),
-		auth: () => {
-			const session = tunnelSession?.() ?? null;
-			return requestAuthFor(route, {
-				grant: session?.grant ?? null,
-				refresh: session?.refreshHandle ?? null,
-			});
-		},
+		/* The grant, and nothing else. The refresh handle is not passed at all: a
+		 * client that cannot see it here cannot send it, and the edge's transparent
+		 * refresh (which needs it) never switches on. */
+		auth: () => requestAuthFor(route, { grant: tunnelSession?.()?.grant }),
 		fetchImpl: options.fetchImpl,
 		timeoutMs: options.timeoutMs,
 		diagnostic: `relay ${route.mode}`,
-		onResponse: async (facts) => {
-			if (route.mode === "radient" && facts.setCookies.length > 0) {
-				/* Persisting these is what makes the 5-minute grant invisible: the edge
-				 * performs a transparent refresh and re-sets both cookies, and a client
-				 * that only read them at sign-in would hit a hard 401 five minutes later
-				 * (`tunnel-edge.md` §2.1). */
-				const next = radientCookiesFrom(facts.setCookies);
-				if (next.grant !== undefined || next.refresh !== undefined) {
-					/* Re-serialised under their real wire names: `next` keys are a local
-					 * shorthand, and a header built from them would carry `grant=` instead of
-					 * `__Host-radient-grant=`. */
-					const cookies = [
-						next.grant !== undefined
-							? `${RADIENT_COOKIES.grant}=${next.grant}`
-							: null,
-						next.refresh !== undefined
-							? `${RADIENT_COOKIES.refresh}=${next.refresh}`
-							: null,
-					].filter((cookie): cookie is string => cookie !== null);
-					/* The callback decides what to do; this module deliberately does not
-					 * write to storage itself (storage.ts is the only module that does). */
-					await onRadientCookies?.(cookies);
-				}
-			}
-			await onResponse?.(facts);
-		},
+		/* No `Set-Cookie` handling on either route. On the tunnel route the app owns
+		 * its session and ignores whatever the edge tries to set; on the custom route
+		 * the platform jar keeps `lop_mobile` and the app never reads it. */
+		onResponse,
 	});
 	return new RelayEndpoints(http);
 }
@@ -157,7 +96,7 @@ export async function signInToCustomRoute(
 	password: string,
 	options: { fetchImpl?: typeof globalThis.fetch } = {},
 ): Promise<CustomRouteSignIn> {
-	const fetchImpl = options.fetchImpl ?? globalThis.fetch;
+	const fetchImpl = resolveFetch(options.fetchImpl);
 	const response = await fetchImpl(`${route.baseUrl}/login`, {
 		method: "POST",
 		headers: {
@@ -191,7 +130,7 @@ export async function signOutOfCustomRoute(
 	route: CustomRoute,
 	options: { fetchImpl?: typeof globalThis.fetch } = {},
 ): Promise<void> {
-	const fetchImpl = options.fetchImpl ?? globalThis.fetch;
+	const fetchImpl = resolveFetch(options.fetchImpl);
 	try {
 		await fetchImpl(`${route.baseUrl}/logout`, {
 			method: "GET",

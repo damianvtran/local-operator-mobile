@@ -98,11 +98,10 @@ export interface CustomRouteSet {
 /** A value that cannot be stored safely, with the reason named. */
 export class SecureStorageError extends Error {
 	override readonly name = "SecureStorageError";
-	constructor(
-		message: string,
-		readonly key: string,
-	) {
+	readonly key: string;
+	constructor(message: string, key: string) {
 		super(message);
+		this.key = key;
 	}
 }
 
@@ -124,13 +123,19 @@ export interface StoragePresence {
  * with a truncated token or a crash on a cold start.
  */
 export class SecureStorage {
+	private readonly adapter: SecureStoreAdapter;
+	private readonly options: {
+		keychainAccessible?: string;
+		now?: () => number;
+	};
+
 	constructor(
-		private readonly adapter: SecureStoreAdapter,
-		private readonly options: {
-			keychainAccessible?: string;
-			now?: () => number;
-		} = {},
-	) {}
+		adapter: SecureStoreAdapter,
+		options: { keychainAccessible?: string; now?: () => number } = {},
+	) {
+		this.adapter = adapter;
+		this.options = options;
+	}
 
 	/** What is stored, in a form safe to render. */
 	async presence(): Promise<StoragePresence> {

@@ -104,7 +104,11 @@ export interface RelayStream {
  * route switch builds a new client rather than reconfiguring this one.
  */
 export class RelayEndpoints {
-	constructor(private readonly http: RelayHttpClient) {}
+	private readonly http: RelayHttpClient;
+
+	constructor(http: RelayHttpClient) {
+		this.http = http;
+	}
 
 	/** The reachability probe. Public, no cookie, and `dist: false` is not a
 	 *  health problem — the native client never needs the web bundle. */

@@ -1,0 +1,147 @@
+/**
+ * The silence watchdog, driven through a real socket and the real abort path.
+ *
+ * A fake timer or a scripted reader would skip the exact mechanism that failed:
+ * `AbortController.abort()` surfaces as a REJECTED `read()`, and the connection
+ * loop has to tell that rejection from a genuine transport error. So the server
+ * here is a real `node:http` listener that answers the first request with headers
+ * and then nothing, and the client reads it with the platform `fetch`.
+ */
+
+import { readFileSync } from "node:fs";
+import { createServer, type Server } from "node:http";
+import type { AddressInfo } from "node:net";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
+
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+import { type DecodedFrame, SseConnection, type StreamStatus } from "../index";
+
+const FIXTURE_ROOT = fileURLToPath(
+	new URL("../../../fixtures/relay", import.meta.url),
+);
+const projection = JSON.parse(
+	readFileSync(join(FIXTURE_ROOT, "sse/sse-projection-live-idle.json"), "utf8"),
+) as { event: string; data: unknown };
+
+const servers: Server[] = [];
+afterEach(async () => {
+	for (const server of servers.splice(0)) {
+		server.closeAllConnections();
+		await new Promise<void>((resolve) => server.close(() => resolve()));
+	}
+});
+
+describe("a stream that goes silent is reopened, not abandoned", () => {
+	it("tears down the quiet socket and reopens on the same path as a rotation", async () => {
+		let requests = 0;
+		const server = createServer((_request, response) => {
+			requests += 1;
+			response.writeHead(200, {
+				"content-type": "text/event-stream",
+				"cache-control": "no-store",
+			});
+			response.flushHeaders();
+			/* The first connection: open, headers sent, then dead air — the shape of a
+			 * tunnel that stopped forwarding while the socket stays up. The second
+			 * connection behaves, and starts with the seed snapshot. */
+			if (requests >= 2) {
+				response.write(
+					`event: ${projection.event}\ndata: ${JSON.stringify(projection.data)}\n\n`,
+				);
+			}
+		});
+		servers.push(server);
+		await new Promise<void>((resolve) =>
+			server.listen(0, "127.0.0.1", resolve),
+		);
+		const { port } = server.address() as AddressInfo;
+
+		const states: StreamStatus[] = [];
+		const frames: DecodedFrame[] = [];
+		const errors: unknown[] = [];
+		const connection = new SseConnection({
+			open: async (signal) => {
+				const response = await fetch(`http://127.0.0.1:${port}/stream`, {
+					signal,
+				});
+				if (!response.body) throw new Error("no body");
+				const reader = response.body.getReader();
+				return {
+					reader,
+					release: async () => {
+						await reader.cancel().catch(() => undefined);
+					},
+				};
+			},
+			onFrame: (frame) => void frames.push(frame),
+			onState: (status) => void states.push(status),
+			onError: (error) => void errors.push(error),
+			random: () => 0,
+			silenceMs: 150,
+		});
+
+		connection.start();
+		await vi.waitFor(
+			() => expect(frames.some((f) => f.kind === "projection")).toBe(true),
+			{ timeout: 5_000 },
+		);
+		const beforeStop = [...states];
+		const stillRunning = connection.isRunning;
+		connection.stop();
+
+		expect(requests).toBeGreaterThanOrEqual(2);
+		expect(stillRunning).toBe(true);
+		/* The stall is routine, so nothing user-visible: no error, and no `closed`
+		 * state before the caller's own stop(). */
+		expect(errors).toEqual([]);
+		expect(beforeStop.some((s) => s.state === "closed")).toBe(false);
+		/* It is reported as a stall (so a screen may dim, not fail), then reopens and
+		 * ends in `open` with the second attempt's seed frame delivered. */
+		const names = beforeStop.map((s) => s.state);
+		expect(names).toContain("stalled");
+		expect(names.at(-1)).toBe("open");
+		expect(beforeStop.at(-1)?.attempt).toBe(2);
+	});
+
+	it("still ends the loop with the error when the transport genuinely fails", async () => {
+		/* The other half of the flag: without it, treating every abort as a stall
+		 * would swallow a real failure. A server that resets the socket mid-body is
+		 * not the watchdog's doing and must reach onError. */
+		const server = createServer((request, response) => {
+			response.writeHead(200, { "content-type": "text/event-stream" });
+			response.flushHeaders();
+			setTimeout(() => request.socket.destroy(), 20);
+		});
+		servers.push(server);
+		await new Promise<void>((resolve) =>
+			server.listen(0, "127.0.0.1", resolve),
+		);
+		const { port } = server.address() as AddressInfo;
+
+		const errors: unknown[] = [];
+		const connection = new SseConnection({
+			open: async (signal) => {
+				const response = await fetch(`http://127.0.0.1:${port}/stream`, {
+					signal,
+				});
+				if (!response.body) throw new Error("no body");
+				const reader = response.body.getReader();
+				return {
+					reader,
+					release: async () => {
+						await reader.cancel().catch(() => undefined);
+					},
+				};
+			},
+			onFrame: () => undefined,
+			onError: (error) => void errors.push(error),
+			random: () => 0,
+			silenceMs: 30_000,
+		});
+		connection.start();
+		await vi.waitFor(() => expect(errors.length).toBe(1), { timeout: 5_000 });
+		expect(connection.isRunning).toBe(false);
+	});
+});

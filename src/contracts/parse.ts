@@ -38,12 +38,16 @@ export interface FrameIssue {
 export class RelayFrameError extends Error {
 	override readonly name = "RelayFrameError";
 
+	/** Which schema rejected it — the caller's own name for the payload. */
+	readonly payload: SchemaName;
+	readonly issues: readonly FrameIssue[];
+	/** The offending value, kept for diagnostics. Never rendered to a user. */
+	readonly raw: unknown;
+
 	constructor(
-		/** Which schema rejected it — the caller's own name for the payload. */
-		readonly payload: SchemaName,
-		readonly issues: readonly FrameIssue[],
-		/** The offending value, kept for diagnostics. Never rendered to a user. */
-		readonly raw: unknown,
+		payload: SchemaName,
+		issues: readonly FrameIssue[],
+		raw: unknown,
 		cause?: unknown,
 	) {
 		super(
@@ -53,6 +57,9 @@ export class RelayFrameError extends Error {
 					.map((issue) => `${issue.path || "<root>"} ${issue.message}`)
 					.join("; "),
 		);
+		this.payload = payload;
+		this.issues = issues;
+		this.raw = raw;
 		if (cause !== undefined) this.cause = cause;
 	}
 

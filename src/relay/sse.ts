@@ -96,7 +96,10 @@ export class SseFrameReader {
 		reset: (options?: { consume?: boolean }) => void;
 	};
 
-	constructor(private readonly now: () => number = () => Date.now()) {
+	private readonly now: () => number;
+
+	constructor(now: () => number = () => Date.now()) {
+		this.now = now;
 		this.parser = createParser({
 			onComment: () => {
 				this.keepalives += 1;
@@ -331,6 +334,11 @@ export class SseConnection {
 		SseConnectionOptions;
 	private controller: AbortController | undefined;
 	private silenceTimer: TimerHandle | undefined;
+	/** Set by the watchdog immediately before it aborts. An abort surfaces as a
+	 *  rejected `read()`, indistinguishable from a socket error by its shape, so
+	 *  the flag is how the read-error branch tells "we tore this down because it
+	 *  went quiet" (reopen, silently) from "the transport failed" (stop, report). */
+	private watchdogFired = false;
 	private jitterTimer: TimerHandle | undefined;
 	private running = false;
 	private attempt = 0;
@@ -410,6 +418,7 @@ export class SseConnection {
 			}
 
 			this.openedAt = this.options.now();
+			this.watchdogFired = false;
 			this.emit({ state: "open", attempt: this.attempt });
 			this.armSilenceWatchdog(controller);
 			const frames = new SseFrameReader(this.options.now);
@@ -433,8 +442,16 @@ export class SseConnection {
 					}
 				}
 			} catch (cause) {
-				ended = "error";
-				error = errorFrom(cause, "sse read");
+				/* A fired watchdog is a stall, not a failure: the socket looked alive and
+				 * delivered nothing for longer than two keep-alive periods, and we
+				 * aborted it. Treating the resulting rejection as an error would stop
+				 * the loop for good and surface a user-visible failure for what the
+				 * contract calls routine (rule 4). Fall through as a clean end instead,
+				 * so it reopens at once and resyncs from the new seed frame. */
+				if (!this.watchdogFired) {
+					ended = "error";
+					error = errorFrom(cause, "sse read");
+				}
 			} finally {
 				this.clearSilenceTimer();
 				await release().catch(() => undefined);
@@ -459,7 +476,7 @@ export class SseConnection {
 			 * the gateway stopped forwarding, which is worth reporting as a distinct
 			 * state while still reconnecting at once — an early EOF carries no
 			 * information about *why* (`tunnel-edge.md` §3). */
-			const rotation = openMs >= ROTATION_MIN_OPEN_MS;
+			const rotation = !this.watchdogFired && openMs >= ROTATION_MIN_OPEN_MS;
 			this.emit({
 				state: rotation ? "rotating" : "stalled",
 				attempt: this.attempt,
@@ -484,8 +501,10 @@ export class SseConnection {
 			if (!this.running) return;
 			/* The socket is open and nothing has arrived for ~35 s while the relay
 			 * keep-alives every 25 s: the stream is dead even though it looks alive.
-			 * Aborting turns it into a reopen, which resyncs from a fresh snapshot. */
-			this.emit({ state: "stalled", attempt: this.attempt });
+			 * The flag goes up BEFORE the abort so the read loop can tell this
+			 * teardown from a transport error; the loop emits the `stalled` state
+			 * itself once the read has unwound, so it is not emitted twice. */
+			this.watchdogFired = true;
 			controller.abort();
 		}, this.options.silenceMs);
 	}

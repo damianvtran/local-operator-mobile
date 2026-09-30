@@ -24,9 +24,11 @@
  *   follow. Following one would turn a 303 into an HTML body.
  * - **`no-store` is ours.** The relay sets no `Cache-Control` on JSON
  *   (`secure_cookie()` is dead code), so nothing upstream forbids caching it.
- * - **Persist `Set-Cookie` from EVERY response.** The edge re-sets both of its
- *   cookies whenever it transparently refreshes, so a client that only reads
- *   cookies at sign-in hits a hard 401 five minutes later.
+ * - **`Set-Cookie` is never read.** On the tunnel route the app owns its session
+ *   and refreshes it through the control plane on its own schedule
+ *   (`tunnel-edge.md` §2.1: "Accept no `Set-Cookie`"); on the custom route the
+ *   platform jar keeps `lop_mobile`. Nothing in this module surfaces a cookie, so
+ *   no caller can grow a dependency on one.
  * - **A timeout is a transport error, not an ambiguous success.** There is no
  *   path here that turns an unanswered request into a `2xx`.
  */
@@ -44,6 +46,7 @@ import {
 	relayErrorFromResponse,
 	transportError,
 } from "./errors";
+import { resolveFetch } from "./platform-fetch";
 
 /** What the caller's route policy says about this request's credentials. */
 export interface RequestAuth {
@@ -58,8 +61,6 @@ export interface RequestAuth {
 }
 
 export interface RelayResponseFactsWithHeaders extends RelayResponseFacts {
-	/** Every `Set-Cookie` the response carried, in order. */
-	setCookies: readonly string[];
 	/** Lower-cased header names present on the response, for diagnostics. */
 	headerNames: readonly string[];
 }
@@ -106,8 +107,8 @@ export interface RelayRequest {
 	 *
 	 * It exists for exactly one shape on this wire: the relay answers a successful
 	 * form login with `303 → /`, and a `303` is not `response.ok`. Without this, the
-	 * custom route's only credential path would be classified as an error, and the
-	 * `Set-Cookie` that came with it would be discarded along with the response.
+	 * custom route's only credential path would be classified as an error even
+	 * though the relay accepted the password.
 	 */
 	accept?: readonly number[];
 	signal?: AbortSignal;
@@ -129,7 +130,6 @@ const TRAILING_SLASHES = /\/+$/;
 /** Splits a combined `Set-Cookie` at a `,` that starts another pair. The
  *  lookahead keeps an `Expires` date's comma intact, because that comma is always
  *  followed by a space and a day name rather than `name=`. */
-const COOKIE_PAIR_BOUNDARY = /,(?=\s*[A-Za-z0-9!#$%&'*+\-.^_`|~]+=)/;
 
 const CONTENT_TYPE_JSON = "application/json";
 const CONTENT_TYPE_FORM = "application/x-www-form-urlencoded";
@@ -145,14 +145,10 @@ export class RelayHttpClient {
 	constructor(options: RelayHttpOptions) {
 		this.baseUrl = options.baseUrl.replace(TRAILING_SLASHES, "");
 		this.auth = options.auth;
-		const impl = options.fetchImpl ?? globalThis.fetch;
-		if (typeof impl !== "function") {
-			/* A missing fetch is a build problem, and it must be loud: the alternative
-			 * is every request failing as "network" on a platform that simply bound the
-			 * global too late. */
-			throw new Error("RelayHttpClient needs a fetch implementation");
-		}
-		this.fetchImpl = impl;
+		/* Bound, not merely captured: see `platform-fetch.ts` for the browser
+		 * brand-check this avoids. A missing fetch is a build problem and is loud
+		 * here, rather than every request failing later as a transport error. */
+		this.fetchImpl = resolveFetch(options.fetchImpl);
 		this.onResponse = options.onResponse;
 		this.timeoutMs = options.timeoutMs ?? 20_000;
 		this.diagnostic = options.diagnostic ?? "relay";
@@ -411,45 +407,8 @@ function responseFacts(response: Response): RelayResponseFactsWithHeaders {
 	return {
 		status: response.status,
 		header,
-		setCookies: readSetCookies(response.headers),
 		headerNames: headerNames.sort(),
 	};
-}
-
-/**
- * Reads every `Set-Cookie` on a response.
- *
- * `getSetCookie()` is the Fetch-standard accessor, but Expo's `Response` is a
- * hand-written polyfill over native responses and may only expose the combined
- * `set-cookie` string (and on iOS the platform may omit it entirely — spike S2
- * in ADR 0002 exists because of exactly this). So this reads whichever accessor
- * exists and never throws; the tunnel route's own refresh path does not depend
- * on the jar, and the custom route's cookie is the jar's business.
- */
-export function readSetCookies(headers: Headers): string[] {
-	const withGetter = headers as Headers & { getSetCookie?: () => string[] };
-	if (typeof withGetter.getSetCookie === "function") {
-		try {
-			const values = withGetter.getSetCookie();
-			if (Array.isArray(values)) return values;
-		} catch {
-			/* Fall through to the combined header. */
-		}
-	}
-	const combined = headers.get("set-cookie");
-	if (!combined) return [];
-	return splitCombinedSetCookie(combined);
-}
-
-/** Splits a combined `Set-Cookie` header. The separator is `,` followed by a
- *  token and `=`, which cannot occur inside an attribute's value in practice;
- *  an `Expires` date contains a comma but is always followed by a space and a
- *  day name, so the lookahead keeps it intact. */
-export function splitCombinedSetCookie(combined: string): string[] {
-	return combined
-		.split(COOKIE_PAIR_BOUNDARY)
-		.map((part) => part.trim())
-		.filter((part) => part.length > 0);
 }
 
 /** Path without query values: a query can carry a search term or a hostname and

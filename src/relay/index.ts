@@ -18,5 +18,7 @@
 export * from "./endpoints";
 export * from "./errors";
 export * from "./http";
+export * from "./platform-fetch";
 export * from "./retry-envelope";
+export * from "./send-command";
 export * from "./sse";

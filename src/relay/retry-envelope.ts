@@ -106,35 +106,13 @@ export function memoryEnvelopeStore(): EnvelopeStore {
  *  an instruction it cannot persist is one whose failure it could not recover. */
 export class EnvelopeStorageError extends Error {
 	override readonly name = "EnvelopeStorageError";
-	constructor(
-		message: string,
-		override readonly cause?: unknown,
-	) {
-		super(message);
+	constructor(message: string, cause?: unknown) {
+		super(message, cause === undefined ? undefined : { cause });
 	}
 }
 
 /** What the caller should do with the stored envelope after an outcome. */
 export type EnvelopeDisposition = "kept" | "cleared" | "cleared-all";
-
-/** The statuses that leave delivery AMBIGUOUS rather than proving pre-admission.
- *  `408`/`502`/`504` can follow a *durable* admission whose acknowledgement was
- *  lost, which is precisely why they are not a rejection. */
-export function isAmbiguousDeliveryStatus(status: number): boolean {
-	return status === 408 || status === 502 || status === 504;
-}
-
-/**
- * The one decision a status implies for the envelope.
- *
- * `undefined` and every non-ambiguous 4xx/5xx clear it; only the ambiguous three
- * keep it. `401` is the caller's signal to clear ALL scoped storage, because the
- * identity that owned those envelopes is gone.
- */
-export function dispositionForStatus(status: number): EnvelopeDisposition {
-	if (status === 401) return "cleared-all";
-	return isAmbiguousDeliveryStatus(status) ? "kept" : "cleared";
-}
 
 /** `lo-mobile-command:<sessionId>`. */
 export function envelopeKey(sessionId: string): string {
@@ -260,9 +238,14 @@ export class RetryEnvelopeStore {
 		op: ContinuationOp,
 		text: string,
 		images?: PromptImage[],
-	): Promise<ContinuationEnvelope> {
+	): Promise<{ envelope: ContinuationEnvelope; reused: boolean }> {
 		const existing = await this.peek(sessionId);
-		if (existing) return existing;
+		/* `reused` is the signal the composer needs: returning the stored envelope
+		 * is right for a double-tap or a retry, but it silently discards the `text`
+		 * this call was handed, so a caller that sends a genuinely NEW draft while an
+		 * earlier one is unresolved must be able to tell and say "you still have an
+		 * unsent message" instead of replaying the old bytes as if they were new. */
+		if (existing) return { envelope: existing, reused: true };
 		const envelope: ContinuationEnvelope = {
 			op,
 			command_id: this.randomUuid(),
@@ -272,7 +255,7 @@ export class RetryEnvelopeStore {
 				: {}),
 		};
 		await this.hold(sessionId, envelope);
-		return envelope;
+		return { envelope, reused: false };
 	}
 
 	/** The envelope held for a session, or `null`. Expired, oversized and corrupt
@@ -432,39 +415,30 @@ export class RetryEnvelopeStore {
 	}
 }
 
-/** Everything that can happen to a command, reduced to what the envelope cares
- *  about. Callers build these from a `RelayError` (`fromRelayError`). */
+/** Everything that can happen to a command: it was acknowledged, or it failed
+ *  with a classified `RelayError`.
+ *
+ *  There is deliberately no status-keyed arm. The envelope disposition is a
+ *  property of the ERROR (`RelayError.envelope`, decided once in `errors.ts`), not
+ *  of a bare status: `503` alone cannot say whether the connector is absent
+ *  (delivery unknown) or refusing (never forwarded), and a second table keyed on
+ *  status is exactly what let the two disagree. */
 export type SettleOutcome =
 	| { kind: "ack" }
-	| { kind: "http-status"; status: number }
-	| { kind: "transport" }
-	| { kind: "frame-error" };
+	| { kind: "failed"; error: RelayError };
 
 export function dispositionForOutcome(
 	outcome: SettleOutcome,
 ): EnvelopeDisposition {
-	switch (outcome.kind) {
-		case "ack":
+	if (outcome.kind === "ack") return "cleared";
+	switch (outcome.error.envelope) {
+		case "keep":
+			return "kept";
+		case "clear-all":
+			return "cleared-all";
+		case "clear":
 			return "cleared";
-		case "http-status":
-			return dispositionForStatus(outcome.status);
-		case "transport":
-			return "kept";
-		case "frame-error":
-			/* A 2xx body we could not read leaves admission unproven in both
-			 * directions, and the cost of the two errors is asymmetric: replaying a
-			 * deduplicated command is free, losing a user's instruction is not. */
-			return "kept";
 	}
-}
-
-/** The envelope outcome implied by a transport-level `RelayError`. Endpoints
- *  never call this; the command layer does, so the mapping has one definition
- *  and the retry table has one source. */
-export function settleOutcomeFromError(error: RelayError): SettleOutcome {
-	if (error.kind === "malformed-frame") return { kind: "frame-error" };
-	if (error.status === undefined) return { kind: "transport" };
-	return { kind: "http-status", status: error.status };
 }
 
 /** Reads a stored item, tolerant of the wrapper's absence. Returns `null` when
