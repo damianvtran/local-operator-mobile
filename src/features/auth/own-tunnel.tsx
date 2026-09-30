@@ -3,10 +3,7 @@ import { useCallback, useState } from "react";
 import { Text, View } from "react-native";
 
 import { isPrivateHost } from "@/connection";
-import {
-	useConnection,
-	useConnectionState,
-} from "@/features/auth/connection-provider";
+import { useConnection } from "@/features/auth/connection-provider";
 import {
 	COMPUTER_COMMANDS,
 	TUNNEL_COMMANDS,
@@ -15,10 +12,9 @@ import {
 import { runTunnelTest } from "@/features/auth/tunnel-test";
 import type { TunnelTestVerdict } from "@/features/auth/tunnel-verdict";
 import { verdictSentence } from "@/features/auth/tunnel-verdict";
-import { CONTROL, SCREEN } from "@/ui/a11y";
+import { CONTROL, ROLE, SCREEN } from "@/ui/a11y";
 import { Alert } from "@/ui/components/alert";
 import { Button } from "@/ui/components/button";
-import { Card } from "@/ui/components/card";
 import { CommandBlock } from "@/ui/components/command-block";
 import { Divider } from "@/ui/components/divider";
 import { Input } from "@/ui/components/input";
@@ -47,6 +43,28 @@ import { SectionHeader } from "@/ui/components/section-header";
  * Step 4 is the point of the screen: a saved-but-wrong tunnel is a dead app with a
  * spinner, and the verdict names which of the four steps is the broken one.
  */
+/**
+ * A numbered step on this screen, one level ABOVE the command labels.
+ *
+ * Measured before this: the four steps ("1. On the computer" … "4. Test it") and the
+ * command blocks' own labels ("Install on the computer", "Or run it in the
+ * foreground", "Check it") all rendered at the same `mono-label` 11 px in `ink-dim`,
+ * so only the numeral told a reader which was the step and which the sub-step (D9).
+ * The numeral stays mono — it is a machine-side marker — and the words take the
+ * heading step, which is the level the command labels sit under.
+ */
+const StepHeader = ({ label }: { label: string }) => {
+	const [numeral, ...rest] = label.split(" ");
+	return (
+		<View className="flex-row items-baseline gap-2">
+			<Text className="text-mono-sm text-ink-dim">{numeral}</Text>
+			<Text className="text-heading text-ink" accessibilityRole={ROLE.header}>
+				{rest.join(" ")}
+			</Text>
+		</View>
+	);
+};
+
 export default function OwnTunnel() {
 	const router = useRouter();
 	const { saveCustomRoute, connectCustom } = useConnection();
@@ -108,7 +126,7 @@ export default function OwnTunnel() {
 
 				{/* ------------------------------------------------ 1. the computer */}
 				<View className="gap-2">
-					<SectionHeader label="1. On the computer" />
+					<StepHeader label="1. On the computer" />
 					<Text className="text-body-sm text-ink-muted">
 						The relay binds loopback only, so this is the machine that has to
 						run it. Leave it awake while you use the app.
@@ -127,7 +145,7 @@ export default function OwnTunnel() {
 
 				{/* -------------------------------------------------- 2. the tunnel */}
 				<View className="gap-2">
-					<SectionHeader label="2. Publish it" />
+					<StepHeader label="2. Publish it" />
 					<Text className="text-body-sm text-ink-muted">{TUNNEL_RULE}</Text>
 					{TUNNEL_COMMANDS.map((item) => (
 						<CommandBlock
@@ -143,7 +161,7 @@ export default function OwnTunnel() {
 
 				{/* ------------------------------------------------- 3. the address */}
 				<View className="gap-3">
-					<SectionHeader label="3. In the app" />
+					<StepHeader label="3. In the app" />
 					<Input
 						label="Public URL"
 						value={url}
@@ -199,7 +217,7 @@ export default function OwnTunnel() {
 
 				{/* ---------------------------------------------------- 4. the test */}
 				<View className="gap-3">
-					<SectionHeader label="4. Test it" />
+					<StepHeader label="4. Test it" />
 					<Text className="text-body-sm text-ink-muted">
 						This makes a real request through your tunnel before anything is
 						saved.

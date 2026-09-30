@@ -82,13 +82,6 @@ export function transportKind(
 	return "unreachable";
 }
 
-/**
- * The two transport roles `RelayErrorKind` now carries by name
- * (`certificate-rejected`, `host-unresolved`). Read through this set so the switch
- * below stays exhaustive over the union without pretending those two arms do not
- * exist.
- */
-
 /** The one-line sentence beside each verdict, in the app's voice: no status code,
  *  no apology, and a remedy where one exists. */
 export function verdictSentence(verdict: TunnelTestVerdict): string {
@@ -104,8 +97,11 @@ export function verdictSentence(verdict: TunnelTestVerdict): string {
 		case "forbidden":
 			return "That tunnel refused the app. If you put an access policy or a login page in front of it, allow the app through; the relay itself also refuses requests it did not come from, so make sure the tunnel forwards straight to 127.0.0.1:4098 rather than to a dashboard or another app.";
 		case "offline":
+			/* Two sentences, so two separators: the relay's own line ends without
+			 *  punctuation and used to run straight into the remedy
+			 *  ("Tunnel temporarily unavailable On that computer: lop mobile status"). */
 			return verdict.detail
-				? `${verdict.detail} ${verdict.remedy}`
+				? `${verdict.detail}. ${verdict.remedy}`
 				: `The tunnel answered, but the relay behind it is not. ${verdict.remedy}`;
 		case "tls":
 			return "That tunnel's certificate was rejected. Use the https:// address the tunnel printed, choose a tunnel with a certificate a phone will trust, or replace a self-signed certificate on the one you run — the app will not skip the check.";

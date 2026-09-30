@@ -2,23 +2,28 @@
  * The own-tunnel connection test: one real request chain, one verdict.
  *
  * The verdict `classify` decides lives in `tunnel-verdict.ts`; this half is the
- * network work that feeds it, and it is the half that CANNOT be unit-tested in
- * Node (it needs `@/connection`). It is therefore proven outside-in, against the
- * mock relay, in the capture harness.
+ * network work that feeds it.
  *
- * **How it is verified, stated precisely.** The six outcomes are driven through the
- * real path by `tunnel-test.test.ts`, with a transport stub standing in for the
- * network (the transport is the part under test *by* the stub): success, a refused
- * password (401), an access-policy refusal (403), a sleeping computer or stopped
- * daemon (503/502), a request that never completes (timeout) and a transport failure
- * (the `unreachable` sentence). Two of the taxonomy's outcomes — `tls` and `host` —
- * CANNOT be distinguished on the web target: Chrome withholds the reason from a
- * rejected `fetch`, so both arrive as an untyped transport failure there. Their
- * sentences are reachable only from a native build, and this host has no simulator,
- * so they are unevidenced on web and NOT RUN on native. That is a limitation of the
- * instrument, not a claim about the code.
+ * **What is proven here, through the `deps` seam.** `runTunnelTest` takes its
+ * transport as a parameter, so a Node test drives the real branch chain — the real
+ * client, the real admission read, the real classifier — with only the network
+ * stubbed. That covers eight outcomes: success; a refused password (401); an
+ * access-policy refusal (403); a sleeping computer or stopped daemon (503/502); a
+ * 404; a request that never completes (timeout); a transport failure that arrives
+ * untyped; and — because the seam hands the classifier a typed failure too — the two
+ * causes a browser cannot name for us, `certificate-rejected` and `host-unresolved`.
+ * (An earlier version of this comment said this half "CANNOT be unit-tested in Node";
+ * the seam described below already disproved that, so the claim is narrowed.)
  *
- * This file previously claimed all six were verified in the harness. It was not true
+ * **What is still unproven, and why.** A real browser cannot be made to produce a
+ * rejected-certificate or DNS reason through `fetch` — Chrome withholds it — so no
+ * capture in the harness reaches those two sentences end to end; they rest on the
+ * classifier cases named above rather than on a frame. On native the platform does
+ * report them, and nothing here has measured that: no simulator on this host, so a
+ * device reading of a TLS failure and of an unresolvable host is the measurement
+ * that would close it.
+ *
+ * This file previously claimed all six were verified in the harness. That was not true
  * of the taxonomy (QA measured five different faults all rendering "That password was
  * not accepted.", because a dead guard below rethrew every failure as
  * `relay-unauthorized`), so the claim is replaced by the above.

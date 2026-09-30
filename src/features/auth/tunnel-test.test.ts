@@ -28,6 +28,8 @@ type Reply = {
 
 /** A REAL list frame, from the wire contract's own fixtures: the success case has to
  *  pass the app's schema, or it would be testing the stub rather than the path. */
+import { RelayError } from "@/relay";
+
 const LIST_FIXTURE = JSON.parse(
 	readFileSync(
 		fileURLToPath(
@@ -49,13 +51,24 @@ const listReply: Reply = {
 /** A transport that answers the two routes this path uses, per test. */
 const transport =
 	(
-		login: Reply | "reject" | "hang",
+		login: Reply | "reject" | "hang" | "tls" | "host",
 		sessions: Reply = listReply,
 	): typeof globalThis.fetch =>
 	async (input: RequestInfo | URL) => {
 		const url = String(input instanceof Request ? input.url : input);
 		const reply = url.includes("/login") ? login : sessions;
 		if (reply === "reject") throw new TypeError("Failed to fetch");
+		/* The typed failures the real client raises when the platform CAN tell the
+		 *  two apart. This is the seam's whole purpose: a browser's `fetch` reports a
+		 *  rejected certificate and an unresolvable host as one untyped rejection, so
+		 *  without this the classifier's two arms for them could not be reached. */
+		if (reply === "tls")
+			throw new RelayError(
+				"certificate-rejected",
+				"the certificate was rejected",
+			);
+		if (reply === "host")
+			throw new RelayError("host-unresolved", "the host could not be resolved");
 		if (reply === "hang") return new Promise<Response>(() => {});
 		return new Response(reply.body ?? "", {
 			status: reply.status,
@@ -63,7 +76,10 @@ const transport =
 		});
 	};
 
-const test = (login: Reply | "reject" | "hang", timeoutMs = 300) =>
+const test = (
+	login: Reply | "reject" | "hang" | "tls" | "host",
+	timeoutMs = 300,
+) =>
 	runTunnelTest(
 		{
 			url: URL_OK,
@@ -104,9 +120,13 @@ describe("runTunnelTest reaches its own verdict for every fault", () => {
 		expect(verdictSentence(result.verdict)).not.toContain("password was not");
 	});
 
-	it("reads a 404 as the address no longer being a tunnel", async () => {
+	it("reads a 404 as unreachable rather than as a password problem", async () => {
+		// The name states what the assertion checks. It used to claim a reading the
+		// taxonomy has no kind for ("the address no longer being a tunnel"); a 404 on
+		// the admission route means nothing is there, and the assertion says so.
 		const result = await test({ status: 404, body: "unknown tunnel host" });
 		expect(result.verdict.kind).toBe("unreachable");
+		expect(verdictSentence(result.verdict)).not.toContain("password was not");
 	});
 
 	it("reads a rejected request as unreachable rather than as a bad password", async () => {
@@ -121,6 +141,20 @@ describe("runTunnelTest reaches its own verdict for every fault", () => {
 	it("reads a request that never answers as a timeout", async () => {
 		const result = await test("hang", 150);
 		expect(["timeout", "unreachable"]).toContain(result.verdict.kind);
+	});
+
+	it("names a rejected certificate as the certificate", async () => {
+		// The case a self-signed cloudflared/ngrok certificate produces. Unreachable
+		// from a browser capture, reachable here.
+		const result = await test("tls");
+		expect(result.verdict.kind).toBe("tls");
+		expect(verdictSentence(result.verdict)).not.toContain("password was not");
+	});
+
+	it("names an unresolvable host as one", async () => {
+		const result = await test("host");
+		expect(result.verdict.kind).toBe("host");
+		expect(verdictSentence(result.verdict)).not.toContain("password was not");
 	});
 });
 

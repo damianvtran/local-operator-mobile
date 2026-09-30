@@ -143,6 +143,16 @@ export type Connection = {
 	retry: () => Promise<void>;
 	/** Whether a connection attempt is in flight. */
 	busy: boolean;
+	/** True once the cold start has finished deciding whether there is anything to
+	 *  resume — the saved own-tunnel read, or a `?lo-relay` override.
+	 *
+	 *  A screen cannot tell "no credentials YET" from "no credentials" without it, and
+	 *  that difference is a whole screen's honesty: the store's initial phase IS
+	 *  `signed-out`, so the first render of a CONNECTED cold start looks identical to a
+	 *  first run. A screen that routed to the welcome surface on `!route` alone bounced
+	 *  a connected reader to `/welcome` on every launch (it did exactly that on the
+	 *  capture harness's cells, which never reached the relay at all). */
+	coldStartSettled: boolean;
 	/** The live client, or `null` when there is no route. A screen uses it for the
 	 *  read and command routes it owns, and never builds a path or a URL itself —
 	 *  `src/relay/endpoints.ts` is the only module that knows the relay's shape. */
@@ -204,6 +214,9 @@ export const ConnectionProvider = ({
 }) => {
 	const [busy, setBusy] = useState(false);
 	const [discovering, setDiscovering] = useState(false);
+	/* See `Connection.coldStartSettled`. */
+	const [coldStartSettled, setColdStartSettled] = useState(false);
+	const cancelledRef = useRef(false);
 	const [savedTunnel, setSavedTunnel] = useState<SavedTunnel | null>(null);
 	const [streamHealth, setStreamHealth] = useState<StreamHealth>("idle");
 	const [signInState, setSignInState] = useState<SignInState>({ kind: "idle" });
@@ -653,24 +666,33 @@ export const ConnectionProvider = ({
 	useEffect(() => {
 		const override = webRelayOverride();
 		if (override) {
-			void connectCustom(override);
+			void connectCustom(override).finally(() => {
+				if (!cancelledRef.current) setColdStartSettled(true);
+			});
 			return;
 		}
 		let cancelled = false;
+		cancelledRef.current = false;
 		void (async () => {
-			const stored = await readSavedTunnel();
-			if (cancelled || !stored) return;
-			setSavedTunnel(stored);
-			if (stored.password != null) {
-				await connectCustom({
-					url: stored.baseUrl,
-					password: stored.password,
-					allowInsecure: stored.allowInsecure,
-				});
+			try {
+				const stored = await readSavedTunnel();
+				if (cancelled || !stored) return;
+				setSavedTunnel(stored);
+				if (stored.password != null) {
+					await connectCustom({
+						url: stored.baseUrl,
+						password: stored.password,
+						allowInsecure: stored.allowInsecure,
+					});
+				}
+			} finally {
+				/* Settled either way: "nothing saved" is a decision, not a pending read. */
+				if (!cancelled) setColdStartSettled(true);
 			}
 		})();
 		return () => {
 			cancelled = true;
+			cancelledRef.current = true;
 		};
 	}, [connectCustom]);
 
@@ -714,6 +736,7 @@ export const ConnectionProvider = ({
 			retry,
 			relay: () => clientRef.current,
 			busy,
+			coldStartSettled,
 			streamHealth,
 			signInState,
 			lastError,
@@ -734,6 +757,7 @@ export const ConnectionProvider = ({
 			tunnelStoragePersistent,
 			retry,
 			busy,
+			coldStartSettled,
 			streamHealth,
 			signInState,
 			lastError,

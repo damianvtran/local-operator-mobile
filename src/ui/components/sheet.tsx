@@ -6,7 +6,6 @@ import {
 	Modal,
 	Pressable,
 	ScrollView,
-	Text,
 	View,
 } from "react-native";
 

@@ -263,8 +263,13 @@ export default function PastSessions() {
 
 /** A coarse age. "3 h ago" is the resolution a reader needs from a list; the
  *  exact minute is on the session itself. */
-function relativeTime(mtime: number): string {
-	const seconds = Math.max(0, Math.round((Date.now() - mtime) / 1000));
+export function relativeTime(mtime: number): string {
+	/* `mtime` is SECONDS (`fixtures/relay/http/past-with-rows.json` carries
+	 *  1790727370 — 2026-09-29T00:16Z). Subtracting it from `Date.now()`'s
+	 *  MILLISECONDS dated every row to 1970: the shipped fixture value rendered
+	 *  "20706 d ago" where the honest reading is "21 h ago", and it also meant the
+	 *  minute/hour rungs below could never be reached. */
+	const seconds = Math.max(0, Math.round(Date.now() / 1000 - mtime));
 	if (seconds < 60) return "just now";
 	const minutes = Math.round(seconds / 60);
 	if (minutes < 60) return `${minutes} min ago`;

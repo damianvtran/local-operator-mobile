@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { Pressable, Text, View } from "react-native";
+import { Text, View } from "react-native";
 
 import { useConnectorWait } from "@/features/auth/connector-wait";
-import { CONTROL, ROLE } from "@/ui/a11y";
+import { CONTROL } from "@/ui/a11y";
 import { Alert } from "@/ui/components/alert";
 import { Button } from "@/ui/components/button";
 import { Card } from "@/ui/components/card";

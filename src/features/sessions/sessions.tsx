@@ -59,7 +59,20 @@ import { useTextScale } from "@/ui/text-scale-provider";
  *     own status, and the connection layer never reports a rotation — so nothing
  *     here can flash once a minute.
  */
-const ActionBar = ({ onMeasure }: { onMeasure: (height: number) => void }) => {
+const ActionBar = ({
+	onMeasure,
+	primaryOnly = false,
+}: {
+	onMeasure: (height: number) => void;
+	/** Just the primary action, when the list header carries the navigation.
+	 *
+	 *  Two measured reasons, both from the design round: at 200 % text on a 320 pt
+	 *  phone the bar's two rows took 224 of 568 pt and left the list a 125 pt window
+	 *  against a 130 pt row — no complete row on screen (D2); and at split width the
+	 *  pane that lists is the one that should own "Past"/"Computers", not the empty
+	 *  detail pane beside it (D8). */
+	primaryOnly?: boolean;
+}) => {
 	const router = useRouter();
 
 	return (
@@ -77,32 +90,42 @@ const ActionBar = ({ onMeasure }: { onMeasure: (height: number) => void }) => {
 				onPress={() => router.push("/new")}
 				testID={CONTROL.sessionsNew}
 			/>
-			<View className="flex-row gap-2">
-				<View className="flex-1">
-					<Button
-						label="Past"
-						onPress={() => router.push("/past")}
-						variant="quiet"
-						testID={CONTROL.sessionsPast}
-					/>
+			{primaryOnly ? null : (
+				<View className="flex-row gap-2">
+					<View className="flex-1">
+						<Button
+							label="Past"
+							onPress={() => router.push("/past")}
+							variant="quiet"
+							testID={CONTROL.sessionsPast}
+						/>
+					</View>
+					<View className="flex-1">
+						<Button
+							testID={CONTROL.sessionsComputers}
+							label="Computers"
+							onPress={() => router.push("/tunnels")}
+							variant="quiet"
+						/>
+					</View>
 				</View>
-				<View className="flex-1">
-					<Button
-						testID={CONTROL.sessionsComputers}
-						label="Computers"
-						onPress={() => router.push("/tunnels")}
-						variant="quiet"
-					/>
-				</View>
-			</View>
+			)}
 		</View>
 	);
 };
 
 export default function Sessions() {
 	const router = useRouter();
-	const { refreshList, retry, relay, refusal, busy, streamHealth } =
-		useConnection();
+	const {
+		refreshList,
+		retry,
+		relay,
+		refusal,
+		busy,
+		streamHealth,
+		coldStartSettled,
+		savedTunnel,
+	} = useConnection();
 	const showToast = useUiStore((state) => state.showToast);
 	/* The split decision, read once: the SAME value drives the cap opt-out below and
 	 *  `SplitView`'s own choice, so the two cannot disagree about whether this screen
@@ -117,7 +140,6 @@ export default function Sessions() {
 	const computers = useConnectionState((state) => state.computers);
 	const tunnelId = useConnectionState((state) => state.tunnelId);
 	const route = useConnectionState((state) => state.route);
-	const _route = useConnectionState((state) => state.route);
 
 	const [searching, setSearching] = useState(false);
 	const [query, setQuery] = useState("");
@@ -158,6 +180,47 @@ export default function Sessions() {
 	 *  arrives through the root font size, so the preference alone reads 1. */
 	const { effectiveScale } = useTextScale();
 	const largeText = effectiveScale > LARGE_TEXT_SCALE;
+
+	/* The list's navigation lives in ITS OWN header when the pinned bar cannot carry
+	 *  it: at split width the pane that lists should own "Past"/"Computers" (D8), and
+	 *  at large text the bar's second row is what left a 320 pt phone a 125 pt list
+	 *  window against a 130 pt row (D2). One flag, one place. */
+	const navInHeader = layout.split || largeText;
+
+	/* A cold start with no route belongs on the welcome surface.
+	 *
+	 * The store documents `signed-out` as "no route, no credentials: the welcome
+	 * screen", the flows begin there, and the welcome screen is polished and was
+	 * reachable only by typing its URL — while `/` showed three permanently pulsing
+	 * skeletons and a "Not answering" pill for a computer that had never been asked
+	 * (D3). */
+	const routed = route !== null;
+	const phase = useConnectionState((state) => state.phase);
+	useEffect(() => {
+		/* NOTHING TO RESUME, and the cold start has said so.
+		 *
+		 *  Every clause is load-bearing, and each one was measured against the
+		 *  harness's cells before it was written:
+		 *   - `coldStartSettled`: the store's INITIAL phase is `signed-out`, so the
+		 *     first render of a connected launch looks exactly like a first run;
+		 *   - `refusal === null`: a refused sign-in ALSO returns the phase to
+		 *     `signed-out` (connection-store.ts), and a refusal has its own surface to
+		 *     render on the list — bouncing it away would hide the reason;
+		 *   - `savedTunnel === null`: a saved own-tunnel with no remembered password is
+		 *     a configured computer whose password the list must ask for, not a
+		 *     first run;
+		 *   - `!routed`: a route exists, so the list is the screen. */
+		if (
+			coldStartSettled &&
+			!busy &&
+			!routed &&
+			refusal === null &&
+			savedTunnel === null &&
+			phase === "signed-out"
+		) {
+			router.replace("/welcome");
+		}
+	}, [busy, coldStartSettled, phase, refusal, router, routed, savedTunnel]);
 
 	const sections = useMemo(() => splitSections(filtered), [filtered]);
 	const waiting = attentionCount(sessions);
@@ -208,26 +271,42 @@ export default function Sessions() {
 					className="min-w-0 flex-1 justify-center"
 					style={{ minHeight: TOUCH_FLOOR }}
 				>
+					{/* Mono: this label is a host or a computer name — a machine string the
+					 *  reader matches against their own terminal (N1, brand-kit § 3.5). */}
 					<Text
-						className="text-label text-ink-muted"
+						className="text-mono-sm text-ink-muted"
 						numberOfLines={1}
 						ellipsizeMode="tail"
 					>
 						{listLabel(computers, tunnelId, route)}
 					</Text>
 				</Pressable>
-				{/* The list pane's own action, and only when the pane exists: with the bar on
-				 *  the detail side, the list would otherwise have no way to start a session.
-				 *  On a phone this renders nothing and the pinned bar is exactly what it
-				 *  was. */}
-				{layout.split ? (
-					<Button
-						label="New"
-						size="sm"
-						variant="quiet"
-						onPress={() => router.push("/new")}
-						testID={CONTROL.sessionsNewInPane}
-					/>
+				{/* The list's own navigation, when the pinned bar is not carrying it.
+				 *
+				 *  Split width: the pane that LISTS owns "Past"/"Computers" — the bar moved
+				 *  to the detail pane, and navigation for the list read as belonging to an
+				 *  empty detail pane beside it (D8). Large text: the bar's second row is
+				 *  what left a 320 pt phone a 125 pt list window against a 130 pt row, so
+				 *  the navigation moves up here and the bar keeps one row (D2). Both cases
+				 *  are the same control in the same place, so they share this slot rather
+				 *  than two layouts that would drift. */}
+				{navInHeader ? (
+					<>
+						<Button
+							label="Past"
+							size="sm"
+							variant="quiet"
+							onPress={() => router.push("/past")}
+							testID={CONTROL.sessionsPastInHeader}
+						/>
+						<Button
+							label="Computers"
+							size="sm"
+							variant="quiet"
+							onPress={() => router.push("/tunnels")}
+							testID={CONTROL.sessionsComputersInHeader}
+						/>
+					</>
 				) : null}
 			</View>
 
@@ -268,7 +347,9 @@ export default function Sessions() {
 					Its transcript, composer and approval cards open here.
 				</Text>
 			</View>
-			{layout.split ? <ActionBar onMeasure={setFooterHeight} /> : null}
+			{layout.split ? (
+				<ActionBar onMeasure={setFooterHeight} primaryOnly />
+			) : null}
 		</ReadableColumn>
 	);
 
@@ -338,7 +419,7 @@ export default function Sessions() {
 			 *  It appears only when it has something to say: a permanent "Connected" dot
 			 *  is furniture the eye learns to skip (the first captured frame showed it as
 			 *  a stray mark under the title). */}
-			{pillState(streamHealth, stale) !== "connected" ? (
+			{routed && pillState(streamHealth, stale) !== "connected" ? (
 				<View className="px-4 pb-2">
 					<ConnectionPill
 						state={pillState(streamHealth, stale)}
@@ -410,7 +491,9 @@ export default function Sessions() {
 							 *  height instead of centring itself into it. */
 							<View className={largeText ? "flex-none" : "flex-1"}>
 								<ListEmpty
-									waiting={frameCount === 0 && !loadFailed(streamHealth)}
+									waiting={
+										routed && frameCount === 0 && !loadFailed(streamHealth)
+									}
 									hasRoute={sessions.length > 0 || frameCount > 0}
 									query={query}
 									onNew={() => router.push("/new")}
@@ -429,7 +512,9 @@ export default function Sessions() {
 			 *  across the whole screen it drew a 1,366 pt bar under both panes — the layout
 			 *  a designer reads as a phone bar stretched. The list pane keeps its own way
 			 *  in, in its pane header. */}
-			{layout.split ? null : <ActionBar onMeasure={setFooterHeight} />}
+			{layout.split ? null : (
+				<ActionBar onMeasure={setFooterHeight} primaryOnly={navInHeader} />
+			)}
 
 			{/* Long-press rather than a swipe: the same action, a gesture a reader
 			 *  discovers by trying it, and a sheet that names what it is about to do. */}

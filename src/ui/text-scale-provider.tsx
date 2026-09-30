@@ -3,6 +3,7 @@ import { PixelRatio, Platform, useWindowDimensions } from "react-native";
 import { ScopedVariables } from "uniwind";
 
 import {
+	clampTextScale,
 	resolveTextScale,
 	scaledTextVariables,
 	TEXT_SCALE_PERCENTS,
@@ -50,8 +51,12 @@ export function platformTextScale(): number {
 	if (typeof document === "undefined" || !document.documentElement) return 1;
 	const root = globalThis.getComputedStyle?.(document.documentElement);
 	const parsed = Number.parseFloat(root?.fontSize ?? "");
+	/* Clamped HERE, where the number is read, rather than at a call site that can
+	 *  forget: this value reaches `effectiveScale`, the diagnostics row and every
+	 *  `LARGE_TEXT_SCALE` layout decision, and a misreported root size (a stray
+	 *  `!important`, an odd user stylesheet) must not become a 3.5x ramp. */
 	return Number.isFinite(parsed) && parsed > 0
-		? parsed / ROOT_FONT_BASELINE_PX
+		? clampTextScale(parsed / ROOT_FONT_BASELINE_PX)
 		: 1;
 }
 
@@ -113,7 +118,7 @@ export function useTextScale(): TextScale {
 	 * size to do the work, so the factor is applied to the values instead — by
 	 * `scaledTextVariables` for `px`, which is a different place from this line but
 	 * still exactly once. */
-	const scale = resolveTextScale(preference, 1);
+	const scale = resolveTextScale(preference);
 
 	/* ONE rule, in the one place the factor is decided: the emitted value never
 	 * carries the platform's factor, and the unit selects which mechanism applies it

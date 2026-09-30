@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+	clampTextScale,
 	parseTextScalePreference,
 	resolveTextScale,
 	scaledTextVariables,
@@ -19,23 +20,35 @@ import { TYPE_STEPS } from "@/ui/tokens.gen";
  */
 
 describe("resolveTextScale", () => {
-	it("follows the platform when nothing was chosen", () => {
-		expect(resolveTextScale("system", 1.3)).toBeCloseTo(1.3);
+	it("defers to the platform by returning no factor of its own", () => {
+		// The platform's factor is not this function's business: the unit applies
+		// it (`TextUnit`) and the provider bounds it where it is READ. The signature
+		// no longer accepts it, so the double application B1 found cannot be
+		// reintroduced by a call site that passes it here.
+		expect(resolveTextScale("system")).toBe(1);
 	});
 
-	it("REPLACES the platform signal when a step was chosen", () => {
-		// The decision that matters: a reader whose phone is already at 200 % must
-		// not get 400 % by asking for 200 %.
-		expect(resolveTextScale("200", 2)).toBe(2);
-		expect(resolveTextScale("100", 2)).toBe(1);
+	it("returns the chosen step as a factor", () => {
+		expect(resolveTextScale("200")).toBe(2);
+		expect(resolveTextScale("100")).toBe(1);
 	});
 
-	it("clamps a misreported platform signal into a usable range", () => {
-		// A signal outside the bounds is a misreported value, not a request: below
-		// 0.8 type stops being readable, above 3 every layout truncates.
-		expect(resolveTextScale("system", 0)).toBe(0.8);
-		expect(resolveTextScale("system", 99)).toBe(3);
-		expect(resolveTextScale("system", Number.NaN)).toBe(1);
+	it("bounds a chosen step that a corrupt preference got past the parser", () => {
+		expect(resolveTextScale("400" as never)).toBe(3);
+		expect(resolveTextScale("10" as never)).toBe(0.8);
+	});
+});
+
+describe("clampTextScale", () => {
+	it("bounds the platform reading the provider takes", () => {
+		// `platformTextScale` divides the browser's root font size by the baseline
+		// and clamps the result, because that number reaches `effectiveScale`, the
+		// diagnostics row and every large-text layout decision: a misreported root
+		// size must not become a 3.5x ramp (R2-2).
+		expect(clampTextScale(0)).toBe(0.8);
+		expect(clampTextScale(99)).toBe(3);
+		expect(clampTextScale(Number.NaN)).toBe(1);
+		expect(clampTextScale(2)).toBe(2);
 	});
 });
 

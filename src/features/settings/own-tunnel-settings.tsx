@@ -1,10 +1,7 @@
 import { useCallback, useState } from "react";
 import { Text, View } from "react-native";
 
-import {
-	useConnection,
-	useConnectionState,
-} from "@/features/auth/connection-provider";
+import { useConnection } from "@/features/auth/connection-provider";
 import { runTunnelTest } from "@/features/auth/tunnel-test";
 import type { TunnelTestVerdict } from "@/features/auth/tunnel-verdict";
 import { verdictSentence } from "@/features/auth/tunnel-verdict";
@@ -108,7 +105,10 @@ export const OwnTunnelSettings = () => {
 			<SectionHeader label="Your own tunnel" />
 			{saved && !editing ? (
 				<View className="gap-2">
-					<Text className="text-body-sm text-ink" numberOfLines={1}>
+					{/* Mono: a host:port is exactly the voice brand-kit § 3.5 rations mono
+					 *  to (paths, ids, hosts), and it is the string a reader compares
+					 *  character by character against what their tunnel printed (N1). */}
+					<Text className="text-mono-sm text-ink" numberOfLines={1}>
 						{saved.baseUrl}
 					</Text>
 					<Text className="text-body-sm text-ink-dim">
@@ -242,10 +242,14 @@ export const OwnTunnelSettings = () => {
 			) : null}
 
 			{!saved && !editing ? (
+				/* `outline`, not `quiet`: a full-width transparent label under a section
+				 *  header reads as a centred caption — no boundary, no cue that it is
+				 *  pressable — while the row above it in the same surface shows what a
+				 *  control looks like (D10). */
 				<Button
 					label="Set up your own tunnel"
 					onPress={() => void beginEdit()}
-					variant="quiet"
+					variant="outline"
 					size="sm"
 					testID={CONTROL.ownTunnelPathAction}
 				/>

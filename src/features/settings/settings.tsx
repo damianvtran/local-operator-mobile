@@ -141,7 +141,16 @@ export default function Settings() {
 					<SectionHeader label="Connection" />
 					<View className="flex-row items-center justify-between">
 						<Text className="text-body-sm text-ink-muted">Status</Text>
-						<ConnectionPill state={pillFor(streamHealth, refusal !== null)} />
+						{/* The WORD, not just the dot. In the list the connected state is
+						 *  deliberately silent (it is furniture there), but this is the VALUE
+						 *  of a row whose label is "Status", and it was a 22x14 pt dot with an
+						 *  accessible name of "Connection: " — the one state a reader looks
+						 *  for, carried by colour alone, which the kit forbids in the same
+						 *  file. The prop already existed. */}
+						<ConnectionPill
+							state={pillFor(streamHealth, refusal !== null)}
+							message="Connected"
+						/>
 					</View>
 					{computers.length > 0 ? (
 						<View className="gap-2 pt-1">

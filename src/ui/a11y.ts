@@ -118,6 +118,8 @@ export const CONTROL = {
 	/* --- added by the wave-2 screen slice (D1): the auth, tunnel and list
 	 * controls it renders. Additive — main's names above are untouched, because the
 	 * Maestro flows in `e2e/maestro/**` reference the ones below. --- */
+	sessionsPastInHeader: "sessions-past-in-header",
+	sessionsComputersInHeader: "sessions-computers-in-header",
 	sessionsPast: "sessions-past",
 	signInStart: "sign-in-start",
 
@@ -176,7 +178,6 @@ export const CONTROL = {
 	splitPaneEnd: "split-pane-end",
 	splitBody: "split-body",
 	sessionsDetailColumn: "sessions-detail-column",
-	sessionsNewInPane: "sessions-new-in-pane",
 	/* --- the list, past-list and new-session controls the flows address. --- */
 	newSessionCwd: "new-session-cwd",
 	newSessionModel: "new-session-model",
@@ -189,6 +190,7 @@ export const CONTROL = {
 
 	computersUseThisComputer: "computers-use-this-computer",
 	computersStartAgain: "computers-start-again",
+	computersBack: "computers-back",
 	computersRefresh: "computers-refresh",
 	ownTunnelBack: "own-tunnel-back",
 	setupCreateTunnel: "setup-create-tunnel",

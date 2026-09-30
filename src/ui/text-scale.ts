@@ -37,10 +37,19 @@ export const TEXT_SCALE_PERCENTS = [100, 150, 200] as const;
 export type TextScalePercent = (typeof TEXT_SCALE_PERCENTS)[number];
 
 /**
- * `system` follows the device/browser; a percent is an explicit override that
- * REPLACES the platform scale rather than multiplying it. Replacing is the
- * honest model: a reader who asks for 200 % because their OS is at 100 % should
- * get 200 %, and one whose OS is already at 200 % should not silently get 400 %.
+ * `system` follows the device/browser; a percent is an explicit override.
+ *
+ * What the override DOES depends on the platform, and the two are different enough
+ * that the comment used to be wrong on one of them:
+ *
+ *  - **web**: it REPLACES the browser's factor. An explicit preference emits `px`, so
+ *    the reader who asks for 200 % gets 200 % even in a browser set to 200 % — not
+ *    400 % (see `TextUnit`, which is where the unit decision and its measurements are).
+ *  - **native**: it COMPOUNDS on the OS setting. React Native scales every `fontSize`
+ *    by `PixelRatio.getFontScale()` itself and `allowFontScaling` is left on by design
+ *    (`design/brand-kit.md` § 3.4), so a phone already at 200 % asking for 200 % renders
+ *    4x. Turning that off to make the native rule match the web one would take the
+ *    platform's own accessibility setting away from a reader, which is the worse trade.
  */
 export type TextScalePreference = "system" | `${TextScalePercent}`;
 
@@ -67,12 +76,18 @@ export function parseTextScalePreference(value: unknown): TextScalePreference {
 		: "system";
 }
 
-/** What actually renders: the override, or the platform's own signal. */
-export function resolveTextScale(
-	preference: TextScalePreference,
-	platformScale: number,
-): number {
-	if (preference === "system") return clampTextScale(platformScale);
+/**
+ * The PREFERENCE's own factor: `1` when it defers to the platform, the chosen
+ * percentage otherwise, clamped to `TEXT_SCALE_BOUNDS`.
+ *
+ * The platform's factor is deliberately NOT a parameter. It used to be, and the
+ * provider passed a literal `1` in the place that looked like the platform's —
+ * a signature that invites putting the platform's factor back here, which is exactly
+ * the double application B1 was. The platform's factor is applied by the unit (see
+ * `TextUnit`) and bounded where it is READ (`platformTextScale`).
+ */
+export function resolveTextScale(preference: TextScalePreference): number {
+	if (preference === "system") return 1;
 	return clampTextScale(Number(preference) / 100);
 }
 

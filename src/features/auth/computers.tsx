@@ -334,6 +334,19 @@ export default function Computers() {
 		<Screen
 			title={empty ? "Set up a computer" : "Computers"}
 			testID={SCREEN.computers}
+			/* The way back. Every sibling screen in this flow has one (`own-tunnel`,
+			 *  `sign-in`, `settings`), and "Set up a computer" is reachable from the list,
+			 *  from Settings and from a refusal surface — arriving from any of them with
+			 *  no back control leaves the platform gesture as the only exit (D7). */
+			headerLeading={
+				<Button
+					testID={CONTROL.computersBack}
+					label="Back"
+					onPress={() => router.back()}
+					variant="quiet"
+					size="sm"
+				/>
+			}
 			headerAction={
 				!empty ? (
 					<Button

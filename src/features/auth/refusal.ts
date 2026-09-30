@@ -48,7 +48,9 @@ const REMEDY: Partial<Record<ErrorSurface, string>> = {
 };
 
 /**
- * `ErrorSurface` → `RefusalKind`.
+ * `ErrorSurface` → `RefusalKind`, exhaustively over the CURRENT union: a surface
+ * added upstream breaks this file's types until it has copy, which is the point —
+ * the alternative is a failure that maps to `undefined` and renders nothing.
  *
  * Two mappings are decisions rather than renames:
  *
@@ -59,9 +61,6 @@ const REMEDY: Partial<Record<ErrorSurface, string>> = {
  *  - `none` never reaches here: a failure with no surface is one the caller
  *    handles silently, and showing it would be the app inventing a problem.
  */
-/** `ErrorSurface` → `RefusalKind`, exhaustively over the CURRENT union: a surface
- *  added upstream breaks this file's types until it has copy, which is the point —
- *  the alternative is a failure that maps to `undefined` and renders nothing. */
 const KIND: Record<Exclude<ErrorSurface, "none">, RefusalKind> = {
 	"computer-offline": "computer-offline",
 	"relay-stopped": "relay-stopped",

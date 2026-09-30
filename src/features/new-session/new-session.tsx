@@ -5,6 +5,7 @@ import { Text, View } from "react-native";
 
 import type { Directories, ModelEntry } from "@/contracts";
 import { useConnection } from "@/features/auth/connection-provider";
+import { RelayError } from "@/relay";
 import { useUiStore } from "@/state/ui-store";
 import { CONTROL, SCREEN } from "@/ui/a11y";
 import { Alert } from "@/ui/components/alert";
@@ -124,9 +125,13 @@ export default function NewSession() {
 		} catch (error) {
 			/* The relay's own sentence when it has one (it names the folder or the
 			 * reason), and never a status code. The form keeps every field. */
+			/* The relay's own accessor when the failure came from there — the same rule
+			 *  `tunnel-verdict.ts` follows — so a transport failure cannot put a
+			 *  runtime's words ("Failed to fetch") in front of a reader. Anything else
+			 *  falls back to the sentence this screen already owns. */
 			const detail =
-				error instanceof Error && error.message.length > 0
-					? error.message
+				error instanceof RelayError
+					? error.displayableMessage
 					: `That folder doesn't exist on this computer.`;
 			setProblem(detail);
 		} finally {
