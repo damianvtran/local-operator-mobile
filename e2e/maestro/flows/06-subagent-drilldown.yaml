@@ -1,0 +1,52 @@
+# F-7 / S6 — drill into a subagent and back.
+#
+# The roster on the projection is *stripped* (prompt, result, transcript and todos
+# emptied) and re-materialised only on the detail route, so this flow is also the
+# check that the app fetches the detail rather than rendering empty fields from
+# the roster: the assertions below are on content that only exists on `/agents/{job}`.
+appId: ${APP_ID}
+name: "F-7 subagent drill-down"
+env:
+  APP_ID: com.radient.localoperator.mobile
+  SESSION_ID: 6714def86197
+  JOB_ID: job-1
+---
+- launchApp:
+    clearState: true
+- runFlow: "01-first-run-sign-in.yaml"
+---
+- tapOn:
+    id: "session-row-${SESSION_ID}"
+- extendedWaitUntil:
+    visible:
+      id: "subagent-strip"
+    timeout: 15000
+- takeScreenshot: "07-00-subagent-strip"
+- assertVisible:
+    id: "subagent-chip-${JOB_ID}"
+- assertVisible:
+    id: "subagent-status-running"
+- takeScreenshot: "07-01-roster"
+- tapOn:
+    id: "subagent-chip-${JOB_ID}"
+- extendedWaitUntil:
+    visible:
+      id: "subagent-detail"
+    timeout: 15000
+- takeScreenshot: "07-02-detail"
+# Content that the roster strips: if these render empty, the app is drawing the
+# aggregate instead of the detail route.
+- assertVisible:
+    id: "subagent-detail-prompt"
+- assertVisible:
+    id: "subagent-detail-transcript"
+- takeScreenshot: "07-03-detail-content"
+- scrollUntilVisible:
+    element:
+      id: "subagent-detail-todos"
+    direction: DOWN
+- takeScreenshot: "07-04-detail-todos"
+- back
+- takeScreenshot: "07-05-back-on-session"
+- assertVisible:
+    id: "session-transcript"

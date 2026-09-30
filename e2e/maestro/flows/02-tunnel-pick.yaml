@@ -1,0 +1,39 @@
+# F-2/F-4 — pick a computer, and the switcher.
+#
+# The tunnel list comes from the discovery API, and the *reachability* comes from
+# a probe: ADR 0002 and `docs/relay/tunnel-edge.md` §4 are explicit that
+# `status: active` means the cloud route is provisioned, never that the machine
+# is awake. So this flow asserts both facts separately — the row says active, and
+# the reachability chip says the probe reached it — because a screen that shows
+# one as the other is the defect the mapping warns about.
+#
+# CI-only: needs a booted simulator or emulator and an app build.
+appId: ${APP_ID}
+name: "F-2 pick a computer"
+env:
+  APP_ID: com.radient.localoperator.mobile
+  TUNNEL_HOST: 0123456789abcdef0123456789abcdef-lop.radienthq.com
+---
+- launchApp:
+    clearState: true
+- takeScreenshot: "02-00-launch"
+- runFlow: "01-first-run-sign-in.yaml"
+---
+- tapOn:
+    id: "computers-button"
+- takeScreenshot: "02-01-computers-empty-or-list"
+- assertVisible:
+    id: "computers-list"
+- takeScreenshot: "02-02-computer-rows"
+# The provisioning/reachability split, asserted separately on purpose.
+- assertVisible:
+    id: "computer-row-status-${TUNNEL_HOST}"
+- assertVisible:
+    id: "computer-row-reachability-${TUNNEL_HOST}"
+- takeScreenshot: "02-03-row-both-facts"
+- tapOn:
+    id: "computer-row-${TUNNEL_HOST}"
+- takeScreenshot: "02-04-selected"
+- assertVisible:
+    id: "computer-selected-marker"
+- takeScreenshot: "02-05-back-on-list"

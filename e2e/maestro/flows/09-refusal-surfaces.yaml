@@ -1,0 +1,57 @@
+# S13 — the sustained-failure surfaces: what the user sees when it does not recover.
+#
+# One flow per refusal family, so a copy or a control that goes missing is caught
+# by name rather than by a screenshot nobody diffs. Each is run against the mock
+# relay pinned to that refusal (`--scenario gateway-503-<reason>` or
+# `--scenario edge-<id>`), which is what makes an otherwise-unreachable state
+# routine to test.
+#
+# The rule these assert: **the surface names a cause and a remedy, and never shows
+# a status code.** ADR 0003 and `docs/relay/tunnel-edge.md` §6 both say the failure
+# taxonomy has five faces, not a status-code dump.
+appId: ${APP_ID}
+name: "S13 refusal surfaces"
+env:
+  APP_ID: com.radient.localoperator.mobile
+---
+- launchApp:
+    clearState: true
+- runFlow: "01-first-run-sign-in.yaml"
+---
+# 1. The computer is offline: Cloudflare's 1033, or a gateway 502. The remedy is
+#    machine-side, and re-authenticating would be wrong.
+- assertVisible:
+    id: "connection-error-computer-offline"
+- assertVisible:
+    id: "connection-error-machine-remedy"
+- takeScreenshot: "13-00-computer-offline"
+- assertNotVisible:
+    id: "connection-error-sign-in"
+# 2. The tunnel is gone: terminal for that URL, with a console link.
+- takeScreenshot: "13-01-rendered"
+- assertVisible:
+    id: "connection-error-tunnel-unavailable"
+- assertVisible:
+    id: "connection-error-console-link"
+- assertNotVisible:
+    id: "connection-error-retry-prominent"
+# 3. Sign in again: the edge's 401 with the re-auth hint header. This one *does*
+#    offer sign-in and must not say "computer offline" — the connector was reached.
+- assertNotVisible:
+    id: "connection-error-computer-offline"
+# 4. Waiting: `authorization_deferred` clears by itself within the deferral
+#    window, so the surface says so and retries rather than sending the user away.
+- assertVisible:
+    id: "connection-error-waiting"
+- assertVisible:
+    id: "connection-error-clears-by-itself"
+- takeScreenshot: "13-02-waiting"
+# 5. The relay is not installed on the machine: a local prerequisite, not a tunnel
+#    problem.
+- assertVisible:
+    id: "connection-error-relay-not-installed"
+- takeScreenshot: "13-03-relay-not-installed"
+# In every case: no bare status code anywhere on screen.
+- assertNotVisible: "503"
+- assertNotVisible: "502"
+- assertNotVisible: "401"

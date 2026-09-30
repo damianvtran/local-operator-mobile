@@ -1,0 +1,121 @@
+/**
+ * The matrix gallery: one HTML page showing every captured frame with its
+ * numbers beside it.
+ *
+ * Why this exists rather than "look in the frames/ directory": a reviewer has to
+ * compare cells — dark against light on the same screen, 100% against 200% on
+ * the same row, first frame against settled. A directory of 200 PNGs makes that
+ * impossible, and the numbers that matter (resolved theme, canvas colour,
+ * whether the theme actually applied, whether the first frame differs from the
+ * settled one) are not visible in a PNG at all.
+ *
+ * Everything is inlined: the page has no network dependency and opens from the
+ * filesystem, because it gets attached to a pull request as an artifact.
+ */
+
+const escape = (value) =>
+	String(value ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+/** A frame is "settled" if it is the plain (non-suffixed) or `-settled` shot. */
+const isSettled = (file) => !/-f0\.png$|-f250\.png$/.test(file);
+
+export function renderGallery(manifest) {
+	const { records, meta } = manifest;
+	const problems = records.flatMap((r) => (r.problems ?? []).map((p) => ({ name: r.name, p })));
+	const byScreen = new Map();
+	for (const record of records) {
+		const list = byScreen.get(record.screen) ?? [];
+		list.push(record);
+		byScreen.set(record.screen, list);
+	}
+
+	const style = `
+		:root { color-scheme: light dark; }
+		body { margin: 0; padding: 24px; font: 13px/1.5 ui-sans-serif, system-ui, sans-serif; background: #f2ede3; color: #211e18; }
+		h1 { font-size: 20px; margin: 0 0 4px; }
+		h2 { font-size: 15px; margin: 28px 0 8px; border-bottom: 1px solid #dad5cb; padding-bottom: 4px; }
+		.summary { display: flex; flex-wrap: wrap; gap: 16px; margin: 12px 0 20px; font-variant-numeric: tabular-nums; }
+		.summary div { background: #f7f5ee; border: 1px solid #dad5cb; border-radius: 6px; padding: 8px 12px; }
+		.summary b { display: block; font-size: 18px; }
+		.fail { background: #f7e7e4; border-color: #96544c; }
+		.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 16px; }
+		figure { margin: 0; background: #f7f5ee; border: 1px solid #dad5cb; border-radius: 6px; padding: 8px; }
+		figure.bad { border-color: #b23a31; border-width: 2px; }
+		img { display: block; width: 100%; image-rendering: -webkit-optimize-contrast; background:
+			repeating-conic-gradient(#e5dfd2 0% 25%, #f2ede3 0% 50%) 50% / 12px 12px; }
+		figcaption { margin-top: 6px; font-size: 11px; }
+		code { font-family: ui-monospace, monospace; font-size: 11px; }
+		table { border-collapse: collapse; margin: 8px 0 20px; font-variant-numeric: tabular-nums; }
+		th, td { text-align: left; padding: 3px 10px 3px 0; border-bottom: 1px solid #e5dfd2; }
+		.warn { color: #8a5800; }
+		.badtext { color: #b23a31; font-weight: 600; }
+		.frames { display: flex; gap: 8px; }
+		.frames img { width: 50%; }
+	`;
+
+	const figures = [...byScreen.entries()]
+		.sort(([a], [b]) => a.localeCompare(b))
+		.map(([screen, list]) => {
+			const cells = list
+				.sort((a, b) => a.name.localeCompare(b.name))
+				.map((record) => {
+					const shots = record.frames ?? [];
+					const settled = shots.find((s) => isSettled(s.file)) ?? shots[0];
+					const earlier = shots.filter((s) => s !== settled);
+					const bad = (record.problems ?? []).length > 0;
+					return `<figure class="${bad ? "bad" : ""}">
+	<img src="frames/${encodeURIComponent(settled?.file ?? "")}" alt="${escape(record.name)}" loading="lazy">
+	${earlier.length ? `<div class="frames">${earlier.map((s) => `<img src="frames/${encodeURIComponent(s.file)}" alt="${escape(s.file)}" loading="lazy">`).join("")}</div>` : ""}
+	<figcaption>
+		<code>${escape(record.name)}</code><br>
+		${escape(record.deviceLabel)} ${record.viewport?.width}×${record.viewport?.height} @${record.viewport?.dpr}x<br>
+		theme <b>${escape(record.resolvedTheme ?? "?")}</b> · canvas <code>${escape(record.canvasColor ?? "?")}</code>
+		${record.expectedCanvas ? ` (expected <code>${escape(record.expectedCanvas)}</code>)` : ""}<br>
+		scale ${escape(record.scale)} · text nodes ${record.measurements?.textNodeCount ?? "?"} · mounted ${record.measurements?.mountedElements ?? "?"}
+		${earlier.length ? `<br><span class="${earlier.some((s) => s.sha !== settled.sha) ? "warn" : ""}">first frame differs: ${earlier.some((s) => s.sha !== settled.sha) ? "yes" : "no"}</span>` : ""}
+		${record.problems?.length ? `<br><span class="badtext">${record.problems.map(escape).join("<br>")}</span>` : ""}
+	</figcaption>
+</figure>`;
+				})
+				.join("\n");
+			return `<h2>${escape(screen)} — ${escape(list[0]?.screenLabel ?? "")}</h2>\n<div class="grid">${cells}</div>`;
+		})
+		.join("\n");
+
+	const themeTable = `
+<table>
+<tr><th>cell prefix</th><th>theme</th><th>resolved</th><th>canvas</th><th>expected</th><th>PNG sha</th></tr>
+${records
+	.map(
+		(r) =>
+			`<tr><td><code>${escape(r.name.replace(/__(dark|light)__/, "__…__"))}</code></td><td>${escape(r.theme)}</td><td>${escape(r.resolvedTheme ?? "?")}</td><td><code>${escape(r.canvasColor ?? "?")}</code></td><td><code>${escape(r.expectedCanvas ?? "—")}</code></td><td><code>${escape(r.frames?.find(isSettled)?.sha ?? "")}</code></td></tr>`,
+	)
+	.join("\n")}
+</table>`;
+
+	return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Local Operator mobile — capture matrix</title>
+<style>${style}</style>
+</head>
+<body>
+<h1>Capture matrix</h1>
+<p><code>${escape(meta.buildDir)}</code> · relay <code>${escape(meta.relay ?? "—")}</code> · scenario <code>${escape(meta.scenario ?? "—")}</code> · ${escape(meta.capturedAt)}</p>
+<div class="summary">
+	<div><b>${records.length}</b> cells</div>
+	<div><b>${records.reduce((n, r) => n + (r.frames?.length ?? 0), 0)}</b> frames</div>
+	<div class="${problems.length ? "fail" : ""}"><b>${problems.length}</b> problems</div>
+	<div><b>${escape(meta.textScaleVerdict ?? "scale: not measured")}</b> text scale</div>
+	<div><b>${records.filter((r) => r.themeApplied === false).length}</b> theme mismatches</div>
+</div>
+${problems.length ? `<h2>Problems</h2><table><tr><th>cell</th><th>problem</th></tr>${problems.map((p) => `<tr><td><code>${escape(p.name)}</code></td><td class="badtext">${escape(p.p)}</td></tr>`).join("")}</table>` : ""}
+<h2>Theme resolution, per cell</h2>
+${themeTable}
+${figures}
+</body>
+</html>
+`;
+}
