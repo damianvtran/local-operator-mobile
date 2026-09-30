@@ -1,0 +1,629 @@
+/**
+ * TypeScript declarations for the `lop mobile` relay wire.
+ *
+ * A DRAFT for the native client: the shapes here are the relay's own, with the
+ * field names, optionality and defaults taken from the Python source of truth
+ * and checked against real captured responses.
+ *
+ * Sources, in the order a disagreement should be resolved:
+ *   1. `local_operator/mobile/types.py`      — the dataclasses the projection is
+ *                                              serialized from (`asdict`, so
+ *                                              every field below is present).
+ *   2. `local_operator/mobile/daemon.py`     — the route payloads (list frame,
+ *                                              history, models, commands, …).
+ *   3. `local_operator/mobile/projection.py` — the caps and the `details` shapes.
+ *   4. `local_operator/mobile/web/src/types.ts` — the existing web client's
+ *                                              reading of the same wire, which is
+ *                                              where "absent means X" is spelled.
+ *   5. `fixtures/relay/*.json`               — captured responses from an
+ *                                              isolated daemon (see README).
+ *
+ * Citations are `file:line` against local-operator `origin/main` @ 52c1df35.
+ *
+ * TWO RULES THAT APPLY TO EVERY DECLARATION BELOW:
+ *
+ * - **A field marked `?` is one an old relay may omit, and the client MUST have
+ *   a defensible reading of absence.** The relay's compatibility mechanism is
+ *   "additive fields", not a versioned schema; the only version marker on the
+ *   wire is `/healthz`'s `version` (=5) and the per-op protocol comments in
+ *   `types.py:428-512`. Where the Python dataclass always emits a field (it is
+ *   serialized with `asdict`), the field is declared required here even though
+ *   a *durable* rebuild or an older relay could in principle omit it.
+ * - **`null` is never `0` and never `""`.** Several fields carry a nullable
+ *   number precisely because the difference is a fact: `activity_started_s`
+ *   (`null` = withhold the digits, `0` = a known zero), `elapsed_s` on a
+ *   subagent, `subagents_running` (`null` = "the relay cannot vouch for this
+ *   row", never "no subagents"), `cumulative_parent_cost` (`null` = money we
+ *   cannot state). See `types.py:637-668, 779-800, 871-897`.
+ */
+
+/* ---------------------------------------------------------------- primitives */
+
+/** `types.py:523-542`. The unknown-kind path is deliberate: a client that does
+ *  not know a newer kind must render it as *something* (the web client renders
+ *  `reasoning` and unknown kinds as nothing — `web/src/transcript.tsx:258-259`),
+ *  never crash. */
+export type EntryKind =
+  | "user"
+  | "assistant"
+  | "tool"
+  | "notice"
+  | "steer"
+  | "compaction"
+  | "parent_message"
+  | "subagent_message"
+  /** An inbound `lop send` from another local session — a distinct card, never
+   *  the user's own turn. `types.py:532-534` */
+  | "peer_message"
+  /** The model's PRIVATE reasoning; transient by construction and never part of
+   *  the durable transcript. `types.py:537-541` */
+  | "reasoning";
+
+/** `types.py:544`. `queued` is not a synonym for `composing` or `running`:
+ *  the model finished writing the call and nothing has started it yet
+ *  (`types.py:566-576`). */
+export type ToolState =
+  | "composing"
+  | "queued"
+  | "running"
+  | "done"
+  | "failed"
+  | "interrupted";
+
+export type TodoStatus = "pending" | "done" | "blocked" | "dropped"; // types.py:548
+
+/** `types.py:546`. `queued` = parked for a capacity slot; `parked` = paused on a
+ *  gate; both are real states a phone must render. */
+export type SubagentStatus =
+  | "running"
+  | "completed"
+  | "failed"
+  | "cancelled"
+  | "parked"
+  | "queued";
+
+/* ------------------------------------------------------------------- content */
+
+/** One image attachment on a user turn, as a REFERENCE, never bytes
+ *  (`types.py:585-592`). Fetch the pixels from
+ *  `GET /api/sessions/{id}/image?entry={entryId}&i={index}`.
+ *  `index` counts IMAGE blocks only — a text caption does not shift it
+ *  (`projection.py:416-439`). */
+export interface TranscriptImageRef {
+  index: number;
+  mime_type: string;
+}
+
+/** Sender identity on a `peer_message` entry; all fields advisory.
+ *  `web/src/types.ts:85-91`. */
+export interface PeerSender {
+  pid?: number;
+  session_id?: string;
+  conversation_name?: string;
+  model_label?: string;
+  cwd?: string;
+}
+
+/** The expand-on-tap payload of a settled tool row.
+ *
+ *  NOT ALWAYS STRINGS: `args` rides through as an object and `diff` as a list of
+ *  unified-diff lines (`web/src/types.ts:54-59`; `projection.py:441-462`). A
+ *  client that assumes `.split()` exists on them throws at render time.
+ *
+ *  Caps (`projection.py:144-147, 199`): args 4 000 chars per value, output the
+ *  last 8 000 chars — a readable window, not a log file. `partial` is the
+ *  in-flight output tail; `severity` tints a notice; `user_run` marks bang-mode
+ *  (the user ran the command themselves, so the card opens expanded). */
+export interface TranscriptEntryDetails {
+  args?: string | Record<string, unknown>;
+  output?: string;
+  diff?: string | string[];
+  partial?: string;
+  sender?: PeerSender;
+  severity?: "info" | "warning" | "error";
+  notice_kind?: "wake";
+  user_run?: boolean;
+  /** Bytes the model has written for this call so far (`projection.py:1895`). */
+  argument_bytes?: number;
+}
+
+/** `types.py:551-600`. One renderable row, pre-folded by the relay. */
+export interface TranscriptEntry {
+  /** A message uuid for messages, and derived ids for synthetic rows
+   *  (`tc-<call_id>` for a live tool row, `<message-id>:<call-id>` for a folded
+   *  one — live fixtures show both forms). Also the key the image endpoint
+   *  resolves against. */
+  id: string;
+  kind: EntryKind;
+  text: string;
+  /* tool rows */
+  tool_call_id: string;
+  tool_name: string;
+  /** Defaults to `interrupted`, never `done`: a row whose state nobody set is a
+   *  call nobody saw return (`types.py:566-577`). */
+  tool_state: ToolState;
+  summary: string;
+  intent: string;
+  diff_added: number;
+  diff_removed: number;
+  elapsed_s: number;
+  error: string;
+  details: TranscriptEntryDetails;
+  /** `[]` when the turn carried no images — including when an image was
+   *  silently dropped at ingest (see `contract.md` §8.9). */
+  images: TranscriptImageRef[];
+  /** Assistant rows stream: flips true on message end (`types.py:593`). */
+  final: boolean;
+  /** Settled streaming is not complete representation: transport caps can
+   *  replace a row with a prefix while keeping its id (`types.py:595-597`). */
+  text_complete: boolean;
+}
+
+export interface TodoItem {
+  text: string;
+  status: TodoStatus;
+  reason: string;
+}
+
+/** Todos are phased; a single implicit `"Todos"` phase carries a flat list and
+ *  renders headerless (`types.py:618-633`). */
+export interface TodoPhase {
+  name: string;
+  items: TodoItem[];
+}
+
+/** One roster row (`types.py:636-677`). `transcript`/`todos` are ALWAYS empty in
+ *  the aggregate projection — the relay strips them and serves them only for the
+ *  active route (`daemon.py:2330-2340`); fetch them from the subagent detail
+ *  route. */
+export interface SubagentRow {
+  job_id: string;
+  label: string;
+  agent: string;
+  status: SubagentStatus;
+  progress: string;
+  /** The child's age — or `null` when this roster has NO age for it. `0.0` is a
+   *  known zero and must be painted as `0s`; `null` withholds the digits
+   *  (`types.py:644-659`). */
+  elapsed_s: number | null;
+  model_label: string;
+  result_text: string;
+  error_text: string;
+  parent_job_id: string | null;
+  session_id: string | null;
+  prompt: string;
+  launch_message_id: string;
+  effort: string;
+  ancestors: string[];
+  ancestor_ids: string[];
+  child_ids: string[];
+  peer_ids: string[];
+  transcript: TranscriptEntry[];
+  todos: TodoPhase[];
+  activity: string;
+}
+
+/** `GET /api/sessions/{id}/agents/{job_id}` returns the cached FULL detail plus
+ *  the epoch it was captured at (`daemon.py:2318`, `web/src/types.ts:178-180`). */
+export interface SubagentDetail extends SubagentRow {
+  version: number;
+}
+
+/* ------------------------------------------------------------------- pending */
+
+/** One choice in an ask picker, with the same consequence line the terminal
+ *  shows (`types.py:680-698`). */
+export interface AskOption {
+  label: string;
+  description: string;
+}
+
+/** The pinned card above the composer: an approval gate or an ask dialog.
+ *  `types.py:701-747`. */
+export interface PendingRequest {
+  request_id: string;
+  kind: "approval" | "ask";
+  title: string;
+  detail: string;
+  /** Empty means a free-text/secret paste field rather than a picker. */
+  options: AskOption[];
+  /** The ask wants a credential: render a MASKED paste field. The relay rides
+   *  only this flag — never the value (`types.py:719-724`). */
+  secret: boolean;
+  /** `Question 1 of 2` (`types.py:725-728`). */
+  question_index: number;
+  question_total: number;
+  /** Index of the preselected option in the options AS CARRIED. A client must
+   *  not re-sort `options` and keep this (`types.py:730-744`). */
+  recommended: number | null;
+  /** Save a secret answer to the encrypted store, not just session memory
+   *  (`types.py:744`). */
+  persist: boolean;
+}
+
+/* ----------------------------------------------------------------- attention */
+
+/** The completion-attention record, read from the shared `AttentionStore` and
+ *  attached to every projection frame (`daemon.py:1790`; `web/src/types.ts:206-213`).
+ *
+ *  This is how a client learns a turn ENDED and whether it was seen — transcript
+ *  activity and heartbeat freshness are explicitly NOT the signal
+ *  (`daemon.py:1003-1006`). */
+export interface CompletionAttention {
+  /** `session/<session_id>`. */
+  conversation_id: string;
+  /** The token `POST /seen` acknowledges. Single-use per completion; a
+   *  superseded one is refused with `409` + `code` (`contract.md` §4.6). */
+  completion_token: string | null;
+  anchor_id: string | null;
+  kind: "complete" | "error" | "interrupted" | "closed" | "retired" | null;
+  unseen: boolean;
+  /** `[revision, ...]` — the store's own revision counter; not a projection
+   *  epoch. */
+  revision: [number, number];
+  /** Present on captured frames: `reason`, `cause`, `notify` (`daemon.py:1822-1855`).
+   *  `cause` is what `is_deliberate_cause` reads to tell a deliberate stop from a
+   *  cut-off (`daemon.py:1835-1837`). */
+  reason?: string;
+  cause?: string;
+  notify?: boolean;
+}
+
+/* --------------------------------------------------------------- the session */
+
+/** The projection (`types.py:798-897`) — the ONLY push form on the session
+ *  stream. Full snapshots, never deltas. */
+export interface SessionProjection {
+  session_id: string;
+  /** The runtime's pid, or **0** on a durable rebuild with no live process
+   *  (observed live: `fixtures/relay/sse-projection-durable-after-death.json`). */
+  pid: number;
+  kind: string;
+  conversation_name: string;
+  cwd: string;
+  model_label: string;
+  /** `provider/model_id` — the value the model sheet submits. */
+  model_selector: string;
+  /** Current rung; `""` when the model has no ladder. */
+  effort: string;
+  effort_ladder: string[];
+  streaming: boolean;
+  /** What the turn is doing right now: `"thinking"`, `"responding"`, or the
+   *  running tool's intent. Empty when idle — never invent a label
+   *  (`types.py:820-826`). */
+  activity: string;
+  /** `null` = withhold the digits (no instant this fold can honestly date the
+   *  phase from); `0` = a known zero painted as `0s` (`types.py:827-846`). */
+  activity_started_s: number | null;
+  /** Why streaming last stopped: `"completed"` or `"aborted"`. The resume
+   *  affordance reads THIS, never an inference from `streaming` flipping —
+   *  a finished turn flips that too (`types.py:847-858`). */
+  stop_reason: string;
+  /** Whether the turn `stop_reason` describes was CUT OFF rather than stopped
+   *  on purpose; the composer's word follows it (`types.py:849-854`). */
+  cut_off: boolean;
+  /** User messages waiting for the turn boundary (`types.py:855`). */
+  queued_count: number;
+  /** Process gone; history still resumable. **Never observed as `true` over the
+   *  relay** — see `contract.md` §6.5 and §8.2. Use the list row's `section`. */
+  ended: boolean;
+  /** Record fresh but the control socket is unreachable. **Never observed as
+   *  `true` over the relay** — the daemon tracks this on its own entry
+   *  (`daemon.py:2554`) but only ever writes `false` into a published frame.
+   *  `subagents_running: null` on the list row is the honest signal. */
+  degraded: boolean;
+  /** The render tail: at most `PROJECTION_TRANSCRIPT_LIMIT = 80` entries, with
+   *  the conversation's opening user message pinned at the head
+   *  (`types.py:980`, `projection.py:3127-3153`). Older rows page in from
+   *  `/history`. */
+  transcript: TranscriptEntry[];
+  todos: TodoPhase[];
+  subagents: SubagentRow[];
+  /** The FRONT waiting request; `null` when nothing is waiting. */
+  pending: PendingRequest | null;
+  /** Total waiting (`>= 1` while `pending` is set): a parallel tool batch can
+   *  open several approvals, so a card may need `1 of N`. */
+  pending_count: number;
+  usage: Record<string, number>;
+  /** The spend ledger, raw. `null` = money we cannot state (never `0.0`);
+   *  `child_costs` empty = no children, never "children cost nothing"
+   *  (`types.py:871-887`). */
+  cumulative_parent_cost: number | null;
+  child_costs: Record<string, number>;
+  subagent_cost: number | null;
+  subagent_cost_knowledge: string | null;
+  /** `unknown | exact | partial | floor` — the rung for the parent figure. */
+  cost_knowledge: string;
+  /** The context reading; `null`/`0` window = unknown, so no percentage is
+   *  possible and the client spells `12.4k/—` (`types.py:888-897`). */
+  context_tokens: number | null;
+  context_window: number | null;
+  context_is_estimate: boolean | null;
+  /** The projection epoch. Drop a repaint whose `version` is lower inside one
+   *  fenced source; re-seed without comparison on reconnect (`contract.md` §6.5). */
+  version: number;
+  /** Attached by the relay on every published frame (`daemon.py:1790`). */
+  attention: CompletionAttention;
+}
+
+/* --------------------------------------------------------------- session list */
+
+/** One row of the list. Section is the SHARED `active` rule, not "a live entry
+ *  exists" — a durable-only conversation with an unseen completion is Active on
+ *  every surface (`daemon.py:929-935`, `daemon.py:351-463`). */
+export interface SessionSummary {
+  session_id: string;
+  section: "active" | "previous";
+  /** The shared durable pin store (`sidebar-pins.json`) — the same state the
+   *  TUI's F10 writes (`daemon.py:834-867`). */
+  pinned: boolean;
+  conversation_name: string;
+  cwd: string;
+  model_label: string;
+  streaming: boolean;
+  needs_attention: boolean;
+  /** A turn finished while nobody was viewing the session and it has not been
+   *  opened since. Cleared by `POST /seen` (`daemon.py:1006`). */
+  unseen: boolean;
+  pending_kind: "approval" | "ask" | "";
+  /** The runtime's own phrase while it is draining after a signal. RANKED, not
+   *  drawn: mark from this rather than from the counts (`daemon.py:944-953`). */
+  leaving: string;
+  /** The build pair while an idle runtime swaps to the build on disk — alive and
+   *  accepting messages that will run (`daemon.py:955-961`). */
+  updating: string;
+  /** **`null` = "not reported", never `0`.** The relay reports `null` for a row
+   *  it cannot vouch for (degraded dial, stale heartbeat, leaving runtime) — so
+   *  a client hides both marks on `null` (`daemon.py:974-991`). */
+  subagents_running: number | null;
+  subagents_queued: number | null;
+  /** Open todos: `pending` + `blocked` (`daemon.py:992-997`). */
+  todos_open: number;
+  mtime: number;
+  /** The same value the rank used, so wire and order cannot disagree about a
+   *  row's birth (`daemon.py:998-1002`). */
+  created_at: number;
+  /** The attention record's `kind` for this conversation (`""` when none). */
+  completion_kind: string;
+}
+
+/** Capabilities ride the SAME list frames (`daemon.py:3410-3443`): one answer,
+ *  two transports. `features` is the lifted feature-flag dict; an absent key
+ *  means "this build does not have it", never an error. `stt` decides whether a
+ *  phone shows a mic — an OLD relay omits the whole object, and absence reads
+ *  exactly like `available: false` (`web/src/types.ts:425-439`). */
+export interface SttCapability {
+  available: boolean;
+  path: string | null;
+  reason?: string;
+}
+
+export interface Capabilities {
+  features?: Record<string, unknown>;
+  stt?: SttCapability;
+}
+
+/** The payload of `GET /api/sessions` and of every `sessions` SSE frame —
+ *  byte-identical by construction (`daemon.py:3410-3443`). */
+export interface SessionListFrame {
+  sessions: SessionSummary[];
+  /** Degradation markers for the DURABLE half of the listing, not for a
+   *  session: `["sessions"]` (the store could not be walked) and/or
+   *  `"attention"` (the attention store could not be read). Empty = healthy
+   *  (`daemon.py:717-743`, `daemon.py:146`). */
+  degraded: string[];
+  capabilities: Capabilities;
+}
+
+/* ------------------------------------------------------------- side payloads */
+
+/** `GET /api/sessions/past`. `forked` marks a fork still wearing its parent's
+ *  title — otherwise byte-identical to the parent row (`daemon.py:4668-4702`). */
+export interface PastSession {
+  id: string;
+  name: string;
+  mtime: number;
+  forked: boolean;
+  /** Present only on search results: the row matched on what was SAID, not on
+   *  its name/id (`daemon.py:4705-4751`). */
+  body_match?: boolean;
+}
+
+export interface PastSessionsResponse {
+  sessions: PastSession[];
+  degraded: string[];
+}
+
+export interface SearchSessionsResponse extends PastSessionsResponse {
+  query: string;
+}
+
+export interface HistoryResponse {
+  /** The page immediately OLDER than `before`, chronological within the page. */
+  entries: TranscriptEntry[];
+  has_more: boolean;
+}
+
+/** `GET /api/commands` (`daemon.py:3228-3250`). TUI chrome (`exit`, `quit`,
+ *  `clear`) is excluded because it is meaningless on a phone. */
+export interface SlashCommand {
+  name: string;
+  description: string;
+  aliases: string[];
+  arguments: "none" | "optional" | "required";
+}
+
+/** One row of `GET /api/models`. **The array order IS the ranking** (direct
+ *  providers first, newest version first, aggregators last) — re-sorting or
+ *  regrouping throws that away (`daemon.py:4958-4999`,
+ *  `web/src/types.ts:352-387`). */
+export interface ModelEntry {
+  selector: string;
+  provider: string;
+  model_id: string;
+  name: string;
+  /** The picker's resolved label exactly as the desktop spells it — a parity
+   *  contract, not a display string. Render `name`. */
+  label?: string;
+  /** Whether a credential exists that can run this model now. */
+  connected?: boolean;
+  /** The provider RESELLS the model rather than serving it. */
+  aggregated?: boolean;
+}
+
+/** `GET /api/directories` (`daemon.py:4262-4271`). `tmp` is the RESOLVED temp
+ *  dir, which the start gate also compares against (`daemon.py:4754-4774`). */
+export interface Directories {
+  home: string;
+  recent: string[];
+  tmp?: string;
+}
+
+/* --------------------------------------------------------------- command ops */
+
+/** A pasted/dropped image on the wire (`web/src/types.ts:412-416`). */
+export interface PromptImage {
+  data_b64: string;
+  mime_type: string;
+}
+
+/** How a message was produced (mobile STT). Sent explicitly by clients that
+ *  compute it; ABSENT is the legacy reading — a producer that did not know the
+ *  vocabulary. The relay forwards it only to an owner that advertised the
+ *  capability (`daemon.py:2786-2793`, `types.py:82-107`). */
+export type InputMode = "typed" | "dictated" | "mixed";
+
+/** The body of `POST /api/sessions/{id}/command`. The `op` field is popped and
+ *  validated first; everything else is validated per op by
+ *  `validate_control_frame` (`types.py:208-426`).
+ *
+ *  Ops the relay accepts from HTTP and their exact required fields: */
+export type CommandOp =
+  /** Durable, idempotent user turn. `command_id` must be a UUID and is
+   *  MANDATORY over HTTP (`daemon.py:3864-3869`). `text` may be empty only when
+   *  an image carries data. */
+  | {
+      op: "prompt";
+      command_id: string;
+      text: string;
+      images?: PromptImage[];
+      input_mode?: InputMode;
+      input_path?: string;
+    }
+  /** Idempotent mid-turn injection; same identity rules as `prompt`. Answers
+   *  `detail: "steering queued"` when the turn is holding it for a boundary. */
+  | {
+      op: "steer";
+      command_id: string;
+      text: string;
+      images?: PromptImage[];
+      input_mode?: InputMode;
+      input_path?: string;
+    }
+  /** The stop button; never kills the session. On a mixed-version runtime it can
+   *  be refused with `422` and the refusal names the op-form to use. */
+  | { op: "abort" }
+  /** Boundary-respecting stop for a supervising agent: lands after the in-flight
+   *  tool batch, before the next model request. `immediate` is the explicit
+   *  opt-in to `abort` semantics (`types.py:431-443`). */
+  | { op: "cancel"; mode?: "graceful" | "immediate" }
+  | { op: "set_model"; provider: string; model_id: string }
+  | { op: "set_effort"; effort: string }
+  /** The off-terminal subset of slash commands. Many are refused with
+   *  `422 "<name> is terminal-only here"` — use `slash_result` for the routed
+   *  form (`web/src/types.ts:456-463`). */
+  | { op: "slash"; command: string; args: string }
+  /** The ROUTED slash op (authority-bearing; may be refused with
+   *  `AUTHORITY_REFUSAL_CODES`). Answers with the command's typed outcome. */
+  | { op: "slash_result"; command: string; args: string; images?: PromptImage[] }
+  /** REFUSED over the relay: `422 "start a new session from the session list"`
+   *  (live `fixtures/relay/op-new-conversation.json`). Use
+   *  `POST /api/sessions/start`. */
+  | { op: "new_conversation" }
+  /** REFUSED over the relay: `422 "pick the session from the session list
+   *  instead"` (live `fixtures/relay/op-resume-session.json`). Use
+   *  `POST /api/sessions/resume`. */
+  | { op: "resume_session"; session_id: string }
+  | {
+      op: "approval_answer";
+      request_id: string;
+      approved: boolean;
+      remember: boolean;
+    }
+  /** `question_index` is the question the card was showing; the relay rejects an
+   *  answer for a question the picker has advanced past, so a tap in flight
+   *  during a terminal advance is never recorded against the wrong question. */
+  | {
+      op: "ask_answer";
+      request_id: string;
+      value: string;
+      question_index: number;
+    }
+  /** Unsend one queued steering message by identity (Esc-recall parity). */
+  | { op: "recall_steer"; command_id: string }
+  /** Ask for a fresh welcome-equivalent projection. */
+  | { op: "snapshot" };
+
+/** A command body plus the optional stage-D signature fields. The relay DROPS
+ *  `operator_cap` from any HTTP body (it mints its own when it is the spawner),
+ *  and ADMITS these three — a signature over a challenge this runtime minted for
+ *  this connection, action and request id (`daemon.py:3817-3850`). */
+export type SignedCommand = CommandOp & {
+  operator_sig?: string;
+  operator_key_id?: string;
+  operator_cert?: string;
+};
+
+/** The uniform success body of the command route. `detail` is prose from the
+ *  owning runtime or the relay; a client may display it verbatim but must not
+ *  parse it. */
+export interface CommandAck {
+  ok: true;
+  detail: string;
+}
+
+/* --------------------------------------------------------------------- errors */
+
+/** Every failure body is `{ error: string }`; `code` is additive and appears
+ *  only where the client must DECIDE rather than display — the authority
+ *  refusals (`operator_authority_required`, `operator_authority_unconfigured`),
+ *  the superseded completion token, `stt_unavailable`, and the project route's
+ *  typed refusals (`daemon.py:3936-3950, 3582-3588, 4390-4394, 4441-4447`). */
+export interface ApiError {
+  error: string;
+  code?: string;
+}
+
+/** The authority refusal codes, spelled once so two lists cannot drift
+ *  (`web/src/api.ts:46-58`). */
+export declare const AUTHORITY_REFUSAL_CODES: readonly [
+  "operator_authority_required",
+  "operator_authority_unconfigured",
+];
+
+/* --------------------------------------------------------------------- status */
+
+export type HttpStatus =
+  | 200
+  | 303
+  /** `/api/*` unauthenticated. On an SSE stream this status is NOT visible to
+   *  an `EventSource`-shaped client. */
+  | 401
+  /** Cross-origin mutation; unknown tunnel host (gateway); revoked device. */
+  | 403
+  /** Unknown session for a read; no such past session; no such image; unknown
+   *  subagent; no host route. */
+  | 404
+  /** No saved messages yet, so a pin is refused; session not connected; a real
+   *  but superseded completion token; project status conflicts. */
+  | 409
+  /** Upload too large (transcribe). */
+  | 413
+  /** Malformed/unknown op, bad shape, refusal with prose. */
+  | 422
+  /** Spawn, catalogue, or a runtime that returned nothing usable. */
+  | 500
+  | 502
+  /** Voice input unavailable; mobile bundle not built. */
+  | 503
+  | 504;

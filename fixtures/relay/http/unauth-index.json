@@ -1,0 +1,11 @@
+{
+  "request": {
+    "method": "GET",
+    "path": "/"
+  },
+  "status": 303,
+  "headers": {
+    "location": "/login"
+  },
+  "body": ""
+}

@@ -1,0 +1,14 @@
+{
+  "request": {
+    "method": "GET",
+    "path": "/api/pair/zzzzzzzz"
+  },
+  "status": 200,
+  "headers": {
+    "content-type": "application/json"
+  },
+  "body": {
+    "paired": false,
+    "device_id": "zzzzzzzz"
+  }
+}

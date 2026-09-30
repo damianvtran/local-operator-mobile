@@ -1,0 +1,128 @@
+{
+  "request": {
+    "method": "GET",
+    "path": "/api/sessions/6714def86197/history?limit=abc"
+  },
+  "status": 200,
+  "headers": {
+    "content-type": "application/json"
+  },
+  "body": {
+    "entries": [
+      {
+        "id": "c71b41b3-f11f-48c7-902e-edf2fa39d307",
+        "kind": "user",
+        "text": "hello relay",
+        "tool_call_id": "",
+        "tool_name": "",
+        "tool_state": "interrupted",
+        "summary": "",
+        "intent": "",
+        "diff_added": 0,
+        "diff_removed": 0,
+        "elapsed_s": 0.0,
+        "error": "",
+        "details": {},
+        "images": [],
+        "final": true,
+        "text_complete": true
+      },
+      {
+        "id": "8674620948364825a916ce9d8c8f3eda",
+        "kind": "assistant",
+        "text": "Hello from the mock provider!",
+        "tool_call_id": "",
+        "tool_name": "",
+        "tool_state": "interrupted",
+        "summary": "",
+        "intent": "",
+        "diff_added": 0,
+        "diff_removed": 0,
+        "elapsed_s": 0.0,
+        "error": "",
+        "details": {},
+        "images": [],
+        "final": true,
+        "text_complete": true
+      },
+      {
+        "id": "1351662b-8dc8-4fd7-a70b-ca7a6b61dd3b",
+        "kind": "user",
+        "text": "run it [bash:20]",
+        "tool_call_id": "",
+        "tool_name": "",
+        "tool_state": "interrupted",
+        "summary": "",
+        "intent": "",
+        "diff_added": 0,
+        "diff_removed": 0,
+        "elapsed_s": 0.0,
+        "error": "",
+        "details": {},
+        "images": [],
+        "final": true,
+        "text_complete": true
+      },
+      {
+        "id": "66ae3bcaa2194753b7e24ef2b69e53ca:call_mock_bash",
+        "kind": "tool",
+        "text": "",
+        "tool_call_id": "call_mock_bash",
+        "tool_name": "bash",
+        "tool_state": "interrupted",
+        "summary": "sleep 20",
+        "intent": "",
+        "diff_added": 0,
+        "diff_removed": 0,
+        "elapsed_s": 11.834096000005957,
+        "error": "Tool call skipped: interrupted by steering.",
+        "details": {
+          "args": {
+            "command": "sleep 20"
+          },
+          "output": "Tool call skipped: interrupted by steering."
+        },
+        "images": [],
+        "final": true,
+        "text_complete": true
+      },
+      {
+        "id": "86a7ef49-68da-4c3e-ab8b-ccd84c5b31d2",
+        "kind": "user",
+        "text": "also say bye",
+        "tool_call_id": "",
+        "tool_name": "",
+        "tool_state": "interrupted",
+        "summary": "",
+        "intent": "",
+        "diff_added": 0,
+        "diff_removed": 0,
+        "elapsed_s": 0.0,
+        "error": "",
+        "details": {},
+        "images": [],
+        "final": true,
+        "text_complete": true
+      },
+      {
+        "id": "cf13127c65234138a2250eccdba095da",
+        "kind": "assistant",
+        "text": "Hello from the mock provider!",
+        "tool_call_id": "",
+        "tool_name": "",
+        "tool_state": "interrupted",
+        "summary": "",
+        "intent": "",
+        "diff_added": 0,
+        "diff_removed": 0,
+        "elapsed_s": 0.0,
+        "error": "",
+        "details": {},
+        "images": [],
+        "final": true,
+        "text_complete": true
+      }
+    ],
+    "has_more": false
+  }
+}

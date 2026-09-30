@@ -1,0 +1,23 @@
+{
+  "request": {
+    "method": "GET",
+    "path": "/api/sessions/search?q=hello&limit=5"
+  },
+  "status": 200,
+  "headers": {
+    "content-type": "application/json"
+  },
+  "body": {
+    "sessions": [
+      {
+        "id": "6714def86197",
+        "name": "Hello from the mock provider",
+        "mtime": 1790727370.334461,
+        "body_match": false,
+        "forked": false
+      }
+    ],
+    "query": "hello",
+    "degraded": []
+  }
+}

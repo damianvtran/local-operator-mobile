@@ -1,0 +1,12 @@
+{
+  "request": {
+    "method": "HEAD",
+    "path": "/mark.png"
+  },
+  "status": 200,
+  "headers": {
+    "content-type": "image/png",
+    "cache-control": "no-store"
+  },
+  "body": ""
+}

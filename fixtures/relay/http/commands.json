@@ -1,0 +1,306 @@
+{
+  "request": {
+    "method": "GET",
+    "path": "/api/commands"
+  },
+  "status": 200,
+  "headers": {
+    "content-type": "application/json"
+  },
+  "body": {
+    "commands": [
+      {
+        "name": "help",
+        "description": "List all commands",
+        "aliases": [],
+        "arguments": "none"
+      },
+      {
+        "name": "copy",
+        "description": "Copy an agent message or code block",
+        "aliases": [],
+        "arguments": "none"
+      },
+      {
+        "name": "links",
+        "description": "Open a link from this conversation in a browser",
+        "aliases": [],
+        "arguments": "none"
+      },
+      {
+        "name": "new",
+        "description": "Start a new conversation",
+        "aliases": [],
+        "arguments": "optional"
+      },
+      {
+        "name": "reload",
+        "description": "Relaunch this conversation on the current install",
+        "aliases": [],
+        "arguments": "none"
+      },
+      {
+        "name": "update",
+        "description": "Install the latest version from PyPI and relaunch",
+        "aliases": [],
+        "arguments": "none"
+      },
+      {
+        "name": "resume",
+        "description": "Pick a past conversation to resume, or resume one (id)",
+        "aliases": [
+          "recall"
+        ],
+        "arguments": "none"
+      },
+      {
+        "name": "aida",
+        "description": "Open your chief of staff, or send her a request",
+        "aliases": [],
+        "arguments": "optional"
+      },
+      {
+        "name": "move",
+        "description": "Change this session's working directory",
+        "aliases": [],
+        "arguments": "optional"
+      },
+      {
+        "name": "rename",
+        "description": "Name this conversation, or /title --refresh",
+        "aliases": [
+          "title"
+        ],
+        "arguments": "optional"
+      },
+      {
+        "name": "fork",
+        "description": "Branch this chat; --switch here, --window elsewhere; <message> starts work",
+        "aliases": [],
+        "arguments": "none"
+      },
+      {
+        "name": "archive",
+        "description": "Hide from the lists, still resumable by id",
+        "aliases": [],
+        "arguments": "none"
+      },
+      {
+        "name": "unarchive",
+        "description": "Show this conversation in the lists again",
+        "aliases": [],
+        "arguments": "none"
+      },
+      {
+        "name": "delete",
+        "description": "Delete this conversation for good; asks to confirm",
+        "aliases": [],
+        "arguments": "optional"
+      },
+      {
+        "name": "model",
+        "description": "Switch model; /model default saves it for new sessions",
+        "aliases": [
+          "models"
+        ],
+        "arguments": "none"
+      },
+      {
+        "name": "effort",
+        "description": "Show or set reasoning effort (shift+tab cycles)",
+        "aliases": [],
+        "arguments": "optional"
+      },
+      {
+        "name": "fast",
+        "description": "Toggle faster output at premium pricing",
+        "aliases": [],
+        "arguments": "optional"
+      },
+      {
+        "name": "theme",
+        "description": "Switch color theme; arrows preview live",
+        "aliases": [
+          "themes"
+        ],
+        "arguments": "optional"
+      },
+      {
+        "name": "provider",
+        "description": "List providers and their login/usage state",
+        "aliases": [],
+        "arguments": "none"
+      },
+      {
+        "name": "settings",
+        "description": "Change every setting on one page",
+        "aliases": [
+          "config"
+        ],
+        "arguments": "none"
+      },
+      {
+        "name": "sidebar",
+        "description": "Show or hide conversations; 'focus' keys the list",
+        "aliases": [],
+        "arguments": "none"
+      },
+      {
+        "name": "search",
+        "description": "Configure web search providers and load balancing",
+        "aliases": [],
+        "arguments": "none"
+      },
+      {
+        "name": "accounts",
+        "description": "List stored credentials",
+        "aliases": [],
+        "arguments": "none"
+      },
+      {
+        "name": "failovers",
+        "description": "Show the model failover cascade and what is serving",
+        "aliases": [],
+        "arguments": "none"
+      },
+      {
+        "name": "usage",
+        "description": "Show provider usage quota",
+        "aliases": [],
+        "arguments": "none"
+      },
+      {
+        "name": "context",
+        "description": "Show prompt, tool-schema and message token usage",
+        "aliases": [],
+        "arguments": "none"
+      },
+      {
+        "name": "session",
+        "description": "Usage, cost, diagnostics; --copy copies the session ID",
+        "aliases": [],
+        "arguments": "none"
+      },
+      {
+        "name": "info",
+        "description": "Install, version, and running sessions on this machine",
+        "aliases": [],
+        "arguments": "none"
+      },
+      {
+        "name": "analytics",
+        "description": "Aggregated token-consumption analytics across all sessions",
+        "aliases": [],
+        "arguments": "optional"
+      },
+      {
+        "name": "goal",
+        "description": "Set the goal and start work; /goal --clear clears it",
+        "aliases": [],
+        "arguments": "optional"
+      },
+      {
+        "name": "loop",
+        "description": "Loop toward a goal: /loop <goal>, <n>; --stop cancels",
+        "aliases": [],
+        "arguments": "optional"
+      },
+      {
+        "name": "btw",
+        "description": "Ask a side question off the record (esc closes it)",
+        "aliases": [],
+        "arguments": "none"
+      },
+      {
+        "name": "compact",
+        "description": "Compact the context now",
+        "aliases": [],
+        "arguments": "none"
+      },
+      {
+        "name": "stop",
+        "description": "End this session, another by name/pid, or all \u2014 /resume reopens it",
+        "aliases": [],
+        "arguments": "optional"
+      },
+      {
+        "name": "approvals",
+        "description": "Show or set tool approval mode for this session",
+        "aliases": [],
+        "arguments": "optional"
+      },
+      {
+        "name": "skills",
+        "description": "List loaded skills",
+        "aliases": [],
+        "arguments": "none"
+      },
+      {
+        "name": "mcp",
+        "description": "List MCP servers; add/remove one, or manage an OAuth grant",
+        "aliases": [],
+        "arguments": "optional"
+      },
+      {
+        "name": "login",
+        "description": "Authenticate a provider",
+        "aliases": [],
+        "arguments": "required"
+      },
+      {
+        "name": "logout",
+        "description": "Remove stored provider credentials",
+        "aliases": [],
+        "arguments": "required"
+      },
+      {
+        "name": "notifications",
+        "description": "Unread completions; read marks them read",
+        "aliases": [],
+        "arguments": "optional"
+      },
+      {
+        "name": "mobile",
+        "description": "Radient phone access: status, enable, stop, billing",
+        "aliases": [],
+        "arguments": "none"
+      },
+      {
+        "name": "network",
+        "description": "Networks, peers, and this device's mesh state",
+        "aliases": [],
+        "arguments": "optional"
+      },
+      {
+        "name": "credential",
+        "description": "Type or paste a secret after a space; masked",
+        "aliases": [
+          "cred"
+        ],
+        "arguments": "optional"
+      },
+      {
+        "name": "team",
+        "description": "List teams, chart a team's org, or send a request to a team's manager",
+        "aliases": [
+          "teams"
+        ],
+        "arguments": "optional"
+      },
+      {
+        "name": "agent",
+        "description": "List agents, switch an agent's class, or speak to this session as one",
+        "aliases": [
+          "agents"
+        ],
+        "arguments": "optional"
+      },
+      {
+        "name": "project",
+        "description": "Track workstreams: list, show, new, delete, link, unlink",
+        "aliases": [],
+        "arguments": "optional"
+      }
+    ]
+  }
+}

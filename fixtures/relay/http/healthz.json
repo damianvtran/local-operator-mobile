@@ -1,0 +1,16 @@
+{
+  "request": {
+    "method": "GET",
+    "path": "/healthz"
+  },
+  "status": 200,
+  "headers": {
+    "content-type": "application/json"
+  },
+  "body": {
+    "ok": true,
+    "version": 5,
+    "sessions": 0,
+    "dist": false
+  }
+}

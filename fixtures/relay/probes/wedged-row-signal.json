@@ -1,0 +1,100 @@
+{
+  "probe": "wedged runtime (SIGSTOP) \u2014 which listing field changes, and when",
+  "method": "one isolated daemon (mock provider); the session runtime process was sent SIGSTOP at t=0 and SIGCONT at t=75; GET /api/sessions polled every 5 s; the row for the frozen session is shown",
+  "heartbeat_timeout_s": 45,
+  "heartbeat_interval_s": 15,
+  "observed_formula": "subagents_running is 0 for a vouched-for registration and null once the heartbeat is stale (daemon.py:512-519)",
+  "note": "run against local-operator origin/main @ 52c1df35 with hosting=test/model_name=mock; no provider credentials used",
+  "samples": [
+    {
+      "t": 5,
+      "subagents_running": 0,
+      "section": "active",
+      "streaming": false
+    },
+    {
+      "t": 10,
+      "subagents_running": 0,
+      "section": "active",
+      "streaming": false
+    },
+    {
+      "t": 15,
+      "subagents_running": 0,
+      "section": "active",
+      "streaming": false
+    },
+    {
+      "t": 20,
+      "subagents_running": 0,
+      "section": "active",
+      "streaming": false
+    },
+    {
+      "t": 25,
+      "subagents_running": 0,
+      "section": "active",
+      "streaming": false
+    },
+    {
+      "t": 30,
+      "subagents_running": 0,
+      "section": "active",
+      "streaming": false
+    },
+    {
+      "t": 35,
+      "subagents_running": 0,
+      "section": "active",
+      "streaming": false
+    },
+    {
+      "t": 40,
+      "subagents_running": null,
+      "section": "active",
+      "streaming": false
+    },
+    {
+      "t": 45,
+      "subagents_running": null,
+      "section": "active",
+      "streaming": false
+    },
+    {
+      "t": 50,
+      "subagents_running": null,
+      "section": "active",
+      "streaming": false
+    },
+    {
+      "t": 55,
+      "subagents_running": null,
+      "section": "active",
+      "streaming": false
+    },
+    {
+      "t": 60,
+      "subagents_running": null,
+      "section": "active",
+      "streaming": false
+    },
+    {
+      "t": 65,
+      "subagents_running": null,
+      "section": "active",
+      "streaming": false
+    },
+    {
+      "t": 70,
+      "subagents_running": null,
+      "section": "active",
+      "streaming": false
+    },
+    {
+      "t": 75,
+      "subagents_running": null,
+      "section": "active",
+      "streaming": false
+    }
+  ]
+}

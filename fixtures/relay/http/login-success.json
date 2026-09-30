@@ -1,0 +1,13 @@
+{
+  "request": {
+    "method": "POST",
+    "path": "/login"
+  },
+  "status": 303,
+  "headers": {
+    "location": "/",
+    "set-cookie": "lop_mobile=<expiry>.<hmac-sha256-hex>; HttpOnly; Max-Age=2592000; Path=/; SameSite=lax"
+  },
+  "body": "",
+  "note": "Set-Cookie value is a placeholder: the real value is <expiry>.<hmac-sha256-hex>, signed with sha256(\"lop-mobile-cookie\\0\"+password). Secure is added only when the request arrived over TLS (daemon.py:3362-3371)."
+}

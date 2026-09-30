@@ -1,0 +1,10 @@
+{
+  "raw_status": "HTTP/1.1 413 Request Entity Too Large",
+  "headers": [
+    "date: Wed, 30 Sep 2026 00:16:19 GMT",
+    "server: uvicorn",
+    "content-length: 78",
+    "content-type: application/json"
+  ],
+  "body": "{\"error\":\"Recording is too large \u2014 the limit is 20 MB. Try a shorter clip.\"}"
+}

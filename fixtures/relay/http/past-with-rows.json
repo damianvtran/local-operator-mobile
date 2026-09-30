@@ -1,0 +1,21 @@
+{
+  "request": {
+    "method": "GET",
+    "path": "/api/sessions/past"
+  },
+  "status": 200,
+  "headers": {
+    "content-type": "application/json"
+  },
+  "body": {
+    "sessions": [
+      {
+        "id": "6714def86197",
+        "name": "Hello from the mock provider",
+        "mtime": 1790727370.334461,
+        "forked": false
+      }
+    ],
+    "degraded": []
+  }
+}

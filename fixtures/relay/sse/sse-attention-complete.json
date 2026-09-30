@@ -1,0 +1,14 @@
+{
+  "conversation_id": "session/6714def86197",
+  "completion_token": "45e4844a-3ee9-4319-9ede-f3e0490d2938",
+  "anchor_id": "cba5a100c2de4cd580769f7d008edb15",
+  "kind": "complete",
+  "reason": "",
+  "cause": "",
+  "notify": true,
+  "unseen": true,
+  "revision": [
+    7,
+    2
+  ]
+}

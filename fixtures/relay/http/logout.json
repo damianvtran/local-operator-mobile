@@ -1,0 +1,13 @@
+{
+  "request": {
+    "method": "GET",
+    "path": "/logout"
+  },
+  "status": 303,
+  "headers": {
+    "location": "/login",
+    "set-cookie": "lop_mobile=\"\"; expires=Wed, 30 Sep 2026 00:16:23 GMT; Max-Age=0; Path=/; SameSite=lax",
+    "clear-site-data": "\"storage\""
+  },
+  "body": ""
+}

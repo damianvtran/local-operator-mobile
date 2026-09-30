@@ -1,0 +1,13 @@
+{
+  "request": {
+    "method": "POST",
+    "path": "/login"
+  },
+  "status": 403,
+  "headers": {
+    "content-type": "application/json"
+  },
+  "body": {
+    "error": "same-origin request required"
+  }
+}
