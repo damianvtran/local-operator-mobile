@@ -1,0 +1,295 @@
+name: Android
+
+# The Android native gate.
+#
+# WHY THIS IS A SEPARATE WORKFLOW from ci.yml. `ios/` and `android/` are
+# generated (ADR 0004), so the native jobs are the slow, expensive end of the
+# pipeline and they earn their place only when a change can affect them. Keeping
+# them in their own file lets the native jobs be gated by a real diff inspection
+# (below) without making every JavaScript pull request pay for a Gradle build —
+# while the *workflow* always runs, which is what stops a required check from
+# sitting pending forever.
+#
+# `on.paths` IS DELIBERATELY NOT USED. A workflow a path filter excludes does not
+# skip, it never runs — and a required check that never runs can never be
+# satisfied. So the filter lives inside the workflow, as an `if:` on the jobs
+# that cost the most (the same trap, and the same fix, the sibling repository
+# documents).
+#
+# TWO JOBS, FOR A REASON THAT IS ABOUT SECRETS RATHER THAN STYLE.
+#   * `android` builds the debug APK and needs NO credential, so it runs on every
+#     change including a fork's — and it is the job a pull request is judged on.
+#   * `internal` signs and can reach the Play API, so it runs ONLY on a push to
+#     `main` and declares `environment: release`. That split is what makes the
+#     credential genuinely unreachable from a pull request: environment secrets
+#     are not merely withheld from a fork, they are not even resolved for a job
+#     whose ref the environment's deployment-branch rule does not allow. Putting
+#     the signing steps in the first job would have forced the secrets to be
+#     repository-wide, which any branch pushed here could then print.
+#
+# A TAG IS NOT HANDLED HERE. release.yml owns `v*`; if this workflow also signed
+# on a tag, every release would upload to Play twice.
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: "24"
+  # Expo SDK 57 / React Native 0.86 build against Java 17, which is the default
+  # JDK on the `ubuntu-latest` image. Named here so the toolchain is an explicit
+  # input rather than whatever the image happens to default to that week.
+  JAVA_VERSION: "17"
+
+jobs:
+  changes:
+    name: Does this change touch anything native?
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      native: ${{ steps.diff.outputs.native }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # The diff needs the base commit, not just the head.
+          fetch-depth: 0
+
+      - name: Decide whether the native jobs are worth running
+        id: diff
+        env:
+          BASE_REF: ${{ github.base_ref }}
+          EVENT: ${{ github.event_name }}
+        run: |
+          set -euo pipefail
+          # Not a pull request: `main` is the release signal and a hand-run is
+          # somebody asking for this pipeline on purpose, so both run everything.
+          if [ "$EVENT" != "pull_request" ]; then
+            echo "native=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git fetch --no-tags --depth=1 origin "$BASE_REF"
+          files=$(git diff --name-only "FETCH_HEAD...HEAD")
+          if [ -z "$files" ]; then
+            # An empty diff is not evidence that nothing native changed, so the
+            # safe answer is to run the jobs.
+            echo "native=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # Skipped only when EVERY changed file is documentation (ADR 0004:
+          # "docs/** or **/*.md"). Anything else, a workflow file included, runs
+          # the native jobs.
+          other=$(printf '%s\n' "$files" | grep -v -E '^(docs/|.*\.md$)' || true)
+          if [ -n "$other" ]; then
+            echo "native=true" >> "$GITHUB_OUTPUT"
+            printf 'native surfaces touched:\n%s\n' "$(printf '%s\n' "$other" | head -20)"
+          else
+            echo "native=false" >> "$GITHUB_OUTPUT"
+            echo "documentation only (docs/** or *.md) — the native jobs are skipped"
+          fi
+
+  android:
+    name: Android (debug APK)
+    needs: changes
+    if: needs.changes.outputs.native == 'true'
+    runs-on: ubuntu-latest
+    # Bounded so a wedged Gradle invocation cannot hold a runner for GitHub's
+    # 360-minute default. A cold run is 8-14 minutes.
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+
+      # No `version:` — pnpm/action-setup reads `packageManager` from
+      # package.json, so the pnpm version has exactly one home.
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+
+      # Third-party action, pinned by FULL COMMIT SHA (v6.4.0): a compromised
+      # third-party action in a job that also holds a signing key is the supply
+      # chain this repository's rule exists for. Gradle caches come with it.
+      - uses: gradle/actions/setup-gradle@b9bee63ef481cc545e4517ec730544a4d8b1dfa0 # v6.4.0
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Derive the version from the ref
+        # `versionCode` is `github.run_number`, which is monotonic across every
+        # build of the repository and never reused — the one property Play
+        # enforces at upload time. `--no-install` keeps prebuild from touching
+        # the frozen lockfile.
+        run: node scripts/ci/version.mjs --write
+
+      - name: Generate the native project
+        run: pnpm exec expo prebuild --platform android --no-install
+
+      - name: Snapshot the generated project before anything builds in it
+        # The determinism gate at the end of this job compares this snapshot with
+        # a fresh `prebuild --clean`. Taking it BEFORE the build is what makes the
+        # comparison meaningful: it is the tree the APK was actually made from.
+        run: cp -R android "$RUNNER_TEMP/android-built"
+
+      - name: Build the debug APK
+        run: |
+          cd android
+          ./gradlew assembleDebug --no-daemon
+
+      - name: Upload the debug APK
+        uses: actions/upload-artifact@v7
+        with:
+          name: android-debug-apk
+          path: android/app/build/outputs/apk/debug/*.apk
+          retention-days: 30
+
+      - name: Assert the native project regenerates identically
+        # ADR 0004: continuous native generation is the source of truth, so the
+        # project that was built must be exactly what the config and its plugins
+        # produce. This is the gate that notices when someone "fixes" a generated
+        # file, because that fix is what the next `prebuild --clean` discards.
+        run: |
+          set -euo pipefail
+          pnpm exec expo prebuild --platform android --clean --no-install
+          node scripts/ci/prebuild-determinism.mjs \
+            --built "$RUNNER_TEMP/android-built" \
+            --regenerated android
+
+  internal:
+    name: Android internal release (signed AAB + APK, Play internal)
+    needs: [changes, android]
+    # `main` only. A pull request never signs — see the header — and a tag is
+    # release.yml's.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    # The environment is where the signing material and the Play service account
+    # live, and where required reviewers can be configured once there is more
+    # than one maintainer. Its deployment-branch rule should name `main` and
+    # `v*` tags; that rule is what keeps the credential out of a pull request
+    # (docs/ci.md, "Secrets").
+    environment: release
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - uses: gradle/actions/setup-gradle@b9bee63ef481cc545e4517ec730544a4d8b1dfa0 # v6.4.0
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Derive the version from the ref
+        run: node scripts/ci/version.mjs --write
+
+      - name: Generate the native project
+        run: pnpm exec expo prebuild --platform android --no-install
+
+      - name: Is the Play service account configured?
+        id: play
+        env:
+          PLAY_SERVICE_ACCOUNT_JSON_BASE64: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON_BASE64 }}
+        # `internal` mode warns rather than fails: a signed build of `main` is
+        # useful on its own, and the store upload is the part that needs the
+        # credential. A tagged release uses `--mode release`, which fails.
+        run: node scripts/ci/check-secrets.mjs --mode internal --need PLAY_SERVICE_ACCOUNT_JSON_BASE64
+
+      - name: Decode the release keystore
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          set -euo pipefail
+          umask 077
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/android-release.keystore"
+          # A blob that decodes but is not a keystore is the failure that wastes
+          # an hour at release time, so it is caught here, where the message can
+          # name the secret. `:env` keeps the password out of the process list.
+          keytool -list -keystore "$RUNNER_TEMP/android-release.keystore" \
+            -storepass:env ANDROID_KEYSTORE_PASSWORD >/dev/null
+
+      - name: Build the signed AAB and APK
+        env:
+          # Environment variables, never `-P`: a Gradle property lands in the
+          # process list and in the log, while variables set from secrets are
+          # masked. `--no-daemon` because a Gradle daemon reuses the environment
+          # of whichever client started it, which would make signing depend on
+          # which job happened to start the daemon.
+          LO_RELEASE_STORE_FILE: ${{ runner.temp }}/android-release.keystore
+          LO_RELEASE_STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          LO_RELEASE_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          LO_RELEASE_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          cd android
+          ./gradlew bundleRelease assembleRelease --no-daemon
+
+      - name: Upload the signed AAB and APK
+        uses: actions/upload-artifact@v7
+        with:
+          name: android-internal
+          path: |
+            android/app/build/outputs/bundle/release/app-release.aab
+            android/app/build/outputs/apk/release/app-release.apk
+          retention-days: 30
+
+      - name: Decode the Play service account
+        if: steps.play.outputs.all_present == 'true'
+        env:
+          PLAY_SERVICE_ACCOUNT_JSON_BASE64: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON_BASE64 }}
+        run: |
+          set -euo pipefail
+          umask 077
+          printf '%s' "$PLAY_SERVICE_ACCOUNT_JSON_BASE64" | base64 --decode > "$RUNNER_TEMP/play-service-account.json"
+
+      - name: Upload to the Play internal track (fastlane)
+        if: steps.play.outputs.all_present == 'true'
+        env:
+          SUPPLY_JSON_KEY: ${{ runner.temp }}/play-service-account.json
+          # The AAB, not the APK: Play requires the app bundle for a release, and
+          # the APK is what the GitHub Release attaches for sideloading.
+          LO_ANDROID_AAB: ${{ github.workspace }}/android/app/build/outputs/bundle/release/app-release.aab
+        run: fastlane android internal
+
+      - name: Remove the decoded credentials
+        # `always()`: this runs on a failed run too, which is exactly when a
+        # credential left on disk is most likely to be swept up with the rest of
+        # the runner's state.
+        if: always()
+        run: rm -f "$RUNNER_TEMP/android-release.keystore" "$RUNNER_TEMP/play-service-account.json"
+
+      - name: Say what was and was not uploaded
+        if: always()
+        run: |
+          {
+            echo "## Android internal release"
+            echo
+            echo "- signed AAB + APK: built and attached to this run"
+            echo "- Play internal track: ${{ steps.play.outputs.all_present == 'true' && 'uploaded' || '**NOT uploaded** — PLAY_SERVICE_ACCOUNT_JSON_BASE64 is not configured' }}"
+            echo
+            echo "A tagged release FAILS rather than skipping this (release.yml)."
+          } >> "$GITHUB_STEP_SUMMARY"

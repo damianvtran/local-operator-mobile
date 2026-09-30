@@ -1,0 +1,386 @@
+name: iOS
+
+# The iOS native gate.
+#
+# WHAT IT PROVES WITHOUT ANY SECRET. A simulator build needs no signing at all,
+# which is what makes it the right first native gate for a public repository: a
+# fork pull request, a contributor with no Apple Developer membership and a
+# maintainer who has not configured the secrets all get the same answer, and it
+# is a real one — the app compiles for the iOS 26 SDK on the Xcode 26 runner, and
+# it LAUNCHES, and the frame it renders is captured.
+#
+# WHY A RELEASE CONFIGURATION FOR THE SIMULATOR BUILD. A Debug build of a React
+# Native app expects a Metro dev server at runtime: launched on a simulator it
+# renders a red error screen, and a screenshot of that proves nothing about the
+# app. A Release build embeds the JavaScript bundle, so the launched app renders
+# the real UI. The cost is one bundling pass, which is cheaper than a frame
+# nobody can trust.
+#
+# WHY THERE ARE TWO JOBS. The simulator job needs no credential and runs on every
+# change; the `internal` job signs and can reach TestFlight, so it runs only on a
+# push to `main` and declares `environment: release`. See android.yml for the
+# full reasoning: the split is what makes the Apple key unreachable from a pull
+# request rather than merely withheld from a fork.
+#
+# A TAG IS NOT HANDLED HERE. release.yml owns `v*`; a tag that also signed here
+# would upload to TestFlight twice.
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: "24"
+  # The simulator is a pinned input, in one place (ADR 0004, open risks). macOS
+  # runner images track Xcode releases, so `scripts/ci/ios-simulator.mjs` resolves
+  # this name against what the runner actually has, prints what it chose, and
+  # warns rather than failing when the image has moved on.
+  IOS_SIMULATOR_DEVICE: iPhone 17
+
+jobs:
+  changes:
+    name: Does this change touch anything native?
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      native: ${{ steps.diff.outputs.native }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Decide whether the native jobs are worth running
+        id: diff
+        env:
+          BASE_REF: ${{ github.base_ref }}
+          EVENT: ${{ github.event_name }}
+        run: |
+          set -euo pipefail
+          # Not a pull request: `main` is a release signal and a hand-run is
+          # somebody asking for this pipeline on purpose, so both run everything.
+          if [ "$EVENT" != "pull_request" ]; then
+            echo "native=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git fetch --no-tags --depth=1 origin "$BASE_REF"
+          files=$(git diff --name-only "FETCH_HEAD...HEAD")
+          if [ -z "$files" ]; then
+            # An empty diff is not evidence that nothing native changed.
+            echo "native=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # Skipped only when EVERY changed file is documentation. Anything else,
+          # a workflow file included, runs the native jobs.
+          other=$(printf '%s\n' "$files" | grep -v -E '^(docs/|.*\.md$)' || true)
+          if [ -n "$other" ]; then
+            echo "native=true" >> "$GITHUB_OUTPUT"
+            printf 'native surfaces touched:\n%s\n' "$(printf '%s\n' "$other" | head -20)"
+          else
+            echo "native=false" >> "$GITHUB_OUTPUT"
+            echo "documentation only (docs/** or *.md) — the native jobs are skipped"
+          fi
+
+  ios:
+    name: iOS (simulator build, launch and frame)
+    needs: changes
+    if: needs.changes.outputs.native == 'true'
+    # `macos-26` is the image that carries Xcode 26.x, which is what Apple's
+    # upload requirement is written against (ADR 0004).
+    runs-on: macos-26
+    # macOS minutes are the pipeline's bottleneck. A cold run is 12-20 minutes;
+    # the bound is the diagnosis for a wedged one, not the budget.
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - uses: actions/setup-java@v6
+        # Expo's Android config is evaluated by `expo prebuild` even for an
+        # `--platform ios` run, and the Java toolchain keeps that path from
+        # depending on whatever JDK the image happens to default to.
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Derive the version from the ref
+        run: node scripts/ci/version.mjs --write
+
+      - name: Generate the native project
+        run: pnpm exec expo prebuild --platform ios --clean --no-install
+
+      - name: Install the pods
+        # Separate from prebuild so each step has one job: prebuild generates,
+        # and this resolves the native dependencies. CocoaPods 1.17.0 is on the
+        # image; `pod install` is idempotent, so it costs nothing when a
+        # Podfile.lock did not change.
+        run: cd ios && pod install
+
+      - name: Snapshot the generated project before anything builds in it
+        run: cp -R ios "$RUNNER_TEMP/ios-built"
+
+      - name: Resolve the simulator
+        id: simulator
+        env:
+          DEVICE: ${{ env.IOS_SIMULATOR_DEVICE }}
+        run: node scripts/ci/ios-simulator.mjs --prefer "$DEVICE"
+
+      - name: Resolve the workspace and scheme
+        id: project
+        # Resolved rather than written down: `expo prebuild` names the workspace
+        # and scheme after the app's sanitised name, and a second copy of that
+        # name here is a copy that can disagree with app.config.ts. The script
+        # also fails loudly when there is no workspace (which means `pod install`
+        # never ran) or when the project declares more than one scheme.
+        run: node scripts/ci/ios-project.mjs --root ios
+
+      - name: Build for the simulator (no signing at all)
+        # `CODE_SIGNING_ALLOWED=NO` is what lets this run with ZERO secrets. It
+        # is not a way of ignoring a signing problem: a simulator build genuinely
+        # has no signing step, and the signed path is the `internal` job.
+        run: |
+          set -euo pipefail
+          xcodebuild \
+            -workspace "${{ steps.project.outputs.workspace }}" \
+            -scheme "${{ steps.project.outputs.scheme }}" \
+            -configuration Release \
+            -destination 'platform=iOS Simulator,id=${{ steps.simulator.outputs.udid }}' \
+            -derivedDataPath "$RUNNER_TEMP/DerivedData" \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+
+      - name: Boot the simulator and launch the app
+        # A build that produces a .app which cannot start is not a working app,
+        # and this is the cheapest honest way to find that out without a device.
+        run: |
+          set -euo pipefail
+          udid="${{ steps.simulator.outputs.udid }}"
+          app=$(find "$RUNNER_TEMP/DerivedData/Build/Products" -maxdepth 2 -name "*.app" -type d | head -1)
+          echo "app: $app"
+          # Read the identity from the app the build produced rather than
+          # repeating it here: the bundle id lives in app.config.ts, and a second
+          # copy in a workflow is a copy that can disagree with it.
+          bundle=$(plutil -extract CFBundleIdentifier raw "$app/Info.plist")
+          echo "bundle: $bundle"
+          xcrun simctl boot "$udid" || true
+          xcrun simctl bootstatus "$udid" -b
+          xcrun simctl install "$udid" "$app"
+          xcrun simctl launch "$udid" "$bundle"
+
+      - name: Capture the frame the app renders
+        run: |
+          set -euo pipefail
+          sleep 5
+          mkdir -p "$RUNNER_TEMP/frames"
+          xcrun simctl io "${{ steps.simulator.outputs.udid }}" screenshot "$RUNNER_TEMP/frames/ios-release.png"
+
+      - name: Upload the frame and the simulator build
+        uses: actions/upload-artifact@v7
+        with:
+          name: ios-simulator
+          path: |
+            ${{ runner.temp }}/frames/*.png
+            ${{ runner.temp }}/DerivedData/Build/Products/Release-iphonesimulator/*.app
+          retention-days: 14
+
+      - name: Assert the native project regenerates identically
+        # ADR 0004: continuous native generation is the source of truth, so the
+        # project that was built must be exactly what the config and its plugins
+        # produce. This notices when someone "fixes" a generated file, because
+        # that fix is what the next `prebuild --clean` discards.
+        run: |
+          set -euo pipefail
+          pnpm exec expo prebuild --platform ios --clean --no-install
+          node scripts/ci/prebuild-determinism.mjs \
+            --built "$RUNNER_TEMP/ios-built" \
+            --regenerated ios
+
+  internal:
+    name: iOS internal release (signed IPA, TestFlight when configured)
+    needs: [changes, ios]
+    # Only a push to `main`. Never a pull request, never a tag (release.yml owns
+    # those) — see the header for why the credentials are scoped to this job.
+    if: needs.changes.outputs.native == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: macos-26
+    timeout-minutes: 90
+    # Where the Apple credentials live, and where required reviewers can be
+    # configured once there is more than one maintainer (ADR 0004). The
+    # environment's deployment-branch rule must list `main` and `v*` — that rule
+    # is what makes the key unreachable from a feature branch.
+    environment: release
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Derive the version from the ref
+        # On `main` this is the placeholder version with a run-number build
+        # number: both stores compare the build number, and the placeholder is
+        # what a non-release build is allowed to be. See docs/ci.md.
+        run: node scripts/ci/version.mjs --write
+
+      - name: Is the iOS signing material configured?
+        id: apple
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_ASC_KEY_ID: ${{ secrets.APPLE_ASC_KEY_ID }}
+          APPLE_ASC_ISSUER_ID: ${{ secrets.APPLE_ASC_ISSUER_ID }}
+          APPLE_ASC_PRIVATE_KEY_BASE64: ${{ secrets.APPLE_ASC_PRIVATE_KEY_BASE64 }}
+        # `internal` mode: a signed build of `main` is useful on its own and the
+        # TestFlight upload is the part that needs the key, so this warns rather
+        # than failing. A tagged release uses `--mode release`, which fails.
+        run: |
+          node scripts/ci/check-secrets.mjs --mode internal --need \
+            APPLE_TEAM_ID,APPLE_ASC_KEY_ID,APPLE_ASC_ISSUER_ID,APPLE_ASC_PRIVATE_KEY_BASE64
+
+      - name: Generate the native project
+        env:
+          # `app.config.ts` reads the team id from here, so the generated Xcode
+          # project has automatic signing pointed at the right team without the
+          # value being committed to a public repository.
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: pnpm exec expo prebuild --platform ios --clean --no-install
+
+      - name: Install the pods
+        run: cd ios && pod install
+
+      - name: Resolve the workspace and scheme
+        id: project
+        # Resolved rather than written down: `expo prebuild` names the workspace
+        # and scheme after the app's sanitised name, and a second copy of that
+        # name here is a copy that can disagree with app.config.ts. The script
+        # also fails loudly when there is no workspace (which means `pod install`
+        # never ran) or when the project declares more than one scheme.
+        run: node scripts/ci/ios-project.mjs --root ios
+
+      - name: Decode the App Store Connect API key
+        if: steps.apple.outputs.all_present == 'true'
+        env:
+          APPLE_ASC_PRIVATE_KEY_BASE64: ${{ secrets.APPLE_ASC_PRIVATE_KEY_BASE64 }}
+        run: |
+          set -euo pipefail
+          umask 077
+          printf '%s' "$APPLE_ASC_PRIVATE_KEY_BASE64" | base64 --decode > "$RUNNER_TEMP/asc-api-key.p8"
+          # A key that is not a key is the failure that wastes an hour, so it is
+          # caught here where the message can name the secret.
+          openssl pkey -in "$RUNNER_TEMP/asc-api-key.p8" -noout -check
+
+      - name: Write the export options
+        # Generated rather than committed, because the team id is part of it and
+        # a committed file would either carry a team id in a public repository or
+        # a placeholder that cannot work.
+        if: steps.apple.outputs.all_present == 'true'
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          set -euo pipefail
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>teamID</key><string>$APPLE_TEAM_ID</string>
+            <key>signingStyle</key><string>automatic</string>
+            <key>uploadSymbols</key><true/>
+            <key>destination</key><string>export</string>
+          </dict>
+          </plist>
+          PLIST
+          plutil -lint "$RUNNER_TEMP/ExportOptions.plist"
+
+      - name: Archive and export the IPA
+        if: steps.apple.outputs.all_present == 'true'
+        env:
+          APPLE_ASC_KEY_ID: ${{ secrets.APPLE_ASC_KEY_ID }}
+          APPLE_ASC_ISSUER_ID: ${{ secrets.APPLE_ASC_ISSUER_ID }}
+        run: |
+          set -euo pipefail
+          key="$RUNNER_TEMP/asc-api-key.p8"
+          xcodebuild \
+            -workspace "${{ steps.project.outputs.workspace }}" \
+            -scheme "${{ steps.project.outputs.scheme }}" \
+            -configuration Release \
+            -destination "generic/platform=iOS" \
+            -archivePath "$RUNNER_TEMP/App.xcarchive" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$key" \
+            -authenticationKeyID "$APPLE_ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$APPLE_ASC_ISSUER_ID" \
+            archive
+          xcodebuild -exportArchive \
+            -archivePath "$RUNNER_TEMP/App.xcarchive" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
+            -exportPath "$RUNNER_TEMP/ipa" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$key" \
+            -authenticationKeyID "$APPLE_ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$APPLE_ASC_ISSUER_ID"
+          find "$RUNNER_TEMP/ipa" -name "*.ipa" -print
+
+      - name: Upload the IPA
+        if: steps.apple.outputs.all_present == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: ios-ipa
+          path: ${{ runner.temp }}/ipa/*.ipa
+          retention-days: 30
+
+      - name: Upload to TestFlight (fastlane)
+        if: steps.apple.outputs.all_present == 'true'
+        env:
+          APPLE_ASC_KEY_ID: ${{ secrets.APPLE_ASC_KEY_ID }}
+          APPLE_ASC_ISSUER_ID: ${{ secrets.APPLE_ASC_ISSUER_ID }}
+          APPLE_ASC_PRIVATE_KEY_PATH: ${{ runner.temp }}/asc-api-key.p8
+          # The directory, not a filename: xcodebuild names the IPA after the
+          # app, and the lane finds it rather than being told a name a rename
+          # would break.
+          LO_IOS_IPA_DIR: ${{ runner.temp }}/ipa
+        run: fastlane ios testflight
+
+      - name: Remove the decoded key
+        if: always()
+        run: rm -f "$RUNNER_TEMP/asc-api-key.p8" "$RUNNER_TEMP/ExportOptions.plist"
+
+      - name: Say what was and was not uploaded
+        if: always()
+        run: |
+          {
+            echo "## iOS internal release"
+            echo
+            echo "- signed IPA: ${{ steps.apple.outputs.all_present == 'true' && 'built and attached to this run' || '**not built** — the Apple credentials are not configured' }}"
+            echo "- TestFlight: ${{ steps.apple.outputs.all_present == 'true' && 'uploaded' || '**NOT uploaded**' }}"
+            echo
+            echo "A tagged release FAILS rather than skipping this (release.yml)."
+          } >> "$GITHUB_STEP_SUMMARY"
