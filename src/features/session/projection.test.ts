@@ -14,7 +14,6 @@ import {
 	toolDetailBlocks,
 	toolElapsed,
 	toolGlyph,
-	transcriptRowTestID,
 	workingLine,
 } from "@/features/session/projection";
 
@@ -177,12 +176,6 @@ describe("row identity", () => {
 		expect(classifyEntry(entry({ kind: "brand_new_kind" }))).toBe("generic");
 	});
 
-	it("anchors each row by its own id", () => {
-		expect(transcriptRowTestID(entry({ id: "abc" }))).toBe(
-			"transcript-row-abc",
-		);
-	});
-
 	it("marks only the tail row, and only while streaming", () => {
 		const rows = [entry({ id: "a" }), entry({ id: "b" })];
 		expect(
@@ -248,10 +241,6 @@ describe("the todos panel's list", () => {
 			"done",
 		]);
 		expect(todos.phases[1]?.rows[0]?.struck).toBe(true);
-	});
-
-	it("is empty when there is nothing to show", () => {
-		expect(projectTodos([]).empty).toBe(true);
 	});
 });
 

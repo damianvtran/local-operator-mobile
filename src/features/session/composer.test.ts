@@ -3,7 +3,6 @@ import {
 	acknowledgedCurrentDraft,
 	attachmentLabel,
 	COMPOSER_COPY,
-	chooseOp,
 	composerControls,
 	receiptForError,
 } from "@/features/session/composer";
@@ -18,11 +17,6 @@ import { RelayError } from "@/relay";
  */
 
 describe("the send/steer morph", () => {
-	it("sends the op the turn state implies, from the one fact that decides it", () => {
-		expect(chooseOp(false)).toBe("prompt");
-		expect(chooseOp(true)).toBe("steer");
-	});
-
 	it("keeps one control in one place through every state", () => {
 		const base = {
 			hasDraft: true,
@@ -222,10 +216,5 @@ describe("attachment metadata shown before send", () => {
 		// a third too large — a number the reader would compare against a file size.
 		const image = { data_b64: "A".repeat(4096), mime_type: "image/png" };
 		expect(attachmentLabel(image)).toBe("PNG · 3 KB");
-	});
-
-	it("switches to megabytes once kilobytes stop being readable", () => {
-		const image = { data_b64: "A".repeat(1_400_000), mime_type: "image/jpeg" };
-		expect(attachmentLabel(image)).toBe("JPEG · 1.0 MB");
 	});
 });

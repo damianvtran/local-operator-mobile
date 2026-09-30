@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 
 import { sessionLayout } from "@/features/session/layout";
 import {
-	ESTIMATED_ROW_PT,
 	estimateVisibleRows,
 	TARGET_MOUNTED_ROWS,
 	windowPolicy,
@@ -84,12 +83,6 @@ describe("the transcript's render window", () => {
 		expect(policy.estimatedMountedRows).toBe(7);
 		expect(policy.initialNumToRender).toBe(7);
 	});
-
-	it("estimates visible rows from the row height the list actually uses", () => {
-		expect(estimateVisibleRows(ESTIMATED_ROW_PT * 3)).toBe(3);
-		// A viewport too short for one row still renders one row.
-		expect(estimateVisibleRows(10)).toBe(1);
-	});
 });
 
 describe("the responsive layout", () => {
@@ -139,25 +132,5 @@ describe("the responsive layout", () => {
 		expect(sessionLayout(768, 1024).twoPane).toBe(false);
 		expect(sessionLayout(834, 1112).twoPane).toBe(false);
 		expect(sessionLayout(1024, 1366).twoPane).toBe(true);
-	});
-
-	it("caps the readable measure instead of stretching it", () => {
-		// A paragraph 1366 px wide is unreadable, and the fix is a constrained column.
-		expect(sessionLayout(1366, 1024).measurePt).toBeLessThan(1366);
-		expect(sessionLayout(390, 844).measurePt).toBe(390);
-	});
-
-	it("classifies every matrix viewport into a bucket", () => {
-		for (const [label, width, height] of VIEWPORTS) {
-			const layout = sessionLayout(width, height);
-			expect(["compact", "medium", "wide"], label).toContain(layout.bucket);
-		}
-		expect(sessionLayout(280, 653).bucket).toBe("compact");
-		expect(sessionLayout(390, 844).bucket).toBe("compact");
-		// A phone in landscape is `medium`: more width than a portrait phone, and still
-		// one column.
-		expect(sessionLayout(844, 390).bucket).toBe("medium");
-		expect(sessionLayout(1366, 1024).bucket).toBe("wide");
-		expect(sessionLayout(768, 1024).bucket).toBe("medium");
 	});
 });

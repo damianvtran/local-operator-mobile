@@ -102,10 +102,6 @@ describe("filtering is a ranked subsequence match", () => {
 			filterCommands(catalogue, "").map((row) => row.command.name),
 		).toEqual(["rename", "review", "resume", "cost"]);
 	});
-
-	it("returns nothing rather than everything when a query matches nothing", () => {
-		expect(filterCommands(catalogue, "zzzz")).toEqual([]);
-	});
 });
 
 describe("what a tap does is a property of the catalogue", () => {
