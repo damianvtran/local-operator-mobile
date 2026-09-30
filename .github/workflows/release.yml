@@ -73,6 +73,18 @@ jobs:
           # this one, so the tags have to be here.
           fetch-depth: 0
 
+      - name: Fetch main, which the build-number floor compares against
+        # The floor is the highest number an internal build could already have
+        # published, and internal builds are published from `main` — so a tag that
+        # is NOT the tip has to clear a later commit's number too, or Play refuses
+        # the duplicate, after the GitHub Release exists (review round 4 / QA Q4).
+        # `origin/main` exists on a checkout of a tag only if it is fetched, and a
+        # missing ref is reported as `not-checked` rather than guessed. This is the
+        # job that ENFORCES the floor; the signing jobs re-derive the same numbers
+        # and their own check is therefore advisory.
+        run: git fetch --no-tags --quiet origin +refs/heads/main:refs/remotes/origin/main
+
+
       - name: Derive the version and the release build number
         id: derive
         env:
@@ -193,15 +205,6 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-
-      - name: Fetch main, which the build-number floor compares against
-        # The floor is the highest number an internal build could already have
-        # published, and internal builds are published from `main` — so a tag that
-        # is NOT the tip has to clear a later commit's number too, or Play refuses
-        # the duplicate (review round 4 / QA Q4). `origin/main` exists on a
-        # checkout of a tag only if it is fetched, and a missing ref is reported as
-        # "not-checked" rather than guessed.
-        run: git fetch --no-tags --quiet origin +refs/heads/main:refs/remotes/origin/main
 
       - name: Derive the version from the tag
         # The tag supplies the version; `release/build-number.txt` supplies the
