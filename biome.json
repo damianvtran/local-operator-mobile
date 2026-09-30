@@ -1,0 +1,71 @@
+{
+	"$schema": "https://biomejs.dev/schemas/2.5.14/schema.json",
+	"vcs": {
+		"enabled": false,
+		"clientKind": "git",
+		"useIgnoreFile": true
+	},
+	"files": {
+		"includes": [
+			"**",
+			"!dist",
+			"!node_modules",
+			"!app/**/node_modules",
+			"!.expo",
+			"!.pnpm-store",
+			"!src/ui/theme.css",
+			"!src/ui/tokens.gen.ts",
+			"!src/uniwind-types.d.ts",
+			"!design",
+			"!docs",
+			"!fixtures",
+			"!store"
+		]
+	},
+	"formatter": {
+		"enabled": true,
+		"indentStyle": "tab"
+	},
+	"linter": {
+		"enabled": true,
+		"rules": {
+			"preset": "recommended",
+			"correctness": {
+				"noUnusedVariables": "warn"
+			},
+			"performance": {
+				"noReExportAll": "warn",
+				"useTopLevelRegex": "warn"
+			}
+		}
+	},
+	"assist": {
+		"actions": {
+			"source": {
+				"organizeImports": "on"
+			}
+		}
+	},
+	"javascript": {
+		"formatter": {
+			"quoteStyle": "double"
+		}
+	},
+	"json": {
+		"formatter": {
+			"enabled": true
+		}
+	},
+	"overrides": [
+		{
+			"includes": ["scripts/build-theme.mjs"],
+			"linter": {
+				"rules": {
+					"style": {
+						"useTemplate": "off"
+					}
+				}
+			}
+		}
+	]
+}
