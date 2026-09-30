@@ -1,5 +1,5 @@
 {
-	"$comment": "Node-run tooling (scripts/**), typechecked separately from the app. These files execute directly under Node's native type stripping, so the config is stricter about what TypeScript may be written than the app's: only ERASABLE syntax (no enums, namespaces or parameter properties, which stripping cannot emit) and explicit `import type`. The app config is extended for strictness and paths, then re-pointed at Node instead of the DOM and React Native.",
+	"$comment": "Node-run tooling (scripts/**), typechecked separately from the app. These files execute directly under Node's native type stripping, so the config is stricter about what TypeScript may be written than the app's: only ERASABLE syntax (no enums, namespaces or parameter properties, which stripping cannot emit) and explicit `import type`. The app config is extended for strictness and paths, then re-pointed at Node instead of the DOM and React Native. The pinned compiler (typescript 7.0.2) accepts `erasableSyntaxOnly` and enforces it; `scripts/erasable-syntax.test.ts` fails if the flag is removed. A `tsc` older than the pin (measured: 5.6.3, from a global install or the npx cache) rejects it with TS5023, so run the gate through `pnpm typecheck`, which resolves the pinned one.",
 	"extends": "./tsconfig.json",
 	"compilerOptions": {
 		"module": "nodenext",
