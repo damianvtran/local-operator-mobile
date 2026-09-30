@@ -517,7 +517,7 @@ Caveats to state in the product copy rather than discover in the field:
 | Asset | Where it lives | Control |
 |---|---|---|
 | Radient OAuth refresh token (90-day rolling) | platform keystore | Rotated on every use; revocable server-side; never logged |
-| Tunnel session refresh handle (30-day absolute) | platform keystore | Revoked by logout; the edge never sees it from us |
+| Tunnel session refresh handle (30-day absolute) | platform keystore | Revoked by the control-plane logout call; sent to the **control plane only**, and to the edge only in the optional logout fallback — never on an ordinary request |
 | Tunnel grant JWT (5 min) | memory only | Held in memory; never persisted |
 | Relay password (custom route only) | user's head, optionally keystore | Never sent on the Radient route — the gateway injects the cookie itself |
 | Transcripts, queued commands | device storage | Cleared on logout; the retry envelope's lifetime is bounded by the relay's own contract (24 h TTL, per-session) |
