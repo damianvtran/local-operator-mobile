@@ -254,7 +254,10 @@ export class RelayHttpClient {
 		 *   which is what `release()` marks. A proxy that answers with headers and then
 		 *   stalls the body is an ordinary shape, and clearing the deadline when the
 		 *   headers arrived left the caller pending for ever (QA round 4, Q1: still
-		 *   pending at 30 s against a 500 ms deadline);
+		 *   pending at 30 s against a 500 ms deadline). The budget is TOTAL elapsed time
+		 *   for the request, not idle time: a body that keeps trickling is cut when the
+		 *   budget is spent, so an unusually large response over a slow link needs a
+		 *   larger client-level `timeoutMs` — the image surface is the one to watch;
 		 * - a STREAM is bounded only until the response arrives, and the deadline is
 		 *   cleared just before this returns it: its body is deliberately long-lived
 		 *   and `sse.ts`'s silence watchdog owns everything after the headers. Keeping

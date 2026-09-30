@@ -50,7 +50,9 @@ async function serve(
 	const server = createServer((_request, response) => handle(response));
 	servers.push(server);
 	await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
-	const { port } = server.address() as AddressInfo;
+	const { port } =
+		server.address() as AddressInfo; /* `listen(0)` always yields an
+	 *  `AddressInfo`; the union is Node's typing for a unix-socket address. */
 	return `http://127.0.0.1:${port}`;
 }
 
@@ -97,7 +99,9 @@ describe("the deadline bounds a short body, and does not bound a stream's", () =
 			`the stalled body settled in ${elapsed} ms against a ${DEADLINE_MS} ms deadline`,
 		).toBeLessThan(DEADLINE_MS + 2_500);
 		expect(isRelayError(settled)).toBe(true);
-		const error = settled as RelayError;
+		const error =
+			settled as RelayError; /* narrowed by the assertion above; the cast
+		 *  is what carries that into the type checker. */
 		expect(error.kind).toBe("transport");
 		/* A body that never finished produced no answer, so the delivery is unknown
 		 * and the taxonomy keeps the envelope: the instruction can be replayed. */
@@ -122,7 +126,9 @@ describe("the deadline bounds a short body, and does not bound a stream's", () =
 		 * the deadline followed the stream's body this would stop part-way, and a phone
 		 * would see a live session freeze on a healthy connection. */
 		const frameCount = 5;
+		let connects = 0;
 		const baseUrl = await serve((response) => {
+			connects += 1;
 			response.writeHead(200, {
 				"content-type": "text/event-stream",
 				"cache-control": "no-store",
@@ -141,8 +147,10 @@ describe("the deadline bounds a short body, and does not bound a stream's", () =
 
 		const client = clientFor(baseUrl);
 		const received: number[] = [];
+		const states: string[] = [];
 		const stream = client.sessionStream(SESSION_ID, {
 			onFrame: () => void received.push(Date.now()),
+			onState: (status) => void states.push(status.state),
 		});
 		stream.connection.start();
 		await vi.waitFor(() => expect(received.length).toBe(frameCount), {
@@ -159,6 +167,16 @@ describe("the deadline bounds a short body, and does not bound a stream's", () =
 			spread,
 			`the stream delivered ${frameCount} frames over ${spread} ms with a ${DEADLINE_MS} ms deadline`,
 		).toBeGreaterThan(DEADLINE_MS);
+		/* THE property that differs (review round 5, R5-M1). The frames alone do not
+		 * discriminate: a deadline that followed the stream's body would cut it here, the
+		 * watchdog would reopen it, and all five frames would still arrive — across TWO
+		 * connections, with a `stalled` and a second `connecting` in between. "The body is
+		 * exempt" means exactly ONE connection and no reopen for the whole window, which
+		 * is what a phone sees as a quietly frozen live session when it regresses. */
+		expect(states).not.toContain("stalled");
+		expect(states.indexOf("connecting")).toBe(states.lastIndexOf("connecting"));
+		expect(states.indexOf("connecting")).toBeLessThan(states.indexOf("open"));
+		expect(connects).toBe(1);
 		expect(stream.connection.isRunning).toBe(true);
 		stream.stop();
 	}, 20_000);
@@ -186,7 +204,10 @@ describe("the deadline bounds a short body, and does not bound a stream's", () =
 		expect(isRelayError(errors[0])).toBe(true);
 		/* The loop's own verdict: it retries a stalled body, so the classified failure
 		 * it eventually reports is the ceiling's, not a raw platform error. */
-		expect((errors[0] as RelayError).kind).toBe("transport");
+		expect((errors[0] as RelayError).kind).toBe(
+			"transport",
+		); /* the loop is the only
+		 *  source of `onError` here, and it reports the taxonomy's type. */
 		stream.stop();
 	}, 30_000);
 });

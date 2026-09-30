@@ -85,16 +85,14 @@ export interface ConnectionActions {
 	markDegraded: (input: { detail: string }) => void;
 	/** A failure with its surface. A `sign-in` surface returns to `signed-out`,
 	 *  because that is the state the user is actually in. */
-	/** Takes the typed error's decision fields. They are all optional because a
-	 *  caller may have only a `kind`-less failure in hand (an endpoint that threw a
-	 *  plain `RelayError` with no surface). A caller holding a `RelayError` passes
-	 *  `displayableMessage`, which is the taxonomy's sanitised copy — `detail` is the
-	 *  classifier's own field and is only a fallback, because it can be empty or
-	 *  markup while the sentence is not. */
+	/** Takes a failure's decision fields. A caller holding a `RelayError` passes the
+	 *  error itself (it is structurally assignable), which is deliberate: the copy that
+	 *  reaches a screen is `displayableMessage`, the taxonomy's sanitised accessor, so
+	 *  there is no way in for a raw `detail` — an unsanitised string, an empty body or a
+	 *  proxy's markup (review round 5, m2). */
 	noteFailure: (error: {
-		surface?: ErrorSurface | null;
-		displayableMessage?: string | null;
-		detail?: string | null;
+		surface: ErrorSurface;
+		displayableMessage: string;
 		retryAfterMs?: number | null;
 	}) => void;
 	/** Ends the route: the only other action that touches `route`. */
@@ -175,14 +173,17 @@ export function createConnectionStore() {
 		},
 
 		noteFailure(error) {
-			const surface = error.surface ?? "none";
+			const { surface } = error;
+			/* Two rules decide what a screen may show. `displayableMessage` is the
+			 * taxonomy's sanitised accessor — never a runtime diagnostic, an empty proxy
+			 * body or markup — so `""` and an HTML error page cannot reach a screen; and a
+			 * CLIENT bug (`diagnostic`) stores NOTHING, because the answer there is a retry
+			 * affordance and the surface says so. Storing its sentence is what put
+			 * "cross-origin request refused" in front of a user for a bug they cannot act
+			 * on (review round 5, m4). */
+			const detail = surface === "diagnostic" ? null : error.displayableMessage;
 			set({
-				/* Through the taxonomy's copy accessor rather than the raw `detail`: it
-				 * sanitises — never a runtime diagnostic, an empty proxy body or markup — so
-				 * a screen reading the snapshot cannot render `""` or an HTML error page.
-				 * `surface` stays the signal for a client bug, where the answer is a retry
-				 * affordance rather than a sentence. */
-				detail: error.displayableMessage ?? error.detail ?? null,
+				detail,
 				surface,
 				retryAfterMs: error.retryAfterMs ?? null,
 				phase: surface === "sign-in" ? "signed-out" : "refused",

@@ -365,13 +365,22 @@ export function isRelayError(value: unknown): value is RelayError {
 /** System error codes that mean the CERTIFICATE, not the network. Kept tight: a
  *  protocol-level TLS complaint (speaking TLS to the wrong port, for instance) is
  *  not a certificate the user has to fix, so it stays `transport`. */
+/** System error codes that mean the CERTIFICATE was rejected. A closed list on
+ *  purpose: it is matched against whatever a runtime puts in `error.code`, and a
+ *  pattern over that namespace would classify a code nobody has seen yet. Every
+ *  entry is a Node/OpenSSL name for a verification failure (review round 5, m1
+ *  added the last four). */
 const CERTIFICATE_CODES = new Set([
 	"CERT_HAS_EXPIRED",
 	"CERT_NOT_YET_VALID",
+	"CERT_REVOKED",
+	"CERT_SIGNATURE_FAILURE",
 	"CERT_UNTRUSTED",
 	"DEPTH_ZERO_SELF_SIGNED_CERT",
 	"ERR_TLS_CERT_ALTNAME_INVALID",
+	"HOSTNAME_MISMATCH",
 	"SELF_SIGNED_CERT_IN_CHAIN",
+	"UNABLE_TO_GET_ISSUER_CERT",
 	"UNABLE_TO_GET_ISSUER_CERT_LOCALLY",
 	"UNABLE_TO_VERIFY_LEAF_SIGNATURE",
 ]);
@@ -385,14 +394,21 @@ const DNS_CODES = new Set(["EAI_AGAIN", "ENOTFOUND", "ERR_NAME_NOT_RESOLVED"]);
  * weaker one — so these match words that cannot mean anything else. `getaddrinfo`
  * appears in the code's own message, which is why it is here as well as `ENOTFOUND`.
  *
- * The certificate arm is ANCHORED to rejection phrasing and does not match the bare
- * word: `/certificate/` classified "the certificate story is long; the request timed
- * out" as a rejected certificate, which tells a caller NEVER to retry a failure that
- * a retry would clear (review round 4, m1). Every negative case that survived is the
- * one this arm no longer takes: `ETIMEDOUT`, `ECONNREFUSED`, `EPROTO`, a bare
- * "fetch failed", and any timeout that merely mentions certificates. */
+ * The certificate arm is a CLOSED LIST of failure PHRASES, anchored to a
+ * verification failure rather than to the noun: `/certificate/` classified "the
+ * certificate story is long; the request timed out" as a rejected certificate, which
+ * tells a caller NEVER to retry a failure a retry would clear (review round 4, m1).
+ * It is a list rather than one pattern because the phrasings are what runtimes
+ * actually print — `unable to get local issuer certificate`, `certificate is not yet
+ * valid`, `Hostname/IP does not match certificate's altnames`, `SSL error:
+ * certificate verify failed` (review round 5, m1). A timeout that happens to mention
+ * certificates matches none of them and stays `transport`.
+ *
+ * React Native and browsers send no code AND say only "Network request failed" /
+ * "Failed to fetch", so neither arm can classify on those targets; the failure is a
+ * `transport` there, which is the safe direction (retryable) and is documented. */
 const CERTIFICATE_TEXT =
-	/self[- ]signed|certificate (is |has )?(expired|invalid|untrusted|rejected|revoked)|unable to (verify|get issuer)/i;
+	/self[- ]signed|certificate (is |has )?(expired|invalid|untrusted|rejected|revoked)|certificate (is )?not yet valid|unable to (verify|get (local )?issuer)|(does not|doesn't) match certificate|altnames|certificate verify failed/i;
 const DNS_TEXT =
 	/getaddrinfo|ENOTFOUND|name not resolved|could not be resolved/i;
 
@@ -552,6 +568,17 @@ export interface RelayResponseFacts {
  * some of the same statuses with different bodies, and only the body (or the
  * presence of `X-Radient-Login`) says which gate spoke.
  */
+/** A string from the body, or `undefined` when there is nothing to show.
+ *
+ * `{"error":""}` is a real relay body shape, and `??` keeps it: the arms below would
+ * then write an EMPTY message while their written copy stayed unreachable — a 401
+ * whose sentence came out as "The relay could not be reached." (review round 5, m3).
+ * Empty means absent, so each arm falls through to its own sentence. */
+function nonEmpty(value: string | undefined): string | undefined {
+	const trimmed = value?.trim();
+	return trimmed === undefined || trimmed === "" ? undefined : trimmed;
+}
+
 export function relayErrorFromResponse(
 	facts: RelayResponseFacts,
 	diagnostic?: string,
@@ -567,12 +594,14 @@ export function relayErrorFromResponse(
 		(facts.body === undefined && text.trimStart().startsWith("{")
 			? asObject(safeParse(text))
 			: undefined);
-	const serverError =
-		typeof objectBody?.error === "string" ? objectBody.error : undefined;
+	const serverError = nonEmpty(
+		typeof objectBody?.error === "string" ? objectBody.error : undefined,
+	);
 	const code =
 		typeof objectBody?.code === "string" ? objectBody.code : undefined;
-	const detail =
-		typeof objectBody?.detail === "string" ? objectBody.detail : undefined;
+	const detail = nonEmpty(
+		typeof objectBody?.detail === "string" ? objectBody.detail : undefined,
+	);
 	const reasonRaw =
 		typeof objectBody?.reason === "string" ? objectBody.reason : undefined;
 	const retryAfterMs = parseRetryAfter(facts.header("retry-after"));

@@ -171,7 +171,11 @@ for a user, which is why they are not collapsed:
 - **`certificate-rejected`** — a self-signed, expired or misaddressed certificate
   on the user's own tunnel. The fix is the certificate, retrying the same one
   cannot change the answer, and `connection` says the fix belongs to the route's own
-  settings rather than to the computer or an account.
+  settings rather than to the computer or an account. Node and OpenSSL send enough for
+  this (`error.code`, or a message from a closed list of verification phrases);
+  **React Native and browsers send neither** — "Network request failed" / "Failed to
+  fetch" with no code — so on those targets this arrives as a plain `transport`,
+  which is the safe direction (retryable) rather than a wrong "never retry".
 - **`host-unresolved`** — the address does not resolve: a typo, or a DNS record
   that is gone. One automatic retry is allowed (a resolver timeout clears by
   itself) and the sentence still names the address. This is the ordinary failure of
@@ -217,7 +221,10 @@ class** (`relay/http.ts`):
   been read. A proxy that answers with headers and then stalls the body is an
   ordinary shape, and clearing the deadline when the headers arrived left the caller
   pending for ever — for `sendPersistedCommand` that is the composer waiting with the
-  envelope held and the outcome never reported;
+  envelope held and the outcome never reported. **The budget is total elapsed time,
+  not idle time**: a body that keeps trickling still ends when the budget is spent, so
+  an unusually large response over a slow link needs a larger client-level
+  `timeoutMs` (the image surface is the one to watch);
 - a **stream's** body is deliberately not bounded: the deadline is cleared when the
   response arrives, and `sse.ts`'s silence watchdog owns everything after the
   headers. It is still bounded UP TO the response, because a connector that accepts

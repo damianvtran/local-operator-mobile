@@ -16,7 +16,7 @@ import { describe, expect, it } from "vitest";
 
 import type { SessionProjection, SessionSummary } from "../../contracts";
 import { parsePayload } from "../../contracts";
-import type { ErrorSurface } from "../../relay";
+import { type ErrorSurface, relayErrorFromResponse } from "../../relay";
 import { loadFixture } from "../../testing/fixtures";
 import {
 	createConnectionStore,
@@ -53,13 +53,13 @@ function projection(): SessionProjection {
 }
 
 function failure(overrides: {
-	surface?: ErrorSurface | null;
-	detail?: string | null;
+	surface?: ErrorSurface;
+	displayableMessage?: string;
 	retryAfterMs?: number | null;
 }) {
 	return {
 		surface: "computer-offline" as const,
-		detail: "Tunnel temporarily unavailable",
+		displayableMessage: "Tunnel temporarily unavailable",
 		...overrides,
 	};
 }
@@ -140,11 +140,12 @@ describe("the connection store is the only place a route starts or ends", () => 
 			tunnelId: "t1",
 		});
 		store.getState().markLive({ accountLabel: "damian" });
-		store
-			.getState()
-			.noteFailure(
-				failure({ surface: "sign-in", detail: "tunnel session expired" }),
-			);
+		store.getState().noteFailure(
+			failure({
+				surface: "sign-in",
+				displayableMessage: "tunnel session expired",
+			}),
+		);
 		/* The user is re-authenticating the SAME computer, not choosing a new one. */
 		expect(store.getState().phase).toBe("signed-out");
 		expect(store.getState().route).not.toBeNull();
@@ -161,13 +162,62 @@ describe("the connection store is the only place a route starts or ends", () => 
 		store.getState().noteFailure(
 			failure({
 				surface: "console",
-				detail: "This tunnel was revoked.",
+				displayableMessage: "This tunnel was revoked.",
 				retryAfterMs: 120_000,
 			}),
 		);
 		expect(store.getState().phase).toBe("refused");
 		expect(store.getState().detail).toBe("This tunnel was revoked.");
 		expect(store.getState().retryAfterMs).toBe(120_000);
+	});
+
+	it("stores the taxonomy's sentence for a junk body, never the body itself", () => {
+		/* Review round 5, m2: the store's copy comes from `displayableMessage`, and these
+		 * are the two shapes that used to reach a screen — `""` from a body-less 502 and
+		 * a proxy's HTML error page. The suite built its failures from literals before,
+		 * so reverting the store left every case green. */
+		const store = createConnectionStore();
+		store.getState().startRoute({
+			mode: "custom",
+			baseUrl: "https://relay.example",
+			allowInsecure: false,
+		});
+		/* A REAL failure, classified by the taxonomy — not a hand-built literal. */
+		store.getState().noteFailure(
+			relayErrorFromResponse({
+				status: 502,
+				header: () => null,
+				text: "",
+			}),
+		);
+		expect(store.getState().detail).toBe("bad gateway");
+
+		store.getState().noteFailure(
+			relayErrorFromResponse({
+				status: 502,
+				header: () => null,
+				text: "<html><body>502 Bad Gateway</body></html>",
+			}),
+		);
+		expect(store.getState().detail).toBe("bad gateway");
+		expect(store.getState().detail).not.toContain("<");
+	});
+
+	it("stores no copy at all for a client bug", () => {
+		/* Review round 5, m4: `diagnostic` means the APP built a bad request, and a
+		 * screen's answer is a retry affordance. Storing its sentence is what put
+		 * "cross-origin request refused" in front of a user for a bug they cannot act on.
+		 * `surface` is how a screen learns this, so it is still recorded. */
+		const store = createConnectionStore();
+		const refused = relayErrorFromResponse({
+			status: 403,
+			header: () => null,
+			text: "<html><body>wrong origin</body></html>",
+		});
+		expect(refused.surface).toBe("diagnostic");
+		store.getState().noteFailure(refused);
+		expect(store.getState().surface).toBe("diagnostic");
+		expect(store.getState().detail).toBeNull();
 	});
 
 	it("never blanks the route on a degraded read", () => {

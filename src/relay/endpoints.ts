@@ -427,9 +427,10 @@ export class RelayEndpoints {
 			 * verdict is `signedIn` + `verified`, which is what a caller acts on. */
 			return { status: 0, signedIn: true, verified: true };
 		}
-		/* The refusal's sentence comes from the taxonomy, which is the one place a
-		 * status becomes copy — not from a status this client could not even read. */
-		const detail = admission.refusal?.detail ?? admission.refusal?.message;
+		/* The refusal's sentence comes from the taxonomy's ONE copy accessor, which is the
+		 * place a status becomes copy — and the only one that refuses a runtime
+		 * diagnostic, an empty body and markup. */
+		const detail = admission.refusal?.displayableMessage;
 		return {
 			status: 0,
 			signedIn: false,

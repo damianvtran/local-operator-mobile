@@ -24,8 +24,22 @@ import {
 	type RelayResponseFacts,
 	rateLimitedError,
 	relayErrorFromResponse,
+	TRANSPORT_SENTENCE,
 	transportError,
 } from "../index";
+
+/** A runtime error carrying a TLS code, the shape Node's TLS layer raises. The
+ *  message deliberately contains no certificate phrase, so the CODE arm is what is
+ *  under test. */
+function codeError(code: string): Error {
+	return Object.assign(new Error(`tls failure (${code})`), { code });
+}
+
+/** The same, one level down, which is how undici reports a cause chain — the
+ *  classifier walks it, and a nested code must classify like a top-level one. */
+function nestedCauseCode(code: string): Error {
+	return new Error("fetch failed", { cause: codeError(code) });
+}
 
 function facts(
 	status: number,
@@ -312,28 +326,56 @@ describe("transport errors name the failure without leaking a URL", () => {
 	});
 
 	it("keeps a timeout that merely mentions a certificate a transport failure", () => {
-		/* Review round 4, m1. The text arm used to match the bare word `/certificate/`,
-		 * so this timeout became `certificate-rejected`: told NEVER to retry, and sent
-		 * to the route-settings surface instead of the retry one. The arm is anchored to
-		 * rejection phrasing; the CODE arm is what carries the real classification. */
-		const timeout = transportError(
-			new Error("the certificate story is long; the request timed out"),
-			"relay POST /login",
-		);
-		expect(timeout.kind).toBe("transport");
-		expect(timeout.surface).toBe("retry");
-		expect(timeout.retry).toBe("same-id");
+		/* Review round 4, m1, and the trap it left: the text arm is a CLOSED LIST of
+		 * verification phrases, so a timeout that happens to mention certificates is not
+		 * told "never retry". */
+		for (const message of [
+			"the certificate story is long; the request timed out",
+			"timed out waiting for certificate revocation check",
+			"connect ETIMEDOUT 203.0.113.10:443",
+			"write EPROTO wrong version number",
+			"fetch failed",
+		]) {
+			const error = transportError(new Error(message), "relay POST /login");
+			expect(error.kind, message).toBe("transport");
+			expect(error.surface, message).toBe("retry");
+			expect(error.retry, message).toBe("same-id");
+		}
 	});
 
-	it("still classifies a genuine certificate rejection, from the message or the code", () => {
-		for (const cause of [
-			new Error("unable to verify the first certificate"),
-			new Error("self-signed certificate in certificate chain"),
-			Object.assign(new Error("bad certificate"), {
-				code: "DEPTH_ZERO_SELF_SIGNED_CERT",
-			}),
+	it("classifies a genuine certificate rejection from the message or the code", () => {
+		/* Review round 5, m1: React Native and the web send NO code, so the message
+		 * carries the classification there, and these are the phrasings the runtimes
+		 * actually print. */
+		for (const message of [
+			"unable to get local issuer certificate",
+			"certificate is not yet valid",
+			"Hostname/IP does not match certificate's altnames: Host: relay.example",
+			"SSL error: certificate verify failed",
+			"unable to verify the first certificate",
+			"self-signed certificate in certificate chain",
+			"certificate has expired",
 		]) {
-			expect(transportError(cause).kind).toBe("certificate-rejected");
+			expect(transportError(new Error(message)).kind, message).toBe(
+				"certificate-rejected",
+			);
+		}
+		/* And the codes, including a nested cause's — the chain is walked. */
+		for (const code of [
+			"DEPTH_ZERO_SELF_SIGNED_CERT",
+			"UNABLE_TO_VERIFY_LEAF_SIGNATURE",
+			"ERR_TLS_CERT_ALTNAME_INVALID",
+			"CERT_REVOKED",
+			"CERT_SIGNATURE_FAILURE",
+			"UNABLE_TO_GET_ISSUER_CERT",
+			"HOSTNAME_MISMATCH",
+		]) {
+			expect(transportError(codeError(code)).kind, code).toBe(
+				"certificate-rejected",
+			);
+			expect(transportError(nestedCauseCode(code)).kind, code).toBe(
+				"certificate-rejected",
+			);
 		}
 	});
 
@@ -402,6 +444,35 @@ describe("transport errors name the failure without leaking a URL", () => {
 		);
 		expect(gatewayBody.kind).toBe("relay-down");
 		expect(gatewayBody.displayableMessage).toBe("local harness unavailable");
+	});
+
+	it("treats an empty error field as absent, so the written sentence is the answer", () => {
+		/* Review round 5, m3: `{"error":""}` is a real body shape, and `??` kept the
+		 * empty string — a 401 whose sentence read "The relay could not be reached."
+		 * while its surface said PASSWORD. The exact copy is asserted where it is safe to
+		 * do so; the 403 asserts the properties instead, because its phrase is pinned by
+		 * the corpus's own capture in the e2e sign-in case. */
+		const unauthorized = relayErrorFromResponse(
+			facts(401, { "content-type": "application/json" }, '{"error":""}'),
+		);
+		expect(unauthorized.surface).toBe("password");
+		expect(unauthorized.displayableMessage).toBe("authentication required");
+
+		const refused = relayErrorFromResponse(
+			facts(403, { "content-type": "application/json" }, '{"error":""}'),
+		);
+		expect(refused.displayableMessage).not.toBe(TRANSPORT_SENTENCE);
+		expect(refused.displayableMessage.length).toBeGreaterThan(0);
+
+		const tooLarge = relayErrorFromResponse(
+			facts(413, { "content-type": "application/json" }, '{"error":""}'),
+		);
+		expect(tooLarge.displayableMessage).toBe("request is too large");
+
+		const limited = relayErrorFromResponse(
+			facts(429, { "content-type": "application/json" }, '{"error":""}'),
+		);
+		expect(limited.displayableMessage).toBe("rate limited");
 	});
 
 	it("keeps a 429 retryable, with its Retry-After, without keeping the envelope", () => {
