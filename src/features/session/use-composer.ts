@@ -17,6 +17,7 @@ import {
 } from "@/features/session/device-storage";
 import { envelopeStoreFor } from "@/features/session/envelope-store";
 import type { SessionRelaySource } from "@/features/session/relay-source";
+import { sendSlashCommand } from "@/features/session/send-slash";
 import {
 	parseSlashDraft,
 	slashQuery,
@@ -104,6 +105,15 @@ export const useComposer = (input: {
 	const [images, setImages] = useState<PromptImage[]>([]);
 	const [retained, setRetained] = useState<ContinuationEnvelope | null>(null);
 	const [sending, setSending] = useState(false);
+	/* The same guard as `sending`, but synchronous. React state is what DISABLES the
+	 * controls; it is not visible to a second event in the same frame, and a double
+	 * tap on a slash row arrives exactly there — measured: two taps in one tick put
+	 * two commands on the wire while every control rendered as disabled. A ref is
+	 * read and written within the tick, so the second tap is refused rather than
+	 * deduplicated afterwards. (The envelope path has the relay's `already admitted`
+	 * for the same hazard; a slash command carries no id to deduplicate on, so here
+	 * it must not be sent twice at all.) */
+	const inFlight = useRef(false);
 	const [error, setError] = useState<string | null>(null);
 	const [notice, setNotice] = useState<string | null>(null);
 	const [attaching, setAttaching] = useState(false);
@@ -154,7 +164,8 @@ export const useComposer = (input: {
 
 	const runSend = useCallback(
 		async (op: "prompt" | "steer") => {
-			if (endpoints === null) return;
+			if (endpoints === null || inFlight.current) return;
+			inFlight.current = true;
 			const trimmed = draftRef.current.trim();
 			const payloadImages =
 				imagesRef.current.length > 0
@@ -170,14 +181,17 @@ export const useComposer = (input: {
 			setNotice(null);
 			try {
 				if (parsed !== null) {
-					// No envelope: a slash command carries no durable identity to replay,
-					// so there is nothing whose outcome could be ambiguous.
-					await endpoints.command(sessionId, {
-						op: "slash",
-						command: parsed.command,
-						args: parsed.args,
+					/* No envelope: a slash command carries no durable identity to replay,
+					 * so there is nothing whose outcome could be ambiguous. The send itself
+					 * is `sendSlashCommand` — the SAME call the tap path makes, so typing
+					 * `/help` and tapping `/help` cannot diverge in state, disable or error
+					 * handling. */
+					await sendSlashCommand({
+						client: endpoints,
+						sessionId,
+						request: parsed,
+						effects: { setSending, setError, setDraft },
 					});
-					setDraft("");
 					return;
 				}
 				/* Hold, send and settle live in `@/relay`'s `sendPersistedCommand`: one
@@ -201,7 +215,19 @@ export const useComposer = (input: {
 					 * re-offered — left exactly as they left it, in the composer, with a
 					 * notice that says it was not sent. A draft that vanishes without a word
 					 * is the failure this mechanism exists to prevent; the same applies to a
-					 * draft that looks sent and is not. */
+					 * draft that looks sent and is not.
+					 *
+					 * How this arm is reached, because QA could not reach it and recorded the
+					 * gap as O1 (low, no user impact): while an envelope is held,
+					 * `envelopePending` disables the primary — measured, so the shipped
+					 * sequence cannot send a NEW draft over an unresolved one, and the
+					 * reader's only move is Retry, which lands on `retryAckNotice` below.
+					 * This arm is the RACE around that guard: the reader presses send on a
+					 * render that still says "not pending", and the failure that makes the
+					 * earlier instruction unresolved lands while this request is in flight.
+					 * It is kept for that race, deliberately not deleted, and it is the only
+					 * path that reaches this sentence — so it stays untested end-to-end
+					 * rather than being claimed as a live flow. */
 					setNotice(COMPOSER_COPY.reusedDraftNotice);
 				} else if (
 					// Only clear the visible draft when the acknowledged bytes ARE the
@@ -243,6 +269,7 @@ export const useComposer = (input: {
 					setError(ambiguousMessage(streaming));
 				}
 			} finally {
+				inFlight.current = false;
 				setSending(false);
 			}
 		},
@@ -259,6 +286,8 @@ export const useComposer = (input: {
 
 	const retry = useCallback(() => {
 		void (async () => {
+			if (inFlight.current) return;
+			inFlight.current = true;
 			const held = await envelopeStore.peek(sessionId);
 			if (held === null || endpoints === null) return;
 			setSending(true);
@@ -293,6 +322,7 @@ export const useComposer = (input: {
 					setError(ambiguousMessage(streaming));
 				}
 			} finally {
+				inFlight.current = false;
 				setSending(false);
 			}
 		})();
@@ -386,20 +416,38 @@ export const useComposer = (input: {
 	const slash = useCallback(
 		(command: SlashCommand) => {
 			const tap = slashTap(command);
+			// Checked before the fill, so a refused second tap cannot even write the
+			// draft the successful first tap is about to clear.
+			if (inFlight.current) return;
 			setDraft(tap.fill);
-			if (!tap.submit) return;
-			/* The run-immediately arm. It sends the request the COMMAND names, never a
-			 * re-parse of the draft: the draft ref is assigned during render, so it
-			 * still holds the pre-tap text here, and re-parsing it sent the partial
-			 * token the reader had typed (`/he`) for a tap on `/help` — 24 of the
-			 * relay's 46 commands (QA round 1, Q1). A slash request carries no
-			 * attachment, which is the same rule the typed path applies. */
+			if (!tap.submit || endpoints === null) return;
+			inFlight.current = true;
+			/* The run-immediately arm. Two things it must NOT do, both of which it did:
+			 *
+			 * - Derive the request from the DRAFT. The draft ref is assigned during
+			 *   render, so it still holds the pre-tap text here, and re-parsing it sent
+			 *   the partial token the reader had typed (`/he`) for a tap on `/help` — 24
+			 *   of the relay's 46 commands (QA round 1, Q1). It comes from the COMMAND.
+			 * - Send on its own. The disable, the error surface and the draft clear are
+			 *   `sendSlashCommand`'s, the same call the typed path makes; the tap is a
+			 *   send like any other, and the sheet closes with the draft it clears
+			 *   (review round 2, F1). A slash request carries no attachment, which is
+			 *   the rule the typed path applies too. */
 			const request = slashTapRequest(command);
-			if (request === null || endpoints === null) return;
-			void endpoints.command(sessionId, {
-				op: "slash",
-				command: request.command,
-				args: request.args,
+			if (request === null) return;
+			setNotice(null);
+			void sendSlashCommand({
+				client: endpoints,
+				sessionId,
+				request,
+				effects: {
+					setSending,
+					setError,
+					setDraft,
+					released: () => {
+						inFlight.current = false;
+					},
+				},
 			});
 		},
 		[endpoints, sessionId, setDraft],

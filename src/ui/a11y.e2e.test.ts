@@ -40,6 +40,62 @@ const SOURCE_FILE = /\.[jt]sx?$/;
 const TEST_FILE = /\.test\.[jt]sx?$/;
 const ID_LINE = /^\s*(?:-\s*)?id:\s*["']?([^"'\s#]+)["']?\s*(?:#.*)?$/;
 
+/**
+ * Source with comments removed, so "rendered" means rendered.
+ *
+ * Both halves of this check read TEXT, and a mention in prose is not a render: a
+ * file carrying only `// SURFACE.sessionRail returns with the rail` satisfied the
+ * reference check, and a comment quoting an identifier failed the literal check —
+ * neither is what either half is about (review round 2, F2).
+ *
+ * Quote-aware on purpose. A naive `/\/\/.*$/` also truncates `https://…` inside a
+ * string, which HIDES the real code after it on that line — the direction that
+ * matters, because a literal this check fails to see is the defect it exists for.
+ * The residual hole is narrower and recorded rather than hidden: a constant
+ * mentioned inside a string still counts as referenced.
+ */
+const stripComments = (source: string): string => {
+	let out = "";
+	let quote: string | null = null;
+	for (let i = 0; i < source.length; i += 1) {
+		const ch = source[i] ?? "";
+		const next = source[i + 1] ?? "";
+		if (quote !== null) {
+			out += ch;
+			if (ch === "\\") {
+				out += next;
+				i += 1;
+				continue;
+			}
+			if (ch === quote) quote = null;
+			continue;
+		}
+		if (ch === '"' || ch === "'" || ch === "`") {
+			quote = ch;
+			out += ch;
+			continue;
+		}
+		if (ch === "/" && next === "/") {
+			while (i < source.length && source[i] !== "\n") i += 1;
+			out += "\n";
+			continue;
+		}
+		if (ch === "/" && next === "*") {
+			i += 2;
+			while (
+				i < source.length &&
+				!(source[i] === "*" && source[i + 1] === "/")
+			) {
+				i += 1;
+			}
+			i += 1;
+			continue;
+		}
+		out += ch;
+	}
+	return out;
+};
+
 const referencedIds = (): Map<string, string[]> => {
 	const byId = new Map<string, string[]>();
 	for (const file of walk(flowsDir).filter((f) => YAML_FILE.test(f))) {
@@ -87,7 +143,9 @@ describe("the routes and primitives against src/ui/a11y.ts", () => {
 		.filter((f) => SOURCE_FILE.test(f) && !TEST_FILE.test(f))
 		.map((file) => ({
 			file: file.slice(root.length),
-			text: readFileSync(file, "utf8"),
+			// Comments stripped ONCE, here, so both halves read the same source and
+			// neither can be satisfied (or broken) by prose.
+			text: stripComments(readFileSync(file, "utf8")),
 		}));
 
 	it("never types an identifier as a literal", () => {

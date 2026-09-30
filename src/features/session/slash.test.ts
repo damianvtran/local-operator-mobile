@@ -156,16 +156,21 @@ describe("a tap sends the command it named, never the token typed so far (Q1)", 
 		}
 	});
 
-	it("is derived from the command, so a draft cannot change what a tap sends", () => {
-		// The property the fix buys: two different drafts, one request.
+	it("is derived from the command, so the token typed so far cannot reach the wire", () => {
+		// The claim is about the REQUEST, not about determinism: the draft the reader
+		// had typed (`/he`) parses to a different command than the row they tapped, and
+		// only one of the two is what a tap sends. (An earlier version of this case
+		// compared `slashTapRequest(help)` with `slashTapRequest(help)` — the same call
+		// with the same argument, which passes for any implementation and proved
+		// nothing; review round 2, F3a.)
 		const help = CATALOGUE.find((c) => c.name === "help");
 		expect(help).toBeDefined();
 		if (help === undefined) return;
-		const fromEmpty = slashTapRequest(help);
-		const withPartialToken = slashTapRequest(help);
-		expect(fromEmpty).toEqual(withPartialToken);
-		expect(parseSlashDraft("/he")).toEqual({ command: "he", args: "" });
-		expect(fromEmpty).not.toEqual(parseSlashDraft("/he"));
+		const tapped = slashTapRequest(help);
+		const typed = parseSlashDraft("/he");
+		expect(typed).toEqual({ command: "he", args: "" });
+		expect(tapped).toEqual({ command: "help", args: "" });
+		expect(tapped).not.toEqual(typed);
 	});
 });
 

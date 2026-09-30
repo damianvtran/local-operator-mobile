@@ -70,10 +70,9 @@ const VIEWPORTS: [
  * 430x932, where `MIN_WINDOW_SIZE` forces a third screen over a 22-row viewport),
  * `tablet` 96 (iPad Pro 1024x1366). The budget itself is 60.
  */
-const PHONE_MOUNTED_BUDGET = 72;
 const MOUNTED_CEILING: Record<DeviceClass, number> = {
 	foldable: 60,
-	phone: PHONE_MOUNTED_BUDGET,
+	phone: 72,
 	tablet: 96,
 };
 
@@ -95,12 +94,11 @@ describe("the transcript's render window", () => {
 			expect(policy.estimatedMountedRows, label).toBeLessThanOrEqual(
 				MOUNTED_CEILING[kind],
 			);
-			// And it is not a bare restatement of the budget: a phone is inside it.
-			if (kind !== "tablet") {
-				expect(policy.estimatedMountedRows, label).toBeLessThanOrEqual(
-					PHONE_MOUNTED_BUDGET,
-				);
-			}
+			// No second budget assertion here: `MOUNTED_CEILING[kind]` already IS the
+			// per-class number — foldable 60 (the budget), phone 72, tablet 96 — so a
+			// per-class re-check against the budget is implied by the line above and
+			// would only fire if a ceiling were raised past it, which is the change the
+			// ceiling itself already fails (review round 2, F8).
 			expect(policy.estimatedMountedRows, label).toBeGreaterThanOrEqual(
 				Math.min(520, visible),
 			);

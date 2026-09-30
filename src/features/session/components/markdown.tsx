@@ -23,7 +23,6 @@ import { cx, TOUCH_FLOOR } from "@/ui/variants";
  * and inline code/bold/italic — and everything else is passed through as text.
  *
  * Passing unknown syntax through VERBATIM is the important half. A renderer that
-
  * drops what it does not understand silently shortens the model's answer, and the
  * reader has no way to know a line is missing. So an unrecognised construct
  * becomes a paragraph of its own source, which is ugly and honest.

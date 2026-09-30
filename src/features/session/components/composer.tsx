@@ -15,6 +15,7 @@ import {
 	COMPOSER_COPY,
 	type ComposerControls,
 } from "@/features/session/composer";
+import { isSendKey } from "@/features/session/keyboard";
 
 import { CONTROL, composerAttachmentID, ROLE, SURFACE, state } from "@/ui/a11y";
 import { Button, Chip, Textarea } from "@/ui/components";
@@ -37,6 +38,15 @@ type WebKeyEvent = {
 	target: unknown;
 	preventDefault: () => void;
 };
+
+/** The event as `isSendKey` reads it: the target identity is resolved here, where
+ *  the DOM node is in hand, so the decision itself stays pure and testable. */
+const asKeyEvent = (event: WebKeyEvent, field: unknown) => ({
+	key: event.key,
+	shiftKey: event.shiftKey,
+	isComposing: event.isComposing,
+	fromField: field !== null && field === event.target,
+});
 type WebFieldNode = {
 	addEventListener: (
 		type: string,
@@ -146,28 +156,33 @@ export const Composer = ({
 
 	const rootRef = useRef<View | null>(null);
 	useEffect(() => {
-		/* Enter sends, Shift+Enter inserts a newline — on a hardware keyboard, on
-		 * both platforms. On web that is a `keydown` the field would otherwise spend
-		 * on a newline (a multiline `TextInput` is a `<textarea>`, and `onSubmitEditing`
-		 * never fires for one — measured: the draft became "…\n" and nothing reached
-		 * the wire). On native the same rule is the platform's own return key, which is
-		 * why the Textarea gets `returnKeyType="send"` and `onSubmitEditing`; a touch
-		 * keyboard keeps its newline gesture, which is the only way to type one. */
+		/* Enter sends, Shift+Enter inserts a newline, on a hardware keyboard. On web
+		 * that is a `keydown` the field would otherwise spend on a newline: a multiline
+		 * `TextInput` is a `<textarea>`, and `onSubmitEditing` never fires for one
+		 * (measured: the draft became "…\n" and nothing reached the wire).
+		 *
+		 * **The native half of this rule is NOT wired, and is not claimed.** RN 0.86.3
+		 * resolves `multiline` with no `submitBehavior` to `"newline"`, and both native
+		 * layers dispatch submit only for `"submit"`/`"blurAndSubmit"` — so the
+		 * `onSubmitEditing` passed to the Textarea below cannot fire, and a hardware
+		 * Enter on iOS/Android inserts a newline instead of sending. Native is NOT RUN
+		 * here (no simulator on this host), so this is read from the installed RN source
+		 * rather than measured. Closing it needs `submitBehavior="submit"` or
+		 * `onKeyPress` forwarding, both with the kit's owner (D1); until then the send
+		 * control and the `keydown` listener above are the only paths that send. */
+		if (Platform.OS !== "web") return;
 		if (Platform.OS !== "web") return;
 		// `View`'s ref is the DOM element on react-native-web; the cast is the whole
 		// of the platform bridge, and `WebFieldNode` names only what is read from it.
 		const node = rootRef.current as unknown as WebFieldNode | null;
 		if (node === null || typeof node.addEventListener !== "function") return;
 		const onKeyDown = (event: WebKeyEvent) => {
-			if (
-				event.key !== "Enter" ||
-				event.shiftKey ||
-				event.isComposing === true
-			) {
-				return;
-			}
 			const field = node.querySelector("textarea, input");
-			if (field === null || field !== event.target) return;
+			// The decision is `isSendKey`'s — Enter, not a newline gesture, not a
+			// composition, and from THIS field rather than the sheet's filter.
+			if (!isSendKey(asKeyEvent(event, field))) return;
+			// The newline the browser would insert has to be stopped BEFORE it lands;
+			// letting the handler run and hoping is how Enter ends up doing both.
 			event.preventDefault();
 			if (canSendRef.current) sendRef.current();
 		};
@@ -298,8 +313,10 @@ export const Composer = ({
 						onChangeText={onDraftChange}
 						placeholder={COMPOSER_COPY.placeholder}
 						maxLines={6}
-						// The hardware keyboard's own submit on native, where the
-						// `keydown` listener above cannot run.
+						// Kept because it is the callback a hardware keyboard submits
+						// through, and it costs nothing — but see the note above: on this RN
+						// version a multiline field never dispatches it. Native is NOT RUN
+						// here, so this records the gap rather than a behaviour.
 						onSubmitEditing={onSend}
 						testID={CONTROL.composerInput}
 					/>

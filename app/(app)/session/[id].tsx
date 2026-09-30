@@ -353,6 +353,7 @@ export default function Session() {
 								onClose={() => undefined}
 								commands={runtime.commands}
 								query={slash ?? ""}
+								busy={composer.sending}
 								onPick={composer.slash}
 							/>
 						}

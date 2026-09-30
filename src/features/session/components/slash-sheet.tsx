@@ -3,7 +3,7 @@ import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
 
 import type { SlashCommand } from "@/contracts";
 import { argumentHint, filterCommands } from "@/features/session/slash";
-import { CONTROL, ROLE, SURFACE, slashCommandID } from "@/ui/a11y";
+import { CONTROL, ROLE, SURFACE, slashCommandID, state } from "@/ui/a11y";
 import { Sheet } from "@/ui/components";
 
 /**
@@ -32,6 +32,10 @@ export type SlashSheetProps = {
 	 *  the request from it (`slashTap`/`slashTapRequest`), never from the draft — the
 	 *  ref still holds the pre-tap text at that moment. */
 	onPick: (command: SlashCommand) => void;
+	/** A command is in flight: every row is disabled until it settles, because a
+	 *  second tap on the same row is a second POST — the sheet closes on the first
+	 *  success, but the tap that lands in the same frame is still delivered. */
+	busy?: boolean;
 };
 
 export const SlashSheet = ({
@@ -41,6 +45,7 @@ export const SlashSheet = ({
 	query,
 	loading = false,
 	onPick,
+	busy = false,
 }: SlashSheetProps) => {
 	const [filter, setFilter] = useState(query);
 	// Re-seeded whenever the sheet opens or the composer's token changes, so the sheet
@@ -85,6 +90,8 @@ export const SlashSheet = ({
 							key={command.name}
 							accessibilityRole={ROLE.button}
 							accessibilityLabel={`/${command.name}, ${command.description}`}
+							accessibilityState={state({ disabled: busy })}
+							disabled={busy}
 							onPress={() => {
 								onPick(command);
 								onClose();
