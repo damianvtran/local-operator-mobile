@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 
-import { sessionLayout } from "@/features/session/layout";
 import {
 	estimateVisibleRows,
 	TARGET_MOUNTED_ROWS,
@@ -8,13 +7,19 @@ import {
 } from "@/features/session/windowing";
 
 /**
- * The two pieces of geometry the screen derives rather than measures, pinned
- * because both fail silently.
+ * The render window, pinned because it fails silently: a transcript that mounts 520
+ * rows is not visibly broken, it is slow, and the slowness arrives with the one
+ * conversation long enough to matter.
  *
- * A transcript that mounts 520 rows is not visibly broken; it is slow, and the
- * slowness arrives with the one conversation long enough to matter. A tablet that
- * shows a phone column stretched across 1366 px is *visibly* broken but only on a
- * device nobody in the loop is holding.
+ * The LAYOUT is deliberately NOT unit-tested here, and that is a decision rather
+ * than an omission. The adaptive vocabulary lives in `src/ui/layout.ts`, which
+ * imports `react-native` — and vitest cannot parse react-native's Flow source, so
+ * any test that imports it fails to load rather than failing an assertion (measured:
+ * `Parse failure: Flow is not supported`). The layout is therefore verified where it
+ * actually renders: the capture rig measures the rail's and the transcript's real
+ * pixel widths on every device and fails the frame when the invariant is broken,
+ * which is evidence a hand-built literal could not give. That rig check exists
+ * because a unit test did not catch an 833 pt rail beside a 533 pt transcript.
  */
 
 /**
@@ -82,55 +87,5 @@ describe("the transcript's render window", () => {
 		const policy = windowPolicy(844, 7);
 		expect(policy.estimatedMountedRows).toBe(7);
 		expect(policy.initialNumToRender).toBe(7);
-	});
-});
-
-describe("the responsive layout", () => {
-	it("keeps every phone and every foldable in a single column, in both orientations", () => {
-		// A landscape phone is 844 pt wide — wider than an iPad mini — so a width-only
-		// rule gives it a rail, which trades the transcript's width for a panel on a
-		// 390 pt-tall screen with a keyboard up. This case is why the rule reads height.
-		for (const [label, width, height, kind] of VIEWPORTS) {
-			if (kind === "tablet") continue;
-			expect(sessionLayout(width, height).twoPane, label).toBe(false);
-		}
-	});
-
-	it("gives a rail only where a full measure still fits beside it", () => {
-		// The point of a tablet layout is a readable transcript; a rail that squeezes
-		// the transcript below its measure trades the thing being read for a panel.
-		for (const [label, width, height] of VIEWPORTS) {
-			const layout = sessionLayout(width, height);
-			if (layout.twoPane) {
-				expect(width - layout.railPt, label).toBeGreaterThanOrEqual(
-					layout.measurePt,
-				);
-			}
-		}
-		// Full-width landscape tablets get the rail…
-		expect(sessionLayout(1366, 1024).twoPane).toBe(true);
-		expect(sessionLayout(1112, 834).twoPane).toBe(true);
-		expect(sessionLayout(1280, 800).twoPane).toBe(true);
-		// …and a split view's detail pane (1366 − 360 = 1006) is NOT: 1006 − 300
-		// leaves 706 pt, under a full measure, so the panels stack inside the column.
-		// This is the case the container measurement exists for — the window says
-		// 1366, the view is given 1006.
-		expect(sessionLayout(1006, 1024).twoPane).toBe(false);
-	});
-
-	it("never stretches a tablet's transcript past the readable measure", () => {
-		// A portrait tablet that cannot fit a rail beside a full measure is ONE
-		// measure-capped column (768, 800, 834); the iPad Pro at 1024 can (724 pt
-		// remains), so it gets the rail. Either way the transcript never exceeds the
-		// measure — a phone layout stretched to tablet width is the finding this pins.
-		for (const [label, width, height, kind] of VIEWPORTS) {
-			if (kind !== "tablet") continue;
-			expect(sessionLayout(width, height).measurePt, label).toBeLessThanOrEqual(
-				720,
-			);
-		}
-		expect(sessionLayout(768, 1024).twoPane).toBe(false);
-		expect(sessionLayout(834, 1112).twoPane).toBe(false);
-		expect(sessionLayout(1024, 1366).twoPane).toBe(true);
 	});
 });

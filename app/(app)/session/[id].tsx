@@ -2,10 +2,6 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { ArrowLeft } from "lucide-react-native";
 import { useCallback, useMemo, useState } from "react";
 import { ScrollView, Text, View } from "react-native";
-import {
-	ReadableColumn,
-	useContainerLayout,
-} from "@/features/session/components/adaptive-shim";
 import { Composer } from "@/features/session/components/composer";
 import { ConnectionBanner } from "@/features/session/components/connection-banner";
 import {
@@ -18,6 +14,7 @@ import { SubagentsPanel } from "@/features/session/components/subagents-panel";
 import { TodosPanel } from "@/features/session/components/todos-panel";
 import { TranscriptList } from "@/features/session/components/transcript-list";
 import { WorkingLine } from "@/features/session/components/working-line";
+import { panelRail } from "@/features/session/panel-rail";
 import { pendingView } from "@/features/session/pending";
 import {
 	middleTruncate,
@@ -32,9 +29,14 @@ import {
 	Chip,
 	EmptyState,
 	IconButton,
+	ReadableColumn,
 	Screen,
 	Skeleton,
 } from "@/ui/components";
+/* The adaptive vocabulary, from the single place D1 owns: `useLayout` decides the
+ * size class and the measure, `SPLIT_PANE_WIDTH` the pane. This screen adds no
+ * breakpoint of its own — see `src/features/session/panel-rail.ts`. */
+import { SPLIT_PANE_WIDTH, useLayout } from "@/ui/layout";
 
 /**
  * The session view (`docs/ux/flows.md` F-6): the product's core screen.
@@ -77,10 +79,11 @@ export default function Session() {
 		null,
 	);
 
-	/* The size class, from the shim that stands in for D1's `src/ui/` hook (see
-	 * `adaptive-shim.tsx`). Read once here so the rail, the column and the composer
-	 * all answer to one decision. */
-	const { layout, onLayout } = useContainerLayout();
+	/* The layout, from D1's hook in `src/ui/layout.ts`. Read once here so the rail,
+	 * the column and the composer all answer to one decision: the rail needs room
+	 * AND content, since an empty rail on a tablet is 360 pt of nothing beside the
+	 * conversation. */
+	const layout = useLayout();
 
 	const [modelsOpen, setModelsOpen] = useState(false);
 	const [effortOpen, setEffortOpen] = useState(false);
@@ -132,13 +135,15 @@ export default function Session() {
 	 * a session name are what distinguish it, so a truncation has to keep both. */
 	const headerTitle = title.length > 0 ? middleTruncate(title, 40) : "session";
 
+	/* One decision, read once, for the rail, the column and the composer alike: the
+	 * rail needs ROOM (D1's split rule plus a full measure beside the pane, in
+	 * `panel-rail.ts`) AND CONTENT, because an empty rail on a tablet is 360 pt of
+	 * nothing beside the conversation. */
+	const showRail = panelRail(layout) && (!todos.empty || !subagents.empty);
+
 	/* The panels, in one place because they render in one of two places: a rail beside
 	 * the transcript on a wide viewport, or beneath it on a phone. Writing them twice
 	 * is how the two layouts come to disagree about the same list. */
-	// A rail needs room AND content. An empty rail on a tablet is ~300 pt of nothing
-	// beside the conversation, which is the "wasted space" finding in another form.
-	const showRail = layout.twoPane && (!todos.empty || !subagents.empty);
-
 	const panels = (
 		<>
 			<TodosPanel
@@ -252,10 +257,7 @@ export default function Session() {
 			    column and stacked when there is not. The main column is MEASURE-CAPPED and
 			    centred: a 1366 pt tablet showing a paragraph 1366 px wide is unreadable, and
 			    the fix is a constrained measure rather than a stretched one. */}
-			<View
-				className={showRail ? "flex-1 flex-row" : "flex-1"}
-				onLayout={onLayout}
-			>
+			<View className={showRail ? "flex-1 flex-row" : "flex-1"}>
 				{showRail ? (
 					<ScrollView
 						className="border-r border-hairline"
@@ -263,13 +265,16 @@ export default function Session() {
 						// ScrollView `flexGrow: 1`, so a width alone is only a flex BASIS
 						// and the rail split the free space with the column (measured in
 						// the 1366 pt frame: an 832 pt rail beside a 533 pt transcript).
-						style={{ width: layout.railPt, flexGrow: 0, flexShrink: 0 }}
+						// The pane width is D1's constant, not a number of this screen's.
+						style={{ width: SPLIT_PANE_WIDTH, flexGrow: 0, flexShrink: 0 }}
 						testID="session-panel-rail"
 					>
 						{panels}
 					</ScrollView>
 				) : null}
-				<ReadableColumn maxWidth={layout.measurePt}>
+				{/* D1's primitive: centred, capped at the layout's own measure, and no
+				    margin at all on a phone (where the measure IS the screen). */}
+				<ReadableColumn testID="session-column">
 					{transcript}
 					{showRail ? null : panels}
 					{working !== null ? (
