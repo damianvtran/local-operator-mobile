@@ -173,14 +173,44 @@ jobs:
           echo "mock relay: http://127.0.0.1:$port (pid $(cat "$RUNNER_TEMP/relay.pid"))"
 
       - name: Capture the frames
-        # `--relay` is what supplies the scenario list and session ids, so the
-        # capture and the audit describe the SAME state (the harness notes are
-        # explicit about that coupling). Frames are written outside the
-        # repository and uploaded — never committed (ADR 0003).
+        # CELLS COME FROM THE RELAY, THROUGH ITS OWN REGISTRY, and the detour is a
+        # finding rather than a preference. `capture.mjs --relay <url>` asks the
+        # relay at `/__mock/state` for `state.cells`, but the relay serves no
+        # such field — its registry is at `/__mock/scenarios` as
+        # `scenarios[].shows` (relay.mjs, the two `__mock` handlers; capture.mjs
+        # `relayState()` and `buildPlan()`). So the documented invocation fails
+        # with "no cells to capture", measured in CI on 2026-09-30, and the
+        # harness's own fallback — `--cells` — is what makes the run possible.
+        # Reading `shows` from the relay keeps the property the harness cares
+        # about (one source of truth for which cells exist, nothing
+        # hand-maintained here) while that mismatch stands. When it is fixed,
+        # dropping the `--cells` argument restores the shorter path.
+        #
+        # Frames are written outside the repository and uploaded — never
+        # committed (ADR 0003).
         run: |
+          set -euo pipefail
+          cells=$(curl -fsS "$MOCK_RELAY_URL/__mock/scenarios" | node -e '
+            let raw = "";
+            process.stdin.on("data", (chunk) => { raw += chunk; });
+            process.stdin.on("end", () => {
+              const payload = JSON.parse(raw);
+              const seen = new Set();
+              for (const scenario of payload.scenarios ?? []) {
+                for (const cell of scenario.shows ?? []) seen.add(cell);
+              }
+              if (seen.size === 0) {
+                console.error("the relay reported no cells");
+                process.exit(1);
+              }
+              process.stdout.write([...seen].sort().join(","));
+            });
+          ')
+          echo "cells ($(printf '%s' "$cells" | tr ',' '\n' | wc -l | tr -d ' ')): $cells"
           node tools/visual/capture.mjs \
             --dir dist --out "$RUNNER_TEMP/frames" \
             --relay "$MOCK_RELAY_URL" \
+            --cells "$cells" \
             --consecutive --yes
 
       - name: Audit the frames against the rubric
@@ -260,6 +290,29 @@ jobs:
           cd android
           ./gradlew assembleDebug --no-daemon
 
+      - name: Read the app's identity from the APK it just built
+        # The flows are told the APP_ID they should launch, and until this step
+        # existed that value was the harness's own default
+        # (`com.radient.localoperator.mobile`) while the app the build produces is
+        # `com.localoperator.mobile` (app.config.ts). Two bundle ids in one
+        # repository is a bug whichever one is right — and the right one for the
+        # pipeline is whatever the build actually produced, because that is the
+        # app installed on the emulator. Reading it out of the APK removes the
+        # second copy entirely, and the bundle id itself stays an operator
+        # decision rather than something CI invents.
+        run: |
+          set -euo pipefail
+          aapt=$(find "${ANDROID_HOME:-$ANDROID_SDK_ROOT}" -name aapt2 -type f | sort | tail -1)
+          echo "aapt2: $aapt"
+          package=$("$aapt" dump badging android/app/build/outputs/apk/debug/app-debug.apk \
+            | sed -n "s/^package: name='\\([^']*\\)'.*/\\1/p" | head -1)
+          if [ -z "$package" ]; then
+            echo "::error::could not read the package name out of the debug APK"
+            exit 1
+          fi
+          echo "APP_ID=$package" >> "$GITHUB_ENV"
+          echo "app under test: $package"
+
       - name: Restore the Android AVD
         uses: actions/cache@v6
         with:
@@ -328,7 +381,7 @@ jobs:
             set -euo pipefail
             adb install -r android/app/build/outputs/apk/debug/app-debug.apk
             maestro --config e2e/maestro/config.yaml test --retry 1 \
-              -e APP_ID=com.radient.localoperator.mobile \
+              -e APP_ID="$APP_ID" \
               -e RELAY_URL="$RELAY_URL_FOR_DEVICE" \
               -e RELAY_PASSWORD="$(cat "$RUNNER_TEMP/relay-password")" \
               -e SESSION_ID=6714def86197 \

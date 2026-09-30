@@ -108,7 +108,7 @@ pnpm install --frozen-lockfile
 
 pnpm lint            # biome check: linter, formatter and import order
 pnpm format:check    # biome format
-pnpm typecheck       # tsc --noEmit
+pnpm typecheck       # tsc --noEmit, then tsc --noEmit -p tsconfig.tools.json
 pnpm test            # vitest, Node environment
 pnpm theme:check     # the generated styling layer matches the tokens
 pnpm export:web      # the web target bundles
@@ -131,33 +131,56 @@ They take their inputs as flags precisely so this works without a runner:
 
 ```sh
 # What version would CI derive from a ref?
-node scripts/ci/version.mjs --ref-type tag --ref-name v1.0.0 --run-number 42
-node scripts/ci/version.mjs --ref-type branch --ref-name main --run-number 42
+node scripts/ci/version.ts --ref-type tag --ref-name v1.0.0 --run-number 42
+node scripts/ci/version.ts --ref-type branch --ref-name main --run-number 42
 
 # Are the release credentials present? (names only; values never printed)
-node scripts/ci/check-secrets.mjs --mode internal --need ANDROID_KEYSTORE_BASE64
+node scripts/ci/check-secrets.ts --mode internal --need ANDROID_KEYSTORE_BASE64
 
 # The simulator a runner would pick, from a captured device list
-node scripts/ci/ios-simulator.mjs --prefer "iPhone 17" --json-file devices.json
+node scripts/ci/ios-simulator.ts --prefer "iPhone 17" --json-file devices.json
 
 # Release notes for a range
-node scripts/ci/release-notes.mjs --from v0.9.0 --to v1.0.0
+node scripts/ci/release-notes.ts --from v0.9.0 --to v1.0.0
 ```
 
 The native builds cannot be reproduced locally, by design. To iterate on them,
 push a branch: the debug APK and the simulator build are attached to the run.
 
+### The tooling is TypeScript, and it is typechecked
+
+The scripts under `scripts/**` are `.ts` and are run **directly by Node** — Node
+strips the type annotations, so there is no build step and no dependency, which
+matters because these scripts run before `pnpm install`. The constraints that
+follow are real ones: nothing that needs emit (no `enum`, no `namespace`, no
+parameter properties, no decorators), `import type` for anything that is a type,
+and the module type has to be declared — `scripts/ci/package.json` says
+`"type": "module"` because the root manifest cannot (`metro.config.js` is
+CommonJS).
+
+`tsconfig.tools.json` is the second program `pnpm typecheck` runs: the app's
+config, pointed at Node ESM with `types: ["node"]` and no DOM. It includes
+`tools/**`, `scripts/**`, `design/**` and `e2e/**`, but `allowJs: false` means
+the trees that are still `.mjs` are not in the program — so the gate starts green
+and covers more as each tree converts, rather than failing on day one for code a
+given change does not own.
+
+A boundary value (a `simctl` payload, an `xcodebuild -list` result) is parsed and
+narrowed field by field, never asserted: a shape change in a future Xcode then
+fails with a sentence about the shape instead of an `undefined` inside a build
+command.
+
 ## Versioning
 
 **The git tag is the only source of truth, and nothing is bumped in a pull
-request.** `scripts/ci/version.mjs` derives everything from the ref and exports
+request.** `scripts/ci/version.ts` derives everything from the ref and exports
 it to the job:
 
 | Value | Rule |
 |---|---|
 | version (JS / `app.json` / Android `versionName` / iOS `CFBundleShortVersionString`) | `vX.Y.Z` without the `v` when the ref is a tag; `0.0.0` otherwise |
 | Android `versionCode`, iOS `CFBundleVersion` | `github.run_number` — monotonic across every build of the repository, never reused |
-| Release notes | generated from the conventional commits since the previous tag (`scripts/ci/release-notes.mjs`) |
+| Release notes | generated from the conventional commits since the previous tag (`scripts/ci/release-notes.ts`) |
 
 The non-tag version is `0.0.0` rather than the ADR's written `0.0.0-dev.<run>`
 because the same string reaches `CFBundleShortVersionString`, and Apple rejects a
@@ -171,7 +194,7 @@ enforce, is carried by the build number. The dev string is still reported as
 what lets a tag version reach both native projects with nothing committed:
 
 ```sh
-node scripts/ci/version.mjs --write   # in CI: sets the two variables for the job
+node scripts/ci/version.ts --write   # in CI: sets the two variables for the job
 ```
 
 Android's release signing comes from `plugins/with-android-release-signing.js`, a
@@ -229,7 +252,7 @@ PNGs), and the emulator job kept off pull requests until the harness exists.
 | Runner | Used for | Notes |
 |---|---|---|
 | `ubuntu-latest` (24.04 at the time of writing) | `checks`, the Android build, the uploader jobs | Ships the Android SDK, Java 17/21/25, Google Chrome and fastlane. Timeouts are set on every job. |
-| `macos-26` | the iOS build, the design-kit asset gates | Ships Xcode 26.x (which is what Apple requires for uploads) and CocoaPods 1.17.0. The simulator is named in `env` in `ios.yml` and resolved by `scripts/ci/ios-simulator.mjs`, which prints what it chose. |
+| `macos-26` | the iOS build, the design-kit asset gates | Ships Xcode 26.x (which is what Apple requires for uploads) and CocoaPods 1.17.0. The simulator is named in `env` in `ios.yml` and resolved by `scripts/ci/ios-simulator.ts`, which prints what it chose. |
 
 `fastlane` is used as the runner image provides it (2.238.0 on `macos-26`, 2.240.1
 on `ubuntu-latest`, read from the image manifests on 2026-09-29), so upgrading it
@@ -263,6 +286,7 @@ afternoon.
 |---|---|
 | `design-kit` fails on `build-icons.mjs --check` or on `capture.mjs --check` when the reference faces are present | The asset was regenerated on a machine with a different rasterizer, Chrome version or font stack. Both gates re-render and compare bytes first, pixels second, and print which comparison passed. The icons gate is reproducible on `macos-26` with `brew install librsvg imagemagick` (which is what this job installs); the capture gate additionally needs the SHIPPED typefaces, so on a clean runner it reports `NOT VERIFIED` instead of failing — read the warning, and see the next row. |
 | `design-kit` warns that the preview capture gate could not make its claim | The sheet renders with the shipped typefaces (Figtree, JetBrains Mono) from a sibling checkout's `public/fonts`, and those woff2 files are not in this repository. Without them the page falls back to the platform face and the five committed captures all differ (measured 2026-09-30: `0 of 5 committed captures verified`). The step turns into a hard failure on its own the moment the reference faces are reachable — a job that checks the sibling repo out before it, or the faces committed under `design/fonts/` (whose `OFL.txt` is already there) and `capture.mjs` pointed at them. That change belongs to the design kit, not to CI. |
+| `checks` fails in `pnpm lint` on files under `tools/**` or `e2e/**` | Those trees are the audit harness, which was written on a branch with no package manifest and so has never met biome. The errors are formatting and lint diagnostics in the harness's own files; the fix belongs to that stream, and `pnpm lint` is right to refuse a tree that does not pass it. |
 | `design-kit` fails on `build-preset.mjs --check` | `design/tokens/tokens.json` changed and `tailwind-preset.js` (and the preview's CSS) were not regenerated — run the generator without `--check`. |
 | `android` fails at "Assert the native project regenerates identically" | Something edited the generated `android/` tree, or a config plugin is non-deterministic. Fix the plugin: the edit is what `prebuild --clean` discards. |
 | `ios` fails to find a simulator | The runner image moved to a newer iPhone than `IOS_SIMULATOR_DEVICE` in `ios.yml`. The job warns and picks the newest available iPhone; change the name in `ios.yml` to silence it. |
