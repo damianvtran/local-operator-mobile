@@ -1,0 +1,20 @@
+{
+  "provenance": {
+    "kind": "live",
+    "relay_ref": "local-operator 52c1df35",
+    "captured_at": "2026-09-29",
+    "how": "captured from an isolated `lop mobile serve` (redirected HOME + LOCAL_OPERATOR_CONFIG_DIR, own ephemeral port, hosting=test/model_name=mock); see ../README.md",
+    "redactions": "isolated home shown as ~; portal password and cookie signatures absent"
+  },
+  "request": {
+    "method": "GET",
+    "path": "/api/sessions/9ed9e2f534cd/image?entry=723ebb3d-8535-4fb3-9a13-e4399b085e85&i=9"
+  },
+  "status": 404,
+  "headers": {
+    "content-type": "application/json"
+  },
+  "body": {
+    "error": "no such image"
+  }
+}

@@ -1,0 +1,71 @@
+{
+  "provenance": {
+    "kind": "live",
+    "relay_ref": "local-operator 52c1df35",
+    "captured_at": "2026-09-29",
+    "how": "captured from an isolated `lop mobile serve` (redirected HOME + LOCAL_OPERATOR_CONFIG_DIR, own ephemeral port, hosting=test/model_name=mock); see ../README.md",
+    "redactions": "isolated home shown as ~; portal password and cookie signatures absent"
+  },
+  "request": {
+    "method": "GET",
+    "path": "/api/sessions"
+  },
+  "status": 200,
+  "headers": {
+    "content-type": "application/json"
+  },
+  "body": {
+    "sessions": [],
+    "degraded": [],
+    "capabilities": {
+      "features": {
+        "auth": 1,
+        "settings": 1,
+        "commands": 2,
+        "catalogues": 1,
+        "profile_catalogue": 1,
+        "team_catalogue": 1,
+        "session_catalogue": 3,
+        "session_catalogue_page": 1,
+        "session_search": 1,
+        "draft_preview": 1,
+        "draft_selection": 1,
+        "session_draft_warm": 1,
+        "lifecycle": 1,
+        "completion_ack": 1,
+        "completion_ack_bulk": 1,
+        "notification_contract": 1,
+        "mcp": 1,
+        "mcp_auth": 1,
+        "mcp_catalog": 1,
+        "radient": 1,
+        "radient_org": 1,
+        "session_variables": 1,
+        "subagent_transcript": 1,
+        "subagent_trajectory": 1,
+        "session_move": 2,
+        "frontend_replace": 1,
+        "diagnostics": 1,
+        "desktop_feed": 1,
+        "desktop_presence": 1,
+        "session_interrupt": 1,
+        "session_pins": 1,
+        "session_archive": 1,
+        "session_delete": 1,
+        "tunnel": 1,
+        "peers": 1,
+        "session_transfer": 1,
+        "aida": 1,
+        "projects": 1,
+        "input_mode": 1,
+        "stt": 1,
+        "references": 1
+      },
+      "stt": {
+        "available": false,
+        "path": null,
+        "reason": "No transcription provider is available and no model is selected for the audio path."
+      }
+    }
+  }
+}
