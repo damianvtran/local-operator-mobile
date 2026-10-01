@@ -96,6 +96,10 @@ def sec(text, start, end):
         return ""
     j = text.find(end, i)
     return text[i:j] if j > i else text[i:]
+NOTE = try_read(REF, "docs/push-cloud-ops.md") or ""
+nf = " ".join(NOTE.split())
+CEIL_21 = sec(af, "Catch-up is bounded", "Two retry policies")
+CEIL_31 = sec(af, "The cloud composes nothing", "Emit an attention change")
 DIGEST = sec(af, "The **digest** form", "Exactly one composer")
 
 def _digest_payload():
@@ -201,7 +205,9 @@ rows = [
   and not has(af,"the cloud supplies the alert") and not has(af,"cloud-composed alert")),
  ("§3.2 the ceiling keeps the alert verbatim",
   has(COMPOSER,"that frame's `alert` included, verbatim")
-  and has(COMPOSER,"records a drop only when it holds no frame at all")),
+  # Round 3 refined which frame is re-delivered; this clause now asserts the refined rule, not the
+  # superseded "records a drop only when it holds no frame at all".
+  and has(COMPOSER,"delivers nothing and records the drop")),
  ("§3.2 the ceiling may not render a banner from the fields",
   has(COMPOSER,"must never fall back to rendering a banner from `type`, `kind` or `count`")
   and not has(COMPOSER,"may fall back")),
@@ -212,6 +218,28 @@ rows = [
  ("§3.4 the digest key is persisted across a restart",
   has(af,"is **persisted in the state file**") and has(af,"reused on restart for that same window")
   and has(af,"**Why persistence is required here and not merely tidy")),
+ # Round 3 widened these: the ceiling sentence is one sentence in FOUR places, and the earlier gate
+ # read only §3.2 — so reverting §2.1, §3.1 or plan S7 to the superseded "whatever its type" wording
+ # passed a green run (R15 / Q38 / Q40). Each statement is now asserted where it is stated.
+ ("§2.1 the ceiling re-delivers only a frame carrying an alert",
+  has(CEIL_21,"carries an `alert`") and has(CEIL_21,"delivers nothing and records the drop")),
+ ("§3.1 the ceiling re-delivers only a frame carrying an alert",
+  has(CEIL_31,"carries an `alert`") and has(CEIL_31,"delivers nothing") and has(CEIL_31,"records the drop")),
+ ("§3.2 the ceiling re-delivers only a frame carrying an alert",
+  has(COMPOSER,"carries an `alert`") and has(COMPOSER,"delivers nothing and records the drop")),
+ ("plan S7 the ceiling re-delivers only a frame carrying an alert",
+  has(pf,"delivering nothing and recording the drop when it holds only `attention` frames or nothing at all")),
+ ("§3.4 the caveat belongs to the digest window, not the attention emit",
+  has(af,"**The caveat is the digest *window*'s, not the attention emit's**")
+  and not has(af,"carries the same process-local caveat")),
+ ("plan: S5's QA list includes Q37", has(pf,"Q32–Q35, Q37")),
+ ("note: the ceiling matches the ADR's",
+  has(nf,"carries an `alert`") and has(nf,"delivers nothing and records the drop")),
+ ("note: the machine's burst limit is defined in-file",
+  has(nf,"`BURST_LIMIT` — **three** eligible rows in one catch-up")),
+ ("note: the digest key is labelled a proposal", has(nf,"*(proposal, as in the ADR)*")),
+ ("note: the digest frame opener names the machine", has(nf,"The machine's digest frame is:")),
+ ("note: the cloud is not the merger", not has(nf,"merged into **one digest emit**")),
  ("plan: the S5 row names the visible digest alert and its persisted key",
   has(pf,"one visible digest alert")
   and has(pf,"with the window's `emit_id` **persisted in the state file**")),

@@ -539,15 +539,17 @@ and why §3.4's content-derived key has something to mint it.
   M1, ruled here).** More than `BURST_LIMIT`-worth of eligible rows in one catch-up emits **one
   digest alert naming the count** — §3.2's third emit type (`type: "digest"`), an `aps.alert` push
   collapsed per computer (§3.2), mirroring the TUI/desktop burst rule
-  (`docs/design/notification-feed.md`, `BURST_LIMIT = 3`). It is **not** the attention form: a silent
+  (`docs/design/notification-feed.md`, `BURST_LIMIT = 3`). It is **not** the attention form: a
+  silent
   `content-available` wake cannot tell a user anything, and a coalesced catch-up is exactly the case
   where the user is not watching — the earlier draft of this bullet left a reader to conclude a
   burst was silent, and §3.2 fixed `type: "attention"` as the silent form, so the contradiction was
   structural rather than verbal. The cloud has a **delivery** guard at a different scale — a
   per-computer ceiling of 60 events/hour — but it is **not a second composer**: it **re-delivers the
-  most recent frame it holds for that computer, whatever its type**, collapsed with
-  `digest:<computer handle>`, and records a drop only when it holds no frame at all (§3.2, "exactly
-  one composer"). The two guards stay independent by design: the machine coalesces what it
+  most recent frame it holds that carries an `alert`** (`completion` or `digest`), collapsed with
+  `digest:<computer handle>` — and **if it holds only `attention` frames, or holds nothing, it
+  delivers nothing and records the drop** (§3.2, "exactly one composer"). The two guards stay
+  independent by design: the machine coalesces what it
   *holds* into one payload, the cloud bounds how often it *delivers* that payload
   (`docs/push-cloud-ops.md` §3).
 - **The digest's presentation is the machine's, and the cloud may not compose it — this is a P2
@@ -874,7 +876,9 @@ POST /api/push/devices/{device_id}/unrevoke → {"ok": true, "device_id": "…"}
   "device_id": "…"}` (`push_devices.py`:611-645 (#1864)); it **deletes every marker the row
   carries** — both `revoked_at` and `unpaired_at` if it has both (`:638-644` (#1864): `for marker in
   ("revoked_at", "unpaired_at")`) — **and a row really can carry both** (round 8 Q-F29: §4's
-  precedence decides which state it *reads as*, it does not stop the second marker being written, and #1864 has a test for exactly that; the delete loop is what makes the single-marker phrasing true
+  precedence decides which state it *reads as*, it does not stop the second marker being written,
+  and #1864 has a test for exactly that; the delete loop is what makes the single-marker phrasing
+  true
   only for the common case). The CLI renders such a row as `unrevoked <label>` with `id <device_id>
   — state: live`, because `device_state` resolves the pair to `revoked` before the verb runs and the
   read-back after it is `live` (`cli.py`:7888-7896 (#1864)). It **restores no token and no
@@ -986,13 +990,15 @@ explicitly). The reasons, so the choice is not just a fit to the note:
 **The cloud composes nothing (round 8; the composer gap).** Ingest **validates, enqueues and
 delivers**: it mints no payload, sets no `aps.badge` (§1.5), and — **for any of the three types,
 completion, attention and digest — it never renders, edits, rewords or synthesises alert text.** The
-words are the machine's, sent in the frame's `alert` object (§3.2) and delivered verbatim; two copies
+words are the machine's, sent in the frame's `alert` object (§3.2) and delivered verbatim; two
+copies
 of a house string, or a cloud that could pick its own noun, is exactly the drift class this document
-family keeps being caught by. Its only transformations are delivery-level — fan-out, the per-device credential gate (§4),
-and the per-computer digest ceiling, which **re-delivers the most recent frame it holds for that
-computer, whatever its type**, collapsed as `digest:<computer handle>` — that frame's `alert`
-verbatim, a drop recorded only when it holds nothing — rather than composing one (§3.2, "exactly one
-composer"). Anything else would
+family keeps being caught by. Its only transformations are delivery-level — fan-out, the per-device
+credential gate (§4),
+and the per-computer digest ceiling, which **re-delivers the most recent frame it holds that carries
+an `alert`** (`completion` or `digest`), collapsed as `digest:<computer handle>` — that frame's
+`alert` verbatim; with only `attention` frames, or nothing, it delivers nothing and records the drop
+— rather than composing one (§3.2, "exactly one composer"). Anything else would
 put the component that must stay blind to names and content (P2) into the composition path.
 
 **Emit an attention change** *(cloud, proposal)*: the same route, the same `202`, with `type:
@@ -1048,7 +1054,8 @@ phone's number drops* — actually exist, which no slice did before.
 The attention form carries `{v, type: "attention", computer, count, emit_id, exclude:
 ["<device_id>"]}` and `aps: {"content-available": 1}` — a **silent, best-effort wake** (§5). One
 term is used for it throughout: **the attention push**. It carries **no `alert` and no user-visible
-text of any kind**: `alert` is required on `completion` and `digest` and absent here (the field table
+text of any kind**: `alert` is required on `completion` and `digest` and absent here (the field
+table
 below), so an `alert` on an attention emit would turn a silent badge correction into a banner.
 
 The **digest** form — §3.2's third emit type, and the visible counterpart of the attention push:
@@ -1062,13 +1069,15 @@ The **digest** form — §3.2's third emit type, and the visible counterpart of 
 ```
 
 It carries **no `conversation` handle, no `completion_token` and no `kind`** — a digest spans
-conversations, so a tap resolves nowhere (the attention form's rule) and there is no per-conversation
+conversations, so a tap resolves nowhere (the attention form's rule) and there is no
+per-conversation
 collapse to do. It collapses **per computer** instead: `apns-collapse-id`/`notification.tag` =
 `digest:<computer handle>`, so two digests never stack, while a completion or attention push for one
 conversation still collapses per conversation beside it. `aps.badge` is still **never sent** (§1.5):
 a digest is an alert, and the icon stays app-managed from the machine's count. The body is the house
 constant plus the count — P2 unchanged, and `count` keeps the table meaning below. `exclude` is
-**permitted here with the attention form's meaning and is never required** — the required case belongs
+**permitted here with the attention form's meaning and is never required** — the required case
+belongs
 to the attention emit alone, because what makes it required is an **ack**, and the nudge an ack
 produces emits the per-conversation attention correction, never a catch-up digest (§3.1). A digest
 that happens to follow an ack in time is not the same thing as one triggered by it, and inventing a
@@ -1085,9 +1094,12 @@ are **not two payload classes**:
   already holds: it **re-delivers the most recent frame it holds for that computer, whatever its
   type**, collapsed with `apns-collapse-id`/`notification.tag` = `digest:<computer handle>` — that
   frame's `alert` included, verbatim — so a burst becomes one banner carrying the machine's words.
-  It **records a drop only when it holds no frame at all**, so the 61st event is never silence just
-  because it happened to be a completion (round 2, R11: the earlier wordings — "payload" here,
-  "digest payload" in §2.1 — disagreed, and the narrower one silenced a burst). It must never fall
+  It **re-delivers only a frame that carries an `alert`** — and if it holds only `attention` frames,
+  or holds nothing, **it delivers nothing and records the drop**. Round 3's ruling supersedes this
+  bullet's first wording: "whatever its type" would have re-delivered a *silent* attention frame
+  under `digest:<computer handle>`, which is the hole the digest type exists to close. It remains
+  one sentence in four places because round 2's R11 found the earlier wordings ("payload" in §3.1,
+  "digest payload" in §2.1) disagreeing, and the narrower one silenced a burst. It must never fall
   back to rendering a banner from `type`, `kind` or `count`, which is the composition this section
   forbids;
 - the cloud's digest record is therefore a record of **deliveries**, not a second payload class. It
@@ -1197,7 +1209,7 @@ POST <cloud>/v1/push/credentials
 | `POST /api/sessions/{id}/seen` | `completion_token`; a duplicate or delayed receipt converges upward (`MAX(receipts.acknowledged, excluded.acknowledged)`, `attention.py:2247-2249`); a receipt for a superseded token is **refused, not recorded** | a heal keeps the token; the refusal is the app's cue to re-read |
 | completion emit *(cloud, proposal)* | **`sha256(completion_token ‖ anchor_id ‖ kind)`** — the record's *content*, which is exactly what `publish`'s supersede rewrites (`attention.py:2094-2100`); the cloud answers `202 {emit_id, accepted_at}` (§3.1) | **a heal changes the key, so the correction is a new delivery and idempotency cannot swallow it** (P5) — **and the key is actually minted, because a heal is read on the supersede cursor** (`superseded_since`, `attention.py:1740`; §2.1). QA round 2's Q9 was exactly this: the distinct key existed in this table while no cursor in §2.1 could see the heal that mints it |
 | attention emit *(cloud, proposal)* | a machine-minted monotone **emit sequence**, persisted with the cursor — never the completion's key | n/a (an ack is not a heal) |
-| digest emit *(cloud, proposal)* | **`sha256("digest" ‖ emit_id ‖ computer)`**, where the `emit_id` is minted **once, when the coalescing window closes** and is **persisted in the state file** — reused on restart for that same window, cleared on the same three exits the completion path uses (`202`, third failure, drop-with-log) — so retries of that digest reuse it (three attempts over ~2 minutes, the lifecycle every other emit has), and the next window mints a new `emit_id` and therefore a **new key**, so a genuine second burst is never deduped away (P5). **Why persistence is required here and not merely tidy (core's S5 finding):** the machine's coalescing window is derived from the cursor, so without a persisted `emit_id` a restart mid-window re-folds the same rows under a **fresh** key — and since the cloud dedupes on the key alone (it may have delivered and lost the `202`), the one **visible** type would show the user "N conversations need you" twice. The attention emit carries the same process-local caveat and this ADR **accepts** it there: a duplicated silent badge correction is harmless, and a duplicated banner is not | n/a (a burst is not a heal). **Minting the `emit_id` at retry time is the failure this rule forbids**: a refused digest that re-mints per pass is a distinct delivery every time, so it re-attempts forever and leaks the pending entry — the defect S5's round found |
+| digest emit *(cloud, proposal)* | **`sha256("digest" ‖ emit_id ‖ computer)`**, where the `emit_id` is minted **once, when the coalescing window closes** and is **persisted in the state file** — reused on restart for that same window, cleared on the same three exits the completion path uses (`202`, third failure, drop-with-log) — so retries of that digest reuse it (three attempts over ~2 minutes, the lifecycle every other emit has), and the next window mints a new `emit_id` and therefore a **new key**, so a genuine second burst is never deduped away (P5). **Why persistence is required here and not merely tidy (core's S5 finding):** the machine's coalescing window is derived from the cursor, so without a persisted `emit_id` a restart mid-window re-folds the same rows under a **fresh** key — and since the cloud dedupes on the key alone (it may have delivered and lost the `202`), the one **visible** type would show the user "N conversations need you" twice. **The caveat is the digest *window*'s, not the attention emit's** (round 3, R13 — the two rows above disagreed): the attention sequence is **persisted with the cursor**, so a restart resumes it rather than re-minting. What is *derived from the cursor* is the window, and that is exactly why the `emit_id` above must be persisted for the one **visible** type — without it a restart re-folds the burst under a fresh key and the user sees "N conversations need you" twice, where a duplicated silent badge correction would have been harmless | n/a (a burst is not a heal). **Minting the `emit_id` at retry time is the failure this rule forbids**: a refused digest that re-mints per pass is a distinct delivery every time, so it re-attempts forever and leaks the pending entry — the defect S5's round found |
 | the supersede cursor | `superseded_since(seq)` (`attention.py:1740`) — the **sequel read** `seq > cursor` (`:1775`), like its siblings | it is the only read that **names** the healed conversation: a heal moves neither `MAX(sequence)` nor `SUM(acknowledged)`, and `revision()`'s third term says only *that* a heal happened (`:1743-1744`, `:2129-2149`) |
 | the badge | **not a wire field at all** (§1.5); it is the machine's count at read time | n/a |
 | `AttentionStore.revision()` | equality only, and it is the machine's own change detector — it never reaches the wire | the heal moves its third term |
