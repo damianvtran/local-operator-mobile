@@ -29,7 +29,11 @@ import { connect as netConnect } from "node:net";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { countProcesses, sweepOrphanChrome } from "../lib/chrome.ts";
+import {
+	countProcesses,
+	scratchRoot,
+	sweepOrphanChrome,
+} from "../lib/chrome.ts";
 import {
 	readinessProblems,
 	requiredStateMarker,
@@ -1279,6 +1283,27 @@ async function main() {
 			captureRun.status === null &&
 			captureRun.signal !== null
 		) {
+			// Reap the killed attempt BEFORE retrying. Its Chrome is spawned `detached`, so it
+			// does not die with the parent that was killed: left alone it holds the profile
+			// and overlaps the retry's browser in the same `--out`. `sweepOrphanChrome` is
+			// ownership-conservative (a live owner's profile is skipped), and the assertion
+			// below is a fresh `pgrep` scoped to the profile path this root mints — never a
+			// match by program name.
+			const attemptRoot = scratchRoot();
+			const reaped = sweepOrphanChrome(attemptRoot);
+			const survivors = countProcesses(join(attemptRoot, "chrome-"));
+			check(
+				"the killed capture's browser is reaped before the retry",
+				survivors,
+				0,
+				`swept ${reaped.swept.length} process(es)`,
+			);
+			if (survivors !== 0) {
+				console.error(
+					`\nverify: ${survivors} process(es) still match the killed capture's profile root;` +
+						" not retrying into an overlapping profile.",
+				);
+			}
 			const retry = spawnSync(
 				process.execPath,
 				[

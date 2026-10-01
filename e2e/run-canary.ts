@@ -96,7 +96,7 @@ const worktree = flag("worktree", DEFAULT_WORKTREE);
 /**
  * A mutation self-test hook: blind one rule and check this canary notices.
  *
- * `--blind U-04` silences a whole check, `--blind U-05-top` one independent rule
+ * `--blind U-04` silences a whole check, `--blind U-05:top` one independent rule
  * inside one. It is not a way to get a green run — a blinded run is not evidence
  * and `verify.ts` uses it only to prove the canary still fails when a rule dies.
  */
@@ -157,6 +157,19 @@ if (args.includes("--manifest") && manifestOverride === "") {
 		"run-canary: --manifest needs a path (an empty value is not 'no override')",
 	);
 	process.exit(2);
+}
+// A bare or trailing `--blind` used to be dropped by the `flatMap` above, so the
+// canary ran UNBLINDED and printed PASS — a typo reading as evidence. The value
+// must exist, and this check sits with the other argument validation, before any
+// code that could launch a browser.
+for (let index = 0; index < args.length; index += 1) {
+	if (args[index] === "--blind" && args[index + 1] === undefined) {
+		console.error(
+			"run-canary: --blind needs a rule name; known rules: " +
+				[...KNOWN_BLINDS].join(", "),
+		);
+		process.exit(2);
+	}
 }
 for (const spec of blind) {
 	if (!KNOWN_BLINDS.has(spec)) {
