@@ -122,7 +122,17 @@ rows = [
  ("§3.1 202 {emit_id, accepted_at}", has(af,"202 {\"emit_id\": \"<uuid>\", \"accepted_at\"")),
  ("§3.1 per-device result replaced", has(af,"replaces the previous\ndraft") or has(af,"replaces the previous draft")),
  ("§3.1 exclude on the wire", has(af,'"exclude": ["<device_id>"]')),
- ("§3.2 exclude row in the field table", has(af,"| `exclude` *(attention only)* |")),
+ ("§3.2 exclude row in the field table", has(af,"| `exclude` *(attention and digest)* |")),
+ # The digest form (round 10 / S5's review M1): the defect was a coalesced catch-up emitted as the
+ # SILENT attention form, so a burst reached the user as nothing at all. Pin the two facts that make
+ # that unbuildable: `digest` is in the type set on both literals, and the digest literal carries an
+ # alert rather than `content-available`.
+ ("§3.2 the digest is a third emit type", has(af,'// "completion" | "attention" | "digest"')
+  and has(af,'"type": "completion|attention|digest"')),
+ ("§3.2 the digest form is a visible alert", has(af,'"type": "digest", "computer"')
+  and "content-available" not in af.split("The **digest** form")[1].split("| Field |")[0]),
+ ("§3.4 the digest key is the window's, minted once", has(af,'sha256("digest" \u2016 emit_id \u2016 computer)')
+  and has(af,"Minting the `emit_id` at retry time is the failure this rule forbids")),
  ("§3.4 heal key minted on the supersede cursor", has(af,"because a heal is read on the supersede cursor")),
  ("§2.2 ops-note retention + gap", has(af,"delivery records are kept **14 days**") or has(af,"kept **14 days**")),
  ("provenance row for the ops note (cross-PR)", has(af,"cross-PR")),

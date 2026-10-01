@@ -55,8 +55,9 @@ so the cost is the worker's replicas and their observability — *est.* two smal
 managed queue. Three limits, *Decided* for launch: **delivery records kept 14 days**; **a device
 dropped after 60 days with no authenticated request** — "last seen" is its last authenticated call
 (it reads unread on launch, foreground, connect), not its last delivery; and **60 events/hour per
-computer**, the excess merged into **one digest emit** — the attention form (`content-available`,
-`count` only, no conversation), its emit ids in a cloud-side digest record beside the delivery rows,
+computer**, the excess merged into **one digest emit** — the **digest** form of §3.2 (`aps.alert` carrying
+the count, no conversation, collapsed per computer), its emit ids in a cloud-side digest record
+beside the delivery rows,
 a second coalescer and not a reuse of the machine's §2.1 one.
 
 **States and markers.** Five states, a marker on each row except the live and absent ones;
