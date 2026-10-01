@@ -312,7 +312,7 @@ async function captureCell(
 		/** Null when this run has no relay, so no claim about it is made. */
 		relayReach: RelayReach | null;
 		/** The web-only seed hook's parameters, when the run was given any. */
-		seed: { route: string | null; session: string | null };
+		seed: { route: string | null; password: string | null };
 	},
 ): Promise<CaptureRecord> {
 	const { deviceSpec: device, scaleSpec } = cell;
@@ -329,7 +329,7 @@ async function captureCell(
 	// the parameters go on the page so the app side has nothing to invent. Whether the
 	// app ADOPTS them is decided by the cell's state markers, not by this line.
 	for (const [key, value] of new URLSearchParams(
-		seedQuery(seed.route, seed.session),
+		seedQuery(seed.route, seed.password),
 	)) {
 		query.set(key, value);
 	}
@@ -440,7 +440,7 @@ async function captureCell(
 	const seededButAbsent =
 		seed.route !== null &&
 		measurements !== null &&
-		!String(measurements.route ?? "").includes("lo-seed-route=");
+		!String(measurements.route ?? "").includes("lo-relay=");
 	// The readiness reading: which route the app settled on and which screen
 	// roots it actually rendered. This is the guard against a green matrix over
 	// the wrong screen, which is exactly what the first run of this harness
@@ -651,6 +651,12 @@ function describeException(details: unknown): string {
 interface Readiness {
 	path: string;
 	testIds: string[];
+	/**
+	 * The ids whose element is actually RENDERED (non-zero box, no `display:none` /
+	 * `visibility:hidden` on it or an ancestor). The state rule is judged on these, not
+	 * on `testIds`: a marker on a hidden node is not a state the user can see.
+	 */
+	visibleTestIds: string[];
 	text: string;
 	elementCount: number;
 }
@@ -665,6 +671,12 @@ function asReadiness(value: unknown): Readiness | null {
 	return {
 		path: typeof bag.path === "string" ? bag.path : "",
 		testIds: ids,
+		visibleTestIds: Array.isArray(bag.visibleTestIds)
+			? bag.visibleTestIds.filter((id): id is string => typeof id === "string")
+			: // An older page that does not report the filtered list is treated as having no
+				// visible markers rather than as having all of them: the affirmative rule must
+				// not be satisfiable by an absence of information.
+				[],
 		text: typeof bag.text === "string" ? bag.text : "",
 		elementCount: typeof bag.elementCount === "number" ? bag.elementCount : 0,
 	};
@@ -692,7 +704,7 @@ function readinessProblemsFor(
 		askedPath: path,
 		actualPath: readiness.path,
 		root: SCREEN_ROOTS[cell.screen],
-		testIds: readiness.testIds,
+		testIds: readiness.visibleTestIds,
 		relayRegistryBacked: relay?.registryBacked ?? false,
 		relayReached: relay?.reached ?? false,
 	});
@@ -997,7 +1009,7 @@ export interface CaptureOptions {
 	 * puts them on the page; the app side that would adopt them is not built, so a cell
 	 * they do not reach still fails by name.
 	 */
-	seed: { route: string | null; session: string | null };
+	seed: { route: string | null; password: string | null };
 }
 
 /** One captured cell and everything the audit and the gallery read off it. */
@@ -1433,18 +1445,22 @@ export async function runCapture(options: CaptureOptions) {
 		readinessProblems.length +
 		identicalCells.length +
 		abandoned.length;
-	if (strict && blocking > 0) {
-		// A run that leaves processes behind has not finished, whatever its frames
-		// look like: "a run that ends normally leaves nothing behind, and proves it in
-		// its own output" is the README's claim, so the number has to be able to fail
-		// the run that made it.
-		const survivors = reaped?.survivors ?? 0;
-		if (survivors !== 0) {
-			readinessProblems.push(
-				`${survivors} Chrome process(es) survived this run's teardown for ` +
-					`'${reaped?.profile ?? "the run profile"}': the run did not clean up after itself`,
-			);
-		}
+	// A run that leaves processes behind has not finished, whatever its frames look
+	// like: "a run that ends normally leaves nothing behind, and proves it in its own
+	// output" is the README's claim, so the number has to be able to fail the run that
+	// made it. It is checked OUTSIDE the `blocking` gate on purpose: a clean matrix that
+	// leaks a browser is exactly the case this must catch, and `blocking` deliberately
+	// does not count survivors — so nesting the two let a leak exit 0 (round 3, found
+	// independently by review and QA). `survivors` is declared once, above, where the
+	// run reports its teardown.
+	if (survivors !== 0) {
+		readinessProblems.push(
+			`${survivors} Chrome process(es) survived this run's teardown for ` +
+				`'${reaped?.profile ?? "the run profile"}': the run did not clean up after itself`,
+		);
+	}
+	const blockingWithSurvivors = blocking + (survivors === 0 ? 0 : 1);
+	if (strict && blockingWithSurvivors > 0) {
 		throw new CaptureFailure(
 			`${themeProblems.length} theme problem(s), ${readinessProblems.length} unready cell(s), ` +
 				`${identicalCells.length} identical-state pair(s), ${abandoned.length} cell(s) with no frame, ` +
@@ -1542,10 +1558,10 @@ if (isMain) {
 				"",
 				"  --dir <path>        the built web target to serve (expo export --platform web)",
 				"  --out <path>        where frames/, manifest.json and index.html go",
-				"  --seed-route <url>  put the web-only seed hook's parameters on every page",
-				"  --seed-session <id> (docs/e2e/README.md option 3). The harness's half only: the",
-				"                      app side that would adopt them is not built, so a cell they",
-				"                      do not reach still fails by name",
+				"  --seed-route <url>  point a web build at one relay by putting the app's own",
+				"  --seed-password <pw> parameters (lo-relay, lo-relay-password, lo-relay-insecure)",
+				"                      on every page. #11's webRelayOverride() reads them, so a",
+				"                      seeded run is how a relay-backed cell becomes measurable",
 				"  --relay <url>       mock relay base URL; supplies the scenario list and session ids",
 				"  --cells <a/b,...>   explicit screen/state cells (default: whatever the relay declares)",
 				"  --cell-timeout <s>  hard bound per cell; a cell that exceeds it FAILS with that reason (default 45)",
@@ -1592,11 +1608,11 @@ if (isMain) {
 			: SCALES,
 		consecutive: bool(flags, "consecutive"),
 		settleMs: num(flags, "settle", 1200),
-		// The web-only seed hook's parameters: the harness puts them on the page, and the
-		// app side (not built — see the README) would adopt them as its connection.
+		// The web build's own relay-override parameters: the harness puts the app's
+		// `lo-relay*` names on the page, and #11's `webRelayOverride()` adopts them.
 		seed: {
 			route: str(flags, "seed-route", "") || null,
-			session: str(flags, "seed-session", "") || null,
+			password: str(flags, "seed-password", "") || null,
 		},
 		// Bounds, in the CLI because CI's job timeout is not this tool's business:
 		// a cell that never settles must fail that cell, and a run that would outlive

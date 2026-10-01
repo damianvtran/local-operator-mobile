@@ -352,6 +352,45 @@ async function main(): Promise<void> {
 				(forApproval.json as { error?: unknown } | undefined)?.error,
 				"session not connected",
 			);
+			// The MALFORMED direction, which is where an earlier revision of the mock was
+			// one block too high: the relay validates the frame BETWEEN the lookup and the
+			// 409 for every op except `prompt`, so a malformed op on an unknown session is
+			// 422 — QA proved it against a live isolated daemon, and the reviewer's
+			// "409 whatever the op" was reasoned from source and is wrong for these.
+			const malformed: Array<{ name: string; body: Record<string, unknown> }> =
+				[
+					{
+						name: "approval_answer with no request_id",
+						body: { op: "approval_answer", approved: true },
+					},
+					{
+						name: "approval_answer with a non-boolean approved",
+						body: { op: "approval_answer", request_id: "x", approved: "yes" },
+					},
+					{ name: "steer with no text", body: { op: "steer" } },
+				];
+			for (const entry of malformed) {
+				const res = await client.post(
+					`/api/sessions/${UNKNOWN}/command`,
+					entry.body,
+				);
+				check(
+					`on an UNKNOWN session, ${entry.name} is 422, not 409`,
+					res.status,
+					422,
+				);
+			}
+			// ... and `prompt` keeps the other order: liveness first, so a prompt with no
+			// text on an unknown session is still 409.
+			const emptyPrompt = await client.post(
+				`/api/sessions/${UNKNOWN}/command`,
+				{ op: "prompt" },
+			);
+			check(
+				"while an empty prompt on an unknown session is still 409",
+				emptyPrompt.status,
+				409,
+			);
 		}
 
 		/* ---- D3: an empty start body is invalid JSON, not a fabricated start ---- */

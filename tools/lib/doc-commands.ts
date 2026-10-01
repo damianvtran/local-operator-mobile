@@ -391,11 +391,13 @@ async function main(): Promise<void> {
 	const file = str(flags, "file", "docs/e2e/README.md") ?? "docs/e2e/README.md";
 	const dist = str(flags, "dist", undefined);
 	const only = str(flags, "only", undefined);
-	// `pnpm e2e:relay` is the slowest documented command — the whole relay contract
-	// plus the canary's mutation self-test now runs ~18 minutes — so the default
-	// bound is sized to it. A bound smaller than a documented command's real
-	// runtime reports the command as broken, which is worse than no bound.
-	const timeoutMs = num(flags, "timeout", 1500) * 1000;
+	// `pnpm e2e:relay` (which is `verify`) is the slowest documented command, and its
+	// runtime is LOAD-DEPENDENT: 28 minutes measured on this host at load averages 32-46,
+	// ~13 minutes on a quiet one. `docs/e2e/README.md` states that figure and this bound
+	// is sized above it, because a bound below a documented command's real runtime reports
+	// the command as broken, which is worse than no bound. If you change the figure, change
+	// it in the README, here, and in `verify.ts`'s watchdog comment together.
+	const timeoutMs = num(flags, "timeout", 2400) * 1000;
 	const verbose = bool(flags, "verbose");
 	const path = resolve(REPO, file);
 	if (!existsSync(path)) {

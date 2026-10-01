@@ -16,7 +16,7 @@
  *   node tools/mock-relay/verify.ts [--fixtures <dir>] [--json <path>]
  */
 
-import { spawn, spawnSync } from "node:child_process";
+import { execFileSync, spawn, spawnSync } from "node:child_process";
 import {
 	existsSync,
 	mkdirSync,
@@ -34,6 +34,7 @@ import {
 	readinessProblems,
 	requiredStateMarker,
 	SCREEN_MARKER_SUBJECT,
+	STATE_MARKER_ALIASES,
 	seedQuery,
 } from "../lib/readiness.ts";
 
@@ -91,9 +92,10 @@ let group = "";
  * When the last assertion was recorded, for the watchdog in `main`.
  *
  * Module scope because `check` is, and the watchdog reads it: the bound has to be
- * on SILENCE, not on total runtime — a healthy run of the mutation group takes
- * fifteen minutes, and a bound that killed it printed nothing at all, hiding the
- * evidence rather than the hang.
+ * on SILENCE, not on total runtime — a healthy run takes 28 minutes on this host at
+ * load averages 32-46 (~13 minutes quiet; `docs/e2e/README.md` states the same figure),
+ * and a bound that killed it printed nothing at all, hiding the evidence rather than
+ * the hang.
  */
 let lastProgress = Date.now();
 
@@ -1295,13 +1297,23 @@ async function main() {
 			// caught exactly that (`U-07:y`, `exit null`) on a loaded host, which is why
 			// this asserts the failure CODE and names a kill as its own outcome.
 			const killed = run.status === null || run.signal !== null;
+			// The sentence names the SIGNAL and the elapsed time, not "the bound": a kill can
+			// arrive from elsewhere (measured: SIGTERM at 33 s), and when `spawnSync` never
+			// started the child there is no signal at all — reporting either as "the 900 s
+			// bound fired" would describe something that did not happen.
+			const outcome =
+				run.status === 1
+					? `exit 1 after ${ranFor}`
+					: run.signal !== null
+						? `killed by ${String(run.signal)} after ${ranFor}`
+						: run.status === null
+							? `never produced a verdict: the child did not start (status null, no signal)`
+							: `exit ${String(run.status)} after ${ranFor}`;
 			check(
 				`blinding ${mutation.blind} makes the canary fail with a verdict, not a kill`,
 				run.status === 1,
 				true,
-				killed
-					? `killed at the 900s bound after ${ranFor} (signal ${String(run.signal)}, status ${String(run.status)})`
-					: `exit ${String(run.status)} after ${ranFor}`,
+				outcome,
 			);
 			check(
 				`blinding ${mutation.blind} misses exactly ${mutation.defect}`,
@@ -1889,6 +1901,208 @@ async function main() {
 			"every screen's required empty marker IS the app's own (no second dialect)",
 			mismatched,
 			[],
+		);
+	}
+
+	/* ---- 3i. round 3: the app's own names, the survivor gate, the marker table ---- */
+	group = "seed parameters are the app's";
+	{
+		// The harness must emit the names the APP reads. PR #11's `webRelayOverride()`
+		// reads `lo-relay`, `lo-relay-password` and `lo-relay-insecure`, and an earlier
+		// revision of this harness invented `lo-seed-*`, which nothing reads — a seed that
+		// silently seeds nothing. Asserting against #11's own source is what makes a rename
+		// there fail here.
+		let source = "";
+		try {
+			source = execFileSync(
+				"git",
+				[
+					"-C",
+					REPO,
+					"show",
+					"origin/feat/screens-lists:src/features/auth/connection-provider.tsx",
+				],
+				{ encoding: "utf8" },
+			);
+		} catch {
+			source = "";
+		}
+		check(
+			"PR #11's connection provider is readable at its ref (the name contract's source)",
+			source.length > 0,
+			true,
+			"git show origin/feat/screens-lists:src/features/auth/connection-provider.tsx",
+		);
+		const appNames = new Set(
+			[...source.matchAll(/"(lo-[a-z-]+)"/g)].map((match) => match[1] ?? ""),
+		);
+		const emitted = new URLSearchParams(seedQuery("http://127.0.0.1:1", "pw"));
+		check(
+			"the harness emits exactly the names the app reads",
+			[...emitted.keys()].sort(),
+			[...appNames].sort(),
+		);
+		check(
+			"the password is among them: a route-only seed renders an unauthenticated page",
+			emitted.has("lo-relay-password"),
+			true,
+		);
+		check(
+			"and no invented parameter rides along",
+			[...emitted.keys()].filter((key) => !appNames.has(key)),
+			[],
+		);
+	}
+
+	group = "a leaking run cannot report a clean matrix";
+	{
+		// Round 3: the survivor count was nested inside the `blocking > 0` gate, so a clean
+		// matrix that leaked a browser exited 0. The regression is an ADVERSARIAL one — a
+		// process that keeps re-creating one carrying the run's own profile path — because a
+		// single stand-in is simply reaped, which was never the failure mode.
+		const root = join(
+			process.env.LOCAL_OPERATOR_SCRATCHPAD ?? tmpdir(),
+			`sweep-gate-${process.pid}`,
+		);
+		const profile = join(root, "chrome-respawning");
+		mkdirSync(profile, { recursive: true });
+		const out = join(root, "frames");
+		const respawner = spawn(
+			process.execPath,
+			[
+				"-e",
+				// The profile travels by ENV, not argv: the reap matches the profile path in a
+				// command line, so a respawner that named it would be reaped with its children
+				// and the test would prove nothing.
+				`const { spawn } = require("node:child_process");
+				 const profile = process.env.LO_RESPAWN_PROFILE;
+				 const ensure = () => spawn(process.execPath, ["-e", "setTimeout(() => {}, 600000)", "--", \`--user-data-dir=\${profile}\`], { stdio: "ignore" });
+				 ensure();
+				 setInterval(ensure, 300);`,
+			],
+			{
+				stdio: "ignore",
+				detached: true,
+				env: { ...process.env, LO_RESPAWN_PROFILE: profile },
+			},
+		);
+		await sleep(700);
+		const run = spawnSync(
+			process.execPath,
+			[
+				join(WORKTREE, "tools", "visual", "capture.ts"),
+				"--dir",
+				join(WORKTREE, "e2e", "fixtures", "audit-canary"),
+				"--out",
+				out,
+				"--cells",
+				"path:/clean/clean",
+				"--devices",
+				"iphone-15",
+				"--themes",
+				"dark",
+				"--scales",
+				"100",
+				"--profile",
+				profile,
+				"--yes",
+			],
+			{ encoding: "utf8", timeout: 300_000, env: { ...process.env } },
+		);
+		const output = `${run.stdout ?? ""}${run.stderr ?? ""}`;
+		check(
+			"a clean matrix that leaks a process exits non-zero",
+			run.status !== 0,
+			true,
+			`exit ${String(run.status)}`,
+		);
+		check(
+			"and the failure names the survivors rather than the matrix",
+			/surviving process\(es\)/.test(output),
+			true,
+			output.split("\n").find((line) => line.includes("surviv")) ?? "(no line)",
+		);
+		// Reap the respawner and everything it made, by pid and by the profile it carries.
+		if (respawner.pid !== undefined) {
+			try {
+				process.kill(-respawner.pid, "SIGKILL");
+			} catch {
+				try {
+					process.kill(respawner.pid, "SIGKILL");
+				} catch {
+					/* already gone */
+				}
+			}
+		}
+		spawnSync("pkill", ["-9", "-f", profile]);
+		await sleep(400);
+		check("and the rig leaves nothing behind", countProcesses(profile), 0);
+		rmSync(root, { recursive: true, force: true });
+	}
+
+	group = "the marker table is the app's, row by row";
+	{
+		// Only the `empty` row can be checked against the app today: the app's a11y module
+		// declares empty markers, screen roots and controls, and no non-empty state marker
+		// exists on any head (#11 and #12 own those). So the checkable rows are asserted,
+		// and the rest are NAMED — a row that silently becomes checkable, or a screen that
+		// appears without a marker decision, fails here instead of drifting.
+		const a11ySource = readFileSync(join(REPO, "src", "ui", "a11y.ts"), "utf8");
+		const declared = new Set(
+			[...a11ySource.matchAll(/"[a-z0-9-]+"/g)].map((match) =>
+				match[0].slice(1, -1),
+			),
+		);
+		const rows = Object.keys(SCREEN_MARKER_SUBJECT);
+		const checked: string[] = [];
+		const pending: string[] = [];
+		for (const screen of rows) {
+			const stateIds = Object.entries(STATE_MARKER_ALIASES).map(
+				([, base]) => base,
+			);
+			const states = [...new Set(["empty", ...stateIds])];
+			for (const state of states) {
+				const marker = requiredStateMarker(screen, state);
+				if (marker === null) continue;
+				if (declared.has(marker)) checked.push(marker);
+				else pending.push(marker);
+			}
+		}
+		check(
+			"every screen's empty marker is the app's own",
+			checked.length >= rows.length,
+			true,
+		);
+		check(
+			"the non-empty state markers are PENDING on #11/#12, not assumed to exist",
+			pending.length > 0 && pending.every((marker) => !declared.has(marker)),
+			true,
+			`${pending.length} pending, e.g. ${pending.slice(0, 3).join(", ")}`,
+		);
+	}
+
+	group = "the coverage keys are where the README says";
+	{
+		const readme = readFileSync(join(REPO, "docs", "e2e", "README.md"), "utf8");
+		check(
+			"the README does not send a reader to meta.measurableCells (they are top-level)",
+			/meta\.(measurableCells|notMeasurableCells|coverageNote)/.test(readme),
+			false,
+		);
+		check(
+			"and it names them at the level they live at",
+			/measurableCells/.test(readme) && /notMeasurableCells/.test(readme),
+			true,
+		);
+		const captureSource = readFileSync(
+			join(REPO, "tools", "visual", "capture.ts"),
+			"utf8",
+		);
+		check(
+			"the manifest writes them at the top level, as the README now says",
+			/^\tmeasurableCells:/m.test(captureSource) &&
+				/^\tnotMeasurableCells:/m.test(captureSource),
+			true,
 		);
 	}
 

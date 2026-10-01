@@ -432,13 +432,36 @@ export const SCREEN_ROOTS: Record<string, string> = {
 
 export const READINESS_PROBE = `
 (() => {
-  const testIds = Array.from(document.querySelectorAll('[data-testid]'))
+  const all = Array.from(document.querySelectorAll('[data-testid]'));
+  const testIds = all
+    .map((el) => el.getAttribute('data-testid'))
+    .filter((id) => typeof id === 'string');
+  // WHICH markers count. A "state reached" claim is only worth anything if the thing
+  // carrying the marker is actually rendered: a testid on a \`display:none\` node, a
+  // \`visibility:hidden\` one, or a zero-area box would otherwise satisfy the affirmative
+  // rule while the user sees nothing. "Visible" here means, precisely: the element and
+  // its ancestors are not display:none or visibility:hidden (getComputedStyle), and its
+  // bounding rect has non-zero width and height. Opacity is NOT part of it — a
+  // translucent-but-present control is still a control the transcript renders.
+  const visible = (el) => {
+    const style = getComputedStyle(el);
+    if (style.display === 'none' || style.visibility === 'hidden') return false;
+    for (let node = el.parentElement; node; node = node.parentElement) {
+      const parentStyle = getComputedStyle(node);
+      if (parentStyle.display === 'none' || parentStyle.visibility === 'hidden') return false;
+    }
+    const rect = el.getBoundingClientRect();
+    return rect.width > 0 && rect.height > 0;
+  };
+  const visibleTestIds = all
+    .filter((el) => visible(el))
     .map((el) => el.getAttribute('data-testid'))
     .filter((id) => typeof id === 'string');
   const text = (document.body && document.body.innerText) ? document.body.innerText.slice(0, 240) : '';
   return {
     path: location.pathname,
     testIds,
+    visibleTestIds,
     text,
     elementCount: document.querySelectorAll('*').length,
   };

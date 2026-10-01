@@ -166,22 +166,32 @@ function routeMatches(asked: string, actual: string): boolean {
 }
 
 /**
- * The query the harness hands the page when a seed route is configured.
+ * The query the harness hands the page to point a web build at one relay.
  *
- * This is the harness's HALF of the web-only seed hook the README describes: the app
- * side (reading the parameters at startup and adopting them as the configured
- * connection, with its own configured route still winning) does not exist yet, and a
- * cell it does not reach still fails by name. What this buys today is that the option
- * is one app-side change away instead of two, and that the parameters are on the page
- * for a run to assert rather than assumed.
+ * These are the APP's parameter names, not a harness dialect: PR #11's
+ * `webRelayOverride()` (`src/features/auth/connection-provider.tsx:169-181` on
+ * `feat/screens-lists`) reads exactly `lo-relay`, `lo-relay-password` and
+ * `lo-relay-insecure`, and its cold start gives that override PRIORITY over a saved
+ * tunnel (`:655-673`) — which is the point of a capture run and the opposite of what an
+ * earlier revision of the README claimed. `verify` asserts this name set against that
+ * source, so a rename there fails here rather than silently seeding nothing.
+ *
+ * The PASSWORD is not optional: the relay authenticates by password into a cookie, so a
+ * route-only seed renders an unauthenticated page and every cell fails for the missing
+ * credential rather than the missing route. There is no session parameter — the session
+ * id travels in the route path, which the harness sets itself.
  */
 export function seedQuery(
 	route: string | null,
-	session: string | null,
+	password: string | null,
 ): string {
 	const params = new URLSearchParams();
-	if (route !== null && route !== "") params.set("lo-seed-route", route);
-	if (session !== null && session !== "")
-		params.set("lo-seed-session", session);
+	if (route !== null && route !== "") {
+		params.set("lo-relay", route);
+		params.set("lo-relay-password", password ?? "");
+		// The app compares this to the string "1" and treats anything else as false, so a
+		// cleartext mock relay needs it spelled exactly.
+		params.set("lo-relay-insecure", "1");
+	}
 	return params.toString();
 }

@@ -70,6 +70,40 @@ import {
 	verifyCookie,
 } from "./wire.ts";
 
+/**
+ * The op vocabulary the contract lists (`docs/relay/contract.md` §4.2). Used to tell a
+ * SHAPE refusal ("unknown op", 422) from a liveness refusal (409) in the relay's own
+ * order — not to claim the mock implements them all: an op in this set the mock has no
+ * branch for is still answered `command-unknown-op` after the liveness check, which is
+ * recorded as a known divergence in `docs/e2e/README.md`.
+ */
+const KNOWN_OPS = new Set([
+	"prompt",
+	"steer",
+	"approval_answer",
+	"ask_answer",
+	"snapshot",
+	"ping",
+	"recall_steer",
+	"peer_message",
+	"peer_set_model",
+	"variables",
+	"credential",
+	"register_secret_redaction",
+	"complete_aside",
+	"adopt_aside",
+	"stop",
+	"retire_if_pristine",
+	"slash",
+	"slash_result",
+	"cancel",
+	"abort",
+	"set_effort",
+	"set_model",
+	"new_conversation",
+	"resume_session",
+]);
+
 export const DEFAULT_PASSWORD = "mock-relay-password";
 
 /** A real 1×1 PNG, so `<Image>` has something decodable to render for `/image`. */
@@ -822,6 +856,19 @@ export function createRelay(options: RelayOptions = {}) {
 		// with `409 {"error":"session not connected"}` before it ever looks at the op.
 		// The mock used to refuse the op first, so a client could read its 422 and
 		// never see the 409 production sends.
+		// The relay's order, and it differs by op: `prompt` checks liveness first, every
+		// other op is VALIDATED first (`validate_control_frame` sits between the lookup and
+		// the 409). A round-3 QA pass proved the difference live against an isolated
+		// daemon: a malformed `approval_answer` or `steer` on an unknown session is `422`,
+		// not `409`. An earlier revision of this block had liveness first for every op —
+		// faithful for `prompt`, lenient for the rest.
+		if (op !== "prompt") {
+			const refusal = shapeRefusal(op, body);
+			if (refusal !== null) {
+				sendJson(res, refusal.status, refusal.body);
+				return;
+			}
+		}
 		if (!projectionFor(sessionId)) {
 			sendFixture(res, "command-unknown-session");
 			return;
@@ -843,19 +890,9 @@ export function createRelay(options: RelayOptions = {}) {
 		// the runtime's reply), so this sentence is the mock's — the shape, not the
 		// wording, is what the contract pins.
 		if (op === "approval_answer") {
-			const requestId = body.request_id;
-			if (typeof requestId !== "string" || requestId.trim() === "") {
-				sendJson(res, 422, errorBody("request_id is required"));
-				return;
-			}
-			if (typeof body.approved !== "boolean") {
-				sendJson(res, 422, errorBody("approved must be a boolean"));
-				return;
-			}
-			if (body.remember !== undefined && typeof body.remember !== "boolean") {
-				sendJson(res, 422, errorBody("remember must be a boolean"));
-				return;
-			}
+			// Shape was already refused above, for this op and every other non-`prompt` one:
+			// one validation, one place, so the two orders cannot drift apart.
+			const requestId = String(body.request_id);
 			// Settling is what makes the round trip observable: the stream's next frame
 			// carries the projection without the pending request, so a client that never
 			// settles the card is caught by a later frame rather than by a poll.
@@ -975,6 +1012,57 @@ export function createRelay(options: RelayOptions = {}) {
 		sendFixture(res, "command-unknown-op");
 		return;
 	};
+
+	/**
+	 * What the relay's frame validation refuses, for the op it is about.
+	 *
+	 * The contract makes the order part of the contract (`docs/relay/contract.md` §4.3,
+	 * `types.validate_control_frame`): the frame is validated BETWEEN the session lookup
+	 * and the `entry is None → 409`, so a MALFORMED non-`prompt` op on an unknown session
+	 * is `422` and a well-formed one is `409`. `prompt` is the exception — liveness first,
+	 * then admission — which is why this is asked only for the other ops. Checked against
+	 * the pinned ref `fc851a94e`; QA verified the same order live against an isolated
+	 * daemon at `d27e4716a`.
+	 */
+	function shapeRefusal(
+		op: string,
+		body: Record<string, unknown>,
+	): { status: number; body: Record<string, unknown> } | null {
+		if (!KNOWN_OPS.has(op)) {
+			// The sentence is the captured one (`fixtures/relay/http/command-unknown-op.json`).
+			return { status: 422, body: { error: `unknown op: '${op}'` } };
+		}
+		if (op === "approval_answer" || op === "ask_answer") {
+			const requestId = body.request_id;
+			if (typeof requestId !== "string" || requestId.trim() === "") {
+				return { status: 422, body: { error: "request_id is required" } };
+			}
+		}
+		if (op === "approval_answer") {
+			if (typeof body.approved !== "boolean") {
+				// Verbatim from the captured `command-approval-bad-shape.json`.
+				return { status: 422, body: { error: "approved must be a boolean" } };
+			}
+			if (body.remember !== undefined && typeof body.remember !== "boolean") {
+				return { status: 422, body: { error: "remember must be a boolean" } };
+			}
+		}
+		if (op === "ask_answer" && typeof body.value !== "string") {
+			return { status: 422, body: { error: "value must be a string" } };
+		}
+		if (op === "steer") {
+			// `steer` shares `prompt`'s rule (contract §4.3): text non-empty OR at least one
+			// image. The corpus has no captured sentence for this refusal, so the wording is
+			// the mock's; the RULE and the status are the contract's.
+			const text = body.text;
+			const hasText = typeof text === "string" && text.trim() !== "";
+			const images = Array.isArray(body.images) ? body.images : [];
+			if (!hasText && images.length === 0) {
+				return { status: 422, body: { error: "text or an image is required" } };
+			}
+		}
+		return null;
+	}
 
 	/** Every non-control route, in the relay's own order of checks. */
 	const route = async (

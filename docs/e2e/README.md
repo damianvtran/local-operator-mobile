@@ -14,12 +14,18 @@ they run on a machine that has only Node, pnpm and the installed Google Chrome
 | `tools/lib/doc-commands.ts` | Do the commands on this page actually run? | `pnpm e2e:docs` |
 
 `pnpm e2e:docs` starts, waits for and reaps the commands that serve; it bounds
-each command at 25 minutes, and `--verbose` prints every command's output rather
-than only the failures'. The block that used to be the slowest — the app-build
-capture at ~26 minutes for the full matrix — is now a bounded sample (`--devices
-iphone-15 --themes dark --scales 100,200`) precisely so the gate can pass for the
-reason the block declares, rather than by timing out. `pnpm e2e:relay` is the
-slowest of the remaining blocks at ~13 minutes. A command this
+each command at **40 minutes** — the figure is the slowest documented block's
+measured runtime with room to spare, because a bound below a command's real
+runtime reports the command as broken, which is worse than no bound.
+
+That figure is **load-dependent, and it is the one to quote**: `pnpm e2e:relay`
+(which is `verify`) measured **28 minutes** on this host at load averages 32–46,
+against ~13 minutes on a quiet one. The README, `tools/lib/doc-commands.ts` and
+`tools/mock-relay/verify.ts` all state that single figure; if you change one,
+change all three. The app-build capture block — the other candidate for slowest —
+is bounded to a 74-cell sample (`--devices iphone-15 --themes dark --scales
+100,200`) precisely so the gate can pass for the reason the block declares
+instead of by timing out. A command this
 machine cannot run is skipped **with its reason printed**, and its tool paths and
 script names are still resolved, so a skip cannot hide a renamed file.
 
@@ -47,17 +53,28 @@ cell names. The number of cells this costs is printed by every run
 (`measurableCells` / `notMeasurableCells` in the manifest, and one line per cell on
 stdout), so the coverage claim is measured rather than asserted.
 
+The coverage fields are **top-level** in `manifest.json` — `measurableCells`,
+`notMeasurableCells`, `coverageNote` (the `meta` object holds `teardown`, `textScaleLive` and
+the other run-level readings; the audit's own key is `coverage`). `verify` asserts both the
+level and the names, so a reader following this page cannot land on `undefined`.
+
 `S5/rich-rows` is the newest of them: the scenario and its cell exist (so the
 transcript's fenced block, diff and tables are one `--scenario rich-rows` away), but
 the cell renders the same not-connected screen, so the copy control's box is still
 unmeasured and the run fails it by name — the same verdict as its neighbours, by the
 same root cause:
 ```
-S5__rich-rows__iphone-15__dark__100: the cell declares 'rich-rows' but the app is
-showing an empty state (session-empty): the state was never reached; the app made no
-request to the mock relay for this cell, so the state it declares (rich-rows) cannot
-have come from the relay
+S5__rich-rows__iphone-15__dark__100: the cell declares 'rich-rows' but the marker
+'session-rich-rows' is not in the DOM: nothing in the frame affirms that state, so the
+cell is NOT MEASURABLE for it; the cell declares 'rich-rows' but the app is showing an
+empty state (session-empty): the state was never reached; the app made no request to the
+mock relay for this cell, so the state it declares (rich-rows) cannot have come from the
+relay
 ```
+(Verbatim from a one-cell run on 2026-09-30 — `--cells S5/rich-rows --devices iphone-15
+--themes dark --scales 100` — because a quoted sample that no longer matches the tool is
+the drift this page exists to refuse. Three problems, in the order the guard asks them:
+the missing marker, the empty screen, the absent request.)
 
 Measured on 2026-09-30, one device, one theme, with the relay recording every
 request it served:
@@ -141,12 +158,57 @@ a reader acts on this paragraph:
    cells (`S2`, `S3`, `S4`, `S10`, `S13`), which need the connection surfaces it owns, plus
    the connection step from (1) on top.
 
-The alternative to (1) is a **web-only seed hook** — the app reads a documented parameter
-at startup (`?lo-seed-route=<relay-url>&lo-seed-session=<id>`) and uses it as the
-configured connection, with its own configured route always winning when one exists. That
-removes the CDP driving entirely and is the more robust option if #11's form proves awkward
-to drive or needs a real keystore. Either way the number to watch is the same: **37 cells
-move from not-measurable to measurable**, and every run prints how many of them got there.
+The alternative to (1) is the **web relay override**, and it is **not** something the app
+still has to build: PR #11's `webRelayOverride()` (`src/features/auth/connection-provider.tsx`,
+`feat/screens-lists`) already reads the query string and hands the connection layer a relay
+URL, password and cleartext opt-in. This harness emits those parameters under **the app's own
+names** — `lo-relay`, `lo-relay-password`, `lo-relay-insecure=1` — so a capture run needs no
+driving and no app change:
+
+```sh
+capture --dir dist --relay <mock-url> --seed-route <mock-url> --seed-password mock-relay-password …
+```
+
+Two properties of that hook matter, and the README said the opposite of the second for one
+revision:
+
+- the **password is not optional**: the relay authenticates by password into a cookie, so a
+  route-only seed renders an unauthenticated page and every cell fails for the missing
+  credential rather than for the missing route;
+- the override takes **priority over a saved tunnel** (`connection-provider.tsx:655-673`:
+  "On web an explicit `lo-relay` override wins"). It has to: a seeded capture that quietly
+  dialled a saved tunnel on the capture machine would photograph the wrong relay.
+
+There is no session parameter — the session id travels in the route path, which the harness
+sets itself. `verify` asserts this name set against #11's own source, so a rename there fails
+here instead of silently seeding nothing.
+
+So the dependencies, stated once:
+
+| what | unblocks | state |
+|---|---|---|
+| the harness seed step (`--seed-route`/`--seed-password`, the app's `lo-relay*` names) | makes a seeded run possible at all | **built here** |
+| PR #11 (`feat/screens-lists`) merging | the **16** list, computer and refusal cells (`S2`, `S3`, `S4`, `S10`, `S13`) | open, in review |
+| PR #12 (`feat/screens-session`) merging | the **21** session cells (`S5`, `S8`, `S6`, `S9`) — `app/(app)/session/[id].tsx` is a placeholder on this head | open, in review |
+| the app emitting the state markers the rule requires (below) | turns "seeded" into "measurable" | **on #11/#12** |
+
+The number to watch is unchanged: **37 cells from not-measurable to measurable**, printed by
+every run.
+
+### The state-marker contract this harness requires
+
+The readiness rule is affirmative, so it needs a name to look for: a cell declaring
+`<screen>/<state>` requires a **visible** `data-testid` of `<subject>-<state>` — `sessions-populated`,
+`session-pending-approval`, `session-rich-rows`, and so on, with the variants (`populated-long`,
+`narrow`, `scroll`, `approval`, `ask`, `ask-multi`) mapping to the state they render.
+
+That is the app's own convention (`sessions-empty`, `session-empty`) extended, and it is a
+**forward requirement, not a finding**: on this head the app's `src/ui/a11y.ts` declares only
+the `-empty` markers, screen roots and controls, so exactly those rows are cross-checked
+against it (`verify` does that per row) and every non-empty row is listed as pending on #11/#12.
+If those PRs name their markers differently, the cells stay not-measurable for a NAMING reason
+while the message blames the app's DOM — which is why the table is asserted and the pending
+rows are named rather than assumed.
 
 Until one of them lands, every relay-backed cell stays **not measured** — a statement
 this harness makes per cell, not a pass it hands out.
