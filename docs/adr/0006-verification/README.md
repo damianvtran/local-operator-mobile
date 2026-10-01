@@ -65,6 +65,25 @@ architecture.md:299` and exits **1**. Its one check that *does* read a file it i
 `docs/architecture.md` row — moves when that file's row changes, and that file is read **from the ref
 being validated**, never from the CWD.
 
+## Residuals, stated rather than implied (round 12)
+
+* **The ref check in `read-citations.py` is LAZY.** It runs only when a citation's `git show` fails, so a
+  checkout missing a ref that the documents never cite *in a Python file* would exit 0 — the resolver, by
+  contrast, validates both refs up front and would exit **2** on that same checkout. For these documents
+  the case cannot be reached: `(pin)` and `(#1864)` each appear on citations in the ADR, so the first
+  failing `git show` is always a ref check. Verified in both directions — a clone carrying only the pin
+  and a clone carrying only PR #1864's head each give one `MISSING REF` line and **rc 2** from both
+  scripts.
+* **The backtick counts, and the method behind them.** Two methods, stated because they differ:
+  excluding the fence **marker** lines still counts fenced *contents*; excluding the fenced **blocks**
+  does not. At the `docs/adr-0006-hygiene` head the ADR reads **2028** by the first method and **1920**
+  by the second (2088 over all lines); `docs/push-plan.md` **548** by both (554 over all lines — the six
+  extra sit on fence markers); this README **132** by both (138 over all lines, and a *reading*, not an
+  invariant: it moves whenever this file is edited). Every figure is **even** under both methods, which
+  is the claim being made — an unbalanced pair shows as an odd count. That is how the one real stray was
+  found: an extra backtick after a citation's closing parenthesis, on the `gateway.py`:310-319 `*(NEW)*`
+  line, removed in round 10.
+
 ## What each script proves, and what it does not
 
 **`verify-documents.py`** asserts the statements the ADR and the plan make about themselves: that a
