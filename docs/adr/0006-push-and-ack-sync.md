@@ -70,8 +70,12 @@ above, **`(pin)`** = the pinned commit above. A citation into a file that exists
 numbers, so an unmarked one is a **failure, not a default**; `push_devices.py` needs no marker
 because it exists only in #1864. A **bare continuation** (`:3382-3388`) inherits the file *and the
 ref* of the citation it follows, which is how the prose reads. The three scripts in
-[`docs/adr/0006-verification/`](0006-verification/) are this paragraph's checkable form; each exits 2
-rather than pretending when `$LOCAL_OPERATOR_REPO` is unusable, and
+[`docs/adr/0006-verification/`](0006-verification/) are this paragraph's checkable form. **What each
+does with a bad input, exactly** (round 9 Q-F31): `resolve-citations.py` and `read-citations.py` exit
+**2** when `$LOCAL_OPERATOR_REPO` is unusable or lacks a ref they need (and `resolve-citations.py`
+exits **3** if its own parser self-test fails), while `verify-documents.py` reads only **this** repository's documents (it never
+opens `$LOCAL_OPERATOR_REPO`) and exits **2** for an unknown git ref or an unreadable document rather
+than raising a traceback, and
 [their README](0006-verification/README.md) states exactly what each proves **and does not**.
 **What they do not check, so no reader has to guess the denominator:** `.md`/`.ts`/`.tsx` citations
 (they resolve at the mobile repository's pin), a file named with no line, a line number written as
@@ -573,7 +577,7 @@ publication cursor (Q9), and why §3.4's content-derived key has something to mi
 | **Account → devices** | account id → the account's registered device ids (what may *receive* is decided by the state marker, §4) | routing; the account already exists (`GET /v1/me`, `tunnels/api.py`:144-170) |
 | **Computer → devices** | the connector's tunnel identity → the devices registered for *that* machine | a user with three machines must not be pushed about machine C's work while paired to A |
 | **Delivery** | `(device_id, conversation_handle, emit_id)` → sent/attempted, provider id, response code, **kept 14 days** | the record of what was pushed: it is what makes re-delivery idempotent, a revocation testable and the cloud's own alerts meaningful. **It is not returned to the machine** (§3.1) |
-| **Credential (per device)** — **the machine's own record** | `credential_live`, `last_authenticated_at`, **`credential_expires_at`** *(new — the **expiry the phone's cookie itself presented**, recorded at register time and refreshed on any authenticated request that names its device; `sign_cookie` puts the expiry in the cookie's value, `mobile/auth.py`:465-469`, so no clock arithmetic and no login-route writer is needed — §4 rule 2 / Q-F15 / R8-m1)*, and the **per-device key** (`device_key`): **minted by the machine at every registration and stored as the key ITSELF in the machine's 0600 record** (`push_devices.py`:194 field, `:510` written, `:946` the atomic 0600 write — core's shape, PR #1864, **the key itself, not a hash** — a hash could not be returned per call, and the per-call return is what makes registration the key's delivery path; **divergence for core, listed in the plan**: a hash would require a one-time return plus a re-register refusal, and #1864 does not do that), and held by the phone in the keystore keyed by its `install_id`. **The store's custody is the same rule the discovery records use — 0600 under 0700 (`registry.py`:5)** | the second limb of §4 rule 2, and the only place the flag lives. **The machine owns it**: the relay's routes write it as they see the cookie and the emit worker (the same process) reads it, so there is no second copy to disagree with and **no epoch to compare** (round 4 `m1`, QA Q-F3). **The key never goes to the cloud** — round 5 M3 caught the earlier sentence "never leaves the machine", which was wrong: the *phone* presents it, as `X-Lop-Device-Key` (§3.1). **A rotation happens on registration**: every `register` re-mints the key and returns it in that response (§3.1), so the owner's lever is a fresh registration (a reinstall, or the device's next authenticated register) and the account console's revoke of the account's access — **not** the device's own initiative; an offline device resumes only by re-registering with its current relay credential, and a device the machine has marked is refused at registration before any key is minted. What the cloud holds is the **coalesced** copy of the two flag values, never per-request traffic (`m5`) |
+| **Credential (per device)** — **the machine's own record** | `credential_live`, `last_authenticated_at`, **`credential_expires_at`** *(new — the **expiry the phone's cookie itself presented**, recorded at register time and refreshed on any authenticated request that names its device; `sign_cookie` puts the expiry in the cookie's value, `mobile/auth.py`:465-469, so no clock arithmetic and no login-route writer is needed — §4 rule 2 / Q-F15 / R8-m1)*, and the **per-device key** (`device_key`): **minted by the machine at every registration and stored as the key ITSELF in the machine's 0600 record** (`push_devices.py`:194 field, `:510` written, `:946` the atomic 0600 write — core's shape, PR #1864, **the key itself, not a hash** — a hash could not be returned per call, and the per-call return is what makes registration the key's delivery path; **divergence for core, listed in the plan**: a hash would require a one-time return plus a re-register refusal, and #1864 does not do that), and held by the phone in the keystore keyed by its `install_id`. **The store's custody is the same rule the discovery records use — 0600 under 0700 (`registry.py`:5)** | the second limb of §4 rule 2, and the only place the flag lives. **The machine owns it**: the relay's routes write it as they see the cookie and the emit worker (the same process) reads it, so there is no second copy to disagree with and **no epoch to compare** (round 4 `m1`, QA Q-F3). **The key never goes to the cloud** — round 5 M3 caught the earlier sentence "never leaves the machine", which was wrong: the *phone* presents it, as `X-Lop-Device-Key` (§3.1). **A rotation happens on registration**: every `register` re-mints the key and returns it in that response (§3.1), so the owner's lever is a fresh registration (a reinstall, or the device's next authenticated register) and the account console's revoke of the account's access — **not** the device's own initiative; an offline device resumes only by re-registering with its current relay credential, and a device the machine has marked is refused at registration before any key is minted. What the cloud holds is the **coalesced** copy of the two flag values, never per-request traffic (`m5`) |
 | **Credentials** | the APNs `.p8` key id + team id; the FCM service account | the reason the cloud has to exist at all |
 | **Grant (per device)** *(cloud, proposal)* | `grant_id`, `device_id`, the computer it belongs to, `minted_at`, `last_refused_at` — the **shape is the cloud lane's** ([`docs/push-cloud-ops.md`](push-cloud-ops.md)); this ADR fixes only the two properties rule 2 depends on | **the enforceable half of §4 rule 2 on the Radient route** (round 5 Q-F8): it is *minted* at registration against an `install_id` the machine's record carries, *required* for delivery (fan-out refuses without it), and *refused* for a row whose marker forbids it. The one property that cannot be verified from this repository — a mint refused while the account has revoked that computer's access — is stated as a **cloud-side requirement** in §4 rule 2 and in §7, not assumed here. **Its life — storage, refresh, rotation** (round 6 QA Q-F8, which caught that a record with no life cannot be implemented): it **lives in the cloud's own store** beside the device row *(proposal)*; it is **refreshed** from the machine's next `credential_live` report rather than from a clock, so the cloud re-arms it from evidence; it is **rotated** — invalidated and re-minted at the next registration — when an **owner** revokes it, or when the device re-registers (which re-mints the key, §3.1); and a **mint is refused outright** while the account's access for that computer is revoked. "The machine never refreshes a grant" in rule 2 means *the machine*, not the cloud |
 **What the cloud must NOT hold:** transcripts, conversation names, session ids, working
@@ -867,8 +871,13 @@ POST /api/push/devices/{device_id}/unrevoke → {"ok": true, "device_id": "…"}
   after the `lop_mobile` cookie (which the CLI also presents). Success is `200 {"ok": true,
   "device_id": "…"}` (`push_devices.py`:611-645 (#1864)); it **deletes every marker the row carries** —
   both `revoked_at` and `unpaired_at` if it has both (`:638-644` (#1864): `for marker in
-  ("revoked_at", "unpaired_at")`), which is the one-marker case in practice because §4's precedence
-  stops a row from reaching here with two — and **restores no token and no credential**: they are
+  ("revoked_at", "unpaired_at")`) — **and a row really can carry both** (round 8 Q-F29: §4's
+  precedence decides which state it *reads as*, it does not stop the second marker being written, and
+  #1864 has a test for exactly that; the delete loop is what makes the single-marker phrasing true
+  only for the common case). The CLI renders such a row as `unrevoked <label>` with
+  `id <device_id> — state: live`, because `device_state` resolves the pair to `revoked` before the
+  verb runs and the read-back after it is `live` (`cli.py`:7888-7896 (#1864)). It **restores no
+  token and no credential**: they are
   left as the last authenticated request wrote them (`:620-626` (#1864)), so the device must register
   again. A row with no marker is a **no-op that still answers `ok`** (`:624-626`).
 - **Presented as the header `X-Lop-Operator-Key`** (`push_devices.py`:193 (#1864)) on
@@ -1087,6 +1096,7 @@ POST <cloud>/v1/push/credentials
 |---|---|---|
 | `devices[].device_id` | string | the cloud's routing key; the same identity §2.2's Device row carries |
 | `devices[].credential_live` | bool | the only fact the delivery gate needs (rule 2) |
+| `v` | int | the payload version, `1` — the same field the APNs payload carries (§3.2's first literal); it is in the emit body because the frozen route's body *is* that object plus the `devices` block |
 | `computer` | string | the routing key every machine→cloud call carries; `extra="forbid"` means it needs a row (§2.3's per-computer rule) |
 | `device` | object | the registration forward's own device body — `device_id`, `platform`, `environment`, `app_version`, `push_token`, `registered_at`; §2.2's Device row is the custody statement |
 | `devices[].credential_expires_at` | int, unix seconds | **NEW, and the reason the lapse is computable at all**: the cookie's own value is `<expiry>.<hmac>` (`mobile/auth.py`:465-469, signed once at login and never renewed), so the machine records **the expiry the phone presented** and the lapse is `expires_at <= now` — no clock arithmetic and no login-route writer (Q-F15 / R8-m1) |
@@ -1254,7 +1264,8 @@ items both matter, because each is a thing a cloud implementer would build wrong
    request", where rule 2 specifies a **coalesced, change-triggered** report (round 4 `m5`). This
    ADR is the authority on the rate; the note is the authority on the cloud's handling of it.
 2. **The credential epoch.** The note's credential paragraph still has the machine "check the
-   credential epoch" — the exact counter rule 2 **deleted** (`docs/push-cloud-ops.md`:1115, round 4 `m1` / QA Q-F3). A
+   credential epoch" — the exact counter rule 2 **deleted** (`docs/push-cloud-ops.md`:73-74`, PR #15 at head `30a0f4d` — round 4 `m1` / QA Q-F3; round 9
+   Q-F30 corrected the line number). A
    reader of the note would build a check the machine will never send.
 3. **The single-route claim.** The same paragraph says delivery "resumes at each device's next
    authenticated request, **which a stolen phone, lacking the new password, cannot make**" — the
@@ -1334,7 +1345,8 @@ Three rules follow, and together they are the whole of the revocation semantics:
    **NEW**:
    - **The registration forward** (the machine→cloud call that forwards a registration, §3.1/§7
      *(proposal)*) carries `devices: [{device_id: str, credential_live: bool,
-     last_authenticated_at: int, unix seconds}]` — the exactly-typed block, not a prose hint.
+     credential_expires_at: int, last_authenticated_at: int, unix seconds}]` — the exactly-typed
+     block, not a prose hint, and not a list that omits the one field the lapse depends on (round 9).
    - **The next emit** (§3.2's attention/completion body) carries the **same block**, added to
      §3.2's allow-list as a *machine→cloud* field: the app-facing payload table is unchanged, and
      nothing new reaches the phone.
@@ -1345,7 +1357,7 @@ Three rules follow, and together they are the whole of the revocation semantics:
    **The lapse is DERIVED, and it is derived from the cookie's ISSUE time, not from the last
    request** (round 7 Q-F15 / R7-m1 — the round-6 draft said `last_authenticated_at` + TTL, which
    over-reports: the cookie is signed **once at login** and never renewed, `sign_cookie` puts only
-   an expiry in it (`mobile/auth.py`:465-469`, `<expiry>.<hmac>`), the expiry is `now +
+   an expiry in it (`mobile/auth.py`:465-469, `<expiry>.<hmac>`), the expiry is `now +
    COOKIE_TTL_S` at that moment (`COOKIE_TTL_S = 30 * 24 * 3600`, `:99`), and nothing refreshes it
    (`:29-33`, "there is no session table") — so a phone whose last request was on day 29 would
    derive a lapse on day 59 while its cookie really died on day 30.
@@ -1357,7 +1369,7 @@ Three rules follow, and together they are the whole of the revocation semantics:
    the `devices` block (§3.2), so the direct route's lapse is `credential_expires_at <= now` — the
    cookie's own death, with no arithmetic and no second clock.
    **On the Radient route the TTL does not govern at all**: the gateway mints a **fresh** cookie for
-   every request it forwards (`gateway.py`:545-548`), so no phone cookie there is ever 29 days old
+   every request it forwards (`gateway.py`:545-548), so no phone cookie there is ever 29 days old
    and the device's liveness is the **grant's**, which the cloud owns (§2.2) — which is why that
    route's lock is the account side and not a clock. A device whose credential lapsed while the app
    was shut is reported not-live **at the next heartbeat** (≤15 min) with the same derivation, and
@@ -1444,7 +1456,7 @@ surface may offer a lever the user's route does not have.
 **The residual the operator key does NOT close — stated once, here** (round 8 M1 / Q-F23, accepted):
 the key is a boundary at the **HTTP layer of the un-revoke route**, and only there. **A phone holding
 a valid `lop_mobile` cookie can drive this machine's agent** — it can start a session
-(`daemon.py`:4253` (pin) is `api_start_session`) and send a prompt through the command frame (`:3964-3972`)
+(`daemon.py`:4253 (pin) is `api_start_session`) and send a prompt through the command frame (`:3964-3972`)
 — and that agent runs as the **same user** as the daemon, so it can read the registry file that holds
 `operator_key` (`push_devices.py`:88-93 (#1864) says the same thing from the other side). **Whether
 that path is actually walkable is UNTESTED** — neither review round demonstrated an exploit, and the

@@ -9,12 +9,20 @@ resolve) and ``read-citations.py`` (does the line support the claim). This scrip
 so a pass here says the documents are internally consistent and say what the round claims — not that
 any of it is true of ``local-operator``.
 """
-import subprocess, sys, textwrap
+import os, subprocess, sys, textwrap
+REPO = os.environ.get("LOCAL_OPERATOR_REPO", "~/local-operator")
 REF = sys.argv[1] if len(sys.argv) > 1 else "WORKTREE"   # a git ref, or WORKTREE to read the files
 def show(ref, path):
     if ref == "WORKTREE":
         return open(path, encoding="utf-8").read()
-    return subprocess.run(["git","show",f"{ref}:{path}"],capture_output=True,text=True,check=True).stdout
+    out = subprocess.run(["git","show",f"{ref}:{path}"],capture_output=True,text=True)
+    if out.returncode != 0:
+        #: An unknown ref or an unusable checkout is a SETUP error, not a failed check: exit 2 with
+        #: the reason, never a CalledProcessError traceback (round 9, Q-F31).
+        print(f"UNUSABLE INPUT: cannot read {ref}:{path} from {REPO} — {out.stderr.strip().splitlines()[-1] if out.stderr.strip() else 'no such ref or path'}",
+              file=sys.stderr)
+        raise SystemExit(2)
+    return out.stdout
 import pathlib as _pathlib
 has_readme = ""
 for _cand in ("docs/adr/0006-verification/README.md", "0006-verification/README.md"):

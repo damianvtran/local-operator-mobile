@@ -34,6 +34,7 @@ NAMED = re.compile(
 BARE = re.compile("[`]?:([0-9]+)(?:-([0-9]+))?[`]?")
 
 repo = pathlib.Path(os.environ.get("LOCAL_OPERATOR_REPO", "~/local-operator")).expanduser()
+problems = 0  #: a printed `!!` is a failure, not decoration (round 9)
 bodies: dict[tuple[str, str], list[str]] = {}
 seen: set[tuple[str, str, str]] = set()
 
@@ -104,9 +105,12 @@ for doc in DOCS:
         end = int(line2) if line2 else start
         if start > len(body):
             print(f"!! {path}:{line}  BEYOND EOF ({len(body)} lines) at {ref[:7]}")
+            problems += 1
             continue
         context = " ".join(x.strip() for x in body[max(0, start - 4): start - 1])
         print(f"\n{path}:{line}   [{ref[:7]}]")
         print(f"    claim: …{context[-150:]}")
         for number in range(start, min(end, len(body)) + 1):
             print(f"    line {number}: {body[number - 1].strip()[:150]}")
+
+sys.exit(1 if problems else 0)

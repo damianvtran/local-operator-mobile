@@ -12,12 +12,20 @@ LOCAL_OPERATOR_REPO=~/local-operator python3 docs/adr/0006-verification/resolve-
 LOCAL_OPERATOR_REPO=~/local-operator python3 docs/adr/0006-verification/read-citations.py [filter]
 ```
 
-`LOCAL_OPERATOR_REPO` defaults to `~/local-operator`. Both source-checking scripts **exit 2 with a
-clear message** when that path is not a git repository or lacks the refs they need — a missing clone
-is a setup error, and saying so is the only useful thing to do about it. `resolve-citations.py` also
-runs a **parser self-test** at startup and exits 3 if its own patterns stop matching the citation
-forms below: a checker whose regex silently stops matching reports "all clear" for a document nothing
-was extracted from (QA round 8, Q-F26).
+`LOCAL_OPERATOR_REPO` defaults to `~/local-operator`. **Every script exits 2, with a clear message,
+on unusable input** — a path that is not a git repository or lacks the refs it needs for the two
+source-checking scripts, an unknown git ref or an unreadable document for `verify-documents.py`. A
+missing clone or a typo'd SHA is a setup error, and saying so is the only useful thing to do about it;
+a traceback is not an answer (round 9, Q-F31).
+
+`resolve-citations.py` runs a **parser self-test** at startup and exits **3** if its own patterns stop
+matching the citation forms below — and the self-test covers **both directions**: a bare mention
+(``daemon.py``) must match the mention counter while a citation (``daemon.py`:3377-3380`)
+must NOT. A counter whose lookahead cannot fail reports zero forever while this README promises it
+prints, so the negative arm is the assertion that keeps it alive (round 9, R9-M1; QA round 8, Q-F26).
+
+`read-citations.py` exits **1** when it prints any `!!` line (a citation beyond EOF), so a reading aid
+that could not read something is not mistaken for a clean pass.
 
 ## Two refs, and how a citation says which
 

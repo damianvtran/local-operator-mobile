@@ -51,6 +51,11 @@ NAMED = re.compile(
     "[`]?([A-Za-z_][A-Za-z0-9_/]*(?:/[A-Za-z0-9_/]+)*[.](?:py|ts|tsx|md))[`]?:([0-9]+)(?:-([0-9]+))?"
 )
 BARE = re.compile("[`]?:([0-9]+)(?:-([0-9]+))?[`]?")
+#: A mention of a file with NO line number. The lookahead must be able to FAIL — with an optional
+#: subpattern inside it (`(?![`:]?)`) it never can, every citation counts as a mention too, and the
+#: counter reports zero forever while the README promises it prints (round 9, R9-M1). Asserted by the
+#: self-test below on both sides: a bare mention matches, a citation does not.
+MENTION = re.compile("[" + TICK + "]([A-Za-z_][A-Za-z0-9_/]*[.]py)[" + TICK + "](?![`:])")
 
 # --- the parser self-test (exit 3 rather than a false all-clear) -------------------------------
 for pattern, sample, want in (
@@ -59,11 +64,17 @@ for pattern, sample, want in (
     (BARE, "`:3382-3388`", ("3382", "3388")),
     (BARE, "`:9`", ("9", None)),
     (BARE, ":99999", ("99999", None)),
+    (MENTION, "`daemon.py` on its own", ("daemon.py",)),
+    (MENTION, "`daemon.py`:3377-3380", None),
+    (MENTION, "`daemon.py:3377`", None),
 ):
     m = pattern.search(sample)
-    if not m or tuple(m.groups()) != want:
-        print(f"PARSER SELF-TEST FAILED: {pattern.pattern!r} on {sample!r} gave "
-              f"{m.groups() if m else None}, wanted {want}", file=sys.stderr)
+    got = tuple(m.groups()) if m else None
+    # `want is None` means "this must NOT match" — a pattern whose lookahead cannot fail, or whose
+    # required group went optional, is caught here rather than reporting an empty counter forever.
+    if got != want:
+        print(f"PARSER SELF-TEST FAILED: {pattern.pattern!r} on {sample!r} gave {got}, wanted {want}",
+              file=sys.stderr)
         raise SystemExit(3)
 
 repo = pathlib.Path(os.environ.get("LOCAL_OPERATOR_REPO", "~/local-operator")).expanduser()
@@ -173,8 +184,7 @@ for doc in DOCS:
             if int(ln) > len(body) or (ln2 and int(ln2) > len(body)):
                 bad.append((full, ln, f"line {ln} beyond EOF ({len(body)} lines) at {ref[:7]}"))
 
-    line_less += [m.group(1) for m in re.finditer("[" + TICK + "]([A-Za-z_][A-Za-z0-9_/]*[.]py)[" +
-                                                  TICK + "](?![`:]?)", flat)]
+    line_less += [m.group(1) for m in MENTION.finditer(flat)]
     # a line number written as PROSE ("`gateway.py` line 5") is not a citation form we parse; it is
     # reported so nothing is silently outside the denominator (QA round 8, Q-F26's probe).
     prose_lines += [m.group(0)[:60] for m in re.finditer(
