@@ -120,6 +120,16 @@ for path, line, line2, marked in cites:
 print(f"checkout={repo}  pin={pin}  mappings={len(maps)}  "
       f"distinct (path,line) citations CHECKED={len(checked)}")
 print("files touched:", " ".join(f"{k}({v})" for k, v in sorted(counts.items())))
+# A backticked file with no `:line` is prose, not a citation — but it is counted and named here so
+# "everything the document cites was checked" is never implied when it was not (QA round 7, row 3:
+# a citation-shaped token the regex does not match used to be skipped in silence).
+mention_spans = list(re.finditer(r"`([A-Za-z_][\w/]*\.py)`(?![`:])", flat))
+line_less = [m.group(1) for m in mention_spans if not re.match(r"`?:\d", flat[m.end() : m.end() + 2])]
+if line_less:
+    sample = ", ".join(sorted(set(line_less))[:6])
+    print(f"MENTIONS WITHOUT A LINE NUMBER (not checked, {len(line_less)}): {sample}"
+          + (" …" if len(set(line_less)) > 6 else ""))
+
 if not_checked:
     print("NOT CHECKED (different pin or non-Python):",
           ", ".join(f"{k} x{v}" for k, v in sorted(not_checked.items())))

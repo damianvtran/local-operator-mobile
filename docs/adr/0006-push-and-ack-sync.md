@@ -822,8 +822,10 @@ DELETE /api/push/devices/{device_id}   → {"ok": true}          // revoke: toke
 // the design is core's, adopted from damianvtran/local-operator PR #1864 at head `d089f7e0f`,
 // which implements it; not merged at the time of writing). The refusal is `403 machine_only` and it
 // means exactly one thing: **the request did not present this machine's operator key.** It is NOT a
-// locality test, and it must not be described as one — the relay's `/api/` auth is a single cookie
-// gate (`daemon.py`:3377-3380), so a phone and the CLI look identical to it.
+// locality test, and it must not be described as one — the relay authenticates `/api/` with ONE cookie
+// check (`authed` → `verify_cookie`, `daemon.py`:3377-3380) inside `gate()` (`:3401-3411`, which also
+// refuses a cross-origin mutation), so a phone and the CLI look identical to it: an origin guard is
+// not an identity either. (Nit from QA round 7: "the whole of `/api/` auth" overstated `:3377-3380`.)
 POST /api/push/devices/{device_id}/unrevoke → {"ok": true, "device_id": "…"}
    // 403 {"code": "machine_only",
    //      "error": "a device cannot restore itself — use the computer or your account"}
@@ -1267,7 +1269,7 @@ Three rules follow, and together they are the whole of the revocation semantics:
      **revoking the phone's access in the Radient account and re-pairing** — not this computer's
      password. **The remedy is route-dependent: rotation is a device-facing lever on the direct route only.** On the Radient route
      the gateway reads the password **once, when the `Gateway` is constructed** — `self.mobile_password
-     = mobile_password` (`gateway.py`:449`), built from config at `tunnels/service.py`:527-533 — and
+     = mobile_password` (`gateway.py`:449), built from config at `tunnels/service.py`:527-533 — and
      nothing in the connector's poller reloads it. So a rotation does not lock the thief out; it
      makes the gateway sign with a **stale** password until the connector is restarted, which locks
      out **every** device of that computer (the owner's own phone included) and then **heals itself
@@ -1669,8 +1671,11 @@ path did not exist at the pin — the lines were right and the path was never ex
 `notify` line, so the citation *resolved* and the **fact** was elsewhere — found by reading the
 line); `daemon.py:777-813` → **`:778-782`** (round 6: the range started on a blank line and missed
 the set literal at `:778`); and the table now also maps `gateway.py`,
-`attach_client.py`, `tui_handle.py` and `mcp/grants.py`, the four paths round 6's design leans on
-(QA round 6, row 7). **Round 7 — the reversal, and the two refs.**
+`attach_client.py`, `tui_handle.py` and `mcp/grants.py` (QA round 6, row 7). **Only `gateway.py` and
+`attach_client.py` are cited since round 7** — the round-6 control-socket design that used the other
+two is retired (§3.1) — and they stay mapped on purpose: a mapping that is stale is harmless, while a
+citation that resolves to nothing is silently skipped by a naive checker, which is the failure this
+whole block exists to prevent (QA round 7, row 3). **Round 7 — the reversal, and the two refs.**
 The HTTP `unrevoke` route and the `403 machine_only` refusal were **removed in round 6**, on the
 finding that a restriction could not be implemented from a request; **round 7 reversed that**, and
 the reason matters more than the outcome: the predicate is a **machine-minted secret presented as a

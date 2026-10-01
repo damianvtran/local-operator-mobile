@@ -56,6 +56,10 @@ turned up the `:1611` → `:2047` and `daemon.py:777-813` → `:778-782` correct
   the one these scripts read, so they are counted and printed as `NOT CHECKED` — the run reports the
   denominator rather than implying it checked them.
 * **A bare range that follows no named file** (nothing to inherit).
+* **A backticked file name with no line number** — prose, not a citation. They are counted and
+  printed (`MENTIONS WITHOUT A LINE NUMBER`) rather than skipped in silence: a citation-shaped
+  token the resolver does not understand is a hole in the denominator, and round 7's QA found
+  one being skipped with `rc=0`.
 * **Whether a citation's line supports its claim** — see `read-citations.py` above.
 * **The `(#1864)` citations' *content* against core's current head.** They are checked against the
   head this document names (`d089f7e0f`). If #1864 moves, re-run against its new head and update the
