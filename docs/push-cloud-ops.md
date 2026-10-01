@@ -11,7 +11,8 @@ differently, ADR 0006 governs the wire and this note governs the runbook.
 **The decided set, in one read.**
 - **Hosting:** the Radient control plane; a standalone Worker is considered and rejected (§2).
 - **Launch limits:** 14-day delivery records; the 60-day drop of a silent device; 60 events/hour per
-  computer, the excess coalesced into one digest (§3).
+  computer, the excess re-delivered as one **visible digest alert** — a machine-composed frame, the
+  cloud's ceiling composing nothing (§3).
 - **Delivery promise:** a nudge, never a guarantee; delivery needs a registered device *and* a live
   credential (States and markers).
 - **On-call:** alert-only to `support@radienthq.com`, no paging; a key rejection must be seen within
@@ -29,7 +30,7 @@ differently, ADR 0006 governs the wire and this note governs the runbook.
   skip** that reads the markers, and the `X-Lop-Device` / `X-Lop-Device-Key` attribution headers
   with the gateway allowlist extension they need. Nothing outside `push_devices.py` consumes
   `device_state()` today. Still owed to the cloud lane: `last_error` / `last_error_at` and the
-  digest record (§6).
+  cloud's record of digest **deliveries** (§6).
 
 **1. What it does.** A machine's daemon sends one authenticated outbound event; ingest validates it,
 writes it to a **durable queue** and answers `202 {emit_id, accepted_at}` — **ADR §3.1 already
@@ -55,9 +56,33 @@ so the cost is the worker's replicas and their observability — *est.* two smal
 managed queue. Three limits, *Decided* for launch: **delivery records kept 14 days**; **a device
 dropped after 60 days with no authenticated request** — "last seen" is its last authenticated call
 (it reads unread on launch, foreground, connect), not its last delivery; and **60 events/hour per
-computer**, the excess merged into **one digest emit** — the attention form (`content-available`,
-`count` only, no conversation), its emit ids in a cloud-side digest record beside the delivery rows,
-a second coalescer and not a reuse of the machine's §2.1 one.
+computer**, the excess merged into **one digest emit** — but the ceiling is a guard over frames the
+cloud already holds, never a second producer, which is the distinction "The digest, exactly" draws.
+
+**The digest, exactly — and there is one composer.** A digest is a **visible alert** and a third
+emit type, `type: "digest"` (the enum is `completion | attention | digest`). **The machine mints
+it** — the type, an `emit_id`, the count, and an `aps.alert` built from the house constants, once,
+when a catch-up exceeds the machine's burst limit. **The cloud composes nothing**: it mints no
+payload, renders no banner from `type`, `kind` or `count`, and never edits, rewords or synthesises
+alert text — the same rule that keeps it blind to conversation names and content (**P2**: ADR 0006's
+boundary that no conversation name, snippet or transcript reaches the cloud). Its 60/hour ceiling is
+a **delivery guard over frames it already holds**: it re-delivers the most recent frame for that
+computer, **whatever its type**, collapsed as `digest:<computer>` — that frame's `alert` verbatim —
+and records a drop **only when it holds no frame at all**, so the 61st event never vanishes just
+because it happened to be a completion. Its digest record is a record of **deliveries**, not a second
+payload class, and carries no `emit_id` of its own.
+
+Delivered verbatim, the frame is: `alert: {title, body}` — required on `completion` and `digest` and
+absent on `attention` — with the body the **house constant** (the machine's fixed sentence, never
+model-written text) plus the count; `aps.alert` present and **never** `content-available`; **no
+conversation handle, no completion token and no `kind`**; `apns-collapse-id` / `notification.tag` =
+`digest:<computer>`, so digests never stack; `aps.badge` still never sent. The **attention** form
+stays silent (`content-available`, no alert) — that difference is the point of the type, since a
+coalesced catch-up delivered as an attention push would be a banner no user ever sees. `exclude` is
+permitted on a digest with the attention form's meaning and is **never required** there: the required
+case is the ack-triggered attention emit, and a catch-up digest has no acting device. Idempotency
+follows the ADR: **one `emit_id` is minted when the window closes** and persisted, the key is
+`sha256("digest" ‖ emit_id ‖ computer)`, retries reuse it, and a new window gets a new key.
 
 **States and markers.** Five states, a marker on each row except the live and absent ones;
 precedence is **revoked > unpaired > expired**, and `GET /api/push/devices` renders the
