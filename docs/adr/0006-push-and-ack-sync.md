@@ -92,7 +92,7 @@ that had to become true.)
 | Repository | Revision | How paths are cited |
 |---|---|---|
 | **local-operator** | `40ca7910e49a` — **a pinned SHA, and *not* `origin/main`**: it *was* `origin/main` when this document was written and is **16 commits behind** it as measured on **2026-09-30** (`origin/main` = `d5346e173`; it was twelve behind when review round 2 read it, at `061ede7` — the distance moves with the branch, so it is always dated). **Every line number below is stated at `40ca7910e49a`**; re-derive at that ref and expect an offset at a newer one: `app.py`'s `_cmd_notifications` is `:40600` on current main against `:40562` here, and `session_sidebar.py`'s "45%" line `:800` against `:704` | `local_operator/mobile/daemon.py` → `daemon.py`; `local_operator/session/attention.py` → `attention.py`; `local_operator/session/runtime/presence.py` → `presence.py`; `local_operator/session/runtime/viewers.py` → `viewers.py`; `local_operator/server/utils/desktop_feed.py` → `desktop_feed.py`; `local_operator/server/utils/desktop_presence.py` → `desktop_presence.py`; `local_operator/notifications/compose.py` → `compose.py`; `local_operator/tui/app.py` → `app.py`; `local_operator/tui/notify.py` → `notify.py`; `local_operator/tui/widgets/session_sidebar.py` → `session_sidebar.py`; `local_operator/operator/devices.py` → `devices.py`; `local_operator/tunnels/api.py` → `tunnels/api.py`; `local_operator/tunnels/service.py` → `tunnels/service.py`, `local_operator/tunnels/gateway.py` → `gateway.py`, `local_operator/cli.py` → `cli.py`, `local_operator/session/runtime/registry.py` → `registry.py`, `local_operator/mobile/attach_client.py` → `attach_client.py`, `local_operator/mobile/tui_handle.py` → `tui_handle.py`, `local_operator/mcp/grants.py` → `mcp/grants.py`, `local_operator/mobile/auth.py` → `mobile/auth.py`, `local_operator/mobile/peer_client.py` → `mobile/peer_client.py`, `local_operator/session/runtime/server.py` → `session/runtime/server.py`, `local_operator/info/render.py` → `info/render.py`, `local_operator/network/dial.py` → `network/dial.py`, `local_operator/operator/devices.py` → `operator/devices.py`; `local_operator/session/session.py` → `session.py`; `local_operator/resume.py` → `resume.py`; `local_operator/server/models/desktop_sessions.py` → `models/desktop_sessions.py`; `local_operator/server/routes/desktop_sessions.py` → `routes/desktop_sessions.py`; `local_operator/server/utils/desktop_sessions.py` → `utils/desktop_sessions.py`; `local_operator/mobile/web/src/store.ts` → `web/src/store.ts`; `local_operator/mobile/install.py` → `mobile/install.py`; `docs/*.md` by full path |
-| **damianvtran/local-operator PR #1864** | `d089f7e0fc0a324c38d6499290c27b2569714549` (head at the time of writing; **open, not merged**) — the implementation this ADR adopts for the device lifecycle and the operators-only un-revoke route. Its citations carry the marker **`(#1864)`** after the range (`daemon.py`:4730-4770 (#1864)), and `push_devices.py` is cited without one because the file exists only there. Read with `gh pr diff 1864 --repo damianvtran/local-operator` | same rule: `git show d089f7e0f:<path>`, never a working tree |
+| **damianvtran/local-operator PR #1864** | `d089f7e0fc0a324c38d6499290c27b2569714549` — **a PR head, not `main` and not a tag**, which is a different kind of pin from the mobile repository's: it can move, and a reader must re-read it rather than assume. Head at the time of writing; **open, not merged** — the implementation this ADR adopts for the device lifecycle and the operators-only un-revoke route. Its citations carry the marker **`(#1864)`** after the range (`daemon.py`:4730-4770 (#1864)), and `push_devices.py` is cited without one because the file exists only there. Read with `gh pr diff 1864 --repo damianvtran/local-operator` | same rule: `git show d089f7e0f:<path>`, never a working tree |
 | **local-operator-mobile** | `origin/main` @ `d5bb850fccac4dcfdd80f2e3b352a51107a955bc` (read 2026-09-30) | this repository's own paths; unmerged work named by branch and SHA |
 | **Radient** (control plane, edge, console) | **no code access** — specified here as an *interface*, never as a change to existing code | every cloud route in §3.1 is marked **proposal** |
 | **Apple / Google / Expo platform docs** | read 2026-09-30, cited by URL | vendor behaviour, quoted with the page it came from |
@@ -843,7 +843,14 @@ POST /api/push/devices/{device_id}/unrevoke → {"ok": true, "device_id": "…"}
   `:946` the atomic 0600 write), read only — `operator_key()` (`:378`) never mints, because a
   verifier that minted would hand the first caller the key it just failed to present — and compared
   constant-time by `verify_operator_key()` (`:407-423`).
-- **Presented as the header `X-Lop-Operator-Key`** (`push_devices.py`:193) on
+- **The route sits behind the usual cookie gate AND the key** — `POST
+  /api/push/devices/{device_id}/unrevoke` is registered beside its siblings (`daemon.py`:4909-4910
+  (#1864)) and calls the API's own `gate()` first, so the operator key is a **second** requirement
+  after the `lop_mobile` cookie (which the CLI also presents). Success is `200 {"ok": true,
+  "device_id": "…"}` (`push_devices.py`:611-680 (#1864)); it clears **one** marker, precedence-resolved
+  — `revoked_at` OR `unpaired_at` — and **restores no token or credential**, so the device must
+  register again.
+- **Presented as the header `X-Lop-Operator-Key`** (`push_devices.py`:193 (#1864)) on
   `POST /api/push/devices/{id}/unrevoke` (`daemon.py`:4826-4853 (#1864), registered at `:4909-4910`), whose
   gate is the single place the distinction is made (`_push_operator_gate`, `daemon.py`:4730-4770 (#1864)).
 - **The CLI is the operator surface**: `lop mobile devices unrevoke <device_id>` calls that route
@@ -852,7 +859,13 @@ POST /api/push/devices/{device_id}/unrevoke → {"ok": true, "device_id": "…"}
   CLI's own: `daemon_unreachable` — "the mobile daemon on port N did not answer" (`:7745-7747`);
   `credential_missing` — "no mobile password is set on this computer — run `lop mobile install`"
   (`:7730-7733`); `operator_key_missing` — "no operator key yet — the daemon mints it when a device
-  registers" (`:7851-7855`). The CLI never edits the store (one writer only).
+  registers" (`:7851-7855`) — and each of those is **exit 1 with no fallback and no write**: a store
+  with no key stays byte-identical, because the CLI never mints (`cli.py`:7846-7856 (#1864)). A
+  **wrong** key is reported with the machine-side remedy, not the device's sentence — the device's
+  copy tells a reader to "use the computer" they are already using, so the CLI renders the fact that
+  can be acted on: `error: machine_only: this computer's operator key does not match the daemon's
+  registry — check --port or restart the daemon` (`cli.py`:7866-7877 (#1864)), exit 1. The account
+  console keeps the device-facing sentence.
 - **The tunnel gateway cannot carry the header, and must never learn to**: it REBUILDS the request
   headers from its allowlist (`gateway.py`:310-319, applied at `:537`), so the key does not survive
   the Radient hop — and a phone that somehow sent one would not have the value, because the key is
@@ -1550,6 +1563,39 @@ untouched by this ADR, and in particular **the STT composer readout is not part 
 work**. STT is being built against the real provider cascade (tunnel-aware, bring-your-own
 providers) in a parallel workstream; this ADR neither designs it nor blocks on it, and the
 navigation change in item 1 must not be used as a vehicle for it.
+
+**The device-state vocabulary — one source, three surfaces** *(core's `lop mobile devices` renders
+it today; the app's Settings must mirror it, and this is the user-facing half of §4's state machine)*:
+
+| State | The sentence (a module constant, not app copy) |
+|---|---|
+| `live` | "registered, and push resumes on its next authenticated read" |
+| `expired` | "notifications are paused for this device until you sign in again" |
+| `unpaired` | "this computer is no longer paired" |
+| `revoked` | "this device was revoked on this computer" |
+| `absent` | "not in this computer's registry; it may register again" |
+
+- The five rows are `push_devices.STATE_DESCRIPTIONS` (`:159-165 (#1864)`), rendered in
+  `DESCRIBED_STATES` order (`:166-169 (#1864)`) and closed by `PRECEDENCE_SENTENCE` — "a device can
+  carry more than one marker; the strongest is shown (revoked > unpaired > expired)"
+  (`:175-177 (#1864)`). **The app consumes the same strings**: they are module constants precisely so
+  the CLI's legend, the app's Settings and the wire cannot describe one state three ways. `absent` is
+  not a row state — it is what a read-back says when the row is gone, which is also how the 60-day
+  drop surfaces with no local marker (§2.2).
+- A row renders its **label** first, then `registered <when> · last authenticated <when>` — or
+  `last seen <when>` for a row an earlier build wrote, because naming a field the row does not carry
+  "starts lying the moment they diverge" (`cli.py`:7988-7992 (#1864)) — then the id on its own
+  indented line (what `revoke` needs, not what a reader recognises).
+- **The unrevoke results, exactly as rendered** (`cli.py`:7888-7898 (#1864)): revoked →
+  `unrevoked <label>`; unpaired → `cleared the unpaired marker on <label>`; expired → `nothing to
+  clear on <label>` plus "it is expired, not revoked — signing in again is what resumes push"; live →
+  `nothing to clear on <label>`. All four then print "no token or credential was restored: it must
+  register again, which needs a live credential (sign in with the portal password)." **The app must
+  not invent a fifth wording**, and the legend only appears when there are rows to explain
+  (`cli.py`:8026-8029 (#1864)).
+- The legend carries the cloud gap too: "the cloud also drops a device after 60 days with no
+  authenticated request, and this computer cannot see that drop — a row here can read live while push
+  has already stopped" (`cli.py`:8068-8071 (#1864), from `CLOUD_IDLE_DROP_DAYS`).
 
 ### 7. Cost, effort, and the critical path
 

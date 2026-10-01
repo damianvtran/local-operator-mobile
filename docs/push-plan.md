@@ -85,6 +85,38 @@ match the implementation, and these are the places where it asks for more or som
 5. **The push token is validated and dropped** (`daemon.py`:4776-4778) ✓ matches §2.2's custody —
    the cloud's registry holds tokens — and **the registration forward itself is S7** (cloud).
 6. **No account-console path** exists in #1864 (cloud, S7), and no credential-change event.
+7. **The guard cells are NOT in #1864** — "the allowlist never gains `X-Lop-Operator-Key`" and the
+   lowercase-literal trap for `X-Lop-Device` are this ADR's requirements **and core lands them in
+   S4c**. Until they land, the transport half of the guarantee (§3.1) is a property of today's
+   gateway rather than an asserted one; Q31 is the row that fails until it does.
+8. **The user-facing vocabulary is core's and the app must consume it, not re-word it**: the five
+   `STATE_DESCRIPTIONS`, `DESCRIBED_STATES` order and `PRECEDENCE_SENTENCE` are module constants
+   (`push_devices.py`:159-177 (#1864)), rendered today by `lop mobile devices`
+   (`cli.py`:8058-8071 (#1864)). The app slice's Settings copy **mirrors them verbatim** (§6's table);
+   deferring the app and shipping different words would be the drift the constants exist to prevent.
+
+### The facts this ADR takes from #1864, and where each is
+
+| Fact this document relies on | #1864 (head `d089f7e0f`) |
+|---|---|
+| the five states and their precedence resolver | `push_devices.py`:128-145, `:338-356` |
+| `STATE_DESCRIPTIONS` (5 rows incl. `absent`) + `DESCRIBED_STATES` + `PRECEDENCE_SENTENCE` | `:159-177` |
+| the register refusals (`403 device_revoked`, `403 device_unpaired`) | `:182-185` |
+| `machine_only` code + sentence | `:187-188` |
+| `OPERATOR_KEY_HEADER` / `OPERATOR_KEY_FIELD` | `:193-194` |
+| `device_key` minted + returned by every register | `:510`, `:522-527` |
+| the operator key minted by the daemon in `register`, under the lock | `:518-519` |
+| the 0600 atomic store write | `:946` |
+| `operator_key()` never mints; `verify_operator_key()` constant-time | `:378`, `:407-423` |
+| `device_key_matches()` (constant-time, "nothing consumes it yet") | `:359-375` |
+| `list` shape (optional `name`/`credential_live`/`last_authenticated_at`) | `:556-571` |
+| `unrevoke` clears one marker, restores nothing | `:611-680` |
+| the daemon gate + the route + its registration | `daemon.py`:4730-4770, `:4826-4853`, `:4909-4910` |
+| the CLI's loopback call, its `daemon_unreachable`/`credential_missing`/`operator_key_missing` answers | `cli.py`:7704-7752, `:7836-7862` |
+| the CLI's machine-side `machine_only` remedy | `cli.py`:7866-7877` |
+| the four unrevoke result lines | `cli.py`:7888-7898` |
+| the row renderer (`last authenticated` vs `last seen`) | `cli.py`:7988-7992` |
+| the legend, the unrevoke note, the 60-day caveat | `cli.py`:8058-8071` |
 
 ## Order, and why
 
