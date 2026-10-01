@@ -18,6 +18,7 @@ import type {
 import {
 	type ConnectionView,
 	connectionView,
+	isRouteRefused,
 	KEEPALIVE_GRACE_S,
 	RECONNECT_DEADLINE_MS,
 	reconnectDelay,
@@ -331,10 +332,9 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 			// A null route with no origin means there is nothing to talk to; the
 			// screen renders its own "not connected" state for that rather than a
 			// connection state, so the derivation is not asked.
-			phase:
-				error !== null || source.reason === "no-route"
-					? ("refused" as const)
-					: ("live" as const),
+			phase: isRouteRefused({ noRoute: source.reason === "no-route", error })
+				? ("refused" as const)
+				: ("live" as const),
 			stream: facts.state,
 			lastEnd: facts.lastEnd,
 			reconnectExpired: facts.overdue,

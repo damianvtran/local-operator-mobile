@@ -393,20 +393,51 @@ export const subagentRowView = (row: SubagentRow): SubagentRowView => {
 	};
 };
 
+/**
+ * The summary's vocabulary: one entry per WIRE status.
+ *
+ * Typed as a `Record<SubagentRow["status"], …>` for the reason the glyph table is:
+ * a new status must fail typecheck here rather than vanish from the summary. The
+ * previous shape — an `if` chain of counters plus six literals in the panel — did
+ * exactly that: three of six states were missing, and the next enum change would
+ * have been dropped the same way (design round 1 D3; review round 4 R9).
+ */
+const ROSTER_SUMMARY: Record<
+	SubagentRow["status"],
+	{
+		word: string;
+		inkClass: string /** The order a reader acts on, among equals. */;
+		rank: number;
+	}
+> = {
+	running: { word: "running", inkClass: "text-ink-muted", rank: 0 },
+	queued: { word: "queued", inkClass: "text-ink-muted", rank: 1 },
+	parked: { word: "parked", inkClass: "text-warning", rank: 2 },
+	failed: { word: "failed", inkClass: "text-danger", rank: 3 },
+	completed: { word: "done", inkClass: "text-ink-muted", rank: 4 },
+	cancelled: { word: "cancelled", inkClass: "text-ink-muted", rank: 5 },
+};
+
+/** One clause of the panel's summary: a count and the word for its status. */
+export interface SubagentClause {
+	status: SubagentRow["status"];
+	word: string;
+	count: number;
+	inkClass: string;
+}
+
 export interface SubagentProjection {
 	rows: SubagentRowView[];
 	running: number;
 	total: number;
-	queued: number;
-	failed: number;
-	/** The three states the summary used to omit. Named here rather than summed
-	 *  into one "other" bucket: the header's job is to be reconcilable against the
-	 *  roster, and a reader who counts 6 rows under a summary that accounts for 3
-	 *  concludes the panel is lying (design round 1, D3). */
-	parked: number;
-	completed: number;
-	cancelled: number;
 	empty: boolean;
+	/** Every status that actually occurs, in the reader's order. Non-zero by
+	 *  construction, so the renderer never filters its own formatted text. */
+	clauses: SubagentClause[];
+	/** `1 agent` / `6 agents`: the count is the roster's own word, and a summary
+	 *  that reads "1 agents" is the kind of thing that makes a reader distrust the
+	 *  numbers beside it (QA round 4, Q3). */
+	totalLabel: string;
 }
 
 /**
@@ -421,33 +452,42 @@ export interface SubagentProjection {
 export const projectSubagents = (
 	subagents: SubagentRow[],
 ): SubagentProjection => {
-	let running = 0;
-	let queued = 0;
-	let failed = 0;
-	let parked = 0;
-	let completed = 0;
-	let cancelled = 0;
+	/* Counts keyed by the same table the words come from, so the two cannot drift:
+	 * every status the wire can send has an entry, and the count for a status is
+	 * whatever the rows say it is. */
+	const counts = new Map<SubagentRow["status"], number>();
 	for (const row of subagents) {
-		if (row.status === "running") running += 1;
-		if (row.status === "queued") queued += 1;
-		if (row.status === "failed") failed += 1;
-		if (row.status === "parked") parked += 1;
-		if (row.status === "completed") completed += 1;
-		if (row.status === "cancelled") cancelled += 1;
+		counts.set(row.status, (counts.get(row.status) ?? 0) + 1);
 	}
+	const clauses: SubagentClause[] = (
+		Object.keys(ROSTER_SUMMARY) as SubagentRow["status"][]
+	)
+		.map((status) => ({
+			status,
+			count: counts.get(status) ?? 0,
+			word: ROSTER_SUMMARY[status].word,
+			inkClass: ROSTER_SUMMARY[status].inkClass,
+			rank: ROSTER_SUMMARY[status].rank,
+		}))
+		.sort((left, right) => left.rank - right.rank)
+		.filter((clause) => clause.count > 0)
+		.map(({ status, count, word, inkClass }) => ({
+			status,
+			count,
+			word,
+			inkClass,
+		}));
+	const running = counts.get("running") ?? 0;
 	return {
 		rows: subagents.map(subagentRowView),
 		// The header says "running", and a queued child is not running — but it IS
 		// outstanding, and the panel collapses on `active` so a queued child keeps
 		// the header legible rather than claiming the roster is idle.
 		running,
-		queued,
-		failed,
-		parked,
-		completed,
-		cancelled,
 		total: subagents.length,
 		empty: subagents.length === 0,
+		clauses,
+		totalLabel: `${subagents.length} ${subagents.length === 1 ? "agent" : "agents"}`,
 	};
 };
 

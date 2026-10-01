@@ -2,6 +2,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { ArrowLeft } from "lucide-react-native";
 import { useCallback, useMemo, useState } from "react";
 import { Text, useWindowDimensions, View } from "react-native";
+import { composerChipLabels } from "@/features/session/chip-labels";
 import { Composer } from "@/features/session/components/composer";
 import { ConnectionBanner } from "@/features/session/components/connection-banner";
 import {
@@ -14,6 +15,7 @@ import { SubagentsPanel } from "@/features/session/components/subagents-panel";
 import { TodosPanel } from "@/features/session/components/todos-panel";
 import { TranscriptList } from "@/features/session/components/transcript-list";
 import { WorkingLine } from "@/features/session/components/working-line";
+import { isRouteRefused } from "@/features/session/connection-view";
 import { headerTitleChars } from "@/features/session/header";
 import { pendingView } from "@/features/session/pending";
 import {
@@ -100,6 +102,30 @@ export default function Session() {
 	// activity, and a placeholder projection would be this screen inventing one.
 	const working = projection === null ? null : workingLine(projection);
 
+	/* What the composer's chips can say, and whether they are still waiting.
+	 *
+	 * `connected` is deliberately first: a projection that HAS arrived is the truth
+	 * about the session even if the stream later drops (stale beats blank), so a
+	 * value is never replaced by `n/a` because the route failed afterwards. Only
+	 * with nothing to show does the connection state decide, and `refused` means
+	 * nothing is coming — a route with no origin, or a stream that never opened
+	 * (review round 4, R8: the chips used to pulse "loading" for the life of the
+	 * screen beside an empty state that said the session was not connected). */
+	const chipConnection =
+		projection !== null
+			? ("connected" as const)
+			: isRouteRefused({
+						noRoute: runtime.source.reason === "no-route",
+						error: runtime.error,
+					})
+				? ("unreachable" as const)
+				: ("loading" as const);
+	const chipLabels = composerChipLabels({
+		model: projection?.model_label ?? null,
+		effort: projection?.effort ?? null,
+		connection: chipConnection,
+	});
+
 	/* The strip exists when it has something true to say: a context read, or a
 	 * roster. Not before — an empty band on every session is noise, and a band
 	 * showing `—` for an unknown number is worse than the noise. */
@@ -179,6 +205,7 @@ export default function Session() {
 			<SubagentsPanel
 				testID={SURFACE.subagentsPanel}
 				subagents={subagents}
+				viewportHeight={viewportHeight}
 				open={openPanel === "subagents"}
 				onToggle={() =>
 					setOpenPanel(openPanel === "subagents" ? null : "subagents")
@@ -243,7 +270,14 @@ export default function Session() {
 			    band. Only rendered when the wire reports something — a strip that showed
 			    `—` for unknown would be a row of noise on every session. `min-h-11` is
 			    the chip's own touch floor, so moving the chip in here costs no target
-			    size and the band is one row instead of two. */}
+			    size and the band is one row instead of two.
+
+			    deferred — the chip's own breathing room (design round 2 D15): the chip is
+			    44 pt in a 44 pt band, so its edges touch the header and the hairline.
+			    Padding the band costs 8 pt of a phone's height at exactly the moment the
+			    composer is being pushed off a 568 pt screen (D11), and a 36 pt visual pill
+			    inside a 44 pt target changes `Chip`'s shape for every chip in the app — a
+			    kit decision, recorded here for the kit rather than taken in this screen. */}
 			{hasStatus ? (
 				<View className="min-h-11 flex-row items-center gap-2 border-b border-hairline px-4">
 					{projection?.context_tokens != null &&
@@ -256,7 +290,12 @@ export default function Session() {
 								{Math.round(
 									(projection.context_tokens / projection.context_window) * 100,
 								)}
-								% context
+								{/* `ctx` under 340 pt: `21% context (est.)` beside the cost and the
+								    subagents chip wraps to two lines inside the band, and the cost
+								    then floats between them (design round 2, D17). The abbreviation
+								    is the standard one and loses nothing; above 340 pt the word
+								    stays whole. */}
+								{viewportWidth < 340 ? "% ctx" : "% context"}
 								{projection.context_is_estimate === true ? " (est.)" : ""}
 							</Text>
 							{projection.cumulative_parent_cost != null ? (
@@ -373,24 +412,8 @@ export default function Session() {
 						onResume={composer.send}
 						error={pending === null ? composer.error : null}
 						queuedCount={projection?.queued_count ?? 0}
-						effortAvailable={effortLadder.length > 0}
-						/* `null` means UNKNOWN, and only an absent projection is unknown. A
-						   present projection that reports no model (or a model with no effort
-						   ladder) is a KNOWN state and says so: making that `null` put a spinner
-						   that never resolves on screen for every model without an effort
-						   control — this PR's own Q3 probe caught it. */
-						modelLabel={
-							projection === null
-								? null
-								: (chipModelLabel(projection.model_label) ?? "n/a")
-						}
-						effortLabel={
-							projection === null
-								? null
-								: projection.effort.length > 0
-									? projection.effort
-									: "n/a"
-						}
+						modelChip={chipLabels.model}
+						effortChip={chipLabels.effort}
 						onOpenModels={() => setModelsOpen(true)}
 						onOpenEffort={() => setEffortOpen(true)}
 						slashQuery={slash}
@@ -439,25 +462,6 @@ export default function Session() {
 }
 
 /**
- * The model chip's label: the model, without its provider prefix.
- *
- * The relay's `model_label` is often the raw `provider/model_id` selector
- * (`anthropic/claude-opus-5`), and at 390 pt that string alone pushed the effort
- * chip against the screen edge. The provider is the model SHEET's grouping, where
- * there is room to read it; the chip only has to say which model is on. Empty (a
- * session that has not reported one) reads as the word the reader taps to choose.
- */
-const chipModelLabel = (label: string): string | null => {
-	// `null`, never the noun: before the first projection the chip would otherwise
-	// read literally "model" — a control that names nothing reads as broken rather
-	// than as loading (design round 1, D6). The composer renders the loading shape.
-	if (label.length === 0) return null;
-	const slash = label.lastIndexOf("/");
-	return slash >= 0 && slash < label.length - 1
-		? label.slice(slash + 1)
-		: label;
-};
-
 /** The composer's own sentence for a retained instruction, kept beside the screen
  *  rather than in `composer.ts` because it is passed in as a prop. */
 const COMPOSER_RETAINED =

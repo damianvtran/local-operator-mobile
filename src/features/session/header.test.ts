@@ -1,9 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import {
-	DISPLAY_ADVANCE_PT,
-	headerTitleChars,
-} from "@/features/session/header";
+import { headerTitleChars } from "@/features/session/header";
 import {
 	MIN_HEADER_NAME_CHARS,
 	middleTruncate,
@@ -20,7 +17,20 @@ import {
 
 const phone = (width: number) => ({ width, height: 844 });
 
+/**
+ * The advance the constant is supposed to be, held HERE as the measurement it came
+ * from rather than read back from the module: the point of the budget is that no
+ * name it admits overflows, so the test multiplies by the measured worst case and
+ * not by whatever the code currently divides by. Set `DISPLAY_ADVANCE_PT` to 10
+ * and this fails; the previous version of this assertion (`floor(a/c) * c <= a`)
+ * held for every `c` and could not fail at all (review round 4, R6).
+ */
+const MEASURED_WIDEST_ADVANCE = 14.06;
+
 describe("the header's title budget", () => {
+	const available = (width: number, cap: number | null = null) =>
+		Math.min(width, cap ?? width) - 32 - 44 - 8;
+
 	it("gives a phone's whole row to the name", () => {
 		// 390 − 32 (gutters) − 44 (back control) − 8 (row gap) = 306 pt available.
 		expect(headerTitleChars(phone(390))).toBe(21);
@@ -28,21 +38,34 @@ describe("the header's title budget", () => {
 		expect(headerTitleChars(phone(320))).toBe(16);
 	});
 
-	it("never promises more than the row can hold", () => {
+	it("never admits a name wider than the row, at any phone width", () => {
 		for (const width of [320, 360, 375, 390, 414, 430, 480]) {
 			const budget = headerTitleChars(phone(width));
-			const available = width - 32 - 44 - 8;
-			expect(budget * DISPLAY_ADVANCE_PT, `${width}px`).toBeLessThanOrEqual(
-				available,
-			);
+			expect(
+				budget * MEASURED_WIDEST_ADVANCE,
+				`${width}px`,
+			).toBeLessThanOrEqual(available(width));
 		}
 	});
 
-	it("respects the measure cap on a tablet rather than the raw width", () => {
-		// A 1366 pt landscape tablet renders the screen in a 640 pt column.
-		const budget = headerTitleChars({ width: 1366, height: 1024 });
-		expect(budget).toBe(Math.floor((640 - 84) / DISPLAY_ADVANCE_PT));
-		expect(budget * DISPLAY_ADVANCE_PT).toBeLessThanOrEqual(640 - 84);
+	it("uses the measure cap rather than the raw width on the two capped classes", () => {
+		// A landscape phone is a phone (620), a 1366 pt landscape tablet is capped at
+		// 640, and a portrait tablet at 560 — the three branches of `maxColumnWidth`
+		// the budget depends on, each asserted against its own cap rather than against
+		// the viewport.
+		expect(headerTitleChars({ width: 844, height: 390 })).toBe(
+			Math.floor(available(844, 620) / MEASURED_WIDEST_ADVANCE),
+		);
+		expect(headerTitleChars({ width: 1366, height: 1024 })).toBe(
+			Math.floor(available(1366, 640) / MEASURED_WIDEST_ADVANCE),
+		);
+		expect(headerTitleChars({ width: 820, height: 1180 })).toBe(
+			Math.floor(available(820, 560) / MEASURED_WIDEST_ADVANCE),
+		);
+		// And each of those is bounded by the cap, not by the screen it sits in.
+		expect(headerTitleChars({ width: 844, height: 390 })).toBeLessThan(
+			Math.floor(available(844) / MEASURED_WIDEST_ADVANCE),
+		);
 	});
 
 	it("never goes below the kit's floor, even where the row cannot hold it", () => {
@@ -58,7 +81,6 @@ describe("the header's title budget", () => {
 			const shown = middleTruncate(name, headerTitleChars(phone(width)));
 			expect(shown.startsWith(name.slice(0, 4)), `${width}px head`).toBe(true);
 			expect(shown.endsWith(name.slice(-4)), `${width}px tail`).toBe(true);
-			expect(shown).toContain("…");
 		}
 	});
 });

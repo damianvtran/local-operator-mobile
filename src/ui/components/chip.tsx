@@ -21,6 +21,13 @@ export type ChipProps = {
 	/** Selection is never colour alone; the chip is also announced as selected. */
 	selected?: boolean;
 	disabled?: boolean;
+	/**
+	 * The name a screen reader reads, when the visible text is an abbreviation or a
+	 * state rather than the thing itself. Defaults to `label` — that was the whole
+	 * contract until a chip whose text is `n/a` was announced as "n/a", which names
+	 * neither the field nor the reason (design round 2, D14).
+	 */
+	accessibilityLabel?: string;
 	accessibilityHint?: string;
 	leadingIcon?: ReactNode;
 	testID: string;
@@ -31,13 +38,14 @@ export const Chip = ({
 	onPress,
 	selected = false,
 	disabled = false,
+	accessibilityLabel,
 	accessibilityHint,
 	leadingIcon,
 	testID,
 }: ChipProps) => (
 	<Pressable
 		accessibilityRole={ROLE.button}
-		accessibilityLabel={label}
+		accessibilityLabel={accessibilityLabel ?? label}
 		accessibilityHint={accessibilityHint}
 		accessibilityState={state({ selected, disabled })}
 		disabled={disabled}

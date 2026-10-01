@@ -10,6 +10,7 @@ import {
 } from "react-native";
 
 import type { PromptImage } from "@/contracts";
+import type { ComposerChip } from "@/features/session/chip-labels";
 import {
 	attachmentLabel,
 	COMPOSER_COPY,
@@ -19,7 +20,7 @@ import { isSendKey } from "@/features/session/keyboard";
 
 import { CONTROL, composerAttachmentID, ROLE, SURFACE, state } from "@/ui/a11y";
 import { Button, Chip, Skeleton, Textarea } from "@/ui/components";
-import { chipClasses, cx } from "@/ui/variants";
+import { cx } from "@/ui/variants";
 
 /**
  * A DOM keyboard event, narrowed to what this file reads.
@@ -99,18 +100,15 @@ export type ComposerProps = {
 	/** A refused start or a failed steer, stated beside the control that caused it. */
 	error: string | null;
 	queuedCount: number;
-	/** `null` until the projection reports one. NOT the noun: a chip labelled
-	 *  "model" is a control that names nothing, which reads as broken rather than as
-	 *  loading, so an unknown label renders the placeholder below (design round
-	 *  1, D6). */
-	modelLabel: string | null;
-	effortLabel: string | null;
+	/** The two chips, each in one of its three states — value, unavailable, or
+	 *  loading while a projection is still expected. The decision lives in
+	 *  `chip-labels.ts` rather than here, because "loading" and "unavailable" look
+	 *  alike on screen and mean opposite things (design round 1 D6, round 2 D14;
+	 *  review round 4 R7/R8). */
+	modelChip: ComposerChip;
+	effortChip: ComposerChip;
 	onOpenModels: () => void;
 	onOpenEffort: () => void;
-	/** False when the selected model has no effort control: the chip is then
-	 *  disabled with the reason, because `EffortSheet`'s own docstring says an
-	 *  empty ladder is the caller's to handle rather than a sheet to open. */
-	effortAvailable: boolean;
 	/** A leading `/` opens the sheet; `null` keeps it shut. */
 	slashQuery: string | null;
 	slashSheet: React.ReactNode;
@@ -128,32 +126,99 @@ export type ComposerProps = {
  */
 const ChipPlaceholder = ({
 	label,
-	barClassName,
+	widthClassName,
 	testID,
 }: {
 	label: string;
-	/** The bar's width, sized to the label it stands in for. */
-	barClassName: string;
+	/** The bar's width, sized to the label it stands in for so the swap does not
+	 *  shift the chip sideways (measured: a 26 pt pill jumped to 119.6 pt when the
+	 *  model arrived). */
+	widthClassName: string;
 	testID: string;
 }) => (
-	/* A `Pressable`, not a `View`, for one measured reason: RN-web emits
-	 * `aria-disabled`/`aria-busy` from `accessibilityState` on its pressable
-	 * primitive and DROPS them on a plain view — so a placeholder built from a View
-	 * renders with no disabled and no busy state at all, which is an accessibility
-	 * regression against the chip it replaces (caught by this PR's own Q3 probe,
-	 * which reads the attribute before tapping). Disabled and without an `onPress`:
-	 * there is nothing to press until the value arrives. */
+	/* A `Pressable`, not a `View`, and `disabled` rather than `accessibilityState`
+	 * alone — the two facts this PR's own probes established the hard way: RN-web
+	 * ignores `accessibilityState` on BOTH View and Pressable, so the disabled flag
+	 * and the removal from the tab order come from the `disabled` prop, and there is
+	 * no `aria-busy` unless it is passed directly (review round 4 R5, QA Q3). Busy is
+	 * therefore passed both ways: `accessibilityState` for native, `aria-busy` for
+	 * the web build. */
 	<Pressable
 		accessibilityRole={ROLE.button}
 		accessibilityLabel={label}
 		accessibilityState={state({ disabled: true, busy: true })}
-		className={chipClasses({ disabled: true })}
+		aria-busy
+		// A border and no fill: the skeleton's `elevated` bar measured 1.07:1 against
+		// the disabled chip's own fill at rest (design round 2, D13), and the kit's
+		// § 19 rule is that the resting tone stands out without the pulse. Every
+		// other skeleton in this app sits on the page ground for exactly that reason,
+		// so the placeholder takes the same ground rather than inventing a tone; the
+		// resting ratio on that ground is confirmed in the next capture run.
+		className="min-h-11 items-center justify-center rounded-full border border-hairline px-3"
 		disabled
 		testID={testID}
 	>
-		<Skeleton lines={1} barClassName={cx("h-3 rounded-sm", barClassName)} />
+		<Skeleton lines={1} barClassName="h-3" widthClassName={widthClassName} />
 	</Pressable>
 );
+
+/**
+ * One of the composer's two chips, rendered from whatever state the wire reports.
+ *
+ * The three cases are deliberately in one place: a value chip is a control, an
+ * unavailable one is disabled with the reason in its hint, and a loading one is
+ * the placeholder. Spread across the JSX they drifted — the defect this replaces
+ * had a rungless model pulsing forever because "no ladder" and "not yet known"
+ * were the same expression.
+ */
+const ComposerChipButton = ({
+	chip,
+	onPress,
+	chooseHint,
+	loadingWidthClassName,
+	testID,
+}: {
+	chip: ComposerChip;
+	onPress: () => void;
+	/** The hint on the value chip, which is the only case that opens a sheet. */
+	chooseHint: string;
+	loadingWidthClassName: string;
+	testID: string;
+}) => {
+	if (chip.kind === "loading") {
+		return (
+			<ChipPlaceholder
+				label={chip.accessibilityLabel}
+				widthClassName={loadingWidthClassName}
+				testID={testID}
+			/>
+		);
+	}
+	if (chip.kind === "unavailable") {
+		return (
+			<Chip
+				label={chip.text}
+				// Never dispatched: `Chip` requires the prop and a disabled Pressable
+				// does not fire it. Passing it keeps one component for all three states
+				// instead of a second, divergent chip shape.
+				onPress={() => undefined}
+				disabled
+				accessibilityLabel={chip.accessibilityLabel}
+				accessibilityHint={chip.accessibilityHint}
+				testID={testID}
+			/>
+		);
+	}
+	return (
+		<Chip
+			label={chip.text}
+			onPress={onPress}
+			accessibilityLabel={chip.accessibilityLabel}
+			accessibilityHint={chooseHint}
+			testID={testID}
+		/>
+	);
+};
 
 export const Composer = ({
 	controls,
@@ -172,11 +237,10 @@ export const Composer = ({
 	onResume,
 	error,
 	queuedCount,
-	modelLabel,
-	effortLabel,
+	modelChip,
+	effortChip,
 	onOpenModels,
 	onOpenEffort,
-	effortAvailable,
 	slashQuery,
 	slashSheet,
 	testID,
@@ -437,39 +501,22 @@ export const Composer = ({
 					</Text>
 				) : null}
 				<View className="flex-1" />
-				{modelLabel === null ? (
-					<ChipPlaceholder
-						label="Model, loading"
-						barClassName="w-16"
-						testID={CONTROL.composerModelChip}
-					/>
-				) : (
-					<Chip
-						label={modelLabel}
-						onPress={onOpenModels}
-						accessibilityHint="Choose the model"
-						testID={CONTROL.composerModelChip}
-					/>
-				)}
-				{effortLabel === null ? (
-					<ChipPlaceholder
-						label="Effort, loading"
-						barClassName="w-8"
-						testID={CONTROL.composerEffortChip}
-					/>
-				) : (
-					<Chip
-						label={effortLabel}
-						onPress={onOpenEffort}
-						disabled={!effortAvailable}
-						accessibilityHint={
-							effortAvailable
-								? "Choose the effort"
-								: "This model has no effort control"
-						}
-						testID={CONTROL.composerEffortChip}
-					/>
-				)}
+				<ComposerChipButton
+					chip={modelChip}
+					onPress={onOpenModels}
+					chooseHint="Choose the model"
+					// Sized to the settled chip (measured 119.6 pt with a model name):
+					// a bar that is too short makes the swap jump sideways.
+					loadingWidthClassName="w-24"
+					testID={CONTROL.composerModelChip}
+				/>
+				<ComposerChipButton
+					chip={effortChip}
+					onPress={onOpenEffort}
+					chooseHint="Choose the effort"
+					loadingWidthClassName="w-7"
+					testID={CONTROL.composerEffortChip}
+				/>
 			</View>
 			{/* The receipt anchor `08-connection-loss-recovery` asserts after a send
 			    across a reconnect: it is the composer's own "the instruction left" mark. */}

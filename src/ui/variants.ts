@@ -270,6 +270,26 @@ export const badgeInkClasses = (tone: SemanticTone = "neutral"): string => {
  * The ink is NOT here: this is the wrapper's fill, border and geometry. A label's
  * colour has to be on the label (`chipLabelClasses`) — see that function for why.
  */
+/**
+ * A skeleton bar's classes: ONE width, never two.
+ *
+ * Tailwind resolves `w-*` by stylesheet order, not by the order classes appear in
+ * the attribute, so `${barClassName} w-full` silently beat a caller's `w-16` and
+ * the bar painted 0 px inside a content-sized pill — two blank pills where a
+ * loading state should have been, and a 122 pt sideways jump when the real label
+ * arrived (design round 2 D13, QA round 4 Q1). The width is therefore a separate
+ * argument with its own default, so a caller's width can never sit beside the
+ * default, and this function is pure so a test can hold that as a rule rather
+ * than as a reading of the rendered page.
+ */
+export const skeletonBarClasses = (input?: {
+	/** Height and shape; a text-line height by default. */
+	barClassName?: string;
+	/** The bar's width; `w-full` for a list placeholder. */
+	widthClassName?: string;
+}): string =>
+	`${input?.barClassName ?? "h-4"} ${input?.widthClassName ?? "w-full"} rounded-sm`;
+
 export const chipClasses = (state: ControlState = {}): string =>
 	cx(
 		"min-h-11 flex-row items-center gap-1.5 rounded-sm border px-3",

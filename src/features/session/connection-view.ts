@@ -138,6 +138,21 @@ const view = (
 	testIDs: [BANNER, ...(options.testIDs ?? [])],
 });
 
+/**
+ * Whether the ROUTE itself is refused — no origin to talk to, or a failure that
+ * stopped the stream before any projection arrived.
+ *
+ * Exported so the rule has one home. It is the difference between "nothing is
+ * coming" and "still coming", which the banner reads for its phase and the
+ * composer's chips read for loading-vs-unavailable; two hand-written copies of an
+ * `||` is exactly how a screen ends up pulsing "loading" beside a state that says
+ * the session is not connected (review round 4, R8).
+ */
+export const isRouteRefused = (input: {
+	noRoute: boolean;
+	error: unknown;
+}): boolean => input.noRoute || input.error !== null;
+
 export interface ConnectionViewInput {
 	/** The connection store's phase. Pre-decided so three screens cannot each
 	 *  interpret one failure differently. */

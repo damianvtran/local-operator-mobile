@@ -1,5 +1,7 @@
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { useState } from "react";
 
+import { Pressable, ScrollView, Text, View } from "react-native";
+import { rosterBody } from "@/features/session/panels";
 import type { SubagentProjection } from "@/features/session/projection";
 import { CONTROL, ROLE, SURFACE, state } from "@/ui/a11y";
 import { cx } from "@/ui/variants";
@@ -22,6 +24,9 @@ export type SubagentsPanelProps = {
 	onToggle: () => void;
 	/** Tapping a child opens its own route. */
 	onOpenAgent: (jobId: string) => void;
+	/** The viewport the panel is inside, so its roster body is bounded by a SHARE of
+	 *  the screen rather than by a constant (design round 2, D11/D12). */
+	viewportHeight: number;
 	testID: string;
 };
 
@@ -50,80 +55,70 @@ export const SubagentsPanel = ({
 	open,
 	onToggle,
 	onOpenAgent,
+	viewportHeight,
 	testID,
 }: SubagentsPanelProps) => {
+	/* The first row's rendered height, so the body's cap lands BETWEEN rows. A row
+	 * carries a label and usually a metadata line, so its height is content-driven
+	 * (44–50 pt) and only a measurement can promise the whole-row cut D12 asks for. */
+	const [rowHeight, setRowHeight] = useState<number | null>(null);
 	if (subagents.empty) return null;
-	const queued = subagents.queued;
-	/* The summary names EVERY state the roster can hold, because the reader
-	 * reconciles it against the rows below: `1/6 running · 1 queued · 1 failed`
-	 * under six rows accounts for three of them, and the arithmetic then reads as a
-	 * bug in the panel (design round 1, D3). Only non-zero clauses appear — `0
-	 * parked` is noise — and the row WRAPS rather than clipping, so a full roster on
-	 * a 320 pt phone costs a second line instead of losing a count.
-	 *
-	 * Order is what a reader acts on: activity, then what is waiting on them, then
-	 * the ends. The failure count keeps the danger ink § 17 protects, and NO clause
-	 * is dimmed — § 17 spells the summary row as "never dimmed", and `ink-dim` is
-	 * dim, which is why the neutral clauses moved up to `ink-muted`. */
-	const clauses = [
-		{
-			key: "running",
-			text: `${subagents.running} running`,
-			inkClass: "text-ink-muted",
-		},
-		{ key: "queued", text: `${queued} queued`, inkClass: "text-ink-muted" },
-		{
-			key: "parked",
-			text: `${subagents.parked} parked`,
-			inkClass: "text-warning",
-		},
-		{
-			key: "failed",
-			text: `${subagents.failed} failed`,
-			inkClass: "text-danger",
-		},
-		{
-			key: "completed",
-			text: `${subagents.completed} done`,
-			inkClass: "text-ink-muted",
-		},
-		{
-			key: "cancelled",
-			text: `${subagents.cancelled} cancelled`,
-			inkClass: "text-ink-muted",
-		},
-	].filter((clause) => !clause.text.startsWith("0 "));
+	/* The summary's words and counts come from `projectSubagents`, which owns the
+	 * one table keyed by every wire status: a status this panel has never heard of
+	 * is a typecheck failure there rather than a clause missing here. */
+	const body = rosterBody({
+		viewportHeight,
+		rowCount: subagents.rows.length,
+		// Measured, not assumed: the rows are content-driven, so only the rendered
+		// height can promise that the cap lands between rows rather than through one.
+		// `undefined` before the first layout, where the estimate stands in.
+		rowPt: rowHeight ?? undefined,
+	});
 
 	return (
 		<View className="border-t border-hairline" testID={testID}>
 			<Pressable
 				accessibilityRole={ROLE.button}
-				accessibilityLabel={`Subagents, ${subagents.total} agents, ${clauses
-					.map((clause) => clause.text)
+				accessibilityLabel={`Subagents, ${subagents.totalLabel}, ${subagents.clauses
+					.map((clause) => `${clause.count} ${clause.word}`)
 					.join(", ")}`}
 				accessibilityState={state({ expanded: open })}
 				onPress={onToggle}
 				testID={CONTROL.subagentsDisclosure}
 			>
-				<View className="min-h-11 flex-row flex-wrap items-center gap-2 px-4 py-1">
+				{/* The label, the roster's own count and the disclosure caret are one
+				    non-wrapping group; only the clauses wrap. A caret that floats to the
+				    end of the row's SECOND line reads as a second control rather than as
+				    this row's disclosure (design round 2, D16). */}
+				<View className="min-h-11 flex-row items-center gap-2 px-4 py-1">
 					<Text className="text-mono-sm text-ink-dim">subagents</Text>
 					<Text className="text-mono-sm text-ink-muted">
-						{subagents.total} agents
+						{subagents.totalLabel}
 					</Text>
-					{clauses.map((clause) => (
-						<Text key={clause.key} className={`text-meta ${clause.inkClass}`}>
-							{clause.text}
-						</Text>
-					))}
-					<View className="flex-1" />
+					<View className="flex-1 flex-row flex-wrap items-center gap-2">
+						{subagents.clauses.map((clause) => (
+							<Text
+								key={clause.status}
+								className={`text-meta ${clause.inkClass}`}
+							>
+								{clause.count} {clause.word}
+							</Text>
+						))}
+					</View>
 					<Text className="text-ink-dim" aria-hidden>
 						{open ? "▾" : "▸"}
 					</Text>
 				</View>
 			</Pressable>
 			{open ? (
-				<ScrollView className="max-h-64" testID={SURFACE.subagentsBody}>
-					{subagents.rows.map((row) => (
+				<ScrollView
+					// A whole number of rows, capped by a share of the viewport: the fixed
+					// 256 pt body pushed the composer off a 568 pt screen (D11) and cut the
+					// sixth row into a lone glyph (D12).
+					style={{ maxHeight: body.maxHeight }}
+					testID={SURFACE.subagentsBody}
+				>
+					{subagents.rows.map((row, index) => (
 						<Pressable
 							key={row.jobId}
 							accessibilityRole={ROLE.button}
@@ -132,6 +127,14 @@ export const SubagentsPanel = ({
 							testID={row.testID}
 						>
 							<View
+								onLayout={
+									index === 0
+										? (event) =>
+												setRowHeight(
+													Math.round(event.nativeEvent.layout.height),
+												)
+										: undefined
+								}
 								className={cx(
 									"min-h-11 flex-row items-start gap-2 py-1.5 pr-4",
 									indentClass(row.depth),
@@ -169,6 +172,14 @@ export const SubagentsPanel = ({
 						</Pressable>
 					))}
 				</ScrollView>
+			) : null}
+			{/* The cue: a bounded scroller whose last visible row is whole still has to
+			    say that more is below, or the reader counts five rows against a summary
+			    that promised six. */}
+			{open && body.hiddenRows > 0 ? (
+				<Text className="px-4 pb-1 text-meta text-ink-dim">
+					+{body.hiddenRows} more
+				</Text>
 			) : null}
 		</View>
 	);

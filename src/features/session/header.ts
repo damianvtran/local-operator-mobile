@@ -39,25 +39,39 @@ const HEADER_CHROME_PT = 32 + 44 + 8;
  * rediscovery: a scale factor on BOTH terms — the chrome by the root font
  * (`rem`), the advance by the same factor once the type ramp is in rem — with
  * `PixelRatio.getFontScale()` as the native half, where the chrome is pt-based and
- * only the ADVANCE scales. Reading the root font on the web build is the only way
- * to get the chrome term's factor; `PixelRatio.getFontScale()` cannot stand in for
- * it, because RN-web answers with the DEVICE pixel ratio (3 on a 3× display),
- * which would divide this budget by three.
+ * only the ADVANCE scales.
+ *
+ * On the WEB build the root font is the only signal for the chrome term, and
+ * `PixelRatio.getFontScale()` cannot stand in for it: react-native-web 0.21.3
+ * hard-codes `fontScale: 1` in `Dimensions`, so its `getFontScale()` returns the
+ * constant 1 whatever the environment's text scale is (`1 || pixelRatio` — the
+ * fallback never runs). A constant is not a signal. An earlier revision of this
+ * comment said it returns the DEVICE pixel ratio (3 on a 3× display) and would
+ * "divide this budget by three"; that was wrong, and it is corrected here rather
+ * than dropped because the conclusion it supported still holds (review round 4,
+ * R4).
  */
 
 /**
  * The display step's advance in px per character, at 600 weight / 28 px — the
- * widest per-character average measured across prose sample names in installed
- * headless Chrome at the shipped font: `13.34 / 12.26 / 13.14 / 14.06` px per
+ * WIDEST per-character average measured across prose sample names in installed
+ * headless Chrome at the shipped font: `13.34 / 12.26 / 13.14 / **14.06**` px per
  * character for four samples, with whole-string natural widths of 358 px for 28
- * characters and 307 px for 25.
+ * characters and 307 px for 25. The value is the widest sample itself, not a
+ * rounded-down neighbour: an earlier revision said "14" and called it the widest,
+ * which was simply false (review round 4, R6), and the safety margin this divisor
+ * is supposed to buy comes from being the maximum, not from the `floor` applied
+ * after it.
  *
- * The widest sample is the divisor rather than the mean, deliberately: a budget
- * that is too generous clips (the defect this exists to prevent), while a budget
- * that is too tight costs one or two characters of a name. Prose names are what
- * this sees, so the samples are prose.
+ * **What this does not cover, stated rather than implied:** the samples are Latin
+ * prose. A name of wide glyphs — CJK (roughly 2× the Latin advance) or a run of
+ * `W`s — exceeds this estimate, so its budget is generous and the platform's own
+ * ellipsis trims the end. It never overflows the row, and the floor still holds,
+ * so the failure mode is D2 for those names only (measured and accepted by QA
+ * round 4 Q2). Covering them needs a real text measurement, which the web build
+ * cannot give this component without a canvas.
  */
-export const DISPLAY_ADVANCE_PT = 14;
+export const DISPLAY_ADVANCE_PT = 14.06;
 
 /**
  * The character budget for a viewport.

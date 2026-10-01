@@ -10,6 +10,7 @@ import {
 	projectSubagents,
 	projectTodos,
 	streamingRowId,
+	subagentRowView,
 	toLines,
 	toolDetailBlocks,
 	toolElapsed,
@@ -279,9 +280,50 @@ describe("the subagent roster", () => {
 			row({ job_id: "job-4", status: "completed" }),
 		]);
 		expect(roster.running).toBe(1);
-		expect(roster.queued).toBe(1);
-		expect(roster.failed).toBe(1);
 		expect(roster.total).toBe(4);
+		// The summary the panel renders, clause by clause: the three states the
+		// summary used to omit are named, and only the occurring ones appear.
+		expect(
+			roster.clauses.map((clause) => `${clause.count} ${clause.word}`),
+		).toEqual(["1 running", "1 queued", "1 failed", "1 done"]);
+	});
+
+	it("accounts for every row in its summary, whatever the roster holds", () => {
+		// The invariant D3 turned on: a reader who counts the rows and adds up the
+		// clauses must reach the same number. Asserted over EVERY wire status, so a
+		// status that gains a glyph but loses a clause fails here.
+		const everyStatus = [
+			"running",
+			"queued",
+			"parked",
+			"completed",
+			"failed",
+			"cancelled",
+		] satisfies import("@/contracts").SubagentRow["status"][];
+		const roster = projectSubagents(
+			everyStatus.map((status, index) =>
+				row({ job_id: `job-${index}`, status }),
+			),
+		);
+		const summed = roster.clauses.reduce(
+			(total, clause) => total + clause.count,
+			0,
+		);
+		expect(summed).toBe(roster.total);
+		expect(roster.total).toBe(everyStatus.length);
+		expect(roster.clauses).toHaveLength(everyStatus.length);
+		expect(roster.totalLabel).toBe("6 agents");
+	});
+
+	it("draws parked and cancelled with different marks", () => {
+		// D10: they shared `–`, so the roster could not be scanned for "what stopped".
+		const parked = subagentRowView(row({ status: "parked" }));
+		const cancelled = subagentRowView(row({ status: "cancelled" }));
+		expect(parked.glyph).not.toBe(cancelled.glyph);
+	});
+
+	it("calls one child an agent, not agents", () => {
+		expect(projectSubagents([row()]).totalLabel).toBe("1 agent");
 	});
 
 	it("withholds a clock rather than inventing `0s`, and keeps the wire's order", () => {
