@@ -83,13 +83,15 @@ running beside it found none of its own: "~20 citations spot-checked, all resolv
 passes could not**: the table mapped `resume.py` to `local_operator/session/resume.py`, a path
 that **does not exist at the pin** — the *lines* were right (`local_operator/resume.py`:169,
 :1715) and the *path* was never exercised, so "re-resolved" was true of the lines and false of
-the path. It is fixed in this pass. **The corrections are named in the PR's remediation comments, not in
-§9** (which is this document's risk table — round 5 caught that stale pointer too), because a
-correction is only useful next to the review that found it.
+the path. It is fixed in this pass. **Corrections live in two places, by kind: this document's §9 citation
+list** — the reader's record of what moved, kept current through round 6 — **and the PR's
+remediation comments**, the reviewer's record of who found it. (The round-5 draft said corrections
+were *not* in §9 while §9 listed them; round 6 caught that contradiction, and this is the sentence
+that had to become true.)
 
 | Repository | Revision | How paths are cited |
 |---|---|---|
-| **local-operator** | `40ca7910e49a` — **a pinned SHA, and *not* `origin/main`**: it *was* `origin/main` when this document was written and is **16 commits behind** it as measured on **2026-09-30** (`origin/main` = `d5346e173`; it was twelve behind when review round 2 read it, at `061ede7` — the distance moves with the branch, so it is always dated). **Every line number below is stated at `40ca7910e49a`**; re-derive at that ref and expect an offset at a newer one: `app.py`'s `_cmd_notifications` is `:40600` on current main against `:40562` here, and `session_sidebar.py`'s "45%" line `:800` against `:704` | `local_operator/mobile/daemon.py` → `daemon.py`; `local_operator/session/attention.py` → `attention.py`; `local_operator/session/runtime/presence.py` → `presence.py`; `local_operator/session/runtime/viewers.py` → `viewers.py`; `local_operator/server/utils/desktop_feed.py` → `desktop_feed.py`; `local_operator/server/utils/desktop_presence.py` → `desktop_presence.py`; `local_operator/notifications/compose.py` → `compose.py`; `local_operator/tui/app.py` → `app.py`; `local_operator/tui/notify.py` → `notify.py`; `local_operator/tui/widgets/session_sidebar.py` → `session_sidebar.py`; `local_operator/operator/devices.py` → `devices.py`; `local_operator/tunnels/api.py` → `tunnels/api.py`; `local_operator/tunnels/service.py` → `tunnels/service.py`; `local_operator/session/session.py` → `session.py`; `local_operator/resume.py` → `resume.py`; `local_operator/server/models/desktop_sessions.py` → `models/desktop_sessions.py`; `local_operator/server/routes/desktop_sessions.py` → `routes/desktop_sessions.py`; `local_operator/server/utils/desktop_sessions.py` → `utils/desktop_sessions.py`; `local_operator/mobile/web/src/store.ts` → `web/src/store.ts`; `local_operator/mobile/install.py` → `mobile/install.py`; `docs/*.md` by full path |
+| **local-operator** | `40ca7910e49a` — **a pinned SHA, and *not* `origin/main`**: it *was* `origin/main` when this document was written and is **16 commits behind** it as measured on **2026-09-30** (`origin/main` = `d5346e173`; it was twelve behind when review round 2 read it, at `061ede7` — the distance moves with the branch, so it is always dated). **Every line number below is stated at `40ca7910e49a`**; re-derive at that ref and expect an offset at a newer one: `app.py`'s `_cmd_notifications` is `:40600` on current main against `:40562` here, and `session_sidebar.py`'s "45%" line `:800` against `:704` | `local_operator/mobile/daemon.py` → `daemon.py`; `local_operator/session/attention.py` → `attention.py`; `local_operator/session/runtime/presence.py` → `presence.py`; `local_operator/session/runtime/viewers.py` → `viewers.py`; `local_operator/server/utils/desktop_feed.py` → `desktop_feed.py`; `local_operator/server/utils/desktop_presence.py` → `desktop_presence.py`; `local_operator/notifications/compose.py` → `compose.py`; `local_operator/tui/app.py` → `app.py`; `local_operator/tui/notify.py` → `notify.py`; `local_operator/tui/widgets/session_sidebar.py` → `session_sidebar.py`; `local_operator/operator/devices.py` → `devices.py`; `local_operator/tunnels/api.py` → `tunnels/api.py`; `local_operator/tunnels/service.py` → `tunnels/service.py`, `local_operator/tunnels/gateway.py` → `gateway.py`, `local_operator/mobile/attach_client.py` → `attach_client.py`, `local_operator/mobile/tui_handle.py` → `tui_handle.py`, `local_operator/mcp/grants.py` → `mcp/grants.py`, `local_operator/mobile/auth.py` → `mobile/auth.py`, `local_operator/mobile/peer_client.py` → `mobile/peer_client.py`, `local_operator/session/runtime/server.py` → `session/runtime/server.py`, `local_operator/info/render.py` → `info/render.py`, `local_operator/network/dial.py` → `network/dial.py`, `local_operator/operator/devices.py` → `operator/devices.py`; `local_operator/session/session.py` → `session.py`; `local_operator/resume.py` → `resume.py`; `local_operator/server/models/desktop_sessions.py` → `models/desktop_sessions.py`; `local_operator/server/routes/desktop_sessions.py` → `routes/desktop_sessions.py`; `local_operator/server/utils/desktop_sessions.py` → `utils/desktop_sessions.py`; `local_operator/mobile/web/src/store.ts` → `web/src/store.ts`; `local_operator/mobile/install.py` → `mobile/install.py`; `docs/*.md` by full path |
 | **local-operator-mobile** | `origin/main` @ `d5bb850fccac4dcfdd80f2e3b352a51107a955bc` (read 2026-09-30) | this repository's own paths; unmerged work named by branch and SHA |
 | **Radient** (control plane, edge, console) | **no code access** — specified here as an *interface*, never as a change to existing code | every cloud route in §3.1 is marked **proposal** |
 | **Apple / Google / Expo platform docs** | read 2026-09-30, cited by URL | vendor behaviour, quoted with the page it came from |
@@ -319,7 +321,7 @@ is that one set, in the listing's snapshot:
 
 - the listing's rows (`recent_session_rows(directory, 100, strict=True)`, `daemon.py:665`, plus
   live entries) — the same identity set the attention decoration is already built for
-  (`daemon.py:779-782`), so this is one pass over data already in hand, not a second scan;
+  (`daemon.py:778-782`), so this is one pass over data already in hand, not a second scan;
 - **user-facing sessions only** — the listing's own origin filter, `USER_ORIGINS`
   (`resume.py:169`) and `_is_hidden_origin` (`resume.py:1715`), applied inside that scan, which
   excludes `agent/<id>` identities, subagent-only rows and scheduled origins;
@@ -553,12 +555,12 @@ publication cursor (Q9), and why §3.4's content-derived key has something to mi
 | Record | Fields | Why it is the minimum |
 |---|---|---|
 | **Device** | `device_id`, `platform`, the push token, `environment` (`sandbox`/`production` — only the app knows which build it is), app build, `created_at`, `last_seen_at`, and the state markers **`revoked_at` / `unpaired_at` / `expired_at`** — **not** `credential_live`, which lives in the Credential row below (`n3`, so one fact has one home) | token rotation and revocation are the whole of device management; **the markers are the states §4 defines, and §4's precedence (revoked > unpaired > expired) is what every reader of the row — the register route, `list`, the delivery gate — resolves, so one row cannot be read two ways** |
-| **Account → devices** | account id → the account's registered device ids (what may *receive* is decided by the state marker, §4) | routing; the account already exists (`GET /v1/me`, `tunnels/api.py`:144-170`) |
+| **Account → devices** | account id → the account's registered device ids (what may *receive* is decided by the state marker, §4) | routing; the account already exists (`GET /v1/me`, `tunnels/api.py`:144-170) |
 | **Computer → devices** | the connector's tunnel identity → the devices registered for *that* machine | a user with three machines must not be pushed about machine C's work while paired to A |
 | **Delivery** | `(device_id, conversation_handle, emit_id)` → sent/attempted, provider id, response code, **kept 14 days** | the record of what was pushed: it is what makes re-delivery idempotent, a revocation testable and the cloud's own alerts meaningful. **It is not returned to the machine** (§3.1) |
 | **Credential (per device)** — **the machine's own record** | `credential_live`, `last_authenticated_at`, and the **per-device key** (`device_key`): **minted by the machine at registration**, stored machine-side as a **hash** in the config-root record (0600, beside the handle key, §4), and held by the phone in the keystore keyed by its `install_id` | the second limb of §4 rule 2, and the only place the flag lives. **The machine owns it**: the relay's routes write it as they see the cookie and the emit worker (the same process) reads it, so there is no second copy to disagree with and **no epoch to compare** (round 4 `m1`, QA Q-F3). **The key never goes to the cloud** — round 5 M3 caught the earlier sentence "never leaves the machine", which was wrong: the *phone* presents it, as `X-Lop-Device-Key` (§3.1). **Rotation is owner-only** — the machine's operator surface or the account console, the same gate as un-revoke — and never happens on the device's own initiative; an offline device resumes only by re-registering with its current relay credential. What the cloud holds is the **coalesced** copy of the two flag values, never per-request traffic (`m5`) |
 | **Credentials** | the APNs `.p8` key id + team id; the FCM service account | the reason the cloud has to exist at all |
-| **Grant (per device)** *(cloud, proposal)* | `grant_id`, `device_id`, the computer it belongs to, `minted_at`, `last_refused_at` — the **shape is the cloud lane's** ([`docs/push-cloud-ops.md`](push-cloud-ops.md)); this ADR fixes only the two properties rule 2 depends on | **the enforceable half of §4 rule 2 on the Radient route** (round 5 Q-F8): it is *minted* at registration against an `install_id` the machine's record carries, *required* for delivery (fan-out refuses without it), and *refused* for a row whose marker forbids it. The one property that cannot be verified from this repository — a mint refused while the account has revoked that computer's access — is stated as a **cloud-side requirement** in §4 rule 2 and in §7, not assumed here |
+| **Grant (per device)** *(cloud, proposal)* | `grant_id`, `device_id`, the computer it belongs to, `minted_at`, `last_refused_at` — the **shape is the cloud lane's** ([`docs/push-cloud-ops.md`](push-cloud-ops.md)); this ADR fixes only the two properties rule 2 depends on | **the enforceable half of §4 rule 2 on the Radient route** (round 5 Q-F8): it is *minted* at registration against an `install_id` the machine's record carries, *required* for delivery (fan-out refuses without it), and *refused* for a row whose marker forbids it. The one property that cannot be verified from this repository — a mint refused while the account has revoked that computer's access — is stated as a **cloud-side requirement** in §4 rule 2 and in §7, not assumed here. **Its life — storage, refresh, rotation** (round 6 QA Q-F8, which caught that a record with no life cannot be implemented): it **lives in the cloud's own store** beside the device row *(proposal)*; it is **refreshed** from the machine's next `credential_live` report rather than from a clock, so the cloud re-arms it from evidence; it is **rotated** — invalidated and re-minted at the next registration — when an **owner** rotates that device (`lop mobile devices rotate`, §3.1) or revokes it; and a **mint is refused outright** while the account's access for that computer is revoked. "The machine never refreshes a grant" in rule 2 means *the machine*, not the cloud |
 **What the cloud must NOT hold:** transcripts, conversation names, session ids, working
 directories, model names, prompt text, **read state or read history**, and **no unread
 count** (§1.5). §4 says what it does learn, honestly, including the residue.
@@ -715,7 +717,7 @@ JSON, and **the auth model is per route** (round 5 m8; §4 rule 2): on the **dir
 relay route is auth-gated by the `lop_mobile` cookie the app holds, whose key is the relay
 password (ADR 0002 §6, `docs/relay/contract.md`:48-52); on the **Radient** route the edge strips
 that cookie and the local gateway injects a per-request one (`docs/relay/tunnel-edge.md`:59-76,
-`tunnels/gateway.py`:545-548), so there the cookie proves *the computer* and not the device —
+`gateway.py`:545-548), so there the cookie proves *the computer* and not the device —
 which is exactly why rule 2's device limb is a key, and why the grant exists at all.
 
 #### 3.1 The operations
@@ -758,20 +760,29 @@ POST /api/push/register
 // by the emit worker in the same process; there is no separate "credential epoch" (§4 rule 2,
 // round 4 m1 / QA Q-F3).
 //
-// THE KEY A REQUEST PRESENTS (round 5 M3, QA Q-F10). `device_key` is returned HERE and on every
-// re-register/refresh — returned once per call and **never listed**: `GET /api/push/devices` does
-// not carry it, exactly as it does not carry the token. The phone presents it as
-// `X-Lop-Device-Key: <device_key>` (a header, never a query parameter); `X-Lop-Device` names the
-// `install_id` and the relay resolves it to the `device_id` the key was minted for (round 5
-// Nit-N2). A valid key for a tombstoned device is still refused by the state rules above: **the
-// key proves IDENTITY, never PERMISSION.** Rotation is owner-only — the machine's operator
-// surface or the account console, the same gate as un-revoke — and never the device's own choice;
-// an offline device resumes only by re-registering with its current relay credential.
+// THE KEY A REQUEST PRESENTS — AND ITS LIFE CYCLE (round 5 M3 / Q-F10; round 6 m1 caught that
+// "returned on every re-register" cannot hold when the machine stores only a HASH, §2.2). The key
+// is returned ONCE:
+//   · first registration of an `install_id` → {"ok": true, "device_id", "device_key", "registered_at"}
+//   · re-register PRESENTING the valid key   → {"ok": true, "device_id", "registered_at"}   (no key)
+//   · re-register of a known `install_id` WITHOUT a valid key →
+//       409 {"code": "device_key_required",
+//            "error": "this device is already registered — restore it from the computer, or reinstall"}
+//     which is the owner remedy rather than a silent re-issue; the key is re-served only when an
+//     OWNER rotates it (`lop mobile devices rotate`, §3.1 — the operator surface, not a route).
+//     The app mints a FRESH `install_id` on a fresh install, so a reinstall is a NEW device row
+//     with a new key — which is what §4 rule 2's Radient-route honesty already assumes.
+// `GET /api/push/devices` never carries the key, exactly as it does not carry the token. The phone
+// presents it as `X-Lop-Device-Key: <device_key>` (a header, never a query parameter);
+// `X-Lop-Device` names the `install_id` and the relay resolves it to the `device_id` the key was
+// minted for (round 5 Nit-N2). A valid key for a tombstoned device is still refused by the state
+// rules above: **the key proves IDENTITY, never PERMISSION.** An offline device resumes by
+// presenting its key — or, if the key is gone, by reinstalling, which is a new device.
 //
-// The two refusal codes above, `X-Lop-Device: <install_id>` and `X-Lop-Device-Key: <device_key>`
-// — a request that moves a device's state presents the key, so a device can move only its own —
-// are DECIDED relay shapes, not proposals: S3 freezes them and rule 2's enforcement rests on them
-// (round 4 m3).
+// The two refusal codes above, the `409 device_key_required` refusal, `X-Lop-Device: <install_id>`
+// and `X-Lop-Device-Key: <device_key>` — a request that moves a device's state presents the key,
+// so a device can move only its own — are DECIDED relay shapes, not proposals: S3 freezes them and
+// rule 2's enforcement rests on them (round 4 m3, round 6 m1).
 // A rotation sets `expired_at`, NOT `revoked_at` — see §4: the two states are deliberately
 // different.
 ```
@@ -795,41 +806,39 @@ cookie to do:
 ```jsonc
 DELETE /api/push/devices/{device_id}   → {"ok": true}          // revoke: token dropped, row tombstoned
 
-// THE WAY BACK IS NOT A DEVICE OPERATION (round 4 B1). "On the machine" is not a place the
-// phone's own session can be: the phone's requests travel through the machine's relay, so a
-// revoked phone holding a live cookie could otherwise clear its own tombstone and be Live again
-// without the password — the ADR's own named worst failure, undone by the device it exists to
-// refuse. `unrevoke` is therefore callable ONLY from the machine's operator surface (the local
-// API the CLI/TUI and `lop mobile devices` drive) or from the account console (§4); a device
-// session gets a refusal the app can render, and §4 rule 1's invariant ("neither marker is
-// cleared by the device itself") is asserted, not assumed.
-//
-// WHAT "THE MACHINE'S OPERATOR SURFACE" MEANS IN CODE (round 5 M5 — a naive predicate reopens
-// B1). The daemon is ONE loopback HTTP server behind ONE cookie gate (`daemon.py`:3380 is the
-// whole of `/api/` auth), and the phone ARRIVES ON LOOPBACK: the tunnel gateway verifies the
-// public HTTPS Origin and forwards to that loopback server (`daemon.py`:3382-3388). "The caller
-// is local" is therefore TRUE for the stolen phone, so `machine_only` may not be implemented that
-// way. The predicate is the CLIENT-DECLARED locality the wire already carries
-// (`attach_client.py`:878-894, "a local socket is not proof"), with the phone as the named
-// non-local case (`tui_handle.py`:998, "the operator's phone … authenticates as
-// locality=\"remote\" with no capabilities") — the same distinction `mcp/grants.py`:20-24 states
-// for this class of refusal: the locality question "is NOT answered by guessing from inside this
-// process … a future mobile relay carrying a slash command from a phone is not [local]". The
-// daemon says it for the operator handshake too (`daemon.py`:1598-1599): "Loopback proves the
-// CALLER is on this machine; it does not prove the PERSON is". So the operator surface is
-// authenticated by the CLI/TUI ATTACH channel's declared locality — never a cookie a phone can
-// hold — and the account console by the account owner's own authentication (§2.4 settles that the
-// Radient login is the machine's, not the app's). A phone-origin request with a valid cookie gets
-// the `machine_only` refusal above, and the plan asserts it (S4a).
-//
-// It clears the marker that is set — `revoked_at` OR `unpaired_at` (they are different states
-// with different refusals, §4) — and the token is NOT restored with it: the device must register
-// again, which needs a live credential.
-POST /api/push/devices/{device_id}/unrevoke → {"ok": true, "device_id": "…"}
-   // machine-operator surface, or the account console (§4).
-   // From a device session: 403 {"code": "machine_only",
-   //                               "error": "a device cannot restore itself — use the computer or your account"}
+// THE WAY BACK IS NOT A WIRE OPERATION (round 6 — review R6-M2 / QA Q-F12; the round-5 draft
+// tried to restrict an HTTP route to "the machine's operator surface", and the pinned code shows
+// that cannot be implemented from a request). The relay's HTTP surface has ONE auth gate — the
+// `lop_mobile` cookie, `daemon.py`:3377-3380 is the whole of `/api/` auth — so a phone and the
+// CLI are the same caller there; a locality value in an HTTP request would be self-declared; and
+// the tunnel gateway forwards only its own allowlist (`gateway.py`:310-319, `:537`) besides. So
+// **there is no `unrevoke` route and no rotate route on the relay at all**, and the round-5
+// `403 machine_only` refusal is retired with them (no route, nothing to refuse: a phone calling
+// an unrevoke-shaped path gets the ordinary 404/405 — asserted in the plan, S4a).
 ```
+
+**Un-revoke and key rotation are operator-surface commands** *(round 6; new work, and not on the
+wire)*. They are verbs of `lop mobile devices` — **a command group that does not exist at the pin
+and is new here** (`git grep 'mobile devices'` at `40ca7910e49a` finds nothing; the only `devices`
+symbol is `operator/devices.py`:99, the *operator device* store, which is a different thing) — and
+they run on a channel a phone cannot present: the session runtime's **control socket**, whose
+attach handshake carries `{"key": record.control_key}` (`attach_client.py`:1116, `daemon.py`:1620,
+`network/dial.py`:329). That key is **the control socket's whole authorization story** — 64 hex
+characters, constant-time compared (`session/runtime/server.py`:10-11), published only inside a
+**0600 record under a 0700 directory** (`info/render.py`:15-17; `mobile/peer_client.py`:13 for peers). A
+phone holds a `lop_mobile` cookie; it does not hold a control key, and possession of the key is
+the entire predicate.
+**The paired-device certificate is not the discriminator, and must not be used as one**: it is
+public data that *declares* authority and "grants nothing" by itself (`daemon.py`:1626-1641), which
+is why `/approvals` can offer the phone a command without that amounting to the operator's
+credential. The account console remains the second path (§4), authenticated as the account owner,
+and it is the one that works with the machine offline.
+**What the commands do**: `unrevoke <device_id>` clears the marker that is set — `revoked_at` OR
+`unpaired_at`, which are different states with different refusals (§4) — and restores no token (the
+device must register again); `rotate <device_id>` mints a new `device_key` for that device and
+returns it to the operator once, which is the owner-side key rotation §2.2 describes. §4 rule 1's
+invariant ("neither marker is cleared by the device itself") is therefore structural: the device
+has no channel that can carry the command.
 
 **Fetch unread** *(new, §1.1)*: `GET /api/attention/unread` → the aggregate above. This one
 route is what the in-app count, the icon badge and every resync read.
@@ -1057,14 +1066,22 @@ paths, and the honest limits of each:
    stolen device**, and it needs a Radient-side device list: a **new cloud-side surface of the
    same class as the blocked account-deletion item** (§7).
 3. **Rotating the relay password** invalidates every device's `lop_mobile` cookie at once —
-   the cookie key is derived from the password (`docs/relay/contract.md`:48-52, ADR 0002 §6) —
-   so it cuts a stolen device off from the relay immediately, and (with rule 2 below) it stops
-   **push delivery** to that device too, without revoking anything, and the marker it writes is
-   **`expired_at`** — never `revoked_at` — reported to the cloud as one credential-change event so
-   fan-out pauses until each device authenticates again (rule 2). **It is not a revoke**, which
-   is why (1)/(2) are still required for a stolen phone: the device returns the moment it can
-   authenticate, and so would a thief who learned the new password. The app's copy must not
-   conflate the two.
+   the cookie key is derived from the password (`docs/relay/contract.md`:48-52, ADR 0002 §6) — and
+   the marker it writes is **`expired_at`**, never `revoked_at`, reported as one credential-change
+   event so fan-out pauses until each device authenticates again (rule 2). **But its reach differs
+   by route, and the copy must say which one the user is on** (round 6 M3/Q3):
+   - **Direct route — a real lever.** The app holds that cookie, so the rotation invalidates the
+     thief's copy immediately: it cuts the device off from the relay, stops **push delivery** to it,
+     and the device only returns if it can authenticate with the new password.
+   - **Radient route — not a lever.** The gateway **mints** the cookie from the machine's own
+     password on every request (`gateway.py`:545-548), so the app never needs the password and a
+     rotation does not lock the thief out. Its actual effect there is the connector outage described
+     in rule 2: the gateway signs with a **stale** password until it is restarted, every device of
+     that computer stops working, and the restart heals all of them — a thief included. The lever on
+     that route is the **account side** (path 2).
+   **It is not a revoke on either route**, which is why (1)/(2) are still required for a stolen
+   phone; the app's copy must not conflate the two, and must not promise a route's lever on the
+   other route.
 4. **Server-side per-token revocation** and **dead-token deletion** (APNs `410 Unregistered` /
    FCM `UNREGISTERED`) — deletion is not optional: an accumulating token table is a privacy
    liability and a cost. **This is the *absent* state below, never a tombstone** (rule 3): the row
@@ -1113,9 +1130,15 @@ items both matter, because each is a thing a cloud implementer would build wrong
    pre-Q-F2 model: on the Radient route the gateway injects the cookie and the phone never needs
    the password, which is precisely why rule 2 had to move that route's lock to the cloud grant.
 
-   The note's author has been asked to re-align all three; **this ADR is the authority until the
-   note matches it, and the note is not edited from this branch** (round 4 M1's rule, kept). This
-   paragraph is where the two documents are checked against each other.
+4. **Four things this ADR has that the note does not carry at all** (round 6 QA Q-F8; a note that
+   is the cloud lane's runbook would otherwise omit them): the **grant** (its record, mint,
+   refusal, refresh and rotation), the **heartbeat** call and its cadence, **`device_key`** with
+   `X-Lop-Device-Key`, and the **`devices` report block**. These are *owed to the note* rather than
+   divergences of it, and they are on the list the note's author has.
+
+   The note's author has been asked to re-align the three and add the four; **this ADR is the
+   authority until the note matches it, and the note is not edited from this branch** (round 4
+   M1's rule, kept). This paragraph is where the two documents are checked against each other.
 
 Three rules follow, and together they are the whole of the revocation semantics:
 
@@ -1153,7 +1176,7 @@ Three rules follow, and together they are the whole of the revocation semantics:
      holds.
    - **Radient route, fresh install: NOT stopped by the grant, and this ADR will not pretend
      otherwise.** There the gateway **injects** `lop_mobile` from the machine's own password
-     (`tunnels/gateway.py`:545-548), so the phone never needs that password — and the grant is
+     (`gateway.py`:545-548), so the phone never needs that password — and the grant is
      *minted at registration*, while a fresh `install_id` carries no marker for the state rules to
      refuse. A re-installed app that can still reach the tunnel therefore **registers, is minted a
      grant and receives pushes**. The tombstone stops the *known* row and the key stops a device
@@ -1163,25 +1186,40 @@ Three rules follow, and together they are the whole of the revocation semantics:
      the account's own access for that computer (or that device) is revoked, so the user's lever is
      **revoking the phone's access in the Radient account and re-pairing** — not this computer's
      password. **Correction to the earlier draft's "the honest remedy is revoke AND rotate"
-     (below): rotation is a device-facing lever on the direct route only**; on the Radient route
-     the gateway re-signs with whatever the current password is, so rotating does not lock a
-     Radient-route phone out.
+     (below): rotation is a device-facing lever on the direct route only.** On the Radient route
+     the gateway reads the password **once, when the `Gateway` is constructed** — `self.mobile_password
+     = mobile_password` (`gateway.py`:449`), built from config at `tunnels/service.py`:527-533 — and
+     nothing in the connector's poller reloads it. So a rotation does not lock the thief out; it
+     makes the gateway sign with a **stale** password until the connector is restarted, which locks
+     out **every** device of that computer (the owner's own phone included) and then **heals itself
+     at that restart**, because the restarted gateway signs with the current password. That is an
+     outage, not a revocation — the lever there is the account side.
    **The honest limit:** on the Radient route the cloud both mints and refuses the grant, so a
    cloud that ignored its own record could still fan out. What the machine contributes is real but
    partial — it never emits for a device it has marked, never refreshes a grant for one, and
    pauses that computer's fan-out with one credential-change event — and the last word is
    Radient's, which is the price of buying the last mile from whoever holds the APNs/FCM
    credentials (§2.4's bargain, stated rather than implied).
-   **The report, its carrier, and why it cannot flood** (round 4 `m5`, round 5 Q-F9 which caught
-   that "piggybacked" named no field and no call): the relay recomputes `credential_live` on every
-   authenticated request but **sends it coalesced and change-triggered**, as a **`devices` block on
-   the machine→cloud calls that already exist** — the next **registration forward** or the next
-   **emit** for that computer — **at most once per device per 5 minutes**, batched for all of the
-   computer's devices, plus a **heartbeat report of its own when neither has happened for 15
-   minutes** (that call carries the same block, and nothing else). **One** credential-change event
-   per rotation. So the cloud sees **O(devices) state, never O(requests) traffic**, and a device
-   whose credential died while the app was closed is reported not-live **at the next heartbeat**
-   (≤15 min), which is when fan-out pauses for it.
+   **The report, its carrier, and how a lapse is derived** (round 4 `m5`; round 5 Q-F9, which
+   caught that "piggybacked" named no field; round 6 Q-F13, which caught that §3.2 forbids unknown
+   fields and this block had no named home). The carrier is named, and every addition below is
+   **NEW**:
+   - **The registration forward** (the machine→cloud call that forwards a registration, §3.1/§7
+     *(proposal)*) carries `devices: [{device_id: str, credential_live: bool,
+     last_authenticated_at: int, unix seconds}]` — the exactly-typed block, not a prose hint.
+   - **The next emit** (§3.2's attention/completion body) carries the **same block**, added to
+     §3.2's allow-list as a *machine→cloud* field: the app-facing payload table is unchanged, and
+     nothing new reaches the phone.
+   - **A heartbeat of its own** — `POST <cloud>/v1/push/credentials` *(cloud, proposal)* — carrying
+     that block and nothing else, sent when neither of the above has happened for **15 minutes**.
+     Both bounds are ceilings: change-triggered, **at most once per device per 5 minutes**, batched
+     for all of the computer's devices, **one** credential-change event per rotation.
+   **The lapse is DERIVED, which is the only way the cloud can hear about an app that is closed:**
+   the machine computes `credential_live` from `last_authenticated_at` against the cookie TTL —
+   `COOKIE_TTL_S = 30 * 24 * 3600` (`mobile/auth.py`:99) — rather than waiting for a request that
+   will never come; the heartbeat recomputes every device of the computer, so a device whose
+   credential lapsed while the app was shut is reported not-live within 15 minutes and fan-out
+   pauses then. The cloud therefore sees **O(devices) state, never O(requests) traffic.**
    **What writes what — the relay's routes are the only writer of markers, and the operator
    surface is the only thing that ever *clears* one** (`m1`, Q-F3; round 5 m9, which caught that
    "writer" alone read as exhaustive and left the clearing transitions unstated): set —
@@ -1197,6 +1235,17 @@ Three rules follow, and together they are the whole of the revocation semantics:
    device's state**. That is what stops a stolen cookie from vouching for another device — and
    every self-reported action here can only *pause* its own delivery, never restore it, which is
    why accepting such a report is safe by construction.
+   **AND THE HEADERS MUST REACH THE RELAY AT ALL** (round 6 M1 — the hole that made this whole limb
+   inert on the route the app actually uses). The tunnel gateway forwards only its allowlist:
+   `headers = {k: v for k, v in incoming.items() if k in _REQUEST_HEADERS}` (`gateway.py`:537),
+   where `_REQUEST_HEADERS` (`gateway.py`:310-319) is accept / accept-language / content-type /
+   range / if-none-match / if-modified-since / last-event-id / origin. **`X-Lop-Device` and
+   `X-Lop-Device-Key` are stripped today**, so "no key, no state change" would mean *nothing moves
+   state* there. The fix is named and additive: **add both headers to `_REQUEST_HEADERS`
+   (`gateway.py`:310-319)`*(NEW)* — never the cookie, which the gateway *injects* rather than
+   forwards (`:545-548`), and nothing the edge is meant to rewrite (`docs/relay/tunnel-edge.md`:59-76).
+   §7 carries it as its own row and a QA row asserts a registration through the gateway arrives
+   with its key end to end.
    **There is no credential "epoch"** (`m1`, Q-F3): the earlier draft had the machine compare one,
    but the relay and the emit worker are the same process, so the flag **is** the machine-side fact
    and a second counter would be a copy that can disagree with its source.
@@ -1210,18 +1259,20 @@ Three rules follow, and together they are the whole of the revocation semantics:
    Conflating either with a revoke would refuse a legitimate reinstall; conflating a revoke with
    them would let a stolen device back in.
 
-**How a device comes back — and none of it is the device's own doing** (round 4 B1; §3.1 states
-the same restriction where the route is specified). By an explicit act, on a surface the device
-does not control — **the machine's operator surface** (the CLI/TUI and `lop mobile devices`) **or
-the account console**, which is the second path and the one that works with the machine offline,
-and which is why the account-side revoke/un-revoke surface is a slice of its own in §7:
-`revoked_at` → `POST /api/push/devices/{device_id}/unrevoke` *(new — §3.1)*; `unpaired_at` → pair that computer again (the pairing flow clears
-it for every device that was bound to it), or `unrevoke` that device explicitly; `expired_at` →
-nothing to clear: authenticate to the relay with the current password and re-register. In every
+**How a device comes back — and none of it is the device's own doing** (round 4 B1; round 6 made
+it structural by removing the route entirely, §3.1). By an explicit act, on a surface the device
+does not control — **the operator surface** (the CLI/TUI over the session runtime's **control
+socket**, whose whole authorization is the `control_key`, or the new `lop mobile devices` verbs)
+**or the account console**: the second path, and the one that works with the machine offline, which
+is why the account-side revoke/un-revoke surface is a slice of its own in §7. Per marker:
+`revoked_at` → `lop mobile devices unrevoke <device_id>` *(new — §3.1)*; `unpaired_at` → pair that
+computer again (the pairing flow clears it for every device bound to it), or un-revoke that device;
+`expired_at` → nothing to clear: authenticate with the current credential and re-register. In every
 case **the marker's clearing restores no token** — the app must register again, and registering
-needs a live credential. Settings shows each row with its state and the action that clears it
-("re-pair this device", "pair this computer again", "sign in again to resume") rather than hiding
-a device the user cannot see or un-revoke.
+needs a live credential (direct route) or a mint the account has not revoked (Radient route, rule
+2). Settings shows each row with its state and the action that clears it ("re-pair this device",
+"pair this computer again", "sign in again to resume") rather than hiding a device the user cannot
+see or un-revoke.
 
 **Notifications never stop silently (this pass's second half).** All three ways delivery stops —
 a rotation, a lapsed cookie, the 60-day drop — are invisible from the app's side until it next
@@ -1235,14 +1286,19 @@ receiving pushes while any of these markers is set**, the mirror of the rule bel
 claiming notifications stopped everywhere while a revoke is pending.
 
 **The residual, stated rather than implied.** The tombstone is indexed by `install_id`, and a
-freshly installed app mints a **new** one — so what stops a re-installed stolen device is the
-*credential* rule — **evaluated by the relay and enforced by the cloud** (rule 2) — not the
-tombstone: to register at all it must authenticate to the machine with
-the relay password (`/login`; the cookie key is derived from that password,
-`docs/relay/contract.md`:48-52). **The honest remedy is revoke AND rotate**, which is why the
-app's Settings copy says so — a revoke offers "also change this computer's password to cut it off
-completely" — and why no surface may claim a revoked device is unreachable while it still holds a
-live cookie.
+freshly installed app mints a **new** one — so what binds a re-install depends on the route (rule
+2), and the two answers are different facts, not one sentence with a footnote:
+- **Direct route: the credential binds it.** To register at all the app must authenticate with the
+  relay password (`/login`; the cookie key is derived from it, `docs/relay/contract.md`:48-52), and
+  a re-installed app does not have it — so here **revoke AND rotate** is the honest remedy, and the
+  revoke may offer "also change this computer's password to cut it off completely".
+- **Radient route: only the account binds it.** The gateway injects the cookie from the machine's
+  password, so a re-install registers and a rotation is that outage-and-heal above — **the honest
+  remedy is revoking the phone's access in the Radient account** (path 2), and the copy must say
+  **exactly that, never the password sentence**. Promising rotation there would be the ADR's own
+  named failure — a user told they are protected while the device keeps receiving.
+Neither route may claim a revoked device is unreachable while it still holds a live cookie, and no
+surface may offer a lever the user's route does not have.
 
 **What a revoked device keeps**: whatever it already cached locally — projections and
 transcripts (ADR 0002 §6) and its `lop_mobile` cookie until the TTL or a password rotation.
@@ -1413,8 +1469,8 @@ week, L ≈ more, with an unknown tail):
 | **Conversation handle + resolve route** (§4, S2 — the per-row **listing field was rejected**, plan S2/§4) | daemon-core | **S** | an HMAC mint, one field on the aggregate, one resolve route |
 | **Interface freeze** (§3, S3) | all three | **S** | the §3 shapes, refusal shapes, fixtures in this repo's `fixtures/` (ADR 0003's pattern) |
 | **Device registry, register/list/deregister routes, no token stored** (§3.1, S4) | daemon-core | **S–M** | durable record, cloud id, Settings list, the generic deregister |
-| **Device lifecycle: live / expired (`expired_at`) / unpaired (`unpaired_at`) / revoked (`revoked_at`) / absent (no row), the shared precedence revoked > unpaired > expired, the register route's two refusals, the emit-side skip, the per-device key minted at registration, un-revoke restricted to the machine and account surfaces** (§3.1, §4, S4a) | daemon-core | **S–M** | the states are one table in code, not five booleans read ad hoc, and the register route, `list` and the emit path resolve the **same** precedence (asserted); `403 device_revoked` on a tombstone and `403 device_unpaired` on an unpaired row, while `expired_at` re-registers; a worker **skips** a device marked or `expired_at` (asserted by observing no emit); a dead token or the 60-day drop deletes the row with **no** marker and re-registers cleanly; **a device's own session gets `403 machine_only` on its own un-revoke** (B1, asserted) while the machine surface and the account console both succeed; a request without the device's key moves no device's state |
-| **Credential-live evaluation and the credential-change event** (the relay evaluates per route — cookie vs cloud grant — the cloud enforces, `X-Lop-Device` **plus the per-device key** on identifying requests, the report **coalesced** rather than per request, one event per rotation, fan-out paused until each device's next authenticated request) (§3.1, §4 rule 2, S4c) | daemon-core + Radient-cloud | **S–M** | after a rotation **no** device of that computer is delivered to (observed at the provider stub) while the machine also refuses to emit for it — and each resumes on its own next authenticated request, not on the rotation's; a device that never authenticates again stays paused, which is the point; **the cloud's seen traffic is bounded by devices, not requests** (asserted: N authenticated requests in a window produce at most one report per device, and none at all when the state did not change); on the Radient route the refusal is observed at the cloud, and on the direct route at the relay |
+| **Device lifecycle: live / expired (`expired_at`) / unpaired (`unpaired_at`) / revoked (`revoked_at`) / absent (no row), the shared precedence revoked > unpaired > expired, the register route's two refusals, the emit-side skip, the per-device key minted at registration and returned ONCE (a hash cannot be re-served, round 6 m1), and un-revoke/rotation as **operator-surface commands with no HTTP route at all** — a phone calling an unrevoke-shaped path gets an ordinary 404/405, and `403 machine_only` no longer exists anywhere** (§3.1, §4, S4a) | daemon-core | **S–M** | the states are one table in code, not five booleans read ad hoc, and the register route, `list` and the emit path resolve the **same** precedence (asserted); `403 device_revoked` on a tombstone and `403 device_unpaired` on an unpaired row, while `expired_at` re-registers; a worker **skips** a device marked or `expired_at` (asserted by observing no emit); a dead token or the 60-day drop deletes the row with **no** marker and re-registers cleanly; **a device's own session gets `403 machine_only` on its own un-revoke** (B1, asserted) while the machine surface and the account console both succeed; a request without the device's key moves no device's state |
+| **Credential-live evaluation and the credential-change event** (the relay evaluates per route — cookie vs cloud grant — the cloud enforces, `X-Lop-Device` **plus the per-device key** on identifying requests, the report **coalesced** with a named carrier and a heartbeat, one event per rotation, fan-out paused until each device's next authenticated request, **and the two device headers added to the gateway's `_REQUEST_HEADERS` allowlist (`gateway.py`:310-319, NEW) so they survive the Radient hop at all**) (§3.1, §4 rule 2, S4c) | daemon-core + Radient-cloud | **S–M** | after a rotation **no** device of that computer is delivered to (observed at the provider stub) while the machine also refuses to emit for it — and each resumes on its own next authenticated request, not on the rotation's; a device that never authenticates again stays paused, which is the point; **the cloud's seen traffic is bounded by devices, not requests** (asserted: N authenticated requests in a window produce at most one report per device, and none at all when the state did not change); on the Radient route the refusal is observed at the cloud, and on the direct route at the relay |
 | **Push worker: two cursors + baseline, acknowledgement-map diff, gates, presence deferral, catch-up, bounded queue that advances only on the cloud's `202`** (§2.1-§2.3, S5) | daemon-core | **M** | the store is done; the risk is the gates and the cursor, not the volume |
 | **Attention emit: structural detection (`revision()` equality as the trigger, then the acknowledgement map and the supersede cursor say which conversation moved), `/seen` nudge that consumes the change, `exclude` on the wire** (§3.1, S6) | daemon-core | **S** | reuses the loop that already reads `revision()` |
 | **App: notifications module, permissions, channels, badge management, handle resolution, `+native-intent` + route, unpair UI, Settings copy, FOSS gating** (§5-§6, S8/S9/S11) | app | **M–L** | a new native module, a new lifecycle path, a new route, a new settings surface, and a build-flavour story: the largest single diff |
@@ -1516,6 +1572,16 @@ measured 2026-09-30, `origin/main` = `d5346e173`, and `app.py`/`session_sidebar.
 shift under it); the citation table now maps
 `models/desktop_sessions.py`, `routes/desktop_sessions.py`, `utils/desktop_sessions.py`,
 `session.py` and `web/src/store.ts`, which were cited without a rule (Q13 / review m2);
+`local_operator/session/resume.py` → **`local_operator/resume.py`** (QA round 4 Q-F1: the mapped
+path did not exist at the pin — the lines were right and the path was never exercised);
+`attention.py:1611` → **`:2047`** for the store's kind vocabulary (QA round 5 Q-F6: `:1611` is the
+`notify` line, so the citation *resolved* and the **fact** was elsewhere — found by reading the
+line); `daemon.py:777-813` → **`:778-782`** (round 6: the range started on a blank line and missed
+the set literal at `:778`); and the table now also maps `gateway.py`,
+`attach_client.py`, `tui_handle.py` and `mcp/grants.py`, the four paths round 6's design leans on
+(QA round 6, row 7). Two retired shapes are recorded in place rather than here: the HTTP
+`unrevoke` route and the `403 machine_only` refusal are **gone** (§3.1), because the pinned code
+cannot implement them from a request.
 `attention.py:2129-2150` → **`:2129-2149`**, the method's real end (review n1); #11's
 `session-projection.ts:61-66` → **`:56-70`**, the function plus its rationale (review n2); and the
 `scaffold`'s own provenance sentence now attributes the drift to **QA round 1 Q7/Q8**, where it
