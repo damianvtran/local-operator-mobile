@@ -1,26 +1,36 @@
-"""Resolve every code citation in the ADR at the pinned revision: PATH first, then lines.
+"""Resolve every code citation in the ADR (and the plan) at the ref each one names: PATH first.
 
-    LOCAL_OPERATOR_REPO=~/local-operator python3 docs/adr/0006-verification/resolve-citations.py
+    LOCAL_OPERATOR_REPO=~/local-operator python3 docs/adr/0006-verification/resolve-citations.py \
+        [<doc-path> ...]
 
-Optional positional arguments: ``<adr-path>`` and ``<pin>`` (defaults: the ADR, and the pin the
-document names). The pinned source checkout comes from ``$LOCAL_OPERATOR_REPO`` and defaults to
-``~/local-operator``; it must be a git repository containing the pin, and the script says so and
-exits 2 rather than reporting a resolution failure when it is not.
+Defaults to `docs/adr/0006-push-and-ack-sync.md` and `docs/push-plan.md`. The pinned checkout comes
+from `$LOCAL_OPERATOR_REPO` (default `~/local-operator`) and must be a git repository holding the
+refs below; the script says so and exits 2 rather than reporting a resolution failure when it is not.
 
-WHAT THIS CHECKS, EXACTLY — and what it does not:
+WHAT IS CHECKED — exactly, because the claim must not be wider than the run:
 
-* checked: every ``<file>.py:<line>`` / ``<file>.py:<line>-<line>`` citation in the ADR whose file
-  the provenance table maps (shorthand) or which is written as a full ``local_operator/...`` path.
-  For each, the **path is resolved first** (``git cat-file -e <pin>:<path>``) and only then the line
-  (or range) is checked against the file's length. Path-first is the whole point (QA round 4 Q-F1:
-  "re-resolved" was true of the line numbers and false of the path).
-* not checked: citations in ``.md``/``.ts``/``.tsx`` files (they resolve at a different pin — the
-  mobile repository's), and any citation the table neither maps nor spells out. An unmapped
-  *Python* citation is a **failure**, not a skip; the others are counted and listed as not-checked
-  so no reader has to guess the denominator.
-* not checked either: whether the cited line **supports** the claim beside it. That is
-  ``read-citations.py``'s job and, ultimately, a human's — ``attention.py:1611`` resolved for
-  several rounds while the fact it was cited for lives at ``:2047`` (QA round 5 Q-F6).
+* Every citation of the form `<file>.py:<line>`, `<file>.py:<line>-<line>`, and a BARE continuation
+  `:<line>` / `:<line>-<line>` that follows a named citation in the same flow (the document's own
+  style, e.g. `` `daemon.py`:3377-3380, `:3382-3388` ``). A bare one inherits the last named FILE and
+  that file's REF, which is how the prose reads.
+* Ref attribution: a citation into a file that exists at both refs must say which — the marker
+  `(#1864)` after the range means PR #1864's head; `(pin)` means the pin. **A citation into a
+  dual-ref file with NO marker is an ERROR**, because the two trees have different line numbers for
+  the same path and an unmarked one could silently resolve against the wrong tree. `push_devices.py`
+  needs no marker: the file exists only in #1864.
+* Path first, then the line (`git cat-file -e <ref>:<path>`, then the line against the file's length).
+
+WHAT IS NOT CHECKED, so the denominator is never implied to be larger:
+
+* Non-Python citations (`.md`, `.ts`, `.tsx`) — a different pin; counted and printed.
+* A backticked file name with no line number (prose, not a citation) — counted and printed.
+* Whether a cited line SUPPORTS its claim — that is `read-citations.py`'s job, and a human's.
+* Anything the mapping table neither maps nor spells out as a full path: an unmapped *Python*
+  citation is a FAILURE, never a silent skip.
+
+Self-test: the parser asserts its own patterns match the forms above before doing anything, and exits
+3 if they do not — a checker whose regex silently stops matching reports "all clear" for a document
+nothing was extracted from, which is the failure this file exists to prevent.
 """
 import collections
 import os
@@ -29,16 +39,34 @@ import re
 import subprocess
 import sys
 
-adr = pathlib.Path(sys.argv[1]) if len(sys.argv) > 1 else pathlib.Path("docs/adr/0006-push-and-ack-sync.md")
-pin = sys.argv[2] if len(sys.argv) > 2 else "40ca7910e49a"
-#: PR #1864's head, cited with an explicit `(#1864)` marker after the range (and `push_devices.py`
-#: always, since that file exists only there). Two refs, one document, no ambiguity: a `daemon.py`
-#: or `cli.py` citation without the marker is checked against the PIN, and fails loudly if its line
-#: does not exist there — which is the signal that it needed the marker.
-pr_ref = "d089f7e0fc0a324c38d6499290c27b2569714549"
-pr_only_files = {"push_devices.py"}
+TICK = chr(96)
+DOCS = sys.argv[1:] or ["docs/adr/0006-push-and-ack-sync.md", "docs/push-plan.md"]
+PIN = "40ca7910e49a"
+PR_REF = "d089f7e0fc0a324c38d6499290c27b2569714549"   # PR #1864's head, cited as (#1864)
+#: Files that exist at BOTH refs: a citation into one of these must carry a marker.
+DUAL_REF_FILES = {"daemon.py", "cli.py"}
+PR_ONLY_FILES = {"push_devices.py"}
+
+NAMED = re.compile(
+    "[`]?([A-Za-z_][A-Za-z0-9_/]*(?:/[A-Za-z0-9_/]+)*[.](?:py|ts|tsx|md))[`]?:([0-9]+)(?:-([0-9]+))?"
+)
+BARE = re.compile("[`]?:([0-9]+)(?:-([0-9]+))?[`]?")
+
+# --- the parser self-test (exit 3 rather than a false all-clear) -------------------------------
+for pattern, sample, want in (
+    (NAMED, "`daemon.py`:3377-3380", ("daemon.py", "3377", "3380")),
+    (NAMED, "`push_devices.py`:519", ("push_devices.py", "519", None)),
+    (BARE, "`:3382-3388`", ("3382", "3388")),
+    (BARE, "`:9`", ("9", None)),
+    (BARE, ":99999", ("99999", None)),
+):
+    m = pattern.search(sample)
+    if not m or tuple(m.groups()) != want:
+        print(f"PARSER SELF-TEST FAILED: {pattern.pattern!r} on {sample!r} gave "
+              f"{m.groups() if m else None}, wanted {want}", file=sys.stderr)
+        raise SystemExit(3)
+
 repo = pathlib.Path(os.environ.get("LOCAL_OPERATOR_REPO", "~/local-operator")).expanduser()
-text = adr.read_text()
 
 
 def git(*args: str) -> subprocess.CompletedProcess:
@@ -47,92 +75,131 @@ def git(*args: str) -> subprocess.CompletedProcess:
 
 if git("rev-parse", "--git-dir").returncode != 0:
     print(f"UNUSABLE CHECKOUT: {repo} is not a git repository — set LOCAL_OPERATOR_REPO to a clone "
-          f"that contains {pin}", file=sys.stderr)
+          f"that contains {PIN} and {PR_REF}", file=sys.stderr)
     raise SystemExit(2)
-if git("cat-file", "-e", f"{pin}^{{commit}}").returncode != 0:
-    print(f"UNUSABLE CHECKOUT: {repo} has no commit {pin} — fetch it, or point "
-          f"LOCAL_OPERATOR_REPO at a clone that does", file=sys.stderr)
-    raise SystemExit(2)
+for ref in (PIN, PR_REF):
+    if git("cat-file", "-e", f"{ref}^{{commit}}").returncode != 0:
+        print(f"UNUSABLE CHECKOUT: {repo} has no commit {ref} — fetch it, or point "
+              f"LOCAL_OPERATOR_REPO at a clone that does", file=sys.stderr)
+        raise SystemExit(2)
 
-# --- the mappings the table declares: `full/path.py` -> `shorthand.py`
-row = next(l for l in text.splitlines() if l.startswith("| **local-operator**"))
-maps = dict(re.findall(r"`(local_operator/[^`]+\.py)` → `([^`]+\.py)`", row))
-rev = {shorthand: full for full, shorthand in maps.items()}
-assert maps, "no mappings parsed"
-
-# --- every citation in the document body, by shorthand or full path
-flat = " ".join(text.split())
-# Two forms, and both are checked: a NAMED citation (`daemon.py`:3380 or `daemon.py`:3377-3380) and
-# a BARE continuation (`:3382-3388`), which the document uses inside a paragraph to keep pointing at
-# the file it just named. A bare range inherits the last named file AND that file's ref, which is how
-# the prose reads — so a paragraph that names `cli.py` (#1864) and then three bare ranges gets all
-# four checked against PR #1864's tree.
-cites: list[tuple[str, str, str, bool]] = []
-last_full: str | None = None
-last_marked = False
-for m in re.finditer(
-    r"`?(?P<name>[A-Za-z_][\w/]*(?:/[\w/]+)*\.(?:py|ts|tsx|md))`?:(?P<line>\d+)(?:-(?P<line2>\d+))?"
-    r"|`?:(?P<bare>\d+)(?:-(?P<bare2>\d+))`?",
-    flat,
-):
-    marked = "#1864" in flat[m.end() : m.end() + 24]
-    if m.group("name"):
-        last_full, last_marked = m.group("name"), marked
-        cites.append((m.group("name"), m.group("line"), m.group("line2"), marked))
-    elif last_full:
-        cites.append((last_full, m.group("bare"), m.group("bare2"), last_marked))
-
-counts: collections.Counter[str] = collections.Counter()
 bad: list[tuple[str, str, str]] = []
 unresolved: set[str] = set()
+unmarked: set[str] = set()
 not_checked: collections.Counter[str] = collections.Counter()
+line_less: list[str] = []
+prose_lines: list[str] = []
+counts: collections.Counter[str] = collections.Counter()
 checked: set[tuple[str, str, str]] = set()
-# One `git show` per distinct FILE (pinned sources are large; a read per citation made this script
-# too slow to run, which is its own kind of failure). The check is still path-first, then lines.
 bodies: dict[tuple[str, str], list[str] | None] = {}
 
-for path, line, line2, marked in cites:
-    if path.endswith((".ts", ".tsx", ".md")):
-        not_checked[path.rsplit(".", 1)[-1]] += 1
-        continue
-    ref = pr_ref if (marked or path in pr_only_files) else pin
-    full = rev.get(path) or (path if path.startswith("local_operator/") else None)
-    if full is None and path in pr_only_files:
-        full = f"local_operator/mobile/{path}"   # PR-only file: only the ref differs
-    if full is None:
-        unresolved.add(path)            # NO SILENT SKIPS: unresolvable is a failure
-        continue
-    key = (ref, full, line)
-    if key in checked:
-        continue
-    checked.add(key)
-    counts[full] += 1
-    if (ref, full) not in bodies:
-        probe = git("cat-file", "-e", f"{ref}:{full}")
-        bodies[(ref, full)] = git("show", f"{ref}:{full}").stdout.splitlines() if probe.returncode == 0 else None
-    body = bodies[(ref, full)]
-    if body is None:
-        bad.append((full, line, "PATH DOES NOT EXIST"))
-        continue
-    if int(line) > len(body) or (line2 and int(line2) > len(body)):
-        bad.append((full, line, f"line {line} beyond EOF ({len(body)} lines)"))
+line_less: list[str] = []
+prose_lines: list[str] = []
+for doc in DOCS:
+    text = pathlib.Path(doc).read_text()
+    flat = " ".join(text.split())
+    # --- the mapping table is the ADR's; the plan cites by the same shorthands
+    try:
+        row = next(l for l in text.splitlines() if l.startswith("| **local-operator**"))
+        maps = dict(re.findall("[" + TICK + "](local_operator/[^" + TICK + "]+[.]py)[" + TICK + "]"
+                               " → [" + TICK + "]([^" + TICK + "]+[.]py)[" + TICK + "]", row))
+    except StopIteration:
+        maps = {}
+    if not maps:
+        adr = pathlib.Path("docs/adr/0006-push-and-ack-sync.md")
+        row = next(l for l in adr.read_text().splitlines() if l.startswith("| **local-operator**"))
+        maps = dict(re.findall("[" + TICK + "](local_operator/[^" + TICK + "]+[.]py)[" + TICK + "]"
+                               " → [" + TICK + "]([^" + TICK + "]+[.]py)[" + TICK + "]", row))
+    rev = {shorthand: full for full, shorthand in maps.items()}
 
-print(f"checkout={repo}  pin={pin}  mappings={len(maps)}  "
-      f"distinct (path,line) citations CHECKED={len(checked)}")
-print("files touched:", " ".join(f"{k}({v})" for k, v in sorted(counts.items())))
-# A backticked file with no `:line` is prose, not a citation — but it is counted and named here so
-# "everything the document cites was checked" is never implied when it was not (QA round 7, row 3:
-# a citation-shaped token the regex does not match used to be skipped in silence).
-mention_spans = list(re.finditer(r"`([A-Za-z_][\w/]*\.py)`(?![`:])", flat))
-line_less = [m.group(1) for m in mention_spans if not re.match(r"`?:\d", flat[m.end() : m.end() + 2])]
+    # --- one ordered pass over both forms, so a bare range inherits the file it follows
+    marks: list[tuple[int, str, str, str, str]] = []
+    for m in NAMED.finditer(flat):
+        marks.append((m.start(), "named", m.group(1), m.group(2), (m.group(3) or "")))
+    for m in BARE.finditer(flat):
+        # a bare match inside a named one is noise: keep only those not overlapping a named span
+        marks.append((m.start(), "bare", "", m.group(1), (m.group(2) or "")))
+    named_spans = [(m.start(), m.end()) for m in NAMED.finditer(flat)] + [(None, None)]  # kept simple
+    named_spans = named_spans[:-1]
+    marks = [m for m in marks if m[1] == "named"
+             or not any(a is not None and m[0] >= a and m[0] < b for a, b in named_spans)]
+    marks.sort(key=lambda t: (t[0], 0 if t[1] == "named" else 1))
+
+    line_less.clear()
+    last_full: str | None = None
+    last_marked = False
+    for pos, kind, name, line, line2 in marks:
+        if kind == "named" and name and not name.endswith((".md", ".ts", ".tsx")):
+            after = flat[pos: pos + 40]        # the marker must follow the citation, not float near it
+            marked = "#1864" in after
+            pinned = "(pin)" in after
+            last_full, last_marked = name, marked
+            if name in DUAL_REF_FILES and not (marked or pinned):
+                unmarked.add(f"{doc}:{name}:{line}")
+                continue
+            if name.endswith(".py"):
+                ref = PR_REF if (marked or name in PR_ONLY_FILES) else PIN
+                cites = [(name, line, line2, ref)]
+            else:
+                cites = []
+        elif kind == "named":
+            not_checked[name.rsplit(".", 1)[-1]] += 1
+            continue
+        else:                       # bare continuation
+            if not last_full:
+                continue
+            ref = PR_REF if (last_marked or last_full in PR_ONLY_FILES) else PIN
+            cites = [(last_full, line, line2, ref)]
+
+        for path, ln, ln2, ref in cites:
+            full = rev.get(path) or (f"local_operator/mobile/{path}" if path in PR_ONLY_FILES
+                                     else (path if path.startswith("local_operator/") else None))
+            if full is None:
+                unresolved.add(path)
+                continue
+            key = (ref, full, ln)
+            if key in checked:
+                continue
+            checked.add(key)
+            counts[full] += 1
+            if (ref, full) not in bodies:
+                probe = git("cat-file", "-e", f"{ref}:{full}")
+                bodies[(ref, full)] = (git("show", f"{ref}:{full}").stdout.splitlines()
+                                       if probe.returncode == 0 else None)
+            body = bodies[(ref, full)]
+            if body is None:
+                bad.append((full, ln, f"PATH DOES NOT EXIST at {ref[:7]}"))
+                continue
+            if int(ln) > len(body) or (ln2 and int(ln2) > len(body)):
+                bad.append((full, ln, f"line {ln} beyond EOF ({len(body)} lines) at {ref[:7]}"))
+
+    line_less += [m.group(1) for m in re.finditer("[" + TICK + "]([A-Za-z_][A-Za-z0-9_/]*[.]py)[" +
+                                                  TICK + "](?![`:]?)", flat)]
+    # a line number written as PROSE ("`gateway.py` line 5") is not a citation form we parse; it is
+    # reported so nothing is silently outside the denominator (QA round 8, Q-F26's probe).
+    prose_lines += [m.group(0)[:60] for m in re.finditer(
+        "[`]?[A-Za-z_][A-Za-z0-9_/]*[.]py[" + TICK + "]?[^.\n]{0,24}?line[ ]+[0-9]+", flat)]
+
+print(f"checkout={repo}  pin={PIN}  pr_ref={PR_REF[:7]}  mappings={len(rev)}  "
+      f"distinct (ref,path,line) citations CHECKED={len(checked)}  dual-ref pairs checked="
+      f"{sum(1 for (r, f, _) in checked if f.rsplit('/', 1)[-1] in DUAL_REF_FILES)}")
+if counts:
+    print("files touched:", " ".join(f"{k}({v})" for k, v in sorted(counts.items())))
 if line_less:
-    sample = ", ".join(sorted(set(line_less))[:6])
-    print(f"MENTIONS WITHOUT A LINE NUMBER (not checked, {len(line_less)}): {sample}"
-          + (" …" if len(set(line_less)) > 6 else ""))
-
+    print(f"MENTIONS WITHOUT A LINE NUMBER (not checked, {len(line_less)}): "
+          + ", ".join(sorted(set(line_less))[:6]) + (" …" if len(set(line_less)) > 6 else ""))
+if prose_lines:
+    print(f"CITATIONS WRITTEN AS PROSE (not checked, {len(prose_lines)}) — write `file.py`:N instead:")
+    for pl in sorted(set(prose_lines))[:5]:
+        print(f"  {pl}")
 if not_checked:
-    print("NOT CHECKED (different pin or non-Python):",
-          ", ".join(f"{k} x{v}" for k, v in sorted(not_checked.items())))
+    print("NOT CHECKED (different pin):", ", ".join(f"{k} x{v}" for k, v in sorted(not_checked.items())))
+if unmarked:
+    print(f"CITATIONS INTO DUAL-REF FILES WITH NO MARKER ({len(unmarked)}) — each needs `(#1864)` or "
+          f"`(pin)`, because the two trees put different code on the same line:")
+    for u in sorted(unmarked):
+        print(f"  {u}")
+    bad.append(("(unmarked)", "0", "no ref marker for: " + ", ".join(sorted(unmarked))))
 if unresolved:
     print(f"UNRESOLVED CITATIONS ({len(unresolved)}) — each needs a mapping or a rewrite:")
     for u in sorted(unresolved):
@@ -141,7 +208,7 @@ if unresolved:
 
 if bad:
     print(f"FAILURES ({len(bad)}):")
-    for path, line, why in bad:
-        print(f"  {path}:{line}  {why}")
+    for path, ln, why in bad:
+        print(f"  {path}:{ln}  {why}")
     raise SystemExit(1)
-print("OK: every mapped path exists at the pin and every cited line resolves")
+print("OK: every cited path exists at its ref and every cited line resolves")

@@ -63,6 +63,20 @@ merged as PR [#13](https://github.com/damianvtran/local-operator-mobile/pull/13)
 the same day. Two records sharing a number is the one thing an ADR index cannot survive, so
 this is 0006.
 
+**Ref markers, and what the checkers actually check** (round 8 Q-F26/Q-F27 — the claim must not be
+wider than the run). Every citation is resolved at the ref it names: **`(#1864)`** = PR #1864's head
+above, **`(pin)`** = the pinned commit above. A citation into a file that exists at **both** refs
+(`daemon.py`, `cli.py`) must carry one of the two — the two trees put different code on the same line
+numbers, so an unmarked one is a **failure, not a default**; `push_devices.py` needs no marker
+because it exists only in #1864. A **bare continuation** (`:3382-3388`) inherits the file *and the
+ref* of the citation it follows, which is how the prose reads. The three scripts in
+[`docs/adr/0006-verification/`](0006-verification/) are this paragraph's checkable form; each exits 2
+rather than pretending when `$LOCAL_OPERATOR_REPO` is unusable, and
+[their README](0006-verification/README.md) states exactly what each proves **and does not**.
+**What they do not check, so no reader has to guess the denominator:** `.md`/`.ts`/`.tsx` citations
+(they resolve at the mobile repository's pin), a file named with no line, a line number written as
+prose, and — the one no script can close — whether a cited line **supports** the claim beside it.
+
 **Provenance of code citations.** Every `file:line` below is stated at a named revision and
 was resolved with `git show <ref>:<path>` — never read from a working tree, because the
 shared checkouts carry other sessions' staged work. **Every citation here has been re-resolved
@@ -91,7 +105,7 @@ that had to become true.)
 
 | Repository | Revision | How paths are cited |
 |---|---|---|
-| **local-operator** | `40ca7910e49a` — **a pinned SHA, and *not* `origin/main`**: it *was* `origin/main` when this document was written and is **16 commits behind** it as measured on **2026-09-30** (`origin/main` = `d5346e173`; it was twelve behind when review round 2 read it, at `061ede7` — the distance moves with the branch, so it is always dated). **Every line number below is stated at `40ca7910e49a`**; re-derive at that ref and expect an offset at a newer one: `app.py`'s `_cmd_notifications` is `:40600` on current main against `:40562` here, and `session_sidebar.py`'s "45%" line `:800` against `:704` | `local_operator/mobile/daemon.py` → `daemon.py`; `local_operator/session/attention.py` → `attention.py`; `local_operator/session/runtime/presence.py` → `presence.py`; `local_operator/session/runtime/viewers.py` → `viewers.py`; `local_operator/server/utils/desktop_feed.py` → `desktop_feed.py`; `local_operator/server/utils/desktop_presence.py` → `desktop_presence.py`; `local_operator/notifications/compose.py` → `compose.py`; `local_operator/tui/app.py` → `app.py`; `local_operator/tui/notify.py` → `notify.py`; `local_operator/tui/widgets/session_sidebar.py` → `session_sidebar.py`; `local_operator/operator/devices.py` → `devices.py`; `local_operator/tunnels/api.py` → `tunnels/api.py`; `local_operator/tunnels/service.py` → `tunnels/service.py`, `local_operator/tunnels/gateway.py` → `gateway.py`, `local_operator/cli.py` → `cli.py`, `local_operator/session/runtime/registry.py` → `registry.py`, `local_operator/mobile/attach_client.py` → `attach_client.py`, `local_operator/mobile/tui_handle.py` → `tui_handle.py`, `local_operator/mcp/grants.py` → `mcp/grants.py`, `local_operator/mobile/auth.py` → `mobile/auth.py`, `local_operator/mobile/peer_client.py` → `mobile/peer_client.py`, `local_operator/session/runtime/server.py` → `session/runtime/server.py`, `local_operator/info/render.py` → `info/render.py`, `local_operator/network/dial.py` → `network/dial.py`, `local_operator/operator/devices.py` → `operator/devices.py`; `local_operator/session/session.py` → `session.py`; `local_operator/resume.py` → `resume.py`; `local_operator/server/models/desktop_sessions.py` → `models/desktop_sessions.py`; `local_operator/server/routes/desktop_sessions.py` → `routes/desktop_sessions.py`; `local_operator/server/utils/desktop_sessions.py` → `utils/desktop_sessions.py`; `local_operator/mobile/web/src/store.ts` → `web/src/store.ts`; `local_operator/mobile/install.py` → `mobile/install.py`; `docs/*.md` by full path |
+| **local-operator** | `40ca7910e49a` — **a pinned SHA, and *not* `origin/main`**: it *was* `origin/main` when this document was written and is **16 commits behind** it as measured on **2026-09-30** (`origin/main` = `d5346e173`; it was twelve behind when review round 2 read it, at `061ede7` — the distance moves with the branch, so it is always dated). **Every line number below is stated at `40ca7910e49a`**; re-derive at that ref and expect an offset at a newer one: `app.py`'s `_cmd_notifications` is app.py 40600 on current main against 40562 here   <!-- not citations: line drift, described in prose -->, and `session_sidebar.py`'s "45%" line `:800` against `:704` | `local_operator/mobile/daemon.py` → `daemon.py`; `local_operator/session/attention.py` → `attention.py`; `local_operator/session/runtime/presence.py` → `presence.py`; `local_operator/session/runtime/viewers.py` → `viewers.py`; `local_operator/server/utils/desktop_feed.py` → `desktop_feed.py`; `local_operator/server/utils/desktop_presence.py` → `desktop_presence.py`; `local_operator/notifications/compose.py` → `compose.py`; `local_operator/tui/app.py` → `app.py`; `local_operator/tui/notify.py` → `notify.py`; `local_operator/tui/widgets/session_sidebar.py` → `session_sidebar.py`; `local_operator/operator/devices.py` → `devices.py`; `local_operator/tunnels/api.py` → `tunnels/api.py`; `local_operator/tunnels/service.py` → `tunnels/service.py`, `local_operator/tunnels/gateway.py` → `gateway.py`, `local_operator/cli.py` → `cli.py`, `local_operator/session/runtime/registry.py` → `registry.py`, `local_operator/mobile/attach_client.py` → `attach_client.py`, `local_operator/mobile/tui_handle.py` → `tui_handle.py`, `local_operator/mcp/grants.py` → `mcp/grants.py`, `local_operator/mobile/auth.py` → `mobile/auth.py`, `local_operator/mobile/peer_client.py` → `mobile/peer_client.py`, `local_operator/session/runtime/server.py` → `session/runtime/server.py`, `local_operator/info/render.py` → `info/render.py`, `local_operator/network/dial.py` → `network/dial.py`, `local_operator/operator/devices.py` → `operator/devices.py`; `local_operator/session/session.py` → `session.py`; `local_operator/resume.py` → `resume.py`; `local_operator/server/models/desktop_sessions.py` → `models/desktop_sessions.py`; `local_operator/server/routes/desktop_sessions.py` → `routes/desktop_sessions.py`; `local_operator/server/utils/desktop_sessions.py` → `utils/desktop_sessions.py`; `local_operator/mobile/web/src/store.ts` → `web/src/store.ts`; `local_operator/mobile/install.py` → `mobile/install.py`; `docs/*.md` by full path |
 | **damianvtran/local-operator PR #1864** | `d089f7e0fc0a324c38d6499290c27b2569714549` — **a PR head, not `main` and not a tag**, which is a different kind of pin from the mobile repository's: it can move, and a reader must re-read it rather than assume. Head at the time of writing; **open, not merged** — the implementation this ADR adopts for the device lifecycle and the operators-only un-revoke route. Its citations carry the marker **`(#1864)`** after the range (`daemon.py`:4730-4770 (#1864)), and `push_devices.py` is cited without one because the file exists only there. Read with `gh pr diff 1864 --repo damianvtran/local-operator` | same rule: `git show d089f7e0f:<path>`, never a working tree |
 | **local-operator-mobile** | `origin/main` @ `d5bb850fccac4dcfdd80f2e3b352a51107a955bc` (read 2026-09-30) | this repository's own paths; unmerged work named by branch and SHA |
 | **Radient** (control plane, edge, console) | **no code access** — specified here as an *interface*, never as a change to existing code | every cloud route in §3.1 is marked **proposal** |
@@ -123,12 +137,12 @@ there are **three** distinct things, and only one of them is what a push may car
 `unseen` is *derived*, never stored: a conversation is unread when
 `MAX(completions.sequence) > receipts.acknowledged` (`attention.py:1588-1612`), surfaced as
 `AttentionState.unseen` and mirrored into the relay's `SessionSummary.unseen`
-(`daemon.py:1051`; `_is_unseen` at `:1099`).
+(`daemon.py:1051` (pin); `_is_unseen` at `:1099`).
 
 **Pending gates are a fourth, separate thing.** A parked `ask`/`approval` has its own
 lifecycle and is *never* answered or removed by a completion receipt (`docs/ATTENTION.md`
 §"Identity and durability"); the phone sees it as `needs_attention` + `pending_kind`
-(`daemon.py:991-992`), and the desktop machine-wide feed deliberately does not carry gates at
+(`daemon.py:991-992` (pin)), and the desktop machine-wide feed deliberately does not carry gates at
 all (`BRIDGE_NOTIFIABLE_KINDS = {"complete", "error", "retired"}`,
 `utils/desktop_sessions.py:368`). §1.4 keeps that boundary, and §2.4's Settings
 statement is honest about it.
@@ -161,9 +175,9 @@ under the config root, through the same `AttentionStore`:**
   `routes/desktop_sessions.py:3428`) and in bulk (`POST /v1/desktop/attention/seen`, 1..500
   items, `:3462`) and learns about every change within ~100 ms from the machine-wide feed
   (`GET /v1/desktop/events`; one `os.stat` doorbell per tick, `docs/design/notification-feed.md`);
-- the **mobile daemon** acks with `POST /api/sessions/{id}/seen` (`daemon.py:3642-3696`,
+- the **mobile daemon** acks with `POST /api/sessions/{id}/seen` (`daemon.py:3642-3696` (pin),
   route registered at `:4701`) and then invalidates its summaries cache and wakes the list
-  SSE (`:3694-3695`), and every 2 s (`SCAN_INTERVAL_S = 2.0`, `daemon.py:92`) re-reads the
+  SSE (`:3694-3695`), and every 2 s (`SCAN_INTERVAL_S = 2.0`, `daemon.py:92` (pin)) re-reads the
   store's own change detector and repaints every watched session (`:2499-2535`).
 
 So **"an ack on one surface clears it on the others" is already true for surfaces attached to
@@ -287,7 +301,7 @@ GET /api/attention/unread                                       // (new) auth-ga
 
 and, on the list payload the app already subscribes to, a **top-level sibling of `degraded`**
 — *not* inside `capabilities`, which is a feature-flag dict where "a missing key means this
-build does not have it" (`daemon.py:3528-3530`, `docs/relay/contract.md`:203-204):
+build does not have it" (`daemon.py:3528-3530` (pin), `docs/relay/contract.md`:203-204):
 
 ```jsonc
 {"sessions": [...], "degraded": [...], "unread": {"count": 2, "revision": [1043, 1041, 7], "degraded": []}}
@@ -316,13 +330,13 @@ which §1.4 forbids.
 **Decision — one predicate, named once (review QA Q14): the population is the identity set the
 listing's own scan produces, with `is_user_session` applied inside that scan.** It is *not*
 re-derived afterwards from `_durable_user_session_dir`, the per-id detail check
-(`daemon.py:1194-1207`), which additionally requires a `transcript.jsonl` and a well-formed
+(`daemon.py:1194-1207` (pin)), which additionally requires a `transcript.jsonl` and a well-formed
 name and would put a durable-but-detail-less row in one set and not the other. Everything below
 is that one set, in the listing's snapshot:
 
-- the listing's rows (`recent_session_rows(directory, 100, strict=True)`, `daemon.py:665`, plus
+- the listing's rows (`recent_session_rows(directory, 100, strict=True)`, `daemon.py:665` (pin), plus
   live entries) — the same identity set the attention decoration is already built for
-  (`daemon.py:778-782`), so this is one pass over data already in hand, not a second scan;
+  (`daemon.py:778-782` (pin)), so this is one pass over data already in hand, not a second scan;
 - **user-facing sessions only** — the listing's own origin filter, `USER_ORIGINS`
   (`resume.py:169`) and `_is_hidden_origin` (`resume.py:1715`), applied inside that scan, which
   excludes `agent/<id>` identities, subagent-only rows and scheduled origins;
@@ -351,12 +365,12 @@ subscription per surface.**
 |---|---|---|
 | **TUI** | `/notifications read` → `acknowledge_many` over the rows its sidebar painted (`app.py:40563-40590`, write at `:40741`) | its catalogue poll (`app.py:27291-27348`, which reads `AttentionStore.revision()` and the attention state) |
 | **Desktop** | `POST /v1/desktop/sessions/{id}/seen` (`routes/desktop_sessions.py:3428`), and `POST /v1/desktop/attention/seen` for a clear-all (`:3462`) | `GET /v1/desktop/events` — 100 ms doorbell; `attention` frames per changed session; `acknowledgement_map()` is its delta read (`desktop_feed.py:931,1188`) |
-| **Mobile app** | `POST /api/sessions/{id}/seen` with `{completion_token}` (`daemon.py:3642-3696`) | the list SSE (`/api/sessions/events`, woken by the daemon on its own ack, `:3694-3695`) while foregrounded, and **push** while backgrounded (new, §2) |
+| **Mobile app** | `POST /api/sessions/{id}/seen` with `{completion_token}` (`daemon.py:3642-3696` (pin)) | the list SSE (`/api/sessions/events`, woken by the daemon on its own ack, `:3694-3695`) while foregrounded, and **push** while backgrounded (new, §2) |
 
 **The rule the three surfaces share, stated once:** *an acknowledgement is
 `(conversation, completion_token)`, it is idempotent, it is refused when the token is not the
 conversation's current completion (`superseded_completion_token`, `attention.py:185`;
-`daemon.py:3676-3690`), and **no automatic path may acknowledge anything** — only a gesture,
+`daemon.py:3676-3690` (pin)), and **no automatic path may acknowledge anything** — only a gesture,
 or a result a human actually rendered* (`docs/ATTENTION.md` §"What a frontend can
 acknowledge" and R10). Nothing in the push work relaxes that: **arriving, tapping, or being
 woken by a push is not a read.**
@@ -390,7 +404,7 @@ Consequences, all deliberate:
   support varies — §5).
 - **When the machine cannot be read, the badge is not updated** and the app says so: `count`
   is **absent** and `degraded` is `["attention"]`, mirroring the listing's existing contract
-  (`daemon.py:739`, `docs/relay/contract.md`:196-200). A store that could not be read is not
+  (`daemon.py:739` (pin), `docs/relay/contract.md`:196-200). A store that could not be read is not
   an empty pile (`docs/ATTENTION.md`).
 - **The badge is cleared on sign-out and on route removal**, and a route with no push at all
   (§2.4) keeps only the number its last connection read — the app must not leave a stale
@@ -431,7 +445,7 @@ push, and only for a device that receives one). Recorded, not chosen.
 #### 1.6 Cross-*device* is solved here; cross-*machine* is explicitly not
 
 - **Several devices, one machine — covered.** Every device reads the same store through the
-  same daemon, and every ack wakes the list SSE (`daemon.py:3694-3695`). A device that is not
+  same daemon, and every ack wakes the list SSE (`daemon.py:3694-3695` (pin)). A device that is not
   connected is corrected by the attention push (§2.3, §3.3). No double badge: a device's badge
   is the machine's number, and an ack on device A makes device B's next read (or wake) return
   the new number.
@@ -464,8 +478,8 @@ push, and only for a device that receives one). Recorded, not chosen.
   │  (tunnels/service.py:47) exists for the relay's reachability, and       │
   │  coupling push to it would mean "stop the tunnel, stop the pushes".     │
   │                                                                        │
-  │  every 2 s (SCAN_INTERVAL_S, daemon.py:92) — the loop that already       │
-  │  reads AttentionStore.revision() (daemon.py:2499-2535):                  │
+  │  every 2 s (SCAN_INTERVAL_S, daemon.py:92 (pin)) — the loop that already       │
+  │  reads AttentionStore.revision() (daemon.py:2499-2535 (pin)):                  │
   │    read NEW publications AND new heals — two cursors:                   │
   │    published_since / superseded_since(cursor)  attention.py:1684/:1740   │
   │    diff acknowledgement_map() (attention.py:1780) for acks               │
@@ -559,9 +573,9 @@ publication cursor (Q9), and why §3.4's content-derived key has something to mi
 | **Account → devices** | account id → the account's registered device ids (what may *receive* is decided by the state marker, §4) | routing; the account already exists (`GET /v1/me`, `tunnels/api.py`:144-170) |
 | **Computer → devices** | the connector's tunnel identity → the devices registered for *that* machine | a user with three machines must not be pushed about machine C's work while paired to A |
 | **Delivery** | `(device_id, conversation_handle, emit_id)` → sent/attempted, provider id, response code, **kept 14 days** | the record of what was pushed: it is what makes re-delivery idempotent, a revocation testable and the cloud's own alerts meaningful. **It is not returned to the machine** (§3.1) |
-| **Credential (per device)** — **the machine's own record** | `credential_live`, `last_authenticated_at`, **`credential_issued_at`** *(new — the cookie's issue time, written by the relay's login route, `daemon.py`:3433-3455; it is what makes the direct route's lapse derivable, §4 rule 2 / Q-F15)*, and the **per-device key** (`device_key`): **minted by the machine at every registration and stored as the key ITSELF in the machine's 0600 record** (`push_devices.py`:194 field, `:510` written, `:946` the atomic 0600 write — core's shape, PR #1864, **the key itself, not a hash** — a hash could not be returned per call, and the per-call return is what makes registration the key's delivery path; **divergence for core, listed in the plan**: a hash would require a one-time return plus a re-register refusal, and #1864 does not do that), and held by the phone in the keystore keyed by its `install_id`. **The store's custody is the same rule the discovery records use — 0600 under 0700 (`registry.py`:5)** | the second limb of §4 rule 2, and the only place the flag lives. **The machine owns it**: the relay's routes write it as they see the cookie and the emit worker (the same process) reads it, so there is no second copy to disagree with and **no epoch to compare** (round 4 `m1`, QA Q-F3). **The key never goes to the cloud** — round 5 M3 caught the earlier sentence "never leaves the machine", which was wrong: the *phone* presents it, as `X-Lop-Device-Key` (§3.1). **A rotation happens on registration**: every `register` re-mints the key and returns it in that response (§3.1), so the owner's lever is a fresh registration (a reinstall, or the device's next authenticated register) and the account console's revoke of the account's access — **not** the device's own initiative; an offline device resumes only by re-registering with its current relay credential, and a device the machine has marked is refused at registration before any key is minted. What the cloud holds is the **coalesced** copy of the two flag values, never per-request traffic (`m5`) |
+| **Credential (per device)** — **the machine's own record** | `credential_live`, `last_authenticated_at`, **`credential_expires_at`** *(new — the **expiry the phone's cookie itself presented**, recorded at register time and refreshed on any authenticated request that names its device; `sign_cookie` puts the expiry in the cookie's value, `mobile/auth.py`:465-469`, so no clock arithmetic and no login-route writer is needed — §4 rule 2 / Q-F15 / R8-m1)*, and the **per-device key** (`device_key`): **minted by the machine at every registration and stored as the key ITSELF in the machine's 0600 record** (`push_devices.py`:194 field, `:510` written, `:946` the atomic 0600 write — core's shape, PR #1864, **the key itself, not a hash** — a hash could not be returned per call, and the per-call return is what makes registration the key's delivery path; **divergence for core, listed in the plan**: a hash would require a one-time return plus a re-register refusal, and #1864 does not do that), and held by the phone in the keystore keyed by its `install_id`. **The store's custody is the same rule the discovery records use — 0600 under 0700 (`registry.py`:5)** | the second limb of §4 rule 2, and the only place the flag lives. **The machine owns it**: the relay's routes write it as they see the cookie and the emit worker (the same process) reads it, so there is no second copy to disagree with and **no epoch to compare** (round 4 `m1`, QA Q-F3). **The key never goes to the cloud** — round 5 M3 caught the earlier sentence "never leaves the machine", which was wrong: the *phone* presents it, as `X-Lop-Device-Key` (§3.1). **A rotation happens on registration**: every `register` re-mints the key and returns it in that response (§3.1), so the owner's lever is a fresh registration (a reinstall, or the device's next authenticated register) and the account console's revoke of the account's access — **not** the device's own initiative; an offline device resumes only by re-registering with its current relay credential, and a device the machine has marked is refused at registration before any key is minted. What the cloud holds is the **coalesced** copy of the two flag values, never per-request traffic (`m5`) |
 | **Credentials** | the APNs `.p8` key id + team id; the FCM service account | the reason the cloud has to exist at all |
-| **Grant (per device)** *(cloud, proposal)* | `grant_id`, `device_id`, the computer it belongs to, `minted_at`, `last_refused_at` — the **shape is the cloud lane's** ([`docs/push-cloud-ops.md`](push-cloud-ops.md)); this ADR fixes only the two properties rule 2 depends on | **the enforceable half of §4 rule 2 on the Radient route** (round 5 Q-F8): it is *minted* at registration against an `install_id` the machine's record carries, *required* for delivery (fan-out refuses without it), and *refused* for a row whose marker forbids it. The one property that cannot be verified from this repository — a mint refused while the account has revoked that computer's access — is stated as a **cloud-side requirement** in §4 rule 2 and in §7, not assumed here. **Its life — storage, refresh, rotation** (round 6 QA Q-F8, which caught that a record with no life cannot be implemented): it **lives in the cloud's own store** beside the device row *(proposal)*; it is **refreshed** from the machine's next `credential_live` report rather than from a clock, so the cloud re-arms it from evidence; it is **rotated** — invalidated and re-minted at the next registration — when an **owner** rotates that device (`lop mobile devices rotate`, §3.1) or revokes it; and a **mint is refused outright** while the account's access for that computer is revoked. "The machine never refreshes a grant" in rule 2 means *the machine*, not the cloud |
+| **Grant (per device)** *(cloud, proposal)* | `grant_id`, `device_id`, the computer it belongs to, `minted_at`, `last_refused_at` — the **shape is the cloud lane's** ([`docs/push-cloud-ops.md`](push-cloud-ops.md)); this ADR fixes only the two properties rule 2 depends on | **the enforceable half of §4 rule 2 on the Radient route** (round 5 Q-F8): it is *minted* at registration against an `install_id` the machine's record carries, *required* for delivery (fan-out refuses without it), and *refused* for a row whose marker forbids it. The one property that cannot be verified from this repository — a mint refused while the account has revoked that computer's access — is stated as a **cloud-side requirement** in §4 rule 2 and in §7, not assumed here. **Its life — storage, refresh, rotation** (round 6 QA Q-F8, which caught that a record with no life cannot be implemented): it **lives in the cloud's own store** beside the device row *(proposal)*; it is **refreshed** from the machine's next `credential_live` report rather than from a clock, so the cloud re-arms it from evidence; it is **rotated** — invalidated and re-minted at the next registration — when an **owner** revokes it, or when the device re-registers (which re-mints the key, §3.1); and a **mint is refused outright** while the account's access for that computer is revoked. "The machine never refreshes a grant" in rule 2 means *the machine*, not the cloud |
 **What the cloud must NOT hold:** transcripts, conversation names, session ids, working
 directories, model names, prompt text, **read state or read history**, and **no unread
 count** (§1.5). §4 says what it does learn, honestly, including the residue.
@@ -795,17 +809,21 @@ POST /api/push/register
 **List this computer's devices** *(new)* — what the phone's Settings renders:
 
 ```jsonc
-GET /api/push/devices → {"devices": [{"device_id":"…","platform":"ios","environment":"production",
-                                       "app_version":"…","registered_at":…,"last_seen_at":…,
-                                       "state":"live|expired|unpaired|revoked"}],
+GET /api/push/devices → {"devices": [{"device_id":"…","platform":"ios","app_version":"1.0.0 (12)",
+                                       "registered_at":…,"last_seen_at":…,
+                                       "state":"live|expired|unpaired|revoked",
+                                       "name":"…",                    // only when a registration gave one
+                                       "credential_live":true,        // only once the machine holds it
+                                       "last_authenticated_at":…}],   // same rule
                         "precedence":"revoked > unpaired > expired"}    // §4's one vocabulary
-// Every always-present field is one the RECORD holds (`push_devices.py`:556-570, PR #1864); three
-// are present only when the record carries them, and absence is the truth rather than a null:
+// Every always-present key is one the RECORD holds, and the three optional ones are present only when
+// it carries them — absence is the truth rather than a null (`push_devices.py`:553-571 (#1864)):
 //   · "name"                    — only when a registration supplied one (`:564-565`)
 //   · "credential_live"         — only once the machine holds a credential fact (`:566-567`)
 //   · "last_authenticated_at"   — same rule, same reason (`:568-569`)
-// `install_id` and `device_key` are deliberately absent: the phone renders neither, and the wire is
-// a contract, not the store's dump (`push_devices.py`:534-546).
+// **`environment` is deliberately NOT here** (R8-m2): the record carries it for the cloud's routing,
+// the phone renders it nowhere, and the wire is a contract, not the store's dump
+// (`push_devices.py`:534-546 (#1864)). `install_id` and `device_key` are absent for the same reason.
 ```
 
 **Revoke / deregister** *(new)*. This is the **revoke** path of §4: it drops the cloud's token
@@ -823,7 +841,7 @@ DELETE /api/push/devices/{device_id}   → {"ok": true}          // revoke: toke
 // which implements it; not merged at the time of writing). The refusal is `403 machine_only` and it
 // means exactly one thing: **the request did not present this machine's operator key.** It is NOT a
 // locality test, and it must not be described as one — the relay authenticates `/api/` with ONE cookie
-// check (`authed` → `verify_cookie`, `daemon.py`:3377-3380) inside `gate()` (`:3401-3411`, which also
+// check (`authed` → `verify_cookie`, `daemon.py`:3377-3380 (pin)) inside `gate()` (`:3401-3411`, which also
 // refuses a cross-origin mutation), so a phone and the CLI look identical to it: an origin guard is
 // not an identity either. (Nit from QA round 7: "the whole of `/api/` auth" overstated `:3377-3380`.)
 POST /api/push/devices/{device_id}/unrevoke → {"ok": true, "device_id": "…"}
@@ -847,9 +865,12 @@ POST /api/push/devices/{device_id}/unrevoke → {"ok": true, "device_id": "…"}
   /api/push/devices/{device_id}/unrevoke` is registered beside its siblings (`daemon.py`:4909-4910
   (#1864)) and calls the API's own `gate()` first, so the operator key is a **second** requirement
   after the `lop_mobile` cookie (which the CLI also presents). Success is `200 {"ok": true,
-  "device_id": "…"}` (`push_devices.py`:611-680 (#1864)); it clears **one** marker, precedence-resolved
-  — `revoked_at` OR `unpaired_at` — and **restores no token or credential**, so the device must
-  register again.
+  "device_id": "…"}` (`push_devices.py`:611-645 (#1864)); it **deletes every marker the row carries** —
+  both `revoked_at` and `unpaired_at` if it has both (`:638-644` (#1864): `for marker in
+  ("revoked_at", "unpaired_at")`), which is the one-marker case in practice because §4's precedence
+  stops a row from reaching here with two — and **restores no token and no credential**: they are
+  left as the last authenticated request wrote them (`:620-626` (#1864)), so the device must register
+  again. A row with no marker is a **no-op that still answers `ok`** (`:624-626`).
 - **Presented as the header `X-Lop-Operator-Key`** (`push_devices.py`:193 (#1864)) on
   `POST /api/push/devices/{id}/unrevoke` (`daemon.py`:4826-4853 (#1864), registered at `:4909-4910`), whose
   gate is the single place the distinction is made (`_push_operator_gate`, `daemon.py`:4730-4770 (#1864)).
@@ -871,26 +892,33 @@ POST /api/push/devices/{device_id}/unrevoke → {"ok": true, "device_id": "…"}
   the Radient hop — and a phone that somehow sent one would not have the value, because the key is
   minted on this machine (`daemon.py`:4736-4741 (#1864)). **`X-Lop-Operator-Key` must NEVER be added to that
   allowlist**, whose entries are lowercase — a mixed-case literal entry would silently do nothing.
-  A QA row (Q27) asserts a request through the gateway carrying the header is refused.
+  A QA row (**Q31**) asserts a request through the gateway carrying the header is refused — on the
+  HTTP path **and** the WebSocket handshake (`gateway.py`:719 applies the same `headers()` filter).
 - **Why the daemon's route and not the session runtime's control socket**: the control socket is a
   **per-live-session-runtime** listener whose auth is a per-session key
   (`session/runtime/server.py`:10-11), while the device registry belongs to the **mobile daemon**
   and must answer with **no session attached at all** — and the runtime's own model treats anything
-  that is not exactly `locality == "local"` as remote (`attach_client.py`:878-894), which is what
+  that is not exactly `locality == "local"` as remote (`session/runtime/server.py`:1304-1307, whose gates read
+  `locality == "remote"`; the two-valued type is `attach_client.py`:889-895, "a local socket is not
+  proof"), which is what
   the daemon's relayed phone frames are. A machine secret on the daemon's own route has neither
-  problem. *(The 0600-under-0700 pattern those records use is `registry.py`:5's, and it is the same
-  custody rule this key's store follows.)*
+  problem. *(The store is a **0600 FILE** whose write is atomic and chmods before the replace
+  (`push_devices.py`:926-946 (#1864)); the **directory's** mode is not asserted there, so this
+  document claims 0600 and nothing about 0700 — the discovery records' 0600-under-0700 pattern
+  (`registry.py`:5) is a different store.)*
 - **The honest limit, adopted from core's own module docstring rather than softened**
-  (`push_devices.py`:81-87): **the key file is readable by any process running as the same user**,
+  (`push_devices.py`:88-93 (#1864)): **the key file is readable by any process running as the same user**,
   including model-authored `bash`. So "operator surface" means **same-user**, not *human*, and the
   key is **not** a boundary against another local process — such a process could as well rewrite the
   store file directly. What it closes is the direction that matters: **a device cannot restore its
   own revoked state**, because a device never has the key. For the stolen-phone threat that is the
-  whole point (a phone has no machine access); against a malicious same-user process, protection is
+  whole point — a phone has no way to present the header, on either route; and the case where that
+  is NOT enough is stated once, in §4's residual (a cookie-holding phone can drive an agent); against
+  a malicious same-user process, protection is
   **out of this ADR's threat model**, stated rather than implied.
 - **The paired-device certificate is not the discriminator, and must not be used as one** (round 5
   M5, restated): it is public data that *declares* authority and "grants nothing" by itself
-  (`daemon.py`:1626-1641), which is why `/approvals` can offer the phone a command without that
+  (`daemon.py`:1626-1641 (pin)), which is why `/approvals` can offer the phone a command without that
   amounting to the operator's credential. The route checks the **key**, nothing else.
 - **What a phone gets instead of a 404**: the ordinary `403 machine_only` body above — a route the
   app can render — and the account console remains the second path, authenticated as the account
@@ -911,7 +939,7 @@ This is what makes a cold tap landable when the conversation is not in the unrea
 `POST /api/sessions/{id}/seen` with `{"completion_token": "…", "device_id": "…"}`. The
 `device_id` is **additive and optional**: it is how a self-correcting attention push skips
 the device that just acted (§3.3). 200 `{ok, attention}`; 422 missing token
-(`daemon.py:3667-3671`); 409 `{"code": "superseded_completion_token"}` when a newer
+(`daemon.py:3667-3671` (pin)); 409 `{"code": "superseded_completion_token"}` when a newer
 completion replaced it (`:3676-3690`); 404 unknown session; 401 unauthenticated. **The app
 re-reads the projection and retries with the token it now names** — the refusal carries no
 state on purpose (`attention.py:2175-2240`).
@@ -954,7 +982,7 @@ completion's key, or the cloud treats the correction as a replay and drops it �
 `POST /seen`; acks from the TUI and the desktop are written by other processes straight into
 `attention.db` (`app.py:40741`, `routes/desktop_sessions.py:3428,3462`) and are visible only
 through the store. So attention events are emitted by the **worker**, on a change it detects
-itself, and `revision()` is the detector it already reads (`daemon.py:2499-2535`):
+itself, and `revision()` is the detector it already reads (`daemon.py:2499-2535` (pin)):
 
 1. **on a tick**, the worker compares the `revision()` triple with the one it holds — an
    **equality** check used as the trigger — and, when it differs, asks the two reads which
@@ -1029,18 +1057,22 @@ not what a phone receives, which is the APNs payload above. The block is **NEW o
 already exist**; every cloud-side shape is *(proposal)*.*
 
 ```jsonc
-// 1. THE REGISTRATION FORWARD (S7) — sent when a device registers. `devices` is NEW here.
+// 1. THE REGISTRATION FORWARD (S7) — sent when a device registers. `devices` is NEW here. The route
+//    is the forward §3.1's register step names; the body below is what it carries.
 POST <cloud>/v1/push/register
 { "computer": "<opaque per-account computer handle>",
   "device": { "device_id": "<opaque>", "platform": "ios|android",
               "environment": "sandbox|production", "app_version": "1.0.0 (12)",
               "push_token": "<platform token>", "registered_at": 1759… },
   "devices": [ { "device_id": "<opaque>", "credential_live": true,
-                 "credential_issued_at": 1759…, "last_authenticated_at": 1759… } ] }
+                 "credential_expires_at": 1759…, "last_authenticated_at": 1759… } ] }
 
 // 2. THE EMIT — the same block rides the next emit for this computer. `devices` is NEW here too.
-POST <cloud>/v1/push/emit
-{ "emit_id": "<uuid>", "type": "completion|attention", "computer": "<handle>",
+//    THE ROUTE IS THE ONE §3.1 AND THE OPS NOTE ALREADY FREEZE (`POST /v1/tunnels/{id}/push/events`,
+//    with the machine's `Idempotency-Key`), not a second spelling — S3 must not freeze two.
+POST /v1/tunnels/{tunnel_id}/push/events        Idempotency-Key: <emit key, §3.4>
+{ "v": 1,
+  "emit_id": "<uuid>", "type": "completion|attention", "computer": "<handle>",
   "conversation": "<handle>", "completion_token": "<uuid>", "kind": "complete|error|…",
   "count": 2, "exclude": ["<device_id>"],              // attention only
   "devices": [ …the same block… ] }
@@ -1055,7 +1087,9 @@ POST <cloud>/v1/push/credentials
 |---|---|---|
 | `devices[].device_id` | string | the cloud's routing key; the same identity §2.2's Device row carries |
 | `devices[].credential_live` | bool | the only fact the delivery gate needs (rule 2) |
-| `devices[].credential_issued_at` | int, unix seconds | **NEW, and the reason the lapse is computable at all**: the cookie's value is `<expiry>.<hmac>` signed once at login (`mobile/auth.py`:465-469) and never renewed, so this plus `COOKIE_TTL_S` is when it dies (Q-F15) |
+| `computer` | string | the routing key every machine→cloud call carries; `extra="forbid"` means it needs a row (§2.3's per-computer rule) |
+| `device` | object | the registration forward's own device body — `device_id`, `platform`, `environment`, `app_version`, `push_token`, `registered_at`; §2.2's Device row is the custody statement |
+| `devices[].credential_expires_at` | int, unix seconds | **NEW, and the reason the lapse is computable at all**: the cookie's own value is `<expiry>.<hmac>` (`mobile/auth.py`:465-469, signed once at login and never renewed), so the machine records **the expiry the phone presented** and the lapse is `expires_at <= now` — no clock arithmetic and no login-route writer (Q-F15 / R8-m1) |
 | `devices[].last_authenticated_at` | int, unix seconds | what the machine last observed — **never** the basis of the lapse |
 | `push_token` | string | the machine validates it and drops it (`daemon.py`:4776-4778 (#1864), PR #1864); the cloud's registry is where tokens live (§2.2) |
 | ~~conversation name, snippet, transcript, `aps.badge`~~ | — | **never** (P2 and §1.5) |
@@ -1220,7 +1254,7 @@ items both matter, because each is a thing a cloud implementer would build wrong
    request", where rule 2 specifies a **coalesced, change-triggered** report (round 4 `m5`). This
    ADR is the authority on the rate; the note is the authority on the cloud's handling of it.
 2. **The credential epoch.** The note's credential paragraph still has the machine "check the
-   credential epoch" — the exact counter rule 2 **deleted** (`:1115`, round 4 `m1` / QA Q-F3). A
+   credential epoch" — the exact counter rule 2 **deleted** (`docs/push-cloud-ops.md`:1115, round 4 `m1` / QA Q-F3). A
    reader of the note would build a check the machine will never send.
 3. **The single-route claim.** The same paragraph says delivery "resumes at each device's next
    authenticated request, **which a stolen phone, lacking the new password, cannot make**" — the
@@ -1315,12 +1349,13 @@ Three rules follow, and together they are the whole of the revocation semantics:
    COOKIE_TTL_S` at that moment (`COOKIE_TTL_S = 30 * 24 * 3600`, `:99`), and nothing refreshes it
    (`:29-33`, "there is no session table") — so a phone whose last request was on day 29 would
    derive a lapse on day 59 while its cookie really died on day 30.
-   **The machine therefore records the issue time, and the field is new**: `credential_issued_at`
-   (unix seconds), **written by the relay's login route when it mints the cookie**
-   (`daemon.py`:3433-3455, where `sign_cookie` is called), stored on the device's Credential record
-   (§2.2) beside `last_authenticated_at`, and reported in the `devices` block (§3.2). The direct
-   route's lapse is then `credential_issued_at + COOKIE_TTL_S`, which is exactly when the cookie
-   dies — an honest derivation rather than an optimistic one.
+   **The machine therefore records the expiry the phone actually presented**, and the field is new:
+   `credential_expires_at` (unix seconds), **read out of the presented cookie and written at register
+   time** (and refreshed by any later authenticated request that names its device) — **not** by the
+   login route, which knows no device and, on a first install, has no record to write to (R8-m1). It
+   lives on the device's Credential record (§2.2) beside `last_authenticated_at` and is reported in
+   the `devices` block (§3.2), so the direct route's lapse is `credential_expires_at <= now` — the
+   cookie's own death, with no arithmetic and no second clock.
    **On the Radient route the TTL does not govern at all**: the gateway mints a **fresh** cookie for
    every request it forwards (`gateway.py`:545-548`), so no phone cookie there is ever 29 days old
    and the device's liveness is the **grant's**, which the cloud owns (§2.2) — which is why that
@@ -1366,7 +1401,7 @@ Three rules follow, and together they are the whole of the revocation semantics:
    them would let a stolen device back in.
 
 **How a device comes back — and none of it is the device's own doing** (round 4 B1; round 6 made
-it structural by removing the route entirely, §3.1). By an explicit act, on a surface the device
+it structural, §3.1 — the route is operators-only and a device has no way to present the key). By an explicit act, on a surface the device
 does not control — **the operator surface** (the `lop mobile devices` verbs, which call the
 daemon's operators-only route over loopback with the machine's `operator_key`, §3.1)
 **or the account console**: the second path, and the one that works with the machine offline, which
@@ -1405,6 +1440,22 @@ freshly installed app mints a **new** one — so what binds a re-install depends
   named failure — a user told they are protected while the device keeps receiving.
 Neither route may claim a revoked device is unreachable while it still holds a live cookie, and no
 surface may offer a lever the user's route does not have.
+
+**The residual the operator key does NOT close — stated once, here** (round 8 M1 / Q-F23, accepted):
+the key is a boundary at the **HTTP layer of the un-revoke route**, and only there. **A phone holding
+a valid `lop_mobile` cookie can drive this machine's agent** — it can start a session
+(`daemon.py`:4253` (pin) is `api_start_session`) and send a prompt through the command frame (`:3964-3972`)
+— and that agent runs as the **same user** as the daemon, so it can read the registry file that holds
+`operator_key` (`push_devices.py`:88-93 (#1864) says the same thing from the other side). **Whether
+that path is actually walkable is UNTESTED** — neither review round demonstrated an exploit, and the
+agent's tool-approval policy is the thing that would have to be passed: `tool_approval_mode` in
+`config.yml`, `--yolo`, or the in-session `/approvals` command — **and `tool_approval_mode: auto`
+installs no gate at all** (`docs/CONSOLE.md`:53), so a machine configured that way has no second line
+here. The mitigations that do hold are the ones §4 already lists: the password rotation on the
+**direct** route (which invalidates the cookie) and the account-side revocation on the **Radient**
+route. Nothing in this ADR should be read as "a revoked phone cannot reach the machine" — it says
+precisely: a revoked phone cannot **un-revoke itself over HTTP**, and everything else is the agent's
+own policy.
 
 **What a revoked device keeps**: whatever it already cached locally — projections and
 transcripts (ADR 0002 §6) and its `lop_mobile` cookie until the TTL or a password rotation.
@@ -1575,16 +1626,17 @@ it today; the app's Settings must mirror it, and this is the user-facing half of
 | `revoked` | "this device was revoked on this computer" |
 | `absent` | "not in this computer's registry; it may register again" |
 
-- The five rows are `push_devices.STATE_DESCRIPTIONS` (`:159-165 (#1864)`), rendered in
-  `DESCRIBED_STATES` order (`:166-169 (#1864)`) and closed by `PRECEDENCE_SENTENCE` — "a device can
+- The five rows are `push_devices.STATE_DESCRIPTIONS` (`:159-165` (#1864)), rendered in
+  `DESCRIBED_STATES` order (`:166-169` (#1864)) and closed by `PRECEDENCE_SENTENCE` — "a device can
   carry more than one marker; the strongest is shown (revoked > unpaired > expired)"
-  (`:175-177 (#1864)`). **The app consumes the same strings**: they are module constants precisely so
+  (`:175-177` (#1864)). **The app consumes the same strings**: they are module constants precisely so
   the CLI's legend, the app's Settings and the wire cannot describe one state three ways. `absent` is
   not a row state — it is what a read-back says when the row is gone, which is also how the 60-day
   drop surfaces with no local marker (§2.2).
 - A row renders its **label** first, then `registered <when> · last authenticated <when>` — or
   `last seen <when>` for a row an earlier build wrote, because naming a field the row does not carry
-  "starts lying the moment they diverge" (`cli.py`:7988-7992 (#1864)) — then the id on its own
+  "starts lying the moment they diverge" (`cli.py`:7981-7986 (#1864) for the rationale, `:7988-7992`
+  for the renderer) — then the id on its own
   indented line (what `revoke` needs, not what a reader recognises).
 - **The unrevoke results, exactly as rendered** (`cli.py`:7888-7898 (#1864)): revoked →
   `unrevoked <label>`; unpaired → `cleared the unpaired marker on <label>`; expired → `nothing to
@@ -1696,7 +1748,7 @@ order this ADR *decides*, and the reason:
 **Citation corrections made across both remediation rounds, listed so the next reader can see
 what moved.** Round 1's were found by **QA round 1 Q7/Q8** (the review round running beside it
 found no drift of its own — "~20 citations spot-checked, all resolve" — and attributing them to
-it was round 2's Q12): `daemon.py:3689-3691` → **`:3694-3695`** (the SSE wake; `:3689-3691` is
+it was round 2's Q12): `daemon.py:3689-3691` (pin) → **`:3694-3695`** (the SSE wake; `:3689-3691` is
 the 409 body); the superseded 409 → **`:3676-3690`**; `compose.py:84-105` →
 **`:93-113`** (the `body_is_snippet`/`body_is_failure` fields); "a delivered banner does not
 mark anything read" → **`attention.py:2391-2393`**; the TUI's change detection →
@@ -1715,7 +1767,7 @@ shift under it); the citation table now maps
 path did not exist at the pin — the lines were right and the path was never exercised);
 `attention.py:1611` → **`:2047`** for the store's kind vocabulary (QA round 5 Q-F6: `:1611` is the
 `notify` line, so the citation *resolved* and the **fact** was elsewhere — found by reading the
-line); `daemon.py:777-813` → **`:778-782`** (round 6: the range started on a blank line and missed
+line); `daemon.py:777-813` (pin) → **`:778-782`** (round 6: the range started on a blank line and missed
 the set literal at `:778`); and the table now also maps `gateway.py`,
 `attach_client.py`, `tui_handle.py` and `mcp/grants.py` (QA round 6, row 7). **Only `gateway.py` and
 `attach_client.py` are cited since round 7** — the round-6 control-socket design that used the other
