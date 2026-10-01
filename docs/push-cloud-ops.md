@@ -56,33 +56,39 @@ so the cost is the worker's replicas and their observability — *est.* two smal
 managed queue. Three limits, *Decided* for launch: **delivery records kept 14 days**; **a device
 dropped after 60 days with no authenticated request** — "last seen" is its last authenticated call
 (it reads unread on launch, foreground, connect), not its last delivery; and **60 events/hour per
-computer**, the excess merged into **one digest emit** — but the ceiling is a guard over frames the
+computer**, the excess **re-delivered as one digest alert** — the ceiling is a guard over frames the
 cloud already holds, never a second producer, which is the distinction "The digest, exactly" draws.
 
 **The digest, exactly — and there is one composer.** A digest is a **visible alert** and a third
 emit type, `type: "digest"` (the enum is `completion | attention | digest`). **The machine mints
 it** — the type, an `emit_id`, the count, and an `aps.alert` built from the house constants, once,
-when a catch-up exceeds the machine's burst limit. **The cloud composes nothing**: it mints no
+when a catch-up exceeds the machine's burst limit (`BURST_LIMIT` — **three** eligible rows in one
+catch-up, the machine's own threshold, `docs/design/notification-feed.md`). **The cloud composes
+nothing**: it mints no
 payload, renders no banner from `type`, `kind` or `count`, and never edits, rewords or synthesises
 alert text — the same rule that keeps it blind to conversation names and content (**P2**: ADR 0006's
 boundary that no conversation name, snippet or transcript reaches the cloud). Its 60/hour ceiling is
-a **delivery guard over frames it already holds**: it re-delivers the most recent frame for that
-computer, **whatever its type**, collapsed as `digest:<computer>` — that frame's `alert` verbatim —
-and records a drop **only when it holds no frame at all**, so the 61st event never vanishes just
-because it happened to be a completion. Its digest record is a record of **deliveries**, not a second
+a **delivery guard over frames it already holds**: it re-delivers the most recent frame it holds
+**that carries an `alert`** (`completion` or `digest`), collapsed as `digest:<computer>` — that
+frame's `alert` verbatim — and **if it holds only `attention` frames, or holds nothing, it delivers
+nothing and records the drop**. Round 3's refinement, and why it exists: "whatever its type" would
+re-deliver a *silent* attention frame under `digest:<computer>`, which is the hole the digest type
+exists to close. Its digest record is a record of **deliveries**, not a second
 payload class, and carries no `emit_id` of its own.
 
-Delivered verbatim, the frame is: `alert: {title, body}` — required on `completion` and `digest` and
+The machine's digest frame is: `alert: {title, body}` — required on `completion` and `digest` and
 absent on `attention` — with the body the **house constant** (the machine's fixed sentence, never
 model-written text) plus the count; `aps.alert` present and **never** `content-available`; **no
 conversation handle, no completion token and no `kind`**; `apns-collapse-id` / `notification.tag` =
 `digest:<computer>`, so digests never stack; `aps.badge` still never sent. The **attention** form
 stays silent (`content-available`, no alert) — that difference is the point of the type, since a
 coalesced catch-up delivered as an attention push would be a banner no user ever sees. `exclude` is
-permitted on a digest with the attention form's meaning and is **never required** there: the required
+permitted on a digest with the attention form's meaning and is **never required** there: the
+required
 case is the ack-triggered attention emit, and a catch-up digest has no acting device. Idempotency
 follows the ADR: **one `emit_id` is minted when the window closes** and persisted, the key is
-`sha256("digest" ‖ emit_id ‖ computer)`, retries reuse it, and a new window gets a new key.
+`sha256("digest" ‖ emit_id ‖ computer)` *(proposal, as in the ADR)*, retries reuse it, and a new
+window gets a new key.
 
 **States and markers.** Five states, a marker on each row except the live and absent ones;
 precedence is **revoked > unpaired > expired**, and `GET /api/push/devices` renders the

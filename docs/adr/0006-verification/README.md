@@ -117,6 +117,18 @@ head). It is a reading aid, not an oracle: a human compares the two columns.
 * **An unmapped Python citation is a FAILURE, not a skip** — that strictness is what found seven
   unmapped paths in round 6 and the `server.py` mismatch in round 8.
 * **Whether a citation's line supports its claim** — see `read-citations.py` above.
+* **The prose wrap is a convention, not a guarantee.** The documents wrap prose at 100 columns. The
+  exceptions are **table rows** (a GFM row must be one physical line), **headings**, and
+  **single-token lines** — a link whose text is a single token, which in the ADR is exactly three
+  lines (`[background`, `[REST`, `[Customizing`, each with its URL on the following line), or one
+  unbreakable code span. Markdown cannot break any of those without changing what they are. So
+  "every prose line is under 100 columns" holds **only** with those excluded, and **no script
+  asserts the wrap** (round 1, n2; the three fragments named in round 2, Q6/n3).
+* **A phrase-presence gate cannot catch a meaning reversal that keeps the phrases.** These checks
+  assert sentences, not senses: an edit that keeps a gated phrase while inverting what it says still
+  passes. That is the residual recorded on #19 as well, and it is why the **literal** and the
+  **field-table row** — what a builder copies — are the contract, with prose drift left to a
+  reviewer (round 2, Q7).
 * **The plan's prose against the ADR's prose.** `verify-documents.py` cross-checks the slice ids one
   way only: the ADR may name no slice the plan does not define, and the digest's slices (`S5`, `S7`)
   are named in both. It does **not** compare the two documents' wording, and the plan may define

@@ -83,6 +83,53 @@ def ok_order(plan_text):  # last 9 ids ascending
     ids = [int(m) for m in _re.findall(r"^\| Q(\d+) \|", plan_text.split("## Not in this plan")[0], _re.M)][-9:]
     return ids == sorted(ids)
 
+def list_structure(text):
+    """(bullets, numbered, blockquotes, fences) — LINE-START counts only.
+
+    Round 2's review M2 / QA Q4: a by-paragraph re-wrap flattened the Markdown list structure — the
+    ADR's line-start bullets went 144 -> 32, §3.2's three-item list rendered as ONE item — and every
+    word-based check passed, because a wrap moves newlines while preserving the word multiset. The
+    floor below is the structure measured at the last known-good revision (50f25d8).
+    """
+    fences = bullets = numbered = quotes = 0
+    in_fence = False
+    for line in text.split("\n"):
+        t = line.strip()
+        if t.startswith("```"):
+            fences += 1
+            in_fence = not in_fence
+            continue
+        if in_fence:
+            continue
+        if re.match(r"^\s*[-*] ", line):
+            bullets += 1
+        if re.match(r"^\s*\d+[.)] ", line):
+            numbered += 1
+        if t.startswith(">"):
+            quotes += 1
+    return (bullets, numbered, quotes, fences)
+
+
+GLUED = re.compile(r"[.:;]\s+(?:\d+[.)]|[-*])\s+\S")
+
+def glued_markers(text):
+    """A list marker glued onto the end of a prose sentence — what flattening looks like.
+
+    Zero at the last known-good revision, 111/17/4 in the ADR/plan/note at the flattened head.
+    """
+    hits = 0
+    in_fence = False
+    for line in text.split("\n"):
+        t = line.strip()
+        if t.startswith("```"):
+            in_fence = not in_fence
+            continue
+        if in_fence or not t:
+            continue
+        hits += len(GLUED.findall(line))
+    return hits
+
+
 def has(hay, needle): return needle in hay
 
 def sec(text, start, end):
@@ -96,7 +143,20 @@ def sec(text, start, end):
         return ""
     j = text.find(end, i)
     return text[i:j] if j > i else text[i:]
+NOTE = try_read(REF, "docs/push-cloud-ops.md") or ""
+nf = " ".join(NOTE.split())
+CEIL_21 = sec(af, "Catch-up is bounded", "Two retry policies")
+CEIL_31 = sec(af, "The cloud composes nothing", "Emit an attention change")
 DIGEST = sec(af, "The **digest** form", "Exactly one composer")
+# The structure floor: the counts at 50f25d8, the revision the by-paragraph re-wrap broke. Floors
+# rather than equality, so adding a bullet is not a FAIL — flattening always reduces the counts, and
+# that is the change this catches. `glued_markers` is the sharper half: it is exactly 0 when the list
+# structure is whole (round 2, M2 / Q4).
+STRUCT_FLOOR = {
+    "ADR": ((144, 31, 7, 22), list_structure(A)),
+    "plan": ((13, 13, 0, 2), list_structure(P)),
+    "note": ((6, 0, 0, 0), list_structure(NOTE)),
+}
 
 def _digest_payload():
     """The digest literal's `aps`/`data`, PARSED from the document (round 2, R9 / QA Q4).
@@ -118,6 +178,7 @@ def _digest_payload():
     except Exception:
         return {}
 
+DIGEST_ROW = next((l for l in A.split("\n") if l.startswith("| digest emit *(cloud, proposal)*")), "")
 DIGEST_PAYLOAD = _digest_payload()
 DIGEST_APS = DIGEST_PAYLOAD.get("aps", {})
 COMPOSER = sec(af, "Exactly one composer", "| Field |")
@@ -201,7 +262,9 @@ rows = [
   and not has(af,"the cloud supplies the alert") and not has(af,"cloud-composed alert")),
  ("§3.2 the ceiling keeps the alert verbatim",
   has(COMPOSER,"that frame's `alert` included, verbatim")
-  and has(COMPOSER,"records a drop only when it holds no frame at all")),
+  # Round 3 refined which frame is re-delivered; this clause now asserts the refined rule, not the
+  # superseded "records a drop only when it holds no frame at all".
+  and has(COMPOSER,"delivers nothing and records the drop")),
  ("§3.2 the ceiling may not render a banner from the fields",
   has(COMPOSER,"must never fall back to rendering a banner from `type`, `kind` or `count`")
   and not has(COMPOSER,"may fall back")),
@@ -212,10 +275,43 @@ rows = [
  ("§3.4 the digest key is persisted across a restart",
   has(af,"is **persisted in the state file**") and has(af,"reused on restart for that same window")
   and has(af,"**Why persistence is required here and not merely tidy")),
+ # Round 3 widened these: the ceiling sentence is one sentence in FOUR places, and the earlier gate
+ # read only §3.2 — so reverting §2.1, §3.1 or plan S7 to the superseded "whatever its type" wording
+ # passed a green run (R15 / Q38 / Q40). Each statement is now asserted where it is stated.
+ ("§2.1 the ceiling re-delivers only a frame carrying an alert",
+  has(CEIL_21,"carries an `alert`") and has(CEIL_21,"delivers nothing and records the drop")),
+ ("§3.1 the ceiling re-delivers only a frame carrying an alert",
+  has(CEIL_31,"carries an `alert`") and has(CEIL_31,"delivers nothing") and has(CEIL_31,"records the drop")),
+ ("§3.2 the ceiling re-delivers only a frame carrying an alert",
+  has(COMPOSER,"carries an `alert`") and has(COMPOSER,"delivers nothing and records the drop")),
+ ("plan S7 the ceiling's own head carries the rule",
+  has(pf,"re-delivers the most recent frame it holds that carries an `alert`")
+  and has(pf,"delivering nothing and recording the drop when it holds only `attention` frames or nothing at all")),
+ # Round 1's m1: presence-only checks passed while the SUPERSEDED wording was restored at a site. The
+ # old phrase may now survive only inside the supersession sentences — quoted history, never a rule.
+ ('§3.2 the superseded "whatever its type" survives only as quoted history',
+  has(af,'*This bullet used to say "whatever its type"') and af.count("whatever its type") == 1),
+ ('note: the superseded "whatever its type" survives only as quoted history',
+  nf.count("whatever its type") == 1),
+ ('plan: the superseded "whatever its type" is gone',
+  "whatever its type" not in pf),
+ ("§3.4 the caveat belongs to the digest window, not the attention emit",
+  has(af,"**The caveat is the digest *window*'s, not the attention emit's**")
+  and not has(af,"carries the same process-local caveat")),
+ ("plan: S5's QA list includes Q37", has(pf,"Q32–Q35, Q37")),
+ ("note: the ceiling matches the ADR's",
+  has(nf,"carries an `alert`") and has(nf,"delivers nothing and records the drop")),
+ ("note: the machine's burst limit is defined in-file",
+  has(nf,"`BURST_LIMIT` — **three** eligible rows in one catch-up")),
+ ("note: the digest key is labelled a proposal", has(nf,"*(proposal, as in the ADR)*")),
+ ("note: the digest frame opener names the machine", has(nf,"The machine's digest frame is:")),
+ ("note: the cloud is not the merger", not has(nf,"merged into **one digest emit**")),
  ("plan: the S5 row names the visible digest alert and its persisted key",
   has(pf,"one visible digest alert")
   and has(pf,"with the window's `emit_id` **persisted in the state file**")),
  ("plan: the digest QA rows are present", has(pf,"| Q35 |") and has(pf,"| Q36 |") and has(pf,"| Q37 |")),
+ ("plan: Q36 names the only-attention case (round 1, Q2)",
+  has(pf,"only `attention` frames held, or nothing")),
  ("§3.2 only the machine composes: the cloud mints no payload and renders no text",
   has(COMPOSER,"cloud mints nothing and composes no text")
   and not has(COMPOSER,"the cloud mints the")
@@ -275,6 +371,16 @@ rows = [
  ("tables: no wrapped row in the plan", table_rows_are_intact(P)),
  ("tables: no wrapped row in the verification README", table_rows_are_intact(has_readme)),
  ("tables: no wrapped row in the ops note", table_rows_are_intact(try_read(REF, "docs/push-cloud-ops.md") or "")),
+ ("structure: the ADR's list structure is not flattened",
+  all(now >= base for now, base in zip(STRUCT_FLOOR["ADR"][1], STRUCT_FLOOR["ADR"][0]))),
+ ("structure: the plan's list structure is not flattened",
+  all(now >= base for now, base in zip(STRUCT_FLOOR["plan"][1], STRUCT_FLOOR["plan"][0]))),
+ ("structure: the note's list structure is not flattened",
+  all(now >= base for now, base in zip(STRUCT_FLOOR["note"][1], STRUCT_FLOOR["note"][0]))),
+ ("structure: no list marker is glued onto a prose sentence (ADR/plan/note)",
+  glued_markers(A) == 0 and glued_markers(P) == 0 and glued_markers(NOTE) == 0),
+ ('m2: the digest row states the "twice" consequence once',
+  DIGEST_ROW.count("N conversations need you") == 1),
  ("R6 the round-6 mappings", has(af,"`local_operator/tunnels/gateway.py` → `gateway.py`") and has(af,"`local_operator/mcp/grants.py` → `mcp/grants.py`") and has(af,"`local_operator/mobile/attach_client.py` → `attach_client.py`") and has(af,"`local_operator/mobile/tui_handle.py` → `tui_handle.py`")),
  ("R6 nit: the range includes :778", has(af,"daemon.py:778-782")),
  ("R6 the §9/provenance contradiction is resolved", has(af,"Corrections live in two places, by kind")),
