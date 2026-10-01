@@ -63,17 +63,39 @@ a re-register after an expiry is not refused. The **absent** state is shared on 
 paths nobody decides: a provider signal (an uninstall, an OS token rotation, a restore) and the
 60-day drop. Conflating either with `revoked_at` is how a legitimate re-register is lost.
 
-**Delivery also needs a live credential, and the relay is what holds it.** The cloud holds no device
-credential and fan-out never calls the relay, so the limb rides a signal, not a lookup: the **relay**,
-the only component that sees the `lop_mobile` cookie, reports a per-device **`credential_live`** flag
-on each authenticated request, the cloud row owning it, and the daemon emits a **credential-change
-event** when a rotation kills the cookies, which sets `expired_at` for that computer's devices and
-pauses fan-out. **A rotation evicts nothing** — the registration survives — **but delivery stops at
-the rotation and resumes at each device's next authenticated request**, which a stolen phone, lacking
-the new password, cannot make. Two locks bound the pause: the machine's **emit path checks the
-credential epoch**, so a single lost call cannot leave fan-out live to a dead cookie, and the 60-day
-drop is the terminal state — a device that never returns becomes **absent** and the pause ends with
-its row. Plan row **S4c**.
+**The credential limb, and which credential decides.** Delivery needs a live credential as well as a
+registered device, and *which* credential decides depends on the phone's route. On the **direct
+route** the app holds `lop_mobile`, whose key derives from the relay password; the relay is the only
+component that sees it, so the relay **evaluates** the flag and the cloud enforces what it is told.
+On the **Radient route** the edge strips `lop_mobile` and the local gateway injects it per request, so
+the injected cookie **cannot tell device A from device B**: there the enforceable half is the
+**cloud-issued per-device grant** — minted at registration against the `install_id` the machine's
+record carries, **required for delivery** (fan-out refuses without it) and refused for a row whose
+marker forbids it — and the relay's report is an auxiliary signal. **Cloud-side requirement:** a mint
+and a fan-out are refused while the account's access for that computer is revoked, because on this
+route a fresh `install_id` carries no marker and that is the only thing that stops a re-installed app
+which can still reach the tunnel.
+
+**What the machine sends, and how often.** The report is **change-triggered and coalesced** — at most
+once per device per 5 minutes, batched for the computer's devices, **one** credential-change event per
+rotation — so the cloud sees O(devices) state, never O(requests) traffic. When neither a registration
+nor an emit has happened for **15 minutes**, a **heartbeat** (`POST <cloud>/v1/push/credentials`)
+carries the block and nothing else: the only call that can report a lapse to an app that is closed.
+The block, `devices: [{device_id, credential_live, credential_expires_at, last_authenticated_at}]`,
+rides the registration forward and the **one emit route**
+`POST /v1/tunnels/{tunnel_id}/push/events` (`Idempotency-Key`, `"v": 1`) — one route and one spelling,
+because the cloud contract is `extra="forbid"`. `credential_expires_at` is **read out of the cookie
+the phone presented and written at register time** (refreshed by any later authenticated request that
+names its device), so the direct route's lapse is `credential_expires_at <= now`, with no clock
+arithmetic. `device_key` is minted machine-side at every registration, held by the phone in its
+keystore, and presented as `X-Lop-Device-Key` beside `X-Lop-Device` on any request that moves a
+device's state; it never goes to the cloud. **A rotation evicts nothing** — the registration survives —
+**but delivery stops at the rotation and resumes at each device's next authenticated request**, and
+the pause is bounded at both ends: the machine's **emit worker reads the flag and the markers and
+skips a device**, so a lost report cannot leave fan-out live to a dead cookie, and the 60-day drop is
+the terminal state — a device that never returns becomes **absent** and the pause ends with its row.
+`403 {"code": "device_revoked"}` and `403 {"code": "device_unpaired"}` are the register refusals that
+make the two markers stick. Plan row **S4c**.
 
 **Nothing stops silently where the app can say so.** For the expired state the `list` string above is
 what the user reads, raised by the relay's `401` on the app's next launch. The 60-day drop is the one
