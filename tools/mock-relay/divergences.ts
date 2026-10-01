@@ -391,6 +391,40 @@ async function main(): Promise<void> {
 				emptyPrompt.status,
 				409,
 			);
+
+			// An UNKNOWN OP is not a shape refusal either: `validate_control_frame` is an
+			// if/elif chain with no `else` (`types.py:208-424`), so an op it does not know
+			// passes validation and reaches the liveness answer; the `422 unknown op` comes
+			// from the registrant, and only on a LIVE session (`daemon.py:3890-4015`).
+			const unknownOpUnknown = await client.post(
+				`/api/sessions/${UNKNOWN}/command`,
+				{ op: "frobnicate" },
+			);
+			check(
+				"an unknown OP on an unknown session is 409, not the registrant's 422",
+				unknownOpUnknown.status,
+				409,
+			);
+			const unknownOpLive = await client.post(`/api/sessions/${SID}/command`, {
+				op: "frobnicate",
+			});
+			check(
+				"while the same op on a LIVE session is the registrant's 422",
+				unknownOpLive.status,
+				422,
+			);
+			// `steer` shares `prompt`'s text rule, and the relay checks `isinstance(text, str)`
+			// FIRST: images rescue a BLANK text, not a missing `text` key.
+			const imageNoText = await client.post(`/api/sessions/${SID}/command`, {
+				op: "steer",
+				command_id: "11111111-2222-4333-8444-00000000000a",
+				images: [{ data_b64: "AAAA" }],
+			});
+			check(
+				"steer with an image but no text key is 422 (text must be a string first)",
+				imageNoText.status,
+				422,
+			);
 		}
 
 		/* ---- D3: an empty start body is invalid JSON, not a fabricated start ---- */

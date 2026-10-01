@@ -71,11 +71,10 @@ import {
 } from "./wire.ts";
 
 /**
- * The op vocabulary the contract lists (`docs/relay/contract.md` §4.2). Used to tell a
- * SHAPE refusal ("unknown op", 422) from a liveness refusal (409) in the relay's own
- * order — not to claim the mock implements them all: an op in this set the mock has no
- * branch for is still answered `command-unknown-op` after the liveness check, which is
- * recorded as a known divergence in `docs/e2e/README.md`.
+ * The op vocabulary the contract lists (`docs/relay/contract.md` §4.2), used ONLY for the
+ * live-session fall-through at the end of `handleCommand`: an op the mock has no branch for
+ * is answered `command-unknown-op` there, which is where the relay's registrant answers it
+ * too. It is deliberately NOT used as a shape gate — see `shapeRefusal`.
  */
 const KNOWN_OPS = new Set([
 	"prompt",
@@ -938,6 +937,16 @@ export function createRelay(options: RelayOptions = {}) {
 				sendFixture(res, "command-invalid-uuid");
 				return;
 			}
+			// `prompt` reaches its text rule HERE (its liveness check comes first, so
+			// `shapeRefusal` never sees it), and `steer` reaches it twice — once above for the
+			// unknown-session order and once here for the live one. Same helper, same sentence.
+			if (op === "prompt") {
+				const textRefusal = textOrImageRefusal(body);
+				if (textRefusal !== null) {
+					sendJson(res, 422, errorBody(textRefusal));
+					return;
+				}
+			}
 			// Bound once, narrowed once: every later use (the ledger, the duplicate
 			// row) has to agree on which identity was admitted.
 			const commandId = String(body.command_id);
@@ -1014,6 +1023,27 @@ export function createRelay(options: RelayOptions = {}) {
 	};
 
 	/**
+	 * `prompt`/`steer` text rule: `text` must be a non-empty string, and only then does a
+	 * non-blank image rescue it (`types.py:208-424`, in that order — an image with a
+	 * missing `text` key is refused, not accepted). The sentence is the pinned source's.
+	 */
+	function textOrImageRefusal(body: Record<string, unknown>): string | null {
+		const text = body.text;
+		// `isinstance(text, str)` comes FIRST in the relay: a body with images but no `text`
+		// key is refused, and only a PRESENT-but-blank text can be rescued by an image. A
+		// "text OR image" reading would accept the first case, which the relay does not.
+		if (typeof text !== "string") return "text must be a non-empty string";
+		if (text.trim() !== "") return null;
+		const images = Array.isArray(body.images) ? body.images : [];
+		const usable = images.some((image) => {
+			const entry = (image ?? {}) as Record<string, unknown>;
+			const data = entry.data_b64 ?? entry.data;
+			return typeof data === "string" && data.trim() !== "";
+		});
+		return usable ? null : "text must be a non-empty string";
+	}
+
+	/**
 	 * What the relay's frame validation refuses, for the op it is about.
 	 *
 	 * The contract makes the order part of the contract (`docs/relay/contract.md` §4.3,
@@ -1023,15 +1053,27 @@ export function createRelay(options: RelayOptions = {}) {
 	 * then admission — which is why this is asked only for the other ops. Checked against
 	 * the pinned ref `fc851a94e`; QA verified the same order live against an isolated
 	 * daemon at `d27e4716a`.
+	 *
+	 * This is a SUBSET of that chain, deliberately and by name: it covers `prompt`/`steer`
+	 * (text-or-image, in the relay's order and with its sentence), `approval_answer`
+	 * (`request_id`, `approved`, `remember`) and `ask_answer` (`request_id`, `value`).
+	 * It does NOT replicate the checks for `cancel`'s `mode`, `slash`'s `command`/`args`,
+	 * `recall_steer`'s `command_id`, `credential`, `variables`, `register_secret_redaction`,
+	 * `adopt_aside`, `peer_message`/`peer_set_model`, `input_mode` membership or
+	 * `input_path`'s length bound — for those ops a MALFORMED request on an unknown session
+	 * is 409 here where the relay gives 422. That gap is recorded as D11 in
+	 * `docs/e2e/README.md` rather than left implicit.
 	 */
 	function shapeRefusal(
 		op: string,
 		body: Record<string, unknown>,
 	): { status: number; body: Record<string, unknown> } | null {
-		if (!KNOWN_OPS.has(op)) {
-			// The sentence is the captured one (`fixtures/relay/http/command-unknown-op.json`).
-			return { status: 422, body: { error: `unknown op: '${op}'` } };
-		}
+		// An UNKNOWN OP is not a shape refusal here: `validate_control_frame` is an if/elif
+		// chain with no `else`, so an op it does not know passes validation and reaches the
+		// liveness answer (409) — the `422 unknown op` comes later, from the registrant, and
+		// only on a LIVE session (`daemon.py:3890-4015`: validation, then `entry is None` →
+		// 409, then `daemon.request`). Putting an op allowlist here re-introduced, for this
+		// one case, the inversion round 2 removed.
 		if (op === "approval_answer" || op === "ask_answer") {
 			const requestId = body.request_id;
 			if (typeof requestId !== "string" || requestId.trim() === "") {
@@ -1051,15 +1093,12 @@ export function createRelay(options: RelayOptions = {}) {
 			return { status: 422, body: { error: "value must be a string" } };
 		}
 		if (op === "steer") {
-			// `steer` shares `prompt`'s rule (contract §4.3): text non-empty OR at least one
-			// image. The corpus has no captured sentence for this refusal, so the wording is
-			// the mock's; the RULE and the status are the contract's.
-			const text = body.text;
-			const hasText = typeof text === "string" && text.trim() !== "";
-			const images = Array.isArray(body.images) ? body.images : [];
-			if (!hasText && images.length === 0) {
-				return { status: 422, body: { error: "text or an image is required" } };
-			}
+			// The relay's rule, in the relay's ORDER (`types.py:208-424`): `text` must be a
+			// string first (`text must be a non-empty string`), and only then does a non-blank
+			// image rescue it — an image with a missing `text` key is 422, not accepted. The
+			// sentence is the pinned source's, not one this mock invented.
+			const refusal = textOrImageRefusal(body);
+			if (refusal !== null) return { status: 422, body: { error: refusal } };
 		}
 		return null;
 	}

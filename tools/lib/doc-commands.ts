@@ -397,7 +397,9 @@ async function main(): Promise<void> {
 	// is sized above it, because a bound below a documented command's real runtime reports
 	// the command as broken, which is worse than no bound. If you change the figure, change
 	// it in the README, here, and in `verify.ts`'s watchdog comment together.
-	const timeoutMs = num(flags, "timeout", 2400) * 1000;
+	// Strictly ABOVE `verify`'s own 2,400 s watchdog: at equal values the outer bound races
+	// the inner one and reports "killed by the gate" for a run that was aborting itself.
+	const timeoutMs = num(flags, "timeout", 2700) * 1000;
 	const verbose = bool(flags, "verbose");
 	const path = resolve(REPO, file);
 	if (!existsSync(path)) {

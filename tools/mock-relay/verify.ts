@@ -1296,7 +1296,6 @@ async function main() {
 			// a mutation could "prove" a rule by never reaching a verdict. A review round
 			// caught exactly that (`U-07:y`, `exit null`) on a loaded host, which is why
 			// this asserts the failure CODE and names a kill as its own outcome.
-			const killed = run.status === null || run.signal !== null;
 			// The sentence names the SIGNAL and the elapsed time, not "the bound": a kill can
 			// arrive from elsewhere (measured: SIGTERM at 33 s), and when `spawnSync` never
 			// started the child there is no signal at all — reporting either as "the 900 s
@@ -1829,7 +1828,10 @@ async function main() {
 			"the seed hook's parameters are the app-facing names, and nothing is added when unset",
 			[seedQuery("http://127.0.0.1:1234", "abc123"), seedQuery(null, null)],
 			[
-				"lo-seed-route=http%3A%2F%2F127.0.0.1%3A1234&lo-seed-session=abc123",
+				// The app's own parameter names, in the order `seedQuery` sets them. The old
+				// expectation here still named the invented `lo-seed-*` pair, which made this
+				// check fail by construction the moment the names changed — the round-4 lesson.
+				"lo-relay=http%3A%2F%2F127.0.0.1%3A1234&lo-relay-password=[redacted]",
 				"",
 			],
 		);
@@ -1912,6 +1914,16 @@ async function main() {
 		// revision of this harness invented `lo-seed-*`, which nothing reads — a seed that
 		// silently seeds nothing. Asserting against #11's own source is what makes a rename
 		// there fail here.
+		// The name contract lives in #11's file. Read it from the branch while the branch
+		// exists, else from the merged path — and FAIL (not skip) when neither is readable,
+		// because a check that quietly does nothing is the failure mode of this whole PR.
+		const providerPath = join(
+			REPO,
+			"src",
+			"features",
+			"auth",
+			"connection-provider.tsx",
+		);
 		let source = "";
 		try {
 			source = execFileSync(
@@ -1925,16 +1937,22 @@ async function main() {
 				{ encoding: "utf8" },
 			);
 		} catch {
-			source = "";
+			source = existsSync(providerPath)
+				? readFileSync(providerPath, "utf8")
+				: "";
 		}
+		// Only the hook's own body counts: scraping every quoted `lo-…` in the file would
+		// read a future storage key as a seed parameter.
+		const hookBody =
+			/function webRelayOverride[\s\S]*?\n}/.exec(source)?.[0] ?? "";
+		const appNames = new Set(
+			[...hookBody.matchAll(/"(lo-[a-z-]+)"/g)].map((match) => match[1] ?? ""),
+		);
 		check(
 			"PR #11's connection provider is readable at its ref (the name contract's source)",
 			source.length > 0,
 			true,
 			"git show origin/feat/screens-lists:src/features/auth/connection-provider.tsx",
-		);
-		const appNames = new Set(
-			[...source.matchAll(/"(lo-[a-z-]+)"/g)].map((match) => match[1] ?? ""),
 		);
 		const emitted = new URLSearchParams(seedQuery("http://127.0.0.1:1", "pw"));
 		check(
@@ -2016,9 +2034,14 @@ async function main() {
 			true,
 			`exit ${String(run.status)}`,
 		);
+		// The count must be NON-ZERO: `0 surviving process(es)` is the tail of every
+		// CaptureFailure message, so the bare phrase would be satisfied by any strict
+		// failure of the matrix and would prove nothing about the survivor gate.
 		check(
-			"and the failure names the survivors rather than the matrix",
-			/surviving process\(es\)/.test(output),
+			"and the failure names a non-zero survivor count rather than the matrix",
+			/[1-9]\d* surviving process\(es\)|survived this run's teardown/.test(
+				output,
+			),
 			true,
 			output.split("\n").find((line) => line.includes("surviv")) ?? "(no line)",
 		);
@@ -2048,8 +2071,14 @@ async function main() {
 		// and the rest are NAMED — a row that silently becomes checkable, or a screen that
 		// appears without a marker decision, fails here instead of drifting.
 		const a11ySource = readFileSync(join(REPO, "src", "ui", "a11y.ts"), "utf8");
+		// The EMPTY block, not every quoted token in the file: the app also declares screen
+		// roots, control ids and role names, and counting those as markers would let a state
+		// marker pass by name collision. The pending tripwire below is owned by #11/#12: it
+		// goes red the day they land a non-empty marker, which is when that row moves up.
+		const emptyBlock =
+			/export const EMPTY[\s\S]*?\n};/.exec(a11ySource)?.[0] ?? "";
 		const declared = new Set(
-			[...a11ySource.matchAll(/"[a-z0-9-]+"/g)].map((match) =>
+			[...emptyBlock.matchAll(/"[a-z0-9-]+"/g)].map((match) =>
 				match[0].slice(1, -1),
 			),
 		);
@@ -2098,10 +2127,13 @@ async function main() {
 			join(REPO, "tools", "visual", "capture.ts"),
 			"utf8",
 		);
+		// Indentation-insensitive on purpose: the level is what matters, and pinning a tab
+		// count made this check fail on the head it was written for (the manifest's keys sit
+		// two tabs deep inside the run function).
 		check(
 			"the manifest writes them at the top level, as the README now says",
-			/^\tmeasurableCells:/m.test(captureSource) &&
-				/^\tnotMeasurableCells:/m.test(captureSource),
+			/^[\t ]{0,2}measurableCells:/m.test(captureSource) &&
+				/^[\t ]{0,2}notMeasurableCells:/m.test(captureSource),
 			true,
 		);
 	}

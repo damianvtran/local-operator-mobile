@@ -98,8 +98,9 @@ app made no request to the mock relay for this cell, so the state it declares
 (pending-approval) cannot have come from the relay
 ```
 
-and the report carries `meta.measurableCells`, `meta.notMeasurableCells` (each with
-its reasons) and `meta.coverageNote`. `audit.ts` reads the same list and reports every
+and the report carries top-level `measurableCells`, `notMeasurableCells` (each with
+its reasons) and `coverageNote` — the same fields the manifest writes at its top level,
+not under `meta` (the audit's own summary key is `coverage`). `audit.ts` reads the same list and reports every
 row of such a cell as `BLOCKED` with `blockedKind: "state-not-reached"` — never
 PASS — and counts them as a gap, so the audit exits non-zero rather than green.
 
@@ -427,6 +428,24 @@ nothing was left. So the honest statement is two-part:
 - a run that is **killed** cannot clean up after itself — the next run in that
   directory does it instead. It is self-healing, not instantly clean, and a machine
   that never runs these tools again keeps the orphan.
+
+### D11 — the mock's op-shape validation is a SUBSET of the relay's
+
+`validate_control_frame` (`types.py:208-424`) is a long if/elif chain; the mock replicates
+the parts the harness exercises and **no more**, and the difference is visible on an unknown
+session:
+
+- **replicated**: `prompt`/`steer` text-or-image in the relay's order (a present-but-blank
+  `text` can be rescued by a non-blank `data_b64`/`data`, a MISSING `text` key cannot) with
+  the relay's own sentence; `approval_answer`'s `request_id`/`approved`/`remember`;
+  `ask_answer`'s `request_id`/`value`.
+- **NOT replicated**: `cancel`'s `mode`, `slash`'s `command`/`args`, `recall_steer`'s
+  `command_id`, `credential`, `variables`, `register_secret_redaction`, `adopt_aside`,
+  `peer_message`/`peer_set_model`, `input_mode`'s membership, `input_path`'s length bound.
+
+For those ops a **malformed** request on an unknown session is `409` here where the relay
+gives `422`; a well-formed one agrees (`409`). The order itself — validation between the
+lookup and the 409, except for `prompt` — is checked at the pinned ref and asserted in D2.
 
 ### Known mock/relay divergences
 
