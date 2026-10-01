@@ -9,7 +9,7 @@ resolve) and ``read-citations.py`` (does the line support the claim). This scrip
 so a pass here says the documents are internally consistent and say what the round claims — not that
 any of it is true of ``local-operator``.
 """
-import os, pathlib, subprocess, sys, textwrap
+import os, pathlib, re, subprocess, sys, textwrap
 REPO = os.environ.get("LOCAL_OPERATOR_REPO", "~/local-operator")
 REF = sys.argv[1] if len(sys.argv) > 1 else "WORKTREE"   # a git ref, or WORKTREE to read the files
 def show(ref, path):
@@ -84,6 +84,44 @@ def ok_order(plan_text):  # last 9 ids ascending
     return ids == sorted(ids)
 
 def has(hay, needle): return needle in hay
+
+def sec(text, start, end):
+    """One REGION of a document, so a check can assert about it instead of the whole file.
+
+    Round 2's R3: the first digest checks were document-wide, so an empty `aps: { }` passed and so did
+    a missing collapse id — both strings existed *somewhere*. A check that cannot fail is not a check.
+    """
+    i = text.find(start)
+    if i < 0:
+        return ""
+    j = text.find(end, i)
+    return text[i:j] if j > i else text[i:]
+DIGEST = sec(af, "The **digest** form", "Exactly one composer")
+
+def _digest_payload():
+    """The digest literal's `aps`/`data`, PARSED from the document (round 2, R9 / QA Q4).
+
+    The first version asked whether the *prose around* the literal mentioned `content-available`,
+    which failed on a true sentence that merely named the term. The check is about the payload, so it
+    reads the payload: placeholders become JSON-safe values and the object is parsed.
+    """
+    import json
+    start = af.find("The **digest** form")
+    i = af.find("```jsonc", start) + len("```jsonc")
+    j = af.find("```", i)
+    raw = af[i:j]
+    raw = re.sub(r'"<[^"]*>"', '"X"', raw)          # a fully-quoted placeholder
+    raw = re.sub(r"<[^>]*>", "X", raw)              # a placeholder inside a longer string
+    raw = raw.replace('"count": X', '"count": 1')   # the one bare numeric placeholder
+    try:
+        return json.loads(raw)
+    except Exception:
+        return {}
+
+DIGEST_PAYLOAD = _digest_payload()
+DIGEST_APS = DIGEST_PAYLOAD.get("aps", {})
+COMPOSER = sec(af, "Exactly one composer", "| Field |")
+FRAME = sec(af, "// 2. THE EMIT", "// 3. THE HEARTBEAT")
 rows = [
  ("B1 three sites: other-channels.md:172-174", has(af,"other-channels.md`:172-174")),
  ("B1 three sites: current-relay-audit.md:220-222", has(af,"current-relay-audit.md`:220-222")),
@@ -122,7 +160,79 @@ rows = [
  ("§3.1 202 {emit_id, accepted_at}", has(af,"202 {\"emit_id\": \"<uuid>\", \"accepted_at\"")),
  ("§3.1 per-device result replaced", has(af,"replaces the previous\ndraft") or has(af,"replaces the previous draft")),
  ("§3.1 exclude on the wire", has(af,'"exclude": ["<device_id>"]')),
- ("§3.2 exclude row in the field table", has(af,"| `exclude` *(attention only)* |")),
+ ("§3.2 exclude row in the field table", has(af,"| `exclude` *(attention and digest)* |")),
+ # The digest form (S5's review M1): a coalesced catch-up was emitted as the SILENT attention form,
+ # so a burst reached the user as nothing at all. These assert the form REGION by REGION — the first
+ # version passed for an empty `aps: { }` and for a missing collapse id (round 2, R3).
+ ("§3.2 the digest is a third emit type", has(af,'// "completion" | "attention" | "digest"')
+  and has(af,'"type": "completion|attention|digest"')),
+ ("§3.2 the digest payload: alert with a title and a body, interrupted as an alert",
+  isinstance(DIGEST_APS.get("alert"), dict)
+  # The parsed values are placeholders ("X"), so presence is what the parse proves here; the literal
+  # itself is pinned for the words just below.
+  and bool(DIGEST_APS.get("alert", {}).get("title"))
+  and bool(DIGEST_APS.get("alert", {}).get("body"))
+  and has(DIGEST,'"title": "<APP_NAME>"')
+  and has(str(DIGEST_APS.get("alert", {}).get("body", "")), "conversations need you")
+  and DIGEST_APS.get("interruption-level") == "active"),
+ ("§3.2 the digest form is a visible alert (no content-available key)",
+  DIGEST_APS != {} and "content-available" not in DIGEST_APS),
+ ("§3.2 the digest carries no badge anywhere", "badge" not in (DIGEST_APS | DIGEST_PAYLOAD.get("data", {}))),
+ ("§3.2 the digest payload carries type/count/emit_id",
+  DIGEST_PAYLOAD.get("data", {}).get("type") == "digest"
+  and "count" in DIGEST_PAYLOAD.get("data", {})
+  and "emit_id" in DIGEST_PAYLOAD.get("data", {})),
+ ("§3.2 the digest collapses per computer", has(DIGEST,"collapses **per computer**")
+  and has(DIGEST,"`digest:<computer handle>`")),
+ ("§3.2 the digest carries no handle, token or kind",
+  has(DIGEST,"no `conversation` handle, no `completion_token` and no `kind`")),
+ ("§3.2 the emit frame carries the alert text with its title and body",
+  has(FRAME,'"alert": { "title": "<APP_NAME>"')
+  and has(FRAME,'"body": "<house constant> · <count> conversations need you"')
+  and has(FRAME,"THE MACHINE'S WORDS, SENT VERBATIM")),
+ ("§3.2 the attention literal carries no alert key",
+  has(sec(af, "The attention form carries", "The **digest** form"), 'aps: {"content-available": 1}')
+  and not has(sec(af, "The attention form carries", "The **digest** form"), '"alert"')),
+ ("§3.2 alert scope: required on completion and digest, absent on attention",
+  has(COMPOSER,"Required on `completion` and `digest`; absent on `attention`")
+  or has(af,"**Required on `completion` and `digest`; absent on `attention`**")),
+ ("§3.2 the field-table alert row keeps the words on the machine",
+  has(af,"| `alert` | object |") and has(af,"**the machine's words, sent verbatim**")
+  and not has(af,"the cloud supplies the alert") and not has(af,"cloud-composed alert")),
+ ("§3.2 the ceiling keeps the alert verbatim",
+  has(COMPOSER,"that frame's `alert` included, verbatim")
+  and has(COMPOSER,"records a drop only when it holds no frame at all")),
+ ("§3.2 the ceiling may not render a banner from the fields",
+  has(COMPOSER,"must never fall back to rendering a banner from `type`, `kind` or `count`")
+  and not has(COMPOSER,"may fall back")),
+ ("§3.2 exclude is scoped per emit (required on the ack-triggered attention only)",
+  has(DIGEST,"permitted here with the attention form's meaning and is never required")
+  and has(af,"**Required** when the emit is an attention correction triggered by an **ack nudge**")
+  and not has(DIGEST,"always required")),
+ ("§3.4 the digest key is persisted across a restart",
+  has(af,"is **persisted in the state file**") and has(af,"reused on restart for that same window")
+  and has(af,"**Why persistence is required here and not merely tidy")),
+ ("plan: the S5 row names the visible digest alert and its persisted key",
+  has(pf,"one visible digest alert")
+  and has(pf,"with the window's `emit_id` **persisted in the state file**")),
+ ("plan: the digest QA rows are present", has(pf,"| Q35 |") and has(pf,"| Q36 |") and has(pf,"| Q37 |")),
+ ("§3.2 only the machine composes: the cloud mints no payload and renders no text",
+  has(COMPOSER,"cloud mints nothing and composes no text")
+  and not has(COMPOSER,"the cloud mints the")
+  and not has(COMPOSER,"the cloud composes the")
+  and has(af,"never renders, edits, rewords or synthesises alert text")),
+ ("consistency: the ADR names no slice the plan does not define",
+  set(re.findall(r"\bS\d+[a-c]?\b", A)) <= set(re.findall(r"^\| \*\*(S\d+[a-c]?)\*\* \|", P, re.M))),
+ ("consistency: the digest's slices are named in both", has(P,"| **S5** |") and "S5" in A
+  and has(P,"| **S7** |") and "S7" in A),
+ ("§3.4 the digest key is the window's, minted once", has(af,'sha256("digest" \u2016 emit_id \u2016 computer)')
+  and has(af,"Minting the `emit_id` at retry time is the failure this rule forbids")),
+ # The composer gap: two mechanisms look like coalescers, so pin that only the machine mints a
+ # payload and that the cloud's role is stated as delivery-only. A reader who finds one sentence but
+ # not the other re-derives the ambiguity.
+ ("§3.2 exactly one composer, the machine", has(af,"**Exactly one composer, and it is the machine")
+  and has(af,"cloud mints nothing and composes no text")),
+ ("§3.1 the cloud composes nothing", has(af,"**The cloud composes nothing")),
  ("§3.4 heal key minted on the supersede cursor", has(af,"because a heal is read on the supersede cursor")),
  ("§2.2 ops-note retention + gap", has(af,"delivery records are kept **14 days**") or has(af,"kept **14 days**")),
  ("provenance row for the ops note (cross-PR)", has(af,"cross-PR")),

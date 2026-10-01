@@ -535,12 +535,30 @@ and why §3.4's content-derived key has something to mint it.
   is to set the supersede cursor to that newest `seq` and log one line naming the count it could not
   carry. It does not sweep and it does not block: a lost heal identity means one *push correction*
   is missed, and the badge, which the app reads from the machine, is right on the next connect.
-- **Catch-up is bounded and coalesced.** More than `BURST_LIMIT`-worth of eligible rows in one
-  catch-up emits **one digest push naming the count**, mirroring the TUI/desktop burst rule
-  (`docs/design/notification-feed.md`, `BURST_LIMIT = 3`). The cloud has its own guard at a
-  different scale — a per-computer ceiling of 60 events/hour, the excess merged into one digest emit
-  rather than dropped — and the two are independent by design: the machine coalesces what it
-  *holds*, the cloud what it *receives* (`docs/push-cloud-ops.md` §3).
+- **Catch-up is bounded and coalesced, and the digest it emits is a *visible alert* (S5's review
+  M1, ruled here).** More than `BURST_LIMIT`-worth of eligible rows in one catch-up emits **one
+  digest alert naming the count** — §3.2's third emit type (`type: "digest"`), an `aps.alert` push
+  collapsed per computer (§3.2), mirroring the TUI/desktop burst rule
+  (`docs/design/notification-feed.md`, `BURST_LIMIT = 3`). It is **not** the attention form: a silent
+  `content-available` wake cannot tell a user anything, and a coalesced catch-up is exactly the case
+  where the user is not watching — the earlier draft of this bullet left a reader to conclude a
+  burst was silent, and §3.2 fixed `type: "attention"` as the silent form, so the contradiction was
+  structural rather than verbal. The cloud has a **delivery** guard at a different scale — a
+  per-computer ceiling of 60 events/hour — but it is **not a second composer**: it **re-delivers the
+  most recent frame it holds for that computer, whatever its type**, collapsed with
+  `digest:<computer handle>`, and records a drop only when it holds no frame at all (§3.2, "exactly
+  one composer"). The two guards stay independent by design: the machine coalesces what it
+  *holds* into one payload, the cloud bounds how often it *delivers* that payload
+  (`docs/push-cloud-ops.md` §3).
+- **The digest's presentation is the machine's, and the cloud may not compose it — this is a P2
+  rule, not a style choice.** The alert text is composed on the machine from the house constants
+  plus the count (§3.2), and the cloud **delivers what it is given: it must not add, rewrite or
+  "improve" alert text**. Composing user-visible text cloud-side would put the component that must
+  stay blind to conversation names and content (P2, §2.2) into the composition path — the same rule
+  that keeps the body a house sentence, applied to the layer that would otherwise be tempted to
+  name the thing it can see. §3.2 states the whole rule, because two coalescing-looking mechanisms
+  exist (the machine's `BURST_LIMIT` catch-up and the cloud's hourly ceiling) and a reader must not
+  have to guess which of them mints a payload: **exactly one composer, the machine**.
 - **Two retry policies, deliberately not folded into one (round 2 m1).** *(a) The presence deferral*
   is machine-local: a timer bounded at 5 minutes and terminated early by a real read, so it never
   leaves the machine at all. *(b) A cloud refusal or timeout* is a wire retry of the **same**
@@ -965,6 +983,18 @@ explicitly). The reasons, so the choice is not just a fit to the note:
   on a non-2xx or timeout (a retry the cloud dedupes into a duplicate `202`, not a duplicate push),
   and drops with one log line after that. Push remains a nudge.
 
+**The cloud composes nothing (round 8; the composer gap).** Ingest **validates, enqueues and
+delivers**: it mints no payload, sets no `aps.badge` (§1.5), and — **for any of the three types,
+completion, attention and digest — it never renders, edits, rewords or synthesises alert text.** The
+words are the machine's, sent in the frame's `alert` object (§3.2) and delivered verbatim; two copies
+of a house string, or a cloud that could pick its own noun, is exactly the drift class this document
+family keeps being caught by. Its only transformations are delivery-level — fan-out, the per-device credential gate (§4),
+and the per-computer digest ceiling, which **re-delivers the most recent frame it holds for that
+computer, whatever its type**, collapsed as `digest:<computer handle>` — that frame's `alert`
+verbatim, a drop recorded only when it holds nothing — rather than composing one (§3.2, "exactly one
+composer"). Anything else would
+put the component that must stay blind to names and content (P2) into the composition path.
+
 **Emit an attention change** *(cloud, proposal)*: the same route, the same `202`, with `type:
 "attention"`, **its own key** (a machine-minted emit sequence, §3.4) — never the completion's key,
 or the cloud treats the correction as a replay and drops it — and an explicit **`exclude`** list
@@ -1006,7 +1036,7 @@ phone's number drops* — actually exist, which no slice did before.
            "thread-id": "<conversation handle>",
            "interruption-level": "active" },
   "data": { "v": 1,
-            "type": "completion",                       // "completion" | "attention"
+            "type": "completion",                       // "completion" | "attention" | "digest"
             "computer": "<opaque per-account computer handle>",
             "conversation": "<opaque conversation handle>",
             "completion_token": "<uuid>",
@@ -1017,7 +1047,52 @@ phone's number drops* — actually exist, which no slice did before.
 
 The attention form carries `{v, type: "attention", computer, count, emit_id, exclude:
 ["<device_id>"]}` and `aps: {"content-available": 1}` — a **silent, best-effort wake** (§5). One
-term is used for it throughout: **the attention push**.
+term is used for it throughout: **the attention push**. It carries **no `alert` and no user-visible
+text of any kind**: `alert` is required on `completion` and `digest` and absent here (the field table
+below), so an `alert` on an attention emit would turn a silent badge correction into a banner.
+
+The **digest** form — §3.2's third emit type, and the visible counterpart of the attention push:
+
+```jsonc
+{ "aps": { "alert": {"title": "<APP_NAME>",
+                     "body": "<digest house constant> · <count> conversations need you"},
+           "interruption-level": "active" },
+  "data": { "v": 1, "type": "digest", "computer": "<computer handle>",
+            "count": <n>, "emit_id": "<uuid>" } }
+```
+
+It carries **no `conversation` handle, no `completion_token` and no `kind`** — a digest spans
+conversations, so a tap resolves nowhere (the attention form's rule) and there is no per-conversation
+collapse to do. It collapses **per computer** instead: `apns-collapse-id`/`notification.tag` =
+`digest:<computer handle>`, so two digests never stack, while a completion or attention push for one
+conversation still collapses per conversation beside it. `aps.badge` is still **never sent** (§1.5):
+a digest is an alert, and the icon stays app-managed from the machine's count. The body is the house
+constant plus the count — P2 unchanged, and `count` keeps the table meaning below. `exclude` is
+**permitted here with the attention form's meaning and is never required** — the required case belongs
+to the attention emit alone, because what makes it required is an **ack**, and the nudge an ack
+produces emits the per-conversation attention correction, never a catch-up digest (§3.1). A digest
+that happens to follow an ack in time is not the same thing as one triggered by it, and inventing a
+trigger that cannot fire is how a rule becomes prose.
+
+**Exactly one composer, and it is the machine (the composer gap, closed).** Two mechanisms look like
+coalescers — the machine's `BURST_LIMIT` catch-up and the cloud's 60 events/hour ceiling — and they
+are **not two payload classes**:
+
+- the **machine** mints the `digest` payload: `type: "digest"`, `emit_id`, `count`, and an
+  `aps.alert` composed from the house constants (§5's constants, the same builder the completion
+  push uses), once, when a catch-up exceeds `BURST_LIMIT`;
+- the **cloud mints nothing and composes no text.** Its ceiling is a delivery guard over frames it
+  already holds: it **re-delivers the most recent frame it holds for that computer, whatever its
+  type**, collapsed with `apns-collapse-id`/`notification.tag` = `digest:<computer handle>` — that
+  frame's `alert` included, verbatim — so a burst becomes one banner carrying the machine's words.
+  It **records a drop only when it holds no frame at all**, so the 61st event is never silence just
+  because it happened to be a completion (round 2, R11: the earlier wordings — "payload" here,
+  "digest payload" in §2.1 — disagreed, and the narrower one silenced a burst). It must never fall
+  back to rendering a banner from `type`, `kind` or `count`, which is the composition this section
+  forbids;
+- the cloud's digest record is therefore a record of **deliveries**, not a second payload class. It
+  carries no `emit_id` of its own invention — `emit_id` is the machine's identity for one emit
+  (§3.4), and a cloud-minted one would make the same burst two deliveries.
 
 | Field | Why it cannot be dropped — or why it is not there |
 |---|---|
@@ -1026,8 +1101,9 @@ term is used for it throughout: **the attention push**.
 | `completion_token` | the tap's ack is token-bound, and §3.3's guard compares it |
 | `kind` | the title/body differ per outcome; the app must not re-derive it. It is the **store's** vocabulary (`complete, error, interrupted, closed, retired` — `attention.py:2047`), not the composer's: `compose.NotificationKind` lists `retired` and the gate kinds but **not `closed`** (`compose.py:60`), so a push builder keyed to the composer's literal set would silently drop a real outcome |
 | `emit_id` | the machine's own identity for one emit, for dedupe and for the cloud's delivery record. **It replaces the `revision` counters that the previous draft carried** (review M7): an opaque UUID per emit cannot be read as activity volume |
-| `exclude` *(attention only)* | the device that just acted, so the self-correcting push skips it — the one field that makes §3.1's exclusion representable at all (round 2 M3: the claim had no wire field). Absent means "exclude nobody", which is what a tick-detected change sends because it never knows who acked. `(proposal)` like the rest of the attention form |
-| `count` | the number in the notification's **body**, so a user can judge whether to look now. **Deliberate, disclosed leak**: it is the machine's unread count at composition time, and the cloud sees it. (The alternative — body says "A turn finished" and nothing else — is a one-line change; recorded, not chosen) |
+| `exclude` *(attention and digest)* | the device that just acted, so the self-correcting push skips it — the one field that makes §3.1's exclusion representable at all (round 2 M3: the claim had no wire field). Absent means "exclude nobody", which is what a tick-detected change sends because it never knows who acked. **Required** when the emit is an attention correction triggered by an **ack nudge** — the device that just acted is not told about a change its own action made. On a **digest** it is *permitted with the same meaning and never required*: the trigger for the required case is an ack, and an ack emits the attention correction, not a catch-up digest (round 2, R6). `(proposal)` like the rest of the attention form |
+| `type: "digest"` *(the third form)* | the catch-up form (§2.1): a **visible alert** carrying the count, with **no** `conversation`, `completion_token` or `kind` — it spans conversations, so nothing can deep-link or collapse per conversation; it collapses **per computer** (`digest:<computer handle>`) |
+| `count` | the number in the notification's **body**, so a user can judge whether to look now. **One number, one noun (round 2, R4)**: it is §1.1's count — the number of conversations with unread notifications, the same number the app's badge shows (§1.4) — read at composition time, and the cloud sees it. The bodies therefore say *"`<count>` conversations need you"*, a noun that is true of that number; a digest that said "updated" would imply a different quantity the field does not carry. (The alternative — body says "A turn finished" and nothing else — is a one-line change; recorded, not chosen) |
 | ~~`aps.badge`~~ | **not sent, ever** (§1.5) |
 | ~~conversation name~~ | **never sent** (P2). Not in the title, not in the body, not in any field. §2.2 says the cloud must not hold it, and `session_names_in_notifications()` gates *local* notifications on the machine (`notify.py:802-820`, **default `True`** at `:820`) — it is not a cloud-facing consent, and it must never be read as one |
 | ~~`revision`~~ | dropped (M7). The badge comes from a read, not from a push |
@@ -1062,9 +1138,11 @@ POST <cloud>/v1/push/register
 //    with the machine's `Idempotency-Key`), not a second spelling — S3 must not freeze two.
 POST /v1/tunnels/{tunnel_id}/push/events        Idempotency-Key: <emit key, §3.4>
 { "v": 1,
-  "emit_id": "<uuid>", "type": "completion|attention", "computer": "<handle>",
+  "emit_id": "<uuid>", "type": "completion|attention|digest", "computer": "<handle>",
   "conversation": "<handle>", "completion_token": "<uuid>", "kind": "complete|error|…",
-  "count": 2, "exclude": ["<device_id>"],              // attention only
+  "count": 2, "exclude": ["<device_id>"],              // attention and digest; required only on the ack-triggered attention emit
+  "alert": { "title": "<APP_NAME>",                    // THE MACHINE'S WORDS, SENT VERBATIM — required on completion and digest, ABSENT on attention (R8)
+             "body": "<house constant> · <count> conversations need you" },
   "devices": [ …the same block… ] }
 
 // 3. THE HEARTBEAT — the block and nothing else, sent when neither of the above has happened for
@@ -1082,6 +1160,7 @@ POST <cloud>/v1/push/credentials
 | `device` | object | the registration forward's own device body — `device_id`, `platform`, `environment`, `app_version`, `push_token`, `registered_at`; §2.2's Device row is the custody statement |
 | `devices[].credential_expires_at` | int, unix seconds | **NEW, and the reason the lapse is computable at all**: the cookie's own value is `<expiry>.<hmac>` (`mobile/auth.py`:465-469, signed once at login and never renewed), so the machine records **the expiry the phone presented** and the lapse is `expires_at <= now` — no clock arithmetic and no login-route writer (Q-F15 / R8-m1) |
 | `devices[].last_authenticated_at` | int, unix seconds | what the machine last observed — **never** the basis of the lapse |
+| `alert` | object | `{title, body}` — **the machine's words, sent verbatim**, because the cloud may not compose them (below). It is house-constant-plus-count only: no names, no snippets, no error text, no model-written text, and it is the same **push-specific builder** §3.2's payload table names (§3.2), not the desktop composer's body path. **Required on `completion` and `digest`; absent on `attention`**, which is a silent `content-available` wake with no text at all — a builder that put an `alert` on an attention emit would make a silent correction visible, and the cloud, forbidden to edit text, would deliver it verbatim (round 2, R8) |
 | `push_token` | string | the machine validates it and drops it (`daemon.py`:4776-4778 (#1864), PR #1864); the cloud's registry is where tokens live (§2.2) |
 | ~~conversation name, snippet, transcript, `aps.badge`~~ | — | **never** (P2 and §1.5) |
 
@@ -1118,6 +1197,7 @@ POST <cloud>/v1/push/credentials
 | `POST /api/sessions/{id}/seen` | `completion_token`; a duplicate or delayed receipt converges upward (`MAX(receipts.acknowledged, excluded.acknowledged)`, `attention.py:2247-2249`); a receipt for a superseded token is **refused, not recorded** | a heal keeps the token; the refusal is the app's cue to re-read |
 | completion emit *(cloud, proposal)* | **`sha256(completion_token ‖ anchor_id ‖ kind)`** — the record's *content*, which is exactly what `publish`'s supersede rewrites (`attention.py:2094-2100`); the cloud answers `202 {emit_id, accepted_at}` (§3.1) | **a heal changes the key, so the correction is a new delivery and idempotency cannot swallow it** (P5) — **and the key is actually minted, because a heal is read on the supersede cursor** (`superseded_since`, `attention.py:1740`; §2.1). QA round 2's Q9 was exactly this: the distinct key existed in this table while no cursor in §2.1 could see the heal that mints it |
 | attention emit *(cloud, proposal)* | a machine-minted monotone **emit sequence**, persisted with the cursor — never the completion's key | n/a (an ack is not a heal) |
+| digest emit *(cloud, proposal)* | **`sha256("digest" ‖ emit_id ‖ computer)`**, where the `emit_id` is minted **once, when the coalescing window closes** and is **persisted in the state file** — reused on restart for that same window, cleared on the same three exits the completion path uses (`202`, third failure, drop-with-log) — so retries of that digest reuse it (three attempts over ~2 minutes, the lifecycle every other emit has), and the next window mints a new `emit_id` and therefore a **new key**, so a genuine second burst is never deduped away (P5). **Why persistence is required here and not merely tidy (core's S5 finding):** the machine's coalescing window is derived from the cursor, so without a persisted `emit_id` a restart mid-window re-folds the same rows under a **fresh** key — and since the cloud dedupes on the key alone (it may have delivered and lost the `202`), the one **visible** type would show the user "N conversations need you" twice. The attention emit carries the same process-local caveat and this ADR **accepts** it there: a duplicated silent badge correction is harmless, and a duplicated banner is not | n/a (a burst is not a heal). **Minting the `emit_id` at retry time is the failure this rule forbids**: a refused digest that re-mints per pass is a distinct delivery every time, so it re-attempts forever and leaks the pending entry — the defect S5's round found |
 | the supersede cursor | `superseded_since(seq)` (`attention.py:1740`) — the **sequel read** `seq > cursor` (`:1775`), like its siblings | it is the only read that **names** the healed conversation: a heal moves neither `MAX(sequence)` nor `SUM(acknowledged)`, and `revision()`'s third term says only *that* a heal happened (`:1743-1744`, `:2129-2149`) |
 | the badge | **not a wire field at all** (§1.5); it is the machine's count at read time | n/a |
 | `AttentionStore.revision()` | equality only, and it is the machine's own change detector — it never reaches the wire | the heal moves its third term |
@@ -1467,9 +1547,10 @@ the worker rides on that rather than inventing a second policy.
   types](https://developer.apple.com/documentation/usernotifications/sending-notification-requests-to-apns#Know-when-to-use-push-types),
   [background
   updates](https://developer.apple.com/documentation/usernotifications/pushing-background-updates-to-your-app)).
-  **Forces:** the completion push is an `alert` push; the attention push is a `content-available`
-  background push, and its correction reaches the icon only through the app, which is exactly what
-  §1.5 decided.
+  **Forces:** the completion push is an `alert` push, **and so is the digest** (§2.1's catch-up: a
+  burst the user is not watching cannot be told about by a silent wake); the attention push is a
+  `content-available` background push, and its correction reaches the icon only through the app,
+  which is exactly what §1.5 decided.
 - **Silent wakes are best-effort and cannot be relied on**: background notifications are low
   priority, "the system may hold and delay" them, "if something force quits or kills the app, the
   system discards the held notification", and Apple advises "don't try to send more than two or
