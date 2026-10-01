@@ -117,5 +117,10 @@ head). It is a reading aid, not an oracle: a human compares the two columns.
 * **An unmapped Python citation is a FAILURE, not a skip** — that strictness is what found seven
   unmapped paths in round 6 and the `server.py` mismatch in round 8.
 * **Whether a citation's line supports its claim** — see `read-citations.py` above.
+* **The plan's prose against the ADR's prose.** `verify-documents.py` cross-checks the slice ids one
+  way only: the ADR may name no slice the plan does not define, and the digest's slices (`S5`, `S7`)
+  are named in both. It does **not** compare the two documents' wording, and the plan may define
+  slices the ADR never enumerates (`S10`, `S12` today) — so "the plan and the ADR agree" is not a
+  claim this script makes (round 2, R7).
 * **The `(#1864)` citations' content against core's *current* head**: they are checked against the
   head this document names. If #1864 moves, re-run against its new head and update the marker's ref.

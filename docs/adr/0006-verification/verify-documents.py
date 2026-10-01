@@ -9,7 +9,7 @@ resolve) and ``read-citations.py`` (does the line support the claim). This scrip
 so a pass here says the documents are internally consistent and say what the round claims — not that
 any of it is true of ``local-operator``.
 """
-import os, pathlib, subprocess, sys, textwrap
+import os, pathlib, re, subprocess, sys, textwrap
 REPO = os.environ.get("LOCAL_OPERATOR_REPO", "~/local-operator")
 REF = sys.argv[1] if len(sys.argv) > 1 else "WORKTREE"   # a git ref, or WORKTREE to read the files
 def show(ref, path):
@@ -84,6 +84,21 @@ def ok_order(plan_text):  # last 9 ids ascending
     return ids == sorted(ids)
 
 def has(hay, needle): return needle in hay
+
+def sec(text, start, end):
+    """One REGION of a document, so a check can assert about it instead of the whole file.
+
+    Round 2's R3: the first digest checks were document-wide, so an empty `aps: { }` passed and so did
+    a missing collapse id — both strings existed *somewhere*. A check that cannot fail is not a check.
+    """
+    i = text.find(start)
+    if i < 0:
+        return ""
+    j = text.find(end, i)
+    return text[i:j] if j > i else text[i:]
+DIGEST = sec(af, "The **digest** form", "Exactly one composer")
+COMPOSER = sec(af, "Exactly one composer", "| Field |")
+FRAME = sec(af, "// 2. THE EMIT", "// 3. THE HEARTBEAT")
 rows = [
  ("B1 three sites: other-channels.md:172-174", has(af,"other-channels.md`:172-174")),
  ("B1 three sites: current-relay-audit.md:220-222", has(af,"current-relay-audit.md`:220-222")),
@@ -123,16 +138,39 @@ rows = [
  ("§3.1 per-device result replaced", has(af,"replaces the previous\ndraft") or has(af,"replaces the previous draft")),
  ("§3.1 exclude on the wire", has(af,'"exclude": ["<device_id>"]')),
  ("§3.2 exclude row in the field table", has(af,"| `exclude` *(attention and digest)* |")),
- # The digest form (round 10 / S5's review M1): the defect was a coalesced catch-up emitted as the
- # SILENT attention form, so a burst reached the user as nothing at all. Pin the two facts that make
- # that unbuildable: `digest` is in the type set on both literals, and the digest literal carries an
- # alert rather than `content-available`.
+ # The digest form (S5's review M1): a coalesced catch-up was emitted as the SILENT attention form,
+ # so a burst reached the user as nothing at all. These assert the form REGION by REGION — the first
+ # version passed for an empty `aps: { }` and for a missing collapse id (round 2, R3).
  ("§3.2 the digest is a third emit type", has(af,'// "completion" | "attention" | "digest"')
   and has(af,'"type": "completion|attention|digest"')),
- ("§3.2 the digest form is a visible alert", has(af,'"type": "digest", "computer"')
-  and "content-available" not in af.split("The **digest** form")[1].split("| Field |")[0]),
+ ("§3.2 the digest literal carries a title and a body with the count",
+  has(DIGEST,'"alert": {"title": "<APP_NAME>"')
+  and has(DIGEST,'"body": "<digest house constant> · <count> conversations need you"')
+  and has(DIGEST,'"type": "digest"')),
+ ("§3.2 the digest form is a visible alert", not has(DIGEST,"content-available")),
+ ("§3.2 the digest collapses per computer", has(DIGEST,"collapses **per computer**")
+  and has(DIGEST,"`digest:<computer handle>`")),
+ ("§3.2 the digest carries no handle, token or kind",
+  has(DIGEST,"no `conversation` handle, no `completion_token` and no `kind`")),
+ ("§3.2 the emit frame carries the alert text verbatim",
+  has(FRAME,'"alert"') and has(FRAME,"THE MACHINE'S WORDS, SENT VERBATIM")),
+ ("§3.2 only the machine composes: the cloud mints no payload and renders no text",
+  has(COMPOSER,"cloud mints nothing and composes no text")
+  and not has(COMPOSER,"the cloud mints the")
+  and not has(COMPOSER,"the cloud composes the")
+  and has(af,"never renders, edits, rewords or synthesises alert text")),
+ ("consistency: the ADR names no slice the plan does not define",
+  set(re.findall(r"\bS\d+[a-c]?\b", A)) <= set(re.findall(r"^\| \*\*(S\d+[a-c]?)\*\* \|", P, re.M))),
+ ("consistency: the digest's slices are named in both", has(P,"| **S5** |") and "S5" in A
+  and has(P,"| **S7** |") and "S7" in A),
  ("§3.4 the digest key is the window's, minted once", has(af,'sha256("digest" \u2016 emit_id \u2016 computer)')
   and has(af,"Minting the `emit_id` at retry time is the failure this rule forbids")),
+ # The composer gap: two mechanisms look like coalescers, so pin that only the machine mints a
+ # payload and that the cloud's role is stated as delivery-only. A reader who finds one sentence but
+ # not the other re-derives the ambiguity.
+ ("§3.2 exactly one composer, the machine", has(af,"**Exactly one composer, and it is the machine")
+  and has(af,"cloud mints nothing and composes no text")),
+ ("§3.1 the cloud composes nothing", has(af,"**The cloud composes nothing")),
  ("§3.4 heal key minted on the supersede cursor", has(af,"because a heal is read on the supersede cursor")),
  ("§2.2 ops-note retention + gap", has(af,"delivery records are kept **14 days**") or has(af,"kept **14 days**")),
  ("provenance row for the ops note (cross-PR)", has(af,"cross-PR")),
