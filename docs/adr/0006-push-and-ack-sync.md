@@ -4,8 +4,7 @@
 - **Date:** 2026-09-30
 - **Deciders:** the maintaining team (manager call, 2026-09-30, on the product questions
   listed below) **and** Local Operator (core) maintainers — this record is deliberately
-  cross-repository, because most of its decisions land in the core and in Radient, not in
-  this app
+  cross-repository, because most of its decisions land in the core and in Radient, not in this app
 - **Depends on:** [ADR 0001 — Framework](0001-framework.md), [ADR 0002 — Connection and auth](0002-connection-and-auth.md), [ADR 0004 — CI/CD](0004-ci-cd.md)
 - **Amends** — the complete list, because this ADR changes what a badge *means*:
   - [ADR 0005](0005-queued-asks.md) §5 — its "`v1` has **no push notifications**" and its
@@ -16,8 +15,7 @@
     "the app badge counts sessions waiting on a decision" is **replaced**: the app badge counts
     conversations with unread notifications (§1.4). "a notification names the session and the
     kind of decision" holds **for local banners only** — never for a push, which carries no name
-    (P2) and no session id (§3.2). P-3's remaining consequence — rows carry state in words — is
-    untouched.
+    (P2) and no session id (§3.2). P-3's remaining consequence — rows carry state in words — is untouched.
   - [`docs/ux/flows.md`](../ux/flows.md) §301 (F-5 §3, "Attention badges … as the app icon
     badge"): the header badge and the ask badge stay; the **icon** badge changes meaning.
   - [`docs/ux/flows.md`](../ux/flows.md) §570 (the Settings table's **Notifications** row) —
@@ -206,8 +204,7 @@ from a diff:
   of decision**." The badge half is replaced by §1.4. The notification half holds **for local
   banners only** and never for a push: P2 sends no name, and no session id rides the wire at all
   (§3.2), so a push can never name the session — corrected here rather than left standing;
-- `docs/ux/flows.md:301` (F-5 §3): "count of sessions needing a decision … as the app icon
-  badge";
+- `docs/ux/flows.md:301` (F-5 §3): "count of sessions needing a decision … as the app icon badge";
 - #11's `attentionCount` (`origin/feat/screens-lists:src/features/sessions/session-projection.ts:56-70`):
   `session.needs_attention ? total + 1 : total`, with a comment saying it is counted "from
   `needs_attention` and never from `unseen`";
@@ -584,14 +581,15 @@ publication cursor (Q9), and why §3.4's content-derived key has something to mi
 | **Delivery** | `(device_id, conversation_handle, emit_id)` → sent/attempted, provider id, response code, **kept 14 days** | the record of what was pushed: it is what makes re-delivery idempotent, a revocation testable and the cloud's own alerts meaningful. **It is not returned to the machine** (§3.1) |
 | **Credential (per device)** — **the machine's own record** | `credential_live`, `last_authenticated_at`, **`credential_expires_at`** *(new — the **expiry the phone's cookie itself presented**, recorded at register time and refreshed on any authenticated request that names its device; `sign_cookie` puts the expiry in the cookie's value, `mobile/auth.py`:465-469, so no clock arithmetic and no login-route writer is needed — §4 rule 2 / Q-F15 / R8-m1)*, and the **per-device key** (`device_key`): **minted by the machine at every registration and stored as the key ITSELF in the machine's 0600 record** (`push_devices.py`:194 field, `:510` written, `:946` the atomic 0600 write — core's shape, PR #1864, **the key itself, not a hash** — a hash could not be returned per call, and the per-call return is what makes registration the key's delivery path; **divergence for core, listed in the plan**: a hash would require a one-time return plus a re-register refusal, and #1864 does not do that), and held by the phone in the keystore keyed by its `install_id`. **The store's custody is the same rule the discovery records use — 0600 under 0700 (`registry.py`:5)** | the second limb of §4 rule 2, and the only place the flag lives. **The machine owns it**: the relay's routes write it as they see the cookie and the emit worker (the same process) reads it, so there is no second copy to disagree with and **no epoch to compare** (round 4 `m1`, QA Q-F3). **The key never goes to the cloud** — round 5 M3 caught the earlier sentence "never leaves the machine", which was wrong: the *phone* presents it, as `X-Lop-Device-Key` (§3.1). **A rotation happens on registration**: every `register` re-mints the key and returns it in that response (§3.1), so the owner's lever is a fresh registration (a reinstall, or the device's next authenticated register) and the account console's revoke of the account's access — **not** the device's own initiative; an offline device resumes only by re-registering with its current relay credential, and a device the machine has marked is refused at registration before any key is minted. What the cloud holds is the **coalesced** copy of the two flag values, never per-request traffic (`m5`) |
 | **Credentials** | the APNs `.p8` key id + team id; the FCM service account | the reason the cloud has to exist at all |
-| **Grant (per device)** *(cloud, proposal)* | `grant_id`, `device_id`, the computer it belongs to, `minted_at`, `last_refused_at` — the **shape is the cloud lane's** ([`docs/push-cloud-ops.md`](push-cloud-ops.md)); this ADR fixes only the two properties rule 2 depends on | **the enforceable half of §4 rule 2 on the Radient route** (round 5 Q-F8): it is *minted* at registration against an `install_id` the machine's record carries, *required* for delivery (fan-out refuses without it), and *refused* for a row whose marker forbids it. The one property that cannot be verified from this repository — a mint refused while the account has revoked that computer's access — is stated as a **cloud-side requirement** in §4 rule 2 and in §7, not assumed here. **Its life — storage, refresh, rotation** (round 6 QA Q-F8, which caught that a record with no life cannot be implemented): it **lives in the cloud's own store** beside the device row *(proposal)*; it is **refreshed** from the machine's next `credential_live` report rather than from a clock, so the cloud re-arms it from evidence; it is **rotated** — invalidated and re-minted at the next registration — when an **owner** revokes it, or when the device re-registers (which re-mints the key, §3.1); and a **mint is refused outright** while the account's access for that computer is revoked. "The machine never refreshes a grant" in rule 2 means *the machine*, not the cloud |
+| **Grant (per device)** *(cloud, proposal)* | `grant_id`, `device_id`, the computer it belongs to, `minted_at`, `last_refused_at` — **the shape is the note's** ([`docs/push-cloud-ops.md`](../push-cloud-ops.md), its credential-limb paragraph), which owns the grant's record; naming it here stops the two documents deferring to each other ([`docs/push-cloud-ops.md`](push-cloud-ops.md)); this ADR fixes only the two properties rule 2 depends on | **the enforceable half of §4 rule 2 on the Radient route** (round 5 Q-F8): it is *minted* at registration against an `install_id` the machine's record carries, *required* for delivery (fan-out refuses without it), and *refused* for a row whose marker forbids it. The one property that cannot be verified from this repository — a mint refused while the account has revoked that computer's access — is stated as a **cloud-side requirement** in §4 rule 2 and in §7, not assumed here. **Its life — storage, refresh, rotation** (round 6 QA Q-F8, which caught that a record with no life cannot be implemented): it **lives in the cloud's own store** beside the device row *(proposal)*; it is **refreshed** from the machine's next `credential_live` report rather than from a clock, so the cloud re-arms it from evidence; it is **rotated** — invalidated and re-minted at the next registration — when an **owner** revokes it, or when the device re-registers (which re-mints the key, §3.1); and a **mint is refused outright** while the account's access for that computer is revoked. "The machine never refreshes a grant" in rule 2 means *the machine*, not the cloud |
 **What the cloud must NOT hold:** transcripts, conversation names, session ids, working
 directories, model names, prompt text, **read state or read history**, and **no unread
 count** (§1.5). §4 says what it does learn, honestly, including the residue.
 
 **Two retention rules this ADR adopts, and one honest gap** (designed in the cloud ops note,
 [`docs/push-cloud-ops.md`](../push-cloud-ops.md), PR #15 — the note stays the operational
-runbook; the rules are the ADR's, and the note's text is being aligned to them): delivery records
+runbook; the rules are the ADR's, and **the note's text now follows them** — PR #15 is merged (`5b76089`) and
+the divergence list below is closed): delivery records
 are kept **14 days**, and a device with **no authenticated request for 60 days has its row
 dropped entirely — no marker.** It is **deliberately not a tombstone**: a tombstone refuses
 re-registration, and this drop is explicitly "rather than a ban", so the app re-registers on the
@@ -627,8 +625,7 @@ watermark **per conversation**, and **exactly one** surface ever wins (`attentio
 - It cannot be fixed by ordering: whichever claim wins, the loser is silenced **for that
   completion** with no lease and no expiry (`attention.py:2403-2420`; QA's probe confirms the
   compare is per sequence, so a *newer* completion in the same conversation is claimable
-  again). A coin-flip between "the banner you needed" and "the phone you needed" is worse than
-  either.
+  again). A coin-flip between "the banner you needed" and "the phone you needed" is worse than either.
 - It would break the claim's own invariant that the claimant **is** the deliverer
   (`docs/ATTENTION.md`:148-156).
 
@@ -704,8 +701,7 @@ What the app does instead, and what it must say:
 
 - **While foregrounded**: the SSE list and per-session streams are live
   (`/api/sessions/events`, `/api/sessions/{id}/events`), the marks and the in-app count are
-  correct, and the icon badge is set directly from the §1.1 read. No push is involved in any
-  of it.
+  correct, and the icon badge is set directly from the §1.1 read. No push is involved in any of it.
 - **A local notification while the app is running** is a legitimate addition and is a slice of
   its own (`docs/push-plan.md` S9), for foreground arrivals and for every route. It is *not* a
   substitute and must not be described as one.
@@ -716,8 +712,7 @@ What the app does instead, and what it must say:
   removal (§1.4), and on a machine that cannot push it reflects the last connection only —
   which §1.5 already discloses.
 - **In Settings the truth is stated once, where the toggle is**, in the Local Operator voice,
-  naming the *remedy*, not the limitation. Proposed copy for the designer to review in the app
-  slice:
+  naming the *remedy*, not the limitation. Proposed copy for the designer to review in the app slice:
 
   > **Notifications** — *This computer is not signed in to Radient, so pushes have no way to
   > reach your phone. Sign in on that computer to get alerts while the app is closed; until
@@ -731,8 +726,7 @@ What the app does instead, and what it must say:
 **quiet hours** (there is no quiet-hours concept in the core; the platforms' own Focus /
 Do Not Disturb already suppress banners and they are the right owner of it) and **"when a
 session needs a decision"** (gates do not push — §1.4, and the plan's follow-up). Both rows
-are listed in the **Amends** block at the top so the flows document is not left claiming
-otherwise.
+are listed in the **Amends** block at the top so the flows document is not left claiming otherwise.
 
 ### 3. The ack-sync contract
 
@@ -939,8 +933,7 @@ POST /api/push/devices/{device_id}/unrevoke → {"ok": true, "device_id": "…"}
   owner (§2.4) and the one that works with the machine offline.
 - **`revoke` stays device-callable and self-targetable; `unrevoke` does not**: a device that revokes
   *itself* only reduces its own access, which is safe for anyone holding a cookie to do — §4 rule 1's
-  invariant ("neither marker is cleared by the device itself") is what the operator key makes
-  structural.
+  invariant ("neither marker is cleared by the device itself") is what the operator key makes structural.
 
 **Fetch unread** *(new, §1.1)*: `GET /api/attention/unread` → the aggregate above. This one
 route is what the in-app count, the icon badge and every resync read.
@@ -1037,8 +1030,7 @@ the phone's number drops* — actually exist, which no slice did before.
             "count": 2 } }
 ```
 
-The attention form carries `{v, type: "attention", computer, count, emit_id, exclude: ["<device_id>"]}`
-and
+The attention form carries `{v, type: "attention", computer, count, emit_id, exclude: ["<device_id>"]}` and
 `aps: {"content-available": 1}` — a **silent, best-effort wake** (§5). One term is used for it
 throughout: **the attention push**.
 
@@ -1154,8 +1146,7 @@ handle, the completion's kind, the completion token, the emit id, the unread cou
 Q-F4). That last one is **delivery state, not read state**: it says when a device *talked to the
 machine*, never what it read or whether it read anything, which is why it is not the read-history
 stream §2.2 prohibits. **No conversation name, no transcript, no snippet, no failure text, no
-prompt, no working directory, no file path, no model name, no tool output, and no read
-history.**
+prompt, no working directory, no file path, no model name, no tool output, and no read history.**
 
 **The conversation handle: mint, scope, and resolve** (review M10 — this was too vague to
 implement from):
@@ -1227,8 +1218,7 @@ paths, and the honest limits of each:
      that computer stops working, and the restart heals all of them — a thief included. The lever on
      that route is the **account side** (path 2).
    **It is not a revoke on either route**, which is why (1)/(2) are still required for a stolen
-   phone; the app's copy must not conflate the two, and must not promise a route's lever on the
-   other route.
+   phone; the app's copy must not conflate the two, and must not promise a route's lever on the other route.
 4. **Server-side per-token revocation** and **dead-token deletion** (APNs `410 Unregistered` /
    FCM `UNREGISTERED`) — deletion is not optional: an accumulating token table is a privacy
    liability and a cost. **This is the *absent* state below, never a tombstone** (rule 3): the row
@@ -1263,29 +1253,22 @@ agreement is a reading, never an assertion). As of **`30a0f4d`** — `docs/push-
 carries the same five states, the same three markers, the same precedence, `expired_at` for the
 credential lapse including a rotation, tombstoning for revoke *and* unpair, and the absent state
 for the provider dead-token and the 60-day drop: the four divergences the round named are closed.
-**Three remain, and round 5 M6 / QA Q-F11 caught that "one" understated them — the count and the
-items both matter, because each is a thing a cloud implementer would build wrongly:**
-1. **The rate.** The note still says the relay reports `credential_live` "on each authenticated
-   request", where rule 2 specifies a **coalesced, change-triggered** report (round 4 `m5`). This
-   ADR is the authority on the rate; the note is the authority on the cloud's handling of it.
-2. **The credential epoch.** The note's credential paragraph still has the machine "check the
-   credential epoch" — the exact counter rule 2 **deleted** (`docs/push-cloud-ops.md`:73-74, PR #15 at head `30a0f4d` — round 4 `m1` / QA Q-F3; round 9
-   Q-F30 corrected the line number). A
-   reader of the note would build a check the machine will never send.
-3. **The single-route claim.** The same paragraph says delivery "resumes at each device's next
-   authenticated request, **which a stolen phone, lacking the new password, cannot make**" — the
-   pre-Q-F2 model: on the Radient route the gateway injects the cookie and the phone never needs
-   the password, which is precisely why rule 2 had to move that route's lock to the cloud grant.
+**All of them are closed at the note's merged head `5b76089`** (PR #15, on `main` since 2026-10-01) —
+the three the round named, and the four it said the note did not carry:
+1. **The rate.** The note now specifies the **coalesced, change-triggered** report — "at most once
+   per device per 5 minutes" — matching rule 2 (round 4 `m5`). The ADR stays the authority on the
+   rate; the note is the authority on the cloud's handling of it.
+2. **The credential epoch.** The sentence is **gone**, and so is the line it sat on: the note was
+   reflowed before it merged, so this entry names the change rather than a line number that no longer exists (round 4 `m1` / QA Q-F3; round 9 Q-F30 corrected the old number).
+3. **The single-route claim.** The "a stolen phone, lacking the new password, cannot make it" clause
+   is gone, and the note now puts the Radient route's lock in the cloud grant — the pre-Q-F2 model is
+   not there to be built wrongly.
+4. **The four it did not carry** — the grant (record, mint, refusal, refresh and rotation), the
+   heartbeat call and its cadence, `device_key` with `X-Lop-Device-Key`, and the `devices` report
+   block — are **all carried** by the merged note.
 
-4. **Four things this ADR has that the note does not carry at all** (round 6 QA Q-F8; a note that
-   is the cloud lane's runbook would otherwise omit them): the **grant** (its record, mint,
-   refusal, refresh and rotation), the **heartbeat** call and its cadence, **`device_key`** with
-   `X-Lop-Device-Key`, and the **`devices` report block**. These are *owed to the note* rather than
-   divergences of it, and they are on the list the note's author has.
-
-   The note's author has been asked to re-align the three and add the four; **this ADR is the
-   authority until the note matches it, and the note is not edited from this branch** (round 4
-   M1's rule, kept). This paragraph is where the two documents are checked against each other.
+   This paragraph remains where the two documents are checked against each other, and the check is a
+   reading, never an assertion: re-read the note's head before relying on it.
 
 Three rules follow, and together they are the whole of the revocation semantics:
 
@@ -1317,8 +1300,7 @@ Three rules follow, and together they are the whole of the revocation semantics:
    two statements could not both stand):
    - **Direct route, fresh install:** stopped by the **password**. The app must present the relay
      password to get a cookie at all, and a re-installed app does not have it; this is the route
-     where "revoke AND rotate" is a real lever, because rotating invalidates the cookie the thief
-     holds.
+     where "revoke AND rotate" is a real lever, because rotating invalidates the cookie the thief holds.
    - **Radient route, fresh install: NOT stopped by the grant, and this ADR will not pretend
      otherwise.** There the gateway **injects** `lop_mobile` from the machine's own password
      (`gateway.py`:545-548), so the phone never needs that password — and the grant is
@@ -1346,8 +1328,7 @@ Three rules follow, and together they are the whole of the revocation semantics:
    credentials (§2.4's bargain, stated rather than implied).
    **The report, its carrier, and how a lapse is derived** (round 4 `m5`; round 5 Q-F9, which
    caught that "piggybacked" named no field; round 6 Q-F13, which caught that §3.2 forbids unknown
-   fields and this block had no named home). The carrier is named, and every addition below is
-   **NEW**:
+   fields and this block had no named home). The carrier is named, and every addition below is **NEW**:
    - **The registration forward** (the machine→cloud call that forwards a registration, §3.1/§7
      *(proposal)*) carries `devices: [{device_id: str, credential_live: bool,
      credential_expires_at: int, last_authenticated_at: int, unix seconds}]` — the exactly-typed
@@ -1471,8 +1452,7 @@ installs no gate at all** (`docs/CONSOLE.md`:53), so a machine configured that w
 here. The mitigations that do hold are the ones §4 already lists: the password rotation on the
 **direct** route (which invalidates the cookie) and the account-side revocation on the **Radient**
 route. Nothing in this ADR should be read as "a revoked phone cannot reach the machine" — it says
-precisely: a revoked phone cannot **un-revoke itself over HTTP**, and everything else is the agent's
-own policy.
+precisely: a revoked phone cannot **un-revoke itself over HTTP**, and everything else is the agent's own policy.
 
 **What a revoked device keeps**: whatever it already cached locally — projections and
 transcripts (ADR 0002 §6) and its `lop_mobile` cookie until the TTL or a password rotation.
@@ -1623,8 +1603,7 @@ because a push tap's correctness depends on it.
    Until S8 lands, the honest statement is: **the push tap deep link is unimplemented.**
 8. **Notifying conversation ≠ current screen.** Tapping a push for conversation B while the
    app sits on A navigates to B, and the back affordance returns to the composer home. The
-   sidebar's unread marks are the machine's, so B's row clears when the ack lands — not on
-   navigation.
+   sidebar's unread marks are the machine's, so B's row clears when the ack lands — not on navigation.
 
 **Out of scope, explicitly:** the composer's data path (sending, queuing, steering) is
 untouched by this ADR, and in particular **the STT composer readout is not part of this
@@ -1717,8 +1696,7 @@ order this ADR *decides*, and the reason:
 
 1. **The aggregate read and the population rule (S1).** Nothing else can be specified against
    a shape that does not exist, and it is independently useful — the app's in-app count and the
-   §1.4 badge work with no push at all. **Ships alone, benefits users immediately, needs no
-   cloud.**
+   §1.4 badge work with no push at all. **Ships alone, benefits users immediately, needs no cloud.**
 2. **The handle (S2) and the interface freeze (S3)**, in parallel with the device registry
    (S4). The freeze depends on S1 and S2 only.
 3. **The push worker (S5) and the attention emit (S6)** behind a feature flag, tested against
@@ -1828,8 +1806,7 @@ belongs (QA round 2 Q12).
 
 ### Negative, accepted
 
-- **No push on a machine with no Radient login** (§2.4), stated plainly in the ADR and in
-  Settings.
+- **No push on a machine with no Radient login** (§2.4), stated plainly in the ADR and in Settings.
 - **No cross-machine unread merge** (§1.6).
 - **The icon badge is only as fresh as the app's last connection** (§1.5). The banner carries
   the fresh number; the icon does not.

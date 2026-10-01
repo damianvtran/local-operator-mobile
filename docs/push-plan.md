@@ -10,8 +10,8 @@ Owners: **app** = this repository; **daemon-core** = `damianvtran/local-operator
 interface we specify and do not implement. Every cloud route in this plan is a **proposal**,
 marked as such wherever it appears; no Radient repository was available to read. **The cloud
 lane's own note is [`docs/push-cloud-ops.md`](push-cloud-ops.md)** (PR
-[#15](https://github.com/damianvtran/local-operator-mobile/pull/15), open — the link resolves
-once it merges), and the two documents are reconciled on the ingest shape: the machine's call
+[#15](https://github.com/damianvtran/local-operator-mobile/pull/15), **merged as
+`5b760898ba5da1d65a23ce5ba999f520ec5e632c`** — the note is on `main`), and the two documents are reconciled on the ingest shape: the machine's call
 answers **`202 {emit_id, accepted_at}`**, accepted and queued, and a per-device result is never
 returned to the machine (ADR §3.1).
 
@@ -52,9 +52,11 @@ numbers, not re-derived.
 
 ---
 
-## S4a against core's implementation (PR #1864, head `d089f7e0f`)
+## S4a against core's implementation (PR #1864, head `d089f7e0f`, **merged as `813c6bf89`**; #1878 `37ab4ed`)
 
-S4a is **already implemented** in `damianvtran/local-operator` PR #1864 (open, not merged): the
+S4a is **already implemented** in `damianvtran/local-operator` PR #1864 — **merged as
+`813c6bf89870b4772fd622246a5d5d41e4ac3f7f` and in the `v0.64.13` release**, with #1878 (`37ab4ed`)
+following it to pin the every-marker `unrevoke` semantics — read as it did at that head: the
 five states and their precedence resolver (`push_devices.py`:136-145, `:338-356`), the two state
 refusals `403 device_revoked` / `403 device_unpaired` (`:182-185`), `expired_at` cleared by
 re-register (`:505-509`), the per-device key minted and returned by every register
@@ -77,12 +79,10 @@ match the implementation, and these are the places where it asks for more or som
 3. **The credential report is unbuilt**: #1864 declares `credential_live` / `last_authenticated_at`
    and adds `device_key_matches` "nothing consumes yet" (`:359-375`), and `list` omits both fields
    when a row does not carry them (`:566-569`). **S4c's carrier, its heartbeat, and the new
-   `credential_expires_at` (§4 rule 2, Q-F15) remain core work**; §3.2 now carries the literals S3
-   freezes.
+   `credential_expires_at` (§4 rule 2, Q-F15) remain core work**; §3.2 now carries the literals S3 freezes.
 4. **`credential_expires_at` is new here and absent there** — its writer is **register**, reading the
    expiry out of the cookie the phone presented (`mobile/auth.py`:465-469), not the login route,
-   which knows no device (R8-m1). It is the one field this document adds to core's store rather than
-   adopting.
+   which knows no device (R8-m1). It is the one field this document adds to core's store rather than adopting.
 5. **The push token is validated and dropped** (`daemon.py`:4776-4778 (#1864)) ✓ matches §2.2's custody —
    the cloud's registry holds tokens — and **the registration forward itself is S7** (cloud).
 6. **No account-console path** exists in #1864 (cloud, S7), and no credential-change event.
@@ -148,8 +148,7 @@ S4 + S7 ── S10
 ## QA matrix this plan asks for
 
 Written for the independent QA pass, per the operator's permutation list plus review round
-1's gaps. Each row names the app's state, the other surfaces' state, the action, and what must
-be observed.
+1's gaps. Each row names the app's state, the other surfaces' state, the action, and what must be observed.
 
 | # | App state | Other surfaces | Action | Expected |
 |---|---|---|---|---|
@@ -217,19 +216,14 @@ be observed.
   **Re-checked at the note's head `30a0f4d` (2026-09-30) rather than asserted:** it now carries the
   same five states, the same markers, the same precedence, `expired_at` for the credential lapse
   including a rotation, tombstoning for revoke *and* unpair, and the absent state for the provider
-  dead-token and the 60-day drop — the four divergences round 4 M1 named are closed. **Three
-  remain, and round 5 M6 / QA Q-F11 caught that an earlier "one" understated them:** (1) the note
-  still says the flag is reported **"on each authenticated request"** where §4 rule 2 specifies a
-  **coalesced, change-triggered** report (round 4 `m5`); (2) it still has the machine **"check the
-  credential epoch"** — the counter this ADR deleted (round 4 `m1`); (3) it still carries the
-  **single-route** claim that a stolen phone "lacking the new password" cannot make the resuming
-  request, which the Radient route's injected cookie contradicts (round 5 M4). The note's author has
-  been asked to re-align all three. **And four things are owed TO the note rather than divergent from
-  it** (round 6 QA Q-F8): the **grant** (record, mint, refusal, refresh, rotation), the **heartbeat**
-  route, **`device_key`** with `X-Lop-Device-Key`, and the **`devices` report block** — none of them
-  exist in the note today, and a cloud implementer reading it alone would build none of them.
-  **This ADR is the authority until the note matches it**, and the note is not edited from this
-  branch. This paragraph is where the two are checked against each other. §2.2's retention rules (**14 days**; the **60-day drop**, now stated as a row
+  dead-token and the 60-day drop — the four divergences round 4 M1 named are closed. **The three
+  round 5 M6 / QA Q-F11 found are closed too, and so are the four the note was owed** (PR #15 merged
+  as `5b76089`): the rate is now the coalesced, change-triggered report "at most once per device per
+  5 minutes"; the credential-epoch sentence is gone; the single-route "lacking the new password"
+  claim is gone, with the Radient route's lock moved to the cloud grant; and the note now carries the
+  **grant**, the **heartbeat** route, **`device_key`** with `X-Lop-Device-Key` and the **`devices`
+  report block**. **The two documents agree at that head**; this paragraph stays where they are
+  checked against each other, and the check is a reading, never an assertion. §2.2's retention rules (**14 days**; the **60-day drop**, now stated as a row
   deletion with no marker rather than a tombstone) are this ADR's decision as of this pass — the
   note remains their operational runbook. Neither is a cloud route shape, so neither carries the
   "proposal" marker the endpoint list does.

@@ -148,7 +148,7 @@ rows = [
  ("R6 the rotation outage is stated exactly", has(af,"reads the password **once, when the `Gateway` is constructed**") and has(af,"heals itself at that restart")),
  ("R6 the residual and the copy are route-conditional", has(af,"**Direct route: the credential binds it.**") and has(af,"**exactly that, never the password sentence**")),
  ("R6 the grant has a life", has(af,"a record with no life cannot be implemented") and has(af,"means *the machine*, not the cloud")),
- ("R6 the note owes four items", has(af,"Four things this ADR has that the note does not carry at all") and has(pf,"four things are owed TO the note")),
+ ("R6 the note now carries the four it was owed", has(af,"are **all carried** by the merged note") and has(pf,"the four the note was owed")),
  ("R6 the round-6 mappings", has(af,"`local_operator/tunnels/gateway.py` → `gateway.py`") and has(af,"`local_operator/mcp/grants.py` → `mcp/grants.py`") and has(af,"`local_operator/mobile/attach_client.py` → `attach_client.py`") and has(af,"`local_operator/mobile/tui_handle.py` → `tui_handle.py`")),
  ("R6 nit: the range includes :778", has(af,"daemon.py:778-782")),
  ("R6 the §9/provenance contradiction is resolved", has(af,"Corrections live in two places, by kind")),
