@@ -318,91 +318,104 @@ export const lastRelease = (
 	};
 };
 
-const refType = arg("ref-type", process.env.GITHUB_REF_TYPE ?? "");
-const refName = arg("ref-name", process.env.GITHUB_REF_NAME ?? "");
-const counterPath = arg("counter", DEFAULT_COUNTER);
-const ref = arg("ref", "HEAD");
+/**
+ * THE CLI IS THE ENTRY POINT ONLY. Everything above is importable: a test can
+ * import `derive` and `floorFor` without the module reading a repository, writing
+ * to `GITHUB_ENV`, or exiting the process. That matters beyond tidiness — the
+ * unguarded version ran on import, and importing it from the unit suite meant the
+ * CLI exited 1 inside the test worker whenever the checkout was a shallow clone
+ * (which is what the `checks` job has), taking the whole test FILE down with
+ * `process.exit unexpectedly called with "1"`. Reproduced locally: `node
+ * scripts/ci/version.ts` inside a `--depth 1` clone exits 1 by design, so a test
+ * that merely imports this file inherits that refusal.
+ */
+if (import.meta.main) {
+	const refType = arg("ref-type", process.env.GITHUB_REF_TYPE ?? "");
+	const refName = arg("ref-name", process.env.GITHUB_REF_NAME ?? "");
+	const counterPath = arg("counter", DEFAULT_COUNTER);
+	const ref = arg("ref", "HEAD");
 
-let derived: Derived;
-let release: { tag: string | null; base: number; commitsSince: number };
-let releaseBuildNumber: number | null = null;
-try {
-	if (git(["rev-parse", "--is-shallow-repository"]) === "true") {
-		throw new Error(
-			"this is a shallow clone, so a commit count would be the count of what " +
-				"was fetched rather than of the repository. Check out with " +
-				"`fetch-depth: 0`.",
-		);
-	}
-	release = lastRelease(counterPath, ref, refType === "tag" ? refName : null);
-	if (refType === "tag") {
-		releaseBuildNumber = counterAt(counterPath);
-	}
-	derived = derive({
-		refType,
-		refName,
-		base: release.base,
-		commitsSinceLastRelease: release.commitsSince,
-		releaseBuildNumber,
-		counterPath,
-	});
-} catch (error) {
-	console.error(`::error::${message(error)}`);
-	process.exit(1);
-}
-
-const lines = [
-	`version=${derived.version}`,
-	`display_version=${derived.displayVersion}`,
-	`version_code=${derived.versionCode}`,
-	`from_tag=${derived.fromTag}`,
-];
-
-// Printed, not exported: they are the numbers behind the derivation, and the
-// table is what makes a dry run of the release path readable ("the number it
-// would claim for main versus for a tag") without a store to compare against.
-const mainInternal = internalNumberAt(
-	counterPath,
-	"origin/main",
-	refType === "tag" ? refName : null,
-);
-// The same floor the release arm applies, printed so a dry run shows both
-// sides of the comparison (Q4: a tag need not be the tip of `main`).
-const minimum = floorFor(release.base + release.commitsSince, mainInternal);
-const diagnostics = [
-	`base_release_number=${release.base}`,
-	`base_release_tag=${release.tag ?? "none"}`,
-	`commits_since_last_release=${release.commitsSince}`,
-	`internal_build_number=${release.base + release.commitsSince}`,
-	`release_build_number=${releaseBuildNumber ?? "none"}`,
-	`minimum_release_build_number=${minimum}`,
-	`main_tip_internal_build_number=${mainInternal ?? "not-checked"}`,
-	`counter_file=${counterPath}`,
-];
-
-if (process.argv.includes("--write")) {
-	const envFile = process.env.GITHUB_ENV;
-	const outputFile = process.env.GITHUB_OUTPUT;
-	if (!envFile || !outputFile) {
-		console.error(
-			"::error::--write needs GITHUB_ENV and GITHUB_OUTPUT, which only exist " +
-				"inside a GitHub Actions step. Drop --write to just print the values.",
-		);
+	let derived: Derived;
+	let release: { tag: string | null; base: number; commitsSince: number };
+	let releaseBuildNumber: number | null = null;
+	try {
+		if (git(["rev-parse", "--is-shallow-repository"]) === "true") {
+			throw new Error(
+				"this is a shallow clone, so a commit count would be the count of what " +
+					"was fetched rather than of the repository. Check out with " +
+					"`fetch-depth: 0`.",
+			);
+		}
+		release = lastRelease(counterPath, ref, refType === "tag" ? refName : null);
+		if (refType === "tag") {
+			releaseBuildNumber = counterAt(counterPath);
+		}
+		derived = derive({
+			refType,
+			refName,
+			base: release.base,
+			commitsSinceLastRelease: release.commitsSince,
+			releaseBuildNumber,
+			counterPath,
+		});
+	} catch (error) {
+		console.error(`::error::${message(error)}`);
 		process.exit(1);
 	}
-	// The two variables the app's own config reads, so `expo prebuild` and every
-	// Gradle/xcodebuild invocation agree on one version without a committed bump.
-	// `display_version` is printed for the run log and deliberately NOT exported:
-	// nothing consumes it, and a variable in the job environment that no file
-	// reads is the shape of bug this pipeline was reviewed for (the version
-	// reaching the artefact is asserted in android.yml and ios.yml).
-	appendFileSync(
-		envFile,
-		`LOCAL_OPERATOR_MOBILE_VERSION=${derived.version}\n` +
-			`LOCAL_OPERATOR_MOBILE_VERSION_CODE=${derived.versionCode}\n`,
-	);
-	appendFileSync(outputFile, `${lines.join("\n")}\n`);
-}
 
-for (const line of lines) console.log(line);
-for (const line of diagnostics) console.log(line);
+	const lines = [
+		`version=${derived.version}`,
+		`display_version=${derived.displayVersion}`,
+		`version_code=${derived.versionCode}`,
+		`from_tag=${derived.fromTag}`,
+	];
+
+	// Printed, not exported: they are the numbers behind the derivation, and the
+	// table is what makes a dry run of the release path readable ("the number it
+	// would claim for main versus for a tag") without a store to compare against.
+	const mainInternal = internalNumberAt(
+		counterPath,
+		"origin/main",
+		refType === "tag" ? refName : null,
+	);
+	// The same floor the release arm applies, printed so a dry run shows both
+	// sides of the comparison (Q4: a tag need not be the tip of `main`).
+	const minimum = floorFor(release.base + release.commitsSince, mainInternal);
+	const diagnostics = [
+		`base_release_number=${release.base}`,
+		`base_release_tag=${release.tag ?? "none"}`,
+		`commits_since_last_release=${release.commitsSince}`,
+		`internal_build_number=${release.base + release.commitsSince}`,
+		`release_build_number=${releaseBuildNumber ?? "none"}`,
+		`minimum_release_build_number=${minimum}`,
+		`main_tip_internal_build_number=${mainInternal ?? "not-checked"}`,
+		`counter_file=${counterPath}`,
+	];
+
+	if (process.argv.includes("--write")) {
+		const envFile = process.env.GITHUB_ENV;
+		const outputFile = process.env.GITHUB_OUTPUT;
+		if (!envFile || !outputFile) {
+			console.error(
+				"::error::--write needs GITHUB_ENV and GITHUB_OUTPUT, which only exist " +
+					"inside a GitHub Actions step. Drop --write to just print the values.",
+			);
+			process.exit(1);
+		}
+		// The two variables the app's own config reads, so `expo prebuild` and every
+		// Gradle/xcodebuild invocation agree on one version without a committed bump.
+		// `display_version` is printed for the run log and deliberately NOT exported:
+		// nothing consumes it, and a variable in the job environment that no file
+		// reads is the shape of bug this pipeline was reviewed for (the version
+		// reaching the artefact is asserted in android.yml and ios.yml).
+		appendFileSync(
+			envFile,
+			`LOCAL_OPERATOR_MOBILE_VERSION=${derived.version}\n` +
+				`LOCAL_OPERATOR_MOBILE_VERSION_CODE=${derived.versionCode}\n`,
+		);
+		appendFileSync(outputFile, `${lines.join("\n")}\n`);
+	}
+
+	for (const line of lines) console.log(line);
+	for (const line of diagnostics) console.log(line);
+}
