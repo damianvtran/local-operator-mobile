@@ -222,7 +222,8 @@ Three more sites say the same thing, and **all three are in the Amends list**: t
 the ADR 0005 §5 sentence that *is* amended), and `docs/ux/current-relay-audit.md`:220-222 (push
 as a non-goal, "use the app icon badge instead"). This repository's own `docs/architecture.md`:299
 is the same claim in the same words and is amended in place — open question 1 now points at this
-ADR.
+ADR, and **the row reads at `:303` on this branch** once the amendment lands, because the clause
+above the row's arrow is what changed.
 
 The operator's rule (§1.4) is "conversations with unread notifications", which is the second
 half of that expression and not the first. **Consequence, stated plainly: a parked approval

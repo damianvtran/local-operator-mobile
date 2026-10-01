@@ -32,13 +32,28 @@ def show(ref, path):
               file=sys.stderr)
         raise SystemExit(2)
     return out.stdout
-import pathlib as _pathlib
-has_readme = ""
-for _cand in ("docs/adr/0006-verification/README.md", "0006-verification/README.md"):
-    _p = _pathlib.Path(_cand)
-    if _p.exists():
-        has_readme = _p.read_text()
-        break
+def try_read(ref, path):
+    """Read a file that MAY be absent: the ref's copy in ref mode, the working tree otherwise.
+
+    The README used to be read from the CWD even in ref mode, so validating a pushed branch from a
+    different checkout could pass or fail on the WRONG tree's README (round 11, R11-m1). Every file
+    this script checks now comes from the tree it names.
+    """
+    if ref == "WORKTREE":
+        try:
+            return pathlib.Path(path).read_text()
+        except OSError:
+            return None
+    out = subprocess.run(["git", "show", f"{ref}:{path}"], capture_output=True, text=True)
+    return out.stdout if out.returncode == 0 else None
+
+has_readme = next((t for t in (try_read(REF, c) for c in
+                               ("docs/adr/0006-verification/README.md", "0006-verification/README.md"))
+                   if t), "")
+# The ADR amends this repository's own docs/architecture.md, so the file is read rather than only
+# quoted: a check that never opens the file it is about cannot fail, which is how the round-10
+# assertion-failure recipe went wrong (round 11, R11-n2).
+ARCH = try_read(REF, "docs/architecture.md") or ""
 A = show(REF, "docs/adr/0006-push-and-ack-sync.md")
 P = show(REF, "docs/push-plan.md")
 af = " ".join(A.split()); pf = " ".join(P.split())
@@ -53,6 +68,7 @@ rows = [
  ("B1 three sites: other-channels.md:172-174", has(af,"other-channels.md`:172-174")),
  ("B1 three sites: current-relay-audit.md:220-222", has(af,"current-relay-audit.md`:220-222")),
  ("B1 three sites: architecture.md:299", has(af,"architecture.md`:299")),
+ ("B1 the amended site is REAL, read at this ref", has(ARCH,"Push notifications (APNs/FCM)")),
  ("B1 false 'four sites' sentence gone", not has(af,"The four sites above")),
  ("B1 seven-sites sentence present", has(af,"All seven of the sites above")),
  ("B1 web/src/store.ts:407 in the list", has(af,"#11's `attentionCount`, `web/src/store.ts:407`")),

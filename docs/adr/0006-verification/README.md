@@ -55,6 +55,16 @@ citation into either without a marker is a failure** — that is the check that 
 #1864 line that happens to exist at the pin (QA round 8). A **bare continuation** (`:3382-3388`)
 inherits the last named file *and its ref*, which is how the prose reads.
 
+## Reproducing a failure arm (so a check is not taken on faith)
+
+Each row of the table above was produced by actually breaking something, and the recipe matters:
+`verify-documents.py` asserts the **documents**, not the files they cite, so breaking a file elsewhere
+in the repository changes nothing. To move it, break the string it asserts — e.g. edit the ADR's own
+`architecture.md`:299 mention at `:223` to `:29X`; the run then reports `FAIL  B1 three sites:
+architecture.md:299` and exits **1**. Its one check that *does* read a file it is about — the amended
+`docs/architecture.md` row — moves when that file's row changes, and that file is read **from the ref
+being validated**, never from the CWD.
+
 ## What each script proves, and what it does not
 
 **`verify-documents.py`** asserts the statements the ADR and the plan make about themselves: that a

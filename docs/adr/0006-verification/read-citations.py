@@ -106,7 +106,11 @@ for doc in DOCS:
                 # A ref the checkout does not carry is a SETUP failure (exit 2); a path missing at a
                 # ref it does carry is a CONTENT failure and must show in the exit status, or a run
                 # that read nothing looks like a clean pass (round 10, R10-M1 / Q-F33).
-                if git("rev-parse", "--verify", "--quiet", ref).returncode:
+                # `rev-parse --verify --quiet <name>` is NOT a guard for a full 40-hex SHA: it exits 0
+                # for any well-formed name whose object is absent, so `PR_REF` (40-hex) sailed past it
+                # and printed one `!!` per citation while `PIN` (abbreviated) failed correctly (round 11,
+                # R11-M1). `cat-file -e <ref>^{commit}` asks whether the OBJECT exists.
+                if git("cat-file", "-e", f"{ref}^{{commit}}").returncode != 0:
                     print(f"MISSING REF: {ref} is not in {repo} — set LOCAL_OPERATOR_REPO to a clone "
                           f"that carries it", file=sys.stderr)
                     raise SystemExit(2)
