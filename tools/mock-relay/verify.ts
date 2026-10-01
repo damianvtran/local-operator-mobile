@@ -1325,6 +1325,9 @@ async function main() {
 						"--capture-only",
 						"--out",
 						mutationCapture,
+						// The retry uses the SAME recorded profile, so the guard covers it too.
+						"--profile",
+						attemptProfile,
 					],
 					{ encoding: "utf8", timeout: 900_000, env: { ...process.env } },
 				);

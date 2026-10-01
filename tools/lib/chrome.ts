@@ -34,6 +34,7 @@
 import { spawn, spawnSync } from "node:child_process";
 import {
 	existsSync,
+	mkdirSync,
 	mkdtempSync,
 	readdirSync,
 	readFileSync,
@@ -134,6 +135,13 @@ export async function launchChrome({
 				"drives the installed browser only — it must never download or script its own engine.",
 		);
 	}
+	// The profile directory must exist before Chrome starts and before `chrome.pid` is
+	// written into it: a caller that passes `--profile` bypasses `scratchRoot()`'s
+	// `mkdtempSync`, so without this the first write throws ENOENT with no signal while
+	// the detached Chrome it just spawned is left running — the orphan the reap exists
+	// to prevent. Created here rather than at one call site, so the next caller that
+	// names a profile is covered too.
+	mkdirSync(profile, { recursive: true });
 	const args = [
 		...(headless ? ["--headless=new"] : []),
 		`--user-data-dir=${profile}`,
@@ -318,6 +326,19 @@ export function reapAttempt(
 	}
 	for (let round = 0; round < 2; round += 1)
 		spawnSync("pkill", ["-9", "-f", profile]);
+	// A retry reuses the same profile path, and Chrome refuses to start — or starts as a
+	// second instance of the one that died — when the previous run's Singleton lock and
+	// socket are still there. Clearing them is what makes the reused path safe. Only
+	// `Singleton*` entries are touched; the rest of the profile is left alone.
+	try {
+		for (const name of readdirSync(profile)) {
+			if (String(name).startsWith("Singleton")) {
+				rmSync(join(profile, String(name)), { recursive: true, force: true });
+			}
+		}
+	} catch {
+		// No profile on disk: nothing to clear.
+	}
 	return { killed, survivors: countProcesses(profile) };
 }
 
