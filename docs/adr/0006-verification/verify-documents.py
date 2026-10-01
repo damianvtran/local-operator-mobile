@@ -61,6 +61,18 @@ def row_line(text, phrase):
     return next((l for l in text.splitlines() if l.strip().startswith("|") and phrase in l), "")
 
 
+
+def table_rows_are_intact(text):
+    """A GFM table row must be ONE physical line: a row that does not close with `|` is a wrapped row.
+
+    This is invisible to a word-count check (the words are all still there) and to a column scanner,
+    but GitHub renders the continuation lines as their own rows — the ADR's provenance table read
+    **12 rows instead of 7** after a reflow wrapped one (round 2 on #17, QA Q4). Presence is asserted
+    with it, so an absent document cannot pass this vacuously.
+    """
+    rows = [l for l in text.split("\n") if l.strip().startswith("|")]
+    return bool(rows) and all(l.rstrip().endswith("|") for l in rows)
+
 AMENDED_ROW = row_line(ARCH, "Push notifications (APNs/FCM)")
 A = show(REF, "docs/adr/0006-push-and-ack-sync.md")
 P = show(REF, "docs/push-plan.md")
@@ -149,6 +161,10 @@ rows = [
  ("R6 the residual and the copy are route-conditional", has(af,"**Direct route: the credential binds it.**") and has(af,"**exactly that, never the password sentence**")),
  ("R6 the grant has a life", has(af,"a record with no life cannot be implemented") and has(af,"means *the machine*, not the cloud")),
  ("R6 the note now carries the four it was owed", has(af,"are **all carried** by the merged note") and has(pf,"the four the note was owed")),
+ ("tables: no wrapped row in the ADR", table_rows_are_intact(A)),
+ ("tables: no wrapped row in the plan", table_rows_are_intact(P)),
+ ("tables: no wrapped row in the verification README", table_rows_are_intact(has_readme)),
+ ("tables: no wrapped row in the ops note", table_rows_are_intact(try_read(REF, "docs/push-cloud-ops.md") or "")),
  ("R6 the round-6 mappings", has(af,"`local_operator/tunnels/gateway.py` → `gateway.py`") and has(af,"`local_operator/mcp/grants.py` → `mcp/grants.py`") and has(af,"`local_operator/mobile/attach_client.py` → `attach_client.py`") and has(af,"`local_operator/mobile/tui_handle.py` → `tui_handle.py`")),
  ("R6 nit: the range includes :778", has(af,"daemon.py:778-782")),
  ("R6 the §9/provenance contradiction is resolved", has(af,"Corrections live in two places, by kind")),
