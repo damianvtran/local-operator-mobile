@@ -51,10 +51,12 @@ NAMED = re.compile(
     "[`]?([A-Za-z_][A-Za-z0-9_/]*(?:/[A-Za-z0-9_/]+)*[.](?:py|ts|tsx|md))[`]?:([0-9]+)(?:-([0-9]+))?"
 )
 BARE = re.compile("[`]?:([0-9]+)(?:-([0-9]+))?[`]?")
-#: A mention of a file with NO line number. The lookahead must be able to FAIL — with an optional
-#: subpattern inside it (`(?![`:]?)`) it never can, every citation counts as a mention too, and the
-#: counter reports zero forever while the README promises it prints (round 9, R9-M1). Asserted by the
-#: self-test below on both sides: a bare mention matches, a citation does not.
+#: A mention of a file with NO line number. The lookahead must be able to FAIL. With an optional
+#: subpattern inside it (`(?![`:]?)`) the inner pattern is satisfied by the EMPTY string, so the
+#: negative lookahead can never succeed, `MENTION` matches nothing at all, and the counter is
+#: silently dead while the README says it prints (round 9 R9-M1; the mechanism, corrected in round 10
+#: R10-n1 — the old pattern matched NOTHING, it did not over-count). Asserted by the self-test below
+#: on both sides: a bare mention matches, a citation does not.
 MENTION = re.compile("[" + TICK + "]([A-Za-z_][A-Za-z0-9_/]*[.]py)[" + TICK + "](?![`:])")
 
 # --- the parser self-test (exit 3 rather than a false all-clear) -------------------------------
@@ -107,7 +109,13 @@ bodies: dict[tuple[str, str], list[str] | None] = {}
 line_less: list[str] = []
 prose_lines: list[str] = []
 for doc in DOCS:
-    text = pathlib.Path(doc).read_text()
+    try:
+        text = pathlib.Path(doc).read_text()
+    except OSError as exc:
+        #: An unreadable document is a SETUP error, like an unusable checkout: say so and exit 2
+        #: rather than raising FileNotFoundError out of the middle of the summary (round 10).
+        print(f"UNUSABLE INPUT: cannot read {doc} — {exc.strerror}", file=sys.stderr)
+        raise SystemExit(2)
     flat = " ".join(text.split())
     # --- the mapping table is the ADR's; the plan cites by the same shorthands
     try:

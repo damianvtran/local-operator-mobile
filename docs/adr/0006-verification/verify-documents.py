@@ -9,17 +9,26 @@ resolve) and ``read-citations.py`` (does the line support the claim). This scrip
 so a pass here says the documents are internally consistent and say what the round claims — not that
 any of it is true of ``local-operator``.
 """
-import os, subprocess, sys, textwrap
+import os, pathlib, subprocess, sys, textwrap
 REPO = os.environ.get("LOCAL_OPERATOR_REPO", "~/local-operator")
 REF = sys.argv[1] if len(sys.argv) > 1 else "WORKTREE"   # a git ref, or WORKTREE to read the files
 def show(ref, path):
     if ref == "WORKTREE":
-        return open(path, encoding="utf-8").read()
+        # The worktree default reads this repository's own files, so the failure it can hit is a
+        # missing/unreadable document — the same class as an unknown ref, and it exits the same way
+        # rather than raising a FileNotFoundError (round 10, R10-m1 / Q-F34).
+        try:
+            return open(path, encoding="utf-8").read()
+        except OSError as exc:
+            print(f"UNUSABLE INPUT: cannot read {path} from the working tree — {exc.strerror} "
+                  f"(pass a git ref as the first argument to read a pushed tree instead)",
+                  file=sys.stderr)
+            raise SystemExit(2)
     out = subprocess.run(["git","show",f"{ref}:{path}"],capture_output=True,text=True)
     if out.returncode != 0:
         #: An unknown ref or an unusable checkout is a SETUP error, not a failed check: exit 2 with
         #: the reason, never a CalledProcessError traceback (round 9, Q-F31).
-        print(f"UNUSABLE INPUT: cannot read {ref}:{path} from {REPO} — {out.stderr.strip().splitlines()[-1] if out.stderr.strip() else 'no such ref or path'}",
+        print(f"UNUSABLE INPUT: cannot read {ref}:{path} — {out.stderr.strip().splitlines()[-1] if out.stderr.strip() else 'no such ref or path'} (git show runs in {pathlib.Path.cwd()}; LOCAL_OPERATOR_REPO is not consulted here)",
               file=sys.stderr)
         raise SystemExit(2)
     return out.stdout

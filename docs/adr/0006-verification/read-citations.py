@@ -34,7 +34,8 @@ NAMED = re.compile(
 BARE = re.compile("[`]?:([0-9]+)(?:-([0-9]+))?[`]?")
 
 repo = pathlib.Path(os.environ.get("LOCAL_OPERATOR_REPO", "~/local-operator")).expanduser()
-problems = 0  #: a printed `!!` is a failure, not decoration (round 9)
+problems = 0  #: a printed `!!` is a failure, not decoration (round 9); every `!!` branch
+#: increments it — one of them did not, and 154 unread citations exited 0 (round 10, R10-M1)
 bodies: dict[tuple[str, str], list[str]] = {}
 seen: set[tuple[str, str, str]] = set()
 
@@ -48,8 +49,13 @@ if git("rev-parse", "--git-dir").returncode != 0:
     raise SystemExit(2)
 
 for doc in DOCS:
-    flat = " ".join(pathlib.Path(doc).read_text().split())
-    row = next((l for l in pathlib.Path(doc).read_text().splitlines()
+    try:
+        text = pathlib.Path(doc).read_text()
+    except OSError as exc:
+        print(f"UNUSABLE INPUT: cannot read {doc} — {exc.strerror}", file=sys.stderr)
+        raise SystemExit(2)
+    flat = " ".join(text.split())
+    row = next((l for l in text.splitlines()
                 if l.startswith("| **local-operator**")), "")
     rev = {sh: full for full, sh in re.findall(
         "[" + TICK + "](local_operator/[^" + TICK + "]+[.]py)[" + TICK + "] → [" + TICK + "]([^" +
@@ -97,7 +103,15 @@ for doc in DOCS:
         if (ref, full) not in bodies:
             out = git("show", f"{ref}:{full}")
             if out.returncode:
+                # A ref the checkout does not carry is a SETUP failure (exit 2); a path missing at a
+                # ref it does carry is a CONTENT failure and must show in the exit status, or a run
+                # that read nothing looks like a clean pass (round 10, R10-M1 / Q-F33).
+                if git("rev-parse", "--verify", "--quiet", ref).returncode:
+                    print(f"MISSING REF: {ref} is not in {repo} — set LOCAL_OPERATOR_REPO to a clone "
+                          f"that carries it", file=sys.stderr)
+                    raise SystemExit(2)
                 print(f"!! {path}:{line}  PATH MISSING at {ref[:7]}")
+                problems += 1
                 continue
             bodies[(ref, full)] = out.stdout.splitlines()
         body = bodies[(ref, full)]

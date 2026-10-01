@@ -71,11 +71,15 @@ numbers, so an unmarked one is a **failure, not a default**; `push_devices.py` n
 because it exists only in #1864. A **bare continuation** (`:3382-3388`) inherits the file *and the
 ref* of the citation it follows, which is how the prose reads. The three scripts in
 [`docs/adr/0006-verification/`](0006-verification/) are this paragraph's checkable form. **What each
-does with a bad input, exactly** (round 9 Q-F31): `resolve-citations.py` and `read-citations.py` exit
-**2** when `$LOCAL_OPERATOR_REPO` is unusable or lacks a ref they need (and `resolve-citations.py`
-exits **3** if its own parser self-test fails), while `verify-documents.py` reads only **this** repository's documents (it never
-opens `$LOCAL_OPERATOR_REPO`) and exits **2** for an unknown git ref or an unreadable document rather
-than raising a traceback, and
+does with a bad input, exactly** (round 9 Q-F31, corrected in round 10 from the ref path only): a
+**setup** failure exits **2** — a checkout that is not a git repository or lacks a ref, for
+`resolve-citations.py` and `read-citations.py`, an unknown git ref or an unreadable document for
+`verify-documents.py` — while a **content** failure exits **1**: every citation the checker could not
+read prints a `!!` line, and one is enough (`read-citations.py` printed 154 of them and exited 0
+before round 10). `resolve-citations.py` additionally exits **3** if its own parser self-test fails,
+and `verify-documents.py` reads only **this** repository's documents — it never opens
+`$LOCAL_OPERATOR_REPO`, so an unusable one is not its failure to report. The per-script table is in
+[the README](0006-verification/README.md), and
 [their README](0006-verification/README.md) states exactly what each proves **and does not**.
 **What they do not check, so no reader has to guess the denominator:** `.md`/`.ts`/`.tsx` citations
 (they resolve at the mobile repository's pin), a file named with no line, a line number written as
@@ -1264,7 +1268,7 @@ items both matter, because each is a thing a cloud implementer would build wrong
    request", where rule 2 specifies a **coalesced, change-triggered** report (round 4 `m5`). This
    ADR is the authority on the rate; the note is the authority on the cloud's handling of it.
 2. **The credential epoch.** The note's credential paragraph still has the machine "check the
-   credential epoch" — the exact counter rule 2 **deleted** (`docs/push-cloud-ops.md`:73-74`, PR #15 at head `30a0f4d` — round 4 `m1` / QA Q-F3; round 9
+   credential epoch" — the exact counter rule 2 **deleted** (`docs/push-cloud-ops.md`:73-74, PR #15 at head `30a0f4d` — round 4 `m1` / QA Q-F3; round 9
    Q-F30 corrected the line number). A
    reader of the note would build a check the machine will never send.
 3. **The single-route claim.** The same paragraph says delivery "resumes at each device's next
@@ -1396,7 +1400,7 @@ Three rules follow, and together they are the whole of the revocation semantics:
    range / if-none-match / if-modified-since / last-event-id / origin. **`X-Lop-Device` and
    `X-Lop-Device-Key` are stripped today**, so "no key, no state change" would mean *nothing moves
    state* there. The fix is named and additive: **add both headers to `_REQUEST_HEADERS`
-   (`gateway.py`:310-319)`*(NEW)* — never the cookie, which the gateway *injects* rather than
+   (`gateway.py`:310-319)*(NEW)* — never the cookie, which the gateway *injects* rather than
    forwards (`:545-548`), and nothing the edge is meant to rewrite (`docs/relay/tunnel-edge.md`:59-76).
    §7 carries it as its own row and a QA row asserts a registration through the gateway arrives
    with its key end to end.

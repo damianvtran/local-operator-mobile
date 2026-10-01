@@ -12,11 +12,25 @@ LOCAL_OPERATOR_REPO=~/local-operator python3 docs/adr/0006-verification/resolve-
 LOCAL_OPERATOR_REPO=~/local-operator python3 docs/adr/0006-verification/read-citations.py [filter]
 ```
 
-`LOCAL_OPERATOR_REPO` defaults to `~/local-operator`. **Every script exits 2, with a clear message,
-on unusable input** — a path that is not a git repository or lacks the refs it needs for the two
-source-checking scripts, an unknown git ref or an unreadable document for `verify-documents.py`. A
-missing clone or a typo'd SHA is a setup error, and saying so is the only useful thing to do about it;
-a traceback is not an answer (round 9, Q-F31).
+`LOCAL_OPERATOR_REPO` defaults to `~/local-operator`. **Setup failures exit 2 and content failures
+exit non-zero — one `!!` line is never a pass.** The table below is what each script *does*, measured
+rather than asserted (round 9 Q-F31, round 10 R10-M1/m1/Q-F33/Q-F34):
+
+| failure | `verify-documents.py` | `resolve-citations.py` | `read-citations.py` |
+|---|---|---|---|
+| `$LOCAL_OPERATOR_REPO` is not a git repository | **0** — this script never opens it | **2** | **2** |
+| a ref the document names is absent from the checkout | **2** | **2** | **2** |
+| a document cannot be read | **2** | **2** | **2** |
+| a cited **path** is missing at a ref the checkout *does* carry | **0** — it never opens the sources | **1** | **1** (`!!`) |
+| a cited **line** is beyond EOF | **0** | **1** | **1** (`!!`) |
+| a citation into a dual-ref file carries no marker | **0** | **1** | not checked here |
+| a document self-assertion fails | **1** | — | — |
+| the parser no longer matches its own citation forms | — | **3** | — |
+
+A missing clone, a typo'd SHA, or a ref the clone lacks is a setup error, and saying so is the only
+useful thing to do about it; a traceback is not an answer. Two of these rows were wrong before round
+10: `read-citations.py` printed one `!!` per citation for an absent ref and still exited **0** (154 of
+them), and the worktree default of `verify-documents.py` raised `FileNotFoundError`.
 
 `resolve-citations.py` runs a **parser self-test** at startup and exits **3** if its own patterns stop
 matching the citation forms below — and the self-test covers **both directions**: a bare mention
@@ -24,8 +38,10 @@ matching the citation forms below — and the self-test covers **both directions
 must NOT. A counter whose lookahead cannot fail reports zero forever while this README promises it
 prints, so the negative arm is the assertion that keeps it alive (round 9, R9-M1; QA round 8, Q-F26).
 
-`read-citations.py` exits **1** when it prints any `!!` line (a citation beyond EOF), so a reading aid
-that could not read something is not mistaken for a clean pass.
+`read-citations.py` exits **1** when it prints any `!!` line — a citation beyond EOF *or* a path missing
+at a ref the checkout carries — so a reading aid that could not read something is not mistaken for a
+clean pass. (It exits **2** when the checkout itself is the problem: not a repository, or missing the
+ref the document cites.)
 
 ## Two refs, and how a citation says which
 
