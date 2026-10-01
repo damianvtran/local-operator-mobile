@@ -111,6 +111,22 @@ const blind = args.flatMap((arg, index) =>
  * landscape device stays in it because U-05's side rules only exist there.
  */
 const fast = args.includes("--fast");
+/**
+ * Shared-capture modes, so the mutation self-test stops paying for the same
+ * matrix seven times.
+ *
+ * The captured matrix is IDENTICAL for every blinded rule — only the audit's
+ * `--blind` differs — yet each rule used to re-capture it, which is seven Chrome
+ * launches where one suffices. That churn is what stepped swap 1.5 GiB in 150 s
+ * and aborted three sweeps in the suite's opening phase.
+ *
+ * `--capture-only` writes the matrix and prints its manifest path; `--manifest
+ * <path>` audits a manifest captured earlier. Neither changes what is asserted:
+ * the same cells, devices, themes, scales and fixtures are used, and the verdict
+ * logic below is untouched.
+ */
+const captureOnly = args.includes("--capture-only");
+const manifestOverride = flag("manifest", "");
 // A unique output directory per run, and never a shared fixed name: two canaries
 // — a developer's and CI's, or two shards — otherwise write one manifest and one
 // report over each other mid-run, and each reads the other's numbers.
@@ -153,37 +169,49 @@ console.log(`canary: ${canaryDir}`);
 console.log(`tokens: ${tokens}`);
 console.log(`out:    ${out}`);
 
-const captureStatus = run("capture the canary matrix", npx, [
-	join(worktree, "tools", "visual", "capture.ts"),
-	"--dir",
-	canaryDir,
-	"--out",
-	out,
-	"--cells",
-	"path:/defects/defects,path:/clean/clean",
-	// `iphone-15-landscape` is here for U-05's left/right rules: in portrait those
-	// insets are 0, so the two side defects have no fixture input at all and a
-	// blind to either sub-rule used to pass unnoticed.
-	"--devices",
-	fast
-		? "iphone-15,iphone-15-landscape"
-		: "iphone-se,iphone-15,iphone-15-landscape",
-	// Both themes stay in the fast set: U-03's colour-only status is caught through
-	// the palette, and a defect that only one theme's colours expose would go
-	// missing in the mutation self-test for a reason that has nothing to do with
-	// the rule being blinded.
-	"--themes",
-	"dark,light",
-	"--scales",
-	"100,200",
-	"--consecutive",
-	"--tokens",
-	tokens,
-	"--yes",
-]);
-if (captureStatus !== 0) {
-	console.error(`\ncapture failed (${captureStatus}); the canary cannot run`);
-	process.exit(captureStatus);
+/** The manifest this run audits: its own capture, or the one `--manifest` named. */
+const manifestPath =
+	manifestOverride === "" ? join(out, "manifest.json") : manifestOverride;
+
+if (manifestOverride === "") {
+	const captureStatus = run("capture the canary matrix", npx, [
+		join(worktree, "tools", "visual", "capture.ts"),
+		"--dir",
+		canaryDir,
+		"--out",
+		out,
+		"--cells",
+		"path:/defects/defects,path:/clean/clean",
+		// `iphone-15-landscape` is here for U-05's left/right rules: in portrait those
+		// insets are 0, so the two side defects have no fixture input at all and a
+		// blind to either sub-rule used to pass unnoticed.
+		"--devices",
+		fast
+			? "iphone-15,iphone-15-landscape"
+			: "iphone-se,iphone-15,iphone-15-landscape",
+		// Both themes stay in the fast set: U-03's colour-only status is caught through
+		// the palette, and a defect that only one theme's colours expose would go
+		// missing in the mutation self-test for a reason that has nothing to do with
+		// the rule being blinded.
+		"--themes",
+		"dark,light",
+		"--scales",
+		"100,200",
+		"--consecutive",
+		"--tokens",
+		tokens,
+		"--yes",
+	]);
+	if (captureStatus !== 0) {
+		console.error(`\ncapture failed (${captureStatus}); the canary cannot run`);
+		process.exit(captureStatus);
+	}
+
+	if (captureOnly) {
+		// Hand the manifest path to the caller so it can audit it per rule.
+		console.log(`manifest: ${join(out, "manifest.json")}`);
+		process.exit(0);
+	}
 }
 
 const tokenArgs = ["--tokens", tokens];
@@ -193,7 +221,16 @@ const defectsStatus = run(
 	[
 		join(worktree, "tools", "audit", "audit.ts"),
 		"--manifest",
-		join(out, "manifest.json"),
+		// The audited manifest is whichever this run is entitled to read: its own
+		// capture, or the one `--manifest` handed it. Reading `out/manifest.json`
+		// here looked correct only while every run captured its own.
+		manifestPath,
+		// The report directory, named explicitly: the audit otherwise roots its
+		// report at the manifest's directory, which is this run's own `out` only
+		// while the run also captured the manifest. Under `--manifest` those differ,
+		// and the report is then read from a directory nothing wrote to.
+		"--out",
+		out,
 		"--settle",
 		"900",
 		"--quiet",
@@ -204,7 +241,9 @@ const defectsStatus = run(
 
 // The clean path on its own, so a failure of the defect run cannot be excused by
 // "the audit fails on everything".
-const manifest = readManifest(join(out, "manifest.json"));
+// A manifest from `--manifest` was captured by an earlier invocation; otherwise
+// this run captured its own.
+const manifest = readManifest(manifestPath);
 if (manifest.records.length === 0) {
 	console.error(
 		"\ncanary: the capture produced no frames, so neither direction can be asserted",

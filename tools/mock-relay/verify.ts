@@ -1242,6 +1242,32 @@ async function main() {
 			{ blind: "U-07:x", defect: "U-07-x" },
 			{ blind: "U-07:y", defect: "U-07-y" },
 		];
+		// One capture for all seven rules. The matrix is identical for every blinded
+		// rule — only the audit's `--blind` differs — so re-capturing it per rule cost
+		// seven Chrome launches where one suffices, and that churn is what aborted
+		// three sweeps in the suite's opening phase.
+		const mutationCapture = join(tmpdir(), `lo-mutation-capture-${Date.now()}`);
+		const captureRun = spawnSync(
+			process.execPath,
+			[
+				join(WORKTREE, "e2e", "run-canary.ts"),
+				"--fast",
+				"--capture-only",
+				"--out",
+				mutationCapture,
+			],
+			{ encoding: "utf8", timeout: 900_000, env: { ...process.env } },
+		);
+		const captureOutput = `${captureRun.stdout ?? ""}${captureRun.stderr ?? ""}`;
+		const sharedManifest =
+			/^manifest:\s*(.+)$/m.exec(captureOutput)?.[1]?.trim() ?? "";
+		check(
+			"the shared capture produced a manifest for every rule to audit",
+			sharedManifest !== "",
+			true,
+			sharedManifest || "no manifest path was printed",
+		);
+
 		for (const mutation of mutations) {
 			const out = join(
 				tmpdir(),
@@ -1261,6 +1287,8 @@ async function main() {
 						"--fast",
 						"--blind",
 						target,
+						"--manifest",
+						sharedManifest,
 						"--out",
 						out,
 					],
@@ -1324,6 +1352,7 @@ async function main() {
 			// 1,048 MB, four fifths of it from this PR's own runs.
 			rmSync(out, { recursive: true, force: true });
 		}
+		rmSync(mutationCapture, { recursive: true, force: true });
 	}
 
 	/* ---- 3d. the text-scale dimension is live, in BOTH directions ---- */
