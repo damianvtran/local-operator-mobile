@@ -1,3 +1,14 @@
+"""Assert what ADR 0006 and docs/push-plan.md say about THEMSELVES — nothing about the code.
+
+    python3 docs/adr/0006-verification/verify-documents.py [git-ref]
+
+No argument reads the working tree; a git ref (a commit SHA, a branch) reads that tree with
+``git show``, which is how the pushed head is checked before a remediation comment claims anything.
+The pinned *sources* are a different job: ``resolve-citations.py`` (does the path exist and the line
+resolve) and ``read-citations.py`` (does the line support the claim). This script never opens them,
+so a pass here says the documents are internally consistent and say what the round claims — not that
+any of it is true of ``local-operator``.
+"""
 import subprocess, sys, textwrap
 REF = sys.argv[1] if len(sys.argv) > 1 else "WORKTREE"   # a git ref, or WORKTREE to read the files
 def show(ref, path):
@@ -66,8 +77,8 @@ rows = [
  ("plan Q16 publish+ack in one tick", has(pf,"publish and an ack land in the same 2 s tick")),
  ("plan Q17 heal + /seen in one tick", has(pf,"a heal lands and a relay `/seen` arrives in the same tick")),
  ("plan Q18 cloud refusal/timeout", has(pf,"a cloud refusal or timeout")),
- ("R6 no HTTP unrevoke/rotate route", has(af,"**there is no `unrevoke` route and no rotate route on the relay at all**") and has(af,"gets the ordinary 404/405")),
- ("R6 the operator commands are named", has(af,"`unrevoke <device_id>` clears the marker that is set") and has(af,"`rotate <device_id>` mints a new `device_key`") and has(af,"**a command group that does not exist at the pin")),
+ ("R7 the operators-only route is back, gated by the machine key", (not has(af,"there is no `unrevoke` route")) and has(af,"POST /api/push/devices/{device_id}/unrevoke → {\"ok\": true") and has(af,"X-Lop-Operator-Key")),
+ ("R7 the CLI is the operator surface over loopback", has(af,"**The CLI is the operator surface**") and has(af,"needs the mobile daemon running") and has(af,"daemon_unreachable") and has(af,"operator_key_missing")),
  ("R4 B1 plan asserts the refusal", has(pf,"403 machine_only")),
  ("R4/R5 M1+M6 note re-checked at its head, three divergences", has(af,"As of **`30a0f4d`**") and has(af,"the four divergences the round named are closed") and has(af,"authority on the rate") and has(af,"The credential epoch") and has(af,"The single-route claim")),
  ("R4 M2 no deletion language anywhere", not has(pf,"deletion on revocation") and not has(pf,"removal on unpair") and not has(pf,"deletes it in the cloud") and not has(af,"unpair removal")),
@@ -78,7 +89,7 @@ rows = [
  ("R4 m4 the revoke-race QA row", has(pf,"| Q24 | a revoke (or unpair) lands **while an emit for that device is in flight**")),
  ("R6 the report has a named carrier and a heartbeat route", has(af,"The carrier is named, and every addition below is") and has(af,"devices: [{device_id: str, credential_live: bool") and has(af,"POST <cloud>/v1/push/credentials")),
  ("R4/R6 n1 the matrix is in order", ok_order(P)),
- ("R6 the key refusal is a 409, not a route", has(af,"409 {\"code\": \"device_key_required\"") and has(pf,"`409 device_key_required`")),
+ ("R7 the key is re-minted per register; the 409 is only the named alternative", has(af,"minted and returned by EVERY register call") and has(af,"next authenticated register") and has(pf,"A hash would force a one-time return plus a `409 device_key_required`")),
  ("R4 n3 the flag has one home", has(af,"**not** `credential_live`, which lives in the Credential row below")),
  ("R4 n5 the account-side surface has a home", has(af,"**account-side revoke/un-revoke surface**") and has(pf,"account-side revoke/un-revoke surface")),
  ("QA-F2 rule 2 is per route", has(af,"- **Direct route.**") and has(af,"- **Radient route.**") and has(af,"`docs/relay/tunnel-edge.md`:59-76") and has(af,"the cloud both mints and refuses the grant")),
@@ -98,19 +109,25 @@ rows = [
  ("R6 plan Q26 the gateway hop", has(pf,"| Q26 | a registration **through the tunnel gateway**")),
  ("R6 plan Q21/Q22 are route-scoped", has(pf,"**direct route**") and has(pf,"on the **direct** route, coming back one at a time")),
  ("R6 the previously-unmapped paths are mapped", has(af,"`local_operator/mobile/auth.py` → `mobile/auth.py`") and has(af,"`local_operator/tunnels/gateway.py` → `gateway.py`") and has(af,"`local_operator/session/runtime/server.py` → `session/runtime/server.py`")),
- ("R6 the operator command is not on the wire", has(af,"**Un-revoke and key rotation are operator-surface commands**") and has(af,"`network/dial.py`:329")),
+ ("R7 the honest limit is stated, not softened", has(af,"readable by any process running as the same user") and has(af,"out of this ADR\u2019s threat model") is False and has(af,"out of this ADR's threat model")),
+ ("R7 the S4a reconciliation is in the plan", has(pf,"S4a against core's implementation") and has(pf,"Residual differences, each an explicit item for the core lane")),
+ ("R7 the machine→cloud literals exist in §3.2", has(af,"POST <cloud>/v1/push/register") and has(af,"POST <cloud>/v1/push/credentials") and has(af,"devices[].credential_issued_at")),
+ ("R7 the QA rows Q27-Q31 exist", has(pf,"| Q27 |") and has(pf,"| Q28 |") and has(pf,"| Q29 |") and has(pf,"| Q30 |") and has(pf,"| Q31 |")),
+ ("R7 the #1864 provenance row and marker exist", has(af,"PR #1864** | `d089f7e0fc0a324c38d6499290c27b2569714549`") and has(af,"`daemon.py`:4730-4770 (#1864)")),
+ ("R7 the scripts document what they do not check", has(has_readme,"NOT CHECKED") or has(has_readme,"not checked")),
+ ("R7 the scripts take a repo path", has(has_readme,"LOCAL_OPERATOR_REPO")),
  ("R6 the verification scripts ship", has(has_readme,"What it does not prove")),
- ("R6 device_key is returned ONCE (a hash cannot be re-served)", has(af,"returned ONCE") and has(af,"stores only a HASH") and has(af,"cannot be re-served")),
+ ("R7 device_key is stored as the key itself", has(af,"the key itself, not a hash") and (not has(af,"stored machine-side as a **hash**"))),
  ("R5 M3 the key proves identity, not permission", has(af,"key proves IDENTITY, never PERMISSION")),
- ("R5 M3/Q-F10 storage and owner-only rotation", has(af,"stored machine-side as a **hash**") and has(af,"**Rotation is owner-only**")),
+ ("R7 the gateway must never carry the operator key", has(af,"must NEVER be added to that") and has(af,"entries are lowercase") and has(af,"Q27")),
  ("R5 M4 the fresh-install claim is corrected", has(af,"Radient route, fresh install: NOT stopped by the grant") and has(af,"registers, is minted a grant and receives pushes") and has(af,"revoking the phone's access in the Radient account")),
  ("R5 M4 rotation lever scoped to the direct route", has(af,"rotation is a device-facing lever on the direct route only")),
- ("R6 machine_only retired; control_key is the predicate", has(af,"`403 machine_only` refusal is retired with them") and has(af,"the control socket's whole authorization story") and has(af,"`session/runtime/server.py`:10-11") and has(af,"`info/render.py`:15-17")),
+ ("R7 why the daemon route, not the control socket", has(af,"per-live-session-runtime") and has(af,"`attach_client.py`:878-894")),
  ("R6 the paired-device certificate is not the discriminator", has(af,"The paired-device certificate is not the discriminator") and has(af,"`daemon.py`:1626-1641")),
  ("R5 Q-F6 the kind citation is fixed", has(af,"attention.py:2047") and has(af,"What that check cannot prove") and has(af,"resolution is not *support*")),
  ("R5 Q-F7 recomputes + SENDS coalesced", has(af,"The relay RECOMPUTES it on every") and has(af,"**SENDS it COALESCED**")),
  ("R5 Q-F8 the grant has a record and a proposal marker", has(af,"| **Grant (per device)** *(cloud, proposal)* |") and has(af,"its record is §2.2's Grant row")),
- ("R6 Q-F13 the lapse is derived from the TTL", has(af,"`COOKIE_TTL_S = 30 * 24 * 3600` (`mobile/auth.py`:99)") and has(af,"The lapse is DERIVED")),
+ ("R7 the lapse is derived from the cookie ISSUE time", has(af,"ISSUE time, not from the last request") and has(af,"`credential_issued_at`") and has(af,"`mobile/auth.py`:465-469") and has(af,"the TTL does not govern at all")),
  ("R5 m7 the slice row drops the listing field", has(af,"| **Conversation handle + resolve route** (§4, S2 — the per-row **listing field was rejected**")),
  ("R5 m8 the preamble is per route", has(af,"**the auth model is per route**")),
  ("R5 m9 writers and the clearing surface", has(af,"the operator surface is the only thing that ever *clears* one")),
@@ -139,7 +156,7 @@ rows = [
  ("REV rule 2 both conditions, per route", has(af,"**Delivery requires BOTH a registered device AND a live credential for it") and has(af,"*which*")),
  ("REV rule 3 dead token is different", has(af,"**Dead-token deletion is a DIFFERENT state (path 4), not a revoke.**")),
  ("REV rotation sets expired not revoked", has(af,"**Rotation sets `expired_at`, never `revoked_at`**")),
- ("REV un-revoke is an operator command, not a route", (not has(af,"POST /api/push/devices/{device_id}/unrevoke")) and has(af,"How a device comes back — and none of it is the device's own doing")),
+ ("R7 the round-6 framing is retired in §9", has(af,"control-socket framing (`control_key`) is retired with it")),
  ("REV residual stated", has(af,"**The residual, stated rather than implied.**")),
  ("REV plan row S4a (markers)", has(pf,"| **S4a** | **Device lifecycle states, one vocabulary** \u2014 live / expired (`expired_at`) / unpaired (`unpaired_at`) / revoked (`revoked_at`) / absent")),
  ("REV QA rows Q19-Q21", has(pf,"| Q19 | a device is revoked while it is live") and has(pf,"| Q20 |") and has(pf,"| Q21 |")),
@@ -151,7 +168,7 @@ rows = [
  ("P5 retention promoted off the note", has(af,"**Two retention rules this ADR adopts") and has(af,"dropped entirely \u2014 no marker")),
  ("P5 register route: two refusals", has(af,'403 {"code": "device_unpaired", "error": "this computer is no longer paired"}')),
  ("P5 register route: expired does not refuse", has(af,"`expired_at` does NOT refuse")),
- ("R6 X-Lop-Device-Key and the attribution header", has(af,"`X-Lop-Device-Key: <device_key>`") and has(af,"the relay resolves it to the `device_id` the key was")),
+ ("R7 X-Lop-Device-Key and the attribution header", has(af,"`X-Lop-Device-Key: <device_key>`") and has(af,"the relay resolves it to the") and has(af,"device_key_matches")),
  ("P5 list returns the state and the precedence", has(af,'"state":"live|expired|unpaired|revoked"') and has(af,'"precedence":"revoked > unpaired > expired"')),
  ("P5 how a device comes back names each act", has(af,"**How a device comes back — and none of it is the device's own doing**") and has(af,"pair this computer again")),
  ("P5 quiet-loss rule stated", has(af,"**Notifications never stop silently (this pass's second half).**") and has(af,"notifications are paused for this device until you sign in again")),
