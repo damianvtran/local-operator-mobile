@@ -165,7 +165,7 @@ jobs:
           start=$(date +%s)
           pnpm install --frozen-lockfile
           echo "install took $(( $(date +%s) - start ))s (631 packages / ~746 MB measured on a "
-          echo "cold store; cached, it is seconds). This is part of the job's 40-minute bound."
+          echo "cold store; cached, it is seconds). This is part of the job's 45-minute bound."
 
       # The mock's own proof: every assertion the verifier makes over the relay's
       # contract, which is what keeps the mock from drifting away from the relay it

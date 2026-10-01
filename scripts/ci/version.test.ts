@@ -10,7 +10,7 @@ import { derive, floorFor } from "./version";
 /**
  * The release build number, exercised against a REAL repository.
  *
- * WHY A GIT FIXTURE AND NOT MOCKS. Every defect in this rule so far — five review
+ * WHY A GIT FIXTURE AND NOT MOCKS. Every defect in this rule so far — six review
  * rounds of them — came from the part that reads git: which tag counts as the
  * previous release, what a shallow clone does to a commit count, whether the tag
  * being cut is itself a candidate for the floor. A mocked `git` would encode the
@@ -30,8 +30,6 @@ import { derive, floorFor } from "./version";
  * cannot share a fixture, and `afterAll` removes them.
  */
 
-// Generous: each case builds a repository with ~15 `git` invocations, and this
-// host runs ~25 agent sessions beside it. A hang still fails the suite.
 const M = 120_000;
 
 /** The script under test, run as a subprocess so the fixture is its repository. */
@@ -42,6 +40,7 @@ const SCRIPT = fileURLToPath(new URL("./version.ts", import.meta.url));
 const FLOOR_MESSAGE = /below the floor of 1011/;
 const FLOOR_VALUE = /below the floor of (\d+)/;
 const TAG_MESSAGE = /not vMAJOR\.MINOR\.PATCH/;
+const COUNTER_MESSAGE = /needs its build number/;
 
 const roots: string[] = [];
 
@@ -55,20 +54,44 @@ const tempRoot = (): string => {
 	return root;
 };
 
+/**
+ * The environment a fixture subprocess gets: this process's, minus the variables
+ * GitHub sets that would turn a fixture call into a release probe.
+ *
+ * ON A TAG PUSH THIS SUITE RUNS INSIDE THE RELEASE GATE. `release.yml`'s `gate` job
+ * calls `ci.yml`, whose `checks` job runs `pnpm test`, and a called workflow sees
+ * the caller's context — so `GITHUB_REF_TYPE=tag` with `GITHUB_REF_NAME=vX.Y.Z`. A
+ * fixture call that passes no `--ref-type` falls back to that, derives a release
+ * from a tag that is not in the fixture, refuses, and the file goes red *inside the
+ * release gate*, where `android`, `ios` and `publish` are all waiting on it (review
+ * round 6, R6-1 — and a push or pull-request run can never show it).
+ *
+ * Deleting them here is only half the fix: the fixture probe also names its ref
+ * explicitly, so the suite is green with these set or unset.
+ *
+ * `GIT_CONFIG_GLOBAL`/`GIT_CONFIG_SYSTEM` are blanked for the keychain rule — on a
+ * maintainer's macOS machine the system config is the one carrying
+ * `credential.helper = osxkeychain`, which is how a test process ends up asking the
+ * OS for a keychain. The fixture's own identity lives in the fixture's config.
+ */
+const childEnv = (): NodeJS.ProcessEnv => {
+	const env: NodeJS.ProcessEnv = { ...process.env };
+	for (const name of [
+		"GITHUB_REF_TYPE",
+		"GITHUB_REF_NAME",
+		"GITHUB_ENV",
+		"GITHUB_OUTPUT",
+	]) {
+		delete env[name];
+	}
+	env.GIT_CONFIG_GLOBAL = "/dev/null";
+	env.GIT_CONFIG_SYSTEM = "/dev/null";
+	env.GIT_TERMINAL_PROMPT = "0";
+	return env;
+};
+
 const git = (cwd: string, args: string[]): string =>
-	execFileSync("git", args, {
-		cwd,
-		encoding: "utf8",
-		env: {
-			...process.env,
-			// The fixture carries its own identity, so blanking the system config
-			// costs nothing — and on a maintainer's macOS machine the system config
-			// is the one holding `credential.helper = osxkeychain`, which is how a
-			// test process ends up asking the OS for a keychain.
-			GIT_CONFIG_SYSTEM: "/dev/null",
-			GIT_TERMINAL_PROMPT: "0",
-		},
-	}).trim();
+	execFileSync("git", args, { cwd, encoding: "utf8", env: childEnv() }).trim();
 
 type Run = { rc: number; out: string; value: (key: string) => string };
 
@@ -80,7 +103,7 @@ const runScript = (cwd: string, args: string[] = []): Run => {
 		out = execFileSync("node", [SCRIPT, ...args], {
 			cwd,
 			encoding: "utf8",
-			env: { ...process.env, GIT_CONFIG_SYSTEM: "/dev/null" },
+			env: childEnv(),
 			stdio: ["ignore", "pipe", "pipe"],
 		});
 	} catch (error) {
@@ -103,13 +126,15 @@ type Scenario = {
 	/** Commits on `main` before the release pull request. */
 	commits?: number;
 	/**
-	 * The counter the release pull request writes, relative to the internal number
-	 * at the tagged commit. `1` is the tight value the failure message's own advice
-	 * produces; larger values are the margin `docs/ci.md` recommends.
+	 * The counter the release pull request writes, relative to the commit count of
+	 * the tagged commit. `1` is the tight value: below the floor, because the bump
+	 * is itself a commit. Larger values are the margin `docs/ci.md` recommends.
 	 */
 	counterOffset?: number;
 	/** Land a commit on `main` after the tag, so the tag is no longer the tip. */
 	mainAhead?: boolean;
+	/** Release a `v0.1.0` first, so this build has a previous release to count from. */
+	priorRelease?: boolean;
 };
 
 /**
@@ -122,6 +147,7 @@ const scenario = ({
 	commits = 3,
 	counterOffset = 20,
 	mainAhead = false,
+	priorRelease = false,
 }: Scenario) => {
 	const root = tempRoot();
 	const origin = join(root, "origin.git");
@@ -131,25 +157,45 @@ const scenario = ({
 	git(work, ["config", "user.email", "fixture@example.invalid"]);
 	git(work, ["config", "user.name", "fixture"]);
 	mkdirSync(join(work, "release"), { recursive: true });
-	writeFileSync(join(work, "release", "build-number.txt"), "0\n");
-	for (let n = 1; n <= commits; n++) {
-		writeFileSync(join(work, `m${n}.txt`), `${n}\n`);
+	const counterFile = join(work, "release", "build-number.txt");
+	const commitAll = (message: string): void => {
 		git(work, ["add", "-A"]);
-		git(work, ["commit", "-q", "-m", `work ${n}`]);
+		git(work, ["commit", "-q", "-m", message]);
+	};
+
+	writeFileSync(counterFile, "0\n");
+	for (let n = 1; n <= (priorRelease ? 1 : commits); n++) {
+		writeFileSync(join(work, `m${n}.txt`), `${n}\n`);
+		commitAll(`work ${n}`);
 	}
 	git(work, ["push", "-q", "origin", "HEAD:main"]);
 
+	if (priorRelease) {
+		// The first release: its own bump commit and tag, left behind so the second
+		// one has a base to count from and a tag name to report.
+		writeFileSync(counterFile, "2\n");
+		commitAll("chore(release): bump to 2");
+		git(work, ["tag", "-a", "v0.1.0", "-m", "v0.1.0"]);
+		for (let n = 2; n <= commits; n++) {
+			writeFileSync(join(work, `m${n}.txt`), `${n}\n`);
+			commitAll(`work ${n}`);
+		}
+	}
+
 	// The release pull request: the counter, as a commit of its own.
-	const counter = commits + counterOffset;
-	writeFileSync(join(work, "release", "build-number.txt"), `${counter}\n`);
-	git(work, ["add", "-A"]);
-	git(work, ["commit", "-q", "-m", `chore(release): bump to ${counter}`]);
-	// On the branch ref, so a case can state the number an internal build of the
-	// tagged commit claims without recomputing the fixture's arithmetic.
+	const counter = (priorRelease ? commits + 1 : commits) + counterOffset;
+	writeFileSync(counterFile, `${counter}\n`);
+	commitAll(`chore(release): bump to ${counter}`);
+	const tag = priorRelease ? "v0.2.0" : "v0.1.0";
+	// On the branch ref — named explicitly, never inherited from the environment
+	// (R6-1) — so a case can state the number an internal build of the tagged
+	// commit claims without recomputing the fixture's arithmetic.
 	const tagCommitInternal = Number(
-		runScript(work).value("internal_build_number"),
+		runScript(work, ["--ref-type", "branch", "--ref-name", "main"]).value(
+			"internal_build_number",
+		),
 	);
-	git(work, ["tag", "-f", "-a", "v0.1.0", "-m", "v0.1.0"]);
+	git(work, ["tag", "-f", "-a", tag, "-m", tag]);
 	git(work, ["push", "-q", "-f", "origin", "HEAD:main", "--tags"]);
 	git(work, [
 		"fetch",
@@ -160,8 +206,7 @@ const scenario = ({
 
 	if (mainAhead) {
 		writeFileSync(join(work, "later.txt"), "later\n");
-		git(work, ["add", "-A"]);
-		git(work, ["commit", "-q", "-m", "a commit after the tag"]);
+		commitAll("a commit after the tag");
 		git(work, ["push", "-q", "origin", "HEAD:main"]);
 		git(work, [
 			"fetch",
@@ -171,33 +216,31 @@ const scenario = ({
 		]);
 	}
 
-	git(work, ["checkout", "-q", "v0.1.0"]);
+	git(work, ["checkout", "-q", tag]);
 	return {
 		tagCommitInternal,
 		counter,
-		release: () =>
-			runScript(work, ["--ref-type", "tag", "--ref-name", "v0.1.0"]),
+		release: () => runScript(work, ["--ref-type", "tag", "--ref-name", tag]),
 	};
 };
 
 describe("floorFor", () => {
-	it("takes the higher of this commit and main's tip, and tolerates an unknown tip", () => {
-		// Q4: an internal build of a commit that landed after the counter bump
-		// claims the same number a tag on the bump commit would, so the floor is
-		// measured from main's tip too.
-		expect(floorFor(1001, 1002)).toBe(1003);
-		// …and a run that could not read `origin/main` uses what it has rather than
-		// inventing a floor.
-		expect(floorFor(1001, null)).toBe(1002);
+	it("takes the higher of this commit and main's tip, plus one", () => {
+		expect(floorFor(100, 102)).toBe(103);
+		expect(floorFor(100, 99)).toBe(101);
+		// No `origin/main` to compare against: the commit's own number is the floor,
+		// which is what a local run reports rather than inventing one.
+		expect(floorFor(100, null)).toBe(101);
 	});
 });
 
 describe("derive", () => {
-	it("refuses a base that is the released counter — the shape of round 5's blocker", () => {
-		// Pre-fix, the tag being cut was its own predecessor in the `origin/main`
-		// lookup, so `base` came back as the tag's own counter with zero commits
-		// since, the floor became `counter + 1`, and NO counter value satisfied it.
-		// The exclusion fixed the lookup; this pins the arithmetic that made it fatal.
+	it("refuses a release whose counter does not clear the floor", () => {
+		// THE ARITHMETIC THAT MADE ROUND 5'S BLOCKER FATAL, not the lookup that
+		// caused it: when the tag being cut is its own predecessor, `base` comes back
+		// as that tag's own counter with zero commits since, so the floor is
+		// `counter + 1` and no counter value satisfies it. The lookup is pinned by
+		// the fixture cases below, which run the real search.
 		expect(() =>
 			derive({
 				refType: "tag",
@@ -206,11 +249,15 @@ describe("derive", () => {
 				commitsSinceLastRelease: 0,
 				releaseBuildNumber: 1010,
 				counterPath: "release/build-number.txt",
+				mainInternal: null,
 			}),
 		).toThrow(FLOOR_MESSAGE);
 	});
 
-	it("accepts a release above the floor, and rejects a tag that is not a version", () => {
+	it("uses main's tip as the floor when it is ahead, and reports the tag's version", () => {
+		// `mainInternal` is an argument, so this case is hermetic: it cannot read the
+		// repository the suite happens to be running in, which is what makes it safe
+		// once the real repo has tags of its own (review round 6, R6-8).
 		expect(
 			derive({
 				refType: "tag",
@@ -219,6 +266,7 @@ describe("derive", () => {
 				commitsSinceLastRelease: 3,
 				releaseBuildNumber: 1010,
 				counterPath: "release/build-number.txt",
+				mainInternal: 1009,
 			}),
 		).toEqual({
 			version: "1.2.3",
@@ -229,13 +277,39 @@ describe("derive", () => {
 		expect(() =>
 			derive({
 				refType: "tag",
+				refName: "v1.2.3",
+				base: 1000,
+				commitsSinceLastRelease: 3,
+				releaseBuildNumber: 1010,
+				counterPath: "release/build-number.txt",
+				mainInternal: 1010,
+			}),
+		).toThrow(FLOOR_VALUE);
+	});
+
+	it("rejects a tag that is not a version, and a release with no counter", () => {
+		expect(() =>
+			derive({
+				refType: "tag",
 				refName: "v1.2",
 				base: 0,
 				commitsSinceLastRelease: 5,
 				releaseBuildNumber: 10,
 				counterPath: "release/build-number.txt",
+				mainInternal: null,
 			}),
 		).toThrow(TAG_MESSAGE);
+		expect(() =>
+			derive({
+				refType: "tag",
+				refName: "v1.2.3",
+				base: 0,
+				commitsSinceLastRelease: 5,
+				releaseBuildNumber: null,
+				counterPath: "release/build-number.txt",
+				mainInternal: null,
+			}),
+		).toThrow(COUNTER_MESSAGE);
 	});
 });
 
@@ -260,11 +334,34 @@ describe("the build number, against a real repository", () => {
 		M,
 	);
 
+	it(
+		"counts from the previous release when one exists",
+		() => {
+			const { tagCommitInternal, counter, release } = scenario({
+				counterOffset: 20,
+				priorRelease: true,
+			});
+			const result = release();
+			expect(result.rc).toBe(0);
+			// The exclusion's other half (R6-2): with a real earlier tag present, the
+			// base is that release — not the root, and not this tag itself, which is
+			// the neighbouring mistake the exclusion exists to prevent.
+			expect(result.value("base_release_tag")).toBe("v0.1.0");
+			expect(Number(result.value("base_release_number"))).toBe(2);
+			expect(Number(result.value("internal_build_number"))).toBe(
+				tagCommitInternal,
+			);
+			expect(tagCommitInternal).toBeGreaterThan(2);
+			expect(Number(result.value("version_code"))).toBe(counter);
+		},
+		M,
+	);
+
 	it.each([
 		{ name: "a margin", offset: 20 },
 		// TWO margins, because with the tag as its own predecessor the floor moves
-		// with the counter and BOTH refused — that is the unsatisfiability round 5
-		// found jointly. One margin alone could look like a fluke of the arithmetic.
+		// with the counter and BOTH would refuse — that is the unsatisfiability round
+		// 5 found jointly. One margin alone could look like a fluke of the arithmetic.
 		{ name: "a larger margin", offset: 40 },
 	])(
 		"accepts the tag on the tip with $name above the internal number",
@@ -293,7 +390,6 @@ describe("the build number, against a real repository", () => {
 			const floor = Number(result.out.match(FLOOR_VALUE)?.[1]);
 			expect(floor).toBe(tagCommitInternal + 1);
 			expect(floor).toBeGreaterThan(counter);
-			expect(result.out).toContain("origin/main");
 		},
 		M,
 	);

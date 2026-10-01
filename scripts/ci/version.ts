@@ -6,7 +6,8 @@
  *     node scripts/ci/version.ts --write               # also export them to the job
  *     node scripts/ci/version.ts --ref-type tag --ref-name v1.2.3 --write
  *
- * Run directly by Node: Node 26 strips the type annotations, so there is no build
+ * Run directly by Node: the pinned runtime (>= 24.2, see the entry-point guard at
+ * the bottom) strips the type annotations, so there is no build
  * step and no dependency here. That constrains the SYNTAX (no `enum`, no
  * `namespace`, no parameter properties, no decorators — anything that would need
  * emit) and nothing else.
@@ -68,6 +69,14 @@ export type Derived = {
 export type Ref = {
 	refType: string;
 	refName: string;
+	/**
+	 * What an internal build from the tip of `origin/main` would claim, or `null`
+	 * when that ref could not be resolved. AN ARGUMENT, not a lookup: `derive` is
+	 * pure, so a caller cannot measure the floor against whatever repository it
+	 * happens to run in — a unit test did exactly that and would have gone red the
+	 * moment the first tag existed. The one place that reads git is the CLI.
+	 */
+	mainInternal: number | null;
 	/** The counter at the last release tag, or 0 before the first release. */
 	base: number;
 	/** Commits since that tag: the increment an internal build claims. */
@@ -108,6 +117,7 @@ export const derive = ({
 	commitsSinceLastRelease,
 	releaseBuildNumber,
 	counterPath,
+	mainInternal,
 }: Ref): Derived => {
 	if (
 		!Number.isSafeInteger(commitsSinceLastRelease) ||
@@ -162,11 +172,6 @@ export const derive = ({
 	// counter, and the floor becomes `counter + 1` at every value — a release that
 	// cannot be built, with a message whose remedy moves with the counter (review
 	// round 5's blocker, QA round 4's B1; both reproduced it on a clone).
-	const mainInternal = internalNumberAt(
-		counterPath,
-		"origin/main",
-		isTag ? refName : null,
-	);
 	const minimum = floorFor(internalNumber, mainInternal);
 	if (releaseBuildNumber < minimum) {
 		const tip =
@@ -328,14 +333,34 @@ export const lastRelease = (
  * `process.exit unexpectedly called with "1"`. Reproduced locally: `node
  * scripts/ci/version.ts` inside a `--depth 1` clone exits 1 by design, so a test
  * that merely imports this file inherits that refusal.
+ *
+ * AND THE GUARD MUST NOT FAIL SILENTLY ON AN OLDER NODE. `import.meta.main` exists
+ * from Node 24.2 (review round 6, R6-5): on anything earlier the property is
+ * `undefined`, the body below never runs, the process exits 0, and the job
+ * continues with whatever version variables the last `--write` left — or with
+ * none. That is the worst possible failure for a step whose whole job is to derive
+ * a version, so a runtime without the property is a NAMED FAILURE here, not a
+ * skip. The workflows pin it as `NODE_VERSION: "24"` (`.github/workflows/*.yml`),
+ * which setup-node resolves to the latest 24.x; 24.2 is the floor this file needs.
  */
-if (import.meta.main) {
+const isEntryPoint = (import.meta as ImportMeta & { main?: boolean }).main;
+if (isEntryPoint === undefined) {
+	console.error(
+		"::error::this Node does not support `import.meta.main` (needs >= 24.2), " +
+			"so running this script as a CLI would silently do nothing and the job " +
+			"would carry on with a stale version. The workflows pin " +
+			'`NODE_VERSION: "24"`; use that or newer.',
+	);
+	process.exit(1);
+}
+if (isEntryPoint) {
 	const refType = arg("ref-type", process.env.GITHUB_REF_TYPE ?? "");
 	const refName = arg("ref-name", process.env.GITHUB_REF_NAME ?? "");
 	const counterPath = arg("counter", DEFAULT_COUNTER);
 	const ref = arg("ref", "HEAD");
 
 	let derived: Derived;
+	let mainInternal: number | null = null;
 	let release: { tag: string | null; base: number; commitsSince: number };
 	let releaseBuildNumber: number | null = null;
 	try {
@@ -350,6 +375,18 @@ if (import.meta.main) {
 		if (refType === "tag") {
 			releaseBuildNumber = counterAt(counterPath);
 		}
+		// THE TAG BEING CUT IS EXCLUDED FROM ITS OWN SEARCH. The runbook tags
+		// main's tip, so the tag is an ancestor of `origin/main`: without this
+		// exclusion `lastRelease` accepts the tag itself, `base` becomes the tag's
+		// own bumped counter, and the floor becomes `counter + 1` at every value — a
+		// release that cannot be built, with a message whose remedy moves with the
+		// counter (review round 5's blocker, QA round 4's B1; both reproduced it on
+		// a clone).
+		mainInternal = internalNumberAt(
+			counterPath,
+			"origin/main",
+			refType === "tag" ? refName : null,
+		);
 		derived = derive({
 			refType,
 			refName,
@@ -357,6 +394,7 @@ if (import.meta.main) {
 			commitsSinceLastRelease: release.commitsSince,
 			releaseBuildNumber,
 			counterPath,
+			mainInternal,
 		});
 	} catch (error) {
 		console.error(`::error::${message(error)}`);
@@ -373,13 +411,8 @@ if (import.meta.main) {
 	// Printed, not exported: they are the numbers behind the derivation, and the
 	// table is what makes a dry run of the release path readable ("the number it
 	// would claim for main versus for a tag") without a store to compare against.
-	const mainInternal = internalNumberAt(
-		counterPath,
-		"origin/main",
-		refType === "tag" ? refName : null,
-	);
-	// The same floor the release arm applies, printed so a dry run shows both
-	// sides of the comparison (Q4: a tag need not be the tip of `main`).
+	// The same floor the release arm applied, printed so a dry run shows both sides
+	// of the comparison (Q4: a tag need not be the tip of `main`).
 	const minimum = floorFor(release.base + release.commitsSince, mainInternal);
 	const diagnostics = [
 		`base_release_number=${release.base}`,

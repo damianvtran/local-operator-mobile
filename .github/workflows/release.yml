@@ -8,7 +8,7 @@ name: Release
 # dies half-way therefore leaves the artefact a user can install (the Release)
 # rather than a store listing nobody can point at.
 #
-# A MISSING CREDENTIAL IS A FAILURE HERE, NOT A SKIP. `secrets` below is a hard
+# A MISSING CREDENTIAL IS A FAILURE HERE, NOT A SKIP. `credentials` below is a hard
 # gate: on a tag, absent signing material or an absent store credential stops the
 # run and names every variable that is missing. The unsigned, upload-free path
 # exists in android.yml and ios.yml for pull requests — where a fork cannot see a
