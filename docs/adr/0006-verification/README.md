@@ -71,9 +71,12 @@ being validated**, never from the CWD.
   checkout missing a ref that the documents never cite *in a Python file* would exit 0 — the resolver, by
   contrast, validates both refs up front and would exit **2** on that same checkout. For these documents
   the case cannot be reached: `(pin)` and `(#1864)` each appear on citations in the ADR, so the first
-  failing `git show` is always a ref check. Verified in both directions — a clone carrying only the pin
-  and a clone carrying only PR #1864's head each give one `MISSING REF` line and **rc 2** from both
-  scripts.
+  failing `git show` is always a ref check. Verified in both directions, and the two scripts say it
+  differently — both exit **2**, but the line is not the same one: `read-citations.py` prints
+  `MISSING REF: <ref> is not in <repo> — set LOCAL_OPERATOR_REPO to a clone that carries it`, while
+  `resolve-citations.py` prints `UNUSABLE CHECKOUT: <repo> has no commit <ref> — fetch it, or point
+  LOCAL_OPERATOR_REPO at a clone that does`. Measured on a clone carrying only the pin and on one
+  carrying only PR #1864's head.
 * **The backtick counts, and the method behind them.** Two methods, stated because they differ:
   excluding the fence **marker** lines still counts fenced *contents*; excluding the fenced **blocks**
   does not. At the `docs/adr-0006-hygiene` head the ADR reads **2028** by the first method and **1920**
