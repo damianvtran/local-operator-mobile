@@ -136,7 +136,6 @@ for doc in DOCS:
              or not any(a is not None and m[0] >= a and m[0] < b for a, b in named_spans)]
     marks.sort(key=lambda t: (t[0], 0 if t[1] == "named" else 1))
 
-    line_less.clear()
     last_full: str | None = None
     last_marked = False
     for pos, kind, name, line, line2 in marks:
@@ -196,8 +195,11 @@ print(f"checkout={repo}  pin={PIN}  pr_ref={PR_REF[:7]}  mappings={len(rev)}  "
 if counts:
     print("files touched:", " ".join(f"{k}({v})" for k, v in sorted(counts.items())))
 if line_less:
-    print(f"MENTIONS WITHOUT A LINE NUMBER (not checked, {len(line_less)}): "
-          + ", ".join(sorted(set(line_less))[:6]) + (" …" if len(set(line_less)) > 6 else ""))
+    #: Accumulated across EVERY document (round 9: a per-document reset made the report describe only
+    #: the last file read, so the ADR's own mentions vanished whenever the plan was scanned too).
+    distinct = sorted(set(line_less))
+    print(f"MENTIONS WITHOUT A LINE NUMBER (not checked, {len(line_less)} in {len(distinct)} names): "
+          + ", ".join(distinct[:6]) + (" …" if len(distinct) > 6 else ""))
 if prose_lines:
     print(f"CITATIONS WRITTEN AS PROSE (not checked, {len(prose_lines)}) — write `file.py`:N instead:")
     for pl in sorted(set(prose_lines))[:5]:
