@@ -227,8 +227,17 @@ rows = [
   has(CEIL_31,"carries an `alert`") and has(CEIL_31,"delivers nothing") and has(CEIL_31,"records the drop")),
  ("§3.2 the ceiling re-delivers only a frame carrying an alert",
   has(COMPOSER,"carries an `alert`") and has(COMPOSER,"delivers nothing and records the drop")),
- ("plan S7 the ceiling re-delivers only a frame carrying an alert",
-  has(pf,"delivering nothing and recording the drop when it holds only `attention` frames or nothing at all")),
+ ("plan S7 the ceiling's own head carries the rule",
+  has(pf,"re-delivers the most recent frame it holds that carries an `alert`")
+  and has(pf,"delivering nothing and recording the drop when it holds only `attention` frames or nothing at all")),
+ # Round 1's m1: presence-only checks passed while the SUPERSEDED wording was restored at a site. The
+ # old phrase may now survive only inside the supersession sentences — quoted history, never a rule.
+ ('§3.2 the superseded "whatever its type" survives only as quoted history',
+  has(af,'*This bullet used to say "whatever its type"') and af.count("whatever its type") == 1),
+ ('note: the superseded "whatever its type" survives only as quoted history',
+  nf.count("whatever its type") == 1),
+ ('plan: the superseded "whatever its type" is gone',
+  "whatever its type" not in pf),
  ("§3.4 the caveat belongs to the digest window, not the attention emit",
   has(af,"**The caveat is the digest *window*'s, not the attention emit's**")
   and not has(af,"carries the same process-local caveat")),
@@ -244,6 +253,8 @@ rows = [
   has(pf,"one visible digest alert")
   and has(pf,"with the window's `emit_id` **persisted in the state file**")),
  ("plan: the digest QA rows are present", has(pf,"| Q35 |") and has(pf,"| Q36 |") and has(pf,"| Q37 |")),
+ ("plan: Q36 names the only-attention case (round 1, Q2)",
+  has(pf,"only `attention` frames held, or nothing")),
  ("§3.2 only the machine composes: the cloud mints no payload and renders no text",
   has(COMPOSER,"cloud mints nothing and composes no text")
   and not has(COMPOSER,"the cloud mints the")

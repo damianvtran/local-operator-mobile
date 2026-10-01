@@ -15,19 +15,17 @@ note is [`docs/push-cloud-ops.md`](push-cloud-ops.md)** (PR
 reconciled on the ingest shape: the machine's call answers **`202 {emit_id, accepted_at}`**,
 accepted and queued, and a per-device result is never returned to the machine (ADR §3.1).
 
-Sizes: **S** ≈ a day or two, **S–M**/**M**/**L** as used in the ADR §7. They are those numbers, not
-re-derived.
+Sizes: **S** ≈ a day or two, **S–M**/**M**/**L** as used in the ADR §7. They are those numbers,
+not re-derived.
 
-**Blocked on the operator, before any cloud work starts:**
-- **A8 — Radient account deletion** (`docs/publishing/checklist.md`:33), already blocking store
-  submission.
-- **A2–A4 — organisation developer accounts** (D-U-N-S, Apple Developer Program as Radient Inc.,
-  Play organisation account).
+**Blocked on the operator, before any cloud work starts:** - **A8 — Radient account deletion**
+(`docs/publishing/checklist.md`:33), already blocking store submission. - **A2–A4 — organisation
+developer accounts** (D-U-N-S, Apple Developer Program as Radient Inc., Play organisation account).
 - **New, from this plan: the push credentials, the fan-out service, and a device-revocation surface
-  in the console.** An APNs `.p8` key and an FCM service account, an always-on fan-out service with
-  an owner and an on-call story, and a way for a user to revoke a device without access to the
-  device (ADR 0006 §4, the stolen-phone case). This is a *runtime* commitment, unlike A8, and it is
-  the critical path.
+in the console.** An APNs `.p8` key and an FCM service account, an always-on fan-out service with an
+owner and an on-call story, and a way for a user to revoke a device without access to the device
+(ADR 0006 §4, the stolen-phone case). This is a *runtime* commitment, unlike A8, and it is the
+critical path.
 
 ---
 
@@ -66,40 +64,37 @@ states and their precedence resolver (`push_devices.py`:136-145, `:338-356`), th
 `:4826-4853`), driven by `lop mobile devices list|revoke|unrevoke` over loopback (`cli.py`:7704-7752
 (#1864), `:7836-7862`), on a 0600 store (`push_devices.py`:946).
 
-**Residual differences, each an explicit item for the core lane (eight of them)** — this document is
-written to match the implementation, and these are the places where it asks for more or something
-different:
+**Residual differences, each an explicit item for the core lane (eight of them)** — this document
+is written to match the implementation, and these are the places where it asks for more or
+something different:
 
 1. **No `rotate` verb** (the CLI's choices are `list|revoke|unrevoke`) — and none is needed, because
-   the key is re-minted by every register call: **the delivery path for a rotated key is the
-   device's next authenticated register** (§3.1, R7-m2). An explicit `rotate` would be additive and
-   could not deliver on its own — the key only ever leaves the machine in a register response.
-2. **The key is stored as the key itself, not a hash** (`push_devices.py`:194, `:510`, `:946`), and
-   §2.2 now says so. A hash would force a one-time return plus a `409 device_key_required` on a
-   re-register without it — recorded here as the alternative, not as the rule.
-3. **The credential report is unbuilt**: #1864 declares `credential_live` / `last_authenticated_at`
-   and adds `device_key_matches` "nothing consumes yet" (`:359-375`), and `list` omits both fields
-   when a row does not carry them (`:566-569`). **S4c's carrier, its heartbeat, and the new
-   `credential_expires_at` (§4 rule 2, Q-F15) remain core work**; §3.2 now carries the literals S3
-   freezes.
-4. **`credential_expires_at` is new here and absent there** — its writer is **register**, reading
-   the expiry out of the cookie the phone presented (`mobile/auth.py`:465-469), not the login route,
-   which knows no device (R8-m1). It is the one field this document adds to core's store rather than
-   adopting.
-5. **The push token is validated and dropped** (`daemon.py`:4776-4778 (#1864)) ✓ matches §2.2's
-   custody — the cloud's registry holds tokens — and **the registration forward itself is S7**
-   (cloud).
-6. **No account-console path** exists in #1864 (cloud, S7), and no credential-change event.
-7. **The guard cells are NOT in #1864** — the allowlist never gains `X-Lop-Operator-Key` and the
-   lowercase-literal trap for `X-Lop-Device` are this ADR's requirements **and core lands them in
-   S4c**. They are a **regression guard, not a gap being closed**: the gateway drops both headers
-   **today** (`gateway.py`:310-319 applied at `:537` and `:719`), so Q31 passes against the pin and
-   fails only if a future allowlist edit lets a device header through (QA round 8, Q-F25).
-8. **The user-facing vocabulary is core's and the app must consume it, not re-word it**: the five
-   `STATE_DESCRIPTIONS`, `DESCRIBED_STATES` order and `PRECEDENCE_SENTENCE` are module constants
-   (`push_devices.py`:159-177 (#1864)), rendered today by `lop mobile devices` (`cli.py`:8058-8071
-   (#1864)). The app slice's Settings copy **mirrors them verbatim** (§6's table); deferring the app
-   and shipping different words would be the drift the constants exist to prevent.
+the key is re-minted by every register call: **the delivery path for a rotated key is the device's
+next authenticated register** (§3.1, R7-m2). An explicit `rotate` would be additive and could not
+deliver on its own — the key only ever leaves the machine in a register response. 2. **The key is
+stored as the key itself, not a hash** (`push_devices.py`:194, `:510`, `:946`), and §2.2 now says
+so. A hash would force a one-time return plus a `409 device_key_required` on a re-register without
+it — recorded here as the alternative, not as the rule. 3. **The credential report is unbuilt**:
+#1864 declares `credential_live` / `last_authenticated_at` and adds `device_key_matches` "nothing
+consumes yet" (`:359-375`), and `list` omits both fields when a row does not carry them
+(`:566-569`). **S4c's carrier, its heartbeat, and the new `credential_expires_at` (§4 rule 2, Q-F15)
+remain core work**; §3.2 now carries the literals S3 freezes. 4. **`credential_expires_at` is new
+here and absent there** — its writer is **register**, reading the expiry out of the cookie the phone
+presented (`mobile/auth.py`:465-469), not the login route, which knows no device (R8-m1). It is the
+one field this document adds to core's store rather than adopting. 5. **The push token is validated
+and dropped** (`daemon.py`:4776-4778 (#1864)) ✓ matches §2.2's custody — the cloud's registry holds
+tokens — and **the registration forward itself is S7** (cloud). 6. **No account-console path**
+exists in #1864 (cloud, S7), and no credential-change event. 7. **The guard cells are NOT in #1864**
+— the allowlist never gains `X-Lop-Operator-Key` and the lowercase-literal trap for `X-Lop-Device`
+are this ADR's requirements **and core lands them in S4c**. They are a **regression guard, not a gap
+being closed**: the gateway drops both headers **today** (`gateway.py`:310-319 applied at `:537` and
+`:719`), so Q31 passes against the pin and fails only if a future allowlist edit lets a device
+header through (QA round 8, Q-F25). 8. **The user-facing vocabulary is core's and the app must
+consume it, not re-word it**: the five `STATE_DESCRIPTIONS`, `DESCRIBED_STATES` order and
+`PRECEDENCE_SENTENCE` are module constants (`push_devices.py`:159-177 (#1864)), rendered today by
+`lop mobile devices` (`cli.py`:8058-8071 (#1864)). The app slice's Settings copy **mirrors them
+verbatim** (§6's table); deferring the app and shipping different words would be the drift the
+constants exist to prevent.
 
 ### The facts this ADR takes from #1864, and where each is
 
@@ -135,19 +130,17 @@ S4 + S7 ── S10
 ```
 
 1. **S1 and S2 ship first and alone.** No cloud, no credential, no decision from anyone outside the
-   core, and useful the moment they land: the aggregate is the in-app count even with no push at
-   all, and the handle is what an on-device deep link needs. If everything else stopped here, the
-   badge rule the operator asked for would already be honest.
-2. **S3 is frozen before the expensive work** (review M11): it needs only S1 and S2, so the cloud
-   team is not made to wait on the worker. S3 freezes the relay shapes, the payload and the keys;
-   the cloud route shapes inside it stay marked **proposal**.
-3. **S4 → S5 → S6 prove the mechanism with no Radient dependency**, because S5 is tested against a
-   stub control plane. This is the deliberate hedge: the design is exercised before the cloud
-   exists, and if the cloud never ships, the work has still produced a device registry, a cursor and
-   a measured eligibility rule rather than a plan.
-4. **S7 is the only slice we cannot do ourselves**, and it is the critical path.
-5. **S8 is the widest diff.** S9 and S11 finish it. S10 needs both a machine and a cloud, so it
-   lands last.
+core, and useful the moment they land: the aggregate is the in-app count even with no push at all,
+and the handle is what an on-device deep link needs. If everything else stopped here, the badge rule
+the operator asked for would already be honest. 2. **S3 is frozen before the expensive work**
+(review M11): it needs only S1 and S2, so the cloud team is not made to wait on the worker. S3
+freezes the relay shapes, the payload and the keys; the cloud route shapes inside it stay marked
+**proposal**. 3. **S4 → S5 → S6 prove the mechanism with no Radient dependency**, because S5 is
+tested against a stub control plane. This is the deliberate hedge: the design is exercised before
+the cloud exists, and if the cloud never ships, the work has still produced a device registry, a
+cursor and a measured eligibility rule rather than a plan. 4. **S7 is the only slice we cannot do
+ourselves**, and it is the critical path. 5. **S8 is the widest diff.** S9 and S11 finish it. S10
+needs both a machine and a cloud, so it lands last.
 
 ## QA matrix this plan asks for
 
@@ -173,7 +166,7 @@ Each row names the app's state, the other surfaces' state, the action, and what 
 | Q33 | two bursts on one computer inside the cloud's one-hour ceiling | — | both digests delivered | `apns-collapse-id`/`notification.tag` is `digest:<computer handle>` on both, so they collapse rather than stack; a completion or attention push for one conversation still collapses per conversation beside them |
 | Q34 | any | — | inspect a `digest` payload field by field | it carries **no** `conversation`, `completion_token` or `kind`, and no `aps.badge`; a tap resolves nowhere (the attention form's rule) |
 | Q35 | any | — | a digest the cloud refuses (`5xx`), then the next catch-up window's digest | the refused one reuses **one** key across all of its retries and leaves no pending entry behind; the next window mints a new `emit_id` and a **new** key, so the second burst is not deduped away (P5) — the S5-round defect |
-| Q36 | any | — | a burst that also crosses the cloud's 60/hour ceiling | the cloud's output is a **delivery of the machine's payload** — same `emit_id`, same alert text, no new body, no `aps.badge`; two digests inside the window arrive collapsed as `digest:<computer handle>`; with no machine payload held, nothing is delivered and the drop is recorded (ADR §3.2's "exactly one composer") |
+| Q36 | any | — | a burst that also crosses the cloud's 60/hour ceiling | the cloud's output is a **delivery of the machine's payload** — same `emit_id`, same alert text, no new body, no `aps.badge`; two digests inside the window arrive collapsed as `digest:<computer handle>`; with **only `attention` frames held, or nothing**, nothing is delivered and the drop is recorded — the row that fails an implementation re-delivering a held attention frame under `digest:<computer handle>` (ADR §3.2's "exactly one composer") |
 | Q37 | a burst catch-up in flight | — | restart the daemon mid-window, then let the window close and the emit retry | the digest's `emit_id` is **persisted in the state file** and reused across the restart, so the cloud sees one key and delivers one banner; a second `emit_id` for the same window (the failure the persistence rule forbids) shows as two "conversations need you" alerts — a restart must not mint one |
 | Q9 | app on a machine with **no Radient login** | — | a turn finishes while the app is backgrounded | **no push, by design**; Settings states why, in the reviewed copy; on foreground the count and marks are correct, and the badge does not stay stale-positive |
 | Q10 | app on a **custom route, machine logged in to Radient** | — | a turn finishes | push **works** (ADR §2.4, review Q6) — the route does not decide it, and the tunnel can even be stopped |
@@ -197,43 +190,41 @@ Each row names the app's state, the other surfaces' state, the action, and what 
 ## Not in this plan
 
 - **Pending `ask`/`approval` pushes.** Gates have no durable, ackable identity today — the ack
-  contract is completion-token-bound (ADR 0006 §1, §9). Follow-up once the core's gate lifecycle has
-  a durable row.
-- **Quiet hours** (S12): promised in `docs/ux/flows.md`:570, absent from the core, deferred
-  explicitly rather than shipped as copy.
-- **Cross-machine unread merge.** An explicit operator decision, then a new ADR (ADR §1.6).
-- **A BYO push gateway** for the fully self-hosted user (ADR §2.4, §9).
-- **STT** and the composer's data path: a parallel workstream, deliberately untouched.
+  contract is completion-token-bound (ADR 0006 §1, §9). Follow-up once the core's gate lifecycle
+  has a durable row. - **Quiet hours** (S12): promised in `docs/ux/flows.md`:570, absent from the
+  core, deferred explicitly rather than shipped as copy. - **Cross-machine unread merge.** An
+  explicit operator decision, then a new ADR (ADR §1.6). - **A BYO push gateway** for the fully
+  self-hosted user (ADR §2.4, §9). - **STT** and the composer's data path: a parallel workstream,
+  deliberately untouched.
 
 ## Coordination notes (things this document cannot change)
 
 - **#11 is open** and its `attentionCount` (`src/features/sessions/session-projection.ts:61-66`)
   counts `needs_attention` only. It must become the §1.4 count or the row is a fourth opinion; that
-  change belongs to #11 or to an immediate follow-up, and this document only records it.
-- **`docs/ux/flows.md` and `docs/README.md`** are touched by #11, so the pointers this ADR owes them
-  (D-1's disposition, the ADR index entry) land after #11 merges, not in this PR.
-- **`docs/push-cloud-ops.md` (PR #15)** is the cloud lane's runbook for S7. It and ADR §3.1 must
-  keep agreeing on the ingest shape; if either changes, both change in the same round.
-- **Revocation semantics (ADR §4, plan S4a)** are the other half of that agreement: the note's
+  change belongs to #11 or to an immediate follow-up, and this document only records it. -
+  **`docs/ux/flows.md` and `docs/README.md`** are touched by #11, so the pointers this ADR owes them
+  (D-1's disposition, the ADR index entry) land after #11 merges, not in this PR. -
+  **`docs/push-cloud-ops.md` (PR #15)** is the cloud lane's runbook for S7. It and ADR §3.1 must
+  keep agreeing on the ingest shape; if either changes, both change in the same round. -
+  **Revocation semantics (ADR §4, plan S4a)** are the other half of that agreement: the note's
   round-4 review read ADR §3.1's register route as consulting nothing about revocation, and the ADR
   now defines the device states, the tombstone that refuses re-registration, the credential rule
   that stops delivery after a rotation without revoking, and dead-token deletion as a different
   state with re-registration allowed. The library/test row is S4a, so none of it rests on prose
-  alone.
-- **The vocabulary is deliberately shared: `revoked_at` / `unpaired_at` / `expired_at`, with the
-  precedence revoked > unpaired > expired, plus the *absent* state for a row that was dropped.**
-  **Re-checked at the note's head `30a0f4d` (2026-09-30) rather than asserted:** it now carries the
-  same five states, the same markers, the same precedence, `expired_at` for the credential lapse
-  including a rotation, tombstoning for revoke *and* unpair, and the absent state for the provider
-  dead-token and the 60-day drop — the four divergences round 4 M1 named are closed. **The three
-  round 5 M6 / QA Q-F11 found are closed too, and so are the four the note was owed** (PR #15 merged
-  as `5b76089`): the rate is now the coalesced, change-triggered report "at most once per device per
-  5 minutes"; the credential-epoch sentence is gone; the single-route "lacking the new password"
-  claim is gone, with the Radient route's lock moved to the cloud grant; and the note now carries
-  the **grant**, the **heartbeat** route, **`device_key`** with `X-Lop-Device-Key` and the
-  **`devices` report block**. **The two documents agree at that head**; this paragraph stays where
-  they are checked against each other, and the check is a reading, never an assertion. §2.2's
-  retention rules (**14 days**; the **60-day drop**, now stated as a row deletion with no marker
-  rather than a tombstone) are this ADR's decision as of this pass — the note remains their
-  operational runbook. Neither is a cloud route shape, so neither carries the "proposal" marker the
-  endpoint list does.
+  alone. - **The vocabulary is deliberately shared: `revoked_at` / `unpaired_at` / `expired_at`,
+  with the precedence revoked > unpaired > expired, plus the *absent* state for a row that was
+  dropped.** **Re-checked at the note's head `30a0f4d` (2026-09-30) rather than asserted:** it now
+  carries the same five states, the same markers, the same precedence, `expired_at` for the
+  credential lapse including a rotation, tombstoning for revoke *and* unpair, and the absent state
+  for the provider dead-token and the 60-day drop — the four divergences round 4 M1 named are
+  closed. **The three round 5 M6 / QA Q-F11 found are closed too, and so are the four the note was
+  owed** (PR #15 merged as `5b76089`): the rate is now the coalesced, change-triggered report "at
+  most once per device per 5 minutes"; the credential-epoch sentence is gone; the single-route
+  "lacking the new password" claim is gone, with the Radient route's lock moved to the cloud grant;
+  and the note now carries the **grant**, the **heartbeat** route, **`device_key`** with
+  `X-Lop-Device-Key` and the **`devices` report block**. **The two documents agree at that head**;
+  this paragraph stays where they are checked against each other, and the check is a reading, never
+  an assertion. §2.2's retention rules (**14 days**; the **60-day drop**, now stated as a row
+  deletion with no marker rather than a tombstone) are this ADR's decision as of this pass — the
+  note remains their operational runbook. Neither is a cloud route shape, so neither carries the
+  "proposal" marker the endpoint list does.

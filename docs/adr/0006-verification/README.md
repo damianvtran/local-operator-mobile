@@ -117,6 +117,11 @@ head). It is a reading aid, not an oracle: a human compares the two columns.
 * **An unmapped Python citation is a FAILURE, not a skip** — that strictness is what found seven
   unmapped paths in round 6 and the `server.py` mismatch in round 8.
 * **Whether a citation's line supports its claim** — see `read-citations.py` above.
+* **The prose wrap is a convention, not a guarantee.** The documents wrap prose at 100 columns; the
+  exceptions are **table rows** (a GFM row must be one physical line), **headings** and **single-token lines** — a link whose only token is a URL, or one
+  unbreakable code span (Markdown cannot break either without changing what they are). So
+  "every prose line is under 100 columns" is true only with those excluded, and no script asserts it
+  (round 1, n2).
 * **The plan's prose against the ADR's prose.** `verify-documents.py` cross-checks the slice ids one
   way only: the ADR may name no slice the plan does not define, and the digest's slices (`S5`, `S7`)
   are named in both. It does **not** compare the two documents' wording, and the plan may define
