@@ -48,7 +48,7 @@ ref the document cites.)
 | Ref | What it is | How it is cited |
 |---|---|---|
 | `40ca7910e49a` | the `local-operator` pin the ADR's provenance table names | `(pin)` after the range, or no marker for a file that exists only there |
-| `d089f7e0fc0a324c38d6499290c27b2569714549` | **PR #1864's head** (open, not merged) — the implementation the ADR adopts | `(#1864)` after the range; `push_devices.py` needs none, the file exists only there |
+| `d089f7e0fc0a324c38d6499290c27b2569714549` | **PR #1864's head**, **merged as `813c6bf89`** (in `v0.64.13`) — the implementation the ADR adopts | `(#1864)` after the range; `push_devices.py` needs none, the file exists only there |
 
 `daemon.py` and `cli.py` exist at **both** refs with different code on the same line numbers, so **a
 citation into either without a marker is a failure** — that is the check that stops an author citing a
