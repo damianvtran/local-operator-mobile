@@ -145,18 +145,15 @@ export async function launchChrome({
 		"--disable-background-networking",
 		"--disable-component-update",
 		"--disable-features=Translate,MediaRouter",
-		// Footprint flags, each chosen because it changes no page-visible
-		// behaviour: `--disable-gpu` drops the compositor tree this suite never
-		// needs (captures go through CDP, not the screen), `--disable-dev-shm-usage`
-		// keeps shared-memory buffers off a small /dev/shm, `--disable-extensions`
-		// avoids loading the profile's default set, and the V8 heap cap bounds one
-		// page's growth. `--single-process`/`--no-zygote`/`--renderer-process-limit`
-		// were rejected: they change per-target semantics that the CDP driving
-		// (`Emulation.*` per page, `Target.closeTarget`) depends on.
+		// `--disable-gpu` drops the compositor tree this suite never needs
+		// (captures go through CDP, not the screen). An earlier revision also set
+		// `--disable-dev-shm-usage` and `--disable-extensions` — neither does
+		// anything in a fresh throwaway profile on macOS, so they are gone rather
+		// than left in as decoration — and a V8 heap cap that no measurement
+		// justified. `--single-process`/`--no-zygote`/`--renderer-process-limit`
+		// stay out: they change per-target semantics the CDP driving (`Emulation.*`
+		// per page, `Target.closeTarget`) depends on.
 		"--disable-gpu",
-		"--disable-dev-shm-usage",
-		"--disable-extensions",
-		"--js-flags=--max-old-space-size=1024",
 		...extraArgs,
 		"about:blank",
 	];

@@ -167,7 +167,7 @@ names** — `lo-relay`, `lo-relay-password`, `lo-relay-insecure=1` — so a capt
 driving and no app change:
 
 ```sh
-capture --dir dist --relay <mock-url> --seed-route <mock-url> --seed-password mock-relay-password …
+pnpm audit:capture --dir dist --relay <mock-url> --seed-route <mock-url> --seed-password mock-relay-password …
 ```
 
 Two properties of that hook matter, and the README said the opposite of the second for one

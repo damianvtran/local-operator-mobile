@@ -380,9 +380,14 @@ async function runCommand(
 		command: text,
 		line: block.line,
 		status: "FAIL",
-		detail: `exit ${run.status}, expected ${block.directives.exits}: ${
-			verbose ? output.slice(-2000) : output.slice(-800)
-		}`,
+		detail:
+			`exit ${run.status}, expected ${block.directives.exits}: ` +
+			// Name the first failing check before the tail, so a failure is
+			// attributable: the previous revision kept only the last 800 characters,
+			// which was enough to see that the sweep failed and not which check did.
+			`${/^\s*(FAIL|missed:|CANARY:).*$/m.exec(output)?.[0]?.trim() ?? "no check line in the output"} ${
+				verbose ? output.slice(-2000) : output.slice(-800)
+			}`,
 	};
 }
 

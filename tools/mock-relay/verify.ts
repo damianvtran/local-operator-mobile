@@ -1242,10 +1242,16 @@ async function main() {
 			{ blind: "U-07:x", defect: "U-07-x" },
 			{ blind: "U-07:y", defect: "U-07-y" },
 		];
-		// One capture for all seven rules. The matrix is identical for every blinded
-		// rule — only the audit's `--blind` differs — so re-capturing it per rule cost
-		// seven Chrome launches where one suffices, and that churn is what aborted
+		// One capture for all seven rules. The captured matrix is identical for every
+		// blinded rule — only the audit's `--blind` differs — so the HEAVY phase went
+		// from seven 48-frame Chrome captures to one, and that churn is what aborted
 		// three sweeps in the suite's opening phase.
+		//
+		// The audits are NOT Chrome-free: `tools/audit/audit.ts` launches a browser,
+		// and each rule runs two of them (a defect page and a clean page). The group
+		// is therefore about fifteen launches, down from about twenty-one — the
+		// reduction is in the captures, not in the launch count as a whole. An
+		// earlier revision of this comment overstated it.
 		const mutationCapture = join(tmpdir(), `lo-mutation-capture-${Date.now()}`);
 		const captureRun = spawnSync(
 			process.execPath,
@@ -1258,9 +1264,41 @@ async function main() {
 			],
 			{ encoding: "utf8", timeout: 900_000, env: { ...process.env } },
 		);
-		const captureOutput = `${captureRun.stdout ?? ""}${captureRun.stderr ?? ""}`;
-		const sharedManifest =
-			/^manifest:\s*(.+)$/m.exec(captureOutput)?.[1]?.trim() ?? "";
+		// A killed capture is a host event, so it is retried ONCE — and if the retry
+		// still produces no manifest the group fails HERE, loudly. It must never fall
+		// back to capturing per rule: that fallback would restore exactly the
+		// footprint this group exists to remove, on exactly the host state that made
+		// the shared capture fail.
+		const captureManifest = (result: typeof captureRun): string =>
+			/^manifest:\s*(.+)$/m
+				.exec(`${result.stdout ?? ""}${result.stderr ?? ""}`)?.[1]
+				?.trim() ?? "";
+		let sharedManifest = captureManifest(captureRun);
+		if (
+			sharedManifest === "" &&
+			captureRun.status === null &&
+			captureRun.signal !== null
+		) {
+			const retry = spawnSync(
+				process.execPath,
+				[
+					join(WORKTREE, "e2e", "run-canary.ts"),
+					"--fast",
+					"--capture-only",
+					"--out",
+					mutationCapture,
+				],
+				{ encoding: "utf8", timeout: 900_000, env: { ...process.env } },
+			);
+			sharedManifest = captureManifest(retry);
+		}
+		if (sharedManifest === "") {
+			console.error(
+				"\nverify: the shared mutation capture produced no manifest.\n" +
+					"The blinded rules are NOT re-captured per rule — that fallback is the footprint\n" +
+					"this change removes. Re-run the sweep on a quieter host.",
+			);
+		}
 		check(
 			"the shared capture produced a manifest for every rule to audit",
 			sharedManifest !== "",
@@ -1269,6 +1307,7 @@ async function main() {
 		);
 
 		for (const mutation of mutations) {
+			if (sharedManifest === "") break;
 			const out = join(
 				tmpdir(),
 				`lo-mutation-${mutation.blind.replace(":", "-")}-${Date.now()}`,

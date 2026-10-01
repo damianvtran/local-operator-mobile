@@ -116,9 +116,13 @@ const fast = args.includes("--fast");
  * matrix seven times.
  *
  * The captured matrix is IDENTICAL for every blinded rule — only the audit's
- * `--blind` differs — yet each rule used to re-capture it, which is seven Chrome
- * launches where one suffices. That churn is what stepped swap 1.5 GiB in 150 s
+ * `--blind` differs — yet each rule used to re-capture it: seven heavy 48-frame
+ * captures where one suffices. That churn is what stepped swap 1.5 GiB in 150 s
  * and aborted three sweeps in the suite's opening phase.
+ *
+ * The audits themselves are NOT Chrome-free (`tools/audit/audit.ts` launches a
+ * browser), so the mutation group's launch count goes from about twenty-one to
+ * about fifteen; the saving is in the captures, not in the audits.
  *
  * `--capture-only` writes the matrix and prints its manifest path; `--manifest
  * <path>` audits a manifest captured earlier. Neither changes what is asserted:
@@ -127,11 +131,59 @@ const fast = args.includes("--fast");
  */
 const captureOnly = args.includes("--capture-only");
 const manifestOverride = flag("manifest", "");
+
+/**
+ * The rule names the mutation self-test blinds. `--manifest` and `--capture-only`
+ * are the shared-capture pair; a mistyped rule name is an error here rather than a
+ * silent PASS, because the audit exits 2 both for "defects were found" and for
+ * "this blind matched nothing" — so without this check a typo produced
+ * `defect-page exit: 2 (non-zero expected)` and a green canary.
+ */
+const KNOWN_BLINDS = new Set([
+	"U-04",
+	"U-05:top",
+	"U-05:bottom",
+	"U-05:left",
+	"U-05:right",
+	"U-07:x",
+	"U-07:y",
+]);
+
+// An empty `--manifest` is a caller bug, not "no override". Treating it as the
+// latter is what let a failed shared capture silently fall back to capturing the
+// matrix once per rule — the footprint this pair of modes exists to remove.
+if (args.includes("--manifest") && manifestOverride === "") {
+	console.error(
+		"run-canary: --manifest needs a path (an empty value is not 'no override')",
+	);
+	process.exit(2);
+}
+for (const spec of blind) {
+	if (!KNOWN_BLINDS.has(spec)) {
+		console.error(
+			`run-canary: unknown --blind '${spec}'; known rules: ${[...KNOWN_BLINDS].join(", ")}`,
+		);
+		process.exit(2);
+	}
+}
+
+/**
+ * The rule names the mutation self-test blinds. `--manifest` and `--capture-only`
+ * are the shared-capture pair; a mistyped rule name is an error here rather than a
+ * silent PASS, because the audit exits 2 both for "defects were found" and for
+ * "this blind matched nothing" — so without this check a typo produced
+ * `defect-page exit: 2 (non-zero expected)` and a green canary.
+ */
 // A unique output directory per run, and never a shared fixed name: two canaries
 // — a developer's and CI's, or two shards — otherwise write one manifest and one
 // report over each other mid-run, and each reads the other's numbers.
 const scratchRoot = process.env.LOCAL_OPERATOR_SCRATCHPAD ?? tmpdir();
-const out = flag("out", mkdtempSync(join(scratchRoot, "canary-")));
+// Only mint a scratch directory when the caller did not name one: the eager
+// fallback created a temp directory on EVERY run, including the audit-only runs
+// that write into the caller's `--out`, and leaked it.
+const outFlag = flag("out", "");
+const out =
+	outFlag !== "" ? outFlag : mkdtempSync(join(scratchRoot, "canary-"));
 const canaryDir = join(worktree, "e2e", "fixtures", "audit-canary");
 
 /**
