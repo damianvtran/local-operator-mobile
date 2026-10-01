@@ -1828,10 +1828,11 @@ async function main() {
 			"the seed hook's parameters are the app-facing names, and nothing is added when unset",
 			[seedQuery("http://127.0.0.1:1234", "abc123"), seedQuery(null, null)],
 			[
-				// The app's own parameter names, in the order `seedQuery` sets them. The old
-				// expectation here still named the invented `lo-seed-*` pair, which made this
-				// check fail by construction the moment the names changed — the round-4 lesson.
-				"lo-relay=http%3A%2F%2F127.0.0.1%3A1234&lo-relay-password=[redacted]",
+				// The app's own parameter names, in the order `seedQuery` sets them: route,
+				// password, then the cleartext opt-in. The old expectation named the invented
+				// `lo-seed-*` pair, and its first repair dropped the `insecure` suffix — both
+				// were fail-by-construction, which is what this frozen-head run caught.
+				"lo-relay=http%3A%2F%2F127.0.0.1%3A1234&lo-relay-password=[redacted]&lo-relay-insecure=1",
 				"",
 			],
 		);
