@@ -130,6 +130,9 @@ const fast = args.includes("--fast");
  * logic below is untouched.
  */
 const captureOnly = args.includes("--capture-only");
+// The caller may name the throwaway profile, so a killed attempt can be reaped by
+// the exact path it used rather than by a root that a fresh call re-mints empty.
+const profileOverride = flag("profile", "");
 const manifestOverride = flag("manifest", "");
 
 /**
@@ -180,13 +183,6 @@ for (const spec of blind) {
 	}
 }
 
-/**
- * The rule names the mutation self-test blinds. `--manifest` and `--capture-only`
- * are the shared-capture pair; a mistyped rule name is an error here rather than a
- * silent PASS, because the audit exits 2 both for "defects were found" and for
- * "this blind matched nothing" — so without this check a typo produced
- * `defect-page exit: 2 (non-zero expected)` and a green canary.
- */
 // A unique output directory per run, and never a shared fixed name: two canaries
 // — a developer's and CI's, or two shards — otherwise write one manifest and one
 // report over each other mid-run, and each reads the other's numbers.
@@ -265,6 +261,7 @@ if (manifestOverride === "") {
 		"--consecutive",
 		"--tokens",
 		tokens,
+		...(profileOverride !== "" ? ["--profile", profileOverride] : []),
 		"--yes",
 	]);
 	if (captureStatus !== 0) {

@@ -291,6 +291,45 @@ export async function reap(
  * to a path unique to this run, which is what keeps the sweep from reaching any
  * other Chrome — including the operator's. Never sweep by program name.
  */
+/**
+ * Reap what a KILLED capture attempt left behind, and report what still matches.
+ *
+ * `pids` are pids THIS run created — never a pid found by name — and each is only
+ * signalled after `kill -0` says it is alive, so a recycled pid is never touched.
+ * The sweep that follows is by exact profile path, which reaches a `detached` Chrome
+ * (one that did not die with the parent that was killed) and any surviving child
+ * carrying the same path in its argv. `sweepOrphanChrome` cannot serve here: it skips
+ * a profile whose recorded owner is still alive, which is exactly the surviving-child
+ * case this has to close.
+ */
+export function reapAttempt(
+	profile: string,
+	pids: number[],
+): { killed: number[]; survivors: number } {
+	const killed: number[] = [];
+	for (const pid of pids) {
+		if (!isAlive(pid)) continue;
+		try {
+			process.kill(pid, "SIGKILL");
+			killed.push(pid);
+		} catch {
+			// Died between the liveness check and the signal: nothing left to do.
+		}
+	}
+	for (let round = 0; round < 2; round += 1)
+		spawnSync("pkill", ["-9", "-f", profile]);
+	return { killed, survivors: countProcesses(profile) };
+}
+
+/**
+ * Whether a killed capture may be retried: only when nothing from the attempt
+ * survives. Retrying into a profile something still holds is how two browsers end
+ * up writing one `--out`.
+ */
+export function mayRetry(survivors: number): boolean {
+	return survivors === 0;
+}
+
 export function countProcesses(profile: string): number {
 	const result = spawnSync("pgrep", ["-f", profile], { encoding: "utf8" });
 	if (result.status !== 0) return 0; // pgrep exits 1 when nothing matches: the good case.

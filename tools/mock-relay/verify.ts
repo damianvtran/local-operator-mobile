@@ -31,6 +31,8 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
 	countProcesses,
+	mayRetry,
+	reapAttempt,
 	scratchRoot,
 	sweepOrphanChrome,
 } from "../lib/chrome.ts";
@@ -1257,6 +1259,7 @@ async function main() {
 		// reduction is in the captures, not in the launch count as a whole. An
 		// earlier revision of this comment overstated it.
 		const mutationCapture = join(tmpdir(), `lo-mutation-capture-${Date.now()}`);
+		const attemptProfile = join(mutationCapture, "chrome-attempt");
 		const captureRun = spawnSync(
 			process.execPath,
 			[
@@ -1265,6 +1268,12 @@ async function main() {
 				"--capture-only",
 				"--out",
 				mutationCapture,
+				// The profile is OURS and recorded before launch, so a killed attempt
+				// can be reaped by the exact path it used. `scratchRoot()` cannot serve:
+				// it mints a fresh empty `chrome-*` directory on every call, so a sweep
+				// or `pgrep` against it finds nothing and the guard can only pass.
+				"--profile",
+				attemptProfile,
 			],
 			{ encoding: "utf8", timeout: 900_000, env: { ...process.env } },
 		);
@@ -1278,6 +1287,7 @@ async function main() {
 				.exec(`${result.stdout ?? ""}${result.stderr ?? ""}`)?.[1]
 				?.trim() ?? "";
 		let sharedManifest = captureManifest(captureRun);
+		let mutationUsable = true;
 		if (
 			sharedManifest === "" &&
 			captureRun.status === null &&
@@ -1289,33 +1299,37 @@ async function main() {
 			// ownership-conservative (a live owner's profile is skipped), and the assertion
 			// below is a fresh `pgrep` scoped to the profile path this root mints — never a
 			// match by program name.
-			const attemptRoot = scratchRoot();
-			const reaped = sweepOrphanChrome(attemptRoot);
-			const survivors = countProcesses(join(attemptRoot, "chrome-"));
+			// Reap the killed attempt BEFORE deciding to retry: its Chrome is spawned
+			// `detached`, so it does not die with the parent that was killed, and its
+			// child may still hold the profile. The profile path is the one recorded at
+			// launch; the sweep is by that exact path, never by program name.
+			const reaped = reapAttempt(attemptProfile, []);
 			check(
 				"the killed capture's browser is reaped before the retry",
-				survivors,
+				reaped.survivors,
 				0,
-				`swept ${reaped.swept.length} process(es)`,
+				`killed ${reaped.killed.length} recorded pid(s), ${reaped.survivors} survivor(s)`,
 			);
-			if (survivors !== 0) {
+			if (!mayRetry(reaped.survivors)) {
 				console.error(
-					`\nverify: ${survivors} process(es) still match the killed capture's profile root;` +
-						" not retrying into an overlapping profile.",
+					`\nverify: ${reaped.survivors} process(es) still hold ${attemptProfile};` +
+						" not retrying into an overlapping profile, and not re-capturing per rule.",
 				);
+				mutationUsable = false;
+			} else {
+				const retry = spawnSync(
+					process.execPath,
+					[
+						join(WORKTREE, "e2e", "run-canary.ts"),
+						"--fast",
+						"--capture-only",
+						"--out",
+						mutationCapture,
+					],
+					{ encoding: "utf8", timeout: 900_000, env: { ...process.env } },
+				);
+				sharedManifest = captureManifest(retry);
 			}
-			const retry = spawnSync(
-				process.execPath,
-				[
-					join(WORKTREE, "e2e", "run-canary.ts"),
-					"--fast",
-					"--capture-only",
-					"--out",
-					mutationCapture,
-				],
-				{ encoding: "utf8", timeout: 900_000, env: { ...process.env } },
-			);
-			sharedManifest = captureManifest(retry);
 		}
 		if (sharedManifest === "") {
 			console.error(
@@ -1332,7 +1346,7 @@ async function main() {
 		);
 
 		for (const mutation of mutations) {
-			if (sharedManifest === "") break;
+			if (sharedManifest === "" || !mutationUsable) break;
 			const out = join(
 				tmpdir(),
 				`lo-mutation-${mutation.blind.replace(":", "-")}-${Date.now()}`,
