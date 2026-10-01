@@ -54,6 +54,14 @@ has_readme = next((t for t in (try_read(REF, c) for c in
 # quoted: a check that never opens the file it is about cannot fail, which is how the round-10
 # assertion-failure recipe went wrong (round 11, R11-n2).
 ARCH = try_read(REF, "docs/architecture.md") or ""
+
+
+def row_line(text, phrase):
+    """The Markdown table row carrying `phrase` — empty when no row does."""
+    return next((l for l in text.splitlines() if l.strip().startswith("|") and phrase in l), "")
+
+
+AMENDED_ROW = row_line(ARCH, "Push notifications (APNs/FCM)")
 A = show(REF, "docs/adr/0006-push-and-ack-sync.md")
 P = show(REF, "docs/push-plan.md")
 af = " ".join(A.split()); pf = " ".join(P.split())
@@ -68,7 +76,13 @@ rows = [
  ("B1 three sites: other-channels.md:172-174", has(af,"other-channels.md`:172-174")),
  ("B1 three sites: current-relay-audit.md:220-222", has(af,"current-relay-audit.md`:220-222")),
  ("B1 three sites: architecture.md:299", has(af,"architecture.md`:299")),
- ("B1 the amended site is REAL, read at this ref", has(ARCH,"Push notifications (APNs/FCM)")),
+ #: The ROW must exist at the ref AND carry the amendment. Two things make this bite: the
+ #: pre-amendment row carries the same phrase, and a file-wide test for `**Answered:**` would be
+ #: satisfied by a second occurrence anywhere else in the file (round 12 m1/Q-F38; round 13 R-2), so
+ #: the assertion is anchored to the table row that names this site. `b6ff95c` added the ADR and
+ #: amended the row in one commit, so a ref carrying the document always carries the amendment.
+ ("B1 the amended row carries the amendment, read at this ref",
+  has(AMENDED_ROW,"**Answered:**") and has(AMENDED_ROW,"adr/0006-push-and-ack-sync.md")),
  ("B1 false 'four sites' sentence gone", not has(af,"The four sites above")),
  ("B1 seven-sites sentence present", has(af,"All seven of the sites above")),
  ("B1 web/src/store.ts:407 in the list", has(af,"#11's `attentionCount`, `web/src/store.ts:407`")),
