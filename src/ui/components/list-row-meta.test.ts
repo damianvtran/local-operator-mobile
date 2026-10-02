@@ -5,6 +5,7 @@ import {
 	META_PATH_FLOOR_CHARS,
 	MODEL_MIN_CHARS,
 	metaLineFor,
+	textWidthDp,
 } from "./list-row-meta";
 
 /**
@@ -20,10 +21,28 @@ import {
  */
 const SE = {
 	one: "~/work",
-	path: "~/workspace/clients/meridian/operations/render",
+	path: "~/workspace/clients/meridian/operations/nightly-reconciliation",
 	opus: "anthropic/claude-opus-5",
 	mock: "nope/nope",
 };
+
+/** A code unit left on its own by a UTF-16 slice, which renders as U+FFFD. */
+const hasLoneSurrogate = (text: string): boolean => {
+	for (let index = 0; index < text.length; index += 1) {
+		const unit = text.charCodeAt(index);
+		if (unit >= 0xd800 && unit <= 0xdbff) {
+			const next = text.charCodeAt(index + 1);
+			if (!(next >= 0xdc00 && next <= 0xdfff)) return true;
+			index += 1;
+		} else if (unit >= 0xdc00 && unit <= 0xdfff) {
+			return true;
+		}
+	}
+	return false;
+};
+
+const roomFor = (widthDp: number, scale: number): number =>
+	widthDp - 8 - META_PATH_FLOOR_CHARS * charWidthDp(scale);
 
 describe("the meta line's fit", () => {
 	it("paints both fields whole before the first layout has a width", () => {
@@ -37,12 +56,44 @@ describe("the meta line's fit", () => {
 
 	it("drops the provider prefix rather than the model's own name, at 320 pt @ 100 %", () => {
 		// The finding's own configuration, and the one frame it asked for: 232 dp
-		// of line, 152 dp of room for the model, 21 characters — two short of the
-		// 23-character id, so the 11-character vendor goes and the model name stays
-		// whole.
+		// of line, 152 dp of room for the model, 21 glyphs — two short of the
+		// 23-glyph id, so the 11-glyph vendor goes and the model name stays whole.
 		expect(
 			metaLineFor({ cwd: SE.one, model: SE.opus, widthDp: 232, scale: 1 }),
 		).toEqual({ cwd: "~/work", model: "…claude-opus-5" });
+	});
+
+	it("keeps a model whose whole name is shorter than the legibility floor", () => {
+		// R2-1: the floor is about an ELIDED label. `o3` and `gpt-4` are complete
+		// names, and a length gate over the painted string dropped them at every
+		// width and scale — the fixtures here are the ones that would have caught it.
+		for (const model of ["o3", "gpt-4", "abcdef"]) {
+			expect(
+				metaLineFor({ cwd: SE.one, model, widthDp: 232, scale: 1 }),
+			).toEqual({ cwd: "~/work", model });
+			expect(
+				metaLineFor({ cwd: SE.one, model, widthDp: 160, scale: 1 }),
+			).toEqual({ cwd: "~/work", model });
+		}
+	});
+
+	it("paints a short model whole when the row has no cwd, rather than an empty line", () => {
+		// The same defect's second face: with no path to share the line with, a
+		// short model was dropped and the row painted an empty meta line.
+		for (const scale of [1, 2]) {
+			expect(metaLineFor({ model: "gpt-4", widthDp: 232, scale })).toEqual({
+				cwd: null,
+				model: "gpt-4",
+			});
+		}
+	});
+
+	it("still drops a label that was elided below the legibility floor", () => {
+		// The floor still applies where it was meant to: an elided fragment that
+		// names nothing leaves the line to the cwd.
+		expect(
+			metaLineFor({ cwd: SE.one, model: SE.opus, widthDp: 232, scale: 2 }),
+		).toEqual({ cwd: "~/work", model: null });
 	});
 
 	it("keeps the tail of a path, not its head, when the path has to be cut", () => {
@@ -56,14 +107,14 @@ describe("the meta line's fit", () => {
 			scale: 1,
 		});
 		expect(cwd?.startsWith("…")).toBe(true);
-		expect(cwd?.endsWith("operations/render")).toBe(true);
+		expect(cwd?.endsWith("ightly-reconciliation")).toBe(true);
 		expect(cwd).not.toContain("~/workspace");
 	});
 
 	it("fits both fields whole wherever the line is wide enough", () => {
-		// The same pair that is cut at 320 pt is whole at 390 pt and in a split pane,
-		// which is what keeps a plain `maxWidth` cap from being the answer: 28 and 33
-		// characters of room against a 23-character id.
+		// The same pair that is cut at 320 pt is whole at 390 pt and in a split
+		// pane, which is what keeps a plain `maxWidth` cap from being the answer: 28
+		// and 33 glyphs of room against a 23-glyph id.
 		for (const widthDp of [318, 287]) {
 			expect(
 				metaLineFor({ cwd: SE.one, model: SE.opus, widthDp, scale: 1 }),
@@ -73,37 +124,68 @@ describe("the meta line's fit", () => {
 		// the path's tail is what pays for the model's name.
 		expect(
 			metaLineFor({ cwd: SE.path, model: SE.opus, widthDp: 318, scale: 1 }),
-		).toEqual({ cwd: "…n/operations/render", model: SE.opus });
-	});
-
-	it("gives the line to the cwd when no legible prefix of the model survives", () => {
-		// 320 pt at 200 %: 72 dp of room is five characters, so the model would be
-		// `…us-5` — a fragment that names nothing. The line carries the cwd alone
-		// (D26's narrowest configuration, reached by measuring rather than by a
-		// text-scale threshold).
-		expect(
-			metaLineFor({ cwd: SE.one, model: SE.opus, widthDp: 232, scale: 2 }),
-		).toEqual({ cwd: "~/work", model: null });
+		).toMatchObject({ model: SE.opus });
 	});
 
 	it("keeps a model that still fits at 150 %, which the scale rule cut off", () => {
 		// The reviewer's D2 case: at 150 % the scale rule removed the model even
-		// though this one fits whole (9 characters of a 10-character budget).
+		// though this one fits whole.
 		expect(
 			metaLineFor({ cwd: SE.one, model: SE.mock, widthDp: 232, scale: 1.5 }),
 		).toEqual({ cwd: "~/work", model: "nope/nope" });
+		// And the id that genuinely does not fit keeps a legible tail.
+		expect(
+			metaLineFor({ cwd: SE.one, model: SE.opus, widthDp: 232, scale: 1.5 }),
+		).toEqual({ cwd: "~/work", model: "…de-opus-5" });
 	});
 
-	it("trims a long model name to its own tail once the vendor is not enough", () => {
-		const { model } = metaLineFor({
-			cwd: SE.one,
-			model: "openrouter/deepseek/deepseek-v4.1-flash",
-			widthDp: 232,
-			scale: 1,
+	it("does not reserve a scaled gap for a spacing unit that is fixed", () => {
+		// R2-2: `gap-2` is 8 dp at every text size, so the model's room is the line
+		// minus 8 — not minus 8 x scale. At 285 dp / 200 % the scaled gap dropped a
+		// 9-glyph model that fits the room the shipped unit leaves; this is the
+		// keep/drop flip, pinned.
+		expect(roomFor(285, 2)).toBe(133);
+		expect(
+			metaLineFor({ cwd: "~/work", model: SE.mock, widthDp: 285, scale: 2 }),
+		).toEqual({ cwd: "~/work", model: "nope/nope" });
+	});
+
+	it("charges a glyph the face cannot draw at the fallback's advance", () => {
+		// R2-3: JetBrains Mono has no CJK coverage, so `文` is drawn from a
+		// fallback face at a full-width em. Counting it at the Latin advance
+		// under-states the line, and the web build then clamps it from the tail —
+		// the direction D26 forbids.
+		expect(charWidthDp(1)).toBeCloseTo(7.2, 6);
+		expect(textWidthDp("文", 1)).toBeCloseTo(12, 6);
+		expect(textWidthDp("~/文書/渲染", 1)).toBeCloseTo(69.6, 6);
+		// A CJK path of 7 glyphs is elided at a budget a Latin path of 8 glyphs
+		// fits whole, because the budget is measured in dp rather than counted.
+		expect(metaLineFor({ cwd: "~/abcdef", widthDp: 60, scale: 1 })).toEqual({
+			cwd: "~/abcdef",
+			model: null,
 		});
-		expect(model?.startsWith("…")).toBe(true);
-		expect(model?.endsWith("flash")).toBe(true);
-		expect(model).not.toContain("openrouter");
+		expect(metaLineFor({ cwd: "~/文書/渲染", widthDp: 60, scale: 1 })).toEqual({
+			cwd: "…書/渲染",
+			model: null,
+		});
+	});
+
+	it("never leaves a lone surrogate behind when it cuts", () => {
+		// R2-4: slicing by UTF-16 unit split `🙂` in half and the half rendered as
+		// U+FFFD in the middle of a path. The cut is by code point.
+		const { cwd } = metaLineFor({ cwd: "~/a🙂b/c", widthDp: 40, scale: 1 });
+		expect(cwd).toBe("…b/c");
+		expect(hasLoneSurrogate(cwd ?? "")).toBe(false);
+		for (const widthDp of [24, 32, 40, 48, 56, 64, 72]) {
+			const painted = metaLineFor({
+				cwd: "~/a🙂b/c",
+				model: "gpt-4",
+				widthDp,
+				scale: 1,
+			});
+			expect(hasLoneSurrogate(painted.cwd ?? "")).toBe(false);
+			expect(hasLoneSurrogate(painted.model ?? "")).toBe(false);
+		}
 	});
 
 	it("gives the model the whole line when the row has no cwd", () => {
@@ -129,36 +211,33 @@ describe("the meta line's fit", () => {
 		});
 	});
 
-	it("keeps the painted model inside the room its floor leaves", () => {
+	it("keeps every painted field inside the box its floor leaves", () => {
 		// The invariant behind every case above: the model never takes more than
-		// the line minus the gap minus the cwd's floor, which is what the flexbox
-		// does with the same numbers.
+		// the line minus the gap minus the cwd's floor, and the cwd never takes
+		// more than the line minus the gap minus the model — which is what the
+		// flexbox does with the same numbers.
 		for (const scale of [1, 1.5, 2]) {
-			for (const widthDp of [232, 287, 318, 390]) {
-				const { model } = metaLineFor({
+			for (const widthDp of [100, 160, 232, 285, 287, 318, 390]) {
+				const { cwd, model } = metaLineFor({
 					cwd: SE.path,
 					model: SE.opus,
 					widthDp,
 					scale,
 				});
-				if (model === null) continue;
-				const room =
-					widthDp - 8 * scale - META_PATH_FLOOR_CHARS * charWidthDp(scale);
-				expect(model.length * charWidthDp(scale)).toBeLessThanOrEqual(room);
+				if (model !== null) {
+					expect(textWidthDp(model, scale)).toBeLessThanOrEqual(
+						roomFor(widthDp, scale),
+					);
+					expect([...model].length).toBeGreaterThanOrEqual(MODEL_MIN_CHARS);
+				}
+				if (cwd !== null) {
+					// With no model the cwd has the whole line, so the gap is only spent
+					// when there is something on the other side of it.
+					const budget =
+						model === null ? widthDp : widthDp - 8 - textWidthDp(model, scale);
+					expect(textWidthDp(cwd, scale)).toBeLessThanOrEqual(budget);
+				}
 			}
 		}
-	});
-
-	it("keeps the model's own name whole whenever the ellipsis can hold the slot", () => {
-		// Which is the whole point: whenever the vendor's space buys the model's
-		// name, the name is not itself cut.
-		const { model } = metaLineFor({
-			cwd: SE.one,
-			model: SE.opus,
-			widthDp: 232,
-			scale: 1,
-		});
-		expect(model).toContain("claude-opus-5");
-		expect((model ?? "").length).toBeGreaterThanOrEqual(MODEL_MIN_CHARS);
 	});
 });

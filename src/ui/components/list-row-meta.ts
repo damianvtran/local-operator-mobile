@@ -21,22 +21,51 @@ import { TYPE_STEPS } from "@/ui/tokens.gen";
  * ellipsis slides its window and yields `…hropic/claude-opus-5`, which still
  * carries most of the vendor. D26 asks for the PREFIX to be the part that goes.
  *
- * **The widths are estimates, and they err wide.** There is no cross-platform way
- * to measure a text's own content width, so the character budgets below are
- * `dp / (size x 0.6 em)`: the shipped mono face measures 0.575 em per character
- * (`anthropic/claude-opus-5`, 24 characters, is 165.61 dp at 12 px), so 0.6
- * under-counts the characters that fit and a painted string stays inside its
- * box. `numberOfLines={1}` and `ellipsizeMode="head"` stay on the element as the
- * mop-up for whatever the estimate gets wrong — and on iOS/Android the flag is
- * the direction the string already has.
+ * **Widths are summed per glyph, and a glyph the face cannot draw is not free.**
+ * There is no cross-platform way to measure a text's own content width, so the
+ * budget below is arithmetic — but arithmetic over the GLYPHS, not over the
+ * string's length: `textWidthDp` charges every glyph what the shipped face
+ * actually advances it, and charges a glyph the face has no coverage for what the
+ * fallback face will spend on it (see `FALLBACK_ADVANCE_EM`). A line that
+ * under-counts its own width is a line the web build clamps from the tail, which
+ * is the direction this module exists to keep out of the product.
+ *
+ * `numberOfLines={1}` and `ellipsizeMode="head"` stay on the element as the
+ * mop-up, and on iOS/Android the flag is the direction the string already has.
  */
 
-/** The advance width of one `text-mono-sm` character, in em. See above. */
-const MONO_CHARACTER_EM = 0.6;
+/** The advance of every glyph the mono face COVERS, in em.
+ *
+ *  JetBrains Mono advances 600/1000 em, and the shipped face measures exactly
+ *  that: `anthropic/claude-opus-5`, 23 characters, is 165.61 dp at a 12 px size —
+ *  7.2 dp each, or 0.600 em. This is the measured advance and NOT a margin; what
+ *  keeps a painted string inside its box is that the budget is floored to whole
+ *  glyphs and that `numberOfLines`/`ellipsizeMode` catch anything the estimate
+ *  still gets wrong. */
+const MONO_ADVANCE_EM = 0.6;
 
-/** `gap-2` is 0.5 rem, and Tailwind's spacing unit follows the ROOT font size,
- *  so the gap between the fields grows with the reader's text size: 8 dp each
- *  way at 100 %. */
+/** What a glyph the face CANNOT draw costs instead.
+ *
+ *  JetBrains Mono has no CJK coverage — `文`, `日` and `あ` all resolve to gid 0
+ *  — so those glyphs are drawn from a fallback face at a full-width advance that
+ *  a 600/1000 em monospace cannot express. Counting them at the Latin advance
+ *  under-states such a line by 1.67x, and an under-stated line is one the web
+ *  build clamps from its tail. One em is the honest figure for a full-width
+ *  glyph, and it errs wide rather than narrow. */
+const FALLBACK_ADVANCE_EM = 1;
+
+/** The scripts the shipped face has no coverage for, plus emoji, which is drawn
+ *  from a colour font and is never one Latin advance wide. */
+const WIDE_GLYPH =
+	/[\u1100-\u115F\u2E80-\u303F\u3040-\u30FF\u3130-\u318F\u3400-\u4DBF\u4E00-\u9FFF\uA960-\uA97F\uAC00-\uD7FF\uF900-\uFAFF\uFE10-\uFE1F\uFE30-\uFE6F\uFF00-\uFF60\uFFE0-\uFFE6]|\p{Extended_Pictographic}/u;
+
+/** `gap-2` in the shipped spacing layer, in dp.
+ *
+ *  `theme.css` registers `--spacing: 4px` and `metro.config.js` fixes native's
+ *  rem at 16, so this unit is a flat 4 px and does NOT follow the reader's text
+ *  size: `gap-2` is 8 dp at 100 % and at 200 %, on both platforms. Reserving
+ *  `8 x scale` here over-reserved 8 dp at 200 % — one glyph of the model's room —
+ *  which is enough to keep a model that should fit (review round 2, R2-2). */
 const META_GAP_DP = 8;
 
 /**
@@ -50,19 +79,22 @@ const META_GAP_DP = 8;
 export const META_PATH_FLOOR_CHARS = 10;
 
 /**
- * The shortest painted model label that still names a model: an ellipsis plus
- * six characters, `…opus-5`. Below that the field carries no information, so it
- * is dropped and the line carries the cwd alone — the narrowest configuration
- * D26 names, reached here by measuring rather than by a text-scale threshold.
+ * How short a painted model label may become before it stops naming anything: an
+ * ellipsis plus six characters, `…opus-5`.
+ *
+ * It applies to a label that had to be ELIDED. A name that fits its box whole is
+ * painted whatever its length — `o3` and `gpt-4` are complete names, and a
+ * length gate over the painted label dropped them at every width and scale
+ * (review round 2, R2-1).
  */
 export const MODEL_MIN_CHARS = 7;
 
-/** The ellipsis is ONE character (U+2026), so it costs exactly one slot. */
+/** The ellipsis is ONE code point (U+2026), so it costs exactly one glyph. */
 const ELLIPSIS = "…";
 
-/** One character of `text-mono-sm`, in dp, at the reader's own text scale. */
+/** One glyph of `text-mono-sm`, in dp, at the reader's own text scale. */
 export const charWidthDp = (scale: number): number =>
-	TYPE_STEPS["mono-sm"].size * scale * MONO_CHARACTER_EM;
+	TYPE_STEPS["mono-sm"].size * scale * MONO_ADVANCE_EM;
 
 /**
  * The dp the cwd is GUARANTEED on the meta line: the floor above, in the units the
@@ -75,16 +107,62 @@ export const charWidthDp = (scale: number): number =>
 export const metaPathFloorDp = (scale: number): number =>
 	META_PATH_FLOOR_CHARS * charWidthDp(scale);
 
+/** One glyph, in dp: the Latin advance, or the fallback's for a wide script. */
+const glyphDp = (glyph: string, scale: number): number =>
+	charWidthDp(scale) *
+	(WIDE_GLYPH.test(glyph) ? FALLBACK_ADVANCE_EM / MONO_ADVANCE_EM : 1);
+
+/** `text` in dp — the sum of its glyphs, not its length. */
+export const textWidthDp = (text: string, scale: number): number =>
+	[...text].reduce((dp, glyph) => dp + glyphDp(glyph, scale), 0);
+
 /** What the line should paint: `null` for a field the row has none of. */
 export type MetaLine = {
 	cwd: string | null;
 	model: string | null;
 };
 
+/** A field's candidate string, and whether it had to lose anything to fit. */
+type Painted = { text: string; elided: boolean };
+
 /** The model's own name, with the provider prefix dropped: `anthropic/x` → `x`. */
 const tokenOf = (id: string): string => {
 	const slash = id.indexOf("/");
 	return slash === -1 ? id : id.slice(slash + 1);
+};
+
+const fitsWhole = (text: string, budgetDp: number, scale: number): boolean =>
+	textWidthDp(text, scale) <= budgetDp;
+
+/**
+ * The longest tail of `text` that fits `budgetDp` once the ellipsis is counted,
+ * by CODE POINT.
+ *
+ * By code point and not by `slice`: a UTF-16 slice can cut a surrogate pair in
+ * half, and the lone surrogate it leaves behind paints as U+FFFD — measured on
+ * `~/a🙂b/c`, which lost the emoji to `…\ude42b/c` at a 40 dp budget (review
+ * round 2, R2-4).
+ */
+const tailFitting = (text: string, budgetDp: number, scale: number): string => {
+	const room = budgetDp - charWidthDp(scale);
+	if (room <= 0) return "";
+	const glyphs = [...text];
+	let spent = 0;
+	let taken = 0;
+	for (let index = glyphs.length - 1; index >= 0; index -= 1) {
+		const width = glyphDp(glyphs[index] ?? "", scale);
+		if (spent + width > room) break;
+		spent += width;
+		taken += 1;
+	}
+	return taken === 0 ? "" : glyphs.slice(glyphs.length - taken).join("");
+};
+
+/** `text` as painted into `budgetDp`: whole when it fits, else its marked tail. */
+const elidedTo = (text: string, budgetDp: number, scale: number): Painted => {
+	if (fitsWhole(text, budgetDp, scale)) return { text, elided: false };
+	const tail = tailFitting(text, budgetDp, scale);
+	return { text: tail === "" ? "" : `${ELLIPSIS}${tail}`, elided: true };
 };
 
 /**
@@ -95,31 +173,22 @@ const tokenOf = (id: string): string => {
  * costs the least to lose — and only if the model's own name still does not fit
  * is its head trimmed.
  */
-const labelFor = (id: string, budgetDp: number, charDp: number): string => {
-	const budget = Math.floor(budgetDp / charDp);
-	if (budget <= 0) return "";
-	if (id.length <= budget) return id;
+const labelFor = (id: string, budgetDp: number, scale: number): Painted => {
+	if (fitsWhole(id, budgetDp, scale)) return { text: id, elided: false };
 	const token = tokenOf(id);
-	/* The ellipsis takes the slot the provider prefix gave up, so the model's own
-	 *  name survives whole whenever it can. */
-	if (token.length + 1 <= budget) return `${ELLIPSIS}${token}`;
-	return elided(token, budget);
+	if (fitsWhole(token, budgetDp - charWidthDp(scale), scale)) {
+		return { text: `${ELLIPSIS}${token}`, elided: true };
+	}
+	const tail = tailFitting(token, budgetDp, scale);
+	return { text: tail === "" ? "" : `${ELLIPSIS}${tail}`, elided: true };
 };
 
 /**
- * `text` as painted into a box `budget` CHARACTERS wide: whole when it fits,
- * otherwise its tail with a leading ellipsis. Nothing when even the ellipsis
- * does not fit — an empty field is more honest than a partial glyph.
+ * Whether a painted label is worth painting: always, unless it was elided down
+ * below `MODEL_MIN_CHARS` — a name that fits is a name, however short it is.
  */
-const elided = (text: string, budget: number): string => {
-	if (text.length <= budget) return text;
-	if (budget <= 1) return "";
-	return `${ELLIPSIS}${text.slice(-(budget - 1))}`;
-};
-
-/** The tail of `text` that fits `budgetDp`, or `text` whole when it fits. */
-const tailFor = (text: string, budgetDp: number, charDp: number): string =>
-	elided(text, Math.floor(budgetDp / charDp));
+const legible = (painted: Painted): boolean =>
+	!painted.elided || [...painted.text].length >= MODEL_MIN_CHARS;
 
 /**
  * The line as it should be painted, given the width the layout actually gave it.
@@ -144,8 +213,6 @@ export function metaLineFor({
 	widthDp: number;
 	scale: number;
 }): MetaLine {
-	const charDp = charWidthDp(scale);
-
 	/* Before the first layout there is no width to fit against, so both fields are
 	 *  painted whole. The common row needs no trim at all, which keeps the settled
 	 *  frame identical to the first one; a row that does trim settles within a
@@ -157,26 +224,29 @@ export function metaLineFor({
 	/* No cwd: the model has the line to itself. */
 	if (cwd === "") {
 		if (model === "") return { cwd: null, model: null };
-		const alone = labelFor(model, widthDp, charDp);
-		return { cwd: null, model: alone.length >= MODEL_MIN_CHARS ? alone : null };
+		const alone = labelFor(model, widthDp, scale);
+		return { cwd: null, model: legible(alone) ? alone.text : null };
 	}
 
 	/* The model may take what is left of the line after the cwd's floor. */
-	const room = widthDp - META_GAP_DP * scale - metaPathFloorDp(scale);
-	const painted = room > 0 && model !== "" ? labelFor(model, room, charDp) : "";
+	const room = widthDp - META_GAP_DP - metaPathFloorDp(scale);
+	const painted =
+		model === "" || room <= 0
+			? { text: "", elided: true }
+			: labelFor(model, room, scale);
 
-	if (painted.length < MODEL_MIN_CHARS) {
+	if (!legible(painted)) {
 		/* No legible prefix of the model survives, so the line carries the cwd
 		 *  alone and the cwd gets the whole width rather than two fragments. */
-		return { cwd: tailFor(cwd, widthDp, charDp), model: null };
+		return { cwd: elidedTo(cwd, widthDp, scale).text, model: null };
 	}
 
 	return {
-		cwd: tailFor(
+		cwd: elidedTo(
 			cwd,
-			widthDp - META_GAP_DP * scale - painted.length * charDp,
-			charDp,
-		),
-		model: painted,
+			widthDp - META_GAP_DP - textWidthDp(painted.text, scale),
+			scale,
+		).text,
+		model: painted.text,
 	};
 }

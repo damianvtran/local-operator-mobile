@@ -225,7 +225,7 @@ export const ListRow = ({
 						 *  The title's row above keeps its own wrap on purpose (design round 2, D13),
 						 *  because there the marks are unshrinkable and a mark pushed past the pane edge
 						 *  is worse than a second line. */}
-						{cwd || model ? (
+						{meta.cwd || meta.model ? (
 							<View
 								className="flex-row items-center gap-2"
 								onLayout={(event) => {

@@ -120,11 +120,8 @@ export type StaleNoteInput = {
 };
 
 export function staleNote(input: StaleNoteInput): string | null {
-	const age = staleAge(input);
-	if (age === null) return null;
-	if (age.seconds < 5) return "Last updated just now.";
-	if (age.seconds < 60) return `Last updated ${age.seconds}s ago.`;
-	return `Last updated ${age.minutes} min ago.`;
+	const phrase = stalePhrase(input);
+	return phrase === null ? null : `Last updated ${phrase}.`;
 }
 
 /**
@@ -146,25 +143,35 @@ export function staleNote(input: StaleNoteInput): string | null {
  * is truncated.
  */
 export function staleShortNote(input: StaleNoteInput): string | null {
-	const age = staleAge(input);
-	if (age === null) return null;
-	if (age.seconds < 5) return "Just now.";
-	if (age.seconds < 60) return `${age.seconds}s ago.`;
-	return `${age.minutes} min ago.`;
+	const phrase = stalePhrase(input);
+	if (phrase === null) return null;
+	return `${phrase === "just now" ? "Just now" : phrase}.`;
 }
 
 /**
- * How old the last frame is, or `null` when nothing has ever been stale. One
- * arithmetic for both sentences above, so the long form and the short form can
- * never disagree about the age the reader is being told.
+ * How old the last frame is, as a phrase with no verb — `just now`, `30s ago`,
+ * `5 min ago`, `3h ago`, `2d ago` — or `null` when nothing has ever been stale.
+ *
+ * The unit is the largest that keeps the phrase short, and that is what BOUNDS
+ * the short sentence: a minutes-only form grew without limit, so a week-old list
+ * read `10080 min ago.` — fourteen characters against the twelve one line holds
+ * at 200 % — and the short form exists precisely to fit one line whole (review
+ * round 2, R2-5).
+ *
+ * One phrase for both sentences, so the long form and the short form cannot
+ * disagree about the age the reader is being told.
  */
-function staleAge(
-	input: StaleNoteInput,
-): { seconds: number; minutes: number } | null {
+function stalePhrase(input: StaleNoteInput): string | null {
 	if (!input.stale || input.lastFrameAt === null) return null;
 	const now = input.now ?? Date.now();
 	const seconds = Math.max(0, Math.round((now - input.lastFrameAt) / 1000));
-	return { seconds, minutes: Math.round(seconds / 60) };
+	if (seconds < 5) return "just now";
+	if (seconds < 60) return `${seconds}s ago`;
+	const minutes = Math.round(seconds / 60);
+	if (minutes < 60) return `${minutes} min ago`;
+	const hours = Math.round(minutes / 60);
+	if (hours < 24) return `${hours}h ago`;
+	return `${Math.round(hours / 24)}d ago`;
 }
 
 /**
