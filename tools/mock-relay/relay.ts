@@ -142,6 +142,18 @@ export interface RelayOptions {
 	scenario?: string;
 	faults?: string[];
 	quiet?: boolean;
+	/**
+	 * Extra origins a mutation may come from, on top of the relay's own origin
+	 * (which `listen` always adds, because the contract makes its own origin
+	 * same-origin).
+	 *
+	 * This is the option the harness needs and could not set: `RelayState` carried
+	 * the field, but `createRelay` accepted no way to fill it, so an in-process
+	 * relay — a test, or a rig serving its page from one loopback port and proxying
+	 * to the relay on another — was refused on every mutation and on `POST /login`
+	 * with no way to opt out. The `--allow-origin` flag is the CLI's spelling of it.
+	 */
+	allowedOrigins?: string[];
 }
 
 /** A listening socket, closable and counted for teardown. */
@@ -286,6 +298,13 @@ export function createRelay(options: RelayOptions = {}) {
 		admitted: new Map(),
 		seenTokens: new Set(),
 		pins: new Map(),
+		// Wired from the options, which it must be: this field decides whether the
+		// same-origin rule can *ever* allow an origin. It was declared on
+		// `RelayOptions` and never copied here, so `createRelay({ allowedOrigins })`
+		// silently did nothing and every caller that configured an allowlist got a
+		// relay that refused it — the option read as a setting and behaved as a no-op.
+		// `listen` adds the relay's own origin to whatever arrives here.
+		allowedOrigins: options.allowedOrigins,
 		submittedAt: null,
 		duplicateDelivered: 0,
 		duplicateFramePending: false,
@@ -1992,6 +2011,26 @@ export function createRelay(options: RelayOptions = {}) {
 			const address = server.address();
 			const actual =
 				typeof address === "object" && address !== null ? address.port : 0;
+			// The relay's OWN origin is same-origin by the contract's own rule
+			// (`docs/relay/contract.md` §1.2) — "a foreign Origin is refused; a
+			// same-origin Origin is allowed" — and the mock has to know it to apply
+			// that rule honestly. `--port 0` picks the port here and nowhere else, so
+			// this is the only place it is knowable. Without it the allowlist is empty
+			// for every CLI-started relay, and the harness's own proxied page — served
+			// at a loopback origin, forwarded to the relay at a different one — is
+			// refused on every mutation and on `POST /login`, so the app never
+			// authenticates and a relay-backed cell renders the degraded screen.
+			// Loopback aliases are included because the mock binds loopback only, and
+			// a foreign (non-loopback) origin still has no way in.
+			const ownHosts = new Set(
+				[host, "127.0.0.1", "localhost"].filter(
+					(candidate) => candidate !== "0.0.0.0" && candidate !== "::",
+				),
+			);
+			state.allowedOrigins = [
+				...(state.allowedOrigins ?? []),
+				...[...ownHosts].map((own) => `http://${own}:${actual}`),
+			];
 			state.servers.push({
 				port: actual,
 				close: (done) => server.close(done),
@@ -2012,10 +2051,17 @@ export function createRelay(options: RelayOptions = {}) {
 
 /* -------------------------------------------------------------------- CLI -- */
 
-const isMain = import.meta.url.endsWith(
-	process.argv[1]?.split("/").pop() ?? "",
-);
-if (isMain) {
+// `import.meta.main` (Node 24+), not the basename heuristic this file used to use:
+// `import.meta.url.endsWith(process.argv[1]?.split("/").pop() ?? "")` is TRUE for
+// ANY url when `process.argv[1]` is absent — every string ends with "" — and `node
+// -e` leaves it absent. So the documented way to read the relay's password,
+//
+//   PW=$(node -e "import('./tools/mock-relay/relay.ts').then(m => m.DEFAULT_PASSWORD)")
+//
+// did print the password and then STARTED A LISTENING RELAY, keeping the event loop
+// alive forever: the command substitution never completed and the capture sat on it.
+// Importing a module must have no side effects; only the entry point runs the CLI.
+if (import.meta.main) {
 	const { flags } = parseArgs(process.argv.slice(2));
 	if (bool(flags, "help")) {
 		console.log(
@@ -2030,7 +2076,10 @@ if (isMain) {
 				"  --fixtures <dir>      fixture corpus root (default <repo>/fixtures/relay)",
 				"  --password <value>    relay password for the login form",
 				"  --max-body-bytes <n>  override the gateway's 10 MiB ceiling, for 413 tests",
+				"  --allow-origin <o>    also allow this Origin on mutations; repeatable. The",
+				"                        relay's own origin is always allowed once listening.",
 				"  --print-port          print the chosen port alone on stdout",
+				"  --print-password      print the relay password alone on stdout and exit",
 				"  --list                print every scenario and exit",
 				"  --quiet               suppress the ready line",
 				"",
@@ -2051,6 +2100,15 @@ if (isMain) {
 		process.exit(0);
 	}
 
+	// A supported way to read the password, which is what the docs needed and did
+	// not have: the only alternative anyone reached for was importing the module
+	// from `node -e`, which used to start a relay and never return (see the note
+	// on `import.meta.main` above). Nothing here holds the loop open: it exits.
+	if (bool(flags, "print-password")) {
+		process.stdout.write(`${DEFAULT_PASSWORD}\n`);
+		process.exit(0);
+	}
+
 	const recordDir = str(flags, "record", undefined);
 	const relay = createRelay({
 		fixturesDir,
@@ -2060,6 +2118,7 @@ if (isMain) {
 		// 0 means "no ceiling on this process", which is the bare relay's real
 		// behaviour; the gateway's cap is modelled by the `413-oversize` fault.
 		maxBodyBytes: num(flags, "max-body-bytes", 0),
+		allowedOrigins: list(flags, "allow-origin"),
 		quiet: bool(flags, "quiet"),
 		record: recordDir ? { dir: recordDir } : false,
 	});
