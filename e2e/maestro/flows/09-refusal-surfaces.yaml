@@ -1,0 +1,79 @@
+# S13 — the sustained-failure surfaces.
+#
+# One assertion set per refusal family, so a copy or a control that goes missing is
+# caught by name rather than by a screenshot nobody diffs. Each family is run
+# against the mock relay pinned to that refusal (`--scenario gateway-503-<reason>`
+# or `--scenario edge-<id>`), which is what makes an otherwise-unreachable state
+# routine to test.
+#
+# The rule these assert: **the surface names a cause and a remedy, and never shows a
+# status code.** ADR 0003 and `docs/relay/tunnel-edge.md` §6 both say the failure
+# taxonomy has five faces, not a status-code dump.
+#
+# The screens do not exist yet: `src/connection/` is a stub, so no refusal can
+# reach a surface. The markers name the identifiers each surface must carry.
+#
+# IDENTIFIERS: every `id:` in this file is in `src/ui/a11y.ts` — the scaffold's
+# own contract, which `src/ui/a11y.e2e.test.ts` checks these flows against. A step
+# the app cannot serve yet is a commented marker, not a selector:
+#
+#     Marker spelling: `# BLOCKED: needs <the-identifier> from <the-screen>`
+#
+# The marker names the identifier a step waits on and the screen that would own
+# it, so the gap is visible in review and the test can require that every marked
+# id is genuinely one the app does not render. An invented selector would fail on
+# the first assertion and read as a flaky flow.
+#
+# CI-only: needs a booted simulator or emulator and an app build (ADR 0003).
+appId: ${APP_ID}
+name: "S13 refusal surfaces"
+env:
+  APP_ID: com.radient.localoperator.mobile
+---
+- launchApp:
+    clearState: true
+- assertVisible:
+    id: "sessions-screen"
+# The computer is offline: Cloudflare's 1033, or a gateway 502. The remedy is
+# machine-side, and re-authenticating would be wrong.
+# BLOCKED: needs connection-error-computer-offline from computers
+# - assertVisible:
+#     id: "connection-error-computer-offline"
+# BLOCKED: needs connection-error-machine-remedy from computers
+# - assertVisible:
+#     id: "connection-error-machine-remedy"
+# BLOCKED: needs connection-error-sign-in from computers
+# - assertNotVisible:
+#     id: "connection-error-sign-in"
+# The tunnel is gone: terminal for that URL, with a console link.
+# BLOCKED: needs connection-error-tunnel-unavailable from computers
+# - assertVisible:
+#     id: "connection-error-tunnel-unavailable"
+# BLOCKED: needs connection-error-console-link from computers
+# - assertVisible:
+#     id: "connection-error-console-link"
+# BLOCKED: needs connection-error-retry-prominent from computers
+# - assertNotVisible:
+#     id: "connection-error-retry-prominent"
+# Sign in again: the edge's 401 with the re-auth hint header. This one *does* offer
+# sign-in and must not say "computer offline" — the connector was reached.
+# BLOCKED: needs connection-error-sign-in from sign-in
+# - assertVisible:
+#     id: "connection-error-sign-in"
+# Waiting: `authorization_deferred` clears by itself within the deferral window, so
+# the surface says so and retries rather than sending the user away.
+# BLOCKED: needs connection-error-waiting from computers
+# - assertVisible:
+#     id: "connection-error-waiting"
+# BLOCKED: needs connection-error-clears-by-itself from computers
+# - assertVisible:
+#     id: "connection-error-clears-by-itself"
+# The relay is not installed on the machine: a local prerequisite, not a tunnel
+# problem.
+# BLOCKED: needs connection-error-relay-not-installed from computers
+# - assertVisible:
+#     id: "connection-error-relay-not-installed"
+# No surface may show a bare status code.
+- assertNotVisible: "503"
+- assertNotVisible: "502"
+- assertNotVisible: "401"

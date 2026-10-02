@@ -1,0 +1,60 @@
+# F-6 — the session view: transcript, streaming, and a steer.
+#
+# The point of this flow is the *settled* state: a client that streams correctly
+# but never leaves a shimmer on a finished turn is a defect only a flow can catch,
+# because a still frame of a stream and a still frame of a finished turn differ
+# only in one glyph.
+#
+# Today the session screen renders its root and empty state: there is no
+# projection store, so every transcript, composer and steer assertion is blocked.
+#
+# IDENTIFIERS: every `id:` in this file is in `src/ui/a11y.ts` — the scaffold's
+# own contract, which `src/ui/a11y.e2e.test.ts` checks these flows against. A step
+# the app cannot serve yet is a commented marker, not a selector:
+#
+#     Marker spelling: `# BLOCKED: needs <the-identifier> from <the-screen>`
+#
+# The marker names the identifier a step waits on and the screen that would own
+# it, so the gap is visible in review and the test can require that every marked
+# id is genuinely one the app does not render. An invented selector would fail on
+# the first assertion and read as a flaky flow.
+#
+# CI-only: needs a booted simulator or emulator and an app build (ADR 0003).
+appId: ${APP_ID}
+name: "F-6 session view and steer"
+env:
+  APP_ID: com.radient.localoperator.mobile
+  SESSION_ID: 6714def86197
+---
+- launchApp:
+    clearState: true
+# Reaching a session needs a row on the list, which is blocked above; the screen
+# root is asserted through a route the app does have once the list exists.
+# BLOCKED: needs session-row-<id> from sessions
+# - tapOn:
+#     id: "session-row-${SESSION_ID}"
+# BLOCKED: needs session-transcript from session
+# - assertVisible:
+#     id: "session-transcript"
+# BLOCKED: needs session-composer from session
+# - assertVisible:
+#     id: "session-composer"
+# BLOCKED: needs composer-input from session
+# - tapOn:
+#     id: "composer-input"
+# BLOCKED: needs composer-send from session
+# - tapOn:
+#     id: "composer-send"
+# BLOCKED: needs transcript-row-streaming from session
+# - extendedWaitUntil:
+#     visible:
+#       id: "transcript-row-streaming"
+#     timeout: 15000
+# BLOCKED: needs queued-message-chip from session
+# - assertVisible:
+#     id: "queued-message-chip"
+# BLOCKED: needs streaming-shimmer from session
+# - assertNotVisible:
+#     id: "streaming-shimmer"
+- assertVisible:
+    id: "sessions-screen"

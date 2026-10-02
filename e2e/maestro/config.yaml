@@ -1,0 +1,28 @@
+# Maestro workspace configuration for the native flow set.
+#
+# Run:  maestro --config e2e/maestro/config.yaml test
+#
+# These flows cannot run on a development machine that has no Xcode and no
+# Android SDK (ADR 0003, "Context", and the repository's own build-host rules),
+# so they are **CI-only**: an iOS simulator on a macOS runner, an Android
+# emulator on a KVM-enabled Linux runner. ADR 0004 wires the jobs; `docs/e2e/ci-notes.md`
+# records how to invoke everything and what each artefact is.
+#
+# Every flow is parameterised, so the same YAML covers both platforms and both
+# connection routes. Pass the values with `-e`:
+#
+#   maestro --config e2e/maestro/config.yaml test \
+#     -e APP_ID=com.radient.localoperator.mobile \
+#     -e RELAY_URL=http://127.0.0.1:<mock-port> \
+#     -e RELAY_PASSWORD="$(cat "$RUN/relay-password")" \
+#     -e SESSION_ID=6714def86197
+#
+# The relay password is never written into a flow. A flow that needed a literal
+# secret could not be committed, so `RELAY_PASSWORD` arrives as an -e value from
+# the CI job's own environment, which reads it out of a 0600 file it created.
+flows:
+  - "flows/*.yaml"
+
+# One retry is allowed, per ADR 0003 §"Layer 4": a second failure is a failure.
+# `retry` is set on the invocation in CI (`--retry`), not here, because the CI
+# job also has to distinguish "flaked once" from "flaked twice" in its report.

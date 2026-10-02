@@ -1,0 +1,56 @@
+# F-1 — first run, the welcome screen and the sign-in screen.
+#
+# What this proves today: the app boots to a real screen with its own root and
+# empty state, and the one control the welcome screen owns navigates. What it
+# does not prove is a *session*, because the connection layer is not implemented
+# yet: `src/connection/` and `src/relay/` are stubs, so there is nothing to sign
+# in against and no list to land on.
+#
+# The steps below therefore stop at the sign-in screen, and the connection steps
+# carry the marker their missing identifiers earn.
+#
+# IDENTIFIERS: every `id:` in this file is in `src/ui/a11y.ts` — the scaffold's
+# own contract, which `src/ui/a11y.e2e.test.ts` checks these flows against. A step
+# the app cannot serve yet is a commented marker, not a selector:
+#
+#     Marker spelling: `# BLOCKED: needs <the-identifier> from <the-screen>`
+#
+# The marker names the identifier a step waits on and the screen that would own
+# it, so the gap is visible in review and the test can require that every marked
+# id is genuinely one the app does not render. An invented selector would fail on
+# the first assertion and read as a flaky flow.
+#
+# CI-only: needs a booted simulator or emulator and an app build (ADR 0003).
+appId: ${APP_ID}
+name: "F-1 first run to sign in"
+env:
+  APP_ID: com.radient.localoperator.mobile
+---
+- launchApp:
+    clearState: true
+- takeScreenshot: "01-00-launch"
+- extendedWaitUntil:
+    visible:
+      id: "welcome-screen"
+    timeout: 15000
+- assertVisible:
+    id: "welcome-empty"
+- takeScreenshot: "01-01-welcome"
+- tapOn:
+    id: "welcome-continue"
+- takeScreenshot: "01-02-sign-in"
+- extendedWaitUntil:
+    visible:
+      id: "sign-in-screen"
+    timeout: 15000
+- assertVisible:
+    id: "sign-in-empty"
+- takeScreenshot: "01-03-sign-in-settled"
+# The Radient sign-in control itself does not exist yet: the screen is an empty
+# state with no action, deliberately, so a button that does nothing is not shipped.
+# BLOCKED: needs sign-in-radient from sign-in
+# - tapOn:
+#     id: "sign-in-radient"
+# BLOCKED: needs sign-in-browser-handoff from sign-in
+# - assertVisible:
+#     id: "sign-in-browser-handoff"
