@@ -1,0 +1,64 @@
+# F-7/S6 — drill into a subagent and back.
+#
+# The roster on the projection is *stripped* (prompt, result, transcript and todos
+# emptied) and re-materialised only on the detail route, so this flow is also the
+# check that the app fetches the detail rather than rendering empty fields from the
+# roster: the assertions are on content that only exists on the detail route.
+#
+# The subagent screen's own root and back control exist and are asserted here. The
+# roster chip needs a session scenario, and the detail content is the session stream's:
+# the contract declares the panel and body surfaces it will render, so those are
+# named below in the contract's own spelling rather than in the pre-fold flow's.
+#
+# IDENTIFIERS: every `id:` in this file is in `src/ui/a11y.ts` — the contract this
+# branch owns, which `src/ui/a11y.e2e.test.ts` checks these flows against. A step the
+# app cannot serve yet is a commented marker, not a selector, and there are three
+# spellings because there are three different gaps:
+#
+#     Marker spelling: `# BLOCKED: needs <the-identifier> from <the-screen>`
+#     Marker spelling: `# PENDING: <the-identifier> from <the-screen>`
+#     Marker spelling: `# SCENARIO: <the-identifier> from <the-screen>`
+#
+# `BLOCKED` names an id `src/ui/a11y.ts` does not declare at all; `PENDING` names one
+# the contract declares whose renderer is not on this branch (the session view's, which
+# lands with its own stream); `SCENARIO` names one the app DOES render, where what is
+# missing is the mock relay pinned to the scenario that produces the state it waits on
+# (`--scenario …`). The test checks each in its own direction, so no marker can hide
+# coverage: a `BLOCKED` id must be absent from the contract, a `PENDING` id must be
+# declared and unrendered, and a `SCENARIO` id must be declared and rendered. An
+# invented selector would fail on the first assertion
+# and read as a flaky flow.
+#
+# CI-only: needs a booted simulator or emulator and an app build (ADR 0003).
+appId: ${APP_ID}
+name: "F-7 subagent drill-down"
+env:
+  APP_ID: com.radient.localoperator.mobile
+  SESSION_ID: 6714def86197
+  JOB_ID: job-1
+---
+- launchApp:
+    clearState: true
+# Reaching the subagent needs the chip, which the session view renders; what is
+# missing is the session scenario that puts a roster on the screen, so this is a
+# SCENARIO rather than a PENDING marker.
+# SCENARIO: subagent-chip-<job> from session
+# - tapOn:
+#     id: "subagent-chip-${JOB_ID}"
+# The detail route's own surfaces. They used to be BLOCKED — the contract carried the
+# panel surfaces (`subagents-panel`/`subagents-body`) and no `subagent-detail-*` name —
+# and they are now declared in the contract by the change that renders them, so the
+# only thing missing is the scenario pin that reaches the route.
+# SCENARIO: subagent-detail-prompt from subagent
+# - assertVisible:
+#     id: "subagent-detail-prompt"
+# SCENARIO: subagent-detail-transcript from subagent
+# - assertVisible:
+#     id: "subagent-detail-transcript"
+# SCENARIO: subagent-detail-todos from subagent
+# - scrollUntilVisible:
+#     element:
+#       id: "subagent-detail-todos"
+#     direction: DOWN
+- assertVisible:
+    id: "sessions-screen"

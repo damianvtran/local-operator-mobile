@@ -1,0 +1,74 @@
+# F-1 — first run and the Radient hand-off.
+#
+# What this proves: the app boots to a real screen with its own root and its own
+# content, and the control the welcome screen owns starts the Radient sign-in — the
+# DEFAULT path, the one a reader who has no tunnel to configure takes.
+#
+# The hand-off runs IN PLACE on this screen rather than on a route of its own
+# (docs/ux/flows.md § 1; `src/features/auth/welcome.tsx`), so the flow asserts the
+# hand-off region appears rather than asserting a navigation to a second screen.
+# `(auth)/sign-in` still exists as the route a re-auth lands on, and that route is
+# walked by `09-refusal-surfaces.yaml`.
+#
+# IDENTIFIERS: every `id:` in this file is in `src/ui/a11y.ts` — the contract this
+# branch owns, which `src/ui/a11y.e2e.test.ts` checks these flows against. A step the
+# app cannot serve yet is a commented marker, not a selector, and there are three
+# spellings because there are three different gaps:
+#
+#     Marker spelling: `# BLOCKED: needs <the-identifier> from <the-screen>`
+#     Marker spelling: `# PENDING: <the-identifier> from <the-screen>`
+#     Marker spelling: `# SCENARIO: <the-identifier> from <the-screen>`
+#
+# `BLOCKED` names an id `src/ui/a11y.ts` does not declare at all; `PENDING` names one
+# the contract declares whose renderer is not on this branch (the session view's, which
+# lands with its own stream); `SCENARIO` names one the app DOES render, where what is
+# missing is the mock relay pinned to the scenario that produces the state it waits on
+# (`--scenario …`). The test checks each in its own direction, so no marker can hide
+# coverage: a `BLOCKED` id must be absent from the contract, a `PENDING` id must be
+# declared and unrendered, and a `SCENARIO` id must be declared and rendered. An
+# invented selector would fail on the first assertion
+# and read as a flaky flow.
+#
+# CI-only: needs a booted simulator or emulator and an app build (ADR 0003).
+appId: ${APP_ID}
+name: "F-1 first run to sign in"
+env:
+  APP_ID: com.radient.localoperator.mobile
+---
+- launchApp:
+    clearState: true
+- takeScreenshot: "01-00-launch"
+- extendedWaitUntil:
+    visible:
+      id: "welcome-screen"
+    timeout: 15000
+- assertVisible:
+    id: "welcome-connect"
+- takeScreenshot: "01-01-welcome"
+- tapOn:
+    id: "welcome-connect"
+- takeScreenshot: "01-02-hand-off"
+# The hand-off region exists as soon as the flow starts, not when the browser sheet
+# becomes visible: a sheet that appears over a page with no prior state is a sheet
+# from nowhere (`sign-in-panel.tsx`, rule 1).
+- extendedWaitUntil:
+    visible:
+      id: "sign-in-browser-handoff"
+    timeout: 15000
+- takeScreenshot: "01-03-hand-off-settled"
+# NOT MARKED, because none of the three marker kinds fits it: what the rest of this
+# flow needs is a REAL Radient account and an interactive browser sheet, which no
+# mock relay can stand in for. The PKCE exchange and each of its failure states are
+# covered by `src/features/auth/radient-sign-in.ts` and `connection-provider.tsx`.
+#
+# Two claims the pre-fold flow made are recorded here rather than guessed at, because
+# neither can hold on this branch:
+#   - it asserted `sign-in-screen`/`sign-in-empty` after tapping a "continue" control,
+#     i.e. that welcome NAVIGATES to a sign-in screen. It does not — the hand-off runs
+#     in place — so those two steps have no counterpart and are not re-pointed.
+#   - `welcome.tsx`'s own comment says this flow presses `back` after the hand-off and
+#     expects `welcome-custom-url` to still be there. That cannot hold either: the
+#     screen hides BOTH routes while the hand-off runs
+#     (`welcome.tsx`: `signInState.kind === "idle" ? … : null`). Whether the quiet
+#     route should stay reachable mid-hand-off is a product decision, not a
+#     reconciliation one, so it is left as it is and reported.

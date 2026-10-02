@@ -4,7 +4,8 @@ import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import type { PendingView } from "@/features/session/pending";
 import { CONTROL, ROLE, SURFACE, state } from "@/ui/a11y";
 import { Button } from "@/ui/components";
-import { cx, TOUCH_FLOOR } from "@/ui/variants";
+import { TOUCH_FLOOR } from "@/ui/layout";
+import { cx } from "@/ui/variants";
 
 /**
  * The pending card: an approval or a question, pinned above the composer

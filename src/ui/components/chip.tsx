@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { Pressable, Text, View } from "react-native";
 
 import { ROLE, state } from "@/ui/a11y";
+import { TOUCH_FLOOR } from "@/ui/layout";
 import { chipClasses, chipLabelClasses } from "@/ui/variants";
 
 /**
@@ -53,7 +54,12 @@ export const Chip = ({
 		onPress={onPress}
 	>
 		{({ pressed }) => (
-			<View className={chipClasses({ selected, disabled, pressed })}>
+			<View
+				className={chipClasses({ selected, disabled, pressed })}
+				/* Same rule as the fields and the Button: the floor is real geometry,
+				 *  per platform, and the audit reads the box. */
+				style={{ minHeight: TOUCH_FLOOR }}
+			>
 				{leadingIcon ? <View pointerEvents="none">{leadingIcon}</View> : null}
 				<Text
 					className={`text-mono-sm ${chipLabelClasses({ selected, disabled })}`}

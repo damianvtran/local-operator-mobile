@@ -3,12 +3,13 @@ import { ActivityIndicator, Pressable, Text, View } from "react-native";
 
 import { ROLE, state } from "@/ui/a11y";
 import { useTokenColor } from "@/ui/appearance";
+import { TOUCH_FLOOR } from "@/ui/layout";
 import {
 	BUTTON_VISUAL_HEIGHT,
 	type ButtonSize,
 	type ButtonVariant,
 	buttonClasses,
-	slopToFloor,
+	CONTROL_DISABLED_INK,
 } from "@/ui/variants";
 
 /**
@@ -56,7 +57,9 @@ export const Button = ({
 	testID,
 }: ButtonProps) => {
 	const iconColor = useTokenColor(
-		disabled ? "ink-disabled" : variant === "primary" ? "on-accent" : "ink",
+		/* The icon follows the label: `ink-dim` rather than `ink-disabled`, for the
+		 *  reason CONTROL_DISABLED_INK records. */
+		disabled ? "ink-dim" : variant === "primary" ? "on-accent" : "ink",
 	);
 	const spinnerColor = useTokenColor(
 		variant === "primary" ? "on-accent" : "ink-muted",
@@ -69,10 +72,23 @@ export const Button = ({
 			accessibilityLabel={label}
 			accessibilityHint={accessibilityHint}
 			accessibilityState={state({ disabled, busy: loading })}
-			// `sm` is the one size under the 44pt floor; it gets hit slop rather
-			// than a smaller target (components.md § 0.1). Hit areas must not
-			// overlap, so this is only for controls with clear space around them.
-			hitSlop={visualHeight < 44 ? slopToFloor(visualHeight) : undefined}
+			/* `sm` is the one size under the floor, and the floor is now REAL geometry
+			 *  rather than `hitSlop`.
+			 *
+			 *  react-native-web implements no `hitSlop` on `Pressable` (only on the
+			 *  legacy `Touchable`), so on the web build — the build the audit harness
+			 *  measures, and the build the store screenshots come from — every `sm`
+			 *  button was a 32 pt target while the code believed it was 44. The harness
+			 *  reads the BOX, and it was right. The pressable box is the floor here and
+			 *  the pill is centred inside it, which reaches the floor on both platforms
+			 *  honestly. Deliberately no `hitSlop` as well: with the box already at the
+			 *  floor it could only grow the target past it and into a neighbour, and
+			 *  hit areas must not overlap (`docs/design/components.md` § 0.1). */
+			style={
+				visualHeight < TOUCH_FLOOR
+					? { minHeight: TOUCH_FLOOR, justifyContent: "center" }
+					: undefined
+			}
 			testID={testID}
 			disabled={disabled}
 			onPress={() => {
@@ -118,7 +134,7 @@ const buttonLabelClasses = (
 	variant: ButtonVariant,
 ): string => {
 	const ink = disabled
-		? "text-ink-disabled"
+		? CONTROL_DISABLED_INK
 		: variant === "primary"
 			? "text-on-accent"
 			: variant === "danger"

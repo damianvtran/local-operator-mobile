@@ -29,7 +29,12 @@ export type TranscriptImageProps = {
 	/** Resolves the image's bytes as a data URI, or `null` when the relay no longer
 	 *  has them. Injected so this component never holds a client. */
 	load: (entryId: string, index: number) => Promise<string | null>;
-	testID?: string;
+	/** REQUIRED, like every other primitive's: the frame is one image of one entry,
+	 *  and a generic default (`"transcript-image"`) was a second spelling of an id
+	 *  the contract does not carry — the identifier check in `a11y.e2e.test.ts`
+	 *  reads a literal default as exactly that. The only caller passes
+	 *  `transcriptImageId(entryId, index)`, so nothing is lost by requiring it. */
+	testID: string;
 };
 
 /** The thumbnail's reserved box. 64 pt is the kit's attachment thumbnail
@@ -40,7 +45,7 @@ export const TranscriptImage = ({
 	entryId,
 	index,
 	load,
-	testID = "transcript-image",
+	testID,
 }: TranscriptImageProps) => {
 	const [uri, setUri] = useState<string | null>(null);
 	const [state, setState] = useState<"loading" | "ready" | "missing">(

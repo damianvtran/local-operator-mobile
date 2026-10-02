@@ -1,0 +1,78 @@
+# F-6 — the session view: transcript, streaming, and a steer.
+#
+# The point of this flow is the *settled* state: a client that streams correctly
+# but never leaves a shimmer on a finished turn is a defect only a flow can catch,
+# because a still frame of a stream and a still frame of a finished turn differ
+# only in one glyph.
+#
+# Today the session screen renders its root and empty state (`app/(app)/session/[id].tsx`):
+# the transcript, composer and steer renderers are the session stream's and land with
+# its own branch, so their identifiers are `PENDING` — declared in the contract, built
+# by nothing here — rather than `BLOCKED`, which is what they use to be called.
+#
+# IDENTIFIERS: every `id:` in this file is in `src/ui/a11y.ts` — the contract this
+# branch owns, which `src/ui/a11y.e2e.test.ts` checks these flows against. A step the
+# app cannot serve yet is a commented marker, not a selector, and there are three
+# spellings because there are three different gaps:
+#
+#     Marker spelling: `# BLOCKED: needs <the-identifier> from <the-screen>`
+#     Marker spelling: `# PENDING: <the-identifier> from <the-screen>`
+#     Marker spelling: `# SCENARIO: <the-identifier> from <the-screen>`
+#
+# `BLOCKED` names an id `src/ui/a11y.ts` does not declare at all; `PENDING` names one
+# the contract declares whose renderer is not on this branch (the session view's, which
+# lands with its own stream); `SCENARIO` names one the app DOES render, where what is
+# missing is the mock relay pinned to the scenario that produces the state it waits on
+# (`--scenario …`). The test checks each in its own direction, so no marker can hide
+# coverage: a `BLOCKED` id must be absent from the contract, a `PENDING` id must be
+# declared and unrendered, and a `SCENARIO` id must be declared and rendered. An
+# invented selector would fail on the first assertion
+# and read as a flaky flow.
+#
+# CI-only: needs a booted simulator or emulator and an app build (ADR 0003).
+appId: ${APP_ID}
+name: "F-6 session view and steer"
+env:
+  APP_ID: com.radient.localoperator.mobile
+  SESSION_ID: 6714def86197
+---
+- launchApp:
+    clearState: true
+# Reaching a session needs a row on the list, which needs the relay pinned to a
+# session scenario.
+# SCENARIO: session-row-<id> from sessions
+# - tapOn:
+#     id: "session-row-${SESSION_ID}"
+# The session view's own identifiers, all of them rendered on this head and all of
+# them one scenario pin away: the list they are reached from is the SCENARIO above.
+# SCENARIO: session-transcript from session
+# - assertVisible:
+#     id: "session-transcript"
+# SCENARIO: session-composer from session
+# - assertVisible:
+#     id: "session-composer"
+# SCENARIO: composer-input from session
+# - tapOn:
+#     id: "composer-input"
+# SCENARIO: composer-send from session
+# - tapOn:
+#     id: "composer-send"
+# `transcript-streaming`, which is the contract's name (`SURFACE.transcriptStreaming`)
+# for the marker on the row that is still receiving text. The pre-fold flow spelled
+# it `transcript-row-streaming`, which the `transcript-row-` family would have let
+# through as a row id the app never builds.
+# SCENARIO: transcript-streaming from session
+# - extendedWaitUntil:
+#     visible:
+#       id: "transcript-streaming"
+#     timeout: 15000
+# SCENARIO: queued-message-chip from session
+# - assertVisible:
+#     id: "queued-message-chip"
+# BLOCKED: needs streaming-shimmer from session — the contract has no shimmer for the
+# streaming row (the schema's equivalent is `transcript-streaming`, marked above),
+# so this names an id nothing declares and nothing builds.
+# - assertNotVisible:
+#     id: "streaming-shimmer"
+- assertVisible:
+    id: "sessions-screen"

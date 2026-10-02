@@ -10,7 +10,8 @@ import {
 } from "react-native";
 
 import { CONTROL, ROLE } from "@/ui/a11y";
-import { cx, TOUCH_FLOOR } from "@/ui/variants";
+import { TOUCH_FLOOR } from "@/ui/layout";
+import { cx } from "@/ui/variants";
 
 /**
  * Assistant markdown, rendered without a markdown library.

@@ -1,7 +1,7 @@
 import { Pressable, ScrollView, Text, View } from "react-native";
 
 import type { ModelEntry } from "@/contracts";
-import { effortRungID, modelOptionID, ROLE, SURFACE, state } from "@/ui/a11y";
+import { effortRungId, modelOptionId, ROLE, SURFACE, state } from "@/ui/a11y";
 import { Sheet } from "@/ui/components";
 import { cx } from "@/ui/variants";
 
@@ -93,7 +93,7 @@ export const ModelSheet = ({
 										onPick(model);
 										onClose();
 									}}
-									testID={modelOptionID(model.model_id)}
+									testID={modelOptionId(model.model_id)}
 								>
 									<View className="min-h-11 flex-row items-center gap-2 px-3">
 										<Text
@@ -173,7 +173,7 @@ export const EffortSheet = ({
 						onPick(rung);
 						onClose();
 					}}
-					testID={effortRungID(rung)}
+					testID={effortRungId(rung)}
 				>
 					<View className="min-h-11 flex-row items-center gap-2 px-3">
 						<View

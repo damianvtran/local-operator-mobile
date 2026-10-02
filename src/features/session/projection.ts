@@ -32,7 +32,7 @@ import type {
 	TranscriptEntry,
 } from "@/contracts";
 import { elapsedLabel } from "@/lib/format";
-import { subagentChipID, transcriptRowID } from "@/ui/a11y";
+import { subagentChipId, transcriptRowId } from "@/ui/a11y";
 
 /* ------------------------------------------------------------------ row kinds */
 
@@ -232,7 +232,7 @@ export const workingLine = (
 
 /** The per-row anchor the Maestro flows address. */
 export const transcriptRowTestID = (entry: TranscriptEntry): string =>
-	transcriptRowID(entry.id);
+	transcriptRowId(entry.id);
 
 /**
  * The row the streaming marker (`SURFACE.transcriptStreaming`) belongs to: the LAST
@@ -389,7 +389,7 @@ export const subagentRowView = (row: SubagentRow): SubagentRowView => {
 		// length. Capped by the renderer rather than here, so the derivation stays
 		// a statement about the wire.
 		depth: row.ancestors.length,
-		testID: subagentChipID(row.job_id),
+		testID: subagentChipId(row.job_id),
 	};
 };
 

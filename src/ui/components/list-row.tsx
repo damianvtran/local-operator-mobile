@@ -7,8 +7,10 @@ import {
 	View,
 } from "react-native";
 
+import { countLabel } from "@/lib/format";
 import { ROLE, state } from "@/ui/a11y";
 import { useReducedMotion, useTokenColor } from "@/ui/appearance";
+import { Shimmer } from "@/ui/components/shimmer";
 import {
 	LIST_ROW_INDICATOR_CLASS,
 	listRowClasses,
@@ -48,6 +50,14 @@ export type ListRowProps = {
 	attentionWord?: "approval" | "question";
 	streaming?: boolean;
 	unread?: boolean;
+	/** The daemon watched this session's runtime die: a receipt of a death THIS
+	 *  daemon saw, not an error (`SessionSummary.ended`). */
+	ended?: boolean;
+	/** The record is fresh but the session's control socket is unreachable
+	 *  (`SessionSummary.degraded`). Distinct from `ended`, and distinct from the
+	 *  LIST being degraded — a degraded row is one session not answering, a
+	 *  degraded listing is the relay unable to walk the catalogue. */
+	degraded?: boolean;
 	/** The session currently open. Selection is never colour alone: the title
 	 * also takes the accent role. */
 	selected?: boolean;
@@ -65,6 +75,8 @@ export const ListRow = ({
 	attentionWord = "approval",
 	streaming = false,
 	unread = false,
+	ended = false,
+	degraded = false,
 	selected = false,
 	onPress,
 	testID,
@@ -76,6 +88,17 @@ export const ListRow = ({
 		unread,
 	});
 
+	/* One word per row, by the precedence `docs/ux/flows.md` § 5 fixes: a decision
+	 * outranks everything, then the receipts. The word is never shown for a live
+	 * idle session, because there is nothing to say about one. */
+	const statusWord = pending
+		? attentionWord
+		: ended
+			? "ended"
+			: degraded
+				? "not answering"
+				: null;
+
 	return (
 		<Pressable
 			accessibilityRole={ROLE.button}
@@ -86,6 +109,8 @@ export const ListRow = ({
 				attention,
 				attentionWord,
 				selected,
+				ended,
+				degraded,
 			})}
 			accessibilityState={state({ selected })}
 			testID={testID}
@@ -95,24 +120,50 @@ export const ListRow = ({
 				<View className={listRowClasses({ selected, pressed })}>
 					<Indicator attention={attention} />
 					<View className="flex-1 gap-0.5">
-						<View className="flex-row items-center gap-2">
+						{/* `flex-wrap`, not a wider row: at 200 % text on a 320 pt phone the
+						 *  title plus its marks do not fit one line, and a row that cannot
+						 *  wrap pushes a mark past the viewport edge — the horizontal
+						 *  overflow the audit measures. Wrapping keeps every mark readable
+						 *  and lets the title keep its own line.
+						 *
+						 *  It only works because the title's box has a basis of `auto` (`TITLE_BOX`)
+						 *  and NOT `flex-1`: a `flex: 1 1 0%` item has a hypothetical width of
+						 *  zero, so it never forces the line to break and merely shrinks to what the
+						 *  marks leave. Measured at 320 pt with the platform text size at 200 %: a
+						 *  session title had a 27 pt client box against 344 pt of text (design round 2,
+						 *  D13, frame `dark320-200-faithful`). The same zero-basis trap the segmented
+						 *  track hit in the audit round. */}
+						<View className="flex-row flex-wrap items-center gap-2">
 							{/* The title yields first: `flex-1` + truncate, with every
-							 * count beside it `shrink-0`. */}
-							<Text
-								className={`flex-1 text-body-sm font-medium ${
-									selected
-										? // Selection's non-colour channel, plus the fill.
-											"text-accent-active dark:text-accent-hover"
-										: "text-ink"
-								}`}
-								numberOfLines={1}
-								ellipsizeMode="tail"
-							>
-								{title}
-							</Text>
-							{pending ? (
-								<Text className="shrink-0 text-meta text-danger">
-									{attentionWord}
+							 * count beside it `shrink-0`. The shimmer wraps the Text rather
+							 * than the slot, because "working" belongs on the name
+							 * (docs/design/components.md § 7) — the spinner in the slot is
+							 * the second channel, not the first. */}
+							<Shimmer active={streaming} style={TITLE_BOX}>
+								<Text
+									className={`text-body-sm font-medium ${
+										selected
+											? // Selection's non-colour channel, plus the fill.
+												"text-accent-active dark:text-accent-hover"
+											: ended || degraded
+												? "text-ink-muted"
+												: "text-ink"
+									}`}
+									numberOfLines={1}
+									ellipsizeMode="tail"
+								>
+									{title}
+								</Text>
+							</Shimmer>
+							{/* One word slot. `approval`/`question` are danger; the two
+							 * receipts are muted, because neither is an error. */}
+							{statusWord ? (
+								<Text
+									className={`shrink-0 text-meta ${
+										pending ? "text-danger" : "text-ink-dim"
+									}`}
+								>
+									{statusWord}
 								</Text>
 							) : null}
 							{unread ? (
@@ -120,20 +171,34 @@ export const ListRow = ({
 							) : null}
 							{subagentCount > 0 ? (
 								<Text className="shrink-0 text-mono-sm text-ink-dim">
-									{subagentCount} agents
+									{countLabel(subagentCount, "agent")}
 								</Text>
 							) : null}
 							{todoCount > 0 ? (
 								<Text className="shrink-0 text-mono-sm text-ink-dim">
-									{todoCount} todos
+									{countLabel(todoCount, "todo")}
 								</Text>
 							) : null}
 						</View>
+						{/* The metadata line never wraps, and it is the CONTAINER that had to change:
+						 *  both children already declare a single line (`numberOfLines={1}`), so
+						 *  `flex-wrap` was the only thing contradicting them. A wrapped item moves
+						 *  onto its own line and the row grows a line exactly where the list has the
+						 *  least room: at 320 pt with the platform text at 200 % a stacked meta row
+						 *  measured 77.6 pt inside a 182.98 pt row, against 34.8 pt and 97.39 pt for a
+						 *  single-line one, and the second row of the list ended 18 pt below the band
+						 *  (QA round 4, Q4-1). The
+						 *  working directory truncates from the HEAD and the model id from the TAIL,
+						 *  which is what each already asks for; the title's row above keeps its own
+						 *  wrap on purpose (design round 2, D13), because there the marks are
+						 *  unshrinkable and a mark pushed past the pane edge is worse than a second
+						 *  line. */}
 						{cwd || model ? (
 							<View className="flex-row items-center gap-2">
 								{cwd ? (
 									<Text
-										className="flex-1 text-mono-sm text-ink-dim"
+										style={TITLE_BOX}
+										className="text-mono-sm text-ink-dim"
 										numberOfLines={1}
 										ellipsizeMode="head"
 									>
@@ -143,7 +208,12 @@ export const ListRow = ({
 									<View className="flex-1" />
 								)}
 								{model ? (
-									<Text className="shrink-0 text-mono-sm text-ink-dim">
+									<Text
+										style={META_VALUE_BOX}
+										className="text-mono-sm text-ink-dim"
+										numberOfLines={1}
+										ellipsizeMode="tail"
+									>
 										{model}
 									</Text>
 								) : null}
@@ -155,6 +225,39 @@ export const ListRow = ({
 		</Pressable>
 	);
 };
+
+/**
+ * The title's flex box: basis `auto`, grow to fill the line, shrink under pressure.
+ *
+ * `flexBasis: "auto"` rather than `flex-1` is the entire point — see the note at the
+ * title's call site. Passed as a STYLE rather than a class because the class pipeline
+ * is where this went wrong once already (the connection pill measured 554 pt in a 320 pt
+ * viewport while `max-w-full` sat in its class list), and a layout fix that silently does
+ * nothing is worse than no fix.
+ *
+ * `minWidth: 0` so react-native-web will shrink the box below the text's intrinsic width
+ * when it DOES share a line with a mark; without it the browser's `min-width: auto` would
+ * push the mark off the row instead of wrapping it.
+ */
+const TITLE_BOX = {
+	flexBasis: "auto",
+	flexGrow: 1,
+	flexShrink: 1,
+	minWidth: 0,
+} as const;
+
+/**
+ * The second line's trailing value (the model label): shrinkable, and it may NOT
+ *  set the line's width.
+ *
+ *  A model id is one unbreakable word to the browser (`anthropic/claude-opus-5`
+ *  has no break opportunity in it), so with the default `min-width: auto` its own
+ *  min-content width became the flex line's minimum and pushed the row past the
+ *  pane — the 12 pt of horizontal overflow measured inside the list scroller at
+ *  320 pt with the platform text at 200 % (design round 3, D18; the same class as
+ *  the TITLE_BOX note above). `minWidth: 0` lets it truncate into whatever the
+ *  working directory leaves, which is what `numberOfLines={1}` already claimed. */
+const META_VALUE_BOX = { flexGrow: 0, flexShrink: 1, minWidth: 0 } as const;
 
 /** The reserved slot. Same 12×12 box in every state. */
 const Indicator = ({
@@ -219,6 +322,8 @@ const rowAccessibilityLabel = (options: {
 	attention: ReturnType<typeof listRowIndicator>;
 	attentionWord: "approval" | "question";
 	selected: boolean;
+	ended?: boolean;
+	degraded?: boolean;
 }): string => {
 	const parts = [options.title];
 	if (options.attention === "pending") {
@@ -228,6 +333,10 @@ const rowAccessibilityLabel = (options: {
 	} else if (options.attention === "unread") {
 		parts.push("new");
 	}
+	/* Read in the same voice as the visible word: a reader who cannot see the muted
+	 * receipt still hears that this session ended or stopped answering. */
+	if (options.ended) parts.push("ended");
+	else if (options.degraded) parts.push("not answering");
 	if (options.selected) parts.push("open");
 	return parts.join(", ");
 };

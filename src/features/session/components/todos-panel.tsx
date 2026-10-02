@@ -2,7 +2,7 @@
 import { Pressable, ScrollView, Text, View } from "react-native";
 
 import type { TodoProjection } from "@/features/session/projection";
-import { CONTROL, ROLE, SURFACE, state, todosRowID } from "@/ui/a11y";
+import { CONTROL, ROLE, SURFACE, state, todosRowId } from "@/ui/a11y";
 import { cx } from "@/ui/variants";
 
 /**
@@ -90,7 +90,7 @@ export const TodosPanel = ({
 								<View
 									key={`${phase.name}-${index}`}
 									className="min-h-8 flex-row items-start gap-2 px-4 py-1"
-									testID={todosRowID(index)}
+									testID={todosRowId(index)}
 								>
 									<Text
 										className={cx("w-4 text-mono-sm", row.inkClass)}

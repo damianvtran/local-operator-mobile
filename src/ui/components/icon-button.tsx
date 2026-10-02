@@ -3,6 +3,7 @@ import { Pressable, View } from "react-native";
 
 import { ROLE, state } from "@/ui/a11y";
 import { useTokenColor } from "@/ui/appearance";
+import { TOUCH_FLOOR } from "@/ui/layout";
 import { iconButtonClasses } from "@/ui/variants";
 
 /**
@@ -50,6 +51,11 @@ export const IconButton = ({
 			disabled={disabled}
 			testID={testID}
 			onPress={onPress}
+			/* On the PRESSABLE, not on its inner box: the audit measures the
+			 * interactive element, and an icon button whose visual is 32 pt with a
+			 * 44 pt child reported as a 32x32 button below the floor (a real FAIL, 36
+			 * cells). The hit area is the thing that has to meet it. */
+			style={{ minHeight: TOUCH_FLOOR, minWidth: TOUCH_FLOOR }}
 		>
 			{({ pressed }) => (
 				<View

@@ -1,0 +1,66 @@
+# F-2/F-4 — pick a computer.
+#
+# The tunnel list comes from the discovery API and the *reachability* comes from a
+# probe: ADR 0002 and `docs/relay/tunnel-edge.md` §4 are explicit that
+# `status: active` means the cloud route is provisioned, never that the machine is
+# awake. So the flow asserts both facts separately, because a screen that shows one
+# as the other is the defect that mapping warns about.
+#
+# Today the computers screen renders both of its states — the set-up path when the
+# account has no tunnel, the list when it has one — so the empty assertion runs live
+# and the row assertions carry a `SCENARIO` marker: they need discovery pinned to a
+# `--scenario` that answers with a tunnel, which the run below is not.
+#
+# IDENTIFIERS: every `id:` in this file is in `src/ui/a11y.ts` — the contract this
+# branch owns, which `src/ui/a11y.e2e.test.ts` checks these flows against. A step the
+# app cannot serve yet is a commented marker, not a selector, and there are three
+# spellings because there are three different gaps:
+#
+#     Marker spelling: `# BLOCKED: needs <the-identifier> from <the-screen>`
+#     Marker spelling: `# PENDING: <the-identifier> from <the-screen>`
+#     Marker spelling: `# SCENARIO: <the-identifier> from <the-screen>`
+#
+# `BLOCKED` names an id `src/ui/a11y.ts` does not declare at all; `PENDING` names one
+# the contract declares whose renderer is not on this branch (the session view's, which
+# lands with its own stream); `SCENARIO` names one the app DOES render, where what is
+# missing is the mock relay pinned to the scenario that produces the state it waits on
+# (`--scenario …`). The test checks each in its own direction, so no marker can hide
+# coverage: a `BLOCKED` id must be absent from the contract, a `PENDING` id must be
+# declared and unrendered, and a `SCENARIO` id must be declared and rendered. An
+# invented selector would fail on the first assertion
+# and read as a flaky flow.
+#
+# CI-only: needs a booted simulator or emulator and an app build (ADR 0003).
+appId: ${APP_ID}
+name: "F-2 pick a computer"
+env:
+  APP_ID: com.radient.localoperator.mobile
+  TUNNEL_HOST: 0123456789abcdef0123456789abcdef-lop.example.invalid
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: "computers-screen"
+    timeout: 15000
+- assertVisible:
+    id: "tunnel-path-radient"
+- takeScreenshot: "02-00-computers-empty"
+# Rows: the identifiers are rendered, but reaching a row needs discovery pinned to a
+# scenario that answers with a tunnel, which this run is not pinned to. The old marker
+# here said the app did not render these — it does (`computers.tsx`, one row per
+# discovered computer), which is exactly the difference `SCENARIO` records.
+# SCENARIO: computer-row-<host> from computers
+# - assertVisible:
+#     id: "computer-row-${TUNNEL_HOST}"
+# SCENARIO: computer-row-status-<host> from computers
+# - assertVisible:
+#     id: "computer-row-status-${TUNNEL_HOST}"
+# SCENARIO: computer-row-reachability-<host> from computers
+# - assertVisible:
+#     id: "computer-row-reachability-${TUNNEL_HOST}"
+# SCENARIO: computer-selected-marker from computers
+# - tapOn:
+#     id: "computer-row-${TUNNEL_HOST}"
+# - assertVisible:
+#     id: "computer-selected-marker"

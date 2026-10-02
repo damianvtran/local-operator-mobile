@@ -3,7 +3,7 @@ import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
 
 import type { SlashCommand } from "@/contracts";
 import { argumentHint, filterCommands } from "@/features/session/slash";
-import { CONTROL, ROLE, SURFACE, slashCommandID, state } from "@/ui/a11y";
+import { CONTROL, ROLE, SURFACE, slashCommandId, state } from "@/ui/a11y";
 import { Sheet } from "@/ui/components";
 
 /**
@@ -96,7 +96,7 @@ export const SlashSheet = ({
 								onPick(command);
 								onClose();
 							}}
-							testID={slashCommandID(command.name)}
+							testID={slashCommandId(command.name)}
 						>
 							<View className="min-h-11 flex-row items-center gap-2 px-3">
 								<Text className="shrink-0 font-mono text-mono-sm text-ink">

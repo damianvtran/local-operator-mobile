@@ -8,7 +8,7 @@ import {
 	classifyEntry,
 	transcriptRowTestID,
 } from "@/features/session/projection";
-import { SURFACE, transcriptImageID } from "@/ui/a11y";
+import { SURFACE, transcriptImageId } from "@/ui/a11y";
 import { cx } from "@/ui/variants";
 
 /**
@@ -126,7 +126,7 @@ export const TranscriptRow = ({
 									index={image.index}
 									mimeType={image.mime_type}
 									load={loadImage}
-									testID={transcriptImageID(entry.id, image.index)}
+									testID={transcriptImageId(entry.id, image.index)}
 								/>
 							))}
 						</View>

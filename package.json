@@ -22,7 +22,16 @@
 		"theme:build": "node scripts/build-theme.ts",
 		"theme:check": "node scripts/build-theme.ts --check",
 		"contrast:check": "node design/tokens/contrast-contract.mjs",
-		"preset:check": "node design/tokens/build-preset.mjs --check"
+		"preset:check": "node design/tokens/build-preset.mjs --check",
+		"mock:relay": "node tools/mock-relay/relay.ts",
+		"e2e:relay": "node tools/mock-relay/verify.ts",
+		"e2e:canary": "node e2e/run-canary.ts",
+		"e2e:docs": "node tools/lib/doc-commands.ts",
+		"e2e:typecheck": "tsc --noEmit -p tools/tsconfig.json",
+		"e2e:divergences": "node tools/mock-relay/divergences.ts",
+		"e2e:verify": "pnpm e2e:typecheck && pnpm e2e:docs && pnpm e2e:relay && pnpm e2e:divergences",
+		"audit:capture": "node tools/visual/capture.ts",
+		"audit:run": "node tools/audit/audit.ts"
 	},
 	"dependencies": {
 		"@expo/metro-runtime": "~57.0.16",

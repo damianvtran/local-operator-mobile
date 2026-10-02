@@ -58,7 +58,18 @@ const checkWithToolsConfig = (source: string) => {
 	}
 };
 
-describe("scripts/ only uses syntax that type stripping can run", () => {
+/**
+ * These cases spawn a COLD `tsc`, measured on this host at **3576 / 3602 / 5051 ms**
+ * — against vitest's 5000 ms default, so the heaviest case timed out on a loaded
+ * machine for a reason that has nothing to do with erasable syntax. The budget below
+ * is 6x the worst measurement, and it bounds only how long the spawn may take: every
+ * assertion is about tsc's verdict and its output, never about the time it took.
+ */
+const COLD_TSC_TIMEOUT_MS = 30_000;
+
+describe("scripts/ only uses syntax that type stripping can run", {
+	timeout: COLD_TSC_TIMEOUT_MS,
+}, () => {
 	it("accepts erasable TypeScript, so the probe itself is sound", () => {
 		const result = checkWithToolsConfig("export const value: number = 1;\n");
 		expect(result.stdout + result.stderr).toBe("");

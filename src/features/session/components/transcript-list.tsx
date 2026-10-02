@@ -10,7 +10,7 @@ import {
 import type { TranscriptEntry } from "@/contracts";
 import { TranscriptRow } from "@/features/session/components/transcript-row";
 import { windowPolicy } from "@/features/session/windowing";
-import { transcriptRowID } from "@/ui/a11y";
+import { transcriptRowId } from "@/ui/a11y";
 
 /**
  * The transcript: virtualised, tail-following, and never blank.
@@ -164,7 +164,7 @@ export const TranscriptList = ({
 					 *
 					 * Zero-size and hidden from the accessibility tree: it is an anchor, and a
 					 * screen reader should not announce it. */}
-					<View testID={transcriptRowID(sessionId)} aria-hidden />
+					<View testID={transcriptRowId(sessionId)} aria-hidden />
 					{header}
 				</>
 			}

@@ -1,0 +1,40 @@
+<!doctype html>
+<!--
+  A page whose text does NOT respond to the root font size — the negative control
+  for the harness's text-scale guard.
+
+  The dimension is only real if the page being measured reads the input the harness
+  drives. The harness drives the ROOT FONT SIZE (a page that sizes its type in `rem`
+  picks it up), and the app itself scales its rem-based type roles that way. A page
+  that sizes everything in `px` ignores it completely, so a "200 %" cell of this page
+  is a 100 % render with a 200 % label — the exact failure that invalidated an earlier
+  run's large-text rows.
+
+  `verify` captures this directory and requires the guard to FAIL it by name; the
+  audit-canary fixture (rem-based) is the other direction, where the guard must pass.
+  Neither fixture is evidence about the app; together they prove the GUARD works.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Inert text-scale fixture</title>
+<style>
+	/* px throughout, deliberately: no rem anywhere, so `root.style.fontSize` has no
+	   effect on any measured text. */
+	/* The canvas follows the resolved theme, so the ONLY failure this page produces
+	   is the scale one: a fixture that also failed the theme check would make the
+	   negative control ambiguous about which guard fired. */
+	:root { --canvas: #f2ede3; --ink: #211e18; }
+	:root[data-lo-theme="dark"] { --canvas: #22201c; --ink: #f2ede3; }
+	body { margin: 0; padding: 16px; background: var(--canvas); color: var(--ink); font-family: system-ui; font-size: 14px; line-height: 20px; }
+	h1 { font-size: 28px; line-height: 34px; margin: 0 0 12px; }
+	p { font-size: 14px; line-height: 20px; margin: 0 0 8px; }
+</style>
+</head>
+<body>
+<h1>Text that never scales</h1>
+<p>Every size on this page is in px, so the harness's root font size does not change a single measured line. A capture of this page must FAIL: the text-scale dimension is inert here.</p>
+<p>The row that fails names this cell and the ratio it measured.</p>
+</body>
+</html>

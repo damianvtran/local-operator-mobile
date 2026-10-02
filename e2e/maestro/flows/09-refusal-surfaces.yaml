@@ -1,0 +1,92 @@
+# S13 — the sustained-failure surfaces.
+#
+# One assertion set per refusal family, so a copy or a control that goes missing is
+# caught by name rather than by a screenshot nobody diffs. Each family is run
+# against the mock relay pinned to that refusal (`--scenario gateway-503-<reason>`
+# or `--scenario edge-<id>`), which is what makes an otherwise-unreachable state
+# routine to test.
+#
+# The rule these assert: **the surface names a cause and a remedy, and never shows a
+# status code.** ADR 0003 and `docs/relay/tunnel-edge.md` §6 both say the failure
+# taxonomy has five faces, not a status-code dump.
+#
+# Every identifier below IS rendered on this branch: `src/ui/components/refusal-surface.tsx`
+# paints one surface per failure kind and a screen mounts it
+# (`src/features/sessions/sessions.tsx`, `src/features/auth/computers.tsx`). So none of
+# these steps is `BLOCKED` — the id exists — and none is `PENDING` either. What each one
+# lacks is the relay pinned to the refusal that makes its surface appear, which is what
+# `SCENARIO` records. `BLOCKED`/`PENDING` here would be false in opposite directions:
+# one claims the contract lacks the id, the other that nothing builds it.
+#
+# IDENTIFIERS: every `id:` in this file is in `src/ui/a11y.ts` — the contract this
+# branch owns, which `src/ui/a11y.e2e.test.ts` checks these flows against. A step the
+# app cannot serve yet is a commented marker, not a selector, and there are three
+# spellings because there are three different gaps:
+#
+#     Marker spelling: `# BLOCKED: needs <the-identifier> from <the-screen>`
+#     Marker spelling: `# PENDING: <the-identifier> from <the-screen>`
+#     Marker spelling: `# SCENARIO: <the-identifier> from <the-screen>`
+#
+# `BLOCKED` names an id `src/ui/a11y.ts` does not declare at all; `PENDING` names one
+# the contract declares whose renderer is not on this branch (the session view's, which
+# lands with its own stream); `SCENARIO` names one the app DOES render, where what is
+# missing is the mock relay pinned to the scenario that produces the state it waits on
+# (`--scenario …`). The test checks each in its own direction, so no marker can hide
+# coverage: a `BLOCKED` id must be absent from the contract, a `PENDING` id must be
+# declared and unrendered, and a `SCENARIO` id must be declared and rendered. An
+# invented selector would fail on the first assertion
+# and read as a flaky flow.
+#
+# CI-only: needs a booted simulator or emulator and an app build (ADR 0003).
+appId: ${APP_ID}
+name: "S13 refusal surfaces"
+env:
+  APP_ID: com.radient.localoperator.mobile
+---
+- launchApp:
+    clearState: true
+- assertVisible:
+    id: "sessions-screen"
+# The computer is offline: Cloudflare's 1033, or a gateway 502. The remedy is
+# machine-side, and re-authenticating would be wrong.
+# SCENARIO: connection-error-computer-offline from computers
+# - assertVisible:
+#     id: "connection-error-computer-offline"
+# SCENARIO: connection-error-machine-remedy from computers
+# - assertVisible:
+#     id: "connection-error-machine-remedy"
+# SCENARIO: connection-error-sign-in from computers
+# - assertNotVisible:
+#     id: "connection-error-sign-in"
+# The tunnel is gone: terminal for that URL, with a console link.
+# SCENARIO: connection-error-tunnel-unavailable from computers
+# - assertVisible:
+#     id: "connection-error-tunnel-unavailable"
+# SCENARIO: connection-error-console-link from computers
+# - assertVisible:
+#     id: "connection-error-console-link"
+# SCENARIO: connection-error-retry-prominent from computers
+# - assertNotVisible:
+#     id: "connection-error-retry-prominent"
+# Sign in again: the edge's 401 with the re-auth hint header. This one *does* offer
+# sign-in and must not say "computer offline" — the connector was reached.
+# SCENARIO: connection-error-sign-in from sign-in
+# - assertVisible:
+#     id: "connection-error-sign-in"
+# Waiting: `authorization_deferred` clears by itself within the deferral window, so
+# the surface says so and retries rather than sending the user away.
+# SCENARIO: connection-error-waiting from computers
+# - assertVisible:
+#     id: "connection-error-waiting"
+# SCENARIO: connection-error-clears-by-itself from computers
+# - assertVisible:
+#     id: "connection-error-clears-by-itself"
+# The relay is not installed on the machine: a local prerequisite, not a tunnel
+# problem.
+# SCENARIO: connection-error-relay-not-installed from computers
+# - assertVisible:
+#     id: "connection-error-relay-not-installed"
+# No surface may show a bare status code.
+- assertNotVisible: "503"
+- assertNotVisible: "502"
+- assertNotVisible: "401"

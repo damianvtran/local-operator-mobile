@@ -12,6 +12,14 @@ import type { ProjectionEntry } from "@/state";
 /**
  * The C1–C7 table, as behaviour rather than as prose.
  *
+ * The ids asserted below are the CONTRACT's, and they are the `connection-*` set
+ * (`SURFACE.connection*` and `CONTROL.connectionRetry/SignIn/Console`) rather than
+ * the `connection-error-*` set: the latter is the wave-2 refusal surface's own
+ * (`REGION.connectionError*`, rendered by `src/ui/components/refusal-surface.tsx`),
+ * and the banner this file derives is a different surface. The fold onto `main` is
+ * where the two were told apart — before it this file asserted `connection-error-*`
+ * for the banner's ids, which the reconciled contract does not carry.
+ *
  * The first case is the one that matters most and the one a still frame can never
  * prove: **C1 must be invisible.** The gateway ends every relayed stream at its
  * 60-second lease, so an orderly close arrives once a minute, forever — and a
@@ -179,7 +187,7 @@ describe("C5 — the Radient session expired", () => {
 			"Your Radient session expired. Sign in to reconnect to Studio desktop.",
 		);
 		expect(view.action?.kind).toBe("sign-in");
-		expect(view.testIDs).toContain("connection-error-sign-in");
+		expect(view.testIDs).toContain("connection-sign-in");
 	});
 });
 
@@ -200,8 +208,8 @@ describe("C6 — a typed refusal renders the gateway's own sentence", () => {
 		);
 		// `authorization_lease_pending` clears by itself within the deferral window, so
 		// the surface says so rather than sending the reader away.
-		expect(view.testIDs).toContain("connection-error-waiting");
-		expect(view.testIDs).toContain("connection-error-clears-by-itself");
+		expect(view.testIDs).toContain("connection-waiting");
+		expect(view.testIDs).toContain("connection-clears-by-itself");
 	});
 
 	it("sends the reader to the console when the remedy lives there", () => {
@@ -216,7 +224,7 @@ describe("C6 — a typed refusal renders the gateway's own sentence", () => {
 		);
 		expect(view.id).toBe("C6");
 		expect(view.action?.kind).toBe("console");
-		expect(view.testIDs).toContain("connection-error-console-link");
+		expect(view.testIDs).toContain("connection-console");
 	});
 
 	it("never shows a runtime's own prose, only the relay's sentence", () => {
@@ -266,12 +274,8 @@ describe("C6 — a typed refusal renders the gateway's own sentence", () => {
 		);
 		expect(certificate.id).toBe("C6");
 		expect(certificate.action?.kind).toBe("console");
-		expect(certificate.testIDs).toContain(
-			"connection-error-certificate-rejected",
-		);
-		expect(certificate.testIDs).not.toContain(
-			"connection-error-retry-prominent",
-		);
+		expect(certificate.testIDs).toContain("connection-certificate-rejected");
+		expect(certificate.testIDs).not.toContain("connection-retry");
 
 		const host = connectionView(
 			input({
@@ -283,7 +287,7 @@ describe("C6 — a typed refusal renders the gateway's own sentence", () => {
 		);
 		expect(host.id).toBe("C6");
 		expect(host.action?.kind).toBe("retry");
-		expect(host.testIDs).toContain("connection-error-host-unresolved");
+		expect(host.testIDs).toContain("connection-host-unresolved");
 		expect(host.text).toContain("address");
 	});
 
@@ -338,8 +342,8 @@ describe("C7 — the computer is not answering", () => {
 		expect(view.text).toBe(
 			"Studio desktop isn’t answering — last seen 4m ago.",
 		);
-		expect(view.testIDs).toContain("connection-error-computer-offline");
-		expect(view.testIDs).toContain("connection-error-machine-remedy");
+		expect(view.testIDs).toContain("connection-computer-offline");
+		expect(view.testIDs).toContain("connection-machine-remedy");
 		expect(view.action?.kind).toBe("retry");
 	});
 });

@@ -25,6 +25,11 @@
  *   present without any value crossing the boundary.
  */
 
+/* Type-only, and deliberately so: the two shapes are read for their fields and nothing
+ * else, so this module still loads with no React Native, no bundler and no cycle. */
+import type { RadientTokens } from "./radient-oauth";
+import type { TunnelSession } from "./tunnel-session";
+
 /** The subset of `expo-secure-store` this module uses. Narrow on purpose: the
  *  adapter is injected, so the module is testable in Node and the dependency is
  *  visible in one place. */
@@ -397,4 +402,65 @@ export async function thisDeviceOnlyAccessibility(): Promise<string> {
 		WHEN_UNLOCKED_THIS_DEVICE_ONLY: string;
 	};
 	return module.WHEN_UNLOCKED_THIS_DEVICE_ONLY;
+}
+
+/* --------------------------------------------------- app shape ↔ stored shape */
+
+/**
+ * The two bridges between the connection layer's WORKING shapes and the records
+ * this module stores.
+ *
+ * They live here because this is the one file that knows both: `radient-oauth.ts`
+ * and `tunnel-session.ts` deliberately say nothing about the keystore, and a caller
+ * that built a record inline would be a second place the field names could drift from
+ * the parser's. Every value crosses unchanged — `expires_at` already carries the
+ * access-token skew on the app's side, so neither direction re-derives an expiry.
+ *
+ * `import type` only: these are shapes, not behaviour, so the module keeps its
+ * property of loading in Node with no React Native and no cycle.
+ */
+export function oauthSetFromTokens(tokens: RadientTokens): RadientOAuthSet {
+	return {
+		access: tokens.access,
+		refresh: tokens.refresh,
+		expires_at: tokens.expires_at,
+		account_label: tokens.account_label,
+		scope: tokens.scope,
+		token_type: tokens.token_type,
+	};
+}
+
+export function tokensFromOauthSet(set: RadientOAuthSet): RadientTokens {
+	return {
+		access: set.access,
+		refresh: set.refresh,
+		expires_at: set.expires_at,
+		account_label: set.account_label,
+		scope: set.scope,
+		token_type: set.token_type,
+	};
+}
+
+export function tunnelSetFromSession(session: TunnelSession): TunnelSessionSet {
+	return {
+		grant: session.grant,
+		grant_expires_at: session.grantExpiresAt,
+		refresh_handle: session.refreshHandle,
+		refresh_expires_at: session.refreshExpiresAt,
+		hostname: session.hostname,
+		tunnel_id: session.tunnelId,
+		minted_at: session.mintedAt,
+	};
+}
+
+export function sessionFromTunnelSet(set: TunnelSessionSet): TunnelSession {
+	return {
+		grant: set.grant,
+		grantExpiresAt: set.grant_expires_at,
+		refreshHandle: set.refresh_handle,
+		refreshExpiresAt: set.refresh_expires_at,
+		hostname: set.hostname,
+		tunnelId: set.tunnel_id,
+		mintedAt: set.minted_at,
+	};
 }

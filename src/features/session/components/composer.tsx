@@ -18,7 +18,8 @@ import {
 } from "@/features/session/composer";
 import { isSendKey } from "@/features/session/keyboard";
 
-import { CONTROL, composerAttachmentID, ROLE, SURFACE, state } from "@/ui/a11y";
+import { composerStateMarkers } from "@/features/session/state-marker";
+import { CONTROL, composerAttachmentId, ROLE, SURFACE, state } from "@/ui/a11y";
 import { Button, Chip, Skeleton, Textarea } from "@/ui/components";
 import { cx } from "@/ui/variants";
 
@@ -302,6 +303,12 @@ export const Composer = ({
 			className="border-t border-hairline px-3 pt-1.5 pb-2"
 			testID={testID}
 		>
+			{/* The state markers the design audit reads, one per true fact and none for a
+			    fact that is not true (`state-marker.ts`). `aria-hidden`: a claim for the
+			    audit, not a thing a reader should hear. */}
+			{composerStateMarkers(controls).map((marker) => (
+				<View key={marker} testID={marker} aria-hidden />
+			))}
 			{/* Attachments, above the field: an attachment changes what send means, so it
 			    is read before the control that is pressed. */}
 			{images.length > 0 ? (
@@ -314,7 +321,7 @@ export const Composer = ({
 									accessibilityRole={ROLE.button}
 									accessibilityLabel={`Remove attachment ${index + 1}`}
 									onPress={() => onRemoveImage(index)}
-									testID={composerAttachmentID(index)}
+									testID={composerAttachmentId(index)}
 								>
 									<View className="overflow-hidden rounded-sm border border-control">
 										<Image

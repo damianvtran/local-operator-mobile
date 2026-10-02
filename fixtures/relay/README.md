@@ -23,7 +23,8 @@ wrong wire.
 Read [`../../docs/relay/contract.md`](../../docs/relay/contract.md) for what each
 sample means; this file is only about provenance and reproduction.
 
-The tree is currently **102 fixtures — 98 live, 4 synthetic** — plus this README.
+The tree is currently **103 fixtures — 98 live, 5 synthetic** — plus this README. The split is counted from `provenance.kind` in the files
+themselves rather than typed here, so it cannot drift from them.
 
 **Two refs are represented, deliberately.** The bulk of the live captures were
 taken at local-operator `52c1df35`; the session-state receipts (`ended`,
@@ -168,6 +169,7 @@ test fixtures (`local_operator/mobile/web/src/*.test.tsx`) for shape.
 | `sse-projection-every-entry-kind.json` | one row of **every** `EntryKind` (user, reasoning, assistant, tool in all six `ToolState`s, steer, peer_message, notice in all three severities plus a wake, compaction, parent_message, subagent_message), a two-phase todo list with a blocked item, and a six-status subagent roster (running, queued, parked, completed, failed, cancelled) |
 | `sse-projection-pending-ask.json` | a secret ask with options, a recommended index, and `question_index: 0` of `question_total: 2` |
 | `sse-projection-pending-approval-example.json` | an approval whose detail is a destructive command, with the tool row still `composing` |
+| `sse-projection-rich-rows.json` | the transcript's RICH rows: a fenced code block (the row that owns the copy control), a fenced diff, and two tables. Built on a captured envelope with the markdown content invented, which is why it is synthetic — no live capture of these rows exists |
 | `models.ranked.json` | a realistic ranked `/api/models` payload, wrapped as `{"provenance": …, "models": [...]}` (the array order **is** the ranking — a client must not re-sort it) |
 
 ## Using these in tests

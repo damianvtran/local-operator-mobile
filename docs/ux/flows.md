@@ -229,36 +229,69 @@ but has no tunnel hits a dead end.
 5. **Never leave the user unable to continue.** Every failure state keeps: the
    command, *Copy*, *I already have a tunnel*, and *Sign out*.
 
-## 3. F-3 Custom tunnel / URL + password
+## 3. F-3 Own tunnel (self-hosted) — the guided set-up
 
-1. Entry points: first-run secondary action; Computers → *Add a computer*;
-   Settings → Computers → *Add*.
-2. **Form, one screen, three fields** (all above the keyboard):
-   - **Address** — the https origin. Validate as https (the edge requires
-     `Origin: https://…` for non-GET requests) and refuse `http://` with the
-     reason, not just "invalid".
-   - **Password** — the relay password. A paste-friendly field (`textContentType`
-     = password, no autocorrect), with a *Paste* affordance; **never** stored in
-     plain app storage — keychain/keystore only.
-   - **Name** — defaults to the hostname; editable so the list is
-     recognisable.
-3. **Verify before saving.** Sign in against the address (`POST /login` →
-   303 + cookie) rather than trusting the input.
-   - *States:* checking / wrong password / unreachable / not a Local Operator
-     relay / OK.
-   - *Wrong password copy:* "That password wasn't accepted." + *Try again*.
-     (Today's web copy is exactly "Wrong password." — acceptable, but no better.)
-   - *Unreachable:* "We couldn't reach that address." + *Try again* + hint to
-     check https.
-   - *Not a relay:* "That address answered, but it isn't a Local Operator
-     relay." — this fact is knowable because `/healthz` is unauthenticated.
-4. **Saved → F-4**, and this computer appears in the switcher beside Radient
-   ones, marked as manual (a small "address" glyph) so the user knows why it has
-   no console link or billing state.
-5. **Edge case:** a password change on the computer invalidates cookies
-   ("rotation invalidates every session for free", `docs/mobile.md`). The app
-   must handle a 401 from a custom computer by returning to this form with the
-   address prefilled — not by silently signing the user out of everything.
+**Revised 2026-09-30.** The flow id is unchanged because the destination is the
+same one; what changed is that this is a *route* and not a form. The app works
+with no Radient account at all, and a reader who already runs a tunnel should
+never have to work that out from a bare "address and password" field.
+
+1. **Entry points — and the path is NAMED where the choice is made.**
+   - First run → *Set up your own tunnel* (secondary to Radient, never hidden).
+   - `/tunnels` with no computer yet → two clearly-labelled paths, in order:
+     **Connect with Radient** (recommended; a private authenticated URL and
+     nothing to configure — the honest reason it is recommended) and **Set up
+     your own tunnel** (the advanced path for a computer you expose yourself,
+     with **no Radient account anywhere in its copy**). With a computer already
+     chosen, the switcher keeps the same entry as a quiet action under the list.
+   - Settings → Your own tunnel → *Set up* / *Edit*.
+   - `/custom` remains a working alias of `/own-tunnel`, so every older link and
+     refusal surface still lands on the guided flow rather than a thinner one.
+2. **Step 1 — on the computer.** The exact commands, each copyable, with what to
+   expect from it: `lop mobile install` (macOS: supervised, generates the portal
+   password into the keychain) or `LOP_MOBILE_PASSWORD=… lop mobile serve`
+   (foreground, serves **127.0.0.1:4098**, loopback only), `lop mobile status`,
+   and `lop mobile password` to set or rotate the portal password. There is no
+   bare `lop mobile` — the CLI has no such command and the copy does not invent
+   one.
+3. **Step 2 — publish it.** `cloudflared tunnel --url http://127.0.0.1:4098` and
+   `ngrok http 4098` as the two named examples, plus the general rule: any tunnel
+   that forwards a public HTTPS URL to `127.0.0.1:4098` works.
+4. **Step 3 — address + password.** `https://` is the preferred form and gets no
+   warning. A plain `http://` address is refused with the reason, not just
+   "invalid", and is reachable only through an explicit opt-in that states the
+   exposure; it is never silently allowed or downgraded. The password is
+   paste-friendly, masked, and never logged; there is **no Name field** — the
+   address is the identity, and the switcher shows the hostname.
+5. **Step 4 — test before saving.** A real request through the reader's tunnel,
+   and a verdict that says what happened **in the taxonomy's sentences, never a
+   status code**:
+   - *Connected* — "Connected — you can see N sessions" (the real count).
+   - *Wrong password* — that password was not accepted; retry.
+   - *403* — the tunnel refused the app: allow it through any access policy or
+     login page in front, and check the tunnel forwards straight to the relay
+     (the relay also refuses requests it did not send; `docs/relay/contract.md`
+     § 1.2).
+   - *503 / 502* — the tunnel exists and nothing healthy is behind it, with the
+     gateway's own sentence and `lop mobile status` as the remedy.
+   - *TLS / certificate* — named as such, because a self-signed edge is the
+     common failure and "unreachable" would send the reader to check DNS.
+   - *DNS / unreachable*, and *timeout*.
+   Only a `Connected` verdict enables saving: a saved-but-unanswered tunnel is a
+   phone showing an empty list with nothing to explain it.
+6. **Saved → F-4**, and it appears in the switcher beside Radient computers. The
+   address and password are kept in the platform's secure store (keychain /
+   keystore; `src/connection/storage.ts` owns the record), never in plain app
+   storage. A cold start **resumes** a saved tunnel without asking again; a
+   tunnel saved without a remembered password is loaded but not dialled, and the
+   screen asks for the password. Settings offers *Edit*, *Test again* (one tap,
+   on the stored values) and *Remove*; removal forgets that one item and leaves
+   the Radient login alone.
+7. **No Radient language on this path**: no account, no credits, no billing, no
+   tunnel-session minting, and nothing here is behind a Radient credential.
+8. **Edge case:** a password rotation on the computer invalidates the relay
+   cookie. A 401 from a custom route returns to this flow with the address
+   prefilled — it must never sign the reader out of everything.
 
 ## 4. F-4 Computers: discovery, connection and the switcher
 

@@ -24,6 +24,7 @@ import {
 	projectTodos,
 	workingLine,
 } from "@/features/session/projection";
+import { sessionStateMarkers } from "@/features/session/state-marker";
 import { draftSlashQuery, useComposer } from "@/features/session/use-composer";
 import { useSessionRuntime } from "@/features/session/use-session";
 import { CONTROL, EMPTY, SCREEN, SURFACE } from "@/ui/a11y";
@@ -135,6 +136,32 @@ export default function Session() {
 		subagents.total > 0;
 
 	const pending = projection?.pending ?? null;
+
+	/* The state markers the design audit reads (`state-marker.ts`), derived from the
+	 *  same facts the screen renders from — a marker is a claim about the state the
+	 *  reader is in, so it may only be emitted for a fact that is true. */
+	const stateMarkers = useMemo(
+		() =>
+			sessionStateMarkers({
+				connected: projection !== null,
+				streaming: runtime.streaming,
+				ended: projection?.ended === true,
+				error: runtime.error !== null,
+				pending:
+					pending === null ? null : pending.kind === "ask" ? "ask" : "approval",
+				subagents: subagents.total,
+				entries: runtime.entries.length,
+			}),
+		[
+			projection,
+			runtime.streaming,
+			runtime.error,
+			runtime.entries.length,
+			pending,
+			subagents.total,
+		],
+	);
+
 	const pendingViewProps = useMemo(
 		() =>
 			pending === null
@@ -266,6 +293,13 @@ export default function Session() {
 			   every phone width. The chip is status, the context strip is status, and
 			   the strip has room for both (design round 1, D2 and D8). */
 		>
+			{/* The state markers the design audit reads, one per true fact and none for a
+			    fact that is not true (`state-marker.ts`). `aria-hidden`: a claim for the
+			    audit, not a thing a reader should hear. They are zero-size, so they add
+			    nothing to the column. */}
+			{stateMarkers.map((marker) => (
+				<View key={marker} testID={marker} aria-hidden />
+			))}
 			{/* The status strip: every number the reader needs while reading, in one
 			    band. Only rendered when the wire reports something — a strip that showed
 			    `—` for unknown would be a row of noise on every session. `min-h-11` is

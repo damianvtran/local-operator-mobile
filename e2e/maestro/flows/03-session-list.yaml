@@ -1,0 +1,70 @@
+# F-5 — the session list.
+#
+# The list is driven by the mock relay's `sessions` scenario, so CI runs it once
+# per state rather than hoping to catch one live. The states it must assert are the
+# ones `docs/relay/contract.md` §7 names and the rubric's S4 row scores: empty,
+# populated, needs-attention and degraded.
+#
+# Today the list store is wired to the relay (`src/state/list-store.ts`, fed by the
+# provider's stream and REST read), so the empty state is asserted live and the
+# populated and degraded states carry `SCENARIO` markers rather than the `BLOCKED`
+# ones they used to: the row and section identifiers ARE rendered by this branch's
+# screens (`sessionRowId`, `REGION.sessionSectionActive`), and what the run below
+# lacks is a relay pinned to a session scenario.
+#
+# `subagents_running: null` is the relay's unreachable-runtime signal and is
+# deliberately not zero. A screen that paints "0 subagents" over a runtime it
+# cannot vouch for is the defect the assertion below exists to catch.
+#
+# IDENTIFIERS: every `id:` in this file is in `src/ui/a11y.ts` — the contract this
+# branch owns, which `src/ui/a11y.e2e.test.ts` checks these flows against. A step the
+# app cannot serve yet is a commented marker, not a selector, and there are three
+# spellings because there are three different gaps:
+#
+#     Marker spelling: `# BLOCKED: needs <the-identifier> from <the-screen>`
+#     Marker spelling: `# PENDING: <the-identifier> from <the-screen>`
+#     Marker spelling: `# SCENARIO: <the-identifier> from <the-screen>`
+#
+# `BLOCKED` names an id `src/ui/a11y.ts` does not declare at all; `PENDING` names one
+# the contract declares whose renderer is not on this branch (the session view's, which
+# lands with its own stream); `SCENARIO` names one the app DOES render, where what is
+# missing is the mock relay pinned to the scenario that produces the state it waits on
+# (`--scenario …`). The test checks each in its own direction, so no marker can hide
+# coverage: a `BLOCKED` id must be absent from the contract, a `PENDING` id must be
+# declared and unrendered, and a `SCENARIO` id must be declared and rendered. An
+# invented selector would fail on the first assertion
+# and read as a flaky flow.
+#
+# CI-only: needs a booted simulator or emulator and an app build (ADR 0003).
+appId: ${APP_ID}
+name: "F-5 session list"
+env:
+  APP_ID: com.radient.localoperator.mobile
+  SESSION_ID: 6714def86197
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: "sessions-screen"
+    timeout: 15000
+- takeScreenshot: "05-00-list"
+- assertVisible:
+    id: "sessions-empty"
+- takeScreenshot: "05-01-empty-state"
+# The search affordance is rendered, and its field appears on the tap, so that half
+# of the header is assertable with no scenario pin: a search control that does nothing
+# when pressed is exactly what this pair of steps catches.
+- tapOn:
+    id: "session-search-button"
+- assertVisible:
+    id: "session-search-field"
+- takeScreenshot: "05-02-search"
+# Rows and sections need the list populated, which needs the relay pinned to a session
+# scenario. The identifiers are rendered today; the state is not reachable without it.
+# SCENARIO: session-row-<id> from sessions
+# - assertVisible:
+#     id: "session-row-${SESSION_ID}"
+# SCENARIO: session-section-active from sessions
+# - assertVisible:
+#     id: "session-section-active"

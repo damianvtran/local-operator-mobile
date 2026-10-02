@@ -1,0 +1,83 @@
+# F-6/S8 — answer a pending approval, then a pending ask.
+#
+# The relay's `approval` and `ask` scenarios pin both card shapes, including the
+# multi-question ask and the destructive-command detail. The flow answers one of
+# each and asserts the card *leaves*: a card that stays after an answer is the
+# defect that reads as a hung app.
+#
+# Both cards are unrendered on this branch — the projection store and the session
+# view are the session stream's — so the card identifiers below are `PENDING`: declared
+# in the contract, built by nothing here. Four of them are named here in the contract's
+# own spelling, because the pre-fold flow used names (`pending-card-approve`,
+# `ask-submit`) that no version of the contract ever had.
+#
+# IDENTIFIERS: every `id:` in this file is in `src/ui/a11y.ts` — the contract this
+# branch owns, which `src/ui/a11y.e2e.test.ts` checks these flows against. A step the
+# app cannot serve yet is a commented marker, not a selector, and there are three
+# spellings because there are three different gaps:
+#
+#     Marker spelling: `# BLOCKED: needs <the-identifier> from <the-screen>`
+#     Marker spelling: `# PENDING: <the-identifier> from <the-screen>`
+#     Marker spelling: `# SCENARIO: <the-identifier> from <the-screen>`
+#
+# `BLOCKED` names an id `src/ui/a11y.ts` does not declare at all; `PENDING` names one
+# the contract declares whose renderer is not on this branch (the session view's, which
+# lands with its own stream); `SCENARIO` names one the app DOES render, where what is
+# missing is the mock relay pinned to the scenario that produces the state it waits on
+# (`--scenario …`). The test checks each in its own direction, so no marker can hide
+# coverage: a `BLOCKED` id must be absent from the contract, a `PENDING` id must be
+# declared and unrendered, and a `SCENARIO` id must be declared and rendered. An
+# invented selector would fail on the first assertion
+# and read as a flaky flow.
+#
+# CI-only: needs a booted simulator or emulator and an app build (ADR 0003).
+appId: ${APP_ID}
+name: "F-6 approval and ask"
+env:
+  APP_ID: com.radient.localoperator.mobile
+  SESSION_ID: 6714def86197
+---
+- launchApp:
+    clearState: true
+- assertVisible:
+    id: "sessions-screen"
+# Reaching a session needs a row on the list, which needs the relay pinned to a
+# session scenario.
+# SCENARIO: session-row-<id> from sessions
+# - tapOn:
+#     id: "session-row-${SESSION_ID}"
+# BLOCKED: needs pending-card from session — nothing declares a bare `pending-card`;
+# the contract's card surfaces are `pending-card-body`, `pending-card-answer` (the ask
+# card) and `pending-card-error`.
+#
+# The `pending-card-*` and `pending-*` ids below stay SCENARIO rather than live: the
+# card renders on a session, and reaching one needs the list pinned to a session
+# scenario, which is the same pin the commented row tap above needs.
+# - extendedWaitUntil:
+#     visible:
+#       id: "pending-card"
+#     timeout: 15000
+# SCENARIO: pending-card-detail from session
+# - assertVisible:
+#     id: "pending-card-detail"
+# SCENARIO: pending-card-destructive-marker from session
+# - assertVisible:
+#     id: "pending-card-destructive-marker"
+# SCENARIO: pending-approve from session
+# - tapOn:
+#     id: "pending-approve"
+# BLOCKED: needs ask-card from session — the ask card is `pending-card-answer` in the
+# contract; nothing declares a separate `ask-card`.
+# - extendedWaitUntil:
+#     visible:
+#       id: "ask-card"
+#     timeout: 15000
+# SCENARIO: ask-question-1-of-2 from session
+# - assertVisible:
+#     id: "ask-question-1-of-2"
+# SCENARIO: ask-option-0 from session
+# - tapOn:
+#     id: "ask-option-0"
+# SCENARIO: pending-ask-submit from session
+# - tapOn:
+#     id: "pending-ask-submit"

@@ -23,7 +23,7 @@
  */
 
 import type { PendingRequest } from "@/contracts";
-import { askOptionID, askQuestionID } from "@/ui/a11y";
+import { askOptionId, askQuestionId } from "@/ui/a11y";
 
 /** Approval, or ask. The two share a frame and disagree about their controls. */
 export type PendingKind = "approval" | "ask";
@@ -191,7 +191,7 @@ export const pendingView = (input: PendingViewInput): PendingView => {
 				: null,
 		questionTestID:
 			pending.question_total > 1
-				? askQuestionID(pending.question_index + 1, pending.question_total)
+				? askQuestionId(pending.question_index + 1, pending.question_total)
 				: null,
 		options: pending.options.map((option, index) => ({
 			label: option.label,
@@ -200,7 +200,7 @@ export const pendingView = (input: PendingViewInput): PendingView => {
 			// `recommended` is an index into the options AS CARRIED, and a client that
 			// re-sorted them and kept the index would mark the wrong one.
 			recommended: pending.recommended === index,
-			testID: askOptionID(index),
+			testID: askOptionId(index),
 		})),
 		freeText: pending.options.length === 0,
 		secret: pending.secret,
