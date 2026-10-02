@@ -1,0 +1,380 @@
+{
+  "provenance": {
+    "kind": "synthetic",
+    "relay_ref": "local-operator 52c1df35",
+    "modelled_on": "the transcript rows that carry markdown — a fenced code block (the row that owns the copy control), a fenced diff, and two tables — on an envelope copied field-for-field from sse-projection-every-entry-kind.json",
+    "why": "no live capture of these rows exists: the markdown is rendered by the app's transcript, not produced by the relay, so the row CONTENT has to be invented while every field name and the surrounding envelope come from a captured fixture. Without it no cell's DOM contains a fenced block, which leaves a control the kit's 44pt floor applies to unmeasurable by anything"
+  },
+  "event": "projection",
+  "data": {
+    "session_id": "6714def86197",
+    "pid": 4242,
+    "kind": "daemon",
+    "conversation_name": "Refactor the relay client",
+    "cwd": "~/work",
+    "model_label": "anthropic/claude-opus-5",
+    "model_selector": "anthropic/claude-opus-5",
+    "effort": "high",
+    "effort_ladder": [
+      "lo",
+      "med",
+      "hi"
+    ],
+    "streaming": false,
+    "activity": "reading the relay sources",
+    "activity_started_s": 128.4,
+    "stop_reason": "",
+    "cut_off": false,
+    "queued_count": 2,
+    "ended": false,
+    "degraded": false,
+    "transcript": [
+      {
+        "id": "m-1",
+        "kind": "user",
+        "text": "Show me the patch.",
+        "tool_call_id": "",
+        "tool_name": "",
+        "tool_state": "interrupted",
+        "summary": "",
+        "intent": "",
+        "diff_added": 0,
+        "diff_removed": 0,
+        "elapsed_s": 0.0,
+        "error": "",
+        "details": {},
+        "images": [
+          {
+            "index": 0,
+            "mime_type": "image/png"
+          }
+        ],
+        "final": true,
+        "text_complete": true
+      },
+      {
+        "id": "m-1",
+        "kind": "assistant",
+        "text": "Here is the file:\n\n```ts\n// setCommentId(comment.id)\nexport function commentId(row) {\n\treturn row?.comment_id ?? null;\n}\n```\n",
+        "tool_call_id": "",
+        "tool_name": "",
+        "tool_state": "interrupted",
+        "summary": "",
+        "intent": "",
+        "diff_added": 0,
+        "diff_removed": 0,
+        "elapsed_s": 0.0,
+        "error": "",
+        "details": {},
+        "images": [
+          {
+            "index": 0,
+            "mime_type": "image/png"
+          }
+        ],
+        "final": true,
+        "text_complete": true
+      },
+      {
+        "id": "m-1",
+        "kind": "tool",
+        "text": "",
+        "tool_call_id": "",
+        "tool_name": "bash",
+        "tool_state": "done",
+        "summary": "applied 1 hunk",
+        "intent": "",
+        "diff_added": 3,
+        "diff_removed": 1,
+        "elapsed_s": 0.0,
+        "error": "",
+        "details": {
+          "command": "git apply patch.diff"
+        },
+        "images": [
+          {
+            "index": 0,
+            "mime_type": "image/png"
+          }
+        ],
+        "final": true,
+        "text_complete": true
+      },
+      {
+        "id": "m-1",
+        "kind": "assistant",
+        "text": "The diff:\n\n```diff\n- const id = row.comment_id;\n+ const id = commentId(row);\n```\n",
+        "tool_call_id": "",
+        "tool_name": "",
+        "tool_state": "interrupted",
+        "summary": "",
+        "intent": "",
+        "diff_added": 0,
+        "diff_removed": 0,
+        "elapsed_s": 0.0,
+        "error": "",
+        "details": {},
+        "images": [
+          {
+            "index": 0,
+            "mime_type": "image/png"
+          }
+        ],
+        "final": true,
+        "text_complete": true
+      },
+      {
+        "id": "m-1",
+        "kind": "assistant",
+        "text": "And the summary:\n\n| instance | outcome | ms |\n| --- | --- | --- |\n| 1 | ok | 41 |\n| 2 | ok | 38 |\n",
+        "tool_call_id": "",
+        "tool_name": "",
+        "tool_state": "interrupted",
+        "summary": "",
+        "intent": "",
+        "diff_added": 0,
+        "diff_removed": 0,
+        "elapsed_s": 0.0,
+        "error": "",
+        "details": {},
+        "images": [
+          {
+            "index": 0,
+            "mime_type": "image/png"
+          }
+        ],
+        "final": true,
+        "text_complete": true
+      },
+      {
+        "id": "m-1",
+        "kind": "assistant",
+        "text": "A bare table, for the same reason:\n\n| key | value |\n| --- | --- |\n| plan | pro |\n",
+        "tool_call_id": "",
+        "tool_name": "",
+        "tool_state": "interrupted",
+        "summary": "",
+        "intent": "",
+        "diff_added": 0,
+        "diff_removed": 0,
+        "elapsed_s": 0.0,
+        "error": "",
+        "details": {},
+        "images": [
+          {
+            "index": 0,
+            "mime_type": "image/png"
+          }
+        ],
+        "final": true,
+        "text_complete": true
+      }
+    ],
+    "todos": [
+      {
+        "name": "Research",
+        "items": [
+          {
+            "text": "read daemon.py",
+            "status": "done",
+            "reason": ""
+          },
+          {
+            "text": "read gateway.py",
+            "status": "done",
+            "reason": ""
+          }
+        ]
+      },
+      {
+        "name": "Docs",
+        "items": [
+          {
+            "text": "contract.md",
+            "status": "done",
+            "reason": ""
+          },
+          {
+            "text": "types.ts",
+            "status": "pending",
+            "reason": ""
+          },
+          {
+            "text": "feature-map.md",
+            "status": "blocked",
+            "reason": "waiting on the fixture run"
+          }
+        ]
+      }
+    ],
+    "subagents": [
+      {
+        "job_id": "job-run",
+        "label": "audit the relay contract",
+        "agent": "task",
+        "status": "running",
+        "progress": "reading daemon.py",
+        "elapsed_s": 42.5,
+        "model_label": "anthropic/claude-opus-5",
+        "result_text": "",
+        "error_text": "",
+        "parent_job_id": null,
+        "session_id": null,
+        "prompt": "",
+        "launch_message_id": "",
+        "effort": "med",
+        "ancestors": [],
+        "ancestor_ids": [],
+        "child_ids": [],
+        "peer_ids": [],
+        "transcript": [],
+        "todos": [],
+        "activity": "reading daemon.py"
+      },
+      {
+        "job_id": "job-queue",
+        "label": "write the migration",
+        "agent": "task",
+        "status": "queued",
+        "progress": "",
+        "elapsed_s": null,
+        "model_label": "anthropic/claude-opus-5",
+        "result_text": "",
+        "error_text": "",
+        "parent_job_id": null,
+        "session_id": null,
+        "prompt": "",
+        "launch_message_id": "",
+        "effort": "med",
+        "ancestors": [],
+        "ancestor_ids": [],
+        "child_ids": [],
+        "peer_ids": [],
+        "transcript": [],
+        "todos": [],
+        "activity": ""
+      },
+      {
+        "job_id": "job-park",
+        "label": "review the diff",
+        "agent": "task",
+        "status": "parked",
+        "progress": "",
+        "elapsed_s": 12.0,
+        "model_label": "anthropic/claude-opus-5",
+        "result_text": "",
+        "error_text": "",
+        "parent_job_id": "job-run",
+        "session_id": null,
+        "prompt": "",
+        "launch_message_id": "",
+        "effort": "med",
+        "ancestors": [],
+        "ancestor_ids": [],
+        "child_ids": [],
+        "peer_ids": [],
+        "transcript": [],
+        "todos": [],
+        "activity": ""
+      },
+      {
+        "job_id": "job-done",
+        "label": "map the web client",
+        "agent": "task",
+        "status": "completed",
+        "progress": "",
+        "elapsed_s": 310.2,
+        "model_label": "anthropic/claude-opus-5",
+        "result_text": "Mapped 5 screens and 11 components.",
+        "error_text": "",
+        "parent_job_id": null,
+        "session_id": "a1b2c3d4e5f6",
+        "prompt": "",
+        "launch_message_id": "m-1",
+        "effort": "med",
+        "ancestors": [],
+        "ancestor_ids": [],
+        "child_ids": [],
+        "peer_ids": [],
+        "transcript": [],
+        "todos": [],
+        "activity": ""
+      },
+      {
+        "job_id": "job-fail",
+        "label": "run the e2e matrix",
+        "agent": "task",
+        "status": "failed",
+        "progress": "",
+        "elapsed_s": 88.0,
+        "model_label": "anthropic/claude-opus-5",
+        "result_text": "",
+        "error_text": "AssertionError: expected 200, got 502",
+        "parent_job_id": null,
+        "session_id": "f6e5d4c3b2a1",
+        "prompt": "",
+        "launch_message_id": "",
+        "effort": "med",
+        "ancestors": [],
+        "ancestor_ids": [],
+        "child_ids": [],
+        "peer_ids": [],
+        "transcript": [],
+        "todos": [],
+        "activity": ""
+      },
+      {
+        "job_id": "job-cancel",
+        "label": "probe the tunnel",
+        "agent": "task",
+        "status": "cancelled",
+        "progress": "",
+        "elapsed_s": 5.0,
+        "model_label": "anthropic/claude-opus-5",
+        "result_text": "",
+        "error_text": "",
+        "parent_job_id": null,
+        "session_id": null,
+        "prompt": "",
+        "launch_message_id": "",
+        "effort": "med",
+        "ancestors": [],
+        "ancestor_ids": [],
+        "child_ids": [],
+        "peer_ids": [],
+        "transcript": [],
+        "todos": [],
+        "activity": ""
+      }
+    ],
+    "pending": null,
+    "pending_count": 0,
+    "usage": {
+      "input_tokens": 18422,
+      "output_tokens": 2100
+    },
+    "cumulative_parent_cost": 12.84,
+    "child_costs": {},
+    "subagent_cost": 3.1,
+    "subagent_cost_knowledge": "exact",
+    "cost_knowledge": "exact",
+    "context_tokens": 41200,
+    "context_window": 200000,
+    "context_is_estimate": false,
+    "version": 412,
+    "attention": {
+      "conversation_id": "session/6714def86197",
+      "completion_token": null,
+      "anchor_id": null,
+      "kind": null,
+      "reason": "",
+      "cause": "",
+      "notify": true,
+      "unseen": false,
+      "revision": [
+        0,
+        0
+      ]
+    }
+  }
+}

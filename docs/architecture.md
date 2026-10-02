@@ -82,6 +82,9 @@ src/
     discovery.ts                      # GET /v1/tunnels → computers and harnesses
     client-factory.ts                 # RouteProfile → configured relay client
     storage.ts                        # expo-secure-store reads/writes
+  notifications/                      # push registration, badges, deep links
+                                      # (ADR 0006 "Push notifications and
+                                      # cross-surface acknowledgement")
   state/                              # zustand stores (no React in here)
     connection-store.ts               # profile, session, connection health
     list-store.ts                     # sessions list (from list SS E)
@@ -270,8 +273,9 @@ pattern with an unknown-kind path.
 - **Foreground/background:** streams are closed when the app is not visible and
   reopened on resume with a fresh snapshot. The 60-second gateway lease makes
   "long-lived stream" an illusion anyway, so there is nothing to keep alive in the
-  background. What happens to a stream while backgrounded, and whether a background
-  notification is possible, is ADR 0002 §7 **S5**.
+  background. The background case — including that a self-hosted route gets no
+  alert at all — is decided in [ADR 0006](adr/0006-push-and-ack-sync.md) §2
+  (which settles ADR 0002 §7 **S5**).
 - **Route switch:** ending a route aborts in-flight requests, closes streams,
   clears the projections (they belong to a different computer), and keeps only what
   the user explicitly saved.
@@ -296,7 +300,7 @@ pattern with an unknown-kind path.
 
 | # | Question | Owner / trigger |
 |---|---|---|
-| 1 | Push notifications (APNs/FCM) — the relay has none today (`docs/mobile.md`, "Non-goals (v1)") | Needs a relay-side change first; out of scope for v1, designed for in the connection module |
+| 1 | ~~Push notifications (APNs/FCM) — the relay has none today (`docs/mobile.md`, "Non-goals (v1)")~~ **Answered:** the design is [ADR 0006](adr/0006-push-and-ack-sync.md) — push on the Radient route, no push on a self-hosted one, unread state staying on the machine | The relay-side and cloud-side slices are in [`docs/push-plan.md`](push-plan.md) |
 | 2 | Answering approvals on *terminal* sessions — the relay deliberately refuses today | Relay contract change; the app should render the "answer at the terminal" state faithfully until then |
 | 3 | Sending images (the relay serves them, does not accept them) | Depends on the relay's upload path |
 | 4 | Tablet and foldable layouts | Design work after the phone layout is settled; the routing model already supports it |

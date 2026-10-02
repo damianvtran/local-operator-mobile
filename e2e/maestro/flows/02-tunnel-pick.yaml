@@ -1,0 +1,53 @@
+# F-2/F-4 — pick a computer.
+#
+# The tunnel list comes from the discovery API and the *reachability* comes from a
+# probe: ADR 0002 and `docs/relay/tunnel-edge.md` §4 are explicit that
+# `status: active` means the cloud route is provisioned, never that the machine is
+# awake. So the flow asserts both facts separately, because a screen that shows one
+# as the other is the defect that mapping warns about.
+#
+# Today the computers screen exists as a root and an empty state only: the tunnel
+# store is not implemented, so every row-level assertion is blocked on the
+# identifiers the rows would carry.
+#
+# IDENTIFIERS: every `id:` in this file is in `src/ui/a11y.ts` — the scaffold's
+# own contract, which `src/ui/a11y.e2e.test.ts` checks these flows against. A step
+# the app cannot serve yet is a commented marker, not a selector:
+#
+#     Marker spelling: `# BLOCKED: needs <the-identifier> from <the-screen>`
+#
+# The marker names the identifier a step waits on and the screen that would own
+# it, so the gap is visible in review and the test can require that every marked
+# id is genuinely one the app does not render. An invented selector would fail on
+# the first assertion and read as a flaky flow.
+#
+# CI-only: needs a booted simulator or emulator and an app build (ADR 0003).
+appId: ${APP_ID}
+name: "F-2 pick a computer"
+env:
+  APP_ID: com.radient.localoperator.mobile
+  TUNNEL_HOST: 0123456789abcdef0123456789abcdef-lop.example.invalid
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: "computers-screen"
+    timeout: 15000
+- assertVisible:
+    id: "computers-empty"
+- takeScreenshot: "02-00-computers-empty"
+# Rows: the discovery list is not implemented, so the row identifiers and their two
+# separate facts (provisioned, reachable) are not rendered yet.
+# BLOCKED: needs computer-row-<host> from computers
+# - assertVisible:
+#     id: "computer-row-${TUNNEL_HOST}"
+# BLOCKED: needs computer-row-status-<host> from computers
+# - assertVisible:
+#     id: "computer-row-status-${TUNNEL_HOST}"
+# BLOCKED: needs computer-row-reachability-<host> from computers
+# - assertVisible:
+#     id: "computer-row-reachability-${TUNNEL_HOST}"
+# BLOCKED: needs computer-selected-marker from computers
+# - assertVisible:
+#     id: "computer-selected-marker"

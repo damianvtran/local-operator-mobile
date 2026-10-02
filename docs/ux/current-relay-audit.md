@@ -172,6 +172,15 @@ verdict. IDs (`R1…`) are referenced from `flows.md` and `principles.md`.
   "shows the wait and says so". This is the top reason people open a
   remote-control app (competitive-research §9.3). Not fixable client-side; the
   native app must state it plainly and the backlog should track the protocol.
+  > *Still true as written — this finding is approvals-worded.* Once the relay
+  > publishes the `asks` field, the app stops applying its terminal-only rule to
+  > **asks** (a new decision, not a supersession of this finding): a `tui`-hosted
+  > session's asks become answerable from the phone, bounded at 60 s, and are
+  > refused only when no owner process is live. Note that `feature-map.md` §5 item
+  > 3 already records this boundary as stale for both kinds on a live-owner
+  > session (`mobile/tui_handle.py:1212` `approval_answer`, `:1233` `ask_answer`
+  > at the pin); reconciling that is left to a documentation pass. See
+  > [ADR 0005](../adr/0005-queued-asks.md) §6.
 - **R11 - MINOR: stop and steer share one button slot** that morphs with turn
   state (`aria-label` changes send→steer→stop). The queue is invisible
   (competitors: Replit's queue drawer). No confirmation on stop.
