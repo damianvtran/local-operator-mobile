@@ -444,6 +444,77 @@ export const REGION = {
 } as const;
 
 /**
+ * The id the app renders when a surface is in a NAMED state, keyed
+ * `<subject>/<state>`.
+ *
+ * Why this lives here rather than in the audit harness: deciding whether a
+ * captured frame is EVIDENCE for the state it declares means knowing which id
+ * the app leaves behind in that state, and a table of those names kept in
+ * `tools/` is a second vocabulary beside the app's. That has already been paid
+ * for once — the harness asked for `sessions-populated`, the app had never
+ * rendered any such thing, and every relay-backed cell was reported NOT
+ * MEASURABLE while the tool itself looked healthy (`docs/e2e/README.md`). So the
+ * app declares its state markers here and `tools/lib/readiness.ts` IMPORTS them;
+ * the harness keeps the cell vocabulary (`S4` is the matrix's language, never
+ * the app's).
+ *
+ * Two rules for an entry, and both are load-bearing:
+ *
+ *  - a marker must be present in ONLY the state it names. A screen root, a
+ *    container or a header control is on screen in every state, so declaring one
+ *    makes the affirmative check vacuous. Every value below was read out of the
+ *    rendered DOM of the state it names AND of its neighbours.
+ *  - a value that ends in `-` is a FAMILY PREFIX: it is satisfied by any id that
+ *    starts with it (`session-row-` is "the list has at least one row", which is
+ *    exactly the claim `populated` makes).
+ *
+ * A state with NO entry is a DECLARED GAP, not a name to invent: the app renders
+ * nothing that affirms it yet, and the harness reports the cell as not
+ * measurable by name rather than accepting a frame that could not say. `session`
+ * and `subagent` are deliberately absent even where `EMPTY` has a value: the
+ * session view lands with its own stream, and a marker its placeholder happens to
+ * render today would measure the placeholder.
+ */
+export const STATE_MARKER: Record<string, Record<string, string>> = {
+	sessions: {
+		empty: EMPTY.sessions,
+		populated: "session-row-",
+		"degraded-listing": CONTROL.sessionsDegradedBanner,
+	},
+	past: {
+		empty: EMPTY.past,
+		populated: "past-row-",
+	},
+	computers: {
+		/** The refusal surface, which the set-up path does not render: the one
+		 *  state of this screen the relay can drive — the computer LIST comes from
+		 *  Radient's account API (`src/connection/discovery.ts`), which the mock
+		 *  relay does not serve, so the other cells are declared gaps. */
+		error: SURFACE.refusalSurface,
+	},
+};
+
+/** The marker the app declares for `<subject>/<state>`, or `null` for a gap. */
+export const stateMarkerFor = (subject: string, state: string): string | null =>
+	STATE_MARKER[subject]?.[state] ?? null;
+
+/**
+ * Whether an id satisfies a marker: an exact match, or — for a family prefix
+ * (one that ends in `-`) — an id that starts with it AND is longer than the prefix
+ * itself. The length clause is the whole check: `"session-row-"` starts with
+ * `"session-row-"`, so without it the family's own declaration would satisfy the
+ * rule and an empty list would pass as a populated one. It is the same rule
+ * `isKnownIdentifier` applies to a family member above.
+ */
+export const markerMatches = (
+	marker: string,
+	ids: readonly string[],
+): boolean =>
+	marker.endsWith("-")
+		? ids.some((id) => id.startsWith(marker) && id.length > marker.length)
+		: ids.includes(marker);
+
+/**
  * Every static identifier the app can render, flat, as a Node script reads it.
  *
  * This file is the single source of truth for the identifier contract, and it is

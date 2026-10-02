@@ -41,8 +41,13 @@ import { bool, csv, num, parseArgs, str } from "../lib/args.ts";
 import type { CdpPage } from "../lib/cdp.ts";
 import { sleep } from "../lib/cdp.ts";
 import { launchChrome } from "../lib/chrome.ts";
-import { readinessProblems, seedQuery } from "../lib/readiness.ts";
+import {
+	markerGapProblem,
+	readinessProblems,
+	seedQuery,
+} from "../lib/readiness.ts";
 import { serveDir } from "../lib/static-server.ts";
+import { DEFAULT_PASSWORD } from "../mock-relay/relay.ts";
 import { renderGallery } from "./gallery.ts";
 import {
 	ALL_DEVICES,
@@ -50,6 +55,7 @@ import {
 	DEVICES,
 	type DeviceProfile,
 	MEASURE_PROBE,
+	PENDING_CELLS,
 	PRE_PAINT_PROBE,
 	READINESS_PROBE,
 	SCALES,
@@ -463,6 +469,26 @@ async function captureCell(
 	offConsole();
 	offException();
 
+	// A DECLARED SKIP, decided here because this is where both halves are known: the
+	// app declares no marker for the cell's state (`markerGapProblem`, the only
+	// problem the gap produces) AND `matrix.ts` names the dependency the cell waits
+	// on. Both are required — a cell whose state the app DOES mark, and whose frame
+	// lacks the marker, is a real failure and must never be swallowed by an entry in
+	// `PENDING_CELLS`.
+	const gap = markerGapProblem(cell.screen, cell.state);
+	const pendingOwner = PENDING_CELLS[cell.cell] ?? null;
+	// The claim is honoured on exactly one condition: the app declares NO marker for
+	// this cell's state. A cell whose marker the app declares — and whose frame does
+	// not show it — is never a skip, which is what stops a marker that stopped
+	// rendering from hiding behind an entry in `PENDING_CELLS`. The cell's other
+	// readiness problems are still recorded (and still reported per cell): they are
+	// simply not counted as a *measurement* gap, because no frame of this cell was
+	// ever going to be evidence.
+	const declaredSkip =
+		pendingOwner !== null && gap !== null
+			? { cell: cell.cell, owner: pendingOwner, reason: gap }
+			: null;
+
 	return {
 		name: frameName(cell),
 		cell: cell.cell,
@@ -482,6 +508,7 @@ async function captureCell(
 		readiness,
 		readinessProblems,
 		ready: readinessProblems.length === 0,
+		declaredSkip,
 		consoleErrors,
 	};
 }
@@ -1007,9 +1034,21 @@ export interface CaptureOptions {
 	/**
 	 * The web-only seed hook's parameters (docs/e2e/README.md, option 3). The harness
 	 * puts them on the page; the app side that would adopt them is not built, so a cell
-	 * they do not reach still fails by name.
+	 * they do not reach still fails by name. `runCapture` DEFAULTS both for a `--relay`
+	 * run — the served origin and the mock relay's own default password — because a seed
+	 * naming the relay's own origin is refused by the browser before the app can
+	 * authenticate, and that run looks green while every frame is a fallback screen.
 	 */
 	seed: { route: string | null; password: string | null };
+	/**
+	 * Do not seed the page at all, even though a relay was given.
+	 *
+	 * There is no other way to ask for "a live relay the page was never pointed at": an
+	 * empty `--seed-route` is what means "use the default". `verify` needs exactly that
+	 * state to prove the relay-reach rule still refuses a cell the app never asked the
+	 * relay about.
+	 */
+	noSeed?: boolean;
 }
 
 /** One captured cell and everything the audit and the gallery read off it. */
@@ -1032,6 +1071,14 @@ export interface CaptureRecord {
 	readiness: Readiness | null;
 	readinessProblems: string[];
 	ready: boolean;
+	/**
+	 * Set when the cell's state is a DECLARED SKIP: the app declares no marker for it
+	 * AND `matrix.ts` `PENDING_CELLS` names the dependency it waits on. A skipped cell
+	 * is NOT evidence and NOT a finding: it is excluded from `notMeasurableCells` and
+	 * reported with its owner. Its own `readinessProblems` are still recorded, so the
+	 * per-cell detail is not lost — it is only not counted as a measurement gap.
+	 */
+	declaredSkip: { cell: string; owner: string; reason: string } | null;
 	consoleErrors: string[];
 	/**
 	 * Whether the text-scale dimension was LIVE for this frame's cell, and the
@@ -1107,6 +1154,38 @@ export async function runCapture(options: CaptureOptions) {
 		port: options.port ?? 0,
 		proxy: options.relay,
 	});
+	/*
+	 * WHICH ORIGIN the seed names, and why it is not the relay's.
+	 *
+	 * The page is served from `server.url` and the relay is proxied there, so the
+	 * app's configured route IS this origin. Seeding the mock relay's own origin
+	 * instead makes every relay request cross-origin, the mock sends no CORS headers,
+	 * and the browser rejects the fetch before the app can authenticate — measured:
+	 * the app renders "The relay could not be reached" and EVERY relay-backed cell is
+	 * a fallback screen while the seed parameters look correct. That failure is worth
+	 * a default rather than a paragraph, because it is silent: the run is green, the
+	 * frames exist, and nothing in them is evidence.
+	 *
+	 * `--seed-route` therefore OVERRIDES; omitted, a relay run seeds the served origin
+	 * (and a run with no `--relay` seeds nothing — the relay paths are not proxied, so
+	 * the origin has no relay behind it). The password defaults to the mock relay's own
+	 * documented constant for the same reason: a seeded run without one renders an
+	 * unauthenticated page and every cell fails for the credential rather than the route.
+	 */
+	const seed = options.noSeed
+		? { route: null, password: null }
+		: {
+				route:
+					options.seed.route ??
+					(options.relay === undefined ? null : server.url),
+				password: options.seed.password ?? DEFAULT_PASSWORD,
+			};
+	if (options.seed.route !== null && options.relay === undefined) {
+		console.log(
+			"note: --seed-route was given without --relay, so the relay's paths are NOT " +
+				"proxied at the seed's origin; the app will report the route as unreachable.",
+		);
+	}
 	const chrome = await launchChrome({ profile: options.profile });
 	const tokens = canvasTokens(options.tokens);
 	const records: CaptureRecord[] = [];
@@ -1169,7 +1248,7 @@ export async function runCapture(options: CaptureOptions) {
 					outDir,
 					settleMs: options.settleMs,
 					relayReach,
-					seed: options.seed,
+					seed,
 				}),
 				options.cellTimeoutMs,
 				`cell ${cell.cell} on ${cell.device}/${cell.theme}/${cell.scale.id}`,
@@ -1303,7 +1382,17 @@ export async function runCapture(options: CaptureOptions) {
 	// that produced one identical image is the specific failure this guard exists
 	// for: before the relay was proxied, five `S4` states rendered the
 	// unauthenticated screen and the matrix looked complete.
-	const unready = records.filter((record) => !record.ready);
+	//
+	// A DECLARED SKIP is pulled out of that set on purpose: its state is a named,
+	// owned dependency the app marks with nothing yet, so its frame was never going
+	// to be evidence and counting it as a measurement GAP would report a known gap as
+	// an instrument failure. It is still reported, with its owner, and it still has no
+	// marker — `PENDING_CELLS` cannot make a working cell look unmeasured, because the
+	// skip is honoured only while the app declares no marker for the state.
+	const unready = records.filter(
+		(record) => !record.ready && record.declaredSkip === null,
+	);
+	const skipped = records.filter((record) => record.declaredSkip !== null);
 	const readinessProblems = unready.map(
 		(record) => `${record.name}: ${record.readinessProblems.join("; ")}`,
 	);
@@ -1368,6 +1457,17 @@ export async function runCapture(options: CaptureOptions) {
 		identicalStates: identicalCells,
 		unreadyCells: unready.map((record) => record.name),
 		/**
+		 * Cells whose state is a named, owned dependency rather than a failure.
+		 *
+		 * Separate from `notMeasurableCells` because the two answer different
+		 * questions: a not-measurable cell is a frame that cannot be evidence, and its
+		 * reasons are findings; a declared skip is a state this head does not have yet,
+		 * and its reason is a ticket. The audit reads this list to mark the cell's rows
+		 * BLOCKED-with-an-owner instead of counting them as a gap.
+		 */
+		declaredSkips: skipped.map((record) => record.declaredSkip),
+		declaredSkipCells: skipped.map((record) => record.name),
+		/**
 		 * Per-cell measurability, by name, in one place.
 		 *
 		 * A clean-looking frame matrix is NOT coverage, and the difference has to be
@@ -1383,10 +1483,16 @@ export async function runCapture(options: CaptureOptions) {
 			cell: record.name,
 			why: record.readinessProblems,
 		})),
-		coverageNote:
+		coverageNote: [
 			unready.length === 0
 				? "every captured cell reached the state it declares"
 				: `${unready.length} of ${records.length} cells did NOT reach the state they declare: their frames show the app's fallback screen and must not be read as evidence about those states`,
+			skipped.length === 0
+				? null
+				: `${skipped.length} more are DECLARED SKIPS — states this head does not render yet, each with its owner in 'declaredSkips'`,
+		]
+			.filter((line): line is string => line !== null)
+			.join("; "),
 		textScaleCheck: scaleCheck,
 		postPaintReflow: reflow,
 		records,
@@ -1424,6 +1530,15 @@ export async function runCapture(options: CaptureOptions) {
 		console.log(
 			`NOT MEASURABLE: ${unready.length} of ${records.length} cells — their frames are the app's fallback screen, not the declared state`,
 		);
+	}
+	if (skipped.length > 0) {
+		console.log(
+			`DECLARED SKIPS (${skipped.length}) — states this head does not render, each with an owner:`,
+		);
+		for (const entry of skipped)
+			console.log(
+				`  - ${String(entry.declaredSkip?.cell)}: ${String(entry.declaredSkip?.owner)}`,
+			);
 	}
 	if (identicalCells.length) {
 		console.log(
@@ -1561,7 +1676,13 @@ if (isMain) {
 				"  --seed-route <url>  point a web build at one relay by putting the app's own",
 				"  --seed-password <pw> parameters (lo-relay, lo-relay-password, lo-relay-insecure)",
 				"                      on every page. #11's webRelayOverride() reads them, so a",
-				"                      seeded run is how a relay-backed cell becomes measurable",
+				"                      seeded run is how a relay-backed cell becomes measurable.",
+				"                      DEFAULTS for a --relay run: the route is the origin the build",
+				"                      is served from (the relay is proxied there; the mock's own",
+				"                      origin is cross-origin and its fetches are refused), and the",
+				"                      password is the mock relay's DEFAULT_PASSWORD.",
+				"  --no-seed           do not seed the page at all, even with --relay: the state a",
+				"                      run needs to prove the app was NOT pointed at the relay",
 				"  --relay <url>       mock relay base URL; supplies the scenario list and session ids",
 				"  --cells <a/b,...>   explicit screen/state cells (default: whatever the relay declares)",
 				"  --cell-timeout <s>  hard bound per cell; a cell that exceeds it FAILS with that reason (default 45)",
@@ -1614,6 +1735,7 @@ if (isMain) {
 			route: str(flags, "seed-route", "") || null,
 			password: str(flags, "seed-password", "") || null,
 		},
+		noSeed: bool(flags, "no-seed"),
 		// Bounds, in the CLI because CI's job timeout is not this tool's business:
 		// a cell that never settles must fail that cell, and a run that would outlive
 		// its job must stop accounting for itself and write what it has.

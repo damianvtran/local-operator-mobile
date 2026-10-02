@@ -428,11 +428,21 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 
 	add(
 		"degraded",
-		"The session record is fresh but its runtime is unreachable: `subagents_running` is null while the row stays active (the SIGSTOP probe's signal).",
-		["S4/degraded", "S5/degraded"],
+		"The session record is fresh but its runtime is unreachable: the row carries its own receipt (`degraded: true`, the signal a phone-observed SIGSTOP produces) AND `subagents_running` is null while the row stays active.",
+		["S4/degraded-row", "S5/degraded"],
 		() => ({
 			projections: { [liveIdle.session_id]: structuredClone(liveIdle) },
-			rowOverrides: { subagents_running: null, subagents_queued: null },
+			// BOTH signals. The app's row state is the per-row receipt
+			// (`SessionSummary.degraded`); nulling the subagent counts is the relay's
+			// older "I cannot vouch for this" signal and is what the two-sample
+			// comparison reads. Serving only the nulls left the row state unreachable:
+			// the app rendered the plain populated row and the cell was measured as
+			// `populated`.
+			rowOverrides: {
+				subagents_running: null,
+				subagents_queued: null,
+				degraded: true,
+			},
 			stream: { mode: "silent" },
 			// A command to an unreachable runtime sits until the relay's reply
 			// window expires, then answers 504.
@@ -443,7 +453,7 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 	add(
 		"degraded-listing",
 		'The durable catalogue could not be walked: `degraded: ["sessions"]` with rows still present.',
-		["S4/degraded"],
+		["S4/degraded-listing"],
 		() => ({
 			projections: { [liveIdle.session_id]: structuredClone(liveIdle) },
 			listOverrides: { degraded: ["sessions"] },
@@ -452,8 +462,8 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 
 	add(
 		"degraded-attention",
-		'The completion-receipt store could not be read: `degraded: ["attention"]`.',
-		["S4/degraded"],
+		'The completion-receipt store could not be read: `degraded: ["attention"]`. Same cell as `degraded-listing` — the app renders the same banner for both, because the reader\'s question ("is this list complete?") is the same one.',
+		["S4/degraded-listing"],
 		() => ({
 			projections: { [liveIdle.session_id]: structuredClone(liveIdle) },
 			listOverrides: { degraded: ["attention"] },
@@ -463,7 +473,7 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 	add(
 		"wedged",
 		"A frozen runtime: the row reports real subagent counts until HEARTBEAT_TIMEOUT_S (45 s) has elapsed, then flips to null while `section` stays active. The two-sample comparison is the only signal.",
-		["S4/degraded", "S13/degraded"],
+		["S4/degraded-row", "S13/degraded"],
 		() => ({
 			projections: { [liveIdle.session_id]: structuredClone(liveIdle) },
 			// Before the timeout the registration is still vouched for.

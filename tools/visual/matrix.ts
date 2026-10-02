@@ -306,7 +306,7 @@ export const SCREENS: Record<string, { label: string; path: string }> = {
 	"S1-welcome": { label: "Welcome (first run)", path: "/welcome" },
 	S2: { label: "Set up a computer", path: "/tunnels" },
 	S3: { label: "Computers", path: "/tunnels" },
-	"S3-custom": { label: "Custom URL + password", path: "/custom" },
+	"S3-custom": { label: "Own tunnel + password", path: "/own-tunnel" },
 	S4: { label: "Sessions list", path: "/" },
 	S5: { label: "Session", path: "/session/{sessionId}" },
 	S6: { label: "Subagent", path: "/session/{sessionId}/agent/{jobId}" },
@@ -393,9 +393,12 @@ export const PRE_PAINT_PROBE = `
 export const SCREEN_ROOTS: Record<string, string> = {
 	S1: "sign-in-screen",
 	"S1-welcome": "welcome-screen",
-	S2: "custom-route-screen",
+	// One screen, three states: `/tunnels` renders `computers-screen` while it is
+	// setting a computer up, listing them, or refusing. The three cells differ by
+	// their STATE marker, not by their root.
+	S2: "computers-screen",
 	S3: "computers-screen",
-	"S3-custom": "custom-route-screen",
+	"S3-custom": "own-tunnel-screen",
 	S4: "sessions-screen",
 	S5: "session-screen",
 	S6: "subagent-screen",
@@ -406,6 +409,65 @@ export const SCREEN_ROOTS: Record<string, string> = {
 	S11: "settings-screen",
 	S13: "computers-screen",
 	S14: "welcome-screen",
+};
+
+/**
+ * Cells whose state the app cannot render yet, and the work each one waits on.
+ *
+ * A DECLARED SKIP is not a silent hole and not a pass: it is the named, owned
+ * dependency that keeps "we could not measure this" from being reported as "this
+ * cell is broken". It is honoured by the capture harness ONLY while the app declares
+ * no marker for the cell's state (`markerGapReason`) — the moment the app declares a
+ * marker, the claim is ignored and a frame that does not show it is a real failure.
+ * So a marker that stops rendering can never hide behind an entry here, and an entry
+ * here cannot outlive the app's gap by making a working cell look unmeasured.
+ *
+ * Keep every entry to a ticket or a named owner plus the fact that is missing; a bare
+ * "TO DO" is the thing this table exists to avoid.
+ */
+export const PENDING_CELLS: Record<string, string> = {
+	/* The 21 session-view cells: the session route is a placeholder on this head. */
+	...Object.fromEntries(
+		[
+			"S5/loading",
+			"S5/populated",
+			"S5/populated-long",
+			"S5/scroll",
+			"S5/empty",
+			"S5/streaming",
+			"S5/aborted",
+			"S5/queued",
+			"S5/pending-approval",
+			"S5/pending-ask",
+			"S5/rich-rows",
+			"S5/subagents",
+			"S5/degraded",
+			"S5/error",
+			"S6/populated",
+			"S6/populated-long",
+			"S8/approval",
+			"S8/ask",
+			"S8/ask-multi",
+			"S8/populated-long",
+			"S9/populated",
+		].map((cell) => [cell, "PR #12 (feat/screens-session): the session route"]),
+	),
+	/* The computers cells: the list is Radient's account API, not the relay. */
+	...Object.fromEntries(
+		["S2/empty", "S3/empty", "S3/populated", "S13/loading", "S13/degraded"].map(
+			(cell) => [
+				cell,
+				"the computer list is Radient's account API (src/connection/discovery.ts /v1/tunnels), which the mock relay does not serve",
+			],
+		),
+	),
+	/* The list states the app renders without an identifier of their own. */
+	"S4/loading":
+		"the list renders skeletons with no identifier while its first frame is in flight",
+	"S4/ended":
+		"the ended row's receipt (ListRow's `ended`) changes copy and colour but carries no identifier",
+	"S4/degraded-row":
+		"the degraded row's receipt (ListRow's `degraded`) renders the copy 'not answering' but carries no identifier",
 };
 
 /** Read the resolved theme/scale and the app's own canvas colour, per frame. */
