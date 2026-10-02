@@ -23,6 +23,15 @@
  * found: the scaffold genuinely could not scale text to 200% and the run exited
  * 0. `--allow-blocked` restores 0 for local exploration and is never used in CI.
  *
+ * A run that measured NOTHING is separated from all of the above, because it was
+ * the one outcome the report could not express: every row BLOCKED printed as
+ * `0 FAIL, 160 BLOCKED`, and `0 FAIL` reads as a clean build in a PR comment
+ * while no check was ever evaluated. It gets its own verdict
+ * (`NO-MEASUREMENT`), an explicit `measured` count in the summary, a stderr
+ * block naming the capture's own reasons, and exit 3 even under
+ * `--allow-blocked` — a gate that measured nothing did not have "a check that
+ * could not measure"; it had no reading at all.
+ *
  * COVERAGE, stated rather than implied: this tool machine-checks the rubric's
  * mechanical half — U-01…U-10 — and nothing else. U-11…U-17 are machine-defined
  * in the rubric and NOT implemented here; §4-§7 are manual by the rubric's own
@@ -579,6 +588,35 @@ export async function runAudit(options: AuditOptions) {
 		(r) =>
 			r.blockedKind === "unmeasurable" || r.blockedKind === "state-not-reached",
 	);
+	/**
+	 * Rows the audit actually EVALUATED — anything that is not BLOCKED.
+	 *
+	 * This is the number the gate is really about, and it was the one number the
+	 * report did not carry: a run whose every row was BLOCKED printed `0 FAIL,
+	 * 160 BLOCKED`, and "0 FAIL" reads as a clean build in a PR comment and in CI
+	 * while the audit measured nothing at all. Counting it explicitly is what lets
+	 * the run say "we measured nothing" instead of leaving a reader to infer it.
+	 */
+	const measured = rows.filter((row) => row.verdict !== "BLOCKED").length;
+	/**
+	 * Why cells were not measurable, straight from the capture's own sentences.
+	 *
+	 * The manifest is the only place that knows whether a cell was refused for a
+	 * missing marker, a route it never reached, or a relay it never talked to, and
+	 * a zero-measurement run has to say WHICH — otherwise the reader sees a wall of
+	 * BLOCKED and blames the app for what may be a naming disagreement between the
+	 * app's identifiers and the harness's marker rule.
+	 */
+	const notMeasurableCell = Array.isArray(manifest.notMeasurableCells)
+		? manifest.notMeasurableCells
+		: [];
+	const unmeasurableReasons = notMeasurableCell.flatMap((entry) => {
+		const cell = asRecord(entry);
+		const why = Array.isArray(cell?.why) ? cell.why : [];
+		return why
+			.filter((reason): reason is string => typeof reason === "string")
+			.map((reason) => `${String(cell?.cell ?? "?")}: ${reason}`);
+	});
 	const report: AuditReport = {
 		generatedAt: new Date().toISOString(),
 		buildDir: meta.buildDir,
@@ -598,10 +636,20 @@ export async function runAudit(options: AuditOptions) {
 		summary: Object.fromEntries([...summary.entries()].sort()),
 		failures: failures.length,
 		blocked: blocked.length,
+		/** Rows that were not BLOCKED: `0` means the audit measured nothing. */
+		measured,
 		/** BLOCKED rows that could not measure something they should have. */
 		unmeasurable: gaps.length,
+		/** The capture's own per-cell reasons, carried so a zero-measurement run can name the cause. */
+		unmeasurableReasons,
 		verdict:
-			failures.length > 0 ? "FAIL" : gaps.length > 0 ? "INCOMPLETE" : "PASS",
+			failures.length > 0
+				? "FAIL"
+				: measured === 0
+					? "NO-MEASUREMENT"
+					: gaps.length > 0
+						? "INCOMPLETE"
+						: "PASS",
 	};
 	mkdirSync(outDir, { recursive: true });
 	writeFileSync(
@@ -675,8 +723,12 @@ export interface AuditReport {
 	>;
 	failures: number;
 	blocked: number;
+	/** Rows the audit evaluated (anything not BLOCKED). `0` = it measured nothing. */
+	measured: number;
 	/** BLOCKED rows that could not measure something they should have. */
 	unmeasurable: number;
+	/** The capture's own sentence per not-measurable cell, for the zero-measurement report. */
+	unmeasurableReasons: string[];
 	verdict: string;
 }
 
@@ -691,6 +743,10 @@ export function renderMarkdown(report: AuditReport) {
 			(report.palette.reason ? ` · (${report.palette.reason})` : ""),
 		`- **verdict: ${report.verdict}** — ${report.failures} FAIL, ${report.blocked} BLOCKED ` +
 			`(${report.unmeasurable} of them unmeasurable, the rest not-applicable)`,
+		`- **rows measured: ${report.measured} of ${report.rows.length}**` +
+			(report.measured === 0
+				? " — the audit measured NOTHING. A run with no measurement is not a run, and 0 FAIL here means no check was ever evaluated."
+				: ""),
 		"",
 		"This tool machine-checks the rubric's mechanical half and nothing else:",
 		`- machine-checked: **${report.coverage.machineChecked.join(", ")}**`,
@@ -720,6 +776,19 @@ export function renderMarkdown(report: AuditReport) {
 		lines.push(
 			"Every check passed on every cell. See `audit-report.json` for the measurements.",
 		);
+	} else if (report.measured === 0) {
+		// A zero-measurement run is not a table of findings; it is a statement that
+		// the instrument could not speak, and it has to read that way.
+		lines.push(
+			`**The audit measured nothing.** All ${report.rows.length} rows are BLOCKED, so there is no measurement`,
+			"here to read as evidence — `0 FAIL` above is the absence of a reading, not a passing one.",
+		);
+		if (report.unmeasurableReasons.length > 0) {
+			lines.push("", "Why the capture could not reach them:", "");
+			for (const reason of report.unmeasurableReasons)
+				lines.push(`- ${reason}`);
+		}
+		lines.push("");
 	} else {
 		lines.push(
 			"| check | screen | state | device | theme | scale | verdict | measured | detail | frame |",
@@ -789,18 +858,37 @@ if (isMain) {
 		throw error;
 	}
 	console.log(
-		`audit: ${report.cells} cells, ${report.rows.length} check rows, ${report.failures} FAIL, ` +
-			`${report.blocked} BLOCKED (${report.unmeasurable} unmeasurable) · ` +
+		`audit: ${report.cells} cells, ${report.rows.length} check rows, ${report.measured} measured, ` +
+			`${report.failures} FAIL, ${report.blocked} BLOCKED (${report.unmeasurable} unmeasurable) · ` +
 			`palette ${report.palette.loaded ? "loaded" : "MISSING"}`,
 	);
 	if (blindUnmatched.size > 0) {
 		// A blind that silences nothing proves nothing, so it fails rather than
-		// letting the mutation self-test read as a pass it did not earn.
+		// letting the mutation self-test read as a pass it did not earn. It is
+		// checked before the zero-measurement rule below because a blind that
+		// matched nothing is a broken INSTRUMENT, not a reading about the app.
 		console.error(
 			`audit: --blind matched no row: ${[...blindUnmatched].join(", ")}. ` +
 				"The rule name or its sub-rule spelling is wrong, or the check produced no row.",
 		);
 		process.exit(2);
+	}
+	if (report.measured === 0) {
+		// Loud, and ahead of every other verdict: a run that evaluated no check must
+		// not report itself as a run with a gap, and `--allow-blocked` (a local
+		// convenience for "a check could not measure") must not turn "measured
+		// nothing" into 0.
+		console.error(
+			`audit: MEASURED NOTHING — 0 of ${report.rows.length} rows were evaluated; all ${report.blocked} are BLOCKED. ` +
+				"This is not a pass and not a gap: the gate could not speak.",
+		);
+		for (const reason of report.unmeasurableReasons.slice(0, 5))
+			console.error(`  - ${reason}`);
+		if (report.unmeasurableReasons.length > 5)
+			console.error(
+				`  … ${report.unmeasurableReasons.length - 5} more, in audit-report.md`,
+			);
+		process.exit(3);
 	}
 	if (report.failures > 0) process.exit(1);
 	// A run with a gap is not a pass: the scaffold's un-scalable text produced a

@@ -114,14 +114,28 @@ export async function serveDir(
 			res.end("no proxy upstream configured");
 			return;
 		}
-		// Headers are passed through except `host`, which must name the upstream;
-		// the cookie and `x-radient-*` headers the relay reads are all preserved,
+		// Headers are passed through except two, and both exceptions exist because
+		// the proxy is a *server-side* hop rather than a browser one:
+		//
+		//  - `host` must name the upstream, not the proxy;
+		//  - `origin` must be RE-WRITTEN, not forwarded. The browser sets it to this
+		//    proxy's own origin (that is the URL it called), and forwarding that
+		//    verbatim makes a same-origin request arrive at the relay as a FOREIGN
+		//    one — so the relay's CSRF rule refuses every mutation and `POST /login`
+		//    can never succeed, which is a relay-backed cell that renders the
+		//    degraded screen for a harness reason. The relay's own origin is what
+		//    the hop really is, and the relay allows its own origin (see
+		//    `RelayState.allowedOrigins`).
+		//
+		// The cookie and `x-radient-*` headers the relay reads are all preserved,
 		// which is the point of proxying rather than rewriting.
 		const headers = new Headers();
 		for (const [key, value] of Object.entries(req.headers)) {
-			if (key === "host" || value === undefined) continue;
+			if (key === "host" || key === "origin" || value === undefined) continue;
 			headers.set(key, Array.isArray(value) ? value.join(", ") : value);
 		}
+		if (req.headers.origin !== undefined)
+			headers.set("origin", new URL(upstream).origin);
 		const body =
 			req.method === "GET" || req.method === "HEAD"
 				? undefined
@@ -145,9 +159,21 @@ export async function serveDir(
 			const out = new Uint8Array(await upstreamRes.arrayBuffer());
 			const outHeaders: Record<string, string> = {};
 			upstreamRes.headers.forEach((value, key) => {
-				// Content-length is recomputed by Node; set-cookie is handled below
-				// because its multiple values must not be folded into one header.
-				if (key === "content-length") return;
+				// Three headers must not be copied onto the response, and each for its
+				// own reason:
+				//
+				//  - content-length is recomputed by Node;
+				//  - content-encoding describes the bytes the UPSTREAM sent, but
+				//    `fetch` has already decompressed the body by the time it is read
+				//    here. Forwarding it makes the browser try to un-gzip a plain
+				//    body and fail with ERR_CONTENT_DECODING_FAILED — so `/api/sessions`
+				//    never resolves and EVERY relay-backed cell renders the app's
+				//    degraded screen with no rows, which is a harness fault wearing the
+				//    app's name. Dropped alongside content-length, which is the same
+				//    class of header: one the hop re-derives rather than passes on;
+				//  - set-cookie is handled below, because its multiple values must not
+				//    be folded into one header.
+				if (key === "content-length" || key === "content-encoding") return;
 				outHeaders[key] = value;
 			});
 			const cookies = upstreamRes.headers.getSetCookie?.() ?? [];
