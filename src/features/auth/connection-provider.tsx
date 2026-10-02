@@ -861,6 +861,21 @@ export const ConnectionProvider = ({
 				}
 				/* Nothing of the reader's own to dial: the RECOMMENDED path's turn. */
 				if (!cancelled) await restoreRadient();
+			} catch {
+				/* The cold start is the APP's own setup, so a throw here is a bug in the app
+				 *  and not a fact about the reader's tunnel — which is exactly the `diagnostic`
+				 *  surface, and it is recorded rather than swallowed: an empty "no computer"
+				 *  screen would be a silent lie about a start that failed.
+				 *
+				 *  This used to be the landing place for a rejected credential WRITE, which
+				 *  arrived here as an unhandled rejection — the shape review round 6, M-C
+				 *  named. That rejection is now caught where it happens, in `carryOutRestore`,
+				 *  because it is survivable; this catches what is left, so no path out of the
+				 *  cold start can escape unhandled whatever a future caller adds. */
+				connectionStore.getState().noteFailure({
+					surface: "diagnostic",
+					displayableMessage: "The start-up check could not be completed.",
+				});
 			} finally {
 				/* Settled either way: "nothing saved" is a decision, not a pending read. */
 				if (!cancelled) setColdStartSettled(true);

@@ -143,3 +143,25 @@ export function degradedNote(degraded: readonly string[]): string | null {
 		return "Some conversations could not be read just now, so this list may be missing rows.";
 	return "Recent activity could not be read, so the new markers may be out of date.";
 }
+
+/**
+ * The same three facts, in sentences that survive the one configuration where the
+ * long ones cannot be painted whole.
+ *
+ * At 320 pt with the platform text at 200 % the banner is capped at two lines —
+ * about 52 characters — while the long sentences run 73 to 80, so the reader saw
+ * `! Some conversations …` and nothing more: a warning with neither a cause nor a
+ * consequence, at the one text size where it most needs to be spelled out
+ * (design round 5, D29). Shortening the COPY is the honest fix and the cap is
+ * what keeps the truncation: swapping in a complete sentence loses nothing to a
+ * screen reader, whereas truncating the long one loses the second half of it
+ * there too.
+ *
+ * Each variant keeps its long counterpart's distinction — rows missing, markers
+ * stale, or both — so the three states remain three states in words. */
+export function degradedShortNote(degraded: readonly string[]): string {
+	if (degraded.includes("sessions") && degraded.includes("attention"))
+		return "This list may be incomplete.";
+	if (degraded.includes("sessions")) return "Some rows may be missing.";
+	return "New markers may be stale.";
+}

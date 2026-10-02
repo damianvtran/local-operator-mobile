@@ -14,6 +14,7 @@ import {
 	attentionCount,
 	attentionWord,
 	degradedNote,
+	degradedShortNote,
 	splitSections,
 	staleNote,
 } from "@/features/sessions/session-projection";
@@ -359,22 +360,40 @@ export default function Sessions() {
 			{degradedMessage ? (
 				<Banner
 					tone="warning"
-					message={degradedMessage}
 					/* A listing the relay could not walk is the state where the reader most
-					 *  needs rows on screen, and its sentence is 78 characters: at 200 % on a
-					 *  320 pt phone it measured 260.56 pt of a 356.81 pt band and left ZERO
-					 *  complete rows (QA round 4, Q4-2). Two lines brings the banner to
-					 *  98.19 pt, which leaves the row complete. What the reader SEES at this
-					 *  size is the sentence's opening — "Some conversations …" — so the cap is
-					 *  a visible truncation, taken deliberately in the one configuration where
-					 *  the alternative is no list at all; `numberOfLines` clamps the paint and
-					 *  not the DOM, so the sentence is still read whole by a screen reader. */
+					 *  needs rows on screen, and the sentences run 73–80 characters: at 200 % on a
+					 *  320 pt phone the longest measured 260.56 pt of a 356.81 pt band and left ZERO
+					 *  complete rows (QA round 4, Q4-2). Two lines brings the banner to 98.19 pt,
+					 *  which leaves the row complete — but two lines paint only about 52 of those
+					 *  characters, so the reader saw `! Some conversations …`: a warning naming
+					 *  neither cause nor consequence, at the one text size where it most needs
+					 *  spelling out (design round 5, D29). In this configuration the SHORT sentence
+					 *  is rendered instead — complete in itself, so nothing is lost to a screen
+					 *  reader either — and `maxLines` stays as the structural guard that keeps a
+					 *  future longer sentence from moving the rows again. */
+					message={
+						phoneLargeText ? degradedShortNote(degraded) : degradedMessage
+					}
 					maxLines={phoneLargeText ? 2 : undefined}
 					testID={CONTROL.sessionsDegradedBanner}
 				/>
 			) : null}
 			{staleMessage ? (
-				<Text className="text-body-sm text-ink-dim">{staleMessage}</Text>
+				/* Capped the way the banner is capped, and for the same reason: this line
+				 *  sits in the same band, and the band is what decides how many rows are
+				 *  complete. Unbounded, a `degraded`+`stale` listing would add this line's
+				 *  full height under the banner and push row 1 back out — measured line
+				 *  heights put it at ~530 pt against a band ending at 504 (review round 6,
+				 *  M-B). One line is ~40.6 pt at this size, which lands row 1's foot at
+				 *  ~490 pt: inside the band, by construction rather than by luck. Only in
+				 *  the narrowest configuration — everywhere else the line has room and the
+				 *  sentence is the connection layer's, not this screen's, to shorten. */
+				<Text
+					className="text-body-sm text-ink-dim"
+					numberOfLines={phoneLargeText ? 1 : undefined}
+				>
+					{staleMessage}
+				</Text>
 			) : null}
 		</View>
 	);

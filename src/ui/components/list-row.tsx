@@ -11,6 +11,9 @@ import { countLabel } from "@/lib/format";
 import { ROLE, state } from "@/ui/a11y";
 import { useReducedMotion, useTokenColor } from "@/ui/appearance";
 import { Shimmer } from "@/ui/components/shimmer";
+import { LARGE_TEXT_SCALE } from "@/ui/text-scale";
+import { useTextScale } from "@/ui/text-scale-provider";
+import { TYPE_STEPS } from "@/ui/tokens.gen";
 import {
 	LIST_ROW_INDICATOR_CLASS,
 	listRowClasses,
@@ -87,6 +90,24 @@ export const ListRow = ({
 		streaming,
 		unread,
 	});
+
+	/* The RENDERED scale, not the preference: on the web the platform's factor
+	 *  arrives through the root font size (see `text-scale-provider`). The meta line
+	 *  needs one decision from it, and it is the same predicate the screens use. */
+	const { effectiveScale } = useTextScale();
+	const largeText = effectiveScale > LARGE_TEXT_SCALE;
+
+	/* The model id is a 100 %-text affordance on a row that also carries a path.
+	 *
+	 *  Two strings share this line and at large text neither can be named in half of
+	 *  it: `anthropic/claude-opus-5` alone wants 331 dp at 200 %, which is more than
+	 *  the 232 dp a 320 pt phone gives the whole line, and a head-elided scrap of it
+	 *  beside an equally elided path is the `~/…` + `no…` pair the design round ruled
+	 *  unacceptable (D26). So at large text the line carries the cwd alone and the
+	 *  model is not rendered — the cwd then names a folder in the space two fragments
+	 *  would have shared. A row with no cwd keeps its model at every scale: it has the
+	 *  line to itself. */
+	const modelInMeta = model != null && model !== "" && (!cwd || !largeText);
 
 	/* One word per row, by the precedence `docs/ux/flows.md` § 5 fixes: a decision
 	 * outranks everything, then the receipts. The word is never shown for a live
@@ -187,17 +208,25 @@ export const ListRow = ({
 						 *  least room: at 320 pt with the platform text at 200 % a stacked meta row
 						 *  measured 77.6 pt inside a 182.98 pt row, against 34.8 pt and 97.39 pt for a
 						 *  single-line one, and the second row of the list ended 18 pt below the band
-						 *  (QA round 4, Q4-1). The
-						 *  working directory truncates from the HEAD and the model id from the TAIL,
-						 *  which is what each already asks for; the title's row above keeps its own
-						 *  wrap on purpose (design round 2, D13), because there the marks are
-						 *  unshrinkable and a mark pushed past the pane edge is worse than a second
-						 *  line. */}
+						 *  (QA round 4, Q4-1).
+						 *
+						 *  **One field yields, and it is never the working directory.** Both halves
+						 *  are elided from the HEAD, so what survives is the part that names the
+						 *  thing: the tail of a path, and the model token rather than the
+						 *  `anthropic/` every row of that provider shares. Giving each field a
+						 *  proportional share of the line (what two shrunken `flex: auto` items do)
+						 *  can produce two fragments and no names — measured at 320 pt / 200 % as
+						 *  `~/…` beside `no…`, and in a split column at 100 % as a 26.02 pt model
+						 *  box beside a 236.98 pt path (design round 5, D26). The cwd is the field a
+						 *  reader scans for, so it holds a FLOOR and the model is the one that
+						 *  yields — see `META_PATH_BOX`. The title's row above keeps its own wrap on
+						 *  purpose (design round 2, D13), because there the marks are unshrinkable
+						 *  and a mark pushed past the pane edge is worse than a second line. */}
 						{cwd || model ? (
 							<View className="flex-row items-center gap-2">
 								{cwd ? (
 									<Text
-										style={TITLE_BOX}
+										style={META_PATH_BOX(effectiveScale)}
 										className="text-mono-sm text-ink-dim"
 										numberOfLines={1}
 										ellipsizeMode="head"
@@ -207,12 +236,12 @@ export const ListRow = ({
 								) : (
 									<View className="flex-1" />
 								)}
-								{model ? (
+								{modelInMeta ? (
 									<Text
 										style={META_VALUE_BOX}
 										className="text-mono-sm text-ink-dim"
 										numberOfLines={1}
-										ellipsizeMode="tail"
+										ellipsizeMode="head"
 									>
 										{model}
 									</Text>
@@ -247,16 +276,62 @@ const TITLE_BOX = {
 } as const;
 
 /**
- * The second line's trailing value (the model label): shrinkable, and it may NOT
- *  set the line's width.
+ * How much of the meta line the working directory is GUARANTEED.
+ *
+ * Expressed in CHARACTERS of `text-mono-sm` and converted with the mono face's
+ * own advance (~0.6 em, and the size comes from the token), because "a usable
+ * width" is a number of characters to the reader and not a number of dp: the
+ * same 72 dp holds half as many of them at 200 %. Ten characters is a folder
+ * name — `~/workspace` is eleven — which is the shortest fragment that still
+ * names where the session is.
+ *
+ * **What it costs, measured.** On a 320 pt phone at 100 % the line is 232 dp, so
+ * 72 + 165.61 + 8 exceeds it and the model gives up 14 dp (166 → 152: the
+ * ellipsis eats one character of a 24-character id). Every wider case fits both
+ * whole — 390 pt at 100 % measures 128.39 + 165.61 + 8 = 302 ≤ 318, and a split
+ * pane at 100 % 97.39 + 165.61 + 8 = 271 ≤ 287 — so the cwd's guarantee is paid
+ * for out of the one configuration that has to choose, which is the choice the
+ * design round made (D26). At large text the model is not rendered at all, so
+ * the floor is never what removes it.
+ *
+ * It is the BASIS this box is built from, not a `minWidth`, because of how
+ * flexbox distributes a deficit: `flex-shrink` is weighted by the base size, so
+ * a floor expressed as the basis with `flexShrink: 0` makes the cwd the one item
+ * that does NOT pay for a shortfall. The model pays all of it, which is the
+ * priority the design round asked for — and `flexGrow: 1` gives the cwd every
+ * spare dp when there is no shortfall at all, so the model stays flush right.
+ */
+const META_PATH_FLOOR_CHARS = 10;
+const MONO_CHARACTER_EM = 0.6;
+const META_PATH_FLOOR_DP = Math.round(
+	META_PATH_FLOOR_CHARS * TYPE_STEPS["mono-sm"].size * MONO_CHARACTER_EM,
+);
+
+/**
+ * The working directory's box: the cwd takes the remainder, and it never gives
+ *  up a dp of it (design round 5, D26).
+ *
+ *  `flexShrink: 0` beside `minWidth: 0` is not a contradiction: the floor is the
+ *  BASIS, so the box starts there and grows into spare space, while a zero
+ *  shrink factor keeps every dp of a shortfall off the cwd and on the model. */
+const META_PATH_BOX = (scale: number) => ({
+	flexBasis: META_PATH_FLOOR_DP * scale,
+	flexGrow: 1,
+	flexShrink: 0,
+	minWidth: 0,
+});
+
+/**
+ * The second line's trailing value (the model label): the item that YIELDS.
  *
  *  A model id is one unbreakable word to the browser (`anthropic/claude-opus-5`
  *  has no break opportunity in it), so with the default `min-width: auto` its own
  *  min-content width became the flex line's minimum and pushed the row past the
  *  pane — the 12 pt of horizontal overflow measured inside the list scroller at
  *  320 pt with the platform text at 200 % (design round 3, D18; the same class as
- *  the TITLE_BOX note above). `minWidth: 0` lets it truncate into whatever the
- *  working directory leaves, which is what `numberOfLines={1}` already claimed. */
+ *  the TITLE_BOX note above). `minWidth: 0` lets it take the whole shortfall,
+ *  which — with the cwd at `flexShrink: 0` — is what makes it the field that
+ *  yields rather than the two of them splitting the loss proportionally. */
 const META_VALUE_BOX = { flexGrow: 0, flexShrink: 1, minWidth: 0 } as const;
 
 /** The reserved slot. Same 12×12 box in every state. */
