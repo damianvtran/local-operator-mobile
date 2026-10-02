@@ -10,8 +10,11 @@ import { describe, expect, it } from "vitest";
 import {
 	captureChecksRunnable,
 	captureDiagnostic,
-	captureFailureIsEnvironmental,
+	captureSkipDecision,
 	NEEDS_BROWSER,
+	NEEDS_HOOK_PARSE,
+	NEEDS_NAME_CONTRACT,
+	nameContractUsable,
 	readFirstAvailable,
 } from "../tools/lib/ci-environment.ts";
 
@@ -87,16 +90,79 @@ describe("a capture failure says what the capture said", () => {
 		);
 	});
 
-	it("separates an environment limit from a real failure on the capture's own words", () => {
-		expect(captureFailureIsEnvironmental("no browser found on this host")).toBe(
-			true,
-		);
+	it("reports a spawn-level failure as the capture not starting, not as it printing nothing", () => {
+		// `spawnSync`'s own `error` (E2BIG, ENOMEM, EACCES) is not the child's words. Read as
+		// "exit null; the capture printed nothing at all" it names a cause the child never had.
+		const diagnostic = captureDiagnostic({
+			status: null,
+			error: new Error("spawnSync node E2BIG"),
+		});
+		expect(diagnostic).toContain("could not be started");
+		expect(diagnostic).toContain("E2BIG");
+		expect(diagnostic).not.toContain("printed nothing at all");
+	});
+});
+
+describe("the skip decision needs two facts, not a phrase from the output", () => {
+	// The diagnostic these inputs are shaped as: what `captureDiagnostic` returns for a
+	// capture that printed no manifest path.
+	const diagnostic = (said: string): string =>
+		`the capture produced no manifest path: exit 1; the capture said: ${said}`;
+
+	it("skips only when the resolver found no browser AND the capture says so", () => {
+		const decision = captureSkipDecision({
+			chromeResolved: false,
+			diagnostic: diagnostic(
+				"Error: No Chrome found (a macOS app bundle, a Linux launcher, or CHROME_BIN).",
+			),
+		});
+		expect(decision.skip).toBe(true);
+		expect(decision.reason).toContain(NEEDS_BROWSER);
+		// The capture's own words ride along, so the skip names what the capture saw.
+		expect(decision.reason).toContain("No Chrome found");
+	});
+
+	it("FAILS a missing fixture instead of absorbing it as a skip (F9)", () => {
+		// The classifier this replaced matched a bare `ENOENT` anywhere in the output, so a
+		// missing repository file became an environment limit: a named skip, exit 0, and the
+		// capture group's coverage silently gone.
+		const decision = captureSkipDecision({
+			chromeResolved: false,
+			diagnostic: diagnostic(
+				"Error: ENOENT: no such file or directory, open '…/e2e/fixtures/audit-canary/clean/clean.html'",
+			),
+		});
+		expect(decision.skip).toBe(false);
+		expect(decision.reason).toContain("ENOENT");
+	});
+
+	it("FAILS a launch failure on a host that has a browser, carrying the cause (F10)", () => {
+		// `tools/lib/chrome.ts:203`'s own wording for a browser that will not come up. With
+		// Chrome present the job fails and names that line, rather than being reclassified.
+		const decision = captureSkipDecision({
+			chromeResolved: true,
+			diagnostic: diagnostic(
+				"Error: Chrome never wrote DevToolsActivePort (30 s). stderr: zygote_host_impl_linux.cc(90)] Running as root without --no-sandbox is not supported.",
+			),
+		});
+		expect(decision.skip).toBe(false);
+		expect(decision.reason).toContain("DevToolsActivePort");
+	});
+});
+
+describe("the name contract's decision is a value, not inline code (F15)", () => {
+	it("separates an unreadable file from a readable file that parses to no names", () => {
+		expect(nameContractUsable("", [])).toEqual({
+			usable: false,
+			reason: NEEDS_NAME_CONTRACT,
+		});
+		expect(nameContractUsable("const webRelayOverride = 1;", [])).toEqual({
+			usable: false,
+			reason: NEEDS_HOOK_PARSE,
+		});
 		expect(
-			captureFailureIsEnvironmental("Error: chrome executable doesn't exist"),
-		).toBe(true);
-		expect(
-			captureFailureIsEnvironmental("Error: audit found 4 FAIL rows"),
-		).toBe(false);
+			nameContractUsable("export function webRelayOverride() {}", ["lo-relay"]),
+		).toEqual({ usable: true, reason: "" });
 	});
 });
 

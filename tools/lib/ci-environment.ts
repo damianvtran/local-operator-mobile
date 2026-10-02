@@ -80,7 +80,13 @@ export function captureDiagnostic(result: {
 	signal?: NodeJS.Signals | null;
 	stdout?: string | null;
 	stderr?: string | null;
+	/** `spawnSync`'s own failure (E2BIG, ENOMEM, EACCES). It is not the child's words, so it
+	 *  must not be reported as the child having printed nothing. */
+	error?: Error | null;
 }): string {
+	if (result.error !== undefined && result.error !== null) {
+		return `the capture could not be started: ${result.error.message}`;
+	}
 	const out = `${result.stdout ?? ""}${result.stderr ?? ""}`.trim();
 	const tail = out.length > 800 ? `… ${out.slice(-800)}` : out;
 	const signal =
@@ -100,8 +106,40 @@ export function captureDiagnostic(result: {
  * on `resolveChrome()`, chose "runnable" on a runner that does have Chrome, and left the
  * checks failing with a note nobody could read.
  */
-export function captureFailureIsEnvironmental(diagnostic: string): boolean {
-	return /no (?:browser|chrome)|chrome (?:was )?not found|ENOENT|executable doesn't exist|no such file or directory.*chrome/i.test(
-		diagnostic,
-	);
+export function captureSkipDecision(input: {
+	chromeResolved: boolean;
+	diagnostic: string;
+}): { skip: boolean; reason: string } {
+	// The ONLY skip: two facts, no interpretation of a message. Matching phrases anywhere in
+	// the output absorbed a REAL defect — a missing fixture, a missing module — as a skip and
+	// exited 0, and a skip that can swallow a genuine failure is worse than the red it
+	// replaces because it is invisible. The display case, the DevToolsActivePort case, a
+	// missing fixture, a wrong selector and a broken audit all fail, each naming its cause.
+	// Whether a job should run a capture at all is the workflow's decision (PR #10), not a
+	// classifier's.
+	const agrees =
+		/no (?:browser|chrome)\b|chrome (?:was )?not found|browser was not found/i.test(
+			input.diagnostic,
+		);
+	if (!input.chromeResolved && agrees) {
+		return { skip: true, reason: `${NEEDS_BROWSER} — ${input.diagnostic}` };
+	}
+	return { skip: false, reason: input.diagnostic };
+}
+
+/**
+ * Is the name contract usable? A READABLE file is not enough: a provider whose hook is an
+ * arrow const, or one that was renamed, parses to ZERO names and reproduces
+ * `expected [] got ["lo-relay", …]` verbatim — by code that looks perfectly healthy. An
+ * empty parse is its own named reason, never a mismatch.
+ *
+ * Moved here from `verify.ts` so a wiring defect in the decision cannot hide inline.
+ */
+export function nameContractUsable(
+	source: string,
+	names: readonly string[],
+): { usable: boolean; reason: string } {
+	if (source === "") return { usable: false, reason: NEEDS_NAME_CONTRACT };
+	if (names.length === 0) return { usable: false, reason: NEEDS_HOOK_PARSE };
+	return { usable: true, reason: "" };
 }

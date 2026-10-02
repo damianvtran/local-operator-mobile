@@ -45,12 +45,13 @@ import {
 import {
 	captureChecksRunnable,
 	captureDiagnostic,
-	captureFailureIsEnvironmental,
-	NEEDS_BROWSER,
+	captureSkipDecision,
 	NEEDS_HOOK_PARSE,
 	NEEDS_NAME_CONTRACT,
+	nameContractUsable,
 	readFirstAvailable,
 } from "../lib/ci-environment.ts";
+
 import {
 	readinessProblems,
 	requiredStateMarker,
@@ -1298,7 +1299,6 @@ async function main() {
 		// is therefore about fifteen launches, down from about twenty-one — the
 		// reduction is in the captures, not in the launch count as a whole. An
 		// earlier revision of this comment overstated it.
-		const capture = captureChecksRunnable(resolveChrome());
 		let anyBlindFailed = false;
 		let retainSharedCapture = false;
 		const mutationCapture = join(tmpdir(), `lo-mutation-capture-${Date.now()}`);
@@ -1329,6 +1329,24 @@ async function main() {
 			/^manifest:\s*(.+)$/m
 				.exec(`${result.stdout ?? ""}${result.stderr ?? ""}`)?.[1]
 				?.trim() ?? "";
+		// How many cells the manifest lists, so the success branch below can assert the
+		// property every per-rule audit depends on rather than comparing the PATH string.
+		// An unreadable or unparseable manifest is 0 cells, which fails the check with the
+		// capture's own path still in the note.
+		const manifestCells = (path: string): number => {
+			try {
+				const parsed = JSON.parse(readFileSync(path, "utf8")) as {
+					records?: unknown[];
+				};
+				return Array.isArray(parsed.records) ? parsed.records.length : 0;
+			} catch {
+				return 0;
+			}
+		};
+		// The LAST attempt's words: on the killed-then-retried path the first attempt died by
+		// SIGTERM, and its note would describe the kill rather than what the retry said — the
+		// one place the surfaced stderr would otherwise be lost (review round 2, F11).
+		let lastCaptureRun = captureRun;
 		let sharedManifest = captureManifest(captureRun);
 		let mutationUsable = true;
 		if (
@@ -1374,6 +1392,7 @@ async function main() {
 					],
 					{ encoding: "utf8", timeout: 900_000, env: { ...process.env } },
 				);
+				lastCaptureRun = retry;
 				sharedManifest = captureManifest(retry);
 			}
 		}
@@ -1382,36 +1401,46 @@ async function main() {
 			// here was the one path where the failure the diagnostic exists to name
 			// retained nothing at all.
 			retainSharedCapture = true;
-			console.error(
-				"\nverify: the shared mutation capture produced no manifest.\n" +
-					"The blinded rules are NOT re-captured per rule — that fallback is the footprint\n" +
-					"this change removes. Re-run the sweep on a quieter host.",
-			);
-		}
-		if (sharedManifest === "") {
 			// Keyed on the CAPTURE'S OUTCOME, not on whether a browser looked present: CI's
 			// contract job ships Chrome 154, so a presence guard chose "runnable", the checks
-			// failed anyway, and the note named the symptom while discarding the cause.
-			const reason = captureDiagnostic(captureRun);
-			if (captureFailureIsEnvironmental(reason)) {
+			// failed anyway, and the note named the symptom while discarding the cause. There is
+			// deliberately no load hint here ("re-run the sweep on a quieter host"): it guessed
+			// at a cause the capture had not named, and it contradicted the decision below,
+			// which reads the capture's own words.
+			const diagnostic = captureDiagnostic(lastCaptureRun);
+			// Two facts, no interpretation: a skip needs the RESOLVER to report no browser AND
+			// the capture's words to agree. Everything else fails with its own cause — the
+			// display case and the DevToolsActivePort case included, which is what tells us
+			// whether this job should be capturing at all (PR #10's decision).
+			const decision = captureSkipDecision({
+				chromeResolved: resolveChrome() !== null,
+				diagnostic,
+			});
+			if (decision.skip) {
 				skip(
 					"the shared capture produced a manifest for every rule to audit",
-					`${NEEDS_BROWSER} — ${reason}`,
+					decision.reason,
 				);
 			} else {
 				check(
 					"the shared capture produced a manifest for every rule to audit",
 					false,
 					true,
-					reason,
+					decision.reason,
 				);
 			}
 		} else {
+			// Q-1 (QA round 1): this compared the manifest PATH against `true`, so the success
+			// branch could never pass — a capture that worked still reddened the run, on every
+			// host that has a browser. Assert what the group promises the seven per-rule audits:
+			// the manifest exists and lists records, which is the precondition `run-canary.ts`
+			// refuses on ("the capture produced no frames") when a rule audits it.
+			const sharedCells = manifestCells(sharedManifest);
 			check(
 				"the shared capture produced a manifest for every rule to audit",
-				sharedManifest,
+				sharedCells > 0,
 				true,
-				sharedManifest,
+				`${sharedManifest} (${sharedCells} captured cells)`,
 			);
 		}
 
@@ -2188,6 +2217,11 @@ async function main() {
 				read: () =>
 					execFileSync("git", ["-C", REPO, "show", FALLBACK_REF], {
 						encoding: "utf8",
+						// Git's `fatal: invalid object name …` is about this fallback being
+						// unavailable, not about the run: with stderr inherited it lands in the
+						// job log as if the harness had failed. stdout is still piped, which is
+						// what `readFirstAvailable` reads; a throw still counts as unreadable.
+						stdio: ["ignore", "pipe", "ignore"],
 					}),
 			},
 		]);
@@ -2211,11 +2245,10 @@ async function main() {
 		// Without the source there is no expectation list to compare against, so these are
 		// NAMED SKIPS. Comparing the emitted names against an empty set is what produced
 		// `expected [] got [...real names...]`, a check that can only ever fail.
-		// `source.length > 0` is not enough: a readable file whose hook is an arrow const, or
-		// a renamed hook, yields ZERO names and reproduces `expected [] got [three real names]`
-		// verbatim. An empty parse is its own reason, never a mismatch.
-		const nameContractUsable = source.length > 0 && appNames.size > 0;
-		if (!nameContractUsable) {
+		// Through the tested helper (review round 2, F15): a readable file with an empty PARSE
+		// is its own named reason, never a mismatch.
+		const contract = nameContractUsable(source, [...appNames]);
+		if (!contract.usable) {
 			for (const name of [
 				"the harness emits exactly the names the app reads",
 				"the password is among them: a route-only seed renders an unauthenticated page",
@@ -2227,7 +2260,7 @@ async function main() {
 				);
 			}
 		}
-		if (nameContractUsable) {
+		if (contract.usable) {
 			const emitted = new URLSearchParams(
 				seedQuery("http://127.0.0.1:1", "pw"),
 			);
@@ -2253,6 +2286,9 @@ async function main() {
 	{
 		// Declared in THIS group's scope: the mutation group has its own declaration, and a
 		// sibling block's `const` is not visible here (the mistake that cost a round).
+		// This group's two checks below are browser-keyed and stay so: the capture they launch
+		// is the leak fixture's own, and the decision the capture group makes from the
+		// capture's own outcome does not reach it.
 		const capture = captureChecksRunnable(resolveChrome());
 
 		// Round 3: the survivor count was nested inside the `blocking > 0` gate, so a clean
