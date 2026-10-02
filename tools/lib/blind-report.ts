@@ -45,7 +45,11 @@ export function blindDiagnostic(input: {
 		}`,
 		// Named in the canary's own words, so a capture that produced nothing can never
 		// read as a passing blank (run-canary prints the same sentence above its verdict).
-		verdict.vacuous ? "VACUOUS: a direction produced no cells or no rows" : "",
+		// The canary's own VACUOUS sentence is above it on stdout; this repeats it and says
+		// so, rather than inventing a second wording for the same condition.
+		verdict.vacuous
+			? "VACUOUS (the canary's own line): a direction produced no cells or no rows"
+			: "",
 		`cells defects/clean ${show(verdict.cells?.defects)}/${show(verdict.cells?.clean)}`,
 		`rows defects/clean ${show(verdict.rows?.defects)}/${show(verdict.rows?.clean)}`,
 		`clean-page FAIL rows ${show(verdict.cleanFails)}`,
@@ -70,4 +74,32 @@ export function parseCanaryVerdict(output: string): CanaryVerdict {
 	} catch {
 		return {};
 	}
+}
+
+/**
+ * Does the blind PASS? The parsed verdict is the authority, not a re-derivation of one of
+ * its five terms.
+ *
+ * This re-implemented only the `missed` term once, and the failure was a false PASS: a
+ * canary whose own verdict said `ok: false` with `cleanFails`, `cleanStatus` or `vacuous`
+ * failed still recorded a passing blind, so the evidence was reaped and the failing term
+ * was never printed. An instrument that reports success for a run that failed is the one
+ * outcome this whole harness exists to prevent, so the check asks the canary.
+ *
+ * A verdict that could not be parsed (`{}`) is a FINDING, never health: `ok === true` is
+ * required, so an absent or malformed verdict fails the blind and the diagnostic reports
+ * `failed terms: not reported`.
+ */
+export function blindPasses(input: {
+	status: number | null;
+	missed: string[];
+	defect: string;
+	verdict: CanaryVerdict;
+}): boolean {
+	return (
+		input.status === 1 &&
+		input.missed.length === 1 &&
+		input.missed[0] === input.defect &&
+		input.verdict.ok === true
+	);
 }

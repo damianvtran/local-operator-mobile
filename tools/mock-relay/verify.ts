@@ -29,7 +29,11 @@ import { connect as netConnect } from "node:net";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { blindDiagnostic, parseCanaryVerdict } from "../lib/blind-report.ts";
+import {
+	blindDiagnostic,
+	blindPasses,
+	parseCanaryVerdict,
+} from "../lib/blind-report.ts";
 import {
 	countProcesses,
 	mayRetry,
@@ -1261,6 +1265,7 @@ async function main() {
 		// reduction is in the captures, not in the launch count as a whole. An
 		// earlier revision of this comment overstated it.
 		let anyBlindFailed = false;
+		let retainSharedCapture = false;
 		const mutationCapture = join(tmpdir(), `lo-mutation-capture-${Date.now()}`);
 		const attemptProfile = join(mutationCapture, "chrome-attempt");
 		const captureRun = spawnSync(
@@ -1338,6 +1343,10 @@ async function main() {
 			}
 		}
 		if (sharedManifest === "") {
+			// The shared capture IS the evidence for this failure, so it is kept: reaping it
+			// here was the one path where the failure the diagnostic exists to name
+			// retained nothing at all.
+			retainSharedCapture = true;
 			console.error(
 				"\nverify: the shared mutation capture produced no manifest.\n" +
 					"The blinded rules are NOT re-captured per rule — that fallback is the footprint\n" +
@@ -1427,10 +1436,16 @@ async function main() {
 				outcome,
 			);
 			const verdict = parseCanaryVerdict(output);
-			const blindOk =
-				run.status === 1 &&
-				missed.length === 1 &&
-				missed[0] === mutation.defect;
+			// `blindPasses` asks the CANARY, rather than re-deriving one of its five terms.
+			// The re-derivation produced a FALSE PASS: a run whose own verdict said
+			// `ok: false` on `cleanFails`, `cleanStatus` or `vacuous` still recorded a
+			// passing blind, so the evidence was reaped and the failing term never printed.
+			const blindOk = blindPasses({
+				status: run.status,
+				missed,
+				defect: mutation.defect,
+				verdict,
+			});
 			// On failure the diagnostic REPLACES the unreadable `got []`: it names the
 			// canary's exit, which of the five terms failed, whether the run was vacuous,
 			// the cells and rows each direction produced, and where the evidence is.
@@ -1457,17 +1472,30 @@ async function main() {
 				// The bound is one tree per FAILING blind, and nothing for a blind that
 				// passes, so a red run keeps exactly the evidence it needs and a green one
 				// keeps none. The canary's own output rides beside the manifest.
-				writeFileSync(`${out}/canary-output.txt`, output.slice(-8000));
-				console.warn(
-					`  kept the failing blind's evidence at ${out} (manifest + canary output; one tree per failing blind)`,
-				);
+				// `out` exists only on the paths that reached `run-canary`'s scratch-dir
+				// creation, so a no-record shared manifest or a killed canary leaves it
+				// absent: an unguarded write ENOENTs, `main().catch` exits 2, and the whole
+				// results table is lost — every check of the run with it. Keeping evidence
+				// must never be able to destroy the report, hence mkdir + try/catch.
+				try {
+					mkdirSync(out, { recursive: true });
+					// 8,000 UTF-16 units, not 8 kB: the tail is a diagnostic, not a transcript.
+					writeFileSync(`${out}/canary-output.txt`, output.slice(-8000));
+					console.warn(
+						`  kept ${mutation.blind}'s evidence at ${out}: this blind's audit output (including clean-manifest.json, when the run got that far) and the canary's stdout tail. The capture manifest is the shared tree, announced above. One tree per failing blind.`,
+					);
+				} catch (error) {
+					console.warn(
+						`  could not retain evidence for ${mutation.blind} (${String(error)}); the report is unaffected`,
+					);
+				}
 			}
 		}
-		if (anyBlindFailed) {
+		if (anyBlindFailed || retainSharedCapture) {
 			// The shared capture is the other half of the evidence: the per-blind tree holds
 			// that blind's audit output, this one holds the matrix it read.
 			console.warn(
-				`  kept the shared capture at ${mutationCapture} because a blind failed`,
+				`  kept the shared capture at ${mutationCapture} because a blind or the shared capture itself failed`,
 			);
 		} else {
 			rmSync(mutationCapture, { recursive: true, force: true });
