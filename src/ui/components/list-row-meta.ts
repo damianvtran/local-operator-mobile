@@ -64,6 +64,17 @@ const ELLIPSIS = "…";
 export const charWidthDp = (scale: number): number =>
 	TYPE_STEPS["mono-sm"].size * scale * MONO_CHARACTER_EM;
 
+/**
+ * The dp the cwd is GUARANTEED on the meta line: the floor above, in the units the
+ * flex box needs.
+ *
+ * Exported so the boilerplate the row puts on the field and the budget this module
+ * fits its string into are the SAME number: two definitions of the floor is how a
+ * painted string and its box drift apart.
+ */
+export const metaPathFloorDp = (scale: number): number =>
+	META_PATH_FLOOR_CHARS * charWidthDp(scale);
+
 /** What the line should paint: `null` for a field the row has none of. */
 export type MetaLine = {
 	cwd: string | null;
@@ -151,7 +162,7 @@ export function metaLineFor({
 	}
 
 	/* The model may take what is left of the line after the cwd's floor. */
-	const room = widthDp - META_GAP_DP * scale - META_PATH_FLOOR_CHARS * charDp;
+	const room = widthDp - META_GAP_DP * scale - metaPathFloorDp(scale);
 	const painted = room > 0 && model !== "" ? labelFor(model, room, charDp) : "";
 
 	if (painted.length < MODEL_MIN_CHARS) {

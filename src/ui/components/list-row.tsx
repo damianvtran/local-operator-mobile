@@ -10,10 +10,9 @@ import {
 import { countLabel } from "@/lib/format";
 import { ROLE, state } from "@/ui/a11y";
 import { useReducedMotion, useTokenColor } from "@/ui/appearance";
-import { metaLineFor } from "@/ui/components/list-row-meta";
+import { metaLineFor, metaPathFloorDp } from "@/ui/components/list-row-meta";
 import { Shimmer } from "@/ui/components/shimmer";
 import { useTextScale } from "@/ui/text-scale-provider";
-import { TYPE_STEPS } from "@/ui/tokens.gen";
 import {
 	LIST_ROW_INDICATOR_CLASS,
 	listRowClasses,
@@ -289,18 +288,16 @@ const TITLE_BOX = {
 } as const;
 
 /**
- * How much of the meta line the working directory is GUARANTEED.
+ * The working directory's box: the cwd takes the remainder, and it never gives up
+ * a dp of the floor it is guaranteed (design round 5, D26).
  *
- * Expressed in CHARACTERS of `text-mono-sm` and converted with the mono face's
- * own advance (~0.6 em, and the size comes from the token), because "a usable
- * width" is a number of characters to the reader and not a number of dp: the
- * same 72 dp holds half as many of them at 200 %. Ten characters is a folder
- * name — `~/workspace` is eleven — which is the shortest fragment that still
- * names where the session is.
+ * The floor itself lives in `list-row-meta.ts` as `metaPathFloorDp`, because the
+ * string painted into this box is fitted to exactly the same number: a floor
+ * defined twice is how a painted string and its box drift apart.
  *
  * **What it costs, measured.** On a 320 pt phone at 100 % the line is 232 dp, so
  * the model's room is 232 - 8 (gap) - 72 = 152 dp: enough for 21 characters of
- * `text-mono-sm`, which is not enough for the 24-character
+ * `text-mono-sm`, which is not enough for the 23-character
  * `anthropic/claude-opus-5`. It paints `…claude-opus-5` instead — the provider
  * prefix, the part every row of that provider shares, is what yields — and the
  * cwd keeps 123 dp of the line. Every wider case fits both whole: 390 pt at
@@ -313,21 +310,8 @@ const TITLE_BOX = {
  * priority the design round asked for — and `flexGrow: 1` gives the cwd every
  * spare dp when there is no shortfall at all, so the model stays flush right.
  */
-const META_PATH_FLOOR_CHARS = 10;
-const MONO_CHARACTER_EM = 0.6;
-const META_PATH_FLOOR_DP = Math.round(
-	META_PATH_FLOOR_CHARS * TYPE_STEPS["mono-sm"].size * MONO_CHARACTER_EM,
-);
-
-/**
- * The working directory's box: the cwd takes the remainder, and it never gives
- *  up a dp of it (design round 5, D26).
- *
- *  `flexShrink: 0` beside `minWidth: 0` is not a contradiction: the floor is the
- *  BASIS, so the box starts there and grows into spare space, while a zero
- *  shrink factor keeps every dp of a shortfall off the cwd and on the model. */
 const META_PATH_BOX = (scale: number) => ({
-	flexBasis: META_PATH_FLOOR_DP * scale,
+	flexBasis: metaPathFloorDp(scale),
 	flexGrow: 1,
 	flexShrink: 0,
 	minWidth: 0,
