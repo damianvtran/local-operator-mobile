@@ -1,14 +1,20 @@
 /**
- * The failure text for a blinded canary, composed from the canary's own verdict.
+ * Deciding whether a blinded canary passed, and describing it when it did not.
  *
- * Why this exists: `verify` used to hand the check only the parsed `missed` ledger, so a
- * failing blind printed `got []` and nothing else — and at `d5b3960` that was
- * uninterpretable, because an empty ledger is the *correct* answer when the capture
- * produced nothing to find a defect in. "The audit found no defect" and "the capture
- * produced nothing to find a defect in" are different faults in different files, and the
- * old message could not tell them apart. The canary now prints a `VERDICT` line
- * (`run-canary.ts`, the five terms of its `ok` expression), and this turns it into one
- * sentence a reader can act on without re-running anything.
+ * Two properties this file exists to hold, both learned the hard way on this branch:
+ *
+ * 1. **A HEALTHY blinded run is `ok: false`.** Blinding removes one rule, the audit then
+ *    misses exactly that defect, and the canary exits 1 by design (`missedDefects.length >
+ *    0` → `failedTerms = ["missed"]` → `ok = false`). So `verdict.ok === true` can never
+ *    hold for the case under test, and requiring it turned every blind into a failure:
+ *    every tree kept (the footprint this harness spent rounds removing) and the shared
+ *    capture never reaped. The permitted failure set is therefore *the expected miss and
+ *    nothing else* — any second term is a real failure of the run.
+ * 2. **The canary is still the authority.** The predicate reads the canary's own verdict
+ *    rather than re-deriving one of its five terms, because a re-derivation shipped a
+ *    FALSE PASS: `cleanFails`, `cleanStatus` and `vacuous` failures were masked.
+ *
+ * An absent, malformed or non-object verdict is a FINDING, never health.
  */
 export interface CanaryVerdict {
 	ok?: boolean;
@@ -26,69 +32,18 @@ export interface CanaryVerdict {
 const show = (value: number | null | undefined): string =>
 	value === undefined || value === null ? "unknown" : String(value);
 
-export function blindDiagnostic(input: {
-	exitCode: number | null;
-	signal: string | null;
-	named: string[];
-	verdict: CanaryVerdict;
-	keptTree: string;
-}): string {
-	const { verdict } = input;
-	const parts = [
-		`exit ${show(input.exitCode)}${input.signal === null ? "" : ` (killed by ${input.signal})`}`,
-		// `none` and `not reported` are different findings: an empty list is a healthy run,
-		// a missing list means the canary never printed a verdict.
-		`failed terms: ${
-			verdict.failedTerms === undefined
-				? "not reported"
-				: verdict.failedTerms.join(", ") || "none"
-		}`,
-		// Named in the canary's own words, so a capture that produced nothing can never
-		// read as a passing blank (run-canary prints the same sentence above its verdict).
-		// The canary's own VACUOUS sentence is above it on stdout; this repeats it and says
-		// so, rather than inventing a second wording for the same condition.
-		verdict.vacuous
-			? "VACUOUS (the canary's own line): a direction produced no cells or no rows"
-			: "",
-		`cells defects/clean ${show(verdict.cells?.defects)}/${show(verdict.cells?.clean)}`,
-		`rows defects/clean ${show(verdict.rows?.defects)}/${show(verdict.rows?.clean)}`,
-		`clean-page FAIL rows ${show(verdict.cleanFails)}`,
-		`defect-page exit ${show(verdict.defectsStatus)} · clean-page exit ${show(verdict.cleanStatus)}`,
-		`audit named: ${input.named.join(", ") || "none"}`,
-		`evidence: ${input.keptTree}`,
-	];
-	return parts.filter((part) => part !== "").join(" · ");
-}
+const asObject = (value: unknown): Record<string, unknown> =>
+	typeof value === "object" && value !== null && !Array.isArray(value)
+		? (value as Record<string, unknown>)
+		: {};
 
 /**
- * Parse the canary's `VERDICT {...}` line. Returns `{}` when the line is absent or
- * malformed, and the diagnostic then says "failed terms: not reported" rather than
- * inventing a term — an unparsed verdict is a finding about the canary, not about the
- * blinding.
- */
-export function parseCanaryVerdict(output: string): CanaryVerdict {
-	const line = /^VERDICT (.*)$/m.exec(output)?.[1];
-	if (line === undefined) return {};
-	try {
-		return JSON.parse(line) as CanaryVerdict;
-	} catch {
-		return {};
-	}
-}
-
-/**
- * Does the blind PASS? The parsed verdict is the authority, not a re-derivation of one of
- * its five terms.
+ * Does the blind PASS?
  *
- * This re-implemented only the `missed` term once, and the failure was a false PASS: a
- * canary whose own verdict said `ok: false` with `cleanFails`, `cleanStatus` or `vacuous`
- * failed still recorded a passing blind, so the evidence was reaped and the failing term
- * was never printed. An instrument that reports success for a run that failed is the one
- * outcome this whole harness exists to prevent, so the check asks the canary.
- *
- * A verdict that could not be parsed (`{}`) is a FINDING, never health: `ok === true` is
- * required, so an absent or malformed verdict fails the blind and the diagnostic reports
- * `failed terms: not reported`.
+ * `status === 1` and the expected single miss are the *shape of success* here, and the
+ * canary's own `failedTerms` must be exactly `["missed"]` — the blinding — with no second
+ * term. `vacuous`, `cleanFails`, `defectsStatus` and `cleanStatus` each therefore fail the
+ * blind and are named in the diagnostic.
  */
 export function blindPasses(input: {
 	status: number | null;
@@ -96,10 +51,83 @@ export function blindPasses(input: {
 	defect: string;
 	verdict: CanaryVerdict;
 }): boolean {
+	const terms = input.verdict.failedTerms;
 	return (
 		input.status === 1 &&
 		input.missed.length === 1 &&
 		input.missed[0] === input.defect &&
-		input.verdict.ok === true
+		Array.isArray(terms) &&
+		terms.length === 1 &&
+		terms[0] === "missed"
 	);
+}
+
+/**
+ * Parse the canary's `VERDICT {...}` line.
+ *
+ * Returns `{}` for anything that is not a JSON object — absent, malformed, `null`, an
+ * array, a string, a number. `JSON.parse("null")` returns `null`, and letting that through
+ * pushed a `TypeError` out of the mutation loop into `main().catch`: exit 2 with the
+ * results table lost, which is precisely the failure mode this file's callers exist to
+ * close.
+ */
+export function parseCanaryVerdict(output: string): CanaryVerdict {
+	const line = /^VERDICT (.*)$/m.exec(output)?.[1];
+	if (line === undefined) return {};
+	try {
+		const parsed: unknown = JSON.parse(line);
+		if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed))
+			return {};
+		return parsed as CanaryVerdict;
+	} catch {
+		return {};
+	}
+}
+
+/**
+ * The failure text. Never throws: it feeds a `check()` message, and a diagnostic that
+ * cannot be rendered is worse than a plain one, so every access is guarded and the whole
+ * composition is wrapped.
+ */
+export function blindDiagnostic(input: {
+	exitCode: number | null;
+	signal: string | null;
+	named: string[];
+	verdict: CanaryVerdict;
+	keptTree: string;
+}): string {
+	try {
+		const verdict = asObject(input.verdict);
+		const terms = Array.isArray(verdict.failedTerms)
+			? (verdict.failedTerms as string[])
+			: undefined;
+		const cells = asObject(verdict.cells);
+		const rows = asObject(verdict.rows);
+		const number = (value: unknown): number | null | undefined =>
+			typeof value === "number" || value === null
+				? (value as number | null)
+				: undefined;
+		const parts = [
+			`exit ${show(input.exitCode)}${input.signal === null ? "" : ` (killed by ${input.signal})`}`,
+			// `none` and `not reported` are different findings: an empty list is a healthy
+			// run's shape, a missing list means the canary never reached a readable verdict.
+			`failed terms: ${
+				terms === undefined ? "not reported" : terms.join(", ") || "none"
+			}`,
+			verdict.vacuous === true
+				? "VACUOUS (the canary's own line): a direction produced no cells or no rows"
+				: "",
+			`cells defects/clean ${show(number(cells.defects))}/${show(number(cells.clean))}`,
+			`rows defects/clean ${show(number(rows.defects))}/${show(number(rows.clean))}`,
+			`clean-page FAIL rows ${show(number(verdict.cleanFails))}`,
+			`defect-page exit ${show(number(verdict.defectsStatus))} · clean-page exit ${show(
+				number(verdict.cleanStatus),
+			)}`,
+			`audit named: ${input.named.join(", ") || "none"}`,
+			`evidence: ${input.keptTree}`,
+		];
+		return parts.filter((part) => part !== "").join(" · ");
+	} catch (error) {
+		return `unreadable verdict (${String(error)}) · exit ${show(input.exitCode)} · evidence: ${input.keptTree}`;
+	}
 }
