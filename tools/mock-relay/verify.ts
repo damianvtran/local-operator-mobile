@@ -44,7 +44,10 @@ import {
 } from "../lib/chrome.ts";
 import {
 	captureChecksRunnable,
+	captureDiagnostic,
+	captureFailureIsEnvironmental,
 	NEEDS_BROWSER,
+	NEEDS_HOOK_PARSE,
 	NEEDS_NAME_CONTRACT,
 	readFirstAvailable,
 } from "../lib/ci-environment.ts";
@@ -1385,17 +1388,30 @@ async function main() {
 					"this change removes. Re-run the sweep on a quieter host.",
 			);
 		}
-		if (!capture.runnable) {
-			skip(
-				"the shared capture produced a manifest for every rule to audit",
-				capture.reason,
-			);
+		if (sharedManifest === "") {
+			// Keyed on the CAPTURE'S OUTCOME, not on whether a browser looked present: CI's
+			// contract job ships Chrome 154, so a presence guard chose "runnable", the checks
+			// failed anyway, and the note named the symptom while discarding the cause.
+			const reason = captureDiagnostic(captureRun);
+			if (captureFailureIsEnvironmental(reason)) {
+				skip(
+					"the shared capture produced a manifest for every rule to audit",
+					`${NEEDS_BROWSER} — ${reason}`,
+				);
+			} else {
+				check(
+					"the shared capture produced a manifest for every rule to audit",
+					false,
+					true,
+					reason,
+				);
+			}
 		} else {
 			check(
 				"the shared capture produced a manifest for every rule to audit",
-				sharedManifest !== "",
+				sharedManifest,
 				true,
-				sharedManifest || "no manifest path was printed",
+				sharedManifest,
 			);
 		}
 
@@ -2195,14 +2211,20 @@ async function main() {
 		// Without the source there is no expectation list to compare against, so these are
 		// NAMED SKIPS. Comparing the emitted names against an empty set is what produced
 		// `expected [] got [...real names...]`, a check that can only ever fail.
-		const nameContractUsable = source.length > 0;
+		// `source.length > 0` is not enough: a readable file whose hook is an arrow const, or
+		// a renamed hook, yields ZERO names and reproduces `expected [] got [three real names]`
+		// verbatim. An empty parse is its own reason, never a mismatch.
+		const nameContractUsable = source.length > 0 && appNames.size > 0;
 		if (!nameContractUsable) {
 			for (const name of [
 				"the harness emits exactly the names the app reads",
 				"the password is among them: a route-only seed renders an unauthenticated page",
 				"and no invented parameter rides along",
 			]) {
-				skip(name, NEEDS_NAME_CONTRACT);
+				skip(
+					name,
+					`${source.length > 0 ? NEEDS_HOOK_PARSE : NEEDS_NAME_CONTRACT} (candidates tried: ${resolved.tried.join(", ")})`,
+				);
 			}
 		}
 		if (nameContractUsable) {
@@ -3097,7 +3119,7 @@ async function main() {
 	if (jsonPath !== null && jsonPath !== "")
 		writeFileSync(
 			jsonPath,
-			`${JSON.stringify({ results, failures: failures.length }, null, 2)}\n`,
+			`${JSON.stringify({ results, failures: failures.length, skipped: skipped.length }, null, 2)}\n`,
 		);
 	process.exit(failures.length === 0 ? 0 : 1);
 }

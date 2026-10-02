@@ -9,6 +9,8 @@
 import { describe, expect, it } from "vitest";
 import {
 	captureChecksRunnable,
+	captureDiagnostic,
+	captureFailureIsEnvironmental,
 	NEEDS_BROWSER,
 	readFirstAvailable,
 } from "../tools/lib/ci-environment.ts";
@@ -57,6 +59,44 @@ describe("the name contract's source is read from the first available candidate"
 				},
 			]),
 		).not.toThrow();
+	});
+});
+
+describe("a capture failure says what the capture said", () => {
+	it("surfaces the child's stderr instead of naming only the symptom", () => {
+		const diagnostic = captureDiagnostic({
+			status: 1,
+			stdout: "",
+			stderr: "Error: no display available for headless Chrome",
+		});
+		expect(diagnostic).toContain("exit 1");
+		expect(diagnostic).toContain("no display available");
+	});
+
+	it("says so when the capture printed nothing at all", () => {
+		expect(
+			captureDiagnostic({
+				status: null,
+				signal: "SIGTERM",
+				stdout: null,
+				stderr: "",
+			}),
+		).toContain("killed by SIGTERM");
+		expect(captureDiagnostic({ status: 1 })).toContain(
+			"printed nothing at all",
+		);
+	});
+
+	it("separates an environment limit from a real failure on the capture's own words", () => {
+		expect(captureFailureIsEnvironmental("no browser found on this host")).toBe(
+			true,
+		);
+		expect(
+			captureFailureIsEnvironmental("Error: chrome executable doesn't exist"),
+		).toBe(true);
+		expect(
+			captureFailureIsEnvironmental("Error: audit found 4 FAIL rows"),
+		).toBe(false);
 	});
 });
 

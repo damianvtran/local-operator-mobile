@@ -14,6 +14,8 @@
  */
 export const NEEDS_BROWSER =
 	"needs a browser (Google Chrome): this job has none — the frames/audit job is the one that captures";
+export const NEEDS_HOOK_PARSE =
+	"needs the connection provider's own hook to parse: the file is readable but no `lo-*` name came out of it, so there is no expectation list to compare against — an empty parse must never read as a mismatch";
 export const NEEDS_NAME_CONTRACT =
 	"needs the app's connection provider to be readable, which the check above explains";
 
@@ -61,4 +63,45 @@ export function captureChecksRunnable(chrome: { path: string } | null): {
 	return chrome === null
 		? { runnable: false, reason: NEEDS_BROWSER }
 		: { runnable: true, reason: "" };
+}
+
+/**
+ * What the capture said, in its own words.
+ *
+ * `captureManifest` returns the manifest path or `""`, and the check then printed "no
+ * manifest path was printed" — which named the symptom and discarded the cause. CI proved
+ * that costs a round: the contract job ships Chrome 154, so a browser-presence guard
+ * decided "runnable", the checks failed anyway, and the note said nothing about why. This
+ * returns the exit status and the child's own stderr tail, so the next reader is one line
+ * from the truth.
+ */
+export function captureDiagnostic(result: {
+	status: number | null;
+	signal?: NodeJS.Signals | null;
+	stdout?: string | null;
+	stderr?: string | null;
+}): string {
+	const out = `${result.stdout ?? ""}${result.stderr ?? ""}`.trim();
+	const tail = out.length > 800 ? `… ${out.slice(-800)}` : out;
+	const signal =
+		result.signal === null || result.signal === undefined
+			? ""
+			: ` (killed by ${String(result.signal)})`;
+	return `the capture produced no manifest path: exit ${String(result.status)}${signal}${
+		tail === ""
+			? "; the capture printed nothing at all"
+			: `; the capture said: ${tail}`
+	}`;
+}
+
+/**
+ * Is a capture failure an ENVIRONMENT limit or a real failure? Decided on the capture's own
+ * output, never on whether a browser merely looked present — the guard that shipped keyed
+ * on `resolveChrome()`, chose "runnable" on a runner that does have Chrome, and left the
+ * checks failing with a note nobody could read.
+ */
+export function captureFailureIsEnvironmental(diagnostic: string): boolean {
+	return /no (?:browser|chrome)|chrome (?:was )?not found|ENOENT|executable doesn't exist|no such file or directory.*chrome/i.test(
+		diagnostic,
+	);
 }
