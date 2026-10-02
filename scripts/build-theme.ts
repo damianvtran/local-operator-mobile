@@ -316,6 +316,28 @@ const css = (): string => {
 	out.push("@source '../**/*.{ts,tsx}';");
 	out.push("");
 	out.push("@theme {");
+	/*
+	 * The spacing SCALE, pinned to px.
+	 *
+	 * Tailwind's default is `0.25rem`, and every spacing utility resolves through
+	 * it (`px-4` → `calc(var(--spacing) * 4)`). `rem` is defined against the ROOT
+	 * font size, so on the web a reader's own text-size setting — and the audit
+	 * harness's `--lo-text-scale` dimension, which is the same signal — multiplied
+	 * all of it: a 44 pt control measured 88 pt, `py-2` measured 16, and on a 320 pt
+	 * phone at 200 % the chrome alone consumed the list's whole band (a captured
+	 * frame showed zero complete session rows, and a second one measured 12 pt of
+	 * horizontal overflow inside the list).
+	 *
+	 * `src/ui/text-scale.ts` states the rule this restores: "Spacing, radii and
+	 * control heights stay put: this is a text setting, and growing a 44 pt button
+	 * to 88 pt is a different (and unrequested) change." Type steps are emitted in
+	 * `rem` so they DO follow the platform scale, which is the half that should.
+	 *
+	 * 4 px is the same value `0.25rem` resolves to at the root size the kit
+	 * assumes, so at 100 % this pin changes nothing.
+	 */
+	out.push("\t--spacing: 4px;");
+	out.push("");
 	out.push("\t/* ---- colour roles ----");
 	out.push("\t *");
 	out.push(

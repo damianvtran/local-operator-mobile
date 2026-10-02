@@ -187,6 +187,16 @@ export default function Sessions() {
 	 *  at large text the bar's second row is what left a 320 pt phone a 125 pt list
 	 *  window against a 130 pt row (D2). One flag, one place. */
 	const navInHeader = layout.split || largeText;
+	/* The address line yields FIRST when the phone's band is the scarce resource.
+	 *
+	 *  At 320 pt with the platform text at 200 % it was measured at 0 pt wide (a
+	 *  26 pt one in the design round's frames) with its own row overflowing the pane
+	 *  by 44 pt, and it is the redundant control of the two: it navigates to
+	 *  `/tunnels`, which is exactly what the "Computers" button beside it does, and
+	 *  which computer is connected is carried by the avatar in the Screen header.
+	 *  The split pane keeps it — there the address has room and names the list's
+	 *  subject — so this is the phone-only half of the same rule as `navInHeader`. */
+	const addressInHeader = !largeText || layout.split;
 
 	/* A cold start with no route belongs on the welcome surface.
 	 *
@@ -276,28 +286,30 @@ export default function Sessions() {
 			 * shared a line, 200 % text on a 320 pt phone squeezed the label to nothing —
 			 * measured in a captured frame, and the reason the controls moved up. */}
 			<View className="flex-row items-center gap-2">
-				<Pressable
-					accessibilityRole={ROLE.button}
-					accessibilityLabel={`${listLabel(computers, tunnelId, route)} — choose a computer`}
-					onPress={() => router.push("/tunnels")}
-					testID={CONTROL.computersButton}
-					/* The floor is the PLATFORM's: 44 on iOS, 48 wherever `Platform.OS`
-					 *  is not iOS — which includes the web/audit profile this build is
-					 *  measured on, where `min-h-11` left the switcher at 44 (QA round 1).
-					 *  A switcher a thumb has to aim at is not a dense row of text. */
-					className="min-w-0 flex-1 justify-center"
-					style={{ minHeight: TOUCH_FLOOR }}
-				>
-					{/* Mono: this label is a host or a computer name — a machine string the
-					 *  reader matches against their own terminal (N1, brand-kit § 3.5). */}
-					<Text
-						className="text-mono-sm text-ink-muted"
-						numberOfLines={1}
-						ellipsizeMode="tail"
+				{addressInHeader ? (
+					<Pressable
+						accessibilityRole={ROLE.button}
+						accessibilityLabel={`${listLabel(computers, tunnelId, route)} — choose a computer`}
+						onPress={() => router.push("/tunnels")}
+						testID={CONTROL.computersButton}
+						/* The floor is the PLATFORM's: 44 on iOS, 48 wherever `Platform.OS`
+						 *  is not iOS — which includes the web/audit profile this build is
+						 *  measured on, where `min-h-11` left the switcher at 44 (QA round 1).
+						 *  A switcher a thumb has to aim at is not a dense row of text. */
+						className="min-w-0 flex-1 justify-center"
+						style={{ minHeight: TOUCH_FLOOR }}
 					>
-						{listLabel(computers, tunnelId, route)}
-					</Text>
-				</Pressable>
+						{/* Mono: this label is a host or a computer name — a machine string the
+						 *  reader matches against their own terminal (N1, brand-kit § 3.5). */}
+						<Text
+							className="text-mono-sm text-ink-muted"
+							numberOfLines={1}
+							ellipsizeMode="tail"
+						>
+							{listLabel(computers, tunnelId, route)}
+						</Text>
+					</Pressable>
+				) : null}
 				{/* The list's own navigation, when the pinned bar is not carrying it.
 				 *
 				 *  Split width: the pane that LISTS owns "Past"/"Computers" — the bar moved

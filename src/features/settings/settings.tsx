@@ -132,16 +132,24 @@ export default function Settings() {
 							size="md"
 							accessibilityLabel="Signed in"
 						/>
-						<View className="min-w-0 flex-1 gap-1">
+						<View
+							className={
+								accountStacked ? "min-w-0 w-full gap-1" : "min-w-0 flex-1 gap-1"
+							}
+						>
 							<Text className="text-body text-ink">
 								{accountLabel ?? "Not signed in with Radient"}
 							</Text>
-							<Text className="text-body-sm text-ink-dim">
+							<Text
+								className="text-body-sm text-ink-dim"
+								numberOfLines={1}
+								ellipsizeMode="tail"
+							>
 								{route
 									? route.mode === "radient"
 										? `Through your Radient tunnel`
 										: `Connected directly to ${route.baseUrl}`
-									: "No computer connected"}
+									: "No connection yet"}
 							</Text>
 						</View>
 					</View>
@@ -392,8 +400,14 @@ function useThemePreference(): {
  * stream and the word was the literal "Connected", so with no route at all — the
  * `signed-out` phase, where `streamHealth` is still `idle` — the row fell through to
  * `connected` and agreed with itself while disagreeing with the card above it. The
- * heading reads `route`, so this does too, and "No computer connected" is what the row
+ * heading reads `route`, so this does too, and "No connection yet" is what the row
  * says when that is the fact (design round 2, D12).
+ *
+ * The noun "computer" is deliberately NOT used here. It names the machine the
+ * reader drives — the thing `/tunnels` lists and "Add a computer" adds — and a
+ * connection state is not that (design round 3, D20: one noun had three
+ * referents). So the value describes the CONNECTION in connection words, and the
+ * machine keeps the noun everywhere it is the referent.
  *
  * The words are short on purpose: this is the VALUE half of a label/value row, so a
  * sentence here would wrap the row at 200 % and push the label off its own line.
@@ -406,8 +420,7 @@ function statusFor(input: {
 	state: ConnectionPillState;
 	message: string;
 } {
-	if (!input.routed)
-		return { state: "inactive", message: "No computer connected" };
+	if (!input.routed) return { state: "inactive", message: "No connection yet" };
 	if (input.refused) return { state: "offline", message: "Not connected" };
 	switch (input.health) {
 		case "connecting":

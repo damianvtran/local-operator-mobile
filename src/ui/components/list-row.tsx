@@ -196,6 +196,7 @@ export const ListRow = ({
 								)}
 								{model ? (
 									<Text
+										style={META_VALUE_BOX}
 										className="text-mono-sm text-ink-dim"
 										numberOfLines={1}
 										ellipsizeMode="tail"
@@ -231,6 +232,19 @@ const TITLE_BOX = {
 	flexShrink: 1,
 	minWidth: 0,
 } as const;
+
+/**
+ * The second line's trailing value (the model label): shrinkable, and it may NOT
+ *  set the line's width.
+ *
+ *  A model id is one unbreakable word to the browser (`anthropic/claude-opus-5`
+ *  has no break opportunity in it), so with the default `min-width: auto` its own
+ *  min-content width became the flex line's minimum and pushed the row past the
+ *  pane — the 12 pt of horizontal overflow measured inside the list scroller at
+ *  320 pt with the platform text at 200 % (design round 3, D18; the same class as
+ *  the TITLE_BOX note above). `minWidth: 0` lets it truncate into whatever the
+ *  working directory leaves, which is what `numberOfLines={1}` already claimed. */
+const META_VALUE_BOX = { flexGrow: 0, flexShrink: 1, minWidth: 0 } as const;
 
 /** The reserved slot. Same 12×12 box in every state. */
 const Indicator = ({

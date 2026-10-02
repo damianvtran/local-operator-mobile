@@ -314,11 +314,14 @@ describe("custom route: password login and the cookie jar", () => {
 			"correct horse",
 			{ fetchImpl: jar.fetch },
 		);
-		expect(refusedByGate).toEqual({
+		expect(refusedByGate).toMatchObject({
 			ok: true,
 			signedIn: false,
 			detail: (fixtureBody("http/login-cross-origin.json") as { error: string })
 				.error,
+			/* Not a password refusal: the relay's same-origin gate answered, so the
+			 *  surface is the refusal's OWN and not "that password was not accepted". */
+			failure: { kind: "origin-refused" },
 		});
 
 		/* 2. A gateway 502 — a status, not a refusal the client parses. Three bodies a
@@ -338,10 +341,11 @@ describe("custom route: password login and the cookie jar", () => {
 				fetchImpl: jar.fetch,
 			});
 		};
-		expect(await badge(502)).toEqual({
+		expect(await badge(502)).toMatchObject({
 			ok: true,
 			signedIn: false,
 			detail: "bad gateway",
+			failure: { kind: "ambiguous-delivery" },
 		});
 		expect(
 			await badge({
@@ -349,17 +353,23 @@ describe("custom route: password login and the cookie jar", () => {
 				body: "<html><body>502 Bad Gateway</body></html>",
 				contentType: "text/html",
 			}),
-		).toEqual({ ok: true, signedIn: false, detail: "bad gateway" });
+		).toMatchObject({
+			ok: true,
+			signedIn: false,
+			detail: "bad gateway",
+			failure: { kind: "ambiguous-delivery" },
+		});
 		expect(
 			await badge({
 				status: 502,
 				body: '{"error":"local harness unavailable"}',
 				contentType: "application/json",
 			}),
-		).toEqual({
+		).toMatchObject({
 			ok: true,
 			signedIn: false,
 			detail: "local harness unavailable",
+			failure: { kind: "relay-down" },
 		});
 
 		/* 3. A wrong password: the visible 401, with the route's own sentence. */
@@ -368,10 +378,12 @@ describe("custom route: password login and the cookie jar", () => {
 			await signInToCustomRoute(routeFor(wrongPassword.baseUrl), "not it", {
 				fetchImpl: jar.fetch,
 			}),
-		).toEqual({
+		).toMatchObject({
 			ok: true,
 			signedIn: false,
 			detail: "That password was not accepted.",
+			/* The one failure that IS about the password. */
+			failure: null,
 		});
 
 		/* 4. Nothing listening at all: no answer to classify. */
@@ -382,10 +394,11 @@ describe("custom route: password login and the cookie jar", () => {
 			await signInToCustomRoute(routeFor(closedUrl), "correct horse", {
 				fetchImpl: jar.fetch,
 			}),
-		).toEqual({
+		).toMatchObject({
 			ok: true,
 			signedIn: false,
 			detail: "The relay could not be reached.",
+			failure: { kind: "transport" },
 		});
 
 		/* 5. The browser's opaque redirect: signed in, verified. */
@@ -394,7 +407,64 @@ describe("custom route: password login and the cookie jar", () => {
 			await signInToCustomRoute(routeFor(browser.baseUrl), "correct horse", {
 				fetchImpl: browserRedirectFetch(jar.fetch),
 			}),
-		).toEqual({ ok: true, signedIn: true });
+		).toMatchObject({ ok: true, signedIn: true, failure: null });
+	});
+
+	it("keeps the password verdict and the tunnel verdict apart at the sign-in seam", async () => {
+		/* Design round 3, D21: `signedIn: false` used to carry BOTH "the relay refused
+		 * the password" and "the tunnel never reached the relay", so the connect flow
+		 * told a reader with a CORRECT password that it had been refused — for a
+		 * gateway 502, an edge 503 and a blocked request alike (three captured
+		 * scenarios, all rendering "That password was not accepted."). This is the one
+		 * test that separates them, and it asserts the two arms a reader's remedy
+		 * hangs on: WHICH failure class, and whether the password was judged at all. */
+		const jar = createCookieJarFetch();
+		const routeFor = customRouteFor;
+
+		const wrong = await relayWith({ auth: { mode: "custom" } });
+		const refusedPassword = await signInToCustomRoute(
+			routeFor(wrong.baseUrl),
+			"not it",
+			{ fetchImpl: jar.fetch },
+		);
+		expect(refusedPassword.failure).toBeNull();
+
+		/* The gateway's 502 for a relay that is not answering — the scenario the
+		 * design round captured as `relay-down-at-gateway`. */
+		const relayDown = await relayWith({
+			auth: { mode: "custom" },
+			loginRefusal: {
+				status: 502,
+				body: '{"error":"local harness unavailable"}',
+				contentType: "application/json",
+			},
+		});
+		const down = await signInToCustomRoute(
+			routeFor(relayDown.baseUrl),
+			"correct horse",
+			{ fetchImpl: jar.fetch },
+		);
+		expect(down.signedIn).toBe(false);
+		expect(down.failure?.kind).toBe("relay-down");
+		/* The sentence is the taxonomy's, and it is NOT the password one. */
+		expect(down.failure?.displayableMessage).toBe("local harness unavailable");
+
+		/* The edge's own 503 — the connector is gone, so nothing behind the tunnel
+		 * answered either. */
+		const edgeDown = await relayWith({
+			auth: { mode: "custom" },
+			loginRefusal: {
+				status: 503,
+				body: "Tunnel temporarily unavailable",
+				contentType: "text/plain",
+			},
+		});
+		const edge = await signInToCustomRoute(
+			routeFor(edgeDown.baseUrl),
+			"correct horse",
+			{ fetchImpl: jar.fetch },
+		);
+		expect(edge.failure?.kind).toBe("computer-offline");
 	});
 
 	it("reads the read-only routes through the real schemas", async () => {

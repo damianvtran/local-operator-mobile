@@ -243,8 +243,14 @@ export default function PastSessions() {
 										{item.name.trim() || "untitled"}
 									</Text>
 									<View className="flex-row items-center gap-2">
-										<Text className="flex-1 text-meta text-ink-dim">
+										<Text
+											className="flex-1 text-meta text-ink-dim"
+											numberOfLines={1}
+											ellipsizeMode="tail"
+										>
 											{relativeTime(item.mtime)}
+											{" · "}
+											{absoluteDate(item.mtime)}
 											{item.forked ? " · a copy" : ""}
 										</Text>
 										{/* Body-only matches are marked: the title not containing
@@ -293,3 +299,38 @@ export function relativeTime(mtime: number): string {
 	if (hours < 24) return `${hours} h ago`;
 	return `${Math.round(hours / 24)} d ago`;
 }
+
+/**
+ * The absolute date, beside the coarse age.
+ *
+ * The age says how recent; only a date says WHEN, and a list of past
+ * conversations is exactly where a reader compares against their own calendar
+ * ("the debugging session from the 29th"). One row carried the age alone, so
+ * two entries three days apart were indistinguishable from two an hour apart on a
+ * different day (design round 2, N3; still open in round 3).
+ *
+ * LOCAL time, not UTC, and a fixed day-month-year order rather than
+ * `toLocaleDateString`: the reader's own calendar is the thing being compared
+ * against, and a locale-dependent string would render differently on the two
+ * machines that read this list.
+ */
+export function absoluteDate(mtime: number): string {
+	const date = new Date(mtime * 1000);
+	return `${date.getDate()} ${MONTH_NAMES[date.getMonth()]} ${date.getFullYear()}`;
+}
+
+/** Short month names, so the date is one line even at 200 % platform text. */
+const MONTH_NAMES = [
+	"Jan",
+	"Feb",
+	"Mar",
+	"Apr",
+	"May",
+	"Jun",
+	"Jul",
+	"Aug",
+	"Sep",
+	"Oct",
+	"Nov",
+	"Dec",
+] as const;

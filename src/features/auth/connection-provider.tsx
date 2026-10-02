@@ -86,7 +86,7 @@ import {
 	createConnectionStore,
 } from "@/state/connection-store";
 import { createListStore, type ListSnapshot } from "@/state/list-store";
-import { adoptableSession, planRestore } from "./radient-restore";
+import { adoptableSession, carryOutRestore } from "./radient-restore";
 
 import { beginRadientSignIn, type SignInState } from "./radient-sign-in";
 import { type RefusalView, refusalFromError } from "./refusal";
@@ -257,6 +257,9 @@ export const ConnectionProvider = ({
 	const tokensRef = useRef<RadientTokens | null>(null);
 	const managerRef = useRef<TunnelSessionManager | null>(null);
 	const retryRef = useRef<(() => Promise<void>) | null>(null);
+	/** The latest revision of the cold-start restore, so the retry a network failure
+	 *  offers can re-run the very function that offered it — see `restoreRadient`. */
+	const restoreRef = useRef<() => Promise<void>>(async () => undefined);
 	const mountedRef = useRef(true);
 
 	useEffect(() => {
@@ -429,6 +432,21 @@ export const ConnectionProvider = ({
 				});
 
 				if (!signIn.signedIn) {
+					if (signIn.failure !== null) {
+						/* The relay never got as far as judging the password: a dead tunnel, a
+						 *  502/503 from the gateway or the edge, a blocked request. Reporting
+						 *  "That password was not accepted." here sends the reader to fix the one
+						 *  thing that is not wrong, and hides the fault that needs action — so
+						 *  the taxonomy's own sentence and surface are used instead (D21).
+						 *
+						 *  The admission read below is deliberately NOT run: a tunnel refusing
+						 *  `/login` is refusing the list route too, so its verdict would only
+						 *  re-derive "not admitted" from a fault already classified. */
+						noteError(signIn.failure, () =>
+							connectCustom({ url, password, allowInsecure }),
+						);
+						return;
+					}
 					/* The status of a MANUAL redirect is not a reliable reading. The daemon
 					 * answers `303` on a successful form login, and `fetch` with
 					 * `redirect: 'manual'` may hand back an **opaque-redirect** response whose
@@ -667,6 +685,12 @@ export const ConnectionProvider = ({
 			tokensRef.current = null;
 			managerRef.current = null;
 			retryRef.current = null;
+			/* The landing latch goes with the session. It is a one-way latch otherwise:
+			 *  written where a stored credential is accepted and never cleared, so the
+			 *  NEXT arrival at `/` in this process (a back gesture, a `router.push`)
+			 *  would still route a signed-out reader to `/tunnels` ("Set up a
+			 *  computer") instead of the first-run surface (review round 4, M2). */
+			if (mountedRef.current) setRestoredAccount(false);
 			listStore.getState().reset();
 			connectionStore.getState().endRoute();
 			/* Every stored credential goes with the sign-out. `removeSavedTunnel` stays the
@@ -748,48 +772,51 @@ export const ConnectionProvider = ({
 	 * first-run screen as though they had never signed in.
 	 */
 	const restoreRadient = useCallback(async () => {
-		/* The decision itself is `planRestore`, which is data and therefore testable;
-		 *  this carries it out. See that module for why the two are separated. */
-		const plan = planRestore(await readStoredOauth());
-		if (plan.kind === "none" || cancelledRef.current) return;
-
-		const dead = async () => {
-			await clearStoredOauth();
-			/* The reader is TOLD, not quietly treated as signed out: an expired session
-			 *  and a first run are different facts and deserve different screens. */
-			connectionStore.getState().noteFailure({
-				surface: "sign-in",
-				displayableMessage: "Your Radient session expired.",
-			});
-		};
-
-		/* Stored, lapsed, and with nothing to renew it: only a browser hand-off can get
-		 *  another grant, so the record goes rather than being retried forever. */
-		if (plan.kind === "discard") {
-			await dead();
-			return;
-		}
-
-		let tokens = plan.tokens;
-		if (plan.kind === "refresh") {
-			try {
-				tokens = await refreshRadientTokens(tokens);
+		/* The decision is `planRestore` and the carrying-out is `carryOutRestore`,
+		 *  both data/injectable and therefore testable; this wires them to the
+		 *  live storage, the live refresh and the list's own discovery. See that
+		 *  module for why the two failure arms must not be collapsed — the bare
+		 *  `catch` that used to live here deleted a valid credential on an offline
+		 *  cold start (review round 4, M1). */
+		const outcome = await carryOutRestore({
+			readOauth: readStoredOauth,
+			writeOauth: async (tokens) => {
 				await writeStoredOauth(tokens);
-			} catch {
-				/* Revoked, expired, or no answer at all — `invalid_grant` and a network
-				 *  failure are treated alike HERE on purpose: neither is fixed by trying
-				 *  again on the next launch, and both must leave the reader at the sign-in
-				 *  surface rather than at a computers list that will answer 401. */
-				await dead();
-				return;
-			}
+			},
+			clearOauth: clearStoredOauth,
+			refresh: (tokens) => refreshRadientTokens(tokens),
+			discover: async (tokens) => {
+				tokensRef.current = tokens;
+				if (mountedRef.current) setRestoredAccount(true);
+				/* Discovery is what turns a credential into a computers screen, and
+				 *  its own `unauthorized` arm deletes a grant the server has refused
+				 *  since. */
+				await refreshComputers();
+			},
+			isCancelled: () => cancelledRef.current,
+		});
+		/* One-way latch no more: any restore that does not end accepted clears it, so a
+		 *  later arrival at `/` cannot inherit a stale "signed in" landing. */
+		if (!outcome.restored && mountedRef.current) setRestoredAccount(false);
+		if (outcome.refusal === null) return;
+		connectionStore.getState().noteFailure({
+			surface: outcome.refusal.surface,
+			displayableMessage: outcome.refusal.message,
+		});
+		/* The retry a network failure offers re-runs the restore it interrupted —
+		 *  `restoreRef` holds the latest revision of this function, because the
+		 *  function is what offers the retry. */
+		if (outcome.refusal.surface === "retry") {
+			retryRef.current = () => restoreRef.current();
 		}
-		tokensRef.current = tokens;
-		if (!cancelledRef.current) setRestoredAccount(true);
-		/* Discovery is what turns a credential into a computers screen, and its own
-		 *  `unauthorized` arm deletes a grant the server has refused since. */
-		await refreshComputers();
 	}, [refreshComputers]);
+
+	/* The restore function is stable (its only dependency is `refreshComputers`), but
+	 *  the retry it publishes must call the latest one, and the two would otherwise
+	 *  have to reference each other. */
+	useEffect(() => {
+		restoreRef.current = restoreRadient;
+	}, [restoreRadient]);
 
 	/* The cold start. On web an explicit `lo-relay` override wins; otherwise the saved
 	 * CUSTOM tunnel is resumed, and failing that a stored RADIENT credential is
@@ -847,12 +874,19 @@ export const ConnectionProvider = ({
 
 	const refusal = useMemo<RefusalView | null>(() => {
 		if (!surface || surface === "none") return null;
+		/* What the refusal's sentence calls the thing that failed. A known computer
+		 *  is named by the reader's own name for it; a Radient route with none
+		 *  discovered yet is "Your computer"; and a custom route is named by the
+		 *  ADDRESS the reader typed, because "The relay" as a subject collided with the
+		 *  `relay-stopped` headline that already says "The relay" — the frame read
+		 *  "The relay is not running on The relay." A bare address is the one name
+		 *  this app is certain the reader recognises." */
 		const subject =
 			computers.length > 0
 				? (computers[0]?.name ?? "Your computer")
 				: route?.mode === "radient"
 					? "Your computer"
-					: "The relay";
+					: (route?.baseUrl ?? "That address");
 		return refusalFromError({
 			error: lastError,
 			surface,

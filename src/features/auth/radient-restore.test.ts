@@ -3,12 +3,17 @@ import { describe, expect, it } from "vitest";
 import type { RadientTokens, TunnelSession } from "@/connection";
 import {
 	oauthSetFromTokens,
+	RadientAuthError,
 	sessionFromTunnelSet,
 	tokensFromOauthSet,
 	tunnelSetFromSession,
 } from "@/connection";
 
-import { adoptableSession, planRestore } from "./radient-restore";
+import {
+	adoptableSession,
+	carryOutRestore,
+	planRestore,
+} from "./radient-restore";
 
 /**
  * The cold start's decisions, and the record round trip they depend on.
@@ -145,5 +150,134 @@ describe("the stored record round trip", () => {
 	it("round-trips a null refresh token rather than inventing one", () => {
 		const original = tokens({ refresh: null });
 		expect(tokensFromOauthSet(oauthSetFromTokens(original)).refresh).toBeNull();
+	});
+});
+
+/**
+ * The carrying-out — the writes, the deletes and the landing flag.
+ *
+ * Review round 4's m1 named this band as the one where both majors lived and no
+ * test reached: `planRestore` was pinned by value while every branch that ACTS on
+ * it was untested. These drive the real function over an injected storage, so each
+ * case asserts what happened to the CREDENTIAL rather than what a screen looked
+ * like.
+ */
+describe("carrying out the restore plan", () => {
+	/** A lapsed grant with a rolling refresh token — the shape a cold start meets
+	 *  after an hour away, and the one whose record must survive. */
+	const lapsed = () => tokens({ expires_at: Date.now() - 1_000 });
+
+	const harness = (options: {
+		refresh: (tokens: RadientTokens) => Promise<RadientTokens>;
+		stored?: RadientTokens | null;
+	}) => {
+		const calls: string[] = [];
+		const deps = {
+			readOauth: async () => options.stored ?? null,
+			writeOauth: async () => {
+				calls.push("write");
+			},
+			clearOauth: async () => {
+				calls.push("clear");
+			},
+			refresh: options.refresh,
+			discover: async () => {
+				calls.push("discover");
+			},
+		};
+		return { calls, deps };
+	};
+
+	it("keeps a still-valid credential when the refresh could not reach Radient", async () => {
+		/* The defect this pins (M1): a bare `catch` treated `network` exactly like
+		 * `invalid_grant` and called `clearOauth()`, deleting a rolling refresh token
+		 * that was still good — on an ordinary offline cold start, which is the most
+		 * common way to meet this branch. The credential must survive, and the reader
+		 * must be offered a retry rather than told their session expired. */
+		const { calls, deps } = harness({
+			stored: lapsed(),
+			refresh: async () => {
+				throw new RadientAuthError("network", "could not reach Radient");
+			},
+		});
+
+		const outcome = await carryOutRestore(deps);
+
+		expect(calls).not.toContain("clear");
+		expect(calls).not.toContain("write");
+		expect(calls).not.toContain("discover");
+		expect(outcome.restored).toBe(false);
+		expect(outcome.refusal?.surface).toBe("retry");
+		expect(outcome.refusal?.message).not.toContain("expired");
+	});
+
+	it("deletes the credential when the server refused the grant", async () => {
+		const { calls, deps } = harness({
+			stored: lapsed(),
+			refresh: async () => {
+				throw new RadientAuthError("invalid_grant", "the grant is gone");
+			},
+		});
+
+		const outcome = await carryOutRestore(deps);
+
+		expect(calls).toContain("clear");
+		expect(outcome.refusal?.surface).toBe("sign-in");
+	});
+
+	it("refreshes, stores the rotated grant and starts discovery", async () => {
+		const rotated = tokens({ access: "fresh", expires_at: NOW + 3_600_000 });
+		const { calls, deps } = harness({
+			stored: lapsed(),
+			refresh: async () => rotated,
+		});
+
+		const outcome = await carryOutRestore(deps);
+
+		expect(calls).toEqual(["write", "discover"]);
+		expect(outcome.restored).toBe(true);
+		expect(outcome.tokens?.access).toBe("fresh");
+	});
+
+	it("adopts a live grant without touching the store", async () => {
+		const { calls, deps } = harness({
+			stored: tokens(),
+			refresh: async () => {
+				throw new Error("must not be called");
+			},
+		});
+
+		const outcome = await carryOutRestore(deps);
+
+		expect(calls).toEqual(["discover"]);
+		expect(outcome.restored).toBe(true);
+	});
+
+	it("discards a lapsed record that has no refresh token to renew it", async () => {
+		const { calls, deps } = harness({
+			stored: tokens({ expires_at: Date.now() - 1_000, refresh: null }),
+			refresh: async () => {
+				throw new Error("must not be called");
+			},
+		});
+
+		const outcome = await carryOutRestore(deps);
+
+		expect(calls).toEqual(["clear"]);
+		expect(outcome.refusal?.surface).toBe("sign-in");
+	});
+
+	it("does nothing at all on a first run", async () => {
+		const { calls, deps } = harness({
+			stored: null,
+			refresh: async () => {
+				throw new Error("must not be called");
+			},
+		});
+
+		const outcome = await carryOutRestore(deps);
+
+		expect(calls).toEqual([]);
+		expect(outcome.refusal).toBeNull();
 	});
 });
