@@ -1,0 +1,52 @@
+# F-9/S13 — connection loss, and the recovery the user must not see.
+#
+# Run against the mock relay with `--fault sse-cut-after=6`, the tunnel gateway's
+# `MAX_STREAM_SECONDS` cap compressed into a few seconds: the stream ends as a clean
+# end-of-body, with no error frame and no status change, so an early EOF carries no
+# information about why it ended (`docs/relay/tunnel-edge.md` §3). What the app must
+# do with that is the whole point:
+#
+#   1. treat EOF as expected, not as an error,
+#   2. reconnect immediately and render the seed frame,
+#   3. **not** show a connection state on the boundary — a user must not see a
+#      reconnect flash every minute,
+#   4. keep the last good projection rendered while reconnecting, never blank.
+#
+# A flow is the only way to test (3): a still frame cannot show an absence. None of
+# the four can be asserted today, because there is no stream to cut — the
+# connection layer is a stub — so this flow keeps the shape and the markers.
+#
+# IDENTIFIERS: every `id:` in this file is in `src/ui/a11y.ts` — the scaffold's
+# own contract, which `src/ui/a11y.e2e.test.ts` checks these flows against. A step
+# the app cannot serve yet is a commented marker, not a selector:
+#
+#     Marker spelling: `# BLOCKED: needs <the-identifier> from <the-screen>`
+#
+# The marker names the identifier a step waits on and the screen that would own
+# it, so the gap is visible in review and the test can require that every marked
+# id is genuinely one the app does not render. An invented selector would fail on
+# the first assertion and read as a flaky flow.
+#
+# CI-only: needs a booted simulator or emulator and an app build (ADR 0003).
+appId: ${APP_ID}
+name: "F-9 connection loss and silent recovery"
+env:
+  APP_ID: com.radient.localoperator.mobile
+  SESSION_ID: 6714def86197
+---
+- launchApp:
+    clearState: true
+- assertVisible:
+    id: "sessions-screen"
+# BLOCKED: needs connection-banner from session
+# - assertNotVisible:
+#     id: "connection-banner"
+# BLOCKED: needs reconnect-toast from session
+# - assertNotVisible:
+#     id: "reconnect-toast"
+# BLOCKED: needs session-transcript from session
+# - assertVisible:
+#     id: "session-transcript"
+# BLOCKED: needs composer-receipt from session
+# - assertVisible:
+#     id: "composer-receipt"

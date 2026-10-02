@@ -324,12 +324,19 @@ never have to work that out from a bare "address and password" field.
    **needs a decision** › **running** › **new activity** › **ended** ›
    **degraded**.
    - *Decision state:* word `approval` / `question` in danger ink plus a dot.
+     *Queued asks are not part of this mark* — they are counted separately
+     (item 3 below), so an ask never competes with an approval for the row's one
+     state.
    - *Running:* shimmer on the name (never a spinner beside it).
    - *New:* accent word `new`, cleared on open.
    - *Ended:* muted, with resume offered inside the session.
    - *Degraded:* muted "not answering" (see §9).
 3. **Attention badges:** count of sessions needing a decision, on the header
-   and as the app icon badge (§10).
+   and as the app icon badge (§10). *Queued asks get their own count*, from
+   `asks_open`: an ask badge sits beside the decision badge and ranks below it, so
+   "the agent asked something and kept working" never reads as "you are blocking
+   it" ([ADR 0005](../adr/0005-queued-asks.md) §8). **Target state** — nothing
+   changes until the relay publishes the `asks` field.
 4. **Search:** server-side search of live sessions and past conversations; an
    empty field shows recents; keyboard opens with the field (search is a
    first-class action on a phone).
@@ -382,6 +389,12 @@ States to specify for every element below: **loading** (history fetch),
    `1 of N` badge, masked field for secrets, and now with a **labelled**
    remember choice that names its scope ("Always allow `bash` in this
    session").
+   - *Queued asks (target state, not shipped).* Once the relay publishes the
+     `asks` field, this card keeps its job for **approvals** and asks move to
+     their own surface — a count badge on the row, an asks list, and a response
+     card per answer; a card is a slot and a queue is a list. See
+     [ADR 0005](../adr/0005-queued-asks.md). Nothing here changes until that wire
+     lands.
 6. **Composer:** multiline field (44 pt minimum), attach (photo library /
    camera / files), model + effort chips, send/steer/stop as one morphing
    primary control with an explicit label, and a **queue indicator** when a
@@ -634,6 +647,10 @@ honest option.)
   deferred to v1.1 and shipped with (a) only. **Recommendation:** (c) for the
   first store release, with the notification settings screen present but honest
   that notifications only work while the app is running.
+  *Settled for v1 by [ADR 0005](../adr/0005-queued-asks.md) §5:* no push, an
+  in-app ask badge, a refetch on foreground, and copy that says the app cannot
+  alert while backgrounded. The option list above survives as the agenda for the
+  push RFC, which is where (a) and (b) get decided.
 - **D-2 - Radient mobile OAuth client.** The phone needs either a loopback
   listener during sign-in (allowed today for `127.0.0.1`/`localhost`/`[::1]`
   with any port) or Radient registering a native client (private-use scheme per

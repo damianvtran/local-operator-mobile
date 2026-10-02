@@ -1,0 +1,44 @@
+{
+	// Type-checking for the audit tooling, which is TypeScript like the app:
+	// Node 26 runs `.ts` directly by stripping types, so there is no build step
+	// and no bundling for any of this.
+	//
+	// It lives here, under `tools/`, rather than as a root `tsconfig.tools.json`
+	// because the root config files belong to the app scaffold's stream: this
+	// stream may not create or edit them. `include` therefore reaches out to
+	// `../e2e/**`, which is the other directory this stream owns.
+	//
+	// `module: esnext` + `moduleResolution: bundler`, not `nodenext`: with no
+	// `package.json` in the tree yet, `nodenext` classifies a `.ts` file as
+	// CommonJS and rejects its `export` statements. The repository's
+	// `package.json` belongs to the app scaffold's stream, so this one declares
+	// the ESM semantics Node already applies — measured: `node tools/x.ts` runs
+	// ESM syntax today and only warns that the module type is unspecified.
+	// `allowImportingTsExtensions` is required because the imports carry `.ts`,
+	// which is what Node's runtime resolution demands.
+	//
+	// `types: ["node"]` is the target state — run with `tsc -p tools/tsconfig.json`.
+	// It requires `@types/node` in the app's devDependencies, which stream A owns
+	// and this stream has requested rather than added (adding a dependency is not
+	// this stream's call).
+	"compilerOptions": {
+		"strict": true,
+		"noUncheckedIndexedAccess": true,
+		"noImplicitOverride": true,
+		"noFallthroughCasesInSwitch": true,
+		"allowJs": false,
+		"noEmit": true,
+		"target": "esnext",
+		"module": "esnext",
+		"moduleResolution": "bundler",
+		"allowImportingTsExtensions": true,
+		"lib": ["esnext", "dom"],
+		"types": ["node"],
+		"skipLibCheck": true,
+		"resolveJsonModule": true,
+		"isolatedModules": true,
+		"verbatimModuleSyntax": true,
+		"forceConsistentCasingInFileNames": true
+	},
+	"include": ["**/*.ts", "../e2e/**/*.ts"]
+}

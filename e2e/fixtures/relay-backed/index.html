@@ -1,0 +1,54 @@
+<!doctype html>
+<!--
+  A minimal page that satisfies a relay-backed capture cell, so the readiness
+  guard can be tested in BOTH directions.
+
+  The guard fails a cell that declares a relay state the app never reached
+  (`sessions-empty` in a cell declared populated, or no request to the relay at
+  all). A guard that only ever fails is as useless as one that only ever passes:
+  it would be satisfied by refusing every relay-backed cell, and nothing would
+  tell a real regression from a broken check.
+
+  So this page does the two things the guard asks for, and nothing else:
+  it asks the relay for something (`/healthz`, proxied at the same origin), and
+  it renders the screen root and the empty-state marker that a cell declaring
+  `S4/empty` promises. It is a fixture for the harness, never a stand-in for the
+  app: the app's own screens are asserted by the flows and the frame matrix.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Relay-backed fixture</title>
+<style>
+	/* The canvas comes from the design tokens (`color.surface.canvas`), and the
+	   theme the harness resolved is honoured, because the capture run asserts a
+	   frame's canvas against the token for the theme it claims: a fixture that
+	   painted one colour in both themes would fail that check and make its own
+	   readiness result unreadable. */
+	:root { --canvas: #f2ede3; --ink: #211e18; --muted: #6b6558; }
+	html[data-lo-theme="dark"] { --canvas: #22201c; --ink: #f2ede3; --muted: #a8a094; }
+	body { margin: 0; font: 16px/1.5 system-ui; background: var(--canvas); color: var(--ink); }
+	header, main { padding: 12px 16px; }
+	h1 { font-size: 1.25rem; margin: 0 0 8px; }
+	p { margin: 0 0 8px; color: var(--muted); }
+</style>
+</head>
+<body>
+<header>
+	<h1>Local Operator</h1>
+	<p>Relay-backed fixture for the capture harness.</p>
+</header>
+<main data-testid="sessions-screen">
+	<p data-testid="sessions-empty">No sessions yet.</p>
+	<p>A screenshot of this page proves the readiness guard accepts a cell whose
+	page really reached the relay in the state it declares; the app's own screens
+	are asserted by the frame matrix and the Maestro flows.</p>
+</main>
+<script>
+	// The request the guard counts. It is deliberately the cheapest real relay
+	// route, so this page proves reachability without modelling a session.
+	fetch('/healthz').catch(() => {});
+</script>
+</body>
+</html>
