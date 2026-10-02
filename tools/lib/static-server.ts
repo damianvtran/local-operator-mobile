@@ -14,6 +14,9 @@ import { createReadStream, existsSync, statSync } from "node:fs";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { createServer } from "node:http";
 import { extname, join, normalize, resolve, sep } from "node:path";
+import { Readable } from "node:stream";
+import { pipeline } from "node:stream/promises";
+import type { ReadableStream as NodeReadableStream } from "node:stream/web";
 
 /**
  * The routes a proxied upstream owns when `serveDir` is given one.
@@ -153,16 +156,23 @@ export async function serveDir(
 					signal: controller.signal,
 				},
 			);
-			// `Uint8Array`, not `Buffer`: Node's fetch accepts the former as a body and
-			// the DOM `BodyInit` type does not include `Buffer`'s shape, so passing a
-			// Buffer is a type error even though it works at runtime.
-			const out = new Uint8Array(await upstreamRes.arrayBuffer());
+			// The body is PIPED, never buffered.
+			//
+			// `await upstreamRes.arrayBuffer()` does not resolve for a response that
+			// never ends, and the relay has one: `/api/sessions/<id>/events` is an
+			// endless `text/event-stream` (the app's live transcript). Buffering it
+			// meant that route answered **no status line and no bytes at all** through
+			// this proxy — `http=000`, 0 B — while the same request called directly was
+			// a live stream. A hop that cannot carry the one response the app is built
+			// around is not a hop. Piping also keeps the hop's memory bounded by what
+			// is in flight rather than by the whole body.
 			const outHeaders: Record<string, string> = {};
 			upstreamRes.headers.forEach((value, key) => {
 				// Three headers must not be copied onto the response, and each for its
 				// own reason:
 				//
-				//  - content-length is recomputed by Node;
+				//  - content-length is recomputed by Node, and is not even available for a
+				//    streamed body (Node frames it as chunked instead);
 				//  - content-encoding describes the bytes the UPSTREAM sent, but
 				//    `fetch` has already decompressed the body by the time it is read
 				//    here. Forwarding it makes the browser try to un-gzip a plain
@@ -183,10 +193,37 @@ export async function serveDir(
 					? { ...outHeaders, "set-cookie": cookies }
 					: outHeaders,
 			);
-			res.end(out);
+			if (upstreamRes.body === null) {
+				res.end();
+			} else {
+				// `pipeline`, not a hand-rolled read loop: it propagates an upstream error
+				// onto the client's socket and destroys BOTH ends, so a stream the relay
+				// ends early (the gateway's 60 s cap, `--fault sse-cut-after`) closes the
+				// connection instead of leaving a half-open one behind, and a client that
+				// goes away mid-stream tears down the upstream fetch with it.
+				//
+				// The cast is the DOM/node stream-type seam: `lib: ["esnext", "dom"]`
+				// types `upstreamRes.body` as the DOM `ReadableStream` and `Readable.fromWeb`
+				// takes `node:stream/web`'s — the same object at runtime (Node's fetch is
+				// undici, whose bodies are node web streams).
+				await pipeline(
+					Readable.fromWeb(upstreamRes.body as unknown as NodeReadableStream),
+					res,
+				);
+			}
 		} catch (error) {
 			// An abort is the shutdown path, not a failure to report to the page.
-			if (error instanceof Error && error.name === "AbortError") return;
+			if (error instanceof Error && error.name === "AbortError") {
+				if (!res.writableEnded) res.destroy();
+				return;
+			}
+			// Once the status and headers are on the wire a 502 cannot be sent over
+			// them, and pretending otherwise would throw a second error over the first:
+			// a stream that fails mid-flight is ended, never re-answered.
+			if (res.headersSent) {
+				res.destroy();
+				return;
+			}
 			const reason = error instanceof Error ? error.message : String(error);
 			res.writeHead(502, { "content-type": "text/plain" });
 			res.end(`proxy upstream unreachable: ${reason}`);
