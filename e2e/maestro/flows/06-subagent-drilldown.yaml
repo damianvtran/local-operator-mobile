@@ -5,19 +5,29 @@
 # check that the app fetches the detail rather than rendering empty fields from the
 # roster: the assertions are on content that only exists on the detail route.
 #
-# Neither the roster nor the detail content exists yet. The subagent screen's own
-# root and back control do, and they are the two things asserted here.
+# The subagent screen's own root and back control exist and are asserted here. The
+# roster chip needs a session scenario, and the detail content is the session stream's:
+# the contract declares the panel and body surfaces it will render, so those are
+# named below in the contract's own spelling rather than in the pre-fold flow's.
 #
-# IDENTIFIERS: every `id:` in this file is in `src/ui/a11y.ts` — the scaffold's
-# own contract, which `src/ui/a11y.e2e.test.ts` checks these flows against. A step
-# the app cannot serve yet is a commented marker, not a selector:
+# IDENTIFIERS: every `id:` in this file is in `src/ui/a11y.ts` — the contract this
+# branch owns, which `src/ui/a11y.e2e.test.ts` checks these flows against. A step the
+# app cannot serve yet is a commented marker, not a selector, and there are three
+# spellings because there are three different gaps:
 #
 #     Marker spelling: `# BLOCKED: needs <the-identifier> from <the-screen>`
+#     Marker spelling: `# PENDING: <the-identifier> from <the-screen>`
+#     Marker spelling: `# SCENARIO: <the-identifier> from <the-screen>`
 #
-# The marker names the identifier a step waits on and the screen that would own
-# it, so the gap is visible in review and the test can require that every marked
-# id is genuinely one the app does not render. An invented selector would fail on
-# the first assertion and read as a flaky flow.
+# `BLOCKED` names an id `src/ui/a11y.ts` does not declare at all; `PENDING` names one
+# the contract declares whose renderer is not on this branch (the session view's, which
+# lands with its own stream); `SCENARIO` names one the app DOES render, where what is
+# missing is the mock relay pinned to the scenario that produces the state it waits on
+# (`--scenario …`). The test checks each in its own direction, so no marker can hide
+# coverage: a `BLOCKED` id must be absent from the contract, a `PENDING` id must be
+# declared and unrendered, and a `SCENARIO` id must be declared and rendered. An
+# invented selector would fail on the first assertion
+# and read as a flaky flow.
 #
 # CI-only: needs a booted simulator or emulator and an app build (ADR 0003).
 appId: ${APP_ID}
@@ -29,16 +39,23 @@ env:
 ---
 - launchApp:
     clearState: true
-# BLOCKED: needs subagent-chip-<job> from session
+# Reaching the subagent needs the chip, which the session view renders — and that
+# view is not on this branch, so the chip is `PENDING` rather than `SCENARIO`: the
+# renderer is what is missing, not the relay state.
+# PENDING: subagent-chip-<job> from session
 # - tapOn:
 #     id: "subagent-chip-${JOB_ID}"
-# BLOCKED: needs subagent-detail-prompt from subagent
+# BLOCKED: needs subagent-detail-prompt from subagent — nothing declares a
+# `subagent-detail-*` name; the contract's subagent surfaces are `subagents-panel` and
+# `subagents-body`, and the todos panel is `todos-panel`/`todos-body`.
 # - assertVisible:
 #     id: "subagent-detail-prompt"
-# BLOCKED: needs subagent-detail-transcript from subagent
+# BLOCKED: needs subagent-detail-transcript from subagent — see above; the contract's
+# spelling is `subagents-body`.
 # - assertVisible:
 #     id: "subagent-detail-transcript"
-# BLOCKED: needs subagent-detail-todos from subagent
+# BLOCKED: needs subagent-detail-todos from subagent — see above; the contract's
+# spelling is `todos-panel`.
 # - scrollUntilVisible:
 #     element:
 #       id: "subagent-detail-todos"

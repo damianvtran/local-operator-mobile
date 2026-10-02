@@ -3,7 +3,15 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
-import { CONTROL, EMPTY, isKnownIdentifier, SCREEN } from "@/ui/a11y";
+import {
+	CONTROL,
+	EMPTY,
+	IDENTIFIER_FAMILIES,
+	isKnownIdentifier,
+	REGION,
+	SCREEN,
+	SURFACE,
+} from "@/ui/a11y";
 
 /**
  * The identifier contract, checked from the outside in.
@@ -24,11 +32,31 @@ const walk = (dir: string): string[] =>
 		return statSync(path).isDirectory() ? walk(path) : [path];
 	});
 
+/**
+ * Comments out of a source file before asking "is this identifier rendered".
+ *
+ * Without this the check is satisfied by a mention: proven on the last round's head,
+ * where declaring an identifier and referring to it inside a `//` comment passed the
+ * guard while nothing rendered it. A leading `*` also drops the JSDoc line, and block
+ * comments are removed whole.
+ */
+const stripComments = (text: string): string =>
+	text
+		.replace(/\/\*[\s\S]*?\*\//g, "")
+		.replace(/^\s*\*.*$/gm, "")
+		.replace(/\/\/.*$/gm, "");
+
 /** `id: "x"` and `- id: x` selectors, quoted or not. Text selectors and regexes
  * are not identifiers and are deliberately not matched. */
-const TESTID_LITERAL = /\btestID=(?:"[^"]*"|\{\s*[`"'])/;
+const TESTID_LITERAL = /\btestID\s*[:=]\s*(?:"[^"]*"|\{\s*[`"']|["'`])/;
 const YAML_FILE = /\.ya?ml$/;
-const TSX_FILE = /\.tsx$/;
+/* `.ts` as well as `.tsx`: the session view keeps its connection banner's copy and
+ *  its identifier map in `.ts` modules, so a `.tsx`-only scan reported every one of
+ *  its ids as unrendered (measured on the other stream's branch: 18 of them). */
+const SOURCE_FILE = /\.tsx?$/;
+/* Tests carry identifiers too — in fixtures, in mocked props — and an id that only a
+ *  test spells is not a rendered control, which is the whole point of the check. */
+const EXCLUDED_FILE = /\.(?:test|e2e\.test)\.tsx?$/;
 const ID_LINE = /^\s*(?:-\s*)?id:\s*["']?([^"'\s#]+)["']?\s*(?:#.*)?$/;
 
 /**
@@ -45,6 +73,122 @@ const ID_LINE = /^\s*(?:-\s*)?id:\s*["']?([^"'\s#]+)["']?\s*(?:#.*)?$/;
  */
 const BLOCKED_LINE = /^\s*#\s*BLOCKED:\s*needs\s+(\S+)\s+from\s+(\S+)/;
 
+/**
+ * A step whose identifier IS in the contract, but whose renderer is not on this
+ * branch — the session view's, whose screens land with their own stream.
+ *
+ * Deliberately a second spelling rather than a second reading of `BLOCKED`: the two
+ * gaps have two different fixes (add the name to the contract, versus land the screen
+ * that renders it), and one marker that means both is a marker that means nothing.
+ * Checking it in the INVERSE direction is what keeps it from becoming a dumping
+ * ground: a `PENDING` id must be known AND unrendered, so the commit that renders one
+ * has to delete its marker.
+ */
+const PENDING_LINE = /^\s*#\s*PENDING:\s*(\S+)\s+from\s+(\S+)/;
+
+/**
+ * A step whose identifier the app renders, but whose STATE needs the relay pinned to
+ * a scenario (`--scenario gateway-503-authorization_refused`).
+ *
+ * The third case, and the one a `BLOCKED` marker used to obscure: the refusal
+ * surfaces are rendered by `src/ui/components/refusal-surface.tsx`, so a marker
+ * claiming the id is missing would be false; what is missing is the relay state that
+ * makes one of them appear. A `SCENARIO` id must be known AND rendered — the exact
+ * inverse of `PENDING` — so neither can stand in for the other.
+ */
+const SCENARIO_LINE = /^\s*#\s*SCENARIO:\s*(\S+)\s+from\s+(\S+)/;
+
+/**
+ * `GROUP.key` → value, read out of the contract's own source.
+ *
+ * The flows name id VALUES (`session-transcript`) while the code names CONSTANTS
+ * (`SURFACE.sessionTranscript`), so answering "does anything render this" needs the
+ * mapping between them. Parsing it here rather than importing a second hand-written
+ * list means a renamed constant cannot leave this check looking at a stale name.
+ */
+const CONTRACT_NAMES: ReadonlyArray<{ name: string; value: string }> = (() => {
+	const source = readFileSync(join(root, "src/ui/a11y.ts"), "utf8");
+	const out: Array<{ name: string; value: string }> = [];
+	for (const group of ["SCREEN", "EMPTY", "CONTROL", "SURFACE", "REGION"]) {
+		const block =
+			new RegExp(
+				`export const ${group} = \\{([\\s\\S]*?)\\n\\} as const;`,
+			).exec(source)?.[1] ?? "";
+		for (const [, key, value] of block.matchAll(/(\w+):\s*"([^"]+)"/g)) {
+			out.push({ name: `${group}.${key ?? ""}`, value: value ?? "" });
+		}
+	}
+	return out;
+})();
+
+/**
+ * The files that can render an identifier: the routes and the primitives that
+ * compose them. Tests are out (an id only a test spells is not a rendered control)
+ * and so is the contract itself, which would otherwise count as its own renderer.
+ */
+const SOURCE_FILES = [
+	...walk(join(root, "app")),
+	...walk(join(root, "src/ui")),
+	/* `src/features/**` too: the screens a route renders live there, so a
+	 *  scan of `app/**` alone would report every identifier as unused the
+	 *  moment a route became a thin wrapper — which is what the wave-2
+	 *  restructure did (measured: 63 "unreferenced" ids, all of them used). */
+	...walk(join(root, "src/features")),
+]
+	.filter((f) => SOURCE_FILE.test(f) && !EXCLUDED_FILE.test(f))
+	.filter((f) => !f.endsWith(join("src", "ui", "a11y.ts")))
+	.map((file) => ({
+		file: file.slice(root.length),
+		text: readFileSync(file, "utf8"),
+	}));
+
+const RENDER_SOURCE = SOURCE_FILES.map(({ text }) => stripComments(text)).join(
+	"\n",
+);
+
+/** The static identifier VALUES some route or primitive names. */
+const RENDERED_VALUES: ReadonlySet<string> = new Set(
+	CONTRACT_NAMES.filter(({ name }) =>
+		new RegExp(`\\b${name.replace(/\./g, "\\.")}\\b`).test(RENDER_SOURCE),
+	).map(({ value }) => value),
+);
+
+/**
+ * The session view's parameterised prefixes: declared, and built by nothing on this
+ * branch.
+ *
+ * A family's renderedness cannot be inferred the way a static's can — the id is data
+ * (`session-row-6714`), so no file spells it and the constant-names lookup above finds
+ * nothing to match. The list is therefore explicit, asserted to be a subset of the
+ * declared families, and the reason is the same one `PENDING_SESSION_VIEW` records.
+ */
+const PENDING_FAMILIES: readonly string[] = [
+	"transcript-row-",
+	"transcript-image-",
+	"model-option-",
+	"effort-rung-",
+	"slash-command-",
+	"composer-attachment-",
+	"subagent-chip-",
+	"todos-row-",
+	"ask-question-",
+	"ask-option-",
+	"session-empty-",
+];
+
+/** Whether the app renders this identifier: a static whose constant a source names,
+ *  or a family member the app builds. */
+const isRenderedId = (id: string): boolean => {
+	if (RENDERED_VALUES.has(id)) return true;
+	const literal = id.split("${")[0] ?? id;
+	const declared = IDENTIFIER_FAMILIES.some(
+		(prefix) => literal.startsWith(prefix) && id.length > prefix.length,
+	);
+	return (
+		declared && !PENDING_FAMILIES.some((prefix) => literal.startsWith(prefix))
+	);
+};
+
 const referencedIds = (): Map<string, string[]> => {
 	const byId = new Map<string, string[]>();
 	for (const file of walk(flowsDir).filter((f) => YAML_FILE.test(f))) {
@@ -56,6 +200,72 @@ const referencedIds = (): Map<string, string[]> => {
 	}
 	return byId;
 };
+
+/**
+ * The identifiers declared for stream D2's session view, whose renderers are not on
+ * this branch.
+ *
+ * One list, one reason, and a condition for its removal: the commit that merges the
+ * session view deletes these names from here, and until it does the count above makes
+ * the exemption visible in every run rather than silent.
+ */
+const PENDING_SESSION_VIEW: ReadonlySet<string> = new Set([
+	"CONTROL.composerSend",
+	"CONTROL.composerStop",
+	"CONTROL.composerAttach",
+	"CONTROL.composerResume",
+	"CONTROL.composerInput",
+	"CONTROL.composerRetry",
+	"CONTROL.composerModelChip",
+	"CONTROL.composerEffortChip",
+	"CONTROL.slashFilter",
+	"CONTROL.pendingApprove",
+	"CONTROL.pendingDeny",
+	"CONTROL.pendingRemember",
+	"CONTROL.pendingAskSubmit",
+	"CONTROL.todosDisclosure",
+	"CONTROL.subagentsDisclosure",
+	"CONTROL.connectionRetry",
+	"CONTROL.connectionSignIn",
+	"CONTROL.connectionConsole",
+	"CONTROL.codeBlockCopy",
+	"SURFACE.sessionTranscript",
+	"SURFACE.sessionComposer",
+	"SURFACE.sessionColumn",
+	"SURFACE.sessionContext",
+	"SURFACE.sessionLoading",
+	"SURFACE.sessionTranscriptEmpty",
+	"SURFACE.sessionWorkingLine",
+	"SURFACE.composerNotice",
+	"SURFACE.composerError",
+	"SURFACE.composerRetained",
+	"SURFACE.composerReceipt",
+	"SURFACE.composerDisabledReason",
+	"SURFACE.queuedMessageChip",
+	"SURFACE.connectionBanner",
+	"SURFACE.connectionWaiting",
+	"SURFACE.connectionClearsByItself",
+	"SURFACE.connectionCertificateRejected",
+	"SURFACE.connectionHostUnresolved",
+	"SURFACE.connectionComputerOffline",
+	"SURFACE.connectionMachineRemedy",
+	"SURFACE.connectionRelayNotInstalled",
+	"SURFACE.connectionTunnelUnavailable",
+	"SURFACE.modelSheet",
+	"SURFACE.effortSheet",
+	"SURFACE.slashSheet",
+	"SURFACE.todosPanel",
+	"SURFACE.todosBody",
+	"SURFACE.subagentsPanel",
+	"SURFACE.subagentsBody",
+	"SURFACE.subagentRunning",
+	"SURFACE.pendingCardBody",
+	"SURFACE.pendingCardDetail",
+	"SURFACE.pendingCardDestructiveMarker",
+	"SURFACE.pendingCardAnswer",
+	"SURFACE.pendingCardError",
+	"SURFACE.transcriptStreaming",
+]);
 
 describe("the Maestro flows against src/ui/a11y.ts", () => {
 	// `e2e/` lands with the audit-harness stream. Until it is on this branch there
@@ -74,6 +284,26 @@ describe("the Maestro flows against src/ui/a11y.ts", () => {
 			);
 		},
 	);
+});
+
+describe("the rendered check reads code, not prose", () => {
+	it("drops a mention that lives in a comment", () => {
+		/* The failure this closes, reproduced on the last head: a declared identifier
+		 *  with no renderer passed the check as soon as a scanned file mentioned it in a
+		 *  comment, which is precisely the "selector no flow can ever hit" the check
+		 *  exists to catch. */
+		const source = [
+			"// CONTROL.scratchProbeId is planned for a later pass",
+			"/* CONTROL.otherProbe too */",
+			" * CONTROL.jSDocProbe in a doc block",
+			"const real = { testID: CONTROL.settingsBack };",
+		].join("\n");
+		const stripped = stripComments(source);
+		expect(stripped).not.toContain("scratchProbeId");
+		expect(stripped).not.toContain("otherProbe");
+		expect(stripped).not.toContain("jSDocProbe");
+		expect(stripped).toContain("CONTROL.settingsBack");
+	});
 });
 
 /**
@@ -99,15 +329,13 @@ const isScreenName = (name: string): boolean => {
 	);
 };
 
-const blockedMarkers = (): Array<{
-	id: string;
-	screen: string;
-	file: string;
-}> => {
+const markersOf = (
+	pattern: RegExp,
+): Array<{ id: string; screen: string; file: string }> => {
 	const out: Array<{ id: string; screen: string; file: string }> = [];
 	for (const file of walk(flowsDir).filter((f) => YAML_FILE.test(f))) {
 		for (const line of readFileSync(file, "utf8").split("\n")) {
-			const match = BLOCKED_LINE.exec(line);
+			const match = pattern.exec(line);
 			if (match === null) continue;
 			out.push({
 				id: match[1] ?? "",
@@ -119,14 +347,21 @@ const blockedMarkers = (): Array<{
 	return out;
 };
 
-describe("the blocked steps the flows declare", () => {
-	it.skipIf(!existsSync(flowsDir))(
-		"marks only identifiers the app genuinely does not render",
-		() => {
-			const markers = blockedMarkers();
-			// A marker naming something the app DOES render is either a stale
-			// comment or an attempt to skip a real check; both are failures.
-			const hidable = markers
+describe("the marked steps the flows declare", () => {
+	it("names a screen that exists, for every kind of marker", () => {
+		const unnamed = [
+			...markersOf(BLOCKED_LINE),
+			...markersOf(PENDING_LINE),
+			...markersOf(SCENARIO_LINE),
+		]
+			.filter(({ screen }) => !isScreenName(screen))
+			.map(({ id, screen, file }) => `${id} → '${screen}'  (${file})`);
+		expect(unnamed).toEqual([]);
+	});
+
+	it("needs a concrete identifier, never a placeholder", () => {
+		for (const pattern of [BLOCKED_LINE, PENDING_LINE, SCENARIO_LINE]) {
+			const hidable = markersOf(pattern)
 				.filter(
 					({ id, screen }) => id.startsWith("<") || screen.startsWith("<"),
 				)
@@ -134,29 +369,56 @@ describe("the blocked steps the flows declare", () => {
 					({ id, file }) => `${id}  (${file}) — the marker needs a concrete id`,
 				);
 			expect(hidable).toEqual([]);
-			const alreadyRendered = markers
-				.filter(({ id }) => isKnownIdentifier(id))
-				.map(
-					({ id, file }) =>
-						`${id}  (${file}) — the app renders this; uncomment the step`,
-				);
-			expect(alreadyRendered).toEqual([]);
-			// The owning screen has to be named, or the gap cannot be assigned.
-			const unnamed = markers
-				.filter(({ screen }) => !isScreenName(screen))
-				.map(({ id, screen, file }) => `${id} → '${screen}'  (${file})`);
-			expect(unnamed).toEqual([]);
-		},
-	);
+		}
+	});
+
+	it("marks as BLOCKED only identifiers the contract does not have", () => {
+		// An id the contract DOES declare is either rendered (the step should run) or
+		// pending (the screen is not here yet). `BLOCKED` for either is a marker that
+		// hides a real state behind a wrong one.
+		const wrong = markersOf(BLOCKED_LINE)
+			.filter(({ id }) => isKnownIdentifier(id))
+			.map(
+				({ id, file }) =>
+					`${id}  (${file}) — the contract declares this; use PENDING or uncomment the step`,
+			);
+		expect(wrong).toEqual([]);
+	});
+
+	it("marks as PENDING only identifiers the contract has and nothing renders", () => {
+		const wrong = markersOf(PENDING_LINE)
+			.filter(({ id }) => !isKnownIdentifier(id) || isRenderedId(id))
+			.map(
+				({ id, file }) =>
+					`${id}  (${file}) — PENDING is for a declared id with no renderer; this one is ${
+						isKnownIdentifier(id) ? "rendered" : "not in the contract"
+					}`,
+			);
+		expect(wrong).toEqual([]);
+	});
+
+	it("marks as SCENARIO only identifiers the app already renders", () => {
+		// The inverse of PENDING: what is missing is a relay state, not a control, so
+		// the id has to be one a screen actually paints today.
+		const wrong = markersOf(SCENARIO_LINE)
+			.filter(({ id }) => !isKnownIdentifier(id) || !isRenderedId(id))
+			.map(
+				({ id, file }) =>
+					`${id}  (${file}) — SCENARIO needs a rendered id; this one is not rendered`,
+			);
+		expect(wrong).toEqual([]);
+	});
+
+	it("lists only declared families as pending", () => {
+		const unknown = PENDING_FAMILIES.filter(
+			(prefix) => !IDENTIFIER_FAMILIES.includes(prefix),
+		);
+		expect(unknown).toEqual([]);
+	});
 });
 
 describe("the routes and primitives against src/ui/a11y.ts", () => {
-	const sources = [...walk(join(root, "app")), ...walk(join(root, "src/ui"))]
-		.filter((f) => TSX_FILE.test(f))
-		.map((file) => ({
-			file: file.slice(root.length),
-			text: readFileSync(file, "utf8"),
-		}));
+	const sources = SOURCE_FILES;
 
 	it("never types an identifier as a literal", () => {
 		// A literal `testID="settings-theme"` is a second spelling waiting to
@@ -171,15 +433,32 @@ describe("the routes and primitives against src/ui/a11y.ts", () => {
 	it("references every declared identifier from at least one route or primitive", () => {
 		// A declared-but-unrendered identifier is a selector no flow can ever hit,
 		// and it would still satisfy the flow check above.
-		const rendered = sources.map(({ text }) => text).join("\n");
-		const unused = Object.entries({ SCREEN, EMPTY, CONTROL }).flatMap(
-			([group, ids]) =>
-				Object.keys(ids)
-					.filter(
-						(key) => !new RegExp(`\\b${group}\\.${key}\\b`).test(rendered),
-					)
-					.map((key) => `${group}.${key}`),
+		const rendered = sources.map(({ text }) => stripComments(text)).join("\n");
+		const unused = Object.entries({
+			SCREEN,
+			EMPTY,
+			CONTROL,
+			SURFACE,
+			REGION,
+		}).flatMap(([group, ids]) =>
+			Object.keys(ids)
+				.filter((key) => !new RegExp(`\\b${group}\\.${key}\\b`).test(rendered))
+				.map((key) => `${group}.${key}`),
 		);
-		expect(unused).toEqual([]);
+		/* The session view's vocabulary is declared here, in the ONE contract, while
+		 *  its renderers live on the other stream's branch — this branch carries no
+		 *  `src/features/session/**` at all. The exemption is checked from BOTH sides,
+		 *  which is what keeps it from becoming a dumping ground: a pending name must
+		 *  be unrendered today, so the commit that renders one has to delete it from
+		 *  this list, and the list is printed by name whenever the check runs. */
+		const pending = unused.filter((name) => PENDING_SESSION_VIEW.has(name));
+		const genuinelyUnused = unused.filter(
+			(name) => !PENDING_SESSION_VIEW.has(name),
+		);
+		expect(genuinelyUnused).toEqual([]);
+		expect(
+			pending.length,
+			`${pending.length} identifier(s) declared for the session view and not yet rendered on this branch: ${pending.join(", ")}`,
+		).toBe(PENDING_SESSION_VIEW.size);
 	});
 });

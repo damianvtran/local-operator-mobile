@@ -3,6 +3,7 @@ import { Text, TextInput, View } from "react-native";
 
 import { ROLE, state } from "@/ui/a11y";
 import { useTokenColor } from "@/ui/appearance";
+import { TOUCH_FLOOR } from "@/ui/layout";
 import { type FieldState, fieldClasses, TEXTAREA_MAX_PX } from "@/ui/variants";
 
 /**
@@ -76,7 +77,13 @@ export const Textarea = ({
 			<TextInput
 				ref={inputRef}
 				className={fieldClasses(fieldState)}
-				style={{ height: Math.min(Math.max(contentHeight, LINE_PX), cap) }}
+				/* One `style`, because a textarea's box IS its visual: the growing height
+				 *  and the platform floor (48 wherever `Platform.OS` is not iOS — the
+				 *  web/audit profile) have to be resolved together (D6). */
+				style={{
+					height: Math.min(Math.max(contentHeight, LINE_PX), cap),
+					minHeight: TOUCH_FLOOR,
+				}}
 				multiline
 				// The transcript scrolls, not the page: the field clips its own
 				// overflow once it hits the cap.

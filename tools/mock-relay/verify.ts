@@ -38,9 +38,20 @@ import {
 	countProcesses,
 	mayRetry,
 	reapAttempt,
+	resolveChrome,
 	scratchRoot,
 	sweepOrphanChrome,
 } from "../lib/chrome.ts";
+import {
+	captureChecksRunnable,
+	captureDiagnostic,
+	captureSkipDecision,
+	NEEDS_HOOK_PARSE,
+	NEEDS_NAME_CONTRACT,
+	nameContractUsable,
+	readFirstAvailable,
+} from "../lib/ci-environment.ts";
+
 import {
 	readinessProblems,
 	requiredStateMarker,
@@ -90,6 +101,8 @@ interface CheckResult {
 	expected: unknown;
 	ok: boolean;
 	note: string;
+	/** Set by `skip()`: counted apart from passes, so it cannot read as one. */
+	skipped?: boolean;
 }
 
 const results: CheckResult[] = [];
@@ -111,6 +124,27 @@ let group = "";
  */
 let lastProgress = Date.now();
 
+/**
+ * A check that CANNOT run here is reported as a NAMED skip, never passed over and never
+ * failed for a reason that belongs to the environment. CI learned this the hard way: the
+ * contract job has no browser, so the capture-dependent checks reported data failures
+ * ("no manifest path was printed") for an environment that simply cannot produce a
+ * manifest. A skip says which environment the check needs, and the tally counts it
+ * separately so a skipped check can never be read as a pass.
+ */
+const skip = (name: string, reason: string): void => {
+	lastProgress = Date.now();
+	results.push({
+		group,
+		name,
+		actual: "(skipped)",
+		expected: "(skipped)",
+		ok: true,
+		skipped: true,
+		note: reason,
+	});
+};
+
 const check = (
 	name: string,
 	actual: unknown,
@@ -128,6 +162,7 @@ const check = (
 		actual,
 		expected: typeof expected === "function" ? "(predicate)" : expected,
 		ok,
+		skipped: false,
 		note,
 	});
 };
@@ -1294,6 +1329,24 @@ async function main() {
 			/^manifest:\s*(.+)$/m
 				.exec(`${result.stdout ?? ""}${result.stderr ?? ""}`)?.[1]
 				?.trim() ?? "";
+		// How many cells the manifest lists, so the success branch below can assert the
+		// property every per-rule audit depends on rather than comparing the PATH string.
+		// An unreadable or unparseable manifest is 0 cells, which fails the check with the
+		// capture's own path still in the note.
+		const manifestCells = (path: string): number => {
+			try {
+				const parsed = JSON.parse(readFileSync(path, "utf8")) as {
+					records?: unknown[];
+				};
+				return Array.isArray(parsed.records) ? parsed.records.length : 0;
+			} catch {
+				return 0;
+			}
+		};
+		// The LAST attempt's words: on the killed-then-retried path the first attempt died by
+		// SIGTERM, and its note would describe the kill rather than what the retry said — the
+		// one place the surfaced stderr would otherwise be lost (review round 2, F11).
+		let lastCaptureRun = captureRun;
 		let sharedManifest = captureManifest(captureRun);
 		let mutationUsable = true;
 		if (
@@ -1339,6 +1392,7 @@ async function main() {
 					],
 					{ encoding: "utf8", timeout: 900_000, env: { ...process.env } },
 				);
+				lastCaptureRun = retry;
 				sharedManifest = captureManifest(retry);
 			}
 		}
@@ -1347,18 +1401,48 @@ async function main() {
 			// here was the one path where the failure the diagnostic exists to name
 			// retained nothing at all.
 			retainSharedCapture = true;
-			console.error(
-				"\nverify: the shared mutation capture produced no manifest.\n" +
-					"The blinded rules are NOT re-captured per rule — that fallback is the footprint\n" +
-					"this change removes. Re-run the sweep on a quieter host.",
+			// Keyed on the CAPTURE'S OUTCOME, not on whether a browser looked present: CI's
+			// contract job ships Chrome 154, so a presence guard chose "runnable", the checks
+			// failed anyway, and the note named the symptom while discarding the cause. There is
+			// deliberately no load hint here ("re-run the sweep on a quieter host"): it guessed
+			// at a cause the capture had not named, and it contradicted the decision below,
+			// which reads the capture's own words.
+			const diagnostic = captureDiagnostic(lastCaptureRun);
+			// Two facts, no interpretation: a skip needs the RESOLVER to report no browser AND
+			// the capture's words to agree. Everything else fails with its own cause — the
+			// display case and the DevToolsActivePort case included, which is what tells us
+			// whether this job should be capturing at all (PR #10's decision).
+			const decision = captureSkipDecision({
+				chromeResolved: resolveChrome() !== null,
+				diagnostic,
+			});
+			if (decision.skip) {
+				skip(
+					"the shared capture produced a manifest for every rule to audit",
+					decision.reason,
+				);
+			} else {
+				check(
+					"the shared capture produced a manifest for every rule to audit",
+					false,
+					true,
+					decision.reason,
+				);
+			}
+		} else {
+			// Q-1 (QA round 1): this compared the manifest PATH against `true`, so the success
+			// branch could never pass — a capture that worked still reddened the run, on every
+			// host that has a browser. Assert what the group promises the seven per-rule audits:
+			// the manifest exists and lists records, which is the precondition `run-canary.ts`
+			// refuses on ("the capture produced no frames") when a rule audits it.
+			const sharedCells = manifestCells(sharedManifest);
+			check(
+				"the shared capture produced a manifest for every rule to audit",
+				sharedCells > 0,
+				true,
+				`${sharedManifest} (${sharedCells} captured cells)`,
 			);
 		}
-		check(
-			"the shared capture produced a manifest for every rule to audit",
-			sharedManifest !== "",
-			true,
-			sharedManifest || "no manifest path was printed",
-		);
 
 		for (const mutation of mutations) {
 			if (sharedManifest === "" || !mutationUsable) break;
@@ -2106,6 +2190,13 @@ async function main() {
 		// The name contract lives in #11's file. Read it from the branch while the branch
 		// exists, else from the merged path — and FAIL (not skip) when neither is readable,
 		// because a check that quietly does nothing is the failure mode of this whole PR.
+		// The working tree FIRST, and a named fallback second. The order matters and so does
+		// the naming: `actions/checkout` is depth-1, so `git show <other-branch>:<path>` has
+		// no object to read there, and a ref-first read left the expectation list EMPTY —
+		// which turned a readable mismatch into the nonsense `expected [] got [lo-relay,
+		// lo-relay-insecure, lo-relay-password]`, and would have failed a healthy `main` as
+		// soon as #11 merged and its branch was deleted. When nothing is readable the
+		// derived checks SKIP by name: an empty expectation list is never a result.
 		const providerPath = join(
 			REPO,
 			"src",
@@ -2113,23 +2204,29 @@ async function main() {
 			"auth",
 			"connection-provider.tsx",
 		);
-		let source = "";
-		try {
-			source = execFileSync(
-				"git",
-				[
-					"-C",
-					REPO,
-					"show",
-					"origin/feat/screens-lists:src/features/auth/connection-provider.tsx",
-				],
-				{ encoding: "utf8" },
-			);
-		} catch {
-			source = existsSync(providerPath)
-				? readFileSync(providerPath, "utf8")
-				: "";
-		}
+		const FALLBACK_REF =
+			"origin/feat/screens-lists:src/features/auth/connection-provider.tsx";
+		const resolved = readFirstAvailable([
+			{
+				label: `${providerPath} (working tree)`,
+				read: () =>
+					existsSync(providerPath) ? readFileSync(providerPath, "utf8") : "",
+			},
+			{
+				label: `${FALLBACK_REF} (the pre-merge branch fallback)`,
+				read: () =>
+					execFileSync("git", ["-C", REPO, "show", FALLBACK_REF], {
+						encoding: "utf8",
+						// Git's `fatal: invalid object name …` is about this fallback being
+						// unavailable, not about the run: with stderr inherited it lands in the
+						// job log as if the harness had failed. stdout is still piped, which is
+						// what `readFirstAvailable` reads; a throw still counts as unreadable.
+						stdio: ["ignore", "pipe", "ignore"],
+					}),
+			},
+		]);
+		const source = resolved.source;
+		const sourceFrom = resolved.from;
 		// Only the hook's own body counts: scraping every quoted `lo-…` in the file would
 		// read a future storage key as a seed parameter.
 		const hookBody =
@@ -2138,31 +2235,62 @@ async function main() {
 			[...hookBody.matchAll(/"(lo-[a-z-]+)"/g)].map((match) => match[1] ?? ""),
 		);
 		check(
-			"PR #11's connection provider is readable at its ref (the name contract's source)",
+			"the app's connection provider is readable (the name contract's source)",
 			source.length > 0,
 			true,
-			"git show origin/feat/screens-lists:src/features/auth/connection-provider.tsx",
+			source.length > 0
+				? `read from ${sourceFrom}`
+				: `not readable from any candidate: ${resolved.tried.join(", ")}`,
 		);
-		const emitted = new URLSearchParams(seedQuery("http://127.0.0.1:1", "pw"));
-		check(
-			"the harness emits exactly the names the app reads",
-			[...emitted.keys()].sort(),
-			[...appNames].sort(),
-		);
-		check(
-			"the password is among them: a route-only seed renders an unauthenticated page",
-			emitted.has("lo-relay-password"),
-			true,
-		);
-		check(
-			"and no invented parameter rides along",
-			[...emitted.keys()].filter((key) => !appNames.has(key)),
-			[],
-		);
+		// Without the source there is no expectation list to compare against, so these are
+		// NAMED SKIPS. Comparing the emitted names against an empty set is what produced
+		// `expected [] got [...real names...]`, a check that can only ever fail.
+		// Through the tested helper (review round 2, F15): a readable file with an empty PARSE
+		// is its own named reason, never a mismatch.
+		const contract = nameContractUsable(source, [...appNames]);
+		if (!contract.usable) {
+			for (const name of [
+				"the harness emits exactly the names the app reads",
+				"the password is among them: a route-only seed renders an unauthenticated page",
+				"and no invented parameter rides along",
+			]) {
+				skip(
+					name,
+					`${source.length > 0 ? NEEDS_HOOK_PARSE : NEEDS_NAME_CONTRACT} (candidates tried: ${resolved.tried.join(", ")})`,
+				);
+			}
+		}
+		if (contract.usable) {
+			const emitted = new URLSearchParams(
+				seedQuery("http://127.0.0.1:1", "pw"),
+			);
+			check(
+				"the harness emits exactly the names the app reads",
+				[...emitted.keys()].sort(),
+				[...appNames].sort(),
+			);
+			check(
+				"the password is among them: a route-only seed renders an unauthenticated page",
+				emitted.has("lo-relay-password"),
+				true,
+			);
+			check(
+				"and no invented parameter rides along",
+				[...emitted.keys()].filter((key) => !appNames.has(key)),
+				[],
+			);
+		}
 	}
 
 	group = "a leaking run cannot report a clean matrix";
 	{
+		// Declared in THIS group's scope: the mutation group has its own declaration, and a
+		// sibling block's `const` is not visible here (the mistake that cost a round).
+		// This group's two checks below are browser-keyed and stay so: the capture they launch
+		// is the leak fixture's own, and the decision the capture group makes from the
+		// capture's own outcome does not reach it.
+		const capture = captureChecksRunnable(resolveChrome());
+
 		// Round 3: the survivor count was nested inside the `blocking > 0` gate, so a clean
 		// matrix that leaked a browser exited 0. The regression is an ADVERSARIAL one — a
 		// process that keeps re-creating one carrying the run's own profile path — because a
@@ -2217,23 +2345,38 @@ async function main() {
 			{ encoding: "utf8", timeout: 300_000, env: { ...process.env } },
 		);
 		const output = `${run.stdout ?? ""}${run.stderr ?? ""}`;
-		check(
-			"a clean matrix that leaks a process exits non-zero",
-			run.status !== 0,
-			true,
-			`exit ${String(run.status)}`,
-		);
+		if (!capture.runnable) {
+			skip(
+				"a clean matrix that leaks a process exits non-zero",
+				capture.reason,
+			);
+		} else {
+			check(
+				"a clean matrix that leaks a process exits non-zero",
+				run.status !== 0,
+				true,
+				`exit ${String(run.status)}`,
+			);
+		}
 		// The count must be NON-ZERO: `0 surviving process(es)` is the tail of every
 		// CaptureFailure message, so the bare phrase would be satisfied by any strict
 		// failure of the matrix and would prove nothing about the survivor gate.
-		check(
-			"and the failure names a non-zero survivor count rather than the matrix",
-			/[1-9]\d* surviving process\(es\)|survived this run's teardown/.test(
-				output,
-			),
-			true,
-			output.split("\n").find((line) => line.includes("surviv")) ?? "(no line)",
-		);
+		if (!capture.runnable) {
+			skip(
+				"and the failure names a non-zero survivor count rather than the matrix",
+				capture.reason,
+			);
+		} else {
+			check(
+				"and the failure names a non-zero survivor count rather than the matrix",
+				/[1-9]\d* surviving process\(es\)|survived this run's teardown/.test(
+					output,
+				),
+				true,
+				output.split("\n").find((line) => line.includes("surviv")) ??
+					"(no line)",
+			);
+		}
 		// Reap the respawner and everything it made, by pid and by the profile it carries.
 		if (respawner.pid !== undefined) {
 			try {
@@ -2985,6 +3128,8 @@ async function main() {
 	}
 
 	/* --------------------------------------------------------------- report -- */
+	// Skips are counted apart from passes: a check that could not run is not evidence.
+	const skipped = results.filter((r) => r.skipped === true);
 	const failures = results.filter((r) => !r.ok);
 	const width = Math.max(...results.map((r) => r.name.length));
 	console.log("");
@@ -2993,7 +3138,7 @@ async function main() {
 			group = r.group;
 			console.log(`\n== ${group}`);
 		}
-		const mark = r.ok ? "PASS" : "FAIL";
+		const mark = r.skipped === true ? "SKIP" : r.ok ? "PASS" : "FAIL";
 		const note = r.note
 			? `  ${r.note}`
 			: r.ok
@@ -3002,7 +3147,7 @@ async function main() {
 		console.log(`  ${mark}  ${r.name.padEnd(width)}${note}`);
 	}
 	console.log(
-		`\n${results.length - failures.length}/${results.length} checks passed; ${failures.length} failed`,
+		`\n${results.length - failures.length - skipped.length}/${results.length} checks passed; ${failures.length} failed; ${skipped.length} skipped (each skip names the environment it needs)`,
 	);
 	const jsonPath = process.argv.slice(2).includes("--json")
 		? flag("json", "")
@@ -3010,7 +3155,7 @@ async function main() {
 	if (jsonPath !== null && jsonPath !== "")
 		writeFileSync(
 			jsonPath,
-			`${JSON.stringify({ results, failures: failures.length }, null, 2)}\n`,
+			`${JSON.stringify({ results, failures: failures.length, skipped: skipped.length }, null, 2)}\n`,
 		);
 	process.exit(failures.length === 0 ? 0 : 1);
 }

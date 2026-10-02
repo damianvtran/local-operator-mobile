@@ -23,6 +23,8 @@
 @source '../**/*.{ts,tsx}';
 
 @theme {
+	--spacing: 4px;
+
 	/* ---- colour roles ----
 	 *
 	 * Registered here with the LIGHT value so every utility exists at build

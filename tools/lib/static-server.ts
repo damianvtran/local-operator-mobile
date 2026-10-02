@@ -14,6 +14,9 @@ import { createReadStream, existsSync, statSync } from "node:fs";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { createServer } from "node:http";
 import { extname, join, normalize, resolve, sep } from "node:path";
+import { Readable } from "node:stream";
+import { pipeline } from "node:stream/promises";
+import type { ReadableStream as NodeReadableStream } from "node:stream/web";
 
 /**
  * The routes a proxied upstream owns when `serveDir` is given one.
@@ -114,14 +117,28 @@ export async function serveDir(
 			res.end("no proxy upstream configured");
 			return;
 		}
-		// Headers are passed through except `host`, which must name the upstream;
-		// the cookie and `x-radient-*` headers the relay reads are all preserved,
+		// Headers are passed through except two, and both exceptions exist because
+		// the proxy is a *server-side* hop rather than a browser one:
+		//
+		//  - `host` must name the upstream, not the proxy;
+		//  - `origin` must be RE-WRITTEN, not forwarded. The browser sets it to this
+		//    proxy's own origin (that is the URL it called), and forwarding that
+		//    verbatim makes a same-origin request arrive at the relay as a FOREIGN
+		//    one — so the relay's CSRF rule refuses every mutation and `POST /login`
+		//    can never succeed, which is a relay-backed cell that renders the
+		//    degraded screen for a harness reason. The relay's own origin is what
+		//    the hop really is, and the relay allows its own origin (see
+		//    `RelayState.allowedOrigins`).
+		//
+		// The cookie and `x-radient-*` headers the relay reads are all preserved,
 		// which is the point of proxying rather than rewriting.
 		const headers = new Headers();
 		for (const [key, value] of Object.entries(req.headers)) {
-			if (key === "host" || value === undefined) continue;
+			if (key === "host" || key === "origin" || value === undefined) continue;
 			headers.set(key, Array.isArray(value) ? value.join(", ") : value);
 		}
+		if (req.headers.origin !== undefined)
+			headers.set("origin", new URL(upstream).origin);
 		const body =
 			req.method === "GET" || req.method === "HEAD"
 				? undefined
@@ -139,15 +156,34 @@ export async function serveDir(
 					signal: controller.signal,
 				},
 			);
-			// `Uint8Array`, not `Buffer`: Node's fetch accepts the former as a body and
-			// the DOM `BodyInit` type does not include `Buffer`'s shape, so passing a
-			// Buffer is a type error even though it works at runtime.
-			const out = new Uint8Array(await upstreamRes.arrayBuffer());
+			// The body is PIPED, never buffered.
+			//
+			// `await upstreamRes.arrayBuffer()` does not resolve for a response that
+			// never ends, and the relay has one: `/api/sessions/<id>/events` is an
+			// endless `text/event-stream` (the app's live transcript). Buffering it
+			// meant that route answered **no status line and no bytes at all** through
+			// this proxy — `http=000`, 0 B — while the same request called directly was
+			// a live stream. A hop that cannot carry the one response the app is built
+			// around is not a hop. Piping also keeps the hop's memory bounded by what
+			// is in flight rather than by the whole body.
 			const outHeaders: Record<string, string> = {};
 			upstreamRes.headers.forEach((value, key) => {
-				// Content-length is recomputed by Node; set-cookie is handled below
-				// because its multiple values must not be folded into one header.
-				if (key === "content-length") return;
+				// Three headers must not be copied onto the response, and each for its
+				// own reason:
+				//
+				//  - content-length is recomputed by Node, and is not even available for a
+				//    streamed body (Node frames it as chunked instead);
+				//  - content-encoding describes the bytes the UPSTREAM sent, but
+				//    `fetch` has already decompressed the body by the time it is read
+				//    here. Forwarding it makes the browser try to un-gzip a plain
+				//    body and fail with ERR_CONTENT_DECODING_FAILED — so `/api/sessions`
+				//    never resolves and EVERY relay-backed cell renders the app's
+				//    degraded screen with no rows, which is a harness fault wearing the
+				//    app's name. Dropped alongside content-length, which is the same
+				//    class of header: one the hop re-derives rather than passes on;
+				//  - set-cookie is handled below, because its multiple values must not
+				//    be folded into one header.
+				if (key === "content-length" || key === "content-encoding") return;
 				outHeaders[key] = value;
 			});
 			const cookies = upstreamRes.headers.getSetCookie?.() ?? [];
@@ -157,10 +193,37 @@ export async function serveDir(
 					? { ...outHeaders, "set-cookie": cookies }
 					: outHeaders,
 			);
-			res.end(out);
+			if (upstreamRes.body === null) {
+				res.end();
+			} else {
+				// `pipeline`, not a hand-rolled read loop: it propagates an upstream error
+				// onto the client's socket and destroys BOTH ends, so a stream the relay
+				// ends early (the gateway's 60 s cap, `--fault sse-cut-after`) closes the
+				// connection instead of leaving a half-open one behind, and a client that
+				// goes away mid-stream tears down the upstream fetch with it.
+				//
+				// The cast is the DOM/node stream-type seam: `lib: ["esnext", "dom"]`
+				// types `upstreamRes.body` as the DOM `ReadableStream` and `Readable.fromWeb`
+				// takes `node:stream/web`'s — the same object at runtime (Node's fetch is
+				// undici, whose bodies are node web streams).
+				await pipeline(
+					Readable.fromWeb(upstreamRes.body as unknown as NodeReadableStream),
+					res,
+				);
+			}
 		} catch (error) {
 			// An abort is the shutdown path, not a failure to report to the page.
-			if (error instanceof Error && error.name === "AbortError") return;
+			if (error instanceof Error && error.name === "AbortError") {
+				if (!res.writableEnded) res.destroy();
+				return;
+			}
+			// Once the status and headers are on the wire a 502 cannot be sent over
+			// them, and pretending otherwise would throw a second error over the first:
+			// a stream that fails mid-flight is ended, never re-answered.
+			if (res.headersSent) {
+				res.destroy();
+				return;
+			}
 			const reason = error instanceof Error ? error.message : String(error);
 			res.writeHead(502, { "content-type": "text/plain" });
 			res.end(`proxy upstream unreachable: ${reason}`);

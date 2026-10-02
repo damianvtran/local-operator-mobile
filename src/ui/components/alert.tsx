@@ -39,15 +39,25 @@ export const Alert = ({ severity, title, children, testID }: AlertProps) => {
 	return (
 		<View
 			className={alertClasses(tone)}
+			/* `maxWidth: "100%"` and the shrink constraint below are INLINE, not classes,
+			 *  and that is not belt-and-braces: this is the component that carries the
+			 *  same failure `connection-pill.tsx` records, where the class-only version
+			 *  measured 554 pt inside a 320 pt viewport and every sibling inherited the
+			 *  width. Measured here: the alert's box was 358 pt while its `scrollWidth`
+			 *  was 786, a verdict sentence's own box measured 898 pt in a 390 pt screen,
+			 *  1573 pt at 200 % — and because the text lays out on ONE line, the URL
+			 *  field, the opt-in row and the Test button under it ran past the right edge
+			 *  too. A long sentence is the variable; the container has to constrain it. */
+			style={{ maxWidth: "100%" }}
 			testID={testID}
 			accessibilityRole="alert"
 			accessibilityLiveRegion={severity === "error" ? "assertive" : "polite"}
 		>
-			<View className="flex-row items-start gap-2">
+			<View className="flex-row items-start gap-2" style={{ maxWidth: "100%" }}>
 				<Text className={`text-mono ${alertWordClasses(tone)}`} aria-hidden>
 					{alertGlyph(tone)}
 				</Text>
-				<View className="flex-1 gap-1">
+				<View className="flex-1 gap-1" style={{ flexShrink: 1, minWidth: 0 }}>
 					{title ? (
 						<Text
 							className={`text-body-sm font-semibold ${alertWordClasses(tone)}`}

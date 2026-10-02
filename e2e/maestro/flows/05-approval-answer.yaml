@@ -5,20 +5,30 @@
 # each and asserts the card *leaves*: a card that stays after an answer is the
 # defect that reads as a hung app.
 #
-# Both cards are unrendered in the scaffold — the projection store does not exist —
-# so this flow currently carries markers only. It is kept as the specification of
-# what the cards must be assertable by, which is what makes the gap trackable.
+# Both cards are unrendered on this branch — the projection store and the session
+# view are the session stream's — so the card identifiers below are `PENDING`: declared
+# in the contract, built by nothing here. Four of them are named here in the contract's
+# own spelling, because the pre-fold flow used names (`pending-card-approve`,
+# `ask-submit`) that no version of the contract ever had.
 #
-# IDENTIFIERS: every `id:` in this file is in `src/ui/a11y.ts` — the scaffold's
-# own contract, which `src/ui/a11y.e2e.test.ts` checks these flows against. A step
-# the app cannot serve yet is a commented marker, not a selector:
+# IDENTIFIERS: every `id:` in this file is in `src/ui/a11y.ts` — the contract this
+# branch owns, which `src/ui/a11y.e2e.test.ts` checks these flows against. A step the
+# app cannot serve yet is a commented marker, not a selector, and there are three
+# spellings because there are three different gaps:
 #
 #     Marker spelling: `# BLOCKED: needs <the-identifier> from <the-screen>`
+#     Marker spelling: `# PENDING: <the-identifier> from <the-screen>`
+#     Marker spelling: `# SCENARIO: <the-identifier> from <the-screen>`
 #
-# The marker names the identifier a step waits on and the screen that would own
-# it, so the gap is visible in review and the test can require that every marked
-# id is genuinely one the app does not render. An invented selector would fail on
-# the first assertion and read as a flaky flow.
+# `BLOCKED` names an id `src/ui/a11y.ts` does not declare at all; `PENDING` names one
+# the contract declares whose renderer is not on this branch (the session view's, which
+# lands with its own stream); `SCENARIO` names one the app DOES render, where what is
+# missing is the mock relay pinned to the scenario that produces the state it waits on
+# (`--scenario …`). The test checks each in its own direction, so no marker can hide
+# coverage: a `BLOCKED` id must be absent from the contract, a `PENDING` id must be
+# declared and unrendered, and a `SCENARIO` id must be declared and rendered. An
+# invented selector would fail on the first assertion
+# and read as a flaky flow.
 #
 # CI-only: needs a booted simulator or emulator and an app build (ADR 0003).
 appId: ${APP_ID}
@@ -31,34 +41,39 @@ env:
     clearState: true
 - assertVisible:
     id: "sessions-screen"
-# BLOCKED: needs session-row-<id> from sessions
+# Reaching a session needs a row on the list, which needs the relay pinned to a
+# session scenario.
+# SCENARIO: session-row-<id> from sessions
 # - tapOn:
 #     id: "session-row-${SESSION_ID}"
-# BLOCKED: needs pending-card from session
+# BLOCKED: needs pending-card from session — nothing declares a bare `pending-card`;
+# the contract's card surfaces are `pending-card-body`, `pending-card-answer` (the ask
+# card) and `pending-card-error`. Re-point this one when the session stream lands.
 # - extendedWaitUntil:
 #     visible:
 #       id: "pending-card"
 #     timeout: 15000
-# BLOCKED: needs pending-card-detail from session
+# PENDING: pending-card-detail from session
 # - assertVisible:
 #     id: "pending-card-detail"
-# BLOCKED: needs pending-card-destructive-marker from session
+# PENDING: pending-card-destructive-marker from session
 # - assertVisible:
 #     id: "pending-card-destructive-marker"
-# BLOCKED: needs pending-card-approve from session
+# PENDING: pending-approve from session
 # - tapOn:
-#     id: "pending-card-approve"
-# BLOCKED: needs ask-card from session
+#     id: "pending-approve"
+# BLOCKED: needs ask-card from session — the ask card is `pending-card-answer` in the
+# contract; nothing declares a separate `ask-card`.
 # - extendedWaitUntil:
 #     visible:
 #       id: "ask-card"
 #     timeout: 15000
-# BLOCKED: needs ask-question-1-of-2 from session
+# PENDING: ask-question-1-of-2 from session
 # - assertVisible:
 #     id: "ask-question-1-of-2"
-# BLOCKED: needs ask-option-0 from session
+# PENDING: ask-option-0 from session
 # - tapOn:
 #     id: "ask-option-0"
-# BLOCKED: needs ask-submit from session
+# PENDING: pending-ask-submit from session
 # - tapOn:
-#     id: "ask-submit"
+#     id: "pending-ask-submit"

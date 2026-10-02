@@ -23,6 +23,10 @@ export type AvatarProps = {
 
 const NAME_SEPARATOR = /[\s@._-]+/;
 
+/** Does this label carry a letter at all? Top-level so the check is compiled once,
+ *  which is also the lint rule this module and `biome` share. */
+const HAS_LETTER = /[A-Za-z]/;
+
 /** Take the initials of a display name. Pure, so it is unit-tested rather than
  * trusted: an empty label must not produce a blank circle with no explanation. */
 export const initialsOf = (label: string): string => {
@@ -31,6 +35,11 @@ export const initialsOf = (label: string): string => {
 		.map((part) => part.trim())
 		.filter(Boolean);
 	if (parts.length === 0) return "?";
+	/* A label that yields no LETTER is not a name: a host label ("127.0.0.1:22501")
+	 * put "10" in an identity circle in the Settings row and in the list, which reads
+	 * as a count rather than as a mark (D11). The caller prefers a real name where it
+	 * has one; this is the floor. */
+	if (!HAS_LETTER.test(label)) return "?";
 	if (parts.length === 1) return (parts[0] as string).slice(0, 2).toUpperCase();
 	return (
 		(parts[0] as string).charAt(0) + (parts[1] as string).charAt(0)

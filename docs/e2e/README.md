@@ -230,6 +230,14 @@ pnpm mock:relay --list
 ```
 
 ```sh
+# the password the mock's login form expects, alone on stdout.
+# Read it this way, never by importing `relay.ts` from `node -e`: an import that
+# runs the CLI starts a listening relay, and a shell command substitution around
+# it waits on that socket forever.
+pnpm mock:relay --print-password
+```
+
+```sh
 # one state, on an ephemeral port, printing the port alone on stdout
 # docs:serves
 pnpm mock:relay --scenario approval --print-port

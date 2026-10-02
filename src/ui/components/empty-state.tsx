@@ -73,7 +73,16 @@ export type EmptyStateProps = {
 	headline: string;
 	/** The action the reader can take. Required: see the note above. */
 	next: string;
-	action?: { label: string; onPress: () => void; testID: string };
+	action?: {
+		label: string;
+		onPress: () => void;
+		/** Needed when the action's own precondition can be false while the state is
+		 *  rendered — a "Clear the search" offered with nothing to clear is a control
+		 *  whose enabled state disagrees with its label. Callers pass the same predicate
+		 *  they render the state on, so the two cannot drift. */
+		disabled?: boolean;
+		testID: string;
+	};
 	testID?: string;
 };
 
@@ -96,6 +105,7 @@ export const EmptyState = ({
 					testID={action.testID}
 					variant="outline"
 					size="md"
+					disabled={action.disabled ?? false}
 				/>
 			) : null}
 		</View>
