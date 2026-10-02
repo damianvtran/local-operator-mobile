@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
 	ActivityIndicator,
 	Animated,
@@ -10,8 +10,8 @@ import {
 import { countLabel } from "@/lib/format";
 import { ROLE, state } from "@/ui/a11y";
 import { useReducedMotion, useTokenColor } from "@/ui/appearance";
+import { metaLineFor } from "@/ui/components/list-row-meta";
 import { Shimmer } from "@/ui/components/shimmer";
-import { LARGE_TEXT_SCALE } from "@/ui/text-scale";
 import { useTextScale } from "@/ui/text-scale-provider";
 import { TYPE_STEPS } from "@/ui/tokens.gen";
 import {
@@ -92,22 +92,19 @@ export const ListRow = ({
 	});
 
 	/* The RENDERED scale, not the preference: on the web the platform's factor
-	 *  arrives through the root font size (see `text-scale-provider`). The meta line
-	 *  needs one decision from it, and it is the same predicate the screens use. */
+	 *  arrives through the root font size (see `text-scale-provider`), and the meta
+	 *  line's character budgets are built from it. */
 	const { effectiveScale } = useTextScale();
-	const largeText = effectiveScale > LARGE_TEXT_SCALE;
 
-	/* The model id is a 100 %-text affordance on a row that also carries a path.
-	 *
-	 *  Two strings share this line and at large text neither can be named in half of
-	 *  it: `anthropic/claude-opus-5` alone wants 331 dp at 200 %, which is more than
-	 *  the 232 dp a 320 pt phone gives the whole line, and a head-elided scrap of it
-	 *  beside an equally elided path is the `~/…` + `no…` pair the design round ruled
-	 *  unacceptable (D26). So at large text the line carries the cwd alone and the
-	 *  model is not rendered — the cwd then names a folder in the space two fragments
-	 *  would have shared. A row with no cwd keeps its model at every scale: it has the
-	 *  line to itself. */
-	const modelInMeta = model != null && model !== "" && (!cwd || !largeText);
+	/* The meta line's measured width, which is what the fit below is decided
+	 *  against — see `metaLineFor`. 0 until the first layout. */
+	const [metaWidth, setMetaWidth] = useState(0);
+	const meta = metaLineFor({
+		cwd,
+		model,
+		widthDp: metaWidth,
+		scale: effectiveScale,
+	});
 
 	/* One word per row, by the precedence `docs/ux/flows.md` § 5 fixes: a decision
 	 * outranks everything, then the receipts. The word is never shown for a live
@@ -210,40 +207,56 @@ export const ListRow = ({
 						 *  single-line one, and the second row of the list ended 18 pt below the band
 						 *  (QA round 4, Q4-1).
 						 *
-						 *  **One field yields, and it is never the working directory.** Both halves
-						 *  are elided from the HEAD, so what survives is the part that names the
-						 *  thing: the tail of a path, and the model token rather than the
-						 *  `anthropic/` every row of that provider shares. Giving each field a
-						 *  proportional share of the line (what two shrunken `flex: auto` items do)
-						 *  can produce two fragments and no names — measured at 320 pt / 200 % as
-						 *  `~/…` beside `no…`, and in a split column at 100 % as a 26.02 pt model
-						 *  box beside a 236.98 pt path (design round 5, D26). The cwd is the field a
-						 *  reader scans for, so it holds a FLOOR and the model is the one that
-						 *  yields — see `META_PATH_BOX`. The title's row above keeps its own wrap on
-						 *  purpose (design round 2, D13), because there the marks are unshrinkable
-						 *  and a mark pushed past the pane edge is worse than a second line. */}
+						 *  **One field yields, and it is never the working directory.** Both halves keep
+						 *  their TAIL, so what survives is the part that names the thing: the tail of a
+						 *  path, and the model's own name rather than the `anthropic/` every row of that
+						 *  provider shares. Giving each field a proportional share of the line (what two
+						 *  shrunken `flex: auto` items do) can produce two fragments and no names —
+						 *  measured at 320 pt / 200 % as `~/…` beside `no…`, and in a split column at
+						 *  100 % as a 26.02 pt model box beside a 236.98 pt path (design round 5, D26).
+						 *  The cwd is the field a reader scans for, so it holds a FLOOR and the model is
+						 *  the one that yields — see `META_PATH_BOX` and `metaLineFor`.
+						 *
+						 *  Which characters are painted is decided as a STRING in `metaLineFor`, not by
+						 *  `ellipsizeMode`: react-native-web ignores that prop, so the web build — the
+						 *  build every capture and design round looks at — was eliding both fields from
+						 *  the tail, which is the one direction D26 rules out. The prop stays as the
+						 *  mop-up, and on iOS/Android it is the direction the string already has.
+						 *
+						 *  The title's row above keeps its own wrap on purpose (design round 2, D13),
+						 *  because there the marks are unshrinkable and a mark pushed past the pane edge
+						 *  is worse than a second line. */}
 						{cwd || model ? (
-							<View className="flex-row items-center gap-2">
-								{cwd ? (
+							<View
+								className="flex-row items-center gap-2"
+								onLayout={(event) => {
+									/* The line's own width, so the fit is decided from the space the layout
+									 *  actually gave the row rather than from a second derivation of the
+									 *  screen's padding, pane width and readable measure. Reported in dp. */
+									const { width } = event.nativeEvent.layout;
+									if (width !== metaWidth) setMetaWidth(width);
+								}}
+							>
+								{meta.cwd ? (
 									<Text
 										style={META_PATH_BOX(effectiveScale)}
 										className="text-mono-sm text-ink-dim"
 										numberOfLines={1}
 										ellipsizeMode="head"
 									>
-										{cwd}
+										{meta.cwd}
 									</Text>
 								) : (
 									<View className="flex-1" />
 								)}
-								{modelInMeta ? (
+								{meta.model ? (
 									<Text
 										style={META_VALUE_BOX}
 										className="text-mono-sm text-ink-dim"
 										numberOfLines={1}
 										ellipsizeMode="head"
 									>
-										{model}
+										{meta.model}
 									</Text>
 								) : null}
 							</View>
@@ -286,13 +299,12 @@ const TITLE_BOX = {
  * names where the session is.
  *
  * **What it costs, measured.** On a 320 pt phone at 100 % the line is 232 dp, so
- * 72 + 165.61 + 8 exceeds it and the model gives up 14 dp (166 → 152: the
- * ellipsis eats one character of a 24-character id). Every wider case fits both
- * whole — 390 pt at 100 % measures 128.39 + 165.61 + 8 = 302 ≤ 318, and a split
- * pane at 100 % 97.39 + 165.61 + 8 = 271 ≤ 287 — so the cwd's guarantee is paid
- * for out of the one configuration that has to choose, which is the choice the
- * design round made (D26). At large text the model is not rendered at all, so
- * the floor is never what removes it.
+ * the model's room is 232 - 8 (gap) - 72 = 152 dp: enough for 21 characters of
+ * `text-mono-sm`, which is not enough for the 24-character
+ * `anthropic/claude-opus-5`. It paints `…claude-opus-5` instead — the provider
+ * prefix, the part every row of that provider shares, is what yields — and the
+ * cwd keeps 123 dp of the line. Every wider case fits both whole: 390 pt at
+ * 100 % leaves the model 238 dp and a split pane 207 dp.
  *
  * It is the BASIS this box is built from, not a `minWidth`, because of how
  * flexbox distributes a deficit: `flex-shrink` is weighted by the base size, so

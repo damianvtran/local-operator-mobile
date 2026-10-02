@@ -863,9 +863,17 @@ export const ConnectionProvider = ({
 				if (!cancelled) await restoreRadient();
 			} catch {
 				/* The cold start is the APP's own setup, so a throw here is a bug in the app
-				 *  and not a fact about the reader's tunnel — which is exactly the `diagnostic`
-				 *  surface, and it is recorded rather than swallowed: an empty "no computer"
-				 *  screen would be a silent lie about a start that failed.
+				 *  and not a fact about the reader's tunnel — which is exactly what the
+				 *  `diagnostic` surface is for, and it is recorded rather than swallowed: an
+				 *  empty "no computer" screen would be a silent lie about a start that failed.
+				 *
+				 *  What the reader sees is the SURFACE's own copy, not the sentence below:
+				 *  `connection-store.ts` deliberately nulls `displayableMessage` for this
+				 *  surface (a client bug has no runtime detail to show and the answer is a
+				 *  retry affordance), so the refusal renders "This request was built
+				 *  incorrectly." over "Nothing on this screen can fix it; this is a bug in the
+				 *  app." The string below is carried because the action requires one and it
+				 *  documents intent; it is not what is painted.
 				 *
 				 *  This used to be the landing place for a rejected credential WRITE, which
 				 *  arrived here as an unhandled rejection — the shape review round 6, M-C

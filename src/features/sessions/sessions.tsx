@@ -17,6 +17,7 @@ import {
 	degradedShortNote,
 	splitSections,
 	staleNote,
+	staleShortNote,
 } from "@/features/sessions/session-projection";
 import { homeShortened } from "@/lib/format";
 import { useUiStore } from "@/state/ui-store";
@@ -260,6 +261,7 @@ export default function Sessions() {
 	const waiting = attentionCount(sessions);
 	const degradedMessage = degradedNote(degraded);
 	const staleMessage = staleNote({ stale, lastFrameAt });
+	const staleShortMessage = staleShortNote({ stale, lastFrameAt });
 
 	const onRefresh = useCallback(() => {
 		void refreshList();
@@ -385,14 +387,17 @@ export default function Sessions() {
 				 *  full height under the banner and push row 1 back out — measured line
 				 *  heights put it at ~530 pt against a band ending at 504 (review round 6,
 				 *  M-B). One line is ~40.6 pt at this size, which lands row 1's foot at
-				 *  ~490 pt: inside the band, by construction rather than by luck. Only in
-				 *  the narrowest configuration — everywhere else the line has room and the
-				 *  sentence is the connection layer's, not this screen's, to shorten. */
+				 *  ~490 pt: inside the band, by construction rather than by luck.
+				 *
+				 *  The cap ALONE would hide the age — a 22-character sentence paints
+				 *  `Last updated …` in one line — so this configuration gets the short
+				 *  form, which is about ten characters and fits whole (review round 1,
+				 *  D3). The pill above still carries the long sentence. */
 				<Text
 					className="text-body-sm text-ink-dim"
 					numberOfLines={phoneLargeText ? 1 : undefined}
 				>
-					{staleMessage}
+					{phoneLargeText ? staleShortMessage : staleMessage}
 				</Text>
 			) : null}
 		</View>

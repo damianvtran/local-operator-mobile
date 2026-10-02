@@ -113,18 +113,58 @@ export function hasSections(sections: SessionSections): boolean {
  * blanked. This is the marking: a sentence with the age in it, because "stale"
  * alone gives the reader no way to judge whether to wait or to act.
  */
-export function staleNote(input: {
+export type StaleNoteInput = {
 	stale: boolean;
 	lastFrameAt: number | null;
 	now?: number;
-}): string | null {
+};
+
+export function staleNote(input: StaleNoteInput): string | null {
+	const age = staleAge(input);
+	if (age === null) return null;
+	if (age.seconds < 5) return "Last updated just now.";
+	if (age.seconds < 60) return `Last updated ${age.seconds}s ago.`;
+	return `Last updated ${age.minutes} min ago.`;
+}
+
+/**
+ * The same age, in a form that fits ONE line at the platform's largest text size.
+ *
+ * The stale line shares the degraded band with the banner, and the band is what
+ * decides how many rows are complete: at 320 pt / 200 % a `body-sm` line is
+ * 40.6 dp and the band has about 55 dp left under a capped banner, so this line
+ * may occupy one line and no more (review round 6, M-B). Capping it there is not
+ * enough by itself — a capped 22-character sentence paints `Last updated …` and
+ * hides the age, which is the only thing this line carries, and hiding the
+ * actionable part is the D29 defect in reverse (D3). So the narrow
+ * configuration gets an age-only sentence that fits whole: one line holds about
+ * twelve characters at that size.
+ *
+ * The connection pill directly above states the CONDITION (`Not answering`) with
+ * the long sentence as its message, so the short form drops the verb and keeps
+ * the number — the reader has the sentence and the number on screen, and neither
+ * is truncated.
+ */
+export function staleShortNote(input: StaleNoteInput): string | null {
+	const age = staleAge(input);
+	if (age === null) return null;
+	if (age.seconds < 5) return "Just now.";
+	if (age.seconds < 60) return `${age.seconds}s ago.`;
+	return `${age.minutes} min ago.`;
+}
+
+/**
+ * How old the last frame is, or `null` when nothing has ever been stale. One
+ * arithmetic for both sentences above, so the long form and the short form can
+ * never disagree about the age the reader is being told.
+ */
+function staleAge(
+	input: StaleNoteInput,
+): { seconds: number; minutes: number } | null {
 	if (!input.stale || input.lastFrameAt === null) return null;
 	const now = input.now ?? Date.now();
 	const seconds = Math.max(0, Math.round((now - input.lastFrameAt) / 1000));
-	if (seconds < 5) return "Last updated just now.";
-	if (seconds < 60) return `Last updated ${seconds}s ago.`;
-	const minutes = Math.round(seconds / 60);
-	return `Last updated ${minutes} min ago.`;
+	return { seconds, minutes: Math.round(seconds / 60) };
 }
 
 /**
