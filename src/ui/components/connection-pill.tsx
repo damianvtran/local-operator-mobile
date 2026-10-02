@@ -26,7 +26,15 @@ export type ConnectionPillState =
 	/** No network route at all: `C4`. */
 	| "offline"
 	/** Open but silent past the grace window, or a snapshot that is old: `C3`. */
-	| "degraded";
+	| "degraded"
+	/** No computer is connected, so there is no transport to report on at all.
+	 *
+	 *  Distinct from `offline`, which is a transport that FAILED. Before this state
+	 *  existed a screen with no route fell through to `connected`, and a Status row that
+	 *  also hardcoded its word painted a green dot and "Connected" under the heading "No
+	 *  computer connected" (design round 2, D12). "Not connected" is not a kind of
+	 *  connected. */
+	| "inactive";
 
 export type ConnectionPillProps = {
 	state: ConnectionPillState;
@@ -45,6 +53,7 @@ const DEFAULT_MESSAGE: Record<ConnectionPillState, string> = {
 	reconnecting: "Reconnecting…",
 	offline: "Offline. Messages will send when you're back.",
 	degraded: "Not answering",
+	inactive: "No computer connected",
 };
 
 const PILL_CLASS: Record<ConnectionPillState, string> = {
@@ -52,6 +61,8 @@ const PILL_CLASS: Record<ConnectionPillState, string> = {
 	reconnecting: "bg-warning-wash border-warning-border",
 	offline: "bg-danger-wash border-danger-border",
 	degraded: "bg-info-wash border-info-border",
+	// Nothing failed, so there is no cause to colour: a neutral mark is the honest one.
+	inactive: "",
 };
 
 const INK_CLASS: Record<ConnectionPillState, string> = {
@@ -59,16 +70,25 @@ const INK_CLASS: Record<ConnectionPillState, string> = {
 	reconnecting: "text-warning",
 	offline: "text-danger",
 	degraded: "text-info",
+	inactive: "text-ink-dim",
 };
 
+/**
+ * The dot's token, per state.
+ *
+ * A token ROLE rather than one of the four semantics, because `inactive` has no
+ * semantics to carry: it is the absence of a connection, not a failure, and painting it
+ * with the same green as a live link is the defect that made this state exist.
+ */
 const DOT_ROLE: Record<
 	ConnectionPillState,
-	"success" | "warning" | "danger" | "info"
+	"success" | "warning" | "danger" | "info" | "ink-dim"
 > = {
 	connected: "success",
 	reconnecting: "warning",
 	offline: "danger",
 	degraded: "info",
+	inactive: "ink-dim",
 };
 
 export const ConnectionPill = ({

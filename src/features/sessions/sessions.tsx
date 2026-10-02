@@ -125,6 +125,7 @@ export default function Sessions() {
 		streamHealth,
 		coldStartSettled,
 		savedTunnel,
+		restoredAccount,
 	} = useConnection();
 	const showToast = useUiStore((state) => state.showToast);
 	/* The split decision, read once: the SAME value drives the cap opt-out below and
@@ -209,7 +210,14 @@ export default function Sessions() {
 		 *   - `savedTunnel === null`: a saved own-tunnel with no remembered password is
 		 *     a configured computer whose password the list must ask for, not a
 		 *     first run;
-		 *   - `!routed`: a route exists, so the list is the screen. */
+		 *   - `!routed`: a route exists, so the list is the screen;
+		 *   - `restoredAccount`: a stored RADIENT credential was read and accepted on
+		 *     this cold start, so the reader IS signed in and their computers are about to
+		 *     arrive — the flows' `Launch →|credential cached| Computers` branch, which
+		 *     would otherwise be bounced to a first-run surface and re-ask a question
+		 *     the hand-off already answered (R3-3). A REFUSAL outranks it: the clause
+		 *     above keeps a revoked credential's surface on this screen, which is where
+		 *     the reader is told their session expired. */
 		if (
 			coldStartSettled &&
 			!busy &&
@@ -218,9 +226,18 @@ export default function Sessions() {
 			savedTunnel === null &&
 			phase === "signed-out"
 		) {
-			router.replace("/welcome");
+			router.replace(restoredAccount ? "/tunnels" : "/welcome");
 		}
-	}, [busy, coldStartSettled, phase, refusal, router, routed, savedTunnel]);
+	}, [
+		busy,
+		coldStartSettled,
+		phase,
+		refusal,
+		restoredAccount,
+		router,
+		routed,
+		savedTunnel,
+	]);
 
 	const sections = useMemo(() => splitSections(filtered), [filtered]);
 	const waiting = attentionCount(sessions);
@@ -496,8 +513,11 @@ export default function Sessions() {
 									}
 									hasRoute={sessions.length > 0 || frameCount > 0}
 									query={query}
+									onClearSearch={() => setQuery("")}
 									onNew={() => router.push("/new")}
 									onConnect={() => router.push("/tunnels")}
+									/* Split layouts only: see `showNewAction`. */
+									showNewAction={layout.split}
 								/>
 							</View>
 						}
@@ -510,8 +530,9 @@ export default function Sessions() {
 			{/* The action bar belongs to the DETAIL pane when there is one: "New session"
 			 *  and its neighbours act on the transcript side of the screen, and pinned
 			 *  across the whole screen it drew a 1,366 pt bar under both panes — the layout
-			 *  a designer reads as a phone bar stretched. The list pane keeps its own way
-			 *  in, in its pane header. */}
+			 *  a designer reads as a phone bar stretched. The list pane's own way in is its
+			 *  empty state's action (`ListEmpty`), which is why that action renders on a
+			 *  split and the phone bar does not repeat it (D16). */}
 			{layout.split ? null : (
 				<ActionBar onMeasure={setFooterHeight} primaryOnly={navInHeader} />
 			)}
@@ -635,14 +656,24 @@ const ListEmpty = ({
 	waiting,
 	hasRoute,
 	query,
+	onClearSearch,
 	onNew,
 	onConnect,
+	showNewAction,
 }: {
 	waiting: boolean;
 	hasRoute: boolean;
 	query: string;
+	onClearSearch: () => void;
 	onNew: () => void;
 	onConnect: () => void;
+	/** Whether this state renders its own "New session" action.
+	 *
+	 *  False on a phone, where the action bar below carries the same control: two
+	 *  identical actions a row apart is noise, not an affordance (design round 2, D16 —
+	 *  the frame showed both). True on a split layout, where the bar belongs to the
+	 *  DETAIL pane and this empty state is the list pane's only way in. */
+	showNewAction: boolean;
 }) => {
 	if (waiting) {
 		return (
@@ -660,7 +691,13 @@ const ListEmpty = ({
 				next="Search covers the loaded sessions' names, ids and folders."
 				action={{
 					label: "Clear the search",
-					onPress: () => undefined,
+					/* A control that renders and does nothing when pressed is the defect this
+					 *  replaces: this shipped as `onPress: () => undefined`, so the empty state
+					 *  offered a way out of a search it could not clear. The predicate is the
+					 *  one this branch renders on, passed through so the button's enabled state
+					 *  cannot disagree with there being something to clear. */
+					onPress: onClearSearch,
+					disabled: query.trim().length === 0,
 					testID: CONTROL.sessionsClearSearchAction,
 				}}
 			/>
@@ -684,11 +721,15 @@ const ListEmpty = ({
 		<EmptyState
 			headline="No sessions yet."
 			next="A session is one conversation with the agent on your machine. Start one and it will appear here."
-			action={{
-				label: "New session",
-				onPress: onNew,
-				testID: CONTROL.sessionsNewAction,
-			}}
+			action={
+				showNewAction
+					? {
+							label: "New session",
+							onPress: onNew,
+							testID: CONTROL.sessionsNewAction,
+						}
+					: undefined
+			}
 			testID={EMPTY.sessions}
 		/>
 	);

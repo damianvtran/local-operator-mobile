@@ -12,20 +12,30 @@
 #      reconnect flash every minute,
 #   4. keep the last good projection rendered while reconnecting, never blank.
 #
-# A flow is the only way to test (3): a still frame cannot show an absence. None of
-# the four can be asserted today, because there is no stream to cut — the
-# connection layer is a stub — so this flow keeps the shape and the markers.
+# The stream exists on this branch (`src/relay/sse.ts`, driven by the provider's
+# `startStream`), so (1)–(2) are asserted by the relay's own tests and the fault
+# injection below. What is still missing is the SURFACE that would show (3)–(4) to a
+# reader: the session view is the session stream's, so the identifiers this flow waits
+# on are `PENDING` — declared in the contract, built by nothing here.
 #
-# IDENTIFIERS: every `id:` in this file is in `src/ui/a11y.ts` — the scaffold's
-# own contract, which `src/ui/a11y.e2e.test.ts` checks these flows against. A step
-# the app cannot serve yet is a commented marker, not a selector:
+# IDENTIFIERS: every `id:` in this file is in `src/ui/a11y.ts` — the contract this
+# branch owns, which `src/ui/a11y.e2e.test.ts` checks these flows against. A step the
+# app cannot serve yet is a commented marker, not a selector, and there are three
+# spellings because there are three different gaps:
 #
 #     Marker spelling: `# BLOCKED: needs <the-identifier> from <the-screen>`
+#     Marker spelling: `# PENDING: <the-identifier> from <the-screen>`
+#     Marker spelling: `# SCENARIO: <the-identifier> from <the-screen>`
 #
-# The marker names the identifier a step waits on and the screen that would own
-# it, so the gap is visible in review and the test can require that every marked
-# id is genuinely one the app does not render. An invented selector would fail on
-# the first assertion and read as a flaky flow.
+# `BLOCKED` names an id `src/ui/a11y.ts` does not declare at all; `PENDING` names one
+# the contract declares whose renderer is not on this branch (the session view's, which
+# lands with its own stream); `SCENARIO` names one the app DOES render, where what is
+# missing is the mock relay pinned to the scenario that produces the state it waits on
+# (`--scenario …`). The test checks each in its own direction, so no marker can hide
+# coverage: a `BLOCKED` id must be absent from the contract, a `PENDING` id must be
+# declared and unrendered, and a `SCENARIO` id must be declared and rendered. An
+# invented selector would fail on the first assertion
+# and read as a flaky flow.
 #
 # CI-only: needs a booted simulator or emulator and an app build (ADR 0003).
 appId: ${APP_ID}
@@ -38,15 +48,17 @@ env:
     clearState: true
 - assertVisible:
     id: "sessions-screen"
-# BLOCKED: needs connection-banner from session
+# PENDING: connection-banner from session
 # - assertNotVisible:
 #     id: "connection-banner"
-# BLOCKED: needs reconnect-toast from session
+# BLOCKED: needs reconnect-toast from session — the contract has a `toast`
+# (`CONTROL.toast`, rendered by `ToastHost`); nothing declares a toast specific to a
+# reconnect, which is the distinction the step is about.
 # - assertNotVisible:
 #     id: "reconnect-toast"
-# BLOCKED: needs session-transcript from session
+# PENDING: session-transcript from session
 # - assertVisible:
 #     id: "session-transcript"
-# BLOCKED: needs composer-receipt from session
+# PENDING: composer-receipt from session
 # - assertVisible:
 #     id: "composer-receipt"

@@ -15,7 +15,10 @@ import { Avatar, initialsOf } from "@/ui/components/avatar";
 import { Badge } from "@/ui/components/badge";
 import { Button } from "@/ui/components/button";
 import { Card } from "@/ui/components/card";
-import { ConnectionPill } from "@/ui/components/connection-pill";
+import {
+	ConnectionPill,
+	type ConnectionPillState,
+} from "@/ui/components/connection-pill";
 import { Dialog } from "@/ui/components/dialog";
 import { Divider } from "@/ui/components/divider";
 import { Screen } from "@/ui/components/screen";
@@ -77,6 +80,14 @@ export default function Settings() {
 	 * own signal multiplies through `rem`, so this is the number a reader perceives
 	 * and the one a layout decision has to be made against. */
 	const accountStacked = textScale.effectiveScale > LARGE_TEXT_SCALE;
+
+	/* The Status row's word AND colour, derived once from the state the account card
+	 *  above reads. See `statusFor` for why one derivation rather than two fields. */
+	const status = statusFor({
+		health: streamHealth,
+		refused: refusal !== null,
+		routed: route !== null,
+	});
 
 	const doSignOut = useCallback(async () => {
 		setConfirmSignOut(false);
@@ -147,10 +158,14 @@ export default function Settings() {
 						 *  accessible name of "Connection: " — the one state a reader looks
 						 *  for, carried by colour alone, which the kit forbids in the same
 						 *  file. The prop already existed. */}
-						<ConnectionPill
-							state={pillFor(streamHealth, refusal !== null)}
-							message="Connected"
-						/>
+						{/* ONE function gives the row both its word and its colour, from the same
+						 *  state the line above reads. They used to come from two places — the
+						 *  colour from `streamHealth`, the word from the literal "Connected" — so
+						 *  three rows under the heading "No computer connected" painted a green
+						 *  dot and the word "Connected" (design round 2, D12, frame
+						 *  `dark390-surface`: pill 90x25, dot rgb(87,199,133)). Splitting the two
+						 *  was the defect; one derivation is the fix. */}
+						<ConnectionPill state={status.state} message={status.message} />
 					</View>
 					{computers.length > 0 ? (
 						<View className="gap-2 pt-1">
@@ -369,15 +384,41 @@ function useThemePreference(): {
 	return { theme, setPreference };
 }
 
-function pillFor(
-	health: ReturnType<typeof useConnection>["streamHealth"],
-	refused: boolean,
-): "connected" | "reconnecting" | "offline" | "degraded" {
-	if (refused) return "offline";
-	if (health === "connecting") return "reconnecting";
-	if (health === "offline") return "offline";
-	if (health === "degraded") return "degraded";
-	return "connected";
+/**
+ * The Status row's state AND its word, from the connection state this screen already
+ * has.
+ *
+ * One function for both, because two is what went wrong: the colour came from the
+ * stream and the word was the literal "Connected", so with no route at all — the
+ * `signed-out` phase, where `streamHealth` is still `idle` — the row fell through to
+ * `connected` and agreed with itself while disagreeing with the card above it. The
+ * heading reads `route`, so this does too, and "No computer connected" is what the row
+ * says when that is the fact (design round 2, D12).
+ *
+ * The words are short on purpose: this is the VALUE half of a label/value row, so a
+ * sentence here would wrap the row at 200 % and push the label off its own line.
+ */
+function statusFor(input: {
+	health: ReturnType<typeof useConnection>["streamHealth"];
+	refused: boolean;
+	routed: boolean;
+}): {
+	state: ConnectionPillState;
+	message: string;
+} {
+	if (!input.routed)
+		return { state: "inactive", message: "No computer connected" };
+	if (input.refused) return { state: "offline", message: "Not connected" };
+	switch (input.health) {
+		case "connecting":
+			return { state: "reconnecting", message: "Connecting…" };
+		case "offline":
+			return { state: "offline", message: "Offline" };
+		case "degraded":
+			return { state: "degraded", message: "Not answering" };
+		default:
+			return { state: "connected", message: "Connected" };
+	}
 }
 
 /** One line of the diagnostics block. A label and a value, never only a value:

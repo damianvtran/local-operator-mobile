@@ -110,10 +110,16 @@ export function refusalFromError(input: {
 	return {
 		kind: refineConnectionKind(input.error) ?? KIND[input.surface],
 		subject: input.subject,
-		/* The relay's own sentence wins when it has one, and reaches the surface
-		 * only when it is not secret material: `RelayError.detail` is already
-		 * redacted by the protocol layer, and it never carries a status code. */
-		detail: input.detail ?? input.error?.detail ?? null,
+		/* The relay's own sentence wins when it has one, and reaches the surface only
+		 *  through the taxonomy's ONE copy accessor.
+		 *
+		 *  This read `input.error?.detail` and the comment beside it claimed `.detail`
+		 *  was "already redacted by the protocol layer". It was not: `detail` carries
+		 *  whatever body arrived, and `<html><body>502 Bad Gateway</body></html>` is a
+		 *  body a tunnel edge happily sends. `displayableMessage` is the accessor that
+		 *  refuses a runtime's own words, an empty body and markup, so the refinement is
+		 *  read from it and the surface cannot be handed markup by either path. */
+		detail: input.detail ?? input.error?.displayableMessage ?? null,
 		remedy: REMEDY[input.surface] ?? null,
 		retryAfterMs: input.retryAfterMs,
 	};

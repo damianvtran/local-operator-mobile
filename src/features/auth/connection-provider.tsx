@@ -10,13 +10,24 @@
  * live while the reader is on Settings, Past sessions or a session view. This
  * module is that owner, and it is the only file in the app that builds a client.
  *
- * **What it deliberately does not do.** It does not persist a credential: the
- * route and its session live for the life of the process. Restoring a route at
- * cold start belongs to `src/connection/storage.ts` (the only module allowed to
- * touch `expo-secure-store`) and is deferred with its own security review — a
- * half-wired restore that writes a token somewhere new is worse than no restore.
- * Sign-out still revokes with the control plane, because that is a consequence of
- * the route ENDING rather than of persistence (`docs/adr/0002`).
+ * **What it does with credentials.** It persists them, through
+ * `src/features/auth/tunnel-storage.ts` — the app's use of the keystore, with one
+ * adapter per run and a stated web fallback — and it is the ONLY caller that may hold an
+ * access token (`docs/architecture.md` principle 4). A Radient sign-in is stored when
+ * the hand-off succeeds and restored at cold start, VERIFIED rather than trusted; those
+ * decisions live in `./radient-restore.ts` as data, so every failure mode (a revoked
+ * grant, a lapsed one, a tunnel that is gone) is a case a test can name and this file
+ * only carries out. No token enters a store or a component, and the one thing that
+ * still lives only for the life of the process is the route itself. Sign-out still
+ * revokes with the control plane, because that is a consequence of the route ENDING
+ * rather than of persistence (`docs/adr/0002`).
+ *
+ * Earlier revisions of this comment said flatly that nothing was persisted. That was
+ * true when it was written and is the reason the app re-ran the whole browser hand-off
+ * on every launch for a signed-in Radient reader (review round 3, R3-3) — a self-hosted
+ * reader with a saved tunnel was dialled straight in while the RECOMMENDED path was the
+ * worse one. The restore it now does is the fix, and its failure modes are the ones the
+ * round names.
  *
  * **The `lo-*` query parameters are web-only and deliberate.** The web target is
  * the surface the audit harness drives (`docs/adr/0003`), and the deployment
@@ -43,6 +54,7 @@ import {
 	discoverComputers,
 	type RadientTokens,
 	type RouteProfile,
+	refreshRadientTokens,
 	revokeTunnelSession,
 	signInToCustomRoute,
 	signOutOfCustomRoute,
@@ -52,10 +64,16 @@ import {
 	validateRadientHostname,
 } from "@/connection";
 import {
+	clearStoredCredentials,
+	clearStoredOauth,
 	readSavedTunnel,
+	readStoredOauth,
+	readStoredTunnelSession,
 	removeSavedTunnel,
 	type SavedTunnel,
 	writeSavedTunnel,
+	writeStoredOauth,
+	writeStoredTunnelSession,
 } from "@/features/auth/tunnel-storage";
 import {
 	type RelayEndpoints,
@@ -68,6 +86,7 @@ import {
 	createConnectionStore,
 } from "@/state/connection-store";
 import { createListStore, type ListSnapshot } from "@/state/list-store";
+import { adoptableSession, planRestore } from "./radient-restore";
 
 import { beginRadientSignIn, type SignInState } from "./radient-sign-in";
 import { type RefusalView, refusalFromError } from "./refusal";
@@ -126,6 +145,15 @@ export type Connection = {
 	discovering: boolean;
 	/** The reader's own tunnel from secure storage, or `null`. */
 	savedTunnel: SavedTunnel | null;
+	/** True when this cold start read a stored RADIENT credential, accepted it, and
+	 *  started discovery.
+	 *
+	 *  It exists because a restored sign-in is invisible to the store: no route exists
+	 *  yet (the reader has not picked a computer), so `phase` is still `signed-out` and
+	 *  a screen cannot tell "signed in, choosing a computer" from "first run". The
+	 *  flows' first branch is `Launch →|credential cached| Computers`, and this is the
+	 *  bit that lets the landing decide which of the two it is (R3-3). */
+	restoredAccount: boolean;
 	selectComputer: (computer: DiscoveredComputer) => Promise<void>;
 	refreshList: () => Promise<void>;
 	signOut: () => Promise<void>;
@@ -218,6 +246,8 @@ export const ConnectionProvider = ({
 	const [coldStartSettled, setColdStartSettled] = useState(false);
 	const cancelledRef = useRef(false);
 	const [savedTunnel, setSavedTunnel] = useState<SavedTunnel | null>(null);
+	/* See `Connection.restoredAccount`. */
+	const [restoredAccount, setRestoredAccount] = useState(false);
 	const [streamHealth, setStreamHealth] = useState<StreamHealth>("idle");
 	const [signInState, setSignInState] = useState<SignInState>({ kind: "idle" });
 	const [lastError, setLastError] = useState<RelayError | null>(null);
@@ -245,7 +275,18 @@ export const ConnectionProvider = ({
 			retryRef.current = retry ?? null;
 			connectionStore.getState().noteFailure({
 				surface: error.surface,
-				displayableMessage: error.detail ?? "",
+				/* `displayableMessage`, NOT `error.detail`.
+				 *
+				 *  The store's field is named for the taxonomy's sanitised accessor and this
+				 *  call site used to bypass it, feeding the RAW `.detail` in its place. That
+				 *  put a tunnel edge's or a proxy's body — `<html><body>502 Bad Gateway
+				 *  </body></html>` is the one a driven repro produced — into the field the
+				 *  store documents as the only way in, from where `refusal.ts` re-read it and
+				 *  `RefusalSurface` rendered it verbatim. The accessor is the one thing that
+				 *  refuses a `transport` failure's runtime words, an empty body and markup,
+				 *  so reading it here is what makes the store's guarantee true rather than
+				 *  merely stated. */
+				displayableMessage: error.displayableMessage,
 				retryAfterMs: error.retryAfterMs ?? null,
 			});
 		},
@@ -299,6 +340,15 @@ export const ConnectionProvider = ({
 							error.surface !== "retry" &&
 							error.surface !== "computer-offline"
 						) {
+							/* The stream is over and it is NOT coming back on its own, so the health
+							 *  must stop reporting a live stream. This branch used to return with
+							 *  `streamHealth` untouched, which left the status pill — and, after the
+							 *  D12 fix, the Settings row that reads it — saying "Connected" for a
+							 *  route the reader has to re-establish. Measured on a driven kill: the
+							 *  pill still read a healthy state 30 s after the relay went away (design
+							 *  round 2, D12 rider). The refusal surface below the row carried the
+							 *  cause; the health was simply never told. */
+							if (mountedRef.current) setStreamHealth("offline");
 							noteError(error);
 							return;
 						}
@@ -441,6 +491,12 @@ export const ConnectionProvider = ({
 					connectionStore.getState().setComputers([]);
 					return;
 				case "unauthorized":
+					/* The credential is gone SERVER-SIDE — revoked, or past its refresh window.
+					 *  Deleted here rather than left for the next launch to retry, so "sign in
+					 *  again" is a state the reader passes through once and not a loop. The other
+					 *  two failure arms deliberately KEEP the credential: an unreachable API or an
+					 *  unreadable answer says nothing about whether the grant is still good. */
+					await clearStoredOauth();
 					connectionStore.getState().noteFailure({
 						surface: "sign-in",
 						displayableMessage: "Your Radient session expired.",
@@ -474,6 +530,12 @@ export const ConnectionProvider = ({
 			});
 			if (!result.ok) return;
 			tokensRef.current = result.tokens;
+			/* Persisted BEFORE discovery, and before any route exists: the credential is
+			 *  what makes the NEXT launch a computers screen instead of a second browser
+			 *  hand-off, and a discovery that then fails (an unreachable API, an empty
+			 *  account) must not throw a valid grant away. A runtime that cannot store it
+			 *  still gets a working session this run — `writeStoredOauth` reports which. */
+			await writeStoredOauth(result.tokens);
 			if (mountedRef.current) setSignInState({ kind: "idle" });
 			/* Straight into discovery, which is what makes the button's promise —
 			 * "finds your computers" — true rather than a second tap away. */
@@ -498,16 +560,28 @@ export const ConnectionProvider = ({
 				}
 				connectionStore.getState().startRoute(route);
 				connectionStore.getState().selectComputer(computer);
+				const adopted = adoptableSession(
+					await readStoredTunnelSession(),
+					computer,
+				);
 				const manager = new TunnelSessionManager({
 					oauthAccessToken: async () => tokensRef.current?.access ?? null,
-					// No persistence yet, on purpose: see this file's header.
-					initial: null,
+					initial: adopted,
+					/* Every mutation of the session is written through, so a crash mid-flow
+					 *  cannot leave the store behind the manager. */
+					persist: (session) => writeStoredTunnelSession(session),
 				});
 				managerRef.current = manager;
-				await manager.mint({
-					tunnelId: computer.tunnelId,
-					hostname: computer.hostname,
-				});
+				if (adopted) {
+					/* Not a mint: a fresh GRANT for a session that already exists. The manager
+					 *  re-mints or refreshes as the handle's age requires. */
+					await manager.usableSession();
+				} else {
+					await manager.mint({
+						tunnelId: computer.tunnelId,
+						hostname: computer.hostname,
+					});
+				}
 				const client = createRelayClient({
 					route,
 					tunnelSession: () => manager.current,
@@ -595,6 +669,10 @@ export const ConnectionProvider = ({
 			retryRef.current = null;
 			listStore.getState().reset();
 			connectionStore.getState().endRoute();
+			/* Every stored credential goes with the sign-out. `removeSavedTunnel` stays the
+			 *  NARROWER delete for a good reason: forgetting a tunnel must not take the
+			 *  Radient grant with it, and a lapsed grant must not take the 30-day handle. */
+			await clearStoredCredentials();
 			if (mountedRef.current) {
 				setStreamHealth("idle");
 				setLastError(null);
@@ -658,11 +736,71 @@ export const ConnectionProvider = ({
 		[],
 	);
 
-	/* The cold start. On web an explicit `lo-relay` override wins; otherwise a
-	 * saved own-tunnel is resumed, because a self-hosted reader who saved one
-	 * should not re-type an address and a password on every launch. A tunnel saved
-	 * WITHOUT a remembered password is loaded but not dialled: the screen asks for
-	 * the password, which is the only honest thing it can do. */
+	/**
+	 * Resumes a stored Radient sign-in on a cold start — `docs/ux/flows.md` § 0's
+	 * "Launch →|credential cached| Computers".
+	 *
+	 * The credential is VERIFIED, never trusted: a grant past its `expires_at` is
+	 * refreshed with the rolling refresh token first, and one the server refuses is
+	 * deleted rather than retried, so the next launch is a first run instead of a loop.
+	 * Every dead end lands on the sign-in surface with the store's `sign-in` surface
+	 * set, so a reader whose session lapsed is TOLD that — never quietly shown a
+	 * first-run screen as though they had never signed in.
+	 */
+	const restoreRadient = useCallback(async () => {
+		/* The decision itself is `planRestore`, which is data and therefore testable;
+		 *  this carries it out. See that module for why the two are separated. */
+		const plan = planRestore(await readStoredOauth());
+		if (plan.kind === "none" || cancelledRef.current) return;
+
+		const dead = async () => {
+			await clearStoredOauth();
+			/* The reader is TOLD, not quietly treated as signed out: an expired session
+			 *  and a first run are different facts and deserve different screens. */
+			connectionStore.getState().noteFailure({
+				surface: "sign-in",
+				displayableMessage: "Your Radient session expired.",
+			});
+		};
+
+		/* Stored, lapsed, and with nothing to renew it: only a browser hand-off can get
+		 *  another grant, so the record goes rather than being retried forever. */
+		if (plan.kind === "discard") {
+			await dead();
+			return;
+		}
+
+		let tokens = plan.tokens;
+		if (plan.kind === "refresh") {
+			try {
+				tokens = await refreshRadientTokens(tokens);
+				await writeStoredOauth(tokens);
+			} catch {
+				/* Revoked, expired, or no answer at all — `invalid_grant` and a network
+				 *  failure are treated alike HERE on purpose: neither is fixed by trying
+				 *  again on the next launch, and both must leave the reader at the sign-in
+				 *  surface rather than at a computers list that will answer 401. */
+				await dead();
+				return;
+			}
+		}
+		tokensRef.current = tokens;
+		if (!cancelledRef.current) setRestoredAccount(true);
+		/* Discovery is what turns a credential into a computers screen, and its own
+		 *  `unauthorized` arm deletes a grant the server has refused since. */
+		await refreshComputers();
+	}, [refreshComputers]);
+
+	/* The cold start. On web an explicit `lo-relay` override wins; otherwise the saved
+	 * CUSTOM tunnel is resumed, and failing that a stored RADIENT credential is
+	 * restored.
+	 *
+	 * That order is deliberate. A custom route needs no control-plane round trip, so it
+	 * is the cheaper resume, and a reader who saved one explicitly chose the technical
+	 * path — re-typing an address and password every launch is the worse outcome. A
+	 * tunnel saved WITHOUT a remembered password is loaded but not dialled: the screen
+	 * asks for the password, which is the only honest thing it can do — and the Radient
+	 * credential is still tried behind it, because a reader may hold both. */
 	useEffect(() => {
 		const override = webRelayOverride();
 		if (override) {
@@ -676,15 +814,20 @@ export const ConnectionProvider = ({
 		void (async () => {
 			try {
 				const stored = await readSavedTunnel();
-				if (cancelled || !stored) return;
-				setSavedTunnel(stored);
-				if (stored.password != null) {
-					await connectCustom({
-						url: stored.baseUrl,
-						password: stored.password,
-						allowInsecure: stored.allowInsecure,
-					});
+				if (cancelled) return;
+				if (stored) {
+					setSavedTunnel(stored);
+					if (stored.password != null) {
+						await connectCustom({
+							url: stored.baseUrl,
+							password: stored.password,
+							allowInsecure: stored.allowInsecure,
+						});
+						return;
+					}
 				}
+				/* Nothing of the reader's own to dial: the RECOMMENDED path's turn. */
+				if (!cancelled) await restoreRadient();
 			} finally {
 				/* Settled either way: "nothing saved" is a decision, not a pending read. */
 				if (!cancelled) setColdStartSettled(true);
@@ -694,7 +837,7 @@ export const ConnectionProvider = ({
 			cancelled = true;
 			cancelledRef.current = true;
 		};
-	}, [connectCustom]);
+	}, [connectCustom, restoreRadient]);
 
 	const surface = useConnectionState((state) => state.surface);
 	const detail = useConnectionState((state) => state.detail);
@@ -727,6 +870,7 @@ export const ConnectionProvider = ({
 			billing: computers[0]?.billing ?? null,
 			discovering,
 			savedTunnel,
+			restoredAccount,
 			selectComputer,
 			refreshList,
 			signOut,
@@ -749,6 +893,7 @@ export const ConnectionProvider = ({
 			computers,
 			discovering,
 			savedTunnel,
+			restoredAccount,
 			selectComputer,
 			refreshList,
 			signOut,

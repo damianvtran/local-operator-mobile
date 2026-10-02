@@ -126,7 +126,16 @@ export default function PastSessions() {
 							label="Search past conversations"
 							value={query}
 							onChangeText={setQuery}
-							placeholder="What was said, or the title"
+							/* Short enough for the narrowest phone: the field shares its row with the
+							 *  "Search" button, so at 320 pt with the button beside it the previous
+							 *  copy ("What was said, or the title", 28 characters) painted as
+							 *  "What was said, or the tit" — a placeholder that truncates
+							 *  mid-word reads as a rendering fault rather than as a hint (QA F-2).
+							 *  Fourteen characters is the same length as the sessions field's
+							 *  "Name or folder", which the harness measured as fitting, and it keeps
+							 *  both facts the search actually covers: words from the transcript AND
+							 *  the title. */
+							placeholder="Words or title"
 							returnKeyType="search"
 							onSubmitEditing={() => void onSearch()}
 						/>
@@ -202,7 +211,14 @@ export default function PastSessions() {
 					data={items}
 					keyExtractor={(item) => item.id}
 					ListHeaderComponent={
-						<SectionHeader label={`${items.length} conversations`} />
+						<SectionHeader
+							/* Singular at one: "1 CONVERSATIONS" is the kind of detail that makes a
+							 *  list look machine-written (design round 2, D15). `SectionHeader`
+							 *  upper-cases the label, so the singular has to be correct HERE. */
+							label={`${items.length} ${
+								items.length === 1 ? "conversation" : "conversations"
+							}`}
+						/>
 					}
 					refreshControl={
 						<RefreshControl

@@ -124,14 +124,22 @@ export const ListRow = ({
 						 *  title plus its marks do not fit one line, and a row that cannot
 						 *  wrap pushes a mark past the viewport edge — the horizontal
 						 *  overflow the audit measures. Wrapping keeps every mark readable
-						 *  and lets the title keep its own line. */}
+						 *  and lets the title keep its own line.
+						 *
+						 *  It only works because the title's box has a basis of `auto` (`TITLE_BOX`)
+						 *  and NOT `flex-1`: a `flex: 1 1 0%` item has a hypothetical width of
+						 *  zero, so it never forces the line to break and merely shrinks to what the
+						 *  marks leave. Measured at 320 pt with the platform text size at 200 %: a
+						 *  session title had a 27 pt client box against 344 pt of text (design round 2,
+						 *  D13, frame `dark320-200-faithful`). The same zero-basis trap the segmented
+						 *  track hit in the audit round. */}
 						<View className="flex-row flex-wrap items-center gap-2">
 							{/* The title yields first: `flex-1` + truncate, with every
 							 * count beside it `shrink-0`. The shimmer wraps the Text rather
 							 * than the slot, because "working" belongs on the name
 							 * (docs/design/components.md § 7) — the spinner in the slot is
 							 * the second channel, not the first. */}
-							<Shimmer active={streaming} className="flex-1">
+							<Shimmer active={streaming} style={TITLE_BOX}>
 								<Text
 									className={`text-body-sm font-medium ${
 										selected
@@ -176,7 +184,8 @@ export const ListRow = ({
 							<View className="flex-row flex-wrap items-center gap-2">
 								{cwd ? (
 									<Text
-										className="flex-1 text-mono-sm text-ink-dim"
+										style={TITLE_BOX}
+										className="text-mono-sm text-ink-dim"
 										numberOfLines={1}
 										ellipsizeMode="head"
 									>
@@ -202,6 +211,26 @@ export const ListRow = ({
 		</Pressable>
 	);
 };
+
+/**
+ * The title's flex box: basis `auto`, grow to fill the line, shrink under pressure.
+ *
+ * `flexBasis: "auto"` rather than `flex-1` is the entire point — see the note at the
+ * title's call site. Passed as a STYLE rather than a class because the class pipeline
+ * is where this went wrong once already (the connection pill measured 554 pt in a 320 pt
+ * viewport while `max-w-full` sat in its class list), and a layout fix that silently does
+ * nothing is worse than no fix.
+ *
+ * `minWidth: 0` so react-native-web will shrink the box below the text's intrinsic width
+ * when it DOES share a line with a mark; without it the browser's `min-width: auto` would
+ * push the mark off the row instead of wrapping it.
+ */
+const TITLE_BOX = {
+	flexBasis: "auto",
+	flexGrow: 1,
+	flexShrink: 1,
+	minWidth: 0,
+} as const;
 
 /** The reserved slot. Same 12×12 box in every state. */
 const Indicator = ({

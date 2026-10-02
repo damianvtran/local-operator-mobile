@@ -253,15 +253,6 @@ export const CONTROL = {
 } as const;
 
 /**
- * Every static identifier the app can render, flat, as a Node script reads it.
- *
- * This file is the single source of truth for the identifier contract, and it is
- * plain TypeScript with NO imports on purpose: `node src/ui/a11y.ts` can load it
- * through type stripping without React Native, the path alias or a bundler. The
- * end-to-end flows (`e2e/maestro/**`) are YAML that must follow these names, never
- * the reverse, and the check that they do lives in `a11y.e2e.test.ts`.
- */
-/**
  * Surfaces a flow asserts rather than presses.
  *
  * A `CONTROL` is something a reader acts on; a `SURFACE` is something a flow must
@@ -315,13 +306,6 @@ export const SURFACE = {
 	refusalSurface: "connection-refusal",
 	signInPanel: "sign-in-panel",
 } as const;
-
-export const IDENTIFIERS: readonly string[] = [
-	...Object.values(SCREEN),
-	...Object.values(EMPTY),
-	...Object.values(CONTROL),
-	...Object.values(SURFACE),
-];
 
 /**
  * Families of parameterised identifiers, declared as their literal prefix
@@ -458,6 +442,31 @@ export const REGION = {
 	connectionErrorHostUnresolved: "connection-error-host-unresolved",
 	connectionErrorRetryProminent: "connection-error-retry-prominent",
 } as const;
+
+/**
+ * Every static identifier the app can render, flat, as a Node script reads it.
+ *
+ * This file is the single source of truth for the identifier contract, and it is
+ * plain TypeScript with NO imports on purpose: `node src/ui/a11y.ts` can load it
+ * through type stripping without React Native, the path alias or a bundler. The
+ * end-to-end flows (`e2e/maestro/**`) are YAML that must follow these names, never
+ * the reverse, and the check that they do lives in `a11y.e2e.test.ts`.
+ *
+ * `REGION` is in the set because a region a flow WAITS ON is a selector exactly as a
+ * control it presses is: the flows assert `session-section-active`, the refusal
+ * surfaces and `settings-section-*` by name, and leaving them out let a flow name an
+ * id this contract could not see — the flow check then read a surface assertion as an
+ * unknown selector. Declared last because `Object.values` needs the binding
+ * initialised, and each one is rendered (`a11y.e2e.test.ts` proves it), so the set
+ * stays honest rather than aspirational.
+ */
+export const IDENTIFIERS: readonly string[] = [
+	...Object.values(SCREEN),
+	...Object.values(EMPTY),
+	...Object.values(CONTROL),
+	...Object.values(SURFACE),
+	...Object.values(REGION),
+];
 
 /** A row's identifier, derived from the id it carries so a flow can address one
  *  row without the screen inventing a second naming scheme. */

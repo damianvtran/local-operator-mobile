@@ -5,20 +5,30 @@
 # captures: what the web harness proves about layout in both themes, this proves
 # about the device render.
 #
-# Text scale is NOT wired: the scaffold has no scale preference, so the 200%
-# assertions are markers. The matrix reports the same gap as an inert
-# text-scale dimension rather than pretending three scales were rendered.
+# Both appearance dimensions are wired on this branch — the theme override and the
+# text-scale preference (`CONTROL.settingsTheme*`, `CONTROL.settingsTextScale*`) — so
+# the pre-fold flow's text-scale markers are real steps now, and the flow drives both
+# and screenshots each step. That is the native half of the evidence the web matrix
+# captures for the same two dimensions.
 #
-# IDENTIFIERS: every `id:` in this file is in `src/ui/a11y.ts` — the scaffold's
-# own contract, which `src/ui/a11y.e2e.test.ts` checks these flows against. A step
-# the app cannot serve yet is a commented marker, not a selector:
+# IDENTIFIERS: every `id:` in this file is in `src/ui/a11y.ts` — the contract this
+# branch owns, which `src/ui/a11y.e2e.test.ts` checks these flows against. A step the
+# app cannot serve yet is a commented marker, not a selector, and there are three
+# spellings because there are three different gaps:
 #
 #     Marker spelling: `# BLOCKED: needs <the-identifier> from <the-screen>`
+#     Marker spelling: `# PENDING: <the-identifier> from <the-screen>`
+#     Marker spelling: `# SCENARIO: <the-identifier> from <the-screen>`
 #
-# The marker names the identifier a step waits on and the screen that would own
-# it, so the gap is visible in review and the test can require that every marked
-# id is genuinely one the app does not render. An invented selector would fail on
-# the first assertion and read as a flaky flow.
+# `BLOCKED` names an id `src/ui/a11y.ts` does not declare at all; `PENDING` names one
+# the contract declares whose renderer is not on this branch (the session view's, which
+# lands with its own stream); `SCENARIO` names one the app DOES render, where what is
+# missing is the mock relay pinned to the scenario that produces the state it waits on
+# (`--scenario …`). The test checks each in its own direction, so no marker can hide
+# coverage: a `BLOCKED` id must be absent from the contract, a `PENDING` id must be
+# declared and unrendered, and a `SCENARIO` id must be declared and rendered. An
+# invented selector would fail on the first assertion
+# and read as a flaky flow.
 #
 # CI-only: needs a booted simulator or emulator and an app build (ADR 0003).
 appId: ${APP_ID}
@@ -33,38 +43,38 @@ env:
       id: "sessions-screen"
     timeout: 15000
 - tapOn:
-    id: "sessions-settings"
+    id: "settings-button"
 - extendedWaitUntil:
     visible:
       id: "settings-screen"
     timeout: 15000
 - takeScreenshot: "11-00-settings"
 - assertVisible:
-    id: "settings-theme"
+    id: "settings-theme-group"
 - assertVisible:
-    id: "appearance-theme-system"
+    id: "settings-theme-system"
 - takeScreenshot: "11-01-theme-control"
 - tapOn:
-    id: "appearance-theme-dark"
+    id: "settings-theme-dark"
 - takeScreenshot: "11-02-theme-dark"
 - tapOn:
-    id: "appearance-theme-light"
+    id: "settings-theme-light"
 - takeScreenshot: "11-03-theme-light"
 - tapOn:
-    id: "appearance-theme-system"
+    id: "settings-theme-system"
 - takeScreenshot: "11-04-theme-system"
 - assertVisible:
-    id: "settings-connection-empty"
-- takeScreenshot: "11-05-connection-empty"
-# BLOCKED: needs settings-text-scale-200 from settings
-# - tapOn:
-#     id: "settings-text-scale-200"
-# BLOCKED: needs settings-text-scale-100 from settings
-# - tapOn:
-#     id: "settings-text-scale-100"
-# BLOCKED: needs settings-sign-out from settings
-# - assertVisible:
-#     id: "settings-sign-out"
-# BLOCKED: needs settings-section-diagnostics from settings
-# - assertVisible:
-#     id: "settings-section-diagnostics"
+    id: "settings-section-connection"
+- takeScreenshot: "11-05-connection-section"
+- tapOn:
+    id: "settings-text-scale-200"
+- takeScreenshot: "11-06-text-200"
+- tapOn:
+    id: "settings-text-scale-100"
+- takeScreenshot: "11-07-text-100"
+- assertVisible:
+    id: "settings-sign-out"
+- takeScreenshot: "11-08-sign-out"
+- assertVisible:
+    id: "settings-section-diagnostics"
+- takeScreenshot: "11-09-diagnostics"
