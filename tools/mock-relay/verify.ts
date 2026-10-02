@@ -29,6 +29,15 @@ import { connect as netConnect } from "node:net";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+// The app's own vocabulary, imported rather than re-derived: the marker contract and
+// the identifiers it names are the thing this file cross-checks, so reading them from
+// the module is the only way the check cannot drift from what the app ships.
+import {
+	IDENTIFIERS,
+	SCREEN,
+	STATE_MARKER,
+	stateMarkerFor,
+} from "../../src/ui/a11y.ts";
 import {
 	blindDiagnostic,
 	blindPasses,
@@ -51,8 +60,8 @@ import {
 	nameContractUsable,
 	readFirstAvailable,
 } from "../lib/ci-environment.ts";
-
 import {
+	declaredSkipFor,
 	markerGapProblem,
 	readinessProblems,
 	requiredStateMarker,
@@ -60,7 +69,7 @@ import {
 	seedQuery,
 } from "../lib/readiness.ts";
 import { paramDiff } from "../lib/seed-params.ts";
-import { PENDING_CELLS } from "../visual/matrix.ts";
+import { PENDING_CELLS, SCREEN_ROOTS } from "../visual/matrix.ts";
 
 const args = process.argv.slice(2);
 const flag = (name: string, fallback: string): string => {
@@ -2501,6 +2510,133 @@ async function main() {
 			declared.size > 0 && declared.size < 20,
 			true,
 			`${declared.size} ids in the block`,
+		);
+	}
+
+	group = "the marker contract's shape, and how it degrades";
+	{
+		// The contract is NESTED — `Record<subject, Record<state, id>>` — and that shape is
+		// load-bearing rather than cosmetic: the harness looks a marker up by
+		// (subject, state), so a FLAT table (`{ sessionIdle: "session-idle", … }`) would
+		// make `stateMarkerFor` return null for every subject and silently turn the whole
+		// measured matrix back into declared gaps. PR #12 declares its own markers on a
+		// branch that will meet this one, and the manager has ruled the nested shape
+		// authoritative; this check is what makes a flat table fail HERE, loudly, instead
+		// of reverting the measurement in a merge nobody notices.
+		const nested = Object.entries(STATE_MARKER).every(
+			([, perSubject]) =>
+				typeof perSubject === "object" &&
+				perSubject !== null &&
+				Object.values(perSubject).every(
+					(id) => typeof id === "string" && id.length > 0,
+				),
+		);
+		check(
+			"the marker contract is nested per subject, never a flat state→id table",
+			nested,
+			true,
+			`${Object.keys(STATE_MARKER).length} subject(s)`,
+		);
+		// An unknown subject or state must be `null` (never `undefined`, which reads as
+		// "no markers" to a caller doing `=== null`), and a screen whose subject the app
+		// marks with nothing must produce a NAMED reason — not a silent absence.
+		check(
+			"an unknown subject or state degrades to null, not undefined",
+			[
+				stateMarkerFor("no-such-subject", "empty"),
+				stateMarkerFor("sessions", "no-such-state"),
+			],
+			[null, null],
+		);
+		check(
+			"a subject the app marks with nothing is a NAMED gap",
+			[
+				requiredStateMarker("S5", "populated"),
+				/holds no entry for 'session\/populated'|no state marker for 'session\/populated'/.test(
+					markerGapProblem("S5", "populated") ?? "",
+				),
+			],
+			[null, true],
+		);
+		// The harness's own vocabulary must name screens the APP renders: every subject in
+		// `SCREEN_MARKER_SUBJECT` has to be one the app declares ids for, so a subject that
+		// drifted (or was invented) cannot sit there quietly asking for markers nothing can
+		// produce.
+		const declaredIds = new Set<string>(IDENTIFIERS);
+		const unknownSubjects = Object.entries(SCREEN_MARKER_SUBJECT)
+			.filter(
+				([, subject]) =>
+					![...declaredIds].some((id) => id.startsWith(`${subject}-`)),
+			)
+			.map(([screen, subject]) => `${screen} → '${subject}'`);
+		check(
+			"every subject the harness maps is one the app declares ids for",
+			unknownSubjects,
+			[],
+		);
+		// And the screen ROOTS the harness requires, which this change edited — they were
+		// stale (`S2 → custom-route-screen`, a screen that no longer exists) and nothing tied
+		// them to the app. They are the app's own `SCREEN` values, so the tie is exact.
+		const appScreens = new Set<string>(Object.values(SCREEN));
+		const unknownRoots = Object.entries(SCREEN_ROOTS)
+			.filter(([, root]) => !appScreens.has(root))
+			.map(([screen, root]) => `${screen} → '${root}'`);
+		check(
+			"every screen root the harness requires is one the app declares",
+			unknownRoots,
+			[],
+		);
+		// The skip policy, asserted where it lives rather than through a browser: a
+		// declared skip may cover only what the app's missing marker CAUSES — the empty
+		// screen its placeholder draws, and the relay it therefore never asks — and must
+		// be REFUSED for a wrong route, a missing root, a marker the app does declare, an
+		// unreadable page, a missing owner or a missing gap. Without this the rule could
+		// regress to "the gap alone is enough" and a rotted route would read as unlanded
+		// work again.
+		const gapIssue = {
+			kind: "marker-gap",
+			message:
+				"the cell declares 'populated' but the app declares no state marker for 'sessions/populated'",
+		};
+		check(
+			"a skip covers the gap and what the gap causes",
+			declaredSkipFor(
+				[
+					gapIssue,
+					{ kind: "empty", message: "the app is showing an empty state" },
+					{ kind: "relay", message: "the app made no request to the relay" },
+				],
+				"PR #12",
+			),
+			{ owner: "PR #12", reason: gapIssue.message },
+		);
+		check(
+			"and is REFUSED for any other issue, for no owner, or for no gap",
+			[
+				declaredSkipFor(
+					[gapIssue, { kind: "route", message: "on /welcome" }],
+					"PR #12",
+				),
+				declaredSkipFor(
+					[gapIssue, { kind: "root", message: "no root" }],
+					"PR #12",
+				),
+				declaredSkipFor(
+					[gapIssue, { kind: "marker", message: "no marker" }],
+					"PR #12",
+				),
+				declaredSkipFor(
+					[gapIssue, { kind: "reading", message: "no reading" }],
+					"PR #12",
+				),
+				declaredSkipFor(
+					[gapIssue, { kind: "seed", message: "seed failed" }],
+					"PR #12",
+				),
+				declaredSkipFor([gapIssue], null),
+				declaredSkipFor([{ kind: "empty", message: "empty" }], "PR #12"),
+			],
+			[null, null, null, null, null, null, null],
 		);
 	}
 

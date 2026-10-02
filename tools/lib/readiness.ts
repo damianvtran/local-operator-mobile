@@ -156,19 +156,98 @@ export interface ReadinessFacts {
 	relayReached: boolean;
 }
 
+/**
+ * What sort of thing is wrong with a frame, as a machine-readable kind beside the
+ * sentence a reader gets.
+ *
+ * The kinds exist because ONE caller has to tell the issues apart rather than just
+ * print them: `tools/visual/capture.ts` decides whether a cell's absence of evidence
+ * is a DECLARED SKIP (a state this head does not render, with an owner) or a
+ * failure. A skip may only cover the consequences of the gap itself — the empty
+ * screen a placeholder draws, and the relay the app therefore never asks — and must
+ * never cover a wrong route or a missing screen root, which are defects wherever
+ * they appear.
+ */
+export type ReadinessIssueKind =
+	/** The page is not on the route the cell asked for. */
+	| "route"
+	/** The app's screen root for this screen is not in the DOM. */
+	| "root"
+	/** The app declares a marker for this state and the frame does not carry it. */
+	| "marker"
+	/** The app declares NO marker for this state: the gap a declared skip may cover. */
+	| "marker-gap"
+	/** The frame shows an empty state while the cell declares another one. */
+	| "empty"
+	/** The relay served this cell nothing, so the state cannot have come from it. */
+	| "relay";
+
+export interface ReadinessIssue {
+	kind: ReadinessIssueKind;
+	message: string;
+}
+
+/**
+ * The issue kinds a DECLARED SKIP may cover, and nothing else.
+ *
+ * Each is a CONSEQUENCE of the gap rather than a defect of its own: the app declares
+ * no marker for the state (`marker-gap`), so its placeholder draws an empty screen
+ * (`empty`) and it never asks the relay for anything (`relay`). A wrong route
+ * (`route`), a missing screen root (`root`) or a marker the app DOES declare and the
+ * frame does not show (`marker`) is a failure wherever it appears — which is what
+ * stops a rotted route or root on a skipped cell from reading as "not implemented
+ * yet". A caller with issue kinds of its own (capture's `reading` and `seed`) adds
+ * them to the blocking side by simply not listing them here.
+ */
+export const SKIP_COVERED_ISSUES: readonly string[] = [
+	"marker-gap",
+	"empty",
+	"relay",
+];
+
+/** What a declared skip says: who owns the gap, and which gap it is. */
+export interface DeclaredSkip {
+	owner: string;
+	reason: string;
+}
+
+/**
+ * Whether these issues may be covered by a declared skip owned by `owner`.
+ *
+ * The rule, in one place so it can be asserted without a browser: a skip needs an
+ * owner, needs the app to declare NO marker for the cell's state, and needs EVERY
+ * issue to be one the gap itself explains. Honouring a skip on the gap alone made a
+ * rotted route or screen root indistinguishable from unlanded work — with `--no-seed`
+ * a cell whose app never left `/welcome` and never drew its own root came back as a
+ * skip and the run exited 0.
+ */
+export function declaredSkipFor(
+	issues: ReadonlyArray<{ kind: string; message: string }>,
+	owner: string | null,
+): DeclaredSkip | null {
+	if (owner === null) return null;
+	const gap = issues.find((issue) => issue.kind === "marker-gap");
+	if (gap === undefined) return null;
+	if (!issues.every((issue) => SKIP_COVERED_ISSUES.includes(issue.kind)))
+		return null;
+	return { owner, reason: gap.message };
+}
+
 /** Why a cell is not ready, in the order a reader needs to hear it. */
-export function readinessProblems(facts: ReadinessFacts): string[] {
-	const problems: string[] = [];
+export function readinessIssues(facts: ReadinessFacts): ReadinessIssue[] {
+	const issues: ReadinessIssue[] = [];
 	if (!routeMatches(facts.askedPath, facts.actualPath)) {
-		problems.push(
-			`the app is on '${facts.actualPath}' but the cell asked for '${facts.askedPath}'`,
-		);
+		issues.push({
+			kind: "route",
+			message: `the app is on '${facts.actualPath}' but the cell asked for '${facts.askedPath}'`,
+		});
 	}
 	const { root, testIds, state } = facts;
 	if (root !== undefined && !testIds.includes(root)) {
-		problems.push(
-			`no '${root}' root in the DOM: the app did not render screen ${facts.screen}`,
-		);
+		issues.push({
+			kind: "root",
+			message: `no '${root}' root in the DOM: the app did not render screen ${facts.screen}`,
+		});
 	}
 	// The affirmative half: a state the app drew leaves its own marker behind. The
 	// marker NAMES come from the app's contract; a state the app declares no marker
@@ -176,32 +255,48 @@ export function readinessProblems(facts: ReadinessFacts): string[] {
 	// marker that should have been there and was not.
 	const required = requiredStateMarker(facts.screen, state);
 	if (required !== null && !markerMatches(required, testIds)) {
-		problems.push(
-			`the cell declares '${state}' but the marker '${required}' is not in the DOM: ` +
+		issues.push({
+			kind: "marker",
+			message:
+				`the cell declares '${state}' but the marker '${required}' is not in the DOM: ` +
 				"nothing in the frame affirms that state, so the cell is NOT MEASURABLE for it",
-		);
+		});
 	}
 	const gap = markerGapProblem(facts.screen, state);
-	if (gap !== null) problems.push(gap);
+	if (gap !== null) issues.push({ kind: "marker-gap", message: gap });
 	// The prohibition half, kept for the states that are not `empty` themselves: a
 	// populated cell showing an empty marker is in the empty state whatever else it
 	// carries.
 	const emptyMarkers = testIds.filter((id) => id.endsWith(EMPTY_MARKER_SUFFIX));
 	if (state !== "empty" && emptyMarkers.length > 0) {
-		problems.push(
-			`the cell declares '${state}' but the app is showing an empty state (${emptyMarkers.join(", ")}): ` +
+		issues.push({
+			kind: "empty",
+			message:
+				`the cell declares '${state}' but the app is showing an empty state (${emptyMarkers.join(", ")}): ` +
 				"the state was never reached",
-		);
+		});
 	}
 	// A cell the RELAY's own registry declared is a state the relay serves, so the app
 	// has to have talked to the relay to render it.
 	if (facts.relayRegistryBacked && !facts.relayReached) {
-		problems.push(
-			"the app made no request to the mock relay for this cell, so the state it " +
+		issues.push({
+			kind: "relay",
+			message:
+				"the app made no request to the mock relay for this cell, so the state it " +
 				`declares (${state}) cannot have come from the relay`,
-		);
+		});
 	}
-	return problems;
+	return issues;
+}
+
+/**
+ * The same issues, as the sentences a report prints.
+ *
+ * Kept as the stable surface the checks assert on, so a caller that does not care
+ * about the distinction between a gap and a defect does not have to know it exists.
+ */
+export function readinessProblems(facts: ReadinessFacts): string[] {
+	return readinessIssues(facts).map((issue) => issue.message);
 }
 
 /**

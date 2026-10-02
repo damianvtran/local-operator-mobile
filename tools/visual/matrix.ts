@@ -450,24 +450,28 @@ export const PENDING_CELLS: Record<string, string> = {
 			"S8/ask-multi",
 			"S8/populated-long",
 			"S9/populated",
-		].map((cell) => [cell, "PR #12 (feat/screens-session): the session route"]),
+		].map((cell) => [
+			cell,
+			"PR #12 (feat/screens-session) — app/(app)/session/[id].tsx is a placeholder",
+		]),
 	),
 	/* The computers cells: the list is Radient's account API, not the relay. */
 	...Object.fromEntries(
 		["S2/empty", "S3/empty", "S3/populated", "S13/loading", "S13/degraded"].map(
 			(cell) => [
 				cell,
-				"the computer list is Radient's account API (src/connection/discovery.ts /v1/tunnels), which the mock relay does not serve",
+				"app — computer discovery reads Radient's account API (src/connection/discovery.ts /v1/tunnels), " +
+					"which the mock relay does not serve; the refusal state is the only one the relay can drive",
 			],
 		),
 	),
 	/* The list states the app renders without an identifier of their own. */
 	"S4/loading":
-		"the list renders skeletons with no identifier while its first frame is in flight",
+		"app (src/ui/a11y.ts STATE_MARKER) — the list renders unlabelled skeletons while its first frame is in flight",
 	"S4/ended":
-		"the ended row's receipt (ListRow's `ended`) changes copy and colour but carries no identifier",
+		"app (src/ui/a11y.ts STATE_MARKER) — ListRow's `ended` receipt changes copy and colour but carries no identifier",
 	"S4/degraded-row":
-		"the degraded row's receipt (ListRow's `degraded`) renders the copy 'not answering' but carries no identifier",
+		"app (src/ui/a11y.ts STATE_MARKER) — ListRow's `degraded` receipt renders 'not answering' but carries no identifier",
 };
 
 /** Read the resolved theme/scale and the app's own canvas colour, per frame. */

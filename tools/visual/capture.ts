@@ -42,8 +42,9 @@ import type { CdpPage } from "../lib/cdp.ts";
 import { sleep } from "../lib/cdp.ts";
 import { launchChrome } from "../lib/chrome.ts";
 import {
-	markerGapProblem,
-	readinessProblems,
+	declaredSkipFor,
+	type ReadinessIssue,
+	readinessIssues,
 	seedQuery,
 } from "../lib/readiness.ts";
 import { serveDir } from "../lib/static-server.ts";
@@ -452,42 +453,36 @@ async function captureCell(
 	// the wrong screen, which is exactly what the first run of this harness
 	// produced before the relay was proxied.
 	const readiness = asReadiness(await page.evaluate(READINESS_PROBE));
-	const readinessProblems = readinessProblemsFor(
-		cell,
-		path,
-		readiness,
-		relayReach,
-	);
+	const issues = readinessIssuesFor(cell, path, readiness, relayReach);
 	if (seededButAbsent) {
-		readinessProblems.push(
-			`the run was told to seed route '${String(seed.route)}' but the page reports ` +
+		issues.push({
+			kind: "seed",
+			message:
+				`the run was told to seed route '${String(seed.route)}' but the page reports ` +
 				`'${String(measurements?.route ?? "")}' without it: the harness's own half of ` +
 				"the seed hook failed",
-		);
+		});
 	}
+	const readinessProblems = issues.map((issue) => issue.message);
 
 	offConsole();
 	offException();
 
-	// A DECLARED SKIP, decided here because this is where both halves are known: the
-	// app declares no marker for the cell's state (`markerGapProblem`, the only
-	// problem the gap produces) AND `matrix.ts` names the dependency the cell waits
-	// on. Both are required — a cell whose state the app DOES mark, and whose frame
-	// lacks the marker, is a real failure and must never be swallowed by an entry in
-	// `PENDING_CELLS`.
-	const gap = markerGapProblem(cell.screen, cell.state);
-	const pendingOwner = PENDING_CELLS[cell.cell] ?? null;
-	// The claim is honoured on exactly one condition: the app declares NO marker for
-	// this cell's state. A cell whose marker the app declares — and whose frame does
-	// not show it — is never a skip, which is what stops a marker that stopped
-	// rendering from hiding behind an entry in `PENDING_CELLS`. The cell's other
-	// readiness problems are still recorded (and still reported per cell): they are
-	// simply not counted as a *measurement* gap, because no frame of this cell was
-	// ever going to be evidence.
+	// A DECLARED SKIP, decided by the policy in `lib/readiness.ts` — the app declares no
+	// marker for the cell's state and `matrix.ts` names an owner for it — and REFUSED
+	// the moment any other issue is present. The "no other issue" clause is the whole
+	// guard: with `--no-seed`, a cell whose app never left `/welcome` and never drew its
+	// own root was previously a declared skip with the run exiting 0, which made a
+	// rotted route or root indistinguishable from unlanded work. `declaredSkipFor`
+	// carries the rule so `verify` asserts it without a browser.
+	const declaredSkipDecision = declaredSkipFor(
+		issues,
+		PENDING_CELLS[cell.cell] ?? null,
+	);
 	const declaredSkip =
-		pendingOwner !== null && gap !== null
-			? { cell: cell.cell, owner: pendingOwner, reason: gap }
-			: null;
+		declaredSkipDecision === null
+			? null
+			: { cell: cell.cell, ...declaredSkipDecision };
 
 	return {
 		name: frameName(cell),
@@ -713,19 +708,28 @@ function asReadiness(value: unknown): Readiness | null {
  * Why a cell is not ready, in the order a reader needs to hear it.
  *
  * A missing reading is itself a failure: the probe runs in the page, so nothing
- * coming back means the frame was taken from a page the harness could not read.
+ * coming back means the frame was taken from a page the harness could not read. It
+ * gets its own kind so a declared skip can never cover it.
  */
-function readinessProblemsFor(
+type CellIssue =
+	| ReadinessIssue
+	| { kind: "reading"; message: string }
+	| { kind: "seed"; message: string };
+
+function readinessIssuesFor(
 	cell: FramePlan,
 	path: string,
 	readiness: Readiness | null,
 	relay: RelayReach | null,
-): string[] {
-	if (readiness === null) return ["the page returned no readiness reading"];
+): CellIssue[] {
+	if (readiness === null)
+		return [
+			{ kind: "reading", message: "the page returned no readiness reading" },
+		];
 	// The rules — affirmative state marker, the `*-empty` prohibition and the relay
 	// reach — live in `lib/readiness.ts`, where both directions can be asserted
 	// without a browser. What stays here is the frame's own facts.
-	return readinessProblems({
+	return readinessIssues({
 		screen: cell.screen,
 		state: cell.state,
 		askedPath: path,
@@ -950,6 +954,15 @@ function findIdenticalStates(records: CaptureRecord[]): string[] {
 			group.map((record) => `${record.screen}/${record.state}`),
 		);
 		if (states.size < 2) continue;
+		// A DECLARED SKIP is not evidence for the state it names, so a group made ONLY of
+		// skipped cells rendering one image is the known gap, not a finding: the 29 skips
+		// on this head are one placeholder screen between them, and reporting that as
+		// "different states, one image" three times is noise a reviewer has to re-derive.
+		//
+		// The check keeps every tooth that matters: one EVIDENTIAL cell is enough to
+		// report the group, so a measured cell that collapses onto a skipped one — or two
+		// measured cells that collapse onto each other — is still caught.
+		if (!group.some((record) => record.declaredSkip === null)) continue;
 		problems.push(
 			`${[...states].join(" = ")} rendered identically (${shaDigest}) on ${group[0]?.device ?? "?"}`,
 		);
@@ -1275,14 +1288,17 @@ export async function runCapture(options: CaptureOptions) {
 				};
 				// The readiness guard ran inside `captureCell`, before this count was
 				// available, so the reach problem is appended here where the relay can
-				// be asked what it served.
-				const reachProblem = readinessProblemsFor(
+				// be asked what it served. It is a covered kind for a declared skip (the
+				// app cannot ask a relay for a state it does not render), so appending it
+				// never turns a skip into a failure — the skip's own decision is made in
+				// `captureCell`, where a route or root problem would have blocked it.
+				const reachIssues = readinessIssuesFor(
 					cell,
 					record.path ?? "",
 					record.readiness,
 					relayReach,
-				);
-				for (const problem of reachProblem) {
+				).map((issue) => issue.message);
+				for (const problem of reachIssues) {
 					if (
 						problem.includes("no request to the mock relay") &&
 						!record.readinessProblems.includes(problem)
@@ -1522,8 +1538,14 @@ export async function runCapture(options: CaptureOptions) {
 		console.log(`UNREADY CELLS (${readinessProblems.length}):`);
 		for (const problem of readinessProblems) console.log(`  - ${problem}`);
 	} else {
+		// Never `records.length/length`: with declared skips pulled out of the unready
+		// set, "every cell reached the screen it names" would print `38/38 measurable` on
+		// a head where 29 of them are known gaps — the exact over-claim this line exists
+		// to prevent.
+		const measured = records.length - skipped.length;
 		console.log(
-			`readiness: every cell reached the screen it names (${records.length}/${records.length} measurable)`,
+			`readiness: every captured cell reached the screen it names (${measured} measured, ` +
+				`${skipped.length} declared skip(s))`,
 		);
 	}
 	if (unready.length > 0) {

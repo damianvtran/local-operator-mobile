@@ -475,10 +475,15 @@ node tools/visual/capture.ts --dir e2e/fixtures/audit-canary \
 # example is the bounded sample; run `--plan` above for the full count, and drop these
 # three flags for the whole matrix.
 #
-# This command reads the APP's current state, and on 2026-09-30 it exits non-zero
+# This command reads the APP's current state, and on 2026-10-02 it exits non-zero
 # with two true findings rather than a harness fault:
-#   * eight `S5/*` states render byte-identically on a phone, so the app cannot yet
-#     distinguish them (the readiness guard's identical-state rule);
+#   * `S2/error` and `S13/error` render byte-identically: that is one screen
+#     (`/tunnels` refusing) reached through two relay causes, so two cells are one
+#     state. A group made ONLY of DECLARED SKIPS is no longer reported — this
+#     head's 29 skips are one placeholder screen between them, and the 19-cell
+#     `S5`/`S6`/`S8`/`S9` group they used to form was that, not a finding — but a
+#     group with ANY evidential cell in it still is (the readiness guard's
+#     identical-state rule);
 #   * the text-scale guard measures BELOW its 1.9x bar in every sample measured, and
 #     the exact ratio depends on which rows are on screen: 1.40x (median text 24px ->
 #     33.6px) on a full-matrix sample, 1.21x on the relay-backed cells (33.59px ->
