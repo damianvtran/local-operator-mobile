@@ -541,4 +541,32 @@ console.log(
 		? "\nCANARY: PASS — the audit catches every declared defect and passes the clean page"
 		: "\nCANARY: FAIL — the instrument is not discriminating",
 );
+// Which of the five terms failed, in words. They come from different stages — the
+// capture, the audit, the comparison — so "the instrument is not discriminating" alone
+// cannot tell a blinding bug from a capture bug. At `d5b3960` the ledger was empty
+// (`missed: none`) while the verdict was non-zero, and nobody could tell which of the
+// other four terms had failed. A VACUOUS run is named in the canary's own words for the
+// same reason: a direction that produced nothing must never read as a passing blank.
+const failedTerms: string[] = [];
+if (vacuous) failedTerms.push("vacuous");
+if (missedDefects.length > 0) failedTerms.push("missed");
+if (cleanFails.length > 0) failedTerms.push("cleanFails");
+if (defectsStatus === 0) failedTerms.push("defectsStatus");
+if (cleanStatus !== 0) failedTerms.push("cleanStatus");
+if (failedTerms.length > 0) {
+	console.log(`  FAILED TERM(S): ${failedTerms.join(", ")}`);
+}
+console.log(
+	`VERDICT ${JSON.stringify({
+		ok,
+		failedTerms,
+		vacuous,
+		missed: missedDefects,
+		cleanFails: cleanFails.length,
+		defectsStatus,
+		cleanStatus,
+		cells: { defects: defects.cells ?? 0, clean: cleanCells },
+		rows: { defects: defectRows, clean: cleanRows },
+	})}`,
+);
 process.exit(ok ? 0 : 1);

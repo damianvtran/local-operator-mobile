@@ -29,6 +29,7 @@ import { connect as netConnect } from "node:net";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { blindDiagnostic, parseCanaryVerdict } from "../lib/blind-report.ts";
 import {
 	countProcesses,
 	mayRetry,
@@ -1259,6 +1260,7 @@ async function main() {
 		// is therefore about fifteen launches, down from about twenty-one — the
 		// reduction is in the captures, not in the launch count as a whole. An
 		// earlier revision of this comment overstated it.
+		let anyBlindFailed = false;
 		const mutationCapture = join(tmpdir(), `lo-mutation-capture-${Date.now()}`);
 		const attemptProfile = join(mutationCapture, "chrome-attempt");
 		const captureRun = spawnSync(
@@ -1424,17 +1426,52 @@ async function main() {
 				true,
 				outcome,
 			);
+			const verdict = parseCanaryVerdict(output);
+			const blindOk =
+				run.status === 1 &&
+				missed.length === 1 &&
+				missed[0] === mutation.defect;
+			// On failure the diagnostic REPLACES the unreadable `got []`: it names the
+			// canary's exit, which of the five terms failed, whether the run was vacuous,
+			// the cells and rows each direction produced, and where the evidence is.
+			const keptTree = blindOk ? "reaped (the check passed)" : out;
 			check(
 				`blinding ${mutation.blind} misses exactly ${mutation.defect}`,
 				missed,
 				[mutation.defect],
+				blindDiagnostic({
+					exitCode: run.status,
+					signal: run.signal === null ? null : String(run.signal),
+					named: missed,
+					verdict,
+					keptTree,
+				}),
 			);
-			// Each mutation writes a whole capture tree under the SHARED OS temp dir. The
-			// loop used to leave every one of them: measured at 168 directories and
-			// 1,048 MB, four fifths of it from this PR's own runs.
-			rmSync(out, { recursive: true, force: true });
+			if (blindOk) {
+				// A PASSING blind's tree is reaped as before: the loop used to leave every
+				// one of them, measured at 168 directories and 1,048 MB, four fifths from
+				// this PR's own runs.
+				rmSync(out, { recursive: true, force: true });
+			} else {
+				anyBlindFailed = true;
+				// The bound is one tree per FAILING blind, and nothing for a blind that
+				// passes, so a red run keeps exactly the evidence it needs and a green one
+				// keeps none. The canary's own output rides beside the manifest.
+				writeFileSync(`${out}/canary-output.txt`, output.slice(-8000));
+				console.warn(
+					`  kept the failing blind's evidence at ${out} (manifest + canary output; one tree per failing blind)`,
+				);
+			}
 		}
-		rmSync(mutationCapture, { recursive: true, force: true });
+		if (anyBlindFailed) {
+			// The shared capture is the other half of the evidence: the per-blind tree holds
+			// that blind's audit output, this one holds the matrix it read.
+			console.warn(
+				`  kept the shared capture at ${mutationCapture} because a blind failed`,
+			);
+		} else {
+			rmSync(mutationCapture, { recursive: true, force: true });
+		}
 	}
 
 	/* ---- 3d. the text-scale dimension is live, in BOTH directions ---- */
