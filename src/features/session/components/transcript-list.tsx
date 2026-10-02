@@ -36,7 +36,7 @@ import { transcriptRowId } from "@/ui/a11y";
 export type TranscriptListProps = {
 	sessionId: string;
 	entries: TranscriptEntry[];
-	/** The row that carries `transcript-row-streaming`, or `null` when settled. */
+	/** The row that carries `transcript-streaming`, or `null` when settled. */
 	streamingRowId: string | null;
 	/** Resolves an attachment's bytes. */
 	loadImage?: (entryId: string, index: number) => Promise<string | null>;

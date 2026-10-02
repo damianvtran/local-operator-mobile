@@ -92,6 +92,78 @@ const stripComments = (text: string): string => {
 /** `id: "x"` and `- id: x` selectors, quoted or not. Text selectors and regexes
  * are not identifiers and are deliberately not matched. */
 const TESTID_LITERAL = /\btestID\s*[:=]\s*(?:"[^"]*"|\{\s*[`"']|["'`])/;
+
+/**
+ * An identifier SHAPED string: kebab-case with at least one segment break.
+ *
+ * A fallback like `?? "loading"` is copy, not a selector, and flagging it would
+ * make this check something to work around rather than something to satisfy. Every
+ * contract id has a dash, and each one that does not (`toast`) is a whole value
+ * rather than a fallback.
+ */
+const IDENTIFIER_SHAPED = /^[a-z0-9]+(?:-[a-z0-9]+)+$/;
+
+/**
+ * Identifier-shaped strings inside a `testID={…}` EXPRESSION.
+ *
+ * `TESTID_LITERAL` reads a `testID` whose value is a literal, and cannot see
+ * `testID={ok ? "one-id" : "another-id"}` — which is not hypothetical: the subagent
+ * detail badge carried exactly that shape, so the fold moved the contract's
+ * constant out from under a renderer (`subagentRunning`) and neither direction of
+ * this file noticed (review round 5, M1). A check that cannot see one of the
+ * contract's own renderers is the defect, not the instance.
+ *
+ * The braces are walked with the same quote awareness as `stripComments`, and a
+ * template is read up to its first `${`: a literal prefix with a dash is a second
+ * spelling of a family, which is what the builders in `src/ui/a11y.ts` exist to
+ * avoid.
+ */
+const literalTestIds = (text: string): string[] => {
+	const out: string[] = [];
+	const needle = "testID";
+	for (
+		let i = text.indexOf(needle);
+		i !== -1;
+		i = text.indexOf(needle, i + 1)
+	) {
+		let j = i + needle.length;
+		while ((text[j] ?? "") === " ") j += 1;
+		if (text[j] !== "=") continue;
+		j += 1;
+		while ((text[j] ?? "") === " ") j += 1;
+		if (text[j] !== "{") continue;
+		const start = j + 1;
+		let depth = 0;
+		let quote: string | null = null;
+		for (; j < text.length; j += 1) {
+			const ch = text[j] ?? "";
+			if (quote !== null) {
+				if (ch === "\\") {
+					j += 1;
+					continue;
+				}
+				if (ch === quote) quote = null;
+				continue;
+			}
+			if (ch === '"' || ch === "'" || ch === "`") {
+				quote = ch;
+				continue;
+			}
+			if (ch === "{") depth += 1;
+			else if (ch === "}") {
+				depth -= 1;
+				if (depth === 0) break;
+			}
+		}
+		const body = text.slice(start, j);
+		for (const match of body.matchAll(/["`']([^"`']*)["`']/g)) {
+			const literal = (match[1] ?? "").split("${")[0] ?? "";
+			const candidate = literal.endsWith("-") ? literal.slice(0, -1) : literal;
+			if (IDENTIFIER_SHAPED.test(candidate)) out.push(match[0]);
+		}
+	}
+	return out;
+};
 const YAML_FILE = /\.ya?ml$/;
 /* `.ts` as well as `.tsx`: the session view keeps its connection banner's copy and
  *  its identifier map in `.ts` modules, so a `.tsx`-only scan reported every one of
@@ -190,11 +262,27 @@ const SOURCE_FILES = [
 	.map((file) => ({
 		file: file.slice(root.length),
 		text: readFileSync(file, "utf8"),
-	}));
+	}))
+	.map(({ file, text }) => ({ file, text, stripped: stripComments(text) }));
 
-const RENDER_SOURCE = SOURCE_FILES.map(({ text }) => stripComments(text)).join(
-	"\n",
-);
+const RENDER_SOURCE = SOURCE_FILES.map(({ stripped }) => stripped).join("\n");
+
+/**
+ * The files that RENDER: a name mentioned in one of these is a name a component
+ * paints, because the file carries a `testID` at all.
+ *
+ * Direction 2 below reads a mention as a render, which is the right reading for a
+ * constant used as a prop and the wrong one for a marker returned as DATA —
+ * `state-marker.ts` names every marker it can return, so counting it as a renderer
+ * let all twelve markers pass while nothing painted one of them (review round 5).
+ * A state marker is a claim about a frame, so it has to be named where the frame is
+ * built.
+ */
+const RENDERING_SOURCE = SOURCE_FILES.filter(({ stripped }) =>
+	/\btestID\b/.test(stripped),
+)
+	.map(({ stripped }) => stripped)
+	.join("\n");
 
 /** The static identifier VALUES some route or primitive names. */
 const RENDERED_VALUES: ReadonlySet<string> = new Set(
@@ -401,15 +489,23 @@ describe("the routes and primitives against src/ui/a11y.ts", () => {
 		// drift from the constant the flows are checked against. Spread and
 		// caller-supplied values (`testID={testID}`) are fine; a string is not.
 		const offenders = sources
-			.filter(({ text }) => TESTID_LITERAL.test(text))
-			.map(({ file }) => file);
+			.map(({ file, stripped }) => ({
+				file,
+				literals: [
+					...(TESTID_LITERAL.test(stripped) ? ["a whole-value literal"] : []),
+					...new Set(literalTestIds(stripped)),
+				],
+			}))
+			.filter(({ literals }) => literals.length > 0)
+			.map(({ file, literals }) => `${file} — ${literals.join(", ")}`);
 		expect(offenders).toEqual([]);
 	});
 
 	it("references every declared identifier from at least one route or primitive", () => {
 		// A declared-but-unrendered identifier is a selector no flow can ever hit,
-		// and it would still satisfy the flow check above.
-		const rendered = sources.map(({ text }) => stripComments(text)).join("\n");
+		// and it would still satisfy the flow check above. A STATE_MARKER is stricter
+		// still: naming it in a module that returns it as data is not rendering it.
+		const rendered = RENDER_SOURCE;
 		const unused = Object.entries({
 			SCREEN,
 			EMPTY,
@@ -419,7 +515,12 @@ describe("the routes and primitives against src/ui/a11y.ts", () => {
 			STATE_MARKER,
 		}).flatMap(([group, ids]) =>
 			Object.keys(ids)
-				.filter((key) => !new RegExp(`\\b${group}\\.${key}\\b`).test(rendered))
+				.filter((key) => {
+					const named = new RegExp(`\\b${group}\\.${key}\\b`);
+					return !(group === "STATE_MARKER"
+						? named.test(RENDERING_SOURCE)
+						: named.test(rendered));
+				})
 				.map((key) => `${group}.${key}`),
 		);
 		/* No exemption list: the session view renders its vocabulary on this head, so

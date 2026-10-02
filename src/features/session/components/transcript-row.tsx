@@ -34,7 +34,7 @@ import { cx } from "@/ui/variants";
  */
 export type TranscriptRowProps = {
 	entry: TranscriptEntry;
-	/** The anchor `transcript-row-streaming` belongs on this row. */
+	/** The anchor `transcript-streaming` belongs on this row. */
 	streaming?: boolean;
 	/** Resolves an attachment's bytes; threaded from the screen. */
 	loadImage?: (entryId: string, index: number) => Promise<string | null>;

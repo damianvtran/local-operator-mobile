@@ -11,6 +11,7 @@ import {
 } from "@/features/session/components/model-sheet";
 import { PendingCard } from "@/features/session/components/pending-card";
 import { SlashSheet } from "@/features/session/components/slash-sheet";
+import { SessionStateMarkers } from "@/features/session/components/state-markers";
 import { SubagentsPanel } from "@/features/session/components/subagents-panel";
 import { TodosPanel } from "@/features/session/components/todos-panel";
 import { TranscriptList } from "@/features/session/components/transcript-list";
@@ -19,12 +20,13 @@ import { isRouteRefused } from "@/features/session/connection-view";
 import { headerTitleChars } from "@/features/session/header";
 import { pendingView } from "@/features/session/pending";
 import {
+	classifyEntry,
 	middleTruncate,
 	projectSubagents,
 	projectTodos,
 	workingLine,
 } from "@/features/session/projection";
-import { sessionStateMarkers } from "@/features/session/state-marker";
+import type { SessionStateFacts } from "@/features/session/state-marker";
 import { draftSlashQuery, useComposer } from "@/features/session/use-composer";
 import { useSessionRuntime } from "@/features/session/use-session";
 import { CONTROL, EMPTY, SCREEN, SURFACE } from "@/ui/a11y";
@@ -137,30 +139,27 @@ export default function Session() {
 
 	const pending = projection?.pending ?? null;
 
-	/* The state markers the design audit reads (`state-marker.ts`), derived from the
-	 *  same facts the screen renders from — a marker is a claim about the state the
-	 *  reader is in, so it may only be emitted for a fact that is true. */
-	const stateMarkers = useMemo(
-		() =>
-			sessionStateMarkers({
-				connected: projection !== null,
-				streaming: runtime.streaming,
-				ended: projection?.ended === true,
-				error: runtime.error !== null,
-				pending:
-					pending === null ? null : pending.kind === "ask" ? "ask" : "approval",
-				subagents: subagents.total,
-				entries: runtime.entries.length,
-			}),
-		[
-			projection,
-			runtime.streaming,
-			runtime.error,
-			runtime.entries.length,
-			pending,
-			subagents.total,
-		],
-	);
+	/* The state markers the design audit reads, derived from the same facts the screen
+	 *  renders from — a marker is a claim about the state the reader is in, so it may
+	 *  only be emitted for a fact that is TRUE. `aborted` is the daemon's own word
+	 *  (`stop_reason`), the same fact that gates the composer's resume affordance;
+	 *  `richRows` is a row the classifier calls a tool call, or one carrying images. */
+	const stateFacts: SessionStateFacts = {
+		connected: projection !== null,
+		streaming: runtime.streaming,
+		ended: projection?.ended === true,
+		aborted: projection?.stop_reason === "aborted" && !runtime.streaming,
+		error: runtime.error !== null,
+		degraded: projection?.degraded === true,
+		queued: projection?.queued_count ?? 0,
+		richRows: runtime.entries.some(
+			(entry) => classifyEntry(entry) === "tool" || entry.images.length > 0,
+		),
+		pending:
+			pending === null ? null : pending.kind === "ask" ? "ask" : "approval",
+		subagents: subagents.total,
+		entries: runtime.entries.length,
+	};
 
 	const pendingViewProps = useMemo(
 		() =>
@@ -293,13 +292,7 @@ export default function Session() {
 			   every phone width. The chip is status, the context strip is status, and
 			   the strip has room for both (design round 1, D2 and D8). */
 		>
-			{/* The state markers the design audit reads, one per true fact and none for a
-			    fact that is not true (`state-marker.ts`). `aria-hidden`: a claim for the
-			    audit, not a thing a reader should hear. They are zero-size, so they add
-			    nothing to the column. */}
-			{stateMarkers.map((marker) => (
-				<View key={marker} testID={marker} aria-hidden />
-			))}
+			<SessionStateMarkers facts={stateFacts} />
 			{/* The status strip: every number the reader needs while reading, in one
 			    band. Only rendered when the wire reports something — a strip that showed
 			    `—` for unknown would be a row of noise on every session. `min-h-11` is

@@ -2,92 +2,99 @@ import { describe, expect, it } from "vitest";
 
 import { COMPOSER_COPY, composerControls } from "@/features/session/composer";
 import {
-	composerStateMarkers,
+	composerStateFlags,
 	type SessionStateFacts,
-	sessionStateMarkers,
+	sessionStateFlags,
 } from "@/features/session/state-marker";
 import { EMPTY, STATE_MARKER, SURFACE } from "@/ui/a11y";
 
 /**
- * The state markers, as behaviour rather than as prose.
+ * Which states are affirmed, as behaviour rather than as prose.
  *
- * The audit reads a marker as an AFFIRMATIVE claim about the frame, so the two
- * directions both matter: a fact that is true has to leave its marker, and a fact
- * that is false must not. A derivation that only ever emitted one marker would
- * fail the first direction for the cells that declare a state a settled session
- * also has (S5/subagents is populated too), and one that emitted markers for
- * everything would fail the second.
+ * The audit reads a marker as an AFFIRMATIVE claim about the frame, so both
+ * directions matter: a fact that is true has to leave its marker, and a fact that
+ * is false must not. A function that only ever affirmed one state would fail the
+ * first direction for the cells a settled session also satisfies (S5/subagents is
+ * populated too), and one that affirmed everything would fail the second.
  */
 
 const facts = (over: Partial<SessionStateFacts> = {}): SessionStateFacts => ({
 	connected: true,
 	streaming: false,
 	ended: false,
+	aborted: false,
 	error: false,
+	degraded: false,
+	queued: 0,
+	richRows: false,
 	pending: null,
 	subagents: 0,
 	entries: 2,
 	...over,
 });
 
-describe("sessionStateMarkers", () => {
+const flagged = (over: Partial<SessionStateFacts> = {}): string[] =>
+	Object.entries(sessionStateFlags(facts(over)))
+		.filter(([, value]) => value)
+		.map(([key]) => key)
+		.sort();
+
+const capitalise = (key: string): string =>
+	`${key[0]?.toUpperCase() ?? ""}${key.slice(1)}`;
+
+describe("sessionStateFlags", () => {
 	it("claims nothing before a projection arrives", () => {
 		// The skeleton and the no-route empty state carry their own markers
 		// (`SURFACE.sessionLoading`, `EMPTY.session`); a second one here would be the
 		// same id twice in the DOM, saying nothing.
-		expect(sessionStateMarkers(facts({ connected: false }))).toEqual([]);
+		expect(flagged({ connected: false })).toEqual([]);
 	});
 
 	it("affirms the settled session and the roster together", () => {
-		// The case the affirmative rule exists for: a populated session with a
-		// roster answers S5/populated AND S5/subagents from one frame.
-		expect(sessionStateMarkers(facts({ subagents: 3 }))).toEqual([
-			STATE_MARKER.sessionSubagents,
-			STATE_MARKER.sessionPopulated,
-		]);
+		// The case the affirmative rule exists for: a populated session with a roster
+		// answers S5/populated AND S5/subagents from one frame.
+		expect(flagged({ subagents: 3 })).toEqual(["populated", "subagents"]);
 	});
 
-	it("names the running turn, the ended session and the failure", () => {
-		expect(sessionStateMarkers(facts({ streaming: true }))).toContain(
-			STATE_MARKER.sessionStreaming,
-		);
-		expect(sessionStateMarkers(facts({ ended: true }))).toContain(
-			STATE_MARKER.sessionEnded,
-		);
-		expect(sessionStateMarkers(facts({ error: true }))).toContain(
-			STATE_MARKER.sessionError,
-		);
+	it("names each state the view can actually phrase", () => {
+		// Every one of these is a fact this view holds, which is why none of them is
+		// left as a declared gap: `stop_reason` (the route's resume gate),
+		// `projection.degraded`, `queued_count`, and a row the classifier calls a tool
+		// call or one carrying images.
+		expect(flagged({ streaming: true })).toContain("streaming");
+		expect(flagged({ ended: true })).toContain("ended");
+		expect(flagged({ aborted: true })).toContain("aborted");
+		expect(flagged({ error: true })).toContain("error");
+		expect(flagged({ degraded: true })).toContain("degraded");
+		expect(flagged({ queued: 2 })).toContain("queued");
+		expect(flagged({ richRows: true })).toContain("richRows");
 	});
 
 	it("tells an approval from an ask, and never claims both", () => {
-		const approval = sessionStateMarkers(facts({ pending: "approval" }));
-		expect(approval).toContain(STATE_MARKER.sessionPendingApproval);
-		expect(approval).not.toContain(STATE_MARKER.sessionPendingAsk);
+		const approval = sessionStateFlags(facts({ pending: "approval" }));
+		expect(approval.pendingApproval).toBe(true);
+		expect(approval.pendingAsk).toBe(false);
 
-		const ask = sessionStateMarkers(facts({ pending: "ask" }));
-		expect(ask).toContain(STATE_MARKER.sessionPendingAsk);
-		expect(ask).not.toContain(STATE_MARKER.sessionPendingApproval);
+		const ask = sessionStateFlags(facts({ pending: "ask" }));
+		expect(ask.pendingAsk).toBe(true);
+		expect(ask.pendingApproval).toBe(false);
 	});
 
 	it("falls back to idle, so a connected session always affirms something", () => {
-		expect(sessionStateMarkers(facts({ entries: 0 }))).toEqual([
-			STATE_MARKER.sessionIdle,
-		]);
+		expect(flagged({ entries: 0 })).toEqual(["idle"]);
 	});
 
-	it("does not claim the markers whose facts it cannot phrase", () => {
-		// `session-degraded`, `session-aborted`, `session-rich-rows` and
-		// `session-queued` are deliberately absent from the derivation (see the
-		// module's own note): a marker for a state the facts cannot name is a claim
-		// nothing can reach, which is the failure the audit refuses rather than
-		// rewards.
-		const all = sessionStateMarkers(
-			facts({ streaming: true, ended: true, subagents: 2 }),
-		);
-		expect(all).not.toContain("session-degraded");
-		expect(all).not.toContain("session-aborted");
-		expect(all).not.toContain("session-rich-rows");
-		expect(all).not.toContain("session-queued");
+	it("has exactly one flag per declared session marker", () => {
+		// The other half of the guard: the render check proves a declared marker is
+		// rendered, this proves nothing is DECLARED with no derivation behind it and no
+		// flag is derived that the contract does not name.
+		const declared = Object.keys(STATE_MARKER)
+			.filter((key) => key.startsWith("session"))
+			.map((key) => key.slice("session".length))
+			.sort();
+		expect(
+			Object.keys(sessionStateFlags(facts())).map(capitalise).sort(),
+		).toEqual(declared);
 	});
 
 	it("leaves the two states the contract already carried to their own renderers", () => {
@@ -99,7 +106,7 @@ describe("sessionStateMarkers", () => {
 	});
 });
 
-describe("composerStateMarkers", () => {
+describe("composerStateFlags", () => {
 	const input = {
 		streaming: false,
 		hasDraft: true,
@@ -110,22 +117,43 @@ describe("composerStateMarkers", () => {
 	};
 
 	it("reads the primary's op rather than recomputing it", () => {
-		expect(composerStateMarkers(composerControls(input))).toEqual([
-			STATE_MARKER.composerIdle,
-		]);
+		expect(composerStateFlags(composerControls(input))).toEqual({
+			idle: true,
+			steering: false,
+			sending: false,
+			ended: false,
+		});
 		expect(
-			composerStateMarkers(composerControls({ ...input, streaming: true })),
-		).toEqual([STATE_MARKER.composerSteering]);
+			composerStateFlags(composerControls({ ...input, streaming: true })),
+		).toEqual({ idle: false, steering: true, sending: false, ended: false });
 	});
 
 	it("prefers the send in flight, and names the ended session", () => {
 		expect(
-			composerStateMarkers(
+			composerStateFlags(
 				composerControls({ ...input, streaming: true, sending: true }),
 			),
-		).toEqual([STATE_MARKER.composerSending]);
+		).toEqual({ idle: false, steering: false, sending: true, ended: false });
+
 		const ended = composerControls({ ...input, ended: true });
 		expect(ended.disabledReason).toBe(COMPOSER_COPY.endedSession);
-		expect(composerStateMarkers(ended)).toEqual([STATE_MARKER.composerEnded]);
+		expect(composerStateFlags(ended)).toEqual({
+			idle: false,
+			steering: false,
+			sending: false,
+			ended: true,
+		});
+	});
+
+	it("has exactly one flag per declared composer marker", () => {
+		const declared = Object.keys(STATE_MARKER)
+			.filter((key) => key.startsWith("composer"))
+			.map((key) => key.slice("composer".length))
+			.sort();
+		expect(
+			Object.keys(composerStateFlags(composerControls(input)))
+				.map(capitalise)
+				.sort(),
+		).toEqual(declared);
 	});
 });

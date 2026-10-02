@@ -315,10 +315,14 @@ export const SURFACE = {
 	subagentPrompt: "subagent-detail-prompt",
 	subagentTodos: "subagent-detail-todos",
 	subagentTranscript: "subagent-detail-transcript",
+	/** The detail route's status badge. Named here in the same change that renders
+	 *  it: the badge used to carry a literal, and the running state it used to
+	 *  switch to is `subagentRunning` below. */
+	subagentStatus: "subagent-detail-status",
 
 	/* The three surfaces whose components carry a DEFAULT identifier rather than
-	/* taking one from a caller: a literal default is a second spelling of an id the
-	/* flows select, which is exactly what the contract exists to prevent. */
+	 * taking one from a caller: a literal default is a second spelling of an id the
+	 * flows select, which is exactly what the contract exists to prevent. */
 	connectionPill: "connection-pill",
 	refusalSurface: "connection-refusal",
 	signInPanel: "sign-in-panel",
@@ -482,6 +486,13 @@ export const REGION = {
  * (`SURFACE.sessionLoading`) and `session-empty` (`EMPTY.session`) — so they are NOT
  * repeated here: two constants for one id is the duplicate a `IDENTIFIERS` set cannot
  * carry, and the states that were missing are the ones below.
+ *
+ * **The `composer-*` markers make nothing measurable today, and that is stated rather
+ * than implied:** the harness's marker table maps its screens to a `<subject>`
+ * (`tools/lib/readiness.ts` § `SCREEN_MARKER_SUBJECT`) and none of them is `composer` —
+ * S5/S8/S9 all map to `session` — so no cell can ever require a `composer-*` id. They
+ * are declared anyway because the composer's state has to be named SOMEWHERE and this
+ * file is where ids live; the session-level rendering of it is `sessionQueued` below.
  */
 export const STATE_MARKER = {
 	/* The session view's own states, all of them derivable from what the runtime
@@ -490,7 +501,11 @@ export const STATE_MARKER = {
 	sessionPopulated: "session-populated",
 	sessionStreaming: "session-streaming",
 	sessionEnded: "session-ended",
+	sessionAborted: "session-aborted",
 	sessionError: "session-error",
+	sessionDegraded: "session-degraded",
+	sessionQueued: "session-queued",
+	sessionRichRows: "session-rich-rows",
 	sessionPendingApproval: "session-pending-approval",
 	sessionPendingAsk: "session-pending-ask",
 	sessionSubagents: "session-subagents",

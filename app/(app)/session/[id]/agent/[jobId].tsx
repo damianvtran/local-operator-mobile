@@ -117,12 +117,18 @@ export default function Subagent() {
 						<Badge
 							label={detail?.status ?? "loading"}
 							tone={statusTone}
-							testID={
-								detail?.status === "running"
-									? "subagent-status-running"
-									: "subagent-detail-status"
-							}
+							testID={SURFACE.subagentStatus}
 						/>
+						{/* The running marker is a SIBLING of the badge, not the badge's own id, so
+						    "this child is running" has ONE name (`SURFACE.subagentRunning`) wherever
+						    it is shown — the roster renders it the same way (`subagents-panel.tsx`).
+						    The badge used to carry the literal `subagent-status-running` while
+						    running and `subagent-detail-status` otherwise: two names for one fact,
+						    neither of them the contract's, and invisible to the identifier check
+						    because a `testID={expr}` whose first token is not a quote was not read. */}
+						{detail?.status === "running" ? (
+							<View testID={SURFACE.subagentRunning} aria-hidden />
+						) : null}
 						{detail?.elapsed_s !== null && detail?.elapsed_s !== undefined ? (
 							<Text className="shrink-0 text-mono-sm text-ink-dim tabular-nums">
 								{elapsedLabel(detail.elapsed_s)}
