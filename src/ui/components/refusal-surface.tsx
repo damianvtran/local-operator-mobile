@@ -89,12 +89,18 @@ const HEADLINE: Record<RefusalKind, (subject: string) => string> = {
 	"host-unresolved": () => "That host name could not be found.",
 };
 
-/** The second line: what to do. One idea, on whose machine. */
+/** The second line: what to do. One idea, on whose machine.
+ *
+ *  The two imperatives that used to interpolate `subject` now name the machine as
+ *  "that computer", because the subject of these surfaces is a bare ADDRESS: with
+ *  it in both lines the address was printed three times in four lines and "Wake
+ *  http://…" read as apparatus rather than as advice (design round 4, D23). The
+ *  headline above names what failed; the remedy chip below names the command. */
 const NEXT: Record<RefusalKind, (subject: string) => string> = {
-	"computer-offline": (subject) =>
-		`Wake ${subject}, and check the connector is running. Its last known state is above.`,
-	"relay-stopped": (subject) =>
-		`On ${subject}, run \`lop mobile\` and leave it running.`,
+	"computer-offline": () =>
+		"Wake that computer, and check the connector is running. Its last known state is above.",
+	"relay-stopped": () =>
+		"On that computer, run `lop mobile` and leave it running.",
 	"tunnel-gone": () =>
 		"Create a tunnel again in Radient, then add this computer.",
 	console: () =>
@@ -143,7 +149,16 @@ export const RefusalSurface = ({
 			<View className="flex-row items-center gap-2">
 				<AlertTriangle color={danger} size={20} />
 				<Text
-					className="flex-1 text-heading text-ink"
+					/* `min-w-0` beside `flex-1`, and it is load-bearing rather than tidying: the
+					 *  subject of three of these headlines is a bare ADDRESS, and a URL is one
+					 *  unbreakable token. A flex item's automatic minimum size is its min-content
+					 *  width, so the box could not shrink below the URL: the headline measured
+					 *  344.66 pt inside a 288 pt pane and took the DOCUMENT to 369/320 at 200 % on
+					 *  a 320 pt phone, clipping the address mid-string (D22 / review r5-m1). With
+					 *  the floor removed, react-native-web's own `overflow-wrap: break-word`
+					 *  breaks the address inside the box, so the reader keeps every character of
+					 *  the one name they have to act on. */
+					className="min-w-0 flex-1 text-heading text-ink"
 					accessibilityRole={ROLE.header}
 					testID={CAUSE_ID[kind]}
 				>

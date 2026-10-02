@@ -187,6 +187,12 @@ export default function Sessions() {
 	 *  at large text the bar's second row is what left a 320 pt phone a 125 pt list
 	 *  window against a 130 pt row (D2). One flag, one place. */
 	const navInHeader = layout.split || largeText;
+	/* The ONE configuration where the list's own chrome has to yield rather than
+	 *  grow: a 320 pt phone with the platform's text at 200 %. Two decisions below
+	 *  read it — which control leaves the header row, and how far the degraded
+	 *  banner may run — so the predicate is written once, where both can see it,
+	 *  rather than re-derived from `largeText` and `layout.split` at each site. */
+	const phoneLargeText = largeText && !layout.split;
 	/* The address line yields FIRST when the phone's band is the scarce resource.
 	 *
 	 *  At 320 pt with the platform text at 200 % it was measured at 0 pt wide (a
@@ -196,7 +202,7 @@ export default function Sessions() {
 	 *  which computer is connected is carried by the avatar in the Screen header.
 	 *  The split pane keeps it — there the address has room and names the list's
 	 *  subject — so this is the phone-only half of the same rule as `navInHeader`. */
-	const addressInHeader = !largeText || layout.split;
+	const addressInHeader = !phoneLargeText;
 
 	/* A cold start with no route belongs on the welcome surface.
 	 *
@@ -354,6 +360,16 @@ export default function Sessions() {
 				<Banner
 					tone="warning"
 					message={degradedMessage}
+					/* A listing the relay could not walk is the state where the reader most
+					 *  needs rows on screen, and its sentence is 78 characters: at 200 % on a
+					 *  320 pt phone it measured 260.56 pt of a 356.81 pt band and left ZERO
+					 *  complete rows (QA round 4, Q4-2). Two lines brings the banner to
+					 *  98.19 pt, which leaves the row complete. What the reader SEES at this
+					 *  size is the sentence's opening — "Some conversations …" — so the cap is
+					 *  a visible truncation, taken deliberately in the one configuration where
+					 *  the alternative is no list at all; `numberOfLines` clamps the paint and
+					 *  not the DOM, so the sentence is still read whole by a screen reader. */
+					maxLines={phoneLargeText ? 2 : undefined}
 					testID={CONTROL.sessionsDegradedBanner}
 				/>
 			) : null}

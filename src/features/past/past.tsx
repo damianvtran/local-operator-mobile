@@ -123,7 +123,16 @@ export default function PastSessions() {
 					<View className="flex-1">
 						<Input
 							testID={CONTROL.pastSearchField}
-							label="Search past conversations"
+							/* The field shares its row with the "Search" button, so this label's box is
+							 *  the field's column and NOT the pane: 150 pt at 320 pt. At 200 % text
+							 *  "conversations" is 173 pt in that box, so the old label ("Search past
+							 *  conversations") broke mid-word across three lines ("Search past /
+							 *  conversatio / ns") and cost the chrome 40.59 pt the list did not have — the
+							 *  Past list's first row ended 20.16 pt below a 568 pt viewport (design round 4,
+							 *  D24; measured 470.56 → 588.16 before, 429.97 → 547.56 after). This copy breaks at the SPACE instead, in two lines, at both sizes,
+							 *  and it mirrors the sessions screen's own field ("Search sessions"); it is
+							 *  also the field's accessible name. */
+							label="Search past sessions"
 							value={query}
 							onChangeText={setQuery}
 							/* Short enough for the narrowest phone: the field shares its row with the

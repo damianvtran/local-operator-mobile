@@ -166,9 +166,15 @@ export async function carryOutRestore(
 
 	let tokens = plan.tokens;
 	if (plan.kind === "refresh") {
+		/* The `try` covers the REFRESH and nothing else (review round 5, m2). A write
+		 *  that rejects is this device failing to persist, not the server refusing the
+		 *  grant, and the `expired()` arm answers it by DELETING a credential nothing
+		 *  has questioned. `writeStoredOauth` swallows its own errors today, so the
+		 *  live wiring cannot reach that arm — but `writeOauth` is typed
+		 *  `Promise<void>`, so the next caller would inherit the trap. */
+		let refreshed: RadientTokens;
 		try {
-			tokens = await deps.refresh(tokens);
-			await deps.writeOauth(tokens);
+			refreshed = await deps.refresh(tokens);
 		} catch (error) {
 			if (isUnreachable(error)) {
 				/* The credential is NOT deleted and nothing is written: there is nothing
@@ -185,6 +191,8 @@ export async function carryOutRestore(
 			}
 			return expired();
 		}
+		await deps.writeOauth(refreshed);
+		tokens = refreshed;
 	}
 
 	if (deps.isCancelled?.() === true) {

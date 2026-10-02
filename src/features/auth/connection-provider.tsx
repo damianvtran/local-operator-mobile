@@ -515,6 +515,12 @@ export const ConnectionProvider = ({
 					 *  two failure arms deliberately KEEP the credential: an unreachable API or an
 					 *  unreadable answer says nothing about whether the grant is still good. */
 					await clearStoredOauth();
+					/* The landing latch goes with the credential (review round 5, r5-n1). This
+					 *  is the SECOND place a session ends — `signOut` is the other — and a latch
+					 *  left set here would route a signed-out reader to `/tunnels` the moment
+					 *  this refusal cleared, which is exactly the M2 defect from the other
+					 *  direction. */
+					if (mountedRef.current) setRestoredAccount(false);
 					connectionStore.getState().noteFailure({
 						surface: "sign-in",
 						displayableMessage: "Your Radient session expired.",

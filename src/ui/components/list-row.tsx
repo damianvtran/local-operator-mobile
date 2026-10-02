@@ -180,8 +180,21 @@ export const ListRow = ({
 								</Text>
 							) : null}
 						</View>
+						{/* The metadata line never wraps, and it is the CONTAINER that had to change:
+						 *  both children already declare a single line (`numberOfLines={1}`), so
+						 *  `flex-wrap` was the only thing contradicting them. A wrapped item moves
+						 *  onto its own line and the row grows a line exactly where the list has the
+						 *  least room: at 320 pt with the platform text at 200 % a stacked meta row
+						 *  measured 77.6 pt inside a 182.98 pt row, against 34.8 pt and 97.39 pt for a
+						 *  single-line one, and the second row of the list ended 18 pt below the band
+						 *  (QA round 4, Q4-1). The
+						 *  working directory truncates from the HEAD and the model id from the TAIL,
+						 *  which is what each already asks for; the title's row above keeps its own
+						 *  wrap on purpose (design round 2, D13), because there the marks are
+						 *  unshrinkable and a mark pushed past the pane edge is worse than a second
+						 *  line. */}
 						{cwd || model ? (
-							<View className="flex-row flex-wrap items-center gap-2">
+							<View className="flex-row items-center gap-2">
 								{cwd ? (
 									<Text
 										style={TITLE_BOX}
