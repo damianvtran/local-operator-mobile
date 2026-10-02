@@ -194,7 +194,7 @@ export function originVerdict(
 		// Served verbatim from `fixtures/relay/http/mutation-cross-origin.json`,
 		// whose sentence the contract redacted. Keeping the fixture's own bytes is
 		// the only non-invented choice; see docs/e2e/README.md.
-		json: { error: "[redacted] request required" },
+		json: { error: "same-origin request required" },
 	};
 }
 

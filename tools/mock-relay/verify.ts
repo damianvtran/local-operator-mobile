@@ -43,6 +43,7 @@ import {
 	STATE_MARKER_ALIASES,
 	seedQuery,
 } from "../lib/readiness.ts";
+import { paramDiff } from "../lib/seed-params.ts";
 
 const args = process.argv.slice(2);
 const flag = (name: string, fallback: string): string => {
@@ -648,8 +649,8 @@ async function main() {
 		});
 		check("an expired cookie is refused", expired.status, 401);
 
-		/* ---- [redacted] ---- */
-		group = "mutation [redacted]";
+		/* ---- cross-origin ---- */
+		group = "mutation cross-origin";
 		const foreign = await client.post(
 			`/api/sessions/${SID}/command`,
 			{ op: "ping" },
@@ -657,7 +658,7 @@ async function main() {
 		);
 		check("foreign Origin on a mutation is 403", foreign.status, 403);
 		check("403 body matches the captured fixture", foreign.json, {
-			error: "[redacted] request required",
+			error: "same-origin request required",
 		});
 
 		const noOrigin = await client.post(`/api/sessions/${SID}/command`, {
@@ -1934,17 +1935,29 @@ async function main() {
 			requiredStateMarker("path:/clean/clean", "clean"),
 			null,
 		);
+		const seedRoute = "http://127.0.0.1:1234";
+		const expectedParams: Array<[string, string]> = [
+			["lo-relay", seedRoute],
+			["lo-relay-password", "abc123"],
+			["lo-relay-insecure", "1"],
+		];
 		check(
 			"the seed hook's parameters are the app-facing names, and nothing is added when unset",
-			[seedQuery("http://127.0.0.1:1234", "abc123"), seedQuery(null, null)],
 			[
-				// The app's own parameter names, in the order `seedQuery` sets them: route,
-				// password, then the cleartext opt-in. The old expectation named the invented
-				// `lo-seed-*` pair, and its first repair dropped the `insecure` suffix — both
-				// were fail-by-construction, which is what this frozen-head run caught.
-				"lo-relay=http%3A%2F%2F127.0.0.1%3A1234&lo-relay-password=[redacted]&lo-relay-insecure=1",
-				"",
+				paramDiff(seedQuery(seedRoute, "abc123"), expectedParams),
+				paramDiff(seedQuery(null, null), []),
 			],
+			["", ""],
+		);
+		// The negative case the rendered-string check could not express: a result with the
+		// cleartext opt-in dropped must FAIL, and must name the missing parameter.
+		check(
+			"and a result missing the opt-in fails, naming that parameter",
+			paramDiff(
+				`lo-relay=${encodeURIComponent(seedRoute)}&lo-relay-password=abc123`,
+				expectedParams,
+			),
+			"parameters that differ: lo-relay-insecure; unexpected: none",
 		);
 
 		/* the prohibition survives, and the relay reach still applies */
