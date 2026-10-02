@@ -28,10 +28,25 @@ export type BannerProps = {
 		loading?: boolean;
 		testID: string;
 	};
-	testID?: string;
+	/** A cap on the message's lines, for the one configuration where the banner is
+	 *  the scarce resource rather than an addition to a screen that has room: a
+	 *  320 pt phone at the platform's large text. The list's own degraded banner is
+	 *  78 characters and measured 260.56 pt there — most of the 356.81 pt band the
+	 *  list lives in — so the state that most needs rows on screen showed NONE
+	 *  (QA round 4, Q4-2). Unset everywhere else: a banner that truncates when it has
+	 *  room is a banner that hides its own remedy. `numberOfLines` clamps the paint,
+	 *  not the DOM, so a screen reader still reads the sentence whole. */
+	maxLines?: number;
+	testID: string;
 };
 
-export const Banner = ({ tone, message, action, testID }: BannerProps) => (
+export const Banner = ({
+	tone,
+	message,
+	action,
+	maxLines,
+	testID,
+}: BannerProps) => (
 	<View
 		className={bannerClasses(tone)}
 		testID={testID}
@@ -42,7 +57,9 @@ export const Banner = ({ tone, message, action, testID }: BannerProps) => (
 			<Text className={`text-mono ${bannerInkClasses(tone)}`} aria-hidden>
 				{bannerGlyph(tone)}
 			</Text>
-			<Text className="flex-1 text-body-sm text-ink">{message}</Text>
+			<Text className="flex-1 text-body-sm text-ink" numberOfLines={maxLines}>
+				{message}
+			</Text>
 		</View>
 		{action ? (
 			<Button

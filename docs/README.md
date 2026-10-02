@@ -1,6 +1,6 @@
 # Documentation
 
-The mobile app is at the research and design stage. This index lists the
+Local Operator Mobile is at the research and design stage. This index lists the
 documentation sections as they land; each is **in progress** until linked.
 
 | Path | What it will hold | Status |

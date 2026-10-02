@@ -28,6 +28,7 @@
 import {
 	isRelayError,
 	RelayEndpoints,
+	type RelayError,
 	RelayHttpClient,
 	type RelayResponseFactsWithHeaders,
 	TRANSPORT_SENTENCE,
@@ -83,8 +84,23 @@ export interface CustomRouteSignIn {
 	ok: true;
 	/** True when the relay answered 303, which is the only success shape. */
 	signedIn: boolean;
-	/** The relay's own sentence for a failure, when it gave one. */
+	/** The relay's own sentence for a refusal of the PASSWORD, when it gave one. */
 	detail?: string;
+	/**
+	 * The classified failure that stopped the password being JUDGED at all, or
+	 * `null` when the relay itself answered the question.
+	 *
+	 * This distinction is the whole reason the field exists. `client.login()`
+	 * classifies through the taxonomy and THROWS for every status the route does
+	 * not answer with — a 502 from the gateway, an edge 503, a 403 from the relay's
+	 * cross-origin gate, a transport failure — and the caller of this boundary has
+	 * no `try`/`catch` to tell those from a refused password. Before this field,
+	 * `signedIn: false` meant both, so the connect flow reported every one of them
+	 * as "That password was not accepted." with a password that was correct
+	 * (design round 3, D21 — the same class as QA round 1's Q-01, on the path the
+	 * earlier fix did not reach).
+	 */
+	failure: RelayError | null;
 }
 
 /**
@@ -118,16 +134,43 @@ export async function signInToCustomRoute(
 		route,
 		...(options.fetchImpl ? { fetchImpl: options.fetchImpl } : {}),
 	});
+	/** A refusal the relay's own admission read answered belongs to the PASSWORD; it
+	 *  is the only failure this boundary reports as one. */
+	const isPasswordRefusal = (error: RelayError): boolean =>
+		error.kind === "relay-unauthorized" ||
+		error.kind === "radiant-login-required";
 	try {
 		const outcome = await client.login(password);
-		if (outcome.signedIn) return { ok: true, signedIn: true };
+		if (outcome.signedIn) return { ok: true, signedIn: true, failure: null };
+		/* `verified` is true when the outcome came from the admission read the
+		 *  browser path forces (`endpoints.login`), which is a real answer about the
+		 *  password rather than the platform hiding a status. An unverified
+		 *  `signedIn: false` is the transport's own report of one of the two statuses
+		 *  this route answers with, the other being 303 — so it too is a refusal. */
 		return {
 			ok: true,
 			signedIn: false,
+			failure: null,
 			detail: outcome.detail ?? "That password was not accepted.",
 		};
 	} catch (cause) {
-		return { ok: true, signedIn: false, detail: refusalSentence(cause) };
+		if (isRelayError(cause)) {
+			return {
+				ok: true,
+				signedIn: false,
+				failure: isPasswordRefusal(cause) ? null : cause,
+				detail: refusalSentence(cause),
+			};
+		}
+		/* Nothing in the client can reject with a non-`RelayError` (every fetch failure
+		 *  is wrapped as `transport`), so this is unreachable-by-construction and is
+		 *  reported as the tunnel failure it is rather than as a wrong password. */
+		return {
+			ok: true,
+			signedIn: false,
+			failure: null,
+			detail: TRANSPORT_SENTENCE,
+		};
 	}
 }
 

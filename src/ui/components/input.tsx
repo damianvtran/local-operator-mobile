@@ -2,6 +2,7 @@ import { Text, TextInput, type TextInputProps, View } from "react-native";
 
 import { ROLE, state } from "@/ui/a11y";
 import { useTokenColor } from "@/ui/appearance";
+import { TOUCH_FLOOR } from "@/ui/layout";
 import { type FieldState, fieldClasses } from "@/ui/variants";
 
 /**
@@ -29,6 +30,9 @@ export type InputProps = {
 	invalid?: boolean;
 	disabled?: boolean;
 	secureTextEntry?: boolean;
+	/** URLs, hosts and ids are typed without the keyboard's automatic
+	 *  capitalisation — a capitalised hostname is a different string. */
+	autoCapitalize?: TextInputProps["autoCapitalize"];
 	autoFocus?: boolean;
 	onSubmitEditing?: () => void;
 	returnKeyType?: TextInputProps["returnKeyType"];
@@ -44,6 +48,7 @@ export const Input = ({
 	disabled = false,
 	secureTextEntry,
 	autoFocus,
+	autoCapitalize,
 	onSubmitEditing,
 	returnKeyType,
 	testID,
@@ -65,6 +70,12 @@ export const Input = ({
 			<Text className="text-body-sm text-ink-muted">{label}</Text>
 			<TextInput
 				className={fieldClasses(fieldState)}
+				/* The platform floor, measured as BOX height — 48 wherever `Platform.OS`
+				 *  is not iOS, which includes the web/audit profile. `fieldClasses`
+				 *  carries `min-h-11` for the native iOS case; this is what makes the
+				 *  measured box right on the build the audit reads (D6: fields and chips
+				 *  all measured 44 there while the Button beside them measured 48). */
+				style={{ minHeight: TOUCH_FLOOR }}
 				accessibilityRole={ROLE.text}
 				accessibilityLabel={label}
 				accessibilityState={state({ disabled })}
@@ -75,6 +86,7 @@ export const Input = ({
 				editable={!disabled}
 				secureTextEntry={secureTextEntry}
 				autoFocus={autoFocus}
+				autoCapitalize={autoCapitalize}
 				onSubmitEditing={onSubmitEditing}
 				returnKeyType={returnKeyType}
 				testID={testID}

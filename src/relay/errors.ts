@@ -678,7 +678,7 @@ export function relayErrorFromResponse(
 				const policy = reason ? REASON_POLICY[reason] : undefined;
 				return new RelayError(
 					"gateway-refused",
-					detail ?? serverError ?? "tunnel authorization unavailable",
+					detail ?? serverError ?? "Tunnel authorization unavailable",
 					{
 						...common,
 						reason,
@@ -691,7 +691,7 @@ export function relayErrorFromResponse(
 			}
 			return new RelayError(
 				"computer-offline",
-				readableBodyText(text) ?? "tunnel temporarily unavailable",
+				readableBodyText(text) ?? "Tunnel temporarily unavailable",
 				common,
 			);
 		}
