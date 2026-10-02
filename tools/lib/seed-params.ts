@@ -7,8 +7,16 @@
  * and a failure names only the keys that differ: at `9810b50` that check failed while
  * printing two identical-looking strings, and the redaction is what made it unreadable.
  *
- * `paramDiff` returns "" when the query matches `expected` exactly — same keys, same
- * order, same raw values, nothing extra.
+ * `paramDiff` returns "" when the query matches `expected` exactly, and it deliberately
+ * IGNORES two things, both stated here because a silent allowance is how a check stops
+ * meaning what it says:
+ *  - **order** — a seed URL's parameter order carries no meaning: the app reads by name
+ *    with `URLSearchParams.get`, so the comparison is order-insensitive;
+ *  - **encoding** — `URLSearchParams` normalises `%20` and `+`, so encoded forms compare
+ *    as the values they decode to rather than as bytes.
+ *
+ * It does NOT ignore duplicates: the same key twice gives the app one value and the URL
+ * another, because `get` returns the first — so a repeated key is reported and fails.
  */
 export function seedParams(query: string): Array<[string, string]> {
 	return [...new URLSearchParams(query).entries()];
@@ -18,17 +26,30 @@ export function paramDiff(
 	actual: string,
 	expected: Array<[string, string]>,
 ): string {
-	const got = new Map(seedParams(actual));
+	const pairs = seedParams(actual);
+	const keys = pairs.map(([key]) => key);
+	const duplicated = [
+		...new Set(keys.filter((key, index) => keys.indexOf(key) !== index)),
+	];
+	const got = new Map(pairs);
 	const differing = expected
-		.filter(([key, value]) => got.get(key) !== value)
+		.filter(([key, value]) => !duplicated.includes(key) && got.get(key) !== value)
 		.map(([key]) => key);
-	const unexpected = [...got.keys()].filter(
-		(key) => !expected.some(([k]) => k === key),
+	const unexpected = keys.filter(
+		(key) =>
+			!expected.some(([expectedKey]) => expectedKey === key) &&
+			!duplicated.includes(key),
 	);
-	if (differing.length === 0 && unexpected.length === 0) return "";
-	return `parameters that differ: ${differing.join(", ") || "none"}; unexpected: ${unexpected.join(", ") || "none"}`;
-}
-
-export function paramCount(query: string): number {
-	return seedParams(query).length;
+	if (
+		duplicated.length === 0 &&
+		differing.length === 0 &&
+		unexpected.length === 0
+	) {
+		return "";
+	}
+	return (
+		`parameters that differ: ${differing.join(", ") || "none"}; ` +
+		`duplicated: ${duplicated.join(", ") || "none"}; ` +
+		`unexpected: ${unexpected.join(", ") || "none"}`
+	);
 }

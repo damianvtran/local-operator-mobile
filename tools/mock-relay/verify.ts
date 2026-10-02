@@ -1957,7 +1957,7 @@ async function main() {
 				`lo-relay=${encodeURIComponent(seedRoute)}&lo-relay-password=abc123`,
 				expectedParams,
 			),
-			"parameters that differ: lo-relay-insecure; unexpected: none",
+			"parameters that differ: lo-relay-insecure; duplicated: none; unexpected: none",
 		);
 
 		/* the prohibition survives, and the relay reach still applies */

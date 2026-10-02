@@ -162,11 +162,18 @@ describe("the deadline bounds a short body, and does not bound a stream's", () =
 		if (first === undefined || last === undefined) {
 			throw new Error("the stream delivered no frame at all");
 		}
-		const spread = last - first;
+		// WAIT PAST the deadline as an event, then require the stream to still be live.
+		// The assertion this replaces compared the wall-clock spread of the five frames
+		// against the deadline, which a loaded host compresses — measured: "delivered 5
+		// frames over 498 ms with a 500 ms deadline", red in 4 of 22 runs, for a reason
+		// unrelated to the behaviour under test. Sleeping for the deadline and then
+		// checking the connection cannot be raced: it only makes the test take longer.
+		void last;
+		await new Promise((resolve) => setTimeout(resolve, DEADLINE_MS + 150));
 		expect(
-			spread,
-			`the stream delivered ${frameCount} frames over ${spread} ms with a ${DEADLINE_MS} ms deadline`,
-		).toBeGreaterThan(DEADLINE_MS);
+			connects,
+			`the stream was cut and reopened inside the window (${connects} connections)`,
+		).toBe(1);
 		/* THE property that differs (review round 5, R5-M1). The frames alone do not
 		 * discriminate: a deadline that followed the stream's body would cut it here, the
 		 * watchdog would reopen it, and all five frames would still arrive — across TWO

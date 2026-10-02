@@ -368,7 +368,7 @@ pnpm e2e:relay
 
 Asserts the relay's own contract, each driving a real socket and
 comparing against the captured corpus: the three auth rules, the cookie's format
-and signature, the [redacted] rule on mutations, the command endpoint's status
+and signature, the same-origin rule on mutations, the command endpoint's status
 mapping, idempotency, the read routes, **every scenario in the registry** (started
 and asserted against the world that scenario declares) and every fault on the
 wire. It exits non-zero on any failure and prints one line per check.

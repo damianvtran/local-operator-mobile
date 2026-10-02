@@ -191,9 +191,8 @@ export function originVerdict(
 	return {
 		kind: "respond",
 		status: 403,
-		// Served verbatim from `fixtures/relay/http/mutation-cross-origin.json`,
-		// whose sentence the contract redacted. Keeping the fixture's own bytes is
-		// the only non-invented choice; see docs/e2e/README.md.
+		// Served verbatim from `fixtures/relay/http/mutation-cross-origin.json` — the
+		// sentence is the fixture's own bytes, not a paraphrase; see docs/e2e/README.md.
 		json: { error: "same-origin request required" },
 	};
 }
