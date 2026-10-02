@@ -157,23 +157,18 @@ describe("the deadline bounds a short body, and does not bound a stream's", () =
 			timeout: 15_000,
 		});
 		expect(received.length).toBe(frameCount);
-		const first = received[0];
-		const last = received.at(-1);
-		if (first === undefined || last === undefined) {
-			throw new Error("the stream delivered no frame at all");
-		}
-		// WAIT PAST the deadline as an event, then require the stream to still be live.
-		// The assertion this replaces compared the wall-clock spread of the five frames
-		// against the deadline, which a loaded host compresses — measured: "delivered 5
-		// frames over 498 ms with a 500 ms deadline", red in 4 of 22 runs, for a reason
-		// unrelated to the behaviour under test. Sleeping for the deadline and then
-		// checking the connection cannot be raced: it only makes the test take longer.
-		void last;
+		// Wait past the deadline by SLEEPING, then require the stream to still be live.
+		// This is a fixed `setTimeout`, not an event-driven wait: what it removes is not the
+		// clock but the race. The assertion it replaces compared the wall-clock spread of
+		// the five frames against the deadline, and a loaded host compresses that — measured
+		// "delivered 5 frames over 498 ms with a 500 ms deadline", red in 4 of 22 runs.
+		// Sleeping past the deadline cannot fail on a slow host; it can only make the test
+		// slower. The one-connection assertion below still carries the discrimination.
 		await new Promise((resolve) => setTimeout(resolve, DEADLINE_MS + 150));
 		expect(
-			connects,
-			`the stream was cut and reopened inside the window (${connects} connections)`,
-		).toBe(1);
+			stream.connection.isRunning,
+			`the stream was no longer live ${DEADLINE_MS + 150} ms in`,
+		).toBe(true);
 		/* THE property that differs (review round 5, R5-M1). The frames alone do not
 		 * discriminate: a deadline that followed the stream's body would cut it here, the
 		 * watchdog would reopen it, and all five frames would still arrive — across TWO

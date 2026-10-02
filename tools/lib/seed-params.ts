@@ -15,8 +15,11 @@
  *  - **encoding** — `URLSearchParams` normalises `%20` and `+`, so encoded forms compare
  *    as the values they decode to rather than as bytes.
  *
- * It does NOT ignore duplicates: the same key twice gives the app one value and the URL
- * another, because `get` returns the first — so a repeated key is reported and fails.
+ * It does NOT ignore duplicates, and it does not choose between them: the same key twice
+ * means the URL carries two values while a name-based reader sees one, so a repeated key
+ * is reported and fails. No first-or-last reading is taken for such a key, so `Map`'s
+ * last-wins behaviour never reaches the result — that note matters only because dropping
+ * either duplicate guard would make it reachable.
  */
 export function seedParams(query: string): Array<[string, string]> {
 	return [...new URLSearchParams(query).entries()];
@@ -33,7 +36,9 @@ export function paramDiff(
 	];
 	const got = new Map(pairs);
 	const differing = expected
-		.filter(([key, value]) => !duplicated.includes(key) && got.get(key) !== value)
+		.filter(
+			([key, value]) => !duplicated.includes(key) && got.get(key) !== value,
+		)
 		.map(([key]) => key);
 	const unexpected = keys.filter(
 		(key) =>
