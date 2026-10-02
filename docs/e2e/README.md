@@ -44,175 +44,110 @@ swept by its own profile path afterwards.
 
 ## Read this before trusting any frame: which cells are measurable
 
-**A frame is not coverage.** Every relay-backed cell — `S5/*` (the session view and
-its streaming, aborted, queued and populated states, including the new
-`S5/rich-rows`), `S8/*` (pending approval and pending ask) and `S6/*` (subagent
-detail) — is **NOT MEASURABLE today**, and a design, UX or rubric reading drawn from
-those frames is a reading of the app's **not-connected screen**, not of the state the
-cell names. The number of cells this costs is printed by every run
-(`measurableCells` / `notMeasurableCells` in the manifest, and one line per cell on
-stdout), so the coverage claim is measured rather than asserted.
+**A frame is not coverage.** Every run prints two counts and a third list, and
+the three answer different questions:
 
-The coverage fields are **top-level** in `manifest.json` — `measurableCells`,
-`notMeasurableCells`, `coverageNote` (the `meta` object holds `teardown`, `textScaleLive` and
-the other run-level readings; the audit's own key is `coverage`). `verify` asserts both the
-level and the names, so a reader following this page cannot land on `undefined`.
+| field (TOP LEVEL of `manifest.json`, not under `meta`) | what it means |
+|---|---|
+| `measurableCells` | cells that reached the state they declare. Only these frames are evidence. |
+| `notMeasurableCells` | cells that did NOT, each with its reasons. A finding about the harness or the app. |
+| `declaredSkips` | cells whose state this head does not render yet, each with the work that owns it. NOT a gap, and NOT evidence. |
 
-`S5/rich-rows` is the newest of them: the scenario and its cell exist (so the
-transcript's fenced block, diff and tables are one `--scenario rich-rows` away), but
-the cell renders the same not-connected screen, so the copy control's box is still
-unmeasured and the run fails it by name — the same verdict as its neighbours, by the
-same root cause:
-```
-S5__rich-rows__iphone-15__dark__100: the cell declares 'rich-rows' but the marker
-'session-rich-rows' is not in the DOM: nothing in the frame affirms that state, so the
-cell is NOT MEASURABLE for it; the cell declares 'rich-rows' but the app is showing an
-empty state (session-empty): the state was never reached; the app made no request to the
-mock relay for this cell, so the state it declares (rich-rows) cannot have come from the
-relay
-```
-(Verbatim from a one-cell run on 2026-09-30 — `--cells S5/rich-rows --devices iphone-15
---themes dark --scales 100` — because a quoted sample that no longer matches the tool is
-the drift this page exists to refuse. Three problems, in the order the guard asks them:
-the missing marker, the empty screen, the absent request.)
-
-Measured on 2026-09-30, one device, one theme, with the relay recording every
-request it served:
+Measured on this head, one device and theme (`--devices iphone-15 --themes dark
+--scales 100`), 38 cells:
 
 ```
-S5/populated          relay requests served: 0   DOM: session-screen, session-back, session-empty
-                      text: "This session is not connected yet."
-                      frame sha 0c58d3f807a5bbf4
-S5/pending-approval   relay requests served: 0   DOM: session-screen, session-back, session-empty
-                      text: "This session is not connected yet."
-                      frame sha 0c58d3f807a5bbf4
+audit: 38 cells, 380 check rows, 81 measured, 0 FAIL, 299 BLOCKED (0 unmeasurable) · palette loaded
+audit: 29 cell(s) are DECLARED SKIPS (not gaps):
 ```
 
-The two frames are byte-identical because both are the same fallback screen. The
-harness says so rather than leaving the reader to notice: the cell **fails by name**
+Nine cells are measured — `S4/empty`, `S4/populated`, `S4/populated-long`,
+`S4/narrow`, `S4/degraded-listing`, `S10/empty`, `S10/populated`, `S2/error`,
+`S13/error`. The other twenty-nine are declared skips:
+
+- **21 session-view cells** (`S5/*`, `S6/*`, `S8/*`, `S9/*`) wait on **PR #12
+  (`feat/screens-session`)**: on this head `app/(app)/session/[id].tsx` is a
+  placeholder that renders `session-empty` in every state, so no frame of them is
+  evidence about the state the cell names.
+- **5 computer cells** (`S2/empty`, `S3/empty`, `S3/populated`, `S13/loading`,
+  `S13/degraded`) need something the relay cannot serve: the computer LIST comes
+  from Radient's account API (`src/connection/discovery.ts`, `GET /v1/tunnels`),
+  so every relay scenario renders the same "Set up a computer" path. Only the
+  refusal state (`S2/error`, `S13/error`) is reachable, because the mock's
+  gateway refusal drives it.
+- **3 list states** the app renders without an identifier of their own:
+  `S4/loading` (skeletons), `S4/ended` and `S4/degraded-row` (the row receipts
+  change copy and colour — "ended", "not answering" — but carry no `testID`).
+
+A declared skip is honoured **only while the app declares no marker for that
+cell's state**, so it can never hide a marker that stopped rendering: flip a
+declared marker off and the cell comes back as `notMeasurableCells`, by name, and
+the audit exits 3 instead of 0. That is asserted, not hoped for — measured
+2026-10-02 by removing the `sessions-degraded-banner` `testID` from
+`src/features/sessions/sessions.tsx` in a scratch build:
 
 ```
-S5__pending-approval__iphone-15__dark__100: the cell declares 'pending-approval' but
-the app is showing an empty state (session-empty): the state was never reached; the
-app made no request to the mock relay for this cell, so the state it declares
-(pending-approval) cannot have come from the relay
+UNREADY CELLS (1):
+  - S4__degraded-listing__iphone-15__dark__100: the cell declares 'degraded-listing'
+    but the marker 'sessions-degraded-banner' is not in the DOM: nothing in the frame
+    affirms that state, so the cell is NOT MEASURABLE for it
+audit: 9 cells, 90 check rows, 72 measured, 0 FAIL, 18 BLOCKED (10 unmeasurable) · palette loaded
+audit-exit=3
 ```
 
-and the report carries top-level `measurableCells`, `notMeasurableCells` (each with
-its reasons) and `coverageNote` — the same fields the manifest writes at its top level,
-not under `meta` (the audit's own summary key is `coverage`). `audit.ts` reads the same list and reports every
-row of such a cell as `BLOCKED` with `blockedKind: "state-not-reached"` — never
-PASS — and counts them as a gap, so the audit exits non-zero rather than green.
+### The state-marker contract is the app's, and the harness imports it
 
-### Why these cells cannot be measured yet, and what unblocks them
+A cell declaring `<screen>/<state>` is evidence only if the frame carries the id
+the app renders in that state. Which id that is, is declared in
+**`src/ui/a11y.ts` `STATE_MARKER`**, keyed `<subject>/<state>` — `sessions`,
+`past`, `computers` — and `tools/lib/readiness.ts` **imports** it. The harness
+keeps the cell vocabulary (`S4` is the matrix's language; the app never learns
+it).
 
-The harness lands on the app's session route without taking it through its connect
-flow (sign-in → computer pick → session), so the app is right to render "not
-connected yet" and never talks to the page origin.
+This used to be a table in the harness that asked for `<subject>-<state>`
+(`sessions-populated`, `computers-error`, …). The app renders no such ids, so
+every relay-backed cell was reported NOT MEASURABLE while the tool looked
+healthy — a harness dialect beside the app's vocabulary, with the failure
+dressed as a finding about the app. An entry in `STATE_MARKER` must be an id
+present in ONLY that state (a screen root or a container is not a marker, because
+it is on screen in every state), and a value ending in `-` is a family prefix
+(`session-row-`, `past-row-`). A state with no entry is a **declared gap**: the
+harness reports the cell by name rather than inventing a marker.
 
-**Driving the flow was tried first, because it is the better answer** (it keeps the
-harness app-agnostic and needs nothing from the app). It is not possible on this
-head: the two screens the flow starts from have **no interactive nodes at all**. The
-copy control's absence has a shape here — measured with the app's own build, one
-device and theme:
-
-```
-$ pnpm audit:capture --dir dist --out "$SCRATCH/connect-probe" \
-    --cells path:/custom/custom --cells path:/sign-in/sign-in \
-    --devices iphone-15 --themes dark --scales 100 --yes
-CELL path--custom__custom__iphone-15__dark__100   testIds: custom-route-screen, custom-empty
-CELL path--sign-in__sign-in__iphone-15__dark__100 testIds: sign-in-screen, sign-in-empty
-$ pnpm audit:run --manifest "$SCRATCH/connect-probe/manifest.json" --out "$SCRATCH/connect-audit"
-U-01: BLOCKED | no interactive nodes in this frame     (both cells)
-```
-
-There is no field to type a URL into, no field for the relay password, and no Test
-or Save control: `app/(auth)/custom.tsx` is an `EmptyState` ("The form needs the
-custom-route connection profile, so this route is the shell only") and
-`app/(auth)/sign-in.tsx` deliberately has no button. The step that fails is therefore
-the very first one — *type the relay URL* — and it fails because the control does not
-exist, not because CDP cannot type.
-
-Two other routes were tried and neither works from outside the app:
-
-- **Seeding persisted state** is impossible on this target: the web build's credential
-  store is in memory (`src/connection/storage.ts` — `memorySecureStore`, "the honest
-  fallback for a runtime with no keystore"), so there is nothing on disk or in
-  `localStorage` to seed.
-- **Driving the flow by UI** is blocked by the app's own current state: the session
-  list has no rows yet, so no flow reaches `/session/<id>` with a live route.
-
-**The unblock is three things, and only one of them is a merge.** Stated plainly, because
-a reader acts on this paragraph:
-
-1. **A connection step in the harness — NOT BUILT.** `tools/visual/capture.ts` has no
-   input injection at all: its whole page interaction is `Page.navigate`,
-   `Emulation.setDeviceMetricsOverride` / `setEmulatedMedia` / `setSafeAreaInsetsOverride`
-   and two read-only `evaluate` probes. So a merge alone changes nothing about what this
-   tool does; the driving has to be written (type the URL, type the password, click Test,
-   click Save), or replaced by the hook in (3).
-2. **PR #12 (`feat/screens-session`) for 21 of the 37 cells** — the 14 `S5`, 4 `S8`, 2 `S6`
-   and 1 `S9` cells all render the session view, and on this head
-   `app/(app)/session/[id].tsx` is a placeholder that renders `session-empty` in every
-   state.
-3. **PR #11 (`feat/screens-lists`) for the other 16** — the list, computer and refusal
-   cells (`S2`, `S3`, `S4`, `S10`, `S13`), which need the connection surfaces it owns, plus
-   the connection step from (1) on top.
-
-The alternative to (1) is the **web relay override**, and it is **not** something the app
-still has to build: PR #11's `webRelayOverride()` (`src/features/auth/connection-provider.tsx`,
-`feat/screens-lists`) already reads the query string and hands the connection layer a relay
-URL, password and cleartext opt-in. This harness emits those parameters under **the app's own
-names** — `lo-relay`, `lo-relay-password`, `lo-relay-insecure=1` — so a capture run needs no
-driving and no app change:
+### Seeding a run so the app actually talks to the relay
 
 ```sh
-pnpm audit:capture --dir dist --relay <mock-url> --seed-route <mock-url> --seed-password mock-relay-password …
+# docs:needs mock-relay
+pnpm audit:capture --dir dist --out "$SCRATCH/frames" --relay "$MOCK_URL"
 ```
 
-Two properties of that hook matter, and the README said the opposite of the second for one
-revision:
+`--relay` is enough. The harness serves the build itself and proxies the relay's
+paths (`/api/`, `/healthz`, `/login`, `/logout`) **at that origin**, so it seeds
+the page with the origin the build is served from and the mock relay's own
+default password — the app's `lo-relay` / `lo-relay-password` /
+`lo-relay-insecure` names, read by PR #11's `webRelayOverride()`.
 
-- the **password is not optional**: the relay authenticates by password into a cookie, so a
-  route-only seed renders an unauthenticated page and every cell fails for the missing
-  credential rather than for the missing route;
-- the override takes **priority over a saved tunnel** (`connection-provider.tsx:655-673`:
-  "On web an explicit `lo-relay` override wins"). It has to: a seeded capture that quietly
-  dialled a saved tunnel on the capture machine would photograph the wrong relay.
+Seeding the mock relay's OWN origin instead — which every earlier revision of
+this page instructed — makes each request cross-origin, the mock sends no CORS
+headers, the browser rejects the fetch before the app can authenticate, and every
+relay-backed cell renders "The relay could not be reached". That run is green,
+its frames exist, and none of them is evidence, which is why the default is now
+the served origin. `--seed-route` / `--seed-password` remain as overrides.
 
-There is no session parameter — the session id travels in the route path, which the harness
-sets itself. `verify` asserts this name set against #11's own source, so a rename there fails
-here instead of silently seeding nothing.
+### What the app still has to do (this harness cannot)
 
-So the dependencies, stated once:
-
-| what | unblocks | state |
-|---|---|---|
-| the harness seed step (`--seed-route`/`--seed-password`, the app's `lo-relay*` names) | makes a seeded run possible at all | **built here** |
-| PR #11 (`feat/screens-lists`) merging | the **16** list, computer and refusal cells (`S2`, `S3`, `S4`, `S10`, `S13`) | open, in review |
-| PR #12 (`feat/screens-session`) merging | the **21** session cells (`S5`, `S8`, `S6`, `S9`) — `app/(app)/session/[id].tsx` is a placeholder on this head | open, in review |
-| the app emitting the state markers the rule requires (below) | turns "seeded" into "measurable" | **on #11/#12** |
-
-The number to watch is unchanged: **37 cells from not-measurable to measurable**, printed by
-every run.
-
-### The state-marker contract this harness requires
-
-The readiness rule is affirmative, so it needs a name to look for: a cell declaring
-`<screen>/<state>` requires a **visible** `data-testid` of `<subject>-<state>` — `sessions-populated`,
-`session-pending-approval`, `session-rich-rows`, and so on, with the variants (`populated-long`,
-`narrow`, `scroll`, `approval`, `ask`, `ask-multi`) mapping to the state they render.
-
-That is the app's own convention (`sessions-empty`, `session-empty`) extended, and it is a
-**forward requirement, not a finding**: on this head the app's `src/ui/a11y.ts` declares only
-the `-empty` markers, screen roots and controls, so exactly those rows are cross-checked
-against it (`verify` does that per row) and every non-empty row is listed as pending on #11/#12.
-If those PRs name their markers differently, the cells stay not-measurable for a NAMING reason
-while the message blames the app's DOM — which is why the table is asserted and the pending
-rows are named rather than assumed.
-
-Until one of them lands, every relay-backed cell stays **not measured** — a statement
-this harness makes per cell, not a pass it hands out.
+1. **Nine empty markers.** On this head `src/ui/a11y.ts` declares `-empty` for
+   five subjects only, so `verify` names the screens whose empty state has no
+   marker: `S1` (sign-in), `S1-welcome`, `S2`, `S3`, `S3-custom`, `S7`
+   (new-session), `S11` (settings), `S13`, `S14`. Those are app-side work.
+2. **A marker for the row receipts.** `S4/ended` and `S4/degraded-row` change
+   copy and colour but leave no `testID` behind, so nothing in the frame can
+   affirm them.
+3. **A marker for the list's loading state** (`S4/loading`), which currently
+   renders unlabelled skeletons.
+4. **The computer cells**, which need Radient's account API — either a fixture
+   path the mock can serve or an app-side state marker driven by something the
+   harness can produce.
 
 ---
 
@@ -231,9 +166,12 @@ pnpm mock:relay --list
 
 ```sh
 # the password the mock's login form expects, alone on stdout.
-# Read it this way, never by importing `relay.ts` from `node -e`: an import that
-# runs the CLI starts a listening relay, and a shell command substitution around
-# it waits on that socket forever.
+# An earlier revision read it with `node -e "import('./tools/mock-relay/relay.ts')…"`,
+# and that started a listening relay: the import ran the CLI, the shell command
+# substitution waited on the socket, and nothing ever returned. `relay.ts` now guards
+# its CLI with `import.meta.main`, so a plain import is safe (the capture harness does
+# exactly that for the default seed password) — but the printed form stays the
+# documented one, because it cannot depend on the guard staying.
 pnpm mock:relay --print-password
 ```
 
@@ -287,10 +225,10 @@ second hand-maintained list.
 | `loading` | S4/loading, S5/loading, S13/loading | No frame has arrived yet: every API route holds its response and the streams stay silent with keepalives only. |
 | `idle` | S4/populated, S5/populated | One live conversation, idle, after a completed turn (the corpus capture). |
 | `many` | S4/populated, S4/populated-long, S4/narrow | Twelve rows: pinned, streaming, needing attention, running subagents, a long name and a long cwd. |
-| `degraded` | S4/degraded, S5/degraded | The session record is fresh but its runtime is unreachable: `subagents_running` is null while the row stays active (the SIGSTOP probe's signal). |
-| `degraded-listing` | S4/degraded | The durable catalogue could not be walked: `degraded: ["sessions"]` with rows still present. |
-| `degraded-attention` | S4/degraded | The completion-receipt store could not be read: `degraded: ["attention"]`. |
-| `wedged` | S4/degraded, S13/degraded | A frozen runtime: the row reports real subagent counts until HEARTBEAT_TIMEOUT_S (45 s) has elapsed, then flips to null while `section` stays active. The two-sample comparison is the only signal. |
+| `degraded` | S4/degraded-row, S5/degraded | The session record is fresh but its runtime is unreachable: the row carries its own receipt (`degraded: true`, what a phone-observed SIGSTOP produces) and `subagents_running` is null while the row stays active. |
+| `degraded-listing` | S4/degraded-listing | The durable catalogue could not be walked: `degraded: ["sessions"]` with rows still present. |
+| `degraded-attention` | S4/degraded-listing | The completion-receipt store could not be read: `degraded: ["attention"]` — the same cell, because the reader's question is the same one. |
+| `wedged` | S4/degraded-row, S13/degraded | A frozen runtime: the row reports real subagent counts until HEARTBEAT_TIMEOUT_S (45 s) has elapsed, then flips to null while `section` stays active. The two-sample comparison is the only signal. |
 | `ended` | S4/ended, S10/populated | A finished conversation whose runtime is gone |
 | `streaming` | S5/streaming | A turn in flight: assistant text grows frame by frame, then settles. |
 | `aborted` | S5/aborted | A turn stopped on purpose: `stop_reason: aborted` with `cut_off: false`, then a second run with `cut_off: true`. |
