@@ -475,24 +475,26 @@ node tools/visual/capture.ts --dir e2e/fixtures/audit-canary \
 # example is the bounded sample; run `--plan` above for the full count, and drop these
 # three flags for the whole matrix.
 #
-# This command reads the APP's current state, and on 2026-10-02 it exits non-zero
-# with two true findings rather than a harness fault:
+# This command reads the APP's current state, and on 2026-10-03 it exits non-zero
+# with one finding rather than a harness fault:
 #   * `S2/error` and `S13/error` render byte-identically: that is one screen
 #     (`/tunnels` refusing) reached through two relay causes, so two cells are one
-#     state. A group made ONLY of DECLARED SKIPS is no longer reported — this
-#     head's 29 skips are one placeholder screen between them, and the 19-cell
-#     `S5`/`S6`/`S8`/`S9` group they used to form was that, not a finding — but a
-#     group with ANY evidential cell in it still is (the readiness guard's
-#     identical-state rule);
-#   * the text-scale guard measures BELOW its 1.9x bar in every sample measured, and
-#     the exact ratio depends on which rows are on screen: 1.40x (median text 24px ->
-#     33.6px) on a full-matrix sample, 1.21x on the relay-backed cells (33.59px ->
-#     40.59px) and 1.00x on the `path:` cells (33.59px -> 33.59px, inert). Part of the
-#     app's type is rem-based and scales, part is px-based and does not, so "200%" is
-#     not a 200% render yet. Read the per-cell pair, not a run median.
-# `docs:exits 1` records that expectation so this page stays executable. REMOVE the
-# marker (and this comment) once the app satisfies both — a marker that outlives its
-# finding is how a green run stops meaning anything.
+#     state. It is reported once per scale, so this two-scale run blocks on two
+#     identical-state pairs of the SAME cells. A group made ONLY of DECLARED SKIPS is
+#     no longer reported — this head's 29 skips are one placeholder screen between
+#     them, and the 19-cell `S5`/`S6`/`S8`/`S9` group they used to form was that, not
+#     a finding — but a group with ANY evidential cell in it still is.
+# The text-scale guard is REPORTED, never blocking: `themeProblems` comes from
+# `verifyThemes` and the scale verdict does not feed it, so it cannot fail this run.
+# On this head it reads "scale dimension is live across 37/38 measured pairs (median
+# 2.86x at 200%)" — 37 of the 38 pairs scale, one sits at 1.865x against a 1.9x bar,
+# and the top-level `live` flag is therefore false. An earlier revision of this
+# comment listed the guard as a second BLOCKING finding, which a strict run never
+# produced. Read the per-cell pair, not a run median.
+# `docs:exits 1` records the identical-state finding so this page stays executable.
+# REMOVE the marker (and this comment) once `/tunnels` distinguishes the two refusal
+# causes — a marker that outlives its finding is how a green run stops meaning
+# anything.
 # docs:needs mock-relay web-build
 # docs:exits 1
 node tools/visual/capture.ts --dir <dist> --out "$SCRATCH/frames" \

@@ -83,6 +83,20 @@ const flag = (name: string, fallback: string): string => {
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO = resolve(HERE, "..", "..");
 const WORKTREE = resolve(flag("relay", REPO));
+
+/**
+ * The (screen, state) pair the marker-degradation fixtures use: a state NO workstream
+ * implements, so the assertion stays true as the contract grows.
+ *
+ * Those checks are about the MECHANISM — a state the app marks with nothing yields no
+ * marker and a NAMED reason — and their first version used `S5/populated` and
+ * `S5/pending-approval`, i.e. a negative about the session view's own subject. PR #12
+ * declares exactly those states, so both fixtures would have flipped and made this file
+ * exit 1 on a false reason the day it landed. A fixture asserting a negative a sibling
+ * branch is about to make positive is a time bomb, not a test: the pair has to be one
+ * nothing owns, which is what makes the mechanism, not the app's progress, the subject.
+ */
+const UNIMPLEMENTED_STATE = "no-workstream-declares-this-state";
 const FIXTURES = resolve(flag("fixtures", join(WORKTREE, "fixtures", "relay")));
 const RELAY = join(WORKTREE, "tools", "mock-relay", "relay.ts");
 // The registry and the wire constants are imported rather than re-declared, so
@@ -2110,8 +2124,8 @@ async function main() {
 		check(
 			"a state the app declares NO marker for yields no marker AND a named gap",
 			[
-				requiredStateMarker("S5", "pending-approval"),
-				markerGapProblem("S5", "pending-approval") !== null,
+				requiredStateMarker("S4", UNIMPLEMENTED_STATE),
+				markerGapProblem("S4", UNIMPLEMENTED_STATE) !== null,
 			],
 			[null, true],
 		);
@@ -2549,14 +2563,46 @@ async function main() {
 			[null, null],
 		);
 		check(
-			"a subject the app marks with nothing is a NAMED gap",
+			"a state no workstream implements is a NAMED gap",
 			[
-				requiredStateMarker("S5", "populated"),
-				/holds no entry for 'session\/populated'|no state marker for 'session\/populated'/.test(
-					markerGapProblem("S5", "populated") ?? "",
+				requiredStateMarker("S4", UNIMPLEMENTED_STATE),
+				(markerGapProblem("S4", UNIMPLEMENTED_STATE) ?? "").includes(
+					`sessions/${UNIMPLEMENTED_STATE}`,
 				),
 			],
 			[null, true],
+		);
+		// The generalisation, so no single pair has to carry the claim: over EVERY screen the
+		// harness maps and every state any workstream names, a state is either marked by the
+		// app or a NAMED gap — never neither. That is the property both functions exist to
+		// keep, and unlike a named pair it cannot be invalidated by a sibling branch landing
+		// markers: it reads the contract, whatever it grows into.
+		const namedStates = [
+			"empty",
+			"loading",
+			"populated",
+			"populated-long",
+			"streaming",
+			"ended",
+			"degraded",
+			"error",
+			"pending-approval",
+			"pending-ask",
+			"rich-rows",
+			"subagents",
+		];
+		const unmarked: string[] = [];
+		for (const screen of Object.keys(SCREEN_MARKER_SUBJECT))
+			for (const state of namedStates) {
+				const marker = requiredStateMarker(screen, state);
+				const gap = markerGapProblem(screen, state);
+				if (marker === null && gap === null)
+					unmarked.push(`${screen}/${state}`);
+			}
+		check(
+			"every state of every mapped screen is marked by the app or a NAMED gap",
+			unmarked,
+			[],
 		);
 		// The harness's own vocabulary must name screens the APP renders: every subject in
 		// `SCREEN_MARKER_SUBJECT` has to be one the app declares ids for, so a subject that
@@ -2569,10 +2615,26 @@ async function main() {
 					![...declaredIds].some((id) => id.startsWith(`${subject}-`)),
 			)
 			.map(([screen, subject]) => `${screen} → '${subject}'`);
+		// One-directional on purpose, and recorded so a later reader does not assume the
+		// check is symmetric: this asserts that every subject the HARNESS maps is one the app
+		// declares ids for. The converse is deliberately not asserted — the app declares
+		// families no harness screen maps (the session view's `composer-*`, its transcript
+		// rows), and a check demanding a harness screen for every app subject would fail the
+		// app for rendering more than the matrix currently walks.
 		check(
 			"every subject the harness maps is one the app declares ids for",
 			unknownSubjects,
 			[],
+		);
+		// The two screen tables must describe the SAME screens. They agree today, and a
+		// divergence is a HOLE rather than a duplicate: a screen in one table only leaves the
+		// other undefined, and `requiredStateMarker` / `markerGapProblem` both return null for
+		// a screen they do not know — so a cell on that screen makes no state claim at all and
+		// could be reported as measured.
+		check(
+			"the two screen tables map the same screens",
+			Object.keys(SCREEN_ROOTS).sort().join(", "),
+			Object.keys(SCREEN_MARKER_SUBJECT).sort().join(", "),
 		);
 		// And the screen ROOTS the harness requires, which this change edited — they were
 		// stale (`S2 → custom-route-screen`, a screen that no longer exists) and nothing tied
@@ -2634,9 +2696,11 @@ async function main() {
 					"PR #12",
 				),
 				declaredSkipFor([gapIssue], null),
+				declaredSkipFor([gapIssue], ""),
+				declaredSkipFor([gapIssue], "   "),
 				declaredSkipFor([{ kind: "empty", message: "empty" }], "PR #12"),
 			],
-			[null, null, null, null, null, null, null],
+			[null, null, null, null, null, null, null, null, null],
 		);
 	}
 

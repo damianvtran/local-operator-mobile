@@ -220,12 +220,16 @@ export interface DeclaredSkip {
  * rotted route or screen root indistinguishable from unlanded work — with `--no-seed`
  * a cell whose app never left `/welcome` and never drew its own root came back as a
  * skip and the run exited 0.
+ *
+ * A BLANK owner is refused too, not just `null`: "a skip names the work that owns it"
+ * is the clause that keeps an ownerless gap from sitting there unfixed, and `""` or
+ * `"   "` satisfies a `=== null` test while naming nobody.
  */
 export function declaredSkipFor(
 	issues: ReadonlyArray<{ kind: string; message: string }>,
 	owner: string | null,
 ): DeclaredSkip | null {
-	if (owner === null) return null;
+	if (owner === null || owner.trim() === "") return null;
 	const gap = issues.find((issue) => issue.kind === "marker-gap");
 	if (gap === undefined) return null;
 	if (!issues.every((issue) => SKIP_COVERED_ISSUES.includes(issue.kind)))
