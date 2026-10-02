@@ -315,7 +315,8 @@ second hand-maintained list.
 | `billing-inactive` | S13/error, S2/error | The tunnel's billing is past due: the gateway refuses with `authorization_refused`. |
 | `tunnel-revoked` | S13/error | The tunnel was revoked: the gateway refuses with `tunnel_not_authorized`. |
 | `login-required` | S13/error | The computer's Radient login expired: gateway `login_required`, and the edge answers 401 with the re-auth hint. |
-| `relay-refuses-command` | S13/error, S5/error | A reachable relay that refuses the command: 422 with a typed code, which must never be retried as-is. |
+| `relay-refuses-command` | S13/error | A reachable relay that refuses the command: 422 with a typed code, which must never be retried as-is. |
+| `stream-refused` | S5/error | The session's own event channel fails at the gateway with `control_plane_unreachable`: the view sits in its error state, and the retry is not transient. |
 | `gateway-503-authorization_deferred` | S13/error | Every request refused at the gateway with `authorization_deferred`. |
 | `gateway-503-authorization_lease_pending` | S13/error | Every request refused at the gateway with `authorization_lease_pending`. |
 | `gateway-503-authorization_refused` | S13/error | Every request refused at the gateway with `authorization_refused`. |

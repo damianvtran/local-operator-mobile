@@ -1,7 +1,10 @@
+import type { SessionProjection, TranscriptEntry } from "@/contracts";
 import {
 	COMPOSER_COPY,
 	type ComposerControls,
 } from "@/features/session/composer";
+import { hasFencedBlock } from "@/features/session/markdown";
+import { classifyEntry } from "@/features/session/projection";
 
 /**
  * Which of the session view's states are true, decided in one place.
@@ -92,6 +95,61 @@ const NOTHING: SessionStateFlags = {
 	idle: false,
 };
 
+/** What the session route knows, which is all this derivation reads. */
+export interface SessionStateInput {
+	projection: SessionProjection | null;
+	/** A turn is running — the wire is still sending rows for it. */
+	streaming: boolean;
+	/** The stream failed, or the route was refused. */
+	error: boolean;
+	entries: TranscriptEntry[];
+	/** How many subagents the roster reports. */
+	subagents: number;
+}
+
+/**
+ * The facts the route reads, in one place.
+ *
+ * `aborted` is the reason this exists at all: it is the composer's resume gate as
+ * well as a state marker, and two copies of one predicate is how what a reader sees
+ * and what a cell is measured by drift apart. It lives here rather than in the route
+ * so the rig that boots the relay per scenario derives the same markers the screen
+ * does, from the same served projection.
+ */
+export const sessionFactsFrom = (
+	input: SessionStateInput,
+): SessionStateFacts => ({
+	connected: input.projection !== null,
+	streaming: input.streaming,
+	ended: input.projection?.ended === true,
+	aborted:
+		input.projection?.stop_reason === "aborted" && input.streaming === false,
+	error: input.error,
+	degraded: input.projection?.degraded === true,
+	queued: input.projection?.queued_count ?? 0,
+	/* A fenced markdown row, which is what `S5/rich-rows` names: the rows that own
+	 * the copy control. A tool row or an image is a different kind of row and a
+	 * different claim — deriving this from "a tool row or an image" passed on a
+	 * fixture that happened to carry both, and would have passed with no fenced block
+	 * in the frame at all (review round 6, M4). */
+	richRows: input.entries.some(
+		(entry) =>
+			classifyEntry(entry) === "assistant" && hasFencedBlock(entry.text),
+	),
+	pending: pendingKindOf(input.projection),
+	subagents: input.subagents,
+	entries: input.entries.length,
+});
+
+/** The card the reader is being asked to answer, or `null`. */
+const pendingKindOf = (
+	projection: SessionProjection | null,
+): SessionStateFacts["pending"] => {
+	const pending = projection?.pending;
+	if (pending === null || pending === undefined) return null;
+	return pending.kind === "ask" ? "ask" : "approval";
+};
+
 export const sessionStateFlags = (
 	facts: SessionStateFacts,
 ): SessionStateFlags => {
@@ -148,13 +206,20 @@ export interface ComposerStateFlags {
  */
 export const composerStateFlags = (
 	controls: ComposerControls,
-): ComposerStateFlags => ({
-	idle:
-		!controls.sending &&
-		controls.disabledReason !== COMPOSER_COPY.endedSession &&
-		controls.primary.kind !== "steer",
-	steering: !controls.sending && controls.primary.kind === "steer",
-	sending: controls.sending,
-	ended:
-		!controls.sending && controls.disabledReason === COMPOSER_COPY.endedSession,
-});
+): ComposerStateFlags => {
+	/* One precedence, `sending > ended > steer > idle`, and it is a precedence rather
+	 * than four independent tests: a session can be ended AND still streaming, and a
+	 * disabled-for-ended primary is not "steering" whatever the wire says. Four
+	 * independent predicates reported ended AND steering at once, which is a state
+	 * the composer has no single look for. */
+	const sending = controls.sending;
+	const ended =
+		!sending && controls.disabledReason === COMPOSER_COPY.endedSession;
+	const steering = !sending && !ended && controls.primary.kind === "steer";
+	return {
+		idle: !sending && !ended && !steering,
+		steering,
+		sending,
+		ended,
+	};
+};

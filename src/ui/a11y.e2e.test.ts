@@ -103,8 +103,21 @@ const TESTID_LITERAL = /\btestID\s*[:=]\s*(?:"[^"]*"|\{\s*[`"']|["'`])/;
  */
 const IDENTIFIER_SHAPED = /^[a-z0-9]+(?:-[a-z0-9]+)+$/;
 
+/** A declaration's initializer: `const ID = <expr>;`, up to the statement's `;`. */
+const HOISTED_LITERAL = (name: string): RegExp =>
+	new RegExp(`(?:const|let|var)\\s+${name}\\s*=\\s*([\\s\\S]*?);`);
+
+/** A template is read up to its first `${`: a literal prefix with a dash is a
+ * second spelling of a family, which is what the builders exist to avoid. */
+const shapedLiteral = (raw: string): string | null => {
+	const literal = raw.split("${")[0] ?? "";
+	const candidate = literal.endsWith("-") ? literal.slice(0, -1) : literal;
+	return IDENTIFIER_SHAPED.test(candidate) ? raw : null;
+};
+
 /**
- * Identifier-shaped strings inside a `testID={…}` EXPRESSION.
+ * Identifier-shaped strings inside a `testID={…}` EXPRESSION, including a hoisted
+ * one a step away.
  *
  * `TESTID_LITERAL` reads a `testID` whose value is a literal, and cannot see
  * `testID={ok ? "one-id" : "another-id"}` — which is not hypothetical: the subagent
@@ -113,10 +126,11 @@ const IDENTIFIER_SHAPED = /^[a-z0-9]+(?:-[a-z0-9]+)+$/;
  * this file noticed (review round 5, M1). A check that cannot see one of the
  * contract's own renderers is the defect, not the instance.
  *
- * The braces are walked with the same quote awareness as `stripComments`, and a
- * template is read up to its first `${`: a literal prefix with a dash is a second
- * spelling of a family, which is what the builders in `src/ui/a11y.ts` exist to
- * avoid.
+ * The braces are walked with the same quote awareness as `stripComments`. A bare
+ * identifier is resolved through its DECLARATION, reading every literal in the
+ * initializer rather than only a whole-value one: `const id = isApproval ?
+ * "pending-card" : "ask-card"` is the same second spelling one refactor away from the
+ * M1 shape, and it is what the two card ids were hiding behind (review round 6).
  */
 const literalTestIds = (text: string): string[] => {
 	const out: string[] = [];
@@ -156,14 +170,40 @@ const literalTestIds = (text: string): string[] => {
 			}
 		}
 		const body = text.slice(start, j);
+		const bare = body.trim();
+		if (/^[A-Za-z_$][\w$]*$/.test(bare)) {
+			const initializer = HOISTED_LITERAL(bare).exec(text)?.[1] ?? "";
+			for (const match of initializer.matchAll(/["`']([^"`']*)["`']/g)) {
+				if (shapedLiteral(match[1] ?? "") !== null)
+					out.push(`${bare} = ${match[0]}`);
+			}
+			continue;
+		}
 		for (const match of body.matchAll(/["`']([^"`']*)["`']/g)) {
-			const literal = (match[1] ?? "").split("${")[0] ?? "";
-			const candidate = literal.endsWith("-") ? literal.slice(0, -1) : literal;
-			if (IDENTIFIER_SHAPED.test(candidate)) out.push(match[0]);
+			if (isMemberSubscript(body, match.index ?? 0)) continue;
+			if (shapedLiteral(match[1] ?? "") !== null) out.push(match[0]);
 		}
 	}
 	return out;
 };
+
+/**
+ * Whether the string at `at` is a member SUBSCRIPT rather than a value.
+ *
+ * `STATE_MARKER.session["rich-rows"]` reads a key out of the contract, and the key is
+ * a state name, not an id: flagging it would make the contract's own nested table
+ * unreadable to this check. A quoted string is a value unless it sits directly after
+ * `[` of an index expression (`ident[…]`), which is the subscript shape.
+ */
+const isMemberSubscript = (body: string, at: number): boolean => {
+	let i = at - 1;
+	while ((body[i] ?? "") === " ") i -= 1;
+	if (body[i] !== "[") return false;
+	i -= 1;
+	while ((body[i] ?? "") === " ") i -= 1;
+	return /[\w.$\])]/.test(body[i] ?? "");
+};
+
 const YAML_FILE = /\.ya?ml$/;
 /* `.ts` as well as `.tsx`: the session view keeps its connection banner's copy and
  *  its identifier map in `.ts` modules, so a `.tsx`-only scan reported every one of
@@ -214,6 +254,63 @@ const PENDING_LINE = /^\s*#\s*PENDING:\s*(\S+)\s+from\s+(\S+)/;
 const SCENARIO_LINE = /^\s*#\s*SCENARIO:\s*(\S+)\s+from\s+(\S+)/;
 
 /**
+ * `STATE_MARKER.subject.state` → id, flattened out of the NESTED table.
+ *
+ * The nesting is the harness's key (`(subject, state)`, because two screens can be in
+ * a state of the same name) and the identifier check needs the flat triples, so the
+ * one place that knows the table's shape is this parser — which reads the contract's
+ * own source, so a renamed subject or state cannot leave the check looking at a name
+ * that no longer exists.
+ */
+const STATE_MARKER_NAMES: ReadonlyArray<{
+	name: string;
+	subject: string;
+	state: string;
+	value: string;
+}> = (() => {
+	const source = readFileSync(join(root, "src/ui/a11y.ts"), "utf8");
+	const block =
+		/export const STATE_MARKER = \{([\s\S]*?)\n\} as const satisfies/.exec(
+			source,
+		)?.[1] ?? "";
+	const out: Array<{
+		name: string;
+		subject: string;
+		state: string;
+		value: string;
+	}> = [];
+	for (const [, subject, body] of block.matchAll(
+		/(\w+):\s*\{([\s\S]*?)\n\t\}/g,
+	)) {
+		for (const [, raw, value] of (body ?? "").matchAll(
+			/(\w+|"[^"]+"):\s*"([^"]+)"/g,
+		)) {
+			const state = (raw ?? "").replace(/"/g, "");
+			out.push({
+				name: `STATE_MARKER.${subject}.${state}`,
+				subject: subject ?? "",
+				state,
+				value: value ?? "",
+			});
+		}
+	}
+	return out;
+})();
+
+/**
+ * Whether a rendering file NAMES this marker.
+ *
+ * Two spellings, because a state name with a dash in it is written as a subscript
+ * (`STATE_MARKER.session["rich-rows"]`) and one without as a property
+ * (`STATE_MARKER.session.idle`) — the check has to accept the spelling a render site
+ * can actually use, or it pushes the next author into a second one.
+ */
+const namesMarker = (entry: { subject: string; state: string }): RegExp =>
+	new RegExp(
+		`\\bSTATE_MARKER\\.${entry.subject}\\.${entry.state}\\b|\\bSTATE_MARKER\\.${entry.subject}\\["${entry.state}"\\]`,
+	);
+
+/**
  * `GROUP.key` → value, read out of the contract's own source.
  *
  * The flows name id VALUES (`session-transcript`) while the code names CONSTANTS
@@ -224,14 +321,7 @@ const SCENARIO_LINE = /^\s*#\s*SCENARIO:\s*(\S+)\s+from\s+(\S+)/;
 const CONTRACT_NAMES: ReadonlyArray<{ name: string; value: string }> = (() => {
 	const source = readFileSync(join(root, "src/ui/a11y.ts"), "utf8");
 	const out: Array<{ name: string; value: string }> = [];
-	for (const group of [
-		"SCREEN",
-		"EMPTY",
-		"CONTROL",
-		"SURFACE",
-		"REGION",
-		"STATE_MARKER",
-	]) {
+	for (const group of ["SCREEN", "EMPTY", "CONTROL", "SURFACE", "REGION"]) {
 		const block =
 			new RegExp(
 				`export const ${group} = \\{([\\s\\S]*?)\\n\\} as const;`,
@@ -240,6 +330,7 @@ const CONTRACT_NAMES: ReadonlyArray<{ name: string; value: string }> = (() => {
 			out.push({ name: `${group}.${key ?? ""}`, value: value ?? "" });
 		}
 	}
+	out.push(...STATE_MARKER_NAMES);
 	return out;
 })();
 
@@ -492,7 +583,9 @@ describe("the routes and primitives against src/ui/a11y.ts", () => {
 			.map(({ file, stripped }) => ({
 				file,
 				literals: [
-					...(TESTID_LITERAL.test(stripped) ? ["a whole-value literal"] : []),
+					...(TESTID_LITERAL.test(stripped)
+						? ["a testID with a string value"]
+						: []),
 					...new Set(literalTestIds(stripped)),
 				],
 			}))
@@ -504,25 +597,22 @@ describe("the routes and primitives against src/ui/a11y.ts", () => {
 	it("references every declared identifier from at least one route or primitive", () => {
 		// A declared-but-unrendered identifier is a selector no flow can ever hit,
 		// and it would still satisfy the flow check above. A STATE_MARKER is stricter
-		// still: naming it in a module that returns it as data is not rendering it.
+		// still: naming it in a module that returns it as data is not rendering it, and
+		// its name is a nested path the flat groups do not have.
 		const rendered = RENDER_SOURCE;
-		const unused = Object.entries({
-			SCREEN,
-			EMPTY,
-			CONTROL,
-			SURFACE,
-			REGION,
-			STATE_MARKER,
-		}).flatMap(([group, ids]) =>
-			Object.keys(ids)
-				.filter((key) => {
-					const named = new RegExp(`\\b${group}\\.${key}\\b`);
-					return !(group === "STATE_MARKER"
-						? named.test(RENDERING_SOURCE)
-						: named.test(rendered));
-				})
-				.map((key) => `${group}.${key}`),
-		);
+		const unused = [
+			...Object.entries({ SCREEN, EMPTY, CONTROL, SURFACE, REGION }).flatMap(
+				([group, ids]) =>
+					Object.keys(ids)
+						.filter(
+							(key) => !new RegExp(`\\b${group}\\.${key}\\b`).test(rendered),
+						)
+						.map((key) => `${group}.${key}`),
+			),
+			...STATE_MARKER_NAMES.filter(
+				(entry) => !namesMarker(entry).test(RENDERING_SOURCE),
+			).map((entry) => entry.name),
+		];
 		/* No exemption list: the session view renders its vocabulary on this head, so
 		 *  the assertion is the plain one the empty list was waiting for. An id declared
 		 *  here and rendered by nothing is a selector no flow can ever hit. */

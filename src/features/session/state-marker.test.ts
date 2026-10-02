@@ -1,12 +1,20 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
+import type { SessionProjection, TranscriptEntry } from "@/contracts";
 import { COMPOSER_COPY, composerControls } from "@/features/session/composer";
 import {
 	composerStateFlags,
 	type SessionStateFacts,
+	type SessionStateFlags,
+	sessionFactsFrom,
 	sessionStateFlags,
 } from "@/features/session/state-marker";
 import { EMPTY, STATE_MARKER, SURFACE } from "@/ui/a11y";
+
+const root = fileURLToPath(new URL("../../../", import.meta.url));
 
 /**
  * Which states are affirmed, as behaviour rather than as prose.
@@ -84,25 +92,30 @@ describe("sessionStateFlags", () => {
 		expect(flagged({ entries: 0 })).toEqual(["idle"]);
 	});
 
-	it("has exactly one flag per declared session marker", () => {
+	it("has exactly one flag per DERIVED session marker", () => {
 		// The other half of the guard: the render check proves a declared marker is
 		// rendered, this proves nothing is DECLARED with no derivation behind it and no
-		// flag is derived that the contract does not name.
-		const declared = Object.keys(STATE_MARKER)
-			.filter((key) => key.startsWith("session"))
-			.map((key) => key.slice("session".length))
+		// flag is derived that the contract does not name. The two screen-level states
+		// (`loading`, `empty`) are the exception, and they are named here rather than
+		// quietly excluded: no runtime fact decides them, the route does.
+		const screenLevel = ["loading", "empty"];
+		const derived = Object.keys(STATE_MARKER.session)
+			.filter((state) => !screenLevel.includes(state))
 			.sort();
 		expect(
-			Object.keys(sessionStateFlags(facts())).map(capitalise).sort(),
-		).toEqual(declared);
+			Object.keys(sessionStateFlags(facts())).map(stateKeyFor).sort(),
+		).toEqual(derived);
 	});
 
-	it("leaves the two states the contract already carried to their own renderers", () => {
-		// `session-empty` is `EMPTY.session` and `session-loading` is
-		// `SURFACE.sessionLoading`; declaring a second constant for either would put a
-		// duplicate in `IDENTIFIERS`, which the namespace check refuses.
-		expect(Object.values(STATE_MARKER)).not.toContain(EMPTY.session);
-		expect(Object.values(STATE_MARKER)).not.toContain(SURFACE.sessionLoading);
+	it("points the empty and loading states at the id a connected frame carries", () => {
+		// QA round 6, Q1. `session-empty` is `EMPTY.session`, painted on the NOT-connected
+		// branch; a connected session that has answered with no rows paints the
+		// transcript's own empty state, and one that has not answered paints the
+		// skeleton. Declaring the first as the cell's marker would blame the app's DOM for
+		// a name the harness picked.
+		expect(STATE_MARKER.session.empty).toBe(SURFACE.sessionTranscriptEmpty);
+		expect(STATE_MARKER.session.loading).toBe(SURFACE.sessionLoading);
+		expect(Object.values(STATE_MARKER.session)).not.toContain(EMPTY.session);
 	});
 });
 
@@ -146,14 +159,192 @@ describe("composerStateFlags", () => {
 	});
 
 	it("has exactly one flag per declared composer marker", () => {
-		const declared = Object.keys(STATE_MARKER)
-			.filter((key) => key.startsWith("composer"))
-			.map((key) => key.slice("composer".length))
-			.sort();
 		expect(
-			Object.keys(composerStateFlags(composerControls(input)))
-				.map(capitalise)
-				.sort(),
-		).toEqual(declared);
+			Object.keys(composerStateFlags(composerControls(composerInput()))).sort(),
+		).toEqual(Object.keys(STATE_MARKER.composer).sort());
 	});
 });
+
+/**
+ * The route's own derivation, tested against the wire rather than against a
+ * hand-built facts object: `S5/degraded` and `S5/queued` were declared with
+ * derivations that were right and unreachable, because the scenarios serving those
+ * cells clone fixtures with the field at its default (review round 6, M3).
+ */
+const projection = (over: Partial<SessionProjection> = {}): SessionProjection =>
+	({
+		ended: false,
+		stop_reason: "completed",
+		degraded: false,
+		queued_count: 0,
+		pending: null,
+		...over,
+	}) as SessionProjection;
+
+const entry = (kind: string, text = ""): TranscriptEntry =>
+	({ kind, text, images: [] }) as unknown as TranscriptEntry;
+
+describe("sessionFactsFrom", () => {
+	it("reads the aborted turn from the wire, and only when it has settled", () => {
+		const settled = sessionFactsFrom({
+			projection: projection({ stop_reason: "aborted" }),
+			streaming: false,
+			error: false,
+			entries: [],
+			subagents: 0,
+		});
+		expect(settled.aborted).toBe(true);
+
+		const running = sessionFactsFrom({
+			projection: projection({ stop_reason: "aborted" }),
+			streaming: true,
+			error: false,
+			entries: [],
+			subagents: 0,
+		});
+		expect(running.aborted).toBe(false);
+	});
+
+	it("takes degraded and queued from the projection's own fields", () => {
+		// The two the scenarios had to start serving (M3).
+		const facts = sessionFactsFrom({
+			projection: projection({ degraded: true, queued_count: 1 }),
+			streaming: false,
+			error: false,
+			entries: [],
+			subagents: 0,
+		});
+		expect(facts.degraded).toBe(true);
+		expect(facts.queued).toBe(1);
+		expect(sessionStateFlags(facts).degraded).toBe(true);
+		expect(sessionStateFlags(facts).queued).toBe(true);
+	});
+
+	it("calls a row rich only when it is a FENCED markdown row", () => {
+		// The discriminating case: a tool row and an image are not what S5/rich-rows
+		// names, so a frame with both and no fence must NOT affirm it.
+		const toolAndImage = sessionFactsFrom({
+			projection: projection(),
+			streaming: false,
+			error: false,
+			entries: [
+				entry("tool", "no fence here"),
+				{ ...entry("assistant"), images: [{}] } as TranscriptEntry,
+			],
+			subagents: 0,
+		});
+		expect(toolAndImage.richRows).toBe(false);
+		expect(sessionStateFlags(toolAndImage).richRows).toBe(false);
+
+		const fenced = sessionFactsFrom({
+			projection: projection(),
+			streaming: false,
+			error: false,
+			entries: [entry("assistant", "Here:\n```ts\nconst a = 1;\n```\n")],
+			subagents: 0,
+		});
+		expect(fenced.richRows).toBe(true);
+	});
+
+	it("does not read a fence out of a row the transcript does not render as markdown", () => {
+		const user = sessionFactsFrom({
+			projection: projection(),
+			streaming: false,
+			error: false,
+			entries: [entry("user", "```\nnot rendered as markdown\n```")],
+			subagents: 0,
+		});
+		expect(user.richRows).toBe(false);
+	});
+});
+
+describe("the flag-to-marker pairing", () => {
+	const source = readFileSync(
+		join(root, "src/features/session/components/state-markers.tsx"),
+		"utf8",
+	);
+	/* Both components use `flags.idle`, so each is searched in its own half: a
+	 *  document-wide search would pair the session's idle with the composer's. */
+	const composerAt = source.indexOf("export const ComposerStateMarkers");
+	const scopes = {
+		session: source.slice(0, composerAt),
+		composer: source.slice(composerAt),
+	};
+
+	/**
+	 * The pairing is what makes a marker MEAN the state, and it is invisible to both
+	 * directions of `a11y.e2e.test.ts`: swapping two flags there keeps every name
+	 * present and every flag correct, so a frame would affirm the wrong state and both
+	 * checks would pass. This reads the render site and pins each flag to its id.
+	 */
+	const paired = (
+		scope: keyof typeof scopes,
+		flag: string,
+		marker: string,
+	): void => {
+		const segments = scopes[scope].split("flags.");
+		const segment = segments.find((part) => part.startsWith(`${flag} ?`));
+		expect(segment, `no render site for flags.${flag}`).toBeDefined();
+		expect(
+			segment?.split("flags.")[0],
+			`flags.${flag} renders something other than STATE_MARKER.${marker}`,
+		).toContain(`STATE_MARKER.${marker}`);
+	};
+
+	it("pairs every session flag with the marker of the state it affirms", () => {
+		for (const key of Object.keys(sessionStateFlags(factsOf()))) {
+			paired("session", key, `session${markerSuffixFor(stateKeyFor(key))}`);
+		}
+	});
+
+	it("pairs every composer flag with the marker of the same name", () => {
+		for (const key of Object.keys(
+			composerStateFlags(composerControls(composerInput())),
+		)) {
+			paired("composer", key, `composer.${key}`);
+		}
+	});
+});
+
+/** The input `composerControls` wants, for the pairing test. */
+const composerInput = () => ({
+	streaming: false,
+	hasDraft: true,
+	hasImages: false,
+	sending: false,
+	envelopePending: false,
+	ended: false,
+});
+
+/** Every flag, so the pairing test covers all of them rather than the ones true. */
+const factsOf = (): SessionStateFacts => facts({ connected: true });
+
+/**
+ * The state key a flag affirms, and the shape its id is written in.
+ *
+ * Stated here rather than derived from the flag's name because the correspondence is
+ * not a case convention: `richRows` is `rich-rows`, `pendingApproval` is
+ * `pending-approval`. That IS the pairing the render site has to make, so the test
+ * states it and then checks the render site against it.
+ */
+const STATE_KEY: Record<keyof SessionStateFlags, string> = {
+	error: "error",
+	streaming: "streaming",
+	ended: "ended",
+	aborted: "aborted",
+	degraded: "degraded",
+	queued: "queued",
+	richRows: "rich-rows",
+	pendingApproval: "pending-approval",
+	pendingAsk: "pending-ask",
+	subagents: "subagents",
+	populated: "populated",
+	idle: "idle",
+};
+
+const stateKeyFor = (key: string): string =>
+	STATE_KEY[key as keyof SessionStateFlags] ?? key;
+
+/** `rich-rows` → `["rich-rows"]`; `idle` → `.idle`. */
+const markerSuffixFor = (stateKey: string): string =>
+	stateKey.includes("-") ? `["${stateKey}"]` : `.${stateKey}`;

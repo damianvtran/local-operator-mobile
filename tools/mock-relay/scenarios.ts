@@ -431,7 +431,14 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 		"The session record is fresh but its runtime is unreachable: `subagents_running` is null while the row stays active (the SIGSTOP probe's signal).",
 		["S4/degraded", "S5/degraded"],
 		() => ({
-			projections: { [liveIdle.session_id]: structuredClone(liveIdle) },
+			/* The projection's own `degraded` receipt, not only the ROW's null counts:
+			 * `S5/degraded` declares the session `degraded`, and the app's marker for it
+			 * reads `projection.degraded`. Cloning the fixture unchanged served
+			 * `degraded: false`, so the cell that declares the state could never carry the
+			 * marker that affirms it. */
+			projections: {
+				[liveIdle.session_id]: projectionFrom(liveIdle, { degraded: true }),
+			},
 			rowOverrides: { subagents_running: null, subagents_queued: null },
 			stream: { mode: "silent" },
 			// A command to an unreachable runtime sits until the relay's reply
@@ -537,7 +544,16 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 		"One queued steering message and the tool row it skipped past.",
 		["S5/queued"],
 		() => ({
-			projections: { [queuedFrame.session_id]: structuredClone(queuedFrame) },
+			/* The CAPTURE has `queued_count: 0`: the fixture was recorded after the queue
+			 * drained, and the message it held is the `steer` row already in the
+			 * transcript. The scenario's own name and description are "one queued steering
+			 * message", so the count is served here — otherwise the cell that declares
+			 * `queued` is the one cell that would never carry the marker for it. */
+			projections: {
+				[queuedFrame.session_id]: projectionFrom(queuedFrame, {
+					queued_count: 1,
+				}),
+			},
 		}),
 	);
 
@@ -798,10 +814,26 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 	add(
 		"relay-refuses-command",
 		"A reachable relay that refuses the command: 422 with a typed code, which must never be retried as-is.",
-		["S13/error", "S5/error"],
+		["S13/error"],
 		() => ({
 			projections: { [liveIdle.session_id]: structuredClone(liveIdle) },
 			commandOverride: "op-slash-unknown",
+		}),
+	);
+
+	add(
+		"stream-refused",
+		"The session's own event channel fails at the gateway with `control_plane_unreachable`: the view sits in its error state, and the retry is not transient.",
+		["S5/error"],
+		() => ({
+			/* `S5/error` declares the session's ERROR state, and the app's marker for it
+			 * reads the CLIENT's stream error (`use-session.ts` sets it from the stream's
+			 * own `onError`), not a refused command — a command refusal lands on the
+			 * composer. The cell used to be served by `relay-refuses-command`, whose
+			 * stream succeeds, so the one cell that declares `error` could never carry the
+			 * marker that affirms it (review round 6, same class as M3). */
+			projections: {},
+			failure: { surface: "gateway", key: "503-control_plane_unreachable" },
 		}),
 	);
 

@@ -20,13 +20,12 @@ import { isRouteRefused } from "@/features/session/connection-view";
 import { headerTitleChars } from "@/features/session/header";
 import { pendingView } from "@/features/session/pending";
 import {
-	classifyEntry,
 	middleTruncate,
 	projectSubagents,
 	projectTodos,
 	workingLine,
 } from "@/features/session/projection";
-import type { SessionStateFacts } from "@/features/session/state-marker";
+import { sessionFactsFrom } from "@/features/session/state-marker";
 import { draftSlashQuery, useComposer } from "@/features/session/use-composer";
 import { useSessionRuntime } from "@/features/session/use-session";
 import { CONTROL, EMPTY, SCREEN, SURFACE } from "@/ui/a11y";
@@ -139,27 +138,32 @@ export default function Session() {
 
 	const pending = projection?.pending ?? null;
 
-	/* The state markers the design audit reads, derived from the same facts the screen
-	 *  renders from — a marker is a claim about the state the reader is in, so it may
-	 *  only be emitted for a fact that is TRUE. `aborted` is the daemon's own word
-	 *  (`stop_reason`), the same fact that gates the composer's resume affordance;
-	 *  `richRows` is a row the classifier calls a tool call, or one carrying images. */
-	const stateFacts: SessionStateFacts = {
-		connected: projection !== null,
-		streaming: runtime.streaming,
-		ended: projection?.ended === true,
-		aborted: projection?.stop_reason === "aborted" && !runtime.streaming,
-		error: runtime.error !== null,
-		degraded: projection?.degraded === true,
-		queued: projection?.queued_count ?? 0,
-		richRows: runtime.entries.some(
-			(entry) => classifyEntry(entry) === "tool" || entry.images.length > 0,
-		),
-		pending:
-			pending === null ? null : pending.kind === "ask" ? "ask" : "approval",
-		subagents: subagents.total,
-		entries: runtime.entries.length,
-	};
+	/* The state markers the design audit reads, from the same facts the screen renders
+	 *  from — a marker is a claim about the state the reader is in, so it may only be
+	 *  emitted for a fact that is TRUE. Memoised because this is the route a reader
+	 *  types into: the facts walk the transcript to find a fenced row, and re-walking
+	 *  it on every keystroke is work the composer's re-render would pay for. */
+	const stateFacts = useMemo(
+		() =>
+			sessionFactsFrom({
+				projection,
+				streaming: runtime.streaming,
+				error: runtime.error !== null,
+				entries: runtime.entries,
+				subagents: subagents.total,
+			}),
+		[
+			projection,
+			runtime.streaming,
+			runtime.error,
+			runtime.entries,
+			subagents.total,
+		],
+	);
+	/* One definition of `aborted`, used by the marker and by the resume affordance.
+	 *  Two copies of this predicate is how the copy a reader sees and the copy a cell
+	 *  is measured by drift apart (`state-marker.ts` § `sessionFactsFrom`). */
+	const aborted = stateFacts.aborted;
 
 	const pendingViewProps = useMemo(
 		() =>
@@ -433,9 +437,7 @@ export default function Session() {
 						}
 						notice={composer.notice}
 						onRetry={composer.retry}
-						showResume={
-							projection?.stop_reason === "aborted" && !runtime.streaming
-						}
+						showResume={aborted}
 						onResume={composer.send}
 						error={pending === null ? composer.error : null}
 						queuedCount={projection?.queued_count ?? 0}

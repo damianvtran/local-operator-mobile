@@ -63,7 +63,12 @@ export const PendingCard = ({
 	const [remember, setRemember] = useState(false);
 
 	const isApproval = view.kind === "approval";
-	const rootTestID = isApproval ? "pending-card" : "ask-card";
+	/* The card's own root, which is TWO ids: an approval gate and a question are the
+	 *  same component in two states, and a flow that waits for the card has to be able
+	 *  to say which. Declared rather than spelled at the render site, because a literal
+	 *  bound to a local is the second spelling this contract exists to prevent (review
+	 *  round 6: the guard could not see it, and each id sat outside the contract). */
+	const rootTestID = isApproval ? SURFACE.pendingCard : SURFACE.askCard;
 
 	/* The answer an ask would submit: a chosen option's label, else the typed text. */
 	const answerValue =

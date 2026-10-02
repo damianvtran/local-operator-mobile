@@ -298,11 +298,13 @@ export const SURFACE = {
 	subagentsPanel: "subagents-panel",
 	subagentsBody: "subagents-body",
 	subagentRunning: "subagent-running",
+	pendingCard: "pending-card",
 	pendingCardBody: "pending-card-body",
 	pendingCardDetail: "pending-card-detail",
 	pendingCardDestructiveMarker: "pending-card-destructive-marker",
 	pendingCardAnswer: "pending-card-answer",
 	pendingCardError: "pending-card-error",
+	askCard: "ask-card",
 	transcriptStreaming: "transcript-streaming",
 
 	/* --- the subagent detail route (stream D2), adopted with the session view's
@@ -465,59 +467,72 @@ export const REGION = {
 } as const;
 
 /**
- * The states a screen AFFIRMS, in the `<subject>-<state>` shape the design audit
- * reads.
+ * The id the app renders when a surface is in a NAMED state, keyed
+ * `<subject>` → `<state>` → id.
  *
- * The identifier groups above answer "can a flow reach this element". A state marker
- * answers a different question the visual audit asks cell by cell: a cell declares
- * `<screen>/<state>`, and the frame is only EVIDENCE for that state if the app leaves
- * an affirmative marker behind saying so (`docs/e2e/README.md`, and
- * `tools/lib/readiness.ts`'s `requiredStateMarker`). A rule that could only say what a
- * page is *not* was satisfied by a page that was nothing in particular — measured — so
- * the marker has to be positive and named.
+ * Why this lives here rather than in the audit harness: deciding whether a captured
+ * frame is EVIDENCE for the state it declares means knowing which id the app leaves
+ * behind in that state, and a table of those names kept in `tools/` is a second
+ * vocabulary beside the app's. The harness IMPORTS this table (`stateMarkerFor` in
+ * the same commit that reads it) and keeps only the cell vocabulary — `S5` is the
+ * matrix's language, never the app's.
  *
- * One marker per state, `<subject>` being the screen's own testid subject (`session`,
- * `composer`): `STATE_MARKER.sessionPendingApproval` → `session-pending-approval`. The whole
- * point of declaring them HERE is that the harness imports this file rather than
- * re-deriving the names, so there is one vocabulary and not two — the failure mode
- * `a11y.e2e.test.ts` exists to prevent, one layer down.
+ * **The key is `(subject, state)`, not the state alone.** Two screens can be in a
+ * state of the same name — `populated` on the list and `populated` on the session —
+ * and a flat table cannot tell them apart, which is how a marker for one screen
+ * satisfies a cell on another. The subjects are the app's own screens and surfaces
+ * (`session`, `composer`, and the harness's `SCREEN_MARKER_SUBJECT` values).
  *
- * Two of the session view's states are already declared as surfaces — `session-loading`
- * (`SURFACE.sessionLoading`) and `session-empty` (`EMPTY.session`) — so they are NOT
- * repeated here: two constants for one id is the duplicate a `IDENTIFIERS` set cannot
- * carry, and the states that were missing are the ones below.
+ * A state with NO entry is a DECLARED GAP, not a name to invent: the app paints
+ * nothing that affirms it, and the harness reports the cell as not measurable by name
+ * rather than accepting a frame that could not say.
  *
- * **The `composer-*` markers make nothing measurable today, and that is stated rather
- * than implied:** the harness's marker table maps its screens to a `<subject>`
- * (`tools/lib/readiness.ts` § `SCREEN_MARKER_SUBJECT`) and none of them is `composer` —
- * S5/S8/S9 all map to `session` — so no cell can ever require a `composer-*` id. They
- * are declared anyway because the composer's state has to be named SOMEWHERE and this
- * file is where ids live; the session-level rendering of it is `sessionQueued` below.
+ * `session.loading` and `session.empty` are declared, and neither id is spelled the way
+ * a reader would guess (QA round 6, Q1). A CONNECTED session that has not answered yet
+ * paints the skeleton (`session-loading`) and one that has answered with no rows paints
+ * the transcript's own empty state (`session-transcript-empty`) — `EMPTY.session`
+ * (`session-empty`) is the NOT-connected branch and is never what a relay-backed cell
+ * shows. So the cell's marker is the id a connected frame really carries, which is the
+ * whole point of the table being the app's: `S5/empty` declaring `session-empty` would
+ * have blamed the app's DOM for a name the harness picked.
+ *
+ * `composer-*` makes nothing measurable today: no harness cell maps to a `composer`
+ * subject (`SCREEN_MARKER_SUBJECT` maps S5/S8/S9 to `session`). It is declared because
+ * the composer's state has to be named somewhere and this file is where ids live; the
+ * session-level rendering of the one that DOES have a cell is `session/queued`.
+ *
+ * `session/idle` and `session/ended` are the same case one subject over: both are real
+ * states of the screen and both are rendered, and NO cell in PR #25's matrix declares
+ * either, so neither makes anything measurable today (checked against its
+ * `PENDING_CELLS` list: the session cells are loading, populated, populated-long,
+ * scroll, empty, streaming, aborted, queued, pending-approval, pending-ask, rich-rows,
+ * subagents, degraded, error). They stay declared because a missing state name is how
+ * the next cell acquires a second dialect.
  */
 export const STATE_MARKER = {
-	/* The session view's own states, all of them derivable from what the runtime
-	 * reports (`src/features/session/state-marker.ts`). */
-	sessionIdle: "session-idle",
-	sessionPopulated: "session-populated",
-	sessionStreaming: "session-streaming",
-	sessionEnded: "session-ended",
-	sessionAborted: "session-aborted",
-	sessionError: "session-error",
-	sessionDegraded: "session-degraded",
-	sessionQueued: "session-queued",
-	sessionRichRows: "session-rich-rows",
-	sessionPendingApproval: "session-pending-approval",
-	sessionPendingAsk: "session-pending-ask",
-	sessionSubagents: "session-subagents",
-
-	/* The composer's own states. Its ALERT slots are already surfaces
-	 * (`composer-notice`, `composer-error`, `composer-retained`); these are the primary
-	 * control's, which is the one control that morphs (`composer.ts` § composerControls). */
-	composerIdle: "composer-idle",
-	composerSteering: "composer-steering",
-	composerSending: "composer-sending",
-	composerEnded: "composer-ended",
-} as const;
+	session: {
+		idle: "session-idle",
+		loading: SURFACE.sessionLoading,
+		populated: "session-populated",
+		empty: SURFACE.sessionTranscriptEmpty,
+		streaming: "session-streaming",
+		ended: "session-ended",
+		aborted: "session-aborted",
+		error: "session-error",
+		degraded: "session-degraded",
+		queued: "session-queued",
+		"rich-rows": "session-rich-rows",
+		"pending-approval": "session-pending-approval",
+		"pending-ask": "session-pending-ask",
+		subagents: "session-subagents",
+	},
+	composer: {
+		idle: "composer-idle",
+		steering: "composer-steering",
+		sending: "composer-sending",
+		ended: "composer-ended",
+	},
+} as const satisfies Record<string, Record<string, string>>;
 
 /**
  * Every static identifier the app can render, flat, as a Node script reads it.
@@ -540,14 +555,23 @@ export const STATE_MARKER = {
  * `data-testid` in the DOM that the audit selects by name, so it is a selector in
  * every way that matters, and leaving it out would let the harness and the flows name
  * a marker this contract could not see.
+ *
+ * It joins as a SET because the marker table is a MAPPING, not a second declaration:
+ * `session/empty` is `SURFACE.sessionTranscriptEmpty`, an id `SURFACE` already
+ * declares, and the table exists precisely to say which declared id a state leaves
+ * behind. The rule this list serves — an id is declared once (`a11y.test.ts`) — is
+ * about the groups, and deduping here is what lets a state name another group's id
+ * without looking like a collision.
  */
 export const IDENTIFIERS: readonly string[] = [
-	...Object.values(SCREEN),
-	...Object.values(EMPTY),
-	...Object.values(CONTROL),
-	...Object.values(SURFACE),
-	...Object.values(REGION),
-	...Object.values(STATE_MARKER),
+	...new Set([
+		...Object.values(SCREEN),
+		...Object.values(EMPTY),
+		...Object.values(CONTROL),
+		...Object.values(SURFACE),
+		...Object.values(REGION),
+		...Object.values(STATE_MARKER).flatMap((states) => Object.values(states)),
+	]),
 ];
 
 /** A row's identifier, derived from the id it carries so a flow can address one

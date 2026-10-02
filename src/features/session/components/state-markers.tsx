@@ -31,22 +31,30 @@ export const SessionStateMarkers = ({
 	const flags = sessionStateFlags(facts);
 	return (
 		<View aria-hidden>
-			{flags.error ? <View testID={STATE_MARKER.sessionError} /> : null}
-			{flags.streaming ? <View testID={STATE_MARKER.sessionStreaming} /> : null}
-			{flags.ended ? <View testID={STATE_MARKER.sessionEnded} /> : null}
-			{flags.aborted ? <View testID={STATE_MARKER.sessionAborted} /> : null}
-			{flags.degraded ? <View testID={STATE_MARKER.sessionDegraded} /> : null}
-			{flags.queued ? <View testID={STATE_MARKER.sessionQueued} /> : null}
-			{flags.richRows ? <View testID={STATE_MARKER.sessionRichRows} /> : null}
+			{flags.error ? <View testID={STATE_MARKER.session.error} /> : null}
+			{flags.streaming ? (
+				<View testID={STATE_MARKER.session.streaming} />
+			) : null}
+			{flags.ended ? <View testID={STATE_MARKER.session.ended} /> : null}
+			{flags.aborted ? <View testID={STATE_MARKER.session.aborted} /> : null}
+			{flags.degraded ? <View testID={STATE_MARKER.session.degraded} /> : null}
+			{flags.queued ? <View testID={STATE_MARKER.session.queued} /> : null}
+			{flags.richRows ? (
+				<View testID={STATE_MARKER.session["rich-rows"]} />
+			) : null}
 			{flags.pendingApproval ? (
-				<View testID={STATE_MARKER.sessionPendingApproval} />
+				<View testID={STATE_MARKER.session["pending-approval"]} />
 			) : null}
 			{flags.pendingAsk ? (
-				<View testID={STATE_MARKER.sessionPendingAsk} />
+				<View testID={STATE_MARKER.session["pending-ask"]} />
 			) : null}
-			{flags.subagents ? <View testID={STATE_MARKER.sessionSubagents} /> : null}
-			{flags.populated ? <View testID={STATE_MARKER.sessionPopulated} /> : null}
-			{flags.idle ? <View testID={STATE_MARKER.sessionIdle} /> : null}
+			{flags.subagents ? (
+				<View testID={STATE_MARKER.session.subagents} />
+			) : null}
+			{flags.populated ? (
+				<View testID={STATE_MARKER.session.populated} />
+			) : null}
+			{flags.idle ? <View testID={STATE_MARKER.session.idle} /> : null}
 		</View>
 	);
 };
@@ -59,10 +67,10 @@ export const ComposerStateMarkers = ({
 	const flags = composerStateFlags(controls);
 	return (
 		<View aria-hidden>
-			{flags.sending ? <View testID={STATE_MARKER.composerSending} /> : null}
-			{flags.ended ? <View testID={STATE_MARKER.composerEnded} /> : null}
-			{flags.steering ? <View testID={STATE_MARKER.composerSteering} /> : null}
-			{flags.idle ? <View testID={STATE_MARKER.composerIdle} /> : null}
+			{flags.sending ? <View testID={STATE_MARKER.composer.sending} /> : null}
+			{flags.ended ? <View testID={STATE_MARKER.composer.ended} /> : null}
+			{flags.steering ? <View testID={STATE_MARKER.composer.steering} /> : null}
+			{flags.idle ? <View testID={STATE_MARKER.composer.idle} /> : null}
 		</View>
 	);
 };

@@ -9,6 +9,7 @@ import {
 	View,
 } from "react-native";
 
+import { FENCE } from "@/features/session/markdown";
 import { CONTROL, ROLE } from "@/ui/a11y";
 import { TOUCH_FLOOR } from "@/ui/layout";
 import { cx } from "@/ui/variants";
@@ -39,7 +40,6 @@ export type Block =
 	| { kind: "quote"; text: string }
 	| { kind: "paragraph"; text: string };
 
-const FENCE = /^\s*```\s*([A-Za-z0-9_+-]*)\s*$/;
 const HEADING = /^(#{1,6})\s+(.*)$/;
 const BULLET = /^\s*[-*+]\s+(.*)$/;
 const ORDERED = /^\s*\d+[.)]\s+(.*)$/;
