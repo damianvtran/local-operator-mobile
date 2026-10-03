@@ -134,11 +134,15 @@ are fixtures, not anyone's real sessions — and `nope/nope` in the session list
 the captured corpus's own placeholder label, sitting beside the realistic
 `anthropic/claude-opus-5` that the synthetic fixtures carry. The light and dark
 frames are the same cell with the theme overridden, and the session view and the
-approvals card are the same session in two of its states.
+approvals card are the same screen in two of its states.
 
-The frames are a 390 pt phone at 3×. The refusal pair is a 430 pt phone instead:
-that screen's card is taller than one fold on the smaller device, and an
-uncropped frame there cuts a control's label through the glyphs.
+The frames are a 390 pt phone at 2× — 780 px wide, downsampled from a 3× capture.
+The refusal pair is a 430 pt phone instead, which its 780 × 1691 shape confirms,
+and the taller device is less a fix than a relocation: that screen's 34 pt
+home-indicator inset ends its content viewport at 810 pt of 844 (898 pt of 932 on
+the taller phone), so an uncropped frame of it always cuts whatever lands on that
+line — a control's label on the smaller phone, the terminal block's last line on
+the taller one.
 
 | Screen | Light | Dark |
 | --- | --- | --- |
