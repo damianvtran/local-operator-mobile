@@ -221,6 +221,16 @@ export interface RelayState {
 	duplicateFramePending: boolean;
 	/** True once an edge 401 has been injected mid-session, so every later request is refused. */
 	expired: boolean;
+	/**
+	 * The faults the INVOCATION asked for (`--fault`), kept apart from a scenario's own.
+	 *
+	 * The two are not the same thing and conflating them is a defect in both directions:
+	 * a scenario's faults must not outlive the scenario (they model that state and no
+	 * other), and `--fault` must not be cleared by a scenario that declares none — which
+	 * is how every fault check in `verify.ts` starts its relay. So `state.faults` is
+	 * recomputed on every pin as `baseFaults + the scenario's own`, and this field is
+	 * what survives the pin. */
+	baseFaults: string[];
 	scenarioStartedAt: number;
 	servers: RelayListener[];
 	record: false | { dir: string };
@@ -290,6 +300,7 @@ export function createRelay(options: RelayOptions = {}) {
 			assertCapturedFaultsExist(options.faults ?? []);
 			return parsed;
 		})(),
+		baseFaults: options.faults ?? [],
 		startedAt: Date.now(),
 		seq: 0,
 		recorded: [],
@@ -316,13 +327,23 @@ export function createRelay(options: RelayOptions = {}) {
 	const resetWorld = (): void => {
 		state.world = scenarios[state.scenario]?.world() ?? {};
 		state.scenarioStartedAt = Date.now();
-		/* A state's own faults are applied with it: `S5/error` is reachable only when the
+		/* A state's own faults are applied WITH it: `S5/error` is reachable only when the
 		 * stream comes up and THEN fails, so the scenario that models it carries the fault
-		 * rather than depending on the runner having passed `--fault` (review round 8). */
-		if (state.world.faults !== undefined) {
-			const declared = state.world.faults.map(
-				(name) => name.split("=")[0] ?? "",
-			);
+		 * rather than depending on the runner having passed `--fault` (review round 8).
+		 *
+		 * AND A STATE THAT DECLARES NO FAULTS CLEARS THE PREVIOUS STATE'S. This branch used
+		 * to leave `state.faults` untouched when the incoming world declared none, so the
+		 * one fault-carrying scenario in the registry (`mid-session-401`, `401-mid-session`)
+		 * outlived its own cell and stayed applied to every scenario after it. Measured on
+		 * 2026-10-03: with the harness pinning scenarios per cell, the `S5/error` cell
+		 * poisoned `S5/pending-ask` and the twelve cells after it — their session stream
+		 * was answered 401 by a fault belonging to a scenario they never named, and the app
+		 * rendered its "session expired" banner with an empty transcript in place of the
+		 * state each cell declares. A fault that outlives its scenario is the mock lying
+		 * about the state it is serving, which is the one thing this relay must never do. */
+		const declaredFaults = state.world.faults ?? [];
+		if (declaredFaults.length > 0) {
+			const declared = declaredFaults.map((name) => name.split("=")[0] ?? "");
 			const unknown = declared.filter(
 				(name) =>
 					!FAULT_NAMES.some((known) =>
@@ -337,8 +358,19 @@ export function createRelay(options: RelayOptions = {}) {
 				throw new Error(
 					`scenario '${state.scenario}' declares an unknown fault: ${unknown.join(", ")}`,
 				);
-			state.faults = parseFaults(state.world.faults);
 		}
+		state.faults = parseFaults([...state.baseFaults, ...declaredFaults]);
+		/* The mid-stream 401 latch belongs to the scenario that models it, and it must
+		 * clear with it for the same reason the faults do. `401-mid-session` ends the
+		 * session stream after `expireAfterS` and then refuses EVERY non-public route
+		 * (`state.expired`), which is the right model inside that cell and a poisoned
+		 * relay outside it: measured on 2026-10-03, when the latch outlived its cell the
+		 * rest of the run rendered the app's "session expired" banner instead of the
+		 * state each cell declares. Clearing it here also makes the job DETERMINISTIC —
+		 * whether the latch tripped at all depended on whether that one cell's stream
+		 * happened to live past its own two-second grant, so the same commit could run
+		 * green or red. */
+		state.expired = false;
 		// Per-scenario ledgers reset with the scenario, so a duplicate-detection
 		// test cannot inherit an id admitted by the previous scenario.
 		state.admitted = new Map();
@@ -1898,9 +1930,14 @@ export function createRelay(options: RelayOptions = {}) {
 				}
 				if (pathname === "/__mock/fault" && method === "POST") {
 					const raw = await readBody(req);
-					const next = parseFaults(JSON.parse(raw || "{}").faults ?? []);
-					state.faults = next;
-					sendJson(res, 200, { faults: next.applied });
+					const names: string[] = JSON.parse(raw || "{}").faults ?? [];
+					/* A control-surface set REPLACES the invocation's own, and then behaves like
+					 * it: it is the baseline a scenario's faults are added to, so it survives a
+					 * pin for the same reason `--fault` does. Setting `state.faults` alone (the
+					 * old shape) would have been undone by the very next scenario switch. */
+					state.baseFaults = names;
+					state.faults = parseFaults([...names, ...(state.world.faults ?? [])]);
+					sendJson(res, 200, { faults: state.faults.applied });
 					return;
 				}
 				if (pathname === "/__mock/reset" && method === "POST") {

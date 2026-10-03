@@ -52,6 +52,8 @@ import { DEFAULT_PASSWORD } from "../mock-relay/relay.ts";
 import { renderGallery } from "./gallery.ts";
 import {
 	ALL_DEVICES,
+	CI_DEVICES,
+	CI_SCALES,
 	CORE_DEVICES,
 	DEVICES,
 	type DeviceProfile,
@@ -74,6 +76,72 @@ let screenshotRetries = 0;
 
 /** Frames above this count are refused without `--yes`: a full matrix is minutes. */
 const CONFIRM_THRESHOLD = 120;
+
+/**
+ * The per-cell budget the DEFAULT whole-run deadline is derived from, in ms, and
+ * the floor a small plan still gets.
+ *
+ * WHY THE DEFAULT IS DERIVED RATHER THAN FIXED. It used to be a flat 900 s, which
+ * holds about 400 cells: a `core` run (936 cells) or a dispatched `full` run (3384)
+ * was therefore cut off by the harness's own default and reported hundreds of cells
+ * as having no frame — a bound firing on a plan it was never sized for, which reads
+ * like a finding about the app and is not one. Deriving it from the plan makes the
+ * default hold the plan it was computed for, and the number is PRINTED with the
+ * plan, so a reviewer can see the bound and argue with it instead of discovering it
+ * fifteen minutes in. An explicit `--deadline` is still honoured exactly: a caller
+ * who names a bound has a reason for it, and gets a note when it is below the
+ * budgeted figure rather than silence.
+ *
+ * The rate is the one measured on the CI runner: 403 cells in 903 s, 2.24 s/cell. The
+ * budget is 3 s/cell — a third more — because the same tool also runs on a laptop under
+ * load, where the measured rate is ~3 s/cell: the bound's job is to catch a run that has
+ * HUNG, not to race one that is merely slower, and a bound that fires on an ordinary
+ * machine is the very defect this replaces. It bounds the RUN, so it is a budget for the
+ * whole plan; the per-cell bound is separate (`--cell-timeout`).
+ */
+const CELL_BUDGET_MS = 3000;
+const MIN_DERIVED_DEADLINE_MS = 900_000;
+
+/**
+ * How long a cell's declared state is given to APPEAR after the settle window, and
+ * how often it is looked for.
+ *
+ * WHY THIS EXISTS. Readiness used to be a single reading taken `--settle` ms after
+ * the page loaded, which silently assumed every scenario's state exists by then.
+ * Two do not: `401-mid-session` ends the stream two seconds in (that is the state),
+ * and `aborted` is a turn that has to finish before its receipt is painted. At the
+ * 1200 ms default both cells were reported `NOT MEASURABLE` — the harness failing
+ * its own clock, not the app failing its state — so the run could never be green
+ * for a reason that had nothing to do with the app. The alternative (a longer
+ * `--settle` for the whole run) is wrong in the other direction: measured
+ * 2026-10-03, `--settle 7000` fixes those two and BREAKS `S5/streaming` and
+ * `S6/populated`, whose states have already come and gone by then.
+ *
+ * So the wait is on the EVENT, not the clock: poll for the marker the app declares,
+ * stop the moment it appears, and re-stamp the settled frame so the frame shows the
+ * state that was waited for. It costs nothing for a cell that is already ready, and
+ * it never applies to a DECLARED SKIP (those fail on `marker-gap`, not `marker`) or
+ * to a wrong route or a missing root, which are defects whenever they appear.
+ */
+const STATE_WAIT_MS = 8_000;
+const STATE_POLL_MS = 400;
+
+/** The whole-run deadline a plan of `cells` cells is budgeted, in ms. */
+const derivedDeadlineMs = (cells: number): number =>
+	Math.max(MIN_DERIVED_DEADLINE_MS, Math.ceil(cells * CELL_BUDGET_MS));
+
+/**
+ * Whether a cell's issues are all "the declared state has not arrived yet".
+ *
+ * `marker` is the only issue kind this waits on: the app DECLARES a marker for the
+ * state and the frame does not carry it yet. `empty` rides along because it is the
+ * same sentence's second half. Everything else — a wrong route, a missing root, a
+ * `marker-gap`, a relay the app never asked — is a defect that waiting cannot fix.
+ */
+const stateStillComing = (issues: ReadonlyArray<{ kind: string }>): boolean =>
+	issues.length > 0 &&
+	issues.some((issue) => issue.kind === "marker") &&
+	issues.every((issue) => issue.kind === "marker" || issue.kind === "empty");
 
 /**
  * Replace the page target after a cell wedged.
@@ -452,16 +520,45 @@ async function captureCell(
 	// roots it actually rendered. This is the guard against a green matrix over
 	// the wrong screen, which is exactly what the first run of this harness
 	// produced before the relay was proxied.
-	const readiness = asReadiness(await page.evaluate(READINESS_PROBE));
-	const issues = readinessIssuesFor(cell, path, readiness, relayReach);
-	if (seededButAbsent) {
-		issues.push({
-			kind: "seed",
-			message:
-				`the run was told to seed route '${String(seed.route)}' but the page reports ` +
-				`'${String(measurements?.route ?? "")}' without it: the harness's own half of ` +
-				"the seed hook failed",
-		});
+	let readiness: Readiness | null = asReadiness(
+		await page.evaluate(READINESS_PROBE),
+	);
+	let issues: CellIssue[] = readinessIssuesFor(
+		cell,
+		path,
+		readiness,
+		relayReach,
+	);
+	const seedIssue = (): CellIssue => ({
+		kind: "seed",
+		message:
+			`the run was told to seed route '${String(seed.route)}' but the page reports ` +
+			`'${String(measurements?.route ?? "")}' without it: the harness's own half of ` +
+			"the seed hook failed",
+	});
+	if (seededButAbsent) issues.push(seedIssue());
+
+	/*
+	 * A state that arrives AFTER the settle window: wait for the marker rather than
+	 * reporting the state missing at 1200 ms. See `STATE_WAIT_MS` for the two cells
+	 * this exists for and for why a longer `--settle` is the wrong repair. The
+	 * settled frame is re-stamped once the state is there, because the frame has to
+	 * show the state the cell names — a cell that passed the marker rule while its
+	 * PNG still held the pre-state would be the harness asserting one thing and
+	 * shipping another.
+	 */
+	if (stateStillComing(issues)) {
+		let waitedMs = 0;
+		while (waitedMs < STATE_WAIT_MS && stateStillComing(issues)) {
+			await sleep(Math.min(STATE_POLL_MS, STATE_WAIT_MS - waitedMs));
+			waitedMs += STATE_POLL_MS;
+			readiness = asReadiness(await page.evaluate(READINESS_PROBE));
+			issues = readinessIssuesFor(cell, path, readiness, relayReach);
+			if (seededButAbsent) issues.push(seedIssue());
+		}
+		if (issues.length === 0) {
+			shots[shots.length - 1] = await stamp(cell.consecutive ? "-settled" : "");
+		}
 	}
 	const readinessProblems = issues.map((issue) => issue.message);
 
@@ -569,7 +666,26 @@ async function withDeadline<T>(
 	});
 	try {
 		const winner = await Promise.race([
-			promise.then((value) => ({ ok: true as const, value })),
+			promise.then(
+				(value) => ({ ok: true as const, value }),
+				/*
+				 * A cell that THROWS is the same kind of event as one that overruns, and it
+				 * used to be the run's own death instead: a `Page.navigate` that stalls past
+				 * CDP's 30 s command timeout rejects, the rejection went straight through this
+				 * race, and the process exited from inside `captureCell` with a stack trace and
+				 * NO manifest at all — the out directory held frames and no summary, so a
+				 * 45-minute job reported nothing about what it had measured. Measured
+				 * 2026-10-03: the documented 72-cell command died this way on entry 39, twice,
+				 * and again on a stashed tree. The caller already knows what to do with a cell
+				 * that did not complete — abandon it BY NAME, then open a fresh page so the
+				 * next cell cannot inherit a wedged one — so the rejection is turned into that
+				 * same shape here rather than being left to unwind the run.
+				 */
+				(error: unknown) => ({
+					ok: false as const,
+					reason: `${what} threw: ${error instanceof Error ? error.message : String(error)}`,
+				}),
+			),
 			expiry,
 		]);
 		return winner;
@@ -1026,15 +1142,15 @@ function canvasTokens(
 
 /**
  * Everything a capture run takes. `tier` is recorded in the manifest so a report
- * can say which sample produced it: a core run is not a full-matrix result, and
- * a cell that was not captured is BLOCKED rather than passed.
+ * can say which sample produced it: a `ci` or `core` run is not a full-matrix
+ * result, and a cell that was not captured is BLOCKED rather than passed.
  */
 export interface CaptureOptions {
 	dir: string;
 	out: string;
 	relay?: string | undefined;
 	cells: string[];
-	tier: "core" | "full";
+	tier: "ci" | "core" | "full";
 	devices: string[];
 	themes: string[];
 	scales: Array<{ id: string; factor: number }>;
@@ -1042,8 +1158,12 @@ export interface CaptureOptions {
 	settleMs: number;
 	/** Hard bound per cell; a cell that exceeds it is a FAILED cell, not a hang. */
 	cellTimeoutMs: number;
-	/** Hard bound for the whole run, checked between cells. */
-	deadlineMs: number;
+	/**
+	 * Hard bound for the whole run, checked between cells. `null` means the caller
+	 * did not name one, so `runCapture` derives it from the plan's size; the
+	 * effective value is what the manifest records.
+	 */
+	deadlineMs: number | null;
 	tokens: string;
 	plan: boolean;
 	yes: boolean;
@@ -1139,6 +1259,16 @@ export async function runCapture(options: CaptureOptions) {
 	const framesPerCell = options.consecutive ? 3 : 1;
 	const plannedFrames = plan.length * framesPerCell;
 
+	/*
+	 * The bound the run will actually hold, and the note when the caller's own
+	 * bound cannot hold it. Printed BEFORE anything is launched so a bound that
+	 * will truncate is a stated diagnosis at minute zero rather than a surprise
+	 * at minute fifteen — which is exactly how the CI job's first real capture
+	 * run failed: 900 s against a 962-cell plan, reported only when it fired.
+	 */
+	const budgetMs = derivedDeadlineMs(plan.length);
+	const deadlineMs = options.deadlineMs ?? budgetMs;
+
 	console.log(
 		`capture plan: ${plan.length} cells × ${framesPerCell} frame(s) = ${plannedFrames} frames`,
 	);
@@ -1155,6 +1285,19 @@ export async function runCapture(options: CaptureOptions) {
 		`  scales:  ${[...new Set(plan.map((c) => c.scaleSpec.id))].join(", ")}`,
 	);
 	console.log(`  out:     ${outDir}`);
+	console.log(
+		`  deadline: ${Math.round(deadlineMs / 1000)} s` +
+			(options.deadlineMs === null
+				? ` (derived from the plan at ${CELL_BUDGET_MS} ms/cell; pass --deadline to override)`
+				: " (explicit)"),
+	);
+	if (options.deadlineMs !== null && options.deadlineMs < budgetMs) {
+		console.log(
+			`note: --deadline ${Math.round(options.deadlineMs / 1000)} s is below this plan's ` +
+				`${Math.round(budgetMs / 1000)} s budget; cells still unvisited when it fires are ` +
+				"reported as having no frame rather than silently skipped.",
+		);
+	}
 	if (options.plan) {
 		for (const cell of plan) console.log(`   ${frameName(cell)}`);
 		return { planned: plannedFrames, plan, dryRun: true };
@@ -1227,14 +1370,14 @@ export async function runCapture(options: CaptureOptions) {
 
 		for (const cell of plan) {
 			index += 1;
-			if (Date.now() - startedAt > options.deadlineMs) {
+			if (Date.now() - startedAt > deadlineMs) {
 				// The overall bound: a run that would exceed its job's own timeout stops
 				// accounting for itself and reports what it captured, rather than being
 				// killed with nothing written. Measured in CI: the step ran past a
 				// 45-minute job timeout and produced no artifacts at all.
 				abandoned.push({
 					cell: cell.cell,
-					reason: `the run passed its ${Math.round(options.deadlineMs / 1000)} s deadline with ${plan.length - index + 1} cell(s) left`,
+					reason: `the run passed its ${Math.round(deadlineMs / 1000)} s deadline with ${plan.length - index + 1} cell(s) left`,
 				});
 				break;
 			}
@@ -1437,7 +1580,7 @@ export async function runCapture(options: CaptureOptions) {
 			cellsPlanned: plan.length,
 			cellsCaptured,
 			cellTimeoutMs: options.cellTimeoutMs,
-			deadlineMs: options.deadlineMs,
+			deadlineMs,
 			devicesCaptured: options.devices,
 			themeTokens: tokens ?? null,
 			textScaleVerdict: scaleCheck.verdict,
@@ -1714,11 +1857,20 @@ if (isMain) {
 				"  --relay <url>       mock relay base URL; supplies the scenario list and session ids",
 				"  --cells <a/b,...>   explicit screen/state cells (default: whatever the relay declares)",
 				"  --cell-timeout <s>  hard bound per cell; a cell that exceeds it FAILS with that reason (default 45)",
-				"  --deadline <s>      hard bound for the whole run (default 900); remaining cells are reported BLOCKED",
-				"  --devices <names>   comma list. Default: the `core` tier in matrix.ts DEVICES",
-				"                      (5 profiles) — pass --full for all 19",
+				"  --deadline <s>      hard bound for the whole run. Default: derived from the plan",
+				"                      (2500 ms/cell, floor 900 s) so a bound always holds its own plan;",
+				"                      a smaller explicit bound is honoured and noted. Cells still",
+				"                      unvisited when it fires are reported as having no frame",
+				"  --tier <name>       the sample to capture: ci | core (default) | full",
+				"                        ci    296 cells — every declared cell, 2 device profiles,",
+				"                              both themes, scales 100 and 200 (~11 min) — the CI job's",
+				"                        core  962 cells — the 5 `core` profiles, both themes, all",
+				"                              three scales",
+				"                        full  3572 cells — all 19 profiles",
+				"  --devices <names>   comma list. Default: the tier's profiles (ci 2, core 5 by",
+				"                      default, --full for all 19)",
 				"  --themes <names>    default dark,light",
-				"  --scales <ids>      default 100,150,200",
+				"  --scales <ids>      default 100,150,200 (the `ci` tier defaults to 100,200)",
 				"  --consecutive       also capture a +250 ms and a settled frame per cell",
 				"  --settle <ms>       boot budget before the first frame (default 1200)",
 				"  --tokens <path>     tokens.json, to check each frame's canvas against its theme",
@@ -1730,20 +1882,35 @@ if (isMain) {
 		);
 		process.exit(dir && out ? 0 : 2);
 	}
-	// An empty `--scales` means "all of them": the matrix's scale dimension is the
-	// one that catches a transcript row clipping its tool result, so it is on by
+	// An empty `--scales` means "the tier's defaults": the matrix's scale dimension is
+	// the one that catches a transcript row clipping its tool result, so it is on by
 	// default rather than opt-in.
 	const scaleIds = csv(flags, "scales");
-	// Which devices a default run covers. `core` is the sample the operator's
-	// rule asks to be run first — smallest phone, a typical phone, phone
-	// landscape, a tablet in each orientation — and `--full` (or `--tier full`)
-	// covers every size. `--devices` overrides either.
-	const tier =
-		bool(flags, "full") || str(flags, "tier", "core") === "full"
-			? "full"
-			: "core";
+	// Which devices a run covers. `core` is the sample the operator's rule asks to be
+	// run first — smallest phone, a typical phone, phone landscape, a tablet in each
+	// orientation — `ci` is the bounded sample the per-push job takes (matrix.ts
+	// `CI_DEVICES`, ~11 minutes), and `--full` covers every size. `--devices`
+	// overrides any of them.
+	//
+	// An unknown tier is an ERROR rather than a silent fall back to `core`: a typo'd
+	// `--tier ci` that quietly ran 962 cells would spend ~36 minutes on a capture the
+	// caller did not ask for, and the whole point of naming the sample is that the
+	// run you get is the one you asked for.
+	const tierFlag = bool(flags, "full") ? "full" : str(flags, "tier", "core");
+	if (tierFlag !== "ci" && tierFlag !== "core" && tierFlag !== "full") {
+		console.error(
+			`unknown --tier '${tierFlag}': the samples are ci, core and full ` +
+				"(tools/visual/matrix.ts)",
+		);
+		process.exit(2);
+	}
+	const tier: "ci" | "core" | "full" = tierFlag;
 	const requestedDevices = csv(flags, "devices");
-	const defaultDevices = tier === "full" ? ALL_DEVICES : CORE_DEVICES;
+	const defaultDevices =
+		tier === "full" ? ALL_DEVICES : tier === "ci" ? CI_DEVICES : CORE_DEVICES;
+	const defaultScaleIds = tier === "ci" ? CI_SCALES : SCALES.map((s) => s.id);
+	const effectiveScaleIds = scaleIds.length ? scaleIds : defaultScaleIds;
+	const deadlineFlag = str(flags, "deadline", undefined);
 	const summary = await runCapture({
 		dir,
 		out,
@@ -1752,9 +1919,7 @@ if (isMain) {
 		tier,
 		devices: requestedDevices.length ? requestedDevices : defaultDevices,
 		themes: csv(flags, "themes").length ? csv(flags, "themes") : THEMES,
-		scales: scaleIds.length
-			? SCALES.filter((s) => scaleIds.includes(s.id))
-			: SCALES,
+		scales: SCALES.filter((s) => effectiveScaleIds.includes(s.id)),
 		consecutive: bool(flags, "consecutive"),
 		settleMs: num(flags, "settle", 1200),
 		// The web build's own relay-override parameters: the harness puts the app's
@@ -1768,7 +1933,11 @@ if (isMain) {
 		// a cell that never settles must fail that cell, and a run that would outlive
 		// its job must stop accounting for itself and write what it has.
 		cellTimeoutMs: num(flags, "cell-timeout", 45) * 1000,
-		deadlineMs: num(flags, "deadline", 900) * 1000,
+		// Absent means "derive it from the plan" — see CELL_BUDGET_MS. An explicit
+		// value is honoured as given, including one small enough to truncate: the run
+		// then prints the budgeted figure beside it rather than pretending they match.
+		deadlineMs:
+			deadlineFlag === undefined ? null : num(flags, "deadline", 900) * 1000,
 		tokens:
 			str(flags, "tokens", join(repoRoot, "design", "tokens", "tokens.json")) ??
 			join(repoRoot, "design", "tokens", "tokens.json"),

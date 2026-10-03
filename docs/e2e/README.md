@@ -54,30 +54,43 @@ the three answer different questions:
 | `declaredSkips` | cells whose state this head does not render yet, each with the work that owns it. NOT a gap, and NOT evidence. |
 
 Measured on this head, one device and theme (`--devices iphone-15 --themes dark
---scales 100`), 38 cells:
+--scales 100`), 36 cells:
 
 ```
-audit: 38 cells, 380 check rows, 81 measured, 0 FAIL, 299 BLOCKED (0 unmeasurable) · palette loaded
-audit: 29 cell(s) are DECLARED SKIPS (not gaps):
+audit: 36 cells, 378 check rows, 252 measured, 54 FAIL, 126 BLOCKED (0 unmeasurable) · palette loaded
+audit: 10 cell(s) are DECLARED SKIPS (not gaps):
 ```
 
-Nine cells are measured — `S4/empty`, `S4/populated`, `S4/populated-long`,
-`S4/narrow`, `S4/degraded-listing`, `S10/empty`, `S10/populated`, `S2/error`,
-`S13/error`. The other twenty-nine are declared skips:
+PLEASE READ THOSE NUMBERS TOGETHER. The capture for that run exits 0 — every captured
+cell reached the screen and state it names — and the AUDIT then fails 54 rows, all of
+them `U-02` contrast on the session view's composer placeholder (`Message Local
+Operator…`, measured **1.29:1** where 4.5:1 is required at 16px, on all 21 session-view
+cells). That is a new finding rather than a new harness fault, and it is exactly what
+the harness is for: while `app/(app)/session/[id].tsx` was a placeholder those cells were
+declared skips and the audit measured 81 rows; PR #12 landed the real session view, the
+cells became capturable, and the audit now measures 252 rows and finds this. It is an
+app finding, not a harness one, and it is named here so the `Web target` job's audit
+step is read as "the session view's composer fails contrast", never as a broken checker.
 
-- **21 session-view cells** (`S5/*`, `S6/*`, `S8/*`, `S9/*`) wait on **PR #12
-  (`feat/screens-session`)**: on this head `app/(app)/session/[id].tsx` is a
-  placeholder that renders `session-empty` in every state, so no frame of them is
-  evidence about the state the cell names.
+The 10 declared skips are:
+
 - **5 computer cells** (`S2/empty`, `S3/empty`, `S3/populated`, `S13/loading`,
   `S13/degraded`) need something the relay cannot serve: the computer LIST comes
   from Radient's account API (`src/connection/discovery.ts`, `GET /v1/tunnels`),
   so every relay scenario renders the same "Set up a computer" path. Only the
-  refusal state (`S2/error`, `S13/error`) is reachable, because the mock's
-  gateway refusal drives it.
+  refusal state (`S13/error`) is reachable, because the mock's gateway refusal
+  drives it.
 - **3 list states** the app renders without an identifier of their own:
   `S4/loading` (skeletons), `S4/ended` and `S4/degraded-row` (the row receipts
   change copy and colour — "ended", "not answering" — but carry no `testID`).
+- **2 subagent cells** (`S6/populated`, `S6/populated-long`): the app declares no
+  `subagent` subject, so nothing in a frame can affirm them.
+
+The 21 session-view cells used to be in that list. They are not any more: the app now
+declares `session-populated` and the rest, and a declared skip is honoured only while the
+app declares no marker for the cell's state — so the entries had gone inert while their
+owner text ("PR #12 … is a placeholder") had gone false. `matrix.ts` no longer carries
+them.
 
 A declared skip is honoured **only while the app declares no marker for that
 cell's state**, so it can never hide a marker that stopped rendering: flip a
@@ -285,10 +298,10 @@ second hand-maintained list.
 | `past-populated` | S10/populated | Past conversations to resume, including a fork wearing its parent's title. |
 | `search-empty` | S4/empty | A search query with no results. |
 | `search-hit` | S4/populated | A search with body-only matches, which must be marked as such. |
-| `models-ranked` | S9/populated | The full ranked model catalogue — order is the ranking, never re-sorted. |
+| `models-ranked` | — (no cell) | The full ranked model catalogue — order is the ranking, never re-sorted. It declared `S9/populated`, and that cell was removed: the sheets are modals the app opens from the composer, no wire action opens one, and the cell therefore rendered `S5/populated` byte-for-byte (see the capture section). |
 | `multi-computer` | S3/populated | Three computers: active, suspended and a second active one. |
 | `no-computers` | S3/empty, S2/empty | No computer is registered yet: the set-up path. |
-| `billing-inactive` | S13/error, S2/error | The tunnel's billing is past due: the gateway refuses with `authorization_refused`. |
+| `billing-inactive` | S13/error | The tunnel's billing is past due: the gateway refuses with `authorization_refused`. It used to declare `S2/error` as well, which was a second name for this same state (see the capture section). |
 | `tunnel-revoked` | S13/error | The tunnel was revoked: the gateway refuses with `tunnel_not_authorized`. |
 | `login-required` | S13/error | The computer's Radient login expired: gateway `login_required`, and the edge answers 401 with the re-auth hint. |
 | `relay-refuses-command` | S13/error | A reachable relay that refuses the command: 422 with a typed code, which must never be retried as-is. |
@@ -508,35 +521,33 @@ node tools/visual/capture.ts --dir e2e/fixtures/audit-canary \
 ```sh
 # A real run against a real build. Build first — `pnpm export:web`, which writes `dist/`.
 #
-# The device/theme/scale set is EXPLICIT and small on purpose. The full matrix is
-# 962 cells (~26 min at the measured 1.6 s/cell), which no documentation gate may spend
-# on one command, and a run that overruns its own bound abandons most of the matrix and
-# reports it as deadline BLOCKED — which reads like a finding and is not one. So this
-# example is the bounded sample; run `--plan` above for the full count, and drop these
-# three flags for the whole matrix.
+# The device/theme/scale set is EXPLICIT and small on purpose: the full `core` tier is
+# 936 cells, which is ~35 minutes at the measured 2.24 s/cell (403 cells in 903 s on the
+# CI runner), and no documentation gate may spend that on one command. So this example is
+# the bounded sample; `--plan` above prints the full count, and dropping these three flags
+# captures the whole `core` tier. `--tier ci` is the sample the per-push CI job takes —
+# every declared cell at two device profiles, both themes and two scales, 288 cells — and
+# `--full` is all 19 profiles at 3384 cells.
 #
-# This command reads the APP's current state, and on 2026-10-03 it exits non-zero
-# with one finding rather than a harness fault:
-#   * `S2/error` and `S13/error` render byte-identically: that is one screen
-#     (`/tunnels` refusing) reached through two relay causes, so two cells are one
-#     state. It is reported once per scale, so this two-scale run blocks on two
-#     identical-state pairs of the SAME cells. A group made ONLY of DECLARED SKIPS is
-#     no longer reported — this head's 29 skips are one placeholder screen between
-#     them, and the 19-cell `S5`/`S6`/`S8`/`S9` group they used to form was that, not
-#     a finding — but a group with ANY evidential cell in it still is.
+# The bound is DERIVED FROM THE PLAN unless you name one: `--deadline` defaults to
+# 2500 ms/cell with a 900 s floor, so a bound always holds the plan it was computed for,
+# and a smaller explicit bound is printed beside the budgeted figure rather than
+# discovered when it fires.
+#
+# This command reads the APP's current state. It exits 0 on this head; the two findings
+# it used to record are fixed, and both fixes were declarations rather than app changes:
+#   * `S2/error` and `S13/error` were ONE state under two names — `/tunnels` renders a
+#     single refusal surface and `STATE_MARKER.computers` declares a single `error` — so
+#     `S2/error` was removed from `billing-inactive`'s `shows`.
+#   * `S9/populated` was the same state as `S5/populated`: the sheets are modals opened
+#     from the composer, the harness reaches a screen only by URL, and the cell declared
+#     the session's own marker. It was removed from `models-ranked`'s `shows`.
+# A group made ONLY of DECLARED SKIPS is not reported at all — this head's 10 skips are
+# one placeholder screen between them — but a group with ANY evidential cell in it is.
 # The text-scale guard is REPORTED, never blocking: `themeProblems` comes from
 # `verifyThemes` and the scale verdict does not feed it, so it cannot fail this run.
-# On this head it reads "scale dimension is live across 37/38 measured pairs (median
-# 2.86x at 200%)" — 37 of the 38 pairs scale, one sits at 1.865x against a 1.9x bar,
-# and the top-level `live` flag is therefore false. An earlier revision of this
-# comment listed the guard as a second BLOCKING finding, which a strict run never
-# produced. Read the per-cell pair, not a run median.
-# `docs:exits 1` records the identical-state finding so this page stays executable.
-# REMOVE the marker (and this comment) once `/tunnels` distinguishes the two refusal
-# causes — a marker that outlives its finding is how a green run stops meaning
-# anything.
+# Read the per-cell pair, not a run median.
 # docs:needs mock-relay web-build
-# docs:exits 1
 node tools/visual/capture.ts --dir <dist> --out "$SCRATCH/frames" \
   --relay <mock-url> --consecutive --yes \
   --devices iphone-15 --themes dark --scales 100,200
@@ -626,8 +637,21 @@ All 19 profiles above are what the harness *can* plan, and they come from
 generated from it rather than maintained beside it. A default run captures the
 `core` tier only (5 profiles: the 320 pt floor, one typical phone,
 the landscape case whose side insets the notch rules need, and a tablet in each
-orientation); `--full` adds the rest. A run states which tier it took, and a cell
-that was not captured is reported BLOCKED rather than passed.
+orientation) — 936 cells at 26 frames per cell. A run states which tier it took,
+and a cell that was not captured is reported as having no frame rather than passed.
+
+Three tiers are declared in `matrix.ts`, and each says what it is:
+
+| tier | sample | cells | why |
+|---|---|---|---|
+| `ci` | every declared cell × `iphone-se`, `tablet-landscape` × both themes × scales 100 and 200 | 288 | the per-push CI job's sample. The step is bound at 20 minutes and the measured rate is 2.24 s/cell, so a 936-cell `core` run cannot fit; this one lands ~11 minutes. It keeps the CELL axis whole — a state that is not captured is a state no review round can report on — and shrinks only the device, theme and scale axes, each to what its check needs: the narrowest and widest viewports (the two sides of the 768 breakpoint), because the theme check compares a cell's dark and light frames, and the 100 %/200 % pair the text-scale guard measures. |
+| `core` | the 5 `core` profiles, both themes, all three scales | 936 | the default, and the local sample the operator's rule asks for. |
+| `full` | all 19 profiles | 3384 | the dispatched/nightly sample. |
+
+`--tier <ci|core|full>` or `--full` selects one; `--devices`, `--themes` and
+`--scales` override any of them. The whole-run `--deadline` is derived from the
+plan's size (2500 ms/cell, floor 900 s) unless you name one, so the default bound
+always holds the plan it was computed for.
 
 Themes: `dark`, `light`. Text scales: `100`, `150`, `200` (percent of the app's
 default) — `150` is skipped on tablets and foldables, where it is not the

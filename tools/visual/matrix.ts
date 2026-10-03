@@ -286,6 +286,51 @@ export const CORE_DEVICES: string[] = Object.entries(DEVICES)
 /** Every device name, in declaration order (smallest to largest). */
 export const ALL_DEVICES: string[] = Object.keys(DEVICES);
 
+/**
+ * The CI tier: the bounded sample the per-push capture job takes.
+ *
+ * WHY A THIRD TIER, AND WHY IT IS HERE RATHER THAN A `--devices` LIST IN YAML.
+ * The `core` tier is 936 cells — the whole declared cell list at 2 themes x
+ * (3 phone scales + 2 tablet scales) x 5 profiles — and the CI job's capture step
+ * is bound at 20 minutes. Measured on the runner, that is 2.24 s/cell: 403 cells
+ * in 903 s, so a core run needs ~36 minutes. The job's first real run of this path
+ * was therefore cut off by the harness's own 900 s deadline with 585 cells
+ * unvisited, and reported them as cells with no frame.
+ *
+ * The three ways out of that are all forbidden by the job's purpose: `--no-strict`
+ * makes it green while measuring 41% of the plan; deleting cells removes the states
+ * a finding could be made about; and raising the bound to ~40 minutes spends the
+ * pipeline's scarcest resource on a check that runs on every push. So the sample
+ * shrinks instead, and it is declared HERE — beside the device and scale tables it
+ * is a subset of — so a reviewer can argue with the sample rather than with a YAML
+ * range, and so the plan, the manifest and the docs all read the same one list.
+ *
+ * WHAT IT KEEPS. The cell axis is NOT sampled: the CI tier captures every cell the
+ * relay's registry declares, because a state that is not captured is a state no
+ * review round can report on. Only the device, theme and scale axes shrink, and
+ * each keeps exactly what its check needs:
+ *
+ *   * `iphone-se` (320x568) and `tablet-landscape` (1112x834) are the two width
+ *     EXTREMES the full matrix spans, on the two sides of `TABLET_MIN_WIDTH`: the
+ *     narrowest viewport the app must survive, and the widest one the layout has to
+ *     earn. A defect at 320 or at 1112 is what this sample is looking for.
+ *   * both themes, because the theme-reached-the-render check compares a cell's
+ *     dark and light frames — one theme cannot make it.
+ *   * the 100% floor and the 200% ceiling, which is the pair the text-scale guard
+ *     measures (200% over 100%). 150% is the phone-typical intermediate case and is
+ *     left to `core`.
+ *
+ * That is 36 cells x 2 themes x (2 + 2) device-scales = 288 cells, ~11 minutes at
+ * the measured rate: inside the step bound with most of it spare. `core` and
+ * `full` are unchanged and stay the local and dispatched samples, so the full
+ * 936-cell `core` matrix and the 3384-cell `full` matrix remain runnable — nothing
+ * is only reachable through CI.
+ */
+export const CI_DEVICES: string[] = ["iphone-se", "tablet-landscape"];
+
+/** The scale ids the CI tier runs: the 100% floor and the 200% ceiling. */
+export const CI_SCALES: string[] = ["100", "200"];
+
 export const THEMES = ["dark", "light"];
 
 /** Text scales as a multiplier of the app's default. 1 = the OS default. */

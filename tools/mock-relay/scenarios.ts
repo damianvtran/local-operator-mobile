@@ -774,7 +774,20 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 	add(
 		"models-ranked",
 		"The full ranked model catalogue — order is the ranking, never re-sorted.",
-		["S9/populated"],
+		/* NO CELL, and that is the honest count. This scenario served `S9/populated`, and
+		 * `S9/populated` was never a state of its own: the sheets are modals the app opens
+		 * from the composer, nothing on the wire opens one, and the harness reaches a screen
+		 * only by URL — so the cell navigated to the session route, declared the SESSION's
+		 * own populated marker (`S9` → `session` in `SCREEN_MARKER_SUBJECT`), and rendered
+		 * byte-identically to `S5/populated`. Measured 2026-10-03 on the full tier: the
+		 * capture reported `S5/populated = S9/populated` as a cross-cell collapse, which is
+		 * the check working — two declared states, one state. Removing the declaration is the
+		 * same remedy `billing-inactive` takes below, and it costs the SHEETS surface its only
+		 * cell: giving it a real one needs a way to drive a sheet into view (an app-side
+		 * affordance or an id the app declares for the open sheet), which is a change this
+		 * harness cannot make for itself. The scenario stays because the ranked catalogue is
+		 * still part of the relay's contract and `verify.ts` exercises it. */
+		[],
 		() => ({
 			projections: { [liveIdle.session_id]: structuredClone(liveIdle) },
 			models: rankedModels,
@@ -806,7 +819,19 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 	add(
 		"billing-inactive",
 		"The tunnel's billing is past due: the gateway refuses with `authorization_refused`.",
-		["S13/error", "S2/error"],
+		/* `S13/error` ALONE, and the second cell it used to declare is not a
+		 * declaration the app can honour. `/tunnels` renders ONE refusal surface for
+		 * every gateway cause — `S2`, `S3` and `S13` are the same screen
+		 * (`computers-screen`, `SCREEN_MARKER_SUBJECT` in `tools/lib/readiness.ts`) and
+		 * `STATE_MARKER.computers` declares exactly one state, `error`. So `S2/error`
+		 * and `S13/error` were one state under two names, and the capture run reported
+		 * them as a cross-cell collapse on all 26 frames of the core tier — the exact
+		 * finding the identical-state check exists to make, raised against a
+		 * declaration that never named a second state. The rubric is what settles it:
+		 * `docs/ux/audit-rubric.md` §1 gives S2 the states "no tunnel yet; waiting;
+		 * connected" and gives the refusal to S13 ("connection loss, re-auth, relay
+		 * refusal"), so the error state belongs to the screen the rubric names for it. */
+		["S13/error"],
 		() => ({
 			projections: {},
 			failure: { surface: "gateway", key: "503-authorization_refused" },
