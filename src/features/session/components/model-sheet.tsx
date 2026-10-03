@@ -3,7 +3,7 @@ import { Pressable, ScrollView, Text, View } from "react-native";
 import type { ModelEntry } from "@/contracts";
 import { effortRungId, modelOptionId, ROLE, SURFACE, state } from "@/ui/a11y";
 import { Sheet } from "@/ui/components";
-import { cx } from "@/ui/variants";
+import { CONTROL_DISABLED_INK, cx } from "@/ui/variants";
 
 /**
  * The model and effort sheets (`docs/ux/flows.md` F-6.7).
@@ -97,9 +97,21 @@ export const ModelSheet = ({
 								>
 									<View className="min-h-11 flex-row items-center gap-2 px-3">
 										<Text
+											/* A disconnected row is genuinely inactive: `disconnected` is the same
+											 *  predicate as the `disabled` on the Pressable above, so SC 1.4.3
+											 *  exempts this text and `ink-disabled` would conform. It is still the
+											 *  wrong ink: the label NAMES the model, and the kit's disabled-label
+											 *  ink is `CONTROL_DISABLED_INK` (`ink-dim`) — the rule Button, Chip and
+											 *  the disabled field already follow. `ink-disabled` measured 2.96:1
+											 *  light / 1.99:1 dark on the sheet's own `elevated` surface, and
+											 *  `ink-dim` measures 6.14 / 5.25 there.
+											 *
+											 *  The unavailability does not rest on the ink: the row also renders the
+											 *  words "not connected" beside it, so nothing is lost by lifting the
+											 *  label to a readable role. */
 											className={cx(
 												"min-w-0 flex-1 text-body-sm",
-												disconnected ? "text-ink-disabled" : "text-ink",
+												disconnected ? CONTROL_DISABLED_INK : "text-ink",
 											)}
 											numberOfLines={1}
 										>

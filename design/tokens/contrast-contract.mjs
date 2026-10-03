@@ -259,6 +259,23 @@ const CONTROLS = [
 	{ id: "row/pressed", fill: "elevated", border: null, ink: "ink", boundary: false },
 	{ id: "row/selected", fill: "row-selected", border: null, ink: "ink", boundary: false },
 
+	/* The model sheet's disconnected row (`model-sheet.tsx`). It is a genuinely
+	   INACTIVE row — the same `disconnected` predicate drives both the ink and the
+	   Pressable's `disabled`, so SC 1.4.3 exempts its text and an exempt ink would
+	   conform. The row is here anyway because the label NAMES the model and the kit
+	   gives a disabled label `ink-dim`; `ink-disabled` measured 2.96:1 light /
+	   1.99:1 dark on the sheet's own `elevated` surface, which is the ground this
+	   row sits on (the row paints no fill of its own; `SHEET_SURFACE_CLASS` does).
+
+	   WHY A TOKEN ROW IS NOT ENOUGH ON ITS OWN, recorded rather than implied: no
+	   capture cell renders a disconnected model — `fixtures/relay/synthetic/
+	   models.ranked.json` is 25/25 connected — and `ModelSheet` is not yet mounted
+	   by a screen, so the frame audit's U-02 cannot reach this row either. This
+	   assertion is the only mechanical guard the pair has today; the frame row
+	   #29's contract comment describes as the companion check does not exist yet
+	   for this one. */
+	{ id: "model-row/disconnected", fill: null, border: null, ink: "ink-dim", grounds: ["elevated"], boundary: false },
+
 	/* Chip and badge. A chip IS a control (it opens a sheet), so its boundary
 	   is asserted; a badge is not, so it is not.
 
@@ -307,6 +324,14 @@ const CONTROLS = [
 	{ id: "segmented/track", fill: "sunken", border: null, ink: "ink-muted", boundary: false },
 	{ id: "segmented/selected", fill: "accent-muted", border: null, ink: "accent-hover", themes: ["dark"], boundary: false },
 	{ id: "segmented/selected", fill: "accent-muted", border: null, ink: "accent-active", themes: ["light"], boundary: false },
+	/* A disabled option's LABEL. It is exempt under SC 1.4.3 (the option is
+	   genuinely inactive), and it is still asserted at the text floor because the
+	   label names the value it selects. The fill is the track's `sunken`: the
+	   option itself is `bg-transparent` inside it. This row is what
+	   `Segmented`'s own label ladder reads; before it, the component painted
+	   `ink-disabled` here (2.42:1 light / 2.50:1 dark) while
+	   `segmentedItemClasses` in the same kit already said `ink-dim`. */
+	{ id: "segmented/disabled", fill: null, border: null, ink: "ink-dim", grounds: ["sunken"], boundary: false },
 	{ id: "skeleton/bar", fill: "elevated", border: null, ink: "ink-dim", boundary: false },
 ];
 
