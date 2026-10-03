@@ -33,9 +33,25 @@ const SOURCE = readFileSync(
 	"utf8",
 );
 
-/** The predicate the row hands to `Pressable`'s `disabled`. */
+/**
+ * The model option row, as its own `<Pressable>` block.
+ *
+ * Scoped to the row rather than to the file, because the file also renders the
+ * effort sheet, and a file-wide `disabled={<word>}` read would silently follow a
+ * rename of the wrong control's predicate. The anchor is the model option's own
+ * test id, so the guard reads the row whose label ink it is actually about.
+ */
+const modelRow = (): string => {
+	const match = SOURCE.match(
+		/<Pressable[\s\S]*?modelOptionId\(model\.model_id\)[\s\S]*?<\/Pressable>/,
+	);
+	expect(match, "the model option row must render a Pressable").not.toBeNull();
+	return match?.[0] ?? "";
+};
+
+/** The predicate the model row hands to its own `Pressable`'s `disabled`. */
 const disabledPredicate = (): string => {
-	const match = SOURCE.match(/disabled=\{(\w+)\}/);
+	const match = modelRow().match(/disabled=\{(\w+)\}/);
 	expect(
 		match,
 		"the model row must pass a `disabled` predicate",
@@ -48,7 +64,7 @@ describe("model sheet disconnected row", () => {
 		const predicate = disabledPredicate();
 		expect(predicate).not.toBe("");
 		/* One predicate, two uses — the ink and the press gate cannot disagree. */
-		expect(SOURCE).toContain(
+		expect(modelRow()).toContain(
 			`${predicate} ? CONTROL_DISABLED_INK : "text-ink"`,
 		);
 	});
@@ -56,7 +72,7 @@ describe("model sheet disconnected row", () => {
 	it("paints a disabled label with the kit's role, never the exempt ink", () => {
 		/* The kit's constant, not a literal class: a literal here is the second
 		 * spelling of a decision that already lives in `src/ui/variants.ts`. */
-		expect(SOURCE).toContain("CONTROL_DISABLED_INK");
+		expect(modelRow()).toContain("CONTROL_DISABLED_INK");
 		const exempt = SOURCE.match(/text-ink-disabled/g) ?? [];
 		expect(
 			exempt,
