@@ -4,6 +4,7 @@ import { Text, TextInput, View } from "react-native";
 import { ROLE, state } from "@/ui/a11y";
 import { useTokenColor } from "@/ui/appearance";
 import { TOUCH_FLOOR } from "@/ui/layout";
+import { useTextScale } from "@/ui/text-scale-provider";
 import { type FieldState, fieldClasses, TEXTAREA_MAX_PX } from "@/ui/variants";
 
 /**
@@ -38,7 +39,11 @@ export type TextareaProps = {
 
 /** One line's height, from the type ramp: `mono-code` is 13pt at 1.6, rounded up
  * to the shipped client's 22px. Kept as one constant so the cap and the growth
- * step cannot disagree. */
+ * step cannot disagree — and MULTIPLIED by the reader's effective scale at the call
+ * site, because the box's geometry has to grow with the text that fills it. Without
+ * that, the constants cap the box at ~1.4 lines of 200 % text while the placeholder
+ * needs ~2.5, and the frame cuts it mid-word (design round D20; the arithmetic was
+ * the defect, not the measurement path). */
 const LINE_PX = 22;
 
 export const Textarea = ({
@@ -53,8 +58,18 @@ export const Textarea = ({
 	autoFocus,
 	testID,
 }: TextareaProps) => {
-	const [contentHeight, setContentHeight] = useState(LINE_PX);
-	const cap = Math.min(maxLines * LINE_PX, TEXTAREA_MAX_PX);
+	const { effectiveScale } = useTextScale();
+	/* One line's height and the cap, both at the reader's scale. At the default scale
+	 * these are exactly the old constants — 22 and `maxLines * 22` capped at
+	 * `TEXTAREA_MAX_PX` — so the 100 % geometry is unchanged by construction. */
+	const line = LINE_PX * effectiveScale;
+	const cap = Math.min(maxLines * line, TEXTAREA_MAX_PX * effectiveScale);
+	const [contentHeight, setContentHeight] = useState(line);
+	/* The placeholder is not part of `contentSize`, so the floor has to come from its
+	 * own render: same typography, same width, measured in place inside a zero-height
+	 * wrapper so it costs no layout. An estimate (a line count times a line height)
+	 * would be a guess at exactly the thing being fixed. */
+	const [placeholderHeight, setPlaceholderHeight] = useState(0);
 	const fieldState: FieldState = disabled
 		? "disabled"
 		: invalid
@@ -74,6 +89,22 @@ export const Textarea = ({
 	return (
 		<View className="gap-1.5">
 			<Text className="text-body-sm text-ink-muted">{label}</Text>
+			{/* Only while it is the thing on screen: any value hides it, so it can never
+			 *  need room the content is already taking. Zero height and clipped, so it
+			 *  lays out and reports its own height without moving anything. */}
+			{placeholder !== undefined && value === "" ? (
+				<View className="h-0 overflow-hidden" aria-hidden>
+					<Text
+						className="text-body"
+						onLayout={(event) =>
+							setPlaceholderHeight(event.nativeEvent.layout.height)
+						}
+						pointerEvents="none"
+					>
+						{placeholder}
+					</Text>
+				</View>
+			) : null}
 			<TextInput
 				ref={inputRef}
 				className={fieldClasses(fieldState)}
@@ -81,13 +112,16 @@ export const Textarea = ({
 				 *  and the platform floor (48 wherever `Platform.OS` is not iOS — the
 				 *  web/audit profile) have to be resolved together (D6). */
 				style={{
-					height: Math.min(Math.max(contentHeight, LINE_PX), cap),
+					height: Math.min(
+						Math.max(contentHeight, line, placeholderHeight),
+						cap,
+					),
 					minHeight: TOUCH_FLOOR,
 				}}
 				multiline
 				// The transcript scrolls, not the page: the field clips its own
 				// overflow once it hits the cap.
-				scrollEnabled={contentHeight > cap}
+				scrollEnabled={Math.max(contentHeight, placeholderHeight) > cap}
 				onContentSizeChange={handleContentSize}
 				accessibilityRole={ROLE.text}
 				accessibilityLabel={label}
