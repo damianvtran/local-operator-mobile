@@ -491,8 +491,15 @@ export const Composer = ({
 			</View>
 
 			{/* The receipt line: the queued count is the only thing here that changes on
-			    its own, and the chips are the reader's two levers on the turn. */}
-			<View className="flex-row items-center gap-2 pt-1.5">
+			    its own, and the chips are the reader's two levers on the turn.
+
+			    `flex-wrap` is what keeps the levers REACHABLE at 200 % platform text
+			    (design round 4, D28): the model chip's label alone is 213 pt there, so a
+			    nowrap row put the effort chip entirely beyond a 320 pt viewport
+			    (measured: `composer-effort-chip` 267.2 → 336.4 at 150 %, 335.6 → 419.2 at
+			    200 %) — a control no finger can reach. Wrapping costs a second line only
+			    at the scales that need one, and takes nothing away at 100 %. */}
+			<View className="flex-row flex-wrap items-center gap-2 pt-1.5">
 				{queuedCount > 0 ? (
 					<Text
 						className="text-mono-sm text-ink-dim"

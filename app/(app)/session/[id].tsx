@@ -315,7 +315,7 @@ export default function Session() {
 			    inside a 44 pt target changes `Chip`'s shape for every chip in the app — a
 			    kit decision, recorded here for the kit rather than taken in this screen. */}
 			{hasStatus ? (
-				<View className="min-h-11 flex-row items-center gap-2 border-b border-hairline px-4">
+				<View className="min-h-11 flex-row flex-wrap items-center gap-2 border-b border-hairline px-4">
 					{projection?.context_tokens != null &&
 					projection?.context_window != null ? (
 						<>

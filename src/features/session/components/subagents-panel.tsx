@@ -4,6 +4,7 @@ import { Pressable, ScrollView, Text, View } from "react-native";
 import { rosterBody } from "@/features/session/panels";
 import type { SubagentProjection } from "@/features/session/projection";
 import { CONTROL, ROLE, SURFACE, state } from "@/ui/a11y";
+import { useTextScale } from "@/ui/text-scale-provider";
 import { cx } from "@/ui/variants";
 
 /**
@@ -62,6 +63,11 @@ export const SubagentsPanel = ({
 	 * carries a label and usually a metadata line, so its height is content-driven
 	 * (44–50 pt) and only a measurement can promise the whole-row cut D12 asks for. */
 	const [rowHeight, setRowHeight] = useState<number | null>(null);
+	/* The scale the row is laid out at, not a guess at one: the roster's counts take a
+	 * line of their own once the label can no longer share it (see the header's note).
+	 * 125 % is where 320 pt stops fitting both, measured — at 100 % the row is one line
+	 * and its geometry is unchanged. */
+	const stacked = useTextScale().effectiveScale > 1.25;
 	if (subagents.empty) return null;
 	/* The summary's words and counts come from `projectSubagents`, which owns the
 	 * one table keyed by every wire status: a status this panel has never heard of
@@ -89,25 +95,34 @@ export const SubagentsPanel = ({
 				{/* The label, the roster's own count and the disclosure caret are one
 				    non-wrapping group; only the clauses wrap. A caret that floats to the
 				    end of the row's SECOND line reads as a second control rather than as
-				    this row's disclosure (design round 2, D16). */}
-				<View className="min-h-11 flex-row items-center gap-2 px-4 py-1">
-					{/* The label group and the clauses both have to be able to YIELD
-					    (design round, D19). At 200 % platform text on the 320 pt floor
-					    `subagents` alone is ~234 pt, and a non-shrinking group pushed the
-					    document to a measured 419 pt while every clause was clipped to
-					    "1 runn" / "1 que". `min-w-0` is what lets a flex child shrink below
-					    its content and wrap inside itself instead of widening the row. */}
+				    this row's disclosure (design round 2, D16).
+
+				    Above 125 % the counts take a line of their own (`w-full`), because on the
+				    320 pt floor they cannot share one with the label: `subagents` alone is ~234 pt
+				    at 200 %, so a clauses box squeezed beside it collapsed to ONE GLYPH PER LINE
+				    (measured 12.7 pt per clause at 320 pt @200 % — design round 4, D29). `min-w-0`
+				    bounds the CONTAINER; each clause is `shrink-0`, so it keeps its own width and
+				    the container wraps it, rather than a clause being squeezed to fit. */}
+				<View
+					className={`min-h-11 flex-row items-center gap-2 px-4 py-1${
+						stacked ? " flex-wrap" : ""
+					}`}
+				>
 					<View className="min-w-0 flex-row flex-wrap items-center gap-2">
 						<Text className="text-mono-sm text-ink-dim">subagents</Text>
 						<Text className="text-mono-sm text-ink-muted">
 							{subagents.totalLabel}
 						</Text>
 					</View>
-					<View className="min-w-0 flex-1 flex-row flex-wrap items-center gap-2">
+					<View
+						className={`min-w-0 flex-row flex-wrap items-center gap-2 ${
+							stacked ? "w-full" : "flex-1"
+						}`}
+					>
 						{subagents.clauses.map((clause) => (
 							<Text
 								key={clause.status}
-								className={`min-w-0 text-meta ${clause.inkClass}`}
+								className={`shrink-0 text-meta ${clause.inkClass}`}
 							>
 								{clause.count} {clause.word}
 							</Text>
