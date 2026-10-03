@@ -5,9 +5,11 @@ import {
 	attentionCount,
 	attentionWord,
 	degradedNote,
+	degradedShortNote,
 	rowMark,
 	splitSections,
 	staleNote,
+	staleShortNote,
 } from "@/features/sessions/session-projection";
 
 /**
@@ -143,5 +145,122 @@ describe("degradedNote", () => {
 		expect(degradedNote(["sessions"])).toContain("missing rows");
 		expect(degradedNote(["attention"])).toContain("out of date");
 		expect(degradedNote(["sessions", "attention"])).toContain("incomplete");
+	});
+});
+
+/**
+ * The two short forms, which exist because of a measured line budget rather than
+ * for style: at 320 pt with the platform text at 200 % the degraded banner is
+ * capped at two lines (about 52 characters) and the stale line beside it at one
+ * (about twelve), and the long sentences run 22 to 80. What must hold is that
+ * the SHORT form is complete in its own right — the reader gets the whole
+ * sentence, not a truncation of it — and that the two forms of one fact never
+ * disagree.
+ */
+describe("the narrow-configuration short forms", () => {
+	/** The characters one `body-sm` line holds at 200 % in a 232 dp column,
+	 *  MEASURED rather than assumed: the banner's own first line broke after
+	 *  `Some rows may be` (16 characters) and the 24-character refusal detail took
+	 *  two lines, so a line holds at least 16 and fewer than 25. */
+	const LINE_CHARS = 16;
+	/** Where the one-line bound is asserted: four characters under the measurement
+	 *  above, because a bound that sits exactly on a measurement has no margin for
+	 *  a different glyph mix (review round 2, R2-5). */
+	const STALE_CHARS = 12;
+
+	it("keeps every degraded kind distinguishable, and inside its two lines", () => {
+		expect(degradedShortNote(["sessions"])).toContain("missing");
+		expect(degradedShortNote(["attention"])).toContain("stale");
+		expect(degradedShortNote(["sessions", "attention"])).toContain(
+			"incomplete",
+		);
+		for (const degraded of [
+			["sessions"],
+			["attention"],
+			["sessions", "attention"],
+		]) {
+			expect(degradedShortNote(degraded).length).toBeLessThanOrEqual(
+				LINE_CHARS * 2,
+			);
+		}
+	});
+
+	it("carries the age in a form one line can hold", () => {
+		// The long form is `Last updated 30s ago.` — 22 characters, which one line
+		// truncates to `Last updated …` and so hides the only fact this line carries
+		// (review round 1, D3).
+		expect(staleShortNote({ stale: false, lastFrameAt: 1_000 })).toBeNull();
+		expect(staleShortNote({ stale: true, lastFrameAt: null })).toBeNull();
+		expect(
+			staleShortNote({ stale: true, lastFrameAt: 1_000, now: 2_000 }),
+		).toBe("Just now.");
+		expect(
+			staleShortNote({ stale: true, lastFrameAt: 1_000, now: 31_000 }),
+		).toBe("30s ago.");
+		expect(
+			staleShortNote({
+				stale: true,
+				lastFrameAt: 1_000,
+				now: 1_000 + 5 * 60_000,
+			}),
+		).toBe("5 min ago.");
+	});
+
+	it("stays inside one line at every age a list can be", () => {
+		// R2-5: the minutes-only form grew without limit — a week-old list read
+		// `10080 min ago.` — so the bound is asserted at the far end of the range,
+		// not only at the ages the fixtures happen to sit in.
+		const ages = [
+			0,
+			4_000,
+			30_000,
+			59_000,
+			60_000,
+			59 * 60_000,
+			60 * 60_000,
+			23 * 3_600_000,
+			24 * 3_600_000,
+			7 * 86_400_000,
+			400 * 86_400_000,
+		];
+		for (const elapsed of ages) {
+			const short = staleShortNote({
+				stale: true,
+				lastFrameAt: 0,
+				now: elapsed,
+			});
+			expect(short).not.toBeNull();
+			expect((short ?? "").length).toBeLessThanOrEqual(STALE_CHARS);
+		}
+		expect(
+			staleShortNote({
+				stale: true,
+				lastFrameAt: 0,
+				now: 7 * 86_400_000,
+			}),
+		).toBe("7d ago.");
+	});
+
+	it("never says a different age from the long form it replaces", () => {
+		// One phrase behind both: a short form that drifted from the long one would
+		// put two ages on the same screen, one in the pill and one beneath it.
+		for (const elapsed of [
+			0,
+			4_000,
+			5_000,
+			59_000,
+			60_000,
+			299_000,
+			3_600_000,
+			86_400_000,
+			7 * 86_400_000,
+		]) {
+			const input = { stale: true, lastFrameAt: 0, now: elapsed };
+			const long = staleNote(input) ?? "";
+			const short = staleShortNote(input) ?? "";
+			expect(long.length).toBeGreaterThan(short.length);
+			const age = short.slice(0, -1);
+			expect(long.toLowerCase()).toContain(age.toLowerCase());
+		}
 	});
 });

@@ -170,13 +170,19 @@ describe("carrying out the restore plan", () => {
 	const harness = (options: {
 		refresh: (tokens: RadientTokens) => Promise<RadientTokens>;
 		stored?: RadientTokens | null;
+		/** Overrides the store's write, for the one failure the live wiring cannot
+		 *  produce: `writeStoredOauth` swallows its own errors, so a DEVICE that cannot
+		 *  persist has to be injected. */
+		write?: () => Promise<void>;
 	}) => {
 		const calls: string[] = [];
 		const deps = {
 			readOauth: async () => options.stored ?? null,
-			writeOauth: async () => {
-				calls.push("write");
-			},
+			writeOauth:
+				options.write ??
+				(async () => {
+					calls.push("write");
+				}),
 			clearOauth: async () => {
 				calls.push("clear");
 			},
@@ -237,6 +243,34 @@ describe("carrying out the restore plan", () => {
 		expect(calls).toEqual(["write", "discover"]);
 		expect(outcome.restored).toBe(true);
 		expect(outcome.tokens?.access).toBe("fresh");
+	});
+
+	it("keeps the credential when the DEVICE cannot persist the rotation", async () => {
+		/* A rejected `writeOauth` means this device could not RECORD a grant that is
+		 *  itself perfectly good, so the restore must not delete it AND must not skip
+		 *  discovery — the session works for this run. This also pins the SHAPE of the
+		 *  two `try` blocks: the write sits in its own, outside the refresh's, so a
+		 *  rejection can never reach the `expired()` arm. Widening the refresh's `try`
+		 *  to cover the write — the mistake review round 5, m2 narrowed out — sends this
+		 *  case to `clearOauth()` and fails on the first assertion (review round 6,
+		 *  M-C). */
+		const rotated = tokens({ access: "fresh", expires_at: NOW + 3_600_000 });
+		const { calls, deps } = harness({
+			stored: lapsed(),
+			refresh: async () => rotated,
+			write: async () => {
+				calls.push("write");
+				throw new Error("the keystore refused the write");
+			},
+		});
+
+		const outcome = await carryOutRestore(deps);
+
+		expect(calls).not.toContain("clear");
+		expect(calls).toEqual(["write", "discover"]);
+		expect(outcome.restored).toBe(true);
+		expect(outcome.tokens?.access).toBe("fresh");
+		expect(outcome.refusal).toBeNull();
 	});
 
 	it("adopts a live grant without touching the store", async () => {

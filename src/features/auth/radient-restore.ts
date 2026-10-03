@@ -171,7 +171,9 @@ export async function carryOutRestore(
 		 *  grant, and the `expired()` arm answers it by DELETING a credential nothing
 		 *  has questioned. `writeStoredOauth` swallows its own errors today, so the
 		 *  live wiring cannot reach that arm — but `writeOauth` is typed
-		 *  `Promise<void>`, so the next caller would inherit the trap. */
+		 *  `Promise<void>`, so the next caller would inherit the trap. The write itself
+		 *  is wrapped where it happens rather than at the caller, because a failure
+		 *  there must not skip discovery. */
 		let refreshed: RadientTokens;
 		try {
 			refreshed = await deps.refresh(tokens);
@@ -191,7 +193,20 @@ export async function carryOutRestore(
 			}
 			return expired();
 		}
-		await deps.writeOauth(refreshed);
+		/* Persisting the rotation is BEST-EFFORT, and for the same reason the `try`
+		 *  above exists at all: a write that fails says this DEVICE could not record the
+		 *  grant, not that the grant is bad. The refresh already succeeded, so the
+		 *  session works for this run and discovery must still run — a reader with a
+		 *  perfectly good refresh token must not be dropped back to the welcome surface
+		 *  because their keystore refused a write. Left uncaught it also escaped the
+		 *  cold start's `try/finally` as an unhandled rejection (review round 6, M-C). */
+		try {
+			await deps.writeOauth(refreshed);
+		} catch {
+			/* Nothing to say to the reader, and nowhere to say it: the credential is
+			 *  still good for this run, and the worst case at the next launch is the
+			 *  hand-off being re-run. */
+		}
 		tokens = refreshed;
 	}
 
