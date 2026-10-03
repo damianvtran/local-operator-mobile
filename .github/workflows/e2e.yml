@@ -1,0 +1,519 @@
+name: E2E (mock relay, audit and Maestro)
+
+# The end-to-end and design-audit layers, wired to the harness that owns them.
+#
+# EVERY COMMAND BELOW GOES THROUGH THE HARNESS'S OWN PACKAGE SCRIPTS
+# (`pnpm e2e:relay`, `pnpm audit:capture`, `pnpm e2e:canary`, …), which are the
+# interface `docs/e2e/ci-notes.md` publishes — not through file paths. That is
+# deliberate and it is round 2's M1: this workflow was first written against
+# `tools/**/*.mjs` names the harness had already renamed to `*.ts`, so every
+# command here would have failed the moment the harness merged. A script name
+# survives a rename; a path does not. The harness is plain Node with no
+# dependencies, so most of this workflow needs a checkout and nothing else.
+#
+# A MISSING HARNESS IS A FAILURE, NOT A SKIP. The `harness` job checks for the
+# package scripts and the Maestro flows, and FAILS — naming every missing piece —
+# rather than skipping the suites behind it, because a green conclusion would
+# claim the relay contract, the frame audit and the canary had run when none of
+# them had. Until the harness lands, this workflow is red on every ref, which is
+# the honest state: what it exists to run is not in the tree.
+#
+# ONE RETRY, AND ONLY FOR THE FLOWS (ADR 0004). Maestro gets `--retry`, which the
+# harness's own config asks CI to pass, and the retry is reported separately so a
+# flake is visible as a flake. Nothing else in the repository retries.
+#
+# WHAT IS DELIBERATELY NOT HERE, rather than quietly missing:
+#   * the **re-capture diff** (ADR 0003, §6 of the harness notes). It needs an
+#     isolated `lop mobile` and therefore the Python toolchain, and the script
+#     ADR 0003 requires does not exist yet — there is nothing to wire.
+#   * **Maestro on an iOS simulator.** The harness documents the invocation, and
+#     the flows are platform-parameterised, but the emulator job is the most
+#     expensive thing this repository runs and it should be green for a while
+#     before a second copy of it exists on macOS minutes. It is a follow-up, not
+#     a silent gap: docs/ci.md says so too.
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Nightly, off-peak: the emulator job is the slowest thing here and the least
+    # useful on a branch nobody is waiting for.
+    - cron: "17 3 * * *"
+  push:
+    branches:
+      - main
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: "24"
+  JAVA_VERSION: "17"
+  # Pinned explicitly. The Maestro installer accepts a version and otherwise
+  # installs "latest", and a mobile-e2e job whose driver changes silently between
+  # two runs is a job whose failures cannot be attributed to anything.
+  MAESTRO_VERSION: "2.11.0"
+  # Android 16, which is what Google requires of new apps and updates since
+  # 2026-08-31 (ADR 0004).
+  MAESTRO_API_LEVEL: "36"
+  # The scenario the mock relay is started with, named in ONE place so the
+  # capture, the audit and the flows all describe the same state — the harness
+  # notes are explicit that running them against different states makes the
+  # numbers mean nothing. `idle` is the relay's own default.
+  MOCK_RELAY_SCENARIO: idle
+
+jobs:
+  harness:
+    name: Is the audit harness present? (fails if it is not)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Detect the harness
+        # A GREEN RUN OF THIS WORKFLOW MUST MEAN THE SUITES RAN. Until this step
+        # could fail, a tree without `tools/` produced `success` with every suite
+        # `skipped` — a green tick on a suite that did not run (review M1). The
+        # harness is what this workflow exists to run (ADR 0003,
+        # `docs/e2e/ci-notes.md`), so its absence is a failure of the workflow's own
+        # premise.
+        #
+        # IT CHECKS THE HARNESS'S INTERFACE, NOT ITS FILE NAMES, and that is the fix
+        # for round 2's M1: this workflow was written against `*.mjs` paths the
+        # harness had already renamed to `*.ts`, so every command here would have
+        # failed the moment #8 merged and "it resolves itself when #8 lands" was
+        # false. The package scripts (`e2e:relay`, `e2e:typecheck`, `audit:capture`, …)
+        # are the interface #8 documents in `docs/e2e/ci-notes.md`, and they survive a
+        # rename — the same reason every other command in this pipeline goes through
+        # a package script rather than a path.
+        id: detect
+        run: |
+          set -euo pipefail
+          missing=()
+          for script in e2e:relay e2e:divergences e2e:canary e2e:typecheck e2e:docs audit:capture audit:run mock:relay; do
+            node -e "process.exit(require('./package.json').scripts?.[process.argv[1]] ? 0 : 1)" "$script" \
+              || missing+=("package script $script")
+          done
+          if ! find e2e/maestro -name '*.yaml' -print -quit 2>/dev/null | grep -q .; then
+            missing+=("e2e/maestro/**/*.yaml")
+          fi
+          {
+            echo "## End-to-end harness"
+            echo
+            if [ ${#missing[@]} -eq 0 ]; then
+              echo "Every piece of the harness is present; the suites below ran."
+            else
+              echo "**The harness is not in this tree.** Missing:"
+              echo
+              for piece in "${missing[@]}"; do echo "- \`$piece\`"; done
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "::error::the audit harness is not in this tree: ${missing[*]}. This workflow exists to run it (ADR 0003, docs/e2e/ci-notes.md) and it ships in its own change, so this is a real failure of the pipeline rather than a reason to skip: a green conclusion here would claim the mock relay, the frame audit and the canary had run when none of them had."
+            exit 1
+          fi
+          echo "the harness is present in full: its package scripts and its Maestro flows"
+
+  mock-relay-contract:
+    name: Mock relay contract and divergence checks
+    needs: harness
+    runs-on: ubuntu-latest
+    # BOUND SIZED FROM A MEASUREMENT, NOT FROM HOPE (review round 3, M3). The
+    # harness documents `pnpm e2e:relay` as its slowest documented command — "the
+    # whole relay contract plus the canary's mutation self-test now runs ~18
+    # minutes — so the default bound is sized to it" (`tools/lib/doc-commands.ts`,
+    # `--timeout 1500`), and `tools/mock-relay/verify.ts` says "a healthy run of the
+    # mutation group takes fifteen minutes". A reviewer's own attempt on this host
+    # was killed at ~14 minutes *inside* the mutation group, on a machine at load
+    # 120-226. The 15-minute job bound this replaces could therefore only ever
+    # report a timeout.
+    #
+    # THE BOUND COVERS THE JOB'S PARTS, NOT ITS LARGEST ONE (review rounds 4's m1 and
+    # 5's N5-1): the invariant is `install + 25 + 10 < 45`. At 40 the install was
+    # left five minutes, which is the one term with no measurement of its own — the
+    # file's number is 631 packages / ~746 MB — so a slow install would have been
+    # cancelled by the runner's generic maximum-execution-time line instead of a step
+    # naming itself, which is the failure the bound was raised for in the first
+    # place. The install prints its own duration, so the next person sizing this has
+    # a measurement rather than an estimate.
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install dependencies
+        # AN EXPLICIT INSTALL, because an implicit one was already happening: pnpm
+        # 12's `verify-deps-before-run` defaults to `install`, so the "no install"
+        # version of this job ran `pnpm e2e:relay` and pulled 631 packages into a
+        # tree that had none — a 746 MB `node_modules`, created without
+        # `--frozen-lockfile`, which is the one property every other job in this
+        # repository is careful about (round 3 addendum, measured). Making it
+        # explicit keeps the lockfile guarantee and puts the cost inside the budget
+        # where it can be seen.
+        run: |
+          set -euo pipefail
+          start=$(date +%s)
+          pnpm install --frozen-lockfile
+          echo "install took $(( $(date +%s) - start ))s (631 packages / ~746 MB measured on a "
+          echo "cold store; cached, it is seconds). This is part of the job's 45-minute bound."
+
+      # The mock's own proof: every assertion the verifier makes over the relay's
+      # contract, which is what keeps the mock from drifting away from the relay it
+      # re-implements. It prints its own assertion count — read that line rather than
+      # a number written down here, which would drift the first time a check is
+      # added. Bounded inside the job's bound so a hang names this command instead of
+      # leaving a cancelled job with no output.
+      - name: Assert the mock relay's contract
+        timeout-minutes: 25
+        run: pnpm e2e:relay
+
+      - name: Assert the harness agrees with the relay where it diverges on purpose
+        # Bounded like the contract above: a hang here should name this check rather
+        # than leave the job to be cancelled with no output.
+        timeout-minutes: 10
+        run: pnpm e2e:divergences
+
+  docs-commands:
+    name: Every command the harness documents (nightly and on demand)
+    needs: harness
+    # WHY THIS IS NOT ON THE PULL-REQUEST PATH (`if:` below). It runs the whole of
+    # `docs/e2e/README.md`, whose slowest entry is the relay contract — ~18 minutes
+    # by the harness's own note — and that command already has its own job above. On
+    # a pull request the sweep would double the longest job in this workflow for no
+    # extra coverage; nightly it is exactly the check worth having, because it is the
+    # one that fails when a tool is renamed or a documented invocation goes stale
+    # (review m2's other half, and round 3's M3 for the bound).
+    #
+    # It exports the web build first: some documented commands declare a `web-build`
+    # prerequisite, and the harness prints SKIP *with the reason* rather than
+    # pretending — so without a `dist/` the sweep would honestly skip them, which is
+    # less than this job is for.
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Export the web target
+        # Same reason as `web-audit`: the harness drives the export, and the
+        # documented commands that need one are skipped without it.
+        timeout-minutes: 15
+        run: pnpm export:web
+
+      - name: Run every documented command
+        # The command's own default bound is 25 minutes (`--timeout 1500`), which is
+        # what fits inside this job's 60 with the export and the install ahead of it.
+        timeout-minutes: 40
+        run: pnpm e2e:docs
+
+  web-audit:
+    name: Web target — frames, audit and the canary
+    needs: harness
+    # LINUX, not macOS. This job ran on `macos-26` only because the harness's
+    # Chrome discovery was hard-coded to `/Applications/Google Chrome.app/...` and
+    # failed on a Linux runner; `tools/lib/chrome.ts` now tries `/usr/bin/
+    # google-chrome`, `google-chrome-stable` and finally PATH, so the macOS spend
+    # (the pipeline's scarcest resource) is gone. It is unproven until the harness
+    # lands and this job first runs for real — if that run cannot find a browser,
+    # the fix is this one line, and the run will say so rather than pass.
+    runs-on: ubuntu-latest
+    # The capture matrix is minutes; the bound is the diagnosis, not the budget.
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Type-check the harness
+        # Review m2, and the harness's own §0: `pnpm typecheck` covers the app and
+        # `scripts/**`, so `tools/**` and `e2e/**` would otherwise be checked by
+        # nothing. This is their gate, and it is seconds.
+        #
+        # `e2e:docs` USED TO RUN HERE AND NO LONGER DOES. It executes every command
+        # `docs/e2e/README.md` names, and the slowest of those is `pnpm e2e:relay` —
+        # ~18 minutes by the harness's own note — so a 5-minute step bound could only
+        # ever report a timeout, while the relay command already has a job of its own
+        # above (review round 3, M3: the command also ran twice per push). The
+        # documented-command sweep still runs, nightly, in `docs-commands`.
+        timeout-minutes: 10
+        run: pnpm e2e:typecheck
+
+      - name: Export the web target
+        # The harness drives the EXPORT, not a dev server: the export is what a
+        # reviewer's bundle would be, and a dev server's on-the-fly transform is a
+        # second variable in a job whose whole point is reproducibility.
+        run: pnpm export:web
+
+      - name: Start the mock relay on an ephemeral port
+        # One relay per job, on a port the OS picks (never the operator's own
+        # 4098), printing the port alone on stdout. Diagnostics go to a file: a
+        # background process holding the step's stdout open is how a CI job hangs.
+        run: |
+          set -euo pipefail
+          pnpm mock:relay \
+            --scenario "${{ env.MOCK_RELAY_SCENARIO }}" \
+            --print-port --quiet \
+            < /dev/null > "$RUNNER_TEMP/relay.port" 2> "$RUNNER_TEMP/relay.err" &
+          echo $! > "$RUNNER_TEMP/relay.pid"
+          for _ in $(seq 1 60); do
+            port=$(head -1 "$RUNNER_TEMP/relay.port" 2>/dev/null || true)
+            case "$port" in ''|*[!0-9]*) sleep 0.5 ;; *) break ;; esac
+          done
+          port=$(head -1 "$RUNNER_TEMP/relay.port")
+          case "$port" in ''|*[!0-9]*) echo "::error::the mock relay never printed a port"; cat "$RUNNER_TEMP/relay.err"; exit 1 ;; esac
+          echo "MOCK_RELAY_URL=http://127.0.0.1:$port" >> "$GITHUB_ENV"
+          echo "mock relay: http://127.0.0.1:$port (pid $(cat "$RUNNER_TEMP/relay.pid"))"
+
+      - name: Capture the frames
+        # BOUNDED PER STEP, not just per job. A capture that hangs would otherwise
+        # consume the whole job budget and report nothing: measured on 2026-09-30,
+        # this step ran over 90 minutes inside a 45-minute job timeout (run
+        # 36669731994) without GitHub reaping it, so the run said only that it was
+        # still going. Measured again on 2026-10-03 (run 37098393675), the capture
+        # costs 2.24 s/cell — 403 cells / 1209 frames in 903.1 s — so the `core`
+        # plan of 858 cells needs ~32 min and cannot finish inside this bound. The
+        # `--tier ci` sample can: 264 cells, ~10 min at the same rate, which leaves
+        # the audit and the canary their own steps below. (`full` is 3102 cells, and
+        # stays a dispatched or local run.)
+        timeout-minutes: 20
+        # THE DOCUMENTED INVOCATION, through the harness's own script
+        # (`docs/e2e/ci-notes.md` §3). An earlier version derived the cell list here
+        # and passed `--cells`, working around a mismatch between what the capture
+        # asked the relay for and what the relay served; the harness fixed that at
+        # the source — its own `relayState()` reads the scenario registry — so the
+        # workaround is gone and this is one command with the flags the notes name.
+        #
+        # `--tier` is named rather than left to the default, because the default is
+        # `core`: the tier is what keeps the sample, the plan and the manifest
+        # reading one list declared in the harness (`tools/visual/matrix.ts`) rather
+        # than a range spelled out here that the harness cannot see. The count is
+        # printed with the plan, so a reviewer can check this file against the run
+        # rather than trust it.
+        #
+        # Frames are written outside the repository and uploaded — never committed
+        # (ADR 0003).
+        run: pnpm audit:capture --dir dist --out "$RUNNER_TEMP/frames" --relay "$MOCK_RELAY_URL" --tier ci --consecutive --yes
+
+      - name: Audit the frames against the rubric
+        timeout-minutes: 5
+        # Exits non-zero on any FAIL row. BLOCKED rows are reported and counted
+        # rather than failing the job — an app whose type ignores the root
+        # font-size is a finding for the review thread, not a broken harness.
+        run: pnpm audit:run --manifest "$RUNNER_TEMP/frames/manifest.json" --out "$RUNNER_TEMP/audit"
+
+      - name: Run the canary
+        timeout-minutes: 5
+        # The gate that stops the audit rotting into a rubber stamp: the fixture
+        # page declares its own defects, so this fails if the audit stops catching
+        # them, starts failing the clean page, or if the harness's own scale
+        # dimension goes inert.
+        run: pnpm e2e:canary
+
+      - name: Stop the mock relay
+        if: always()
+        run: |
+          if [ -f "$RUNNER_TEMP/relay.pid" ]; then
+            pid=$(cat "$RUNNER_TEMP/relay.pid")
+            # By exact pid, and only the one this job started.
+            kill "$pid" 2>/dev/null || true
+            for _ in $(seq 1 20); do kill -0 "$pid" 2>/dev/null || break; sleep 0.25; done
+            kill -9 "$pid" 2>/dev/null || true
+          fi
+          echo "relay stopped; any remaining listener on the port was never this job's"
+
+      - name: Upload the frames, the manifest and the audit report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: audit-frames
+          path: |
+            ${{ runner.temp }}/frames
+            ${{ runner.temp }}/audit
+          retention-days: 30
+
+  maestro-android:
+    name: Maestro flows on an Android 16 emulator
+    needs: harness
+    # NIGHTLY AND ON DEMAND, not per push: the harness's own note says "nightly and
+    # release gate", and ADR 0003's risk table limits emulator flows for the same
+    # reason — they are the slowest, flakiest part of the pipeline and the least
+    # informative on a branch somebody is iterating on.
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build the debug APK to install on the emulator
+        # Built here rather than downloaded from the Android workflow: a
+        # cross-workflow artefact download couples two independent triggers, and
+        # the debug APK is exactly what the flows should run against.
+        run: |
+          set -euo pipefail
+          pnpm exec expo prebuild --platform android --clean --no-install
+          cd android
+          ./gradlew assembleDebug --no-daemon
+
+      - name: Read the app's identity from the APK it just built
+        # The flows are told the APP_ID they should launch, and until this step
+        # existed that value was the harness's own default
+        # (`com.radient.localoperator.mobile`) while the app the build produces is
+        # `com.localoperator.mobile` (app.config.ts). Two bundle ids in one
+        # repository is a bug whichever one is right — and the right one for the
+        # pipeline is whatever the build actually produced, because that is the
+        # app installed on the emulator. Reading it out of the APK removes the
+        # second copy entirely, and the bundle id itself stays an operator
+        # decision rather than something CI invents.
+        run: |
+          set -euo pipefail
+          aapt=$(find "${ANDROID_HOME:-$ANDROID_SDK_ROOT}" -name aapt2 -type f | sort | tail -1)
+          echo "aapt2: $aapt"
+          package=$("$aapt" dump badging android/app/build/outputs/apk/debug/app-debug.apk \
+            | sed -n "s/^package: name='\\([^']*\\)'.*/\\1/p" | head -1)
+          if [ -z "$package" ]; then
+            echo "::error::could not read the package name out of the debug APK"
+            exit 1
+          fi
+          echo "APP_ID=$package" >> "$GITHUB_ENV"
+          echo "app under test: $package"
+
+      - name: Restore the Android AVD
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/.android/avd
+            ~/.android/adb*
+          key: ${{ runner.os }}-avd-${{ env.MAESTRO_API_LEVEL }}-${{ hashFiles('e2e/maestro/**') }}
+
+      - name: Install the pinned Maestro CLI
+        # The one `curl | bash` this repository allows (ADR 0004), and
+        # MAESTRO_VERSION is what keeps it from being "latest".
+        run: |
+          set -euo pipefail
+          export MAESTRO_VERSION
+          curl -fsSL "https://get.maestro.mobile.dev" | bash
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+
+      - name: Write the relay password the flows are given
+        # Generated per run into a 0600 file rather than committed as a literal,
+        # which is what the harness asks for: a flow carrying a literal password
+        # could not be committed at all.
+        run: |
+          set -euo pipefail
+          umask 077
+          node -e 'process.stdout.write(require("node:crypto").randomBytes(24).toString("base64url"))' > "$RUNNER_TEMP/relay-password"
+          echo "relay password: $(wc -c < "$RUNNER_TEMP/relay-password") bytes, mode $(stat -c '%a' "$RUNNER_TEMP/relay-password")"
+
+      - name: Start the mock relay for the flows
+        run: |
+          set -euo pipefail
+          pnpm mock:relay \
+            --scenario "${{ env.MOCK_RELAY_SCENARIO }}" \
+            --password "$(cat "$RUNNER_TEMP/relay-password")" \
+            --print-port --quiet \
+            < /dev/null > "$RUNNER_TEMP/relay.port" 2> "$RUNNER_TEMP/relay.err" &
+          echo $! > "$RUNNER_TEMP/relay.pid"
+          for _ in $(seq 1 60); do
+            port=$(head -1 "$RUNNER_TEMP/relay.port" 2>/dev/null || true)
+            case "$port" in ''|*[!0-9]*) sleep 0.5 ;; *) break ;; esac
+          done
+          port=$(head -1 "$RUNNER_TEMP/relay.port")
+          case "$port" in ''|*[!0-9]*) echo "::error::the mock relay never printed a port"; cat "$RUNNER_TEMP/relay.err"; exit 1 ;; esac
+          echo "MOCK_RELAY_URL=http://127.0.0.1:$port" >> "$GITHUB_ENV"
+          # The emulator reaches the host's loopback through 10.0.2.2, which is why
+          # the flows are given the URL rather than reaching for localhost.
+          echo "RELAY_URL_FOR_DEVICE=http://10.0.2.2:$port" >> "$GITHUB_ENV"
+          echo "mock relay: http://127.0.0.1:$port (pid $(cat "$RUNNER_TEMP/relay.pid"))"
+
+      - name: Run the flows
+        id: flows
+        uses: reactivecircus/android-emulator-runner@c9c93e6ba9c4194322e114c40970d5983d9a07cc # v2.38.0
+        with:
+          api-level: ${{ env.MAESTRO_API_LEVEL }}
+          target: google_apis
+          arch: x86_64
+          avd-name: lo-mobile-e2e
+          force-avd-creation: false
+          emulator-options: >-
+            -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect
+            -no-snapshot-save
+          disable-animations: true
+          # A spell checker underlining as you type is a known source of text-input
+          # flakiness.
+          disable-spellchecker: true
+          script: |
+            set -euo pipefail
+            adb install -r android/app/build/outputs/apk/debug/app-debug.apk
+            maestro --config e2e/maestro/config.yaml test --retry 1 \
+              -e APP_ID="$APP_ID" \
+              -e RELAY_URL="$RELAY_URL_FOR_DEVICE" \
+              -e RELAY_PASSWORD="$(cat "$RUNNER_TEMP/relay-password")" \
+              # The harness's own fixture session id, from the corpus the mock
+              # relay serves (`fixtures/relay/**` — the id every captured
+              # projection uses). Named here because a bare constant in a file
+              # that names the source of every other constant is the one that
+              # gets copied somewhere it does not belong.
+              -e SESSION_ID=6714def86197 \
+              -e MAESTRO_SCREENSHOTS="$RUNNER_TEMP/maestro-screenshots"
+
+      - name: Stop the mock relay
+        if: always()
+        run: |
+          if [ -f "$RUNNER_TEMP/relay.pid" ]; then
+            pid=$(cat "$RUNNER_TEMP/relay.pid")
+            kill "$pid" 2>/dev/null || true
+            for _ in $(seq 1 20); do kill -0 "$pid" 2>/dev/null || break; sleep 0.25; done
+            kill -9 "$pid" 2>/dev/null || true
+          fi
+          rm -f "$RUNNER_TEMP/relay-password"
+
+      - name: Upload the per-step screenshots
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: maestro-screenshots
+          path: ${{ runner.temp }}/maestro-screenshots
+          retention-days: 30
