@@ -100,18 +100,11 @@ export const Textarea = ({
 			<Text className="text-body-sm text-ink-muted">{label}</Text>
 			{/* Only while it is the thing on screen: any value hides it, so it can never
 			 *  need room the content is already taking. Zero height and clipped, so it
-			 *  lays out and reports its own height without moving anything.
-			 *
-			 *  `text-ink-muted` — the SAME ink the real placeholder renders with — is
-			 *  load-bearing rather than cosmetic: the audit measures text nodes in the
-			 *  DOM and does not know this one is invisible, so an unset ink was read as
-			 *  the browser default (black, 1.29:1 on the dark canvas) and reported as a
-			 *  placeholder contrast failure (R-5). Mirroring the visible placeholder's
-			 *  ink makes the measurement describe the placeholder the reader sees. */}
+			 *  lays out and reports its own height without moving anything. */}
 			{placeholder !== undefined && value === "" ? (
 				<View className="h-0 overflow-hidden" aria-hidden>
 					<Text
-						className="text-body text-ink-muted"
+						className="text-body"
 						onLayout={(event) =>
 							setPlaceholderHeight(event.nativeEvent.layout.height)
 						}

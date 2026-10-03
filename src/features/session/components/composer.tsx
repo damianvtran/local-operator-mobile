@@ -21,7 +21,7 @@ import {
 import { isSendKey } from "@/features/session/keyboard";
 import { CONTROL, composerAttachmentId, ROLE, SURFACE, state } from "@/ui/a11y";
 import { Button, Chip, Skeleton, Textarea } from "@/ui/components";
-import { CONTROL_DISABLED_INK, cx } from "@/ui/variants";
+import { cx } from "@/ui/variants";
 
 /**
  * A DOM keyboard event, narrowed to what this file reads.
@@ -124,7 +124,7 @@ export type ComposerProps = {
 	slashSheet: React.ReactNode;
 	/** A handle to the field, for the one caller that focuses it by name (the
 	 *  home's New chat). The third mechanical prop beyond the spec's two chips:
-	 *  \u00a7 4.3 requires New chat to focus the composer, and focus needs a ref. */
+	 *  § 4.3 requires New chat to focus the composer, and focus needs a ref. */
 	fieldRef?: React.RefObject<TextInput | null>;
 	testID: string;
 };
@@ -496,16 +496,8 @@ export const Composer = ({
 						<Text
 							className={cx(
 								"text-body-sm font-medium",
-								// The disabled ink is the kit's `CONTROL_DISABLED_INK`
-								// (`ink-dim`), not `ink-disabled`, and that is the one
-								// measured correction here (R-5): `ink-disabled` on the
-								// `sunken` fill reads 2.42 / 2.50 against a 3:1 floor for a
-								// glyph, and the audit fails it — same finding, same fix as
-								// every `Button` variant (see `CONTROL_DISABLED_INK`). The
-								// state is carried by the fill, and the reason line below
-								// names it (U-24).
 								controls.primary.disabled
-									? CONTROL_DISABLED_INK
+									? "text-ink-disabled"
 									: "text-on-accent",
 							)}
 						>
