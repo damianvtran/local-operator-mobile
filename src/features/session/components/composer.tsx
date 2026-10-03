@@ -124,7 +124,7 @@ export type ComposerProps = {
 	slashSheet: React.ReactNode;
 	/** A handle to the field, for the one caller that focuses it by name (the
 	 *  home's New chat). The third mechanical prop beyond the spec's two chips:
-	 *  \u00a7 4.3 requires New chat to focus the composer, and focus needs a ref. */
+	 *  § 4.3 requires New chat to focus the composer, and focus needs a ref. */
 	fieldRef?: React.RefObject<TextInput | null>;
 	testID: string;
 };
