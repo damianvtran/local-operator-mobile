@@ -316,6 +316,29 @@ export function createRelay(options: RelayOptions = {}) {
 	const resetWorld = (): void => {
 		state.world = scenarios[state.scenario]?.world() ?? {};
 		state.scenarioStartedAt = Date.now();
+		/* A state's own faults are applied with it: `S5/error` is reachable only when the
+		 * stream comes up and THEN fails, so the scenario that models it carries the fault
+		 * rather than depending on the runner having passed `--fault` (review round 8). */
+		if (state.world.faults !== undefined) {
+			const declared = state.world.faults.map(
+				(name) => name.split("=")[0] ?? "",
+			);
+			const unknown = declared.filter(
+				(name) =>
+					!FAULT_NAMES.some((known) =>
+						known.includes("<")
+							? name.startsWith(known.slice(0, known.indexOf("<")))
+							: known === name,
+					),
+			);
+			// A typo here would be a state that quietly never happens, which is the
+			// failure this whole round is about; `parseFaults` drops what it cannot name.
+			if (unknown.length > 0)
+				throw new Error(
+					`scenario '${state.scenario}' declares an unknown fault: ${unknown.join(", ")}`,
+				);
+			state.faults = parseFaults(state.world.faults);
+		}
 		// Per-scenario ledgers reset with the scenario, so a duplicate-detection
 		// test cannot inherit an id admitted by the previous scenario.
 		state.admitted = new Map();
@@ -405,6 +428,42 @@ export function createRelay(options: RelayOptions = {}) {
 	};
 
 	const gatewayDetail = (reason: string): string => fix.gatewayDetail(reason);
+
+	/**
+	 * The gateway's own refusal for a scenario's or fault's failure key, or `null`
+	 * when the key is not a refusal at all.
+	 *
+	 * ONE definition for three callers: the blanket refusal that fronts every route,
+	 * the mid-session fault, and the `refused` stream mode that fails the session's
+	 * event channel ALONE. A second spelling would let the same key answer different
+	 * bodies depending on which path reached it, which is the divergence this file
+	 * already has a note about (`503-` keys sharing a prefix across two spaces).
+	 *
+	 * `tag` is the label fragment the caller finishes the request with: the reason for
+	 * a `<prefix>-<reason>` key, the key itself for a named body.
+	 */
+	const gatewayRefusalFor = (
+		key: string,
+	): {
+		status: number;
+		json: Json;
+		headers?: Record<string, string>;
+		tag: string;
+	} | null => {
+		const body = GATEWAY_FAILURES[key];
+		if (body !== undefined) {
+			return { status: body.status, json: body.json, tag: key };
+		}
+		if (!key.startsWith("503-")) return null;
+		const reason = key.slice(4);
+		const refusal = gatewayUnavailable(gatewayDetail(reason), reason);
+		return {
+			status: 503,
+			json: refusal.json,
+			headers: refusal.headers,
+			tag: reason,
+		};
+	};
 
 	/* --------------------------------------------------------------- helpers -- */
 
@@ -1453,6 +1512,28 @@ export function createRelay(options: RelayOptions = {}) {
 			const projection = projectionFor(sessionId);
 
 			if (rest === "/events" && method === "GET") {
+				const stream: StreamSpec = world.stream ?? { mode: "idle" };
+				if (stream.mode === "refused") {
+					/* The session's OWN channel fails while the catalogue and the health
+					 * route answer: the client holds a projection and its stream is refused,
+					 * which is the only shape the session view's error state is reached from
+					 * (`S5/error`). A blanket `failure` refuses `/api/sessions` too, so no
+					 * projection ever arrives and `session-error` is not rendered however
+					 * true the failure is — measured, and the reason this mode exists. */
+					const key = stream.refusalKey ?? "[redacted]";
+					const refusal = gatewayRefusalFor(key);
+					if (refusal === null)
+						throw new Error(`no such gateway refusal: ${key}`);
+					if (state.record) {
+						recordRequest({
+							method,
+							path: pathname + (url.search || ""),
+							status: refusal.status,
+							note: `stream:gateway:${refusal.tag}`,
+						});
+					}
+					return sendJson(res, refusal.status, refusal.json, refusal.headers);
+				}
 				if (!projection) {
 					// The real relay does NOT refuse an unknown session here: it opens a
 					// 200 event stream that stays open and sends no frame (measured on a
@@ -1468,7 +1549,6 @@ export function createRelay(options: RelayOptions = {}) {
 						frames: () => null,
 					});
 				}
-				const stream: StreamSpec = world.stream ?? { mode: "idle" };
 				const seedProjection = structuredClone(projection);
 				return openStream(req, res, {
 					kind: "projection",
@@ -1867,47 +1947,27 @@ export function createRelay(options: RelayOptions = {}) {
 						refusal.headers ?? {},
 					);
 				}
-				// `GATEWAY_FAILURES` is consulted FIRST. Two key spaces share the
-				// `503-` prefix — `503-<RELAY_DETAIL reason>` is the refusal, while
-				// `503-relay-not-installed` is one of the gateway's own bodies with a
-				// different shape — so testing the prefix first silently misroutes
-				// that body into the reason lookup and answers a 500.
-				const body = GATEWAY_FAILURES[key];
-				if (body !== undefined) {
-					finish(body.status, `gateway:${key}`);
-					sendJson(res, body.status, body.json);
-					return;
-				}
-				if (key.startsWith("503-")) {
-					const reason = key.slice(4);
-					const detail = gatewayDetail(reason);
-					const refusal = gatewayUnavailable(detail, reason);
-					finish(503, `gateway:${reason}`);
-					sendJson(res, 503, refusal.json, refusal.headers);
-					return;
-				}
-				throw new Error(`no such gateway failure: ${key}`);
+				// The key space is shared (`503-<RELAY_DETAIL reason>` is the refusal while
+				// `503-relay-not-installed` is a gateway body), and `gatewayRefusalFor`
+				// holds that ordering once for every caller.
+				const refusal = gatewayRefusalFor(key);
+				if (refusal === null)
+					throw new Error(`no such gateway failure: ${key}`);
+				finish(refusal.status, `gateway:${refusal.tag}`);
+				sendJson(res, refusal.status, refusal.json, refusal.headers);
+				return;
 			}
 
 			// A mid-session gateway refusal, from `--fault 503-<reason>`.
 			if (state.faults.http.refuseWith) {
 				const key = state.faults.http.refuseWith;
-				// Same ordering rule as the scenario path above: bodies first.
-				const body = GATEWAY_FAILURES[key];
-				if (body !== undefined) {
-					finish(body.status, `fault:gateway:${key}`);
-					sendJson(res, body.status, body.json);
-					return;
-				}
-				if (key.startsWith("503-")) {
-					const reason = key.slice(4);
-					const detail = gatewayDetail(reason);
-					const refusal = gatewayUnavailable(detail, reason);
-					finish(503, `fault:gateway:${reason}`);
-					sendJson(res, 503, refusal.json, refusal.headers);
-					return;
-				}
-				throw new Error(`no such gateway failure: ${key}`);
+				// Same definition as the scenario path above.
+				const refusal = gatewayRefusalFor(key);
+				if (refusal === null)
+					throw new Error(`no such gateway failure: ${key}`);
+				finish(refusal.status, `fault:gateway:${refusal.tag}`);
+				sendJson(res, refusal.status, refusal.json, refusal.headers);
+				return;
 			}
 
 			// `--scenario loading` holds the API open: there is no "loading" body

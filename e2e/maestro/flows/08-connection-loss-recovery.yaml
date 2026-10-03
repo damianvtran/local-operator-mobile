@@ -48,7 +48,7 @@ env:
     clearState: true
 - assertVisible:
     id: "sessions-screen"
-# PENDING: connection-banner from session
+# SCENARIO: connection-banner from session
 # - assertNotVisible:
 #     id: "connection-banner"
 # BLOCKED: needs reconnect-toast from session — the contract has a `toast`
@@ -56,9 +56,9 @@ env:
 # reconnect, which is the distinction the step is about.
 # - assertNotVisible:
 #     id: "reconnect-toast"
-# PENDING: session-transcript from session
+# SCENARIO: session-transcript from session
 # - assertVisible:
 #     id: "session-transcript"
-# PENDING: composer-receipt from session
+# SCENARIO: composer-receipt from session
 # - assertVisible:
 #     id: "composer-receipt"

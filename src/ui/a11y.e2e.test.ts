@@ -10,6 +10,7 @@ import {
 	isKnownIdentifier,
 	REGION,
 	SCREEN,
+	STATE_MARKER,
 	SURFACE,
 } from "@/ui/a11y";
 
@@ -39,16 +40,223 @@ const walk = (dir: string): string[] =>
  * where declaring an identifier and referring to it inside a `//` comment passed the
  * guard while nothing rendered it. A leading `*` also drops the JSDoc line, and block
  * comments are removed whole.
+ *
+ * Quote-aware on purpose (this branch's review round 2, F2). A naive `/\/\/.*$/` also
+ * truncates `https://…` inside a string, which HIDES the real code after it on that
+ * line — the direction that matters, because a literal this check fails to see is the
+ * defect it exists for. The residual hole is narrower and recorded rather than hidden:
+ * a constant mentioned inside a string still counts as referenced.
  */
-const stripComments = (text: string): string =>
-	text
-		.replace(/\/\*[\s\S]*?\*\//g, "")
-		.replace(/^\s*\*.*$/gm, "")
-		.replace(/\/\/.*$/gm, "");
+const stripComments = (text: string): string => {
+	let out = "";
+	let quote: string | null = null;
+	for (let i = 0; i < text.length; i += 1) {
+		const ch = text[i] ?? "";
+		const next = text[i + 1] ?? "";
+		if (quote !== null) {
+			out += ch;
+			if (ch === "\\") {
+				out += next;
+				i += 1;
+				continue;
+			}
+			if (ch === quote) quote = null;
+			continue;
+		}
+		if (ch === '"' || ch === "'" || ch === "`") {
+			quote = ch;
+			out += ch;
+			continue;
+		}
+		if (ch === "/" && next === "/") {
+			while (i < text.length && text[i] !== "\n") i += 1;
+			out += "\n";
+			continue;
+		}
+		if (ch === "/" && next === "*") {
+			i += 2;
+			while (i < text.length && !(text[i] === "*" && text[i + 1] === "/")) {
+				i += 1;
+			}
+			i += 1;
+			continue;
+		}
+		out += ch;
+	}
+	return out
+		.split("\n")
+		.filter((line) => !/^\s*\*/.test(line))
+		.join("\n");
+};
 
 /** `id: "x"` and `- id: x` selectors, quoted or not. Text selectors and regexes
  * are not identifiers and are deliberately not matched. */
 const TESTID_LITERAL = /\btestID\s*[:=]\s*(?:"[^"]*"|\{\s*[`"']|["'`])/;
+
+/**
+ * An identifier SHAPED string: kebab-case with at least one segment break.
+ *
+ * A fallback like `?? "loading"` is copy, not a selector, and flagging it would
+ * make this check something to work around rather than something to satisfy. Every
+ * contract id has a dash, and each one that does not (`toast`) is a whole value
+ * rather than a fallback.
+ */
+const IDENTIFIER_SHAPED = /^[a-z0-9]+(?:-[a-z0-9]+)+$/;
+
+/** A declaration's initializer: `const ID = <expr>;`, up to the statement's `;`. */
+const HOISTED_LITERAL = (name: string): RegExp =>
+	new RegExp(`(?:const|let|var)\\s+${name}\\s*=\\s*([\\s\\S]*?);`);
+
+/**
+ * The literal an `obj.key` / `obj["key"]` accessor reads, when the object is a local
+ * literal.
+ *
+ * `testID={ids.root}` with `const ids = { root: "pending-card" }` is the hoisted
+ * shape with one more step: the value is a literal in the same file, so a check that
+ * stops at identifiers reports nothing. The object must be declared in the SAME file
+ * and as a literal; anything else is the dynamic case named in the comment below.
+ */
+const memberLiteral = (text: string, accessor: string): string | null => {
+	const parts =
+		/^([A-Za-z_$][\w$]*)\s*(?:\.\s*([A-Za-z_$][\w$]*)|\[\s*["'`]([^"'`]+)["'`]\s*\])$/.exec(
+			accessor.trim(),
+		);
+	if (parts === null) return null;
+	const [, object, dotKey, bracketKey] = parts;
+	const key = dotKey ?? bracketKey ?? "";
+	if (key === "") return null;
+	const body =
+		new RegExp(
+			`(?:const|let|var)\\s+${object}\\s*=\\s*\\{([\\s\\S]*?)\\}`,
+		).exec(text)?.[1] ?? "";
+	const hit = new RegExp(
+		`(?:^|[\\s,{])(?:${key}|["'][^"']*["'])\\s*:\\s*(["'\`])([^"'\`]*)\\1`,
+	).exec(body);
+	return hit?.[2] ?? null;
+};
+
+/** A template is read up to its first `${`: a literal prefix with a dash is a
+ * second spelling of a family, which is what the builders exist to avoid. */
+const shapedLiteral = (raw: string): string | null => {
+	const literal = raw.split("${")[0] ?? "";
+	const candidate = literal.endsWith("-") ? literal.slice(0, -1) : literal;
+	return IDENTIFIER_SHAPED.test(candidate) ? raw : null;
+};
+
+/**
+ * Identifier-shaped strings inside a `testID={…}` EXPRESSION, including a hoisted
+ * one a step away.
+ *
+ * `TESTID_LITERAL` reads a `testID` whose value is a literal, and cannot see
+ * `testID={ok ? "one-id" : "another-id"}` — which is not hypothetical: the subagent
+ * detail badge carried exactly that shape, so the fold moved the contract's
+ * constant out from under a renderer (`subagentRunning`) and neither direction of
+ * this file noticed (review round 5, M1). A check that cannot see one of the
+ * contract's own renderers is the defect, not the instance.
+ *
+ * The braces are walked with the same quote awareness as `stripComments`. A bare
+ * identifier is resolved through its DECLARATION, reading every literal in the
+ * initializer rather than only a whole-value one: `const id = isApproval ?
+ * "pending-card" : "ask-card"` is the same second spelling one refactor away from the
+ * M1 shape, and it is what the two card ids were hiding behind (review round 6). An
+ * object accessor (`ids.root`, `ids["root"]`) is resolved the same way when the object
+ * is a literal in the same file, and a dash-terminated literal inside an assembled
+ * expression (`"session-row-" + id`) is read as the family prefix it is.
+ *
+ * Still out of reach, named rather than implied: an id that arrives through an
+ * IMPORT, and one computed at runtime (`buildId()`). Both need either module
+ * resolution — following a re-export chain, i.e. becoming a bundler — or execution, and
+ * a check that only ever sees source has no way to be total. The other direction
+ * (`references every declared identifier from at least one route or primitive`) is
+ * what covers an imported id in practice: it must be named somewhere that renders.
+ */
+const literalTestIds = (text: string): string[] => {
+	const out: string[] = [];
+	const needle = "testID";
+	for (
+		let i = text.indexOf(needle);
+		i !== -1;
+		i = text.indexOf(needle, i + 1)
+	) {
+		let j = i + needle.length;
+		while ((text[j] ?? "") === " ") j += 1;
+		if (text[j] !== "=") continue;
+		j += 1;
+		while ((text[j] ?? "") === " ") j += 1;
+		if (text[j] !== "{") continue;
+		const start = j + 1;
+		let depth = 0;
+		let quote: string | null = null;
+		for (; j < text.length; j += 1) {
+			const ch = text[j] ?? "";
+			if (quote !== null) {
+				if (ch === "\\") {
+					j += 1;
+					continue;
+				}
+				if (ch === quote) quote = null;
+				continue;
+			}
+			if (ch === '"' || ch === "'" || ch === "`") {
+				quote = ch;
+				continue;
+			}
+			if (ch === "{") depth += 1;
+			else if (ch === "}") {
+				depth -= 1;
+				if (depth === 0) break;
+			}
+		}
+		const body = text.slice(start, j);
+		const bare = body.trim();
+		if (/^[A-Za-z_$][\w$]*$/.test(bare)) {
+			const initializer = HOISTED_LITERAL(bare).exec(text)?.[1] ?? "";
+			for (const match of initializer.matchAll(/["`']([^"`']*)["`']/g)) {
+				if (shapedLiteral(match[1] ?? "") !== null)
+					out.push(`${bare} = ${match[0]}`);
+			}
+			continue;
+		}
+		if (/^[A-Za-z_$][\w$]*\s*(?:\.|\[)/.test(bare)) {
+			const literal = memberLiteral(text, bare);
+			if (literal !== null && shapedLiteral(literal) !== null)
+				out.push(`${bare} = "${literal}"`);
+			continue;
+		}
+		const assembled = /\+|\$\{/.test(body);
+		for (const match of body.matchAll(/["`']([^"`']*)["`']/g)) {
+			if (isMemberSubscript(body, match.index ?? 0)) continue;
+			const raw = match[1] ?? "";
+			if (shapedLiteral(raw) !== null) {
+				out.push(match[0]);
+				continue;
+			}
+			/* A dash-terminated literal inside an assembled expression is the builders'
+			 * own output spelled by hand: `"session-row-" + id` is a family prefix, and a
+			 * prefix this check cannot see is a whole family it cannot see. */
+			if (assembled && /-$/.test(raw)) out.push(match[0]);
+		}
+	}
+	return out;
+};
+
+/**
+ * Whether the string at `at` is a member SUBSCRIPT rather than a value.
+ *
+ * `STATE_MARKER.session["rich-rows"]` reads a key out of the contract, and the key is
+ * a state name, not an id: flagging it would make the contract's own nested table
+ * unreadable to this check. A quoted string is a value unless it sits directly after
+ * `[` of an index expression (`ident[…]`), which is the subscript shape.
+ */
+const isMemberSubscript = (body: string, at: number): boolean => {
+	let i = at - 1;
+	while ((body[i] ?? "") === " ") i -= 1;
+	if (body[i] !== "[") return false;
+	i -= 1;
+	while ((body[i] ?? "") === " ") i -= 1;
+	return /[\w.$\])]/.test(body[i] ?? "");
+};
+
 const YAML_FILE = /\.ya?ml$/;
 /* `.ts` as well as `.tsx`: the session view keeps its connection banner's copy and
  *  its identifier map in `.ts` modules, so a `.tsx`-only scan reported every one of
@@ -99,6 +307,63 @@ const PENDING_LINE = /^\s*#\s*PENDING:\s*(\S+)\s+from\s+(\S+)/;
 const SCENARIO_LINE = /^\s*#\s*SCENARIO:\s*(\S+)\s+from\s+(\S+)/;
 
 /**
+ * `STATE_MARKER.subject.state` → id, flattened out of the NESTED table.
+ *
+ * The nesting is the harness's key (`(subject, state)`, because two screens can be in
+ * a state of the same name) and the identifier check needs the flat triples, so the
+ * one place that knows the table's shape is this parser — which reads the contract's
+ * own source, so a renamed subject or state cannot leave the check looking at a name
+ * that no longer exists.
+ */
+const STATE_MARKER_NAMES: ReadonlyArray<{
+	name: string;
+	subject: string;
+	state: string;
+	value: string;
+}> = (() => {
+	const source = readFileSync(join(root, "src/ui/a11y.ts"), "utf8");
+	const block =
+		/export const STATE_MARKER = \{([\s\S]*?)\n\} as const satisfies/.exec(
+			source,
+		)?.[1] ?? "";
+	const out: Array<{
+		name: string;
+		subject: string;
+		state: string;
+		value: string;
+	}> = [];
+	for (const [, subject, body] of block.matchAll(
+		/(\w+):\s*\{([\s\S]*?)\n\t\}/g,
+	)) {
+		for (const [, raw, value] of (body ?? "").matchAll(
+			/(\w+|"[^"]+"):\s*"([^"]+)"/g,
+		)) {
+			const state = (raw ?? "").replace(/"/g, "");
+			out.push({
+				name: `STATE_MARKER.${subject}.${state}`,
+				subject: subject ?? "",
+				state,
+				value: value ?? "",
+			});
+		}
+	}
+	return out;
+})();
+
+/**
+ * Whether a rendering file NAMES this marker.
+ *
+ * Two spellings, because a state name with a dash in it is written as a subscript
+ * (`STATE_MARKER.session["rich-rows"]`) and one without as a property
+ * (`STATE_MARKER.session.idle`) — the check has to accept the spelling a render site
+ * can actually use, or it pushes the next author into a second one.
+ */
+const namesMarker = (entry: { subject: string; state: string }): RegExp =>
+	new RegExp(
+		`\\bSTATE_MARKER\\.${entry.subject}\\.${entry.state}\\b|\\bSTATE_MARKER\\.${entry.subject}\\["${entry.state}"\\]`,
+	);
+
+/**
  * `GROUP.key` → value, read out of the contract's own source.
  *
  * The flows name id VALUES (`session-transcript`) while the code names CONSTANTS
@@ -118,6 +383,7 @@ const CONTRACT_NAMES: ReadonlyArray<{ name: string; value: string }> = (() => {
 			out.push({ name: `${group}.${key ?? ""}`, value: value ?? "" });
 		}
 	}
+	out.push(...STATE_MARKER_NAMES);
 	return out;
 })();
 
@@ -140,11 +406,63 @@ const SOURCE_FILES = [
 	.map((file) => ({
 		file: file.slice(root.length),
 		text: readFileSync(file, "utf8"),
-	}));
+	}))
+	.map(({ file, text }) => ({ file, text, stripped: stripComments(text) }));
 
-const RENDER_SOURCE = SOURCE_FILES.map(({ text }) => stripComments(text)).join(
-	"\n",
-);
+const RENDER_SOURCE = SOURCE_FILES.map(({ stripped }) => stripped).join("\n");
+
+/**
+ * The files that RENDER: a name mentioned in one of these is a name a component
+ * paints, because the file carries a `testID` at all.
+ *
+ * Direction 2 below reads a mention as a render, which is the right reading for a
+ * constant used as a prop and the wrong one for a marker returned as DATA —
+ * `state-marker.ts` names every marker it can return, so counting it as a renderer
+ * let all twelve markers pass while nothing painted one of them (review round 5).
+ * A state marker is a claim about a frame, so it has to be named where the frame is
+ * built.
+ */
+const RENDERING_SOURCE = SOURCE_FILES.filter(({ stripped }) =>
+	/\btestID\b/.test(stripped),
+)
+	.map(({ stripped }) => stripped)
+	.join("\n");
+
+/**
+ * Whether a FAMILY marker (`"session-row-"`) is rendered.
+ *
+ * A family's value is a PREFIX, never a whole id, so "does a renderer name this
+ * constant" is the wrong question — nothing spells `session-row-` as an id; the rows
+ * are ASSEMBLED from it by a builder the renderer calls (`testID={sessionRowId(id)}`).
+ * The builder lives in the contract, which `SOURCE_FILES` excludes (a contract is not
+ * its own renderer), so it is read from the contract's own text and what is required
+ * is the CALL, in a file that renders. A family assembled inline in a component is the
+ * same claim stated directly.
+ */
+const CONTRACT_SOURCE = readFileSync(join(root, "src/ui/a11y.ts"), "utf8");
+
+const familyIsRendered = (prefix: string): boolean => {
+	const assembled = "`" + prefix + "${";
+	if (RENDER_SOURCE.includes(assembled)) return true;
+	/* `lastIndexOf`, because the contract's own prose names the family in a doc
+	 *  comment ABOVE its builder — the definition is the last occurrence. */
+	const at = CONTRACT_SOURCE.lastIndexOf(assembled);
+	if (at === -1) return false;
+	const builder = (() => {
+		/* The NEAREST declaration before the template, not the first one in the file: a
+		 *  greedy `[\s\S]*` match otherwise walks back to an unrelated `const`. */
+		let name: string | undefined;
+		for (const match of CONTRACT_SOURCE.slice(0, at).matchAll(
+			/(?:export\s+)?(?:const|function)\s+(\w+)/g,
+		))
+			name = match[1];
+		return name;
+	})();
+	return (
+		builder !== undefined &&
+		new RegExp(`\\b${builder}\\(`).test(RENDERING_SOURCE)
+	);
+};
 
 /** The static identifier VALUES some route or primitive names. */
 const RENDERED_VALUES: ReadonlySet<string> = new Set(
@@ -154,25 +472,17 @@ const RENDERED_VALUES: ReadonlySet<string> = new Set(
 );
 
 /**
- * The session view's parameterised prefixes: declared, and built by nothing on this
- * branch.
+ * The parameterised prefixes that are declared and built by NOTHING yet.
  *
  * A family's renderedness cannot be inferred the way a static's can — the id is data
  * (`session-row-6714`), so no file spells it and the constant-names lookup above finds
  * nothing to match. The list is therefore explicit, asserted to be a subset of the
- * declared families, and the reason is the same one `PENDING_SESSION_VIEW` records.
+ * declared families, and it is EMPTY of the session view's ten: those arrived with the
+ * branch that renders them, which is the condition this list's own note set for their
+ * removal.
  */
 const PENDING_FAMILIES: readonly string[] = [
-	"transcript-row-",
-	"transcript-image-",
-	"model-option-",
-	"effort-rung-",
-	"slash-command-",
-	"composer-attachment-",
-	"subagent-chip-",
-	"todos-row-",
-	"ask-question-",
-	"ask-option-",
+	/* Declared as a family, built by nothing on any head yet. */
 	"session-empty-",
 ];
 
@@ -200,72 +510,6 @@ const referencedIds = (): Map<string, string[]> => {
 	}
 	return byId;
 };
-
-/**
- * The identifiers declared for stream D2's session view, whose renderers are not on
- * this branch.
- *
- * One list, one reason, and a condition for its removal: the commit that merges the
- * session view deletes these names from here, and until it does the count above makes
- * the exemption visible in every run rather than silent.
- */
-const PENDING_SESSION_VIEW: ReadonlySet<string> = new Set([
-	"CONTROL.composerSend",
-	"CONTROL.composerStop",
-	"CONTROL.composerAttach",
-	"CONTROL.composerResume",
-	"CONTROL.composerInput",
-	"CONTROL.composerRetry",
-	"CONTROL.composerModelChip",
-	"CONTROL.composerEffortChip",
-	"CONTROL.slashFilter",
-	"CONTROL.pendingApprove",
-	"CONTROL.pendingDeny",
-	"CONTROL.pendingRemember",
-	"CONTROL.pendingAskSubmit",
-	"CONTROL.todosDisclosure",
-	"CONTROL.subagentsDisclosure",
-	"CONTROL.connectionRetry",
-	"CONTROL.connectionSignIn",
-	"CONTROL.connectionConsole",
-	"CONTROL.codeBlockCopy",
-	"SURFACE.sessionTranscript",
-	"SURFACE.sessionComposer",
-	"SURFACE.sessionColumn",
-	"SURFACE.sessionContext",
-	"SURFACE.sessionLoading",
-	"SURFACE.sessionTranscriptEmpty",
-	"SURFACE.sessionWorkingLine",
-	"SURFACE.composerNotice",
-	"SURFACE.composerError",
-	"SURFACE.composerRetained",
-	"SURFACE.composerReceipt",
-	"SURFACE.composerDisabledReason",
-	"SURFACE.queuedMessageChip",
-	"SURFACE.connectionBanner",
-	"SURFACE.connectionWaiting",
-	"SURFACE.connectionClearsByItself",
-	"SURFACE.connectionCertificateRejected",
-	"SURFACE.connectionHostUnresolved",
-	"SURFACE.connectionComputerOffline",
-	"SURFACE.connectionMachineRemedy",
-	"SURFACE.connectionRelayNotInstalled",
-	"SURFACE.connectionTunnelUnavailable",
-	"SURFACE.modelSheet",
-	"SURFACE.effortSheet",
-	"SURFACE.slashSheet",
-	"SURFACE.todosPanel",
-	"SURFACE.todosBody",
-	"SURFACE.subagentsPanel",
-	"SURFACE.subagentsBody",
-	"SURFACE.subagentRunning",
-	"SURFACE.pendingCardBody",
-	"SURFACE.pendingCardDetail",
-	"SURFACE.pendingCardDestructiveMarker",
-	"SURFACE.pendingCardAnswer",
-	"SURFACE.pendingCardError",
-	"SURFACE.transcriptStreaming",
-]);
 
 describe("the Maestro flows against src/ui/a11y.ts", () => {
 	// `e2e/` lands with the audit-harness stream. Until it is on this branch there
@@ -425,40 +669,44 @@ describe("the routes and primitives against src/ui/a11y.ts", () => {
 		// drift from the constant the flows are checked against. Spread and
 		// caller-supplied values (`testID={testID}`) are fine; a string is not.
 		const offenders = sources
-			.filter(({ text }) => TESTID_LITERAL.test(text))
-			.map(({ file }) => file);
+			.map(({ file, stripped }) => ({
+				file,
+				literals: [
+					...(TESTID_LITERAL.test(stripped)
+						? ["a testID with a string value"]
+						: []),
+					...new Set(literalTestIds(stripped)),
+				],
+			}))
+			.filter(({ literals }) => literals.length > 0)
+			.map(({ file, literals }) => `${file} — ${literals.join(", ")}`);
 		expect(offenders).toEqual([]);
 	});
 
 	it("references every declared identifier from at least one route or primitive", () => {
 		// A declared-but-unrendered identifier is a selector no flow can ever hit,
-		// and it would still satisfy the flow check above.
-		const rendered = sources.map(({ text }) => stripComments(text)).join("\n");
-		const unused = Object.entries({
-			SCREEN,
-			EMPTY,
-			CONTROL,
-			SURFACE,
-			REGION,
-		}).flatMap(([group, ids]) =>
-			Object.keys(ids)
-				.filter((key) => !new RegExp(`\\b${group}\\.${key}\\b`).test(rendered))
-				.map((key) => `${group}.${key}`),
-		);
-		/* The session view's vocabulary is declared here, in the ONE contract, while
-		 *  its renderers live on the other stream's branch — this branch carries no
-		 *  `src/features/session/**` at all. The exemption is checked from BOTH sides,
-		 *  which is what keeps it from becoming a dumping ground: a pending name must
-		 *  be unrendered today, so the commit that renders one has to delete it from
-		 *  this list, and the list is printed by name whenever the check runs. */
-		const pending = unused.filter((name) => PENDING_SESSION_VIEW.has(name));
-		const genuinelyUnused = unused.filter(
-			(name) => !PENDING_SESSION_VIEW.has(name),
-		);
-		expect(genuinelyUnused).toEqual([]);
-		expect(
-			pending.length,
-			`${pending.length} identifier(s) declared for the session view and not yet rendered on this branch: ${pending.join(", ")}`,
-		).toBe(PENDING_SESSION_VIEW.size);
+		// and it would still satisfy the flow check above. A STATE_MARKER is stricter
+		// still: naming it in a module that returns it as data is not rendering it, and
+		// its name is a nested path the flat groups do not have.
+		const rendered = RENDER_SOURCE;
+		const unused = [
+			...Object.entries({ SCREEN, EMPTY, CONTROL, SURFACE, REGION }).flatMap(
+				([group, ids]) =>
+					Object.keys(ids)
+						.filter(
+							(key) => !new RegExp(`\\b${group}\\.${key}\\b`).test(rendered),
+						)
+						.map((key) => `${group}.${key}`),
+			),
+			...STATE_MARKER_NAMES.filter((entry) =>
+				entry.value.endsWith("-")
+					? !familyIsRendered(entry.value)
+					: !namesMarker(entry).test(RENDERING_SOURCE),
+			).map((entry) => entry.name),
+		];
+		/* No exemption list: the session view renders its vocabulary on this head, so
+		 *  the assertion is the plain one the empty list was waiting for. An id declared
+		 *  here and rendered by nothing is a selector no flow can ever hit. */
+		expect(unused).toEqual([]);
 	});
 });
