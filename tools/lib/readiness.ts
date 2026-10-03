@@ -33,6 +33,19 @@
  * Ad-hoc pages (`--cells path:/…`, which is how the canary drives its own fixtures)
  * carry no subject: such a page makes no claim about an app state, so the marker rule
  * does not apply to it and the `*-empty` prohibition still does.
+ *
+ * PRESENCE vs VISIBILITY — two different questions, and conflating them was a real
+ * failure of this rule rather than a refinement of it. A **state marker counts by
+ * PRESENCE**: it is a machine-readable assertion about what a screen is showing, not an
+ * affordance a person taps, and the app's own derived markers are zero-size `View`s by
+ * design (`src/features/session/state-markers.tsx`), so asking a marker to have a
+ * non-zero box excluded exactly the states this check exists to affirm — measured, that
+ * made `populated`, `streaming`, `aborted`, `queued`, `error`, `rich-rows`,
+ * `pending-approval`, `pending-ask` and `subagents` unmeasurable on a head that renders
+ * every one of them. A **screen ROOT still requires VISIBILITY**: the root IS the
+ * screen, and a zero-size root really would mean nothing rendered. The two lists arrive
+ * as separate fields (`presentIds`, `visibleIds`) so neither rule can be satisfied by
+ * the other's evidence, and both directions are pinned in `scripts/readiness.test.ts`.
  */
 
 import { markerMatches, stateMarkerFor } from "../../src/ui/a11y.ts";
@@ -148,8 +161,19 @@ export interface ReadinessFacts {
 	actualPath: string;
 	/** The app's screen-root testid for this screen, when it is a real app screen. */
 	root: string | undefined;
-	/** Every `data-testid` in the DOM. */
-	testIds: readonly string[];
+	/**
+	 * Every `data-testid` in the DOM, rendered or not. This is what a STATE MARKER is
+	 * judged on: a marker asserts what the screen is showing, and the app's derived
+	 * markers are zero-size by design, so presence is the honest test for one.
+	 */
+	presentIds: readonly string[];
+	/**
+	 * The subset of `presentIds` whose element is actually rendered (non-zero box, no
+	 * `display:none` / `visibility:hidden` on it or an ancestor). This is what a ROOT is
+	 * judged on, and only a root: the root IS the screen, so a zero-size one means
+	 * nothing rendered, while a hidden-but-present MARKER still asserts its state.
+	 */
+	visibleIds: readonly string[];
 	/** True when the RELAY's own registry declared this cell. */
 	relayRegistryBacked: boolean;
 	/** True when the relay served at least one request for this cell. */
@@ -246,8 +270,8 @@ export function readinessIssues(facts: ReadinessFacts): ReadinessIssue[] {
 			message: `the app is on '${facts.actualPath}' but the cell asked for '${facts.askedPath}'`,
 		});
 	}
-	const { root, testIds, state } = facts;
-	if (root !== undefined && !testIds.includes(root)) {
+	const { root, presentIds, visibleIds, state } = facts;
+	if (root !== undefined && !visibleIds.includes(root)) {
 		issues.push({
 			kind: "root",
 			message: `no '${root}' root in the DOM: the app did not render screen ${facts.screen}`,
@@ -258,7 +282,7 @@ export function readinessIssues(facts: ReadinessFacts): ReadinessIssue[] {
 	// for is a declared gap, named as its own problem so it can be told apart from a
 	// marker that should have been there and was not.
 	const required = requiredStateMarker(facts.screen, state);
-	if (required !== null && !markerMatches(required, testIds)) {
+	if (required !== null && !markerMatches(required, presentIds)) {
 		issues.push({
 			kind: "marker",
 			message:
@@ -271,7 +295,9 @@ export function readinessIssues(facts: ReadinessFacts): ReadinessIssue[] {
 	// The prohibition half, kept for the states that are not `empty` themselves: a
 	// populated cell showing an empty marker is in the empty state whatever else it
 	// carries.
-	const emptyMarkers = testIds.filter((id) => id.endsWith(EMPTY_MARKER_SUFFIX));
+	const emptyMarkers = presentIds.filter((id) =>
+		id.endsWith(EMPTY_MARKER_SUFFIX),
+	);
 	if (state !== "empty" && emptyMarkers.length > 0) {
 		issues.push({
 			kind: "empty",

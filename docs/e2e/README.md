@@ -114,6 +114,22 @@ it is on screen in every state), and a value ending in `-` is a family prefix
 (`session-row-`, `past-row-`). A state with no entry is a **declared gap**: the
 harness reports the cell by name rather than inventing a marker.
 
+**A marker counts by PRESENCE; a screen root requires VISIBILITY.** Two different
+questions, and conflating them made most of the app's declared states unmeasurable. A
+state marker is a machine-readable assertion about what a screen is showing — not an
+affordance a person taps — and the app's derived markers are zero-size `View`s by
+design (`src/features/session/state-markers.tsx`), so requiring a non-zero box
+excluded exactly the states this rule exists to affirm: the design round on PR #12
+measured that `populated`, `streaming`, `aborted`, `queued`, `error`, `rich-rows`,
+`pending-approval`, `pending-ask` and `subagents` could not be measured as shipped. A
+**root** still requires a rendered box — `display:none`, `visibility:hidden` and a
+zero-area rect all fail it — because the root IS the screen: a zero-size root really
+would mean nothing drew. The probe reports both lists (`testIds` = presence,
+`visibleTestIds` = rendered) and `tools/lib/readiness.ts` reads them separately
+(`presentIds` for a marker, `visibleIds` for a root), so neither rule can be satisfied
+by the other's evidence. Both directions are pinned in `scripts/readiness.test.ts` and
+in `verify`'s readiness guard.
+
 ### Seeding a run so the app actually talks to the relay
 
 ```sh
@@ -134,6 +150,25 @@ relay-backed cell renders "The relay could not be reached". That run is green,
 its frames exist, and none of them is evidence, which is why the default is now
 the served origin. `--seed-route` / `--seed-password` remain as overrides.
 
+The origin must also be **stable across runs**, which is what `--port` is for: the
+harness serves the build on an ephemeral port by default, so each run's serve origin —
+the one the seed names, and the one the app's saved route and login are keyed by in
+`localStorage` and the browser profile — is a different origin from the last run's. Pin
+it (`--port 4321`) whenever a run depends on state an earlier navigation left behind
+(a hand login, or a warm-up cell below).
+
+**A relay-backed cell whose screen re-subscribes on login needs a WARM-UP first.** The
+capture navigates once per cell and reuses one browser, and the design round measured
+on PR #12 that the session screen does not re-subscribe its stream once login lands, so
+a single-navigation capture keeps the 401 banner and the cell reads as an unreached
+state. Nothing in `runCapture` warms the page up today — it navigates straight to each
+cell's route — so a plan whose FIRST cell is relay-backed is the one to read with that
+in mind, and a cell that needs the warm-up is a limitation of this harness rather than
+of the relay. Measured counter-example on this head, so the limitation is not
+overstated: `--cells S4/populated` alone, from a cold profile in one navigation, still
+reaches the relay and is ready — the stream re-subscription is the session screen's
+property, not one of relay-backed cells as a class.
+
 ### What the app still has to do (this harness cannot)
 
 1. **Nine empty markers.** On this head `src/ui/a11y.ts` declares `-empty` for
@@ -147,7 +182,10 @@ the served origin. `--seed-route` / `--seed-password` remain as overrides.
    renders unlabelled skeletons.
 4. **The computer cells**, which need Radient's account API — either a fixture
    path the mock can serve or an app-side state marker driven by something the
-   harness can produce.
+   harness can produce. (Distinct from the relay-backed cells above, which the
+   design round on PR #12 established ARE reachable with the serve origin pinned
+   and a warm-up cell first — see "Seeding a run" — so "the relay cannot serve
+   this" is about the account API, not about the relay.)
 
 ---
 

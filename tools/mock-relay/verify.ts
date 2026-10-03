@@ -33,7 +33,9 @@ import { fileURLToPath } from "node:url";
 // the identifiers it names are the thing this file cross-checks, so reading them from
 // the module is the only way the check cannot drift from what the app ships.
 import {
+	IDENTIFIER_FAMILIES,
 	IDENTIFIERS,
+	isKnownIdentifier,
 	SCREEN,
 	STATE_MARKER,
 	stateMarkerFor,
@@ -63,6 +65,7 @@ import {
 import {
 	declaredSkipFor,
 	markerGapProblem,
+	type ReadinessFacts,
 	readinessProblems,
 	requiredStateMarker,
 	SCREEN_MARKER_SUBJECT,
@@ -2042,61 +2045,125 @@ async function main() {
 	// rather than an invented name this file hoped the app would render.
 	group = "readiness guard";
 	{
-		const base = {
+		// Fixtures name the ids on their page. A ROOT is judged on the RENDERED list and a
+		// MARKER on the PRESENT one (`lib/readiness.ts`), and every id a fixture names is
+		// rendered unless the case is ABOUT a hidden node — so `page()` mirrors the one list
+		// into the other here rather than repeating it at eight sites. `capture`, the only
+		// production caller, always passes the two lists separately.
+		// The frame facts every case shares. The two id lists are NOT here on purpose: a
+		// fixture that spread `base` would carry its defaults back into `page()`'s derived
+		// list, which is how this helper first shipped and how every root check in this
+		// group went red.
+		const base: Omit<
+			ReadinessFacts,
+			"screen" | "state" | "presentIds" | "visibleIds"
+		> = {
 			askedPath: "/",
 			actualPath: "/",
 			root: "sessions-screen",
-			testIds: [] as string[],
 			relayRegistryBacked: false,
 			relayReached: false,
 		};
+		const page = (
+			over: Pick<ReadinessFacts, "screen" | "state"> &
+				Partial<ReadinessFacts> & { presentIds: readonly string[] },
+		): ReadinessFacts => ({
+			...base,
+			...over,
+			// The caller's own `visibleIds` when it has one (the case about a hidden node), the
+			// present list otherwise — which is what "every id this fixture names is rendered"
+			// means. Derived LAST so the spread cannot undo it.
+			visibleIds: over.visibleIds ?? over.presentIds,
+		});
 		const markerProblem = (state: string, marker: string) =>
 			`the cell declares '${state}' but the marker '${marker}' is not in the DOM: ` +
 			"nothing in the frame affirms that state, so the cell is NOT MEASURABLE for it";
 
+		/* PRESENCE vs VISIBILITY — the two rules read different lists, both ways */
+		check(
+			"a zero-size MARKER still counts, while a zero-size ROOT does not",
+			[
+				readinessProblems(
+					page({
+						screen: "S4",
+						state: "populated",
+						// The marker is in the DOM and has no box: the app's derived state markers are
+						// zero-size `View`s by design, so requiring a rect excluded every state the
+						// audit exists to affirm.
+						presentIds: ["sessions-screen", "session-row-6714def86197"],
+						visibleIds: ["sessions-screen"],
+					}),
+				),
+				readinessProblems(
+					page({
+						screen: "S4",
+						state: "populated",
+						// The ROOT is in the DOM and has no box: the root IS the screen, so this is
+						// the frame that rendered nothing and it must stay a failure.
+						presentIds: ["sessions-screen", "session-row-6714def86197"],
+						visibleIds: ["session-row-6714def86197"],
+					}),
+				),
+			],
+			[
+				[],
+				[
+					"no 'sessions-screen' root in the DOM: the app did not render screen S4",
+				],
+			],
+		);
+
 		check(
 			"a cell whose state marker is present is ready",
-			readinessProblems({
-				...base,
-				screen: "S4",
-				state: "populated",
-				testIds: ["sessions-screen", "session-row-6714def86197"],
-			}),
+			readinessProblems(
+				page({
+					...base,
+					screen: "S4",
+					state: "populated",
+					presentIds: ["sessions-screen", "session-row-6714def86197"],
+				}),
+			),
 			[],
 		);
 		check(
 			"a cell whose state marker is absent fails BY NAME, not by absence",
-			readinessProblems({
-				...base,
-				screen: "S4",
-				state: "populated",
-				testIds: ["sessions-screen"],
-			}),
+			readinessProblems(
+				page({
+					...base,
+					screen: "S4",
+					state: "populated",
+					presentIds: ["sessions-screen"],
+				}),
+			),
 			[markerProblem("populated", "session-row-")],
 		);
 		check(
 			"a marker that is only a PREFIX of the ids on the page is not a match",
-			readinessProblems({
-				...base,
-				screen: "S4",
-				state: "populated",
-				// The family PREFIX itself is on the page and no row is: the check must
-				// not accept it, or a family declaration would satisfy its own rule.
-				testIds: ["sessions-screen", "session-row-"],
-			}),
+			readinessProblems(
+				page({
+					...base,
+					screen: "S4",
+					state: "populated",
+					// The family PREFIX itself is on the page and no row is: the check must
+					// not accept it, or a family declaration would satisfy its own rule.
+					presentIds: ["sessions-screen", "session-row-"],
+				}),
+			),
 			[markerProblem("populated", "session-row-")],
 		);
 		check(
 			"and the same page is refused for every state the matrix declares",
 			["streaming", "rich-rows", "pending-approval"].map(
 				(state) =>
-					readinessProblems({
-						...base,
-						screen: "S5",
-						state,
-						root: "session-screen",
-						testIds: ["session-screen"],
-					}).length,
+					readinessProblems(
+						page({
+							...base,
+							screen: "S5",
+							state,
+							root: "session-screen",
+							presentIds: ["session-screen"],
+						}),
+					).length,
 			),
 			[1, 1, 1],
 		);
@@ -2166,16 +2233,18 @@ async function main() {
 		// every expected list.
 		check(
 			"a populated cell showing an empty marker is still refused",
-			readinessProblems({
-				...base,
-				screen: "S4",
-				state: "populated",
-				testIds: [
-					"sessions-screen",
-					"session-row-6714def86197",
-					"sessions-empty",
-				],
-			}),
+			readinessProblems(
+				page({
+					...base,
+					screen: "S4",
+					state: "populated",
+					presentIds: [
+						"sessions-screen",
+						"session-row-6714def86197",
+						"sessions-empty",
+					],
+				}),
+			),
 			[
 				"the cell declares 'populated' but the app is showing an empty state (sessions-empty): " +
 					"the state was never reached",
@@ -2183,13 +2252,15 @@ async function main() {
 		);
 		check(
 			"a registry-backed cell the relay never served is refused even with its marker",
-			readinessProblems({
-				...base,
-				screen: "S4",
-				state: "populated",
-				testIds: ["sessions-screen", "session-row-6714def86197"],
-				relayRegistryBacked: true,
-			}),
+			readinessProblems(
+				page({
+					...base,
+					screen: "S4",
+					state: "populated",
+					presentIds: ["sessions-screen", "session-row-6714def86197"],
+					relayRegistryBacked: true,
+				}),
+			),
 			[
 				"the app made no request to the mock relay for this cell, so the state it " +
 					"declares (populated) cannot have come from the relay",
@@ -2197,13 +2268,15 @@ async function main() {
 		);
 		check(
 			"a cell on the wrong route is refused",
-			readinessProblems({
-				...base,
-				screen: "S4",
-				state: "populated",
-				actualPath: "/sign-in",
-				testIds: ["sessions-screen"],
-			})[0],
+			readinessProblems(
+				page({
+					...base,
+					screen: "S4",
+					state: "populated",
+					actualPath: "/sign-in",
+					presentIds: ["sessions-screen"],
+				}),
+			)[0],
 			"the app is on '/sign-in' but the cell asked for '/'",
 		);
 
@@ -2470,7 +2543,18 @@ async function main() {
 		const emptyBlock =
 			/export const EMPTY = \{[\s\S]*?\n\} as const;/.exec(a11ySource)?.[0] ??
 			"";
-		const declared = new Set(
+		// The set this check asks "is it the app's?" against is the app's DECLARED SURFACE
+		// (`IDENTIFIERS`), not the EMPTY block. PR #12 maps `session.empty` to a `SURFACE`
+		// id (`session-transcript-empty`) on purpose — a `SURFACE` and an `EMPTY` id are the
+		// same kind of thing, a `data-testid` the audit selects by name — and a check that
+		// only accepted EMPTY ids would go red on a contract the app declares perfectly
+		// well, which is the merge-order trap this group has already paid for once.
+		// Measured: with #12's table present this passes, and it still fails by name for a
+		// marker the app does not declare (`sign-in-empty`).
+		const declared = new Set<string>(IDENTIFIERS);
+		// The EMPTY block is still extracted, and still guarded below, because the second
+		// check needs to know which subject the app declares an EMPTY id for.
+		const emptyDeclared = new Set(
 			[...emptyBlock.matchAll(/"[a-z0-9-]+"/g)].map((match) =>
 				match[0].slice(1, -1),
 			),
@@ -2507,7 +2591,7 @@ async function main() {
 		const unexplained = rows.filter((screen) => {
 			const subject = SCREEN_MARKER_SUBJECT[screen];
 			if (subject === undefined) return false;
-			if (!declared.has(`${subject}-empty`)) return false;
+			if (!emptyDeclared.has(`${subject}-empty`)) return false;
 			return (
 				requiredStateMarker(screen, "empty") === null &&
 				!pendingScreens.has(screen)
@@ -2521,9 +2605,9 @@ async function main() {
 		);
 		check(
 			"the extraction reads the EMPTY block, not the rest of the file",
-			declared.size > 0 && declared.size < 20,
+			emptyDeclared.size > 0 && emptyDeclared.size < 20,
 			true,
-			`${declared.size} ids in the block`,
+			`${emptyDeclared.size} ids in the block`,
 		);
 	}
 
@@ -2572,11 +2656,17 @@ async function main() {
 			],
 			[null, true],
 		);
-		// The generalisation, so no single pair has to carry the claim: over EVERY screen the
-		// harness maps and every state any workstream names, a state is either marked by the
-		// app or a NAMED gap — never neither. That is the property both functions exist to
-		// keep, and unlike a named pair it cannot be invalidated by a sibling branch landing
-		// markers: it reads the contract, whatever it grows into.
+		// One check over the whole vocabulary, and it CAN FAIL — which is the point. An
+		// earlier revision asserted "a state is marked or a NAMED gap, never neither" and
+		// presented it as coverage; QA measured it as a tautology (180 pairs, 0 neither),
+		// because `markerGapProblem` IS the complement of `requiredStateMarker`. A guard that
+		// cannot fail while calling itself coverage is the failure class this file has paid
+		// for repeatedly. What is asserted instead is a fact about the CONTRACT, not about
+		// that relationship: every marker the harness can demand must be an id the APP KNOWS
+		// — a static in `IDENTIFIERS` or one of its `IDENTIFIER_FAMILIES` prefixes, judged by
+		// the app's own `isKnownIdentifier`. A name this file derived (`past-populated`,
+		// `session-empty`) is in neither, and neither is a stale or typo'd contract value, so
+		// both fail here BY NAME while every honest gap still passes.
 		const namedStates = [
 			"empty",
 			"loading",
@@ -2591,17 +2681,22 @@ async function main() {
 			"rich-rows",
 			"subagents",
 		];
-		const unmarked: string[] = [];
+		const unknownMarkers: string[] = [];
 		for (const screen of Object.keys(SCREEN_MARKER_SUBJECT))
 			for (const state of namedStates) {
 				const marker = requiredStateMarker(screen, state);
-				const gap = markerGapProblem(screen, state);
-				if (marker === null && gap === null)
-					unmarked.push(`${screen}/${state}`);
+				if (marker === null) continue;
+				// A family PREFIX (`session-row-`) is demanded as the bare prefix, which
+				// `isKnownIdentifier` refuses on purpose (it wants a concrete member); a family the
+				// app declares is the honest spelling of that demand.
+				const known = marker.endsWith("-")
+					? IDENTIFIER_FAMILIES.includes(marker) || isKnownIdentifier(marker)
+					: isKnownIdentifier(marker);
+				if (!known) unknownMarkers.push(`${screen}/${state} → ${marker}`);
 			}
 		check(
-			"every state of every mapped screen is marked by the app or a NAMED gap",
-			unmarked,
+			"every marker the harness can demand is one the app's contract knows",
+			unknownMarkers,
 			[],
 		);
 		// The harness's own vocabulary must name screens the APP renders: every subject in

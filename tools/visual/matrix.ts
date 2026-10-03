@@ -502,13 +502,18 @@ export const READINESS_PROBE = `
   const testIds = all
     .map((el) => el.getAttribute('data-testid'))
     .filter((id) => typeof id === 'string');
-  // WHICH markers count. A "state reached" claim is only worth anything if the thing
-  // carrying the marker is actually rendered: a testid on a \`display:none\` node, a
-  // \`visibility:hidden\` one, or a zero-area box would otherwise satisfy the affirmative
-  // rule while the user sees nothing. "Visible" here means, precisely: the element and
-  // its ancestors are not display:none or visibility:hidden (getComputedStyle), and its
-  // bounding rect has non-zero width and height. Opacity is NOT part of it — a
-  // translucent-but-present control is still a control the transcript renders.
+  // WHICH list a rule reads. The probe reports both, and the two are NOT interchangeable:
+  //  * \`testIds\` is PRESENCE, and it is what a STATE MARKER is judged on. A marker is a
+  //    machine-readable assertion about what a screen is showing, and the app's derived
+  //    markers are zero-size \`View\`s by design, so a non-zero box cannot be a condition
+  //    on one — measured, requiring it made \`populated\`, \`streaming\`, \`error\` and seven
+  //    more declared states unmeasurable on a head that renders every one of them.
+  //  * \`visibleTestIds\` is RENDERED, and it is what a screen ROOT is judged on: the root
+  //    IS the screen, so a \`display:none\` node, a \`visibility:hidden\` one or a zero-area
+  //    box really would mean nothing drew. "Visible" here means, precisely: the element
+  //    and its ancestors are not display:none or visibility:hidden (getComputedStyle),
+  //    and its bounding rect has non-zero width and height. Opacity is NOT part of it —
+  //    a translucent-but-present control is still a control the transcript renders.
   const visible = (el) => {
     const style = getComputedStyle(el);
     if (style.display === 'none' || style.visibility === 'hidden') return false;

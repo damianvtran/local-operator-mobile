@@ -672,11 +672,14 @@ function describeException(details: unknown): string {
 /** The readiness reading, narrowed from the page's own `unknown` reply. */
 interface Readiness {
 	path: string;
+	/** Every `data-testid` in the DOM, rendered or not: what a state MARKER is judged on. */
 	testIds: string[];
 	/**
 	 * The ids whose element is actually RENDERED (non-zero box, no `display:none` /
-	 * `visibility:hidden` on it or an ancestor). The state rule is judged on these, not
-	 * on `testIds`: a marker on a hidden node is not a state the user can see.
+	 * `visibility:hidden` on it or an ancestor). A ROOT is judged on these, because the
+	 * root IS the screen; a marker is judged on `testIds`, because the app's derived
+	 * state markers are zero-size by design and a marker asserts what the screen shows
+	 * rather than an affordance a person taps. See `lib/readiness.ts`.
 	 */
 	visibleTestIds: string[];
 	text: string;
@@ -696,8 +699,10 @@ function asReadiness(value: unknown): Readiness | null {
 		visibleTestIds: Array.isArray(bag.visibleTestIds)
 			? bag.visibleTestIds.filter((id): id is string => typeof id === "string")
 			: // An older page that does not report the filtered list is treated as having no
-				// visible markers rather than as having all of them: the affirmative rule must
-				// not be satisfiable by an absence of information.
+				// VISIBLE ids rather than as having all of them: that fails the root check, which
+				// is the safe direction, and it cannot make the marker rule pass on an absence of
+				// information because the marker is judged on `testIds`, which such a page does
+				// report.
 				[],
 		text: typeof bag.text === "string" ? bag.text : "",
 		elementCount: typeof bag.elementCount === "number" ? bag.elementCount : 0,
@@ -735,7 +740,8 @@ function readinessIssuesFor(
 		askedPath: path,
 		actualPath: readiness.path,
 		root: SCREEN_ROOTS[cell.screen],
-		testIds: readiness.visibleTestIds,
+		presentIds: readiness.testIds,
+		visibleIds: readiness.visibleTestIds,
 		relayRegistryBacked: relay?.registryBacked ?? false,
 		relayReached: relay?.reached ?? false,
 	});
