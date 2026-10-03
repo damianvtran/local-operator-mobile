@@ -14,8 +14,9 @@ Sources are the two requirement documents in this directory
 parent document before acting on an item — this list says *what* and *who*, not
 *how*.
 
-**Status of the programme:** nothing below is done. The app does not exist yet;
-this list is the plan, and it is ordered so that the long-lead items start first.
+**Status of the programme:** nothing below is done — no submission has been made to
+any store. The app exists and builds; this list is what remains before a store will
+accept it, ordered so that the long-lead items start first.
 
 ---
 
