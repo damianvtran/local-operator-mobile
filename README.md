@@ -141,8 +141,8 @@ The refusal pair is a 430 pt phone instead, which its 780 × 1691 shape confirms
 and the taller device is less a fix than a relocation: that screen's 34 pt
 home-indicator inset ends its content viewport at 810 pt of 844 (898 pt of 932 on
 the taller phone), so an uncropped frame of it always cuts whatever lands on that
-line — a control's label on the smaller phone, the terminal block's last line on
-the taller one.
+line — the card heading `Create one on the computer` on the smaller phone, the
+terminal block's last line on the taller one.
 
 | Screen | Light | Dark |
 | --- | --- | --- |
