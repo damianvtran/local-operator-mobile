@@ -291,7 +291,9 @@ second hand-maintained list.
 | `billing-inactive` | S13/error, S2/error | The tunnel's billing is past due: the gateway refuses with `authorization_refused`. |
 | `tunnel-revoked` | S13/error | The tunnel was revoked: the gateway refuses with `tunnel_not_authorized`. |
 | `login-required` | S13/error | The computer's Radient login expired: gateway `login_required`, and the edge answers 401 with the re-auth hint. |
-| `relay-refuses-command` | S13/error, S5/error | A reachable relay that refuses the command: 422 with a typed code, which must never be retried as-is. |
+| `relay-refuses-command` | S13/error | A reachable relay that refuses the command: 422 with a typed code, which must never be retried as-is. |
+| `mid-session-401` | S5/error | The stream comes up, carries the session, and then the edge refuses it: the reconnect is answered 401, so a connected session sits in its error state. |
+| `stream-refused` | — (reachable by name) | The session's own event channel is refused at the gateway while the catalogue and the health route answer: a refused subscription, which the app surfaces as a connection state, so no matrix cell declares it. |
 | `gateway-503-authorization_deferred` | S13/error | Every request refused at the gateway with `authorization_deferred`. |
 | `gateway-503-authorization_lease_pending` | S13/error | Every request refused at the gateway with `authorization_lease_pending`. |
 | `gateway-503-authorization_refused` | S13/error | Every request refused at the gateway with `authorization_refused`. |

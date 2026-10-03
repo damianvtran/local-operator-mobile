@@ -39,23 +39,23 @@ env:
 ---
 - launchApp:
     clearState: true
-# Reaching the subagent needs the chip, which the session view renders — and that
-# view is not on this branch, so the chip is `PENDING` rather than `SCENARIO`: the
-# renderer is what is missing, not the relay state.
-# PENDING: subagent-chip-<job> from session
+# Reaching the subagent needs the chip, which the session view renders; what is
+# missing is the session scenario that puts a roster on the screen, so this is a
+# SCENARIO rather than a PENDING marker.
+# SCENARIO: subagent-chip-<job> from session
 # - tapOn:
 #     id: "subagent-chip-${JOB_ID}"
-# BLOCKED: needs subagent-detail-prompt from subagent — nothing declares a
-# `subagent-detail-*` name; the contract's subagent surfaces are `subagents-panel` and
-# `subagents-body`, and the todos panel is `todos-panel`/`todos-body`.
+# The detail route's own surfaces. They used to be BLOCKED — the contract carried the
+# panel surfaces (`subagents-panel`/`subagents-body`) and no `subagent-detail-*` name —
+# and they are now declared in the contract by the change that renders them, so the
+# only thing missing is the scenario pin that reaches the route.
+# SCENARIO: subagent-detail-prompt from subagent
 # - assertVisible:
 #     id: "subagent-detail-prompt"
-# BLOCKED: needs subagent-detail-transcript from subagent — see above; the contract's
-# spelling is `subagents-body`.
+# SCENARIO: subagent-detail-transcript from subagent
 # - assertVisible:
 #     id: "subagent-detail-transcript"
-# BLOCKED: needs subagent-detail-todos from subagent — see above; the contract's
-# spelling is `todos-panel`.
+# SCENARIO: subagent-detail-todos from subagent
 # - scrollUntilVisible:
 #     element:
 #       id: "subagent-detail-todos"
