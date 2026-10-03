@@ -496,6 +496,15 @@ export const REGION = {
  * whole point of the table being the app's: `S5/empty` declaring `session-empty` would
  * have blamed the app's DOM for a name the harness picked.
  *
+ * **`session/empty` is the weakest claim in this table, and that is recorded rather
+ * than implied** (review round 7, R7-3): a REFUSED session also renders an empty
+ * transcript, so a frame the relay refused carries `session-transcript-empty` too —
+ * measured on this branch, where an unauthenticated capture of `S5/error` carried
+ * exactly that id. The cell is therefore satisfied by a frame that is empty for the
+ * wrong reason. Strengthening it needs a SECOND, connection-scoped id that only a
+ * connected-empty session paints — which is a session-view change, not a table entry:
+ * the table can only name one id per state, and the two states share this one.
+ *
  * `composer-*` makes nothing measurable today: no harness cell maps to a `composer`
  * subject (`SCREEN_MARKER_SUBJECT` maps S5/S8/S9 to `session`). It is declared because
  * the composer's state has to be named somewhere and this file is where ids live; the

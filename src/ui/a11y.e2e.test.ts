@@ -107,6 +107,34 @@ const IDENTIFIER_SHAPED = /^[a-z0-9]+(?:-[a-z0-9]+)+$/;
 const HOISTED_LITERAL = (name: string): RegExp =>
 	new RegExp(`(?:const|let|var)\\s+${name}\\s*=\\s*([\\s\\S]*?);`);
 
+/**
+ * The literal an `obj.key` / `obj["key"]` accessor reads, when the object is a local
+ * literal.
+ *
+ * `testID={ids.root}` with `const ids = { root: "pending-card" }` is the hoisted
+ * shape with one more step: the value is a literal in the same file, so a check that
+ * stops at identifiers reports nothing. The object must be declared in the SAME file
+ * and as a literal; anything else is the dynamic case named in the comment below.
+ */
+const memberLiteral = (text: string, accessor: string): string | null => {
+	const parts =
+		/^([A-Za-z_$][\w$]*)\s*(?:\.\s*([A-Za-z_$][\w$]*)|\[\s*["'`]([^"'`]+)["'`]\s*\])$/.exec(
+			accessor.trim(),
+		);
+	if (parts === null) return null;
+	const [, object, dotKey, bracketKey] = parts;
+	const key = dotKey ?? bracketKey ?? "";
+	if (key === "") return null;
+	const body =
+		new RegExp(
+			`(?:const|let|var)\\s+${object}\\s*=\\s*\\{([\\s\\S]*?)\\}`,
+		).exec(text)?.[1] ?? "";
+	const hit = new RegExp(
+		`(?:^|[\\s,{])(?:${key}|["'][^"']*["'])\\s*:\\s*(["'\`])([^"'\`]*)\\1`,
+	).exec(body);
+	return hit?.[2] ?? null;
+};
+
 /** A template is read up to its first `${`: a literal prefix with a dash is a
  * second spelling of a family, which is what the builders exist to avoid. */
 const shapedLiteral = (raw: string): string | null => {
@@ -130,7 +158,17 @@ const shapedLiteral = (raw: string): string | null => {
  * identifier is resolved through its DECLARATION, reading every literal in the
  * initializer rather than only a whole-value one: `const id = isApproval ?
  * "pending-card" : "ask-card"` is the same second spelling one refactor away from the
- * M1 shape, and it is what the two card ids were hiding behind (review round 6).
+ * M1 shape, and it is what the two card ids were hiding behind (review round 6). An
+ * object accessor (`ids.root`, `ids["root"]`) is resolved the same way when the object
+ * is a literal in the same file, and a dash-terminated literal inside an assembled
+ * expression (`"session-row-" + id`) is read as the family prefix it is.
+ *
+ * Still out of reach, named rather than implied: an id that arrives through an
+ * IMPORT, and one computed at runtime (`buildId()`). Both need either module
+ * resolution — following a re-export chain, i.e. becoming a bundler — or execution, and
+ * a check that only ever sees source has no way to be total. The other direction
+ * (`references every declared identifier from at least one route or primitive`) is
+ * what covers an imported id in practice: it must be named somewhere that renders.
  */
 const literalTestIds = (text: string): string[] => {
 	const out: string[] = [];
@@ -179,9 +217,24 @@ const literalTestIds = (text: string): string[] => {
 			}
 			continue;
 		}
+		if (/^[A-Za-z_$][\w$]*\s*(?:\.|\[)/.test(bare)) {
+			const literal = memberLiteral(text, bare);
+			if (literal !== null && shapedLiteral(literal) !== null)
+				out.push(`${bare} = "${literal}"`);
+			continue;
+		}
+		const assembled = /\+|\$\{/.test(body);
 		for (const match of body.matchAll(/["`']([^"`']*)["`']/g)) {
 			if (isMemberSubscript(body, match.index ?? 0)) continue;
-			if (shapedLiteral(match[1] ?? "") !== null) out.push(match[0]);
+			const raw = match[1] ?? "";
+			if (shapedLiteral(raw) !== null) {
+				out.push(match[0]);
+				continue;
+			}
+			/* A dash-terminated literal inside an assembled expression is the builders'
+			 * own output spelled by hand: `"session-row-" + id` is a family prefix, and a
+			 * prefix this check cannot see is a whole family it cannot see. */
+			if (assembled && /-$/.test(raw)) out.push(match[0]);
 		}
 	}
 	return out;

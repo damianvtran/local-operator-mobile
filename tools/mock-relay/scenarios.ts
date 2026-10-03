@@ -37,8 +37,20 @@ export interface StreamSpec {
 	 * renders, keep-alives continue, and no turn frames ever follow. It is the
 	 * state a degraded row's socket is actually in, as distinct from the
 	 * `silent-stall` fault, which stops the keep-alives too.
+	 *
+	 * `refused` is the session's OWN event channel failing while the rest of the
+	 * relay answers — a connected session whose stream is refused, which is the
+	 * only shape the session view's error state can be reached from. A blanket
+	 * `failure` cannot serve that cell: it refuses `/api/sessions` too, so the
+	 * client never holds a projection, `connected` stays false, and the error
+	 * marker is not rendered however true the failure is (measured: `session-error`
+	 * is unreachable from a blanket refusal).
 	 */
-	mode: "streaming" | "idle" | "keepalive-only" | "silent";
+	mode: "streaming" | "idle" | "keepalive-only" | "silent" | "refused";
+	/** The gateway refusal the event route answers with when `mode: "refused"`:
+	 *  a key from the same space `FailureSpec.key` uses. Only a NON-transient
+	 *  refusal reaches the error state — a transport drop is reconnected through. */
+	refusalKey?: string;
 	/** Milliseconds between pumped frames; the default is 700. */
 	intervalMs?: number;
 	settleAfterTurns?: number;
@@ -823,7 +835,7 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 
 	add(
 		"stream-refused",
-		"The session's own event channel fails at the gateway with `control_plane_unreachable`: the view sits in its error state, and the retry is not transient.",
+		"The session's own event channel is refused at the gateway (`control_plane_unreachable`) while the catalogue and the health route answer: a CONNECTED session whose stream failed, which is the state `S5/error` declares.",
 		["S5/error"],
 		() => ({
 			/* `S5/error` declares the session's ERROR state, and the app's marker for it
@@ -831,9 +843,18 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 			 * own `onError`), not a refused command — a command refusal lands on the
 			 * composer. The cell used to be served by `relay-refuses-command`, whose
 			 * stream succeeds, so the one cell that declares `error` could never carry the
-			 * marker that affirms it (review round 6, same class as M3). */
-			projections: {},
-			failure: { surface: "gateway", key: "503-control_plane_unreachable" },
+			 * marker that affirms it (review round 6, same class as M3).
+			 *
+			 * The refusal is on the STREAM, not on the world: a blanket `failure` refuses
+			 * `/api/sessions` too, so the client never holds a projection, `connected`
+			 * stays false, and the error marker is not rendered (review round 7, R7-1).
+			 * Rows are served so the frame also carries `session-populated` and NO
+			 * `*-empty` marker — the cell forbids the empty ones. */
+			projections: { [liveIdle.session_id]: structuredClone(liveIdle) },
+			stream: {
+				mode: "refused",
+				refusalKey: "503-control_plane_unreachable",
+			},
 		}),
 	);
 

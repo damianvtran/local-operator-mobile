@@ -316,7 +316,7 @@ second hand-maintained list.
 | `tunnel-revoked` | S13/error | The tunnel was revoked: the gateway refuses with `tunnel_not_authorized`. |
 | `login-required` | S13/error | The computer's Radient login expired: gateway `login_required`, and the edge answers 401 with the re-auth hint. |
 | `relay-refuses-command` | S13/error | A reachable relay that refuses the command: 422 with a typed code, which must never be retried as-is. |
-| `stream-refused` | S5/error | The session's own event channel fails at the gateway with `control_plane_unreachable`: the view sits in its error state, and the retry is not transient. |
+| `stream-refused` | S5/error | The session's own event channel is refused at the gateway (`control_plane_unreachable`) while the catalogue and the health route answer: a connected session whose stream failed. |
 | `gateway-503-authorization_deferred` | S13/error | Every request refused at the gateway with `authorization_deferred`. |
 | `gateway-503-authorization_lease_pending` | S13/error | Every request refused at the gateway with `authorization_lease_pending`. |
 | `gateway-503-authorization_refused` | S13/error | Every request refused at the gateway with `authorization_refused`. |

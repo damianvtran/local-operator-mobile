@@ -254,8 +254,13 @@ export default function Session() {
 			/>
 		) : runtime.entries.length === 0 && runtime.loading ? (
 			// Loading is a skeleton, never a spinner over a blank column: the three bars
-			// reserve the shape the transcript will take.
-			<View className="px-4 pt-3">
+			// reserve the shape the transcript will take. `flex-1` is load-bearing and not
+			// cosmetic (design round D18): the transcript branch is a `FlatList`, which
+			// fills the column, and a plain wrapper let the column's surplus land BELOW the
+			// loading bars — measured at 200 % text, the composer's content ended 39 % of
+			// the way down the screen here against 99 % in `empty`/`populated`. A composer
+			// floating mid-screen is the first thing a reader notices.
+			<View className="flex-1 px-4 pt-3">
 				<Skeleton lines={3} testID={SURFACE.sessionLoading} />
 			</View>
 		) : (
