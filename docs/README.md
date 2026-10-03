@@ -1,7 +1,8 @@
 # Documentation
 
-Local Operator Mobile is at the research and design stage. This index lists the
-documentation sections as they land; each is **in progress** until linked.
+Local Operator Mobile is past the research and design stage: the app is built and
+exercised in this repository, though no build has been published yet. This index
+lists the documentation sections.
 
 | Path | What it will hold | Status |
 | --- | --- | --- |

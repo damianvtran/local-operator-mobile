@@ -4,9 +4,9 @@ Thank you for your interest in contributing! Bug reports, feature ideas, documen
 
 ## Project status
 
-The project is at the research and design stage: there is no app code yet. The first pull requests record decisions — the toolchain, how the app talks to the relay, store requirements, the design kit — in [`docs/`](docs/README.md). Once the toolchain is chosen, this guide will gain setup, build, and test instructions.
+The app is built and exercised in this repository — the Expo / React Native shell, the connection surfaces, the session list and the session view — but no build has been published: it is in no store, and no GitHub Release has been cut. To run, test and look at it, see [docs/development.md](docs/development.md) and the [README](README.md); the decisions behind the stack are in [`docs/adr/`](docs/adr/).
 
-Until then, the most useful contributions are:
+The most useful contributions right now are:
 
 - **Feedback on the planned features and decisions** — open an issue or comment on the relevant pull request.
 - **Corrections to the docs** — especially anything about the relay, tunnels, or store requirements that is wrong or out of date.
