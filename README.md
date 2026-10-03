@@ -122,10 +122,13 @@ secrets only, never in this repository.
 
 Captured from the app's own web export (`pnpm export:web`), driven in installed
 headless Chrome at a 390 pt viewport, against the mock relay in
-[`tools/mock-relay/`](./tools/mock-relay/) — so the conversations below are the
-harness's fixtures, not anyone's real sessions. The light and dark frames are the
-same cells with the theme overridden, and the composer row is the composer band
-of the session view above it.
+[`tools/mock-relay/`](./tools/mock-relay/). Every frame is the app driven against
+that relay's **fixture data**: the conversations, session names and model labels
+are fixtures, not anyone's real sessions — and `nope/nope` in the session list is
+the captured corpus's own placeholder label, sitting beside the realistic
+`anthropic/claude-opus-5` that the synthetic fixtures carry. The light and dark
+frames are the same cells with the theme overridden, and the composer row is the
+composer band of the session view above it.
 
 | | Light | Dark |
 | --- | --- | --- |
