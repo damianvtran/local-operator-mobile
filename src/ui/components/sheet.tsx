@@ -8,6 +8,7 @@ import {
 	ScrollView,
 	View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { CONTROL, ROLE } from "@/ui/a11y";
 import { useReducedMotion, useTokenColor } from "@/ui/appearance";
@@ -61,6 +62,13 @@ export const Sheet = ({
 	const reduceMotion = useReducedMotion();
 	const shadow = useShadow("overlay");
 	const scrimColour = useTokenColor("scrim");
+	/* The home-indicator inset belongs to the SCROLL CONTENT, not the sheet's own
+	 *  bottom edge: the surface stays anchored where flex puts it (screen bottom),
+	 *  and the last row of content has to clear the indicator. Without it the last
+	 *  row sat ~10 pt UNDER the indicator on a 34 pt-inset device — the rest of the
+	 *  app already reads the insets (`screen.tsx`), so this was an inconsistency
+	 *  of the primitive, not a policy (`E2` D1/U-05). */
+	const insets = useSafeAreaInsets();
 	const [columnHeight, setColumnHeight] = useState(0);
 	const rise = useRef(new Animated.Value(0)).current;
 	const scrimFade = useRef(new Animated.Value(0)).current;
@@ -155,7 +163,11 @@ export const Sheet = ({
 								? undefined
 								: { maxHeight: maxContentHeight }
 						}
-						contentContainerClassName="px-4 pb-6"
+						contentContainerClassName="px-4"
+						/* `pb-6` (24) plus the safe-area inset, computed rather than spelled
+						 *  as a class so the indicator's height rides the DEVICE, and the model /
+						 *  effort / slash sheets are corrected by the same line. */
+						contentContainerStyle={{ paddingBottom: 24 + insets.bottom }}
 					>
 						{children}
 					</ScrollView>
