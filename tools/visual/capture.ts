@@ -76,6 +76,13 @@ import {
  */
 let screenshotRetries = 0;
 
+/**
+ * Cells whose settled frame had to be retaken because the readings moved across it,
+ * for the WHOLE run — module state for `screenshotRetries`' reason, and printed so
+ * the retry is visible rather than silent.
+ */
+let settledRetakes = 0;
+
 /** Frames above this count are refused without `--yes`: a full matrix is minutes. */
 const CONFIRM_THRESHOLD = 120;
 
@@ -84,7 +91,7 @@ const CONFIRM_THRESHOLD = 120;
  * the floor a small plan still gets.
  *
  * WHY THE DEFAULT IS DERIVED RATHER THAN FIXED. It used to be a flat 900 s, which
- * holds about 400 cells: a `core` run (910 cells) or a dispatched `full` run (3290)
+ * holds about 400 cells: a `core` run (858 cells) or a dispatched `full` run (3102)
  * was therefore cut off by the harness's own default and reported hundreds of cells
  * as having no frame — a bound firing on a plan it was never sized for, which reads
  * like a finding about the app and is not one. Deriving it from the plan makes the
@@ -128,6 +135,24 @@ const MIN_DERIVED_DEADLINE_MS = 900_000;
 const STATE_WAIT_MS = 8_000;
 const STATE_POLL_MS = 400;
 
+/**
+ * How many times the settled frame may be retaken while its readings keep moving.
+ *
+ * Three, not one: the race this closes is a state ARRIVING, so the first retake
+ * usually lands after it — but a cell that changes twice (a banner, then its text)
+ * would still ship a frame the manifest misdescribes at two. Bounded, because a cell
+ * whose readings never agree must not cost the run: it keeps its last frame and last
+ * reading, which is what the harness did before the retake existed.
+ */
+const SETTLED_UNIT_TAKES = 3;
+
+/** One reading of a cell: the harness's verdict on it, and what it is showing. */
+interface CellState {
+	readiness: Readiness | null;
+	/** The `CONTENT_PROBE` digest, taken with the readiness reading. */
+	content: string;
+}
+
 /** The whole-run deadline a plan of `cells` cells is budgeted, in ms. */
 const derivedDeadlineMs = (cells: number): number =>
 	Math.max(MIN_DERIVED_DEADLINE_MS, Math.ceil(cells * CELL_BUDGET_MS));
@@ -146,22 +171,93 @@ const stateStillComing = (issues: ReadonlyArray<{ kind: string }>): boolean =>
 	issues.every((issue) => issue.kind === "marker" || issue.kind === "empty");
 
 /**
- * Replace the page target after a cell wedged.
+ * Make a page target capture-ready: the three CDP calls every page the harness
+ * drives needs, each BOUNDED and each a value rather than a throw.
  *
- * A fresh target is the only reliable way past a page holding a live stream on a
- * socket the harness no longer controls: closing the old one is what stops it
- * speaking, and the new one starts the next cell from a blank document.
+ * WHY BOUNDED when the CDP client already fails a command after 30 s: a throw
+ * unwinds `runCapture` from inside the cell loop, so the run ends with a stack
+ * trace and NO manifest on disk. That is the same shape `withDeadline` was added
+ * around the cell itself for, and a browser that accepts the connection and then
+ * stops answering is a measured case rather than a hypothetical one (QA hit
+ * `Target.createTarget did not answer within 30000 ms`, rc 1, nothing written).
+ * The pre-paint probe is part of the set because `captureCell`'s theme reporting
+ * reads `window.__loCapture`, so a page without it is not one this harness can
+ * report on. It is called from the ONE place a page is opened (`freshPage`),
+ * so the arming cannot drift from the page it arms.
  */
-async function recoverPage(
-	chrome: Awaited<ReturnType<typeof launchChrome>>,
+async function armPage(
 	page: CdpPage,
 	ms: number,
+): Promise<{ ok: true } | { ok: false; reason: string }> {
+	const steps: Array<[string, Promise<unknown>]> = [
+		["Page.enable", page.send("Page.enable")],
+		["Runtime.enable", page.send("Runtime.enable")],
+		[
+			"Page.addScriptToEvaluateOnNewDocument",
+			page.send("Page.addScriptToEvaluateOnNewDocument", {
+				source: PRE_PAINT_PROBE,
+			}),
+		],
+	];
+	for (const [what, call] of steps) {
+		const done = await withDeadline(call, ms, what);
+		if (!done.ok) return { ok: false, reason: done.reason };
+	}
+	return { ok: true };
+}
+
+/**
+ * Close the current page target, if there is one, and open an armed replacement.
+ *
+ * WHY EVERY CELL GETS A FRESH TARGET, not only a wedged one.
+ *
+ * The app under test holds an open `text/event-stream` on its session screen, and
+ * `serveDir` proxies the relay at the SAME origin it serves the build from (that
+ * same-origin proxy is what lets a relay-backed cell be driven at all). Those
+ * streams are connections to the app origin, they are long-lived by design, and a
+ * run accumulates them across cells. Past a point the next `Page.navigate` NEVER
+ * COMMITS, which is the whole of what `CDP Page.navigate did not answer within
+ * 30000 ms` was reporting. Measured 2026-10-03: 11 stalls in a 104-cell `S5`
+ * block, every one of them `S5/*` (the only screen that opens a stream), at the
+ * same cells on every run, reproduced on `ubuntu-latest` as well as here.
+ *
+ * WHY THIS LAYER, and not the wait or the timeout. Chrome dispatches
+ * `Page.navigate`'s reply from the navigation's reset — i.e. at COMMIT — and
+ * never from the `load` event (`content/browser/devtools/protocol/page_handler.cc`:
+ * `Navigate` parks the callback in `navigate_callbacks_` until
+ * `NavigationReset`/`TransferNavigationRequestOwnership` fires). A reply that
+ * never arrives therefore means the navigation never committed, so nothing the
+ * harness waits on — `load`, `commit`, `DOMContentLoaded`, or the declared-state
+ * marker — can change the outcome: the navigation has not started, it is not
+ * slow. A longer timeout would only make the stall quieter, which is the failure
+ * this PR series exists to remove.
+ *
+ * WHY CLOSING THE TARGET, and not just destroying the document. A hop through
+ * `about:blank` — the one navigation that needs no socket, so it commits even
+ * when the origin is busy — is not enough: it leaves the held connections in
+ * place (measured: 6 before the hop, 6 after, cell after cell) and the same cells
+ * stall behind it. Destroying the TARGET releases them. Measured on the 104-cell
+ * `S5` block: 11 stalls and 12 cells with no frame before, 0 and 0 after, 312
+ * frames in 240 s.
+ *
+ * The cost is one target create/close per cell, and it is not a regression in
+ * rate: the 264-cell `ci` tier runs at 2.12 s/cell, against the 2.24 s/cell the
+ * per-cell budget was titrated from. It also leaves the cell loop with ONE shape
+ * instead of two — a wedged cell and a healthy one now take the same path, so the
+ * recovery cannot rot out of use as the failure it exists for stops happening.
+ */
+async function freshPage(
+	chrome: Awaited<ReturnType<typeof launchChrome>>,
+	page: CdpPage | null,
+	ms: number,
 ): Promise<{ ok: true; page: CdpPage } | { ok: false; reason: string }> {
-	try {
-		await page.send("Target.closeTarget", { targetId: page.targetId });
-	} catch {
-		// A target wedged beyond answering is closed by the browser when the profile
-		// is torn down; the new target is what the next cell needs.
+	if (page !== null) {
+		try {
+			await page.send("Target.closeTarget", { targetId: page.targetId });
+		} catch {
+			// A target wedged beyond answering is closed by the browser when the profile
+			// is torn down; the new target is what the next cell needs.
+		}
 	}
 	/*
 	 * Bounded, and a FAILURE rather than a throw. A browser that has stopped answering
@@ -181,11 +277,12 @@ async function recoverPage(
 			reason: `the browser stopped answering: ${opened.reason}`,
 		};
 	const next = opened.value;
-	await next.send("Page.enable");
-	await next.send("Runtime.enable");
-	await next.send("Page.addScriptToEvaluateOnNewDocument", {
-		source: PRE_PAINT_PROBE,
-	});
+	const armed = await armPage(next, ms);
+	if (!armed.ok)
+		return {
+			ok: false,
+			reason: `the browser stopped answering: ${armed.reason}`,
+		};
 	return { ok: true, page: next };
 }
 
@@ -542,10 +639,8 @@ async function captureCell(
 		await sleep(250);
 		shots.push(await stamp("-f250"));
 		await sleep(Math.max(0, settleMs - 250));
-		shots.push(await stamp("-settled"));
 	} else {
 		await sleep(Math.max(0, settleMs - 50));
-		shots.push(await stamp(""));
 	}
 	const measurements = asMeasurements(await page.evaluate(MEASURE_PROBE));
 	// If the harness was asked to seed and the page's own route does not carry the
@@ -556,59 +651,103 @@ async function captureCell(
 		seed.route !== null &&
 		measurements !== null &&
 		!String(measurements.route ?? "").includes("lo-relay=");
-	// The readiness reading: which route the app settled on and which screen
-	// roots it actually rendered. This is the guard against a green matrix over
-	// the wrong screen, which is exactly what the first run of this harness
-	// produced before the relay was proxied.
-	let readiness: Readiness | null = asReadiness(
-		await page.evaluate(READINESS_PROBE),
-	);
-	let issues: CellIssue[] = readinessIssuesFor(
-		cell,
-		path,
-		readiness,
-		relayReach,
-	);
-	const seedIssue = (): CellIssue => ({
-		kind: "seed",
-		message:
-			`the run was told to seed route '${String(seed.route)}' but the page reports ` +
-			`'${String(measurements?.route ?? "")}' without it: the harness's own half of ` +
-			"the seed hook failed",
+	/**
+	 * The two readings that must describe the same moment as the settled frame.
+	 *
+	 * Read together, and read as a pair by every caller below: the readiness probe is
+	 * the harness's verdict on WHICH state the app is showing (route, screen roots,
+	 * state markers) and the content probe is WHAT it is showing, and a frame is only
+	 * evidence for a cell when both were true of that frame.
+	 */
+	const readState = async (): Promise<CellState> => ({
+		readiness: asReadiness(await page.evaluate(READINESS_PROBE)),
+		// Cheap (one evaluate) and read with the readiness reading, never after the
+		// frame — see `IDENTICAL_FRAME_EXEMPTIONS` for why a byte comparison alone is
+		// not enough to call two frames a collapse.
+		content: digestContent(asContent(await page.evaluate(CONTENT_PROBE))),
 	});
-	if (seededButAbsent) issues.push(seedIssue());
+	/** The cell's verdict for one reading, as the messages a report prints. */
+	const verdictOf = (reading: CellState): CellIssue[] => {
+		const found = readinessIssuesFor(cell, path, reading.readiness, relayReach);
+		if (seededButAbsent)
+			found.push({
+				kind: "seed",
+				message:
+					`the run was told to seed route '${String(seed.route)}' but the page reports ` +
+					`'${String(measurements?.route ?? "")}' without it: the harness's own half of ` +
+					"the seed hook failed",
+			});
+		return found;
+	};
+	/** Everything about the cell that must hold still across the settled frame. */
+	const fingerprintOf = (reading: CellState): string =>
+		`${reading.content}\u0000${verdictOf(reading)
+			.map((issue) => issue.message)
+			.join("\u0000")}`;
+
+	let reading = await readState();
+	let issues = verdictOf(reading);
 
 	/*
 	 * A state that arrives AFTER the settle window: wait for the marker rather than
 	 * reporting the state missing at 1200 ms. See `STATE_WAIT_MS` for the two cells
-	 * this exists for and for why a longer `--settle` is the wrong repair. The
-	 * settled frame is re-stamped once the state is there, because the frame has to
-	 * show the state the cell names — a cell that passed the marker rule while its
-	 * PNG still held the pre-state would be the harness asserting one thing and
-	 * shipping another.
+	 * this exists for and for why a longer `--settle` is the wrong repair.
 	 */
-	if (stateStillComing(issues)) {
-		let waitedMs = 0;
-		while (waitedMs < STATE_WAIT_MS && stateStillComing(issues)) {
-			await sleep(Math.min(STATE_POLL_MS, STATE_WAIT_MS - waitedMs));
-			waitedMs += STATE_POLL_MS;
-			readiness = asReadiness(await page.evaluate(READINESS_PROBE));
-			issues = readinessIssuesFor(cell, path, readiness, relayReach);
-			if (seededButAbsent) issues.push(seedIssue());
-		}
-		if (issues.length === 0) {
-			shots[shots.length - 1] = await stamp(cell.consecutive ? "-settled" : "");
-		}
+	let waitedMs = 0;
+	while (waitedMs < STATE_WAIT_MS && stateStillComing(issues)) {
+		await sleep(Math.min(STATE_POLL_MS, STATE_WAIT_MS - waitedMs));
+		waitedMs += STATE_POLL_MS;
+		reading = await readState();
+		issues = verdictOf(reading);
 	}
+
 	/*
-	 * What the cell is SHOWING, read after the state has settled and without the
-	 * viewport: the screen reader's view of it. Cheap (one evaluate) and only ever read
-	 * for the identical-frame check — see `IDENTICAL_FRAME_EXEMPTIONS` for why a byte
-	 * comparison alone is not enough to call two frames a collapse.
+	 * STAMP, THEN CONFIRM THE READINGS DID NOT MOVE ACROSS THE FRAME.
+	 *
+	 * WHY THIS LOOP EXISTS. The settled frame used to be stamped BEFORE the readiness
+	 * and content probes, and re-stamped only when the marker was still missing — so a
+	 * state arriving between the frame and the probes shipped a PNG of the PRE-state
+	 * under a manifest entry that said the cell was in the state it names. That is the
+	 * "asserting one thing and shipping another" the marker rule exists to prevent,
+	 * and it is not only a wrong frame: the identical-state check then sees "same
+	 * bytes, different content" across two cells and hands the reviewer the
+	 * camera-limit branch, whose repair is a signed declaration that would be FALSE.
+	 *
+	 * Measured 2026-10-03: this race is why 2 of 3 runs of the exact `ci` command
+	 * exited 1 on an undeclared `S5/error = S5/populated` pair — the error cell's
+	 * settled PNG was the populated screen while its content reading carried the 401
+	 * banner, at two different devices.
+	 *
+	 * So the frame is retaken until two CONSECUTIVE readings agree: the reading was
+	 * taken, the frame was stamped, and the reading is taken again. Agreement means
+	 * nothing moved across the frame, which is what makes the manifest's claim about
+	 * the cell true of the PNG it points at; disagreement means the frame was taken on
+	 * the wrong side of a change, so it is retaken and checked again.
+	 *
+	 * A cell that never agrees is one whose readings genuinely keep changing — the
+	 * animated spinner, the virtualized transcript window — and it keeps the LAST frame
+	 * and the LAST reading rather than failing: a state that will not hold still is not
+	 * a readiness defect, and the frame still carries the state it declares. Those
+	 * cells are COUNTED (`settledRetakes`, printed with the run's summary) so the retry
+	 * is visible rather than silent, the way a transient screenshot retry already is.
 	 */
-	const contentDigest = digestContent(
-		asContent(await page.evaluate(CONTENT_PROBE)),
-	);
+	const settleSuffix = cell.consecutive ? "-settled" : "";
+	shots.push(await stamp(settleSuffix));
+	let fingerprint = fingerprintOf(reading);
+	let retakes = 0;
+	for (;;) {
+		reading = await readState();
+		const next = fingerprintOf(reading);
+		if (next === fingerprint) break;
+		fingerprint = next;
+		retakes += 1;
+		if (retakes >= SETTLED_UNIT_TAKES) break;
+		shots[shots.length - 1] = await stamp(settleSuffix);
+	}
+	if (retakes > 0) settledRetakes += 1;
+	issues = verdictOf(reading);
+	const readiness = reading.readiness;
+	const contentDigest = reading.content;
 	const readinessProblems = issues.map((issue) => issue.message);
 
 	offConsole();
@@ -1401,7 +1540,8 @@ export async function runCapture(options: CaptureOptions) {
 	 * bound cannot hold it. Printed BEFORE anything is launched so a bound that
 	 * will truncate is a stated diagnosis at minute zero rather than a surprise
 	 * at minute fifteen — which is exactly how the CI job's first real capture
-	 * run failed: 900 s against a 910-cell plan, reported only when it fired.
+	 * run failed: 900 s against the 910-cell plan the `core` default held at the time,
+	 * reported only when it fired.
 	 */
 	const budgetMs = derivedDeadlineMs(plan.length);
 	const deadlineMs = options.deadlineMs ?? budgetMs;
@@ -1449,10 +1589,23 @@ export async function runCapture(options: CaptureOptions) {
 	// The relay is proxied at the SAME origin as the build, so the app's own
 	// configured route reaches it. Without this every relay-backed cell rendered
 	// an app with no route and five different states produced one identical image.
-	const server = await serveDir(options.dir, {
-		port: options.port ?? 0,
-		proxy: options.relay,
-	});
+	// BOUNDED because it is the FIRST step of the run — ahead of the plan, the browser
+	// and the manifest — so a step that parks here leaves nothing on disk to say what
+	// happened. What the bound reports is `serveDir`'s own throw, not the named refusal
+	// the cell class gets: an occupied port still ends the run with
+	// `the static server threw: listen EADDRINUSE …` and no manifest, which is right —
+	// there is no plan yet, so there is no cell list to account for. It is the silent
+	// version of that failure the bound removes.
+	const served = await withDeadline(
+		serveDir(options.dir, {
+			port: options.port ?? 0,
+			proxy: options.relay,
+		}),
+		options.cellTimeoutMs,
+		"the static server",
+	);
+	if (!served.ok) throw new Error(served.reason);
+	const server = served.value;
 	/*
 	 * WHICH ORIGIN the seed names, and why it is not the relay's.
 	 *
@@ -1507,6 +1660,7 @@ export async function runCapture(options: CaptureOptions) {
 	const tokens = canvasTokens(options.tokens);
 	const records: CaptureRecord[] = [];
 	screenshotRetries = 0;
+	settledRetakes = 0;
 	let reaped: Awaited<ReturnType<typeof chrome.close>> | null = null;
 	/** Cells that produced no frame, and why — never a silent skip. */
 	const abandoned: Array<{ cell: string; reason: string }> = [...unrenderable];
@@ -1516,60 +1670,24 @@ export async function runCapture(options: CaptureOptions) {
 	let index = 0;
 
 	try {
-		// Bounded like a cell: a browser that never answers `Target.createTarget` used to
-		// take the whole run down with a stack trace and no manifest.
-		const first = await withDeadline(
-			chrome.page(),
-			options.cellTimeoutMs,
-			"the browser's first target",
-		);
-		if (!first.ok) {
-			refuse(
-				"the browser",
-				`the browser could not open a page: ${first.reason}`,
-			);
-			throw new Error(`the browser could not open a page: ${first.reason}`);
-		}
-		let page = first.value;
-		await page.send("Page.enable");
-		await page.send("Runtime.enable");
-		await page.send("Page.addScriptToEvaluateOnNewDocument", {
-			source: PRE_PAINT_PROBE,
-		});
+		/*
+		 * EVERY CELL OPENS ITS OWN TARGET — see `freshPage` for why a reused one
+		 * eventually cannot commit a navigation at all. There is deliberately no
+		 * separate "first target" step: the first cell's recycle closes nothing and
+		 * opens a page exactly as every later cell does, so the loop has one shape and
+		 * a wedged cell needs no recovery path of its own.
+		 */
+		let page: CdpPage | null = null;
 
 		for (const cell of plan) {
 			index += 1;
 			/* One abandonment path, so every reason a cell has no frame is recorded and printed
-			 * the same way (and so a new one cannot be added that quietly forgets the page
-			 * recovery below). */
+			 * the same way. */
 			const abandonCell = (reason: string): void => {
 				abandoned.push({ cell: cell.cell, reason });
 				console.log(
 					`[${index}/${plan.length}] ${cell.cell} on ${cell.device} — FAILED: ${reason}`,
 				);
-			};
-			/**
-			 * A fresh target for the next cell, or `false` when the browser has stopped
-			 * answering — in which case the rest of the plan is abandoned BY NAME and the
-			 * loop breaks, so the run still writes a manifest that accounts for every cell
-			 * it did not capture.
-			 */
-			const nextPage = async (): Promise<boolean> => {
-				const recovered = await recoverPage(
-					chrome,
-					page,
-					options.cellTimeoutMs,
-				);
-				if (recovered.ok) {
-					page = recovered.page;
-					return true;
-				}
-				for (const rest of plan.slice(index))
-					abandoned.push({ cell: rest.cell, reason: recovered.reason });
-				console.log(
-					`  ${recovered.reason} — the ${plan.length - index} cell(s) left are BLOCKED`,
-				);
-				return false;
 			};
 			if (Date.now() - startedAt > deadlineMs) {
 				// The overall bound: a run that would exceed its job's own timeout stops
@@ -1582,6 +1700,22 @@ export async function runCapture(options: CaptureOptions) {
 				});
 				break;
 			}
+			/*
+			 * A target that has never held a stream, for this cell. A browser that has
+			 * stopped answering is a NAMED refusal rather than a throw: the rest of the
+			 * plan is abandoned BY NAME and the loop breaks, so the run still writes a
+			 * manifest that accounts for every cell it did not capture.
+			 */
+			const fresh = await freshPage(chrome, page, options.cellTimeoutMs);
+			if (!fresh.ok) {
+				for (const rest of plan.slice(index - 1))
+					abandoned.push({ cell: rest.cell, reason: fresh.reason });
+				console.log(
+					`  ${fresh.reason} — the ${plan.length - index + 1} cell(s) left are BLOCKED`,
+				);
+				break;
+			}
+			page = fresh.page;
 			// Pin the relay to this cell's state before rendering it, and count what the
 			// relay serves while it renders. A registry-declared cell whose requests
 			// did not grow is a cell the app rendered without asking the relay for
@@ -1603,7 +1737,6 @@ export async function runCapture(options: CaptureOptions) {
 					);
 					if (!pinned.ok) {
 						abandonCell(pinned.reason);
-						if (!(await nextPage())) break;
 						continue;
 					}
 				}
@@ -1618,7 +1751,6 @@ export async function runCapture(options: CaptureOptions) {
 			);
 			if (!countBefore.ok) {
 				abandonCell(countBefore.reason);
-				if (!(await nextPage())) break;
 				continue;
 			}
 			const requestsBefore = countBefore.value;
@@ -1640,9 +1772,8 @@ export async function runCapture(options: CaptureOptions) {
 			);
 			if (!attempted.ok) {
 				abandonCell(attempted.reason);
-				// The page may be wedged with a live stream; a fresh target keeps the
-				// next cell from inheriting it.
-				if (!(await nextPage())) break;
+				// The next cell opens its own target, so a page left wedged with a live
+				// stream is closed by that recycle rather than inherited here.
 				continue;
 			}
 			const record = attempted.value;
@@ -1720,6 +1851,9 @@ export async function runCapture(options: CaptureOptions) {
 			`${skippedLive} live owner(s) left alone` +
 			(screenshotRetries > 0
 				? `, ${screenshotRetries} screenshot retr(y|ies)`
+				: "") +
+			(settledRetakes > 0
+				? `, ${settledRetakes} cell(s) whose settled frame was retaken to agree with its readings`
 				: ""),
 	);
 
@@ -1825,6 +1959,7 @@ export async function runCapture(options: CaptureOptions) {
 				orphansReaped: reaped?.sweep?.swept.length ?? 0,
 				liveOwnersSkipped: reaped?.sweep?.skipped.length ?? 0,
 				screenshotRetries,
+				settledRetakes,
 			},
 			// Which cells were measured against a LIVE dimension, by name. A report
 			// that only carried the run-level verdict let a reader take every "200 %"
@@ -2122,11 +2257,11 @@ if (isMain) {
 				"                      a smaller explicit bound is honoured and noted. Cells still",
 				"                      unvisited when it fires are reported as having no frame",
 				"  --tier <name>       the sample to capture: ci | core (default) | full",
-				"                        ci    280 cells — every declared cell, 2 device profiles,",
-				"                              both themes, scales 100 and 200 (~11 min) — the CI job's",
-				"                        core  910 cells — the 5 `core` profiles, both themes, all",
+				"                        ci    264 cells — every declared cell, 2 device profiles,",
+				"                              both themes, scales 100 and 200 (~10 min) — the CI job's",
+				"                        core  858 cells — the 5 `core` profiles, both themes, all",
 				"                              three scales",
-				"                        full  3290 cells — all 19 profiles",
+				"                        full  3102 cells — all 19 profiles",
 				"  --devices <names>   comma list. Default: the tier's profiles (ci 2, core 5 by",
 				"                      default, --full for all 19)",
 				"  --themes <names>    default dark,light",
@@ -2149,11 +2284,11 @@ if (isMain) {
 	// Which devices a run covers. `core` is the sample the operator's rule asks to be
 	// run first — smallest phone, a typical phone, phone landscape, a tablet in each
 	// orientation — `ci` is the bounded sample the per-push job takes (matrix.ts
-	// `CI_DEVICES`, ~11 minutes), and `--full` covers every size. `--devices`
+	// `CI_DEVICES`, ~10 minutes), and `--full` covers every size. `--devices`
 	// overrides any of them.
 	//
 	// An unknown tier is an ERROR rather than a silent fall back to `core`: a typo'd
-	// `--tier ci` that quietly ran 910 cells would spend ~36 minutes on a capture the
+	// `--tier ci` that quietly ran 858 cells would spend ~32 minutes on a capture the
 	// caller did not ask for, and the whole point of naming the sample is that the
 	// run you get is the one you asked for.
 	const tierFlag = bool(flags, "full") ? "full" : str(flags, "tier", "core");

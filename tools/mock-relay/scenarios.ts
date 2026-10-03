@@ -586,7 +586,23 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 	add(
 		"approval",
 		"A pending approval gate with a real running tool row beneath it.",
-		["S5/pending-approval", "S8/approval"],
+		/* `S8/approval` ALONE. `S5/pending-approval` used to be declared beside it, and it
+		 * was the same capture under a second name: `matrix.ts` gives S8 the session route
+		 * (`/session/{sessionId}`) and `SCREEN_MARKER_SUBJECT` gives it the session subject,
+		 * so a cell on either name navigates to the same URL against the same projection.
+		 * The identical-state check caught it the moment every cell was captured — a
+		 * collapse, i.e. the same bytes AND the same content, on iphone-se and
+		 * tablet-landscape — and the remedy is the one `models-ranked`'s `S9/populated` and
+		 * `long-transcript`'s `S5/scroll` already take: remove the declaration, never an
+		 * exemption, because an exemption is a signed statement that two DIFFERENT states
+		 * are a camera limit and this is one state wearing two names. S8 keeps the name
+		 * because the pending card is what that surface is named for, and it is also the
+		 * cheaper side to keep: dropping `S8/approval` instead would leave
+		 * `approval-destructive`'s declaration as the only one serving the name, silently
+		 * re-pointing this cell at the destructive card. The cost is that the SESSION view
+		 * (S5) no longer declares the pending-approval state under its own name; the
+		 * rendering is unchanged and still captured, and the gap is named in the PR. */
+		["S8/approval"],
 		() => ({
 			projections: {
 				[approvalFrame.session_id]: structuredClone(approvalFrame),
@@ -624,7 +640,12 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 	add(
 		"ask",
 		"A pending secret ask: free-text, with options offered and one recommended.",
-		["S5/pending-ask", "S8/ask"],
+		/* `S8/ask` alone, for the reason `approval` records above: `S5/pending-ask`
+		 * navigated to the same route with the same projection, so the pair was one state
+		 * under two names and the identical-state check reported it as a byte-identical
+		 * pair as soon as every cell was captured. The SESSION view loses the name, not
+		 * the rendering. */
+		["S8/ask"],
 		() => ({
 			projections: { [askFrame.session_id]: structuredClone(askFrame) },
 		}),
