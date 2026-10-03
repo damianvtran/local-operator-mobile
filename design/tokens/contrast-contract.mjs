@@ -50,6 +50,13 @@
  *     composite, a gradient, an image under text, or a colour a platform
  *     picked for itself (a native sheet's own ground, a system keyboard). Those
  *     need a human and a screenshot.
+ *   - It measures TOKENS. Whether a component paints the role its row names is a
+ *     question about code, answered per rendered node by the frame audit's U-02 —
+ *     which has one known limit of its own: a control's `::placeholder` is a
+ *     pseudo-element, so U-02 reads the field's stand-in copy rather than the
+ *     pseudo-element (proxy coverage, named in `tools/audit/checks.ts` under
+ *     U-02). The rows below are the direct assertion; the frame row is the check
+ *     that the field actually uses them.
  *
  * Do not read a clean run as "the design system is accessible". Read it as
  * "every pairing we have written down still holds".
@@ -65,10 +72,13 @@ const FLOOR = { text: 4.5, nonText: 3.0 };
 const TOUCH_FLOOR = { ios: 44, android: 48 };
 const INPUT_FONT_PX = 16;
 
-/* `ink-disabled` is the only exempt foreground (SC 1.4.3, inactive control),
-   and a disabled control's boundary is exempt under SC 1.4.11 for the same
-   reason. Nothing else is exempt by category — everything else is declared
-   below with a ratio and a reason. */
+/* `ink-disabled` is the palette's exempt foreground (SC 1.4.3, an inactive
+   control), and a disabled control's boundary is exempt under SC 1.4.11 for the
+   same reason. Nothing else is exempt by category — everything else is declared
+   below with a ratio and a reason. No CONTROLS row names `ink-disabled` any
+   more: the shipped components paint a disabled label with the kit's
+   `CONTROL_DISABLED_INK` (`ink-dim`), so the token is carried by the pair list
+   and its EXCEPTIONS pins instead, which fails if any of them drifts. */
 const EXEMPT_INK = new Set(["ink-disabled"]);
 
 /* ---- 2. WCAG 2.x relative luminance and CIE L* -------------------------- */
@@ -143,6 +153,13 @@ const textPairs = () => {
 	on("ink", GROUNDS);
 	on("ink-muted", GROUNDS);
 	on("ink-dim", GROUNDS);
+
+	/* The exempt ink, listed so its EXCEPTIONS pins are EVALUATED rather than
+	   merely printed: every ground is asserted at the text floor and carried by a
+	   pinned sub-floor ratio, and a value that drifts fails with the reason.
+	   Nothing else in this file asserts `ink-disabled`, which is how a pin can rot
+	   unnoticed — the failure mode these pins exist to prevent. */
+	on("ink-disabled", GROUNDS);
 
 	/* Accent is the link colour and the primary fill. Permitted on every
 	   ground INCLUDING the well — see WATCHED for the 0.01 margin that makes
@@ -242,17 +259,29 @@ const CONTROLS = [
 	{ id: "button/ghost", fill: null, border: null, ink: "ink-muted", boundary: false },
 	{ id: "button/danger", fill: "danger-wash", border: "danger-border", ink: "danger" },
 
-	/* The disabled rows. Both assertions are exempt; listed so the exemption
-	   is visible in the output rather than absent from it. */
-	{ id: "button/primary disabled", fill: "sunken", border: null, ink: "ink-disabled", boundary: false },
-	{ id: "button/secondary disabled", fill: "surface", border: "hairline", ink: "ink-disabled", boundary: false },
+	/* The disabled rows. Their ink is `ink-dim`, which is what the kit actually
+	   paints (`CONTROL_DISABLED_INK` in src/ui/variants.ts, pinned by its own test):
+   a disabled label NAMES its action, so it is asserted at the text floor rather
+   than exempted. These rows used to say `ink-disabled`, an ink the shipped
+   Button and field had already replaced — and a row documenting the wrong ink is
+   worse than no row, because the session composer's primary read it as sanction
+   for a 2.42:1 disabled label (see `composer/send disabled` below).
+   `ink-disabled` stays the palette's exempt ink for an icon-only disabled
+   control; its pinned values live in EXCEPTIONS. */
+	{ id: "button/primary disabled", fill: "sunken", border: null, ink: "ink-dim", boundary: false },
+	{ id: "button/secondary disabled", fill: "surface", border: "hairline", ink: "ink-dim", boundary: false },
 
 	/* Input and textarea, components.md § 4. */
 	{ id: "input/rest", fill: "surface", border: "border-control", ink: "ink" },
-	{ id: "input/placeholder", fill: "surface", border: "border-control", ink: "ink-dim" },
+	/* The ink the field SHIPS is `ink-muted`, not the `ink-dim` the role summary in
+	   tokens.json mentions for placeholders — `Textarea` resolves the value with
+	   `useTokenColor("ink-muted")` and hands the same binding to
+	   `placeholderTextColor` and to its measuring stand-in copy. This row asserts
+	   what a reader actually sees (8.19:1 light, 7.85:1 dark). */
+	{ id: "input/placeholder", fill: "surface", border: "border-control", ink: "ink-muted" },
 	{ id: "input/focused", fill: "surface", border: "accent", ink: "ink" },
 	{ id: "input/invalid", fill: "surface", border: "danger", ink: "ink" },
-	{ id: "input/disabled", fill: "sunken", border: "hairline", ink: "ink-disabled", boundary: false },
+	{ id: "input/disabled", fill: "sunken", border: "hairline", ink: "ink-dim", boundary: false },
 
 	/* List row — the session row, the transcript row, the roster row. */
 	{ id: "row/rest", fill: "surface", border: null, ink: "ink", boundary: false },
@@ -289,6 +318,17 @@ const CONTROLS = [
 	{ id: "composer/field", fill: "elevated", border: "border-control", ink: "ink" },
 	{ id: "composer/send", fill: "accent", border: null, ink: "on-accent" },
 	{ id: "composer/stop", fill: null, border: "danger-border", ink: "danger" },
+
+	/* The two composer pairs the frame audit measures on every cell, named here so
+	   a token nudge that breaks them fails by name instead of only as a frame row.
+	   `composer/send disabled` is what the primary control takes when it is
+	   disabled (fill `sunken`, the kit's disabled ink); `composer/placeholder` is
+	   the placeholder's ink on the field's own fill, which is `surface` on this
+	   head: `Textarea` calls `fieldClasses(fieldState)` without `inComposer`, so
+	   the `elevated` fill on the row above is the intent and not the render.
+	   Recorded, not assumed — the audit measures the shipped fill either way. */
+	{ id: "composer/send disabled", fill: "sunken", border: null, ink: "ink-dim", boundary: false },
+	{ id: "composer/placeholder", fill: "surface", border: null, ink: "ink-muted", boundary: false },
 
 	/* Pending card — the approval and the ask, the loudest thing on screen. */
 	{ id: "pending/card", fill: "accent-wash", border: "accent", ink: "ink" },

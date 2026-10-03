@@ -510,14 +510,43 @@ export const bannerGlyph = (tone: "danger" | "warning"): string =>
 export const segmentedTrackClasses =
 	"flex-row rounded-sm border border-hairline bg-sunken p-0.5";
 
+/**
+ * A segmented option's LABEL ink — the ladder, in one place.
+ *
+ * The ink has to be on the TEXT rather than left to the wrapper: a
+ * react-native-web `Text` declares its own `color` and does not inherit the
+ * wrapper's (the trap `chipLabelClasses` documents). `Segmented` therefore
+ * names the label ink itself, and before this helper it kept a SECOND copy of
+ * the ladder below — a copy that had drifted, painting a disabled option's
+ * label with the palette's exempt `ink-disabled` while this file's own
+ * `segmentedItemClasses` already said `CONTROL_DISABLED_INK`. Two spellings of
+ * one decision is the defect; the option renders one of them, and nothing in a
+ * passing run could tell which.
+ *
+ * Why the disabled branch is `ink-dim` and not `ink-disabled`: the option
+ * NAMES the value it selects, so it takes the kit's disabled-label ink
+ * (`CONTROL_DISABLED_INK`, pinned by `variants.test.ts`) rather than the exempt
+ * role. `ink-disabled` is exempt under SC 1.4.3 as an inactive control's text —
+ * so a disabled label in it is not a conformance failure — but it measures
+ * 2.42:1 light / 2.50:1 dark on the track's `sunken` fill, and the kit's policy
+ * (Button, Chip, field) is that a label that names its action stays readable.
+ */
+export const segmentedLabelClasses = (state: ControlState = {}): string =>
+	state.disabled
+		? CONTROL_DISABLED_INK
+		: state.selected
+			? "text-accent-active dark:text-accent-hover"
+			: "text-ink-muted";
+
+/**
+ * The option's own box. Its fill is the state signal; its ink is delegated so
+ * the wrapper and the label cannot disagree about it.
+ */
 export const segmentedItemClasses = (state: ControlState = {}): string =>
 	cx(
 		"min-h-11 flex-1 flex-row items-center justify-center rounded-sm px-3",
-		state.disabled
-			? `bg-transparent ${CONTROL_DISABLED_INK}`
-			: state.selected
-				? "bg-accent-muted text-accent-active dark:text-accent-hover"
-				: "bg-transparent text-ink-muted",
+		state.disabled || !state.selected ? "bg-transparent" : "bg-accent-muted",
+		segmentedLabelClasses(state),
 	);
 
 /** The selected label's extra weight — the second, non-colour channel. */

@@ -4,6 +4,7 @@ import { ROLE, state } from "@/ui/a11y";
 import { TOUCH_FLOOR } from "@/ui/layout";
 import {
 	segmentedItemClasses,
+	segmentedLabelClasses,
 	segmentedLabelWeight,
 	segmentedTrackClasses,
 } from "@/ui/variants";
@@ -110,13 +111,9 @@ export const Segmented = <T extends string>({
 								style={{ minHeight: TOUCH_FLOOR }}
 							>
 								<Text
-									className={`text-label ${segmentedLabelWeight(selected)} ${
-										disabled
-											? "text-ink-disabled"
-											: selected
-												? "text-accent-active dark:text-accent-hover"
-												: "text-ink-muted"
-									}`}
+									className={`text-label ${segmentedLabelWeight(selected)} ${segmentedLabelClasses(
+										{ disabled, selected },
+									)}`}
 									numberOfLines={1}
 								>
 									{option.label}
