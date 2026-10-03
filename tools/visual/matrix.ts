@@ -567,13 +567,19 @@ export const PENDING_CELLS: Record<string, string> = {
  * it was measured on: the exemption is a statement about the frame, not about the app.
  */
 export const IDENTICAL_FRAME_EXEMPTIONS: Record<string, string> = {
-	"S5/populated-long|S5/rich-rows":
+	"S5/populated-long|S5/rich-rows|S5/subagents":
 		"below-the-fold at iphone-se / 200 %: the 320 px column at 200 % text is filled by the " +
 		"session header (`Refactor… client`, the context/task/subagent panel rows), and the rows " +
-		"that distinguish the two cells — the 520-row transcript versus the code-block/diff/table " +
-		"rows — start below the viewport, so the PNG is all chrome. The content differs at every " +
-		"device and scale (both cells reach their own marker), which is what makes this a limit " +
-		"of the camera rather than a collapse.",
+		"that distinguish these three cells — the 520-row transcript, the code-block/diff/table " +
+		"rows, and the subagent roster's own rows — start below the viewport, so the PNG is all " +
+		"chrome. The content differs at every device and scale (each cell reaches its own " +
+		"marker), which is what makes this a limit of the camera rather than a collapse. THE " +
+		"GROUP IS THREE NAMES ON ONE ENTRY on purpose: it was declared as " +
+		"`S5/populated-long|S5/rich-rows`, and a third cell joining it when the capture first " +
+		"completed a whole tier — until then the stalls left cells missing and the comparison " +
+		"could not form the group — is evidence that the phenomenon is the one this entry " +
+		"describes, so it extends the statement rather than opening a second entry for the " +
+		"same thing.",
 };
 
 /** Read the resolved theme/scale and the app's own canvas colour, per frame. */

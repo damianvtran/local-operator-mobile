@@ -287,9 +287,9 @@ second hand-maintained list.
 | `streaming` | S5/streaming | A turn in flight: assistant text grows frame by frame, then settles. |
 | `aborted` | S5/aborted | A turn stopped on purpose: `stop_reason: aborted` with `cut_off: false`, then a second run with `cut_off: true`. |
 | `queued` | S5/queued | One queued steering message and the tool row it skipped past. |
-| `approval` | S5/pending-approval, S8/approval | A pending approval gate with a real running tool row beneath it. |
+| `approval` | S8/approval | A pending approval gate with a real running tool row beneath it. (`S5/pending-approval` is not declared beside it: `matrix.ts` gives S8 the session route and the session subject, so a cell on either name is the same capture — one state under two names, which the identical-state check reported as a collapse once every cell was captured.) |
 | `approval-destructive` | S8/approval | A pending approval whose detail is a destructive command, tool still composing. |
-| `ask` | S5/pending-ask, S8/ask | A pending secret ask: free-text, with options offered and one recommended. |
+| `ask` | S8/ask | A pending secret ask: free-text, with options offered and one recommended. (`S5/pending-ask` is not declared beside it, for the `approval` reason above.) |
 | `ask-multi` | S8/ask-multi | The second of two questions in one pending ask, with a parallel count above one. |
 | `subagent-running` | S5/subagents, S6/populated | A running subagent with a queued sibling and a parked one, plus a detail route. |
 | `subagent-completed` | S6/populated, S6/populated-long | A completed subagent carrying a result, with a blocked second child. |
