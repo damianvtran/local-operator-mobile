@@ -68,14 +68,19 @@ describe("findIdenticalFrames", () => {
 		expect(result.exemptions).toEqual([]);
 	});
 
-	it("reports the DECLARED exemption for the pair the matrix declares, and nothing else", () => {
+	it("reports the DECLARED exemption for the group the matrix declares, and nothing else", () => {
 		// The one key `matrix.ts` declares, so this test fails if the table loses it —
-		// the exemption is a statement about a real pair, not a variable.
+		// the exemption is a statement about a real group, not a variable. The group is
+		// three names because that is the shape the check forms once a tier captures
+		// every cell: `S5/subagents` joined `S5/populated-long` and `S5/rich-rows` in the
+		// same byte-group, and the table extends the one statement rather than opening a
+		// second entry for the same phenomenon.
 		const result = findIdenticalFrames([
 			cell("S5", "populated-long", "aaaa", "long", {
 				cell: "S5/populated-long",
 			}),
 			cell("S5", "rich-rows", "aaaa", "rows", { cell: "S5/rich-rows" }),
+			cell("S5", "subagents", "aaaa", "roster", { cell: "S5/subagents" }),
 		]);
 		expect(result.collapses).toEqual([]);
 		expect(result.undeclared).toEqual([]);
@@ -133,6 +138,7 @@ describe("findIdenticalFrames", () => {
 				cell: "S5/populated-long",
 			}),
 			cell("S5", "rich-rows", "aaaa", "rows", { cell: "S5/rich-rows" }),
+			cell("S5", "subagents", "aaaa", "roster", { cell: "S5/subagents" }),
 		]);
 		expect(result.collapses).toHaveLength(1);
 		expect(result.exemptions).toEqual([]);
