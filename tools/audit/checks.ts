@@ -289,6 +289,12 @@ export const SUB_RULE_TEXT: Record<string, RegExp> = {
 	"U-05:right": /^right edge/,
 	"U-07:x": /overflow-x/,
 	"U-07:y": /overflow-y/,
+	// U-08's escape branch: a reported overlap where one of the two boxes has a clipping
+	// ancestor that is not on its containing-block chain. It has its own pattern because
+	// the canary asserts a rule, not a check — every other U-08 fixture is a plain
+	// overlap, so without this a clip test that swallowed the escape case would still
+	// find some other U-08 row on the page and pass (review round 3).
+	"U-08:escape": /^painted over a clipping ancestor/,
 };
 
 /** U-05 — nothing sits under a notch, a home indicator or an Android gesture bar. */
@@ -638,7 +644,11 @@ function u08Overlap(state: AuditState): CheckRow[] {
 			rows.push({
 				check: "U-08",
 				verdict: "FAIL",
-				measured: `${overlapW}x${overlapH}pt overlap (${round((area / smaller) * 100, 0)}% of the smaller box)`,
+				// The rule's own words come first when the pair includes a node the browser
+				// paints through a clipping ancestor that is off its containing-block chain: it
+				// is the escape the every-ancestor walk swallowed, and `SUB_RULE_TEXT` reads it
+				// to tell this branch apart from a plain overlap.
+				measured: `${a.escapedClip || b.escapedClip ? "painted over a clipping ancestor: " : ""}${overlapW}x${overlapH}pt overlap (${round((area / smaller) * 100, 0)}% of the smaller box)`,
 				detail: `${a.path} ∩ ${b.path}${offscreenNote(a, state)}`,
 			});
 		}
@@ -909,6 +919,11 @@ export interface AuditNode {
 	 * an image), and `ariaHidden` is `aria-hidden="true"` on the node or any ancestor.
 	 */
 	clippedAway: boolean;
+	/**
+	 * An ancestor clips this node only off its containing-block chain, so the browser paints
+	 * it: the shape a clip test walking every ancestor swallows (see U-08's escape branch).
+	 */
+	escapedClip: boolean;
 	ariaHidden: boolean;
 	ownInk: boolean;
 	interactive: boolean;

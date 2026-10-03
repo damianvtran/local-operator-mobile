@@ -1294,7 +1294,50 @@ export interface CaptureRecord {
 export async function runCapture(options: CaptureOptions) {
 	const outDir = options.out;
 	mkdirSync(join(outDir, "frames"), { recursive: true });
-	const state = await relayState(options.relay, options.cellTimeoutMs);
+	/*
+	 * A REFUSAL IN THE PRE-FLIGHT ALSO ACCOUNTS FOR ITSELF.
+	 *
+	 * `relayState` is bounded now, so a relay that accepts and never answers refuses in one
+	 * bound instead of hanging until the job is killed — but it refused with NOTHING written,
+	 * which is the same "the run left no account of itself" shape the cell path was fixed
+	 * for. A refusal is a fact about the run, so it goes into the manifest the job uploads:
+	 * `records` is empty because no cell was planned, and `meta.preflightRefusal` names the
+	 * reason. The error is re-thrown, so the exit code is still a refusal — the file is a
+	 * record, not a recovery.
+	 */
+	let state: RelayStateReply | null;
+	try {
+		state = await relayState(options.relay, options.cellTimeoutMs);
+	} catch (error) {
+		const reason = error instanceof Error ? error.message : String(error);
+		writeFileSync(
+			join(outDir, "manifest.json"),
+			`${JSON.stringify(
+				{
+					meta: {
+						refused: true,
+						preflightRefusal: reason,
+						buildDir: resolve(options.dir),
+						relay: options.relay ?? null,
+						out: outDir,
+					},
+					themeProblems: [],
+					readinessProblems: [
+						`the run refused to plan a single cell: ${reason}`,
+					],
+					abandonedCells: [],
+					identicalStates: [],
+					identicalStateUndeclared: [],
+					identicalStateExemptions: [],
+					records: [],
+				},
+				null,
+				2,
+			)}
+`,
+		);
+		throw error;
+	}
 	if (state !== null && state.cells.length === 0) {
 		throw new Error(
 			`the mock relay at ${options.relay} declares no cells: /__mock/scenarios returned no ` +

@@ -93,6 +93,29 @@ export const EXTRACT_PROBE = `
     }
     return false;
   };
+  // The same walk as it stood BEFORE the chain, kept for one reason: to NAME the nodes
+  // the two walks disagree about. A node that only the every-ancestor walk calls clipped
+  // has a clipping ancestor that is NOT on its chain, so the browser paints it — the
+  // shape (a pinned node escaping a clipped container) this rule's costliest false
+  // negative lives in, and U-08 says so out loud in the row. It never filters anything:
+  // 'clippedAway' alone decides that.
+  const clippedByAnyAncestor = (el, rect) => {
+    let left = rect.left, top = rect.top, right = rect.right, bottom = rect.bottom;
+    let node = el.parentElement;
+    while (node && node.nodeType === 1) {
+      const s = getComputedStyle(node);
+      if (s.overflowX !== 'visible' || s.overflowY !== 'visible') {
+        const r = node.getBoundingClientRect();
+        left = Math.max(left, r.left);
+        top = Math.max(top, r.top);
+        right = Math.min(right, r.right);
+        bottom = Math.min(bottom, r.bottom);
+        if (right <= left || bottom <= top) return true;
+      }
+      node = node.parentElement;
+    }
+    return false;
+  };
   // 'aria-hidden' is inherited, so it is answered over the chain and not per node.
   const ariaHiddenIn = (el) => {
     let node = el;
@@ -217,10 +240,12 @@ export const EXTRACT_PROBE = `
       disabled: el.disabled === true || el.getAttribute('aria-disabled') === 'true',
       isControl: /^(input|select|textarea)$/.test(el.tagName.toLowerCase()),
       childImages: el.querySelectorAll('img,svg').length,
-      // The two facts a box does not tell you: whether an ancestor clips it to
-      // nothing, and whether it draws ink of its own at all. Reported as
-      // measurements — U-08 is where they become a rule.
+      // The facts a box does not tell you: whether an ancestor clips it to nothing,
+      // whether an ancestor clips it ONLY off its containing-block chain (so the
+      // browser paints it anyway), and whether it draws ink of its own at all.
+      // Reported as measurements — U-08 is where they become a rule.
       clippedAway: clippedAway(el, rect),
+      escapedClip: clippedByAnyAncestor(el, rect) && !clippedAway(el, rect),
       ariaHidden: ariaHiddenIn(el),
       ownInk:
         ownText.length > 0

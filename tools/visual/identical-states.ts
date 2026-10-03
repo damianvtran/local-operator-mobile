@@ -1,10 +1,13 @@
 /**
  * The identical-frame partition, kept pure so it can be tested.
  *
- * It lives outside `capture.ts` because `capture.ts` is an entry point that parses argv
- * on import: logic a test cannot import is logic nobody can break on purpose, and the
- * undeclared-pair branch is a BLOCKING outcome — exactly the kind of path that needs a
- * test rather than a reviewer's word.
+ * It lives in its own module rather than in `capture.ts` because the rule is PURE — records
+ * in, findings out — while the file that runs it pulls in the whole harness: the CDP client,
+ * the browser launcher, the argv parser. `capture.ts` is importable, verified: an `import`
+ * returns `runCapture` and does not execute the CLI. So the reason is the blast radius of a
+ * test that must load all of that to reach eight assertions, not a technical barrier — and the
+ * undeclared-pair branch is a BLOCKING outcome, exactly the kind of path that needs a test
+ * rather than a reviewer's word.
  */
 
 import { IDENTICAL_FRAME_EXEMPTIONS } from "./matrix.ts";
