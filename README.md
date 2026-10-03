@@ -13,7 +13,7 @@
 
 <p align="center">
   <a href="./LICENSE"><img alt="License: MIT" src="https://img.shields.io/github/license/damianvtran/local-operator-mobile"></a>
-  <img alt="CI: not yet configured" src="https://img.shields.io/badge/CI-not%20yet%20configured-lightgrey">
+  <a href="https://github.com/damianvtran/local-operator-mobile/actions/workflows/ci.yml"><img alt="CI status" src="https://img.shields.io/github/actions/workflow/status/damianvtran/local-operator-mobile/ci.yml?branch=main"></a>
   <img alt="Platforms: iOS and Android" src="https://img.shields.io/badge/platform-iOS%20%7C%20Android-lightgrey">
   <img alt="Status: in development" src="https://img.shields.io/badge/status-in%20development-orange">
 </p>
@@ -24,29 +24,73 @@
   <a href="https://local-operator.com">Website</a>
 </p>
 
-> **Status: in development.** This repository is at the research and design stage. There is no app build yet, and nothing below describes shipped functionality — every feature is planned.
+> **Status: in development.** The app is built and exercised in this repository —
+> against a mock relay, a frame audit and the test suite — but **no build has been
+> published**: it is not in the App Store, TestFlight or Google Play, and no GitHub
+> Release has been cut. [Features](#features) says what is built and what is not;
+> [Download](#download) says what you can get today.
+
+<br />
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="./docs/assets/screenshots/session-view-dark.png">
+    <source media="(prefers-color-scheme: light)" srcset="./docs/assets/screenshots/session-view-light.png">
+    <img alt="The session view in light theme: a transcript with a diff, a table and a running tool row, the to-do and subagent strips, and the composer with its model and effort chips."
+         src="./docs/assets/screenshots/session-view-light.png">
+  </picture>
+  <br />
+  <sub><code>a session at work</code> — the transcript, the to-do and subagent strips, and the composer's model and effort chips.</sub>
+</p>
 
 ## What it is
 
 **Local Operator Mobile** is a native iOS and Android client for [Local Operator](https://github.com/damianvtran/local-operator) sessions that run on your own computer. Your agents keep running where they are — on your machine, with your files and your tools — and the app lets you follow along, answer questions, approve risky steps, and start new work while you are away from your desk.
 
-It talks to the mobile relay that ships with Local Operator (`lop mobile`), the same relay behind today's mobile web client, and it aims to be a faster, more native way to use it: real push-style updates, platform sign-in, and a layout designed for a phone rather than adapted to one.
+It talks to the mobile relay that ships with Local Operator (`lop mobile`), the same relay behind today's mobile web client, and it is a native client for it: platform sign-in, and a layout designed for a phone rather than adapted to one. Push notifications are designed but not built yet — see [ADR 0006](./docs/adr/0006-push-and-ack-sync.md).
 
 ## Features
 
-All of these are **in development**; none has shipped.
+**Built** — each of these is implemented, unit-tested, and rendered against the
+mock relay by the [frame audit](./docs/e2e/README.md):
 
-- **Session list** — every live session on your computer, with what each one is doing right now.
-- **Live transcript** — follow a session as it works: messages, tool calls, and results as they stream in.
-- **Steer and stop** — send a follow-up to redirect a running agent, or stop it.
-- **Approvals and questions** — answer an agent's questions and approve or decline the steps it asks about.
-- **Model and effort** — switch a session's model and reasoning effort.
-- **Slash commands** — the session's commands, with suggestions as you type.
-- **Subagents** — drill into the subagents a session has started and follow each one.
-- **To-dos** — the task list a session is working through.
-- **Past sessions** — search earlier sessions and resume one.
-- **New session** — start a session in a folder you pick on your computer.
+- **Session list** — every live session on your computer, split into active and
+  previous, with what each one is doing right now: which are running, how many
+  subagents they have, which are waiting on you, and which have stopped answering.
+- **Search** — filter the list, and search past sessions by their contents on the
+  relay, not just their titles.
+- **Live transcript** — follow a session as it works: messages, markdown, code
+  blocks, diffs and tables, tool calls with their durations, images the agent
+  produced, and results as they stream in.
+- **Composer** — send a message, steer a running turn, or stop it, from one
+  control that never moves; with the session's model and reasoning effort shown
+  beside it, and a leading `/` for the session's own commands.
+- **Approvals and questions** — approve or decline the steps an agent asks about
+  and answer its questions, in the transcript where they were asked.
+- **Subagents and to-dos** — the subagents a session has started (and a detail
+  view for each), and the task list it is working through.
 - **Image attachments** — send a photo or screenshot into a session.
+- **New session, past sessions** — start a session in a folder you pick on your
+  computer, with the model and an optional first prompt; and search earlier
+  sessions and resume one.
+- **Connection and sign-in** — sign in with Radient and the app finds your
+  personal tunnels, or point it at any tunnel or URL you run yourself and sign in
+  with the relay password. A tunnel that refuses, an expired login and a computer
+  that is asleep each get their own explanation and remedy.
+- **Settings** — the connected computer, appearance (theme and text size), and
+  diagnostics for the connection.
+
+**Designed, and not implemented yet:**
+
+- **Push notifications** — the design for delivering a session's
+  attention-needing events to the phone, and for acknowledging them across
+  surfaces, is recorded in [ADR 0006](./docs/adr/0006-push-and-ack-sync.md).
+  Nothing is wired up.
+- **Demo mode** — a build that lets someone try the app without owning a computer
+  running `lop`, which the store review paths in [`docs/publishing/`](./docs/publishing/)
+  ask for.
+- **Pair this phone** — setting the connection up by scanning something on the
+  computer, instead of typing an address.
 
 ## How it connects
 
@@ -59,33 +103,97 @@ To set up the computer side, see the Local Operator docs for [tunnels](https://g
 
 ## Download
 
-There is no release yet. When the first build is ready it will be listed here:
+**No build has been published yet** — the app is in no store, and no GitHub
+Release has been cut. Here is everything you can get today:
 
-- **App Store (iOS)** — coming soon
-- **TestFlight (iOS beta)** — coming soon
-- **Google Play (Android)** — coming soon
-- **GitHub Releases** — coming soon
+| Where | State today |
+| --- | --- |
+| **GitHub Releases** (signed APK, AAB and IPA) | No `v*` tag has been cut, so there is no Release to download. The release pipeline is in review in [#10](https://github.com/damianvtran/local-operator-mobile/pull/10); once it is on `main`, a `v*` tag runs the full gate, builds and signs both platforms, and attaches the artefacts to a Release. |
+| **CI artefacts** | Once #10 is on `main`, every run that touches the native projects uploads a **debug APK** you can sideload and the **iOS simulator build plus the frame it rendered**; a push to `main` also uploads a **signed AAB and APK** to the `android-internal` artefact. |
+| **Google Play** | **Not yet published.** `docs/publishing/google-play.md` lists what a listing requires. |
+| **App Store** | **Not yet published.** `docs/publishing/apple-app-store.md` lists what a listing requires. |
+| **TestFlight** | **Not yet published.** `docs/publishing/other-channels.md` covers the beta channel and its 90-day build expiry. |
+| **Build it yourself** | `pnpm install` then `pnpm dev:web` — see [Development](#development). No Xcode or Android SDK is needed for the web target. |
+
+Signing material (keystores, certificates, provisioning profiles) lives in CI
+secrets only, never in this repository.
 
 ## Screenshots
 
-Screenshots will be added here with the first app build, captured from the real app in light and dark themes.
+Captured from the app's own web export (`pnpm export:web`), driven in installed
+headless Chrome at a 390 pt viewport, against the mock relay in
+[`tools/mock-relay/`](./tools/mock-relay/) — so the conversations below are the
+harness's fixtures, not anyone's real sessions. The light and dark frames are the
+same cells with the theme overridden, and the composer row is the composer band
+of the session view above it.
+
+| | Light | Dark |
+| --- | --- | --- |
+| **Welcome** — the first run, and the two ways in. | <img alt="The welcome screen in light theme." src="./docs/assets/screenshots/welcome-light.png" width="260"> | <img alt="The welcome screen in dark theme." src="./docs/assets/screenshots/welcome-dark.png" width="260"> |
+| **Sign in** — Radient, or an address and the relay password. | <img alt="The sign-in screen in light theme." src="./docs/assets/screenshots/sign-in-light.png" width="260"> | <img alt="The sign-in screen in dark theme." src="./docs/assets/screenshots/sign-in-dark.png" width="260"> |
+| **Session list** — active and previous, with what each one is doing right now. | <img alt="The session list in light theme." src="./docs/assets/screenshots/session-list-light.png" width="260"> | <img alt="The session list in dark theme." src="./docs/assets/screenshots/session-list-dark.png" width="260"> |
+| **Session view** — the transcript, a running tool row, the to-do and subagent strips. | <img alt="A session's transcript in light theme." src="./docs/assets/screenshots/session-view-light.png" width="260"> | <img alt="A session's transcript in dark theme." src="./docs/assets/screenshots/session-view-dark.png" width="260"> |
+| **Composer** — one control for send, steer and stop, with the model and effort chips. | <img alt="The composer band in light theme, showing the message field and the model and effort chips." src="./docs/assets/screenshots/composer-light.png" width="420"> | <img alt="The composer band in dark theme, showing the message field and the model and effort chips." src="./docs/assets/screenshots/composer-dark.png" width="420"> |
+| **Settings** — the connected computer, appearance, diagnostics. | <img alt="The settings screen in light theme." src="./docs/assets/screenshots/settings-light.png" width="260"> | <img alt="The settings screen in dark theme." src="./docs/assets/screenshots/settings-dark.png" width="260"> |
+| **A refusal** — a tunnel that will not let this phone in, and what to do about it. | <img alt="The refusal surface in light theme." src="./docs/assets/screenshots/refusal-light.png" width="260"> | <img alt="The refusal surface in dark theme." src="./docs/assets/screenshots/refusal-dark.png" width="260"> |
 
 ## Development
 
-The toolchain has not been chosen yet. That decision, and the reasoning behind it, will be recorded as an architecture decision record in [`docs/adr/`](./docs/). Setup instructions will follow here once it lands.
+The app is **Expo / React Native** (SDK 57, React 19), typed with TypeScript,
+styled through a generated design system, and tested with Vitest. The reasoning
+behind the stack, the connection layer, the test harness and the pipeline is in
+[`docs/adr/`](./docs/adr/) — starting with [ADR 0001](./docs/adr/0001-framework.md).
+
+```sh
+pnpm install        # pnpm only — the lockfile is pnpm's
+
+pnpm dev            # the Expo dev server; press i / a for a device
+pnpm dev:web        # the web target in a browser
+pnpm ios            # or: pnpm android
+
+pnpm test           # vitest, Node environment
+pnpm typecheck      # tsc --noEmit, app and tools
+pnpm lint           # biome check
+pnpm theme:check    # the generated styling layer is current with the tokens
+pnpm contrast:check # the design kit's contrast contract still holds
+pnpm export:web     # writes dist/, which is also what the frame audit drives
+```
+
+The end-to-end and design-audit layers have their own entry points — the mock
+relay, the frame harness and the audit checker, all plain Node with no
+dependencies:
+
+```sh
+pnpm mock:relay             # the deterministic mock relay, any state on demand
+pnpm audit:capture          # serve dist/, drive headless Chrome, write a frame matrix
+pnpm audit:run              # score those frames against the audit rubric
+pnpm e2e:verify             # the relay contract, the docs' own commands, and the canary
+```
+
+See [docs/development.md](./docs/development.md) for the loops, and
+[docs/e2e/README.md](./docs/e2e/README.md) for what the harness can and cannot
+prove. Native builds and native end-to-end tests run in CI: nothing here needs a
+local Xcode or Android SDK.
 
 See [CONTRIBUTING.md](./CONTRIBUTING.md) for how changes are proposed and reviewed, and [AGENTS.md](./AGENTS.md) for the conventions humans and coding agents follow in this repository.
 
 ## Documentation
 
-The documentation index is [docs/README.md](./docs/README.md). Planned sections:
+The documentation index is [docs/README.md](./docs/README.md):
 
-- `docs/adr/` — architecture decision records, starting with the toolchain choice.
-- `docs/relay/` — how the app talks to the Local Operator mobile relay and the Radient tunnel.
-- `docs/publishing/` — App Store, Google Play, and other store requirements.
-- `docs/ux/` — user experience research, flows, and audit harnesses.
-- `design/` — the design and brand kit.
-- `store/` — store listing copy and assets.
+- [`docs/adr/`](./docs/adr/) — architecture decision records: the framework and
+  styling stack, connection and authentication, the e2e and audit harness, the
+  CI/CD pipeline, queued asks, and push notifications with cross-surface acknowledgement.
+- [`docs/relay/`](./docs/relay/) — the relay contract the app is written
+  against, its types, its feature map and the tunnel edge.
+- [`docs/e2e/`](./docs/e2e/) — the mock relay, the frame harness and the audit
+  checker, and what each one can prove.
+- [`docs/ux/`](./docs/ux/) — user experience research, the target flows,
+  principles, and the audit rubric the frames are scored against.
+- [`docs/publishing/`](./docs/publishing/) — what the App Store, Google Play and
+  the other channels each require, and the checklist that tracks them.
+- [`design/`](./design/) — the design and brand kit the styling layer is generated from.
+- [`store/`](./store/) — draft store listing copy in the layouts fastlane expects.
 
 ## Security
 
