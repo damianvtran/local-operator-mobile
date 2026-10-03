@@ -35,9 +35,20 @@ export type AuthVerdict = { kind: "allow" } | ({ kind: "respond" } & Refusal);
 /** What the mutation's origin gate decides (`contract.md` §4). */
 export type OriginVerdict = { kind: "allow" } | ({ kind: "respond" } & Refusal);
 
-/** A gateway 503, with the `Retry-After` seconds the contract pins per reason. */
+/**
+ * A gateway 503, with the `Retry-After` seconds the contract pins per reason.
+ *
+ * `json` is required here, though it is optional on `Refusal`: every gateway
+ * refusal carries a JSON body — `gatewayUnavailable` sets
+ * `content-type: application/json` and always emits one, and every
+ * `GATEWAY_FAILURES` entry is keyed by its body. `Refusal` has to keep the
+ * field optional because it also models the 303 `authVerdict` answers with
+ * (`Location: /login`, `body: ""`, no JSON), so the refinement belongs here on
+ * the gateway type rather than on the shared one.
+ */
 export interface GatewayRefusal extends Refusal {
 	retryAfterS: string | undefined;
+	json: Json;
 }
 
 /* ---------------------------------------------------------------- cookies -- */
