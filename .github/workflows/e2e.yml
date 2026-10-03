@@ -297,8 +297,11 @@ jobs:
         # consume the whole job budget and report nothing: measured on 2026-09-30,
         # this step ran over 90 minutes inside a 45-minute job timeout (run
         # 36669731994) without GitHub reaping it, so the run said only that it was
-        # still going. Twenty minutes is several times a complete matrix on a warm
-        # runner, and a fired bound names this step.
+        # still going. Measured again on 2026-10-03 (run 37098393675), the capture
+        # costs 2.24 s/cell — 403 cells / 1209 frames in 903.1 s — so the `core`
+        # plan of 910 cells needs ~34 min and cannot finish inside this bound. The
+        # `--tier ci` sample can: 280 cells, ~10 min at the same rate, which leaves
+        # the audit and the canary their own steps below.
         timeout-minutes: 20
         # THE DOCUMENTED INVOCATION, through the harness's own script
         # (`docs/e2e/ci-notes.md` §3). An earlier version derived the cell list here
@@ -307,9 +310,16 @@ jobs:
         # the source — its own `relayState()` reads the scenario registry — so the
         # workaround is gone and this is one command with the flags the notes name.
         #
+        # `--tier` is named rather than left to the default, because the default is
+        # `core`: the tier is what keeps the sample, the plan and the manifest
+        # reading one list declared in the harness (`tools/visual/matrix.ts`) rather
+        # than a range spelled out here that the harness cannot see. The count is
+        # printed with the plan, so a reviewer can check this file against the run
+        # rather than trust it.
+        #
         # Frames are written outside the repository and uploaded — never committed
         # (ADR 0003).
-        run: pnpm audit:capture --dir dist --out "$RUNNER_TEMP/frames" --relay "$MOCK_RELAY_URL" --consecutive --yes
+        run: pnpm audit:capture --dir dist --out "$RUNNER_TEMP/frames" --relay "$MOCK_RELAY_URL" --tier ci --consecutive --yes
 
       - name: Audit the frames against the rubric
         timeout-minutes: 5
