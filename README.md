@@ -116,7 +116,13 @@ Release has been cut. Here is everything you can get today:
 | **Build it yourself** | `pnpm install` then `pnpm dev:web` — see [Development](#development). No Xcode or Android SDK is needed for the web target. |
 
 Signing material (keystores, certificates, provisioning profiles) lives in CI
-secrets only, never in this repository.
+secrets only, never in this repository — and **none of it is configured yet**.
+Both signed rows above are gated on it: the pipeline reads the Android keystore
+and its passwords, the Play service account, and the Apple team id, App Store
+Connect key id, issuer id and private key from repository secrets in a `release`
+environment (`scripts/ci/check-secrets.ts --mode release`), and a `v*` tag fails
+loudly — naming every variable that is missing — rather than skipping the
+signing. A signed APK, AAB or IPA exists only once those are in place.
 
 ## Screenshots
 
@@ -142,7 +148,7 @@ uncropped frame there cuts a control's label through the glyphs.
 | **Session view** — the transcript, a running tool row, the to-do and subagent strips. | <img alt="A session's transcript: user turns, a bash tool row with its duration, a diff, two markdown tables, the to-dos and subagent strips, and the composer with its model and effort chips." src="./docs/assets/screenshots/session-view-light.png" width="260"> | <img alt="The same transcript in dark theme." src="./docs/assets/screenshots/session-view-dark.png" width="260"> |
 | **Approvals** — a step the agent wants to run, and the two ways to answer it. | <img alt="A pending approval in the transcript: the bash command the agent wants to run, the folder it runs in, an Approve and a Deny button, and an always-allow control." src="./docs/assets/screenshots/approval-light.png" width="260"> | <img alt="The same pending approval in dark theme." src="./docs/assets/screenshots/approval-dark.png" width="260"> |
 | **Settings** — the connected computer, appearance, diagnostics. | <img alt="The settings screen: the connected computer and its status, the theme and text-size controls, and diagnostics." src="./docs/assets/screenshots/settings-light.png" width="260"> | <img alt="The settings screen in dark theme: the same connection, appearance and diagnostics sections." src="./docs/assets/screenshots/settings-dark.png" width="260"> |
-| **A refusal** — a tunnel that will not let this phone in, and what to do about it. | <img alt="The refusal surface: a tunnel that needs attention in Radient, the command to run on that computer, and the other ways to connect." src="./docs/assets/screenshots/refusal-light.png" width="260"> | <img alt="The refusal surface in dark theme: the same refusal and the same remedies." src="./docs/assets/screenshots/refusal-dark.png" width="260"> |
+| **A refusal** — Radient refused the computer's relay authorization, and signing in on this phone will not change it. | <img alt="The refusal surface: a tunnel that needs attention in Radient, the command to run on that computer, and the other ways to connect." src="./docs/assets/screenshots/refusal-light.png" width="260"> | <img alt="The refusal surface in dark theme: the same refusal and the same remedies." src="./docs/assets/screenshots/refusal-dark.png" width="260"> |
 
 ## Development
 
@@ -174,7 +180,8 @@ dependencies:
 pnpm mock:relay             # the deterministic mock relay, any state on demand
 pnpm audit:capture          # serve dist/, drive headless Chrome, write a frame matrix
 pnpm audit:run              # score those frames against the audit rubric
-pnpm e2e:verify             # the relay contract, the docs' own commands, and the canary
+pnpm e2e:verify             # the tools' own types, this page's commands, the relay
+                            # contract, and the divergence checks
 ```
 
 See [docs/development.md](./docs/development.md) for the loops, and
@@ -197,6 +204,8 @@ The documentation index is [docs/README.md](./docs/README.md):
   checker, and what each one can prove.
 - [`docs/ux/`](./docs/ux/) — user experience research, the target flows,
   principles, and the audit rubric the frames are scored against.
+- [`docs/design/`](./docs/design/) — the design system the app's styling layer is
+  generated from: brand kit, components, tokens and previews.
 - [`docs/publishing/`](./docs/publishing/) — what the App Store, Google Play and
   the other channels each require, and the checklist that tracks them.
 - [`design/`](./design/) — the design and brand kit the styling layer is generated from.
