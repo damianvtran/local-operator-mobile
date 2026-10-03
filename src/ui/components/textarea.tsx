@@ -91,11 +91,21 @@ export const Textarea = ({
 			<Text className="text-body-sm text-ink-muted">{label}</Text>
 			{/* Only while it is the thing on screen: any value hides it, so it can never
 			 *  need room the content is already taking. Zero height and clipped, so it
-			 *  lays out and reports its own height without moving anything. */}
+			 *  lays out and reports its own height without moving anything.
+			 *
+			 *  It carries the placeholder's INK as well as its typography, from the same
+			 *  `placeholderColour` the field hands to `placeholderTextColor` — one value,
+			 *  two renderings of the same string. Without it the copy takes the platform's
+			 *  default text colour, which is black: on the dark canvas that is 1.29:1,
+			 *  outside every ink this palette owns (`ink-disabled`, the dimmest, is 2.37:1
+			 *  there). The copy is a real text node, so the audit's U-02 measures it as the
+			 *  placeholder — the textarea's own `::placeholder` is a pseudo-element no DOM
+			 *  probe can read — and an ink no role owns is a reading, not a colour. */}
 			{placeholder !== undefined && value === "" ? (
 				<View className="h-0 overflow-hidden" aria-hidden>
 					<Text
 						className="text-body"
+						style={{ color: placeholderColour }}
 						onLayout={(event) =>
 							setPlaceholderHeight(event.nativeEvent.layout.height)
 						}

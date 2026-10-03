@@ -20,7 +20,7 @@ import {
 import { isSendKey } from "@/features/session/keyboard";
 import { CONTROL, composerAttachmentId, ROLE, SURFACE, state } from "@/ui/a11y";
 import { Button, Chip, Skeleton, Textarea } from "@/ui/components";
-import { cx } from "@/ui/variants";
+import { CONTROL_DISABLED_INK, cx } from "@/ui/variants";
 
 /**
  * A DOM keyboard event, narrowed to what this file reads.
@@ -476,11 +476,18 @@ export const Composer = ({
 							controls.primary.disabled ? "bg-sunken" : "bg-accent",
 						)}
 					>
+						{/* The disabled ink is the kit's own constant, not a local choice: this
+						    control is the only one in the app that hand-rolls the primary's
+						    disabled treatment instead of going through `Button`, and it was the
+						    one place still painting a disabled label in `ink-disabled` —
+						    2.42:1 on `sunken` in light, 2.50:1 in dark, against the 4.5:1 a label
+						    needs. `CONTROL_DISABLED_INK` carries the why (variants.ts) and the
+						    ratio the audit measures: 5.02:1 light, 6.59:1 dark. */}
 						<Text
 							className={cx(
 								"text-body-sm font-medium",
 								controls.primary.disabled
-									? "text-ink-disabled"
+									? CONTROL_DISABLED_INK
 									: "text-on-accent",
 							)}
 						>
