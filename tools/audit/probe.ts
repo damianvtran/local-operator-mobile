@@ -31,12 +31,51 @@ export const EXTRACT_PROBE = `
   // Its own style can say visible while an ANCESTOR clips it away: a zero-height
   // 'overflow: hidden' wrapper leaves its child a full-size getBoundingClientRect
   // and not one painted pixel, and the per-node test above cannot see that because
-  // the clipping is not on the node. What is measured here is the node's box
-  // intersected with every clipping ancestor's box, which is the region that can
-  // actually reach the screen.
+  // the clipping is not on the node.
+  //
+  // WHICH ANCESTORS COUNT is the part that has to be right, and walking all of them
+  // is wrong: CSS clips the descendants that are laid out INSIDE the clipper, so an
+  // ancestor clips this node only if it sits on the node's containing-block chain. A
+  // 'position: fixed' node, or an 'absolute' node whose containing block is ABOVE the
+  // clipper (a static zero-height wrapper is not one), is painted by the browser —
+  // and calling it clipped-away would hide exactly the pinned-over-content defect
+  // this rule exists to report: a toast, a sheet, a floating composer.
+  const establishesContainingBlock = (s) =>
+    (s.transform && s.transform !== 'none')
+    || (s.filter && s.filter !== 'none')
+    || (s.backdropFilter && s.backdropFilter !== 'none')
+    || (s.perspective && s.perspective !== 'none')
+    || (s.willChange && /transform|filter|perspective/.test(s.willChange))
+    || (s.contain && /paint|layout|strict|content/.test(s.contain));
+  // The element this node is positioned and laid out against, or null for the
+  // viewport. Walking from here upward is the chain, and it is what the clip test
+  // follows — every element on it can clip the node; nothing above it can.
+  const containingBlock = (el) => {
+    const style = getComputedStyle(el);
+    if (style.position === 'fixed') {
+      let node = el.parentElement;
+      while (node && node.nodeType === 1) {
+        if (establishesContainingBlock(getComputedStyle(node))) return node;
+        node = node.parentElement;
+      }
+      return null;
+    }
+    if (style.position === 'absolute') {
+      let node = el.parentElement;
+      while (node && node.nodeType === 1) {
+        const s = getComputedStyle(node);
+        if (s.position !== 'static' || establishesContainingBlock(s)) return node;
+        node = node.parentElement;
+      }
+      return null;
+    }
+    // Static, relative and sticky content is laid out in its parent, which is
+    // therefore on the chain; the walk continues from there.
+    return el.parentElement;
+  };
   const clippedAway = (el, rect) => {
     let left = rect.left, top = rect.top, right = rect.right, bottom = rect.bottom;
-    let node = el.parentElement;
+    let node = containingBlock(el);
     while (node && node.nodeType === 1) {
       const s = getComputedStyle(node);
       // 'overflow: visible' on both axes paints outside the box; anything else
@@ -50,7 +89,7 @@ export const EXTRACT_PROBE = `
         bottom = Math.min(bottom, r.bottom);
         if (right <= left || bottom <= top) return true;
       }
-      node = node.parentElement;
+      node = containingBlock(node);
     }
     return false;
   };

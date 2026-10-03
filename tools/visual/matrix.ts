@@ -290,7 +290,7 @@ export const ALL_DEVICES: string[] = Object.keys(DEVICES);
  * The CI tier: the bounded sample the per-push capture job takes.
  *
  * WHY A THIRD TIER, AND WHY IT IS HERE RATHER THAN A `--devices` LIST IN YAML.
- * The `core` tier is 936 cells — the whole declared cell list at 2 themes x
+ * The `core` tier is 910 cells — the whole declared cell list at 2 themes x
  * (3 phone scales + 2 tablet scales) x 5 profiles — and the CI job's capture step
  * is bound at 20 minutes. Measured on the runner, that is 2.24 s/cell: 403 cells
  * in 903 s, so a core run needs ~36 minutes. The job's first real run of this path
@@ -320,10 +320,10 @@ export const ALL_DEVICES: string[] = Object.keys(DEVICES);
  *     measures (200% over 100%). 150% is the phone-typical intermediate case and is
  *     left to `core`.
  *
- * That is 36 cells x 2 themes x (2 + 2) device-scales = 288 cells, ~11 minutes at
+ * That is 35 cells x 2 themes x (2 + 2) device-scales = 280 cells, ~11 minutes at
  * the measured rate: inside the step bound with most of it spare. `core` and
  * `full` are unchanged and stay the local and dispatched samples, so the full
- * 936-cell `core` matrix and the 3384-cell `full` matrix remain runnable — nothing
+ * 910-cell `core` matrix and the 3290-cell `full` matrix remain runnable — nothing
  * is only reachable through CI.
  */
 export const CI_DEVICES: string[] = ["iphone-se", "tablet-landscape"];
@@ -529,6 +529,18 @@ export const PENDING_CELLS: Record<string, string> = {
 		"app (src/ui/a11y.ts STATE_MARKER) — ListRow's `ended` receipt changes copy and colour but carries no identifier",
 	"S4/degraded-row":
 		"app (src/ui/a11y.ts STATE_MARKER) — ListRow's `degraded` receipt renders 'not answering' but carries no identifier",
+	/* The scrolled transcript, and it is here rather than only in the PR because this
+	 * table is where a coverage gap is supposed to live. `S5/scroll` was
+	 * `S5/populated-long` under a second name — both were pinned from `long-transcript`'s
+	 * single projection — so the duplicate DECLARATION went and the relay no longer
+	 * declares the cell; the entry is inert for the same reason the session-view block
+	 * above is, since a skip is honoured only while the app declares no marker. What it
+	 * records is the state that is still unmeasured: a scroll POSITION is a viewport
+	 * interaction and not something the wire can declare, so nothing in the harness can
+	 * drive one, and the next person to add a wire action or an app-side id has the
+	 * owner text to read. */
+	"S5/scroll":
+		"harness (tools/visual/capture.ts) — driving a scroll position needs a wire action or an app-side id; until then no cell evidences a scrolled transcript",
 };
 
 /**

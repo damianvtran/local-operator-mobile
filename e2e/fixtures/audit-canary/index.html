@@ -40,6 +40,8 @@
   | #scale-clip           | U-04  | a px-height box that only clips once text scales     |
   | #unnamed-icon         | U-09  | an icon button with no accessible name               |
   | #label-mismatch       | U-10  | visible "Approve", accessible name "Confirm"         |
+  | #escape-pinned        | U-08  | an absolute node a clipping ancestor cannot clip      |
+  | #fixed-escape         | U-08  | a fixed node under the same non-clipping ancestor      |
 -->
 <html lang="en">
 <head>
@@ -272,6 +274,32 @@
 	<h2>U-08 overlap</h2>
 	<div id="overlap-a" data-defect="U-08" style="position:absolute;top:32px;left:0;width:140px;height:40px;background:var(--surface);border:1px solid var(--border);padding:4px">Alpha</div>
 	<div id="overlap-b" data-defect="U-08" style="position:absolute;top:42px;left:20px;width:140px;height:40px;background:var(--surface);border:1px solid var(--border);padding:4px">Beta</div>
+</div>
+
+<!-- U-08: a node whose containing block is ABOVE an ancestor that clips. The wrapper
+     is static with height 0 and `overflow: hidden`, so it clips its STATIC children —
+     but this node is absolute and is laid out against the PANEL, so the browser paints
+     it over the control. A clip test that walks every overflow ancestor instead of the
+     containing-block chain calls it invisible and hides a real overlap: this fixture
+     exists because the canary's other overlap cases have no clipping ancestor, which
+     is how the defect survived a round. -->
+<div class="bad panel" style="position:relative;height:72px">
+	<h2>U-08 absolute node above a clipping ancestor</h2>
+	<button class="control" id="escape-under" style="display:block;width:180px;height:44px">Send</button>
+	<div id="escape-clipper" style="overflow:hidden;height:0">
+		<div id="escape-pinned" data-defect="U-08" style="position:absolute;top:12px;left:12px;width:180px;height:96px;background:var(--surface);border:1px solid var(--border)">Pinned over the control</div>
+	</div>
+</div>
+
+<!-- U-08: a FIXED node inside an ancestor that clips. Fixed content is positioned
+     against the viewport, so a static zero-height wrapper cannot clip it either — the
+     browser paints it. Translucent on purpose: a translucent pinned bar over content is
+     reported rather than excluded, so this asserts the filter did not swallow it. -->
+<div class="bad panel">
+	<h2>U-08 fixed node under a clipping ancestor</h2>
+	<div style="overflow:hidden;height:0">
+		<div id="fixed-escape" data-defect="U-08" style="position:fixed;top:0;left:0;width:200px;height:120px;background:rgba(178,58,49,0.35)">Fixed across the page</div>
+	</div>
 </div>
 
 <!-- U-09: an icon button with no accessible name. -->

@@ -677,7 +677,10 @@ rendered text and accessibility labels, i.e. what a phone would read out), and:
   rather than a knob that loosens the comparison.
 
 Declared exemptions are reported (`EXEMPT IDENTICAL FRAMES (n)`) and recorded in the
-manifest as `identicalStateExemptions`; only `identicalStates` can fail a run.
+manifest as `identicalStateExemptions`. Two lists fail a run: `identicalStates` (a
+collapse — the same bytes AND the same content) and `identicalStateUndeclared` (the same
+bytes, different content, and nothing has signed for it as a camera limit); the declared
+exemptions do not.
 
 Themes: `dark`, `light`. Text scales: `100`, `150`, `200` (percent of the app's
 default) — `150` is skipped on tablets and foldables, where it is not the
@@ -793,7 +796,7 @@ the distinction is the whole rule:
 | A pinned overlay that is **translucent** | **reported** | a see-through bar over text IS a visible overlap, whoever painted it |
 | A pinned opaque overlay that **encloses a control** | **reported** | a control the user cannot reach is a defect regardless of how the overlay was positioned |
 | Two **pinned** elements overlapping | **reported** | two bars stacked on each other is a defect |
-| A node that **cannot be seen** — clipped to nothing by an ancestor (`overflow` other than `visible`), or `aria-hidden` and painting no ink of its own | **not reported** | a box is not a drawing. The composer's measuring stand-in is a full-size box inside a zero-height `overflow: hidden` wrapper, so its geometry overlaps the placeholder it measures while it paints not one pixel: 40 rows for an overlap nobody could look at. It is excluded from *this* rule only — U-07 measures clipping itself, and the stand-in stays in the app because the height it measures is a real fix |
+| A node that **cannot be seen** — clipped to nothing by an ancestor on its containing-block chain (`overflow` other than `visible`), or `aria-hidden` and painting no ink of its own | **not reported** | a box is not a drawing. The composer's measuring stand-in is a full-size box inside a zero-height `overflow: hidden` wrapper, so its geometry overlaps the placeholder it measures while it paints not one pixel: 40 rows for an overlap nobody could look at. It is excluded from *this* rule only — U-07 measures clipping itself, and the stand-in stays in the app because the height it measures is a real fix. **The chain is the whole rule**: an ancestor clips only what is laid out inside it, so a `fixed` node or an `absolute` node whose containing block sits above a static wrapper is painted and is reported — the working shape of every toast and sheet |
 
 "Pinned" cannot be the CSS keyword. The first version tested
 `position: fixed | sticky`, and `react-native-web` paints a pinned footer
@@ -808,7 +811,12 @@ Both directions are asserted in the canary, because a rule that only exempts is
 indistinguishable from a rule that does nothing: `e2e/fixtures/audit-canary/` carries
 a clean-path pin-over-scroll footer that must **not** be reported, and, on the
 defect path, a translucent pinned bar and a control seated under an opaque pinned
-bar that must be.
+bar that must be. The same fixture carries the two shapes a clip test is most likely
+to swallow — an `absolute` node and a `fixed` node, each inside a static zero-height
+`overflow: hidden` wrapper, each painted over content and therefore reported —
+because the overlap cases above have no clipping ancestor between them, so a filter
+that walked every ancestor instead of the containing-block chain would keep catching
+those while hiding a real defect.
 
 ### A measurement outside the captured frame says so
 

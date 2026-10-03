@@ -50,6 +50,7 @@ import {
 import { serveDir } from "../lib/static-server.ts";
 import { DEFAULT_PASSWORD } from "../mock-relay/relay.ts";
 import { renderGallery } from "./gallery.ts";
+import { findIdenticalFrames } from "./identical-states.ts";
 import {
 	ALL_DEVICES,
 	CI_DEVICES,
@@ -58,7 +59,6 @@ import {
 	CORE_DEVICES,
 	DEVICES,
 	type DeviceProfile,
-	IDENTICAL_FRAME_EXEMPTIONS,
 	MEASURE_PROBE,
 	PENDING_CELLS,
 	PRE_PAINT_PROBE,
@@ -181,6 +181,10 @@ const sha = (buffer: Buffer): string =>
  */
 async function relayState(
 	relayUrl: string | undefined,
+	/** The same bound the cells use. The pre-flight is a `fetch` too, and a relay that
+	 * accepts and never answers hung the whole run before it had planned a cell —
+	 * measured by QA as rc 124 against their own bound with no manifest written. */
+	timeoutMs: number,
 ): Promise<RelayStateReply | null> {
 	if (!relayUrl) return null;
 	// Two endpoints, because they answer different questions and only one of them
@@ -189,14 +193,30 @@ async function relayState(
 	// entry's `shows` is the set of cells that state fills. Reading `cells` off
 	// `/__mock/state` — which never served it — made the documented `--relay`
 	// invocation fail with "no cells to capture".
-	const stateRes = await fetch(new URL("/__mock/state", relayUrl));
+	//
+	// BOTH ARE BOUNDED, and a timeout is a refusal rather than a hang: a capture that
+	// cannot plan is a run that must say so, not one that sits until its job is killed.
+	const stateCall = await withDeadline(
+		fetch(new URL("/__mock/state", relayUrl)),
+		timeoutMs,
+		`the mock relay's /__mock/state`,
+	);
+	if (!stateCall.ok)
+		throw new Error(`${stateCall.reason}; is it a mock relay?`);
+	const stateRes = stateCall.value;
 	if (!stateRes.ok)
 		throw new Error(
 			`mock relay /__mock/state answered ${stateRes.status}; is it a mock relay?`,
 		);
 	const state = asRecord(await stateRes.json()) ?? {};
 
-	const registryRes = await fetch(new URL("/__mock/scenarios", relayUrl));
+	const registryCall = await withDeadline(
+		fetch(new URL("/__mock/scenarios", relayUrl)),
+		timeoutMs,
+		`the mock relay's /__mock/scenarios`,
+	);
+	if (!registryCall.ok) throw new Error(registryCall.reason);
+	const registryRes = registryCall.value;
 	if (!registryRes.ok)
 		throw new Error(
 			`mock relay /__mock/scenarios answered ${registryRes.status}`,
@@ -723,9 +743,11 @@ async function relayStep<T>(
 	what: string,
 ): Promise<{ ok: true; value: T } | { ok: false; reason: string }> {
 	const result = await withDeadline(run(), ms, what);
-	return result.ok
-		? result
-		: { ok: false, reason: `the relay went away: ${result.reason}` };
+	if (result.ok) return result;
+	// Say what was OBSERVED rather than what it probably means: this path covers a
+	// relay that accepted and never answered as well as one that is gone, and the two
+	// want different fixes (a hung relay is not a departed one).
+	return { ok: false, reason: `the relay did not answer: ${result.reason}` };
 }
 
 /** What the measurement probe reports, narrowed from the page's reply. */
@@ -1119,118 +1141,6 @@ interface RelayStateReply {
 	>;
 }
 
-/**
- * Cells that declare different states but produced the same bytes.
- *
- * The check is deliberately cross-cell rather than per-cell: two *themes* of one
- * cell being identical is already caught by the twin check, while two *states*
- * of one screen being identical is the separate, harder-to-notice failure — the
- * app ignored the state and rendered one screen for all of them.
- *
- * Compared on the settled frame, which is the one a reviewer looks at.
- *
- * BYTES ALONE ARE NOT THE VERDICT, and this is the distinction that matters. A frame is
- * a viewport, and a viewport can be filled by chrome: at 320 px with 200 % text two cells
- * whose content differs in every row are byte-identical because the rows are below the
- * fold. So a byte-identical group is partitioned by what each cell is SHOWING
- * (`contentDigest`, read by `CONTENT_PROBE` without the viewport) and the two outcomes are
- * kept apart:
- *
- *   * a partition that still holds two declared states → a REAL COLLAPSE. It fails, with
- *     the same shape of message as before.
- *   * every cell carrying its own content → the pixels agree and the app does not: a
- *     camera limit, which passes ONLY when the pair is declared in
- *     `IDENTICAL_FRAME_EXEMPTIONS` (matrix.ts) with the reason a reviewer needs. An
- *     undeclared pair FAILS with the key to declare, so a new collapse cannot exempt
- *     itself by being camera-shaped by accident.
- *
- * A group with any collapse in it is reported as a collapse and nothing else: one real
- * collapse is the finding, and reporting a coexisting camera limit beside it would only
- * dilute it.
- */
-function exemptionKey(records: readonly CaptureRecord[]): string {
-	return [...new Set(records.map((record) => record.cell))].sort().join("|");
-}
-
-function findIdenticalFrames(records: CaptureRecord[]): {
-	collapses: string[];
-	undeclared: string[];
-	exemptions: string[];
-} {
-	const bySha = new Map<string, CaptureRecord[]>();
-	for (const record of records) {
-		const frame = record.frames[record.frames.length - 1];
-		if (frame === undefined) continue;
-		const key = `${frame.sha}`;
-		bySha.set(key, [...(bySha.get(key) ?? []), record]);
-	}
-	const collapses: string[] = [];
-	const undeclared: string[] = [];
-	const exemptions: string[] = [];
-	for (const [shaDigest, group] of bySha) {
-		const states = new Set(
-			group.map((record) => `${record.screen}/${record.state}`),
-		);
-		if (states.size < 2) continue;
-		// A DECLARED SKIP is not evidence for the state it names, so a group made ONLY of
-		// skipped cells rendering one image is the known gap, not a finding: the 29 skips
-		// on this head are one placeholder screen between them, and reporting that as
-		// "different states, one image" three times is noise a reviewer has to re-derive.
-		//
-		// The check keeps every tooth that matters: one EVIDENTIAL cell is enough to
-		// report the group, so a measured cell that collapses onto a skipped one — or two
-		// measured cells that collapse onto each other — is still caught.
-		if (!group.some((record) => record.declaredSkip === null)) continue;
-		const where = group[0]?.device ?? "?";
-		const label = [...states].sort().join(" = ");
-		// Partition by what each cell is SHOWING. Two cells in one partition rendered the
-		// same bytes AND the same content: that is a collapse, whichever viewport they were
-		// captured at.
-		const byContent = new Map<string, CaptureRecord[]>();
-		for (const record of group) {
-			byContent.set(record.contentDigest, [
-				...(byContent.get(record.contentDigest) ?? []),
-				record,
-			]);
-		}
-		const partitions = [...byContent.values()];
-		const collapsed = partitions.filter(
-			(part) =>
-				new Set(part.map((record) => `${record.screen}/${record.state}`)).size >
-				1,
-		);
-		for (const part of collapsed) {
-			const partStates = [
-				...new Set(part.map((record) => `${record.screen}/${record.state}`)),
-			].sort();
-			collapses.push(
-				`${partStates.join(" = ")} rendered identically (${shaDigest}) on ${where}, and their frames carry the same content`,
-			);
-		}
-		// One real collapse is the finding; a camera limit beside it would only dilute it.
-		if (collapsed.length > 0) continue;
-		const key = exemptionKey(group);
-		const reason = IDENTICAL_FRAME_EXEMPTIONS[key];
-		if (reason === undefined) {
-			// Its own list, because it is its own statement: the pixels agree and the app
-			// does not, which is a camera limit only once somebody declares it as one. Printed
-			// under its own header so the summary never says "same content" about a pair whose
-			// line says the content differs (QA round 1).
-			undeclared.push(
-				`${label} rendered identically (${shaDigest}) on ${where} although their renderings differ: ` +
-					`if that is the viewport filling with chrome rather than a collapse, declare '${key}' ` +
-					"in matrix.ts IDENTICAL_FRAME_EXEMPTIONS with the reason — until it is declared, a " +
-					"byte-identical pair of different states is not evidence",
-			);
-		} else {
-			exemptions.push(
-				`${label} rendered identically (${shaDigest}) on ${where} — declared, not a collapse: ${reason}`,
-			);
-		}
-	}
-	return { collapses, undeclared, exemptions };
-}
-
 /** `rgb(a, b, c)`/`#rrggbb` → lowercase hex, so a computed colour can meet a token. */
 function rgbEquals(
 	computed: string | null | undefined,
@@ -1384,7 +1294,7 @@ export interface CaptureRecord {
 export async function runCapture(options: CaptureOptions) {
 	const outDir = options.out;
 	mkdirSync(join(outDir, "frames"), { recursive: true });
-	const state = await relayState(options.relay);
+	const state = await relayState(options.relay, options.cellTimeoutMs);
 	if (state !== null && state.cells.length === 0) {
 		throw new Error(
 			`the mock relay at ${options.relay} declares no cells: /__mock/scenarios returned no ` +
