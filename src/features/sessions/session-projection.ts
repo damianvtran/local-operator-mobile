@@ -113,18 +113,65 @@ export function hasSections(sections: SessionSections): boolean {
  * blanked. This is the marking: a sentence with the age in it, because "stale"
  * alone gives the reader no way to judge whether to wait or to act.
  */
-export function staleNote(input: {
+export type StaleNoteInput = {
 	stale: boolean;
 	lastFrameAt: number | null;
 	now?: number;
-}): string | null {
+};
+
+export function staleNote(input: StaleNoteInput): string | null {
+	const phrase = stalePhrase(input);
+	return phrase === null ? null : `Last updated ${phrase}.`;
+}
+
+/**
+ * The same age, in a form that fits ONE line at the platform's largest text size.
+ *
+ * The stale line shares the degraded band with the banner, and the band is what
+ * decides how many rows are complete: at 320 pt / 200 % a `body-sm` line is
+ * 40.6 dp and the band has about 55 dp left under a capped banner, so this line
+ * may occupy one line and no more (review round 6, M-B). Capping it there is not
+ * enough by itself — a capped 22-character sentence paints `Last updated …` and
+ * hides the age, which is the only thing this line carries, and hiding the
+ * actionable part is the D29 defect in reverse (D3). So the narrow
+ * configuration gets an age-only sentence that fits whole: one line holds about
+ * twelve characters at that size.
+ *
+ * The connection pill directly above states the CONDITION (`Not answering`) with
+ * the long sentence as its message, so the short form drops the verb and keeps
+ * the number — the reader has the sentence and the number on screen, and neither
+ * is truncated.
+ */
+export function staleShortNote(input: StaleNoteInput): string | null {
+	const phrase = stalePhrase(input);
+	if (phrase === null) return null;
+	return `${phrase === "just now" ? "Just now" : phrase}.`;
+}
+
+/**
+ * How old the last frame is, as a phrase with no verb — `just now`, `30s ago`,
+ * `5 min ago`, `3h ago`, `2d ago` — or `null` when nothing has ever been stale.
+ *
+ * The unit is the largest that keeps the phrase short, and that is what BOUNDS
+ * the short sentence: a minutes-only form grew without limit, so a week-old list
+ * read `10080 min ago.` — fourteen characters against the twelve one line holds
+ * at 200 % — and the short form exists precisely to fit one line whole (review
+ * round 2, R2-5).
+ *
+ * One phrase for both sentences, so the long form and the short form cannot
+ * disagree about the age the reader is being told.
+ */
+function stalePhrase(input: StaleNoteInput): string | null {
 	if (!input.stale || input.lastFrameAt === null) return null;
 	const now = input.now ?? Date.now();
 	const seconds = Math.max(0, Math.round((now - input.lastFrameAt) / 1000));
-	if (seconds < 5) return "Last updated just now.";
-	if (seconds < 60) return `Last updated ${seconds}s ago.`;
+	if (seconds < 5) return "just now";
+	if (seconds < 60) return `${seconds}s ago`;
 	const minutes = Math.round(seconds / 60);
-	return `Last updated ${minutes} min ago.`;
+	if (minutes < 60) return `${minutes} min ago`;
+	const hours = Math.round(minutes / 60);
+	if (hours < 24) return `${hours}h ago`;
+	return `${Math.round(hours / 24)}d ago`;
 }
 
 /**
@@ -142,4 +189,26 @@ export function degradedNote(degraded: readonly string[]): string | null {
 	if (degraded.includes("sessions"))
 		return "Some conversations could not be read just now, so this list may be missing rows.";
 	return "Recent activity could not be read, so the new markers may be out of date.";
+}
+
+/**
+ * The same three facts, in sentences that survive the one configuration where the
+ * long ones cannot be painted whole.
+ *
+ * At 320 pt with the platform text at 200 % the banner is capped at two lines —
+ * about 52 characters — while the long sentences run 73 to 80, so the reader saw
+ * `! Some conversations …` and nothing more: a warning with neither a cause nor a
+ * consequence, at the one text size where it most needs to be spelled out
+ * (design round 5, D29). Shortening the COPY is the honest fix and the cap is
+ * what keeps the truncation: swapping in a complete sentence loses nothing to a
+ * screen reader, whereas truncating the long one loses the second half of it
+ * there too.
+ *
+ * Each variant keeps its long counterpart's distinction — rows missing, markers
+ * stale, or both — so the three states remain three states in words. */
+export function degradedShortNote(degraded: readonly string[]): string {
+	if (degraded.includes("sessions") && degraded.includes("attention"))
+		return "This list may be incomplete.";
+	if (degraded.includes("sessions")) return "Some rows may be missing.";
+	return "New markers may be stale.";
 }

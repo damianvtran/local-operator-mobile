@@ -48,6 +48,15 @@ describe("accessibility identifiers", () => {
 
 	it("are kebab-case, so a selector is predictable from its name", () => {
 		for (const id of IDENTIFIERS) {
+			/* A FAMILY PREFIX ends in `-` by construction (`"session-row-"` for
+			 *  `session-row-<id>`, `a11y.ts`'s own rule) and is matched against the ids
+			 *  that start with it — each of which is kebab-case where it is declared.
+			 *  The prefix itself is not a selector anyone types, so its dash is syntax,
+			 *  not a naming mistake; the body before it is still checked. */
+			if (id.endsWith("-")) {
+				expect(id.slice(0, -1)).toMatch(KEBAB);
+				continue;
+			}
 			expect(id).toMatch(KEBAB);
 		}
 	});

@@ -428,6 +428,42 @@ const RENDERING_SOURCE = SOURCE_FILES.filter(({ stripped }) =>
 	.map(({ stripped }) => stripped)
 	.join("\n");
 
+/**
+ * Whether a FAMILY marker (`"session-row-"`) is rendered.
+ *
+ * A family's value is a PREFIX, never a whole id, so "does a renderer name this
+ * constant" is the wrong question — nothing spells `session-row-` as an id; the rows
+ * are ASSEMBLED from it by a builder the renderer calls (`testID={sessionRowId(id)}`).
+ * The builder lives in the contract, which `SOURCE_FILES` excludes (a contract is not
+ * its own renderer), so it is read from the contract's own text and what is required
+ * is the CALL, in a file that renders. A family assembled inline in a component is the
+ * same claim stated directly.
+ */
+const CONTRACT_SOURCE = readFileSync(join(root, "src/ui/a11y.ts"), "utf8");
+
+const familyIsRendered = (prefix: string): boolean => {
+	const assembled = "`" + prefix + "${";
+	if (RENDER_SOURCE.includes(assembled)) return true;
+	/* `lastIndexOf`, because the contract's own prose names the family in a doc
+	 *  comment ABOVE its builder — the definition is the last occurrence. */
+	const at = CONTRACT_SOURCE.lastIndexOf(assembled);
+	if (at === -1) return false;
+	const builder = (() => {
+		/* The NEAREST declaration before the template, not the first one in the file: a
+		 *  greedy `[\s\S]*` match otherwise walks back to an unrelated `const`. */
+		let name: string | undefined;
+		for (const match of CONTRACT_SOURCE.slice(0, at).matchAll(
+			/(?:export\s+)?(?:const|function)\s+(\w+)/g,
+		))
+			name = match[1];
+		return name;
+	})();
+	return (
+		builder !== undefined &&
+		new RegExp(`\\b${builder}\\(`).test(RENDERING_SOURCE)
+	);
+};
+
 /** The static identifier VALUES some route or primitive names. */
 const RENDERED_VALUES: ReadonlySet<string> = new Set(
 	CONTRACT_NAMES.filter(({ name }) =>
@@ -662,8 +698,10 @@ describe("the routes and primitives against src/ui/a11y.ts", () => {
 						)
 						.map((key) => `${group}.${key}`),
 			),
-			...STATE_MARKER_NAMES.filter(
-				(entry) => !namesMarker(entry).test(RENDERING_SOURCE),
+			...STATE_MARKER_NAMES.filter((entry) =>
+				entry.value.endsWith("-")
+					? !familyIsRendered(entry.value)
+					: !namesMarker(entry).test(RENDERING_SOURCE),
 			).map((entry) => entry.name),
 		];
 		/* No exemption list: the session view renders its vocabulary on this head, so

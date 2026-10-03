@@ -306,7 +306,7 @@ export const SCREENS: Record<string, { label: string; path: string }> = {
 	"S1-welcome": { label: "Welcome (first run)", path: "/welcome" },
 	S2: { label: "Set up a computer", path: "/tunnels" },
 	S3: { label: "Computers", path: "/tunnels" },
-	"S3-custom": { label: "Custom URL + password", path: "/custom" },
+	"S3-custom": { label: "Own tunnel + password", path: "/own-tunnel" },
 	S4: { label: "Sessions list", path: "/" },
 	S5: { label: "Session", path: "/session/{sessionId}" },
 	S6: { label: "Subagent", path: "/session/{sessionId}/agent/{jobId}" },
@@ -393,9 +393,12 @@ export const PRE_PAINT_PROBE = `
 export const SCREEN_ROOTS: Record<string, string> = {
 	S1: "sign-in-screen",
 	"S1-welcome": "welcome-screen",
-	S2: "custom-route-screen",
+	// One screen, three states: `/tunnels` renders `computers-screen` while it is
+	// setting a computer up, listing them, or refusing. The three cells differ by
+	// their STATE marker, not by their root.
+	S2: "computers-screen",
 	S3: "computers-screen",
-	"S3-custom": "custom-route-screen",
+	"S3-custom": "own-tunnel-screen",
 	S4: "sessions-screen",
 	S5: "session-screen",
 	S6: "subagent-screen",
@@ -406,6 +409,69 @@ export const SCREEN_ROOTS: Record<string, string> = {
 	S11: "settings-screen",
 	S13: "computers-screen",
 	S14: "welcome-screen",
+};
+
+/**
+ * Cells whose state the app cannot render yet, and the work each one waits on.
+ *
+ * A DECLARED SKIP is not a silent hole and not a pass: it is the named, owned
+ * dependency that keeps "we could not measure this" from being reported as "this
+ * cell is broken". It is honoured by the capture harness ONLY while the app declares
+ * no marker for the cell's state (`markerGapReason`) — the moment the app declares a
+ * marker, the claim is ignored and a frame that does not show it is a real failure.
+ * So a marker that stops rendering can never hide behind an entry here, and an entry
+ * here cannot outlive the app's gap by making a working cell look unmeasured.
+ *
+ * Keep every entry to a ticket or a named owner plus the fact that is missing; a bare
+ * "TO DO" is the thing this table exists to avoid.
+ */
+export const PENDING_CELLS: Record<string, string> = {
+	/* The 21 session-view cells: the session route is a placeholder on this head. */
+	...Object.fromEntries(
+		[
+			"S5/loading",
+			"S5/populated",
+			"S5/populated-long",
+			"S5/scroll",
+			"S5/empty",
+			"S5/streaming",
+			"S5/aborted",
+			"S5/queued",
+			"S5/pending-approval",
+			"S5/pending-ask",
+			"S5/rich-rows",
+			"S5/subagents",
+			"S5/degraded",
+			"S5/error",
+			"S6/populated",
+			"S6/populated-long",
+			"S8/approval",
+			"S8/ask",
+			"S8/ask-multi",
+			"S8/populated-long",
+			"S9/populated",
+		].map((cell) => [
+			cell,
+			"PR #12 (feat/screens-session) — app/(app)/session/[id].tsx is a placeholder",
+		]),
+	),
+	/* The computers cells: the list is Radient's account API, not the relay. */
+	...Object.fromEntries(
+		["S2/empty", "S3/empty", "S3/populated", "S13/loading", "S13/degraded"].map(
+			(cell) => [
+				cell,
+				"app — computer discovery reads Radient's account API (src/connection/discovery.ts /v1/tunnels), " +
+					"which the mock relay does not serve; the refusal state is the only one the relay can drive",
+			],
+		),
+	),
+	/* The list states the app renders without an identifier of their own. */
+	"S4/loading":
+		"app (src/ui/a11y.ts STATE_MARKER) — the list renders unlabelled skeletons while its first frame is in flight",
+	"S4/ended":
+		"app (src/ui/a11y.ts STATE_MARKER) — ListRow's `ended` receipt changes copy and colour but carries no identifier",
+	"S4/degraded-row":
+		"app (src/ui/a11y.ts STATE_MARKER) — ListRow's `degraded` receipt renders 'not answering' but carries no identifier",
 };
 
 /** Read the resolved theme/scale and the app's own canvas colour, per frame. */
@@ -436,13 +502,18 @@ export const READINESS_PROBE = `
   const testIds = all
     .map((el) => el.getAttribute('data-testid'))
     .filter((id) => typeof id === 'string');
-  // WHICH markers count. A "state reached" claim is only worth anything if the thing
-  // carrying the marker is actually rendered: a testid on a \`display:none\` node, a
-  // \`visibility:hidden\` one, or a zero-area box would otherwise satisfy the affirmative
-  // rule while the user sees nothing. "Visible" here means, precisely: the element and
-  // its ancestors are not display:none or visibility:hidden (getComputedStyle), and its
-  // bounding rect has non-zero width and height. Opacity is NOT part of it — a
-  // translucent-but-present control is still a control the transcript renders.
+  // WHICH list a rule reads. The probe reports both, and the two are NOT interchangeable:
+  //  * \`testIds\` is PRESENCE, and it is what a STATE MARKER is judged on. A marker is a
+  //    machine-readable assertion about what a screen is showing, and the app's derived
+  //    markers are zero-size \`View\`s by design, so a non-zero box cannot be a condition
+  //    on one — measured, requiring it made \`populated\`, \`streaming\`, \`error\` and seven
+  //    more declared states unmeasurable on a head that renders every one of them.
+  //  * \`visibleTestIds\` is RENDERED, and it is what a screen ROOT is judged on: the root
+  //    IS the screen, so a \`display:none\` node, a \`visibility:hidden\` one or a zero-area
+  //    box really would mean nothing drew. "Visible" here means, precisely: the element
+  //    and its ancestors are not display:none or visibility:hidden (getComputedStyle),
+  //    and its bounding rect has non-zero width and height. Opacity is NOT part of it —
+  //    a translucent-but-present control is still a control the transcript renders.
   const visible = (el) => {
     const style = getComputedStyle(el);
     if (style.display === 'none' || style.visibility === 'hidden') return false;

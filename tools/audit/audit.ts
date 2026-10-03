@@ -479,6 +479,22 @@ export async function runAudit(options: AuditOptions) {
 			const notMeasurable = manifest.unreadyCells;
 			const cellWasUnready =
 				Array.isArray(notMeasurable) && notMeasurable.includes(record.name);
+			// A DECLARED SKIP is a third outcome, and it has to be its own: the cell's
+			// state is a named, owned dependency (a ticket, or an API the harness cannot
+			// serve) rather than a failure, so its rows are BLOCKED with an owner and do
+			// NOT count as a measurement gap. Counting them as gaps made every run of a
+			// matrix that legitimately spans unlanded work exit 3, which is "we could not
+			// tell" applied to a question nobody asked. The capture harness only marks a
+			// cell this way while the app declares no marker for its state, so a marker
+			// that stopped rendering is still a gap and still exits 3.
+			const skipCells = manifest.declaredSkipCells;
+			const cellWasSkipped =
+				Array.isArray(skipCells) && skipCells.includes(record.name);
+			const skipOwner = Array.isArray(manifest.declaredSkips)
+				? (manifest.declaredSkips.find(
+						(entry) => asRecord(entry)?.cell === record.name,
+					) as Record<string, unknown> | undefined)
+				: undefined;
 			const produced = runChecks(state, {
 				floors,
 				semantic: { ...semantic },
@@ -503,16 +519,26 @@ export async function runAudit(options: AuditOptions) {
 			// rewritten to PASS and says so, and a blinded run is never evidence —
 			// but a hook that silently did nothing would make the self-test vacuous,
 			// so an unmatched spec is reported rather than ignored.
-			const measured = cellWasUnready
+			const measured = cellWasSkipped
 				? produced.map((row) => ({
 						...row,
 						verdict: "BLOCKED" as const,
-						blockedKind: "state-not-reached" as const,
+						blockedKind: "declared-skip" as const,
 						detail:
-							`${row.detail ?? ""} — this cell did not reach the state it declares in the ` +
-							"capture run, so the row describes the fallback screen",
+							`${row.detail ?? ""} — this cell's state is a DECLARED SKIP: ` +
+							`${String(skipOwner?.owner ?? "no owner named")}. Its frame is not evidence for ` +
+							`the state it declares, and its absence is not a measurement gap`,
 					}))
-				: produced;
+				: cellWasUnready
+					? produced.map((row) => ({
+							...row,
+							verdict: "BLOCKED" as const,
+							blockedKind: "state-not-reached" as const,
+							detail:
+								`${row.detail ?? ""} — this cell did not reach the state it declares in the ` +
+								"capture run, so the row describes the fallback screen",
+						}))
+					: produced;
 			const blinded = measured.map((row) => {
 				const spec = options.blind.find((candidate) =>
 					matchesBlind(row, [candidate]),
@@ -642,6 +668,23 @@ export async function runAudit(options: AuditOptions) {
 		unmeasurable: gaps.length,
 		/** The capture's own per-cell reasons, carried so a zero-measurement run can name the cause. */
 		unmeasurableReasons,
+		/**
+		 * Cells whose state is a named, owned dependency rather than a failure.
+		 *
+		 * Reported so a reader can tell "the matrix does not cover this yet, and here is
+		 * who owns it" from "the instrument could not tell". They are NOT gaps: counting
+		 * them as gaps made every run of a matrix spanning unlanded work exit 3.
+		 */
+		declaredSkips: (Array.isArray(manifest.declaredSkips)
+			? manifest.declaredSkips
+			: []
+		)
+			.map((entry) => asRecord(entry))
+			.filter((entry): entry is Record<string, unknown> => entry !== undefined)
+			.map(
+				(entry) =>
+					`${String(entry.cell ?? "?")}: ${String(entry.owner ?? "no owner named")}`,
+			),
 		verdict:
 			failures.length > 0
 				? "FAIL"
@@ -725,6 +768,11 @@ export interface AuditReport {
 	blocked: number;
 	/** Rows the audit evaluated (anything not BLOCKED). `0` = it measured nothing. */
 	measured: number;
+	/**
+	 * Cells whose state is a named, owned dependency rather than a failure. Never
+	 * counted in `unmeasurable`: a declared gap is not an instrument failure.
+	 */
+	declaredSkips: string[];
 	/** BLOCKED rows that could not measure something they should have. */
 	unmeasurable: number;
 	/** The capture's own sentence per not-measurable cell, for the zero-measurement report. */
@@ -767,6 +815,21 @@ export function renderMarkdown(report: AuditReport) {
 		);
 	}
 	const interesting = report.rows.filter((r) => r.verdict !== "PASS");
+	if (report.declaredSkips.length > 0) {
+		// Its own section, above the rows, because it is the one thing a reader must
+		// not confuse with a measurement gap: the state is not reachable on this head
+		// and somebody owns it.
+		lines.push(
+			"",
+			`## Declared skips (${report.declaredSkips.length})`,
+			"",
+			"These cells declare a state this head does not render yet, so no frame of them is",
+			"evidence. They are NOT counted in `unmeasurable` (the capture marks a cell this way",
+			"only while the app declares no marker for its state):",
+			"",
+		);
+		for (const entry of report.declaredSkips) lines.push(`- ${entry}`);
+	}
 	lines.push(
 		"",
 		`## Rows (${interesting.length} non-PASS of ${report.rows.length})`,
@@ -862,6 +925,19 @@ if (isMain) {
 			`${report.failures} FAIL, ${report.blocked} BLOCKED (${report.unmeasurable} unmeasurable) · ` +
 			`palette ${report.palette.loaded ? "loaded" : "MISSING"}`,
 	);
+	if (report.declaredSkips.length > 0) {
+		// Named, and deliberately NOT folded into "unmeasurable": a cell whose state
+		// waits on an owned ticket is not something the instrument failed to read.
+		console.log(
+			`audit: ${report.declaredSkips.length} cell(s) are DECLARED SKIPS (not gaps):`,
+		);
+		for (const entry of report.declaredSkips.slice(0, 5))
+			console.log(`  - ${entry}`);
+		if (report.declaredSkips.length > 5)
+			console.log(
+				`  … ${report.declaredSkips.length - 5} more, in audit-report.md`,
+			);
+	}
 	if (blindUnmatched.size > 0) {
 		// A blind that silences nothing proves nothing, so it fails rather than
 		// letting the mutation self-test read as a pass it did not earn. It is
