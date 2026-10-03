@@ -91,15 +91,23 @@ export const SubagentsPanel = ({
 				    end of the row's SECOND line reads as a second control rather than as
 				    this row's disclosure (design round 2, D16). */}
 				<View className="min-h-11 flex-row items-center gap-2 px-4 py-1">
-					<Text className="text-mono-sm text-ink-dim">subagents</Text>
-					<Text className="text-mono-sm text-ink-muted">
-						{subagents.totalLabel}
-					</Text>
-					<View className="flex-1 flex-row flex-wrap items-center gap-2">
+					{/* The label group and the clauses both have to be able to YIELD
+					    (design round, D19). At 200 % platform text on the 320 pt floor
+					    `subagents` alone is ~234 pt, and a non-shrinking group pushed the
+					    document to a measured 419 pt while every clause was clipped to
+					    "1 runn" / "1 que". `min-w-0` is what lets a flex child shrink below
+					    its content and wrap inside itself instead of widening the row. */}
+					<View className="min-w-0 flex-row flex-wrap items-center gap-2">
+						<Text className="text-mono-sm text-ink-dim">subagents</Text>
+						<Text className="text-mono-sm text-ink-muted">
+							{subagents.totalLabel}
+						</Text>
+					</View>
+					<View className="min-w-0 flex-1 flex-row flex-wrap items-center gap-2">
 						{subagents.clauses.map((clause) => (
 							<Text
 								key={clause.status}
-								className={`text-meta ${clause.inkClass}`}
+								className={`min-w-0 text-meta ${clause.inkClass}`}
 							>
 								{clause.count} {clause.word}
 							</Text>

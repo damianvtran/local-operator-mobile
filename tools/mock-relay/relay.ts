@@ -316,6 +316,29 @@ export function createRelay(options: RelayOptions = {}) {
 	const resetWorld = (): void => {
 		state.world = scenarios[state.scenario]?.world() ?? {};
 		state.scenarioStartedAt = Date.now();
+		/* A state's own faults are applied with it: `S5/error` is reachable only when the
+		 * stream comes up and THEN fails, so the scenario that models it carries the fault
+		 * rather than depending on the runner having passed `--fault` (review round 8). */
+		if (state.world.faults !== undefined) {
+			const declared = state.world.faults.map(
+				(name) => name.split("=")[0] ?? "",
+			);
+			const unknown = declared.filter(
+				(name) =>
+					!FAULT_NAMES.some((known) =>
+						known.includes("<")
+							? name.startsWith(known.slice(0, known.indexOf("<")))
+							: known === name,
+					),
+			);
+			// A typo here would be a state that quietly never happens, which is the
+			// failure this whole round is about; `parseFaults` drops what it cannot name.
+			if (unknown.length > 0)
+				throw new Error(
+					`scenario '${state.scenario}' declares an unknown fault: ${unknown.join(", ")}`,
+				);
+			state.faults = parseFaults(state.world.faults);
+		}
 		// Per-scenario ledgers reset with the scenario, so a duplicate-detection
 		// test cannot inherit an id admitted by the previous scenario.
 		state.admitted = new Map();

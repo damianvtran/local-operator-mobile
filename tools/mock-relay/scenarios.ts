@@ -83,6 +83,15 @@ export interface ScenarioWorld {
 	/** Session id → projection. An empty object is "no conversations at all". */
 	projections?: Record<string, SessionProjection>;
 	stream?: StreamSpec;
+	/**
+	 * Faults this state NEEDS, in the `faults.ts` spelling (`401-mid-session=2`).
+	 *
+	 * A fault that belongs to the state travels with the state: a cell pinned by the
+	 * capture — which sends only the scenario NAME — gets it, and so does a rig that
+	 * switches scenario. A scenario without faults leaves whatever the runner was
+	 * started with alone, so `--fault` still works.
+	 */
+	faults?: string[];
 	/** A fixture name whose recorded answer the command endpoint returns instead. */
 	commandOverride?: string;
 	failure?: FailureSpec;
@@ -834,22 +843,33 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 	);
 
 	add(
-		"stream-refused",
-		"The session's own event channel is refused at the gateway (`control_plane_unreachable`) while the catalogue and the health route answer: a CONNECTED session whose stream failed, which is the state `S5/error` declares.",
+		"mid-session-401",
+		"The stream comes up, carries the session, and then the edge refuses it: the reconnect is answered 401, so a CONNECTED session sits in its error state.",
 		["S5/error"],
 		() => ({
-			/* `S5/error` declares the session's ERROR state, and the app's marker for it
-			 * reads the CLIENT's stream error (`use-session.ts` sets it from the stream's
-			 * own `onError`), not a refused command — a command refusal lands on the
-			 * composer. The cell used to be served by `relay-refuses-command`, whose
-			 * stream succeeds, so the one cell that declares `error` could never carry the
-			 * marker that affirms it (review round 6, same class as M3).
-			 *
-			 * The refusal is on the STREAM, not on the world: a blanket `failure` refuses
-			 * `/api/sessions` too, so the client never holds a projection, `connected`
-			 * stays false, and the error marker is not rendered (review round 7, R7-1).
-			 * Rows are served so the frame also carries `session-populated` and NO
-			 * `*-empty` marker — the cell forbids the empty ones. */
+			/* `S5/error` declares the session's ERROR state, and the app paints `session-error`
+			 * from `runtime.error` — which the stream's own `onError` sets AFTER the
+			 * subscription is up (`use-session.ts`). A refused SUBSCRIBE never gets there:
+			 * that is a connection state, and the app answers it with `connection-banner`.
+			 * So the cell needs a stream that arrives and then fails, which is what this
+			 * fault does (review round 8; QA measured the same shape on `idle`). */
+			projections: { [liveIdle.session_id]: structuredClone(liveIdle) },
+			stream: { mode: "idle" },
+			faults: ["401-mid-session=2"],
+		}),
+	);
+
+	add(
+		"stream-refused",
+		"The session's own event channel is refused at the gateway (`control_plane_unreachable`) while the catalogue and the health route answer: a refused subscription, which the app surfaces as a CONNECTION state.",
+		[],
+		() => ({
+			/* No matrix cell declares "the connection was refused" — the honest marker for
+			 * it is `connection-banner`, which the session cells that own the banner assert
+			 * — so this state is reachable by name and carries no cell (review round 8).
+			 * It stays because it is what a refused session really looks like, and because
+			 * `S5/error` moved off it: a refused subscribe never sets `runtime.error`, so
+			 * the error marker could not paint. */
 			projections: { [liveIdle.session_id]: structuredClone(liveIdle) },
 			stream: {
 				mode: "refused",
