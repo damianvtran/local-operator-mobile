@@ -106,6 +106,11 @@ export interface ScenarioWorld {
 	listOverrides?: { degraded?: string[] };
 	/** Field overrides applied to every derived row; `null` means "not reported". */
 	rowOverrides?: Record<string, SessionSummary[keyof SessionSummary]>;
+	/** Overrides applied to ONE row, keyed by session id, on top of the blanket
+	 *  `rowOverrides`. Exists because `unseen` is per conversation: a state that
+	 *  needs some rows unread and some read (the §1.4 equality cell) cannot say
+	 *  that with a blanket override. */
+	rowOverridesById?: Record<string, Partial<SessionSummary>>;
 	rowOverridesAfterHeartbeat?: Record<
 		string,
 		SessionSummary[keyof SessionSummary]
@@ -444,6 +449,39 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 				);
 			}
 			return { projections };
+		},
+	);
+
+	add(
+		"unread",
+		"Three conversations: two carry unread notifications and one does not — the frame-level `unread` block (count 2) and the rows it describes, for the badge's equality cell (ADR 0006 §1.1-1.2).",
+		["S4/populated"],
+		() => {
+			const unreadRow = projectionFrom(afterDeath, {
+				session_id: syntheticSessionId("unread-row"),
+			});
+			const olderUnread = projectionFrom(
+				fix.projection("sse_projection_ended"),
+				{ session_id: syntheticSessionId("unread-older") },
+			);
+			const readRow = projectionFrom(liveIdle, {
+				session_id: syntheticSessionId("read-row"),
+			});
+			return {
+				projections: {
+					[unreadRow.session_id]: unreadRow,
+					[olderUnread.session_id]: olderUnread,
+					[readRow.session_id]: readRow,
+				},
+				/* `rowFrom` defaults `unseen` to false — the listing row is what says — so
+				 * the two unread conversations are marked per row here, leaving the
+				 * third read: count 2 over 3 rows is the mixed case the equality test
+				 * must survive (a count of all rows would pass a 2-of-2 fixture). */
+				rowOverridesById: {
+					[unreadRow.session_id]: { unseen: true, section: "active" },
+					[olderUnread.session_id]: { unseen: true, section: "active" },
+				},
+			};
 		},
 	);
 

@@ -695,9 +695,9 @@ async function main() {
 		const authed = await client.get("/api/sessions");
 		check("the cookie authenticates /api/sessions", authed.status, 200);
 		check(
-			"list body has sessions + degraded + capabilities",
+			"list body has sessions + degraded + capabilities + unread",
 			Object.keys(bag(authed.json)).sort().join(","),
-			"capabilities,degraded,sessions",
+			"capabilities,degraded,sessions,unread",
 		);
 		check(
 			"degraded is present and empty when nothing is wrong",
@@ -968,7 +968,7 @@ async function main() {
 			Object.keys(listFrames[0]?.data ?? {})
 				.sort()
 				.join(","),
-			"capabilities,degraded,sessions",
+			"capabilities,degraded,sessions,unread",
 		);
 
 		const proj = await readStream(relay.base, `/api/sessions/${SID}/events`, {
@@ -995,6 +995,78 @@ async function main() {
 			true,
 		);
 
+		await relay.stop();
+	}
+
+	/* ---- the notification path's routes (S1/S2) ---- */
+	group = "notification path (S1/S2)";
+	{
+		const relay = await startRelay({ scenario: "idle" });
+		const client = makeClient(relay.base);
+		await client.login(PASSWORD);
+		const fix = loadFixtures(FIXTURES);
+		/* Every value read OFF THE FIXTURES, so a re-capture cannot make the mock
+		 * and these checks disagree about which handle is the pair. */
+		const seenFixture = fix.http.get("seen-real-token");
+		const seenPath = str(bag(seenFixture?.request).path);
+		const seenSession = seenPath.split("/")[3] ?? "";
+		const seenToken = str(
+			bag(bag(seenFixture?.json).attention).completion_token,
+		);
+		const resolveFixture = fix.http.get("push-conversation-ok");
+		const resolveHandle =
+			str(bag(resolveFixture?.request).path).split("/").pop() ?? "";
+		const resolveSession = str(bag(resolveFixture?.json).session_id);
+		const unknownHandle =
+			str(bag(fix.http.get("push-conversation-unknown")?.request).path)
+				.split("/")
+				.pop() ?? "";
+
+		const resolved = await client.get(
+			`/api/push/conversation/${resolveHandle}`,
+		);
+		check("a resolvable handle answers 200", resolved.status, 200);
+		check(
+			"the resolve body is exactly {session_id}",
+			Object.keys(bag(resolved.json)).sort().join(","),
+			"session_id",
+		);
+		check(
+			"the handle resolves to the conversation its fixture recorded",
+			str(bag(resolved.json).session_id),
+			resolveSession,
+		);
+		const unknown = await client.get(`/api/push/conversation/${unknownHandle}`);
+		check("an unknown handle is a clean 404", unknown.status, 404);
+		check(
+			"the 404 is the daemon's own sentence",
+			str(bag(unknown.json).error),
+			"unknown conversation handle",
+		);
+
+		const acked = await client.post(seenPath, {
+			completion_token: seenToken,
+		});
+		check("a current completion token acks 200", acked.status, 200);
+		const attention = bag(bag(acked.json).attention);
+		check(
+			"the ack settles the completion: identity + unseen:false + the sent token",
+			[
+				str(attention.conversation_id) === `session/${seenSession}`,
+				attention.unseen === false,
+				str(attention.completion_token) === seenToken,
+			].join(","),
+			"true,true,true",
+		);
+		const stale = await client.post(seenPath, {
+			completion_token: "00000000-0000-4000-8000-000000000000",
+		});
+		check("a superseded token is refused 409", stale.status, 409);
+		check(
+			"the refusal carries the machine code the app branches on",
+			str(bag(stale.json).code),
+			"superseded_completion_token",
+		);
 		await relay.stop();
 	}
 
@@ -1095,12 +1167,33 @@ async function main() {
 		check(
 			`scenario '${name}' answers a well-formed list`,
 			Object.keys(bag(list.json)).sort().join(","),
-			"capabilities,degraded,sessions",
+			"capabilities,degraded,sessions,unread",
 		);
 		check(
 			`scenario '${name}' declares its own row count`,
 			rows.length,
 			(n: number) => n >= 0,
+		);
+		/* The frame-level `unread` block (S1): `count` equals the number of
+		 * `unseen` rows in the SAME frame — the daemon's own equality test,
+		 * mirrored here so the mock cannot drift from it — and when the listing
+		 * declares `attention` degraded, `count` is ABSENT (never 0). */
+		const unreadBag = bag(bag(list.json).unread);
+		const attentionDegraded = arr(bag(list.json).degraded)
+			.map((marker) => str(marker))
+			.includes("attention");
+		const unseenRows = rows.filter((row) => bag(row).unseen === true).length;
+		check(
+			`scenario '${name}' unread.count equals its unseen rows (S1 equality)`,
+			unreadBag.count === undefined ? "absent" : str(unreadBag.count),
+			attentionDegraded ? "absent" : String(unseenRows),
+		);
+		check(
+			`scenario '${name}' unread.degraded mirrors the attention marker`,
+			arr(unreadBag.degraded)
+				.map((marker) => str(marker))
+				.join(","),
+			attentionDegraded ? "attention" : "",
 		);
 		const projectionBag = bag(projection);
 		const note =
@@ -1119,7 +1212,11 @@ async function main() {
 		// The registry's own row expectations, asserted: a scenario that declares a
 		// pending approval must produce a row that says so, or the fixture and the
 		// server disagree about the state.
-		if (world.rowOverrides || world.rowOverridesAfterHeartbeat) {
+		if (
+			world.rowOverrides ||
+			world.rowOverridesAfterHeartbeat ||
+			world.rowOverridesById
+		) {
 			check(
 				`scenario '${name}' applies its row overrides`,
 				rows.length > 0,
