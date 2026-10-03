@@ -27,6 +27,104 @@ export const EXTRACT_PROBE = `
     if (rect.width <= 0 || rect.height <= 0) return false;
     return true;
   };
+  // Is the node RENDERED, which is a different question from "is it laid out"?
+  // Its own style can say visible while an ANCESTOR clips it away: a zero-height
+  // 'overflow: hidden' wrapper leaves its child a full-size getBoundingClientRect
+  // and not one painted pixel, and the per-node test above cannot see that because
+  // the clipping is not on the node.
+  //
+  // WHICH ANCESTORS COUNT is the part that has to be right, and walking all of them
+  // is wrong: CSS clips the descendants that are laid out INSIDE the clipper, so an
+  // ancestor clips this node only if it sits on the node's containing-block chain. A
+  // 'position: fixed' node, or an 'absolute' node whose containing block is ABOVE the
+  // clipper (a static zero-height wrapper is not one), is painted by the browser —
+  // and calling it clipped-away would hide exactly the pinned-over-content defect
+  // this rule exists to report: a toast, a sheet, a floating composer.
+  const establishesContainingBlock = (s) =>
+    (s.transform && s.transform !== 'none')
+    || (s.filter && s.filter !== 'none')
+    || (s.backdropFilter && s.backdropFilter !== 'none')
+    || (s.perspective && s.perspective !== 'none')
+    || (s.willChange && /transform|filter|perspective/.test(s.willChange))
+    || (s.contain && /paint|layout|strict|content/.test(s.contain));
+  // The element this node is positioned and laid out against, or null for the
+  // viewport. Walking from here upward is the chain, and it is what the clip test
+  // follows — every element on it can clip the node; nothing above it can.
+  const containingBlock = (el) => {
+    const style = getComputedStyle(el);
+    if (style.position === 'fixed') {
+      let node = el.parentElement;
+      while (node && node.nodeType === 1) {
+        if (establishesContainingBlock(getComputedStyle(node))) return node;
+        node = node.parentElement;
+      }
+      return null;
+    }
+    if (style.position === 'absolute') {
+      let node = el.parentElement;
+      while (node && node.nodeType === 1) {
+        const s = getComputedStyle(node);
+        if (s.position !== 'static' || establishesContainingBlock(s)) return node;
+        node = node.parentElement;
+      }
+      return null;
+    }
+    // Static, relative and sticky content is laid out in its parent, which is
+    // therefore on the chain; the walk continues from there.
+    return el.parentElement;
+  };
+  const clippedAway = (el, rect) => {
+    let left = rect.left, top = rect.top, right = rect.right, bottom = rect.bottom;
+    let node = containingBlock(el);
+    while (node && node.nodeType === 1) {
+      const s = getComputedStyle(node);
+      // 'overflow: visible' on both axes paints outside the box; anything else
+      // clips (auto/scroll clip too, and a child scrolled out of its container is
+      // no more visible than a hidden one).
+      if (s.overflowX !== 'visible' || s.overflowY !== 'visible') {
+        const r = node.getBoundingClientRect();
+        left = Math.max(left, r.left);
+        top = Math.max(top, r.top);
+        right = Math.min(right, r.right);
+        bottom = Math.min(bottom, r.bottom);
+        if (right <= left || bottom <= top) return true;
+      }
+      node = containingBlock(node);
+    }
+    return false;
+  };
+  // The same walk as it stood BEFORE the chain, kept for one reason: to NAME the nodes
+  // the two walks disagree about. A node that only the every-ancestor walk calls clipped
+  // has a clipping ancestor that is NOT on its chain, so the browser paints it — the
+  // shape (a pinned node escaping a clipped container) this rule's costliest false
+  // negative lives in, and U-08 says so out loud in the row. It never filters anything:
+  // 'clippedAway' alone decides that.
+  const clippedByAnyAncestor = (el, rect) => {
+    let left = rect.left, top = rect.top, right = rect.right, bottom = rect.bottom;
+    let node = el.parentElement;
+    while (node && node.nodeType === 1) {
+      const s = getComputedStyle(node);
+      if (s.overflowX !== 'visible' || s.overflowY !== 'visible') {
+        const r = node.getBoundingClientRect();
+        left = Math.max(left, r.left);
+        top = Math.max(top, r.top);
+        right = Math.min(right, r.right);
+        bottom = Math.min(bottom, r.bottom);
+        if (right <= left || bottom <= top) return true;
+      }
+      node = node.parentElement;
+    }
+    return false;
+  };
+  // 'aria-hidden' is inherited, so it is answered over the chain and not per node.
+  const ariaHiddenIn = (el) => {
+    let node = el;
+    while (node && node.nodeType === 1) {
+      if (node.getAttribute('aria-hidden') === 'true') return true;
+      node = node.parentElement;
+    }
+    return false;
+  };
   // The effective background: the nearest ancestor with a non-transparent
   // background colour, composited down to opaque. A colour on a parent *is* the
   // text's ground, which is exactly the case a per-element check misses.
@@ -142,6 +240,18 @@ export const EXTRACT_PROBE = `
       disabled: el.disabled === true || el.getAttribute('aria-disabled') === 'true',
       isControl: /^(input|select|textarea)$/.test(el.tagName.toLowerCase()),
       childImages: el.querySelectorAll('img,svg').length,
+      // The facts a box does not tell you: whether an ancestor clips it to nothing,
+      // whether an ancestor clips it ONLY off its containing-block chain (so the
+      // browser paints it anyway), and whether it draws ink of its own at all.
+      // Reported as measurements — U-08 is where they become a rule.
+      clippedAway: clippedAway(el, rect),
+      escapedClip: clippedByAnyAncestor(el, rect) && !clippedAway(el, rect),
+      ariaHidden: ariaHiddenIn(el),
+      ownInk:
+        ownText.length > 0
+        || (style.backgroundColor !== 'rgba(0, 0, 0, 0)' && style.backgroundColor !== 'transparent')
+        || px(style.borderTopWidth) > 0
+        || el.querySelectorAll('img,svg').length > 0,
       // The nearest ancestor's full text, so a status *word* carried by a sibling
       // counts as a carrier and a bare dot beside it is not a colour-only status.
       containerText: ((el.closest('p, li, div, section, header, footer, td, button') || el.parentElement || el).textContent || '').trim().slice(0, 200),

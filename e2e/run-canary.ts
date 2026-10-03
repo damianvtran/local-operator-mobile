@@ -150,6 +150,11 @@ const KNOWN_BLINDS = new Set([
 	"U-05:right",
 	"U-07:x",
 	"U-07:y",
+	// U-08's escape branches: the overlaps a clip test walking every ancestor swallows. Both
+	// are blindable so the mutation self-test can prove each is load-bearing — blinding one
+	// must make the canary miss exactly that shape's fixture (review rounds 3 and 4).
+	"U-08:escape-absolute",
+	"U-08:escape-fixed",
 ]);
 
 // An empty `--manifest` is a caller bug, not "no override". Treating it as the

@@ -305,6 +305,18 @@ export const SUB_RULE_TEXT: Record<string, RegExp> = {
 	"U-05:right": /^right edge/,
 	"U-07:x": /overflow-x/,
 	"U-07:y": /overflow-y/,
+	// U-08's escape branches: a reported overlap where one of the two boxes has a clipping
+	// ancestor that is not on its containing-block chain. They have their own patterns
+	// because the canary asserts a rule, not a check — every other U-08 fixture is a plain
+	// overlap, so without these a clip test that swallowed the escape case would still find
+	// some other U-08 row on the page and pass (review round 3).
+	//
+	// Split by the escaping node's own `position` so each shape is separately blindable
+	// (review round 4): one rule covering both made a blind report two missed defects, which
+	// the audit's mutation self-test correctly reads as "not exactly the named rule".
+	"U-08:escape-absolute": /^painted over a clipping ancestor \(absolute\)/,
+	"U-08:escape-fixed": /^painted over a clipping ancestor \(fixed\)/,
+	"U-08:escape-sticky": /^painted over a clipping ancestor \(sticky\)/,
 };
 
 /** U-05 — nothing sits under a notch, a home indicator or an Android gesture bar. */
@@ -576,13 +588,35 @@ function offscreenNote(node: AuditNode, state: AuditState): string {
 	return "";
 }
 
+/**
+ * Whether an element can be SEEN, which is not the same as having been laid out.
+ *
+ * U-08 measures overlap between boxes, and a box is not a drawing. Pairing the
+ * composer's measuring stand-in — full-size geometry inside a zero-height
+ * `overflow: hidden` wrapper, `aria-hidden`, painting nothing — against the
+ * placeholder it measures produced 40 U-08 rows for an overlap nobody could look
+ * at, and the rule that settles it is the one a user would state: **a node that
+ * cannot be seen cannot overlap.**
+ *
+ * Applied only here, and deliberately: the stand-in exists to measure the wrapped
+ * height of the placeholder (a real defect it fixes), so removing it from the app
+ * would be the wrong repair, and the other checks that legitimately measure a
+ * clipped node (U-07 measures clipping itself) must keep seeing it.
+ */
+function isGhost(node: AuditNode): boolean {
+	if (node.clippedAway) return true;
+	return node.ariaHidden && !node.ownInk;
+}
+
 /** U-08 — meaningful boxes must not overlap. */
 function u08Overlap(state: AuditState): CheckRow[] {
 	// The rubric's rule is pairwise over *text and interactive* boxes, so a label
 	// drawn under a control is caught as well as two controls on top of each
 	// other. Ancestor/descendant pairs are excluded: a container overlaps its own
 	// child by construction, and counting those would fail every nested layout.
-	const meaningful = state.nodes.filter((n) => n.ownText || n.interactive);
+	const meaningful = state.nodes.filter(
+		(n) => !isGhost(n) && (n.ownText || n.interactive),
+	);
 	const rows: CheckRow[] = [];
 	for (let i = 0; i < meaningful.length; i += 1) {
 		for (let j = i + 1; j < meaningful.length; j += 1) {
@@ -619,6 +653,8 @@ function u08Overlap(state: AuditState): CheckRow[] {
 				const coversControl = under.interactive && encloses(overlay, under);
 				if (!coversControl && isOpaque(overlay)) continue;
 			}
+			// Whichever of the pair escaped a clipping ancestor, if either did.
+			const escaped = a.escapedClip ? a : b.escapedClip ? b : null;
 			const overlapW =
 				Math.min(a.rect.x + a.rect.w, b.rect.x + b.rect.w) -
 				Math.max(a.rect.x, b.rect.x);
@@ -632,7 +668,12 @@ function u08Overlap(state: AuditState): CheckRow[] {
 			rows.push({
 				check: "U-08",
 				verdict: "FAIL",
-				measured: `${overlapW}x${overlapH}pt overlap (${round((area / smaller) * 100, 0)}% of the smaller box)`,
+				// The rule's own words come first when the pair includes a node the browser
+				// paints through a clipping ancestor that is off its containing-block chain: it
+				// is the escape the every-ancestor walk swallowed, and `SUB_RULE_TEXT` reads it
+				// (with the escaping node's position) to tell this branch — and each of its
+				// shapes — apart from a plain overlap.
+				measured: `${escaped === null ? "" : `painted over a clipping ancestor (${escaped.position}): `}${overlapW}x${overlapH}pt overlap (${round((area / smaller) * 100, 0)}% of the smaller box)`,
 				detail: `${a.path} ∩ ${b.path}${offscreenNote(a, state)}`,
 			});
 		}
@@ -891,6 +932,25 @@ export interface AuditNode {
 	clientHeight: number;
 	borderWidth: number;
 	padding: { top: number; bottom: number; left: number; right: number };
+	/**
+	 * Whether an ancestor clips this node away, and whether it draws ink of its own.
+	 *
+	 * A box is not a drawing. `clippedAway` is true when the node's rectangle
+	 * intersects none of its clipping ancestors' boxes, which the probe answers over
+	 * the chain because the clipping that hides a node is usually not on the node:
+	 * the composer's measuring stand-in is a full-size box inside a zero-height
+	 * `overflow: hidden` wrapper, 262×18pt of geometry that paints not one pixel.
+	 * `ownInk` is whether it paints anything at all (text, a background, a border or
+	 * an image), and `ariaHidden` is `aria-hidden="true"` on the node or any ancestor.
+	 */
+	clippedAway: boolean;
+	/**
+	 * An ancestor clips this node only off its containing-block chain, so the browser paints
+	 * it: the shape a clip test walking every ancestor swallows (see U-08's escape branch).
+	 */
+	escapedClip: boolean;
+	ariaHidden: boolean;
+	ownInk: boolean;
 	interactive: boolean;
 	disabled: boolean;
 	isControl: boolean;

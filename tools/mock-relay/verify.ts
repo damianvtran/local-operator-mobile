@@ -1315,6 +1315,8 @@ async function main() {
 			{ blind: "U-05:right", defect: "U-05-right" },
 			{ blind: "U-07:x", defect: "U-07-x" },
 			{ blind: "U-07:y", defect: "U-07-y" },
+			{ blind: "U-08:escape-absolute", defect: "U-08-escape-absolute" },
+			{ blind: "U-08:escape-fixed", defect: "U-08-escape-fixed" },
 		];
 		// One capture for all seven rules. The captured matrix is identical for every
 		// blinded rule — only the audit's `--blind` differs — so the HEAVY phase went
