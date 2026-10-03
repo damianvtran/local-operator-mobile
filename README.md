@@ -37,7 +37,7 @@
     <source media="(prefers-color-scheme: dark)" srcset="./docs/assets/screenshots/session-view-dark.png">
     <source media="(prefers-color-scheme: light)" srcset="./docs/assets/screenshots/session-view-light.png">
     <img alt="The session view in light theme: a transcript with a diff, a table and a running tool row, the to-do and subagent strips, and the composer with its model and effort chips."
-         src="./docs/assets/screenshots/session-view-light.png">
+         width="360" src="./docs/assets/screenshots/session-view-light.png">
   </picture>
   <br />
   <sub><code>a session at work</code> — the transcript, the to-do and subagent strips, and the composer's model and effort chips.</sub>
@@ -121,24 +121,28 @@ secrets only, never in this repository.
 ## Screenshots
 
 Captured from the app's own web export (`pnpm export:web`), driven in installed
-headless Chrome at a 390 pt viewport, against the mock relay in
+headless Chrome, against the mock relay in
 [`tools/mock-relay/`](./tools/mock-relay/). Every frame is the app driven against
 that relay's **fixture data**: the conversations, session names and model labels
 are fixtures, not anyone's real sessions — and `nope/nope` in the session list is
 the captured corpus's own placeholder label, sitting beside the realistic
 `anthropic/claude-opus-5` that the synthetic fixtures carry. The light and dark
-frames are the same cells with the theme overridden, and the composer row is the
-composer band of the session view above it.
+frames are the same cell with the theme overridden, and the session view and the
+approvals card are the same session in two of its states.
 
-| | Light | Dark |
+The frames are a 390 pt phone at 3×. The refusal pair is a 430 pt phone instead:
+that screen's card is taller than one fold on the smaller device, and an
+uncropped frame there cuts a control's label through the glyphs.
+
+| Screen | Light | Dark |
 | --- | --- | --- |
-| **Welcome** — the first run, and the two ways in. | <img alt="The welcome screen in light theme." src="./docs/assets/screenshots/welcome-light.png" width="260"> | <img alt="The welcome screen in dark theme." src="./docs/assets/screenshots/welcome-dark.png" width="260"> |
-| **Sign in** — Radient, or an address and the relay password. | <img alt="The sign-in screen in light theme." src="./docs/assets/screenshots/sign-in-light.png" width="260"> | <img alt="The sign-in screen in dark theme." src="./docs/assets/screenshots/sign-in-dark.png" width="260"> |
-| **Session list** — active and previous, with what each one is doing right now. | <img alt="The session list in light theme." src="./docs/assets/screenshots/session-list-light.png" width="260"> | <img alt="The session list in dark theme." src="./docs/assets/screenshots/session-list-dark.png" width="260"> |
-| **Session view** — the transcript, a running tool row, the to-do and subagent strips. | <img alt="A session's transcript in light theme." src="./docs/assets/screenshots/session-view-light.png" width="260"> | <img alt="A session's transcript in dark theme." src="./docs/assets/screenshots/session-view-dark.png" width="260"> |
-| **Composer** — one control for send, steer and stop, with the model and effort chips. | <img alt="The composer band in light theme, showing the message field and the model and effort chips." src="./docs/assets/screenshots/composer-light.png" width="420"> | <img alt="The composer band in dark theme, showing the message field and the model and effort chips." src="./docs/assets/screenshots/composer-dark.png" width="420"> |
-| **Settings** — the connected computer, appearance, diagnostics. | <img alt="The settings screen in light theme." src="./docs/assets/screenshots/settings-light.png" width="260"> | <img alt="The settings screen in dark theme." src="./docs/assets/screenshots/settings-dark.png" width="260"> |
-| **A refusal** — a tunnel that will not let this phone in, and what to do about it. | <img alt="The refusal surface in light theme." src="./docs/assets/screenshots/refusal-light.png" width="260"> | <img alt="The refusal surface in dark theme." src="./docs/assets/screenshots/refusal-dark.png" width="260"> |
+| **Welcome** — the first run, and the two ways in. | <img alt="The welcome screen: the app's promise that your agent runs on your computer, with Sign in with Radient and Set up your own tunnel." src="./docs/assets/screenshots/welcome-light.png" width="260"> | <img alt="The welcome screen in dark theme: the same promise and the same two ways in." src="./docs/assets/screenshots/welcome-dark.png" width="260"> |
+| **Sign in** — Radient, or an address and the relay password. | <img alt="The sign-in screen: Sign in with Radient, or use an address and password." src="./docs/assets/screenshots/sign-in-light.png" width="260"> | <img alt="The sign-in screen in dark theme: the same two ways to sign in." src="./docs/assets/screenshots/sign-in-dark.png" width="260"> |
+| **Session list** — active and previous, with what each one is doing right now. | <img alt="The session list: a running session with its subagent count, one session waiting on approval, and a previous one, above the New session, Past and Computers controls." src="./docs/assets/screenshots/session-list-light.png" width="260"> | <img alt="The session list in dark theme: the same active and previous sessions." src="./docs/assets/screenshots/session-list-dark.png" width="260"> |
+| **Session view** — the transcript, a running tool row, the to-do and subagent strips. | <img alt="A session's transcript: user turns, a bash tool row with its duration, a diff, two markdown tables, the to-dos and subagent strips, and the composer with its model and effort chips." src="./docs/assets/screenshots/session-view-light.png" width="260"> | <img alt="The same transcript in dark theme." src="./docs/assets/screenshots/session-view-dark.png" width="260"> |
+| **Approvals** — a step the agent wants to run, and the two ways to answer it. | <img alt="A pending approval in the transcript: the bash command the agent wants to run, the folder it runs in, an Approve and a Deny button, and an always-allow control." src="./docs/assets/screenshots/approval-light.png" width="260"> | <img alt="The same pending approval in dark theme." src="./docs/assets/screenshots/approval-dark.png" width="260"> |
+| **Settings** — the connected computer, appearance, diagnostics. | <img alt="The settings screen: the connected computer and its status, the theme and text-size controls, and diagnostics." src="./docs/assets/screenshots/settings-light.png" width="260"> | <img alt="The settings screen in dark theme: the same connection, appearance and diagnostics sections." src="./docs/assets/screenshots/settings-dark.png" width="260"> |
+| **A refusal** — a tunnel that will not let this phone in, and what to do about it. | <img alt="The refusal surface: a tunnel that needs attention in Radient, the command to run on that computer, and the other ways to connect." src="./docs/assets/screenshots/refusal-light.png" width="260"> | <img alt="The refusal surface in dark theme: the same refusal and the same remedies." src="./docs/assets/screenshots/refusal-dark.png" width="260"> |
 
 ## Development
 
