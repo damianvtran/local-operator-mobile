@@ -438,6 +438,25 @@ export interface SessionListFrame {
    *  (`daemon.py:717-743`, `daemon.py:146`). */
   degraded: string[];
   capabilities: Capabilities;
+  /** The machine's unread aggregate, a TOP-LEVEL sibling of `degraded` — not
+   *  a `capabilities` flag, where a missing key means "this build does not have
+   *  it" (ADR 0006 §1.1, `daemon.py` `unread_block()`). Additive: an older
+   *  relay omits the block, and **absence means "unknown", never 0**. `count`
+   *  is absent when `degraded` is non-empty. */
+  unread?: UnreadBlock;
+}
+
+/** The frame-level unread aggregate. `count` is the §1.4 badge number:
+ *  conversations with unread notifications, over the listing's own snapshot —
+ *  a conversation with three unread completions counts once. */
+export interface UnreadBlock {
+  /** Absent when `degraded` is non-empty. Never read absence as `0`. */
+  count?: number;
+  /** `AttentionStore.revision()` — an EQUALITY token, never an order: compare
+   *  it for change; never sort by it (`daemon.py` `unread_block()`). */
+  revision: [number, number, number];
+  /** `["attention"]` when the completion-receipt store could not be read. */
+  degraded: string[];
 }
 
 /* ------------------------------------------------------------- side payloads */

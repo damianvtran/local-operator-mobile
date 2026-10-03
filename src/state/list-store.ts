@@ -24,6 +24,7 @@ import type {
 	Capabilities,
 	SessionListFrame,
 	SessionSummary,
+	UnreadBlock,
 } from "../contracts";
 
 export interface ListSnapshot {
@@ -32,6 +33,11 @@ export interface ListSnapshot {
 	 *  healthy; present means say so, because a partial list is not an empty one. */
 	degraded: string[];
 	capabilities: Capabilities;
+	/** The machine's own unread aggregate, off the frame the list already
+	 *  repaints from (ADR 0006 §1.1). `null` until a frame carries it: an older
+	 *  relay omits the block and that absence means **unknown, never 0** — the
+	 *  badge reads `count` when it is a number and shows no number otherwise. */
+	unread: UnreadBlock | null;
 	/** How many frames have been applied. Surfaced for diagnostics and for a test to
 	 *  assert a repaint happened. */
 	frameCount: number;
@@ -45,7 +51,7 @@ export interface ListActions {
 	/** Applies one full frame. Wholesale replacement, by design. */
 	applyFrame: (
 		frame: Pick<SessionListFrame, "sessions" | "degraded"> &
-			Partial<Pick<SessionListFrame, "capabilities">>,
+			Partial<Pick<SessionListFrame, "capabilities" | "unread">>,
 		at?: number,
 	) => void;
 	/** Marks the rendered list as no longer live. Never clears it. */
@@ -61,6 +67,7 @@ const INITIAL: ListSnapshot = {
 	sessions: [],
 	degraded: [],
 	capabilities: {},
+	unread: null,
 	frameCount: 0,
 	lastFrameAt: null,
 	stale: true,
@@ -80,6 +87,13 @@ export function createListStore(deps: { now?: () => number } = {}) {
 				 * frame established: `capabilities.stt` decides whether a mic exists, and
 				 * blinking it off would remove and restore a control. */
 				capabilities: frame.capabilities ?? get().capabilities,
+				/* The same rule, one level of subtlety more: a relay that carries the
+				 * block carries it on EVERY frame, so an absent block means an older
+				 * relay — erasing a block a previous frame established would forget a
+				 * count the machine did give us. A frame that carries the block always
+				 * WINS, including when it says `degraded` (count absent, badge darkens
+				 * again). */
+				unread: frame.unread ?? get().unread,
 				frameCount: get().frameCount + 1,
 				lastFrameAt: at ?? now(),
 				stale: false,
