@@ -689,7 +689,19 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 	add(
 		"long-transcript",
 		"A 520-row tool transcript: the case the projection's 80-row cap and degradation tiers exist for.",
-		["S5/populated-long", "S5/scroll"],
+		/* `S5/populated-long` ALONE, and the second cell it declared is not a declaration the
+		 * relay can honour. This scenario builds ONE projection and both of its cells were
+		 * pinned from it, so `S5/scroll` was `S5/populated-long` rendered from the same
+		 * projection at the same viewport: the identical-state check reported the pair on the
+		 * ci tier (light, iphone-se and tablet-landscape) and the readiness table already
+		 * aliases `scroll` onto `populated`. A scroll POSITION is a viewport interaction, not
+		 * a state the wire can declare — driving the two apart needs a scroll action or an id
+		 * the app itself exposes, and neither exists yet — so the duplicate name goes the way
+		 * `S2/error` went from `billing-inactive`. The coverage it claimed (a cell evidencing
+		 * a scrolled transcript) is named as a gap in the PR rather than papered over with an
+		 * exemption: an exemption is for two states a camera cannot tell apart, and this is
+		 * one state wearing two names. */
+		["S5/populated-long"],
 		() => {
 			const projection = projectionFrom(everyKind, {
 				transcript: longTranscript(everyKind, 520),

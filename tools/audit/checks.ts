@@ -560,13 +560,35 @@ function offscreenNote(node: AuditNode, state: AuditState): string {
 	return "";
 }
 
+/**
+ * Whether an element can be SEEN, which is not the same as having been laid out.
+ *
+ * U-08 measures overlap between boxes, and a box is not a drawing. Pairing the
+ * composer's measuring stand-in — full-size geometry inside a zero-height
+ * `overflow: hidden` wrapper, `aria-hidden`, painting nothing — against the
+ * placeholder it measures produced 40 U-08 rows for an overlap nobody could look
+ * at, and the rule that settles it is the one a user would state: **a node that
+ * cannot be seen cannot overlap.**
+ *
+ * Applied only here, and deliberately: the stand-in exists to measure the wrapped
+ * height of the placeholder (a real defect it fixes), so removing it from the app
+ * would be the wrong repair, and the other checks that legitimately measure a
+ * clipped node (U-07 measures clipping itself) must keep seeing it.
+ */
+function isGhost(node: AuditNode): boolean {
+	if (node.clippedAway) return true;
+	return node.ariaHidden && !node.ownInk;
+}
+
 /** U-08 — meaningful boxes must not overlap. */
 function u08Overlap(state: AuditState): CheckRow[] {
 	// The rubric's rule is pairwise over *text and interactive* boxes, so a label
 	// drawn under a control is caught as well as two controls on top of each
 	// other. Ancestor/descendant pairs are excluded: a container overlaps its own
 	// child by construction, and counting those would fail every nested layout.
-	const meaningful = state.nodes.filter((n) => n.ownText || n.interactive);
+	const meaningful = state.nodes.filter(
+		(n) => !isGhost(n) && (n.ownText || n.interactive),
+	);
 	const rows: CheckRow[] = [];
 	for (let i = 0; i < meaningful.length; i += 1) {
 		for (let j = i + 1; j < meaningful.length; j += 1) {
@@ -875,6 +897,20 @@ export interface AuditNode {
 	clientHeight: number;
 	borderWidth: number;
 	padding: { top: number; bottom: number; left: number; right: number };
+	/**
+	 * Whether an ancestor clips this node away, and whether it draws ink of its own.
+	 *
+	 * A box is not a drawing. `clippedAway` is true when the node's rectangle
+	 * intersects none of its clipping ancestors' boxes, which the probe answers over
+	 * the chain because the clipping that hides a node is usually not on the node:
+	 * the composer's measuring stand-in is a full-size box inside a zero-height
+	 * `overflow: hidden` wrapper, 262×18pt of geometry that paints not one pixel.
+	 * `ownInk` is whether it paints anything at all (text, a background, a border or
+	 * an image), and `ariaHidden` is `aria-hidden="true"` on the node or any ancestor.
+	 */
+	clippedAway: boolean;
+	ariaHidden: boolean;
+	ownInk: boolean;
 	interactive: boolean;
 	disabled: boolean;
 	isControl: boolean;

@@ -293,7 +293,7 @@ second hand-maintained list.
 | `ask-multi` | S8/ask-multi | The second of two questions in one pending ask, with a parallel count above one. |
 | `subagent-running` | S5/subagents, S6/populated | A running subagent with a queued sibling and a parked one, plus a detail route. |
 | `subagent-completed` | S6/populated, S6/populated-long | A completed subagent carrying a result, with a blocked second child. |
-| `long-transcript` | S5/populated-long, S5/scroll | A 520-row tool transcript: the case the projection's 80-row cap and degradation tiers exist for. |
+| `long-transcript` | S5/populated-long | A 520-row tool transcript: the case the projection's 80-row cap and degradation tiers exist for. (`S5/scroll` is not declared beside it: the relay builds ONE projection for this scenario, so the two cells were one state under two names, and a scroll position is a viewport interaction the wire cannot declare.) |
 | `long-names` | S5/populated-long, S4/populated-long, S8/populated-long | A 64-character conversation name, a deep cwd, and a 400-character pending question. |
 | `empty-transcript` | S5/empty | A session that has just started: the seed projection, no rows. |
 | `every-entry-kind` | S5/populated | One row of every TranscriptEntry kind, for the renderer's fallback path. |
@@ -481,7 +481,7 @@ the limitation is visible rather than inferred.
 | `GET /__mock/state` | `scenario`, applied `faults`, `sessions`, `admittedCommands`, `duplicateDelivered`, `uptimeS`, and two counts: **`requests`** is every request the relay *served* (control routes excluded, so reading the state cannot move it), and **`recorded`** is the length of the transcript `--record` would write |
 | `GET /__mock/scenarios` | every scenario with the cells it declares, and every fault name |
 | `POST /__mock/scenario` | pin the world (`{"scenario": "<name>"}`) — what makes a captured cell's state true rather than assumed |
-| `POST /__mock/fault` | apply faults to a running relay |
+| `POST /__mock/fault` | set the relay's **baseline** faults (`{"faults": ["<name>"]}`). A scenario is pinned *with* its own faults, so the applied set is this baseline plus the pinned scenario's — which is why a fault set here survives a pin and a fault a scenario declares does not |
 | `GET /__mock/record` | the transcript rows themselves |
 | `POST /__mock/reset` | clear the transcript |
 | `POST /__mock/shutdown` | stop the process |
@@ -525,12 +525,12 @@ node tools/visual/capture.ts --dir e2e/fixtures/audit-canary \
 # A real run against a real build. Build first — `pnpm export:web`, which writes `dist/`.
 #
 # The device/theme/scale set is EXPLICIT and small on purpose: the full `core` tier is
-# 936 cells, which is ~35 minutes at the measured 2.24 s/cell (403 cells in 903 s on the
+# 910 cells, which is ~34 minutes at the measured 2.24 s/cell (403 cells in 903 s on the
 # CI runner), and no documentation gate may spend that on one command. So this example is
 # the bounded sample; `--plan` above prints the full count, and dropping these three flags
 # captures the whole `core` tier. `--tier ci` is the sample the per-push CI job takes —
-# every declared cell at two device profiles, both themes and two scales, 288 cells — and
-# `--full` is all 19 profiles at 3384 cells.
+# every declared cell at two device profiles, both themes and two scales, 280 cells — and
+# `--full` is all 19 profiles at 3290 cells.
 #
 # The bound is DERIVED FROM THE PLAN unless you name one: `--deadline` defaults to
 # 3000 ms/cell with a 900 s floor, so a bound always holds the plan it was computed for,
@@ -640,16 +640,16 @@ All 19 profiles above are what the harness *can* plan, and they come from
 generated from it rather than maintained beside it. A default run captures the
 `core` tier only (5 profiles: the 320 pt floor, one typical phone,
 the landscape case whose side insets the notch rules need, and a tablet in each
-orientation) — 936 cells at 26 frames per cell. A run states which tier it took,
+orientation) — 910 cells at 26 frames per cell. A run states which tier it took,
 and a cell that was not captured is reported as having no frame rather than passed.
 
 Three tiers are declared in `matrix.ts`, and each says what it is:
 
 | tier | sample | cells | why |
 |---|---|---|---|
-| `ci` | every declared cell × `iphone-se`, `tablet-landscape` × both themes × scales 100 and 200 | 288 | the per-push CI job's sample. The step is bound at 20 minutes and the measured rate is 2.24 s/cell, so a 936-cell `core` run cannot fit; this one lands ~11 minutes. It keeps the CELL axis whole — a state that is not captured is a state no review round can report on — and shrinks only the device, theme and scale axes, each to what its check needs: the narrowest and widest viewports (the two sides of the 768 breakpoint), because the theme check compares a cell's dark and light frames, and the 100 %/200 % pair the text-scale guard measures. |
-| `core` | the 5 `core` profiles, both themes, all three scales | 936 | the default, and the local sample the operator's rule asks for. |
-| `full` | all 19 profiles | 3384 | the dispatched/nightly sample. |
+| `ci` | every declared cell × `iphone-se`, `tablet-landscape` × both themes × scales 100 and 200 | 280 | the per-push CI job's sample. The step is bound at 20 minutes and the measured rate is 2.24 s/cell, so a 910-cell `core` run cannot fit; this one lands ~11 minutes. It keeps the CELL axis whole — a state that is not captured is a state no review round can report on — and shrinks only the device, theme and scale axes, each to what its check needs: the narrowest and widest viewports (the two sides of the 768 breakpoint), because the theme check compares a cell's dark and light frames, and the 100 %/200 % pair the text-scale guard measures. |
+| `core` | the 5 `core` profiles, both themes, all three scales | 910 | the default, and the local sample the operator's rule asks for. |
+| `full` | all 19 profiles | 3290 | the dispatched/nightly sample. |
 
 `--tier <ci|core|full>` or `--full` selects one; `--devices`, `--themes` and
 `--scales` override any of them. The whole-run `--deadline` is derived from the
@@ -793,6 +793,7 @@ the distinction is the whole rule:
 | A pinned overlay that is **translucent** | **reported** | a see-through bar over text IS a visible overlap, whoever painted it |
 | A pinned opaque overlay that **encloses a control** | **reported** | a control the user cannot reach is a defect regardless of how the overlay was positioned |
 | Two **pinned** elements overlapping | **reported** | two bars stacked on each other is a defect |
+| A node that **cannot be seen** — clipped to nothing by an ancestor (`overflow` other than `visible`), or `aria-hidden` and painting no ink of its own | **not reported** | a box is not a drawing. The composer's measuring stand-in is a full-size box inside a zero-height `overflow: hidden` wrapper, so its geometry overlaps the placeholder it measures while it paints not one pixel: 40 rows for an overlap nobody could look at. It is excluded from *this* rule only — U-07 measures clipping itself, and the stand-in stays in the app because the height it measures is a real fix |
 
 "Pinned" cannot be the CSS keyword. The first version tested
 `position: fixed | sticky`, and `react-native-web` paints a pinned footer

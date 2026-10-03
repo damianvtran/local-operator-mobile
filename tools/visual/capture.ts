@@ -84,7 +84,7 @@ const CONFIRM_THRESHOLD = 120;
  * the floor a small plan still gets.
  *
  * WHY THE DEFAULT IS DERIVED RATHER THAN FIXED. It used to be a flat 900 s, which
- * holds about 400 cells: a `core` run (936 cells) or a dispatched `full` run (3384)
+ * holds about 400 cells: a `core` run (910 cells) or a dispatched `full` run (3290)
  * was therefore cut off by the harness's own default and reported hundreds of cells
  * as having no frame — a bound firing on a plan it was never sized for, which reads
  * like a finding about the app and is not one. Deriving it from the plan makes the
@@ -706,6 +706,28 @@ async function withDeadline<T>(
 	}
 }
 
+/**
+ * A relay call the cell depends on, under the cell's own bound.
+ *
+ * The pin and the two request counts are the only `fetch`es in the cell loop, and they
+ * used to sit OUTSIDE `withDeadline`: a relay that died mid-run threw `fetch failed`
+ * straight through the loop, so the run ended with a stack trace and NO manifest at all —
+ * the shape W6 removed for a cell whose PAGE hangs, left standing for a cell whose RELAY
+ * goes away (QA round 1 reproduced it on this head and on `origin/main` by killing the
+ * relay mid-run). The failure is returned as a value so the caller can account for the
+ * cell by name instead of the run by crash.
+ */
+async function relayStep<T>(
+	run: () => Promise<T>,
+	ms: number,
+	what: string,
+): Promise<{ ok: true; value: T } | { ok: false; reason: string }> {
+	const result = await withDeadline(run(), ms, what);
+	return result.ok
+		? result
+		: { ok: false, reason: `the relay went away: ${result.reason}` };
+}
+
 /** What the measurement probe reports, narrowed from the page's reply. */
 export interface Measurements {
 	reported?: {
@@ -1132,6 +1154,7 @@ function exemptionKey(records: readonly CaptureRecord[]): string {
 
 function findIdenticalFrames(records: CaptureRecord[]): {
 	collapses: string[];
+	undeclared: string[];
 	exemptions: string[];
 } {
 	const bySha = new Map<string, CaptureRecord[]>();
@@ -1142,6 +1165,7 @@ function findIdenticalFrames(records: CaptureRecord[]): {
 		bySha.set(key, [...(bySha.get(key) ?? []), record]);
 	}
 	const collapses: string[] = [];
+	const undeclared: string[] = [];
 	const exemptions: string[] = [];
 	for (const [shaDigest, group] of bySha) {
 		const states = new Set(
@@ -1188,7 +1212,11 @@ function findIdenticalFrames(records: CaptureRecord[]): {
 		const key = exemptionKey(group);
 		const reason = IDENTICAL_FRAME_EXEMPTIONS[key];
 		if (reason === undefined) {
-			collapses.push(
+			// Its own list, because it is its own statement: the pixels agree and the app
+			// does not, which is a camera limit only once somebody declares it as one. Printed
+			// under its own header so the summary never says "same content" about a pair whose
+			// line says the content differs (QA round 1).
+			undeclared.push(
 				`${label} rendered identically (${shaDigest}) on ${where} although their renderings differ: ` +
 					`if that is the viewport filling with chrome rather than a collapse, declare '${key}' ` +
 					"in matrix.ts IDENTICAL_FRAME_EXEMPTIONS with the reason — until it is declared, a " +
@@ -1200,7 +1228,7 @@ function findIdenticalFrames(records: CaptureRecord[]): {
 			);
 		}
 	}
-	return { collapses, exemptions };
+	return { collapses, undeclared, exemptions };
 }
 
 /** `rgb(a, b, c)`/`#rrggbb` → lowercase hex, so a computed colour can meet a token. */
@@ -1382,7 +1410,7 @@ export async function runCapture(options: CaptureOptions) {
 	 * bound cannot hold it. Printed BEFORE anything is launched so a bound that
 	 * will truncate is a stated diagnosis at minute zero rather than a surprise
 	 * at minute fifteen — which is exactly how the CI job's first real capture
-	 * run failed: 900 s against a 962-cell plan, reported only when it fired.
+	 * run failed: 900 s against a 910-cell plan, reported only when it fired.
 	 */
 	const budgetMs = derivedDeadlineMs(plan.length);
 	const deadlineMs = options.deadlineMs ?? budgetMs;
@@ -1488,6 +1516,15 @@ export async function runCapture(options: CaptureOptions) {
 
 		for (const cell of plan) {
 			index += 1;
+			/* One abandonment path, so every reason a cell has no frame is recorded and printed
+			 * the same way (and so a new one cannot be added that quietly forgets the page
+			 * recovery below). */
+			const abandonCell = (reason: string): void => {
+				abandoned.push({ cell: cell.cell, reason });
+				console.log(
+					`[${index}/${plan.length}] ${cell.cell} on ${cell.device} — FAILED: ${reason}`,
+				);
+			};
 			if (Date.now() - startedAt > deadlineMs) {
 				// The overall bound: a run that would exceed its job's own timeout stops
 				// accounting for itself and reports what it captured, rather than being
@@ -1508,15 +1545,37 @@ export async function runCapture(options: CaptureOptions) {
 			const registryBacked =
 				options.relay !== undefined &&
 				Object.hasOwn(state?.cellScenarios ?? {}, cell.cell);
-			if (registryBacked && options.relay !== undefined) {
+			const relay = options.relay;
+			if (registryBacked && relay !== undefined) {
 				const scenario = state?.cellScenarios?.[cell.cell]?.[0];
-				if (scenario !== undefined)
-					await selectScenario(options.relay, scenario);
+				if (scenario !== undefined) {
+					// Bounded like the cell itself: a pin whose relay is gone abandons THIS cell.
+					const pinned = await relayStep(
+						() => selectScenario(relay, scenario),
+						options.cellTimeoutMs,
+						`pinning ${scenario} for ${cell.cell}`,
+					);
+					if (!pinned.ok) {
+						abandonCell(pinned.reason);
+						page = await recoverPage(chrome, page);
+						continue;
+					}
+				}
 			}
-			const requestsBefore =
-				options.relay === undefined
-					? null
-					: await relayRequestCount(options.relay);
+			const countBefore = await relayStep(
+				() =>
+					relay === undefined
+						? Promise.resolve(null)
+						: relayRequestCount(relay),
+				options.cellTimeoutMs,
+				`reading the relay's request count for ${cell.cell}`,
+			);
+			if (!countBefore.ok) {
+				abandonCell(countBefore.reason);
+				page = await recoverPage(chrome, page);
+				continue;
+			}
+			const requestsBefore = countBefore.value;
 
 			// The per-cell bound. A cell whose page never settles used to hang the
 			// whole run; it now fails with the deadline that expired, and the next cell
@@ -1534,18 +1593,24 @@ export async function runCapture(options: CaptureOptions) {
 				`cell ${cell.cell} on ${cell.device}/${cell.theme}/${cell.scale.id}`,
 			);
 			if (!attempted.ok) {
-				abandoned.push({ cell: cell.cell, reason: attempted.reason });
-				console.log(
-					`[${index}/${plan.length}] ${cell.cell} on ${cell.device} — FAILED: ${attempted.reason}`,
-				);
+				abandonCell(attempted.reason);
 				// The page may be wedged with a live stream; a fresh target keeps the
 				// next cell from inheriting it.
 				page = await recoverPage(chrome, page);
 				continue;
 			}
 			const record = attempted.value;
-			if (options.relay !== undefined) {
-				const requestsAfter = await relayRequestCount(options.relay);
+			if (relay !== undefined) {
+				/* Bounded for the same reason as the count before it, and here the frame is already
+				 * captured: a relay that dies now costs this cell its REACH fact (`null` already means
+				 * "could not count", and the fact is resolved as unreached for a registry cell) rather
+				 * than the whole run its manifest. */
+				const countAfter = await relayStep(
+					() => relayRequestCount(relay),
+					options.cellTimeoutMs,
+					`reading the relay's request count after ${cell.cell}`,
+				);
+				const requestsAfter = countAfter.ok ? countAfter.value : null;
 				relayReach = {
 					registryBacked,
 					reached:
@@ -1679,8 +1744,11 @@ export async function runCapture(options: CaptureOptions) {
 	const readinessProblems = unready.map(
 		(record) => `${record.name}: ${record.readinessProblems.join("; ")}`,
 	);
-	const { collapses: identicalCells, exemptions: identicalExemptions } =
-		findIdenticalFrames(records);
+	const {
+		collapses: identicalCells,
+		undeclared: identicalUndeclared,
+		exemptions: identicalExemptions,
+	} = findIdenticalFrames(records);
 
 	// The manifest is what the audit and the gallery both read, so it carries the
 	// facts each of them needs by name rather than a shape they must infer.
@@ -1739,6 +1807,13 @@ export async function runCapture(options: CaptureOptions) {
 		/** Cells with no frame: unrenderable screens and cells that hit a deadline. */
 		abandonedCells: abandoned,
 		identicalStates: identicalCells,
+		/**
+		 * Byte-identical frames whose declared states differ, whose content differs too, and
+		 * which nothing has declared: a camera limit nobody has signed for. Blocking, and
+		 * listed apart from the collapses so the manifest's own wording matches what was
+		 * measured.
+		 */
+		identicalStateUndeclared: identicalUndeclared,
 		/**
 		 * Byte-identical frames whose declared states differ in CONTENT: a limit of the
 		 * camera (the differing content is below the fold), declared by name in
@@ -1843,6 +1918,12 @@ export async function runCapture(options: CaptureOptions) {
 		);
 		for (const entry of identicalCells) console.log(`  - ${entry}`);
 	}
+	if (identicalUndeclared.length) {
+		console.log(
+			`UNDECLARED IDENTICAL FRAMES (${identicalUndeclared.length}): the same bytes with DIFFERENT content — a camera limit, and one nothing has declared as a camera limit`,
+		);
+		for (const entry of identicalUndeclared) console.log(`  - ${entry}`);
+	}
 	if (identicalExemptions.length) {
 		console.log(
 			`EXEMPT IDENTICAL FRAMES (${identicalExemptions.length}): byte-identical frames whose declared states DIFFER in content, each declared in matrix.ts IDENTICAL_FRAME_EXEMPTIONS — a limit of the camera, not a collapse`,
@@ -1862,6 +1943,7 @@ export async function runCapture(options: CaptureOptions) {
 		themeProblems.length +
 		readinessProblems.length +
 		identicalCells.length +
+		identicalUndeclared.length +
 		abandoned.length;
 	// A run that leaves processes behind has not finished, whatever its frames look
 	// like: "a run that ends normally leaves nothing behind, and proves it in its own
@@ -1881,7 +1963,7 @@ export async function runCapture(options: CaptureOptions) {
 	if (strict && blockingWithSurvivors > 0) {
 		throw new CaptureFailure(
 			`${themeProblems.length} theme problem(s), ${readinessProblems.length} unready cell(s), ` +
-				`${identicalCells.length} identical-state collapse(s), ${abandoned.length} cell(s) with no frame, ` +
+				`${identicalCells.length} identical-state collapse(s), ${identicalUndeclared.length} undeclared identical-state pair(s), ${abandoned.length} cell(s) with no frame, ` +
 				`${survivors} surviving process(es); ` +
 				`see ${join(outDir, "manifest.json")}`,
 			{
@@ -1994,11 +2076,11 @@ if (isMain) {
 				"                      a smaller explicit bound is honoured and noted. Cells still",
 				"                      unvisited when it fires are reported as having no frame",
 				"  --tier <name>       the sample to capture: ci | core (default) | full",
-				"                        ci    296 cells — every declared cell, 2 device profiles,",
+				"                        ci    280 cells — every declared cell, 2 device profiles,",
 				"                              both themes, scales 100 and 200 (~11 min) — the CI job's",
-				"                        core  962 cells — the 5 `core` profiles, both themes, all",
+				"                        core  910 cells — the 5 `core` profiles, both themes, all",
 				"                              three scales",
-				"                        full  3572 cells — all 19 profiles",
+				"                        full  3290 cells — all 19 profiles",
 				"  --devices <names>   comma list. Default: the tier's profiles (ci 2, core 5 by",
 				"                      default, --full for all 19)",
 				"  --themes <names>    default dark,light",
@@ -2025,7 +2107,7 @@ if (isMain) {
 	// overrides any of them.
 	//
 	// An unknown tier is an ERROR rather than a silent fall back to `core`: a typo'd
-	// `--tier ci` that quietly ran 962 cells would spend ~36 minutes on a capture the
+	// `--tier ci` that quietly ran 910 cells would spend ~36 minutes on a capture the
 	// caller did not ask for, and the whole point of naming the sample is that the
 	// run you get is the one you asked for.
 	const tierFlag = bool(flags, "full") ? "full" : str(flags, "tier", "core");

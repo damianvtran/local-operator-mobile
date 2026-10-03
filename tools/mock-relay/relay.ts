@@ -222,6 +222,19 @@ export interface RelayState {
 	/** True once an edge 401 has been injected mid-session, so every later request is refused. */
 	expired: boolean;
 	/**
+	 * Which world this state describes, incremented on every pin.
+	 *
+	 * A timer that touches global state belongs to the world it was armed IN, not to
+	 * whichever world happens to be pinned when it fires: `expireAfterS` arms its timer
+	 * when a stream opens and latches `expired` seconds later, so a pin in between left
+	 * the latch cleared and then re-latched by a timer nobody was waiting for — under a
+	 * scenario that declares no fault at all. Comparing this counter is how a stale timer
+	 * knows it is stale. It is a counter rather than the scenario NAME because a run can
+	 * pin A, then B, then A again, and the third pin's timer must not be taken for the
+	 * first one's.
+	 */
+	generation: number;
+	/**
 	 * The faults the INVOCATION asked for (`--fault`), kept apart from a scenario's own.
 	 *
 	 * The two are not the same thing and conflating them is a defect in both directions:
@@ -320,6 +333,7 @@ export function createRelay(options: RelayOptions = {}) {
 		duplicateDelivered: 0,
 		duplicateFramePending: false,
 		expired: false,
+		generation: 0,
 		scenarioStartedAt: Date.now(),
 		servers: [],
 		record: false,
@@ -371,6 +385,13 @@ export function createRelay(options: RelayOptions = {}) {
 		 * happened to live past its own two-second grant, so the same commit could run
 		 * green or red. */
 		state.expired = false;
+		/* The world's own identity, so a timer armed in the previous one can see that it is
+		 * stale. `expireAfterS` fires seconds after a stream opens, and the pin has already
+		 * cleared the latch by then: measured 2026-10-03, pinning `mid-session-401`, opening
+		 * its stream and pinning `idle` 0.4 s later read `faults: []` and 200, and the SAME
+		 * request read 401 three seconds later — the W3 symptom one pin later, under a
+		 * scenario that declares no fault. See `state.generation`. */
+		state.generation += 1;
 		// Per-scenario ledgers reset with the scenario, so a duplicate-detection
 		// test cannot inherit an id admitted by the previous scenario.
 		state.admitted = new Map();
@@ -798,7 +819,17 @@ export function createRelay(options: RelayOptions = {}) {
 		// the *next* request is refused with the re-auth hint header.
 		let expireTimer: ReturnType<typeof setTimeout> | undefined;
 		if (faults.expireAfterS !== undefined) {
+			// The grant belongs to the world this stream was opened in. A pin re-arms the relay
+			// for another scenario, and this stream's deadline must not latch a 401 onto a world
+			// that never declared one — so a stale timer ends its own (now meaningless) stream
+			// and stops there. See `state.generation`.
+			const armedIn = state.generation;
 			expireTimer = setTimeout(() => {
+				if (state.generation !== armedIn) {
+					cleanup();
+					res.end();
+					return;
+				}
 				state.expired = true;
 				cleanup();
 				res.end();

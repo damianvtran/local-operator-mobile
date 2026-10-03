@@ -27,6 +27,42 @@ export const EXTRACT_PROBE = `
     if (rect.width <= 0 || rect.height <= 0) return false;
     return true;
   };
+  // Is the node RENDERED, which is a different question from "is it laid out"?
+  // Its own style can say visible while an ANCESTOR clips it away: a zero-height
+  // 'overflow: hidden' wrapper leaves its child a full-size getBoundingClientRect
+  // and not one painted pixel, and the per-node test above cannot see that because
+  // the clipping is not on the node. What is measured here is the node's box
+  // intersected with every clipping ancestor's box, which is the region that can
+  // actually reach the screen.
+  const clippedAway = (el, rect) => {
+    let left = rect.left, top = rect.top, right = rect.right, bottom = rect.bottom;
+    let node = el.parentElement;
+    while (node && node.nodeType === 1) {
+      const s = getComputedStyle(node);
+      // 'overflow: visible' on both axes paints outside the box; anything else
+      // clips (auto/scroll clip too, and a child scrolled out of its container is
+      // no more visible than a hidden one).
+      if (s.overflowX !== 'visible' || s.overflowY !== 'visible') {
+        const r = node.getBoundingClientRect();
+        left = Math.max(left, r.left);
+        top = Math.max(top, r.top);
+        right = Math.min(right, r.right);
+        bottom = Math.min(bottom, r.bottom);
+        if (right <= left || bottom <= top) return true;
+      }
+      node = node.parentElement;
+    }
+    return false;
+  };
+  // 'aria-hidden' is inherited, so it is answered over the chain and not per node.
+  const ariaHiddenIn = (el) => {
+    let node = el;
+    while (node && node.nodeType === 1) {
+      if (node.getAttribute('aria-hidden') === 'true') return true;
+      node = node.parentElement;
+    }
+    return false;
+  };
   // The effective background: the nearest ancestor with a non-transparent
   // background colour, composited down to opaque. A colour on a parent *is* the
   // text's ground, which is exactly the case a per-element check misses.
@@ -142,6 +178,16 @@ export const EXTRACT_PROBE = `
       disabled: el.disabled === true || el.getAttribute('aria-disabled') === 'true',
       isControl: /^(input|select|textarea)$/.test(el.tagName.toLowerCase()),
       childImages: el.querySelectorAll('img,svg').length,
+      // The two facts a box does not tell you: whether an ancestor clips it to
+      // nothing, and whether it draws ink of its own at all. Reported as
+      // measurements — U-08 is where they become a rule.
+      clippedAway: clippedAway(el, rect),
+      ariaHidden: ariaHiddenIn(el),
+      ownInk:
+        ownText.length > 0
+        || (style.backgroundColor !== 'rgba(0, 0, 0, 0)' && style.backgroundColor !== 'transparent')
+        || px(style.borderTopWidth) > 0
+        || el.querySelectorAll('img,svg').length > 0,
       // The nearest ancestor's full text, so a status *word* carried by a sibling
       // counts as a carrier and a bare dot beside it is not a colour-only status.
       containerText: ((el.closest('p, li, div, section, header, footer, td, button') || el.parentElement || el).textContent || '').trim().slice(0, 200),
