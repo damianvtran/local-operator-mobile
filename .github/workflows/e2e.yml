@@ -299,9 +299,10 @@ jobs:
         # 36669731994) without GitHub reaping it, so the run said only that it was
         # still going. Measured again on 2026-10-03 (run 37098393675), the capture
         # costs 2.24 s/cell — 403 cells / 1209 frames in 903.1 s — so the `core`
-        # plan of 910 cells needs ~34 min and cannot finish inside this bound. The
-        # `--tier ci` sample can: 280 cells, ~10 min at the same rate, which leaves
-        # the audit and the canary their own steps below.
+        # plan of 858 cells needs ~32 min and cannot finish inside this bound. The
+        # `--tier ci` sample can: 264 cells, ~10 min at the same rate, which leaves
+        # the audit and the canary their own steps below. (`full` is 3102 cells, and
+        # stays a dispatched or local run.)
         timeout-minutes: 20
         # THE DOCUMENTED INVOCATION, through the harness's own script
         # (`docs/e2e/ci-notes.md` §3). An earlier version derived the cell list here
