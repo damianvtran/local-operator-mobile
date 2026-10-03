@@ -94,6 +94,25 @@ describe("findIdenticalFrames", () => {
 		expect(result).toEqual({ collapses: [], undeclared: [], exemptions: [] });
 	});
 
+	it("ignores a group made only of frames that never reached their state", () => {
+		// `ready: false` is the readiness guard's own verdict that the cell is showing the
+		// app's fallback screen: the frame is not evidence for the state it declares.
+		const unready = { ready: false };
+		const result = findIdenticalFrames([
+			cell("S5", "error", "aaaa", "signed-out", unready),
+			cell("S5", "populated", "aaaa", "populated", unready),
+		]);
+		expect(result).toEqual({ collapses: [], undeclared: [], exemptions: [] });
+	});
+
+	it("still reports a collapse when a ready cell shares the bytes with an unready one", () => {
+		const result = findIdenticalFrames([
+			cell("S5", "error", "aaaa", "identical"),
+			cell("S5", "populated", "aaaa", "identical", { ready: false }),
+		]);
+		expect(result.collapses).toHaveLength(1);
+	});
+
 	it("still reports a collapse when a skipped cell is in the same group", () => {
 		const result = findIdenticalFrames([
 			cell("S5", "populated", "aaaa", "identical"),

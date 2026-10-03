@@ -289,12 +289,18 @@ export const SUB_RULE_TEXT: Record<string, RegExp> = {
 	"U-05:right": /^right edge/,
 	"U-07:x": /overflow-x/,
 	"U-07:y": /overflow-y/,
-	// U-08's escape branch: a reported overlap where one of the two boxes has a clipping
-	// ancestor that is not on its containing-block chain. It has its own pattern because
-	// the canary asserts a rule, not a check — every other U-08 fixture is a plain
-	// overlap, so without this a clip test that swallowed the escape case would still
-	// find some other U-08 row on the page and pass (review round 3).
-	"U-08:escape": /^painted over a clipping ancestor/,
+	// U-08's escape branches: a reported overlap where one of the two boxes has a clipping
+	// ancestor that is not on its containing-block chain. They have their own patterns
+	// because the canary asserts a rule, not a check — every other U-08 fixture is a plain
+	// overlap, so without these a clip test that swallowed the escape case would still find
+	// some other U-08 row on the page and pass (review round 3).
+	//
+	// Split by the escaping node's own `position` so each shape is separately blindable
+	// (review round 4): one rule covering both made a blind report two missed defects, which
+	// the audit's mutation self-test correctly reads as "not exactly the named rule".
+	"U-08:escape-absolute": /^painted over a clipping ancestor \(absolute\)/,
+	"U-08:escape-fixed": /^painted over a clipping ancestor \(fixed\)/,
+	"U-08:escape-sticky": /^painted over a clipping ancestor \(sticky\)/,
 };
 
 /** U-05 — nothing sits under a notch, a home indicator or an Android gesture bar. */
@@ -631,6 +637,8 @@ function u08Overlap(state: AuditState): CheckRow[] {
 				const coversControl = under.interactive && encloses(overlay, under);
 				if (!coversControl && isOpaque(overlay)) continue;
 			}
+			// Whichever of the pair escaped a clipping ancestor, if either did.
+			const escaped = a.escapedClip ? a : b.escapedClip ? b : null;
 			const overlapW =
 				Math.min(a.rect.x + a.rect.w, b.rect.x + b.rect.w) -
 				Math.max(a.rect.x, b.rect.x);
@@ -647,8 +655,9 @@ function u08Overlap(state: AuditState): CheckRow[] {
 				// The rule's own words come first when the pair includes a node the browser
 				// paints through a clipping ancestor that is off its containing-block chain: it
 				// is the escape the every-ancestor walk swallowed, and `SUB_RULE_TEXT` reads it
-				// to tell this branch apart from a plain overlap.
-				measured: `${a.escapedClip || b.escapedClip ? "painted over a clipping ancestor: " : ""}${overlapW}x${overlapH}pt overlap (${round((area / smaller) * 100, 0)}% of the smaller box)`,
+				// (with the escaping node's position) to tell this branch — and each of its
+				// shapes — apart from a plain overlap.
+				measured: `${escaped === null ? "" : `painted over a clipping ancestor (${escaped.position}): `}${overlapW}x${overlapH}pt overlap (${round((area / smaller) * 100, 0)}% of the smaller box)`,
 				detail: `${a.path} ∩ ${b.path}${offscreenNote(a, state)}`,
 			});
 		}

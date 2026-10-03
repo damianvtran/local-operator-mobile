@@ -155,20 +155,38 @@ const stateStillComing = (issues: ReadonlyArray<{ kind: string }>): boolean =>
 async function recoverPage(
 	chrome: Awaited<ReturnType<typeof launchChrome>>,
 	page: CdpPage,
-): Promise<CdpPage> {
+	ms: number,
+): Promise<{ ok: true; page: CdpPage } | { ok: false; reason: string }> {
 	try {
 		await page.send("Target.closeTarget", { targetId: page.targetId });
 	} catch {
 		// A target wedged beyond answering is closed by the browser when the profile
 		// is torn down; the new target is what the next cell needs.
 	}
-	const next = await chrome.page();
+	/*
+	 * Bounded, and a FAILURE rather than a throw. A browser that has stopped answering
+	 * cannot capture anything else, and the run has to say so in its manifest instead of
+	 * dying with a stack trace and nothing on disk — the shape QA hit at startup
+	 * (`Target.createTarget did not answer within 30000 ms`, rc 1, no manifest), one cell
+	 * later. The caller abandons the rest of the plan by name and breaks.
+	 */
+	const opened = await withDeadline(
+		chrome.page(),
+		ms,
+		"the browser's next target",
+	);
+	if (!opened.ok)
+		return {
+			ok: false,
+			reason: `the browser stopped answering: ${opened.reason}`,
+		};
+	const next = opened.value;
 	await next.send("Page.enable");
 	await next.send("Runtime.enable");
 	await next.send("Page.addScriptToEvaluateOnNewDocument", {
 		source: PRE_PAINT_PROBE,
 	});
-	return next;
+	return { ok: true, page: next };
 }
 
 const sha = (buffer: Buffer): string =>
@@ -1305,25 +1323,37 @@ export async function runCapture(options: CaptureOptions) {
 	 * reason. The error is re-thrown, so the exit code is still a refusal — the file is a
 	 * record, not a recovery.
 	 */
-	let state: RelayStateReply | null;
-	try {
-		state = await relayState(options.relay, options.cellTimeoutMs);
-	} catch (error) {
-		const reason = error instanceof Error ? error.message : String(error);
+	/*
+	 * A REFUSAL THAT STOPS THE RUN STILL ACCOUNTS FOR ITSELF.
+	 *
+	 * Three things can stop a capture before any cell is planned or captured: a relay
+	 * that does not answer the pre-flight, a relay that declares no cells, and a browser
+	 * that cannot open a page. All three used to `throw` with NOTHING written, which is
+	 * the same "the run left no account of itself" shape the cell path and the relay path
+	 * were fixed for — QA round 4 hit it at startup: `Target.createTarget did not answer
+	 * within 30000 ms`, rc 1, no manifest. So each one records a manifest naming itself
+	 * and then throws, which keeps the exit code a refusal and gives the job something to
+	 * upload.
+	 *
+	 * `phase` is where it stopped, because the three want different fixes and a reader of
+	 * the artifact should not have to infer which one happened.
+	 */
+	const refuse = (phase: string, reason: string): void => {
 		writeFileSync(
 			join(outDir, "manifest.json"),
 			`${JSON.stringify(
 				{
 					meta: {
 						refused: true,
-						preflightRefusal: reason,
+						refusedAt: phase,
+						refusal: reason,
 						buildDir: resolve(options.dir),
 						relay: options.relay ?? null,
 						out: outDir,
 					},
 					themeProblems: [],
 					readinessProblems: [
-						`the run refused to plan a single cell: ${reason}`,
+						`the run refused to start at ${phase}: ${reason}`,
 					],
 					abandonedCells: [],
 					identicalStates: [],
@@ -1336,13 +1366,21 @@ export async function runCapture(options: CaptureOptions) {
 			)}
 `,
 		);
+	};
+	let state: RelayStateReply | null;
+	try {
+		state = await relayState(options.relay, options.cellTimeoutMs);
+	} catch (error) {
+		const reason = error instanceof Error ? error.message : String(error);
+		refuse("the relay pre-flight", reason);
 		throw error;
 	}
 	if (state !== null && state.cells.length === 0) {
-		throw new Error(
+		const reason =
 			`the mock relay at ${options.relay} declares no cells: /__mock/scenarios returned no ` +
-				"scenario with a `shows` list, so there is nothing to capture",
-		);
+			"scenario with a `shows` list, so there is nothing to capture";
+		refuse("the plan", reason);
+		throw new Error(reason);
 	}
 
 	const unrenderable: Array<{ cell: string; reason: string }> = [];
@@ -1447,7 +1485,25 @@ export async function runCapture(options: CaptureOptions) {
 				"proxied at the seed's origin; the app will report the route as unreachable.",
 		);
 	}
-	const chrome = await launchChrome({ profile: options.profile });
+	/*
+	 * BOUNDED, with a floor above `launchChrome`'s own 30 s wait for the port file: a
+	 * browser that starts far enough to be connected to and then never answers a CDP call
+	 * hangs HERE, before the two `chrome.page()` sites get a chance — measured with a stub
+	 * that writes `DevToolsActivePort` and then accepts and never replies: the run sat for
+	 * 180 s and wrote nothing. Bounding the launch turns that into the same named refusal
+	 * as the rest of this class.
+	 */
+	const launched = await withDeadline(
+		launchChrome({ profile: options.profile }),
+		Math.max(45_000, options.cellTimeoutMs),
+		"the browser's debug port",
+	);
+	if (!launched.ok) {
+		const reason = `no browser came up: ${launched.reason}`;
+		refuse("the browser", reason);
+		throw new Error(reason);
+	}
+	const chrome = launched.value;
 	const tokens = canvasTokens(options.tokens);
 	const records: CaptureRecord[] = [];
 	screenshotRetries = 0;
@@ -1460,7 +1516,21 @@ export async function runCapture(options: CaptureOptions) {
 	let index = 0;
 
 	try {
-		let page = await chrome.page();
+		// Bounded like a cell: a browser that never answers `Target.createTarget` used to
+		// take the whole run down with a stack trace and no manifest.
+		const first = await withDeadline(
+			chrome.page(),
+			options.cellTimeoutMs,
+			"the browser's first target",
+		);
+		if (!first.ok) {
+			refuse(
+				"the browser",
+				`the browser could not open a page: ${first.reason}`,
+			);
+			throw new Error(`the browser could not open a page: ${first.reason}`);
+		}
+		let page = first.value;
 		await page.send("Page.enable");
 		await page.send("Runtime.enable");
 		await page.send("Page.addScriptToEvaluateOnNewDocument", {
@@ -1477,6 +1547,29 @@ export async function runCapture(options: CaptureOptions) {
 				console.log(
 					`[${index}/${plan.length}] ${cell.cell} on ${cell.device} — FAILED: ${reason}`,
 				);
+			};
+			/**
+			 * A fresh target for the next cell, or `false` when the browser has stopped
+			 * answering — in which case the rest of the plan is abandoned BY NAME and the
+			 * loop breaks, so the run still writes a manifest that accounts for every cell
+			 * it did not capture.
+			 */
+			const nextPage = async (): Promise<boolean> => {
+				const recovered = await recoverPage(
+					chrome,
+					page,
+					options.cellTimeoutMs,
+				);
+				if (recovered.ok) {
+					page = recovered.page;
+					return true;
+				}
+				for (const rest of plan.slice(index))
+					abandoned.push({ cell: rest.cell, reason: recovered.reason });
+				console.log(
+					`  ${recovered.reason} — the ${plan.length - index} cell(s) left are BLOCKED`,
+				);
+				return false;
 			};
 			if (Date.now() - startedAt > deadlineMs) {
 				// The overall bound: a run that would exceed its job's own timeout stops
@@ -1510,7 +1603,7 @@ export async function runCapture(options: CaptureOptions) {
 					);
 					if (!pinned.ok) {
 						abandonCell(pinned.reason);
-						page = await recoverPage(chrome, page);
+						if (!(await nextPage())) break;
 						continue;
 					}
 				}
@@ -1525,7 +1618,7 @@ export async function runCapture(options: CaptureOptions) {
 			);
 			if (!countBefore.ok) {
 				abandonCell(countBefore.reason);
-				page = await recoverPage(chrome, page);
+				if (!(await nextPage())) break;
 				continue;
 			}
 			const requestsBefore = countBefore.value;
@@ -1549,7 +1642,7 @@ export async function runCapture(options: CaptureOptions) {
 				abandonCell(attempted.reason);
 				// The page may be wedged with a live stream; a fresh target keeps the
 				// next cell from inheriting it.
-				page = await recoverPage(chrome, page);
+				if (!(await nextPage())) break;
 				continue;
 			}
 			const record = attempted.value;

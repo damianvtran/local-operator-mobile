@@ -40,8 +40,8 @@
   | #scale-clip           | U-04  | a px-height box that only clips once text scales     |
   | #unnamed-icon         | U-09  | an icon button with no accessible name               |
   | #label-mismatch       | U-10  | visible "Approve", accessible name "Confirm"         |
-  | #escape-pinned        | U-08-escape | an absolute node a clipping ancestor cannot clip |
-  | #fixed-escape         | U-08-escape | a fixed node under the same non-clipping ancestor |
+  | #escape-pinned        | U-08-escape-absolute | an absolute node a clipping ancestor cannot clip |
+  | #fixed-escape         | U-08-escape-fixed | a fixed node under the same non-clipping ancestor |
 -->
 <html lang="en">
 <head>
@@ -294,7 +294,7 @@
 <div class="bad panel" style="position:relative;height:56px">
 	<button class="control" id="escape-under" aria-label="Send" style="position:absolute;top:12px;left:12px;width:180px;height:44px"></button>
 	<div id="escape-clipper" style="overflow:hidden;height:0">
-		<div id="escape-pinned" role="button" aria-label="Send" data-defect="U-08-escape" style="position:absolute;top:12px;left:12px;width:180px;height:44px;background:var(--surface);border:1px solid var(--border)"></div>
+		<div id="escape-pinned" role="button" aria-label="Send" data-defect="U-08-escape-absolute" style="position:absolute;top:12px;left:12px;width:180px;height:44px;background:var(--surface);border:1px solid var(--border)"></div>
 	</div>
 </div>
 
@@ -306,7 +306,7 @@
 <div class="bad panel" style="height:56px">
 	<button class="control" id="fixed-under" aria-label="Send" style="position:fixed;top:12px;left:12px;width:180px;height:44px"></button>
 	<div id="fixed-clipper" style="overflow:hidden;height:0">
-		<div id="fixed-escape" role="button" aria-label="Send" data-defect="U-08-escape" style="position:fixed;top:12px;left:12px;width:180px;height:44px;background:var(--surface);border:1px solid var(--border)"></div>
+		<div id="fixed-escape" role="button" aria-label="Send" data-defect="U-08-escape-fixed" style="position:fixed;top:12px;left:12px;width:180px;height:44px;background:var(--surface);border:1px solid var(--border)"></div>
 	</div>
 </div>
 

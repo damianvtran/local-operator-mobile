@@ -26,6 +26,12 @@ export interface FrameRecord {
 	device: string;
 	/** `null` unless the app declares no marker for this cell's state. */
 	declaredSkip: unknown | null;
+	/**
+	 * Whether the frame AFFIRMS the state it declares, as the readiness guard decided it.
+	 * `false` means the app rendered its fallback screen, so the frame is not evidence for
+	 * that state — see the not-evidence rule below.
+	 */
+	ready?: boolean | null;
 	/** What the cell is SHOWING, read without the viewport — see `CONTENT_PROBE`. */
 	contentDigest: string;
 	frames: Array<{ sha: string }>;
@@ -92,7 +98,23 @@ export function findIdenticalFrames(records: FrameRecord[]): {
 		// The check keeps every tooth that matters: one EVIDENTIAL cell is enough to
 		// report the group, so a measured cell that collapses onto a skipped one — or two
 		// measured cells that collapse onto each other — is still caught.
-		if (!group.some((record) => record.declaredSkip === null)) continue;
+		// A frame that does not AFFIRM the state it declares is not evidence for it, and the
+		// declared skips are only half of that set: a cell that never reached its state
+		// (`ready: false`, reported as NOT MEASURABLE with the reason) rendered the app's
+		// fallback screen, and comparing fallback screens across cells reports "two states,
+		// one image" for a frame that was never that state's image. Measured on the ci tier:
+		// `S5/error` reaches its mid-stream 401 only when the fault lands before the frame,
+		// and in the runs where it did not, its frame collided with `S5/populated`'s.
+		//
+		// The check keeps every tooth that matters: one EVIDENTIAL cell is enough to report
+		// the group, so a ready cell that collapses onto an unready one — or two ready cells
+		// that collapse onto each other — is still caught.
+		if (
+			!group.some(
+				(record) => record.declaredSkip === null && record.ready !== false,
+			)
+		)
+			continue;
 		const where = group[0]?.device ?? "?";
 		const label = [...states].sort().join(" = ");
 		// Partition by what each cell is SHOWING. Two cells in one partition rendered the
