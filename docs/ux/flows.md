@@ -44,16 +44,19 @@ graph TD
   A -->|credential cached| C[Computers]
   B -->|system browser, PKCE| B2[Radient console consent]
   B2 -->|callback| C
-  C -->|one computer, connected| D[Sessions]
+  C -->|one computer, connected| D[Home]
   C -->|none| E[Set up a computer]
   E -->|waiting for connector| E2[Connected]
   E2 --> D
   C -->|add manually| F[Custom tunnel or URL]
   F --> C
-  D -->|row| G[Session]
-  D -->|new session| H[New session]
-  D -->|past| I[Past sessions]
-  D -->|projects| J[Projects]
+  D -->|sidebar| D1[Sessions]
+  D -->|folder chip| H[New session]
+  D -->|first message| G[Session]
+  D1 -->|row| G
+  D1 -->|past| I[Past sessions]
+  D1 -->|projects| J[Projects]
+  D1 -->|switcher| C
   D -->|avatar| K[Settings]
   G -->|subagent row| L[Subagent]
   G -->|pending card| M[Approval / question]
@@ -71,7 +74,9 @@ graph TD
   G -.->|503 relay reason| T[Computer can't be reached]
 ```
 
-Screen names (final): **Computers** (host list), **Sessions** (session list),
+Screen names (final): **Computers** (host list), **Home** (the new-chat
+composer — the destination ADR 0006 § 6 records), **Sessions** (the
+conversations panel behind Home's sidebar, and a docked pane on a tablet),
 **Session**, **Subagent**, **New session**, **Past sessions**, **Projects**,
 **Settings**, **Set up a computer**, **Sign in**.
 
@@ -87,7 +92,7 @@ becomes a screen.
 | F-2 no tunnel yet | Set up a computer | P-2, P-5, P-6, P-10 |
 | F-3 custom URL + password | Set up a computer | P-5, P-6, P-8, P-12 |
 | F-4 computers and the switcher | Computers, Settings › Computers | P-3, P-5, P-10 |
-| F-5 session list | Sessions | P-1, P-3, P-5, P-9 |
+| F-5 session list | Sessions (the panel behind Home) | P-1, P-3, P-5, P-9 |
 | F-6 session view | Session, sheets, pending card | P-1, P-2, P-4, P-7, P-8, P-9 |
 | F-7 subagents | Subagent | P-3, P-10 |
 | F-8 new / past / projects | New session, Past sessions, Projects | P-1, P-2, P-10 |
@@ -314,20 +319,36 @@ never have to work that out from a bare "address and password" field.
    confirm once, explain that it removes the phone from the list and does not
    touch the computer.
 
-## 5. F-5 Sessions (the list)
+## 5. F-5 Sessions (the conversations panel)
 
-1. **Header:** computer name (tap = switcher), search icon, avatar (Settings).
-2. **Sections:** Pinned · Active · Previous. A session row shows: name, working
-   directory (truncated from the left, since the tail identifies it), model
-   label, and **one** state mark chosen by this precedence (matching the web
-   client's documented ranking so the two surfaces never disagree):
+The list is no longer the landing screen: **Home** (F-8's composer, below) is,
+and the list opens behind Home's sidebar — as a temporary panel on a phone
+(overlay + scrim, closes on a row or on the close control or Android back) and
+as a docked pane in the split view on a tablet ([ADR 0006](../adr/0006-push-and-ack-sync.md) §6).
+One list, two mounts: the same component serves both, so a row reads the same
+wherever it is.
+
+1. **The panel's header:** computer name (tap = switcher), search, *New chat*,
+   close. Home's own header stays minimal — the sidebar affordance (44 pt) and
+the avatar (Settings); Home carries no title, because its largest type is the
+greeting.
+2. **Sections:** Pinned · Running · Today · This week · Older — a heading is a
+   REGION, never a control. A session row shows: name, working directory
+   (**one truncation rule per row**: the directory keeps its head and ellipsises
+   its tail, since the volume and first segment identify it; the leading
+   shorten is computed against `$HOME` first), model label, a **relative time**
+   (trailing, reserved in every row: "now" / "5 min" / "3h" / "2d"), and
+   **one** state mark chosen by this precedence (matching the web client's
+   documented ranking so the two surfaces never disagree):
    **needs a decision** › **running** › **new activity** › **ended** ›
    **degraded**.
    - *Decision state:* word `approval` / `question` in danger ink plus a dot.
      *Queued asks are not part of this mark* — they are counted separately
      (item 3 below), so an ask never competes with an approval for the row's one
      state.
-   - *Running:* shimmer on the name (never a spinner beside it).
+   - *Running:* shimmer on the name (never a spinner beside it). **A running
+     row is never collapsed into a time section** and shows no time ("now"
+     says nothing); its section is Running.
    - *New:* accent word `new`, cleared on open.
    - *Ended:* muted, with resume offered inside the session.
    - *Degraded:* muted "not answering" (see §9).
@@ -337,19 +358,30 @@ never have to work that out from a bare "address and password" field.
    "the agent asked something and kept working" never reads as "you are blocking
    it" ([ADR 0005](../adr/0005-queued-asks.md) §8). **Target state** — nothing
    changes until the relay publishes the `asks` field.
-4. **Search:** server-side search of live sessions and past conversations; an
-   empty field shows recents; keyboard opens with the field (search is a
-   first-class action on a phone).
+4. **Search:** revealed on tap from the panel's header — the icon becomes the
+   field in place (a search that is always-open steals the header's first
+   action). It filters the loaded sessions by name, id and folder; an empty
+   field shows recents; the keyboard opens with the field (search is a
+   first-class action on a phone). A search with no matches is its own state and
+   says so, with a control that clears it. (A server-side search over past
+   conversations is the relay-side target; the panel searches what it has until
+   then.)
 5. **Row actions:** swipe **left** = pin/unpin (with the same durable pin store
    the TUI's F10 and the desktop use, so the surfaces agree); swipe **right** =
    archive/end; long-press = context menu. *No pinning hidden behind a
    long-press with a permanent hint line* (R7) — a first-run coach mark teaches
    the swipe once, then never again.
-6. **Footer:** *New session* primary; *Past* and *Projects* secondary.
-7. **States:** loading (skeleton rows) / empty (see below) / one session /
-   many / all ended / offline (banner, cached rows, "last updated") / error.
+6. **Footer:** *New chat* primary; *Past sessions* and *computers* secondary —
+   the panel reaches the routes the list's own footer always owned. *New chat*
+   closes the panel and focuses Home's composer; *Past* and *computers* push
+   their routes, as before.
+7. **States:** loading (skeleton rows — with its own marker, so a loading panel
+   and an empty panel are distinguishable to the eye AND to a capture; R-2) /
+   empty (see below) / one session / many / all ended / offline (banner, cached
+   rows, "last updated") / error.
    - *Empty copy intent:* two sentences, and an action: "No sessions on
-     `<computer>` yet." + "Start one and it will appear here." + *New session*.
+     `<computer>` yet." + "Start one and it will appear here." + *New chat* (the
+     panel's own way in).
      If the computer has never had one, add the one-line hint about what a
      session is.
 8. **Pull to refresh** re-reads the list; the SSE stream keeps it live while

@@ -432,6 +432,29 @@ primitive in the app, and the one that carries the most information.
 | Effort chip | `mono-sm` `ink-dim`, opens the rung sheet |
 | Attachments | 64 thumbs with a remove control; each image capped at **1568 px** on its long edge before upload |
 | Slash sheet | the same sheet in § 8, filtered as the draft starts with `/` |
+| Leading chip (`leadingChip`, home only) | the folder chip: `homeShortened(target.cwd, home)`, `size="sm"`, tap pushes `/new` |
+
+### Home's use of it, and the two additive props
+
+Home (S4) mounts the same composer with two additive props, one of which it
+leaves empty:
+
+- `leadingChip` — the **folder chip** above the field's row, naming the folder a
+  new session would start in (`homeShortened`, so `$HOME` shortens first); tap
+  pushes `/new`, the deliberate path. It is the home's only new chip.
+- `effortChip` — **`null` on home**: there is no turn yet to apply an effort to,
+  and the view's rule (`new-session.tsx:36-39`) is that a chip whose enabled
+  state disagrees with its label is a dead end; the same composer still renders
+  the effort chip beside `modelChip` on the session view.
+
+The home also passes `fieldRef` — a handle to the platform field — because
+*New chat* (in the conversations panel) closes the panel and puts the caret in
+the field it names. The session view leaves it out and the internal ref is used
+as before.
+
+The composer's foot position is invariant on home too: suggestions and the
+splash sit *above* it, and when the region stops fitting it scrolls
+(`keyboardShouldPersistTaps="handled"`) rather than pushing the field down.
 
 ### The send / steer / stop morph
 
