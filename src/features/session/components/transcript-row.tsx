@@ -1,6 +1,7 @@
 import { Text, View } from "react-native";
 
 import type { TranscriptEntry } from "@/contracts";
+import { AskResponseRow } from "@/features/session/components/ask-response-row";
 import { Markdown } from "@/features/session/components/markdown";
 import { ToolRow } from "@/features/session/components/tool-row";
 import { TranscriptImage } from "@/features/session/components/transcript-image";
@@ -81,6 +82,26 @@ export const TranscriptRow = ({
 		return (
 			<View className="px-3">
 				<ToolRow entry={entry} testID={testID} />
+				{anchors}
+			</View>
+		);
+	}
+
+	if (kind === "ask") {
+		return (
+			<View className="px-3" testID={testID}>
+				{/* The card carries the kind's own id (`ask-response-card` /
+				 *  `ask-timeout-card`) UNDER the row's standard anchor, because the
+				 *  transcript row keeps one addressable name per row while the audit
+				 *  cells need the state — the same split the streaming anchor uses. */}
+				<AskResponseRow
+					entry={entry}
+					testID={
+						entry.kind === "ask_timeout"
+							? SURFACE.askTimeoutCard
+							: SURFACE.askResponseCard
+					}
+				/>
 				{anchors}
 			</View>
 		);

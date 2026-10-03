@@ -1,5 +1,5 @@
 import { useRouter } from "expo-router";
-import { Search } from "lucide-react-native";
+import { MessageCircleQuestion, Search } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { FlatList, Pressable, RefreshControl, Text, View } from "react-native";
 
@@ -10,6 +10,7 @@ import {
 	useConnectionState,
 	useListState,
 } from "@/features/auth/connection-provider";
+import { AsksSheet } from "@/features/session/components/asks-sheet";
 import {
 	attentionCount,
 	attentionWord,
@@ -19,9 +20,17 @@ import {
 	staleNote,
 	staleShortNote,
 } from "@/features/sessions/session-projection";
-import { homeShortened } from "@/lib/format";
+import { countLabel, homeShortened } from "@/lib/format";
 import { useUiStore } from "@/state/ui-store";
-import { CONTROL, EMPTY, REGION, ROLE, SCREEN, sessionRowId } from "@/ui/a11y";
+import {
+	asksBadgeId,
+	CONTROL,
+	EMPTY,
+	REGION,
+	ROLE,
+	SCREEN,
+	sessionRowId,
+} from "@/ui/a11y";
 import { ReadableColumn, SplitView } from "@/ui/components/adaptive";
 import { Avatar, initialsOf } from "@/ui/components/avatar";
 import { Badge } from "@/ui/components/badge";
@@ -145,6 +154,9 @@ export default function Sessions() {
 	const route = useConnectionState((state) => state.route);
 
 	const [searching, setSearching] = useState(false);
+	/** The asks sheet, opened from the header's question control (the row badge
+	 *  is static — the header control carries the id). */
+	const [asksOpen, setAsksOpen] = useState(false);
 	const [query, setQuery] = useState("");
 	const [home, setHome] = useState<string | null>(null);
 	const [menuTarget, setMenuTarget] = useState<SessionSummary | null>(null);
@@ -259,6 +271,15 @@ export default function Sessions() {
 
 	const sections = useMemo(() => splitSections(filtered), [filtered]);
 	const waiting = attentionCount(sessions);
+	/* The asks aggregate, in the field's own unit: `asks_open` counts ASKS (open
+	 *  plus timed-out-and-answerable), summed across the rows the runtime can
+	 *  vouch for. A row that does not publish the field contributes NOTHING,
+	 *  never a zero — absence is the capability proxy. */
+	const asksTotal = sessions.reduce(
+		(sum, session) =>
+			sum + (typeof session.asks_open === "number" ? session.asks_open : 0),
+		0,
+	);
 	const degradedMessage = degradedNote(degraded);
 	const staleMessage = staleNote({ stale, lastFrameAt });
 	const staleShortMessage = staleShortNote({ stale, lastFrameAt });
@@ -439,6 +460,23 @@ export default function Sessions() {
 					{waiting > 0 ? (
 						<Badge label={`${waiting}`} tone="danger" mono />
 					) : null}
+					{/* The ask aggregate sits BESIDE the decision badge and RANKS BELOW it
+					 *  (`flows.md` F-5 §3): "the agent asked something and kept working"
+					 *  must never read as "you are blocking it". `meta` type, neutral tone
+					 *  — the calm voice — and the badge is static; the control beside it
+					 *  opens the sheet. */}
+					{asksTotal > 0 ? (
+						<Badge label={countLabel(asksTotal, "ask")} />
+					) : null}
+					<IconButton
+						accessibilityLabel="Questions"
+						accessibilityHint="Questions your agents are waiting on"
+						onPress={() => setAsksOpen(true)}
+						icon={({ color, size }) => (
+							<MessageCircleQuestion color={color} size={size} />
+						)}
+						testID={CONTROL.asksOpen}
+					/>
 					<IconButton
 						accessibilityLabel="Search sessions"
 						onPress={() => setSearching((value) => !value)}
@@ -540,6 +578,8 @@ export default function Sessions() {
 									ended={item.session.ended === true}
 									degraded={item.session.degraded === true}
 									subagentCount={item.session.subagents_running ?? 0}
+									askCount={item.session.asks_open}
+									askBadgeTestID={asksBadgeId(item.session.session_id)}
 									onPress={() =>
 										router.push(`/session/${item.session.session_id}`)
 									}
@@ -618,6 +658,20 @@ export default function Sessions() {
 					/>
 				</View>
 			</Sheet>
+
+			{/* The walked queue, from the header's question control. The list frame
+			    is the name source for foreign rows; the aggregate route supplies
+			    the rows themselves. */}
+			<AsksSheet
+				visible={asksOpen}
+				onClose={() => setAsksOpen(false)}
+				client={relay()}
+				sessions={sessions}
+				onOpenConversation={(sessionId) => {
+					setAsksOpen(false);
+					router.push(`/session/${sessionId}`);
+				}}
+			/>
 		</Screen>
 	);
 }

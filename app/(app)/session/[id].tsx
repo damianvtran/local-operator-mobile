@@ -2,7 +2,11 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { ArrowLeft } from "lucide-react-native";
 import { useCallback, useMemo, useState } from "react";
 import { Text, useWindowDimensions, View } from "react-native";
+import { useListState } from "@/features/auth/connection-provider";
+import { blockingPending } from "@/features/session/asks";
 import { composerChipLabels } from "@/features/session/chip-labels";
+import { AskBar } from "@/features/session/components/ask-bar";
+import { AsksSheet } from "@/features/session/components/asks-sheet";
 import { Composer } from "@/features/session/components/composer";
 import { ConnectionBanner } from "@/features/session/components/connection-banner";
 import {
@@ -80,6 +84,13 @@ export default function Session() {
 
 	const [modelsOpen, setModelsOpen] = useState(false);
 	const [effortOpen, setEffortOpen] = useState(false);
+	/** The asks sheet's visibility — entered only by the reader (§5.0: never
+	 *  automatic on arrival), from the bar. */
+	const [asksOpen, setAsksOpen] = useState(false);
+
+	/* The list frame's rows: names for the sheet's foreign-ask rows, which the
+	 *  aggregate route deliberately does not carry. */
+	const listSessions = useListState((state) => state.sessions);
 
 	const projection = runtime.projection;
 
@@ -136,7 +147,14 @@ export default function Session() {
 			projection?.context_window != null) ||
 		subagents.total > 0;
 
-	const pending = projection?.pending ?? null;
+	/* The legacy ask-mirror rule (design §4, client rule N3): once `asks` is
+	 *  present, a `pending` card of `kind == "ask"` is one of those rows mirrored
+	 *  for old clients and must be IGNORED here — rendering both would draw the
+	 *  same ask twice and collect a second answer. Approvals are unaffected. */
+	const pending = blockingPending(
+		projection?.pending ?? null,
+		projection?.asks,
+	);
 
 	/* The state markers the design audit reads, from the same facts the screen renders
 	 *  from — a marker is a claim about the state the reader is in, so it may only be
@@ -426,6 +444,15 @@ export default function Session() {
 						}}
 					/>
 
+					{/* The ask bar: the MINIMIZED affordance (§5.0), directly above the
+					    composer and BELOW the connection banner — when the relay is
+					    unreachable the bar's data is stale and saying so matters more.
+					    It renders itself away at zero outstanding, so its presence is
+					    the statement. */}
+					<View className="px-3 pb-1">
+						<AskBar asks={projection?.asks} onOpen={() => setAsksOpen(true)} />
+					</View>
+
 					<Composer
 						testID={SURFACE.sessionComposer}
 						controls={composer.controls}
@@ -489,6 +516,21 @@ export default function Session() {
 						op: "set_effort",
 						effort,
 					});
+				}}
+			/>
+
+			{/* The walked queue (§5.3): the aggregate route, so a sitting can clear
+			    asks from several conversations. Names come from the list frame;
+			    its own rows carry `session_id` + `cwd` for the foreign ones. */}
+			<AsksSheet
+				visible={asksOpen}
+				onClose={() => setAsksOpen(false)}
+				client={runtime.source.endpoints}
+				currentSessionId={sessionId}
+				sessions={listSessions}
+				onOpenConversation={(target) => {
+					setAsksOpen(false);
+					router.push(`/session/${target}`);
 				}}
 			/>
 		</Screen>

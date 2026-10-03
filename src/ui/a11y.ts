@@ -211,6 +211,14 @@ export const CONTROL = {
 	sessionsComputers: "sessions-computers",
 	sessionOpenCurrent: "session-open-current",
 	sessionOpenPrevious: "session-open-previous",
+	/* --- the queued-ask surfaces (E2, design §4/§5.0). The bar's own id is on the
+	 *  whole chip because the chip is the control; the sheet's controls are named
+	 *  one at a time like every other surface's. --- */
+	asksOpen: "asks-open",
+	askRespond: "ask-respond",
+	askDecline: "ask-decline",
+	askDismiss: "ask-dismiss",
+	askOpenConversation: "ask-open-conversation",
 	settingsTunnelCancel: "settings-tunnel-cancel",
 	settingsBack: "settings-back",
 	settingsUseComputer: "settings-use-computer",
@@ -305,6 +313,16 @@ export const SURFACE = {
 	pendingCardAnswer: "pending-card-answer",
 	pendingCardError: "pending-card-error",
 	askCard: "ask-card",
+	/* --- the queued-ask surfaces: the minimized bar, the sheet's states, and the
+	 *  two transcript cards a settled ask leaves behind. --- */
+	askBar: "ask-bar",
+	asksSheet: "asks-sheet",
+	asksSheetBody: "asks-sheet-body",
+	asksSheetLoading: "asks-sheet-loading",
+	asksSheetEmpty: "asks-sheet-empty",
+	asksSheetError: "asks-sheet-error",
+	askResponseCard: "ask-response-card",
+	askTimeoutCard: "ask-timeout-card",
 	transcriptStreaming: "transcript-streaming",
 
 	/* --- the subagent detail route (stream D2), adopted with the session view's
@@ -362,6 +380,11 @@ export const IDENTIFIER_FAMILIES: readonly string[] = [
 	"todos-row-",
 	"ask-question-",
 	"ask-option-",
+	/* The queued-ask surfaces' parameterised identifiers (E2): one row per ask,
+	 *  one count chip per session row, one field per question. */
+	"ask-row-",
+	"asks-badge-",
+	"ask-field-",
 ];
 
 /**
@@ -574,6 +597,20 @@ export const STATE_MARKER = {
 		sending: "composer-sending",
 		ended: "composer-ended",
 	},
+	/* The queued-ask surfaces (E2). `bar` is the one state a session screen
+	 *  carries while anything is outstanding — the marker must NOT paint in an
+	 *  empty queue, so it lives on the bar itself, which renders nothing at zero.
+	 *  The sheet's states are the read's states (loading / empty / error) and its
+	 *  populated state is the row family; `timed-out` is its own row family so the
+	 *  audit's `timed-out-mixed` cell can prove the state from the DOM. */
+	asks: {
+		bar: SURFACE.askBar,
+		loading: SURFACE.asksSheetLoading,
+		empty: SURFACE.asksSheetEmpty,
+		error: SURFACE.asksSheetError,
+		populated: "ask-row-",
+		"timed-out": "ask-row-timed-out-",
+	},
 } as const satisfies Record<string, Record<string, string>>;
 
 /** The marker the app declares for `<subject>/<state>`, or `null` for a gap. */
@@ -716,6 +753,29 @@ export const composerAttachmentId = (index: number): string =>
 /** One row of the subagents panel, keyed by the job it reports on. */
 export const subagentChipId = (jobId: string): string =>
 	`subagent-chip-${jobId}`;
+
+/** One ask's row in the asks sheet, keyed by the ask's own id. */
+export const askRowId = (askId: string): string => `ask-row-${askId}`;
+
+/**
+ * The anchor that marks one ask row as TIMED OUT — an EXTRA id on the row it
+ * belongs to, on a zero-size sibling (the `transcript-streaming` shape), because
+ * the row's own id must stay stable as an ask changes hands with time while the
+ * audit's `timed-out-mixed` cell still needs the state to be provable from the
+ * DOM. Same family as `askRowId` by construction (`ask-row-` prefix), so a flow
+ * that addresses any row through the row family also reaches this one.
+ */
+export const timedOutAskRowId = (askId: string): string =>
+	`ask-row-timed-out-${askId}`;
+
+/** One session row's outstanding-ask count chip. */
+export const asksBadgeId = (sessionId: string): string =>
+	`asks-badge-${sessionId}`;
+
+/** One question's field inside an ask's answer form, keyed by the QUESTION id so
+ *  a flow can reach a question without counting controls. */
+export const askFieldId = (questionId: string): string =>
+	`ask-field-${questionId}`;
 
 /** One row of the todos panel, by its position in the list. */
 export const todosRowId = (index: number): string => `todos-row-${index}`;
