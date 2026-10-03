@@ -146,22 +146,93 @@ const stateStillComing = (issues: ReadonlyArray<{ kind: string }>): boolean =>
 	issues.every((issue) => issue.kind === "marker" || issue.kind === "empty");
 
 /**
- * Replace the page target after a cell wedged.
+ * Make a page target capture-ready: the three CDP calls every page the harness
+ * drives needs, each BOUNDED and each a value rather than a throw.
  *
- * A fresh target is the only reliable way past a page holding a live stream on a
- * socket the harness no longer controls: closing the old one is what stops it
- * speaking, and the new one starts the next cell from a blank document.
+ * WHY BOUNDED when the CDP client already fails a command after 30 s: a throw
+ * unwinds `runCapture` from inside the cell loop, so the run ends with a stack
+ * trace and NO manifest on disk. That is the same shape `withDeadline` was added
+ * around the cell itself for, and a browser that accepts the connection and then
+ * stops answering is a measured case rather than a hypothetical one (QA hit
+ * `Target.createTarget did not answer within 30000 ms`, rc 1, nothing written).
+ * The pre-paint probe is part of the set because `captureCell`'s theme reporting
+ * reads `window.__loCapture`, so a page without it is not one this harness can
+ * report on. One helper covers both call sites — the target the run opens for a
+ * cell and the replacement `freshPage` opens — so the two cannot drift apart.
  */
-async function recoverPage(
-	chrome: Awaited<ReturnType<typeof launchChrome>>,
+async function armPage(
 	page: CdpPage,
 	ms: number,
+): Promise<{ ok: true } | { ok: false; reason: string }> {
+	const steps: Array<[string, Promise<unknown>]> = [
+		["Page.enable", page.send("Page.enable")],
+		["Runtime.enable", page.send("Runtime.enable")],
+		[
+			"Page.addScriptToEvaluateOnNewDocument",
+			page.send("Page.addScriptToEvaluateOnNewDocument", {
+				source: PRE_PAINT_PROBE,
+			}),
+		],
+	];
+	for (const [what, call] of steps) {
+		const done = await withDeadline(call, ms, what);
+		if (!done.ok) return { ok: false, reason: done.reason };
+	}
+	return { ok: true };
+}
+
+/**
+ * Close the current page target, if there is one, and open an armed replacement.
+ *
+ * WHY EVERY CELL GETS A FRESH TARGET, not only a wedged one.
+ *
+ * The app under test holds an open `text/event-stream` on its session screen, and
+ * `serveDir` proxies the relay at the SAME origin it serves the build from (that
+ * same-origin proxy is what lets a relay-backed cell be driven at all). Those
+ * streams are connections to the app origin, they are long-lived by design, and a
+ * run accumulates them across cells. Past a point the next `Page.navigate` NEVER
+ * COMMITS, which is the whole of what `CDP Page.navigate did not answer within
+ * 30000 ms` was reporting. Measured 2026-10-03: 11 stalls in a 104-cell `S5`
+ * block, every one of them `S5/*` (the only screen that opens a stream), at the
+ * same cells on every run, reproduced on `ubuntu-latest` as well as here.
+ *
+ * WHY THIS LAYER, and not the wait or the timeout. Chrome dispatches
+ * `Page.navigate`'s reply from the navigation's reset — i.e. at COMMIT — and
+ * never from the `load` event (`content/browser/devtools/protocol/page_handler.cc`:
+ * `Navigate` parks the callback in `navigate_callbacks_` until
+ * `NavigationReset`/`TransferNavigationRequestOwnership` fires). A reply that
+ * never arrives therefore means the navigation never committed, so nothing the
+ * harness waits on — `load`, `commit`, `DOMContentLoaded`, or the declared-state
+ * marker — can change the outcome: the navigation has not started, it is not
+ * slow. A longer timeout would only make the stall quieter, which is the failure
+ * this PR series exists to remove.
+ *
+ * WHY CLOSING THE TARGET, and not just destroying the document. A hop through
+ * `about:blank` — the one navigation that needs no socket, so it commits even
+ * when the origin is busy — is not enough: it leaves the held connections in
+ * place (measured: 6 before the hop, 6 after, cell after cell) and the same cells
+ * stall behind it. Destroying the TARGET releases them. Measured on the 104-cell
+ * `S5` block: 11 stalls and 12 cells with no frame before, 0 and 0 after, 312
+ * frames in 240 s.
+ *
+ * The cost is one target create/close per cell, and it is not a regression in
+ * rate: the 280-cell `ci` tier runs at 2.10 s/cell, against the 2.24 s/cell the
+ * per-cell budget was titrated from. It also leaves the cell loop with ONE shape
+ * instead of two — a wedged cell and a healthy one now take the same path, so the
+ * recovery cannot rot out of use as the failure it exists for stops happening.
+ */
+async function freshPage(
+	chrome: Awaited<ReturnType<typeof launchChrome>>,
+	page: CdpPage | null,
+	ms: number,
 ): Promise<{ ok: true; page: CdpPage } | { ok: false; reason: string }> {
-	try {
-		await page.send("Target.closeTarget", { targetId: page.targetId });
-	} catch {
-		// A target wedged beyond answering is closed by the browser when the profile
-		// is torn down; the new target is what the next cell needs.
+	if (page !== null) {
+		try {
+			await page.send("Target.closeTarget", { targetId: page.targetId });
+		} catch {
+			// A target wedged beyond answering is closed by the browser when the profile
+			// is torn down; the new target is what the next cell needs.
+		}
 	}
 	/*
 	 * Bounded, and a FAILURE rather than a throw. A browser that has stopped answering
@@ -181,11 +252,12 @@ async function recoverPage(
 			reason: `the browser stopped answering: ${opened.reason}`,
 		};
 	const next = opened.value;
-	await next.send("Page.enable");
-	await next.send("Runtime.enable");
-	await next.send("Page.addScriptToEvaluateOnNewDocument", {
-		source: PRE_PAINT_PROBE,
-	});
+	const armed = await armPage(next, ms);
+	if (!armed.ok)
+		return {
+			ok: false,
+			reason: `the browser stopped answering: ${armed.reason}`,
+		};
 	return { ok: true, page: next };
 }
 
@@ -1449,10 +1521,21 @@ export async function runCapture(options: CaptureOptions) {
 	// The relay is proxied at the SAME origin as the build, so the app's own
 	// configured route reaches it. Without this every relay-backed cell rendered
 	// an app with no route and five different states produced one identical image.
-	const server = await serveDir(options.dir, {
-		port: options.port ?? 0,
-		proxy: options.relay,
-	});
+	// BOUNDED like everything else a run opens: `serveDir` binds a loopback port and
+	// reads a directory, so a hang here is not a plausible failure — but it is the
+	// FIRST step of the run, ahead of the plan, the browser and the manifest, and a
+	// step that throws or parks there leaves nothing on disk to say what happened.
+	// Cheap to make it the same named refusal as the rest of the class.
+	const served = await withDeadline(
+		serveDir(options.dir, {
+			port: options.port ?? 0,
+			proxy: options.relay,
+		}),
+		options.cellTimeoutMs,
+		"the static server",
+	);
+	if (!served.ok) throw new Error(served.reason);
+	const server = served.value;
 	/*
 	 * WHICH ORIGIN the seed names, and why it is not the relay's.
 	 *
@@ -1516,60 +1599,24 @@ export async function runCapture(options: CaptureOptions) {
 	let index = 0;
 
 	try {
-		// Bounded like a cell: a browser that never answers `Target.createTarget` used to
-		// take the whole run down with a stack trace and no manifest.
-		const first = await withDeadline(
-			chrome.page(),
-			options.cellTimeoutMs,
-			"the browser's first target",
-		);
-		if (!first.ok) {
-			refuse(
-				"the browser",
-				`the browser could not open a page: ${first.reason}`,
-			);
-			throw new Error(`the browser could not open a page: ${first.reason}`);
-		}
-		let page = first.value;
-		await page.send("Page.enable");
-		await page.send("Runtime.enable");
-		await page.send("Page.addScriptToEvaluateOnNewDocument", {
-			source: PRE_PAINT_PROBE,
-		});
+		/*
+		 * EVERY CELL OPENS ITS OWN TARGET — see `freshPage` for why a reused one
+		 * eventually cannot commit a navigation at all. There is deliberately no
+		 * separate "first target" step: the first cell's recycle closes nothing and
+		 * opens a page exactly as every later cell does, so the loop has one shape and
+		 * a wedged cell needs no recovery path of its own.
+		 */
+		let page: CdpPage | null = null;
 
 		for (const cell of plan) {
 			index += 1;
 			/* One abandonment path, so every reason a cell has no frame is recorded and printed
-			 * the same way (and so a new one cannot be added that quietly forgets the page
-			 * recovery below). */
+			 * the same way. */
 			const abandonCell = (reason: string): void => {
 				abandoned.push({ cell: cell.cell, reason });
 				console.log(
 					`[${index}/${plan.length}] ${cell.cell} on ${cell.device} — FAILED: ${reason}`,
 				);
-			};
-			/**
-			 * A fresh target for the next cell, or `false` when the browser has stopped
-			 * answering — in which case the rest of the plan is abandoned BY NAME and the
-			 * loop breaks, so the run still writes a manifest that accounts for every cell
-			 * it did not capture.
-			 */
-			const nextPage = async (): Promise<boolean> => {
-				const recovered = await recoverPage(
-					chrome,
-					page,
-					options.cellTimeoutMs,
-				);
-				if (recovered.ok) {
-					page = recovered.page;
-					return true;
-				}
-				for (const rest of plan.slice(index))
-					abandoned.push({ cell: rest.cell, reason: recovered.reason });
-				console.log(
-					`  ${recovered.reason} — the ${plan.length - index} cell(s) left are BLOCKED`,
-				);
-				return false;
 			};
 			if (Date.now() - startedAt > deadlineMs) {
 				// The overall bound: a run that would exceed its job's own timeout stops
@@ -1582,6 +1629,22 @@ export async function runCapture(options: CaptureOptions) {
 				});
 				break;
 			}
+			/*
+			 * A target that has never held a stream, for this cell. A browser that has
+			 * stopped answering is a NAMED refusal rather than a throw: the rest of the
+			 * plan is abandoned BY NAME and the loop breaks, so the run still writes a
+			 * manifest that accounts for every cell it did not capture.
+			 */
+			const fresh = await freshPage(chrome, page, options.cellTimeoutMs);
+			if (!fresh.ok) {
+				for (const rest of plan.slice(index - 1))
+					abandoned.push({ cell: rest.cell, reason: fresh.reason });
+				console.log(
+					`  ${fresh.reason} — the ${plan.length - index + 1} cell(s) left are BLOCKED`,
+				);
+				break;
+			}
+			page = fresh.page;
 			// Pin the relay to this cell's state before rendering it, and count what the
 			// relay serves while it renders. A registry-declared cell whose requests
 			// did not grow is a cell the app rendered without asking the relay for
@@ -1603,7 +1666,6 @@ export async function runCapture(options: CaptureOptions) {
 					);
 					if (!pinned.ok) {
 						abandonCell(pinned.reason);
-						if (!(await nextPage())) break;
 						continue;
 					}
 				}
@@ -1618,7 +1680,6 @@ export async function runCapture(options: CaptureOptions) {
 			);
 			if (!countBefore.ok) {
 				abandonCell(countBefore.reason);
-				if (!(await nextPage())) break;
 				continue;
 			}
 			const requestsBefore = countBefore.value;
@@ -1640,9 +1701,8 @@ export async function runCapture(options: CaptureOptions) {
 			);
 			if (!attempted.ok) {
 				abandonCell(attempted.reason);
-				// The page may be wedged with a live stream; a fresh target keeps the
-				// next cell from inheriting it.
-				if (!(await nextPage())) break;
+				// The next cell opens its own target, so a page left wedged with a live
+				// stream is closed by that recycle rather than inherited here.
 				continue;
 			}
 			const record = attempted.value;
