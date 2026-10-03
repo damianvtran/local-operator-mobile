@@ -1185,8 +1185,12 @@ async function main() {
 		const unseenRows = rows.filter((row) => bag(row).unseen === true).length;
 		check(
 			`scenario '${name}' unread.count equals its unseen rows (S1 equality)`,
-			unreadBag.count === undefined ? "absent" : str(unreadBag.count),
-			attentionDegraded ? "absent" : String(unseenRows),
+			/* `num`, never `str`: the count is a number, and the string helper
+			 * renders one as an empty string — which read as "absent" and made this
+			 * check fail on every healthy scenario (caught by running the suite,
+			 * not by reading it). */
+			unreadBag.count === undefined ? "absent" : num(unreadBag.count),
+			attentionDegraded ? "absent" : unseenRows,
 		);
 		check(
 			`scenario '${name}' unread.degraded mirrors the attention marker`,
