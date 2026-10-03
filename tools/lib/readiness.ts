@@ -67,7 +67,12 @@ export const SCREEN_MARKER_SUBJECT: Record<string, string> = {
 	S2: "computers",
 	S3: "computers",
 	"S3-custom": "own-tunnel",
-	S4: "sessions",
+	// S4 is the composer home since the Part 2 slice: `/` is Home, and the
+	// sessions list moved into the panel (S15). The four measured cells that used
+	// to be S4/* re-homed: the list ones kept their names under S15, and the home
+	// gained its own idle cell. The relabel table diff is flagged for the plan
+	// lane in the PR body — these two lines are the whole mapping change.
+	S4: "home",
 	S5: "session",
 	S6: "subagent",
 	S7: "new-session",
@@ -77,6 +82,10 @@ export const SCREEN_MARKER_SUBJECT: Record<string, string> = {
 	S11: "settings",
 	S13: "computers",
 	S14: "welcome",
+	/** The conversations panel: a screen of its own for the harness because its
+	 *  route (`/conversations`) is the programmatic open and a deep-link failure's
+	 *  landing — the sessions list's cells and their markers live here now. */
+	S15: "sidebar",
 };
 
 /**
@@ -101,6 +110,11 @@ export const STATE_MARKER_ALIASES: Record<string, string> = {
 	approval: "pending-approval",
 	ask: "pending-ask",
 	"ask-multi": "pending-ask",
+	/** The panel's degraded-listing cell renders the same look as `degraded`
+	 *  (the banner + the short/long note): the app has no second degradation
+	 *  look for a list, so the variant borrows the state's marker — which is
+	 *  what this table is for. */
+	"degraded-listing": "degraded",
 };
 
 /** Every empty-state marker ends with this, which is what the prohibition matches. */

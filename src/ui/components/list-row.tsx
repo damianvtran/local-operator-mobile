@@ -44,6 +44,13 @@ export type ListRowProps = {
 	cwd?: string;
 	/** Model label, right-aligned on the second line. */
 	model?: string;
+	/** The trailing relative time ("now", "5 min", "3h", "2d"), from the panel's
+	 *  time-based sections — the SECTION says when, the row says how long ago.
+	 *  `ml-auto shrink-0` puts it on the row's right edge in every row, so the
+	 *  title's own start x is the indicator slot's business regardless, and the
+	 *  time's right edge does not depend on the title's length. Running rows pass
+	 *  nothing (a running row's time is "now", which says nothing). */
+	time?: string;
 	subagentCount?: number;
 	todoCount?: number;
 	/** A decision is waiting: the loudest state in the list. */
@@ -64,6 +71,13 @@ export type ListRowProps = {
 	 * also takes the accent role. */
 	selected?: boolean;
 	onPress: () => void;
+	/** Keeps the existing pin/open sheet reachable from the conversations pane,
+	 *  where a swipe is not a gesture a list under a drawer should own. Optional:
+	 *  every other caller presses straight through. */
+	onLongPress?: () => void;
+	/** Announced after the label when a long press can do something — a gesture
+	 *  has no visible affordance, so the fact it exists must be spoken. */
+	longPressAccessibilityHint?: string;
 	testID: string;
 };
 
@@ -71,6 +85,7 @@ export const ListRow = ({
 	title,
 	cwd,
 	model,
+	time,
 	subagentCount = 0,
 	todoCount = 0,
 	pending = false,
@@ -81,6 +96,8 @@ export const ListRow = ({
 	degraded = false,
 	selected = false,
 	onPress,
+	onLongPress,
+	longPressAccessibilityHint,
 	testID,
 }: ListRowProps) => {
 	const attention = listRowIndicator({
@@ -130,8 +147,10 @@ export const ListRow = ({
 				degraded,
 			})}
 			accessibilityState={state({ selected })}
+			accessibilityHint={longPressAccessibilityHint}
 			testID={testID}
 			onPress={onPress}
+			onLongPress={onLongPress}
 		>
 			{({ pressed }) => (
 				<View className={listRowClasses({ selected, pressed })}>
@@ -196,6 +215,16 @@ export const ListRow = ({
 									{countLabel(todoCount, "todo")}
 								</Text>
 							) : null}
+							{time !== undefined && time !== "" ? (
+								<Text
+									className="ml-auto shrink-0 text-meta text-ink-dim"
+									// The row's accessible name already carries the state; the time is
+									// part of the title line's scan and needs no announcement of its own
+									// (the visible string is what a reader needs).
+								>
+									{time}
+								</Text>
+							) : null}
 						</View>
 						{/* The metadata line never wraps, and it is the CONTAINER that had to change:
 						 *  both children already declare a single line (`numberOfLines={1}`), so
@@ -206,21 +235,26 @@ export const ListRow = ({
 						 *  single-line one, and the second row of the list ended 18 pt below the band
 						 *  (QA round 4, Q4-1).
 						 *
-						 *  **One field yields, and it is never the working directory.** Both halves keep
-						 *  their TAIL, so what survives is the part that names the thing: the tail of a
-						 *  path, and the model's own name rather than the `anthropic/` every row of that
-						 *  provider shares. Giving each field a proportional share of the line (what two
-						 *  shrunken `flex: auto` items do) can produce two fragments and no names —
-						 *  measured at 320 pt / 200 % as `~/…` beside `no…`, and in a split column at
-						 *  100 % as a 26.02 pt model box beside a 236.98 pt path (design round 5, D26).
-						 *  The cwd is the field a reader scans for, so it holds a FLOOR and the model is
-						 *  the one that yields — see `META_PATH_BOX` and `metaLineFor`.
+						 *  **One field yields, and it is never the working directory.** The model loses
+						 *  its provider prefix first and then its name-end; the path keeps its HEAD
+						 *  (R-3, 2026-10-03: on a rendered frame the title kept its head while the
+						 *  path kept its tail — TWO directions in one row, and the head of a path
+						 *  is the part a reader scans). Prose and paths elide the tail; only the
+						 *  model, an identifier rather than prose, keeps its name-end (D26's
+						 *  reasoning about `anthropic/` is unaffected). Giving each field a
+						 *  proportional share of the line (what two shrunken `flex: auto` items do)
+						 *  can produce two fragments and no names — measured at 320 pt / 200 % as
+						 *  `~/…` beside `no…`, and in a split column at 100 % as a 26.02 pt model
+						 *  box beside a 236.98 pt path (design round 5, D26). The cwd is the field
+						 *  a reader scans for, so it holds a FLOOR and the model is the one that
+						 *  yields — see `META_PATH_BOX` and `metaLineFor`.
 						 *
 						 *  Which characters are painted is decided as a STRING in `metaLineFor`, not by
 						 *  `ellipsizeMode`: react-native-web ignores that prop, so the web build — the
 						 *  build every capture and design round looks at — was eliding both fields from
-						 *  the tail, which is the one direction D26 rules out. The prop stays as the
-						 *  mop-up, and on iOS/Android it is the direction the string already has.
+						 *  the tail, which is the one direction D26 rules out for the model and R-3
+						 *  rules out for the path. The prop stays as the mop-up, and on iOS/Android
+						 *  each is the direction its string already has (path `tail`, model `head`).
 						 *
 						 *  The title's row above keeps its own wrap on purpose (design round 2, D13),
 						 *  because there the marks are unshrinkable and a mark pushed past the pane edge
@@ -241,7 +275,10 @@ export const ListRow = ({
 										style={META_PATH_BOX(effectiveScale)}
 										className="text-mono-sm text-ink-dim"
 										numberOfLines={1}
-										ellipsizeMode="head"
+										// The path keeps its head (R-3), so the mop-up ellipsis is `tail`: it is the
+										// direction the painted string already has, and the end that can be spared if
+										// the arithmetic ever under-counts.
+										ellipsizeMode="tail"
 									>
 										{meta.cwd}
 									</Text>

@@ -221,6 +221,33 @@ export const DRAFT_KEY_PREFIX = "lo-mobile-draft:";
 export const draftKey = (sessionId: string): string =>
 	`${DRAFT_KEY_PREFIX}${sessionId}`;
 
+/**
+ * The home composer's one staging slot.
+ *
+ * The home has no session id, so the key is fixed — deliberately inside the same
+ * `lo-mobile-draft:` family, because its lifetime rule is a draft's: it survives a
+ * `401` (`clearAllDrafts` clears the family only on an EXPLICIT sign-out or an
+ * identity change), it is cleared when its text was genuinely delivered as a first
+ * prompt, and never both (P-4).
+ */
+export const HOME_DRAFT_KEY = "lo-mobile-draft:home";
+
+export const readHomeDraft = async (): Promise<string> => {
+	try {
+		return (await deviceStore.get(HOME_DRAFT_KEY)) ?? "";
+	} catch {
+		/* An unreadable draft is an empty one for this screen; the store is
+		 * best-effort here because a failed READ has lost nothing. */
+		return "";
+	}
+};
+
+export const writeHomeDraft = (text: string): Promise<void> =>
+	deviceStore.set(HOME_DRAFT_KEY, text);
+
+export const clearHomeDraft = (): Promise<void> =>
+	deviceStore.remove(HOME_DRAFT_KEY);
+
 export const readDraft = async (sessionId: string): Promise<string> => {
 	try {
 		return (await deviceStore.get(draftKey(sessionId))) ?? "";

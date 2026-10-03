@@ -352,7 +352,7 @@ export const SCREENS: Record<string, { label: string; path: string }> = {
 	S2: { label: "Set up a computer", path: "/tunnels" },
 	S3: { label: "Computers", path: "/tunnels" },
 	"S3-custom": { label: "Own tunnel + password", path: "/own-tunnel" },
-	S4: { label: "Sessions list", path: "/" },
+	S4: { label: "Home (new chat)", path: "/" },
 	S5: { label: "Session", path: "/session/{sessionId}" },
 	S6: { label: "Subagent", path: "/session/{sessionId}/agent/{jobId}" },
 	S7: { label: "New session", path: "/new" },
@@ -362,6 +362,7 @@ export const SCREENS: Record<string, { label: string; path: string }> = {
 	S11: { label: "Settings", path: "/settings" },
 	S13: { label: "Refused / unreachable", path: "/tunnels" },
 	S14: { label: "Demo mode", path: "/demo" },
+	S15: { label: "Conversations panel", path: "/conversations" },
 };
 
 /**
@@ -444,7 +445,12 @@ export const SCREEN_ROOTS: Record<string, string> = {
 	S2: "computers-screen",
 	S3: "computers-screen",
 	"S3-custom": "own-tunnel-screen",
-	S4: "sessions-screen",
+	// S4 is the composer home; the sessions list's cells re-homed to S15 with the
+	// list itself, and the /conversations route carries `sessions-screen` (the
+	// panel's route/root, kept per the contract). Re-pointing S4 re-labelled four
+	// measured cells (S4/empty, S4/populated, S4/populated-long, S4/narrow ->
+	// S15/*) and added S4/idle; the diff is flagged for the plan lane in the PR.
+	S4: "home-screen",
 	S5: "session-screen",
 	S6: "subagent-screen",
 	S7: "new-session-screen",
@@ -454,6 +460,7 @@ export const SCREEN_ROOTS: Record<string, string> = {
 	S11: "settings-screen",
 	S13: "computers-screen",
 	S14: "welcome-screen",
+	S15: "sessions-screen",
 };
 
 /**
@@ -523,11 +530,9 @@ export const PENDING_CELLS: Record<string, string> = {
 		),
 	),
 	/* The list states the app renders without an identifier of their own. */
-	"S4/loading":
-		"app (src/ui/a11y.ts STATE_MARKER) — the list renders unlabelled skeletons while its first frame is in flight",
-	"S4/ended":
+	"S15/ended":
 		"app (src/ui/a11y.ts STATE_MARKER) — ListRow's `ended` receipt changes copy and colour but carries no identifier",
-	"S4/degraded-row":
+	"S15/degraded-row":
 		"app (src/ui/a11y.ts STATE_MARKER) — ListRow's `degraded` receipt renders 'not answering' but carries no identifier",
 	/* The scrolled transcript, and it is here rather than only in the PR because this
 	 * table is where a coverage gap is supposed to live. `S5/scroll` was

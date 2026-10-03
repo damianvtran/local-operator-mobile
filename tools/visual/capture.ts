@@ -28,7 +28,7 @@
  *
  * Usage:
  *   node tools/visual/capture.ts --dir <web-build> --out <frames-dir> \
- *     [--relay http://127.0.0.1:PORT] [--scenario <name>] [--cells S4/populated,...]
+ *     [--relay http://127.0.0.1:PORT] [--scenario <name>] [--cells S15/populated,...]
  *     [--devices iphone-15,...] [--themes dark,light] [--scales 100,150,200]
  *     [--consecutive] [--plan] [--yes] [--strict] [--full]
  *     [--cell-timeout <s>] [--deadline <s>]

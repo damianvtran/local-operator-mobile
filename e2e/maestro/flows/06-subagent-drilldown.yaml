@@ -61,4 +61,4 @@ env:
 #       id: "subagent-detail-todos"
 #     direction: DOWN
 - assertVisible:
-    id: "sessions-screen"
+    id: "home-screen"

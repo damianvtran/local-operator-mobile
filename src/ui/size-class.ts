@@ -64,6 +64,34 @@ export const SPLIT_PANE_WIDTH = 360;
  *  is wide and short, and the keyboard covers half of it. */
 export const SPLIT_MIN_HEIGHT = 700;
 
+/* --- the conversations panel's geometry (the home + sidebar slice). No token
+ *  carries these yet, and by this file's own rule new layout numbers live HERE
+ *  once and the manager is told they belong in the token set — proposed as
+ *  `layout.sidebar = { mobileMax: 280, tablet: 320, sliver: 56 }`. --- */
+
+/** Material's own temporary-drawer width rule: max 280 on mobile, 320 on tablet. */
+export const SIDEBAR_MOBILE_MAX = 280;
+
+/** The floor, so a narrow phone's panel still fits its rows' skeletons. */
+export const SIDEBAR_MIN_WIDTH = 240;
+
+/** What stays visible of the page behind the panel at the 320 pt floor — the
+ *  same sliver Material's own example leaves at the right edge. */
+export const SIDEBAR_SLIVER = 56;
+
+/**
+ * The panel's width for a viewport: `min(280, vw − 56)`, floored at 240.
+ *
+ * 390 pt phone → 280 (sliver 110); 320 pt phone → 264 (sliver 56). The sliver is
+ * what keeps the page behind the panel legible enough to read as "darkened",
+ * not gone — the temporary-drawer rule, not a sizing preference.
+ */
+export const sidebarWidthFor = (viewportWidth: number): number =>
+	Math.max(
+		SIDEBAR_MIN_WIDTH,
+		Math.min(SIDEBAR_MOBILE_MAX, viewportWidth - SIDEBAR_SLIVER),
+	);
+
 /** The pure decision, so it is testable and is not a rendering side effect. */
 export function layoutFor(width: number, height: number): Layout {
 	const orientation: Orientation = width > height ? "landscape" : "portrait";

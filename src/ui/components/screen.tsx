@@ -21,8 +21,12 @@ import { useTextScale } from "@/ui/text-scale-provider";
  * The `canvas` fill behind it is the same ground the content scrolls on.
  */
 export type ScreenProps = {
-	/** The screen title, in the `display` step. */
-	title: string;
+	/** The screen title, in the `display` step. OPTIONAL since the composer home:
+	 *  the home's header is its own row (sidebar · computer · avatar) and a 28 pt
+	 *  `display` title above a screen with no subject would be the app's third
+	 *  largest thing — the spec's decision, and it also keeps the header one 56 pt
+	 *  row at every text scale (a titleless header has nothing to stack). */
+	title?: string;
 	children: ReactNode;
 	/** Right-aligned header control (a settings affordance, a new-session button). */
 	headerAction?: ReactNode;
@@ -84,9 +88,12 @@ export const Screen = ({
 	 * line on a 320 pt phone, and the title is the element that gets clipped —
 	 * measured: at 200 % "Sessions" rendered as "S." with the controls intact. So the
 	 * header STACKS instead: the title keeps a full line, the controls move under it,
-	 * and no text is truncated by chrome that cannot shrink. */
+	 * and no text is truncated by chrome that cannot shrink.
+	 *
+	 * A TITLELESS header never stacks: there is no title row to protect, and the
+	 * spec's decision 4 makes the home's header one 56 pt row at every scale. */
 	const { effectiveScale } = useTextScale();
-	const stackHeader = effectiveScale > LARGE_TEXT_SCALE;
+	const stackHeader = title !== undefined && effectiveScale > LARGE_TEXT_SCALE;
 	return (
 		<View
 			className="flex-1 bg-canvas"
@@ -122,13 +129,15 @@ export const Screen = ({
 						 *  the longest title in the app ("Your own tunnel" fits in one at 2×
 						 *  on 390 pt and two at 320). */}
 						<View className="flex-row items-center gap-2">{headerLeading}</View>
-						<Heading
-							level={1}
-							className="text-display text-ink"
-							numberOfLines={2}
-						>
-							{title}
-						</Heading>
+						{title !== undefined ? (
+							<Heading
+								level={1}
+								className="text-display text-ink"
+								numberOfLines={2}
+							>
+								{title}
+							</Heading>
+						) : null}
 						{/* `flex-wrap` and not a squeeze: the action cluster can hold a count
 						 *  badge, an icon button and an avatar, and at 200 % on a 320 pt phone
 						 *  the three do not fit on one line — with the default shrink they
@@ -141,13 +150,15 @@ export const Screen = ({
 				) : (
 					<>
 						{headerLeading}
-						<Heading
-							level={1}
-							className="flex-1 text-display text-ink"
-							numberOfLines={1}
-						>
-							{title}
-						</Heading>
+						{title !== undefined ? (
+							<Heading
+								level={1}
+								className="flex-1 text-display text-ink"
+								numberOfLines={1}
+							>
+								{title}
+							</Heading>
+						) : null}
 						{headerAction}
 					</>
 				)}

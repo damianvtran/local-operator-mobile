@@ -40,7 +40,7 @@ env:
     clearState: true
 - extendedWaitUntil:
     visible:
-      id: "sessions-screen"
+      id: "home-screen"
     timeout: 15000
 - tapOn:
     id: "settings-button"

@@ -12,7 +12,7 @@
 #
 # Every identifier below IS rendered on this branch: `src/ui/components/refusal-surface.tsx`
 # paints one surface per failure kind and a screen mounts it
-# (`src/features/sessions/sessions.tsx`, `src/features/auth/computers.tsx`). So none of
+# (`src/features/home/home.tsx`, `src/features/auth/computers.tsx`). So none of
 # these steps is `BLOCKED` — the id exists — and none is `PENDING` either. What each one
 # lacks is the relay pinned to the refusal that makes its surface appear, which is what
 # `SCENARIO` records. `BLOCKED`/`PENDING` here would be false in opposite directions:
@@ -46,7 +46,7 @@ env:
 - launchApp:
     clearState: true
 - assertVisible:
-    id: "sessions-screen"
+    id: "home-screen"
 # The computer is offline: Cloudflare's 1033, or a gateway 502. The remedy is
 # machine-side, and re-authenticating would be wrong.
 # SCENARIO: connection-error-computer-offline from computers

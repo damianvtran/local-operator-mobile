@@ -34,6 +34,11 @@ export type TextareaProps = {
 	maxLines?: number;
 	onSubmitEditing?: () => void;
 	autoFocus?: boolean;
+	/** A handle to the platform field, for the one caller that must FOCUS it —
+	 *  the home's New chat row, which closes the drawer and puts the caret where
+	 *  the reader is about to type. Optional: every other caller leaves it out
+	 *  and the internal ref is used as before. */
+	fieldRef?: React.RefObject<TextInput | null>;
 	testID: string;
 };
 
@@ -56,6 +61,7 @@ export const Textarea = ({
 	maxLines = 6,
 	onSubmitEditing,
 	autoFocus,
+	fieldRef,
 	testID,
 }: TextareaProps) => {
 	const { effectiveScale } = useTextScale();
@@ -75,7 +81,10 @@ export const Textarea = ({
 		: invalid
 			? "invalid"
 			: "rest";
-	const inputRef = useRef<TextInput>(null);
+	const inputRef = useRef<TextInput | null>(null);
+	/* The caller's handle wins: it exists so the home can focus the field, and
+	 *  the internal one is never read — only forwarded to the element. */
+	const resolvedRef = fieldRef ?? inputRef;
 	// React Native takes the placeholder as a colour VALUE, not a class.
 	const placeholderColour = useTokenColor("ink-muted");
 
@@ -130,7 +139,7 @@ export const Textarea = ({
 				</View>
 			) : null}
 			<TextInput
-				ref={inputRef}
+				ref={resolvedRef}
 				className={fieldClasses(fieldState)}
 				/* One `style`, because a textarea's box IS its visual: the growing height
 				 *  and the platform floor (48 wherever `Platform.OS` is not iOS — the

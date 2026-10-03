@@ -1735,12 +1735,12 @@ async function main() {
 		//
 		//    `--no-seed` is load-bearing now. Left to itself, capture seeds the served
 		//    origin for any `--relay` run, and the app then DOES reach the relay and DOES
-		//    render `S4/empty` — the probe would measure a real state instead of the
+		//    render `S15/empty` — the probe would measure a real state instead of the
 		//    absence of one. Suppressing the seed is what restores the case this check is
 		//    about; without it the check silently stopped asking its question.
 		const appDist = join(WORKTREE, "dist");
 		if (existsSync(join(appDist, "index.html"))) {
-			const unready = capture(appDist, "S4/empty", ["--no-seed"]);
+			const unready = capture(appDist, "S15/empty", ["--no-seed"]);
 			check(
 				"a relay-backed cell the app never served is refused",
 				unready.status !== 0,
@@ -1757,7 +1757,7 @@ async function main() {
 		// 2. A page that reaches the relay AND renders the declared state PASSES.
 		const ready = capture(
 			join(WORKTREE, "e2e", "fixtures", "relay-backed"),
-			"S4/empty",
+			"S15/empty",
 		);
 		check(
 			"a cell whose page reached the relay in its declared state is accepted",
@@ -2087,7 +2087,7 @@ async function main() {
 			[
 				readinessProblems(
 					page({
-						screen: "S4",
+						screen: "S15",
 						state: "populated",
 						// The marker is in the DOM and has no box: the app's derived state markers are
 						// zero-size `View`s by design, so requiring a rect excluded every state the
@@ -2098,7 +2098,7 @@ async function main() {
 				),
 				readinessProblems(
 					page({
-						screen: "S4",
+						screen: "S15",
 						state: "populated",
 						// The ROOT is in the DOM and has no box: the root IS the screen, so this is
 						// the frame that rendered nothing and it must stay a failure.
@@ -2110,7 +2110,7 @@ async function main() {
 			[
 				[],
 				[
-					"no 'sessions-screen' root in the DOM: the app did not render screen S4",
+					"no 'sessions-screen' root in the DOM: the app did not render screen S15",
 				],
 			],
 		);
@@ -2120,7 +2120,7 @@ async function main() {
 			readinessProblems(
 				page({
 					...base,
-					screen: "S4",
+					screen: "S15",
 					state: "populated",
 					presentIds: ["sessions-screen", "session-row-6714def86197"],
 				}),
@@ -2132,7 +2132,7 @@ async function main() {
 			readinessProblems(
 				page({
 					...base,
-					screen: "S4",
+					screen: "S15",
 					state: "populated",
 					presentIds: ["sessions-screen"],
 				}),
@@ -2144,7 +2144,7 @@ async function main() {
 			readinessProblems(
 				page({
 					...base,
-					screen: "S4",
+					screen: "S15",
 					state: "populated",
 					// The family PREFIX itself is on the page and no row is: the check must
 					// not accept it, or a family declaration would satisfy its own rule.
@@ -2173,18 +2173,18 @@ async function main() {
 		/* the marker is the APP's, imported from its contract — never re-derived here */
 		check(
 			"a width variant asks for the marker of the state it renders",
-			requiredStateMarker("S4", "populated-long"),
+			requiredStateMarker("S15", "populated-long"),
 			"session-row-",
 		);
 		check(
 			"and a scroll variant too",
-			requiredStateMarker("S4", "scroll"),
+			requiredStateMarker("S15", "scroll"),
 			"session-row-",
 		);
 		check(
 			"a marker is an id the APP declares, not a `<subject>-<state>` this file invented",
 			[
-				requiredStateMarker("S4", "empty"),
+				requiredStateMarker("S15", "empty"),
 				requiredStateMarker("S10", "populated"),
 				requiredStateMarker("S2", "error"),
 			],
@@ -2193,8 +2193,8 @@ async function main() {
 		check(
 			"a state the app declares NO marker for yields no marker AND a named gap",
 			[
-				requiredStateMarker("S4", UNIMPLEMENTED_STATE),
-				markerGapProblem("S4", UNIMPLEMENTED_STATE) !== null,
+				requiredStateMarker("S15", UNIMPLEMENTED_STATE),
+				markerGapProblem("S15", UNIMPLEMENTED_STATE) !== null,
 			],
 			[null, true],
 		);
@@ -2229,7 +2229,7 @@ async function main() {
 		);
 
 		/* the prohibition survives, and the relay reach still applies */
-		// The row id is the marker S4/populated actually requires today, so each probe
+		// The row id is the marker S15/populated actually requires today, so each probe
 		// below fires ONLY the rule it is about: `sessions-populated` was the old
 		// dialect's name, and keeping it here would add a second, unrelated problem to
 		// every expected list.
@@ -2238,7 +2238,7 @@ async function main() {
 			readinessProblems(
 				page({
 					...base,
-					screen: "S4",
+					screen: "S15",
 					state: "populated",
 					presentIds: [
 						"sessions-screen",
@@ -2257,7 +2257,7 @@ async function main() {
 			readinessProblems(
 				page({
 					...base,
-					screen: "S4",
+					screen: "S15",
 					state: "populated",
 					presentIds: ["sessions-screen", "session-row-6714def86197"],
 					relayRegistryBacked: true,
@@ -2273,13 +2273,14 @@ async function main() {
 			readinessProblems(
 				page({
 					...base,
-					screen: "S4",
+					screen: "S15",
 					state: "populated",
+					askedPath: "/conversations",
 					actualPath: "/sign-in",
 					presentIds: ["sessions-screen"],
 				}),
 			)[0],
-			"the app is on '/sign-in' but the cell asked for '/'",
+			"the app is on '/sign-in' but the cell asked for '/conversations'",
 		);
 
 		/* the harness's marker table must agree with the app's own a11y contract */
@@ -2644,16 +2645,16 @@ async function main() {
 			"an unknown subject or state degrades to null, not undefined",
 			[
 				stateMarkerFor("no-such-subject", "empty"),
-				stateMarkerFor("sessions", "no-such-state"),
+				stateMarkerFor("sidebar", "no-such-state"),
 			],
 			[null, null],
 		);
 		check(
 			"a state no workstream implements is a NAMED gap",
 			[
-				requiredStateMarker("S4", UNIMPLEMENTED_STATE),
-				(markerGapProblem("S4", UNIMPLEMENTED_STATE) ?? "").includes(
-					`sessions/${UNIMPLEMENTED_STATE}`,
+				requiredStateMarker("S15", UNIMPLEMENTED_STATE),
+				(markerGapProblem("S15", UNIMPLEMENTED_STATE) ?? "").includes(
+					`sidebar/${UNIMPLEMENTED_STATE}`,
 				),
 			],
 			[null, true],
