@@ -42,6 +42,18 @@ export type EntryKind =
 	| "subagent_message"
 	| "peer_message"
 	| "reasoning"
+	/**
+	 * A queued ask SETTLING (`docs/design/ask-nonblocking.md` §4): one row per
+	 * answer, late answer or decline — `details.status` says which — plus a
+	 * sibling kind for the deadline itself. Distinct kinds so a client can key an
+	 * affordance on them (the timed-out ask stays answerable), and an unknown-kind
+	 * client renders through its generic path — exactly what it did before the
+	 * queue existed.
+	 */
+	| "ask_response"
+	/** A queued ask's deadline passing with nobody answering; answerable late
+	 *  until `expires_at + 7 d`. */
+	| "ask_timeout"
 	| (string & {});
 
 /** Closed: `queued` is not a synonym for `composing` or `running`. */
@@ -92,6 +104,26 @@ export interface TranscriptEntryDetails {
 	notice_kind?: "wake";
 	user_run?: boolean;
 	argument_bytes?: number;
+	/* --- the queued-ask rows (design §4): the fold attaches these to
+	 *  `ask_response` and `ask_timeout` entries so no surface re-derives Q&A from
+	 *  a sentence (`local_operator/mobile/projection.py`, the ask branches). --- */
+	ask_id?: string;
+	/** `timed_out` on an `ask_timeout` row; `answered` | `late` | `declined` on
+	 *  an `ask_response` row. Rendered VERBATIM through the shared copy table. */
+	status?: string;
+	/** The full question list, so `answeredPairs` needs no round trip. */
+	questions?: AskQuestion[];
+	/** Secret answers hold the KEY ONLY (`[<key>]`), never a value. */
+	answers?: Record<string, string[]>;
+	/** Epoch milliseconds the response landed. */
+	at?: number;
+	/** `ask_timeout` only: how long the ask waited, in seconds. */
+	waited_s?: number;
+	/** `ask_timeout` only: whether the deadline was short enough to be urgent. */
+	urgent?: boolean;
+	/** `ask_timeout` only: the notice the MODEL was given (the timeout text),
+	 *  rendered under it as "what the agent was told". */
+	text?: string;
 }
 
 export interface TranscriptEntry {
@@ -176,6 +208,65 @@ export interface PendingRequest {
 	persist: boolean;
 }
 
+/* -------------------------------------------------------------- queued asks */
+
+/** One question of a queued ask, as `PendingAsk.questions` carries it. The FULL
+ *  question rides the wire — options with their consequence lines, `multi`,
+ *  `secret`, `persist` — so the form needs no re-derivation of the ask. */
+export interface AskQuestion {
+	id: string;
+	question: string;
+	options: AskOption[];
+	/** More than one option may be chosen; the answer map still holds a list. */
+	multi: boolean;
+	/** The model's recommendation, as an INDEX INTO `options` (the runtime hoists
+	 *  the recommended option to 0 and states the position; `null`/absent = no
+	 *  recommendation was stated). */
+	recommended?: number | null;
+	/** The credential case: the answer is a masked paste field, and the answer
+	 *  map holds the KEY the runtime stored, never the value (§4). */
+	secret: boolean;
+	/** For a secret question, save it to the operator's long-term store rather
+	 *  than only session memory. The flag rides; the value never does. */
+	persist: boolean;
+}
+
+/** One queued ask on the phone wire (design §4, frozen).
+ *
+ *  PRESENCE IS THE CAPABILITY PROXY: `SessionProjection.asks` is absent while
+ *  the runtime does not publish queued asks and absence must render exactly
+ *  today's view — never a zero badge. A field an old relay may omit is optional
+ *  here with an explicit reading in `schemas.ts` rather than `undefined`
+ *  reaching a screen. */
+export interface PendingAsk {
+	ask_id: string;
+	/** Absent on the per-session projection; PRESENT on every aggregate row
+	 *  (`GET /api/asks`), which additionally carries `cwd`. */
+	session_id?: string;
+	/** The owning conversation's working directory — aggregate rows only. */
+	cwd?: string;
+	/** Epoch MILLISECONDS (`now_ms()`), unlike the seconds-based session clocks. */
+	created_at: number;
+	/** Epoch milliseconds; the countdown renders from it on the CLIENT clock. */
+	expires_at: number;
+	timeout_s: number;
+	urgent: boolean;
+	/** The status set, rendered VERBATIM — never inferred from elapsed time. */
+	status: string;
+	/** The runtime's statement that this status's response rows exist in the
+	 *  transcript; drives the "delivering" copy, never a control. */
+	delivered: boolean;
+	questions: AskQuestion[];
+	/** Secret answers hold the KEY ONLY (`[<key>]`), never a value. */
+	answers?: Record<string, string[]>;
+	/** Which surface settled it when another beat this phone to the answer. */
+	answered_by?: { surface?: string } & Record<string, unknown>;
+	answered_at?: number;
+	/** Question ids the legacy incremental path already took in this runtime;
+	 *  drafts, not settled answers. Absent on atomically answered asks. */
+	draft_question_ids?: string[];
+}
+
 /* ----------------------------------------------------------------- attention */
 
 export interface CompletionAttention {
@@ -217,7 +308,26 @@ export interface SessionProjection {
 	todos: TodoPhase[];
 	subagents: SubagentRow[];
 	pending: PendingRequest | null;
+	/** The APPROVAL queue's length (`>= 1` while `pending` is set). An outstanding
+	 *  ASK is counted by `asks_open` instead — while the one-release legacy mirror
+	 *  is live, `pending` may also carry a queued ask's synthetic card and this
+	 *  count deliberately does not include it. */
 	pending_count: number;
+	/** The session's queued asks (design §4), newest first with the OPEN ones in
+	 *  front. PRESENCE IS THE CAPABILITY PROXY: this and `asks_open` are ABSENT
+	 *  (not `[]`/`0`) unless the runtime publishes queued asks, and absence must
+	 *  render exactly today's view. Once present, IGNORE any `pending` card whose
+	 *  `kind == "ask"` — the legacy mirror of one of these rows. */
+	asks?: PendingAsk[];
+	/** The session's OUTSTANDING tally — open plus timed-out-and-answerable asks,
+	 *  passed through verbatim. Never `rows.length`: the frame's list can be a
+	 *  prefix of the tally. */
+	asks_open?: number;
+	/** True only when the frame's byte bound dropped ask rows (core
+	 *  `session/frontend_state.py` `bound_ask_rows`). Absent when complete — read
+	 *  absence as complete. Not forwarded by today's phone projection; declared
+	 *  so the client reacts the day it is. */
+	asks_truncated?: boolean;
 	usage: Record<string, number>;
 	cumulative_parent_cost: number | null;
 	child_costs: Record<string, number>;
@@ -266,6 +376,11 @@ export interface SessionSummary {
 	subagents_running: number | null;
 	subagents_queued: number | null;
 	todos_open: number;
+	/** Outstanding queued asks on this row (design §4/§5.0), from the runtime's
+	 *  own count. ABSENT — never `0` — while the runtime does not publish asks:
+	 *  presence is the capability proxy. Distinct from `pending_kind`, which
+	 *  stays the APPROVAL signal. */
+	asks_open?: number;
 	mtime: number;
 	/** Absent on an older relay; `createdAt()` falls back to `mtime`. */
 	created_at?: number;
@@ -420,6 +535,18 @@ export interface HealthzResponse {
 export interface SeenResponse {
 	ok: true;
 	attention: CompletionAttention;
+}
+
+/** `GET /api/asks` — every outstanding/recent queued ask across conversations,
+ *  straight off the derived index (no runtime and no session open needed). Rows
+ *  are the frozen `PendingAsk` shape PLUS `session_id` + `cwd`, which is why a
+ *  row drawn under another conversation's name can be answered against that
+ *  conversation's own route. */
+export interface AsksResponse {
+	asks: PendingAsk[];
+	/** True only when a wire bound dropped rows — a prefix is never drawn beside
+	 *  a full count and read as complete. Absent while the route is uncapped. */
+	asks_truncated?: boolean;
 }
 
 export interface PinResponse {

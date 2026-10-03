@@ -23,7 +23,7 @@ wrong wire.
 Read [`../../docs/relay/contract.md`](../../docs/relay/contract.md) for what each
 sample means; this file is only about provenance and reproduction.
 
-The tree is currently **103 fixtures — 98 live, 5 synthetic** — plus this README. The split is counted from `provenance.kind` in the files
+The tree is currently **104 fixtures — 98 live, 6 synthetic** — plus this README. The split is counted from `provenance.kind` in the files
 themselves rather than typed here, so it cannot drift from them.
 
 **Two refs are represented, deliberately.** The bulk of the live captures were

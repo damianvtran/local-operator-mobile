@@ -33,6 +33,8 @@ import { z } from "zod";
 
 import type {
 	ApiError,
+	AskQuestion,
+	AsksResponse,
 	Capabilities,
 	CommandAck,
 	CommandsResponse,
@@ -45,6 +47,7 @@ import type {
 	PastSession,
 	PastSessionsResponse,
 	PeerSender,
+	PendingAsk,
 	PendingRequest,
 	PinResponse,
 	PromptImage,
@@ -218,6 +221,72 @@ export const pendingRequestSchema = z.looseObject({
 	persist: z.boolean(),
 });
 
+/**
+ * One question of a queued ask (design §4). The whole question rides the wire,
+ * so this is the form's data: `multi` and `secret` decide the control, and
+ * `recommended` is an INDEX into `options` — the runtime hoists the recommended
+ * option to 0 and states the position, so a client must never re-sort options
+ * and keep it.
+ */
+export const askQuestionSchema = z.looseObject({
+	id: nonEmpty,
+	question: z.string(),
+	options: z.array(askOptionSchema),
+	multi: z.boolean(),
+	/** Index into `options`; `null`/absent = no recommendation was stated. */
+	recommended: z.number().int().nullable().optional(),
+	secret: z.boolean(),
+	/** For a secret question: persist to the operator's store, not just session
+	 *  memory. The flag rides; the value never does. */
+	persist: z.boolean(),
+});
+
+/**
+ * One queued ask (design §4, frozen).
+ *
+ * NOTHING IS DEFAULTED HERE, and that is the contract's own instruction: every
+ * field below is either always published by a runtime with the field live, or a
+ * value whose absence HAS a specific reading the reader must apply (an absent
+ * `answers` map means "not settled", never `{}` — the queue's own spelling for
+ * a skipped question is an EMPTY LIST). `status` is a plain string on purpose: a
+ * newer runtime's status must pass through as its own word, never be mapped
+ * onto a known one.
+ */
+export const pendingAskSchema = z.looseObject({
+	ask_id: nonEmpty,
+	/** Aggregate rows only; the per-session frame already addresses its session. */
+	session_id: z.string().optional(),
+	/** Aggregate rows only. */
+	cwd: z.string().optional(),
+	/** Epoch MILLISECONDS, unlike the seconds-based session clocks. */
+	created_at: z.number(),
+	expires_at: z.number(),
+	timeout_s: z.number(),
+	urgent: z.boolean(),
+	/** Rendered verbatim; never inferred from elapsed time. */
+	status: z.string(),
+	/** Drives the "delivering" copy, never a control. */
+	delivered: z.boolean(),
+	questions: z.array(askQuestionSchema),
+	/** Secret answers hold the KEY ONLY. */
+	answers: z.record(z.string(), z.array(z.string())).optional(),
+	answered_by: z.looseObject({ surface: z.string().optional() }).optional(),
+	answered_at: z.number().optional(),
+	draft_question_ids: z.array(z.string()).optional(),
+});
+
+/** `GET /api/asks`: every outstanding/recent ask across conversations, from the
+ *  index — the one read the asks sheet uses (index-backed, no runtime needed).
+ *  Rows carry `session_id` + `cwd`. No cap on the route today (core
+ *  `asks/store.index_asks`: "NO CROSS-SESSION CAP, deliberately"), so
+ *  `asks_truncated` is absent in practice — read when a daemon ever caps the
+ *  route (the projection's own bound, carried onto the aggregate), and it is how
+ *  the sheet's `truncated` state is driven by the mock relay. */
+export const asksResponseSchema = z.looseObject({
+	asks: z.array(pendingAskSchema),
+	asks_truncated: z.boolean().optional(),
+});
+
 /** The completion-attention record. This — not transcript activity, not
  *  heartbeat freshness — is how a client learns a turn ENDED. */
 export const completionAttentionSchema = z.looseObject({
@@ -266,7 +335,22 @@ export const sessionProjectionSchema = z.looseObject({
 	todos: z.array(todoPhaseSchema),
 	subagents: z.array(subagentRowSchema),
 	pending: pendingRequestSchema.nullable(),
+	/** The APPROVAL queue's length. An outstanding ask rides `asks_open`, and to
+	 *  keep the mirror's double-render from reaching a new client, `pending`'s
+	 *  `kind == "ask"` card is IGNORED wherever `asks` is present. */
 	pending_count: z.number().int(),
+	/**
+	 * The queued-ask fields (design §4). DELIBERATELY NOT DEFAULTED — not even to
+	 * `[]`/`0`/`false`: the field's PRESENCE is the client-side capability proxy,
+	 * so a default would fabricate "this runtime has queued asks" out of an older
+	 * relay's silence. An absent `asks`/`asks_open` renders exactly today's view.
+	 */
+	asks: z.array(pendingAskSchema).optional(),
+	asks_open: z.number().int().optional(),
+	/** Read: absent = the list is complete (never `false` on the wire when it is).
+	 *  Not forwarded by today's phone projection; declared so a frame that carries
+	 *  it needs no client change. */
+	asks_truncated: z.boolean().optional(),
 	usage: z.record(z.string(), z.number()),
 	/** `null` = money the relay cannot state. Never `0`. */
 	cumulative_parent_cost: z.number().nullable(),
@@ -301,6 +385,10 @@ export const sessionSummarySchema = z.looseObject({
 	subagents_running: z.number().nullable(),
 	subagents_queued: z.number().nullable(),
 	todos_open: z.number().int(),
+	/** Outstanding asks on the row. ABSENT — never `0` — while the runtime does
+	 *  not publish asks: presence is the capability proxy the row badge obeys, and
+	 *  a `.default(0)` would erase exactly the distinction. */
+	asks_open: z.number().int().optional(),
 	mtime: epochSeconds,
 	/** Absent on an older relay; the client falls back to `mtime`. */
 	created_at: epochSeconds.optional(),
@@ -510,6 +598,17 @@ export const commandOpSchema = z.discriminatedUnion("op", [
 		 *  question the picker has advanced past. */
 		question_index: z.number().int(),
 	}),
+	/* THE QUEUED-ASK FAMILY (design §4). `ask_respond` is ATOMIC per ask: one map
+	 * of question id → chosen labels for the WHOLE ask, so a partial map is
+	 * refused rather than half-applied. The relay validates the same fields
+	 * server-side (`types.py:337-355`); validating here catches it on the device. */
+	z.looseObject({
+		op: z.literal("ask_respond"),
+		ask_id: nonEmpty,
+		answers: z.record(z.string(), z.array(z.string())),
+	}),
+	z.looseObject({ op: z.literal("ask_decline"), ask_id: nonEmpty }),
+	z.looseObject({ op: z.literal("ask_dismiss"), ask_id: nonEmpty }),
 	z.looseObject({ op: z.literal("recall_steer"), command_id: z.uuid() }),
 	z.looseObject({ op: z.literal("ping") }),
 	z.looseObject({ op: z.literal("snapshot") }),
@@ -592,6 +691,8 @@ export const SCHEMAS = {
 	directories: directoriesSchema,
 	apiError: apiErrorSchema,
 	commandAck: commandAckSchema,
+	/** `GET /api/asks`: the aggregate route the asks sheet reads. */
+	asks: asksResponseSchema,
 	/** Registered as well as exported so the request body a caller sends is
 	 *  validated by the same boundary as every response: an op with a missing or
 	 *  mistyped field fails on the device, not as a `422` the UI has to explain. */
@@ -660,6 +761,7 @@ export type WireConformance = [
 	SchemaSatisfiesWire<"apiError"> extends ApiError ? true : never,
 	SchemaSatisfiesWire<"commandAck"> extends CommandAck ? true : never,
 	SchemaSatisfiesWire<"seen"> extends SeenResponse ? true : never,
+	SchemaSatisfiesWire<"asks"> extends AsksResponse ? true : never,
 	SchemaSatisfiesWire<"pin"> extends PinResponse ? true : never,
 ];
 
@@ -667,6 +769,8 @@ export type WireConformance = [
  * one, and to keep the unused-import lints honest in files that only need types. */
 export type {
 	ApiError,
+	AskQuestion,
+	AsksResponse,
 	Capabilities,
 	CommandAck,
 	CommandsResponse,
@@ -679,6 +783,7 @@ export type {
 	PastSession,
 	PastSessionsResponse,
 	PeerSender,
+	PendingAsk,
 	PendingRequest,
 	PinResponse,
 	PromptImage,

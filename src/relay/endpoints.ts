@@ -168,6 +168,20 @@ export class RelayEndpoints {
 		});
 	}
 
+	/** Every outstanding/recent queued ask, across conversations (design §4).
+	 *  Index-backed: an ask outlives the runtime that queued it, so this answers
+	 *  with no session open — which is why the asks sheet reads this route rather
+	 *  than stitching per-session frames together, whose rows would be missing the
+	 *  `session_id`/`cwd` a foreign ask's row needs. `signal` bounds the read: the
+	 *  sheet treats a hung read as itself the failure (`READ_TIMEOUT_MS`). */
+	async asks(signal?: AbortSignal): Promise<Payload<"asks">> {
+		return this.http.json("asks", {
+			method: "GET",
+			path: "/api/asks",
+			signal,
+		});
+	}
+
 	/** Past conversations. **Cannot be paged**: the route takes no `limit`, and a
 	 *  client must not promise "load more" (`contract.md` §3.3). */
 	async pastSessions(): Promise<Payload<"pastSessions">> {
