@@ -290,7 +290,7 @@ export const ALL_DEVICES: string[] = Object.keys(DEVICES);
  * The CI tier: the bounded sample the per-push capture job takes.
  *
  * WHY A THIRD TIER, AND WHY IT IS HERE RATHER THAN A `--devices` LIST IN YAML.
- * The `core` tier is 910 cells — the whole declared cell list at 2 themes x
+ * The `core` tier is 858 cells — the whole declared cell list at 2 themes x
  * (3 phone scales + 2 tablet scales) x 5 profiles — and the CI job's capture step
  * is bound at 20 minutes. Measured on the runner, that is 2.24 s/cell: 403 cells
  * in 903 s, so a core run needs ~36 minutes. The job's first real run of this path
@@ -320,10 +320,10 @@ export const ALL_DEVICES: string[] = Object.keys(DEVICES);
  *     measures (200% over 100%). 150% is the phone-typical intermediate case and is
  *     left to `core`.
  *
- * That is 35 cells x 2 themes x (2 + 2) device-scales = 280 cells, ~11 minutes at
+ * That is 33 cells x 2 themes x (2 + 2) device-scales = 264 cells, ~10 minutes at
  * the measured rate: inside the step bound with most of it spare. `core` and
  * `full` are unchanged and stay the local and dispatched samples, so the full
- * 910-cell `core` matrix and the 3290-cell `full` matrix remain runnable — nothing
+ * 858-cell `core` matrix and the 3102-cell `full` matrix remain runnable — nothing
  * is only reachable through CI.
  */
 export const CI_DEVICES: string[] = ["iphone-se", "tablet-landscape"];
