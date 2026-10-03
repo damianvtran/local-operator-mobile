@@ -46,34 +46,34 @@ env:
 # SCENARIO: session-row-<id> from sessions
 # - tapOn:
 #     id: "session-row-${SESSION_ID}"
-# BLOCKED: needs pending-card from session — nothing declares a bare `pending-card`;
-# the contract's card surfaces are `pending-card-body`, `pending-card-answer` (the ask
-# card) and `pending-card-error`. Re-point this one when the session stream lands.
+# SCENARIO: pending-card from session — the id is the approval card's root
+# (`SURFACE.pendingCard`, declared and rendered); what is missing is not the id but the
+# pin, the same session scenario the commented row tap above needs.
 # - extendedWaitUntil:
 #     visible:
 #       id: "pending-card"
 #     timeout: 15000
-# PENDING: pending-card-detail from session
+# SCENARIO: pending-card-detail from session
 # - assertVisible:
 #     id: "pending-card-detail"
-# PENDING: pending-card-destructive-marker from session
+# SCENARIO: pending-card-destructive-marker from session
 # - assertVisible:
 #     id: "pending-card-destructive-marker"
-# PENDING: pending-approve from session
+# SCENARIO: pending-approve from session
 # - tapOn:
 #     id: "pending-approve"
-# BLOCKED: needs ask-card from session — the ask card is `pending-card-answer` in the
-# contract; nothing declares a separate `ask-card`.
+# SCENARIO: ask-card from session — the ask card's root (`SURFACE.askCard`): the same
+# component in its question state, and the pin is the session scenario.
 # - extendedWaitUntil:
 #     visible:
 #       id: "ask-card"
 #     timeout: 15000
-# PENDING: ask-question-1-of-2 from session
+# SCENARIO: ask-question-1-of-2 from session
 # - assertVisible:
 #     id: "ask-question-1-of-2"
-# PENDING: ask-option-0 from session
+# SCENARIO: ask-option-0 from session
 # - tapOn:
 #     id: "ask-option-0"
-# PENDING: pending-ask-submit from session
+# SCENARIO: pending-ask-submit from session
 # - tapOn:
 #     id: "pending-ask-submit"

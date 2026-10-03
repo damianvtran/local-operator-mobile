@@ -4,6 +4,8 @@ import { Text, View } from "react-native";
 import { CONTROL, REGION, ROLE, SURFACE } from "@/ui/a11y";
 import { useTokenColor } from "@/ui/appearance";
 import { Button } from "@/ui/components/button";
+import { useTextScale } from "@/ui/text-scale-provider";
+import { TYPE_STEPS } from "@/ui/tokens.gen";
 
 /**
  * The refusal surface: what the app shows when a connection CANNOT be made
@@ -95,12 +97,22 @@ const HEADLINE: Record<RefusalKind, (subject: string) => string> = {
  *  "that computer", because the subject of these surfaces is a bare ADDRESS: with
  *  it in both lines the address was printed three times in four lines and "Wake
  *  http://…" read as apparatus rather than as advice (design round 4, D23). The
- *  headline above names what failed; the remedy chip below names the command. */
-const NEXT: Record<RefusalKind, (subject: string) => string> = {
+ *  headline above names what failed; the remedy chip below names the command.
+ *
+ *  No entry takes the subject any more, so the map does not ask for one. The type
+ *  used to promise `(subject: string) => string` while all ten entries ignored it,
+ *  which read as a dependency the copy might use and could not (review round 6,
+ *  N-B); a parameter nothing reads is a promise a reader has to disprove. */
+const NEXT: Record<RefusalKind, () => string> = {
 	"computer-offline": () =>
 		"Wake that computer, and check the connector is running. Its last known state is above.",
-	"relay-stopped": () =>
-		"On that computer, run `lop mobile` and leave it running.",
+	/* The command lives ONLY in the chip below. Naming it here too made the same
+	 *  instruction appear twice in two consecutive lines — "On that computer, run
+	 *  `lop mobile`…" above "On that computer: lop mobile" — which the design round
+	 *  ruled an echo rather than emphasis (D27). The line keeps the ADVICE and the
+	 *  chip keeps the WHERE and the WHAT, which is how `computer-offline` is
+	 *  already shaped. */
+	"relay-stopped": () => "Start the relay again and leave it running.",
 	"tunnel-gone": () =>
 		"Create a tunnel again in Radient, then add this computer.",
 	console: () =>
@@ -129,6 +141,33 @@ const CAUSE_ID: Partial<Record<RefusalKind, string>> = {
 	"host-unresolved": REGION.connectionErrorHostUnresolved,
 };
 
+/** The mark beside the headline. */
+const ALERT_GLYPH_SIZE = 20;
+
+/**
+ * How far the mark's top sits below the headline's, so it lands on the FIRST line
+ * however many lines the sentence takes.
+ *
+ * The row used `items-center`, which centres the glyph on the headline BLOCK: with
+ * a four-line headline at 320 pt / 200 % the mark's centre sat 81.81 pt below the
+ * sentence's first line, level with the third of four — beside the middle of the
+ * URL rather than beside "The relay is not running" (design round 5, D28). At
+ * 100 % the block is one line and the same rule happened to be right, which is
+ * why nothing caught it until the headline learned to wrap (D22).
+ *
+ * The offset is DERIVED from the type token and the glyph's own size rather than
+ * tuned by eye, and it therefore follows the reader's text size: the line box is
+ * what grows, not the glyph, so the correction is 1.475 dp at 100 % and 12.95 dp
+ * at 200 %. (Centring on the first line means half the line box, less half the
+ * glyph.) */
+const alertGlyphOffset = (scale: number): number =>
+	Math.max(
+		0,
+		(TYPE_STEPS.heading.size * TYPE_STEPS.heading.lineHeight * scale -
+			ALERT_GLYPH_SIZE) /
+			2,
+	);
+
 export const RefusalSurface = ({
 	kind,
 	subject,
@@ -143,11 +182,16 @@ export const RefusalSurface = ({
 }: RefusalSurfaceProps) => {
 	const danger = useTokenColor("danger");
 	const waitSeconds = retryAfterMs ? Math.round(retryAfterMs / 1000) : null;
+	const { effectiveScale } = useTextScale();
 
 	return (
 		<View className="gap-3 py-6" testID={testID}>
-			<View className="flex-row items-center gap-2">
-				<AlertTriangle color={danger} size={20} />
+			<View className="flex-row items-start gap-2">
+				<AlertTriangle
+					color={danger}
+					size={ALERT_GLYPH_SIZE}
+					style={{ marginTop: alertGlyphOffset(effectiveScale) }}
+				/>
 				<Text
 					/* `min-w-0` beside `flex-1`, and it is load-bearing rather than tidying: the
 					 *  subject of three of these headlines is a bare ADDRESS, and a URL is one
@@ -165,7 +209,7 @@ export const RefusalSurface = ({
 					{HEADLINE[kind](subject)}
 				</Text>
 			</View>
-			<Text className="text-body-sm text-ink-muted">{NEXT[kind](subject)}</Text>
+			<Text className="text-body-sm text-ink-muted">{NEXT[kind]()}</Text>
 			{/* The gateway's own sentence sits UNDER the plain one: the reader gets the
 			 *  short version first, and the specific one when they want it. It is never
 			 *  the only line, because a gateway sentence assumes the relay's vocabulary. */}

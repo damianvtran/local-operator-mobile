@@ -23,12 +23,22 @@
  *   --no-first-run            Suppresses the first-run UI that otherwise
  *     --no-default-browser-check  opens real windows.
  *
- * Two teardown facts this file encodes, both measured in AGENTS.md:
+ * Three teardown facts this file encodes, the first two measured in AGENTS.md:
  * signalling the browser PID alone leaves helpers behind (0–5, varying run to
- * run), and the sweep must be scoped to our own profile path. So: SIGTERM the
- * process *group* (we spawn detached, so the group is ours and signalling it
- * cannot reach the caller), then sweep by exact profile path, then **assert 0
- * remain** rather than trusting the sweep.
+ * run); the sweep must be scoped to our own profile path; and the *reach* of
+ * that path-scoped sweep is a PLATFORM DEFAULT, not a property of the pattern.
+ * BSD/macOS `pgrep`/`pkill -f` exclude the caller and all its ancestors, while
+ * procps-ng (Linux, and therefore every CI runner) includes them and hides the
+ * opt-out behind `-A`/`--ignore-ancestors` — a flag the other platform does not
+ * have, under a name (`-a`) whose meaning there is the opposite one. Measured on
+ * this host by emulating the Linux default: the harness's own `pkill -f
+ * <profile>` SIGTERMed `capture.ts` *and* the `run-canary.ts` that spawned it,
+ * because both carry `--profile <path>` in argv. So the pattern is never trusted
+ * on its own: `matchingPids` enumerates it and subtracts this process's whole
+ * ancestry, which makes the reaper's reach identical on both platforms. Then:
+ * SIGTERM the process *group* (we spawn detached, so the group is ours and
+ * signalling it cannot reach the caller), sweep by exact profile path minus our
+ * own tree, and **assert 0 remain** rather than trusting the sweep.
  */
 
 import { spawn, spawnSync } from "node:child_process";
@@ -273,8 +283,11 @@ export async function reap(
 	let escalated = false;
 	while (Date.now() < deadline && cleanRounds < 2) {
 		// SIGKILL on the second round: a helper that ignored SIGTERM will not
-		// start ignoring SIGKILL, and the count assertion is what matters.
-		spawnSync("pkill", escalated ? ["-9", "-f", profile] : ["-f", profile]);
+		// start ignoring SIGKILL, and the count assertion is what matters. Signalled
+		// pid by pid rather than through `pkill -f`: on Linux that pattern reaches
+		// the caller's own ancestors, and the ancestors here are the harness (see
+		// `matchingPids`).
+		signalMatching(profile, escalated ? "SIGKILL" : "SIGTERM");
 		escalated = true;
 		await sleep(900);
 		survivors = countProcesses(profile);
@@ -295,10 +308,61 @@ export async function reap(
 }
 
 /**
- * Count live processes matching our profile path. `pgrep -f <profile>` is scoped
- * to a path unique to this run, which is what keeps the sweep from reaching any
- * other Chrome — including the operator's. Never sweep by program name.
+ * This process and every ancestor of it, by pid.
+ *
+ * Walked from `ps` rather than taken from a platform flag, so the caller's own
+ * tree is excluded the same way on a macOS laptop and a Linux CI runner. A
+ * missing or unreadable ancestor ends the walk: an incomplete chain only ever
+ * makes the filter *smaller*, and the pids it would have held are the ones a
+ * reaper must never signal.
  */
+function ancestry(): Set<number> {
+	const chain = new Set<number>([process.pid]);
+	let pid = process.ppid;
+	for (let hop = 0; hop < 64 && pid > 0 && !chain.has(pid); hop += 1) {
+		chain.add(pid);
+		const parent = spawnSync("ps", ["-o", "ppid=", "-p", String(pid)], {
+			encoding: "utf8",
+		});
+		if (parent.status !== 0) break;
+		const next = Number((parent.stdout ?? "").trim());
+		if (!Number.isInteger(next) || next <= 0) break;
+		pid = next;
+	}
+	return chain;
+}
+
+/**
+ * The pids whose command line mentions `profile`, minus this process and its
+ * ancestors — the only safe way to read a *pattern* as a set of targets.
+ */
+function matchingPids(profile: string): number[] {
+	const result = spawnSync("pgrep", ["-f", profile], { encoding: "utf8" });
+	if (result.status !== 0) return []; // pgrep exits 1 when nothing matches: the good case.
+	const excluded = ancestry();
+	return (result.stdout ?? "")
+		.split("\n")
+		.map((line) => Number(line.trim()))
+		.filter((pid) => Number.isInteger(pid) && pid > 0 && !excluded.has(pid));
+}
+
+/** Signal every process matching `profile` that is not this process or an ancestor. */
+function signalMatching(
+	profile: string,
+	signal: "SIGTERM" | "SIGKILL",
+): number {
+	let signalled = 0;
+	for (const pid of matchingPids(profile)) {
+		try {
+			process.kill(pid, signal);
+			signalled += 1;
+		} catch {
+			// Exited between the scan and the signal: nothing left to do.
+		}
+	}
+	return signalled;
+}
+
 /**
  * Reap what a KILLED capture attempt left behind, and report what still matches.
  *
@@ -324,8 +388,7 @@ export function reapAttempt(
 			// Died between the liveness check and the signal: nothing left to do.
 		}
 	}
-	for (let round = 0; round < 2; round += 1)
-		spawnSync("pkill", ["-9", "-f", profile]);
+	for (let round = 0; round < 2; round += 1) signalMatching(profile, "SIGKILL");
 	// A retry reuses the same profile path, and Chrome refuses to start — or starts as a
 	// second instance of the one that died — when the previous run's Singleton lock and
 	// socket are still there. Clearing them is what makes the reused path safe. Only
@@ -351,10 +414,18 @@ export function mayRetry(survivors: number): boolean {
 	return survivors === 0;
 }
 
+/**
+ * Count live processes matching our profile path. `pgrep -f <profile>` is scoped
+ * to a path unique to this run, which is what keeps the sweep from reaching any
+ * other Chrome — including the operator's. Never sweep by program name.
+ *
+ * The ancestry filter in `matchingPids` is what makes the count mean "processes
+ * OTHER than the ones doing the reaping": without it a Linux runner counts its
+ * own harness, so the count could never reach 0 and `reap` would loop to its
+ * deadline on a teardown that had actually succeeded.
+ */
 export function countProcesses(profile: string): number {
-	const result = spawnSync("pgrep", ["-f", profile], { encoding: "utf8" });
-	if (result.status !== 0) return 0; // pgrep exits 1 when nothing matches: the good case.
-	return result.stdout.split("\n").filter((line) => line.trim() !== "").length;
+	return matchingPids(profile).length;
 }
 
 /**
@@ -436,8 +507,8 @@ export function sweepOrphanChrome(root: string): {
 				continue;
 			}
 			if (countProcesses(child) > 0 && isAlive(chromePid)) {
-				spawnSync("pkill", ["-9", "-f", child]);
-				if (countProcesses(child) > 0) spawnSync("pkill", ["-9", "-f", child]);
+				signalMatching(child, "SIGKILL");
+				if (countProcesses(child) > 0) signalMatching(child, "SIGKILL");
 				swept.push(chromePid);
 			}
 			if (countProcesses(child) === 0) {

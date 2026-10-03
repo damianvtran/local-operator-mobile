@@ -29,6 +29,17 @@ import { connect as netConnect } from "node:net";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+// The app's own vocabulary, imported rather than re-derived: the marker contract and
+// the identifiers it names are the thing this file cross-checks, so reading them from
+// the module is the only way the check cannot drift from what the app ships.
+import {
+	IDENTIFIER_FAMILIES,
+	IDENTIFIERS,
+	isKnownIdentifier,
+	SCREEN,
+	STATE_MARKER,
+	stateMarkerFor,
+} from "../../src/ui/a11y.ts";
 import {
 	blindDiagnostic,
 	blindPasses,
@@ -51,15 +62,17 @@ import {
 	nameContractUsable,
 	readFirstAvailable,
 } from "../lib/ci-environment.ts";
-
 import {
+	declaredSkipFor,
+	markerGapProblem,
+	type ReadinessFacts,
 	readinessProblems,
 	requiredStateMarker,
 	SCREEN_MARKER_SUBJECT,
-	STATE_MARKER_ALIASES,
 	seedQuery,
 } from "../lib/readiness.ts";
 import { paramDiff } from "../lib/seed-params.ts";
+import { PENDING_CELLS, SCREEN_ROOTS } from "../visual/matrix.ts";
 
 const args = process.argv.slice(2);
 const flag = (name: string, fallback: string): string => {
@@ -73,6 +86,20 @@ const flag = (name: string, fallback: string): string => {
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO = resolve(HERE, "..", "..");
 const WORKTREE = resolve(flag("relay", REPO));
+
+/**
+ * The (screen, state) pair the marker-degradation fixtures use: a state NO workstream
+ * implements, so the assertion stays true as the contract grows.
+ *
+ * Those checks are about the MECHANISM — a state the app marks with nothing yields no
+ * marker and a NAMED reason — and their first version used `S5/populated` and
+ * `S5/pending-approval`, i.e. a negative about the session view's own subject. PR #12
+ * declares exactly those states, so both fixtures would have flipped and made this file
+ * exit 1 on a false reason the day it landed. A fixture asserting a negative a sibling
+ * branch is about to make positive is a time bomb, not a test: the pair has to be one
+ * nothing owns, which is what makes the mechanism, not the app's progress, the subject.
+ */
+const UNIMPLEMENTED_STATE = "no-workstream-declares-this-state";
 const FIXTURES = resolve(flag("fixtures", join(WORKTREE, "fixtures", "relay")));
 const RELAY = join(WORKTREE, "tools", "mock-relay", "relay.ts");
 // The registry and the wire constants are imported rather than re-declared, so
@@ -1667,6 +1694,7 @@ async function main() {
 		const capture = (
 			dir: string,
 			cells: string,
+			extra: string[] = [],
 		): { status: number | null; output: string } => {
 			const run = spawnSync(
 				process.execPath,
@@ -1689,6 +1717,7 @@ async function main() {
 					"--tokens",
 					join(WORKTREE, "design", "tokens", "tokens.json"),
 					"--yes",
+					...extra,
 				],
 				{ encoding: "utf8", timeout: 180_000 },
 			);
@@ -1698,11 +1727,18 @@ async function main() {
 			};
 		};
 
-		// 1. The app's own build asks the relay for nothing and shows its empty
-		//    screen: a cell declaring a relay-served state must FAIL, naming why.
+		// 1. The app's own build, with a live relay it was never pointed at
+		//    (`--no-seed`): it asks the relay for nothing and shows its empty screen, so a
+		//    cell declaring a relay-served state must FAIL, naming why.
+		//
+		//    `--no-seed` is load-bearing now. Left to itself, capture seeds the served
+		//    origin for any `--relay` run, and the app then DOES reach the relay and DOES
+		//    render `S4/empty` — the probe would measure a real state instead of the
+		//    absence of one. Suppressing the seed is what restores the case this check is
+		//    about; without it the check silently stopped asking its question.
 		const appDist = join(WORKTREE, "dist");
 		if (existsSync(join(appDist, "index.html"))) {
-			const unready = capture(appDist, "S4/empty");
+			const unready = capture(appDist, "S4/empty", ["--no-seed"]);
 			check(
 				"a relay-backed cell the app never served is refused",
 				unready.status !== 0,
@@ -2003,81 +2039,162 @@ async function main() {
 	// one relay request and NO marker of any kind was accepted for `S4/populated` and
 	// `S4/streaming` (exit 0). The guard's state evidence was one prohibition — "must not
 	// show `*-empty`" — which a page that shows nothing in particular satisfies. The rule
-	// is now affirmative and per state, and its REQUIRED marker is derived from the app's
-	// own contract (`<subject>-<state>`, the convention `sessions-empty` already uses),
-	// so the two cannot drift apart unnoticed.
+	// is now affirmative and per state, and its REQUIRED marker is the id the APP declares
+	// for that state (`src/ui/a11y.ts` STATE_MARKER, imported here), so the two cannot
+	// drift apart unnoticed — and a state the app declares no marker for is a NAMED gap
+	// rather than an invented name this file hoped the app would render.
 	group = "readiness guard";
 	{
-		const base = {
+		// Fixtures name the ids on their page. A ROOT is judged on the RENDERED list and a
+		// MARKER on the PRESENT one (`lib/readiness.ts`), and every id a fixture names is
+		// rendered unless the case is ABOUT a hidden node — so `page()` mirrors the one list
+		// into the other here rather than repeating it at eight sites. `capture`, the only
+		// production caller, always passes the two lists separately.
+		// The frame facts every case shares. The two id lists are NOT here on purpose: a
+		// fixture that spread `base` would carry its defaults back into `page()`'s derived
+		// list, which is how this helper first shipped and how every root check in this
+		// group went red.
+		const base: Omit<
+			ReadinessFacts,
+			"screen" | "state" | "presentIds" | "visibleIds"
+		> = {
 			askedPath: "/",
 			actualPath: "/",
 			root: "sessions-screen",
-			testIds: [] as string[],
 			relayRegistryBacked: false,
 			relayReached: false,
 		};
+		const page = (
+			over: Pick<ReadinessFacts, "screen" | "state"> &
+				Partial<ReadinessFacts> & { presentIds: readonly string[] },
+		): ReadinessFacts => ({
+			...base,
+			...over,
+			// The caller's own `visibleIds` when it has one (the case about a hidden node), the
+			// present list otherwise — which is what "every id this fixture names is rendered"
+			// means. Derived LAST so the spread cannot undo it.
+			visibleIds: over.visibleIds ?? over.presentIds,
+		});
 		const markerProblem = (state: string, marker: string) =>
 			`the cell declares '${state}' but the marker '${marker}' is not in the DOM: ` +
 			"nothing in the frame affirms that state, so the cell is NOT MEASURABLE for it";
 
+		/* PRESENCE vs VISIBILITY — the two rules read different lists, both ways */
+		check(
+			"a zero-size MARKER still counts, while a zero-size ROOT does not",
+			[
+				readinessProblems(
+					page({
+						screen: "S4",
+						state: "populated",
+						// The marker is in the DOM and has no box: the app's derived state markers are
+						// zero-size `View`s by design, so requiring a rect excluded every state the
+						// audit exists to affirm.
+						presentIds: ["sessions-screen", "session-row-6714def86197"],
+						visibleIds: ["sessions-screen"],
+					}),
+				),
+				readinessProblems(
+					page({
+						screen: "S4",
+						state: "populated",
+						// The ROOT is in the DOM and has no box: the root IS the screen, so this is
+						// the frame that rendered nothing and it must stay a failure.
+						presentIds: ["sessions-screen", "session-row-6714def86197"],
+						visibleIds: ["session-row-6714def86197"],
+					}),
+				),
+			],
+			[
+				[],
+				[
+					"no 'sessions-screen' root in the DOM: the app did not render screen S4",
+				],
+			],
+		);
+
 		check(
 			"a cell whose state marker is present is ready",
-			readinessProblems({
-				...base,
-				screen: "S4",
-				state: "populated",
-				testIds: ["sessions-screen", "sessions-populated"],
-			}),
+			readinessProblems(
+				page({
+					...base,
+					screen: "S4",
+					state: "populated",
+					presentIds: ["sessions-screen", "session-row-6714def86197"],
+				}),
+			),
 			[],
 		);
 		check(
 			"a cell whose state marker is absent fails BY NAME, not by absence",
-			readinessProblems({
-				...base,
-				screen: "S4",
-				state: "populated",
-				testIds: ["sessions-screen"],
-			}),
-			[markerProblem("populated", "sessions-populated")],
+			readinessProblems(
+				page({
+					...base,
+					screen: "S4",
+					state: "populated",
+					presentIds: ["sessions-screen"],
+				}),
+			),
+			[markerProblem("populated", "session-row-")],
+		);
+		check(
+			"a marker that is only a PREFIX of the ids on the page is not a match",
+			readinessProblems(
+				page({
+					...base,
+					screen: "S4",
+					state: "populated",
+					// The family PREFIX itself is on the page and no row is: the check must
+					// not accept it, or a family declaration would satisfy its own rule.
+					presentIds: ["sessions-screen", "session-row-"],
+				}),
+			),
+			[markerProblem("populated", "session-row-")],
 		);
 		check(
 			"and the same page is refused for every state the matrix declares",
 			["streaming", "rich-rows", "pending-approval"].map(
 				(state) =>
-					readinessProblems({
-						...base,
-						screen: "S5",
-						state,
-						root: "session-screen",
-						testIds: ["session-screen"],
-					}).length,
+					readinessProblems(
+						page({
+							...base,
+							screen: "S5",
+							state,
+							root: "session-screen",
+							presentIds: ["session-screen"],
+						}),
+					).length,
 			),
 			[1, 1, 1],
 		);
 
-		/* the normalisation: a variant requires the marker of the state it renders */
+		/* the marker is the APP's, imported from its contract — never re-derived here */
 		check(
-			"a width variant requires its base state's marker",
+			"a width variant asks for the marker of the state it renders",
 			requiredStateMarker("S4", "populated-long"),
-			"sessions-populated",
+			"session-row-",
 		);
 		check(
-			"a scroll variant too",
+			"and a scroll variant too",
 			requiredStateMarker("S4", "scroll"),
-			"sessions-populated",
+			"session-row-",
 		);
 		check(
-			"and the pending card is one card across two screens",
+			"a marker is an id the APP declares, not a `<subject>-<state>` this file invented",
 			[
-				requiredStateMarker("S8", "approval"),
-				requiredStateMarker("S5", "pending-approval"),
+				requiredStateMarker("S4", "empty"),
+				requiredStateMarker("S10", "populated"),
+				requiredStateMarker("S2", "error"),
 			],
-			["session-pending-approval", "session-pending-approval"],
+			["sessions-empty", "past-row-", "connection-refusal"],
 		);
 		check(
-			"a state with no alias requires its own marker",
-			requiredStateMarker("S5", "subagents"),
-			"session-subagents",
+			"a state the app declares NO marker for yields no marker AND a named gap",
+			[
+				requiredStateMarker("S4", UNIMPLEMENTED_STATE),
+				markerGapProblem("S4", UNIMPLEMENTED_STATE) !== null,
+			],
+			[null, true],
 		);
 		check(
 			"an ad-hoc page makes no state claim, so it needs no app marker",
@@ -2110,14 +2227,24 @@ async function main() {
 		);
 
 		/* the prohibition survives, and the relay reach still applies */
+		// The row id is the marker S4/populated actually requires today, so each probe
+		// below fires ONLY the rule it is about: `sessions-populated` was the old
+		// dialect's name, and keeping it here would add a second, unrelated problem to
+		// every expected list.
 		check(
 			"a populated cell showing an empty marker is still refused",
-			readinessProblems({
-				...base,
-				screen: "S4",
-				state: "populated",
-				testIds: ["sessions-screen", "sessions-populated", "sessions-empty"],
-			}),
+			readinessProblems(
+				page({
+					...base,
+					screen: "S4",
+					state: "populated",
+					presentIds: [
+						"sessions-screen",
+						"session-row-6714def86197",
+						"sessions-empty",
+					],
+				}),
+			),
 			[
 				"the cell declares 'populated' but the app is showing an empty state (sessions-empty): " +
 					"the state was never reached",
@@ -2125,13 +2252,15 @@ async function main() {
 		);
 		check(
 			"a registry-backed cell the relay never served is refused even with its marker",
-			readinessProblems({
-				...base,
-				screen: "S4",
-				state: "populated",
-				testIds: ["sessions-screen", "sessions-populated"],
-				relayRegistryBacked: true,
-			}),
+			readinessProblems(
+				page({
+					...base,
+					screen: "S4",
+					state: "populated",
+					presentIds: ["sessions-screen", "session-row-6714def86197"],
+					relayRegistryBacked: true,
+				}),
+			),
 			[
 				"the app made no request to the mock relay for this cell, so the state it " +
 					"declares (populated) cannot have come from the relay",
@@ -2139,13 +2268,15 @@ async function main() {
 		);
 		check(
 			"a cell on the wrong route is refused",
-			readinessProblems({
-				...base,
-				screen: "S4",
-				state: "populated",
-				actualPath: "/sign-in",
-				testIds: ["sessions-screen"],
-			})[0],
+			readinessProblems(
+				page({
+					...base,
+					screen: "S4",
+					state: "populated",
+					actualPath: "/sign-in",
+					presentIds: ["sessions-screen"],
+				}),
+			)[0],
 			"the app is on '/sign-in' but the cell asked for '/'",
 		);
 
@@ -2403,42 +2534,268 @@ async function main() {
 		// and the rest are NAMED — a row that silently becomes checkable, or a screen that
 		// appears without a marker decision, fails here instead of drifting.
 		const a11ySource = readFileSync(join(REPO, "src", "ui", "a11y.ts"), "utf8");
-		// The EMPTY block, not every quoted token in the file: the app also declares screen
-		// roots, control ids and role names, and counting those as markers would let a state
-		// marker pass by name collision. The pending tripwire below is owned by #11/#12: it
-		// goes red the day they land a non-empty marker, which is when that row moves up.
+		// The EMPTY block, not every quoted token in the file. This regex used to be
+		// `/export const EMPTY[\s\S]*?\n};/`, and the block ends `} as const;` — so it
+		// never stopped there and ran on to the end of `state(...)`: 12,674 characters,
+		// 177 identifiers, the whole file. A `declared` set containing everything made
+		// every assertion over it vacuous, which is the same failure class this file has
+		// already spent rounds fixing. The third check below is the guard on it.
 		const emptyBlock =
-			/export const EMPTY[\s\S]*?\n};/.exec(a11ySource)?.[0] ?? "";
-		const declared = new Set(
+			/export const EMPTY = \{[\s\S]*?\n\} as const;/.exec(a11ySource)?.[0] ??
+			"";
+		// The set this check asks "is it the app's?" against is the app's DECLARED SURFACE
+		// (`IDENTIFIERS`), not the EMPTY block. PR #12 maps `session.empty` to a `SURFACE`
+		// id (`session-transcript-empty`) on purpose — a `SURFACE` and an `EMPTY` id are the
+		// same kind of thing, a `data-testid` the audit selects by name — and a check that
+		// only accepted EMPTY ids would go red on a contract the app declares perfectly
+		// well, which is the merge-order trap this group has already paid for once.
+		// Measured: with #12's table present this passes, and it still fails by name for a
+		// marker the app does not declare (`sign-in-empty`).
+		const declared = new Set<string>(IDENTIFIERS);
+		// The EMPTY block is still extracted, and still guarded below, because the second
+		// check needs to know which subject the app declares an EMPTY id for.
+		const emptyDeclared = new Set(
 			[...emptyBlock.matchAll(/"[a-z0-9-]+"/g)].map((match) =>
 				match[0].slice(1, -1),
 			),
 		);
 		const rows = Object.keys(SCREEN_MARKER_SUBJECT);
-		const checked: string[] = [];
-		const pending: string[] = [];
+		const mismatched: string[] = [];
+		const named: string[] = [];
 		for (const screen of rows) {
-			const stateIds = Object.entries(STATE_MARKER_ALIASES).map(
-				([, base]) => base,
-			);
-			const states = [...new Set(["empty", ...stateIds])];
-			for (const state of states) {
-				const marker = requiredStateMarker(screen, state);
-				if (marker === null) continue;
-				if (declared.has(marker)) checked.push(marker);
-				else pending.push(marker);
+			const marker = requiredStateMarker(screen, "empty");
+			if (marker === null || declared.has(marker)) {
+				// Either the app declares no empty marker for this subject, or it declares
+				// the one the harness asks for. Both are fine; neither is a dialect.
+				if (marker === null) named.push(screen);
+			} else {
+				mismatched.push(`${screen} → ${marker}`);
 			}
 		}
 		check(
-			"every screen's empty marker is the app's own",
-			checked.length >= rows.length,
-			true,
+			"every EMPTY marker the harness asks for is one the app declares",
+			mismatched,
+			[],
+		);
+		// A screen whose subject the app DOES declare an empty marker for must be either
+		// CHECKED here or named by the declared-skip registry: otherwise this check has
+		// quietly stopped asking about a screen the app can actually render. `S5`/`S6`/
+		// `S8`/`S9` are the case that makes this non-trivial — the app declares
+		// `session-empty` and `subagent-empty`, while the contract deliberately omits the
+		// session view's subjects, because a marker its placeholder happens to render
+		// today would measure the placeholder. That omission is legitimate ONLY while the
+		// skip registry names those cells, which is what this asserts.
+		const pendingScreens = new Set(
+			Object.keys(PENDING_CELLS).map((cell) => cell.split("/")[0] ?? cell),
+		);
+		const unexplained = rows.filter((screen) => {
+			const subject = SCREEN_MARKER_SUBJECT[screen];
+			if (subject === undefined) return false;
+			if (!emptyDeclared.has(`${subject}-empty`)) return false;
+			return (
+				requiredStateMarker(screen, "empty") === null &&
+				!pendingScreens.has(screen)
+			);
+		});
+		check(
+			"no screen whose empty marker the app declares is left unexplained",
+			unexplained,
+			[],
+			`${rows.length - named.length} checked, ${named.length} named of ${rows.length} screens`,
 		);
 		check(
-			"the non-empty state markers are PENDING on #11/#12, not assumed to exist",
-			pending.length > 0 && pending.every((marker) => !declared.has(marker)),
+			"the extraction reads the EMPTY block, not the rest of the file",
+			emptyDeclared.size > 0 && emptyDeclared.size < 20,
 			true,
-			`${pending.length} pending, e.g. ${pending.slice(0, 3).join(", ")}`,
+			`${emptyDeclared.size} ids in the block`,
+		);
+	}
+
+	group = "the marker contract's shape, and how it degrades";
+	{
+		// The contract is NESTED — `Record<subject, Record<state, id>>` — and that shape is
+		// load-bearing rather than cosmetic: the harness looks a marker up by
+		// (subject, state), so a FLAT table (`{ sessionIdle: "session-idle", … }`) would
+		// make `stateMarkerFor` return null for every subject and silently turn the whole
+		// measured matrix back into declared gaps. PR #12 declares its own markers on a
+		// branch that will meet this one, and the manager has ruled the nested shape
+		// authoritative; this check is what makes a flat table fail HERE, loudly, instead
+		// of reverting the measurement in a merge nobody notices.
+		const nested = Object.entries(STATE_MARKER).every(
+			([, perSubject]) =>
+				typeof perSubject === "object" &&
+				perSubject !== null &&
+				Object.values(perSubject).every(
+					(id) => typeof id === "string" && id.length > 0,
+				),
+		);
+		check(
+			"the marker contract is nested per subject, never a flat state→id table",
+			nested,
+			true,
+			`${Object.keys(STATE_MARKER).length} subject(s)`,
+		);
+		// An unknown subject or state must be `null` (never `undefined`, which reads as
+		// "no markers" to a caller doing `=== null`), and a screen whose subject the app
+		// marks with nothing must produce a NAMED reason — not a silent absence.
+		check(
+			"an unknown subject or state degrades to null, not undefined",
+			[
+				stateMarkerFor("no-such-subject", "empty"),
+				stateMarkerFor("sessions", "no-such-state"),
+			],
+			[null, null],
+		);
+		check(
+			"a state no workstream implements is a NAMED gap",
+			[
+				requiredStateMarker("S4", UNIMPLEMENTED_STATE),
+				(markerGapProblem("S4", UNIMPLEMENTED_STATE) ?? "").includes(
+					`sessions/${UNIMPLEMENTED_STATE}`,
+				),
+			],
+			[null, true],
+		);
+		// One check over the whole vocabulary, and it CAN FAIL — which is the point. An
+		// earlier revision asserted "a state is marked or a NAMED gap, never neither" and
+		// presented it as coverage; QA measured it as a tautology (180 pairs, 0 neither),
+		// because `markerGapProblem` IS the complement of `requiredStateMarker`. A guard that
+		// cannot fail while calling itself coverage is the failure class this file has paid
+		// for repeatedly. What is asserted instead is a fact about the CONTRACT, not about
+		// that relationship: every marker the harness can demand must be an id the APP KNOWS
+		// — a static in `IDENTIFIERS` or one of its `IDENTIFIER_FAMILIES` prefixes, judged by
+		// the app's own `isKnownIdentifier`. A name this file derived (`past-populated`,
+		// `session-empty`) is in neither, and neither is a stale or typo'd contract value, so
+		// both fail here BY NAME while every honest gap still passes.
+		const namedStates = [
+			"empty",
+			"loading",
+			"populated",
+			"populated-long",
+			"streaming",
+			"ended",
+			"degraded",
+			"error",
+			"pending-approval",
+			"pending-ask",
+			"rich-rows",
+			"subagents",
+		];
+		const unknownMarkers: string[] = [];
+		for (const screen of Object.keys(SCREEN_MARKER_SUBJECT))
+			for (const state of namedStates) {
+				const marker = requiredStateMarker(screen, state);
+				if (marker === null) continue;
+				// A family PREFIX (`session-row-`) is demanded as the bare prefix, which
+				// `isKnownIdentifier` refuses on purpose (it wants a concrete member); a family the
+				// app declares is the honest spelling of that demand.
+				const known = marker.endsWith("-")
+					? IDENTIFIER_FAMILIES.includes(marker) || isKnownIdentifier(marker)
+					: isKnownIdentifier(marker);
+				if (!known) unknownMarkers.push(`${screen}/${state} → ${marker}`);
+			}
+		check(
+			"every marker the harness can demand is one the app's contract knows",
+			unknownMarkers,
+			[],
+		);
+		// The harness's own vocabulary must name screens the APP renders: every subject in
+		// `SCREEN_MARKER_SUBJECT` has to be one the app declares ids for, so a subject that
+		// drifted (or was invented) cannot sit there quietly asking for markers nothing can
+		// produce.
+		const declaredIds = new Set<string>(IDENTIFIERS);
+		const unknownSubjects = Object.entries(SCREEN_MARKER_SUBJECT)
+			.filter(
+				([, subject]) =>
+					![...declaredIds].some((id) => id.startsWith(`${subject}-`)),
+			)
+			.map(([screen, subject]) => `${screen} → '${subject}'`);
+		// One-directional on purpose, and recorded so a later reader does not assume the
+		// check is symmetric: this asserts that every subject the HARNESS maps is one the app
+		// declares ids for. The converse is deliberately not asserted — the app declares
+		// families no harness screen maps (the session view's `composer-*`, its transcript
+		// rows), and a check demanding a harness screen for every app subject would fail the
+		// app for rendering more than the matrix currently walks.
+		check(
+			"every subject the harness maps is one the app declares ids for",
+			unknownSubjects,
+			[],
+		);
+		// The two screen tables must describe the SAME screens. They agree today, and a
+		// divergence is a HOLE rather than a duplicate: a screen in one table only leaves the
+		// other undefined, and `requiredStateMarker` / `markerGapProblem` both return null for
+		// a screen they do not know — so a cell on that screen makes no state claim at all and
+		// could be reported as measured.
+		check(
+			"the two screen tables map the same screens",
+			Object.keys(SCREEN_ROOTS).sort().join(", "),
+			Object.keys(SCREEN_MARKER_SUBJECT).sort().join(", "),
+		);
+		// And the screen ROOTS the harness requires, which this change edited — they were
+		// stale (`S2 → custom-route-screen`, a screen that no longer exists) and nothing tied
+		// them to the app. They are the app's own `SCREEN` values, so the tie is exact.
+		const appScreens = new Set<string>(Object.values(SCREEN));
+		const unknownRoots = Object.entries(SCREEN_ROOTS)
+			.filter(([, root]) => !appScreens.has(root))
+			.map(([screen, root]) => `${screen} → '${root}'`);
+		check(
+			"every screen root the harness requires is one the app declares",
+			unknownRoots,
+			[],
+		);
+		// The skip policy, asserted where it lives rather than through a browser: a
+		// declared skip may cover only what the app's missing marker CAUSES — the empty
+		// screen its placeholder draws, and the relay it therefore never asks — and must
+		// be REFUSED for a wrong route, a missing root, a marker the app does declare, an
+		// unreadable page, a missing owner or a missing gap. Without this the rule could
+		// regress to "the gap alone is enough" and a rotted route would read as unlanded
+		// work again.
+		const gapIssue = {
+			kind: "marker-gap",
+			message:
+				"the cell declares 'populated' but the app declares no state marker for 'sessions/populated'",
+		};
+		check(
+			"a skip covers the gap and what the gap causes",
+			declaredSkipFor(
+				[
+					gapIssue,
+					{ kind: "empty", message: "the app is showing an empty state" },
+					{ kind: "relay", message: "the app made no request to the relay" },
+				],
+				"PR #12",
+			),
+			{ owner: "PR #12", reason: gapIssue.message },
+		);
+		check(
+			"and is REFUSED for any other issue, for no owner, or for no gap",
+			[
+				declaredSkipFor(
+					[gapIssue, { kind: "route", message: "on /welcome" }],
+					"PR #12",
+				),
+				declaredSkipFor(
+					[gapIssue, { kind: "root", message: "no root" }],
+					"PR #12",
+				),
+				declaredSkipFor(
+					[gapIssue, { kind: "marker", message: "no marker" }],
+					"PR #12",
+				),
+				declaredSkipFor(
+					[gapIssue, { kind: "reading", message: "no reading" }],
+					"PR #12",
+				),
+				declaredSkipFor(
+					[gapIssue, { kind: "seed", message: "seed failed" }],
+					"PR #12",
+				),
+				declaredSkipFor([gapIssue], null),
+				declaredSkipFor([gapIssue], ""),
+				declaredSkipFor([gapIssue], "   "),
+				declaredSkipFor([{ kind: "empty", message: "empty" }], "PR #12"),
+			],
+			[null, null, null, null, null, null, null, null, null],
 		);
 	}
 

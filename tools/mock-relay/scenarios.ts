@@ -37,8 +37,20 @@ export interface StreamSpec {
 	 * renders, keep-alives continue, and no turn frames ever follow. It is the
 	 * state a degraded row's socket is actually in, as distinct from the
 	 * `silent-stall` fault, which stops the keep-alives too.
+	 *
+	 * `refused` is the session's OWN event channel failing while the rest of the
+	 * relay answers — a connected session whose stream is refused, which is the
+	 * only shape the session view's error state can be reached from. A blanket
+	 * `failure` cannot serve that cell: it refuses `/api/sessions` too, so the
+	 * client never holds a projection, `connected` stays false, and the error
+	 * marker is not rendered however true the failure is (measured: `session-error`
+	 * is unreachable from a blanket refusal).
 	 */
-	mode: "streaming" | "idle" | "keepalive-only" | "silent";
+	mode: "streaming" | "idle" | "keepalive-only" | "silent" | "refused";
+	/** The gateway refusal the event route answers with when `mode: "refused"`:
+	 *  a key from the same space `FailureSpec.key` uses. Only a NON-transient
+	 *  refusal reaches the error state — a transport drop is reconnected through. */
+	refusalKey?: string;
 	/** Milliseconds between pumped frames; the default is 700. */
 	intervalMs?: number;
 	settleAfterTurns?: number;
@@ -71,6 +83,15 @@ export interface ScenarioWorld {
 	/** Session id → projection. An empty object is "no conversations at all". */
 	projections?: Record<string, SessionProjection>;
 	stream?: StreamSpec;
+	/**
+	 * Faults this state NEEDS, in the `faults.ts` spelling (`401-mid-session=2`).
+	 *
+	 * A fault that belongs to the state travels with the state: a cell pinned by the
+	 * capture — which sends only the scenario NAME — gets it, and so does a rig that
+	 * switches scenario. A scenario without faults leaves whatever the runner was
+	 * started with alone, so `--fault` still works.
+	 */
+	faults?: string[];
 	/** A fixture name whose recorded answer the command endpoint returns instead. */
 	commandOverride?: string;
 	failure?: FailureSpec;
@@ -428,11 +449,23 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 
 	add(
 		"degraded",
-		"The session record is fresh but its runtime is unreachable: `subagents_running` is null while the row stays active (the SIGSTOP probe's signal).",
-		["S4/degraded", "S5/degraded"],
+		"The session record is fresh but its runtime is unreachable: the row carries its own receipt (`degraded: true`, the signal a phone-observed SIGSTOP produces) AND `subagents_running` is null while the row stays active.",
+		["S4/degraded-row", "S5/degraded"],
 		() => ({
-			projections: { [liveIdle.session_id]: structuredClone(liveIdle) },
-			rowOverrides: { subagents_running: null, subagents_queued: null },
+			/* BOTH signals, and they are not alternatives. #23 added the ROW's own
+			 * receipt (`SessionSummary.degraded`), which is what the list row reads;
+			 * this branch's `S5/degraded` marker reads the PROJECTION's field. Serving
+			 * one without the other leaves the other cell's state unreachable, which is
+			 * the defect this fixture already carried once (review round 6, M3): the
+			 * cell that declares the state could not carry the marker that affirms it. */
+			projections: {
+				[liveIdle.session_id]: projectionFrom(liveIdle, { degraded: true }),
+			},
+			rowOverrides: {
+				subagents_running: null,
+				subagents_queued: null,
+				degraded: true,
+			},
 			stream: { mode: "silent" },
 			// A command to an unreachable runtime sits until the relay's reply
 			// window expires, then answers 504.
@@ -443,7 +476,7 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 	add(
 		"degraded-listing",
 		'The durable catalogue could not be walked: `degraded: ["sessions"]` with rows still present.',
-		["S4/degraded"],
+		["S4/degraded-listing"],
 		() => ({
 			projections: { [liveIdle.session_id]: structuredClone(liveIdle) },
 			listOverrides: { degraded: ["sessions"] },
@@ -452,8 +485,8 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 
 	add(
 		"degraded-attention",
-		'The completion-receipt store could not be read: `degraded: ["attention"]`.',
-		["S4/degraded"],
+		'The completion-receipt store could not be read: `degraded: ["attention"]`. Same cell as `degraded-listing` — the app renders the same banner for both, because the reader\'s question ("is this list complete?") is the same one.',
+		["S4/degraded-listing"],
 		() => ({
 			projections: { [liveIdle.session_id]: structuredClone(liveIdle) },
 			listOverrides: { degraded: ["attention"] },
@@ -463,7 +496,7 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 	add(
 		"wedged",
 		"A frozen runtime: the row reports real subagent counts until HEARTBEAT_TIMEOUT_S (45 s) has elapsed, then flips to null while `section` stays active. The two-sample comparison is the only signal.",
-		["S4/degraded", "S13/degraded"],
+		["S4/degraded-row", "S13/degraded"],
 		() => ({
 			projections: { [liveIdle.session_id]: structuredClone(liveIdle) },
 			// Before the timeout the registration is still vouched for.
@@ -537,7 +570,16 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 		"One queued steering message and the tool row it skipped past.",
 		["S5/queued"],
 		() => ({
-			projections: { [queuedFrame.session_id]: structuredClone(queuedFrame) },
+			/* The CAPTURE has `queued_count: 0`: the fixture was recorded after the queue
+			 * drained, and the message it held is the `steer` row already in the
+			 * transcript. The scenario's own name and description are "one queued steering
+			 * message", so the count is served here — otherwise the cell that declares
+			 * `queued` is the one cell that would never carry the marker for it. */
+			projections: {
+				[queuedFrame.session_id]: projectionFrom(queuedFrame, {
+					queued_count: 1,
+				}),
+			},
 		}),
 	);
 
@@ -798,10 +840,46 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 	add(
 		"relay-refuses-command",
 		"A reachable relay that refuses the command: 422 with a typed code, which must never be retried as-is.",
-		["S13/error", "S5/error"],
+		["S13/error"],
 		() => ({
 			projections: { [liveIdle.session_id]: structuredClone(liveIdle) },
 			commandOverride: "op-slash-unknown",
+		}),
+	);
+
+	add(
+		"mid-session-401",
+		"The stream comes up, carries the session, and then the edge refuses it: the reconnect is answered 401, so a CONNECTED session sits in its error state.",
+		["S5/error"],
+		() => ({
+			/* `S5/error` declares the session's ERROR state, and the app paints `session-error`
+			 * from `runtime.error` — which the stream's own `onError` sets AFTER the
+			 * subscription is up (`use-session.ts`). A refused SUBSCRIBE never gets there:
+			 * that is a connection state, and the app answers it with `connection-banner`.
+			 * So the cell needs a stream that arrives and then fails, which is what this
+			 * fault does (review round 8; QA measured the same shape on `idle`). */
+			projections: { [liveIdle.session_id]: structuredClone(liveIdle) },
+			stream: { mode: "idle" },
+			faults: ["401-mid-session=2"],
+		}),
+	);
+
+	add(
+		"stream-refused",
+		"The session's own event channel is refused at the gateway (`control_plane_unreachable`) while the catalogue and the health route answer: a refused subscription, which the app surfaces as a CONNECTION state.",
+		[],
+		() => ({
+			/* No matrix cell declares "the connection was refused" — the honest marker for
+			 * it is `connection-banner`, which the session cells that own the banner assert
+			 * — so this state is reachable by name and carries no cell (review round 8).
+			 * It stays because it is what a refused session really looks like, and because
+			 * `S5/error` moved off it: a refused subscribe never sets `runtime.error`, so
+			 * the error marker could not paint. */
+			projections: { [liveIdle.session_id]: structuredClone(liveIdle) },
+			stream: {
+				mode: "refused",
+				refusalKey: "503-control_plane_unreachable",
+			},
 		}),
 	);
 

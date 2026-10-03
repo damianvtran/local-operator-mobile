@@ -246,6 +246,12 @@ export const CONTROL = {
 	pendingAskSubmit: "pending-ask-submit",
 	todosDisclosure: "todos-disclosure",
 	subagentsDisclosure: "subagents-disclosure",
+	/** The session header's subagents lever, which OPENS the roster panel.
+	 *  Deliberately not `subagentsDisclosure`: that one is the panel's own header
+	 *  toggle and collapses what this one opened, so the two are different
+	 *  controls on different surfaces and a flow reaching for one must not be able
+	 *  to land on the other. */
+	sessionSubagents: "session-subagents-chip",
 	connectionRetry: "connection-retry",
 	connectionSignIn: "connection-sign-in",
 	connectionConsole: "connection-console",
@@ -292,16 +298,33 @@ export const SURFACE = {
 	subagentsPanel: "subagents-panel",
 	subagentsBody: "subagents-body",
 	subagentRunning: "subagent-running",
+	pendingCard: "pending-card",
 	pendingCardBody: "pending-card-body",
 	pendingCardDetail: "pending-card-detail",
 	pendingCardDestructiveMarker: "pending-card-destructive-marker",
 	pendingCardAnswer: "pending-card-answer",
 	pendingCardError: "pending-card-error",
+	askCard: "ask-card",
 	transcriptStreaming: "transcript-streaming",
 
+	/* --- the subagent detail route (stream D2), adopted with the session view's
+	 * vocabulary above. The drill-down flow asserts these by name
+	 * (`e2e/maestro/flows/06-subagent-drilldown.yaml`), so without them in the one
+	 * contract the flow's steps would have nothing to be checked against. --- */
+	subagentCrumb: "subagent-detail-crumb",
+	subagentError: "subagent-detail-error",
+	subagentLoading: "subagent-detail-loading",
+	subagentPrompt: "subagent-detail-prompt",
+	subagentTodos: "subagent-detail-todos",
+	subagentTranscript: "subagent-detail-transcript",
+	/** The detail route's status badge. Named here in the same change that renders
+	 *  it: the badge used to carry a literal, and the running state it used to
+	 *  switch to is `subagentRunning` below. */
+	subagentStatus: "subagent-detail-status",
+
 	/* The three surfaces whose components carry a DEFAULT identifier rather than
-	/* taking one from a caller: a literal default is a second spelling of an id the
-	/* flows select, which is exactly what the contract exists to prevent. */
+	 * taking one from a caller: a literal default is a second spelling of an id the
+	 * flows select, which is exactly what the contract exists to prevent. */
 	connectionPill: "connection-pill",
 	refusalSurface: "connection-refusal",
 	signInPanel: "sign-in-panel",
@@ -444,6 +467,138 @@ export const REGION = {
 } as const;
 
 /**
+ * The id the app renders when a surface is in a NAMED state, keyed
+ * `<subject>` → `<state>` → id.
+ *
+ * Why this lives here rather than in the audit harness: deciding whether a captured
+ * frame is EVIDENCE for the state it declares means knowing which id the app leaves
+ * behind in that state, and a table of those names kept in `tools/` is a second
+ * vocabulary beside the app's. The harness IMPORTS this table (`stateMarkerFor` and
+ * `markerMatches` below are its only readers, in `tools/lib/readiness.ts` and the
+ * mock relay's own verify) and keeps the cell vocabulary — `S5` is the matrix's
+ * language, never the app's.
+ *
+ * **The key is `(subject, state)`, not the state alone.** Two screens can be in a
+ * state of the same name — `populated` on the list and `populated` on the session —
+ * and a flat table cannot tell them apart, which is how a marker for one screen
+ * satisfies a cell on another. The subjects are the app's own screens and surfaces
+ * (`sessions`, `past`, `computers`, `session`, `composer`; the harness's
+ * `SCREEN_MARKER_SUBJECT` maps each cell onto one of them).
+ *
+ * Two rules for an entry, and both are load-bearing:
+ *
+ *  - a marker must be present in ONLY the state it names. A screen root, a
+ *    container or a header control is on screen in every state, so declaring one
+ *    makes the affirmative check vacuous. Every value below was read out of the
+ *    rendered DOM of the state it names AND of its neighbours.
+ *  - a value that ends in `-` is a FAMILY PREFIX: it is satisfied by any id that
+ *    starts with it (`session-row-` is "the list has at least one row", which is
+ *    exactly the claim `populated` makes).
+ *
+ * A state with NO entry is a DECLARED GAP, not a name to invent: the app paints
+ * nothing that affirms it, and the harness reports the cell as not measurable by name
+ * rather than accepting a frame that could not say.
+ *
+ * `session.loading` and `session.empty` are declared, and neither id is spelled the way
+ * a reader would guess (QA round 6, Q1). A CONNECTED session that has not answered yet
+ * paints the skeleton (`session-loading`) and one that has answered with no rows paints
+ * the transcript's own empty state (`session-transcript-empty`) — `EMPTY.session`
+ * (`session-empty`) is the NOT-connected branch and is never what a relay-backed cell
+ * shows. So the cell's marker is the id a connected frame really carries, which is the
+ * whole point of the table being the app's: `S5/empty` declaring `session-empty` would
+ * have blamed the app's DOM for a name the harness picked.
+ *
+ * **`session/empty` is the weakest claim in this table, and that is recorded rather
+ * than implied** (review round 7, R7-3): a REFUSED session also renders an empty
+ * transcript, so a frame the relay refused carries `session-transcript-empty` too —
+ * measured on this branch, where an unauthenticated capture of `S5/error` carried
+ * exactly that id. The cell is therefore satisfied by a frame that is empty for the
+ * wrong reason. Strengthening it needs a SECOND, connection-scoped id that only a
+ * connected-empty session paints — which is a session-view change, not a table entry:
+ * the table can only name one id per state, and the two states share this one.
+ *
+ * `composer-*` makes nothing measurable today: no harness cell maps to a `composer`
+ * subject (`SCREEN_MARKER_SUBJECT` maps S5/S8/S9 to `session`). It is declared because
+ * the composer's state has to be named somewhere and this file is where ids live; the
+ * session-level rendering of the one that DOES have a cell is `session/queued`.
+ *
+ * `session/idle` and `session/ended` are the same case one subject over: both are real
+ * states of the screen and both are rendered, and NO cell in PR #25's matrix declares
+ * either, so neither makes anything measurable today (checked against its
+ * `PENDING_CELLS` list: the session cells are loading, populated, populated-long,
+ * scroll, empty, streaming, aborted, queued, pending-approval, pending-ask, rich-rows,
+ * subagents, degraded, error). They stay declared because a missing state name is how
+ * the next cell acquires a second dialect.
+ */
+/* `as const satisfies` rather than a wide annotation: the app's own reads
+ * (`STATE_MARKER.session.populated` in `state-markers.tsx`) then cannot be
+ * `undefined`, which is what `noUncheckedIndexedAccess` reports for a table declared
+ * `Record<string, …>`. The harness still looks a cell's subject up by an arbitrary
+ * string, so `stateMarkerFor` is the one place that widens it. */
+export const STATE_MARKER = {
+	sessions: {
+		empty: EMPTY.sessions,
+		populated: "session-row-",
+		"degraded-listing": CONTROL.sessionsDegradedBanner,
+	},
+	past: {
+		empty: EMPTY.past,
+		populated: "past-row-",
+	},
+	computers: {
+		/** The refusal surface, which the set-up path does not render: the one
+		 *  state of this screen the relay can drive — the computer LIST comes from
+		 *  Radient's account API (`src/connection/discovery.ts`), which the mock
+		 *  relay does not serve, so the other cells are declared gaps. */
+		error: SURFACE.refusalSurface,
+	},
+	session: {
+		idle: "session-idle",
+		loading: SURFACE.sessionLoading,
+		populated: "session-populated",
+		empty: SURFACE.sessionTranscriptEmpty,
+		streaming: "session-streaming",
+		ended: "session-ended",
+		aborted: "session-aborted",
+		error: "session-error",
+		degraded: "session-degraded",
+		queued: "session-queued",
+		"rich-rows": "session-rich-rows",
+		"pending-approval": "session-pending-approval",
+		"pending-ask": "session-pending-ask",
+		subagents: "session-subagents",
+	},
+	composer: {
+		idle: "composer-idle",
+		steering: "composer-steering",
+		sending: "composer-sending",
+		ended: "composer-ended",
+	},
+} as const satisfies Record<string, Record<string, string>>;
+
+/** The marker the app declares for `<subject>/<state>`, or `null` for a gap. */
+export const stateMarkerFor = (subject: string, state: string): string | null =>
+	(STATE_MARKER as Record<string, Record<string, string> | undefined>)[
+		subject
+	]?.[state] ?? null;
+
+/**
+ * Whether an id satisfies a marker: an exact match, or — for a family prefix
+ * (one that ends in `-`) — an id that starts with it AND is longer than the prefix
+ * itself. The length clause is the whole check: `"session-row-"` starts with
+ * `"session-row-"`, so without it the family's own declaration would satisfy the
+ * rule and an empty list would pass as a populated one. It is the same rule
+ * `isKnownIdentifier` applies to a family member above.
+ */
+export const markerMatches = (
+	marker: string,
+	ids: readonly string[],
+): boolean =>
+	marker.endsWith("-")
+		? ids.some((id) => id.startsWith(marker) && id.length > marker.length)
+		: ids.includes(marker);
+
+/**
  * Every static identifier the app can render, flat, as a Node script reads it.
  *
  * This file is the single source of truth for the identifier contract, and it is
@@ -459,13 +614,28 @@ export const REGION = {
  * unknown selector. Declared last because `Object.values` needs the binding
  * initialised, and each one is rendered (`a11y.e2e.test.ts` proves it), so the set
  * stays honest rather than aspirational.
+ *
+ * `STATE_MARKER` joins them for the same reason `REGION` did: a state marker is a
+ * `data-testid` in the DOM that the audit selects by name, so it is a selector in
+ * every way that matters, and leaving it out would let the harness and the flows name
+ * a marker this contract could not see.
+ *
+ * It joins as a SET because the marker table is a MAPPING, not a second declaration:
+ * `session/empty` is `SURFACE.sessionTranscriptEmpty`, an id `SURFACE` already
+ * declares, and the table exists precisely to say which declared id a state leaves
+ * behind. The rule this list serves — an id is declared once (`a11y.test.ts`) — is
+ * about the groups, and deduping here is what lets a state name another group's id
+ * without looking like a collision.
  */
 export const IDENTIFIERS: readonly string[] = [
-	...Object.values(SCREEN),
-	...Object.values(EMPTY),
-	...Object.values(CONTROL),
-	...Object.values(SURFACE),
-	...Object.values(REGION),
+	...new Set([
+		...Object.values(SCREEN),
+		...Object.values(EMPTY),
+		...Object.values(CONTROL),
+		...Object.values(SURFACE),
+		...Object.values(REGION),
+		...Object.values(STATE_MARKER).flatMap((states) => Object.values(states)),
+	]),
 ];
 
 /** A row's identifier, derived from the id it carries so a flow can address one
@@ -511,3 +681,48 @@ export const computerRowIds = (
 	status: `computer-row-status-${hostname}`,
 	reachability: `computer-row-reachability-${hostname}`,
 });
+
+/* --- the session view's builders (stream D2), adopted with its vocabulary above.
+ *
+ * Each one is here for the reason `sessionRowId` is: a `testID` whose value is a
+ * template is read as a literal by the identifier check, so a prefix spelled at the
+ * call site would drift from `IDENTIFIER_FAMILIES` the moment nobody looked. The
+ * row ids are data (a projection's entry id, a job id), which is why they cannot be
+ * a fixed list.
+ */
+
+/** One transcript row. The row's own id is the projection's entry id. */
+export const transcriptRowId = (rowId: string): string =>
+	`transcript-row-${rowId}`;
+
+/** One image inside a transcript row, disambiguated by its index within the row. */
+export const transcriptImageId = (entryId: string, index: number): string =>
+	`transcript-image-${entryId}-${index}`;
+
+/** One model in the model sheet. */
+export const modelOptionId = (modelId: string): string =>
+	`model-option-${modelId}`;
+
+/** One rung of the effort ladder. */
+export const effortRungId = (rung: string): string => `effort-rung-${rung}`;
+
+/** One command in the slash sheet. */
+export const slashCommandId = (name: string): string => `slash-command-${name}`;
+
+/** One attached image in the composer, by its position. */
+export const composerAttachmentId = (index: number): string =>
+	`composer-attachment-${index}`;
+
+/** One row of the subagents panel, keyed by the job it reports on. */
+export const subagentChipId = (jobId: string): string =>
+	`subagent-chip-${jobId}`;
+
+/** One row of the todos panel, by its position in the list. */
+export const todosRowId = (index: number): string => `todos-row-${index}`;
+
+/** One question of a multi-question ask: `ask-question-<n>-of-<total>`. */
+export const askQuestionId = (index: number, total: number): string =>
+	`ask-question-${index}-of-${total}`;
+
+/** One answer option of an ask, by its position among the offered options. */
+export const askOptionId = (index: number): string => `ask-option-${index}`;

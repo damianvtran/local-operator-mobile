@@ -43,28 +43,34 @@ env:
 # SCENARIO: session-row-<id> from sessions
 # - tapOn:
 #     id: "session-row-${SESSION_ID}"
-# PENDING: session-transcript from session
+# The session view's own identifiers, all of them rendered on this head and all of
+# them one scenario pin away: the list they are reached from is the SCENARIO above.
+# SCENARIO: session-transcript from session
 # - assertVisible:
 #     id: "session-transcript"
-# PENDING: session-composer from session
+# SCENARIO: session-composer from session
 # - assertVisible:
 #     id: "session-composer"
-# PENDING: composer-input from session
+# SCENARIO: composer-input from session
 # - tapOn:
 #     id: "composer-input"
-# PENDING: composer-send from session
+# SCENARIO: composer-send from session
 # - tapOn:
 #     id: "composer-send"
-# PENDING: transcript-row-streaming from session
+# `transcript-streaming`, which is the contract's name (`SURFACE.transcriptStreaming`)
+# for the marker on the row that is still receiving text. The pre-fold flow spelled
+# it `transcript-row-streaming`, which the `transcript-row-` family would have let
+# through as a row id the app never builds.
+# SCENARIO: transcript-streaming from session
 # - extendedWaitUntil:
 #     visible:
-#       id: "transcript-row-streaming"
+#       id: "transcript-streaming"
 #     timeout: 15000
-# PENDING: queued-message-chip from session
+# SCENARIO: queued-message-chip from session
 # - assertVisible:
 #     id: "queued-message-chip"
 # BLOCKED: needs streaming-shimmer from session — the contract has no shimmer for the
-# streaming row (the schema's equivalent is `transcript-row-streaming`, marked above),
+# streaming row (the schema's equivalent is `transcript-streaming`, marked above),
 # so this names an id nothing declares and nothing builds.
 # - assertNotVisible:
 #     id: "streaming-shimmer"

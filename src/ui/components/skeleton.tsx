@@ -3,7 +3,7 @@ import { Animated, View } from "react-native";
 
 import { LIVE_REGION } from "@/ui/a11y";
 import { useReducedMotion, useTokenColor } from "@/ui/appearance";
-import { SKELETON_PULSE_MS } from "@/ui/variants";
+import { SKELETON_PULSE_MS, skeletonBarClasses } from "@/ui/variants";
 
 /**
  * A placeholder that matches the layout it is standing in for: three bars for a
@@ -19,14 +19,28 @@ import { SKELETON_PULSE_MS } from "@/ui/variants";
 export type SkeletonProps = {
 	/** Number of bars. One bar is a single-line placeholder. */
 	lines?: number;
-	/** Height class per bar; defaults to a text-line height. */
+	/** The bar's height and shape; defaults to a text-line height. */
 	barClassName?: string;
+	/**
+	 * The bar's width, and the ONLY width in its class list.
+	 *
+	 * Width is a separate prop because the two widths cannot coexist: Tailwind
+	 * resolves `w-*` by STYLESHEET order, not by the order they are listed in the
+	 * class attribute, so a caller's `w-16` lost to this component's `w-full` and
+	 * the bar painted **0 px** inside a content-sized pill — two blank pills where
+	 * the loading state should have been (design round 2 D13 / QA round 4 Q1;
+	 * measured bar 0 × 12, chip 26 × 44, then a 122 pt sideways jump when the real
+	 * label arrived). A caller that stands in for a KNOWN-size value passes the
+	 * width here; a list-item placeholder keeps the default.
+	 */
+	widthClassName?: string;
 	testID?: string;
 };
 
 export const Skeleton = ({
 	lines = 3,
 	barClassName = "h-4",
+	widthClassName = "w-full",
 	testID,
 }: SkeletonProps) => {
 	const reduceMotion = useReducedMotion();
@@ -87,7 +101,9 @@ export const Skeleton = ({
 			{barKeys.map((barKey) => (
 				<Animated.View
 					key={barKey}
-					className={`${barClassName} w-full rounded-sm`}
+					// One width, never two: see `widthClassName` and
+					// `skeletonBarClasses`, which holds that as a pure, tested rule.
+					className={skeletonBarClasses({ barClassName, widthClassName })}
 					style={{
 						// A brightness step between two grounds, not an opacity fade: an
 						// opacity pulse takes the bar towards the ground this fill exists to

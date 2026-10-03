@@ -11,6 +11,7 @@ import {
 	listRowIndicator,
 	segmentedItemClasses,
 	segmentedLabelWeight,
+	skeletonBarClasses,
 	skeletonClasses,
 	touchFloorFor,
 } from "@/ui/variants";
@@ -201,5 +202,40 @@ describe("segmented control", () => {
 describe("empty state", () => {
 	it("is not an error: no semantic danger binding anywhere in it", () => {
 		expect(emptyStateClasses).not.toMatch(/danger|warning/);
+	});
+});
+
+describe("skeleton bar classes", () => {
+	it("carries exactly one width, whoever asks for what", () => {
+		// The defect this holds shut: `w-full` appended after a caller's `w-16` won
+		// on the rendered page (Tailwind resolves `w-*` by stylesheet order), so the
+		// bar measured 0 px inside a content-sized pill and the loading chip painted
+		// nothing (design round 2 D13 / QA round 4 Q1).
+		for (const input of [
+			undefined,
+			{ barClassName: "h-3" },
+			{ widthClassName: "w-24" },
+			{ barClassName: "h-3", widthClassName: "w-7" },
+		]) {
+			const classes = skeletonBarClasses(input);
+			expect(
+				classes.match(/\bw-[a-z0-9[\]/.-]+/g) ?? [],
+				JSON.stringify(input),
+			).toHaveLength(1);
+		}
+	});
+
+	it("uses the caller's width instead of the full-width default", () => {
+		const classes = skeletonBarClasses({
+			barClassName: "h-3",
+			widthClassName: "w-24",
+		});
+		expect(classes).toContain("w-24");
+		expect(classes).not.toContain("w-full");
+		expect(classes).toContain("h-3");
+	});
+
+	it("defaults a list placeholder to the full width, once", () => {
+		expect(skeletonBarClasses()).toBe("h-4 w-full rounded-sm");
 	});
 });
