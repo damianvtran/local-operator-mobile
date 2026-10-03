@@ -6,6 +6,7 @@ import {
 	Pressable,
 	ScrollView,
 	Text,
+	type TextInput,
 	View,
 } from "react-native";
 
@@ -20,7 +21,7 @@ import {
 import { isSendKey } from "@/features/session/keyboard";
 import { CONTROL, composerAttachmentId, ROLE, SURFACE, state } from "@/ui/a11y";
 import { Button, Chip, Skeleton, Textarea } from "@/ui/components";
-import { cx } from "@/ui/variants";
+import { CONTROL_DISABLED_INK, cx } from "@/ui/variants";
 
 /**
  * A DOM keyboard event, narrowed to what this file reads.
@@ -100,18 +101,31 @@ export type ComposerProps = {
 	/** A refused start or a failed steer, stated beside the control that caused it. */
 	error: string | null;
 	queuedCount: number;
+	/** A leading chip, before the levers on the receipt line. The composer home
+	 *  passes its target folder here (`homeTargetFolder`); the session view has no
+	 *  leading chip and passes nothing. Additive: the session view's rendering is
+	 *  untouched by its existence. */
+	leadingChip?: React.ReactNode;
 	/** The two chips, each in one of its three states — value, unavailable, or
 	 *  loading while a projection is still expected. The decision lives in
 	 *  `chip-labels.ts` rather than here, because "loading" and "unavailable" look
 	 *  alike on screen and mean opposite things (design round 1 D6, round 2 D14;
-	 *  review round 4 R7/R8). */
+	 *  review round 4 R7/R8).
+	 *
+	 *  Optional since the composer home: home has no turn to apply an effort to,
+	 *  so it passes `null` and the lever is not rendered at all — a disabled chip
+	 *  whose label disagrees with what it can do is the U-24 dead end. */
 	modelChip: ComposerChip;
-	effortChip: ComposerChip;
+	effortChip?: ComposerChip | null;
 	onOpenModels: () => void;
 	onOpenEffort: () => void;
 	/** A leading `/` opens the sheet; `null` keeps it shut. */
 	slashQuery: string | null;
 	slashSheet: React.ReactNode;
+	/** A handle to the field, for the one caller that focuses it by name (the
+	 *  home's New chat). The third mechanical prop beyond the spec's two chips:
+	 *  \u00a7 4.3 requires New chat to focus the composer, and focus needs a ref. */
+	fieldRef?: React.RefObject<TextInput | null>;
 	testID: string;
 };
 
@@ -237,12 +251,14 @@ export const Composer = ({
 	onResume,
 	error,
 	queuedCount,
+	leadingChip,
 	modelChip,
 	effortChip,
 	onOpenModels,
 	onOpenEffort,
 	slashQuery,
 	slashSheet,
+	fieldRef,
 	testID,
 }: ComposerProps) => {
 	const attachmentSummary = useMemo(
@@ -425,6 +441,7 @@ export const Composer = ({
 						// version a multiline field never dispatches it. Native is NOT RUN
 						// here, so this records the gap rather than a behaviour.
 						onSubmitEditing={onSend}
+						fieldRef={fieldRef}
 						testID={CONTROL.composerInput}
 					/>
 				</View>
@@ -479,8 +496,16 @@ export const Composer = ({
 						<Text
 							className={cx(
 								"text-body-sm font-medium",
+								// The disabled ink is the kit's `CONTROL_DISABLED_INK`
+								// (`ink-dim`), not `ink-disabled`, and that is the one
+								// measured correction here (R-5): `ink-disabled` on the
+								// `sunken` fill reads 2.42 / 2.50 against a 3:1 floor for a
+								// glyph, and the audit fails it — same finding, same fix as
+								// every `Button` variant (see `CONTROL_DISABLED_INK`). The
+								// state is carried by the fill, and the reason line below
+								// names it (U-24).
 								controls.primary.disabled
-									? "text-ink-disabled"
+									? CONTROL_DISABLED_INK
 									: "text-on-accent",
 							)}
 						>
@@ -500,6 +525,7 @@ export const Composer = ({
 			    200 %) — a control no finger can reach. Wrapping costs a second line only
 			    at the scales that need one, and takes nothing away at 100 %. */}
 			<View className="flex-row flex-wrap items-center gap-2 pt-1.5">
+				{leadingChip}
 				{queuedCount > 0 ? (
 					<Text
 						className="text-mono-sm text-ink-dim"
@@ -518,13 +544,15 @@ export const Composer = ({
 					loadingWidthClassName="w-24"
 					testID={CONTROL.composerModelChip}
 				/>
-				<ComposerChipButton
-					chip={effortChip}
-					onPress={onOpenEffort}
-					chooseHint="Choose the effort"
-					loadingWidthClassName="w-7"
-					testID={CONTROL.composerEffortChip}
-				/>
+				{effortChip ? (
+					<ComposerChipButton
+						chip={effortChip}
+						onPress={onOpenEffort}
+						chooseHint="Choose the effort"
+						loadingWidthClassName="w-7"
+						testID={CONTROL.composerEffortChip}
+					/>
+				) : null}
 			</View>
 			{/* The receipt anchor `08-connection-loss-recovery` asserts after a send
 			    across a reconnect: it is the composer's own "the instruction left" mark. */}

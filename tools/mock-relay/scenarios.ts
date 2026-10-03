@@ -370,7 +370,7 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 	add(
 		"empty",
 		"No conversations at all: an empty catalogue with nothing degraded.",
-		["S4/empty"],
+		["S4/idle", "S15/empty"],
 		() => ({
 			projections: {},
 		}),
@@ -379,7 +379,7 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 	add(
 		"loading",
 		"No frame has arrived yet: every API route holds its response and the streams stay silent with keepalives only.",
-		["S4/loading", "S5/loading", "S13/loading"],
+		["S15/loading", "S5/loading", "S13/loading"],
 		() => ({
 			projections: {},
 			hold: { api: "forever" },
@@ -390,14 +390,14 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 	add(
 		"idle",
 		"One live conversation, idle, after a completed turn (the corpus capture).",
-		["S4/populated", "S5/populated"],
+		["S15/populated", "S5/populated"],
 		() => idleWorld(),
 	);
 
 	add(
 		"many",
 		"Twelve rows: pinned, streaming, needing attention, running subagents, a long name and a long cwd.",
-		["S4/populated", "S4/populated-long", "S4/narrow"],
+		["S15/populated", "S15/populated-long", "S15/narrow"],
 		() => {
 			const streaming = projectionFrom(everyKind, {
 				session_id: syntheticSessionId("streaming-row"),
@@ -450,7 +450,7 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 	add(
 		"degraded",
 		"The session record is fresh but its runtime is unreachable: the row carries its own receipt (`degraded: true`, the signal a phone-observed SIGSTOP produces) AND `subagents_running` is null while the row stays active.",
-		["S4/degraded-row", "S5/degraded"],
+		["S15/degraded-row", "S5/degraded"],
 		() => ({
 			/* BOTH signals, and they are not alternatives. #23 added the ROW's own
 			 * receipt (`SessionSummary.degraded`), which is what the list row reads;
@@ -476,7 +476,7 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 	add(
 		"degraded-listing",
 		'The durable catalogue could not be walked: `degraded: ["sessions"]` with rows still present.',
-		["S4/degraded-listing"],
+		["S15/degraded-listing"],
 		() => ({
 			projections: { [liveIdle.session_id]: structuredClone(liveIdle) },
 			listOverrides: { degraded: ["sessions"] },
@@ -486,7 +486,7 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 	add(
 		"degraded-attention",
 		'The completion-receipt store could not be read: `degraded: ["attention"]`. Same cell as `degraded-listing` — the app renders the same banner for both, because the reader\'s question ("is this list complete?") is the same one.',
-		["S4/degraded-listing"],
+		["S15/degraded-listing"],
 		() => ({
 			projections: { [liveIdle.session_id]: structuredClone(liveIdle) },
 			listOverrides: { degraded: ["attention"] },
@@ -496,7 +496,7 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 	add(
 		"wedged",
 		"A frozen runtime: the row reports real subagent counts until HEARTBEAT_TIMEOUT_S (45 s) has elapsed, then flips to null while `section` stays active. The two-sample comparison is the only signal.",
-		["S4/degraded-row", "S13/degraded"],
+		["S15/degraded-row", "S13/degraded"],
 		() => ({
 			projections: { [liveIdle.session_id]: structuredClone(liveIdle) },
 			// Before the timeout the registration is still vouched for.
@@ -513,7 +513,7 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 	add(
 		"ended",
 		"A finished conversation whose runtime is gone",
-		["S4/ended", "S10/populated"],
+		["S15/ended", "S10/populated"],
 		() => {
 			const projection = structuredClone(afterDeath);
 			return {
@@ -701,7 +701,7 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 	add(
 		"long-names",
 		"A 64-character conversation name, a deep cwd, and a 400-character pending question.",
-		["S5/populated-long", "S4/populated-long", "S8/populated-long"],
+		["S5/populated-long", "S15/populated-long", "S8/populated-long"],
 		() => {
 			const projection = projectionFrom(approvalFrame, {
 				conversation_name: longName,
@@ -756,15 +756,26 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 		}),
 	);
 
-	add("search-empty", "A search query with no results.", ["S4/empty"], () => ({
-		projections: { [liveIdle.session_id]: structuredClone(liveIdle) },
-		search: fix.response("search-empty"),
-	}));
+	/* The two search scenarios carry RESPONSE fixtures (a search request's answer);
+	 *  what a capture of the panel renders without a typed query is the one live
+	 *  row both worlds declare, so the cell they fill is the populated one. The
+	 *  empty-search STATE is reachable only by typing — it has its own marker
+	 *  (`sidebar/empty-search`) and is asserted by the flow that types, not by a
+	 *  capture. */
+	add(
+		"search-empty",
+		"A search query with no results.",
+		["S15/populated"],
+		() => ({
+			projections: { [liveIdle.session_id]: structuredClone(liveIdle) },
+			search: fix.response("search-empty"),
+		}),
+	);
 
 	add(
 		"search-hit",
 		"A search with body-only matches, which must be marked as such.",
-		["S4/populated"],
+		["S15/populated"],
 		() => ({
 			projections: { [liveIdle.session_id]: structuredClone(liveIdle) },
 			search: fix.response("search-hit"),

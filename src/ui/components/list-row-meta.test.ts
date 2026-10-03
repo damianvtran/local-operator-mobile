@@ -12,9 +12,9 @@ import {
  * The meta line's fit, pinned at the widths the design round measured.
  *
  * These are the numbers the finding is made of, so they are asserted as VALUES
- * rather than as "contains an ellipsis": the point of D26 is which PART of each
- * field survives, and a test that only checked for truncation would pass on the
- * tail-ellipsis behaviour the web build actually had.
+ * rather than as "contains an ellipsis": the point of D26 (and of R-3 after it)
+ * is WHICH PART of each field survives, and a test that only checked for truncation
+ * would pass on either direction.
  *
  * The widths are the measured meta lines: 232 dp on a 320 pt phone, 318 dp on a
  * 390 pt one, 287 dp in a split pane at 834×1112.
@@ -96,19 +96,24 @@ describe("the meta line's fit", () => {
 		).toEqual({ cwd: "~/work", model: null });
 	});
 
-	it("keeps the tail of a path, not its head, when the path has to be cut", () => {
-		// The other half of the same bug: react-native-web elided the path from the
-		// tail, so a row showed `~/workspace/clients/m…` — the part every row in
-		// that folder shares.
+	it("keeps the head of a path, so both lines of the row elide their tail (R-3)", () => {
+		// R-3 (2026-10-03, on the narrow frame): the title kept its head while the
+		// path kept its tail — TWO truncation rules inside one row. A path is read
+		// from its start (`~/workspace/…` is what a reader scans for), so the path
+		// now elides its tail like the row's prose does. The same string D26 called
+		// a defect is the intended direction now, and the reason it was rejected
+		// then no longer applies: tail-keeping was chosen for BOTH fields together,
+		// while the MODEL still keeps its name-end (the D26 reasoning about
+		// `anthropic/` is unchanged — see `list-row-meta.ts`).
 		const { cwd } = metaLineFor({
 			cwd: SE.path,
 			model: SE.mock,
 			widthDp: 232,
 			scale: 1,
 		});
-		expect(cwd?.startsWith("…")).toBe(true);
-		expect(cwd?.endsWith("ightly-reconciliation")).toBe(true);
-		expect(cwd).not.toContain("~/workspace");
+		expect(cwd?.endsWith("…")).toBe(true);
+		expect(cwd?.startsWith("~/workspace/clients/")).toBe(true);
+		expect(cwd).not.toContain("ightly-reconciliation");
 	});
 
 	it("fits both fields whole wherever the line is wide enough", () => {
@@ -165,16 +170,18 @@ describe("the meta line's fit", () => {
 			model: null,
 		});
 		expect(metaLineFor({ cwd: "~/文書/渲染", widthDp: 60, scale: 1 })).toEqual({
-			cwd: "…書/渲染",
+			cwd: "~/文書/…",
 			model: null,
 		});
 	});
 
 	it("never leaves a lone surrogate behind when it cuts", () => {
 		// R2-4: slicing by UTF-16 unit split `🙂` in half and the half rendered as
-		// U+FFFD in the middle of a path. The cut is by code point.
-		const { cwd } = metaLineFor({ cwd: "~/a🙂b/c", widthDp: 40, scale: 1 });
-		expect(cwd).toBe("…b/c");
+		// U+FFFD in the middle of a path. The cut is by code point — and the cut
+		// here lands AT the emoji, which is the boundary a code-unit slice would
+		// have split.
+		const { cwd } = metaLineFor({ cwd: "~/a🙂b/c", widthDp: 41, scale: 1 });
+		expect(cwd).toBe("~/a🙂…");
 		expect(hasLoneSurrogate(cwd ?? "")).toBe(false);
 		for (const widthDp of [24, 32, 40, 48, 56, 64, 72]) {
 			const painted = metaLineFor({

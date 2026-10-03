@@ -6,8 +6,9 @@ import {
 	attentionWord,
 	degradedNote,
 	degradedShortNote,
+	relativeTimeFor,
 	rowMark,
-	splitSections,
+	splitSidebarSections,
 	staleNote,
 	staleShortNote,
 } from "@/features/sessions/session-projection";
@@ -97,21 +98,118 @@ describe("attentionCount", () => {
 	});
 });
 
-describe("splitSections", () => {
-	it("groups without re-sorting, and pinned outranks the section", () => {
+/** Local noon on a fixed calendar day, so the section boundaries are asserted in
+ *  the reader's own timezone rather than in UTC. */
+const NOON = new Date(2026, 9, 3, 12, 0, 0, 0).getTime(); // 2026-10-03 12:00 local
+const MINUTE_MS = 60_000;
+const HOUR_MS = 60 * MINUTE_MS;
+const DAY_MS_T = 24 * HOUR_MS;
+
+describe("splitSidebarSections", () => {
+	it("groups without re-sorting; pinned outranks, running outranks the time bins", () => {
 		// The relay sorts rows so the phone, the TUI and the desktop agree; a client
-		// that re-ordered them would be a fourth opinion. And a pinned CONVERSATION
+		// that re-ordered them would be a fourth opinion. A pinned CONVERSATION
 		// belongs with the pinned ones, or pinning an old session appears to do
-		// nothing at all.
-		const sections = splitSections([
-			session({ session_id: "1", section: "active" }),
-			session({ session_id: "2", section: "previous", pinned: true }),
-			session({ session_id: "3", section: "active" }),
-			session({ session_id: "4", section: "previous" }),
-		]);
+		// nothing at all — and a running row is Running even at 10 days old, because
+		// "what is working right now" is the question that section answers.
+		const sections = splitSidebarSections(
+			[
+				session({ session_id: "1", mtime: NOON / 1000 - 60 }),
+				session({
+					session_id: "2",
+					pinned: true,
+					mtime: NOON / 1000 - (30 * DAY_MS_T) / 1000,
+				}),
+				session({
+					session_id: "3",
+					streaming: true,
+					mtime: NOON / 1000 - (30 * DAY_MS_T) / 1000,
+				}),
+				session({
+					session_id: "4",
+					needs_attention: true,
+					mtime: NOON / 1000 - (9 * DAY_MS_T) / 1000,
+				}),
+				session({
+					session_id: "5",
+					mtime: NOON / 1000 - (3 * DAY_MS_T) / 1000,
+				}),
+				session({
+					session_id: "6",
+					mtime: NOON / 1000 - (40 * DAY_MS_T) / 1000,
+				}),
+			],
+			NOON,
+		);
 		expect(sections.pinned.map((s) => s.session_id)).toEqual(["2"]);
-		expect(sections.active.map((s) => s.session_id)).toEqual(["1", "3"]);
-		expect(sections.previous.map((s) => s.session_id)).toEqual(["4"]);
+		expect(sections.running.map((s) => s.session_id)).toEqual(["3", "4"]);
+		expect(sections.today.map((s) => s.session_id)).toEqual(["1"]);
+		expect(sections.week.map((s) => s.session_id)).toEqual(["5"]);
+		expect(sections.older.map((s) => s.session_id)).toEqual(["6"]);
+	});
+
+	it("reads calendar days, so last night is not today", () => {
+		// "Today" is the word on screen: a conversation from 11 pm yesterday is not
+		// from today at 9 am, whatever a rolling 24 h says.
+		const sections = splitSidebarSections(
+			[
+				session({
+					session_id: "late",
+					mtime: NOON / 1000 - (15 * HOUR_MS) / 1000,
+				}),
+				session({
+					session_id: "early",
+					mtime: NOON / 1000 - (3 * HOUR_MS) / 1000,
+				}),
+			],
+			NOON,
+		);
+		expect(sections.today.map((s) => s.session_id)).toEqual(["early"]);
+		expect(sections.week.map((s) => s.session_id)).toEqual(["late"]);
+	});
+
+	it("reads `created_at` before `mtime`, and the seven-day edge is held", () => {
+		// The wire's two clocks: `created_at` is the basis when a relay sends it
+		// (older relays omit it). At exactly seven days the row is Older — "within
+		// seven days" is strict, and a row that flips on a rounding error is worse
+		// than one that flips a second early.
+		const sixDays = session({
+			session_id: "six",
+			mtime: NOON / 1000 - (90 * DAY_MS_T) / 1000,
+			created_at: NOON / 1000 - (6 * DAY_MS_T) / 1000,
+		});
+		const sevenDays = session({
+			session_id: "seven",
+			mtime: NOON / 1000 - (7 * DAY_MS_T) / 1000,
+		});
+		const sections = splitSidebarSections([sixDays, sevenDays], NOON);
+		expect(sections.week.map((s) => s.session_id)).toEqual(["six"]);
+		expect(sections.older.map((s) => s.session_id)).toEqual(["seven"]);
+	});
+});
+
+describe("relativeTimeFor", () => {
+	it("spells the units the panel's rows use, and none for a running row", () => {
+		// The section says WHEN; the row must say how long ago. Minutes are spelled
+		// `min` (the spec's examples), and a running row carries no time at all —
+		// "now" is all a running row's time could say, and the section already does.
+		const at = (ms: number) => session({ mtime: NOON / 1000 - ms / 1000 });
+		expect(relativeTimeFor(at(30 * 1000), NOON)).toBe("now");
+		expect(relativeTimeFor(at(5 * MINUTE_MS), NOON)).toBe("5 min");
+		expect(relativeTimeFor(at(59 * MINUTE_MS), NOON)).toBe("59 min");
+		expect(relativeTimeFor(at(3 * HOUR_MS), NOON)).toBe("3h");
+		expect(relativeTimeFor(at(2 * DAY_MS_T), NOON)).toBe("2d");
+		expect(relativeTimeFor(at(10 * DAY_MS_T), NOON)).toBe("1w");
+		expect(relativeTimeFor(at(400 * DAY_MS_T), NOON)).toBe("1y");
+		expect(
+			relativeTimeFor(session({ mtime: NOON / 1000, streaming: true }), NOON),
+		).toBeNull();
+		expect(
+			relativeTimeFor(
+				session({ mtime: NOON / 1000, needs_attention: true }),
+				NOON,
+			),
+		).toBeNull();
 	});
 });
 

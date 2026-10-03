@@ -44,7 +44,7 @@ describe("presence and visibility are two different questions", () => {
 		expect(
 			readinessProblems(
 				frame({
-					screen: "S4",
+					screen: "S15",
 					state: "populated",
 					presentIds: ["sessions-screen", "session-row-6714def86197"],
 					visibleIds: ["sessions-screen"],
@@ -58,14 +58,14 @@ describe("presence and visibility are two different questions", () => {
 		expect(
 			readinessProblems(
 				frame({
-					screen: "S4",
+					screen: "S15",
 					state: "populated",
 					presentIds: ["sessions-screen", "session-row-6714def86197"],
 					visibleIds: ["session-row-6714def86197"],
 				}),
 			),
 		).toEqual([
-			"no 'sessions-screen' root in the DOM: the app did not render screen S4",
+			"no 'sessions-screen' root in the DOM: the app did not render screen S15",
 		]);
 	});
 
@@ -73,7 +73,7 @@ describe("presence and visibility are two different questions", () => {
 		// The negative control for the split: presence is not a licence to pass on absence.
 		const issues = readinessIssues(
 			frame({
-				screen: "S4",
+				screen: "S15",
 				state: "populated",
 				presentIds: ["sessions-screen"],
 				visibleIds: ["sessions-screen"],
@@ -90,7 +90,7 @@ describe("presence and visibility are two different questions", () => {
 		expect(
 			readinessProblems(
 				frame({
-					screen: "S4",
+					screen: "S15",
 					state: "populated",
 					presentIds: [
 						"sessions-screen",
@@ -110,15 +110,21 @@ describe("presence and visibility are two different questions", () => {
 describe("the marker is the app's, read rather than built", () => {
 	it("asks for the id the app declares, not `${subject}-${state}`", () => {
 		// `past/populated` is `past-row-`, a family prefix; the derivation would be
-		// `past-populated`, which no frame can carry.
+		// `past-populated`, which no frame can carry. The old `sessions` subject is
+		// the PANEL's `sidebar` now, and the home (`S4`) answers with its own ids.
 		expect(requiredStateMarker("S10", "populated")).toBe("past-row-");
-		expect(requiredStateMarker("S4", "empty")).toBe("sessions-empty");
+		expect(requiredStateMarker("S15", "empty")).toBe("sessions-empty");
 		expect(requiredStateMarker("S2", "error")).toBe("connection-refusal");
+		expect(requiredStateMarker("S4", "idle")).toBe("home-idle");
 	});
 
 	it("keeps a variant on the marker of the state it renders", () => {
-		expect(requiredStateMarker("S4", "populated-long")).toBe("session-row-");
-		expect(requiredStateMarker("S4", "narrow")).toBe("session-row-");
+		expect(requiredStateMarker("S15", "populated-long")).toBe("session-row-");
+		expect(requiredStateMarker("S15", "narrow")).toBe("session-row-");
+		// The panel's degraded-listing variant renders the same look as `degraded`.
+		expect(requiredStateMarker("S15", "degraded-listing")).toBe(
+			"sessions-degraded-banner",
+		);
 		expect(requiredStateMarker("path:/clean/clean", "clean")).toBeNull();
 	});
 });

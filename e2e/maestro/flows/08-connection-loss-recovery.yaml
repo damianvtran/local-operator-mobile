@@ -47,7 +47,7 @@ env:
 - launchApp:
     clearState: true
 - assertVisible:
-    id: "sessions-screen"
+    id: "home-screen"
 # SCENARIO: connection-banner from session
 # - assertNotVisible:
 #     id: "connection-banner"
