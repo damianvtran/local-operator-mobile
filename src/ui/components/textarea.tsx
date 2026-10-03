@@ -91,11 +91,35 @@ export const Textarea = ({
 			<Text className="text-body-sm text-ink-muted">{label}</Text>
 			{/* Only while it is the thing on screen: any value hides it, so it can never
 			 *  need room the content is already taking. Zero height and clipped, so it
-			 *  lays out and reports its own height without moving anything. */}
+			 *  lays out and reports its own height without moving anything.
+			 *
+			 *  WHY a second rendering exists: a placeholder is not part of the field's
+			 *  `contentSize`, so nothing else can tell the box how tall the WRAPPED
+			 *  placeholder is — and it needs to know, because at 200 % text the placeholder
+			 *  takes ~2.5 lines and the box would otherwise cut it mid-word (design round
+			 *  D20). This copy is a height measurement, not a colour one: the placeholder's
+			 *  own colour IS readable from the DOM (`getComputedStyle(el, "::placeholder")`),
+			 *  so nothing about its legibility depends on this element.
+			 *
+			 *  What the copy must not do is disagree with the field about the thing it stands
+			 *  in for, and it stands in for the placeholder — so it takes the placeholder's
+			 *  ink from the same `placeholderColour` the field hands to
+			 *  `placeholderTextColor`: one value, two renderings of the same string. Left to
+			 *  inherit, it took the platform default, black, which on the dark canvas is
+			 *  1.29:1 and outside every ink this palette owns (`ink-disabled`, the dimmest,
+			 *  is 2.37:1 there).
+			 *
+			 *  One consequence worth naming: this copy is a real text node while the
+			 *  placeholder is a pseudo-element, so the frame audit's U-02 reads THIS element
+			 *  when it asks about a placeholder. That is proxy coverage — the pair is pinned
+			 *  directly in design/tokens/contrast-contract.mjs (`input/placeholder`), and
+			 *  src/ui/components/textarea.test.ts fails if the two are ever given
+			 *  different inks. */}
 			{placeholder !== undefined && value === "" ? (
 				<View className="h-0 overflow-hidden" aria-hidden>
 					<Text
 						className="text-body"
+						style={{ color: placeholderColour }}
 						onLayout={(event) =>
 							setPlaceholderHeight(event.nativeEvent.layout.height)
 						}
