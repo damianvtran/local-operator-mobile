@@ -471,7 +471,19 @@ export const SCREEN_ROOTS: Record<string, string> = {
  * "TO DO" is the thing this table exists to avoid.
  */
 export const PENDING_CELLS: Record<string, string> = {
-	/* The 21 session-view cells: the session route is a placeholder on this head. */
+	/* The 21 session-view cells, INERT ON THIS HEAD, and left in place on purpose.
+	 * They were added while `app/(app)/session/[id].tsx` was a placeholder that drew
+	 * `session-empty` in every state; PR #12 landed the real session view, so the app now
+	 * declares `session-populated` and the rest, and a skip is honoured only while the app
+	 * declares NO marker for the cell's state. Every one of these is therefore REFUSED —
+	 * which is the direction that matters: a session state that stops rendering comes back
+	 * as a `marker` issue and is reported NOT MEASURABLE by name, never quietly skipped.
+	 * What remains is their owner text, which describes the head they were written for and
+	 * is never printed, because the skip is never taken. They are kept rather than deleted
+	 * because `verify.ts`'s "no screen whose empty marker the app declares is left
+	 * unexplained" check reads this table's SCREENS, and removing them there is a change to
+	 * that check's premise (the app no longer omits the session subjects) rather than to
+	 * this registry. */
 	...Object.fromEntries(
 		[
 			"S5/loading",

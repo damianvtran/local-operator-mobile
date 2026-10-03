@@ -88,9 +88,12 @@ The 10 declared skips are:
 
 The 21 session-view cells used to be in that list. They are not any more: the app now
 declares `session-populated` and the rest, and a declared skip is honoured only while the
-app declares no marker for the cell's state — so the entries had gone inert while their
-owner text ("PR #12 … is a placeholder") had gone false. `matrix.ts` no longer carries
-them.
+app declares no marker for the cell's state — so those entries are refused on this head
+and never printed. `matrix.ts` still carries them, with a comment saying so: the owner
+text describes the head they were written for, and removing them is a change to the
+premise of `verify.ts`'s "no screen whose empty marker the app declares is left
+unexplained" check (the app no longer omits the session subjects either) rather than a
+tidy-up.
 
 A declared skip is honoured **only while the app declares no marker for that
 cell's state**, so it can never hide a marker that stopped rendering: flip a
