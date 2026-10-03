@@ -260,6 +260,24 @@ export function createRelay(options: RelayOptions = {}) {
 				}
 			: null;
 	})();
+	/**
+	 * Handle → session id, read off the corpus's own resolve capture
+	 * (`push-conversation-ok.json`): its recorded REQUEST names the handle and
+	 * its body names the session, so the mock's mapping cannot drift from the
+	 * wire the app tests against. Every other handle is the clean 404.
+	 */
+	const defaultPushHandles = (() => {
+		const map = new Map<string, string>();
+		const fixture = fix.http.get("push-conversation-ok");
+		const request = isRecord(fixture?.request) ? fixture.request : undefined;
+		const requestPath = typeof request?.path === "string" ? request.path : "";
+		const match = /^\/api\/push\/conversation\/([^/?#]+)$/.exec(requestPath);
+		const body = isRecord(fixture?.json) ? fixture.json : undefined;
+		const sessionId = asString(body?.session_id) ?? "";
+		if (match?.[1] !== undefined && sessionId !== "")
+			map.set(decodeURIComponent(match[1]), sessionId);
+		return map;
+	})();
 	const scenarios = buildScenarios(fix);
 	const password = options.password ?? DEFAULT_PASSWORD;
 	/**
@@ -580,9 +598,15 @@ export function createRelay(options: RelayOptions = {}) {
 	const rowsFor = (): SessionSummary[] => {
 		const world = state.world;
 		const overrides = world.rowOverrides ?? {};
-		const rows = Object.values(world.projections ?? {}).map((projection) =>
-			rowFrom(projection, overrides),
-		);
+		/* Per-session overrides win over the blanket ones: `unseen` is a fact about
+		 * ONE conversation, and the §1.4 equality cell needs a mix. */
+		const perSession = world.rowOverridesById ?? {};
+		const rows = Object.values(world.projections ?? {}).map((projection) => {
+			const row = rowFrom(projection, overrides);
+			const specific = perSession[projection.session_id];
+			if (specific !== undefined) Object.assign(row, specific);
+			return row;
+		});
 		// The heartbeat flip is a *time* signal, not a flag: before
 		// HEARTBEAT_TIMEOUT_S the registration is vouched for, after it the
 		// counts go null while the section stays active. Reproducing the
@@ -602,10 +626,31 @@ export function createRelay(options: RelayOptions = {}) {
 
 	const listBody = (): SessionListFrame => {
 		const world = state.world;
+		const degraded = world.listOverrides?.degraded ?? [];
+		const rows = rowsFor();
+		/* The frame-level `unread` block (S1, ADR 0006 §1.1): `count` is computed
+		 * from the SAME rows this frame carries, so the equality the daemon
+		 * guarantees (count == unseen rows) cannot drift here either. `attention`
+		 * in the listing's own `degraded` means the receipt store could not be
+		 * read — and a store that could not be read is not an empty pile: `count`
+		 * is ABSENT, never 0. */
+		const attentionDegraded = degraded.includes("attention");
+		const unread = {
+			...(attentionDegraded
+				? {}
+				: { count: rows.filter((row) => row.unseen === true).length }),
+			revision: [rows.length, state.seenTokens.size, 0] as [
+				number,
+				number,
+				number,
+			],
+			degraded: attentionDegraded ? ["attention"] : [],
+		};
 		return {
-			sessions: rowsFor(),
-			degraded: world.listOverrides?.degraded ?? [],
+			sessions: rows,
+			degraded,
 			capabilities: structuredClone(fix.list("sessions-empty").capabilities),
+			unread,
 		};
 	};
 
@@ -1472,6 +1517,21 @@ export function createRelay(options: RelayOptions = {}) {
 			return;
 		}
 
+		/* The push tap's handle → session id (S2, ADR 0006 §3.1/§6.7). The mapping
+		 * is the corpus capture's own pair; a handle this mock cannot resolve is
+		 * the daemon's clean 404 sentence, never a 500. */
+		const pushMatch = /^\/api\/push\/conversation\/([^/]+)$/.exec(pathname);
+		if (pushMatch && method === "GET") {
+			const handle = decodeURIComponent(pushMatch[1] ?? "");
+			const sessionId = defaultPushHandles.get(handle) ?? null;
+			if (sessionId === null) {
+				sendFixture(res, "push-conversation-unknown");
+				return;
+			}
+			sendJson(res, 200, { session_id: sessionId });
+			return;
+		}
+
 		if (pathname === "/api/projects") {
 			if (method === "GET") {
 				sendFixture(res, "projects-empty");
@@ -1668,7 +1728,35 @@ export function createRelay(options: RelayOptions = {}) {
 					sendFixture(res, "seen-missing-token");
 					return;
 				}
-				state.seenTokens.add(String(body.completion_token));
+				const posted = String(body.completion_token);
+				/* A REAL token a newer completion replaced is refused `409` with the
+				 * machine code; the app's remedy is to re-read the projection and try
+				 * the token it now names (contract §4.6, ADR Q11). The mock refuses
+				 * exactly the discrimination the app exercises: token ≠ the session's
+				 * CURRENT one. (The success capture is the corpus's own response for
+				 * session 6714def86197's token — replayed verbatim, like every other
+				 * route here.) */
+				const current = projection.attention?.completion_token ?? null;
+				if (
+					typeof current === "string" &&
+					current.length > 0 &&
+					posted !== current
+				) {
+					sendFixture(res, "seen-superseded");
+					return;
+				}
+				state.seenTokens.add(posted);
+				/* The receipt landed: the daemon invalidates its cache and wakes the
+				 * list so the next paint already shows the cleared mark. The mock
+				 * mutates its copy of the projection the same way — a later
+				 * `GET /api/sessions` (and the next list frame) carries `unseen: false`
+				 * and a decremented count. The per-session row override is the second
+				 * place a scenario can keep the SAME fact (a mixed unread/read list
+				 * cannot be said with the blanket overrides), and the wake clears it
+				 * where it is, so the repaint means one thing. */
+				if (projection.attention) projection.attention.unseen = false;
+				const rowFact = state.world.rowOverridesById?.[sessionId];
+				if (rowFact !== undefined) rowFact.unseen = false;
 				sendFixture(res, "seen-real-token");
 				return;
 			}
