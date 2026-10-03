@@ -533,7 +533,7 @@ node tools/visual/capture.ts --dir e2e/fixtures/audit-canary \
 # `--full` is all 19 profiles at 3384 cells.
 #
 # The bound is DERIVED FROM THE PLAN unless you name one: `--deadline` defaults to
-# 2500 ms/cell with a 900 s floor, so a bound always holds the plan it was computed for,
+# 3000 ms/cell with a 900 s floor, so a bound always holds the plan it was computed for,
 # and a smaller explicit bound is printed beside the budgeted figure rather than
 # discovered when it fires.
 #
@@ -653,8 +653,31 @@ Three tiers are declared in `matrix.ts`, and each says what it is:
 
 `--tier <ci|core|full>` or `--full` selects one; `--devices`, `--themes` and
 `--scales` override any of them. The whole-run `--deadline` is derived from the
-plan's size (2500 ms/cell, floor 900 s) unless you name one, so the default bound
+plan's size (3000 ms/cell, floor 900 s) unless you name one, so the default bound
 always holds the plan it was computed for.
+
+### Two cells that render byte-identically
+
+The check this harness leans on hardest is the cross-cell one: two cells that declare
+different states and produce the same bytes is the app ignoring the state, and it is what
+caught `S13/error = S2/error` on 26 consecutive frames. **Bytes alone are not the verdict,
+though**, because a frame is a viewport and a viewport can be filled by chrome. At 320 px
+with 200 % text the session's header, progress and panel rows fill the whole picture, and
+`S5/populated-long` and `S5/rich-rows` — whose transcripts differ in every row — are
+byte-identical while the app renders both states correctly. So a byte-identical group is
+partitioned by what each cell is SHOWING, read without the viewport (`CONTENT_PROBE`: the
+rendered text and accessibility labels, i.e. what a phone would read out), and:
+
+- **same bytes and same content** → a real collapse. It fails, as it always did.
+- **same bytes, different content** → a limit of the camera. It passes **only** when the
+  pair is declared by name in `matrix.ts` `IDENTICAL_FRAME_EXEMPTIONS` with the reason a
+  reviewer needs (which viewport, and which content differs). An undeclared pair still
+  FAILS, naming the key to declare — so a new collapse cannot exempt itself by being
+  camera-shaped by accident, and the exemption table is a statement a reviewer reads
+  rather than a knob that loosens the comparison.
+
+Declared exemptions are reported (`EXEMPT IDENTICAL FRAMES (n)`) and recorded in the
+manifest as `identicalStateExemptions`; only `identicalStates` can fail a run.
 
 Themes: `dark`, `light`. Text scales: `100`, `150`, `200` (percent of the app's
 default) — `150` is skipped on tablets and foldables, where it is not the

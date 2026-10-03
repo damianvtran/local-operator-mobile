@@ -54,9 +54,11 @@ import {
 	ALL_DEVICES,
 	CI_DEVICES,
 	CI_SCALES,
+	CONTENT_PROBE,
 	CORE_DEVICES,
 	DEVICES,
 	type DeviceProfile,
+	IDENTICAL_FRAME_EXEMPTIONS,
 	MEASURE_PROBE,
 	PENDING_CELLS,
 	PRE_PAINT_PROBE,
@@ -560,6 +562,15 @@ async function captureCell(
 			shots[shots.length - 1] = await stamp(cell.consecutive ? "-settled" : "");
 		}
 	}
+	/*
+	 * What the cell is SHOWING, read after the state has settled and without the
+	 * viewport: the screen reader's view of it. Cheap (one evaluate) and only ever read
+	 * for the identical-frame check — see `IDENTICAL_FRAME_EXEMPTIONS` for why a byte
+	 * comparison alone is not enough to call two frames a collapse.
+	 */
+	const contentDigest = digestContent(
+		asContent(await page.evaluate(CONTENT_PROBE)),
+	);
 	const readinessProblems = issues.map((issue) => issue.message);
 
 	offConsole();
@@ -600,6 +611,7 @@ async function captureCell(
 		readiness,
 		readinessProblems,
 		ready: readinessProblems.length === 0,
+		contentDigest,
 		declaredSkip,
 		consoleErrors,
 	};
@@ -823,6 +835,39 @@ function asReadiness(value: unknown): Readiness | null {
 		text: typeof bag.text === "string" ? bag.text : "",
 		elementCount: typeof bag.elementCount === "number" ? bag.elementCount : 0,
 	};
+}
+
+/** What `CONTENT_PROBE` reports, narrowed from the page's own reply. */
+interface CellContent {
+	text: string;
+	labels: string;
+}
+
+function asContent(value: unknown): CellContent {
+	if (typeof value !== "object" || value === null || Array.isArray(value))
+		return { text: "", labels: "" };
+	const bag = value as Record<string, unknown>;
+	return {
+		text: typeof bag.text === "string" ? bag.text : "",
+		labels: typeof bag.labels === "string" ? bag.labels : "",
+	};
+}
+
+/**
+ * The digest the identical-frame check compares, over the CONTENT of a cell.
+ *
+ * Text and labels are hashed as two fields rather than concatenated so a cell whose
+ * text moved into an accessibility label cannot digest the same as one that rendered it.
+ * An empty reading is a digest too — two cells that both reported nothing are the same
+ * content, which is the direction that keeps the check's teeth.
+ */
+function digestContent(content: CellContent): string {
+	return createHash("sha256")
+		.update(content.text)
+		.update("\u0000")
+		.update(content.labels)
+		.digest("hex")
+		.slice(0, 16);
 }
 
 /**
@@ -1061,8 +1106,34 @@ interface RelayStateReply {
  * app ignored the state and rendered one screen for all of them.
  *
  * Compared on the settled frame, which is the one a reviewer looks at.
+ *
+ * BYTES ALONE ARE NOT THE VERDICT, and this is the distinction that matters. A frame is
+ * a viewport, and a viewport can be filled by chrome: at 320 px with 200 % text two cells
+ * whose content differs in every row are byte-identical because the rows are below the
+ * fold. So a byte-identical group is partitioned by what each cell is SHOWING
+ * (`contentDigest`, read by `CONTENT_PROBE` without the viewport) and the two outcomes are
+ * kept apart:
+ *
+ *   * a partition that still holds two declared states → a REAL COLLAPSE. It fails, with
+ *     the same shape of message as before.
+ *   * every cell carrying its own content → the pixels agree and the app does not: a
+ *     camera limit, which passes ONLY when the pair is declared in
+ *     `IDENTICAL_FRAME_EXEMPTIONS` (matrix.ts) with the reason a reviewer needs. An
+ *     undeclared pair FAILS with the key to declare, so a new collapse cannot exempt
+ *     itself by being camera-shaped by accident.
+ *
+ * A group with any collapse in it is reported as a collapse and nothing else: one real
+ * collapse is the finding, and reporting a coexisting camera limit beside it would only
+ * dilute it.
  */
-function findIdenticalStates(records: CaptureRecord[]): string[] {
+function exemptionKey(records: readonly CaptureRecord[]): string {
+	return [...new Set(records.map((record) => record.cell))].sort().join("|");
+}
+
+function findIdenticalFrames(records: CaptureRecord[]): {
+	collapses: string[];
+	exemptions: string[];
+} {
 	const bySha = new Map<string, CaptureRecord[]>();
 	for (const record of records) {
 		const frame = record.frames[record.frames.length - 1];
@@ -1070,7 +1141,8 @@ function findIdenticalStates(records: CaptureRecord[]): string[] {
 		const key = `${frame.sha}`;
 		bySha.set(key, [...(bySha.get(key) ?? []), record]);
 	}
-	const problems: string[] = [];
+	const collapses: string[] = [];
+	const exemptions: string[] = [];
 	for (const [shaDigest, group] of bySha) {
 		const states = new Set(
 			group.map((record) => `${record.screen}/${record.state}`),
@@ -1085,11 +1157,50 @@ function findIdenticalStates(records: CaptureRecord[]): string[] {
 		// report the group, so a measured cell that collapses onto a skipped one — or two
 		// measured cells that collapse onto each other — is still caught.
 		if (!group.some((record) => record.declaredSkip === null)) continue;
-		problems.push(
-			`${[...states].join(" = ")} rendered identically (${shaDigest}) on ${group[0]?.device ?? "?"}`,
+		const where = group[0]?.device ?? "?";
+		const label = [...states].sort().join(" = ");
+		// Partition by what each cell is SHOWING. Two cells in one partition rendered the
+		// same bytes AND the same content: that is a collapse, whichever viewport they were
+		// captured at.
+		const byContent = new Map<string, CaptureRecord[]>();
+		for (const record of group) {
+			byContent.set(record.contentDigest, [
+				...(byContent.get(record.contentDigest) ?? []),
+				record,
+			]);
+		}
+		const partitions = [...byContent.values()];
+		const collapsed = partitions.filter(
+			(part) =>
+				new Set(part.map((record) => `${record.screen}/${record.state}`)).size >
+				1,
 		);
+		for (const part of collapsed) {
+			const partStates = [
+				...new Set(part.map((record) => `${record.screen}/${record.state}`)),
+			].sort();
+			collapses.push(
+				`${partStates.join(" = ")} rendered identically (${shaDigest}) on ${where}, and their frames carry the same content`,
+			);
+		}
+		// One real collapse is the finding; a camera limit beside it would only dilute it.
+		if (collapsed.length > 0) continue;
+		const key = exemptionKey(group);
+		const reason = IDENTICAL_FRAME_EXEMPTIONS[key];
+		if (reason === undefined) {
+			collapses.push(
+				`${label} rendered identically (${shaDigest}) on ${where} although their renderings differ: ` +
+					`if that is the viewport filling with chrome rather than a collapse, declare '${key}' ` +
+					"in matrix.ts IDENTICAL_FRAME_EXEMPTIONS with the reason — until it is declared, a " +
+					"byte-identical pair of different states is not evidence",
+			);
+		} else {
+			exemptions.push(
+				`${label} rendered identically (${shaDigest}) on ${where} — declared, not a collapse: ${reason}`,
+			);
+		}
 	}
-	return problems;
+	return { collapses, exemptions };
 }
 
 /** `rgb(a, b, c)`/`#rrggbb` → lowercase hex, so a computed colour can meet a token. */
@@ -1210,6 +1321,13 @@ export interface CaptureRecord {
 	readiness: Readiness | null;
 	readinessProblems: string[];
 	ready: boolean;
+	/**
+	 * A digest of what the cell is SHOWING, read without the viewport (`CONTENT_PROBE`):
+	 * the screen reader's view of it. It is the second opinion the identical-frame check
+	 * asks for before it calls two byte-identical frames a collapse — see
+	 * `IDENTICAL_FRAME_EXEMPTIONS`.
+	 */
+	contentDigest: string;
 	/**
 	 * Set when the cell's state is a DECLARED SKIP: the app declares no marker for it
 	 * AND `matrix.ts` `PENDING_CELLS` names the dependency it waits on. A skipped cell
@@ -1561,7 +1679,8 @@ export async function runCapture(options: CaptureOptions) {
 	const readinessProblems = unready.map(
 		(record) => `${record.name}: ${record.readinessProblems.join("; ")}`,
 	);
-	const identicalCells = findIdenticalStates(records);
+	const { collapses: identicalCells, exemptions: identicalExemptions } =
+		findIdenticalFrames(records);
 
 	// The manifest is what the audit and the gallery both read, so it carries the
 	// facts each of them needs by name rather than a shape they must infer.
@@ -1620,6 +1739,13 @@ export async function runCapture(options: CaptureOptions) {
 		/** Cells with no frame: unrenderable screens and cells that hit a deadline. */
 		abandonedCells: abandoned,
 		identicalStates: identicalCells,
+		/**
+		 * Byte-identical frames whose declared states differ in CONTENT: a limit of the
+		 * camera (the differing content is below the fold), declared by name in
+		 * `IDENTICAL_FRAME_EXEMPTIONS` with its reason. Reported, never failing — and only
+		 * reachable for a pair that IS declared, so this list cannot grow quietly.
+		 */
+		identicalStateExemptions: identicalExemptions,
 		unreadyCells: unready.map((record) => record.name),
 		/**
 		 * Cells whose state is a named, owned dependency rather than a failure.
@@ -1713,9 +1839,15 @@ export async function runCapture(options: CaptureOptions) {
 	}
 	if (identicalCells.length) {
 		console.log(
-			`IDENTICAL STATES (${identicalCells.length}): cells that declare different states produced the same bytes`,
+			`IDENTICAL STATES (${identicalCells.length}): cells that declare different states produced the same bytes AND the same content`,
 		);
 		for (const entry of identicalCells) console.log(`  - ${entry}`);
+	}
+	if (identicalExemptions.length) {
+		console.log(
+			`EXEMPT IDENTICAL FRAMES (${identicalExemptions.length}): byte-identical frames whose declared states DIFFER in content, each declared in matrix.ts IDENTICAL_FRAME_EXEMPTIONS — a limit of the camera, not a collapse`,
+		);
+		for (const entry of identicalExemptions) console.log(`  - ${entry}`);
 	}
 
 	const strict = options.strict !== false;
@@ -1749,7 +1881,7 @@ export async function runCapture(options: CaptureOptions) {
 	if (strict && blockingWithSurvivors > 0) {
 		throw new CaptureFailure(
 			`${themeProblems.length} theme problem(s), ${readinessProblems.length} unready cell(s), ` +
-				`${identicalCells.length} identical-state pair(s), ${abandoned.length} cell(s) with no frame, ` +
+				`${identicalCells.length} identical-state collapse(s), ${abandoned.length} cell(s) with no frame, ` +
 				`${survivors} surviving process(es); ` +
 				`see ${join(outDir, "manifest.json")}`,
 			{
@@ -1858,7 +1990,7 @@ if (isMain) {
 				"  --cells <a/b,...>   explicit screen/state cells (default: whatever the relay declares)",
 				"  --cell-timeout <s>  hard bound per cell; a cell that exceeds it FAILS with that reason (default 45)",
 				"  --deadline <s>      hard bound for the whole run. Default: derived from the plan",
-				"                      (2500 ms/cell, floor 900 s) so a bound always holds its own plan;",
+				"                      (3000 ms/cell, floor 900 s) so a bound always holds its own plan;",
 				"                      a smaller explicit bound is honoured and noted. Cells still",
 				"                      unvisited when it fires are reported as having no frame",
 				"  --tier <name>       the sample to capture: ci | core (default) | full",

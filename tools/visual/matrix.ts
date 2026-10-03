@@ -531,6 +531,39 @@ export const PENDING_CELLS: Record<string, string> = {
 		"app (src/ui/a11y.ts STATE_MARKER) — ListRow's `degraded` receipt renders 'not answering' but carries no identifier",
 };
 
+/**
+ * Byte-identical frames that are a LIMIT OF THE COMPARISON, not a collapse.
+ *
+ * The identical-frame check compares settled PNG bytes, which is exactly the right test
+ * for "two declared states produced one image" and the wrong test for "two declared states
+ * produced one image OF THE CHROME". At 320 px with 200 % text the session's header,
+ * progress and panel rows fill the whole viewport, so two cells whose transcripts differ
+ * in every row are byte-identical while the app is rendering both states correctly.
+ *
+ * So a byte-identical group is not failed on the bytes alone any more: the harness reads
+ * what each cell is SHOWING without the viewport (`CONTENT_PROBE` — the screen reader's
+ * view: its rendered text and its accessibility labels), and
+ *
+ *   * same bytes AND same content  → a real collapse: reported and failed, as before;
+ *   * same bytes, DIFFERENT content → a DECLARED exemption or nothing. It passes as a
+ *     limitation only when the pair is named here, with the reason a reviewer needs
+ *     (which viewport, and which content differs); an undeclared pair is still a
+ *     FAILURE, so a new collapse cannot quietly exempt itself.
+ *
+ * The key is the group's distinct cell names, sorted, joined with `|`. Keep this table
+ * EMPTY unless a pair is genuinely a camera limit, and let the reason name the viewport
+ * it was measured on: the exemption is a statement about the frame, not about the app.
+ */
+export const IDENTICAL_FRAME_EXEMPTIONS: Record<string, string> = {
+	"S5/populated-long|S5/rich-rows":
+		"below-the-fold at iphone-se / 200 %: the 320 px column at 200 % text is filled by the " +
+		"session header (`Refactor… client`, the context/task/subagent panel rows), and the rows " +
+		"that distinguish the two cells — the 520-row transcript versus the code-block/diff/table " +
+		"rows — start below the viewport, so the PNG is all chrome. The content differs at every " +
+		"device and scale (both cells reach their own marker), which is what makes this a limit " +
+		"of the camera rather than a collapse.",
+};
+
 /** Read the resolved theme/scale and the app's own canvas colour, per frame. */
 /**
  * The readiness probe: after a cell settles, what did the app actually render?
@@ -593,6 +626,41 @@ export const READINESS_PROBE = `
     text,
     elementCount: document.querySelectorAll('*').length,
   };
+})();
+`;
+
+/**
+ * What a cell is SHOWING, read in the way a viewport cannot truncate.
+ *
+ * The identical-frame check compares PNG bytes, which is the right test for "two states
+ * produced one image" and the wrong test for "two states produced one image of the
+ * CHROME". At 320 px with 200 % text the session's header and panels fill the whole
+ * frame, so `S5/populated-long` and `S5/rich-rows` — whose transcripts differ in every
+ * row — measure byte-identical while the app is rendering two different states perfectly
+ * well. This probe is the second opinion: the SCREEN READER's view of the cell (its
+ * rendered text, leaf by leaf, plus every accessibility label), which is what a phone
+ * would read out and what "are these the same state?" actually means. It is not a
+ * substitute for the pixel check — it is what decides whether a byte-identical pair is a
+ * COLLAPSE or a limit of the camera, and `IDENTICAL_FRAME_EXEMPTIONS` is where a
+ * limitation has to be declared before it can be believed.
+ */
+export const CONTENT_PROBE = `
+(() => {
+  const norm = (value) => (value || '').replace(/\\s+/g, ' ').trim();
+  const roots = document.querySelectorAll('[data-testid$="-screen"]');
+  const scope = roots.length > 0 ? roots[0] : document.body;
+  if (!scope) return { text: '', labels: '' };
+  const texts = [];
+  const labels = [];
+  for (const el of scope.querySelectorAll('*')) {
+    if (el.children.length === 0) {
+      const text = norm(el.textContent);
+      if (text) texts.push(text);
+    }
+    const label = norm(el.getAttribute('aria-label'));
+    if (label) labels.push(label);
+  }
+  return { text: texts.join('\\u001f'), labels: labels.join('\\u001f') };
 })();
 `;
 

@@ -79,7 +79,7 @@ every declared cell at two device profiles, both themes and scales 100/200 — 2
 (`--full`) stay runnable locally and on a dispatched run; nothing is reachable only
 through CI.
 
-The whole-run bound is derived from the plan (2500 ms/cell, floor 900 s) unless
+The whole-run bound is derived from the plan (3000 ms/cell, floor 900 s) unless
 `--deadline` names one, so a bound cannot silently truncate the plan it was computed
 for. If you do name a smaller one, the run prints the budgeted figure beside it before
 it renders anything, and every cell it never reached is reported as having no frame —
