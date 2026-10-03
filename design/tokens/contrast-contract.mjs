@@ -50,6 +50,13 @@
  *     composite, a gradient, an image under text, or a colour a platform
  *     picked for itself (a native sheet's own ground, a system keyboard). Those
  *     need a human and a screenshot.
+ *   - It measures TOKENS. Whether a component paints the role its row names is a
+ *     question about code, answered per rendered node by the frame audit's U-02 —
+ *     which has one known limit of its own: a control's `::placeholder` is a
+ *     pseudo-element, so U-02 reads the field's stand-in copy rather than the
+ *     pseudo-element (proxy coverage, named in `tools/audit/checks.ts` under
+ *     U-02). The rows below are the direct assertion; the frame row is the check
+ *     that the field actually uses them.
  *
  * Do not read a clean run as "the design system is accessible". Read it as
  * "every pairing we have written down still holds".
@@ -252,8 +259,8 @@ const CONTROLS = [
 	{ id: "button/ghost", fill: null, border: null, ink: "ink-muted", boundary: false },
 	{ id: "button/danger", fill: "danger-wash", border: "danger-border", ink: "danger" },
 
-/* The disabled rows. Their ink is `ink-dim`, which is what the kit actually
-   paints (`CONTROL_DISABLED_INK` in src/ui/variants.ts, pinned by its own test):
+	/* The disabled rows. Their ink is `ink-dim`, which is what the kit actually
+	   paints (`CONTROL_DISABLED_INK` in src/ui/variants.ts, pinned by its own test):
    a disabled label NAMES its action, so it is asserted at the text floor rather
    than exempted. These rows used to say `ink-disabled`, an ink the shipped
    Button and field had already replaced — and a row documenting the wrong ink is
@@ -266,7 +273,12 @@ const CONTROLS = [
 
 	/* Input and textarea, components.md § 4. */
 	{ id: "input/rest", fill: "surface", border: "border-control", ink: "ink" },
-	{ id: "input/placeholder", fill: "surface", border: "border-control", ink: "ink-dim" },
+	/* The ink the field SHIPS is `ink-muted`, not the `ink-dim` the role summary in
+	   tokens.json mentions for placeholders — `Textarea` resolves the value with
+	   `useTokenColor("ink-muted")` and hands the same binding to
+	   `placeholderTextColor` and to its measuring stand-in copy. This row asserts
+	   what a reader actually sees (8.19:1 light, 7.85:1 dark). */
+	{ id: "input/placeholder", fill: "surface", border: "border-control", ink: "ink-muted" },
 	{ id: "input/focused", fill: "surface", border: "accent", ink: "ink" },
 	{ id: "input/invalid", fill: "surface", border: "danger", ink: "ink" },
 	{ id: "input/disabled", fill: "sunken", border: "hairline", ink: "ink-dim", boundary: false },

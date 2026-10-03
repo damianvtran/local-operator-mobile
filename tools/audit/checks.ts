@@ -147,7 +147,23 @@ function u01TouchTargets(state: AuditState, floors: Floors): CheckRow[] {
 	return rows;
 }
 
-/** U-02 — body text ≥ 4.5:1 and large text ≥ 3:1, against its *effective* ground. */
+/**
+ * U-02 — body text ≥ 4.5:1 and large text ≥ 3:1, against its *effective* ground.
+ *
+ * ONE KNOWN LIMIT OF THIS CHECK'S SCOPE, stated here rather than only in a review
+ * thread: it reads text NODES, so a control's `::placeholder` — a pseudo-element,
+ * absent from the DOM walk — is never directly measured. What IS measured is the
+ * field's stand-in copy, the zero-height node `src/ui/components/textarea.tsx`
+ * renders to measure the placeholder's wrapped height, and that copy is the only
+ * placeholder-shaped node in the frame. **U-02 is therefore proxy coverage for a
+ * placeholder, not direct coverage**: a placeholder whose own ink is unreadable
+ * while the copy's is fine would pass here (measured: forcing the placeholder's
+ * colour to its surface leaves this check green). Closing it needs the extract
+ * probe to read `getComputedStyle(el, "::placeholder")` alongside `color`; until
+ * then, the pair itself is asserted in design/tokens/contrast-contract.mjs
+ * (`input/placeholder`) and the field's use of it is pinned by
+ * src/ui/components/textarea.test.ts.
+ */
 function u02Contrast(state: AuditState, floors: Floors): CheckRow[] {
 	const textNodes = state.nodes.filter(
 		(n) => n.ownText && n.ownText.length > 0,
