@@ -32,6 +32,19 @@
  * `--allow-blocked` — a gate that measured nothing did not have "a check that
  * could not measure"; it had no reading at all.
  *
+ * A RE-DRIVE THAT DOES NOT REACH THE STATE ITS RECORD NAMES is not measured
+ * either, and it is its own outcome (`state-not-reproduced`) for the same reason:
+ * the rows would otherwise be readings about a screen the cell does not name.
+ * This tool rebuilds every cell's URL from the manifest, so it renders whatever
+ * THAT URL shows — and the seed the capture put on every page is part of that URL.
+ * A relay-backed cell whose app was never pointed at a relay falls back to its own
+ * default screen, and the checks that pass there were counted as the cell's. The
+ * re-drive is therefore held to the capture's own readiness rule (the route the
+ * record rendered, its screen root and its state marker — not its content: the rule's
+ * bound, including the eight cells it is known to miss, is stated on `reDriveMismatch`),
+ * and a mismatch BLOCKS the
+ * cell and exits 3 like any other gap — see `lib/readiness.ts` `reDriveMismatch`.
+ *
  * COVERAGE, stated rather than implied: this tool machine-checks the rubric's
  * mechanical half — U-01…U-10 — and nothing else. U-11…U-17 are machine-defined
  * in the rubric and NOT implemented here; §4-§7 are manual by the rubric's own
@@ -45,8 +58,22 @@ import { bool, csv, num, parseArgs, str } from "../lib/args.ts";
 import type { CdpPage } from "../lib/cdp.ts";
 import { sleep } from "../lib/cdp.ts";
 import { launchChrome } from "../lib/chrome.ts";
+import { freshPage, withDeadline } from "../lib/page.ts";
+import {
+	reDriveIssues,
+	reDriveMismatch,
+	STATE_POLL_MS,
+	STATE_WAIT_MS,
+	seedQuery,
+	stateStillComing,
+} from "../lib/readiness.ts";
+import { selectScenario } from "../lib/relay.ts";
 import { serveDir } from "../lib/static-server.ts";
-import { PRE_PAINT_PROBE } from "../visual/matrix.ts";
+import {
+	PRE_PAINT_PROBE,
+	READINESS_PROBE,
+	SCREEN_ROOTS,
+} from "../visual/matrix.ts";
 import type { AuditState, CheckRow } from "./checks.ts";
 import { runChecks, SUB_RULE_TEXT } from "./checks.ts";
 import { floorsFromTokens } from "./color.ts";
@@ -113,6 +140,94 @@ const asRecord = (value: unknown): Record<string, unknown> | undefined =>
 	typeof value === "object" && value !== null && !Array.isArray(value)
 		? (value as Record<string, unknown>)
 		: undefined;
+
+/** The readiness reading a re-driven page reports, narrowed at the CDP boundary. */
+interface ReDrivenReading {
+	path: string;
+	testIds: string[];
+	visibleTestIds: string[];
+}
+
+function asReading(value: unknown): ReDrivenReading {
+	const bag = asRecord(value) ?? {};
+	const ids = (key: string): string[] =>
+		Array.isArray(bag[key])
+			? (bag[key] as unknown[]).filter(
+					(id): id is string => typeof id === "string",
+				)
+			: [];
+	return {
+		path: typeof bag.path === "string" ? bag.path : "",
+		testIds: ids("testIds"),
+		visibleTestIds: ids("visibleTestIds"),
+	};
+}
+
+/**
+ * `meta.seed`, as the capture writes it. `null` when the manifest carries none, which
+ * includes every manifest written before the field existed — and that is deliberately
+ * NOT the same as "not seeded": the re-drive comparison below is what decides whether
+ * an unseeded re-drive reached the recorded state, so a manifest from before this
+ * record produces mismatches rather than a silently unseeded green.
+ */
+function asSeed(value: unknown): SeedRecord | null {
+	const bag = asRecord(value);
+	if (bag === undefined) return null;
+	return {
+		// Anything but an explicit `true` is "no seed was applied": the safe direction,
+		// because it makes the re-drive's disagreement with the record visible.
+		applied: bag.applied === true,
+		password: typeof bag.password === "string" ? bag.password : null,
+		route: typeof bag.route === "string" ? bag.route : null,
+		origin: typeof bag.origin === "string" ? bag.origin : null,
+	};
+}
+
+/**
+ * Whether the record's own capture run judged this cell to be in the state it names.
+ *
+ * UNKNOWN COUNTS AS READINESS CLAIMED, and that is the point: a manifest written
+ * before `ready` existed must not become a licence to measure a re-driven fallback
+ * screen. A record the capture genuinely failed on carries `ready: false` and its
+ * sentences, and is already BLOCKED by name through `unreadyCells`, so the two
+ * outcomes can never double-count one cell.
+ */
+function recordClaimedReadiness(record: AuditRecord): boolean {
+	if (record.ready === false) return false;
+	return (record.readinessProblems ?? []).length === 0;
+}
+
+/**
+ * Put the mock relay back into the scenario this cell's state comes from.
+ *
+ * The relay holds ONE scenario at a time, and a cell's state is a fact about that pin
+ * as much as about its URL: without this the re-drive renders whatever the PREVIOUS
+ * cell left the relay in, which is a state this cell does not name. The capture pins
+ * each cell before rendering it (`tools/visual/capture.ts`) and records the name it
+ * pinned; this replays exactly that, through the same `selectScenario`.
+ *
+ * A cell no scenario declares (an ad-hoc `path:` page, or a manifest written before
+ * the name was recorded) pins nothing, and the invariant below decides what the page
+ * it renders is worth.
+ */
+async function pinCellScenario(
+	record: AuditRecord,
+	relay: string | null,
+	timeoutMs: number,
+): Promise<void> {
+	const scenario = record.pinnedScenario;
+	if (relay === null || typeof scenario !== "string" || scenario === "") return;
+	const pinned = await withDeadline(
+		selectScenario(relay, scenario),
+		timeoutMs,
+		`pinning ${scenario} for ${record.name ?? record.screen}`,
+	);
+	if (!pinned.ok) {
+		throw new Error(
+			`${pinned.reason}: the cell cannot be re-driven in the state it declares`,
+		);
+	}
+}
 
 /**
  * Read the semantic palette out of the design tokens.
@@ -193,6 +308,19 @@ export function paletteProvenance(
 	return { path: tokensPath, loaded: true, reason: null, entries };
 }
 
+/*
+ * WHAT A RE-DRIVE MUST REPRODUCE, and the two facts it needs from the manifest.
+ *
+ * `path`/`theme`/`scale`/`insets` are the cell's own dimensions. The SEED is the
+ * run's, and it is here because a relay-backed cell is only in the state it names
+ * while the app is pointed at a relay: without it the app falls back to its own
+ * default screen and every check that "passes" there is a reading about a screen
+ * the cell does not name. It is read from `meta.seed` — the capture's record of
+ * what it applied — never from an argument the caller must remember: the whole
+ * defect was a re-drive that silently dropped a parameter the capture had set, and
+ * a fix that depends on every future caller passing a flag is the same defect.
+ */
+
 /** One captured cell, as the audit reads it out of the manifest. */
 interface AuditRecord {
 	/** Whether the capture run judged this frame's text-scale pair live. */
@@ -210,10 +338,70 @@ interface AuditRecord {
 	viewport: { width: number; height: number; dpr: number };
 	insets?: { top: number; bottom: number; left: number; right: number };
 	frames?: Array<{ file: string }>;
+	/**
+	 * Whether the capture run judged this cell to have reached its declared state,
+	 * and the sentences it failed on. A cell the capture could not reach is already
+	 * BLOCKED by name (`unreadyCells`); the re-drive comparison below is what catches
+	 * the opposite — a record the capture reached and the re-drive no longer does.
+	 */
+	ready?: boolean;
+	readinessProblems?: string[];
+	/*
+	 * The manifest also carries `readiness` here — the capture's own `READINESS_PROBE`
+	 * reading (the route it rendered and the ids it carried) — and the re-drive is NOT
+	 * compared against it. It is compared against the RULE, given the record's route:
+	 * the same rule the capture used to call the cell ready (`lib/readiness.ts`
+	 * `reDriveMismatch`, which states its bound). Comparing the two id SETS was the
+	 * other option and was rejected on measurement: two captures of the same tier
+	 * already disagree on 4 streaming cells (a transcript row that had arrived by the
+	 * second run), so set equality would BLOCK real cells the capture measured — and a
+	 * rule that blocks a real cell costs more than one that misses the eight `S5/empty`
+	 * cells, which are the known residue and are named where the rule is documented.
+	 */
+	/**
+	 * The relay scenario the capture pinned before rendering this cell, or absent/null
+	 * for a cell no scenario declares. The re-drive pins the same one: the relay holds a
+	 * single scenario, so without this the page is whatever the previous cell left.
+	 */
+	pinnedScenario?: string | null;
+}
+
+/** The capture's record of the web-only seed hook, as `meta.seed` carries it. */
+interface SeedRecord {
+	/** False when the capture did not seed at all (`--no-seed`, or no `--relay`). */
+	applied: boolean;
+	password: string | null;
+	route: string | null;
+	/** The origin the capture served the build from, to tell a run-local route apart. */
+	origin: string | null;
+}
+
+/**
+ * The seed to re-drive with: the route the app is pointed at and the password it
+ * authenticates with. `null` means "re-drive the cell unseeded", which is correct for a
+ * capture that used none and a NAMED mismatch for one that did (see `reDriveMismatch`).
+ */
+type ResolvedSeed = { route: string | null; password: string | null } | null;
+
+/**
+ * The seed this run re-drives with, or `null` when the capture used none.
+ *
+ * The capture's DEFAULT seed route is the origin IT served the build from, and this
+ * run serves the same build on its own port — so a recorded route that is that
+ * origin must be re-derived here rather than reused, or every re-driven fetch would
+ * go to a server that no longer exists. An explicit `--seed-route` names some other
+ * origin and is kept verbatim.
+ */
+function seedFor(seed: SeedRecord | null, origin: string): ResolvedSeed {
+	if (seed === null || !seed.applied || seed.route === null) return null;
+	return {
+		route: seed.route === seed.origin ? origin : seed.route,
+		password: seed.password,
+	};
 }
 
 /** The query string the capture used, so the audit renders the same cell. */
-function cellQuery(record: AuditRecord): string {
+function cellQuery(record: AuditRecord, seed: ResolvedSeed): string {
 	const query = new URLSearchParams({
 		"lo-theme": record.theme,
 		"lo-text-scale": String(
@@ -230,13 +418,37 @@ function cellQuery(record: AuditRecord): string {
 		const value = insetsBeforeOverride[side];
 		if (value !== undefined) query.set(`lo-inset-${side}`, String(value));
 	}
+	// The capture's half of the web-only seed hook (docs/e2e/README.md, option 3),
+	// replayed through the SHARED `seedQuery` rather than respelled here: these are
+	// the app's own parameter names, and a second spelling is how the two drift.
+	if (seed !== null) {
+		for (const [key, value] of new URLSearchParams(
+			seedQuery(seed.route, seed.password),
+		)) {
+			query.set(key, value);
+		}
+	}
 	return query.toString();
 }
 
 async function auditCell(
 	page: CdpPage,
 	record: AuditRecord,
-	{ origin, settleMs }: { origin: string; settleMs: number },
+	{
+		origin,
+		settleMs,
+		seed,
+		relay,
+		cellTimeoutMs,
+	}: {
+		origin: string;
+		settleMs: number;
+		seed: ResolvedSeed;
+		/** The mock relay to pin, or null when the manifest recorded none. */
+		relay: string | null;
+		/** The cell's own bound, for the relay pin inside it. */
+		cellTimeoutMs: number;
+	},
 ) {
 	const device = record.viewport;
 	await page.send("Emulation.setDeviceMetricsOverride", {
@@ -280,9 +492,39 @@ async function auditCell(
 	await page.send("Page.addScriptToEvaluateOnNewDocument", {
 		source: PRE_PAINT_PROBE,
 	});
-	const url = `${origin}${record.path}?${cellQuery(record)}`;
+	await pinCellScenario(record, relay, cellTimeoutMs);
+	const url = `${origin}${record.path}?${cellQuery(record, seed)}`;
 	await page.send("Page.navigate", { url });
 	await sleep(settleMs);
+	/*
+	 * WAIT FOR THE EVENT, NOT THE CLOCK — the same rule the capture applies, and for the
+	 * same measured reason (`lib/readiness.ts` `STATE_WAIT_MS`): a declared state can
+	 * settle AFTER the settle window, and a re-drive judged at the window would block a
+	 * cell whose state simply arrived late. Measured here: `S4/empty` re-driven at the
+	 * default 1200 ms still showed the populated list, and reproduced at `--settle 4000`.
+	 *
+	 * Only a cell the capture called READY is waited on: a declared skip or an unready cell
+	 * is BLOCKED on its own account, and polling for a state nothing claims would add the
+	 * whole bound to every one of them.
+	 */
+	const reDriveFacts = (reading: ReDrivenReading) => ({
+		screen: record.screen,
+		state: record.state,
+		askedPath: record.path,
+		root: SCREEN_ROOTS[record.screen],
+		reading,
+	});
+	let reading = asReading(await page.evaluate(READINESS_PROBE));
+	let waitedMs = 0;
+	while (
+		recordClaimedReadiness(record) &&
+		waitedMs < STATE_WAIT_MS &&
+		stateStillComing(reDriveIssues(reDriveFacts(reading)))
+	) {
+		await sleep(Math.min(STATE_POLL_MS, STATE_WAIT_MS - waitedMs));
+		waitedMs += STATE_POLL_MS;
+		reading = asReading(await page.evaluate(READINESS_PROBE));
+	}
 	// The probe runs in the page, so its reply arrives as `unknown`; the audit
 	// re-drives the same URL the capture used and reads the same fields, so this
 	// is the boundary where the probe's contract is asserted once (below) rather
@@ -314,6 +556,7 @@ async function auditCell(
 			null,
 		requestedUrl: url,
 		insetsOverride,
+		reading,
 	};
 }
 
@@ -334,40 +577,6 @@ export interface AuditOptions {
 
 /** Refused-audit: the exit code 2 path, thrown so the CLI and the API agree. */
 export class AuditRefused extends Error {}
-
-/**
- * Run `promise`, giving up after `ms` with a named reason.
- *
- * The same shape the capture harness uses, for the same measured reason: a tool
- * that can hang reports nothing, and both of these drive a real browser over
- * pages this process does not control.
- */
-async function withDeadline<T>(
-	promise: Promise<T>,
-	ms: number,
-	what: string,
-): Promise<{ ok: true; value: T } | { ok: false; reason: string }> {
-	let timer: ReturnType<typeof setTimeout> | undefined;
-	const expiry = new Promise<{ ok: false; reason: string }>((resolve) => {
-		timer = setTimeout(
-			() =>
-				resolve({
-					ok: false,
-					reason: `${what} did not complete within ${ms} ms`,
-				}),
-			ms,
-		);
-		timer.unref?.();
-	});
-	try {
-		return await Promise.race([
-			promise.then((value) => ({ ok: true as const, value })),
-			expiry,
-		]);
-	} finally {
-		if (timer !== undefined) clearTimeout(timer);
-	}
-}
 
 export async function runAudit(options: AuditOptions) {
 	/**
@@ -426,20 +635,74 @@ export async function runAudit(options: AuditOptions) {
 		throw new AuditRefused(
 			`${manifestPath} has no meta.buildDir: cannot serve the build`,
 		);
+	/** The mock relay, as the manifest recorded it: served through the proxy and pinned per cell. */
+	const relay = typeof meta.relay === "string" ? meta.relay : null;
 	const server = await serveDir(meta.buildDir, {
-		proxy: typeof meta.relay === "string" ? meta.relay : undefined,
+		proxy: relay ?? undefined,
 	});
+	/*
+	 * THE SEED THE CAPTURE APPLIED, read from the manifest's own record of it and
+	 * resolved against THIS run's origin.
+	 *
+	 * Read rather than passed, and that is the fix rather than a convenience: the audit
+	 * re-drives cells a capture produced, so the parameters belong to the RECORD. A flag
+	 * would put the burden on every future caller to remember it — which is exactly how
+	 * the defect arrived. The capture seeded, the audit did not, and a run of relay-backed
+	 * cells measured the app's own fallback screen under the cells' names.
+	 */
+	const seedRecord = asSeed(meta.seed);
+	const seed = seedFor(seedRecord, server.url);
+	if (!options.quiet) {
+		console.log(
+			seed === null
+				? "audit: the manifest records no relay seed — re-driving the cells as captured"
+				: `audit: re-driving with the relay seed at ${seed.route}`,
+		);
+	}
 	const chrome = await launchChrome({ profile: options.profile });
 
 	const rows = [];
 	let index = 0;
 	try {
-		const page = await chrome.page();
-		await page.send("Page.enable");
-		await page.send("Runtime.enable");
-		await page.send("Accessibility.enable");
+		/*
+		 * EVERY CELL GETS ITS OWN TARGET, the same shape the capture uses and for the same
+		 * measured reason (`lib/page.ts` `freshPage`): the seeded re-drive holds a live relay
+		 * stream on the session screens, the streams accumulate across cells, and past a point
+		 * the next `Page.navigate` never commits. Reusing one target put the audit exactly
+		 * there — `CDP Page.navigate did not answer within 30000 ms`, an unhandled rejection
+		 * out of the cell loop, and no report written at all.
+		 */
+		let page: CdpPage | null = null;
 		for (const record of records) {
 			index += 1;
+			const fresh = await freshPage(chrome, page, options.cellTimeoutMs);
+			if (!fresh.ok) {
+				// A browser that has stopped answering cannot audit anything else. The run says so
+				// — one BLOCKED row per cell it did not reach — instead of dying with a stack
+				// trace and no report.
+				console.error(
+					`  ${fresh.reason} — the ${records.length - index + 1} cell(s) left are BLOCKED`,
+				);
+				for (const rest of records.slice(index - 1)) {
+					rows.push({
+						check: "RUN",
+						verdict: "BLOCKED",
+						blockedKind: "unmeasurable",
+						measured: null,
+						detail: fresh.reason,
+						screen: rest.screen,
+						state: rest.state,
+						device: rest.device,
+						theme: rest.theme,
+						scale: rest.scale,
+					});
+				}
+				break;
+			}
+			page = fresh.page;
+			// `freshPage` arms every page with the two enables and the pre-paint probe; the audit
+			// additionally reads the accessibility tree, so its own enable rides along here.
+			await page.send("Accessibility.enable");
 			// Per-cell bound, for the same reason the capture has one: the audit
 			// re-drives every cell in a browser, and a page that never settles would
 			// otherwise park the whole job. A cell that expires is reported as a
@@ -448,6 +711,9 @@ export async function runAudit(options: AuditOptions) {
 				auditCell(page, record, {
 					origin: server.url,
 					settleMs: options.settleMs,
+					seed,
+					relay,
+					cellTimeoutMs: options.cellTimeoutMs,
 				}),
 				options.cellTimeoutMs,
 				`cell ${record.screen}/${record.state} on ${record.device}`,
@@ -469,6 +735,36 @@ export async function runAudit(options: AuditOptions) {
 				continue;
 			}
 			const state = attempted.value;
+			/*
+			 * DID THE RE-DRIVE REACH THE STATE THE RECORD NAMES?
+			 *
+			 * This is the invariant the whole re-drive needed and never had: the audit
+			 * renders a page and then reports what its checks measured THERE, so a page that
+			 * is not the cell (an unseeded app on its own welcome screen) contributed rows
+			 * under the cell's name. The capture already has the vocabulary — it refuses to
+			 * call a cell ready when the state marker is absent — and the same rule is applied
+			 * here to the re-driven page, against the route the RECORD itself rendered.
+			 *
+			 * A mismatch is its own outcome rather than a FAIL or a PASS: the rows describe a
+			 * screen the cell does not name, so there is no verdict to give. `state-not-reproduced`
+			 * is reported with the other gaps (BLOCKED, exit 3) so a wrong screen can never
+			 * contribute passing rows, and it names the cell on stderr so the run says which
+			 * re-drive disagreed rather than only counting rows.
+			 */
+			const mismatch = recordClaimedReadiness(record)
+				? reDriveMismatch({
+						screen: record.screen,
+						state: record.state,
+						askedPath: record.path,
+						root: SCREEN_ROOTS[record.screen],
+						reading: state.reading ?? null,
+					})
+				: null;
+			if (mismatch !== null) {
+				console.error(
+					`  ${String(record.name)}: the re-drive did not reach the state this record names — ${mismatch}`,
+				);
+			}
 			// A cell whose declared state was never reached is not measurable, and its
 			// rows are BLOCKED rather than PASS/FAIL: the harness re-drives the same URL,
 			// so it renders the same fallback screen, and a check that "passed" there is
@@ -538,7 +834,16 @@ export async function runAudit(options: AuditOptions) {
 								`${row.detail ?? ""} — this cell did not reach the state it declares in the ` +
 								"capture run, so the row describes the fallback screen",
 						}))
-					: produced;
+					: mismatch !== null
+						? produced.map((row) => ({
+								...row,
+								verdict: "BLOCKED" as const,
+								blockedKind: "state-not-reproduced" as const,
+								detail:
+									`${row.detail ?? ""} — the capture's record for this cell WAS ready and the ` +
+									`re-drive does not reach the state it names, so the row describes another screen: ${mismatch}`,
+							}))
+						: produced;
 			const blinded = measured.map((row) => {
 				const spec = options.blind.find((candidate) =>
 					matchesBlind(row, [candidate]),
@@ -612,7 +917,9 @@ export async function runAudit(options: AuditOptions) {
 	// outside a 200% frame cannot apply — and stay non-failing.
 	const gaps = blocked.filter(
 		(r) =>
-			r.blockedKind === "unmeasurable" || r.blockedKind === "state-not-reached",
+			r.blockedKind === "unmeasurable" ||
+			r.blockedKind === "state-not-reached" ||
+			r.blockedKind === "state-not-reproduced",
 	);
 	/**
 	 * Rows the audit actually EVALUATED — anything that is not BLOCKED.
@@ -656,6 +963,17 @@ export async function runAudit(options: AuditOptions) {
 		measuredAgainst: {
 			tokens: palette.path,
 			themes: [...new Set(records.map((r) => r.theme))],
+		},
+		/*
+		 * WHAT THE RE-DRIVE WAS POINTED AT, because a reader who cannot see this cannot
+		 * tell a run that measured the recorded states from one that measured the app's
+		 * fallback screen everywhere. In the report rather than in the prose for the same
+		 * reason the provenance of the palette is: the numbers above only mean what this
+		 * line says they mean.
+		 */
+		reDrive: {
+			recorded: seedRecord?.applied === true,
+			route: seed?.route ?? null,
 		},
 		coverage: COVERAGE,
 		rows,
@@ -753,6 +1071,11 @@ export interface AuditReport {
 	palette: PaletteProvenance;
 	coverage: typeof COVERAGE;
 	measuredAgainst: { tokens: string | null; themes: string[] };
+	/**
+	 * The seed the capture recorded, and the route this run re-drove it with. `route` is
+	 * an origin of THIS run's when the capture seeded the origin it served from.
+	 */
+	reDrive: { recorded: boolean; route: string | null };
 	rows: Array<
 		Record<string, string | null | undefined> & {
 			verdict: string;
@@ -773,7 +1096,10 @@ export interface AuditReport {
 	 * counted in `unmeasurable`: a declared gap is not an instrument failure.
 	 */
 	declaredSkips: string[];
-	/** BLOCKED rows that could not measure something they should have. */
+	/**
+	 * BLOCKED rows that could not measure something they should have — the not-measurable
+	 * checks plus the cells whose re-drive did not reach the state the record names.
+	 */
 	unmeasurable: number;
 	/** The capture's own sentence per not-measurable cell, for the zero-measurement report. */
 	unmeasurableReasons: string[];
@@ -781,6 +1107,12 @@ export interface AuditReport {
 }
 
 export function renderMarkdown(report: AuditReport) {
+	// Named apart from "unmeasurable" because the two are different statements: one is
+	// "this side could not read a number", the other is "the page was not the cell at
+	// all". Both block, and a reader has to be able to tell which happened.
+	const notReproduced = report.rows.filter(
+		(row) => row.blockedKind === "state-not-reproduced",
+	).length;
 	const lines = [
 		`# Accessibility audit — ${report.generatedAt}`,
 		"",
@@ -789,8 +1121,20 @@ export function renderMarkdown(report: AuditReport) {
 		`- cells audited: ${report.cells} · checks: ${report.checks.join(", ")}`,
 		`- palette: \`${report.palette.path ?? "—"}\` · loaded: ${report.palette.loaded} · entries: ${report.palette.entries}` +
 			(report.palette.reason ? ` · (${report.palette.reason})` : ""),
+		/*
+		 * WHAT THE RE-DRIVE WAS POINTED AT. A reader who cannot see this cannot tell a run
+		 * that measured the recorded states from one that measured the app's fallback
+		 * screen in every cell — which is the reading this line exists to make impossible
+		 * to mistake for the former.
+		 */
+		`- re-drive: ${
+			report.reDrive.recorded
+				? `the capture's own relay seed, re-applied at \`${report.reDrive.route ?? "—"}\``
+				: "no relay seed recorded in the manifest — the cells were re-driven as captured"
+		}`,
 		`- **verdict: ${report.verdict}** — ${report.failures} FAIL, ${report.blocked} BLOCKED ` +
-			`(${report.unmeasurable} of them unmeasurable, the rest not-applicable)`,
+			`(${report.unmeasurable - notReproduced} unmeasurable, ${notReproduced} state-not-reproduced, ` +
+			"the rest not-applicable)",
 		`- **rows measured: ${report.measured} of ${report.rows.length}**` +
 			(report.measured === 0
 				? " — the audit measured NOTHING. A run with no measurement is not a run, and 0 FAIL here means no check was ever evaluated."
@@ -925,6 +1269,30 @@ if (isMain) {
 			`${report.failures} FAIL, ${report.blocked} BLOCKED (${report.unmeasurable} unmeasurable) · ` +
 			`palette ${report.palette.loaded ? "loaded" : "MISSING"}`,
 	);
+	const notReproduced = report.rows.filter(
+		(row) => row.blockedKind === "state-not-reproduced",
+	);
+	if (notReproduced.length > 0) {
+		/*
+		 * NAMED, because this is the outcome that used to be a silent PASS: the capture's
+		 * record for these cells was ready and the re-drive landed on another screen. A
+		 * count alone would not say which cell, and the cells are what a reader has to go
+		 * and look at; the full sentences are on stderr once per cell as they happen and in
+		 * audit-report.md.
+		 */
+		console.error(
+			`audit: ${notReproduced.length} row(s) are BLOCKED as state-not-reproduced — the capture's ` +
+				"record for these cells was ready and the re-drive did not reach the state it names:",
+		);
+		const named = [
+			...new Set(
+				notReproduced.map((row) => String(row.frame ?? row.url ?? "?")),
+			),
+		];
+		for (const entry of named.slice(0, 5)) console.error(`  - ${entry}`);
+		if (named.length > 5)
+			console.error(`  … ${named.length - 5} more, in audit-report.md`);
+	}
 	if (report.declaredSkips.length > 0) {
 		// Named, and deliberately NOT folded into "unmeasurable": a cell whose state
 		// waits on an owned ticket is not something the instrument failed to read.

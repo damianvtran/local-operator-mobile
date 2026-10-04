@@ -997,6 +997,17 @@ export interface AuditState {
 	device?: string;
 	medianTextHeight?: number | null;
 	insetsOverride?: { applied: boolean; reason: string | null };
+	/**
+	 * The readiness reading of the RE-DRIVEN page, injected by the audit runner from
+	 * `READINESS_PROBE`. It is compared with the record's own reading so a page that is
+	 * not the cell cannot contribute rows under the cell's name — see
+	 * `lib/readiness.ts` `reDriveMismatch`.
+	 */
+	reading?: {
+		path: string;
+		testIds: readonly string[];
+		visibleTestIds: readonly string[];
+	} | null;
 }
 
 /** One node from the accessibility tree, as `flattenAxTree` reports it. */

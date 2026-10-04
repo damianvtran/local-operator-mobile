@@ -168,6 +168,21 @@ relay-backed cell renders "The relay could not be reached". That run is green,
 its frames exist, and none of them is evidence, which is why the default is now
 the served origin. `--seed-route` / `--seed-password` remain as overrides.
 
+The seed is **recorded, not re-typed**. `meta.seed` in the manifest holds what the run
+applied (`applied`, `password`, `route`, `origin`), and `pnpm audit:run` re-applies it when
+it re-drives the same cells — re-deriving a `route` that was the capture's own origin at the
+**audit's** own origin, because the audit serves the build on its own port. A manifest that
+records none (one written before the field existed) is not read as "nothing was seeded":
+the audit says so on stdout and every cell whose record was ready is `BLOCKED` by name
+instead of measured. Until PR #36 the audit rebuilt each cell's URL without the seed and
+measured the app's own fallback screen under the cell's name: `0 FAIL` over 256 cells, 95 %
+of whose measured cells described a screen the cell does not name.
+
+The scenario is recorded the same way. The mock relay holds **one** scenario at a time, so
+the capture pins each cell's before rendering it and writes the name to
+`records[].pinnedScenario`; the audit pins the same one before re-driving, or the page is
+whatever the previous cell left behind.
+
 The origin must also be **stable across runs**, which is what `--port` is for: the
 harness serves the build on an ephemeral port by default, so each run's serve origin —
 the one the seed names, and the one the app's saved route and login are keyed by in
@@ -742,7 +757,14 @@ with the measured number, the frame it came from, and a verdict.
 
 Three rules the report keeps: **a pass states its measurement**; **an exception
 is recorded, never assumed**; and **a check that cannot be evaluated says
-`BLOCKED`** rather than passing.
+`BLOCKED`** rather than passing. A fourth is the audit's own: **a cell whose
+re-driven page does not reach the state its record names is `BLOCKED` as
+`state-not-reproduced`, never measured** — its rows would describe a screen the cell
+does not name. That rule is the capture's own readiness rule (route, screen root and
+declared state marker — **not** content), and its bound, including the cells it can
+miss, is stated on `reDriveMismatch` in `tools/lib/readiness.ts`. The report prints
+what it re-applied as a `- re-drive:` line, read from `meta.seed` and
+`records[].pinnedScenario` rather than from a flag an operator has to remember.
 
 ### How text scale is actually driven, and how the harness knows it worked
 
