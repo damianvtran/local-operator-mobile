@@ -10,6 +10,7 @@ import {
 	fieldClasses,
 	listRowIndicator,
 	segmentedItemClasses,
+	segmentedLabelClasses,
 	segmentedLabelWeight,
 	skeletonBarClasses,
 	skeletonClasses,
@@ -195,6 +196,27 @@ describe("segmented control", () => {
 		expect(segmentedLabelWeight(true)).not.toBe(segmentedLabelWeight(false));
 		expect(segmentedItemClasses({ selected: true })).not.toBe(
 			segmentedItemClasses({ selected: false }),
+		);
+	});
+
+	it("gives a disabled option's label the kit's disabled ink, not the exempt role", () => {
+		/* `text-ink-disabled` on this label would be SC 1.4.3-exempt — the option is
+		 * genuinely inactive — and that exemption is why it survived a passing suite:
+		 * conforming text is easy to mistake for the RIGHT role. The label names the
+		 * value it selects, so it takes `CONTROL_DISABLED_INK`, the rule the button
+		 * pin below asserts for every other control. Measured on the track's `sunken`
+		 * fill: `ink-disabled` 2.42:1 light / 2.50:1 dark, `ink-dim` 5.02 / 6.59. */
+		const disabled = segmentedLabelClasses({ disabled: true });
+		expect(disabled).toContain("text-ink-dim");
+		expect(disabled).not.toContain("text-ink-disabled");
+		/* One ladder, two consumers: the wrapper cannot disagree with the label it
+		 * wraps — the drift that produced this test. */
+		expect(segmentedItemClasses({ disabled: true })).toContain(disabled);
+		/* `selected` + `disabled` is reachable (a value stays chosen while its
+		 * provider is signed out), and disabled has to win: a disabled item that
+		 * still reads as the selected one is the wrong message. */
+		expect(segmentedLabelClasses({ disabled: true, selected: true })).toBe(
+			disabled,
 		);
 	});
 });

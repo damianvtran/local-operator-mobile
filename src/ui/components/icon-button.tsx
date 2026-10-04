@@ -40,7 +40,21 @@ export const IconButton = ({
 	accessibilityHint,
 	testID,
 }: IconButtonProps) => {
-	const color = useTokenColor(disabled ? "ink-disabled" : "ink-muted");
+	const color = useTokenColor(
+		/* The EXEMPT ink, deliberately — this is the one place it is the right role.
+		 *  The kit's rule (`CONTROL_DISABLED_INK`, src/ui/variants.ts) is about a
+		 *  disabled LABEL, because a label NAMES the action; an icon-only control has
+		 *  no such label, and a glyph is exempt as an inactive component's own shape
+		 *  (SC 1.4.3 for the text rule's scope, SC 1.4.11 for what it draws). So the
+		 *  disabled glyph keeps `ink-disabled`: 2.58-2.96:1 light / 1.99-2.37:1 dark
+		 *  across the grounds a control sits on.
+		 *
+		 *  The `CONTROL_DISABLED_INK` on `iconButtonClasses`' disabled branch is not a
+		 *  second answer to this: an SVG takes its colour as a PROP and `IconButton`
+		 *  renders no `Text`, so nothing inherits that class and it paints nothing.
+		 *  This binding is the shipped colour; that one is the shared helper's idiom. */
+		disabled ? "ink-disabled" : "ink-muted",
+	);
 
 	return (
 		<Pressable

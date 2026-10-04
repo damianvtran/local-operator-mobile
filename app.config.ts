@@ -45,10 +45,46 @@ const color = (path: string, theme: "light" | "dark"): string => {
 // operation, and nothing in the app depends on the value.
 const BUNDLE_ID = "com.localoperator.mobile";
 
+/* DERIVED, NOT REMEMBERED (ADR 0004, "Versioning").
+ *
+ * Every build path in `.github/workflows` runs `scripts/ci/version.ts --write`
+ * before `expo prebuild`, and that script exports these two values into the job:
+ * the git tag supplies the human-facing version, and the build number is the
+ * repository-global sequence `docs/ci.md` documents (an internal build claims the
+ * last release's counter plus the commits since; a release claims the counter
+ * itself) — never `github.run_number`, which is per workflow. Nothing else may set
+ * them, or two builds of the same commit could claim the same version.
+ *
+ * UNSET IS THE LOCAL CASE, and it is deliberately the previous behaviour: a
+ * contributor's `expo start` or local `expo prebuild` sees no variables, so the
+ * version stays the placeholder and the platforms supply their own build number.
+ * That is why this reads the environment rather than a generated file — a
+ * generated file would have to exist for local development too, and would then be
+ * a committed number that two branches can disagree about.
+ *
+ * The values are strings on the way in and typed on the way out: `ios.buildNumber`
+ * is a string and `android.versionCode` is an integer, and neither is set at all
+ * when there is no build number, so an unset variable is genuinely absent from
+ * the generated project instead of present and empty.
+ */
+const version = process.env.LOCAL_OPERATOR_MOBILE_VERSION ?? "0.0.0";
+const buildNumber = Number(
+	process.env.LOCAL_OPERATOR_MOBILE_VERSION_CODE ?? "0",
+);
+if (!Number.isInteger(buildNumber) || buildNumber < 0) {
+	// A non-numeric build number would reach `expo prebuild` and be written into
+	// the native projects, where the stores reject it at upload — a failure that
+	// costs a whole release cycle to discover. Fail here instead, where the value
+	// entered.
+	throw new Error(
+		`LOCAL_OPERATOR_MOBILE_VERSION_CODE must be a non-negative integer, got ${process.env.LOCAL_OPERATOR_MOBILE_VERSION_CODE}`,
+	);
+}
+
 const config: ExpoConfig = {
 	name: "Local Operator",
 	slug: "local-operator-mobile",
-	version: "0.0.0",
+	version,
 	// `scheme` is what makes `localoperator://s/<sessionId>` deep links resolve
 	// (docs/ux/flows.md § 11); expo-router derives its linking config from it.
 	scheme: "localoperator",
@@ -61,6 +97,19 @@ const config: ExpoConfig = {
 	ios: {
 		bundleIdentifier: BUNDLE_ID,
 		supportsTablet: true,
+		// `CFBundleVersion`. Omitted when there is no build number, so a local
+		// prebuild keeps whatever the template generates.
+		...(buildNumber > 0 ? { buildNumber: String(buildNumber) } : {}),
+		// The Apple team automatic signing resolves against. Omitted when unset, so a
+		// contributor without a team id still prebuilds and Xcode falls back to the
+		// local default. CI sets `APPLE_TEAM_ID` from the repository secret and
+		// `ios.yml` reads this field back out of the resolved config and fails when
+		// the two disagree — the WIRING is the part that was missing (review M4: the
+		// variable sat in a step's environment with no reader anywhere, which is the
+		// same defect class as the version wiring).
+		...(process.env.APPLE_TEAM_ID
+			? { appleTeamId: process.env.APPLE_TEAM_ID }
+			: {}),
 		// iOS 26 renders icons through Liquid Glass; the three appearances are
 		// authored assets (brand-kit § 6.4). The tinted variant is greyscale by
 		// definition — a coloured one is wrong, not merely worse.
@@ -72,6 +121,9 @@ const config: ExpoConfig = {
 	},
 	android: {
 		package: BUNDLE_ID,
+		// The value both stores compare for monotonicity. Omitted when there is no
+		// build number, for the same reason as `ios.buildNumber`.
+		...(buildNumber > 0 ? { versionCode: buildNumber } : {}),
 		adaptiveIcon: {
 			foregroundImage:
 				"./design/app-icon/android/ic_launcher_foreground-432.png",
@@ -133,6 +185,14 @@ const config: ExpoConfig = {
 			},
 		],
 		"expo-image",
+		// RELEASE SIGNING, and the only thing that makes `bundleRelease` produce a
+		// signed AAB. Without it the generated project keeps Expo's template release
+		// `signingConfig`, which points at the DEBUG keystore, so a "release" build
+		// is debug-signed and Play rejects it. The plugin reads the keystore and its
+		// passwords from the environment at build time (docs/ci.md, "Secrets") and
+		// leaves the debug build untouched, so a contributor with no signing material
+		// can still build and test.
+		"./plugins/with-android-release-signing.js",
 	],
 	experiments: {
 		typedRoutes: true,

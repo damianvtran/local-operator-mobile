@@ -1,0 +1,522 @@
+name: Release
+
+# A tag is the release. `v1.2.3` on `main` is the whole instruction.
+#
+# THE ORDER MATTERS, and it is the ADR's order: the full gate runs, both
+# platforms build and sign, the GitHub Release is created with the APK, the AAB
+# and the IPA attached, and only then do the store uploads run. A release that
+# dies half-way therefore leaves the artefact a user can install (the Release)
+# rather than a store listing nobody can point at.
+#
+# A MISSING CREDENTIAL IS A FAILURE HERE, NOT A SKIP. `credentials` below is a hard
+# gate: on a tag, absent signing material or an absent store credential stops the
+# run and names every variable that is missing. The unsigned, upload-free path
+# exists in android.yml and ios.yml for pull requests — where a fork cannot see a
+# secret anyway — and it is deliberately not reachable from a tag.
+#
+# There is NO VERSION BUMP IN THE REPOSITORY. `pyproject.toml`'s analogue here is
+# `app.config.ts`, whose version is a placeholder that CI overrides from the tag
+# (see scripts/ci/version.ts and docs/ci.md, "Versioning"). A maintainer tags;
+# nothing is edited to release.
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to release, e.g. v0.1.0 (workflow_dispatch only)"
+        required: true
+        type: string
+      dry_run:
+        description: "Run the gate and the credential check, then stop before any build or upload"
+        required: false
+        type: boolean
+        default: false
+
+# A release is never cancelled and never superseded: two tags can legitimately be
+# cut close together, and the earlier run still has to finish writing its Release.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+# Elevated per job, never here: only `publish` needs to write.
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: "24"
+  # fastlane is preinstalled on both runner images (2.238.0 on macos-26, 2.240.1
+  # on ubuntu-latest, read from the image manifests 2026-09-29), so the uploader
+  # is a pinned property of the runner rather than a `gem install` racing the
+  # network at release time. The consequence to know: upgrading fastlane means
+  # moving the runner image label, which is also where Xcode and the Android SDK
+  # are pinned — one place, not three.
+  FASTLANE_DISABLE_COLORS: "1"
+  FASTLANE_SKIP_UPDATE_CHECK: "1"
+
+jobs:
+  version:
+    name: Derive the version from the tag
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      version: ${{ steps.derive.outputs.version }}
+      display_version: ${{ steps.derive.outputs.display_version }}
+      version_code: ${{ steps.derive.outputs.version_code }}
+      tag: ${{ steps.derive.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # The notes are generated from the commits between the previous tag and
+          # this one, so the tags have to be here.
+          fetch-depth: 0
+
+      - name: Fetch main, which the build-number floor compares against
+        # The floor is the highest number an internal build could already have
+        # published, and internal builds are published from `main` — so a tag that
+        # is NOT the tip has to clear a later commit's number too, or Play refuses
+        # the duplicate, after the GitHub Release exists (review round 4 / QA Q4).
+        # `origin/main` exists on a checkout of a tag only if it is fetched, and a
+        # missing ref is reported as `not-checked` rather than guessed. This is the
+        # job that ENFORCES the floor; the signing jobs re-derive the same numbers
+        # and their own check is therefore advisory.
+        run: git fetch --no-tags --quiet origin +refs/heads/main:refs/remotes/origin/main
+
+
+      - name: Derive the version and the release build number
+        id: derive
+        env:
+          DISPATCH_TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          if [ -n "$DISPATCH_TAG" ]; then
+            # A hand-run release names its tag, because `github.ref_name` on a
+            # `workflow_dispatch` is the branch the run was started from.
+            tag="$DISPATCH_TAG"
+          else
+            tag="$REF_NAME"
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+          # One script decides, and it FAILS (naming the minimum it needs) when the
+          # counter in release/build-number.txt would not outrank both the previous
+          # release and the internal builds already published from this commit's
+          # history. `--write` exports the two variables the app config reads.
+          node scripts/ci/version.ts --write --ref-type tag --ref-name "$tag"
+
+          # The numbers behind the derivation, printed rather than asserted, so a
+          # dry run of this path — which has no store to compare against — shows
+          # what a tag would claim next to what an internal build of the same
+          # commit claims. `github.run_number` is NOT one of them: it is per
+          # workflow, and the release would otherwise claim a number lower than
+          # something main has already uploaded.
+          values=$(node scripts/ci/version.ts --ref-type tag --ref-name "$tag")
+          field() { printf '%s\n' "$values" | sed -n "s/^$1=//p"; }
+          {
+            echo "## Release $tag"
+            echo
+            echo "| | |"
+            echo "|---|---|"
+            echo "| version | \`$(field version)\` |"
+            echo "| published build number (versionCode / CFBundleVersion) | \`$(field release_build_number)\` |"
+            echo "| an internal build of this commit claims | \`$(field internal_build_number)\` |"
+            echo "| the counter at the previous release (the floor it set) | \`$(field base_release_number)\` |"
+            echo "| an internal build from the tip of origin/main claims | \`$(field main_tip_internal_build_number)\` |"
+            echo "| the floor this release had to beat | \`$(field minimum_release_build_number)\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  credentials:
+    name: Every release credential is present
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    # THE ENVIRONMENT, BECAUSE THIS IS WHERE THE SECRETS ARE READ. `docs/ci.md`
+    # tells the operator to create `release` with a `main` branch rule and a `v*`
+    # tag rule and to keep the nine credentials there; a job that reads them but
+    # does not declare the environment sees them EMPTY once they live there, and
+    # `--mode release` hard-fails on the first tag — before any build, and without
+    # the approval prompt that would have surfaced it (QA round 3, Q1; the other
+    # three jobs that touch secrets — `android`, `ios`, `publish` — already declare
+    # it). The tag path is covered by the environment's TAG rule, not its branch
+    # rule: GitHub types these patterns, so `v*` has to be configured as a tag rule
+    # or this job is refused on `refs/tags/v*` (review round 4, M4-1).
+    environment: release
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Check the signing and store credentials, by name
+        # `--mode release` is the difference between a release and a pull
+        # request: here a missing variable is a hard failure that names it. The
+        # alternative — a signed-build step that quietly skips — is a release
+        # that ships an unsigned APK and says nothing.
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          PLAY_SERVICE_ACCOUNT_JSON_BASE64: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON_BASE64 }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_ASC_KEY_ID: ${{ secrets.APPLE_ASC_KEY_ID }}
+          APPLE_ASC_ISSUER_ID: ${{ secrets.APPLE_ASC_ISSUER_ID }}
+          APPLE_ASC_PRIVATE_KEY_BASE64: ${{ secrets.APPLE_ASC_PRIVATE_KEY_BASE64 }}
+        run: |
+          node scripts/ci/check-secrets.ts --mode release --need ANDROID_KEYSTORE_BASE64,ANDROID_KEYSTORE_PASSWORD,ANDROID_KEY_ALIAS,ANDROID_KEY_PASSWORD,PLAY_SERVICE_ACCOUNT_JSON_BASE64,APPLE_TEAM_ID,APPLE_ASC_KEY_ID,APPLE_ASC_ISSUER_ID,APPLE_ASC_PRIVATE_KEY_BASE64
+
+  gate:
+    name: Full gate
+    needs: [version, credentials]
+    if: inputs.dry_run != true
+    # The same workflow a pull request runs, called rather than copied. A release
+    # that gated on a second, slightly different list of checks is how "green CI"
+    # and "what shipped" drift apart.
+    uses: ./.github/workflows/ci.yml
+
+  android:
+    name: Android (signed AAB + APK)
+    needs: [version, gate]
+    if: inputs.dry_run != true
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    # Where the signing material lives, and where required reviewers can be
+    # configured once there is more than one maintainer (ADR 0004).
+    environment: release
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # The build number is the commit count of the ref being built, so a
+          # shallow clone would derive a number that is too low — the exact
+          # failure the counter exists to prevent.
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@b9bee63ef481cc545e4517ec730544a4d8b1dfa0 # v6.4.0
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Derive the version from the tag
+        # The tag supplies the version; `release/build-number.txt` supplies the
+        # build number, and the script refuses a tag whose number would not
+        # outrank both the previous release and this commit's count. The tag arrives
+        # through `env:` like every other non-literal in a shell body (review m3).
+        env:
+          TAG: ${{ needs.version.outputs.tag }}
+        run: node scripts/ci/version.ts --write --ref-type tag --ref-name "$TAG"
+
+      - name: Generate the native project
+        run: pnpm exec expo prebuild --platform android --clean --no-install
+
+      - name: Decode the release keystore
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          set -euo pipefail
+          umask 077
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/android-release.keystore"
+          # A blob that decodes but is not a keystore is the failure that wastes
+          # an hour at release time: fail here, where the message names the
+          # secret. `:env` keeps the password out of the process list.
+          keytool -list -keystore "$RUNNER_TEMP/android-release.keystore" \
+            -storepass:env ANDROID_KEYSTORE_PASSWORD >/dev/null
+
+      - name: Build the signed AAB and APK
+        env:
+          # Environment variables, never `-P`: Gradle properties land in the
+          # process list and in the log, while variables set from secrets are
+          # masked. `--no-daemon` because a Gradle daemon reuses the environment
+          # of whichever client started it.
+          LO_RELEASE_STORE_FILE: ${{ runner.temp }}/android-release.keystore
+          LO_RELEASE_STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          LO_RELEASE_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          LO_RELEASE_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          cd android
+          ./gradlew bundleRelease assembleRelease --no-daemon
+
+      - name: Assert the artefacts are signed with a release key
+        # `assembleRelease` will happily produce an APK signed by whatever its
+        # signing config says, and the Expo template's release build type points
+        # at the DEBUG keystore. So the artefact is verified rather than assumed:
+        # the APK must carry a signature, and that signature must not be the
+        # shared debug key. The digest is printed into the log so the release
+        # record says which key signed what.
+        run: |
+          set -euo pipefail
+          # `apksigner` ships with the Android build-tools but is not on PATH.
+          apksigner=$(find "${ANDROID_HOME:-$ANDROID_SDK_ROOT}" -name apksigner -type f | sort | tail -1)
+          echo "apksigner: $apksigner"
+          "$apksigner" verify --print-certs android/app/build/outputs/apk/release/app-release.apk \
+            | tee "$RUNNER_TEMP/apk-certs.txt"
+          if grep -qi 'CN=Android Debug' "$RUNNER_TEMP/apk-certs.txt"; then
+            echo "::error::the release APK is signed with the DEBUG keystore — the signing config did not take effect"
+            exit 1
+          fi
+
+      - name: Upload the signed artefacts
+        # Through the shared action, which stages both Gradle outputs into one
+        # directory first: naming two paths roots the artefact at their least
+        # common ancestor, which the download turns into
+        # `artifacts/bundle/release/…` (review round 3, B1). `ci.yml`'s
+        # `release-staging` probe uses this same action, so the shape cannot
+        # drift from the step that consumes it.
+        uses: ./.github/actions/upload-android-release
+        with:
+          aab: android/app/build/outputs/bundle/release/app-release.aab
+          apk: android/app/build/outputs/apk/release/app-release.apk
+
+      - name: Remove the decoded keystore
+        if: always()
+        run: rm -f "$RUNNER_TEMP/android-release.keystore"
+
+  ios:
+    name: iOS (signed IPA)
+    needs: [version, gate]
+    if: inputs.dry_run != true
+    runs-on: macos-26
+    timeout-minutes: 120
+    environment: release
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # The build number is the commit count of the ref being built, so a
+          # shallow clone would derive a number that is too low — the exact
+          # failure the counter exists to prevent.
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Derive the version from the tag
+        # The tag supplies the version; `release/build-number.txt` supplies the
+        # build number, and the script refuses a tag whose number would not
+        # outrank both the previous release and this commit's count. The tag arrives
+        # through `env:` like every other non-literal in a shell body (review m3).
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          TAG: ${{ needs.version.outputs.tag }}
+        run: node scripts/ci/version.ts --write --ref-type tag --ref-name "$TAG"
+
+      - name: Generate the native project
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: pnpm exec expo prebuild --platform ios --clean --no-install
+
+      - name: Resolve the workspace and scheme
+        id: project
+        run: node scripts/ci/ios-project.ts --root ios
+
+      - name: Decode the App Store Connect API key
+        env:
+          APPLE_ASC_PRIVATE_KEY_BASE64: ${{ secrets.APPLE_ASC_PRIVATE_KEY_BASE64 }}
+        run: |
+          set -euo pipefail
+          umask 077
+          printf '%s' "$APPLE_ASC_PRIVATE_KEY_BASE64" | base64 --decode > "$RUNNER_TEMP/asc-api-key.p8"
+
+      - name: Write the export options
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          set -euo pipefail
+          # Generated rather than committed: the team id is part of it, and a
+          # committed copy would put a personal team id in a public repository.
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>teamID</key><string>$APPLE_TEAM_ID</string>
+            <key>signingStyle</key><string>automatic</string>
+            <key>uploadSymbols</key><true/>
+            <key>destination</key><string>export</string>
+          </dict>
+          </plist>
+          PLIST
+          plutil -lint "$RUNNER_TEMP/ExportOptions.plist"
+
+      - name: Archive and export the IPA
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_ASC_KEY_ID: ${{ secrets.APPLE_ASC_KEY_ID }}
+          APPLE_ASC_ISSUER_ID: ${{ secrets.APPLE_ASC_ISSUER_ID }}
+        run: |
+          set -euo pipefail
+          key="$RUNNER_TEMP/asc-api-key.p8"
+          xcodebuild \
+            -workspace "${{ steps.project.outputs.workspace }}" \
+            -scheme "${{ steps.project.outputs.scheme }}" \
+            -configuration Release \
+            -destination "generic/platform=iOS" \
+            -archivePath "$RUNNER_TEMP/App.xcarchive" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$key" \
+            -authenticationKeyID "$APPLE_ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$APPLE_ASC_ISSUER_ID" \
+            archive
+          xcodebuild -exportArchive \
+            -archivePath "$RUNNER_TEMP/App.xcarchive" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
+            -exportPath "$RUNNER_TEMP/ipa" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$key" \
+            -authenticationKeyID "$APPLE_ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$APPLE_ASC_ISSUER_ID"
+          ls -l "$RUNNER_TEMP/ipa"
+
+      - name: Upload the IPA
+        uses: actions/upload-artifact@v7
+        with:
+          name: ios-ipa
+          path: ${{ runner.temp }}/ipa/*.ipa
+          retention-days: 90
+
+      - name: Remove the decoded key
+        if: always()
+        run: rm -f "$RUNNER_TEMP/asc-api-key.p8"
+
+  publish:
+    name: GitHub Release, then the stores
+    needs: [version, android, ios]
+    if: inputs.dry_run != true
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    environment: release
+    # The one job that elevates, and only for the Release it creates.
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: android-release
+          path: artifacts
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: ios-ipa
+          path: artifacts
+
+      - name: Generate the release notes from the conventional commits
+        # Through `env:`, like everything else that is not a literal: a tag is
+        # free text on the dispatch path, and a value interpolated straight into a
+        # shell body is a quoting question nobody wants to re-derive every time
+        # (review m3).
+        env:
+          TAG: ${{ needs.version.outputs.tag }}
+        run: node scripts/ci/release-notes.ts --to "$TAG" --out notes.md
+
+      - name: Stage the release assets under their published names
+        # IN PLACE, inside `artifacts/`. The first version of this step renamed the
+        # downloaded files into the workspace root with a bare `mv`, which emptied
+        # `artifacts/` while the store steps below were still handed the pre-rename
+        # paths — so Play and TestFlight would have failed on EVERY tagged release,
+        # after the GitHub Release had already been created. Reproduced against a
+        # faithful `artifacts/` tree before fixing (QA Q1).
+        #
+        # The product is "Local Operator"; the repository and the bundle id are
+        # internal identifiers and stay as they are. So do the file names a person
+        # downloads: `app-release.apk` tells a reader nothing about which app or
+        # which version it is.
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+        # The script, not three inline lines: `ci.yml`'s `release-staging` job runs
+        # the same file against a real upload/download round trip on every pull
+        # request, so a change to either half of this path is caught without a tag.
+        run: scripts/ci/stage-release-assets.sh artifacts "$VERSION"
+
+      - name: Create the GitHub Release with the three artefacts
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ needs.version.outputs.tag }}
+          VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          gh release create "$TAG" \
+            --title "Local Operator $VERSION" \
+            --notes-file notes.md \
+            "artifacts/local-operator-${VERSION}.apk" \
+            "artifacts/local-operator-${VERSION}.aab" \
+            "artifacts/local-operator-${VERSION}.ipa"
+
+      - name: Decode the Play service account
+        env:
+          PLAY_SERVICE_ACCOUNT_JSON_BASE64: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON_BASE64 }}
+        run: |
+          set -euo pipefail
+          umask 077
+          printf '%s' "$PLAY_SERVICE_ACCOUNT_JSON_BASE64" | base64 --decode > "$RUNNER_TEMP/play-service-account.json"
+
+      - name: Decode the App Store Connect API key
+        env:
+          APPLE_ASC_PRIVATE_KEY_BASE64: ${{ secrets.APPLE_ASC_PRIVATE_KEY_BASE64 }}
+        run: |
+          set -euo pipefail
+          umask 077
+          printf '%s' "$APPLE_ASC_PRIVATE_KEY_BASE64" | base64 --decode > "$RUNNER_TEMP/asc-api-key.p8"
+
+      - name: Upload the AAB to the Play internal track (fastlane)
+        env:
+          SUPPLY_JSON_KEY: ${{ runner.temp }}/play-service-account.json
+          # The SAME path the staging step produced, which is the whole of QA Q1:
+          # the store steps used to be handed the pre-rename location.
+          LO_ANDROID_AAB: ${{ github.workspace }}/artifacts/local-operator-${{ needs.version.outputs.version }}.aab
+        run: fastlane android internal
+
+      - name: Upload the IPA to TestFlight (fastlane)
+        env:
+          APPLE_ASC_KEY_ID: ${{ secrets.APPLE_ASC_KEY_ID }}
+          APPLE_ASC_ISSUER_ID: ${{ secrets.APPLE_ASC_ISSUER_ID }}
+          APPLE_ASC_PRIVATE_KEY_PATH: ${{ runner.temp }}/asc-api-key.p8
+          # The directory, not the file: the lane globs `*.ipa` in it, and after the
+          # staging step that directory holds `local-operator-<version>.ipa`.
+          LO_IOS_IPA_DIR: ${{ github.workspace }}/artifacts
+        run: fastlane ios testflight
+
+      - name: Remove the decoded credentials
+        if: always()
+        run: rm -f "$RUNNER_TEMP/play-service-account.json" "$RUNNER_TEMP/asc-api-key.p8"
+
+      - name: Release summary
+        if: always()
+        env:
+          TAG: ${{ needs.version.outputs.tag }}
+          VERSION: ${{ needs.version.outputs.version }}
+          BUILD_NUMBER: ${{ needs.version.outputs.version_code }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          {
+            echo "## $TAG"
+            echo
+            echo "| | |"
+            echo "|---|---|"
+            echo "| version | \`$VERSION\` |"
+            echo "| published build number (versionCode / CFBundleVersion) | \`$BUILD_NUMBER\` |"
+            echo "| GitHub Release | https://github.com/$REPOSITORY/releases/tag/$TAG |"
+            echo
+            echo "Attached: signed APK, signed AAB, IPA. Uploaded: Play internal track, TestFlight."
+          } >> "$GITHUB_STEP_SUMMARY"

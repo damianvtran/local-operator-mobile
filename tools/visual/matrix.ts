@@ -286,6 +286,51 @@ export const CORE_DEVICES: string[] = Object.entries(DEVICES)
 /** Every device name, in declaration order (smallest to largest). */
 export const ALL_DEVICES: string[] = Object.keys(DEVICES);
 
+/**
+ * The CI tier: the bounded sample the per-push capture job takes.
+ *
+ * WHY A THIRD TIER, AND WHY IT IS HERE RATHER THAN A `--devices` LIST IN YAML.
+ * The `core` tier is 832 cells — the whole declared cell list at 2 themes x
+ * (3 phone scales + 2 tablet scales) x 5 profiles — and the CI job's capture step
+ * is bound at 20 minutes. Measured on the runner, that is 2.24 s/cell: 403 cells
+ * in 903 s, so a core run needs ~31 minutes. The job's first real run of this path
+ * was therefore cut off by the harness's own 900 s deadline with 585 cells
+ * unvisited, and reported them as cells with no frame.
+ *
+ * The three ways out of that are all forbidden by the job's purpose: `--no-strict`
+ * makes it green while measuring 41% of the plan; deleting cells removes the states
+ * a finding could be made about; and raising the bound to ~40 minutes spends the
+ * pipeline's scarcest resource on a check that runs on every push. So the sample
+ * shrinks instead, and it is declared HERE — beside the device and scale tables it
+ * is a subset of — so a reviewer can argue with the sample rather than with a YAML
+ * range, and so the plan, the manifest and the docs all read the same one list.
+ *
+ * WHAT IT KEEPS. The cell axis is NOT sampled: the CI tier captures every cell the
+ * relay's registry declares, because a state that is not captured is a state no
+ * review round can report on. Only the device, theme and scale axes shrink, and
+ * each keeps exactly what its check needs:
+ *
+ *   * `iphone-se` (320x568) and `tablet-landscape` (1112x834) are the two width
+ *     EXTREMES the full matrix spans, on the two sides of `TABLET_MIN_WIDTH`: the
+ *     narrowest viewport the app must survive, and the widest one the layout has to
+ *     earn. A defect at 320 or at 1112 is what this sample is looking for.
+ *   * both themes, because the theme-reached-the-render check compares a cell's
+ *     dark and light frames — one theme cannot make it.
+ *   * the 100% floor and the 200% ceiling, which is the pair the text-scale guard
+ *     measures (200% over 100%). 150% is the phone-typical intermediate case and is
+ *     left to `core`.
+ *
+ * That is 32 cells x 2 themes x (2 + 2) device-scales = 256 cells, ~10 minutes at
+ * the measured rate: inside the step bound with most of it spare. `core` and
+ * `full` are unchanged and stay the local and dispatched samples, so the full
+ * 832-cell `core` matrix and the 3008-cell `full` matrix remain runnable — nothing
+ * is only reachable through CI.
+ */
+export const CI_DEVICES: string[] = ["iphone-se", "tablet-landscape"];
+
+/** The scale ids the CI tier runs: the 100% floor and the 200% ceiling. */
+export const CI_SCALES: string[] = ["100", "200"];
+
 export const THEMES = ["dark", "light"];
 
 /** Text scales as a multiplier of the app's default. 1 = the OS default. */
@@ -426,7 +471,19 @@ export const SCREEN_ROOTS: Record<string, string> = {
  * "TO DO" is the thing this table exists to avoid.
  */
 export const PENDING_CELLS: Record<string, string> = {
-	/* The 21 session-view cells: the session route is a placeholder on this head. */
+	/* The 21 session-view cells, INERT ON THIS HEAD, and left in place on purpose.
+	 * They were added while `app/(app)/session/[id].tsx` was a placeholder that drew
+	 * `session-empty` in every state; PR #12 landed the real session view, so the app now
+	 * declares `session-populated` and the rest, and a skip is honoured only while the app
+	 * declares NO marker for the cell's state. Every one of these is therefore REFUSED —
+	 * which is the direction that matters: a session state that stops rendering comes back
+	 * as a `marker` issue and is reported NOT MEASURABLE by name, never quietly skipped.
+	 * What remains is their owner text, which describes the head they were written for and
+	 * is never printed, because the skip is never taken. They are kept rather than deleted
+	 * because `verify.ts`'s "no screen whose empty marker the app declares is left
+	 * unexplained" check reads this table's SCREENS, and removing them there is a change to
+	 * that check's premise (the app no longer omits the session subjects) rather than to
+	 * this registry. */
 	...Object.fromEntries(
 		[
 			"S5/loading",
@@ -472,6 +529,57 @@ export const PENDING_CELLS: Record<string, string> = {
 		"app (src/ui/a11y.ts STATE_MARKER) — ListRow's `ended` receipt changes copy and colour but carries no identifier",
 	"S4/degraded-row":
 		"app (src/ui/a11y.ts STATE_MARKER) — ListRow's `degraded` receipt renders 'not answering' but carries no identifier",
+	/* The scrolled transcript, and it is here rather than only in the PR because this
+	 * table is where a coverage gap is supposed to live. `S5/scroll` was
+	 * `S5/populated-long` under a second name — both were pinned from `long-transcript`'s
+	 * single projection — so the duplicate DECLARATION went and the relay no longer
+	 * declares the cell; the entry is inert for the same reason the session-view block
+	 * above is, since a skip is honoured only while the app declares no marker. What it
+	 * records is the state that is still unmeasured: a scroll POSITION is a viewport
+	 * interaction and not something the wire can declare, so nothing in the harness can
+	 * drive one, and the next person to add a wire action or an app-side id has the
+	 * owner text to read. */
+	"S5/scroll":
+		"harness (tools/visual/capture.ts) — driving a scroll position needs a wire action or an app-side id; until then no cell evidences a scrolled transcript",
+};
+
+/**
+ * Byte-identical frames that are a LIMIT OF THE COMPARISON, not a collapse.
+ *
+ * The identical-frame check compares settled PNG bytes, which is exactly the right test
+ * for "two declared states produced one image" and the wrong test for "two declared states
+ * produced one image OF THE CHROME". At 320 px with 200 % text the session's header,
+ * progress and panel rows fill the whole viewport, so two cells whose transcripts differ
+ * in every row are byte-identical while the app is rendering both states correctly.
+ *
+ * So a byte-identical group is not failed on the bytes alone any more: the harness reads
+ * what each cell is SHOWING without the viewport (`CONTENT_PROBE` — the screen reader's
+ * view: its rendered text and its accessibility labels), and
+ *
+ *   * same bytes AND same content  → a real collapse: reported and failed, as before;
+ *   * same bytes, DIFFERENT content → a DECLARED exemption or nothing. It passes as a
+ *     limitation only when the pair is named here, with the reason a reviewer needs
+ *     (which viewport, and which content differs); an undeclared pair is still a
+ *     FAILURE, so a new collapse cannot quietly exempt itself.
+ *
+ * The key is the group's distinct cell names, sorted, joined with `|`. Keep this table
+ * EMPTY unless a pair is genuinely a camera limit, and let the reason name the viewport
+ * it was measured on: the exemption is a statement about the frame, not about the app.
+ */
+export const IDENTICAL_FRAME_EXEMPTIONS: Record<string, string> = {
+	"S5/populated-long|S5/rich-rows|S5/subagents":
+		"below-the-fold at iphone-se / 200 %: the 320 px column at 200 % text is filled by the " +
+		"session header (`Refactor… client`, the context/task/subagent panel rows), and the rows " +
+		"that distinguish these three cells — the 520-row transcript, the code-block/diff/table " +
+		"rows, and the subagent roster's own rows — start below the viewport, so the PNG is all " +
+		"chrome. The content differs at every device and scale (each cell reaches its own " +
+		"marker), which is what makes this a limit of the camera rather than a collapse. THE " +
+		"GROUP IS THREE NAMES ON ONE ENTRY on purpose: it was declared as " +
+		"`S5/populated-long|S5/rich-rows`, and a third cell joining it when the capture first " +
+		"completed a whole tier — until then the stalls left cells missing and the comparison " +
+		"could not form the group — is evidence that the phenomenon is the one this entry " +
+		"describes, so it extends the statement rather than opening a second entry for the " +
+		"same thing.",
 };
 
 /** Read the resolved theme/scale and the app's own canvas colour, per frame. */
@@ -536,6 +644,41 @@ export const READINESS_PROBE = `
     text,
     elementCount: document.querySelectorAll('*').length,
   };
+})();
+`;
+
+/**
+ * What a cell is SHOWING, read in the way a viewport cannot truncate.
+ *
+ * The identical-frame check compares PNG bytes, which is the right test for "two states
+ * produced one image" and the wrong test for "two states produced one image of the
+ * CHROME". At 320 px with 200 % text the session's header and panels fill the whole
+ * frame, so `S5/populated-long` and `S5/rich-rows` — whose transcripts differ in every
+ * row — measure byte-identical while the app is rendering two different states perfectly
+ * well. This probe is the second opinion: the SCREEN READER's view of the cell (its
+ * rendered text, leaf by leaf, plus every accessibility label), which is what a phone
+ * would read out and what "are these the same state?" actually means. It is not a
+ * substitute for the pixel check — it is what decides whether a byte-identical pair is a
+ * COLLAPSE or a limit of the camera, and `IDENTICAL_FRAME_EXEMPTIONS` is where a
+ * limitation has to be declared before it can be believed.
+ */
+export const CONTENT_PROBE = `
+(() => {
+  const norm = (value) => (value || '').replace(/\\s+/g, ' ').trim();
+  const roots = document.querySelectorAll('[data-testid$="-screen"]');
+  const scope = roots.length > 0 ? roots[0] : document.body;
+  if (!scope) return { text: '', labels: '' };
+  const texts = [];
+  const labels = [];
+  for (const el of scope.querySelectorAll('*')) {
+    if (el.children.length === 0) {
+      const text = norm(el.textContent);
+      if (text) texts.push(text);
+    }
+    const label = norm(el.getAttribute('aria-label'));
+    if (label) labels.push(label);
+  }
+  return { text: texts.join('\\u001f'), labels: labels.join('\\u001f') };
 })();
 `;
 
