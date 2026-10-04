@@ -602,7 +602,8 @@ does not succeed still fails the cell.
    against the design token for the theme it claims, and fails on either. A
    frame with almost nothing mounted is reported as blank rather than passed.
    The canvas half needs `--tokens`: a missing tokens file, or one that carries no
-   canvas for a theme, leaves those frames uncompared, and the run says so —
+   canvas for a theme (an empty value counts as none, not as a canvas), leaves those
+   frames uncompared, and the run says so —
    naming the cause and how many frames went uncompared — instead of printing
    that every frame's canvas matches its cell for a comparison it never made.
    The exit code is unchanged either way, because absent tokens is not a failure
@@ -848,11 +849,12 @@ because the overlap cases above have no clipping ancestor between them, so a fil
 that walked every ancestor instead of the containing-block chain would keep catching
 those while hiding a real defect. And the painted-region rule above is asserted the
 same way, in **both** directions: `data-defect` elements prove the rule still fires,
-and `data-not-defect` elements (`#phantom-over` for U-08, `#inset-clipped` for U-05,
-`#status-row-dot` for U-03) prove it stays silent on the shape it must not report —
-invisible to the eye for the two geometry rules, redundant with the status word beside
-it for U-03 — with the U-08 suppression still required to be RECORDED with its reason,
-so a pair that quietly stopped overlapping cannot pass as a working rule.
+and `data-not-defect` elements (`#phantom-over` for U-08, `#inset-clipped` for U-05)
+prove it stays silent on the shape no user can see — with the U-08 suppression still
+required to be RECORDED with its reason, so a pair that quietly stopped overlapping
+cannot pass as a working rule. `#status-row-dot` is deliberately **not** in that list:
+what proves its silence is the U-03 colour-only-status rule, not the painted-region
+rule, so listing it here would credit this rule with another rule's fixture.
 
 ### A measurement outside the captured frame says so
 

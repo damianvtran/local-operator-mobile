@@ -35,7 +35,7 @@
  */
 
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { bool, csv, num, parseArgs, str } from "../lib/args.ts";
 import type { CdpPage } from "../lib/cdp.ts";
@@ -72,6 +72,11 @@ import {
 	SCREENS,
 	THEMES,
 } from "./matrix.ts";
+import {
+	type CanvasTokens,
+	canvasComparable,
+	canvasTokens,
+} from "./theme-tokens.ts";
 
 /**
  * Frames whose first screenshot attempt failed and whose retry succeeded, for the
@@ -965,8 +970,11 @@ function verifyThemes(
 			const expected = tokens.perTheme?.[theme]?.canvas ?? null;
 			// Counted, not inferred later: `canvasMatchesToken` is `null` both when the
 			// comparison ran and agreed and when it never ran at all, and the summary must
-			// not read the second as the first.
-			if (expected === null) {
+			// not read the second as the first. The test is `canvasComparable` — the SAME one
+			// the verdict below uses, never a second test of its own: an empty-string token
+			// counted as compared here while the verdict skipped it is how the all-clear got
+			// printed over zero comparisons.
+			if (!canvasComparable(expected)) {
 				canvasUncompared += 1;
 				themesWithoutCanvas.add(theme);
 			} else {
@@ -984,7 +992,7 @@ function verifyThemes(
 				expectedCanvas: expected,
 				resolvedTheme: record.resolvedTheme,
 				themeSource: record.measurements?.reported?.themeSource ?? null,
-				canvasMatchesToken: expected
+				canvasMatchesToken: canvasComparable(expected)
 					? rgbEquals(record.canvasColor, expected)
 					: null,
 			};
@@ -1120,78 +1128,6 @@ function rgbEquals(
 		`#${toHex(match[1])}${toHex(match[2])}${toHex(match[3])}` ===
 		hex.toLowerCase()
 	);
-}
-
-/**
- * The design tokens' canvas per theme, and whether the comparison they feed can be
- * made at all.
- *
- * A missing token file is not a failure — the capture still produces frames — but it
- * is not agreement either: with no canvas to compare against, every frame's
- * `canvasMatchesToken` stays `null`, and the summary then printed "every frame's
- * resolved theme and canvas match its cell" for a comparison that never ran. Absence
- * read as a pass is the shape this harness refuses everywhere else, so `reason`
- * carries what the run reports instead of that sentence.
- *
- * The second `existsSync` test this replaces was unreachable — the first guard
- * already returned for a missing file — so it was deleted rather than left as a
- * branch that can never be taken.
- */
-interface CanvasTokens {
-	/**
-	 * Per-theme canvas colour, in exactly the shape the manifest's `meta.themeTokens`
-	 * has always carried: the two themes when they were read, `{}` when no tokens were
-	 * named or found, `null` when one was named and could not be read. Reshaping this
-	 * to report the skip would change an artifact other tools read, so the report lives
-	 * on stdout and this field keeps its meaning.
-	 */
-	readonly perTheme: Record<string, { canvas: string | null }> | null;
-	/** Why the canvas comparison cannot be made, or `null` when it can. */
-	readonly reason: string | null;
-}
-
-/** Read the design tokens' canvas per theme, so a frame can be checked against them. */
-function canvasTokens(tokensPath: string | undefined): CanvasTokens {
-	// `{}`, not `null`: a token file that was never named or never found is the state
-	// this field has always recorded as an empty table, and the manifest must not move
-	// under a fix that is only about saying so.
-	if (!tokensPath) {
-		return { perTheme: {}, reason: "no --tokens path was given" };
-	}
-	if (!existsSync(tokensPath)) {
-		return { perTheme: {}, reason: `no tokens file at ${tokensPath}` };
-	}
-	const tokens = JSON.parse(readFileSync(tokensPath, "utf8"));
-	const tokensBag: unknown = tokens;
-	if (typeof tokensBag !== "object" || tokensBag === null) {
-		return { perTheme: null, reason: `${tokensPath} is not a JSON object` };
-	}
-	const color = (tokensBag as Record<string, unknown>).color;
-	const surface =
-		typeof color === "object" && color !== null
-			? (color as Record<string, unknown>).surface
-			: undefined;
-	const canvas =
-		typeof surface === "object" && surface !== null
-			? (surface as Record<string, unknown>).canvas
-			: undefined;
-	if (typeof canvas !== "object" || canvas === null) {
-		return {
-			perTheme: null,
-			reason: `${tokensPath} carries no color.surface.canvas per theme`,
-		};
-	}
-	const pick = (theme: string): string | null => {
-		const value = (canvas as Record<string, unknown>)[theme];
-		return typeof value === "string" ? value : null;
-	};
-	return {
-		perTheme: {
-			dark: { canvas: pick("dark") },
-			light: { canvas: pick("light") },
-		},
-		reason: null,
-	};
 }
 
 /**
