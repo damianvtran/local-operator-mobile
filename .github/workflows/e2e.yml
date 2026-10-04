@@ -351,6 +351,16 @@ jobs:
         run: pnpm audit:run --manifest "$RUNNER_TEMP/frames/manifest.json" --out "$RUNNER_TEMP/audit"
 
       - name: Run the canary
+        # ALWAYS, AND STILL PLAIN OTHERWISE. The audit step above exits 1 on real app
+        # findings (the U-05/U-08 geometry rows at 200 %), and a step with no `if:`
+        # after a failing one is SKIPPED — verified in run 37177701601, where the
+        # audit's exit 1 left the canary unrun. That silently retires the mutation
+        # self-test exactly while the gate is red, and a self-test that cannot run is
+        # indistinguishable from one that was not needed. No `continue-on-error` and no
+        # `|| true`: the canary still fails the job when it fails. It needs nothing the
+        # steps above produce (it captures its own fixture matrix), so it can run on a
+        # red audit.
+        if: always()
         timeout-minutes: 5
         # The gate that stops the audit rotting into a rubber stamp: the fixture
         # page declares its own defects, so this fails if the audit stops catching
