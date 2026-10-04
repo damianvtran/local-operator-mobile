@@ -72,46 +72,6 @@ export function unreadBadgeCount(block: UnreadBlock | null): number | null {
 }
 
 /**
- * The three sections, in the order the relay's own catalogue ranks them.
- *
- * **Nothing here re-sorts.** The relay sorts rows on the shared catalogue key so
- * the phone, the TUI and the desktop agree (`daemon.py`), and a client that
- * re-ordered them would be a fourth opinion. Grouping preserves the incoming
- * order within each section.
- *
- * `pinned` is a durable store that all three surfaces share, which is why a
- * pinned row appears here and not only in the app that pinned it.
- */
-export type SessionSections = {
-	pinned: SessionSummary[];
-	active: SessionSummary[];
-	previous: SessionSummary[];
-};
-
-export function splitSections(
-	sessions: readonly SessionSummary[],
-): SessionSections {
-	const out: SessionSections = { pinned: [], active: [], previous: [] };
-	for (const session of sessions) {
-		/* Pinned outranks the section: a pinned previous conversation belongs with
-		 * the pinned ones, or pinning an old session would appear to do nothing. */
-		if (session.pinned) out.pinned.push(session);
-		else if (session.section === "previous") out.previous.push(session);
-		else out.active.push(session);
-	}
-	return out;
-}
-
-/** True when any row is a candidate for the section headings at all. */
-export function hasSections(sections: SessionSections): boolean {
-	return (
-		sections.pinned.length > 0 ||
-		sections.active.length > 0 ||
-		sections.previous.length > 0
-	);
-}
-
-/**
  * The stale line, or `null`.
  *
  * The cold-start rule (`docs/architecture.md` § Lifecycle) is that the last known
@@ -212,6 +172,111 @@ export function degradedNote(degraded: readonly string[]): string | null {
  *
  * Each variant keeps its long counterpart's distinction — rows missing, markers
  * stale, or both — so the three states remain three states in words. */
+/**
+ * The conversations panel's sections, and the row's relative time — the
+ * desktop's own vocabulary and rules (`local-operator-ui` `chat-list-sections.ts`,
+ * read at 854afeb7), adopted here because the panel IS the sessions list now.
+ *
+ *   RUNNING    a turn is live or waiting on the reader (`streaming ||
+ *              needs_attention`). Never collapsed, and **no time**: a running
+ *              row's time is "now", which says nothing.
+ *   TODAY      last moved on this local calendar day. Calendar days rather than a
+ *              rolling 24 h, because "today" is the word on screen: a
+ *              conversation from 11 pm yesterday is not from today at 9 am,
+ *              whatever the arithmetic says.
+ *   THIS WEEK  within the last seven days, and not today.
+ *   OLDER      everything else.
+ *
+ * PINNED outranks the binning — the app's existing rule (a pinned previous
+ * conversation belongs with the pinned ones, or pinning appears to do nothing).
+ *
+ * **Nothing here re-sorts.** The relay's order holds inside each bucket, exactly
+ * as it did in the old sections; bucketing is `filter`.
+ *
+ * The time basis is `(created_at ?? mtime) × 1000` — both are epoch SECONDS on
+ * the wire (`SessionSummary`), and `created_at` is absent on older relays.
+ */
+export type SidebarSections = {
+	pinned: SessionSummary[];
+	running: SessionSummary[];
+	today: SessionSummary[];
+	week: SessionSummary[];
+	older: SessionSummary[];
+};
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** A row's time in epoch MILLISECONDS: the activity clock, or the conversation's
+ *  birth when a relay predates `created_at`. */
+export function rowTimeMs(session: SessionSummary): number {
+	return (session.created_at ?? session.mtime) * 1000;
+}
+
+/** Local midnight for `now` — the boundary "Today" means. */
+const startOfDayMs = (now: number): number => {
+	const date = new Date(now);
+	date.setHours(0, 0, 0, 0);
+	return date.getTime();
+};
+
+export function splitSidebarSections(
+	sessions: readonly SessionSummary[],
+	now: number = Date.now(),
+): SidebarSections {
+	const out: SidebarSections = {
+		pinned: [],
+		running: [],
+		today: [],
+		week: [],
+		older: [],
+	};
+	const startOfDay = startOfDayMs(now);
+	for (const session of sessions) {
+		if (session.pinned) {
+			out.pinned.push(session);
+			continue;
+		}
+		if (session.streaming || session.needs_attention) {
+			out.running.push(session);
+			continue;
+		}
+		const at = rowTimeMs(session);
+		if (at >= startOfDay) out.today.push(session);
+		else if (now - at < 7 * DAY_MS) out.week.push(session);
+		else out.older.push(session);
+	}
+	return out;
+}
+
+/**
+ * The row's trailing relative time — `now`, `5 min`, `3h`, `2d` — the companion
+ * of the sections above. Without it a time-based section is illegible: the
+ * section says WHEN, the row must say how long ago.
+ *
+ * Minutes are spelled `min` (the spec's own examples). Weeks and years fold the
+ * same way the desktop's `relativeTime` does, so a long-cold row stays short.
+ *
+ * `null` for a row the panel paints no time on — a running row (see the section
+ * comment above). The rule lives HERE, not at the render site, so the row and
+ * the section cannot disagree about which rows carry a time.
+ */
+export function relativeTimeFor(
+	session: SessionSummary,
+	now: number = Date.now(),
+): string | null {
+	if (session.streaming || session.needs_attention) return null;
+	const minutes = Math.floor(Math.max(0, now - rowTimeMs(session)) / 60_000);
+	if (minutes < 1) return "now";
+	if (minutes < 60) return `${minutes} min`;
+	const hours = Math.floor(minutes / 60);
+	if (hours < 24) return `${hours}h`;
+	const days = Math.floor(hours / 24);
+	if (days < 7) return `${days}d`;
+	const weeks = Math.floor(days / 7);
+	if (days < 365) return `${weeks}w`;
+	return `${Math.floor(days / 365)}y`;
+}
+
 export function degradedShortNote(degraded: readonly string[]): string {
 	if (degraded.includes("sessions") && degraded.includes("attention"))
 		return "This list may be incomplete.";

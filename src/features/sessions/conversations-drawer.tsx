@@ -1,0 +1,173 @@
+import { useEffect, useRef } from "react";
+import {
+	Animated,
+	Easing,
+	Keyboard,
+	Modal,
+	Pressable,
+	useWindowDimensions,
+	View,
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+import { ConversationsPane } from "@/features/sessions/conversations-pane";
+import { ROLE, SURFACE } from "@/ui/a11y";
+import { useReducedMotion, useTokenColor } from "@/ui/appearance";
+import { useShadow } from "@/ui/elevation";
+import { sidebarWidthFor } from "@/ui/layout";
+import { effectiveDuration, parseCubicBezier } from "@/ui/motion";
+import { TextScaleProvider } from "@/ui/text-scale-provider";
+import { DURATIONS, EASINGS } from "@/ui/tokens.gen";
+
+/**
+ * The conversations drawer: the temporary variant of Material's navigation
+ * drawer, which is the one Material requires on a phone.
+ *
+ * **It is an overlay, not a route.** The panel is not a destination — closing it
+ * returns the reader to the composer they were on, the draft included — so it is
+ * a `Modal` over the home rather than a pushed screen. The panel COVERs; the home
+ * beneath is never unmounted (a push would lose a draft and re-run the home's
+ * cold-start effects). The panel itself, ruled by the spec: `elevated` ground,
+ * the overlay shadow, and the scoped `panel-edge` edge. It is a token decision,
+ * not a colour hack here: in dark the fill's own step against the scrim ground
+ * measured 1.38:1 (D-dark-1) and no scrim alpha fixed it. The drawer consumes
+ * the role derived for exactly this pair — measured 4.53:1 against the scrim
+ * ground and 3.28:1 against the panel (`design/tokens/contrast-contract.mjs`
+ * § 'the overlay panel edge'). Light was already clean (its fill ≈ 8.2:1) and
+ * keeps the soft hairline step.
+ *
+ * **Dismissal is threefold, and all three close the same way**: the scrim, the
+ * pane's own close control, and Android's back gesture (`onRequestClose` — the
+ * flow § 11 rule that every modal surface is back-dismissible). Closing dismisses
+ * the keyboard first when the composer had focus, so the reader sees the home
+ * they were returning to rather than a keyboard over it.
+ *
+ * The slide is `duration.slow` through `effectiveDuration`, so reduced motion
+ * caps it instead of killing it (a press is a press); the scrim fades on
+ * `duration.fast`. Same pattern as `Sheet`, deliberately — one motion idiom.
+ */
+export type ConversationsDrawerProps = {
+	visible: boolean;
+	onClose: () => void;
+	/** The home's staging slot: close, then focus the composer (the home owns
+	 *  the field, so only it can do the second half). */
+	onNewChat?: () => void;
+	/** The programmatic notice line (ADR 0006 § 6.6). */
+	notice?: string | null;
+	/** The relay's home path, for the rows' `~`-shortened cwd. */
+	homeDirectory?: string | null;
+};
+
+export const ConversationsDrawer = ({
+	visible,
+	onClose,
+	onNewChat,
+	notice,
+	homeDirectory,
+}: ConversationsDrawerProps) => {
+	const insets = useSafeAreaInsets();
+	const { width } = useWindowDimensions();
+	const panelWidth = sidebarWidthFor(width);
+	const reduceMotion = useReducedMotion();
+	const shadow = useShadow("overlay");
+	const scrimColour = useTokenColor("scrim");
+	const slide = useRef(new Animated.Value(0)).current;
+	const scrimFade = useRef(new Animated.Value(0)).current;
+
+	useEffect(() => {
+		if (!visible) {
+			slide.setValue(0);
+			scrimFade.setValue(0);
+			return;
+		}
+		Animated.parallel([
+			Animated.timing(slide, {
+				toValue: 1,
+				duration: effectiveDuration(DURATIONS.slow, reduceMotion),
+				easing: Easing.bezier(...parseCubicBezier(EASINGS["out-expo"])),
+				useNativeDriver: true,
+			}),
+			Animated.timing(scrimFade, {
+				toValue: 1,
+				duration: effectiveDuration(DURATIONS.fast, reduceMotion),
+				useNativeDriver: true,
+			}),
+		]).start();
+	}, [visible, slide, scrimFade, reduceMotion]);
+
+	const close = () => {
+		/* The keyboard yields first: the composer is where the reader came from,
+		 * and a keyboard that outlives the drawer would sit over the home at the
+		 * moment it is shown. */
+		Keyboard.dismiss();
+		onClose();
+	};
+
+	return (
+		<Modal
+			visible={visible}
+			transparent
+			animationType="none"
+			onRequestClose={close}
+			// The covered application is inert while the drawer is up: `aria-modal`
+			// alone does not remove it from keyboard or screen-reader navigation.
+			accessibilityViewIsModal
+		>
+			<View className="flex-1">
+				<Animated.View
+					style={{ opacity: scrimFade }}
+					className="absolute inset-0"
+				>
+					<Pressable
+						className="flex-1"
+						style={{ backgroundColor: scrimColour }}
+						accessibilityRole={ROLE.button}
+						accessibilityLabel="Close conversations"
+						onPress={close}
+					/>
+				</Animated.View>
+
+				<Animated.View
+					className="absolute inset-y-0 left-0"
+					testID={SURFACE.sidebar}
+					style={{
+						width: panelWidth,
+						...shadow,
+						transform: [
+							{
+								translateX: slide.interpolate({
+									inputRange: [0, 1],
+									outputRange: [-panelWidth, 0],
+								}),
+							},
+						],
+					}}
+				>
+					<View
+						className="flex-1 border-panel-edge border-r bg-elevated"
+						style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}
+					>
+						{/* The type scale is re-published INSIDE the Modal because a modal is a
+						 *  PORTAL: react-native-web appends its node to `document.body`, OUTSIDE the
+						 *  `ScopedVariables` div the app's provider renders, so the pane's
+						 *  `var(--text-*)` fell back to the stylesheet's fixed px values and the
+						 *  drawer was the one surface that ignored the reader's text size —
+						 *  measured by the capture: at iphone-se / 200 % the drawer's cells scaled
+						 *  1.0-1.17x while every surface beside them scaled 2.00x (PR #34 review
+						 *  round 2, F1). On native the provider is context-only, so this
+						 *  re-declares the same values rather than computing a second scale. */}
+						<TextScaleProvider>
+							<ConversationsPane
+								onClose={close}
+								onNavigate={close}
+								onNewChat={onNewChat}
+								notice={notice}
+								homeDirectory={homeDirectory}
+							/>
+						</TextScaleProvider>
+					</View>
+				</Animated.View>
+			</View>
+		</Modal>
+	);
+};

@@ -42,8 +42,10 @@
   | #label-mismatch       | U-10  | visible "Approve", accessible name "Confirm"         |
   | #escape-pinned        | U-08-escape-absolute | an absolute node a clipping ancestor cannot clip |
   | #fixed-escape         | U-08-escape-fixed | a fixed node under the same non-clipping ancestor |
+  | #modal-collide-a/b    | U-08  | two controls colliding INSIDE one dialog still fail  |
+  | #dialog-band-control  | U-05-top-dialog | dialog CONTENT (a control) raised into the band still fails |
 
-  Three of the entries are the INVERSE declaration, `data-not-defect`: elements the
+  Seven of the entries are the INVERSE declaration, `data-not-defect`: elements the
   audit must NOT report. A rule is only worth trusting when it is shown both to fire
   on a defect and to stay silent on the shape it must not fire on, and the two
   directions are asserted in the same run so neither can be satisfied by an
@@ -56,7 +58,23 @@
                the notch band, its painted top sits exactly at the inset's edge);
                #status-row-dot must produce no U-03 row (its status word `approval`
                sits beside it in the same control), while #status-dot — the same dot
-               with no word at all, in a panel that HAS a heading — must still fail.
+               with no word at all, in a panel that HAS a heading — must still fail;
+               #modal-covered and #modal-backdrop must produce no FAIL row (the
+               dialog's `aria-modal` boundary and its own opaque surface separate
+               them from what they sit over; both suppressions must be RECORDED with
+               the rule's own reason), while #modal-collide-a/b — two controls
+               colliding inside the SAME dialog, no surface between them — must
+               still fail;
+               #dialog-surface must produce no U-05 row (a modal dialog's own
+               full-height ground is a surface, not content), while
+               #dialog-band-control — that dialog's own control raised into the
+               band — must still fail, or the exemption would be indistinguishable
+               from a blanket;
+               #dismiss-host must produce no U-05 row either: it is a modal's own
+               fixed, viewport-covering layer, and the band is held by the
+               dialog's dismiss layer — a control role, but one that dismisses
+               from anywhere, so nothing in the band is a target a reader must
+               reach.
 -->
 <html lang="en">
 <head>
@@ -186,6 +204,80 @@
 <div class="bad" style="position:relative;height:120px">
 	<div id="inset-clipper" style="position:absolute;top:0;left:0;width:200px;height:120px;overflow:hidden">
 		<div id="inset-clipped" data-not-defect="U-05" role="button" aria-label="Clipped above the inset edge" style="position:absolute;top:-10px;left:0;width:200px;height:44px;background:var(--surface);border:1px solid var(--border)"></div>
+	</div>
+</div>
+
+<!-- U-08's MODAL LAYERING and U-05's modal surface: a modal dialog covering the
+     app is the layering a user reads as "a drawer is open", not two things
+     colliding. `aria-modal="true"` is the standard declaration that everything
+     outside the dialog is inert while it is open, and it is what tells the rules
+     so — never a per-page list.
+
+     BOTH DIRECTIONS, in one shape. #modal-covered (outside the dialog) and
+     #modal-backdrop (inside it, under its opaque panel) must produce no FAIL row
+     — recorded instead as suppressions with the rule's own reason — while
+     #modal-collide-a/b, two controls colliding INSIDE the same dialog with no
+     opaque surface between them, must still fail exactly as a plain overlap does.
+     And #dialog-surface, the dialog's own full-height ground at the viewport
+     edge, must stay silent under U-05 while #dialog-band-control — that same
+     dialog's CONTROL, raised into the band — must still fail.
+     The block sits high in the flow on purpose: the page's own fixed bars
+     (#footer-flush, #opaque-pin) occupy the bottom band, and a mid-page block
+     would cross it in landscape and manufacture pairs with them. -->
+<div class="bad panel" style="position:relative;height:220px">
+	<!-- The label's size is PINNED small on purpose: as a full-size h2 it wrapped to
+	     two lines at 200% and its glyphs painted onto #modal-covered (measured:
+	     120x44pt, 100% of the button) — a real overlap with a must-not-report
+	     element. At 0.75rem it stays one line under every scale the matrix uses
+	     (24px at 200% x 19 characters < the narrowest portrait content width), so
+	     its painted region clears the members' zone at every scale. -->
+	<h2 style="font-size:0.75rem">U-08 modal layering</h2>
+	<!-- Controls with an accessible name and NO text, like the escape shapes: a
+	     fixed-height element carrying text would sit at one height in both scale
+	     snapshots and drag the per-cell text-scale median below the instrument's
+	     1.9x guard (measured: this page fell to 1.71x while these carried text). -->
+	<button class="control" id="modal-covered" data-not-defect="U-08" data-not-defect-reason="modal-layer" aria-label="Covered control" style="position:absolute;top:96px;left:100px;width:120px;height:44px"></button>
+	<div id="modal-shell" role="dialog" aria-modal="true" aria-label="Demo dialog" style="position:absolute;top:64px;left:80px;width:220px;height:140px">
+		<button class="control" id="modal-backdrop" data-not-defect="U-08" data-not-defect-reason="modal-surface" aria-label="Dismiss the dialog" style="position:absolute;top:10px;left:0;width:120px;height:60px;background:rgba(178,58,49,0.35)"></button>
+		<div id="modal-panel" style="position:absolute;top:0;left:0;width:160px;height:140px;background:var(--surface);border:1px solid var(--border)">
+			<button class="control" id="modal-control" aria-label="In dialog" style="position:absolute;top:20px;left:10px;width:120px;height:44px"></button>
+			<button class="control" id="modal-collide-a" data-defect="U-08" aria-label="Alpha block" style="position:absolute;top:72px;left:10px;width:120px;height:44px"></button>
+			<button class="control" id="modal-collide-b" data-defect="U-08" aria-label="Beta block" style="position:absolute;top:82px;left:30px;width:120px;height:44px"></button>
+		</div>
+	</div>
+</div>
+
+<!-- U-05's modal surface. The carrier (#dialog-fixture) is the aria-modal
+     element, so the SURFACE and the CONTROL are siblings: a FAIL row for the
+     control must not name the surface merely as an ancestor of its
+     subject — the canary's "must-not-report" reads the row's whole path. -->
+<div class="bad" id="dialog-fixture" role="dialog" aria-modal="true" aria-label="Dialog fixture" style="position:fixed;top:0;right:0;width:0;height:0">
+	<div id="dialog-surface" data-not-defect="U-05" style="position:fixed;top:0;right:0;width:8px;height:100%;background:var(--surface);border-left:1px solid var(--border)"></div>
+	<button class="control" id="dialog-band-control" data-defect="U-05-top-dialog" aria-label="Dialog control in the band" style="position:fixed;top:0;right:0;width:44px;height:44px"></button>
+</div>
+
+<!-- U-05's modal DISMISS layer — the shape react-native-web paints around an open
+     modal: a fixed, viewport-covering HOST that carries no text and no control of
+     its own, holding the aria-modal dialog whose band is occupied by the dialog's
+     dismiss layer. That layer carries a CONTROL role but is not a target a reader
+     must reach — it dismisses from anywhere — so the band holds nothing a thumb
+     must find; contrast #footer-flush, where the band IS the target. Without the
+     host's set-aside it reports "pinned content is 0pt from the bottom" for a
+     layer that exists only because the modal is open — the class the conversations
+     drawer produced at iphone-15 (design round 4).
+
+     The dismiss layer is bounded, and placed clear of this page's own fixtures,
+     deliberately: it must add NO U-08 pairs, because the suppression rows are
+     capped per cell (8) and a page-covering control would crowd the rows the
+     canary reads for #modal-covered, #modal-backdrop and #phantom-over out of
+     their cells. The app's own scrim is full-bleed; what this block holds is the
+     HOST's set-aside and the layer's role, and #dialog-band-control keeps the
+     failing direction so neither declaration reads as a blanket. -->
+<div class="bad" id="dismiss-host" data-not-defect="U-05" style="position:fixed;top:0;left:0;right:0;bottom:0">
+	<div id="dismiss-dialog" role="dialog" aria-modal="true" aria-label="Dismiss layer fixture" style="position:fixed;top:0;left:0;right:0;bottom:0">
+		<button class="control" id="dismiss-scrim" aria-label="Dismiss the layer" style="position:absolute;top:70px;left:230px;width:120px;height:60px;background:rgba(178,58,49,0.35)">
+			<svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8" fill="var(--accent)"/></svg>
+		</button>
 	</div>
 </div>
 
@@ -353,7 +445,7 @@
 	<div id="phantom-clipper" style="position:absolute;top:0;left:0;width:120px;height:40px;overflow:hidden">
 		<div id="phantom-under" role="button" aria-label="Clipped under" style="position:absolute;top:0;left:0;width:120px;height:140px;background:var(--surface);border:1px solid var(--border)"></div>
 	</div>
-	<div id="phantom-over" data-not-defect="U-08" role="button" aria-label="Beside it" style="position:absolute;top:100px;left:0;width:120px;height:44px;background:var(--surface);border:1px solid var(--border)"></div>
+	<div id="phantom-over" data-not-defect="U-08" data-not-defect-reason="painted-disjoint" role="button" aria-label="Beside it" style="position:absolute;top:100px;left:0;width:120px;height:44px;background:var(--surface);border:1px solid var(--border)"></div>
 </div>
 
 <!-- U-08's ESCAPE branch: a node whose containing block is ABOVE an ancestor that clips.

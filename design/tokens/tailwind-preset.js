@@ -51,6 +51,7 @@ const colors = {
 	"hairline": "var(--lo-hairline)",
 	"hairline-strong": "var(--lo-hairline-strong)",
 	"border-control": "var(--lo-border-control)",
+	"panel-edge": "var(--lo-panel-edge)",
 	"accent": "var(--lo-accent)",
 	"accent-hover": "var(--lo-accent-hover)",
 	"accent-active": "var(--lo-accent-active)",
@@ -176,6 +177,7 @@ module.exports.cssVariables = () => `
 	--lo-hairline: #dad5cb;
 	--lo-hairline-strong: #c9c3b6;
 	--lo-border-control: #857f70;
+	--lo-panel-edge: #dad5cb;
 	--lo-accent: #137742;
 	--lo-accent-hover: #116036;
 	--lo-accent-active: #0c4b2a;
@@ -228,6 +230,7 @@ module.exports.cssVariables = () => `
 	--lo-hairline: #403b2c;
 	--lo-hairline-strong: #4d4633;
 	--lo-border-control: #837c6d;
+	--lo-panel-edge: #857b69;
 	--lo-accent: #38c96a;
 	--lo-accent-hover: #5ad584;
 	--lo-accent-active: #2bb25c;
@@ -274,6 +277,7 @@ module.exports.themeBlock = () => `
 	--color-hairline: var(--lo-hairline);
 	--color-hairline-strong: var(--lo-hairline-strong);
 	--color-border-control: var(--lo-border-control);
+	--color-panel-edge: var(--lo-panel-edge);
 	--color-accent: var(--lo-accent);
 	--color-accent-hover: var(--lo-accent-hover);
 	--color-accent-active: var(--lo-accent-active);

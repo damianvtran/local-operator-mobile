@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { type FrameRecord, findIdenticalFrames } from "./identical-states.ts";
 
 /**
- * The four outcomes of the identical-frame check, each asserted on its own.
+ * The five outcomes of the identical-frame check, each asserted on its own.
  *
  * Why this exists at all: `identicalStateUndeclared` joined the blocking total in the
  * same change that introduced it, and a blocking term nobody can make fire on purpose
@@ -33,7 +33,12 @@ describe("findIdenticalFrames", () => {
 			cell("S5", "populated", "aaaa", "one"),
 			cell("S5", "populated", "aaaa", "one", { device: "tablet-landscape" }),
 		]);
-		expect(result).toEqual({ collapses: [], undeclared: [], exemptions: [] });
+		expect(result).toEqual({
+			collapses: [],
+			undeclared: [],
+			exemptions: [],
+			coincidences: [],
+		});
 	});
 
 	it("says nothing when the frames differ", () => {
@@ -41,7 +46,12 @@ describe("findIdenticalFrames", () => {
 			cell("S5", "populated", "aaaa", "one"),
 			cell("S5", "empty", "bbbb", "two"),
 		]);
-		expect(result).toEqual({ collapses: [], undeclared: [], exemptions: [] });
+		expect(result).toEqual({
+			collapses: [],
+			undeclared: [],
+			exemptions: [],
+			coincidences: [],
+		});
 	});
 
 	it("reports a COLLAPSE when the bytes and the content agree", () => {
@@ -54,6 +64,50 @@ describe("findIdenticalFrames", () => {
 		expect(result.collapses[0]).toContain("carry the same content");
 		expect(result.undeclared).toEqual([]);
 		expect(result.exemptions).toEqual([]);
+		expect(result.coincidences).toEqual([]);
+	});
+
+	it("passes a DECLARED one-view pair — the composed case, not a collapse", () => {
+		// The pair the coincidence table was opened for: at tablet-landscape
+		// `/conversations` renders the home with the panel docked, so S15/empty and
+		// S4/idle are one view and BOTH cells are evidential — each reaches its own
+		// root and marker inside it. Declared, it is reported as a coincidence; the
+		// same bytes and the same content are what the composition SHOULD produce.
+		const result = findIdenticalFrames([
+			cell("S15", "empty", "aaaa", "one", {
+				cell: "S15/empty",
+				device: "tablet-landscape",
+			}),
+			cell("S4", "idle", "aaaa", "one", {
+				cell: "S4/idle",
+				device: "tablet-landscape",
+			}),
+		]);
+		expect(result.collapses).toEqual([]);
+		expect(result.undeclared).toEqual([]);
+		expect(result.coincidences).toHaveLength(1);
+		expect(result.coincidences[0]).toContain("S15/empty = S4/idle");
+		expect(result.coincidences[0]).toContain(
+			"declared one view for both states",
+		);
+	});
+
+	it("refuses the declaration the moment a cell stops being evidential", () => {
+		// `ready: false` is the guard's verdict that the cell shows the app's fallback
+		// screen: a non-evidential partition can never declare itself out of a collapse.
+		const result = findIdenticalFrames([
+			cell("S15", "empty", "aaaa", "one", {
+				cell: "S15/empty",
+				device: "tablet-landscape",
+			}),
+			cell("S4", "idle", "aaaa", "one", {
+				cell: "S4/idle",
+				device: "tablet-landscape",
+				ready: false,
+			}),
+		]);
+		expect(result.collapses).toHaveLength(1);
+		expect(result.coincidences).toEqual([]);
 	});
 
 	it("reports an UNDECLARED pair — the blocking term — when only the bytes agree", () => {
@@ -96,7 +150,12 @@ describe("findIdenticalFrames", () => {
 			cell("S5", "populated", "aaaa", "one", skipped),
 			cell("S5", "empty", "aaaa", "one", skipped),
 		]);
-		expect(result).toEqual({ collapses: [], undeclared: [], exemptions: [] });
+		expect(result).toEqual({
+			collapses: [],
+			undeclared: [],
+			exemptions: [],
+			coincidences: [],
+		});
 	});
 
 	it("ignores a group made only of frames that never reached their state", () => {
@@ -107,7 +166,12 @@ describe("findIdenticalFrames", () => {
 			cell("S5", "error", "aaaa", "signed-out", unready),
 			cell("S5", "populated", "aaaa", "populated", unready),
 		]);
-		expect(result).toEqual({ collapses: [], undeclared: [], exemptions: [] });
+		expect(result).toEqual({
+			collapses: [],
+			undeclared: [],
+			exemptions: [],
+			coincidences: [],
+		});
 	});
 
 	it("still reports a collapse when a ready cell shares the bytes with an unready one", () => {

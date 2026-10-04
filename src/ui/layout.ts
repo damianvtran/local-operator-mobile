@@ -67,8 +67,12 @@ export {
 	type Layout,
 	layoutFor,
 	type Orientation,
+	SIDEBAR_MIN_WIDTH,
+	SIDEBAR_MOBILE_MAX,
+	SIDEBAR_SLIVER,
 	type SizeClass,
 	SPLIT_MIN_HEIGHT,
 	SPLIT_MIN_WIDTH,
 	SPLIT_PANE_WIDTH,
+	sidebarWidthFor,
 } from "@/ui/size-class";

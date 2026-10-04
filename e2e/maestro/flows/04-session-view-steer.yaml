@@ -75,4 +75,4 @@ env:
 # - assertNotVisible:
 #     id: "streaming-shimmer"
 - assertVisible:
-    id: "sessions-screen"
+    id: "home-screen"

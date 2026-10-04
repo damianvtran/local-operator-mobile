@@ -52,7 +52,7 @@ describe("presence and visibility are two different questions", () => {
 		expect(
 			readinessProblems(
 				frame({
-					screen: "S4",
+					screen: "S15",
 					state: "populated",
 					presentIds: ["sessions-screen", "session-row-6714def86197"],
 					visibleIds: ["sessions-screen"],
@@ -66,14 +66,14 @@ describe("presence and visibility are two different questions", () => {
 		expect(
 			readinessProblems(
 				frame({
-					screen: "S4",
+					screen: "S15",
 					state: "populated",
 					presentIds: ["sessions-screen", "session-row-6714def86197"],
 					visibleIds: ["session-row-6714def86197"],
 				}),
 			),
 		).toEqual([
-			"no 'sessions-screen' root in the DOM: the app did not render screen S4",
+			"no 'sessions-screen' root in the DOM: the app did not render screen S15",
 		]);
 	});
 
@@ -81,7 +81,7 @@ describe("presence and visibility are two different questions", () => {
 		// The negative control for the split: presence is not a licence to pass on absence.
 		const issues = readinessIssues(
 			frame({
-				screen: "S4",
+				screen: "S15",
 				state: "populated",
 				presentIds: ["sessions-screen"],
 				visibleIds: ["sessions-screen"],
@@ -98,7 +98,7 @@ describe("presence and visibility are two different questions", () => {
 		expect(
 			readinessProblems(
 				frame({
-					screen: "S4",
+					screen: "S15",
 					state: "populated",
 					presentIds: [
 						"sessions-screen",
@@ -113,20 +113,64 @@ describe("presence and visibility are two different questions", () => {
 				"the state was never reached",
 		]);
 	});
+
+	it("does not read another surface's empty state as this cell's miss", () => {
+		// The home composes with the docked conversations panel at tablet-landscape:
+		// the panel's empty state beside the home is the OTHER surface's, and the home
+		// is not in it. Reading every `*-empty` refused this cell for a panel that was
+		// correctly empty (PR #34 review round 2, F1) — the prohibition now reads the
+		// empty marker the cell's own surface declares, and the home declares none.
+		expect(
+			readinessProblems(
+				frame({
+					screen: "S4",
+					state: "idle",
+					root: "home-screen",
+					presentIds: ["home-screen", "home-idle", "sessions-empty"],
+					visibleIds: ["home-screen"],
+				}),
+			),
+		).toEqual([]);
+	});
+
+	it("keeps the affirmative half's tooth when the own marker is missing", () => {
+		// Scoping the prohibition must not cost the marker rule: a frame showing only
+		// the docked panel's empty state and no `home-idle` is still refused — for the
+		// missing marker, not for the other surface's empty marker.
+		const issues = readinessIssues(
+			frame({
+				screen: "S4",
+				state: "idle",
+				root: "home-screen",
+				presentIds: ["home-screen", "sessions-empty"],
+				visibleIds: ["home-screen"],
+			}),
+		);
+		expect(issues.map((issue) => issue.kind)).toEqual(["marker"]);
+		expect(issues[0]?.message).toContain(
+			"the marker 'home-idle' is not in the DOM",
+		);
+	});
 });
 
 describe("the marker is the app's, read rather than built", () => {
 	it("asks for the id the app declares, not `${subject}-${state}`", () => {
 		// `past/populated` is `past-row-`, a family prefix; the derivation would be
-		// `past-populated`, which no frame can carry.
+		// `past-populated`, which no frame can carry. The old `sessions` subject is
+		// the PANEL's `sidebar` now, and the home (`S4`) answers with its own ids.
 		expect(requiredStateMarker("S10", "populated")).toBe("past-row-");
-		expect(requiredStateMarker("S4", "empty")).toBe("sessions-empty");
+		expect(requiredStateMarker("S15", "empty")).toBe("sessions-empty");
 		expect(requiredStateMarker("S2", "error")).toBe("connection-refusal");
+		expect(requiredStateMarker("S4", "idle")).toBe("home-idle");
 	});
 
 	it("keeps a variant on the marker of the state it renders", () => {
-		expect(requiredStateMarker("S4", "populated-long")).toBe("session-row-");
-		expect(requiredStateMarker("S4", "narrow")).toBe("session-row-");
+		expect(requiredStateMarker("S15", "populated-long")).toBe("session-row-");
+		expect(requiredStateMarker("S15", "narrow")).toBe("session-row-");
+		// The panel's degraded-listing variant renders the same look as `degraded`.
+		expect(requiredStateMarker("S15", "degraded-listing")).toBe(
+			"sessions-degraded-banner",
+		);
 		expect(requiredStateMarker("path:/clean/clean", "clean")).toBeNull();
 	});
 });
@@ -165,11 +209,14 @@ describe("the wait covers a state still arriving, and nothing else", () => {
  * the checks that passed there were reported under the cell's name.
  */
 describe("a re-driven page must reach the state its record names", () => {
-	/** `S4/populated` as the capture renders it: route `/`, root present, marker present. */
+	/** `S15/populated` as the capture renders it behind the panel: route
+	 *  `/conversations`, root present, marker present. (The list's cells were `S4/*`
+	 *  on `/` until the composer home landed; this fixture follows the capture the
+	 *  same way the scenario registry's cells took their re-home.) */
 	const recorded = {
-		screen: "S4",
+		screen: "S15",
 		state: "populated",
-		askedPath: "/",
+		askedPath: "/conversations",
 		root: "sessions-screen",
 	};
 
@@ -178,7 +225,7 @@ describe("a re-driven page must reach the state its record names", () => {
 			reDriveMismatch({
 				...recorded,
 				reading: {
-					path: "/",
+					path: "/conversations",
 					testIds: ["sessions-screen", "session-row-6714def86197"],
 					visibleTestIds: ["sessions-screen"],
 				},
@@ -197,7 +244,7 @@ describe("a re-driven page must reach the state its record names", () => {
 			},
 		});
 		expect(mismatch).toContain(
-			"the app is on '/welcome' but the cell asked for '/'",
+			"the app is on '/welcome' but the cell asked for '/conversations'",
 		);
 		expect(mismatch).toContain("no 'sessions-screen' root in the DOM");
 		expect(mismatch).toContain("the marker 'session-row-' is not in the DOM");
@@ -216,7 +263,7 @@ describe("a re-driven page must reach the state its record names", () => {
 			reDriveMismatch({
 				...recorded,
 				reading: {
-					path: "/",
+					path: "/conversations",
 					testIds: ["sessions-screen", "sessions-empty"],
 					visibleTestIds: ["sessions-screen"],
 				},

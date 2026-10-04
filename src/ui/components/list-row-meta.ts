@@ -13,13 +13,28 @@ import { TYPE_STEPS } from "@/ui/tokens.gen";
  * looks at, elided from the TAIL instead: the model read `anthropic/claude-opu…`
  * (the vendor, identical on every row of that provider) and the path
  * `~/workspace/clients/m…` (the head, identical on every row of that folder).
- * The direction of the loss is the whole point of the design round's D26 —
- * `anthropic/` names a vendor, `…claude-opus-5` names a model — so it is decided
- * as a string here and both platforms render the same characters, by
- * construction rather than by a flag one of them happens to honour. And the
- * string is a copy decision no flag can express even where the flag works: a head
- * ellipsis slides its window and yields `…hropic/claude-opus-5`, which still
- * carries most of the vendor. D26 asks for the PREFIX to be the part that goes.
+ * The direction is decided by WHAT THE FIELD IS, and the two fields decide
+ * differently on purpose (D26, review round 5, and R-3, 2026-10-03):
+ *
+ *  - **The model keeps its TAIL** — the name after the slash. `anthropic/`
+ *    names a vendor, `…claude-opus-5` names a model (D26: "the PREFIX is the
+ *    part that goes").
+ *  - **The working directory keeps its HEAD** — R-3 reversed D26's original
+ *    choice for the path on a rendered frame: the row showed the title with its
+ *    head intact (`Refactor the payment reconciliation worker an…`) beside a
+ *    path keeping its tail (`…pelines/nightly-reconciliation`), TWO different
+ *    truncation directions inside one row, and the head of a path (`~/work/…`)
+ *    is the part a reader scans for. Both text fields of the row now elide the
+ *    TAIL; only the model, an identifier rather than prose, keeps its name-end.
+ *    The FIT stays D26's: same floor, same min, same order of yielding — this
+ *    is the direction of the painted string only.
+ *
+ * **The same arithmetic has a second consumer** (`tailFit`): the conversations
+ * pane's switcher paints a route label — an identifier whose PREFIX is the same
+ * on every loopback session and whose port is the part that differs — so it
+ * keeps its tail too, and the fit is the model's minus the provider-prefix
+ * step. Which characters paint is a string decision for the same reason: the
+ * web build must not leave it to a prop react-native-web does not read.
  *
  * **Widths are summed per glyph, and a glyph the face cannot draw is not free.**
  * There is no cross-platform way to measure a text's own content width, so the
@@ -27,11 +42,13 @@ import { TYPE_STEPS } from "@/ui/tokens.gen";
  * string's length: `textWidthDp` charges every glyph what the shipped face
  * actually advances it, and charges a glyph the face has no coverage for what the
  * fallback face will spend on it (see `FALLBACK_ADVANCE_EM`). A line that
- * under-counts its own width is a line the web build clamps from the tail, which
- * is the direction this module exists to keep out of the product.
+ * under-counts its own width is a line the web build clamps against the painted
+ * string's own direction; the estimate is floored to whole glyphs so the arithmetic
+ * errs inside the box rather than outside it.
  *
- * `numberOfLines={1}` and `ellipsizeMode="head"` stay on the element as the
- * mop-up, and on iOS/Android the flag is the direction the string already has.
+ * `numberOfLines={1}` and each field's `ellipsizeMode` (path `tail`, model `head`)
+ * stay on the elements as the mop-up, and on iOS/Android each flag is the direction
+ * its string already has.
  */
 
 /** The advance of every glyph the mono face COVERS, in em.
@@ -135,8 +152,8 @@ const fitsWhole = (text: string, budgetDp: number, scale: number): boolean =>
 	textWidthDp(text, scale) <= budgetDp;
 
 /**
- * The longest tail of `text` that fits `budgetDp` once the ellipsis is counted,
- * by CODE POINT.
+ * The longest TAIL of `text` that fits `budgetDp` once the ellipsis is counted,
+ * by CODE POINT — the MODEL's direction (see `labelFor`).
  *
  * By code point and not by `slice`: a UTF-16 slice can cut a surrogate pair in
  * half, and the lone surrogate it leaves behind paints as U+FFFD — measured on
@@ -158,11 +175,58 @@ const tailFitting = (text: string, budgetDp: number, scale: number): string => {
 	return taken === 0 ? "" : glyphs.slice(glyphs.length - taken).join("");
 };
 
-/** `text` as painted into `budgetDp`: whole when it fits, else its marked tail. */
+/**
+ * The longest HEAD of `text` that fits `budgetDp` once the ellipsis is counted,
+ * by code point — the PATH's direction (R-3: a path is read from its start).
+ *
+ * The same glyph arithmetic as `tailFitting`, walked from the other end; kept as
+ * two functions rather than one with a direction flag because the two call sites
+ * have different reasons, and a shared `reverse`-style helper would make the
+ * next reader re-derive which end each field keeps.
+ */
+const headFitting = (text: string, budgetDp: number, scale: number): string => {
+	const room = budgetDp - charWidthDp(scale);
+	if (room <= 0) return "";
+	const glyphs = [...text];
+	let spent = 0;
+	let taken = 0;
+	for (let index = 0; index < glyphs.length; index += 1) {
+		const width = glyphDp(glyphs[index] ?? "", scale);
+		if (spent + width > room) break;
+		spent += width;
+		taken += 1;
+	}
+	return taken === 0 ? "" : glyphs.slice(0, taken).join("");
+};
+
+/** `text` as painted into `budgetDp`: whole when it fits, else its marked HEAD
+ *  (the cwd's rule — see the module comment; the model has its own, `labelFor`). */
 const elidedTo = (text: string, budgetDp: number, scale: number): Painted => {
 	if (fitsWhole(text, budgetDp, scale)) return { text, elided: false };
+	const head = headFitting(text, budgetDp, scale);
+	return { text: head === "" ? "" : `${head}${ELLIPSIS}`, elided: true };
+};
+
+/**
+ * `text` as painted for a surface that must keep its TAIL: whole when it fits,
+ * else an ellipsis and the longest tail that does.
+ *
+ * The conversations pane's switcher is the consumer: a route label like
+ * `127.0.0.1:51078` is an identifier, and the identifier rule is that the
+ * prefix is the part that goes (D26) — the port is the only part that differs
+ * per session, so it is the part that stays. The round recorded the direction
+ * as arguable for a mixed host:port string and did not prescribe one; this is
+ * the identifier reading, taken where the box runs out (the home header's
+ * wider box still paints the same ladder whole).
+ */
+export const tailFit = (
+	text: string,
+	budgetDp: number,
+	scale: number,
+): string => {
+	if (fitsWhole(text, budgetDp, scale)) return text;
 	const tail = tailFitting(text, budgetDp, scale);
-	return { text: tail === "" ? "" : `${ELLIPSIS}${tail}`, elided: true };
+	return tail === "" ? ELLIPSIS : `${ELLIPSIS}${tail}`;
 };
 
 /**

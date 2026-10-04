@@ -52,7 +52,7 @@ measurement.
 | S1 | Sign in (first screen) + system-browser hand-off | F-1 |
 | S2 | Set up a computer (no tunnel yet; waiting; connected) | F-2 |
 | S3 | Computers (list, switcher, add manually) | F-4, F-3 |
-| S4 | Sessions (list: live / degraded / ended, pinned, search, past, projects) | F-5, F-8 |
+| S4 | Home (new chat: composer, splash, suggestions) | F-8 |
 | S5 | Session (transcript, tool rows, todos, subagent strip, pending card, composer) | F-6 |
 | S6 | Subagent | F-7 |
 | S7 | New session (directory picker, model) | F-8 |
@@ -63,6 +63,7 @@ measurement.
 | S12 | Pair this phone | F-6 |
 | S13 | Connection loss, re-auth, relay refusal | F-9 |
 | S14 | Demo mode | F-10 |
+| S15 | Sessions (the conversations panel: live / degraded / ended, pinned, sections, search, past, computers; docked pane on a tablet) | F-5, F-8 |
 
 ## 2. States to capture for every screen
 
@@ -137,9 +138,11 @@ a reason**, never skipped silently.
 
 ## 6. Per-screen specifics the harness must not skip
 
-- **S4 Sessions:** a row's state must be readable without opening it (word +
+- **S15 Sessions (the panel):** a row's state must be readable without opening it (word +
   colour); search must survive a reconnect; a degraded computer's rows must be
-  visually distinct from an ended session's.
+  visually distinct from an ended session's; loading and empty must be
+  distinguishable to the eye (their markers are `sidebar/loading` and the
+  sessions empty state).
 - **S5 Session / S8 Pending card:** the decision controls must be reachable with
   the keyboard open on the smallest supported device, and with a paragraph-length
   question. This is the highest-value screen in the app and the one with the

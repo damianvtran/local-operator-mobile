@@ -352,7 +352,7 @@ export const SCREENS: Record<string, { label: string; path: string }> = {
 	S2: { label: "Set up a computer", path: "/tunnels" },
 	S3: { label: "Computers", path: "/tunnels" },
 	"S3-custom": { label: "Own tunnel + password", path: "/own-tunnel" },
-	S4: { label: "Sessions list", path: "/" },
+	S4: { label: "Home (new chat)", path: "/" },
 	S5: { label: "Session", path: "/session/{sessionId}" },
 	S6: { label: "Subagent", path: "/session/{sessionId}/agent/{jobId}" },
 	S7: { label: "New session", path: "/new" },
@@ -362,6 +362,7 @@ export const SCREENS: Record<string, { label: string; path: string }> = {
 	S11: { label: "Settings", path: "/settings" },
 	S13: { label: "Refused / unreachable", path: "/tunnels" },
 	S14: { label: "Demo mode", path: "/demo" },
+	S15: { label: "Conversations panel", path: "/conversations" },
 };
 
 /**
@@ -444,7 +445,12 @@ export const SCREEN_ROOTS: Record<string, string> = {
 	S2: "computers-screen",
 	S3: "computers-screen",
 	"S3-custom": "own-tunnel-screen",
-	S4: "sessions-screen",
+	// S4 is the composer home; the sessions list's cells re-homed to S15 with the
+	// list itself, and the /conversations route carries `sessions-screen` (the
+	// panel's route/root, kept per the contract). Re-pointing S4 re-labelled four
+	// measured cells (S4/empty, S4/populated, S4/populated-long, S4/narrow ->
+	// S15/*) and added S4/idle; the diff is flagged for the plan lane in the PR.
+	S4: "home-screen",
 	S5: "session-screen",
 	S6: "subagent-screen",
 	S7: "new-session-screen",
@@ -454,6 +460,7 @@ export const SCREEN_ROOTS: Record<string, string> = {
 	S11: "settings-screen",
 	S13: "computers-screen",
 	S14: "welcome-screen",
+	S15: "sessions-screen",
 };
 
 /**
@@ -523,11 +530,9 @@ export const PENDING_CELLS: Record<string, string> = {
 		),
 	),
 	/* The list states the app renders without an identifier of their own. */
-	"S4/loading":
-		"app (src/ui/a11y.ts STATE_MARKER) — the list renders unlabelled skeletons while its first frame is in flight",
-	"S4/ended":
+	"S15/ended":
 		"app (src/ui/a11y.ts STATE_MARKER) — ListRow's `ended` receipt changes copy and colour but carries no identifier",
-	"S4/degraded-row":
+	"S15/degraded-row":
 		"app (src/ui/a11y.ts STATE_MARKER) — ListRow's `degraded` receipt renders 'not answering' but carries no identifier",
 	/* The scrolled transcript, and it is here rather than only in the PR because this
 	 * table is where a coverage gap is supposed to live. `S5/scroll` was
@@ -582,6 +587,44 @@ export const IDENTICAL_FRAME_EXEMPTIONS: Record<string, string> = {
 		"same thing.",
 };
 
+/**
+ * Byte-identical frames whose cells are ONE VIEW at that device BY COMPOSITION.
+ *
+ * The remedy for "two cells, one image, same content" has been to REMOVE the duplicate
+ * declaration (S4/narrow, S9/populated, S2/error in their commits) — but that remedy
+ * fits one STATE wearing two names. This table is the other case the same test cannot
+ * tell apart: two DIFFERENT states that a device renders in ONE composed view, where
+ * both claims are true at once and neither name is a duplicate where they differ.
+ *
+ * At tablet-landscape, `/conversations` renders the same `Home` with the panel open
+ * (`app/(app)/conversations.tsx` renders `<Home forcePanelOpen>`), and the panel is
+ * DOCKED there, so `S4/idle` and `S15/empty` produce the same bytes AND the same
+ * content — each cell still reaches its own root and marker inside that one view
+ * (`home-idle` and `sessions-empty` are both in both frames, which the byte-identity
+ * itself proves). At iphone-se the drawer overlays the home and the frames differ, so
+ * both declarations are needed: S4/idle is the home's own cell and S15/empty is the
+ * panel's empty state and the `/conversations` route's capture.
+ *
+ * A pair is consulted ONLY when every cell in the partition is EVIDENTIAL (ready, not
+ * skipped), so a partition in which any state's own marker is missing can never declare
+ * itself out of a collapse; an undeclared same-content partition still FAILS, exactly
+ * as it did before this table existed.
+ */
+export const IDENTICAL_FRAME_COINCIDENCES: Record<string, string> = {
+	"S15/empty|S4/idle":
+		"one view, two states at tablet-landscape: `/conversations` renders the same home " +
+		"with the panel open, and the panel is docked at this device, so the route and the " +
+		"home compose into ONE rendering — the same bytes AND the same content are both " +
+		"correct, and each cell still reaches its own root and marker in it (`home-idle` " +
+		"for S4, `sessions-empty` for S15 — present in both frames, which the byte-identity " +
+		"proves). Not a camera limit: the content really agrees, because the composition " +
+		"really is one view. The pair differs at iphone-se (the drawer overlays the home), " +
+		"which is why neither declaration can be removed — S4/idle is the home's own cell " +
+		"and S15/empty is the panel's empty state and the /conversations route's capture. " +
+		"Measured on the ci run at 0b414a4: four pairs, one per theme × scale " +
+		"(dark 07d9c40e1083 / d7ca9bcec45e; light 1623786f6c06 / f2ee0ac17b8f).",
+};
+
 /** Read the resolved theme/scale and the app's own canvas colour, per frame. */
 /**
  * The readiness probe: after a cell settles, what did the app actually render?
@@ -598,8 +641,13 @@ export const IDENTICAL_FRAME_EXEMPTIONS: Record<string, string> = {
  * A screen root says which screen drew; these say which STATE it drew.
  *
  * The rule is negative for every state that is not honestly empty: an honest
- * empty state is a specific screen's `*-empty` marker, so seeing one on a cell
- * that asked for populated, streaming or error means the state was never reached.
+ * empty state is a specific screen's `*-empty` marker, so seeing THE CELL'S OWN
+ * SURFACE's one on a cell that asked for populated, streaming or error means the
+ * state was never reached. The marker read is the surface's own
+ * (`STATE_MARKER.<subject>.empty`): a device composes surfaces — the home docks
+ * the conversations panel at tablet-landscape — and the panel's empty state
+ * drawn beside the home is not the home's miss (`tools/lib/readiness.ts`). An
+ * ad-hoc `path:` page declares no surface, so every `*-empty` is read for it.
  * `empty` is the one state where the marker is required rather than forbidden,
  * which is also what stops a check that only forbids from passing vacuously.
  */
@@ -659,8 +707,9 @@ export const READINESS_PROBE = `
  * rendered text, leaf by leaf, plus every accessibility label), which is what a phone
  * would read out and what "are these the same state?" actually means. It is not a
  * substitute for the pixel check — it is what decides whether a byte-identical pair is a
- * COLLAPSE or a limit of the camera, and `IDENTICAL_FRAME_EXEMPTIONS` is where a
- * limitation has to be declared before it can be believed.
+ * COLLAPSE, a declared one-view coincidence (`IDENTICAL_FRAME_COINCIDENCES`), or a limit
+ * of the camera — and `IDENTICAL_FRAME_EXEMPTIONS` is where a limitation has to be
+ * declared before it can be believed.
  */
 export const CONTENT_PROBE = `
 (() => {

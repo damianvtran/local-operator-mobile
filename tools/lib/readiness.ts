@@ -67,7 +67,12 @@ export const SCREEN_MARKER_SUBJECT: Record<string, string> = {
 	S2: "computers",
 	S3: "computers",
 	"S3-custom": "own-tunnel",
-	S4: "sessions",
+	// S4 is the composer home since the Part 2 slice: `/` is Home, and the
+	// sessions list moved into the panel (S15). The four measured cells that used
+	// to be S4/* re-homed: the list ones kept their names under S15, and the home
+	// gained its own idle cell. The relabel table diff is flagged for the plan
+	// lane in the PR body — these two lines are the whole mapping change.
+	S4: "home",
 	S5: "session",
 	S6: "subagent",
 	S7: "new-session",
@@ -77,6 +82,10 @@ export const SCREEN_MARKER_SUBJECT: Record<string, string> = {
 	S11: "settings",
 	S13: "computers",
 	S14: "welcome",
+	/** The conversations panel: a screen of its own for the harness because its
+	 *  route (`/conversations`) is the programmatic open and a deep-link failure's
+	 *  landing — the sessions list's cells and their markers live here now. */
+	S15: "sidebar",
 };
 
 /**
@@ -101,6 +110,11 @@ export const STATE_MARKER_ALIASES: Record<string, string> = {
 	approval: "pending-approval",
 	ask: "pending-ask",
 	"ask-multi": "pending-ask",
+	/** The panel's degraded-listing cell renders the same look as `degraded`
+	 *  (the banner + the short/long note): the app has no second degradation
+	 *  look for a list, so the variant borrows the state's marker — which is
+	 *  what this table is for. */
+	"degraded-listing": "degraded",
 };
 
 /** Every empty-state marker ends with this, which is what the prohibition matches. */
@@ -303,15 +317,31 @@ export function readinessIssues(facts: ReadinessFacts): ReadinessIssue[] {
 	if (gap !== null) issues.push({ kind: "marker-gap", message: gap });
 	// The prohibition half, kept for the states that are not `empty` themselves: a
 	// populated cell showing an empty marker is in the empty state whatever else it
-	// carries.
+	// carries — but the marker it reads is the one the cell's OWN surface declares
+	// (`STATE_MARKER.<subject>.empty`). A device COMPOSES surfaces: the home docks
+	// the conversations panel at tablet-landscape, and the panel's empty state,
+	// drawn beside the home, is not the home's miss — reading every `*-empty`
+	// refused the home's idle cell for a panel that was correctly empty (PR #34
+	// review round 2, F1). An ad-hoc `path:` page declares no surface, so every
+	// empty marker is still read for it — the same line `requiredStateMarker`
+	// draws for the affirmative half above.
+	const subject = SCREEN_MARKER_SUBJECT[facts.screen];
+	const ownEmpty =
+		subject === undefined ? null : stateMarkerFor(subject, "empty");
 	const emptyMarkers = presentIds.filter((id) =>
 		id.endsWith(EMPTY_MARKER_SUFFIX),
 	);
-	if (state !== "empty" && emptyMarkers.length > 0) {
+	const offending =
+		subject === undefined
+			? emptyMarkers
+			: emptyMarkers.filter(
+					(id) => ownEmpty !== null && markerMatches(ownEmpty, [id]),
+				);
+	if (state !== "empty" && offending.length > 0) {
 		issues.push({
 			kind: "empty",
 			message:
-				`the cell declares '${state}' but the app is showing an empty state (${emptyMarkers.join(", ")}): ` +
+				`the cell declares '${state}' but the app is showing an empty state (${offending.join(", ")}): ` +
 				"the state was never reached",
 		});
 	}

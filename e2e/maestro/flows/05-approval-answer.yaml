@@ -40,7 +40,7 @@ env:
 - launchApp:
     clearState: true
 - assertVisible:
-    id: "sessions-screen"
+    id: "home-screen"
 # Reaching a session needs a row on the list, which needs the relay pinned to a
 # session scenario.
 # SCENARIO: session-row-<id> from sessions

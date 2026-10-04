@@ -150,6 +150,20 @@ export const EXTRACT_PROBE = `
     }
     return false;
   };
+  // Whether the node sits inside a MODAL DIALOG's subtree: the node itself or any
+  // ancestor carries aria-modal="true", the standard declaration that everything
+  // outside the dialog is inert while it is open. react-native-web paints its
+  // Modal this way (the conversations drawer), and the accessibility tree reads
+  // the same attribute. Reported as a measurement — U-05 and U-08 are where it
+  // becomes a rule.
+  const inModalDialogIn = (el) => {
+    let node = el;
+    while (node && node.nodeType === 1) {
+      if (node.getAttribute('aria-modal') === 'true') return true;
+      node = node.parentElement;
+    }
+    return false;
+  };
   // The effective background: the nearest ancestor with a non-transparent
   // background colour, composited down to opaque. A colour on a parent *is* the
   // text's ground, which is exactly the case a per-element check misses.
@@ -306,6 +320,7 @@ export const EXTRACT_PROBE = `
       escapedClip: clippedByAnyAncestor(el, rect) && painted !== null,
       scrollsX: insideHorizontalScroller(el),
       ariaHidden: ariaHiddenIn(el),
+      inModalDialog: inModalDialogIn(el),
       ownInk:
         ownText.length > 0
         || (style.backgroundColor !== 'rgba(0, 0, 0, 0)' && style.backgroundColor !== 'transparent')

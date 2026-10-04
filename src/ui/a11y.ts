@@ -52,6 +52,10 @@ export const SCREEN = {
 	computers: "computers-screen",
 	sessions: "sessions-screen",
 	session: "session-screen",
+	/** `/` is the composer home (the ADR 0006 § 6 default destination). The
+	 *  sessions list keeps `sessions` — it still renders as the conversations
+	 *  panel's route/root, so the harness's S4 relabel does not orphan it. */
+	home: "home-screen",
 	subagent: "subagent-screen",
 	past: "past-sessions-screen",
 	newSession: "new-session-screen",
@@ -94,8 +98,7 @@ export const EMPTY = {
  * identifier is typed as a literal where a constant exists.
  */
 export const CONTROL = {
-	// Welcome and Sessions: the two shell routes that render an action.
-	sessionsNew: "sessions-new",
+	// Welcome: the shell route that renders an action.
 	notFoundHome: "not-found-home",
 
 	// The back affordance each pushed screen puts in its header. Named per screen
@@ -118,9 +121,6 @@ export const CONTROL = {
 	/* --- added by the wave-2 screen slice (D1): the auth, tunnel and list
 	 * controls it renders. Additive — main's names above are untouched, because the
 	 * Maestro flows in `e2e/maestro/**` reference the ones below. --- */
-	sessionsPastInHeader: "sessions-past-in-header",
-	sessionsComputersInHeader: "sessions-computers-in-header",
-	sessionsPast: "sessions-past",
 	signInStart: "sign-in-start",
 
 	// The identifiers `e2e/maestro/flows/**` presses. They are the contract with
@@ -142,11 +142,10 @@ export const CONTROL = {
 	customPasswordField: "custom-password-field",
 	customConnect: "custom-connect",
 	customInsecureOptIn: "custom-insecure-opt-in",
-	/** The list's two header controls: the computer switcher and Settings. */
+	/** The computer switcher (the home header's name, and the panel's own row —
+	 *  two controls, two ids: `computersButton` here and `sidebarSwitcher`). */
 	computersButton: "computers-button",
 	settingsButton: "settings-button",
-	sessionSearchButton: "session-search-button",
-	sessionSearchField: "session-search-field",
 	/** Set on the chosen computer row, so "which one is active" is asserted as a
 	 *  state rather than inferred from a colour. */
 	computerSelectedMarker: "computer-selected-marker",
@@ -177,7 +176,6 @@ export const CONTROL = {
 	splitPaneStart: "split-pane-start",
 	splitPaneEnd: "split-pane-end",
 	splitBody: "split-body",
-	sessionsDetailColumn: "sessions-detail-column",
 	/* --- the list, past-list and new-session controls the flows address. --- */
 	newSessionCwd: "new-session-cwd",
 	newSessionModel: "new-session-model",
@@ -185,7 +183,6 @@ export const CONTROL = {
 	newSessionPrompt: "new-session-prompt",
 	newSessionStart: "new-session-start",
 	sessionsSplit: "sessions-split",
-	sessionsFooter: "sessions-footer",
 	sessionsNoRoute: "sessions-no-route",
 
 	computersUseThisComputer: "computers-use-this-computer",
@@ -208,13 +205,18 @@ export const CONTROL = {
 	pastRetry: "past-retry",
 	pastBackToSessions: "past-back-to-sessions",
 	sessionsDegradedBanner: "sessions-degraded-banner",
-	sessionsComputers: "sessions-computers",
 	sessionOpenCurrent: "session-open-current",
 	sessionOpenPrevious: "session-open-previous",
-	/* --- the queued-ask surfaces (E2, design §4/§5.0). The bar's own id is on the
-	 *  whole chip because the chip is the control; the sheet's controls are named
-	 *  one at a time like every other surface's. --- */
-	asksOpen: "asks-open",
+	/* --- the queued-ask surfaces (E2, design §4/§5.0). The sheet's controls are
+	 *  named one at a time like every other surface's.
+	 *
+	 *  No `asksOpen` yet: its only renderer was the old list screen this branch
+	 *  deleted, and the panel's outstanding-ask indicator is the ask lane's to
+	 *  wire (`spec-home-sidebar.md` §10 — "`SURFACE.sidebar` is where an
+	 *  outstanding-ask count belongs (E2) … Not this PR"). Dropped rather than
+	 *  kept as a rendererless selector, because the enumerating check in
+	 *  `a11y.e2e.test.ts` refuses an identifier no route or primitive paints;
+	 *  E2 re-declares it WITH its renderer when the indicator lands. --- */
 	askRespond: "ask-respond",
 	askDecline: "ask-decline",
 	askDismiss: "ask-dismiss",
@@ -264,6 +266,36 @@ export const CONTROL = {
 	connectionSignIn: "connection-sign-in",
 	connectionConsole: "connection-console",
 	codeBlockCopy: "code-block-copy",
+
+	/* --- the composer home and the conversations panel (the Part 2 slice).
+	 *
+	 * Named here in the same change that renders them. Two deliberate pairs of
+	 * near-neighbours, each split for the same reason — two controls can be on
+	 * screen at once (the panel is an overlay over the home), and a shared id
+	 * makes Maestro's `id:` matching pick arbitrarily:
+	 *  - `computersButton` is the HOME header's switcher (the landing's, where a
+	 *    flow meets it first); `sidebarSwitcher` is the panel's own row.
+	 *  - `sidebarClose` is the panel's visible close. The scrim and Android back
+	 *    close the panel too but carry no id: neither is a control a flow should
+	 *    press by name while the panel's own close is present. --- */
+
+	/** The home header's sidebar affordance: opens the conversations panel. */
+	homeSidebar: "home-sidebar",
+	/** The home composer's folder chip: the session's target folder. */
+	homeTargetFolder: "home-target-folder",
+	/** The home's offline action "Connect a computer", in the suggestions' slot. */
+	homeConnect: "home-connect",
+	/** The home's folders-read failure line and its remedy (review M2): the
+	 *  sentence `/new` uses for the same failure, with the retry the home lacked. */
+	homeFoldersBanner: "home-folders-banner",
+	homeFoldersRetry: "home-folders-retry",
+	sidebarSwitcher: "sidebar-switcher",
+	sidebarNewChat: "sidebar-new-chat",
+	sidebarSearch: "sidebar-search",
+	sidebarSearchField: "sidebar-search-field",
+	sidebarClose: "sidebar-close",
+	sidebarPast: "sidebar-past",
+	sidebarComputers: "sidebar-computers",
 } as const;
 
 /**
@@ -346,6 +378,23 @@ export const SURFACE = {
 	connectionPill: "connection-pill",
 	refusalSurface: "connection-refusal",
 	signInPanel: "sign-in-panel",
+
+	/* --- the composer home (ADR 0006 § 6) and the conversations panel. The
+	 * splash's pieces each carry an id because the design round captures them
+	 * separately and a state marker must be present in ONLY the state it names
+	 * (`homeStarting` IS the sending marker — see STATE_MARKER.home). --- */
+	homeComposer: "home-composer",
+	homeSplash: "home-splash",
+	homeGreeting: "home-greeting",
+	homeSuggestions: "home-suggestions",
+	homeTip: "home-tip",
+	homeStarting: "home-starting",
+	sidebar: "conversations-sidebar",
+	/** The deep-link failure's one honest sentence (ADR 0006 § 6.6): the
+	 *  `/conversations` route reads it from a `notice` param and hands it to the
+	 *  pane, which renders it under the panel's header — that route is the
+	 *  deep-link-to-nothing destination's landing. */
+	sidebarNotice: "sidebar-notice",
 } as const;
 
 /**
@@ -452,9 +501,18 @@ export const state = (options: {
  * one of them is a place the flows and this file must agree.
  */
 export const REGION = {
-	sessionsList: "session-list",
-	sessionSectionActive: "session-section-active",
-	sessionSectionPrevious: "session-section-previous",
+	/** The conversations panel's list and its sections. `session-section-active`
+	 *  and `session-section-previous` retired WITH the list's move into the panel:
+	 *  the panel's vocabulary is the desktop's (Pinned · Running · Today · This
+	 *  week · Older), and the two spellings cannot both be true of one list.
+	 *  `e2e/maestro/**` and this contract moved together — a rename here without
+	 *  the flows is a flow that silently stops reaching its control. */
+	sidebarList: "conversations-list",
+	sidebarSectionPinned: "sidebar-section-pinned",
+	sidebarSectionRunning: "sidebar-section-running",
+	sidebarSectionToday: "sidebar-section-today",
+	sidebarSectionWeek: "sidebar-section-week",
+	sidebarSectionOlder: "sidebar-section-older",
 	/** Marks a search hit that matched the conversation's BODY rather than its
 	 *  title: `docs/relay/contract.md` §3.3, and the reason a result can be a
 	 *  legitimate match with a title that does not contain the query. */
@@ -560,11 +618,12 @@ export const REGION = {
  * `Record<string, …>`. The harness still looks a cell's subject up by an arbitrary
  * string, so `stateMarkerFor` is the one place that widens it. */
 export const STATE_MARKER = {
-	sessions: {
-		empty: EMPTY.sessions,
-		populated: "session-row-",
-		"degraded-listing": CONTROL.sessionsDegradedBanner,
-	},
+	/* The old `sessions` subject retired with the list's move into the panel: its
+	 * three entries (`EMPTY.sessions`, `"session-row-"`, the degraded banner) are
+	 * now the `sidebar` subject's, and keeping both spellings of the same id would
+	 * trip the marker table's own uniqueness rule (`a11y.test.ts`: an id named
+	 * twice makes two states claim one frame). `sessionRowId` and the
+	 * `session-row-` family are unchanged — one list, one family. */
 	past: {
 		empty: EMPTY.past,
 		populated: "past-row-",
@@ -597,6 +656,28 @@ export const STATE_MARKER = {
 		steering: "composer-steering",
 		sending: "composer-sending",
 		ended: "composer-ended",
+	},
+	/* The composer home (`/`). `idle` and `draft` differ only by the composer's
+	 * content, so the marker SWAPS between them — one id present in both states
+	 * would make the affirmative check vacuous. `sending` aliases the `Starting…`
+	 * line's surface id: that line IS the state. */
+	home: {
+		idle: "home-idle",
+		draft: "home-draft",
+		sending: SURFACE.homeStarting,
+		offline: "home-offline",
+	},
+	/* The conversations panel, subject `sidebar`. `populated` keeps the ONE row
+	 * family (`STATE_MARKER.sessions.populated` is the same prefix — one list,
+	 * one family, so `sessionRowId` serves both subjects). */
+	sidebar: {
+		open: SURFACE.sidebar,
+		loading: "sidebar-loading",
+		empty: EMPTY.sessions,
+		populated: "session-row-",
+		"empty-search": "sidebar-empty-search",
+		degraded: CONTROL.sessionsDegradedBanner,
+		stale: "sidebar-stale",
 	},
 	/* The queued-ask surfaces (E2). `bar` is the one state a session screen
 	 *  carries while anything is outstanding — the marker must NOT paint in an
@@ -646,8 +727,8 @@ export const markerMatches = (
  * the reverse, and the check that they do lives in `a11y.e2e.test.ts`.
  *
  * `REGION` is in the set because a region a flow WAITS ON is a selector exactly as a
- * control it presses is: the flows assert `session-section-active`, the refusal
- * surfaces and `settings-section-*` by name, and leaving them out let a flow name an
+ * control it presses is: the flows assert the panel's `sidebar-section-*` regions, the
+ * refusal surfaces and `settings-section-*` by name, and leaving them out let a flow name an
  * id this contract could not see — the flow check then read a surface assertion as an
  * unknown selector. Declared last because `Object.values` needs the binding
  * initialised, and each one is rendered (`a11y.e2e.test.ts` proves it), so the set
