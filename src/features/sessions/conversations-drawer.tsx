@@ -27,11 +27,13 @@ import { DURATIONS, EASINGS } from "@/ui/tokens.gen";
  * a `Modal` over the home rather than a pushed screen. The panel COVERs; the home
  * beneath is never unmounted (a push would lose a draft and re-run the home's
  * cold-start effects). The panel itself, ruled by the spec: `elevated` ground,
- * the overlay shadow, a `hairline` edge — and the design round confirms the
- * dark-theme read of that edge on a captured frame, because the computed
- * scrim-to-panel contrast in dark is 1.38:1 and no alpha of the scrim role fixes
- * it (D-dark-1; the fix, if the frame confirms it, is a token decision, not a
- * colour hack here).
+ * the overlay shadow, and the scoped `panel-edge` edge. It is a token decision,
+ * not a colour hack here: in dark the fill's own step against the scrim ground
+ * measured 1.38:1 (D-dark-1) and no scrim alpha fixed it. The drawer consumes
+ * the role derived for exactly this pair — measured 4.53:1 against the scrim
+ * ground and 3.28:1 against the panel (`design/tokens/contrast-contract.mjs`
+ * § 'the overlay panel edge'). Light was already clean (its fill ≈ 8.2:1) and
+ * keeps the soft hairline step.
  *
  * **Dismissal is threefold, and all three close the same way**: the scrim, the
  * pane's own close control, and Android's back gesture (`onRequestClose` — the
@@ -141,7 +143,7 @@ export const ConversationsDrawer = ({
 					}}
 				>
 					<View
-						className="flex-1 border-hairline border-r bg-elevated"
+						className="flex-1 border-panel-edge border-r bg-elevated"
 						style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}
 					>
 						<ConversationsPane

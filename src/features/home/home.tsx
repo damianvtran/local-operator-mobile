@@ -1,6 +1,6 @@
 import { randomUUID } from "expo-crypto";
 import { useRouter } from "expo-router";
-import { Menu } from "lucide-react-native";
+import { Menu, Settings } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { TextInput } from "react-native";
 import { Pressable, Text, View } from "react-native";
@@ -13,6 +13,7 @@ import {
 } from "@/features/auth/connection-provider";
 import {
 	CONNECT_DISABLED_REASON,
+	FOLDERS_READ_FAILED,
 	REFUSED_START_FALLBACK,
 } from "@/features/home/home-copy";
 import { HomeStateMarkers } from "@/features/home/home-markers";
@@ -40,8 +41,8 @@ import { useUiStore } from "@/state/ui-store";
 import { CONTROL, ROLE, SCREEN, SURFACE } from "@/ui/a11y";
 import { ReadableColumn, SplitView } from "@/ui/components/adaptive";
 import { Alert } from "@/ui/components/alert";
-import { Avatar, initialsOf } from "@/ui/components/avatar";
 import { Badge } from "@/ui/components/badge";
+import { Banner } from "@/ui/components/banner";
 import { Chip } from "@/ui/components/chip";
 import { IconButton } from "@/ui/components/icon-button";
 import { RefusalSurface } from "@/ui/components/refusal-surface";
@@ -105,7 +106,6 @@ export default function Home({
 		coldStartSettled,
 		savedTunnel,
 		restoredAccount,
-		lastError,
 	} = useConnection();
 	const computers = useConnectionState((state) => state.computers);
 	const tunnelId = useConnectionState((state) => state.tunnelId);
@@ -120,6 +120,8 @@ export default function Home({
 	const [attaching, setAttaching] = useState(false);
 	const [composerError, setComposerError] = useState<string | null>(null);
 	const [homeDirectory, setHomeDirectory] = useState<string | null>(null);
+	const [directoriesFailed, setDirectoriesFailed] = useState(false);
+	const [directoriesAttempt, setDirectoriesAttempt] = useState(0);
 	const [topModel, setTopModel] = useState<ModelEntry | null>(null);
 	const [modelsLoaded, setModelsLoaded] = useState(false);
 	const [starting, setStarting] = useState(false);
@@ -134,8 +136,17 @@ export default function Home({
 	const offline = deviceOnline() === false;
 
 	/* The relay's home directory is the target every first send uses, until the
-	 * reader goes through `/new` and picks another folder. Read once per client,
-	 * the same way the list read it for its rows' `~`-shortening. */
+	 * reader goes through `/new` and picks another folder. Read once per client —
+	 * and once per retry: a transient read failure must not strand the composer
+	 * with no send and no sentence until a remount (review M2), so the failure is
+	 * said (`FOLDERS_READ_FAILED`, `/new`'s verbatim line) and cleared only by a
+	 * successful read. `directoriesAttempt` is a dependency the exhaustive-deps rule
+	 * cannot justify from the body: it is a RE-RUN TRIGGER (the retry), and without
+	 * it the failed read would never be re-asked. The model catalogue's FIRST entry
+	 * is the default model — the relay's own ranking, never re-sorted (`/new`'s
+	 * rule, verbatim). A failure leaves the chip in its loading state's successor:
+	 * unavailable, said plainly. */
+	// biome-ignore lint/correctness/useExhaustiveDependencies: see the comment above
 	useEffect(() => {
 		const active = relay();
 		if (!active) return;
@@ -143,12 +154,14 @@ export default function Home({
 		void active
 			.directories()
 			.then((directories) => {
-				if (live) setHomeDirectory(directories.home);
+				if (live) {
+					setHomeDirectory(directories.home);
+					setDirectoriesFailed(false);
+				}
 			})
-			.catch(() => undefined);
-		/* The model catalogue's FIRST entry is the default model — the relay's own
-		 * ranking, never re-sorted (`/new`'s rule, verbatim). A failure leaves the
-		 * chip in its loading state's successor: unavailable, said plainly. */
+			.catch(() => {
+				if (live) setDirectoriesFailed(true);
+			});
 		void active
 			.models()
 			.then((catalogue) => {
@@ -162,7 +175,11 @@ export default function Home({
 		return () => {
 			live = false;
 		};
-	}, [relay]);
+	}, [relay, directoriesAttempt]);
+
+	const retryDirectories = useCallback(() => {
+		setDirectoriesAttempt((attempt) => attempt + 1);
+	}, []);
 
 	/* The home's draft, restored once. If the reader has already typed by the
 	 * time the read resolves, what they have typed wins — the store is storage,
@@ -435,6 +452,23 @@ export default function Home({
 				starting={starting}
 			/>
 
+			{/* A folders read that failed leaves the composer unsendable; the sentence
+			 *  is `/new`'s verbatim line and the retry is the path the failure never
+			 *  had (review M2). The banner goes away with the condition — a successful
+			 *  re-read clears it — and never over a readable folder. */}
+			{directoriesFailed && homeDirectory === null ? (
+				<Banner
+					tone="warning"
+					message={FOLDERS_READ_FAILED}
+					action={{
+						label: "Retry",
+						onPress: retryDirectories,
+						testID: CONTROL.homeFoldersRetry,
+					}}
+					testID={CONTROL.homeFoldersBanner}
+				/>
+			) : null}
+
 			<View>
 				{problem !== null ? (
 					<View className="px-4 pb-2">
@@ -540,21 +574,17 @@ export default function Home({
 								{listLabel(computers, tunnelId, route)}
 							</Text>
 						</Pressable>
-						{/* The avatar IS the Settings affordance, and its initials come
-						 *  from the same label the switcher shows. */}
-						<Pressable
-							accessibilityRole={ROLE.button}
+						{/* Settings is a GEAR, not the avatar (design D2): the avatar's initials
+						 *  came from the same label as the computer name beside it, and a
+						 *  host-shaped label fell to the `?` floor — legible as *Help*, not as
+						 *  Settings. The gear says what the control does; the accessible name
+						 *  still comes from the caller's label. */}
+						<IconButton
 							accessibilityLabel="Settings"
 							onPress={() => router.push("/settings")}
+							icon={({ color, size }) => <Settings color={color} size={size} />}
 							testID={CONTROL.settingsButton}
-							style={{ minHeight: TOUCH_FLOOR, minWidth: TOUCH_FLOOR }}
-						>
-							<Avatar
-								initials={initialsOf(listLabel(computers, tunnelId, route))}
-								size="sm"
-								accessibilityLabel="Settings"
-							/>
-						</Pressable>
+						/>
 					</View>
 				}
 			>

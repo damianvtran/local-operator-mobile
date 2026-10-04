@@ -9,11 +9,11 @@ import {
 } from "react-native";
 
 import {
+	draftExistsFor,
 	GREETING,
-	HOME_SUGGESTIONS,
 	HOME_TIP_ROTATE_MS,
 	STARTING,
-	suggestionCountFor,
+	suggestionSlotFor,
 	tipAt,
 } from "@/features/home/home-copy";
 import { CONTROL, ROLE, SURFACE } from "@/ui/a11y";
@@ -64,7 +64,19 @@ export type HomeSplashProps = {
  *
  * The rows are not `Button`s because a Button sizes to its label and these are
  * full-width targets (the spec's "full-width ghost rows"); they borrow the
- * variant's own classes so the press feedback is the kit's, not a new one. */
+ * variant's own classes so the press feedback is the kit's, not a new one.
+ *
+ * **The rest boundary is a rule under the row** (design D5): without one the
+ * rows read as static centred copy rather than as a control, and the kit already
+ * has this grammar for a full-width row — the panel's own New chat row rules
+ * itself the same way. It is painted INLINE from the `hairline` token rather
+ * than with `border-hairline`: the row borrows the `quiet` variant's classes,
+ * and that variant paints `border-transparent` — both are border-colour
+ * utilities, the compiler orders them, and the measured result was
+ * `border-hairline` LOSING and the rule not painting at all. Inline wins
+ * deterministically and reads the same token. The rule is decorative (the row
+ * is full-bleed and every pixel of its width is the target), which is exactly
+ * the hairline's role; it is never a control's sole boundary. */
 const SuggestionRow = ({
 	label,
 	onPress,
@@ -76,25 +88,31 @@ const SuggestionRow = ({
 	 *  rows themselves carry no ids — they are content, and a flow presses them
 	 *  by their label. */
 	testID?: string;
-}) => (
-	<Pressable
-		accessibilityRole={ROLE.button}
-		onPress={onPress}
-		testID={testID}
-		style={{ minHeight: TOUCH_FLOOR }}
-	>
-		{({ pressed }) => (
-			<View className={cx(buttonClasses("quiet", "md", { pressed }), "w-full")}>
-				<Text
-					className={pressed ? "text-ink" : "text-ink-muted"}
-					numberOfLines={1}
+}) => {
+	const rowEdge = useTokenColor("hairline");
+	return (
+		<Pressable
+			accessibilityRole={ROLE.button}
+			onPress={onPress}
+			testID={testID}
+			style={{ minHeight: TOUCH_FLOOR }}
+		>
+			{({ pressed }) => (
+				<View
+					className={cx(buttonClasses("quiet", "md", { pressed }), "w-full")}
+					style={{ borderBottomColor: rowEdge, borderBottomWidth: 1 }}
 				>
-					{label}
-				</Text>
-			</View>
-		)}
-	</Pressable>
-);
+					<Text
+						className={pressed ? "text-ink" : "text-ink-muted"}
+						numberOfLines={1}
+					>
+						{label}
+					</Text>
+				</View>
+			)}
+		</Pressable>
+	);
+};
 
 /** The tip's own line height, fixed: the spec's 20 pt. A tick that changed the
  *  line's height would move everything under it (the desktop's rule). */
@@ -114,10 +132,12 @@ export const HomeSplash = ({
 	/* The tip's clock: suspended while the composer holds a draft — a line that
 	 * changed under a half-written sentence would pull at the exact field the
 	 * reader is typing into. The index is kept across the suspension (suspended,
-	 * not restarted). */
+	 * not restarted). The held-draft predicate is `draftExistsFor`, shared with
+	 * the suggestions' slot below and the state marker, so a whitespace-only
+	 * draft cannot freeze the tip while the frame declares `idle` (review n2). */
 	const [tipIndex, setTipIndex] = useState(0);
 	useEffect(() => {
-		if (starting || draft !== "") return;
+		if (starting || draftExistsFor(draft)) return;
 		const timer = setInterval(
 			() => setTipIndex((index) => index + 1),
 			HOME_TIP_ROTATE_MS,
@@ -144,10 +164,12 @@ export const HomeSplash = ({
 
 	const level = yielded.region === regionHeight ? yielded.level : 0;
 	const fits = contentHeight === 0 || contentHeight <= regionHeight;
-	const rows = HOME_SUGGESTIONS.slice(
-		0,
-		connected ? suggestionCountFor(width) : 0,
-	);
+	/* The slot's contents are decided in ONE place (`suggestionSlotFor`), which
+	 *  is also where review B1's fix lives: while a draft is held the slot is
+	 *  empty — a suggestion's tap REPLACES the field's text, so a live row beside
+	 *  a held draft is a silent overwrite (spec decision 6, §3.5). */
+	const slot = suggestionSlotFor({ connected, draft, width });
+	const rows = slot.kind === "suggestions" ? slot.rows : [];
 	const visibleRows =
 		level >= 3 && rows.length > 2 ? rows.slice(0, rows.length - 1) : rows;
 
@@ -195,7 +217,7 @@ export const HomeSplash = ({
 					>
 						{GREETING}
 					</Text>
-					{connected ? (
+					{slot.kind === "suggestions" ? (
 						<View className="w-full gap-3" testID={SURFACE.homeSuggestions}>
 							{visibleRows.map((label) => (
 								<SuggestionRow
@@ -205,16 +227,17 @@ export const HomeSplash = ({
 								/>
 							))}
 						</View>
-					) : (
+					) : slot.kind === "connect" ? (
 						/* The connect card takes the chips' slot: with nothing connected
 						 *  there is nothing to ask yet, so the one move that changes the
-						 *  state is the only control. */
+						 *  state is the only control. It survives a held draft (it replaces
+						 *  nothing); only the suggestions hide — see `suggestionSlotFor`. */
 						<SuggestionRow
 							label="Connect a computer"
 							onPress={onConnect}
 							testID={CONTROL.homeConnect}
 						/>
-					)}
+					) : null}
 					{level < 1 ? (
 						<View
 							className="flex-row items-center gap-1.5"

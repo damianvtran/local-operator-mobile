@@ -1,5 +1,6 @@
 import { View } from "react-native";
 
+import { draftExistsFor } from "@/features/home/home-copy";
 import { STATE_MARKER } from "@/ui/a11y";
 
 /**
@@ -16,6 +17,10 @@ import { STATE_MARKER } from "@/ui/a11y";
  * one id present in both states would make the affirmative check vacuous — a
  * frame showing `home-idle` would "pass" for a draft. Everything else is
  * additive: `offline` is present only while the device is known offline.
+ *
+ * "A draft exists" is `draftExistsFor` — the same predicate the splash's tip
+ * and suggestion slot read, so the marker cannot declare `idle` for a frame the
+ * splash is treating as a draft (review n2).
  */
 export const HomeStateMarkers = ({
 	draft,
@@ -25,7 +30,7 @@ export const HomeStateMarkers = ({
 	offline: boolean;
 }) => (
 	<View aria-hidden>
-		{draft.trim() !== "" ? (
+		{draftExistsFor(draft) ? (
 			<View testID={STATE_MARKER.home.draft} />
 		) : (
 			<View testID={STATE_MARKER.home.idle} />

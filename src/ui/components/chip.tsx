@@ -57,8 +57,10 @@ export const Chip = ({
 			<View
 				className={chipClasses({ selected, disabled, pressed })}
 				/* Same rule as the fields and the Button: the floor is real geometry,
-				 *  per platform, and the audit reads the box. */
-				style={{ minHeight: TOUCH_FLOOR }}
+				 *  per platform, and the audit reads the box. BOTH axes: a chip sized to
+				 *  its label measured 33.2×48 pt for a lone `~` — a thumb target under
+				 *  the floor the control's own contract claims (design D4/D3). */
+				style={{ minHeight: TOUCH_FLOOR, minWidth: TOUCH_FLOOR }}
 			>
 				{leadingIcon ? <View pointerEvents="none">{leadingIcon}</View> : null}
 				<Text

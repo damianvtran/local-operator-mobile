@@ -23,6 +23,24 @@ export const REFUSED_START_FALLBACK =
  *  the connect action's slot is named for in the spec. */
 export const CONNECT_DISABLED_REASON = "Connect a computer to send.";
 
+/** The folders read failed — the same sentence `/new` uses for the same failure
+ *  (`new-session.tsx`), so one failure has one voice. Carried here because the
+ *  home also has to clear it on a successful re-read (review M2). */
+export const FOLDERS_READ_FAILED =
+	"We couldn't read this computer's folders just now.";
+
+/**
+ * Whether the composer holds a draft at all.
+ *
+ * THE predicate, shared by its three readers so they cannot disagree: the
+ * splash's tip clock, the suggestions' slot, and the state marker
+ * (`home-markers.tsx`). `trim()`, not `!== ""`: a whitespace-only draft is
+ * EMPTY here — the marker already reads it that way, and before this helper a
+ * whitespace-only draft froze the tip while the frame declared `idle` (review
+ * n2).
+ */
+export const draftExistsFor = (draft: string): boolean => draft.trim() !== "";
+
 /** The pool's own character ceiling, asserted. 24 is the spec's number; it is
  *  what keeps a full-width row on one line at 320 pt inside the row's 48 pt. */
 export const SUGGESTION_CHAR_BUDGET = 24;
@@ -46,6 +64,39 @@ export const HOME_SUGGESTIONS = [
  *  spec's own pair exact; a 375 pt phone is nearer the 320 case's pressure). */
 export const suggestionCountFor = (viewportWidth: number): number =>
 	viewportWidth >= 390 ? 3 : 2;
+
+/**
+ * What occupies the suggestions' slot under the greeting.
+ *
+ * `suggestions` renders the pool's head while the draft is empty; `connect`
+ * fills the slot with the one move that changes a no-route state; and `none`
+ * is review B1's fix: the slot empties while a draft is held — spec decision
+ * 6, "suggestions render only while the draft is empty" (§3.5 `draft exists` →
+ * "suggestions hidden"), because a suggestion's tap REPLACES the field's text
+ * and a chip that overwrites typed text is a data-loss control (P-4).
+ *
+ * The connect row is not a text-overwriter (its row navigates instead of
+ * staging a draft), so it stays reachable in the no-route state; only the
+ * suggestions themselves hide. A whitespace-only draft counts as empty
+ * (`draftExistsFor`), so the tip, the marker and this slot read one state.
+ */
+export type SuggestionSlot =
+	| { kind: "suggestions"; rows: readonly string[] }
+	| { kind: "connect" }
+	| { kind: "none" };
+
+export const suggestionSlotFor = (input: {
+	connected: boolean;
+	draft: string;
+	width: number;
+}): SuggestionSlot => {
+	if (!input.connected) return { kind: "connect" };
+	if (draftExistsFor(input.draft)) return { kind: "none" };
+	return {
+		kind: "suggestions",
+		rows: HOME_SUGGESTIONS.slice(0, suggestionCountFor(input.width)),
+	};
+};
 
 /** The tip's own character ceiling — the phone row is ~288 pt of `text-meta`
  *  at its narrowest, which is about 48 characters. Asserted, not felt. */

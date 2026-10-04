@@ -72,7 +72,7 @@ cells became capturable, and the audit now measures 252 rows and finds this. It 
 app finding, not a harness one, and it is named here so the `Web target` job's audit
 step is read as "the session view's composer fails contrast", never as a broken checker.
 
-The 10 declared skips are:
+The 9 declared skips are:
 
 - **5 computer cells** (`S2/empty`, `S3/empty`, `S3/populated`, `S13/loading`,
   `S13/degraded`) need something the relay cannot serve: the computer LIST comes
@@ -101,7 +101,8 @@ cell's state**, so it can never hide a marker that stopped rendering: flip a
 declared marker off and the cell comes back as `notMeasurableCells`, by name, and
 the audit exits 3 instead of 0. That is asserted, not hoped for — measured
 2026-10-02 by removing the `sessions-degraded-banner` `testID` from
-`src/features/sessions/sessions.tsx` in a scratch build:
+the list's component (then `src/features/sessions/sessions.tsx`, now
+`conversations-pane.tsx`) in a scratch build:
 
 ```
 UNREADY CELLS (1):
@@ -277,7 +278,7 @@ second hand-maintained list.
 | `empty` | S4/idle, S15/empty | No conversations at all: an empty catalogue with nothing degraded. |
 | `loading` | S15/loading, S5/loading, S13/loading | No frame has arrived yet: every API route holds its response and the streams stay silent with keepalives only. |
 | `idle` | S15/populated, S5/populated | One live conversation, idle, after a completed turn (the corpus capture). |
-| `many` | S15/populated, S15/populated-long | Twelve rows: pinned, streaming, needing attention, running subagents, a long name and a long cwd. (`S4/narrow` is not declared beside it: this scenario builds ONE world and both names navigate to the same route (`/`), so the two cells were one state under two names — the identical-state check reported the pair as a collapse, the same bytes AND the same content, on iphone-se and tablet-landscape. A width is an AXIS rather than a state, so `narrow` went and `populated-long` — the content variant the rubric names — stayed; the narrow viewport is still captured by the `iphone-se` device at every cell.) |
+| `many` | S15/populated, S15/populated-long | Twelve rows: pinned, streaming, needing attention, running subagents, a long name and a long cwd. (`narrow` is not declared beside it — the retired `S4/narrow`: this scenario builds ONE world and both names navigate to the same route (`/conversations` at this head; `/` when the list was the landing), so the two cells were one state under two names — the identical-state check reported the pair as a collapse, the same bytes AND the same content, on iphone-se and tablet-landscape. A width is an AXIS rather than a state, so `narrow` went and `populated-long` — the content variant the rubric names — stayed; the narrow viewport is still captured by the `iphone-se` device at every cell.) |
 | `degraded` | S15/degraded-row, S5/degraded | The session record is fresh but its runtime is unreachable: the row carries its own receipt (`degraded: true`, what a phone-observed SIGSTOP produces) and `subagents_running` is null while the row stays active. |
 | `degraded-listing` | S15/degraded-listing | The durable catalogue could not be walked: `degraded: ["sessions"]` with rows still present. |
 | `degraded-attention` | S15/degraded-listing | The completion-receipt store could not be read: `degraded: ["attention"]` — the same cell, because the reader's question is the same one. |
@@ -544,7 +545,7 @@ node tools/visual/capture.ts --dir e2e/fixtures/audit-canary \
 #   * `S9/populated` was the same state as `S5/populated`: the sheets are modals opened
 #     from the composer, the harness reaches a screen only by URL, and the cell declared
 #     the session's own marker. It was removed from `models-ranked`'s `shows`.
-# A group made ONLY of DECLARED SKIPS is not reported at all — this head's 10 skips are
+# A group made ONLY of DECLARED SKIPS is not reported at all — this head's 9 skips are
 # one placeholder screen between them — but a group with ANY evidential cell in it is.
 # The text-scale guard is REPORTED, never blocking: `themeProblems` comes from
 # `verifyThemes` and the scale verdict does not feed it, so it cannot fail this run.

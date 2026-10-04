@@ -271,6 +271,10 @@ export const CONTROL = {
 	homeTargetFolder: "home-target-folder",
 	/** The home's offline action "Connect a computer", in the suggestions' slot. */
 	homeConnect: "home-connect",
+	/** The home's folders-read failure line and its remedy (review M2): the
+	 *  sentence `/new` uses for the same failure, with the retry the home lacked. */
+	homeFoldersBanner: "home-folders-banner",
+	homeFoldersRetry: "home-folders-retry",
 	sidebarSwitcher: "sidebar-switcher",
 	sidebarNewChat: "sidebar-new-chat",
 	sidebarSearch: "sidebar-search",
@@ -362,8 +366,10 @@ export const SURFACE = {
 	homeTip: "home-tip",
 	homeStarting: "home-starting",
 	sidebar: "conversations-sidebar",
-	/** The deep-link failure's one honest sentence (ADR 0006 § 6.6), rendered on
-	 *  the panel's route — see `app/(app)/conversations.tsx`. */
+	/** The deep-link failure's one honest sentence (ADR 0006 § 6.6): the
+	 *  `/conversations` route reads it from a `notice` param and hands it to the
+	 *  pane, which renders it under the panel's header — that route is the
+	 *  deep-link-to-nothing destination's landing. */
 	sidebarNotice: "sidebar-notice",
 } as const;
 
@@ -678,8 +684,8 @@ export const markerMatches = (
  * the reverse, and the check that they do lives in `a11y.e2e.test.ts`.
  *
  * `REGION` is in the set because a region a flow WAITS ON is a selector exactly as a
- * control it presses is: the flows assert `session-section-active`, the refusal
- * surfaces and `settings-section-*` by name, and leaving them out let a flow name an
+ * control it presses is: the flows assert the panel's `sidebar-section-*` regions, the
+ * refusal surfaces and `settings-section-*` by name, and leaving them out let a flow name an
  * id this contract could not see — the flow check then read a surface assertion as an
  * unknown selector. Declared last because `Object.values` needs the binding
  * initialised, and each one is rendered (`a11y.e2e.test.ts` proves it), so the set

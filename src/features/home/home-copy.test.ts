@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import {
 	CONNECT_DISABLED_REASON,
+	draftExistsFor,
+	FOLDERS_READ_FAILED,
 	GREETING,
 	HOME_SUGGESTIONS,
 	HOME_TIP_ROTATE_MS,
@@ -9,9 +11,14 @@ import {
 	STARTING,
 	SUGGESTION_CHAR_BUDGET,
 	suggestionCountFor,
+	suggestionSlotFor,
 	TIP_CHAR_BUDGET,
 	tipAt,
 } from "@/features/home/home-copy";
+
+/** Hoisted so the check is compiled once (the same rule the kit's own modules
+ *  follow — an inline regex in a callback is re-created per call). */
+const AGENT_MAKER = /agent/i;
 
 /**
  * The home's copy budgets, asserted rather than argued in review.
@@ -51,7 +58,7 @@ describe("the home's copy", () => {
 		// two "Create …"s read as one idea twice.
 		expect(new Set(leadingVerbs).size).toBe(HOME_SUGGESTIONS.length);
 		// At most one entry creates an agent, for the same reason.
-		const agentMakers = HOME_SUGGESTIONS.filter((s) => /agent/i.test(s));
+		const agentMakers = HOME_SUGGESTIONS.filter((s) => AGENT_MAKER.test(s));
 		expect(agentMakers.length).toBeLessThanOrEqual(1);
 	});
 
@@ -68,12 +75,66 @@ describe("the home's copy", () => {
 		expect(tipAt(HOME_TIPS.length + 2)).toBe(HOME_TIPS[2]);
 	});
 
-	it("states the two fixed sentences", () => {
+	it("states the fixed sentences", () => {
 		// The splash's one-line replacement while the first send is in flight: a
 		// second line would move the composer.
 		expect(STARTING).toBe("Starting…");
 		expect(STARTING.includes("\n")).toBe(false);
 		// The disabled reason is the sentence the composer's own surface carries.
 		expect(CONNECT_DISABLED_REASON).toBe("Connect a computer to send.");
+		// The folders read's failure sentence, `/new`'s verbatim (review M2).
+		expect(FOLDERS_READ_FAILED).toBe(
+			"We couldn't read this computer's folders just now.",
+		);
+	});
+});
+
+/**
+ * The draft gate — review B1's fix, asserted on the helpers the splash renders
+ * from (the splash itself needs the RN renderer + uniwind + lucide, which is the
+ * e2e layer's job per `vitest.config.ts`; these are the plain modules it
+ * renders, the same split every other screen's logic uses).
+ */
+describe("the draft gate", () => {
+	it("treats only whitespace as no draft at all", () => {
+		// `trim()` — the state marker's own reading (review n2): a whitespace-only
+		// draft is EMPTY, so the tip rotates and the marker declares `idle`.
+		expect(draftExistsFor("")).toBe(false);
+		expect(draftExistsFor("   ")).toBe(false);
+		expect(draftExistsFor("\n\t")).toBe(false);
+		expect(draftExistsFor("x")).toBe(true);
+		expect(draftExistsFor(" x ")).toBe(true);
+	});
+
+	it("empties the suggestions' slot while a draft is held", () => {
+		// The regression QA reproduced on `306121b6`: a live suggestion row beside
+		// a held draft, whose tap silently replaced the text (data loss, P-4).
+		const held = suggestionSlotFor({
+			connected: true,
+			draft: "QAtest keep-this-draft",
+			width: 390,
+		});
+		expect(held.kind).toBe("none");
+	});
+
+	it("fills the slot with the pool's head while the draft is empty", () => {
+		const wide = suggestionSlotFor({ connected: true, draft: "", width: 390 });
+		expect(wide.kind).toBe("suggestions");
+		if (wide.kind === "suggestions") expect(wide.rows.length).toBe(3);
+		// The 320 pt count does not change the gate, only the row count.
+		const narrow = suggestionSlotFor({
+			connected: true,
+			draft: "",
+			width: 320,
+		});
+		if (narrow.kind === "suggestions") expect(narrow.rows.length).toBe(2);
+	});
+
+	it("still shows the connect row while a draft is held", () => {
+		// The connect row replaces nothing — it navigates — so it is not a
+		// data-loss control and stays; only the text-replacing suggestions hide.
+		expect(
+			suggestionSlotFor({ connected: false, draft: "typed", width: 390 }).kind,
+		).toBe("connect");
 	});
 });

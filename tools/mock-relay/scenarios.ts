@@ -402,10 +402,12 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 	add(
 		"many",
 		"Twelve rows: pinned, streaming, needing attention, running subagents, a long name and a long cwd.",
-		/* `S4/narrow` used to be declared beside `S4/populated-long`, and it was the same
-		 * rendering under a second name: this scenario builds ONE world, both cells navigate
-		 * to the same route (`/`), and the readiness table already aliases both names onto the
-		 * sessions screen's single `populated` marker, so neither name had a look of its own.
+		/* `narrow` used to be declared beside `populated-long` (then `S4/narrow` ×
+		 * `S4/populated-long`, re-homed to `S15/*` with the panel), and it was the same
+		 * rendering under a second name: this scenario builds ONE world, both names navigate
+		 * to the same route (`/conversations` at this head; `/` when the list was the landing),
+		 * and the readiness table already aliases both names onto the list's single `populated`
+		 * marker, so neither name had a look of its own.
 		 * The identical-state check reported the pair as a COLLAPSE — the same bytes AND the
 		 * same content, on iphone-se and tablet-landscape — and the remedy is the one
 		 * `long-transcript`'s `S5/scroll`, `models-ranked`'s `S9/populated` and `approval`'s
@@ -419,7 +421,7 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 		 * CELL would re-declare the viewport inside the cell axis — the one axis the tier
 		 * deliberately keeps whole. `populated-long` is a content variant the rubric names (a
 		 * long session name, a long question) and the one `verify.ts`'s vocabulary enumerates.
-		 * And `populated-long` has a second declaration (`long-names`) while `S4/narrow`
+		 * And `populated-long` has a second declaration (`long-names`) while `narrow`
 		 * existed only here.
 		 *
 		 * The cost is named rather than papered over: no cell evidences the list under the
@@ -480,7 +482,10 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 	add(
 		"unread",
 		"Three conversations: two carry unread notifications and one does not — the frame-level `unread` block (count 2) and the rows it describes, for the badge's equality cell (ADR 0006 §1.1-1.2).",
-		["S4/populated"],
+		/* The list's cells re-homed to `S15` with the panel on this branch, so #35's
+		 * declaration — written against the sessions list's old home at `/` — names
+		 * `S15/populated` here: `S4` is the composer home now. */
+		["S15/populated"],
 		() => {
 			const unreadRow = projectionFrom(afterDeath, {
 				session_id: syntheticSessionId("unread-row"),

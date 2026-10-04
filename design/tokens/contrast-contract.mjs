@@ -98,6 +98,25 @@ const ratio = (a, b) => {
 	return Math.round(((x + 0.05) / (y + 0.05)) * 100) / 100;
 };
 
+/** The scrim's own ground: `over` (an 8-digit hex, its own alpha) composited on
+ *  `base`, per channel, in 8-bit — the blend every renderer of these tokens
+ *  performs. The preamble above says this file cannot see an alpha composite;
+ *  this is the one place it stays honest anyway, because BOTH layers are flat
+ *  tokens the system owns and the arithmetic is deterministic: the measured
+ *  frames (2026-10-04) read rgb(18,17,14) dark / rgb(80,78,74) light, matching
+ *  this to ≤1/255 per channel. */
+const composite = (over, base) => {
+	const alpha = Number.parseInt(over.slice(7, 9), 16) / 255;
+	const [o, b] = [parse(over.slice(0, 7)), parse(base)];
+	return `#${[0, 1, 2]
+		.map((i) =>
+			Math.round((o[i] * alpha + b[i] * (1 - alpha)) * 255)
+				.toString(16)
+				.padStart(2, "0"),
+		)
+		.join("")}`;
+};
+
 /** CIE L*, used only for the ground ladder. sRGB -> linear -> Y -> L*. */
 const lstar = (hex) => {
 	const [r, g, b] = parse(hex).map((c) =>
@@ -583,6 +602,31 @@ for (const theme of ["light", "dark"]) {
 	for (const g of GROUNDS)
 		assertPair("border-control", g, FLOOR.nonText, theme, P, "structural border");
 
+	/* The overlay panel's edge (the scoped `panel-edge` role): the conversations
+	   drawer over the scrim. D-dark-1 measured the panel fill at 1.38:1 against
+	   the scrim ground in dark — a panel that far from its ground does not read
+	   as its own surface, and no scrim alpha fixed it — so the edge carries the
+	   read and must clear the non-text floor against the ground it separates
+	   FROM. In dark it must also clear it against the panel it sits on, because
+	   there the stroke IS the whole read; in light the fill already measures
+	   ≈8.2 and the edge keeps the hairline's quiet step, so only the scrim pair
+	   is asserted there — an asymmetry the tokens' own derivation explains. */
+	checks += 1;
+	const scrimGround = composite(P.scrim, P.canvas);
+	const edgeOnScrim = ratio(P["panel-edge"], scrimGround);
+	if (edgeOnScrim < FLOOR.nonText)
+		fail(
+			`${theme}  the overlay panel edge: panel-edge on the scrim ground (${scrimGround}) = ${edgeOnScrim.toFixed(2)} < ${FLOOR.nonText} — the panel has no edge against the dimmed content behind it`,
+		);
+	if (theme === "dark") {
+		checks += 1;
+		const edgeOnPanel = ratio(P["panel-edge"], P.elevated);
+		if (edgeOnPanel < FLOOR.nonText)
+			fail(
+				`dark  the overlay panel edge on its own panel = ${edgeOnPanel.toFixed(2)} < ${FLOOR.nonText} — the stroke melts into the fill it outlines`,
+			);
+	}
+
 	/* The focus ring against every ground and every fill it can appear over.
 	   On a phone the ring is rarely seen, but a hardware keyboard, a switch
 	   control and a remote all reach it, and the shipped client keeps it for
@@ -671,6 +715,20 @@ console.log(
 );
 for (const [fg, bg, t, pinned, why] of FORBIDDEN)
 	console.log(`  ${pinned.toFixed(2)}  ${t.padEnd(5)} ${fg} on ${bg} — ${why}`);
+
+/* The scoped pair the `panel-edge` role was derived for, in full — printed so a
+   run shows the measurement rather than only meaning it (an unmeasured token is
+   the defect class this file exists for). */
+console.log(
+	"The overlay panel's edge (scoped: reads against a scrim, never a control boundary):",
+);
+for (const theme of ["light", "dark"]) {
+	const P = load(theme);
+	const ground = composite(P.scrim, P.canvas);
+	console.log(
+		`  ${ratio(P["panel-edge"], ground).toFixed(2)}  ${theme.padEnd(5)} panel-edge on the scrim ground (${ground}) — on the panel itself: ${ratio(P["panel-edge"], P.elevated).toFixed(2)}`,
+	);
+}
 
 if (failures) {
 	console.error(

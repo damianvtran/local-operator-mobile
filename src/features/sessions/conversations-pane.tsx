@@ -31,7 +31,6 @@ import {
 	sessionRowId,
 } from "@/ui/a11y";
 import { useTokenColor } from "@/ui/appearance";
-import { Avatar, initialsOf } from "@/ui/components/avatar";
 import { Banner } from "@/ui/components/banner";
 import { Button } from "@/ui/components/button";
 import { ConnectionPill } from "@/ui/components/connection-pill";
@@ -169,6 +168,16 @@ export const ConversationsPane = ({
 	const staleMessage = staleNote({ stale, lastFrameAt });
 	const staleShortMessage = staleShortNote({ stale, lastFrameAt });
 	const waiting = frameCount === 0 && !loadFailed(streamHealth);
+	const hasRoute = sessions.length > 0 || frameCount > 0;
+	/* The header's New chat row yields while the empty state owns the screen
+	 * (design D6): two "New chat" actions inside one 264 pt panel, and the CTA
+	 * at the point of need — the empty state's own action, the one the flows
+	 * press (`sessions-new-action`) — is the one that stays. All three terms are
+	 * load-bearing (`sessions.length === 0` included — without it the row left a
+	 * POPULATED list, caught on a rendered frame). Loading, search-empty and
+	 * no-route keep it (their CTAs are different actions, not duplicates). */
+	const noSessionsYet =
+		!waiting && query.trim().length === 0 && hasRoute && sessions.length === 0;
 
 	const onRefresh = useMemo(
 		() => () => {
@@ -266,20 +275,22 @@ export const ConversationsPane = ({
 			 *  home's one staging slot means this never stages a SECOND draft — it
 			 *  closes the panel and hands the composer back (P-4: a control that
 			 *  overwrote typed text would be a data-loss control). */}
-			<Pressable
-				accessibilityRole={ROLE.button}
-				accessibilityLabel="New chat"
-				onPress={() => {
-					onNavigate?.();
-					onNewChat?.();
-				}}
-				testID={CONTROL.sidebarNewChat}
-				className="flex-row items-center gap-3 border-hairline border-b px-4"
-				style={{ minHeight: 56 }}
-			>
-				<SquarePen size={20} color={newChatInk} />
-				<Text className="text-body text-ink">New chat</Text>
-			</Pressable>
+			{!noSessionsYet ? (
+				<Pressable
+					accessibilityRole={ROLE.button}
+					accessibilityLabel="New chat"
+					onPress={() => {
+						onNavigate?.();
+						onNewChat?.();
+					}}
+					testID={CONTROL.sidebarNewChat}
+					className="flex-row items-center gap-3 border-hairline border-b px-4"
+					style={{ minHeight: 56 }}
+				>
+					<SquarePen size={20} color={newChatInk} />
+					<Text className="text-body text-ink">New chat</Text>
+				</Pressable>
+			) : null}
 
 			{/* The connection pill belongs ABOVE the list, not inside it: inside,
 			 *  it was a scrolling header whose box ended up under the footer at
@@ -380,7 +391,7 @@ export const ConversationsPane = ({
 					<View className={largeText ? "flex-none" : "flex-1"}>
 						<PaneEmpty
 							waiting={routed && waiting}
-							hasRoute={sessions.length > 0 || frameCount > 0}
+							hasRoute={hasRoute}
 							query={query}
 							onClearSearch={() => setQuery("")}
 							onNew={() => {

@@ -280,6 +280,7 @@ measuring **8.58:1**. In light the accent is dark enough that white is correct
 | `ink-dim` | `#656056` | `#a6a091` | Captions, counts, meta, placeholder, a diff's context lines. The dimmest ink that still clears 4.5:1 everywhere: measured 5.02 minimum (light, on `sunken`) |
 | `ink-disabled` | `#9a9488` | `#5f5a4e` | Disabled control text **only**, exempt under SC 1.4.3 |
 | `border-control` | `#857f70` | `#837c6d` | The **structural** line: any 1px rule that is the *sole* boundary of required content. 3.20–3.92 light, 3.18–4.14 dark |
+| `panel-edge` | `#dad5cb` | `#857b69` | **Scoped**: the edge of an overlay panel over a scrim — the conversations drawer. It reads against the dimmed content it separates from: 4.53:1 dark against the scrim ground and 3.28:1 against its own panel; light keeps the hairline's step (5.68:1 against the light scrim ground). Never a control boundary — controls keep `border-control` |
 
 `hairline` and `hairline-strong` are **decorative and may never be a sole
 boundary**: measured 1.18–1.54 across all grounds. The contract asserts that as a

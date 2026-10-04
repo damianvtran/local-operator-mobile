@@ -46,6 +46,7 @@
 	--color-hairline: #dad5cb;
 	--color-hairline-strong: #c9c3b6;
 	--color-border-control: #857f70;
+	--color-panel-edge: #dad5cb;
 	--color-accent: #137742;
 	--color-accent-hover: #116036;
 	--color-accent-active: #0c4b2a;
@@ -259,6 +260,7 @@
 			--color-hairline: #dad5cb;
 			--color-hairline-strong: #c9c3b6;
 			--color-border-control: #857f70;
+			--color-panel-edge: #dad5cb;
 			--color-accent: #137742;
 			--color-accent-hover: #116036;
 			--color-accent-active: #0c4b2a;
@@ -304,6 +306,7 @@
 			--color-hairline: #403b2c;
 			--color-hairline-strong: #4d4633;
 			--color-border-control: #837c6d;
+			--color-panel-edge: #857b69;
 			--color-accent: #38c96a;
 			--color-accent-hover: #5ad584;
 			--color-accent-active: #2bb25c;
