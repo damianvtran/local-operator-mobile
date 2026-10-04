@@ -108,8 +108,8 @@ Release has been cut. Here is everything you can get today:
 
 | Where | State today |
 | --- | --- |
-| **GitHub Releases** (signed APK, AAB and IPA) | No `v*` tag has been cut, so there is no Release to download. The release pipeline is in review in [#10](https://github.com/damianvtran/local-operator-mobile/pull/10); once it is on `main`, a `v*` tag runs the full gate, builds and signs both platforms, and attaches the artefacts to a Release. |
-| **CI artefacts** | Once #10 is on `main`, every run that touches the native projects uploads a **debug APK** you can sideload and the **iOS simulator build plus the frame it rendered**; a push to `main` also uploads a **signed AAB and APK** to the `android-internal` artefact. |
+| **GitHub Releases** (signed APK, AAB and IPA) | No `v*` tag has been cut, so there is no Release to download. The [release pipeline](https://github.com/damianvtran/local-operator-mobile/blob/main/.github/workflows/release.yml) is on `main` ([#10](https://github.com/damianvtran/local-operator-mobile/pull/10)): a `v*` tag runs the full gate, builds and signs both platforms, and attaches the artefacts to a Release. |
+| **CI artefacts** | Every run that touches the native projects uploads a **debug APK** you can sideload and the **iOS simulator build plus the frame it rendered**; once the signing secrets below are configured, a push to `main` also uploads a **signed AAB and APK** to the `android-internal` artefact. |
 | **Google Play** | **Not yet published.** `docs/publishing/google-play.md` lists what a listing requires. |
 | **App Store** | **Not yet published.** `docs/publishing/apple-app-store.md` lists what a listing requires. |
 | **TestFlight** | **Not yet published.** `docs/publishing/other-channels.md` covers the beta channel and its 90-day build expiry. |
@@ -117,7 +117,7 @@ Release has been cut. Here is everything you can get today:
 
 Signing material (keystores, certificates, provisioning profiles) lives in CI
 secrets only, never in this repository — and **none of it is configured yet**.
-Both signed rows above are gated on it: the pipeline reads the Android keystore
+Every signed artefact promised above is gated on it: the pipeline reads the Android keystore
 and its passwords, the Play service account, and the Apple team id, App Store
 Connect key id, issuer id and private key from repository secrets in a `release`
 environment (`scripts/ci/check-secrets.ts --mode release`), and a `v*` tag fails
