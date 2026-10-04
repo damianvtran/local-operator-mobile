@@ -123,14 +123,14 @@ jobs:
     needs: harness
     runs-on: ubuntu-latest
     # BOUND SIZED FROM A MEASUREMENT, NOT FROM HOPE (review round 3, M3). The
-    # harness documents `pnpm e2e:relay` as its slowest documented command — "the
-    # whole relay contract plus the canary's mutation self-test now runs ~18
-    # minutes — so the default bound is sized to it" (`tools/lib/doc-commands.ts`,
-    # `--timeout 1500`), and `tools/mock-relay/verify.ts` says "a healthy run of the
-    # mutation group takes fifteen minutes". A reviewer's own attempt on this host
-    # was killed at ~14 minutes *inside* the mutation group, on a machine at load
-    # 120-226. The 15-minute job bound this replaces could therefore only ever
-    # report a timeout.
+    # harness documents `pnpm e2e:relay` as its slowest documented command, and its
+    # "runtime is LOAD-DEPENDENT: 28 minutes measured on this host at load averages
+    # 32-46, ~13 minutes on a quiet one" (`tools/lib/doc-commands.ts`, `--timeout
+    # 2700`), and `tools/mock-relay/verify.ts` says "a healthy run takes 28 minutes
+    # on this host at load averages 32-46 (~13 minutes quiet)". A reviewer's own
+    # attempt on this host was killed at ~14 minutes *inside* the mutation group, on
+    # a machine at load 120-226. The 15-minute job bound this replaces could
+    # therefore only ever report a timeout.
     #
     # THE BOUND COVERS THE JOB'S PARTS, NOT ITS LARGEST ONE (review rounds 4's m1 and
     # 5's N5-1): the invariant is `install + 25 + 10 < 45`. At 40 the install was
@@ -187,7 +187,7 @@ jobs:
     name: Every command the harness documents (nightly and on demand)
     needs: harness
     # WHY THIS IS NOT ON THE PULL-REQUEST PATH (`if:` below). It runs the whole of
-    # `docs/e2e/README.md`, whose slowest entry is the relay contract — ~18 minutes
+    # `docs/e2e/README.md`, whose slowest entry is the relay contract — ~28 minutes
     # by the harness's own note — and that command already has its own job above. On
     # a pull request the sweep would double the longest job in this workflow for no
     # extra coverage; nightly it is exactly the check worth having, because it is the
@@ -221,8 +221,9 @@ jobs:
         run: pnpm export:web
 
       - name: Run every documented command
-        # The command's own default bound is 25 minutes (`--timeout 1500`), which is
-        # what fits inside this job's 60 with the export and the install ahead of it.
+        # The command's own default bound is 45 minutes (`--timeout 2700`); this step
+        # is bounded at 40 so it fits inside this job's 60 with the export and the
+        # install ahead of it.
         timeout-minutes: 40
         run: pnpm e2e:docs
 
@@ -259,7 +260,7 @@ jobs:
         #
         # `e2e:docs` USED TO RUN HERE AND NO LONGER DOES. It executes every command
         # `docs/e2e/README.md` names, and the slowest of those is `pnpm e2e:relay` —
-        # ~18 minutes by the harness's own note — so a 5-minute step bound could only
+        # ~28 minutes by the harness's own note — so a 5-minute step bound could only
         # ever report a timeout, while the relay command already has a job of its own
         # above (review round 3, M3: the command also ran twice per push). The
         # documented-command sweep still runs, nightly, in `docs-commands`.
@@ -299,9 +300,9 @@ jobs:
         # 36669731994) without GitHub reaping it, so the run said only that it was
         # still going. Measured again on 2026-10-03 (run 37098393675), the capture
         # costs 2.24 s/cell — 403 cells / 1209 frames in 903.1 s — so the `core`
-        # plan of 858 cells needs ~32 min and cannot finish inside this bound. The
-        # `--tier ci` sample can: 264 cells, ~10 min at the same rate, which leaves
-        # the audit and the canary their own steps below. (`full` is 3102 cells, and
+        # plan of 832 cells needs ~31 min and cannot finish inside this bound. The
+        # `--tier ci` sample can: 256 cells, ~10 min at the same rate, which leaves
+        # the audit and the canary their own steps below. (`full` is 3008 cells, and
         # stays a dispatched or local run.)
         timeout-minutes: 20
         # THE DOCUMENTED INVOCATION, through the harness's own script
