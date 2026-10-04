@@ -1517,8 +1517,6 @@ export async function runCapture(options: CaptureOptions) {
 	let reaped: Awaited<ReturnType<typeof chrome.close>> | null = null;
 	/** Cells that produced no frame, and why — never a silent skip. */
 	const abandoned: Array<{ cell: string; reason: string }> = [...unrenderable];
-	/** What a reviewer must not read as a captured matrix. */
-	const cellsCaptured = plan.length - unrenderable.length;
 	const startedAt = Date.now();
 	let index = 0;
 
@@ -1814,6 +1812,28 @@ export async function runCapture(options: CaptureOptions) {
 			records.filter((record) => record.frames.length > 0).map((r) => r.device),
 		),
 	]);
+	/**
+	 * WHAT THE RUN CAPTURED — from the RECORDS, i.e. from the frames that exist, and never
+	 * from the plan. `plan.length - unrenderable.length` was a plan-derived number wearing a
+	 * captured name: a run whose deadline fired before the first cell reported
+	 * `cellsCaptured: 330` in its manifest while its own console said `captured 0 cells`.
+	 * Nothing read the field, which is exactly how such a number waits to be trusted.
+	 *
+	 * `cellsAttempted` is the other fact, named rather than implied: the loop reached and
+	 * measured those cells (a record exists for each, with or without a frame), so the two
+	 * are distinguishable by name instead of by convention. `cellsPlanned` above stays the
+	 * plan's count.
+	 */
+	const cellsAttempted = records.length;
+	const cellsCaptured = records.filter(
+		(record) => record.frames.length > 0,
+	).length;
+	/** Frames on disk, counted off the records — not `cells x framesPerCell`, which assumes
+	 * every cell kept every frame. */
+	const framesWritten = records.reduce(
+		(total, record) => total + record.frames.length,
+		0,
+	);
 	/** Profiles the plan named that produced no frame at all — the gap the claim must show. */
 	const plannedWithoutFrames = plannedCoverage.captured.filter(
 		(device) => !coverage.captured.includes(device),
@@ -1856,6 +1876,7 @@ export async function runCapture(options: CaptureOptions) {
 			tier: options.tier,
 			cellsPlanned: plan.length,
 			cellsCaptured,
+			cellsAttempted,
 			cellTimeoutMs: options.cellTimeoutMs,
 			deadlineMs,
 			devicesCaptured: options.devices,
@@ -1982,8 +2003,11 @@ export async function runCapture(options: CaptureOptions) {
 
 	console.log("");
 	console.log(
-		`captured ${records.length} cells / ${records.length * framesPerCell} frames in ` +
-			`${(summary.meta.durationMs / 1000).toFixed(1)} s`,
+		`captured ${cellsCaptured} cells / ${framesWritten} frames in ` +
+			`${(summary.meta.durationMs / 1000).toFixed(1)} s` +
+			(cellsAttempted === cellsCaptured
+				? ""
+				: ` (${cellsAttempted - cellsCaptured} cell(s) reached with no frame)`),
 	);
 	// The bound, restated where the run's verdict is read: the frames above are a sample of
 	// the declared matrix, and which part of it is missing is a fact about this run rather

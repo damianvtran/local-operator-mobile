@@ -59,4 +59,17 @@ describe("deviceCoverage", () => {
 			ALL_DEVICES.length - CORE_DEVICES.length,
 		);
 	});
+
+	it("names no profile when none was captured, rather than an empty pair of brackets", () => {
+		// The reviewer's case: a `--deadline` that fires before the first cell leaves a run
+		// with nothing captured, and `captured ()` read as a broken sentence over what is
+		// actually the finding — so the brackets only appear when there is a name for them.
+		const none = deviceCoverage([]);
+		expect(none.captured).toEqual([]);
+		expect(none.notCaptured).toEqual(ALL_DEVICES);
+		expect(describeDeviceCoverage(none)).toBe(
+			`device coverage: 0 of ${ALL_DEVICES.length} declared profiles captured; ` +
+				`${ALL_DEVICES.length} NOT captured (${ALL_DEVICES.join(", ")})`,
+		);
+	});
 });

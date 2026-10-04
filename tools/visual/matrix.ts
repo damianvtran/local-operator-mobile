@@ -328,12 +328,16 @@ export function describeDeviceCoverage(coverage: {
 	captured: string[];
 	notCaptured: string[];
 }): string {
-	const captured = coverage.captured.join(", ");
+	// A run that captured nothing has no names to put in the brackets, and `captured ()` reads
+	// as a broken sentence rather than as the finding it is — the list is only listed when
+	// there is at least one entry in it.
+	const named =
+		coverage.captured.length > 0 ? ` (${coverage.captured.join(", ")})` : "";
 	if (coverage.notCaptured.length === 0) {
-		return `device coverage: all ${coverage.declared.length} declared profiles captured (${captured})`;
+		return `device coverage: all ${coverage.declared.length} declared profiles captured${named}`;
 	}
 	return (
-		`device coverage: ${coverage.captured.length} of ${coverage.declared.length} declared profiles captured (${captured}); ` +
+		`device coverage: ${coverage.captured.length} of ${coverage.declared.length} declared profiles captured${named}; ` +
 		`${coverage.notCaptured.length} NOT captured (${coverage.notCaptured.join(", ")})`
 	);
 }

@@ -421,8 +421,14 @@ jobs:
     # EXPECTED FIRST-RUN VERDICT: THIS JOB IS RED, AND THAT IS WHAT IT IS FOR. It has
     # never executed (schedule/dispatch only). A real local `--tier core --consecutive`
     # run exits 1 in BOTH steps, and every term of that exit reproduces identically at
-    # 85b2785 with no app/audit file changed (`git diff --stat 85b2785..<this-head> --
-    # app src store design public` is empty):
+    # 85b2785, where the app, the audit and the design kit are byte-identical to this
+    # head: `git diff --stat 85b2785..<this-head> -- app src store design public
+    # tools/audit` is empty. That range is NOT empty under `tools/` — this PR's own
+    # changes are there — and the only one of them that could in principle decide a
+    # canvas comparison is the padded-token trim, which is inert for the shipped token
+    # file: its two canvases are already unpadded — checked, not assumed: reading them
+    # back gives each value equal to its own trim, and a test now pins the padded fixture
+    # onto the shipped value — so no displayed colour moves.
     #   * capture: `captured 858 cells / 2574 frames in 1810.8 s`, rc 1 on FOUR unready
     #     cells — `S15/loading` and `S4/idle`, both themes, at `iphone-15-landscape` and
     #     200 % (`median text 34.796875px at 200% against 1.74x the 100% cell (needs
