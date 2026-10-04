@@ -117,10 +117,23 @@ export const COVERAGE = {
  */
 /** The semantic palette a state-only colour usage is measured against. */
 export interface SemanticPalette {
-	danger: string | null;
-	warning: string | null;
-	success: string | null;
-	info: string | null;
+	/**
+	 * Each role PER THEME, because a status colour is not the same hex in the two
+	 * themes and a palette carrying only one of them cannot fire in the other.
+	 *
+	 * Measured, and it is the reason this shape changed: the dot's computed colour in a
+	 * dark cell is the DARK hex, which matched nothing while only `.light` was read — so
+	 * U-03 reported PASS in dark cells on a page whose status was carried by colour
+	 * alone. A check that cannot fail in one of the two shipped themes is not a check.
+	 */
+	dangerLight: string | null;
+	dangerDark: string | null;
+	warningLight: string | null;
+	warningDark: string | null;
+	successLight: string | null;
+	successDark: string | null;
+	infoLight: string | null;
+	infoDark: string | null;
 	/** The accent is theme-dependent in the design kit, so both values are measured. */
 	accentLight: string | null;
 	accentDark: string | null;
@@ -183,6 +196,25 @@ function asSeed(value: unknown): SeedRecord | null {
 	};
 }
 
+/** The cell key the manifest's own tables are keyed by (`screen/state`). */
+function recordCell(record: AuditRecord): string {
+	return record.cell ?? `${record.screen}/${record.state}`;
+}
+
+/**
+ * What to print when a declared-skip entry carries no owner.
+ *
+ * NOT "no owner named": the sentence has to say where the gap is, and it is in the
+ * MANIFEST entry — the capture refuses to declare a skip without an owner
+ * (`lib/readiness.ts` `declaredSkipFor`), so a reader meeting this is looking at a
+ * hand-written or stale manifest, not at a cell nobody owns. (The lookup that finds
+ * the entry compared its `screen/state` key to the record's frame STEM, so every
+ * lookup missed and every declared skip printed this fallback while the manifest named
+ * an owner for all of them.)
+ */
+const DECLARED_SKIP_NO_OWNER =
+	"the manifest's declaredSkips entry for this cell names no owner";
+
 /**
  * Whether the record's own capture run judged this cell to be in the state it names.
  *
@@ -241,10 +273,14 @@ async function pinCellScenario(
  */
 export function semanticFromTokens(tokens: unknown): SemanticPalette {
 	const out: SemanticPalette = {
-		danger: null,
-		warning: null,
-		success: null,
-		info: null,
+		dangerLight: null,
+		dangerDark: null,
+		warningLight: null,
+		warningDark: null,
+		successLight: null,
+		successDark: null,
+		infoLight: null,
+		infoDark: null,
 		accentLight: null,
 		accentDark: null,
 	};
@@ -253,23 +289,34 @@ export function semanticFromTokens(tokens: unknown): SemanticPalette {
 	const color = asRecord(root.color);
 	if (color === undefined) return out;
 	const semantic = asRecord(color.semantic);
-	for (const name of ["danger", "warning", "success", "info"] as const) {
-		const value = semantic?.[name];
-		if (typeof value === "string") out[name] = value;
-		else {
-			const nested = asRecord(value);
-			out[name] = typeof nested?.light === "string" ? nested.light : null;
-		}
-	}
-	const accent = asRecord(color.accent);
-	const accentValue = accent?.accent;
-	if (typeof accentValue === "string") {
-		out.accentLight = accentValue;
-	} else {
-		const pair = asRecord(accentValue);
-		out.accentLight = typeof pair?.light === "string" ? pair.light : null;
-		out.accentDark = typeof pair?.dark === "string" ? pair.dark : null;
-	}
+	/** A role's two theme values, whichever shape the tokens carry it in. */
+	const pair = (
+		value: unknown,
+	): { light: string | null; dark: string | null } => {
+		// A flat string is one colour for both themes, so it lands in both halves: a
+		// palette with no theme split must stay usable in either theme.
+		if (typeof value === "string") return { light: value, dark: value };
+		const bag = asRecord(value);
+		return {
+			light: typeof bag?.light === "string" ? bag.light : null,
+			dark: typeof bag?.dark === "string" ? bag.dark : null,
+		};
+	};
+	const danger = pair(semantic?.danger);
+	out.dangerLight = danger.light;
+	out.dangerDark = danger.dark;
+	const warning = pair(semantic?.warning);
+	out.warningLight = warning.light;
+	out.warningDark = warning.dark;
+	const success = pair(semantic?.success);
+	out.successLight = success.light;
+	out.successDark = success.dark;
+	const info = pair(semantic?.info);
+	out.infoLight = info.light;
+	out.infoDark = info.dark;
+	const accent = pair(asRecord(color.accent)?.accent);
+	out.accentLight = accent.light;
+	out.accentDark = accent.dark;
 	return out;
 }
 
@@ -328,6 +375,8 @@ interface AuditRecord {
 
 	/** The frame stem, used in progress and failure lines. */
 	name?: string;
+	/** The `screen/state` pair the manifest records for this cell, e.g. `S4/loading`. */
+	cell?: string;
 	screen: string;
 	screenLabel?: string;
 	state: string;
@@ -788,7 +837,13 @@ export async function runAudit(options: AuditOptions) {
 				Array.isArray(skipCells) && skipCells.includes(record.name);
 			const skipOwner = Array.isArray(manifest.declaredSkips)
 				? (manifest.declaredSkips.find(
-						(entry) => asRecord(entry)?.cell === record.name,
+						// The manifest's `declaredSkips` entries are keyed by the CELL
+						// (`screen/state` — how `capture.ts` writes them), never by the record's
+						// own frame stem (`S4__loading__iphone-se__dark__100`). Matching the
+						// stem made every lookup miss, so every declared skip printed its
+						// fallback — "no owner named" — while the manifest named an owner for
+						// all of them.
+						(entry) => asRecord(entry)?.cell === recordCell(record),
 					) as Record<string, unknown> | undefined)
 				: undefined;
 			const produced = runChecks(state, {
@@ -822,7 +877,7 @@ export async function runAudit(options: AuditOptions) {
 						blockedKind: "declared-skip" as const,
 						detail:
 							`${row.detail ?? ""} — this cell's state is a DECLARED SKIP: ` +
-							`${String(skipOwner?.owner ?? "no owner named")}. Its frame is not evidence for ` +
+							`${String(skipOwner?.owner ?? DECLARED_SKIP_NO_OWNER)}. Its frame is not evidence for ` +
 							`the state it declares, and its absence is not a measurement gap`,
 					}))
 				: cellWasUnready
@@ -1001,7 +1056,7 @@ export async function runAudit(options: AuditOptions) {
 			.filter((entry): entry is Record<string, unknown> => entry !== undefined)
 			.map(
 				(entry) =>
-					`${String(entry.cell ?? "?")}: ${String(entry.owner ?? "no owner named")}`,
+					`${String(entry.cell ?? "?")}: ${String(entry.owner ?? DECLARED_SKIP_NO_OWNER)}`,
 			),
 		verdict:
 			failures.length > 0

@@ -244,13 +244,33 @@ function u03ColourOnlyStatus(
 			},
 		];
 	}
-	// A dot is not a colour-only status when a *word* sits beside it: "Failed" next
-	// to a red dot is a word carrier, and flagging it would make this check noise.
-	// So the node's nearest container's text is part of the question, and a glyph
-	// in the label is accepted the same way the rubric's own wording allows.
+	// A dot is not a colour-only status when a *word* sits beside it: "Failed" next to a
+	// red dot is a word carrier, and flagging it would make this check noise. "Beside"
+	// is the whole question, and it has exactly two honest scopes:
+	//
+	//   - the node's own container text, for a node that belongs to no control (a dot in
+	//     a paragraph, where the paragraph IS the composition); and
+	//   - the CONTROL the node belongs to, for a node inside one — a status indicator is
+	//     drawn in an empty 12 pt slot while its word sits in a sibling branch of the
+	//     same row. The app's `ListRow` is that shape, and reading only the slot made one
+	//     redundant marker report as a colour-only status in 8 cells.
+	//
+	// WHY THE WALK CANNOT SIMPLY GO FURTHER. The tempting fix is "nearest ancestor with
+	// any text", and it is wrong: on every real screen the next ancestor holding text is
+	// a heading, a page title or the screen root, so every dot would find a word above it
+	// and U-03 could never fire again — a rule narrowed until it cannot fail. The canary's
+	// `#status-dot` is exactly that trap (a bare dot in a paragraph, inside a panel that
+	// carries a heading) and it stays a FAIL under this rule, while `#status-row-dot` is
+	// the control-scoped shape beside it and stays silent. `e2e/run-canary.ts` asserts
+	// that pair in both directions.
+	//
+	// The row's accessible NAME is the other candidate, and it is rejected for a reason
+	// that matters: it is U-09's channel, not a visible carrier, and it lives on the
+	// control, so a labelled row would clear any dot inside it — a red dot in a "Send"
+	// button carries no status, but its name would say otherwise.
 	const hasWord = (node: AuditNode): boolean => {
-		const container = (node.containerText ?? "").trim();
-		return /[A-Za-z]{3,}/.test(container);
+		const carrier = `${node.containerText ?? ""} ${node.controlText ?? ""}`;
+		return /[A-Za-z]{3,}/.test(carrier);
 	};
 	const suspects = state.nodes.filter((n) => {
 		if (n.interactive) return false;
@@ -362,9 +382,59 @@ function u05SafeAreas(state: AuditState): CheckRow[] {
 	const pinned = (n: AuditNode): boolean =>
 		n.position === "fixed" || n.position === "sticky";
 	const rows: CheckRow[] = [];
-	const considered = state.nodes.filter(draws);
+	/**
+	 * Nodes this rule saw and did not judge, by reason.
+	 *
+	 * GHOSTS ARE NOT CONTENT. A node clipped to nothing, or hidden from the
+	 * accessibility tree with no ink of its own, is not "sitting under the notch": it
+	 * is not sitting anywhere. The filter is U-08's own `isGhost`, and it is what the 38
+	 * rows this rule signed on the 2026-10-04 `main` manifest were: every one of them a
+	 * node whose layout box reached into the band while NOTHING of it was painted (22 on
+	 * CI's own run of the same head).
+	 *
+	 * The painted box below is the other half of the same rule, and it catches the shape
+	 * the filter cannot: a node clipped only PART of the way paints, so the filter keeps
+	 * it, and it is the painted box that stops it being reported for where its LAYOUT box
+	 * reaches. That shape does not occur on the app manifest this change was measured
+	 * against — the canary's `#inset-clipped` is it, and the canary fails if the rule goes
+	 * back to measuring layout boxes.
+	 *
+	 * The count is REPORTED rather than silent: a rule that stops firing has to say what
+	 * it stopped judging and why, or a narrowed rule is indistinguishable from a dead
+	 * one.
+	 */
+	const setAside = new Map<string, number>();
+	const bump = (reason: string): void => {
+		setAside.set(reason, (setAside.get(reason) ?? 0) + 1);
+	};
+	const drawing = state.nodes.filter(draws);
+	const considered = drawing.filter((n) => {
+		if (!isGhost(n)) return true;
+		bump(
+			n.clippedAway
+				? "clipped to nothing by an ancestor on its containing-block chain"
+				: "aria-hidden with no ink of its own",
+		);
+		return false;
+	});
+	let painted = 0;
 	for (const node of considered) {
-		const { y, h, x, w } = node.rect;
+		// Measured on the PAINTED box, not the layout box, for the same reason the ghosts
+		// are dropped: a node whose painted part starts below the inset is not under the
+		// inset however far its layout box reaches up. A node clipped only PART of the way
+		// paints, so the ghost filter does not drop it, and this is the rule that keeps it
+		// from being reported for where its layout box reaches — the canary's
+		// `#inset-clipped` is exactly that shape.
+		const box = paintedBox(node);
+		if (box === null) {
+			// Unreachable while `isGhost` above already excludes on the same field, and kept
+			// because the two read it through different helpers: if they ever disagree, this
+			// rule must stay quiet rather than measure a layout box the user cannot see.
+			bump("nothing painted");
+			continue;
+		}
+		painted += 1;
+		const { y, h, x, w } = box;
 		// TOP: anything drawing inside the notch/Dynamic Island band. Content below
 		// the fold has y > inset.top, so this only fires at the top of the page —
 		// which is exactly where a full-bleed header or banner lives.
@@ -393,7 +463,7 @@ function u05SafeAreas(state: AuditState): CheckRow[] {
 		// control passes through the bottom band on its way past, so judging unpinned
 		// nodes would flag the whole document; the defect that matters is a composer
 		// or action bar pinned flush to the home indicator.
-		if (insets.bottom > 0 && pinned(node) && node.rect.bottom <= vh + 1) {
+		if (insets.bottom > 0 && pinned(node) && box.bottom <= vh + 1) {
 			const gap = vh - (y + h);
 			if (gap < Math.max(insets.bottom, 8) - 1) {
 				rows.push({
@@ -424,11 +494,21 @@ function u05SafeAreas(state: AuditState): CheckRow[] {
 		}
 	}
 	if (rows.length === 0) {
+		// The set-aside count, with its reason, is part of the PASS: these are the nodes
+		// this rule used to report, and a reader has to be able to see that it still saw
+		// them and why it stayed quiet — not infer it from two numbers that differ.
+		const aside = [...setAside.entries()]
+			.map(([reason, count]) => `${count} set aside (${reason})`)
+			.join("; ");
+		const notes = [
+			`${considered.length} drawing node(s) considered`,
+			aside,
+		].filter((note) => note !== "");
 		rows.push({
 			check: "U-05",
 			verdict: "PASS",
-			measured: `top ${insets.top}pt and bottom ${insets.bottom}pt respected across ${considered.length} drawing nodes`,
-			detail: "",
+			measured: `top ${insets.top}pt and bottom ${insets.bottom}pt respected across ${painted} painted node(s)`,
+			detail: notes.join("; "),
 		});
 	}
 	return rows;
@@ -446,17 +526,36 @@ function u06HorizontalOverflow(state: AuditState): CheckRow[] {
 			detail: "",
 		});
 	}
-	// A node wider than the viewport is only acceptable inside something that
-	// scrolls horizontally *on purpose*; anything else pushes the layout.
+	// A node wider than the viewport is acceptable ONLY inside something that scrolls
+	// horizontally *on purpose* — the rubric's own clause: "at 200 % overflowing only
+	// inside an explicitly scrollable region". That region is the ANCESTOR (a code
+	// block's `ScrollView`, rendered `overflow-x: auto` by react-native-web), so the
+	// probe answers it on the chain rather than from the node's own style; a code line
+	// long by design is content, not a layout defect. It is recorded as an EXCEPTION,
+	// never folded into PASS, so the run still says what it let through and where.
+	//
+	// ONE KNOWN LIMIT, measured by QA on this head rather than argued (and recorded
+	// rather than silently fixed, since what width this rule MEANS is a separate
+	// decision): the comparison is against `state.viewport.width`, and in this harness
+	// that reading is the emulated layout viewport, which grows to the document's
+	// scroll width when the DOCUMENT itself overflows (measured: 511 on a 320 pt
+	// iphone-se cell). A node that overflows on a page that also overflows therefore
+	// never reaches this loop — the document-level row above is the only row that
+	// fires — so the EXCEPTION cannot be emitted in that case. The verdict is still
+	// FAIL there, so nothing false passes; and the app's own U-06 rows are unaffected,
+	// because its overflow is contained by the scroller and the reading stays 320.
 	const offenders = state.nodes.filter(
 		(n) => n.rect.x + n.rect.w > state.viewport.width + 1 && n.rect.w > 8,
 	);
 	for (const node of offenders.slice(0, 8)) {
+		const overflow = node.rect.x + node.rect.w - state.viewport.width;
 		rows.push({
 			check: "U-06",
-			verdict: "FAIL",
-			measured: `right edge ${node.rect.x + node.rect.w}px vs viewport ${state.viewport.width}px`,
-			detail: node.path,
+			verdict: node.scrollsX ? "EXCEPTION" : "FAIL",
+			measured: `right edge ${node.rect.x + node.rect.w}px vs viewport ${state.viewport.width}px (+${overflow}px)`,
+			detail: node.scrollsX
+				? `${node.path} — inside an ancestor with overflow-x: auto|scroll, the explicitly scrollable region the rubric allows`
+				: node.path,
 		});
 	}
 	if (rows.length === 0) {
@@ -608,16 +707,83 @@ function isGhost(node: AuditNode): boolean {
 	return node.ariaHidden && !node.ownInk;
 }
 
+/**
+ * The box a rule about PAINTED geometry measures, or `null` when nothing is painted.
+ *
+ * A check that measures a layout box measures a claim about a drawing that may not
+ * exist: see `AuditNode.visibleRect`. `null` is not a fallback to `rect` — the whole
+ * point of the field is that an unpainted node paints nowhere, and reading `rect`
+ * there reinstates the phantom the field exists to remove.
+ */
+function paintedBox(node: AuditNode): AuditNode["rect"] | null {
+	return node.visibleRect;
+}
+
+/**
+ * Why a pair that the LAYOUT boxes stack on top of each other is not an overlap a
+ * user can see. Exported so the canary can assert the wording instead of copying it.
+ */
+export const U08_SUPPRESSION = {
+	/**
+	 * One of the two paints at most a 1pt sliver of its box.
+	 *
+	 * NOT "nothing is painted": a node that paints nothing at all is excluded from this
+	 * rule's pair set before pairing (`isGhost`), so what reaches this branch is the
+	 * rounded-to-a-line case, and the wording says what was measured.
+	 */
+	SLIVER: "paints at most a 1pt sliver of its box",
+	/** Both paint, but not on top of each other: the painted regions are disjoint. */
+	DISJOINT: "the painted regions do not intersect",
+	/** Both paint on top of each other, but by less than the rule's 25% of the smaller box. */
+	BELOW_THRESHOLD: "the painted overlap is below the 25% the rule needs",
+} as const;
+
 /** U-08 — meaningful boxes must not overlap. */
 function u08Overlap(state: AuditState): CheckRow[] {
 	// The rubric's rule is pairwise over *text and interactive* boxes, so a label
 	// drawn under a control is caught as well as two controls on top of each
 	// other. Ancestor/descendant pairs are excluded: a container overlaps its own
 	// child by construction, and counting those would fail every nested layout.
+	//
+	// The rule is over boxes the user can SEE, which is `visibleRect` and not `rect`:
+	// see `AuditNode.visibleRect` for why a layout box is the wrong question.
 	const meaningful = state.nodes.filter(
 		(n) => !isGhost(n) && (n.ownText || n.interactive),
 	);
-	const rows: CheckRow[] = [];
+	const failures: CheckRow[] = [];
+	/**
+	 * Pairs the layout geometry would report, whose PAINTED regions do not overlap.
+	 *
+	 * These are the rows this rule used to emit: on CI's run of the 2026-10-04 `main`
+	 * manifest every one of its 114 U-08 rows was such a pair, and the four geometry
+	 * rules accounted for all 148 of that run's FAIL rows (U-08 114, U-05 22, U-06 8,
+	 * U-03 4). The paired local re-drive of the same manifest moves together: 126 U-08
+	 * rows of its 176 FAILs.
+	 *
+	 * They are recorded, one row each with its reason, and never dropped — a rule that
+	 * narrows until it cannot fail is the failure mode this whole instrument series has
+	 * been about, so what it sets aside has to be as readable as what it reports. The
+	 * ROWS ARE CAPPED at eight per cell, like the failures and independently of them, so
+	 * a cell with more than eight suppressions shows eight reason-tagged rows and states
+	 * the true count and the whole per-reason breakdown on every one of them (the cap
+	 * never bit on this manifest: the largest cell count was 8).
+	 */
+	const suppressed: CheckRow[] = [];
+	const reasons = new Map<string, number>();
+	const suppress = (
+		a: AuditNode,
+		b: AuditNode,
+		reason: string,
+		layoutNote = "",
+	): void => {
+		reasons.set(reason, (reasons.get(reason) ?? 0) + 1);
+		suppressed.push({
+			check: "U-08",
+			verdict: "EXCEPTION",
+			measured: `suppressed: ${reason}${layoutNote}`,
+			detail: `${a.path} ∩ ${b.path}`,
+		});
+	};
 	for (let i = 0; i < meaningful.length; i += 1) {
 		for (let j = i + 1; j < meaningful.length; j += 1) {
 			const a = meaningful[i];
@@ -653,19 +819,74 @@ function u08Overlap(state: AuditState): CheckRow[] {
 				const coversControl = under.interactive && encloses(overlay, under);
 				if (!coversControl && isOpaque(overlay)) continue;
 			}
-			// Whichever of the pair escaped a clipping ancestor, if either did.
-			const escaped = a.escapedClip ? a : b.escapedClip ? b : null;
-			const overlapW =
+			// THE PAIR IS A CANDIDATE ONLY IF ITS LAYOUT BOXES STACK. Deciding that on
+			// layout geometry, and the verdict on painted geometry, is what makes a
+			// suppression count mean something: every suppressed pair is one the rule
+			// would otherwise have reported, and none of them is a pair that never
+			// touched.
+			const layoutW =
 				Math.min(a.rect.x + a.rect.w, b.rect.x + b.rect.w) -
 				Math.max(a.rect.x, b.rect.x);
-			const overlapH =
+			const layoutH =
 				Math.min(a.rect.y + a.rect.h, b.rect.y + b.rect.h) -
 				Math.max(a.rect.y, b.rect.y);
-			if (overlapW <= 1 || overlapH <= 1) continue;
+			if (layoutW <= 1 || layoutH <= 1) continue;
+			const layoutArea = layoutW * layoutH;
+			const layoutSmaller = Math.min(a.rect.w * a.rect.h, b.rect.w * b.rect.h);
+			const layoutPct = layoutSmaller > 0 ? layoutArea / layoutSmaller : 0;
+			if (layoutPct < 0.25) continue;
+			const layoutNote = ` (layout boxes overlap ${layoutW}x${layoutH}pt, ${round(layoutPct * 100, 0)}% of the smaller box)`;
+			// From here the pair would be a finding on layout geometry. Whether it IS one
+			// is decided on what is painted.
+			const paintedA = paintedBox(a);
+			const paintedB = paintedBox(b);
+			const unpainted =
+				paintedA === null
+					? a
+					: paintedB === null
+						? b
+						: paintedA.w <= 1 || paintedA.h <= 1
+							? a
+							: paintedB.w <= 1 || paintedB.h <= 1
+								? b
+								: null;
+			if (unpainted !== null || paintedA === null || paintedB === null) {
+				suppress(
+					a,
+					b,
+					`${unpainted?.path ?? "one of the pair"} ${U08_SUPPRESSION.SLIVER}`,
+					layoutNote,
+				);
+				continue;
+			}
+			const overlapW =
+				Math.min(paintedA.x + paintedA.w, paintedB.x + paintedB.w) -
+				Math.max(paintedA.x, paintedB.x);
+			const overlapH =
+				Math.min(paintedA.y + paintedA.h, paintedB.y + paintedB.h) -
+				Math.max(paintedA.y, paintedB.y);
+			if (overlapW <= 1 || overlapH <= 1) {
+				suppress(a, b, U08_SUPPRESSION.DISJOINT, layoutNote);
+				continue;
+			}
 			const area = overlapW * overlapH;
-			const smaller = Math.min(a.rect.w * a.rect.h, b.rect.w * b.rect.h);
-			if (area / smaller < 0.25) continue;
-			rows.push({
+			const smaller = Math.min(
+				paintedA.w * paintedA.h,
+				paintedB.w * paintedB.h,
+			);
+			const pct = smaller > 0 ? area / smaller : 0;
+			if (pct < 0.25) {
+				suppress(
+					a,
+					b,
+					U08_SUPPRESSION.BELOW_THRESHOLD,
+					`${layoutNote}, painted ${overlapW}x${overlapH}pt, ${round(pct * 100, 0)}% of the smaller painted box`,
+				);
+				continue;
+			}
+			// Whichever of the pair escaped a clipping ancestor, if either did.
+			const escaped = a.escapedClip ? a : b.escapedClip ? b : null;
+			failures.push({
 				check: "U-08",
 				verdict: "FAIL",
 				// The rule's own words come first when the pair includes a node the browser
@@ -673,20 +894,34 @@ function u08Overlap(state: AuditState): CheckRow[] {
 				// is the escape the every-ancestor walk swallowed, and `SUB_RULE_TEXT` reads it
 				// (with the escaping node's position) to tell this branch — and each of its
 				// shapes — apart from a plain overlap.
-				measured: `${escaped === null ? "" : `painted over a clipping ancestor (${escaped.position}): `}${overlapW}x${overlapH}pt overlap (${round((area / smaller) * 100, 0)}% of the smaller box)`,
+				measured: `${escaped === null ? "" : `painted over a clipping ancestor (${escaped.position}): `}${overlapW}x${overlapH}pt overlap (${round(pct * 100, 0)}% of the smaller painted box)`,
 				detail: `${a.path} ∩ ${b.path}${offscreenNote(a, state)}`,
 			});
 		}
 	}
-	if (rows.length === 0) {
-		rows.push({
-			check: "U-08",
-			verdict: "PASS",
-			measured: `${meaningful.length} text/control boxes, no pair overlapping >25%`,
-			detail: "",
-		});
+	if (failures.length === 0 && suppressed.length === 0) {
+		return [
+			{
+				check: "U-08",
+				verdict: "PASS",
+				measured: `${meaningful.length} text/control boxes, no pair overlapping >25%`,
+				detail: "",
+			},
+		];
 	}
-	return rows.slice(0, 8);
+	// The cell's own breakdown, on every suppression row: a per-cell count that is
+	// only visible when the cap happens to let a row through is the silence this
+	// whole branch exists to remove.
+	const breakdown = [...reasons.entries()]
+		.map(([reason, count]) => `${count}× ${reason}`)
+		.join("; ");
+	for (const row of suppressed)
+		row.detail = `${row.detail} — ${suppressed.length} pair(s) suppressed in this cell: ${breakdown}`;
+	// FAIL rows first, and each kind capped in its OWN right (8), so a real painted overlap
+	// can never be crowded out of a cell's eight by the rows that explain what the rule set
+	// aside — and so the rows it set aside are not invisible in precisely the cells that used
+	// to report eight of them. Every suppression row names its pair and its reason.
+	return [...failures.slice(0, 8), ...suppressed.slice(0, 8)];
 }
 
 /** U-09 — every interactive node in the accessibility tree carries a name. */
@@ -915,6 +1150,34 @@ export interface AuditNode {
 		right: number;
 		bottom: number;
 	};
+	/**
+	 * Where the node actually PAINTS, or `null` when no part of it is painted.
+	 *
+	 * `rect` is a layout box, and a box is not a drawing: a node clipped only part of
+	 * the way keeps its full layout box, so a check that pairs layout boxes reports an
+	 * overlap between this node and a sibling sitting outside the clipping ancestor
+	 * that no user can see. The probe answers this from the SAME sweep that decides
+	 * `clippedAway` (see its `clipIntersection`), so the two can never disagree — and
+	 * every geometry rule that asks "what does the user see here" reads this, never
+	 * `rect`.
+	 */
+	visibleRect: {
+		x: number;
+		y: number;
+		w: number;
+		h: number;
+		right: number;
+		bottom: number;
+	} | null;
+	/**
+	 * Whether an ancestor scrolls horizontally on purpose (`overflow-x: auto|scroll`).
+	 *
+	 * The rubric allows content wider than the viewport inside an explicitly scrollable
+	 * region — a code block is the real case — and the fact lives on the ANCESTOR: the
+	 * element that scrolls is the `ScrollView`, the element that overflows is the text
+	 * inside it. Measured per node because that is where the rule asks.
+	 */
+	scrollsX: boolean;
 	fontSize: number;
 	fontWeight: string;
 	color: string;
@@ -955,7 +1218,25 @@ export interface AuditNode {
 	disabled: boolean;
 	isControl: boolean;
 	childImages: number;
+	/**
+	 * The text of the node's nearest semantic ancestor container (`p, li, div, …`), or
+	 * of its parent when it has none.
+	 *
+	 * One of U-03's two carrier scopes. It is the right scope for a node that belongs to
+	 * no control, where the composition is the local container itself.
+	 */
 	containerText: string;
+	/**
+	 * The text of the nearest INTERACTIVE ancestor — the control the node belongs to —
+	 * or `""` when there is none.
+	 *
+	 * U-03's other carrier scope, and the one a status indicator needs: the word that
+	 * carries the status sits beside the dot in the same control, while the dot's own
+	 * container is the empty 12 pt indicator slot it is drawn in. Both scopes are
+	 * bounded *downwards* on purpose — see `hasWord` in `u03ColourOnlyStatus` for why the
+	 * walk must not simply continue to the page.
+	 */
+	controlText: string;
 	hasGlyph: boolean;
 	semanticColour: string;
 	semanticBackground: string;
