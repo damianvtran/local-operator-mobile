@@ -145,6 +145,11 @@ const manifestOverride = flag("manifest", "");
 const KNOWN_BLINDS = new Set([
 	"U-04",
 	"U-05:top",
+	// The top rule's dialog shape (content inside an aria-modal dialog raised
+	// into the band): its own sub-rule since review round 4, so blinding it
+	// misses exactly #dialog-band-control while blinding U-05:top misses
+	// exactly #full-bleed.
+	"U-05:top-dialog",
 	"U-05:bottom",
 	"U-05:left",
 	"U-05:right",

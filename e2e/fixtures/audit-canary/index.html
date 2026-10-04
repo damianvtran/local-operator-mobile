@@ -43,9 +43,9 @@
   | #escape-pinned        | U-08-escape-absolute | an absolute node a clipping ancestor cannot clip |
   | #fixed-escape         | U-08-escape-fixed | a fixed node under the same non-clipping ancestor |
   | #modal-collide-a/b    | U-08  | two controls colliding INSIDE one dialog still fail  |
-  | #dialog-band-control  | U-05-top | dialog CONTENT (a control) raised into the band still fails |
+  | #dialog-band-control  | U-05-top-dialog | dialog CONTENT (a control) raised into the band still fails |
 
-  Five of the entries are the INVERSE declaration, `data-not-defect`: elements the
+  Seven of the entries are the INVERSE declaration, `data-not-defect`: elements the
   audit must NOT report. A rule is only worth trusting when it is shown both to fire
   on a defect and to stay silent on the shape it must not fire on, and the two
   directions are asserted in the same run so neither can be satisfied by an
@@ -69,7 +69,12 @@
                full-height ground is a surface, not content), while
                #dialog-band-control — that dialog's own control raised into the
                band — must still fail, or the exemption would be indistinguishable
-               from a blanket.
+               from a blanket;
+               #dismiss-host must produce no U-05 row either: it is a modal's own
+               fixed, viewport-covering layer, and the band is held by the
+               dialog's dismiss layer — a control role, but one that dismisses
+               from anywhere, so nothing in the band is a target a reader must
+               reach.
 -->
 <html lang="en">
 <head>
@@ -248,7 +253,32 @@
      subject — the canary's "must-not-report" reads the row's whole path. -->
 <div class="bad" id="dialog-fixture" role="dialog" aria-modal="true" aria-label="Dialog fixture" style="position:fixed;top:0;right:0;width:0;height:0">
 	<div id="dialog-surface" data-not-defect="U-05" style="position:fixed;top:0;right:0;width:8px;height:100%;background:var(--surface);border-left:1px solid var(--border)"></div>
-	<button class="control" id="dialog-band-control" data-defect="U-05-top" aria-label="Dialog control in the band" style="position:fixed;top:0;right:0;width:44px;height:44px"></button>
+	<button class="control" id="dialog-band-control" data-defect="U-05-top-dialog" aria-label="Dialog control in the band" style="position:fixed;top:0;right:0;width:44px;height:44px"></button>
+</div>
+
+<!-- U-05's modal DISMISS layer — the shape react-native-web paints around an open
+     modal: a fixed, viewport-covering HOST that carries no text and no control of
+     its own, holding the aria-modal dialog whose band is occupied by the dialog's
+     dismiss layer. That layer carries a CONTROL role but is not a target a reader
+     must reach — it dismisses from anywhere — so the band holds nothing a thumb
+     must find; contrast #footer-flush, where the band IS the target. Without the
+     host's set-aside it reports "pinned content is 0pt from the bottom" for a
+     layer that exists only because the modal is open — the class the conversations
+     drawer produced at iphone-15 (design round 4).
+
+     The dismiss layer is bounded, and placed clear of this page's own fixtures,
+     deliberately: it must add NO U-08 pairs, because the suppression rows are
+     capped per cell (8) and a page-covering control would crowd the rows the
+     canary reads for #modal-covered, #modal-backdrop and #phantom-over out of
+     their cells. The app's own scrim is full-bleed; what this block holds is the
+     HOST's set-aside and the layer's role, and #dialog-band-control keeps the
+     failing direction so neither declaration reads as a blanket. -->
+<div class="bad" id="dismiss-host" data-not-defect="U-05" style="position:fixed;top:0;left:0;right:0;bottom:0">
+	<div id="dismiss-dialog" role="dialog" aria-modal="true" aria-label="Dismiss layer fixture" style="position:fixed;top:0;left:0;right:0;bottom:0">
+		<button class="control" id="dismiss-scrim" aria-label="Dismiss the layer" style="position:absolute;top:70px;left:230px;width:120px;height:60px;background:rgba(178,58,49,0.35)">
+			<svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8" fill="var(--accent)"/></svg>
+		</button>
+	</div>
 </div>
 
 <h1>Audit canary</h1>

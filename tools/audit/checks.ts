@@ -320,6 +320,13 @@ function u03ColourOnlyStatus(
  */
 export const SUB_RULE_TEXT: Record<string, RegExp> = {
 	"U-05:top": /^top edge/,
+	// The top rule's second shape — content INSIDE a modal dialog raised into
+	// the band, the boundary of the modal-surface set-aside below. Separate
+	// words so each shape is separately blindable: one text for both made a
+	// blind of either report two missed fixtures, which the mutation self-test
+	// correctly reads as "not exactly the named rule" — the same finding U-08's
+	// escape branches were split for (review round 4).
+	"U-05:top-dialog": /^dialog content/,
 	"U-05:bottom": /^pinned content/,
 	"U-05:left": /^left edge/,
 	"U-05:right": /^right edge/,
@@ -417,6 +424,21 @@ function u05SafeAreas(state: AuditState): CheckRow[] {
 		);
 		return false;
 	});
+	/**
+	 * Node indices that sit on the ancestor chain of something inside an
+	 * `aria-modal` dialog — i.e. the layers a modal is wrapped in.
+	 *
+	 * U-05's dismiss-layer set-aside below reads this: react-native-web paints
+	 * every open modal inside its own fixed, viewport-covering layer (the
+	 * conversations drawer's host), and that layer is a fact about the modal,
+	 * not about the app that opened it — so the rule is keyed to the
+	 * `aria-modal` declaration rather than to any app-specific shape.
+	 */
+	const modalCarriers = new Set<number>();
+	for (const n of state.nodes) {
+		if (!n.inModalDialog) continue;
+		for (const ancestor of n.ancestors) modalCarriers.add(ancestor);
+	}
 	let painted = 0;
 	for (const node of considered) {
 		// Measured on the PAINTED box, not the layout box, for the same reason the ghosts
@@ -466,6 +488,31 @@ function u05SafeAreas(state: AuditState): CheckRow[] {
 			);
 			continue;
 		}
+		// THE MODAL'S OWN FULL-VIEWPORT LAYER IS NOT CONTENT UNDER THE SAFE AREA
+		// EITHER. react-native-web wraps every open modal in a fixed,
+		// viewport-covering layer that carries no text and no control of its own
+		// (the conversations drawer's host at iphone-15, design round 4); its band
+		// occupant is whatever the dialog draws there, and for that drawer it is
+		// the dialog's full-bleed dismiss layer — a CONTROL role, but one that
+		// dismisses from anywhere, so the band holds no target a reader must reach
+		// (unlike the pinned action bar this rule exists to catch, #footer-flush).
+		// Content raised into the band still fails on its own row (the canary's
+		// #dialog-band-control), so this set-aside cannot read as a blanket.
+		if (
+			modalCarriers.has(node.index) &&
+			!node.ownText &&
+			!node.interactive &&
+			node.position === "fixed" &&
+			x <= 1 &&
+			y <= 1 &&
+			x + w >= vw - 1 &&
+			y + h >= vh - 1
+		) {
+			bump(
+				"a modal's own full-viewport layer whose band holds the dialog's full-bleed dismiss layer (a control role, dismissal from anywhere)",
+			);
+			continue;
+		}
 		if (
 			insets.top > 0 &&
 			!containerLike &&
@@ -476,7 +523,16 @@ function u05SafeAreas(state: AuditState): CheckRow[] {
 			rows.push({
 				check: "U-05",
 				verdict: "FAIL",
-				measured: `top edge ${y}pt is inside the ${insets.top}pt unsafe top inset`,
+				// Two shapes, two wordings, because they are separately blindable
+				// rules: page content under the inset (#full-bleed) and content
+				// inside a modal dialog raised into the band (#dialog-band-control,
+				// the boundary of the modal set-asides above). One wording for both
+				// made a blind of either report BOTH fixtures as missed, which the
+				// mutation self-test reads as "not exactly the named rule" (the same
+				// finding U-08's escape branches were split for, review round 4).
+				measured: node.inModalDialog
+					? `dialog content sits at ${y}pt, inside the ${insets.top}pt unsafe top inset`
+					: `top edge ${y}pt is inside the ${insets.top}pt unsafe top inset`,
 				detail: `${node.path}${node.ownText ? ` (${JSON.stringify(node.ownText.slice(0, 30))})` : ""}`,
 			});
 			continue;

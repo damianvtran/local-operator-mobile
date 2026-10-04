@@ -207,10 +207,16 @@ export const CONTROL = {
 	sessionsDegradedBanner: "sessions-degraded-banner",
 	sessionOpenCurrent: "session-open-current",
 	sessionOpenPrevious: "session-open-previous",
-	/* --- the queued-ask surfaces (E2, design §4/§5.0). The bar's own id is on the
-	 *  whole chip because the chip is the control; the sheet's controls are named
-	 *  one at a time like every other surface's. --- */
-	asksOpen: "asks-open",
+	/* --- the queued-ask surfaces (E2, design §4/§5.0). The sheet's controls are
+	 *  named one at a time like every other surface's.
+	 *
+	 *  No `asksOpen` yet: its only renderer was the old list screen this branch
+	 *  deleted, and the panel's outstanding-ask indicator is the ask lane's to
+	 *  wire (`spec-home-sidebar.md` §10 — "`SURFACE.sidebar` is where an
+	 *  outstanding-ask count belongs (E2) … Not this PR"). Dropped rather than
+	 *  kept as a rendererless selector, because the enumerating check in
+	 *  `a11y.e2e.test.ts` refuses an identifier no route or primitive paints;
+	 *  E2 re-declares it WITH its renderer when the indicator lands. --- */
 	askRespond: "ask-respond",
 	askDecline: "ask-decline",
 	askDismiss: "ask-dismiss",

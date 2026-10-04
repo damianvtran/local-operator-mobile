@@ -1411,6 +1411,10 @@ async function main() {
 		const mutations: Array<{ blind: string; defect: string }> = [
 			{ blind: "U-04", defect: "U-04" },
 			{ blind: "U-05:top", defect: "U-05-top" },
+			// The top rule's dialog shape (content inside an aria-modal dialog raised
+			// into the band): its own sub-rule since review round 4, so each blind
+			// misses exactly the fixture it names.
+			{ blind: "U-05:top-dialog", defect: "U-05-top-dialog" },
 			{ blind: "U-05:bottom", defect: "U-05-bottom" },
 			{ blind: "U-05:left", defect: "U-05-left" },
 			{ blind: "U-05:right", defect: "U-05-right" },
@@ -1419,14 +1423,14 @@ async function main() {
 			{ blind: "U-08:escape-absolute", defect: "U-08-escape-absolute" },
 			{ blind: "U-08:escape-fixed", defect: "U-08-escape-fixed" },
 		];
-		// One capture for all seven rules. The captured matrix is identical for every
+		// One capture for all ten rules. The captured matrix is identical for every
 		// blinded rule — only the audit's `--blind` differs — so the HEAVY phase went
-		// from seven 48-frame Chrome captures to one, and that churn is what aborted
+		// from ten 48-frame Chrome captures to one, and that churn is what aborted
 		// three sweeps in the suite's opening phase.
 		//
 		// The audits are NOT Chrome-free: `tools/audit/audit.ts` launches a browser,
 		// and each rule runs two of them (a defect page and a clean page). The group
-		// is therefore about fifteen launches, down from about twenty-one — the
+		// is therefore about twenty-one launches, down from about thirty — the
 		// reduction is in the captures, not in the launch count as a whole. An
 		// earlier revision of this comment overstated it.
 		let anyBlindFailed = false;
