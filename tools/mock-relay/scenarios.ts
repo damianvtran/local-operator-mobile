@@ -694,6 +694,139 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 		}),
 	);
 
+	/* The `send` tool's delivery states: the desktop tool row's four-state arm
+	 * (local-operator-ui #719) as the phone renders it (local-operator PR #1855
+	 * is the vocabulary's source). The rows carry the same `details.delivery`
+	 * payload the real result attaches (`DeliveryOutcome.details()`), with the
+	 * core's own sentences as the output text; the LAST row is a PRE-FIELD send
+	 * — no `delivery` key at all — so one frame shows what a relay that
+	 * predates the field sends beside what this client renders when the field
+	 * arrives. */
+	add(
+		"send-delivery",
+		"A transcript where cross-session sends settled in each delivery state — delivered, wake unconfirmed, delivery unconfirmed, not delivered — beside a pre-field send row with no `details.delivery`.",
+		["S5/send-delivery"],
+		() => {
+			const base = structuredClone(everyKind);
+			const template = base.transcript.find((entry) => entry.kind === "tool");
+			if (template === undefined) {
+				throw new Error(
+					"the send-delivery base projection has no tool row to clone",
+				);
+			}
+			type Row = SessionProjection["transcript"][number];
+			const sendRow = (
+				id: string,
+				summary: string,
+				overrides: Partial<Row>,
+			): Row => ({
+				...structuredClone(template),
+				id: `tc-${id}`,
+				tool_call_id: id,
+				tool_name: "send",
+				tool_state: "done",
+				text: "",
+				summary,
+				intent: "",
+				diff_added: 0,
+				diff_removed: 0,
+				elapsed_s: 5.1,
+				error: "",
+				images: [],
+				final: true,
+				text_complete: true,
+				details: {},
+				...overrides,
+			});
+			const projection = projectionFrom(base, {
+				conversation_name: "Release sweep",
+				transcript: [
+					{
+						...structuredClone(template),
+						id: "m-send-1",
+						kind: "user",
+						tool_call_id: "",
+						tool_name: "",
+						tool_state: "interrupted",
+						text: "Send the sweep results out and tell me how they landed.",
+						summary: "",
+						intent: "",
+						details: {},
+						images: [],
+					},
+					sendRow("delivered", "→ release-owner · nightly sweep is green", {
+						details: {
+							delivery: {
+								state: "delivered",
+								message_id: "peer-9f31c0d2a4b8e6f70918273645546372",
+								wake: false,
+								attempts: 1,
+								cause: "",
+								route: "direct",
+							},
+							output: "delivered (id peer-9f31c0d2a4b8e6f70918273645546372)",
+						},
+					}),
+					sendRow("mailbox", "→ nightly-audit · ledger check", {
+						details: {
+							delivery: {
+								state: "mailbox",
+								message_id: "peer-1a2b3c4d5e6f708192a3b4c5d6e7f809",
+								wake: true,
+								attempts: 3,
+								cause: "no wake ack",
+								route: "direct",
+							},
+							partial_result: true,
+							output:
+								"delivered to its mailbox (id peer-1a2b3c4d5e6f708192a3b4c5d6e7f809) — the wake was not acknowledged within 5s after 3 attempts. It will read the message on its next turn; do not send it again.",
+						},
+					}),
+					sendRow("unconfirmed", "→ build-mini · cache flush", {
+						details: {
+							delivery: {
+								state: "unconfirmed",
+								message_id: "peer-2b3c4d5e6f708192a3b4c5d6e7f8091a",
+								wake: true,
+								attempts: 3,
+								cause: "no answer",
+								route: "direct",
+							},
+							partial_result: true,
+							output:
+								"delivery unconfirmed (id peer-2b3c4d5e6f708192a3b4c5d6e7f8091a) — no answer within 5s after 3 attempts and the message is not yet in its transcript. It may still arrive once its loop turns. Check the target's transcript before resending; sending again may deliver it twice.",
+						},
+					}),
+					sendRow("failed", "→ nightly-sweep · stop the run", {
+						tool_state: "failed",
+						error:
+							"no delivery confirmation from nightly-sweep: the peer is not running. The message was not delivered.",
+						details: {
+							delivery: {
+								state: "failed",
+								message_id: "peer-3c4d5e6f708192a3b4c5d6e7f8091a2b",
+								wake: true,
+								attempts: 1,
+								cause: "the peer is not running",
+								route: "direct",
+							},
+							output: "",
+						},
+					}),
+					/* The pre-field row: what a relay that predates `details.delivery`
+					 * sends, and the frame's own before/after pair — the four rows above
+					 * are the arm, this one is the row without it. */
+					sendRow("prefield", "→ release-owner · status note", {
+						details: {
+							output: "delivered (id peer-4d5e6f708192a3b4c5d6e7f8091a2b3c)",
+						},
+					}),
+				],
+			});
+			return { projections: { [projection.session_id]: projection } };
+		},
+	);
+
 	add(
 		"approval-destructive",
 		"A pending approval whose detail is a destructive command, tool still composing.",

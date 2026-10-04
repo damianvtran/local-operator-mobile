@@ -11,6 +11,7 @@ import { View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { ConnectionProvider } from "@/features/auth/connection-provider";
 import { useDeepLinkResolution } from "@/features/deep-links/use-deep-link-resolution";
+import { useNotificationTapRouting } from "@/notifications/use-notification-taps";
 import { ThemeProvider, useTheme } from "@/ui/appearance";
 import { ToastHost } from "@/ui/components";
 import { TextScaleProvider } from "@/ui/text-scale-provider";
@@ -42,6 +43,7 @@ export default function RootLayout() {
 						<View className="flex-1 bg-canvas">
 							<ThemedStatusBar />
 							<DeepLinkResolution />
+							<NotificationTapRouting />
 							<Stack screenOptions={{ headerShown: false }} />
 							<ToastHost />
 						</View>
@@ -64,6 +66,18 @@ export default function RootLayout() {
  */
 const DeepLinkResolution = () => {
 	useDeepLinkResolution();
+	return null;
+};
+
+/**
+ * The notification tap router, mounted beside the deep-link resolver for the
+ * same reason: a response that arrives while any screen is up (or before any
+ * screen exists) becomes a pending destination, and the resolver lands it. On
+ * a web build and on a binary without the notifications module this is a no-op
+ * (see `notifications/native.ts`); it renders nothing.
+ */
+const NotificationTapRouting = () => {
+	useNotificationTapRouting();
 	return null;
 };
 

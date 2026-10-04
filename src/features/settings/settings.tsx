@@ -27,6 +27,7 @@ import { Segmented } from "@/ui/components/segmented";
 import { LARGE_TEXT_SCALE } from "@/ui/text-scale";
 import { TEXT_SCALE_OPTIONS, useTextScale } from "@/ui/text-scale-provider";
 import type { ThemePreference } from "@/ui/tokens.gen";
+import { NotificationsSection } from "./notifications-section";
 import { OwnTunnelSettings } from "./own-tunnel-settings";
 
 /**
@@ -291,6 +292,11 @@ export default function Settings() {
 							: " Overridden above."}
 					</Text>
 				</View>
+
+				<Divider />
+
+				{/* ------------------------------------------------------ notifications */}
+				<NotificationsSection />
 
 				<Divider />
 

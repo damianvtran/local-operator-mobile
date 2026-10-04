@@ -1071,10 +1071,31 @@ outcomes with the sentence and severity taken from `harness/rows.py`
 | `diff_added`, `diff_removed` | int | |
 | `elapsed_s` | float | |
 | `error` | string | |
-| `details` | object | expand payload: `args` (dict **or** string), `output` (string), `diff` (string **or** string[]), `partial`, `sender`, `severity` (`info\|warning\|error`), `notice_kind` (`wake`), `user_run` (bang-mode: the card opens expanded) |
+| `details` | object | expand payload: `args` (dict **or** string), `output` (string), `diff` (string **or** string[]), `partial`, `sender`, `severity` (`info\|warning\|error`), `notice_kind` (`wake`), `user_run` (bang-mode: the card opens expanded), `delivery` (the `send` tool's settled state — below) |
 | `images` | `{index, mime_type}[]` | **references only**; bytes come from `/image` |
 | `final` | bool | assistant rows stream; flips true on message end |
 | `text_complete` | bool | settled streaming ≠ complete representation; transport caps can replace the row with a prefix while keeping its message id |
+
+**`details.delivery`** — a cross-session `send`'s settled outcome, one nested
+object: `{state, message_id, wake, attempts, cause, route, reason}`
+(local-operator PR #1855, `peer_send.DeliveryOutcome.details`;
+`tools/builtin.py` execute_send). `state` is one of `delivered | mailbox |
+unconfirmed | failed` — the words, quoted from the core's one vocabulary
+(`peer_send.py:308-313`): `delivered` is silent; `mailbox` prints "wake
+unconfirmed" (the message IS in the mailbox — do not re-send); `unconfirmed`
+prints "delivery unconfirmed" (nothing proves either way — check the target's
+transcript before resending); `failed` prints "not delivered". The desktop
+tool row renders the four since local-operator-ui #719; this client mirrors
+the semantics in `src/features/session/delivery.ts`.
+
+**Carriage, stated rather than implied:** as of local-operator `1d88f3466`
+the core ATTACHES this object to the result (`details["delivery"] =
+outcome.details()`) but the mobile fold does not copy it onto the phone's
+tool row yet (`mobile/projection.py` `_tool_row_details` copies `diff` keys
+only), so a real relay does not send it to this client today; the app is
+built to the frozen shape and the mock relay serves it. Flipping it on
+end-to-end is a one-line core change (add `"delivery"` to that copy loop)
+amed in the mobile PR that added this row.
 
 `PendingRequest` — `types.py:701-747`: `request_id`, `kind (approval|ask)`,
 `title`, `detail`, `options [{label, description}]`, `secret` (render a **masked**

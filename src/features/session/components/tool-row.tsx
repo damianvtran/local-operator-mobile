@@ -4,6 +4,13 @@ import { Pressable, ScrollView, Text, View } from "react-native";
 
 import type { TranscriptEntry } from "@/contracts";
 import {
+	deliveryAccessibleName,
+	deliveryStateFromDetails,
+	isPartialDelivery,
+	SEND_DELIVERY_NOTE,
+	SEND_DELIVERY_WORD,
+} from "@/features/session/delivery";
+import {
 	diffCounts,
 	diffLineTone,
 	hasToolDetails,
@@ -45,6 +52,14 @@ import { cx } from "@/ui/variants";
  * § 15 addition that would make them documented has been routed to the kit's owner
  * (design round 1, D5) — this comment is the interim record on the component, not
  * a second spec.
+ *
+ * **The send row carries one arm of its own**: a cross-session `send` whose
+ * result states a `details.delivery` is painted with the state's own word and
+ * mark (the desktop tool row's four-state treatment, local-operator-ui #719),
+ * because the incident behind that change is a phone-shaped one too — a message
+ * that landed in a busy peer's mailbox must not read as a failure, and must not
+ * read as a clean success either. The mapping lives in `session/delivery.ts`;
+ * this file only renders it.
  */
 export type ToolRowProps = {
 	entry: TranscriptEntry;
@@ -101,10 +116,33 @@ export const ToolRow = ({ entry, testID }: ToolRowProps) => {
 	 */
 	const [override, setOverride] = useState<boolean | null>(null);
 	const open = override ?? entry.details.user_run === true;
-	const tone = toolGlyph(entry.tool_state);
+	/* The send row's delivery arm. `delivery` is read only for the send tool:
+	 * the field is that tool's own, and a row that grew the word because some
+	 * other tool attached a lookalike key would be this surface inventing an
+	 * interpretation (the core's `SEND_TOOL_NAME` is the gate the TUI and the
+	 * desktop row both use). */
+	const delivery =
+		entry.tool_name.toLowerCase() === "send"
+			? deliveryStateFromDetails(entry.details)
+			: null;
+	const word =
+		delivery === null ? null : (SEND_DELIVERY_WORD[delivery] ?? null);
+	const note =
+		delivery === null ? null : (SEND_DELIVERY_NOTE[delivery] ?? null);
+	const deliveryName = deliveryAccessibleName(delivery);
+	/* The amber pair takes the warning mark — neither the silent success tick
+	 * nor the danger wash — and the WORD beside it carries the distinction with
+	 * colour off. `delivered` and `failed` keep the glyph their tool state
+	 * already earned. */
+	const partial = isPartialDelivery(delivery);
+	const tone = partial
+		? { glyph: "!", inkClass: "text-warning", pulsing: false }
+		: toolGlyph(entry.tool_state);
 	const counts = diffCounts(entry);
 	const elapsed = toolElapsed(entry);
-	const details = hasToolDetails(entry);
+	/* The delivery note is a reason to allow the expansion on its own: a row
+	 * whose hint the reader can only reach by expanding must be expandable. */
+	const details = hasToolDetails(entry) || note !== null;
 	const blocks = toolDetailBlocks(entry);
 	/* A queued call keeps the raised background of a live row — it is announced and
 	 * may still execute — but it does NOT pulse: the pulse is the "work is
@@ -125,7 +163,7 @@ export const ToolRow = ({ entry, testID }: ToolRowProps) => {
 		>
 			<Pressable
 				accessibilityRole={details ? ROLE.button : ROLE.text}
-				accessibilityLabel={`${entry.tool_name} ${entry.tool_state}${entry.summary ? `, ${entry.summary}` : ""}`}
+				accessibilityLabel={`${entry.tool_name} ${entry.tool_state}${entry.summary ? `, ${entry.summary}` : ""}${deliveryName ? `, ${deliveryName}` : ""}`}
 				accessibilityState={details ? { expanded: open } : undefined}
 				disabled={!details}
 				onPress={() => details && setOverride(!open)}
@@ -156,6 +194,20 @@ export const ToolRow = ({ entry, testID }: ToolRowProps) => {
 					>
 						{entry.summary}
 					</Text>
+					{/* The delivery word: the state's own name for what is known (see
+					    `session/delivery.ts`), never a bare verdict. Amber for the two
+					    unsettled-but-not-failed states, danger for `not delivered`. */}
+					{word !== null ? (
+						<Text
+							className={cx(
+								"shrink-0 text-body-sm",
+								delivery === "failed" ? "text-danger" : "text-warning",
+							)}
+							numberOfLines={1}
+						>
+							{word}
+						</Text>
+					) : null}
 					{/* Suppressed entirely when both counts are zero — `+0 −0` is noise
 					    dressed as a measurement. */}
 					{counts !== null ? (
@@ -188,6 +240,20 @@ export const ToolRow = ({ entry, testID }: ToolRowProps) => {
 					) : null}
 					{entry.error ? (
 						<Text className="text-body-sm text-danger">{entry.error}</Text>
+					) : null}
+					{/* The delivery state's wrapping sentence — what the state means and
+					    what to do about it, including the check-before-resending hint the
+					    raw result line buries at its far end. The raw text stays below as
+					    the output block, where the id and the attempt count live. */}
+					{note !== null ? (
+						<Text
+							className={cx(
+								"text-body-sm",
+								delivery === "failed" ? "text-danger" : "text-warning",
+							)}
+						>
+							{note}
+						</Text>
 					) : null}
 					{blocks.showArgs && blocks.args.length > 0 ? (
 						<TextBlock lines={blocks.args} tone="text-ink-muted" />

@@ -228,6 +228,7 @@ export const CONTROL = {
 	settingsAddComputer: "settings-add-computer",
 	settingsTextScaleGroup: "settings-text-scale-group",
 	settingsRetryLastAction: "settings-retry-last-action",
+	settingsNotificationsEnable: "settings-notifications-enable",
 	refusalSignIn: "refusal-sign-in",
 	refusalRetry: "refusal-retry",
 	refusalAnotherAddress: "refusal-another-address",
@@ -530,6 +531,10 @@ export const REGION = {
 	settingsConnection: "settings-section-connection",
 	settingsAppearance: "settings-section-appearance",
 	settingsDiagnostics: "settings-section-diagnostics",
+	/** Notifications: the permission state and the honest machine line
+	 *  (ADR 0006 §2.4, §5). The marker is the section's own region id so the
+	 *  capture can assert the section rendered. */
+	settingsNotifications: "settings-section-notifications",
 
 	/** The refusal surfaces (`docs/ux/flows.md` § 9, C5/C6/C7). Each id names a
 	 *  CAUSE the flow asserts by name, so a control or a sentence that goes missing
@@ -647,6 +652,11 @@ export const STATE_MARKER = {
 		degraded: "session-degraded",
 		queued: "session-queued",
 		"rich-rows": "session-rich-rows",
+		/* The `send` tool's settled delivery states, in the transcript (the
+		 * desktop tool row's four-state arm mirrored — local-operator-ui #719).
+		 * The cell `S5/send-delivery` affirms it: at least one row carries a
+		 * `details.delivery.state`. */
+		"send-delivery": "session-send-delivery",
 		"pending-approval": "session-pending-approval",
 		"pending-ask": "session-pending-ask",
 		subagents: "session-subagents",
