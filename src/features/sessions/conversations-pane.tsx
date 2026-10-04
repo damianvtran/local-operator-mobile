@@ -38,6 +38,7 @@ import { EmptyState } from "@/ui/components/empty-state";
 import { IconButton } from "@/ui/components/icon-button";
 import { Input } from "@/ui/components/input";
 import { ListRow } from "@/ui/components/list-row";
+import { tailFit } from "@/ui/components/list-row-meta";
 import { SectionHeader } from "@/ui/components/section-header";
 import { Sheet } from "@/ui/components/sheet";
 import { Skeleton } from "@/ui/components/skeleton";
@@ -147,6 +148,24 @@ export const ConversationsPane = ({
 	const { effectiveScale } = useTextScale();
 	const largeText = effectiveScale > LARGE_TEXT_SCALE;
 
+	/* The switcher's painted label. The text box's OWN width is the budget —
+	 *  measured on the line, so it cannot drift from the flex rules — and the
+	 *  fit is the row's meta arithmetic (`tailFit`): whole before the first
+	 *  layout (the common label fits, so the first frame is the settled frame),
+	 *  tail-kept once the box is narrower than the string. Measured motivation
+	 *  (review round 3, D3): at 200 % the drawer's 143 dp box dropped the port
+	 *  of `127.0.0.1:51078` — the only part that differs per session — because
+	 *  react-native-web ignores `ellipsizeMode`, so the painted STRING is the
+	 *  only control over which end survives. The home header paints the same
+	 *  ladder whole at 200 %: its box is wider, and the fit engages only where
+	 *  the box runs out. */
+	const switcherLabel = listLabel(computers, tunnelId, route);
+	const [switcherLabelWidth, setSwitcherLabelWidth] = useState(0);
+	const paintedSwitcherLabel =
+		switcherLabelWidth > 0
+			? tailFit(switcherLabel, switcherLabelWidth, effectiveScale)
+			: switcherLabel;
+
 	const filtered = useMemo(() => {
 		const needle = query.trim().toLowerCase();
 		if (needle.length === 0) return sessions;
@@ -211,7 +230,7 @@ export const ConversationsPane = ({
 			<View className="flex-row items-center gap-1 px-2">
 				<Pressable
 					accessibilityRole={ROLE.button}
-					accessibilityLabel={`${listLabel(computers, tunnelId, route)} — choose a computer`}
+					accessibilityLabel={`${switcherLabel} — choose a computer`}
 					onPress={() => {
 						onNavigate?.();
 						router.push("/tunnels");
@@ -227,8 +246,14 @@ export const ConversationsPane = ({
 						className="text-mono-sm text-ink-muted"
 						numberOfLines={1}
 						ellipsizeMode="tail"
+						/* The painted string is fitted above (`tailFit`); this pair stays as the
+						 *  platform mop-up, as on the row's meta line: on iOS/Android the tail
+						 *  ellipsis is the direction the fitted string already has. */
+						onLayout={(event) =>
+							setSwitcherLabelWidth(event.nativeEvent.layout.width)
+						}
 					>
-						{listLabel(computers, tunnelId, route)}
+						{paintedSwitcherLabel}
 					</Text>
 				</Pressable>
 				<IconButton
@@ -415,9 +440,25 @@ export const ConversationsPane = ({
 
 			{/* The footer: the two secondary routes, each a 44 pt target. The
 			 *  panel's own navigation, always visible — the desktop sidebar's
-			 *  footer, phone-sized. */}
-			<View className="flex-row gap-2 border-hairline border-t px-2 pb-2 pt-2">
-				<View className="flex-1">
+			 *  footer, phone-sized.
+			 *
+			 *  Above `LARGE_TEXT_SCALE` the two RE-STACK into a column (the settings
+			 *  account row's idiom, not `flex-wrap`: with both children `flex-1` a
+			 *  wrap never engages — it would only squeeze). Side by side each label
+			 *  has ~104 dp and "Past sessions" needs 107.6 dp at 150 % and 143.5 dp
+			 *  at 200 %, so it wrapped to two lines inside a 48 dp control that does
+			 *  not grow with its label, and its box crossed the band's edges
+			 *  (744.4..811.6 against 745..810 at 200 %, review round 3, D1).
+			 *  Stacked, each label gets the panel's full width — 240 dp of text box
+			 *  inside the button at the drawer's 280 pt — and stays one line. */}
+			<View
+				className={
+					largeText
+						? "flex-col gap-2 border-hairline border-t px-2 pb-2 pt-2"
+						: "flex-row gap-2 border-hairline border-t px-2 pb-2 pt-2"
+				}
+			>
+				<View className={largeText ? "w-full" : "flex-1"}>
 					<Button
 						label="Past sessions"
 						onPress={() => {
@@ -429,7 +470,7 @@ export const ConversationsPane = ({
 						testID={CONTROL.sidebarPast}
 					/>
 				</View>
-				<View className="flex-1">
+				<View className={largeText ? "w-full" : "flex-1"}>
 					<Button
 						label="Computers"
 						onPress={() => {

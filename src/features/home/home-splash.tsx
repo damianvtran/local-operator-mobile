@@ -20,6 +20,9 @@ import { CONTROL, ROLE, SURFACE } from "@/ui/a11y";
 import { useTokenColor } from "@/ui/appearance";
 import { BrandMark } from "@/ui/components/brand-mark";
 import { TOUCH_FLOOR } from "@/ui/layout";
+import { LARGE_TEXT_SCALE } from "@/ui/text-scale";
+import { useTextScale } from "@/ui/text-scale-provider";
+import { TYPE_STEPS } from "@/ui/tokens.gen";
 import { buttonClasses, cx } from "@/ui/variants";
 
 /**
@@ -47,8 +50,10 @@ import { buttonClasses, cx } from "@/ui/variants";
  *
  * **The tip rotates on twelve seconds and is not announced** (`home-copy.ts`
  * has the pool and the reasons). Its presence is a function of the region's
- * height and the pool at large — never of the current entry's length — and the
- * line is a fixed 20 pt, so a rotation never moves anything below it.
+ * height and the pool at large — never of the current entry's length — and its
+ * reserve is fixed for the scale (one `meta` line, two at large text, where the
+ * line would otherwise paint wider than the phone and be cut at both ends —
+ * review round 3, D2), so a rotation never moves anything below it.
  */
 export type HomeSplashProps = {
 	draft: string;
@@ -114,9 +119,29 @@ const SuggestionRow = ({
 	);
 };
 
-/** The tip's own line height, fixed: the spec's 20 pt. A tick that changed the
- *  line's height would move everything under it (the desktop's rule). */
+/** The tip's own line height at 100 %: the spec's 20 pt. A tick that changed the
+ *  line's height would move everything under it (the desktop's rule) — the
+ *  height is therefore fixed PER SCALE, and the two numbers that fix it are
+ *  this one and the reserve below. */
 const TIP_LINE_PX = 20;
+
+/** The reserve the tip rotates inside at a text scale: one `meta` line at
+ *  normal text, two above `LARGE_TEXT_SCALE` — computed from the ONE type
+ *  table (`tokens.gen`), not hand-copied, so it moves with the tokens.
+ *
+ *  Why two lines are the large-text shape: at 200 % the pool's own budget
+ *  paints ~444-497 dp against a 358 dp content column on a 390 pt phone, and
+ *  the longest entry still wraps to two lines on a 320 pt phone (each line
+ *  holds roughly half its 45 glyphs), so two lines is what the copy needs and
+ *  the clamp below is its mop-up exactly as `numberOfLines={1}` was at 100 %.
+ *  FIXED for the scale — never for the current entry's length — so a rotation
+ *  moves nothing below it; a scale change re-measures the whole splash anyway
+ *  (the two `onLayout`s), which is the one case this number is allowed to
+ *  change in. */
+const tipReserveDp = (scale: number, largeText: boolean): number =>
+	largeText
+		? 2 * TYPE_STEPS.meta.size * scale * TYPE_STEPS.meta.lineHeight
+		: TIP_LINE_PX;
 
 export const HomeSplash = ({
 	draft,
@@ -128,6 +153,8 @@ export const HomeSplash = ({
 	const markColor = useTokenColor("ink-muted");
 	const tipColor = useTokenColor("ink-dim");
 	const { width } = useWindowDimensions();
+	const { effectiveScale } = useTextScale();
+	const largeText = effectiveScale > LARGE_TEXT_SCALE;
 
 	/* The tip's clock: suspended while the composer holds a draft — a line that
 	 * changed under a half-written sentence would pull at the exact field the
@@ -239,9 +266,22 @@ export const HomeSplash = ({
 						/>
 					) : null}
 					{level < 1 ? (
+						/* At large text the row takes the content width and the line WRAPS
+						 *  inside the reserve — the fix for the 200 % cut: a centred
+						 *  content-sized row painted ~462 dp against a 390 dp viewport and
+						 *  lost BOTH ends (measured: right edge 426 vs 390). The width is the
+						 *  wrap's constraint, `justify-center` keeps the icon-and-line group
+						 *  centred, and `text-center` centres the wrapped lines. At 100 %
+						 *  nothing moves: same content-sized row, same 20 pt reserve, same
+						 *  one clamped line. No font shrink and no hidden overflow: the
+						 *  reserve is sized from the type table, and the clamp is the mop-up
+						 *  the line always had. */
 						<View
-							className="flex-row items-center gap-1.5"
-							style={{ height: TIP_LINE_PX }}
+							className={cx(
+								"flex-row items-center gap-1.5",
+								largeText && "w-full justify-center",
+							)}
+							style={{ minHeight: tipReserveDp(effectiveScale, largeText) }}
 							testID={SURFACE.homeTip}
 							/* Ambient: no affordance, no announcement, no live region. Asking
 							 *  assistive technology to read it would spam a sentence every
@@ -250,7 +290,13 @@ export const HomeSplash = ({
 							importantForAccessibility="no"
 						>
 							<Info color={tipColor} size={12} />
-							<Text className="text-meta text-ink-dim" numberOfLines={1}>
+							<Text
+								className={cx(
+									"text-meta text-ink-dim",
+									largeText && "text-center",
+								)}
+								numberOfLines={largeText ? 2 : 1}
+							>
 								{tipAt(tipIndex)}
 							</Text>
 						</View>

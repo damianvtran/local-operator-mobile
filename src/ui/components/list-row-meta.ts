@@ -29,6 +29,13 @@ import { TYPE_STEPS } from "@/ui/tokens.gen";
  *    The FIT stays D26's: same floor, same min, same order of yielding — this
  *    is the direction of the painted string only.
  *
+ * **The same arithmetic has a second consumer** (`tailFit`): the conversations
+ * pane's switcher paints a route label — an identifier whose PREFIX is the same
+ * on every loopback session and whose port is the part that differs — so it
+ * keeps its tail too, and the fit is the model's minus the provider-prefix
+ * step. Which characters paint is a string decision for the same reason: the
+ * web build must not leave it to a prop react-native-web does not read.
+ *
  * **Widths are summed per glyph, and a glyph the face cannot draw is not free.**
  * There is no cross-platform way to measure a text's own content width, so the
  * budget below is arithmetic — but arithmetic over the GLYPHS, not over the
@@ -198,6 +205,28 @@ const elidedTo = (text: string, budgetDp: number, scale: number): Painted => {
 	if (fitsWhole(text, budgetDp, scale)) return { text, elided: false };
 	const head = headFitting(text, budgetDp, scale);
 	return { text: head === "" ? "" : `${head}${ELLIPSIS}`, elided: true };
+};
+
+/**
+ * `text` as painted for a surface that must keep its TAIL: whole when it fits,
+ * else an ellipsis and the longest tail that does.
+ *
+ * The conversations pane's switcher is the consumer: a route label like
+ * `127.0.0.1:51078` is an identifier, and the identifier rule is that the
+ * prefix is the part that goes (D26) — the port is the only part that differs
+ * per session, so it is the part that stays. The round recorded the direction
+ * as arguable for a mixed host:port string and did not prescribe one; this is
+ * the identifier reading, taken where the box runs out (the home header's
+ * wider box still paints the same ladder whole).
+ */
+export const tailFit = (
+	text: string,
+	budgetDp: number,
+	scale: number,
+): string => {
+	if (fitsWhole(text, budgetDp, scale)) return text;
+	const tail = tailFitting(text, budgetDp, scale);
+	return tail === "" ? ELLIPSIS : `${ELLIPSIS}${tail}`;
 };
 
 /**

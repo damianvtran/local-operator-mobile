@@ -5,6 +5,7 @@ import {
 	META_PATH_FLOOR_CHARS,
 	MODEL_MIN_CHARS,
 	metaLineFor,
+	tailFit,
 	textWidthDp,
 } from "./list-row-meta";
 
@@ -246,5 +247,26 @@ describe("the meta line's fit", () => {
 				}
 			}
 		}
+	});
+});
+
+describe("tailFit (the conversations pane's switcher)", () => {
+	it("keeps the port of a route label at the drawer's own widths", () => {
+		// The measured drawer budget: the switcher's text box is 143 dp of
+		// mono-sm, and `127.0.0.1:51078` needs 216 dp, so the prefix — the same on
+		// every loopback session — goes and the port (the part that differs)
+		// stays. This is the identifier rule (D26); the round recorded the mixed
+		// host:port direction as arguable and did not prescribe one, and the
+		// painted string is the only control over it on web, where
+		// `ellipsizeMode` is inert.
+		expect(tailFit("127.0.0.1:51078", 143, 2)).toBe("….1:51078");
+		expect(tailFit("127.0.0.1:51078", 143, 1.5)).toBe("….0.0.1:51078");
+	});
+
+	it("paints the label whole wherever the box is wide enough", () => {
+		// 100 % in the drawer's same box, and a wider budget standing for the
+		// home header's box — the fit engages only where the box runs out.
+		expect(tailFit("127.0.0.1:51078", 143, 1)).toBe("127.0.0.1:51078");
+		expect(tailFit("127.0.0.1:51078", 250, 2)).toBe("127.0.0.1:51078");
 	});
 });
