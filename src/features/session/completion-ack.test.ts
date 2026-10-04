@@ -4,7 +4,9 @@ import {
 	ACK_MAX_BACKOFF_MS,
 	type AckGates,
 	mayAcknowledge,
+	overlaysBlocked,
 	retryDelayMs,
+	type ScreenOverlays,
 	settlesCompletion,
 } from "@/features/session/completion-ack";
 
@@ -64,6 +66,48 @@ describe("retryDelayMs", () => {
 		expect(retryDelayMs(5)).toBe(4_000);
 		expect(retryDelayMs(30)).toBe(ACK_MAX_BACKOFF_MS);
 	});
+});
+
+describe("overlaysBlocked", () => {
+	/* The overlay walk (R2-2): `blocked` is built from this set, and this build
+	 *  measures no DOM, so the set is the ONLY occlusion channel the ack gate
+	 *  has — every sheet the screen can open must hold it, and with none open
+	 *  the attempt must fire exactly as `mayAcknowledge` always allowed. */
+	const closed: ScreenOverlays = {
+		models: false,
+		effort: false,
+		panel: false,
+		asks: false,
+		slash: false,
+	};
+
+	it("holds nothing when nothing is open — no over-gating", () => {
+		expect(overlaysBlocked(closed)).toBe(false);
+		/* Every other gate holding, `blocked` from this set alone: this is the
+		 *  normal case (reader watching the session, no sheet up). */
+		expect(
+			mayAcknowledge({
+				appActive: true,
+				focused: true,
+				blocked: overlaysBlocked(closed),
+				anchorVisible: true,
+				completionComplete: true,
+				streaming: false,
+				unseen: true,
+				hasToken: true,
+				hasAnchor: true,
+				sameConversation: true,
+				hasClient: true,
+			}),
+		).toBe(true);
+	});
+
+	it.each([["models"], ["effort"], ["panel"], ["asks"], ["slash"]] as const)(
+		"holds the screen while %s is open",
+		(overlay) => {
+			expect(overlaysBlocked({ ...closed, [overlay]: true })).toBe(true);
+		},
+	);
 });
 
 describe("settlesCompletion", () => {

@@ -55,6 +55,11 @@ export type RowKind =
 	| "parent"
 	| "subagent"
 	| "peer"
+	/** A settled queued ask's record: `ask_response` (answered / late / declined)
+	 *  or `ask_timeout` (the deadline). One treatment for both — the card
+	 *  distinguishes them from `entry.kind` and their details, and the two share
+	 *  the tool-row family's shape (a record, not a decision). */
+	| "ask"
 	| "generic";
 
 const KIND_MAP: Record<string, RowKind> = {
@@ -67,6 +72,8 @@ const KIND_MAP: Record<string, RowKind> = {
 	parent_message: "parent",
 	subagent_message: "subagent",
 	peer_message: "peer",
+	ask_response: "ask",
+	ask_timeout: "ask",
 };
 
 export const classifyEntry = (entry: TranscriptEntry): RowKind =>

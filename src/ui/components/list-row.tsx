@@ -12,8 +12,10 @@ import { ROLE, state } from "@/ui/a11y";
 import { useReducedMotion, useTokenColor } from "@/ui/appearance";
 import { metaLineFor, metaPathFloorDp } from "@/ui/components/list-row-meta";
 import { Shimmer } from "@/ui/components/shimmer";
+import { LARGE_TEXT_SCALE } from "@/ui/text-scale";
 import { useTextScale } from "@/ui/text-scale-provider";
 import {
+	cx,
 	LIST_ROW_INDICATOR_CLASS,
 	listRowClasses,
 	listRowIndicator,
@@ -46,6 +48,15 @@ export type ListRowProps = {
 	model?: string;
 	subagentCount?: number;
 	todoCount?: number;
+	/** Outstanding queued asks on this session (`SessionSummary.asks_open`).
+	 *  ABSENT — never `0` — while the runtime does not publish asks, and both
+	 *  render nothing: a zero badge would count a list the relay cannot vouch
+	 *  for, which is the one claim the capability proxy exists to withhold. */
+	askCount?: number;
+	/** The count chip's own id (`asksBadgeId(sessionId)`), declared by the caller
+	 *  because the row does not know its session id — the same reason `testID`
+	 *  arrives whole. Rendered only when the chip is. */
+	askBadgeTestID?: string;
 	/** A decision is waiting: the loudest state in the list. */
 	pending?: boolean;
 	/** The attention word the row shows with the dot: `approval` or `question`. */
@@ -73,6 +84,8 @@ export const ListRow = ({
 	model,
 	subagentCount = 0,
 	todoCount = 0,
+	askCount = 0,
+	askBadgeTestID,
 	pending = false,
 	attentionWord = "approval",
 	streaming = false,
@@ -94,6 +107,25 @@ export const ListRow = ({
 	 *  arrives through the root font size (see `text-scale-provider`), and the meta
 	 *  line's character budgets are built from it. */
 	const { effectiveScale } = useTextScale();
+
+	/* §2.1's yield order (E2): at large text the count strip is over budget, and
+	 *  the counts that yield are the PROGRESS ones — an ask count carries a
+	 *  DEADLINE, agents/todos carry progress, so asks are the last to go. The
+	 *  progress counts yield only when there is an asks chip to protect, and they
+	 *  yield WHOLE: a count is never truncated, because a shorter string produced
+	 *  by clipping (`12` from `12 agents`) is still a valid-looking count and so
+	 *  reads as the truth. */
+	const progressCountsYield = effectiveScale > LARGE_TEXT_SCALE && askCount > 0;
+
+	/* The marks WRAP only at large text (`wrapMarks` at the title row). Wrapping
+	 *  exists so no mark is pushed past the pane edge when the title cannot share
+	 *  a line (`D13`, measured at 200 %), but at normal text it was pure cost:
+	 *  measured at 320 pt / 100 %, the title took the full line and `4 asks`
+	 *  dropped to a second, left-aligned line — the row grew 60 -> 85 and the
+	 *  count lost its right-hand position (design round 1, `D6`). Below
+	 *  `LARGE_TEXT_SCALE` the title yields FIRST instead — it truncates and every
+	 *  count keeps the line and the right edge. */
+	const wrapMarks = effectiveScale > LARGE_TEXT_SCALE;
 
 	/* The meta line's measured width, which is what the fit below is decided
 	 *  against — see `metaLineFor`. 0 until the first layout. */
@@ -137,11 +169,13 @@ export const ListRow = ({
 				<View className={listRowClasses({ selected, pressed })}>
 					<Indicator attention={attention} />
 					<View className="flex-1 gap-0.5">
-						{/* `flex-wrap`, not a wider row: at 200 % text on a 320 pt phone the
-						 *  title plus its marks do not fit one line, and a row that cannot
-						 *  wrap pushes a mark past the viewport edge — the horizontal
-						 *  overflow the audit measures. Wrapping keeps every mark readable
-						 *  and lets the title keep its own line.
+						{/* `flex-wrap` — but only at large text (`wrapMarks`): at 200 % on a
+						 *  320 pt phone the title plus its marks do not fit one line, and a
+						 *  row that cannot wrap pushes a mark past the viewport edge — the
+						 *  horizontal overflow the audit measures. Wrapping keeps every mark
+						 *  readable and lets the title keep its own line. At normal text the
+						 *  wrap was the wrong trade (D6): the title truncates instead and the
+						 *  counts keep the line.
 						 *
 						 *  It only works because the title's box has a basis of `auto` (`TITLE_BOX`)
 						 *  and NOT `flex-1`: a `flex: 1 1 0%` item has a hypothetical width of
@@ -150,7 +184,12 @@ export const ListRow = ({
 						 *  session title had a 27 pt client box against 344 pt of text (design round 2,
 						 *  D13, frame `dark320-200-faithful`). The same zero-basis trap the segmented
 						 *  track hit in the audit round. */}
-						<View className="flex-row flex-wrap items-center gap-2">
+						<View
+							className={cx(
+								"flex-row items-center gap-2",
+								wrapMarks && "flex-wrap",
+							)}
+						>
 							{/* The title yields first: `flex-1` + truncate, with every
 							 * count beside it `shrink-0`. The shimmer wraps the Text rather
 							 * than the slot, because "working" belongs on the name
@@ -186,12 +225,34 @@ export const ListRow = ({
 							{unread ? (
 								<Text className="shrink-0 text-meta text-accent">new</Text>
 							) : null}
-							{subagentCount > 0 ? (
+							{/* The asks count comes FIRST in the count strip (design E2 §2.1): a
+							 *  deadline outranks a progress count, so when the strip is under
+							 *  pressure it is the agents/todos counts that yield, never this one —
+							 *  and no count is ever truncated (a dropped count is ABSENT; a
+							 *  truncated one is a valid-looking lie).
+							 *
+							 *  THE UNIT IS THE FIELD'S OWN: `asks_open` counts ASKS (open plus
+							 *  timed-out-and-answerable), so the chip says "asks" while the bar
+							 *  above a composer counts questions. The accessible name uses this
+							 *  surface's word for the set — "not a blocker" — because a queued ask
+							 *  is not a "waiting for you" state: the agent keeps working
+							 *  (design §5's header rule), and a reader who heard "waiting" beside a
+							 *  danger approval would rightly conclude the run was held. */}
+							{askCount > 0 ? (
+								<Text
+									className="shrink-0 text-mono-sm text-ink-dim"
+									testID={askBadgeTestID}
+									accessibilityLabel={`${countLabel(askCount, "ask")}, not a blocker`}
+								>
+									{countLabel(askCount, "ask")}
+								</Text>
+							) : null}
+							{subagentCount > 0 && !progressCountsYield ? (
 								<Text className="shrink-0 text-mono-sm text-ink-dim">
 									{countLabel(subagentCount, "agent")}
 								</Text>
 							) : null}
-							{todoCount > 0 ? (
+							{todoCount > 0 && !progressCountsYield ? (
 								<Text className="shrink-0 text-mono-sm text-ink-dim">
 									{countLabel(todoCount, "todo")}
 								</Text>

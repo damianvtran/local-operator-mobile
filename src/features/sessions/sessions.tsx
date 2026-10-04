@@ -1,5 +1,5 @@
 import { useRouter } from "expo-router";
-import { Search } from "lucide-react-native";
+import { MessageCircleQuestion, Search } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { FlatList, Pressable, RefreshControl, Text, View } from "react-native";
 
@@ -10,6 +10,7 @@ import {
 	useConnectionState,
 	useListState,
 } from "@/features/auth/connection-provider";
+import { AsksSheet } from "@/features/session/components/asks-sheet";
 import {
 	attentionWord,
 	degradedNote,
@@ -19,9 +20,17 @@ import {
 	staleShortNote,
 	unreadBadgeCount,
 } from "@/features/sessions/session-projection";
-import { homeShortened } from "@/lib/format";
+import { countLabel, homeShortened } from "@/lib/format";
 import { useUiStore } from "@/state/ui-store";
-import { CONTROL, EMPTY, REGION, ROLE, SCREEN, sessionRowId } from "@/ui/a11y";
+import {
+	asksBadgeId,
+	CONTROL,
+	EMPTY,
+	REGION,
+	ROLE,
+	SCREEN,
+	sessionRowId,
+} from "@/ui/a11y";
 import { ReadableColumn, SplitView } from "@/ui/components/adaptive";
 import { Avatar, initialsOf } from "@/ui/components/avatar";
 import { Badge } from "@/ui/components/badge";
@@ -38,6 +47,7 @@ import { SectionHeader } from "@/ui/components/section-header";
 import { Sheet } from "@/ui/components/sheet";
 import { Skeleton } from "@/ui/components/skeleton";
 import { TOUCH_FLOOR, useLayout } from "@/ui/layout";
+import { headerStackWidth } from "@/ui/size-class";
 import { LARGE_TEXT_SCALE } from "@/ui/text-scale";
 import { useTextScale } from "@/ui/text-scale-provider";
 
@@ -146,6 +156,9 @@ export default function Sessions() {
 	const route = useConnectionState((state) => state.route);
 
 	const [searching, setSearching] = useState(false);
+	/** The asks sheet, opened from the header's question control (the row badge
+	 *  is static — the header control carries the id). */
+	const [asksOpen, setAsksOpen] = useState(false);
 	const [query, setQuery] = useState("");
 	const [home, setHome] = useState<string | null>(null);
 	const [menuTarget, setMenuTarget] = useState<SessionSummary | null>(null);
@@ -265,6 +278,15 @@ export default function Sessions() {
 	 * withholds `count`), and the header then shows no number at all: absence is
 	 * never rendered as 0. The degraded banner below is the "says so". */
 	const badgeCount = unreadBadgeCount(unread);
+	/* The asks aggregate, in the field's own unit: `asks_open` counts ASKS (open
+	 *  plus timed-out-and-answerable), summed across the rows the runtime can
+	 *  vouch for. A row that does not publish the field contributes NOTHING,
+	 *  never a zero — absence is the capability proxy. */
+	const asksTotal = sessions.reduce(
+		(sum, session) =>
+			sum + (typeof session.asks_open === "number" ? session.asks_open : 0),
+		0,
+	);
 	const degradedMessage = degradedNote(degraded);
 	const staleMessage = staleNote({ stale, lastFrameAt });
 	const staleShortMessage = staleShortNote({ stale, lastFrameAt });
@@ -296,10 +318,11 @@ export default function Sessions() {
 		<View className="gap-3">
 			{/* The switcher, and it is ALONE on its row.
 			 *
-			 * The screen's own controls (the waiting badge, search, Settings) live in the
-			 * Screen header above, so this row has exactly one thing to fit. When all four
-			 * shared a line, 200 % text on a 320 pt phone squeezed the label to nothing —
-			 * measured in a captured frame, and the reason the controls moved up. */}
+			 * The screen's own controls (the unread and asks badges, search and
+			 * Settings) live in the Screen header above, so this row has exactly one
+			 * thing to fit. When they all shared a line, 200 % text on a 320 pt phone
+			 * squeezed the label to nothing — measured in a captured frame, and the
+			 * reason the controls moved up. */}
 			<View className="flex-row items-center gap-2">
 				{addressInHeader ? (
 					<Pressable
@@ -440,6 +463,11 @@ export default function Sessions() {
 			 *  a cap on the whole screen is what squeezed a tablet into a 560 pt
 			 *  column in the middle of 1366 pt. */
 			capColumn={!layout.split}
+			/* The stack bound is the header's LIVE fit (R2-1, round 2): the merged
+			 *  header can carry two count badges and the kit floor covers one — with
+			 *  `unread > 0` the title clipped at 360/375/390. `headerStackWidth`
+			 *  floors at the kit constant, so only a heavier cluster moves it. */
+			stackBelowWidth={headerStackWidth(badgeCount, asksTotal)}
 			headerAction={
 				<View className="flex-row items-center gap-1">
 					{badgeCount !== null && badgeCount > 0 ? (
@@ -453,6 +481,23 @@ export default function Sessions() {
 							accessibilityLabel={`${badgeCount} new conversation${badgeCount === 1 ? "" : "s"}`}
 						/>
 					) : null}
+					{/* The ask aggregate sits BESIDE the decision badge and RANKS BELOW it
+					 *  (`flows.md` F-5 §3): "the agent asked something and kept working"
+					 *  must never read as "you are blocking it". `meta` type, neutral tone
+					 *  — the calm voice — and the badge is static; the control beside it
+					 *  opens the sheet. */}
+					{asksTotal > 0 ? (
+						<Badge label={countLabel(asksTotal, "ask")} />
+					) : null}
+					<IconButton
+						accessibilityLabel="Questions"
+						accessibilityHint="Questions your agents are waiting on"
+						onPress={() => setAsksOpen(true)}
+						icon={({ color, size }) => (
+							<MessageCircleQuestion color={color} size={size} />
+						)}
+						testID={CONTROL.asksOpen}
+					/>
 					<IconButton
 						accessibilityLabel="Search sessions"
 						onPress={() => setSearching((value) => !value)}
@@ -554,6 +599,8 @@ export default function Sessions() {
 									ended={item.session.ended === true}
 									degraded={item.session.degraded === true}
 									subagentCount={item.session.subagents_running ?? 0}
+									askCount={item.session.asks_open}
+									askBadgeTestID={asksBadgeId(item.session.session_id)}
 									onPress={() =>
 										router.push(`/session/${item.session.session_id}`)
 									}
@@ -632,6 +679,20 @@ export default function Sessions() {
 					/>
 				</View>
 			</Sheet>
+
+			{/* The walked queue, from the header's question control. The list frame
+			    is the name source for foreign rows; the aggregate route supplies
+			    the rows themselves. */}
+			<AsksSheet
+				visible={asksOpen}
+				onClose={() => setAsksOpen(false)}
+				client={relay()}
+				sessions={sessions}
+				onOpenConversation={(sessionId) => {
+					setAsksOpen(false);
+					router.push(`/session/${sessionId}`);
+				}}
+			/>
 		</Screen>
 	);
 }

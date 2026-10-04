@@ -217,11 +217,23 @@ export const pendingView = (input: PendingViewInput): PendingView => {
 		 * rendered WITH controls offers the reader a button that can only refuse,
 		 * and `ended` is the reliable signal that nothing can be answered — more
 		 * reliable than `kind`, which a non-`tui` session also has. */
-		terminalOnly: input.sessionKind === "tui" || input.ended,
-		boundarySentence: input.ended
-			? PENDING_BOUNDARY_COPY.ended
-			: terminalKind
-				? PENDING_BOUNDARY_COPY.terminal
+		/* R10 narrows to APPROVALS (ADR 0005 §6, E2): a queued ask is answerable
+		 *  even on a `tui`-hosted session — the TUI process that adopted the
+		 *  session reconciles the queue within a ≤60 s bound — and with no live
+		 *  owner the RELAY refuses, in its own sentence, which the app renders
+		 *  verbatim in the pinned controls region. Greying an ask's form here
+		 *  would hide a working path behind a boundary that no longer applies to
+		 *  it, and a silently disabled control is the failure this whole card
+		 *  contract exists to avoid. */
+		terminalOnly:
+			kind === "approval" && (input.sessionKind === "tui" || input.ended),
+		boundarySentence:
+			kind === "approval"
+				? input.ended
+					? PENDING_BOUNDARY_COPY.ended
+					: terminalKind
+						? PENDING_BOUNDARY_COPY.terminal
+						: null
 				: null,
 		runsOnComputer:
 			kind === "approval" &&

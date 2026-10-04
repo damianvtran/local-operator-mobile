@@ -63,7 +63,7 @@ export interface CompletionAckInput {
 	projection: SessionProjection | null;
 	/** From `TranscriptList`: the anchor row's bottom is inside the viewport. */
 	anchorVisible: boolean;
-	/** A sheet or panel is open (models, effort, todos, subagents). */
+	/** A sheet or panel is open (models, effort, asks, slash, todos/subagents). */
 	blocked: boolean;
 }
 

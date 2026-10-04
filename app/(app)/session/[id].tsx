@@ -2,7 +2,12 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { ArrowLeft } from "lucide-react-native";
 import { useCallback, useMemo, useState } from "react";
 import { Text, useWindowDimensions, View } from "react-native";
+import { useListState } from "@/features/auth/connection-provider";
+import { blockingPending } from "@/features/session/asks";
 import { composerChipLabels } from "@/features/session/chip-labels";
+import { overlaysBlocked } from "@/features/session/completion-ack";
+import { AskBar } from "@/features/session/components/ask-bar";
+import { AsksSheet } from "@/features/session/components/asks-sheet";
 import { Composer } from "@/features/session/components/composer";
 import { ConnectionBanner } from "@/features/session/components/connection-banner";
 import {
@@ -81,21 +86,43 @@ export default function Session() {
 
 	const [modelsOpen, setModelsOpen] = useState(false);
 	const [effortOpen, setEffortOpen] = useState(false);
+	/** The asks sheet's visibility — entered only by the reader (§5.0: never
+	 *  automatic on arrival), from the bar. */
+	const [asksOpen, setAsksOpen] = useState(false);
+
+	/* The list frame's rows: names for the sheet's foreign-ask rows, which the
+	 *  aggregate route deliberately does not carry. */
+	const listSessions = useListState((state) => state.sessions);
+
 	/** Whether the completion's anchor row bottom is inside the transcript's
 	 *  viewport — measured by `TranscriptList` (the list owns the geometry; this
 	 *  screen only carries the answer to the ack gate). */
 	const [completionVisible, setCompletionVisible] = useState(false);
 
+	/* The slash sheet's visibility — read by the ack gate (an open slash sheet
+	 *  holds the screen, R2-2) as well as by the sheet itself, so it is
+	 *  declared above both readers. */
+	const slash = draftSlashQuery(composer.draft);
+
 	/* The read receipt: fires only when the completion's END is genuinely on
 	 *  screen while the app is foregrounded on this session (ADR 0006 §1.3).
-	 *  A sheet or either panel counts as `blocked`, exactly like the web's
-	 *  gate list — a completion behind an overlay has not been read. */
+	 *  A sheet (models, effort, asks, slash) or either panel counts as
+	 *  `blocked`, exactly like the web's gate list — a completion behind an
+	 *  overlay has not been read. This build measures no DOM, so the overlay set
+	 *  is its ONLY occlusion channel; it lives in `overlaysBlocked`, and a test
+	 *  walks it (review round 2, R2-2). */
 	useCompletionAck({
 		sessionId,
 		endpoints: runtime.source.endpoints,
 		projection: runtime.projection,
 		anchorVisible: completionVisible,
-		blocked: modelsOpen || effortOpen || openPanel !== null,
+		blocked: overlaysBlocked({
+			models: modelsOpen,
+			effort: effortOpen,
+			panel: openPanel !== null,
+			asks: asksOpen,
+			slash: slash !== null,
+		}),
 	});
 
 	const projection = runtime.projection;
@@ -153,7 +180,14 @@ export default function Session() {
 			projection?.context_window != null) ||
 		subagents.total > 0;
 
-	const pending = projection?.pending ?? null;
+	/* The legacy ask-mirror rule (design §4, client rule N3): once `asks` is
+	 *  present, a `pending` card of `kind == "ask"` is one of those rows mirrored
+	 *  for old clients and must be IGNORED here — rendering both would draw the
+	 *  same ask twice and collect a second answer. Approvals are unaffected. */
+	const pending = blockingPending(
+		projection?.pending ?? null,
+		projection?.asks,
+	);
 
 	/* The state markers the design audit reads, from the same facts the screen renders
 	 *  from — a marker is a claim about the state the reader is in, so it may only be
@@ -206,8 +240,6 @@ export default function Session() {
 			projection?.cwd,
 		],
 	);
-
-	const slash = draftSlashQuery(composer.draft);
 
 	const openAgent = useCallback(
 		(jobId: string) => {
@@ -445,6 +477,15 @@ export default function Session() {
 						}}
 					/>
 
+					{/* The ask bar: the MINIMIZED affordance (§5.0), directly above the
+					    composer and BELOW the connection banner — when the relay is
+					    unreachable the bar's data is stale and saying so matters more.
+					    It renders itself away at zero outstanding, so its presence is
+					    the statement. */}
+					<View className="px-3 pb-1">
+						<AskBar asks={projection?.asks} onOpen={() => setAsksOpen(true)} />
+					</View>
+
 					<Composer
 						testID={SURFACE.sessionComposer}
 						controls={composer.controls}
@@ -508,6 +549,21 @@ export default function Session() {
 						op: "set_effort",
 						effort,
 					});
+				}}
+			/>
+
+			{/* The walked queue (§5.3): the aggregate route, so a sitting can clear
+			    asks from several conversations. Names come from the list frame;
+			    its own rows carry `session_id` + `cwd` for the foreign ones. */}
+			<AsksSheet
+				visible={asksOpen}
+				onClose={() => setAsksOpen(false)}
+				client={runtime.source.endpoints}
+				currentSessionId={sessionId}
+				sessions={listSessions}
+				onOpenConversation={(target) => {
+					setAsksOpen(false);
+					router.push(`/session/${target}`);
 				}}
 			/>
 		</Screen>
