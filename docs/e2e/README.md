@@ -683,7 +683,15 @@ byte-identical while the app renders both states correctly. So a byte-identical 
 partitioned by what each cell is SHOWING, read without the viewport (`CONTENT_PROBE`: the
 rendered text and accessibility labels, i.e. what a phone would read out), and:
 
-- **same bytes and same content** → a real collapse. It fails, as it always did.
+- **same bytes and same content** → a real collapse — unless every cell in the pair is
+  evidential and the pair is declared by name in `matrix.ts` `IDENTICAL_FRAME_COINCIDENCES`
+  as ONE VIEW. A device composes surfaces: at tablet-landscape the home docks the
+  conversations panel and `/conversations` renders the home itself, so two cells that each
+  reach their own root and marker can legitimately produce one image and one content
+  (`S15/empty = S4/idle`; the pair differs at iphone-se, where the drawer overlays the
+  home). Undeclared, it still FAILS — and a declaration is inert the moment any cell in
+  the pair stops being evidential, so a state the app ignored (its marker missing) can
+  never qualify.
 - **same bytes, different content** → a limit of the camera. It passes **only** when the
   pair is declared by name in `matrix.ts` `IDENTICAL_FRAME_EXEMPTIONS` with the reason a
   reviewer needs (which viewport, and which content differs). An undeclared pair still
@@ -692,10 +700,11 @@ rendered text and accessibility labels, i.e. what a phone would read out), and:
   rather than a knob that loosens the comparison.
 
 Declared exemptions are reported (`EXEMPT IDENTICAL FRAMES (n)`) and recorded in the
-manifest as `identicalStateExemptions`. Two lists fail a run: `identicalStates` (a
-collapse — the same bytes AND the same content) and `identicalStateUndeclared` (the same
-bytes, different content, and nothing has signed for it as a camera limit); the declared
-exemptions do not.
+manifest as `identicalStateExemptions`; declared one-view coincidences likewise
+(`ONE VIEW, TWO STATES (n)`, `identicalStateCoincidences`). Two lists fail a run:
+`identicalStates` (a collapse — the same bytes AND the same content, undeclared) and
+`identicalStateUndeclared` (the same bytes, different content, and nothing has signed for
+it as a camera limit); the declared entries do not.
 
 Themes: `dark`, `light`. Text scales: `100`, `150`, `200` (percent of the app's
 default) — `150` is skipped on tablets and foldables, where it is not the

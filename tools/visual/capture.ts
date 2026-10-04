@@ -1189,7 +1189,8 @@ export interface CaptureRecord {
 	 * A digest of what the cell is SHOWING, read without the viewport (`CONTENT_PROBE`):
 	 * the screen reader's view of it. It is the second opinion the identical-frame check
 	 * asks for before it calls two byte-identical frames a collapse — see
-	 * `IDENTICAL_FRAME_EXEMPTIONS`.
+	 * `IDENTICAL_FRAME_EXEMPTIONS`, and `IDENTICAL_FRAME_COINCIDENCES` for the composed
+	 * case where the content is allowed to agree.
 	 */
 	contentDigest: string;
 	/**
@@ -1276,6 +1277,7 @@ export async function runCapture(options: CaptureOptions) {
 					identicalStates: [],
 					identicalStateUndeclared: [],
 					identicalStateExemptions: [],
+					identicalStateCoincidences: [],
 					records: [],
 				},
 				null,
@@ -1719,6 +1721,7 @@ export async function runCapture(options: CaptureOptions) {
 		collapses: identicalCells,
 		undeclared: identicalUndeclared,
 		exemptions: identicalExemptions,
+		coincidences: identicalCoincidences,
 	} = findIdenticalFrames(records);
 
 	// The manifest is what the audit and the gallery both read, so it carries the
@@ -1816,6 +1819,14 @@ export async function runCapture(options: CaptureOptions) {
 		 * reachable for a pair that IS declared, so this list cannot grow quietly.
 		 */
 		identicalStateExemptions: identicalExemptions,
+		/**
+		 * Byte-identical frames whose declared states a device composes into ONE view
+		 * (`IDENTICAL_FRAME_COINCIDENCES`): here the same bytes AND the same content are
+		 * the correct rendering — every cell reaches its own root and marker inside the
+		 * one view. Reported, never failing, and only reachable for a pair the matrix
+		 * declares with its reason.
+		 */
+		identicalStateCoincidences: identicalCoincidences,
 		unreadyCells: unready.map((record) => record.name),
 		/**
 		 * Cells whose state is a named, owned dependency rather than a failure.
@@ -1924,6 +1935,12 @@ export async function runCapture(options: CaptureOptions) {
 			`EXEMPT IDENTICAL FRAMES (${identicalExemptions.length}): byte-identical frames whose declared states DIFFER in content, each declared in matrix.ts IDENTICAL_FRAME_EXEMPTIONS — a limit of the camera, not a collapse`,
 		);
 		for (const entry of identicalExemptions) console.log(`  - ${entry}`);
+	}
+	if (identicalCoincidences.length) {
+		console.log(
+			`ONE VIEW, TWO STATES (${identicalCoincidences.length}): byte-identical frames whose cells the app composes into one view at that device, each declared in matrix.ts IDENTICAL_FRAME_COINCIDENCES — every cell still reaches its own root and marker`,
+		);
+		for (const entry of identicalCoincidences) console.log(`  - ${entry}`);
 	}
 
 	const strict = options.strict !== false;

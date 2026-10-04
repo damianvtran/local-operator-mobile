@@ -10,7 +10,10 @@
  * rather than a reviewer's word.
  */
 
-import { IDENTICAL_FRAME_EXEMPTIONS } from "./matrix.ts";
+import {
+	IDENTICAL_FRAME_COINCIDENCES,
+	IDENTICAL_FRAME_EXEMPTIONS,
+} from "./matrix.ts";
 
 /**
  * One captured cell, as much of it as the partition reads.
@@ -54,8 +57,14 @@ export interface FrameRecord {
  * (`contentDigest`, read by `CONTENT_PROBE` without the viewport) and the two outcomes are
  * kept apart:
  *
- *   * a partition that still holds two declared states → a REAL COLLAPSE. It fails, with
- *     the same shape of message as before.
+ *   * a partition that still holds two declared states → a REAL COLLAPSE — unless every
+ *     cell in it is EVIDENTIAL and the pair is declared in `IDENTICAL_FRAME_COINCIDENCES`
+ *     (matrix.ts): a device COMPOSES surfaces — at tablet-landscape the home docks the
+ *     conversations panel and `/conversations` renders the home itself, so two cells that
+ *     each reach their own root and marker can genuinely BE one rendered view (PR #34).
+ *     An undeclared same-content partition still fails, and a declaration is inert the
+ *     moment any cell in it stops being evidential — a state the app ignored cannot show
+ *     its own marker, so a real collapse can never qualify.
  *   * every cell carrying its own content → the pixels agree and the app does not: a
  *     camera limit, which passes ONLY when the pair is declared in
  *     `IDENTICAL_FRAME_EXEMPTIONS` (matrix.ts) with the reason a reviewer needs. An
@@ -64,7 +73,7 @@ export interface FrameRecord {
  *
  * A group with any collapse in it is reported as a collapse and nothing else: one real
  * collapse is the finding, and reporting a coexisting camera limit beside it would only
- * dilute it.
+ * dilute it. A declared coincidence is reported under its own heading and does not fail.
  */
 function exemptionKey(records: readonly FrameRecord[]): string {
 	return [...new Set(records.map((record) => record.cell))].sort().join("|");
@@ -74,6 +83,7 @@ export function findIdenticalFrames(records: FrameRecord[]): {
 	collapses: string[];
 	undeclared: string[];
 	exemptions: string[];
+	coincidences: string[];
 } {
 	const bySha = new Map<string, FrameRecord[]>();
 	for (const record of records) {
@@ -85,6 +95,7 @@ export function findIdenticalFrames(records: FrameRecord[]): {
 	const collapses: string[] = [];
 	const undeclared: string[] = [];
 	const exemptions: string[] = [];
+	const coincidences: string[] = [];
 	for (const [shaDigest, group] of bySha) {
 		const states = new Set(
 			group.map((record) => `${record.screen}/${record.state}`),
@@ -137,9 +148,29 @@ export function findIdenticalFrames(records: FrameRecord[]): {
 			const partStates = [
 				...new Set(part.map((record) => `${record.screen}/${record.state}`)),
 			].sort();
-			collapses.push(
-				`${partStates.join(" = ")} rendered identically (${shaDigest}) on ${where}, and their frames carry the same content`,
+			const message = `${partStates.join(" = ")} rendered identically (${shaDigest}) on ${where}, and their frames carry the same content`;
+			/* ONE VIEW, TWO STATES. A same-content pair is normally the collapse this check
+			 * exists for — the app ignored a state — but a composition can render two
+			 * declared states in ONE view: at tablet-landscape the home docks the
+			 * conversations panel and `/conversations` renders the home itself, so two
+			 * cells that each reach their own root and marker legitimately produce the
+			 * same bytes AND the same content (PR #34). That case is statable only by
+			 * declaration: the entry must carry a reason, and every cell in the partition
+			 * must be EVIDENTIAL — a state the app ignored cannot show its own marker, so
+			 * a real collapse can never qualify. An undeclared same-content partition is
+			 * still pushed as a collapse below. */
+			const key = exemptionKey(part);
+			const declared = IDENTICAL_FRAME_COINCIDENCES[key];
+			const allEvidential = part.every(
+				(record) => record.declaredSkip === null && record.ready !== false,
 			);
+			if (declared !== undefined && allEvidential) {
+				coincidences.push(
+					`${message} — declared one view for both states: ${declared}`,
+				);
+				continue;
+			}
+			collapses.push(message);
 		}
 		// One real collapse is the finding; a camera limit beside it would only dilute it.
 		if (collapsed.length > 0) continue;
@@ -162,5 +193,5 @@ export function findIdenticalFrames(records: FrameRecord[]): {
 			);
 		}
 	}
-	return { collapses, undeclared, exemptions };
+	return { collapses, undeclared, exemptions, coincidences };
 }

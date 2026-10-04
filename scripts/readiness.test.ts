@@ -113,6 +113,44 @@ describe("presence and visibility are two different questions", () => {
 				"the state was never reached",
 		]);
 	});
+
+	it("does not read another surface's empty state as this cell's miss", () => {
+		// The home composes with the docked conversations panel at tablet-landscape:
+		// the panel's empty state beside the home is the OTHER surface's, and the home
+		// is not in it. Reading every `*-empty` refused this cell for a panel that was
+		// correctly empty (PR #34 review round 2, F1) — the prohibition now reads the
+		// empty marker the cell's own surface declares, and the home declares none.
+		expect(
+			readinessProblems(
+				frame({
+					screen: "S4",
+					state: "idle",
+					root: "home-screen",
+					presentIds: ["home-screen", "home-idle", "sessions-empty"],
+					visibleIds: ["home-screen"],
+				}),
+			),
+		).toEqual([]);
+	});
+
+	it("keeps the affirmative half's tooth when the own marker is missing", () => {
+		// Scoping the prohibition must not cost the marker rule: a frame showing only
+		// the docked panel's empty state and no `home-idle` is still refused — for the
+		// missing marker, not for the other surface's empty marker.
+		const issues = readinessIssues(
+			frame({
+				screen: "S4",
+				state: "idle",
+				root: "home-screen",
+				presentIds: ["home-screen", "sessions-empty"],
+				visibleIds: ["home-screen"],
+			}),
+		);
+		expect(issues.map((issue) => issue.kind)).toEqual(["marker"]);
+		expect(issues[0]?.message).toContain(
+			"the marker 'home-idle' is not in the DOM",
+		);
+	});
 });
 
 describe("the marker is the app's, read rather than built", () => {

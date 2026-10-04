@@ -16,6 +16,7 @@ import { useReducedMotion, useTokenColor } from "@/ui/appearance";
 import { useShadow } from "@/ui/elevation";
 import { sidebarWidthFor } from "@/ui/layout";
 import { effectiveDuration, parseCubicBezier } from "@/ui/motion";
+import { TextScaleProvider } from "@/ui/text-scale-provider";
 import { DURATIONS, EASINGS } from "@/ui/tokens.gen";
 
 /**
@@ -146,13 +147,24 @@ export const ConversationsDrawer = ({
 						className="flex-1 border-panel-edge border-r bg-elevated"
 						style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}
 					>
-						<ConversationsPane
-							onClose={close}
-							onNavigate={close}
-							onNewChat={onNewChat}
-							notice={notice}
-							homeDirectory={homeDirectory}
-						/>
+						{/* The type scale is re-published INSIDE the Modal because a modal is a
+						 *  PORTAL: react-native-web appends its node to `document.body`, OUTSIDE the
+						 *  `ScopedVariables` div the app's provider renders, so the pane's
+						 *  `var(--text-*)` fell back to the stylesheet's fixed px values and the
+						 *  drawer was the one surface that ignored the reader's text size —
+						 *  measured by the capture: at iphone-se / 200 % the drawer's cells scaled
+						 *  1.0-1.17x while every surface beside them scaled 2.00x (PR #34 review
+						 *  round 2, F1). On native the provider is context-only, so this
+						 *  re-declares the same values rather than computing a second scale. */}
+						<TextScaleProvider>
+							<ConversationsPane
+								onClose={close}
+								onNavigate={close}
+								onNewChat={onNewChat}
+								notice={notice}
+								homeDirectory={homeDirectory}
+							/>
+						</TextScaleProvider>
 					</View>
 				</Animated.View>
 			</View>
