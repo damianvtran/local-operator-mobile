@@ -5,10 +5,10 @@ Listing copy for the App Store and Google Play, in the directory layouts the
 being typed into a console.
 
 **Everything in this directory is DRAFT.** None of it has been submitted, and
-none of it describes shipped functionality: this repository is at the research
-and design stage and the app does not exist yet. Every feature named below is
-planned. The copy therefore makes no claim about what the app currently does —
-it describes what the app is being built to do, in the voice the product uses.
+none of it describes shipped functionality: the app is built in this repository,
+but no build has been published, so the copy makes no claim about what a reader
+can install today. The features named below are what the app does or is being
+built to do, in the voice the product uses.
 
 ## The `DRAFT:` marker
 
