@@ -41,12 +41,17 @@ import { bool, csv, num, parseArgs, str } from "../lib/args.ts";
 import type { CdpPage } from "../lib/cdp.ts";
 import { sleep } from "../lib/cdp.ts";
 import { launchChrome } from "../lib/chrome.ts";
+import { freshPage, withDeadline } from "../lib/page.ts";
 import {
 	declaredSkipFor,
 	type ReadinessIssue,
 	readinessIssues,
+	STATE_POLL_MS,
+	STATE_WAIT_MS,
 	seedQuery,
+	stateStillComing,
 } from "../lib/readiness.ts";
+import { selectScenario } from "../lib/relay.ts";
 import { serveDir } from "../lib/static-server.ts";
 import { DEFAULT_PASSWORD } from "../mock-relay/relay.ts";
 import { renderGallery } from "./gallery.ts";
@@ -61,7 +66,6 @@ import {
 	type DeviceProfile,
 	MEASURE_PROBE,
 	PENDING_CELLS,
-	PRE_PAINT_PROBE,
 	READINESS_PROBE,
 	SCALES,
 	SCREEN_ROOTS,
@@ -112,30 +116,6 @@ const CELL_BUDGET_MS = 3000;
 const MIN_DERIVED_DEADLINE_MS = 900_000;
 
 /**
- * How long a cell's declared state is given to APPEAR after the settle window, and
- * how often it is looked for.
- *
- * WHY THIS EXISTS. Readiness used to be a single reading taken `--settle` ms after
- * the page loaded, which silently assumed every scenario's state exists by then.
- * Two do not: `401-mid-session` ends the stream two seconds in (that is the state),
- * and `aborted` is a turn that has to finish before its receipt is painted. At the
- * 1200 ms default both cells were reported `NOT MEASURABLE` — the harness failing
- * its own clock, not the app failing its state — so the run could never be green
- * for a reason that had nothing to do with the app. The alternative (a longer
- * `--settle` for the whole run) is wrong in the other direction: measured
- * 2026-10-03, `--settle 7000` fixes those two and BREAKS `S5/streaming` and
- * `S6/populated`, whose states have already come and gone by then.
- *
- * So the wait is on the EVENT, not the clock: poll for the marker the app declares,
- * stop the moment it appears, and re-stamp the settled frame so the frame shows the
- * state that was waited for. It costs nothing for a cell that is already ready, and
- * it never applies to a DECLARED SKIP (those fail on `marker-gap`, not `marker`) or
- * to a wrong route or a missing root, which are defects whenever they appear.
- */
-const STATE_WAIT_MS = 8_000;
-const STATE_POLL_MS = 400;
-
-/**
  * How many times the settled frame may be retaken while its readings keep moving.
  *
  * Three, not one: the race this closes is a state ARRIVING, so the first retake
@@ -156,135 +136,6 @@ interface CellState {
 /** The whole-run deadline a plan of `cells` cells is budgeted, in ms. */
 const derivedDeadlineMs = (cells: number): number =>
 	Math.max(MIN_DERIVED_DEADLINE_MS, Math.ceil(cells * CELL_BUDGET_MS));
-
-/**
- * Whether a cell's issues are all "the declared state has not arrived yet".
- *
- * `marker` is the only issue kind this waits on: the app DECLARES a marker for the
- * state and the frame does not carry it yet. `empty` rides along because it is the
- * same sentence's second half. Everything else — a wrong route, a missing root, a
- * `marker-gap`, a relay the app never asked — is a defect that waiting cannot fix.
- */
-const stateStillComing = (issues: ReadonlyArray<{ kind: string }>): boolean =>
-	issues.length > 0 &&
-	issues.some((issue) => issue.kind === "marker") &&
-	issues.every((issue) => issue.kind === "marker" || issue.kind === "empty");
-
-/**
- * Make a page target capture-ready: the three CDP calls every page the harness
- * drives needs, each BOUNDED and each a value rather than a throw.
- *
- * WHY BOUNDED when the CDP client already fails a command after 30 s: a throw
- * unwinds `runCapture` from inside the cell loop, so the run ends with a stack
- * trace and NO manifest on disk. That is the same shape `withDeadline` was added
- * around the cell itself for, and a browser that accepts the connection and then
- * stops answering is a measured case rather than a hypothetical one (QA hit
- * `Target.createTarget did not answer within 30000 ms`, rc 1, nothing written).
- * The pre-paint probe is part of the set because `captureCell`'s theme reporting
- * reads `window.__loCapture`, so a page without it is not one this harness can
- * report on. It is called from the ONE place a page is opened (`freshPage`),
- * so the arming cannot drift from the page it arms.
- */
-async function armPage(
-	page: CdpPage,
-	ms: number,
-): Promise<{ ok: true } | { ok: false; reason: string }> {
-	const steps: Array<[string, Promise<unknown>]> = [
-		["Page.enable", page.send("Page.enable")],
-		["Runtime.enable", page.send("Runtime.enable")],
-		[
-			"Page.addScriptToEvaluateOnNewDocument",
-			page.send("Page.addScriptToEvaluateOnNewDocument", {
-				source: PRE_PAINT_PROBE,
-			}),
-		],
-	];
-	for (const [what, call] of steps) {
-		const done = await withDeadline(call, ms, what);
-		if (!done.ok) return { ok: false, reason: done.reason };
-	}
-	return { ok: true };
-}
-
-/**
- * Close the current page target, if there is one, and open an armed replacement.
- *
- * WHY EVERY CELL GETS A FRESH TARGET, not only a wedged one.
- *
- * The app under test holds an open `text/event-stream` on its session screen, and
- * `serveDir` proxies the relay at the SAME origin it serves the build from (that
- * same-origin proxy is what lets a relay-backed cell be driven at all). Those
- * streams are connections to the app origin, they are long-lived by design, and a
- * run accumulates them across cells. Past a point the next `Page.navigate` NEVER
- * COMMITS, which is the whole of what `CDP Page.navigate did not answer within
- * 30000 ms` was reporting. Measured 2026-10-03: 11 stalls in a 104-cell `S5`
- * block, every one of them `S5/*` (the only screen that opens a stream), at the
- * same cells on every run, reproduced on `ubuntu-latest` as well as here.
- *
- * WHY THIS LAYER, and not the wait or the timeout. Chrome dispatches
- * `Page.navigate`'s reply from the navigation's reset — i.e. at COMMIT — and
- * never from the `load` event (`content/browser/devtools/protocol/page_handler.cc`:
- * `Navigate` parks the callback in `navigate_callbacks_` until
- * `NavigationReset`/`TransferNavigationRequestOwnership` fires). A reply that
- * never arrives therefore means the navigation never committed, so nothing the
- * harness waits on — `load`, `commit`, `DOMContentLoaded`, or the declared-state
- * marker — can change the outcome: the navigation has not started, it is not
- * slow. A longer timeout would only make the stall quieter, which is the failure
- * this PR series exists to remove.
- *
- * WHY CLOSING THE TARGET, and not just destroying the document. A hop through
- * `about:blank` — the one navigation that needs no socket, so it commits even
- * when the origin is busy — is not enough: it leaves the held connections in
- * place (measured: 6 before the hop, 6 after, cell after cell) and the same cells
- * stall behind it. Destroying the TARGET releases them. Measured on the 104-cell
- * `S5` block: 11 stalls and 12 cells with no frame before, 0 and 0 after, 312
- * frames in 240 s.
- *
- * The cost is one target create/close per cell, and it is not a regression in
- * rate: the 256-cell `ci` tier runs at 2.12 s/cell, against the 2.24 s/cell the
- * per-cell budget was titrated from. It also leaves the cell loop with ONE shape
- * instead of two — a wedged cell and a healthy one now take the same path, so the
- * recovery cannot rot out of use as the failure it exists for stops happening.
- */
-async function freshPage(
-	chrome: Awaited<ReturnType<typeof launchChrome>>,
-	page: CdpPage | null,
-	ms: number,
-): Promise<{ ok: true; page: CdpPage } | { ok: false; reason: string }> {
-	if (page !== null) {
-		try {
-			await page.send("Target.closeTarget", { targetId: page.targetId });
-		} catch {
-			// A target wedged beyond answering is closed by the browser when the profile
-			// is torn down; the new target is what the next cell needs.
-		}
-	}
-	/*
-	 * Bounded, and a FAILURE rather than a throw. A browser that has stopped answering
-	 * cannot capture anything else, and the run has to say so in its manifest instead of
-	 * dying with a stack trace and nothing on disk — the shape QA hit at startup
-	 * (`Target.createTarget did not answer within 30000 ms`, rc 1, no manifest), one cell
-	 * later. The caller abandons the rest of the plan by name and breaks.
-	 */
-	const opened = await withDeadline(
-		chrome.page(),
-		ms,
-		"the browser's next target",
-	);
-	if (!opened.ok)
-		return {
-			ok: false,
-			reason: `the browser stopped answering: ${opened.reason}`,
-		};
-	const next = opened.value;
-	const armed = await armPage(next, ms);
-	if (!armed.ok)
-		return {
-			ok: false,
-			reason: `the browser stopped answering: ${armed.reason}`,
-		};
-	return { ok: true, page: next };
-}
 
 const sha = (buffer: Buffer): string =>
 	createHash("sha256").update(buffer).digest("hex").slice(0, 16);
@@ -828,62 +679,6 @@ export class CaptureFailure extends Error {
 }
 
 /**
- * Run `promise`, and give up on it after `ms` with a named reason.
- *
- * Every cell is bounded, and the reason is a *value* rather than a thrown
- * message: a cell that never settles must be recorded as a FAILED cell with the
- * deadline it hit, because a capture run that silently skips a cell and one that
- * hangs both leave a reviewer with no frame and no explanation. The timer is
- * unref'd so a resolved promise does not keep the process alive.
- */
-async function withDeadline<T>(
-	promise: Promise<T>,
-	ms: number,
-	what: string,
-): Promise<{ ok: true; value: T } | { ok: false; reason: string }> {
-	let timer: ReturnType<typeof setTimeout> | undefined;
-	const expiry = new Promise<{ ok: false; reason: string }>((resolve) => {
-		timer = setTimeout(
-			() =>
-				resolve({
-					ok: false,
-					reason: `${what} did not complete within ${ms} ms`,
-				}),
-			ms,
-		);
-		timer.unref?.();
-	});
-	try {
-		const winner = await Promise.race([
-			promise.then(
-				(value) => ({ ok: true as const, value }),
-				/*
-				 * A cell that THROWS is the same kind of event as one that overruns, and it
-				 * used to be the run's own death instead: a `Page.navigate` that stalls past
-				 * CDP's 30 s command timeout rejects, the rejection went straight through this
-				 * race, and the process exited from inside `captureCell` with a stack trace and
-				 * NO manifest at all — the out directory held frames and no summary, so a
-				 * 45-minute job reported nothing about what it had measured. Measured
-				 * 2026-10-03: the documented 72-cell command died this way on entry 39, twice,
-				 * and again on a stashed tree. The caller already knows what to do with a cell
-				 * that did not complete — abandon it BY NAME, then open a fresh page so the
-				 * next cell cannot inherit a wedged one — so the rejection is turned into that
-				 * same shape here rather than being left to unwind the run.
-				 */
-				(error: unknown) => ({
-					ok: false as const,
-					reason: `${what} threw: ${error instanceof Error ? error.message : String(error)}`,
-				}),
-			),
-			expiry,
-		]);
-		return winner;
-	} finally {
-		if (timer !== undefined) clearTimeout(timer);
-	}
-}
-
-/**
  * A relay call the cell depends on, under the cell's own bound.
  *
  * The pin and the two request counts are the only `fetch`es in the cell loop, and they
@@ -1107,32 +902,6 @@ function readinessIssuesFor(
 		relayRegistryBacked: relay?.registryBacked ?? false,
 		relayReached: relay?.reached ?? false,
 	});
-}
-
-/**
- * Pin the relay to the scenario that serves this cell.
- *
- * Without this the harness read `/__mock/state` and `/__mock/scenarios` and then
- * captured every cell against whatever single scenario the relay happened to be
- * started with — so a cell labelled `S8/approval` could render an unrelated state
- * and still pass. A state label is a claim about what the relay serves; this is
- * what makes it true.
- */
-async function selectScenario(
-	relayUrl: string,
-	scenario: string,
-): Promise<void> {
-	const res = await fetch(new URL("/__mock/scenario", relayUrl), {
-		method: "POST",
-		headers: { "content-type": "application/json" },
-		body: JSON.stringify({ scenario }),
-	});
-	if (!res.ok) {
-		throw new Error(
-			`the mock relay refused to switch to scenario '${scenario}' (${res.status}): ` +
-				"the cell cannot be captured in the state it declares",
-		);
-	}
 }
 
 /** How many requests the relay has served, for the per-cell reach check. */
@@ -1431,6 +1200,15 @@ export interface CaptureRecord {
 	 * per-cell detail is not lost — it is only not counted as a measurement gap.
 	 */
 	declaredSkip: { cell: string; owner: string; reason: string } | null;
+	/**
+	 * The relay scenario this cell's state comes from (the first scenario whose `shows`
+	 * declares it), or null for a cell no scenario declares (an ad-hoc `path:` page).
+	 *
+	 * Recorded because the mock relay holds ONE scenario at a time: the audit re-drives
+	 * this cell and must pin the same one, or it renders the state the PREVIOUS cell left
+	 * behind and measures that under this cell's name.
+	 */
+	pinnedScenario?: string | null;
 	consoleErrors: string[];
 	/**
 	 * Whether the text-scale dimension was LIVE for this frame's cell, and the
@@ -1726,19 +1504,28 @@ export async function runCapture(options: CaptureOptions) {
 				options.relay !== undefined &&
 				Object.hasOwn(state?.cellScenarios ?? {}, cell.cell);
 			const relay = options.relay;
-			if (registryBacked && relay !== undefined) {
-				const scenario = state?.cellScenarios?.[cell.cell]?.[0];
-				if (scenario !== undefined) {
-					// Bounded like the cell itself: a pin whose relay is gone abandons THIS cell.
-					const pinned = await relayStep(
-						() => selectScenario(relay, scenario),
-						options.cellTimeoutMs,
-						`pinning ${scenario} for ${cell.cell}`,
-					);
-					if (!pinned.ok) {
-						abandonCell(pinned.reason);
-						continue;
-					}
+			/*
+			 * The scenario that serves this cell, kept so the RECORD carries it.
+			 *
+			 * The mock relay holds ONE scenario at a time, so a cell's state is a fact about
+			 * the pin as much as about the URL: the audit re-drives these cells later, and a
+			 * re-drive that does not put the relay back into this scenario renders whatever the
+			 * previous cell left behind — a state the cell does not name, measured under its
+			 * name. See `tools/audit/audit.ts`.
+			 */
+			const cellScenario = registryBacked
+				? (state?.cellScenarios?.[cell.cell]?.[0] ?? null)
+				: null;
+			if (cellScenario !== null && relay !== undefined) {
+				// Bounded like the cell itself: a pin whose relay is gone abandons THIS cell.
+				const pinned = await relayStep(
+					() => selectScenario(relay, cellScenario),
+					options.cellTimeoutMs,
+					`pinning ${cellScenario} for ${cell.cell}`,
+				);
+				if (!pinned.ok) {
+					abandonCell(pinned.reason);
+					continue;
 				}
 			}
 			const countBefore = await relayStep(
@@ -1777,6 +1564,10 @@ export async function runCapture(options: CaptureOptions) {
 				continue;
 			}
 			const record = attempted.value;
+			// The scenario travels WITH the cell, for the same reason the seed travels with
+			// the run (see `meta.seed`): the audit re-drives this URL, and the relay has to be
+			// back in the state the cell names before it does.
+			record.pinnedScenario = cellScenario;
 			if (relay !== undefined) {
 				/* Bounded for the same reason as the count before it, and here the frame is already
 				 * captured: a relay that dies now costs this cell its REACH fact (`null` already means
@@ -1941,6 +1732,29 @@ export async function runCapture(options: CaptureOptions) {
 			repoRoot: resolve(new URL("../../", import.meta.url).pathname),
 			relay: options.relay ?? null,
 			scenario: state?.scenario ?? null,
+			/*
+			 * THE SEED, AS THIS RUN APPLIED IT, because the audit re-drives these cells and
+			 * must put the SAME parameters back on the page.
+			 *
+			 * It is RUN-WIDE and lives in `meta` for that reason: `seed` is computed once
+			 * above the loop and handed to every cell, so a per-cell copy would carry one
+			 * fact in two hundred places and let them disagree. The audit's `cellQuery()`
+			 * rebuilt each cell's URL from the theme/scale/insets fields and never carried
+			 * `lo-relay*`, so a relay-backed cell whose state exists only BECAUSE the app
+			 * was pointed at a relay was re-driven against an unseeded app and measured as
+			 * its own fallback screen — the vacuous green this record removes.
+			 *
+			 * `origin` is what makes `route` usable by a re-drive: the default seed route is
+			 * THIS run's own origin, and the audit serves the same build on its own port, so
+			 * it must re-derive that route rather than reuse a dead one. An explicit
+			 * `--seed-route` names some other origin and is kept verbatim.
+			 */
+			seed: {
+				applied: seed.route !== null,
+				password: seed.password,
+				route: seed.route,
+				origin: server.url,
+			},
 			plannedFrames,
 			framesPerCell,
 			tier: options.tier,

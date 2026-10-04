@@ -339,6 +339,147 @@ export function readinessProblems(facts: ReadinessFacts): string[] {
 }
 
 /**
+ * How long a cell's declared state is given to APPEAR after the settle window, and
+ * how often it is looked for.
+ *
+ * WHY THIS EXISTS. Readiness used to be a single reading taken `--settle` ms after
+ * the page loaded, which silently assumed every scenario's state exists by then.
+ * Two do not: `401-mid-session` ends the stream two seconds in (that is the state),
+ * and `aborted` is a turn that has to finish before its receipt is painted. At the
+ * 1200 ms default both cells were reported `NOT MEASURABLE` — the harness failing
+ * its own clock, not the app failing its state — so the run could never be green
+ * for a reason that had nothing to do with the app. The alternative (a longer
+ * `--settle` for the whole run) is wrong in the other direction: measured
+ * 2026-10-03, `--settle 7000` fixes those two and BREAKS `S5/streaming` and
+ * `S6/populated`, whose states have already come and gone by then.
+ *
+ * So the wait is on the EVENT, not the clock: poll for the marker the app declares and
+ * stop the moment it appears. It costs nothing for a cell that is already ready, and it
+ * never applies to a DECLARED SKIP (those fail on `marker-gap`, not `marker`) or to a
+ * wrong route or a missing root, which are defects whenever they appear.
+ *
+ * BOTH CALLERS NEED IT, which is why it is here rather than in either tool: the capture
+ * retakes the settled frame once the state has arrived, and the audit reads the state
+ * again before deciding whether the re-drive reached it — an audit that judged the
+ * re-drive at the settle window would BLOCK a cell whose state simply arrived late,
+ * which is the harness reading its own clock instead of the page.
+ */
+export const STATE_WAIT_MS = 8_000;
+export const STATE_POLL_MS = 400;
+
+/**
+ * Whether a cell's issues are all "the declared state has not arrived yet".
+ *
+ * `marker` is the only issue kind this waits on: the app DECLARES a marker for the
+ * state and the frame does not carry it yet. `empty` rides along because it is the
+ * same sentence's second half. Everything else — a wrong route, a missing root, a
+ * `marker-gap`, a relay the app never asked — is a defect that waiting cannot fix.
+ */
+export const stateStillComing = (
+	issues: ReadonlyArray<{ kind: string }>,
+): boolean =>
+	issues.length > 0 &&
+	issues.some((issue) => issue.kind === "marker") &&
+	issues.every((issue) => issue.kind === "marker" || issue.kind === "empty");
+
+/**
+ * The facts a RE-DRIVEN page gives, against the cell's own record.
+ *
+ * `askedPath` is the route the RECORD rendered (the capture's resolved path), not a
+ * path re-derived from the matrix: a re-drive is judged against what the capture
+ * actually saw, so a route that moved between the two runs is a mismatch rather than
+ * something a second derivation could paper over.
+ */
+export interface ReDriveFacts {
+	/** The screen the record names, as the matrix spells it (`S4`, or `path:/x`). */
+	screen: string;
+	/** The state the record names. */
+	state: string;
+	/** The route the record rendered. */
+	askedPath: string;
+	/** The app's screen-root testid for this screen, when it is a real app screen. */
+	root: string | undefined;
+	/**
+	 * What the re-driven page reports (`READINESS_PROBE`), or `null` when the page
+	 * returned nothing — an unreadable page is its own failure, never a pass.
+	 */
+	reading: {
+		path: string;
+		testIds: readonly string[];
+		visibleTestIds: readonly string[];
+	} | null;
+}
+
+/**
+ * Why a RE-DRIVEN page is not in the state its record names, or `null` when it is.
+ *
+ * This is the invariant that stops a re-drive measuring a screen the cell does not
+ * name. The audit renders a page and reports what its checks measured there — so a
+ * page that is not the cell (an app that was never pointed at a relay, showing its own
+ * welcome screen) contributed rows under the cell's name. The capture already refuses
+ * to call a cell ready when the state marker is absent; the same rule is applied here,
+ * to the re-driven page, against the route the record itself rendered.
+ *
+ * WHAT IT DELIBERATELY DOES NOT CHECK: the relay clause (`relayRegistryBacked` /
+ * `relayReached`). That fact comes from counting the mock relay's requests, which only
+ * the capture run does. A re-drive that invented it would report a finding this side
+ * cannot substantiate, so it is `false`/`true` here — every clause decidable from the
+ * page alone is still applied.
+ *
+ * The result is a SENTENCE, because the caller records it as the reason its rows are
+ * not measurements rather than turning it into a verdict of its own: a wrong screen has
+ * no verdict to give.
+ */
+export function reDriveMismatch(facts: ReDriveFacts): string | null {
+	const issues = reDriveIssues(facts);
+	if (issues.length === 0) return null;
+	return issues.map((issue) => issue.message).join("; ");
+}
+
+/**
+ * One reason a re-drive is not the state its record names: the readiness rule's own
+ * kinds, plus "the page could not be read at all" — which is not a rule the page can
+ * violate, and is its own kind so a wait cannot mistake it for a state still arriving.
+ */
+export type ReDriveIssue =
+	| ReadinessIssue
+	| { kind: "reading"; message: string };
+
+/**
+ * The same issues as a LIST, for a caller that has to decide what to do about them.
+ *
+ * The audit polls on this while the only thing wrong is that the declared state has not
+ * arrived yet (`stateStillComing`) — the same wait the capture makes. A state that is
+ * simply late is not a re-drive that reached another screen, and blocking such a cell
+ * would be the harness reading its own clock instead of the page.
+ */
+export function reDriveIssues(facts: ReDriveFacts): ReDriveIssue[] {
+	if (facts.reading === null) {
+		return [
+			{
+				kind: "reading",
+				message:
+					"the re-driven page returned no readiness reading, so nothing in the frame " +
+					"affirms the state and no row can describe this cell",
+			},
+		];
+	}
+	return readinessIssues({
+		screen: facts.screen,
+		state: facts.state,
+		askedPath: facts.askedPath,
+		actualPath: facts.reading.path,
+		root: facts.root,
+		presentIds: facts.reading.testIds,
+		visibleIds: facts.reading.visibleTestIds,
+		// The relay's request count is a fact the CAPTURE run had and the audit does not:
+		// it counts nothing while re-driving, so it must not invent an un-reached relay.
+		relayRegistryBacked: false,
+		relayReached: true,
+	});
+}
+
+/**
  * Whether the page's route is the one the cell asked for. `{…}` segments are the
  * session/job placeholders, so they match anything.
  */
