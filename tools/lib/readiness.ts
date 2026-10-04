@@ -426,6 +426,32 @@ export interface ReDriveFacts {
  * cannot substantiate, so it is `false`/`true` here — every clause decidable from the
  * page alone is still applied.
  *
+ * ITS BOUND, STATED: this is the capture's readiness rule — route + visible screen root
+ * + the app's declared state marker, plus the `*-empty` prohibition — and NOT a content
+ * comparison. It is therefore necessary, not sufficient, and two limits follow from that
+ * which a reader should not have to discover:
+ *
+ *  - a state that renders on the right route with the right root and the right marker
+ *    passes whatever else is on the page. Measured against the seed sweep, 8 of the 192
+ *    seed-affected cells do this: every `S5/empty` cell (all devices, themes and scales)
+ *    re-driven unseeded renders the same route with 18 ids where its record had 15 —
+ *    extra ids, and `session-transcript-empty` still among them — so route, root and
+ *    marker are all satisfied and its rows would be measured as the cell. Those 8 are
+ *    the whole residue of `136 same-route changes − 128 marker losses`;
+ *  - the marker contract is the app's, so a state the app renders with the same look as
+ *    another is held only to the shared marker (`STATE_MARKER_ALIASES`: `populated-long`,
+ *    `narrow` and `scroll` are the populated screen), and an ad-hoc `path:` page, which
+ *    declares no app state at all, is judged on its route alone. A cell whose DECLARED
+ *    state is the fallback (`S14/welcome`) is indistinguishable from the seed failing —
+ *    harmless for that cell, and the reason "unseeded is always caught" is not a claim
+ *    this rule makes.
+ *
+ * What it does establish is the case that mattered: a re-drive that reaches another
+ * screen — the app's own fallback — cannot contribute rows under this cell's name, and
+ * neither can one that reads as unreadable, empty where the record was populated, or on
+ * another route or root. Tightening it into a content comparison is a different change:
+ * a rule that blocks a real cell costs more than a rule that misses these eight.
+ *
  * The result is a SENTENCE, because the caller records it as the reason its rows are
  * not measurements rather than turning it into a verdict of its own: a wrong screen has
  * no verdict to give.

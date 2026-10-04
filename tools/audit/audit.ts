@@ -40,7 +40,9 @@
  * A relay-backed cell whose app was never pointed at a relay falls back to its own
  * default screen, and the checks that pass there were counted as the cell's. The
  * re-drive is therefore held to the capture's own readiness rule (the route the
- * record rendered, its screen root and its state marker), and a mismatch BLOCKS the
+ * record rendered, its screen root and its state marker — not its content: the rule's
+ * bound, including the eight cells it is known to miss, is stated on `reDriveMismatch`),
+ * and a mismatch BLOCKS the
  * cell and exits 3 like any other gap — see `lib/readiness.ts` `reDriveMismatch`.
  *
  * COVERAGE, stated rather than implied: this tool machine-checks the rubric's
@@ -344,16 +346,18 @@ interface AuditRecord {
 	 */
 	ready?: boolean;
 	readinessProblems?: string[];
-	/**
-	 * The capture's own `READINESS_PROBE` reading: the route it rendered and the
-	 * `data-testid`s it carried. This is the record's account of its own state, and
-	 * the re-drive is measured against it.
+	/*
+	 * The manifest also carries `readiness` here — the capture's own `READINESS_PROBE`
+	 * reading (the route it rendered and the ids it carried) — and the re-drive is NOT
+	 * compared against it. It is compared against the RULE, given the record's route:
+	 * the same rule the capture used to call the cell ready (`lib/readiness.ts`
+	 * `reDriveMismatch`, which states its bound). Comparing the two id SETS was the
+	 * other option and was rejected on measurement: two captures of the same tier
+	 * already disagree on 4 streaming cells (a transcript row that had arrived by the
+	 * second run), so set equality would BLOCK real cells the capture measured — and a
+	 * rule that blocks a real cell costs more than one that misses the eight `S5/empty`
+	 * cells, which are the known residue and are named where the rule is documented.
 	 */
-	readiness?: {
-		path: string;
-		testIds: string[];
-		visibleTestIds: string[];
-	} | null;
 	/**
 	 * The relay scenario the capture pinned before rendering this cell, or absent/null
 	 * for a cell no scenario declares. The re-drive pins the same one: the relay holds a

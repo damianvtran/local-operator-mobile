@@ -132,15 +132,6 @@ describe("the marker is the app's, read rather than built", () => {
 });
 
 /**
- * The re-drive invariant: a page re-driven by the AUDIT has to reach the state its
- * record names, or its rows are not measurements of that cell.
- *
- * The failure this pins is not hypothetical: `tools/audit/audit.ts` rebuilt each cell's
- * URL without the `lo-relay*` seed the capture had put on it, so a relay-backed cell was
- * re-driven against an unseeded app — which falls back to its own default screen — and
- * the checks that passed there were reported under the cell's name.
- */
-/**
  * The WAIT is bounded by what it covers, and that bound is load-bearing in both tools.
  *
  * A state that arrives after the settle window must be waited for — the capture remakes
@@ -164,6 +155,15 @@ describe("the wait covers a state still arriving, and nothing else", () => {
 	});
 });
 
+/**
+ * The re-drive invariant: a page re-driven by the AUDIT has to reach the state its
+ * record names, or its rows are not measurements of that cell.
+ *
+ * The failure this pins is not hypothetical: `tools/audit/audit.ts` rebuilt each cell's
+ * URL without the `lo-relay*` seed the capture had put on it, so a relay-backed cell was
+ * re-driven against an unseeded app — which falls back to its own default screen — and
+ * the checks that passed there were reported under the cell's name.
+ */
 describe("a re-driven page must reach the state its record names", () => {
 	/** `S4/populated` as the capture renders it: route `/`, root present, marker present. */
 	const recorded = {
