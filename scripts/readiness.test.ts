@@ -171,11 +171,14 @@ describe("the wait covers a state still arriving, and nothing else", () => {
  * the checks that passed there were reported under the cell's name.
  */
 describe("a re-driven page must reach the state its record names", () => {
-	/** `S4/populated` as the capture renders it: route `/`, root present, marker present. */
+	/** `S15/populated` as the capture renders it behind the panel: route
+	 *  `/conversations`, root present, marker present. (The list's cells were `S4/*`
+	 *  on `/` until the composer home landed; this fixture follows the capture the
+	 *  same way the scenario registry's cells took their re-home.) */
 	const recorded = {
-		screen: "S4",
+		screen: "S15",
 		state: "populated",
-		askedPath: "/",
+		askedPath: "/conversations",
 		root: "sessions-screen",
 	};
 
@@ -184,7 +187,7 @@ describe("a re-driven page must reach the state its record names", () => {
 			reDriveMismatch({
 				...recorded,
 				reading: {
-					path: "/",
+					path: "/conversations",
 					testIds: ["sessions-screen", "session-row-6714def86197"],
 					visibleTestIds: ["sessions-screen"],
 				},
@@ -203,7 +206,7 @@ describe("a re-driven page must reach the state its record names", () => {
 			},
 		});
 		expect(mismatch).toContain(
-			"the app is on '/welcome' but the cell asked for '/'",
+			"the app is on '/welcome' but the cell asked for '/conversations'",
 		);
 		expect(mismatch).toContain("no 'sessions-screen' root in the DOM");
 		expect(mismatch).toContain("the marker 'session-row-' is not in the DOM");
@@ -222,7 +225,7 @@ describe("a re-driven page must reach the state its record names", () => {
 			reDriveMismatch({
 				...recorded,
 				reading: {
-					path: "/",
+					path: "/conversations",
 					testIds: ["sessions-screen", "sessions-empty"],
 					visibleTestIds: ["sessions-screen"],
 				},
