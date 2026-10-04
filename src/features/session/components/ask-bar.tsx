@@ -89,7 +89,7 @@ export const AskBar = ({ asks, onOpen }: AskBarProps) => {
 			) : (
 				<View className="min-w-0 flex-1" />
 			)}
-			<Text aria-hidden className="shrink-0 text-accent">
+			<Text aria-hidden className="shrink-0 text-body-sm text-accent">
 				▸
 			</Text>
 		</Pressable>

@@ -128,7 +128,7 @@ export const SubagentsPanel = ({
 							</Text>
 						))}
 					</View>
-					<Text className="text-ink-dim" aria-hidden>
+					<Text className="text-meta text-ink-dim" aria-hidden>
 						{open ? "▾" : "▸"}
 					</Text>
 				</View>

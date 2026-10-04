@@ -47,6 +47,7 @@ import { SectionHeader } from "@/ui/components/section-header";
 import { Sheet } from "@/ui/components/sheet";
 import { Skeleton } from "@/ui/components/skeleton";
 import { TOUCH_FLOOR, useLayout } from "@/ui/layout";
+import { headerStackWidth } from "@/ui/size-class";
 import { LARGE_TEXT_SCALE } from "@/ui/text-scale";
 import { useTextScale } from "@/ui/text-scale-provider";
 
@@ -317,10 +318,11 @@ export default function Sessions() {
 		<View className="gap-3">
 			{/* The switcher, and it is ALONE on its row.
 			 *
-			 * The screen's own controls (the waiting badge, search, Settings) live in the
-			 * Screen header above, so this row has exactly one thing to fit. When all four
-			 * shared a line, 200 % text on a 320 pt phone squeezed the label to nothing —
-			 * measured in a captured frame, and the reason the controls moved up. */}
+			 * The screen's own controls (the unread and asks badges, search and
+			 * Settings) live in the Screen header above, so this row has exactly one
+			 * thing to fit. When they all shared a line, 200 % text on a 320 pt phone
+			 * squeezed the label to nothing — measured in a captured frame, and the
+			 * reason the controls moved up. */}
 			<View className="flex-row items-center gap-2">
 				{addressInHeader ? (
 					<Pressable
@@ -461,6 +463,11 @@ export default function Sessions() {
 			 *  a cap on the whole screen is what squeezed a tablet into a 560 pt
 			 *  column in the middle of 1366 pt. */
 			capColumn={!layout.split}
+			/* The stack bound is the header's LIVE fit (R2-1, round 2): the merged
+			 *  header can carry two count badges and the kit floor covers one — with
+			 *  `unread > 0` the title clipped at 360/375/390. `headerStackWidth`
+			 *  floors at the kit constant, so only a heavier cluster moves it. */
+			stackBelowWidth={headerStackWidth(badgeCount, asksTotal)}
 			headerAction={
 				<View className="flex-row items-center gap-1">
 					{badgeCount !== null && badgeCount > 0 ? (

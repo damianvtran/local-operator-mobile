@@ -5,6 +5,7 @@ import { Text, useWindowDimensions, View } from "react-native";
 import { useListState } from "@/features/auth/connection-provider";
 import { blockingPending } from "@/features/session/asks";
 import { composerChipLabels } from "@/features/session/chip-labels";
+import { overlaysBlocked } from "@/features/session/completion-ack";
 import { AskBar } from "@/features/session/components/ask-bar";
 import { AsksSheet } from "@/features/session/components/asks-sheet";
 import { Composer } from "@/features/session/components/composer";
@@ -98,16 +99,30 @@ export default function Session() {
 	 *  screen only carries the answer to the ack gate). */
 	const [completionVisible, setCompletionVisible] = useState(false);
 
+	/* The slash sheet's visibility — read by the ack gate (an open slash sheet
+	 *  holds the screen, R2-2) as well as by the sheet itself, so it is
+	 *  declared above both readers. */
+	const slash = draftSlashQuery(composer.draft);
+
 	/* The read receipt: fires only when the completion's END is genuinely on
 	 *  screen while the app is foregrounded on this session (ADR 0006 §1.3).
-	 *  A sheet or either panel counts as `blocked`, exactly like the web's
-	 *  gate list — a completion behind an overlay has not been read. */
+	 *  A sheet (models, effort, asks, slash) or either panel counts as
+	 *  `blocked`, exactly like the web's gate list — a completion behind an
+	 *  overlay has not been read. This build measures no DOM, so the overlay set
+	 *  is its ONLY occlusion channel; it lives in `overlaysBlocked`, and a test
+	 *  walks it (review round 2, R2-2). */
 	useCompletionAck({
 		sessionId,
 		endpoints: runtime.source.endpoints,
 		projection: runtime.projection,
 		anchorVisible: completionVisible,
-		blocked: modelsOpen || effortOpen || openPanel !== null,
+		blocked: overlaysBlocked({
+			models: modelsOpen,
+			effort: effortOpen,
+			panel: openPanel !== null,
+			asks: asksOpen,
+			slash: slash !== null,
+		}),
 	});
 
 	const projection = runtime.projection;
@@ -225,8 +240,6 @@ export default function Session() {
 			projection?.cwd,
 		],
 	);
-
-	const slash = draftSlashQuery(composer.draft);
 
 	const openAgent = useCallback(
 		(jobId: string) => {

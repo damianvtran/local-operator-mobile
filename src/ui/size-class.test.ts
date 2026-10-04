@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
 	HEADER_STACK_WIDTH,
 	headerStacks,
+	headerStackWidth,
 	layoutFor,
 	SPLIT_MIN_HEIGHT,
 } from "@/ui/size-class";
@@ -97,5 +98,52 @@ describe("headerStacks", () => {
 		expect(headerStacks(LARGE_TEXT_SCALE, 390)).toBe(false);
 		expect(headerStacks(LARGE_TEXT_SCALE + 0.01, 390)).toBe(true);
 		expect(headerStacks(2, 320)).toBe(true);
+	});
+
+	it("takes the bound a screen passes for its own cluster", () => {
+		/* Round 2 (R2-1): a screen whose action cluster is heavier than the kit
+		 *  floor passes its live fit as the third argument; callers that pass
+		 *  nothing keep the behaviour pinned above. */
+		expect(headerStacks(1, 390, 383)).toBe(false);
+		expect(headerStacks(1, 390, 397)).toBe(true);
+		expect(headerStacks(1, HEADER_STACK_WIDTH)).toBe(false);
+	});
+});
+
+describe("headerStackWidth", () => {
+	/* The round-2 re-derivation (R2-1). The kit floor covers the r1 frame — one
+	 *  asks badge; the merged header can carry TWO count badges, and this is the
+	 *  live fit the sessions screen passes. Every number is a round-2 probe
+	 *  reading; the sum rounds up, so the bound errs toward stacking early. */
+
+	it("reproduces the kit constant for the r1 frame, and floors lighter sets", () => {
+		expect(headerStackWidth(null, 4)).toBe(HEADER_STACK_WIDTH);
+		expect(headerStackWidth(null, 0)).toBe(HEADER_STACK_WIDTH);
+		expect(headerStackWidth(0, 0)).toBe(HEADER_STACK_WIDTH);
+		expect(headerStackWidth(99, 0)).toBe(HEADER_STACK_WIDTH);
+	});
+
+	it("raises the bound for the merged header's two badges", () => {
+		/* Measured before the fix: with both badges at 2-digit counts the title
+		 *  clipped at 360 (69/106), 375 (84/106) and 390 (99/106). */
+		const both = headerStackWidth(99, 99);
+		expect(both).toBe(397);
+		for (const width of [360, 375, 390]) {
+			expect(headerStacks(1, width, both)).toBe(true);
+		}
+		expect(headerStacks(1, 430, both)).toBe(false);
+	});
+
+	it("keeps 390 single-line at one-digit counts, and fixes 360/375", () => {
+		const pair = headerStackWidth(9, 9);
+		expect(pair).toBe(383);
+		expect(headerStacks(1, 390, pair)).toBe(false);
+		expect(headerStacks(1, 375, pair)).toBe(true);
+		expect(headerStacks(1, 360, pair)).toBe(true);
+	});
+
+	it("widens with further digits rather than clamping", () => {
+		expect(headerStackWidth(100, 99)).toBeGreaterThan(headerStackWidth(99, 99));
+		expect(headerStackWidth(9, 100)).toBeGreaterThan(headerStackWidth(9, 99));
 	});
 });

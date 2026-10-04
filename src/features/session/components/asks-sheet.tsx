@@ -752,7 +752,7 @@ export const AsksSheet = ({
 											deadline {durationLabel(-left)} ago
 										</Text>
 									) : null}
-									<Text className="text-ink-dim" aria-hidden>
+									<Text className="text-meta text-ink-dim" aria-hidden>
 										{expanded ? "▾" : "▸"}
 									</Text>
 									{/* The route from a foreign ask to its own conversation, as the

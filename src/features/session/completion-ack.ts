@@ -77,6 +77,43 @@ export function mayAcknowledge(gates: AckGates): boolean {
 	);
 }
 
+/**
+ * The overlays the session screen can hold open, as facts — the native build's
+ * stand-in for the web's occlusion check.
+ *
+ * The web confirms every attempt with `document.elementFromPoint`, and its
+ * sheets are full-column scrims, so an open sheet blocks by OCCLUSION. This
+ * build measures no DOM (`completion-visibility.ts`), which makes this set the
+ * ONLY overlay channel the gate has: every sheet the screen can open over the
+ * transcript must appear here, or the 500 ms loop acknowledges a completion
+ * nobody could see (review round 2, R2-2 — the asks and slash sheets were the
+ * miss).
+ */
+export interface ScreenOverlays {
+	/** The model picker. */
+	models: boolean;
+	/** The effort picker. */
+	effort: boolean;
+	/** Either bottom panel — todos or subagents (one at a time). */
+	panel: boolean;
+	/** The queued-questions sheet. */
+	asks: boolean;
+	/** The slash-command sheet (open while the composer's draft leads with `/`). */
+	slash: boolean;
+}
+
+/** Whether any open overlay holds the screen — the `blocked` gate's own list,
+ *  walked as one expression so a test can turn each term on alone. */
+export function overlaysBlocked(overlays: ScreenOverlays): boolean {
+	return (
+		overlays.models ||
+		overlays.effort ||
+		overlays.panel ||
+		overlays.asks ||
+		overlays.slash
+	);
+}
+
 /** Whether the answer settles the completion this attempt was about: the three
  *  fields the contract says to read, and nothing else. A resolved call is not a
  *  read — an older daemon answered a superseded token with a 200 whose state

@@ -100,7 +100,7 @@ export const AskResponseRow = ({ entry, testID }: AskResponseRowProps) => {
 							: line.text}
 					</Text>
 					{hasDetails ? (
-						<Text className="shrink-0 text-ink-dim" aria-hidden>
+						<Text className="shrink-0 text-body-sm text-ink-dim" aria-hidden>
 							{open ? "▾" : "▸"}
 						</Text>
 					) : null}
