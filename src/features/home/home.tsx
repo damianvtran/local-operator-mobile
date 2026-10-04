@@ -32,7 +32,7 @@ import {
 import { deviceOnline } from "@/features/session/runtime";
 import { ConversationsDrawer } from "@/features/sessions/conversations-drawer";
 import { ConversationsPane } from "@/features/sessions/conversations-pane";
-import { attentionCount } from "@/features/sessions/session-projection";
+import { unreadBadgeCount } from "@/features/sessions/session-projection";
 import { homeShortened } from "@/lib/format";
 import { listLabel } from "@/lib/route-label";
 import { RelayError } from "@/relay";
@@ -111,7 +111,7 @@ export default function Home({
 	const tunnelId = useConnectionState((state) => state.tunnelId);
 	const route = useConnectionState((state) => state.route);
 	const phase = useConnectionState((state) => state.phase);
-	const sessions = useListState((state) => state.sessions);
+	const unread = useListState((state) => state.unread);
 	const showToast = useUiStore((state) => state.showToast);
 
 	const [panelOpen, setPanelOpen] = useState(forcePanelOpen);
@@ -209,7 +209,13 @@ export default function Home({
 		savedTunnel,
 	]);
 
-	const attention = useMemo(() => attentionCount(sessions), [sessions]);
+	/* The header badge reads the machine's own unread count (ADR 0006 §1.4) —
+	 * NOT a local count of rows and not `needs_attention`. `null` means the
+	 * number is not readable (an older relay omits the block; a degraded one
+	 * withholds `count`), and the header then shows no number at all: absence is
+	 * never rendered as 0. The conversations pane's degraded banner is the
+	 * "says so". */
+	const badgeCount = unreadBadgeCount(unread);
 
 	/* The banner: only the states the product has sentences for. A refusal renders
 	 * its own fuller surface below (and nothing here duplicates it); the
@@ -493,8 +499,16 @@ export default function Home({
 				headerLeading={
 					split ? undefined : (
 						<View className="flex-row items-center gap-1">
-							{attention > 0 ? (
-								<Badge label={`${attention}`} tone="danger" mono />
+							{badgeCount !== null && badgeCount > 0 ? (
+								<Badge
+									label={`${badgeCount}`}
+									tone="danger"
+									mono
+									/* Sighted readers get the numeral; assistive tech gets the sentence
+									 * it stands for — the row's own state word ("new", per
+									 * `rowAccessibilityLabel`) plus the count (ADR 0006 §1.4). */
+									accessibilityLabel={`${badgeCount} new conversation${badgeCount === 1 ? "" : "s"}`}
+								/>
 							) : null}
 							<IconButton
 								accessibilityLabel="Open conversations"

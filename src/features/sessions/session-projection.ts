@@ -8,7 +8,7 @@
  * decision that gets changed by accident.
  */
 
-import type { SessionSummary } from "@/contracts";
+import type { SessionSummary, UnreadBlock } from "@/contracts";
 
 /**
  * The one state mark a row shows (docs/ux/flows.md § 5 step 2).
@@ -53,16 +53,22 @@ export function attentionWord(
 }
 
 /**
- * How many sessions are waiting on the reader. Counted from `needs_attention`
- * and never from `unseen`: "new since you looked" and "blocked until you answer"
- * are different facts, and conflating them makes the badge say "3" for a list of
- * three finished turns.
+ * The §1.4 badge number, off the frame-level `unread` block — or `null` for
+ * every state where the number is not readable.
+ *
+ * The badge means "conversations with unread notifications" (ADR 0006 §1.4),
+ * and the number is the MACHINE's own read (§1.1) — a conversation with three
+ * unread completions counts once, and no client recomputes it from its own
+ * list. This function therefore deliberately does NOT fall back to counting
+ * `unseen` rows and does NOT return `0` for absence: an older relay omits the
+ * block, and a degraded one withholds `count`, and both absences mean
+ * **unknown** — the header shows no number rather than one the machine did
+ * not give. (`0` — a readable count of zero — is a real answer and clears the
+ * badge, which is what the caller's `> 0` check is for.)
  */
-export function attentionCount(sessions: readonly SessionSummary[]): number {
-	return sessions.reduce(
-		(total, session) => (session.needs_attention ? total + 1 : total),
-		0,
-	);
+export function unreadBadgeCount(block: UnreadBlock | null): number | null {
+	if (block === null || block.count === undefined) return null;
+	return block.count;
 }
 
 /**

@@ -1,0 +1,21 @@
+{
+  "provenance": {
+    "kind": "live",
+    "relay_ref": "local-operator ca0569855",
+    "captured_at": "2026-10-03",
+    "how": "captured from an isolated `lop mobile serve` (redirected HOME + LOCAL_OPERATOR_CONFIG_DIR, own ephemeral port, every CMUX_*/LOP_* variable stripped, hosting=test/model_name=mock), with two mock-provider completions driven so the first completion's real token was superseded; see ../README.md",
+    "redactions": "isolated home shown as ~; portal password and cookie signatures absent"
+  },
+  "request": {
+    "method": "POST",
+    "path": "/api/sessions/b3535011f562/seen"
+  },
+  "status": 409,
+  "headers": {
+    "content-type": "application/json"
+  },
+  "body": {
+    "error": "completion token superseded by a newer completion",
+    "code": "superseded_completion_token"
+  }
+}

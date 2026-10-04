@@ -57,8 +57,10 @@ from the list, from the app icon badge, and from a notification — without
 reading a transcript.
 
 *Consequence:* session rows carry state in words, not only colour
-(`approval`, `question`, `working`, `ended`); the app badge counts sessions
-waiting on a decision; a notification names the session and the kind of decision.
+(`approval`, `question`, `working`, `ended`); the app badge counts
+conversations with unread notifications, as read from the machine (ADR 0006
+§1.4); a notification names the session and the kind of decision in a local
+banner only, never in a push.
 
 *Evidence:* the strongest pattern across every comparator; the weakest is a
 status that needs the session opened to interpret (`competitive-research.md` §5,

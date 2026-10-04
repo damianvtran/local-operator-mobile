@@ -27,6 +27,10 @@ export type BadgeProps = {
 	 * upper case is the caller's copy to write that way. */
 	mono?: boolean;
 	testID?: string;
+	/** The accessible name, for a badge whose label is only meaningful sighted
+	 *  (a bare count). The label stays the rendering; this is what assistive
+	 *  tech is told instead of the numeral. */
+	accessibilityLabel?: string;
 };
 
 export const Badge = ({
@@ -34,13 +38,27 @@ export const Badge = ({
 	tone = "neutral",
 	mono = false,
 	testID,
+	accessibilityLabel,
 }: BadgeProps) => (
-	<View className={badgeClasses(tone)} testID={testID}>
+	<View
+		className={badgeClasses(tone)}
+		testID={testID}
+		accessible={accessibilityLabel !== undefined}
+		accessibilityLabel={accessibilityLabel}
+	>
 		<Text
 			// `leading-4` on BOTH variants, because the two steps' own line heights
 			// differ by 3.6 px and the kit caps a badge at 22: the label box has to be
 			// bound once (16 px) for the mono and the sans badge to be the same height.
 			className={`leading-4 ${mono ? "text-mono-label" : "text-meta"} ${badgeInkClasses(tone)}`}
+			// When the call site names the badge, the visible label is a rendering of
+			// that name, not a second name: hidden from assistive tech on every
+			// platform (the same shape as `Avatar`'s initials).
+			accessibilityElementsHidden={accessibilityLabel !== undefined}
+			aria-hidden={accessibilityLabel !== undefined}
+			importantForAccessibility={
+				accessibilityLabel !== undefined ? "no" : "auto"
+			}
 		>
 			{label}
 		</Text>

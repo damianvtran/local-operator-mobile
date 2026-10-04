@@ -23,14 +23,16 @@ wrong wire.
 Read [`../../docs/relay/contract.md`](../../docs/relay/contract.md) for what each
 sample means; this file is only about provenance and reproduction.
 
-The tree is currently **103 fixtures — 98 live, 5 synthetic** — plus this README. The split is counted from `provenance.kind` in the files
+The tree is currently **107 fixtures — 102 live, 5 synthetic** — plus this README. The split is counted from `provenance.kind` in the files
 themselves rather than typed here, so it cannot drift from them.
 
-**Two refs are represented, deliberately.** The bulk of the live captures were
+**Three refs are represented, deliberately.** The bulk of the live captures were
 taken at local-operator `52c1df35`; the session-state receipts (`ended`,
 `degraded`) were added by #1784, so the captures that show them are taken at
-`fc851a94e`. Each file's `provenance.relay_ref` names its own, and no capture was
-restamped to look newer than it is.
+`fc851a94e`; and the push/ack-sync samples (the frame-level `unread` block, the
+handle-resolution route, and the superseded-token refusal) are taken at
+`ca0569855`, where S1/S2/S4 shipped. Each file's `provenance.relay_ref` names its
+own, and no capture was restamped to look newer than it is.
 
 ## Provenance
 
@@ -49,6 +51,16 @@ daemon running local-operator `origin/main` @ `52c1df35`:
   credentials were used and no network was reached.
 - the daemon was stopped by pid and the root deleted afterwards; the operator's
   live daemon, tunnel connector and sessions were never touched.
+
+A second campaign — 2026-10-03, same recipe, from a clean worktree of
+`origin/main` @ `ca0569855` where push/ack-sync S1/S2/S4 had shipped — produced
+the notification-path samples: the `unread` block on a real list frame
+(`sessions-with-unread.json`), a machine-minted handle resolved through
+`/api/push/conversation/{handle}` (`push-conversation-ok.json`), an unknown
+handle's clean 404 (`push-conversation-unknown.json`), and a REAL superseded
+token's 409 (`seen-superseded.json` — two mock-provider completions were driven,
+so the first completion's token was genuinely replaced; acknowledging the stale
+token is what produced the refusal).
 
 Redaction applied to every live file: the isolated home path is shown as `~`, the
 portal password appears nowhere (the `Set-Cookie` value is replaced with a
@@ -84,6 +96,20 @@ inventing anything; `hosting: test` is what makes turns deterministic.
 `{"op":"prompt","command_id":"<uuid4>","text":"run it [bash:20]"}` reproduces the
 pending-approval frame.
 
+The notification-path samples are the same recipe plus two turns:
+
+- `POST /api/sessions/start` `{"cwd": "<the isolated home>"}`, then two
+  `POST /api/sessions/{id}/command` prompts (plain text — a mock completion
+  needs no tool trigger), waiting for each turn to finish;
+- `GET /api/attention/unread`: after the first completion it carries the row's
+  `push_handle` (the first build that serves a row mints the key) and the
+  completion's `completion_token`;
+- the second completion supersedes the first token, so acknowledging the FIRST
+  token answers `409` + `superseded_completion_token` (`seen-superseded.json`);
+- `GET /api/push/conversation/{push_handle}` answers `200 {"session_id": …}`,
+  and a handle this machine did not mint answers the clean
+  `404 "unknown conversation handle"`.
+
 ## Index
 
 ### HTTP responses (`http/`)
@@ -99,6 +125,7 @@ pending-approval frame.
 | `logout.json` | `GET /logout` | 303 | cookie cleared + `Clear-Site-Data: "storage"` |
 | `mutation-cross-origin.json` | `POST /api/sessions/start` | 403 | the same-origin rule |
 | `sessions-empty.json` | `GET /api/sessions` | 200 | empty list, `capabilities` |
+| `sessions-with-unread.json` | `GET /api/sessions` | 200 | one unread conversation: the top-level `unread` block (S1) beside the row it counts |
 | `commands.json` | `GET /api/commands` | 200 | the slash list |
 | `models.json` | `GET /api/models` | 200 | `[]` on a relay with no credentials |
 | `directories.json` | `GET /api/directories` | 200 | home / recent / tmp |
@@ -109,7 +136,8 @@ pending-approval frame.
 | `resume-unknown.json`, `resume-no-id.json` | `POST /api/sessions/resume` | 404 / 400 | |
 | `history-ok.json`, `history-unknown.json`, `history-bad-limit.json` | `GET /api/sessions/{id}/history` | 200 / 404 / 200 | the bad-limit case silently falls back to 80 |
 | `image-ok.json`, `image-bad-index.json`, `image-missing-entry-param.json`, `image-unknown-entry.json` | `GET /api/sessions/{id}/image` | 200 / 404 / 400 / 404 | the 200 body records size + mime instead of the bytes |
-| `seen-real-token.json`, `seen-missing-token.json`, `seen-unknown-session.json` | `POST /api/sessions/{id}/seen` | 200 / 422 / 404 | |
+| `seen-real-token.json`, `seen-missing-token.json`, `seen-unknown-session.json`, `seen-superseded.json` | `POST /api/sessions/{id}/seen` | 200 / 422 / 404 / 409 | the 409 is a REAL superseded token's refusal (`code: superseded_completion_token`) |
+| `push-conversation-ok.json`, `push-conversation-unknown.json` | `GET /api/push/conversation/{handle}` | 200 / 404 | the machine-minted handle → session id (S2); the 404 is the clean 'unknown conversation handle' |
 | `pin-true.json`, `pin-not-bool.json`, `pin-unknown.json` | `POST /api/sessions/{id}/pin` | 200 / 422 / 404 | read-back semantics |
 | `subagent-unknown.json`, `subagent-history-unknown.json` | `…/agents/{job}` | 404 | |
 | `command-prompt-ok.json`, `command-prompt-duplicate.json`, `command-prompt-tool.json`, `command-prompt-image.json`, `command-steer-queued.json`, `command-abort.json`, `command-no-origin-post.json` | `POST /api/sessions/{id}/command` | 200 | the receipt ladder |

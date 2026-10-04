@@ -10,7 +10,6 @@ import {
 	useListState,
 } from "@/features/auth/connection-provider";
 import {
-	attentionCount,
 	attentionWord,
 	degradedNote,
 	degradedShortNote,

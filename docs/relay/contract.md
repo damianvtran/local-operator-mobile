@@ -128,6 +128,8 @@ The routes that *do* set cache headers are the SSE streams
 | GET | `/api/sessions/{id}/image` | gate | `daemon.py:3849-3888` |
 | GET | `/api/sessions/{id}/agents/{job_id}` | gate | `daemon.py:3759-3776` |
 | GET | `/api/sessions/{id}/agents/{job_id}/history` | gate | `daemon.py:3778-3810` |
+| GET | `/api/attention/unread` | gate | the unread aggregate (S1), `daemon.py:3989-4015` |
+| GET | `/api/push/conversation/{handle}` | gate | `daemon.py:4017-4055` |
 | POST | `/api/pair` | gate | `daemon.py:4119-4187` |
 | GET | `/api/pair/{device_id}` | gate | `daemon.py:4189-4231` |
 | GET | `/api/commands` | gate | `daemon.py:4233-4237` |
@@ -189,6 +191,11 @@ transports** (`daemon.py:3485-3491`). The phone's home screen reads the SSE one.
   "capabilities": {
     "features": { "auth": 1, "commands": 2, "session_catalogue": 3, ... },
     "stt": { "available": false, "path": null, "reason": "..." }
+  },
+  "unread": {                           // S1 (ADR 0006 §1.1); absent on an older relay
+    "count": 2,                         // conversations with unread completions; ABSENT when degraded
+    "revision": [1043, 1041, 7],        // an equality token, never an order
+    "degraded": []                      // ["attention"] when the receipt store could not be read
   }
 }
 ```
@@ -203,6 +210,20 @@ transports** (`daemon.py:3485-3491`). The phone's home screen reads the SSE one.
 - `capabilities.features` is a lazy, memoised flag dict; a missing key means
   "this build does not have it", never an error (`daemon.py:1496-1519`).
   Live sample: `fixtures/relay/http/sessions-empty.json`.
+- `unread` is the machine's own aggregate (push/ack-sync S1), a TOP-LEVEL
+  sibling of `degraded` — deliberately not a `capabilities` flag, because a
+  missing key there means "this build does not have it" while an older relay's
+  missing block here means **unknown, never 0**. `count` counts CONVERSATIONS
+  with unread completions over exactly the rows the listing serves — one
+  conversation with three unread completions counts once — and equals the
+  frame's own `unseen` rows. A non-empty `degraded` means the receipt store
+  could not be read, and then `count` is **absent** rather than `0`: a store
+  that could not be read is not an empty pile, and clearing a badge on it is
+  the lie the absence prevents. `revision` is `AttentionStore.revision()`: an
+  equality token, never an order. The dedicated route `GET /api/attention/unread`
+  serves the same block as its whole body (`daemon.py:3989-4015`, the
+  snapshot's assembly at `daemon.py:1008-1085`). Live:
+  `fixtures/relay/http/sessions-with-unread.json`.
 
 `SessionSummary` — every key, with optionality:
 
@@ -415,6 +436,26 @@ which are per-row booleans** (`daemon.py:906-914`).
   bundle needs `lop mobile restart` to appear, which is the documented upgrade
   path (`daemon.py:4730-4740`).
 
+### 3.12 `GET /api/push/conversation/{handle}` — a push tap's conversation
+
+Push/ack-sync S2 [ADR 0006 §3.1/§4]: a push payload carries only an opaque
+handle, so a cold tap — the conversation is not in the unread set any more, or
+never was on this client — resolves through here.
+
+| Case | Response |
+| --- | --- |
+| a handle this machine minted for a conversation it still offers | `200 {"session_id": "<id>"}` |
+| unknown, stale after a key rotation, or naming a conversation that no longer exists | `404 {"error": "unknown conversation handle"}` — a clean refusal, never a `500` |
+
+— `daemon.py:4017-4055`; live `fixtures/relay/http/push-conversation-ok.json`,
+`push-conversation-unknown.json`.
+
+The handle is deliberately NOT checked against the unread set: resolving an
+already-acknowledged conversation is the whole point. It is minted
+deterministically per conversation (`base64url(HMAC-SHA256(key, identity))[:22]`
+over the conversation's stable identity; `push_handles.py`) and appears as
+`push_handle` on the rows of `GET /api/attention/unread`.
+
 ---
 
 ## 4. The mutation routes
@@ -574,12 +615,13 @@ Request `{"completion_token": "<uuid>"}`.
 | no live entry **and** no durable user session | `404 {"error": "unknown session"}` |
 | unparseable JSON body | `422 {"error": "completion_token is required; update the client"}` |
 | `completion_token` absent or not a string | `422 {"error": "completion_token is required"}` |
-| a **real** token a newer completion has replaced | `409 {"error": "completion token superseded by a newer completion", "code": <SUPERSEDED_TOKEN_CODE>}` |
+| a **real** token a newer completion has replaced | `409 {"error": "completion token superseded by a newer completion", "code": "superseded_completion_token"}` (`attention.py:185`'s constant, pinned cross-repo) |
 | an unknown token | `409 {"error": "unknown completion token"}` |
 | success | `200 {"ok": true, "attention": <state>}` |
 
-— code `daemon.py:3628-3682`; live `seen-missing-token.json`,
-`seen-unknown-session.json`, `seen-real-token.json`.
+— code `daemon.py:3628-3682`, the superseded branch at `daemon.py:4236-4244`;
+live `seen-missing-token.json`, `seen-unknown-session.json`,
+`seen-real-token.json`, `seen-superseded.json`.
 
 The token is the `attention.completion_token` the projection carried. On the
 superseded branch the remedy differs: re-read the projection and acknowledge the
