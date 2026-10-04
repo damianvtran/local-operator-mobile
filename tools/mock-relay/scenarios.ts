@@ -397,7 +397,32 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 	add(
 		"many",
 		"Twelve rows: pinned, streaming, needing attention, running subagents, a long name and a long cwd.",
-		["S4/populated", "S4/populated-long", "S4/narrow"],
+		/* `S4/narrow` used to be declared beside `S4/populated-long`, and it was the same
+		 * rendering under a second name: this scenario builds ONE world, both cells navigate
+		 * to the same route (`/`), and the readiness table already aliases both names onto the
+		 * sessions screen's single `populated` marker, so neither name had a look of its own.
+		 * The identical-state check reported the pair as a COLLAPSE — the same bytes AND the
+		 * same content, on iphone-se and tablet-landscape — and the remedy is the one
+		 * `long-transcript`'s `S5/scroll`, `models-ranked`'s `S9/populated` and `approval`'s
+		 * `S5/pending-approval` already take: remove the declaration, never an exemption,
+		 * because an exemption is a signed statement that two DIFFERENT states are a limit of
+		 * the camera, and this is one state wearing two names.
+		 *
+		 * `narrow` goes rather than `populated-long`, and the reasons are checkable rather
+		 * than a preference. A width is an AXIS, not a state: the rubric's `narrow (320 pt)`
+		 * is the `iphone-se` device this tier already captures for every cell, so a `narrow`
+		 * CELL would re-declare the viewport inside the cell axis — the one axis the tier
+		 * deliberately keeps whole. `populated-long` is a content variant the rubric names (a
+		 * long session name, a long question) and the one `verify.ts`'s vocabulary enumerates.
+		 * And `populated-long` has a second declaration (`long-names`) while `S4/narrow`
+		 * existed only here.
+		 *
+		 * The cost is named rather than papered over: no cell evidences the list under the
+		 * `narrow` NAME. Nothing is unmeasured — the narrow viewport is captured at every cell
+		 * by the device axis, and this scenario's rendering is still captured as
+		 * `S4/populated-long` — so this is not a `PENDING_CELLS` gap and must not be recorded
+		 * as one. */
+		["S4/populated", "S4/populated-long"],
 		() => {
 			const streaming = projectionFrom(everyKind, {
 				session_id: syntheticSessionId("streaming-row"),
@@ -586,7 +611,23 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 	add(
 		"approval",
 		"A pending approval gate with a real running tool row beneath it.",
-		["S5/pending-approval", "S8/approval"],
+		/* `S8/approval` ALONE. `S5/pending-approval` used to be declared beside it, and it
+		 * was the same capture under a second name: `matrix.ts` gives S8 the session route
+		 * (`/session/{sessionId}`) and `SCREEN_MARKER_SUBJECT` gives it the session subject,
+		 * so a cell on either name navigates to the same URL against the same projection.
+		 * The identical-state check caught it the moment every cell was captured — a
+		 * collapse, i.e. the same bytes AND the same content, on iphone-se and
+		 * tablet-landscape — and the remedy is the one `models-ranked`'s `S9/populated` and
+		 * `long-transcript`'s `S5/scroll` already take: remove the declaration, never an
+		 * exemption, because an exemption is a signed statement that two DIFFERENT states
+		 * are a camera limit and this is one state wearing two names. S8 keeps the name
+		 * because the pending card is what that surface is named for, and it is also the
+		 * cheaper side to keep: dropping `S8/approval` instead would leave
+		 * `approval-destructive`'s declaration as the only one serving the name, silently
+		 * re-pointing this cell at the destructive card. The cost is that the SESSION view
+		 * (S5) no longer declares the pending-approval state under its own name; the
+		 * rendering is unchanged and still captured, and the gap is named in the PR. */
+		["S8/approval"],
 		() => ({
 			projections: {
 				[approvalFrame.session_id]: structuredClone(approvalFrame),
@@ -624,7 +665,12 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 	add(
 		"ask",
 		"A pending secret ask: free-text, with options offered and one recommended.",
-		["S5/pending-ask", "S8/ask"],
+		/* `S8/ask` alone, for the reason `approval` records above: `S5/pending-ask`
+		 * navigated to the same route with the same projection, so the pair was one state
+		 * under two names and the identical-state check reported it as a byte-identical
+		 * pair as soon as every cell was captured. The SESSION view loses the name, not
+		 * the rendering. */
+		["S8/ask"],
 		() => ({
 			projections: { [askFrame.session_id]: structuredClone(askFrame) },
 		}),
@@ -689,7 +735,19 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 	add(
 		"long-transcript",
 		"A 520-row tool transcript: the case the projection's 80-row cap and degradation tiers exist for.",
-		["S5/populated-long", "S5/scroll"],
+		/* `S5/populated-long` ALONE, and the second cell it declared is not a declaration the
+		 * relay can honour. This scenario builds ONE projection and both of its cells were
+		 * pinned from it, so `S5/scroll` was `S5/populated-long` rendered from the same
+		 * projection at the same viewport: the identical-state check reported the pair on the
+		 * ci tier (light, iphone-se and tablet-landscape) and the readiness table already
+		 * aliases `scroll` onto `populated`. A scroll POSITION is a viewport interaction, not
+		 * a state the wire can declare — driving the two apart needs a scroll action or an id
+		 * the app itself exposes, and neither exists yet — so the duplicate name goes the way
+		 * `S2/error` went from `billing-inactive`. The coverage it claimed (a cell evidencing
+		 * a scrolled transcript) is named as a gap in the PR rather than papered over with an
+		 * exemption: an exemption is for two states a camera cannot tell apart, and this is
+		 * one state wearing two names. */
+		["S5/populated-long"],
 		() => {
 			const projection = projectionFrom(everyKind, {
 				transcript: longTranscript(everyKind, 520),
@@ -774,7 +832,20 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 	add(
 		"models-ranked",
 		"The full ranked model catalogue — order is the ranking, never re-sorted.",
-		["S9/populated"],
+		/* NO CELL, and that is the honest count. This scenario served `S9/populated`, and
+		 * `S9/populated` was never a state of its own: the sheets are modals the app opens
+		 * from the composer, nothing on the wire opens one, and the harness reaches a screen
+		 * only by URL — so the cell navigated to the session route, declared the SESSION's
+		 * own populated marker (`S9` → `session` in `SCREEN_MARKER_SUBJECT`), and rendered
+		 * byte-identically to `S5/populated`. Measured 2026-10-03 on the full tier: the
+		 * capture reported `S5/populated = S9/populated` as a cross-cell collapse, which is
+		 * the check working — two declared states, one state. Removing the declaration is the
+		 * same remedy `billing-inactive` takes below, and it costs the SHEETS surface its only
+		 * cell: giving it a real one needs a way to drive a sheet into view (an app-side
+		 * affordance or an id the app declares for the open sheet), which is a change this
+		 * harness cannot make for itself. The scenario stays because the ranked catalogue is
+		 * still part of the relay's contract and `verify.ts` exercises it. */
+		[],
 		() => ({
 			projections: { [liveIdle.session_id]: structuredClone(liveIdle) },
 			models: rankedModels,
@@ -806,7 +877,19 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 	add(
 		"billing-inactive",
 		"The tunnel's billing is past due: the gateway refuses with `authorization_refused`.",
-		["S13/error", "S2/error"],
+		/* `S13/error` ALONE, and the second cell it used to declare is not a
+		 * declaration the app can honour. `/tunnels` renders ONE refusal surface for
+		 * every gateway cause — `S2`, `S3` and `S13` are the same screen
+		 * (`computers-screen`, `SCREEN_MARKER_SUBJECT` in `tools/lib/readiness.ts`) and
+		 * `STATE_MARKER.computers` declares exactly one state, `error`. So `S2/error`
+		 * and `S13/error` were one state under two names, and the capture run reported
+		 * them as a cross-cell collapse on all 26 frames of the core tier — the exact
+		 * finding the identical-state check exists to make, raised against a
+		 * declaration that never named a second state. The rubric is what settles it:
+		 * `docs/ux/audit-rubric.md` §1 gives S2 the states "no tunnel yet; waiting;
+		 * connected" and gives the refusal to S13 ("connection loss, re-auth, relay
+		 * refusal"), so the error state belongs to the screen the rubric names for it. */
+		["S13/error"],
 		() => ({
 			projections: {},
 			failure: { surface: "gateway", key: "503-authorization_refused" },

@@ -63,17 +63,34 @@ doc drifts from the run the first time anyone adds a check.
     pnpm audit:capture \
       --dir dist --out frames \
       --relay ${{ env.MOCK_RELAY_URL }} \
-      --consecutive --yes
+      --tier ci --consecutive --yes
 - run: pnpm audit:run --manifest frames/manifest.json
 - uses: actions/upload-artifact@v4
   with: { name: audit-frames, path: frames/ }
 ```
 
+**`--tier ci` is the sample, and it is not optional.** A default (`core`) run is 832
+cells; at the 2.24 s/cell this harness measured on the runner (403 cells in 903 s) that
+is ~31 minutes, against a step bound of 20. The tier is declared in
+`tools/visual/matrix.ts` rather than spelled here as a `--devices` list so the sample,
+the plan and the manifest all read one list a reviewer can argue with, and it captures
+every declared cell at two device profiles, both themes and scales 100/200 — 256 cells,
+~10 minutes. The full `core` tier (`--tier core`) and the 3008-cell `full` tier
+(`--full`) stay runnable locally and on a dispatched run; nothing is reachable only
+through CI.
+
+The whole-run bound is derived from the plan (3000 ms/cell, floor 900 s) unless
+`--deadline` names one, so a bound cannot silently truncate the plan it was computed
+for. If you do name a smaller one, the run prints the budgeted figure beside it before
+it renders anything, and every cell it never reached is reported as having no frame —
+never skipped silently.
+
 `capture.ts` exits non-zero when a frame's resolved theme does not match the
-cell it claims, when a dark/light pair is byte-identical, or when a frame is
-effectively blank — failures a green test suite hides, and the reason the
-`manifest.json` carries each frame's resolved theme and canvas colour rather
-than just a PNG.
+cell it claims, when a dark/light pair is byte-identical, when two cells that declare
+different states render the same bytes, when a cell does not reach the state it
+declares, or when a frame is effectively blank — failures a green test suite hides, and
+the reason the `manifest.json` carries each frame's resolved theme and canvas colour
+rather than just a PNG.
 
 An **inert text-scale dimension** is reported in the manifest
 (`meta.textScaleLive: false`) and makes `audit.ts` report `U-04` as `BLOCKED`

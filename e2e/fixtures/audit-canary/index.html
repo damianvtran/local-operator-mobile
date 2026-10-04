@@ -40,6 +40,8 @@
   | #scale-clip           | U-04  | a px-height box that only clips once text scales     |
   | #unnamed-icon         | U-09  | an icon button with no accessible name               |
   | #label-mismatch       | U-10  | visible "Approve", accessible name "Confirm"         |
+  | #escape-pinned        | U-08-escape-absolute | an absolute node a clipping ancestor cannot clip |
+  | #fixed-escape         | U-08-escape-fixed | a fixed node under the same non-clipping ancestor |
 -->
 <html lang="en">
 <head>
@@ -272,6 +274,40 @@
 	<h2>U-08 overlap</h2>
 	<div id="overlap-a" data-defect="U-08" style="position:absolute;top:32px;left:0;width:140px;height:40px;background:var(--surface);border:1px solid var(--border);padding:4px">Alpha</div>
 	<div id="overlap-b" data-defect="U-08" style="position:absolute;top:42px;left:20px;width:140px;height:40px;background:var(--surface);border:1px solid var(--border);padding:4px">Beta</div>
+</div>
+
+<!-- U-08's ESCAPE branch: a node whose containing block is ABOVE an ancestor that clips.
+     The wrapper is static with height 0 and `overflow: hidden`, so it clips its STATIC
+     children — but this node is absolute and is laid out against the PANEL, so the browser
+     paints it. A clip test that walks every overflow ancestor instead of the
+     containing-block chain calls it invisible and hides a real overlap.
+
+     GEOMETRY, because the first version of this fixture measured nothing (review round 3):
+     the control and the escaping node are BOTH absolute at the same inset in the same
+     relative panel, so they cover each other exactly — 100% of the smaller box — instead
+     of depending on where a heading's margin happened to leave the button.
+
+     NO TEXT AND NO HEADING on these two panels, deliberately: the capture's text-scale
+     guard reads the MEDIAN text box of the page, and four extra text nodes moved it enough
+     at iphone-15 to make two cells read as unscaled. Both nodes carry a role and an
+     accessible name instead, which is what makes them meaningful boxes to U-08. -->
+<div class="bad panel" style="position:relative;height:56px">
+	<button class="control" id="escape-under" aria-label="Send" style="position:absolute;top:12px;left:12px;width:180px;height:44px"></button>
+	<div id="escape-clipper" style="overflow:hidden;height:0">
+		<div id="escape-pinned" role="button" aria-label="Send" data-defect="U-08-escape-absolute" style="position:absolute;top:12px;left:12px;width:180px;height:44px;background:var(--surface);border:1px solid var(--border)"></div>
+	</div>
+</div>
+
+<!-- U-08's ESCAPE branch, the FIXED shape: fixed content is positioned against the
+     viewport, so a static zero-height wrapper cannot clip it either — the browser paints
+     it. Both boxes are fixed at the same inset, so the overlap is 100% by construction and
+     does not depend on the panel's place in the page (see the note above on the absent
+     text). -->
+<div class="bad panel" style="height:56px">
+	<button class="control" id="fixed-under" aria-label="Send" style="position:fixed;top:12px;left:12px;width:180px;height:44px"></button>
+	<div id="fixed-clipper" style="overflow:hidden;height:0">
+		<div id="fixed-escape" role="button" aria-label="Send" data-defect="U-08-escape-fixed" style="position:fixed;top:12px;left:12px;width:180px;height:44px;background:var(--surface);border:1px solid var(--border)"></div>
+	</div>
 </div>
 
 <!-- U-09: an icon button with no accessible name. -->

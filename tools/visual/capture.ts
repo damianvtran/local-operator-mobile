@@ -50,8 +50,12 @@ import {
 import { serveDir } from "../lib/static-server.ts";
 import { DEFAULT_PASSWORD } from "../mock-relay/relay.ts";
 import { renderGallery } from "./gallery.ts";
+import { findIdenticalFrames } from "./identical-states.ts";
 import {
 	ALL_DEVICES,
+	CI_DEVICES,
+	CI_SCALES,
+	CONTENT_PROBE,
 	CORE_DEVICES,
 	DEVICES,
 	type DeviceProfile,
@@ -72,33 +76,214 @@ import {
  */
 let screenshotRetries = 0;
 
+/**
+ * Cells whose settled frame had to be retaken because the readings moved across it,
+ * for the WHOLE run — module state for `screenshotRetries`' reason, and printed so
+ * the retry is visible rather than silent.
+ */
+let settledRetakes = 0;
+
 /** Frames above this count are refused without `--yes`: a full matrix is minutes. */
 const CONFIRM_THRESHOLD = 120;
 
 /**
- * Replace the page target after a cell wedged.
+ * The per-cell budget the DEFAULT whole-run deadline is derived from, in ms, and
+ * the floor a small plan still gets.
  *
- * A fresh target is the only reliable way past a page holding a live stream on a
- * socket the harness no longer controls: closing the old one is what stops it
- * speaking, and the new one starts the next cell from a blank document.
+ * WHY THE DEFAULT IS DERIVED RATHER THAN FIXED. It used to be a flat 900 s, which
+ * holds about 400 cells: a `core` run (832 cells) or a dispatched `full` run (3008)
+ * was therefore cut off by the harness's own default and reported hundreds of cells
+ * as having no frame — a bound firing on a plan it was never sized for, which reads
+ * like a finding about the app and is not one. Deriving it from the plan makes the
+ * default hold the plan it was computed for, and the number is PRINTED with the
+ * plan, so a reviewer can see the bound and argue with it instead of discovering it
+ * fifteen minutes in. An explicit `--deadline` is still honoured exactly: a caller
+ * who names a bound has a reason for it, and gets a note when it is below the
+ * budgeted figure rather than silence.
+ *
+ * The rate is the one measured on the CI runner: 403 cells in 903 s, 2.24 s/cell. The
+ * budget is 3 s/cell — a third more — because the same tool also runs on a laptop under
+ * load, where the measured rate is ~3 s/cell: the bound's job is to catch a run that has
+ * HUNG, not to race one that is merely slower, and a bound that fires on an ordinary
+ * machine is the very defect this replaces. It bounds the RUN, so it is a budget for the
+ * whole plan; the per-cell bound is separate (`--cell-timeout`).
  */
-async function recoverPage(
-	chrome: Awaited<ReturnType<typeof launchChrome>>,
+const CELL_BUDGET_MS = 3000;
+const MIN_DERIVED_DEADLINE_MS = 900_000;
+
+/**
+ * How long a cell's declared state is given to APPEAR after the settle window, and
+ * how often it is looked for.
+ *
+ * WHY THIS EXISTS. Readiness used to be a single reading taken `--settle` ms after
+ * the page loaded, which silently assumed every scenario's state exists by then.
+ * Two do not: `401-mid-session` ends the stream two seconds in (that is the state),
+ * and `aborted` is a turn that has to finish before its receipt is painted. At the
+ * 1200 ms default both cells were reported `NOT MEASURABLE` — the harness failing
+ * its own clock, not the app failing its state — so the run could never be green
+ * for a reason that had nothing to do with the app. The alternative (a longer
+ * `--settle` for the whole run) is wrong in the other direction: measured
+ * 2026-10-03, `--settle 7000` fixes those two and BREAKS `S5/streaming` and
+ * `S6/populated`, whose states have already come and gone by then.
+ *
+ * So the wait is on the EVENT, not the clock: poll for the marker the app declares,
+ * stop the moment it appears, and re-stamp the settled frame so the frame shows the
+ * state that was waited for. It costs nothing for a cell that is already ready, and
+ * it never applies to a DECLARED SKIP (those fail on `marker-gap`, not `marker`) or
+ * to a wrong route or a missing root, which are defects whenever they appear.
+ */
+const STATE_WAIT_MS = 8_000;
+const STATE_POLL_MS = 400;
+
+/**
+ * How many times the settled frame may be retaken while its readings keep moving.
+ *
+ * Three, not one: the race this closes is a state ARRIVING, so the first retake
+ * usually lands after it — but a cell that changes twice (a banner, then its text)
+ * would still ship a frame the manifest misdescribes at two. Bounded, because a cell
+ * whose readings never agree must not cost the run: it keeps its last frame and last
+ * reading, which is what the harness did before the retake existed.
+ */
+const SETTLED_UNIT_TAKES = 3;
+
+/** One reading of a cell: the harness's verdict on it, and what it is showing. */
+interface CellState {
+	readiness: Readiness | null;
+	/** The `CONTENT_PROBE` digest, taken with the readiness reading. */
+	content: string;
+}
+
+/** The whole-run deadline a plan of `cells` cells is budgeted, in ms. */
+const derivedDeadlineMs = (cells: number): number =>
+	Math.max(MIN_DERIVED_DEADLINE_MS, Math.ceil(cells * CELL_BUDGET_MS));
+
+/**
+ * Whether a cell's issues are all "the declared state has not arrived yet".
+ *
+ * `marker` is the only issue kind this waits on: the app DECLARES a marker for the
+ * state and the frame does not carry it yet. `empty` rides along because it is the
+ * same sentence's second half. Everything else — a wrong route, a missing root, a
+ * `marker-gap`, a relay the app never asked — is a defect that waiting cannot fix.
+ */
+const stateStillComing = (issues: ReadonlyArray<{ kind: string }>): boolean =>
+	issues.length > 0 &&
+	issues.some((issue) => issue.kind === "marker") &&
+	issues.every((issue) => issue.kind === "marker" || issue.kind === "empty");
+
+/**
+ * Make a page target capture-ready: the three CDP calls every page the harness
+ * drives needs, each BOUNDED and each a value rather than a throw.
+ *
+ * WHY BOUNDED when the CDP client already fails a command after 30 s: a throw
+ * unwinds `runCapture` from inside the cell loop, so the run ends with a stack
+ * trace and NO manifest on disk. That is the same shape `withDeadline` was added
+ * around the cell itself for, and a browser that accepts the connection and then
+ * stops answering is a measured case rather than a hypothetical one (QA hit
+ * `Target.createTarget did not answer within 30000 ms`, rc 1, nothing written).
+ * The pre-paint probe is part of the set because `captureCell`'s theme reporting
+ * reads `window.__loCapture`, so a page without it is not one this harness can
+ * report on. It is called from the ONE place a page is opened (`freshPage`),
+ * so the arming cannot drift from the page it arms.
+ */
+async function armPage(
 	page: CdpPage,
-): Promise<CdpPage> {
-	try {
-		await page.send("Target.closeTarget", { targetId: page.targetId });
-	} catch {
-		// A target wedged beyond answering is closed by the browser when the profile
-		// is torn down; the new target is what the next cell needs.
+	ms: number,
+): Promise<{ ok: true } | { ok: false; reason: string }> {
+	const steps: Array<[string, Promise<unknown>]> = [
+		["Page.enable", page.send("Page.enable")],
+		["Runtime.enable", page.send("Runtime.enable")],
+		[
+			"Page.addScriptToEvaluateOnNewDocument",
+			page.send("Page.addScriptToEvaluateOnNewDocument", {
+				source: PRE_PAINT_PROBE,
+			}),
+		],
+	];
+	for (const [what, call] of steps) {
+		const done = await withDeadline(call, ms, what);
+		if (!done.ok) return { ok: false, reason: done.reason };
 	}
-	const next = await chrome.page();
-	await next.send("Page.enable");
-	await next.send("Runtime.enable");
-	await next.send("Page.addScriptToEvaluateOnNewDocument", {
-		source: PRE_PAINT_PROBE,
-	});
-	return next;
+	return { ok: true };
+}
+
+/**
+ * Close the current page target, if there is one, and open an armed replacement.
+ *
+ * WHY EVERY CELL GETS A FRESH TARGET, not only a wedged one.
+ *
+ * The app under test holds an open `text/event-stream` on its session screen, and
+ * `serveDir` proxies the relay at the SAME origin it serves the build from (that
+ * same-origin proxy is what lets a relay-backed cell be driven at all). Those
+ * streams are connections to the app origin, they are long-lived by design, and a
+ * run accumulates them across cells. Past a point the next `Page.navigate` NEVER
+ * COMMITS, which is the whole of what `CDP Page.navigate did not answer within
+ * 30000 ms` was reporting. Measured 2026-10-03: 11 stalls in a 104-cell `S5`
+ * block, every one of them `S5/*` (the only screen that opens a stream), at the
+ * same cells on every run, reproduced on `ubuntu-latest` as well as here.
+ *
+ * WHY THIS LAYER, and not the wait or the timeout. Chrome dispatches
+ * `Page.navigate`'s reply from the navigation's reset — i.e. at COMMIT — and
+ * never from the `load` event (`content/browser/devtools/protocol/page_handler.cc`:
+ * `Navigate` parks the callback in `navigate_callbacks_` until
+ * `NavigationReset`/`TransferNavigationRequestOwnership` fires). A reply that
+ * never arrives therefore means the navigation never committed, so nothing the
+ * harness waits on — `load`, `commit`, `DOMContentLoaded`, or the declared-state
+ * marker — can change the outcome: the navigation has not started, it is not
+ * slow. A longer timeout would only make the stall quieter, which is the failure
+ * this PR series exists to remove.
+ *
+ * WHY CLOSING THE TARGET, and not just destroying the document. A hop through
+ * `about:blank` — the one navigation that needs no socket, so it commits even
+ * when the origin is busy — is not enough: it leaves the held connections in
+ * place (measured: 6 before the hop, 6 after, cell after cell) and the same cells
+ * stall behind it. Destroying the TARGET releases them. Measured on the 104-cell
+ * `S5` block: 11 stalls and 12 cells with no frame before, 0 and 0 after, 312
+ * frames in 240 s.
+ *
+ * The cost is one target create/close per cell, and it is not a regression in
+ * rate: the 256-cell `ci` tier runs at 2.12 s/cell, against the 2.24 s/cell the
+ * per-cell budget was titrated from. It also leaves the cell loop with ONE shape
+ * instead of two — a wedged cell and a healthy one now take the same path, so the
+ * recovery cannot rot out of use as the failure it exists for stops happening.
+ */
+async function freshPage(
+	chrome: Awaited<ReturnType<typeof launchChrome>>,
+	page: CdpPage | null,
+	ms: number,
+): Promise<{ ok: true; page: CdpPage } | { ok: false; reason: string }> {
+	if (page !== null) {
+		try {
+			await page.send("Target.closeTarget", { targetId: page.targetId });
+		} catch {
+			// A target wedged beyond answering is closed by the browser when the profile
+			// is torn down; the new target is what the next cell needs.
+		}
+	}
+	/*
+	 * Bounded, and a FAILURE rather than a throw. A browser that has stopped answering
+	 * cannot capture anything else, and the run has to say so in its manifest instead of
+	 * dying with a stack trace and nothing on disk — the shape QA hit at startup
+	 * (`Target.createTarget did not answer within 30000 ms`, rc 1, no manifest), one cell
+	 * later. The caller abandons the rest of the plan by name and breaks.
+	 */
+	const opened = await withDeadline(
+		chrome.page(),
+		ms,
+		"the browser's next target",
+	);
+	if (!opened.ok)
+		return {
+			ok: false,
+			reason: `the browser stopped answering: ${opened.reason}`,
+		};
+	const next = opened.value;
+	const armed = await armPage(next, ms);
+	if (!armed.ok)
+		return {
+			ok: false,
+			reason: `the browser stopped answering: ${armed.reason}`,
+		};
+	return { ok: true, page: next };
 }
 
 const sha = (buffer: Buffer): string =>
@@ -111,6 +296,10 @@ const sha = (buffer: Buffer): string =>
  */
 async function relayState(
 	relayUrl: string | undefined,
+	/** The same bound the cells use. The pre-flight is a `fetch` too, and a relay that
+	 * accepts and never answers hung the whole run before it had planned a cell —
+	 * measured by QA as rc 124 against their own bound with no manifest written. */
+	timeoutMs: number,
 ): Promise<RelayStateReply | null> {
 	if (!relayUrl) return null;
 	// Two endpoints, because they answer different questions and only one of them
@@ -119,14 +308,30 @@ async function relayState(
 	// entry's `shows` is the set of cells that state fills. Reading `cells` off
 	// `/__mock/state` — which never served it — made the documented `--relay`
 	// invocation fail with "no cells to capture".
-	const stateRes = await fetch(new URL("/__mock/state", relayUrl));
+	//
+	// BOTH ARE BOUNDED, and a timeout is a refusal rather than a hang: a capture that
+	// cannot plan is a run that must say so, not one that sits until its job is killed.
+	const stateCall = await withDeadline(
+		fetch(new URL("/__mock/state", relayUrl)),
+		timeoutMs,
+		`the mock relay's /__mock/state`,
+	);
+	if (!stateCall.ok)
+		throw new Error(`${stateCall.reason}; is it a mock relay?`);
+	const stateRes = stateCall.value;
 	if (!stateRes.ok)
 		throw new Error(
 			`mock relay /__mock/state answered ${stateRes.status}; is it a mock relay?`,
 		);
 	const state = asRecord(await stateRes.json()) ?? {};
 
-	const registryRes = await fetch(new URL("/__mock/scenarios", relayUrl));
+	const registryCall = await withDeadline(
+		fetch(new URL("/__mock/scenarios", relayUrl)),
+		timeoutMs,
+		`the mock relay's /__mock/scenarios`,
+	);
+	if (!registryCall.ok) throw new Error(registryCall.reason);
+	const registryRes = registryCall.value;
 	if (!registryRes.ok)
 		throw new Error(
 			`mock relay /__mock/scenarios answered ${registryRes.status}`,
@@ -434,10 +639,8 @@ async function captureCell(
 		await sleep(250);
 		shots.push(await stamp("-f250"));
 		await sleep(Math.max(0, settleMs - 250));
-		shots.push(await stamp("-settled"));
 	} else {
 		await sleep(Math.max(0, settleMs - 50));
-		shots.push(await stamp(""));
 	}
 	const measurements = asMeasurements(await page.evaluate(MEASURE_PROBE));
 	// If the harness was asked to seed and the page's own route does not carry the
@@ -448,21 +651,103 @@ async function captureCell(
 		seed.route !== null &&
 		measurements !== null &&
 		!String(measurements.route ?? "").includes("lo-relay=");
-	// The readiness reading: which route the app settled on and which screen
-	// roots it actually rendered. This is the guard against a green matrix over
-	// the wrong screen, which is exactly what the first run of this harness
-	// produced before the relay was proxied.
-	const readiness = asReadiness(await page.evaluate(READINESS_PROBE));
-	const issues = readinessIssuesFor(cell, path, readiness, relayReach);
-	if (seededButAbsent) {
-		issues.push({
-			kind: "seed",
-			message:
-				`the run was told to seed route '${String(seed.route)}' but the page reports ` +
-				`'${String(measurements?.route ?? "")}' without it: the harness's own half of ` +
-				"the seed hook failed",
-		});
+	/**
+	 * The two readings that must describe the same moment as the settled frame.
+	 *
+	 * Read together, and read as a pair by every caller below: the readiness probe is
+	 * the harness's verdict on WHICH state the app is showing (route, screen roots,
+	 * state markers) and the content probe is WHAT it is showing, and a frame is only
+	 * evidence for a cell when both were true of that frame.
+	 */
+	const readState = async (): Promise<CellState> => ({
+		readiness: asReadiness(await page.evaluate(READINESS_PROBE)),
+		// Cheap (one evaluate) and read with the readiness reading, never after the
+		// frame — see `IDENTICAL_FRAME_EXEMPTIONS` for why a byte comparison alone is
+		// not enough to call two frames a collapse.
+		content: digestContent(asContent(await page.evaluate(CONTENT_PROBE))),
+	});
+	/** The cell's verdict for one reading, as the messages a report prints. */
+	const verdictOf = (reading: CellState): CellIssue[] => {
+		const found = readinessIssuesFor(cell, path, reading.readiness, relayReach);
+		if (seededButAbsent)
+			found.push({
+				kind: "seed",
+				message:
+					`the run was told to seed route '${String(seed.route)}' but the page reports ` +
+					`'${String(measurements?.route ?? "")}' without it: the harness's own half of ` +
+					"the seed hook failed",
+			});
+		return found;
+	};
+	/** Everything about the cell that must hold still across the settled frame. */
+	const fingerprintOf = (reading: CellState): string =>
+		`${reading.content}\u0000${verdictOf(reading)
+			.map((issue) => issue.message)
+			.join("\u0000")}`;
+
+	let reading = await readState();
+	let issues = verdictOf(reading);
+
+	/*
+	 * A state that arrives AFTER the settle window: wait for the marker rather than
+	 * reporting the state missing at 1200 ms. See `STATE_WAIT_MS` for the two cells
+	 * this exists for and for why a longer `--settle` is the wrong repair.
+	 */
+	let waitedMs = 0;
+	while (waitedMs < STATE_WAIT_MS && stateStillComing(issues)) {
+		await sleep(Math.min(STATE_POLL_MS, STATE_WAIT_MS - waitedMs));
+		waitedMs += STATE_POLL_MS;
+		reading = await readState();
+		issues = verdictOf(reading);
 	}
+
+	/*
+	 * STAMP, THEN CONFIRM THE READINGS DID NOT MOVE ACROSS THE FRAME.
+	 *
+	 * WHY THIS LOOP EXISTS. The settled frame used to be stamped BEFORE the readiness
+	 * and content probes, and re-stamped only when the marker was still missing — so a
+	 * state arriving between the frame and the probes shipped a PNG of the PRE-state
+	 * under a manifest entry that said the cell was in the state it names. That is the
+	 * "asserting one thing and shipping another" the marker rule exists to prevent,
+	 * and it is not only a wrong frame: the identical-state check then sees "same
+	 * bytes, different content" across two cells and hands the reviewer the
+	 * camera-limit branch, whose repair is a signed declaration that would be FALSE.
+	 *
+	 * Measured 2026-10-03: this race is why 2 of 3 runs of the exact `ci` command
+	 * exited 1 on an undeclared `S5/error = S5/populated` pair — the error cell's
+	 * settled PNG was the populated screen while its content reading carried the 401
+	 * banner, at two different devices.
+	 *
+	 * So the frame is retaken until two CONSECUTIVE readings agree: the reading was
+	 * taken, the frame was stamped, and the reading is taken again. Agreement means
+	 * nothing moved across the frame, which is what makes the manifest's claim about
+	 * the cell true of the PNG it points at; disagreement means the frame was taken on
+	 * the wrong side of a change, so it is retaken and checked again.
+	 *
+	 * A cell that never agrees is one whose readings genuinely keep changing — the
+	 * animated spinner, the virtualized transcript window — and it keeps the LAST frame
+	 * and the LAST reading rather than failing: a state that will not hold still is not
+	 * a readiness defect, and the frame still carries the state it declares. Those
+	 * cells are COUNTED (`settledRetakes`, printed with the run's summary) so the retry
+	 * is visible rather than silent, the way a transient screenshot retry already is.
+	 */
+	const settleSuffix = cell.consecutive ? "-settled" : "";
+	shots.push(await stamp(settleSuffix));
+	let fingerprint = fingerprintOf(reading);
+	let retakes = 0;
+	for (;;) {
+		reading = await readState();
+		const next = fingerprintOf(reading);
+		if (next === fingerprint) break;
+		fingerprint = next;
+		retakes += 1;
+		if (retakes >= SETTLED_UNIT_TAKES) break;
+		shots[shots.length - 1] = await stamp(settleSuffix);
+	}
+	if (retakes > 0) settledRetakes += 1;
+	issues = verdictOf(reading);
+	const readiness = reading.readiness;
+	const contentDigest = reading.content;
 	const readinessProblems = issues.map((issue) => issue.message);
 
 	offConsole();
@@ -503,6 +788,7 @@ async function captureCell(
 		readiness,
 		readinessProblems,
 		ready: readinessProblems.length === 0,
+		contentDigest,
 		declaredSkip,
 		consoleErrors,
 	};
@@ -569,13 +855,56 @@ async function withDeadline<T>(
 	});
 	try {
 		const winner = await Promise.race([
-			promise.then((value) => ({ ok: true as const, value })),
+			promise.then(
+				(value) => ({ ok: true as const, value }),
+				/*
+				 * A cell that THROWS is the same kind of event as one that overruns, and it
+				 * used to be the run's own death instead: a `Page.navigate` that stalls past
+				 * CDP's 30 s command timeout rejects, the rejection went straight through this
+				 * race, and the process exited from inside `captureCell` with a stack trace and
+				 * NO manifest at all — the out directory held frames and no summary, so a
+				 * 45-minute job reported nothing about what it had measured. Measured
+				 * 2026-10-03: the documented 72-cell command died this way on entry 39, twice,
+				 * and again on a stashed tree. The caller already knows what to do with a cell
+				 * that did not complete — abandon it BY NAME, then open a fresh page so the
+				 * next cell cannot inherit a wedged one — so the rejection is turned into that
+				 * same shape here rather than being left to unwind the run.
+				 */
+				(error: unknown) => ({
+					ok: false as const,
+					reason: `${what} threw: ${error instanceof Error ? error.message : String(error)}`,
+				}),
+			),
 			expiry,
 		]);
 		return winner;
 	} finally {
 		if (timer !== undefined) clearTimeout(timer);
 	}
+}
+
+/**
+ * A relay call the cell depends on, under the cell's own bound.
+ *
+ * The pin and the two request counts are the only `fetch`es in the cell loop, and they
+ * used to sit OUTSIDE `withDeadline`: a relay that died mid-run threw `fetch failed`
+ * straight through the loop, so the run ended with a stack trace and NO manifest at all —
+ * the shape W6 removed for a cell whose PAGE hangs, left standing for a cell whose RELAY
+ * goes away (QA round 1 reproduced it on this head and on `origin/main` by killing the
+ * relay mid-run). The failure is returned as a value so the caller can account for the
+ * cell by name instead of the run by crash.
+ */
+async function relayStep<T>(
+	run: () => Promise<T>,
+	ms: number,
+	what: string,
+): Promise<{ ok: true; value: T } | { ok: false; reason: string }> {
+	const result = await withDeadline(run(), ms, what);
+	if (result.ok) return result;
+	// Say what was OBSERVED rather than what it probably means: this path covers a
+	// relay that accepted and never answered as well as one that is gone, and the two
+	// want different fixes (a hung relay is not a departed one).
+	return { ok: false, reason: `the relay did not answer: ${result.reason}` };
 }
 
 /** What the measurement probe reports, narrowed from the page's reply. */
@@ -707,6 +1036,39 @@ function asReadiness(value: unknown): Readiness | null {
 		text: typeof bag.text === "string" ? bag.text : "",
 		elementCount: typeof bag.elementCount === "number" ? bag.elementCount : 0,
 	};
+}
+
+/** What `CONTENT_PROBE` reports, narrowed from the page's own reply. */
+interface CellContent {
+	text: string;
+	labels: string;
+}
+
+function asContent(value: unknown): CellContent {
+	if (typeof value !== "object" || value === null || Array.isArray(value))
+		return { text: "", labels: "" };
+	const bag = value as Record<string, unknown>;
+	return {
+		text: typeof bag.text === "string" ? bag.text : "",
+		labels: typeof bag.labels === "string" ? bag.labels : "",
+	};
+}
+
+/**
+ * The digest the identical-frame check compares, over the CONTENT of a cell.
+ *
+ * Text and labels are hashed as two fields rather than concatenated so a cell whose
+ * text moved into an accessibility label cannot digest the same as one that rendered it.
+ * An empty reading is a digest too — two cells that both reported nothing are the same
+ * content, which is the direction that keeps the check's teeth.
+ */
+function digestContent(content: CellContent): string {
+	return createHash("sha256")
+		.update(content.text)
+		.update("\u0000")
+		.update(content.labels)
+		.digest("hex")
+		.slice(0, 16);
 }
 
 /**
@@ -936,46 +1298,6 @@ interface RelayStateReply {
 	>;
 }
 
-/**
- * Cells that declare different states but produced the same bytes.
- *
- * The check is deliberately cross-cell rather than per-cell: two *themes* of one
- * cell being identical is already caught by the twin check, while two *states*
- * of one screen being identical is the separate, harder-to-notice failure — the
- * app ignored the state and rendered one screen for all of them.
- *
- * Compared on the settled frame, which is the one a reviewer looks at.
- */
-function findIdenticalStates(records: CaptureRecord[]): string[] {
-	const bySha = new Map<string, CaptureRecord[]>();
-	for (const record of records) {
-		const frame = record.frames[record.frames.length - 1];
-		if (frame === undefined) continue;
-		const key = `${frame.sha}`;
-		bySha.set(key, [...(bySha.get(key) ?? []), record]);
-	}
-	const problems: string[] = [];
-	for (const [shaDigest, group] of bySha) {
-		const states = new Set(
-			group.map((record) => `${record.screen}/${record.state}`),
-		);
-		if (states.size < 2) continue;
-		// A DECLARED SKIP is not evidence for the state it names, so a group made ONLY of
-		// skipped cells rendering one image is the known gap, not a finding: the 29 skips
-		// on this head are one placeholder screen between them, and reporting that as
-		// "different states, one image" three times is noise a reviewer has to re-derive.
-		//
-		// The check keeps every tooth that matters: one EVIDENTIAL cell is enough to
-		// report the group, so a measured cell that collapses onto a skipped one — or two
-		// measured cells that collapse onto each other — is still caught.
-		if (!group.some((record) => record.declaredSkip === null)) continue;
-		problems.push(
-			`${[...states].join(" = ")} rendered identically (${shaDigest}) on ${group[0]?.device ?? "?"}`,
-		);
-	}
-	return problems;
-}
-
 /** `rgb(a, b, c)`/`#rrggbb` → lowercase hex, so a computed colour can meet a token. */
 function rgbEquals(
 	computed: string | null | undefined,
@@ -1026,15 +1348,15 @@ function canvasTokens(
 
 /**
  * Everything a capture run takes. `tier` is recorded in the manifest so a report
- * can say which sample produced it: a core run is not a full-matrix result, and
- * a cell that was not captured is BLOCKED rather than passed.
+ * can say which sample produced it: a `ci` or `core` run is not a full-matrix
+ * result, and a cell that was not captured is BLOCKED rather than passed.
  */
 export interface CaptureOptions {
 	dir: string;
 	out: string;
 	relay?: string | undefined;
 	cells: string[];
-	tier: "core" | "full";
+	tier: "ci" | "core" | "full";
 	devices: string[];
 	themes: string[];
 	scales: Array<{ id: string; factor: number }>;
@@ -1042,8 +1364,12 @@ export interface CaptureOptions {
 	settleMs: number;
 	/** Hard bound per cell; a cell that exceeds it is a FAILED cell, not a hang. */
 	cellTimeoutMs: number;
-	/** Hard bound for the whole run, checked between cells. */
-	deadlineMs: number;
+	/**
+	 * Hard bound for the whole run, checked between cells. `null` means the caller
+	 * did not name one, so `runCapture` derives it from the plan's size; the
+	 * effective value is what the manifest records.
+	 */
+	deadlineMs: number | null;
 	tokens: string;
 	plan: boolean;
 	yes: boolean;
@@ -1091,6 +1417,13 @@ export interface CaptureRecord {
 	readinessProblems: string[];
 	ready: boolean;
 	/**
+	 * A digest of what the cell is SHOWING, read without the viewport (`CONTENT_PROBE`):
+	 * the screen reader's view of it. It is the second opinion the identical-frame check
+	 * asks for before it calls two byte-identical frames a collapse — see
+	 * `IDENTICAL_FRAME_EXEMPTIONS`.
+	 */
+	contentDigest: string;
+	/**
 	 * Set when the cell's state is a DECLARED SKIP: the app declares no marker for it
 	 * AND `matrix.ts` `PENDING_CELLS` names the dependency it waits on. A skipped cell
 	 * is NOT evidence and NOT a finding: it is excluded from `notMeasurableCells` and
@@ -1118,12 +1451,75 @@ export interface CaptureRecord {
 export async function runCapture(options: CaptureOptions) {
 	const outDir = options.out;
 	mkdirSync(join(outDir, "frames"), { recursive: true });
-	const state = await relayState(options.relay);
-	if (state !== null && state.cells.length === 0) {
-		throw new Error(
-			`the mock relay at ${options.relay} declares no cells: /__mock/scenarios returned no ` +
-				"scenario with a `shows` list, so there is nothing to capture",
+	/*
+	 * A REFUSAL IN THE PRE-FLIGHT ALSO ACCOUNTS FOR ITSELF.
+	 *
+	 * `relayState` is bounded now, so a relay that accepts and never answers refuses in one
+	 * bound instead of hanging until the job is killed — but it refused with NOTHING written,
+	 * which is the same "the run left no account of itself" shape the cell path was fixed
+	 * for. A refusal is a fact about the run, so it goes into the manifest the job uploads:
+	 * `records` is empty because no cell was planned, and `meta.preflightRefusal` names the
+	 * reason. The error is re-thrown, so the exit code is still a refusal — the file is a
+	 * record, not a recovery.
+	 */
+	/*
+	 * A REFUSAL THAT STOPS THE RUN STILL ACCOUNTS FOR ITSELF.
+	 *
+	 * Three things can stop a capture before any cell is planned or captured: a relay
+	 * that does not answer the pre-flight, a relay that declares no cells, and a browser
+	 * that cannot open a page. All three used to `throw` with NOTHING written, which is
+	 * the same "the run left no account of itself" shape the cell path and the relay path
+	 * were fixed for — QA round 4 hit it at startup: `Target.createTarget did not answer
+	 * within 30000 ms`, rc 1, no manifest. So each one records a manifest naming itself
+	 * and then throws, which keeps the exit code a refusal and gives the job something to
+	 * upload.
+	 *
+	 * `phase` is where it stopped, because the three want different fixes and a reader of
+	 * the artifact should not have to infer which one happened.
+	 */
+	const refuse = (phase: string, reason: string): void => {
+		writeFileSync(
+			join(outDir, "manifest.json"),
+			`${JSON.stringify(
+				{
+					meta: {
+						refused: true,
+						refusedAt: phase,
+						refusal: reason,
+						buildDir: resolve(options.dir),
+						relay: options.relay ?? null,
+						out: outDir,
+					},
+					themeProblems: [],
+					readinessProblems: [
+						`the run refused to start at ${phase}: ${reason}`,
+					],
+					abandonedCells: [],
+					identicalStates: [],
+					identicalStateUndeclared: [],
+					identicalStateExemptions: [],
+					records: [],
+				},
+				null,
+				2,
+			)}
+`,
 		);
+	};
+	let state: RelayStateReply | null;
+	try {
+		state = await relayState(options.relay, options.cellTimeoutMs);
+	} catch (error) {
+		const reason = error instanceof Error ? error.message : String(error);
+		refuse("the relay pre-flight", reason);
+		throw error;
+	}
+	if (state !== null && state.cells.length === 0) {
+		const reason =
+			`the mock relay at ${options.relay} declares no cells: /__mock/scenarios returned no ` +
+			"scenario with a `shows` list, so there is nothing to capture";
+		refuse("the plan", reason);
+		throw new Error(reason);
 	}
 
 	const unrenderable: Array<{ cell: string; reason: string }> = [];
@@ -1138,6 +1534,17 @@ export async function runCapture(options: CaptureOptions) {
 	});
 	const framesPerCell = options.consecutive ? 3 : 1;
 	const plannedFrames = plan.length * framesPerCell;
+
+	/*
+	 * The bound the run will actually hold, and the note when the caller's own
+	 * bound cannot hold it. Printed BEFORE anything is launched so a bound that
+	 * will truncate is a stated diagnosis at minute zero rather than a surprise
+	 * at minute fifteen — which is exactly how the CI job's first real capture
+	 * run failed: 900 s against the 910-cell plan the `core` default held at the time,
+	 * reported only when it fired.
+	 */
+	const budgetMs = derivedDeadlineMs(plan.length);
+	const deadlineMs = options.deadlineMs ?? budgetMs;
 
 	console.log(
 		`capture plan: ${plan.length} cells × ${framesPerCell} frame(s) = ${plannedFrames} frames`,
@@ -1155,6 +1562,19 @@ export async function runCapture(options: CaptureOptions) {
 		`  scales:  ${[...new Set(plan.map((c) => c.scaleSpec.id))].join(", ")}`,
 	);
 	console.log(`  out:     ${outDir}`);
+	console.log(
+		`  deadline: ${Math.round(deadlineMs / 1000)} s` +
+			(options.deadlineMs === null
+				? ` (derived from the plan at ${CELL_BUDGET_MS} ms/cell; pass --deadline to override)`
+				: " (explicit)"),
+	);
+	if (options.deadlineMs !== null && options.deadlineMs < budgetMs) {
+		console.log(
+			`note: --deadline ${Math.round(options.deadlineMs / 1000)} s is below this plan's ` +
+				`${Math.round(budgetMs / 1000)} s budget; cells still unvisited when it fires are ` +
+				"reported as having no frame rather than silently skipped.",
+		);
+	}
 	if (options.plan) {
 		for (const cell of plan) console.log(`   ${frameName(cell)}`);
 		return { planned: plannedFrames, plan, dryRun: true };
@@ -1169,10 +1589,23 @@ export async function runCapture(options: CaptureOptions) {
 	// The relay is proxied at the SAME origin as the build, so the app's own
 	// configured route reaches it. Without this every relay-backed cell rendered
 	// an app with no route and five different states produced one identical image.
-	const server = await serveDir(options.dir, {
-		port: options.port ?? 0,
-		proxy: options.relay,
-	});
+	// BOUNDED because it is the FIRST step of the run — ahead of the plan, the browser
+	// and the manifest — so a step that parks here leaves nothing on disk to say what
+	// happened. What the bound reports is `serveDir`'s own throw, not the named refusal
+	// the cell class gets: an occupied port still ends the run with
+	// `the static server threw: listen EADDRINUSE …` and no manifest, which is right —
+	// there is no plan yet, so there is no cell list to account for. It is the silent
+	// version of that failure the bound removes.
+	const served = await withDeadline(
+		serveDir(options.dir, {
+			port: options.port ?? 0,
+			proxy: options.relay,
+		}),
+		options.cellTimeoutMs,
+		"the static server",
+	);
+	if (!served.ok) throw new Error(served.reason);
+	const server = served.value;
 	/*
 	 * WHICH ORIGIN the seed names, and why it is not the relay's.
 	 *
@@ -1205,10 +1638,29 @@ export async function runCapture(options: CaptureOptions) {
 				"proxied at the seed's origin; the app will report the route as unreachable.",
 		);
 	}
-	const chrome = await launchChrome({ profile: options.profile });
+	/*
+	 * BOUNDED, with a floor above `launchChrome`'s own 30 s wait for the port file: a
+	 * browser that starts far enough to be connected to and then never answers a CDP call
+	 * hangs HERE, before the two `chrome.page()` sites get a chance — measured with a stub
+	 * that writes `DevToolsActivePort` and then accepts and never replies: the run sat for
+	 * 180 s and wrote nothing. Bounding the launch turns that into the same named refusal
+	 * as the rest of this class.
+	 */
+	const launched = await withDeadline(
+		launchChrome({ profile: options.profile }),
+		Math.max(45_000, options.cellTimeoutMs),
+		"the browser's debug port",
+	);
+	if (!launched.ok) {
+		const reason = `no browser came up: ${launched.reason}`;
+		refuse("the browser", reason);
+		throw new Error(reason);
+	}
+	const chrome = launched.value;
 	const tokens = canvasTokens(options.tokens);
 	const records: CaptureRecord[] = [];
 	screenshotRetries = 0;
+	settledRetakes = 0;
 	let reaped: Awaited<ReturnType<typeof chrome.close>> | null = null;
 	/** Cells that produced no frame, and why — never a silent skip. */
 	const abandoned: Array<{ cell: string; reason: string }> = [...unrenderable];
@@ -1218,26 +1670,52 @@ export async function runCapture(options: CaptureOptions) {
 	let index = 0;
 
 	try {
-		let page = await chrome.page();
-		await page.send("Page.enable");
-		await page.send("Runtime.enable");
-		await page.send("Page.addScriptToEvaluateOnNewDocument", {
-			source: PRE_PAINT_PROBE,
-		});
+		/*
+		 * EVERY CELL OPENS ITS OWN TARGET — see `freshPage` for why a reused one
+		 * eventually cannot commit a navigation at all. There is deliberately no
+		 * separate "first target" step: the first cell's recycle closes nothing and
+		 * opens a page exactly as every later cell does, so the loop has one shape and
+		 * a wedged cell needs no recovery path of its own.
+		 */
+		let page: CdpPage | null = null;
 
 		for (const cell of plan) {
 			index += 1;
-			if (Date.now() - startedAt > options.deadlineMs) {
+			/* One abandonment path, so every reason a cell has no frame is recorded and printed
+			 * the same way. */
+			const abandonCell = (reason: string): void => {
+				abandoned.push({ cell: cell.cell, reason });
+				console.log(
+					`[${index}/${plan.length}] ${cell.cell} on ${cell.device} — FAILED: ${reason}`,
+				);
+			};
+			if (Date.now() - startedAt > deadlineMs) {
 				// The overall bound: a run that would exceed its job's own timeout stops
 				// accounting for itself and reports what it captured, rather than being
 				// killed with nothing written. Measured in CI: the step ran past a
 				// 45-minute job timeout and produced no artifacts at all.
 				abandoned.push({
 					cell: cell.cell,
-					reason: `the run passed its ${Math.round(options.deadlineMs / 1000)} s deadline with ${plan.length - index + 1} cell(s) left`,
+					reason: `the run passed its ${Math.round(deadlineMs / 1000)} s deadline with ${plan.length - index + 1} cell(s) left`,
 				});
 				break;
 			}
+			/*
+			 * A target that has never held a stream, for this cell. A browser that has
+			 * stopped answering is a NAMED refusal rather than a throw: the rest of the
+			 * plan is abandoned BY NAME and the loop breaks, so the run still writes a
+			 * manifest that accounts for every cell it did not capture.
+			 */
+			const fresh = await freshPage(chrome, page, options.cellTimeoutMs);
+			if (!fresh.ok) {
+				for (const rest of plan.slice(index - 1))
+					abandoned.push({ cell: rest.cell, reason: fresh.reason });
+				console.log(
+					`  ${fresh.reason} — the ${plan.length - index + 1} cell(s) left are BLOCKED`,
+				);
+				break;
+			}
+			page = fresh.page;
 			// Pin the relay to this cell's state before rendering it, and count what the
 			// relay serves while it renders. A registry-declared cell whose requests
 			// did not grow is a cell the app rendered without asking the relay for
@@ -1247,15 +1725,35 @@ export async function runCapture(options: CaptureOptions) {
 			const registryBacked =
 				options.relay !== undefined &&
 				Object.hasOwn(state?.cellScenarios ?? {}, cell.cell);
-			if (registryBacked && options.relay !== undefined) {
+			const relay = options.relay;
+			if (registryBacked && relay !== undefined) {
 				const scenario = state?.cellScenarios?.[cell.cell]?.[0];
-				if (scenario !== undefined)
-					await selectScenario(options.relay, scenario);
+				if (scenario !== undefined) {
+					// Bounded like the cell itself: a pin whose relay is gone abandons THIS cell.
+					const pinned = await relayStep(
+						() => selectScenario(relay, scenario),
+						options.cellTimeoutMs,
+						`pinning ${scenario} for ${cell.cell}`,
+					);
+					if (!pinned.ok) {
+						abandonCell(pinned.reason);
+						continue;
+					}
+				}
 			}
-			const requestsBefore =
-				options.relay === undefined
-					? null
-					: await relayRequestCount(options.relay);
+			const countBefore = await relayStep(
+				() =>
+					relay === undefined
+						? Promise.resolve(null)
+						: relayRequestCount(relay),
+				options.cellTimeoutMs,
+				`reading the relay's request count for ${cell.cell}`,
+			);
+			if (!countBefore.ok) {
+				abandonCell(countBefore.reason);
+				continue;
+			}
+			const requestsBefore = countBefore.value;
 
 			// The per-cell bound. A cell whose page never settles used to hang the
 			// whole run; it now fails with the deadline that expired, and the next cell
@@ -1273,18 +1771,23 @@ export async function runCapture(options: CaptureOptions) {
 				`cell ${cell.cell} on ${cell.device}/${cell.theme}/${cell.scale.id}`,
 			);
 			if (!attempted.ok) {
-				abandoned.push({ cell: cell.cell, reason: attempted.reason });
-				console.log(
-					`[${index}/${plan.length}] ${cell.cell} on ${cell.device} — FAILED: ${attempted.reason}`,
-				);
-				// The page may be wedged with a live stream; a fresh target keeps the
-				// next cell from inheriting it.
-				page = await recoverPage(chrome, page);
+				abandonCell(attempted.reason);
+				// The next cell opens its own target, so a page left wedged with a live
+				// stream is closed by that recycle rather than inherited here.
 				continue;
 			}
 			const record = attempted.value;
-			if (options.relay !== undefined) {
-				const requestsAfter = await relayRequestCount(options.relay);
+			if (relay !== undefined) {
+				/* Bounded for the same reason as the count before it, and here the frame is already
+				 * captured: a relay that dies now costs this cell its REACH fact (`null` already means
+				 * "could not count", and the fact is resolved as unreached for a registry cell) rather
+				 * than the whole run its manifest. */
+				const countAfter = await relayStep(
+					() => relayRequestCount(relay),
+					options.cellTimeoutMs,
+					`reading the relay's request count after ${cell.cell}`,
+				);
+				const requestsAfter = countAfter.ok ? countAfter.value : null;
 				relayReach = {
 					registryBacked,
 					reached:
@@ -1348,6 +1851,9 @@ export async function runCapture(options: CaptureOptions) {
 			`${skippedLive} live owner(s) left alone` +
 			(screenshotRetries > 0
 				? `, ${screenshotRetries} screenshot retr(y|ies)`
+				: "") +
+			(settledRetakes > 0
+				? `, ${settledRetakes} cell(s) whose settled frame was retaken to agree with its readings`
 				: ""),
 	);
 
@@ -1418,7 +1924,11 @@ export async function runCapture(options: CaptureOptions) {
 	const readinessProblems = unready.map(
 		(record) => `${record.name}: ${record.readinessProblems.join("; ")}`,
 	);
-	const identicalCells = findIdenticalStates(records);
+	const {
+		collapses: identicalCells,
+		undeclared: identicalUndeclared,
+		exemptions: identicalExemptions,
+	} = findIdenticalFrames(records);
 
 	// The manifest is what the audit and the gallery both read, so it carries the
 	// facts each of them needs by name rather than a shape they must infer.
@@ -1437,7 +1947,7 @@ export async function runCapture(options: CaptureOptions) {
 			cellsPlanned: plan.length,
 			cellsCaptured,
 			cellTimeoutMs: options.cellTimeoutMs,
-			deadlineMs: options.deadlineMs,
+			deadlineMs,
 			devicesCaptured: options.devices,
 			themeTokens: tokens ?? null,
 			textScaleVerdict: scaleCheck.verdict,
@@ -1449,6 +1959,7 @@ export async function runCapture(options: CaptureOptions) {
 				orphansReaped: reaped?.sweep?.swept.length ?? 0,
 				liveOwnersSkipped: reaped?.sweep?.skipped.length ?? 0,
 				screenshotRetries,
+				settledRetakes,
 			},
 			// Which cells were measured against a LIVE dimension, by name. A report
 			// that only carried the run-level verdict let a reader take every "200 %"
@@ -1477,6 +1988,20 @@ export async function runCapture(options: CaptureOptions) {
 		/** Cells with no frame: unrenderable screens and cells that hit a deadline. */
 		abandonedCells: abandoned,
 		identicalStates: identicalCells,
+		/**
+		 * Byte-identical frames whose declared states differ, whose content differs too, and
+		 * which nothing has declared: a camera limit nobody has signed for. Blocking, and
+		 * listed apart from the collapses so the manifest's own wording matches what was
+		 * measured.
+		 */
+		identicalStateUndeclared: identicalUndeclared,
+		/**
+		 * Byte-identical frames whose declared states differ in CONTENT: a limit of the
+		 * camera (the differing content is below the fold), declared by name in
+		 * `IDENTICAL_FRAME_EXEMPTIONS` with its reason. Reported, never failing — and only
+		 * reachable for a pair that IS declared, so this list cannot grow quietly.
+		 */
+		identicalStateExemptions: identicalExemptions,
 		unreadyCells: unready.map((record) => record.name),
 		/**
 		 * Cells whose state is a named, owned dependency rather than a failure.
@@ -1570,9 +2095,21 @@ export async function runCapture(options: CaptureOptions) {
 	}
 	if (identicalCells.length) {
 		console.log(
-			`IDENTICAL STATES (${identicalCells.length}): cells that declare different states produced the same bytes`,
+			`IDENTICAL STATES (${identicalCells.length}): cells that declare different states produced the same bytes AND the same content`,
 		);
 		for (const entry of identicalCells) console.log(`  - ${entry}`);
+	}
+	if (identicalUndeclared.length) {
+		console.log(
+			`UNDECLARED IDENTICAL FRAMES (${identicalUndeclared.length}): the same bytes with DIFFERENT content — a camera limit, and one nothing has declared as a camera limit`,
+		);
+		for (const entry of identicalUndeclared) console.log(`  - ${entry}`);
+	}
+	if (identicalExemptions.length) {
+		console.log(
+			`EXEMPT IDENTICAL FRAMES (${identicalExemptions.length}): byte-identical frames whose declared states DIFFER in content, each declared in matrix.ts IDENTICAL_FRAME_EXEMPTIONS — a limit of the camera, not a collapse`,
+		);
+		for (const entry of identicalExemptions) console.log(`  - ${entry}`);
 	}
 
 	const strict = options.strict !== false;
@@ -1587,6 +2124,7 @@ export async function runCapture(options: CaptureOptions) {
 		themeProblems.length +
 		readinessProblems.length +
 		identicalCells.length +
+		identicalUndeclared.length +
 		abandoned.length;
 	// A run that leaves processes behind has not finished, whatever its frames look
 	// like: "a run that ends normally leaves nothing behind, and proves it in its own
@@ -1606,7 +2144,7 @@ export async function runCapture(options: CaptureOptions) {
 	if (strict && blockingWithSurvivors > 0) {
 		throw new CaptureFailure(
 			`${themeProblems.length} theme problem(s), ${readinessProblems.length} unready cell(s), ` +
-				`${identicalCells.length} identical-state pair(s), ${abandoned.length} cell(s) with no frame, ` +
+				`${identicalCells.length} identical-state collapse(s), ${identicalUndeclared.length} undeclared identical-state pair(s), ${abandoned.length} cell(s) with no frame, ` +
 				`${survivors} surviving process(es); ` +
 				`see ${join(outDir, "manifest.json")}`,
 			{
@@ -1714,11 +2252,20 @@ if (isMain) {
 				"  --relay <url>       mock relay base URL; supplies the scenario list and session ids",
 				"  --cells <a/b,...>   explicit screen/state cells (default: whatever the relay declares)",
 				"  --cell-timeout <s>  hard bound per cell; a cell that exceeds it FAILS with that reason (default 45)",
-				"  --deadline <s>      hard bound for the whole run (default 900); remaining cells are reported BLOCKED",
-				"  --devices <names>   comma list. Default: the `core` tier in matrix.ts DEVICES",
-				"                      (5 profiles) — pass --full for all 19",
+				"  --deadline <s>      hard bound for the whole run. Default: derived from the plan",
+				"                      (3000 ms/cell, floor 900 s) so a bound always holds its own plan;",
+				"                      a smaller explicit bound is honoured and noted. Cells still",
+				"                      unvisited when it fires are reported as having no frame",
+				"  --tier <name>       the sample to capture: ci | core (default) | full",
+				"                        ci    256 cells — every declared cell, 2 device profiles,",
+				"                              both themes, scales 100 and 200 (~10 min) — the CI job's",
+				"                        core  832 cells — the 5 `core` profiles, both themes, all",
+				"                              three scales",
+				"                        full  3008 cells — all 19 profiles",
+				"  --devices <names>   comma list. Default: the tier's profiles (ci 2, core 5 by",
+				"                      default, --full for all 19)",
 				"  --themes <names>    default dark,light",
-				"  --scales <ids>      default 100,150,200",
+				"  --scales <ids>      default 100,150,200 (the `ci` tier defaults to 100,200)",
 				"  --consecutive       also capture a +250 ms and a settled frame per cell",
 				"  --settle <ms>       boot budget before the first frame (default 1200)",
 				"  --tokens <path>     tokens.json, to check each frame's canvas against its theme",
@@ -1730,20 +2277,35 @@ if (isMain) {
 		);
 		process.exit(dir && out ? 0 : 2);
 	}
-	// An empty `--scales` means "all of them": the matrix's scale dimension is the
-	// one that catches a transcript row clipping its tool result, so it is on by
+	// An empty `--scales` means "the tier's defaults": the matrix's scale dimension is
+	// the one that catches a transcript row clipping its tool result, so it is on by
 	// default rather than opt-in.
 	const scaleIds = csv(flags, "scales");
-	// Which devices a default run covers. `core` is the sample the operator's
-	// rule asks to be run first — smallest phone, a typical phone, phone
-	// landscape, a tablet in each orientation — and `--full` (or `--tier full`)
-	// covers every size. `--devices` overrides either.
-	const tier =
-		bool(flags, "full") || str(flags, "tier", "core") === "full"
-			? "full"
-			: "core";
+	// Which devices a run covers. `core` is the sample the operator's rule asks to be
+	// run first — smallest phone, a typical phone, phone landscape, a tablet in each
+	// orientation — `ci` is the bounded sample the per-push job takes (matrix.ts
+	// `CI_DEVICES`, ~10 minutes), and `--full` covers every size. `--devices`
+	// overrides any of them.
+	//
+	// An unknown tier is an ERROR rather than a silent fall back to `core`: a typo'd
+	// `--tier ci` that quietly ran 832 cells would spend ~31 minutes on a capture the
+	// caller did not ask for, and the whole point of naming the sample is that the
+	// run you get is the one you asked for.
+	const tierFlag = bool(flags, "full") ? "full" : str(flags, "tier", "core");
+	if (tierFlag !== "ci" && tierFlag !== "core" && tierFlag !== "full") {
+		console.error(
+			`unknown --tier '${tierFlag}': the samples are ci, core and full ` +
+				"(tools/visual/matrix.ts)",
+		);
+		process.exit(2);
+	}
+	const tier: "ci" | "core" | "full" = tierFlag;
 	const requestedDevices = csv(flags, "devices");
-	const defaultDevices = tier === "full" ? ALL_DEVICES : CORE_DEVICES;
+	const defaultDevices =
+		tier === "full" ? ALL_DEVICES : tier === "ci" ? CI_DEVICES : CORE_DEVICES;
+	const defaultScaleIds = tier === "ci" ? CI_SCALES : SCALES.map((s) => s.id);
+	const effectiveScaleIds = scaleIds.length ? scaleIds : defaultScaleIds;
+	const deadlineFlag = str(flags, "deadline", undefined);
 	const summary = await runCapture({
 		dir,
 		out,
@@ -1752,9 +2314,7 @@ if (isMain) {
 		tier,
 		devices: requestedDevices.length ? requestedDevices : defaultDevices,
 		themes: csv(flags, "themes").length ? csv(flags, "themes") : THEMES,
-		scales: scaleIds.length
-			? SCALES.filter((s) => scaleIds.includes(s.id))
-			: SCALES,
+		scales: SCALES.filter((s) => effectiveScaleIds.includes(s.id)),
 		consecutive: bool(flags, "consecutive"),
 		settleMs: num(flags, "settle", 1200),
 		// The web build's own relay-override parameters: the harness puts the app's
@@ -1768,7 +2328,11 @@ if (isMain) {
 		// a cell that never settles must fail that cell, and a run that would outlive
 		// its job must stop accounting for itself and write what it has.
 		cellTimeoutMs: num(flags, "cell-timeout", 45) * 1000,
-		deadlineMs: num(flags, "deadline", 900) * 1000,
+		// Absent means "derive it from the plan" — see CELL_BUDGET_MS. An explicit
+		// value is honoured as given, including one small enough to truncate: the run
+		// then prints the budgeted figure beside it rather than pretending they match.
+		deadlineMs:
+			deadlineFlag === undefined ? null : num(flags, "deadline", 900) * 1000,
 		tokens:
 			str(flags, "tokens", join(repoRoot, "design", "tokens", "tokens.json")) ??
 			join(repoRoot, "design", "tokens", "tokens.json"),

@@ -14,8 +14,16 @@ Sources are the two requirement documents in this directory
 parent document before acting on an item — this list says *what* and *who*, not
 *how*.
 
-**Status of the programme:** nothing below is done. The app does not exist yet;
-this list is the plan, and it is ordered so that the long-lead items start first.
+**Status of the programme:** nothing below has been submitted to any store, and
+most of it is not done — but the in-repository items are further along than that.
+**F1** (the pinned macOS runner) and **F6** (the release workflow: tag → build → sign →
+upload → attach) are in the repository, landed with [#10](https://github.com/damianvtran/local-operator-mobile/pull/10) and not yet proven by a tagged release; **F7** (the no-Xcode, no-SDK local path), **B5** (the Android launcher icons and the
+512 px Play icon) and **B15** (the accessibility work, held by `pnpm contrast:check`,
+the 200 % text scale and the reduced-motion handling) are done, and **B4** has its
+source layers and its light, dark and tinted renders committed while the `.icon`
+bundle itself is still built by hand in Icon Composer. The app exists and builds;
+this list is what remains before a store will accept it, ordered so that the
+long-lead items start first.
 
 ---
 

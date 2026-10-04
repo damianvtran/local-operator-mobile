@@ -1,16 +1,19 @@
 # Documentation
 
-Local Operator Mobile is at the research and design stage. This index lists the
-documentation sections as they land; each is **in progress** until linked.
+Local Operator Mobile is past the research and design stage: the app is built and
+exercised in this repository, though no build has been published yet. This index
+lists the documentation sections.
 
-| Path | What it will hold | Status |
+| Path | What it holds | Status |
 | --- | --- | --- |
-| `docs/adr/` | Architecture decision records, starting with the app toolchain. | in progress |
+| `docs/adr/` | Architecture decision records: the app toolchain, connection and authentication, the e2e and audit harness, the CI/CD pipeline, queued asks, and push notifications. | 0001–0006 written |
 | `docs/relay/` | How the app talks to the Local Operator mobile relay and the Radient tunnel: auth, streaming, reconnects. | in progress |
-| `docs/publishing/` | Requirements for the App Store, Google Play, and other stores, plus the release pipeline. | in progress |
-| `docs/ux/` | UX research, flows, and the end-to-end harnesses that audit design and UX. | in progress |
-| `design/` | The design and brand kit, built from real Local Operator assets. | in progress |
-| `store/` | Store listing copy, screenshots, and other store assets. | in progress |
+| `docs/e2e/` | The mock relay, the frame harness and the audit checker, and what each one can prove. | written |
+| `docs/ux/` | UX research, the target flows, principles, and the audit rubric the frames are scored against. | written |
+| `docs/design/` | The design system the app's styling layer is generated from: brand kit, components, tokens and previews. | written |
+| `docs/publishing/` | Requirements for the App Store, Google Play, and other stores, plus the release pipeline. | written; `checklist.md` tracks what each store still needs |
+| `design/` | The design and brand kit, built from real Local Operator assets: tokens, fonts, app icons and previews. | written; the app's stylesheet and token module are generated from it |
+| `store/` | Store listing copy, screenshots, and other store assets. | draft — nothing submitted |
 
 Brand source files used by the README live in [`docs/assets/brand/`](./assets/brand/).
 
