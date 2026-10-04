@@ -404,6 +404,32 @@ export interface SessionListFrame {
 	/** Degradation markers for the durable listing: `"sessions"` and/or `"attention"`. */
 	degraded: string[];
 	capabilities: Capabilities;
+	/**
+	 * Push/ack-sync S1 [ADR 0006 §1.1]: the machine's own unread aggregate, a
+	 * TOP-LEVEL sibling of `degraded` — deliberately not inside `capabilities`,
+	 * where a missing key means "this build does not have it". Additive: an
+	 * OLDER relay omits the whole block, and **absence means "unknown", never
+	 * 0** — a client must not touch a count it cannot read.
+	 *
+	 * `count` is absent (`degraded` non-empty) when the attention store could
+	 * not be read: a store that could not be read is not an empty pile. The
+	 * population is the listing's own snapshot — one conversation with three
+	 * unread completions counts once.
+	 */
+	unread?: UnreadBlock;
+}
+
+/** The frame-level unread aggregate (`SessionListFrame.unread`). */
+export interface UnreadBlock {
+	/** The badge number: conversations with unread notifications. Absent when
+	 *  `degraded` is non-empty. Never read absence as `0`. */
+	count?: number;
+	/** `AttentionStore.revision()` — an **equality token, never an order**: it
+	 *  moves on a publish, on a read and `supersedes` moves on a heal. A client
+	 *  compares it for change, it does not sort by it. */
+	revision: [number, number, number];
+	/** The daemon's own marker for "could not be read" (`["attention"]`). */
+	degraded: string[];
 }
 
 /* ------------------------------------------------------------- side payloads */
@@ -547,6 +573,14 @@ export interface AsksResponse {
 	/** True only when a wire bound dropped rows — a prefix is never drawn beside
 	 *  a full count and read as complete. Absent while the route is uncapped. */
 	asks_truncated?: boolean;
+}
+
+/** `GET /api/push/conversation/{handle}` — a push tap's opaque handle resolved to
+ *  its conversation. A handle this machine cannot mint for a conversation it
+ *  still offers is a clean 404, never a 500 (local-operator `daemon.py`
+ *  `api_push_conversation`, ADR 0006 §3.1/§6.7). */
+export interface PushConversationResponse {
+	session_id: string;
 }
 
 export interface PinResponse {

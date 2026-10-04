@@ -2,6 +2,7 @@ import { createElement as h } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
+import { Badge } from "@/ui/components/badge";
 import { Heading } from "@/ui/components/heading";
 import { Segmented } from "@/ui/components/segmented";
 
@@ -78,5 +79,38 @@ describe("Heading", () => {
 			["h2", "2"],
 			["h3", "3"],
 		]);
+	});
+});
+
+describe("Badge", () => {
+	it("announces the call site's name, not the bare numeral", () => {
+		/* The sessions header's unread badge renders only a number, so the call
+		 * site supplies the name (in the row's own vocabulary: "new"). The
+		 * numeral is that name's rendering and leaves the tree with it. */
+		const badge = h(Badge as never, {
+			label: "2",
+			tone: "danger",
+			mono: true,
+			accessibilityLabel: "2 new conversations",
+		});
+		const named = tags(badge).filter(
+			(tag) => tag.attrs["aria-label"] === "2 new conversations",
+		);
+		expect(named.length).toBeGreaterThan(0);
+		expect(tags(badge).some((tag) => tag.attrs["aria-hidden"] === "true")).toBe(
+			true,
+		);
+	});
+
+	it("keeps an unnamed badge's label in the accessibility tree", () => {
+		/* Other call sites pass words that ARE the name; nothing changes for
+		 * them — no name is invented and no label is hidden. */
+		const badge = h(Badge as never, { label: "Recommended" });
+		expect(
+			tags(badge).every((tag) => tag.attrs["aria-label"] === undefined),
+		).toBe(true);
+		expect(
+			tags(badge).every((tag) => tag.attrs["aria-hidden"] !== "true"),
+		).toBe(true);
 	});
 });

@@ -12,13 +12,13 @@ import {
 } from "@/features/auth/connection-provider";
 import { AsksSheet } from "@/features/session/components/asks-sheet";
 import {
-	attentionCount,
 	attentionWord,
 	degradedNote,
 	degradedShortNote,
 	splitSections,
 	staleNote,
 	staleShortNote,
+	unreadBadgeCount,
 } from "@/features/sessions/session-projection";
 import { countLabel, homeShortened } from "@/lib/format";
 import { useUiStore } from "@/state/ui-store";
@@ -146,6 +146,7 @@ export default function Sessions() {
 
 	const sessions = useListState((state) => state.sessions);
 	const degraded = useListState((state) => state.degraded);
+	const unread = useListState((state) => state.unread);
 	const frameCount = useListState((state) => state.frameCount);
 	const stale = useListState((state) => state.stale);
 	const lastFrameAt = useListState((state) => state.lastFrameAt);
@@ -270,7 +271,12 @@ export default function Sessions() {
 	]);
 
 	const sections = useMemo(() => splitSections(filtered), [filtered]);
-	const waiting = attentionCount(sessions);
+	/* The header badge reads the machine's own unread count (ADR 0006 §1.4) —
+	 * NOT a local count of rows and not `needs_attention`. `null` means the
+	 * number is not readable (an older relay omits the block; a degraded one
+	 * withholds `count`), and the header then shows no number at all: absence is
+	 * never rendered as 0. The degraded banner below is the "says so". */
+	const badgeCount = unreadBadgeCount(unread);
 	/* The asks aggregate, in the field's own unit: `asks_open` counts ASKS (open
 	 *  plus timed-out-and-answerable), summed across the rows the runtime can
 	 *  vouch for. A row that does not publish the field contributes NOTHING,
@@ -457,8 +463,16 @@ export default function Sessions() {
 			capColumn={!layout.split}
 			headerAction={
 				<View className="flex-row items-center gap-1">
-					{waiting > 0 ? (
-						<Badge label={`${waiting}`} tone="danger" mono />
+					{badgeCount !== null && badgeCount > 0 ? (
+						<Badge
+							label={`${badgeCount}`}
+							tone="danger"
+							mono
+							/* Sighted readers get the numeral; assistive tech gets the sentence
+							 * it stands for — the row's own state word ("new", per
+							 * `rowAccessibilityLabel`) plus the count (ADR 0006 §1.4). */
+							accessibilityLabel={`${badgeCount} new conversation${badgeCount === 1 ? "" : "s"}`}
+						/>
 					) : null}
 					{/* The ask aggregate sits BESIDE the decision badge and RANKS BELOW it
 					 *  (`flows.md` F-5 §3): "the agent asked something and kept working"

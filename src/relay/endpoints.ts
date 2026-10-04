@@ -322,6 +322,21 @@ export class RelayEndpoints {
 		});
 	}
 
+	/**
+	 * Resolves a push tap's opaque conversation handle to its session id (ADR 0006
+	 * §3.1/§6.7). A push carries only the handle — no raw session id — so a cold
+	 * tap lands through here; a handle this machine cannot mint for a conversation
+	 * it still offers is a clean `404` the caller renders as one honest sentence.
+	 */
+	async resolveConversation(
+		handle: string,
+	): Promise<Payload<"pushConversation">> {
+		return this.http.json("pushConversation", {
+			method: "GET",
+			path: `/api/push/conversation/${encodeURIComponent(handle)}`,
+		});
+	}
+
 	/** Sets a session's pin to a DESIRED state. The answer is the state the store
 	 *  read back, so the optimist must render that rather than what it asked for. */
 	async pin(sessionId: string, pinned: boolean): Promise<Payload<"pin">> {

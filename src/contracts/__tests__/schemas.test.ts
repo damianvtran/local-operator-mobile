@@ -201,6 +201,12 @@ function classifyHttp(rel: string, fixture: HttpFixture): Classification {
 		return { kind: "schema", schema: "commandAck", value: body };
 	if (idThen("/seen")) return { kind: "schema", schema: "seen", value: body };
 	if (idThen("/pin")) return { kind: "schema", schema: "pin", value: body };
+	if (route.startsWith("/api/push/conversation/")) {
+		/* The success half of S2's handle resolution; the refusal half is the
+		 * `unknown conversation handle` fixture, which the error-key rule above
+		 * already classifies as `apiError`. */
+		return { kind: "schema", schema: "pushConversation", value: body };
+	}
 	if (/\/api\/sessions\/[^/]+\/agents\/[^/]+$/.test(route)) {
 		return { kind: "schema", schema: "subagentDetail", value: body };
 	}

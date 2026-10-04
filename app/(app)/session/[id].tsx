@@ -30,6 +30,7 @@ import {
 	workingLine,
 } from "@/features/session/projection";
 import { sessionFactsFrom } from "@/features/session/state-marker";
+import { useCompletionAck } from "@/features/session/use-completion-ack";
 import { draftSlashQuery, useComposer } from "@/features/session/use-composer";
 import { useSessionRuntime } from "@/features/session/use-session";
 import { CONTROL, EMPTY, SCREEN, SURFACE } from "@/ui/a11y";
@@ -91,6 +92,23 @@ export default function Session() {
 	/* The list frame's rows: names for the sheet's foreign-ask rows, which the
 	 *  aggregate route deliberately does not carry. */
 	const listSessions = useListState((state) => state.sessions);
+
+	/** Whether the completion's anchor row bottom is inside the transcript's
+	 *  viewport — measured by `TranscriptList` (the list owns the geometry; this
+	 *  screen only carries the answer to the ack gate). */
+	const [completionVisible, setCompletionVisible] = useState(false);
+
+	/* The read receipt: fires only when the completion's END is genuinely on
+	 *  screen while the app is foregrounded on this session (ADR 0006 §1.3).
+	 *  A sheet or either panel counts as `blocked`, exactly like the web's
+	 *  gate list — a completion behind an overlay has not been read. */
+	useCompletionAck({
+		sessionId,
+		endpoints: runtime.source.endpoints,
+		projection: runtime.projection,
+		anchorVisible: completionVisible,
+		blocked: modelsOpen || effortOpen || openPanel !== null,
+	});
 
 	const projection = runtime.projection;
 
@@ -289,6 +307,8 @@ export default function Session() {
 				streamingRowId={runtime.streamingRowId}
 				loadImage={runtime.loadImage}
 				onOpenAgent={openAgent}
+				anchorId={runtime.projection?.attention?.anchor_id ?? null}
+				onAnchorVisible={setCompletionVisible}
 				empty={
 					<EmptyState
 						headline="Nothing here yet."

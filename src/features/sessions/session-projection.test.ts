@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 
 import type { SessionSummary } from "@/contracts";
 import {
-	attentionCount,
 	attentionWord,
 	degradedNote,
 	degradedShortNote,
@@ -10,6 +9,7 @@ import {
 	splitSections,
 	staleNote,
 	staleShortNote,
+	unreadBadgeCount,
 } from "@/features/sessions/session-projection";
 
 /**
@@ -83,17 +83,25 @@ describe("attentionWord", () => {
 	});
 });
 
-describe("attentionCount", () => {
-	it("counts blocked sessions, not unseen ones", () => {
-		// "new since you looked" and "blocked until you answer" are different facts,
-		// and conflating them makes the badge read "2" for two finished turns.
+describe("unreadBadgeCount", () => {
+	it("reads the machine's own count off the block", () => {
+		// One number, one source: whatever the machine read (a conversation with
+		// three unread completions counts once) is what the badge shows.
 		expect(
-			attentionCount([
-				session({ needs_attention: true }),
-				session({ unseen: true }),
-				session({ unseen: true, streaming: true }),
-			]),
-		).toBe(1);
+			unreadBadgeCount({ count: 2, revision: [3, 2, 0], degraded: [] }),
+		).toBe(2);
+	});
+
+	it("distinguishes a readable zero from unknown", () => {
+		// `0` is a real answer (it clears the badge); a missing block and a missing
+		// `count` are both UNKNOWN, and unknown must never render as 0.
+		expect(
+			unreadBadgeCount({ count: 0, revision: [2, 2, 0], degraded: [] }),
+		).toBe(0);
+		expect(unreadBadgeCount(null)).toBeNull();
+		expect(
+			unreadBadgeCount({ revision: [2, 0, 0], degraded: ["attention"] }),
+		).toBeNull();
 	});
 });
 
