@@ -80,9 +80,10 @@ The 10 declared skips are:
   so every relay scenario renders the same "Set up a computer" path. Only the
   refusal state (`S13/error`) is reachable, because the mock's gateway refusal
   drives it.
-- **3 list states** the app renders without an identifier of their own:
-  `S4/loading` (skeletons), `S4/ended` and `S4/degraded-row` (the row receipts
-  change copy and colour — "ended", "not answering" — but carry no `testID`).
+- **2 list states** the app renders without an identifier of their own:
+  `S15/ended` and `S15/degraded-row` (the row receipts change copy and colour —
+  "ended", "not answering" — but carry no `testID`). The list's loading state
+  used to be a third; the panel carries `sidebar/loading` now (R-2).
 - **2 subagent cells** (`S6/populated`, `S6/populated-long`): the app declares no
   `subagent` subject, so nothing in a frame can affirm them.
 
@@ -181,7 +182,7 @@ state. Nothing in `runCapture` warms the page up today — it navigates straight
 cell's route — so a plan whose FIRST cell is relay-backed is the one to read with that
 in mind, and a cell that needs the warm-up is a limitation of this harness rather than
 of the relay. Measured counter-example on this head, so the limitation is not
-overstated: `--cells S4/populated` alone, from a cold profile in one navigation, still
+overstated: `--cells S15/populated` alone, from a cold profile in one navigation, still
 reaches the relay and is ready — the stream re-subscription is the session screen's
 property, not one of relay-backed cells as a class.
 
@@ -191,12 +192,10 @@ property, not one of relay-backed cells as a class.
    five subjects only, so `verify` names the screens whose empty state has no
    marker: `S1` (sign-in), `S1-welcome`, `S2`, `S3`, `S3-custom`, `S7`
    (new-session), `S11` (settings), `S13`, `S14`. Those are app-side work.
-2. **A marker for the row receipts.** `S4/ended` and `S4/degraded-row` change
+2. **A marker for the row receipts.** `S15/ended` and `S15/degraded-row` change
    copy and colour but leave no `testID` behind, so nothing in the frame can
    affirm them.
-3. **A marker for the list's loading state** (`S4/loading`), which currently
-   renders unlabelled skeletons.
-4. **The computer cells**, which need Radient's account API — either a fixture
+3. **The computer cells**, which need Radient's account API — either a fixture
    path the mock can serve or an app-side state marker driven by something the
    harness can produce. (Distinct from the relay-backed cells above, which the
    design round on PR #12 established ARE reachable with the serve origin pinned
@@ -275,15 +274,15 @@ second hand-maintained list.
 
 | scenario | cells it fills | what it pins |
 |---|---|---|
-| `empty` | S4/empty | No conversations at all: an empty catalogue with nothing degraded. |
-| `loading` | S4/loading, S5/loading, S13/loading | No frame has arrived yet: every API route holds its response and the streams stay silent with keepalives only. |
-| `idle` | S4/populated, S5/populated | One live conversation, idle, after a completed turn (the corpus capture). |
-| `many` | S4/populated, S4/populated-long | Twelve rows: pinned, streaming, needing attention, running subagents, a long name and a long cwd. (`S4/narrow` is not declared beside it: this scenario builds ONE world and both names navigate to the same route (`/`), so the two cells were one state under two names — the identical-state check reported the pair as a collapse, the same bytes AND the same content, on iphone-se and tablet-landscape. A width is an AXIS rather than a state, so `narrow` went and `populated-long` — the content variant the rubric names — stayed; the narrow viewport is still captured by the `iphone-se` device at every cell.) |
-| `degraded` | S4/degraded-row, S5/degraded | The session record is fresh but its runtime is unreachable: the row carries its own receipt (`degraded: true`, what a phone-observed SIGSTOP produces) and `subagents_running` is null while the row stays active. |
-| `degraded-listing` | S4/degraded-listing | The durable catalogue could not be walked: `degraded: ["sessions"]` with rows still present. |
-| `degraded-attention` | S4/degraded-listing | The completion-receipt store could not be read: `degraded: ["attention"]` — the same cell, because the reader's question is the same one. |
-| `wedged` | S4/degraded-row, S13/degraded | A frozen runtime: the row reports real subagent counts until HEARTBEAT_TIMEOUT_S (45 s) has elapsed, then flips to null while `section` stays active. The two-sample comparison is the only signal. |
-| `ended` | S4/ended, S10/populated | A finished conversation whose runtime is gone |
+| `empty` | S4/idle, S15/empty | No conversations at all: an empty catalogue with nothing degraded. |
+| `loading` | S15/loading, S5/loading, S13/loading | No frame has arrived yet: every API route holds its response and the streams stay silent with keepalives only. |
+| `idle` | S15/populated, S5/populated | One live conversation, idle, after a completed turn (the corpus capture). |
+| `many` | S15/populated, S15/populated-long | Twelve rows: pinned, streaming, needing attention, running subagents, a long name and a long cwd. (`S4/narrow` is not declared beside it: this scenario builds ONE world and both names navigate to the same route (`/`), so the two cells were one state under two names — the identical-state check reported the pair as a collapse, the same bytes AND the same content, on iphone-se and tablet-landscape. A width is an AXIS rather than a state, so `narrow` went and `populated-long` — the content variant the rubric names — stayed; the narrow viewport is still captured by the `iphone-se` device at every cell.) |
+| `degraded` | S15/degraded-row, S5/degraded | The session record is fresh but its runtime is unreachable: the row carries its own receipt (`degraded: true`, what a phone-observed SIGSTOP produces) and `subagents_running` is null while the row stays active. |
+| `degraded-listing` | S15/degraded-listing | The durable catalogue could not be walked: `degraded: ["sessions"]` with rows still present. |
+| `degraded-attention` | S15/degraded-listing | The completion-receipt store could not be read: `degraded: ["attention"]` — the same cell, because the reader's question is the same one. |
+| `wedged` | S15/degraded-row, S13/degraded | A frozen runtime: the row reports real subagent counts until HEARTBEAT_TIMEOUT_S (45 s) has elapsed, then flips to null while `section` stays active. The two-sample comparison is the only signal. |
+| `ended` | S15/ended, S10/populated | A finished conversation whose runtime is gone |
 | `streaming` | S5/streaming | A turn in flight: assistant text grows frame by frame, then settles. |
 | `aborted` | S5/aborted | A turn stopped on purpose: `stop_reason: aborted` with `cut_off: false`, then a second run with `cut_off: true`. |
 | `queued` | S5/queued | One queued steering message and the tool row it skipped past. |
@@ -294,13 +293,13 @@ second hand-maintained list.
 | `subagent-running` | S5/subagents, S6/populated | A running subagent with a queued sibling and a parked one, plus a detail route. |
 | `subagent-completed` | S6/populated, S6/populated-long | A completed subagent carrying a result, with a blocked second child. |
 | `long-transcript` | S5/populated-long | A 520-row tool transcript: the case the projection's 80-row cap and degradation tiers exist for. (`S5/scroll` is not declared beside it: the relay builds ONE projection for this scenario, so the two cells were one state under two names, and a scroll position is a viewport interaction the wire cannot declare.) |
-| `long-names` | S5/populated-long, S4/populated-long, S8/populated-long | A 64-character conversation name, a deep cwd, and a 400-character pending question. |
+| `long-names` | S5/populated-long, S15/populated-long, S8/populated-long | A 64-character conversation name, a deep cwd, and a 400-character pending question. |
 | `empty-transcript` | S5/empty | A session that has just started: the seed projection, no rows. |
 | `every-entry-kind` | S5/populated | One row of every TranscriptEntry kind, for the renderer's fallback path. |
 | `past-empty` | S10/empty | No past conversations. |
 | `past-populated` | S10/populated | Past conversations to resume, including a fork wearing its parent's title. |
-| `search-empty` | S4/empty | A search query with no results. |
-| `search-hit` | S4/populated | A search with body-only matches, which must be marked as such. |
+| `search-empty` | S15/populated | A search query with no results; a capture types no query, so the cell it fills is the world's one live row. |
+| `search-hit` | S15/populated | A search with body-only matches, which must be marked as such. |
 | `models-ranked` | — (no cell) | The full ranked model catalogue — order is the ranking, never re-sorted. It declared `S9/populated`, and that cell was removed: the sheets are modals the app opens from the composer, no wire action opens one, and the cell therefore rendered `S5/populated` byte-for-byte (see the capture section). |
 | `multi-computer` | S3/populated | Three computers: active, suspended and a second active one. |
 | `no-computers` | S3/empty, S2/empty | No computer is registered yet: the set-up path. |
