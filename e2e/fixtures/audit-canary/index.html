@@ -43,7 +43,7 @@
   | #escape-pinned        | U-08-escape-absolute | an absolute node a clipping ancestor cannot clip |
   | #fixed-escape         | U-08-escape-fixed | a fixed node under the same non-clipping ancestor |
 
-  Two of the entries are the INVERSE declaration, `data-not-defect`: elements the
+  Three of the entries are the INVERSE declaration, `data-not-defect`: elements the
   audit must NOT report. A rule is only worth trusting when it is shown both to fire
   on a defect and to stay silent on the shape it must not fire on, and the two
   directions are asserted in the same run so neither can be satisfied by an
@@ -53,7 +53,10 @@
                #phantom-under exactly, but the painted regions do not), and the U-08
                suppression that replaces it must still be RECORDED, with its reason;
                #inset-clipped must produce no U-05 row (its layout top sits inside
-               the notch band, its painted top sits exactly at the inset's edge).
+               the notch band, its painted top sits exactly at the inset's edge);
+               #status-row-dot must produce no U-03 row (its status word `approval`
+               sits beside it in the same control), while #status-dot — the same dot
+               with no word at all, in a panel that HAS a heading — must still fail.
 -->
 <html lang="en">
 <head>
@@ -135,6 +138,14 @@
 	#dense-pair button { width: 28px; height: 28px; padding: 0; }
 	#low-contrast { background: #f2ede3; color: #a8a296; padding: 8px; }
 	#status-dot { display: inline-block; width: 12px; height: 12px; border-radius: 50%; background: var(--danger); border: none; }
+	/* U-03's carrier scope. The indicator slot is EMPTY, exactly as the app's ListRow
+	   draws it, and the word that carries the status is a sibling branch of the same
+	   control in the SAME colour — so the dot is redundant with a visible word and the
+	   rule must stay silent. The empty `div` wrapper is the whole point: it is what
+	   `.closest()` self-matches into silence. */
+	#status-row-slot { display: inline-block; }
+	#status-row-dot { display: inline-block; width: 12px; height: 12px; border-radius: 50%; background: var(--danger); border: none; }
+	.status-word { color: var(--danger); }
 	#full-bleed { position: absolute; top: 0; left: 0; right: 0; padding: 4px; background: var(--surface); }
 	#too-wide { width: 480px; height: 20px; background: var(--surface); border: 1px solid var(--border); }
 	#clipped { height: 16px; overflow: hidden; background: var(--surface); }
@@ -208,12 +219,29 @@
 <!-- U-03: a status carried by colour alone. -->
 <div class="bad panel">
 	<h2>U-03 colour-only status</h2>
-	<!-- No word and no glyph: the dot is the entire status. -->
+	<!-- No word and no glyph: the dot is the entire status. The panel's own heading is
+	     the trap this shape guards: a carrier lookup that walked up to the next ancestor
+	     with ANY text would find "U-03 colour-only status" and stop reporting this, which
+	     is why the scope is the control and not the ancestry. -->
 	<p><span id="status-dot" data-defect="U-03"></span></p>
 </div>
 <div class="good panel">
 	<h2>U-03 colour-only status (clean)</h2>
 	<p class="status" id="good-status"><span class="status-dot" style="width:12px;height:12px;border-radius:50%;background:var(--danger)"></span> Failed</p>
+</div>
+
+<!-- U-03's CARRIER SCOPE: the same indicator whose status word sits in a SIBLING branch
+     of the same control — the shape the app's `ListRow` has, where a 12 pt indicator
+     slot with no text of its own is followed by the word `approval` in the same colour.
+     A person sees the word; the dot carries nothing on its own, so the rule must stay
+     silent. The control is what makes that sayable: the dot belongs to the button, the
+     button carries the word, and the walk stops there. -->
+<div class="bad panel">
+	<h2>U-03 carrier beside the dot</h2>
+	<button class="control" id="status-row" aria-label="Clean up the staging bucket, approval waiting">
+		<div id="status-row-slot"><span id="status-row-dot" data-not-defect="U-03"></span></div>
+		<span class="status-word">approval</span>
+	</button>
 </div>
 
 <!-- U-05: content under the notch band. -->

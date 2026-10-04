@@ -244,13 +244,33 @@ function u03ColourOnlyStatus(
 			},
 		];
 	}
-	// A dot is not a colour-only status when a *word* sits beside it: "Failed" next
-	// to a red dot is a word carrier, and flagging it would make this check noise.
-	// So the node's nearest container's text is part of the question, and a glyph
-	// in the label is accepted the same way the rubric's own wording allows.
+	// A dot is not a colour-only status when a *word* sits beside it: "Failed" next to a
+	// red dot is a word carrier, and flagging it would make this check noise. "Beside"
+	// is the whole question, and it has exactly two honest scopes:
+	//
+	//   - the node's own container text, for a node that belongs to no control (a dot in
+	//     a paragraph, where the paragraph IS the composition); and
+	//   - the CONTROL the node belongs to, for a node inside one — a status indicator is
+	//     drawn in an empty 12 pt slot while its word sits in a sibling branch of the
+	//     same row. The app's `ListRow` is that shape, and reading only the slot made one
+	//     redundant marker report as a colour-only status in 8 cells.
+	//
+	// WHY THE WALK CANNOT SIMPLY GO FURTHER. The tempting fix is "nearest ancestor with
+	// any text", and it is wrong: on every real screen the next ancestor holding text is
+	// a heading, a page title or the screen root, so every dot would find a word above it
+	// and U-03 could never fire again — a rule narrowed until it cannot fail. The canary's
+	// `#status-dot` is exactly that trap (a bare dot in a paragraph, inside a panel that
+	// carries a heading) and it stays a FAIL under this rule, while `#status-row-dot` is
+	// the control-scoped shape beside it and stays silent. `e2e/run-canary.ts` asserts
+	// that pair in both directions.
+	//
+	// The row's accessible NAME is the other candidate, and it is rejected for a reason
+	// that matters: it is U-09's channel, not a visible carrier, and it lives on the
+	// control, so a labelled row would clear any dot inside it — a red dot in a "Send"
+	// button carries no status, but its name would say otherwise.
 	const hasWord = (node: AuditNode): boolean => {
-		const container = (node.containerText ?? "").trim();
-		return /[A-Za-z]{3,}/.test(container);
+		const carrier = `${node.containerText ?? ""} ${node.controlText ?? ""}`;
+		return /[A-Za-z]{3,}/.test(carrier);
 	};
 	const suspects = state.nodes.filter((n) => {
 		if (n.interactive) return false;
@@ -513,6 +533,17 @@ function u06HorizontalOverflow(state: AuditState): CheckRow[] {
 	// probe answers it on the chain rather than from the node's own style; a code line
 	// long by design is content, not a layout defect. It is recorded as an EXCEPTION,
 	// never folded into PASS, so the run still says what it let through and where.
+	//
+	// ONE KNOWN LIMIT, measured by QA on this head rather than argued (and recorded
+	// rather than silently fixed, since what width this rule MEANS is a separate
+	// decision): the comparison is against `state.viewport.width`, and in this harness
+	// that reading is the emulated layout viewport, which grows to the document's
+	// scroll width when the DOCUMENT itself overflows (measured: 511 on a 320 pt
+	// iphone-se cell). A node that overflows on a page that also overflows therefore
+	// never reaches this loop — the document-level row above is the only row that
+	// fires — so the EXCEPTION cannot be emitted in that case. The verdict is still
+	// FAIL there, so nothing false passes; and the app's own U-06 rows are unaffected,
+	// because its overflow is contained by the scroller and the reading stays 320.
 	const offenders = state.nodes.filter(
 		(n) => n.rect.x + n.rect.w > state.viewport.width + 1 && n.rect.w > 8,
 	);
@@ -693,8 +724,14 @@ function paintedBox(node: AuditNode): AuditNode["rect"] | null {
  * user can see. Exported so the canary can assert the wording instead of copying it.
  */
 export const U08_SUPPRESSION = {
-	/** One of the two paints nothing at all: fully clipped away, or smaller than a pixel. */
-	CLIPPED_AWAY: "clipped away — nothing of its box is painted",
+	/**
+	 * One of the two paints at most a 1pt sliver of its box.
+	 *
+	 * NOT "nothing is painted": a node that paints nothing at all is excluded from this
+	 * rule's pair set before pairing (`isGhost`), so what reaches this branch is the
+	 * rounded-to-a-line case, and the wording says what was measured.
+	 */
+	SLIVER: "paints at most a 1pt sliver of its box",
 	/** Both paint, but not on top of each other: the painted regions are disjoint. */
 	DISJOINT: "the painted regions do not intersect",
 	/** Both paint on top of each other, but by less than the rule's 25% of the smaller box. */
@@ -717,12 +754,19 @@ function u08Overlap(state: AuditState): CheckRow[] {
 	/**
 	 * Pairs the layout geometry would report, whose PAINTED regions do not overlap.
 	 *
-	 * These are the rows this rule used to emit: on the 2026-10-04 `main` manifest every
-	 * one of the 111 U-08 rows was such a pair — and 111 of the 161 FAIL rows across the
-	 * four geometry rules, the rest being U-05's 38, U-06's 8 and U-03's 4. They are
-	 * recorded here, one row each with its reason, and never dropped: a rule that
+	 * These are the rows this rule used to emit: on CI's run of the 2026-10-04 `main`
+	 * manifest every one of its 114 U-08 rows was such a pair, and the four geometry
+	 * rules accounted for all 148 of that run's FAIL rows (U-08 114, U-05 22, U-06 8,
+	 * U-03 4). The paired local re-drive of the same manifest moves together: 126 U-08
+	 * rows of its 176 FAILs.
+	 *
+	 * They are recorded, one row each with its reason, and never dropped — a rule that
 	 * narrows until it cannot fail is the failure mode this whole instrument series has
-	 * been about, so what it sets aside has to be as readable as what it reports.
+	 * been about, so what it sets aside has to be as readable as what it reports. The
+	 * ROWS ARE CAPPED at eight per cell, like the failures and independently of them, so
+	 * a cell with more than eight suppressions shows eight reason-tagged rows and states
+	 * the true count and the whole per-reason breakdown on every one of them (the cap
+	 * never bit on this manifest: the largest cell count was 8).
 	 */
 	const suppressed: CheckRow[] = [];
 	const reasons = new Map<string, number>();
@@ -810,7 +854,7 @@ function u08Overlap(state: AuditState): CheckRow[] {
 				suppress(
 					a,
 					b,
-					`${unpainted?.path ?? "one of the pair"} is ${U08_SUPPRESSION.CLIPPED_AWAY}`,
+					`${unpainted?.path ?? "one of the pair"} ${U08_SUPPRESSION.SLIVER}`,
 					layoutNote,
 				);
 				continue;
@@ -1174,7 +1218,25 @@ export interface AuditNode {
 	disabled: boolean;
 	isControl: boolean;
 	childImages: number;
+	/**
+	 * The text of the node's nearest semantic ancestor container (`p, li, div, …`), or
+	 * of its parent when it has none.
+	 *
+	 * One of U-03's two carrier scopes. It is the right scope for a node that belongs to
+	 * no control, where the composition is the local container itself.
+	 */
 	containerText: string;
+	/**
+	 * The text of the nearest INTERACTIVE ancestor — the control the node belongs to —
+	 * or `""` when there is none.
+	 *
+	 * U-03's other carrier scope, and the one a status indicator needs: the word that
+	 * carries the status sits beside the dot in the same control, while the dot's own
+	 * container is the empty 12 pt indicator slot it is drawn in. Both scopes are
+	 * bounded *downwards* on purpose — see `hasWord` in `u03ColourOnlyStatus` for why the
+	 * walk must not simply continue to the page.
+	 */
+	controlText: string;
 	hasGlyph: boolean;
 	semanticColour: string;
 	semanticBackground: string;

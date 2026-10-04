@@ -175,6 +175,23 @@ export const EXTRACT_PROBE = `
     el.matches(INTERACTIVE_TAGS)
     || INTERACTIVE_ROLES.has((el.getAttribute('role') || '').toLowerCase())
     || (el.hasAttribute('tabindex') && el.getAttribute('tabindex') !== '-1');
+  // The text of the CONTROL this node belongs to, which is the scope U-03's carrier
+  // lookup needs: a status dot's word sits beside it in the same control (a 12pt
+  // indicator slot has no text of its own), so the dot's nearest semantic container is
+  // too near, and the whole ancestor chain is too far — walking to the page would let a
+  // section heading stand in for a carrier and the rule could never fire on a real
+  // screen. The nearest INTERACTIVE ancestor is the composition the status belongs to,
+  // and it is a fact about the DOM, so it is measured here rather than re-walked in
+  // checks.ts. Empty string when the node belongs to no control, which is what keeps a
+  // bare dot in a paragraph reportable.
+  const controlText = (el) => {
+    let node = el.parentElement;
+    while (node && node.nodeType === 1) {
+      if (isInteractive(node)) return (node.textContent || '').trim().slice(0, 200);
+      node = node.parentElement;
+    }
+    return '';
+  };
   const labelFor = (el) => {
     const aria = el.getAttribute('aria-label');
     if (aria) return aria.trim();
@@ -302,6 +319,9 @@ export const EXTRACT_PROBE = `
       // word beside it" — reading it as one exempted exactly the nodes this check
       // exists to find.
       containerText: ((el.parentElement && el.parentElement.closest('p, li, div, section, header, footer, td, button') || el.parentElement || el).textContent || '').trim().slice(0, 200),
+      // The same question asked at the scope a carrier actually lives at: the control
+      // the node belongs to, or nothing when it belongs to no control. See controlText.
+      controlText: controlText(el),
       hasGlyph: /[\\u2190-\\u2BFF\\u2000-\\u206F!?]|\\b(error|failed|pending|waiting|done|running|warning)\\b/i.test(el.textContent || ''),
       // A colour-only status: draws with a semantic colour but carries no word,
       // glyph or shape and no accessible name — the thing U-03 exists to catch.
