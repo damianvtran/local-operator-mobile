@@ -777,7 +777,6 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 								cause: "no wake ack",
 								route: "direct",
 							},
-							partial_result: true,
 							output:
 								"delivered to its mailbox (id peer-1a2b3c4d5e6f708192a3b4c5d6e7f809) — the wake was not acknowledged within 5s after 3 attempts. It will read the message on its next turn; do not send it again.",
 						},
@@ -792,7 +791,6 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 								cause: "no answer",
 								route: "direct",
 							},
-							partial_result: true,
 							output:
 								"delivery unconfirmed (id peer-2b3c4d5e6f708192a3b4c5d6e7f8091a) — no answer within 5s after 3 attempts and the message is not yet in its transcript. It may still arrive once its loop turns. Check the target's transcript before resending; sending again may deliver it twice.",
 						},
