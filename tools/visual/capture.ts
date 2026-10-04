@@ -91,7 +91,7 @@ const CONFIRM_THRESHOLD = 120;
  * the floor a small plan still gets.
  *
  * WHY THE DEFAULT IS DERIVED RATHER THAN FIXED. It used to be a flat 900 s, which
- * holds about 400 cells: a `core` run (858 cells) or a dispatched `full` run (3102)
+ * holds about 400 cells: a `core` run (832 cells) or a dispatched `full` run (3008)
  * was therefore cut off by the harness's own default and reported hundreds of cells
  * as having no frame — a bound firing on a plan it was never sized for, which reads
  * like a finding about the app and is not one. Deriving it from the plan makes the
@@ -241,7 +241,7 @@ async function armPage(
  * frames in 240 s.
  *
  * The cost is one target create/close per cell, and it is not a regression in
- * rate: the 264-cell `ci` tier runs at 2.12 s/cell, against the 2.24 s/cell the
+ * rate: the 256-cell `ci` tier runs at 2.12 s/cell, against the 2.24 s/cell the
  * per-cell budget was titrated from. It also leaves the cell loop with ONE shape
  * instead of two — a wedged cell and a healthy one now take the same path, so the
  * recovery cannot rot out of use as the failure it exists for stops happening.
@@ -2257,11 +2257,11 @@ if (isMain) {
 				"                      a smaller explicit bound is honoured and noted. Cells still",
 				"                      unvisited when it fires are reported as having no frame",
 				"  --tier <name>       the sample to capture: ci | core (default) | full",
-				"                        ci    264 cells — every declared cell, 2 device profiles,",
+				"                        ci    256 cells — every declared cell, 2 device profiles,",
 				"                              both themes, scales 100 and 200 (~10 min) — the CI job's",
-				"                        core  858 cells — the 5 `core` profiles, both themes, all",
+				"                        core  832 cells — the 5 `core` profiles, both themes, all",
 				"                              three scales",
-				"                        full  3102 cells — all 19 profiles",
+				"                        full  3008 cells — all 19 profiles",
 				"  --devices <names>   comma list. Default: the tier's profiles (ci 2, core 5 by",
 				"                      default, --full for all 19)",
 				"  --themes <names>    default dark,light",
@@ -2288,7 +2288,7 @@ if (isMain) {
 	// overrides any of them.
 	//
 	// An unknown tier is an ERROR rather than a silent fall back to `core`: a typo'd
-	// `--tier ci` that quietly ran 858 cells would spend ~32 minutes on a capture the
+	// `--tier ci` that quietly ran 832 cells would spend ~31 minutes on a capture the
 	// caller did not ask for, and the whole point of naming the sample is that the
 	// run you get is the one you asked for.
 	const tierFlag = bool(flags, "full") ? "full" : str(flags, "tier", "core");

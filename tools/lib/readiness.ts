@@ -84,6 +84,15 @@ export const SCREEN_MARKER_SUBJECT: Record<string, string> = {
  * marker affirms them. Keep this table short: an entry here is a statement that the
  * app has no distinct look for the variant, which is usually true of a width or a
  * scroll position and never true of a different card.
+ *
+ * An entry can OUTLIVE the cell that declared it — `scroll` has, since
+ * `long-transcript` stopped declaring `S5/scroll`, and `narrow` has, since the `many`
+ * scenario stopped declaring `S4/narrow` — because what it states is a fact about the
+ * APP rather than about the registry: a width or a scroll position has no distinct
+ * look whether or not a cell still names it. It is kept for that reason, and never as
+ * a licence to declare the name again — a variant whose only difference from another
+ * state is its VIEWPORT has no cell of its own, because the device axis is where a
+ * width lives (see `many`'s comment in tools/mock-relay/scenarios.ts).
  */
 export const STATE_MARKER_ALIASES: Record<string, string> = {
 	"populated-long": "populated",
