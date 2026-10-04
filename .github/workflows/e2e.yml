@@ -189,7 +189,7 @@ jobs:
     # WHY THIS IS NOT ON THE PULL-REQUEST PATH (`if:` below). It runs the whole of
     # `docs/e2e/README.md`, whose slowest entry is the relay contract — ~28 minutes
     # by the harness's own note — and that command already has its own job above. On
-    # a pull request the sweep would double the longest job in this workflow for no
+    # a pull request the sweep would run the relay contract a second time for no
     # extra coverage; nightly it is exactly the check worth having, because it is the
     # one that fails when a tool is renamed or a documented invocation goes stale
     # (review m2's other half, and round 3's M3 for the bound).
@@ -200,7 +200,7 @@ jobs:
     # less than this job is for.
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 70
     steps:
       - uses: actions/checkout@v7
 
@@ -221,10 +221,16 @@ jobs:
         run: pnpm export:web
 
       - name: Run every documented command
-        # The command's own default bound is 45 minutes (`--timeout 2700`); this step
-        # is bounded at 40 so it fits inside this job's 60 with the export and the
-        # install ahead of it.
-        timeout-minutes: 40
+        # THE OUTER BOUND MUST OUTLIVE THE INNER ONE. `tools/lib/doc-commands.ts`
+        # bounds each documented command at 45 minutes (`--timeout 2700`), and that
+        # default sits strictly above `verify.ts`'s own 2,400 s watchdog so the inner
+        # bound fires first and names the command it killed — at equal values the two
+        # race and the outer one reports a generic timeout instead. The command's
+        # default therefore cannot be lowered below 40 minutes, so the STEP is what
+        # moves above it: 50 here, and the job to 70 to hold the export (15) and the
+        # install ahead of it. At 40 this step sat BELOW the command's own default,
+        # which is a bound under the work it contains.
+        timeout-minutes: 50
         run: pnpm e2e:docs
 
   web-audit:
@@ -239,7 +245,13 @@ jobs:
     # the fix is this one line, and the run will say so rather than pass.
     runs-on: ubuntu-latest
     # The capture matrix is minutes; the bound is the diagnosis, not the budget.
-    timeout-minutes: 45
+    # THE BOUND COVERS THE JOB'S PARTS, NOT ITS LARGEST ONE, the invariant the
+    # mock-relay job below states as `install + 25 + 10 < 45`: here it is
+    # `install + typecheck 10 + capture 20 + audit 10 + canary 5 < 50`. It was 45,
+    # which the audit's raise to 10 pushed to exactly the sum of its parts with no
+    # room for the install — a bound under the work it contains, the shape this
+    # pass exists to remove.
+    timeout-minutes: 50
     steps:
       - uses: actions/checkout@v7
 
@@ -324,7 +336,15 @@ jobs:
         run: pnpm audit:capture --dir dist --out "$RUNNER_TEMP/frames" --relay "$MOCK_RELAY_URL" --tier ci --consecutive --yes
 
       - name: Audit the frames against the rubric
-        timeout-minutes: 5
+        timeout-minutes: 10
+        # BOUND DERIVED FROM THE CELL COUNT, not guessed. On run 37167390506 this
+        # step audited 250 of the ci tier's 256 cells in 312 s — 1.25 s/cell, with
+        # no FAIL row — so the whole tier is 256 x 1.25 s = ~5.3 min and 10 gives
+        # ~1.9x headroom. At 5 it was killed with six cells to go: a bound below the
+        # work it contains, the same shape that made the capture's deadline derive
+        # from its own plan. It is DERIVED, not COMPUTED at runtime: GitHub evaluates
+        # `timeout-minutes` before any step runs, and the count that matters is the
+        # captured manifest's, which does not exist until the step above finishes.
         # Exits non-zero on any FAIL row. BLOCKED rows are reported and counted
         # rather than failing the job — an app whose type ignores the root
         # font-size is a finding for the review thread, not a broken harness.
