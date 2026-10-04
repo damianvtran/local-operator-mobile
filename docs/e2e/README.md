@@ -755,12 +755,12 @@ with the measured number, the frame it came from, and a verdict.
 |---|---|---|
 | `U-01` | Touch-target size | min(w, h) < 44 pt (48 on Android). The rubric's dense-list exception is measured (≥ 24 pt with ≥ 8 pt of separation) and reported as `EXCEPTION`, never folded into a pass |
 | `U-02` | Contrast, body text | < 4.5:1, or < 3:1 for large text, measured against the node's **effective** ground |
-| `U-03` | Colour-only status | A status drawn only in a semantic colour, with no word, glyph or accessible name carrying it |
+| `U-03` | Colour-only status | A status drawn only in a semantic colour, with no word, glyph or accessible name carrying it. The palette carries **both themes**, because a dark cell's dot is the dark hex and a palette with only `.light` made the check unable to fire in dark at all |
 | `U-04` | Text scale to 200 % | Clipping at 200 %, **and** only when the harness showed the scale dimension is live |
-| `U-05` | Safe areas | Content inside the notch band, or pinned content inside the home-indicator band, or a control within 8 pt of an unsafe edge |
-| `U-06` | Horizontal overflow | The document wider than the viewport |
+| `U-05` | Safe areas | Content inside the notch band, or pinned content inside the home-indicator band, or a control within 8 pt of an unsafe edge — measured on the node's **painted** box, and never on a node that paints nothing |
+| `U-06` | Horizontal overflow | The document wider than the viewport; a node wider than the viewport is an `EXCEPTION` (recorded, never a pass) when an ancestor scrolls horizontally on purpose — the rubric's own clause, and the shape a code block has |
 | `U-07` | Clipped text | `overflow: hidden`/clip with hidden content, except a single-line ellipsis that has a full value |
-| `U-08` | Overlap | Two text-or-control boxes intersecting by > 25 % of the smaller one |
+| `U-08` | Overlap | Two text-or-control boxes whose **painted regions** intersect by > 25 % of the smaller one. A pair whose layout boxes intersect while the painted regions do not is recorded as an `EXCEPTION` naming the reason, never reported as an overlap |
 | `U-09` | Accessible name | An interactive accessibility node with no name |
 | `U-10` | Label-in-name | The accessible name does not contain the visible label |
 
@@ -818,7 +818,7 @@ together they prove the *guard* discriminates.
 ### The U-08 overlap rule, and what it deliberately does not report
 
 `U-08` pairs meaningful boxes (text or interactive) and fails a pair whose overlap
-covers more than 25 % of the smaller box. Three cases are excluded or reported, and
+covers more than 25 % of the smaller box. The cases below are excluded or reported, and
 the distinction is the whole rule:
 
 | Case | Verdict | Why |
@@ -828,6 +828,7 @@ the distinction is the whole rule:
 | A pinned opaque overlay that **encloses a control** | **reported** | a control the user cannot reach is a defect regardless of how the overlay was positioned |
 | Two **pinned** elements overlapping | **reported** | two bars stacked on each other is a defect |
 | A node that **cannot be seen** — clipped to nothing by an ancestor on its containing-block chain (`overflow` other than `visible`), or `aria-hidden` and painting no ink of its own | **not reported** | a box is not a drawing. The composer's measuring stand-in is a full-size box inside a zero-height `overflow: hidden` wrapper, so its geometry overlaps the placeholder it measures while it paints not one pixel: 40 rows for an overlap nobody could look at. It is excluded from *this* rule only — U-07 measures clipping itself, and the stand-in stays in the app because the height it measures is a real fix. **The chain is the whole rule**: an ancestor clips only what is laid out inside it, so a `fixed` node or an `absolute` node whose containing block sits above a static wrapper is painted and is reported — the working shape of every toast and sheet |
+| A pair whose **layout boxes** intersect while their **painted regions** do not — one of the two is clipped only PART of the way by an ancestor on its chain | **not reported**, and recorded as an `EXCEPTION` naming the reason | the same "a box is not a drawing" rule at the precision the row above needs. A node clipped part of the way keeps its FULL layout box, so that box reaches past its clipper and meets a sibling sitting outside it, and the layout pairing of 2026-10-04 reported exactly that as an overlap: on the `main` manifest every one of the 114 U-08 FAIL rows was such a pair, and 124 replayed pairs painted nothing on each other. Two nodes that really are drawn on top of each other still fail, and the canary asserts both directions |
 
 "Pinned" cannot be the CSS keyword. The first version tested
 `position: fixed | sticky`, and `react-native-web` paints a pinned footer
@@ -847,7 +848,12 @@ to swallow — an `absolute` node and a `fixed` node, each inside a static zero-
 `overflow: hidden` wrapper, each painted over content and therefore reported —
 because the overlap cases above have no clipping ancestor between them, so a filter
 that walked every ancestor instead of the containing-block chain would keep catching
-those while hiding a real defect.
+those while hiding a real defect. And the painted-region rule above is asserted the
+same way, in **both** directions: `data-defect` elements prove the rule still fires,
+and `data-not-defect` elements (`#phantom-over` for U-08, `#inset-clipped` for U-05)
+prove it stays silent on the shape no user can see — with the U-08 suppression still
+required to be RECORDED with its reason, so a pair that quietly stopped overlapping
+cannot pass as a working rule.
 
 ### A measurement outside the captured frame says so
 
