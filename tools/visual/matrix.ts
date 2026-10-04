@@ -287,6 +287,58 @@ export const CORE_DEVICES: string[] = Object.entries(DEVICES)
 export const ALL_DEVICES: string[] = Object.keys(DEVICES);
 
 /**
+ * Which of the declared profiles a run's device list covers, and which it does not.
+ *
+ * WHY A RUN HAS TO SAY THIS ITSELF. The per-push CI job captures `--tier ci`, which is 2 of
+ * the 19 profiles declared above, and a green `Web target` job READ as "the app is fine"
+ * when it asserted something far narrower. The sample is declared HERE, beside the device
+ * table it is a subset of; this helper is how a RUN states the bound it actually took, so a
+ * reader of a green run cannot mistake the sample for the whole matrix. It reads
+ * `ALL_DEVICES` rather than a second list of its own, so it cannot drift from the table the
+ * plan is built from.
+ *
+ * `captured` is filtered to the declared order (so the two lists line up with the table in
+ * `docs/e2e/README.md`), and any name the matrix does not declare is kept at the end: the
+ * statement is about what ran, whatever it was.
+ */
+export function deviceCoverage(captured: readonly string[]): {
+	declared: string[];
+	captured: string[];
+	notCaptured: string[];
+} {
+	const declared = [...ALL_DEVICES];
+	const asked = new Set(captured);
+	return {
+		declared,
+		captured: [
+			...declared.filter((name) => asked.has(name)),
+			...captured.filter((name) => !declared.includes(name)),
+		],
+		notCaptured: declared.filter((name) => !asked.has(name)),
+	};
+}
+
+/**
+ * The run's own one-line statement of what its device sample covers, and — always — what it
+ * leaves out. Kept beside `deviceCoverage` so the sentence and the counts cannot disagree:
+ * the `captured` branch is reachable only when `notCaptured` is empty.
+ */
+export function describeDeviceCoverage(coverage: {
+	declared: string[];
+	captured: string[];
+	notCaptured: string[];
+}): string {
+	const captured = coverage.captured.join(", ");
+	if (coverage.notCaptured.length === 0) {
+		return `device coverage: all ${coverage.declared.length} declared profiles captured (${captured})`;
+	}
+	return (
+		`device coverage: ${coverage.captured.length} of ${coverage.declared.length} declared profiles captured (${captured}); ` +
+		`${coverage.notCaptured.length} NOT captured (${coverage.notCaptured.join(", ")})`
+	);
+}
+
+/**
  * The CI tier: the bounded sample the per-push capture job takes.
  *
  * WHY A THIRD TIER, AND WHY IT IS HERE RATHER THAN A `--devices` LIST IN YAML.
@@ -767,6 +819,16 @@ export const MEASURE_PROBE = `
   return {
     reported: { theme: info.theme, scale: info.scale, reduceMotion: info.reduceMotion,
                 themeSource: info.themeSource, insets: info.insets },
+    // THE SCHEME THE RENDERER RESOLVED, read back from the same signal the app reads
+    // (useColorScheme() -> matchMedia('(prefers-color-scheme: dark)')). This is NOT
+    // reported.theme: the pre-paint probe resolves that from the lo-theme query FIRST,
+    // so it says what the harness ASKED for. Emulation.setEmulatedMedia is a separate CDP
+    // call, and a driver that passes the query without it renders the OS scheme while
+    // themeSource still reads 'query' — a light cell silently captured as a dark twin.
+    // Reading the resolved scheme is what lets the capture refuse that cell by name.
+    resolvedColorScheme: typeof window.matchMedia === 'function'
+      ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+      : null,
     canvasColor: canvas,
     rootBackground: rootStyle ? rootStyle.backgroundColor : null,
     rootFontSize: rootStyle ? rootStyle.fontSize : null,

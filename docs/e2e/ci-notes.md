@@ -117,6 +117,29 @@ if the checker stops catching a declared defect, if it starts failing the clean
 page, or if the harness's own scale dimension goes inert. Cheap, and the only
 job here that tests the *instrument* rather than the app.
 
+### 4b. The `core` device sample (nightly, and on demand)
+
+```yaml
+- run: pnpm audit:capture --dir dist --out frames --relay $MOCK_RELAY_URL --tier core --consecutive --yes
+- run: pnpm audit:run --manifest frames/manifest.json
+```
+
+`--tier ci` covers 2 of the matrix's 19 declared profiles, so until this job
+existed nothing automated covered the device variety the operator's rule asks
+for — phones in many sizes, tablets both ways. `web-audit-core` runs the `core`
+tier (5 profiles / 832 cells) on the schedule and on demand only, so a pull
+request does not pay for it and the `ci` step's 20-minute bound is not stretched.
+
+Both bounds are derived from the measured rate rather than guessed: 832 cells at
+2.24 s/cell is ~31 min, so the capture step is bound at 60 (~1.9x), and 832 cells
+at the audit's 1.25 s/cell is ~17 min, so the audit step is bound at 35. The job
+holds its parts: `install + export + capture 60 + audit 35 < 120`.
+
+The capture states its own device coverage — which declared profiles it covered
+and which it did not, by name — in the plan block, beside the run's verdict, in
+`meta.deviceCoverage`, and in `index.html`. A green `core` run therefore reads as
+the sample it is, and a green `ci` run cannot read as the whole matrix.
+
 ### 5. Native E2E with Maestro (nightly and release gate, CI-only)
 
 ```yaml

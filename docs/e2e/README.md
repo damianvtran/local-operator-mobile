@@ -595,11 +595,18 @@ does not succeed still fails the cell.
    `--window-size`.** On Chrome 152 the flag clamps the width at a 500 px floor
    and silently loses 87 px of height, so a frame's dimensions would be assumed
    rather than set.
-2. **Every frame states its *resolved* theme and its *computed* canvas colour**,
-   read back from the page — never what the harness asked for. A theme applied
+2. **Every frame states its *resolved* theme and its *computed* canvas colour**, and the
+   colour scheme it rendered under is read back from the page — never taken from what the
+   harness asked for. A theme applied
    after first paint once produced two byte-identical "dark" and "light"
    captures, so the run compares the two frames' hashes, compares each canvas
-   against the design token for the theme it claims, and fails on either. A
+   against the design token for the theme it claims, and fails on either. It also reads
+   `matchMedia('(prefers-color-scheme: dark)')` — the same signal the app's
+   `useColorScheme()` follows — and REFUSES the cell by name when the scheme the renderer
+   resolved is not the one the cell declares: `themeSource: "query"` only says the query
+   parameter was applied, and the app's preference is `system`, so a driver that passes the
+   query with no media emulation renders the other scheme and a `light` cell becomes a dark
+   twin (the parity lane caught exactly that and re-ran its frames). A
    frame with almost nothing mounted is reported as blank rather than passed.
    The canvas half needs `--tokens`: a missing tokens file, or one that carries no
    canvas for a theme (an empty value counts as none, not as a canvas), leaves those
@@ -678,6 +685,23 @@ Three tiers are declared in `matrix.ts`, and each says what it is:
 `--scales` override any of them. The whole-run `--deadline` is derived from the
 plan's size (3000 ms/cell, floor 900 s) unless you name one, so the default bound
 always holds the plan it was computed for.
+
+**A run states the bound it took, and so does the artifact it leaves.** The per-push
+`web-audit` job captures the `ci` tier — **2 of the 19 profiles above** — and a green job
+that printed only the devices it used read as "the app is fine" over an assertion about two
+viewports. So the capture prints its own device coverage: the declared profiles it captured,
+by name, and the declared profiles it did **not** capture, by name and count, in the plan
+block before anything renders and again beside the run's verdict. The same statement is
+recorded in the manifest (`meta.deviceCoverage` and `meta.deviceCoverageNote`) and repeated
+in `index.html` beside the cell and frame counts, because that page is what a reviewer opens
+instead of the stdout. A run of the whole matrix says so instead; the sentence is derived
+from `ALL_DEVICES`, so it cannot drift from this table.
+
+**The device variety that is not on the per-push path has its own nightly job.**
+`.github/workflows/e2e.yml` `web-audit-core` captures and audits the `core` tier — 5
+profiles / 832 cells, ~31 minutes at the measured 2.24 s/cell — on the schedule and on
+demand only. The `ci` sample stays the per-push one and keeps its own 20-minute capture
+bound; neither job is stretched to cover the other's tier.
 
 ### Two cells that render byte-identically
 

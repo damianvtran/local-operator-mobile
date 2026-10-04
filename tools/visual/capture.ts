@@ -64,6 +64,8 @@ import {
 	CORE_DEVICES,
 	DEVICES,
 	type DeviceProfile,
+	describeDeviceCoverage,
+	deviceCoverage,
 	MEASURE_PROBE,
 	PENDING_CELLS,
 	READINESS_PROBE,
@@ -717,6 +719,11 @@ export interface Measurements {
 		insets?: Record<string, string>;
 	};
 	canvasColor?: string | null;
+	/**
+	 * The colour scheme the RENDERER resolved (`matchMedia('(prefers-color-scheme: dark)')`),
+	 * not the one the cell asked for — the two differ when the emulation was not applied.
+	 */
+	resolvedColorScheme?: string | null;
 	rootBackground?: string | null;
 	rootFontSize?: string | null;
 	documentScrollWidth?: number;
@@ -759,6 +766,7 @@ function asMeasurements(value: unknown): Measurements | null {
 								: undefined,
 					},
 		canvasColor: text("canvasColor"),
+		resolvedColorScheme: text("resolvedColorScheme"),
 		rootBackground: text("rootBackground"),
 		rootFontSize: text("rootFontSize"),
 		documentScrollWidth: count("documentScrollWidth"),
@@ -1004,6 +1012,26 @@ function verifyThemes(
 				record.themeApplied = false;
 				note(
 					`requested theme '${theme}' but the page resolved '${record.resolvedTheme}'`,
+				);
+			}
+			/*
+			 * The scheme the RENDERER resolved, which `reported.theme` above is not: the pre-paint
+			 * probe resolves THAT from the `lo-theme` query first, so it reports what the harness
+			 * ASKED for. `Emulation.setEmulatedMedia` is a separate CDP call, and the app's
+			 * preference is `system`, so a driver that passes the query without the emulation
+			 * renders the other scheme while `themeSource` still reads `query` — the parity lane
+			 * caught exactly that and re-ran its frames. Refuse the cell by name instead (the same
+			 * way a cell whose state marker never arrived is refused) rather than let a light cell
+			 * pass as evidence while its frame is a dark twin of the dark cell's.
+			 */
+			const scheme = record.measurements?.resolvedColorScheme ?? null;
+			record.themeCheck.resolvedColorScheme = scheme;
+			if (record.measurements !== null && scheme !== theme) {
+				record.themeApplied = false;
+				note(
+					scheme === null
+						? `the page reported no resolved colour scheme, so nothing shows this frame rendered '${theme}'`
+						: `the cell asks for '${theme}' but the page resolved prefers-color-scheme '${scheme}': the theme query was applied but the scheme the app reads was not, so this frame is not evidence for '${theme}'`,
 				);
 			}
 			if (record.themeCheck.canvasMatchesToken === false) {
@@ -1341,15 +1369,22 @@ export async function runCapture(options: CaptureOptions) {
 	const budgetMs = derivedDeadlineMs(plan.length);
 	const deadlineMs = options.deadlineMs ?? budgetMs;
 
+	/*
+	 * WHAT THIS RUN COVERS, IN ITS OWN WORDS. The tier selects a SAMPLE of the declared
+	 * device matrix — the per-push job's `ci` is 2 of 19 profiles — so a green run that only
+	 * printed its `devices:` list read as "the app is fine" over an assertion about two
+	 * viewports. The statement is derived from the plan (what will actually be captured) and
+	 * read from `matrix.ts` (what is declared), so the two cannot drift.
+	 */
+	const coverage = deviceCoverage([...new Set(plan.map((c) => c.device))]);
+
 	console.log(
 		`capture plan: ${plan.length} cells × ${framesPerCell} frame(s) = ${plannedFrames} frames`,
 	);
 	console.log(
 		`  screens: ${[...new Set(plan.map((c) => c.screen))].sort().join(", ")}`,
 	);
-	console.log(
-		`  devices: ${[...new Set(plan.map((c) => c.device))].join(", ")}`,
-	);
+	console.log(`  ${describeDeviceCoverage(coverage)}`);
 	console.log(
 		`  themes:  ${[...new Set(plan.map((c) => c.theme))].join(", ")}`,
 	);
@@ -1452,7 +1487,15 @@ export async function runCapture(options: CaptureOptions) {
 		throw new Error(reason);
 	}
 	const chrome = launched.value;
-	const tokens = canvasTokens(options.tokens);
+	/*
+	 * Declared here, assigned INSIDE the run's own `try` below. A `--tokens` path that is a
+	 * directory or malformed JSON throws from `canvasTokens` (`readFileSync` / `JSON.parse`),
+	 * and this read used to sit between `launchChrome` and the `try` — so the throw escaped
+	 * before the `finally` and leaked the Chrome instance this run had just started (found by
+	 * QA). Inside the `try`, the `finally` closes the browser and the static server before the
+	 * error propagates, so a crash cannot leave either behind.
+	 */
+	let tokens: CanvasTokens;
 	const records: CaptureRecord[] = [];
 	screenshotRetries = 0;
 	settledRetakes = 0;
@@ -1465,6 +1508,7 @@ export async function runCapture(options: CaptureOptions) {
 	let index = 0;
 
 	try {
+		tokens = canvasTokens(options.tokens);
 		/*
 		 * EVERY CELL OPENS ITS OWN TARGET — see `freshPage` for why a reused one
 		 * eventually cannot commit a navigation at all. There is deliberately no
@@ -1782,6 +1826,14 @@ export async function runCapture(options: CaptureOptions) {
 			cellTimeoutMs: options.cellTimeoutMs,
 			deadlineMs,
 			devicesCaptured: options.devices,
+			/**
+			 * The device bound, by name, in the artifact: what the RUN covered out of the
+			 * profiles `matrix.ts` declares, and what it did not. `devicesCaptured` above is what
+			 * the caller ASKED for; these lists are what the plan would actually capture, so a
+			 * report neither hides a narrower sample nor claims a wider one.
+			 */
+			deviceCoverage: coverage,
+			deviceCoverageNote: describeDeviceCoverage(coverage),
 			// `perTheme` is written as-is: this field's shape is unchanged, so nothing that
 			// reads the manifest moves under a fix about reporting.
 			themeTokens: tokens.perTheme,
@@ -1898,6 +1950,10 @@ export async function runCapture(options: CaptureOptions) {
 		`captured ${records.length} cells / ${records.length * framesPerCell} frames in ` +
 			`${(summary.meta.durationMs / 1000).toFixed(1)} s`,
 	);
+	// The bound, restated where the run's verdict is read: the frames above are a sample of
+	// the declared matrix, and which part of it is missing is a fact about this run rather
+	// than something a reader has to infer from the plan it no longer has in front of them.
+	console.log(describeDeviceCoverage(coverage));
 	console.log(`frames that changed after first paint: ${reflow.length}`);
 	console.log(`text-scale dimension: ${scaleCheck.verdict}`);
 	if (themeProblems.length) {
@@ -2125,12 +2181,14 @@ if (isMain) {
 				"                      (3000 ms/cell, floor 900 s) so a bound always holds its own plan;",
 				"                      a smaller explicit bound is honoured and noted. Cells still",
 				"                      unvisited when it fires are reported as having no frame",
-				"  --tier <name>       the sample to capture: ci | core (default) | full",
-				"                        ci    256 cells — every declared cell, 2 device profiles,",
-				"                              both themes, scales 100 and 200 (~10 min) — the CI job's",
-				"                        core  832 cells — the 5 `core` profiles, both themes, all",
-				"                              three scales",
-				"                        full  3008 cells — all 19 profiles",
+				"  --tier <name>       the sample to capture: ci | core (default) | full.",
+				"                      The matrix declares 19 device profiles; the run prints the",
+				"                      share it covered, and names the profiles it did not.",
+				"                        ci    2 of 19 profiles — 256 cells, both themes, scales 100",
+				"                              and 200 (~10 min) — the per-push CI job's sample",
+				"                        core  5 of 19 profiles — 832 cells, both themes, all",
+				"                              three scales — the local default",
+				"                        full  19 of 19 profiles — 3008 cells",
 				"  --devices <names>   comma list. Default: the tier's profiles (ci 2, core 5 by",
 				"                      default, --full for all 19)",
 				"  --themes <names>    default dark,light",
