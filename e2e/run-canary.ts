@@ -27,7 +27,7 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { SUB_RULE_TEXT } from "../tools/audit/checks.ts";
+import { SUB_RULE_TEXT, U08_SUPPRESSION } from "../tools/audit/checks.ts";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const DEFAULT_WORKTREE = resolve(HERE, "..");
@@ -460,6 +460,73 @@ const caughtByElement = declared.filter((defect) => {
 	);
 });
 /**
+ * Elements the fixture declares the audit must NOT report, as `data-not-defect`.
+ *
+ * The mirror of `data-defect`, and the direction the clean page cannot cover: the clean
+ * page has no defect to miss, so it says nothing about a rule that has been narrowed
+ * until it can no longer fire. These elements carry the SHAPE a rule must stay silent on —
+ * a pair whose layout boxes overlap while their painted regions do not, a control whose
+ * layout top reaches into the notch band while its painted top sits at the inset's edge —
+ * so a rule that starts reporting them fails here.
+ */
+interface NotDefect {
+	check: string;
+	element: string;
+}
+
+const declaredNotDefects = (): NotDefect[] => {
+	const out: NotDefect[] = [];
+	for (const tag of html.matchAll(
+		/<[a-z0-9]+\b[^>]*data-not-defect="([^"]+)"[^>]*>/gi,
+	)) {
+		const check = tag[1] ?? "";
+		const element = /\bid="([^"]+)"/.exec(tag[0])?.[1];
+		if (check === "" || element === undefined) {
+			console.error(
+				"canary: a data-not-defect declaration needs a check id and an element id; " +
+					"without them nothing can assert that the audit stayed silent about it.",
+			);
+			process.exit(2);
+		}
+		out.push({ check, element });
+	}
+	return out;
+};
+const notDefects = declaredNotDefects();
+
+/** Declared-exempt elements that a FAIL row named anyway. */
+const firedOnNotDefect = notDefects
+	.filter((entry) =>
+		defects.rows.some(
+			(row: AuditRow) =>
+				row.verdict === "FAIL" &&
+				row.check === entry.check &&
+				rowNames(row).includes(`#${entry.element}`),
+		),
+	)
+	.map((entry) => `${entry.check} (#${entry.element})`);
+/**
+ * A U-08 suppression must be RECORDED, not merely absent, and recorded with the RULE'S
+ * own words for why (imported, so a rename cannot leave this asserting a stale string).
+ *
+ * A pair that quietly stopped overlapping would satisfy "no FAIL row" while proving
+ * nothing about the rule, so the reason-tagged EXCEPTION row is required as well: the
+ * assertion is that the rule still SAW the pair and said why it set it aside.
+ */
+const unrecordedSuppressions = notDefects
+	.filter(
+		(entry) =>
+			entry.check === "U-08" &&
+			!defects.rows.some(
+				(row: AuditRow) =>
+					row.verdict === "EXCEPTION" &&
+					rowNames(row).includes(`#${entry.element}`) &&
+					(row.measured ?? "").includes(U08_SUPPRESSION.DISJOINT),
+			),
+	)
+	.map((entry) => `U-08 (#${entry.element})`);
+
+/**
  * A defect is caught either by the row that names its element, or — for a rule
  * that reports document-wide (U-06's overflow) or through the accessibility tree
  * (U-09, whose node carries no DOM id) — by the check itself.
@@ -493,6 +560,15 @@ console.log(
 	`  declared by the fixture: ${declared.map((d) => d.marker).join(", ")}`,
 );
 console.log(`  caught by the audit:     ${caught.join(", ")}`);
+console.log(
+	`  must-not-report:         ${notDefects.map((d) => `${d.check} (#${d.element})`).join(", ") || "none"}`,
+);
+if (firedOnNotDefect.length > 0)
+	console.log(`    - REPORTED ANYWAY:       ${firedOnNotDefect.join(", ")}`);
+if (unrecordedSuppressions.length > 0)
+	console.log(
+		`    - NOT RECORDED AS SUPPRESSED: ${unrecordedSuppressions.join(", ")}`,
+	);
 console.log(
 	`  caught per defect:       ${caughtDefects.map((d) => d.marker).join(", ") || "none"}`,
 );
@@ -530,7 +606,13 @@ if (blind.length > 0) {
 	);
 }
 console.log(`  clean-page cells/rows:   ${cleanCells}/${cleanRows}`);
-const vacuous = cleanCells === 0 || cleanRows === 0 || defectRows === 0;
+const vacuous =
+	cleanCells === 0 ||
+	cleanRows === 0 ||
+	defectRows === 0 ||
+	// The must-not-report direction is only worth anything while the fixture declares
+	// one: deleting the declarations would otherwise silence it.
+	notDefects.length === 0;
 if (vacuous)
 	console.log(
 		"  VACUOUS: a direction produced no cells or no rows, so nothing was actually asserted",
@@ -539,6 +621,8 @@ const ok =
 	!vacuous &&
 	missedDefects.length === 0 &&
 	cleanFails.length === 0 &&
+	firedOnNotDefect.length === 0 &&
+	unrecordedSuppressions.length === 0 &&
 	defectsStatus !== 0 &&
 	cleanStatus === 0;
 console.log(
@@ -556,6 +640,9 @@ const failedTerms: string[] = [];
 if (vacuous) failedTerms.push("vacuous");
 if (missedDefects.length > 0) failedTerms.push("missed");
 if (cleanFails.length > 0) failedTerms.push("cleanFails");
+if (firedOnNotDefect.length > 0) failedTerms.push("firedOnNotDefect");
+if (unrecordedSuppressions.length > 0)
+	failedTerms.push("suppressionUnrecorded");
 if (defectsStatus === 0) failedTerms.push("defectsStatus");
 if (cleanStatus !== 0) failedTerms.push("cleanStatus");
 if (failedTerms.length > 0) {
@@ -568,6 +655,8 @@ console.log(
 		vacuous,
 		missed: missedDefects,
 		cleanFails: cleanFails.length,
+		firedOnNotDefect,
+		unrecordedSuppressions,
 		defectsStatus,
 		cleanStatus,
 		cells: { defects: defects.cells ?? 0, clean: cleanCells },

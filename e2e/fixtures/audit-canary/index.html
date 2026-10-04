@@ -42,6 +42,18 @@
   | #label-mismatch       | U-10  | visible "Approve", accessible name "Confirm"         |
   | #escape-pinned        | U-08-escape-absolute | an absolute node a clipping ancestor cannot clip |
   | #fixed-escape         | U-08-escape-fixed | a fixed node under the same non-clipping ancestor |
+
+  Two of the entries are the INVERSE declaration, `data-not-defect`: elements the
+  audit must NOT report. A rule is only worth trusting when it is shown both to fire
+  on a defect and to stay silent on the shape it must not fire on, and the two
+  directions are asserted in the same run so neither can be satisfied by an
+  instrument that always reports or never does:
+
+    /defects   #phantom-over must produce no FAIL row (its layout box overlaps
+               #phantom-under exactly, but the painted regions do not), and the U-08
+               suppression that replaces it must still be RECORDED, with its reason;
+               #inset-clipped must produce no U-05 row (its layout top sits inside
+               the notch band, its painted top sits exactly at the inset's edge).
 -->
 <html lang="en">
 <head>
@@ -145,6 +157,27 @@
 </script>
 </head>
 <body>
+<!-- U-05's PAINTED-REGION guard: a control whose LAYOUT box reaches above the inset
+     while its painted box starts exactly at it. The clipper sits ON the inset's line
+     and the node is scrolled up inside it by 10px, so its top edge is 10px above that
+     line and inside the band — and the node paints nothing there, because the clipper
+     does not. A rule measuring layout boxes reports content under the notch; nothing is.
+
+     The 10px matters twice: it has to keep the node's LAYOUT top at or below 0 (the
+     rule only judges a box that is on screen at all), and it has to be under the
+     smallest inset the matrix uses (20pt on iphone-se), so the shape is the reported
+     one on every device — layout top inside the band, painted top at its edge.
+
+     The clipper is the first child of the body so its top IS the inset's line
+     (body padding-top is `--lo-inset-top`), the spacer is deep enough that the painted
+     half clears the page content below it, and the inset is read from the same custom
+     property the harness sets. -->
+<div class="bad" style="position:relative;height:120px">
+	<div id="inset-clipper" style="position:absolute;top:0;left:0;width:200px;height:120px;overflow:hidden">
+		<div id="inset-clipped" data-not-defect="U-05" role="button" aria-label="Clipped above the inset edge" style="position:absolute;top:-10px;left:0;width:200px;height:44px;background:var(--surface);border:1px solid var(--border)"></div>
+	</div>
+</div>
+
 <h1>Audit canary</h1>
 <p class="panel">A page whose defects are known, used to prove the audit checker fails.</p>
 
@@ -274,6 +307,25 @@
 	<h2>U-08 overlap</h2>
 	<div id="overlap-a" data-defect="U-08" style="position:absolute;top:32px;left:0;width:140px;height:40px;background:var(--surface);border:1px solid var(--border);padding:4px">Alpha</div>
 	<div id="overlap-b" data-defect="U-08" style="position:absolute;top:42px;left:20px;width:140px;height:40px;background:var(--surface);border:1px solid var(--border);padding:4px">Beta</div>
+</div>
+
+<!-- U-08's PAINTED-REGION guard: the pair the rule must NOT report, declared as such.
+     `#phantom-under` is 140px tall inside a 40px-tall clipper that IS on its
+     containing-block chain, so it paints only its top 40px; `#phantom-over` sits at
+     y=100. Their LAYOUT boxes overlap exactly (120x140 against 120x44, 100% of the
+     smaller), which is what the rule paired before the painted region existed, and not
+     one painted pixel of the two is on top of the other. The suppression is asserted
+     as well as the silence: a pair that quietly stopped overlapping would satisfy "no
+     FAIL row" while proving nothing about the rule.
+
+     Both are controls with an accessible name and NO text, for the reason the escape
+     fixtures above state: the capture's text-scale guard reads the MEDIAN text box of
+     the page, and extra text nodes move it. -->
+<div class="bad" style="position:relative;height:150px">
+	<div id="phantom-clipper" style="position:absolute;top:0;left:0;width:120px;height:40px;overflow:hidden">
+		<div id="phantom-under" role="button" aria-label="Clipped under" style="position:absolute;top:0;left:0;width:120px;height:140px;background:var(--surface);border:1px solid var(--border)"></div>
+	</div>
+	<div id="phantom-over" data-not-defect="U-08" role="button" aria-label="Beside it" style="position:absolute;top:100px;left:0;width:120px;height:44px;background:var(--surface);border:1px solid var(--border)"></div>
 </div>
 
 <!-- U-08's ESCAPE branch: a node whose containing block is ABOVE an ancestor that clips.

@@ -73,7 +73,17 @@ export const EXTRACT_PROBE = `
     // therefore on the chain; the walk continues from there.
     return el.parentElement;
   };
-  const clippedAway = (el, rect) => {
+  // THE PAINTED REGION of a node: its box intersected with every clipping ancestor on
+  // its containing-block chain, or the word null when that intersection is empty
+  // (nothing of it is painted at all).
+  //
+  // Both facts come from ONE walk on purpose. "Is any of it painted" and "which part is
+  // painted" are the same question asked to different precision, and two walks that
+  // answer them are two walks that can disagree — which is precisely the defect this
+  // function exists to close: a node clipped only PART of the way keeps its FULL layout
+  // box, so a check pairing layout boxes reports an overlap between a node and a
+  // sibling sitting outside the clipper that no user can see.
+  const clipIntersection = (el, rect) => {
     let left = rect.left, top = rect.top, right = rect.right, bottom = rect.bottom;
     let node = containingBlock(el);
     while (node && node.nodeType === 1) {
@@ -87,9 +97,24 @@ export const EXTRACT_PROBE = `
         top = Math.max(top, r.top);
         right = Math.min(right, r.right);
         bottom = Math.min(bottom, r.bottom);
-        if (right <= left || bottom <= top) return true;
+        if (right <= left || bottom <= top) return null;
       }
       node = containingBlock(node);
+    }
+    return { left, top, right, bottom };
+  };
+  // Whether the node is laid out inside an ancestor that scrolls horizontally ON
+  // PURPOSE. No per-node fact can answer this: the element that scrolls is the
+  // ANCESTOR (a code block's ScrollView, which react-native-web renders with
+  // overflow-x: auto), while the node that overflows the viewport is the text inside
+  // it. The rubric allows the overflow there and nowhere else, so the answer has to
+  // come from the chain.
+  const insideHorizontalScroller = (el) => {
+    let node = el.parentElement;
+    while (node && node.nodeType === 1) {
+      const overflowX = getComputedStyle(node).overflowX;
+      if (overflowX === 'auto' || overflowX === 'scroll') return true;
+      node = node.parentElement;
     }
     return false;
   };
@@ -177,6 +202,9 @@ export const EXTRACT_PROBE = `
     const style = getComputedStyle(el);
     const rect = el.getBoundingClientRect();
     if (!isVisible(el, style, rect)) continue;
+    // Computed once, so the two facts derived from it (is anything painted, and which
+    // box that painted part occupies) cannot drift apart.
+    const painted = clipIntersection(el, rect);
     const ownText = [...el.childNodes]
       .filter((n) => n.nodeType === 3)
       .map((n) => n.textContent.trim())
@@ -240,21 +268,40 @@ export const EXTRACT_PROBE = `
       disabled: el.disabled === true || el.getAttribute('aria-disabled') === 'true',
       isControl: /^(input|select|textarea)$/.test(el.tagName.toLowerCase()),
       childImages: el.querySelectorAll('img,svg').length,
-      // The facts a box does not tell you: whether an ancestor clips it to nothing,
-      // whether an ancestor clips it ONLY off its containing-block chain (so the
-      // browser paints it anyway), and whether it draws ink of its own at all.
-      // Reported as measurements — U-08 is where they become a rule.
-      clippedAway: clippedAway(el, rect),
-      escapedClip: clippedByAnyAncestor(el, rect) && !clippedAway(el, rect),
+      // The facts a box does not tell you: WHERE the node is painted (its box
+      // intersected with every clipping ancestor on its chain), whether an ancestor
+      // clips it to nothing at all, whether an ancestor clips it ONLY off its
+      // containing-block chain (so the browser paints it anyway), and whether it draws
+      // ink of its own at all. Reported as measurements — U-05 and U-08 are where they
+      // become rules.
+      visibleRect:
+        painted === null
+          ? null
+          : {
+              x: Math.round(painted.left),
+              y: Math.round(painted.top),
+              w: Math.round(painted.right - painted.left),
+              h: Math.round(painted.bottom - painted.top),
+              right: Math.round(painted.right),
+              bottom: Math.round(painted.bottom),
+            },
+      clippedAway: painted === null,
+      escapedClip: clippedByAnyAncestor(el, rect) && painted !== null,
+      scrollsX: insideHorizontalScroller(el),
       ariaHidden: ariaHiddenIn(el),
       ownInk:
         ownText.length > 0
         || (style.backgroundColor !== 'rgba(0, 0, 0, 0)' && style.backgroundColor !== 'transparent')
         || px(style.borderTopWidth) > 0
         || el.querySelectorAll('img,svg').length > 0,
-      // The nearest ancestor's full text, so a status *word* carried by a sibling
-      // counts as a carrier and a bare dot beside it is not a colour-only status.
-      containerText: ((el.closest('p, li, div, section, header, footer, td, button') || el.parentElement || el).textContent || '').trim().slice(0, 200),
+      // The nearest ANCESTOR container's full text, so a status *word* carried beside
+      // the node counts as a carrier and a bare dot does not become one.
+      //
+      // The walk starts at the PARENT, never at the node: closest() matches the
+      // element itself when it is a div or a p, and the node's own subtree is not "a
+      // word beside it" — reading it as one exempted exactly the nodes this check
+      // exists to find.
+      containerText: ((el.parentElement && el.parentElement.closest('p, li, div, section, header, footer, td, button') || el.parentElement || el).textContent || '').trim().slice(0, 200),
       hasGlyph: /[\\u2190-\\u2BFF\\u2000-\\u206F!?]|\\b(error|failed|pending|waiting|done|running|warning)\\b/i.test(el.textContent || ''),
       // A colour-only status: draws with a semantic colour but carries no word,
       // glyph or shape and no accessible name — the thing U-03 exists to catch.
