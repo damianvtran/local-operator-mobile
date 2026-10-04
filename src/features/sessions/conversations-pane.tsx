@@ -313,13 +313,19 @@ export const ConversationsPane = ({
 						tone="warning"
 						/* A listing the relay could not walk is the state where the reader
 						 *  most needs rows on screen. The long sentences run 73–80
-						 *  characters, and in a 280 pt panel at 200 % that is most of the
-						 *  band; at large text the SHORT sentence renders instead —
+						 *  characters; at large text the SHORT sentence renders instead —
 						 *  complete in itself (so a screen reader loses nothing) and the
 						 *  D29 fix: a warning naming neither cause nor consequence at the
-						 *  one text size where it most needs spelling out. */
+						 *  one text size where it most needs spelling out. NO `maxLines`:
+						 *  the 2-line cap was sized for the full-width 320 pt list, and in
+						 *  the 264 pt drawer at 200 % the message column fits ~10
+						 *  characters a line, so the cap cut "Some rows may be missing." to
+						 *  "Some rows may be …" — the consequence word, gone (U-04/U-07
+						 *  measured: content 122 px in the 81 px two-line box; PR #34
+						 *  review round 2). The short sentence, painted whole, is the
+						 *  bound now: 3 lines at 264 pt / 200 %, against the 260 pt band
+						 *  the long copy once ate (Q4-2). */
 						message={largeText ? degradedShortNote(degraded) : degradedMessage}
-						maxLines={largeText ? 2 : undefined}
 						testID={CONTROL.sessionsDegradedBanner}
 					/>
 				</View>

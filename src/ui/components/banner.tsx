@@ -28,17 +28,21 @@ export type BannerProps = {
 		loading?: boolean;
 		testID: string;
 	};
-	/** A cap on the message's lines, for the one configuration where the banner is
-	 *  the scarce resource rather than an addition to a screen that has room: a
-	 *  320 pt phone at the platform's large text. The list's own degraded banner is
-	 *  73–80 characters (80 for `degraded: ["sessions"]`, the widest of the three)
-	 *  and measured 260.56 pt there — most of the 356.81 pt band the list lives in —
-	 *  so the state that most needs rows on screen showed NONE (QA round 4, Q4-2).
-	 *  Unset everywhere else: a banner that truncates when it has room is a banner
-	 *  that hides its own remedy. Where the cap bites, the caller shortens the COPY
-	 *  rather than accepting a truncation — the sentence it paints has to be one the
-	 *  reader can act on (design round 5, D29) — so this bound is the structural
-	 *  guard, and `numberOfLines` clamps the paint rather than the DOM. */
+	/** A cap on the message's lines, for a caller whose band is genuinely scarce.
+	 *  The history is the list's own banner: at large text its 73–80 character
+	 *  sentences (80 for `degraded: ["sessions"]`, the widest of the three)
+	 *  measured 260.56 pt on a 320 pt phone — most of the 356.81 pt band the list
+	 *  lives in — so the state that most needs rows on screen showed NONE (QA
+	 *  round 4, Q4-2). Where the cap bites, the caller shortens the COPY rather
+	 *  than accepting a truncation — the sentence it paints has to be one the
+	 *  reader can act on (design round 5, D29) — and `numberOfLines` clamps the
+	 *  paint rather than the DOM. The list no longer sets this cap: its large-text
+	 *  copy was shortened to fit it, and the moment the drawer began to scale, the
+	 *  2-line cap cut that short sentence ("Some rows may be …" at 200 %; U-04,
+	 *  PR #34 review round 2) — so the SHORT sentence, painted whole, is the bound
+	 *  now, and this prop stays for a caller with a truly scarce band and copy
+	 *  sized to the cap. Unset everywhere else: a banner that truncates when it
+	 *  has room is a banner that hides its own remedy. */
 	maxLines?: number;
 	testID: string;
 };
