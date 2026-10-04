@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { maxColumnWidth } from "@/ui/column";
 import { Heading } from "@/ui/components/heading";
-import { LARGE_TEXT_SCALE } from "@/ui/text-scale";
+import { headerStacks } from "@/ui/size-class";
 import { useTextScale } from "@/ui/text-scale-provider";
 
 /**
@@ -43,6 +43,11 @@ export type ScreenProps = {
 	 *  this is an opt-out of the cap, never a second measure. Defaults `true`:
 	 *  every other screen is byte-for-byte unchanged. */
 	capColumn?: boolean;
+	/** The width below which THIS screen's header stacks its title. Omitted, the
+	 *  kit's floor (`HEADER_STACK_WIDTH`) applies; a heavier action cluster —
+	 *  the sessions list's, which can carry two count badges — passes its own
+	 *  measured fit instead (`headerStackWidth`). */
+	stackBelowWidth?: number;
 	testID?: string;
 };
 
@@ -64,6 +69,7 @@ export const Screen = ({
 	headerLeading,
 	scroll = true,
 	capColumn = true,
+	stackBelowWidth,
 	testID,
 }: ScreenProps) => {
 	const insets = useSafeAreaInsets();
@@ -84,16 +90,26 @@ export const Screen = ({
 				alignSelf: "center" as const,
 			}
 		: undefined;
-	/* Above roughly 140 % text the title and the header's controls do not fit one
-	 * line on a 320 pt phone, and the title is the element that gets clipped —
-	 * measured: at 200 % "Sessions" rendered as "S." with the controls intact. So the
-	 * header STACKS instead: the title keeps a full line, the controls move under it,
-	 * and no text is truncated by chrome that cannot shrink.
+	/* Two ways the title and the header's controls stop fitting one line, and
+	 * the title is the element that gets clipped in both — measured: at 200 %
+	 * "Sessions" rendered as "S." with the controls intact, and at 320 pt /
+	 * 100 % it rendered "Ses…" (clientW 72 against 106 of text) once the header
+	 * carried a count badge and three controls. So the header STACKS instead:
+	 * the title keeps a full line, the controls move under it, and no text is
+	 * truncated by chrome that cannot shrink. The triggers (large text, or a
+	 * viewport below the screen's own bound — the kit floor by default, or the
+	 * measured fit a heavier cluster passes as `stackBelowWidth`) live in
+	 * `headerStacks` (`size-class.ts`), asserted in a unit test rather than
+	 * argued from this comment.
 	 *
-	 * A TITLELESS header never stacks: there is no title row to protect, and the
-	 * spec's decision 4 makes the home's header one 56 pt row at every scale. */
+	 * A TITLELESS header never stacks (the composer home, spec decision 4):
+	 * there is no title row to protect, and the width trigger would otherwise
+	 * fire on the home's own narrow phone. Titleless is the home today — every
+	 * other screen passes a title — so the carve-out moves no other screen. */
 	const { effectiveScale } = useTextScale();
-	const stackHeader = title !== undefined && effectiveScale > LARGE_TEXT_SCALE;
+	const stackHeader =
+		title !== undefined &&
+		headerStacks(effectiveScale, viewport.width, stackBelowWidth);
 	return (
 		<View
 			className="flex-1 bg-canvas"

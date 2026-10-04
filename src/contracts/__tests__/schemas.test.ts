@@ -382,6 +382,31 @@ function projectionWith(overrides: Record<string, unknown>): unknown {
 	return { ...VALID_PROJECTION, ...overrides };
 }
 
+/** One queued-ask row as the wire carries it (design §4, frozen). */
+const askRow = (
+	overrides: Record<string, unknown> = {},
+): Record<string, unknown> => ({
+	ask_id: "ask-1",
+	created_at: 1_790_727_000_000,
+	expires_at: 1_790_727_900_000,
+	timeout_s: 900,
+	urgent: false,
+	status: "open",
+	delivered: false,
+	questions: [
+		{
+			id: "q1",
+			question: "which one?",
+			options: [{ label: "a", description: "the first" }],
+			multi: false,
+			recommended: 0,
+			secret: false,
+			persist: false,
+		},
+	],
+	...overrides,
+});
+
 describe("malformed frames are rejected, never coerced", () => {
 	const cases: [string, SchemaName, unknown][] = [
 		[
@@ -566,6 +591,34 @@ describe("malformed frames are rejected, never coerced", () => {
 			"a sessions frame carrying projection data",
 			"sessionsStreamFrame",
 			loadFixture("sse/sse-projection-live-idle.json"),
+		],
+		[
+			"an ask whose questions is an object",
+			"sessionProjection",
+			projectionWith({
+				asks: [{ ...askRow(), questions: {} }],
+				asks_open: 1,
+			}),
+		],
+		[
+			"an ask missing its status",
+			"sessionProjection",
+			projectionWith({ asks: [askRow({ status: undefined })], asks_open: 1 }),
+		],
+		[
+			"an aggregate asks response whose asks is an object",
+			"asks",
+			{ asks: {} },
+		],
+		[
+			"an ask_respond with no answers map",
+			"commandOp",
+			{ op: "ask_respond", ask_id: "ask-1" },
+		],
+		[
+			"an ask_respond whose answers hold strings, not lists",
+			"commandOp",
+			{ op: "ask_respond", ask_id: "ask-1", answers: { q1: "yes" } },
 		],
 	];
 
@@ -1025,5 +1078,89 @@ describe("a projection from a relay that predates an additive field", () => {
 		expect(parsed.ok).toBe(true);
 		if (!parsed.ok) return;
 		expect(parsed.data.cut_off).toBe(false);
+	});
+});
+
+/* --------------------------------------------------------------- queued asks */
+
+/**
+ * The queued-ask fields are the client-side capability proxy (design §4, the N2
+ * rule): the field's PRESENCE means "this runtime publishes asks" and its
+ * ABSENCE must render exactly today's view. A schema that defaults `asks` to `[]`
+ * or `asks_open` to `0` would fabricate that capability out of an older relay's
+ * silence — the one failure this half of the contract exists to prevent.
+ */
+describe("the queued-ask fields are read by presence, never defaulted", () => {
+	it("leaves an absent asks field absent — not an empty list, not a zero", () => {
+		const parsed = parsePayload("sessionProjection", projectionWith({}));
+		expect(parsed.asks).toBeUndefined();
+		expect(parsed.asks_open).toBeUndefined();
+	});
+
+	it("keeps a zero the wire states as a zero, never as absence", () => {
+		const parsed = parsePayload(
+			"sessionProjection",
+			projectionWith({ asks_open: 0 }),
+		);
+		expect(parsed.asks_open).toBe(0);
+	});
+
+	it("accepts the ask row whole, including the frozen question shape", () => {
+		const parsed = parsePayload(
+			"sessionProjection",
+			projectionWith({ asks: [askRow()], asks_open: 1 }),
+		);
+		const row = parsed.asks?.[0];
+		expect(row?.ask_id).toBe("ask-1");
+		expect(row?.questions[0]?.options[0]?.description).toBe("the first");
+		expect(row?.questions[0]?.recommended).toBe(0);
+	});
+
+	it("carries session_id and cwd on aggregate rows, so a foreign row is answerable", () => {
+		const parsed = parsePayload("asks", {
+			asks: [{ ...askRow(), session_id: "6714def86197", cwd: "~/work" }],
+		});
+		expect(parsed.asks[0]?.session_id).toBe("6714def86197");
+		expect(parsed.asks[0]?.cwd).toBe("~/work");
+	});
+
+	it("passes an unknown status through as its own word, never onto a known one", () => {
+		const parsed = parsePayload(
+			"sessionProjection",
+			projectionWith({
+				asks: [askRow({ status: "escalated_to_human" })],
+				asks_open: 1,
+			}),
+		);
+		expect(parsed.asks?.[0]?.status).toBe("escalated_to_human");
+	});
+
+	it("reads asks_truncated as absent unless the frame states it — absence means complete", () => {
+		const plain = parsePayload("sessionProjection", projectionWith({}));
+		expect(plain.asks_truncated).toBeUndefined();
+		const cut = parsePayload(
+			"sessionProjection",
+			projectionWith({ asks: [askRow()], asks_open: 21, asks_truncated: true }),
+		);
+		expect(cut.asks_truncated).toBe(true);
+	});
+
+	it("parses the ask-family command bodies the sheet sends", () => {
+		const respond = parsePayload("commandOp", {
+			op: "ask_respond",
+			ask_id: "ask-1",
+			answers: { q1: ["a"], q2: [] },
+		});
+		expect(respond.op).toBe("ask_respond");
+		const decline = parsePayload("commandOp", {
+			op: "ask_decline",
+			ask_id: "ask-1",
+		});
+		expect(decline.op).toBe("ask_decline");
+		const dismiss = parsePayload("commandOp", {
+			op: "ask_dismiss",
+			ask_id: "ask-1",
+		});
+		expect(dismiss.op).toBe("ask_dismiss");
 	});
 });

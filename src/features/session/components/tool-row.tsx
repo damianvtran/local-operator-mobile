@@ -175,7 +175,7 @@ export const ToolRow = ({ entry, testID }: ToolRowProps) => {
 						</Text>
 					) : null}
 					{details ? (
-						<Text className="shrink-0 text-ink-dim" aria-hidden>
+						<Text className="shrink-0 text-mono-sm text-ink-dim" aria-hidden>
 							{open ? "▾" : "▸"}
 						</Text>
 					) : null}

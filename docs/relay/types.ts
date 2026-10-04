@@ -61,7 +61,17 @@ export type EntryKind =
   | "peer_message"
   /** The model's PRIVATE reasoning; transient by construction and never part of
    *  the durable transcript. `types.py:537-541` */
-  | "reasoning";
+  | "reasoning"
+  /** A queued ask SETTLING (design `docs/design/ask-nonblocking.md` §4): one row
+   *  per answer, late answer or decline — `details.status` says which — plus a
+   *  sibling kind for the deadline itself. Distinct kinds rather than a generic
+   *  notice because a client must be able to key an affordance on them (the
+   *  timed-out ask stays answerable) and because the shared row text already
+   *  distinguishes them (`types.py:577-588`). */
+  | "ask_response"
+  /** A queued ask's deadline passing with nobody answering; the ask stays
+   *  answerable late until `expires_at + 7 d` (`types.py:583-588`). */
+  | "ask_timeout";
 
 /** `types.py:544`. `queued` is not a synonym for `composing` or `running`:
  *  the model finished writing the call and nothing has started it yet
@@ -129,6 +139,25 @@ export interface TranscriptEntryDetails {
   user_run?: boolean;
   /** Bytes the model has written for this call so far (`projection.py:1895`). */
   argument_bytes?: number;
+  /* --- the queued-ask rows (design §4): attached to `ask_response` /
+   *  `ask_timeout` entries by the fold (`projection.py`, the ask branches). --- */
+  ask_id?: string;
+  /** `timed_out` on `ask_timeout`; `answered` | `late` | `declined` on
+   *  `ask_response`. Rendered verbatim through the shared copy table. */
+  status?: string;
+  /** The full question list — no surface re-derives Q&A from a sentence. */
+  questions?: AskQuestion[];
+  /** Secret answers hold the KEY ONLY (`[<key>]`), never a value. */
+  answers?: Record<string, string[]>;
+  /** Epoch milliseconds the response landed. */
+  at?: number;
+  /** `ask_timeout` only: how long the ask waited, in seconds. */
+  waited_s?: number;
+  /** `ask_timeout` only: whether the deadline was short enough to be urgent. */
+  urgent?: boolean;
+  /** `ask_timeout` only: the notice the MODEL was given, under it as "what the
+   *  agent was told". */
+  text?: string;
 }
 
 /** `types.py:551-600`. One renderable row, pre-folded by the relay. */
@@ -245,6 +274,75 @@ export interface PendingRequest {
   persist: boolean;
 }
 
+/* -------------------------------------------------------------- queued asks */
+
+/** One question of a queued ask, as `PendingAsk.questions` carries it
+ *  (`types.py:752-785`; `asks/queue._question_shape`). The FULL question rides
+ *  the wire — id, options with their consequence lines, `multi`, `secret`,
+ *  `persist` — so a client draws the form without re-deriving the ask. */
+export interface AskQuestion {
+  id: string;
+  question: string;
+  options: AskOption[];
+  /** More than one option may be chosen; the answer map still holds a list. */
+  multi: boolean;
+  /** The model's recommendation, as an INDEX INTO `options` (the runtime hoists
+   *  the recommended option to 0 and states the position; the harness option
+   *  model carries no boolean to read). `null`/absent = no recommendation. */
+  recommended?: number | null;
+  /** The credential case: the answer is a masked paste field and the answer map
+   *  holds the KEY the runtime stored, never the value (§4). */
+  secret: boolean;
+  /** For a secret question, save it to the operator's long-term store rather
+   *  than only session memory. The flag rides; the value never does. */
+  persist: boolean;
+}
+
+/** One queued ask on the phone wire (design §4, frozen; `types.py:752-785`).
+ *
+ *  PRESENCE IS THE CAPABILITY PROXY: `SessionProjection.asks` is absent while
+ *  the runtime does not publish queued asks, and absence must render exactly
+ *  today's view — never a zero badge or an empty list. A FIELD an old relay may
+ *  omit is optional here and the client MUST have a defensible reading of
+ *  absence (`docs/relay/types.ts`'s own two rules). */
+export interface PendingAsk {
+  ask_id: string;
+  /** The conversation the ask belongs to. Absent on the per-session projection
+   *  (the frame already addresses it); PRESENT on every row of the aggregate
+   *  (`GET /api/asks`), and rows of the aggregate additionally carry `cwd`. */
+  session_id?: string;
+  /** The owning conversation's working directory — aggregate rows only
+   *  (`asks/store.index_asks`). */
+  cwd?: string;
+  /** Epoch MILLISECONDS (`now_ms()`), unlike the seconds-based session clocks. */
+  created_at: number;
+  /** Epoch milliseconds; the countdown is rendered from it on the CLIENT clock
+   *  (§5 — the wire carries no second countdown). */
+  expires_at: number;
+  timeout_s: number;
+  /** The deadline is short enough that the ask should read as urgent. */
+  urgent: boolean;
+  /** The frozen status set, rendered VERBATIM — a client never infers a state
+   *  from elapsed time (`types.py:479-485`). Open vocabularies are deliberately
+   *  NOT closed here: a newer runtime's status passes through as its own word. */
+  status: string;
+  /** The runtime's statement that the response rows this status requires exist
+   *  in the transcript. Drives the "delivering" copy, never a control. */
+  delivered: boolean;
+  questions: AskQuestion[];
+  /** Secret answers hold the KEY ONLY (`[<key>]`), never a value. Absent until
+   *  the ask settles (a draft map may exist on the legacy incremental path). */
+  answers?: Record<string, string[]>;
+  /** Which surface settled it, when another one beat this phone to the answer
+   *  (§4 single-winner: the loser is told `already answered by <surface>`). */
+  answered_by?: { surface?: string } & Record<string, unknown>;
+  answered_at?: number;
+  /** Question ids the LEGACY incremental path (design §4, A2 addendum) has
+   *  already taken in this runtime for a still-open ask. They are drafts, not
+   *  settled answers; absent on every ask answered the atomic way. */
+  draft_question_ids?: string[];
+}
+
 /* ----------------------------------------------------------------- attention */
 
 /** The completion-attention record, read from the shared `AttentionStore` and
@@ -334,8 +432,31 @@ export interface SessionProjection {
   /** The FRONT waiting request; `null` when nothing is waiting. */
   pending: PendingRequest | null;
   /** Total waiting (`>= 1` while `pending` is set): a parallel tool batch can
-   *  open several approvals, so a card may need `1 of N`. */
+   *  open several approvals, so a card may need `1 of N`. The APPROVAL queue's
+   *  length; an outstanding ASK is counted by `asks_open` instead — while the
+   *  one-release legacy mirror is live, `pending` may also carry a queued ask's
+   *  synthetic card and this count deliberately does not include it
+   *  (`types.py:987-996`). */
   pending_count: number;
+  /** The session's queued asks (design §4), newest first with the OPEN ones in
+   *  front. PRESENCE IS THE CAPABILITY PROXY: this field and `asks_open` are
+   *  ABSENT (not `[]`/`0`) unless the runtime publishes queued asks, and absence
+   *  must render exactly today's view (`types.py:998-1015`). Once present,
+   *  IGNORE any `pending` card whose `kind == "ask"` — it is the legacy mirror
+   *  of one of these rows, and honouring both paints one ask twice. */
+  asks?: PendingAsk[];
+  /** The session's OUTSTANDING tally — open plus timed-out-and-answerable asks
+   *  (`asks.store.OUTSTANDING_STATUSES`), passed through verbatim. Never
+   *  `rows.length`: the frame's list can be a prefix of the tally. */
+  asks_open?: number;
+  /** True only when the frame's byte bound dropped ask rows, so the list is a
+   *  PREFIX of the session's asks rather than all of them (core
+   *  `session/frontend_state.py:2975-2980` `bound_ask_rows`). Absent — never
+   *  `false` — when the list is complete: read absence as complete, and never
+   *  compare a count against the rows drawn. NOTE: today's phone projection
+   *  (`local_operator/mobile/types.py` `SessionProjection`) does not forward
+   *  this flag; the field is declared so the client reacts the day it does. */
+  asks_truncated?: boolean;
   usage: Record<string, number>;
   /** The spend ledger, raw. `null` = money we cannot state (never `0.0`);
    *  `child_costs` empty = no children, never "children cost nothing"
@@ -404,6 +525,12 @@ export interface SessionSummary {
   degraded?: boolean;
   /** Open todos: `pending` + `blocked` (`daemon.py:1023-1028`). */
   todos_open: number;
+  /** Outstanding queued asks on this row (design §4/§5.0), from the runtime's
+   *  own count (`daemon.py:1288-1310`). ABSENT — never `0` — while the runtime
+   *  does not publish asks: presence is the capability proxy, and a badge may
+   *  not count a list the relay cannot vouch for. Distinct from `pending_kind`,
+   *  which stays the APPROVAL signal. */
+  asks_open?: number;
   mtime: number;
   /** The same value the rank used, so wire and order cannot disagree about a
    *  row's birth (`daemon.py:1029-1033`). */
@@ -603,6 +730,17 @@ export type CommandOp =
       value: string;
       question_index: number;
     }
+  /** THE QUEUED-ASK FAMILY (design §4). `ask_respond` is ATOMIC per ask: one map
+   *  of question id → chosen labels for the WHOLE ask — a partial map is refused
+   *  rather than half-applied, so a multi-question ask settles in one write
+   *  (`types.py:337-355`). */
+  | { op: "ask_respond"; ask_id: string; answers: Record<string, string[]> }
+  /** The explicit no — "decide yourself"; the agent is told (design §2.4). */
+  | { op: "ask_decline"; ask_id: string }
+  /** Dismiss is VIEW-ONLY: it removes the row from the queue's front end and
+   *  injects nothing — no turn is bought. Offered only on a timed-out ask, so
+   *  it cannot shadow an in-window answer. */
+  | { op: "ask_dismiss"; ask_id: string }
   /** Unsend one queued steering message by identity (Esc-recall parity). */
   | { op: "recall_steer"; command_id: string }
   /** Ask for a fresh welcome-equivalent projection. */

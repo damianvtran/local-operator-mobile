@@ -73,6 +73,31 @@ describe("the terminal boundary (R10)", () => {
 	});
 });
 
+describe("the terminal boundary narrows to approvals (E2)", () => {
+	it("offers an ask's controls even on a tui-hosted session", () => {
+		// ADR 0005 §6: a queued ask on a tui-hosted session is answerable — the TUI
+		// process that adopted the session reconciles the queue within a ≤60 s
+		// bound, and with no live owner the RELAY refuses in its own sentence.
+		// Greying the form would hide a working path behind a boundary that does
+		// not apply to asks, and a silently disabled control is the failure this
+		// card contract exists to avoid.
+		const ask = view({ kind: "ask" }, "tui");
+		expect(ask.terminalOnly).toBe(false);
+		expect(ask.boundarySentence).toBeNull();
+	});
+
+	it("keeps an ask answerable on an ended session — the relay owns that refusal", () => {
+		const ask = view({ kind: "ask" }, "daemon", true);
+		expect(ask.terminalOnly).toBe(false);
+		expect(ask.boundarySentence).toBeNull();
+	});
+
+	it("still greys an approval on the same two sessions", () => {
+		expect(view({}, "tui").terminalOnly).toBe(true);
+		expect(view({}, "daemon", true).terminalOnly).toBe(true);
+	});
+});
+
 describe("the remember label names its scope (R12)", () => {
 	it("names the tool and the session, not 'this choice'", () => {
 		expect(view().rememberLabel).toBe("Always allow `bash` in this session");

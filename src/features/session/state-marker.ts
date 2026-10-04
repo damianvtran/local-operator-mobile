@@ -1,4 +1,5 @@
 import type { SessionProjection, TranscriptEntry } from "@/contracts";
+import { blockingPending } from "@/features/session/asks";
 import {
 	COMPOSER_COPY,
 	type ComposerControls,
@@ -141,12 +142,20 @@ export const sessionFactsFrom = (
 	entries: input.entries.length,
 });
 
-/** The card the reader is being asked to answer, or `null`. */
+/** The card the reader is being asked to answer, or `null`.
+ *
+ *  THE MIRROR RULE APPLIES HERE TOO (design §4's client rule N3): once `asks`
+ *  is present, a `pending` slot with `kind == "ask"` is the legacy mirror of
+ *  one of those rows and the screen renders the queued surfaces instead — so
+ *  the `pending-ask` marker must not claim a card that is not on screen. */
 const pendingKindOf = (
 	projection: SessionProjection | null,
 ): SessionStateFacts["pending"] => {
-	const pending = projection?.pending;
-	if (pending === null || pending === undefined) return null;
+	const pending = blockingPending(
+		projection?.pending ?? null,
+		projection?.asks,
+	);
+	if (pending === null) return null;
 	return pending.kind === "ask" ? "ask" : "approval";
 };
 

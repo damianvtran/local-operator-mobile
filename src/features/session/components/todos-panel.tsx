@@ -65,7 +65,10 @@ export const TodosPanel = ({
 					</Text>
 					<View className="flex-1" />
 					<Text
-						className={cx("text-ink-dim", heldShut && "opacity-60")}
+						className={cx(
+							"text-mono-sm text-ink-dim",
+							heldShut && "opacity-60",
+						)}
 						aria-hidden
 					>
 						{expanded ? "▾" : "▸"}
