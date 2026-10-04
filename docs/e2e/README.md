@@ -841,10 +841,11 @@ because the overlap cases above have no clipping ancestor between them, so a fil
 that walked every ancestor instead of the containing-block chain would keep catching
 those while hiding a real defect. And the painted-region rule above is asserted the
 same way, in **both** directions: `data-defect` elements prove the rule still fires,
-and `data-not-defect` elements (`#phantom-over` for U-08, `#inset-clipped` for U-05)
-prove it stays silent on the shape no user can see — with the U-08 suppression still
-required to be RECORDED with its reason, so a pair that quietly stopped overlapping
-cannot pass as a working rule.
+and `data-not-defect` elements (`#phantom-over` for U-08, `#inset-clipped` for U-05,
+`#status-row-dot` for U-03) prove it stays silent on the shape it must not report —
+invisible to the eye for the two geometry rules, redundant with the status word beside
+it for U-03 — with the U-08 suppression still required to be RECORDED with its reason,
+so a pair that quietly stopped overlapping cannot pass as a working rule.
 
 ### A measurement outside the captured frame says so
 
