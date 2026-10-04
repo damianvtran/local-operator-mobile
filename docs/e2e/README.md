@@ -601,6 +601,13 @@ does not succeed still fails the cell.
    captures, so the run compares the two frames' hashes, compares each canvas
    against the design token for the theme it claims, and fails on either. A
    frame with almost nothing mounted is reported as blank rather than passed.
+   The canvas half needs `--tokens`: a missing tokens file, or one that carries no
+   canvas for a theme, leaves those frames uncompared, and the run says so —
+   naming the cause and how many frames went uncompared — instead of printing
+   that every frame's canvas matches its cell for a comparison it never made.
+   The exit code is unchanged either way, because absent tokens is not a failure
+   here; it is a report. A canvas that IS compared and disagrees still fails the
+   run.
 3. **It reaps what it starts**, by pid, sweeps its own profile path, and asserts
    0 processes remain. A leaked browser keeps retrying the keychain on the
    operator's screen for minutes after the run.

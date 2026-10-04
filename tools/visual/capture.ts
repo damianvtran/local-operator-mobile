@@ -929,12 +929,28 @@ interface RelayReach {
 	reached: boolean;
 }
 
+/** What the theme check found, and whether its canvas half could run at all. */
+interface ThemeCheckReport {
+	/** One entry per problem, as the summary and the strict gate read them. */
+	problems: string[];
+	/** Frames whose canvas was compared against the token's. */
+	canvasCompared: number;
+	/** Frames that had no token canvas to be compared against. */
+	canvasUncompared: number;
+	/** Why the canvas half did not cover every frame, or `null` when it did. */
+	canvasReason: string | null;
+}
+
 /** Compare each frame's claimed theme against the token canvas and its twin. */
 function verifyThemes(
 	records: CaptureRecord[],
-	canvasTokens: Record<string, { canvas: string | null }> | null,
-): string[] {
+	tokens: CanvasTokens,
+): ThemeCheckReport {
 	const problems = [];
+	let canvasCompared = 0;
+	let canvasUncompared = 0;
+	/** The themes the tokens left without a canvas, so the report can name them. */
+	const themesWithoutCanvas = new Set<string>();
 	const byStem = new Map();
 	for (const record of records) {
 		const stem = `${record.cell}__${record.device}__${record.scale}`;
@@ -946,7 +962,16 @@ function verifyThemes(
 		for (const theme of ["dark", "light"]) {
 			const record = bucket[theme];
 			if (!record) continue;
-			const expected = canvasTokens?.[theme]?.canvas ?? null;
+			const expected = tokens.perTheme?.[theme]?.canvas ?? null;
+			// Counted, not inferred later: `canvasMatchesToken` is `null` both when the
+			// comparison ran and agreed and when it never ran at all, and the summary must
+			// not read the second as the first.
+			if (expected === null) {
+				canvasUncompared += 1;
+				themesWithoutCanvas.add(theme);
+			} else {
+				canvasCompared += 1;
+			}
 			record.problems = [];
 			// The per-record fields the gallery and the report both read: what the
 			// page *resolved*, what actually rendered, and what the token says it
@@ -1007,7 +1032,19 @@ function verifyThemes(
 			}
 		}
 	}
-	return problems;
+	return {
+		problems,
+		canvasCompared,
+		canvasUncompared,
+		// A reason is carried whenever the canvas half could not run at all, and whenever
+		// it ran but left frames uncompared. Only `null` — every frame compared — lets the
+		// summary claim that every frame's canvas matches its cell.
+		canvasReason:
+			tokens.reason ??
+			(canvasUncompared === 0
+				? null
+				: `the tokens carry no canvas for ${[...themesWithoutCanvas].sort().join(" / ")}`),
+	};
 }
 
 const asRecord = (value: unknown): Record<string, unknown> | undefined =>
@@ -1085,19 +1122,50 @@ function rgbEquals(
 	);
 }
 
+/**
+ * The design tokens' canvas per theme, and whether the comparison they feed can be
+ * made at all.
+ *
+ * A missing token file is not a failure — the capture still produces frames — but it
+ * is not agreement either: with no canvas to compare against, every frame's
+ * `canvasMatchesToken` stays `null`, and the summary then printed "every frame's
+ * resolved theme and canvas match its cell" for a comparison that never ran. Absence
+ * read as a pass is the shape this harness refuses everywhere else, so `reason`
+ * carries what the run reports instead of that sentence.
+ *
+ * The second `existsSync` test this replaces was unreachable — the first guard
+ * already returned for a missing file — so it was deleted rather than left as a
+ * branch that can never be taken.
+ */
+interface CanvasTokens {
+	/**
+	 * Per-theme canvas colour, in exactly the shape the manifest's `meta.themeTokens`
+	 * has always carried: the two themes when they were read, `{}` when no tokens were
+	 * named or found, `null` when one was named and could not be read. Reshaping this
+	 * to report the skip would change an artifact other tools read, so the report lives
+	 * on stdout and this field keeps its meaning.
+	 */
+	readonly perTheme: Record<string, { canvas: string | null }> | null;
+	/** Why the canvas comparison cannot be made, or `null` when it can. */
+	readonly reason: string | null;
+}
+
 /** Read the design tokens' canvas per theme, so a frame can be checked against them. */
-function canvasTokens(
-	tokensPath: string | undefined,
-): Record<string, { canvas: string | null }> | null {
-	if (!tokensPath || !existsSync(tokensPath)) return {};
-	// Absent tokens are not a failure: the design kit lands in its own change, and
-	// a capture run that cannot read the token file should still produce frames —
-	// it just cannot make the token-comparison half of the theme check, and says
-	// so rather than inventing a colour to compare against.
-	if (!existsSync(tokensPath)) return null;
+function canvasTokens(tokensPath: string | undefined): CanvasTokens {
+	// `{}`, not `null`: a token file that was never named or never found is the state
+	// this field has always recorded as an empty table, and the manifest must not move
+	// under a fix that is only about saying so.
+	if (!tokensPath) {
+		return { perTheme: {}, reason: "no --tokens path was given" };
+	}
+	if (!existsSync(tokensPath)) {
+		return { perTheme: {}, reason: `no tokens file at ${tokensPath}` };
+	}
 	const tokens = JSON.parse(readFileSync(tokensPath, "utf8"));
 	const tokensBag: unknown = tokens;
-	if (typeof tokensBag !== "object" || tokensBag === null) return null;
+	if (typeof tokensBag !== "object" || tokensBag === null) {
+		return { perTheme: null, reason: `${tokensPath} is not a JSON object` };
+	}
 	const color = (tokensBag as Record<string, unknown>).color;
 	const surface =
 		typeof color === "object" && color !== null
@@ -1107,12 +1175,23 @@ function canvasTokens(
 		typeof surface === "object" && surface !== null
 			? (surface as Record<string, unknown>).canvas
 			: undefined;
-	if (typeof canvas !== "object" || canvas === null) return null;
+	if (typeof canvas !== "object" || canvas === null) {
+		return {
+			perTheme: null,
+			reason: `${tokensPath} carries no color.surface.canvas per theme`,
+		};
+	}
 	const pick = (theme: string): string | null => {
 		const value = (canvas as Record<string, unknown>)[theme];
 		return typeof value === "string" ? value : null;
 	};
-	return { dark: { canvas: pick("dark") }, light: { canvas: pick("light") } };
+	return {
+		perTheme: {
+			dark: { canvas: pick("dark") },
+			light: { canvas: pick("light") },
+		},
+		reason: null,
+	};
 }
 
 /**
@@ -1648,7 +1727,8 @@ export async function runCapture(options: CaptureOptions) {
 				: ""),
 	);
 
-	const themeProblems = verifyThemes(records, tokens);
+	const themeReport = verifyThemes(records, tokens);
+	const themeProblems = themeReport.problems;
 	const reflow = records
 		.filter((r) => r.frames.length > 2)
 		.map((r) => {
@@ -1763,7 +1843,9 @@ export async function runCapture(options: CaptureOptions) {
 			cellTimeoutMs: options.cellTimeoutMs,
 			deadlineMs,
 			devicesCaptured: options.devices,
-			themeTokens: tokens ?? null,
+			// `perTheme` is written as-is: this field's shape is unchanged, so nothing that
+			// reads the manifest moves under a fix about reporting.
+			themeTokens: tokens.perTheme,
 			textScaleVerdict: scaleCheck.verdict,
 			textScaleLive: scaleCheck.live === true,
 			// The teardown reading, in the artifact as well as on stdout: a run that left
@@ -1874,9 +1956,29 @@ export async function runCapture(options: CaptureOptions) {
 	if (themeProblems.length) {
 		console.log(`THEME PROBLEMS (${themeProblems.length}):`);
 		for (const problem of themeProblems) console.log(`  - ${problem}`);
-	} else {
+	} else if (themeReport.canvasReason === null) {
 		console.log(
 			"theme problems: none — every frame's resolved theme and canvas match its cell, and no dark/light pair is identical",
+		);
+	}
+	// The theme check has two halves, and only the first can run without tokens: the
+	// theme the page RESOLVED, and the canvas it painted against the design token for
+	// that theme. When the second half cannot be made, printing nothing would leave the
+	// run's silence to be read as a pass — the shape `UNREADY CELLS` and `CELLS WITH NO
+	// FRAME` below exist to refuse. So the skip is NAMED, with how much of the matrix
+	// went uncompared and what the comparison needs, the way `tools/mock-relay/verify.ts`
+	// names a check the environment cannot run. It is a report, not a failure: absent
+	// tokens never failed a run here, and a canvas that IS compared and disagrees still
+	// lands in `THEME PROBLEMS` and still fails. The sentence above is deliberately NOT
+	// printed in this branch — it claims every frame's canvas "match[es]" its cell, which
+	// for an uncompared frame is a measurement nobody made.
+	if (themeReport.canvasReason !== null) {
+		console.log(
+			`THEME CHECK INCOMPLETE (${themeReport.canvasUncompared} of ${themeReport.canvasUncompared + themeReport.canvasCompared} frame(s) uncompared) — the canvas-vs-token half did NOT run for those frames:`,
+		);
+		console.log(`  - ${themeReport.canvasReason}`);
+		console.log(
+			"  - the comparison needs a canvas per theme in a tokens file: pass `--tokens <path>` to run it",
 		);
 	}
 	if (readinessProblems.length) {
