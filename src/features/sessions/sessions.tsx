@@ -443,7 +443,15 @@ export default function Sessions() {
 			headerAction={
 				<View className="flex-row items-center gap-1">
 					{badgeCount !== null && badgeCount > 0 ? (
-						<Badge label={`${badgeCount}`} tone="danger" mono />
+						<Badge
+							label={`${badgeCount}`}
+							tone="danger"
+							mono
+							/* Sighted readers get the numeral; assistive tech gets the sentence
+							 * it stands for — the row's own state word ("new", per
+							 * `rowAccessibilityLabel`) plus the count (ADR 0006 §1.4). */
+							accessibilityLabel={`${badgeCount} new conversation${badgeCount === 1 ? "" : "s"}`}
+						/>
 					) : null}
 					<IconButton
 						accessibilityLabel="Search sessions"

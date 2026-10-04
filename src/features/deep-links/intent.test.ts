@@ -56,10 +56,35 @@ describe("nativeIntentFor", () => {
 		}
 	});
 
-	it("never throws on a malformed escape", () => {
-		// A lone `%` is not a decodable id; the honest answer is the original
-		// string, not a crash at cold start.
-		const path = "localoperator://s/%";
-		expect(nativeIntentFor(path)).toEqual({ path, sessionId: null });
+	it("passes an id that is dot segments through", () => {
+		/* `.` and `..` are the one path shape decoding can smuggle past the `/`
+		 * check — a router normalising them would climb out of the segment the
+		 * rewrite claims — so the guard reads the DECODED id (`%2e%2e` reaches it
+		 * as `..`). `...` is not a dot segment, but an id of only dots is no
+		 * session id, and one predicate covers the class. */
+		const passthrough = [
+			"localoperator://s/..",
+			"localoperator://s/.",
+			"localoperator://s/...",
+			"localoperator://s/%2e%2e",
+		];
+		for (const path of passthrough) {
+			expect(nativeIntentFor(path)).toEqual({ path, sessionId: null });
+		}
+	});
+
+	it("never throws on a malformed escape or an unencodable id", () => {
+		/* A lone `%` is not a decodable id, and an unpaired surrogate decodes but
+		 * has no UTF-8 spelling to re-encode (the encode is the second half of the
+		 * same operation); the honest answer to both is the original string, not a
+		 * crash at cold start. */
+		const passthrough = [
+			"localoperator://s/%",
+			"localoperator://s/\uD800",
+			"localoperator://s/a\uDC00b",
+		];
+		for (const path of passthrough) {
+			expect(nativeIntentFor(path)).toEqual({ path, sessionId: null });
+		}
 	});
 });

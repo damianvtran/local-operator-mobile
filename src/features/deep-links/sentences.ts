@@ -25,7 +25,8 @@ export const THIS_COMPUTER = "this computer";
 export const unknownConversationNote = (computer: string): string =>
 	`That conversation isn't on ${computer} any more.`;
 
-/** ADR 0006 §6.4's shape — "…couldn't reach <computer>; here are your
- *  conversations." (final wording by the design round). */
+/** ADR 0006 §6.4's shape — "…could not reach <computer>; here are your
+ *  conversations." (final wording by the design round, kept contraction-free:
+ *  the app's refusal copy carries none). */
 export const unreachableComputerNote = (computer: string): string =>
-	`Couldn't reach ${computer}; here are your conversations.`;
+	`Could not reach ${computer}; here are your conversations.`;

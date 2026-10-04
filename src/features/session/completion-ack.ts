@@ -40,6 +40,14 @@ export interface AckGates {
 	blocked: boolean;
 	/** The completion's end is on screen (`TranscriptList`'s measurement). */
 	anchorVisible: boolean;
+	/** The anchored completion's representation is complete — `final &&
+	 *  text_complete`, the web selector's `data-completion-complete` half.
+	 *  Settled streaming is NOT the same fact: transport caps can leave the row
+	 *  a prefix while keeping its message id (`docs/relay/contract.md`), and
+	 *  acknowledging one would acknowledge a result the reader has not seen the
+	 *  end of. A row that is not loaded resolves to NOT complete, the same
+	 *  direction as unknown geometry. */
+	completionComplete: boolean;
 	streaming: boolean;
 	unseen: boolean;
 	/** The attention names a `completion_token`. */
@@ -59,6 +67,7 @@ export function mayAcknowledge(gates: AckGates): boolean {
 		gates.focused &&
 		!gates.blocked &&
 		gates.anchorVisible &&
+		gates.completionComplete &&
 		!gates.streaming &&
 		gates.unseen &&
 		gates.hasToken &&

@@ -90,7 +90,7 @@ describe("the resolver's sentences", () => {
 			"That conversation isn't on this computer any more.",
 		);
 		expect(unreachableComputerNote(THIS_COMPUTER)).toBe(
-			"Couldn't reach this computer; here are your conversations.",
+			"Could not reach this computer; here are your conversations.",
 		);
 	});
 });

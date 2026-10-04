@@ -13,6 +13,9 @@
  * - the app is foregrounded (`AppState === "active"`),
  * - the session screen is the focused route,
  * - the completion is present, settled (`!streaming`), and `unseen`,
+ * - the anchored completion is COMPLETE (`final && text_complete` — the web
+ *   selector's `data-completion-complete` half): a settled row can still be a
+ *   transport-capped prefix, and a prefix's "end" is not the end,
  * - the token and anchor exist and the attention record names THIS
  *   conversation (identity is part of the verdict, never assumed),
  * - no sheet or panel holds the screen (the web's `blocked`), and
@@ -49,6 +52,7 @@ import {
 	retryDelayMs,
 	settlesCompletion,
 } from "@/features/session/completion-ack";
+import { entryComplete } from "@/features/session/completion-visibility";
 import type { RelayEndpoints } from "@/relay";
 
 export interface CompletionAckInput {
@@ -154,11 +158,20 @@ export const useCompletionAck = ({
 			const live = liveRef.current;
 			const client = live.endpoints;
 			const current = live.projection?.attention ?? null;
+			/* The anchored row's completeness, re-read per attempt like every other
+			 * gate — the transcript can change between attempts, and a row that is
+			 * not loaded resolves to NOT complete (the unknown-geometry direction,
+			 * by the CURRENT anchor_id). */
+			const anchorEntry = live.projection?.transcript.find(
+				(entry) => entry.id === current?.anchor_id,
+			);
 			const gates: AckGates = {
 				appActive: appActiveRef.current,
 				focused: focusedRef.current,
 				blocked: live.blocked,
 				anchorVisible: live.anchorVisible,
+				completionComplete:
+					anchorEntry !== undefined && entryComplete(anchorEntry),
 				streaming: live.projection?.streaming === true,
 				unseen: current?.unseen === true,
 				hasToken: typeof current?.completion_token === "string",

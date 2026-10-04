@@ -26,6 +26,10 @@ export const DEEP_LINK_SCHEME = "localoperator";
  *  not-found rather than the app guessing). */
 const SESSION_LINK = /^localoperator:(?:\/\/)?s\/([^/?#\s]+)$/i;
 
+/** An id that is only dots — `.`/`..` and their `%2e` spellings, which decode
+ *  into dot segments a router normalises away (see the guard below). */
+const DOTS_ONLY = /^\.+$/;
+
 export interface NativeIntent {
 	/** What the router should open: the rewritten route, or the original string. */
 	path: string;
@@ -48,15 +52,28 @@ export function nativeIntentFor(path: string): NativeIntent {
 	const raw = match?.[1];
 	if (raw === undefined) return { path, sessionId: null };
 	let id: string;
+	let escaped: string;
 	try {
 		id = decodeURIComponent(raw);
+		/* Re-encoded so the id cannot smuggle a path separator into the route it
+		 * is interpolated into — the rewrite writes a route, and route building
+		 * is string building unless it is escaped. The encode is the second half
+		 * of the same operation, so it lives inside the same guard: an unpaired
+		 * surrogate decodes cleanly and has no escape, and "never throws" only
+		 * holds if both halves are caught. */
+		escaped = encodeURIComponent(id);
 	} catch {
-		/* A lone `%` is not an id; hand the link back whole. */
+		/* A lone `%` is not a decodable id, and a string that cannot be
+		 * re-encoded is not an id either; hand the link back whole. */
 		return { path, sessionId: null };
 	}
-	if (id.length === 0 || id.includes("/")) return { path, sessionId: null };
-	/* Re-encoded so the id cannot smuggle a path separator into the route it is
-	 * interpolated into — the rewrite writes a route, and route building is
-	 * string building unless it is escaped. */
-	return { path: `/session/${encodeURIComponent(id)}`, sessionId: id };
+	/* `/` cannot survive into the route, and neither can a dots-only id: `.` and
+	 * `..` are the dot segments a router normalises away (`%2e` spellings decode
+	 * into them), and a normalised `/session/..` climbs out of the segment this
+	 * rewrite claims. An id that is only dots is no session id — it passes
+	 * through like every other shape this module does not recognise. */
+	if (id.length === 0 || id.includes("/") || DOTS_ONLY.test(id)) {
+		return { path, sessionId: null };
+	}
+	return { path: `/session/${escaped}`, sessionId: id };
 }
