@@ -102,7 +102,7 @@ const CONFIRM_THRESHOLD = 120;
  * the floor a small plan still gets.
  *
  * WHY THE DEFAULT IS DERIVED RATHER THAN FIXED. It used to be a flat 900 s, which
- * holds about 400 cells: a `core` run (832 cells) or a dispatched `full` run (3008)
+ * holds about 400 cells: a `core` run (858 cells) or a dispatched `full` run (3102)
  * was therefore cut off by the harness's own default and reported hundreds of cells
  * as having no frame — a bound firing on a plan it was never sized for, which reads
  * like a finding about the app and is not one. Deriving it from the plan makes the
@@ -1976,8 +1976,12 @@ export async function runCapture(options: CaptureOptions) {
 	// printed in this branch — it claims every frame's canvas "match[es]" its cell, which
 	// for an uncompared frame is a measurement nobody made.
 	if (themeReport.canvasReason !== null) {
+		// `canvasUncompared`/`canvasCompared` count RECORDS — cells, not frames. Call them
+		// that: the same page's own `N of M cell(s)` is what this line has to agree with, and
+		// a `--consecutive` run has three frames per cell, so `frame(s)` here was wrong by a
+		// factor of three on exactly the runs whose frame count is largest.
 		console.log(
-			`THEME CHECK INCOMPLETE (${themeReport.canvasUncompared} of ${themeReport.canvasUncompared + themeReport.canvasCompared} frame(s) uncompared) — the canvas-vs-token half did NOT run for those frames:`,
+			`THEME CHECK INCOMPLETE (${themeReport.canvasUncompared} of ${themeReport.canvasUncompared + themeReport.canvasCompared} cell(s) uncompared) — the canvas-vs-token half did NOT run for those cells:`,
 		);
 		console.log(`  - ${themeReport.canvasReason}`);
 		console.log(
@@ -2184,11 +2188,11 @@ if (isMain) {
 				"  --tier <name>       the sample to capture: ci | core (default) | full.",
 				"                      The matrix declares 19 device profiles; the run prints the",
 				"                      share it covered, and names the profiles it did not.",
-				"                        ci    2 of 19 profiles — 256 cells, both themes, scales 100",
+				"                        ci    2 of 19 profiles — 264 cells, both themes, scales 100",
 				"                              and 200 (~10 min) — the per-push CI job's sample",
-				"                        core  5 of 19 profiles — 832 cells, both themes, all",
+				"                        core  5 of 19 profiles — 858 cells, both themes, all",
 				"                              three scales — the local default",
-				"                        full  19 of 19 profiles — 3008 cells",
+				"                        full  19 of 19 profiles — 3102 cells",
 				"  --devices <names>   comma list. Default: the tier's profiles (ci 2, core 5 by",
 				"                      default, --full for all 19)",
 				"  --themes <names>    default dark,light",
@@ -2215,7 +2219,7 @@ if (isMain) {
 	// overrides any of them.
 	//
 	// An unknown tier is an ERROR rather than a silent fall back to `core`: a typo'd
-	// `--tier ci` that quietly ran 832 cells would spend ~31 minutes on a capture the
+	// `--tier ci` that quietly ran 858 cells would spend ~32 minutes on a capture the
 	// caller did not ask for, and the whole point of naming the sample is that the
 	// run you get is the one you asked for.
 	const tierFlag = bool(flags, "full") ? "full" : str(flags, "tier", "core");
