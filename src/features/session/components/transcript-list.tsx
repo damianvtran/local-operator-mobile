@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
 	FlatList,
 	type LayoutChangeEvent,
@@ -8,9 +8,10 @@ import {
 } from "react-native";
 
 import type { TranscriptEntry } from "@/contracts";
+import { anchorBottomVisible } from "@/features/session/completion-visibility";
 import { TranscriptRow } from "@/features/session/components/transcript-row";
 import { windowPolicy } from "@/features/session/windowing";
-import { transcriptRowId } from "@/ui/a11y";
+import { completionAnchorId, transcriptRowId } from "@/ui/a11y";
 
 /**
  * The transcript: virtualised, tail-following, and never blank.
@@ -48,6 +49,13 @@ export type TranscriptListProps = {
 	empty?: React.ReactElement | null;
 	/** Rendered above the rows, inside the scroller: the status strip. */
 	header?: React.ReactNode;
+	/** The entry id whose BOTTOM the ack gate watches — the completion
+	 *  attention's `anchor_id` (ADR 0006 §3.1). `null` when nothing is being
+	 *  watched. */
+	anchorId?: string | null;
+	/** Fired when "the anchor row's bottom is inside this list's viewport"
+	 *  flips. The list owns the measurements; the screen owns the meaning. */
+	onAnchorVisible?: (visible: boolean) => void;
 	testID: string;
 };
 
@@ -73,6 +81,8 @@ export const TranscriptList = ({
 	onOpenAgent,
 	empty,
 	header,
+	anchorId = null,
+	onAnchorVisible,
 	testID,
 }: TranscriptListProps) => {
 	const listRef = useRef<FlatList<TranscriptEntry>>(null);
@@ -88,9 +98,119 @@ export const TranscriptList = ({
 		[viewportPt, entries.length],
 	);
 
-	const onLayout = useCallback((event: LayoutChangeEvent) => {
-		setViewportPt(event.nativeEvent.layout.height);
+	/* ---------------------------------------------------- the anchor geometry --
+	 *
+	 * The ack gate needs one fact from this component — "the anchor row's bottom
+	 * is inside the viewport" — and it is computed HERE because this is where
+	 * the three inputs live: the scroll facts (onScroll/onContentSizeChange),
+	 * the viewport height (onLayout), and every row's measured height
+	 * (`measureRow`, fed by each row's onLayout). The decision itself is the
+	 * pure `anchorBottomVisible`, so the arithmetic that gates a read receipt
+	 * is testable without a renderer.
+	 *
+	 * The scroll path runs at frame rate, so NOTHING here writes state per
+	 * event: facts and heights live in refs, and only a FLIP of the boolean
+	 * reaches React (via `onAnchorVisible`). A flip is rare — it is what the
+	 * per-frame computation exists to find. */
+	/** Scroll facts, updated in place on every scroll/content event. */
+	const factsRef = useRef({ contentPt: 0, offsetY: 0 });
+	/** Measured row heights, keyed by entry id. Persisted across repaints so an
+	 *  unmounted-then-remounted row keeps the height it laid out with. */
+	const heightsRef = useRef(new Map<string, number>());
+	/** The last boolean reported upward; only flips are reported. */
+	const lastAnchorVisibleRef = useRef(false);
+	/* Latest props read by `recompute`, which must be stable: a re-created scroll
+	 * handler is fine, but the refs keep the decision ONE function. */
+	const anchorIdRef = useRef<string | null>(anchorId);
+	anchorIdRef.current = anchorId;
+	const entriesRef = useRef(entries);
+	entriesRef.current = entries;
+	const viewportRef = useRef(0);
+	viewportRef.current = viewportPt;
+	const onAnchorVisibleRef = useRef(onAnchorVisible);
+	onAnchorVisibleRef.current = onAnchorVisible;
+
+	const recompute = useCallback(() => {
+		const report = (visible: boolean) => {
+			if (lastAnchorVisibleRef.current === visible) return;
+			lastAnchorVisibleRef.current = visible;
+			onAnchorVisibleRef.current?.(visible);
+		};
+		const anchor = anchorIdRef.current;
+		if (anchor === null) {
+			report(false);
+			return;
+		}
+		const rows = entriesRef.current;
+		const index = rows.findIndex((entry) => entry.id === anchor);
+		if (index < 0) {
+			report(false);
+			return;
+		}
+		/* Every row AFTER the anchor must have a measured height, or the anchor's
+		 * position relative to the content's end is unknown — and unknown must
+		 * never read as "visible" (see `anchorBottomVisible`). */
+		let afterHeight: number | null = 0;
+		for (let i = index + 1; i < rows.length; i += 1) {
+			const height = heightsRef.current.get(rows[i]?.id ?? "");
+			if (height === undefined) {
+				afterHeight = null;
+				break;
+			}
+			afterHeight += height;
+		}
+		const facts = factsRef.current;
+		report(
+			anchorBottomVisible({
+				tailDistance: facts.contentPt - facts.offsetY - viewportRef.current,
+				viewportPt: viewportRef.current,
+				afterHeight,
+				anchorRendered: heightsRef.current.has(anchor),
+			}),
+		);
 	}, []);
+
+	/** One row's laid-out height arrived. Heights change while text streams, so
+	 *  a re-measure overwrites — the latest layout is the truth. */
+	const measureRow = useCallback(
+		(id: string, height: number) => {
+			heightsRef.current.set(id, height);
+			recompute();
+		},
+		[recompute],
+	);
+
+	/* A session switch starts the geometry over: heights belong to the rows that
+	 *  laid out, and the previous conversation's are not this one's. `sessionId`
+	 *  is a dependency the exhaustive-deps rule cannot justify from the body (the
+	 *  refs carry the data), and it is exactly the trigger that matters: without
+	 *  it a switch would recompute against the previous conversation's heights
+	 *  (the working-line precedent: `activity`'s own note). */
+	// biome-ignore lint/correctness/useExhaustiveDependencies: see the comment above
+	useEffect(() => {
+		heightsRef.current.clear();
+		recompute();
+	}, [sessionId, recompute]);
+
+	/* Anchors and frames change outside scroll events too (a new frame appends
+	 * rows; the attention moves to a new anchor). The rule reads the body —
+	 * `recompute` alone — while these deps are the EVENTS that must re-ask the
+	 * question; the body deliberately reads them through refs so the per-frame
+	 * scroll path never re-creates this callback. */
+	// biome-ignore lint/correctness/useExhaustiveDependencies: see the comment above
+	useEffect(() => {
+		recompute();
+	}, [recompute, anchorId, entries]);
+
+	const onLayout = useCallback(
+		(event: LayoutChangeEvent) => {
+			const height = event.nativeEvent.layout.height;
+			setViewportPt(height);
+			viewportRef.current = height;
+			recompute();
+		},
+		[recompute],
+	);
 
 	const onScroll = useCallback(
 		(event: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -100,38 +220,66 @@ export const TranscriptList = ({
 				contentSize.height - contentOffset.y - layoutMeasurement.height;
 			atTail.current = distance < TAIL_BAND_PT;
 			scrollOffsets.set(sessionId, contentOffset.y);
+			factsRef.current = {
+				contentPt: contentSize.height,
+				offsetY: contentOffset.y,
+			};
+			recompute();
 		},
-		[sessionId],
+		[sessionId, recompute],
 	);
 
 	/* The offset is restored once, after the first content change: before that there
 	 * is nothing to scroll, and a restore that ran into an empty list would silently
 	 * lose the position (F-6.11 — Back preserves scroll). Keyed on the session so a
 	 * session switch restores ITS offset rather than the previous one's. */
-	const onContentSizeChange = useCallback(() => {
-		if (restoredFor.current !== sessionId) {
-			restoredFor.current = sessionId;
-			const saved = scrollOffsets.get(sessionId);
-			if (saved !== undefined && saved > 0) {
-				listRef.current?.scrollToOffset({ offset: saved, animated: false });
-				return;
+	const onContentSizeChange = useCallback(
+		(_width: number, height: number) => {
+			factsRef.current = { ...factsRef.current, contentPt: height };
+			if (restoredFor.current !== sessionId) {
+				restoredFor.current = sessionId;
+				const saved = scrollOffsets.get(sessionId);
+				if (saved !== undefined && saved > 0) {
+					listRef.current?.scrollToOffset({ offset: saved, animated: false });
+					recompute();
+					return;
+				}
 			}
-		}
-		if (atTail.current) {
-			listRef.current?.scrollToEnd({ animated: false });
-		}
-	}, [sessionId]);
+			if (atTail.current) {
+				listRef.current?.scrollToEnd({ animated: false });
+			}
+			recompute();
+		},
+		[sessionId, recompute],
+	);
 
 	const renderItem = useCallback(
 		({ item }: { item: TranscriptEntry }) => (
-			<TranscriptRow
-				entry={item}
-				streaming={streamingRowId !== null && item.id === streamingRowId}
-				loadImage={loadImage}
-				onOpenAgent={onOpenAgent}
-			/>
+			/* The measuring wrapper: one `onLayout` per row is what makes the
+			 * anchor's position knowable at all in a virtualised list that refuses
+			 * fixed row heights. It adds no styling and no size of its own. */
+			<View
+				onLayout={(event) =>
+					measureRow(item.id, event.nativeEvent.layout.height)
+				}
+			>
+				<TranscriptRow
+					entry={item}
+					streaming={streamingRowId !== null && item.id === streamingRowId}
+					loadImage={loadImage}
+					onOpenAgent={onOpenAgent}
+				/>
+				{/* The completion anchor: a zero-size sibling at the row's bottom edge
+				 * (an element carries one testID, so the anchor is its own element —
+				 * the streaming anchor's note), named by the attention's `anchor_id`
+				 * so flows and the ack gate can address the row the completion ended
+				 * on. */}
+				{item.id === anchorId ? (
+					<View testID={completionAnchorId(item.id)} aria-hidden />
+				) : null}
+			</View>
 		),
-		[streamingRowId, loadImage, onOpenAgent],
+		[streamingRowId, loadImage, onOpenAgent, anchorId, measureRow],
 	);
 
 	return (

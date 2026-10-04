@@ -353,6 +353,7 @@ export const IDENTIFIER_FAMILIES: readonly string[] = [
 	"command-",
 	/* The session view's own parameterised identifiers, adopted with its block above. */
 	"transcript-row-",
+	"completion-anchor-",
 	"transcript-image-",
 	"model-option-",
 	"effort-rung-",
@@ -694,6 +695,13 @@ export const computerRowIds = (
 /** One transcript row. The row's own id is the projection's entry id. */
 export const transcriptRowId = (rowId: string): string =>
 	`transcript-row-${rowId}`;
+
+/** The completion attention's anchor row (ADR 0006 §3.1): the row a read
+ *  receipt is ABOUT. It sits on a zero-size sibling at the row's bottom edge,
+ *  because the ack gate's whole subject is "the END of this completion is on
+ *  screen" — the anchor marks where the end is. */
+export const completionAnchorId = (anchorId: string): string =>
+	`completion-anchor-${anchorId}`;
 
 /** One image inside a transcript row, disambiguated by its index within the row. */
 export const transcriptImageId = (entryId: string, index: number): string =>

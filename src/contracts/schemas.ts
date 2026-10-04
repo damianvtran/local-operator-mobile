@@ -48,6 +48,7 @@ import type {
 	PendingRequest,
 	PinResponse,
 	PromptImage,
+	PushConversationResponse,
 	SearchSessionsResponse,
 	SeenResponse,
 	SessionListFrame,
@@ -62,6 +63,7 @@ import type {
 	TranscriptEntry,
 	TranscriptEntryDetails,
 	TranscriptImageRef,
+	UnreadBlock,
 } from "./types.gen";
 
 /* ---------------------------------------------------------------- primitives */
@@ -341,11 +343,31 @@ export const capabilitiesSchema = z.looseObject({
 	),
 });
 
+/** The frame-level unread aggregate (push/ack-sync S1, ADR 0006 §1.1).
+ *  Deliberately NOT defaulted: an older relay omits the whole block and
+ *  *absence means "unknown", never 0* — the default would be a zero this
+ *  client must never invent. `count` is optional for the same reason at the
+ *  field level: `degraded` non-empty means the machine could not read its own
+ *  store, and a store that could not be read is not an empty pile. */
+export const unreadBlockSchema = z.looseObject({
+	/** Conversations with unread notifications — one conversation with three
+	 *  unread completions counts once. Absent when `degraded` is non-empty. */
+	count: z.number().int().optional(),
+	/** An equality token, never an order (the daemon's `revision()`, whose three
+	 *  terms move on a publish, a read, and a heal). Validated because the
+	 *  mirror declares it; nothing in the app may sort by it. */
+	revision: z.tuple([z.number(), z.number(), z.number()]),
+	/** The daemon's own marker for "could not be read" (`["attention"]`). */
+	degraded: z.array(z.string()),
+});
+
 export const sessionListFrameSchema = z.looseObject({
 	sessions: z.array(sessionSummarySchema),
 	/** `[]` when healthy — present on every frame so "nothing to report" is
 	 *  distinguishable from "too old to know". */
 	degraded: z.array(z.string()),
+	/** Optional on the schema and **never defaulted** — see `unreadBlockSchema`. */
+	unread: unreadBlockSchema.optional(),
 	/* Defaulted through a factory for the same reason `stt` is: a loose object's
 	 * input type carries an index signature, so a bare object literal is not
 	 * assignable — and an older relay omitting the block must still yield a frame
@@ -426,6 +448,13 @@ export const commandAckSchema = z.looseObject({
 export const seenResponseSchema = z.looseObject({
 	ok: z.literal(true),
 	attention: completionAttentionSchema,
+});
+
+/** `GET /api/push/conversation/{handle}` — a push tap's opaque handle resolved
+ *  to its conversation (`daemon.py` `api_push_conversation`, ADR 0006 §3.1).
+ *  An unknown handle is a clean `404` this schema never sees. */
+export const pushConversationResponseSchema = z.looseObject({
+	session_id: nonEmpty,
 });
 
 export const pinResponseSchema = z.looseObject({
@@ -597,6 +626,7 @@ export const SCHEMAS = {
 	 *  mistyped field fails on the device, not as a `422` the UI has to explain. */
 	commandOp: commandOpSchema,
 	seen: seenResponseSchema,
+	pushConversation: pushConversationResponseSchema,
 	pin: pinResponseSchema,
 	startSession: startSessionResponseSchema,
 	resumeSession: resumeSessionResponseSchema,
@@ -660,6 +690,9 @@ export type WireConformance = [
 	SchemaSatisfiesWire<"apiError"> extends ApiError ? true : never,
 	SchemaSatisfiesWire<"commandAck"> extends CommandAck ? true : never,
 	SchemaSatisfiesWire<"seen"> extends SeenResponse ? true : never,
+	SchemaSatisfiesWire<"pushConversation"> extends PushConversationResponse
+		? true
+		: never,
 	SchemaSatisfiesWire<"pin"> extends PinResponse ? true : never,
 ];
 
@@ -682,6 +715,7 @@ export type {
 	PendingRequest,
 	PinResponse,
 	PromptImage,
+	PushConversationResponse,
 	SearchSessionsResponse,
 	SeenResponse,
 	SessionListFrame,
@@ -696,4 +730,5 @@ export type {
 	TranscriptEntry,
 	TranscriptEntryDetails,
 	TranscriptImageRef,
+	UnreadBlock,
 };

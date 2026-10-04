@@ -331,8 +331,9 @@ never have to work that out from a bare "address and password" field.
    - *New:* accent word `new`, cleared on open.
    - *Ended:* muted, with resume offered inside the session.
    - *Degraded:* muted "not answering" (see §9).
-3. **Attention badges:** count of sessions needing a decision, on the header
-   and as the app icon badge (§10). *Queued asks get their own count*, from
+3. **Attention badges:** count of conversations with unread notifications, on
+   the header and as the app icon badge (§10; [ADR 0006](../adr/0006-push-and-ack-sync.md)
+   §1.4). *Queued asks get their own count*, from
    `asks_open`: an ask badge sits beside the decision badge and ranks below it, so
    "the agent asked something and kept working" never reads as "you are blocking
    it" ([ADR 0005](../adr/0005-queued-asks.md) §8). **Target state** — nothing

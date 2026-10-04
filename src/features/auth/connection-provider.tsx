@@ -326,6 +326,7 @@ export const ConnectionProvider = ({
 								sessions: frame.data.sessions,
 								degraded: frame.data.degraded,
 								capabilities: frame.data.capabilities,
+								unread: frame.data.unread,
 							});
 						}
 					},
@@ -393,6 +394,7 @@ export const ConnectionProvider = ({
 					sessions: frame.sessions,
 					degraded: frame.degraded,
 					capabilities: frame.capabilities,
+					unread: frame.unread,
 				});
 			}
 		},
@@ -660,6 +662,7 @@ export const ConnectionProvider = ({
 				sessions: frame.sessions,
 				degraded: frame.degraded,
 				capabilities: frame.capabilities,
+				unread: frame.unread,
 			});
 		} catch (error) {
 			if (error instanceof RelayError) {
