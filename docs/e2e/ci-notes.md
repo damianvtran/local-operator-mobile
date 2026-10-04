@@ -130,10 +130,15 @@ for — phones in many sizes, tablets both ways. `web-audit-core` runs the `core
 tier (5 profiles / 832 cells) on the schedule and on demand only, so a pull
 request does not pay for it and the `ci` step's 20-minute bound is not stretched.
 
-Both bounds are derived from the measured rate rather than guessed: 832 cells at
-2.24 s/cell is ~31 min, so the capture step is bound at 60 (~1.9x), and 832 cells
-at the audit's 1.25 s/cell is ~17 min, so the audit step is bound at 35. The job
-holds its parts: `install + export + capture 60 + audit 35 < 120`.
+Both bounds are derived from the measured rate and checked against the plan the
+run prints for itself, rather than guessed. The runner's rate is 2.24 s/cell, so
+the `core` capture is ~31 min by this page's own 832-cell figure (~32 min at the
+858 cells `--plan --tier core --consecutive` prints at this head, whose derived
+deadline is 2,574 s). The capture step is bound at 60, which is above that
+derived deadline — so the step cannot cut short the budget the run computes for
+itself — and ~1.9x the measured cost. The audit runs at 1.25 s/cell, so it is
+~18 min and its step is bound at 35. The job holds its parts:
+`install + export + capture 60 + audit 35 < 120`.
 
 The capture states its own device coverage — which declared profiles it covered
 and which it did not, by name — in the plan block, beside the run's verdict, in

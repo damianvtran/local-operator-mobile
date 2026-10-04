@@ -404,12 +404,18 @@ jobs:
     # SIZED FROM THE MEASUREMENT, NOT FROM HOPE. The runner's own rate is 2.24 s/cell
     # (403 cells / 1209 frames in 903.1 s, run 37098393675), which is also the number
     # `docs/e2e/README.md` uses to say a `core` run is ~31 minutes: 832 x 2.24 s = 1,863 s.
-    # The step bound of 60 is ~1.9x that — the same headroom the per-push capture (20 for
-    # ~10) and audit (10 for ~5.3) steps carry. The audit runs at 1.25 s/cell (250 of the
-    # ci tier's 256 cells in 312 s, run 37167390506), so `core` is 832 x 1.25 s = 1,040 s
-    # ≈ 17 min and its step bound is 35. The job bound holds its parts, the invariant the
-    # other jobs in this file state: `install + export + capture 60 + audit 35 < 120`.
-    # This is a ~70-minute nightly job; it does not run on a pull request.
+    # The plan this job actually holds is the one the capture prints before it renders
+    # anything, so the bound is checked against THAT rather than against a table: at
+    # 85b2785 `--plan --tier core --consecutive` prints `858 cells x 3 frame(s) = 2574
+    # frames` and derives its own `deadline: 2574 s` (3000 ms/cell). The capture step's 60
+    # is above that derived deadline (so the step cannot cut short the budget the run
+    # computed for itself) and ~1.9x the ~32 min the 858 cells cost at 2.24 s/cell — the
+    # same headroom the per-push capture (20 for ~10) and audit (10 for ~5.3) steps carry.
+    # The audit runs at 1.25 s/cell (250 of the ci tier's 256 cells in 312 s, run
+    # 37167390506), so `core` is 858 x 1.25 s = 1,073 s ≈ 18 min and its step bound is 35.
+    # The job bound holds its parts, the invariant the other jobs in this file state:
+    # `install + export + capture 60 + audit 35 < 120`. This is a ~75-minute nightly job
+    # (~32 min of capture and ~18 min of audit); it does not run on a pull request.
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 120

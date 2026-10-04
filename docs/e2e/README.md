@@ -698,10 +698,11 @@ instead of the stdout. A run of the whole matrix says so instead; the sentence i
 from `ALL_DEVICES`, so it cannot drift from this table.
 
 **The device variety that is not on the per-push path has its own nightly job.**
-`.github/workflows/e2e.yml` `web-audit-core` captures and audits the `core` tier — 5
-profiles / 832 cells, ~31 minutes at the measured 2.24 s/cell — on the schedule and on
-demand only. The `ci` sample stays the per-push one and keeps its own 20-minute capture
-bound; neither job is stretched to cover the other's tier.
+`.github/workflows/e2e.yml` `web-audit-core` captures and audits the `core` tier — 5 of
+the 19 profiles, ~858 cells / 2,574 frames and ~32 minutes at the measured 2.24 s/cell
+(this head; the tier table's 832 was taken before the relay registry grew) — on the
+schedule and on demand only. The `ci` sample stays the per-push one and keeps its own
+20-minute capture bound; neither job is stretched to cover the other's tier.
 
 ### Two cells that render byte-identically
 
