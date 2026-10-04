@@ -15,6 +15,7 @@ import { Shimmer } from "@/ui/components/shimmer";
 import { LARGE_TEXT_SCALE } from "@/ui/text-scale";
 import { useTextScale } from "@/ui/text-scale-provider";
 import {
+	cx,
 	LIST_ROW_INDICATOR_CLASS,
 	listRowClasses,
 	listRowIndicator,
@@ -116,6 +117,16 @@ export const ListRow = ({
 	 *  reads as the truth. */
 	const progressCountsYield = effectiveScale > LARGE_TEXT_SCALE && askCount > 0;
 
+	/* The marks WRAP only at large text (`wrapMarks` at the title row). Wrapping
+	 *  exists so no mark is pushed past the pane edge when the title cannot share
+	 *  a line (`D13`, measured at 200 %), but at normal text it was pure cost:
+	 *  measured at 320 pt / 100 %, the title took the full line and `4 asks`
+	 *  dropped to a second, left-aligned line — the row grew 60 -> 85 and the
+	 *  count lost its right-hand position (design round 1, `D6`). Below
+	 *  `LARGE_TEXT_SCALE` the title yields FIRST instead — it truncates and every
+	 *  count keeps the line and the right edge. */
+	const wrapMarks = effectiveScale > LARGE_TEXT_SCALE;
+
 	/* The meta line's measured width, which is what the fit below is decided
 	 *  against — see `metaLineFor`. 0 until the first layout. */
 	const [metaWidth, setMetaWidth] = useState(0);
@@ -158,11 +169,13 @@ export const ListRow = ({
 				<View className={listRowClasses({ selected, pressed })}>
 					<Indicator attention={attention} />
 					<View className="flex-1 gap-0.5">
-						{/* `flex-wrap`, not a wider row: at 200 % text on a 320 pt phone the
-						 *  title plus its marks do not fit one line, and a row that cannot
-						 *  wrap pushes a mark past the viewport edge — the horizontal
-						 *  overflow the audit measures. Wrapping keeps every mark readable
-						 *  and lets the title keep its own line.
+						{/* `flex-wrap` — but only at large text (`wrapMarks`): at 200 % on a
+						 *  320 pt phone the title plus its marks do not fit one line, and a
+						 *  row that cannot wrap pushes a mark past the viewport edge — the
+						 *  horizontal overflow the audit measures. Wrapping keeps every mark
+						 *  readable and lets the title keep its own line. At normal text the
+						 *  wrap was the wrong trade (D6): the title truncates instead and the
+						 *  counts keep the line.
 						 *
 						 *  It only works because the title's box has a basis of `auto` (`TITLE_BOX`)
 						 *  and NOT `flex-1`: a `flex: 1 1 0%` item has a hypothetical width of
@@ -171,7 +184,12 @@ export const ListRow = ({
 						 *  session title had a 27 pt client box against 344 pt of text (design round 2,
 						 *  D13, frame `dark320-200-faithful`). The same zero-basis trap the segmented
 						 *  track hit in the audit round. */}
-						<View className="flex-row flex-wrap items-center gap-2">
+						<View
+							className={cx(
+								"flex-row items-center gap-2",
+								wrapMarks && "flex-wrap",
+							)}
+						>
 							{/* The title yields first: `flex-1` + truncate, with every
 							 * count beside it `shrink-0`. The shimmer wraps the Text rather
 							 * than the slot, because "working" belongs on the name

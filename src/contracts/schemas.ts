@@ -282,8 +282,10 @@ export const pendingAskSchema = z.looseObject({
  *  Rows carry `session_id` + `cwd`. No cap on the route today (core
  *  `asks/store.index_asks`: "NO CROSS-SESSION CAP, deliberately"), so
  *  `asks_truncated` is absent in practice — read when a daemon ever caps the
- *  route (the projection's own bound, carried onto the aggregate), and it is how
- *  the sheet's `truncated` state is driven by the mock relay. */
+ *  route (the projection's own bound, carried onto the aggregate). It is what
+ *  WILL drive the sheet's `truncated` state once a mock-relay ask scenario
+ *  lands — an audit-arm follow-up that does not exist yet, so nothing drives
+ *  that state today. */
 export const asksResponseSchema = z.looseObject({
 	asks: z.array(pendingAskSchema),
 	asks_truncated: z.boolean().optional(),

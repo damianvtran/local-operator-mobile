@@ -9,6 +9,7 @@ import {
 	View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { ScopedVariables } from "uniwind";
 
 import { CONTROL, ROLE } from "@/ui/a11y";
 import { useReducedMotion, useTokenColor } from "@/ui/appearance";
@@ -16,6 +17,7 @@ import { Heading } from "@/ui/components/heading";
 import { IconButton } from "@/ui/components/icon-button";
 import { useShadow } from "@/ui/elevation";
 import { effectiveDuration, parseCubicBezier } from "@/ui/motion";
+import { useTextScale } from "@/ui/text-scale-provider";
 import { DURATIONS, EASINGS } from "@/ui/tokens.gen";
 import {
 	SHEET_DETENTS,
@@ -69,6 +71,9 @@ export const Sheet = ({
 	 *  app already reads the insets (`screen.tsx`), so this was an inconsistency
 	 *  of the primitive, not a policy (`E2` D1/U-05). */
 	const insets = useSafeAreaInsets();
+	/* The scaled type variables, republished INSIDE the modal — the why is at
+	 *  the `ScopedVariables` call below. */
+	const { variables } = useTextScale();
 	const [columnHeight, setColumnHeight] = useState(0);
 	const rise = useRef(new Animated.Value(0)).current;
 	const scrimFade = useRef(new Animated.Value(0)).current;
@@ -114,65 +119,76 @@ export const Sheet = ({
 			accessibilityViewIsModal
 			testID={testID}
 		>
-			<View
-				className="flex-1 justify-end"
-				onLayout={(event) => setColumnHeight(event.nativeEvent.layout.height)}
-			>
-				<Animated.View
-					style={{ opacity: scrimFade }}
-					className="absolute inset-0"
+			{/* The scaled type-scale variables are RE-PUBLISHED inside the modal:
+			 *  a React Native `Modal` renders through its own root — on the web,
+			 *  react-native-web portals it to a fresh node under `document.body` —
+			 *  which sits outside the element `TextScaleProvider` writes the scaled
+			 *  variables onto, so the sheet's own type kept the 100 % sizes while
+			 *  everything around it scaled (measured: the sheet title stayed 20 px
+			 *  at a 200 % setting — design D2). This is the provider's own mechanism
+			 *  applied one level down; on native it merely re-provides the same
+			 *  context. */}
+			<ScopedVariables variables={variables}>
+				<View
+					className="flex-1 justify-end"
+					onLayout={(event) => setColumnHeight(event.nativeEvent.layout.height)}
 				>
-					<Pressable
-						className="flex-1"
-						style={{ backgroundColor: scrimColour }}
-						accessibilityRole={ROLE.button}
-						accessibilityLabel="Close"
-						testID={CONTROL.sheetScrim}
-						onPress={onClose}
-					/>
-				</Animated.View>
-
-				<Animated.View
-					className={SHEET_SURFACE_CLASS}
-					style={{
-						...shadow,
-						transform: [
-							{
-								translateY: rise.interpolate({
-									inputRange: [0, 1],
-									outputRange: [40, 0],
-								}),
-							},
-						],
-					}}
-				>
-					<View className="flex-row items-center gap-2 px-4 py-3">
-						<Heading level={2} className="flex-1 text-title text-ink">
-							{title}
-						</Heading>
-						<IconButton
-							accessibilityLabel="Close"
-							testID={CONTROL.sheetClose}
-							onPress={onClose}
-							icon={({ color, size }) => <X color={color} size={size} />}
-						/>
-					</View>
-					<ScrollView
-						style={
-							maxContentHeight === undefined
-								? undefined
-								: { maxHeight: maxContentHeight }
-						}
-						contentContainerClassName="px-4"
-						/* `pb-6` (24) plus the safe-area inset, computed rather than spelled
-						 *  as a class so the indicator's height rides the DEVICE, and the model /
-						 *  effort / slash sheets are corrected by the same line. */
-						contentContainerStyle={{ paddingBottom: 24 + insets.bottom }}
+					<Animated.View
+						style={{ opacity: scrimFade }}
+						className="absolute inset-0"
 					>
-						{children}
-					</ScrollView>
-				</Animated.View>
-			</View>
+						<Pressable
+							className="flex-1"
+							style={{ backgroundColor: scrimColour }}
+							accessibilityRole={ROLE.button}
+							accessibilityLabel="Close"
+							testID={CONTROL.sheetScrim}
+							onPress={onClose}
+						/>
+					</Animated.View>
+
+					<Animated.View
+						className={SHEET_SURFACE_CLASS}
+						style={{
+							...shadow,
+							transform: [
+								{
+									translateY: rise.interpolate({
+										inputRange: [0, 1],
+										outputRange: [40, 0],
+									}),
+								},
+							],
+						}}
+					>
+						<View className="flex-row items-center gap-2 px-4 py-3">
+							<Heading level={2} className="flex-1 text-title text-ink">
+								{title}
+							</Heading>
+							<IconButton
+								accessibilityLabel="Close"
+								testID={CONTROL.sheetClose}
+								onPress={onClose}
+								icon={({ color, size }) => <X color={color} size={size} />}
+							/>
+						</View>
+						<ScrollView
+							style={
+								maxContentHeight === undefined
+									? undefined
+									: { maxHeight: maxContentHeight }
+							}
+							contentContainerClassName="px-4"
+							/* `pb-6` (24) plus the safe-area inset, computed rather than spelled
+							 *  as a class so the indicator's height rides the DEVICE, and the model /
+							 *  effort / slash sheets are corrected by the same line. */
+							contentContainerStyle={{ paddingBottom: 24 + insets.bottom }}
+						>
+							{children}
+						</ScrollView>
+					</Animated.View>
+				</View>
+			</ScopedVariables>
 		</Modal>
 	);
 };

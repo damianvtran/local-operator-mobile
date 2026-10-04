@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import type { PendingAsk } from "@/contracts";
+import type { PendingAsk, SessionSummary } from "@/contracts";
 import {
 	answeredBySurface,
 	answeredPairs,
 	askStateLine,
+	asksPopulationSignature,
 	askToneInk,
 	blockingPending,
 	dockAsk,
@@ -50,6 +51,32 @@ function ask(patch: Partial<PendingAsk> = {}): PendingAsk {
 				persist: false,
 			},
 		],
+		...patch,
+	};
+}
+
+/** A list row carrying only what the population signature reads — the rest is
+ *  pinned so the object is a real `SessionSummary`. */
+function summary(
+	patch: Partial<SessionSummary> & { session_id: string },
+): SessionSummary {
+	return {
+		section: "active",
+		pinned: false,
+		conversation_name: "",
+		cwd: "",
+		model_label: "",
+		streaming: false,
+		needs_attention: false,
+		unseen: false,
+		pending_kind: "",
+		leaving: "",
+		updating: "",
+		subagents_running: null,
+		subagents_queued: null,
+		todos_open: 0,
+		mtime: 0,
+		completion_kind: "",
 		...patch,
 	};
 }
@@ -175,6 +202,17 @@ describe("headAsk / dockAsk", () => {
 		expect(headAsk([newer, older])?.ask_id).toBe("old");
 	});
 
+	it("breaks a same-millisecond tie by ask_id — the web dock's rule", () => {
+		/* Ported from `lib/asks.ts:225` at the pin: two asks can share a
+		 *  millisecond, and a scan-order tie would let the bar name a different
+		 *  ask than the web dock names for the same queue (agent review
+		 *  round 1, m1). */
+		const a = ask({ ask_id: "a", created_at: 500 });
+		const b = ask({ ask_id: "b", created_at: 500 });
+		expect(headAsk([a, b])?.ask_id).toBe("a");
+		expect(headAsk([b, a])?.ask_id).toBe("a");
+	});
+
 	it("ignores a timed-out ask for the HEAD but offers it as the dock fallback", () => {
 		const timeout = ask({ ask_id: "t", status: "timed_out" });
 		expect(headAsk([timeout])).toBeNull();
@@ -228,7 +266,7 @@ describe("the bar's question count (the unit split)", () => {
 });
 
 describe("questionProgress", () => {
-	it("counts answers already landed, so the form can say 'Question 2 of 3'", () => {
+	it("counts answers already landed — the form's progress arithmetic", () => {
 		const row = ask({
 			questions: [
 				{
@@ -332,5 +370,34 @@ describe("answeredBySurface", () => {
 			answeredBySurface(ask({ answered_by: { surface: "terminal" } })),
 		).toBe("terminal");
 		expect(answeredBySurface(ask({}))).toBe("");
+	});
+});
+
+describe("asksPopulationSignature", () => {
+	it("moves on counts, not on row order — a re-rank is not new information", () => {
+		const a = summary({ session_id: "s1", asks_open: 2 });
+		const b = summary({ session_id: "s2", asks_open: 1 });
+		expect(asksPopulationSignature([a, b])).toBe(
+			asksPopulationSignature([b, a]),
+		);
+	});
+
+	it("moves when a count changes", () => {
+		expect(
+			asksPopulationSignature([summary({ session_id: "s1", asks_open: 1 })]),
+		).not.toBe(
+			asksPopulationSignature([summary({ session_id: "s1", asks_open: 2 })]),
+		);
+	});
+
+	it("reads absence as nothing — never as a zero", () => {
+		/* The capability proxy (§4): a row that does not publish the field
+		 *  contributes NOTHING, so an older relay's frame cannot look like a
+		 *  settlement and fire a re-read. */
+		expect(asksPopulationSignature([summary({ session_id: "s1" })])).toBe("");
+		expect(
+			asksPopulationSignature([summary({ session_id: "s1", asks_open: 0 })]),
+		).toBe("");
+		expect(asksPopulationSignature(undefined)).toBe("");
 	});
 });

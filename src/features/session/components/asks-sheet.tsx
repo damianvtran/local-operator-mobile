@@ -1,11 +1,13 @@
 // biome-ignore-all lint/suspicious/noArrayIndexKey: the settled record's question list is regenerated whole on every render — a parsed detail, not an editable collection — so position IS the identity, the case React's own key docs exempt. A content-derived key would be recomputed every frame to produce the same value.
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { ArrowUpRight } from "lucide-react-native";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, Text, TextInput, View } from "react-native";
 
 import type { AskQuestion, PendingAsk, SessionSummary } from "@/contracts";
 import {
 	answeredPairs,
 	askStateLine,
+	asksPopulationSignature,
 	askToneInk,
 	durationLabel,
 	isAnswerable,
@@ -13,7 +15,7 @@ import {
 	outstandingAsks,
 	unansweredQuestions,
 } from "@/features/session/asks";
-import { isRelayError, type RelayEndpoints } from "@/relay";
+import { isRelayError, type RelayEndpoints, TRANSPORT_SENTENCE } from "@/relay";
 import {
 	askFieldId,
 	askQuestionId,
@@ -25,6 +27,7 @@ import {
 	timedOutAskRowId,
 } from "@/ui/a11y";
 import { Button } from "@/ui/components/button";
+import { IconButton } from "@/ui/components/icon-button";
 import { Sheet } from "@/ui/components/sheet";
 import { TOUCH_FLOOR } from "@/ui/layout";
 import { cx } from "@/ui/variants";
@@ -81,12 +84,19 @@ const READ_TIMEOUT_MS = 8000;
  *  the crossing within half a minute of the truth without a per-second redraw. */
 const TICK_MS = 20000;
 
-const READ_FAILED = "could not reach the computer";
-const READ_TIMED_OUT = "the read timed out — the computer is not answering";
+/** The app's one transport sentence (`relay/errors.ts`) — not a sheet-local
+ *  second wording of "could not reach the computer": two copies of one rule is
+ *  how the two drift (design D4). */
+const READ_FAILED = TRANSPORT_SENTENCE;
+/** A capitalised sentence, like the sheet's empty state (design D4). */
+const READ_TIMED_OUT = "The read timed out — the computer is not answering.";
 /** A 404 on the aggregate route is an OLDER daemon: the route is additive and
- *  its absence is the one read failure that is not a transport problem. */
+ *  its absence is the one read failure that is not a transport problem. The
+ *  noun is the COMPUTER's relay, never "this session" — the sheet is
+ *  index-backed and cross-session, opened from the sessions list where there is
+ *  no "this session" — and the line names what to update (design D4). */
 const RUNTIME_PREDATES_ASKS =
-	"this session's runtime predates queued questions; update it";
+	"The relay on this computer is too old for queued questions. Update local-operator to see them here.";
 
 /** The relay's own sentence when it gave one; the plainest honest line when it
  *  did not. Never a bare status code under a button that explains nothing. */
@@ -314,6 +324,13 @@ const AskDetail = ({
 				{fields.map((question, index) => {
 					const id = String(question.id);
 					const isSkipped = skipped.includes(id);
+					/* The number is the question's ABSOLUTE position in the full list,
+					 *  never the field's ordinal in the unanswered subset: with a legacy
+					 *  draft already taken, subset numbering restarted and the second
+					 *  question rendered "1/3" (agent review round 1, m3). The testID
+					 *  keeps the FIELD's ordinal — it addresses rendered fields for the
+					 *  audit, not questions. */
+					const position = questions.indexOf(question) + 1;
 					return (
 						<View key={id} className="gap-1" testID={askFieldId(id)}>
 							{questions.length > 1 ? (
@@ -321,7 +338,7 @@ const AskDetail = ({
 									className="font-mono text-mono-sm text-ink-dim"
 									testID={askQuestionId(index + 1, questions.length)}
 								>
-									{index + 1}/{questions.length}
+									{position}/{questions.length}
 								</Text>
 							) : null}
 							<Text className="text-body font-medium text-ink">
@@ -458,6 +475,17 @@ export const AsksSheet = ({
 		message: string;
 	} | null>(null);
 
+	/* Whether the sheet was open on the previous render, and the frames' own
+	 *  outstanding-population signature: together they tell the one load effect
+	 *  below WHY it is running — a fresh opening vs a changed population — so the
+	 *  opening collapses the walk and a population-driven re-read does not
+	 *  (spec §2.3; agent review round 1, m2). */
+	const wasVisible = useRef(false);
+	const population = useMemo(
+		() => asksPopulationSignature(sessions),
+		[sessions],
+	);
+
 	const load = useCallback(async () => {
 		if (client === null) {
 			setRows([]);
@@ -495,16 +523,28 @@ export const AsksSheet = ({
 		}
 	}, [client]);
 
-	/* A NEW OPENING RE-READS — one effect for both triggers (two effects keyed
-	 *  on `open` would each fire on the opening transition and fetch twice for
-	 *  one tap), and the expansion collapses: the walk starts where the reader
-	 *  left it, not where the last visit did. */
+	/* A NEW OPENING re-reads AND collapses the walk (the walk starts where the
+	 *  reader left it, not where the last visit did); a changed outstanding
+	 *  population re-reads WITHOUT collapsing it — spec §2.3, the web sheet's
+	 *  `asksRevision` trigger, so a new or elsewhere-settled ask cannot sit
+	 *  unseen for a backstop interval. ONE effect for both triggers — two effects
+	 *  keyed on `visible` would each fire on the opening transition and fetch
+	 *  twice for one tap — and the ref tells them apart, so a population-keyed
+	 *  load never resets the walk. */
+	// biome-ignore lint/correctness/useExhaustiveDependencies: see the comment above — `population` is a TRIGGER, not a read.
 	useEffect(() => {
-		if (!visible) return;
-		setOpenAsk(null);
-		setRowError(null);
+		if (!visible) {
+			wasVisible.current = false;
+			return;
+		}
+		const opening = !wasVisible.current;
+		wasVisible.current = true;
+		if (opening) {
+			setOpenAsk(null);
+			setRowError(null);
+		}
 		void load();
-	}, [visible, load]);
+	}, [visible, population, load]);
 
 	/* The deadline backstop, while the sheet is open only. */
 	useEffect(() => {
@@ -625,10 +665,13 @@ export const AsksSheet = ({
 					while it is closed.
 				</Text>
 				{/* The bounded read naming its own bound: a prefix must never sit
-				 *  beside a full count and read as complete. */}
+				 *  beside a full count and read as complete. No numeral: the aggregate
+				 *  route is uncapped, so any figure here would borrow the projection
+				 *  frame's cap rather than state this route's (agent review round 1,
+				 *  n1). */}
 				{truncated ? (
 					<Text className="text-meta text-ink-dim">
-						Showing the newest 20 — open a conversation to see the rest
+						Showing the newest questions — open a conversation to see the rest
 					</Text>
 				) : null}
 				{error !== "" ? (
@@ -673,23 +716,9 @@ export const AsksSheet = ({
 					return (
 						<View key={row.ask_id} className="gap-1">
 							{foreign ? (
-								<View className="flex-row items-center gap-2">
-									<Text className="min-w-0 flex-1 truncate text-meta text-ink-muted">
-										{names.get(sessionId) ?? sessionId}
-									</Text>
-									{/* The route from a foreign ask to its own conversation;
-									 *  the parent owns the transition (clear the sheet, then
-									 *  navigate) so the sheet cannot outlive the row it
-									 *  opened. */}
-									{onOpenConversation ? (
-										<Button
-											label="open"
-											variant="quiet"
-											onPress={() => onOpenConversation(sessionId)}
-											testID={CONTROL.askOpenConversation}
-										/>
-									) : null}
-								</View>
+								<Text className="min-w-0 truncate text-meta text-ink-muted">
+									{names.get(sessionId) ?? sessionId}
+								</Text>
 							) : null}
 							<Pressable
 								accessibilityRole={ROLE.button}
@@ -712,7 +741,7 @@ export const AsksSheet = ({
 										<Text className="text-meta text-ink-dim">· urgent</Text>
 									) : null}
 								</View>
-								<View className="flex-row flex-wrap items-baseline gap-x-2">
+								<View className="flex-row flex-wrap items-center gap-x-2">
 									{foreign && row.cwd ? (
 										<Text className="min-w-0 flex-1 truncate text-mono-sm text-ink-dim">
 											{row.cwd}
@@ -726,6 +755,28 @@ export const AsksSheet = ({
 									<Text className="text-ink-dim" aria-hidden>
 										{expanded ? "▾" : "▸"}
 									</Text>
+									{/* The route from a foreign ask to its own conversation, as the
+									 *  META line's trailing control — below the sentence that says what
+									 *  the ask is, in a real control's shape (design D3). As a bare
+									 *  "open" word it collided with the status vocabulary, sat ABOVE
+									 *  the sentence, and was transparent; an outlined icon button with
+									 *  the accessible name "Open conversation" replaces all three. A
+									 *  press resolves to the innermost control on both platforms
+									 *  (react-native-web runs only the first PressResponder
+									 *  ancestor's onPress), so this cannot also toggle the row's
+									 *  expansion. The parent owns the transition (clear the sheet,
+									 *  then navigate) so the sheet cannot outlive the row it opened. */}
+									{foreign && onOpenConversation ? (
+										<IconButton
+											accessibilityLabel="Open conversation"
+											outlined
+											onPress={() => onOpenConversation(sessionId)}
+											icon={({ color, size }) => (
+												<ArrowUpRight color={color} size={size} />
+											)}
+											testID={CONTROL.askOpenConversation}
+										/>
+									) : null}
 								</View>
 							</Pressable>
 							{/* The audit's `timed-out-mixed` cell proves the state from

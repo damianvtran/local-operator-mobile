@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { layoutFor, SPLIT_MIN_HEIGHT } from "@/ui/size-class";
+import {
+	HEADER_STACK_WIDTH,
+	headerStacks,
+	layoutFor,
+	SPLIT_MIN_HEIGHT,
+} from "@/ui/size-class";
+import { LARGE_TEXT_SCALE } from "@/ui/text-scale";
 
 /**
  * The layout thresholds, and only the thresholds.
@@ -68,5 +74,28 @@ describe("layoutFor", () => {
 		expect(layoutFor(768, 1024)).toMatchObject({ split: false, measure: 560 });
 		expect(layoutFor(844, 390)).toMatchObject({ split: false, measure: 620 });
 		expect(layoutFor(390, 844).measure).toBeNull();
+	});
+});
+
+describe("headerStacks", () => {
+	it("stacks at the narrowest phone even at 100 % text", () => {
+		/* The width trigger (D1): the busiest header's chrome (248 dp) plus its
+		 *  title (106 dp) cannot fit below 354 dp — measured at 320 pt, where the
+		 *  title rendered "Ses…" (clientW 72, scrollW 106). */
+		expect(headerStacks(1, 320)).toBe(true);
+		expect(headerStacks(1, HEADER_STACK_WIDTH - 1)).toBe(true);
+	});
+
+	it("keeps one line where the title fits — the sizes the matrix covers", () => {
+		expect(headerStacks(1, HEADER_STACK_WIDTH)).toBe(false);
+		expect(headerStacks(1, 360)).toBe(false);
+		expect(headerStacks(1, 390)).toBe(false);
+		expect(headerStacks(1, 430)).toBe(false);
+	});
+
+	it("stacks at large text at every width, exactly above the threshold", () => {
+		expect(headerStacks(LARGE_TEXT_SCALE, 390)).toBe(false);
+		expect(headerStacks(LARGE_TEXT_SCALE + 0.01, 390)).toBe(true);
+		expect(headerStacks(2, 320)).toBe(true);
 	});
 });

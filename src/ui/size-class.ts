@@ -1,4 +1,5 @@
 import { maxColumnWidth } from "@/ui/column";
+import { LARGE_TEXT_SCALE } from "@/ui/text-scale";
 import { LAYOUT } from "@/ui/tokens.gen";
 
 /**
@@ -63,6 +64,30 @@ export const SPLIT_PANE_WIDTH = 360;
 /** Below this height two panes are slivers, whatever the width: 844x390 landscape
  *  is wide and short, and the keyboard covers half of it. */
 export const SPLIT_MIN_HEIGHT = 700;
+
+/** The width below which a screen header stacks its title above its controls.
+ *
+ *  Derived from the design round's measurements (D1): the busiest header — the
+ *  sessions list, a count badge plus two 48 dp controls plus the avatar —
+ *  reserves 248 dp of chrome (at the measured frame the title received 72 of
+ *  the 320 dp, so the chrome took the rest), and the title ("Sessions" at the
+ *  `display` step) needs 106 dp, so at 100 % text the title cannot fit below
+ *  248 + 106 = 354 dp: at 320 it rendered "Ses…" (clientW 72, scrollW 106)
+ *  while removing either control restored it (both 124/124 — zero slack at
+ *  that width, and this PR's control is what tipped it). The count badge is
+ *  the variable term, which is one reason this is the measured floor rather
+ *  than a rounder number. */
+export const HEADER_STACK_WIDTH = 354;
+
+/** Whether a screen header stacks its title above its controls: at large text
+ *  (`LARGE_TEXT_SCALE`, the scale the stacked layout was designed against), or
+ *  on a viewport too narrow for the busiest header's chrome and title to share
+ *  one line (`HEADER_STACK_WIDTH`). One decision, in one place, so `Screen`
+ *  renders it and the unit test pins both triggers instead of a comment
+ *  arguing both. */
+export function headerStacks(effectiveScale: number, width: number): boolean {
+	return effectiveScale > LARGE_TEXT_SCALE || width < HEADER_STACK_WIDTH;
+}
 
 /** The pure decision, so it is testable and is not a rendering side effect. */
 export function layoutFor(width: number, height: number): Layout {

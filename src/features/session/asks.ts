@@ -38,7 +38,7 @@
  * No React, no React Native: every function here is a pure reading of the wire.
  */
 
-import type { AskQuestion, PendingAsk } from "@/contracts";
+import type { AskQuestion, PendingAsk, SessionSummary } from "@/contracts";
 
 /** The statuses the wire carries (design §4's frozen `PendingAsk.status`; a
  *  newer runtime may add one, so callers must keep the unknown arm). */
@@ -215,7 +215,9 @@ export function outstandingAsks(
  *  addendum), and the relay's own dock picks the same head. A `timed_out` ask
  *  is not a head: it is still answerable, but it is no longer the thing the
  *  agent is waiting on, so a count built from it must keep it out of the name.
- */
+ *  Equal `created_at` values break by `ask_id` — the same tie-break the web
+ *  dock applies (`lib/asks.ts`), so the two surfaces name the same ask for
+ *  the same queue instead of each following its own scan order. */
 export function headAsk(
 	rows: PendingAsk[] | undefined | null,
 ): PendingAsk | null {
@@ -223,7 +225,12 @@ export function headAsk(
 	let head: PendingAsk | null = null;
 	for (const row of list) {
 		if (String(row?.status || "") !== "open") continue;
-		if (head === null || Number(row.created_at) < Number(head.created_at)) {
+		if (
+			head === null ||
+			Number(row.created_at) < Number(head.created_at) ||
+			(Number(row.created_at) === Number(head.created_at) &&
+				String(row.ask_id) < String(head.ask_id))
+		) {
 			head = row;
 		}
 	}
@@ -267,10 +274,36 @@ export function orderedForDisplay(
 	return [first, ...list.filter((row) => row.ask_id !== first.ask_id)];
 }
 
-/** How many of an ask's questions are answered, and how many there are — the
- *  sheet's `Question 1 of 3` label reads this, so the label and the form's own
- *  completeness check (both counting `unansweredQuestions`) agree by
- *  construction rather than by two copies of the arithmetic. */
+/** A signature of the frames' own outstanding-ask population, for the asks
+ *  sheet's "a frame changed the population ⇒ re-read" trigger (spec §2.3; the
+ *  web sheet keys on the store's `asksRevision`). PURE and exported so the
+ *  rule is testable on its own — the sheet's effect is where it is USED, and
+ *  an effect test would mock the fetch, not the rule. The rule is threefold
+ *  and each clause is a deliberate answer: per-SESSION counts, so an unrelated
+ *  repaint of a session streaming at 30/s cannot move it; ORDER-INSENSITIVE
+ *  (the daemon's row order is its own rank and a re-rank is not new
+ *  information); and a runtime that does not publish asks contributes NOTHING
+ *  rather than a zero — absence is the capability proxy (§4; a zero would be a
+ *  claim it cannot make). */
+export function asksPopulationSignature(
+	rows: readonly SessionSummary[] | undefined | null,
+): string {
+	const parts: string[] = [];
+	for (const row of rows ?? []) {
+		const count = row?.asks_open;
+		if (typeof count !== "number" || count <= 0) continue;
+		parts.push(`${row.session_id}:${count}`);
+	}
+	parts.sort();
+	return parts.join(",");
+}
+
+/** How many of an ask's questions are already taken (settled answers or the
+ *  legacy path's drafts), and how many there are — the form's progress
+ *  arithmetic. NOT what the sheet's per-field number reads: that label counts
+ *  each field's ABSOLUTE position in the full question list (`asks-sheet.tsx`),
+ *  because a taken PREFIX would renumber the tail under subset numbering —
+ *  and for a taken middle the two would disagree. */
 export function questionProgress(row: PendingAsk): {
 	index: number;
 	total: number;

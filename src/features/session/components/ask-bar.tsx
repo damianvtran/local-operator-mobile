@@ -9,6 +9,8 @@ import {
 } from "@/features/session/asks";
 import { SURFACE } from "@/ui/a11y";
 import { TOUCH_FLOOR } from "@/ui/layout";
+import { LARGE_TEXT_SCALE } from "@/ui/text-scale";
+import { useTextScale } from "@/ui/text-scale-provider";
 
 /**
  * The ask bar — the MINIMIZED half of the two-state model (design §5.0, R7).
@@ -47,12 +49,17 @@ export type AskBarProps = {
 };
 
 export const AskBar = ({ asks, onOpen }: AskBarProps) => {
+	const { effectiveScale } = useTextScale();
 	const outstanding = outstandingAsks(asks);
 	if (outstanding.length === 0) return null;
 	const head = dockAsk(asks);
 	const questions = outstandingQuestions(asks);
 	const label = questionsWaitingLabel(questions);
 	const preview = String(head?.questions?.[0]?.question ?? "").trim();
+	/* At large text the preview would collapse to a fragment — measured at
+	 *  200 %: `· C…` beside the count. A one-character stub is not a name, so
+	 *  it is dropped WHOLE (the count and the chevron stay; design D5). */
+	const showPreview = preview.length > 0 && effectiveScale <= LARGE_TEXT_SCALE;
 
 	return (
 		<Pressable
@@ -71,7 +78,7 @@ export const AskBar = ({ asks, onOpen }: AskBarProps) => {
 				?
 			</Text>
 			<Text className="shrink-0 text-body-sm text-ink-muted">{label}</Text>
-			{preview.length > 0 ? (
+			{showPreview ? (
 				<Text
 					className="min-w-0 flex-1 text-body-sm text-ink"
 					numberOfLines={1}
