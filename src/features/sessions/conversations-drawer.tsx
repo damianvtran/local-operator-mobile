@@ -145,7 +145,28 @@ export const ConversationsDrawer = ({
 				>
 					<View
 						className="flex-1 border-panel-edge border-r bg-elevated"
-						style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}
+						style={{
+							paddingTop: insets.top,
+							paddingBottom: insets.bottom,
+							/* The panel is anchored to the viewport's LEFT edge, so its own left inset is
+							 *  the horizontal safe area that applies to it — and it has to carry it
+							 *  itself: a Modal portals onto `document.body` (the note below), which puts
+							 *  the panel OUTSIDE the `Screen` that applies `paddingLeft` for every other
+							 *  surface, so its rows painted inside the unsafe band on anything with a
+							 *  side inset. Measured at iphone-15-landscape (insets 59/59, the env() value
+							 *  resolved by the capture rig): the header's host label painted at x=16 and
+							 *  the footer tabs at x=35.9, both inside the 59 pt band. The padding goes on
+							 *  the panel rather than the pane so the fill stays full-bleed behind the band
+							 *  — the same shape as the Screen, which pads its root rather than its
+							 *  children.
+							 *
+							 *  LEFT ONLY. The panel never reaches the viewport's right edge (it is 280 pt
+							 *  of a 844 pt landscape phone), so `insets.right` describes a screen edge the
+							 *  panel does not touch; reserving it would cost 59 pt of a 280 pt panel for
+							 *  nothing. `left` is the one that moves when the notch (or a rounded corner)
+							 *  is on the side the drawer slides in from. */
+							paddingLeft: insets.left,
+						}}
 					>
 						{/* The type scale is re-published INSIDE the Modal because a modal is a
 						 *  PORTAL: react-native-web appends its node to `document.body`, OUTSIDE the
