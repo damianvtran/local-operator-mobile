@@ -133,7 +133,10 @@ request does not pay for it and the `ci` step's 20-minute bound is not stretched
 Both bounds are derived from the measured rate and checked against the plan the
 run prints for itself, rather than guessed. The runner's rate is 2.24 s/cell, so
 the 858-cell `core` capture is ~32 min, and `--plan --tier core --consecutive`
-prints the 2,574 frames and derives its own deadline of 2,574 s. The capture step is
+prints the 2,574 frames and derives a deadline of 2,574 s. Those two numbers agree
+because both are 858 x 3 — three frames per cell with `--consecutive`, and the
+budget's three seconds per cell — not because the deadline is frame-derived. The
+capture step is
 bound at 60, which is above that
 derived deadline — so the step cannot cut short the budget the run computes for
 itself — and ~1.9x the measured cost. The audit runs at 1.25 s/cell, so it is

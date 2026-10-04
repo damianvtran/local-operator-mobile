@@ -1370,13 +1370,22 @@ export async function runCapture(options: CaptureOptions) {
 	const deadlineMs = options.deadlineMs ?? budgetMs;
 
 	/*
-	 * WHAT THIS RUN COVERS, IN ITS OWN WORDS. The tier selects a SAMPLE of the declared
-	 * device matrix — the per-push job's `ci` is 2 of 19 profiles — so a green run that only
-	 * printed its `devices:` list read as "the app is fine" over an assertion about two
-	 * viewports. The statement is derived from the plan (what will actually be captured) and
-	 * read from `matrix.ts` (what is declared), so the two cannot drift.
+	 * THE PLAN'S DEVICE SET — what this run INTENDS to cover, printed beside the plan it
+	 * belongs to. The tier selects a SAMPLE of the declared device matrix (the per-push
+	 * job's `ci` is 2 of 19 profiles), and a run that printed only its `devices:` list read
+	 * as "the app is fine" over an assertion about two viewports.
+	 *
+	 * It is the INTENT, not the coverage claim. The claim is computed from the RECORDS after
+	 * the loop, because a run handed fewer frames than it planned — a fired `--deadline`, a
+	 * cell that never settled — must not go on claiming the plan: `--devices
+	 * iphone-se,tablet-landscape --deadline 1` captured 1 of its 2 cells and still said
+	 * "2 of 19 declared profiles captured", which is this PR's own defect in the field it
+	 * adds. Both lists are read from `matrix.ts` (what is declared), so neither can drift
+	 * from it.
 	 */
-	const coverage = deviceCoverage([...new Set(plan.map((c) => c.device))]);
+	const plannedCoverage = deviceCoverage([
+		...new Set(plan.map((c) => c.device)),
+	]);
 
 	console.log(
 		`capture plan: ${plan.length} cells × ${framesPerCell} frame(s) = ${plannedFrames} frames`,
@@ -1384,7 +1393,13 @@ export async function runCapture(options: CaptureOptions) {
 	console.log(
 		`  screens: ${[...new Set(plan.map((c) => c.screen))].sort().join(", ")}`,
 	);
-	console.log(`  ${describeDeviceCoverage(coverage)}`);
+	console.log(
+		plannedCoverage.notCaptured.length === 0
+			? `  devices planned: all ${plannedCoverage.declared.length} declared profiles (${plannedCoverage.captured.join(", ")})`
+			: `  devices planned: ${plannedCoverage.captured.join(", ")} — ` +
+					`${plannedCoverage.captured.length} of ${plannedCoverage.declared.length} declared profiles, ` +
+					`the other ${plannedCoverage.notCaptured.length} not in this run's plan`,
+	);
 	console.log(
 		`  themes:  ${[...new Set(plan.map((c) => c.theme))].join(", ")}`,
 	);
@@ -1786,6 +1801,24 @@ export async function runCapture(options: CaptureOptions) {
 
 	// The manifest is what the audit and the gallery both read, so it carries the
 	// facts each of them needs by name rather than a shape they must infer.
+	/*
+	 * WHAT THIS RUN CAPTURED, IN ITS OWN WORDS — from the RECORDS, i.e. from the frames that
+	 * exist, never from the plan. A record is pushed for every cell the loop reached, and a
+	 * cell that produced no frame is in `abandoned` instead, so filtering on `frames.length`
+	 * makes the claim describe the evidence a reader can actually open. A profile the plan
+	 * named whose cells all died (or died before their first frame) is therefore NOT captured,
+	 * and the shortfall is stated rather than absorbed.
+	 */
+	const coverage = deviceCoverage([
+		...new Set(
+			records.filter((record) => record.frames.length > 0).map((r) => r.device),
+		),
+	]);
+	/** Profiles the plan named that produced no frame at all — the gap the claim must show. */
+	const plannedWithoutFrames = plannedCoverage.captured.filter(
+		(device) => !coverage.captured.includes(device),
+	);
+
 	const summary = {
 		meta: {
 			generatedAt: new Date().toISOString(),
@@ -1827,13 +1860,15 @@ export async function runCapture(options: CaptureOptions) {
 			deadlineMs,
 			devicesCaptured: options.devices,
 			/**
-			 * The device bound, by name, in the artifact: what the RUN covered out of the
-			 * profiles `matrix.ts` declares, and what it did not. `devicesCaptured` above is what
-			 * the caller ASKED for; these lists are what the plan would actually capture, so a
-			 * report neither hides a narrower sample nor claims a wider one.
+			 * The device bound, by name, in the artifact: what the RUN CAPTURED out of the profiles
+			 * `matrix.ts` declares, and what it did not. It is computed from the records' frames,
+			 * so a run that captured fewer frames than it planned does not claim the plan here;
+			 * `devicePlanned` below carries the intent separately, so a reader can tell a shortfall
+			 * from a narrow `--devices`.
 			 */
 			deviceCoverage: coverage,
 			deviceCoverageNote: describeDeviceCoverage(coverage),
+			devicePlanned: plannedCoverage.captured,
 			// `perTheme` is written as-is: this field's shape is unchanged, so nothing that
 			// reads the manifest moves under a fix about reporting.
 			themeTokens: tokens.perTheme,
@@ -1954,6 +1989,14 @@ export async function runCapture(options: CaptureOptions) {
 	// the declared matrix, and which part of it is missing is a fact about this run rather
 	// than something a reader has to infer from the plan it no longer has in front of them.
 	console.log(describeDeviceCoverage(coverage));
+	if (plannedWithoutFrames.length > 0) {
+		// The plan and the claim disagree, so say so where the claim is read: this is the
+		// sentence that used to overstate the run.
+		console.log(
+			`  the plan named ${plannedCoverage.captured.length} profile(s) (${plannedCoverage.captured.join(", ")}); ` +
+				`${plannedWithoutFrames.join(", ")} produced no frame in this run`,
+		);
+	}
 	console.log(`frames that changed after first paint: ${reflow.length}`);
 	console.log(`text-scale dimension: ${scaleCheck.verdict}`);
 	if (themeProblems.length) {

@@ -417,6 +417,29 @@ jobs:
     # The job bound holds its parts, the invariant the other jobs in this file state:
     # `install + export + capture 60 + audit 35 < 120`. This is a ~75-minute nightly job
     # (~32 min of capture and ~18 min of audit); it does not run on a pull request.
+    #
+    # EXPECTED FIRST-RUN VERDICT: THIS JOB IS RED, AND THAT IS WHAT IT IS FOR. It has
+    # never executed (schedule/dispatch only). A real local `--tier core --consecutive`
+    # run exits 1 in BOTH steps, and every term of that exit reproduces identically at
+    # 85b2785 with no app/audit file changed (`git diff --stat 85b2785..<this-head> --
+    # app src store design public` is empty):
+    #   * capture: `captured 858 cells / 2574 frames in 1810.8 s`, rc 1 on FOUR unready
+    #     cells — `S15/loading` and `S4/idle`, both themes, at `iphone-15-landscape` and
+    #     200 % (`median text 34.796875px at 200% against 1.74x the 100% cell (needs
+    #     >=1.9x)`) — and two identical-state collapses, `S15/ended = S15/populated` on
+    #     `iphone-15-landscape`. Its `theme problems` line is `none`: the resolved-scheme
+    #     check added with this job does not fire on it.
+    #   * audit: `858 cells, 13316 check rows, 9530 measured, 2326 FAIL, 3786 BLOCKED
+    #     (140 unmeasurable)`, rc 1, every FAIL row a U-05 one at `iphone-15-landscape`
+    #     (816/804/706 at scales 100/150/200), in 1,161 s against this job's 35-min bound.
+    # Those are real app-side findings the per-push `ci` sample cannot reach (it never
+    # captures `iphone-15-landscape`), which is the reason this job exists. So: do NOT add
+    # `continue-on-error` and do NOT exempt or silence a cell — a job that reports a real
+    # finding is working, and this comment is where a reader finds out that the red is the
+    # finding rather than a broken job. Clearing them is an app-side fix with its own PR.
+    # NOT yet verified, and not claimed here: whether a GitHub runner reproduces these
+    # metric-sensitive results. That needs a `workflow_dispatch`; the figures above are
+    # measured on this host.
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 120

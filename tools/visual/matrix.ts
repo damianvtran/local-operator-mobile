@@ -342,10 +342,11 @@ export function describeDeviceCoverage(coverage: {
  * The CI tier: the bounded sample the per-push capture job takes.
  *
  * WHY A THIRD TIER, AND WHY IT IS HERE RATHER THAN A `--devices` LIST IN YAML.
- * The `core` tier is 858 cells — the whole declared cell list (33 cells) at 2 themes x
- * (3 phone scales + 2 tablet scales) x 5 profiles — and the CI job's capture step
- * is bound at 20 minutes. Measured on the runner, that is 2.24 s/cell: 403 cells
- * in 903 s, so a core run needs ~32 minutes. The job's first real run of this path
+ * The `core` tier is 858 cells: the whole declared cell list (33 cells) x 2 themes x
+ * (3 phones x 3 scales + 2 tablets x 2 scales) — 33 x 2 x 13, the tier's 5 profiles —
+ * and the CI job's capture step is bound at 20 minutes. Measured on the runner, that is
+ * 2.24 s/cell: 403 cells in 903 s, so a core run needs ~32 minutes. The job's first real
+ * run of this path
  * was therefore cut off by the harness's own 900 s deadline with 585 cells
  * unvisited, and reported them as cells with no frame.
  *
