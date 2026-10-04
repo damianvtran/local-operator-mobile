@@ -397,7 +397,32 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 	add(
 		"many",
 		"Twelve rows: pinned, streaming, needing attention, running subagents, a long name and a long cwd.",
-		["S4/populated", "S4/populated-long", "S4/narrow"],
+		/* `S4/narrow` used to be declared beside `S4/populated-long`, and it was the same
+		 * rendering under a second name: this scenario builds ONE world, both cells navigate
+		 * to the same route (`/`), and the readiness table already aliases both names onto the
+		 * sessions screen's single `populated` marker, so neither name had a look of its own.
+		 * The identical-state check reported the pair as a COLLAPSE — the same bytes AND the
+		 * same content, on iphone-se and tablet-landscape — and the remedy is the one
+		 * `long-transcript`'s `S5/scroll`, `models-ranked`'s `S9/populated` and `approval`'s
+		 * `S5/pending-approval` already take: remove the declaration, never an exemption,
+		 * because an exemption is a signed statement that two DIFFERENT states are a limit of
+		 * the camera, and this is one state wearing two names.
+		 *
+		 * `narrow` goes rather than `populated-long`, and the reasons are checkable rather
+		 * than a preference. A width is an AXIS, not a state: the rubric's `narrow (320 pt)`
+		 * is the `iphone-se` device this tier already captures for every cell, so a `narrow`
+		 * CELL would re-declare the viewport inside the cell axis — the one axis the tier
+		 * deliberately keeps whole. `populated-long` is a content variant the rubric names (a
+		 * long session name, a long question) and the one `verify.ts`'s vocabulary enumerates.
+		 * And `populated-long` has a second declaration (`long-names`) while `S4/narrow`
+		 * existed only here.
+		 *
+		 * The cost is named rather than papered over: no cell evidences the list under the
+		 * `narrow` NAME. Nothing is unmeasured — the narrow viewport is captured at every cell
+		 * by the device axis, and this scenario's rendering is still captured as
+		 * `S4/populated-long` — so this is not a `PENDING_CELLS` gap and must not be recorded
+		 * as one. */
+		["S4/populated", "S4/populated-long"],
 		() => {
 			const streaming = projectionFrom(everyKind, {
 				session_id: syntheticSessionId("streaming-row"),
