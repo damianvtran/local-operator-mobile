@@ -13,6 +13,8 @@
  * filesystem, because it gets attached to a pull request as an artifact.
  */
 
+import { canvasComparable } from "./theme-tokens.ts";
+
 /**
  * Escape text for HTML.
  *
@@ -54,6 +56,12 @@ interface GalleryRecord {
 	problems?: string[];
 	viewport?: { width: number; height: number; dpr: number };
 	themeApplied?: boolean | null;
+	/**
+	 * The theme check's per-record verdict: `canvasMatchesToken` is `true`/`false` when
+	 * the canvas WAS compared, `null` when no token canvas was available to compare
+	 * against. The tile below reads it for exactly that distinction.
+	 */
+	themeCheck?: { canvasMatchesToken?: boolean | null } | null;
 	/** The cell's own state marker, so the gallery can show which cells were not captured. */
 	ready?: boolean;
 	readinessProblems?: string[];
@@ -143,6 +151,50 @@ ${records
 	.join("\n")}
 </table>`;
 
+	/**
+	 * The theme tile, which must not read "0 theme mismatches" over a matrix whose canvas
+	 * half never ran.
+	 *
+	 * `themeApplied` is `false` only for a REAL mismatch; a frame whose canvas was never
+	 * compared against a token leaves it `null`, so counting `false` alone printed a clean
+	 * tile for a check that measured nothing — absence read as a pass, on the artifact a
+	 * reviewer opens instead of the stdout. The records carry the distinction
+	 * (`canvasMatchesToken`: `true`/`false` compared, `null` not), so the tile names the
+	 * half that did not run and how much of the matrix it covered, and it derives the
+	 * themes it lacked with the SAME predicate the capture uses rather than a second one.
+	 */
+	const themeMismatches = records.filter(
+		(r) => r.themeApplied === false,
+	).length;
+	const canvasUncompared = records.filter(
+		(r) => (r.themeCheck?.canvasMatchesToken ?? null) === null,
+	).length;
+	const perThemeTokens =
+		typeof meta.themeTokens === "object" && meta.themeTokens !== null
+			? (meta.themeTokens as Record<string, { canvas?: string | null }>)
+			: null;
+	const themesWithoutCanvas = ["dark", "light"].filter(
+		(theme) => !canvasComparable(perThemeTokens?.[theme]?.canvas ?? null),
+	);
+	/**
+	 * Why the half could not run, in the manifest's own terms — the three states
+	 * `meta.themeTokens` distinguishes: unreadable (`null`), nothing named or found
+	 * (`{}`), or a table that is missing a theme. A tile that counted frames and said no
+	 * more would leave a reader to guess which, and the guess is what this tile is for.
+	 */
+	const canvasLack =
+		perThemeTokens === null
+			? "the capture could not read a token file"
+			: Object.keys(perThemeTokens).length === 0
+				? "the capture had no token file"
+				: themesWithoutCanvas.length > 0
+					? `the tokens carry no canvas for ${themesWithoutCanvas.join(" / ")}`
+					: "the manifest records no canvas comparison for them";
+	const themeTile =
+		canvasUncompared === 0
+			? `<div><b>${themeMismatches}</b> theme mismatches</div>`
+			: `<div><b>${themeMismatches}</b> theme mismatches <span class="warn">(the canvas-vs-token half did not run for ${canvasUncompared} of ${records.length} frame(s) — ${canvasLack}; the run needs a canvas per theme from \`--tokens\`)</span></div>`;
+
 	return `<!doctype html>
 <html lang="en">
 <head>
@@ -159,7 +211,7 @@ ${records
 	<div><b>${records.reduce((n, r) => n + (r.frames?.length ?? 0), 0)}</b> frames</div>
 	<div class="${problems.length ? "fail" : ""}"><b>${problems.length}</b> problems</div>
 	<div><b>${escapeHtml(meta.textScaleVerdict ?? "scale: not measured")}</b> text scale</div>
-	<div><b>${records.filter((r) => r.themeApplied === false).length}</b> theme mismatches</div>
+	${themeTile}
 </div>
 ${problems.length ? `<h2>Problems</h2><table><tr><th>cell</th><th>problem</th></tr>${problems.map((p) => `<tr><td><code>${escapeHtml(p.name)}</code></td><td class="badtext">${escapeHtml(p.p)}</td></tr>`).join("")}</table>` : ""}
 <h2>Theme resolution, per cell</h2>
