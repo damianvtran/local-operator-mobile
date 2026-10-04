@@ -216,7 +216,9 @@ jobs:
 
       - name: Export the web target
         # Same reason as `web-audit`: the harness drives the export, and the
-        # documented commands that need one are skipped without it.
+        # documented commands that need one are skipped without it. The build has to
+        # be HANDED to the sweep as well as written — see `--dist dist` below, without
+        # which `pnpm export:web` had no effect on what this job ran.
         timeout-minutes: 15
         run: pnpm export:web
 
@@ -230,8 +232,18 @@ jobs:
         # moves above it: 50 here, and the job to 70 to hold the export (15) and the
         # install ahead of it. At 40 this step sat BELOW the command's own default,
         # which is a bound under the work it contains.
+        #
+        # `--dist dist` is what the export above is FOR. `doc-commands.ts` marks a
+        # `web-build` block runnable only when `--dist` supplies the build; without it
+        # every such block prints SKIP (needs a web build) even here, where the export
+        # exists — measured on run 37177902882, which had just written `dist/` and still
+        # reported the seeding capture and §2's real run as skipped. Handing over the
+        # path is what makes this job prove the build-gated commands it exports for,
+        # rather than reporting green over two it never ran. Measured locally with the
+        # build supplied: 11 passed, 1 skipped, 0 failed in 12 m 45 s, both build-gated
+        # captures running for real.
         timeout-minutes: 50
-        run: pnpm e2e:docs
+        run: pnpm e2e:docs --dist dist
 
   web-audit:
     name: Web target — frames, audit and the canary
