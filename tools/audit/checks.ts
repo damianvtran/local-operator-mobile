@@ -444,6 +444,28 @@ function u05SafeAreas(state: AuditState): CheckRow[] {
 		// build. The children of such a container are what the rule is about, and
 		// they are judged on their own.
 		const containerLike = h >= vh * 0.6 && w >= vw * 0.9;
+		// THE DIALOG'S OWN SURFACE IS NOT CONTENT UNDER THE NOTCH. A modal dialog's
+		// ground spans the viewport by construction (the conversations drawer's
+		// panel, top to bottom), so it is the `containerLike` exemption at the shape
+		// that test misses: a panel narrower than 90% of the viewport but full
+		// height, inside an `aria-modal` dialog. Only a node that carries no text
+		// and is not a control qualifies — anything a reader can read or press
+		// inside the band keeps failing exactly as before — the count is reported
+		// with the PASS like every other set-aside here, and the canary's
+		// `#dialog-surface` holds the silent direction while `#dialog-band-control`
+		// keeps the failing one.
+		if (
+			node.inModalDialog &&
+			!node.ownText &&
+			!node.interactive &&
+			y <= 1 &&
+			y + h >= vh - 1
+		) {
+			bump(
+				"a modal dialog's own full-height surface (no text or control of its own)",
+			);
+			continue;
+		}
 		if (
 			insets.top > 0 &&
 			!containerLike &&
@@ -736,7 +758,61 @@ export const U08_SUPPRESSION = {
 	DISJOINT: "the painted regions do not intersect",
 	/** Both paint on top of each other, but by less than the rule's 25% of the smaller box. */
 	BELOW_THRESHOLD: "the painted overlap is below the 25% the rule needs",
+	/** The pair straddles a MODAL DIALOG's boundary: one side is inside an
+	 *  `aria-modal` dialog and the other is the application it covers. `aria-modal`
+	 *  is the standard declaration that everything outside the dialog is inert while
+	 *  it is open — the browser's own statement that the covered side is COVERED,
+	 *  not colliding. */
+	MODAL_LAYER:
+		"one side is inside an aria-modal dialog and the other is the covered app",
+	/** Both sides are inside the dialog, and the dialog's own opaque surface — an
+	 *  ancestor of one side, painted over the region the two share — covers the
+	 *  pair (the drawer's panel ground over the scrim beneath it). */
+	MODAL_SURFACE:
+		"the dialog's own opaque surface covers the pair where it overlaps",
 } as const;
+
+function dialogSeparator(
+	a: AuditNode,
+	b: AuditNode,
+	state: AuditState,
+): AuditNode | null {
+	// The region both boxes claim, in LAYOUT terms: this branch decides before the
+	// painted-region gates run, and the separator must cover whatever region the
+	// pair shares at all.
+	const x = Math.max(a.rect.x, b.rect.x);
+	const y = Math.max(a.rect.y, b.rect.y);
+	const right = Math.min(a.rect.x + a.rect.w, b.rect.x + b.rect.w);
+	const bottom = Math.min(a.rect.y + a.rect.h, b.rect.y + b.rect.h);
+	if (right - x <= 1 || bottom - y <= 1) return null;
+	for (const candidate of state.nodes) {
+		// The separator is a SURFACE of the dialog, not a pair member and not a
+		// descendant of one: it is opaque, it paints over the shared region, and it
+		// belongs to exactly ONE side's subtree. A shared ancestor of both members
+		// (the dialog's own ground behind both) paints BEHIND them and separates
+		// nothing, so the exactly-one test is what keeps a real same-layer collision
+		// — two controls inside one dialog — reported.
+		if (candidate.index === a.index || candidate.index === b.index) continue;
+		if (!candidate.inModalDialog) continue;
+		if (!isOpaque(candidate)) continue;
+		const box = paintedBox(candidate);
+		if (box === null) continue;
+		if (
+			box.x > x + 1 ||
+			box.y > y + 1 ||
+			box.x + box.w < right - 1 ||
+			box.y + box.h < bottom - 1
+		)
+			continue;
+		const insideA =
+			candidate.index === a.index || a.ancestors.includes(candidate.index);
+		const insideB =
+			candidate.index === b.index || b.ancestors.includes(candidate.index);
+		if (insideA === insideB) continue;
+		return candidate;
+	}
+	return null;
+}
 
 /** U-08 — meaningful boxes must not overlap. */
 function u08Overlap(state: AuditState): CheckRow[] {
@@ -836,6 +912,29 @@ function u08Overlap(state: AuditState): CheckRow[] {
 			const layoutPct = layoutSmaller > 0 ? layoutArea / layoutSmaller : 0;
 			if (layoutPct < 0.25) continue;
 			const layoutNote = ` (layout boxes overlap ${layoutW}x${layoutH}pt, ${round(layoutPct * 100, 0)}% of the smaller box)`;
+			// THE PAIR STRADDLES A MODAL BOUNDARY, OR IS SEPARATED BY THE DIALOG'S OWN
+			// SURFACE. `aria-modal` declares that everything outside the dialog is inert
+			// while it is open: the covered app against the dialog's surface is the
+			// layering the dialog exists to draw, not two things colliding, and the same
+			// fact one layer down explains a pair inside the dialog whose shared region
+			// is covered by an opaque surface of the dialog itself (the panel ground
+			// over the scrim beneath it). Both are recorded with the layout note,
+			// never silently dropped, and both are keyed to the `aria-modal`
+			// declaration rather than to any app-specific shape — a page that never
+			// opens a modal dialog reaches neither branch. The canary asserts both
+			// directions: the covered shapes stay silent, and a collision between two
+			// controls of the SAME dialog still fails.
+			if (a.inModalDialog !== b.inModalDialog) {
+				suppress(a, b, U08_SUPPRESSION.MODAL_LAYER, layoutNote);
+				continue;
+			}
+			if (a.inModalDialog && b.inModalDialog) {
+				const separator = dialogSeparator(a, b, state);
+				if (separator !== null) {
+					suppress(a, b, U08_SUPPRESSION.MODAL_SURFACE, layoutNote);
+					continue;
+				}
+			}
 			// From here the pair would be a finding on layout geometry. Whether it IS one
 			// is decided on what is painted.
 			const paintedA = paintedBox(a);
@@ -1213,6 +1312,12 @@ export interface AuditNode {
 	 */
 	escapedClip: boolean;
 	ariaHidden: boolean;
+	/** Whether the node sits inside a MODAL DIALOG's subtree — its own element or any
+	 *  ancestor carries `aria-modal="true"`. U-05 and U-08 read it: a modal dialog's
+	 *  own surface is not content under a safe-area edge, and pairs that straddle the
+	 *  dialog's boundary (or are separated by its opaque surface) are its layering,
+	 *  not a collision. */
+	inModalDialog: boolean;
 	ownInk: boolean;
 	interactive: boolean;
 	disabled: boolean;

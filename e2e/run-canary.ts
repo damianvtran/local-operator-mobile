@@ -472,7 +472,26 @@ const caughtByElement = declared.filter((defect) => {
 interface NotDefect {
 	check: string;
 	element: string;
+	/**
+	 * For U-08 entries, the suppression reason this element must be RECORDED with,
+	 * resolved from the rule's own table (`U08_SUPPRESSION`) by the fixture's
+	 * `data-not-defect-reason`. `null` for checks that carry no suppression record.
+	 */
+	reason: string | null;
 }
+
+/**
+ * The name a fixture declares to the reason string it must be recorded with.
+ *
+ * Every U-08 `data-not-defect` entry must declare one: the assertion below is
+ * that the rule still SAW the pair and wrote WHY it set it aside, so the reason
+ * is half the assertion. An unknown name is refused rather than downgraded.
+ */
+const U08_REASON_NAMES: Record<string, string> = {
+	"painted-disjoint": U08_SUPPRESSION.DISJOINT,
+	"modal-layer": U08_SUPPRESSION.MODAL_LAYER,
+	"modal-surface": U08_SUPPRESSION.MODAL_SURFACE,
+};
 
 const declaredNotDefects = (): NotDefect[] => {
 	const out: NotDefect[] = [];
@@ -488,7 +507,22 @@ const declaredNotDefects = (): NotDefect[] => {
 			);
 			process.exit(2);
 		}
-		out.push({ check, element });
+		let reason: string | null = null;
+		if (check === "U-08") {
+			const name = /\bdata-not-defect-reason="([^"]+)"/.exec(tag[0])?.[1];
+			reason = name === undefined ? null : (U08_REASON_NAMES[name] ?? null);
+			if (reason === null) {
+				console.error(
+					`canary: #${element} declares data-not-defect="U-08" with ${
+						name === undefined
+							? "no data-not-defect-reason"
+							: `unknown reason '${name}'`
+					}; add the reason here (U08_REASON_NAMES) and to U08_SUPPRESSION in tools/audit/checks.ts rather than letting the assertion weaken to "some row exists".`,
+				);
+				process.exit(2);
+			}
+		}
+		out.push({ check, element, reason });
 	}
 	return out;
 };
@@ -506,12 +540,17 @@ const firedOnNotDefect = notDefects
 	)
 	.map((entry) => `${entry.check} (#${entry.element})`);
 /**
- * A U-08 suppression must be RECORDED, not merely absent, and recorded with the RULE'S
- * own words for why (imported, so a rename cannot leave this asserting a stale string).
+ * A U-08 suppression must be RECORDED, not merely absent, and recorded with the
+ * reason the fixture declared — each entry names its own, because a modal-layer
+ * pair and a painted-disjoint pair are set aside by different branches and a
+ * blanket "some EXCEPTION row exists" would accept either for the other.
+ * `U08_REASON_NAMES` resolves the fixture's name through the rule's own table
+ * (imported), so a rename cannot leave this asserting a stale string.
  *
- * A pair that quietly stopped overlapping would satisfy "no FAIL row" while proving
- * nothing about the rule, so the reason-tagged EXCEPTION row is required as well: the
- * assertion is that the rule still SAW the pair and said why it set it aside.
+ * A pair that quietly stopped overlapping would satisfy "no FAIL row" while
+ * proving nothing about the rule, so the reason-tagged EXCEPTION row is required
+ * as well: the assertion is that the rule still SAW the pair and said why it set
+ * it aside.
  */
 const unrecordedSuppressions = notDefects
 	.filter(
@@ -521,7 +560,8 @@ const unrecordedSuppressions = notDefects
 				(row: AuditRow) =>
 					row.verdict === "EXCEPTION" &&
 					rowNames(row).includes(`#${entry.element}`) &&
-					(row.measured ?? "").includes(U08_SUPPRESSION.DISJOINT),
+					entry.reason !== null &&
+					(row.measured ?? "").includes(entry.reason),
 			),
 	)
 	.map((entry) => `U-08 (#${entry.element})`);
