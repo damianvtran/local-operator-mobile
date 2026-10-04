@@ -57,6 +57,7 @@ import {
 	captureChecksRunnable,
 	captureDiagnostic,
 	captureSkipDecision,
+	NEEDS_APP_BUILD,
 	NEEDS_HOOK_PARSE,
 	NEEDS_NAME_CONTRACT,
 	nameContractUsable,
@@ -1853,6 +1854,19 @@ async function main() {
 				/no request to the mock relay/.test(unready.output),
 				true,
 			);
+		} else {
+			// Absence must not read as a pass. `dist/` is gitignored and untracked, so CI and
+			// any tree that has not run `pnpm export:web` have none — and the bare `if` this
+			// replaces ran NEITHER check there while the tally still said `0 skipped`. That is
+			// the whole 2-check spread between a run with a build (483/483) and one without
+			// (481/481): the total moved and nothing said why. Named skips make the count the
+			// same in both states, and name the environment the pair needs.
+			for (const name of [
+				"a relay-backed cell the app never served is refused",
+				"and the reason names the relay",
+			]) {
+				skip(name, NEEDS_APP_BUILD);
+			}
 		}
 
 		// 2. A page that reaches the relay AND renders the declared state PASSES.

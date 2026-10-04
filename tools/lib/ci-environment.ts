@@ -14,6 +14,8 @@
  */
 export const NEEDS_BROWSER =
 	"needs a browser (Google Chrome): this job has none — the frames/audit job is the one that captures";
+export const NEEDS_APP_BUILD =
+	"needs the app's web build (`dist/index.html`): this tree has none — `dist/` is gitignored and untracked, so only a tree that has run `pnpm export:web` has one, and the frames/audit job is the one that builds it";
 export const NEEDS_HOOK_PARSE =
 	"needs the connection provider's own hook to parse: the file is readable but no `lo-*` name came out of it, so there is no expectation list to compare against — an empty parse must never read as a mismatch";
 export const NEEDS_NAME_CONTRACT =
