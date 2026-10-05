@@ -667,37 +667,65 @@ export const PENDING_CELLS: Record<string, string> = {
  *     (which viewport, and which content differs); an undeclared pair is still a
  *     FAILURE, so a new collapse cannot quietly exempt itself.
  *
- * The key is the group's distinct cell names, sorted, joined with `|`. Keep this table
- * EMPTY unless a pair is genuinely a camera limit, and let the reason name the viewport
+ * An entry declares the CLASS — the cells that may coincide at some device, scale or
+ * seed — and a produced group qualifies when it is CONTAINED in one. Keep this table
+ * EMPTY unless a class is genuinely a camera limit, and let the reason name the viewport
  * it was measured on: the exemption is a statement about the frame, not about the app.
+ *
+ * WHY A CLASS AND NOT A KEY. These entries replaced a `Record<string, string>` whose key
+ * was the colliding group's cell names sorted and joined with `|` — ONE EXACT SUBSET.
+ * That shape cannot state what the entries mean. The same three cells collide as a
+ * three-way group at 200 % and as a pair at 135 % (`S5/populated-long` = `S5/subagents`,
+ * measured on the ci tier the day its axis gained the 135 % step), so the pair matched no
+ * literal, the blocking gate red on a phenomenon a reviewer had already approved, and the
+ * only remedy the shape allowed was one literal per subset — whack-a-mole across every
+ * scale, device and seed that produces a different subset of the same cells. The class is
+ * what a reviewer approves; the subset is what a run happens to produce.
  */
-export const IDENTICAL_FRAME_EXEMPTIONS: Record<string, string> = {
-	"S16/populated|S16/unknown-status":
-		"below-the-fold at iphone-se / 200 %: the 320 px column at 200 % text is filled by the " +
-		"list's own header (`Projects`) and its first two sections, and the one thing that " +
-		"distinguishes the two cells — the UNKNOWN STATUS section, which is the feature this " +
-		"cell exists to prove — is placed LAST by `groupProjectsByStatus` (a status this build " +
-		"does not know sorts after every known one) and starts below the viewport, so the PNG " +
-		"is the same chrome. The content differs (each cell reaches its own marker, " +
-		"`projects-populated` / `projects-unknown-status`), which is what makes this a limit " +
-		"of the camera rather than a collapse; at 100 % the swapped row is still above the " +
-		"fold and the two frames differ, and so does the whole pair at tablet-landscape, so " +
-		"the states are distinguishable everywhere except the narrowest column at the " +
-		"largest text.",
-	"S5/populated-long|S5/rich-rows|S5/subagents":
-		"below-the-fold at iphone-se / 200 %: the 320 px column at 200 % text is filled by the " +
-		"session header (`Refactor… client`, the context/task/subagent panel rows), and the rows " +
-		"that distinguish these three cells — the 520-row transcript, the code-block/diff/table " +
-		"rows, and the subagent roster's own rows — start below the viewport, so the PNG is all " +
-		"chrome. The content differs at every device and scale (each cell reaches its own " +
-		"marker), which is what makes this a limit of the camera rather than a collapse. THE " +
-		"GROUP IS THREE NAMES ON ONE ENTRY on purpose: it was declared as " +
-		"`S5/populated-long|S5/rich-rows`, and a third cell joining it when the capture first " +
-		"completed a whole tier — until then the stalls left cells missing and the comparison " +
-		"could not form the group — is evidence that the phenomenon is the one this entry " +
-		"describes, so it extends the statement rather than opening a second entry for the " +
-		"same thing.",
-};
+export interface IdenticalFrameClass {
+	/** The cells that may coincide at SOME device, scale or seed — the class itself. */
+	cells: string[];
+	/** Why that coincidence is a limit of the comparison rather than a collapse. */
+	reason: string;
+}
+
+export const IDENTICAL_FRAME_EXEMPTIONS: IdenticalFrameClass[] = [
+	{
+		cells: ["S16/populated", "S16/unknown-status"],
+		reason:
+			"below-the-fold at iphone-se / 200 %: the 320 px column at 200 % text is filled by the " +
+			"list's own header (`Projects`) and its first two sections, and the one thing that " +
+			"distinguishes the two cells — the UNKNOWN STATUS section, which is the feature this " +
+			"cell exists to prove — is placed LAST by `groupProjectsByStatus` (a status this build " +
+			"does not know sorts after every known one) and starts below the viewport, so the PNG " +
+			"is the same chrome. The content differs (each cell reaches its own marker, " +
+			"`projects-populated` / `projects-unknown-status`), which is what makes this a limit " +
+			"of the camera rather than a collapse; at 100 % the swapped row is still above the " +
+			"fold and the two frames differ, and so does both cells at tablet-landscape, so " +
+			"the states are distinguishable everywhere except the narrowest column at the " +
+			"largest text. The two cells are the whole class: no other pair involving either has " +
+			"ever collided.",
+	},
+	{
+		cells: ["S5/populated-long", "S5/rich-rows", "S5/subagents"],
+		reason:
+			"below-the-fold at iphone-se / 200 %: the 320 px column at 200 % text is filled by the " +
+			"session header (`Refactor… client`, the context/task/subagent panel rows), and the rows " +
+			"that distinguish these three cells — the 520-row transcript, the code-block/diff/table " +
+			"rows, and the subagent roster's own rows — start below the viewport, so the PNG is all " +
+			"chrome. The content differs at every device and scale (each cell reaches its own " +
+			"marker), which is what makes this a limit of the camera rather than a collapse. THE " +
+			"CLASS IS THREE NAMES ON ONE ENTRY on purpose: it was declared for `S5/populated-long` " +
+			"and `S5/rich-rows`, and a third cell joining it when the capture first completed a " +
+			"whole tier — until then the stalls left cells missing and the comparison could not " +
+			"form the group — is evidence that the phenomenon is the one this entry describes, so " +
+			"it extends the statement rather than opening a second entry for the same thing. " +
+			"Declaring the CLASS is what makes that hold at every scale: the same three cells " +
+			"collide three ways at 200 % and only two ways at 135 % (`S5/populated-long` = " +
+			"`S5/subagents`), and both are this phenomenon — subsets of one class, not two " +
+			"findings.",
+	},
+];
 
 /**
  * Byte-identical frames whose cells are ONE VIEW at that device BY COMPOSITION.
@@ -717,25 +745,32 @@ export const IDENTICAL_FRAME_EXEMPTIONS: Record<string, string> = {
  * both declarations are needed: S4/idle is the home's own cell and S15/empty is the
  * panel's empty state and the `/conversations` route's capture.
  *
- * A pair is consulted ONLY when every cell in the partition is EVIDENTIAL (ready, not
+ * A class is consulted ONLY when every cell in the partition is EVIDENTIAL (ready, not
  * skipped), so a partition in which any state's own marker is missing can never declare
  * itself out of a collapse; an undeclared same-content partition still FAILS, exactly
- * as it did before this table existed.
+ * as it did before this table existed. The entries use the same `IdenticalFrameClass`
+ * shape and the same CONTAINMENT rule as the exemptions above — one class, whichever
+ * subset a run produces — for the same reason: a composition can coincide for a subset
+ * of its cells at one device and a superset at another, and a key per subset would red
+ * on the phenomenon the class already states.
  */
-export const IDENTICAL_FRAME_COINCIDENCES: Record<string, string> = {
-	"S15/empty|S4/idle":
-		"one view, two states at tablet-landscape: `/conversations` renders the same home " +
-		"with the panel open, and the panel is docked at this device, so the route and the " +
-		"home compose into ONE rendering — the same bytes AND the same content are both " +
-		"correct, and each cell still reaches its own root and marker in it (`home-idle` " +
-		"for S4, `sessions-empty` for S15 — present in both frames, which the byte-identity " +
-		"proves). Not a camera limit: the content really agrees, because the composition " +
-		"really is one view. The pair differs at iphone-se (the drawer overlays the home), " +
-		"which is why neither declaration can be removed — S4/idle is the home's own cell " +
-		"and S15/empty is the panel's empty state and the /conversations route's capture. " +
-		"Measured on the ci run at 0b414a4: four pairs, one per theme × scale " +
-		"(dark 07d9c40e1083 / d7ca9bcec45e; light 1623786f6c06 / f2ee0ac17b8f).",
-};
+export const IDENTICAL_FRAME_COINCIDENCES: IdenticalFrameClass[] = [
+	{
+		cells: ["S15/empty", "S4/idle"],
+		reason:
+			"one view, two states at tablet-landscape: `/conversations` renders the same home " +
+			"with the panel open, and the panel is docked at this device, so the route and the " +
+			"home compose into ONE rendering — the same bytes AND the same content are both " +
+			"correct, and each cell still reaches its own root and marker in it (`home-idle` " +
+			"for S4, `sessions-empty` for S15 — present in both frames, which the byte-identity " +
+			"proves). Not a camera limit: the content really agrees, because the composition " +
+			"really is one view. The pair differs at iphone-se (the drawer overlays the home), " +
+			"which is why neither declaration can be removed — S4/idle is the home's own cell " +
+			"and S15/empty is the panel's empty state and the /conversations route's capture. " +
+			"Measured on the ci run at 0b414a4: four pairs, one per theme × scale " +
+			"(dark 07d9c40e1083 / d7ca9bcec45e; light 1623786f6c06 / f2ee0ac17b8f).",
+	},
+];
 
 /** Read the resolved theme/scale and the app's own canvas colour, per frame. */
 /**

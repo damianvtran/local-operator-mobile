@@ -751,18 +751,25 @@ partitioned by what each cell is SHOWING, read without the viewport (`CONTENT_PR
 rendered text and accessibility labels, i.e. what a phone would read out), and:
 
 - **same bytes and same content** → a real collapse — unless every cell in the pair is
-  evidential and the pair is declared by name in `matrix.ts` `IDENTICAL_FRAME_COINCIDENCES`
-  as ONE VIEW. A device composes surfaces: at tablet-landscape the home docks the
-  conversations panel and `/conversations` renders the home itself, so two cells that each
-  reach their own root and marker can legitimately produce one image and one content
-  (`S15/empty = S4/idle`; the pair differs at iphone-se, where the drawer overlays the
-  home). Undeclared, it still FAILS — and a declaration is inert the moment any cell in
-  the pair stops being evidential, so a state the app ignored (its marker missing) can
-  never qualify.
+  evidential and the group is contained in a class declared in `matrix.ts`
+  `IDENTICAL_FRAME_COINCIDENCES` as ONE VIEW. A device composes surfaces: at
+  tablet-landscape the home docks the conversations panel and `/conversations` renders the
+  home itself, so two cells that each reach their own root and marker can legitimately
+  produce one image and one content (`S15/empty` + `S4/idle`; the class differs at
+  iphone-se, where the drawer overlays the home). Undeclared, it still FAILS — and a
+  declaration is inert the moment any cell in the group stops being evidential, so a state
+  the app ignored (its marker missing) can never qualify.
 - **same bytes, different content** → a limit of the camera. It passes **only** when the
-  pair is declared by name in `matrix.ts` `IDENTICAL_FRAME_EXEMPTIONS` with the reason a
-  reviewer needs (which viewport, and which content differs). An undeclared pair still
-  FAILS, naming the key to declare — so a new collapse cannot exempt itself by being
+  produced group is contained in a class declared in `matrix.ts`
+  `IDENTICAL_FRAME_EXEMPTIONS` with the reason a reviewer needs (which viewport, and which
+  content differs). **The ledgers declare CLASSES, not one colliding set:** a run produces
+  whichever SUBSET its device, scale and seed render identically — the `S5` class is a
+  three-way collision at 200 % and a two-way one at 135 % — so a group qualifies when every
+  cell in it is named by the entry, and the most specific entry wins. That is why the
+  ledgers are `IdenticalFrameClass[]` and not a key per subset: an exact key reds the gate
+  on a phenomenon a reviewer already approved, and asks for a fresh literal for every
+  scale, device or seed that shifts the subset. An undeclared group still FAILS, naming the
+  cells to declare — so a new collapse cannot exempt itself by being
   camera-shaped by accident, and the exemption table is a statement a reviewer reads
   rather than a knob that loosens the comparison.
 

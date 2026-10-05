@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { type FrameRecord, findIdenticalFrames } from "./identical-states.ts";
+import {
+	type FrameRecord,
+	findIdenticalFrames,
+	matchDeclared,
+} from "./identical-states.ts";
 
 /**
  * The five outcomes of the identical-frame check, each asserted on its own.
@@ -207,5 +211,102 @@ describe("findIdenticalFrames", () => {
 		expect(result.collapses).toHaveLength(1);
 		expect(result.exemptions).toEqual([]);
 		expect(result.undeclared).toEqual([]);
+	});
+
+	it("accepts a SUBSET of a declared class — the pair a narrower scale produces", () => {
+		// THE MECHANISM THIS PINS, and why it is not a convenience. `CI_SCALES` gained the
+		// 135 % step, and at iphone-se/light/135 only TWO of the three cells in the declared
+		// S5 class collide: CI produced exactly this pair, and the blocking gate red on a
+		// phenomenon a reviewer had already approved because the ledger was keyed on one
+		// exact subset. A key per subset cannot be maintained — the next scale, device or
+		// seed produces a different subset of the same cells — so the assertion is that the
+		// pair qualifies through the class it belongs to.
+		const result = findIdenticalFrames([
+			cell("S5", "populated-long", "aaaa", "long", {
+				cell: "S5/populated-long",
+			}),
+			cell("S5", "subagents", "aaaa", "roster", { cell: "S5/subagents" }),
+		]);
+		expect(result.collapses).toEqual([]);
+		expect(result.undeclared).toEqual([]);
+		expect(result.exemptions).toHaveLength(1);
+		expect(result.exemptions[0]).toContain("declared, not a collapse");
+	});
+
+	it("still fails a group that contains a cell the class does not name", () => {
+		// The tooth containment keeps: one undeclared cell in the group is enough, so a new
+		// collapse cannot hide behind a class it is not part of.
+		const result = findIdenticalFrames([
+			cell("S5", "populated-long", "aaaa", "long", {
+				cell: "S5/populated-long",
+			}),
+			cell("S5", "subagents", "aaaa", "roster", { cell: "S5/subagents" }),
+			cell("S5", "empty", "aaaa", "empty"),
+		]);
+		expect(result.collapses).toEqual([]);
+		expect(result.undeclared).toHaveLength(1);
+		expect(result.exemptions).toEqual([]);
+		expect(result.undeclared[0]).toContain("'S5/empty'");
+	});
+
+	it("matches a class by containment for BOTH ledgers, not just the exemption one", () => {
+		// The rule lives in ONE matcher and both ledgers consult it, so containment is
+		// asserted on the matcher itself rather than inferred from whichever branch happens
+		// to be cheap to drive: with a composed class of three, any two of its cells qualify,
+		// an empty ledger matches nothing, and one undeclared cell is still fatal.
+		const composed = [
+			cell("S15", "empty", "aaaa", "one", { cell: "S15/empty" }),
+			cell("S4", "idle", "aaaa", "one", { cell: "S4/idle" }),
+		];
+		const classOfThree = [
+			{
+				cells: ["S15/empty", "S4/idle", "S4/live"],
+				reason: "composed at this device",
+			},
+		];
+		expect(matchDeclared(composed, classOfThree)?.reason).toBe(
+			"composed at this device",
+		);
+		expect(matchDeclared(composed, [])).toBeUndefined();
+		expect(
+			matchDeclared(
+				[...composed, cell("S13", "error", "aaaa", "x")],
+				classOfThree,
+			),
+		).toBeUndefined();
+	});
+
+	it("quotes the most SPECIFIC declared class, not a broader one that contains it", () => {
+		// Two entries can both cover a produced set. The narrow one is the statement that
+		// describes this run; quoting a broader entry's reason would report a phenomenon the
+		// reviewer never saw.
+		const group = [
+			cell("S5", "subagents", "aaaa", "roster", { cell: "S5/subagents" }),
+		];
+		const ledger = [
+			{
+				cells: ["S5/populated-long", "S5/rich-rows", "S5/subagents"],
+				reason: "broad",
+			},
+			{ cells: ["S5/subagents"], reason: "narrow" },
+		];
+		expect(matchDeclared(group, ledger)?.reason).toBe("narrow");
+	});
+
+	it("hands over the CLASS to declare when a group is undeclared", () => {
+		// The message IS the remedy, so it names the cells this run produced AND says that
+		// extending an existing entry's `cells` is the answer when the phenomenon is one
+		// already declared: reading it as "declare this exact set" is what produced the
+		// per-subset literals this shape replaced.
+		const result = findIdenticalFrames([
+			cell("S5", "populated-long", "aaaa", "long", {
+				cell: "S5/populated-long",
+			}),
+			cell("S5", "scroll", "aaaa", "scrolled"),
+		]);
+		expect(result.undeclared[0]).toContain(
+			"{ cells: ['S5/populated-long', 'S5/scroll'] }",
+		);
+		expect(result.undeclared[0]).toContain("extend the `cells` of the entry");
 	});
 });

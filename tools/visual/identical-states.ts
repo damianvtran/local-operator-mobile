@@ -13,6 +13,7 @@
 import {
 	IDENTICAL_FRAME_COINCIDENCES,
 	IDENTICAL_FRAME_EXEMPTIONS,
+	type IdenticalFrameClass,
 } from "./matrix.ts";
 
 /**
@@ -58,25 +59,61 @@ export interface FrameRecord {
  * kept apart:
  *
  *   * a partition that still holds two declared states → a REAL COLLAPSE — unless every
- *     cell in it is EVIDENTIAL and the pair is declared in `IDENTICAL_FRAME_COINCIDENCES`
- *     (matrix.ts): a device COMPOSES surfaces — at tablet-landscape the home docks the
- *     conversations panel and `/conversations` renders the home itself, so two cells that
+ *     cell in it is EVIDENTIAL and the group is contained in a class declared in
+ *     `IDENTICAL_FRAME_COINCIDENCES` (matrix.ts): a device COMPOSES surfaces — at
+ *     tablet-landscape the home docks the conversations panel and `/conversations`
+ *     renders the home itself, so two cells that
  *     each reach their own root and marker can genuinely BE one rendered view (PR #34).
  *     An undeclared same-content partition still fails, and a declaration is inert the
  *     moment any cell in it stops being evidential — a state the app ignored cannot show
  *     its own marker, so a real collapse can never qualify.
  *   * every cell carrying its own content → the pixels agree and the app does not: a
- *     camera limit, which passes ONLY when the pair is declared in
- *     `IDENTICAL_FRAME_EXEMPTIONS` (matrix.ts) with the reason a reviewer needs. An
- *     undeclared pair FAILS with the key to declare, so a new collapse cannot exempt
- *     itself by being camera-shaped by accident.
+ *     camera limit, which passes ONLY when the produced group is CONTAINED in a class
+ *     declared in `IDENTICAL_FRAME_EXEMPTIONS` (matrix.ts) with the reason a reviewer
+ *     needs. An undeclared group FAILS with the cells to declare, so a new collapse
+ *     cannot exempt itself by being camera-shaped by accident.
  *
  * A group with any collapse in it is reported as a collapse and nothing else: one real
  * collapse is the finding, and reporting a coexisting camera limit beside it would only
  * dilute it. A declared coincidence is reported under its own heading and does not fail.
  */
-function exemptionKey(records: readonly FrameRecord[]): string {
-	return [...new Set(records.map((record) => record.cell))].sort().join("|");
+/**
+ * The declared class a produced group belongs to, or `undefined`.
+ *
+ * MATCHED BY CONTAINMENT, NEVER BY EQUALITY, and that is the whole reason the ledgers
+ * carry a class instead of the `Record<string, string>` keyed on the sorted cell names
+ * this replaced. A run produces whichever SUBSET of a class its device, scale and seed
+ * render identically — the S5 class is a three-way collision at 200 % and a two-way one
+ * at 135 % — so an exact key needs one literal per subset and reds the blocking gate on
+ * a phenomenon a reviewer already approved. A key per subset is unbounded: every new
+ * scale, device or seed that makes a different subset identical asks for another entry.
+ *
+ * Containment keeps the tooth: EVERY cell in the produced group must be named by the
+ * entry, so a group containing any undeclared cell still matches nothing and is reported.
+ * The most SPECIFIC match wins (fewest declared cells), so a broad class's reason is
+ * never quoted for a narrower collision it happens to contain.
+ *
+ * Exported for the tests that pin the class semantics: the rule is shared by the
+ * exemptions and the coincidences, and a test reaching it through only one of them could
+ * not show that it holds for both.
+ */
+export function matchDeclared(
+	group: readonly FrameRecord[],
+	ledger: readonly IdenticalFrameClass[],
+): IdenticalFrameClass | undefined {
+	const produced = [...new Set(group.map((record) => record.cell))];
+	let best: IdenticalFrameClass | undefined;
+	for (const entry of ledger) {
+		if (!produced.every((cell) => entry.cells.includes(cell))) continue;
+		if (best === undefined || entry.cells.length < best.cells.length)
+			best = entry;
+	}
+	return best;
+}
+
+/** The cells a produced group names, sorted — for the message that asks for a declaration. */
+function producedCells(records: readonly FrameRecord[]): string[] {
+	return [...new Set(records.map((record) => record.cell))].sort();
 }
 
 export function findIdenticalFrames(records: FrameRecord[]): {
@@ -159,14 +196,13 @@ export function findIdenticalFrames(records: FrameRecord[]): {
 			 * must be EVIDENTIAL — a state the app ignored cannot show its own marker, so
 			 * a real collapse can never qualify. An undeclared same-content partition is
 			 * still pushed as a collapse below. */
-			const key = exemptionKey(part);
-			const declared = IDENTICAL_FRAME_COINCIDENCES[key];
+			const declared = matchDeclared(part, IDENTICAL_FRAME_COINCIDENCES);
 			const allEvidential = part.every(
 				(record) => record.declaredSkip === null && record.ready !== false,
 			);
 			if (declared !== undefined && allEvidential) {
 				coincidences.push(
-					`${message} — declared one view for both states: ${declared}`,
+					`${message} — declared one view for both states: ${declared.reason}`,
 				);
 				continue;
 			}
@@ -174,22 +210,31 @@ export function findIdenticalFrames(records: FrameRecord[]): {
 		}
 		// One real collapse is the finding; a camera limit beside it would only dilute it.
 		if (collapsed.length > 0) continue;
-		const key = exemptionKey(group);
-		const reason = IDENTICAL_FRAME_EXEMPTIONS[key];
-		if (reason === undefined) {
+		const declared = matchDeclared(group, IDENTICAL_FRAME_EXEMPTIONS);
+		if (declared === undefined) {
 			// Its own list, because it is its own statement: the pixels agree and the app
 			// does not, which is a camera limit only once somebody declares it as one. Printed
 			// under its own header so the summary never says "same content" about a pair whose
 			// line says the content differs (QA round 1).
+			//
+			// The message hands over the CLASS to declare — the cells this run made identical —
+			// because the ledger states classes and the run produces subsets (see
+			// `matchDeclared`). Reading it as "declare this exact set" is what produced the
+			// per-subset literals this shape replaced, so the sentence says both halves: the
+			// class this run produced, and that extending an existing entry's `cells` is the
+			// answer when the phenomenon is one already declared.
+			const cells = producedCells(group);
 			undeclared.push(
 				`${label} rendered identically (${shaDigest}) on ${where} although their renderings differ: ` +
-					`if that is the viewport filling with chrome rather than a collapse, declare '${key}' ` +
-					"in matrix.ts IDENTICAL_FRAME_EXEMPTIONS with the reason — until it is declared, a " +
+					`if that is the viewport filling with chrome rather than a collapse, declare the class ` +
+					`{ cells: [${cells.map((cell) => `'${cell}'`).join(", ")}] } in matrix.ts ` +
+					"IDENTICAL_FRAME_EXEMPTIONS with the reason — or extend the `cells` of the entry " +
+					"that already describes this phenomenon — because until it is declared, a " +
 					"byte-identical pair of different states is not evidence",
 			);
 		} else {
 			exemptions.push(
-				`${label} rendered identically (${shaDigest}) on ${where} — declared, not a collapse: ${reason}`,
+				`${label} rendered identically (${shaDigest}) on ${where} — declared, not a collapse: ${declared.reason}`,
 			);
 		}
 	}
