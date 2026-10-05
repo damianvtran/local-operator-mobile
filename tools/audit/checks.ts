@@ -553,16 +553,87 @@ function u05SafeAreas(state: AuditState): CheckRow[] {
 				continue;
 			}
 		}
-		if (insets.left > 0 && x < insets.left && x + w > 0) {
+		// THE SIDE BANDS. In landscape the notch moves to an edge, so these two rules
+		// ask the top rule's question on the other axis, and they carry the same
+		// exemptions expressed for a side band. Both are counted with their own
+		// reason (`bump`), never dropped in silence.
+		const entersLeft = insets.left > 0 && x < insets.left && x + w > 0;
+		const entersRight =
+			insets.right > 0 && vw - (x + w) < insets.right && x < vw;
+		if (entersLeft || entersRight) {
+			// THE MODAL'S OWN FULL-BLEED DISMISS LAYER IS NOT A TARGET UNDER AN
+			// UNSAFE EDGE. An open react-native-web modal paints a dismiss layer
+			// across the whole viewport: a CONTROL, so it is not the surface the
+			// `containerLike` branch below sets aside, but one that dismisses from
+			// anywhere — no reader has to reach a target inside the band, which is
+			// the shape these rules exist to catch (the canary's #side-left and
+			// #side-right bars). This is the side band's half of the top rule's
+			// dismiss-layer set-aside, and it is keyed to the control being
+			// container-scale in BOTH axes so a bounded control inside a dialog
+			// keeps failing on its own row.
+			if (node.inModalDialog && node.interactive && containerLike) {
+				bump(
+					"a modal's own full-bleed dismiss layer (a control role that dismisses from anywhere, so the band holds no target a reader must reach)",
+				);
+				continue;
+			}
+			// A FULL-BLEED CONTAINER IS NOT CONTENT UNDER AN UNSAFE EDGE, for the
+			// same reason the top rule exempts it: every app root and full-bleed
+			// wrapper sits flush to the edge by construction, and `draws` counts a
+			// background as content, so without this the rules report the whole
+			// ancestor chain for the background sitting under the band — the Screen
+			// root that correctly applies `padding-left: 59` among them. What a
+			// reader can actually read or reach is judged on its own row, which is
+			// what keeps a real intrusion — the conversations drawer's title and
+			// rows, at x = 16…56 — named.
+			if (containerLike) {
+				bump(
+					"a full-bleed container or ancestor (its background paints into the band; its own content is judged on its own rows)",
+				);
+				continue;
+			}
+			// A MODAL DIALOG'S OWN GROUND IS NOT CONTENT UNDER A SIDE EDGE EITHER.
+			// This is the top rule's modal-surface set-aside (`inModalDialog &&
+			// !ownText && !interactive`) with its extent expressed for a side band,
+			// and the EXTENT is the part that has to change: the top rule asks the
+			// surface to reach the far edge (`y + h >= vh - 1`), while the
+			// conversations drawer's own ground stops at the bottom inset on
+			// landscape — measured 369 pt of a 390 pt viewport — so reusing that test
+			// verbatim would leave the exemption silent on the very surface its
+			// comment names. The side band asks instead for the extent the top rule
+			// already uses to call a node a container (`containerLike`'s 0.6 vh) plus
+			// the band's own edge. Only a node with no word and no control of its own
+			// qualifies: the drawer's title, rows and icons all carry one and keep
+			// failing on their own rows.
+			if (
+				node.inModalDialog &&
+				!node.ownText &&
+				!node.interactive &&
+				(x <= 1 || x + w >= vw - 1) &&
+				h >= vh * 0.6
+			) {
+				bump(
+					"a modal dialog's own ground (no text or control of its own, reaching an edge and spanning the band)",
+				);
+				continue;
+			}
+		}
+		if (entersLeft) {
 			rows.push({
 				check: "U-05",
 				verdict: "FAIL",
 				measured: `left edge ${x}pt inside the ${insets.left}pt inset`,
 				detail: node.path,
 			});
-			continue;
 		}
-		if (insets.right > 0 && vw - (x + w) < insets.right && x < vw) {
+		// The right rule used to sit AFTER the left rule's `continue`, so a node that
+		// reached into BOTH side insets was reported for the left edge and the right
+		// edge was never evaluated for it — a rule that could not fail for any
+		// full-width node, which in landscape is most of them. The two edges are
+		// independent questions about the same node, so both are asked and both rows
+		// are emitted; the canary's #side-right keeps a bounded right-edge violation
+		// load-bearing.
+		if (entersRight) {
 			rows.push({
 				check: "U-05",
 				verdict: "FAIL",
