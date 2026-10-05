@@ -50,6 +50,14 @@ import { CONTROL_DISABLED_INK, cx } from "@/ui/variants";
  *  machine's own snapshot; the row is one height either way (design §2.5 D3). */
 const rowIsLive = (phase: DictationState["phase"]): boolean => phase !== "idle";
 
+/** The row's own border, top and bottom (the `border` utility is 1 px each side).
+ *  Named because the row's height is a BORDER box: a `minHeight` of exactly
+ *  `TOUCH_FLOOR` left a live row 2 px taller than an outcome one, because the live
+ *  row's own 48 px discard control set the content height and the outcome's did not —
+ *  measured 50 against 48 at 100 % (design round 1, D1's own figures). Adding the
+ *  border to the floor makes every state the same box at the default scale. */
+const DICTATION_ROW_BORDER_PX = 2;
+
 /** One line of the row's status text (body-sm, 14 px at 1.45), in px at scale 1.
  *
  *  The row has to RESERVE a box, not measure one: at large text the status is
@@ -63,14 +71,20 @@ const STATUS_LINE_PX = 21;
 /** The gap between the status line and the controls line at large text. */
 const DICTATION_ROW_GAP_PX = 8;
 
-/** The dictation row's height once the text is large (design §2.5 D3's "one
- *  height"): one status line, the gap, and a touch-floor controls line.
+/** The dictation row's height at the reader's scale (design §2.5 D3's "one height").
  *
- *  Two status lines — the longest outcome copy at 200 % — are SHORTER than this sum
- *  (2 × 41 < 41 + 8 + 48 at 200 %), so fixing the box here gives every state the
- *  same height with no layout pass and no dependence on which sentence is showing. */
+ *  At the default scale it is the touch floor plus the row's own border. Past
+ *  `LARGE_TEXT_SCALE` it is one status line, the gap, and a touch-floor controls
+ *  line, plus that border: two status lines — the longest outcome copy at 200 % — are SHORTER than
+ *  that sum (2 x 41 < 41 + 8 + 48 at 200 %), so fixing the box gives every state
+ *  the same height with no layout pass and no dependence on which sentence shows. */
 const dictationRowBox = (scale: number): number =>
-	Math.round(STATUS_LINE_PX * scale) + DICTATION_ROW_GAP_PX + TOUCH_FLOOR;
+	scale > LARGE_TEXT_SCALE
+		? Math.round(STATUS_LINE_PX * scale) +
+			DICTATION_ROW_GAP_PX +
+			TOUCH_FLOOR +
+			DICTATION_ROW_BORDER_PX
+		: TOUCH_FLOOR + DICTATION_ROW_BORDER_PX;
 
 /**
  * A DOM keyboard event, narrowed to what this file reads.
@@ -432,17 +446,23 @@ export const Composer = ({
 				) : null}
 				{/* The reader's own DISCARD: it stops the take and sends no request at all,
 				    which is a different outcome from the mic (stop AND transcribe). Shown
-				    while a dictation is live only — an outcome line has nothing to cancel. */}
+				    while a dictation is live only — an outcome line has nothing to cancel.
+
+				    The VISIBLE word is `Discard`, not `Cancel`, for exactly that reason
+				    (design round 1, D6): the mic beside it morphs to a Square that STOPS AND
+				    TRANSCRIBES, and "Cancel" reads as "stop", so the two adjacent controls
+				    promised the same thing while doing different ones. `Discard` names the
+				    throw-away, and it now matches the accessible name. */}
 				{rowIsLive(voice.phase) ? (
 					<Pressable
 						accessibilityRole={ROLE.button}
-						accessibilityLabel="Cancel voice input"
+						accessibilityLabel="Discard voice input"
 						onPress={voice.cancel}
 						style={{ minHeight: TOUCH_FLOOR, minWidth: TOUCH_FLOOR }}
 						className="items-center justify-center"
 						testID={CONTROL.composerDictationCancel}
 					>
-						<Text className="text-body-sm text-ink-muted">Cancel</Text>
+						<Text className="text-body-sm text-ink-muted">Discard</Text>
 					</Pressable>
 				) : null}
 			</>
@@ -705,14 +725,10 @@ export const Composer = ({
 							? "border-danger-border bg-danger-wash"
 							: "border-hairline",
 					)}
-					// One height for every state the row can show (D3). The 100 % line is the
-					// touch floor; past `LARGE_TEXT_SCALE` it is the row's own two-line sum, so
-					// neither the meter nor a short outcome sets it.
-					style={{
-						minHeight: dictationLargeText
-							? dictationRowBox(effectiveScale)
-							: TOUCH_FLOOR,
-					}}
+					// One height for every state the row can show (D3). At the default scale it
+					// is the touch floor plus the row's border; past `LARGE_TEXT_SCALE` it is the
+					// row's own two-line sum, so neither the meter nor a short outcome sets it.
+					style={{ minHeight: dictationRowBox(effectiveScale) }}
 					testID={SURFACE.composerDictationBar}
 				>
 					{dictationLargeText ? (
