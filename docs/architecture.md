@@ -245,12 +245,18 @@ against the wire instead:
    that makes the relay's additive-only evolution rule (`docs/mobile.md`) safe on the
    client side.
 3. **Hold the two files together at compile time.** `WireConformance` in
-   `src/contracts/schemas.ts` is a type-level assertion that every schema's output is
-   assignable to the mirror's declaration: a schema that answers `undefined` where the
-   wire promises a string, or that widens an enum, fails `pnpm type-check`. That, with
-   the boundary validation above, is the mirror's real mechanical guard today — not a
-   generated file checked for drift, but a hand-authored one the parser and the
-   compiler keep honest.
+   `src/contracts/schemas.ts` is a type-level assertion that each schema it covers
+   produces a shape assignable to the mirror's declaration: a schema that answers
+   `undefined` where the wire promises a string, or that widens an enum, fails
+   `pnpm typecheck`. It fires for the asserted subset — 20 of the 28 registered
+   schemas. The eight it does not yet cover (`commandOp`, `gatewayRefusal`,
+   `modelEntry`, `projectionStreamFrame`, `resumeSession`, `sessionsStreamFrame`,
+   `startSession`, `subagentRow`) are request bodies, stream frames and element
+   shapes outside the assertion; five of them already have a mirror type, so the
+   gap is coverage rather than a missing declaration. That, with the boundary
+   validation above, is the mirror's real mechanical guard today — not a generated
+   file checked for drift, but a hand-authored one the parser and the compiler keep
+   honest.
 
 The generator and the CI drift-check are named above as *planned* because the web
 client's parity story has them and this repository does not yet: `docs/ci.md`

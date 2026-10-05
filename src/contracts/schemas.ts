@@ -819,62 +819,86 @@ export type SchemaName = keyof SchemaRegistry;
  */
 export type Payload<K extends SchemaName> = z.output<SchemaRegistry[K]>;
 
-/** Compile-time proof that each schema's OUTPUT satisfies the mirror:
+/** Compile-time proof that each asserted schema's OUTPUT satisfies the mirror:
  *  every field a schema produces must be a field the wire type declares, with a
  *  compatible type. Written in this direction on purpose — a schema that answers
  *  `undefined` where the wire promises a string, or that widens `tool_state`,
- *  fails the intersection below and therefore `pnpm type-check`, which is the
- *  point of keeping both files.
+ *  fails the assertion below and therefore `pnpm typecheck`, which is the point
+ *  of keeping both files.
+ *
+ *  The assertion covers the schemas listed in `WireConformance` — 20 of the 28
+ *  in `SCHEMAS`; the eight without one (`commandOp`, `gatewayRefusal`,
+ *  `modelEntry`, `projectionStreamFrame`, `resumeSession`, `sessionsStreamFrame`,
+ *  `startSession`, `subagentRow`) are request bodies or stream frames the mirror
+ *  does not yet name. It fires only for the asserted subset.
  *
  *  It is deliberately not the other direction: the schemas are the client's
  *  reading, and where they are *narrower* than the dataclasses (no
  *  `new_conversation`/`resume_session` in `commandOpSchema`, because the relay
- *  refuses both over HTTP) that narrowing is intended and must not be an error. */
+ *  refuses both over HTTP) that narrowing is intended and must not be an error.
+ *
+ *  A `false` result here means the payload is `never`, which only happens for a
+ *  schema that can never parse; that is a failure, not an absence, so it must
+ *  resolve to `false` rather than `never` and trip the binding below. */
 type SchemaSatisfiesWire<K extends SchemaName> = [Payload<K>] extends [never]
-	? never
+	? false
 	: Payload<K>;
 
-/** Instantiating this alias is what runs the check; it is exported so the check
- *  cannot be dropped by an edit that removes an unused local type. */
+/** Each element resolves to `true` when the schema's output satisfies the
+ *  mirror and `false` when it does not. This alias alone proves nothing: a type
+ *  alias is never checked unless it is instantiated, and a `never` element is
+ *  both legal and assignable to `true[]`, so the earlier shape compiled silently
+ *  even with a real divergence. Both branches therefore resolve to `false` and
+ *  the tuple is bound to `AssertAll` below, where a single `false` element
+ *  violates the `true[]` constraint and `tsc` reports TS2344. */
 export type WireConformance = [
-	SchemaSatisfiesWire<"healthz"> extends HealthzResponse ? true : never,
+	SchemaSatisfiesWire<"healthz"> extends HealthzResponse ? true : false,
 	SchemaSatisfiesWire<"sessionListFrame"> extends SessionListFrame
 		? true
-		: never,
-	SchemaSatisfiesWire<"sessionSummary"> extends SessionSummary ? true : never,
+		: false,
+	SchemaSatisfiesWire<"sessionSummary"> extends SessionSummary ? true : false,
 	SchemaSatisfiesWire<"sessionProjection"> extends SessionProjection
 		? true
-		: never,
+		: false,
 	SchemaSatisfiesWire<"pastSessions"> extends PastSessionsResponse
 		? true
-		: never,
+		: false,
 	SchemaSatisfiesWire<"searchSessions"> extends SearchSessionsResponse
 		? true
-		: never,
-	SchemaSatisfiesWire<"history"> extends HistoryResponse ? true : never,
-	SchemaSatisfiesWire<"subagentDetail"> extends SubagentDetail ? true : never,
-	SchemaSatisfiesWire<"commands"> extends CommandsResponse ? true : never,
-	SchemaSatisfiesWire<"models"> extends ModelsResponse ? true : never,
-	SchemaSatisfiesWire<"directories"> extends Directories ? true : never,
-	SchemaSatisfiesWire<"apiError"> extends ApiError ? true : never,
-	SchemaSatisfiesWire<"commandAck"> extends CommandAck ? true : never,
-	SchemaSatisfiesWire<"seen"> extends SeenResponse ? true : never,
-	SchemaSatisfiesWire<"asks"> extends AsksResponse ? true : never,
+		: false,
+	SchemaSatisfiesWire<"history"> extends HistoryResponse ? true : false,
+	SchemaSatisfiesWire<"subagentDetail"> extends SubagentDetail ? true : false,
+	SchemaSatisfiesWire<"commands"> extends CommandsResponse ? true : false,
+	SchemaSatisfiesWire<"models"> extends ModelsResponse ? true : false,
+	SchemaSatisfiesWire<"directories"> extends Directories ? true : false,
+	SchemaSatisfiesWire<"apiError"> extends ApiError ? true : false,
+	SchemaSatisfiesWire<"commandAck"> extends CommandAck ? true : false,
+	SchemaSatisfiesWire<"seen"> extends SeenResponse ? true : false,
+	SchemaSatisfiesWire<"asks"> extends AsksResponse ? true : false,
 	SchemaSatisfiesWire<"pushConversation"> extends PushConversationResponse
 		? true
-		: never,
+		: false,
 	SchemaSatisfiesWire<"pushRegister"> extends PushRegisterResponse
 		? true
-		: never,
-	SchemaSatisfiesWire<"pushDevices"> extends PushDevicesResponse ? true : never,
+		: false,
+	SchemaSatisfiesWire<"pushDevices"> extends PushDevicesResponse ? true : false,
 	SchemaSatisfiesWire<"pushDeviceDelete"> extends PushDeviceDeleteResponse
 		? true
-		: never,
-	SchemaSatisfiesWire<"pin"> extends PinResponse ? true : never,
+		: false,
+	SchemaSatisfiesWire<"pin"> extends PinResponse ? true : false,
 ];
 
-/* Re-exported for callers that want the generated shape alongside the inferred
- * one, and to keep the unused-import lints honest in files that only need types. */
+/** Binding the tuple to a `true[]`-constrained parameter is what runs the check
+ *  at compile time — without this instantiation the alias above is inert. It is
+ *  exported so an edit that removes an unused local alias cannot silently drop
+ *  the check; one `false` element (a schema whose output does not satisfy the
+ *  mirror) makes this instantiation TS2344. */
+type AssertAll<T extends true[]> = T;
+export type _WireConformanceChecked = AssertAll<WireConformance>;
+
+/* Re-exported for callers that want the mirror's declared shape alongside the
+ * inferred one, and to keep the unused-import lints honest in files that only
+ * need types. */
 export type {
 	ApiError,
 	AskQuestion,
