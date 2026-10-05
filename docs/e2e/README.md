@@ -877,15 +877,41 @@ large-text question`. That is not hypothetical — those two frames' medians are
 (96 px / 96 px, **1.00×** on the `root-pinned-text-scale` fixture), so the median this
 replaced failed the pair while a per-role comparison on its own would have passed it.
 
-**Only text that renders is a type role.** A `display:none` node — and an inline
-`<script>` in the body is one, its source text being a text child — still reports a
-computed `font-size` and never follows the root. Counting it invents a type role that
-paints nothing: on the `hidden-role-text-scale` fixture a hidden 22 px node (1.375rem)
-has the half-rem 200 % partner of a frozen role, so a guard reading `body *` fails a page
-whose every visible role scales exactly 2× (measured, with the filter removed: `the 22px
-role (1 node(s)) did not scale: the 200% frame still renders 22px text where 44px was
-expected`, exit 1). The guard reads the rendered set — the same `height > 0` the median
-reading always applied — so the two cannot disagree about which text is on the page.
+**A type role is a BOX, not a paint — and that is this harness's stance, stated with what it
+costs.** The guard counts a node whose bounding box has height; `visibility: hidden` alone is
+excluded, which is what `READINESS_PROBE`'s `visible()` says too. Two shapes are therefore
+COUNTED though nothing draws: a node at `opacity: 0`, and a child clipped away inside a
+`height:0; overflow:hidden` container. That is deliberate — the audit reads the app's
+clipped placeholder proxy on purpose, and `visible()` answers a different question ("did the
+app render this marker", not "can a reviewer read this text"). `unpainted-role-text-scale`
+pins it: each of those two shapes carries a frozen px size and the page **FAILS** by name.
+
+**What the box test cannot catch, asserted rather than left unknown.** Text that paints with
+NO box of its own is skipped, so a FROZEN role on such a carrier is never reported and its
+pair reads live. Three shapes do it, all of them legible on screen:
+
+| shape | why its box measures zero |
+|---|---|
+| `height: 0; overflow: visible` on a carrier holding its own text | the box is zero and nothing clips the text |
+| `line-height: 0` | the line box collapses while the glyphs still draw |
+| `display: contents` | no box at all; the text paints in the parent's flow |
+
+`painted-carrier-text-scale` pins this limit: it carries all three with frozen px sizes and
+must **PASS** (exit 0, live) with none of them named. A limit stated as a measurement beats
+an unknown hole.
+
+A stricter, paint-based predicate — a `Range` over the node's own text yielding a line rect,
+plus the ancestor opacity product and an ancestor-clipping intersection — **catches those
+three and is NOT shipped**: measured on the `ci` tier it moved a reading (96 pairs carrying
+a note became 118), and a metric change that reclassifies app cells is the exact failure
+this branch has had to correct twice. Its incidence on `app/`, `src/` and `design/` is 0:
+the app's only zero-height text node is `textarea.tsx`'s, and it is `overflow: hidden` and
+paints nothing.
+
+The `medianTextHeight` the report prints is a readout of the metric this guard replaced (the
+median of the counted nodes' box heights); nothing in the guard reads it. `textNodeCount`
+keeps its older, looser meaning (elements holding direct text, drawn or not) — the same
+distinction `testIds` versus `visibleTestIds` draws in the readiness probe.
 
 **Why per role and not a median.** The first version reduced a cell to the median
 rendered text box at each scale and required the ratio to clear 1.9×. A median is a
@@ -907,41 +933,54 @@ marked **88 of 272 cells UNREADY** and every one of them was decided by a layout
 change rather than by the type.
 
 **What the per-role guard can no longer catch, and how often it fires.** A 100 % role
-with no scaled counterpart is named in `scaleNotes`, not failed. Three different things
+with no scaled counterpart is named in `scaleNotes`, not failed. Four different things
 produce that signature — a node that did not move with the root font size, a node the
-layout drops at 200 %, and a node RESIZED to a size the factor does not produce
-(`calc()`, `clamp()`, an `em` under a fixed-px parent) — and two frames cannot tell them
-apart.
+layout drops or clips away at that scale, a node RESIZED to a size the factor does not
+produce (`calc()`, `clamp()`, an `em` under a fixed-px parent), and, in the other
+direction, a size the 200 % frame shows that no 100 % role explains — and two frames
+cannot tell them apart.
 
 The case that actually happens is the first, and it is not rare. **On this harness's own
-`ci` capture, 96 of 136 pairs carry a note naming a size that did not move — every one of
-them a 14 px node — and all 136 pairs are still reported live.** So the honest reading of
-a live verdict is this, and nothing wider: *every role present at 100 % is present at
-200 % and grew by the factor; a node frozen at a size that COINCIDES with a role which
-otherwise scales is reported in `scaleNotes` and does not fail the cell.* The guard fails
-a **role** that did not scale — a page whose body copy never grows, a hardcoded px heading
-beside rem paragraphs, a wholly px page — not a cell in which one node of a scaling role
-stayed put. That is why `136/136 live` on a tier whose notes name frozen text in 70 % of
-pairs is not a contradiction, and must not be read as "there is no frozen text here".
+`ci` capture, 96 of the 136 pairs carry a note naming a size that did not move — every one of
+them a 14 px node — and all 136 pairs are still reported live.**
+So the honest reading of a live verdict is this, and nothing wider: *every role present at
+100 % is counted at 200 % too and grew by the factor; a node frozen at a size that
+COINCIDES with a role which otherwise scales, one the layout drops or clips at 200 %, or one
+resized to a size the factor does not produce is reported in `scaleNotes` and does not fail
+the cell.* The guard fails a **role** that did not scale — a page whose body copy never
+grows, a hardcoded px heading beside rem paragraphs, a wholly px page — not a cell in which
+one node of a scaling role stayed put. That is why `136/136 live` on a tier whose notes name
+unexplained text in **70 %** of pairs is not a contradiction, and must not be read as "there
+is no frozen text here".
 
-The third branch — a node present at BOTH scales at a size the factor does not produce —
-is a note as well, so a role can partly follow the scale and still not fail the cell. It
-does not occur on the app's own tiers: every one of those 96 notes is the frozen/
-coinciding kind, and there is no `calc()`, `clamp()` or viewport-unit font size anywhere
-in `app/`, `src/` or `design/`. A probe carrying `calc(10px + 0.5rem)` measures **18 px →
-26 px (1.444×)** and is named, not failed. That is the widest reading of a live verdict,
-and it is the one a `U-04` signer should work from.
+Two further limits, named rather than left implicit: a role that **partly** follows the scale
+is a note, never a failure (`calc(10px + 0.5rem)` measures **18 px → 26 px, 1.444×**), and
+text painting with **no box of its own** is not counted at all — the three shapes above, with
+`painted-carrier-text-scale` asserting the miss. The reading is the same for both: named, not
+failed. The `calc()` branch never appears on the app's own tiers — there is no
+`calc()`, `clamp()` or viewport-unit font size anywhere in `app/`, `src/` or `design/`, and
+a probe carrying `calc(10px + 0.5rem)` measures **18 px → 26 px (1.444×)** and is named,
+not failed. That is the widest reading of a live verdict, and it is the one a `U-04` signer
+should work from.
 
-Both directions are asserted in `verify` (`pnpm e2e:relay`), now across five fixtures.
-Three must **FAIL by name**: `e2e/fixtures/inert-text-scale/` (all `px`, the whole page
-frozen), `e2e/fixtures/px-role-text-scale/` (one `px` role among scaling ones — the case
-a median cannot see, and the one the old median called live at 4.000×) and
-`e2e/fixtures/root-pinned-text-scale/` (a root the harness cannot move, the guard's own
-precondition). Two must **pass**: the rem-based `e2e/fixtures/audit-canary/`, and
-`e2e/fixtures/hidden-role-text-scale/`, whose every visible role scales while it also
-carries a never-painted 22 px node — the control for reading rendered text only. None of
-the five is evidence about the app — together they prove the *guard* discriminates, on
-each way a cell can fail to answer a large-text question and on the way it must not.
+Both directions are asserted in `verify` (`pnpm e2e:relay`), now across seven fixtures —
+four that must **FAIL by name** and three that must **pass**:
+
+| fixture | what it controls | must |
+|---|---|---|
+| `inert-text-scale/` | all `px`: the whole page frozen | FAIL, `the 200% frame renders the same text sizes` |
+| `px-role-text-scale/` | one `px` role among scaling ones — the case a median cannot see | FAIL, `the 20px role … did not scale` |
+| `root-pinned-text-scale/` | `html { font-size: 16px !important }`: a root the harness cannot move | FAIL, `the harness's root font size did not take effect` |
+| `unpainted-role-text-scale/` | text that is laid out but never drawn: `opacity:0` and a child clipped away, both frozen | FAIL, those two roles named; `visibility:hidden` not counted |
+| `painted-carrier-text-scale/` | the KNOWN miss: frozen text painting with no box of its own (`height:0` carrier, `line-height:0`, `display:contents`) | PASS, none named |
+| `hidden-role-text-scale/` | a `display:none` carrier (and an inline `<script>`) | pass |
+| `audit-canary/` | all `rem` | pass, dimension live |
+
+Each direction is a measurement, not an assertion about the diff: the pinned-root
+fixture's two frames have equal medians (the old rule's 1.00×), the mixed fixture was the
+one the old median called live at **4.000×**, and the four painted-text shapes were each
+captured before and after the predicate change. No fixture is evidence about the app —
+together they prove the *guard* discriminates.
 
 ### The U-08 overlap rule, and what it deliberately does not report
 

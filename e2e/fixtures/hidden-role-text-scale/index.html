@@ -12,9 +12,16 @@
   `the 22px role (1 node(s)) did not scale: the 200% frame still renders 22px text
   where 44px was expected` (exit 1).
 
-  So this is a PASS control for the other direction of the same question: the guard must
-  read the text that RENDERS, the way the cell-median reading always has. A fixture that
-  fails for the wrong reason is how a suite teaches people to stop reading it.
+  WHAT IT CONTROLS, EXACTLY: `display:none`, and only that shape — the script entry is
+  the same shape via a different element. It is NOT the general proof that the guard
+  reads painted text: opacity 0, visibility hidden and a clipped child are controlled by
+  `unpainted-role-text-scale`, and the two carriers whose text paints with no box of its
+  own by `painted-carrier-text-scale`. Those are the shapes this page cannot speak for,
+  and each has its own fixture rather than an appeal to this one.
+
+  So this is a PASS control for one direction of the question: the guard must read the
+  text that RENDERS. A fixture that fails for the wrong reason is how a suite teaches
+  people to stop reading it.
 -->
 <html lang="en">
 <head><meta charset="utf-8"><title>Hidden type roles</title>

@@ -1843,6 +1843,59 @@ async function main() {
 			true,
 		);
 
+		// The COUNTED shapes, asserted so the stance cannot move silently. The guard counts a
+		// type role by its BOX, on purpose: a node at opacity:0 and a child clipped away
+		// inside a zero-height container both keep a box, both are counted, and both FAIL the
+		// cell when frozen — the audit reads the app's clipped placeholder proxy on purpose,
+		// so the readiness rule's visible() is deliberately not this predicate. Passing would
+		// be the false-negative QA reported as a defect and the operator's rule closes as the
+		// documented stance; FAILING, naming those two roles, is correct here.
+		//
+		// `visibility: hidden` is the one shape the box test excludes, and it is the one
+		// whose exclusion moved no tier reading (measured). The 24px role must NOT be named.
+		const counted = run(
+			join(WORKTREE, "e2e", "fixtures", "unpainted-role-text-scale"),
+		);
+		check(
+			"frozen text that is laid out but not drawn is still a type role",
+			counted.status !== 0,
+			true,
+			`exit ${counted.status}`,
+		);
+		check(
+			"and the opacity-0 and clipped roles are the ones named",
+			/the 22px role \(1 node\(s\)\) did not scale/.test(counted.output) &&
+				/the 26px role \(1 node\(s\)\) did not scale/.test(counted.output),
+			true,
+		);
+		check(
+			"while a visibility:hidden role is not counted at all",
+			!/the 24px role/.test(counted.output),
+			true,
+		);
+
+		// The KNOWN MISS, asserted rather than left unknown: text that paints with NO box of
+		// its own — a zero-height non-clipping carrier holding its own text, a collapsed line
+		// box, and a `display: contents` element — is skipped by the box test, so this page
+		// PASSES (exit 0, dimension live) with all three frozen roles unnamed. A paint-based
+		// predicate catches them and is NOT shipped: measured on the `ci` tier it moved a
+		// reading (96 pairs noted -> 118), and this branch's whole subject is a metric that
+		// reclassified cells silently. docs/e2e/README.md carries the shape and its incidence.
+		const missed = run(
+			join(WORKTREE, "e2e", "fixtures", "painted-carrier-text-scale"),
+		);
+		check(
+			"text that paints with no box of its own is a KNOWN miss — the page still PASSES",
+			missed.status,
+			0,
+			`exit ${missed.status}`,
+		);
+		check(
+			"and none of the three carrier roles is named",
+			!/\d+px role/.test(missed.output),
+			true,
+		);
+
 		const live = run(join(WORKTREE, "e2e", "fixtures", "audit-canary"));
 		check(
 			"a rem-based page passes the guard",

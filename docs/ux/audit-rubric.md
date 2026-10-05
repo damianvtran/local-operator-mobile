@@ -63,27 +63,32 @@ median with all fifteen nodes scaling exactly 2×).
 **Two things are checked before any role is compared.** The 200 % frame's root font size
 must be the factor's multiple of the 100 % frame's: a page that pins its root (`font-size:
 … !important` outranks the inline property the harness writes) renders both frames at
-100 %, and a comparison made against each frame's own root would call that live. And a
-role is only counted for text that RENDERS — a `display:none` node (an inline `<script>`'s
-source text is one) reports a font size without ever painting, so counting it invents a
-role that cannot scale and fails a page whose every visible role doubled.
+100 %, and a comparison made against each frame's own root would call that live. And a role
+is counted by its **box**, not by whether it draws — `visibility: hidden` is excluded (the
+same thing the readiness rule's `visible()` says), while a node at `opacity: 0` and a child
+clipped away inside a zero-height container ARE counted, because the audit reads the app's
+clipped placeholder proxy on purpose. **What that cannot catch, and a signer must not
+assume away:** text that paints with no box of its own (`height: 0; overflow: visible`,
+`line-height: 0`, `display: contents`) is skipped, so a frozen role on such a carrier goes
+unreported and the pair reads live — a measured, asserted limit (`painted-carrier-
+text-scale`), not an unknown one. `U-04` can therefore read every live cell's text as text
+the box tree knows about.
 
 **A note in `scaleNotes` is a third answer, and it is the common one.** Three different
 things leave a 100 % role without a scaled counterpart — a node that did not move with
-the root font size, a node a responsive layout drops at 200 %, and a node resized to a
-size the factor does not produce (`calc()`, `clamp()`, an `em` under a fixed-px parent)
-— and two frames cannot tell them apart, so the guard names the role and does not fail
-the cell. `U-04` is therefore signed per ROLE, not per node: **a role present at both
-scales whose nodes only partly moved is reported as a note, so a live verdict says every
-role grew, never that every text node did.** That third case has a measured size: a probe
-carrying `calc(10px + 0.5rem)` renders **18 px → 26 px (1.444×)**, and the guard names it
-rather than failing the cell. It does not occur on the app's own tiers — no `calc()`,
-`clamp()` or viewport-unit font size exists in `app/`, `src/` or `design/`, and every note
-on the `ci` capture is the frozen/coinciding kind. On that same capture the note fires on
-**96 of 136 pairs** while all 136 pairs read live — a
-live tier run is not evidence that no text is frozen. The measurement, its manifest
-fields and its controls are in `docs/e2e/README.md` §"How text scale is actually
-driven".
+the root font size, a node a responsive layout drops or clips at 200 %, a node resized to a
+size the factor does not produce (`calc()`, `clamp()`, an `em` under a fixed-px parent),
+and (in the other direction) a size the 200 % frame shows that no 100 % role explains — and
+two frames cannot tell them apart, so the guard names the role and does not fail the cell.
+`U-04` is therefore signed per ROLE, not per node: **a role present at both scales whose
+nodes only partly moved is reported as a note, so a live verdict says every role grew,
+never that every text node did.** The `calc()` case has a measured size — a probe carrying
+`calc(10px + 0.5rem)` renders **18 px → 26 px (1.444×)**, named rather than failing the cell
+— and it does not occur on the app's own tiers: there is no `calc()`, `clamp()` or
+viewport-unit font size in `app/`, `src/` or `design/`. On the `ci` capture the note fires
+on **96 of 136 pairs** while all 136 pairs read live — a live tier run is not evidence that no
+text is frozen. The measurement, its manifest fields and its controls are in
+`docs/e2e/README.md` §"How text scale is actually driven".
 
 ## 1. Screens to score
 

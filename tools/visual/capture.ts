@@ -744,6 +744,10 @@ export interface Measurements {
 	documentClientWidth?: number;
 	bodyScrollWidth?: number;
 	textNodeCount?: number;
+	/**
+	 * The median BOX height of the counted text — the readout of the metric this guard
+	 * replaced, printed in the run log, and read by no rule (the guard judges roles).
+	 */
 	medianTextHeight?: number | null;
 	/**
 	 * Every distinct text size the page rendered, with how many text nodes carried
@@ -2221,6 +2225,25 @@ export async function runCapture(options: CaptureOptions) {
 }
 
 /**
+ * The factor the guard's two scale ids declare, read from `SCALES` rather than written
+ * as a 2 — see the call site for why. The lookup cannot fail for the pair the guard
+ * pairs: `SCALES` declares every id a run can ask for, and every tier's list derives
+ * from it.
+ */
+function declaredScaleFactor(): number {
+	const factorOf = (id: string) => {
+		const scale = SCALES.find((entry) => entry.id === id);
+		// A plain Error, not a CaptureFailure: this is a programming error in this file's
+		// own pairing, not a finding about a captured cell (CaptureFailure carries the
+		// per-cell evidence a run reports).
+		if (scale === undefined)
+			throw new Error(`no declared scale with id '${id}'`);
+		return scale.factor;
+	};
+	return factorOf("200") / factorOf("100");
+}
+
+/**
  * Does the text-scale dimension actually do anything? An instrument whose scale
  * dimension silently does nothing produces identical frames at both scales and
  * looks like a pass. This compares the text a cell renders at 200 % against the
@@ -2231,9 +2254,11 @@ export async function runCapture(options: CaptureOptions) {
  * fraction of the frame's OWN root: the 200 % root must be the declared factor's
  * multiple of the 100 % root (a page pinning `font-size: … !important` renders both
  * frames at 100 %, and judged against itself that pair reads live — which is the defeat
- * this guard exists to catch), and only text that RENDERS counts as a role (`display:
- * none`, and an inline `<script>`'s source text, report a font size without painting
- * one). Both are asserted rather than assumed — see `judgeTextScale`.
+ * this guard exists to catch), and a type role is counted by its BOX. `visibility: hidden`
+ * is excluded (as READINESS_PROBE's visible() does), while opacity:0 and clipped nodes are
+ * counted on purpose; see MEASURE_PROBE for the stance and for the one shape a box test
+ * cannot catch, which `painted-carrier-text-scale` asserts as a known miss. Both are
+ * asserted rather than assumed — see `judgeTextScale`.
  *
  * WHY PER ROLE AND NOT A MEDIAN OVER THE CELL.
  *
@@ -2266,12 +2291,20 @@ export async function runCapture(options: CaptureOptions) {
  * paragraphs, a wholly px page.
  *
  * THAT CONCESSION IS THE COMMON CASE, NOT A CORNER. Measured on this harness's own
- * `ci` capture: 96 of 136 pairs carry such a note (every one naming a 14 px node) and
- * all 136 read live — so a live tier run says every ROLE grew, never that no text is
- * frozen. The rubric (`docs/ux/audit-rubric.md`) and the e2e README carry the same
- * number and the same reading, so neither tells a softer story than the check.
+ * `ci` capture: 96 of 136 pairs carry such a note (every one naming a 14 px node) and all
+ * 136 read live — so a live tier run says every ROLE grew, never that no text is frozen.
+ * Two limits are named here rather than left implicit: a role that partly follows the scale
+ * is a note (calc(10px + 0.5rem) measures 18 -> 26 px, 1.444x), and text painting with no
+ * box of its own is not counted at all (see MEASURE_PROBE, and the
+ * `painted-carrier-text-scale` fixture that asserts the miss). The rubric
+ * (`docs/ux/audit-rubric.md`) and the e2e README carry the same numbers and the same
+ * reading, so neither tells a softer story than the check.
  */
 function verifyTextScale(records: CaptureRecord[]) {
+	// Read from `SCALES`, not written as a 2: the assertion below compares the 200 % root
+	// against the 100 % root times this, so a changed scale table moves the assertion with
+	// it instead of making every pair look like a page that pinned its root.
+	const factor = declaredScaleFactor();
 	const perDevice = new Map();
 	for (const record of records) {
 		const key = `${record.screen}__${record.state}__${record.device}__${record.theme}`;
@@ -2294,6 +2327,7 @@ function verifyTextScale(records: CaptureRecord[]) {
 					at200.histogram,
 					at100.rootPx,
 					at200.rootPx,
+					factor,
 				),
 			);
 		}
@@ -2369,6 +2403,7 @@ function judgeTextScale(
 	at200: Map<number, number>,
 	rootPx100: number,
 	rootPx200: number,
+	factor: number,
 ) {
 	const px = (rem: number) => Math.round(rem * rootPx100 * 100) / 100;
 	// THE PRECONDITION, CHECKED FIRST, because everything below divides each frame by ITS
@@ -2379,7 +2414,7 @@ function judgeTextScale(
 	// exists to catch — and the median it replaced did catch it (1.00x, FAIL) — so the
 	// root relationship is asserted here rather than assumed. A pair whose 200 % root is
 	// not the declared factor cannot answer a large-text question, whatever its sizes say.
-	const expectedRoot200 = rootPx100 * 2; // the declared % the guard pairs: 100 then 200
+	const expectedRoot200 = rootPx100 * factor; // the declared % the guard pairs: 100 then 200
 	if (Math.abs(rootPx200 - expectedRoot200) > 0.5)
 		return {
 			key,
@@ -2446,7 +2481,7 @@ function judgeTextScale(
 			);
 		else
 			notes.push(
-				`the ${px(rem)}px role (${count} node(s)) has no ${px(rem) * 2}px counterpart at 200% — a node the layout drops, or one that grew by a size the factor does not produce`,
+				`the ${px(rem)}px role (${count} node(s)) has no ${px(rem) * 2}px counterpart at 200% — a node the layout drops or clips away at that scale, or one that grew by a size the factor does not produce`,
 			);
 	}
 	for (const [rem, count] of at200) {
