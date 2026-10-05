@@ -1,4 +1,5 @@
 import { Modal, Pressable, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { CONTROL, ROLE } from "@/ui/a11y";
 import { useTokenColor } from "@/ui/appearance";
@@ -44,6 +45,12 @@ export const Dialog = ({
 }: DialogProps) => {
 	const shadow = useShadow("overlay");
 	const scrimColour = useTokenColor("scrim");
+	/* The side bands. A centred dialog normally touches neither screen edge, but the
+	 *  surface is as wide as its content allows and on a landscape phone that is the
+	 *  whole viewport: measured at iphone-15-landscape (insets 59/59, resolved by the
+	 *  capture rig) it spans x = 24…820 of 844, so the title paints at x = 41 and the
+	 *  confirm action's right edge reaches x = 800 — both inside the band. */
+	const insets = useSafeAreaInsets();
 
 	return (
 		<Modal
@@ -63,7 +70,20 @@ export const Dialog = ({
 					testID={CONTROL.dialogScrim}
 					onPress={onCancel}
 				/>
-				<View className={DIALOG_SURFACE_CLASS} style={{ ...shadow }}>
+				<View
+					className={DIALOG_SURFACE_CLASS}
+					style={{
+						...shadow,
+						/* A MARGIN on the surface, not padding on the modal's root. `px-6` on the
+						 *  root is the phone's own margin, and an inline `paddingLeft` would
+						 *  OVERRIDE it rather than add to it; padding the root would also move the
+						 *  scrim, which is `absolute inset-0` on that same box, and leave the
+						 *  band it no longer covers undimmed. The margin is outside the dialog, so
+						 *  both the surface and the band keep the meaning they had. */
+						marginLeft: insets.left,
+						marginRight: insets.right,
+					}}
+				>
 					<Heading level={2} className="text-title text-ink">
 						{title}
 					</Heading>
