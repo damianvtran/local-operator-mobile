@@ -1409,20 +1409,45 @@ async function main() {
 	// now carries a landscape device.
 	group = "sub-rule mutation";
 	{
-		const mutations: Array<{ blind: string; defect: string }> = [
-			{ blind: "U-04", defect: "U-04" },
-			{ blind: "U-05:top", defect: "U-05-top" },
+		/**
+		 * Each blindable rule and EVERY fixture it catches, named exactly as the
+		 * canary's own `missed:` ledger names them (`<marker> (#<element>)`).
+		 *
+		 * A LIST rather than a single defect, because a rule can catch more than one
+		 * fixture and the assertion below has to stay exact. `U-05:top` is that rule:
+		 * its one top-edge wording catches #full-bleed and #translucent-bar alike (the
+		 * latter re-declared from U-08 in #50, whose `meaningful` filter cannot see a
+		 * word-less overlay), so `SUB_RULE_TEXT` cannot tell the two apart and both are
+		 * named here. Declaring only the bare marker collapsed them to `["U-05-top",
+		 * "U-05-top"]` and read the second fixture as a phantom extra miss — the red
+		 * `main` this list was corrected for.
+		 */
+		const mutations: Array<{ blind: string; defects: string[] }> = [
+			{ blind: "U-04", defects: ["U-04 (#scale-clip)"] },
+			{
+				blind: "U-05:top",
+				defects: ["U-05-top (#full-bleed)", "U-05-top (#translucent-bar)"],
+			},
 			// The top rule's dialog shape (content inside an aria-modal dialog raised
 			// into the band): its own sub-rule since review round 4, so each blind
 			// misses exactly the fixture it names.
-			{ blind: "U-05:top-dialog", defect: "U-05-top-dialog" },
-			{ blind: "U-05:bottom", defect: "U-05-bottom" },
-			{ blind: "U-05:left", defect: "U-05-left" },
-			{ blind: "U-05:right", defect: "U-05-right" },
-			{ blind: "U-07:x", defect: "U-07-x" },
-			{ blind: "U-07:y", defect: "U-07-y" },
-			{ blind: "U-08:escape-absolute", defect: "U-08-escape-absolute" },
-			{ blind: "U-08:escape-fixed", defect: "U-08-escape-fixed" },
+			{
+				blind: "U-05:top-dialog",
+				defects: ["U-05-top-dialog (#dialog-band-control)"],
+			},
+			{ blind: "U-05:bottom", defects: ["U-05-bottom (#footer-flush)"] },
+			{ blind: "U-05:left", defects: ["U-05-left (#side-left)"] },
+			{ blind: "U-05:right", defects: ["U-05-right (#side-right)"] },
+			{ blind: "U-07:x", defects: ["U-07-x (#clipped-x)"] },
+			{ blind: "U-07:y", defects: ["U-07-y (#clipped)"] },
+			{
+				blind: "U-08:escape-absolute",
+				defects: ["U-08-escape-absolute (#escape-pinned)"],
+			},
+			{
+				blind: "U-08:escape-fixed",
+				defects: ["U-08-escape-fixed (#fixed-escape)"],
+			},
 		];
 		// One capture for all ten rules. The captured matrix is identical for every
 		// blinded rule — only the audit's `--blind` differs — so the HEAVY phase went
@@ -1625,11 +1650,14 @@ async function main() {
 			}
 			const output = `${run.stdout ?? ""}${run.stderr ?? ""}`;
 			const missedLine = /^\s*missed:\s*(.+)$/m.exec(output)?.[1]?.trim() ?? "";
-			// The marker carries the element id in parentheses; the defect name is
-			// what the assertion is about.
+			// The ledger entries VERBATIM — marker AND element id (`U-05-top
+			// (#translucent-bar)`). The element id used to be stripped, which collapsed a
+			// rule's two fixtures to the same bare marker and left the expected
+			// single-defect list unable to tell "a second fixture" from "a duplicate
+			// miss" — the ambiguity that reddened `main` after #50.
 			const missed = missedLine
 				.split(",")
-				.map((entry) => entry.trim().replace(/\s*\(#.*\)$/, ""))
+				.map((entry) => entry.trim())
 				.filter((entry) => entry !== "" && entry !== "none");
 			// A KILLED canary is not a failed canary. `spawnSync` reports `status: null`
 			// when its own bound fires, and `null !== 0` satisfied the old assertion — so
@@ -1662,17 +1690,21 @@ async function main() {
 			const blindOk = blindPasses({
 				status: run.status,
 				missed,
-				defect: mutation.defect,
+				defects: mutation.defects,
 				verdict,
 			});
 			// On failure the diagnostic REPLACES the unreadable `got []`: it names the
 			// canary's exit, which of the five terms failed, whether the run was vacuous,
 			// the cells and rows each direction produced, and where the evidence is.
 			const keptTree = blindOk ? "reaped (the check passed)" : out;
+			// Sorted on both sides: the canary emits `missed:` in the fixture's document
+			// order, and pinning that would fail a fixture that merely moved in the file
+			// while the set it names is unchanged. Set equality is still exact — every
+			// fixture the rule catches, no more and no fewer.
 			check(
-				`blinding ${mutation.blind} misses exactly ${mutation.defect}`,
-				missed,
-				[mutation.defect],
+				`blinding ${mutation.blind} misses exactly ${mutation.defects.join(", ")}`,
+				[...missed].sort(),
+				[...mutation.defects].sort(),
 				blindDiagnostic({
 					exitCode: run.status,
 					signal: run.signal === null ? null : String(run.signal),

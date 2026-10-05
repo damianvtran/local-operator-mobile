@@ -1138,7 +1138,10 @@ point: a check with two independent rules (`U-05-top` vs `U-05-left`, `U-07-x` v
 (U-04's scaling clip) would not be asserted at all. Both were true of an earlier
 revision, so `pnpm e2e:relay` now also runs a **mutation self-test**: it blinds one
 rule at a time through `--blind <rule>` and requires the canary to fail naming
-exactly that defect. A rule the self-test cannot blind is a rule nothing checks.
+exactly that rule's fixtures — every one it catches and nothing else, so a rule
+whose single wording catches two elements (`U-05:top` catches `#full-bleed` and
+`#translucent-bar`) expects both. A rule the self-test cannot blind is a rule
+nothing checks.
 
 The canary also proves the harness's own dimensions work, in both directions:
 `e2e/fixtures/audit-canary/` is written in `rem`, so the text-scale dimension comes

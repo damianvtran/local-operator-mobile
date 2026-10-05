@@ -22,6 +22,17 @@ import {
 
 const DEFECT = "U-05-top";
 
+/**
+ * The one rule with more than one fixture, and the two ledger entries it expects.
+ *
+ * `U-05:top`'s single top-edge wording catches both elements, so a realistic
+ * `missed:` ledger for it carries two entries under one marker — the shape the
+ * expectation is a list for (the red `main` after PR #50 declared the second).
+ */
+const FULL_BLEED = "U-05-top (#full-bleed)";
+const TRANSLUCENT_BAR = "U-05-top (#translucent-bar)";
+const TWO_FIXTURE_DEFECTS = [FULL_BLEED, TRANSLUCENT_BAR];
+
 /** The realistic healthy blinded verdict: exit 1, `ok: false`, and ONE failed term. */
 const healthyBlind: CanaryVerdict = {
 	ok: false,
@@ -35,10 +46,13 @@ const healthyBlind: CanaryVerdict = {
 	rows: { defects: 12, clean: 12 },
 };
 
-const call = (verdict: CanaryVerdict) => ({
+const call = (
+	verdict: CanaryVerdict,
+	overrides: { missed?: string[]; defects?: string[] } = {},
+) => ({
 	status: 1,
-	missed: [DEFECT],
-	defect: DEFECT,
+	missed: overrides.missed ?? [DEFECT],
+	defects: overrides.defects ?? [DEFECT],
 	verdict,
 });
 
@@ -101,6 +115,35 @@ describe("a blind passes only when the canary's own verdict permits it", () => {
 			blindPasses({ ...call(healthyBlind), missed: ["U-05-bottom"] }),
 		).toBe(false);
 		expect(blindPasses({ ...call(healthyBlind), status: null })).toBe(false);
+	});
+
+	it("accepts a rule whose single wording catches TWO fixtures, in either order", () => {
+		// Order is not part of the property — the canary emits the fixture's document
+		// order, so both ledgers below describe the same set.
+		for (const missed of [TWO_FIXTURE_DEFECTS, [TRANSLUCENT_BAR, FULL_BLEED]]) {
+			expect(
+				blindPasses(
+					call(
+						{ ...healthyBlind, missed },
+						{ missed, defects: TWO_FIXTURE_DEFECTS },
+					),
+				),
+			).toBe(true);
+		}
+	});
+
+	it("still fails a two-fixture rule that missed only one of them", () => {
+		// The exactness this pins: a blind that missed SOMETHING is not a blind that
+		// missed everything the rule catches, and the harness's value is the second.
+		const missed = [FULL_BLEED];
+		expect(
+			blindPasses(
+				call(
+					{ ...healthyBlind, missed },
+					{ missed, defects: TWO_FIXTURE_DEFECTS },
+				),
+			),
+		).toBe(false);
 	});
 
 	it("fails an unreadable verdict rather than reading it as health", () => {

@@ -4,7 +4,8 @@
  * Two properties this file exists to hold, both learned the hard way on this branch:
  *
  * 1. **A HEALTHY blinded run is `ok: false`.** Blinding removes one rule, the audit then
- *    misses exactly that defect, and the canary exits 1 by design (`missedDefects.length >
+ *    misses exactly that rule's fixture(s), and the canary exits 1 by design
+ *    (`missedDefects.length >
  *    0` → `failedTerms = ["missed"]` → `ok = false`). So `verdict.ok === true` can never
  *    hold for the case under test, and requiring it turned every blind into a failure:
  *    every tree kept (the footprint this harness spent rounds removing) and the shared
@@ -38,24 +39,39 @@ const asObject = (value: unknown): Record<string, unknown> =>
 		: {};
 
 /**
+ * Do two ledgers name the same entries, order aside?
+ *
+ * The expected set is a LIST because a rule can have more than one fixture, and a list
+ * compared exactly — never "at least one" — is what keeps `misses exactly` exact. Order
+ * is not part of the property: the canary emits declarations in the fixture's document
+ * order, and pinning that would fail a fixture that merely moved in the file.
+ */
+const sameMembers = (a: string[], b: string[]): boolean =>
+	JSON.stringify([...a].sort()) === JSON.stringify([...b].sort());
+
+/**
  * Does the blind PASS?
  *
- * `status === 1` and the expected single miss are the *shape of success* here, and the
+ * `status === 1` and the expected miss set are the *shape of success* here, and the
  * canary's own `failedTerms` must be exactly `["missed"]` — the blinding — with no second
  * term. `vacuous`, `cleanFails`, `defectsStatus` and `cleanStatus` each therefore fail the
  * blind and are named in the diagnostic.
+ *
+ * `defects` is a LIST because a rule can catch more than one fixture — `U-05:top` catches
+ * both `#full-bleed` and `#translucent-bar`. The match is still EXACT (every listed fixture
+ * and nothing else), which is what keeps "misses exactly" exact rather than relaxing it to
+ * "misses at least one".
  */
 export function blindPasses(input: {
 	status: number | null;
 	missed: string[];
-	defect: string;
+	defects: string[];
 	verdict: CanaryVerdict;
 }): boolean {
 	const terms = input.verdict.failedTerms;
 	return (
 		input.status === 1 &&
-		input.missed.length === 1 &&
-		input.missed[0] === input.defect &&
+		sameMembers(input.missed, input.defects) &&
 		Array.isArray(terms) &&
 		terms.length === 1 &&
 		terms[0] === "missed"
