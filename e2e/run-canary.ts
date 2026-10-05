@@ -152,8 +152,10 @@ const KNOWN_BLINDS = new Set([
 	"U-05:top",
 	// The top rule's dialog shape (content inside an aria-modal dialog raised
 	// into the band): its own sub-rule since review round 4, so blinding it
-	// misses exactly #dialog-band-control while blinding U-05:top misses
-	// exactly #full-bleed.
+	// misses exactly #dialog-band-control while blinding U-05:top misses exactly
+	// the two fixtures its single top-edge wording catches — #full-bleed and
+	// #translucent-bar, the latter re-declared from U-08 in #50. `verify.ts`
+	// names both in its expected set.
 	"U-05:top-dialog",
 	"U-05:bottom",
 	"U-05:left",
