@@ -235,8 +235,9 @@ describe("the slash tap takes the composer as a send does", () => {
 		const guard = slashArm.indexOf("if (request === null) return;");
 		const hold = slashArm.indexOf("inFlight.current = true;");
 		expect(guard).toBeGreaterThan(-1);
-		expect(hold, "a return before the send would leak inFlight").toBeGreaterThan(
-			guard,
-		);
+		expect(
+			hold,
+			"a return before the send would leak inFlight",
+		).toBeGreaterThan(guard);
 	});
 });
