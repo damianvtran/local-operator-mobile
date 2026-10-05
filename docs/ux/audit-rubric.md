@@ -58,7 +58,8 @@ The guard is composition-insensitive on purpose. An earlier version compared the
 cell's **median** text box, which moves when the MIX of sizes changes even though every
 role scaled — so a text node that gained the type role it was missing made the cell
 fail for improving (measured: `S15/loading__tablet-landscape__200` fell to a 1.852×
-median with all fifteen nodes scaling exactly 2×).
+median with all fifteen nodes scaling exactly 2×, the factor `SCALES` declares for the
+200 % id).
 
 **Two things are checked before any role is compared.** The 200 % frame's root font size
 must be the factor's multiple of the 100 % frame's: a page that pins its root (`font-size:
@@ -68,11 +69,15 @@ is counted by its **box**, not by whether it draws — `visibility: hidden` is e
 same thing the readiness rule's `visible()` says), while a node at `opacity: 0` and a child
 clipped away inside a zero-height container ARE counted, because the audit reads the app's
 clipped placeholder proxy on purpose. **What that cannot catch, and a signer must not
-assume away:** text that paints with no box of its own (`height: 0; overflow: visible`,
-`line-height: 0`, `display: contents`) is skipped, so a frozen role on such a carrier goes
-unreported and the pair reads live — a measured, asserted limit (`painted-carrier-
-text-scale`), not an unknown one. `U-04` can therefore read every live cell's text as text
-the box tree knows about.
+assume away:** text painting from a **zero-height box** is skipped — the role goes
+unreported and the pair reads live. That is a CLASS, not a list: the shapes seen so far are
+`height: 0` with `overflow: visible`, `line-height: 0`, `display: contents` and
+`contain: size`, *including but not limited to* those, over elements that hold direct text.
+Two further escapes have a different cause and are not box cases at all — generated content
+(`::before` / `::after`) is not an element holding direct text, and text inside a shadow root
+is never traversed. `painted-carrier-text-scale` pins three of the box shapes as a known
+miss. Read a live verdict as "every role the box tree knows about grew", and **not** as
+"there is no frozen text here".
 
 **A note in `scaleNotes` is a third answer, and it is the common one.** Three different
 things leave a 100 % role without a scaled counterpart — a node that did not move with

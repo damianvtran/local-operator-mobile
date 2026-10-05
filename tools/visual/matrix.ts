@@ -833,13 +833,14 @@ export const MEASURE_PROBE = `
   // node's OWN computed value is read: visibility is inherited, so a visibility:visible
   // child of a hidden parent keeps its own value and must stay counted.
   //
-  // WHAT A BOX TEST CANNOT CATCH, asserted rather than left unknown: text that paints with
-  // NO box of its own — height:0; overflow:visible, line-height:0 (the line box
-  // collapses while the glyphs still draw), and display:contents — is skipped, so a
-  // FROZEN role on such a carrier is never reported and its pair reads live. The
-  // painted-carrier-text-scale fixture asserts that known miss by requiring the cell to
-  // PASS with its frozen roles unnamed, and docs/e2e/README.md states the shape and its
-  // measured incidence. The app has no such carrier today.
+  // WHAT A BOX TEST CANNOT CATCH — a class rather than a list. Text painting from a
+  // ZERO-HEIGHT box is skipped, so a FROZEN role on such a carrier is never reported and
+  // its pair reads live. Seen so far, including but not limited to: height:0 with
+  // overflow:visible, line-height:0, display:contents, contain:size — over elements that
+  // hold direct text. (Generated content and shadow-root text escape for a different
+  // reason: not direct text, and never traversed.) The painted-carrier-text-scale fixture
+  // asserts three of those shapes as a known miss, and docs/e2e/README.md states the class
+  // with its measured incidence. The app has no such carrier today.
   const unpainted = (el) => el.getBoundingClientRect().height <= 0;
   const heights = textNodes.slice(0, 400).map((el) => el.getBoundingClientRect().height).filter((h) => h > 0);
   heights.sort((a, b) => a - b);

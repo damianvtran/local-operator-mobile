@@ -886,27 +886,42 @@ clipped placeholder proxy on purpose, and `visible()` answers a different questi
 app render this marker", not "can a reviewer read this text"). `unpainted-role-text-scale`
 pins it: each of those two shapes carries a frozen px size and the page **FAILS** by name.
 
-**What the box test cannot catch, asserted rather than left unknown.** Text that paints with
-NO box of its own is skipped, so a FROZEN role on such a carrier is never reported and its
-pair reads live. Three shapes do it, all of them legible on screen:
+**What the box test cannot catch — stated as a CLASS, because any list of shapes invites a
+fifth.** The guard reads an element's box, so text that paints from a **zero-height box** is
+invisible to it: the role is never reported, the pair reads live, and a frozen size on such a
+carrier goes unnoticed. This is about elements that hold **direct text**, which are the only
+nodes the probe looks at. The shapes seen so far — **including but not limited to**:
 
-| shape | why its box measures zero |
+| shape | why the box measures zero |
 |---|---|
-| `height: 0; overflow: visible` on a carrier holding its own text | the box is zero and nothing clips the text |
+| `height: 0` with `overflow: visible`, on a carrier holding its own text | the box is zero and nothing clips the text |
 | `line-height: 0` | the line box collapses while the glyphs still draw |
 | `display: contents` | no box at all; the text paints in the parent's flow |
+| `contain: size` | containment collapses the box to zero while the glyphs still paint |
 
-`painted-carrier-text-scale` pins this limit: it carries all three with frozen px sizes and
-must **PASS** (exit 0, live) with none of them named. A limit stated as a measurement beats
-an unknown hole.
+`painted-carrier-text-scale` pins three of those (`height:0`, `line-height:0`,
+`display:contents`) with frozen px sizes and must **PASS** (exit 0, live) with none of them
+named. The table is an example set, not the class: a fifth mechanism that also yields a
+zero-height box would be missed in exactly the same way, and nothing here says otherwise.
+Measured on this head: a `contain: size` element holding its own 22 px text is absent from
+the `100 %` role set altogether and the cell reads live.
+
+**Two further ways text escapes the role set, from a different cause** — these are NOT
+zero-box cases, and conflating them with the table above is what an earlier revision of this
+section got wrong. Text in **generated content** (`::before` / `::after`) is not an element
+holding direct text, so the probe never sees it; and text inside a **shadow root** is never
+traversed, because the probe walks the light DOM (`document.querySelectorAll('body *')`).
+Neither is a statement about boxes, and neither is covered by the fixtures above.
 
 A stricter, paint-based predicate — a `Range` over the node's own text yielding a line rect,
-plus the ancestor opacity product and an ancestor-clipping intersection — **catches those
-three and is NOT shipped**: measured on the `ci` tier it moved a reading (96 pairs carrying
-a note became 118), and a metric change that reclassifies app cells is the exact failure
-this branch has had to correct twice. Its incidence on `app/`, `src/` and `design/` is 0:
-the app's only zero-height text node is `textarea.tsx`'s, and it is `overflow: hidden` and
-paints nothing.
+plus the ancestor opacity product and an ancestor-clipping intersection — **is NOT shipped**:
+measured on the `ci` tier it moved the **note count** (96 pairs carrying a note became 118,
+with the verdict unchanged at 136/136 live and 0 UNREADY), and a metric change that moves a
+number app cells report is the failure this branch has had to correct twice. Note count, not
+verdict: no cell's readiness changed, and the earlier revision of this sentence was wrong to
+imply otherwise. Its incidence
+on `app/`, `src/` and `design/` is 0: the app's only zero-height **element wrapping text** is
+`textarea.tsx`'s, and it is `overflow: hidden` and paints nothing.
 
 The `medianTextHeight` the report prints is a readout of the metric this guard replaced (the
 median of the counted nodes' box heights); nothing in the guard reads it. `textNodeCount`
@@ -955,9 +970,10 @@ is no frozen text here".
 
 Two further limits, named rather than left implicit: a role that **partly** follows the scale
 is a note, never a failure (`calc(10px + 0.5rem)` measures **18 px → 26 px, 1.444×**), and
-text painting with **no box of its own** is not counted at all — the three shapes above, with
-`painted-carrier-text-scale` asserting the miss. The reading is the same for both: named, not
-failed. The `calc()` branch never appears on the app's own tiers — there is no
+text painting from a **zero-height box** is not counted at all — the table above lists the
+shapes seen so far as examples, not as the class, and `painted-carrier-text-scale` asserts
+three of them. The reading is the same for both: named, not failed. The `calc()` branch
+never appears on the app's own tiers — there is no
 `calc()`, `clamp()` or viewport-unit font size anywhere in `app/`, `src/` or `design/`, and
 a probe carrying `calc(10px + 0.5rem)` measures **18 px → 26 px (1.444×)** and is named,
 not failed. That is the widest reading of a live verdict, and it is the one a `U-04` signer
@@ -972,7 +988,7 @@ four that must **FAIL by name** and three that must **pass**:
 | `px-role-text-scale/` | one `px` role among scaling ones — the case a median cannot see | FAIL, `the 20px role … did not scale` |
 | `root-pinned-text-scale/` | `html { font-size: 16px !important }`: a root the harness cannot move | FAIL, `the harness's root font size did not take effect` |
 | `unpainted-role-text-scale/` | text that is laid out but never drawn: `opacity:0` and a child clipped away, both frozen | FAIL, those two roles named; `visibility:hidden` not counted |
-| `painted-carrier-text-scale/` | the KNOWN miss: frozen text painting with no box of its own (`height:0` carrier, `line-height:0`, `display:contents`) | PASS, none named |
+| `painted-carrier-text-scale/` | the known miss: frozen text painting from a zero-height box (`height:0` carrier, `line-height:0`, `display:contents` — examples, not the class) | PASS, none named |
 | `hidden-role-text-scale/` | a `display:none` carrier (and an inline `<script>`) | pass |
 | `audit-canary/` | all `rem` | pass, dimension live |
 

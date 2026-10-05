@@ -2256,9 +2256,13 @@ function declaredScaleFactor(): number {
  * frames at 100 %, and judged against itself that pair reads live — which is the defeat
  * this guard exists to catch), and a type role is counted by its BOX. `visibility: hidden`
  * is excluded (as READINESS_PROBE's visible() does), while opacity:0 and clipped nodes are
- * counted on purpose; see MEASURE_PROBE for the stance and for the one shape a box test
- * cannot catch, which `painted-carrier-text-scale` asserts as a known miss. Both are
- * asserted rather than assumed — see `judgeTextScale`.
+ * counted on purpose. What a box test cannot see is text painting from a ZERO-HEIGHT box —
+ * a CLASS rather than a list: `height:0; overflow:visible`, `line-height:0`,
+ * `display:contents`, `contain:size`, and shapes not yet seen, over elements that hold
+ * direct text. Generated content and shadow-root text escape for a different reason — not
+ * direct text, never traversed — and the README names them separately. See MEASURE_PROBE;
+ * the `painted-carrier-text-scale` fixture asserts three of the box shapes as a known miss.
+ * Both preconditions are asserted rather than assumed — see `judgeTextScale`.
  *
  * WHY PER ROLE AND NOT A MEDIAN OVER THE CELL.
  *
@@ -2294,11 +2298,11 @@ function declaredScaleFactor(): number {
  * `ci` capture: 96 of 136 pairs carry such a note (every one naming a 14 px node) and all
  * 136 read live — so a live tier run says every ROLE grew, never that no text is frozen.
  * Two limits are named here rather than left implicit: a role that partly follows the scale
- * is a note (calc(10px + 0.5rem) measures 18 -> 26 px, 1.444x), and text painting with no
- * box of its own is not counted at all (see MEASURE_PROBE, and the
- * `painted-carrier-text-scale` fixture that asserts the miss). The rubric
- * (`docs/ux/audit-rubric.md`) and the e2e README carry the same numbers and the same
- * reading, so neither tells a softer story than the check.
+ * is a note (calc(10px + 0.5rem) measures 18 -> 26 px, 1.444x), and text painting from a
+ * ZERO-HEIGHT box is not counted at all — MEASURE_PROBE states that as a class and the
+ * `painted-carrier-text-scale` fixture pins three of its shapes. The rubric
+ * (`docs/ux/audit-rubric.md`) and the e2e README carry the same numbers, the same class and
+ * the same reading, so none of the three tells a softer story than the check.
  */
 function verifyTextScale(records: CaptureRecord[]) {
 	// Read from `SCALES`, not written as a 2: the assertion below compares the 200 % root

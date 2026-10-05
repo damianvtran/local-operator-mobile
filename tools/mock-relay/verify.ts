@@ -1878,9 +1878,10 @@ async function main() {
 		// its own — a zero-height non-clipping carrier holding its own text, a collapsed line
 		// box, and a `display: contents` element — is skipped by the box test, so this page
 		// PASSES (exit 0, dimension live) with all three frozen roles unnamed. A paint-based
-		// predicate catches them and is NOT shipped: measured on the `ci` tier it moved a
-		// reading (96 pairs noted -> 118), and this branch's whole subject is a metric that
-		// reclassified cells silently. docs/e2e/README.md carries the shape and its incidence.
+		// predicate catches them and is NOT shipped: measured on the `ci` tier it moved the
+		// NOTE COUNT (96 pairs noted -> 118; the verdict stayed 136/136 live, 0 UNREADY), and
+		// a metric change that moves a number app cells report is this branch's whole subject.
+		// docs/e2e/README.md states the class and its incidence.
 		const missed = run(
 			join(WORKTREE, "e2e", "fixtures", "painted-carrier-text-scale"),
 		);
