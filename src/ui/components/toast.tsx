@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { Animated, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { type ToastTone, useUiStore } from "@/state/ui-store";
 import { CONTROL } from "@/ui/a11y";
 import { useReducedMotion, useTokenColor } from "@/ui/appearance";
@@ -65,6 +66,11 @@ export const ToastHost = () => {
 	const dismiss = useUiStore((state) => state.dismissToast);
 	const reduceMotion = useReducedMotion();
 	const fade = useRef(new Animated.Value(0)).current;
+	/* The device's unsafe edges. The host is mounted at the app ROOT
+	 *  (`app/_layout.tsx`), outside every `Screen`, so no screen padding reaches it
+	 *  — it has to carry the insets itself, exactly as `ConversationsDrawer` does
+	 *  for the same reason. */
+	const insets = useSafeAreaInsets();
 
 	useEffect(() => {
 		if (!toast) return;
@@ -100,10 +106,23 @@ export const ToastHost = () => {
 	return (
 		<View
 			className="absolute inset-x-4 bottom-4 items-center"
-			// Above the composer in the token's z ladder, inside the safe area. The
-			// screen owns the bottom padding, because the keyboard offset is decided
-			// where the composer is.
-			style={{ zIndex: Z_LEVELS.toast }}
+			/* Above the composer in the token's z ladder. The `inset-x-4 bottom-4`
+			 *  margin is the PHONE's own 16 pt; the device's unsafe edges are spent as
+			 *  padding on this host, so the pill clears them at every orientation. In
+			 *  portrait that is only the home indicator; in landscape the notch moves to
+			 *  the SIDES, and there the margin alone leaves the pill inside both bands —
+			 *  measured at iphone-15-landscape (insets 59/59, resolved by the capture
+			 *  rig): pill x = 16…828 of 844, its label starting at x = 48, and its foot
+			 *  16 pt above a 21 pt gesture bar.
+			 *
+			 *  The padding rides on the HOST rather than the pill so the 16 pt margin
+			 *  keeps its meaning and no width is spent out of the message column. */
+			style={{
+				zIndex: Z_LEVELS.toast,
+				paddingLeft: insets.left,
+				paddingRight: insets.right,
+				paddingBottom: insets.bottom,
+			}}
 		>
 			<Animated.View style={{ opacity: fade }} className="w-full">
 				<Toast

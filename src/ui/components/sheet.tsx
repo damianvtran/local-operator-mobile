@@ -151,6 +151,21 @@ export const Sheet = ({
 						className={SHEET_SURFACE_CLASS}
 						style={{
 							...shadow,
+							/* THE SIDE BANDS, for the same reason the bottom one below is spent on
+							 *  the scroll content: a bottom sheet is full-bleed, so the moment the notch
+							 *  moves to an edge — landscape — its title AND its close control paint
+							 *  inside the unsafe band. Measured at iphone-15-landscape (insets 59/59,
+							 *  resolved by the capture rig): the title's left edge is x = 17, and the
+							 *  close control's right edge reaches x = 828 of 844.
+							 *
+							 *  The padding rides on the SURFACE, which carries the fill, so the sheet
+							 *  stays full-bleed behind the band and only its content is inset — the
+							 *  shape `Screen` uses (it pads its root, not its children). It is NOT
+							 *  `ConversationsDrawer`'s widen-and-pad: that spends the inset out of a
+							 *  FIXED-width panel's outer geometry, and a full-viewport surface has no
+							 *  outer geometry left to widen. */
+							paddingLeft: insets.left,
+							paddingRight: insets.right,
 							transform: [
 								{
 									translateY: rise.interpolate({
