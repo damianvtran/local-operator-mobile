@@ -39,10 +39,13 @@ export const COMPOSER_COPY = {
 	 * 368 pt at 200 %. The overlay that used to clamp it cut MID-WORD inside the
 	 * product name at the DEFAULT scale (`Message Local Opera…`) — truncated copy
 	 * rather than an abbreviation, seen by every user at 100 % (design round 2, D2).
-	 * `Message` measures 63.5 pt at 100 % and 126.9 pt at 200 % in that box, so it
+	 * `Message…` measures 73.3 pt at 100 % and 146.5 pt at 200 % in that box, so it
 	 * fits unellipsized at every scale and the platform's own `::placeholder` paints
-	 * it — see `Textarea` for why the overlay was dropped rather than kept. */
-	placeholder: "Message",
+	 * it — see `Textarea` for why the overlay was dropped rather than kept. The
+	 * trailing ellipsis is the design's own convention for this field (the § 12 mock
+	 * ends the sentence the same way) and is what distinguishes it from the field's
+	 * visible `label`, which is also the word `Message`. */
+	placeholder: "Message…",
 	/** A send that could not reach the runtime at all. Never the raw fetch error:
 	 *  "Load failed" was a shipped first impression (U3). */
 	continuationError: "Couldn’t continue this conversation. Try again.",
