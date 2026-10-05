@@ -262,11 +262,14 @@ jobs:
     # The capture matrix is minutes; the bound is the diagnosis, not the budget.
     # THE BOUND COVERS THE JOB'S PARTS, NOT ITS LARGEST ONE, the invariant the
     # mock-relay job below states as `install + 25 + 10 < 45`: here it is
-    # `install + typecheck 10 + capture 20 + audit 10 + canary 5 < 50`. It was 45,
+    # `install + typecheck 10 + capture 30 + audit 15 + canary 5 < 60`. It was 45,
     # which the audit's raise to 10 pushed to exactly the sum of its parts with no
     # room for the install — a bound under the work it contains, the shape this
-    # pass exists to remove.
-    timeout-minutes: 50
+    # pass exists to remove. The capture and audit parts rose again when `CI_SCALES`
+    # gained the boundary step (336 -> 504 cells): that is a budget the per-push
+    # path now pays deliberately, because an axis that BRACKETS the band the footer
+    # breaks in cannot see that class of defect, and it reached review once already.
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v7
 
@@ -328,10 +331,17 @@ jobs:
         # still going. Measured again on 2026-10-03 (run 37098393675), the capture
         # costs 2.24 s/cell — 403 cells / 1209 frames in 903.1 s — so the `core`
         # plan of 1512 cells needs ~56 min and cannot finish inside this bound. The
-        # `--tier ci` sample can: 336 cells, ~12 min at the same rate, which leaves
+        # `--tier ci` sample can: 504 cells, ~19 min at the same rate, which leaves
         # the audit and the canary their own steps below. (`full` is 5544 cells, and
         # stays a dispatched or local run.)
-        timeout-minutes: 20
+        #
+        # RAISED 20 -> 30 WITH THE CI AXIS, and the two move together: `CI_SCALES`
+        # gained the boundary step (135), so this sample is 504 cells rather than 336.
+        # 30 is above the plan's own derived deadline (504 x 3 s = 25.2 min), which is
+        # the property the step bound has to keep — a bound that fires every run stops
+        # being a signal — and ~1.6x the measured cost, the headroom the other steps
+        # here carry.
+        timeout-minutes: 30
         # THE DOCUMENTED INVOCATION, through the harness's own script
         # (`docs/e2e/ci-notes.md` §3). An earlier version derived the cell list here
         # and passed `--cells`, working around a mismatch between what the capture
@@ -351,12 +361,13 @@ jobs:
         run: pnpm audit:capture --dir dist --out "$RUNNER_TEMP/frames" --relay "$MOCK_RELAY_URL" --tier ci --consecutive --yes
 
       - name: Audit the frames against the rubric
-        timeout-minutes: 10
+        timeout-minutes: 15
         # BOUND DERIVED FROM THE CELL COUNT, not guessed. On run 37167390506 this
         # step audited 250 of the ci tier's 256 cells in 312 s — 1.25 s/cell, with
         # no FAIL row — so the tier as it stood then was 256 x 1.25 s = ~5.3 min. It
-        # plans 336 cells today (~7 min at that rate) and 10 gives ~1.4x headroom
-        # over that. At 5 it was killed with six cells to go: a bound below the
+        # plans 504 cells today (~10.5 min at that rate) and 15 gives ~1.4x headroom
+        # over that, the ratio this bound has always carried; it moved 10 -> 15 with
+        # the capture above when `CI_SCALES` gained the boundary step. At 5 it was killed with six cells to go: a bound below the
         # work it contains, the same shape that made the capture's deadline derive
         # from its own plan. It is DERIVED, not COMPUTED at runtime: GitHub evaluates
         # `timeout-minutes` before any step runs, and the count that matters is the

@@ -574,7 +574,7 @@ node tools/visual/capture.ts --dir e2e/fixtures/audit-canary \
 # command. So this example is the bounded sample; `--plan` above prints the full count,
 # and dropping these three flags captures the whole `core` tier. `--tier ci` is the sample
 # the per-push CI job takes — every declared cell at two device profiles, both themes and
-# two scales, 336 cells — and `--full` is all 19 profiles at 5544 cells.
+# three scales, 504 cells — and `--full` is all 19 profiles at 5544 cells.
 #
 # The bound is DERIVED FROM THE PLAN unless you name one: `--deadline` defaults to
 # 3000 ms/cell with a 900 s floor, so a bound always holds the plan it was computed for,
@@ -712,7 +712,7 @@ Three tiers are declared in `matrix.ts`, and each says what it is:
 
 | tier | sample | cells | why |
 |---|---|---|---|
-| `ci` | every declared cell × `iphone-se`, `tablet-landscape` × both themes × scales 100 and 200 | 336 | the per-push CI job's sample. The step is bound at 20 minutes and the measured rate is 2.24 s/cell, so a 1512-cell `core` run cannot fit; this one lands ~12 minutes. It keeps the CELL axis whole — a state that is not captured is a state no review round can report on — and shrinks only the device, theme and scale axes, each to what its check needs: the narrowest and widest viewports (the two sides of the 768 breakpoint), because the theme check compares a cell's dark and light frames, and the 100 %/200 % pair the text-scale guard measures. |
+| `ci` | every declared cell × `iphone-se`, `tablet-landscape` × both themes × scales 100, 135 and 200 | 504 | the per-push CI job's sample. The step is bound at 30 minutes and the measured rate is 2.24 s/cell, so a 1512-cell `core` run cannot fit; this one lands ~19 minutes. It keeps the CELL axis whole — a state that is not captured is a state no review round can report on — and shrinks only the device, theme and scale axes, each to what its check needs: the narrowest and widest viewports (the two sides of the 768 breakpoint), because the theme check compares a cell's dark and light frames, and the 100 %/135 %/200 % set — the pair the text-scale guard measures plus the BOUNDARY step the footer's layout breaks at, because an axis that brackets that band cannot see a defect inside it. |
 | `core` | the 5 `core` profiles, both themes, every scale | 1512 | the default, and the local sample the operator's rule asks for. |
 | `full` | all 19 profiles | 5544 | the dispatched/nightly sample. |
 

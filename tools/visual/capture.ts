@@ -102,7 +102,7 @@ let settledRetakes = 0;
  * not a size policy: it catches a plan far larger than any sample this harness
  * offers (an inflated cell registry, a cell list copied from another tree), and it
  * is why a big run is always something the caller typed `--yes` for. It sits BELOW
- * every tier on purpose — `ci` plans 336 cells, `core` 1512, `full` 5544 — so none of
+ * every tier on purpose — `ci` plans 504 cells, `core` 1512, `full` 5544 — so none of
  * them starts by accident; the CI job passes `--yes` for exactly that reason. It is
  * NOT tied to the default tier, so it must not be raised to "let the default run": a
  * documented invocation that plans the whole `core` tier is a 56-minute command, and
@@ -2590,15 +2590,15 @@ if (isMain) {
 				"  --tier <name>       the sample to capture: ci | core (default) | full.",
 				"                      The matrix declares 19 device profiles; the run prints the",
 				"                      share it covered, and names the profiles it did not.",
-				"                        ci    2 of 19 profiles — 336 cells, both themes, scales 100",
-				"                              and 200 (~10 min) — the per-push CI job's sample",
+				"                        ci    2 of 19 profiles — 504 cells, both themes, scales 100,",
+				"                              135 and 200 (~19 min) — the per-push CI job's sample",
 				"                        core  5 of 19 profiles — 1512 cells, both themes,",
 				"                              every scale — the local default",
 				"                        full  19 of 19 profiles — 5544 cells",
 				"  --devices <names>   comma list. Default: the tier's profiles (ci 2, core 5 by",
 				"                      default, --full for all 19)",
 				"  --themes <names>    default dark,light",
-				"  --scales <ids>      default 100,135,150,200 (the `ci` tier defaults to 100,200)",
+				"  --scales <ids>      default 100,135,150,200 (the `ci` tier defaults to 100,135,200)",
 				"  --consecutive       also capture a +250 ms and a settled frame per cell",
 				"  --settle <ms>       boot budget before the first frame (default 1200)",
 				"  --tokens <path>     tokens.json, to check each frame's canvas against its theme",

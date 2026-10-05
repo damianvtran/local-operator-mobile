@@ -375,28 +375,39 @@ export function describeDeviceCoverage(coverage: {
  *   * both themes, because the theme-reached-the-render check compares a cell's
  *     dark and light frames — one theme cannot make it.
  *   * the 100% floor and the 200% ceiling, which is the pair the text-scale guard
- *     measures (200% over 100%). 150% is the phone-typical intermediate case and is
- *     left to `core`.
+ *     measures (200% over 100%), PLUS the boundary step between them — see
+ *     `CI_SCALES` below for why the boundary earns the third slot and 150% does
+ *     not. 150% stays in `core`, which sweeps every scale.
  *
- * That is 42 cells x 2 themes x (2 profiles x 2 scales) = 336 cells, ~12 minutes at
- * the measured rate: inside the step bound with most of it spare. `core` and
- * `full` are unchanged and stay the local and dispatched samples, so the full
- * 1512-cell `core` matrix and the 5544-cell `full` matrix remain runnable — nothing
- * is only reachable through CI.
+ * That is 42 cells x 2 themes x (2 profiles x 3 scales) = 504 cells, ~19 minutes at
+ * the measured rate: inside the step bound (raised with it, see `CI_SCALES`) with
+ * the same headroom it always carried. `core` and `full` are unchanged and stay the
+ * local and dispatched samples, so the full 1512-cell `core` matrix and the
+ * 5544-cell `full` matrix remain runnable — nothing is only reachable through CI.
  */
 export const CI_DEVICES: string[] = ["iphone-se", "tablet-landscape"];
 
-/** The scale ids the CI tier runs: the 100% floor and the 200% ceiling.
+/** The scale ids the CI tier runs: the 100% floor, the BOUNDARY step, and the 200%
+ * ceiling.
  *
- * DELIBERATELY NOT 135, even though the matrix's axis now carries it. The tier is
- * bound at 20 minutes on every push; at the measured 2.24 s/cell three scales would
- * be 504 cells = 18.8 min, and the harness derives its own deadline at 3000 ms/cell
- * — 504 x 3 s = 25.2 min — which is ABOVE the step bound, so the step would cut
- * short the budget the run computed for itself. Four scales would be worse. The
- * in-between scale is therefore exercised by `core` (the nightly `web-audit-core`
- * job and any local run), and covering it per-push is a budget decision for the
- * pipeline rather than something to slip in here. */
-export const CI_SCALES: string[] = ["100", "200"];
+ * WHY THE BOUNDARY IS HERE RATHER THAN A MID-POINT. This axis carried 100 and 200 —
+ * which BRACKET the band the footer's layout breaks in (1.35 to 1.4), and an axis that
+ * brackets a failure cannot see it. That defect reached review once, so its prior on
+ * this surface is high, and it is not worth waiting for the nightly to find the next
+ * one. `135` is that boundary: 1.3529411765, the largest standard iOS Dynamic Type
+ * step, and the value the web build derives from a 22 px root. A mid-point inside a
+ * range that now behaves continuously (there is no threshold left to sit between)
+ * earns less per push than the boundary itself does. The nightly `core` tier still
+ * sweeps every scale, so nothing is lost by composing the two sets differently.
+ *
+ * WHAT IT COSTS, because it is NOT free and the two are one decision. Three scales on
+ * both CI profiles is 504 cells, +50 % over the two-scale 336, so the per-push capture
+ * and audit bounds in `.github/workflows/e2e.yml` were raised with it (capture 20 → 30,
+ * audit 10 → 15, job 50 → 60). A bound that fires every run stops being a signal, so
+ * this list and that bound have to move together: reverting the bounds without
+ * reverting this list makes the job red, and reverting this list without the bounds
+ * wastes the budget it was sized for. */
+export const CI_SCALES: string[] = ["100", "135", "200"];
 
 export const THEMES = ["dark", "light"];
 
