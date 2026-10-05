@@ -1,5 +1,5 @@
 /**
- * Generated mirror of the `lop mobile` relay wire types.
+ * Hand-authored mirror of the `lop mobile` relay wire types.
  *
  * Source of truth: `local_operator/mobile/{types,daemon,projection}.py` in
  * `damianvtran/local-operator`, which serialises its dataclasses with `asdict`
@@ -9,8 +9,12 @@
  * runtime schemas are checked against.
  *
  * Committed on purpose: a contributor without a local-operator checkout can
- * still build. `scripts/gen-relay-types.mjs` (a later stream) regenerates it and
- * CI reports drift, because the relay may legitimately move ahead of the app.
+ * still build. A generator (`scripts/gen-relay-types.mjs`) and a CI drift-check
+ * are planned, not present yet (a later stream): the generator would regenerate
+ * this file and CI would report drift, because the relay may legitimately move
+ * ahead of the app. Until then the file is maintained by hand, and the
+ * `WireConformance` assertion plus the boundary parsers in `schemas.ts` are what
+ * keep it honest.
  *
  * Two rules hold for every declaration, and they are the reason for the
  * nullability below:

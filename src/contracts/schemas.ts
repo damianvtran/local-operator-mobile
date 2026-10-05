@@ -814,12 +814,12 @@ export type SchemaName = keyof SchemaRegistry;
  *
  * These are the client's payload types: `schemas.ts` infers them (so the schema
  * and the type cannot disagree), and `types.gen.ts` is what they are checked
- * against. `Wire` exists so a caller that needs the generated shape can ask for
- * it explicitly without importing the module.
+ * against. `Wire` exists so a caller that needs the mirror's declared shape can
+ * ask for it explicitly without importing the module.
  */
 export type Payload<K extends SchemaName> = z.output<SchemaRegistry[K]>;
 
-/** Compile-time proof that each schema's OUTPUT satisfies the generated mirror:
+/** Compile-time proof that each schema's OUTPUT satisfies the mirror:
  *  every field a schema produces must be a field the wire type declares, with a
  *  compatible type. Written in this direction on purpose — a schema that answers
  *  `undefined` where the wire promises a string, or that widens `tool_state`,
