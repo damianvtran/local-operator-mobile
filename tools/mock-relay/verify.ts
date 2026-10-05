@@ -1767,10 +1767,28 @@ async function main() {
 			`exit ${inert.status}`,
 		);
 		check(
-			"and the failing cell is named with its measured ratio",
-			/the text did not scale: median text \d+px at 200% against 1x/.test(
+			"and the failing cell is named as rendering both scales the same",
+			/the text did not scale with the root font size: .*the 200% frame renders the same text sizes/.test(
 				inert.output,
 			),
+			true,
+		);
+
+		// The MIXED case, and the one a per-role guard exists for: every paragraph
+		// scales and one role is pinned in px. A median over the cell is carried by the
+		// scaling majority and reports the pair live; the per-role guard reads the one
+		// role that did not move. Without this fixture the guard's headline failure —
+		// `S15/loading__tablet-landscape__200` — would have no small, cheap control.
+		const mixed = run(join(WORKTREE, "e2e", "fixtures", "px-role-text-scale"));
+		check(
+			"a page with ONE unscaled type role among scaling ones FAILS the guard",
+			mixed.status !== 0,
+			true,
+			`exit ${mixed.status}`,
+		);
+		check(
+			"and the unscaled role is the one named",
+			/the 20px role \(1 node\(s\)\) did not scale/.test(mixed.output),
 			true,
 		);
 

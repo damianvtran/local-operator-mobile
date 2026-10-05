@@ -764,6 +764,25 @@ export const MEASURE_PROBE = `
   const heights = textNodes.slice(0, 400).map((el) => el.getBoundingClientRect().height).filter((h) => h > 0);
   heights.sort((a, b) => a - b);
   const medianTextHeight = heights.length ? heights[Math.floor(heights.length / 2)] : 0;
+  // The size of every text node, grouped by size, so the scale guard can judge each
+  // TYPE ROLE against its own 100% counterpart instead of one cell median.
+  //
+  // WHY THE MEDIAN ABOVE IS NO LONGER ENOUGH: a median over the whole cell moves when
+  // the cell's COMPOSITION changes, not only when its scaling does. Giving a node its
+  // missing type role — the correct fix — shifts the median's basis and can drag the
+  // ratio BELOW the bar while every role scaled exactly 2x. The guard reads this
+  // histogram instead; medianTextHeight stays because the report prints it, not
+  // because the guard trusts it.
+  //
+  // Reported as a measurement (a size in CSS px and a count), never a verdict -- the
+  // role decision lives in tools/visual/capture.ts verifyTextScale.
+  const roleSizes = new Map();
+  for (const el of textNodes) {
+    const size = Number.parseFloat(getComputedStyle(el).fontSize);
+    if (!Number.isFinite(size) || size <= 0) continue;
+    roleSizes.set(size, (roleSizes.get(size) || 0) + 1);
+  }
+  const rootFontSizePx = Number.parseFloat(rootStyle ? rootStyle.fontSize : '');
   return {
     reported: { theme: info.theme, scale: info.scale, reduceMotion: info.reduceMotion,
                 themeSource: info.themeSource, insets: info.insets },
@@ -775,6 +794,13 @@ export const MEASURE_PROBE = `
     bodyScrollWidth: body ? body.scrollWidth : 0,
     textNodeCount: textNodes.length,
     medianTextHeight,
+    // Every distinct text size and how many nodes carried it. The guard turns these
+    // into roles by dividing by rootFontSizePx; leaving the division to the guard
+    // keeps this probe's output a reading rather than a judgement.
+    textRoleSizes: [...roleSizes.entries()]
+      .map(([px, count]) => ({ px, count }))
+      .sort((a, b) => a.px - b.px),
+    rootFontSizePx: Number.isFinite(rootFontSizePx) ? rootFontSizePx : null,
     route: location.pathname + location.search,
     title: document.title,
     // A blank render is the failure that looks like success: a screenshot of

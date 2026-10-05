@@ -738,6 +738,20 @@ export interface Measurements {
 	bodyScrollWidth?: number;
 	textNodeCount?: number;
 	medianTextHeight?: number | null;
+	/**
+	 * Every distinct text size the page rendered, with how many text nodes carried
+	 * it. The scale guard turns these into ROLES by dividing by `rootFontSizePx`.
+	 *
+	 * A histogram rather than a second median on purpose: a median is a total, so a
+	 * single role that did not scale hides behind a body-dominated middle, and a
+	 * role that STARTS scaling (the correct fix) drags the median while every role
+	 * grew correctly. Judging each role against its own 100 % counterpart needs the
+	 * sizes, not their middle.
+	 */
+	textRoleSizes?: Array<{ px: number; count: number }> | null;
+	/** The root font size in px the page rendered under — the divisor that turns an
+	 * absolute size into the scale-invariant role. */
+	rootFontSizePx?: number | null;
 	route?: string;
 	title?: string;
 	mountedElements?: number;
@@ -781,6 +795,27 @@ function asMeasurements(value: unknown): Measurements | null {
 		textNodeCount: count("textNodeCount"),
 		medianTextHeight:
 			typeof bag.medianTextHeight === "number" ? bag.medianTextHeight : null,
+		textRoleSizes: Array.isArray(bag.textRoleSizes)
+			? bag.textRoleSizes
+					.map((entry) => {
+						const row =
+							typeof entry === "object" && entry !== null
+								? (entry as Record<string, unknown>)
+								: {};
+						return { px: Number(row.px), count: Number(row.count) };
+					})
+					.filter(
+						(row) =>
+							Number.isFinite(row.px) &&
+							row.px > 0 &&
+							Number.isFinite(row.count) &&
+							row.count > 0,
+					)
+			: null,
+		rootFontSizePx:
+			typeof bag.rootFontSizePx === "number" && bag.rootFontSizePx > 0
+				? bag.rootFontSizePx
+				: null,
 		route: text("route") ?? undefined,
 		title: text("title") ?? undefined,
 		mountedElements: count("mountedElements"),
@@ -1241,13 +1276,21 @@ export interface CaptureRecord {
 	pinnedScenario?: string | null;
 	consoleErrors: string[];
 	/**
-	 * Whether the text-scale dimension was LIVE for this frame's cell, and the
-	 * ratio it was judged on. `null` means the run did not capture both scales for
-	 * this key, so the frame cannot answer a large-text question either way — which
-	 * is a different statement from "measured at 100 %".
+	 * Whether the text-scale dimension was LIVE for this frame's cell, and — when it
+	 * was not — the roles that failed, by name. `null` means the run did not capture
+	 * both scales for this key, so the frame cannot answer a large-text question
+	 * either way — which is a different statement from "measured at 100 %".
+	 *
+	 * `scaleProblems` replaces the single `scaleRatio` the guard used to record: a
+	 * ratio was the reading of one number (the cell median), and the judgement is now
+	 * made role by role, so what a reader needs is which roles failed, not a middle.
 	 */
 	scaleLive?: boolean | null;
-	scaleRatio?: number | null;
+	scaleProblems?: string[] | null;
+	/** Sizes the 200 % frame showed and the 100 % frame did not — reported, never a
+	 * failure by itself. See `judgeTextScale` for why the two frames cannot tell a
+	 * frozen node from a size a layout introduces at the larger scale. */
+	scaleNotes?: string[] | null;
 	resolvedTheme?: string | null;
 	canvasColor?: string | null;
 	expectedCanvas?: string | null;
@@ -1701,33 +1744,29 @@ export async function runCapture(options: CaptureOptions) {
 	// The per-cell half of the scale guard, and the reason it exists: the app does
 	// NOT read the `?lo-text-scale` query parameter — its type roles multiply the
 	// browser's ROOT FONT SIZE — so a run can render every "200 %" cell at 100 %
-	// and still produce a full matrix of confident rows. A run-level median hides
+	// and still produce a full matrix of confident rows. A run-level verdict hides
 	// exactly that case, because one responsive screen lifts it while another
 	// screen's cell is inert. So each pair is judged on its own, and an inert cell
 	// is FAILED BY NAME rather than averaged away.
-	const inertScale = new Map(
-		(scaleCheck.perCell ?? [])
-			.filter((entry) => !entry.live)
-			.map((entry) => [entry.key, entry]),
+	const judgedByKey = new Map(
+		(scaleCheck.perCell ?? []).map((entry) => [entry.key, entry]),
 	);
 	for (const record of records) {
 		const key = `${record.screen}__${record.state}__${record.device}__${record.theme}`;
-		const judged = (scaleCheck.perCell ?? []).find(
-			(entry) => entry.key === key,
-		);
+		const judged = judgedByKey.get(key);
 		record.scaleLive = judged?.live ?? null;
-		record.scaleRatio = judged?.ratio ?? null;
+		record.scaleProblems = judged?.problems ?? null;
+		record.scaleNotes = judged?.notes ?? null;
 		if (record.scale === "200" && judged !== undefined && !judged.live) {
 			record.readinessProblems = [
 				...record.readinessProblems,
-				`the text did not scale: median text ${String(record.measurements?.medianTextHeight ?? 0)}px at 200% ` +
-					`against ${String(judged.ratio)}x the 100% cell (needs ≥${String(scaleCheck.liveMinRatio)}x), ` +
-					"so this cell measures 100% and cannot answer a large-text question",
+				`the text did not scale with the root font size: ${judged.problems.join("; ")} — ` +
+					"every type role must grow by the cell's own factor, so this cell cannot " +
+					"answer a large-text question",
 			];
 			record.ready = false;
 		}
 	}
-	void inertScale;
 
 	// A cell that did not reach its own screen is not evidence, and a set of cells
 	// that produced one identical image is the specific failure this guard exists
@@ -1914,6 +1953,17 @@ export async function runCapture(options: CaptureOptions) {
 	);
 	console.log(`frames that changed after first paint: ${reflow.length}`);
 	console.log(`text-scale dimension: ${scaleCheck.verdict}`);
+	if (scaleCheck.notedPairs > 0) {
+		// "Reported as such rather than silently counted": a size only the 200 % frame
+		// shows is named here, and each pair carries its own `notes` in the manifest.
+		// It is NOT a failure — see `judgeTextScale` for why two frames cannot tell a
+		// frozen node from a size the layout introduces at this scale.
+		console.log(
+			`  text-scale notes: ${scaleCheck.notedPairs} pair(s) show a size only at 200% — ` +
+				"a node that did not move with the root font size, or a layout that introduced it " +
+				"at this scale; named, not failed",
+		);
+	}
 	if (themeProblems.length) {
 		console.log(`THEME PROBLEMS (${themeProblems.length}):`);
 		for (const problem of themeProblems) console.log(`  - ${problem}`);
@@ -2043,62 +2093,229 @@ export async function runCapture(options: CaptureOptions) {
 
 /**
  * Does the text-scale dimension actually do anything? An instrument whose scale
- * dimension silently does nothing produces three identical frames per cell and
- * looks like a pass. This measures the median rendered text height at each scale
- * and reports the observed ratio, so the *dimension* can be shown to work before
- * any U-04 finding is trusted.
+ * dimension silently does nothing produces identical frames at both scales and
+ * looks like a pass. This compares the text a cell renders at 200 % against the
+ * same text at 100 %, PER TYPE ROLE, and fails the cell by name when a role did
+ * not grow by the factor the cell declares.
+ *
+ * WHY PER ROLE AND NOT A MEDIAN OVER THE CELL.
+ *
+ * The first version reduced a cell to the median rendered text box at each scale
+ * and required the ratio to clear 1.9. A median is a property of the cell's
+ * COMPOSITION as much as of its scaling: when a node that rendered at a fixed size
+ * starts following the scale — the correct fix for a missing type role — the mix of
+ * sizes changes, the median moves, and the ratio can FALL below the bar while every
+ * role scaled exactly 2x. That is the app getting better and the metric getting
+ * worse, measured on `S15/loading__tablet-landscape__200`: fifteen text nodes, all
+ * scaling exactly 2x, whose median fell from 2.00x to 1.852x once the composer's
+ * `＋` and `Connect a computer` were given their type roles. The same total hides
+ * one inert role behind a body-dominated middle.
+ *
+ * A ROLE IS THE TEXT'S SIZE RELATIVE TO THE ROOT. The harness drives the root font
+ * size, so a role that follows it has the SAME size-in-rem at both scales and only
+ * its px size doubles; a role that ignores it (authored in px, or a fixed default)
+ * keeps its px size and so changes rem. Keying on the rem size is therefore the
+ * composition-insensitive identity, and "present at 200 %" already means "grew by the
+ * cell's factor". A cell is live when every role the 100 % frame rendered is present
+ * in the 200 % frame; a size the 200 % frame shows that no 100 % role explains is
+ * NAMED in `notes`, never counted toward the verdict.
+ *
+ * WHAT IT DELIBERATELY DOES NOT DO. Node COUNTS are not compared (see
+ * `judgeTextScale`: a layout may add or drop a node carrying a role that scaled), and
+ * a 200 %-only size is a note rather than a failure, because two frames cannot tell a
+ * node frozen at a coinciding size from a size a layout introduced at the larger
+ * scale. What the guard still fails is a ROLE that did not scale: a page whose body
+ * copy never grows, a hardcoded px heading beside rem paragraphs, a wholly px page.
+ * The blind spot named above is the price, and the rubric (`docs/ux/audit-rubric.md`)
+ * and the e2e README carry the same note so a reader is not told a softer story than
+ * the check.
  */
 function verifyTextScale(records: CaptureRecord[]) {
 	const perDevice = new Map();
 	for (const record of records) {
 		const key = `${record.screen}__${record.state}__${record.device}__${record.theme}`;
 		const bucket = perDevice.get(key) ?? {};
-		bucket[record.scale] = record.measurements?.medianTextHeight ?? 0;
+		bucket[record.scale] = {
+			histogram: roleHistogram(record),
+			rootPx: record.measurements?.rootFontSizePx ?? null,
+		};
 		perDevice.set(key, bucket);
 	}
-	const ratios = [];
+	const perCell = [];
 	for (const [key, bucket] of perDevice) {
-		if (bucket["100"] && bucket["200"])
-			ratios.push({ key, ratio: bucket["200"] / bucket["100"] });
+		const at100 = bucket["100"];
+		const at200 = bucket["200"];
+		// A pair with no roles on either side (no text, or a frame from before this
+		// probe) is NOT a live dimension: it is left out so the run reports the pair as
+		// missing coverage rather than as passed.
+		if (at100?.histogram?.size && at200?.histogram?.size) {
+			perCell.push(
+				judgeTextScale(
+					key,
+					at100.histogram,
+					at200.histogram,
+					at100.rootPx ?? 16,
+				),
+			);
+		}
 	}
-	if (ratios.length === 0) {
+	perCell.sort((a, b) => (a.key < b.key ? -1 : a.key > b.key ? 1 : 0));
+	if (perCell.length === 0) {
 		// Nothing to conclude, and `live` stays false so no large-text verdict can
 		// be drawn from a run that only ever rendered one scale.
 		return {
 			verdict: "not measured (needs both 100% and 200% in one run)",
-			ratios: [],
+			perCell: [],
+			notedPairs: 0,
 			live: false,
 		};
 	}
-	const middle = ratios.map((r) => r.ratio).sort((a, b) => a - b)[
-		Math.floor(ratios.length / 2)
-	];
-	// A missing middle is the "could not tell" case, not a scale of 1: the
-	// dimension is reported inert rather than assumed live.
-	const median = middle ?? 0;
-	// The bar is 1.9, not "more than 1.2": a cell at 1.3x is not a 200 % cell, and
-	// treating it as one is how an inert dimension acquires coverage. 2 is what the
-	// matrix asks for; 1.9 tolerates the sub-pixel rounding of a wrapped line.
-	const LIVE_MIN_RATIO = 1.9;
-	const perCell = ratios.map((entry) => ({
-		key: entry.key,
-		ratio: Number(entry.ratio.toFixed(3)),
-		live: entry.ratio >= LIVE_MIN_RATIO,
-	}));
-	const works = median >= LIVE_MIN_RATIO;
 	const inertCells = perCell.filter((entry) => !entry.live);
+	const notedCells = perCell.filter((entry) => entry.notes.length > 0);
 	return {
-		medianObservedRatio: Number(median.toFixed(3)),
 		expected: 2,
-		liveMinRatio: LIVE_MIN_RATIO,
-		live: works && inertCells.length === 0,
+		live: inertCells.length === 0,
 		perCell,
-		verdict: works
-			? `scale dimension is live across ${perCell.length - inertCells.length}/${perCell.length} measured pairs (median ${median.toFixed(2)}x at 200%)`
-			: `scale dimension is INERT (median ${median.toFixed(2)}x at 200%) — three frames per cell ` +
-				"are effectively one, so any U-04 'no clipping at 200%' result from this run is meaningless",
-		ratios,
+		/**
+		 * Pairs with a role the 100 % frame did not have: a size the 200 % frame shows
+		 * that no 100 % role explains. Reported, never failing — see `judgeTextScale`.
+		 * Carried here as a count so the run can say it out loud instead of burying it
+		 * in `perCell`, because "reported as such" is the whole point of keeping the
+		 * signal: a frozen node named, not a cell failed for it.
+		 */
+		notedPairs: notedCells.length,
+		verdict:
+			inertCells.length === 0
+				? `scale dimension is live across ${perCell.length}/${perCell.length} measured pairs (every type role grew by the cell's own factor)`
+				: `scale dimension is INERT on ${inertCells.length}/${perCell.length} measured pairs — a cell ` +
+					"whose text did not grow by its declared factor renders at 100% under a 200% label, so any " +
+					"U-04 'no clipping at 200%' result from it is meaningless",
 	};
+}
+
+/**
+ * A cell's text roles: each distinct `font-size / rootFontSize` and how many text
+ * nodes carried it, or `null` when the frame has no role reading to give.
+ *
+ * `null` is the "cannot tell" case, not a pass: a frame captured before this probe
+ * (or one whose page never set a root font size) is left out of `perCell`, so the
+ * pair shows up as missing coverage rather than as a live dimension.
+ */
+function roleHistogram(record: CaptureRecord): Map<number, number> | null {
+	const sizes = record.measurements?.textRoleSizes ?? null;
+	const root = record.measurements?.rootFontSizePx ?? null;
+	if (!sizes || !root || root <= 0) return null;
+	const histogram = new Map<number, number>();
+	for (const { px, count } of sizes) {
+		// Four decimals, not three: `14 / 32` is `0.4375`, and rounding that to three
+		// (`0.438`) would render it as `7.01px` in a message and, worse, could merge two
+		// distinct roles. The quotient is exactly equal across scales for a role that
+		// follows the root, so this only has to survive the browser's own sub-pixel
+		// readings, not invent a tolerance.
+		const rem = Math.round((px / root) * 10000) / 10000;
+		histogram.set(rem, (histogram.get(rem) ?? 0) + count);
+	}
+	return histogram;
+}
+
+/** One cell's per-role comparison, naming every role that did not line up. */
+function judgeTextScale(
+	key: string,
+	at100: Map<number, number>,
+	at200: Map<number, number>,
+	rootPx100: number,
+) {
+	const px = (rem: number) => Math.round(rem * rootPx100 * 100) / 100;
+	// The whole page frozen: the 200 % frame renders the 100 % frame's sizes exactly.
+	// Reported as that single fact rather than as per-role diffs, which is both
+	// truer and what a reader wants first.
+	if (sameSizes(at100, at200, rootPx100)) {
+		return {
+			key,
+			live: false,
+			problems: [
+				`the 200% frame renders the same text sizes as the 100% frame (${[
+					...at100,
+				]
+					.map(([rem, count]) => `${px(rem)}px x${count}`)
+					.sort()
+					.join(", ")})`,
+			],
+			notes: [],
+		};
+	}
+	// THE TWO WAYS A ROLE CAN BE ABSENT FROM THE 200 % FRAME ARE NOT THE SAME, and the
+	// guard separates them because the frames can:
+	//
+	//   * the role is still there at its OLD size — a node that ignored the root font
+	//     size. This is a role that did not scale, and the cell FAILS on it. In rem
+	//     terms that node's key halves (its px held while the root doubled), which is
+	//     exactly the `rem / 2` lookup below.
+	//   * the role is gone entirely — a layout that drops a label at 200 %, or a state
+	//     that settled differently between the two frames. This is REPORTED in `notes`,
+	//     never failed: it is not a statement about type, and failing it would fail a
+	//     correct app for its responsive design (measured: the sibling PR's own
+	//     `S4/idle__tablet-landscape__dark` 100 % frame renders a 15 px `label` role its
+	//     200 % frame does not, and no scaling is wrong there).
+	//
+	// NODE COUNTS ARE NOT COMPARED for the same reason: a layout may add or drop a node
+	// whose role DID scale, and a count rule marked 88 of main's 272 `ci` cells UNREADY
+	// on exactly that (its only frozen sizes were single 14 px nodes; every cell's roles
+	// had scaled counterparts).
+	const problems: string[] = [];
+	const notes: string[] = [];
+	for (const [rem, count] of at100) {
+		if (at200.has(rem)) continue; // scaled — its 200 % px is twice its 100 % px
+		if (hasApprox(at200, rem / 2))
+			problems.push(
+				`the ${px(rem)}px role (${count} node(s)) did not scale: the 200% frame still renders ${px(rem)}px text where ${px(rem) * 2}px was expected`,
+			);
+		else
+			notes.push(
+				`the ${px(rem)}px role (${count} node(s)) is absent from the 200% frame — a layout that drops it, not a type that ignored the scale`,
+			);
+	}
+	for (const [rem, count] of at200) {
+		if (at100.has(rem)) continue;
+		notes.push(
+			`${px(rem)}px text appears only at 200% (${count} node(s)) — either a frozen node whose size coincides with a scaled role, or a size the layout introduces at this scale`,
+		);
+	}
+	problems.sort();
+	notes.sort();
+	return { key, live: problems.length === 0, problems, notes };
+}
+
+/** Whether `map` holds `value` within a sub-pixel tolerance of the rounding above. */
+function hasApprox(map: Map<number, number>, value: number) {
+	for (const candidate of map.keys())
+		if (Math.abs(candidate - value) < 1e-3) return true;
+	return false;
+}
+
+/**
+ * Whether the 200 % frame renders the same text SIZES as the 100 % frame — the
+ * whole-page inert case. Compares in px (each scale's own root), so a page whose
+ * every role stayed put is recognised as one fact rather than as per-role diffs.
+ */
+function sameSizes(
+	at100: Map<number, number>,
+	at200: Map<number, number>,
+	rootPx100: number,
+) {
+	const inPx = (histogram: Map<number, number>, root: number) => {
+		const out = new Map<number, number>();
+		for (const [rem, count] of histogram) {
+			const size = Math.round(rem * root * 100) / 100;
+			out.set(size, (out.get(size) ?? 0) + count);
+		}
+		return out;
+	};
+	const a = inPx(at100, rootPx100);
+	const b = inPx(at200, rootPx100 * 2);
+	if (a.size !== b.size) return false;
+	for (const [size, count] of a) if (b.get(size) !== count) return false;
+	return true;
 }
 
 /* -------------------------------------------------------------------- CLI -- */

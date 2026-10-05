@@ -45,6 +45,27 @@ question produced it.
 frame at a named viewport, an accessibility-tree extract, or a timing
 measurement.
 
+**The text-scale dimension is judged per type role.** `U-04` reads the 200 % frames
+only when the harness has shown the dimension is live, and "live" is now a per-role
+statement: for each (screen, state, device, theme) captured at 100 % and 200 %, every
+type role the page rendered — each distinct text size relative to the root font size —
+must be present in the 200 % frame at the declared factor. Node COUNTS are not
+compared: a responsive layout may add or drop a node whose role scaled. A role that did
+not grow makes the cell UNREADY and names the role; a size the 200 % frame shows that no
+100 % role explains is reported as a note, not a failure.
+
+The guard is composition-insensitive on purpose. An earlier version compared the
+cell's **median** text box, which moves when the MIX of sizes changes even though every
+role scaled — so a text node that gained the type role it was missing made the cell
+fail for improving (measured: `S15/loading__tablet-landscape__200` fell to a 1.852×
+median with all fifteen nodes scaling exactly 2×). What the per-role guard **cannot**
+catch, and a reader must not assume away: a cell whose text genuinely changes between
+the two scales — a label a responsive layout drops at 200 %, say — is reported as a
+finding, because that role has no counterpart to compare. Read a live verdict as "every
+role present at 100 % is present at 200 % and grew by the factor", never as "the
+page's type is correct". The measurement, its manifest fields and its controls are in
+`docs/e2e/README.md` §"How text scale is actually driven".
+
 ## 1. Screens to score
 
 | # | Screen | Flows |

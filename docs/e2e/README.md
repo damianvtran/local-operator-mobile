@@ -642,12 +642,13 @@ Two mechanisms, applied **before first paint** (`Page.addScriptToEvaluateOnNewDo
   web build has no OS text-size signal a browser can emulate, and because
   `env(safe-area-inset-*)` cannot be overridden through CDP.
 
-The harness does not assume either mechanism worked. It measures the **observed
-text-scale ratio** (the median rendered text height at 200 % over the same
-element at 100 %) and reports the dimension as live or **inert**. An inert
-dimension is not a failed run — it is a run that cannot answer any large-text
-question, and the manifest says so instead of producing three identical frames
-labelled as three scales.
+The harness does not assume either mechanism worked. It reads the **type roles**
+the page rendered — each distinct text size relative to the root font size, and how
+many text nodes carried it — and reports the dimension as live or **inert**. A role
+that follows the root keeps the same size-in-rem at both scales, so a live pair is
+one whose 100 % and 200 % role histograms match exactly. An inert dimension is not a
+failed run — it is a run that cannot answer any large-text question, and the manifest
+says so instead of producing identical frames labelled as different scales.
 
 ### Devices, themes and scales
 
@@ -813,31 +814,65 @@ inference is what produced a run of "200 %" cells rendered at 100 %.
 
 Because a dimension that renders without measuring anything reads exactly like
 coverage, the guard is **per cell**, not per run: for every (screen, state, device,
-theme) captured at both 100 % and 200 %, the median rendered text height must grow by
-at least **1.9×**. A cell that does not is failed by name —
+theme) captured at both 100 % and 200 %, every type role the 100 % frame rendered
+must be present in the 200 % frame at the size the factor implies. A cell that does
+not is failed by name —
 
 ```
-path--inert__inert__iphone-15__dark__200: the text did not scale: median text 40px
-at 200% against 1x the 100% cell (needs ≥1.9x), so this cell measures 100% and cannot
-answer a large-text question
+path--inert__inert__iphone-15__dark__200: the text did not scale with the root font
+size: the 20px role (1 node(s)) did not scale: the 200% frame has no 40px text — every
+type role must grow by the cell's own factor, so this cell cannot answer a large-text
+question
 ```
 
 — and every frame records which of the two it was:
 
 | Manifest field | What it says |
 |---|---|
-| `meta.textScaleVerdict` | the run-level sentence, with the median ratio |
+| `meta.textScaleVerdict` | the run-level sentence, over the measured pairs |
 | `meta.textScaleLive` | true only when every measured pair was live |
 | `meta.textScaleLiveCells` / `meta.textScaleInertCells` | the cells by name, so a reader can tell a live 200 % row from a 100 % render wearing a 200 % label |
 | `meta.textScalePairsPlanned` / `textScalePairsMeasured` | the coverage this run does not have |
-| `records[].scaleLive` / `scaleRatio` | per frame; `null` means both scales were not captured, which is a third answer and not a pass |
+| `records[].scaleLive` / `scaleProblems` | per frame; `null` means both scales were not captured (a third answer, not a pass), and `scaleProblems` names the roles that did not line up |
+| `records[].scaleNotes` / `textScaleCheck.notedPairs` | per frame and per run: a size the 200 % frame shows that no 100 % role explains. **Reported, never failing** — see below |
+| `records[].measurements.textRoleSizes` / `rootFontSizePx` | the reading the judgement is made on: every distinct text size and its node count, and the root font size they are relative to |
 
-A run-level median is not enough and was the earlier guard's flaw: one responsive
-screen lifts the median while another screen's cell is inert. Both directions are
-asserted in `verify` (`pnpm e2e:relay`): `e2e/fixtures/inert-text-scale/` is a page
-whose type is entirely in `px` and must FAIL by name, and the rem-based
-`e2e/fixtures/audit-canary/` must pass. Neither fixture is evidence about the app —
-together they prove the *guard* discriminates.
+**Why per role and not a median.** The first version reduced a cell to the median
+rendered text box at each scale and required the ratio to clear 1.9×. A median is a
+property of the cell's *composition* as much as of its scaling: when a node that
+rendered at a fixed size starts following the scale — the correct fix for a missing
+type role — the mix of sizes changes, the median moves, and the ratio can fall below
+the bar while every role scaled exactly 2×. Measured on
+`S15/loading__tablet-landscape__200`: fifteen text nodes, all scaling exactly 2×,
+whose median fell from 2.00× to **1.852×** once the composer's `＋` and the splash's
+`Connect a computer` were given their type roles. The same total hid one inert role
+behind a body-dominated middle, too.
+
+**Node counts are not compared, and why.** A role's identity is its size relative to
+the root font size, so "present at 200 %" already means "grew by the cell's factor".
+How MANY nodes carry it is not the guard's question: a responsive layout legitimately
+adds or drops a node whose role scaled, and counting them made the guard fail for a
+page whose every role had grown — measured on main's `ci` tier, where a count rule
+marked **88 of 272 cells UNREADY** and every one of them was decided by a layout
+change rather than by the type.
+
+**What the per-role guard can no longer catch.** A size only the 200 % frame shows is
+named in `scaleNotes`, not failed: it is the signature of a node that did not move with
+the root font size, and it is also what a layout that introduces a size at 200 % looks
+like, and two frames cannot tell those apart. The blind spot that leaves is narrow but
+real: a node frozen at a size that COINCIDES with a role which otherwise scales is
+reported in `scaleNotes` and does not fail the cell. The guard fails a **role** that did
+not scale (a page whose body copy never grows, a hardcoded px heading beside rem
+paragraphs); it does not fail a cell because one node of a scaling role stayed put. Read
+a live verdict as "every role present at 100 % is present at 200 % and grew", never as
+"every text node scaled".
+
+Both directions are asserted in `verify` (`pnpm e2e:relay`), now across three
+fixtures: `e2e/fixtures/inert-text-scale/` (all `px`, the whole page frozen) and
+`e2e/fixtures/px-role-text-scale/` (one `px` role among scaling ones — the case a
+median cannot see) must FAIL by name, and the rem-based `e2e/fixtures/audit-canary/`
+must pass. None of the three is evidence about the app — together they prove the
+*guard* discriminates.
 
 ### The U-08 overlap rule, and what it deliberately does not report
 
@@ -949,8 +984,10 @@ exactly that defect. A rule the self-test cannot blind is a rule nothing checks.
 
 The canary also proves the harness's own dimensions work, in both directions:
 `e2e/fixtures/audit-canary/` is written in `rem`, so the text-scale dimension comes
-out **live** (measured median 2.00× at 200 %), and `e2e/fixtures/inert-text-scale/`
-is written in `px` and must fail by name. `pnpm e2e:relay` asserts both.
+out **live** (every type role measured 2.00× at 200 %), and
+`e2e/fixtures/inert-text-scale/` is written in `px` and must fail by name
+(`e2e/fixtures/px-role-text-scale/` is the mixed case). `pnpm e2e:relay` asserts all
+three.
 
 What this does **not** say is anything about the app. The canary is a page this
 repository controls; a live dimension there proves the *harness* drives a real
