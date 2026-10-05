@@ -42,6 +42,9 @@ export const SessionStateMarkers = ({
 			{flags.richRows ? (
 				<View testID={STATE_MARKER.session["rich-rows"]} />
 			) : null}
+			{flags.delivery ? (
+				<View testID={STATE_MARKER.session["send-delivery"]} />
+			) : null}
 			{flags.pendingApproval ? (
 				<View testID={STATE_MARKER.session["pending-approval"]} />
 			) : null}

@@ -94,7 +94,21 @@ let screenshotRetries = 0;
  */
 let settledRetakes = 0;
 
-/** Frames above this count are refused without `--yes`: a full matrix is minutes. */
+/**
+ * Frames above this count are refused without `--yes`: a full matrix is minutes.
+ *
+ * WHAT IT IS FOR, and what it is deliberately NOT bound to. It is a RUNAWAY guard,
+ * not a size policy: it catches a plan far larger than any sample this harness
+ * offers (an inflated cell registry, a cell list copied from another tree), and it
+ * is why a big run is always something the caller typed `--yes` for. It sits BELOW
+ * every tier on purpose — `ci` plans 264 cells, `core` 858, `full` 3102 — so none of
+ * them starts by accident; the CI job passes `--yes` for exactly that reason. It is
+ * NOT tied to the default tier, so it must not be raised to "let the default run": a
+ * documented invocation that plans the whole `core` tier is a 32-minute command, and
+ * the defect is the invocation, not the bound. Deriving it from the plan the way
+ * `CELL_BUDGET_MS` is derived would be circular — the guard would then never fire —
+ * so it stays a constant, and this comment is what it is derived from.
+ */
 const CONFIRM_THRESHOLD = 120;
 
 /**

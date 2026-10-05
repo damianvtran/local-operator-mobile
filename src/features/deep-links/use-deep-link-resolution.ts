@@ -14,6 +14,10 @@
  *   `revision` moved while it was in flight — the answer belongs to the route
  *   it was asked on, and a route switch aborts the streams and projections the
  *   old computer's cache was made of (§6.5).
+ * - **A session link is checked before it is trusted.** The router navigates a
+ *   cold-start link on the way in; the resolver's repair navigation is gated on
+ *   the relay's existence route (`history`, §3.5), because a stale id must land
+ *   with the honest sentence instead of on a dead screen (`session-link.ts`).
  * - **A bounded wait, then one honest sentence.** A destination that never
  *   reaches a live route lands on the conversations surface after
  *   `DEEP_LINK_WAIT_MS` and SAYS SO — it must not spin, and it must not
@@ -37,6 +41,7 @@ import {
 } from "@/features/auth/connection-provider";
 import {
 	noteConversationPush,
+	noteSessionLink,
 	peekPendingDestination,
 	subscribePendingDestination,
 	takePendingDestination,
@@ -46,7 +51,8 @@ import {
 	unknownConversationNote,
 	unreachableComputerNote,
 } from "@/features/deep-links/sentences";
-import { isRelayError } from "@/relay";
+import { sessionLinkOutcome } from "@/features/deep-links/session-link";
+import { isRelayMissing } from "@/relay";
 import { useUiStore } from "@/state/ui-store";
 
 /**
@@ -91,9 +97,18 @@ export const useDeepLinkResolution = (): void => {
 	 * harness's page and never the installed app. */
 	useEffect(() => {
 		if (Platform.OS !== "web" || typeof location === "undefined") return;
-		const handle = new URLSearchParams(location.search).get("lo-conversation");
-		if (handle === null || handle.length === 0) return;
-		noteConversationPush({ conversation: handle, computer: null });
+		const params = new URLSearchParams(location.search);
+		const handle = params.get("lo-conversation");
+		if (handle !== null && handle.length > 0) {
+			noteConversationPush({ conversation: handle, computer: null });
+		}
+		/* The session-link half of the same hook: drives `localoperator://s/<id>`
+		 * without a native intent, INCLUDING the stale id the resolver's existence
+		 * check exists for (a cell can hand it a dead id and capture the landing). */
+		const sessionId = params.get("lo-session");
+		if (sessionId !== null && sessionId.length > 0) {
+			noteSessionLink(sessionId);
+		}
 	}, []);
 
 	/* Consume when — and only when — a route is live. */
@@ -102,11 +117,41 @@ export const useDeepLinkResolution = (): void => {
 		const destination = takePendingDestination();
 		if (destination === null) return;
 		if (destination.kind === "session") {
-			/* The rewrite already navigated here on the way in; `navigate` is the
-			 * idempotent form, so this is the repair for the cases the router could
-			 * not take directly (a cold start whose navigation was superseded, a
-			 * reader who moved on) rather than a second push. */
-			router.navigate(`/session/${destination.sessionId}`);
+			const client = connect.relay();
+			if (client === null) {
+				showToast(unreachableComputerNote(label), "danger");
+				router.replace("/");
+				return;
+			}
+			const askedOn = connectionStore.getState().revision;
+			void (async () => {
+				try {
+					/* The existence check, before the repair navigation: a stale link
+					 * must land somewhere sensible rather than on a dead session screen
+					 * whose empty state invites sending the first message (the "no such
+					 * session anymore" edge). `history` is the relay's own existence
+					 * route — live generation or durable session answers, anything else
+					 * is the clean 404 (contract.md §3.5) — so the 404 is proof, and a
+					 * 200 needs no navigation at all when the router already took the
+					 * reader there (the cold-start case). One page, to keep the probe
+					 * cheap. */
+					await client.history(destination.sessionId, { limit: 1 });
+					if (connectionStore.getState().revision !== askedOn) return;
+					router.navigate(`/session/${destination.sessionId}`);
+				} catch (error) {
+					if (connectionStore.getState().revision !== askedOn) return;
+					/* A clean 404 is the §6.6 "no longer there" sentence (the same
+					 * one an unknown handle gets — both name a conversation the
+					 * computer does not have); anything else must not borrow it. */
+					showToast(
+						sessionLinkOutcome(error) === "missing"
+							? unknownConversationNote(label)
+							: unreachableComputerNote(label),
+						"danger",
+					);
+					router.replace("/");
+				}
+			})();
 			return;
 		}
 		const client = connect.relay();
@@ -123,11 +168,13 @@ export const useDeepLinkResolution = (): void => {
 				router.navigate(`/session/${answer.session_id}`);
 			} catch (error) {
 				if (connectionStore.getState().revision !== askedOn) return;
-				/* A clean 404 is §6.6's "no longer there"; anything else is the
-				 * unreachable path — both land on the conversations surface, with
-				 * the sentence that is true of each. */
+				/* The relay's own 404 is §6.6's "no longer there"; anything else —
+				 * the edge's unknown-tunnel 404 included, which is a dead tunnel
+				 * and not a deleted conversation — is the unreachable path. Both
+				 * land on the conversations surface, with the sentence that is
+				 * true of each. */
 				showToast(
-					isRelayError(error) && error.status === 404
+					isRelayMissing(error)
 						? unknownConversationNote(label)
 						: unreachableComputerNote(label),
 					"danger",

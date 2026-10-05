@@ -234,3 +234,93 @@ describe("the acknowledgement (S4)", () => {
 		expect(after.sessions.filter((row) => row.unseen === true)).toHaveLength(1);
 	});
 });
+
+/**
+ * The push device registry's routes (S4a), driven through the app's own client.
+ *
+ * The app does not CALL registration yet (the cloud forward is S7, unbuilt —
+ * the gate is recorded on `registerDevice` and in the PR), so this suite is the
+ * client half's proof: the wire shapes validate, the register upsert keeps its
+ * record's identity, the revoke tombstone sticks, and a revoked device is
+ * refused with the machine's own code. The mock models these routes from the
+ * core's source (`push_devices.py`); its provenance note is in `relay.ts`.
+ */
+describe("the push device registry (S4a)", () => {
+	const INSTALL_ID = "5a1b2c3d-4e5f-4061-8273-8495a6b7c8d9";
+	let registeredDeviceId = "";
+
+	it("registers a device, minting the key in the response", async () => {
+		const first = await client.registerDevice({
+			platform: "ios",
+			token: "apns-token-1",
+			environment: "sandbox",
+			app_version: "0.0.0",
+			install_id: INSTALL_ID,
+		});
+		expect(first.ok).toBe(true);
+		expect(first.device_key.length).toBeGreaterThan(0);
+		registeredDeviceId = first.device_id;
+	});
+
+	it("re-registering with a rotated token keeps the row's identity", async () => {
+		const second = await client.registerDevice({
+			platform: "ios",
+			token: "apns-token-2",
+			environment: "sandbox",
+			app_version: "0.0.0",
+			install_id: INSTALL_ID,
+		});
+		/* The idempotency is the upsert: same device_id, same registered_at —
+		 * "the same device" is the row, not the request. */
+		expect(second.device_id).toBe(registeredDeviceId);
+	});
+
+	it("lists the device as live, with the core's precedence string", async () => {
+		const list = await client.pushDevices();
+		const row = list.devices.find(
+			(device) => device.device_id === registeredDeviceId,
+		);
+		expect(row?.state).toBe("live");
+		expect(row?.platform).toBe("ios");
+		expect(list.precedence).toBe("revoked > unpaired > expired");
+	});
+
+	it("revokes as a tombstone — the row stays, its state moves", async () => {
+		const removed = await client.revokePushDevice(registeredDeviceId);
+		expect(removed.ok).toBe(true);
+		const after = await client.pushDevices();
+		expect(
+			after.devices.find((device) => device.device_id === registeredDeviceId)
+				?.state,
+		).toBe("revoked");
+	});
+
+	it("refuses to re-register a revoked device with the machine's code", async () => {
+		await expect(
+			client.registerDevice({
+				platform: "ios",
+				token: "apns-token-3",
+				environment: "sandbox",
+				app_version: "0.0.0",
+				install_id: INSTALL_ID,
+			}),
+		).rejects.toMatchObject({ status: 403, code: "device_revoked" });
+	});
+
+	it("refuses an invalid registration body", async () => {
+		await expect(
+			client.registerDevice({
+				platform: "ios",
+				token: "",
+				environment: "sandbox",
+				app_version: "0.0.0",
+				install_id: "another-install",
+			}),
+		).rejects.toMatchObject({ status: 422 });
+	});
+
+	it("revoking an id the registry does not hold is still ok — the retry must not fail", async () => {
+		const answer = await client.revokePushDevice("dev-nonexistent");
+		expect(answer.ok).toBe(true);
+	});
+});

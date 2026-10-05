@@ -194,10 +194,13 @@ jobs:
     # one that fails when a tool is renamed or a documented invocation goes stale
     # (review m2's other half, and round 3's M3 for the bound).
     #
-    # It exports the web build first: some documented commands declare a `web-build`
-    # prerequisite, and the harness prints SKIP *with the reason* rather than
-    # pretending — so without a `dist/` the sweep would honestly skip them, which is
-    # less than this job is for.
+    # It exports the web build first, because some documented commands declare a
+    # `web-build` prerequisite — but THE EXPORT ALONE DOES NOT STOP THEM SKIPPING.
+    # `tools/lib/doc-commands.ts` marks such a block runnable only when `--dist`
+    # supplies the build, and this job does not pass it (the export step carries the
+    # measurement of what happens when it does). So they print SKIP *with the reason*
+    # rather than pretending, which names what was not proven — and their tool paths
+    # and script names are still resolved, so a skip cannot hide a renamed file.
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 70
@@ -217,6 +220,17 @@ jobs:
       - name: Export the web target
         # Same reason as `web-audit`: the harness drives the export, and the
         # documented commands that need one are skipped without it.
+        #
+        # THE BUILD IS NOT HANDED TO THE SWEEP, ON PURPOSE. `doc-commands.ts` marks a
+        # `web-build` block runnable only when `--dist` supplies the build, so as the
+        # step stands every such block prints SKIP — `pnpm export:web` above has no
+        # effect on what the sweep runs. That was measured, and so was the reason it is
+        # not simply fixed here: dispatching this workflow with `--dist dist` runs the
+        # two build-gated captures for the first time, and §2's (`L549`) EXITS 1 on the
+        # runner with `1 undeclared identical-state pair(s)` — a real finding that
+        # passes on macOS, so enabling the plumbing needs that pair fixed or declared
+        # first (run 37238085957, job 111541147842). Until then SKIP is the honest
+        # state: it names what was not proven rather than reporting green over it.
         timeout-minutes: 15
         run: pnpm export:web
 
@@ -231,6 +245,7 @@ jobs:
         # install ahead of it. At 40 this step sat BELOW the command's own default,
         # which is a bound under the work it contains.
         timeout-minutes: 50
+        # NOT `--dist dist`: see the export step above for the measured reason.
         run: pnpm e2e:docs
 
   web-audit:
@@ -338,10 +353,10 @@ jobs:
       - name: Audit the frames against the rubric
         timeout-minutes: 10
         # BOUND DERIVED FROM THE CELL COUNT, not guessed. On run 37167390506 this
-        # step audited 250 of the 256 cells the tier held THEN in 312 s — 1.25 s/cell,
-        # with no FAIL row. The tier holds 264 cells now, so the whole tier is
-        # 264 x 1.25 s = ~5.5 min and 10 gives ~1.8x headroom. At 5 it was killed with
-        # six cells to go: a bound below the
+        # step audited 250 of the ci tier's 256 cells in 312 s — 1.25 s/cell, with
+        # no FAIL row — so the tier as it stood then was 256 x 1.25 s = ~5.3 min. It
+        # plans 264 cells today (~5.5 min at that rate) and 10 gives ~1.8x headroom
+        # over that. At 5 it was killed with six cells to go: a bound below the
         # work it contains, the same shape that made the capture's deadline derive
         # from its own plan. It is DERIVED, not COMPUTED at runtime: GitHub evaluates
         # `timeout-minutes` before any step runs, and the count that matters is the
