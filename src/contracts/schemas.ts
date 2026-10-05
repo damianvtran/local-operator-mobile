@@ -814,67 +814,237 @@ export type SchemaName = keyof SchemaRegistry;
  *
  * These are the client's payload types: `schemas.ts` infers them (so the schema
  * and the type cannot disagree), and `types.gen.ts` is what they are checked
- * against. `Wire` exists so a caller that needs the generated shape can ask for
- * it explicitly without importing the module.
+ * against. `Wire` exists so a caller that needs the mirror's declared shape can
+ * ask for it explicitly without importing the module.
  */
 export type Payload<K extends SchemaName> = z.output<SchemaRegistry[K]>;
 
-/** Compile-time proof that each schema's OUTPUT satisfies the generated mirror:
- *  every field a schema produces must be a field the wire type declares, with a
- *  compatible type. Written in this direction on purpose — a schema that answers
- *  `undefined` where the wire promises a string, or that widens `tool_state`,
- *  fails the intersection below and therefore `pnpm type-check`, which is the
- *  point of keeping both files.
+/**
+ * ## What this guard catches, and what it cannot
+ *
+ * It is a compile-time check with a reviewed scope, not a proof.
+ *
+ * **Tested** — each by injection against this file at tsc 7.0.2, the version
+ * `package.json` pins: a schema added with no confirmation (a `SCHEMAS` entry
+ * with no `WireMirror` key and no excuse); a confirmation for a schema that does
+ * not exist (a `WireMirror` key that is not a `SchemaName`); a renamed schema; a
+ * deleted mirror key; an emptied mirror map; a real type divergence in the
+ * direction the assertion tests — a covered schema's output that stops being
+ * assignable to the mirror's declaration (a field the mirror declares that
+ * the payload does not satisfy); a payload *wider* than the mirror is not
+ * caught, as the note below says; a
+ * mirror value widened to `unknown`/`any`, which would make that key's check
+ * vacuous; and an excuse list that gains a name outside the enumerated eight or
+ * loses one of them.
+ *
+ * **Not tested, and not testable from inside these definitions: an edit to the
+ * definitions themselves.** Successive rounds each closed a hole only for it to
+ * reopen one alias deeper — the tuple length, then the excuse alias, then the
+ * alias the coverage test read. No type-level construction in this language
+ * protects the definitions it is built from, so an edit that widens a
+ * computation *and* its restatement together compiles cleanly. These definitions
+ * are therefore **reviewed as code, not trusted as a mechanism**: the review is
+ * the ordinary review of the PR that edits them, which is why they are kept
+ * small, restated in pairs, and meant to be read together.
+ */
+
+/** Compile-time proof that each asserted schema's OUTPUT is assignable to the
+ *  mirror's declaration. Written in this direction on purpose — a schema that
+ *  answers `undefined` where the wire promises a string, or that widens
+ *  `tool_state`, fails the assertion below and therefore `pnpm typecheck`, which
+ *  is the point of keeping both files.
+ *
+ *  Assignability is one-directional, so this is not a field-by-field equality:
+ *  an extra field the mirror does not declare passes, and an `any` field passes
+ *  with it, because both are safe under the boundary's additive-only rule
+ *  (`docs/architecture.md` item 2). An `unknown` field is the case that
+ *  correctly fails.
+ *
+ *  The assertion covers the schemas keyed in `WireMirror` — 20 of the 28 in
+ *  `SCHEMAS`; the eight named in `UnassertedSchema` (`commandOp`,
+ *  `gatewayRefusal`, `modelEntry`, `projectionStreamFrame`, `resumeSession`,
+ *  `sessionsStreamFrame`, `startSession`, `subagentRow`) are request bodies,
+ *  stream frames and element shapes outside the assertion; five already have a
+ *  mirror type, so the gap is coverage rather than a missing declaration.
+ *  `CoverageComplete` requires every `SCHEMAS` name to be covered or excused;
+ *  what that does and does not promise is stated at the head of this section.
  *
  *  It is deliberately not the other direction: the schemas are the client's
  *  reading, and where they are *narrower* than the dataclasses (no
  *  `new_conversation`/`resume_session` in `commandOpSchema`, because the relay
- *  refuses both over HTTP) that narrowing is intended and must not be an error. */
+ *  refuses both over HTTP) that narrowing is intended and must not be an error.
+ *
+ *  A `false` result here means the payload is `never`, which only happens for a
+ *  schema that can never parse; that is a failure, not an absence, so it must
+ *  resolve to `false` rather than `never` and trip the binding below. */
 type SchemaSatisfiesWire<K extends SchemaName> = [Payload<K>] extends [never]
-	? never
+	? false
 	: Payload<K>;
 
-/** Instantiating this alias is what runs the check; it is exported so the check
- *  cannot be dropped by an edit that removes an unused local type. */
-export type WireConformance = [
-	SchemaSatisfiesWire<"healthz"> extends HealthzResponse ? true : never,
-	SchemaSatisfiesWire<"sessionListFrame"> extends SessionListFrame
-		? true
-		: never,
-	SchemaSatisfiesWire<"sessionSummary"> extends SessionSummary ? true : never,
-	SchemaSatisfiesWire<"sessionProjection"> extends SessionProjection
-		? true
-		: never,
-	SchemaSatisfiesWire<"pastSessions"> extends PastSessionsResponse
-		? true
-		: never,
-	SchemaSatisfiesWire<"searchSessions"> extends SearchSessionsResponse
-		? true
-		: never,
-	SchemaSatisfiesWire<"history"> extends HistoryResponse ? true : never,
-	SchemaSatisfiesWire<"subagentDetail"> extends SubagentDetail ? true : never,
-	SchemaSatisfiesWire<"commands"> extends CommandsResponse ? true : never,
-	SchemaSatisfiesWire<"models"> extends ModelsResponse ? true : never,
-	SchemaSatisfiesWire<"directories"> extends Directories ? true : never,
-	SchemaSatisfiesWire<"apiError"> extends ApiError ? true : never,
-	SchemaSatisfiesWire<"commandAck"> extends CommandAck ? true : never,
-	SchemaSatisfiesWire<"seen"> extends SeenResponse ? true : never,
-	SchemaSatisfiesWire<"asks"> extends AsksResponse ? true : never,
-	SchemaSatisfiesWire<"pushConversation"> extends PushConversationResponse
-		? true
-		: never,
-	SchemaSatisfiesWire<"pushRegister"> extends PushRegisterResponse
-		? true
-		: never,
-	SchemaSatisfiesWire<"pushDevices"> extends PushDevicesResponse ? true : never,
-	SchemaSatisfiesWire<"pushDeviceDelete"> extends PushDeviceDeleteResponse
-		? true
-		: never,
-	SchemaSatisfiesWire<"pin"> extends PinResponse ? true : never,
-];
+/** The mirror type each asserted schema is checked against, keyed by the
+ *  schema's `SCHEMAS` name. The keys are the assertion's coverage: every key
+ *  must be a real `SchemaName` (a key that is not one makes its element `false`,
+ *  which trips the binding), and `CoverageComplete` requires every `SCHEMAS` name
+ *  to be either here or one of the enumerated eight. A schema added without a
+ *  key, or a key for a schema that does not exist, is therefore a compile error
+ *  rather than a schema that drops out of the check unremarked. */
+type WireMirror = {
+	healthz: HealthzResponse;
+	sessionListFrame: SessionListFrame;
+	sessionSummary: SessionSummary;
+	sessionProjection: SessionProjection;
+	pastSessions: PastSessionsResponse;
+	searchSessions: SearchSessionsResponse;
+	history: HistoryResponse;
+	subagentDetail: SubagentDetail;
+	commands: CommandsResponse;
+	models: ModelsResponse;
+	directories: Directories;
+	apiError: ApiError;
+	commandAck: CommandAck;
+	seen: SeenResponse;
+	asks: AsksResponse;
+	pushConversation: PushConversationResponse;
+	pushRegister: PushRegisterResponse;
+	pushDevices: PushDevicesResponse;
+	pushDeviceDelete: PushDeviceDeleteResponse;
+	pin: PinResponse;
+};
 
-/* Re-exported for callers that want the generated shape alongside the inferred
- * one, and to keep the unused-import lints honest in files that only need types. */
+/** `SCHEMAS` names deliberately outside the assertion, each the shape of a
+ *  request body, a stream frame or an element the mirror does not yet declare as
+ *  a payload — five (`commandOp`, `modelEntry`, `startSession`, `resumeSession`,
+ *  `subagentRow`) already have a mirror type. Listed so `CoverageComplete` can
+ *  tell an excused gap from a forgotten one. This list and the literal below are
+ *  two statements of the same set, held equal by `ExcusesEnumerated`, so a
+ *  one-sided edit to either fails the build; an edit to both compiles, which is
+ *  the limit stated at the head of this section. */
+type UnassertedSchema =
+	| "commandOp"
+	| "gatewayRefusal"
+	| "modelEntry"
+	| "projectionStreamFrame"
+	| "resumeSession"
+	| "sessionsStreamFrame"
+	| "startSession"
+	| "subagentRow";
+
+/** The same eight names, restated as a literal. `UnassertedSchema` is consulted
+ *  only as a union, so redefining it absorbs every schema added to `SCHEMAS`:
+ *  `type UnassertedSchema = string` and `= SchemaName` both excuse anything, and
+ *  `= Exclude<SchemaName, keyof WireMirror>` is the shape a loosening would
+ *  plausibly take — it reads like "the remaining gap". No structural test
+ *  separates that last form from the literal at a clean head; they are the same
+ *  set until a schema is added, which is why the test has to be a restatement.
+ *  `ExcusesEnumerated` holds the two sets equal in both directions, and
+ *  `CoverageGap` reads this literal rather than the alias, so a one-sided edit to
+ *  either statement fails the binding while an edit to both compiles. */
+type UnassertedSchemaPinned =
+	| "commandOp"
+	| "gatewayRefusal"
+	| "modelEntry"
+	| "projectionStreamFrame"
+	| "resumeSession"
+	| "sessionsStreamFrame"
+	| "startSession"
+	| "subagentRow";
+
+/** `true` only while the effective excuse list and the literal are the same set.
+ *  Both directions, because `Exclude<A, B> extends never` is A ⊆ B — a subset,
+ *  not an equality: the one-way form accepts a name added only to
+ *  `UnassertedSchemaPinned`, leaving the two lists disagreeing about what the
+ *  eight are with the build still green. A list widened to `string`, to
+ *  `SchemaName`, or to the mirror's complement fails here instead. */
+type ExcusesEnumerated = [
+	Exclude<UnassertedSchema, UnassertedSchemaPinned>,
+	Exclude<UnassertedSchemaPinned, UnassertedSchema>,
+] extends [never, never]
+	? true
+	: false;
+
+/** `false` when a mirror value is `unknown` or `any`: each accepts every payload,
+ *  so that key's assignability test is vacuously true and a divergence in the
+ *  schema it names compiles silently. `[unknown] extends [T]` is the test — a
+ *  declared shape refuses `unknown`, while `unknown` and `any` both accept it.
+ *  (`object`/`{}` also accept broadly but still reject `null`/`undefined`, so
+ *  those are left to the ordinary assignability check.) */
+type MirrorIsConcrete<T> = [unknown] extends [T] ? false : true;
+
+/** Each key resolves to `true` when the schema's output satisfies the mirror and
+ *  `false` when it does not; a key that is not a `SchemaName` also resolves to
+ *  `false`, and so does one whose mirror value has been widened to `unknown`.
+ *  This alias alone proves nothing: a type alias is never checked unless it is
+ *  instantiated, and a `never` element is both legal and satisfies a `true`
+ *  constraint, so the earlier tuple shape compiled silently even with a real
+ *  divergence. Every branch therefore resolves to `false`, and the alias is bound
+ *  to `AssertAll` below, where a single `false` violates the `true[]` constraint
+ *  and `tsc` reports TS2344. Keying by schema name rather than writing a
+ *  positional tuple is deliberate: the keys *are* the asserted set, so a
+ *  shortened tuple can no longer drop a schema out of the check. */
+export type WireConformance = {
+	[K in keyof WireMirror]: K extends SchemaName
+		? MirrorIsConcrete<WireMirror[K]> extends true
+			? SchemaSatisfiesWire<K> extends WireMirror[K]
+				? true
+				: false
+			: false
+		: false;
+};
+
+/** `true` only when every element of `WireConformance` is `true`; a single
+ *  `false` widens the indexed union to `true | false`, which does not extend
+ *  `true`. */
+type AllConform = WireConformance[keyof WireConformance] extends true
+	? true
+	: false;
+
+/** Every `SCHEMAS` name that is neither asserted in `WireMirror` nor named in
+ *  the enumerated eight — the coverage gap. Computed from `UnassertedSchemaPinned`,
+ *  the literal, so that widening the editable `UnassertedSchema` alias cannot
+ *  excuse a schema here. */
+type CoverageGap = Exclude<
+	SchemaName,
+	keyof WireMirror | UnassertedSchemaPinned
+>;
+
+/** The same gap, computed from the editable alias. A separate statement, and
+ *  required to agree with `CoverageGap`, because a single expression is invisible
+ *  to every guard: an edit that widens *one* of the two computations — appending
+ *  `| "zzInjected"` to the subtraction, or replacing it with the derived
+ *  `Exclude<SchemaName, keyof WireMirror>` — leaves the other non-empty. This
+ *  closes that door, not the class: editing both restatements together still
+ *  compiles (see the bound at the head of this section). */
+type CoverageGapRestated = Exclude<
+	SchemaName,
+	keyof WireMirror | UnassertedSchema
+>;
+
+/** `true` only while both computations of the gap are empty: every `SCHEMAS` key
+ *  is asserted in `WireMirror` or named in the enumerated eight. */
+type CoverageComplete = [CoverageGap, CoverageGapRestated] extends [
+	never,
+	never,
+]
+	? true
+	: false;
+
+/** Binding the trio to a `true[]`-constrained parameter is what runs the check at
+ *  compile time: a type alias is never evaluated until it is instantiated, so the
+ *  aliases above are inert without this `AssertAll<…>` — verified by neutralising
+ *  the binding with a divergence present, which returns rc 0. The export is for
+ *  discoverability and is NOT the mechanism: an exported alias still runs
+ *  nothing. One `false` element — a divergent schema, a `SCHEMAS` name that is
+ *  neither mirrored nor excused, an excuse list no longer equal to the
+ *  enumerated eight, or a coverage subtraction that disagrees with its
+ *  restatement — makes this instantiation TS2344. */
+type AssertAll<T extends true[]> = T;
+export type _WireConformanceChecked = AssertAll<
+	[AllConform, CoverageComplete, ExcusesEnumerated]
+>;
+
+/* Re-exported for callers that want the mirror's declared shape alongside the
+ * inferred one, and to keep the unused-import lints honest in files that only
+ * need types. */
 export type {
 	ApiError,
 	AskQuestion,

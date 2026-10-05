@@ -2,7 +2,7 @@
 /**
  * The relay wire contract.
  *
- * `types.gen.ts` is the generated mirror of the relay's dataclasses,
+ * `types.gen.ts` is the hand-authored mirror of the relay's dataclasses,
  * `schemas.ts` is the runtime validation of every payload, and `parse.ts` is the
  * only door between them and the rest of the app. `src/relay/` is the only
  * module allowed to call into this layer; `src/features/` and `app/` read the

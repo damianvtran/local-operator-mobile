@@ -65,10 +65,9 @@ app/                                  # Expo Router routes — navigation only
   (app)/settings.tsx                  # connection, theme, diagnostics, sign out
 
 src/
-  contracts/                          # relay wire contract (see "Type sharing")
+  contracts/                          # relay wire contract (see "Type sharing"; wire samples in fixtures/relay/)
     schemas.ts                        # zod schemas for every payload
-    types.gen.ts                      # generated mirror of the relay dataclasses
-    fixtures/*.json                   # captured from a real relay
+    types.gen.ts                      # hand-authored mirror of the relay's dataclasses
   relay/                              # the protocol client — no UI, no navigation
     endpoints.ts                      # one function per relay route
     http.ts                           # fetch wrapper: headers, origin, errors
@@ -226,14 +225,18 @@ sequenceDiagram
 The relay serialises Python dataclasses with `asdict`, and the existing web client
 mirrors them by hand with a comment saying so
 (`~/local-operator/local_operator/mobile/web/src/types.ts`, first paragraph). Two
-hand-maintained mirrors is one too many, so this repository does three things
-instead:
+hand-maintained mirrors is one too many, so this repository runs two mechanisms
+against the wire instead:
 
-1. **Generate where possible.** `scripts/gen-relay-types.mjs` reads the relay's
-   dataclasses (given a path to a Local Operator checkout, or a published wheel) and
-   emits `src/contracts/types.gen.ts` field-for-field, defaults included. It is a dev
-   tool: the generated file is committed, so a contributor without the checkout can
-   still build.
+1. **Mirror by hand, seeded from the contract.** `src/contracts/types.gen.ts` is
+   the field-for-field mirror of the relay's dataclasses, seeded from
+   `docs/relay/types.ts` — the annotated reading of the same wire, which carries the
+   `file:line` citations. It is **hand-authored and committed on purpose**, so a
+   contributor without a local-operator checkout can still build. A generator
+   (`scripts/gen-relay-types.mjs`) that would read the relay's dataclasses — given a
+   path to a Local Operator checkout, or a published wheel — and emit this file
+   field-for-field, defaults included, is **planned, not present**; so is the
+   scheduled CI job that would regenerate it and fail on drift.
 2. **Validate at the boundary, always.** `src/contracts/schemas.ts` holds a zod
    schema per payload, and the relay client parses every REST body and every SSE
    frame through it. Unknown fields are preserved rather than stripped, so a newer
@@ -241,14 +244,27 @@ instead:
    to the documented default rather than rendering `undefined`. This is the mechanism
    that makes the relay's additive-only evolution rule (`docs/mobile.md`) safe on the
    client side.
-3. **Detect drift in CI.** A scheduled workflow checks out `damianvtran/local-operator`,
-   regenerates `types.gen.ts`, and fails if the committed file differs — the same
-   shape as the web client's parity fixtures. A separate set of fixtures
-   (`src/contracts/fixtures/*.json`, captured from a real relay in a scenario script)
-   is re-captured by the same job so schema and sample cannot diverge silently. Both
-   are **non-blocking on failure but alerting**, because the relay may legitimately
-   move ahead of the app; the app's own CI is not the place to hold a different
-   repository hostage.
+3. **Hold the two files together at compile time.** `WireConformance` in
+   `src/contracts/schemas.ts` is a type-level assertion that each schema it covers
+   produces a shape assignable to the mirror's declaration: a schema that answers
+   `undefined` where the wire promises a string, or that widens an enum, fails
+   `pnpm typecheck`. It fires for the asserted subset — 20 of the 28 registered
+   schemas. The eight it does not yet cover (`commandOp`, `gatewayRefusal`,
+   `modelEntry`, `projectionStreamFrame`, `resumeSession`, `sessionsStreamFrame`,
+   `startSession`, `subagentRow`) are request bodies, stream frames and element
+   shapes outside the assertion; five of them already have a mirror type, so the
+   gap is coverage rather than a missing declaration. That, with the boundary
+   validation above, is the mirror's real mechanical guard today — not a generated
+   file checked for drift, but a hand-authored one the parser and the compiler keep
+   honest.
+
+The generator and the CI drift-check are named above as *planned* because the web
+client's parity story has them and this repository does not yet: `docs/ci.md`
+records the fixture re-capture diff as a deliberate non-goal until the script
+exists, and the wire corpus it would re-capture lives at `fixtures/relay/`. When
+the drift-check lands it should be **non-blocking on failure but alerting**,
+because the relay may legitimately move ahead of the app; the app's own CI is not
+the place to hold a different repository hostage.
 
 Compatibility signals we do read at runtime:
 
