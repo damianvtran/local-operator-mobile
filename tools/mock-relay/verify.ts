@@ -1759,6 +1759,12 @@ async function main() {
 			};
 		};
 
+		// A STATUS CHECK ALONE IS NOT THE DISCRIMINATOR HERE, and the comment says so
+		// because `exit != 0` has another way to be satisfied: `inert-text-scale` is three
+		// elements, so it also trips the capture's blank-frame check ("only 3 elements
+		// mounted"). The companion assertion below — the one that greps for the guard's
+		// own sentence — is what a silent scale guard cannot pass. The mixed fixture is
+		// given six elements precisely so its pair is not in that position.
 		const inert = run(join(WORKTREE, "e2e", "fixtures", "inert-text-scale"));
 		check(
 			"a page whose text ignores the root font size FAILS the guard",
@@ -1776,9 +1782,10 @@ async function main() {
 
 		// The MIXED case, and the one a per-role guard exists for: every paragraph
 		// scales and one role is pinned in px. A median over the cell is carried by the
-		// scaling majority and reports the pair live; the per-role guard reads the one
-		// role that did not move. Without this fixture the guard's headline failure —
-		// `S15/loading__tablet-landscape__200` — would have no small, cheap control.
+		// scaling majority and reports the pair live (measured: 4.000x against the 1.9
+		// bar); the per-role guard reads the one role that did not move. Without this
+		// fixture the guard's headline failure — `S15/loading__tablet-landscape__200` —
+		// would have no small, cheap control.
 		const mixed = run(join(WORKTREE, "e2e", "fixtures", "px-role-text-scale"));
 		check(
 			"a page with ONE unscaled type role among scaling ones FAILS the guard",

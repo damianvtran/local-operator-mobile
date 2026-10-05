@@ -14,6 +14,13 @@
   20px role; the inert-text-scale fixture is the all-px case and the audit-canary is
   the all-rem case. Together the three prove the guard discriminates in both
   directions, including the mixed composition a median could not see.
+
+  ENOUGH ELEMENTS ON PURPOSE. A page of three elements also trips the capture's
+  blank-frame check ("only N elements mounted — the frame is (nearly) blank"), and
+  then `verify`'s `status !== 0` assertion would hold with the scale guard silent.
+  Six elements clear that check, so the only failure this page produces is the scale
+  one and the companion assertion — the one that greps for the message naming the
+  20px role — is what carries the discrimination.
 -->
 <html lang="en">
 <head>
@@ -40,5 +47,10 @@
 <p>A second paragraph keeps the scaling copy the majority: with only the pinned heading for
    company a lone frozen role could move the cell median enough for the old check to catch it
    by accident, which would prove nothing about the per-role comparison.</p>
+<p>The rest of the copy is here to carry the page past the capture's blank-frame floor, so
+   that a non-zero exit from this fixture can only mean the scale guard fired.</p>
+<p>Every one of these paragraphs is `1rem`, and every one of them doubles; the heading above
+   is `20px` and does not move at all.</p>
+<p>A last row, so the body has six elements and the frame is plainly not blank.</p>
 </body>
 </html>

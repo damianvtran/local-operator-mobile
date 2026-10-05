@@ -1304,20 +1304,24 @@ export interface CaptureRecord {
 	pinnedScenario?: string | null;
 	consoleErrors: string[];
 	/**
-	 * Whether the text-scale dimension was LIVE for this frame's cell, and — when it
-	 * was not — the roles that failed, by name. `null` means the run did not capture
+	 * Whether the text-scale dimension was LIVE for this frame's cell, and — on the
+	 * 200 % frame only — the roles that failed. `null` means the run did not capture
 	 * both scales for this key, so the frame cannot answer a large-text question
 	 * either way — which is a different statement from "measured at 100 %".
 	 *
 	 * `scaleProblems` replaces the single `scaleRatio` the guard used to record: a
 	 * ratio was the reading of one number (the cell median), and the judgement is now
 	 * made role by role, so what a reader needs is which roles failed, not a middle.
+	 * The judgement is a fact about the PAIR, which is why `scaleLive` is on both
+	 * frames, but its evidence is about the 200 % frame, which is why the problems and
+	 * the notes are on that one alone.
 	 */
 	scaleLive?: boolean | null;
 	scaleProblems?: string[] | null;
 	/** Sizes the 200 % frame showed and the 100 % frame did not — reported, never a
-	 * failure by itself. See `judgeTextScale` for why the two frames cannot tell a
-	 * frozen node from a size a layout introduces at the larger scale. */
+	 * failure by itself, and carried on the 200 % frame for the same reason as
+	 * `scaleProblems`. See `judgeTextScale` for why the two frames cannot tell a
+	 * frozen node from a size a layout introduces or resizes to at the larger scale. */
 	scaleNotes?: string[] | null;
 	resolvedTheme?: string | null;
 	canvasColor?: string | null;
@@ -1812,8 +1816,13 @@ export async function runCapture(options: CaptureOptions) {
 		const key = `${record.screen}__${record.state}__${record.device}__${record.theme}`;
 		const judged = judgedByKey.get(key);
 		record.scaleLive = judged?.live ?? null;
-		record.scaleProblems = judged?.problems ?? null;
-		record.scaleNotes = judged?.notes ?? null;
+		// The judgement is ABOUT the 200 % frame, so the problems and the notes are
+		// attached to IT and not to its 100 % sibling: a note that reads "… at 200 % …"
+		// on the 100 % record tells a manifest reader the wrong frame (CI measured one
+		// note per pair landing on 192 records, both frames of each of 96 pairs).
+		record.scaleProblems =
+			record.scale === "200" ? (judged?.problems ?? null) : null;
+		record.scaleNotes = record.scale === "200" ? (judged?.notes ?? null) : null;
 		if (record.scale === "200" && judged !== undefined && !judged.live) {
 			record.readinessProblems = [
 				...record.readinessProblems,
@@ -2242,23 +2251,24 @@ export async function runCapture(options: CaptureOptions) {
  *
  * WHAT IT DELIBERATELY DOES NOT DO. Node COUNTS are not compared (see
  * `judgeTextScale`: a layout may add or drop a node carrying a role that scaled), and
- * a 200 %-only size is a note rather than a failure, because two frames cannot tell a
- * node frozen at a coinciding size from a size a layout introduced at the larger
- * scale. What the guard still fails is a ROLE that did not scale: a page whose body
- * copy never grows, a hardcoded px heading beside rem paragraphs, a wholly px page.
- * The blind spot named above is the price, and the rubric (`docs/ux/audit-rubric.md`)
- * and the e2e README carry the same note so a reader is not told a softer story than
- * the check.
+ * a 100 % role with no scaled counterpart is a note rather than a failure, because two
+ * frames cannot tell a node frozen at a coinciding size from one the layout drops or
+ * resizes at the larger scale. What the guard still fails is a ROLE that did not
+ * scale: a page whose body copy never grows, a hardcoded px heading beside rem
+ * paragraphs, a wholly px page.
+ *
+ * THAT CONCESSION IS THE COMMON CASE, NOT A CORNER. Measured on this harness's own
+ * `ci` capture: 96 of 136 pairs carry such a note (every one naming a 14 px node) and
+ * all 136 read live — so a live tier run says every ROLE grew, never that no text is
+ * frozen. The rubric (`docs/ux/audit-rubric.md`) and the e2e README carry the same
+ * number and the same reading, so neither tells a softer story than the check.
  */
 function verifyTextScale(records: CaptureRecord[]) {
 	const perDevice = new Map();
 	for (const record of records) {
 		const key = `${record.screen}__${record.state}__${record.device}__${record.theme}`;
 		const bucket = perDevice.get(key) ?? {};
-		bucket[record.scale] = {
-			histogram: roleHistogram(record),
-			rootPx: record.measurements?.rootFontSizePx ?? null,
-		};
+		bucket[record.scale] = roleReading(record);
 		perDevice.set(key, bucket);
 	}
 	const perCell = [];
@@ -2268,14 +2278,9 @@ function verifyTextScale(records: CaptureRecord[]) {
 		// A pair with no roles on either side (no text, or a frame from before this
 		// probe) is NOT a live dimension: it is left out so the run reports the pair as
 		// missing coverage rather than as passed.
-		if (at100?.histogram?.size && at200?.histogram?.size) {
+		if (at100?.histogram.size && at200?.histogram.size) {
 			perCell.push(
-				judgeTextScale(
-					key,
-					at100.histogram,
-					at200.histogram,
-					at100.rootPx ?? 16,
-				),
+				judgeTextScale(key, at100.histogram, at200.histogram, at100.rootPx),
 			);
 		}
 	}
@@ -2314,14 +2319,19 @@ function verifyTextScale(records: CaptureRecord[]) {
 }
 
 /**
- * A cell's text roles: each distinct `font-size / rootFontSize` and how many text
- * nodes carried it, or `null` when the frame has no role reading to give.
+ * A frame's text roles: each distinct `font-size / rootFontSize` with how many text
+ * nodes carried it, plus the root font size they were read against.
  *
- * `null` is the "cannot tell" case, not a pass: a frame captured before this probe
- * (or one whose page never set a root font size) is left out of `perCell`, so the
- * pair shows up as missing coverage rather than as a live dimension.
+ * `null` is the "cannot tell" case, not a pass: a frame captured before this probe,
+ * or one whose page never set a root font size, is left out of `perCell`, so the
+ * pair shows up as missing coverage rather than as a live dimension. Returning the
+ * root WITH the histogram is what lets the caller pass that root on as a number
+ * rather than defaulting it at the call site — a default can never fire here (the
+ * root is checked below) and only reads as if a 16 px fallback might be applied.
  */
-function roleHistogram(record: CaptureRecord): Map<number, number> | null {
+function roleReading(
+	record: CaptureRecord,
+): { histogram: Map<number, number>; rootPx: number } | null {
 	const sizes = record.measurements?.textRoleSizes ?? null;
 	const root = record.measurements?.rootFontSizePx ?? null;
 	if (!sizes || !root || root <= 0) return null;
@@ -2335,7 +2345,7 @@ function roleHistogram(record: CaptureRecord): Map<number, number> | null {
 		const rem = Math.round((px / root) * 10000) / 10000;
 		histogram.set(rem, (histogram.get(rem) ?? 0) + count);
 	}
-	return histogram;
+	return { histogram, rootPx: root };
 }
 
 /** One cell's per-role comparison, naming every role that did not line up. */
@@ -2371,12 +2381,15 @@ function judgeTextScale(
 	//     size. This is a role that did not scale, and the cell FAILS on it. In rem
 	//     terms that node's key halves (its px held while the root doubled), which is
 	//     exactly the `rem / 2` lookup below.
-	//   * the role is gone entirely — a layout that drops a label at 200 %, or a state
-	//     that settled differently between the two frames. This is REPORTED in `notes`,
-	//     never failed: it is not a statement about type, and failing it would fail a
-	//     correct app for its responsive design (measured: the sibling PR's own
-	//     `S4/idle__tablet-landscape__dark` 100 % frame renders a 15 px `label` role its
-	//     200 % frame does not, and no scaling is wrong there).
+	//   * the role is absent from the 200 % frame entirely — a layout that drops a label at
+	//     200 %, a state that settled differently between the two frames, OR a node
+	//     RESIZED to a size the factor does not produce (`calc()`/`clamp()`/an `em` under a
+	//     fixed-px parent). Reported in `notes`, never failed: it is not a statement about
+	//     type, and failing it would fail a correct app for its responsive design
+	//     (measured: the sibling PR's own `S4/idle__tablet-landscape__dark` 100 % frame
+	//     renders a 15 px `label` role its 200 % frame does not, and no scaling is wrong
+	//     there). The three causes are named in the note itself, because two frames cannot
+	//     tell them apart.
 	//
 	// NODE COUNTS ARE NOT COMPARED for the same reason: a layout may add or drop a node
 	// whose role DID scale, and a count rule marked 88 of main's 272 `ci` cells UNREADY
@@ -2390,18 +2403,21 @@ function judgeTextScale(
 	// as "7px text", which is the opposite of the honest reading.
 	const px200 = (rem: number) => Math.round(rem * rootPx100 * 2 * 100) / 100;
 	for (const [rem, count] of at100) {
-		if (at200.has(rem)) continue; // scaled — its 200 % px is twice its 100 % px
+		// `hasApprox` on BOTH halves of the question: the scaled lookup was exact while the
+		// frozen one allowed a tolerance, so a role that scaled but whose four-decimal
+		// quotient drifted was filed as absent rather than as scaled.
+		if (hasApprox(at200, rem)) continue; // scaled — its 200 % px is twice its 100 % px
 		if (hasApprox(at200, rem / 2))
 			problems.push(
 				`the ${px(rem)}px role (${count} node(s)) did not scale: the 200% frame still renders ${px(rem)}px text where ${px(rem) * 2}px was expected`,
 			);
 		else
 			notes.push(
-				`the ${px(rem)}px role (${count} node(s)) is absent from the 200% frame — a layout that drops it, not a type that ignored the scale`,
+				`the ${px(rem)}px role (${count} node(s)) has no ${px(rem) * 2}px counterpart at 200% — a node the layout drops, or one that grew by a size the factor does not produce`,
 			);
 	}
 	for (const [rem, count] of at200) {
-		if (at100.has(rem)) continue;
+		if (hasApprox(at100, rem)) continue;
 		notes.push(
 			`${px200(rem)}px text at 200% is not twice any 100% size (${count} node(s)) — a node that ignored the root font size, or a size the layout introduces at this scale`,
 		);

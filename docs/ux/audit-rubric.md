@@ -50,21 +50,28 @@ only when the harness has shown the dimension is live, and "live" is now a per-r
 statement: for each (screen, state, device, theme) captured at 100 % and 200 %, every
 type role the page rendered — each distinct text size relative to the root font size —
 must be present in the 200 % frame at the declared factor. Node COUNTS are not
-compared: a responsive layout may add or drop a node whose role scaled. A role that did
-not grow makes the cell UNREADY and names the role; a size the 200 % frame shows that no
-100 % role explains is reported as a note, not a failure.
+compared: a responsive layout may add or drop a node whose role scaled. A role that is
+still on screen at its 100 % size makes the cell UNREADY and names the role; a 100 % role
+with no scaled counterpart is reported as a note, not a failure.
 
 The guard is composition-insensitive on purpose. An earlier version compared the
 cell's **median** text box, which moves when the MIX of sizes changes even though every
 role scaled — so a text node that gained the type role it was missing made the cell
 fail for improving (measured: `S15/loading__tablet-landscape__200` fell to a 1.852×
-median with all fifteen nodes scaling exactly 2×). What the per-role guard **cannot**
-catch, and a reader must not assume away: a cell whose text genuinely changes between
-the two scales — a label a responsive layout drops at 200 %, say — is reported as a
-finding, because that role has no counterpart to compare. Read a live verdict as "every
-role present at 100 % is present at 200 % and grew by the factor", never as "the
-page's type is correct". The measurement, its manifest fields and its controls are in
-`docs/e2e/README.md` §"How text scale is actually driven".
+median with all fifteen nodes scaling exactly 2×).
+
+**A note in `scaleNotes` is a third answer, and it is the common one.** Three different
+things leave a 100 % role without a scaled counterpart — a node that did not move with
+the root font size, a node a responsive layout drops at 200 %, and a node resized to a
+size the factor does not produce (`calc()`, `clamp()`, an `em` under a fixed-px parent)
+— and two frames cannot tell them apart, so the guard names the role and does not fail
+the cell. `U-04` is therefore signed per ROLE, not per node: **a role present at both
+scales whose nodes only partly moved is reported as a note, so a live verdict says every
+role grew, never that every text node did.** On the harness's own `ci` capture that note
+fires on **96 of 136 pairs** (all naming a 14 px node) while all 136 pairs read live — a
+live tier run is not evidence that no text is frozen. The measurement, its manifest
+fields and its controls are in `docs/e2e/README.md` §"How text scale is actually
+driven".
 
 ## 1. Screens to score
 

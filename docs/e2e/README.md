@@ -845,9 +845,9 @@ not is failed by name —
 
 ```
 path--inert__inert__iphone-15__dark__200: the text did not scale with the root font
-size: the 20px role (1 node(s)) did not scale: the 200% frame has no 40px text — every
-type role must grow by the cell's own factor, so this cell cannot answer a large-text
-question
+size: the 20px role (1 node(s)) did not scale: the 200% frame still renders 20px text
+where 40px was expected — every type role must grow by the cell's own factor, so this
+cell cannot answer a large-text question
 ```
 
 — and every frame records which of the two it was:
@@ -858,8 +858,9 @@ question
 | `meta.textScaleLive` | true only when every measured pair was live |
 | `meta.textScaleLiveCells` / `meta.textScaleInertCells` | the cells by name, so a reader can tell a live 200 % row from a 100 % render wearing a 200 % label |
 | `meta.textScalePairsPlanned` / `textScalePairsMeasured` | the coverage this run does not have |
-| `records[].scaleLive` / `scaleProblems` | per frame; `null` means both scales were not captured (a third answer, not a pass), and `scaleProblems` names the roles that did not line up |
-| `records[].scaleNotes` / `textScaleCheck.notedPairs` | per frame and per run: a size the 200 % frame shows that no 100 % role explains. **Reported, never failing** — see below |
+| `records[].scaleLive` | per frame; `null` means both scales were not captured (a third answer, not a pass). The verdict is a fact about the PAIR, so it is on both frames |
+| `records[].scaleProblems` / `scaleNotes` | on the **200 % frame only**, because that is the frame they describe: the roles that failed, and the sizes the 100 % frame does not explain. **Reported, never failing** — see below |
+| `meta.textScaleCheck.notedPairs` | how many pairs carry a note, so a run says it out loud instead of burying it in `perCell` |
 | `records[].measurements.textRoleSizes` / `rootFontSizePx` | the reading the judgement is made on: every distinct text size and its node count, and the root font size they are relative to |
 
 **Why per role and not a median.** The first version reduced a cell to the median
@@ -881,16 +882,23 @@ page whose every role had grown — measured on main's `ci` tier, where a count 
 marked **88 of 272 cells UNREADY** and every one of them was decided by a layout
 change rather than by the type.
 
-**What the per-role guard can no longer catch.** A size only the 200 % frame shows is
-named in `scaleNotes`, not failed: it is the signature of a node that did not move with
-the root font size, and it is also what a layout that introduces a size at 200 % looks
-like, and two frames cannot tell those apart. The blind spot that leaves is narrow but
-real: a node frozen at a size that COINCIDES with a role which otherwise scales is
-reported in `scaleNotes` and does not fail the cell. The guard fails a **role** that did
-not scale (a page whose body copy never grows, a hardcoded px heading beside rem
-paragraphs); it does not fail a cell because one node of a scaling role stayed put. Read
-a live verdict as "every role present at 100 % is present at 200 % and grew", never as
-"every text node scaled".
+**What the per-role guard can no longer catch, and how often it fires.** A 100 % role
+with no scaled counterpart is named in `scaleNotes`, not failed. Three different things
+produce that signature — a node that did not move with the root font size, a node the
+layout drops at 200 %, and a node RESIZED to a size the factor does not produce
+(`calc()`, `clamp()`, an `em` under a fixed-px parent) — and two frames cannot tell them
+apart.
+
+The case that actually happens is the first, and it is not rare. **On this harness's own
+`ci` capture, 96 of 136 pairs carry a note naming a size that did not move — every one of
+them a 14 px node — and all 136 pairs are still reported live.** So the honest reading of
+a live verdict is this, and nothing wider: *every role present at 100 % is present at
+200 % and grew by the factor; a node frozen at a size that COINCIDES with a role which
+otherwise scales is reported in `scaleNotes` and does not fail the cell.* The guard fails
+a **role** that did not scale — a page whose body copy never grows, a hardcoded px heading
+beside rem paragraphs, a wholly px page — not a cell in which one node of a scaling role
+stayed put. That is why `136/136 live` on a tier whose notes name frozen text in 70 % of
+pairs is not a contradiction, and must not be read as "there is no frozen text here".
 
 Both directions are asserted in `verify` (`pnpm e2e:relay`), now across three
 fixtures: `e2e/fixtures/inert-text-scale/` (all `px`, the whole page frozen) and
