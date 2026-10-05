@@ -37,6 +37,7 @@ import type { RelayEndpoints } from "@/relay";
 import { micVisible as micGate } from "@/stt/capability";
 import { dictate } from "@/stt/dictate";
 import { MAX_RECORDING_MS } from "@/stt/dictation";
+import { forcedDictation, forcedLevels } from "@/stt/dictation-hook";
 import {
 	type DictationEvent,
 	type DictationPhase,
@@ -145,6 +146,15 @@ export const useDictation = (input: DictationInput): DictationState => {
 	const snapshotRef = useRef<DictationSnapshot>(IDLE_DICTATION);
 	const [seconds, setSeconds] = useState(0);
 	const meter = useMemo(() => createMeterStore(), []);
+
+	/* The harness page may FORCE a dictation state so the design round can review a
+	 * frame of it (`stt/dictation-hook.ts`; the web target cannot record, so these
+	 * states have no other rendering). A forced snapshot is what this hook REPORTS;
+	 * the machine underneath stays idle, so a capture cannot open a microphone. */
+	const forced = useMemo(() => forcedDictation(), []);
+	useEffect(() => {
+		if (forced?.phase === "recording") meter.set(forcedLevels());
+	}, [forced, meter]);
 
 	/* The live recording and its timers. Refs, not state: they are read inside
 	 * callbacks that must see the CURRENT handle, and a re-render is not what makes
@@ -375,9 +385,9 @@ export const useDictation = (input: DictationInput): DictationState => {
 
 	return {
 		micVisible,
-		phase: snapshot.phase,
+		phase: forced?.phase ?? snapshot.phase,
 		seconds,
-		status: dictationStatusLine(snapshot),
+		status: dictationStatusLine(forced ?? snapshot),
 		meter,
 		press,
 		cancel,

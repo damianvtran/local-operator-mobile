@@ -192,6 +192,28 @@ mic when — and only when — a scenario advertises a voice path. It is inert f
 every other cell, and no installed build reads it (`stt/recorder.ts`'s
 `recorderFromHook`).
 
+Two more per-cell viewers exist for the dictation states, both inert unless a
+cell asks for them:
+
+- `lo-dictation=starting|recording|transcribing|added|empty|discarded` forces the
+  composer's dictation state (`src/stt/dictation-hook.ts`). The mic can APPEAR on a
+  harness page with `lo-recorder`, but the web target cannot record, so every state
+  past `idle` — and all three outcome lines — has no rendering a reviewer can look
+  at without it. The real state machine is untouched: a forced snapshot is only what
+  the composer draws, so a capture cannot open a microphone.
+- `lo-draft=<text>` seeds the composer's draft into the device store
+  (`lo-mobile-draft:<sessionId>`, read by the app itself; the seed is written by the
+  pre-paint probe, which is what makes it land before the app's first read). A draft
+  is the one composer state no relay scenario can produce, and a review of the
+  recording bar needs a filled field to judge against.
+
+A warm-up cell is needed for the FIRST relay-backed cell of a run: the browser
+profile has no cookie yet, so the cold start's own requests go out unauthenticated
+and the page settles on "authentication required" before the login it then performs
+lands. Capture an ordinary `/session/{sessionId}` cell first (`path:/session/{sessionId}/warm`
+is enough; the state name is deliberately one nothing declares, and that ONE cell is
+the run's expected `unready`) and every later cell in the same run is authenticated.
+
 The seed is **recorded, not re-typed**. `meta.seed` in the manifest holds what the run
 applied (`applied`, `password`, `route`, `origin`), and `pnpm audit:run` re-applies it when
 it re-drives the same cells — re-deriving a `route` that was the capture's own origin at the

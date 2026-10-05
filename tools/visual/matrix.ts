@@ -463,6 +463,24 @@ export const PRE_PAINT_PROBE = `
   // be able to report what the page *resolved* even if the DOM write below has
   // not happened yet.
   window.__loCapture = { theme, scale, reduceMotion, insets, themeSource: params.get('lo-theme') ? 'query' : 'os' };
+  // A DRAFT a cell wants on screen ('lo-draft'). The composer reads its draft from
+  // the device store — localStorage on the web target, keyed per session — so the
+  // seed has to land before the app's first read, and it has to spell the key the app
+  // builds itself ('lo-mobile-draft:' + sessionId, src/features/session/device-storage.ts).
+  // It exists because a draft is the one composer state no relay scenario can produce:
+  // it is the reader's own unfinished sentence, stored on the device, and the visual
+  // round needs a filled field to review states against (the STT recording bar was
+  // reviewed over one). Absent, the field stays empty — nothing else about a cell changes.
+  const seededDraft = params.get('lo-draft');
+  if (seededDraft !== null) {
+    const segments = location.pathname.split('/');
+    const sessionId = segments[1] === 'session' ? (segments[2] || '') : '';
+    try {
+      localStorage.setItem('lo-mobile-draft:' + sessionId, seededDraft);
+    } catch {
+      // A storage-denied profile renders an empty field; the cell still captures.
+    }
+  }
   const paint = () => {
     const root = document.documentElement;
     if (!root) return;
