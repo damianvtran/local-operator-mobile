@@ -45,6 +45,56 @@ question produced it.
 frame at a named viewport, an accessibility-tree extract, or a timing
 measurement.
 
+**The text-scale dimension is judged per type role.** `U-04` reads the 200 % frames
+only when the harness has shown the dimension is live, and "live" is now a per-role
+statement: for each (screen, state, device, theme) captured at 100 % and 200 %, every
+type role the page rendered — each distinct text size relative to the root font size —
+must be present in the 200 % frame at the declared factor. Node COUNTS are not
+compared: a responsive layout may add or drop a node whose role scaled. A role that is
+still on screen at its 100 % size makes the cell UNREADY and names the role; a 100 % role
+with no scaled counterpart is reported as a note, not a failure.
+
+The guard is composition-insensitive on purpose. An earlier version compared the
+cell's **median** text box, which moves when the MIX of sizes changes even though every
+role scaled — so a text node that gained the type role it was missing made the cell
+fail for improving (measured: `S15/loading__tablet-landscape__200` fell to a 1.852×
+median with all fifteen nodes scaling exactly 2×, the factor `SCALES` declares for the
+200 % id).
+
+**Two things are checked before any role is compared.** The 200 % frame's root font size
+must be the factor's multiple of the 100 % frame's: a page that pins its root (`font-size:
+… !important` outranks the inline property the harness writes) renders both frames at
+100 %, and a comparison made against each frame's own root would call that live. And a role
+is counted by its **box**, not by whether it draws — `visibility: hidden` is excluded (the
+same thing the readiness rule's `visible()` says), while a node at `opacity: 0` and a child
+clipped away inside a zero-height container ARE counted, because the audit reads the app's
+clipped placeholder proxy on purpose. **What that cannot catch, and a signer must not
+assume away:** text painting from a **zero-height box** is skipped — the role goes
+unreported and the pair reads live. That is a CLASS, not a list: the shapes seen so far are
+`height: 0` with `overflow: visible`, `line-height: 0`, `display: contents` and
+`contain: size`, *including but not limited to* those, over elements that hold direct text.
+Two further escapes have a different cause and are not box cases at all — generated content
+(`::before` / `::after`) is not an element holding direct text, and text inside a shadow root
+is never traversed. `painted-carrier-text-scale` pins three of the box shapes as a known
+miss. Read a live verdict as "every role the box tree knows about grew", and **not** as
+"there is no frozen text here".
+
+**A note in `scaleNotes` is a third answer, and it is the common one.** Three different
+things leave a 100 % role without a scaled counterpart — a node that did not move with
+the root font size, a node a responsive layout drops or clips at 200 %, a node resized to a
+size the factor does not produce (`calc()`, `clamp()`, an `em` under a fixed-px parent),
+and (in the other direction) a size the 200 % frame shows that no 100 % role explains — and
+two frames cannot tell them apart, so the guard names the role and does not fail the cell.
+`U-04` is therefore signed per ROLE, not per node: **a role present at both scales whose
+nodes only partly moved is reported as a note, so a live verdict says every role grew,
+never that every text node did.** The `calc()` case has a measured size — a probe carrying
+`calc(10px + 0.5rem)` renders **18 px → 26 px (1.444×)**, named rather than failing the cell
+— and it does not occur on the app's own tiers: there is no `calc()`, `clamp()` or
+viewport-unit font size in `app/`, `src/` or `design/`. On the `ci` capture the note fires
+on **96 of 136 pairs** while all 136 pairs read live — a live tier run is not evidence that no
+text is frozen. The measurement, its manifest fields and its controls are in
+`docs/e2e/README.md` §"How text scale is actually driven".
+
 ## 1. Screens to score
 
 | # | Screen | Flows |

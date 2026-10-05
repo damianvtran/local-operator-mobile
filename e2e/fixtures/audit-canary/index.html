@@ -232,10 +232,11 @@
 	     (24px at 200% x 19 characters < the narrowest portrait content width), so
 	     its painted region clears the members' zone at every scale. -->
 	<h2 style="font-size:0.75rem">U-08 modal layering</h2>
-	<!-- Controls with an accessible name and NO text, like the escape shapes: a
-	     fixed-height element carrying text would sit at one height in both scale
-	     snapshots and drag the per-cell text-scale median below the instrument's
-	     1.9x guard (measured: this page fell to 1.71x while these carried text). -->
+	<!-- Controls with an accessible name and NO text, like the escape shapes. A
+	     fixture-hygiene choice, not a guard requirement: the scale guard now reads each
+	     type ROLE, so text here would simply have to scale like every other role rather
+	     than move a median. The text stays off so the fixture measures only the roles
+	     it means to assert. -->
 	<button class="control" id="modal-covered" data-not-defect="U-08" data-not-defect-reason="modal-layer" aria-label="Covered control" style="position:absolute;top:96px;left:100px;width:120px;height:44px"></button>
 	<div id="modal-shell" role="dialog" aria-modal="true" aria-label="Demo dialog" style="position:absolute;top:64px;left:80px;width:220px;height:140px">
 		<button class="control" id="modal-backdrop" data-not-defect="U-08" data-not-defect-reason="modal-surface" aria-label="Dismiss the dialog" style="position:absolute;top:10px;left:0;width:120px;height:60px;background:rgba(178,58,49,0.35)"></button>
@@ -439,8 +440,8 @@
      FAIL row" while proving nothing about the rule.
 
      Both are controls with an accessible name and NO text, for the reason the escape
-     fixtures above state: the capture's text-scale guard reads the MEDIAN text box of
-     the page, and extra text nodes move it. -->
+     fixtures above state: this fixture measures the type roles it declares, and extra
+     text nodes would add roles it does not mean to assert. -->
 <div class="bad" style="position:relative;height:150px">
 	<div id="phantom-clipper" style="position:absolute;top:0;left:0;width:120px;height:40px;overflow:hidden">
 		<div id="phantom-under" role="button" aria-label="Clipped under" style="position:absolute;top:0;left:0;width:120px;height:140px;background:var(--surface);border:1px solid var(--border)"></div>
@@ -459,10 +460,12 @@
      relative panel, so they cover each other exactly — 100% of the smaller box — instead
      of depending on where a heading's margin happened to leave the button.
 
-     NO TEXT AND NO HEADING on these two panels, deliberately: the capture's text-scale
-     guard reads the MEDIAN text box of the page, and four extra text nodes moved it enough
-     at iphone-15 to make two cells read as unscaled. Both nodes carry a role and an
-     accessible name instead, which is what makes them meaningful boxes to U-08. -->
+     NO TEXT AND NO HEADING on these two panels, deliberately: this fixture exists to
+     prove the OTHER rules, and extra text nodes would add type roles it does not mean to
+     assert. (Under the old MEDIAN guard they also moved the cell median enough at
+     iphone-15 to make two cells read as unscaled — the artefact the per-role guard
+     removed.) Both nodes carry a role and an accessible name instead, which is what
+     makes them meaningful boxes to U-08. -->
 <div class="bad panel" style="position:relative;height:56px">
 	<button class="control" id="escape-under" aria-label="Send" style="position:absolute;top:12px;left:12px;width:180px;height:44px"></button>
 	<div id="escape-clipper" style="overflow:hidden;height:0">

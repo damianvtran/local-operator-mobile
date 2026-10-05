@@ -1,0 +1,53 @@
+<!doctype html>
+<!--
+  A KNOWN, MEASURED MISS — asserted here rather than left unknown.
+
+  The guard counts a type role by its bounding box (see MEASURE_PROBE), so text that paints
+  with NO box of its own is skipped and a frozen role on such a carrier is never reported.
+  This page carries three such carriers, each with a px size that cannot follow the root,
+  and every one of them is legible on screen:
+
+    height: 0; overflow: visible   — the box is zero-height and nothing clips the text
+    line-height: 0                 — the line box collapses while the glyphs still draw
+    display: contents              — no box at all; the text paints in the parent's flow
+
+  This page therefore PASSES the guard (exit 0, dimension live) with all three roles
+  unnamed. That is the point: the fixture pins the limit so a future change to the
+  predicate cannot move it silently, and docs/e2e/README.md carries the same shape with its
+  measured incidence. The opposite direction — a box that paints nothing and is still
+  counted, which this harness does on purpose — is `unpainted-role-text-scale`.
+
+  A stricter, paint-based predicate would catch these three and is NOT shipped: measured on
+  the `ci` tier it moved a reading (96 pairs noted → 118), and a metric change that
+  reclassifies app cells is the failure mode this branch has had to correct twice. The
+  limit is stated, not closed.
+-->
+<html lang="en">
+<head><meta charset="utf-8"><title>Carriers whose text paints outside the box</title>
+<style>
+	/* The canvas follows the resolved theme, so the scale roles are the only possible
+	   subject of this page. */
+	:root{--canvas:#f2ede3;--ink:#211e18}
+	:root[data-lo-theme="dark"]{--canvas:#22201c;--ink:#f2ede3}
+	body{margin:0;padding:16px;background:var(--canvas);color:var(--ink);font-family:system-ui;font-size:1rem;line-height:1.5}
+	h1{font-size:1.25rem;margin:0 0 12px}
+	p{font-size:1rem;margin:0 0 8px}
+	/* Carrier 1: zero-height box, nothing clipping it, holding its own text. */
+	.zerobox{height:0;overflow:visible;font-size:22px}
+	/* Carrier 2: the line box collapses and the glyphs still paint outside it. */
+	.zeroline{line-height:0;font-size:24px}
+	/* Carrier 3: no box at all — the text paints in the parent's flow at this font-size. */
+	.contents{display:contents;font-size:26px}
+</style></head>
+<body>
+<h1>Carriers whose text paints outside the box</h1>
+<p>Every role but the three below doubles with the root.</p>
+<p>The three carriers are the shapes an element-geometry test drops: a zero-height box that
+   does not clip, a collapsed line box, and a boxless display:contents element.</p>
+<p>A third paragraph, so the page clears the capture's blank-frame floor and an exit code
+   could not be decided by that check instead.</p>
+<div class="zerobox">zero-height carrier, 22px</div>
+<div class="zeroline">collapsed-line-height carrier, 24px</div>
+<div class="contents">display:contents carrier, 26px</div>
+</body>
+</html>

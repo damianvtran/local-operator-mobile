@@ -819,9 +819,53 @@ export const MEASURE_PROBE = `
     if (!el.textContent || !el.textContent.trim()) return false;
     return [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim());
   });
+  // WHICH TEXT COUNTS AS A TYPE ROLE — the box test, and exactly what it does not catch.
+  //
+  // The test is a non-zero bounding box, the same one the median reading above has always
+  // used: a node that is LAID OUT counts, whether or not it draws. That is deliberate for
+  // two shapes this audit relies on — a node at opacity:0, and a node clipped inside a
+  // zero-height container — so READINESS_PROBE's visible() is deliberately NOT the
+  // predicate here: that test answers "did the app render this marker", while the audit
+  // reads the app's clipped placeholder proxy on purpose (docs/ux/audit-rubric.md).
+  //
+  // visibility:hidden is the one shape excluded, because it is the one whose box a
+  // reviewer's eye never sees and whose exclusion changes no reading on any tier. Only the
+  // node's OWN computed value is read: visibility is inherited, so a visibility:visible
+  // child of a hidden parent keeps its own value and must stay counted.
+  //
+  // WHAT A BOX TEST CANNOT CATCH — a class rather than a list. Text painting from a
+  // ZERO-HEIGHT box is skipped, so a FROZEN role on such a carrier is never reported and
+  // its pair reads live. Seen so far, including but not limited to: height:0 with
+  // overflow:visible, line-height:0, display:contents, contain:size — over elements that
+  // hold direct text. (Generated content and shadow-root text escape for a different
+  // reason: not direct text, and never traversed.) The painted-carrier-text-scale fixture
+  // asserts three of those shapes as a known miss, and docs/e2e/README.md states the class
+  // with its measured incidence. The app has no such carrier today.
+  const unpainted = (el) => el.getBoundingClientRect().height <= 0;
   const heights = textNodes.slice(0, 400).map((el) => el.getBoundingClientRect().height).filter((h) => h > 0);
   heights.sort((a, b) => a - b);
   const medianTextHeight = heights.length ? heights[Math.floor(heights.length / 2)] : 0;
+  // The size of every counted text node, grouped by size, so the scale guard can judge each
+  // TYPE ROLE against its own 100% counterpart instead of one cell median.
+  //
+  // WHY THE MEDIAN ABOVE IS NO LONGER ENOUGH: a median over the whole cell moves when the
+  // cell's COMPOSITION changes, not only when its scaling does. Giving a node its missing
+  // type role — the correct fix — shifts the median's basis and can drag the ratio BELOW
+  // the bar while every role scaled exactly 2x. The guard reads this histogram instead;
+  // medianTextHeight stays because the report prints it, not because the guard trusts it.
+  //
+  // Reported as a measurement (a size in CSS px and a count), never a verdict -- the role
+  // decision lives in tools/visual/capture.ts verifyTextScale.
+  const roleSizes = new Map();
+  for (const el of textNodes) {
+    if (unpainted(el)) continue;
+    const style = getComputedStyle(el);
+    if (style.visibility === 'hidden') continue;
+    const size = Number.parseFloat(style.fontSize);
+    if (!Number.isFinite(size) || size <= 0) continue;
+    roleSizes.set(size, (roleSizes.get(size) || 0) + 1);
+  }
+  const rootFontSizePx = Number.parseFloat(rootStyle ? rootStyle.fontSize : '');
   return {
     reported: { theme: info.theme, scale: info.scale, reduceMotion: info.reduceMotion,
                 themeSource: info.themeSource, insets: info.insets },
@@ -843,6 +887,13 @@ export const MEASURE_PROBE = `
     bodyScrollWidth: body ? body.scrollWidth : 0,
     textNodeCount: textNodes.length,
     medianTextHeight,
+    // Every distinct text size and how many nodes carried it. The guard turns these
+    // into roles by dividing by rootFontSizePx; leaving the division to the guard
+    // keeps this probe's output a reading rather than a judgement.
+    textRoleSizes: [...roleSizes.entries()]
+      .map(([px, count]) => ({ px, count }))
+      .sort((a, b) => a.px - b.px),
+    rootFontSizePx: Number.isFinite(rootFontSizePx) ? rootFontSizePx : null,
     route: location.pathname + location.search,
     title: document.title,
     // A blank render is the failure that looks like success: a screenshot of
