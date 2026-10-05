@@ -31,6 +31,7 @@
   | #low-contrast         | U-02  | ink #a8a296 on ground #f2ede3                        |
   | #status-dot           | U-03  | colour-only status: no word, glyph or name           |
   | #three-dot-a          | U-03  | a THREE-dot colour-only status row — the shape the series exception must not swallow |
+  | #fifteen-dot-a        | U-03  | a FIFTEEN-dot colour-only row — one below LEVEL_BARS, pinning the series floor at exactly 16 (review round 4, R4-1) |
   | #full-bleed           | U-05-top    | content at y=0 under the top inset             |
   | #footer-flush         | U-05-bottom | a pinned bar flush to the home indicator       |
   | #side-left            | U-05-left   | a bar flush to the left edge (landscape)       |
@@ -384,6 +385,18 @@
 <div class="bad panel">
 	<h2>U-03 three-dot status</h2>
 	<p><span id="three-dot-a" class="dot" data-defect="U-03"></span><span class="dot"></span><span class="dot"></span></p>
+</div>
+
+<!-- U-03's FLOOR, pinned at exactly the meter's bar count (review round 4, R4-1):
+     the same colour-only shape as the three-dot row, one bar SHORT of `LEVEL_BARS`.
+     The three-dot row only catches a floor widened to 3 or less; a floor widened into
+     4..15 is invisible to it, and this row is what fails there. It is a FAILURE row
+     (15 < 16), so it is proven by an element-naming FAIL and — like #three-dot-a —
+     never by the canary's check-level fallback. The first dot carries the declaration;
+     the other fourteen exist so the row is a SERIES of exactly fifteen. -->
+<div class="bad panel">
+	<h2>U-03 fifteen-dot status (one below the meter)</h2>
+	<p><span id="fifteen-dot-a" class="dot" data-defect="U-03"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span></p>
 </div>
 
 <!-- U-03's CONTROL FILL: the send button's accent fill — a direct child covering its
