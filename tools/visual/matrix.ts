@@ -346,10 +346,11 @@ export function describeDeviceCoverage(coverage: {
  * The CI tier: the bounded sample the per-push capture job takes.
  *
  * WHY A THIRD TIER, AND WHY IT IS HERE RATHER THAN A `--devices` LIST IN YAML.
- * The `core` tier is 858 cells: the whole declared cell list (33 cells) x 2 themes x
- * (3 phones x 3 scales + 2 tablets x 2 scales) — 33 x 2 x 13, the tier's 5 profiles —
+ * The `core` tier is 884 cells: the whole declared cell list (34 cells) x 2 themes x
+ * (3 phones x 3 scales + 2 tablets x 2 scales) — 34 x 2 x 13, the tier's 5 profiles —
  * and the CI job's capture step is bound at 20 minutes. Measured on the runner, that is
- * 2.24 s/cell: 403 cells in 903 s, so a core run needs ~32 minutes. The job's first real
+ * 2.24 s/cell: 403 cells in 903 s (run 37098393675, a plan of 403 cells then), so a core
+ * run needs ~33 minutes. The job's first real
  * run of this path
  * was therefore cut off by the harness's own 900 s deadline with 585 cells
  * unvisited, and reported them as cells with no frame.
@@ -377,10 +378,10 @@ export function describeDeviceCoverage(coverage: {
  *     measures (200% over 100%). 150% is the phone-typical intermediate case and is
  *     left to `core`.
  *
- * That is 33 cells x 2 themes x (2 profiles x 2 scales) = 264 cells, ~10 minutes at
+ * That is 34 cells x 2 themes x (2 profiles x 2 scales) = 272 cells, ~10 minutes at
  * the measured rate: inside the step bound with most of it spare. `core` and
  * `full` are unchanged and stay the local and dispatched samples, so the full
- * 858-cell `core` matrix and the 3102-cell `full` matrix remain runnable — nothing
+ * 884-cell `core` matrix and the 3196-cell `full` matrix remain runnable — nothing
  * is only reachable through CI.
  */
 export const CI_DEVICES: string[] = ["iphone-se", "tablet-landscape"];
