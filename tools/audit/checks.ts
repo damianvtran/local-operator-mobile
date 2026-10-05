@@ -561,16 +561,17 @@ function u05SafeAreas(state: AuditState): CheckRow[] {
 		const entersRight =
 			insets.right > 0 && vw - (x + w) < insets.right && x < vw;
 		if (entersLeft || entersRight) {
-			// THE MODAL'S OWN FULL-BLEED DISMISS LAYER IS NOT A TARGET UNDER AN
-			// UNSAFE EDGE. An open react-native-web modal paints a dismiss layer
-			// across the whole viewport: a CONTROL, so it is not the surface the
-			// `containerLike` branch below sets aside, but one that dismisses from
-			// anywhere — no reader has to reach a target inside the band, which is
-			// the shape these rules exist to catch (the canary's #side-left and
-			// #side-right bars). This is the side band's half of the top rule's
-			// dismiss-layer set-aside, and it is keyed to the control being
-			// container-scale in BOTH axes so a bounded control inside a dialog
-			// keeps failing on its own row.
+			// A MODAL'S OWN FULL-BLEED DISMISS LAYER IS NOT A TARGET UNDER AN UNSAFE
+			// EDGE. An open react-native-web modal paints a dismiss layer across the
+			// whole viewport: a CONTROL, and one that dismisses from anywhere — no
+			// reader has to reach a target inside the band, which is the shape these
+			// rules exist to catch (the canary's #side-left and #side-both-edges
+			// bars). It is the side band's half of the top rule's dismiss-layer
+			// set-aside, and it is the only interactive full-bleed shape exempted:
+			// the container branch below is restricted to nodes that are NOT
+			// controls, so removing this branch puts the scrim back on a FAIL row
+			// instead of leaving it silently covered — a branch that cannot change an
+			// outcome must not look like a second condition.
 			if (node.inModalDialog && node.interactive && containerLike) {
 				bump(
 					"a modal's own full-bleed dismiss layer (a control role that dismisses from anywhere, so the band holds no target a reader must reach)",
@@ -586,34 +587,44 @@ function u05SafeAreas(state: AuditState): CheckRow[] {
 			// reader can actually read or reach is judged on its own row, which is
 			// what keeps a real intrusion — the conversations drawer's title and
 			// rows, at x = 16…56 — named.
-			if (containerLike) {
+			//
+			// `!interactive` is load-bearing rather than a detail: the rubric's own
+			// words are "no control within 8 pt of an unsafe edge", so a
+			// container-scale CONTROL is content here and is left to the dismiss
+			// branch above, or to its own FAIL row.
+			if (containerLike && !node.interactive) {
 				bump(
-					"a full-bleed container or ancestor (its background paints into the band; its own content is judged on its own rows)",
+					"a full-bleed container or surface (its background paints into the band; its own content is judged on its own rows)",
 				);
 				continue;
 			}
 			// A MODAL DIALOG'S OWN GROUND IS NOT CONTENT UNDER A SIDE EDGE EITHER.
 			// This is the top rule's modal-surface set-aside (`inModalDialog &&
-			// !ownText && !interactive`) with its extent expressed for a side band,
-			// and the EXTENT is the part that has to change: the top rule asks the
-			// surface to reach the far edge (`y + h >= vh - 1`), while the
-			// conversations drawer's own ground stops at the bottom inset on
-			// landscape — measured 369 pt of a 390 pt viewport — so reusing that test
-			// verbatim would leave the exemption silent on the very surface its
-			// comment names. The side band asks instead for the extent the top rule
-			// already uses to call a node a container (`containerLike`'s 0.6 vh) plus
-			// the band's own edge. Only a node with no word and no control of its own
-			// qualifies: the drawer's title, rows and icons all carry one and keep
-			// failing on their own rows.
+			// !ownText && !interactive`) with its extent expressed for a side band:
+			// the fragment of the dialog that reaches the unsafe edge, carrying no
+			// word and no control of its own. The extent test is the one place the
+			// side band has to differ, and it has to be WEAKER rather than stricter
+			// — the top rule asks the surface to reach the far edge (`y + h >= vh -
+			// 1`), while the conversations drawer's own ground stops at the bottom
+			// inset on landscape (measured 369 pt of a 390 pt viewport), so that
+			// test is silent on the very surface its comment names.
+			//
+			// Nothing further is needed to keep this from reading as a blanket: a
+			// node with a word of its own is content, and a node that is a control is
+			// content, so the drawer's title, its rows, its icons and its row buttons
+			// all keep failing on their own rows. An earlier revision ALSO required
+			// the surface to span 0.6 vh, and that left the drawer's own shorter
+			// full-width regions (w = 279, h = 48…200 pt) reporting as if they were
+			// findings; the height bar was there to distinguish a ground from a row,
+			// and `!ownText && !interactive` already does that.
 			if (
 				node.inModalDialog &&
 				!node.ownText &&
 				!node.interactive &&
-				(x <= 1 || x + w >= vw - 1) &&
-				h >= vh * 0.6
+				(x <= 1 || x + w >= vw - 1)
 			) {
 				bump(
-					"a modal dialog's own ground (no text or control of its own, reaching an edge and spanning the band)",
+					"a modal dialog's own ground (no text or control of its own, reaching the unsafe edge)",
 				);
 				continue;
 			}
