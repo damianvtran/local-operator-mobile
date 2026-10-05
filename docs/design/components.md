@@ -416,7 +416,7 @@ primitive in the app, and the one that carries the most information.
 ┌──────────────────────────────────────────────────────────┐
 │  [ attachments strip, when present ]                     │
 │  ┌────────────────────────────────────┐  ⬤  ⬤           │
-│  │ Message Local Operator…            │  stop  send       │
+│  │ Message                            │  stop  send       │
 │  └────────────────────────────────────┘                  │
 │  2 queued                             opus-4.6   high    │
 └──────────────────────────────────────────────────────────┘

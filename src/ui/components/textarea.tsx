@@ -113,16 +113,22 @@ export const Textarea = ({
 		placeholderMaxLines === undefined
 			? placeholderHeight
 			: Math.min(placeholderHeight, bodyLine * placeholderMaxLines);
-	/* The capped placeholder is drawn by US, not by the platform. A `<textarea>`'s
-	 * `::placeholder` cannot be told to stop wrapping, and one that wraps paints its
-	 * second line straight through the field's box (measured on the 320 pt phone once
-	 * the box was held to one line: “Operator…” bled over the receipt row). The offset
-	 * is the field's own border + padding — `fieldClasses`: `border px-3 py-2` — which
-	 * is also where the platform paints its placeholder, so the two agree. */
-	const clampedPlaceholder =
-		placeholder !== undefined &&
-		value === "" &&
-		placeholderMaxLines !== undefined;
+	/* The clamped overlay that used to be painted over the field is GONE. It existed
+	 * because a `<textarea>`'s `::placeholder` cannot be told to stop wrapping, and one
+	 * that wraps paints its second line straight through the field's box (measured on
+	 * the 320 pt phone once the box was held to one line: “Operator…” bled over the
+	 * receipt row). It solved that by ellipsizing, and the ellipsis became the defect:
+	 * at the 166 pt content box the resting sentence was cut MID-WORD inside the
+	 * product name at the DEFAULT scale (`Message Local Opera…`), and no smaller
+	 * resting type can fix 200 %, where the sentence needs 368 pt (design round 2,
+	 * D2). A copy short enough to fit one line at every scale removes the need for
+	 * both: the platform's own placeholder is honest, always fits what it is given,
+	 * and the overlay node painted over the field was also what the frame audit
+	 * counted as a real painted overlap on all 24 cells (U-08, design round 2, D3).
+	 *
+	 * `placeholderMaxLines` / the floor it feeds are KEPT: they hold the empty field
+	 * to one body line whatever the placeholder happens to measure, which is the
+	 * invariant D1 rests on. */
 	/* Why `contentHeight` is floored too, and only here: on web an EMPTY field's
 	 * `scrollHeight` includes the placeholder, so the content report carries the
 	 * placeholder's own wrapped height into the box and would defeat the cap by
@@ -226,7 +232,7 @@ export const Textarea = ({
 					accessibilityState={state({ disabled })}
 					value={value}
 					onChangeText={onChangeText}
-					placeholder={clampedPlaceholder ? undefined : placeholder}
+					placeholder={placeholder}
 					placeholderTextColor={placeholderColour}
 					editable={!disabled}
 					onSubmitEditing={onSubmitEditing}
@@ -237,28 +243,9 @@ export const Textarea = ({
 					autoFocus={autoFocus}
 					testID={testID}
 				/>
-				{/* Painted AFTER the field, because the field's own fill is opaque: an
-				 *  overlay underneath it would never be seen. `pointerEvents="none"` so every
-				 *  tap still reaches the field, and `aria-hidden` because the field's `label`
-				 *  is already its accessible name. */}
-				{clampedPlaceholder ? (
-					<Text
-						className="text-body"
-						style={{
-							position: "absolute",
-							left: 13,
-							right: 13,
-							top: 9,
-							color: placeholderColour,
-						}}
-						numberOfLines={1}
-						ellipsizeMode="tail"
-						pointerEvents="none"
-						aria-hidden
-					>
-						{placeholder}
-					</Text>
-				) : null}
+				{/* No overlay here any more: the platform paints its own placeholder, and the
+				 *  copy is short enough at every scale that it cannot wrap into the receipt
+				 *  row (see the note on the floor above). */}
 			</View>
 		</View>
 	);

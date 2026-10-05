@@ -33,7 +33,16 @@ import type { ContinuationOp, RelayError } from "@/relay";
  * the delivered acknowledgement — rather than "previous"/"pending"/"last".
  */
 export const COMPOSER_COPY = {
-	placeholder: "Message Local Operator…",
+	/* The web client's sentence here is `Message Local Operator…`, and this port
+	 * shortens it ON PURPOSE: the field's content box is 166 pt on the 320 pt phone
+	 * and a placeholder is one line, so the sentence renders 184 pt at 100 % text and
+	 * 368 pt at 200 %. The overlay that used to clamp it cut MID-WORD inside the
+	 * product name at the DEFAULT scale (`Message Local Opera…`) — truncated copy
+	 * rather than an abbreviation, seen by every user at 100 % (design round 2, D2).
+	 * `Message` measures 63.5 pt at 100 % and 126.9 pt at 200 % in that box, so it
+	 * fits unellipsized at every scale and the platform's own `::placeholder` paints
+	 * it — see `Textarea` for why the overlay was dropped rather than kept. */
+	placeholder: "Message",
 	/** A send that could not reach the runtime at all. Never the raw fetch error:
 	 *  "Load failed" was a shipped first impression (U3). */
 	continuationError: "Couldn’t continue this conversation. Try again.",
