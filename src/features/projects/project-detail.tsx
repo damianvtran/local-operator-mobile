@@ -10,6 +10,7 @@ import {
 	projectDisplayName,
 	projectRefusalSentence,
 	projectStatusTone,
+	STALE_BADGE_LABEL,
 	showsStaleMark,
 } from "@/features/projects/projects-copy";
 import { ProjectDetailStateMarkers } from "@/features/projects/projects-markers";
@@ -125,7 +126,7 @@ export default function ProjectDetail() {
 						{/* The same rule the row uses: a stale verdict is only shown where a
 						 *  progress line exists to be stale (`showsStaleMark`). */}
 						{showsStaleMark(project) ? (
-							<Badge label="progress stale" tone="warning" />
+							<Badge label={STALE_BADGE_LABEL} tone="warning" />
 						) : null}
 					</View>
 

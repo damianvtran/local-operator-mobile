@@ -91,6 +91,20 @@ export function projectRowMeta(project: ProjectSummary): string {
 }
 
 /**
+ * The stale verdict's ONE word, shared by the list row's badge, the detail's badge
+ * and the row's accessible name.
+ *
+ * `progress stale` rather than a bare `stale`, and the reason is where the badge
+ * sits: on the LIST it is beside the project name, over a meta line that counts
+ * milestones and sessions and says nothing about progress, so a bare `stale` reads
+ * as a verdict on the PROJECT (review round 1, D4). Naming what has gone old is
+ * true in both places, because the condition is `progress_stale` over a progress
+ * line that exists (`showsStaleMark`) — and ONE constant is what stops the two
+ * surfaces drifting into two spellings of one fact again.
+ */
+export const STALE_BADGE_LABEL = "progress stale";
+
+/**
  * Whether to show the stale mark, which is NOT the same question as
  * `project.progress_stale` on its own.
  *
@@ -129,10 +143,17 @@ export function showsStaleMark(project: {
  */
 export function projectRefusalSentence(error: unknown): string | null {
 	if (!isRelayError(error)) return null;
-	/* Only the DEFINITIVE refusals this build reads. Everything else — a
-	 * transport drop, a gateway deferral, a certificate — is a connection failure
-	 * whose surface names its own cause. */
-	if (error.surface !== "none") return null;
+	/* The relay's OWN refusal, in its own words: `kind: "rejected"` is the
+	 * definitive answer it wrote for a reader (the detail's `404
+	 * project_not_found` on these read paths).
+	 *
+	 * NOT `surface === "none"`, which is what this gated on first — that surface is
+	 * shared with `malformed-frame`, whose message is a CLIENT-side diagnostic
+	 * (`"GET /api/projects did not match the relay contract"`) and must never reach
+	 * user copy (review round 1, m1). Everything else — a transport drop, a gateway
+	 * deferral, a certificate — is a connection failure whose own surface names its
+	 * cause. */
+	if (error.kind !== "rejected") return null;
 	const sentence = error.displayableMessage.trim();
 	return sentence === "" ? null : sentence;
 }

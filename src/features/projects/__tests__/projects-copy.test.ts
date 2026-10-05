@@ -9,6 +9,7 @@ import {
 	projectRefusalSentence,
 	projectRowMeta,
 	projectStatusTone,
+	STALE_BADGE_LABEL,
 	sessionCountLabel,
 	showsStaleMark,
 } from "@/features/projects/projects-copy";
@@ -115,6 +116,15 @@ describe("project copy", () => {
 		).toBe(false);
 	});
 
+	it("spells the stale verdict once, for the row, the detail and the accessible name", () => {
+		/* One fact, one word (`review round 1, D4`). The LIST's badge sits beside the
+		 *  project name over a meta line about milestones and sessions, where a bare
+		 *  `stale` reads as a verdict on the project — so the word names what has gone
+		 *  old, and BOTH surfaces plus the row's `accessibilityLabel` read it from this
+		 *  one constant rather than three literals that can drift apart. */
+		expect(STALE_BADGE_LABEL).toBe("progress stale");
+	});
+
 	it("names a linked session by its title, falling back to the id", () => {
 		expect(
 			linkedSessionLabel(link({ title: "Payments cutover — ledger" })),
@@ -158,6 +168,19 @@ describe("the refusal sentence", () => {
 		 *  connection taxonomy already names that cause — a second line here would
 		 *  give one failure two voices. */
 		const error = new RelayError("transport", "Network request failed");
+		expect(projectRefusalSentence(error)).toBeNull();
+	});
+
+	it("never shows a client-side protocol diagnostic to a reader", () => {
+		/* `malformed-frame` shares `surface: "none"` with `rejected`, so a gate on the
+		 *  SURFACE let this copy through: its message names the contract the client
+		 *  could not parse, which is a diagnostic for us and not a sentence for a user
+		 *  (review round 1, m1). The gate is the KIND. */
+		const error = new RelayError(
+			"malformed-frame",
+			"GET /api/projects did not match the relay contract",
+		);
+		expect(error.surface).toBe("none");
 		expect(projectRefusalSentence(error)).toBeNull();
 	});
 

@@ -327,9 +327,9 @@ jobs:
         # 36669731994) without GitHub reaping it, so the run said only that it was
         # still going. Measured again on 2026-10-03 (run 37098393675), the capture
         # costs 2.24 s/cell — 403 cells / 1209 frames in 903.1 s — so the `core`
-        # plan of 1092 cells needs ~41 min and cannot finish inside this bound. The
+        # plan of 1512 cells needs ~56 min and cannot finish inside this bound. The
         # `--tier ci` sample can: 336 cells, ~12 min at the same rate, which leaves
-        # the audit and the canary their own steps below. (`full` is 3948 cells, and
+        # the audit and the canary their own steps below. (`full` is 5544 cells, and
         # stays a dispatched or local run.)
         timeout-minutes: 20
         # THE DOCUMENTED INVOCATION, through the harness's own script
@@ -412,29 +412,29 @@ jobs:
     # WHY THIS JOB EXISTS. The operator's requirement is QA "across a variety of different
     # device sizes of phone … and tablets both vertical and horizontal", and until this job
     # nothing automated covered it: the per-push `web-audit` job runs `--tier ci`, which is
-    # 2 of the matrix's 19 declared profiles, and both `core` (5 profiles / 1092 cells) and
-    # `full` (19 / 3948) were local or dispatched only. This job captures and audits `core`,
+    # 2 of the matrix's 19 declared profiles, and both `core` (5 profiles / 1512 cells) and
+    # `full` (19 / 5544) were local or dispatched only. This job captures and audits `core`,
     # on the NIGHTLY schedule only, so the per-push path is untouched and the `ci` job keeps
-    # its own 20-minute capture bound rather than being stretched to fit a 41-minute one.
+    # its own 20-minute capture bound rather than being stretched to fit a 56-minute one.
     #
     # SIZED FROM THE MEASUREMENT, NOT FROM HOPE. The runner's own rate is 2.24 s/cell
     # (403 cells / 1209 frames in 903.1 s, run 37098393675, a plan of 403 cells then),
-    # which is also the number `docs/e2e/README.md` uses to say a `core` run is ~41
-    # minutes: 1092 x 2.24 s = 2,446 s.
+    # which is also the number `docs/e2e/README.md` uses to say a `core` run is ~56
+    # minutes: 1512 x 2.24 s = 3,387 s.
     # The plan this job holds is the one the capture prints before it renders anything, so
     # the bound is checked against THAT rather than against a table, and each plan is
     # pinned to the ref that printed it: at 85b2785 `--plan --tier core --consecutive`
     # printed `858 cells x 3 frame(s) = 2574 frames` with a derived `deadline: 2574 s`, and
-    # at THIS head it prints `1092 cells x 3 frame(s) = 3276 frames` and `deadline: 3276 s`
-    # (3000 ms/cell). The capture step's 60 is above both derived deadlines (so the step
-    # cannot cut short the budget the run computed for itself) and ~1.5x the ~41 min the
-    # 1092 cells cost at 2.24 s/cell — the same headroom the per-push capture (20 for ~12)
+    # at THIS head it prints `1512 cells x 3 frame(s) = 4536 frames` and `deadline: 4536 s`
+    # (3000 ms/cell). The capture step's 90 is above both derived deadlines (so the step
+    # cannot cut short the budget the run computed for itself) and ~1.6x the ~56 min the
+    # 1512 cells cost at 2.24 s/cell — the same headroom the per-push capture (20 for ~12)
     # and audit (10 for ~7) steps carry.
     # The audit runs at 1.25 s/cell (250 of the 256 cells the tier held then in 312 s, run
-    # 37167390506), so `core` is 1092 x 1.25 s = 1,365 s ≈ 23 min and its step bound is 35.
+    # 37167390506), so `core` is 1512 x 1.25 s = 1,890 s ≈ 32 min and its step bound is 50.
     # The job bound holds its parts, the invariant the other jobs in this file state:
-    # `install + export + capture 60 + audit 35 < 120`. This is a ~90-minute nightly job
-    # (~41 min of capture and ~23 min of audit); it does not run on a pull request.
+    # `install + export + capture 90 + audit 50 < 170`. This is a ~2.5-hour nightly job
+    # (~56 min of capture and ~32 min of audit); it does not run on a pull request.
     #
     # EXPECTED FIRST-RUN VERDICT: THIS JOB IS RED, AND THAT IS WHAT IT IS FOR. It has
     # never executed (schedule/dispatch only). A real local `--tier core --consecutive`
@@ -449,7 +449,7 @@ jobs:
     # onto the shipped value — so no displayed colour moves.
     # THE TWO RUNS BELOW ARE RECORDS, PINNED TO THE PLAN THEY WERE MEASURED ON rather
     # than re-derived: they ran on the 858-cell plan (which `85b2785` prints, and where
-    # every term reproduces), while this head's plan is 884 cells.
+    # every term reproduces), while this head's plan is 1092 cells.
     #   * capture: `captured 858 cells / 2574 frames in 1810.8 s`, rc 1 on FOUR unready
     #     cells — `S15/loading` and `S4/idle`, both themes, at `iphone-15-landscape` and
     #     200 % (`median text 34.796875px at 200% against 1.74x the 100% cell (needs
@@ -458,7 +458,8 @@ jobs:
     #     check added with this job does not fire on it.
     #   * audit: `858 cells, 13316 check rows, 9530 measured, 2326 FAIL, 3786 BLOCKED
     #     (140 unmeasurable)`, rc 1, every FAIL row a U-05 one at `iphone-15-landscape`
-    #     (816/804/706 at scales 100/150/200), in 1,161 s against this job's 35-min bound.
+    #     (816/804/706 at scales 100/150/200), in 1,161 s against the 35-min bound the step
+    #     then had.
     # Those are real app-side findings the per-push `ci` sample cannot reach (it never
     # captures `iphone-15-landscape`), which is the reason this job exists. So: do NOT add
     # `continue-on-error` and do NOT exempt or silence a cell — a job that reports a real
@@ -469,7 +470,7 @@ jobs:
     # measured on this host.
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 170
     steps:
       - uses: actions/checkout@v7
 
@@ -512,11 +513,11 @@ jobs:
         # `--tier core` names the sample the run states for itself: the capture prints its own
         # device coverage, so this job's log says which of the 19 declared profiles it covered
         # and which it did not, rather than leaving a green job to read as the whole matrix.
-        timeout-minutes: 60
+        timeout-minutes: 90
         run: pnpm audit:capture --dir dist --out "$RUNNER_TEMP/frames" --relay "$MOCK_RELAY_URL" --tier core --consecutive --yes
 
       - name: Audit the frames against the rubric
-        timeout-minutes: 35
+        timeout-minutes: 50
         run: pnpm audit:run --manifest "$RUNNER_TEMP/frames/manifest.json" --out "$RUNNER_TEMP/audit"
 
       - name: Stop the mock relay

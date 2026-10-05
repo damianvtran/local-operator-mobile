@@ -1198,7 +1198,8 @@ export type _WireConformanceChecked = AssertAll<
 
 /* Re-exported for callers that want the mirror's declared shape alongside the
  * inferred one, and to keep the unused-import lints honest in files that only
- * need types. */ export type {
+ * need types. */
+export type {
 	ApiError,
 	AskQuestion,
 	AsksResponse,

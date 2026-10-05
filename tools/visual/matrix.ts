@@ -346,11 +346,11 @@ export function describeDeviceCoverage(coverage: {
  * The CI tier: the bounded sample the per-push capture job takes.
  *
  * WHY A THIRD TIER, AND WHY IT IS HERE RATHER THAN A `--devices` LIST IN YAML.
- * The `core` tier is 1092 cells: the whole declared cell list (42 cells) x 2 themes x
- * (3 phones x 3 scales + 2 tablets x 2 scales) — 42 x 2 x 13, the tier's 5 profiles —
+ * The `core` tier is 1512 cells: the whole declared cell list (42 cells) x 2 themes x
+ * (3 phones x 4 scales + 2 tablets x 3 scales) — 42 x 2 x 18, the tier's 5 profiles —
  * and the CI job's capture step is bound at 20 minutes. Measured on the runner, that is
  * 2.24 s/cell: 403 cells in 903 s (run 37098393675, a plan of 403 cells then), so a core
- * run needs ~41 minutes. The job's first real
+ * run needs ~56 minutes. The job's first real
  * run of this path
  * was therefore cut off by the harness's own 900 s deadline with 585 cells
  * unvisited, and reported them as cells with no frame.
@@ -381,12 +381,21 @@ export function describeDeviceCoverage(coverage: {
  * That is 42 cells x 2 themes x (2 profiles x 2 scales) = 336 cells, ~12 minutes at
  * the measured rate: inside the step bound with most of it spare. `core` and
  * `full` are unchanged and stay the local and dispatched samples, so the full
- * 1092-cell `core` matrix and the 3948-cell `full` matrix remain runnable — nothing
+ * 1512-cell `core` matrix and the 5544-cell `full` matrix remain runnable — nothing
  * is only reachable through CI.
  */
 export const CI_DEVICES: string[] = ["iphone-se", "tablet-landscape"];
 
-/** The scale ids the CI tier runs: the 100% floor and the 200% ceiling. */
+/** The scale ids the CI tier runs: the 100% floor and the 200% ceiling.
+ *
+ * DELIBERATELY NOT 135, even though the matrix's axis now carries it. The tier is
+ * bound at 20 minutes on every push; at the measured 2.24 s/cell three scales would
+ * be 504 cells = 18.8 min, and the harness derives its own deadline at 3000 ms/cell
+ * — 504 x 3 s = 25.2 min — which is ABOVE the step bound, so the step would cut
+ * short the budget the run computed for itself. Four scales would be worse. The
+ * in-between scale is therefore exercised by `core` (the nightly `web-audit-core`
+ * job and any local run), and covering it per-push is a budget decision for the
+ * pipeline rather than something to slip in here. */
 export const CI_SCALES: string[] = ["100", "200"];
 
 export const THEMES = ["dark", "light"];
@@ -394,6 +403,19 @@ export const THEMES = ["dark", "light"];
 /** Text scales as a multiplier of the app's default. 1 = the OS default. */
 export const SCALES = [
 	{ id: "100", factor: 1 },
+	/* THE IN-BETWEEN STEP, and it is here because an axis that BRACKETS a failure
+	 *  cannot see it. The footer's column-versus-pair boundary used to sit at
+	 *  `LARGE_TEXT_SCALE` (1.4), which left a band — 1.35 up to 1.4 — INSIDE the
+	 *  layout branch it was supposed to protect: the pair only broke above 1.4, so
+	 *  every scale in that band wrapped a label (design review round 2, D6). No cell could
+	 *  show it, because the nearest captured scales were 100 and 150 and both sit
+	 *  outside it. The factor is the exact iOS `xxxLarge` Dynamic Type step rather
+	 *  than a round 1.35: it is a setting a real user has, and it is on the failing
+	 *  side of the boundary the round measured (the browser's own 22 px default,
+	 *  1.375, is the other in-band value and behaves the same way). The footer fix
+	 *  removes the threshold entirely, so what this axis step now protects is the
+	 *  ABSENCE of a threshold — see `conversations-pane.tsx`. */
+	{ id: "135", factor: 1.3529411765 },
 	{ id: "150", factor: 1.5 },
 	{ id: "200", factor: 2 },
 ];
