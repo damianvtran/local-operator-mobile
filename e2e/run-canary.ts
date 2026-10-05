@@ -27,7 +27,12 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { SUB_RULE_TEXT, U08_SUPPRESSION } from "../tools/audit/checks.ts";
+import {
+	SUB_RULE_TEXT,
+	U03_SUPPRESSION,
+	U08_SUPPRESSION,
+	U10_DECLARATION,
+} from "../tools/audit/checks.ts";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const DEFAULT_WORKTREE = resolve(HERE, "..");
@@ -478,24 +483,44 @@ interface NotDefect {
 	check: string;
 	element: string;
 	/**
-	 * For U-08 entries, the suppression reason this element must be RECORDED with,
-	 * resolved from the rule's own table (`U08_SUPPRESSION`) by the fixture's
-	 * `data-not-defect-reason`. `null` for checks that carry no suppression record.
+	 * The suppression reason this element must be RECORDED with, resolved from the
+	 * rule's own exported table (`U08_SUPPRESSION`, `U03_SUPPRESSION`,
+	 * `U10_DECLARATION`) by the fixture's `data-not-defect-reason`. `null` when the
+	 * fixture declares none — for a shape a rule silences without recording anything
+	 * (U-03's carrier scope never reaches a row at all), the assertion is then only
+	 * "no FAIL row names it".
 	 */
 	reason: string | null;
 }
 
 /**
- * The name a fixture declares to the reason string it must be recorded with.
+ * The name a fixture declares to the reason string it must be recorded with, per
+ * check.
  *
- * Every U-08 `data-not-defect` entry must declare one: the assertion below is
- * that the rule still SAW the pair and wrote WHY it set it aside, so the reason
- * is half the assertion. An unknown name is refused rather than downgraded.
+ * A U-08 entry MUST declare one, because a silent suppression there is a bug the
+ * reason is half the assertion against. U-03 and U-10 entries MAY: when they do,
+ * the reason is asserted the same way, so the shapes those branches exist for
+ * (`#filled-control`, `#meter-series`, `#draft-value`) are proven to be RECORDED
+ * rather than merely absent — the coverage review round 3's R3-1 found missing for
+ * the two U-03 branches and the U-10 branch.
+ *
+ * The strings come from the rules' own exported tables, so a reworded reason fails
+ * here instead of leaving the canary asserting a sentence the audit no longer
+ * writes. An unknown name is refused rather than downgraded.
  */
-const U08_REASON_NAMES: Record<string, string> = {
-	"painted-disjoint": U08_SUPPRESSION.DISJOINT,
-	"modal-layer": U08_SUPPRESSION.MODAL_LAYER,
-	"modal-surface": U08_SUPPRESSION.MODAL_SURFACE,
+const NOT_DEFECT_REASON_NAMES: Record<string, Record<string, string>> = {
+	"U-08": {
+		"painted-disjoint": U08_SUPPRESSION.DISJOINT,
+		"modal-layer": U08_SUPPRESSION.MODAL_LAYER,
+		"modal-surface": U08_SUPPRESSION.MODAL_SURFACE,
+	},
+	"U-03": {
+		"control-fill": U03_SUPPRESSION.CONTROL_FILL,
+		"meter-series": U03_SUPPRESSION.METER_SERIES,
+	},
+	"U-10": {
+		"text-entry-value": U10_DECLARATION.TEXT_ENTRY_VALUE,
+	},
 };
 
 const declaredNotDefects = (): NotDefect[] => {
@@ -512,20 +537,21 @@ const declaredNotDefects = (): NotDefect[] => {
 			);
 			process.exit(2);
 		}
+		const name = /\bdata-not-defect-reason="([^"]+)"/.exec(tag[0])?.[1];
 		let reason: string | null = null;
-		if (check === "U-08") {
-			const name = /\bdata-not-defect-reason="([^"]+)"/.exec(tag[0])?.[1];
-			reason = name === undefined ? null : (U08_REASON_NAMES[name] ?? null);
+		if (name !== undefined) {
+			reason = NOT_DEFECT_REASON_NAMES[check]?.[name] ?? null;
 			if (reason === null) {
 				console.error(
-					`canary: #${element} declares data-not-defect="U-08" with ${
-						name === undefined
-							? "no data-not-defect-reason"
-							: `unknown reason '${name}'`
-					}; add the reason here (U08_REASON_NAMES) and to U08_SUPPRESSION in tools/audit/checks.ts rather than letting the assertion weaken to "some row exists".`,
+					`canary: #${element} declares data-not-defect="${check}" with unknown reason '${name}'; add it to NOT_DEFECT_REASON_NAMES here and to the matching table in tools/audit/checks.ts (U08_SUPPRESSION / U03_SUPPRESSION / U10_DECLARATION) rather than letting the assertion weaken to "some row exists".`,
 				);
 				process.exit(2);
 			}
+		} else if (check === "U-08") {
+			console.error(
+				`canary: #${element} declares data-not-defect="U-08" with no data-not-defect-reason; every U-08 entry must name the reason it is recorded with, or the assertion weakens to "some row exists".`,
+			);
+			process.exit(2);
 		}
 		out.push({ check, element, reason });
 	}
@@ -545,31 +571,34 @@ const firedOnNotDefect = notDefects
 	)
 	.map((entry) => `${entry.check} (#${entry.element})`);
 /**
- * A U-08 suppression must be RECORDED, not merely absent, and recorded with the
- * reason the fixture declared — each entry names its own, because a modal-layer
- * pair and a painted-disjoint pair are set aside by different branches and a
- * blanket "some EXCEPTION row exists" would accept either for the other.
- * `U08_REASON_NAMES` resolves the fixture's name through the rule's own table
- * (imported), so a rename cannot leave this asserting a stale string.
+ * A declared exception must be RECORDED, not merely absent, and recorded with the
+ * reason the fixture declared — each entry names its own, because two different
+ * branches can set aside two different shapes, and a blanket "some EXCEPTION row
+ * exists" would accept either for the other. `NOT_DEFECT_REASON_NAMES` resolves the
+ * fixture's name through each rule's own exported table (imported), so a rename
+ * cannot leave this asserting a stale string.
  *
- * A pair that quietly stopped overlapping would satisfy "no FAIL row" while
- * proving nothing about the rule, so the reason-tagged EXCEPTION row is required
- * as well: the assertion is that the rule still SAW the pair and said why it set
- * it aside.
+ * The contract covers U-03's two branches and U-10's one as well as U-08's
+ * (review round 3, R3-1): a shape that quietly stopped reaching its branch would
+ * satisfy "no FAIL row" while proving nothing about the rule, so the
+ * reason-tagged EXCEPTION row is required as well: the assertion is that the rule
+ * still SAW the element and said why it set it aside. An entry with no declared
+ * reason is skipped here (the carrier-scope shapes a rule silences without
+ * recording anything) — its assertion is the `firedOnNotDefect` half alone.
  */
-const unrecordedSuppressions = notDefects
-	.filter(
-		(entry) =>
-			entry.check === "U-08" &&
-			!defects.rows.some(
-				(row: AuditRow) =>
-					row.verdict === "EXCEPTION" &&
-					rowNames(row).includes(`#${entry.element}`) &&
-					entry.reason !== null &&
-					(row.measured ?? "").includes(entry.reason),
-			),
-	)
-	.map((entry) => `U-08 (#${entry.element})`);
+const unrecordedSuppressions: string[] = [];
+for (const entry of notDefects) {
+	const reason = entry.reason;
+	if (reason === null) continue;
+	const recorded = defects.rows.some(
+		(row: AuditRow) =>
+			row.verdict === "EXCEPTION" &&
+			rowNames(row).includes(`#${entry.element}`) &&
+			(row.measured ?? "").includes(reason),
+	);
+	if (!recorded)
+		unrecordedSuppressions.push(`${entry.check} (#${entry.element})`);
+}
 
 /**
  * A defect is caught either by the row that names its element, or — for a rule
