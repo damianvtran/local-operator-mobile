@@ -22,6 +22,7 @@ import {
 	joinDraft,
 	noteDictation,
 	resetOnEmptyDraft,
+	resetOnSessionSwitch,
 } from "@/stt/dictation";
 
 describe("joinDraft", () => {
@@ -122,6 +123,25 @@ describe("provenance", () => {
 		expect(resetOnEmptyDraft(provenance, "still typing")).toBe(provenance);
 		expect(resetOnEmptyDraft(provenance, "   ")).toEqual(emptyProvenance());
 		expect(resetOnEmptyDraft(provenance, "")).toEqual(emptyProvenance());
+	});
+
+	it("drops the previous window on a session switch, so a typed send in the next conversation carries no path", () => {
+		/* Session A: a dictation landed, so the window names its path. */
+		const inA = noteDictation(emptyProvenance(), {
+			start: 0,
+			end: 5,
+			path: "provider_stt_radient",
+		});
+		expect(annotationForSend(inA).input_path).toBe("provider_stt_radient");
+		/* The reader deep-links from A to B: the composer's session effect resets the
+		 * window with the rest of the per-session state (use-composer.ts), because the
+		 * route keys nothing on `id` so the same hook instance sees the new session. */
+		const inB = resetOnSessionSwitch();
+		/* B is a purely TYPED message. Without the reset it would carry A's path. */
+		const typed = applyEdit(inB, computeEdit("", "hello")!);
+		const annotation = annotationForSend(typed);
+		expect(annotation.input_mode).toBe("typed");
+		expect("input_path" in annotation).toBe(false);
 	});
 
 	it("shifts a span strictly after an edit, keeping its path", () => {

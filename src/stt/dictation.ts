@@ -134,6 +134,23 @@ export function emptyProvenance(): DictationProvenance {
 	return { sawTyping: false, sawDictation: false, spans: [], lastPath: "" };
 }
 
+/**
+ * Reset the window when the reader moves to ANOTHER session.
+ *
+ * The session route carries no `getId`/`key` on `id`, so one composer instance
+ * sees a new `sessionId` when the reader deep-links from A to B. The window's
+ * provenance is per conversation and is not stored beside the draft, so it has to
+ * reset with the rest of the per-session state: otherwise A's spans and
+ * `lastPath` survive into B, and a TYPED message in B goes out `mixed`/`dictated`
+ * carrying **A's `input_path`** — a permanent mislabel on a durable row, the exact
+ * class of error the silent annotation exists to prevent (agent review round 1,
+ * M1). A fresh conversation starts with nothing seen, as an emptied draft does;
+ * it is a separate rule from `resetOnEmptyDraft` because B may already hold a
+ * stored draft, so "the draft is empty" is not what happened here.
+ */
+export const resetOnSessionSwitch = (): DictationProvenance =>
+	emptyProvenance();
+
 /** Record one dictation: sticky flag, the new span, and its path. */
 export function noteDictation(
 	provenance: DictationProvenance,

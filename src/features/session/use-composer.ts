@@ -41,6 +41,8 @@ import {
 	emptyProvenance,
 	joinDraft,
 	noteDictation,
+	resetOnEmptyDraft,
+	resetOnSessionSwitch,
 } from "@/stt/dictation";
 
 /**
@@ -162,6 +164,13 @@ export const useComposer = (input: {
 		setImages([]);
 		setError(null);
 		setNotice(null);
+		/* The draft window RESTARTS here too. The route carries no `getId`/`key` on
+		 * `id`, so this hook instance can see a new `sessionId` — a deep-link from A to
+		 * B — and provenance is per conversation, not per hook. Left uncleared, A's
+		 * spans/`lastPath` would annotate a TYPED message in B as `mixed`/`dictated`
+		 * with A's `input_path`: immutable identity written onto a durable row (agent
+		 * review round 1, M1). It resets with the rest of the per-session state. */
+		provenanceRef.current = resetOnSessionSwitch();
 		readDraft(sessionId).then((stored) => {
 			if (!cancelled) setDraftState(stored);
 		});
@@ -195,7 +204,7 @@ export const useComposer = (input: {
 		(text: string) => {
 			const previous = draftRef.current;
 			if (text.trim() === "") {
-				provenanceRef.current = emptyProvenance();
+				provenanceRef.current = resetOnEmptyDraft(provenanceRef.current, text);
 			} else {
 				const edit = computeEdit(previous, text);
 				if (edit !== null)
