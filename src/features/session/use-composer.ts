@@ -218,10 +218,17 @@ export const useComposer = (input: {
 	/* The voice mic. The transcript is APPENDED (never a clobber), the returned
 	 * `path` is recorded as the dictated span's provenance, and the field is
 	 * deliberately NOT focused — a programmatic focus pops the iOS keyboard over
-	 * wherever the reader moved on to (design §2.5/U1). */
+	 * wherever the reader moved on to (design §2.5/U1).
+	 *
+	 * `sending` is passed so the machine can state that it deliberately does NOT gate
+	 * the mic on it (defect 4: dictating the follow-up while the last message is on
+	 * the wire is a normal flow, not a blocked one). The three outcome lines the
+	 * design names (U2/U3/D2) are the machine's, not this hook's — see
+	 * `stt/dictation-machine.ts`. */
 	const voice = useDictation({
 		endpoints,
 		capabilities,
+		sending,
 		onTranscript: (text, path) => {
 			const previous = draftRef.current;
 			const joined = joinDraft(previous, text);
@@ -234,23 +241,25 @@ export const useComposer = (input: {
 			});
 			commitDraft(joined);
 		},
-		onEmpty: () => {
-			/* Deliberately silent here: the empty-transcript sentence (D2), the
-			 * "Transcript added" line (U3) and the discarded line (U2) are the
-			 * follow-up PR's, per this task's scope. The draft is simply unchanged, which
-			 * is the non-clobber guarantee; nothing is announced yet. */
-		},
 		onError: (sentence) => setError(sentence),
 		onUnauthorized: (cause) => {
 			if (isRelayError(cause)) setError(receiptForError(cause).message);
 		},
 	});
+	const cancelDictationForSend = voice.cancelForSend;
 
 	/* --------------------------------------------------------------- the send */
 
 	const runSend = useCallback(
 		async (op: "prompt" | "steer") => {
 			if (endpoints === null || inFlight.current) return;
+			/* U2/defect 4: a send takes the composer, so any dictation still in flight
+			 * is aborted and discarded — a transcript landing after the message left
+			 * belongs to the NEXT message, and appending it here would be a clobber by
+			 * another name. The drop is SAID ("Voice input discarded." in the status
+			 * row) because speech the reader just gave must not vanish silently. An
+			 * explicit cancel is the reader's own discard and says nothing. */
+			cancelDictationForSend();
 			inFlight.current = true;
 			const trimmed = draftRef.current.trim();
 			const payloadImages =
@@ -367,7 +376,15 @@ export const useComposer = (input: {
 		// and `chooseOp` both read it, so a stale closure here would ask the reader
 		// "couldn't continue this conversation" about a live turn — or send a second
 		// prompt into a streaming session where a steer was meant.
-		[endpoints, sessionId, envelopeStore, setDraft, onSent, streaming],
+		[
+			endpoints,
+			sessionId,
+			envelopeStore,
+			setDraft,
+			onSent,
+			streaming,
+			cancelDictationForSend,
+		],
 	);
 
 	const send = useCallback(() => {
@@ -377,9 +394,22 @@ export const useComposer = (input: {
 	const retry = useCallback(() => {
 		void (async () => {
 			if (inFlight.current) return;
+			/* A retry is a send: it takes the composer exactly as the primary does, so an
+			 * in-flight dictation is cancelled and its loss is said. The web client's own
+			 * retry goes through its `send()` for this reason (design §2.5/U2). */
+			cancelDictationForSend();
 			inFlight.current = true;
 			const held = await envelopeStore.peek(sessionId);
-			if (held === null || endpoints === null) return;
+			if (held === null || endpoints === null) {
+				/* Nothing to replay (the envelope was evicted, or its 24 h TTL expired) or
+				 * no route: the retry does not happen, so it must not HOLD the composer.
+				 * The guard is set above the `await` on purpose — a second retry could
+				 * otherwise start inside it — so releasing it is this arm's job; an early
+				 * return that left it set made every later send and retry a silent no-op
+				 * until remount (agent review round 1). */
+				inFlight.current = false;
+				return;
+			}
 			setSending(true);
 			setError(null);
 			try {
@@ -416,7 +446,7 @@ export const useComposer = (input: {
 				setSending(false);
 			}
 		})();
-	}, [endpoints, envelopeStore, sessionId, streaming]);
+	}, [endpoints, envelopeStore, sessionId, streaming, cancelDictationForSend]);
 
 	const stop = useCallback(() => {
 		void (async () => {
@@ -511,7 +541,6 @@ export const useComposer = (input: {
 			if (inFlight.current) return;
 			setDraft(tap.fill);
 			if (!tap.submit || endpoints === null) return;
-			inFlight.current = true;
 			/* The run-immediately arm. Two things it must NOT do, both of which it did:
 			 *
 			 * - Derive the request from the DRAFT. The draft ref is assigned during
@@ -525,6 +554,18 @@ export const useComposer = (input: {
 			 *   the rule the typed path applies too. */
 			const request = slashTapRequest(command);
 			if (request === null) return;
+			/* The tap IS "a send like any other" (the line above), so it takes the composer
+			 * exactly as its typed twin `runSend` does: an in-flight dictation is cancelled
+			 * and its loss is said. Without this the transcript of a take still in flight
+			 * could land in the draft this tap just cleared, annotated `dictated`/`mixed` —
+			 * the durable-row provenance lie `use-composer.ts` calls a defect — because the
+			 * mic is disabled while `transcribing` but the field is not (agent review
+			 * round 1). */
+			cancelDictationForSend();
+			// Set AFTER the null check above: a return between the guard and the send would
+			// leave `inFlight` stuck true, making every later send a silent no-op until
+			// remount — the same leak the retry's early return had.
+			inFlight.current = true;
 			setNotice(null);
 			void sendSlashCommand({
 				client: endpoints,
@@ -540,7 +581,7 @@ export const useComposer = (input: {
 				},
 			});
 		},
-		[endpoints, sessionId, setDraft],
+		[endpoints, sessionId, setDraft, cancelDictationForSend],
 	);
 
 	const controls = useMemo(

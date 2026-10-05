@@ -451,6 +451,27 @@ function seedFor(seed: SeedRecord | null, origin: string): ResolvedSeed {
 }
 
 /** The query string the capture used, so the audit renders the same cell. */
+/**
+ * The URL a cell is driven at: the page path (which may carry the cell's OWN
+ * query — `lo-dictation`, `lo-draft`) joined with the audit's parameters.
+ *
+ * The separator comes FROM the path rather than being assumed. A naive `?` on a
+ * path that already had a query produced `…&lo-dictation=recording?lo-theme=dark`:
+ * the cell's last parameter swallowed the whole audit block as its value,
+ * `lo-dictation` never applied, and the audit measured the ORDINARY composer while
+ * reporting the cell's name (design round 1, D4 — the report's own rows showed the
+ * malformed URL, and this PR's query-bearing cells were the first to hit it).
+ * Exported so a test can pin the join.
+ */
+export function cellUrl(origin: string, path: string, query: string): string {
+	return `${origin}${path}${path.includes("?") ? "&" : "?"}${query}`;
+}
+
+/**
+ * The audit's own parameters: theme, text scale, the safe-area insets, the capture
+ * seed and the web-only hooks. These go AFTER whatever query the cell's path
+ * already carries — see `cellUrl`.
+ */
 function cellQuery(record: AuditRecord, seed: ResolvedSeed): string {
 	const query = new URLSearchParams({
 		"lo-theme": record.theme,
@@ -549,7 +570,7 @@ async function auditCell(
 		source: PRE_PAINT_PROBE,
 	});
 	await pinCellScenario(record, relay, cellTimeoutMs);
-	const url = `${origin}${record.path}?${cellQuery(record, seed)}`;
+	const url = cellUrl(origin, record.path, cellQuery(record, seed));
 	await page.send("Page.navigate", { url });
 	await sleep(settleMs);
 	/*

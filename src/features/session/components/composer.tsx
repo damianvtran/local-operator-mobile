@@ -23,6 +23,7 @@ import {
 import { isSendKey } from "@/features/session/keyboard";
 import type { DictationState } from "@/features/session/use-dictation";
 import { formatDuration } from "@/stt/dictation";
+import { MIC_HINT, micLabel } from "@/stt/dictation-machine";
 import {
 	CONTROL,
 	composerAttachmentId,
@@ -31,36 +32,59 @@ import {
 	SURFACE,
 	state,
 } from "@/ui/a11y";
-import { Button, Chip, IconButton, Skeleton, Textarea } from "@/ui/components";
+import {
+	Button,
+	Chip,
+	DictationMeter,
+	IconButton,
+	Skeleton,
+	Textarea,
+} from "@/ui/components";
+import { TOUCH_FLOOR } from "@/ui/layout";
+import { LARGE_TEXT_SCALE } from "@/ui/text-scale";
+import { useTextScale } from "@/ui/text-scale-provider";
 import { CONTROL_DISABLED_INK, cx } from "@/ui/variants";
 
-/** The mic's accessible name per state. The control MORPHS, so a label that named
- *  only "record" would lie once it is the control that stops. */
-const micLabel = (phase: DictationState["phase"]): string =>
-	phase === "recording"
-		? "Stop and transcribe"
-		: phase === "transcribing"
-			? "Transcribing"
-			: "Start voice input";
+/** The outcome lines the status row can rest on, and whether the row is showing a
+ *  LIVE dictation (a phase) rather than a settled outcome. Both are read from the
+ *  machine's own snapshot; the row is one height either way (design §2.5 D3). */
+const rowIsLive = (phase: DictationState["phase"]): boolean => phase !== "idle";
 
-const MIC_HINT: Record<DictationState["phase"], string | undefined> = {
-	idle: "Record a voice message to append to the draft",
-	recording: "Stops the recording and transcribes it",
-	transcribing: undefined,
-};
+/** The row's own border, top and bottom (the `border` utility is 1 px each side).
+ *  Named because the row's height is a BORDER box: a `minHeight` of exactly
+ *  `TOUCH_FLOOR` left a live row 2 px taller than an outcome one, because the live
+ *  row's own 48 px discard control set the content height and the outcome's did not —
+ *  measured 50 against 48 at 100 % (design round 1, D1's own figures). Adding the
+ *  border to the floor makes every state the same box at the default scale. */
+const DICTATION_ROW_BORDER_PX = 2;
 
-/** The state, in words, for the polite live region (design §2.5's `role="status"`).
- *  The mic's own label morphs, but a label change on a resting button is not
- *  announced — a reader who presses the mic gets no confirmation that recording
- *  began unless the state is in a live region (design round 1, D3). The three
- *  OUTCOME lines the design also names are the follow-up STT PR's (D4), so this
- *  carries only the live states. */
-const dictationStatus = (phase: DictationState["phase"]): string =>
-	phase === "recording"
-		? "Recording"
-		: phase === "transcribing"
-			? "Transcribing"
-			: "";
+/** One line of the row's status text (body-sm, 14 px at 1.45), in px at scale 1.
+ *
+ *  The row has to RESERVE a box, not measure one: at large text the status is
+ *  allowed two lines, and the controls get a line of their own, but a short status
+ *  (a one-line outcome) must not shrink the row below the two-line states — that is
+ *  exactly the "the composer jumps when a take starts" the design round measured
+ *  (D1). A line count times a line height is the box, computed the same way
+ *  `Textarea` computes its own field height from `BODY_LINE_PX`. */
+const STATUS_LINE_PX = 21;
+
+/** The gap between the status line and the controls line at large text. */
+const DICTATION_ROW_GAP_PX = 8;
+
+/** The dictation row's height at the reader's scale (design §2.5 D3's "one height").
+ *
+ *  At the default scale it is the touch floor plus the row's own border. Past
+ *  `LARGE_TEXT_SCALE` it is one status line, the gap, and a touch-floor controls
+ *  line, plus that border: two status lines — the longest outcome copy at 200 % — are SHORTER than
+ *  that sum (2 x 41 < 41 + 8 + 48 at 200 %), so fixing the box gives every state
+ *  the same height with no layout pass and no dependence on which sentence shows. */
+const dictationRowBox = (scale: number): number =>
+	scale > LARGE_TEXT_SCALE
+		? Math.round(STATUS_LINE_PX * scale) +
+			DICTATION_ROW_GAP_PX +
+			TOUCH_FLOOR +
+			DICTATION_ROW_BORDER_PX
+		: TOUCH_FLOOR + DICTATION_ROW_BORDER_PX;
 
 /**
  * A DOM keyboard event, narrowed to what this file reads.
@@ -311,6 +335,14 @@ export const Composer = ({
 		[images],
 	);
 
+	/* The dictation row's layout is scale-dependent (D1/D2/D3): beside the controls a
+	 * squeezed status clipped and the meter's flex bars collapsed to zero width, so
+	 * past `LARGE_TEXT_SCALE` the row stacks and its box is fixed. See the row's own
+	 * comment. `effectiveScale` — not `scale` — because on the web the platform's
+	 * factor reaches the glyphs through the root font size. */
+	const { effectiveScale } = useTextScale();
+	const dictationLargeText = effectiveScale > LARGE_TEXT_SCALE;
+
 	/* The handler the listener calls, kept in a ref: re-attaching the listener on
 	 * every render (to capture the current closure) is the other way to do this, and
 	 * it drops keydowns in the gap between removing and adding. */
@@ -338,7 +370,6 @@ export const Composer = ({
 		 * `onKeyPress` forwarding, both with the kit's owner (D1); until then the send
 		 * control and the `keydown` listener above are the only paths that send. */
 		if (Platform.OS !== "web") return;
-		if (Platform.OS !== "web") return;
 		// `View`'s ref is the DOM element on react-native-web; the cast is the whole
 		// of the platform bridge, and `WebFieldNode` names only what is read from it.
 		const node = rootRef.current as unknown as WebFieldNode | null;
@@ -356,6 +387,86 @@ export const Composer = ({
 		node.addEventListener("keydown", onKeyDown);
 		return () => node.removeEventListener("keydown", onKeyDown);
 	}, []);
+
+	/* The dictation row's pieces, built once and laid out by the row below. Extracting
+	 * them keeps the two layouts — one line at 100 %, and the stacked pair past
+	 * `LARGE_TEXT_SCALE` — from drifting apart: both render the same nodes. */
+	const dictationLive = voice !== null && rowIsLive(voice.phase);
+	const dictationDot = dictationLive ? (
+		<View className="h-2 w-2 rounded-full bg-danger" aria-hidden />
+	) : null;
+	const dictationStatus =
+		voice === null ? null : (
+			/* The POLITE live region, now visible rather than zero-height: the design's
+			 * `role="status"` is the row a blind reader hears, and the outcome lines
+			 * (U2/U3/D2) belong in the same one the live states use. The field's own
+			 * `label` is its accessible name, so nothing is announced twice.
+			 *
+			 * Two lines past `LARGE_TEXT_SCALE`: on its own full-width line the longest
+			 * outcome copy ("Didn't catch that — try again.", 369 pt at 200 %) fits two,
+			 * where beside the controls it clipped to `Didn't catch that — tr…` (D3). */
+			<Text
+				role={ROLE.status}
+				accessibilityLiveRegion={LIVE_REGION.polite}
+				numberOfLines={dictationLargeText ? 2 : 1}
+				className={cx(
+					"text-body-sm",
+					rowIsLive(voice.phase) ? "text-danger" : "text-ink-muted",
+				)}
+				testID={SURFACE.composerDictationStatus}
+			>
+				{voice.status}
+			</Text>
+		);
+	const dictationControls =
+		voice === null ? null : (
+			<>
+				{voice.phase === "recording" ? (
+					<DictationMeter
+						meter={voice.meter}
+						testID={SURFACE.composerDictationMeter}
+					/>
+				) : null}
+				{voice.phase === "recording" ? (
+					<Text
+						className="text-mono-sm text-ink-muted"
+						// A stable width so the row does not reflow as the clock advances — and
+						// SCALED, because an unscaled 34 pt slot is narrower than `0:00` at 200 %
+						// and the timer wraps `0:0` over `0`, growing the row to 71.6 pt against 50
+						// (design round 1, D1). `numberOfLines={1}` stops the wrap outright.
+						numberOfLines={1}
+						style={{
+							minWidth: Math.round(34 * effectiveScale),
+							textAlign: "right",
+						}}
+						testID={SURFACE.composerDictationTimer}
+					>
+						{formatDuration(voice.seconds)}
+					</Text>
+				) : null}
+				{/* The reader's own DISCARD: it stops the take and sends no request at all,
+				    which is a different outcome from the mic (stop AND transcribe). Shown
+				    while a dictation is live only — an outcome line has nothing to cancel.
+
+				    The VISIBLE word is `Discard`, not `Cancel`, for exactly that reason
+				    (design round 1, D6): the mic beside it morphs to a Square that STOPS AND
+				    TRANSCRIBES, and "Cancel" reads as "stop", so the two adjacent controls
+				    promised the same thing while doing different ones. `Discard` names the
+				    throw-away, and it now matches the accessible name. */}
+				{rowIsLive(voice.phase) ? (
+					<Pressable
+						accessibilityRole={ROLE.button}
+						accessibilityLabel="Discard voice input"
+						onPress={voice.cancel}
+						style={{ minHeight: TOUCH_FLOOR, minWidth: TOUCH_FLOOR }}
+						className="items-center justify-center"
+						testID={CONTROL.composerDictationCancel}
+					>
+						<Text className="text-body-sm text-ink-muted">Discard</Text>
+					</Pressable>
+				) : null}
+			</>
+		);
 
 	return (
 		<View
@@ -577,6 +688,66 @@ export const Composer = ({
 					</View>
 				</Pressable>
 			</View>
+			{/* The dictation row (design §2.5): a line that SPANS the composer, holding
+			    one height across recording, transcribing and the three outcome states, so
+			    stopping a recording does not move the line (D3).
+
+			    It is a ROW rather than the previous button-morph alone because a 44 pt
+			    button swap did not read as "the composer is recording" — a reader had to
+			    find the morph to know. The span is the state: a full-width bar with a live
+			    level meter, the word, and the elapsed time.
+
+			    The meter is `flex-1`, so it takes whatever the word, the clock and the
+			    cancel do not: that is what makes the peaks SPAN rather than sit in a corner.
+
+			    It sits directly UNDER the field and OVER the receipt line: under the field
+			    because that is the thing it appends to (and the mic that runs it is one row
+			    further down, on the receipt line), and never OVER it — defect 1 was that the
+			    draft could not be read while a recording was live, so nothing here masks,
+			    dims or disables the field, which keeps its own height, content and
+			    editability for the whole take.
+
+			    TWO layouts, one box height. At 100 % everything shares one line. Past
+			    `LARGE_TEXT_SCALE` the status takes its own full-width line and the controls
+			    take the next: side by side, the status was squeezed to ~99 pt and clipped
+			    (`Recor…`, `Didn't catch that — tr…`, D3) and the meter's flex bars collapsed
+			    to 0.0 px (D2). The box is fixed rather than content-sized so a one-line
+			    outcome does not shrink the row below the two-line states — the jump the
+			    design round measured (D1). */}
+			{voice?.micVisible && (rowIsLive(voice.phase) || voice.status !== "") ? (
+				<View
+					className={cx(
+						"mb-1.5 rounded-sm border px-3",
+						dictationLargeText
+							? "flex-col items-stretch justify-center gap-2"
+							: "flex-row items-center gap-2",
+						rowIsLive(voice.phase)
+							? "border-danger-border bg-danger-wash"
+							: "border-hairline",
+					)}
+					// One height for every state the row can show (D3). At the default scale it
+					// is the touch floor plus the row's border; past `LARGE_TEXT_SCALE` it is the
+					// row's own two-line sum, so neither the meter nor a short outcome sets it.
+					style={{ minHeight: dictationRowBox(effectiveScale) }}
+					testID={SURFACE.composerDictationBar}
+				>
+					{dictationLargeText ? (
+						<>
+							{dictationStatus}
+							<View className="flex-row items-center gap-2">
+								{dictationDot}
+								{dictationControls}
+							</View>
+						</>
+					) : (
+						<>
+							{dictationDot}
+							{dictationStatus}
+							{dictationControls}
+						</>
+					)}
+				</View>
+			) : null}
 
 			{/* The receipt line: the queued count is the only thing here that changes on
 			    its own, and the chips are the reader's two levers on the turn.
@@ -629,52 +800,23 @@ export const Composer = ({
 				    costs the field nothing, and the row already wraps (D28) so a 200 % scale
 				    can push it to a second line rather than squeeze the field. */}
 				{voice?.micVisible ? (
-					<View className="flex-row items-center gap-1">
-						{voice.phase === "recording" ? (
-							<Text
-								className="text-mono-sm text-ink-muted"
-								// A stable width so the row does not reflow as the clock advances.
-								style={{ minWidth: 34, textAlign: "right" }}
-								testID={SURFACE.composerDictationTimer}
-							>
-								{formatDuration(voice.seconds)}
-							</Text>
-						) : null}
-						<IconButton
-							accessibilityLabel={micLabel(voice.phase)}
-							accessibilityHint={MIC_HINT[voice.phase]}
-							disabled={voice.phase === "transcribing"}
-							outlined
-							onPress={voice.press}
-							icon={({ color, size }) =>
-								voice.phase === "recording" ? (
-									<Square color={color} size={size} />
-								) : (
-									<Mic color={color} size={size} />
-								)
-							}
-							testID={CONTROL.composerMic}
-						/>
-					</View>
+					<IconButton
+						accessibilityLabel={micLabel(voice.phase)}
+						accessibilityHint={MIC_HINT[voice.phase]}
+						disabled={voice.phase === "transcribing"}
+						outlined
+						onPress={voice.press}
+						icon={({ color, size }) =>
+							voice.phase === "recording" ? (
+								<Square color={color} size={size} />
+							) : (
+								<Mic color={color} size={size} />
+							)
+						}
+						testID={CONTROL.composerMic}
+					/>
 				) : null}
 			</View>
-			{/* D3: the recording / transcribing states are ANNOUNCED, not only shown. The
-			    design puts them in a polite `role="status"`; the timer and the morphing
-			    mic stay where the eye reads them and this node is the announcement —
-			    zero-height and clipped so it costs no layout, and never `aria-hidden`, so
-			    it stays in the accessibility tree. The field's own `label` is its
-			    accessible name, so nothing is announced twice. */}
-			{voice?.micVisible ? (
-				<View className="h-0 overflow-hidden">
-					<Text
-						role={ROLE.status}
-						accessibilityLiveRegion={LIVE_REGION.polite}
-						testID={SURFACE.composerDictationStatus}
-					>
-						{dictationStatus(voice.phase)}
-					</Text>
-				</View>
-			) : null}
 			{/* The receipt anchor `08-connection-loss-recovery` asserts after a send
 			    across a reconnect: it is the composer's own "the instruction left" mark. */}
 			<View testID={SURFACE.composerReceipt} aria-hidden />

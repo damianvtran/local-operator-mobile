@@ -194,3 +194,50 @@ describe("what a tap does is a property of the catalogue", () => {
 		expect(argumentHint(command("x", { arguments: "optional" }))).toBeNull();
 	});
 });
+
+/**
+ * The slash TAP is a send, so it takes the composer as `runSend` does.
+ *
+ * The call site lives in a React hook (`use-composer.ts`), which the Node runner
+ * cannot render; the defect it guards is a missing STATEMENT, which no rendered
+ * assertion here can see either. So the source is read and the tap arm pinned:
+ * the cancellation must precede the send, and `inFlight` must be held only once
+ * the arm is actually going to send (agent review round 1 — a tap-cleared draft
+ * could otherwise receive a transcript still in flight, annotated with the wrong
+ * `dictated`/`mixed` provenance).
+ */
+describe("the slash tap takes the composer as a send does", () => {
+	const source = readFileSync(
+		fileURLToPath(new URL("./use-composer.ts", import.meta.url)),
+		"utf8",
+	);
+	const start = source.indexOf("const slash = useCallback(");
+	const end = source.indexOf("const controls = useMemo(");
+	const slashArm = source.slice(start, end);
+
+	it("reads the tap arm from the real hook, not an empty slice", () => {
+		expect(start).toBeGreaterThan(-1);
+		expect(end).toBeGreaterThan(start);
+		expect(slashArm).toContain("sendSlashCommand(");
+	});
+
+	it("cancels an in-flight dictation before the tap sends", () => {
+		const cancel = slashArm.indexOf("cancelDictationForSend()");
+		const send = slashArm.indexOf("sendSlashCommand(");
+		expect(
+			cancel,
+			"the slash tap sends without cancelDictationForSend()",
+		).toBeGreaterThan(-1);
+		expect(cancel, "the cancel must precede the send").toBeLessThan(send);
+	});
+
+	it("holds `inFlight` only once it will actually send", () => {
+		const guard = slashArm.indexOf("if (request === null) return;");
+		const hold = slashArm.indexOf("inFlight.current = true;");
+		expect(guard).toBeGreaterThan(-1);
+		expect(
+			hold,
+			"a return before the send would leak inFlight",
+		).toBeGreaterThan(guard);
+	});
+});

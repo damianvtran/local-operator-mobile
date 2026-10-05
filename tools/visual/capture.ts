@@ -37,6 +37,7 @@
 import { createHash } from "node:crypto";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { cellUrl } from "../audit/audit.ts";
 import { bool, csv, num, parseArgs, str } from "../lib/args.ts";
 import type { CdpPage } from "../lib/cdp.ts";
 import { sleep } from "../lib/cdp.ts";
@@ -424,7 +425,12 @@ async function captureCell(
 		query.set(key, value);
 	}
 	const path = resolvePath(cell.path, state);
-	const url = `${baseUrl}${path}${path.includes("?") ? "&" : "?"}${query}`;
+	// The join lives in ONE place (`cellUrl`, shared with the audit) so a fix to the
+	// separator cannot land in one copy and not the other. The design-round-1 D4 bug
+	// — `…&lo-dictation=recording?lo-theme=dark` — was a second, drifted copy of this
+	// rule: the capture applied it, the audit did not, and the audit measured the
+	// ordinary composer under the cell's name. Importing it keeps the two in step.
+	const url = cellUrl(baseUrl, path, query.toString());
 
 	const consoleErrors: string[] = [];
 	// Console and exception payloads are CDP-shaped, so each field is narrowed

@@ -27,7 +27,12 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { SUB_RULE_TEXT, U08_SUPPRESSION } from "../tools/audit/checks.ts";
+import {
+	SUB_RULE_TEXT,
+	U03_SUPPRESSION,
+	U08_SUPPRESSION,
+	U10_DECLARATION,
+} from "../tools/audit/checks.ts";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const DEFAULT_WORKTREE = resolve(HERE, "..");
@@ -478,25 +483,57 @@ interface NotDefect {
 	check: string;
 	element: string;
 	/**
-	 * For U-08 entries, the suppression reason this element must be RECORDED with,
-	 * resolved from the rule's own table (`U08_SUPPRESSION`) by the fixture's
-	 * `data-not-defect-reason`. `null` for checks that carry no suppression record.
+	 * The suppression reason this element must be RECORDED with, resolved from the
+	 * rule's own exported table (`U08_SUPPRESSION`, `U03_SUPPRESSION`,
+	 * `U10_DECLARATION`) by the fixture's `data-not-defect-reason`. `null` for a
+	 * shape the fixture declares SILENT (`data-not-defect-silent`): the rule must not
+	 * reach it at all — no row, of any verdict, under its own check — and the
+	 * assertion is that absence rather than a recording.
 	 */
 	reason: string | null;
+	/** True for a `data-not-defect-silent` element: assert NO row, not a recording. */
+	silent: boolean;
 }
 
 /**
- * The name a fixture declares to the reason string it must be recorded with.
+ * The name a fixture declares to the reason string it must be recorded with, per
+ * check.
  *
- * Every U-08 `data-not-defect` entry must declare one: the assertion below is
- * that the rule still SAW the pair and wrote WHY it set it aside, so the reason
- * is half the assertion. An unknown name is refused rather than downgraded.
+ * THE CHOICE IS FORCED (QA round 2, Q2-1's second half): every `data-not-defect`
+ * entry must EITHER name the reason it is RECORDED with, via
+ * `data-not-defect-reason`, OR declare `data-not-defect-silent` — a shape the rule
+ * must not reach at all. A missing reason used to be the quiet default, which
+ * downgraded the assertion from "recorded with this reason" to "no FAIL row names
+ * it": deleting `data-not-defect-reason="meter-series"` left the canary green,
+ * because `unrecordedSuppressions` skips an entry with no reason. Neither
+ * attribute, or both, is now an error.
+ *
+ * The strings come from the rules' own exported tables, so a reworded reason fails
+ * here instead of leaving the canary asserting a sentence the audit no longer
+ * writes. An unknown name is refused rather than downgraded.
  */
-const U08_REASON_NAMES: Record<string, string> = {
-	"painted-disjoint": U08_SUPPRESSION.DISJOINT,
-	"modal-layer": U08_SUPPRESSION.MODAL_LAYER,
-	"modal-surface": U08_SUPPRESSION.MODAL_SURFACE,
+const NOT_DEFECT_REASON_NAMES: Record<string, Record<string, string>> = {
+	"U-08": {
+		"painted-disjoint": U08_SUPPRESSION.DISJOINT,
+		"modal-layer": U08_SUPPRESSION.MODAL_LAYER,
+		"modal-surface": U08_SUPPRESSION.MODAL_SURFACE,
+	},
+	"U-03": {
+		"control-fill": U03_SUPPRESSION.CONTROL_FILL,
+		"meter-series": U03_SUPPRESSION.METER_SERIES,
+	},
+	"U-10": {
+		"text-entry-value": U10_DECLARATION.TEXT_ENTRY_VALUE,
+	},
 };
+
+/**
+ * The fixture's opt-out for a `data-not-defect` shape the rule must not reach AT ALL.
+ *
+ * A module-level constant so the parser does not rebuild it per tag (biome's
+ * `useTopLevelRegex`).
+ */
+const NOT_DEFECT_SILENT = /\bdata-not-defect-silent\b/;
 
 const declaredNotDefects = (): NotDefect[] => {
 	const out: NotDefect[] = [];
@@ -512,22 +549,31 @@ const declaredNotDefects = (): NotDefect[] => {
 			);
 			process.exit(2);
 		}
+		const name = /\bdata-not-defect-reason="([^"]+)"/.exec(tag[0])?.[1];
+		const silent = NOT_DEFECT_SILENT.test(tag[0]);
+		if (name !== undefined && silent) {
+			console.error(
+				`canary: #${element} declares both data-not-defect-reason and data-not-defect-silent; they say different things and cannot both be true.`,
+			);
+			process.exit(2);
+		}
+		if (name === undefined && !silent) {
+			console.error(
+				`canary: #${element} declares data-not-defect="${check}" with neither data-not-defect-reason nor data-not-defect-silent. Name the reason it is recorded with (from NOT_DEFECT_REASON_NAMES and the matching table in tools/audit/checks.ts), or mark it silent — otherwise the assertion weakens to "some row exists" and a deleted reason goes unnoticed (QA round 2).`,
+			);
+			process.exit(2);
+		}
 		let reason: string | null = null;
-		if (check === "U-08") {
-			const name = /\bdata-not-defect-reason="([^"]+)"/.exec(tag[0])?.[1];
-			reason = name === undefined ? null : (U08_REASON_NAMES[name] ?? null);
+		if (name !== undefined) {
+			reason = NOT_DEFECT_REASON_NAMES[check]?.[name] ?? null;
 			if (reason === null) {
 				console.error(
-					`canary: #${element} declares data-not-defect="U-08" with ${
-						name === undefined
-							? "no data-not-defect-reason"
-							: `unknown reason '${name}'`
-					}; add the reason here (U08_REASON_NAMES) and to U08_SUPPRESSION in tools/audit/checks.ts rather than letting the assertion weaken to "some row exists".`,
+					`canary: #${element} declares data-not-defect="${check}" with unknown reason '${name}'; add it to NOT_DEFECT_REASON_NAMES here and to the matching table in tools/audit/checks.ts (U08_SUPPRESSION / U03_SUPPRESSION / U10_DECLARATION) rather than letting the assertion weaken to "some row exists".`,
 				);
 				process.exit(2);
 			}
 		}
-		out.push({ check, element, reason });
+		out.push({ check, element, reason, silent });
 	}
 	return out;
 };
@@ -545,48 +591,98 @@ const firedOnNotDefect = notDefects
 	)
 	.map((entry) => `${entry.check} (#${entry.element})`);
 /**
- * A U-08 suppression must be RECORDED, not merely absent, and recorded with the
- * reason the fixture declared — each entry names its own, because a modal-layer
- * pair and a painted-disjoint pair are set aside by different branches and a
- * blanket "some EXCEPTION row exists" would accept either for the other.
- * `U08_REASON_NAMES` resolves the fixture's name through the rule's own table
- * (imported), so a rename cannot leave this asserting a stale string.
+ * A declared exception must be RECORDED, not merely absent, and recorded with the
+ * reason the fixture declared — each entry names its own, because two different
+ * branches can set aside two different shapes, and a blanket "some EXCEPTION row
+ * exists" would accept either for the other. `NOT_DEFECT_REASON_NAMES` resolves the
+ * fixture's name through each rule's own exported table (imported), so a rename
+ * cannot leave this asserting a stale string.
  *
- * A pair that quietly stopped overlapping would satisfy "no FAIL row" while
- * proving nothing about the rule, so the reason-tagged EXCEPTION row is required
- * as well: the assertion is that the rule still SAW the pair and said why it set
- * it aside.
+ * The contract covers U-03's two branches and U-10's one as well as U-08's
+ * (review round 3, R3-1): a shape that quietly stopped reaching its branch would
+ * satisfy "no FAIL row" while proving nothing about the rule, so the
+ * reason-tagged EXCEPTION row is required as well: the assertion is that the rule
+ * still SAW the element and said why it set it aside. A SILENT entry
+ * (`data-not-defect-silent`) is skipped here, because its contract is the
+ * opposite one — the rule must not reach it at all — and that absence is asserted
+ * by `silentButReported` below together with `firedOnNotDefect`.
  */
-const unrecordedSuppressions = notDefects
-	.filter(
-		(entry) =>
-			entry.check === "U-08" &&
-			!defects.rows.some(
-				(row: AuditRow) =>
-					row.verdict === "EXCEPTION" &&
-					rowNames(row).includes(`#${entry.element}`) &&
-					entry.reason !== null &&
-					(row.measured ?? "").includes(entry.reason),
-			),
-	)
-	.map((entry) => `U-08 (#${entry.element})`);
+const unrecordedSuppressions: string[] = [];
+for (const entry of notDefects) {
+	const reason = entry.reason;
+	if (reason === null) continue;
+	const recorded = defects.rows.some(
+		(row: AuditRow) =>
+			row.verdict === "EXCEPTION" &&
+			rowNames(row).includes(`#${entry.element}`) &&
+			(row.measured ?? "").includes(reason),
+	);
+	if (!recorded)
+		unrecordedSuppressions.push(`${entry.check} (#${entry.element})`);
+}
 
 /**
- * A defect is caught either by the row that names its element, or — for a rule
- * that reports document-wide (U-06's overflow) or through the accessibility tree
- * (U-09, whose node carries no DOM id) — by the check itself.
- *
- * The fallback is deliberately narrow: it applies only to a marker that names a
- * whole check, never to a sub-rule. That is the distinction the review drew: a
- * check with independent branches (`U-05-top` vs `U-05-left`, `U-07-x` vs
- * `U-07-y`) must be tied to its own element, or blinding one branch passes. The
- * runner reports which defects were proven at check granularity, so the weaker
- * of the two assertions is never invisible.
+ * A `data-not-defect-silent` shape must produce NO row under its own check — of any
+ * verdict, not merely no FAIL. `firedOnNotDefect` already covers the FAIL case; this
+ * is the recording half, so a silent shape the rule STARTS reaching (a suppression, an
+ * EXCEPTION) cannot pass by looking like the shape it used to be.
  */
+const silentButReported: string[] = [];
+for (const entry of notDefects) {
+	if (!entry.silent) continue;
+	const reported = defects.rows.some(
+		(row: AuditRow) =>
+			row.check === entry.check && rowNames(row).includes(`#${entry.element}`),
+	);
+	if (reported) silentButReported.push(`${entry.check} (#${entry.element})`);
+}
+
+/**
+ * A defect is caught either by a row that NAMES its element, or — for the two
+ * rules that report without an element id at all — by the check itself.
+ *
+ * THE FALLBACK IS AN EXPLICIT ALLOWLIST, NOT `marker === check` (QA round 2,
+ * Q2-1). `marker === check` only says the marker names a whole check rather than a
+ * sub-rule; it says nothing about whether the rule CAN name the element it caught.
+ * A fixture whose marker names its own check therefore rode the fallback:
+ * `#three-dot-a` (marker `U-03`) was "caught" at check level by any OTHER U-03
+ * FAIL row, so it proved nothing about the colour-only series floor. Measured
+ * (QA's repro, with the floor widened back to `>= 3`): `#three-dot-a` became an
+ * EXCEPTION and the canary still printed `CANARY: PASS`, `missed: none`.
+ *
+ * Each entry is a DEFECT (`<check>#<element>`), not a whole check, so a new
+ * declared defect can never inherit the exemption — it has to be listed, and the
+ * check it names must actually carry a FAIL row.
+ *
+ *   - `U-06#too-wide`: the overflow rule reports the document's scroll width, so
+ *     its row names no element.
+ *   - `U-09#unnamed-icon`: the rule reads the accessibility tree, and its node
+ *     carries no DOM id.
+ *
+ * A check whose rows DO name elements (U-03, U-08, U-10, …) is deliberately
+ * absent: every declared defect of those checks has to be caught by a FAIL row
+ * that names its element, or the fixture is not load-bearing — the whole point of
+ * Q2-1.
+ */
+const CHECK_LEVEL_DEFECTS = new Set(["U-06#too-wide", "U-09#unnamed-icon"]);
+
+// A listed defect the fixture no longer declares would silently stop being
+// asserted, so the list must name things the page still carries.
+const orphanedCheckLevel = [...CHECK_LEVEL_DEFECTS].filter(
+	(key) => !declared.some((d) => `${d.check}#${d.element}` === key),
+);
+if (orphanedCheckLevel.length > 0) {
+	console.error(
+		`canary: CHECK_LEVEL_DEFECTS names ${orphanedCheckLevel.join(", ")}, which the fixture no longer declares; remove the stale entry rather than leaving an exemption that hides a deleted fixture.`,
+	);
+	process.exit(2);
+}
+
 const checkLevel = declared.filter(
 	(defect) =>
-		// `marker === check` means the marker names the whole check, not a branch.
-		defect.marker === defect.check && caught.includes(defect.check),
+		defect.marker === defect.check &&
+		CHECK_LEVEL_DEFECTS.has(`${defect.check}#${defect.element}`) &&
+		caught.includes(defect.check),
 );
 const caughtDefects = [...new Set([...caughtByElement, ...checkLevel])];
 const caughtByCheckOnly = checkLevel.filter(
@@ -613,6 +709,10 @@ if (firedOnNotDefect.length > 0)
 if (unrecordedSuppressions.length > 0)
 	console.log(
 		`    - NOT RECORDED AS SUPPRESSED: ${unrecordedSuppressions.join(", ")}`,
+	);
+if (silentButReported.length > 0)
+	console.log(
+		`    - REPORTED DESPITE data-not-defect-silent: ${silentButReported.join(", ")}`,
 	);
 console.log(
 	`  caught per defect:       ${caughtDefects.map((d) => d.marker).join(", ") || "none"}`,
@@ -668,6 +768,7 @@ const ok =
 	cleanFails.length === 0 &&
 	firedOnNotDefect.length === 0 &&
 	unrecordedSuppressions.length === 0 &&
+	silentButReported.length === 0 &&
 	defectsStatus !== 0 &&
 	cleanStatus === 0;
 console.log(
@@ -688,6 +789,7 @@ if (cleanFails.length > 0) failedTerms.push("cleanFails");
 if (firedOnNotDefect.length > 0) failedTerms.push("firedOnNotDefect");
 if (unrecordedSuppressions.length > 0)
 	failedTerms.push("suppressionUnrecorded");
+if (silentButReported.length > 0) failedTerms.push("silentNotReported");
 if (defectsStatus === 0) failedTerms.push("defectsStatus");
 if (cleanStatus !== 0) failedTerms.push("cleanStatus");
 if (failedTerms.length > 0) {
@@ -702,6 +804,7 @@ console.log(
 		cleanFails: cleanFails.length,
 		firedOnNotDefect,
 		unrecordedSuppressions,
+		silentButReported,
 		defectsStatus,
 		cleanStatus,
 		cells: { defects: defects.cells ?? 0, clean: cleanCells },

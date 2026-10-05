@@ -32,6 +32,7 @@ export { Card } from "@/ui/components/card";
 export { Chip } from "@/ui/components/chip";
 export { ConnectionPill } from "@/ui/components/connection-pill";
 export { Dialog } from "@/ui/components/dialog";
+export { DictationMeter } from "@/ui/components/dictation-meter";
 export { Divider } from "@/ui/components/divider";
 export { EmptyState } from "@/ui/components/empty-state";
 export { Heading } from "@/ui/components/heading";

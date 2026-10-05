@@ -30,6 +30,7 @@
 import { Platform } from "react-native";
 
 import { MAX_RECORDING_SECONDS } from "@/stt/dictation";
+import { meterFraction } from "@/stt/levels";
 
 type AudioModule = typeof import("expo-audio");
 
@@ -90,6 +91,24 @@ export async function loadRecorder(): Promise<AudioModule | null> {
 		loaded = import("expo-audio").catch(() => null);
 	}
 	return loaded;
+}
+
+/**
+ * Resolve the audio module AHEAD of the press, without awaiting it.
+ *
+ * Measured cause of the first-press start lag: `loaded` is null until the first
+ * `loadRecorder()`, so the press that opens the microphone pays the dynamic
+ * `import("expo-audio")` — native module init included — INSIDE the gesture, after
+ * the permission prompt and before the audio session is switched. Warming it when
+ * the mic becomes visible takes that cost off the press path entirely; the import
+ * is deduplicated by the `loaded` promise, so a warm call is free and a build
+ * without the module still answers `null` rather than throwing.
+ *
+ * Deliberately not awaited by the caller: a warm-up that blocks is the lag it
+ * exists to remove.
+ */
+export function warmRecorder(): void {
+	void loadRecorder();
 }
 
 /** The microphone permission in the app's vocabulary. `unsupported` is a build
@@ -159,6 +178,10 @@ export interface ActiveRecording {
 	/** Stops and deletes the file — the explicit-cancel path, which sends NO
 	 *  request. */
 	cancel(): Promise<void>;
+	/** The live input level as a `[0, 1]` fraction, for the recording meter, or
+	 *  `null` when the platform reports none (a build without metering, or a
+	 *  reading before the first frame). See `stt/levels.ts` for the mapping. */
+	level(): number | null;
 }
 
 /**
@@ -258,18 +281,34 @@ export async function finishActiveRecording(
  * TRANSCRIBES, and a JS timer does not run while the app is backgrounded — the
  * native bound is what holds the promise there.
  */
-export async function startRecording(): Promise<ActiveRecording | null> {
+export async function startRecording(options?: {
+	/** The permission the CALLER has already confirmed, so this does not ask the OS
+	 *  a second time on the press path — the hook requests it first, and the
+	 *  duplicate read is one of the awaited round-trips between the press and
+	 *  `record()`. Absent means "read it here", which is what a standalone caller
+	 *  wants. A value other than `granted` refuses without touching the recorder. */
+	permission?: MicPermission;
+}): Promise<ActiveRecording | null> {
 	const module = await loadRecorder();
 	if (module === null) return null;
 	try {
-		const permission = await module.getRecordingPermissionsAsync();
-		if (permission.status !== "granted") return null;
+		if (options?.permission !== undefined) {
+			if (options.permission !== "granted") return null;
+		} else {
+			const permission = await module.getRecordingPermissionsAsync();
+			if (permission.status !== "granted") return null;
+		}
 		/* The iOS audio session has to allow recording before `record()`; without
 		 * it the recorder starts and captures silence. */
 		await module.setAudioModeAsync({ allowsRecording: true });
-		const recorder = new module.AudioModule.AudioRecorder(
-			module.RecordingPresets.HIGH_QUALITY,
-		);
+		const recorder = new module.AudioModule.AudioRecorder({
+			...module.RecordingPresets.HIGH_QUALITY,
+			/* Drives the recording meter (design §2.5's fourth state carrier). Costs
+			 * one status field per read; a platform that ignores it leaves `metering`
+			 * undefined and `level()` answers null, so the meter degrades rather than
+			 * invents a level. */
+			isMeteringEnabled: true,
+		});
 		await recorder.prepareToRecordAsync();
 		recorder.record({ forDuration: MAX_RECORDING_SECONDS });
 		let stopped = false;
@@ -283,6 +322,16 @@ export async function startRecording(): Promise<ActiveRecording | null> {
 			cancel: async () => {
 				const recording = await stop();
 				if (recording !== null) await discardRecording(recording);
+			},
+			level: () => {
+				try {
+					const reading = recorder.getStatus().metering;
+					return reading === undefined ? null : meterFraction(reading);
+				} catch {
+					/* A status read that throws (a recorder already torn down) is "no
+					 * reading", not a failure the meter should surface. */
+					return null;
+				}
 			},
 		};
 	} catch {

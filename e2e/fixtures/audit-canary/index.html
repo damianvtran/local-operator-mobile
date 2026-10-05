@@ -30,6 +30,8 @@
   | #dense-pair           | U-01  | 28x28 controls 10pt apart — the rubric's EXCEPTION   |
   | #low-contrast         | U-02  | ink #a8a296 on ground #f2ede3                        |
   | #status-dot           | U-03  | colour-only status: no word, glyph or name           |
+  | #three-dot-a          | U-03  | a THREE-dot colour-only status row — the shape the series exception must not swallow |
+  | #fifteen-dot-a        | U-03  | a FIFTEEN-dot colour-only row — one below LEVEL_BARS, pinning the series floor at exactly 16 (review round 4, R4-1) |
   | #full-bleed           | U-05-top    | content at y=0 under the top inset             |
   | #footer-flush         | U-05-bottom | a pinned bar flush to the home indicator       |
   | #side-left            | U-05-left   | a bar flush to the left edge (landscape)       |
@@ -45,7 +47,7 @@
   | #modal-collide-a/b    | U-08  | two controls colliding INSIDE one dialog still fail  |
   | #dialog-band-control  | U-05-top-dialog | dialog CONTENT (a control) raised into the band still fails |
 
-  Seven of the entries are the INVERSE declaration, `data-not-defect`: elements the
+  Ten of the entries are the INVERSE declaration, `data-not-defect`: elements the
   audit must NOT report. A rule is only worth trusting when it is shown both to fire
   on a defect and to stay silent on the shape it must not fire on, and the two
   directions are asserted in the same run so neither can be satisfied by an
@@ -54,11 +56,27 @@
     /defects   #phantom-over must produce no FAIL row (its layout box overlaps
                #phantom-under exactly, but the painted regions do not), and the U-08
                suppression that replaces it must still be RECORDED, with its reason;
+               the four shapes below are declared `data-not-defect-silent` because the
+               rule must not reach them AT ALL — no row of any verdict under their own
+               check, not merely no FAIL row — and the canary asserts that absence
+               (`silentButReported`), so a shape the rule STARTS reaching is caught too;
                #inset-clipped must produce no U-05 row (its layout top sits inside
                the notch band, its painted top sits exactly at the inset's edge);
                #status-row-dot must produce no U-03 row (its status word `approval`
                sits beside it in the same control), while #status-dot — the same dot
                with no word at all, in a panel that HAS a heading — must still fail;
+               #three-dot-a must still FAIL (three identical colour-only dots with no
+               word, glyph or name are a status row, not a meter), while #meter-series
+               — `LEVEL_BARS` same-colour bars in one wrapper whose own text is empty,
+               the meter's own shape — must come back EXCEPTION with its reason
+               RECORDED, and #filled-control likewise (a control whose own glyph and
+               accessible name carry the affordance fills its own box); without these
+               three the `declaredColourException` branches are not exercised at all,
+               so the canary's PASS proved nothing about their width (review round 3,
+               R3-1);
+               #draft-value must produce no U-10 row (a textarea's visible text is its
+               VALUE, not a label) and must RECORD the reason it is set aside, so the
+               exemption is proven reachable and recorded rather than merely silent;
                #modal-covered and #modal-backdrop must produce no FAIL row (the
                dialog's `aria-modal` boundary and its own opaque surface separate
                them from what they sit over; both suppressions must be RECORDED with
@@ -144,6 +162,11 @@
 	.covered-control { position: absolute; left: 12px; width: 60px; height: 32px; }
 	.panel { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 12px; margin: 12px 0; }
 	button { font: inherit; border: 1px solid var(--border); background: var(--surface); color: var(--ink); border-radius: 6px; }
+	/* The UA default for a textarea is 13.33px, which does NOT follow the root font
+	   size — left alone, the U-10 value fixture made every 200 % cell unready
+	   ("the 13.33px role did not scale"). The fixture's controls inherit the page
+	   font exactly as the app's do. */
+	textarea { font: inherit; border: 1px solid var(--border); background: var(--surface); color: var(--ink); border-radius: 6px; padding: 8px; }
 	/* Clean geometry: 44pt controls, or a padded hit area that reaches 44. */
 	.control { min-height: 44px; min-width: 44px; padding: 0 16px; }
 	.icon-only { min-height: 44px; min-width: 44px; padding: 0 12px; display: inline-flex; align-items: center; gap: 8px; }
@@ -164,6 +187,22 @@
 	#status-row-slot { display: inline-block; }
 	#status-row-dot { display: inline-block; width: 12px; height: 12px; border-radius: 50%; background: var(--danger); border: none; }
 	.status-word { color: var(--danger); }
+	/* The three-dot status row: the SAME colour-only dot as #status-dot, three times
+	   over, with no word, glyph or name anywhere in the row. It is the shape the
+	   U-03 series exception must NOT swallow — a short row of identical dots is a
+	   status series, not a meter — so it is a DECLARED DEFECT the canary requires a
+	   FAIL row for. Before the predicate was narrowed to the meter's own bar count,
+	   this shape came back EXCEPTION and the audit could not fail on it (QA round 1,
+	   Q1). */
+	.dot { display: inline-block; width: 12px; height: 12px; border-radius: 50%; background: var(--danger); border: none; margin-right: 4px; }
+	/* The level-meter shape: `LEVEL_BARS` (16) same-colour bars under one empty
+	   wrapper, which is what the meter's own box is. The exception exists for THIS,
+	   so the canary requires it to come back EXCEPTION with its reason recorded. */
+	#meter-series { display: flex; align-items: flex-end; gap: 2px; height: 24px; overflow: hidden; }
+	.meter-bar { flex: 0 0 8px; background: var(--danger); border-radius: 999px; }
+	/* The send button's own painted surface: a direct child covering the control's
+	   box, the other shape U-03 declares. */
+	.control-fill { position: absolute; inset: 0; background: var(--accent); border-radius: inherit; }
 	#full-bleed { position: absolute; top: 0; left: 0; right: 0; padding: 4px; background: var(--surface); }
 	#too-wide { width: 480px; height: 20px; background: var(--surface); border: 1px solid var(--border); }
 	#clipped { height: 16px; overflow: hidden; background: var(--surface); }
@@ -203,7 +242,7 @@
      property the harness sets. -->
 <div class="bad" style="position:relative;height:120px">
 	<div id="inset-clipper" style="position:absolute;top:0;left:0;width:200px;height:120px;overflow:hidden">
-		<div id="inset-clipped" data-not-defect="U-05" role="button" aria-label="Clipped above the inset edge" style="position:absolute;top:-10px;left:0;width:200px;height:44px;background:var(--surface);border:1px solid var(--border)"></div>
+		<div id="inset-clipped" data-not-defect="U-05" data-not-defect-silent role="button" aria-label="Clipped above the inset edge" style="position:absolute;top:-10px;left:0;width:200px;height:44px;background:var(--surface);border:1px solid var(--border)"></div>
 	</div>
 </div>
 
@@ -253,7 +292,7 @@
      control must not name the surface merely as an ancestor of its
      subject — the canary's "must-not-report" reads the row's whole path. -->
 <div class="bad" id="dialog-fixture" role="dialog" aria-modal="true" aria-label="Dialog fixture" style="position:fixed;top:0;right:0;width:0;height:0">
-	<div id="dialog-surface" data-not-defect="U-05" style="position:fixed;top:0;right:0;width:8px;height:100%;background:var(--surface);border-left:1px solid var(--border)"></div>
+	<div id="dialog-surface" data-not-defect="U-05" data-not-defect-silent style="position:fixed;top:0;right:0;width:8px;height:100%;background:var(--surface);border-left:1px solid var(--border)"></div>
 	<button class="control" id="dialog-band-control" data-defect="U-05-top-dialog" aria-label="Dialog control in the band" style="position:fixed;top:0;right:0;width:44px;height:44px"></button>
 </div>
 
@@ -274,7 +313,7 @@
      their cells. The app's own scrim is full-bleed; what this block holds is the
      HOST's set-aside and the layer's role, and #dialog-band-control keeps the
      failing direction so neither declaration reads as a blanket. -->
-<div class="bad" id="dismiss-host" data-not-defect="U-05" style="position:fixed;top:0;left:0;right:0;bottom:0">
+<div class="bad" id="dismiss-host" data-not-defect="U-05" data-not-defect-silent style="position:fixed;top:0;left:0;right:0;bottom:0">
 	<div id="dismiss-dialog" role="dialog" aria-modal="true" aria-label="Dismiss layer fixture" style="position:fixed;top:0;left:0;right:0;bottom:0">
 		<button class="control" id="dismiss-scrim" aria-label="Dismiss the layer" style="position:absolute;top:70px;left:230px;width:120px;height:60px;background:rgba(178,58,49,0.35)">
 			<svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8" fill="var(--accent)"/></svg>
@@ -332,9 +371,80 @@
 <div class="bad panel">
 	<h2>U-03 carrier beside the dot</h2>
 	<button class="control" id="status-row" aria-label="Clean up the staging bucket, approval waiting">
-		<div id="status-row-slot"><span id="status-row-dot" data-not-defect="U-03"></span></div>
+		<div id="status-row-slot"><span id="status-row-dot" data-not-defect="U-03" data-not-defect-silent></span></div>
 		<span class="status-word">approval</span>
 	</button>
+</div>
+
+<!-- U-03's THREE-DOT STATUS: a real colour-only status, three dots deep. The series
+     exception is for the level meter, not for a short row of identical indicators —
+     before the floor was tied to the meter's own bar count, this shape came back
+     EXCEPTION and the audit had stopped being able to fail on it (QA round 1, Q1).
+     The first dot carries the declaration; the other two are there so the row is a
+     SERIES and not one dot the exception could never have matched anyway. -->
+<div class="bad panel">
+	<h2>U-03 three-dot status</h2>
+	<p><span id="three-dot-a" class="dot" data-defect="U-03"></span><span class="dot"></span><span class="dot"></span></p>
+</div>
+
+<!-- U-03's FLOOR, pinned at exactly the meter's bar count (review round 4, R4-1):
+     the same colour-only shape as the three-dot row, one bar SHORT of `LEVEL_BARS`.
+     The three-dot row only catches a floor widened to 3 or less; a floor widened into
+     4..15 is invisible to it, and this row is what fails there. It is a FAILURE row
+     (15 < 16), so it is proven by an element-naming FAIL and — like #three-dot-a —
+     never by the canary's check-level fallback. The first dot carries the declaration;
+     the other fourteen exist so the row is a SERIES of exactly fifteen. -->
+<div class="bad panel">
+	<h2>U-03 fifteen-dot status (one below the meter)</h2>
+	<p><span id="fifteen-dot-a" class="dot" data-defect="U-03"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span></p>
+</div>
+
+<!-- U-03's CONTROL FILL: the send button's accent fill — a direct child covering its
+     control's box. The control carries a glyph AND an accessible name, which is what
+     the branch now requires (`childImages > 0 || hasAccessibleName`); a wordless,
+     glyph-less control painted one semantic colour would FAIL.
+     ORDER MATTERS: this panel sits BEFORE the meter below because U-03 prints at most
+     eight DECLARED rows per cell (`declared.slice(0, 8)`) and the meter contributes
+     sixteen — with the meter first, its rows fill that budget and this shape's row is
+     dropped, so the canary silently stops proving this branch (measured: 0 rows naming
+     #filled-control, the exact "green run proves nothing" shape this fixture exists to
+     prevent). -->
+<div class="bad panel">
+	<h2>U-03 control fill</h2>
+	<button class="control" id="filled-control" data-not-defect="U-03" data-not-defect-reason="control-fill" aria-label="Send the draft" style="position: relative; width: 44px; height: 44px; padding: 0">
+		<svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="M2 2 L18 10 L2 18 Z" fill="var(--ink)"/></svg>
+		<span class="control-fill"></span>
+	</button>
+</div>
+
+<!-- U-03's METER SHAPE: `LEVEL_BARS` same-colour bars in one wrapper whose own text
+     is empty (the meter box carries no word — `Recording` sits BESIDE it, in the
+     row). This is the shape the exception exists for, so it must come back
+     EXCEPTION with its reason RECORDED, not merely absent; `unrecordedSuppressions`
+     asserts that. A flat (silent-take) meter is 16 equal bars, which is why the
+     floor is a count and not a size-variance requirement. It comes SECOND in the
+     page so the one-row control fill above is not crowded out of the per-cell
+     declared budget (see that panel's note). -->
+<div class="bad panel">
+	<h2>U-03 meter series</h2>
+	<div id="meter-series" data-not-defect="U-03" data-not-defect-reason="meter-series" aria-hidden="true">
+		<div class="meter-bar" style="height: 6px"></div>
+		<div class="meter-bar" style="height: 10px"></div>
+		<div class="meter-bar" style="height: 14px"></div>
+		<div class="meter-bar" style="height: 18px"></div>
+		<div class="meter-bar" style="height: 22px"></div>
+		<div class="meter-bar" style="height: 19px"></div>
+		<div class="meter-bar" style="height: 15px"></div>
+		<div class="meter-bar" style="height: 11px"></div>
+		<div class="meter-bar" style="height: 7px"></div>
+		<div class="meter-bar" style="height: 5px"></div>
+		<div class="meter-bar" style="height: 9px"></div>
+		<div class="meter-bar" style="height: 13px"></div>
+		<div class="meter-bar" style="height: 17px"></div>
+		<div class="meter-bar" style="height: 12px"></div>
+		<div class="meter-bar" style="height: 8px"></div>
+		<div class="meter-bar" style="height: 6px"></div>
+	</div>
 </div>
 
 <!-- U-05: content under the notch band. -->
@@ -416,12 +526,18 @@
 	<div id="good-scale">One short line of text, in a box that grows with it.</div>
 </div>
 
-<!-- U-08 translucent pinned bar: a VISIBLE overlap, so the rule must report it
-     even though the bar is pinned and anchored to the viewport edge. -->
+<!-- A pinned TRANSLUCENT bar over content: a visible overlap, so the bar must be
+     reported by SOME rule. U-08 pairs only boxes carrying text or interactivity
+     (`meaningful` in tools/audit/checks.ts), and this bar has neither — so U-08 never
+     reaches it. It IS anchored at y=0 inside the unsafe top band, so the TOP-INSET
+     rule catches it, and that is the check it now declares. An earlier U-08 marker here
+     passed only through the canary's check-level fallback — exactly the masking QA
+     round 2 removed (Q2-1): the declaration must name the rule that actually catches
+     the element, not one the fallback can be satisfied for by another row. -->
 <div class="bad panel">
-	<h2>U-08 translucent bar over content</h2>
+	<h2>U-05 top inset: translucent pinned bar over content</h2>
 	<p id="translucent-under">Text that is legible through the bar above it, which is exactly why this one is a defect.</p>
-	<div id="translucent-bar" class="translucent-bar bad" data-defect="U-08" style="top: 0"></div>
+	<div id="translucent-bar" class="translucent-bar bad" data-defect="U-05-top" style="top: 0"></div>
 </div>
 
 <!-- U-08 control under an opaque pinned bar: unreachable, so reported even though
@@ -521,6 +637,14 @@
 <div class="bad panel">
 	<h2>U-10 label in name</h2>
 	<button class="control" id="label-mismatch" data-defect="U-10" aria-label="Confirm">Approve</button>
+</div>
+<!-- U-10's TEXT-ENTRY branch: a textarea's visible text is its VALUE, not a label, so
+     the label-in-name comparison cannot pass by construction. Declared (an EXCEPTION
+     row recording the measured name and value) and asserted here, so the branch is
+     proven reachable and recorded rather than merely silent. -->
+<div class="bad panel">
+	<h2>U-10 text-entry value</h2>
+	<textarea id="draft-value" data-not-defect="U-10" data-not-defect-reason="text-entry-value" aria-label="Draft message" rows="2">Add a retry to the send path.</textarea>
 </div>
 <div class="good panel">
 	<h2>U-10 label in name (clean)</h2>
