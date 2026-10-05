@@ -23,8 +23,9 @@ That figure is **load-dependent, and it is the one to quote**: `pnpm e2e:relay`
 against ~13 minutes on a quiet one. The README, `tools/lib/doc-commands.ts` and
 `tools/mock-relay/verify.ts` all state that single figure; if you change one,
 change all three. The app-build capture block — the other candidate for slowest —
-is bounded to a 74-cell sample (`--devices iphone-15 --themes dark --scales
-100,200`) precisely so the gate can pass for the reason the block declares
+is bounded to a 66-cell sample: the whole declared cell list (33 cells on today's
+registry) at one device, one theme and two scales (`--devices iphone-15 --themes
+dark --scales 100,200`), so the gate can pass for the reason the block declares
 instead of by timing out. A command this
 machine cannot run is skipped **with its reason printed**, and its tool paths and
 script names are still resolved, so a skip cannot hide a renamed file.
@@ -53,8 +54,9 @@ the three answer different questions:
 | `notMeasurableCells` | cells that did NOT, each with its reasons. A finding about the harness or the app. |
 | `declaredSkips` | cells whose state this head does not render yet, each with the work that owns it. NOT a gap, and NOT evidence. |
 
-Measured on this head, one device and theme (`--devices iphone-15 --themes dark
---scales 100`), 36 cells:
+One device and theme (`--devices iphone-15 --themes dark --scales 100`) plans 33
+cells on today's registry — 36 when the run below was taken — so that output is
+quoted from the run that produced it rather than re-derived from today's count:
 
 ```
 audit: 36 cells, 378 check rows, 252 measured, 54 FAIL, 126 BLOCKED (0 unmeasurable) · palette loaded
@@ -562,8 +564,12 @@ node tools/visual/capture.ts --dir e2e/fixtures/audit-canary \
 # and a smaller explicit bound is printed beside the budgeted figure rather than
 # discovered when it fires.
 #
-# This command reads the APP's current state. It exits 0 on this head; the two findings
-# it used to record are fixed, and both fixes were declarations rather than app changes:
+# This command reads the APP's current state. On macOS it exits 0 on this head; on the
+# Linux CI runner it does NOT — there it exits 1 with `1 undeclared identical-state
+# pair(s)` (run 37238085957, job 111541147842), and the pair is left unnamed because
+# the capture writes its manifest to a temp directory this job uploads no artifact
+# from: reproduce it there to read the pair off the manifest. The two findings it used
+# to record are fixed, and both fixes were declarations rather than app changes:
 #   * `S2/error` and `S13/error` were ONE state under two names — `/tunnels` renders a
 #     single refusal surface and `STATE_MARKER.computers` declares a single `error` — so
 #     `S2/error` was removed from `billing-inactive`'s `shows`.

@@ -194,10 +194,13 @@ jobs:
     # one that fails when a tool is renamed or a documented invocation goes stale
     # (review m2's other half, and round 3's M3 for the bound).
     #
-    # It exports the web build first: some documented commands declare a `web-build`
-    # prerequisite, and the harness prints SKIP *with the reason* rather than
-    # pretending — so without a `dist/` the sweep would honestly skip them, which is
-    # less than this job is for.
+    # It exports the web build first, because some documented commands declare a
+    # `web-build` prerequisite — but THE EXPORT ALONE DOES NOT STOP THEM SKIPPING.
+    # `tools/lib/doc-commands.ts` marks such a block runnable only when `--dist`
+    # supplies the build, and this job does not pass it (the export step carries the
+    # measurement of what happens when it does). So they print SKIP *with the reason*
+    # rather than pretending, which names what was not proven — and their tool paths
+    # and script names are still resolved, so a skip cannot hide a renamed file.
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 70
