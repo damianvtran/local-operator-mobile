@@ -118,12 +118,25 @@ const config: ExpoConfig = {
 			dark: "./design/app-icon/ios/icon-dark-1024.png",
 			tinted: "./design/app-icon/ios/icon-tinted-1024.png",
 		},
+		// The microphone CAPABILITY DECLARATION, not a privacy-label change: the
+		// recorded audio is relayed to the reader's own computer for one transcription
+		// and not retained (mobile-stt design §1), so the store privacy labels are
+		// unchanged. The string is the prompt iOS shows at the moment the reader
+		// presses the mic — never at first launch.
+		infoPlist: {
+			NSMicrophoneUsageDescription:
+				"Record a voice message and transcribe it on your own computer. The recording is sent for one transcription and not kept.",
+		},
 	},
 	android: {
 		package: BUNDLE_ID,
 		// The value both stores compare for monotonicity. Omitted when there is no
 		// build number, for the same reason as `ios.buildNumber`.
 		...(buildNumber > 0 ? { versionCode: buildNumber } : {}),
+		// The Android half of the same declaration. Expo's plugin adds it from the
+		// recorder's own manifest anyway; declared here so the capability is visible in
+		// this file rather than implied by a dependency.
+		permissions: ["RECORD_AUDIO"],
 		adaptiveIcon: {
 			foregroundImage:
 				"./design/app-icon/android/ic_launcher_foreground-432.png",
