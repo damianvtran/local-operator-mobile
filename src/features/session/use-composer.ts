@@ -218,10 +218,17 @@ export const useComposer = (input: {
 	/* The voice mic. The transcript is APPENDED (never a clobber), the returned
 	 * `path` is recorded as the dictated span's provenance, and the field is
 	 * deliberately NOT focused — a programmatic focus pops the iOS keyboard over
-	 * wherever the reader moved on to (design §2.5/U1). */
+	 * wherever the reader moved on to (design §2.5/U1).
+	 *
+	 * `sending` is passed so the machine can state that it deliberately does NOT gate
+	 * the mic on it (defect 4: dictating the follow-up while the last message is on
+	 * the wire is a normal flow, not a blocked one). The three outcome lines the
+	 * design names (U2/U3/D2) are the machine's, not this hook's — see
+	 * `stt/dictation-machine.ts`. */
 	const voice = useDictation({
 		endpoints,
 		capabilities,
+		sending,
 		onTranscript: (text, path) => {
 			const previous = draftRef.current;
 			const joined = joinDraft(previous, text);
@@ -234,23 +241,25 @@ export const useComposer = (input: {
 			});
 			commitDraft(joined);
 		},
-		onEmpty: () => {
-			/* Deliberately silent here: the empty-transcript sentence (D2), the
-			 * "Transcript added" line (U3) and the discarded line (U2) are the
-			 * follow-up PR's, per this task's scope. The draft is simply unchanged, which
-			 * is the non-clobber guarantee; nothing is announced yet. */
-		},
 		onError: (sentence) => setError(sentence),
 		onUnauthorized: (cause) => {
 			if (isRelayError(cause)) setError(receiptForError(cause).message);
 		},
 	});
+	const cancelDictationForSend = voice.cancelForSend;
 
 	/* --------------------------------------------------------------- the send */
 
 	const runSend = useCallback(
 		async (op: "prompt" | "steer") => {
 			if (endpoints === null || inFlight.current) return;
+			/* U2/defect 4: a send takes the composer, so any dictation still in flight
+			 * is aborted and discarded — a transcript landing after the message left
+			 * belongs to the NEXT message, and appending it here would be a clobber by
+			 * another name. The drop is SAID ("Voice input discarded." in the status
+			 * row) because speech the reader just gave must not vanish silently. An
+			 * explicit cancel is the reader's own discard and says nothing. */
+			cancelDictationForSend();
 			inFlight.current = true;
 			const trimmed = draftRef.current.trim();
 			const payloadImages =
@@ -367,7 +376,15 @@ export const useComposer = (input: {
 		// and `chooseOp` both read it, so a stale closure here would ask the reader
 		// "couldn't continue this conversation" about a live turn — or send a second
 		// prompt into a streaming session where a steer was meant.
-		[endpoints, sessionId, envelopeStore, setDraft, onSent, streaming],
+		[
+			endpoints,
+			sessionId,
+			envelopeStore,
+			setDraft,
+			onSent,
+			streaming,
+			cancelDictationForSend,
+		],
 	);
 
 	const send = useCallback(() => {

@@ -252,6 +252,9 @@ export const CONTROL = {
 	composerStop: "composer-stop",
 	composerAttach: "composer-attach",
 	composerMic: "composer-mic",
+	/** The recording bar's own cancel: DISCARDS the take and sends no request,
+	 *  unlike the mic, which stops and transcribes. Two outcomes, two controls. */
+	composerDictationCancel: "composer-dictation-cancel",
 	composerResume: "composer-resume",
 	composerInput: "composer-input",
 	composerRetry: "composer-retry",
@@ -326,6 +329,9 @@ export const SURFACE = {
 	composerNotice: "composer-notice",
 	composerDictationTimer: "composer-dictation-timer",
 	composerDictationStatus: "composer-dictation-status",
+	/** The composer-spanning recording bar, and the level meter inside it. */
+	composerDictationBar: "composer-dictation-bar",
+	composerDictationMeter: "composer-dictation-meter",
 	composerError: "composer-error",
 	composerRetained: "composer-retained",
 	composerReceipt: "composer-receipt",

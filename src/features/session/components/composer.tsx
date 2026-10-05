@@ -23,6 +23,7 @@ import {
 import { isSendKey } from "@/features/session/keyboard";
 import type { DictationState } from "@/features/session/use-dictation";
 import { formatDuration } from "@/stt/dictation";
+import { MIC_HINT, micLabel } from "@/stt/dictation-machine";
 import {
 	CONTROL,
 	composerAttachmentId,
@@ -31,36 +32,21 @@ import {
 	SURFACE,
 	state,
 } from "@/ui/a11y";
-import { Button, Chip, IconButton, Skeleton, Textarea } from "@/ui/components";
+import {
+	Button,
+	Chip,
+	DictationMeter,
+	IconButton,
+	Skeleton,
+	Textarea,
+} from "@/ui/components";
+import { TOUCH_FLOOR } from "@/ui/layout";
 import { CONTROL_DISABLED_INK, cx } from "@/ui/variants";
 
-/** The mic's accessible name per state. The control MORPHS, so a label that named
- *  only "record" would lie once it is the control that stops. */
-const micLabel = (phase: DictationState["phase"]): string =>
-	phase === "recording"
-		? "Stop and transcribe"
-		: phase === "transcribing"
-			? "Transcribing"
-			: "Start voice input";
-
-const MIC_HINT: Record<DictationState["phase"], string | undefined> = {
-	idle: "Record a voice message to append to the draft",
-	recording: "Stops the recording and transcribes it",
-	transcribing: undefined,
-};
-
-/** The state, in words, for the polite live region (design §2.5's `role="status"`).
- *  The mic's own label morphs, but a label change on a resting button is not
- *  announced — a reader who presses the mic gets no confirmation that recording
- *  began unless the state is in a live region (design round 1, D3). The three
- *  OUTCOME lines the design also names are the follow-up STT PR's (D4), so this
- *  carries only the live states. */
-const dictationStatus = (phase: DictationState["phase"]): string =>
-	phase === "recording"
-		? "Recording"
-		: phase === "transcribing"
-			? "Transcribing"
-			: "";
+/** The outcome lines the status row can rest on, and whether the row is showing a
+ *  LIVE dictation (a phase) rather than a settled outcome. Both are read from the
+ *  machine's own snapshot; the row is one height either way (design §2.5 D3). */
+const rowIsLive = (phase: DictationState["phase"]): boolean => phase !== "idle";
 
 /**
  * A DOM keyboard event, narrowed to what this file reads.
@@ -629,50 +615,102 @@ export const Composer = ({
 				    costs the field nothing, and the row already wraps (D28) so a 200 % scale
 				    can push it to a second line rather than squeeze the field. */}
 				{voice?.micVisible ? (
-					<View className="flex-row items-center gap-1">
-						{voice.phase === "recording" ? (
-							<Text
-								className="text-mono-sm text-ink-muted"
-								// A stable width so the row does not reflow as the clock advances.
-								style={{ minWidth: 34, textAlign: "right" }}
-								testID={SURFACE.composerDictationTimer}
-							>
-								{formatDuration(voice.seconds)}
-							</Text>
-						) : null}
-						<IconButton
-							accessibilityLabel={micLabel(voice.phase)}
-							accessibilityHint={MIC_HINT[voice.phase]}
-							disabled={voice.phase === "transcribing"}
-							outlined
-							onPress={voice.press}
-							icon={({ color, size }) =>
-								voice.phase === "recording" ? (
-									<Square color={color} size={size} />
-								) : (
-									<Mic color={color} size={size} />
-								)
-							}
-							testID={CONTROL.composerMic}
-						/>
-					</View>
+					<IconButton
+						accessibilityLabel={micLabel(voice.phase)}
+						accessibilityHint={MIC_HINT[voice.phase]}
+						disabled={voice.phase === "transcribing"}
+						outlined
+						onPress={voice.press}
+						icon={({ color, size }) =>
+							voice.phase === "recording" ? (
+								<Square color={color} size={size} />
+							) : (
+								<Mic color={color} size={size} />
+							)
+						}
+						testID={CONTROL.composerMic}
+					/>
 				) : null}
 			</View>
-			{/* D3: the recording / transcribing states are ANNOUNCED, not only shown. The
-			    design puts them in a polite `role="status"`; the timer and the morphing
-			    mic stay where the eye reads them and this node is the announcement —
-			    zero-height and clipped so it costs no layout, and never `aria-hidden`, so
-			    it stays in the accessibility tree. The field's own `label` is its
-			    accessible name, so nothing is announced twice. */}
-			{voice?.micVisible ? (
-				<View className="h-0 overflow-hidden">
+			{/* The dictation row (design §2.5): ONE line that SPANS the composer, holding
+			    one height across recording, transcribing and the three outcome states, so
+			    stopping a recording does not move the line (D3).
+
+			    It is a ROW rather than the previous button-morph alone because a 44 pt
+			    button swap did not read as "the composer is recording" — a reader had to
+			    find the morph to know. The span is the state: a full-width bar with a live
+			    level meter, the word, and the elapsed time.
+
+			    The meter is `flex-1`, so it takes whatever the word, the clock and the
+			    cancel do not: that is what makes the peaks SPAN rather than sit in a corner.
+
+			    It sits ABOVE the field, never over it: defect 1 was that the draft could
+			    not be read while a recording was live, and nothing here masks, dims or
+			    disables the field — the row is a sibling of it, and the field keeps its own
+			    height, content and editability for the whole recording. */}
+			{voice?.micVisible && (rowIsLive(voice.phase) || voice.status !== "") ? (
+				<View
+					className={cx(
+						"mb-1.5 flex-row items-center gap-2 rounded-sm border px-3",
+						rowIsLive(voice.phase)
+							? "border-danger-border bg-danger-wash"
+							: "border-hairline",
+					)}
+					// One height for every state the row can show (D3), from the touch floor
+					// rather than the content: the meter must never be what sets it.
+					style={{ minHeight: TOUCH_FLOOR }}
+					testID={SURFACE.composerDictationBar}
+				>
+					{rowIsLive(voice.phase) ? (
+						<View className="h-2 w-2 rounded-full bg-danger" aria-hidden />
+					) : null}
+					{/* The POLITE live region, now visible rather than zero-height: the design's
+					    `role="status"` is the row a blind reader hears, and the outcome lines
+					    (U2/U3/D2) belong in the same one the live states use. The field's own
+					    `label` is its accessible name, so nothing is announced twice. */}
 					<Text
 						role={ROLE.status}
 						accessibilityLiveRegion={LIVE_REGION.polite}
+						numberOfLines={1}
+						className={cx(
+							"text-body-sm",
+							rowIsLive(voice.phase) ? "text-danger" : "text-ink-muted",
+						)}
 						testID={SURFACE.composerDictationStatus}
 					>
-						{dictationStatus(voice.phase)}
+						{voice.status}
 					</Text>
+					{voice.phase === "recording" ? (
+						<DictationMeter
+							meter={voice.meter}
+							testID={SURFACE.composerDictationMeter}
+						/>
+					) : null}
+					{voice.phase === "recording" ? (
+						<Text
+							className="text-mono-sm text-ink-muted"
+							// A stable width so the row does not reflow as the clock advances.
+							style={{ minWidth: 34, textAlign: "right" }}
+							testID={SURFACE.composerDictationTimer}
+						>
+							{formatDuration(voice.seconds)}
+						</Text>
+					) : null}
+					{/* The reader's own DISCARD: it stops the take and sends no request at all,
+					    which is a different outcome from the mic (stop AND transcribe). Shown
+					    while a dictation is live only — an outcome line has nothing to cancel. */}
+					{rowIsLive(voice.phase) ? (
+						<Pressable
+							accessibilityRole={ROLE.button}
+							accessibilityLabel="Cancel voice input"
+							onPress={voice.cancel}
+							style={{ minHeight: TOUCH_FLOOR, minWidth: TOUCH_FLOOR }}
+							className="items-center justify-center"
+							testID={CONTROL.composerDictationCancel}
+						>
+							<Text className="text-body-sm text-ink-muted">Cancel</Text>
+						</Pressable>
+					) : null}
 				</View>
 			) : null}
 			{/* The receipt anchor `08-connection-loss-recovery` asserts after a send
