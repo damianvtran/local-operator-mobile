@@ -206,6 +206,10 @@ export default function Session() {
 				error: runtime.error !== null,
 				entries: runtime.entries,
 				subagents: subagents.total,
+				/* The composer's own gate, not a second reading of
+				 * `capabilities.stt`: a marker may only claim what the control
+				 * actually rendered, so both must come from one decision. */
+				micVisible: composer.voice.micVisible,
 			}),
 		[
 			projection,
@@ -213,6 +217,7 @@ export default function Session() {
 			runtime.error,
 			runtime.entries,
 			subagents.total,
+			composer.voice.micVisible,
 		],
 	);
 	/* One definition of `aborted`, used by the marker and by the resume affordance.

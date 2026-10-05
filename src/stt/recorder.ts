@@ -44,6 +44,41 @@ const URI_QUERY = /[?#]/;
 export const recorderSupported = (): boolean =>
 	Platform.OS === "ios" || Platform.OS === "android";
 
+/**
+ * The web-target test hook's vocabulary — the `lo-recorder` query value a capture
+ * cell may set.
+ *
+ * Same convention as `lo-relay`/`lo-notifications` (`features/auth/
+ * connection-provider.tsx`, `permission.ts`): a URL can steer the harness's page
+ * and never the installed app. The web build is ALWAYS `unsupported` — the page
+ * has no native recorder — so without this hook the mic has no capturable
+ * rendering at all, and the design round would be reviewing a surface it cannot
+ * see (`permission.ts`'s hook note makes the same argument for the same reason).
+ *
+ * `"supported"` stands in for a build that can record; any other value, and an
+ * ABSENT parameter, falls through to the platform fact. The hook says nothing
+ * about the RELAY — `capabilities.stt` is the other half of the gate
+ * (`stt/capability.ts`), and the harness drives both.
+ */
+export function recorderFromHook(value?: string | null): boolean | null {
+	if (value === null || value === undefined) return null;
+	return value === "supported";
+}
+
+/** The `lo-recorder` value this page carries, or `null` when it is not a web page. */
+const recorderHookValue = (): string | null => {
+	if (Platform.OS !== "web" || typeof location === "undefined") return null;
+	return new URLSearchParams(location.search).get("lo-recorder");
+};
+
+/**
+ * Whether this build can record: the platform fact, or the web capture hook that
+ * stands in for it on a harness page. The ONE reader of the hook — everything
+ * else asks this, so a second platform check cannot drift from it.
+ */
+export const canRecord = (): boolean =>
+	recorderFromHook(recorderHookValue()) ?? recorderSupported();
+
 let loaded: Promise<AudioModule | null> | null = null;
 
 /** The module, or `null` when this binary does not carry it. Cached: a dynamic

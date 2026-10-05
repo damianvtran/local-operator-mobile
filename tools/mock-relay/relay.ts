@@ -48,10 +48,12 @@ import { defaultFixturesDir, loadFixtures, textOf } from "./fixtures.ts";
 import type { ScenarioWorld, StreamSpec } from "./scenarios.ts";
 import {
 	buildScenarios,
+	capabilityBlock,
 	resolveScenarioName,
 	rowFrom,
 	scenarioNames,
 } from "./scenarios.ts";
+import { declaredLengthOf, transcribeResponse } from "./transcribe.ts";
 import {
 	authVerdict,
 	COOKIE_NAME,
@@ -724,7 +726,15 @@ export function createRelay(options: RelayOptions = {}) {
 		return {
 			sessions: rows,
 			degraded,
-			capabilities: structuredClone(fix.list("sessions-empty").capabilities),
+			/* The capability block rides BOTH transports off this one builder, so the
+			 * REST read and the SSE frame cannot describe the mic differently — and the
+			 * scenario's own `voice` override is applied here rather than to a copy of
+			 * the frame, which is what lets `voice` advertise a path and
+			 * `voice-absent` omit the key entirely. */
+			capabilities: capabilityBlock(
+				fix.list("sessions-empty").capabilities,
+				world.voice,
+			),
 			unread,
 		};
 	};
@@ -998,8 +1008,8 @@ export function createRelay(options: RelayOptions = {}) {
 
 	/* --------------------------------------------------------------- routing -- */
 
-	/** Read the whole body, refusing anything above the ceiling. */
-	const readBody = (req: IncomingMessage): Promise<string> =>
+	/** Read the whole body as BYTES, refusing anything above the ceiling. */
+	const readBodyBuffer = (req: IncomingMessage): Promise<Buffer> =>
 		new Promise((resolvePromise, reject) => {
 			const chunks: Buffer[] = [];
 			let size = 0;
@@ -1023,11 +1033,20 @@ export function createRelay(options: RelayOptions = {}) {
 				}
 				chunks.push(chunk);
 			});
-			req.on("end", () =>
-				resolvePromise(Buffer.concat(chunks).toString("utf8")),
-			);
+			req.on("end", () => resolvePromise(Buffer.concat(chunks)));
 			req.on("error", reject);
 		});
+
+	/**
+	 * The whole body as text — every route's read but the voice upload's.
+	 *
+	 * `/api/transcribe` reads BYTES (`readBodyBuffer`): its body is the recording
+	 * itself, and a `utf8` round trip would both corrupt the part and lose the
+	 * byte count the size cap is measured in. Every other route parses JSON or a
+	 * form, where the string view is what the relay's own reader hands its parser.
+	 */
+	const readBody = async (req: IncomingMessage): Promise<string> =>
+		(await readBodyBuffer(req)).toString("utf8");
 
 	const handleCommand = (
 		req: IncomingMessage,
@@ -1324,8 +1343,16 @@ export function createRelay(options: RelayOptions = {}) {
 
 		// 1. The gateway's body ceiling, before anything is routed.
 		let rawBody: string | undefined;
+		let rawBytes: Buffer | undefined;
 		try {
-			if (mutation) rawBody = await readBody(req);
+			if (mutation) {
+				/* The voice upload is the ONE route whose body is not text: the `audio`
+				 * part IS the recording, and decoding it through `utf8` would corrupt
+				 * the bytes the mime and size checks read. */
+				if (pathname === "/api/transcribe")
+					rawBytes = await readBodyBuffer(req);
+				else rawBody = await readBody(req);
+			}
 		} catch (error) {
 			// The ceiling is signalled by a marker on the thrown error, so the marker
 			// is read off the caught value rather than assumed present.
@@ -1723,16 +1750,21 @@ export function createRelay(options: RelayOptions = {}) {
 		}
 
 		if (pathname === "/api/transcribe" && method === "POST") {
-			const contentType = String(req.headers["content-type"] ?? "");
-			if (contentType.includes("application/json")) {
-				sendFixture(res, "transcribe-bad-mime");
-				return;
-			}
-			if (!contentType.includes("multipart")) {
-				sendFixture(res, "transcribe-missing-audio");
-				return;
-			}
-			sendJson(res, 200, { text: "", degraded: ["stt"] });
+			/* The contract's whole table, in the daemon's own order. `transcribe.ts`
+			 * owns the mapping, so this route is only the wire: read the declared
+			 * length, the bytes and the media type off the request, hand them the
+			 * ONE availability read the pinned world advertises, and serve the
+			 * captured fixture when the answer has one (the corpus is the source of
+			 * a sentence) or the built body otherwise. */
+			const result = transcribeResponse({
+				declaredLength: declaredLengthOf(req.headers["content-length"]),
+				body: rawBytes ?? Buffer.alloc(0),
+				contentType: String(req.headers["content-type"] ?? ""),
+				available: world.voice?.capability?.available === true,
+				answer: world.voice?.answer,
+			});
+			if (result.fixture !== undefined) sendFixture(res, result.fixture);
+			else sendJson(res, result.status, result.body);
 			return;
 		}
 

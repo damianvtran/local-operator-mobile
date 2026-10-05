@@ -68,6 +68,11 @@ export interface SessionStateFacts {
 	subagents: number;
 	/** How many transcript rows the projection has. */
 	entries: number;
+	/** The composer renders its voice mic: the relay advertised `capabilities.stt`
+	 *  AND this build can record. Read from the composer's own gate rather than
+	 *  recomputed here, so the marker and the control cannot disagree — the
+	 *  `richRows` lesson applied to an affordance. */
+	voice: boolean;
 }
 
 /** The markers' own booleans: one per declared state, named as the marker is. */
@@ -85,6 +90,7 @@ export interface SessionStateFlags {
 	subagents: boolean;
 	populated: boolean;
 	idle: boolean;
+	voice: boolean;
 }
 
 /** No state is affirmed: nothing has arrived yet. */
@@ -102,6 +108,7 @@ const NOTHING: SessionStateFlags = {
 	subagents: false,
 	populated: false,
 	idle: false,
+	voice: false,
 };
 
 /** What the session route knows, which is all this derivation reads. */
@@ -114,6 +121,9 @@ export interface SessionStateInput {
 	entries: TranscriptEntry[];
 	/** How many subagents the roster reports. */
 	subagents: number;
+	/** Whether the composer renders its mic — `useDictation().micVisible`, which is
+	 *  the relay's `capabilities.stt` AND this build's own recorder gate. */
+	micVisible: boolean;
 }
 
 /**
@@ -154,6 +164,7 @@ export const sessionFactsFrom = (
 	pending: pendingKindOf(input.projection),
 	subagents: input.subagents,
 	entries: input.entries.length,
+	voice: input.micVisible,
 });
 
 /** The card the reader is being asked to answer, or `null`.
@@ -196,11 +207,15 @@ export const sessionStateFlags = (
 		subagents: facts.subagents > 0,
 		populated: facts.entries > 0,
 		idle: false,
+		voice: facts.voice,
 	};
 	/* The fallback, so a connected session always affirms SOMETHING: a screen with a
-	 * root and no state marker is the case the affirmative rule exists to refuse. */
+	 * root and no state marker is the case the affirmative rule exists to refuse.
+	 * `voice` is deliberately NOT a term of it: it describes an AFFORDANCE rather
+	 * than the session, so a blank connected session still says `idle` (which is
+	 * what the settled-empty look is) and its frame carries both markers. */
 	flags.idle = !Object.entries(flags).some(
-		([key, value]) => key !== "idle" && value,
+		([key, value]) => key !== "idle" && key !== "voice" && value,
 	);
 	return flags;
 };

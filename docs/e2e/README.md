@@ -180,6 +180,18 @@ relay-backed cell renders "The relay could not be reached". That run is green,
 its frames exist, and none of them is evidence, which is why the default is now
 the served origin. `--seed-route` / `--seed-password` remain as overrides.
 
+A harness page also carries `lo-recorder=supported`, merged by
+`tools/lib/readiness.ts`'s `captureHookQuery()` from BOTH the capture and the
+audit, so the two render one screen. It is not a relay seed: the mic's gate has
+two halves, and while the RELAY's half is `capabilities.stt` (which a scenario
+drives), the BUILD's half is `recorderSupported()` — a hard `false` on the web
+target, because capture needs a native recorder. Without the hook the
+mic-visible state (`S5/voice`) has no rendering a reviewer can look at and fails
+readiness for a control the page can never draw; with it, the cell renders the
+mic when — and only when — a scenario advertises a voice path. It is inert for
+every other cell, and no installed build reads it (`stt/recorder.ts`'s
+`recorderFromHook`).
+
 The seed is **recorded, not re-typed**. `meta.seed` in the manifest holds what the run
 applied (`applied`, `password`, `route`, `origin`), and `pnpm audit:run` re-applies it when
 it re-drives the same cells — re-deriving a `route` that was the capture's own origin at the

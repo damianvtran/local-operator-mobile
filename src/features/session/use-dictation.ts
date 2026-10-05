@@ -33,7 +33,6 @@ import {
 	discardRecording,
 	type MicPermission,
 	readMicPermission,
-	recorderSupported,
 	requestMicPermission,
 	startRecording,
 } from "@/stt/recorder";
@@ -83,7 +82,10 @@ export const useDictation = (input: DictationInput): DictationState => {
 	} = input;
 
 	const micVisible = useMemo(
-		() => micGate(capabilities, recorderSupported()),
+		/* The gate's own default is `stt/recorder.ts`'s `canRecord()` — the
+		 * platform fact, or the web capture hook a harness page carries — so this
+		 * reader does not spell the platform check a second time. */
+		() => micGate(capabilities),
 		[capabilities],
 	);
 

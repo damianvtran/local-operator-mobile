@@ -662,6 +662,14 @@ export const STATE_MARKER = {
 		"pending-approval": "session-pending-approval",
 		"pending-ask": "session-pending-ask",
 		subagents: "session-subagents",
+		/* The composer's voice mic. Present in ONLY this state: the composer renders
+		 * the control iff `capabilities.stt.available` AND the build can record
+		 * (`stt/capability.ts`), so a session frame either carries `composer-mic` or
+		 * does not — which is exactly the claim the cell `S5/voice` makes. The id is
+		 * CONTROL's own (a control a flow may also press), named here rather than
+		 * re-declared: the marker table MAPS a state onto a declared id, which is
+		 * the one way this table is allowed to reuse one. */
+		voice: CONTROL.composerMic,
 	},
 	composer: {
 		idle: "composer-idle",

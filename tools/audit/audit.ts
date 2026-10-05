@@ -60,6 +60,7 @@ import { sleep } from "../lib/cdp.ts";
 import { launchChrome } from "../lib/chrome.ts";
 import { freshPage, withDeadline } from "../lib/page.ts";
 import {
+	captureHookQuery,
 	reDriveIssues,
 	reDriveMismatch,
 	STATE_POLL_MS,
@@ -476,6 +477,12 @@ function cellQuery(record: AuditRecord, seed: ResolvedSeed): string {
 		)) {
 			query.set(key, value);
 		}
+	}
+	// The web-only hooks every harness page carries (`lo-recorder`): the audit
+	// re-renders the SAME page the capture did, so a cell whose markers depend on
+	// one of these would otherwise pass in the capture and fail here.
+	for (const [key, value] of new URLSearchParams(captureHookQuery())) {
+		query.set(key, value);
 	}
 	return query.toString();
 }

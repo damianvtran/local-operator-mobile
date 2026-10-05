@@ -9,16 +9,16 @@
  *   not to error). The schema already defaults the block, but a caller may pass a
  *   bare `{}` — the list store's initial snapshot — so this reads absence again
  *   rather than trusting a shape;
- * - this build can actually record (the native audio module is present; see
- *   `stt/recorder.ts`). A mic that appears on a build that cannot record is the
- *   "control that cannot work" pattern, and on the web target it is the only
- *   possible outcome.
+ * - this build can actually record (the native audio module is present, or a
+ *   harness page carries the web capture hook; see `stt/recorder.ts`). A mic
+ *   that appears on a build that cannot record is the "control that cannot
+ *   work" pattern, and on the web target it is the only possible outcome.
  *
  * No React, no network.
  */
 
 import type { Capabilities, SttCapability } from "@/contracts";
-import { recorderSupported } from "@/stt/recorder";
+import { canRecord as buildCanRecord } from "@/stt/recorder";
 
 /** What an absent `capabilities.stt` block reads as. The same value the relay
  *  would send for "no transcription backend", so every downstream reader can use
@@ -43,10 +43,13 @@ export const sttAvailable = (
 
 /**
  * Whether to render the mic. `canRecord` is injectable so a test can assert the
- * rule without a native host; at the call site it defaults to what this build
- * actually supports.
+ * rule without a native host; at the call site it defaults to
+ * `stt/recorder.ts`'s `canRecord()`, which is the platform fact OR the web
+ * capture hook (`lo-recorder`) that stands in for it on a harness page — read
+ * there and not here, so a second platform check cannot drift from the
+ * recorder's own.
  */
 export const micVisible = (
 	capabilities: Capabilities | null | undefined,
-	canRecord: boolean = recorderSupported(),
+	canRecord: boolean = buildCanRecord(),
 ): boolean => sttAvailable(capabilities) && canRecord;

@@ -12,12 +12,14 @@
 import { describe, expect, it } from "vitest";
 
 import {
+	canRecord,
 	discardRecording,
 	extensionOf,
 	fileNameOf,
 	loadRecorder,
 	mimeForExtension,
 	readMicPermission,
+	recorderFromHook,
 	recorderSupported,
 	startRecording,
 } from "@/stt/recorder";
@@ -47,6 +49,23 @@ describe("mime mapping", () => {
 describe("degradation without the native module", () => {
 	it("reports the platform as unable to record", () => {
 		expect(recorderSupported()).toBe(false);
+	});
+
+	it("keeps the capture hook from changing an installed build's answer", () => {
+		/* No `lo-recorder` on this host, so the hook falls through to the platform
+		 * fact — the property that keeps a URL from steering the shipped app. */
+		expect(recorderFromHook(null)).toBeNull();
+		expect(recorderFromHook(undefined)).toBeNull();
+		expect(canRecord()).toBe(false);
+	});
+
+	it("reads the capture hook's vocabulary", () => {
+		/* The one value that stands in for a recorder; anything else is a refusal,
+		 * so a typo in a cell's URL hides the mic rather than faking a frame. */
+		expect(recorderFromHook("supported")).toBe(true);
+		expect(recorderFromHook("unsupported")).toBe(false);
+		expect(recorderFromHook("yes")).toBe(false);
+		expect(recorderFromHook("true")).toBe(false);
 	});
 
 	it("loads no module and asks for no permission", async () => {

@@ -2802,6 +2802,11 @@ async function main() {
 			"pending-ask",
 			"rich-rows",
 			"subagents",
+			// The composer's voice mic, whose marker the app declares on the control the
+			// composer renders (`session/voice` → `composer-mic`). Named here so a rename
+			// on either side fails this run rather than leaving a cell that can never be
+			// measured.
+			"voice",
 		];
 		const unknownMarkers: string[] = [];
 		for (const screen of Object.keys(SCREEN_MARKER_SUBJECT))

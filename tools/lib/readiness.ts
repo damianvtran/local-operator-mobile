@@ -583,3 +583,27 @@ export function seedQuery(
 	}
 	return params.toString();
 }
+
+/**
+ * The web-only hooks EVERY harness page carries, beside the relay seed.
+ *
+ * Today that is `lo-recorder=supported`, and it exists because the two halves
+ * of the mic's gate are answered by different things: the RELAY advertises
+ * voice (`capabilities.stt`, which a scenario drives) while the BUILD must be
+ * able to record, and the web target's `recorderSupported()` is a hard `false`
+ * (`src/stt/recorder.ts`) — capture needs a native recorder. The design round
+ * audits the web frames (`docs/e2e/ci-notes.md`), so without this hook the
+ * mic-visible state has no rendering a reviewer can look at, and the cell would
+ * fail readiness for a marker the page can never draw.
+ *
+ * Unconditional, and that is deliberate rather than lazy: it is a statement
+ * about the PAGE (this is a harness page, not a hand-run web build), the same
+ * kind `lo-theme`/`lo-insets` make, and it is inert for every cell whose relay
+ * does not advertise `stt` — which is every cell but the voice scenario's.
+ * Both tools that build a page URL merge it through THIS function, because a
+ * second spelling is how the capture and the audit render different screens
+ * (the drift `seedQuery`'s own note describes).
+ */
+export function captureHookQuery(): string {
+	return new URLSearchParams({ "lo-recorder": "supported" }).toString();
+}
