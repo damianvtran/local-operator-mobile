@@ -1763,8 +1763,8 @@ async function main() {
 		// because `exit != 0` has another way to be satisfied: `inert-text-scale` is three
 		// elements, so it also trips the capture's blank-frame check ("only 3 elements
 		// mounted"). The companion assertion below — the one that greps for the guard's
-		// own sentence — is what a silent scale guard cannot pass. The mixed fixture is
-		// given six elements precisely so its pair is not in that position.
+		// own sentence — is what a silent scale guard cannot pass. Every other fixture here
+		// is given at least six elements precisely so its pair is not in that position.
 		const inert = run(join(WORKTREE, "e2e", "fixtures", "inert-text-scale"));
 		check(
 			"a page whose text ignores the root font size FAILS the guard",
@@ -1796,6 +1796,50 @@ async function main() {
 		check(
 			"and the unscaled role is the one named",
 			/the 20px role \(1 node\(s\)\) did not scale/.test(mixed.output),
+			true,
+		);
+
+		// The PINNED-ROOT case, and the guard's own precondition: `!important` on `html`
+		// outranks the inline root the harness writes, so both frames render at 100 % and the
+		// old median caught it (medians 96/96 = 1.00x, under the 1.9 bar) where a per-role
+		// comparison judged against each frame's OWN root calls it live. The guard asserts
+		// the 200 % root is the declared factor before it compares a size, and this is what
+		// proves that assertion is there.
+		const pinned = run(
+			join(WORKTREE, "e2e", "fixtures", "root-pinned-text-scale"),
+		);
+		check(
+			"a page that pins its root font size FAILS the guard",
+			pinned.status !== 0,
+			true,
+			`exit ${pinned.status}`,
+		);
+		check(
+			"and the reason names the root the harness could not move",
+			/the harness's root font size did not take effect: the 200% frame renders with a root of 16px against 16px/.test(
+				pinned.output,
+			),
+			true,
+		);
+
+		// The HIDDEN-node case: every visible role scales, and the page also carries a
+		// `display:none` div at 22px plus an inline `<script>` (whose source text is a text
+		// child of a display:none element). Both report a font size and neither follows the
+		// root, so a guard that reads `body *` invents a type role and FAILS this page —
+		// measured at exit 1 with `the 22px role (1 node(s)) did not scale` when the
+		// rendered-node filter is removed. Passing here is the assertion that matters.
+		const hidden = run(
+			join(WORKTREE, "e2e", "fixtures", "hidden-role-text-scale"),
+		);
+		check(
+			"a page whose only non-scaling text is never painted still PASSES",
+			hidden.status,
+			0,
+			`exit ${hidden.status}`,
+		);
+		check(
+			"and no role is invented for the hidden 22px node",
+			!/22px role/.test(hidden.output),
 			true,
 		);
 

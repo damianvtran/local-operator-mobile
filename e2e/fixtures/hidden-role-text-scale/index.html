@@ -1,0 +1,47 @@
+<!doctype html>
+<!--
+  A page whose EVERY VISIBLE type role scales exactly — while it also carries two nodes
+  that never paint: a `display:none` div at 22px, and an inline `<script>` whose source
+  text is a text child of a `display:none` element.
+
+  Both report a computed font size, and neither can follow the scale, so a guard that
+  reads `body *` counts a type role that is not on the screen. At 22px (1.375rem) that
+  role's 200 % partner is 0.6875rem — exactly the half-rem signature of a frozen node —
+  so the guard's own test fires on text no screenshot has ever shown, and this page
+  FAILS with the 22px role named. Measured, with the rendered-node filter removed:
+  `the 22px role (1 node(s)) did not scale: the 200% frame still renders 22px text
+  where 44px was expected` (exit 1).
+
+  So this is a PASS control for the other direction of the same question: the guard must
+  read the text that RENDERS, the way the cell-median reading always has. A fixture that
+  fails for the wrong reason is how a suite teaches people to stop reading it.
+-->
+<html lang="en">
+<head><meta charset="utf-8"><title>Hidden type roles</title>
+<style>
+	/* The canvas follows the resolved theme, so the only possible failure on this page is
+	   a type role the guard invented. */
+	:root{--canvas:#f2ede3;--ink:#211e18}
+	:root[data-lo-theme="dark"]{--canvas:#22201c;--ink:#f2ede3}
+	body{margin:0;padding:16px;background:var(--canvas);color:var(--ink);font-family:system-ui;font-size:1rem;line-height:1.5}
+	/* Visible roles: 1.25rem and 1rem, each doubles with the root. */
+	h1{font-size:1.25rem;margin:0 0 12px}
+	p{font-size:1rem;margin:0 0 8px}
+	/* NEVER PAINTED — and 22px so it coincides with no visible role, which is what makes
+	   it a false FAIL rather than the masked coincidence the docs describe. */
+	.gone{display:none;font-size:22px}
+</style></head>
+<body>
+<h1>Hidden type roles</h1>
+<p>Every visible role on this page doubles with the root: the heading is 1.25rem and the
+   paragraphs are 1rem.</p>
+<p>The div below is display:none, so no screenshot has ever shown it, and it keeps a fixed
+   22px that cannot follow the scale — the shape of an inline script's source text too,
+   which is a text child of a display:none element.</p>
+<p>A third paragraph, so the page clears the capture's blank-frame floor and a non-zero exit
+   can only mean a type role was judged.</p>
+<p>A fourth paragraph, so the scaling majority is the same shape as the other probes.</p>
+<div class="gone">never painted, 22px</div>
+<script>window.__probe = 1;</script>
+</body>
+</html>

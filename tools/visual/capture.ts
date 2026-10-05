@@ -2227,6 +2227,14 @@ export async function runCapture(options: CaptureOptions) {
  * same text at 100 %, PER TYPE ROLE, and fails the cell by name when a role did
  * not grow by the factor the cell declares.
  *
+ * TWO PRECONDITIONS, CHECKED BEFORE ANY SIZE IS COMPARED, because every size below is a
+ * fraction of the frame's OWN root: the 200 % root must be the declared factor's
+ * multiple of the 100 % root (a page pinning `font-size: … !important` renders both
+ * frames at 100 %, and judged against itself that pair reads live — which is the defeat
+ * this guard exists to catch), and only text that RENDERS counts as a role (`display:
+ * none`, and an inline `<script>`'s source text, report a font size without painting
+ * one). Both are asserted rather than assumed — see `judgeTextScale`.
+ *
  * WHY PER ROLE AND NOT A MEDIAN OVER THE CELL.
  *
  * The first version reduced a cell to the median rendered text box at each scale
@@ -2280,7 +2288,13 @@ function verifyTextScale(records: CaptureRecord[]) {
 		// missing coverage rather than as passed.
 		if (at100?.histogram.size && at200?.histogram.size) {
 			perCell.push(
-				judgeTextScale(key, at100.histogram, at200.histogram, at100.rootPx),
+				judgeTextScale(
+					key,
+					at100.histogram,
+					at200.histogram,
+					at100.rootPx,
+					at200.rootPx,
+				),
 			);
 		}
 	}
@@ -2354,8 +2368,27 @@ function judgeTextScale(
 	at100: Map<number, number>,
 	at200: Map<number, number>,
 	rootPx100: number,
+	rootPx200: number,
 ) {
 	const px = (rem: number) => Math.round(rem * rootPx100 * 100) / 100;
+	// THE PRECONDITION, CHECKED FIRST, because everything below divides each frame by ITS
+	// OWN root. That is right only while the harness's scale input actually reached the
+	// page: a page that pins its root (`html { font-size: 16px !important }` beats the
+	// inline root the harness writes) renders BOTH frames at 100 %, and a frame judged
+	// against itself is trivially "every role grew". That is the exact defeat this guard
+	// exists to catch — and the median it replaced did catch it (1.00x, FAIL) — so the
+	// root relationship is asserted here rather than assumed. A pair whose 200 % root is
+	// not the declared factor cannot answer a large-text question, whatever its sizes say.
+	const expectedRoot200 = rootPx100 * 2; // the declared % the guard pairs: 100 then 200
+	if (Math.abs(rootPx200 - expectedRoot200) > 0.5)
+		return {
+			key,
+			live: false,
+			problems: [
+				`the harness's root font size did not take effect: the 200% frame renders with a root of ${rootPx200}px against ${rootPx100}px at 100% (expecting ${expectedRoot200}px), so both frames were rendered at the same scale and this pair cannot answer a large-text question`,
+			],
+			notes: [],
+		};
 	// The whole page frozen: the 200 % frame renders the 100 % frame's sizes exactly.
 	// Reported as that single fact rather than as per-role diffs, which is both
 	// truer and what a reader wants first.

@@ -1,0 +1,61 @@
+<!doctype html>
+<!--
+  A page that PINS its root font size, so the harness cannot move it.
+
+  The guard drives the scale by setting the root font size (16 px at 100 %, 32 px at
+  200 %). A stylesheet declaration with `!important` outranks that inline assignment,
+  so this page renders the 100 % and the 200 % frame at the SAME scale and the two
+  frames come out byte-identical — the exact defeat the guard exists to catch.
+
+  WHY IT NEEDS ITS OWN FIXTURE. Judged against itself, every role "grows by the
+  factor": the guard divides each frame by that frame's OWN root, so a page that never
+  moved is trivially live. The old median did catch this (1.00x, under the 1.9 bar), so
+  the per-role rewrite must not lose it — the guard therefore asserts that the 200 %
+  root IS the declared factor before it compares any size.
+
+  `verify` captures this directory and requires the guard to FAIL it, naming the root
+  the harness could not move; `inert-text-scale` is the all-px case, `px-role-text-scale`
+  the one-frozen-role case and `audit-canary` the all-rem case. Together the four prove
+  the guard discriminates on each way a cell can fail to answer a large-text question,
+  and that it still passes a page whose every role scales.
+
+  ENOUGH ELEMENTS ON PURPOSE, for the same reason as `px-role-text-scale`: a three-element
+  page also trips the capture's blank-frame check, so a non-zero exit would prove nothing.
+  Six elements clear it and leave the root assertion as the only failure here.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A root the harness cannot move</title>
+<style>
+	/* The pin. This is the fixture's whole point: `!important` here outranks the inline
+	   `documentElement.style.fontSize` the harness writes before each capture, so both
+	   frames are rendered at 16 px and no role can grow. */
+	html { font-size: 16px !important; }
+	/* The canvas follows the resolved theme, so the root pin stays the ONLY failure this
+	   page produces — a fixture that also failed the theme check would be ambiguous about
+	   which guard fired. */
+	:root { --canvas: #f2ede3; --ink: #211e18; }
+	:root[data-lo-theme="dark"] { --canvas: #22201c; --ink: #f2ede3; }
+	body { margin: 0; padding: 16px; background: var(--canvas); color: var(--ink); font-family: system-ui; font-size: 1rem; line-height: 1.5; }
+	/* rem on purpose: this type WOULD follow the root if the root were allowed to move. */
+	p { font-size: 1rem; margin: 0 0 8px; }
+	h1 { font-size: 1.25rem; margin: 0 0 12px; }
+</style>
+</head>
+<body>
+<h1>A root the harness cannot move</h1>
+<p>Every size on this page is in rem, so it doubles when the root font size doubles — and the
+   root cannot double here, because the stylesheet pins it with `!important`.</p>
+<p>The harness sets the root inline before each capture, once at 16 px and once at 32 px, and
+   both captures come back identical. That is what makes this page the control for the guard's
+   own precondition rather than for any one role.</p>
+<p>Without the root assertion the per-role comparison divides each frame by that frame's own
+   root and reports the pair live, which is how a guard that exists to catch non-scaling text
+   would pass text that never scaled.</p>
+<p>A fourth paragraph, so the scaling majority is the same shape as the mixed fixture's and the
+   only difference between the two pages is the pin above.</p>
+<p>A last row, so the body has six elements and the frame is plainly not blank.</p>
+</body>
+</html>

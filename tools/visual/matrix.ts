@@ -822,8 +822,8 @@ export const MEASURE_PROBE = `
   const heights = textNodes.slice(0, 400).map((el) => el.getBoundingClientRect().height).filter((h) => h > 0);
   heights.sort((a, b) => a - b);
   const medianTextHeight = heights.length ? heights[Math.floor(heights.length / 2)] : 0;
-  // The size of every text node, grouped by size, so the scale guard can judge each
-  // TYPE ROLE against its own 100% counterpart instead of one cell median.
+  // The size of every RENDERED text node, grouped by size, so the scale guard can judge
+  // each TYPE ROLE against its own 100% counterpart instead of one cell median.
   //
   // WHY THE MEDIAN ABOVE IS NO LONGER ENOUGH: a median over the whole cell moves when
   // the cell's COMPOSITION changes, not only when its scaling does. Giving a node its
@@ -832,10 +832,18 @@ export const MEASURE_PROBE = `
   // histogram instead; medianTextHeight stays because the report prints it, not
   // because the guard trusts it.
   //
+  // RENDERED NODES ONLY — the same test the median above already applies (height > 0). A
+  // node display:none hides still reports a computed font size, and an inline <script> in
+  // the body IS such a node (its source text is a text child). Counting either invents a
+  // type role that paints nothing and cannot scale, which FAILS a page whose every visible
+  // role scaled exactly — a false verdict, and the reason a fixture must not carry one.
+  // Reading the box is how the two measurements agree about which text is on the page.
+  //
   // Reported as a measurement (a size in CSS px and a count), never a verdict -- the
   // role decision lives in tools/visual/capture.ts verifyTextScale.
   const roleSizes = new Map();
   for (const el of textNodes) {
+    if (el.getBoundingClientRect().height <= 0) continue;
     const size = Number.parseFloat(getComputedStyle(el).fontSize);
     if (!Number.isFinite(size) || size <= 0) continue;
     roleSizes.set(size, (roleSizes.get(size) || 0) + 1);

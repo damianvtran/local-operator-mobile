@@ -863,6 +863,30 @@ cell cannot answer a large-text question
 | `meta.textScaleCheck.notedPairs` | how many pairs carry a note, so a run says it out loud instead of burying it in `perCell` |
 | `records[].measurements.textRoleSizes` / `rootFontSizePx` | the reading the judgement is made on: every distinct text size and its node count, and the root font size they are relative to |
 
+**The root is checked before any size is.** Every size above is read as a fraction of
+the frame's OWN root font size, which is what makes the comparison composition-
+insensitive — and that is only sound while the harness's scale input actually reached
+the page. A page that pins its root (`html { font-size: 16px !important }` outranks the
+inline property the probe writes) renders both frames at 100 %, and judged against
+itself such a pair is trivially "every role grew". The guard therefore asserts that the
+200 % root is the factor's multiple of the 100 % root *before* it compares anything, and
+fails the pair by name when it is not: `… the harness's root font size did not take
+effect: the 200% frame renders with a root of 16px against 16px at 100% (expecting
+32px), so both frames were rendered at the same scale and this pair cannot answer a
+large-text question`. That is not hypothetical — those two frames' medians are equal
+(96 px / 96 px, **1.00×** on the `root-pinned-text-scale` fixture), so the median this
+replaced failed the pair while a per-role comparison on its own would have passed it.
+
+**Only text that renders is a type role.** A `display:none` node — and an inline
+`<script>` in the body is one, its source text being a text child — still reports a
+computed `font-size` and never follows the root. Counting it invents a type role that
+paints nothing: on the `hidden-role-text-scale` fixture a hidden 22 px node (1.375rem)
+has the half-rem 200 % partner of a frozen role, so a guard reading `body *` fails a page
+whose every visible role scales exactly 2× (measured, with the filter removed: `the 22px
+role (1 node(s)) did not scale: the 200% frame still renders 22px text where 44px was
+expected`, exit 1). The guard reads the rendered set — the same `height > 0` the median
+reading always applied — so the two cannot disagree about which text is on the page.
+
 **Why per role and not a median.** The first version reduced a cell to the median
 rendered text box at each scale and required the ratio to clear 1.9×. A median is a
 property of the cell's *composition* as much as of its scaling: when a node that
@@ -900,12 +924,24 @@ beside rem paragraphs, a wholly px page — not a cell in which one node of a sc
 stayed put. That is why `136/136 live` on a tier whose notes name frozen text in 70 % of
 pairs is not a contradiction, and must not be read as "there is no frozen text here".
 
-Both directions are asserted in `verify` (`pnpm e2e:relay`), now across three
-fixtures: `e2e/fixtures/inert-text-scale/` (all `px`, the whole page frozen) and
-`e2e/fixtures/px-role-text-scale/` (one `px` role among scaling ones — the case a
-median cannot see) must FAIL by name, and the rem-based `e2e/fixtures/audit-canary/`
-must pass. None of the three is evidence about the app — together they prove the
-*guard* discriminates.
+The third branch — a node present at BOTH scales at a size the factor does not produce —
+is a note as well, so a role can partly follow the scale and still not fail the cell. It
+does not occur on the app's own tiers: every one of those 96 notes is the frozen/
+coinciding kind, and there is no `calc()`, `clamp()` or viewport-unit font size anywhere
+in `app/`, `src/` or `design/`. A probe carrying `calc(10px + 0.5rem)` measures **18 px →
+26 px (1.444×)** and is named, not failed. That is the widest reading of a live verdict,
+and it is the one a `U-04` signer should work from.
+
+Both directions are asserted in `verify` (`pnpm e2e:relay`), now across five fixtures.
+Three must **FAIL by name**: `e2e/fixtures/inert-text-scale/` (all `px`, the whole page
+frozen), `e2e/fixtures/px-role-text-scale/` (one `px` role among scaling ones — the case
+a median cannot see, and the one the old median called live at 4.000×) and
+`e2e/fixtures/root-pinned-text-scale/` (a root the harness cannot move, the guard's own
+precondition). Two must **pass**: the rem-based `e2e/fixtures/audit-canary/`, and
+`e2e/fixtures/hidden-role-text-scale/`, whose every visible role scales while it also
+carries a never-painted 22 px node — the control for reading rendered text only. None of
+the five is evidence about the app — together they prove the *guard* discriminates, on
+each way a cell can fail to answer a large-text question and on the way it must not.
 
 ### The U-08 overlap rule, and what it deliberately does not report
 

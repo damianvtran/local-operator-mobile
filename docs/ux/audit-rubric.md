@@ -60,6 +60,14 @@ role scaled — so a text node that gained the type role it was missing made the
 fail for improving (measured: `S15/loading__tablet-landscape__200` fell to a 1.852×
 median with all fifteen nodes scaling exactly 2×).
 
+**Two things are checked before any role is compared.** The 200 % frame's root font size
+must be the factor's multiple of the 100 % frame's: a page that pins its root (`font-size:
+… !important` outranks the inline property the harness writes) renders both frames at
+100 %, and a comparison made against each frame's own root would call that live. And a
+role is only counted for text that RENDERS — a `display:none` node (an inline `<script>`'s
+source text is one) reports a font size without ever painting, so counting it invents a
+role that cannot scale and fails a page whose every visible role doubled.
+
 **A note in `scaleNotes` is a third answer, and it is the common one.** Three different
 things leave a 100 % role without a scaled counterpart — a node that did not move with
 the root font size, a node a responsive layout drops at 200 %, and a node resized to a
@@ -67,8 +75,12 @@ size the factor does not produce (`calc()`, `clamp()`, an `em` under a fixed-px 
 — and two frames cannot tell them apart, so the guard names the role and does not fail
 the cell. `U-04` is therefore signed per ROLE, not per node: **a role present at both
 scales whose nodes only partly moved is reported as a note, so a live verdict says every
-role grew, never that every text node did.** On the harness's own `ci` capture that note
-fires on **96 of 136 pairs** (all naming a 14 px node) while all 136 pairs read live — a
+role grew, never that every text node did.** That third case has a measured size: a probe
+carrying `calc(10px + 0.5rem)` renders **18 px → 26 px (1.444×)**, and the guard names it
+rather than failing the cell. It does not occur on the app's own tiers — no `calc()`,
+`clamp()` or viewport-unit font size exists in `app/`, `src/` or `design/`, and every note
+on the `ci` capture is the frozen/coinciding kind. On that same capture the note fires on
+**96 of 136 pairs** while all 136 pairs read live — a
 live tier run is not evidence that no text is frozen. The measurement, its manifest
 fields and its controls are in `docs/e2e/README.md` §"How text scale is actually
 driven".
