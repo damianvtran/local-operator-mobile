@@ -29,30 +29,6 @@ const TRAILING_WHITESPACE = /\s$/;
 /** The same bound in the unit expo-audio's `record({ forDuration })` takes. */
 export const MAX_RECORDING_SECONDS = MAX_RECORDING_MS / 1000;
 
-/**
- * First supported wins. `audio/mp4` leads because iOS records AAC/mp4
- * (`expo-audio`'s m4a preset); the rest follow the codecs Android and the web
- * target prefer. `""` means "platform default", which the server's allowlist
- * still has to recognise — hence the wide server allowlist.
- */
-export const RECORDER_MIME_CANDIDATES = [
-	"audio/mp4",
-	"audio/webm;codecs=opus",
-	"audio/webm",
-	"audio/ogg;codecs=opus",
-	"audio/mpeg",
-	"audio/wav",
-] as const;
-
-export function pickRecorderMime(
-	isSupported: (mime: string) => boolean,
-): string {
-	for (const mime of RECORDER_MIME_CANDIDATES) {
-		if (isSupported(mime)) return mime;
-	}
-	return "";
-}
-
 /** `m:ss` for the recording status row. */
 export function formatDuration(seconds: number): string {
 	const safe = Math.max(0, Math.floor(seconds));

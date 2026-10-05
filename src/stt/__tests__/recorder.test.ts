@@ -16,6 +16,7 @@ import {
 	discardRecording,
 	extensionOf,
 	fileNameOf,
+	finishActiveRecording,
 	loadRecorder,
 	mimeForExtension,
 	readMicPermission,
@@ -83,5 +84,59 @@ describe("degradation without the native module", () => {
 				durationMs: 0,
 			}),
 		).resolves.toBeUndefined();
+	});
+});
+
+/** A recorder stand-in: the native `AudioRecorder` is not loadable here, and this
+ *  is the shape `finishActiveRecording` reads. */
+const recorderStub = (uri: string | null, stop: () => Promise<void>) => ({
+	stop,
+	uri,
+	getStatus: () => ({ durationMillis: 0 }),
+});
+
+describe("stopping a recording", () => {
+	it("discards the file a THROWING stop already wrote, instead of leaving it on disk", async () => {
+		/* The backgrounded `forDuration` auto-stop followed by our own re-stop lands
+		 * here: `stop()` rejects while the native file exists. Reporting that as an
+		 * empty take without discarding would make the phone a retention point on an
+		 * arm the design says must discard (§2.5; agent review round 1, m1). */
+		const discarded: string[] = [];
+		const result = await finishActiveRecording(
+			recorderStub("file:///cache/recording.m4a", async () => {
+				throw new Error("native stop failed");
+			}),
+			async (recording) => {
+				discarded.push(recording.uri);
+			},
+		);
+		expect(result).toBeNull();
+		expect(discarded).toEqual(["file:///cache/recording.m4a"]);
+	});
+
+	it("discards nothing, and reports an empty take, when a throwing stop wrote no file", async () => {
+		const discarded: string[] = [];
+		const result = await finishActiveRecording(
+			recorderStub(null, async () => {
+				throw new Error("native stop failed");
+			}),
+			async (recording) => {
+				discarded.push(recording.uri);
+			},
+		);
+		expect(result).toBeNull();
+		expect(discarded).toEqual([]);
+	});
+
+	it("returns the written file, and discards nothing, on a normal stop", async () => {
+		const result = await finishActiveRecording(
+			recorderStub("file:///cache/recording.m4a", async () => {}),
+			async () => {
+				throw new Error("a good take must not be discarded");
+			},
+		);
+		expect(result?.uri).toBe("file:///cache/recording.m4a");
+		expect(result?.mimeType).toBe("audio/mp4");
+		expect(result?.name).toBe("recording.m4a");
 	});
 });

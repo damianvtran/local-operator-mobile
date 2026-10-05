@@ -29,7 +29,7 @@
 
 import { Platform } from "react-native";
 
-import { MAX_RECORDING_SECONDS, pickRecorderMime } from "@/stt/dictation";
+import { MAX_RECORDING_SECONDS } from "@/stt/dictation";
 
 type AudioModule = typeof import("expo-audio");
 
@@ -193,6 +193,62 @@ export function mimeForExtension(extension: string): string {
 }
 
 /**
+ * What `finishActiveRecording` reads off the recorder.
+ *
+ * The native `AudioRecorder` satisfies this structurally; the narrow shape exists
+ * so a test can stand one in and drive the stop-failure arm, which the web/Node
+ * host cannot otherwise reach (it never loads the module).
+ */
+export interface StoppableRecorder {
+	stop(): Promise<void>;
+	/** The file it wrote, or `null`/`""` when it captured nothing. */
+	uri: string | null;
+	getStatus(): { durationMillis: number };
+}
+
+/** The upload descriptor for a stopped file URI. */
+export const recordingFor = (
+	uri: string,
+	durationMs: number,
+): MicrophoneRecording => ({
+	uri,
+	mimeType: mimeForExtension(extensionOf(uri)),
+	name: fileNameOf(uri),
+	durationMs,
+});
+
+/**
+ * Stop a recorder and describe what it captured.
+ *
+ * Returns the file to upload, or `null` when nothing was captured (a stop with no
+ * URI is an empty take, not an error). The `stop()` FAILURE arm is not an empty
+ * take, and it does not leave the file behind: the native call can reject after
+ * the file exists — the backgrounded `forDuration` auto-stop followed by our own
+ * re-stop lands exactly here — so whatever was written is DISCARDED before this
+ * reports nothing captured. Every arm must leave the phone not a retention point
+ * (design §2.5's discard rule; agent review round 1, m1), and a `discard` that
+ * itself fails is swallowed by `discardRecording` — cleanup never fails the
+ * caller.
+ */
+export async function finishActiveRecording(
+	recorder: StoppableRecorder,
+	discard: (recording: MicrophoneRecording) => Promise<void> = discardRecording,
+): Promise<MicrophoneRecording | null> {
+	try {
+		await recorder.stop();
+	} catch {
+		const written = recorder.uri;
+		if (written !== null && written !== "") {
+			await discard(recordingFor(written, 0));
+		}
+		return null;
+	}
+	const uri = recorder.uri;
+	if (uri === null || uri === "") return null;
+	return recordingFor(uri, recorder.getStatus().durationMillis);
+}
+
+/**
  * Begins a recording. Returns `null` when the platform, the module or the
  * permission is missing — the caller treats null as "no mic" and says so, rather
  * than starting a UI state it cannot finish.
@@ -220,20 +276,7 @@ export async function startRecording(): Promise<ActiveRecording | null> {
 		const stop = async (): Promise<MicrophoneRecording | null> => {
 			if (stopped) return null;
 			stopped = true;
-			try {
-				await recorder.stop();
-			} catch {
-				return null;
-			}
-			const uri = recorder.uri;
-			if (uri === null || uri === "") return null;
-			const status = recorder.getStatus();
-			return {
-				uri,
-				mimeType: mimeForExtension(extensionOf(uri)),
-				name: fileNameOf(uri),
-				durationMs: status.durationMillis,
-			};
+			return finishActiveRecording(recorder);
 		};
 		return {
 			stop,
@@ -283,16 +326,3 @@ export function fileNameOf(uri: string): string {
 	const lastSegment = withoutQuery.split("/").pop() ?? "";
 	return lastSegment === "" ? "recording.m4a" : lastSegment;
 }
-
-/**
- * The MIME the shipped recorder preset produces.
- *
- * `RecordingPresets.HIGH_QUALITY` writes AAC in an m4a container on both native
- * platforms (see the package's own docs), so this is `audio/mp4` — the first
- * entry of `RECORDER_MIME_CANDIDATES` and a member of the server allowlist. It is
- * derived through `pickRecorderMime` rather than hardcoded so that a future
- * preset change is a one-line edit in `dictation.ts`; the device check that
- * confirms the container on a real handset is named as a QA gap, not assumed.
- */
-export const recorderMimeType = (): string =>
-	pickRecorderMime((mime) => mime === "audio/mp4" || mime.startsWith("audio/"));
