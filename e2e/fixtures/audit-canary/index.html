@@ -55,6 +55,10 @@
     /defects   #phantom-over must produce no FAIL row (its layout box overlaps
                #phantom-under exactly, but the painted regions do not), and the U-08
                suppression that replaces it must still be RECORDED, with its reason;
+               the four shapes below are declared `data-not-defect-silent` because the
+               rule must not reach them AT ALL — no row of any verdict under their own
+               check, not merely no FAIL row — and the canary asserts that absence
+               (`silentButReported`), so a shape the rule STARTS reaching is caught too;
                #inset-clipped must produce no U-05 row (its layout top sits inside
                the notch band, its painted top sits exactly at the inset's edge);
                #status-row-dot must produce no U-03 row (its status word `approval`
@@ -237,7 +241,7 @@
      property the harness sets. -->
 <div class="bad" style="position:relative;height:120px">
 	<div id="inset-clipper" style="position:absolute;top:0;left:0;width:200px;height:120px;overflow:hidden">
-		<div id="inset-clipped" data-not-defect="U-05" role="button" aria-label="Clipped above the inset edge" style="position:absolute;top:-10px;left:0;width:200px;height:44px;background:var(--surface);border:1px solid var(--border)"></div>
+		<div id="inset-clipped" data-not-defect="U-05" data-not-defect-silent role="button" aria-label="Clipped above the inset edge" style="position:absolute;top:-10px;left:0;width:200px;height:44px;background:var(--surface);border:1px solid var(--border)"></div>
 	</div>
 </div>
 
@@ -287,7 +291,7 @@
      control must not name the surface merely as an ancestor of its
      subject — the canary's "must-not-report" reads the row's whole path. -->
 <div class="bad" id="dialog-fixture" role="dialog" aria-modal="true" aria-label="Dialog fixture" style="position:fixed;top:0;right:0;width:0;height:0">
-	<div id="dialog-surface" data-not-defect="U-05" style="position:fixed;top:0;right:0;width:8px;height:100%;background:var(--surface);border-left:1px solid var(--border)"></div>
+	<div id="dialog-surface" data-not-defect="U-05" data-not-defect-silent style="position:fixed;top:0;right:0;width:8px;height:100%;background:var(--surface);border-left:1px solid var(--border)"></div>
 	<button class="control" id="dialog-band-control" data-defect="U-05-top-dialog" aria-label="Dialog control in the band" style="position:fixed;top:0;right:0;width:44px;height:44px"></button>
 </div>
 
@@ -308,7 +312,7 @@
      their cells. The app's own scrim is full-bleed; what this block holds is the
      HOST's set-aside and the layer's role, and #dialog-band-control keeps the
      failing direction so neither declaration reads as a blanket. -->
-<div class="bad" id="dismiss-host" data-not-defect="U-05" style="position:fixed;top:0;left:0;right:0;bottom:0">
+<div class="bad" id="dismiss-host" data-not-defect="U-05" data-not-defect-silent style="position:fixed;top:0;left:0;right:0;bottom:0">
 	<div id="dismiss-dialog" role="dialog" aria-modal="true" aria-label="Dismiss layer fixture" style="position:fixed;top:0;left:0;right:0;bottom:0">
 		<button class="control" id="dismiss-scrim" aria-label="Dismiss the layer" style="position:absolute;top:70px;left:230px;width:120px;height:60px;background:rgba(178,58,49,0.35)">
 			<svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8" fill="var(--accent)"/></svg>
@@ -366,7 +370,7 @@
 <div class="bad panel">
 	<h2>U-03 carrier beside the dot</h2>
 	<button class="control" id="status-row" aria-label="Clean up the staging bucket, approval waiting">
-		<div id="status-row-slot"><span id="status-row-dot" data-not-defect="U-03"></span></div>
+		<div id="status-row-slot"><span id="status-row-dot" data-not-defect="U-03" data-not-defect-silent></span></div>
 		<span class="status-word">approval</span>
 	</button>
 </div>
@@ -509,12 +513,18 @@
 	<div id="good-scale">One short line of text, in a box that grows with it.</div>
 </div>
 
-<!-- U-08 translucent pinned bar: a VISIBLE overlap, so the rule must report it
-     even though the bar is pinned and anchored to the viewport edge. -->
+<!-- A pinned TRANSLUCENT bar over content: a visible overlap, so the bar must be
+     reported by SOME rule. U-08 pairs only boxes carrying text or interactivity
+     (`meaningful` in tools/audit/checks.ts), and this bar has neither — so U-08 never
+     reaches it. It IS anchored at y=0 inside the unsafe top band, so the TOP-INSET
+     rule catches it, and that is the check it now declares. An earlier U-08 marker here
+     passed only through the canary's check-level fallback — exactly the masking QA
+     round 2 removed (Q2-1): the declaration must name the rule that actually catches
+     the element, not one the fallback can be satisfied for by another row. -->
 <div class="bad panel">
-	<h2>U-08 translucent bar over content</h2>
+	<h2>U-05 top inset: translucent pinned bar over content</h2>
 	<p id="translucent-under">Text that is legible through the bar above it, which is exactly why this one is a defect.</p>
-	<div id="translucent-bar" class="translucent-bar bad" data-defect="U-08" style="top: 0"></div>
+	<div id="translucent-bar" class="translucent-bar bad" data-defect="U-05-top" style="top: 0"></div>
 </div>
 
 <!-- U-08 control under an opaque pinned bar: unreachable, so reported even though
