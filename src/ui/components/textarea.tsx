@@ -50,14 +50,30 @@ export type TextareaProps = {
 	testID: string;
 };
 
-/** One line's height, from the type ramp: `mono-code` is 13pt at 1.6, rounded up
- * to the shipped client's 22px. Kept as one constant so the cap and the growth
- * step cannot disagree — and MULTIPLIED by the reader's effective scale at the call
- * site, because the box's geometry has to grow with the text that fills it. Without
- * that, the constants cap the box at ~1.4 lines of 200 % text while the placeholder
- * needs ~2.5, and the frame cuts it mid-word (design round D20; the arithmetic was
- * the defect, not the measurement path). */
+/** The CAP's line, from the type ramp: `mono-code` is 13pt at 1.6, rounded up to the
+ * shipped client's 22px. It sizes the six-line ceiling (`maxLines * line`, itself
+ * capped at `TEXTAREA_MAX_PX`) — the box's growth step is `BODY_LINE_PX`, which is
+ * what a filled line actually measures. Both are MULTIPLIED by the reader's
+ * effective scale at the call site, because the box's geometry has to grow with the
+ * text that fills it. Without that, the constants cap the box at ~1.4 lines of
+ * 200 % text while the placeholder needs ~2.5, and the frame cuts it mid-word
+ * (design round D20; the arithmetic was the defect, not the measurement path). */
 const LINE_PX = 22;
+
+/** The line box of the field's OWN type: `text-body` is 16 pt at 1.5 → 24 pt, and
+ *  a FILLED field reports exactly this from `contentSize` for its first line.
+ *
+ *  It is a second constant, and not `LINE_PX`, because the two were conflated as
+ *  the EMPTY field's floor and only there do they disagree: `LINE_PX` is the
+ *  ramp's 13 pt `mono-code` line the six-line CAP was measured with, so an empty
+ *  field rested at `22 × scale` while the first typed character reported
+ *  `24 × scale`. The field then settled 4 pt taller at 150 % text and 16 pt at
+ *  200 %, moving the whole composer and the transcript above it on the first
+ *  keystroke — masked at 100 % only by `minHeight` being 48 there (design round 2,
+ *  D1: measured 48→52 and 48→64 on the field and the composer). Deriving the
+ *  empty floor from THIS constant is what makes the two states equal at every
+ *  scale rather than equal-by-accident at one. */
+const BODY_LINE_PX = 24;
 
 export const Textarea = ({
 	label,
@@ -78,6 +94,11 @@ export const Textarea = ({
 	 * these are exactly the old constants — 22 and `maxLines * 22` capped at
 	 * `TEXTAREA_MAX_PX` — so the 100 % geometry is unchanged by construction. */
 	const line = LINE_PX * effectiveScale;
+	/* The one-line box a FILLED field rests at, and therefore the floor an EMPTY one
+	 * must take (see `BODY_LINE_PX`). Both the empty floors below and the minimum
+	 * term in the height come from it, so the two states are equal by construction
+	 * at every scale — the invariant design §2.5 D1 asks for. */
+	const bodyLine = BODY_LINE_PX * effectiveScale;
 	const cap = Math.min(maxLines * line, TEXTAREA_MAX_PX * effectiveScale);
 	const [contentHeight, setContentHeight] = useState(line);
 	/* The placeholder is not part of `contentSize`, so the floor has to come from its
@@ -91,7 +112,7 @@ export const Textarea = ({
 	const placeholderFloor =
 		placeholderMaxLines === undefined
 			? placeholderHeight
-			: Math.min(placeholderHeight, line * placeholderMaxLines);
+			: Math.min(placeholderHeight, bodyLine * placeholderMaxLines);
 	/* The capped placeholder is drawn by US, not by the platform. A `<textarea>`'s
 	 * `::placeholder` cannot be told to stop wrapping, and one that wraps paints its
 	 * second line straight through the field's box (measured on the 320 pt phone once
@@ -111,7 +132,9 @@ export const Textarea = ({
 	 * and a filled one is unaffected — `value !== ""` keeps the growth for typed
 	 * text, which is what the box is for. */
 	const contentFloor =
-		placeholderMaxLines !== undefined && value === "" ? line : contentHeight;
+		placeholderMaxLines !== undefined && value === ""
+			? bodyLine
+			: contentHeight;
 	const fieldState: FieldState = disabled
 		? "disabled"
 		: invalid
@@ -188,7 +211,7 @@ export const Textarea = ({
 					 *  web/audit profile) have to be resolved together (D6). */
 					style={{
 						height: Math.min(
-							Math.max(contentFloor, line, placeholderFloor),
+							Math.max(contentFloor, bodyLine, placeholderFloor),
 							cap,
 						),
 						minHeight: TOUCH_FLOOR,
