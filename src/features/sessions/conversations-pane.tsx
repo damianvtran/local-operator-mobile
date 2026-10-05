@@ -438,48 +438,74 @@ export const ConversationsPane = ({
 				}
 			/>
 
-			{/* The footer: the two secondary routes, each a 44 pt target. The
+			{/* The footer: the three secondary routes, each a 44 pt target. The
 			 *  panel's own navigation, always visible — the desktop sidebar's
-			 *  footer, phone-sized.
+			 *  footer, phone-sized. `docs/ux/flows.md` draws `--|projects|` as a
+			 *  PEER of `--|past|` off the conversations panel, so the entry point
+			 *  belongs here rather than behind a settings row.
 			 *
-			 *  Above `LARGE_TEXT_SCALE` the two RE-STACK into a column (the settings
-			 *  account row's idiom, not `flex-wrap`: with both children `flex-1` a
+			 *  Above `LARGE_TEXT_SCALE` the three RE-STACK into a column (the settings
+			 *  account row's idiom, not `flex-wrap`: with the children `flex-1` a
 			 *  wrap never engages — it would only squeeze). Side by side each label
-			 *  has ~104 dp and "Past sessions" needs 107.6 dp at 150 % and 143.5 dp
+			 *  had ~104 dp and "Past sessions" needs 107.6 dp at 150 % and 143.5 dp
 			 *  at 200 %, so it wrapped to two lines inside a 48 dp control that does
 			 *  not grow with its label, and its box crossed the band's edges
 			 *  (744.4..811.6 against 745..810 at 200 %, review round 3, D1).
 			 *  Stacked, each label gets the panel's full width — 240 dp of text box
-			 *  inside the button at the drawer's 280 pt — and stays one line. */}
+			 *  inside the button at the drawer's 280 pt — and stays one line.
+			 *
+			 *  Below `LARGE_TEXT_SCALE` they are a 2+1 GRID rather than one row of
+			 *  three. At the drawer's 280 pt the drawer's inner box is 264 pt, so a
+			 *  three-up row leaves each label a 53-59 pt text box after the `sm`
+			 *  button's `px-3`, and "Past sessions" needs ~72 dp even at 100 %; a
+			 *  two-up pair has 96-104 pt and fits. The third control therefore spans
+			 *  the band beneath the pair. It is a GRID, not `flex-wrap`, for the same
+			 *  reason the stack is not a wrap: the two `flex-1` children of the pair
+			 *  have a zero base size and would all three share one line. The
+			 *  full-width third cell is what forces the break. */}
 			<View
 				className={
 					largeText
 						? "flex-col gap-2 border-hairline border-t px-2 pb-2 pt-2"
-						: "flex-row gap-2 border-hairline border-t px-2 pb-2 pt-2"
+						: "gap-2 border-hairline border-t px-2 pb-2 pt-2"
 				}
 			>
-				<View className={largeText ? "w-full" : "flex-1"}>
-					<Button
-						label="Past sessions"
-						onPress={() => {
-							onNavigate?.();
-							router.push("/past");
-						}}
-						variant="quiet"
-						size="sm"
-						testID={CONTROL.sidebarPast}
-					/>
+				<View className={largeText ? "flex-col gap-2" : "flex-row gap-2"}>
+					<View className={largeText ? "w-full" : "flex-1"}>
+						<Button
+							label="Past sessions"
+							onPress={() => {
+								onNavigate?.();
+								router.push("/past");
+							}}
+							variant="quiet"
+							size="sm"
+							testID={CONTROL.sidebarPast}
+						/>
+					</View>
+					<View className={largeText ? "w-full" : "flex-1"}>
+						<Button
+							label="Computers"
+							onPress={() => {
+								onNavigate?.();
+								router.push("/tunnels");
+							}}
+							variant="quiet"
+							size="sm"
+							testID={CONTROL.sidebarComputers}
+						/>
+					</View>
 				</View>
-				<View className={largeText ? "w-full" : "flex-1"}>
+				<View className="w-full">
 					<Button
-						label="Computers"
+						label="Projects"
 						onPress={() => {
 							onNavigate?.();
-							router.push("/tunnels");
+							router.push("/projects");
 						}}
 						variant="quiet"
 						size="sm"
-						testID={CONTROL.sidebarComputers}
+						testID={CONTROL.sidebarProjects}
 					/>
 				</View>
 			</View>

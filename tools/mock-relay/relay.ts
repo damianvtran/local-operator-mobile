@@ -687,12 +687,20 @@ export function createRelay(options: RelayOptions = {}) {
 		value: Json | FixtureResponseOverride,
 	): void => {
 		if (isRecord(value) && typeof value.status === "number") {
-			const { status, headers, json, text } = value as FixtureResponseOverride;
+			// `value.status` is narrowed to `number` by the guard, and it has to be
+			// read back off `value` rather than destructured through the
+			// `FixtureResponseOverride` cast: that type declares `status?: number`,
+			// so destructuring re-widens it to `number | undefined` and the two
+			// `send*` calls below stop compiling. This is the file the HARNESS
+			// config (`tools/tsconfig.json`, what `pnpm e2e:typecheck` runs) gates
+			// on, and it is not the same config as the root `tsconfig.tools.json`:
+			// a run of the root one alone misses this error entirely.
+			const { headers, json, text } = value as FixtureResponseOverride;
 			if (json !== undefined) {
-				sendJson(res, status, json, headers ?? {});
+				sendJson(res, value.status, json, headers ?? {});
 				return;
 			}
-			sendText(res, status, text ?? "", headers ?? {});
+			sendText(res, value.status, text ?? "", headers ?? {});
 			return;
 		}
 		sendJson(res, 200, value as Json);

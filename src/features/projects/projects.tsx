@@ -82,8 +82,13 @@ export default function Projects() {
 
 	const sections = groupProjectsByStatus(rows);
 	const hasUnknownStatus = sections.some((section) => !section.known);
-	const empty = !loading && refused === null && sections.length === 0;
 	const failed = refused !== null || unreachable;
+	/* `!failed` is not decoration: the marker this drives is zero-height and aria-hidden
+	 * (readiness reads it as a probe, not as content), and the audit's contract is that
+	 * REFUSED and EMPTY are mutually exclusive by construction. Without it the unreachable
+	 * arm renders `projects-empty` (DIV 358x0, aria-hidden) beside `project-refusal`, so a
+	 * check that trusts the mutual exclusion is looking at a state that cannot exist. */
+	const empty = !loading && !failed && sections.length === 0;
 
 	return (
 		<Screen
@@ -173,7 +178,11 @@ export default function Projects() {
 								<Pressable
 									key={project.id}
 									accessibilityRole={ROLE.button}
-									accessibilityLabel={`${projectDisplayName(project)}, ${projectRowMeta(project)}`}
+									// The stale verdict is part of the label rather than left to the badge: an
+									// explicit `accessibilityLabel` REPLACES the children's text, so a
+									// screen reader would otherwise announce the name and the counts and
+									// never the one word that says the row's progress has gone old.
+									accessibilityLabel={`${projectDisplayName(project)}, ${projectRowMeta(project)}${showsStaleMark(project) ? ", stale" : ""}`}
 									onPress={() => router.push(`/projects/${project.id}`)}
 									testID={projectRowId(project.id)}
 								>

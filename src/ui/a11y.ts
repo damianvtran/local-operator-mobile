@@ -312,6 +312,10 @@ export const CONTROL = {
 	sidebarClose: "sidebar-close",
 	sidebarPast: "sidebar-past",
 	sidebarComputers: "sidebar-computers",
+	/** The footer's third route (S16's entry point): `docs/ux/flows.md` draws the
+	 *  projects surface as a peer of `past` off the conversations panel, so it
+	 *  lives in the same footer rather than behind a settings row. */
+	sidebarProjects: "sidebar-projects",
 	/** The projects list's own controls (S16). Read-only in this build: the list
 	 *  and the pushed detail have a retry and a back, and NO mutation control —
 	 *  a row pushes, it does not create, edit or delete. */

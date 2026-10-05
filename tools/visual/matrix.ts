@@ -346,11 +346,11 @@ export function describeDeviceCoverage(coverage: {
  * The CI tier: the bounded sample the per-push capture job takes.
  *
  * WHY A THIRD TIER, AND WHY IT IS HERE RATHER THAN A `--devices` LIST IN YAML.
- * The `core` tier is 1066 cells: the whole declared cell list (41 cells) x 2 themes x
- * (3 phones x 3 scales + 2 tablets x 2 scales) — 41 x 2 x 13, the tier's 5 profiles —
+ * The `core` tier is 1092 cells: the whole declared cell list (42 cells) x 2 themes x
+ * (3 phones x 3 scales + 2 tablets x 2 scales) — 42 x 2 x 13, the tier's 5 profiles —
  * and the CI job's capture step is bound at 20 minutes. Measured on the runner, that is
  * 2.24 s/cell: 403 cells in 903 s (run 37098393675, a plan of 403 cells then), so a core
- * run needs ~33 minutes. The job's first real
+ * run needs ~41 minutes. The job's first real
  * run of this path
  * was therefore cut off by the harness's own 900 s deadline with 585 cells
  * unvisited, and reported them as cells with no frame.
@@ -378,10 +378,10 @@ export function describeDeviceCoverage(coverage: {
  *     measures (200% over 100%). 150% is the phone-typical intermediate case and is
  *     left to `core`.
  *
- * That is 41 cells x 2 themes x (2 profiles x 2 scales) = 328 cells, ~12 minutes at
+ * That is 42 cells x 2 themes x (2 profiles x 2 scales) = 336 cells, ~12 minutes at
  * the measured rate: inside the step bound with most of it spare. `core` and
  * `full` are unchanged and stay the local and dispatched samples, so the full
- * 1066-cell `core` matrix and the 3854-cell `full` matrix remain runnable — nothing
+ * 1092-cell `core` matrix and the 3948-cell `full` matrix remain runnable — nothing
  * is only reachable through CI.
  */
 export const CI_DEVICES: string[] = ["iphone-se", "tablet-landscape"];
@@ -639,6 +639,18 @@ export const PENDING_CELLS: Record<string, string> = {
  * it was measured on: the exemption is a statement about the frame, not about the app.
  */
 export const IDENTICAL_FRAME_EXEMPTIONS: Record<string, string> = {
+	"S16/populated|S16/unknown-status":
+		"below-the-fold at iphone-se / 200 %: the 320 px column at 200 % text is filled by the " +
+		"list's own header (`Projects`) and its first two sections, and the one thing that " +
+		"distinguishes the two cells — the UNKNOWN STATUS section, which is the feature this " +
+		"cell exists to prove — is placed LAST by `groupProjectsByStatus` (a status this build " +
+		"does not know sorts after every known one) and starts below the viewport, so the PNG " +
+		"is the same chrome. The content differs (each cell reaches its own marker, " +
+		"`projects-populated` / `projects-unknown-status`), which is what makes this a limit " +
+		"of the camera rather than a collapse; at 100 % the swapped row is still above the " +
+		"fold and the two frames differ, and so does the whole pair at tablet-landscape, so " +
+		"the states are distinguishable everywhere except the narrowest column at the " +
+		"largest text.",
 	"S5/populated-long|S5/rich-rows|S5/subagents":
 		"below-the-fold at iphone-se / 200 %: the 320 px column at 200 % text is filled by the " +
 		"session header (`Refactor… client`, the context/task/subagent panel rows), and the rows " +

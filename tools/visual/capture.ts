@@ -102,7 +102,7 @@ let settledRetakes = 0;
  * not a size policy: it catches a plan far larger than any sample this harness
  * offers (an inflated cell registry, a cell list copied from another tree), and it
  * is why a big run is always something the caller typed `--yes` for. It sits BELOW
- * every tier on purpose — `ci` plans 328 cells, `core` 1066, `full` 3854 — so none of
+ * every tier on purpose — `ci` plans 336 cells, `core` 1092, `full` 3948 — so none of
  * them starts by accident; the CI job passes `--yes` for exactly that reason. It is
  * NOT tied to the default tier, so it must not be raised to "let the default run": a
  * documented invocation that plans the whole `core` tier is a 33-minute command, and
@@ -117,7 +117,7 @@ const CONFIRM_THRESHOLD = 120;
  * the floor a small plan still gets.
  *
  * WHY THE DEFAULT IS DERIVED RATHER THAN FIXED. It used to be a flat 900 s, which
- * holds about 400 cells: a `core` run (1066 cells) or a dispatched `full` run (3854)
+ * holds about 400 cells: a `core` run (1092 cells) or a dispatched `full` run (3948)
  * was therefore cut off by the harness's own default and reported hundreds of cells
  * as having no frame — a bound firing on a plan it was never sized for, which reads
  * like a finding about the app and is not one. Deriving it from the plan makes the
@@ -2590,11 +2590,11 @@ if (isMain) {
 				"  --tier <name>       the sample to capture: ci | core (default) | full.",
 				"                      The matrix declares 19 device profiles; the run prints the",
 				"                      share it covered, and names the profiles it did not.",
-				"                        ci    2 of 19 profiles — 328 cells, both themes, scales 100",
+				"                        ci    2 of 19 profiles — 336 cells, both themes, scales 100",
 				"                              and 200 (~10 min) — the per-push CI job's sample",
-				"                        core  5 of 19 profiles — 1066 cells, both themes, all",
+				"                        core  5 of 19 profiles — 1092 cells, both themes, all",
 				"                              three scales — the local default",
-				"                        full  19 of 19 profiles — 3854 cells",
+				"                        full  19 of 19 profiles — 3948 cells",
 				"  --devices <names>   comma list. Default: the tier's profiles (ci 2, core 5 by",
 				"                      default, --full for all 19)",
 				"  --themes <names>    default dark,light",
@@ -2621,7 +2621,7 @@ if (isMain) {
 	// overrides any of them.
 	//
 	// An unknown tier is an ERROR rather than a silent fall back to `core`: a typo'd
-	// `--tier ci` that quietly ran 1066 cells would spend ~40 minutes on a capture the
+	// `--tier ci` that quietly ran 1092 cells would spend ~40 minutes on a capture the
 	// caller did not ask for, and the whole point of naming the sample is that the
 	// run you get is the one you asked for.
 	const tierFlag = bool(flags, "full") ? "full" : str(flags, "tier", "core");

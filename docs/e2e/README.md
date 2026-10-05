@@ -23,7 +23,7 @@ That figure is **load-dependent, and it is the one to quote**: `pnpm e2e:relay`
 against ~13 minutes on a quiet one. The README, `tools/lib/doc-commands.ts` and
 `tools/mock-relay/verify.ts` all state that single figure; if you change one,
 change all three. The app-build capture block — the other candidate for slowest —
-is bounded to an 82-cell sample: the whole declared cell list (41 cells on today's
+is bounded to an 84-cell sample: the whole declared cell list (42 cells on today's
 registry) at one device, one theme and two scales (`--devices iphone-15 --themes
 dark --scales 100,200`), so the gate can pass for the reason the block declares
 instead of by timing out. A command this
@@ -156,10 +156,10 @@ in `verify`'s readiness guard.
 # docs:needs mock-relay web-build
 #
 # The sample is EXPLICIT and small, for §2's reason: the default (`core`) tier plans
-# 1066 cells, one frame each, which is ~40 minutes at the measured 2.24 s/cell and is
+# 1092 cells, one frame each, which is ~40 minutes at the measured 2.24 s/cell and is
 # above the harness's own 120-frame confirmation threshold — so an un-narrowed run is
-# REFUSED without `--yes`, and even with it no documentation gate may spend 33 minutes
-# on one command. One phone, one theme, one scale is 41 frames, and it still proves what
+# REFUSED without `--yes`, and even with it no documentation gate may spend 41 minutes
+# on one command. One phone, one theme, one scale is 42 frames, and it still proves what
 # this section is about: seeding is a property of `--relay`, not of the sample's size.
 # `web-build` is declared because the command reads `dist/`: without a build it does
 # not fall back to anything, it fails on `static root does not exist`.
@@ -569,12 +569,12 @@ node tools/visual/capture.ts --dir e2e/fixtures/audit-canary \
 # A real run against a real build. Build first — `pnpm export:web`, which writes `dist/`.
 #
 # The device/theme/scale set is EXPLICIT and small on purpose: the full `core` tier is
-# 1066 cells, which is ~40 minutes at the measured 2.24 s/cell (403 cells in 903 s on the
+# 1092 cells, which is ~40 minutes at the measured 2.24 s/cell (403 cells in 903 s on the
 # CI runner, a plan of 403 cells then), and no documentation gate may spend that on one
 # command. So this example is the bounded sample; `--plan` above prints the full count,
 # and dropping these three flags captures the whole `core` tier. `--tier ci` is the sample
 # the per-push CI job takes — every declared cell at two device profiles, both themes and
-# two scales, 328 cells — and `--full` is all 19 profiles at 3854 cells.
+# two scales, 336 cells — and `--full` is all 19 profiles at 3948 cells.
 #
 # The bound is DERIVED FROM THE PLAN unless you name one: `--deadline` defaults to
 # 3000 ms/cell with a 900 s floor, so a bound always holds the plan it was computed for,
@@ -704,7 +704,7 @@ All 19 profiles above are what the harness *can* plan, and they come from
 generated from it rather than maintained beside it. A default run captures the
 `core` tier only (5 profiles: the 320 pt floor, one typical phone,
 the landscape case whose side insets the notch rules need, and a tablet in each
-orientation) — 1066 cells, one frame each unless `--consecutive` asks for the +250 ms
+orientation) — 1092 cells, one frame each unless `--consecutive` asks for the +250 ms
 and settled frames too. A run states which tier it took,
 and a cell that was not captured is reported as having no frame rather than passed.
 
@@ -712,9 +712,9 @@ Three tiers are declared in `matrix.ts`, and each says what it is:
 
 | tier | sample | cells | why |
 |---|---|---|---|
-| `ci` | every declared cell × `iphone-se`, `tablet-landscape` × both themes × scales 100 and 200 | 328 | the per-push CI job's sample. The step is bound at 20 minutes and the measured rate is 2.24 s/cell, so a 1066-cell `core` run cannot fit; this one lands ~12 minutes. It keeps the CELL axis whole — a state that is not captured is a state no review round can report on — and shrinks only the device, theme and scale axes, each to what its check needs: the narrowest and widest viewports (the two sides of the 768 breakpoint), because the theme check compares a cell's dark and light frames, and the 100 %/200 % pair the text-scale guard measures. |
-| `core` | the 5 `core` profiles, both themes, all three scales | 1066 | the default, and the local sample the operator's rule asks for. |
-| `full` | all 19 profiles | 3854 | the dispatched/nightly sample. |
+| `ci` | every declared cell × `iphone-se`, `tablet-landscape` × both themes × scales 100 and 200 | 336 | the per-push CI job's sample. The step is bound at 20 minutes and the measured rate is 2.24 s/cell, so a 1092-cell `core` run cannot fit; this one lands ~12 minutes. It keeps the CELL axis whole — a state that is not captured is a state no review round can report on — and shrinks only the device, theme and scale axes, each to what its check needs: the narrowest and widest viewports (the two sides of the 768 breakpoint), because the theme check compares a cell's dark and light frames, and the 100 %/200 % pair the text-scale guard measures. |
+| `core` | the 5 `core` profiles, both themes, all three scales | 1092 | the default, and the local sample the operator's rule asks for. |
+| `full` | all 19 profiles | 3948 | the dispatched/nightly sample. |
 
 `--tier <ci|core|full>` or `--full` selects one; `--devices`, `--themes` and
 `--scales` override any of them. The whole-run `--deadline` is derived from the
@@ -734,7 +734,7 @@ from `ALL_DEVICES`, so it cannot drift from this table.
 
 **The device variety that is not on the per-push path has its own nightly job.**
 `.github/workflows/e2e.yml` `web-audit-core` captures and audits the `core` tier — 5 of
-the 19 profiles, 1066 cells / 3,198 frames and ~40 minutes at the measured 2.24 s/cell —
+the 19 profiles, 1092 cells / 3,276 frames and ~41 minutes at the measured 2.24 s/cell —
 on the schedule and on demand only. The `ci` sample stays the per-push one and keeps its
 own 20-minute capture bound; neither job is stretched to cover the other's tier.
 

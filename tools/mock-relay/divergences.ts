@@ -52,6 +52,12 @@ const KNOWN_DIVERGENCES: Array<{ id: string; what: string; reason: string }> = [
 		reason:
 			"the shipped mark is a shipped binary asset in the relay's own web bundle; vendoring it would add a fixture that says nothing about the client. The BYTES are asserted to be a real PNG instead, which is what a client can observe.",
 	},
+	{
+		id: "D11",
+		what: "`POST /api/projects` answers the mock's 405 where the real relay answers 201 (and likewise PATCH/DELETE on `{key}`)",
+		reason:
+			"DELIBERATE, and it comes out with the mutation slice. The client carries no project write call, so a mock that answered 201 would have to invent the created row's shape and a store round-trip it never performs, and nothing in this repository would validate either. The `ALLOWED_METHODS` table keeps GET/HEAD on both project routes so a wrong method is the relay's own 405 rather than an invented body. Measured against a real isolated `lop mobile`: POST /api/projects there creates a row and answers 201, so this DIVERGES on purpose — the mutation slice replaces the entry with the real route and removes this line.",
+	},
 ];
 
 interface Check {
