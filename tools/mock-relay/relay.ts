@@ -671,6 +671,33 @@ export function createRelay(options: RelayOptions = {}) {
 		return;
 	};
 
+	/**
+	 * A scenario's projects override, which may be a bare BODY or a whole RECORDED
+	 * RESPONSE.
+	 *
+	 * The two are told apart the way `world.past` is (a value, or an override): a
+	 * recorded response always carries a numeric `status`, and a wire body for these
+	 * two routes never does — `{"projects": [...]}` and `{"project": …, "links": […]}`
+	 * are the only shapes either one has. Returning a bare body is the common case
+	 * (an empty listing); the recorded form exists so a refusal cell can drive a real
+	 * status AND a real body.
+	 */
+	const sendRecordedOrBody = (
+		res: ServerResponse,
+		value: Json | FixtureResponseOverride,
+	): void => {
+		if (isRecord(value) && typeof value.status === "number") {
+			const { status, headers, json, text } = value as FixtureResponseOverride;
+			if (json !== undefined) {
+				sendJson(res, status, json, headers ?? {});
+				return;
+			}
+			sendText(res, status, text ?? "", headers ?? {});
+			return;
+		}
+		sendJson(res, 200, value as Json);
+	};
+
 	/** The session rows for the listing, in the relay's own rank order. */
 	const rowsFor = (): SessionSummary[] => {
 		const world = state.world;
@@ -1732,16 +1759,51 @@ export function createRelay(options: RelayOptions = {}) {
 			return;
 		}
 
-		if (pathname === "/api/projects") {
-			if (method === "GET") {
-				sendFixture(res, "projects-empty");
+		if (pathname === "/api/projects" && method === "GET") {
+			/* The REAL listing shape, from the captured fixture: the six-project store
+			 *  `scripts/mobile_projects_fixture.py` seeds. It used to answer an ad-hoc
+			 *  `{key, name}` here, which is not the wire — so nothing could catch a
+			 *  client reading the wrong contract. A state that needs a different
+			 *  listing (empty, or a status this build does not know) overrides
+			 *  `world.projects.list`.
+			 *
+			 *  The listing's own POST is NOT stubbed: the native client reads this
+			 *  surface and never writes it, so a create body would be a shape nothing
+			 *  validates against — and `methodNotAllowed` answers 405 for it above,
+			 *  which is the real relay's answer for a method a route does not carry. */
+			const list = world.projects?.list;
+			if (list !== undefined) {
+				sendRecordedOrBody(res, list);
 				return;
 			}
-			if (method === "POST")
-				return sendJson(res, 201, {
-					key: "mock-project",
-					name: body?.name ?? "Mock project",
-				});
+			sendFixture(res, "projects-list");
+			return;
+		}
+
+		const projectDetail = /^\/api\/projects\/([^/]+)$/.exec(pathname);
+		if (projectDetail && method === "GET") {
+			const detail = world.projects?.detail;
+			if (detail !== undefined) {
+				sendRecordedOrBody(res, detail);
+				return;
+			}
+			/* The relay's own addressing rule: an exact id, then a case-insensitive
+			 *  name. The one row the capture holds answers for its id and its name;
+			 *  EVERY other key answers the captured `404 project_not_found`, whose
+			 *  sentence names the near-miss — which is the refusal the detail screen
+			 *  renders, driven here by a real body rather than an invented one. */
+			const key = decodeURIComponent(projectDetail[1] ?? "").toLowerCase();
+			const captured = fix.record("projects-detail");
+			const project = isRecord(captured.project) ? captured.project : {};
+			const ids = [project.id, project.name]
+				.filter((value): value is string => typeof value === "string")
+				.map((value) => value.toLowerCase());
+			if (ids.includes(key)) {
+				sendFixture(res, "projects-detail");
+				return;
+			}
+			sendFixture(res, "projects-not-found");
+			return;
 		}
 
 		if (pathname === "/api/pair" && method === "POST") {
@@ -2085,6 +2147,10 @@ export function createRelay(options: RelayOptions = {}) {
 		{ match: /^\/api\/directories$/, methods: ["GET", "HEAD"] },
 		{ match: /^\/api\/models$/, methods: ["GET", "HEAD"] },
 		{ match: /^\/api\/projects$/, methods: ["GET", "HEAD"] },
+		/* The key-scoped detail. GET only: the mutation routes this client does not
+		 *  call live on sibling paths (`{key}/milestones`, …), and a method a route
+		 *  does not carry is a 405 rather than a body this mock invented. */
+		{ match: /^\/api\/projects\/[^/]+$/, methods: ["GET", "HEAD"] },
 		{ match: /^\/api\/pair$/, methods: ["POST"] },
 		{ match: /^\/healthz$/, methods: ["GET", "HEAD"] },
 		{ match: /^\/login$/, methods: ["GET", "POST"] },

@@ -64,6 +64,11 @@ export const SCREEN = {
 	home: "home-screen",
 	subagent: "subagent-screen",
 	past: "past-sessions-screen",
+	/** The projects list (S16) and its pushed detail. Two roots, because the detail
+	 *  is a route of its own — the app pushes it — rather than a panel inside the
+	 *  list, and a capture must be able to tell which of the two drew. */
+	projects: "projects-screen",
+	projectDetail: "project-detail-screen",
 	newSession: "new-session-screen",
 	settings: "settings-screen",
 	notFound: "not-found-screen",
@@ -80,6 +85,9 @@ export const EMPTY = {
 	session: "session-empty",
 	subagent: "subagent-empty",
 	past: "past-empty",
+	/** The projects list with nothing in it. Its own id, so "this screen is
+	 *  honestly empty" cannot be satisfied by another screen's empty state. */
+	projects: "projects-empty",
 	notFound: "not-found-empty",
 } as const;
 
@@ -304,6 +312,13 @@ export const CONTROL = {
 	sidebarClose: "sidebar-close",
 	sidebarPast: "sidebar-past",
 	sidebarComputers: "sidebar-computers",
+	/** The projects list's own controls (S16). Read-only in this build: the list
+	 *  and the pushed detail have a retry and a back, and NO mutation control —
+	 *  a row pushes, it does not create, edit or delete. */
+	projectsBack: "projects-back",
+	projectsRetry: "projects-retry",
+	projectDetailBack: "project-detail-back",
+	projectDetailRetry: "project-detail-retry",
 } as const;
 
 /**
@@ -316,6 +331,29 @@ export const CONTROL = {
  * a state ("the certificate was rejected") without inventing a control for it.
  */
 export const SURFACE = {
+	projectsLoading: "projects-loading",
+	/** The list's unknown-status section. Its own id because the state it proves
+	 *  is the ABSENCE of a status from `PROJECT_STATUS_ORDER` — a section that
+	 *  only exists because a newer relay invented a status this build does not
+	 *  know, and which must be visible rather than silently dropped. */
+	projectsUnknownStatus: "projects-unknown-status",
+	projectDetailLoading: "project-detail-loading",
+	/** The composed detail's linked-session list — the region a flow asserts
+	 *  rather than a control it presses, the same shape as `sidebarList`. */
+	projectLinks: "project-links",
+	/** The daemon's own refusal sentence on a project read, in an `Alert`.
+	 *  Deliberately NOT a `RefusalSurface`: that component's taxonomy is the
+	 *  CONNECTION's (`src/relay/errors.ts` `ErrorSurface`), and a `404
+	 *  project_not_found` is a definitive answer from a reachable relay rather
+	 *  than a connection that could not be made. Copy that claimed "that project
+	 *  is not answering" for a project the daemon says does not exist would send
+	 *  the reader to check a machine that is working. */
+	projectRefusal: "project-refusal",
+	/** The same refusal on the pushed DETAIL — a second id rather than the list's,
+	 *  because the marker table may MAP a state onto a declared id but must not
+	 *  name one id twice (`src/ui/a11y.test.ts`): two states claiming one frame is
+	 *  how "the refusal is on screen" stops meaning which surface it is on. */
+	projectDetailRefusal: "project-detail-refusal",
 	sessionTranscript: "session-transcript",
 	sessionComposer: "session-composer",
 	sessionColumn: "session-column",
@@ -445,6 +483,9 @@ export const IDENTIFIER_FAMILIES: readonly string[] = [
 	"ask-row-",
 	"asks-badge-",
 	"ask-field-",
+	/* The projects listing's own row family (S16): one row per project, keyed by
+	 *  the project's id, so a flow reaches a row without counting rows. */
+	"project-row-",
 ];
 
 /**
@@ -642,6 +683,30 @@ export const STATE_MARKER = {
 		empty: EMPTY.past,
 		populated: "past-row-",
 	},
+	/* The projects list and its pushed detail (S16). `populated` is the row family
+	 *  (`projectRowId`), which is what "the list drew rows" means. `refused` is the
+	 *  daemon's own refusal sentence — the state the mock relay drives with a real
+	 *  404 — and `unknown-status` is the trailing section a status this build does
+	 *  not know lands in; the cell exists so "an unrecognised status is not dropped"
+	 *  is measured rather than asserted. */
+	projects: {
+		loading: SURFACE.projectsLoading,
+		empty: EMPTY.projects,
+		populated: "project-row-",
+		refused: SURFACE.projectRefusal,
+		"unknown-status": SURFACE.projectsUnknownStatus,
+	},
+	/* The pushed detail's own subject. The KEY is the id PREFIX, not a camelCase
+	 *  spelling of it: `tools/mock-relay/verify.ts` requires every subject the
+	 *  harness maps to be one the app declares ids for — i.e. some declared id must
+	 *  start with `<subject>-` — and this surface's ids are `project-detail-*`. A
+	 *  subject that answered `projectDetail` would pass the table lookup and fail
+	 *  that check, which is exactly the drift it exists to catch. */
+	"project-detail": {
+		loading: SURFACE.projectDetailLoading,
+		populated: SURFACE.projectLinks,
+		refused: SURFACE.projectDetailRefusal,
+	},
 	computers: {
 		/** The refusal surface, which the set-up path does not render: the one
 		 *  state of this screen the relay can drive — the computer LIST comes from
@@ -805,6 +870,11 @@ export const sessionRowId = (sessionId: string): string =>
  * an identifier per row keeps "copy the Cloudflare command" assertable without
  * counting blocks on the screen.
  */
+/** The row identifier for one project, so the prefix lives in the contract and
+ *  not at each call site (the `pastRowId` shape). */
+export const projectRowId = (projectId: string): string =>
+	`project-row-${projectId}`;
+
 /** The row identifier for one past session, so the prefix lives in the contract
  *  rather than in a template literal at the call site (the e2e check reads this
  *  file for every name a flow may use). */

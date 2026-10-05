@@ -265,6 +265,42 @@ export class RelayEndpoints {
 		});
 	}
 
+	/** The projects listing (`GET /api/projects`), in the relay's own board order —
+	 *  the sections are the relay's `STATUS_RANK`, not a client sort.
+	 *
+	 *  Read-only in this build: the mutation routes (create, patch, delete, links,
+	 *  milestones) exist on the relay and are deliberately not called from here.
+	 *
+	 *  A refusal carries the relay's own sentence (`RelayError.displayableMessage`)
+	 *  — the 5xx arm of this route is `503 project_store_busy`, retryable rather
+	 *  than malformed — so a screen shows that sentence instead of re-wording it. */
+	async projects(signal?: AbortSignal): Promise<Payload<"projects">> {
+		return this.http.json("projects", {
+			method: "GET",
+			path: "/api/projects",
+			signal,
+		});
+	}
+
+	/** One project's composed detail (`GET /api/projects/{key}`), with the linked
+	 *  sessions the relay resolved for it.
+	 *
+	 *  `key` is the relay's own addressing rule — an exact id first, then a
+	 *  case-insensitive name — so a caller may pass either and must encode it: a
+	 *  name is grammar-limited but not URL-safe. An unknown key is the relay's
+	 *  `404 project_not_found`, whose body sentence names up to two prefix-matched
+	 *  near-misses; that sentence is what a screen shows. */
+	async project(
+		key: string,
+		signal?: AbortSignal,
+	): Promise<Payload<"projectDetail">> {
+		return this.http.json("projectDetail", {
+			method: "GET",
+			path: `/api/projects/${encodeURIComponent(key)}`,
+			signal,
+		});
+	}
+
 	/** Full-text search over past conversations. `query` is echoed by the relay so
 	 *  a late answer can be matched to its request. */
 	async searchSessions(

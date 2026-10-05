@@ -102,7 +102,7 @@ let settledRetakes = 0;
  * not a size policy: it catches a plan far larger than any sample this harness
  * offers (an inflated cell registry, a cell list copied from another tree), and it
  * is why a big run is always something the caller typed `--yes` for. It sits BELOW
- * every tier on purpose — `ci` plans 272 cells, `core` 884, `full` 3196 — so none of
+ * every tier on purpose — `ci` plans 328 cells, `core` 1066, `full` 3854 — so none of
  * them starts by accident; the CI job passes `--yes` for exactly that reason. It is
  * NOT tied to the default tier, so it must not be raised to "let the default run": a
  * documented invocation that plans the whole `core` tier is a 33-minute command, and
@@ -117,7 +117,7 @@ const CONFIRM_THRESHOLD = 120;
  * the floor a small plan still gets.
  *
  * WHY THE DEFAULT IS DERIVED RATHER THAN FIXED. It used to be a flat 900 s, which
- * holds about 400 cells: a `core` run (884 cells) or a dispatched `full` run (3196)
+ * holds about 400 cells: a `core` run (1066 cells) or a dispatched `full` run (3854)
  * was therefore cut off by the harness's own default and reported hundreds of cells
  * as having no frame — a bound firing on a plan it was never sized for, which reads
  * like a finding about the app and is not one. Deriving it from the plan makes the
@@ -237,6 +237,7 @@ async function relayState(
 		scenarios: entries,
 		sessionId: typeof state.sessionId === "string" ? state.sessionId : null,
 		jobId: typeof state.jobId === "string" ? state.jobId : null,
+		projectKey: typeof state.projectKey === "string" ? state.projectKey : null,
 		scenario: typeof state.scenario === "string" ? state.scenario : null,
 	};
 }
@@ -245,7 +246,15 @@ async function relayState(
 function resolvePath(path: string, state: RelayStateReply | null): string {
 	const sessionId = state?.sessionId ?? "6714def86197";
 	const jobId = state?.jobId ?? "job-1";
-	return path.replace("{sessionId}", sessionId).replace("{jobId}", jobId);
+	/* `{projectKey}` defaults to the row the captured corpus holds by NAME rather
+	 *  than by id: the mock relay's key-scoped route answers a case-insensitive id
+	 *  OR name (`tools/mock-relay/relay.ts`), and a name stays readable in a
+	 *  manifest, so a frame can be traced back to the row it rendered. */
+	const projectKey = state?.projectKey ?? "payments-migration";
+	return path
+		.replace("{sessionId}", sessionId)
+		.replace("{jobId}", jobId)
+		.replace("{projectKey}", projectKey);
 }
 
 /**
@@ -1192,6 +1201,9 @@ interface RelayStateReply {
 	cellScenarios?: Record<string, string[]>;
 	sessionId: string | null;
 	jobId: string | null;
+	/** The project the key-scoped cell navigates to, when the relay's state reply
+	 *  names one; `resolvePath` falls back to the captured row. */
+	projectKey: string | null;
 	scenario: string | null;
 	scenarios: Record<
 		string,
@@ -2578,11 +2590,11 @@ if (isMain) {
 				"  --tier <name>       the sample to capture: ci | core (default) | full.",
 				"                      The matrix declares 19 device profiles; the run prints the",
 				"                      share it covered, and names the profiles it did not.",
-				"                        ci    2 of 19 profiles — 272 cells, both themes, scales 100",
+				"                        ci    2 of 19 profiles — 328 cells, both themes, scales 100",
 				"                              and 200 (~10 min) — the per-push CI job's sample",
-				"                        core  5 of 19 profiles — 884 cells, both themes, all",
+				"                        core  5 of 19 profiles — 1066 cells, both themes, all",
 				"                              three scales — the local default",
-				"                        full  19 of 19 profiles — 3196 cells",
+				"                        full  19 of 19 profiles — 3854 cells",
 				"  --devices <names>   comma list. Default: the tier's profiles (ci 2, core 5 by",
 				"                      default, --full for all 19)",
 				"  --themes <names>    default dark,light",
@@ -2609,7 +2621,7 @@ if (isMain) {
 	// overrides any of them.
 	//
 	// An unknown tier is an ERROR rather than a silent fall back to `core`: a typo'd
-	// `--tier ci` that quietly ran 884 cells would spend ~33 minutes on a capture the
+	// `--tier ci` that quietly ran 1066 cells would spend ~40 minutes on a capture the
 	// caller did not ask for, and the whole point of naming the sample is that the
 	// run you get is the one you asked for.
 	const tierFlag = bool(flags, "full") ? "full" : str(flags, "tier", "core");

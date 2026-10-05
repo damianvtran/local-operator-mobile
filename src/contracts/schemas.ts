@@ -42,6 +42,7 @@ import type {
 	Directories,
 	HealthzResponse,
 	HistoryResponse,
+	LinkedSession,
 	ModelEntry,
 	ModelsResponse,
 	PastSession,
@@ -50,6 +51,13 @@ import type {
 	PendingAsk,
 	PendingRequest,
 	PinResponse,
+	ProjectAttachment,
+	ProjectDetailResponse,
+	ProjectMilestone,
+	ProjectSummary,
+	ProjectsResponse,
+	ProjectUpdate,
+	ProjectView,
 	PromptImage,
 	PushConversationResponse,
 	PushDeviceDeleteResponse,
@@ -510,6 +518,140 @@ export const searchSessionsResponseSchema = pastSessionsResponseSchema.extend({
 	query: z.string(),
 });
 
+/* ---------------------------------------------------------------- projects */
+
+/**
+ * One milestone. `status` is the RELAY's derivation
+ * (`local_operator/projects.py:milestone_status`) — closed because the
+ * relay's own model declares it `Literal["completed", "overdue", "upcoming"]`,
+ * and re-deriving it from `target_date`/`completed_at` here is how a chip in
+ * this app starts disagreeing with a line in a tool result.
+ *
+ * `target_date`/`completed_at` keep `.nullable().default(null)`: absent means
+ * the field is not set, and `null` stays `null` rather than becoming `""`.
+ */
+export const projectMilestoneSchema = z.looseObject({
+	name: z.string(),
+	target_date: z.string().nullable().default(null),
+	completed_at: z.string().nullable().default(null),
+	status: z.enum(["completed", "overdue", "upcoming"]),
+});
+
+/** One stored attachment on a history entry. `path` resolves on the machine
+ *  that serves the payload; the client shows the name and the byte count. */
+export const projectAttachmentSchema = z.looseObject({
+	name: z.string().default(""),
+	kind: z.string().default("data"),
+	path: z.string().default(""),
+	bytes: z.number().default(0),
+	added_at: z.string().default(""),
+});
+
+/** One append-only history entry, newest last. */
+export const projectUpdateSchema = z.looseObject({
+	at: z.string().default(""),
+	text: z.string().default(""),
+	by: z.string().default(""),
+	attachments: z.array(projectAttachmentSchema).default([]),
+});
+
+/**
+ * One row of the listing (local-operator `ProjectSummary`).
+ *
+ * `progress_stale` defaults to `true`, which is the relay model's own default
+ * (`ProjectSummary.progress_stale: bool = True`) — a row whose staleness the
+ * relay did not state is treated as the row's own verdict, never re-derived
+ * from `progress_updated_at` against the phone's clock. Every count here is the
+ * relay's arithmetic; none is recomputed client-side.
+ */
+export const projectSummarySchema = z.looseObject({
+	id: nonEmpty,
+	name: z.string(),
+	description: z.string().default(""),
+	owner: z.string().nullable().default(null),
+	team: z.string().nullable().default(null),
+	title: z.string().nullable().default(null),
+	/* Open on purpose: the relay's status is a `str`, and a status a newer relay
+	 * invented must reach the screen's own unknown-status section rather than
+	 * failing the whole listing parse. */
+	status: z.string(),
+	tags: z.array(z.string()).default([]),
+	start_date: z.string().nullable().default(null),
+	target_date: z.string().nullable().default(null),
+	completed_at: z.string().nullable().default(null),
+	estimate: z.number().nullable().default(null),
+	estimate_unit: z.string().default("points"),
+	milestones_completed: z.number().default(0),
+	milestones_total: z.number().default(0),
+	sessions: z.number().default(0),
+	live_sessions: z.number().default(0),
+	coordination_sessions: z.number().default(0),
+	progress_stale: z.boolean().default(true),
+	progress_updated_at: z.number().nullable().default(null),
+	progress_refreshed_at: z.number().nullable().default(null),
+	progress_refreshed_by: z.string().default(""),
+	updated_at: z.number().default(0),
+});
+
+/** The full record behind `GET /api/projects/{key}`. */
+export const projectViewSchema = z.looseObject({
+	id: nonEmpty,
+	name: z.string(),
+	description: z.string().default(""),
+	owner: z.string().nullable().default(null),
+	team: z.string().nullable().default(null),
+	title: z.string().nullable().default(null),
+	status: z.string(),
+	progress: z.string().default(""),
+	progress_updated_at: z.number().nullable().default(null),
+	progress_reported_by: z.string().default(""),
+	progress_refreshed_at: z.number().nullable().default(null),
+	progress_refreshed_by: z.string().default(""),
+	progress_stale: z.boolean().default(true),
+	tags: z.array(z.string()).default([]),
+	sessions: z.array(z.string()).default([]),
+	coordination_sessions: z.array(z.string()).default([]),
+	created_at: z.number().default(0),
+	updated_at: z.number().default(0),
+	start_date: z.string().nullable().default(null),
+	target_date: z.string().nullable().default(null),
+	completed_at: z.string().nullable().default(null),
+	estimate: z.number().nullable().default(null),
+	estimate_unit: z.string().default("points"),
+	milestones: z.array(projectMilestoneSchema).default([]),
+	updates: z.array(projectUpdateSchema).default([]),
+});
+
+/**
+ * One linked session row. `runtime`/`subagents`/`todos` are free-form
+ * passthroughs: the shapes are the runtime record's own and this client reads
+ * only `runtime.state`, so validating further would reject frames the relay
+ * considers valid. They stay NULLABLE, because `null` is a wired value for a
+ * coordination row and collapsing it to `{}` would invent a live-looking row.
+ */
+export const linkedSessionSchema = z.looseObject({
+	session_id: nonEmpty,
+	role: z.enum(["work", "coordination"]).default("work"),
+	exists: z.boolean(),
+	title: z.string().nullable().default(null),
+	created_at: z.number().nullable().default(null),
+	archived: z.boolean().default(false),
+	runtime: z.record(z.string(), z.unknown()).nullable().default(null),
+	subagents: z.record(z.string(), z.unknown()).nullable().default(null),
+	todos: z.record(z.string(), z.unknown()).nullable().default(null),
+});
+
+/** `GET /api/projects` — the listing. */
+export const projectsResponseSchema = z.looseObject({
+	projects: z.array(projectSummarySchema),
+});
+
+/** `GET /api/projects/{key}` — the row plus its composed link rows. */
+export const projectDetailResponseSchema = z.looseObject({
+	project: projectViewSchema,
+	links: z.array(linkedSessionSchema).default([]),
+});
+
 export const historyResponseSchema = z.looseObject({
 	entries: z.array(transcriptEntrySchema),
 	has_more: z.boolean(),
@@ -797,6 +939,13 @@ export const SCHEMAS = {
 	pushDevices: pushDevicesResponseSchema,
 	pushDeviceDelete: pushDeviceDeleteResponseSchema,
 	pin: pinResponseSchema,
+	/* The two read families this build ships. The mutation answers (create,
+	 *  patch, delete, links, milestones) are not registered yet because nothing
+	 *  here calls them — a schema nobody validates against is a claim without a
+	 *  reader — and the wire types above already carry their shapes for the
+	 *  slices that add them. */
+	projects: projectsResponseSchema,
+	projectDetail: projectDetailResponseSchema,
 	startSession: startSessionResponseSchema,
 	resumeSession: resumeSessionResponseSchema,
 	sessionsStreamFrame: sessionsStreamFrameSchema,
@@ -909,6 +1058,11 @@ type WireMirror = {
 	pushDevices: PushDevicesResponse;
 	pushDeviceDelete: PushDeviceDeleteResponse;
 	pin: PinResponse;
+	/* The projects read path (`PROJECT_STATUS_ORDER`'s route pair). Asserted, not
+	 *  excused: a schema whose output stops being assignable to these mirror
+	 *  declarations trips `AssertAll` above. */
+	projects: ProjectsResponse;
+	projectDetail: ProjectDetailResponse;
 };
 
 /** `SCHEMAS` names deliberately outside the assertion, each the shape of a
@@ -1044,8 +1198,7 @@ export type _WireConformanceChecked = AssertAll<
 
 /* Re-exported for callers that want the mirror's declared shape alongside the
  * inferred one, and to keep the unused-import lints honest in files that only
- * need types. */
-export type {
+ * need types. */ export type {
 	ApiError,
 	AskQuestion,
 	AsksResponse,
@@ -1056,6 +1209,7 @@ export type {
 	Directories,
 	HealthzResponse,
 	HistoryResponse,
+	LinkedSession,
 	ModelEntry,
 	ModelsResponse,
 	PastSession,
@@ -1064,6 +1218,13 @@ export type {
 	PendingAsk,
 	PendingRequest,
 	PinResponse,
+	ProjectAttachment,
+	ProjectDetailResponse,
+	ProjectMilestone,
+	ProjectSummary,
+	ProjectsResponse,
+	ProjectUpdate,
+	ProjectView,
 	PromptImage,
 	PushConversationResponse,
 	PushDeviceDeleteResponse,
