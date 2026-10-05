@@ -28,6 +28,12 @@ export const ROLE = {
 	image: "image",
 	imagebutton: "imagebutton",
 	alert: "alert",
+	/* A polite live region. Spelled through the `role` prop, not `accessibilityRole`:
+	 *  React Native's `AccessibilityRole` union has no `status` (its ARIA-shaped `Role`
+	 *  type does), and react-native-web passes an unmapped role straight through to
+	 *  the DOM. The composer's dictation states are announced from one, never only
+	 *  shown (design §2.5 / round 1 D3). */
+	status: "status",
 	tab: "tab",
 	tablist: "tablist",
 	radiogroup: "radiogroup",
@@ -319,6 +325,7 @@ export const SURFACE = {
 	sessionWorkingLine: "session-working-line",
 	composerNotice: "composer-notice",
 	composerDictationTimer: "composer-dictation-timer",
+	composerDictationStatus: "composer-dictation-status",
 	composerError: "composer-error",
 	composerRetained: "composer-retained",
 	composerReceipt: "composer-receipt",

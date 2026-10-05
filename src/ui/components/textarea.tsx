@@ -32,6 +32,14 @@ export type TextareaProps = {
 	disabled?: boolean;
 	/** Six lines by default; the composer may raise it, never remove it. */
 	maxLines?: number;
+	/** The most lines a WRAPPED placeholder may add to the field's resting height.
+	 *  Unset keeps the shipped growth (design round D20: the box grows so a wrapped
+	 *  placeholder is not cut mid-word). The composer passes `1` instead — its resting
+	 *  height must stay stable (§2.5 D1), because on the 320 pt phone the placeholder
+	 *  grew past the field at 150/200 % text and pushed the last transcript row past
+	 *  the scroller (design round 1, D1/D2). At `1` the empty and the one-line states
+	 *  are equal by construction, whichever way the placeholder wraps. */
+	placeholderMaxLines?: number;
 	onSubmitEditing?: () => void;
 	autoFocus?: boolean;
 	/** A handle to the platform field, for the one caller that must FOCUS it —
@@ -59,6 +67,7 @@ export const Textarea = ({
 	invalid = false,
 	disabled = false,
 	maxLines = 6,
+	placeholderMaxLines,
 	onSubmitEditing,
 	autoFocus,
 	fieldRef,
@@ -76,6 +85,33 @@ export const Textarea = ({
 	 * wrapper so it costs no layout. An estimate (a line count times a line height)
 	 * would be a guess at exactly the thing being fixed. */
 	const [placeholderHeight, setPlaceholderHeight] = useState(0);
+	/* What the placeholder may claim of the resting height: all of it by default,
+	 * clamped to the caller's line budget when one is given (see
+	 * `placeholderMaxLines`). */
+	const placeholderFloor =
+		placeholderMaxLines === undefined
+			? placeholderHeight
+			: Math.min(placeholderHeight, line * placeholderMaxLines);
+	/* The capped placeholder is drawn by US, not by the platform. A `<textarea>`'s
+	 * `::placeholder` cannot be told to stop wrapping, and one that wraps paints its
+	 * second line straight through the field's box (measured on the 320 pt phone once
+	 * the box was held to one line: “Operator…” bled over the receipt row). The offset
+	 * is the field's own border + padding — `fieldClasses`: `border px-3 py-2` — which
+	 * is also where the platform paints its placeholder, so the two agree. */
+	const clampedPlaceholder =
+		placeholder !== undefined &&
+		value === "" &&
+		placeholderMaxLines !== undefined;
+	/* Why `contentHeight` is floored too, and only here: on web an EMPTY field's
+	 * `scrollHeight` includes the placeholder, so the content report carries the
+	 * placeholder's own wrapped height into the box and would defeat the cap by
+	 * exactly the growth it exists to stop (measured: the composer's field sat at
+	 * 64 pt at 100 % and 160 pt at 200 % with `placeholderMaxLines={1}` set and the
+	 * content report still in play). With a cap, an empty field rests at one line
+	 * and a filled one is unaffected — `value !== ""` keeps the growth for typed
+	 * text, which is what the box is for. */
+	const contentFloor =
+		placeholderMaxLines !== undefined && value === "" ? line : contentHeight;
 	const fieldState: FieldState = disabled
 		? "disabled"
 		: invalid
@@ -100,7 +136,12 @@ export const Textarea = ({
 			<Text className="text-body-sm text-ink-muted">{label}</Text>
 			{/* Only while it is the thing on screen: any value hides it, so it can never
 			 *  need room the content is already taking. Zero height and clipped, so it
-			 *  lays out and reports its own height without moving anything.
+			 *  lays out and reports its own height without moving anything — which is why
+			 *  it lives INSIDE the field's own wrapper: as a child of the root's `gap-1.5`
+			 *  column it contributed a 6 pt gap in the empty state and none once a
+			 *  character was typed, so the resting composer was 6 pt taller empty than
+			 *  one-line on the 320 pt phone (measured 80.3 vs 74.3 pt on the field's root;
+			 *  design §2.5 D1 requires the two to be equal).
 			 *
 			 *  WHY a second rendering exists: a placeholder is not part of the field's
 			 *  `contentSize`, so nothing else can tell the box how tall the WRAPPED
@@ -124,54 +165,78 @@ export const Textarea = ({
 			 *  directly in design/tokens/contrast-contract.mjs (`input/placeholder`), and
 			 *  src/ui/components/textarea.test.ts fails if the two are ever given
 			 *  different inks. */}
-			{placeholder !== undefined && value === "" ? (
-				<View className="h-0 overflow-hidden" aria-hidden>
+			<View className="relative">
+				{placeholder !== undefined && value === "" ? (
+					<View className="h-0 overflow-hidden" aria-hidden>
+						<Text
+							className="text-body"
+							style={{ color: placeholderColour }}
+							onLayout={(event) =>
+								setPlaceholderHeight(event.nativeEvent.layout.height)
+							}
+							pointerEvents="none"
+						>
+							{placeholder}
+						</Text>
+					</View>
+				) : null}
+				<TextInput
+					ref={resolvedRef}
+					className={fieldClasses(fieldState)}
+					/* One `style`, because a textarea's box IS its visual: the growing height
+					 *  and the platform floor (48 wherever `Platform.OS` is not iOS — the
+					 *  web/audit profile) have to be resolved together (D6). */
+					style={{
+						height: Math.min(
+							Math.max(contentFloor, line, placeholderFloor),
+							cap,
+						),
+						minHeight: TOUCH_FLOOR,
+					}}
+					multiline
+					// The transcript scrolls, not the page: the field clips its own
+					// overflow once it hits the cap.
+					scrollEnabled={Math.max(contentFloor, placeholderFloor) > cap}
+					onContentSizeChange={handleContentSize}
+					accessibilityRole={ROLE.text}
+					accessibilityLabel={label}
+					accessibilityState={state({ disabled })}
+					value={value}
+					onChangeText={onChangeText}
+					placeholder={clampedPlaceholder ? undefined : placeholder}
+					placeholderTextColor={placeholderColour}
+					editable={!disabled}
+					onSubmitEditing={onSubmitEditing}
+					// A hardware keyboard offers Send; Shift+Enter still inserts a newline
+					// and is handled by the composer, which owns the send action.
+					returnKeyType="send"
+					inputMode="text"
+					autoFocus={autoFocus}
+					testID={testID}
+				/>
+				{/* Painted AFTER the field, because the field's own fill is opaque: an
+				 *  overlay underneath it would never be seen. `pointerEvents="none"` so every
+				 *  tap still reaches the field, and `aria-hidden` because the field's `label`
+				 *  is already its accessible name. */}
+				{clampedPlaceholder ? (
 					<Text
 						className="text-body"
-						style={{ color: placeholderColour }}
-						onLayout={(event) =>
-							setPlaceholderHeight(event.nativeEvent.layout.height)
-						}
+						style={{
+							position: "absolute",
+							left: 13,
+							right: 13,
+							top: 9,
+							color: placeholderColour,
+						}}
+						numberOfLines={1}
+						ellipsizeMode="tail"
 						pointerEvents="none"
+						aria-hidden
 					>
 						{placeholder}
 					</Text>
-				</View>
-			) : null}
-			<TextInput
-				ref={resolvedRef}
-				className={fieldClasses(fieldState)}
-				/* One `style`, because a textarea's box IS its visual: the growing height
-				 *  and the platform floor (48 wherever `Platform.OS` is not iOS — the
-				 *  web/audit profile) have to be resolved together (D6). */
-				style={{
-					height: Math.min(
-						Math.max(contentHeight, line, placeholderHeight),
-						cap,
-					),
-					minHeight: TOUCH_FLOOR,
-				}}
-				multiline
-				// The transcript scrolls, not the page: the field clips its own
-				// overflow once it hits the cap.
-				scrollEnabled={Math.max(contentHeight, placeholderHeight) > cap}
-				onContentSizeChange={handleContentSize}
-				accessibilityRole={ROLE.text}
-				accessibilityLabel={label}
-				accessibilityState={state({ disabled })}
-				value={value}
-				onChangeText={onChangeText}
-				placeholder={placeholder}
-				placeholderTextColor={placeholderColour}
-				editable={!disabled}
-				onSubmitEditing={onSubmitEditing}
-				// A hardware keyboard offers Send; Shift+Enter still inserts a newline
-				// and is handled by the composer, which owns the send action.
-				returnKeyType="send"
-				inputMode="text"
-				autoFocus={autoFocus}
-				testID={testID}
-			/>
+				) : null}
+			</View>
 		</View>
 	);
 };
