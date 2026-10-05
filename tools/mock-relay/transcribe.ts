@@ -42,12 +42,15 @@
  *     the declared `Content-Length` (with the daemon's 1 MB framing slack, which
  *     is what a >20 MB clip trips) AND the post-read `audio` payload length. The
  *     post-read arm is reachable only for a body between 20 MB and 21 MB, since
- *     the mock has no body ceiling by default; no test walks that window, and the
- *     unit suite pins the declared arm instead.
- *   - **`language`/`prompt`/`model` semantics.** They are accepted and the
- *     `model` field is echoed into the success answer (the daemon's `model`
- *     comes from the provider response); the daemon's own validators for the
- *     two text fields are not reproduced.
+ *     the mock has no body ceiling by default: a payload one byte over the cap
+ *     whose multipart framing still fits inside the declared arm's slack. BOTH
+ *     arms are walked by `transcribe.test.ts` — the declared one at 21 MB + 64
+ *     and the post-read one at 20 MB + 1.
+ *   - **`language`/`prompt`/`model` semantics.** The parts are accepted and not
+ *     read: the request has no `model` field at all. The success answer's `model`
+ *     is the SCENARIO's declared `answer.model` — the value the daemon would have
+ *     taken from the provider response — not an echo of the request. The daemon's
+ *     own validators for the two text fields are not reproduced.
  *   - **A parameter whose value contains a `;`.** `parseMultipart` splits the
  *     Content-Disposition on `;` rather than running starlette's stricter
  *     parser, so a `filename` carrying one would be read short. No recorder

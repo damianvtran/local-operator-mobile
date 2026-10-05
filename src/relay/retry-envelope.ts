@@ -184,6 +184,10 @@ export function isValidEnvelope(value: unknown): value is ContinuationEnvelope {
 	}
 	if (candidate.input_path !== undefined) {
 		if (typeof candidate.input_path !== "string") return false;
+		/* `undefined` is the legacy "no path"; `""` is a malformed PRESENT value —
+		 * `holdNew` never stores one and `annotationForSend` omits the field instead —
+		 * so it is refused like any other bad string rather than read as absent. */
+		if (candidate.input_path === "") return false;
 		if (candidate.input_path.length > 96) return false;
 	}
 	return true;

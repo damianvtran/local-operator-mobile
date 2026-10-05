@@ -47,13 +47,16 @@ describe("envelope annotation validation", () => {
 		expect(isValidEnvelope({ ...base, input_mode: "spoken" })).toBe(false);
 	});
 
-	it("bounds input_path at 96 characters", () => {
+	it("bounds input_path at 96 characters, and refuses an empty one", () => {
 		const base = { op: "prompt" as const, command_id: UUID, text: "hi" };
 		expect(isValidEnvelope({ ...base, input_path: "a".repeat(96) })).toBe(true);
 		expect(isValidEnvelope({ ...base, input_path: "a".repeat(97) })).toBe(
 			false,
 		);
 		expect(isValidEnvelope({ ...base, input_path: 5 })).toBe(false);
+		/* Absence is the legacy reading; `""` is a malformed present value the relay
+		 * refuses (422), so the store refuses it too rather than smuggle it through. */
+		expect(isValidEnvelope({ ...base, input_path: "" })).toBe(false);
 	});
 });
 
