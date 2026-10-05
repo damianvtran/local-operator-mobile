@@ -5,10 +5,18 @@ import { View } from "react-native";
 
 import { LEVEL_BARS, type MeterStore } from "@/stt/levels";
 
-/** The shortest a bar ever gets. Not zero: a flat meter must still read as a meter
- *  ("the microphone is on and hearing nothing") rather than as an empty row, which
- *  is the silent-take the meter exists to make visible before it becomes an empty
- *  transcript. */
+/** The shortest a bar ever gets, and its WIDTH floor too. Not zero: a flat meter
+ *  must still read as a meter ("the microphone is on and hearing nothing") rather
+ *  than as an empty row, which is the silent-take the meter exists to make visible
+ *  before it becomes an empty transcript.
+ *
+ * It is a `minWidth` as well as a floor on the `height`, because `flex-1` gives a
+ * bar a flex-BASIS of zero and react-native-web lets a flex item shrink to it: at a
+ * text scale where the row is squeezed, every bar measured 0.0 px wide and the meter
+ * — this row's headline — rendered as nothing (design round 1, D2: 320 pt/150 % and
+ * 200 %, 390 pt/200 %). A minimum width the flex shrink cannot cross keeps each bar
+ * visible; the row's `overflow-hidden` clips any that no longer fit rather than
+ * letting them push the composer sideways. */
 const BAR_MIN_PX = 3;
 
 /** The tallest. The row sits inside the composer's recording bar, which is a
@@ -45,21 +53,28 @@ export const DictationMeter = ({
 	);
 	return (
 		<View
-			className="h-6 flex-1 flex-row items-end gap-0.5"
+			className="h-6 flex-1 flex-row items-end gap-0.5 overflow-hidden"
 			testID={testID}
 			aria-hidden
 		>
 			{Array.from({ length: LEVEL_BARS }, (_, index) => {
-				/* The history is oldest-first and may be shorter than the row (a
-				 * recording that just started): the slots before it stay at the floor,
-				 * so the meter fills from the left as it runs. */
+				/* The history is oldest-first and RIGHT-anchored: a fresh take starts at
+				 * the right edge and the row scrolls leftward as it fills, so a history
+				 * shorter than the row leaves the SLOTS BEFORE it at the floor and the
+				 * newest reading sits at the right (the mapping below places a short
+				 * history's entries in the last slots). The alternative — filling from the
+				 * left — was what this comment used to claim while the code did this; a
+				 * right-anchored scrolling history is the conventional shape and is kept. */
 				const offset = levels.length - LEVEL_BARS + index;
 				const level = offset >= 0 ? (levels[offset] ?? 0) : 0;
 				return (
 					<View
 						key={index}
 						className="flex-1 rounded-full bg-danger"
-						style={{ height: BAR_MIN_PX + level * (BAR_MAX_PX - BAR_MIN_PX) }}
+						style={{
+							minWidth: BAR_MIN_PX,
+							height: BAR_MIN_PX + level * (BAR_MAX_PX - BAR_MIN_PX),
+						}}
 					/>
 				);
 			})}
