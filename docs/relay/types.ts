@@ -118,6 +118,17 @@ export interface PeerSender {
   cwd?: string;
 }
 
+/** `peer_send.DeliveryOutcome.details` — see `TranscriptEntryDetails.delivery`. */
+export interface SendDeliveryDetails {
+  state?: string;
+  message_id?: string;
+  wake?: boolean | string;
+  attempts?: number;
+  cause?: string;
+  route?: string;
+  reason?: string;
+}
+
 /** The expand-on-tap payload of a settled tool row.
  *
  *  NOT ALWAYS STRINGS: `args` rides through as an object and `diff` as a list of
@@ -139,6 +150,23 @@ export interface TranscriptEntryDetails {
   user_run?: boolean;
   /** Bytes the model has written for this call so far (`projection.py:1895`). */
   argument_bytes?: number;
+  /** The `send` tool's settled delivery state, `details.delivery`
+   *  (local-operator PR #1855; the desktop tool row renders it since
+   *  local-operator-ui #719). Keys: `state` (`delivered | mailbox |
+   *  unconfirmed | failed`), `message_id`, `wake`, `attempts`, `cause`,
+   *  `route`, `reason` (`peer_send.DeliveryOutcome.details`,
+   *  `local_operator/mobile/peer_send.py`). The app reads it through
+   *  `src/features/session/delivery.ts` and treats an absent or unknown
+   *  `state` as "no state" — never as a failure claim.
+   *
+   *  CARRIAGE, as of local-operator `1d88f3466`: the core attaches this
+   *  object to the tool result's persist payload (`tools/builtin.py`
+   *  execute_send) but the mobile fold does NOT copy it onto the phone's
+   *  row yet (`mobile/projection.py` `_tool_row_details` copies diff keys
+   *  only). The app is built to this shape and the mock relay serves it;
+   *  lighting it up end-to-end needs the one-line core change named in
+   *  the mobile PR that added this field. */
+  delivery?: SendDeliveryDetails;
   /* --- the queued-ask rows (design §4): attached to `ask_response` /
    *  `ask_timeout` entries by the fold (`projection.py`, the ask branches). --- */
   ask_id?: string;

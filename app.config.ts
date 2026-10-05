@@ -185,6 +185,23 @@ const config: ExpoConfig = {
 			},
 		],
 		"expo-image",
+		[
+			"expo-notifications",
+			{
+				// The Android status-bar small icon: monochrome and alpha-only
+				// (brand-kit § 6.6), so it reads on every shade. The accent is the
+				// static build colour for the icon and app name in the shade;
+				// per-event colours belong to the notification classes the cloud
+				// payload names (S7) and are not fixed here.
+				icon: "./design/app-icon/android/ic_notification.png",
+				color: color("accent.accent", "light"),
+				// `enableBackgroundRemoteNotifications` stays OFF, deliberately: the
+				// silent attention wake (ADR 0006 §1.5) is the one push that needs
+				// the mode, and its handler is S6/S7 work — declaring the mode
+				// before anything handles it would make this build claim more than
+				// it does, and it is a one-line flip when that handler lands.
+			},
+		],
 		// RELEASE SIGNING, and the only thing that makes `bundleRelease` produce a
 		// signed AAB. Without it the generated project keeps Expo's template release
 		// `signingConfig`, which points at the DEBUG keystore, so a "release" build

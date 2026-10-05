@@ -52,6 +52,10 @@ import type {
 	PinResponse,
 	PromptImage,
 	PushConversationResponse,
+	PushDeviceDeleteResponse,
+	PushDeviceRow,
+	PushDevicesResponse,
+	PushRegisterResponse,
 	SearchSessionsResponse,
 	SeenResponse,
 	SessionListFrame,
@@ -126,6 +130,25 @@ export const peerSenderSchema = z.looseObject({
 	cwd: z.string().optional(),
 });
 
+/** The send tool's settled delivery payload (`details.delivery`).
+ *
+ *  The ONE nested payload both the live result and the persisted row carry
+ *  (local-operator PR #1855, `peer_send.DeliveryOutcome.details`). `state` is
+ *  typed as an open string on purpose: the four states are known today
+ *  (`delivered | mailbox | unconfirmed | failed`) but a future core may add a
+ *  fifth, and a closed enum here would reject the whole frame a newer relay
+ *  sends. The four-state narrowing lives in `features/session/delivery.ts`,
+ *  which reads an unknown state as absent rather than guessing. */
+export const sendDeliveryDetailsSchema = z.looseObject({
+	state: z.string().optional(),
+	message_id: z.string().optional(),
+	wake: z.union([z.boolean(), z.string()]).optional(),
+	attempts: z.number().optional(),
+	cause: z.string().optional(),
+	route: z.string().optional(),
+	reason: z.string().optional(),
+});
+
 /** `args` rides through as an object as often as a string; `diff` as a list of
  *  unified-diff lines as often as a string. Both are modelled as the union the
  *  relay actually sends rather than as the convenient one. */
@@ -139,6 +162,11 @@ export const transcriptEntryDetailsSchema = z.looseObject({
 	notice_kind: z.literal("wake").optional(),
 	user_run: z.boolean().optional(),
 	argument_bytes: z.number().optional(),
+	/** The `send` tool's delivered / wake-unconfirmed / delivery-unconfirmed /
+	 *  not-delivered states. Absent on every transcript a relay that predates
+	 *  the field serves — and on this one until the mobile fold copies it
+	 *  through (`projection.py`). */
+	delivery: sendDeliveryDetailsSchema.optional(),
 });
 
 export const transcriptEntrySchema = z.looseObject({
@@ -547,6 +575,41 @@ export const pushConversationResponseSchema = z.looseObject({
 	session_id: nonEmpty,
 });
 
+/** `POST /api/push/register` (local-operator `push_devices.register`).
+ *  `device_key` appears in this response only; refusals (revoked / unpaired /
+ *  machine-only) arrive as the relay's own error bodies, never here. */
+export const pushRegisterResponseSchema = z.looseObject({
+	ok: z.literal(true),
+	device_id: nonEmpty,
+	device_key: nonEmpty,
+	registered_at: z.number(),
+});
+
+/** One `GET /api/push/devices` row. `state` stays an open string: the four
+ *  names are known today and a renderer maps them through the core's own
+ *  descriptions; an unknown state must render through the fallback, not reject
+ *  the frame. */
+export const pushDeviceRowSchema = z.looseObject({
+	device_id: nonEmpty,
+	platform: z.string(),
+	app_version: z.string(),
+	registered_at: z.number(),
+	last_seen_at: z.number(),
+	state: z.string(),
+	name: z.string().optional(),
+	credential_live: z.boolean().optional(),
+	last_authenticated_at: z.number().optional(),
+});
+
+export const pushDevicesResponseSchema = z.looseObject({
+	devices: z.array(pushDeviceRowSchema),
+	precedence: z.string(),
+});
+
+export const pushDeviceDeleteResponseSchema = z.looseObject({
+	ok: z.literal(true),
+});
+
 export const pinResponseSchema = z.looseObject({
 	ok: z.literal(true),
 	/** The state the store read back — a caller cannot be told a pin the reader
@@ -730,6 +793,9 @@ export const SCHEMAS = {
 	commandOp: commandOpSchema,
 	seen: seenResponseSchema,
 	pushConversation: pushConversationResponseSchema,
+	pushRegister: pushRegisterResponseSchema,
+	pushDevices: pushDevicesResponseSchema,
+	pushDeviceDelete: pushDeviceDeleteResponseSchema,
 	pin: pinResponseSchema,
 	startSession: startSessionResponseSchema,
 	resumeSession: resumeSessionResponseSchema,
@@ -797,6 +863,13 @@ export type WireConformance = [
 	SchemaSatisfiesWire<"pushConversation"> extends PushConversationResponse
 		? true
 		: never,
+	SchemaSatisfiesWire<"pushRegister"> extends PushRegisterResponse
+		? true
+		: never,
+	SchemaSatisfiesWire<"pushDevices"> extends PushDevicesResponse ? true : never,
+	SchemaSatisfiesWire<"pushDeviceDelete"> extends PushDeviceDeleteResponse
+		? true
+		: never,
 	SchemaSatisfiesWire<"pin"> extends PinResponse ? true : never,
 ];
 
@@ -823,6 +896,10 @@ export type {
 	PinResponse,
 	PromptImage,
 	PushConversationResponse,
+	PushDeviceDeleteResponse,
+	PushDeviceRow,
+	PushDevicesResponse,
+	PushRegisterResponse,
 	SearchSessionsResponse,
 	SeenResponse,
 	SessionListFrame,
