@@ -454,7 +454,20 @@ export const Composer = ({
 					testID={CONTROL.composerAttach}
 				>
 					<View className="h-11 w-11 items-center justify-center rounded-full border border-control">
-						<Text className="text-ink-muted" aria-hidden>
+						{/* A NAMED TYPE ROLE, not a bare colour class. A `<Text>` carrying only
+						 *  `text-ink-muted` inherits the stylesheet's fixed 14 px and never reads a
+						 *  `--text-*` role, so the glyph ignored the reader's text size — the same
+						 *  defect the splash's suggestion labels were fixed for. Its cost is to the
+						 *  MEASUREMENT as much as the reader: at 200 % every text node around it
+						 *  doubles and this one does not, so it sits at the 100 %-median height and
+						 *  drags the run-level median down — the drawer's own `S15/populated` 200 %
+						 *  cells were reported UNREADY ("median text 34.796875px at 200% against
+						 *  1.74x the 100% cell"), which makes `audit:capture` exit 1 for any cell
+						 *  set containing the populated drawer. `body-sm` (14 px / 400) is the step
+						 *  the glyph already PAINTS, so 100 % is unchanged and the glyph now scales
+						 *  with everything beside it. `aria-hidden` stays: the label a reader hears
+						 *  is the button's own ("Attach an image"). */}
+						<Text className="text-body-sm text-ink-muted" aria-hidden>
 							＋
 						</Text>
 					</View>

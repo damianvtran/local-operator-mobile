@@ -107,8 +107,26 @@ const SuggestionRow = ({
 					className={cx(buttonClasses("quiet", "md", { pressed }), "w-full")}
 					style={{ borderBottomColor: rowEdge, borderBottomWidth: 1 }}
 				>
+					{/* A NAMED TYPE ROLE, not a bare colour class. A `<Text>` carrying only
+					 *  `text-ink-muted` inherits the stylesheet's fixed 14 px: it never reads a
+					 *  `--text-*` role, so it was the one string on the splash that ignored the
+					 *  reader's text size — measured by the capture at iphone-15-landscape, where
+					 *  the row's 14 px held at 200 % while every other role doubled (body 16→32,
+					 *  title 20→40), and the cell was reported UNREADY (median text 1.74x at
+					 *  200 %, needs ≥ 1.9x) because of it.
+					 *
+					 *  `body-sm` is the kit's role for a full-width row's label: the same row
+					 *  grammar this kit already uses for the panel's conversation rows, the past
+					 *  list's rows and the settings rows (`text-body-sm text-ink`), and it is the
+					 *  step the row already PAINTS (14 px / 400) — so the fix is scale-only and
+					 *  the row's 100 % rendering is untouched. `label` (15 px / 600) is the role
+					 *  for a control's own label (Button, Segmented) and would restyle a row that
+					 *  reads as copy, not as a caption; a bare colour class is the defect. */}
 					<Text
-						className={pressed ? "text-ink" : "text-ink-muted"}
+						className={cx(
+							"text-body-sm",
+							pressed ? "text-ink" : "text-ink-muted",
+						)}
 						numberOfLines={1}
 					>
 						{label}

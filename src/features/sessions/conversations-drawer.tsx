@@ -67,7 +67,24 @@ export const ConversationsDrawer = ({
 }: ConversationsDrawerProps) => {
 	const insets = useSafeAreaInsets();
 	const { width } = useWindowDimensions();
-	const panelWidth = sidebarWidthFor(width);
+	/* The designed panel width PLUS the left inset — the inset is added to the
+	 *  panel's OUTER geometry, never spent out of its content column.
+	 *
+	 *  Widening is what makes the inset free for the content. With the width left
+	 *  alone and only padding added, the panel's column takes the whole hit:
+	 *  measured at iphone-15-landscape (insets 59/59, env() resolved by the capture
+	 *  rig) the empty state's column went 247 → 188 pt, the copy reflowed one line
+	 *  and the drawer's own "New chat" CTA fell from 27 of its 48 pt visible to
+	 *  6.5 — its label out of view at 100 % text in both themes — while the
+	 *  header's host label ellipsized at the DEFAULT text size. The widened panel
+	 *  restores the column to its designed width (247 pt) and the CTA to its
+	 *  before position, at every scale.
+	 *
+	 *  The `SIDEBAR_SLIVER` cap inside `sidebarWidthFor` binds only below 336 pt of
+	 *  viewport, where no side inset exists (a side inset this large implies a
+	 *  landscape phone 844 pt wide, whose sliver is 505 pt of the 844), so adding
+	 *  the inset cannot eat the page behind the panel. */
+	const panelWidth = sidebarWidthFor(width) + insets.left;
 	const reduceMotion = useReducedMotion();
 	const shadow = useShadow("overlay");
 	const scrimColour = useTokenColor("scrim");
@@ -145,7 +162,32 @@ export const ConversationsDrawer = ({
 				>
 					<View
 						className="flex-1 border-panel-edge border-r bg-elevated"
-						style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}
+						style={{
+							paddingTop: insets.top,
+							paddingBottom: insets.bottom,
+							/* The panel is anchored to the viewport's LEFT edge, so its own left inset is
+							 *  the horizontal safe area that applies to it — and it has to carry it
+							 *  itself: a Modal portals onto `document.body` (the note below), which puts
+							 *  the panel OUTSIDE the `Screen` that applies `paddingLeft` for every other
+							 *  surface, so its rows painted inside the unsafe band on anything with a
+							 *  side inset. Measured at iphone-15-landscape (insets 59/59, the env() value
+							 *  resolved by the capture rig): the header's host label painted at x=16 and
+							 *  the footer tabs at x=35.9, both inside the 59 pt band.
+							 *
+							 *  The padding goes on the panel's own content view, and the panel ITSELF is
+							 *  widened by the same inset (see `panelWidth` above): together they spend the
+							 *  inset out of the panel's OUTER geometry while the fill stays full-bleed
+							 *  behind the band and the content column keeps its designed width — the same
+							 *  shape as the `Screen`, which pads its root rather than its children.
+							 *
+							 *  LEFT ONLY. The panel is anchored to the left edge and never reaches the
+							 *  right one (339 pt of an 844 pt landscape phone, a 505 pt sliver behind),
+							 *  so `insets.right` describes a screen edge the panel does not touch;
+							 *  reserving it would cost another 59 pt for nothing. `left` is the one that
+							 *  moves when the notch (or a rounded corner) is on the side the drawer
+							 *  slides in from. */
+							paddingLeft: insets.left,
+						}}
 					>
 						{/* The type scale is re-published INSIDE the Modal because a modal is a
 						 *  PORTAL: react-native-web appends its node to `document.body`, OUTSIDE the
