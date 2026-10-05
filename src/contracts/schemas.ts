@@ -828,8 +828,11 @@ export type Payload<K extends SchemaName> = z.output<SchemaRegistry[K]>;
  * `package.json` pins: a schema added with no confirmation (a `SCHEMAS` entry
  * with no `WireMirror` key and no excuse); a confirmation for a schema that does
  * not exist (a `WireMirror` key that is not a `SchemaName`); a renamed schema; a
- * deleted mirror key; an emptied mirror map; a real type divergence in either
- * direction between a covered schema's output and the mirror's declaration; a
+ * deleted mirror key; an emptied mirror map; a real type divergence in the
+ * direction the assertion tests — a covered schema's output that stops being
+ * assignable to the mirror's declaration (a field the mirror declares that
+ * the payload does not satisfy); a payload *wider* than the mirror is not
+ * caught, as the note below says; a
  * mirror value widened to `unknown`/`any`, which would make that key's check
  * vacuous; and an excuse list that gains a name outside the enumerated eight or
  * loses one of them.
