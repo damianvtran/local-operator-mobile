@@ -18,6 +18,7 @@
  *    every interactive node has a name.
  */
 
+import { LEVEL_BARS } from "../../src/stt/levels.ts";
 import type { Floors } from "./color.ts";
 import { composite, contrastRatio, parseCssColor } from "./color.ts";
 import { INTERACTIVE_AX_ROLES } from "./probe.ts";
@@ -326,6 +327,28 @@ function u03ColourOnlyStatus(
 }
 
 /**
+ * The U-03 declared-exception reasons, exported so the canary asserts the rule's
+ * own wording rather than a copy of it — the same contract `U08_SUPPRESSION` has.
+ * A drifted reason string would otherwise leave the canary asserting a sentence
+ * the audit no longer writes, which is a green run proving nothing.
+ */
+export const U03_SUPPRESSION = {
+	/**
+	 * Branch (1), a control's own painted surface. The reason names the two carriers
+	 * the branch actually requires (`childImages > 0 || hasAccessibleName`), so the
+	 * prose and the predicate cannot drift apart (review round 3, R3-2).
+	 */
+	CONTROL_FILL:
+		"the control's own painted surface — its glyph or accessible name carries the affordance, so its fill is not a colour-only status",
+	/**
+	 * Branch (2), one bar of the level meter's repeated series. The row appends the
+	 * measured count and colour, so this is the stable prefix the canary asserts.
+	 */
+	METER_SERIES:
+		"one bar of the level meter's repeated series, not a single status indicator",
+} as const;
+
+/**
  * The two shapes U-03 DECLARES as exceptions rather than FAILs, each with its
  * measured reason — the shape a reviewer agreed is a false positive in substance.
  *
@@ -338,6 +361,12 @@ function u03ColourOnlyStatus(
  * exception is a recorded statement a reader can audit, which is what makes it
  * different from a prose rationale in a review comment and from a rule narrowed
  * until it cannot fail.
+ *
+ * Both branches are exercised by a canary fixture (review round 3, R3-1): the
+ * `#filled-control` and `#meter-series` shapes must come back EXCEPTION with the
+ * reason below, and `#three-dot-a` must come back FAIL. Without those fixtures,
+ * "the predicates are narrow" was a claim no run could test — the round-2 comment
+ * asserted it against a fixture that exercised neither new branch.
  */
 function declaredColourException(
 	node: AuditNode,
@@ -350,26 +379,52 @@ function declaredColourException(
 	// name (U-09 passes on the control). The rule's `controlText` scope already accepts a
 	// WORD in the control; this is that same case with a glyph instead of a word.
 	//
-	// Deliberately GEOMETRIC, because the name channel is what U-03 refuses on purpose:
-	// a status DOT inside a control is a fraction of its box (measured 12×12 in a 44 pt
-	// button, and a meter bar 3×13 in its 84 px row) and does NOT match — that is the
-	// shape the rule exists to keep reporting.
+	// The branch REQUIRES one of those two carriers on the control, because that is
+	// what the reason claims and what makes the fill not a status: a wordless,
+	// glyph-less control fully painted one semantic colour is exactly the colour-only
+	// state U-03 exists to report, and exempting it would reopen the hole this branch
+	// is meant to be a narrow cut in (review round 3, R3-2).
+	//
+	// The geometry reads `visibleRect` (what is PAINTED), not the layout `rect`: this
+	// file's convention for "what does the reader see" is `visibleRect`, so a fill
+	// clipped to a sliver against its control must not count as covering it.
 	const control = node.ancestors
 		.map((i) => byIndex.get(i))
 		.find((n) => n?.interactive);
+	const controlBox = control === undefined ? null : paintedBox(control);
+	const fillBox = paintedBox(node);
 	if (
 		control !== undefined &&
-		node.rect.w >= control.rect.w * 0.9 &&
-		node.rect.h >= control.rect.h * 0.9
+		controlBox !== null &&
+		fillBox !== null &&
+		fillBox.w >= controlBox.w * 0.9 &&
+		fillBox.h >= controlBox.h * 0.9 &&
+		(control.childImages > 0 || control.hasAccessibleName)
 	) {
-		return "the control's own painted surface (its glyph and accessible name carry the affordance; a control's fill is not a colour-only status)";
+		return U03_SUPPRESSION.CONTROL_FILL;
 	}
-	// (2) ONE BAR OF A REPEATED SERIES. The recording meter is `LEVEL_BARS` sibling bars
-	// drawing one semantic colour — a visualisation of level, not a single status
-	// indicator — and the row's status word (`Recording`) sits BESIDE the meter, outside
-	// both of the rule's bounded scopes (its own container is the empty meter box). Three
-	// or more same-tagged siblings sharing the colour is the measured signature of a
-	// series; a lone indicator cannot match it.
+	// (2) ONE BAR OF THE LEVEL METER'S REPEATED SERIES. The recording meter is exactly
+	// `LEVEL_BARS` sibling bars drawing one semantic colour — a visualisation of level,
+	// not a single status indicator — and the row's status word (`Recording`) sits
+	// BESIDE the meter, outside both of the rule's bounded scopes (its own container is
+	// the empty meter box).
+	//
+	// THE FLOOR IS THE METER'S OWN BAR COUNT, NOT "a handful" (QA round 1, Q1; review
+	// round 3, R3-1). The earlier `>= 3` was satisfied by ANY short row of same-colour
+	// siblings, and QA reproduced the consequence: three bare colour-only dots — a real
+	// U-03 violation — came back EXCEPTION, so the audit could no longer fail on a
+	// 3-dot colour-only status. Tying the count to `LEVEL_BARS` (imported from the
+	// meter's own module, so it cannot drift) is the narrowest rule that keeps the flat
+	// meter exempt: the meter is 16 bars and a status row is a handful of indicators,
+	// so a 3-dot status row can no longer match.
+	//
+	// THE RESIDUAL, stated rather than hidden: a run of >= LEVEL_BARS identical
+	// same-colour siblings WOULD still be exempted. That is the bound of a shape
+	// predicate that must not fire on a flat (silent-take) meter — a size-varying
+	// requirement was rejected because a real meter at rest is 16 equal bars. At that
+	// cardinality a uniform same-colour run reads as a meter, not as a status row, and
+	// the canary's `#three-dot-a` fixture fails the moment this floor is widened back
+	// below `LEVEL_BARS` again, so the direction cannot drift unnoticed.
 	//
 	// `aria-hidden` is NOT the discriminator even though the meter carries it: an
 	// aria-hidden node can still paint a colour-only status, so exempting that attribute
@@ -382,8 +437,8 @@ function declaredColourException(
 				n.tag === node.tag &&
 				n.semanticBackground === node.semanticBackground,
 		);
-		if (series.length >= 3) {
-			return `one of ${series.length} bars of a repeated series drawing ${node.semanticBackground} (a level meter, not a single status indicator)`;
+		if (series.length >= LEVEL_BARS) {
+			return `${U03_SUPPRESSION.METER_SERIES} (${series.length} bars drawing ${node.semanticBackground})`;
 		}
 	}
 	return null;
@@ -1283,6 +1338,15 @@ function u09AccessibleName(state: AuditState): CheckRow[] {
 	}));
 }
 
+/**
+ * The U-10 declared-exception reason, exported for the same contract as
+ * `U03_SUPPRESSION`: the canary asserts the wording the rule writes rather than a
+ * copy that could drift.
+ */
+export const U10_DECLARATION = {
+	TEXT_ENTRY_VALUE: "a text-entry VALUE, not a label",
+} as const;
+
 /** U-10 — the accessible name contains the visible label, so "tap approve" works. */
 function u10LabelInName(state: AuditState): CheckRow[] {
 	// The guard is on the *DOM's* interactive nodes, because the pairing below is
@@ -1324,11 +1388,21 @@ function u10LabelInName(state: AuditState): CheckRow[] {
 		// measured name and value — rather than dropped or turned into a PASS; the rule
 		// itself is unchanged, and the shape is narrow (input/textarea only: a button or
 		// link whose visible text disagrees with its name is still a FAIL).
+		//
+		// The `input` half is UNREACHABLE today and is kept deliberately (review round 3,
+		// R3-4): `ownText` is built from DIRECT CHILD text nodes (`probe.ts`), and an
+		// `<input>` is a void element, so it can never carry one — `visible` is always
+		// "" and the `visible.length < 2` guard above `continue`s first. A `<textarea>`
+		// does carry its value as a child text node, which is the shape the canary's
+		// `#draft-value` fixture exercises. The tag is listed anyway because it shares
+		// the branch's meaning (a text-entry VALUE) and a future probe that reports an
+		// input's value as `ownText` must inherit the exemption rather than silently
+		// start failing on it.
 		if (control.tag === "input" || control.tag === "textarea") {
 			declared.push({
 				check: "U-10",
 				verdict: "EXCEPTION",
-				measured: `declared exception: a text-entry VALUE, not a label — name ${JSON.stringify(name.slice(0, 40))} vs value ${JSON.stringify(visible.slice(0, 40))}`,
+				measured: `declared exception: ${U10_DECLARATION.TEXT_ENTRY_VALUE} — name ${JSON.stringify(name.slice(0, 40))} vs value ${JSON.stringify(visible.slice(0, 40))}`,
 				detail: control.path,
 			});
 			continue;
