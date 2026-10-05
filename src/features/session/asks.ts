@@ -39,6 +39,7 @@
  */
 
 import type { AskQuestion, PendingAsk, SessionSummary } from "@/contracts";
+import { isRelayError, isRelayMissing, TRANSPORT_SENTENCE } from "@/relay";
 
 /** The statuses the wire carries (design §4's frozen `PendingAsk.status`; a
  *  newer runtime may add one, so callers must keep the unknown arm). */
@@ -417,3 +418,39 @@ export function outstandingQuestions(
 		0,
 	);
 }
+
+/* ---------------------------------------------- the sheet's failure lines */
+
+/** The app's one transport sentence (`relay/errors.ts`) — not a sheet-local
+ *  second wording of "could not reach the computer": two copies of one rule is
+ *  how the two drift (design D4). */
+export const READ_FAILED = TRANSPORT_SENTENCE;
+
+/** A 404 on the aggregate route is an OLDER daemon: the route is additive and
+ *  its absence is the one read failure that is not a transport problem. The
+ *  noun is the COMPUTER's relay, never "this session" — the sheet is
+ *  index-backed and cross-session, opened from the sessions list where there is
+ *  no "this session" — and the line names what to update (design D4). */
+export const RUNTIME_PREDATES_ASKS =
+	"The relay on this computer is too old for queued questions. Update local-operator to see them here.";
+
+/** The relay's own sentence when it gave one; the plainest honest line when it
+ *  did not. Never a bare status code under a button that explains nothing. */
+export const refusalText = (failure: unknown): string =>
+	isRelayError(failure) ? failure.displayableMessage : READ_FAILED;
+
+/** The line the sheet shows for a failed aggregate read.
+ *
+ *  A 404 means "this daemon predates the route" ONLY when the RELAY itself sent
+ *  it — `isRelayMissing`. The edge and the gateway answer `404` for "this
+ *  hostname is not a tunnel" too, a refusal from a machine IN FRONT of the
+ *  relay: the host was never reached, so nothing can be concluded about its age,
+ *  and telling the reader to update a computer the app could not reach is a
+ *  false statement about where the problem is. That case reads as unreachable. */
+export const asksReadFailureLine = (failure: unknown): string => {
+	if (isRelayMissing(failure)) return RUNTIME_PREDATES_ASKS;
+	if (isRelayError(failure) && failure.kind === "unknown-tunnel") {
+		return READ_FAILED;
+	}
+	return refusalText(failure);
+};

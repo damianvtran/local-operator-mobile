@@ -6,6 +6,7 @@ import {
 	answeredPairs,
 	askStateLine,
 	asksPopulationSignature,
+	asksReadFailureLine,
 	askToneInk,
 	blockingPending,
 	dockAsk,
@@ -18,9 +19,13 @@ import {
 	outstandingQuestions,
 	questionProgress,
 	questionsWaitingLabel,
+	READ_FAILED,
+	RUNTIME_PREDATES_ASKS,
+	refusalText,
 	remainingMs,
 	unansweredQuestions,
 } from "@/features/session/asks";
+import { type RelayResponseFacts, relayErrorFromResponse } from "@/relay";
 
 /**
  * The ask vocabulary, and the decisions that are easy to get subtly wrong:
@@ -399,5 +404,71 @@ describe("asksPopulationSignature", () => {
 			asksPopulationSignature([summary({ session_id: "s1", asks_open: 0 })]),
 		).toBe("");
 		expect(asksPopulationSignature(undefined)).toBe("");
+	});
+});
+
+/** A response as the classifier reads it — the same shape `errors.test.ts` uses. */
+function facts(
+	status: number,
+	headers: Record<string, string> = {},
+	defaultText = "",
+): RelayResponseFacts & { text: string } {
+	const lower = new Map(
+		Object.entries(headers).map(([key, value]) => [key.toLowerCase(), value]),
+	);
+	return {
+		status,
+		header: (name: string) => lower.get(name.toLowerCase()) ?? null,
+		text: defaultText,
+	};
+}
+
+/**
+ * The line the sheet shows when the aggregate read fails.
+ *
+ * A 404 is deliberately overloaded on the wire: the relay answers it for "this
+ * route does not exist" (the route is additive, so the daemon is simply older),
+ * and the edge in front of it answers it for "this hostname is not a tunnel".
+ * Reading the status alone turns a dead tunnel into "update local-operator",
+ * which is a false statement about where the problem is — so the two cases are
+ * asserted together, and the un-reachable one must NOT wear the older-daemon
+ * sentence.
+ */
+describe("the sheet's line for a failed aggregate read", () => {
+	it("calls the relay's own 404 an older daemon — the one answer a reader can act on", () => {
+		const older = relayErrorFromResponse(
+			facts(
+				404,
+				{ "content-type": "application/json" },
+				'{"error":"not found"}',
+			),
+		);
+		expect(older.kind).toBe("rejected");
+		expect(asksReadFailureLine(older)).toBe(RUNTIME_PREDATES_ASKS);
+	});
+
+	it("never reads a dead tunnel's 404 as an old daemon — the host was not reached", () => {
+		const deadTunnel = relayErrorFromResponse(
+			facts(404, { "content-type": "text/plain" }, "Unknown tunnel"),
+		);
+		expect(deadTunnel.kind).toBe("unknown-tunnel");
+		expect(asksReadFailureLine(deadTunnel)).not.toBe(RUNTIME_PREDATES_ASKS);
+		expect(asksReadFailureLine(deadTunnel)).toBe(READ_FAILED);
+	});
+
+	it("keeps the relay's own sentence for a refusal it did answer with", () => {
+		const refused = relayErrorFromResponse(
+			facts(
+				503,
+				{ "content-type": "application/json" },
+				'{"detail":"Tunnel authorization unavailable","reason":"authorization_refused"}',
+			),
+		);
+		expect(asksReadFailureLine(refused)).toBe(refused.displayableMessage);
+		expect(refusalText(refused)).toBe(refused.displayableMessage);
+	});
+
+	it("reads a failure with no relay sentence, and a non-relay one, as unreachable", () => {
+		expect(asksReadFailureLine(new TypeError("boom"))).toBe(READ_FAILED);
 	});
 });
