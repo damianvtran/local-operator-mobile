@@ -13,15 +13,18 @@
  */
 
 import type {
+	Capabilities,
 	PastSession,
 	PendingRequest,
 	SessionProjection,
 	SessionSummary,
+	SttCapability,
 	ToolState,
 } from "../../docs/relay/types.ts";
 import type { Json } from "../lib/json.ts";
 import { isRecord } from "../lib/json.ts";
 import type { FixtureCorpus } from "./fixtures.ts";
+import type { TranscribeAnswer } from "./transcribe.ts";
 import { syntheticSessionId } from "./wire.ts";
 
 /**
@@ -118,6 +121,29 @@ export interface ScenarioWorld {
 	past?: PastSession[] | FixtureOverride;
 	search?: FixtureOverride;
 	models?: Json[];
+	/**
+	 * The voice-input surface this state pins — the only two answers a mic's
+	 * visibility and one transcription upload need, and they must agree: a state
+	 * that ADVERTISES a voice path is the state whose `POST /api/transcribe`
+	 * answers `200`, and one that does not answers the `503` its hidden mic could
+	 * never have reached.
+	 */
+	voice?: {
+		/**
+		 * The `capabilities.stt` block the list frame serves, replacing the block the
+		 * captured `sessions-empty` fixture carries (`available: false`):
+		 *
+		 *  - an OBJECT advertises exactly that block, and the mic shows (§3.2);
+		 *  - `null` OMITS the key entirely — the older-relay case the contract says
+		 *    must read as unavailable, which is a DIFFERENT state from a block that
+		 *    says `available: false` even though both hide the mic;
+		 *  - absent (undefined) keeps the captured block.
+		 */
+		capability?: SttCapability | null;
+		/** The success answer `POST /api/transcribe` returns when the capability is
+		 *  available; `transcribe.ts`'s default stands in when this is absent. */
+		answer?: TranscribeAnswer;
+	};
 }
 
 /** One registered scenario. */
@@ -134,6 +160,32 @@ export type ScenarioRegistry = Record<string, ScenarioEntry>;
 
 /** The session id every live capture in the corpus uses. */
 export const CAPTURED_SESSION = "6714def86197";
+
+/**
+ * The list frame's `capabilities` block, with the scenario's own voice override
+ * applied.
+ *
+ * Three outcomes, and the third is why this is a function rather than a spread:
+ * an override of `null` must DELETE the key (the older-relay shape), not set it
+ * to `null` — `{"stt": null}` is a key the contract does not describe, and a
+ * client reading `capabilities.stt?.available` would see the same `undefined`
+ * either way while a stricter reader of the wire would not. The `features` bag
+ * is carried through untouched: this override is only ever about `stt`.
+ */
+export function capabilityBlock(
+	base: Capabilities,
+	override: ScenarioWorld["voice"],
+): Capabilities {
+	const next: Capabilities = structuredClone(base);
+	if (override === undefined) return next;
+	const stt = override.capability;
+	if (stt === null) {
+		delete next.stt;
+		return next;
+	}
+	if (stt !== undefined) next.stt = stt;
+	return next;
+}
 
 /** A `SessionSummary` derived from a projection, so a row and its stream agree. */
 export function rowFrom(
@@ -607,6 +659,50 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 	);
 
 	/* ------------------------------------------------------- session states -- */
+
+	/* The voice-input states. `voice` is the mic-VISIBLE frame the design round
+	 * needs; the hidden look is not a second scenario because it is already
+	 * every other scenario's: the captured block says `available: false`, so
+	 * `S5/populated` IS the mic-hidden frame, and a dedicated cell would be the
+	 * same bytes under a second name (the COLLAPSE the identical-state check
+	 * exists to refuse). `voice-absent` declares no cell for the same reason —
+	 * it differs from `available: false` on the WIRE, not on the screen — but it
+	 * is the older-relay shape a client is most likely to get wrong, so it is
+	 * pinnable and asserted rather than left to a unit mock. */
+
+	add(
+		"voice",
+		"A live conversation whose relay advertises voice input: the composer shows the mic, and POST /api/transcribe answers the contract's success shape. Built on `idleWorld()` — the SAME world the `S5/populated` cell renders — so the visible/hidden pair differs by the mic and the capability block, and nothing else.",
+		["S5/voice"],
+		() => ({
+			...idleWorld(),
+			voice: {
+				// A real `STT_BACKENDS` key, because the app stores the path the
+				// upload RETURNS as `input_path` and never re-derives it.
+				capability: {
+					available: true,
+					path: "provider_stt_radient",
+					reason: "",
+				},
+				answer: {
+					text: "Add a retry to the send path.",
+					provider: "radient",
+					model: null,
+					path: "provider_stt_radient",
+				},
+			},
+		}),
+	);
+
+	add(
+		"voice-absent",
+		"An older relay: `capabilities.stt` is OMITTED, which reads exactly like `available: false` (§3.2) — and `/api/transcribe` answers its 503, the race a hidden mic can still reach.",
+		[],
+		() => ({
+			...idleWorld(),
+			voice: { capability: null },
+		}),
+	);
 
 	add(
 		"streaming",

@@ -32,6 +32,14 @@ export type TextareaProps = {
 	disabled?: boolean;
 	/** Six lines by default; the composer may raise it, never remove it. */
 	maxLines?: number;
+	/** The most lines a WRAPPED placeholder may add to the field's resting height.
+	 *  Unset keeps the shipped growth (design round D20: the box grows so a wrapped
+	 *  placeholder is not cut mid-word). The composer passes `1` instead — its resting
+	 *  height must stay stable (§2.5 D1), because on the 320 pt phone the placeholder
+	 *  grew past the field at 150/200 % text and pushed the last transcript row past
+	 *  the scroller (design round 1, D1/D2). At `1` the empty and the one-line states
+	 *  are equal by construction, whichever way the placeholder wraps. */
+	placeholderMaxLines?: number;
 	onSubmitEditing?: () => void;
 	autoFocus?: boolean;
 	/** A handle to the platform field, for the one caller that must FOCUS it —
@@ -42,14 +50,39 @@ export type TextareaProps = {
 	testID: string;
 };
 
-/** One line's height, from the type ramp: `mono-code` is 13pt at 1.6, rounded up
- * to the shipped client's 22px. Kept as one constant so the cap and the growth
- * step cannot disagree — and MULTIPLIED by the reader's effective scale at the call
- * site, because the box's geometry has to grow with the text that fills it. Without
- * that, the constants cap the box at ~1.4 lines of 200 % text while the placeholder
- * needs ~2.5, and the frame cuts it mid-word (design round D20; the arithmetic was
- * the defect, not the measurement path). */
+/** The CAP's line, from the type ramp: `mono-code` is 13pt at 1.6, rounded up to the
+ * shipped client's 22px. It sizes the six-line ceiling (`maxLines * line`, itself
+ * capped at `TEXTAREA_MAX_PX`) — the box's growth step is `BODY_LINE_PX`, which is
+ * what a filled line actually measures. Both are MULTIPLIED by the reader's
+ * effective scale at the call site, because the box's geometry has to grow with the
+ * text that fills it. Without that, the constants cap the box at ~1.4 lines of
+ * 200 % text while the placeholder needs ~2.5, and the frame cuts it mid-word
+ * (design round D20; the arithmetic was the defect, not the measurement path). */
 const LINE_PX = 22;
+
+/** The line box of the field's OWN type: `text-body` is 16 pt at 1.5 → 24 pt, and
+ *  a FILLED field reports exactly this (before `FIELD_PAD_Y`) from `contentSize`.
+ *
+ *  It is a second constant, and not `LINE_PX`, because the two were conflated as
+ *  the EMPTY field's floor and only there do they disagree: `LINE_PX` is the
+ *  ramp's 13 pt `mono-code` line the six-line CAP was measured with, while the
+ *  field's own text is `text-body` at 24. An empty field floored on the cap's line
+ *  therefore rested below the box its own first character would report, and the
+ *  shortfall surfaced the moment `minHeight` stopped masking it — design round 2,
+ *  D1: 48 → 52 at 150 % text and 48 → 64 at 200 %, on the field and on the whole
+ *  composer above it. */
+const BODY_LINE_PX = 24;
+
+/** The vertical box the field's own classes put around its text: `py-2` is 8 + 8.
+ *
+ *  A FILLED field's `contentSize` — the number the one-line state rests at — is a
+ *  SCROLL height, so it reports the text line PLUS this padding (measured: 36 + 16
+ *  = 52 pt at 150 % text, 48 + 16 = 64 at 200 %). An EMPTY field's floor has to
+ *  carry it too, or the two states differ by exactly one padding as soon as
+ *  `minHeight` (48, the web/audit profile's touch floor) stops masking it at
+ *  100 % text — which is the residual reflow design round 2 measured (48 → 52 and
+ *  48 → 64 on the field and the composer). */
+const FIELD_PAD_Y = 16;
 
 export const Textarea = ({
 	label,
@@ -59,16 +92,24 @@ export const Textarea = ({
 	invalid = false,
 	disabled = false,
 	maxLines = 6,
+	placeholderMaxLines,
 	onSubmitEditing,
 	autoFocus,
 	fieldRef,
 	testID,
 }: TextareaProps) => {
 	const { effectiveScale } = useTextScale();
-	/* One line's height and the cap, both at the reader's scale. At the default scale
-	 * these are exactly the old constants — 22 and `maxLines * 22` capped at
-	 * `TEXTAREA_MAX_PX` — so the 100 % geometry is unchanged by construction. */
+	/* The cap's line, at the reader's scale: `maxLines * 22` capped at
+	 * `TEXTAREA_MAX_PX`, so the 100 % ceiling is unchanged by construction. */
 	const line = LINE_PX * effectiveScale;
+	/* The field's text line at the reader's scale — the box `BODY_LINE_PX` names,
+	 * and the unit the placeholder's own line budget is expressed in. */
+	const bodyLine = BODY_LINE_PX * effectiveScale;
+	/* The one-line box a FILLED field rests at, and therefore the floor an EMPTY one
+	 * must take (see `BODY_LINE_PX` and `FIELD_PAD_Y`). Both the empty floors below
+	 * and the minimum term in the height come from it, so the two states are equal
+	 * by construction at every scale — the invariant design §2.5 D1 asks for. */
+	const oneLineBox = BODY_LINE_PX * effectiveScale + FIELD_PAD_Y;
 	const cap = Math.min(maxLines * line, TEXTAREA_MAX_PX * effectiveScale);
 	const [contentHeight, setContentHeight] = useState(line);
 	/* The placeholder is not part of `contentSize`, so the floor has to come from its
@@ -76,6 +117,42 @@ export const Textarea = ({
 	 * wrapper so it costs no layout. An estimate (a line count times a line height)
 	 * would be a guess at exactly the thing being fixed. */
 	const [placeholderHeight, setPlaceholderHeight] = useState(0);
+	/* What the placeholder may claim of the resting height: all of it by default,
+	 * clamped to the caller's line budget when one is given (see
+	 * `placeholderMaxLines`). */
+	const placeholderFloor =
+		placeholderMaxLines === undefined
+			? placeholderHeight + FIELD_PAD_Y
+			: Math.min(placeholderHeight, bodyLine * placeholderMaxLines) +
+				FIELD_PAD_Y;
+	/* The clamped overlay that used to be painted over the field is GONE. It existed
+	 * because a `<textarea>`'s `::placeholder` cannot be told to stop wrapping, and one
+	 * that wraps paints its second line straight through the field's box (measured on
+	 * the 320 pt phone once the box was held to one line: “Operator…” bled over the
+	 * receipt row). It solved that by ellipsizing, and the ellipsis became the defect:
+	 * at the 166 pt content box the resting sentence was cut MID-WORD inside the
+	 * product name at the DEFAULT scale (`Message Local Opera…`), and no smaller
+	 * resting type can fix 200 %, where the sentence needs 368 pt (design round 2,
+	 * D2). A copy short enough to fit one line at every scale removes the need for
+	 * both: the platform's own placeholder is honest, always fits what it is given,
+	 * and the overlay node painted over the field was also what the frame audit
+	 * counted as a real painted overlap on all 24 cells (U-08, design round 2, D3).
+	 *
+	 * `placeholderMaxLines` / the floor it feeds are KEPT: they hold the empty field
+	 * to one body line whatever the placeholder happens to measure, which is the
+	 * invariant D1 rests on. */
+	/* Why `contentHeight` is floored too, and only here: on web an EMPTY field's
+	 * `scrollHeight` includes the placeholder, so the content report carries the
+	 * placeholder's own wrapped height into the box and would defeat the cap by
+	 * exactly the growth it exists to stop (measured: the composer's field sat at
+	 * 64 pt at 100 % and 160 pt at 200 % with `placeholderMaxLines={1}` set and the
+	 * content report still in play). With a cap, an empty field rests at one line
+	 * and a filled one is unaffected — `value !== ""` keeps the growth for typed
+	 * text, which is what the box is for. */
+	const contentFloor =
+		placeholderMaxLines !== undefined && value === ""
+			? oneLineBox
+			: contentHeight;
 	const fieldState: FieldState = disabled
 		? "disabled"
 		: invalid
@@ -100,7 +177,12 @@ export const Textarea = ({
 			<Text className="text-body-sm text-ink-muted">{label}</Text>
 			{/* Only while it is the thing on screen: any value hides it, so it can never
 			 *  need room the content is already taking. Zero height and clipped, so it
-			 *  lays out and reports its own height without moving anything.
+			 *  lays out and reports its own height without moving anything — which is why
+			 *  it lives INSIDE the field's own wrapper: as a child of the root's `gap-1.5`
+			 *  column it contributed a 6 pt gap in the empty state and none once a
+			 *  character was typed, so the resting composer was 6 pt taller empty than
+			 *  one-line on the 320 pt phone (measured 80.3 vs 74.3 pt on the field's root;
+			 *  design §2.5 D1 requires the two to be equal).
 			 *
 			 *  WHY a second rendering exists: a placeholder is not part of the field's
 			 *  `contentSize`, so nothing else can tell the box how tall the WRAPPED
@@ -124,54 +206,59 @@ export const Textarea = ({
 			 *  directly in design/tokens/contrast-contract.mjs (`input/placeholder`), and
 			 *  src/ui/components/textarea.test.ts fails if the two are ever given
 			 *  different inks. */}
-			{placeholder !== undefined && value === "" ? (
-				<View className="h-0 overflow-hidden" aria-hidden>
-					<Text
-						className="text-body"
-						style={{ color: placeholderColour }}
-						onLayout={(event) =>
-							setPlaceholderHeight(event.nativeEvent.layout.height)
-						}
-						pointerEvents="none"
-					>
-						{placeholder}
-					</Text>
-				</View>
-			) : null}
-			<TextInput
-				ref={resolvedRef}
-				className={fieldClasses(fieldState)}
-				/* One `style`, because a textarea's box IS its visual: the growing height
-				 *  and the platform floor (48 wherever `Platform.OS` is not iOS — the
-				 *  web/audit profile) have to be resolved together (D6). */
-				style={{
-					height: Math.min(
-						Math.max(contentHeight, line, placeholderHeight),
-						cap,
-					),
-					minHeight: TOUCH_FLOOR,
-				}}
-				multiline
-				// The transcript scrolls, not the page: the field clips its own
-				// overflow once it hits the cap.
-				scrollEnabled={Math.max(contentHeight, placeholderHeight) > cap}
-				onContentSizeChange={handleContentSize}
-				accessibilityRole={ROLE.text}
-				accessibilityLabel={label}
-				accessibilityState={state({ disabled })}
-				value={value}
-				onChangeText={onChangeText}
-				placeholder={placeholder}
-				placeholderTextColor={placeholderColour}
-				editable={!disabled}
-				onSubmitEditing={onSubmitEditing}
-				// A hardware keyboard offers Send; Shift+Enter still inserts a newline
-				// and is handled by the composer, which owns the send action.
-				returnKeyType="send"
-				inputMode="text"
-				autoFocus={autoFocus}
-				testID={testID}
-			/>
+			<View className="relative">
+				{placeholder !== undefined && value === "" ? (
+					<View className="h-0 overflow-hidden" aria-hidden>
+						<Text
+							className="text-body"
+							style={{ color: placeholderColour }}
+							onLayout={(event) =>
+								setPlaceholderHeight(event.nativeEvent.layout.height)
+							}
+							pointerEvents="none"
+						>
+							{placeholder}
+						</Text>
+					</View>
+				) : null}
+				<TextInput
+					ref={resolvedRef}
+					className={fieldClasses(fieldState)}
+					/* One `style`, because a textarea's box IS its visual: the growing height
+					 *  and the platform floor (48 wherever `Platform.OS` is not iOS — the
+					 *  web/audit profile) have to be resolved together (D6). */
+					style={{
+						height: Math.min(
+							Math.max(contentFloor, oneLineBox, placeholderFloor),
+							cap,
+						),
+						minHeight: TOUCH_FLOOR,
+					}}
+					multiline
+					// The transcript scrolls, not the page: the field clips its own
+					// overflow once it hits the cap.
+					scrollEnabled={Math.max(contentFloor, placeholderFloor) > cap}
+					onContentSizeChange={handleContentSize}
+					accessibilityRole={ROLE.text}
+					accessibilityLabel={label}
+					accessibilityState={state({ disabled })}
+					value={value}
+					onChangeText={onChangeText}
+					placeholder={placeholder}
+					placeholderTextColor={placeholderColour}
+					editable={!disabled}
+					onSubmitEditing={onSubmitEditing}
+					// A hardware keyboard offers Send; Shift+Enter still inserts a newline
+					// and is handled by the composer, which owns the send action.
+					returnKeyType="send"
+					inputMode="text"
+					autoFocus={autoFocus}
+					testID={testID}
+				/>
+				{/* No overlay here any more: the platform paints its own placeholder, and the
+				 *  copy is short enough at every scale that it cannot wrap into the receipt
+				 *  row (see the note on the floor above). */}
+			</View>
 		</View>
 	);
 };

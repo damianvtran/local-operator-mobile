@@ -1,4 +1,6 @@
 // biome-ignore-all lint/suspicious/noArrayIndexKey: every list in this file is regenerated from the same source on each render (a parsed string, a diff, a todo phase), so position IS the identity — the case React's own key docs exempt. A content-derived key would be recomputed every frame to produce the same value.
+
+import { Mic, Square } from "lucide-react-native";
 import { useEffect, useMemo, useRef } from "react";
 import {
 	Image,
@@ -19,9 +21,46 @@ import {
 	type ComposerControls,
 } from "@/features/session/composer";
 import { isSendKey } from "@/features/session/keyboard";
-import { CONTROL, composerAttachmentId, ROLE, SURFACE, state } from "@/ui/a11y";
-import { Button, Chip, Skeleton, Textarea } from "@/ui/components";
+import type { DictationState } from "@/features/session/use-dictation";
+import { formatDuration } from "@/stt/dictation";
+import {
+	CONTROL,
+	composerAttachmentId,
+	LIVE_REGION,
+	ROLE,
+	SURFACE,
+	state,
+} from "@/ui/a11y";
+import { Button, Chip, IconButton, Skeleton, Textarea } from "@/ui/components";
 import { CONTROL_DISABLED_INK, cx } from "@/ui/variants";
+
+/** The mic's accessible name per state. The control MORPHS, so a label that named
+ *  only "record" would lie once it is the control that stops. */
+const micLabel = (phase: DictationState["phase"]): string =>
+	phase === "recording"
+		? "Stop and transcribe"
+		: phase === "transcribing"
+			? "Transcribing"
+			: "Start voice input";
+
+const MIC_HINT: Record<DictationState["phase"], string | undefined> = {
+	idle: "Record a voice message to append to the draft",
+	recording: "Stops the recording and transcribes it",
+	transcribing: undefined,
+};
+
+/** The state, in words, for the polite live region (design §2.5's `role="status"`).
+ *  The mic's own label morphs, but a label change on a resting button is not
+ *  announced — a reader who presses the mic gets no confirmation that recording
+ *  began unless the state is in a live region (design round 1, D3). The three
+ *  OUTCOME lines the design also names are the follow-up STT PR's (D4), so this
+ *  carries only the live states. */
+const dictationStatus = (phase: DictationState["phase"]): string =>
+	phase === "recording"
+		? "Recording"
+		: phase === "transcribing"
+			? "Transcribing"
+			: "";
 
 /**
  * A DOM keyboard event, narrowed to what this file reads.
@@ -88,6 +127,11 @@ export type ComposerProps = {
 	onRemoveImage: (index: number) => void;
 	onAttach: () => void;
 	attaching?: boolean;
+	/** The voice mic's state. `null`/absent means this surface shows no mic — the
+	 *  composer home passes nothing (its mic belongs with the new-chat flow), and a
+	 *  relay without `capabilities.stt` gets `micVisible: false` from the session
+	 *  view. */
+	voice?: DictationState | null;
 	onSend: () => void;
 	onStop: () => void;
 	/** The retained envelope's message, or `null` when nothing is pending. */
@@ -242,6 +286,7 @@ export const Composer = ({
 	onRemoveImage,
 	onAttach,
 	attaching = false,
+	voice = null,
 	onSend,
 	onStop,
 	retainedMessage,
@@ -436,6 +481,10 @@ export const Composer = ({
 						onChangeText={onDraftChange}
 						placeholder={COMPOSER_COPY.placeholder}
 						maxLines={6}
+						/* One line of placeholder, always (§2.5 D1): the field's resting height
+						 * must not grow with a wrapped placeholder, or the last transcript row is
+						 * pushed past the scroller at 200 % text (design round 1, D1/D2). */
+						placeholderMaxLines={1}
 						// Kept because it is the callback a hardware keyboard submits
 						// through, and it costs nothing — but see the note above: on this RN
 						// version a multiline field never dispatches it. Native is NOT RUN
@@ -567,7 +616,65 @@ export const Composer = ({
 						testID={CONTROL.composerEffortChip}
 					/>
 				) : null}
+				{/* The voice mic: shown only when the relay says voice input can run here AND
+				    this build can record (`voice.micVisible`). Absence of `capabilities.stt`
+				    is unavailable, so an older relay simply never renders it.
+
+				    It sits on the receipt line, NOT in the field's row, because a control in
+				    that row costs the field its width: 48 target + the 8 gap took the 320 pt
+				    field's content box from 166 to 110 px, which wrapped the placeholder to
+				    two lines at 100 % and four at 200 % (breaking mid-word, since even
+				    "Message" no longer fit) and grew the resting composer to 55 % of the
+				    viewport, clipping the last transcript row (design round 1, D1/D2). Here it
+				    costs the field nothing, and the row already wraps (D28) so a 200 % scale
+				    can push it to a second line rather than squeeze the field. */}
+				{voice?.micVisible ? (
+					<View className="flex-row items-center gap-1">
+						{voice.phase === "recording" ? (
+							<Text
+								className="text-mono-sm text-ink-muted"
+								// A stable width so the row does not reflow as the clock advances.
+								style={{ minWidth: 34, textAlign: "right" }}
+								testID={SURFACE.composerDictationTimer}
+							>
+								{formatDuration(voice.seconds)}
+							</Text>
+						) : null}
+						<IconButton
+							accessibilityLabel={micLabel(voice.phase)}
+							accessibilityHint={MIC_HINT[voice.phase]}
+							disabled={voice.phase === "transcribing"}
+							outlined
+							onPress={voice.press}
+							icon={({ color, size }) =>
+								voice.phase === "recording" ? (
+									<Square color={color} size={size} />
+								) : (
+									<Mic color={color} size={size} />
+								)
+							}
+							testID={CONTROL.composerMic}
+						/>
+					</View>
+				) : null}
 			</View>
+			{/* D3: the recording / transcribing states are ANNOUNCED, not only shown. The
+			    design puts them in a polite `role="status"`; the timer and the morphing
+			    mic stay where the eye reads them and this node is the announcement —
+			    zero-height and clipped so it costs no layout, and never `aria-hidden`, so
+			    it stays in the accessibility tree. The field's own `label` is its
+			    accessible name, so nothing is announced twice. */}
+			{voice?.micVisible ? (
+				<View className="h-0 overflow-hidden">
+					<Text
+						role={ROLE.status}
+						accessibilityLiveRegion={LIVE_REGION.polite}
+						testID={SURFACE.composerDictationStatus}
+					>
+						{dictationStatus(voice.phase)}
+					</Text>
+				</View>
+			) : null}
 			{/* The receipt anchor `08-connection-loss-recovery` asserts after a send
 			    across a reconnect: it is the composer's own "the instruction left" mark. */}
 			<View testID={SURFACE.composerReceipt} aria-hidden />

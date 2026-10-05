@@ -57,6 +57,13 @@ export const SessionStateMarkers = ({
 			{flags.populated ? (
 				<View testID={STATE_MARKER.session.populated} />
 			) : null}
+			{/* The mic is AFFIRMATIVE evidence in its own right: the cell `S5/voice`
+			 * declares the voice state, and this is what says the frame reached it.
+			 * Rendered beside the session markers rather than in the composer because
+			 * the composer is drawn by three other screens (S7/S8/S9) that have no
+			 * cell for it, and a marker on all four would be one id claiming four
+			 * frames. */}
+			{flags.voice ? <View testID={STATE_MARKER.session.voice} /> : null}
 			{flags.idle ? <View testID={STATE_MARKER.session.idle} /> : null}
 		</View>
 	);

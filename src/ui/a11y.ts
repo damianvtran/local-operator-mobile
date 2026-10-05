@@ -28,6 +28,12 @@ export const ROLE = {
 	image: "image",
 	imagebutton: "imagebutton",
 	alert: "alert",
+	/* A polite live region. Spelled through the `role` prop, not `accessibilityRole`:
+	 *  React Native's `AccessibilityRole` union has no `status` (its ARIA-shaped `Role`
+	 *  type does), and react-native-web passes an unmapped role straight through to
+	 *  the DOM. The composer's dictation states are announced from one, never only
+	 *  shown (design §2.5 / round 1 D3). */
+	status: "status",
 	tab: "tab",
 	tablist: "tablist",
 	radiogroup: "radiogroup",
@@ -245,6 +251,7 @@ export const CONTROL = {
 	composerSend: "composer-send",
 	composerStop: "composer-stop",
 	composerAttach: "composer-attach",
+	composerMic: "composer-mic",
 	composerResume: "composer-resume",
 	composerInput: "composer-input",
 	composerRetry: "composer-retry",
@@ -317,6 +324,8 @@ export const SURFACE = {
 	sessionTranscriptEmpty: "session-transcript-empty",
 	sessionWorkingLine: "session-working-line",
 	composerNotice: "composer-notice",
+	composerDictationTimer: "composer-dictation-timer",
+	composerDictationStatus: "composer-dictation-status",
 	composerError: "composer-error",
 	composerRetained: "composer-retained",
 	composerReceipt: "composer-receipt",
@@ -660,6 +669,14 @@ export const STATE_MARKER = {
 		"pending-approval": "session-pending-approval",
 		"pending-ask": "session-pending-ask",
 		subagents: "session-subagents",
+		/* The composer's voice mic. Present in ONLY this state: the composer renders
+		 * the control iff `capabilities.stt.available` AND the build can record
+		 * (`stt/capability.ts`), so a session frame either carries `composer-mic` or
+		 * does not — which is exactly the claim the cell `S5/voice` makes. The id is
+		 * CONTROL's own (a control a flow may also press), named here rather than
+		 * re-declared: the marker table MAPS a state onto a declared id, which is
+		 * the one way this table is allowed to reuse one. */
+		voice: CONTROL.composerMic,
 	},
 	composer: {
 		idle: "composer-idle",

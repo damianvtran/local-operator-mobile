@@ -65,6 +65,68 @@ export interface StartSessionRequest {
 	model_id?: string;
 }
 
+/**
+ * One audio recording for `POST /api/transcribe`.
+ *
+ * Two shapes, because the runtime's `FormData` and the browser's are different
+ * at the file part: React Native appends a `{ uri, name, type }` descriptor and
+ * reads the file itself, while the web/Node targets append a `Blob` with a
+ * filename. `audio` is unioned so ONE endpoint call serves both, decided at the
+ * call site by the recorder (see `stt/recorder.ts`).
+ *
+ * `language`, `prompt` and `model` are forward-compat passthroughs (contract
+ * §4.10 lists them as optional); nothing in this app sets them yet.
+ */
+export interface TranscribeUpload {
+	audio: Blob | { uri: string; name: string; type: string };
+	/** The multipart filename, for the Blob arm. Ignored for the `{ uri }` arm,
+	 *  which carries its own `name`. */
+	filename?: string;
+	language?: string;
+	prompt?: string;
+	model?: string;
+}
+
+/** The raw answer from `POST /api/transcribe`, before it is read into a
+ *  sentence. The endpoint returns the STATUS rather than throwing on a refusal,
+ *  because every non-401 refusal has a body sentence the UI must show. */
+export interface TranscribeResponse {
+	status: number;
+	text: string;
+}
+
+/** The statuses `POST /api/transcribe` can answer with that carry a sentence the
+ *  app reads rather than a transport failure. `401` is deliberately absent: it is
+ *  the shared reload rule, and the transport's own taxonomy must raise it. */
+const TRANSCRIBE_READ_STATUSES = [402, 413, 422, 500, 502, 503] as const;
+
+/** True for the RN file descriptor shape (`{ uri }`) rather than a `Blob`. A
+ *  `Blob` answers `arrayBuffer`; the RN descriptor does not — that is the whole
+ *  discrimination, and it is why this is not a `typeof` check on a class name
+ *  that the two runtimes spell differently. */
+function isNativeFilePart(
+	audio: TranscribeUpload["audio"],
+): audio is { uri: string; name: string; type: string } {
+	return typeof (audio as Blob).arrayBuffer !== "function";
+}
+
+/** Builds the multipart body. The file part's FIELD NAME must be `audio` — the
+ *  daemon's required field (contract §4.10), and the reason a wrong name is a
+ *  `422 audio file is required` rather than a silent success. */
+export function transcribeForm(upload: TranscribeUpload): FormData {
+	const form = new FormData();
+	if (isNativeFilePart(upload.audio)) {
+		/* React Native's convention; `fetch` reads the URI and streams the file. */
+		form.append("audio", upload.audio as unknown as Blob);
+	} else {
+		form.append("audio", upload.audio, upload.filename ?? "recording.bin");
+	}
+	if (upload.language !== undefined) form.append("language", upload.language);
+	if (upload.prompt !== undefined) form.append("prompt", upload.prompt);
+	if (upload.model !== undefined) form.append("model", upload.model);
+	return form;
+}
+
 /** The `POST /api/push/register` body (ADR 0006 §3.1). `platform` and
  *  `environment` are the enums the core validates against (`push_devices`
  *  `PLATFORMS`/`ENVIRONMENTS`); `install_id` is the app's persisted UUID and is
@@ -285,6 +347,33 @@ export class RelayEndpoints {
 	 *  given; re-sorting it client-side throws away the server's answer. */
 	async models(): Promise<Payload<"models">> {
 		return this.http.json("models", { method: "GET", path: "/api/models" });
+	}
+
+	/**
+	 * `POST /api/transcribe` — voice input (contract §4.10, design §2.3).
+	 *
+	 * Returns the raw status and body rather than a parsed payload: every refusal
+	 * this route can produce (413/422/402/503) carries a sentence the composer must
+	 * show, and `502` must be routed to the app's OWN retry sentence rather than the
+	 * upstream text. The reading of those into an outcome is `stt/transcribe.ts`'s
+	 * job, deliberately kept out of this transport layer.
+	 *
+	 * `401` is NOT in the accepted set, so the transport's own taxonomy raises it as
+	 * `relay-unauthorized` (envelope `clear-all`) — the shared reload rule, applied
+	 * once, by the same handler every other 401 goes through.
+	 */
+	async transcribe(
+		upload: TranscribeUpload,
+		options?: { signal?: AbortSignal },
+	): Promise<TranscribeResponse> {
+		const { status, text } = await this.http.raw({
+			method: "POST",
+			path: "/api/transcribe",
+			multipart: transcribeForm(upload),
+			accept: TRANSCRIBE_READ_STATUSES,
+			signal: options?.signal,
+		});
+		return { status, text };
 	}
 
 	/** The new-session directory picker's data. `tmp` is the RESOLVED temp dir the

@@ -49,7 +49,7 @@
  *   was atomic, and a truncated envelope has no trustworthy UUID/body pairing.
  */
 
-import type { PromptImage } from "../contracts";
+import type { InputMode, PromptImage } from "../contracts";
 import type { RelayError } from "./errors";
 
 /** Key prefix, identical to the web client's so the two clients describe the
@@ -67,12 +67,20 @@ export const MAX_PENDING_ENVELOPES = 8;
  *  carries no durable identity to replay. */
 export type ContinuationOp = "prompt" | "steer";
 
-/** The exact bytes of one instruction. `images` are copied, never referenced. */
+/** The exact bytes of one instruction. `images` are copied, never referenced.
+ *
+ * `input_mode`/`input_path` are the design's silent annotation (design §2.1,
+ * `input-mode-v1`) and they are part of the instruction's IMMUTABLE IDENTITY:
+ * a retry replays the stored bytes, annotation included, so they are stored
+ * here rather than recomputed at send time. `input_path` is omitted — never
+ * `""` — when there was no dictated span to name. */
 export interface ContinuationEnvelope {
 	op: ContinuationOp;
 	command_id: string;
 	text: string;
 	images?: PromptImage[];
+	input_mode?: InputMode;
+	input_path?: string;
 }
 
 /** What is written to storage. The wrapper is what makes an old item readable
@@ -161,6 +169,27 @@ export function isValidEnvelope(value: unknown): value is ContinuationEnvelope {
 			if (typeof data !== "string" || typeof mime !== "string") return false;
 		}
 	}
+	/* The annotation is validated as strictly as the relay validates it
+	 * (`types.validate_control_frame`): an `input_mode` outside the closed
+	 * vocabulary is refused at the boundary, because a malformed present value is a
+	 * `422` the runtime will not coerce. An absent field is the legacy reading and
+	 * stays absent — `undefined` is fine, `""` is not. */
+	if (candidate.input_mode !== undefined) {
+		if (
+			candidate.input_mode !== "typed" &&
+			candidate.input_mode !== "dictated" &&
+			candidate.input_mode !== "mixed"
+		)
+			return false;
+	}
+	if (candidate.input_path !== undefined) {
+		if (typeof candidate.input_path !== "string") return false;
+		/* `undefined` is the legacy "no path"; `""` is a malformed PRESENT value —
+		 * `holdNew` never stores one and `annotationForSend` omits the field instead —
+		 * so it is refused like any other bad string rather than read as absent. */
+		if (candidate.input_path === "") return false;
+		if (candidate.input_path.length > 96) return false;
+	}
 	return true;
 }
 
@@ -243,12 +272,19 @@ export class RetryEnvelopeStore {
 	 *
 	 * Reuse is the whole point: a second send while one is pending must replay the
 	 * SAME UUID rather than create a second instruction.
+	 *
+	 * `annotation` is the design's `input_mode`/`input_path` pair. It is applied
+	 * only when a NEW envelope is minted — a reused envelope already carries the
+	 * bytes it was retained with, and overwriting its annotation would put a
+	 * provenance on a body it did not describe. `input_path` is copied only when
+	 * present: an absent path stays absent, never `""` (design §2.1).
 	 */
 	async holdNew(
 		sessionId: string,
 		op: ContinuationOp,
 		text: string,
 		images?: PromptImage[],
+		annotation?: { input_mode?: InputMode; input_path?: string },
 	): Promise<{ envelope: ContinuationEnvelope; reused: boolean }> {
 		const existing = await this.peek(sessionId);
 		/* `reused` is the signal the composer needs: returning the stored envelope
@@ -263,6 +299,12 @@ export class RetryEnvelopeStore {
 			text,
 			...(images && images.length > 0
 				? { images: images.map((image) => ({ ...image })) }
+				: {}),
+			...(annotation?.input_mode !== undefined
+				? { input_mode: annotation.input_mode }
+				: {}),
+			...(annotation?.input_path !== undefined && annotation.input_path !== ""
+				? { input_path: annotation.input_path }
 				: {}),
 		};
 		await this.hold(sessionId, envelope);

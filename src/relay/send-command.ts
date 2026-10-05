@@ -48,7 +48,7 @@
  * are two instructions, not one double-tap.
  */
 
-import type { PromptImage } from "../contracts";
+import type { InputMode, PromptImage } from "../contracts";
 import type { RelayEndpoints } from "./endpoints";
 import { isRelayError, RelayError, transportError } from "./errors";
 import type { ContinuationOp, RetryEnvelopeStore } from "./retry-envelope";
@@ -70,6 +70,11 @@ export interface SendCommandInput {
 	op: ContinuationOp;
 	text: string;
 	images?: PromptImage[];
+	/** The silent annotation (design §2.1): `input_mode` and, when a dictation ran,
+	 *  the `input_path` the transcribe response returned. Part of the instruction's
+	 *  identity, so it is stored WITH the envelope and replayed on a retry. */
+	input_mode?: InputMode;
+	input_path?: string;
 }
 
 /** One send's outcome as a VALUE rather than a rejection. The promise carrying it
@@ -115,6 +120,10 @@ function payloadKeyOf(input: SendCommandInput): string {
 		input.op,
 		input.text,
 		(input.images ?? []).map((image) => [image.mime_type, image.data_b64]),
+		/* The annotation is part of the body's identity: two sends that differ only
+		 * in how they were produced must not be joined as one instruction. */
+		input.input_mode ?? null,
+		input.input_path ?? null,
 	]);
 }
 
@@ -226,6 +235,7 @@ async function runSend(input: SendCommandInput): Promise<SendResult> {
 		input.op,
 		input.text,
 		input.images,
+		{ input_mode: input.input_mode, input_path: input.input_path },
 	);
 	const { envelope } = held;
 	try {
@@ -235,6 +245,14 @@ async function runSend(input: SendCommandInput): Promise<SendResult> {
 			text: envelope.text,
 			...(envelope.images && envelope.images.length > 0
 				? { images: envelope.images }
+				: {}),
+			/* From the ENVELOPE, not from `input`: a replayed envelope carries the
+			 * annotation it was retained with, so a retry sends identical bytes. */
+			...(envelope.input_mode !== undefined
+				? { input_mode: envelope.input_mode }
+				: {}),
+			...(envelope.input_path !== undefined
+				? { input_path: envelope.input_path }
 				: {}),
 		});
 		await envelopes.settle(sessionId, { kind: "ack" });

@@ -12,7 +12,7 @@ import {
 	sessionFactsFrom,
 	sessionStateFlags,
 } from "@/features/session/state-marker";
-import { EMPTY, STATE_MARKER, SURFACE } from "@/ui/a11y";
+import { CONTROL, EMPTY, STATE_MARKER, SURFACE } from "@/ui/a11y";
 
 const root = fileURLToPath(new URL("../../../", import.meta.url));
 
@@ -39,6 +39,7 @@ const facts = (over: Partial<SessionStateFacts> = {}): SessionStateFacts => ({
 	pending: null,
 	subagents: 0,
 	entries: 2,
+	voice: false,
 	...over,
 });
 
@@ -202,6 +203,7 @@ describe("sessionFactsFrom", () => {
 			error: false,
 			entries: [],
 			subagents: 0,
+			micVisible: false,
 		});
 		expect(settled.aborted).toBe(true);
 
@@ -211,6 +213,7 @@ describe("sessionFactsFrom", () => {
 			error: false,
 			entries: [],
 			subagents: 0,
+			micVisible: false,
 		});
 		expect(running.aborted).toBe(false);
 	});
@@ -223,6 +226,7 @@ describe("sessionFactsFrom", () => {
 			error: false,
 			entries: [],
 			subagents: 0,
+			micVisible: false,
 		});
 		expect(facts.degraded).toBe(true);
 		expect(facts.queued).toBe(1);
@@ -242,6 +246,7 @@ describe("sessionFactsFrom", () => {
 				{ ...entry("assistant"), images: [{}] } as TranscriptEntry,
 			],
 			subagents: 0,
+			micVisible: false,
 		});
 		expect(toolAndImage.richRows).toBe(false);
 		expect(sessionStateFlags(toolAndImage).richRows).toBe(false);
@@ -252,6 +257,7 @@ describe("sessionFactsFrom", () => {
 			error: false,
 			entries: [entry("assistant", "Here:\n```ts\nconst a = 1;\n```\n")],
 			subagents: 0,
+			micVisible: false,
 		});
 		expect(fenced.richRows).toBe(true);
 	});
@@ -263,8 +269,36 @@ describe("sessionFactsFrom", () => {
 			error: false,
 			entries: [entry("user", "```\nnot rendered as markdown\n```")],
 			subagents: 0,
+			micVisible: false,
 		});
 		expect(user.richRows).toBe(false);
+	});
+
+	it("affirms the voice mic only for the composer's own gate", () => {
+		/* The gate is `capabilities.stt` AND this build's recorder, and the marker
+		 * reads the COMPOSER's decision rather than re-reading either half — so a frame
+		 * can only claim the mic it actually rendered. */
+		const base = {
+			projection: projection(),
+			streaming: false,
+			error: false,
+			entries: [entry("assistant", "hi")],
+			subagents: 0,
+		};
+		expect(
+			sessionStateFlags(sessionFactsFrom({ ...base, micVisible: true })).voice,
+		).toBe(true);
+		expect(
+			sessionStateFlags(sessionFactsFrom({ ...base, micVisible: false })).voice,
+		).toBe(false);
+	});
+
+	it("names the mic's own control as the voice marker's id", () => {
+		/* The marker MAPS onto the control the composer renders, so the control's
+		 * presence IS the claim: there is no second, zero-size id that a mic-less
+		 * frame could carry (a11y.ts's marker table is allowed to reuse a declared
+		 * id for exactly this). */
+		expect(STATE_MARKER.session.voice).toBe(CONTROL.composerMic);
 	});
 
 	it("affirms send-delivery only through the row's own gate", () => {
@@ -277,6 +311,7 @@ describe("sessionFactsFrom", () => {
 			streaming: false,
 			error: false,
 			subagents: 0,
+			micVisible: false,
 			entries: [
 				{
 					...entry("tool"),
@@ -292,6 +327,7 @@ describe("sessionFactsFrom", () => {
 			streaming: false,
 			error: false,
 			subagents: 0,
+			micVisible: false,
 			entries: [
 				{
 					...entry("tool"),
@@ -387,6 +423,7 @@ const STATE_KEY: Record<keyof SessionStateFlags, string> = {
 	subagents: "subagents",
 	populated: "populated",
 	idle: "idle",
+	voice: "voice",
 };
 
 const stateKeyFor = (key: string): string =>

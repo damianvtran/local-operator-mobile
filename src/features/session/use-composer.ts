@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import type { PromptImage, SlashCommand } from "@/contracts";
+import type { Capabilities, PromptImage, SlashCommand } from "@/contracts";
 import { pickImage } from "@/features/session/attach";
 import {
 	acknowledgedCurrentDraft,
@@ -25,10 +25,25 @@ import {
 	slashTapRequest,
 } from "@/features/session/slash";
 import {
+	type DictationState,
+	useDictation,
+} from "@/features/session/use-dictation";
+import {
 	type ContinuationEnvelope,
 	isRelayError,
 	sendPersistedCommand,
 } from "@/relay";
+import {
+	annotationForSend,
+	applyEdit,
+	computeEdit,
+	type DictationProvenance,
+	emptyProvenance,
+	joinDraft,
+	noteDictation,
+	resetOnEmptyDraft,
+	resetOnSessionSwitch,
+} from "@/stt/dictation";
 
 /**
  * The composer's state, and the one rule it exists to keep: **a typed instruction
@@ -79,7 +94,12 @@ export interface ComposerState {
 		approved: boolean,
 		remember: boolean,
 	) => void;
-	answerAsk: (requestId: string, value: string, questionIndex: number) => void;
+	answerAsk: (
+		requestId: string,
+		value: string,
+		questionIndex: number,
+	) => void /** The voice mic, if this relay and build can record (see `stt/capability.ts`). */;
+	voice: DictationState;
 }
 
 export const useComposer = (input: {
@@ -87,13 +107,16 @@ export const useComposer = (input: {
 	source: SessionRelaySource;
 	streaming: boolean;
 	ended: boolean;
+	/** The relay's capability block, off the list frame. Decides whether a mic
+	 *  exists at all (`capabilities.stt`, absence = unavailable). */
+	capabilities: Capabilities | null | undefined;
 	/** Bumped by the screen when a pending card needs the draft left alone. */
 	onSent?: () => void;
 }): ComposerState => {
 	// `onSent` is destructured rather than kept as `input`: an object prop in a
 	// dependency array is a new identity every render, which makes every
 	// `useCallback` below it pointless.
-	const { sessionId, source, streaming, ended, onSent } = input;
+	const { sessionId, source, streaming, ended, capabilities, onSent } = input;
 	const endpoints = source.endpoints;
 
 	/* ONE store per session, shared process-wide: two instances on one session
@@ -118,6 +141,11 @@ export const useComposer = (input: {
 	const [notice, setNotice] = useState<string | null>(null);
 	const [attaching, setAttaching] = useState(false);
 
+	/* The draft window's provenance (design §2.1): sticky per window, reset by an
+	 * empty draft. A ref, not state — nothing renders differently from it, and the
+	 * send path reads it synchronously. */
+	const provenanceRef = useRef<DictationProvenance>(emptyProvenance());
+
 	/* Mirrors of the two values an in-flight send has to compare AFTER it returns:
 	 * the reader may have edited the draft while the request was out, and the
 	 * comparison decides whether the acknowledgement clears it. */
@@ -136,6 +164,13 @@ export const useComposer = (input: {
 		setImages([]);
 		setError(null);
 		setNotice(null);
+		/* The draft window RESTARTS here too. The route carries no `getId`/`key` on
+		 * `id`, so this hook instance can see a new `sessionId` — a deep-link from A to
+		 * B — and provenance is per conversation, not per hook. Left uncleared, A's
+		 * spans/`lastPath` would annotate a TYPED message in B as `mixed`/`dictated`
+		 * with A's `input_path`: immutable identity written onto a durable row (agent
+		 * review round 1, M1). It resets with the rest of the per-session state. */
+		provenanceRef.current = resetOnSessionSwitch();
 		readDraft(sessionId).then((stored) => {
 			if (!cancelled) setDraftState(stored);
 		});
@@ -152,13 +187,64 @@ export const useComposer = (input: {
 		};
 	}, [sessionId, envelopeStore]);
 
-	const setDraft = useCallback(
+	/** Writes the draft and its persistence WITHOUT touching provenance. Used by the
+	 *  dictation append, whose edit is a dictation, not typing — routing it through
+	 *  `setDraft` would mark `sawTyping` and turn a pure dictation into `mixed`. */
+	const commitDraft = useCallback(
 		(text: string) => {
 			setDraftState(text);
 			void writeDraft(sessionId, text);
 		},
 		[sessionId],
 	);
+
+	/** Classifies one USER-driven draft change (typing, a slash fill, an ack clear):
+	 *  sticky `sawTyping`, spans trimmed, and the window reset when it empties. */
+	const setDraft = useCallback(
+		(text: string) => {
+			const previous = draftRef.current;
+			if (text.trim() === "") {
+				provenanceRef.current = resetOnEmptyDraft(provenanceRef.current, text);
+			} else {
+				const edit = computeEdit(previous, text);
+				if (edit !== null)
+					provenanceRef.current = applyEdit(provenanceRef.current, edit);
+			}
+			commitDraft(text);
+		},
+		[commitDraft],
+	);
+
+	/* The voice mic. The transcript is APPENDED (never a clobber), the returned
+	 * `path` is recorded as the dictated span's provenance, and the field is
+	 * deliberately NOT focused — a programmatic focus pops the iOS keyboard over
+	 * wherever the reader moved on to (design §2.5/U1). */
+	const voice = useDictation({
+		endpoints,
+		capabilities,
+		onTranscript: (text, path) => {
+			const previous = draftRef.current;
+			const joined = joinDraft(previous, text);
+			const cleaned = text.trim();
+			if (cleaned === "" || joined === previous) return;
+			provenanceRef.current = noteDictation(provenanceRef.current, {
+				start: joined.length - cleaned.length,
+				end: joined.length,
+				path,
+			});
+			commitDraft(joined);
+		},
+		onEmpty: () => {
+			/* Deliberately silent here: the empty-transcript sentence (D2), the
+			 * "Transcript added" line (U3) and the discarded line (U2) are the
+			 * follow-up PR's, per this task's scope. The draft is simply unchanged, which
+			 * is the non-clobber guarantee; nothing is announced yet. */
+		},
+		onError: (sentence) => setError(sentence),
+		onUnauthorized: (cause) => {
+			if (isRelayError(cause)) setError(receiptForError(cause).message);
+		},
+	});
 
 	/* --------------------------------------------------------------- the send */
 
@@ -207,6 +293,10 @@ export const useComposer = (input: {
 					op,
 					text: trimmed,
 					...(payloadImages ? { images: payloadImages } : {}),
+					/* The silent annotation, off the draft window's provenance. A freshly
+					 * typed message carries `typed` with no path; a dictated one carries
+					 * `dictated` and the path the response returned; both carries `mixed`. */
+					...annotationForSend(provenanceRef.current),
 				});
 				setRetained(null);
 				if (result.reusedPreviousDraft) {
@@ -487,6 +577,7 @@ export const useComposer = (input: {
 		slash,
 		answerApproval,
 		answerAsk,
+		voice,
 	};
 };
 
