@@ -52,4 +52,18 @@ describe("which keydown sends the draft", () => {
 			);
 		}
 	});
+
+	it("never claims Space, and so cannot be the mic's start-lag conflict", () => {
+		/* The STT UX round reported a start lag and suspected the space key was being
+		 * swallowed by the composer's own keydown listener. It is not, and this pins
+		 * it: the listener claims Enter alone, so a Space in the field is an ordinary
+		 * space and a Space on a focused control is the platform's own activation —
+		 * neither reaches the send path. The measured cause of the lag was elsewhere
+		 * (see `stt/dictation-machine.ts`'s `starting` phase); this case exists so the
+		 * suspicion cannot be quietly re-raised against a future edit. */
+		expect(isSendKey({ key: " ", shiftKey: false, ...fromField })).toBe(false);
+		expect(isSendKey({ key: "Spacebar", shiftKey: false, ...fromField })).toBe(
+			false,
+		);
+	});
 });
