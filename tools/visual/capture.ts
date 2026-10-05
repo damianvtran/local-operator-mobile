@@ -64,6 +64,8 @@ import {
 	CORE_DEVICES,
 	DEVICES,
 	type DeviceProfile,
+	describeDeviceCoverage,
+	deviceCoverage,
 	MEASURE_PROBE,
 	PENDING_CELLS,
 	READINESS_PROBE,
@@ -99,10 +101,10 @@ let settledRetakes = 0;
  * not a size policy: it catches a plan far larger than any sample this harness
  * offers (an inflated cell registry, a cell list copied from another tree), and it
  * is why a big run is always something the caller typed `--yes` for. It sits BELOW
- * every tier on purpose — `ci` plans 264 cells, `core` 858, `full` 3102 — so none of
+ * every tier on purpose — `ci` plans 272 cells, `core` 884, `full` 3196 — so none of
  * them starts by accident; the CI job passes `--yes` for exactly that reason. It is
  * NOT tied to the default tier, so it must not be raised to "let the default run": a
- * documented invocation that plans the whole `core` tier is a 32-minute command, and
+ * documented invocation that plans the whole `core` tier is a 33-minute command, and
  * the defect is the invocation, not the bound. Deriving it from the plan the way
  * `CELL_BUDGET_MS` is derived would be circular — the guard would then never fire —
  * so it stays a constant, and this comment is what it is derived from.
@@ -114,7 +116,7 @@ const CONFIRM_THRESHOLD = 120;
  * the floor a small plan still gets.
  *
  * WHY THE DEFAULT IS DERIVED RATHER THAN FIXED. It used to be a flat 900 s, which
- * holds about 400 cells: a `core` run (858 cells) or a dispatched `full` run (3102)
+ * holds about 400 cells: a `core` run (884 cells) or a dispatched `full` run (3196)
  * was therefore cut off by the harness's own default and reported hundreds of cells
  * as having no frame — a bound firing on a plan it was never sized for, which reads
  * like a finding about the app and is not one. Deriving it from the plan makes the
@@ -731,6 +733,11 @@ export interface Measurements {
 		insets?: Record<string, string>;
 	};
 	canvasColor?: string | null;
+	/**
+	 * The colour scheme the RENDERER resolved (`matchMedia('(prefers-color-scheme: dark)')`),
+	 * not the one the cell asked for — the two differ when the emulation was not applied.
+	 */
+	resolvedColorScheme?: string | null;
 	rootBackground?: string | null;
 	rootFontSize?: string | null;
 	documentScrollWidth?: number;
@@ -787,6 +794,7 @@ function asMeasurements(value: unknown): Measurements | null {
 								: undefined,
 					},
 		canvasColor: text("canvasColor"),
+		resolvedColorScheme: text("resolvedColorScheme"),
 		rootBackground: text("rootBackground"),
 		rootFontSize: text("rootFontSize"),
 		documentScrollWidth: count("documentScrollWidth"),
@@ -1053,6 +1061,26 @@ function verifyThemes(
 				record.themeApplied = false;
 				note(
 					`requested theme '${theme}' but the page resolved '${record.resolvedTheme}'`,
+				);
+			}
+			/*
+			 * The scheme the RENDERER resolved, which `reported.theme` above is not: the pre-paint
+			 * probe resolves THAT from the `lo-theme` query first, so it reports what the harness
+			 * ASKED for. `Emulation.setEmulatedMedia` is a separate CDP call, and the app's
+			 * preference is `system`, so a driver that passes the query without the emulation
+			 * renders the other scheme while `themeSource` still reads `query` — the parity lane
+			 * caught exactly that and re-ran its frames. Refuse the cell by name instead (the same
+			 * way a cell whose state marker never arrived is refused) rather than let a light cell
+			 * pass as evidence while its frame is a dark twin of the dark cell's.
+			 */
+			const scheme = record.measurements?.resolvedColorScheme ?? null;
+			record.themeCheck.resolvedColorScheme = scheme;
+			if (record.measurements !== null && scheme !== theme) {
+				record.themeApplied = false;
+				note(
+					scheme === null
+						? `the page reported no resolved colour scheme, so nothing shows this frame rendered '${theme}'`
+						: `the cell asks for '${theme}' but the page resolved prefers-color-scheme '${scheme}': the theme query was applied but the scheme the app reads was not, so this frame is not evidence for '${theme}'`,
 				);
 			}
 			if (record.themeCheck.canvasMatchesToken === false) {
@@ -1398,6 +1426,24 @@ export async function runCapture(options: CaptureOptions) {
 	const budgetMs = derivedDeadlineMs(plan.length);
 	const deadlineMs = options.deadlineMs ?? budgetMs;
 
+	/*
+	 * THE PLAN'S DEVICE SET — what this run INTENDS to cover, printed beside the plan it
+	 * belongs to. The tier selects a SAMPLE of the declared device matrix (the per-push
+	 * job's `ci` is 2 of 19 profiles), and a run that printed only its `devices:` list read
+	 * as "the app is fine" over an assertion about two viewports.
+	 *
+	 * It is the INTENT, not the coverage claim. The claim is computed from the RECORDS after
+	 * the loop, because a run handed fewer frames than it planned — a fired `--deadline`, a
+	 * cell that never settled — must not go on claiming the plan: `--devices
+	 * iphone-se,tablet-landscape --deadline 1` captured 1 of its 2 cells and still said
+	 * "2 of 19 declared profiles captured", which is this PR's own defect in the field it
+	 * adds. Both lists are read from `matrix.ts` (what is declared), so neither can drift
+	 * from it.
+	 */
+	const plannedCoverage = deviceCoverage([
+		...new Set(plan.map((c) => c.device)),
+	]);
+
 	console.log(
 		`capture plan: ${plan.length} cells × ${framesPerCell} frame(s) = ${plannedFrames} frames`,
 	);
@@ -1405,7 +1451,11 @@ export async function runCapture(options: CaptureOptions) {
 		`  screens: ${[...new Set(plan.map((c) => c.screen))].sort().join(", ")}`,
 	);
 	console.log(
-		`  devices: ${[...new Set(plan.map((c) => c.device))].join(", ")}`,
+		plannedCoverage.notCaptured.length === 0
+			? `  devices planned: all ${plannedCoverage.declared.length} declared profiles (${plannedCoverage.captured.join(", ")})`
+			: `  devices planned: ${plannedCoverage.captured.join(", ")} — ` +
+					`${plannedCoverage.captured.length} of ${plannedCoverage.declared.length} declared profiles, ` +
+					`the other ${plannedCoverage.notCaptured.length} not in this run's plan`,
 	);
 	console.log(
 		`  themes:  ${[...new Set(plan.map((c) => c.theme))].join(", ")}`,
@@ -1509,19 +1559,26 @@ export async function runCapture(options: CaptureOptions) {
 		throw new Error(reason);
 	}
 	const chrome = launched.value;
-	const tokens = canvasTokens(options.tokens);
+	/*
+	 * Declared here, assigned INSIDE the run's own `try` below. A `--tokens` path that is a
+	 * directory or malformed JSON throws from `canvasTokens` (`readFileSync` / `JSON.parse`),
+	 * and this read used to sit between `launchChrome` and the `try` — so the throw escaped
+	 * before the `finally` and leaked the Chrome instance this run had just started (found by
+	 * QA). Inside the `try`, the `finally` closes the browser and the static server before the
+	 * error propagates, so a crash cannot leave either behind.
+	 */
+	let tokens: CanvasTokens;
 	const records: CaptureRecord[] = [];
 	screenshotRetries = 0;
 	settledRetakes = 0;
 	let reaped: Awaited<ReturnType<typeof chrome.close>> | null = null;
 	/** Cells that produced no frame, and why — never a silent skip. */
 	const abandoned: Array<{ cell: string; reason: string }> = [...unrenderable];
-	/** What a reviewer must not read as a captured matrix. */
-	const cellsCaptured = plan.length - unrenderable.length;
 	const startedAt = Date.now();
 	let index = 0;
 
 	try {
+		tokens = canvasTokens(options.tokens);
 		/*
 		 * EVERY CELL OPENS ITS OWN TARGET — see `freshPage` for why a reused one
 		 * eventually cannot commit a navigation at all. There is deliberately no
@@ -1795,6 +1852,43 @@ export async function runCapture(options: CaptureOptions) {
 
 	// The manifest is what the audit and the gallery both read, so it carries the
 	// facts each of them needs by name rather than a shape they must infer.
+	/*
+	 * WHAT THIS RUN CAPTURED, IN ITS OWN WORDS — from the RECORDS, i.e. from the frames that
+	 * exist, never from the plan. A record is pushed for every cell the loop reached, and a
+	 * cell that produced no frame is in `abandoned` instead, so filtering on `frames.length`
+	 * makes the claim describe the evidence a reader can actually open. A profile the plan
+	 * named whose cells all died (or died before their first frame) is therefore NOT captured,
+	 * and the shortfall is stated rather than absorbed.
+	 */
+	const coverage = deviceCoverage([
+		...new Set(
+			records.filter((record) => record.frames.length > 0).map((r) => r.device),
+		),
+	]);
+	/**
+	 * WHAT THE RUN CAPTURED — from the RECORDS, i.e. from the frames that exist, and never
+	 * from the plan. `plan.length - unrenderable.length` was a plan-derived number wearing a
+	 * captured name: a run whose deadline fired before the first cell reported
+	 * `cellsCaptured: 330` in its manifest while its own console said `captured 0 cells`.
+	 * Nothing read the field, which is exactly how such a number waits to be trusted.
+	 *
+	 * It is the ONLY count of them, and the filter is the claim's own definition — a cell is
+	 * captured when there is a frame to open — rather than `records.length`. There is no
+	 * "attempted" field and no separate frame total, because both would be names for this one:
+	 * `captureCell` either throws (the cell then being named in `abandonedCells` with its
+	 * reason) or returns having pushed at least one frame, `records.push` is the only record
+	 * site, and a settled-frame retake REPLACES its frame — so reached and captured are the
+	 * same cells, and the frames are `cellsCaptured x framesPerCell`. A field, or a sentence,
+	 * for a state that cannot occur is how the next reader learns something false.
+	 */
+	const cellsCaptured = records.filter(
+		(record) => record.frames.length > 0,
+	).length;
+	/** Profiles the plan named that produced no frame at all — the gap the claim must show. */
+	const plannedWithoutFrames = plannedCoverage.captured.filter(
+		(device) => !coverage.captured.includes(device),
+	);
+
 	const summary = {
 		meta: {
 			generatedAt: new Date().toISOString(),
@@ -1835,6 +1929,16 @@ export async function runCapture(options: CaptureOptions) {
 			cellTimeoutMs: options.cellTimeoutMs,
 			deadlineMs,
 			devicesCaptured: options.devices,
+			/**
+			 * The device bound, by name, in the artifact: what the RUN CAPTURED out of the profiles
+			 * `matrix.ts` declares, and what it did not. It is computed from the records' frames,
+			 * so a run that captured fewer frames than it planned does not claim the plan here;
+			 * `devicePlanned` below carries the intent separately, so a reader can tell a shortfall
+			 * from a narrow `--devices`.
+			 */
+			deviceCoverage: coverage,
+			deviceCoverageNote: describeDeviceCoverage(coverage),
+			devicePlanned: plannedCoverage.captured,
 			// `perTheme` is written as-is: this field's shape is unchanged, so nothing that
 			// reads the manifest moves under a fix about reporting.
 			themeTokens: tokens.perTheme,
@@ -1948,9 +2052,21 @@ export async function runCapture(options: CaptureOptions) {
 
 	console.log("");
 	console.log(
-		`captured ${records.length} cells / ${records.length * framesPerCell} frames in ` +
+		`captured ${cellsCaptured} cells / ${cellsCaptured * framesPerCell} frames in ` +
 			`${(summary.meta.durationMs / 1000).toFixed(1)} s`,
 	);
+	// The bound, restated where the run's verdict is read: the frames above are a sample of
+	// the declared matrix, and which part of it is missing is a fact about this run rather
+	// than something a reader has to infer from the plan it no longer has in front of them.
+	console.log(describeDeviceCoverage(coverage));
+	if (plannedWithoutFrames.length > 0) {
+		// The plan and the claim disagree, so say so where the claim is read: this is the
+		// sentence that used to overstate the run.
+		console.log(
+			`  the plan named ${plannedCoverage.captured.length} profile(s) (${plannedCoverage.captured.join(", ")}); ` +
+				`${plannedWithoutFrames.join(", ")} produced no frame in this run`,
+		);
+	}
 	console.log(`frames that changed after first paint: ${reflow.length}`);
 	console.log(`text-scale dimension: ${scaleCheck.verdict}`);
 	if (scaleCheck.notedPairs > 0) {
@@ -1984,8 +2100,12 @@ export async function runCapture(options: CaptureOptions) {
 	// printed in this branch — it claims every frame's canvas "match[es]" its cell, which
 	// for an uncompared frame is a measurement nobody made.
 	if (themeReport.canvasReason !== null) {
+		// `canvasUncompared`/`canvasCompared` count RECORDS — cells, not frames. Call them
+		// that: the same page's own `N of M cell(s)` is what this line has to agree with, and
+		// a `--consecutive` run has three frames per cell, so `frame(s)` here was wrong by a
+		// factor of three on exactly the runs whose frame count is largest.
 		console.log(
-			`THEME CHECK INCOMPLETE (${themeReport.canvasUncompared} of ${themeReport.canvasUncompared + themeReport.canvasCompared} frame(s) uncompared) — the canvas-vs-token half did NOT run for those frames:`,
+			`THEME CHECK INCOMPLETE (${themeReport.canvasUncompared} of ${themeReport.canvasUncompared + themeReport.canvasCompared} cell(s) uncompared) — the canvas-vs-token half did NOT run for those cells:`,
 		);
 		console.log(`  - ${themeReport.canvasReason}`);
 		console.log(
@@ -2361,12 +2481,14 @@ if (isMain) {
 				"                      (3000 ms/cell, floor 900 s) so a bound always holds its own plan;",
 				"                      a smaller explicit bound is honoured and noted. Cells still",
 				"                      unvisited when it fires are reported as having no frame",
-				"  --tier <name>       the sample to capture: ci | core (default) | full",
-				"                        ci    264 cells — every declared cell, 2 device profiles,",
-				"                              both themes, scales 100 and 200 (~10 min) — the CI job's",
-				"                        core  858 cells — the 5 `core` profiles, both themes, all",
-				"                              three scales",
-				"                        full  3102 cells — all 19 profiles",
+				"  --tier <name>       the sample to capture: ci | core (default) | full.",
+				"                      The matrix declares 19 device profiles; the run prints the",
+				"                      share it covered, and names the profiles it did not.",
+				"                        ci    2 of 19 profiles — 272 cells, both themes, scales 100",
+				"                              and 200 (~10 min) — the per-push CI job's sample",
+				"                        core  5 of 19 profiles — 884 cells, both themes, all",
+				"                              three scales — the local default",
+				"                        full  19 of 19 profiles — 3196 cells",
 				"  --devices <names>   comma list. Default: the tier's profiles (ci 2, core 5 by",
 				"                      default, --full for all 19)",
 				"  --themes <names>    default dark,light",
@@ -2393,7 +2515,7 @@ if (isMain) {
 	// overrides any of them.
 	//
 	// An unknown tier is an ERROR rather than a silent fall back to `core`: a typo'd
-	// `--tier ci` that quietly ran 858 cells would spend ~32 minutes on a capture the
+	// `--tier ci` that quietly ran 884 cells would spend ~33 minutes on a capture the
 	// caller did not ask for, and the whole point of naming the sample is that the
 	// run you get is the one you asked for.
 	const tierFlag = bool(flags, "full") ? "full" : str(flags, "tier", "core");

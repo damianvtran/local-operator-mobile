@@ -287,13 +287,71 @@ export const CORE_DEVICES: string[] = Object.entries(DEVICES)
 export const ALL_DEVICES: string[] = Object.keys(DEVICES);
 
 /**
+ * Which of the declared profiles a run's device list covers, and which it does not.
+ *
+ * WHY A RUN HAS TO SAY THIS ITSELF. The per-push CI job captures `--tier ci`, which is 2 of
+ * the 19 profiles declared above, and a green `Web target` job READ as "the app is fine"
+ * when it asserted something far narrower. The sample is declared HERE, beside the device
+ * table it is a subset of; this helper is how a RUN states the bound it actually took, so a
+ * reader of a green run cannot mistake the sample for the whole matrix. It reads
+ * `ALL_DEVICES` rather than a second list of its own, so it cannot drift from the table the
+ * plan is built from.
+ *
+ * `captured` is filtered to the declared order (so the two lists line up with the table in
+ * `docs/e2e/README.md`), and any name the matrix does not declare is kept at the end: the
+ * statement is about what ran, whatever it was.
+ */
+export function deviceCoverage(captured: readonly string[]): {
+	declared: string[];
+	captured: string[];
+	notCaptured: string[];
+} {
+	const declared = [...ALL_DEVICES];
+	const asked = new Set(captured);
+	return {
+		declared,
+		captured: [
+			...declared.filter((name) => asked.has(name)),
+			...captured.filter((name) => !declared.includes(name)),
+		],
+		notCaptured: declared.filter((name) => !asked.has(name)),
+	};
+}
+
+/**
+ * The run's own one-line statement of what its device sample covers, and — always — what it
+ * leaves out. Kept beside `deviceCoverage` so the sentence and the counts cannot disagree:
+ * the `captured` branch is reachable only when `notCaptured` is empty.
+ */
+export function describeDeviceCoverage(coverage: {
+	declared: string[];
+	captured: string[];
+	notCaptured: string[];
+}): string {
+	// A run that captured nothing has no names to put in the brackets, and `captured ()` reads
+	// as a broken sentence rather than as the finding it is — the list is only listed when
+	// there is at least one entry in it.
+	const named =
+		coverage.captured.length > 0 ? ` (${coverage.captured.join(", ")})` : "";
+	if (coverage.notCaptured.length === 0) {
+		return `device coverage: all ${coverage.declared.length} declared profiles captured${named}`;
+	}
+	return (
+		`device coverage: ${coverage.captured.length} of ${coverage.declared.length} declared profiles captured${named}; ` +
+		`${coverage.notCaptured.length} NOT captured (${coverage.notCaptured.join(", ")})`
+	);
+}
+
+/**
  * The CI tier: the bounded sample the per-push capture job takes.
  *
  * WHY A THIRD TIER, AND WHY IT IS HERE RATHER THAN A `--devices` LIST IN YAML.
- * The `core` tier is 858 cells — the whole declared cell list at 2 themes x
- * (3 phone scales + 2 tablet scales) x 5 profiles — and the CI job's capture step
- * is bound at 20 minutes. Measured on the runner, that is 2.24 s/cell: 403 cells
- * in 903 s, so a core run needs ~32 minutes. The job's first real run of this path
+ * The `core` tier is 884 cells: the whole declared cell list (34 cells) x 2 themes x
+ * (3 phones x 3 scales + 2 tablets x 2 scales) — 34 x 2 x 13, the tier's 5 profiles —
+ * and the CI job's capture step is bound at 20 minutes. Measured on the runner, that is
+ * 2.24 s/cell: 403 cells in 903 s (run 37098393675, a plan of 403 cells then), so a core
+ * run needs ~33 minutes. The job's first real
+ * run of this path
  * was therefore cut off by the harness's own 900 s deadline with 585 cells
  * unvisited, and reported them as cells with no frame.
  *
@@ -320,10 +378,10 @@ export const ALL_DEVICES: string[] = Object.keys(DEVICES);
  *     measures (200% over 100%). 150% is the phone-typical intermediate case and is
  *     left to `core`.
  *
- * That is 33 cells x 2 themes x (2 + 2) device-scales = 264 cells, ~10 minutes at
+ * That is 34 cells x 2 themes x (2 profiles x 2 scales) = 272 cells, ~10 minutes at
  * the measured rate: inside the step bound with most of it spare. `core` and
  * `full` are unchanged and stay the local and dispatched samples, so the full
- * 858-cell `core` matrix and the 3102-cell `full` matrix remain runnable — nothing
+ * 884-cell `core` matrix and the 3196-cell `full` matrix remain runnable — nothing
  * is only reachable through CI.
  */
 export const CI_DEVICES: string[] = ["iphone-se", "tablet-landscape"];
@@ -786,6 +844,16 @@ export const MEASURE_PROBE = `
   return {
     reported: { theme: info.theme, scale: info.scale, reduceMotion: info.reduceMotion,
                 themeSource: info.themeSource, insets: info.insets },
+    // THE SCHEME THE RENDERER RESOLVED, read back from the same signal the app reads
+    // (useColorScheme() -> matchMedia('(prefers-color-scheme: dark)')). This is NOT
+    // reported.theme: the pre-paint probe resolves that from the lo-theme query FIRST,
+    // so it says what the harness ASKED for. Emulation.setEmulatedMedia is a separate CDP
+    // call, and a driver that passes the query without it renders the OS scheme while
+    // themeSource still reads 'query' — a light cell silently captured as a dark twin.
+    // Reading the resolved scheme is what lets the capture refuse that cell by name.
+    resolvedColorScheme: typeof window.matchMedia === 'function'
+      ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+      : null,
     canvasColor: canvas,
     rootBackground: rootStyle ? rootStyle.backgroundColor : null,
     rootFontSize: rootStyle ? rootStyle.fontSize : null,
