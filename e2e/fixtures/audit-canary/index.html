@@ -33,7 +33,7 @@
   | #full-bleed           | U-05-top    | content at y=0 under the top inset             |
   | #footer-flush         | U-05-bottom | a pinned bar flush to the home indicator       |
   | #side-left            | U-05-left   | a bar flush to the left edge (landscape)       |
-  | #side-right           | U-05-right  | a bar flush to the right edge (landscape)      |
+  | #side-right           | U-05-right  | a FULL-WIDTH bar reaching BOTH side bands — the only right-edge fixture that fails if the two edges stop being evaluated independently |
   | #too-wide             | U-06  | a 480px block in a 320px viewport                    |
   | #clipped              | U-07-y | two lines of text in a 16px-tall overflow:hidden box |
   | #clipped-x            | U-07-x | a line wider than its box, clipped horizontally      |
@@ -365,13 +365,33 @@
 <div id="footer-flush" class="footer-bar bad" data-defect="U-05-bottom" style="bottom: 0">Flush to the home indicator</div>
 <div id="good-footer" class="footer-bar good" style="bottom: var(--lo-inset-bottom, 0px); left: var(--lo-inset-left, 0px); right: var(--lo-inset-right, 0px)">Padded clear of it</div>
 
-<!-- U-05 left/right: in landscape the notch is a SIDE inset. These two bars are
-     flush to the left and right edges, which is correct in portrait (insets 0) and
-     a defect in landscape — so the marker names the direction, not the check. -->
+<!-- U-05 left/right: in landscape the notch is a SIDE inset. #side-left is flush
+     to the left edge and #side-right reaches BOTH edges, which is correct in
+     portrait (insets 0) and a defect in landscape — so the marker names the
+     direction, not the check. -->
 <div class="side-bar bad" id="side-left" data-defect="U-05-left" style="left: 0">Flush left</div>
 <div class="side-bar good" id="good-side-left" style="left: var(--lo-inset-left, 0px)">Clear left</div>
-<div class="side-bar bad" id="side-right" data-defect="U-05-right" style="right: 0">Flush right</div>
-<div class="side-bar good" id="good-side-right" style="right: var(--lo-inset-right, 0px)">Clear right</div>
+<div class="side-bar bad" id="side-right" data-defect="U-05-right" style="left: 0; right: 0; width: auto"></div>
+<div class="side-bar good" id="good-side-right" style="left: var(--lo-inset-left, 0px); right: var(--lo-inset-right, 0px); width: auto"></div>
+
+<!-- U-05 right: in landscape the notch is a SIDE inset, and this bar is flush to
+     BOTH edges — which is what makes the right rule's row conditional on the two
+     edges being evaluated INDEPENDENTLY. A 60 px bar flush to `right: 0` on its
+     own is reached by the right rule before AND after the two edges were
+     decoupled, so neither the canary nor `--blind U-05:right` could tell those two
+     states apart; with this shape, restoring the old `continue` after the left
+     rule removes the right row and the canary reports
+     `missed: U-05-right (#side-right)`.
+
+     The bounded right-edge shape is still exercised, and asserted, by
+     #dialog-band-control — a 44 pt control at the right edge inside the modal.
+
+     It carries NO text and NO control deliberately. U-08 pairs *meaningful* boxes
+     (`ownText || interactive`), so a bare surface joins no pair: a full-width bar
+     WITH a label would pair with the page's own text at its height, and on the
+     CLEAN page that pair would fail the direction that must pass. U-05 still sees
+     it, because `draws` counts a background and a border. The `.good` counterpart
+     clears both insets, so the clean page stays clean on every device. -->
 
 <!-- U-07 x: the same box clips on the OTHER axis. Two independent rules live in
      U-07, and this element is why blinding one of them cannot pass. -->
