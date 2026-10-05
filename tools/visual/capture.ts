@@ -2264,6 +2264,11 @@ function judgeTextScale(
 	// had scaled counterparts).
 	const problems: string[] = [];
 	const notes: string[] = [];
+	// A size the 200 % frame shows is expressed in THAT frame's px, which is what a
+	// reader sees in a screenshot (`px(rem) * 2`). Reporting it in the 100 % frame's
+	// scale would name a size nothing renders at — a frozen 14 px node would be filed
+	// as "7px text", which is the opposite of the honest reading.
+	const px200 = (rem: number) => Math.round(rem * rootPx100 * 2 * 100) / 100;
 	for (const [rem, count] of at100) {
 		if (at200.has(rem)) continue; // scaled — its 200 % px is twice its 100 % px
 		if (hasApprox(at200, rem / 2))
@@ -2278,7 +2283,7 @@ function judgeTextScale(
 	for (const [rem, count] of at200) {
 		if (at100.has(rem)) continue;
 		notes.push(
-			`${px(rem)}px text appears only at 200% (${count} node(s)) — either a frozen node whose size coincides with a scaled role, or a size the layout introduces at this scale`,
+			`${px200(rem)}px text at 200% is not twice any 100% size (${count} node(s)) — a node that ignored the root font size, or a size the layout introduces at this scale`,
 		);
 	}
 	problems.sort();
