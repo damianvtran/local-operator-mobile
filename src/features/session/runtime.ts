@@ -23,6 +23,7 @@ import type { RouteProfile } from "@/connection";
 import type { SessionProjection, TranscriptEntry } from "@/contracts";
 import {
 	type ErrorSurface,
+	isRelayMissing,
 	type RelayEndpoints,
 	RelayError,
 	type StreamState,
@@ -98,7 +99,12 @@ export const loadAttachments = async (
 		);
 		return `data:${mimeType};base64,${toBase64(bytes)}`;
 	} catch (error) {
-		if (error instanceof RelayError && error.status === 404) return null;
+		/* Only the relay's OWN `no such image` 404 is proof the bytes are gone.
+		 *  The edge and the gateway answer `404` for "not a tunnel" too, and reading
+		 *  that as absence would tell the reader a live attachment vanished when the
+		 *  real problem is that the host was never reached — so anything else, the
+		 *  unknown-tunnel 404 included, rethrows as a failure to reach the host. */
+		if (isRelayMissing(error)) return null;
 		throw error;
 	}
 };

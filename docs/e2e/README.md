@@ -23,8 +23,9 @@ That figure is **load-dependent, and it is the one to quote**: `pnpm e2e:relay`
 against ~13 minutes on a quiet one. The README, `tools/lib/doc-commands.ts` and
 `tools/mock-relay/verify.ts` all state that single figure; if you change one,
 change all three. The app-build capture block — the other candidate for slowest —
-is bounded to a 74-cell sample (`--devices iphone-15 --themes dark --scales
-100,200`) precisely so the gate can pass for the reason the block declares
+is bounded to a 68-cell sample: the whole declared cell list (34 cells on today's
+registry) at one device, one theme and two scales (`--devices iphone-15 --themes
+dark --scales 100,200`), so the gate can pass for the reason the block declares
 instead of by timing out. A command this
 machine cannot run is skipped **with its reason printed**, and its tool paths and
 script names are still resolved, so a skip cannot hide a renamed file.
@@ -53,8 +54,9 @@ the three answer different questions:
 | `notMeasurableCells` | cells that did NOT, each with its reasons. A finding about the harness or the app. |
 | `declaredSkips` | cells whose state this head does not render yet, each with the work that owns it. NOT a gap, and NOT evidence. |
 
-Measured on this head, one device and theme (`--devices iphone-15 --themes dark
---scales 100`), 36 cells:
+One device and theme (`--devices iphone-15 --themes dark --scales 100`) plans 33
+cells on today's registry — 36 when the run below was taken — so that output is
+quoted from the run that produced it rather than re-derived from today's count:
 
 ```
 audit: 36 cells, 378 check rows, 252 measured, 54 FAIL, 126 BLOCKED (0 unmeasurable) · palette loaded
@@ -151,8 +153,18 @@ in `verify`'s readiness guard.
 ### Seeding a run so the app actually talks to the relay
 
 ```sh
-# docs:needs mock-relay
-pnpm audit:capture --dir dist --out "$SCRATCH/frames" --relay "$MOCK_URL"
+# docs:needs mock-relay web-build
+#
+# The sample is EXPLICIT and small, for §2's reason: the default (`core`) tier plans
+# 884 cells, one frame each, which is ~33 minutes at the measured 2.24 s/cell and is
+# above the harness's own 120-frame confirmation threshold — so an un-narrowed run is
+# REFUSED without `--yes`, and even with it no documentation gate may spend 33 minutes
+# on one command. One phone, one theme, one scale is 34 frames, and it still proves what
+# this section is about: seeding is a property of `--relay`, not of the sample's size.
+# `web-build` is declared because the command reads `dist/`: without a build it does
+# not fall back to anything, it fails on `static root does not exist`.
+pnpm audit:capture --dir dist --out "$SCRATCH/frames" --relay "$MOCK_URL" \
+  --devices iphone-15 --themes dark --scales 100
 ```
 
 `--relay` is enough. The harness serves the build itself and proxies the relay's
@@ -540,20 +552,24 @@ node tools/visual/capture.ts --dir e2e/fixtures/audit-canary \
 # A real run against a real build. Build first — `pnpm export:web`, which writes `dist/`.
 #
 # The device/theme/scale set is EXPLICIT and small on purpose: the full `core` tier is
-# 832 cells, which is ~31 minutes at the measured 2.24 s/cell (403 cells in 903 s on the
-# CI runner), and no documentation gate may spend that on one command. So this example is
-# the bounded sample; `--plan` above prints the full count, and dropping these three flags
-# captures the whole `core` tier. `--tier ci` is the sample the per-push CI job takes —
-# every declared cell at two device profiles, both themes and two scales, 256 cells — and
-# `--full` is all 19 profiles at 3008 cells.
+# 884 cells, which is ~33 minutes at the measured 2.24 s/cell (403 cells in 903 s on the
+# CI runner, a plan of 403 cells then), and no documentation gate may spend that on one
+# command. So this example is the bounded sample; `--plan` above prints the full count,
+# and dropping these three flags captures the whole `core` tier. `--tier ci` is the sample
+# the per-push CI job takes — every declared cell at two device profiles, both themes and
+# two scales, 272 cells — and `--full` is all 19 profiles at 3196 cells.
 #
 # The bound is DERIVED FROM THE PLAN unless you name one: `--deadline` defaults to
 # 3000 ms/cell with a 900 s floor, so a bound always holds the plan it was computed for,
 # and a smaller explicit bound is printed beside the budgeted figure rather than
 # discovered when it fires.
 #
-# This command reads the APP's current state. It exits 0 on this head; the two findings
-# it used to record are fixed, and both fixes were declarations rather than app changes:
+# This command reads the APP's current state. On macOS it exits 0 on this head; on the
+# Linux CI runner it does NOT — there it exits 1 with `1 undeclared identical-state
+# pair(s)` (run 37238085957, job 111541147842), and the pair is left unnamed because
+# the capture writes its manifest to a temp directory this job uploads no artifact
+# from: reproduce it there to read the pair off the manifest. The two findings it used
+# to record are fixed, and both fixes were declarations rather than app changes:
 #   * `S2/error` and `S13/error` were ONE state under two names — `/tunnels` renders a
 #     single refusal surface and `STATE_MARKER.computers` declares a single `error` — so
 #     `S2/error` was removed from `billing-inactive`'s `shows`.
@@ -595,11 +611,18 @@ does not succeed still fails the cell.
    `--window-size`.** On Chrome 152 the flag clamps the width at a 500 px floor
    and silently loses 87 px of height, so a frame's dimensions would be assumed
    rather than set.
-2. **Every frame states its *resolved* theme and its *computed* canvas colour**,
-   read back from the page — never what the harness asked for. A theme applied
+2. **Every frame states its *resolved* theme and its *computed* canvas colour**, and the
+   colour scheme it rendered under is read back from the page — never taken from what the
+   harness asked for. A theme applied
    after first paint once produced two byte-identical "dark" and "light"
    captures, so the run compares the two frames' hashes, compares each canvas
-   against the design token for the theme it claims, and fails on either. A
+   against the design token for the theme it claims, and fails on either. It also reads
+   `matchMedia('(prefers-color-scheme: dark)')` — the same signal the app's
+   `useColorScheme()` follows — and REFUSES the cell by name when the scheme the renderer
+   resolved is not the one the cell declares: `themeSource: "query"` only says the query
+   parameter was applied, and the app's preference is `system`, so a driver that passes the
+   query with no media emulation renders the other scheme and a `light` cell becomes a dark
+   twin (the parity lane caught exactly that and re-ran its frames). A
    frame with almost nothing mounted is reported as blank rather than passed.
    The canvas half needs `--tokens`: a missing tokens file, or one that carries no
    canvas for a theme (an empty value counts as none, not as a canvas), leaves those
@@ -626,12 +649,13 @@ Two mechanisms, applied **before first paint** (`Page.addScriptToEvaluateOnNewDo
   web build has no OS text-size signal a browser can emulate, and because
   `env(safe-area-inset-*)` cannot be overridden through CDP.
 
-The harness does not assume either mechanism worked. It measures the **observed
-text-scale ratio** (the median rendered text height at 200 % over the same
-element at 100 %) and reports the dimension as live or **inert**. An inert
-dimension is not a failed run — it is a run that cannot answer any large-text
-question, and the manifest says so instead of producing three identical frames
-labelled as three scales.
+The harness does not assume either mechanism worked. It reads the **type roles**
+the page rendered — each distinct text size relative to the root font size, and how
+many text nodes carried it — and reports the dimension as live or **inert**. A role
+that follows the root keeps the same size-in-rem at both scales, so a live pair is
+one whose 100 % and 200 % role histograms match exactly. An inert dimension is not a
+failed run — it is a run that cannot answer any large-text question, and the manifest
+says so instead of producing identical frames labelled as different scales.
 
 ### Devices, themes and scales
 
@@ -663,21 +687,39 @@ All 19 profiles above are what the harness *can* plan, and they come from
 generated from it rather than maintained beside it. A default run captures the
 `core` tier only (5 profiles: the 320 pt floor, one typical phone,
 the landscape case whose side insets the notch rules need, and a tablet in each
-orientation) — 832 cells at 26 frames per cell. A run states which tier it took,
+orientation) — 884 cells, one frame each unless `--consecutive` asks for the +250 ms
+and settled frames too. A run states which tier it took,
 and a cell that was not captured is reported as having no frame rather than passed.
 
 Three tiers are declared in `matrix.ts`, and each says what it is:
 
 | tier | sample | cells | why |
 |---|---|---|---|
-| `ci` | every declared cell × `iphone-se`, `tablet-landscape` × both themes × scales 100 and 200 | 256 | the per-push CI job's sample. The step is bound at 20 minutes and the measured rate is 2.24 s/cell, so an 832-cell `core` run cannot fit; this one lands ~10 minutes. It keeps the CELL axis whole — a state that is not captured is a state no review round can report on — and shrinks only the device, theme and scale axes, each to what its check needs: the narrowest and widest viewports (the two sides of the 768 breakpoint), because the theme check compares a cell's dark and light frames, and the 100 %/200 % pair the text-scale guard measures. |
-| `core` | the 5 `core` profiles, both themes, all three scales | 832 | the default, and the local sample the operator's rule asks for. |
-| `full` | all 19 profiles | 3008 | the dispatched/nightly sample. |
+| `ci` | every declared cell × `iphone-se`, `tablet-landscape` × both themes × scales 100 and 200 | 272 | the per-push CI job's sample. The step is bound at 20 minutes and the measured rate is 2.24 s/cell, so an 884-cell `core` run cannot fit; this one lands ~10 minutes. It keeps the CELL axis whole — a state that is not captured is a state no review round can report on — and shrinks only the device, theme and scale axes, each to what its check needs: the narrowest and widest viewports (the two sides of the 768 breakpoint), because the theme check compares a cell's dark and light frames, and the 100 %/200 % pair the text-scale guard measures. |
+| `core` | the 5 `core` profiles, both themes, all three scales | 884 | the default, and the local sample the operator's rule asks for. |
+| `full` | all 19 profiles | 3196 | the dispatched/nightly sample. |
 
 `--tier <ci|core|full>` or `--full` selects one; `--devices`, `--themes` and
 `--scales` override any of them. The whole-run `--deadline` is derived from the
 plan's size (3000 ms/cell, floor 900 s) unless you name one, so the default bound
 always holds the plan it was computed for.
+
+**A run states the bound it took, and so does the artifact it leaves.** The per-push
+`web-audit` job captures the `ci` tier — **2 of the 19 profiles above** — and a green job
+that printed only the devices it used read as "the app is fine" over an assertion about two
+viewports. So the capture prints its own device coverage: the declared profiles it captured,
+by name, and the declared profiles it did **not** capture, by name and count, in the plan
+block before anything renders and again beside the run's verdict. The same statement is
+recorded in the manifest (`meta.deviceCoverage` and `meta.deviceCoverageNote`) and repeated
+in `index.html` beside the cell and frame counts, because that page is what a reviewer opens
+instead of the stdout. A run of the whole matrix says so instead; the sentence is derived
+from `ALL_DEVICES`, so it cannot drift from this table.
+
+**The device variety that is not on the per-push path has its own nightly job.**
+`.github/workflows/e2e.yml` `web-audit-core` captures and audits the `core` tier — 5 of
+the 19 profiles, 884 cells / 2,652 frames and ~33 minutes at the measured 2.24 s/cell —
+on the schedule and on demand only. The `ci` sample stays the per-push one and keeps its
+own 20-minute capture bound; neither job is stretched to cover the other's tier.
 
 ### Two cells that render byte-identically
 
@@ -797,30 +839,163 @@ inference is what produced a run of "200 %" cells rendered at 100 %.
 
 Because a dimension that renders without measuring anything reads exactly like
 coverage, the guard is **per cell**, not per run: for every (screen, state, device,
-theme) captured at both 100 % and 200 %, the median rendered text height must grow by
-at least **1.9×**. A cell that does not is failed by name —
+theme) captured at both 100 % and 200 %, every type role the 100 % frame rendered
+must be present in the 200 % frame at the size the factor implies. A cell that does
+not is failed by name —
 
 ```
-path--inert__inert__iphone-15__dark__200: the text did not scale: median text 40px
-at 200% against 1x the 100% cell (needs ≥1.9x), so this cell measures 100% and cannot
-answer a large-text question
+path--inert__inert__iphone-15__dark__200: the text did not scale with the root font
+size: the 20px role (1 node(s)) did not scale: the 200% frame still renders 20px text
+where 40px was expected — every type role must grow by the cell's own factor, so this
+cell cannot answer a large-text question
 ```
 
 — and every frame records which of the two it was:
 
 | Manifest field | What it says |
 |---|---|
-| `meta.textScaleVerdict` | the run-level sentence, with the median ratio |
+| `meta.textScaleVerdict` | the run-level sentence, over the measured pairs |
 | `meta.textScaleLive` | true only when every measured pair was live |
 | `meta.textScaleLiveCells` / `meta.textScaleInertCells` | the cells by name, so a reader can tell a live 200 % row from a 100 % render wearing a 200 % label |
 | `meta.textScalePairsPlanned` / `textScalePairsMeasured` | the coverage this run does not have |
-| `records[].scaleLive` / `scaleRatio` | per frame; `null` means both scales were not captured, which is a third answer and not a pass |
+| `records[].scaleLive` | per frame; `null` means both scales were not captured (a third answer, not a pass). The verdict is a fact about the PAIR, so it is on both frames |
+| `records[].scaleProblems` / `scaleNotes` | on the **200 % frame only**, because that is the frame they describe: the roles that failed, and the sizes the 100 % frame does not explain. **Reported, never failing** — see below |
+| `meta.textScaleCheck.notedPairs` | how many pairs carry a note, so a run says it out loud instead of burying it in `perCell` |
+| `records[].measurements.textRoleSizes` / `rootFontSizePx` | the reading the judgement is made on: every distinct text size and its node count, and the root font size they are relative to |
 
-A run-level median is not enough and was the earlier guard's flaw: one responsive
-screen lifts the median while another screen's cell is inert. Both directions are
-asserted in `verify` (`pnpm e2e:relay`): `e2e/fixtures/inert-text-scale/` is a page
-whose type is entirely in `px` and must FAIL by name, and the rem-based
-`e2e/fixtures/audit-canary/` must pass. Neither fixture is evidence about the app —
+**The root is checked before any size is.** Every size above is read as a fraction of
+the frame's OWN root font size, which is what makes the comparison composition-
+insensitive — and that is only sound while the harness's scale input actually reached
+the page. A page that pins its root (`html { font-size: 16px !important }` outranks the
+inline property the probe writes) renders both frames at 100 %, and judged against
+itself such a pair is trivially "every role grew". The guard therefore asserts that the
+200 % root is the factor's multiple of the 100 % root *before* it compares anything, and
+fails the pair by name when it is not: `… the harness's root font size did not take
+effect: the 200% frame renders with a root of 16px against 16px at 100% (expecting
+32px), so both frames were rendered at the same scale and this pair cannot answer a
+large-text question`. That is not hypothetical — those two frames' medians are equal
+(96 px / 96 px, **1.00×** on the `root-pinned-text-scale` fixture), so the median this
+replaced failed the pair while a per-role comparison on its own would have passed it.
+
+**A type role is a BOX, not a paint — and that is this harness's stance, stated with what it
+costs.** The guard counts a node whose bounding box has height; `visibility: hidden` alone is
+excluded, which is what `READINESS_PROBE`'s `visible()` says too. Two shapes are therefore
+COUNTED though nothing draws: a node at `opacity: 0`, and a child clipped away inside a
+`height:0; overflow:hidden` container. That is deliberate — the audit reads the app's
+clipped placeholder proxy on purpose, and `visible()` answers a different question ("did the
+app render this marker", not "can a reviewer read this text"). `unpainted-role-text-scale`
+pins it: each of those two shapes carries a frozen px size and the page **FAILS** by name.
+
+**What the box test cannot catch — stated as a CLASS, because any list of shapes invites a
+fifth.** The guard reads an element's box, so text that paints from a **zero-height box** is
+invisible to it: the role is never reported, the pair reads live, and a frozen size on such a
+carrier goes unnoticed. This is about elements that hold **direct text**, which are the only
+nodes the probe looks at. The shapes seen so far — **including but not limited to**:
+
+| shape | why the box measures zero |
+|---|---|
+| `height: 0` with `overflow: visible`, on a carrier holding its own text | the box is zero and nothing clips the text |
+| `line-height: 0` | the line box collapses while the glyphs still draw |
+| `display: contents` | no box at all; the text paints in the parent's flow |
+| `contain: size` | containment collapses the box to zero while the glyphs still paint |
+
+`painted-carrier-text-scale` pins three of those (`height:0`, `line-height:0`,
+`display:contents`) with frozen px sizes and must **PASS** (exit 0, live) with none of them
+named. The table is an example set, not the class: a fifth mechanism that also yields a
+zero-height box would be missed in exactly the same way, and nothing here says otherwise.
+Measured on this head: a `contain: size` element holding its own 22 px text is absent from
+the `100 %` role set altogether and the cell reads live.
+
+**Two further ways text escapes the role set, from a different cause** — these are NOT
+zero-box cases, and conflating them with the table above is what an earlier revision of this
+section got wrong. Text in **generated content** (`::before` / `::after`) is not an element
+holding direct text, so the probe never sees it; and text inside a **shadow root** is never
+traversed, because the probe walks the light DOM (`document.querySelectorAll('body *')`).
+Neither is a statement about boxes, and neither is covered by the fixtures above.
+
+A stricter, paint-based predicate — a `Range` over the node's own text yielding a line rect,
+plus the ancestor opacity product and an ancestor-clipping intersection — **is NOT shipped**:
+measured on the `ci` tier it moved the **note count** (96 pairs carrying a note became 118,
+with the verdict unchanged at 136/136 live and 0 UNREADY), and a metric change that moves a
+number app cells report is the failure this branch has had to correct twice. Note count, not
+verdict: no cell's readiness changed, and the earlier revision of this sentence was wrong to
+imply otherwise. Its incidence
+on `app/`, `src/` and `design/` is 0: the app's only zero-height **element wrapping text** is
+`textarea.tsx`'s, and it is `overflow: hidden` and paints nothing.
+
+The `medianTextHeight` the report prints is a readout of the metric this guard replaced (the
+median of the counted nodes' box heights); nothing in the guard reads it. `textNodeCount`
+keeps its older, looser meaning (elements holding direct text, drawn or not) — the same
+distinction `testIds` versus `visibleTestIds` draws in the readiness probe.
+
+**Why per role and not a median.** The first version reduced a cell to the median
+rendered text box at each scale and required the ratio to clear 1.9×. A median is a
+property of the cell's *composition* as much as of its scaling: when a node that
+rendered at a fixed size starts following the scale — the correct fix for a missing
+type role — the mix of sizes changes, the median moves, and the ratio can fall below
+the bar while every role scaled exactly 2×. Measured on
+`S15/loading__tablet-landscape__200`: fifteen text nodes, all scaling exactly 2×,
+whose median fell from 2.00× to **1.852×** once the composer's `＋` and the splash's
+`Connect a computer` were given their type roles. The same total hid one inert role
+behind a body-dominated middle, too.
+
+**Node counts are not compared, and why.** A role's identity is its size relative to
+the root font size, so "present at 200 %" already means "grew by the cell's factor".
+How MANY nodes carry it is not the guard's question: a responsive layout legitimately
+adds or drops a node whose role scaled, and counting them made the guard fail for a
+page whose every role had grown — measured on main's `ci` tier, where a count rule
+marked **88 of 272 cells UNREADY** and every one of them was decided by a layout
+change rather than by the type.
+
+**What the per-role guard can no longer catch, and how often it fires.** A 100 % role
+with no scaled counterpart is named in `scaleNotes`, not failed. Four different things
+produce that signature — a node that did not move with the root font size, a node the
+layout drops or clips away at that scale, a node RESIZED to a size the factor does not
+produce (`calc()`, `clamp()`, an `em` under a fixed-px parent), and, in the other
+direction, a size the 200 % frame shows that no 100 % role explains — and two frames
+cannot tell them apart.
+
+The case that actually happens is the first, and it is not rare. **On this harness's own
+`ci` capture, 96 of the 136 pairs carry a note naming a size that did not move — every one of
+them a 14 px node — and all 136 pairs are still reported live.**
+So the honest reading of a live verdict is this, and nothing wider: *every role present at
+100 % is counted at 200 % too and grew by the factor; a node frozen at a size that
+COINCIDES with a role which otherwise scales, one the layout drops or clips at 200 %, or one
+resized to a size the factor does not produce is reported in `scaleNotes` and does not fail
+the cell.* The guard fails a **role** that did not scale — a page whose body copy never
+grows, a hardcoded px heading beside rem paragraphs, a wholly px page — not a cell in which
+one node of a scaling role stayed put. That is why `136/136 live` on a tier whose notes name
+unexplained text in **70 %** of pairs is not a contradiction, and must not be read as "there
+is no frozen text here".
+
+Two further limits, named rather than left implicit: a role that **partly** follows the scale
+is a note, never a failure (`calc(10px + 0.5rem)` measures **18 px → 26 px, 1.444×**), and
+text painting from a **zero-height box** is not counted at all — the table above lists the
+shapes seen so far as examples, not as the class, and `painted-carrier-text-scale` asserts
+three of them. The reading is the same for both: named, not failed. The `calc()` branch
+never appears on the app's own tiers — there is no
+`calc()`, `clamp()` or viewport-unit font size anywhere in `app/`, `src/` or `design/`, and
+a probe carrying `calc(10px + 0.5rem)` measures **18 px → 26 px (1.444×)** and is named,
+not failed. That is the widest reading of a live verdict, and it is the one a `U-04` signer
+should work from.
+
+Both directions are asserted in `verify` (`pnpm e2e:relay`), now across seven fixtures —
+four that must **FAIL by name** and three that must **pass**:
+
+| fixture | what it controls | must |
+|---|---|---|
+| `inert-text-scale/` | all `px`: the whole page frozen | FAIL, `the 200% frame renders the same text sizes` |
+| `px-role-text-scale/` | one `px` role among scaling ones — the case a median cannot see | FAIL, `the 20px role … did not scale` |
+| `root-pinned-text-scale/` | `html { font-size: 16px !important }`: a root the harness cannot move | FAIL, `the harness's root font size did not take effect` |
+| `unpainted-role-text-scale/` | text that is laid out but never drawn: `opacity:0` and a child clipped away, both frozen | FAIL, those two roles named; `visibility:hidden` not counted |
+| `painted-carrier-text-scale/` | the known miss: frozen text painting from a zero-height box (`height:0` carrier, `line-height:0`, `display:contents` — examples, not the class) | PASS, none named |
+| `hidden-role-text-scale/` | a `display:none` carrier (and an inline `<script>`) | pass |
+| `audit-canary/` | all `rem` | pass, dimension live |
+
+Each direction is a measurement, not an assertion about the diff: the pinned-root
+fixture's two frames have equal medians (the old rule's 1.00×), the mixed fixture was the
+one the old median called live at **4.000×**, and the four painted-text shapes were each
+captured before and after the predicate change. No fixture is evidence about the app —
 together they prove the *guard* discriminates.
 
 ### The U-08 overlap rule, and what it deliberately does not report
@@ -933,8 +1108,10 @@ exactly that defect. A rule the self-test cannot blind is a rule nothing checks.
 
 The canary also proves the harness's own dimensions work, in both directions:
 `e2e/fixtures/audit-canary/` is written in `rem`, so the text-scale dimension comes
-out **live** (measured median 2.00× at 200 %), and `e2e/fixtures/inert-text-scale/`
-is written in `px` and must fail by name. `pnpm e2e:relay` asserts both.
+out **live** (every type role measured 2.00× at 200 %), and
+`e2e/fixtures/inert-text-scale/` is written in `px` and must fail by name
+(`e2e/fixtures/px-role-text-scale/` is the mixed case). `pnpm e2e:relay` asserts all
+three.
 
 What this does **not** say is anything about the app. The canary is a page this
 repository controls; a live dimension there proves the *harness* drives a real

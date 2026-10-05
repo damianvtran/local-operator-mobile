@@ -1,0 +1,50 @@
+<!doctype html>
+<!--
+  What this harness COUNTS on purpose, asserted so it cannot move silently.
+
+  The guard counts a type role by its bounding box, and that is deliberate: a node at
+  opacity:0 and a node clipped away inside a zero-height container both keep a box, both
+  are counted, and both FAIL the cell when their text is frozen. The audit reads the app's
+  clipped placeholder proxy on purpose, so READINESS_PROBE's visible() is NOT the predicate
+  here — that test answers "did the app render this marker", a different question.
+
+  So this page FAILS by name for the `opacity: 0` and clipped roles. It is the negative
+  control for the stance, and the counterpart of `painted-carrier-text-scale`, which pins
+  the miss the box test cannot close.
+
+  `visibility: hidden` is the one shape the box test does not count: a node whose own
+  computed visibility is hidden is not a type role, which is what READINESS_PROBE's
+  visible() says too, and excluding it moved no reading on any tier (measured). It is on
+  this page so the fixture covers the whole boundary in one capture.
+-->
+<html lang="en">
+<head><meta charset="utf-8"><title>Counted without being drawn</title>
+<style>
+	/* The canvas follows the resolved theme, so the scale roles are the only subject. */
+	:root{--canvas:#f2ede3;--ink:#211e18}
+	:root[data-lo-theme="dark"]{--canvas:#22201c;--ink:#f2ede3}
+	body{margin:0;padding:16px;background:var(--canvas);color:var(--ink);font-family:system-ui;font-size:1rem;line-height:1.5}
+	h1{font-size:1.25rem;margin:0 0 12px}
+	p{font-size:1rem;margin:0 0 8px}
+	/* Counted: laid out, box non-zero, drawn at zero opacity. */
+	.faded{opacity:0;font-size:22px;margin:0 0 8px}
+	/* NOT counted: the box test excludes it, and so does the readiness rule. */
+	.invisible{visibility:hidden;font-size:24px;margin:0 0 8px}
+	/* Counted: the child keeps its own non-zero box even though its ancestor clips it away. */
+	.clipbox{height:0;overflow:hidden}
+	.clipped{font-size:26px}
+</style></head>
+<body>
+<h1>Counted without being drawn</h1>
+<p>Every visible role on this page doubles with the root: the heading is 1.25rem and the
+   paragraphs are 1rem.</p>
+<p>The two shapes below the fold of this comment carry a fixed px size that cannot follow
+   the scale, and both are counted as type roles because both keep a bounding box.</p>
+<p>A third paragraph, so the page clears the capture's blank-frame floor and a non-zero exit
+   could only mean a role was judged.</p>
+<p>A fourth paragraph, so the scaling majority keeps the same shape as the other probes.</p>
+<div class="faded">opacity 0, 22px</div>
+<div class="invisible">visibility hidden, 24px</div>
+<div class="clipbox"><span class="clipped">clipped away, 26px</span></div>
+</body>
+</html>

@@ -35,6 +35,17 @@ describe("canvasTokenFor", () => {
 		expect(canvasTokenFor(undefined)).toBeNull();
 		expect(canvasTokenFor(42)).toBeNull();
 	});
+
+	it("returns the value its own predicate accepted, never the padded original", () => {
+		// The DECISION is `trim() !== ""`, so the VALUE has to be the trimmed one. Returning
+		// the original made `rgbEquals` compare `"  #22201c  "` against a rendered
+		// `rgb(34, 32, 28)` and fail a cell that had rendered correctly. The equivalence
+		// below is the property that defect broke — both forms must reach the comparison as
+		// the same string, so a padded tokens file and a clean one are one input.
+		expect(canvasTokenFor("  #22201c  ")).toBe("#22201c");
+		expect(canvasTokenFor("  #22201c  ")).toBe(canvasTokenFor("#22201c"));
+		expect(canvasTokenFor("\t#f2ede3\n")).toBe("#f2ede3");
+	});
 });
 
 describe("canvasComparable", () => {
@@ -70,6 +81,30 @@ describe("canvasTokens", () => {
 		const tokens = canvasTokens(fixture("tokens-no-canvas.json"));
 		expect(tokens.reason).not.toBeNull();
 		expect(tokens.perTheme).toBeNull();
+	});
+
+	it("trims a padded canvas, so a padded file compares against the rendered colour", () => {
+		// A committed fixture rather than a value minted here, for the same reason the
+		// empty-string case has one: whitespace around a colour is what a hand-edited token
+		// file looks like, so the case is reviewable and stays fixed after this round.
+		const tokens = canvasTokens(fixture("tokens-padded-canvas.json"));
+		expect(tokens.reason).toBeNull();
+		expect(tokens.perTheme?.dark?.canvas).toBe("#22201c");
+		expect(tokens.perTheme?.light?.canvas).toBe("#f2ede3");
+		// The mutation this pins, in the shape the empty-token case uses — assert the
+		// CONSEQUENCE, not the return value: the stored canvas must be exactly what the design
+		// kit ships, because `rgbEquals` compares the stored string verbatim. Untrimmed, a
+		// padded file recorded `"  #22201c  "`, matched no rendered colour, and failed a cell
+		// that had rendered correctly.
+		const shipped = canvasTokens(shippedTokens);
+		expect(tokens.perTheme?.dark?.canvas).toBe(shipped.perTheme?.dark?.canvas);
+		expect(tokens.perTheme?.light?.canvas).toBe(
+			shipped.perTheme?.light?.canvas,
+		);
+		expect(tokens.perTheme?.dark?.canvas).toBe(
+			tokens.perTheme?.dark?.canvas?.trim(),
+		);
+		expect(canvasComparable(tokens.perTheme?.dark?.canvas ?? null)).toBe(true);
 	});
 
 	it("reports no --tokens path, and a path that does not exist, as an empty table", () => {

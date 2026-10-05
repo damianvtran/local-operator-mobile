@@ -38,7 +38,14 @@ export interface CanvasTokens {
  * comparisons. That is the defect this single predicate exists to close.
  */
 export function canvasTokenFor(value: unknown): string | null {
-	return typeof value === "string" && value.trim() !== "" ? value : null;
+	// The DECISION and the VALUE are the same test. This used to decide blankness on
+	// `value.trim()` and then return the UNTRIMMED value, so a token written with padding
+	// (" #22201c ") was accepted as a canvas and then compared against the rendered
+	// `rgb(34, 32, 28)` by `rgbEquals`, which trims nothing — failing a cell that had
+	// rendered correctly, which is the spurious red this one word removes.
+	if (typeof value !== "string") return null;
+	const trimmed = value.trim();
+	return trimmed === "" ? null : trimmed;
 }
 
 /**

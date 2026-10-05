@@ -302,6 +302,28 @@ export function createRelay(options: RelayOptions = {}) {
 		return map;
 	})();
 	const scenarios = buildScenarios(fix);
+	/* The push device registry (push/ack-sync S4, ADR 0006 §3.1). The corpus
+	 * holds no captures of these routes — they shipped after the last drain — so
+	 * the mock models them from the core's own source (`push_devices.py`: the
+	 * register upsert on `install_id`, the revoke tombstone, the state
+	 * precedence) and this comment is their provenance. Rows live for the life
+	 * of the process: a register upserts, a DELETE tombstones, and a list
+	 * renders the state the tombstones imply. No field is invented — the shapes
+	 * are the ADR's (`register` → device_id + device_key + registered_at;
+	 * `list_devices` → the six base fields plus the optional name and credential
+	 * facts this mock never has a reason to write). */
+	const pushDevices = new Map<
+		string,
+		{
+			device_id: string;
+			platform: string;
+			app_version: string;
+			registered_at: number;
+			last_seen_at: number;
+			revoked_at?: number;
+		}
+	>();
+	let pushDeviceSeq = 0;
 	const password = options.password ?? DEFAULT_PASSWORD;
 	/**
 	 * The bare relay has NO body ceiling: the 10 MiB cap belongs to the gateway and
@@ -1592,6 +1614,94 @@ export function createRelay(options: RelayOptions = {}) {
 				return;
 			}
 			sendJson(res, 200, { session_id: sessionId });
+			return;
+		}
+
+		/* The push device registry routes (ADR 0006 §3.1). Shapes and semantics
+		 * from the core's `push_devices.py`; see the registry declaration's
+		 * provenance note. */
+		if (pathname === "/api/push/register" && method === "POST") {
+			const record = isRecord(body) ? body : {};
+			const platform = record.platform;
+			const environment = record.environment;
+			const token = record.token;
+			const appVersion = record.app_version;
+			const installId = record.install_id;
+			if (
+				(platform !== "ios" && platform !== "android") ||
+				(environment !== "sandbox" && environment !== "production") ||
+				typeof token !== "string" ||
+				token === "" ||
+				typeof appVersion !== "string" ||
+				appVersion === "" ||
+				typeof installId !== "string" ||
+				installId === ""
+			) {
+				sendJson(res, 422, errorBody("invalid registration body"));
+				return;
+			}
+			const existing = pushDevices.get(installId);
+			/* A tombstoned row refuses before anything is written — the register
+			 * route's own rule (a revoked device must not re-register itself). */
+			if (existing?.revoked_at !== undefined) {
+				sendJson(res, 403, {
+					code: "device_revoked",
+					error: "this device was revoked on this computer",
+				});
+				return;
+			}
+			const now = Date.now();
+			const row = existing ?? {
+				device_id: `dev-${(++pushDeviceSeq).toString(16).padStart(4, "0")}`,
+				platform,
+				app_version: appVersion,
+				registered_at: now,
+				last_seen_at: now,
+			};
+			row.platform = platform;
+			row.app_version = appVersion;
+			row.last_seen_at = now;
+			pushDevices.set(installId, row);
+			/* `device_key` is minted per accepted register and returned in this
+			 * response only (the real route rotates it the same way). */
+			sendJson(res, 200, {
+				ok: true,
+				device_id: row.device_id,
+				device_key: `devkey-${(pushDeviceSeq * 2654435761).toString(16)}`,
+				registered_at: row.registered_at,
+			});
+			return;
+		}
+
+		if (pathname === "/api/push/devices" && method === "GET") {
+			const devices = [...pushDevices.values()].map((row) => ({
+				device_id: row.device_id,
+				platform: row.platform,
+				app_version: row.app_version,
+				registered_at: row.registered_at,
+				last_seen_at: row.last_seen_at,
+				state: row.revoked_at === undefined ? "live" : "revoked",
+			}));
+			sendJson(res, 200, {
+				devices,
+				/* The core's own precedence string, rendered there from the table
+				 * the state resolver walks (`push_devices.PRECEDENCE`). */
+				precedence: "revoked > unpaired > expired",
+			});
+			return;
+		}
+
+		const pushDelete = /^\/api\/push\/devices\/([^/]+)$/.exec(pathname);
+		if (pushDelete && method === "DELETE") {
+			const deviceId = decodeURIComponent(pushDelete[1] ?? "");
+			for (const row of pushDevices.values()) {
+				if (row.device_id === deviceId && row.revoked_at === undefined) {
+					row.revoked_at = Date.now();
+				}
+			}
+			/* Idempotent in both directions: an id the registry does not hold is
+			 * still `{"ok": true}` — the app retries this on sign-out. */
+			sendJson(res, 200, { ok: true });
 			return;
 		}
 

@@ -64,6 +64,8 @@ import {
 	CORE_DEVICES,
 	DEVICES,
 	type DeviceProfile,
+	describeDeviceCoverage,
+	deviceCoverage,
 	MEASURE_PROBE,
 	PENDING_CELLS,
 	READINESS_PROBE,
@@ -92,7 +94,21 @@ let screenshotRetries = 0;
  */
 let settledRetakes = 0;
 
-/** Frames above this count are refused without `--yes`: a full matrix is minutes. */
+/**
+ * Frames above this count are refused without `--yes`: a full matrix is minutes.
+ *
+ * WHAT IT IS FOR, and what it is deliberately NOT bound to. It is a RUNAWAY guard,
+ * not a size policy: it catches a plan far larger than any sample this harness
+ * offers (an inflated cell registry, a cell list copied from another tree), and it
+ * is why a big run is always something the caller typed `--yes` for. It sits BELOW
+ * every tier on purpose — `ci` plans 272 cells, `core` 884, `full` 3196 — so none of
+ * them starts by accident; the CI job passes `--yes` for exactly that reason. It is
+ * NOT tied to the default tier, so it must not be raised to "let the default run": a
+ * documented invocation that plans the whole `core` tier is a 33-minute command, and
+ * the defect is the invocation, not the bound. Deriving it from the plan the way
+ * `CELL_BUDGET_MS` is derived would be circular — the guard would then never fire —
+ * so it stays a constant, and this comment is what it is derived from.
+ */
 const CONFIRM_THRESHOLD = 120;
 
 /**
@@ -100,7 +116,7 @@ const CONFIRM_THRESHOLD = 120;
  * the floor a small plan still gets.
  *
  * WHY THE DEFAULT IS DERIVED RATHER THAN FIXED. It used to be a flat 900 s, which
- * holds about 400 cells: a `core` run (832 cells) or a dispatched `full` run (3008)
+ * holds about 400 cells: a `core` run (884 cells) or a dispatched `full` run (3196)
  * was therefore cut off by the harness's own default and reported hundreds of cells
  * as having no frame — a bound firing on a plan it was never sized for, which reads
  * like a finding about the app and is not one. Deriving it from the plan makes the
@@ -717,13 +733,36 @@ export interface Measurements {
 		insets?: Record<string, string>;
 	};
 	canvasColor?: string | null;
+	/**
+	 * The colour scheme the RENDERER resolved (`matchMedia('(prefers-color-scheme: dark)')`),
+	 * not the one the cell asked for — the two differ when the emulation was not applied.
+	 */
+	resolvedColorScheme?: string | null;
 	rootBackground?: string | null;
 	rootFontSize?: string | null;
 	documentScrollWidth?: number;
 	documentClientWidth?: number;
 	bodyScrollWidth?: number;
 	textNodeCount?: number;
+	/**
+	 * The median BOX height of the counted text — the readout of the metric this guard
+	 * replaced, printed in the run log, and read by no rule (the guard judges roles).
+	 */
 	medianTextHeight?: number | null;
+	/**
+	 * Every distinct text size the page rendered, with how many text nodes carried
+	 * it. The scale guard turns these into ROLES by dividing by `rootFontSizePx`.
+	 *
+	 * A histogram rather than a second median on purpose: a median is a total, so a
+	 * single role that did not scale hides behind a body-dominated middle, and a
+	 * role that STARTS scaling (the correct fix) drags the median while every role
+	 * grew correctly. Judging each role against its own 100 % counterpart needs the
+	 * sizes, not their middle.
+	 */
+	textRoleSizes?: Array<{ px: number; count: number }> | null;
+	/** The root font size in px the page rendered under — the divisor that turns an
+	 * absolute size into the scale-invariant role. */
+	rootFontSizePx?: number | null;
 	route?: string;
 	title?: string;
 	mountedElements?: number;
@@ -759,6 +798,7 @@ function asMeasurements(value: unknown): Measurements | null {
 								: undefined,
 					},
 		canvasColor: text("canvasColor"),
+		resolvedColorScheme: text("resolvedColorScheme"),
 		rootBackground: text("rootBackground"),
 		rootFontSize: text("rootFontSize"),
 		documentScrollWidth: count("documentScrollWidth"),
@@ -767,6 +807,27 @@ function asMeasurements(value: unknown): Measurements | null {
 		textNodeCount: count("textNodeCount"),
 		medianTextHeight:
 			typeof bag.medianTextHeight === "number" ? bag.medianTextHeight : null,
+		textRoleSizes: Array.isArray(bag.textRoleSizes)
+			? bag.textRoleSizes
+					.map((entry) => {
+						const row =
+							typeof entry === "object" && entry !== null
+								? (entry as Record<string, unknown>)
+								: {};
+						return { px: Number(row.px), count: Number(row.count) };
+					})
+					.filter(
+						(row) =>
+							Number.isFinite(row.px) &&
+							row.px > 0 &&
+							Number.isFinite(row.count) &&
+							row.count > 0,
+					)
+			: null,
+		rootFontSizePx:
+			typeof bag.rootFontSizePx === "number" && bag.rootFontSizePx > 0
+				? bag.rootFontSizePx
+				: null,
 		route: text("route") ?? undefined,
 		title: text("title") ?? undefined,
 		mountedElements: count("mountedElements"),
@@ -1006,6 +1067,26 @@ function verifyThemes(
 					`requested theme '${theme}' but the page resolved '${record.resolvedTheme}'`,
 				);
 			}
+			/*
+			 * The scheme the RENDERER resolved, which `reported.theme` above is not: the pre-paint
+			 * probe resolves THAT from the `lo-theme` query first, so it reports what the harness
+			 * ASKED for. `Emulation.setEmulatedMedia` is a separate CDP call, and the app's
+			 * preference is `system`, so a driver that passes the query without the emulation
+			 * renders the other scheme while `themeSource` still reads `query` — the parity lane
+			 * caught exactly that and re-ran its frames. Refuse the cell by name instead (the same
+			 * way a cell whose state marker never arrived is refused) rather than let a light cell
+			 * pass as evidence while its frame is a dark twin of the dark cell's.
+			 */
+			const scheme = record.measurements?.resolvedColorScheme ?? null;
+			record.themeCheck.resolvedColorScheme = scheme;
+			if (record.measurements !== null && scheme !== theme) {
+				record.themeApplied = false;
+				note(
+					scheme === null
+						? `the page reported no resolved colour scheme, so nothing shows this frame rendered '${theme}'`
+						: `the cell asks for '${theme}' but the page resolved prefers-color-scheme '${scheme}': the theme query was applied but the scheme the app reads was not, so this frame is not evidence for '${theme}'`,
+				);
+			}
 			if (record.themeCheck.canvasMatchesToken === false) {
 				record.themeApplied = false;
 				note(
@@ -1227,13 +1308,25 @@ export interface CaptureRecord {
 	pinnedScenario?: string | null;
 	consoleErrors: string[];
 	/**
-	 * Whether the text-scale dimension was LIVE for this frame's cell, and the
-	 * ratio it was judged on. `null` means the run did not capture both scales for
-	 * this key, so the frame cannot answer a large-text question either way — which
-	 * is a different statement from "measured at 100 %".
+	 * Whether the text-scale dimension was LIVE for this frame's cell, and — on the
+	 * 200 % frame only — the roles that failed. `null` means the run did not capture
+	 * both scales for this key, so the frame cannot answer a large-text question
+	 * either way — which is a different statement from "measured at 100 %".
+	 *
+	 * `scaleProblems` replaces the single `scaleRatio` the guard used to record: a
+	 * ratio was the reading of one number (the cell median), and the judgement is now
+	 * made role by role, so what a reader needs is which roles failed, not a middle.
+	 * The judgement is a fact about the PAIR, which is why `scaleLive` is on both
+	 * frames, but its evidence is about the 200 % frame, which is why the problems and
+	 * the notes are on that one alone.
 	 */
 	scaleLive?: boolean | null;
-	scaleRatio?: number | null;
+	scaleProblems?: string[] | null;
+	/** Sizes the 200 % frame showed and the 100 % frame did not — reported, never a
+	 * failure by itself, and carried on the 200 % frame for the same reason as
+	 * `scaleProblems`. See `judgeTextScale` for why the two frames cannot tell a
+	 * frozen node from a size a layout introduces or resizes to at the larger scale. */
+	scaleNotes?: string[] | null;
 	resolvedTheme?: string | null;
 	canvasColor?: string | null;
 	expectedCanvas?: string | null;
@@ -1341,6 +1434,24 @@ export async function runCapture(options: CaptureOptions) {
 	const budgetMs = derivedDeadlineMs(plan.length);
 	const deadlineMs = options.deadlineMs ?? budgetMs;
 
+	/*
+	 * THE PLAN'S DEVICE SET — what this run INTENDS to cover, printed beside the plan it
+	 * belongs to. The tier selects a SAMPLE of the declared device matrix (the per-push
+	 * job's `ci` is 2 of 19 profiles), and a run that printed only its `devices:` list read
+	 * as "the app is fine" over an assertion about two viewports.
+	 *
+	 * It is the INTENT, not the coverage claim. The claim is computed from the RECORDS after
+	 * the loop, because a run handed fewer frames than it planned — a fired `--deadline`, a
+	 * cell that never settled — must not go on claiming the plan: `--devices
+	 * iphone-se,tablet-landscape --deadline 1` captured 1 of its 2 cells and still said
+	 * "2 of 19 declared profiles captured", which is this PR's own defect in the field it
+	 * adds. Both lists are read from `matrix.ts` (what is declared), so neither can drift
+	 * from it.
+	 */
+	const plannedCoverage = deviceCoverage([
+		...new Set(plan.map((c) => c.device)),
+	]);
+
 	console.log(
 		`capture plan: ${plan.length} cells × ${framesPerCell} frame(s) = ${plannedFrames} frames`,
 	);
@@ -1348,7 +1459,11 @@ export async function runCapture(options: CaptureOptions) {
 		`  screens: ${[...new Set(plan.map((c) => c.screen))].sort().join(", ")}`,
 	);
 	console.log(
-		`  devices: ${[...new Set(plan.map((c) => c.device))].join(", ")}`,
+		plannedCoverage.notCaptured.length === 0
+			? `  devices planned: all ${plannedCoverage.declared.length} declared profiles (${plannedCoverage.captured.join(", ")})`
+			: `  devices planned: ${plannedCoverage.captured.join(", ")} — ` +
+					`${plannedCoverage.captured.length} of ${plannedCoverage.declared.length} declared profiles, ` +
+					`the other ${plannedCoverage.notCaptured.length} not in this run's plan`,
 	);
 	console.log(
 		`  themes:  ${[...new Set(plan.map((c) => c.theme))].join(", ")}`,
@@ -1452,19 +1567,26 @@ export async function runCapture(options: CaptureOptions) {
 		throw new Error(reason);
 	}
 	const chrome = launched.value;
-	const tokens = canvasTokens(options.tokens);
+	/*
+	 * Declared here, assigned INSIDE the run's own `try` below. A `--tokens` path that is a
+	 * directory or malformed JSON throws from `canvasTokens` (`readFileSync` / `JSON.parse`),
+	 * and this read used to sit between `launchChrome` and the `try` — so the throw escaped
+	 * before the `finally` and leaked the Chrome instance this run had just started (found by
+	 * QA). Inside the `try`, the `finally` closes the browser and the static server before the
+	 * error propagates, so a crash cannot leave either behind.
+	 */
+	let tokens: CanvasTokens;
 	const records: CaptureRecord[] = [];
 	screenshotRetries = 0;
 	settledRetakes = 0;
 	let reaped: Awaited<ReturnType<typeof chrome.close>> | null = null;
 	/** Cells that produced no frame, and why — never a silent skip. */
 	const abandoned: Array<{ cell: string; reason: string }> = [...unrenderable];
-	/** What a reviewer must not read as a captured matrix. */
-	const cellsCaptured = plan.length - unrenderable.length;
 	const startedAt = Date.now();
 	let index = 0;
 
 	try {
+		tokens = canvasTokens(options.tokens);
 		/*
 		 * EVERY CELL OPENS ITS OWN TARGET — see `freshPage` for why a reused one
 		 * eventually cannot commit a navigation at all. There is deliberately no
@@ -1687,33 +1809,34 @@ export async function runCapture(options: CaptureOptions) {
 	// The per-cell half of the scale guard, and the reason it exists: the app does
 	// NOT read the `?lo-text-scale` query parameter — its type roles multiply the
 	// browser's ROOT FONT SIZE — so a run can render every "200 %" cell at 100 %
-	// and still produce a full matrix of confident rows. A run-level median hides
+	// and still produce a full matrix of confident rows. A run-level verdict hides
 	// exactly that case, because one responsive screen lifts it while another
 	// screen's cell is inert. So each pair is judged on its own, and an inert cell
 	// is FAILED BY NAME rather than averaged away.
-	const inertScale = new Map(
-		(scaleCheck.perCell ?? [])
-			.filter((entry) => !entry.live)
-			.map((entry) => [entry.key, entry]),
+	const judgedByKey = new Map(
+		(scaleCheck.perCell ?? []).map((entry) => [entry.key, entry]),
 	);
 	for (const record of records) {
 		const key = `${record.screen}__${record.state}__${record.device}__${record.theme}`;
-		const judged = (scaleCheck.perCell ?? []).find(
-			(entry) => entry.key === key,
-		);
+		const judged = judgedByKey.get(key);
 		record.scaleLive = judged?.live ?? null;
-		record.scaleRatio = judged?.ratio ?? null;
+		// The judgement is ABOUT the 200 % frame, so the problems and the notes are
+		// attached to IT and not to its 100 % sibling: a note that reads "… at 200 % …"
+		// on the 100 % record tells a manifest reader the wrong frame (CI measured one
+		// note per pair landing on 192 records, both frames of each of 96 pairs).
+		record.scaleProblems =
+			record.scale === "200" ? (judged?.problems ?? null) : null;
+		record.scaleNotes = record.scale === "200" ? (judged?.notes ?? null) : null;
 		if (record.scale === "200" && judged !== undefined && !judged.live) {
 			record.readinessProblems = [
 				...record.readinessProblems,
-				`the text did not scale: median text ${String(record.measurements?.medianTextHeight ?? 0)}px at 200% ` +
-					`against ${String(judged.ratio)}x the 100% cell (needs ≥${String(scaleCheck.liveMinRatio)}x), ` +
-					"so this cell measures 100% and cannot answer a large-text question",
+				`the text did not scale with the root font size: ${judged.problems.join("; ")} — ` +
+					"every type role must grow by the cell's own factor, so this cell cannot " +
+					"answer a large-text question",
 			];
 			record.ready = false;
 		}
 	}
-	void inertScale;
 
 	// A cell that did not reach its own screen is not evidence, and a set of cells
 	// that produced one identical image is the specific failure this guard exists
@@ -1742,6 +1865,43 @@ export async function runCapture(options: CaptureOptions) {
 
 	// The manifest is what the audit and the gallery both read, so it carries the
 	// facts each of them needs by name rather than a shape they must infer.
+	/*
+	 * WHAT THIS RUN CAPTURED, IN ITS OWN WORDS — from the RECORDS, i.e. from the frames that
+	 * exist, never from the plan. A record is pushed for every cell the loop reached, and a
+	 * cell that produced no frame is in `abandoned` instead, so filtering on `frames.length`
+	 * makes the claim describe the evidence a reader can actually open. A profile the plan
+	 * named whose cells all died (or died before their first frame) is therefore NOT captured,
+	 * and the shortfall is stated rather than absorbed.
+	 */
+	const coverage = deviceCoverage([
+		...new Set(
+			records.filter((record) => record.frames.length > 0).map((r) => r.device),
+		),
+	]);
+	/**
+	 * WHAT THE RUN CAPTURED — from the RECORDS, i.e. from the frames that exist, and never
+	 * from the plan. `plan.length - unrenderable.length` was a plan-derived number wearing a
+	 * captured name: a run whose deadline fired before the first cell reported
+	 * `cellsCaptured: 330` in its manifest while its own console said `captured 0 cells`.
+	 * Nothing read the field, which is exactly how such a number waits to be trusted.
+	 *
+	 * It is the ONLY count of them, and the filter is the claim's own definition — a cell is
+	 * captured when there is a frame to open — rather than `records.length`. There is no
+	 * "attempted" field and no separate frame total, because both would be names for this one:
+	 * `captureCell` either throws (the cell then being named in `abandonedCells` with its
+	 * reason) or returns having pushed at least one frame, `records.push` is the only record
+	 * site, and a settled-frame retake REPLACES its frame — so reached and captured are the
+	 * same cells, and the frames are `cellsCaptured x framesPerCell`. A field, or a sentence,
+	 * for a state that cannot occur is how the next reader learns something false.
+	 */
+	const cellsCaptured = records.filter(
+		(record) => record.frames.length > 0,
+	).length;
+	/** Profiles the plan named that produced no frame at all — the gap the claim must show. */
+	const plannedWithoutFrames = plannedCoverage.captured.filter(
+		(device) => !coverage.captured.includes(device),
+	);
+
 	const summary = {
 		meta: {
 			generatedAt: new Date().toISOString(),
@@ -1782,6 +1942,16 @@ export async function runCapture(options: CaptureOptions) {
 			cellTimeoutMs: options.cellTimeoutMs,
 			deadlineMs,
 			devicesCaptured: options.devices,
+			/**
+			 * The device bound, by name, in the artifact: what the RUN CAPTURED out of the profiles
+			 * `matrix.ts` declares, and what it did not. It is computed from the records' frames,
+			 * so a run that captured fewer frames than it planned does not claim the plan here;
+			 * `devicePlanned` below carries the intent separately, so a reader can tell a shortfall
+			 * from a narrow `--devices`.
+			 */
+			deviceCoverage: coverage,
+			deviceCoverageNote: describeDeviceCoverage(coverage),
+			devicePlanned: plannedCoverage.captured,
 			// `perTheme` is written as-is: this field's shape is unchanged, so nothing that
 			// reads the manifest moves under a fix about reporting.
 			themeTokens: tokens.perTheme,
@@ -1895,11 +2065,34 @@ export async function runCapture(options: CaptureOptions) {
 
 	console.log("");
 	console.log(
-		`captured ${records.length} cells / ${records.length * framesPerCell} frames in ` +
+		`captured ${cellsCaptured} cells / ${cellsCaptured * framesPerCell} frames in ` +
 			`${(summary.meta.durationMs / 1000).toFixed(1)} s`,
 	);
+	// The bound, restated where the run's verdict is read: the frames above are a sample of
+	// the declared matrix, and which part of it is missing is a fact about this run rather
+	// than something a reader has to infer from the plan it no longer has in front of them.
+	console.log(describeDeviceCoverage(coverage));
+	if (plannedWithoutFrames.length > 0) {
+		// The plan and the claim disagree, so say so where the claim is read: this is the
+		// sentence that used to overstate the run.
+		console.log(
+			`  the plan named ${plannedCoverage.captured.length} profile(s) (${plannedCoverage.captured.join(", ")}); ` +
+				`${plannedWithoutFrames.join(", ")} produced no frame in this run`,
+		);
+	}
 	console.log(`frames that changed after first paint: ${reflow.length}`);
 	console.log(`text-scale dimension: ${scaleCheck.verdict}`);
+	if (scaleCheck.notedPairs > 0) {
+		// "Reported as such rather than silently counted": a size only the 200 % frame
+		// shows is named here, and each pair carries its own `notes` in the manifest.
+		// It is NOT a failure — see `judgeTextScale` for why two frames cannot tell a
+		// frozen node from a size the layout introduces at this scale.
+		console.log(
+			`  text-scale notes: ${scaleCheck.notedPairs} pair(s) show a size only at 200% — ` +
+				"a node that did not move with the root font size, or a layout that introduced it " +
+				"at this scale; named, not failed",
+		);
+	}
 	if (themeProblems.length) {
 		console.log(`THEME PROBLEMS (${themeProblems.length}):`);
 		for (const problem of themeProblems) console.log(`  - ${problem}`);
@@ -1920,8 +2113,12 @@ export async function runCapture(options: CaptureOptions) {
 	// printed in this branch — it claims every frame's canvas "match[es]" its cell, which
 	// for an uncompared frame is a measurement nobody made.
 	if (themeReport.canvasReason !== null) {
+		// `canvasUncompared`/`canvasCompared` count RECORDS — cells, not frames. Call them
+		// that: the same page's own `N of M cell(s)` is what this line has to agree with, and
+		// a `--consecutive` run has three frames per cell, so `frame(s)` here was wrong by a
+		// factor of three on exactly the runs whose frame count is largest.
 		console.log(
-			`THEME CHECK INCOMPLETE (${themeReport.canvasUncompared} of ${themeReport.canvasUncompared + themeReport.canvasCompared} frame(s) uncompared) — the canvas-vs-token half did NOT run for those frames:`,
+			`THEME CHECK INCOMPLETE (${themeReport.canvasUncompared} of ${themeReport.canvasUncompared + themeReport.canvasCompared} cell(s) uncompared) — the canvas-vs-token half did NOT run for those cells:`,
 		);
 		console.log(`  - ${themeReport.canvasReason}`);
 		console.log(
@@ -2028,63 +2225,310 @@ export async function runCapture(options: CaptureOptions) {
 }
 
 /**
+ * The factor the guard's two scale ids declare, read from `SCALES` rather than written
+ * as a 2 — see the call site for why. The lookup cannot fail for the pair the guard
+ * pairs: `SCALES` declares every id a run can ask for, and every tier's list derives
+ * from it.
+ */
+function declaredScaleFactor(): number {
+	const factorOf = (id: string) => {
+		const scale = SCALES.find((entry) => entry.id === id);
+		// A plain Error, not a CaptureFailure: this is a programming error in this file's
+		// own pairing, not a finding about a captured cell (CaptureFailure carries the
+		// per-cell evidence a run reports).
+		if (scale === undefined)
+			throw new Error(`no declared scale with id '${id}'`);
+		return scale.factor;
+	};
+	return factorOf("200") / factorOf("100");
+}
+
+/**
  * Does the text-scale dimension actually do anything? An instrument whose scale
- * dimension silently does nothing produces three identical frames per cell and
- * looks like a pass. This measures the median rendered text height at each scale
- * and reports the observed ratio, so the *dimension* can be shown to work before
- * any U-04 finding is trusted.
+ * dimension silently does nothing produces identical frames at both scales and
+ * looks like a pass. This compares the text a cell renders at 200 % against the
+ * same text at 100 %, PER TYPE ROLE, and fails the cell by name when a role did
+ * not grow by the factor the cell declares.
+ *
+ * TWO PRECONDITIONS, CHECKED BEFORE ANY SIZE IS COMPARED, because every size below is a
+ * fraction of the frame's OWN root: the 200 % root must be the declared factor's
+ * multiple of the 100 % root (a page pinning `font-size: … !important` renders both
+ * frames at 100 %, and judged against itself that pair reads live — which is the defeat
+ * this guard exists to catch), and a type role is counted by its BOX. `visibility: hidden`
+ * is excluded (as READINESS_PROBE's visible() does), while opacity:0 and clipped nodes are
+ * counted on purpose. What a box test cannot see is text painting from a ZERO-HEIGHT box —
+ * a CLASS rather than a list: `height:0; overflow:visible`, `line-height:0`,
+ * `display:contents`, `contain:size`, and shapes not yet seen, over elements that hold
+ * direct text. Generated content and shadow-root text escape for a different reason — not
+ * direct text, never traversed — and the README names them separately. See MEASURE_PROBE;
+ * the `painted-carrier-text-scale` fixture asserts three of the box shapes as a known miss.
+ * Both preconditions are asserted rather than assumed — see `judgeTextScale`.
+ *
+ * WHY PER ROLE AND NOT A MEDIAN OVER THE CELL.
+ *
+ * The first version reduced a cell to the median rendered text box at each scale
+ * and required the ratio to clear 1.9. A median is a property of the cell's
+ * COMPOSITION as much as of its scaling: when a node that rendered at a fixed size
+ * starts following the scale — the correct fix for a missing type role — the mix of
+ * sizes changes, the median moves, and the ratio can FALL below the bar while every
+ * role scaled exactly 2x. That is the app getting better and the metric getting
+ * worse, measured on `S15/loading__tablet-landscape__200`: fifteen text nodes, all
+ * scaling exactly 2x, whose median fell from 2.00x to 1.852x once the composer's
+ * `＋` and `Connect a computer` were given their type roles. The same total hides
+ * one inert role behind a body-dominated middle.
+ *
+ * A ROLE IS THE TEXT'S SIZE RELATIVE TO THE ROOT. The harness drives the root font
+ * size, so a role that follows it has the SAME size-in-rem at both scales and only
+ * its px size doubles; a role that ignores it (authored in px, or a fixed default)
+ * keeps its px size and so changes rem. Keying on the rem size is therefore the
+ * composition-insensitive identity, and "present at 200 %" already means "grew by the
+ * cell's factor". A cell is live when every role the 100 % frame rendered is present
+ * in the 200 % frame; a size the 200 % frame shows that no 100 % role explains is
+ * NAMED in `notes`, never counted toward the verdict.
+ *
+ * WHAT IT DELIBERATELY DOES NOT DO. Node COUNTS are not compared (see
+ * `judgeTextScale`: a layout may add or drop a node carrying a role that scaled), and
+ * a 100 % role with no scaled counterpart is a note rather than a failure, because two
+ * frames cannot tell a node frozen at a coinciding size from one the layout drops or
+ * resizes at the larger scale. What the guard still fails is a ROLE that did not
+ * scale: a page whose body copy never grows, a hardcoded px heading beside rem
+ * paragraphs, a wholly px page.
+ *
+ * THAT CONCESSION IS THE COMMON CASE, NOT A CORNER. Measured on this harness's own
+ * `ci` capture: 96 of 136 pairs carry such a note (every one naming a 14 px node) and all
+ * 136 read live — so a live tier run says every ROLE grew, never that no text is frozen.
+ * Two limits are named here rather than left implicit: a role that partly follows the scale
+ * is a note (calc(10px + 0.5rem) measures 18 -> 26 px, 1.444x), and text painting from a
+ * ZERO-HEIGHT box is not counted at all — MEASURE_PROBE states that as a class and the
+ * `painted-carrier-text-scale` fixture pins three of its shapes. The rubric
+ * (`docs/ux/audit-rubric.md`) and the e2e README carry the same numbers, the same class and
+ * the same reading, so none of the three tells a softer story than the check.
  */
 function verifyTextScale(records: CaptureRecord[]) {
+	// Read from `SCALES`, not written as a 2: the assertion below compares the 200 % root
+	// against the 100 % root times this, so a changed scale table moves the assertion with
+	// it instead of making every pair look like a page that pinned its root.
+	const factor = declaredScaleFactor();
 	const perDevice = new Map();
 	for (const record of records) {
 		const key = `${record.screen}__${record.state}__${record.device}__${record.theme}`;
 		const bucket = perDevice.get(key) ?? {};
-		bucket[record.scale] = record.measurements?.medianTextHeight ?? 0;
+		bucket[record.scale] = roleReading(record);
 		perDevice.set(key, bucket);
 	}
-	const ratios = [];
+	const perCell = [];
 	for (const [key, bucket] of perDevice) {
-		if (bucket["100"] && bucket["200"])
-			ratios.push({ key, ratio: bucket["200"] / bucket["100"] });
+		const at100 = bucket["100"];
+		const at200 = bucket["200"];
+		// A pair with no roles on either side (no text, or a frame from before this
+		// probe) is NOT a live dimension: it is left out so the run reports the pair as
+		// missing coverage rather than as passed.
+		if (at100?.histogram.size && at200?.histogram.size) {
+			perCell.push(
+				judgeTextScale(
+					key,
+					at100.histogram,
+					at200.histogram,
+					at100.rootPx,
+					at200.rootPx,
+					factor,
+				),
+			);
+		}
 	}
-	if (ratios.length === 0) {
+	perCell.sort((a, b) => (a.key < b.key ? -1 : a.key > b.key ? 1 : 0));
+	if (perCell.length === 0) {
 		// Nothing to conclude, and `live` stays false so no large-text verdict can
 		// be drawn from a run that only ever rendered one scale.
 		return {
 			verdict: "not measured (needs both 100% and 200% in one run)",
-			ratios: [],
+			perCell: [],
+			notedPairs: 0,
 			live: false,
 		};
 	}
-	const middle = ratios.map((r) => r.ratio).sort((a, b) => a - b)[
-		Math.floor(ratios.length / 2)
-	];
-	// A missing middle is the "could not tell" case, not a scale of 1: the
-	// dimension is reported inert rather than assumed live.
-	const median = middle ?? 0;
-	// The bar is 1.9, not "more than 1.2": a cell at 1.3x is not a 200 % cell, and
-	// treating it as one is how an inert dimension acquires coverage. 2 is what the
-	// matrix asks for; 1.9 tolerates the sub-pixel rounding of a wrapped line.
-	const LIVE_MIN_RATIO = 1.9;
-	const perCell = ratios.map((entry) => ({
-		key: entry.key,
-		ratio: Number(entry.ratio.toFixed(3)),
-		live: entry.ratio >= LIVE_MIN_RATIO,
-	}));
-	const works = median >= LIVE_MIN_RATIO;
 	const inertCells = perCell.filter((entry) => !entry.live);
+	const notedCells = perCell.filter((entry) => entry.notes.length > 0);
 	return {
-		medianObservedRatio: Number(median.toFixed(3)),
 		expected: 2,
-		liveMinRatio: LIVE_MIN_RATIO,
-		live: works && inertCells.length === 0,
+		live: inertCells.length === 0,
 		perCell,
-		verdict: works
-			? `scale dimension is live across ${perCell.length - inertCells.length}/${perCell.length} measured pairs (median ${median.toFixed(2)}x at 200%)`
-			: `scale dimension is INERT (median ${median.toFixed(2)}x at 200%) — three frames per cell ` +
-				"are effectively one, so any U-04 'no clipping at 200%' result from this run is meaningless",
-		ratios,
+		/**
+		 * Pairs with a role the 100 % frame did not have: a size the 200 % frame shows
+		 * that no 100 % role explains. Reported, never failing — see `judgeTextScale`.
+		 * Carried here as a count so the run can say it out loud instead of burying it
+		 * in `perCell`, because "reported as such" is the whole point of keeping the
+		 * signal: a frozen node named, not a cell failed for it.
+		 */
+		notedPairs: notedCells.length,
+		verdict:
+			inertCells.length === 0
+				? `scale dimension is live across ${perCell.length}/${perCell.length} measured pairs (every type role grew by the cell's own factor)`
+				: `scale dimension is INERT on ${inertCells.length}/${perCell.length} measured pairs — a cell ` +
+					"whose text did not grow by its declared factor renders at 100% under a 200% label, so any " +
+					"U-04 'no clipping at 200%' result from it is meaningless",
 	};
+}
+
+/**
+ * A frame's text roles: each distinct `font-size / rootFontSize` with how many text
+ * nodes carried it, plus the root font size they were read against.
+ *
+ * `null` is the "cannot tell" case, not a pass: a frame captured before this probe,
+ * or one whose page never set a root font size, is left out of `perCell`, so the
+ * pair shows up as missing coverage rather than as a live dimension. Returning the
+ * root WITH the histogram is what lets the caller pass that root on as a number
+ * rather than defaulting it at the call site — a default can never fire here (the
+ * root is checked below) and only reads as if a 16 px fallback might be applied.
+ */
+function roleReading(
+	record: CaptureRecord,
+): { histogram: Map<number, number>; rootPx: number } | null {
+	const sizes = record.measurements?.textRoleSizes ?? null;
+	const root = record.measurements?.rootFontSizePx ?? null;
+	if (!sizes || !root || root <= 0) return null;
+	const histogram = new Map<number, number>();
+	for (const { px, count } of sizes) {
+		// Four decimals, not three: `14 / 32` is `0.4375`, and rounding that to three
+		// (`0.438`) would render it as `7.01px` in a message and, worse, could merge two
+		// distinct roles. The quotient is exactly equal across scales for a role that
+		// follows the root, so this only has to survive the browser's own sub-pixel
+		// readings, not invent a tolerance.
+		const rem = Math.round((px / root) * 10000) / 10000;
+		histogram.set(rem, (histogram.get(rem) ?? 0) + count);
+	}
+	return { histogram, rootPx: root };
+}
+
+/** One cell's per-role comparison, naming every role that did not line up. */
+function judgeTextScale(
+	key: string,
+	at100: Map<number, number>,
+	at200: Map<number, number>,
+	rootPx100: number,
+	rootPx200: number,
+	factor: number,
+) {
+	const px = (rem: number) => Math.round(rem * rootPx100 * 100) / 100;
+	// THE PRECONDITION, CHECKED FIRST, because everything below divides each frame by ITS
+	// OWN root. That is right only while the harness's scale input actually reached the
+	// page: a page that pins its root (`html { font-size: 16px !important }` beats the
+	// inline root the harness writes) renders BOTH frames at 100 %, and a frame judged
+	// against itself is trivially "every role grew". That is the exact defeat this guard
+	// exists to catch — and the median it replaced did catch it (1.00x, FAIL) — so the
+	// root relationship is asserted here rather than assumed. A pair whose 200 % root is
+	// not the declared factor cannot answer a large-text question, whatever its sizes say.
+	const expectedRoot200 = rootPx100 * factor; // the declared % the guard pairs: 100 then 200
+	if (Math.abs(rootPx200 - expectedRoot200) > 0.5)
+		return {
+			key,
+			live: false,
+			problems: [
+				`the harness's root font size did not take effect: the 200% frame renders with a root of ${rootPx200}px against ${rootPx100}px at 100% (expecting ${expectedRoot200}px), so both frames were rendered at the same scale and this pair cannot answer a large-text question`,
+			],
+			notes: [],
+		};
+	// The whole page frozen: the 200 % frame renders the 100 % frame's sizes exactly.
+	// Reported as that single fact rather than as per-role diffs, which is both
+	// truer and what a reader wants first.
+	if (sameSizes(at100, at200, rootPx100)) {
+		return {
+			key,
+			live: false,
+			problems: [
+				`the 200% frame renders the same text sizes as the 100% frame (${[
+					...at100,
+				]
+					.map(([rem, count]) => `${px(rem)}px x${count}`)
+					.sort()
+					.join(", ")})`,
+			],
+			notes: [],
+		};
+	}
+	// THE TWO WAYS A ROLE CAN BE ABSENT FROM THE 200 % FRAME ARE NOT THE SAME, and the
+	// guard separates them because the frames can:
+	//
+	//   * the role is still there at its OLD size — a node that ignored the root font
+	//     size. This is a role that did not scale, and the cell FAILS on it. In rem
+	//     terms that node's key halves (its px held while the root doubled), which is
+	//     exactly the `rem / 2` lookup below.
+	//   * the role is absent from the 200 % frame entirely — a layout that drops a label at
+	//     200 %, a state that settled differently between the two frames, OR a node
+	//     RESIZED to a size the factor does not produce (`calc()`/`clamp()`/an `em` under a
+	//     fixed-px parent). Reported in `notes`, never failed: it is not a statement about
+	//     type, and failing it would fail a correct app for its responsive design
+	//     (measured: the sibling PR's own `S4/idle__tablet-landscape__dark` 100 % frame
+	//     renders a 15 px `label` role its 200 % frame does not, and no scaling is wrong
+	//     there). The three causes are named in the note itself, because two frames cannot
+	//     tell them apart.
+	//
+	// NODE COUNTS ARE NOT COMPARED for the same reason: a layout may add or drop a node
+	// whose role DID scale, and a count rule marked 88 of main's 272 `ci` cells UNREADY
+	// on exactly that (its only frozen sizes were single 14 px nodes; every cell's roles
+	// had scaled counterparts).
+	const problems: string[] = [];
+	const notes: string[] = [];
+	// A size the 200 % frame shows is expressed in THAT frame's px, which is what a
+	// reader sees in a screenshot (`px(rem) * 2`). Reporting it in the 100 % frame's
+	// scale would name a size nothing renders at — a frozen 14 px node would be filed
+	// as "7px text", which is the opposite of the honest reading.
+	const px200 = (rem: number) => Math.round(rem * rootPx100 * 2 * 100) / 100;
+	for (const [rem, count] of at100) {
+		// `hasApprox` on BOTH halves of the question: the scaled lookup was exact while the
+		// frozen one allowed a tolerance, so a role that scaled but whose four-decimal
+		// quotient drifted was filed as absent rather than as scaled.
+		if (hasApprox(at200, rem)) continue; // scaled — its 200 % px is twice its 100 % px
+		if (hasApprox(at200, rem / 2))
+			problems.push(
+				`the ${px(rem)}px role (${count} node(s)) did not scale: the 200% frame still renders ${px(rem)}px text where ${px(rem) * 2}px was expected`,
+			);
+		else
+			notes.push(
+				`the ${px(rem)}px role (${count} node(s)) has no ${px(rem) * 2}px counterpart at 200% — a node the layout drops or clips away at that scale, or one that grew by a size the factor does not produce`,
+			);
+	}
+	for (const [rem, count] of at200) {
+		if (hasApprox(at100, rem)) continue;
+		notes.push(
+			`${px200(rem)}px text at 200% is not twice any 100% size (${count} node(s)) — a node that ignored the root font size, or a size the layout introduces at this scale`,
+		);
+	}
+	problems.sort();
+	notes.sort();
+	return { key, live: problems.length === 0, problems, notes };
+}
+
+/** Whether `map` holds `value` within a sub-pixel tolerance of the rounding above. */
+function hasApprox(map: Map<number, number>, value: number) {
+	for (const candidate of map.keys())
+		if (Math.abs(candidate - value) < 1e-3) return true;
+	return false;
+}
+
+/**
+ * Whether the 200 % frame renders the same text SIZES as the 100 % frame — the
+ * whole-page inert case. Compares in px (each scale's own root), so a page whose
+ * every role stayed put is recognised as one fact rather than as per-role diffs.
+ */
+function sameSizes(
+	at100: Map<number, number>,
+	at200: Map<number, number>,
+	rootPx100: number,
+) {
+	const inPx = (histogram: Map<number, number>, root: number) => {
+		const out = new Map<number, number>();
+		for (const [rem, count] of histogram) {
+			const size = Math.round(rem * root * 100) / 100;
+			out.set(size, (out.get(size) ?? 0) + count);
+		}
+		return out;
+	};
+	const a = inPx(at100, rootPx100);
+	const b = inPx(at200, rootPx100 * 2);
+	if (a.size !== b.size) return false;
+	for (const [size, count] of a) if (b.get(size) !== count) return false;
+	return true;
 }
 
 /* -------------------------------------------------------------------- CLI -- */
@@ -2125,12 +2569,14 @@ if (isMain) {
 				"                      (3000 ms/cell, floor 900 s) so a bound always holds its own plan;",
 				"                      a smaller explicit bound is honoured and noted. Cells still",
 				"                      unvisited when it fires are reported as having no frame",
-				"  --tier <name>       the sample to capture: ci | core (default) | full",
-				"                        ci    256 cells — every declared cell, 2 device profiles,",
-				"                              both themes, scales 100 and 200 (~10 min) — the CI job's",
-				"                        core  832 cells — the 5 `core` profiles, both themes, all",
-				"                              three scales",
-				"                        full  3008 cells — all 19 profiles",
+				"  --tier <name>       the sample to capture: ci | core (default) | full.",
+				"                      The matrix declares 19 device profiles; the run prints the",
+				"                      share it covered, and names the profiles it did not.",
+				"                        ci    2 of 19 profiles — 272 cells, both themes, scales 100",
+				"                              and 200 (~10 min) — the per-push CI job's sample",
+				"                        core  5 of 19 profiles — 884 cells, both themes, all",
+				"                              three scales — the local default",
+				"                        full  19 of 19 profiles — 3196 cells",
 				"  --devices <names>   comma list. Default: the tier's profiles (ci 2, core 5 by",
 				"                      default, --full for all 19)",
 				"  --themes <names>    default dark,light",
@@ -2157,7 +2603,7 @@ if (isMain) {
 	// overrides any of them.
 	//
 	// An unknown tier is an ERROR rather than a silent fall back to `core`: a typo'd
-	// `--tier ci` that quietly ran 832 cells would spend ~31 minutes on a capture the
+	// `--tier ci` that quietly ran 884 cells would spend ~33 minutes on a capture the
 	// caller did not ask for, and the whole point of naming the sample is that the
 	// run you get is the one you asked for.
 	const tierFlag = bool(flags, "full") ? "full" : str(flags, "tier", "core");

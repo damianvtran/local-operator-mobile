@@ -65,6 +65,18 @@ export interface StartSessionRequest {
 	model_id?: string;
 }
 
+/** The `POST /api/push/register` body (ADR 0006 §3.1). `platform` and
+ *  `environment` are the enums the core validates against (`push_devices`
+ *  `PLATFORMS`/`ENVIRONMENTS`); `install_id` is the app's persisted UUID and is
+ *  the device's identity — a re-register with the same id upserts the row. */
+export interface RegisterDeviceRequest {
+	platform: "ios" | "android";
+	token: string;
+	environment: "sandbox" | "production";
+	app_version: string;
+	install_id: string;
+}
+
 /**
  * What `POST /login` establishes, on both transports.
  *
@@ -334,6 +346,51 @@ export class RelayEndpoints {
 		return this.http.json("pushConversation", {
 			method: "GET",
 			path: `/api/push/conversation/${encodeURIComponent(handle)}`,
+		});
+	}
+
+	/**
+	 * Records this device with the computer (ADR 0006 §3.1), idempotent on
+	 * `install_id`. The response's `device_key` is minted once and must be stored
+	 * before it is used again; refusals (a revoked or unpaired row) arrive as the
+	 * relay's own typed error bodies.
+	 *
+	 * BUILT AND TESTED, DELIBERATELY NOT CALLED from the app yet: the cloud
+	 * forward (S7) is unbuilt, so a registration today writes a row no push can
+	 * use — the manager decision of 2026-10-03 records "DON'T register
+	 * pre-cloud". The call site lands when S7 does; the mock relay serves the
+	 * route, so the client half is exercised by the e2e suite now.
+	 */
+	async registerDevice(
+		request: RegisterDeviceRequest,
+	): Promise<Payload<"pushRegister">> {
+		return this.http.json("pushRegister", {
+			method: "POST",
+			path: "/api/push/register",
+			body: request,
+		});
+	}
+
+	/** This computer's registered devices (`GET /api/push/devices`), the
+	 *  Settings list. Read-only: opening Settings bumps nothing. */
+	async pushDevices(): Promise<Payload<"pushDevices">> {
+		return this.http.json("pushDevices", {
+			method: "GET",
+			path: "/api/push/devices",
+		});
+	}
+
+	/** REVOKES one device (`DELETE /api/push/devices/{device_id}`, ADR §4 rule 1,
+	 *  local-operator `push_devices.revoke`). A tombstone, not a row removal, and
+	 *  idempotent in both directions: an id the registry does not hold still
+	 *  answers `{"ok": true}` — the app retries this on sign-out and a retry must
+	 *  not read as a failure. */
+	async revokePushDevice(
+		deviceId: string,
+	): Promise<Payload<"pushDeviceDelete">> {
+		return this.http.json("pushDeviceDelete", {
+			method: "DELETE",
+			path: `/api/push/devices/${encodeURIComponent(deviceId)}`,
 		});
 	}
 

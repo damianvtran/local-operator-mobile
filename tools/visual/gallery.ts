@@ -152,6 +152,23 @@ ${records
 </table>`;
 
 	/**
+	 * The device bound, on the ARTIFACT rather than only in the stdout a reviewer may never
+	 * have seen. This is the capture's own sentence — which of the declared profiles it
+	 * covered and which it did not — so a green tile over 2 of 19 profiles cannot read as a
+	 * whole-matrix result on the page a reviewer opens instead of the run. It is rendered
+	 * only when the manifest carries it: a manifest written before the field existed makes
+	 * no claim rather than a wrong one.
+	 */
+	const coverageNote =
+		typeof meta.deviceCoverageNote === "string" ? meta.deviceCoverageNote : "";
+	const coverage =
+		typeof meta.deviceCoverage === "object" && meta.deviceCoverage !== null
+			? (meta.deviceCoverage as { notCaptured?: unknown })
+			: null;
+	const coveragePartial =
+		Array.isArray(coverage?.notCaptured) && coverage.notCaptured.length > 0;
+
+	/**
 	 * The theme tile, which must not read "0 theme mismatches" over a matrix whose canvas
 	 * half never ran.
 	 *
@@ -193,7 +210,7 @@ ${records
 	const themeTile =
 		canvasUncompared === 0
 			? `<div><b>${themeMismatches}</b> theme mismatches</div>`
-			: `<div><b>${themeMismatches}</b> theme mismatches <span class="warn">(the canvas-vs-token half did not run for ${canvasUncompared} of ${records.length} frame(s) — ${canvasLack}; the run needs a canvas per theme from \`--tokens\`)</span></div>`;
+			: `<div><b>${themeMismatches}</b> theme mismatches <span class="warn">(the canvas-vs-token half did not run for ${canvasUncompared} of ${records.length} cell(s) — ${canvasLack}; the run needs a canvas per theme from \`--tokens\`)</span></div>`;
 
 	return `<!doctype html>
 <html lang="en">
@@ -209,6 +226,7 @@ ${records
 <div class="summary">
 	<div><b>${records.length}</b> cells</div>
 	<div><b>${records.reduce((n, r) => n + (r.frames?.length ?? 0), 0)}</b> frames</div>
+	${coverageNote ? `<div class="${coveragePartial ? "warn" : ""}">${escapeHtml(coverageNote)}</div>` : ""}
 	<div class="${problems.length ? "fail" : ""}"><b>${problems.length}</b> problems</div>
 	<div><b>${escapeHtml(meta.textScaleVerdict ?? "scale: not measured")}</b> text scale</div>
 	${themeTile}

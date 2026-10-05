@@ -1,0 +1,56 @@
+<!doctype html>
+<!--
+  A page whose body copy follows the root font size but ONE text role does not —
+  the negative control for the guard's per-ROLE comparison.
+
+  The guard drives the ROOT FONT SIZE: a role that follows it has the same size in
+  rem at both scales, and one authored in px keeps its px size and so changes rem.
+  This page carries BOTH — so it is the case a MEDIAN over the cell cannot answer.
+  The scaling paragraphs are the majority, the median still roughly doubles, and the
+  old median guard called the pair live while one role sat frozen. The per-role guard
+  reads the role that did not move and fails the cell by name.
+
+  `verify` captures this directory and requires the guard to FAIL it, naming the
+  20px role; the inert-text-scale fixture is the all-px case and the audit-canary is
+  the all-rem case. Together the three prove the guard discriminates in both
+  directions, including the mixed composition a median could not see.
+
+  ENOUGH ELEMENTS ON PURPOSE. A page of three elements also trips the capture's
+  blank-frame check ("only N elements mounted — the frame is (nearly) blank"), and
+  then `verify`'s `status !== 0` assertion would hold with the scale guard silent.
+  Six elements clear that check, so the only failure this page produces is the scale
+  one and the companion assertion — the one that greps for the message naming the
+  20px role — is what carries the discrimination.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>One unscaled text role</title>
+<style>
+	/* The canvas follows the resolved theme, so the ONLY failure this page produces is
+	   the scale one: a fixture that also failed the theme check would make the negative
+	   control ambiguous about which guard fired. */
+	:root { --canvas: #f2ede3; --ink: #211e18; }
+	:root[data-lo-theme="dark"] { --canvas: #22201c; --ink: #f2ede3; }
+	body { margin: 0; padding: 16px; background: var(--canvas); color: var(--ink); font-family: system-ui; font-size: 1rem; line-height: 1.5; }
+	/* rem on purpose: this type follows `root.style.fontSize`. */
+	p { font-size: 1rem; margin: 0 0 8px; }
+	/* The ONE role that ignores it — a hardcoded px size, the shape of a node whose
+	   type role was never wired to the scale (`U-04`'s own defect). */
+	.pinned { font-size: 20px; margin: 0 0 12px; }
+</style>
+</head>
+<body>
+<h1 class="pinned">A role that never scales</h1>
+<p>This paragraph follows the root font size, so it renders twice as large in the 200% frame.</p>
+<p>A second paragraph keeps the scaling copy the majority: with only the pinned heading for
+   company a lone frozen role could move the cell median enough for the old check to catch it
+   by accident, which would prove nothing about the per-role comparison.</p>
+<p>The rest of the copy is here to carry the page past the capture's blank-frame floor, so
+   that a non-zero exit from this fixture can only mean the scale guard fired.</p>
+<p>Every one of these paragraphs is `1rem`, and every one of them doubles; the heading above
+   is `20px` and does not move at all.</p>
+<p>A last row, so the body has six elements and the frame is plainly not blank.</p>
+</body>
+</html>

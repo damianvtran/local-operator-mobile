@@ -8,14 +8,17 @@ import {
 	answeredPairs,
 	askStateLine,
 	asksPopulationSignature,
+	asksReadFailureLine,
 	askToneInk,
 	durationLabel,
 	isAnswerable,
 	orderedForDisplay,
 	outstandingAsks,
+	READ_FAILED,
+	refusalText,
 	unansweredQuestions,
 } from "@/features/session/asks";
-import { isRelayError, type RelayEndpoints, TRANSPORT_SENTENCE } from "@/relay";
+import type { RelayEndpoints } from "@/relay";
 import {
 	askFieldId,
 	askQuestionId,
@@ -84,26 +87,8 @@ const READ_TIMEOUT_MS = 8000;
  *  the crossing within half a minute of the truth without a per-second redraw. */
 const TICK_MS = 20000;
 
-/** The app's one transport sentence (`relay/errors.ts`) — not a sheet-local
- *  second wording of "could not reach the computer": two copies of one rule is
- *  how the two drift (design D4). */
-const READ_FAILED = TRANSPORT_SENTENCE;
 /** A capitalised sentence, like the sheet's empty state (design D4). */
 const READ_TIMED_OUT = "The read timed out — the computer is not answering.";
-/** A 404 on the aggregate route is an OLDER daemon: the route is additive and
- *  its absence is the one read failure that is not a transport problem. The
- *  noun is the COMPUTER's relay, never "this session" — the sheet is
- *  index-backed and cross-session, opened from the sessions list where there is
- *  no "this session" — and the line names what to update (design D4). */
-const RUNTIME_PREDATES_ASKS =
-	"The relay on this computer is too old for queued questions. Update local-operator to see them here.";
-
-/** The relay's own sentence when it gave one; the plainest honest line when it
- *  did not. Never a bare status code under a button that explains nothing. */
-const refusalText = (failure: unknown): string => {
-	if (isRelayError(failure)) return failure.displayableMessage ?? READ_FAILED;
-	return READ_FAILED;
-};
 
 type SettleKind = "respond" | "decline" | "dismiss";
 type PendingAction = { askId: string; kind: SettleKind } | null;
@@ -510,14 +495,10 @@ export const AsksSheet = ({
 				setError(READ_TIMED_OUT);
 				return;
 			}
-			/* A 404 is not "could not reach": the daemon answered — it simply
-			 *  predates the route, which is the one failure a reader can act on
-			 *  (update it). Everything else keeps the transport sentence. */
-			if (isRelayError(failure) && failure.status === 404) {
-				setError(RUNTIME_PREDATES_ASKS);
-				return;
-			}
-			setError(refusalText(failure));
+			/* The read's failure line lives in `asks.ts` with its own both-directions
+			 *  test: a 404 is the older-daemon answer only when the RELAY sent it, and a
+			 *  dead tunnel's 404 must read as unreachable rather than as an old daemon. */
+			setError(asksReadFailureLine(failure));
 		} finally {
 			setLoaded(true);
 		}

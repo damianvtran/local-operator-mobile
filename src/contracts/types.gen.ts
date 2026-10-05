@@ -93,6 +93,29 @@ export interface PeerSender {
 	cwd?: string;
 }
 
+/** The `send` tool's settled delivery payload — `details.delivery`.
+ *
+ *  The ONE nested payload both the live tool result and the persisted row
+ *  carry (local-operator PR #1855; `peer_send.DeliveryOutcome.details`,
+ *  `tools/builtin.py` execute_send). `state` is the fact the app renders:
+ *  `delivered | mailbox | unconfirmed | failed`, read through
+ *  `features/session/delivery.ts`, which treats any other value as absent.
+ *
+ *  CARRIAGE: the mobile projection does not copy this object into a row's
+ *  `details` yet (as of local-operator `1d88f3466`, `mobile/projection.py`
+ *  `_tool_row_details` copies diff keys only), so this field is the shape the
+ *  app is built to and the mock relay serves; the core change that lights it
+ *  up end-to-end is tracked in the PR that added this interface. */
+export interface SendDeliveryDetails {
+	state?: string;
+	message_id?: string;
+	wake?: boolean | string;
+	attempts?: number;
+	cause?: string;
+	route?: string;
+	reason?: string;
+}
+
 export interface TranscriptEntryDetails {
 	/** An object as often as a string — never assume `.split()` exists. */
 	args?: string | Record<string, unknown>;
@@ -102,6 +125,8 @@ export interface TranscriptEntryDetails {
 	sender?: PeerSender;
 	severity?: "info" | "warning" | "error";
 	notice_kind?: "wake";
+	/** The `send` tool's settled delivery state (see `SendDeliveryDetails`). */
+	delivery?: SendDeliveryDetails;
 	user_run?: boolean;
 	argument_bytes?: number;
 	/* --- the queued-ask rows (design §4): the fold attaches these to
@@ -581,6 +606,55 @@ export interface AsksResponse {
  *  `api_push_conversation`, ADR 0006 §3.1/§6.7). */
 export interface PushConversationResponse {
 	session_id: string;
+}
+
+/** `POST /api/push/register` — one device recorded, idempotent on identity
+ *  (local-operator `push_devices.register`, ADR 0006 §3.1). `device_key` is
+ *  returned ONCE, in this response only: the Settings surface stores it in the
+ *  keystore and no route ever echoes it again. `registered_at` is the RECORD's
+ *  own stamp, not the request's clock — a re-register keeps it. */
+export interface PushRegisterResponse {
+	ok: true;
+	device_id: string;
+	device_key: string;
+	registered_at: number;
+}
+
+/** One row of `GET /api/push/devices` (local-operator `push_devices.list_devices`).
+ *  Exactly the ADR's shape: `environment` and `install_id` are excluded by the
+ *  core on purpose, and `name` / `credential_live` / `last_authenticated_at`
+ *  are absent on rows an earlier build wrote — absence is the truth, never a
+ *  null to special-case. `state` is the core's vocabulary: `live | expired |
+ *  unpaired | revoked` (the descriptions are the product's own words,
+ *  `push_devices.STATE_DESCRIPTIONS`). */
+export interface PushDeviceRow {
+	device_id: string;
+	platform: string;
+	app_version: string;
+	registered_at: number;
+	last_seen_at: number;
+	state: string;
+	name?: string;
+	credential_live?: boolean;
+	last_authenticated_at?: number;
+}
+
+/** `GET /api/push/devices` — the Settings list. `precedence` is the resolver's
+ *  own string (`"revoked > unpaired > expired"`), rendered from the table the
+ *  state resolver walks, so a legend cannot drift from the rows. */
+export interface PushDevicesResponse {
+	devices: PushDeviceRow[];
+	precedence: string;
+}
+
+/** `DELETE /api/push/devices/{device_id}` — revokes the device and answers
+ *  `{"ok": true}`. A TOMBSTONE, not a row removal: the row stays with
+ *  `revoked_at` set (`push_devices.revoke` — that is what makes a revoke stick
+ *  for the same `install_id` instead of being undone by the app's next launch),
+ *  and the route is idempotent: an unknown or already-revoked id answers this
+ *  same shape rather than refusing. ("Pinned" is not a device concept.) */
+export interface PushDeviceDeleteResponse {
+	ok: true;
 }
 
 export interface PinResponse {

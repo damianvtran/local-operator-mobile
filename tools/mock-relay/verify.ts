@@ -1759,6 +1759,12 @@ async function main() {
 			};
 		};
 
+		// A STATUS CHECK ALONE IS NOT THE DISCRIMINATOR HERE, and the comment says so
+		// because `exit != 0` has another way to be satisfied: `inert-text-scale` is three
+		// elements, so it also trips the capture's blank-frame check ("only 3 elements
+		// mounted"). The companion assertion below — the one that greps for the guard's
+		// own sentence — is what a silent scale guard cannot pass. Every other fixture here
+		// is given at least six elements precisely so its pair is not in that position.
 		const inert = run(join(WORKTREE, "e2e", "fixtures", "inert-text-scale"));
 		check(
 			"a page whose text ignores the root font size FAILS the guard",
@@ -1767,10 +1773,127 @@ async function main() {
 			`exit ${inert.status}`,
 		);
 		check(
-			"and the failing cell is named with its measured ratio",
-			/the text did not scale: median text \d+px at 200% against 1x/.test(
+			"and the failing cell is named as rendering both scales the same",
+			/the text did not scale with the root font size: .*the 200% frame renders the same text sizes/.test(
 				inert.output,
 			),
+			true,
+		);
+
+		// The MIXED case, and the one a per-role guard exists for: every paragraph
+		// scales and one role is pinned in px. A median over the cell is carried by the
+		// scaling majority and reports the pair live (measured: 4.000x against the 1.9
+		// bar); the per-role guard reads the one role that did not move. Without this
+		// fixture the guard's headline failure — `S15/loading__tablet-landscape__200` —
+		// would have no small, cheap control.
+		const mixed = run(join(WORKTREE, "e2e", "fixtures", "px-role-text-scale"));
+		check(
+			"a page with ONE unscaled type role among scaling ones FAILS the guard",
+			mixed.status !== 0,
+			true,
+			`exit ${mixed.status}`,
+		);
+		check(
+			"and the unscaled role is the one named",
+			/the 20px role \(1 node\(s\)\) did not scale/.test(mixed.output),
+			true,
+		);
+
+		// The PINNED-ROOT case, and the guard's own precondition: `!important` on `html`
+		// outranks the inline root the harness writes, so both frames render at 100 % and the
+		// old median caught it (medians 96/96 = 1.00x, under the 1.9 bar) where a per-role
+		// comparison judged against each frame's OWN root calls it live. The guard asserts
+		// the 200 % root is the declared factor before it compares a size, and this is what
+		// proves that assertion is there.
+		const pinned = run(
+			join(WORKTREE, "e2e", "fixtures", "root-pinned-text-scale"),
+		);
+		check(
+			"a page that pins its root font size FAILS the guard",
+			pinned.status !== 0,
+			true,
+			`exit ${pinned.status}`,
+		);
+		check(
+			"and the reason names the root the harness could not move",
+			/the harness's root font size did not take effect: the 200% frame renders with a root of 16px against 16px/.test(
+				pinned.output,
+			),
+			true,
+		);
+
+		// The HIDDEN-node case: every visible role scales, and the page also carries a
+		// `display:none` div at 22px plus an inline `<script>` (whose source text is a text
+		// child of a display:none element). Both report a font size and neither follows the
+		// root, so a guard that reads `body *` invents a type role and FAILS this page —
+		// measured at exit 1 with `the 22px role (1 node(s)) did not scale` when the
+		// rendered-node filter is removed. Passing here is the assertion that matters.
+		const hidden = run(
+			join(WORKTREE, "e2e", "fixtures", "hidden-role-text-scale"),
+		);
+		check(
+			"a page whose only non-scaling text is never painted still PASSES",
+			hidden.status,
+			0,
+			`exit ${hidden.status}`,
+		);
+		check(
+			"and no role is invented for the hidden 22px node",
+			!/22px role/.test(hidden.output),
+			true,
+		);
+
+		// The COUNTED shapes, asserted so the stance cannot move silently. The guard counts a
+		// type role by its BOX, on purpose: a node at opacity:0 and a child clipped away
+		// inside a zero-height container both keep a box, both are counted, and both FAIL the
+		// cell when frozen — the audit reads the app's clipped placeholder proxy on purpose,
+		// so the readiness rule's visible() is deliberately not this predicate. Passing would
+		// be the false-negative QA reported as a defect and the operator's rule closes as the
+		// documented stance; FAILING, naming those two roles, is correct here.
+		//
+		// `visibility: hidden` is the one shape the box test excludes, and it is the one
+		// whose exclusion moved no tier reading (measured). The 24px role must NOT be named.
+		const counted = run(
+			join(WORKTREE, "e2e", "fixtures", "unpainted-role-text-scale"),
+		);
+		check(
+			"frozen text that is laid out but not drawn is still a type role",
+			counted.status !== 0,
+			true,
+			`exit ${counted.status}`,
+		);
+		check(
+			"and the opacity-0 and clipped roles are the ones named",
+			/the 22px role \(1 node\(s\)\) did not scale/.test(counted.output) &&
+				/the 26px role \(1 node\(s\)\) did not scale/.test(counted.output),
+			true,
+		);
+		check(
+			"while a visibility:hidden role is not counted at all",
+			!/the 24px role/.test(counted.output),
+			true,
+		);
+
+		// The KNOWN MISS, asserted rather than left unknown: text that paints with NO box of
+		// its own — a zero-height non-clipping carrier holding its own text, a collapsed line
+		// box, and a `display: contents` element — is skipped by the box test, so this page
+		// PASSES (exit 0, dimension live) with all three frozen roles unnamed. A paint-based
+		// predicate catches them and is NOT shipped: measured on the `ci` tier it moved the
+		// NOTE COUNT (96 pairs noted -> 118; the verdict stayed 136/136 live, 0 UNREADY), and
+		// a metric change that moves a number app cells report is this branch's whole subject.
+		// docs/e2e/README.md states the class and its incidence.
+		const missed = run(
+			join(WORKTREE, "e2e", "fixtures", "painted-carrier-text-scale"),
+		);
+		check(
+			"text that paints with no box of its own is a KNOWN miss — the page still PASSES",
+			missed.status,
+			0,
+			`exit ${missed.status}`,
+		);
+		check(
+			"and none of the three carrier roles is named",
+			!/\d+px role/.test(missed.output),
 			true,
 		);
 

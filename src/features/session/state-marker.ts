@@ -4,6 +4,7 @@ import {
 	COMPOSER_COPY,
 	type ComposerControls,
 } from "@/features/session/composer";
+import { sendDeliveryStateOf } from "@/features/session/delivery";
 import { hasFencedBlock } from "@/features/session/markdown";
 import { classifyEntry } from "@/features/session/projection";
 
@@ -55,6 +56,11 @@ export interface SessionStateFacts {
 	queued: number;
 	/** Rows that carry more than text: a tool call, or an image. */
 	richRows: boolean;
+	/** At least one settled row states a `send` delivery outcome (the four-state
+	 *  arm — `S5/send-delivery`). Deliberately ANY of the four: the cell's claim is
+	 *  "this frame shows the delivery vocabulary", and which state a given frame
+	 *  shows is the row's own word, not a second marker per state. */
+	delivery: boolean;
 	/** The card the reader is being asked to answer, if any. `projection.pending`'s
 	 *  kind, not the card's rendering. */
 	pending: "approval" | "ask" | null;
@@ -73,6 +79,7 @@ export interface SessionStateFlags {
 	degraded: boolean;
 	queued: boolean;
 	richRows: boolean;
+	delivery: boolean;
 	pendingApproval: boolean;
 	pendingAsk: boolean;
 	subagents: boolean;
@@ -89,6 +96,7 @@ const NOTHING: SessionStateFlags = {
 	degraded: false,
 	queued: false,
 	richRows: false,
+	delivery: false,
 	pendingApproval: false,
 	pendingAsk: false,
 	subagents: false,
@@ -137,6 +145,12 @@ export const sessionFactsFrom = (
 		(entry) =>
 			classifyEntry(entry) === "assistant" && hasFencedBlock(entry.text),
 	),
+	/* Read through the same function the row renders with, so a marker can never
+	 * affirm a state the reader's row would not show — the `richRows` lesson.
+	 * `sendDeliveryStateOf` carries the `send` gate the row applies, so a
+	 * lookalike `delivery` key on another tool grows no word and affirms no
+	 * marker. */
+	delivery: input.entries.some((entry) => sendDeliveryStateOf(entry) !== null),
 	pending: pendingKindOf(input.projection),
 	subagents: input.subagents,
 	entries: input.entries.length,
@@ -176,6 +190,7 @@ export const sessionStateFlags = (
 		degraded: facts.degraded,
 		queued: facts.queued > 0,
 		richRows: facts.richRows,
+		delivery: facts.delivery,
 		pendingApproval: facts.pending === "approval",
 		pendingAsk: facts.pending === "ask",
 		subagents: facts.subagents > 0,
