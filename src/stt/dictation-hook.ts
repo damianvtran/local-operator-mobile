@@ -20,9 +20,15 @@
  * machine underneath stays `idle`, so a capture cannot leave a recorder open, and
  * an installed app — where `location` is not a web page — reads `null`.
  *
- * No React, no React Native. The synthetic level history is deterministic (no
- * randomness, no clock), so the same cell renders the same bytes twice.
+ * No React, and no React Native beyond the ONE platform read the hook convention
+ * uses (`recorder.ts`'s `Platform.OS !== "web"` guard). The synthetic level history
+ * is deterministic (no randomness, no clock), so the same cell renders the same
+ * bytes twice. Resting "inert in an installed build" on `location` being undefined
+ * alone would be an implicit rule where its siblings state an explicit one
+ * (agent review round 1).
  */
+
+import { Platform } from "react-native";
 
 import type {
 	DictationOutcome,
@@ -57,7 +63,7 @@ export function dictationFromHook(
 
 /** The `lo-dictation` value this page carries, or `null` when it is not a web page. */
 const hookValue = (): string | null => {
-	if (typeof location === "undefined") return null;
+	if (Platform.OS !== "web" || typeof location === "undefined") return null;
 	return new URLSearchParams(location.search).get("lo-dictation");
 };
 

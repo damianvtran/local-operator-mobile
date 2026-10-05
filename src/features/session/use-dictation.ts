@@ -373,6 +373,12 @@ export const useDictation = (input: DictationInput): DictationState => {
 	 * (its result would have nowhere to land). */
 	useEffect(
 		() => () => {
+			/* Supersede any in-flight run BEFORE aborting, exactly as `discardLive` does:
+			 * without the bump a late abort rejection (or a result that raced the abort)
+			 * still passed the epoch check and ran the "live failure" arm — `setError`
+			 * through the parent's handler — against an unmounted tree. With it, the
+			 * continuation sees the bump and drops its result (agent review round 1). */
+			runIdRef.current += 1;
 			clearTimers();
 			abortRef.current?.abort();
 			abortRef.current = null;
