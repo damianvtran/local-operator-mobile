@@ -294,12 +294,99 @@ function u03ColourOnlyStatus(
 			},
 		];
 	}
-	return suspects.slice(0, 8).map((node) => ({
-		check: "U-03",
-		verdict: "FAIL",
-		measured: `colour ${node.semanticBackground || node.semanticBorder || node.semanticColour}, no word/glyph/name`,
-		detail: `${node.path}`,
-	}));
+	// The suspects this repository DECLARES as exceptions rather than FAILs are split
+	// out here and returned as EXCEPTION rows of their own, in the same shape U-08
+	// uses for a pair its painted-region rule sets aside: RECORDED with a reason,
+	// never folded into a pass and never dropped. `declaredColourException` says what
+	// each shape is and why it is narrow.
+	const byIndex = new Map(state.nodes.map((n) => [n.index, n]));
+	const failures: CheckRow[] = [];
+	const declared: CheckRow[] = [];
+	for (const node of suspects) {
+		const reason = declaredColourException(node, state, byIndex);
+		if (reason !== null) {
+			declared.push({
+				check: "U-03",
+				verdict: "EXCEPTION",
+				measured: `declared exception: ${reason}`,
+				detail: node.path,
+			});
+			continue;
+		}
+		failures.push({
+			check: "U-03",
+			verdict: "FAIL",
+			measured: `colour ${node.semanticBackground || node.semanticBorder || node.semanticColour}, no word/glyph/name`,
+			detail: `${node.path}`,
+		});
+	}
+	// Both caps independently, like U-08: a cell with more than eight suppressions
+	// still states the reason on every row it does print.
+	return [...failures.slice(0, 8), ...declared.slice(0, 8)];
+}
+
+/**
+ * The two shapes U-03 DECLARES as exceptions rather than FAILs, each with its
+ * measured reason — the shape a reviewer agreed is a false positive in substance.
+ *
+ * WHY A PREDICATE OVER THE EXTRACTED NODE, and not a list of CSS paths: a path list
+ * would pin one page's hashed class names and rot on the next build; a predicate
+ * states the SHAPE. Neither branch can widen to a real colour-only status — see the
+ * geometry in each.
+ *
+ * Returning a reason (rather than suppressing silently) is the point: a declared
+ * exception is a recorded statement a reader can audit, which is what makes it
+ * different from a prose rationale in a review comment and from a rule narrowed
+ * until it cannot fail.
+ */
+function declaredColourException(
+	node: AuditNode,
+	state: AuditState,
+	byIndex: Map<number, AuditNode>,
+): string | null {
+	// (1) A CONTROL'S OWN PAINTED SURFACE. The composer's send button paints its accent
+	// fill on a direct child that covers the control's box exactly (measured 44×44 over
+	// a 44×44 button); the affordance is the control's — its glyph, and its accessible
+	// name (U-09 passes on the control). The rule's `controlText` scope already accepts a
+	// WORD in the control; this is that same case with a glyph instead of a word.
+	//
+	// Deliberately GEOMETRIC, because the name channel is what U-03 refuses on purpose:
+	// a status DOT inside a control is a fraction of its box (measured 12×12 in a 44 pt
+	// button, and a meter bar 3×13 in its 84 px row) and does NOT match — that is the
+	// shape the rule exists to keep reporting.
+	const control = node.ancestors
+		.map((i) => byIndex.get(i))
+		.find((n) => n?.interactive);
+	if (
+		control !== undefined &&
+		node.rect.w >= control.rect.w * 0.9 &&
+		node.rect.h >= control.rect.h * 0.9
+	) {
+		return "the control's own painted surface (its glyph and accessible name carry the affordance; a control's fill is not a colour-only status)";
+	}
+	// (2) ONE BAR OF A REPEATED SERIES. The recording meter is `LEVEL_BARS` sibling bars
+	// drawing one semantic colour — a visualisation of level, not a single status
+	// indicator — and the row's status word (`Recording`) sits BESIDE the meter, outside
+	// both of the rule's bounded scopes (its own container is the empty meter box). Three
+	// or more same-tagged siblings sharing the colour is the measured signature of a
+	// series; a lone indicator cannot match it.
+	//
+	// `aria-hidden` is NOT the discriminator even though the meter carries it: an
+	// aria-hidden node can still paint a colour-only status, so exempting that attribute
+	// wholesale would be the rule narrowing it must not.
+	const parent = node.ancestors[0];
+	if (parent !== undefined && node.semanticBackground !== "") {
+		const series = state.nodes.filter(
+			(n) =>
+				n.ancestors[0] === parent &&
+				n.tag === node.tag &&
+				n.semanticBackground === node.semanticBackground,
+		);
+		if (series.length >= 3) {
+			return `one of ${series.length} bars of a repeated series drawing ${node.semanticBackground} (a level meter, not a single status indicator)`;
+		}
+	}
+	return null;
 }
 
 /**
@@ -1214,6 +1301,7 @@ function u10LabelInName(state: AuditState): CheckRow[] {
 		];
 	}
 	const rows: CheckRow[] = [];
+	const declared: CheckRow[] = [];
 	// Pairing happens in the DOM, on the control's *own* label. The AX tree gives
 	// names but not the node identity a visible label can be attached to, and
 	// pairing every AX control with the first labelled element on the page is how
@@ -1229,6 +1317,22 @@ function u10LabelInName(state: AuditState): CheckRow[] {
 			.toLowerCase()
 			.replace(/\s+/g, " ");
 		if (name.includes(visible)) continue;
+		// A TEXT-ENTRY control's visible text is its VALUE, not a label. U-10 compares
+		// the accessible name with the visible LABEL, so that voice control ("tap
+		// approve") works; a typed draft is not a label and the comparison cannot pass
+		// by construction. RECORDED as a declared exception — an EXCEPTION row with the
+		// measured name and value — rather than dropped or turned into a PASS; the rule
+		// itself is unchanged, and the shape is narrow (input/textarea only: a button or
+		// link whose visible text disagrees with its name is still a FAIL).
+		if (control.tag === "input" || control.tag === "textarea") {
+			declared.push({
+				check: "U-10",
+				verdict: "EXCEPTION",
+				measured: `declared exception: a text-entry VALUE, not a label — name ${JSON.stringify(name.slice(0, 40))} vs value ${JSON.stringify(visible.slice(0, 40))}`,
+				detail: control.path,
+			});
+			continue;
+		}
 		rows.push({
 			check: "U-10",
 			verdict: "FAIL",
@@ -1236,7 +1340,7 @@ function u10LabelInName(state: AuditState): CheckRow[] {
 			detail: control.path,
 		});
 	}
-	if (rows.length === 0) {
+	if (rows.length === 0 && declared.length === 0) {
 		rows.push({
 			check: "U-10",
 			verdict: "PASS",
@@ -1245,7 +1349,7 @@ function u10LabelInName(state: AuditState): CheckRow[] {
 			detail: "",
 		});
 	}
-	return rows.slice(0, 8);
+	return [...rows.slice(0, 8), ...declared.slice(0, 8)];
 }
 
 /**
