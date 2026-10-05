@@ -1095,7 +1095,7 @@ tool row yet (`mobile/projection.py` `_tool_row_details` copies `diff` keys
 only), so a real relay does not send it to this client today; the app is
 built to the frozen shape and the mock relay serves it. Flipping it on
 end-to-end is a one-line core change (add `"delivery"` to that copy loop)
-amed in the mobile PR that added this row.
+named in the mobile PR that added this row.
 
 `PendingRequest` — `types.py:701-747`: `request_id`, `kind (approval|ask)`,
 `title`, `detail`, `options [{label, description}]`, `secret` (render a **masked**

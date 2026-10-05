@@ -52,7 +52,7 @@ import {
 	unreachableComputerNote,
 } from "@/features/deep-links/sentences";
 import { sessionLinkOutcome } from "@/features/deep-links/session-link";
-import { isRelayError } from "@/relay";
+import { isRelayMissing } from "@/relay";
 import { useUiStore } from "@/state/ui-store";
 
 /**
@@ -168,11 +168,13 @@ export const useDeepLinkResolution = (): void => {
 				router.navigate(`/session/${answer.session_id}`);
 			} catch (error) {
 				if (connectionStore.getState().revision !== askedOn) return;
-				/* A clean 404 is §6.6's "no longer there"; anything else is the
-				 * unreachable path — both land on the conversations surface, with
-				 * the sentence that is true of each. */
+				/* The relay's own 404 is §6.6's "no longer there"; anything else —
+				 * the edge's unknown-tunnel 404 included, which is a dead tunnel
+				 * and not a deleted conversation — is the unreachable path. Both
+				 * land on the conversations surface, with the sentence that is
+				 * true of each. */
 				showToast(
-					isRelayError(error) && error.status === 404
+					isRelayMissing(error)
 						? unknownConversationNote(label)
 						: unreachableComputerNote(label),
 					"danger",

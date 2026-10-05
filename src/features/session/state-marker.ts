@@ -4,7 +4,7 @@ import {
 	COMPOSER_COPY,
 	type ComposerControls,
 } from "@/features/session/composer";
-import { deliveryStateFromDetails } from "@/features/session/delivery";
+import { sendDeliveryStateOf } from "@/features/session/delivery";
 import { hasFencedBlock } from "@/features/session/markdown";
 import { classifyEntry } from "@/features/session/projection";
 
@@ -146,10 +146,11 @@ export const sessionFactsFrom = (
 			classifyEntry(entry) === "assistant" && hasFencedBlock(entry.text),
 	),
 	/* Read through the same function the row renders with, so a marker can never
-	 * affirm a state the reader's row would not show — the `richRows` lesson. */
-	delivery: input.entries.some(
-		(entry) => deliveryStateFromDetails(entry.details) !== null,
-	),
+	 * affirm a state the reader's row would not show — the `richRows` lesson.
+	 * `sendDeliveryStateOf` carries the `send` gate the row applies, so a
+	 * lookalike `delivery` key on another tool grows no word and affirms no
+	 * marker. */
+	delivery: input.entries.some((entry) => sendDeliveryStateOf(entry) !== null),
 	pending: pendingKindOf(input.projection),
 	subagents: input.subagents,
 	entries: input.entries.length,

@@ -66,15 +66,35 @@ describe("the copy table", () => {
 	});
 
 	it("never promises a delivery that cannot happen", () => {
-		/* The granted state names the missing half instead of "you will be
-		 * notified" (ADR 0006 §2.4's rule): no sentence may claim alerts work
-		 * while the cloud forward is unbuilt. */
-		expect(PUSH_COPY.granted.toLowerCase()).toContain(
-			"not switched on for this computer yet",
-		);
-		expect(PUSH_COPY.granted.toLowerCase()).not.toContain(
-			"you will be notified",
-		);
+		/* ADR 0006 §2.4's rule, applied to EVERY state that could be read as
+		 * "alerts are on": no sentence may claim alerts work while the cloud
+		 * forward is unbuilt — none ends on "to receive alerts" or "alerts
+		 * arrive once …" (design round 1, D5). */
+		for (const state of ["granted", "denied", "undetermined"] as const) {
+			expect(PUSH_COPY[state].toLowerCase()).toContain(
+				"not switched on for this computer yet",
+			);
+			expect(PUSH_COPY[state].toLowerCase()).not.toContain(
+				"you will be notified",
+			);
+			expect(PUSH_COPY[state].toLowerCase()).not.toContain("receive alerts");
+			expect(PUSH_COPY[state].toLowerCase()).not.toContain("alerts arrive");
+		}
+	});
+
+	it("names what works today in every state that reads as on", () => {
+		/* The workaround ADR 0006 §2.4's draft carries — the one thing a reader
+		 * can act on while the background half is unbuilt. */
+		for (const state of ["granted", "denied", "undetermined"] as const) {
+			expect(PUSH_COPY[state]).toContain(
+				"alerts work only while Local Operator is open",
+			);
+		}
+	});
+
+	it("reads unknown as a failed check, not a refusal, and names the remedy", () => {
+		expect(PUSH_COPY.unknown).toContain("not a refusal");
+		expect(PUSH_COPY.unknown).toContain("reopen Settings");
 	});
 });
 

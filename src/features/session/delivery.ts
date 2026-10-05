@@ -30,7 +30,7 @@
  *   - `unconfirmed` — "delivery unconfirmed": no answer and no proof either
  *     way. The one state whose hint is "check the target's transcript before
  *     resending", because nothing else can tell whether the message landed.
- *   - `failed` — "not delivered": proven non-delivery; only the cause below
+ *   - `failed` — "not delivered": proven non-delivery; only the cause
  *     is worth acting on.
  *
  * The hint's wording below is adapted from the desktop UI's strings
@@ -40,6 +40,8 @@
  * note AND in the row's spoken name, and a test pins both to this module so
  * the two cannot drift.
  */
+
+import type { TranscriptEntry } from "@/contracts";
 
 /** The four states the wire may state, in the core's own names. */
 export type SendDeliveryState =
@@ -74,6 +76,25 @@ export function deliveryStateFromDetails(
 	const state = (delivery as Record<string, unknown>).state;
 	return typeof state === "string" && SEND_DELIVERY_STATES.has(state)
 		? (state as SendDeliveryState)
+		: null;
+}
+
+/**
+ * The delivery state a ROW shows — `deliveryStateFromDetails` gated to the tool
+ * the field belongs to.
+ *
+ * `details.delivery` is the `send` tool's own field (the core's
+ * `SEND_TOOL_NAME`; the TUI and the desktop row gate on exactly that), so a
+ * lookalike key on another tool must not grow the word on a row — and, because
+ * the state marker and the row must agree by construction (the `richRows`
+ * lesson), must not affirm the marker either. The row and the marker both read
+ * through this one function so the gate cannot drift.
+ */
+export function sendDeliveryStateOf(
+	entry: Pick<TranscriptEntry, "tool_name" | "details">,
+): SendDeliveryState | null {
+	return entry.tool_name.toLowerCase() === "send"
+		? deliveryStateFromDetails(entry.details)
 		: null;
 }
 
@@ -113,7 +134,7 @@ export const SEND_DELIVERY_NOTE: Readonly<
 	unconfirmed:
 		"Not confirmed: there was no answer and the message is not in their transcript. It may still arrive, so check the target's transcript before resending.",
 	failed:
-		"Nothing was delivered. Fix the cause named below, or retry the send.",
+		"Nothing was delivered. Fix the cause named above, or retry the send.",
 };
 
 /**

@@ -182,8 +182,17 @@ const projection = (over: Partial<SessionProjection> = {}): SessionProjection =>
 		...over,
 	}) as SessionProjection;
 
+/* `tool_name` and `details` are on EVERY wire row (`TranscriptEntry`: a string,
+ * schema-validated), so the minimal entry carries them too — the `send-delivery`
+ * fact reads through the row's own gate, which touches the name. */
 const entry = (kind: string, text = ""): TranscriptEntry =>
-	({ kind, text, images: [] }) as unknown as TranscriptEntry;
+	({
+		kind,
+		text,
+		images: [],
+		tool_name: "",
+		details: {},
+	}) as unknown as TranscriptEntry;
 
 describe("sessionFactsFrom", () => {
 	it("reads the aborted turn from the wire, and only when it has settled", () => {
@@ -256,6 +265,42 @@ describe("sessionFactsFrom", () => {
 			subagents: 0,
 		});
 		expect(user.richRows).toBe(false);
+	});
+
+	it("affirms send-delivery only through the row's own gate", () => {
+		/* Review MINOR-1: the marker used to flip on ANY entry whose details
+		 * carried a known `delivery.state`, while the row renders the word only
+		 * for `send` — so a lookalike key on another tool affirmed a marker no
+		 * row backed. Both read `sendDeliveryStateOf` now. */
+		const lookalike = sessionFactsFrom({
+			projection: projection(),
+			streaming: false,
+			error: false,
+			subagents: 0,
+			entries: [
+				{
+					...entry("tool"),
+					tool_name: "bash",
+					details: { delivery: { state: "failed" } },
+				} as TranscriptEntry,
+			],
+		});
+		expect(sessionStateFlags(lookalike).delivery).toBe(false);
+
+		const send = sessionFactsFrom({
+			projection: projection(),
+			streaming: false,
+			error: false,
+			subagents: 0,
+			entries: [
+				{
+					...entry("tool"),
+					tool_name: "send",
+					details: { delivery: { state: "failed" } },
+				} as TranscriptEntry,
+			],
+		});
+		expect(sessionStateFlags(send).delivery).toBe(true);
 	});
 });
 

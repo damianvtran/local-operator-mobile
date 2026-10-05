@@ -7,6 +7,7 @@ import {
 	SEND_DELIVERY_LABEL,
 	SEND_DELIVERY_NOTE,
 	SEND_DELIVERY_WORD,
+	sendDeliveryStateOf,
 } from "@/features/session/delivery";
 
 /**
@@ -74,6 +75,36 @@ describe("deliveryStateFromDetails", () => {
 	});
 });
 
+describe("sendDeliveryStateOf — the row's gate, shared with the marker", () => {
+	it("reads the field only for the send tool; a lookalike key reads null", () => {
+		/* Review MINOR-1: the row renders the word only for `send`, and the
+		 * state marker must affirm through the same gate — a lookalike
+		 * `delivery` key on another tool grew a marker no row backed. */
+		expect(
+			sendDeliveryStateOf({
+				tool_name: "bash",
+				details: { delivery: { state: "failed" } },
+			}),
+		).toBeNull();
+		expect(
+			sendDeliveryStateOf({
+				tool_name: "send",
+				details: { delivery: { state: "failed" } },
+			}),
+		).toBe("failed");
+		expect(sendDeliveryStateOf({ tool_name: "send", details: {} })).toBeNull();
+	});
+
+	it("gates case-insensitively, the read the row always made", () => {
+		expect(
+			sendDeliveryStateOf({
+				tool_name: "SEND",
+				details: { delivery: { state: "mailbox" } },
+			}),
+		).toBe("mailbox");
+	});
+});
+
 describe("the words and the partial pair", () => {
 	it("names each state's subject, never a bare verdict", () => {
 		expect(SEND_DELIVERY_WORD.mailbox).toBe("wake unconfirmed");
@@ -134,6 +165,8 @@ describe("the check-before-resending hedge", () => {
 	});
 
 	it("names the reader's action in the failed note, never a machine API", () => {
-		expect(SEND_DELIVERY_NOTE.failed).toContain("Fix the cause named below");
+		/* The cause (`entry.error`) renders ABOVE the note in the expansion —
+		 * the direction must match the layout (design round 1, D3). */
+		expect(SEND_DELIVERY_NOTE.failed).toContain("Fix the cause named above");
 	});
 });

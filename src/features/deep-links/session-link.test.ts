@@ -22,6 +22,21 @@ describe("sessionLinkOutcome", () => {
 		).toBe("missing");
 	});
 
+	it("reads the edge's unknown-tunnel 404 as failed, never missing", () => {
+		/* The same status from a different machine. "unknown tunnel host" is
+		 * the refusal of the edge/gateway sitting IN FRONT of the relay — the
+		 * computer is unreachable, and the conversation may well exist behind
+		 * it — so it must never borrow the "no longer there" sentence (review
+		 * round 1, MAJOR-1; `errors.test.ts` pins the two kinds apart). */
+		expect(
+			sessionLinkOutcome(
+				new RelayError("unknown-tunnel", "unknown tunnel host", {
+					status: 404,
+				}),
+			),
+		).toBe("failed");
+	});
+
 	it.each([
 		["a transport failure", new RelayError("transport", "could not reach it")],
 		[

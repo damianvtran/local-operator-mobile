@@ -20,6 +20,7 @@ import { fixtureText, loadFixture } from "../../testing/fixtures";
 
 import {
 	GATEWAY_REASONS,
+	isRelayMissing,
 	parseRetryAfter,
 	type RelayResponseFacts,
 	rateLimitedError,
@@ -297,6 +298,34 @@ describe("a tunnel that is gone is terminal, not a retry", () => {
 		);
 		expect(error.kind).toBe("rejected");
 		expect(error.serverError).toBe("unknown session");
+	});
+});
+
+describe("absence is only the relay's own 404", () => {
+	it("holds for the relay's unknown-session 404", () => {
+		const fixture = JSON.parse(fixtureText("http/history-unknown.json")) as {
+			status: number;
+			body: { error: string };
+		};
+		const error = relayErrorFromResponse(
+			facts(fixture.status, {}, JSON.stringify(fixture.body)),
+		);
+		expect(isRelayMissing(error)).toBe(true);
+	});
+
+	it("refuses the edge's unknown-tunnel 404 and every non-404", () => {
+		const tunnel = relayErrorFromResponse(
+			facts(404, { "content-type": "text/plain" }, "Unknown tunnel"),
+		);
+		expect(isRelayMissing(tunnel)).toBe(false);
+
+		const unauthorized = relayErrorFromResponse(
+			facts(401, {}, '{"error":"authentication required"}'),
+		);
+		expect(isRelayMissing(unauthorized)).toBe(false);
+
+		expect(isRelayMissing(new TypeError("boom"))).toBe(false);
+		expect(isRelayMissing(null)).toBe(false);
 	});
 });
 

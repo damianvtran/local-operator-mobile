@@ -5,10 +5,10 @@ import { Pressable, ScrollView, Text, View } from "react-native";
 import type { TranscriptEntry } from "@/contracts";
 import {
 	deliveryAccessibleName,
-	deliveryStateFromDetails,
 	isPartialDelivery,
 	SEND_DELIVERY_NOTE,
 	SEND_DELIVERY_WORD,
+	sendDeliveryStateOf,
 } from "@/features/session/delivery";
 import {
 	diffCounts,
@@ -19,6 +19,9 @@ import {
 	toolGlyph,
 } from "@/features/session/projection";
 import { ROLE } from "@/ui/a11y";
+import { LARGE_TEXT_SCALE } from "@/ui/text-scale";
+import { useTextScale } from "@/ui/text-scale-provider";
+import { TYPE_STEPS } from "@/ui/tokens.gen";
 import { cx } from "@/ui/variants";
 
 /**
@@ -93,8 +96,44 @@ const DiffBlock = ({ lines }: { lines: string[] }) => (
 	</View>
 );
 
-const TextBlock = ({ lines, tone }: { lines: string[]; tone: string }) => (
-	<View className="max-h-48 overflow-hidden rounded-sm bg-sunken p-2">
+/**
+ * The raw output well's cap, as a LINE COUNT so it survives the text scale
+ * (design round 1, D2). The fixed `max-h-48` was 192 px at every scale: it let
+ * the well outweigh the note at 100 % (138 pt against 61 pt) and hid 63 % of
+ * the 522 pt machine line behind a nested scroll at 200 %. Three mono-sm lines
+ * at every scale keeps the note the tallest thing in the expansion and the
+ * well scrollable — nothing is lost, it just no longer leads. The pad is the
+ * well's own `p-2`, which does NOT scale: spacing stays put.
+ */
+const OUTPUT_WELL_LINES = 3;
+const OUTPUT_WELL_PAD_PX = 16;
+const outputWellCap = (scale: number): number => {
+	const line = TYPE_STEPS["mono-sm"];
+	return Math.round(
+		OUTPUT_WELL_LINES * line.size * line.lineHeight * scale +
+			OUTPUT_WELL_PAD_PX,
+	);
+};
+
+const TextBlock = ({
+	lines,
+	tone,
+	capPx,
+}: {
+	lines: string[];
+	tone: string;
+	/** The height cap when the caller wants one that scales with the type (the
+	 *  raw OUTPUT well — design round 1, D2). Unset keeps the fixed `max-h-48`
+	 *  the args block has always had. */
+	capPx?: number;
+}) => (
+	<View
+		className={cx(
+			"overflow-hidden rounded-sm bg-sunken p-2",
+			capPx === undefined && "max-h-48",
+		)}
+		style={capPx === undefined ? undefined : { maxHeight: capPx }}
+	>
 		<ScrollView>
 			<Text className={cx("whitespace-pre-wrap font-mono text-mono-sm", tone)}>
 				{lines.join("\n")}
@@ -116,15 +155,14 @@ export const ToolRow = ({ entry, testID }: ToolRowProps) => {
 	 */
 	const [override, setOverride] = useState<boolean | null>(null);
 	const open = override ?? entry.details.user_run === true;
+	const { effectiveScale } = useTextScale();
 	/* The send row's delivery arm. `delivery` is read only for the send tool:
 	 * the field is that tool's own, and a row that grew the word because some
 	 * other tool attached a lookalike key would be this surface inventing an
 	 * interpretation (the core's `SEND_TOOL_NAME` is the gate the TUI and the
-	 * desktop row both use). */
-	const delivery =
-		entry.tool_name.toLowerCase() === "send"
-			? deliveryStateFromDetails(entry.details)
-			: null;
+	 * desktop row both use; `sendDeliveryStateOf` is that gate, shared with the
+	 * state marker so a row and its marker cannot drift). */
+	const delivery = sendDeliveryStateOf(entry);
 	const word =
 		delivery === null ? null : (SEND_DELIVERY_WORD[delivery] ?? null);
 	const note =
@@ -138,6 +176,11 @@ export const ToolRow = ({ entry, testID }: ToolRowProps) => {
 	const tone = partial
 		? { glyph: "!", inkClass: "text-warning", pulsing: false }
 		: toolGlyph(entry.tool_state);
+	/* Above `LARGE_TEXT_SCALE` the word cannot share the row without taking the
+	 * name and the summary with it (design round 1, D1 — 265 pt of word against a
+	 * 350 pt row at 200 %), so it moves to a line of its own; the render below
+	 * carries the numbers. */
+	const deliveryOnOwnLine = word !== null && effectiveScale > LARGE_TEXT_SCALE;
 	const counts = diffCounts(entry);
 	const elapsed = toolElapsed(entry);
 	/* The delivery note is a reason to allow the expansion on its own: a row
@@ -196,8 +239,11 @@ export const ToolRow = ({ entry, testID }: ToolRowProps) => {
 					</Text>
 					{/* The delivery word: the state's own name for what is known (see
 					    `session/delivery.ts`), never a bare verdict. Amber for the two
-					    unsettled-but-not-failed states, danger for `not delivered`. */}
-					{word !== null ? (
+					    unsettled-but-not-failed states, danger for `not delivered`.
+					    Rendered inline below `LARGE_TEXT_SCALE`; at and above it the
+					    word takes its own line below the row — see the render and its
+					    measurements there. */}
+					{word !== null && !deliveryOnOwnLine ? (
 						<Text
 							className={cx(
 								"shrink-0 text-body-sm",
@@ -232,9 +278,39 @@ export const ToolRow = ({ entry, testID }: ToolRowProps) => {
 						</Text>
 					) : null}
 				</View>
+				{/* The word's own line at large text. Left inline, the word is
+				 *  `shrink-0` and grows with the type: measured on the 390 pt phone it
+				 *  reached 265 pt against the 350 pt row at 200 % and took the tool
+				 *  name and the whole summary — the message's TARGET — to 0 pt, which
+				 *  the expansion then never repeated (design round 1, D1). On its own
+				 *  line the row reads exactly as it did before the word existed
+				 *  (name 58 pt, summary 209 pt at 200 % — the base build's own
+				 *  numbers) and the word stays whole. It moves by being a sibling of
+				 *  the line row rather than by wrapping, so the rule is one rule on
+				 *  phone and tablet alike; below the threshold nothing changes. */}
+				{deliveryOnOwnLine ? (
+					<Text
+						className={cx(
+							"text-body-sm",
+							delivery === "failed" ? "text-danger" : "text-warning",
+						)}
+						numberOfLines={1}
+					>
+						{word}
+					</Text>
+				) : null}
 			</Pressable>
 			{open && details ? (
 				<View className="flex flex-col gap-1.5 pb-1 pl-6">
+					{/* D1's recoverability half: the summary restated at the top of the
+					 *  expansion. At 150 % and up the collapsed row keeps it with the word
+					 *  moved aside, but even at 100 % it is clipped (`138 of 187`), and a
+					 *  resend decision leans on the target being readable somewhere. Only
+					 *  rows carrying a delivery word render it: a `delivered` send is the
+					 *  row it always was. */}
+					{word !== null && entry.summary ? (
+						<Text className="text-body-sm text-ink-dim">{entry.summary}</Text>
+					) : null}
 					{entry.intent ? (
 						<Text className="text-body-sm text-ink-muted">{entry.intent}</Text>
 					) : null}
@@ -260,7 +336,11 @@ export const ToolRow = ({ entry, testID }: ToolRowProps) => {
 					) : null}
 					{blocks.diff.length > 0 ? <DiffBlock lines={blocks.diff} /> : null}
 					{blocks.output.length > 0 ? (
-						<TextBlock lines={blocks.output} tone="text-ink-muted" />
+						<TextBlock
+							lines={blocks.output}
+							tone="text-ink-muted"
+							capPx={outputWellCap(effectiveScale)}
+						/>
 					) : null}
 					{/* An interrupted call keeps its partial output and says so: a row that
 					    silently looks finished misreports what the tool did. */}

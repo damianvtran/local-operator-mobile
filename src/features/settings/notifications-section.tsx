@@ -12,7 +12,7 @@ import {
 	PUSH_ENABLE_LABEL,
 	type PushAvailability,
 } from "@/notifications/permission";
-import { isRelayError } from "@/relay";
+import { isRelayMissing } from "@/relay";
 import { CONTROL, REGION } from "@/ui/a11y";
 import { Button } from "@/ui/components/button";
 import { SectionHeader } from "@/ui/components/section-header";
@@ -96,12 +96,12 @@ export const NotificationsSection = () => {
 			const payload = await client.pushDevices();
 			setDeviceList({ kind: "ready", devices: payload.devices });
 		} catch (error) {
-			/* A 404 is a relay older than the route (S4a); anything else is a
+			/* The relay's own 404 is a relay older than the route (S4a); anything
+			 * else — the edge's unknown-tunnel 404 (a dead tunnel) included — is a
 			 * read that failed on a relay that may well have it. The two
 			 * sentences differ because the facts do. */
 			setDeviceList({
-				kind:
-					isRelayError(error) && error.status === 404 ? "unsupported" : "error",
+				kind: isRelayMissing(error) ? "unsupported" : "error",
 			});
 		}
 	}, [relay]);
@@ -124,12 +124,23 @@ export const NotificationsSection = () => {
 			<SectionHeader label="Notifications" />
 			{/* The state sentence. `null` is the read in flight — one line, no
 			 *  spinner: Settings is a static screen and a spinner here would be
-			 *  furniture. */}
-			<Text className="text-body-sm text-ink-muted">
-				{availability === null
-					? "Checking this phone's notification settings."
-					: PUSH_COPY[availability]}
-			</Text>
+			 *  furniture. `unknown` wears a mark, because a check that FAILED is
+			 *  not a refusal (`denied`) and must be distinguishable from one at a
+			 *  glance — and its sentence names the remedy the other states cannot
+			 *  (checking again), since this is the one state that can change on its
+			 *  own. */}
+			<View className="flex-row items-start gap-1.5">
+				{availability === "unknown" ? (
+					<Text className="font-mono text-mono-sm text-ink-muted" aria-hidden>
+						?
+					</Text>
+				) : null}
+				<Text className="min-w-0 flex-1 text-body-sm text-ink-muted">
+					{availability === null
+						? "Checking this phone's notification settings."
+						: PUSH_COPY[availability]}
+				</Text>
+			</View>
 			{availability !== null && canRequestPermission(availability) ? (
 				<Button
 					testID={CONTROL.settingsNotificationsEnable}

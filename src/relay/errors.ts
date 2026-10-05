@@ -362,6 +362,22 @@ export function isRelayError(value: unknown): value is RelayError {
 	return value instanceof RelayError;
 }
 
+/** Whether a failure is the relay's OWN "no such thing" answer: a definitive
+ *  `404` from the relay itself (`kind: "rejected"`), the clean
+ *  `{"error": "unknown session"}` shape `contract.md` §3.5 defines.
+ *
+ *  Deliberately not `status === 404` alone. The edge and the gateway answer
+ *  `404` for "this hostname is not a tunnel" too — the refusal of a machine IN
+ *  FRONT of the relay, so whatever was asked about may well exist behind it. It
+ *  classifies as `unknown-tunnel` (`relayErrorFromResponse`), and callers that
+ *  tell "gone" from "unreachable" must not read it as proof of absence: a dead
+ *  tunnel is a different fact from a deleted conversation. */
+export function isRelayMissing(error: unknown): boolean {
+	return (
+		isRelayError(error) && error.kind === "rejected" && error.status === 404
+	);
+}
+
 /** System error codes that mean the CERTIFICATE, not the network. Kept tight: a
  *  protocol-level TLS complaint (speaking TLS to the wrong port, for instance) is
  *  not a certificate the user has to fix, so it stays `transport`. */

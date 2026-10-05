@@ -14,9 +14,12 @@
  *   nothing.
  * - **Name the remedy, never "you will be notified".** ADR 0006 §2.4's rule:
  *   a state that cannot deliver says what WOULD change it (`denied` names
- *   system settings; `granted` names the push service this computer has to
- *   switch on). The design round owns the final wording — these strings are
- *   the PR's draft and live in one table so rewording is one edit.
+ *   system settings; `granted` and the rest name the push service this
+ *   computer has to switch on), and every state that could be read as "alerts
+ *   are on" also names what works today — alerts run only while the app is
+ *   open, the workaround ADR 0006 §2.4's draft carries. The design round owns
+ *   the final wording — these strings are the PR's draft and live in one table
+ *   so rewording is one edit.
  *
  * `unknown` exists because the read can fail honestly: expo-notifications can
  * answer a status this build does not know (a future iOS value), and the
@@ -53,12 +56,13 @@ export function availabilityFromStatus(status: unknown): PushAvailability {
 export const PUSH_COPY: Readonly<Record<PushAvailability, string>> = {
 	unsupported: "This build does not include notifications.",
 	granted:
-		"Allowed. Background alerts are not switched on for this computer yet — nothing will arrive until they are.",
+		"Allowed. Background alerts are not switched on for this computer yet — nothing will arrive until they are. Until then, alerts work only while Local Operator is open.",
 	denied:
-		"Notifications are turned off for this app in system settings. Turn them back on there to receive alerts.",
+		"Notifications are turned off for this app in system settings. Turn them back on there. Background alerts are not switched on for this computer yet — until they are, alerts work only while Local Operator is open.",
 	undetermined:
-		"Ask your phone for permission. Alerts arrive once this computer's push service is switched on.",
-	unknown: "Notifications could not be checked on this phone.",
+		"Ask your phone for permission. Background alerts are not switched on for this computer yet — until they are, alerts work only while Local Operator is open.",
+	unknown:
+		"Notifications could not be checked on this phone. This is not a refusal — reopen Settings to check again.",
 };
 
 /** Whether a state has a control to press. Only `undetermined` does: the

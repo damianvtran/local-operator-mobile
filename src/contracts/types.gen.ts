@@ -647,8 +647,12 @@ export interface PushDevicesResponse {
 	precedence: string;
 }
 
-/** `DELETE /api/push/devices/{device_id}` — the row is gone (pinned or revoked
- *  rows refuse before this shape is reached). */
+/** `DELETE /api/push/devices/{device_id}` — revokes the device and answers
+ *  `{"ok": true}`. A TOMBSTONE, not a row removal: the row stays with
+ *  `revoked_at` set (`push_devices.revoke` — that is what makes a revoke stick
+ *  for the same `install_id` instead of being undone by the app's next launch),
+ *  and the route is idempotent: an unknown or already-revoked id answers this
+ *  same shape rather than refusing. ("Pinned" is not a device concept.) */
 export interface PushDeviceDeleteResponse {
 	ok: true;
 }
