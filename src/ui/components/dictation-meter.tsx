@@ -27,8 +27,21 @@ const BAR_MIN_PX = 3;
  *  over the box — so the row's `overflow-hidden` took the shortfall off the trailing,
  *  NEWEST bar and clipped it to ≈1 px (design round 2, D7). At 2.5 px the group's
  *  min-content width is 16 × 2.5 + 15 × 2 = 70 px, inside the box with room to spare.
- *  The floor binds only at that one cell: everywhere wider the bars are
- *  `flex-1`-grown well above 2.5 px, so their painted width is unchanged. */
+ *
+ *  THE FLOOR IS INERT IN EVERY MEASURED CELL, which is a different claim from the
+ *  one this comment used to make. It is not that the 2.5 px floor clamps at
+ *  320 pt/200 %: the narrowest natural bar there measures 2.875 px, already above
+ *  2.5, so the floor clamps nothing and no cell's painted width changed when it
+ *  dropped from 3. Every wider cell's natural width is larger still (3.34 px at
+ *  320 pt/100 %, up to 9.78 px at 390 pt/150 %). The floor is a backstop for a box
+ *  narrower than any the matrix drives, not a value the meter currently rests on
+ *  (review round 3, R3-5).
+ *
+ *  RESIDUAL, bounded: the fit argument assumes the meter box never drops below
+ *  `LEVEL_BARS × 2.5 + (LEVEL_BARS − 1) × 2 = 70 px`, since that is where the floor
+ *  would start clamping and the trailing bar would clip again. The tightest measured
+ *  box is 76 px (320 pt at 200 %), leaving 6 px of slack — so this is a guard, not a
+ *  standing margin. */
 const BAR_MIN_W_PX = 2.5;
 
 /** The tallest. The row sits inside the composer's recording bar, which is a
