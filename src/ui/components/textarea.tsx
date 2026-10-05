@@ -61,19 +61,28 @@ export type TextareaProps = {
 const LINE_PX = 22;
 
 /** The line box of the field's OWN type: `text-body` is 16 pt at 1.5 → 24 pt, and
- *  a FILLED field reports exactly this from `contentSize` for its first line.
+ *  a FILLED field reports exactly this (before `FIELD_PAD_Y`) from `contentSize`.
  *
  *  It is a second constant, and not `LINE_PX`, because the two were conflated as
  *  the EMPTY field's floor and only there do they disagree: `LINE_PX` is the
- *  ramp's 13 pt `mono-code` line the six-line CAP was measured with, so an empty
- *  field rested at `22 × scale` while the first typed character reported
- *  `24 × scale`. The field then settled 4 pt taller at 150 % text and 16 pt at
- *  200 %, moving the whole composer and the transcript above it on the first
- *  keystroke — masked at 100 % only by `minHeight` being 48 there (design round 2,
- *  D1: measured 48→52 and 48→64 on the field and the composer). Deriving the
- *  empty floor from THIS constant is what makes the two states equal at every
- *  scale rather than equal-by-accident at one. */
+ *  ramp's 13 pt `mono-code` line the six-line CAP was measured with, while the
+ *  field's own text is `text-body` at 24. An empty field floored on the cap's line
+ *  therefore rested below the box its own first character would report, and the
+ *  shortfall surfaced the moment `minHeight` stopped masking it — design round 2,
+ *  D1: 48 → 52 at 150 % text and 48 → 64 at 200 %, on the field and on the whole
+ *  composer above it. */
 const BODY_LINE_PX = 24;
+
+/** The vertical box the field's own classes put around its text: `py-2` is 8 + 8.
+ *
+ *  A FILLED field's `contentSize` — the number the one-line state rests at — is a
+ *  SCROLL height, so it reports the text line PLUS this padding (measured: 36 + 16
+ *  = 52 pt at 150 % text, 48 + 16 = 64 at 200 %). An EMPTY field's floor has to
+ *  carry it too, or the two states differ by exactly one padding as soon as
+ *  `minHeight` (48, the web/audit profile's touch floor) stops masking it at
+ *  100 % text — which is the residual reflow design round 2 measured (48 → 52 and
+ *  48 → 64 on the field and the composer). */
+const FIELD_PAD_Y = 16;
 
 export const Textarea = ({
 	label,
@@ -90,15 +99,17 @@ export const Textarea = ({
 	testID,
 }: TextareaProps) => {
 	const { effectiveScale } = useTextScale();
-	/* One line's height and the cap, both at the reader's scale. At the default scale
-	 * these are exactly the old constants — 22 and `maxLines * 22` capped at
-	 * `TEXTAREA_MAX_PX` — so the 100 % geometry is unchanged by construction. */
+	/* The cap's line, at the reader's scale: `maxLines * 22` capped at
+	 * `TEXTAREA_MAX_PX`, so the 100 % ceiling is unchanged by construction. */
 	const line = LINE_PX * effectiveScale;
-	/* The one-line box a FILLED field rests at, and therefore the floor an EMPTY one
-	 * must take (see `BODY_LINE_PX`). Both the empty floors below and the minimum
-	 * term in the height come from it, so the two states are equal by construction
-	 * at every scale — the invariant design §2.5 D1 asks for. */
+	/* The field's text line at the reader's scale — the box `BODY_LINE_PX` names,
+	 * and the unit the placeholder's own line budget is expressed in. */
 	const bodyLine = BODY_LINE_PX * effectiveScale;
+	/* The one-line box a FILLED field rests at, and therefore the floor an EMPTY one
+	 * must take (see `BODY_LINE_PX` and `FIELD_PAD_Y`). Both the empty floors below
+	 * and the minimum term in the height come from it, so the two states are equal
+	 * by construction at every scale — the invariant design §2.5 D1 asks for. */
+	const oneLineBox = BODY_LINE_PX * effectiveScale + FIELD_PAD_Y;
 	const cap = Math.min(maxLines * line, TEXTAREA_MAX_PX * effectiveScale);
 	const [contentHeight, setContentHeight] = useState(line);
 	/* The placeholder is not part of `contentSize`, so the floor has to come from its
@@ -111,8 +122,9 @@ export const Textarea = ({
 	 * `placeholderMaxLines`). */
 	const placeholderFloor =
 		placeholderMaxLines === undefined
-			? placeholderHeight
-			: Math.min(placeholderHeight, bodyLine * placeholderMaxLines);
+			? placeholderHeight + FIELD_PAD_Y
+			: Math.min(placeholderHeight, bodyLine * placeholderMaxLines) +
+				FIELD_PAD_Y;
 	/* The clamped overlay that used to be painted over the field is GONE. It existed
 	 * because a `<textarea>`'s `::placeholder` cannot be told to stop wrapping, and one
 	 * that wraps paints its second line straight through the field's box (measured on
@@ -139,7 +151,7 @@ export const Textarea = ({
 	 * text, which is what the box is for. */
 	const contentFloor =
 		placeholderMaxLines !== undefined && value === ""
-			? bodyLine
+			? oneLineBox
 			: contentHeight;
 	const fieldState: FieldState = disabled
 		? "disabled"
@@ -217,7 +229,7 @@ export const Textarea = ({
 					 *  web/audit profile) have to be resolved together (D6). */
 					style={{
 						height: Math.min(
-							Math.max(contentFloor, bodyLine, placeholderFloor),
+							Math.max(contentFloor, oneLineBox, placeholderFloor),
 							cap,
 						),
 						minHeight: TOUCH_FLOOR,
