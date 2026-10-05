@@ -72,11 +72,15 @@ export default function Session() {
 	const router = useRouter();
 
 	const runtime = useSessionRuntime(sessionId);
+	/* The relay's capability block, off the same list frame the screen already reads
+	 * below. Declared before the composer because the composer's mic gate needs it. */
+	const capabilities = useListState((state) => state.capabilities);
 	const composer = useComposer({
 		sessionId,
 		source: runtime.source,
 		streaming: runtime.streaming,
 		ended: runtime.projection?.ended === true,
+		capabilities,
 	});
 
 	/** `null`, `"todos"` or `"subagents"`: one open panel at most. */
@@ -495,6 +499,7 @@ export default function Session() {
 						onRemoveImage={composer.removeImage}
 						onAttach={composer.attach}
 						attaching={composer.attaching}
+						voice={composer.voice}
 						onSend={composer.send}
 						onStop={composer.stop}
 						retainedMessage={
