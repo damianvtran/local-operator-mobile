@@ -5,19 +5,31 @@ import { View } from "react-native";
 
 import { LEVEL_BARS, type MeterStore } from "@/stt/levels";
 
-/** The shortest a bar ever gets, and its WIDTH floor too. Not zero: a flat meter
- *  must still read as a meter ("the microphone is on and hearing nothing") rather
- *  than as an empty row, which is the silent-take the meter exists to make visible
- *  before it becomes an empty transcript.
- *
- * It is a `minWidth` as well as a floor on the `height`, because `flex-1` gives a
- * bar a flex-BASIS of zero and react-native-web lets a flex item shrink to it: at a
- * text scale where the row is squeezed, every bar measured 0.0 px wide and the meter
- * — this row's headline — rendered as nothing (design round 1, D2: 320 pt/150 % and
- * 200 %, 390 pt/200 %). A minimum width the flex shrink cannot cross keeps each bar
- * visible; the row's `overflow-hidden` clips any that no longer fit rather than
- * letting them push the composer sideways. */
+/** The shortest a bar ever gets — its HEIGHT floor. Not zero: a flat meter must
+ *  still read as a meter ("the microphone is on and hearing nothing") rather than
+ *  as an empty row, which is the silent-take the meter exists to make visible
+ *  before it becomes an empty transcript. */
 const BAR_MIN_PX = 3;
+
+/** The bars' WIDTH floor — separate from, and lower than, the height floor, because
+ *  it exists for a different reason.
+ *
+ *  `flex-1` gives a bar a flex-BASIS of zero and react-native-web lets a flex item
+ *  shrink to it, so at a text scale where the row is squeezed every bar measured
+ *  0.0 px wide and the meter — this row's headline — rendered as nothing (design
+ *  round 1, D2: 320 pt/150 % and 200 %, 390 pt/200 %). A minimum width the flex
+ *  shrink cannot cross keeps each bar visible.
+ *
+ *  WHY 2.5 AND NOT THE 3 px HEIGHT FLOOR: the floor has to FIT its box. The group's
+ *  min-content width is `LEVEL_BARS` widths plus their `gap-0.5` (2 px) gaps, and the
+ *  narrowest meter box is 320 pt at 200 % (clientWidth ≈ 76 px, design round 2's
+ *  measurement). At a 3 px width floor that group is 16 × 3 + 15 × 2 = 78 px — 2 px
+ *  over the box — so the row's `overflow-hidden` took the shortfall off the trailing,
+ *  NEWEST bar and clipped it to ≈1 px (design round 2, D7). At 2.5 px the group's
+ *  min-content width is 16 × 2.5 + 15 × 2 = 70 px, inside the box with room to spare.
+ *  The floor binds only at that one cell: everywhere wider the bars are
+ *  `flex-1`-grown well above 2.5 px, so their painted width is unchanged. */
+const BAR_MIN_W_PX = 2.5;
 
 /** The tallest. The row sits inside the composer's recording bar, which is a
  *  `min-h-11` (44 pt) line, so the meter can never be the thing that sets the row's
@@ -72,7 +84,7 @@ export const DictationMeter = ({
 						key={index}
 						className="flex-1 rounded-full bg-danger"
 						style={{
-							minWidth: BAR_MIN_PX,
+							minWidth: BAR_MIN_W_PX,
 							height: BAR_MIN_PX + level * (BAR_MAX_PX - BAR_MIN_PX),
 						}}
 					/>
