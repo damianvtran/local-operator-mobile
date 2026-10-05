@@ -400,7 +400,16 @@ export const useComposer = (input: {
 			cancelDictationForSend();
 			inFlight.current = true;
 			const held = await envelopeStore.peek(sessionId);
-			if (held === null || endpoints === null) return;
+			if (held === null || endpoints === null) {
+				/* Nothing to replay (the envelope was evicted, or its 24 h TTL expired) or
+				 * no route: the retry does not happen, so it must not HOLD the composer.
+				 * The guard is set above the `await` on purpose — a second retry could
+				 * otherwise start inside it — so releasing it is this arm's job; an early
+				 * return that left it set made every later send and retry a silent no-op
+				 * until remount (agent review round 1). */
+				inFlight.current = false;
+				return;
+			}
 			setSending(true);
 			setError(null);
 			try {
@@ -532,7 +541,6 @@ export const useComposer = (input: {
 			if (inFlight.current) return;
 			setDraft(tap.fill);
 			if (!tap.submit || endpoints === null) return;
-			inFlight.current = true;
 			/* The run-immediately arm. Two things it must NOT do, both of which it did:
 			 *
 			 * - Derive the request from the DRAFT. The draft ref is assigned during
@@ -546,6 +554,18 @@ export const useComposer = (input: {
 			 *   the rule the typed path applies too. */
 			const request = slashTapRequest(command);
 			if (request === null) return;
+			/* The tap IS "a send like any other" (the line above), so it takes the composer
+			 * exactly as its typed twin `runSend` does: an in-flight dictation is cancelled
+			 * and its loss is said. Without this the transcript of a take still in flight
+			 * could land in the draft this tap just cleared, annotated `dictated`/`mixed` —
+			 * the durable-row provenance lie `use-composer.ts` calls a defect — because the
+			 * mic is disabled while `transcribing` but the field is not (agent review
+			 * round 1). */
+			cancelDictationForSend();
+			// Set AFTER the null check above: a return between the guard and the send would
+			// leave `inFlight` stuck true, making every later send a silent no-op until
+			// remount — the same leak the retry's early return had.
+			inFlight.current = true;
 			setNotice(null);
 			void sendSlashCommand({
 				client: endpoints,
@@ -561,7 +581,7 @@ export const useComposer = (input: {
 				},
 			});
 		},
-		[endpoints, sessionId, setDraft],
+		[endpoints, sessionId, setDraft, cancelDictationForSend],
 	);
 
 	const controls = useMemo(
