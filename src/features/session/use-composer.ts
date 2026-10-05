@@ -394,6 +394,10 @@ export const useComposer = (input: {
 	const retry = useCallback(() => {
 		void (async () => {
 			if (inFlight.current) return;
+			/* A retry is a send: it takes the composer exactly as the primary does, so an
+			 * in-flight dictation is cancelled and its loss is said. The web client's own
+			 * retry goes through its `send()` for this reason (design §2.5/U2). */
+			cancelDictationForSend();
 			inFlight.current = true;
 			const held = await envelopeStore.peek(sessionId);
 			if (held === null || endpoints === null) return;
@@ -433,7 +437,7 @@ export const useComposer = (input: {
 				setSending(false);
 			}
 		})();
-	}, [endpoints, envelopeStore, sessionId, streaming]);
+	}, [endpoints, envelopeStore, sessionId, streaming, cancelDictationForSend]);
 
 	const stop = useCallback(() => {
 		void (async () => {
