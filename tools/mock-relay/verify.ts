@@ -1228,6 +1228,30 @@ async function main() {
 				true,
 			);
 		}
+		// A scenario whose cells read an `/ended` receipt must serve the receipt
+		// on the row, or the cell renders the plain row and can collapse onto the
+		// populated one. `S15/ended` was exactly that: the served row carried no
+		// `ended` at all, the frame could never show the receipt the cell
+		// declares, and the identical-state check reported `S15/ended =
+		// S15/populated` at iphone-15-landscape / 200 % (nightly core sample).
+		// The wire fact mirrors the live capture `http/list_row_ended.json`.
+		//
+		// Scope: this selector is the `/ended` suffix alone, and the suffix is
+		// screen-agnostic (a future `S5/ended` pane receipt would ride it without
+		// reading the row). Other receipt classes need per-suffix predicates, not
+		// one flag check — `wedged` legitimately serves its count-null transition
+		// before the `degraded` flag arrives, so a naive `degraded === true`
+		// predicate would fail it — and a `degraded` guard (`S15/degraded-row`)
+		// is follow-up work rather than half-built here.
+		// (`cell: string` is annotated because the registry arrives through a
+		// dynamic import, which types the module `any`.)
+		if (registry[name].shows.some((cell: string) => cell.endsWith("/ended"))) {
+			check(
+				`scenario '${name}' serves the ended receipt its cell reads`,
+				rows.some((row) => row.ended === true),
+				true,
+			);
+		}
 		const firstSessionId = str(firstRow.session_id);
 		if (projection && world.projections?.[firstSessionId]) {
 			const expected = world.projections[firstSessionId];
