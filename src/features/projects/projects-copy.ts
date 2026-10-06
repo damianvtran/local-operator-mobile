@@ -189,3 +189,93 @@ export function linkedSessionState(link: LinkedSession): string | null {
 	if (typeof state !== "string" || state === "") return null;
 	return state === "stopped" ? "not running" : state;
 }
+
+/* ---------------------------------------------------------------- writes --- */
+
+/**
+ * The message a milestone name containing a slash gets, and the reason it is the
+ * PHONE that refuses it.
+ *
+ * The relay's remove route carries the milestone's name as the last PATH
+ * SEGMENT (`/api/projects/{key}/milestones/{name}`, `[^/]+` upstream), so a name
+ * with a slash is CREATABLE — the add route carries the name in its BODY — and
+ * then unaddressable: `ship%2Fv2` does not reach the route and the relay answers
+ * a bare `404 Not Found` with no JSON body at all (measured against an isolated
+ * daemon, both raw and percent-encoded). The real remedy is a relay route that
+ * does not put the key in the path; until then the honest control is an
+ * explanation rather than a button that cannot work.
+ */
+export const MILESTONE_SLASH_NOTE =
+	"Milestone names can't contain a slash. The route that removes one carries the name in its path, so a name with a slash could never be removed.";
+
+/** Whether a typed milestone name is one this build will send. */
+export function milestoneNameUsable(name: string): boolean {
+	const trimmed = name.trim();
+	return trimmed !== "" && !trimmed.includes("/");
+}
+
+/** Whether a name ALREADY on a milestone contains a slash — the other half of
+ *  the guard: such a milestone cannot be removed from here at all. */
+export function milestoneUnremovable(name: string): boolean {
+	return name.includes("/");
+}
+
+/**
+ * The tags a reader typed, split the way a list is typed.
+ *
+ * Commas or whitespace, the two separators the tag grammar itself cannot
+ * contain. The values are sent VERBATIM: an upper-case tag or a leading `#` is
+ * the store's to refuse, with its own sentence, rather than this field's to
+ * silently rewrite.
+ */
+export function parseTags(text: string): string[] {
+	return text
+		.split(/[\s,]+/)
+		.map((tag) => tag.trim())
+		.filter((tag) => tag !== "");
+}
+
+/** The deletion's confirmation sentence, naming what is lost and what is not. */
+export function deleteProjectBody(displayName: string): string {
+	return `Delete ${displayName}? The project row goes for good. Its linked sessions and their transcripts are not touched.`;
+}
+
+/** The milestone removal's confirmation sentence, the same two halves. */
+export function removeMilestoneBody(name: string): string {
+	return `Remove ${name} from this project? The milestone goes for good. The project's sessions and its progress line are not touched.`;
+}
+
+/**
+ * What a failed project WRITE says when the relay wrote no sentence of its own.
+ *
+ * A transport failure is the one case where the outcome is genuinely UNKNOWN:
+ * the request may have reached the store and its answer may have been lost, so
+ * this sentence says that rather than "it did not work", which is a claim this
+ * client cannot make. A definitive refusal never reaches here — it carries the
+ * relay's own words (`projectRefusalSentence`).
+ */
+export const WRITE_UNKNOWN_NOTE =
+	"We couldn't reach your computer, so we can't tell whether that was saved. Check the project before trying again.";
+
+/** The one-line receipt a successful write leaves. */
+export function writeReceipt(action: string, subject: string): string {
+	return `${action} ${subject}.`;
+}
+
+/**
+ * Whether a write's failure is the relay saying the row is GONE.
+ *
+ * Another surface — the tool, the desktop app, a second phone — deleted the
+ * project between the read and the write. A refusal sentence standing under a
+ * detail view for a row that no longer exists is a dead end (there is nothing
+ * left to retry against), so the screen says what happened and goes back to the
+ * listing, which is the shape the web client's sheet takes for the same case.
+ */
+export function isVanishRefusal(error: unknown): boolean {
+	return (
+		isRelayError(error) &&
+		error.kind === "rejected" &&
+		error.status === 404 &&
+		error.code === "project_not_found"
+	);
+}
