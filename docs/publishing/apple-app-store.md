@@ -396,13 +396,23 @@ login page or an empty state.
 "Apps may only use public APIs and must run on the currently shipping OS."
 Nothing here is unusual, with one caveat: the app talks to a loopback listener
 during Radient sign-in (see § 6). Loopback sockets are public API and permitted
-on iOS; the Local Network privacy prompt applies to LAN and Bonjour traffic, not
-to loopback. If a future feature discovers the desktop app over the LAN, that
-changes: it needs `NSLocalNetworkUsageDescription` and Bonjour service types, and
-is a different review conversation
-(<https://developer.apple.com/documentation/technotes/tn3179-understanding-local-network-privacy>
-— note this page is JavaScript-gated and could not be read by a text fetcher on
-2026-09-29; re-read it in a browser before relying on the LAN case).
+on iOS; the local-network permission applies to traffic to devices on a local
+network, which loopback is not — TN3179: "A local network is an IP network
+associated with a broadcast-capable network interface."
+
+The app ALSO offers a same-Wi-Fi path that connects to the relay on the reader's
+own computer at a private address (the no-tunnel case, ADR 0002 § 5). That path
+needs `NSLocalNetworkUsageDescription`, which the build ships and CI asserts out
+of the built `Info.plist`; the one-time alert it feeds appears on the first local
+connection, not at launch. `NSBonjourServices` remains deliberately absent: it
+attaches to Bonjour browsing or advertising, the app has no discovery, and a
+discovery feature is a different review conversation.
+
+(Source: TN3179,
+<https://developer.apple.com/documentation/technotes/tn3179-understanding-local-network-privacy>
+— read in full on 2026-10-06. The technote serves as plain text at its `.md`
+suffix; an earlier revision of this document called the page JavaScript-gated and
+unreadable by a text fetcher, and that note was stale.)
 
 ---
 

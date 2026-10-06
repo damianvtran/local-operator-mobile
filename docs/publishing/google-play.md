@@ -214,18 +214,22 @@ it does not remove the requirement, because account creation is still offered.
 | --- | --- | --- |
 | **Photos & video** | Apps targeting Android 13+ "may only request the `READ_MEDIA_IMAGES` and `READ_MEDIA_VIDEO` permissions if system pickers (like the Android Photo Picker) are not sufficient for your app to provide core functionality". Full compliance was mandatory from **2025-05-28**; non-compliant apps are subject to removal | <https://support.google.com/googleplay/android-developer/answer/14115180> (read 2026-09-29) |
 | Photo picker | The Android Photo Picker is the sanctioned route; custom pickers "are not automatically qualified" and need a declaration | same |
-| **Local network** | Android 16: opt-in via the `NEARBY_WIFI_DEVICES` permission group. **Android 17 (targetSdk 37): mandatory**, and local network is blocked by default, with the permission renamed `ACCESS_LOCAL_NETWORK` | <https://developer.android.com/privacy-and-security/local-network-permission> (read 2026-09-29) |
+| **Local network** | Android 16: opt-in via the `NEARBY_WIFI_DEVICES` permission. **Android 17 (targetSdk 37): mandatory** — local network is blocked by default for apps that update their target SDK, under the renamed `ACCESS_LOCAL_NETWORK` runtime permission; apps below targetSdk 37 ("legacy apps") keep an implicit grant, and Google's guidance is not to request the permission at runtime before targeting 37 | <https://developer.android.com/privacy-and-security/local-network-permission> (read 2026-10-06) |
 | **Ads** | Must declare whether the app contains ads; the answer shows as a "Contains ads" label | <https://support.google.com/googleplay/android-developer/answer/9859455> (read 2026-09-29) |
 | **Financial features** | **All** developers must complete the Financial features declaration, "including apps on closed testing, open testing, or production tracks", and apps with no financial features must still certify that | <https://support.google.com/googleplay/android-developer/answer/13849271> (read 2026-09-29) |
 
 **For this app:** the image-attachment feature sends one photo into a session.
 Use the **system photo picker** and request no media permission at all; the
 Play Photo and Video Permissions policy is then not engaged. On local network:
-the app reaches a tunnel over the internet, so it needs no LAN permission for the
-Radient route — but any future "find my computer on the LAN" feature must be
-built before the Android 17 enforcement date or it will fail silently on
-targetSdk 37. Localhost/loopback traffic is unaffected by that project, which is
-what an on-device OAuth loopback listener uses.
+the Radient route reaches a tunnel over the internet, so it needs no LAN
+permission; the same-Wi-Fi path (a literal private address, no tunnel — ADR 0002
+§ 5) is where the project lands, and the app is configured for it — the manifest
+declares `ACCESS_LOCAL_NETWORK` (inert while `targetSdk 36`; the runtime request
+lands with the targetSdk-37 bump, per Google's guidance above), and the cleartext
+half is `android:usesCleartextTraffic`, asserted in CI on the release merged
+manifest. Localhost/loopback traffic is unaffected by the local-network project,
+which is what an on-device OAuth loopback listener uses; from Android 17 the
+platform also carries an implicit localhost configuration of its own.
 
 ---
 
