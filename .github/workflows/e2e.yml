@@ -265,9 +265,9 @@ jobs:
     # (run 37379067992, this job, the tiers as they stand): setup and checkouts 21 s +
     # install 4 s + typecheck 1 s + EXPORT 34 s + RELAY START 1 s + capture 1044 s +
     # canary 81 s + stop relay 0 s + upload of the 91 MB artifact 6 s = 1192 s, the job's
-    # whole measured wall time, plus the audit at its own measured rate — 504 cells x
-    # 1.25 s = 630 s, which is DERIVED rather than taken from that run, whose capture
-    # failed the identical-state gate before the audit step ran. That is ~1,822 s ≈ 30
+    # whole measured wall time, plus the audit at its own measured rate — 528 cells x
+    # 1.25 s = 660 s, which is DERIVED rather than taken from that run, whose capture
+    # failed the identical-state gate before the audit step ran. That is ~1,852 s ≈ 31
     # min against the 60 below, so the bound is ~2x the work: the headroom is the point.
     # THE OLD FORM WAS FALSE, not merely imprecise:
     # `install + typecheck 10 + capture 30 + audit 15 + canary 5 < 60` sums to exactly
@@ -341,16 +341,16 @@ jobs:
         # 36669731994) without GitHub reaping it, so the run said only that it was
         # still going. Measured again on 2026-10-03 (run 37098393675), the capture
         # costs 2.24 s/cell — 403 cells / 1209 frames in 903.1 s — so the `core`
-        # plan of 1512 cells needs ~56 min and cannot finish inside this bound. The
-        # `--tier ci` sample can: 504 cells, ~19 min at the same rate, which leaves
-        # the audit and the canary their own steps below. (`full` is 5544 cells, and
+        # plan of 1584 cells needs ~59 min and cannot finish inside this bound. The
+        # `--tier ci` sample can: 528 cells, ~20 min at the same rate, which leaves
+        # the audit and the canary their own steps below. (`full` is 5808 cells, and
         # stays a dispatched or local run.)
         #
         # RAISED 20 -> 30 WITH THE CI AXIS, and the two move together: `CI_SCALES`
-        # gained the boundary step (135), so this sample is 504 cells rather than 336.
-        # 30 is above the plan's own derived deadline (504 x 3 s = 25.2 min), which is
+        # gained the boundary step (135), so this sample is 528 cells rather than 336.
+        # 30 is above the plan's own derived deadline (528 x 3 s = 26.4 min), which is
         # the property the step bound has to keep — a bound that fires every run stops
-        # being a signal — and ~1.6x the measured cost, the headroom the other steps
+        # being a signal — and ~1.5x the measured cost, the headroom the other steps
         # here carry.
         timeout-minutes: 30
         # THE DOCUMENTED INVOCATION, through the harness's own script
@@ -376,7 +376,7 @@ jobs:
         # BOUND DERIVED FROM THE CELL COUNT, not guessed. On run 37167390506 this
         # step audited 250 of the ci tier's 256 cells in 312 s — 1.25 s/cell, with
         # no FAIL row — so the tier as it stood then was 256 x 1.25 s = ~5.3 min. It
-        # plans 504 cells today (~10.5 min at that rate) and 15 gives ~1.4x headroom
+        # plans 528 cells today (~11 min at that rate) and 15 gives ~1.35x headroom
         # over that, the ratio this bound has always carried; it moved 10 -> 15 with
         # the capture above when `CI_SCALES` gained the boundary step. At 5 it was killed with six cells to go: a bound below the
         # work it contains, the same shape that made the capture's deadline derive
@@ -434,29 +434,29 @@ jobs:
     # WHY THIS JOB EXISTS. The operator's requirement is QA "across a variety of different
     # device sizes of phone … and tablets both vertical and horizontal", and until this job
     # nothing automated covered it: the per-push `web-audit` job runs `--tier ci`, which is
-    # 2 of the matrix's 19 declared profiles, and both `core` (5 profiles / 1512 cells) and
-    # `full` (19 / 5544) were local or dispatched only. This job captures and audits `core`,
+    # 2 of the matrix's 19 declared profiles, and both `core` (5 profiles / 1584 cells) and
+    # `full` (19 / 5808) were local or dispatched only. This job captures and audits `core`,
     # on the NIGHTLY schedule only, so the per-push path is untouched and the `ci` job keeps
-    # its own 30-minute capture bound rather than being stretched to fit a 56-minute one.
+    # its own 30-minute capture bound rather than being stretched to fit a 59-minute one.
     #
     # SIZED FROM THE MEASUREMENT, NOT FROM HOPE. The runner's own rate is 2.24 s/cell
     # (403 cells / 1209 frames in 903.1 s, run 37098393675, a plan of 403 cells then),
-    # which is also the number `docs/e2e/README.md` uses to say a `core` run is ~56
-    # minutes: 1512 x 2.24 s = 3,387 s.
+    # which is also the number `docs/e2e/README.md` uses to say a `core` run is ~59
+    # minutes: 1584 x 2.24 s = 3,548 s.
     # The plan this job holds is the one the capture prints before it renders anything, so
     # the bound is checked against THAT rather than against a table, and each plan is
     # pinned to the ref that printed it: at 85b2785 `--plan --tier core --consecutive`
     # printed `858 cells x 3 frame(s) = 2574 frames` with a derived `deadline: 2574 s`, and
-    # at THIS head it prints `1512 cells x 3 frame(s) = 4536 frames` and `deadline: 4536 s`
+    # at THIS head it prints `1584 cells x 3 frame(s) = 4752 frames` and `deadline: 4752 s`
     # (3000 ms/cell). The capture step's 90 is above both derived deadlines (so the step
-    # cannot cut short the budget the run computed for itself) and ~1.6x the ~56 min the
-    # 1512 cells cost at 2.24 s/cell — the same headroom the per-push capture (30 for ~19)
-    # and audit (15 for ~10) steps carry.
+    # cannot cut short the budget the run computed for itself) and ~1.5x the ~59 min the
+    # 1584 cells cost at 2.24 s/cell — the same headroom the per-push capture (30 for ~20)
+    # and audit (15 for ~11) steps carry.
     # The audit runs at 1.25 s/cell (250 of the 256 cells the tier held then in 312 s, run
-    # 37167390506), so `core` is 1512 x 1.25 s = 1,890 s ≈ 32 min and its step bound is 50.
+    # 37167390506), so `core` is 1584 x 1.25 s = 1,980 s ≈ 33 min and its step bound is 50.
     # The job bound holds its parts, the invariant the other jobs in this file state:
     # `install + export + capture 90 + audit 50 < 170`. This is a ~2.5-hour nightly job
-    # (~56 min of capture and ~32 min of audit); it does not run on a pull request.
+    # (~59 min of capture and ~33 min of audit); it does not run on a pull request.
     #
     # EXPECTED FIRST-RUN VERDICT: THIS JOB IS RED, AND THAT IS WHAT IT IS FOR. It has
     # never executed (schedule/dispatch only). A real local `--tier core --consecutive`

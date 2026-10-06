@@ -346,11 +346,11 @@ export function describeDeviceCoverage(coverage: {
  * The CI tier: the bounded sample the per-push capture job takes.
  *
  * WHY A THIRD TIER, AND WHY IT IS HERE RATHER THAN A `--devices` LIST IN YAML.
- * The `core` tier is 1512 cells: the whole declared cell list (42 cells) x 2 themes x
- * (3 phones x 4 scales + 2 tablets x 3 scales) — 42 x 2 x 18, the tier's 5 profiles —
+ * The `core` tier is 1584 cells: the whole declared cell list (44 cells) x 2 themes x
+ * (3 phones x 4 scales + 2 tablets x 3 scales) — 44 x 2 x 18, the tier's 5 profiles —
  * and the CI job's capture step is bound at 30 minutes. Measured on the runner, that is
  * 2.24 s/cell: 403 cells in 903 s (run 37098393675, a plan of 403 cells then), so a core
- * run needs ~56 minutes. The job's first real
+ * run needs ~59 minutes. The job's first real
  * run of this path
  * was therefore cut off by the harness's own 900 s deadline with 585 cells
  * unvisited, and reported them as cells with no frame.
@@ -379,11 +379,11 @@ export function describeDeviceCoverage(coverage: {
  *     `CI_SCALES` below for why the boundary earns the third slot and 150% does
  *     not. 150% stays in `core`, which sweeps every scale.
  *
- * That is 42 cells x 2 themes x (2 profiles x 3 scales) = 504 cells, ~19 minutes at
+ * That is 44 cells x 2 themes x (2 profiles x 3 scales) = 528 cells, ~20 minutes at
  * the measured rate: inside the step bound (raised with it, see `CI_SCALES`) with
  * the same headroom it always carried. `core` and `full` are unchanged and stay the
- * local and dispatched samples, so the full 1512-cell `core` matrix and the
- * 5544-cell `full` matrix remain runnable — nothing is only reachable through CI.
+ * local and dispatched samples, so the full 1584-cell `core` matrix and the
+ * 5808-cell `full` matrix remain runnable — nothing is only reachable through CI.
  */
 export const CI_DEVICES: string[] = ["iphone-se", "tablet-landscape"];
 
@@ -401,7 +401,7 @@ export const CI_DEVICES: string[] = ["iphone-se", "tablet-landscape"];
  * sweeps every scale, so nothing is lost by composing the two sets differently.
  *
  * WHAT IT COSTS, because it is NOT free and the two are one decision. Three scales on
- * both CI profiles is 504 cells, +50 % over the two-scale 336, so the per-push capture
+ * both CI profiles is 528 cells, +57 % over the two-scale 336, so the per-push capture
  * and audit bounds in `.github/workflows/e2e.yml` were raised with it (capture 20 → 30,
  * audit 10 → 15, job 50 → 60). A bound that fires every run stops being a signal, so
  * this list and that bound have to move together: reverting the bounds without
