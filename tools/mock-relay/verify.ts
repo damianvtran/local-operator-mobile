@@ -1228,6 +1228,22 @@ async function main() {
 				true,
 			);
 		}
+		// A scenario whose cells read a ROW RECEIPT must serve the receipt on the
+		// row, or the cell renders the plain row and can collapse onto the
+		// populated one. `S15/ended` was exactly that: the served row carried no
+		// `ended` at all, the frame could never show the receipt the cell
+		// declares, and the identical-state check reported `S15/ended =
+		// S15/populated` at iphone-15-landscape / 200 % (nightly core sample).
+		// The wire fact mirrors the live capture `http/list_row_ended.json`.
+		// (`cell: string` is annotated because the registry arrives through a
+		// dynamic import, which types the module `any`.)
+		if (registry[name].shows.some((cell: string) => cell.endsWith("/ended"))) {
+			check(
+				`scenario '${name}' serves the ended receipt its cell reads`,
+				rows.some((row) => row.ended === true),
+				true,
+			);
+		}
 		const firstSessionId = str(firstRow.session_id);
 		if (projection && world.projections?.[firstSessionId]) {
 			const expected = world.projections[firstSessionId];
