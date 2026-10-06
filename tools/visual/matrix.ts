@@ -738,20 +738,28 @@ export const IDENTICAL_FRAME_EXEMPTIONS: IdenticalFrameClass[] = [
 			"that distinguish these cells — the 520-row transcript, the code-block/diff/table " +
 			"rows, the subagent roster's own rows, and the transcript's TOP (the message-plus-bar " +
 			"rows the two `path:` cells pin the viewport to) — start below the viewport, so the PNG " +
-			"is all chrome. The content differs at every device and scale (each cell reaches its own " +
-			"root or marker), which is what makes this a limit of the camera rather than a collapse. " +
+			"is all chrome. The content differs for every subset the one-view coincidence on this " +
+			"class's cells does not carry — each such cell reaches its own root or marker — which is " +
+			"what makes this a limit of the camera rather than a collapse. The one subset the " +
+			"coincidence entry carries — `S5/populated-long` against the `?lo-scroll=top/condensed` " +
+			"cell at iphone-se / 200 % — is a composition declared there (content digests EQUAL: " +
+			"`3911696863f1487d` dark, `0063b6b8723f5676` light — run 37529153608); the check " +
+			"consults that table for a same-content partition before this one, so this entry is " +
+			"only ever asked for the subsets it can describe. " +
 			"THE CLASS IS FIVE NAMES ON ONE ENTRY on purpose: it was declared for `S5/populated-long` " +
 			"and `S5/rich-rows`, a third cell joined it when the capture first completed a whole " +
 			"tier — until then the stalls left cells missing and the comparison could not form the " +
 			"group — and the two `path:` cells joined it when the long-transcript scenario grew a " +
 			"top and an open state of its own (measured on the ci run of 37522263768, where the five " +
-			"rendered byte-identical at iphone-se with their content digests differing). A cell " +
+			"rendered byte-identical at iphone-se and their content digests differed for every " +
+			"subset except the `S5/populated-long` = `?lo-scroll=top/condensed` pair the coincidence " +
+			"entry carries). A cell " +
 			"joining an existing entry is evidence that the phenomenon is the one that entry " +
 			"describes, so it extends the statement rather than opening a second entry for the same " +
 			"thing. Declaring the CLASS is what makes that hold at every scale: these cells collide " +
 			"in whichever SUBSET a device, theme and scale produce — five ways at 200 % on the " +
-			"narrowest column, narrower subsets at 135 % and 100 % — and every subset is this " +
-			"phenomenon, not a finding of its own.",
+			"narrowest column, narrower subsets at 135 % and 100 % — and every subset not carried by " +
+			"the coincidence entry is this phenomenon, not a finding of its own.",
 	},
 ];
 

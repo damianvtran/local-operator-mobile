@@ -19,12 +19,20 @@
  *      what makes completion itself safe: a turn finishing changes nothing on
  *      screen (the requirement's "a turn being completed must not pop the
  *      scroll position").
- *   2. ONCE A TURN IS CONDENSED IT STAYS CONDENSED. The decision is monotone:
- *      the latch (`CondensePlan.latch`) records a turn the moment it first
- *      condenses, and nothing but the reader's own expansion changes its
- *      rendering afterwards. A later frame that regresses the turn's rows (the
- *      transport-cap caveat in `completion-visibility.ts`) cannot pop it back
- *      open, because the decision no longer depends on those rows.
+ *   2. ONCE A TURN IS CONDENSED IT STAYS CONDENSED — and its render is a
+ *      constant of the latch, not of the frame. The latch (`CondensePlan.latch`)
+ *      records a turn the moment it first condenses, with the facts a later
+ *      render must not re-decide: the bar's `steps`/`durationS`, and the span
+ *      of rows the collapse stands for. Nothing but the reader's own expansion
+ *      changes its rendering afterwards — not a later frame that regresses the
+ *      turn's rows (the transport-cap caveat in `completion-visibility.ts`),
+ *      and not the relay's capped tail window (`projection.py::_cap_tail`),
+ *      where the span's rows — eventually the closing answer itself — leave the
+ *      projection while the pinned turn stays: a row is hidden by this turn iff
+ *      it is in the frozen span, so a window that has slid past the span
+ *      entirely still shows the bar (its numbers state what the collapse stood
+ *      for), and the frame can neither re-open it, re-attach it to other rows,
+ *      nor change its height.
  *   3. THE BAR'S WORDS ARE DECIDED ONCE. `steps`/`durationS` freeze into the
  *      latch at the condense moment, so a frame that mutates an old row cannot
  *      change the bar's string — and therefore cannot change its height.
@@ -166,17 +174,23 @@ export interface TurnBarFacts {
 
 /**
  * What the latch remembers about a turn: the facts the bar froze with, and the
- * id of the row that closed the turn when it condensed.
+ * span of rows the collapse stands for — the rows between the opening message
+ * and the closing answer, AS THE FRAME THAT CONDENSED THE TURN carried them.
  *
- * The closing id is part of the record because the hidden span is "the rows
- * between the opening message and the closing answer" — and a later frame may
- * present that answer as a transport-cap prefix, which the live scan (rightly)
- * stops calling an answer. The latch's own id keeps the span where it was;
- * geometry does not move because the wire regressed a representation.
+ * The span is frozen rather than re-derived from each later frame, and that is
+ * the whole fix for the relay's real frame shape (a capped tail window,
+ * `projection.py::_cap_tail`): a later frame may present the closing answer as
+ * a transport-cap prefix (which the live scan, rightly, stops calling an
+ * answer), and the window slides, so the span's rows — eventually the closing
+ * row itself — leave the projection while the pinned turn stays. Re-deriving
+ * either is how a bar used to re-open (empty span) and then re-attach to a
+ * different chunk of the window. A row is hidden by this turn iff it is in the
+ * frozen span, so the latched turn's render cannot change for any subsequent
+ * frame, including frames where its own rows are no longer in the projection.
  */
 export interface LatchedTurn {
 	facts: TurnBarFacts;
-	closingId: string;
+	hiddenIds: readonly string[];
 }
 
 /** One row of the rendered transcript list. A bar's id is the a11y builder's
@@ -207,10 +221,12 @@ export interface TurnView {
 	/** The ids of every item this turn contributes, in order. */
 	itemIds: string[];
 	/** The row ids the collapse stands for — the rows between the opening message
-	 *  and the closing answer. Emitted into `itemIds` as well when the turn is
-	 *  open, so the field answers "what did the collapse hide", not "what is on
-	 *  screen now". */
-	hiddenIds: string[];
+	 *  and the closing answer, frozen at the condense moment so a later frame
+	 *  cannot move them. Emitted into `itemIds` as well when the turn is open.
+	 *  Deliberately not "what is on screen now": rows the frame no longer
+	 *  carries stay in the list, and rows the collapse never covered never
+	 *  enter it. */
+	hiddenIds: readonly string[];
 }
 
 export interface CondenseInput {
@@ -254,28 +270,24 @@ export function condensePlan(input: CondenseInput): CondensePlan {
 		const isActive = index === turns.length - 1;
 		const latchedTurn = latch.get(turn.key);
 		/*
-		 * The closing answer is the LATCHED one when this turn has condensed
-		 * before: a later frame may present that answer as a transport-cap prefix
-		 * — which the live scan, rightly, stops calling an answer, and which would
-		 * otherwise re-open a bar the reader has already seen. The scan is the
-		 * source only while the turn has no latch to trust.
+		 * THE LATCH OUTRANKS THE FRAME. A latched turn's render must be a pure
+		 * function of the latch for ANY later frame — including the relay's real
+		 * shape, where the projection is a capped tail window and the span's rows,
+		 * eventually the closing row itself, leave it. So the scan and a fresh
+		 * span are computed only while the turn has no latch to trust; a latched
+		 * turn reads its frozen span and nothing else from this frame.
 		 */
-		const scanned = closingAnswerIndex(entries, turn);
 		const closing =
-			latchedTurn === undefined
-				? scanned
-				: (indexOfId(entries, turn, latchedTurn.closingId) ?? scanned);
+			latchedTurn === undefined ? closingAnswerIndex(entries, turn) : null;
 		/*
-		 * The hidden span is only computable when the turn has a closing answer:
-		 * hidden rows are the ones between the opening user row and it.
+		 * The span the collapse stands for: for a first condensation, the rows
+		 * between the opening user row and the scanned closing in THIS frame (all
+		 * a first frame can honestly freeze); for a latched turn, the frozen list.
 		 */
-		const hiddenIds: string[] = [];
-		if (closing !== null && closing > turn.start + 1) {
-			for (let at = turn.start + 1; at < closing; at += 1) {
-				const row = entries[at];
-				if (row !== undefined) hiddenIds.push(row.id);
-			}
-		}
+		const spanIds: readonly string[] =
+			latchedTurn !== undefined
+				? latchedTurn.hiddenIds
+				: spanBetween(entries, turn, closing);
 		/*
 		 * Invariant 2 outranks the active-turn rule in the corner that should not
 		 * occur (a replacement frame — not an append — that makes a latched turn
@@ -289,21 +301,18 @@ export function condensePlan(input: CondenseInput): CondensePlan {
 			(turn.opensWithUserRow &&
 				!isActive &&
 				closing !== null &&
-				hiddenIds.length > 0);
-		if (condensed && latchedTurn === undefined && closing !== null) {
-			const closingRow = entries[closing];
-			if (closingRow !== undefined) {
-				latch.set(turn.key, {
-					facts: barFactsFor(entries, turn),
-					closingId: closingRow.id,
-				});
-			}
+				spanIds.length > 0);
+		if (latchedTurn === undefined && condensed && closing !== null) {
+			latch.set(turn.key, {
+				facts: barFactsFor(entries, turn, closing),
+				hiddenIds: spanIds,
+			});
 		}
 		const facts = latch.get(turn.key)?.facts ?? null;
 
 		const view: TurnView = {
 			key: turn.key,
-			condensed: condensed && hiddenIds.length > 0,
+			condensed,
 			bar: null,
 			itemIds: [],
 			hiddenIds: [],
@@ -318,9 +327,9 @@ export function condensePlan(input: CondenseInput): CondensePlan {
 		const open = input.expanded.has(turn.key);
 		if (view.condensed && facts !== null) {
 			view.bar = facts;
-			view.hiddenIds = hiddenIds;
+			view.hiddenIds = spanIds;
+			const barId = turnBarId(turn.key);
 			if (!open) {
-				const barId = turnBarId(turn.key);
 				items.push({
 					kind: "bar",
 					id: barId,
@@ -330,11 +339,18 @@ export function condensePlan(input: CondenseInput): CondensePlan {
 					headline: turnHeadline(opening?.text ?? ""),
 				});
 				view.itemIds.push(barId);
-				// The hidden rows are the collapse; when the turn is open they are
-				// emitted below like any other row.
-				for (let at = closing ?? turn.end + 1; at <= turn.end; at += 1) {
+				/*
+				 * The collapse hides exactly its own frozen span; nothing else is
+				 * ever hidden by this turn. The closing-absent frame — the window
+				 * has slid past the span — needs no boundary: the intersection is
+				 * simply empty, the bar stays (its numbers state what the collapse
+				 * stood for), and every row the frame still carries renders. This
+				 * is the whole point: the frame cannot re-decide the collapse.
+				 */
+				const hidden = new Set(spanIds);
+				for (let at = turn.start + 1; at <= turn.end; at += 1) {
 					const row = entries[at];
-					if (row === undefined) continue;
+					if (row === undefined || hidden.has(row.id)) continue;
 					items.push({ kind: "entry", id: row.id, entry: row });
 					view.itemIds.push(row.id);
 				}
@@ -343,7 +359,6 @@ export function condensePlan(input: CondenseInput): CondensePlan {
 			}
 			// Expanded: the bar still leads the rows it was hiding, so the
 			// disclosure that opened them is where the reader left it.
-			const barId = turnBarId(turn.key);
 			items.push({
 				kind: "bar",
 				id: barId,
@@ -366,27 +381,40 @@ export function condensePlan(input: CondenseInput): CondensePlan {
 	return { items, turns: views, latch };
 }
 
-/** The row id's index within one turn, or `null` when this frame's slice no
- *  longer carries it. */
-function indexOfId(
+/** The rows between the opening user row and the closing answer, as one frame
+ *  carries them: a first condensation can only freeze what it can see (a window
+ *  that has already slid may have lost the span's oldest rows — nothing can
+ *  re-hide rows the wire no longer sends; see the module note). */
+function spanBetween(
 	entries: readonly TranscriptEntry[],
 	turn: TranscriptTurn,
-	id: string,
-): number | null {
-	for (let at = turn.start; at <= turn.end; at += 1) {
-		if (entries[at]?.id === id) return at;
+	closing: number | null,
+): readonly string[] {
+	if (closing === null || closing <= turn.start + 1) return [];
+	const ids: string[] = [];
+	for (let at = turn.start + 1; at < closing; at += 1) {
+		const row = entries[at];
+		if (row !== undefined) ids.push(row.id);
 	}
-	return null;
+	return ids;
 }
 
-/** The bar's facts for one turn: the tool rows it will hide. */
+/** The bar's facts for one turn: the tool rows the collapse hides — those
+ *  strictly inside the span (rows after the closing answer are statements that
+ *  stay visible, so a collapsed turn never has tools there).
+ *
+ *  `steps` counts TOOL rows; the span itself may also hide non-tool rows (a
+ *  steer, a notice), so "N steps" and "the span is N rows long" are two
+ *  different quantities by design — the bar states the former, the collapse
+ *  hides the latter. */
 function barFactsFor(
 	entries: readonly TranscriptEntry[],
 	turn: TranscriptTurn,
+	closing: number,
 ): TurnBarFacts {
 	let steps = 0;
 	let durationS = 0;
-	for (let at = turn.start + 1; at <= turn.end; at += 1) {
+	for (let at = turn.start + 1; at < closing; at += 1) {
 		const entry = entries[at];
 		if (entry?.kind !== "tool") continue;
 		steps += 1;
