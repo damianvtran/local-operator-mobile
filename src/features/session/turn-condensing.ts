@@ -262,7 +262,7 @@ export function condensePlan(input: CondenseInput): CondensePlan {
 		 */
 		const scanned = closingAnswerIndex(entries, turn);
 		const closing =
-			latchedTurn === null || latchedTurn === undefined
+			latchedTurn === undefined
 				? scanned
 				: (indexOfId(entries, turn, latchedTurn.closingId) ?? scanned);
 		/*
