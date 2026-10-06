@@ -12,11 +12,7 @@ import {
 	writeReceipt,
 } from "@/features/projects/projects-copy";
 import { useUiStore } from "@/state/ui-store";
-import {
-	CONTROL,
-	projectCreateStatusId,
-	SURFACE,
-} from "@/ui/a11y";
+import { CONTROL, projectCreateStatusId, SURFACE } from "@/ui/a11y";
 import { Alert } from "@/ui/components/alert";
 import { Button } from "@/ui/components/button";
 import { Chip } from "@/ui/components/chip";

@@ -56,9 +56,9 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import {
 	type Affordance,
+	type AffordanceOutcome,
 	describeAffordance,
 	runAffordances,
-	type AffordanceOutcome,
 	waitForTestID,
 } from "../lib/affordance.ts";
 import { bool, csv, num, parseArgs, str } from "../lib/args.ts";

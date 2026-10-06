@@ -222,7 +222,12 @@ export async function runAffordances(
 		for (;;) {
 			const reading: unknown = await page.evaluate(affordanceScript(action));
 			result = typeof reading === "string" ? reading : "missing";
-			if (result === "ok" || result === "unreachable" || result === "not-a-field") break;
+			if (
+				result === "ok" ||
+				result === "unreachable" ||
+				result === "not-a-field"
+			)
+				break;
 			if (Date.now() >= deadline) break;
 			await sleep(pollMs);
 		}

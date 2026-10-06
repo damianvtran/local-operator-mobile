@@ -1,13 +1,19 @@
-import { Modal, Pressable, Text, useWindowDimensions, View } from "react-native";
+import {
+	Modal,
+	Pressable,
+	Text,
+	useWindowDimensions,
+	View,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { ScopedVariables } from "uniwind";
 import { CONTROL, ROLE } from "@/ui/a11y";
 import { useTokenColor } from "@/ui/appearance";
+import { maxColumnWidth } from "@/ui/column";
 import { Button } from "@/ui/components/button";
 import { Heading } from "@/ui/components/heading";
 import { useModalStackEntry } from "@/ui/components/modal-stack-entry";
-import { maxColumnWidth } from "@/ui/column";
 import { useShadow } from "@/ui/elevation";
 import { useTextScale } from "@/ui/text-scale-provider";
 import { DIALOG_SURFACE_CLASS } from "@/ui/variants";

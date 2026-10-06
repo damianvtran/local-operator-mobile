@@ -289,18 +289,25 @@ describe("the mock's project store on the writes the relay was measured to take"
 			const captured = fix.http.get(name) as {
 				request?: { body?: Record<string, unknown> };
 				json?: {
-					project?: { milestones?: Array<{ name?: string; target_date?: unknown }> };
+					project?: {
+						milestones?: Array<{ name?: string; target_date?: unknown }>;
+					};
 				};
 			};
 			const requestBody = captured.request?.body;
-			expect(requestBody, `${name} records the request it captured`).toBeDefined();
+			expect(
+				requestBody,
+				`${name} records the request it captured`,
+			).toBeDefined();
 			const expected = captured.json?.project?.milestones?.find(
 				(row) => row.name === "beta cut",
 			)?.target_date;
 			const answered = answerOf(
 				projects.setMilestone("capture-writes", requestBody as never),
 			).json as {
-				project?: { milestones?: Array<{ name?: string; target_date?: unknown }> };
+				project?: {
+					milestones?: Array<{ name?: string; target_date?: unknown }>;
+				};
 			};
 			const actual = answered.project?.milestones?.find(
 				(row) => row.name === "beta cut",

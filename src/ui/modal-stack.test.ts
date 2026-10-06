@@ -77,7 +77,9 @@ describe("the modal stack", () => {
 
 	it("notifies a subscriber on every mount and unmount", () => {
 		const readings: number[] = [];
-		const unsubscribe = subscribeToModalStack(() => readings.push(modalStackDepth()));
+		const unsubscribe = subscribeToModalStack(() =>
+			readings.push(modalStackDepth()),
+		);
 
 		const a = open();
 		const b = open();
