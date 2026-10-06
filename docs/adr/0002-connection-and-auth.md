@@ -523,9 +523,11 @@ only honest if the build carries the native change too:
   `ACCESS_LOCAL_NETWORK` at runtime prior to targeting SDK 37"
   ("Local network permission", developer.android.com, read 2026-10-06). The runtime
   request therefore lands in the same change as the targetSdk-37 bump, where it
-  means something; what ships now is the declaration plus copy that reads a blocked
-  attempt correctly when one occurs (`tunnel-verdict.ts`, the `local-network`
-  verdict).
+  means something — and the COPY half lands with it: while the build targets 36
+  the permission cannot be the reason anything failed, so the Android sentence
+  ships the machine-side check only and takes its Settings path (Google's own
+  group, "Settings > Apps > [App Name] > Permissions > Nearby devices") in that
+  same change (`tunnel-verdict.ts`, the `local-network` verdict).
 - **iOS (amended 2026-10-06 — the page carries two readings, so both
   mechanisms ship):** the same shape, set through `ios.infoPlist` in `app.config.ts`.
   Apple's page for the key says it "controls whether App Transport Security (ATS)

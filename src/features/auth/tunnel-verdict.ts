@@ -149,11 +149,14 @@ export function verdictSentence(
 				 *  measures, so the copy must not assert it (see the kind above). */
 				return "Nothing answered at that address on this network. Check the computer is awake and running the relay. If both are true, it may be the local-network permission: allow Local Operator under Settings → Privacy & Security → Local Network, then tap Test the connection.";
 			}
-			if (platform === "android") {
-				return "Nothing answered at that address on this network. Check the computer is awake and running the relay. If both are true, the local-network permission is the remaining gate: Android blocks an app from reaching devices on your network until it is allowed. Allow Local Operator under Settings → Apps → Local Operator → Permissions, then test again.";
-			}
-			/* Web keeps the machine-side sentence: a browser has no such permission to
-			 *  grant. */
+			/* Android carries the machine-side half only while the build targets 36:
+			 *  local network is open there (legacy apps receive an implicit grant)
+			 *  and `ACCESS_LOCAL_NETWORK` is declared but deliberately never requested
+			 *  until the targetSdk-37 bump, so a Settings path would name a gate this
+			 *  build cannot have. The permission half lands WITH that bump, where
+			 *  Google's own path names the group: "Settings > Apps > [App Name] >
+			 *  Permissions > Nearby devices". Web keeps this same sentence: a browser
+			 *  has no such permission to grant. */
 			return "Nothing answered at that address on this network. Check the computer is awake and running the relay, then tap Test the connection.";
 		case "refused":
 			return (

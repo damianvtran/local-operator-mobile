@@ -241,9 +241,9 @@ describe("the local-network verdict", () => {
 
 	it("states the machine-side check, and the permission as a possibility only where the build can honour it", () => {
 		const verdict: TunnelTestVerdict = { kind: "local-network" };
-		// The machine-side check is the more common cause on a LAN, so it leads; the
-		// retry names the control by its real label.
-		for (const platform of ["ios", "web"] as const) {
+		// The machine-side check is the more common cause on a LAN, so it leads on
+		// every platform; the retry names the control by its real label.
+		for (const platform of ["ios", "android", "web"] as const) {
 			const sentence = verdictSentence(verdict, platform);
 			expect(sentence).toContain("awake");
 			expect(sentence).toContain("Test the connection");
@@ -256,15 +256,22 @@ describe("the local-network verdict", () => {
 		expect(ios).toContain("may be the local-network permission");
 		expect(ios).toContain("Settings → Privacy & Security → Local Network");
 		expect(ios.indexOf("awake")).toBeLessThan(ios.indexOf("Settings"));
-		expect(verdictSentence(verdict, "android")).toContain(
-			"Settings → Apps → Local Operator → Permissions",
-		);
+		// Android's Settings path lands with the targetSdk-37 bump, where the
+		// permission can actually block; on the shipping (36) build a path would
+		// name a gate the app cannot have, so the sentence carries no path at all.
+		expect(verdictSentence(verdict, "android")).not.toContain("Settings");
+		expect(verdictSentence(verdict, "android")).not.toContain("permission");
 	});
 
 	it("keeps the machine-only wording free of a phone menu it cannot grant", () => {
 		const sentence = verdictSentence({ kind: "local-network" }, "web");
 		expect(sentence).not.toContain("Settings");
 		expect(sentence).toContain("Test the connection");
+		// Android ships this same machine-only half for as long as it targets 36 —
+		// the permission half rides with the targetSdk-37 bump.
+		expect(verdictSentence({ kind: "local-network" }, "android")).toBe(
+			sentence,
+		);
 		// And it is still not the generic sentence this verdict exists to replace.
 		expect(sentence).not.toBe(
 			verdictSentence({ kind: "unreachable", detail: null }, "web"),
