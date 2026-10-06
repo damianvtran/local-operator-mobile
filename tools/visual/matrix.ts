@@ -725,23 +725,33 @@ export const IDENTICAL_FRAME_EXEMPTIONS: IdenticalFrameClass[] = [
 			"ever collided.",
 	},
 	{
-		cells: ["S5/populated-long", "S5/rich-rows", "S5/subagents"],
+		cells: [
+			"S5/populated-long",
+			"S5/rich-rows",
+			"S5/subagents",
+			"path:/session/{sessionId}?lo-scroll=top/condensed",
+			"path:/session/{sessionId}?lo-scroll=top&lo-expand=tc-conv-00-user/expanded",
+		],
 		reason:
 			"below-the-fold at iphone-se / 200 %: the 320 px column at 200 % text is filled by the " +
 			"session header (`Refactor… client`, the context/task/subagent panel rows), and the rows " +
-			"that distinguish these three cells — the 520-row transcript, the code-block/diff/table " +
-			"rows, and the subagent roster's own rows — start below the viewport, so the PNG is all " +
-			"chrome. The content differs at every device and scale (each cell reaches its own " +
-			"marker), which is what makes this a limit of the camera rather than a collapse. THE " +
-			"CLASS IS THREE NAMES ON ONE ENTRY on purpose: it was declared for `S5/populated-long` " +
-			"and `S5/rich-rows`, and a third cell joining it when the capture first completed a " +
-			"whole tier — until then the stalls left cells missing and the comparison could not " +
-			"form the group — is evidence that the phenomenon is the one this entry describes, so " +
-			"it extends the statement rather than opening a second entry for the same thing. " +
-			"Declaring the CLASS is what makes that hold at every scale: the same three cells " +
-			"collide three ways at 200 % and only two ways at 135 % (`S5/populated-long` = " +
-			"`S5/subagents`), and both are this phenomenon — subsets of one class, not two " +
-			"findings.",
+			"that distinguish these cells — the 520-row transcript, the code-block/diff/table " +
+			"rows, the subagent roster's own rows, and the transcript's TOP (the message-plus-bar " +
+			"rows the two `path:` cells pin the viewport to) — start below the viewport, so the PNG " +
+			"is all chrome. The content differs at every device and scale (each cell reaches its own " +
+			"root or marker), which is what makes this a limit of the camera rather than a collapse. " +
+			"THE CLASS IS FIVE NAMES ON ONE ENTRY on purpose: it was declared for `S5/populated-long` " +
+			"and `S5/rich-rows`, a third cell joined it when the capture first completed a whole " +
+			"tier — until then the stalls left cells missing and the comparison could not form the " +
+			"group — and the two `path:` cells joined it when the long-transcript scenario grew a " +
+			"top and an open state of its own (measured on the ci run of 37522263768, where the five " +
+			"rendered byte-identical at iphone-se with their content digests differing). A cell " +
+			"joining an existing entry is evidence that the phenomenon is the one that entry " +
+			"describes, so it extends the statement rather than opening a second entry for the same " +
+			"thing. Declaring the CLASS is what makes that hold at every scale: these cells collide " +
+			"in whichever SUBSET a device, theme and scale produce — five ways at 200 % on the " +
+			"narrowest column, narrower subsets at 135 % and 100 % — and every subset is this " +
+			"phenomenon, not a finding of its own.",
 	},
 ];
 
