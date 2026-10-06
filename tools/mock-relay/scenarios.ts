@@ -928,15 +928,12 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 	 * twelve seconds, covering every reader's window, while the content stops
 	 * growing after the fourth row — the windows moved, not the cell's render.
 	 *
-	 * What the consecutive frames show (review round 2, D4 — corrected to what
-	 * was actually captured): `-f0` is the pre-first-paint blank, and the
-	 * current set's `-f250` lands MID-ARRIVAL — the run-digest tables drawn,
-	 * the third table's header just arrived with no body rows yet, `responding`
-	 * in the working line — so the pair is §4.1 #10's evidence: no reflow
-	 * between the first painted frame and the settled one, with the arrival
-	 * visible where a fixed offset lands inside it. A stamp's position against
-	 * the stream depends on the boot, which is why the durable claim is the
-	 * pair's, not one frame's. */
+	 * What the consecutive frames show (review rounds 2–3, D4): `-f0` is the
+	 * pre-first-paint blank, and the `-f250` → `-settled` pair is §4.1 #10's
+	 * evidence — no reflow between the first painted frame and the settled
+	 * one. A stamp's position against the stream depends on the boot, which
+	 * is why the durable claim is the pair's, not one frame's, and why this
+	 * comment does not claim a particular frame catches a particular tick. */
 	add(
 		"tables-streaming",
 		"A streaming turn whose answer introduces a table: the divider and the first row land in one frame, then the rows arrive one per frame.",

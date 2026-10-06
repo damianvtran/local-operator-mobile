@@ -732,6 +732,7 @@ export const IDENTICAL_FRAME_EXEMPTIONS: IdenticalFrameClass[] = [
 			"S5/tables",
 			"S5/tables-end",
 			"S5/tables-in-view",
+			"S5/streaming-tables",
 			"path:/session/{sessionId}?lo-scroll=top/condensed",
 			"path:/session/{sessionId}?lo-scroll=top&lo-expand=tc-conv-00-user/expanded",
 			"path:/session/6714def86197/warm",
@@ -764,15 +765,15 @@ export const IDENTICAL_FRAME_EXEMPTIONS: IdenticalFrameClass[] = [
 			"`S5/tables` at iphone-15/light/200 % and `S5/tables-end` at iphone-se/dark/200 % " +
 			"share bytes with `S5/rich-rows` while the three cells' content digests all differ " +
 			"(`rich-rows` 0f1e6030ab8f, `tables` 1bc50098bd2d). `S5/tables-in-view` " +
-			"JOINS (review round 2): its whole purpose is a scroll assertion, and at 200 % on " +
-			"phones the transcript's visible band measures NO HEIGHT (QA's reading: " +
-			"`session-transcript` clientHeight 0 pt, iphone-15 and iphone-se), so the assertion " +
-			"moves `scrollTop` inside a band with no pixels to change — the content digests " +
-			"differ (brought vs not) while the PNGs are the same chrome-free band. That split " +
-			"is declared: the 100 %/135 % pairs where the same assertion is a no-op because " +
-			"there is no scroll room are the COINCIDENCE below, with the same content. The " +
-			"frames disagree wherever the tables are on screen — every 100 % frame, both " +
-			"devices — so this is the camera limit, not the app ignoring a state. The WARM-UP " +
+			"JOINS (review rounds 2–3): the pair it produces here is content-differs-frames-agree — " +
+			"measured at iphone-se/dark/100 and tablet-landscape/dark/100 — where the assertion's " +
+			"scroll re-renders the transcript's virtualization window without moving a drawn " +
+			"pixel, which is this camera limit; wherever the assertion cannot move anything the " +
+			"contents agree and the pair is the COINCIDENCE below. `S5/streaming-tables` " +
+			"JOINS (review round 3): wherever its settled frame is the same chrome the warm-up " +
+			"cell draws (its transcript below the fold) the bytes agree while its content digest " +
+			"still carries the streaming rows — the same bytes with different content, which is " +
+			"this camera limit. The WARM-UP " +
 			"CELL JOINS " +
 			"TOO, and it is the class's clearest case: it is the run's first navigation " +
 			"(`path:/session/6714def86197/warm`, the cell that burns the cold start), it " +
@@ -845,11 +846,10 @@ export const IDENTICAL_FRAME_COINCIDENCES: IdenticalFrameClass[] = [
 			"state really is the same content one interaction later, and the viewport is the " +
 			"only thing that hides the difference. Measured 2026-10-06 on " +
 			"`fix/hero-tables-strips`. `S5/tables-in-view` joins the class for the variants " +
-			"where ITS assertion is also a no-op — the transcript has no scroll room at 100 % " +
-			"(and 135 % on the same devices), so the bring scroll cannot move anything, the " +
-			"frames are the same view AND the same content, and each cell still reaches " +
-			"`session-tables`. Where the assertion changes pixels the frames differ; where the " +
-			"band has no height it joins the camera-limit exemption above.",
+			"where ITS assertion moves nothing — the same view AND the same content — measured " +
+			"at 135 %/200 % on both phones, all four phone-200 pairs included; the 100 % pairs, " +
+			"where the assertion does change the rendered content, are the camera-limit " +
+			"exemption above.",
 	},
 ];
 

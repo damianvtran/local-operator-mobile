@@ -250,19 +250,21 @@ const Table = ({ header, rows }: { header: string[]; rows: string[][] }) => {
 	}, [forced, scrolls]);
 
 	/* The `bring` half of the viewer: the transcript list's own scroll target is
-	 * not reachable from this component, so the frame asks the browser directly
-	 * (`scrollIntoView` walks every scrollable ancestor). It RE-ASSERTS on an
-	 * interval rather than firing once, and the first capture is what proved the
-	 * need: the transcript list runs its own initial scroll-to-end when its
-	 * content lays out, which lands AFTER a single early call and puts the frame
-	 * back at the bottom (measured — the one-shot version's 200 % frames were
-	 * byte-identical to the un-hooked cell's). The interval runs for twenty
-	 * seconds and the last assertion before the capture's settle wins — the 8 s
-	 * settle plus a cold-profile boot can otherwise outlast a shorter window.
-	 * `inline: "nearest"` leaves the horizontal offset alone, so the state the
-	 * frame lands in is the same cut-edge state the un-hooked cell renders.
-	 * Each table in a message asks; the last assertion comes from the last table
-	 * (the wide one with the cue), so that is what a `bring` frame shows. */
+	 * not reachable from this component, so the assertion walks the DOM to the
+	 * table's own scrollable ancestor and sets its scrollTop to its maximum —
+	 * the bottom the list itself rests at, so the two cannot fight. It
+	 * RE-ASSERTS on an interval rather than firing once, and the first capture
+	 * is what proved the need: the transcript list runs its own initial
+	 * scroll-to-end when its content lays out, which lands AFTER a single
+	 * early call and puts the frame back at the bottom (measured — the
+	 * one-shot version's 200 % frames were byte-identical to the un-hooked
+	 * cell's). The interval runs for twenty seconds and the last assertion
+	 * before the capture's settle wins — the 8 s settle plus a cold-profile
+	 * boot can otherwise outlast a shorter window. It lives for this
+	 * component's MOUNTED window: a table that unmounts and remounts re-arms
+	 * it, and a page whose table never mounts gets no assertion at all. Each
+	 * table in a message asserts; every assertion targets the last table (the
+	 * wide one with the cue), so that is what a `bring` frame shows. */
 	useEffect(() => {
 		if (forced !== "bring" || broughtIntoView.current) return;
 		broughtIntoView.current = true;
