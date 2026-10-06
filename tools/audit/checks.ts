@@ -1678,11 +1678,15 @@ function u38TableRendered(state: AuditState): CheckRow[] {
 			detail: `${node.path} — ${node.ownText.replace(WHITESPACE_RUNS, " ").trim().slice(0, 80)}`,
 		});
 	}
-	// The parser's marker against the renderer's output (U-38:marker).
-	if (
-		state.tables.length === 0 &&
-		state.nodes.some((n) => n.testId === "session-tables")
-	) {
+	// The parser's marker against the renderer's output (U-38:marker). The marker
+	// is read from the RE-DRIVEN page's PRESENCE reading (`state.reading.testIds`),
+	// not from `state.nodes`: the app's derived markers are zero-size Views by
+	// design and the probe's node sweep drops zero-area elements (measured — review
+	// round 2, R2-2: the node-based reading could never fire live). `readiness.ts`
+	// teaches the same presence-vs-visibility split.
+	const markerPresent =
+		state.reading?.testIds?.includes("session-tables") ?? false;
+	if (state.tables.length === 0 && markerPresent) {
 		failures.push({
 			check: "U-38",
 			verdict: "FAIL",

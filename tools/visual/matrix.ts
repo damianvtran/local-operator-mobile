@@ -731,6 +731,7 @@ export const IDENTICAL_FRAME_EXEMPTIONS: IdenticalFrameClass[] = [
 			"S5/subagents",
 			"S5/tables",
 			"S5/tables-end",
+			"S5/tables-in-view",
 			"path:/session/{sessionId}?lo-scroll=top/condensed",
 			"path:/session/{sessionId}?lo-scroll=top&lo-expand=tc-conv-00-user/expanded",
 			"path:/session/6714def86197/warm",
@@ -762,9 +763,17 @@ export const IDENTICAL_FRAME_EXEMPTIONS: IdenticalFrameClass[] = [
 			"at 200 % their wide table and the code rows above it are below the same fold, so " +
 			"`S5/tables` at iphone-15/light/200 % and `S5/tables-end` at iphone-se/dark/200 % " +
 			"share bytes with `S5/rich-rows` while the three cells' content digests all differ " +
-			"(`rich-rows` 0f1e6030ab8f, `tables` 1bc50098bd2d). The frames disagree wherever the " +
-			"tables are on screen — every 100 % frame, both devices — so this is the camera " +
-			"limit, not the app ignoring a state. The WARM-UP CELL JOINS " +
+			"(`rich-rows` 0f1e6030ab8f, `tables` 1bc50098bd2d). `S5/tables-in-view` " +
+			"JOINS (review round 2): its whole purpose is a scroll assertion, and at 200 % on " +
+			"phones the transcript's visible band measures NO HEIGHT (QA's reading: " +
+			"`session-transcript` clientHeight 0 pt, iphone-15 and iphone-se), so the assertion " +
+			"moves `scrollTop` inside a band with no pixels to change — the content digests " +
+			"differ (brought vs not) while the PNGs are the same chrome-free band. That split " +
+			"is declared: the 100 %/135 % pairs where the same assertion is a no-op because " +
+			"there is no scroll room are the COINCIDENCE below, with the same content. The " +
+			"frames disagree wherever the tables are on screen — every 100 % frame, both " +
+			"devices — so this is the camera limit, not the app ignoring a state. The WARM-UP " +
+			"CELL JOINS " +
 			"TOO, and it is the class's clearest case: it is the run's first navigation " +
 			"(`path:/session/6714def86197/warm`, the cell that burns the cold start), it " +
 			"renders the same idle world at the same 320 pt column, and at 200 % its " +
@@ -823,31 +832,7 @@ export const IDENTICAL_FRAME_COINCIDENCES: IdenticalFrameClass[] = [
 			"(dark 07d9c40e1083 / d7ca9bcec45e; light 1623786f6c06 / f2ee0ac17b8f).",
 	},
 	{
-		cells: [
-			"S5/populated-long",
-			"path:/session/{sessionId}?lo-scroll=top/condensed",
-		],
-		reason:
-			"one view, two scroll positions at iphone-se / 200 %: at 320 px with 200 % text the " +
-			"transcript's visible area is a sliver between the session header and its panels, and " +
-			"the list's window sits at its TOP in both cells — the tail-following " +
-			"`S5/populated-long` renders the same first rows as the anchored " +
-			"`path:…condensed`, which is why the same bytes carry the same content and the " +
-			"identical-state check reads one view. The readings agree on it: at dark/200 both " +
-			"cells' `readiness.text` begins `Refactor… client … Reconcile last night's ledger " +
-			"and tell me what slipped. ✓ completed · 38 steps …` and their content digests are " +
-			"EQUAL (3911696863f1487d; 0063b6b8723f5676 at light/200 — run 37529153608). The " +
-			"claims do not collide where the transcript has room: at 100 % and 135 % the two " +
-			"cells render different bytes (dark/100 152d8908 vs 0bd818dc; light/100 922d64ec vs " +
-			"3b9115da; dark/135 d8d3dafb vs e66aba68; light/135 c7a6c724 vs 4eece5e6), so " +
-			"neither cell is a duplicate of the other and neither declaration can be removed. " +
-			"Every cell still reaches the session screen with its relay-backed session, and at " +
-			"this exact combo both carry the condensed turn bars as visible ids " +
-			"(`session-screen`, `turn-bar-tc-conv-00-user` … in the visible set), which is what " +
-			"keeps this a composition at that viewport rather than a collapse of either state.",
-	},
-	{
-		cells: ["S5/tables", "S5/tables-end"],
+		cells: ["S5/tables", "S5/tables-end", "S5/tables-in-view"],
 		reason:
 			"one state, one scroll offset apart, at iphone-se / light / 200 %: the two cells are " +
 			"the SAME transcript — `tables-end` is `tables` with the wide table scrolled to its " +
@@ -859,7 +844,12 @@ export const IDENTICAL_FRAME_COINCIDENCES: IdenticalFrameClass[] = [
 			"camera limit written as a coincidence rather than two cells that collapsed: the " +
 			"state really is the same content one interaction later, and the viewport is the " +
 			"only thing that hides the difference. Measured 2026-10-06 on " +
-			"`fix/hero-tables-strips`.",
+			"`fix/hero-tables-strips`. `S5/tables-in-view` joins the class for the variants " +
+			"where ITS assertion is also a no-op — the transcript has no scroll room at 100 % " +
+			"(and 135 % on the same devices), so the bring scroll cannot move anything, the " +
+			"frames are the same view AND the same content, and each cell still reaches " +
+			"`session-tables`. Where the assertion changes pixels the frames differ; where the " +
+			"band has no height it joins the camera-limit exemption above.",
 	},
 ];
 

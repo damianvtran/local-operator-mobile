@@ -187,17 +187,41 @@ describe("U-38 — a markdown table renders as a table", () => {
 	it("fails the marker↔render cross-check: session-tables with no md-table", () => {
 		const rows = run(
 			"U-38",
-			state({ nodes: [node({ testId: "session-tables" })] }),
+			state({
+				// The marker is read from the PRESENCE reading, not from a node:
+				// the app's derived markers are zero-size Views and the probe's
+				// node sweep drops zero-area elements (review round 2, R2-2).
+				reading: {
+					path: "/session/1",
+					testIds: ["session-tables"],
+					visibleTestIds: [],
+				},
+			}),
 		);
 		expect(rows[0]?.verdict).toBe("FAIL");
 		expect(rows[0]?.measured).toMatch(/^declared table did not render/);
+	});
+
+	it("does not fire the cross-check from a zero-area node (the shape the probe never sees)", () => {
+		const rows = run(
+			"U-38",
+			state({ nodes: [node({ testId: "session-tables" })] }),
+		);
+		// No reading, no tables: not-applicable for the structure half — the
+		// node-only evidence cannot affirm the marker, which is why the check
+		// stopped reading nodes at all.
+		expect(rows[0]?.verdict).toBe("BLOCKED");
 	});
 
 	it("passes the cross-check when the marker and the rendered table agree", () => {
 		const rows = run(
 			"U-38",
 			state({
-				nodes: [node({ testId: "session-tables" })],
+				reading: {
+					path: "/session/1",
+					testIds: ["session-tables"],
+					visibleTestIds: [],
+				},
 				tables: [goodTable],
 			}),
 		);

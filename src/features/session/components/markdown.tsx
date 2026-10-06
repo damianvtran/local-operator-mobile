@@ -256,8 +256,9 @@ const Table = ({ header, rows }: { header: string[]; rows: string[][] }) => {
 	 * need: the transcript list runs its own initial scroll-to-end when its
 	 * content lays out, which lands AFTER a single early call and puts the frame
 	 * back at the bottom (measured — the one-shot version's 200 % frames were
-	 * byte-identical to the un-hooked cell's). The interval runs for six seconds
-	 * and the last assertion before the capture's settle wins.
+	 * byte-identical to the un-hooked cell's). The interval runs for twenty
+	 * seconds and the last assertion before the capture's settle wins — the 8 s
+	 * settle plus a cold-profile boot can otherwise outlast a shorter window.
 	 * `inline: "nearest"` leaves the horizontal offset alone, so the state the
 	 * frame lands in is the same cut-edge state the un-hooked cell renders.
 	 * Each table in a message asks; the last assertion comes from the last table

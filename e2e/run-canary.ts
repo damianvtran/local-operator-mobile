@@ -406,6 +406,17 @@ interface Defect {
 	element: string;
 }
 
+/**
+ * The fixture's opt-out for a `data-not-defect` shape the rule must not reach AT ALL,
+ * and the two attributes a declaration tag carries. All three sit ABOVE their first
+ * call on purpose: `declaredDefects()` runs at module level, so declarations placed
+ * after it initialize too late — measured, that ReferenceError'd every canary run
+ * (review round 2, R2-1); biome's `useTopLevelRegex` wants them out of loop bodies.
+ */
+const NOT_DEFECT_SILENT = /\bdata-not-defect-silent\b/;
+const DECLARATION_ID_RE = /\bid="([^"]+)"/;
+const DECLARATION_REASON_RE = /\bdata-not-defect-reason="([^"]+)"/;
+
 const declaredDefects = (): Defect[] => {
 	const out: Defect[] = [];
 	// Every tag carrying a `data-defect`, with its own `id` read from the same tag.
@@ -556,20 +567,6 @@ const NOT_DEFECT_REASON_NAMES: Record<string, Record<string, string>> = {
 		"header-only-table": U38_DECLARATION.HEADER_ONLY,
 	},
 };
-
-/**
- * The fixture's opt-out for a `data-not-defect` shape the rule must not reach AT ALL.
- *
- * A module-level constant so the parser does not rebuild it per tag (biome's
- * `useTopLevelRegex`).
- */
-const NOT_DEFECT_SILENT = /\bdata-not-defect-silent\b/;
-
-/** The two attributes a declaration tag carries, hoisted to the top level per
- *  biome's `useTopLevelRegex`: they run once per tag, and the rule wants them
- *  out of the loop bodies. */
-const DECLARATION_ID_RE = /\bid="([^"]+)"/;
-const DECLARATION_REASON_RE = /\bdata-not-defect-reason="([^"]+)"/;
 
 const declaredNotDefects = (): NotDefect[] => {
 	const out: NotDefect[] = [];
