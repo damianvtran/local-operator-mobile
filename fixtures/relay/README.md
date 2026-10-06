@@ -23,16 +23,26 @@ wrong wire.
 Read [`../../docs/relay/contract.md`](../../docs/relay/contract.md) for what each
 sample means; this file is only about provenance and reproduction.
 
-The tree is currently **111 fixtures — 105 live, 6 synthetic** — plus this README. The split is counted from `provenance.kind` in the files
+The tree is currently **119 fixtures — 113 live, 6 synthetic** — plus this README. The split is counted from `provenance.kind` in the files
 themselves rather than typed here, so it cannot drift from them.
 
-**Three refs are represented, deliberately.** The bulk of the live captures were
+**Four refs are represented, deliberately.** The bulk of the live captures were
 taken at local-operator `52c1df35`; the session-state receipts (`ended`,
 `degraded`) were added by #1784, so the captures that show them are taken at
 `fc851a94e`; and the push/ack-sync samples (the frame-level `unread` block, the
 handle-resolution route, and the superseded-token refusal) are taken at
 `ca0569855`, where S1/S2/S4 shipped. Each file's `provenance.relay_ref` names its
 own, and no capture was restamped to look newer than it is.
+
+The projects WRITE samples (`projects-created`, `projects-create-refused`,
+`projects-create-invalid`, `projects-delete-refused`, `projects-deleted`,
+`projects-milestone`, `projects-milestone-removed`,
+`projects-milestone-refused`) are a fourth: they were captured on the same
+`scripts/mobile_projects_fixture.py` recipe as the projects READS, at a
+local-operator worktree whose `mobile/projects.py` and `mobile/daemon.py` were
+byte-identical to `origin/main` when the capture ran. Their `provenance.how`
+records that rather than a bare ref, because the sha they name is the worktree's
+and the claim a reader needs is about the ROUTE.
 
 ## Provenance
 

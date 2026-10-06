@@ -838,3 +838,45 @@ export interface ProjectDetailResponse {
 	project: ProjectView;
 	links: LinkedSession[];
 }
+
+/**
+ * A project write that answers with the row's SUMMARY — `POST /api/projects`
+ * today (and `PATCH`/`links` when a later slice adds them).
+ *
+ * The answer is a summary rather than the view for the same reason the listing
+ * is: the write changed the row, not the row's milestones or links, and a
+ * caller that needs those re-reads the detail. `ok: true` is the relay's own
+ * literal (`create_payload` returns `{"ok": True, …}`) and is checked rather
+ * than assumed, so a refusal body can never be read as a success.
+ */
+export interface ProjectWriteResponse {
+	ok: true;
+	project: ProjectSummary;
+}
+
+/**
+ * `DELETE /api/projects/{key}` — the delete's answer.
+ *
+ * `deleted` is the relay's own field rather than something inferred from the
+ * status: the route answers `{"ok": True, "deleted": True}` and this client
+ * renders its outcome from what the relay said, not from a 2xx it hopes means
+ * the row is gone.
+ */
+export interface ProjectDeleteResponse {
+	ok: true;
+	deleted: boolean;
+}
+
+/**
+ * A milestone write's answer — `POST /api/projects/{key}/milestones` (add or
+ * update, keyed by name) and `DELETE …/milestones/{name}`.
+ *
+ * The whole `ProjectView`, not the milestone: the route's answer is what the
+ * milestone list re-renders from, and it carries the relay's derived statuses
+ * (`milestone_status`) for every milestone, so a client that patched its own
+ * copy from the request would be the second derivation this app has none of.
+ */
+export interface ProjectMilestoneResponse {
+	ok: true;
+	project: ProjectView;
+}

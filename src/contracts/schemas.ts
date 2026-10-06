@@ -52,12 +52,15 @@ import type {
 	PendingRequest,
 	PinResponse,
 	ProjectAttachment,
+	ProjectDeleteResponse,
 	ProjectDetailResponse,
 	ProjectMilestone,
+	ProjectMilestoneResponse,
 	ProjectSummary,
 	ProjectsResponse,
 	ProjectUpdate,
 	ProjectView,
+	ProjectWriteResponse,
 	PromptImage,
 	PushConversationResponse,
 	PushDeviceDeleteResponse,
@@ -652,6 +655,36 @@ export const projectDetailResponseSchema = z.looseObject({
 	links: z.array(linkedSessionSchema).default([]),
 });
 
+/**
+ * A project write that answers with the row's SUMMARY (`POST /api/projects`).
+ *
+ * `ok` is the literal `true` the relay writes, checked rather than assumed: a
+ * caller that gates on it cannot read a refusal body — the relay's refusals are
+ * `{"error", "code"}` and never carry `ok` — as a success. The summary is
+ * validated by the SAME schema the listing's rows use, so a created row and a
+ * listed row cannot be described differently by this client.
+ */
+export const projectWriteResponseSchema = z.looseObject({
+	ok: z.literal(true),
+	project: projectSummarySchema,
+});
+
+/** `DELETE /api/projects/{key}` — the relay's own read-back of the outcome. */
+export const projectDeleteResponseSchema = z.looseObject({
+	ok: z.literal(true),
+	deleted: z.boolean(),
+});
+
+/**
+ * A milestone write's answer (`POST`/`DELETE` on `…/milestones`): the whole
+ * project view, derived statuses included. The view schema is the detail
+ * route's own, so the milestone list cannot be described two ways.
+ */
+export const projectMilestoneResponseSchema = z.looseObject({
+	ok: z.literal(true),
+	project: projectViewSchema,
+});
+
 export const historyResponseSchema = z.looseObject({
 	entries: z.array(transcriptEntrySchema),
 	has_more: z.boolean(),
@@ -946,6 +979,12 @@ export const SCHEMAS = {
 	 *  slices that add them. */
 	projects: projectsResponseSchema,
 	projectDetail: projectDetailResponseSchema,
+	/* The write answers this slice calls. Each is registered because a route
+	 *  this client reads must have a schema at the parse boundary; leaving one
+	 *  out would make its endpoint a typed lie rather than a compile error. */
+	projectWrite: projectWriteResponseSchema,
+	projectDelete: projectDeleteResponseSchema,
+	projectMilestone: projectMilestoneResponseSchema,
 	startSession: startSessionResponseSchema,
 	resumeSession: resumeSessionResponseSchema,
 	sessionsStreamFrame: sessionsStreamFrameSchema,
@@ -1063,6 +1102,13 @@ type WireMirror = {
 	 *  declarations trips `AssertAll` above. */
 	projects: ProjectsResponse;
 	projectDetail: ProjectDetailResponse;
+	/* The projects WRITE answers, same route family, same rule: asserted, not
+	 *  merely registered. A schema whose output stops being assignable to these
+	 *  declarations trips `AssertAll` above — which is the whole point of adding
+	 *  a key here in the mutation's own commit rather than a later one. */
+	projectWrite: ProjectWriteResponse;
+	projectDelete: ProjectDeleteResponse;
+	projectMilestone: ProjectMilestoneResponse;
 };
 
 /** `SCHEMAS` names deliberately outside the assertion, each the shape of a
@@ -1220,12 +1266,15 @@ export type {
 	PendingRequest,
 	PinResponse,
 	ProjectAttachment,
+	ProjectDeleteResponse,
 	ProjectDetailResponse,
 	ProjectMilestone,
+	ProjectMilestoneResponse,
 	ProjectSummary,
 	ProjectsResponse,
 	ProjectUpdate,
 	ProjectView,
+	ProjectWriteResponse,
 	PromptImage,
 	PushConversationResponse,
 	PushDeviceDeleteResponse,
