@@ -12,6 +12,7 @@ import {
 import { runTunnelTest } from "@/features/auth/tunnel-test";
 import type { TunnelTestVerdict } from "@/features/auth/tunnel-verdict";
 import { verdictSentence } from "@/features/auth/tunnel-verdict";
+import { sentencePlatform } from "@/lib/platform";
 import { CONTROL, ROLE, SCREEN } from "@/ui/a11y";
 import { Alert } from "@/ui/components/alert";
 import { Button } from "@/ui/components/button";
@@ -292,7 +293,7 @@ const VerdictBlock = ({ verdict }: { verdict: TunnelTestVerdict }) => {
 				}
 				title={verdict.kind === "ok" ? "Connected" : "Not yet"}
 			>
-				{verdictSentence(verdict)}
+				{verdictSentence(verdict, sentencePlatform())}
 			</Alert>
 			{/* The remedy is a separate line because it is a command to run, not part
 			 *  of the diagnosis — the same split `refusal-surface.tsx` makes. */}

@@ -5,17 +5,22 @@ import {
 	transportKind,
 	verdictSentence,
 } from "@/features/auth/tunnel-verdict";
+import type { SentencePlatform } from "@/lib/platform";
 import { RelayError } from "@/relay";
 
 /**
  * The own-tunnel verdict taxonomy.
  *
- * This is the logic the feature is made of: a self-hosted tunnel fails in six ways
+ * This is the logic the feature is made of: a self-hosted tunnel fails in ways
  * that look identical from a phone, each with a different fix, and every one of
  * them is decided HERE rather than in a screen. The runner that feeds it
  * (`tunnel-test.ts`) is proven outside-in against the mock relay, because it needs
  * `@/connection` and cannot be imported by a Node test.
  */
+
+/** Where a sentence could name a Settings path, so the wording for each is held to
+ *  the same rules, not just the one the tests happen to run on. */
+const PLATFORMS: SentencePlatform[] = ["ios", "android", "web"];
 
 const transport = (message: string) => {
 	// The shape the relay layer produces when `fetch` itself rejects: a
@@ -130,16 +135,18 @@ describe("classify", () => {
 		);
 		expect(classify(certificate).kind).toBe("tls");
 		expect(classify(host).kind).toBe("host");
-		expect(verdictSentence(classify(certificate))).not.toBe(
-			verdictSentence(classify(host)),
+		expect(verdictSentence(classify(certificate), "ios")).not.toBe(
+			verdictSentence(classify(host), "ios"),
 		);
 	});
 });
 
 describe("verdictSentence", () => {
 	it("counts the sessions it can actually see", () => {
-		expect(verdictSentence({ kind: "ok", sessions: 1 })).toContain("1 session");
-		expect(verdictSentence({ kind: "ok", sessions: 4 })).toContain(
+		expect(verdictSentence({ kind: "ok", sessions: 1 }, "ios")).toContain(
+			"1 session",
+		);
+		expect(verdictSentence({ kind: "ok", sessions: 4 }, "ios")).toContain(
 			"4 sessions",
 		);
 	});
@@ -163,38 +170,103 @@ describe("verdictSentence", () => {
 			{ kind: "host", detail: "ENOTFOUND" },
 			{ kind: "unreachable", detail: null },
 			{ kind: "timeout" },
+			{ kind: "local-network" },
 			{ kind: "refused", detail: null },
 		];
-		for (const verdict of verdicts) {
-			// Addresses and ports legitimately contain three digits, so they are
-			// stripped before the check: what must never appear is a bare status code.
-			const prose = verdictSentence(verdict)
-				.replace(/\b\d{1,3}(?:\.\d{1,3}){3}\b/g, "ADDRESS")
-				.replace(/:\d+/g, ":PORT");
-			expect(prose).not.toMatch(/\b[1-5]\d{2}\b/);
-			expect(prose).not.toMatch(/\bHTTP\b/);
+		for (const platform of PLATFORMS) {
+			for (const verdict of verdicts) {
+				// Addresses and ports legitimately contain three digits, so they are
+				// stripped before the check: what must never appear is a bare status code.
+				const prose = verdictSentence(verdict, platform)
+					.replace(/\b\d{1,3}(?:\.\d{1,3}){3}\b/g, "ADDRESS")
+					.replace(/:\d+/g, ":PORT");
+				expect(prose).not.toMatch(/\b[1-5]\d{2}\b/);
+				expect(prose).not.toMatch(/\bHTTP\b/);
+			}
 		}
 	});
 
 	it("says what to change for the failures that need a change", () => {
 		// A 403 and a certificate failure are the two a reader can act on, so the
 		// sentence has to name the change rather than only the symptom.
-		expect(verdictSentence({ kind: "forbidden", detail: null })).toMatch(
+		expect(verdictSentence({ kind: "forbidden", detail: null }, "ios")).toMatch(
 			/allow the app through/i,
 		);
-		expect(verdictSentence({ kind: "tls", detail: null })).toMatch(
+		expect(verdictSentence({ kind: "tls", detail: null }, "ios")).toMatch(
 			/certificate/i,
 		);
-		expect(verdictSentence({ kind: "host", detail: null })).toMatch(
+		expect(verdictSentence({ kind: "host", detail: null }, "ios")).toMatch(
 			/host name could not be found/i,
 		);
 		expect(
-			verdictSentence({
-				kind: "offline",
-				detail: null,
-				remedy: "lop mobile status",
-			}),
+			verdictSentence(
+				{
+					kind: "offline",
+					detail: null,
+					remedy: "lop mobile status",
+				},
+				"ios",
+			),
 		).toMatch(/lop mobile status/);
+	});
+});
+
+describe("the local-network verdict", () => {
+	const unreachable = () => transport("Network request failed");
+
+	it("is produced for a private host only, and only for the outcomes the OS gate can mimic", () => {
+		expect(classify(unreachable(), { privateHost: true })).toEqual({
+			kind: "local-network",
+		});
+		// Without the route context the same failure keeps its own reading; the
+		// verdict is a property of (failure, address), not of the failure.
+		expect(classify(unreachable()).kind).toBe("unreachable");
+		expect(
+			classify(new Error("The operation was aborted"), { privateHost: true })
+				.kind,
+		).toBe("local-network");
+		// A rejected certificate and an unresolvable name keep their verdicts on a
+		// private host too: different fixes, and folding them into the permission
+		// sentence would send the reader to the wrong one.
+		expect(
+			classify(transport("self signed certificate in certificate chain"), {
+				privateHost: true,
+			}).kind,
+		).toBe("tls");
+		expect(
+			classify(new Error("getaddrinfo ENOTFOUND x"), { privateHost: true })
+				.kind,
+		).toBe("host");
+	});
+
+	it("names both causes and an exact Settings path on each phone", () => {
+		const verdict: TunnelTestVerdict = { kind: "local-network" };
+		// The machine-side check is the more common cause on a LAN, so it leads.
+		for (const platform of ["ios", "android"] as const) {
+			const sentence = verdictSentence(verdict, platform);
+			expect(sentence).toContain("awake");
+			expect(sentence.indexOf("awake")).toBeLessThan(
+				sentence.indexOf("Settings"),
+			);
+			// Granting the prompt changes nothing until the test runs again.
+			expect(sentence).toContain("test again");
+		}
+		expect(verdictSentence(verdict, "ios")).toContain(
+			"Settings → Privacy & Security → Local Network",
+		);
+		expect(verdictSentence(verdict, "android")).toContain(
+			"Settings → Apps → Local Operator → Permissions",
+		);
+	});
+
+	it("keeps the web wording free of a phone menu it cannot grant", () => {
+		const sentence = verdictSentence({ kind: "local-network" }, "web");
+		expect(sentence).not.toContain("Settings");
+		expect(sentence).toContain("test again");
+		// And it is still not the generic sentence this verdict exists to replace.
+		expect(sentence).not.toBe(
+			verdictSentence({ kind: "unreachable", detail: null }, "web"),
+		);
 	});
 });
 
@@ -209,6 +281,7 @@ describe("the rendered sentence, through the real classifier", () => {
 		// sentence says what is likely in front of the tunnel and what to allow.
 		const sentence = verdictSentence(
 			classify(new RelayError("origin-refused", "refused", { status: 403 })),
+			"ios",
 		);
 		expect(sentence).toContain("access policy");
 		expect(sentence).not.toContain("origin-refused");
@@ -245,7 +318,7 @@ describe("the rendered sentence, through the real classifier", () => {
 		// `forbidden` carries the taxonomy's own guidance rather than the detail; it is
 		// checked separately below, so it is not in the table.
 		for (const [error, expected] of cases) {
-			const sentence = verdictSentence(classify(error));
+			const sentence = verdictSentence(classify(error), "ios");
 			expect(sentence).toContain(expected);
 			expect(sentence).not.toContain(error.kind);
 			expect(sentence).not.toMatch(/\b[1-5]\d{2}\b/);
