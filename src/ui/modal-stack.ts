@@ -1,10 +1,14 @@
 /**
  * One modal at a time, registered where the modal is mounted.
  *
- * WHY THE PRIMITIVE OWNS THIS. `Dialog` and `Sheet` are the only two components
- * that render a React Native `Modal`, and a `Modal` covers the viewport: two of
- * them mounted at once paint two full-height surfaces over each other, which is
- * what the audit's U-08 rule reports as a 320×568 pt overlap. The first fix for
+ * WHY THE PRIMITIVE OWNS THIS. A React Native `Modal` covers the viewport, so two
+ * of them mounted at once paint two full-height surfaces over each other — what
+ * the audit's U-08 rule reports as a 320×568 pt overlap. The renderers are
+ * `Sheet`, `Dialog` and (this file's first correction) `ConversationsDrawer`, and
+ * the rule is enforced by the `Modal` being drawn rather than by a list here: a
+ * "these are all the callers" claim in a comment is what let the drawer — a third
+ * caller — miss the guard for a round, so every `Modal` in this app registers and
+ * `rg -n '<Modal' src/` is the list. The first fix for
  * this was a prop on ONE screen — `visible={editor !== null && !confirmRemove}`
  * in the projects detail — and that shape is wrong for two reasons, both paid for
  * in review: it guards one PAIRING, so the screen's other confirm (the project

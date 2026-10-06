@@ -90,66 +90,148 @@ const selector = (testID: string): string =>
 /**
  * The page-side expression for one affordance.
  *
- * Returns `"ok"` when it acted, `"missing"` when the element is not in the DOM
- * (the caller polls before believing that), `"inert"` when the element is
- * DISABLED — a control that cannot be pressed — and `"unreachable"` when it is
- * in the DOM and enabled but a reader could not put a finger on it: no box at
- * all, or something else is under the point the press would land on. The four are
- * separate because they need different readings: a missing element is a
- * harness/cell disagreement about the id, an inert one is a cell asserting a
- * state its own control refuses to reach (a form whose submit is disabled because
- * the field is empty, say), and an unreachable one is a control behind something
- * — the shape a second modal produces — where reporting it as "missing" would
- * send the next reader looking for the wrong thing.
+ * WHAT IT RETURNS, and why each answer is its own: a JSON object whose `result`
+ * is `"ok"` when it acted, `"missing"` when the element is not in the DOM (the
+ * caller polls before believing that), `"inert"` when the element is DISABLED,
+ * `"not-a-field"` when a `type` action addressed something that is not an
+ * input or a textarea, and `"unreachable"` when a reader could not have put a
+ * finger on the control: no box at all, nothing painted, something else under
+ * the point a press would land on, or a position only a HIDDEN ancestor's
+ * programmatic scroll could reach. A missing element is a harness/cell
+ * disagreement about the id; an inert one is a cell asserting a state its own
+ * control refuses to reach; an unreachable one is a control behind something —
+ * the shape a second modal produces — where reporting it as "missing" would send
+ * the next reader looking for the wrong thing.
  *
- * `THE READER'S OWN TEST` is the shared preamble of both scripts: scroll the
- * control into view, then require a non-zero box and that `elementFromPoint` at
- * its centre is the element or inside it. `pointer-events: none` falls out of the
- * hit test for free (the point resolves to whatever is painted behind), which is
- * why there is no separate check for it.
+ * `"ok-after-scroll"` IS `ok` WITH A FACT ATTACHED, and the distinction is the
+ * point of this version. A control a reader reaches by scrolling is genuinely
+ * pressable, so refusing it would fail states the app really ships (a milestone
+ * row on a 320 pt phone at 200 %), and the action therefore scrolls it in — but
+ * `ok` alone would silently convert "the reader could not see this control" into
+ * a pass, which is exactly the class this harness exists to catch. So the answer
+ * names it and carries the control's PRE-SCROLL box, the scroll is RESTORED
+ * after the press (the frame is of the resting page again, which is what the
+ * design round's bounds were reasoned against), and a control declared as one
+ * that must be reachable without a scroll can fail by name on that answer.
+ *
+ * `THE READER'S OWN TEST` is the shared preamble of both scripts: nothing is
+ * pressed through a hidden or transparent box, nothing is pressed off the
+ * viewport or through whatever is painted over it, and the only scrolling it does
+ * is the scrolling a reader has — through ancestors whose own `overflow` is
+ * `auto`/`scroll`. Measured classes this refuses, each of which the previous
+ * version pressed and reported `ok`: a control covered by a modal, a zero-size
+ * one, one with `pointer-events: none` (it falls out of the hit test for free), a
+ * transparent one, and one an `overflow: hidden` ancestor would have to be
+ * scrolled to reveal.
  */
-const REACHABLE = `
-  if (typeof el.scrollIntoView === "function") el.scrollIntoView({ block: "center", inline: "center" });
-  const rect = el.getBoundingClientRect();
-  if (rect.width <= 0 || rect.height <= 0) return "unreachable";
-  const hit = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
-  if (!hit || !(hit === el || el.contains(hit))) return "unreachable";`;
+const READER = `
+  const finish = (result, pre) => JSON.stringify(pre ? { result, pre } : { result });
+  const paints = (node) => {
+    for (let n = node, hops = 0; n && hops < 12; n = n.parentElement, hops++) {
+      const s = getComputedStyle(n);
+      if (s.opacity === "0" || s.visibility === "hidden" || s.display === "none") return false;
+    }
+    return true;
+  };
+  const onScreen = (node) => {
+    const r = node.getBoundingClientRect();
+    if (r.width <= 0 || r.height <= 0) return false;
+    const cx = r.left + r.width / 2;
+    const cy = r.top + r.height / 2;
+    const vw = document.documentElement.clientWidth;
+    const vh = document.documentElement.clientHeight;
+    if (cx < 0 || cy < 0 || cx > vw || cy > vh) return false;
+    const hit = document.elementFromPoint(cx, cy);
+    return !!hit && (hit === node || node.contains(hit));
+  };
+  const boxOf = (r) => ({ x: Math.round(r.left), y: Math.round(r.top), w: Math.round(r.width), h: Math.round(r.height) });
+  const scrollers = [];
+  let behindAHiddenClip = false;
+  for (let n = el.parentElement, hops = 0; n && hops < 12; n = n.parentElement, hops++) {
+    const s = getComputedStyle(n);
+    const scrollable = /(auto|scroll)/.test(s.overflowY) || /(auto|scroll)/.test(s.overflowX);
+    if (scrollable) { scrollers.push(n); continue; }
+    if (s.overflowX === "visible" && s.overflowY === "visible") continue;
+    const outer = n.getBoundingClientRect();
+    const r = el.getBoundingClientRect();
+    if (r.bottom <= outer.top || r.top >= outer.bottom || r.right <= outer.left || r.left >= outer.right) behindAHiddenClip = true;
+  }
+  const marks = () => scrollers.map((n) => [n, n.scrollTop, n.scrollLeft]);
+  const restore = (saved) => { for (const [n, top, left] of saved) { n.scrollTop = top; n.scrollLeft = left; } };`;
 
 export function affordanceScript(action: Affordance): string {
 	if ("click" in action) {
 		return `(() => {
   const el = document.querySelector(${selector(action.click)});
-  if (!el) return "missing";
-  if (el.disabled === true || el.getAttribute("aria-disabled") === "true") return "inert";${REACHABLE}
+  if (!el) return JSON.stringify({ result: "missing" });
+  if (el.disabled === true || el.getAttribute("aria-disabled") === "true") return JSON.stringify({ result: "inert" });${READER}
+  if (!paints(el)) return finish("unreachable");
+  const wasOnScreen = onScreen(el);
+  if (!wasOnScreen && behindAHiddenClip) return finish("unreachable");
+  const before = boxOf(el.getBoundingClientRect());
+  const saved = marks();
+  if (!wasOnScreen && typeof el.scrollIntoView === "function") el.scrollIntoView({ block: "center", inline: "center" });
+  if (!onScreen(el)) { restore(saved); return finish("unreachable"); }
   const fire = (type) => el.dispatchEvent(
     type.startsWith("pointer")
       ? new PointerEvent(type, { bubbles: true, cancelable: true, pointerId: 1, isPrimary: true })
       : new MouseEvent(type, { bubbles: true, cancelable: true, view: window })
   );
   for (const type of ["pointerdown", "mousedown", "pointerup", "mouseup", "click"]) fire(type);
-  return "ok";
+  restore(saved);
+  return wasOnScreen ? finish("ok") : finish("ok-after-scroll", before);
 })()`;
 	}
 	const { testID, text } = action.type;
 	return `(() => {
   const el = document.querySelector(${selector(testID)});
-  if (!el) return "missing";
-  if (el.disabled === true || el.getAttribute("aria-disabled") === "true") return "inert";
-  if (el.tagName !== "INPUT" && el.tagName !== "TEXTAREA") return "not-a-field";${REACHABLE}
+  if (!el) return JSON.stringify({ result: "missing" });
+  if (el.disabled === true || el.getAttribute("aria-disabled") === "true") return JSON.stringify({ result: "inert" });
+  if (el.tagName !== "INPUT" && el.tagName !== "TEXTAREA") return JSON.stringify({ result: "not-a-field" });${READER}
+  if (!paints(el)) return finish("unreachable");
+  const wasOnScreen = onScreen(el);
+  if (!wasOnScreen && behindAHiddenClip) return finish("unreachable");
+  const before = boxOf(el.getBoundingClientRect());
+  const saved = marks();
+  if (!wasOnScreen && typeof el.scrollIntoView === "function") el.scrollIntoView({ block: "center", inline: "center" });
+  if (!onScreen(el)) { restore(saved); return finish("unreachable"); }
   const proto = el.tagName === "TEXTAREA" ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
   const setter = Object.getOwnPropertyDescriptor(proto, "value").set;
   setter.call(el, ${JSON.stringify(text)});
   el.dispatchEvent(new Event("input", { bubbles: true }));
-  return "ok";
+  restore(saved);
+  return wasOnScreen ? finish("ok") : finish("ok-after-scroll", before);
 })()`;
 }
 
 /** The result of one affordance, as the page reported it. */
+/** The box a control had BEFORE the action scrolled it into view. */
+export interface AffordanceBox {
+	x: number;
+	y: number;
+	w: number;
+	h: number;
+}
+
 export interface AffordanceOutcome {
 	action: Affordance;
-	/** `ok`, `inert`, `missing`, `unreachable`, or `not-a-field`. */
+	/** `ok`, `ok-after-scroll`, `inert`, `missing`, `unreachable`, or `not-a-field`. */
 	result: string;
+	/** Present on `ok-after-scroll` only: where the control was before the scroll. */
+	preScroll?: AffordanceBox;
 }
+
+/**
+ * Whether an outcome is one the caller must report as a failure.
+ *
+ * `ok-after-scroll` is NOT a failure — the press happened, the way a reader
+ * would have made it — and it is separate from this question because a caller may
+ * still care about it: the capture fails a cell by name when the control that
+ * answers it is one this repository declares must be reachable without a scroll,
+ * and the audit counts it as a measured replay rather than a gap.
+ */
+export const outcomeFailed = (result: string): boolean =>
+	result !== "ok" && result !== "ok-after-scroll";
 
 /**
  * Whether an element with this `data-testid` is in the DOM.
@@ -189,6 +271,29 @@ export async function waitForTestID(
 	}
 }
 
+/** The page's JSON reply, or a `missing` outcome when it is not one. */
+const readOutcome = (
+	reading: unknown,
+	action: Affordance,
+): AffordanceOutcome => {
+	if (typeof reading !== "string") return { action, result: "missing" };
+	try {
+		const parsed = JSON.parse(reading) as {
+			result?: unknown;
+			pre?: unknown;
+		};
+		const result =
+			typeof parsed.result === "string" ? parsed.result : "missing";
+		const pre = parsed.pre as AffordanceBox | undefined;
+		return pre === undefined
+			? { action, result }
+			: { action, result, preScroll: pre };
+	} catch {
+		// A reply this parser cannot read is not evidence the press happened.
+		return { action, result: "missing" };
+	}
+};
+
 const sleep = (ms: number): Promise<void> =>
 	new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -218,20 +323,30 @@ export async function runAffordances(
 	const outcomes: AffordanceOutcome[] = [];
 	for (const action of actions) {
 		const deadline = Date.now() + waitMs;
-		let result = "missing";
+		let outcome: AffordanceOutcome = { action, result: "missing" };
 		for (;;) {
-			const reading: unknown = await page.evaluate(affordanceScript(action));
-			result = typeof reading === "string" ? reading : "missing";
+			outcome = readOutcome(
+				await page.evaluate(affordanceScript(action)),
+				action,
+			);
+			/* TWO ANSWERS ARE NOT RETRYABLE. `ok` (and `ok-after-scroll`) is the
+			 *  press landing, and `not-a-field` is a DOM fact that cannot change —
+			 *  retrying either would only spend the bound. `missing`, `inert` and
+			 *  `unreachable` are all "not yet": an element still arriving, a control
+			 *  inert until React has re-rendered with the typed value, and a control
+			 *  covered while a scrim or a sheet is still animating. Every one of them
+			 *  was measured as a flake class, and a bounded retry keeps the honest
+			 *  answer at the end of the bound. */
 			if (
-				result === "ok" ||
-				result === "unreachable" ||
-				result === "not-a-field"
+				outcome.result === "ok" ||
+				outcome.result === "ok-after-scroll" ||
+				outcome.result === "not-a-field"
 			)
 				break;
 			if (Date.now() >= deadline) break;
 			await sleep(pollMs);
 		}
-		outcomes.push({ action, result });
+		outcomes.push(outcome);
 	}
 	return outcomes;
 }

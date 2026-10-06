@@ -13,6 +13,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ConversationsPane } from "@/features/sessions/conversations-pane";
 import { ROLE, SURFACE } from "@/ui/a11y";
 import { useReducedMotion, useTokenColor } from "@/ui/appearance";
+import { useModalStackEntry } from "@/ui/components/modal-stack-entry";
 import { useShadow } from "@/ui/elevation";
 import { sidebarWidthFor } from "@/ui/layout";
 import { effectiveDuration, parseCubicBezier } from "@/ui/motion";
@@ -120,9 +121,15 @@ export const ConversationsDrawer = ({
 		onClose();
 	};
 
+	/* The drawer is a THIRD `Modal` renderer, and the stack rule is the primitive's:
+	 *  it stands down if a newer modal is mounted over it rather than painting two
+	 *  full-viewport surfaces over each other (`@/ui/modal-stack`). It was the
+	 *  renderer that made that module's "only two callers" claim false. */
+	const covered = useModalStackEntry(visible);
+
 	return (
 		<Modal
-			visible={visible}
+			visible={visible && !covered}
 			transparent
 			animationType="none"
 			onRequestClose={close}

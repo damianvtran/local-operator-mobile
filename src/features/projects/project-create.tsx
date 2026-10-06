@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Text, View } from "react-native";
 
 import { PROJECT_STATUS_ORDER } from "@/contracts";
@@ -73,17 +73,39 @@ export const ProjectCreateSheet = ({
 	 *  survive a dismissal by construction — and that is the rule this slice chose
 	 *  deliberately: a stray tap on the scrim must not throw away a filled form,
 	 *  which is the failure the milestone editor's reset sat on the other side of.
-	 *  What was missing is the reader being TOLD (`DRAFT_KEPT_NOTE`), which is what
-	 *  this flag gates. It is read on the transition, so it never reports the text
-	 *  the reader is typing right now as "kept from last time". */
+	 *  What was missing is the reader being TOLD (`DRAFT_KEPT_NOTE`), and this flag
+	 *  gates that sentence. */
 	const [keptDraft, setKeptDraft] = useState(false);
+	/*
+	 * THE SENTENCE IS A FACT ABOUT THE OPENING, NOT ABOUT THE FIELDS — and the first
+	 * version of this got that wrong in the one way that matters: its effect listed
+	 * `name`, `description` and `tags`, so the flag was recomputed on every
+	 * keystroke and a reader typing their FIRST character into a fresh form was told
+	 * "Kept from your last visit. Clear the fields to start something new." — a false
+	 * statement about their own data, instructing them to discard the work they had
+	 * just started, and a 45 pt jump under their finger. It was also the one axis
+	 * U3's "one rule, both forms agree" claim still failed on, because the milestone
+	 * editor reads its draft once in `openEditor`.
+	 *
+	 * The fields are therefore read through a ref written on every render and read
+	 * exactly once per opening: the effect's only dependency is `visible`, so the
+	 * value it sees is the draft as it stood at the moment the sheet opened. The
+	 * sibling form gets the same property by setting its flag in `openEditor`; this
+	 * component owns its own fields and has no opener to set it in, so the transition
+	 * is where it is computed instead.
+	 */
+	const fields = useRef({ name, description, tags });
+	fields.current = { name, description, tags };
 
 	useEffect(() => {
 		if (!visible) return;
+		const held = fields.current;
 		setKeptDraft(
-			name.trim() !== "" || description.trim() !== "" || tags.trim() !== "",
+			held.name.trim() !== "" ||
+				held.description.trim() !== "" ||
+				held.tags.trim() !== "",
 		);
-	}, [visible, name, description, tags]);
+	}, [visible]);
 
 	const submit = async () => {
 		const client = relay();

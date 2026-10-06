@@ -84,6 +84,7 @@ import {
 	SCREEN_ROOTS,
 	SCREENS,
 	THEMES,
+	UNSCROLLED_CONTROLS,
 } from "./matrix.ts";
 import {
 	type CanvasTokens,
@@ -654,6 +655,24 @@ async function captureCell(
 				"click" in outcome.action
 					? outcome.action.click
 					: outcome.action.type.testID;
+			/*
+			 * `ok-after-scroll` IS A PASS WITH A FACT ATTACHED, and the fact is
+			 * recorded rather than judged — unless the control is one this repository
+			 * DECLARES must be reachable where the reader meets it. That declaration
+			 * is the instrument the design round asked for: without it, "the answering
+			 * control was below the fold" can only be caught after the fact by U-05 or
+			 * U-08, which is exactly why round 1's automation missed it and a human
+			 * reading frames found it. With it, the cell fails by name, at the moment
+			 * the press had to scroll.
+			 */
+			if (outcome.result === "ok-after-scroll") {
+				if (!UNSCROLLED_CONTROLS.includes(target)) continue;
+				found.push({
+					kind: "affordance",
+					message: `the control '${target}' is declared as one a reader must reach WITHOUT scrolling, and the press required scrolling it into view (its resting box was x=${outcome.preScroll?.x ?? "?"} y=${outcome.preScroll?.y ?? "?"})`,
+				});
+				continue;
+			}
 			/* One sentence per answer, because each names a different repair: the
 			 *  page does not carry the id, the app refuses the state, a reader could
 			 *  not put a finger on the control (something is over it — the shape a
@@ -789,6 +808,11 @@ async function captureCell(
 		/* What this capture DID to reach the state, for the audit's re-drive: the
 		 *  actions it applied, not the table it read them from. */
 		openers: cell.openers ?? [],
+		/* WHAT EACH ACTION ANSWERED, and for a press that needed a scroll, where the
+		 *  control was before it: the audit replays these and reports a replay that
+		 *  did not land, and a reader can see from here which frames were taken of a
+		 *  page the harness had to scroll first. */
+		openerOutcomes,
 		consoleErrors,
 	};
 }
@@ -1434,6 +1458,16 @@ export interface CaptureRecord {
 	 * per-cell detail is not lost — it is only not counted as a measurement gap.
 	 */
 	declaredSkip: { cell: string; owner: string; reason: string } | null;
+	/**
+	 * What each opener ANSWERED, in order — and, for a press that had to scroll the
+	 * control into view, the box it had before the scroll.
+	 *
+	 * Recorded because the answer is not an implementation detail of the run: the
+	 * audit replays these actions and compares, and a reader asking "is this frame of
+	 * the page AT REST" needs the scroll fact to be somewhere other than a diff of two
+	 * capture runs. `R10`/`Q5`.
+	 */
+	openerOutcomes: AffordanceOutcome[];
 	/**
 	 * The relay scenario this cell's state comes from (the first scenario whose `shows`
 	 * declares it), or null for a cell no scenario declares (an ad-hoc `path:` page).
@@ -2258,6 +2292,28 @@ export async function runCapture(options: CaptureOptions) {
 			"theme problems: none — every frame's resolved theme and canvas match its cell, and no dark/light pair is identical",
 		);
 	}
+	/*
+	 * WHICH FRAMES ARE OF A PAGE THE HARNESS HAD TO SCROLL — stated, not discovered.
+	 *
+	 * The guard scrolls an off-screen control into view the way a reader does, and
+	 * restores the scroll afterwards, so a frame is of the resting page again. What
+	 * remains is the FACT: this cell's state was reached by scrolling, which is
+	 * exactly the property the design rounds reason about when they ask whether an
+	 * answering control is where the reader meets it. Left in the manifest alone it
+	 * would be a number nobody reads, so the run says it, by cell.
+	 */
+	const scrolled = records.filter((record) =>
+		(record.openerOutcomes ?? []).some(
+			(outcome) => outcome.result === "ok-after-scroll",
+		),
+	);
+	console.log(
+		scrolled.length === 0
+			? "scrolled presses: none — every opener pressed a control that was already on screen"
+			: `scrolled presses: ${scrolled.length} cell(s) needed a scroll to reach a control (${scrolled
+					.map((record) => record.name)
+					.join(", ")})`,
+	);
 	// The theme check has two halves, and only the first can run without tokens: the
 	// theme the page RESOLVED, and the canvas it painted against the design token for
 	// that theme. When the second half cannot be made, printing nothing would leave the

@@ -488,7 +488,13 @@ jobs:
     # onto the shipped value — so no displayed colour moves.
     # THE TWO RUNS BELOW ARE RECORDS, PINNED TO THE PLAN THEY WERE MEASURED ON rather
     # than re-derived: they ran on the 858-cell plan (which `85b2785` prints, and where
-    # every term reproduces), while this head's plan is 1092 cells.
+    # every term reproduces), while the head they were taken at (PR #51's merge,
+    # `15deac3`) planned 1092 cells. 1092 stays as THAT head's number — it is the plan
+    # those runs are pinned to, not a claim about this branch, which is why the sentence
+    # says `15deac3` rather than "this head": a relative reference here went stale the
+    # moment the plan moved, and it was the one figure a sweep's grep pattern did not
+    # contain. This head's plans are in the SIZING note above, each with the ref that
+    # prints it.
     #   * capture: `captured 858 cells / 2574 frames in 1810.8 s`, rc 1 on FOUR unready
     #     cells — `S15/loading` and `S4/idle`, both themes, at `iphone-15-landscape` and
     #     200 % (`median text 34.796875px at 200% against 1.74x the 100% cell (needs

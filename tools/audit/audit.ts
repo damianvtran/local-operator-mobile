@@ -58,6 +58,7 @@ import {
 	type Affordance,
 	type AffordanceOutcome,
 	describeAffordance,
+	outcomeFailed,
 	runAffordances,
 	waitForTestID,
 } from "../lib/affordance.ts";
@@ -949,9 +950,13 @@ export async function runAudit(options: AuditOptions) {
 			 * already returns is what makes the TYPING checkable on re-drive (review
 			 * round 1, R6), and it costs one line per action.
 			 */
+			/* `ok-after-scroll` is a replay that LANDED — the press happened, the way
+			 *  a reader makes it — so it is not this gap; the capture is where a declared
+			 *  no-scroll control is judged (`UNSCROLLED_CONTROLS`). What counts here is
+			 *  an action that could not be replayed at all. */
 			const openerGap =
-				(state.openerOutcomes ?? []).find(
-					(outcome) => outcome.result !== "ok",
+				(state.openerOutcomes ?? []).find((outcome) =>
+					outcomeFailed(outcome.result),
 				) ?? null;
 			const gap =
 				mismatch ??

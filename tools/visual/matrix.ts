@@ -617,6 +617,34 @@ export const SCREEN_ROOTS: Record<string, string> = {
  * ONE ENTRY PER CELL, and the cell name is the key: a cell whose opener moved is
  * a cell that fails, loudly, with the missing id in the sentence.
  */
+/**
+ * Controls a reader must be able to press WITHOUT scrolling first.
+ *
+ * WHY THIS LIST EXISTS. The guard in `lib/affordance.ts` scrolls an off-screen
+ * control into view before pressing it, because that is what a reader does — but
+ * then `ok` alone would turn "the reader could not see this control" into a pass,
+ * which is exactly the class the projects lifecycle's round-1 design finding was
+ * about (the create sheet's `Create` and its refusal both below the fold at every
+ * scale on both phones, the refusal painting in 11 of 28 combinations). Relying on
+ * U-05/U-08 to catch that after the fact is what let an automated capture pass a
+ * screen a human had to find by eye. So a control can be DECLARED here, and a
+ * press that needed a scroll then fails the cell by name, with the control's
+ * resting box in the sentence.
+ *
+ * WHAT BELONGS ON IT: the control that ANSWERS a surface — the submit of a form, a
+ * confirm's action — never a control the reader navigates with (a row, a header
+ * action, a list item). Those are reachable by scrolling on any scrolling screen,
+ * which is why the guard presses them and why they are not declared.
+ *
+ * The answer carries the pre-scroll box, so the sentence reads as evidence rather
+ * than as a complaint: `x=17 y=812` is where the reader would have had to look.
+ */
+export const UNSCROLLED_CONTROLS: readonly string[] = [
+	CONTROL.projectCreateSubmit,
+	CONTROL.projectMilestoneSubmit,
+	CONTROL.projectMilestoneRemove,
+];
+
 export const CELL_OPENERS: Record<string, Affordance[]> = {
 	/* --- the create sheet, over the listing (S16) --- */
 	"S16/create": [{ click: CONTROL.projectsNew }],

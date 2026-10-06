@@ -424,6 +424,39 @@ export const SHEET_CONTENT_MAX_FRACTION = 0.6;
  *
  * The other two detents are bounded already; `content` was the one that was not.
  */
+/**
+ * WHICH DETENT A FOOTERED FORM TAKES, DECIDED HERE RATHER THAN IMPLIED.
+ *
+ * The forms (create a project; edit a milestone) take `content` — 0.6 — and that
+ * choice was challenged in review round 1 on the ground that a six-control form
+ * does not fit, with `full` (0.92) offered as the alternative. That round's
+ * rejection of `full` was reasoned about the ACTION ("the form is taller than the
+ * window at every detent"), and the pinned `footer` has since made the action's
+ * reachability independent of the detent — so the reason moved and the decision
+ * has to be re-stated rather than inherited.
+ *
+ * MEASURED, at the extreme corner (iphone-se, 200 %, which is a 320 pt phone at
+ * the largest type step): the `content` cap splits 76 / 181 / 84 pt into header /
+ * body / footer, so the body band is 181 pt for 926 pt of form. `full` would make
+ * that band 362 pt. The decision is `content`, for three reasons:
+ *
+ *  1. The sheet is anchored over a listing or a detail the reader is working in,
+ *     and it is a task handed out by that screen rather than a destination
+ *     (`project-create.tsx` says why it is a sheet and not a route). At 0.92 the
+ *     surface leaves ~26 pt of that context on the narrowest phone at 100 %, which
+ *     reads as a page that happens to sit over another one.
+ *  2. The load-bearing half of round 1's finding was the ANSWERING CONTROL and its
+ *     refusal being out of reach, and the pinned footer settles that at any detent
+ *     — the band the reader scrolls is a comfort question, not a reachability one.
+ *  3. The cost is bounded and legible: the body scrolls, and the reader can see
+ *     roughly a control and a half at the largest type step on the smallest phone.
+ *
+ * WHAT WOULD CHANGE IT: a form whose body needs more than about three screens of
+ * scroll at the DEFAULT scale (100 %) — at that point the detent is what is making
+ * a sheet behave like a page, and `full` becomes the cheaper answer than a longer
+ * scroll. Recorded so the next reader argues with a measurement instead of with a
+ * reason that no longer applies (design round 2, D8).
+ */
 export const SHEET_DETENTS: Record<SheetDetent, number | null> = {
 	content: SHEET_CONTENT_MAX_FRACTION,
 	half: 0.5,

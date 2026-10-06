@@ -15,8 +15,12 @@ import {
  * The rule itself — mount order, newest wins — lives in `@/ui/modal-stack` with
  * its own reasoning and its own test, because that module has no renderer in it.
  * This file is the few lines of React that connect a component to it, shared by
- * `Sheet` and `Dialog` rather than written twice: the guard has to hold between
- * ANY two modals, which is exactly the property a per-component copy would lose.
+ * every modal renderer — `Sheet`, `Dialog` and the conversations drawer — rather
+ * than written three times: the guard has to hold between ANY two modals, which is
+ * exactly the property a per-component copy would lose. The count is written as a
+ * rule rather than as a list on purpose: an earlier version of this doc named two
+ * callers, the drawer was a third, and the stale list is what let it miss the
+ * guard for a round (`rg -n '<Modal' src/` is the list).
  *
  * The registration is keyed on `visible`, not on mount, so a modal that is
  * mounted but closed (the shape every caller here uses — a screen keeps its
