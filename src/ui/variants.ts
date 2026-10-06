@@ -401,13 +401,34 @@ export const SHEET_SURFACE_CLASS =
  * are the same number until a keyboard opens, which is when the mistake bites. */
 export type SheetDetent = "content" | "half" | "full";
 
+/**
+ * `content` fits its content, capped at this fraction of the column.
+ *
+ * THE CAP WAS DOCUMENTED AND NOT IMPLEMENTED for as long as this table has
+ * existed: the `content` entry was `null`, which `Sheet` reads as "no bound at
+ * all", so a content-detent sheet could grow past the column it lives in and its
+ * own header row would be drawn INSIDE the device's top unsafe band. MEASURED on
+ * the capture that added the projects lifecycle's forms (this slice, at iphone-se
+ * / 200 %): the create and milestone sheets put their first row at 6-15 pt
+ * against a 20 pt declared inset, and the audit's U-05 rule failed them — the
+ * frames show the sheet's title scrolled off the top of the screen. This constant
+ * was declared beside the table for exactly that cap and referenced nowhere.
+ *
+ * Declared BEFORE the table that now uses it: a `const` read in an initializer
+ * above its own declaration is a TDZ error at module load, not a compile error.
+ */
+export const SHEET_CONTENT_MAX_FRACTION = 0.6;
+
+/** Detents, as a fraction of the scroll COLUMN — not of the viewport. The two
+ * are the same number until a keyboard opens, which is when the mistake bites.
+ *
+ * The other two detents are bounded already; `content` was the one that was not.
+ */
 export const SHEET_DETENTS: Record<SheetDetent, number | null> = {
-	content: null, // fit content, capped at 60% of the column
+	content: SHEET_CONTENT_MAX_FRACTION,
 	half: 0.5,
 	full: 0.92,
 };
-
-export const SHEET_CONTENT_MAX_FRACTION = 0.6;
 
 export const DIALOG_SURFACE_CLASS =
 	"rounded-lg border border-hairline bg-elevated p-4";
