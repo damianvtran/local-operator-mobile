@@ -12,11 +12,16 @@
 # connection routes. Pass the values with `-e`:
 #
 #   maestro test --config e2e/maestro/config.yaml \
-#     -e APP_ID=com.radient.localoperator.mobile \
+#     -e APP_ID=<the built app's id> \
 #     -e RELAY_URL=http://127.0.0.1:<mock-port> \
 #     -e RELAY_PASSWORD="$(cat "$RUN/relay-password")" \
 #     -e SESSION_ID=6714def86197 \
 #     e2e/maestro
+#
+# `APP_ID` has no default in any flow, deliberately: Maestro 2.11.0 applies a
+# flow-level `env:` value after the CLI's `-e` values and overwrites them, so a
+# default committed in a flow would silently launch the wrong bundle — the value
+# comes from the invocation, and CI reads it out of the APK it just built.
 #
 # The relay password is never written into a flow. A flow that needed a literal
 # secret could not be committed, so `RELAY_PASSWORD` arrives as an -e value from

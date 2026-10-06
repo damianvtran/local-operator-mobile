@@ -34,7 +34,6 @@
 appId: ${APP_ID}
 name: "F-2 pick a computer"
 env:
-  APP_ID: com.radient.localoperator.mobile
   TUNNEL_HOST: 0123456789abcdef0123456789abcdef-lop.example.invalid
 ---
 - launchApp:

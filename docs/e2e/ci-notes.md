@@ -153,7 +153,7 @@ the sample it is, and a green `ci` run cannot read as the whole matrix.
 ```yaml
 # iOS, macos runner
 - run: maestro test --config e2e/maestro/config.yaml \
-         -e APP_ID=com.radient.localoperator.mobile \
+         -e APP_ID=<the built app's id> \
          -e RELAY_URL=http://127.0.0.1:$MOCK_RELAY_PORT \
          -e SESSION_ID=6714def86197 \
          e2e/maestro

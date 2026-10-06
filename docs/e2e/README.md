@@ -1182,7 +1182,7 @@ recovery (F-9) and the refusal surfaces (S13).
 ```sh
 # docs:needs mock-relay maestro
 maestro test --config e2e/maestro/config.yaml \
-  -e APP_ID=com.radient.localoperator.mobile \
+  -e APP_ID=<the built app's id> \
   -e RELAY_URL=<mock-url> \
   -e SESSION_ID=6714def86197 \
   e2e/maestro

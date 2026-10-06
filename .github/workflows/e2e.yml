@@ -649,7 +649,11 @@ jobs:
         # pipeline is whatever the build actually produced, because that is the
         # app installed on the emulator. Reading it out of the APK removes the
         # second copy entirely, and the bundle id itself stays an operator
-        # decision rather than something CI invents.
+        # decision rather than something CI invents. The flows deliberately
+        # declare no `APP_ID` default of their own, for this reason: Maestro
+        # 2.11.0 applies a flow-level `env:` value after the CLI's `-e` values
+        # and overwrites them, so a committed default would silently beat this
+        # step's value.
         run: |
           set -euo pipefail
           aapt=$(find "${ANDROID_HOME:-$ANDROID_SDK_ROOT}" -name aapt2 -type f | sort | tail -1)

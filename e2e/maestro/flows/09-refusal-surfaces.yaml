@@ -40,8 +40,6 @@
 # CI-only: needs a booted simulator or emulator and an app build (ADR 0003).
 appId: ${APP_ID}
 name: "S13 refusal surfaces"
-env:
-  APP_ID: com.radient.localoperator.mobile
 ---
 - launchApp:
     clearState: true
