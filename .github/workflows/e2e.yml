@@ -738,11 +738,14 @@ jobs:
             # `SESSION_ID` is the harness's own fixture session id, from the corpus
             # the mock relay serves (`fixtures/relay/**` — the id every captured
             # projection uses).
+            # The `test` subcommand requires the flow target positional: pass the
+            # workspace root (`e2e/maestro`) — its `flows:` list selects which flows
+            # run, and the config's globs resolve against the directory passed.
             # One retry, and only one (ADR 0003): Maestro 2.11.0's CLI has no retry
             # flag, so the invocation itself re-runs the set once on failure and
             # raises a ::warning — a flake stays visible, a second failure is a
             # failure (the step's exit code).
-            run_flows() { maestro --config e2e/maestro/config.yaml test -e APP_ID="$APP_ID" -e RELAY_URL="$RELAY_URL_FOR_DEVICE" -e RELAY_PASSWORD="$(cat "$RUNNER_TEMP/relay-password")" -e SESSION_ID=6714def86197 -e MAESTRO_SCREENSHOTS="$RUNNER_TEMP/maestro-screenshots"; }; run_flows || { echo "::warning title=Maestro flaked once::the flow set failed; re-running it once, per ADR 0003 — a second failure is a failure"; run_flows; }
+            run_flows() { maestro test --config e2e/maestro/config.yaml -e APP_ID="$APP_ID" -e RELAY_URL="$RELAY_URL_FOR_DEVICE" -e RELAY_PASSWORD="$(cat "$RUNNER_TEMP/relay-password")" -e SESSION_ID=6714def86197 -e MAESTRO_SCREENSHOTS="$RUNNER_TEMP/maestro-screenshots" e2e/maestro; }; run_flows || { echo "::warning title=Maestro flaked once::the flow set failed; re-running it once, per ADR 0003 — a second failure is a failure"; run_flows; }
 
       - name: Stop the mock relay
         if: always()

@@ -1,6 +1,6 @@
 # Maestro workspace configuration for the native flow set.
 #
-# Run:  maestro --config e2e/maestro/config.yaml test
+# Run:  maestro test --config e2e/maestro/config.yaml e2e/maestro
 #
 # These flows cannot run on a development machine that has no Xcode and no
 # Android SDK (ADR 0003, "Context", and the repository's own build-host rules),
@@ -11,11 +11,12 @@
 # Every flow is parameterised, so the same YAML covers both platforms and both
 # connection routes. Pass the values with `-e`:
 #
-#   maestro --config e2e/maestro/config.yaml test \
+#   maestro test --config e2e/maestro/config.yaml \
 #     -e APP_ID=com.radient.localoperator.mobile \
 #     -e RELAY_URL=http://127.0.0.1:<mock-port> \
 #     -e RELAY_PASSWORD="$(cat "$RUN/relay-password")" \
-#     -e SESSION_ID=6714def86197
+#     -e SESSION_ID=6714def86197 \
+#     e2e/maestro
 #
 # The relay password is never written into a flow. A flow that needed a literal
 # secret could not be committed, so `RELAY_PASSWORD` arrives as an -e value from

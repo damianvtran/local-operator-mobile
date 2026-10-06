@@ -1181,10 +1181,11 @@ recovery (F-9) and the refusal surfaces (S13).
 
 ```sh
 # docs:needs mock-relay maestro
-maestro --config e2e/maestro/config.yaml test \
+maestro test --config e2e/maestro/config.yaml \
   -e APP_ID=com.radient.localoperator.mobile \
   -e RELAY_URL=<mock-url> \
-  -e SESSION_ID=6714def86197
+  -e SESSION_ID=6714def86197 \
+  e2e/maestro
 ```
 
 **These have not been run.** They need a booted simulator or emulator and a
