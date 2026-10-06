@@ -653,8 +653,24 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 				rowOverrides: {
 					section: "previous",
 					streaming: false,
-					// The durable re-materialisation publishes pid 0 with ended false;
-					// the listing row is what says the conversation is over.
+					/* The LISTING ROW is the receipt this cell reads: the pane paints
+					 * `SessionSummary.ended` as the muted title and the word `ended`
+					 * (`list-row.tsx`), and `rowFrom` derives no receipt from a projection —
+					 * the durable frame above is the same death at the ref where it read
+					 * `ended: false`. Without this override the row carried no `ended` at
+					 * all, so `S15/ended` photographed as `S15/populated` — byte-identical
+					 * at iphone-15-landscape / 200 %, where the one thing that differed
+					 * elsewhere (the meta line) sits below the fold — and the
+					 * identical-state check reported the collapse it exists to catch. The
+					 * wire fact mirrors the live capture `http/list_row_ended.json`:
+					 * `ended: true`, subagents null while the runtime is gone. */
+					ended: true,
+					/* The runtime is gone, so the relay cannot vouch for a count:
+					 * `null` is "not reported" and must never be read as `0`
+					 * (`docs/relay/contract.md` §3.2 — the pair the capture shows).
+					 * `degraded` and `wedged` null the same pair for the same reason. */
+					subagents_running: null,
+					subagents_queued: null,
 					completion_kind: "complete",
 					unseen: false,
 				},
