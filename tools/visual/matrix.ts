@@ -798,6 +798,30 @@ export const IDENTICAL_FRAME_COINCIDENCES: IdenticalFrameClass[] = [
 			"Measured on the ci run at 0b414a4: four pairs, one per theme × scale " +
 			"(dark 07d9c40e1083 / d7ca9bcec45e; light 1623786f6c06 / f2ee0ac17b8f).",
 	},
+	{
+		cells: [
+			"S5/populated-long",
+			"path:/session/{sessionId}?lo-scroll=top/condensed",
+		],
+		reason:
+			"one view, two scroll positions at iphone-se / 200 %: at 320 px with 200 % text the " +
+			"transcript's visible area is a sliver between the session header and its panels, and " +
+			"the list's window sits at its TOP in both cells — the tail-following " +
+			"`S5/populated-long` renders the same first rows as the anchored " +
+			"`path:…condensed`, which is why the same bytes carry the same content and the " +
+			"identical-state check reads one view. The readings agree on it: at dark/200 both " +
+			"cells' `readiness.text` begins `Refactor… client … Reconcile last night's ledger " +
+			"and tell me what slipped. ✓ completed · 38 steps …` and their content digests are " +
+			"EQUAL (3911696863f1487d; 0063b6b8723f5676 at light/200 — run 37529153608). The " +
+			"claims do not collide where the transcript has room: at 100 % and 135 % the two " +
+			"cells render different bytes (dark/100 152d8908 vs 0bd818dc; light/100 922d64ec vs " +
+			"3b9115da; dark/135 d8d3dafb vs e66aba68; light/135 c7a6c724 vs 4eece5e6), so " +
+			"neither cell is a duplicate of the other and neither declaration can be removed. " +
+			"Every cell still reaches the session screen with its relay-backed session, and at " +
+			"this exact combo both carry the condensed turn bars as visible ids " +
+			"(`session-screen`, `turn-bar-tc-conv-00-user` … in the visible set), which is what " +
+			"keeps this a composition at that viewport rather than a collapse of either state.",
+	},
 ];
 
 /** Read the resolved theme/scale and the app's own canvas colour, per frame. */
