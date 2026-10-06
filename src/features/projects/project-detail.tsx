@@ -446,7 +446,14 @@ export default function ProjectDetail() {
 			)}
 
 			<Sheet
-				visible={editor !== null}
+				/* THE SHEET STANDS DOWN WHILE ITS CONFIRM IS UP. Two open modals at once
+				 *  is a shape this app does not use anywhere else — the project delete's
+				 *  confirm is raised over the SCREEN — and it is what the audit's U-08 rule
+				 *  reports as a 320x568pt full-viewport overlap on the remove cell, because
+				 *  the two modal layers cover each other exactly. Hiding rather than
+				 *  unmounting keeps the reader's typing and the milestone being edited, so
+				 *  Cancel returns to the sheet they were in. */
+				visible={editor !== null && !confirmRemove}
 				onClose={closeEditor}
 				title={editingName === null ? "Add milestone" : "Edit milestone"}
 				testID={SURFACE.projectMilestoneSheet}

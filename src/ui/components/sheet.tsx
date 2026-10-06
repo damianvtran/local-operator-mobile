@@ -6,6 +6,7 @@ import {
 	Modal,
 	Pressable,
 	ScrollView,
+	useWindowDimensions,
 	View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -103,10 +104,26 @@ export const Sheet = ({
 	}, [visible, rise, scrimFade, reduceMotion]);
 
 	const fraction = SHEET_DETENTS[detent];
+	/*
+	 * THE CAP EXISTS FROM THE FIRST FRAME, and that is the whole reason for the
+	 * window fallback.
+	 *
+	 * `columnHeight` comes from `onLayout`, which react-native-web answers from a
+	 * `ResizeObserver` — a frame LATER. Until it lands, a bounded detent had no
+	 * bound at all, so a tall sheet was painted at its full natural height for one
+	 * frame and its own header row sat inside the device's top unsafe band.
+	 * MEASURED, not reasoned about: this slice's audit re-drives the create cell,
+	 * reads the geometry as soon as the sheet's marker appears, and reported
+	 * `U-05 dialog content sits at 1pt, inside the 20pt unsafe top inset` — while
+	 * the captured FRAME of the same cell (taken after the settle window, when
+	 * `onLayout` had landed) was correctly capped. The window's height is the right
+	 * seed rather than a guess: the column IS the window until a keyboard opens,
+	 * which is the case `onLayout` exists to correct.
+	 */
+	const windowHeight = useWindowDimensions().height;
+	const capHeight = columnHeight > 0 ? columnHeight : windowHeight;
 	const maxContentHeight =
-		fraction === null || columnHeight === 0
-			? undefined
-			: Math.round(columnHeight * fraction);
+		fraction === null ? undefined : Math.round(capHeight * fraction);
 
 	return (
 		<Modal
