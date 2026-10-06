@@ -12,6 +12,14 @@
  * assumed rather than set.
  */
 
+/* The app's own identifier contract, IMPORTED rather than copied: an opener is a
+ * press on a control the app declares, so the name it presses is the app's, and a
+ * second spelling here would be a cell that fails the day the control is renamed
+ * (`tools/lib/readiness.ts` imports the same module for the same reason). It is
+ * plain TypeScript with no imports of its own, so the tooling can load it. */
+import { CONTROL, projectMilestoneEditId } from "../../src/ui/a11y.ts";
+import type { Affordance } from "../lib/affordance.ts";
+
 /**
  * Safe-area insets per device class, in CSS pixels. `env(safe-area-inset-*)`
  * cannot be overridden through CDP, so the harness declares them as custom
@@ -346,8 +354,8 @@ export function describeDeviceCoverage(coverage: {
  * The CI tier: the bounded sample the per-push capture job takes.
  *
  * WHY A THIRD TIER, AND WHY IT IS HERE RATHER THAN A `--devices` LIST IN YAML.
- * The `core` tier is 1584 cells: the whole declared cell list (44 cells) x 2 themes x
- * (3 phones x 4 scales + 2 tablets x 3 scales) — 44 x 2 x 18, the tier's 5 profiles —
+ * The `core` tier is 1836 cells: the whole declared cell list (51 cells) x 2 themes x
+ * (3 phones x 4 scales + 2 tablets x 3 scales) — 51 x 2 x 18, the tier's 5 profiles —
  * and the CI job's capture step is bound at 30 minutes. Measured on the runner, that is
  * 2.24 s/cell: 403 cells in 903 s (run 37098393675, a plan of 403 cells then), so a core
  * run needs ~59 minutes. The job's first real
@@ -379,11 +387,11 @@ export function describeDeviceCoverage(coverage: {
  *     `CI_SCALES` below for why the boundary earns the third slot and 150% does
  *     not. 150% stays in `core`, which sweeps every scale.
  *
- * That is 44 cells x 2 themes x (2 profiles x 3 scales) = 528 cells, ~20 minutes at
+ * That is 51 cells x 2 themes x (2 profiles x 3 scales) = 612 cells, ~23 minutes at
  * the measured rate: inside the step bound (raised with it, see `CI_SCALES`) with
  * the same headroom it always carried. `core` and `full` are unchanged and stay the
- * local and dispatched samples, so the full 1584-cell `core` matrix and the
- * 5808-cell `full` matrix remain runnable — nothing is only reachable through CI.
+ * local and dispatched samples, so the full 1836-cell `core` matrix and the
+ * 6732-cell `full` matrix remain runnable — nothing is only reachable through CI.
  */
 export const CI_DEVICES: string[] = ["iphone-se", "tablet-landscape"];
 
@@ -401,9 +409,10 @@ export const CI_DEVICES: string[] = ["iphone-se", "tablet-landscape"];
  * sweeps every scale, so nothing is lost by composing the two sets differently.
  *
  * WHAT IT COSTS, because it is NOT free and the two are one decision. Three scales on
- * both CI profiles is 528 cells, +57 % over the two-scale 336, so the per-push capture
- * and audit bounds in `.github/workflows/e2e.yml` were raised with it (capture 20 → 30,
- * audit 10 → 15, job 50 → 60). A bound that fires every run stops being a signal, so
+ * both CI profiles is 612 cells, +50 % over the two-scale 408, so the per-push capture
+ * and audit bounds in `.github/workflows/e2e.yml` were raised with it — most recently to
+ * capture 40 / audit 20 / job 80, when the lifecycle cells took the cell list from 42 to
+ * 51 and the sample from 504 to 612. A bound that fires every run stops being a signal, so
  * this list and that bound have to move together: reverting the bounds without
  * reverting this list makes the job red, and reverting this list without the bounds
  * wastes the budget it was sized for. */
@@ -579,6 +588,100 @@ export const SCREEN_ROOTS: Record<string, string> = {
 	S15: "sessions-screen",
 	S16: "projects-screen",
 	"S16-detail": "project-detail-screen",
+};
+
+/**
+ * The actions a cell takes before it settles — the harness's own press.
+ *
+ * A cell is a state, and until this table existed a state had to be reachable by
+ * URL alone: the harness navigates and waits, it does not open a panel. So every
+ * state BEHIND A CONTROL had no cell, which is a whole class of surface a design
+ * or QA round is asked to sign off with no frame behind it — `S9/populated` was
+ * withdrawn as a cell for exactly that reason.
+ *
+ * WHAT AN ENTRY MAY DO is deliberately two things (`tools/lib/affordance.ts`):
+ * press a control by its declared id, and put text into a field. Both are things
+ * a READER does; neither is a hook the app has to carry for the harness. The
+ * states they reach are reached through the app's own code and the relay's own
+ * wire — a refusal cell gets the relay's sentence because the app really asked
+ * and was really refused, and a busy cell is busy because the relay really has
+ * not answered.
+ *
+ * RECORDED, NOT RE-DERIVED. The capture writes the actions it applied into the
+ * manifest and the audit REPLAYS them from that record, the same rule the seed
+ * follows: a re-drive that re-derived the list from this table would be measuring
+ * whatever this table says today rather than what the frame was taken of.
+ *
+ * ONE ENTRY PER CELL, and the cell name is the key: a cell whose opener moved is
+ * a cell that fails, loudly, with the missing id in the sentence.
+ */
+export const CELL_OPENERS: Record<string, Affordance[]> = {
+	/* --- the create sheet, over the listing (S16) --- */
+	"S16/create": [{ click: CONTROL.projectsNew }],
+	/* The same sheet with a reader's own values in it: what the form looks like
+	 *  filled, which is the state a design round judges the spacing and the
+	 *  wrapping against. The description is deliberately a sentence rather than a
+	 *  word — the field is the one that has to hold prose. */
+	"S16/create-filled": [
+		{ click: CONTROL.projectsNew },
+		{
+			type: {
+				testID: CONTROL.projectCreateName,
+				text: "vendor-sso-cutover",
+			},
+		},
+		{
+			type: {
+				testID: CONTROL.projectCreateDescription,
+				text: "Move the last three services off the vendor's SSO before the contract lapses.",
+			},
+		},
+	],
+	/* A name the seeded store ALREADY holds, submitted: the store answers its own
+	 *  `409 project_name_exists` and the sheet renders that sentence. Nothing in
+	 *  the harness writes the refusal — the mock is the store, and the sentence is
+	 *  the one the app prints from the answer. */
+	"S16/create-refused": [
+		{ click: CONTROL.projectsNew },
+		{ type: { testID: CONTROL.projectCreateName, text: "payments-migration" } },
+		{ click: CONTROL.projectCreateSubmit },
+	],
+	/* The same submit against a relay that never answers (`projects-write-busy`). */
+	"S16/create-busy": [
+		{ click: CONTROL.projectsNew },
+		{ type: { testID: CONTROL.projectCreateName, text: "vendor-sso-cutover" } },
+		{ click: CONTROL.projectCreateSubmit },
+	],
+
+	/* --- the milestone editor and the two confirms (S16 detail) --- */
+	"S16-detail/milestone-editor": [{ click: CONTROL.projectAddMilestone }],
+	/* The slash refusal, WHILE IT IS TYPED: the guard is the phone's, because the
+	 *  route that removes a milestone carries its name in the path. Nothing is
+	 *  submitted, so the explanation is what the frame is about. */
+	"S16-detail/slash": [
+		{ click: CONTROL.projectAddMilestone },
+		{ type: { testID: CONTROL.projectMilestoneName, text: "ship/v2" } },
+	],
+	/* Removal lives inside the editor of an EXISTING milestone, behind its own
+	 *  confirm — two presses, which is the point: the first opens the editor, the
+	 *  second asks. */
+	"S16-detail/milestone-remove": [
+		{ click: projectMilestoneEditId("beta cut") },
+		{ click: CONTROL.projectMilestoneRemove },
+	],
+	/* A milestone write the relay never answers, pressed from the EDITOR rather
+	 *  than from a row toggle, and for an evidence reason worth stating: the sheet
+	 *  is an overlay, so the in-flight state is on screen at every scale, while a
+	 *  row toggle's own row sits below the fold on a 320 pt phone at 200 %. The
+	 *  screen-level `project-milestone-busy` marker is the same either way — this
+	 *  is about what the FRAME can show, not about what the app does. */
+	"S16-detail/busy": [
+		{ click: projectMilestoneEditId("beta cut") },
+		{ click: CONTROL.projectMilestoneSubmit },
+	],
+	/* The project delete's confirm: the first tap sends NOTHING (the deletion is
+	 *  not undoable), so this frame is the question, not the answer. */
+	"S16-detail/delete-confirm": [{ click: CONTROL.projectDelete }],
 };
 
 /**

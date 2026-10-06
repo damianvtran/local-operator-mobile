@@ -38,6 +38,11 @@ import { createHash } from "node:crypto";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { cellUrl } from "../audit/audit.ts";
+import {
+	type Affordance,
+	describeAffordances,
+	runAffordances,
+} from "../lib/affordance.ts";
 import { bool, csv, num, parseArgs, str } from "../lib/args.ts";
 import type { CdpPage } from "../lib/cdp.ts";
 import { sleep } from "../lib/cdp.ts";
@@ -61,6 +66,7 @@ import { renderGallery } from "./gallery.ts";
 import { findIdenticalFrames } from "./identical-states.ts";
 import {
 	ALL_DEVICES,
+	CELL_OPENERS,
 	CI_DEVICES,
 	CI_SCALES,
 	CONTENT_PROBE,
@@ -104,10 +110,10 @@ let settledRetakes = 0;
  * not a size policy: it catches a plan far larger than any sample this harness
  * offers (an inflated cell registry, a cell list copied from another tree), and it
  * is why a big run is always something the caller typed `--yes` for. It sits BELOW
- * every tier on purpose — `ci` plans 528 cells, `core` 1584, `full` 5808 — so none of
+ * every tier on purpose — `ci` plans 612 cells, `core` 1836, `full` 6732 — so none of
  * them starts by accident; the CI job passes `--yes` for exactly that reason. It is
  * NOT tied to the default tier, so it must not be raised to "let the default run": a
- * documented invocation that plans the whole `core` tier is a 59-minute command, and
+ * documented invocation that plans the whole `core` tier is a 69-minute command, and
  * the defect is the invocation, not the bound. Deriving it from the plan the way
  * `CELL_BUDGET_MS` is derived would be circular — the guard would then never fire —
  * so it stays a constant, and this comment is what it is derived from.
@@ -119,7 +125,7 @@ const CONFIRM_THRESHOLD = 120;
  * the floor a small plan still gets.
  *
  * WHY THE DEFAULT IS DERIVED RATHER THAN FIXED. It used to be a flat 900 s, which
- * holds about 400 cells: a `core` run (1584 cells) or a dispatched `full` run (5808)
+ * holds about 400 cells: a `core` run (1836 cells) or a dispatched `full` run (6732)
  * was therefore cut off by the harness's own default and reported hundreds of cells
  * as having no frame — a bound firing on a plan it was never sized for, which reads
  * like a finding about the app and is not one. Deriving it from the plan makes the
@@ -138,7 +144,7 @@ const CONFIRM_THRESHOLD = 120;
  *
  * THE HEADROOM IS THINNER THAN 1.34x AGAINST THE RUNNER SUGGESTS, and this is the number to
  * look at when the plan next grows. The `ci` plan has measured 2.17 s/cell at its fastest and
- * 2.74 s/cell at its slowest on this host (504 cells in 1093.7 s and 1380.5 s), so the slow end
+ * 2.74 s/cell at its slowest on this host (a plan of 504 cells then: 1093.7 s and 1380.5 s), so the slow end
  * sits ~9 % inside this budget. It is NOT re-tuned here, because the bound's job is to catch a
  * run that hung rather than to race one that is slow — but the day `CI_SCALES` or a device list
  * grows, this margin is what is spent first, before the deadline fires on a run that was merely
@@ -340,6 +346,10 @@ function buildPlan({
 						deviceSpec: device,
 						scaleSpec: scale,
 						consecutive,
+						/* The actions this cell takes to reach its state, per FRAME so the
+						 *  capture, the manifest and the audit's re-drive all read one list.
+						 *  Most cells have none: a URL is what most states are. */
+						openers: CELL_OPENERS[cell] ?? [],
 					});
 				}
 			}
@@ -549,6 +559,27 @@ async function captureCell(
 	};
 
 	await loaded;
+	/*
+	 * THE CELL'S OWN ACTIONS, before any frame is stamped.
+	 *
+	 * A cell that declares a state BEHIND A CONTROL says how to reach it in
+	 * `CELL_OPENERS`; the press is a press (the app's own path, the relay's own
+	 * wire), never a hook the screens carry for the harness. Running it here —
+	 * after the load event and before `f0` and the settled frame — is what makes the
+	 * frames of a cell the frames of the state it names, and it is why the readiness
+	 * loop below (which waits on a missing MARKER) also covers the opened state's
+	 * arrival: the app re-renders once the press lands, and the loop is what waits.
+	 *
+	 * A press that found nothing is NOT a quiet skip. It means the id this table
+	 * names is not on the page, so the frame about to be stamped is of the state
+	 * BEFORE the one the cell declares — the exact shape of "asserting one thing and
+	 * shipping another" the marker rule exists to prevent — and it is reported as an
+	 * issue, by name, with the control that was missing.
+	 */
+	const openerOutcomes =
+		(cell.openers ?? []).length > 0
+			? await runAffordances(page, cell.openers ?? [])
+			: [];
 	if (cell.consecutive) {
 		// Consecutive frames: a first frame that differs from the settled frame is
 		// motion the user sees, whether or not it was intended, and a frame whose
@@ -595,6 +626,20 @@ async function captureCell(
 					`'${String(measurements?.route ?? "")}' without it: the harness's own half of ` +
 					"the seed hook failed",
 			});
+		for (const outcome of openerOutcomes) {
+			if (outcome.result === "ok") continue;
+			const target =
+				"click" in outcome.action
+					? outcome.action.click
+					: outcome.action.type.testID;
+			found.push({
+				kind: "affordance",
+				message:
+					outcome.result === "inert"
+						? `the control '${target}' was disabled, so the state this cell declares was never opened`
+						: `the control '${target}' is not on the page, so the state this cell declares was never opened`,
+			});
+		}
 		return found;
 	};
 	/** Everything about the cell that must hold still across the settled frame. */
@@ -708,6 +753,9 @@ async function captureCell(
 		ready: readinessProblems.length === 0,
 		contentDigest,
 		declaredSkip,
+		/* What this capture DID to reach the state, for the audit's re-drive: the
+		 *  actions it applied, not the table it read them from. */
+		openers: cell.openers ?? [],
 		consoleErrors,
 	};
 }
@@ -988,7 +1036,11 @@ function digestContent(content: CellContent): string {
 type CellIssue =
 	| ReadinessIssue
 	| { kind: "reading"; message: string }
-	| { kind: "seed"; message: string };
+	| { kind: "seed"; message: string }
+	/** A control this cell presses was not there, or was disabled — the state the
+	 *  cell names was never opened, which is a fact about the frame rather than a
+	 *  success with a surprising picture in it. */
+	| { kind: "affordance"; message: string };
 
 function readinessIssuesFor(
 	cell: FramePlan,
@@ -1217,6 +1269,9 @@ interface FramePlan {
 	deviceSpec: DeviceProfile;
 	scaleSpec: { id: string; factor: number };
 	consecutive: boolean;
+	/** The actions this cell takes to reach its state, from `CELL_OPENERS`. Empty
+	 *  for a cell a URL expresses on its own, which is most of them. */
+	openers: Affordance[];
 }
 
 /**
@@ -1356,6 +1411,16 @@ export interface CaptureRecord {
 	 */
 	pinnedScenario?: string | null;
 	consoleErrors: string[];
+	/**
+	 * The page actions this capture APPLIED to reach the cell's state, in order.
+	 *
+	 * Empty for a cell a URL can express on its own, which is most of them. The audit
+	 * REPLAYS this list rather than re-deriving it from `CELL_OPENERS`: a re-drive that
+	 * re-read the table would be measuring whatever the table says at re-drive time
+	 * instead of what the frame was actually taken of — the rule `meta.seed` already
+	 * follows for the seed.
+	 */
+	openers: Affordance[];
 	/**
 	 * Whether the text-scale dimension was LIVE for this frame's cell, and — on the
 	 * 200 % frame only — the roles that failed. `null` means the run did not capture
@@ -1535,7 +1600,17 @@ export async function runCapture(options: CaptureOptions) {
 		);
 	}
 	if (options.plan) {
-		for (const cell of plan) console.log(`   ${frameName(cell)}`);
+		/* The openers are part of the plan, not a detail of the run: a cell that
+		 *  reaches its state by PRESSING something is a different promise from one a
+		 *  URL expresses, and a reviewer reading the plan is the person who has to
+		 *  agree with it before it costs twenty minutes. */
+		for (const cell of plan) {
+			const openers =
+				cell.openers.length > 0
+					? `  ← ${describeAffordances(cell.openers)}`
+					: "";
+			console.log(`   ${frameName(cell)}${openers}`);
+		}
 		return { planned: plannedFrames, plan, dryRun: true };
 	}
 	if (plannedFrames > CONFIRM_THRESHOLD && !options.yes) {
@@ -2621,11 +2696,11 @@ if (isMain) {
 				"  --tier <name>       the sample to capture: ci | core (default) | full.",
 				"                      The matrix declares 19 device profiles; the run prints the",
 				"                      share it covered, and names the profiles it did not.",
-				"                        ci    2 of 19 profiles — 528 cells, both themes, scales 100,",
-				"                              135 and 200 (~20 min) — the per-push CI job's sample",
-				"                        core  5 of 19 profiles — 1584 cells, both themes,",
+				"                        ci    2 of 19 profiles — 612 cells, both themes, scales 100,",
+				"                              135 and 200 (~19 min) — the per-push CI job's sample",
+				"                        core  5 of 19 profiles — 1836 cells, both themes,",
 				"                              every scale — the local default",
-				"                        full  19 of 19 profiles — 5808 cells",
+				"                        full  19 of 19 profiles — 6732 cells",
 				"  --devices <names>   comma list. Default: the tier's profiles (ci 2, core 5 by",
 				"                      default, --full for all 19)",
 				"  --themes <names>    default dark,light",
@@ -2652,7 +2727,7 @@ if (isMain) {
 	// overrides any of them.
 	//
 	// An unknown tier is an ERROR rather than a silent fall back to `core`: a typo'd
-	// `--tier ci` that quietly ran 1584 cells would spend ~59 minutes on a capture the
+	// `--tier ci` that quietly ran 1836 cells would spend ~69 minutes on a capture the
 	// caller did not ask for, and the whole point of naming the sample is that the
 	// run you get is the one you asked for.
 	const tierFlag = bool(flags, "full") ? "full" : str(flags, "tier", "core");

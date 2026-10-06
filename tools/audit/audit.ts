@@ -54,6 +54,7 @@
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { type Affordance, runAffordances } from "../lib/affordance.ts";
 import { bool, csv, num, parseArgs, str } from "../lib/args.ts";
 import type { CdpPage } from "../lib/cdp.ts";
 import { sleep } from "../lib/cdp.ts";
@@ -419,11 +420,53 @@ interface AuditRecord {
 	 * cells, which are the known residue and are named where the rule is documented.
 	 */
 	/**
+	 * The page actions the CAPTURE applied to reach this cell's state, replayed by the
+	 * re-drive rather than re-derived from `CELL_OPENERS` — the rule `meta.seed` already
+	 * follows: a re-drive that re-read the table would be measuring whatever the table
+	 * says at re-drive time rather than what the frame was taken of.
+	 *
+	 * Read as `unknown` and narrowed by `recordedOpeners` below, because the manifest is
+	 * JSON. Absent (a manifest written before the hook existed) means "no actions", which
+	 * is the safe direction: the re-drive renders the PRE-state, its state marker is
+	 * missing, and the comparison reports the mismatch instead of a quiet green.
+	 */
+	openers?: unknown;
+	/**
 	 * The relay scenario the capture pinned before rendering this cell, or absent/null
 	 * for a cell no scenario declares. The re-drive pins the same one: the relay holds a
 	 * single scenario, so without this the page is whatever the previous cell left.
 	 */
 	pinnedScenario?: string | null;
+}
+
+/**
+ * The recorded openers, narrowed from the manifest's `unknown`.
+ *
+ * A malformed entry is DROPPED rather than thrown on: the manifest is written by
+ * this repository's own capture, so a shape this cannot read is a mismatch the
+ * readiness comparison surfaces as a missing state marker — a failure that names
+ * the cell, rather than a crash that names nothing.
+ */
+function recordedOpeners(value: unknown): Affordance[] {
+	if (!Array.isArray(value)) return [];
+	const out: Affordance[] = [];
+	for (const entry of value) {
+		if (typeof entry !== "object" || entry === null) continue;
+		const row = entry as Record<string, unknown>;
+		if (typeof row.click === "string") {
+			out.push({ click: row.click });
+			continue;
+		}
+		const spec =
+			typeof row.type === "object" && row.type !== null
+				? (row.type as Record<string, unknown>)
+				: null;
+		if (spec === null) continue;
+		if (typeof spec.testID === "string" && typeof spec.text === "string") {
+			out.push({ type: { testID: spec.testID, text: spec.text } });
+		}
+	}
+	return out;
 }
 
 /** The capture's record of the web-only seed hook, as `meta.seed` carries it. */
@@ -591,6 +634,19 @@ async function auditCell(
 	const url = cellUrl(origin, record.path, cellQuery(record, seed));
 	await page.send("Page.navigate", { url });
 	await sleep(settleMs);
+	/*
+	 * REPLAY WHAT THE CAPTURE APPLIED to reach this cell's state, before the readiness
+	 * wait below.
+	 *
+	 * The list comes from the manifest (`record.openers`), not from `CELL_OPENERS`: a
+	 * re-drive that re-read the table would be measuring whatever the table says at
+	 * re-drive time rather than what the frame was taken of — the same reasoning
+	 * `meta.seed` records for the seed. A cell whose control is gone therefore shows up
+	 * as the state marker it never opened, which the comparison against the record
+	 * reports by name rather than as a silent green.
+	 */
+	const openers = recordedOpeners(record.openers);
+	if (openers.length > 0) await runAffordances(page, openers);
 	/*
 	 * WAIT FOR THE EVENT, NOT THE CLOCK — the same rule the capture applies, and for the
 	 * same measured reason (`lib/readiness.ts` `STATE_WAIT_MS`): a declared state can
