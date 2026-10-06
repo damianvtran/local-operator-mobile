@@ -46,7 +46,7 @@
  * cell and exits 3 like any other gap — see `lib/readiness.ts` `reDriveMismatch`.
  *
  * COVERAGE, stated rather than implied: this tool machine-checks the rubric's
- * mechanical half — U-01…U-10 — and nothing else. U-11…U-17 are machine-defined
+ * mechanical half — U-01…U-10 and U-38…U-42 — and nothing else. U-11…U-17 are machine-defined
  * in the rubric and NOT implemented here; §4-§7 are manual by the rubric's own
  * text; §9's R1-R6 assertions are not implemented. See `COVERAGE` below, which
  * is printed in the report so a reader never has to infer it.
@@ -61,6 +61,7 @@ import { launchChrome } from "../lib/chrome.ts";
 import { freshPage, withDeadline } from "../lib/page.ts";
 import {
 	captureHookQuery,
+	cellHookQuery,
 	reDriveIssues,
 	reDriveMismatch,
 	STATE_POLL_MS,
@@ -98,6 +99,15 @@ export const ALL_CHECKS = [
 	"U-08",
 	"U-09",
 	"U-10",
+	/* The S5 redesign's five (design pass `fix/hero-tables-strips` §1.8/§4.2):
+	 * table rendering, the token cap, the scroll cue, the strip's rail/caret, and
+	 * spacing against the token scale. They are numbered 38-42 because the
+	 * rubric's own numbering places them after the §3 sequence they extend. */
+	"U-38",
+	"U-39",
+	"U-40",
+	"U-41",
+	"U-42",
 ];
 
 /** The rubric ids this tool does NOT machine-check, and who owns them. */
@@ -503,6 +513,14 @@ function cellQuery(record: AuditRecord, seed: ResolvedSeed): string {
 	// re-renders the SAME page the capture did, so a cell whose markers depend on
 	// one of these would otherwise pass in the capture and fail here.
 	for (const [key, value] of new URLSearchParams(captureHookQuery())) {
+		query.set(key, value);
+	}
+	// The per-cell viewer hooks, through the same builder the capture merges — the
+	// audit must re-drive the exact page the frame came from (`S5/tables-end`'s
+	// scrolled table is the reason this exists).
+	for (const [key, value] of new URLSearchParams(
+		cellHookQuery(record.cell ?? ""),
+	)) {
 		query.set(key, value);
 	}
 	return query.toString();

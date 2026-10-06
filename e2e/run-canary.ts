@@ -32,6 +32,7 @@ import {
 	U03_SUPPRESSION,
 	U08_SUPPRESSION,
 	U10_DECLARATION,
+	U40_DEFERRAL,
 } from "../tools/audit/checks.ts";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -167,6 +168,18 @@ const KNOWN_BLINDS = new Set([
 	// must make the canary miss exactly that shape's fixture (review rounds 3 and 4).
 	"U-08:escape-absolute",
 	"U-08:escape-fixed",
+	// The S5 redesign's rules (U-38…U-42). Each is blindable so the mutation
+	// self-test proves it is the rule that fires: U-38 has two (the leak scan and
+	// the table structure), U-40's two directions are separately load-bearing
+	// (a missing cue and a false one), and U-41's rail and caret are independent.
+	"U-38:leak",
+	"U-38:rows",
+	"U-39",
+	"U-40:cue",
+	"U-40:false",
+	"U-41:rail",
+	"U-41:caret",
+	"U-42",
 ]);
 
 // An empty `--manifest` is a caller bug, not "no override". Treating it as the
@@ -526,6 +539,12 @@ const NOT_DEFECT_REASON_NAMES: Record<string, Record<string, string>> = {
 	},
 	"U-10": {
 		"text-entry-value": U10_DECLARATION.TEXT_ENTRY_VALUE,
+	},
+	// The code block's own cue is a separate decision (design pass §6.2): U-40
+	// must REPORT the overflowing non-table scroller as a declared deferral,
+	// never pass it silently, and this entry is what asserts the recording.
+	"U-40": {
+		"code-block-deferral": U40_DEFERRAL.SCOPE,
 	},
 };
 

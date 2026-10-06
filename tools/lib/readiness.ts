@@ -127,6 +127,11 @@ export const STATE_MARKER_ALIASES: Record<string, string> = {
 	 *  frame, not from a marker). An entry here is what lets the cell borrow the
 	 *  `tables` marker rather than invent a second id for a scroll offset. */
 	"tables-end": "tables",
+	/** The table arriving: the same state as `streaming` — an assistant row whose
+	 *  text is still being written — with the row's content being a table. The
+	 *  app has no second streaming look for it, which is what the alias table is
+	 *  for; §4.1 #10 reads the consecutive frames, not a marker. */
+	"streaming-tables": "streaming",
 };
 
 /** Every empty-state marker ends with this, which is what the prohibition matches. */
@@ -618,4 +623,25 @@ export function seedQuery(
  */
 export function captureHookQuery(): string {
 	return new URLSearchParams({ "lo-recorder": "supported" }).toString();
+}
+
+/**
+ * Per-cell viewer hooks: a query value that steers ONE cell's page, keyed by the
+ * cell name and merged by BOTH halves of the harness through this one builder —
+ * the capture and the audit render the same screen, or the audit measures a page
+ * the frame was never taken from.
+ *
+ * `S5/tables-end` is the case: it shows the wide table scrolled to its end, so
+ * the left-mirror fade and the retired right fade have a frame, and a scroll
+ * offset is a viewport interaction no wire action can declare. The value is the
+ * app-side `lo-md-scroll` hook (`src/features/session/table-scroll-hook.ts`),
+ * which is scoped to the table's own scroll view and inert everywhere else.
+ */
+export const CELL_HOOKS: Record<string, Record<string, string>> = {
+	"S5/tables-end": { "lo-md-scroll": "end" },
+};
+
+/** The per-cell hook query for one cell name (empty when it declares none). */
+export function cellHookQuery(cell: string): string {
+	return new URLSearchParams(CELL_HOOKS[cell] ?? {}).toString();
 }

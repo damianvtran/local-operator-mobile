@@ -172,6 +172,14 @@ describe("the marker is the app's, read rather than built", () => {
 			"sessions-degraded-banner",
 		);
 		expect(requiredStateMarker("path:/clean/clean", "clean")).toBeNull();
+		// The S5 redesign's two (design pass `fix/hero-tables-strips`): the table's
+		// scroll position and the table's arrival both render a look the app has
+		// already named, so both cells borrow the marker rather than inventing a
+		// second id for an interaction and a streaming frame.
+		expect(requiredStateMarker("S5", "tables-end")).toBe("session-tables");
+		expect(requiredStateMarker("S5", "streaming-tables")).toBe(
+			"session-streaming",
+		);
 	});
 });
 

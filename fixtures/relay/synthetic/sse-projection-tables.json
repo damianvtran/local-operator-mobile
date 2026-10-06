@@ -1,0 +1,286 @@
+{
+ "provenance": {
+  "kind": "synthetic",
+  "relay_ref": "local-operator 52c1df35",
+  "modelled_on": "an envelope copied field-for-field from sse-projection-rich-rows.json, with the transcript replaced by the two table shapes the S5 hero check needs: a table priced to fit the rail (2 columns priced at the one-advance rule: 353.4pt of 358pt on iphone-15, so no cue may appear) and a 3x64-character-SHA digest table (630.4pt, so it scrolls, bleeds and cues on both phones)",
+  "why": "no live capture carries a table that FITS the phone rail: the rich-rows fixture's tables are both comfortably narrow, so the false-affordance direction (no cue when there is nothing to scroll) had no frame and no cell. The 64-character tokens are sha256 digests because that is the cap the pricing holds whole"
+ },
+ "event": "projection",
+ "data": {
+  "session_id": "6714def86197",
+  "pid": 4242,
+  "kind": "daemon",
+  "conversation_name": "Refactor the relay client",
+  "cwd": "~/work",
+  "model_label": "anthropic/claude-opus-5",
+  "model_selector": "anthropic/claude-opus-5",
+  "effort": "high",
+  "effort_ladder": [
+   "lo",
+   "med",
+   "hi"
+  ],
+  "streaming": false,
+  "activity": "reading the relay sources",
+  "activity_started_s": 128.4,
+  "stop_reason": "",
+  "cut_off": false,
+  "queued_count": 2,
+  "ended": false,
+  "degraded": false,
+  "transcript": [
+   {
+    "id": "m-1",
+    "kind": "user",
+    "text": "Show me the reconciliation digest.",
+    "tool_call_id": "",
+    "tool_name": "",
+    "tool_state": "interrupted",
+    "summary": "",
+    "intent": "",
+    "diff_added": 0,
+    "diff_removed": 0,
+    "elapsed_s": 0.0,
+    "error": "",
+    "details": {},
+    "images": [
+     {
+      "index": 0,
+      "mime_type": "image/png"
+     }
+    ],
+    "final": true,
+    "text_complete": true
+   },
+   {
+    "id": "m-1",
+    "kind": "assistant",
+    "text": "The run digest, and the digests themselves:\n\n| stage | digest |\n| --- | --- |\n| `reconciliation` | `3f9a2b7c4d5e6f70a1b2c3d4e5f6` |\n| `shard-verify` | `9c1e77a0b2d4f6081a3c5e7b` |\n\nThe full image digests:\n\n| instance | digest | state |\n| --- | --- | --- |\n| 1 | `a3f01b2c4d5e6f708192a3b4c5d6e7f8091a2b3c4d5e6f708192a3b4c5d6e7f8` | ok |\n| 2 | `b4e12c3d5e6f70819a2b3c4d5e6f708192a3b4c5d6e7f8091a2b3c4d5e6f7081` | ok |\n",
+    "tool_call_id": "",
+    "tool_name": "",
+    "tool_state": "interrupted",
+    "summary": "",
+    "intent": "",
+    "diff_added": 0,
+    "diff_removed": 0,
+    "elapsed_s": 0.0,
+    "error": "",
+    "details": {},
+    "images": [
+     {
+      "index": 0,
+      "mime_type": "image/png"
+     }
+    ],
+    "final": true,
+    "text_complete": true
+   }
+  ],
+  "todos": [
+   {
+    "name": "Research",
+    "items": [
+     {
+      "text": "read daemon.py",
+      "status": "done",
+      "reason": ""
+     },
+     {
+      "text": "read gateway.py",
+      "status": "done",
+      "reason": ""
+     }
+    ]
+   },
+   {
+    "name": "Docs",
+    "items": [
+     {
+      "text": "contract.md",
+      "status": "done",
+      "reason": ""
+     },
+     {
+      "text": "types.ts",
+      "status": "pending",
+      "reason": ""
+     },
+     {
+      "text": "feature-map.md",
+      "status": "blocked",
+      "reason": "waiting on the fixture run"
+     }
+    ]
+   }
+  ],
+  "subagents": [
+   {
+    "job_id": "job-run",
+    "label": "audit the relay contract",
+    "agent": "task",
+    "status": "running",
+    "progress": "reading daemon.py",
+    "elapsed_s": 42.5,
+    "model_label": "anthropic/claude-opus-5",
+    "result_text": "",
+    "error_text": "",
+    "parent_job_id": null,
+    "session_id": null,
+    "prompt": "",
+    "launch_message_id": "",
+    "effort": "med",
+    "ancestors": [],
+    "ancestor_ids": [],
+    "child_ids": [],
+    "peer_ids": [],
+    "transcript": [],
+    "todos": [],
+    "activity": "reading daemon.py"
+   },
+   {
+    "job_id": "job-queue",
+    "label": "write the migration",
+    "agent": "task",
+    "status": "queued",
+    "progress": "",
+    "elapsed_s": null,
+    "model_label": "anthropic/claude-opus-5",
+    "result_text": "",
+    "error_text": "",
+    "parent_job_id": null,
+    "session_id": null,
+    "prompt": "",
+    "launch_message_id": "",
+    "effort": "med",
+    "ancestors": [],
+    "ancestor_ids": [],
+    "child_ids": [],
+    "peer_ids": [],
+    "transcript": [],
+    "todos": [],
+    "activity": ""
+   },
+   {
+    "job_id": "job-park",
+    "label": "review the diff",
+    "agent": "task",
+    "status": "parked",
+    "progress": "",
+    "elapsed_s": 12.0,
+    "model_label": "anthropic/claude-opus-5",
+    "result_text": "",
+    "error_text": "",
+    "parent_job_id": "job-run",
+    "session_id": null,
+    "prompt": "",
+    "launch_message_id": "",
+    "effort": "med",
+    "ancestors": [],
+    "ancestor_ids": [],
+    "child_ids": [],
+    "peer_ids": [],
+    "transcript": [],
+    "todos": [],
+    "activity": ""
+   },
+   {
+    "job_id": "job-done",
+    "label": "map the web client",
+    "agent": "task",
+    "status": "completed",
+    "progress": "",
+    "elapsed_s": 310.2,
+    "model_label": "anthropic/claude-opus-5",
+    "result_text": "Mapped 5 screens and 11 components.",
+    "error_text": "",
+    "parent_job_id": null,
+    "session_id": "a1b2c3d4e5f6",
+    "prompt": "",
+    "launch_message_id": "m-1",
+    "effort": "med",
+    "ancestors": [],
+    "ancestor_ids": [],
+    "child_ids": [],
+    "peer_ids": [],
+    "transcript": [],
+    "todos": [],
+    "activity": ""
+   },
+   {
+    "job_id": "job-fail",
+    "label": "run the e2e matrix",
+    "agent": "task",
+    "status": "failed",
+    "progress": "",
+    "elapsed_s": 88.0,
+    "model_label": "anthropic/claude-opus-5",
+    "result_text": "",
+    "error_text": "AssertionError: expected 200, got 502",
+    "parent_job_id": null,
+    "session_id": "f6e5d4c3b2a1",
+    "prompt": "",
+    "launch_message_id": "",
+    "effort": "med",
+    "ancestors": [],
+    "ancestor_ids": [],
+    "child_ids": [],
+    "peer_ids": [],
+    "transcript": [],
+    "todos": [],
+    "activity": ""
+   },
+   {
+    "job_id": "job-cancel",
+    "label": "probe the tunnel",
+    "agent": "task",
+    "status": "cancelled",
+    "progress": "",
+    "elapsed_s": 5.0,
+    "model_label": "anthropic/claude-opus-5",
+    "result_text": "",
+    "error_text": "",
+    "parent_job_id": null,
+    "session_id": null,
+    "prompt": "",
+    "launch_message_id": "",
+    "effort": "med",
+    "ancestors": [],
+    "ancestor_ids": [],
+    "child_ids": [],
+    "peer_ids": [],
+    "transcript": [],
+    "todos": [],
+    "activity": ""
+   }
+  ],
+  "pending": null,
+  "pending_count": 0,
+  "usage": {
+   "input_tokens": 18422,
+   "output_tokens": 2100
+  },
+  "cumulative_parent_cost": 12.84,
+  "child_costs": {},
+  "subagent_cost": 3.1,
+  "subagent_cost_knowledge": "exact",
+  "cost_knowledge": "exact",
+  "context_tokens": 41200,
+  "context_window": 200000,
+  "context_is_estimate": false,
+  "version": 412,
+  "attention": {
+   "conversation_id": "session/6714def86197",
+   "completion_token": null,
+   "anchor_id": null,
+   "kind": null,
+   "reason": "",
+   "cause": "",
+   "notify": true,
+   "unseen": false,
+   "revision": [
+    0,
+    0
+   ]
+  }
+ }
+}

@@ -333,6 +333,46 @@
     "P-4",
     "P-12"
    ]
+  },
+  {
+   "id": "U-38",
+   "title": "Markdown tables render as tables",
+   "method": "automated",
+   "principles": [
+    "P-10"
+   ]
+  },
+  {
+   "id": "U-39",
+   "title": "Table columns are priced from content",
+   "method": "automated",
+   "principles": [
+    "P-11"
+   ]
+  },
+  {
+   "id": "U-40",
+   "title": "A horizontal scroller carries a cue",
+   "method": "automated",
+   "principles": [
+    "P-11"
+   ]
+  },
+  {
+   "id": "U-41",
+   "title": "A wrapped summary row keeps one rail and one caret line",
+   "method": "automated",
+   "principles": [
+    "P-11"
+   ]
+  },
+  {
+   "id": "U-42",
+   "title": "Spacing steps come from the scale",
+   "method": "automated",
+   "principles": [
+    "P-11"
+   ]
   }
  ]
 }

@@ -295,6 +295,19 @@ export const EXTRACT_PROBE = `
       clientHeight: el.clientHeight,
       borderWidth: px(style.borderTopWidth),
       padding: { top: px(style.paddingTop), bottom: px(style.paddingBottom), left: px(style.paddingLeft), right: px(style.paddingRight) },
+      // The spacing vocabulary U-42 scores, and the two scrolling facts U-40 reads.
+      // Margin and the gaps are computed values like padding, so a class that
+      // stops compiling shows up as a measurement, not as a missing field. RowGap
+      // and columnGap read from the resolved computed style: React Native Web
+      // writes gap as both row-gap and column-gap, and a flex container with no
+      // gap computes "normal", which the px() helper folds to 0.
+      margin: { top: px(style.marginTop), bottom: px(style.marginBottom), left: px(style.marginLeft), right: px(style.marginRight) },
+      rowGap: px(style.rowGap),
+      columnGap: px(style.columnGap),
+      scrollLeft: el.scrollLeft || 0,
+      // The machine-readable name the table checks anchor on (the md-table family
+      // of the design pass section 4.3). Null when the node carries none.
+      testId: el.getAttribute('data-testid'),
       interactive: interactiveNode,
       disabled: el.disabled === true || el.getAttribute('aria-disabled') === 'true',
       isControl: /^(input|select|textarea)$/.test(el.tagName.toLowerCase()),
@@ -345,6 +358,158 @@ export const EXTRACT_PROBE = `
       semanticBorder: style.borderTopColor,
     });
   }
+  // ---- the markdown tables (U-38/U-39/U-40) -----------------------------
+  //
+  // A word's box is not a node's box: a token that wrapped occupies TWO line
+  // rects inside one text node, and the only way to ask which is a Range per
+  // whitespace run. The walk is per CELL, not per node, so a table with fifty
+  // cells costs fifty short walks rather than one walk of every text node in
+  // the document.
+  const measureBrokenRuns = (el) => {
+    const broken = [];
+    const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+    let textNode;
+    while ((textNode = walker.nextNode())) {
+      const text = textNode.textContent || '';
+      const runs = /\\S+/g;
+      let match;
+      while ((match = runs.exec(text))) {
+        const range = document.createRange();
+        range.setStart(textNode, match.index);
+        range.setEnd(textNode, match.index + match[0].length);
+        const rects = range.getClientRects();
+        const tops = new Set();
+        for (let r = 0; r < rects.length; r += 1) {
+          const rect = rects[r];
+          if (rect.width <= 0 && rect.height <= 0) continue;
+          tops.add(Math.round(rect.top));
+        }
+        if (tops.size > 1) broken.push({ token: match[0].slice(0, 48), length: match[0].length });
+      }
+    }
+    return broken;
+  };
+  // Whether a node's box reaches past the content rail it sits in: the nearest
+  // ancestor that declares a right padding is the rail's owner, and the scroll
+  // viewport "bleeds" when it runs past that ancestor's content box (U-40's
+  // criterion, and the half that makes a cut edge a cue rather than an accident).
+  const bleedsPastRail = (el) => {
+    const box = el.getBoundingClientRect();
+    let node = el.parentElement;
+    while (node) {
+      const style = getComputedStyle(node);
+      const paddingRight = px(style.paddingRight);
+      if (paddingRight > 0) {
+        const rect = node.getBoundingClientRect();
+        const borderRight = px(style.borderRightWidth);
+        return box.right > rect.right - paddingRight - borderRight + 0.5;
+      }
+      node = node.parentElement;
+    }
+    return false;
+  };
+  const tables = [];
+  for (const wrapper of document.querySelectorAll('[data-testid="md-table"]')) {
+    // A wrapper the page does not paint is not a table the reader sees. Without
+    // this, the canary's OWN mode gating (a .bad fixture hidden on /clean, a
+    // .good one hidden on /defects) makes every hidden fixture fire on the
+    // other page, and a rule that reports tables nobody can see lies about both.
+    if (wrapper.getClientRects().length === 0) continue;
+    const wrapperIndex = indexOfElement.get(wrapper);
+    if (wrapperIndex === undefined) continue;
+    const cells = [];
+    for (const cell of wrapper.querySelectorAll('[data-testid="md-table-cell"]')) {
+      const cellIndex = indexOfElement.get(cell);
+      cells.push({
+        index: cellIndex === undefined ? -1 : cellIndex,
+        text: (cell.textContent || '').trim().slice(0, 200),
+        broken: measureBrokenRuns(cell),
+      });
+    }
+    const scrollEl = wrapper.querySelector('[data-testid="md-table-scroll"]');
+    let scroll = null;
+    if (scrollEl) {
+      const scrollIndex = indexOfElement.get(scrollEl);
+      scroll = {
+        index: scrollIndex === undefined ? -1 : scrollIndex,
+        scrollWidth: scrollEl.scrollWidth,
+        clientWidth: scrollEl.clientWidth,
+        scrollLeft: scrollEl.scrollLeft || 0,
+        overflow: scrollEl.scrollWidth > scrollEl.clientWidth + 1,
+        bleeds: bleedsPastRail(scrollEl),
+        cues: wrapper.querySelectorAll('[data-testid="md-table-scroll-cue"]').length,
+      };
+    }
+    tables.push({
+      index: wrapperIndex,
+      headRows: wrapper.querySelectorAll('[data-testid="md-table-head"]').length,
+      bodyRows: wrapper.querySelectorAll('[data-testid="md-table-row"]').length,
+      cells,
+      scroll,
+    });
+  }
+  // ---- the disclosure rows (U-41) ---------------------------------------
+  //
+  // The row is found by its SHAPE — an interactive element carrying a caret
+  // glyph — because the check it feeds reads geometry, not a class name. Each
+  // text line inside the row is a Range's client rect grouped by top (one line
+  // may hold several rects: the label, its count, the caret's neighbours), and
+  // the caret is measured separately so its box cannot pollute a line's left
+  // edge.
+  const findCaret = (el) => {
+    const candidates = [el].concat([...el.querySelectorAll('*')]);
+    for (const candidate of candidates) {
+      if (!/^[\\u25B8\\u25BE]$/.test((candidate.textContent || '').trim())) continue;
+      // The DEEPEST match: a wrapper whose only text is the glyph reports the
+      // same string, and its box is the whole row — which would make the caret
+      // measurement a measurement of everything.
+      if (candidate.querySelector('*') === null) return candidate;
+    }
+    return null;
+  };
+  const summaries = [];
+  for (const el of all) {
+    if (!isInteractive(el)) continue;
+    // The tables rule's own visibility skip, for the same reason: a row the
+    // page does not paint must not be judged on rails and carets it has not.
+    if (el.getClientRects().length === 0) continue;
+    const caret = findCaret(el);
+    if (caret === null) continue;
+    const fragments = [];
+    const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+    let textNode;
+    while ((textNode = walker.nextNode())) {
+      if (caret.contains(textNode)) continue;
+      if ((textNode.textContent || '').trim().length === 0) continue;
+      const range = document.createRange();
+      range.selectNodeContents(textNode);
+      const rects = range.getClientRects();
+      for (let r = 0; r < rects.length; r += 1) {
+        const rect = rects[r];
+        if (rect.width <= 0 && rect.height <= 0) continue;
+        fragments.push({ left: rect.left, top: rect.top, bottom: rect.bottom });
+      }
+    }
+    const lines = [];
+    for (const fragment of fragments) {
+      const line = lines.find((l) => Math.abs(l.top - fragment.top) < 6);
+      if (line) {
+        line.left = Math.min(line.left, fragment.left);
+        line.bottom = Math.max(line.bottom, fragment.bottom);
+      } else {
+        lines.push({ left: fragment.left, top: fragment.top, bottom: fragment.bottom });
+      }
+    }
+    lines.sort((a, b) => a.top - b.top);
+    const caretRect = caret.getBoundingClientRect();
+    const rowRect = el.getBoundingClientRect();
+    summaries.push({
+      index: indexOfElement.get(el) ?? -1,
+      rowLeft: rowRect.left,
+      lines,
+      caret: { left: caretRect.left, top: caretRect.top, bottom: caretRect.bottom },
+    });
+  }
   return {
     url: location.href,
     viewport: { width: window.innerWidth, height: window.innerHeight, dpr: window.devicePixelRatio },
@@ -372,6 +537,8 @@ export const EXTRACT_PROBE = `
     })(),
     nodeCount: nodes.length,
     nodes,
+    tables,
+    summaries,
   };
 })();
 `;

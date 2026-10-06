@@ -21,6 +21,7 @@ import {
 	existsSync,
 	mkdirSync,
 	mkdtempSync,
+	readdirSync,
 	readFileSync,
 	rmSync,
 	writeFileSync,
@@ -29,6 +30,7 @@ import { connect as netConnect } from "node:net";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { sessionProjectionSchema } from "../../src/contracts/schemas.ts";
 // The app's own vocabulary, imported rather than re-derived: the marker contract and
 // the identifiers it names are the thing this file cross-checks, so reading them from
 // the module is the only way the check cannot drift from what the app ships.
@@ -1472,6 +1474,27 @@ async function main() {
 				blind: "U-08:escape-fixed",
 				defects: ["U-08-escape-fixed (#fixed-escape)"],
 			},
+			/* The S5 redesign's eight (U-38…U-42). `U-40:cue` catches TWO shapes —
+			 * an overflowing table with no cue and one whose viewport stops at the
+			 * rail — which the canary declares under the same rule, the way
+			 * `U-05:top` declares its two. */
+			{ blind: "U-38:leak", defects: ["U-38-leak (#table-leak)"] },
+			{ blind: "U-38:rows", defects: ["U-38-rows (#table-half)"] },
+			{ blind: "U-39", defects: ["U-39 (#narrow-column)"] },
+			{
+				blind: "U-40:cue",
+				defects: [
+					"U-40-cue (#no-cue-overflow)",
+					"U-40-cue (#no-bleed-overflow)",
+				],
+			},
+			{ blind: "U-40:false", defects: ["U-40-false (#fit-with-cue)"] },
+			{ blind: "U-41:rail", defects: ["U-41-rail (#rail-drift)"] },
+			{
+				blind: "U-41:caret",
+				defects: ["U-41-caret (#caret-midline)"],
+			},
+			{ blind: "U-42", defects: ["U-42 (#off-scale-pad)"] },
 		];
 		// One capture for all ten rules. The captured matrix is identical for every
 		// blinded rule — only the audit's `--blind` differs — so the HEAVY phase went
@@ -2909,6 +2932,45 @@ async function main() {
 			emptyDeclared.size > 0 && emptyDeclared.size < 20,
 			true,
 			`${emptyDeclared.size} ids in the block`,
+		);
+	}
+
+	group = "the synthetic projections parse against the app's own schema";
+	{
+		/* WHY THIS EXISTS, measured 2026-10-06: `sse-projection-tables.json` was
+		 * authored with a nullable `activity` and four-field transcript entries. The
+		 * mock relay served it happily, this file's corpus checks passed, and the
+		 * APP's `sessionProjectionSchema` discarded every frame — so three cells
+		 * rendered `session-transcript-empty` and the capture could only report
+		 * "the state was never reached". Nothing validated synthetic fixtures
+		 * against the schema the app actually parses with: the relay is a fixture
+		 * server, not a contract gate, and `tools/mock-relay/shape.ts` checks the
+		 * fields the relay itself reads. A fixture that the app cannot parse is a
+		 * cell that can never be measured, so it fails HERE instead of silently
+		 * emptying a frame. */
+		const syntheticDir = join(REPO, "fixtures", "relay", "synthetic");
+		const invalid: string[] = [];
+		let parsedCount = 0;
+		for (const file of readdirSync(syntheticDir).sort()) {
+			if (!file.endsWith(".json")) continue;
+			const fixture = JSON.parse(
+				readFileSync(join(syntheticDir, file), "utf8"),
+			) as { event?: unknown; data?: unknown };
+			if (fixture.event !== "projection") continue;
+			parsedCount += 1;
+			const result = sessionProjectionSchema.safeParse(fixture.data);
+			if (!result.success) {
+				const first = result.error.issues[0];
+				invalid.push(
+					`${file}: ${first?.path.join(".") ?? "?"} ${first?.message ?? "invalid"}`,
+				);
+			}
+		}
+		check(
+			"every synthetic projection parses against sessionProjectionSchema",
+			invalid,
+			[],
+			`${parsedCount} fixture(s) parsed`,
 		);
 	}
 
