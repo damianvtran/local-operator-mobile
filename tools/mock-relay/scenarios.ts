@@ -665,6 +665,12 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 					 * wire fact mirrors the live capture `http/list_row_ended.json`:
 					 * `ended: true`, subagents null while the runtime is gone. */
 					ended: true,
+					/* The runtime is gone, so the relay cannot vouch for a count:
+					 * `null` is "not reported" and must never be read as `0`
+					 * (`docs/relay/contract.md` §3.2 — the pair the capture shows).
+					 * `degraded` and `wedged` null the same pair for the same reason. */
+					subagents_running: null,
+					subagents_queued: null,
 					completion_kind: "complete",
 					unseen: false,
 				},
