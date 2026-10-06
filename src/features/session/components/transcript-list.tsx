@@ -10,6 +10,7 @@ import {
 import type { TranscriptEntry } from "@/contracts";
 import { anchorBottomVisible } from "@/features/session/completion-visibility";
 import { TranscriptRow } from "@/features/session/components/transcript-row";
+import { scrollAnchorFromHook } from "@/features/session/scroll-hook";
 import { windowPolicy } from "@/features/session/windowing";
 import { completionAnchorId, transcriptRowId } from "@/ui/a11y";
 
@@ -86,7 +87,10 @@ export const TranscriptList = ({
 	testID,
 }: TranscriptListProps) => {
 	const listRef = useRef<FlatList<TranscriptEntry>>(null);
-	const atTail = useRef(true);
+	/** The capture hook's anchor: `top` starts the list unfollowed so a still can
+	 *  show the conversation's shape (see `scroll-hook.ts`). Read once. */
+	const [scrollAnchor] = useState(scrollAnchorFromHook);
+	const atTail = useRef(scrollAnchor !== "top");
 	/** Which session's offset has already been restored, held as a ref rather than
 	 *  in an effect keyed on `sessionId`: the restore has to run when the list first
 	 *  has content, which is an event the list emits, not a render this hook sees. */
@@ -239,7 +243,9 @@ export const TranscriptList = ({
 			if (restoredFor.current !== sessionId) {
 				restoredFor.current = sessionId;
 				const saved = scrollOffsets.get(sessionId);
-				if (saved !== undefined && saved > 0) {
+				// The capture hook's anchor outranks a saved offset: a page that asked
+				// for `top` asked for the top.
+				if (scrollAnchor !== "top" && saved !== undefined && saved > 0) {
 					listRef.current?.scrollToOffset({ offset: saved, animated: false });
 					recompute();
 					return;
@@ -250,7 +256,7 @@ export const TranscriptList = ({
 			}
 			recompute();
 		},
-		[sessionId, recompute],
+		[sessionId, recompute, scrollAnchor],
 	);
 
 	const renderItem = useCallback(
