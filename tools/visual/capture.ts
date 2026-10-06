@@ -355,7 +355,16 @@ function buildPlan({
  */
 const frameName = (cell: FramePlan): string =>
 	`${cell.screen}__${cell.state}__${cell.device}__${cell.theme}__${cell.scaleSpec.id}`.replace(
-		/[/\\:]/g,
+		// The set is the union of two measured rejections, and both are silent until
+		// they are not: a path separator would quietly write into a subdirectory (the
+		// original `/\\:` fold), and the artifact uploader refuses a file name
+		// containing any of `" : < > | * ?` — measured on run 37522263768, where the
+		// first `path:` cells embed their query (`…?lo-scroll=top/condensed`) and the
+		// upload step died with "The path ... contains the following character:
+		// Question mark ?" AFTER a successful capture, so the frames never reached the
+		// artifact. Cell names keep their `?` where a person reads them (the manifest,
+		// the audit report); only the file stem folds it.
+		/[/\\:?*<>|"]/g,
 		"-",
 	);
 
