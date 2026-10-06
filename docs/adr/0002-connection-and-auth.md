@@ -545,14 +545,21 @@ only honest if the build carries the native change too:
   validation accepts — `10.0.0.0/8`, `100.64.0.0/10` (CGNAT, which Tailscale
   uses), `169.254.0.0/16`, `172.16.0.0/12`, `192.168.0.0/16` — each with
   `NSExceptionAllowsInsecureHTTPLoads`, `NSAllowsArbitraryLoads` false, and no TLS
-  relaxation. (The `NSExceptionDomains` page confirms IP addresses and CIDR ranges
-  are legal keys on iOS 17+; read 2026-10-06.)
+  relaxation. Loopback is deliberately NOT listed: TN3179 defines a local network
+  as an IP network on a broadcast-capable interface, which loopback is not, and
+  the app's only loopback use is the OAuth listener on the phone itself, never a
+  route to the computer. (The `NSExceptionDomains` page confirms IP addresses and
+  CIDR ranges are legal keys on iOS 17+; read 2026-10-06.)
   `NSAllowsArbitraryLoadsInWebContent` is a WKWebView key with no bearing on a
   native `fetch` (this app has no WebView in the data path at all).
   **The trade, stated rather than discovered:** the CIDR list is exactly the
-  private ranges and nothing else — an address outside it still depends on the
-  boolean being read the lenient way, and because Android's flag is app-wide, a
-  public `http://` host stays refused on iOS where Android would allow it. **iOS
+  private literal-IP ranges and nothing else. A literal address outside it still
+  depends on the boolean being read the lenient way, and a host named rather than
+  numbered — the URL validation accepts `.local` names (covered by the boolean)
+  and Tailscale MagicDNS names (which are not) — stays refused over `http://` on
+  iOS where Android's app-wide flag would allow it; those routes publish an
+  `https://` name, and that is the form to use. The same asymmetry also lets
+  Android reach a public `http://` host that iOS refuses. **iOS
   therefore keeps parity with Android: `http://` on a private-network host is
   available on both platforms, off by default, behind the same explicit
   per-connection opt-in** — as *configured* under both readings; which reading the
