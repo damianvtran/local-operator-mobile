@@ -4,7 +4,6 @@ import { Pressable, ScrollView, Text, View } from "react-native";
 import { rosterBody } from "@/features/session/panels";
 import type { SubagentProjection } from "@/features/session/projection";
 import { CONTROL, ROLE, SURFACE, state } from "@/ui/a11y";
-import { useTextScale } from "@/ui/text-scale-provider";
 import { cx } from "@/ui/variants";
 
 /**
@@ -63,11 +62,6 @@ export const SubagentsPanel = ({
 	 * carries a label and usually a metadata line, so its height is content-driven
 	 * (44–50 pt) and only a measurement can promise the whole-row cut D12 asks for. */
 	const [rowHeight, setRowHeight] = useState<number | null>(null);
-	/* The scale the row is laid out at, not a guess at one: the roster's counts take a
-	 * line of their own once the label can no longer share it (see the header's note).
-	 * 125 % is where 320 pt stops fitting both, measured — at 100 % the row is one line
-	 * and its geometry is unchanged. */
-	const stacked = useTextScale().effectiveScale > 1.25;
 	if (subagents.empty) return null;
 	/* The summary's words and counts come from `projectSubagents`, which owns the
 	 * one table keyed by every wire status: a status this panel has never heard of
@@ -92,33 +86,31 @@ export const SubagentsPanel = ({
 				onPress={onToggle}
 				testID={CONTROL.subagentsDisclosure}
 			>
-				{/* The label, the roster's own count and the disclosure caret are one
-				    non-wrapping group; only the clauses wrap. A caret that floats to the
-				    end of the row's SECOND line reads as a second control rather than as
-				    this row's disclosure (design round 2, D16).
-
-				    Above 125 % the counts take a line of their own (`w-full`), because on the
-				    320 pt floor they cannot share one with the label: `subagents` alone is ~234 pt
-				    at 200 %, so a clauses box squeezed beside it collapsed to ONE GLYPH PER LINE
-				    (measured 12.7 pt per clause at 320 pt @200 % — design round 4, D29). `min-w-0`
-				    bounds the CONTAINER; each clause is `shrink-0`, so it keeps its own width and
-				    the container wraps it, rather than a clause being squeezed to fit. */}
-				<View
-					className={`min-h-11 flex-row items-center gap-2 px-4 py-1${
-						stacked ? " flex-wrap" : ""
-					}`}
-				>
-					<View className="min-w-0 flex-row flex-wrap items-center gap-2">
-						<Text className="text-mono-sm text-ink-dim">subagents</Text>
-						<Text className="text-mono-sm text-ink-muted">
-							{subagents.totalLabel}
+				{/* TWO ROWS in one container, at every scale and on every device (design pass
+				    `fix/hero-tables-strips` §2.2). The clause block gets the row's full content
+				    width — before, it was `flex-1` BESIDE the label, so the six clauses were
+				    confined to `row − label − caret` and wrapped AROUND the label: on the 320 pt
+				    floor clause line 1 rendered above the label and clause line 3 below it, with
+				    the caret riding the middle (D2/D3). The label line is `items-start`, so the
+				    caret tracks the FIRST line even when the label itself wraps at 200 %; the
+				    clauses wrap under their own line and never around anything. The 125 % `stacked`
+				    branch is DELETED with this shape: layout must not change by device or scale,
+				    and one structure at 100 % and 200 % is the reason to prefer it over a
+				    fit-conditional stack. `gap-x-3` is the between-components tier for side-by-side
+				    clauses; `gap-y-1` keeps wrapped clause lines reading as one block. */}
+				<View className="min-h-11 gap-y-1 px-4 py-2">
+					<View className="flex-row items-start gap-2">
+						<View className="min-w-0 flex-1 flex-row flex-wrap items-center gap-2">
+							<Text className="text-mono-sm text-ink-dim">subagents</Text>
+							<Text className="text-mono-sm text-ink-muted">
+								{subagents.totalLabel}
+							</Text>
+						</View>
+						<Text className="text-meta text-ink-dim" aria-hidden>
+							{open ? "▾" : "▸"}
 						</Text>
 					</View>
-					<View
-						className={`min-w-0 flex-row flex-wrap items-center gap-2 ${
-							stacked ? "w-full" : "flex-1"
-						}`}
-					>
+					<View className="flex-row flex-wrap items-center gap-x-3 gap-y-1">
 						{subagents.clauses.map((clause) => (
 							<Text
 								key={clause.status}
@@ -128,9 +120,6 @@ export const SubagentsPanel = ({
 							</Text>
 						))}
 					</View>
-					<Text className="text-meta text-ink-dim" aria-hidden>
-						{open ? "▾" : "▸"}
-					</Text>
 				</View>
 			</Pressable>
 			{open ? (
@@ -159,7 +148,7 @@ export const SubagentsPanel = ({
 										: undefined
 								}
 								className={cx(
-									"min-h-11 flex-row items-start gap-2 py-1.5 pr-4",
+									"min-h-11 flex-row items-start gap-2 py-2 pr-4",
 									indentClass(row.depth),
 								)}
 							>

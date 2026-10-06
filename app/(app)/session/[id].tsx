@@ -441,7 +441,7 @@ export default function Session() {
 						/>
 					) : null}
 					{pendingViewProps !== null ? (
-						<View className="px-3 pb-1">
+						<View className="px-4 pb-1">
 							<PendingCard
 								view={pendingViewProps}
 								busy={composer.sending}
@@ -491,7 +491,7 @@ export default function Session() {
 					    unreachable the bar's data is stale and saying so matters more.
 					    It renders itself away at zero outstanding, so its presence is
 					    the statement. */}
-					<View className="px-3 pb-1">
+					<View className="px-4 pb-1">
 						<AskBar asks={projection?.asks} onOpen={() => setAsksOpen(true)} />
 					</View>
 

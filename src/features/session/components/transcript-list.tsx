@@ -442,7 +442,11 @@ export const TranscriptList = ({
 			maxToRenderPerBatch={policy.maxToRenderPerBatch}
 			windowSize={policy.windowSize}
 			updateCellsBatchingPeriod={40}
-			contentContainerStyle={{ paddingBottom: 8 }}
+			// 16 pt: the `between-sections` floor. 8 pt was the last prose row's bottom
+			// padding with nothing on the other side of it, so the transcript met the
+			// todos strip with an unmeasured gap — every other band in the column starts
+			// from a 16 pt rail (§3.2 of the design pass).
+			contentContainerStyle={{ paddingBottom: 16 }}
 		/>
 	);
 };

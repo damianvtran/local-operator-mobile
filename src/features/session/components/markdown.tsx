@@ -1,6 +1,6 @@
 // biome-ignore-all lint/suspicious/noArrayIndexKey: every list in this file is regenerated from the same source on each render (a parsed string, a diff, a todo phase), so position IS the identity — the case React's own key docs exempt. A content-derived key would be recomputed every frame to produce the same value.
 import * as Clipboard from "expo-clipboard";
-import { useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
 	Pressable,
 	ScrollView,
@@ -8,10 +8,20 @@ import {
 	type TextStyle,
 	View,
 } from "react-native";
+import Svg, { Defs, LinearGradient, Rect, Stop } from "react-native-svg";
 
-import { FENCE } from "@/features/session/markdown";
-import { CONTROL, ROLE } from "@/ui/a11y";
+import {
+	type InlineSpan,
+	parseInline,
+	parseMarkdown,
+	TABLE_CELL_PADDING_X_PT,
+	tablePricing,
+} from "@/features/session/markdown";
+import { forcedTableScroll } from "@/features/session/table-scroll-hook";
+import { CONTROL, ROLE, SURFACE } from "@/ui/a11y";
+import { useTokenColor } from "@/ui/appearance";
 import { TOUCH_FLOOR } from "@/ui/layout";
+import { useTextScale } from "@/ui/text-scale-provider";
 import { cx } from "@/ui/variants";
 
 /**
@@ -21,8 +31,10 @@ import { cx } from "@/ui/variants";
  * layer and every value comes from the token system; a general markdown renderer
  * brings its own HTML-ish view tree and its own type sizes, which is a second
  * styling layer beside the kit. So the subset the transcript actually receives is
- * parsed here — fenced code, ATX headings, list items, blockquotes, paragraphs,
- * and inline code/bold/italic — and everything else is passed through as text.
+ * parsed in `markdown.ts` (fenced code, ATX headings, list items, blockquotes,
+ * tables, paragraphs, and inline code/bold/italic) and everything else is passed
+ * through as text — the grammar lives beside this file rather than in it so the
+ * state marker and the parser's own tests can read it without a React Native host.
  *
  * Passing unknown syntax through VERBATIM is the important half. A renderer that
  * drops what it does not understand silently shortens the model's answer, and the
@@ -32,166 +44,6 @@ import { cx } from "@/ui/variants";
  * The assistant's turn has **no bubble** (`docs/design/components.md` § 14): a
  * bubble separates a thing from other things, and the answer is the page.
  */
-
-export type Block =
-	| { kind: "code"; language: string; lines: string[] }
-	| { kind: "heading"; level: number; text: string }
-	| { kind: "list"; ordered: boolean; items: string[] }
-	| { kind: "quote"; text: string }
-	| { kind: "paragraph"; text: string };
-
-const HEADING = /^(#{1,6})\s+(.*)$/;
-const BULLET = /^\s*[-*+]\s+(.*)$/;
-const ORDERED = /^\s*\d+[.)]\s+(.*)$/;
-const QUOTE = /^\s*>\s?(.*)$/;
-
-/**
- * Split a document into blocks.
- *
- * Block-level only, in one pass and with no lookahead: the transcript re-renders
- * on every streamed frame, so the parser's cost is paid per frame and a
- * backtracking grammar would be paid for text the reader is already reading.
- */
-export const parseMarkdown = (text: string): Block[] => {
-	const blocks: Block[] = [];
-	const lines = text.split("\n");
-	let index = 0;
-	while (index < lines.length) {
-		const line = lines[index] ?? "";
-		const fence = FENCE.exec(line);
-		if (fence) {
-			const language = fence[1] ?? "";
-			const body: string[] = [];
-			index += 1;
-			while (index < lines.length && !FENCE.test(lines[index] ?? "")) {
-				body.push(lines[index] ?? "");
-				index += 1;
-			}
-			// Consume the closing fence when there is one; an unterminated fence is a
-			// stream still arriving, so the body so far is the honest render.
-			if (index < lines.length) index += 1;
-			blocks.push({ kind: "code", language, lines: body });
-			continue;
-		}
-		const heading = HEADING.exec(line);
-		if (heading) {
-			blocks.push({
-				kind: "heading",
-				level: (heading[1] ?? "#").length,
-				text: heading[2] ?? "",
-			});
-			index += 1;
-			continue;
-		}
-		const quote = QUOTE.exec(line);
-		if (quote) {
-			const body: string[] = [quote[1] ?? ""];
-			index += 1;
-			while (index < lines.length && QUOTE.test(lines[index] ?? "")) {
-				body.push((QUOTE.exec(lines[index] ?? "") ?? [])[1] ?? "");
-				index += 1;
-			}
-			blocks.push({ kind: "quote", text: body.join("\n") });
-			continue;
-		}
-		const bullet = BULLET.exec(line);
-		const ordered = ORDERED.exec(line);
-		if (bullet ?? ordered) {
-			const isOrdered = ordered !== null && bullet === null;
-			const pattern = isOrdered ? ORDERED : BULLET;
-			const items: string[] = [];
-			while (index < lines.length) {
-				const item = pattern.exec(lines[index] ?? "");
-				if (!item) break;
-				items.push(item[1] ?? "");
-				index += 1;
-			}
-			blocks.push({ kind: "list", ordered: isOrdered, items });
-			continue;
-		}
-		if (line.trim().length === 0) {
-			index += 1;
-			continue;
-		}
-		const paragraph: string[] = [line];
-		index += 1;
-		while (index < lines.length) {
-			const next = lines[index] ?? "";
-			if (
-				next.trim().length === 0 ||
-				FENCE.test(next) ||
-				HEADING.test(next) ||
-				BULLET.test(next) ||
-				ORDERED.test(next) ||
-				QUOTE.test(next)
-			)
-				break;
-			paragraph.push(next);
-			index += 1;
-		}
-		blocks.push({ kind: "paragraph", text: paragraph.join("\n") });
-	}
-	return blocks;
-};
-
-/* ------------------------------------------------------------------ inline */
-
-export type InlineSpan = {
-	text: string;
-	code: boolean;
-	bold: boolean;
-	italic: boolean;
-};
-
-const INLINE = /(`[^`]+`|\*\*[^*]+\*\*|\*[^*]+\*)/g;
-
-/**
- * Split one line into styled spans.
- *
- * A deliberately small grammar, and a fixed point: text that matches nothing is a
- * plain span, so an unmatched `**` renders as itself rather than swallowing the
- * rest of the line — which is what a partial-`**` streamed frame would otherwise
- * do on every frame of a long answer.
- */
-export const parseInline = (text: string): InlineSpan[] => {
-	const spans: InlineSpan[] = [];
-	for (const piece of text.split(INLINE)) {
-		if (piece === undefined || piece.length === 0) continue;
-		if (piece.startsWith("`") && piece.endsWith("`") && piece.length > 1) {
-			spans.push({
-				text: piece.slice(1, -1),
-				code: true,
-				bold: false,
-				italic: false,
-			});
-		} else if (
-			piece.startsWith("**") &&
-			piece.endsWith("**") &&
-			piece.length > 3
-		) {
-			spans.push({
-				text: piece.slice(2, -2),
-				code: false,
-				bold: true,
-				italic: false,
-			});
-		} else if (
-			piece.startsWith("*") &&
-			piece.endsWith("*") &&
-			piece.length > 2
-		) {
-			spans.push({
-				text: piece.slice(1, -1),
-				code: false,
-				bold: false,
-				italic: true,
-			});
-		} else {
-			spans.push({ text: piece, code: false, bold: false, italic: false });
-		}
-	}
-	return spans;
-};
 
 const spanClass = (span: InlineSpan): string =>
 	cx(
@@ -219,6 +71,243 @@ const Inline = ({ text, base }: { text: string; base?: string }) => (
 /** React Native has no `<i>`; the text style is the only italic it has, and it is
  *  declared once so the inline parser's `italic` is not a silent no-op. */
 const ITALIC: TextStyle = { fontStyle: "italic" };
+
+/* ------------------------------------------------------------------- tables */
+
+/**
+ * The markdown table (`docs/ux` § the table block; design pass
+ * `fix/hero-tables-strips` §1.3–§1.6).
+ *
+ * React Native has neither CSS auto table layout nor min-content, so the column
+ * widths are PRICED from the parsed strings (`tablePricing`, one constant pinned
+ * by a test) rather than measured: the scroll child is a row with
+ * `minWidth: naturalWidth`, each cell carries `flexBasis`/`minWidth: minW(c)` and
+ * `flexGrow: share(c)`, and the `ScrollView`'s content container carries
+ * `minWidth: "100%"` — so a table that fits stretches to the column and
+ * distributes its slack, and one that does not scrolls rather than squeezing any
+ * column below its longest word.
+ */
+
+/** The rail every band in the session column sits on (`space.gutters.phone`), in
+ *  pt. The table's scroll viewport bleeds PAST it by exactly this much — to the
+ *  screen's right edge — so an overflowing table is cut mid-cell at the edge,
+ *  which is the primary "this continues" cue (`§1.6`). */
+const TABLE_RAIL_PT = 16;
+
+/** The static fade band's width, in pt (`§1.6`): transparent at the content
+ *  side, `canvas` at the edge. A cue, not a mask. */
+const TABLE_FADE_PT = 24;
+
+/**
+ * Gradient ids must be unique per instance: two tables can share one document,
+ * and `url(#…)` resolves to the first id in it. A module counter (not a value
+ * derived from content) because the id must be stable across the re-renders a
+ * streaming frame causes — a recomputed id would drop the fill mid-scroll.
+ */
+let fadeSeq = 0;
+
+const TableFade = ({
+	side,
+	colour,
+}: {
+	side: "left" | "right";
+	colour: string;
+}) => {
+	const id = useRef("");
+	if (id.current === "") {
+		fadeSeq += 1;
+		id.current = `md-table-fade-${fadeSeq}`;
+	}
+	return (
+		<View
+			// The cue is machine-readable (U-40 addresses it by name) but must not
+			// eat the gesture: a drag that starts on the fade still scrolls the table.
+			pointerEvents="none"
+			aria-hidden
+			testID={SURFACE.mdTableScrollCue}
+			style={{
+				position: "absolute",
+				top: 0,
+				bottom: 0,
+				width: TABLE_FADE_PT,
+				right: side === "right" ? 0 : undefined,
+				left: side === "left" ? 0 : undefined,
+			}}
+		>
+			<Svg width="100%" height="100%">
+				<Defs>
+					{/* Drawn to the `canvas` ROLE, in both themes, because that is the
+					    ground the table sits on: a constant gradient, unaffected by
+					    reduced motion and costing nothing per frame. */}
+					<LinearGradient id={id.current} x1="0%" y1="0%" x2="100%" y2="0%">
+						{[
+							<Stop
+								key="near"
+								offset="0"
+								stopColor={colour}
+								stopOpacity={side === "right" ? 0 : 1}
+							/>,
+							<Stop
+								key="far"
+								offset="1"
+								stopColor={colour}
+								stopOpacity={side === "right" ? 1 : 0}
+							/>,
+						]}
+					</LinearGradient>
+				</Defs>
+				<Rect width="100%" height="100%" fill={`url(#${id.current})`} />
+			</Svg>
+		</View>
+	);
+};
+
+const Table = ({ header, rows }: { header: string[]; rows: string[][] }) => {
+	const { effectiveScale } = useTextScale();
+	const canvas = useTokenColor("canvas");
+	/* Priced from the parsed strings — no measurement, no layout pass: this
+	 * renderer is on the streaming path and re-runs on every frame. */
+	const pricing = useMemo(
+		() => tablePricing(header, rows, effectiveScale),
+		[header, rows, effectiveScale],
+	);
+
+	const [viewportWidth, setViewportWidth] = useState(0);
+	const [contentWidth, setContentWidth] = useState(0);
+	const [scrollX, setScrollX] = useState(0);
+	const scrollRef = useRef<ScrollView>(null);
+	/** The `lo-md-scroll=end` viewer has run for this table (it runs once). */
+	const scrolledToEnd = useRef(false);
+
+	/* The two booleans §1.6 names, from the layout the table actually got. A
+	 * table that fits draws no fade and does not bleed — a cue on a table that
+	 * does not scroll is the false affordance the anti-pattern exists to
+	 * prevent, inverted. */
+	const overflowing = contentWidth > viewportWidth + 0.5;
+	const forced = useMemo(() => forcedTableScroll(), []);
+
+	const onLayout = useCallback(
+		(event: import("react-native").LayoutChangeEvent) => {
+			setViewportWidth(event.nativeEvent.layout.width);
+		},
+		[],
+	);
+	const onContentSizeChange = useCallback((width: number) => {
+		setContentWidth(width);
+	}, []);
+	const onScroll = useCallback(
+		(
+			event: import("react-native").NativeSyntheticEvent<
+				import("react-native").NativeScrollEvent
+			>,
+		) => {
+			const x = event.nativeEvent.contentOffset.x;
+			// The scroll path runs at frame rate; only a real move reaches state.
+			setScrollX((current) => (Math.abs(current - x) < 0.5 ? current : x));
+		},
+		[],
+	);
+
+	/* The web-only viewer (`table-scroll-hook.ts`): a capture cell that asks for
+	 * the table's END, which no wire action can produce. It waits for the measured
+	 * overflow because scrolling a table that fits is a no-op with a cue bug
+	 * attached — nothing to scroll, and the mirror fade would be a lie. */
+	useEffect(() => {
+		if (forced !== "end" || scrolledToEnd.current || !overflowing) return;
+		scrolledToEnd.current = true;
+		scrollRef.current?.scrollToEnd({ animated: false });
+	}, [forced, overflowing]);
+
+	const atEnd = overflowing && scrollX >= contentWidth - viewportWidth - 1;
+	const showRight = overflowing && !atEnd;
+	const showLeft = scrollX > 0.5;
+
+	const cellStyle = (column: number) => {
+		// `box-sizing: border-box` (React Native's own default) means the cell's
+		// box must carry its padding and separator, or the priced text width would
+		// be eaten by the chrome and the longest word would break.
+		const box =
+			(pricing.minWidths[column] ?? 0) +
+			2 * TABLE_CELL_PADDING_X_PT +
+			(column > 0 ? 1 : 0);
+		return {
+			flexBasis: box,
+			flexGrow: pricing.shares[column] ?? 1,
+			flexShrink: 0,
+			minWidth: box,
+		};
+	};
+	const renderCell = (cell: string, column: number, head: boolean) => (
+		<View
+			key={column}
+			testID={SURFACE.mdTableCell}
+			style={cellStyle(column)}
+			className={cx("px-3 py-2", column > 0 && "border-l border-hairline")}
+		>
+			<Inline
+				text={cell}
+				base={
+					head ? "text-body-sm font-medium text-ink" : "text-body-sm text-ink"
+				}
+			/>
+		</View>
+	);
+
+	return (
+		<View
+			testID={SURFACE.mdTable}
+			style={overflowing ? { marginRight: -TABLE_RAIL_PT } : undefined}
+		>
+			{/* The frame: 1pt `border-control`, because on a phone the grid is what
+			    makes a row-and-column read as rows and columns, and a hairline is
+			    measured as a wash (1.25:1), not an edge. */}
+			<View className="overflow-hidden rounded-sm border border-control">
+				<ScrollView
+					ref={scrollRef}
+					testID={SURFACE.mdTableScroll}
+					horizontal
+					// The cue is the fade, so the platform's own transient indicator
+					// has nothing to add; the Android glow would compete with it.
+					showsHorizontalScrollIndicator={false}
+					overScrollMode="never"
+					// Android: the outer container is a FlatList, and without this the
+					// table does not pan. iOS: a vertical drag must not become a table
+					// drag — the pair is what keeps both axes behaving.
+					nestedScrollEnabled
+					directionalLockEnabled
+					onLayout={onLayout}
+					onContentSizeChange={onContentSizeChange}
+					onScroll={onScroll}
+					scrollEventThrottle={16}
+					contentContainerStyle={{ minWidth: "100%" }}
+				>
+					<View style={{ minWidth: pricing.naturalWidth }}>
+						<View
+							testID={SURFACE.mdTableHead}
+							className="flex-row border-b border-control bg-sunken"
+						>
+							{header.map((cell, column) => renderCell(cell, column, true))}
+						</View>
+						{rows.map((row, rowIndex) => (
+							<View
+								key={rowIndex}
+								testID={SURFACE.mdTableRow}
+								className={cx(
+									"flex-row",
+									rowIndex > 0 && "border-t border-hairline",
+								)}
+							>
+								{row.map((cell, column) => renderCell(cell, column, false))}
+							</View>
+						))}
+					</View>
+				</ScrollView>
+			</View>
+			{showRight ? <TableFade side="right" colour={canvas} /> : null}
+			{showLeft ? <TableFade side="left" colour={canvas} /> : null}
+		</View>
+	);
+};
 
 /* --------------------------------------------------------------- the component */
 
@@ -284,7 +373,13 @@ const HEADING_CLASS: Record<number, string> = {
 export const Markdown = ({ text }: { text: string }) => {
 	const blocks = parseMarkdown(text);
 	return (
-		<>
+		/* ONE gap container, and every block carries no outer margin of its own
+		 * (`components.md` §22, "the container owns the gap"). Before this an
+		 * answer's only separation was each block's own line-box leading: a code
+		 * well met the next paragraph with ≈6 pt of half-leading and two
+		 * paragraphs met at 0 pt, so nine different separations were all the same
+		 * value. The gap is the `between-components` tier, desktop parity. */
+		<View className="gap-3">
 			{blocks.map((block, index) => {
 				switch (block.kind) {
 					case "code":
@@ -300,7 +395,6 @@ export const Markdown = ({ text }: { text: string }) => {
 							<Text
 								key={index}
 								className={cx(
-									"pt-1",
 									HEADING_CLASS[block.level] ?? "text-body-lg text-ink",
 								)}
 							>
@@ -309,7 +403,7 @@ export const Markdown = ({ text }: { text: string }) => {
 						);
 					case "list":
 						return (
-							<View key={index} className="gap-0.5">
+							<View key={index} className="gap-1">
 								{block.items.map((item, itemIndex) => (
 									<View key={itemIndex} className="flex-row gap-2">
 										<Text className="text-body-lg text-ink-dim" aria-hidden>
@@ -328,10 +422,14 @@ export const Markdown = ({ text }: { text: string }) => {
 								<Inline text={block.text} base="text-body-sm text-ink-muted" />
 							</View>
 						);
+					case "table":
+						return (
+							<Table key={index} header={block.header} rows={block.rows} />
+						);
 					default:
 						return <Inline key={index} text={block.text} />;
 				}
 			})}
-		</>
+		</View>
 	);
 };

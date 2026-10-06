@@ -42,6 +42,7 @@ export const SessionStateMarkers = ({
 			{flags.richRows ? (
 				<View testID={STATE_MARKER.session["rich-rows"]} />
 			) : null}
+			{flags.tables ? <View testID={STATE_MARKER.session.tables} /> : null}
 			{flags.delivery ? (
 				<View testID={STATE_MARKER.session["send-delivery"]} />
 			) : null}

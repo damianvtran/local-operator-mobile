@@ -368,6 +368,18 @@ export const SURFACE = {
 	sessionLoading: "session-loading",
 	sessionTranscriptEmpty: "session-transcript-empty",
 	sessionWorkingLine: "session-working-line",
+	/* --- the markdown table (design pass `fix/hero-tables-strips` §1.4–§1.6).
+	 *  The wrapper, its scrolling viewport and the fade are what U-38/U-40
+	 *  address by name; the two row ids and the cell id are what let U-38 count
+	 *  a table's rows and U-39 measure each cell's tokens. These are surfaces,
+	 *  not markers: they are present in every frame that draws a table, which is
+	 *  exactly what makes them anchorable. --- */
+	mdTable: "md-table",
+	mdTableScroll: "md-table-scroll",
+	mdTableScrollCue: "md-table-scroll-cue",
+	mdTableHead: "md-table-head",
+	mdTableRow: "md-table-row",
+	mdTableCell: "md-table-cell",
 	composerNotice: "composer-notice",
 	composerDictationTimer: "composer-dictation-timer",
 	composerDictationStatus: "composer-dictation-status",
@@ -737,6 +749,11 @@ export const STATE_MARKER = {
 		degraded: "session-degraded",
 		queued: "session-queued",
 		"rich-rows": "session-rich-rows",
+		/* A transcript that carries a markdown table — the rows U-38's check
+		 * exists for. Derived from the same parser the renderer uses
+		 * (`hasTableBlock`), so the marker can never affirm a table the reader
+		 * would not be looking at. */
+		tables: "session-tables",
 		/* The `send` tool's settled delivery states, in the transcript (the
 		 * desktop tool row's four-state arm mirrored — local-operator-ui #719).
 		 * The cell `S5/send-delivery` affirms it: at least one row carries a

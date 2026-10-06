@@ -120,6 +120,13 @@ export const STATE_MARKER_ALIASES: Record<string, string> = {
 	 *  look for a list, so the variant borrows the state's marker — which is
 	 *  what this table is for. */
 	"degraded-listing": "degraded",
+	/** The table's scroll position: the same look, one interaction later — the
+	 *  cell `S5/tables-end` renders the wide table scrolled to its end so the
+	 *  left-mirror fade and the retired right fade have a frame (design pass
+	 *  `fix/hero-tables-strips` §4.1 #7; §4.3 says the cue is read from that
+	 *  frame, not from a marker). An entry here is what lets the cell borrow the
+	 *  `tables` marker rather than invent a second id for a scroll offset. */
+	"tables-end": "tables",
 };
 
 /** Every empty-state marker ends with this, which is what the prohibition matches. */
