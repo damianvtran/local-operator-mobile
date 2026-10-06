@@ -54,9 +54,15 @@ const KNOWN_DIVERGENCES: Array<{ id: string; what: string; reason: string }> = [
 	},
 	{
 		id: "D11",
-		what: "`POST /api/projects` answers the mock's 405 where the real relay answers 201 (and likewise PATCH/DELETE on `{key}`)",
+		what: "`PATCH /api/projects/{key}` answers the mock's 405 where the real relay answers 200 (create, delete and both milestone routes are REAL here now)",
 		reason:
-			"DELIBERATE, and it comes out with the mutation slice. The client carries no project write call, so a mock that answered 201 would have to invent the created row's shape and a store round-trip it never performs, and nothing in this repository would validate either. The `ALLOWED_METHODS` table keeps GET/HEAD on both project routes so a wrong method is the relay's own 405 rather than an invented body. Measured against a real isolated `lop mobile`: POST /api/projects there creates a row and answers 201, so this DIVERGES on purpose — the mutation slice replaces the entry with the real route and removes this line.",
+			"NARROWED, not new. The read path's slice carried no project write call at all, so the whole family answered 405; the lifecycle slice implemented create, delete and the milestone pair against an isolated daemon and this entry shrank to the one verb that slice does not offer. `PATCH` belongs to the edit form's slice, and a mock that answered 200 to a body no client sends would be inventing the edit semantics — the accepted keys, the tri-state `''`-clears rule, the estimate's apply arm — with nothing in this repository to validate them. Measured at the ref the write fixtures name: `PATCH` there answers 200 with the row's SUMMARY. The mock's `ALLOWED_METHODS` entry therefore keeps `GET, HEAD, DELETE` on that path, so PATCH is a 405 rather than an invented body.",
+	},
+	{
+		id: "D12",
+		what: "a method the project COLLECTION does not carry answers `405` with a wider `Allow` here (`GET, HEAD, POST`) than the relay sends (`GET, HEAD`)",
+		reason:
+			"A shape difference in one response header, and it is the mock's simplification rather than the relay's behaviour. aiohttp registers `GET /api/projects` and `POST /api/projects` as two ROUTES, so a `DELETE` on the collection is answered by the GET route and its `Allow` lists only that route's methods (`GET, HEAD` — measured). The mock's table is keyed per PATH with a method list, so its single entry carries all three and the refusal names all three. No client reads `Allow` — the app branches on the status and the body — and matching it would mean modelling aiohttp's route table rather than the wire, which is the wrong thing to mirror. Stated rather than hidden, because an unlisted divergence is the defect this file exists for.",
 	},
 ];
 
@@ -191,7 +197,13 @@ function makeClient(base: string) {
 			call("GET", path, undefined, timeoutMs),
 		post: (path: string, body?: unknown, timeoutMs?: number) =>
 			call("POST", path, body, timeoutMs),
-		delete: (path: string) => call("DELETE", path),
+		/** A DELETE, with or without a body — the project delete's confirmation IS
+		 *  its body, so the no-body shape had to become optional rather than the
+		 *  only one. */
+		delete: (path: string, body?: unknown) => call("DELETE", path, body),
+		/** Any other verb, for the method tables (`PUT` on a collection). */
+		call: (method: string, path: string, body?: unknown, timeoutMs?: number) =>
+			call(method, path, body, timeoutMs),
 		/** An authenticated POST with no body at all (not even `{}`). */
 		postNoBody: async (
 			path: string,
@@ -578,6 +590,158 @@ async function main(): Promise<void> {
 				bytes.length > 64,
 				true,
 				`${bytes.length} bytes`,
+			);
+		}
+
+		/* ---- the project WRITE routes, against the behaviour a real relay was
+		 * measured to have (the ref the write fixtures name) ---- */
+		group = "project writes";
+		{
+			const created = await client.post("/api/projects", {
+				name: "divergence-probe",
+				status: "active",
+				tags: ["a", "b"],
+			});
+			/* 200, NOT 201 — the earlier D11 said 201 and was wrong: the daemon's
+			 *  `_project_call` wraps every payload in a plain `JSONResponse`, measured
+			 *  at both write routes. A mock that answered 201 would diverge from the
+			 *  relay it is supposed to be. */
+			check("create answers 200", created.status, 200);
+			check(
+				"create echoes the row's SUMMARY",
+				typeof (created.json as { project?: { id?: unknown } } | undefined)
+					?.project?.id,
+				"string",
+			);
+			const listed = await client.get("/api/projects");
+			check(
+				"and the row is IN the listing afterwards",
+				(
+					(listed.json as { projects?: Array<{ name?: unknown }> })?.projects ??
+					[]
+				).some((row) => row.name === "divergence-probe"),
+				true,
+			);
+			const taken = await client.post("/api/projects", {
+				name: "DIVERGENCE-PROBE",
+			});
+			check("a taken name is 409", taken.status, 409);
+			check(
+				"…case-insensitively, with the relay's own sentence",
+				(taken.json as { error?: unknown } | undefined)?.error,
+				"project 'DIVERGENCE-PROBE' already exists",
+			);
+			check(
+				"…and its machine code",
+				(taken.json as { code?: unknown } | undefined)?.code,
+				"project_name_exists",
+			);
+			const blank = await client.post("/api/projects", { name: "   " });
+			check("a blank name is 422", blank.status, 422);
+			check(
+				"…with `name is required`",
+				(blank.json as { error?: unknown } | undefined)?.error,
+				"name is required",
+			);
+			const listed0 = await client.post("/api/projects", [1, 2, 3]);
+			check("a body that is not an object is 400", listed0.status, 400);
+			check(
+				"…with the relay's own sentence and no code",
+				listed0.json as { error?: unknown; code?: unknown } | undefined,
+				(error: unknown) =>
+					JSON.stringify(error) ===
+					'{"error":"request body must be an object"}',
+			);
+
+			const slashed = await client.post(
+				"/api/projects/divergence-probe/milestones",
+				{ name: "ship/v2" },
+			);
+			/* The measurement the phone's slash guard exists for: the add route carries
+			 *  the name in its BODY, so a slash name is CREATED — and the remove route
+			 *  carries it in the PATH, where `[^/]+` cannot match `ship%2Fv2` either. */
+			check("a slash-named milestone is creatable", slashed.status, 200);
+			const unreachable = await client.delete(
+				`/api/projects/divergence-probe/milestones/${encodeURIComponent("ship/v2")}`,
+			);
+			check("…and its removal never reaches a route", unreachable.status, 404);
+			check(
+				"…as the server's own page, not the relay's error JSON",
+				unreachable.json,
+				undefined,
+			);
+
+			const milestone = await client.post(
+				"/api/projects/divergence-probe/milestones",
+				{ name: "beta cut", completed: true },
+			);
+			check("a milestone write answers the whole VIEW", milestone.status, 200);
+			check(
+				"…with the milestone the store now holds",
+				(
+					(
+						milestone.json as {
+							project?: { milestones?: Array<{ name?: unknown }> };
+						}
+					)?.project?.milestones ?? []
+				).some((row) => row.name === "beta cut"),
+				true,
+			);
+			const removedMilestone = await client.delete(
+				"/api/projects/divergence-probe/milestones/never%20added",
+			);
+			check(
+				"removing a milestone the project does not hold is 422",
+				removedMilestone.status,
+				422,
+			);
+			check(
+				"…with the store's sentence",
+				(removedMilestone.json as { error?: unknown } | undefined)?.error,
+				"no milestone named 'never added'",
+			);
+
+			const mismatch = await client.delete("/api/projects/divergence-probe", {
+				confirm: "something else",
+			});
+			check("a confirm that is not the name is 422", mismatch.status, 422);
+			check(
+				"…with the relay's own sentence",
+				(mismatch.json as { error?: unknown } | undefined)?.error,
+				"confirm must repeat the project name 'divergence-probe' exactly (the name, not the id)",
+			);
+			const noConfirm = await client.delete("/api/projects/divergence-probe");
+			check("a DELETE with no body at all is 400", noConfirm.status, 400);
+			const deleted = await client.delete("/api/projects/divergence-probe", {
+				confirm: "divergence-probe",
+			});
+			check("delete answers the relay's own read-back", deleted.json, {
+				ok: true,
+				deleted: true,
+			});
+			const gone = await client.delete("/api/projects/divergence-probe", {
+				confirm: "divergence-probe",
+			});
+			check("deleting it again is the relay's 404", gone.status, 404);
+			check(
+				"…with its machine code",
+				(gone.json as { code?: unknown } | undefined)?.code,
+				"project_not_found",
+			);
+
+			const put = await client.call("PUT", "/api/projects", { name: "x" });
+			check("PUT on the collection is 405", put.status, 405);
+			const patch = await client.call(
+				"PATCH",
+				"/api/projects/payments-migration",
+				{
+					status: "paused",
+				},
+			);
+			check(
+				"PATCH is still the mock's 405 (the narrowed D11)",
+				patch.status,
+				405,
 			);
 		}
 	} finally {

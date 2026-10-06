@@ -45,6 +45,7 @@ import type { FaultSet } from "./faults.ts";
 import { FAULT_NAMES, parseFaults, summariseFaults } from "./faults.ts";
 import type { FixtureResponseOverride } from "./fixtures.ts";
 import { defaultFixturesDir, loadFixtures, textOf } from "./fixtures.ts";
+import { createProjectsStore, isProjectsRefusal } from "./projects.ts";
 import type { ScenarioWorld, StreamSpec } from "./scenarios.ts";
 import {
 	buildScenarios,
@@ -304,6 +305,13 @@ export function createRelay(options: RelayOptions = {}) {
 		return map;
 	})();
 	const scenarios = buildScenarios(fix);
+	/**
+	 * The project store the WRITE routes mutate (see `projects.ts`). Seeded from
+	 * the captured corpus, so every read it answers is byte-identical to the
+	 * fixture the read path was captured against, and RESET with the world — a
+	 * create in one cell's scenario must not appear in the next one's.
+	 */
+	const projects = createProjectsStore(fix);
 	/* The push device registry (push/ack-sync S4, ADR 0006 §3.1). The corpus
 	 * holds no captures of these routes — they shipped after the last drain — so
 	 * the mock models them from the core's own source (`push_devices.py`: the
@@ -382,6 +390,11 @@ export function createRelay(options: RelayOptions = {}) {
 	};
 	const resetWorld = (): void => {
 		state.world = scenarios[state.scenario]?.world() ?? {};
+		/* The store is part of the WORLD, not of the process: a cell that creates
+		 *  or deletes a row must not leave it behind for the next cell's own
+		 *  scenario, which is the same reasoning the faults and the expired latch
+		 *  below carry. */
+		projects.reset();
 		state.scenarioStartedAt = Date.now();
 		/* A state's own faults are applied WITH it: `S5/error` is reachable only when the
 		 * stream comes up and THEN fails, so the scenario that models it carries the fault
@@ -1110,6 +1123,47 @@ export function createRelay(options: RelayOptions = {}) {
 	const readBody = async (req: IncomingMessage): Promise<string> =>
 		(await readBodyBuffer(req)).toString("utf8");
 
+	/**
+	 * A request body parsed as JSON, or `undefined` when it is not JSON at all.
+	 *
+	 * `undefined` is deliberate and is not an error: the real relay reads
+	 * `await request.json()` inside a `try`, and a body it cannot parse — empty,
+	 * truncated, or not JSON — arrives at the project routes as `None` and is
+	 * answered `400 {"error": "request body must be an object"}` (MEASURED: a
+	 * `DELETE` with no body at all answers exactly that, and so does a JSON array).
+	 * The store is what turns this into that refusal, so the mapping lives in one
+	 * place rather than at each route.
+	 */
+	const parseJsonBody = (raw: string): unknown => {
+		if (raw.trim() === "") return undefined;
+		try {
+			return JSON.parse(raw) as unknown;
+		} catch {
+			return undefined;
+		}
+	};
+
+	/**
+	 * A pathname with its percent-escapes resolved, or the raw value when it is
+	 * malformed — which is what aiohttp routes against.
+	 *
+	 * THIS IS THE MILESTONE-REMOVE ROUTE'S OWN SHAPE, and the reason the phone
+	 * carries a slash guard: `{name:str}` is `[^/]+` over the DECODED path, so a
+	 * milestone named `ship/v2` decodes to two segments and reaches NO route at
+	 * all (MEASURED: `DELETE …/milestones/ship%2Fv2` and the raw form both answer
+	 * the server's own plain-text `404 Not Found`, with no JSON body). Matching the
+	 * raw pathname here would route it happily and hand the store a name no other
+	 * surface could ever address — a mock more capable than the relay, which is
+	 * the one direction this file must not lean.
+	 */
+	const decodedPathname = (value: string): string => {
+		try {
+			return decodeURIComponent(value);
+		} catch {
+			return value;
+		}
+	};
+
 	const handleCommand = (
 		req: IncomingMessage,
 		res: ServerResponse,
@@ -1833,27 +1887,90 @@ export function createRelay(options: RelayOptions = {}) {
 		}
 
 		if (pathname === "/api/projects" && method === "GET") {
-			/* The REAL listing shape, from the captured fixture: the six-project store
-			 *  `scripts/mobile_projects_fixture.py` seeds. It used to answer an ad-hoc
-			 *  `{key, name}` here, which is not the wire — so nothing could catch a
-			 *  client reading the wrong contract. A state that needs a different
-			 *  listing (empty, or a status this build does not know) overrides
-			 *  `world.projects.list`.
-			 *
-			 *  The listing's own POST is NOT stubbed: the native client reads this
-			 *  surface and never writes it, so a create body would be a shape nothing
-			 *  validates against — and `methodNotAllowed` answers 405 for it above,
-			 *  which is the real relay's answer for a method a route does not carry. */
+			/* The listing, from the mock's own STORE — which is seeded from the
+			 *  captured fixture and byte-identical to it until a write moves it (proved
+			 *  by `tools/mock-relay/projects.parity.test.ts`). A state that needs a
+			 *  different listing (empty, or a status this build does not know) still
+			 *  overrides `world.projects.list`. */
 			const list = world.projects?.list;
 			if (list !== undefined) {
 				sendRecordedOrBody(res, list);
 				return;
 			}
-			sendFixture(res, "projects-list");
+			sendJson(res, 200, projects.list());
+			return;
+		}
+
+		if (pathname === "/api/projects" && method === "POST") {
+			/* `POST /api/projects` — the create the listing's sheet calls. The body is
+			 *  read and the STORE mutates, because a mock that answered a canned row
+			 *  would make every carrier of that answer (the receipt, and the listing the
+			 *  screen re-reads) a claim about a store that never changed. */
+			const outcome = projects.create(parseJsonBody(rawBody ?? ""));
+			if (isProjectsRefusal(outcome)) {
+				sendJson(res, outcome.refuse.status, outcome.refuse.json);
+				return;
+			}
+			sendJson(res, outcome.answer.status, outcome.answer.json);
+			return;
+		}
+
+		const milestoneAdd = /^\/api\/projects\/([^/]+)\/milestones$/.exec(
+			pathname,
+		);
+		if (milestoneAdd && method === "POST") {
+			const outcome = projects.setMilestone(
+				decodeURIComponent(milestoneAdd[1] ?? ""),
+				parseJsonBody(rawBody ?? ""),
+			);
+			if (isProjectsRefusal(outcome)) {
+				sendJson(res, outcome.refuse.status, outcome.refuse.json);
+				return;
+			}
+			sendJson(res, outcome.answer.status, outcome.answer.json);
+			return;
+		}
+
+		/* Decoded, for the reason `decodedPathname` states: this is the route whose
+		 *  `[^/]+` boundary is the whole subject of the phone's slash guard. */
+		const milestoneRemove =
+			/^\/api\/projects\/([^/]+)\/milestones\/([^/]+)$/.exec(
+				decodedPathname(pathname),
+			);
+		if (milestoneRemove && method === "DELETE") {
+			/* A name carrying a slash never reaches here: the route's `{name:str}` is
+			 *  `[^/]+` on the real relay too, so `ship%2Fv2` falls through to the
+			 *  server's own `404` — the shape that makes a slash-named milestone
+			 *  unremovable, and the reason the phone refuses one while it is typed. */
+			/* The captures are ALREADY decoded (the match ran on the decoded path),
+			 *  so decoding them again would turn a name holding a literal `%20`
+			 *  into a space the caller never sent. */
+			const outcome = projects.removeMilestone(
+				milestoneRemove[1] ?? "",
+				milestoneRemove[2] ?? "",
+			);
+			if (isProjectsRefusal(outcome)) {
+				sendJson(res, outcome.refuse.status, outcome.refuse.json);
+				return;
+			}
+			sendJson(res, outcome.answer.status, outcome.answer.json);
 			return;
 		}
 
 		const projectDetail = /^\/api\/projects\/([^/]+)$/.exec(pathname);
+		if (projectDetail && method === "DELETE") {
+			const outcome = projects.remove(
+				decodeURIComponent(projectDetail[1] ?? ""),
+				parseJsonBody(rawBody ?? ""),
+			);
+			if (isProjectsRefusal(outcome)) {
+				sendJson(res, outcome.refuse.status, outcome.refuse.json);
+				return;
+			}
+			sendJson(res, outcome.answer.status, outcome.answer.json);
+			return;
+		}
+
 		if (projectDetail && method === "GET") {
 			const detail = world.projects?.detail;
 			if (detail !== undefined) {
@@ -1861,21 +1978,18 @@ export function createRelay(options: RelayOptions = {}) {
 				return;
 			}
 			/* The relay's own addressing rule: an exact id, then a case-insensitive
-			 *  name. The one row the capture holds answers for its id and its name;
-			 *  EVERY other key answers the captured `404 project_not_found`, whose
-			 *  sentence names the near-miss — which is the refusal the detail screen
-			 *  renders, driven here by a real body rather than an invented one. */
-			const key = decodeURIComponent(projectDetail[1] ?? "").toLowerCase();
-			const captured = fix.record("projects-detail");
-			const project = isRecord(captured.project) ? captured.project : {};
-			const ids = [project.id, project.name]
-				.filter((value): value is string => typeof value === "string")
-				.map((value) => value.toLowerCase());
-			if (ids.includes(key)) {
-				sendFixture(res, "projects-detail");
+			 *  name — and the store holds every row the capture held, so the ONE row
+			 *  whose detail was captured answers byte-identically and every other key
+			 *  answers the captured `404 project_not_found`, whose sentence names the
+			 *  near-miss. */
+			const outcome = projects.detail(
+				decodeURIComponent(projectDetail[1] ?? ""),
+			);
+			if (isProjectsRefusal(outcome)) {
+				sendJson(res, outcome.refuse.status, outcome.refuse.json);
 				return;
 			}
-			sendFixture(res, "projects-not-found");
+			sendJson(res, outcome.answer.status, outcome.answer.json);
 			return;
 		}
 
@@ -2219,11 +2333,21 @@ export function createRelay(options: RelayOptions = {}) {
 		{ match: /^\/api\/commands$/, methods: ["GET", "HEAD"] },
 		{ match: /^\/api\/directories$/, methods: ["GET", "HEAD"] },
 		{ match: /^\/api\/models$/, methods: ["GET", "HEAD"] },
-		{ match: /^\/api\/projects$/, methods: ["GET", "HEAD"] },
-		/* The key-scoped detail. GET only: the mutation routes this client does not
-		 *  call live on sibling paths (`{key}/milestones`, …), and a method a route
-		 *  does not carry is a 405 rather than a body this mock invented. */
-		{ match: /^\/api\/projects\/[^/]+$/, methods: ["GET", "HEAD"] },
+		{ match: /^\/api\/projects$/, methods: ["GET", "HEAD", "POST"] },
+		/* The milestone routes come BEFORE the key-scoped one: `.find` takes the
+		 *  first match, and `{key}` would otherwise swallow both. The sets are the
+		 *  real relay's own, measured: `PUT`/`OPTIONS` on the collection answer `405`
+		 *  with `Allow: GET, HEAD`, and `GET`/`PUT` on a project's milestones answer
+		 *  `405` with `Allow: POST`. The mock's collection entry lists all three of
+		 *  its methods where the relay splits the POST route out, so a `DELETE` on
+		 *  the collection carries a wider `Allow` here — named in `divergences.ts`
+		 *  rather than left for a reader to find. */
+		{
+			match: /^\/api\/projects\/[^/]+\/milestones\/[^/]+$/,
+			methods: ["DELETE"],
+		},
+		{ match: /^\/api\/projects\/[^/]+\/milestones$/, methods: ["POST"] },
+		{ match: /^\/api\/projects\/[^/]+$/, methods: ["GET", "HEAD", "DELETE"] },
 		{ match: /^\/api\/pair$/, methods: ["POST"] },
 		{ match: /^\/healthz$/, methods: ["GET", "HEAD"] },
 		{ match: /^\/login$/, methods: ["GET", "POST"] },
@@ -2416,6 +2540,22 @@ export function createRelay(options: RelayOptions = {}) {
 				!pathname.endsWith("/events")
 			) {
 				finish(0, "held open (scenario loading)");
+				return undefined;
+			}
+
+			/* The WRITE-side hold: the same honesty one verb over. `hold.mutations`
+			 *  answers a non-read route with nothing at all, which is the only way to
+			 *  photograph an in-flight write — a cell that declares "the create is
+			 *  waiting" needs a create that really is waiting, not a state the app was
+			 *  asked to pretend (when the relay holds, the button's own in-flight state
+			 *  is what the frame shows, and the store is never touched). */
+			if (
+				state.world.hold?.mutations === "forever" &&
+				method !== "GET" &&
+				method !== "HEAD" &&
+				pathname.startsWith("/api/")
+			) {
+				finish(0, "held open (scenario mutations)");
 				return undefined;
 			}
 
