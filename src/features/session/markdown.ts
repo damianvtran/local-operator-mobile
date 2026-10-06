@@ -335,17 +335,47 @@ export const parseInline = (text: string): InlineSpan[] => {
  */
 
 /**
- * The advance of one character at the cell face, in pt, at 100 % scale.
+ * The advance of one MONO face character, in pt at 100 % scale — the exact box
+ * advance of `mono-sm` (12pt) in the shipped build, pinned by
+ * `markdown.test.ts` rather than assumed.
  *
- * ONE constant, pinned by `markdown.test.ts` rather than assumed: it is the
- * measured box advance of `mono-sm` in the shipped build (a code line of 28
- * characters spans ≈198pt of ink on the iphone-15 frame, and a sha256 hex digest
- * is exactly 64 characters and must stay whole — see the 64 cap below), NOT a
- * `0.6em` recomputed from the font size. Everything a table sizes is derived from
- * this number, so a font change that moves the advance moves the pricing with it
- * the moment this is re-measured.
+ * The measured basis: a monospace run reads 7.2pt/char from the live DOM on the
+ * shipped web build (an 11-character run spans exactly 79.2pt), which is also
+ * 0.6em × 12pt. It is NOT the per-character value of a code line's INK: a
+ * 28-character code line spans ≈198.33pt of ink on the iphone-15 frame (the
+ * design pass's number), which divides to 7.08, but ink undercounts — the last
+ * glyph's width is not a full advance, and the box a token occupies is what
+ * decides whether it wraps. Pricing at the ink value under-sizes a sha256
+ * column by a full character.
  */
-export const TABLE_MONO_ADVANCE_PT = 7.08;
+export const TABLE_MONO_ADVANCE_PT = 7.2;
+
+/**
+ * The advance of one SANS face character, in pt at 100 % — the widest glyph
+ * advance of `body-sm` at its body weight, measured the same way from the same
+ * build and pinned by the same test: a 20-`m` run spans 240pt of box at 100 %
+ * → 12.00/char (capitals 11.88, digits 7.93, mixed prose 5.85). `m` is the
+ * widest glyph in the regular Latin face.
+ *
+ * WHY TWO ADVANCES, against the spec's single `CH`: the single constant was
+ * built and measured before it was believed (2026-10-06, this branch). One
+ * advance below the proportional face's real cost re-opened the exact defect
+ * `U-39` exists for: the 7-character header `outcome` broke its own column at
+ * 200 % on the S5 rich-rows frames (cell content box 105.4pt against a real run
+ * of ≈106pt) — `U-39` failed on the fixture the spec itself mandates. One
+ * advance ABOVE the mono cost is just as wrong in the other direction: pricing
+ * every code token at the sans bound pushed even the fits-exactly fixture over
+ * the rail and manufactured the cue this redesign exists to reserve for real
+ * overflow. So each token is priced at its own face's advance, mono exact and
+ * sans at its worst regular glyph. The header face is `body-sm` at weight 600,
+ * whose advances run ≈2-3 % wider (measured: `m` 13.82, `W` 15.60) — a header
+ * token built entirely of those glyphs would out-run this bound, and the right
+ * fix then is to re-measure this constant, which `U-39` will say the moment it
+ * breaks a real token. Disclosed on the PR rather than silently diverging: the
+ * spec's §1.3 pinned one `CH`, and this is the second measurement that says
+ * why one is not enough.
+ */
+export const TABLE_SANS_ADVANCE_PT = 12;
 
 /**
  * The token cap, in characters.
@@ -373,16 +403,66 @@ export const TABLE_BORDER_PT = 1;
 const clampToken = (value: number): number =>
 	Math.min(TABLE_TOKEN_CAP, Math.max(TABLE_TOKEN_FLOOR, value));
 
-/** The longest whitespace-delimited run across one column's header and body
- *  cells, in characters. Split on runs of whitespace after escape resolution. */
-const longestToken = (cells: string[]): number => {
-	let longest = 0;
+/** One whitespace-delimited run of a cell, and the face it renders in. */
+interface PricedToken {
+	length: number;
+	/** True inside a `code span`, whose face has ONE advance and is therefore
+	 *  priced exactly (`TABLE_MONO_ADVANCE_PT`); false for the proportional sans
+	 *  face, priced at its worst glyph (`TABLE_SANS_ADVANCE_PT`). */
+	mono: boolean;
+}
+
+/**
+ * Split one cell into its whitespace-delimited runs, marking the runs that sit
+ * inside `code spans`.
+ *
+ * A backtick TOGGLES the face, and an unterminated span leaves the rest of the
+ * cell on the code face — the same reading the inline renderer gives an
+ * unclosed span (it renders the backtick and its text verbatim), so the pricing
+ * and the renderer cannot disagree about where the code face starts. The
+ * backticks themselves are not part of any token's width: they are not glyphs
+ * the cell draws.
+ */
+const pricedTokens = (cell: string): PricedToken[] => {
+	const tokens: PricedToken[] = [];
+	let mono = false;
+	let run = "";
+	const flush = (): void => {
+		if (run !== "") {
+			tokens.push({ length: run.length, mono });
+			run = "";
+		}
+	};
+	for (const character of cell) {
+		if (character === "`") {
+			flush();
+			mono = !mono;
+			continue;
+		}
+		if (WHITESPACE.test(character)) {
+			flush();
+			continue;
+		}
+		run += character;
+	}
+	flush();
+	return tokens;
+};
+
+/** The priced width of one column, in pt at 100 %: the widest token across its
+ *  header and body cells, each token at its own face's advance. */
+const columnWidth = (cells: string[]): number => {
+	let widest = 0;
 	for (const cell of cells) {
-		for (const token of cell.split(WHITESPACE)) {
-			if (token.length > longest) longest = token.length;
+		for (const token of pricedTokens(cell.replace(/\\\|/g, "|"))) {
+			const advance = token.mono
+				? TABLE_MONO_ADVANCE_PT
+				: TABLE_SANS_ADVANCE_PT;
+			const width = clampToken(token.length) * advance;
+			if (width > widest) widest = width;
 		}
 	}
-	return longest;
+	return widest;
 };
 
 /** The longest whole cell string across one column, in characters. */
@@ -404,11 +484,17 @@ export interface TablePricing {
 /**
  * Price `header` + `rows` at `effectiveScale`.
  *
- * The arithmetic is the design pass's, verbatim:
+ * The arithmetic is the design pass's, with one measured correction:
  *
- *   minW(c)  = clamp(longestToken(c), 4, 64) * advance * scale
+ *   minW(c)  = max over tokens (clamp(len, 4, 64) * advance(face)) * scale
  *   share(c) = clamp(longestCellChars(c), 4, 64)
  *   naturalW = Σ minW(c) + (cols + 1) * border + cols * 2 * cellPaddingX
+ *
+ * The design's single `advance` was measured on a mono code line and applied
+ * to every token; the correction and its measurements are in
+ * `TABLE_SANS_ADVANCE_PT`'s note. `U-39` is the arbiter: it failed the
+ * single-advance build on the spec's own fixture ('outcome' at 200 %) and
+ * passes this one on the same frames.
  *
  * The `effectiveScale` factor is not optional: without it a 200 % reader gets
  * columns priced for 100 % and every cell wraps — the large-text failure the
@@ -425,9 +511,7 @@ export function tablePricing(
 	for (let column = 0; column < columns; column += 1) {
 		const cells = [header[column] ?? ""];
 		for (const row of rows) cells.push(row[column] ?? "");
-		minWidths.push(
-			clampToken(longestToken(cells)) * TABLE_MONO_ADVANCE_PT * effectiveScale,
-		);
+		minWidths.push(columnWidth(cells) * effectiveScale);
 		shares.push(clampToken(longestCell(cells)));
 	}
 	const naturalWidth =

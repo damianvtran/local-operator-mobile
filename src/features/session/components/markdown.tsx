@@ -172,38 +172,67 @@ const Table = ({ header, rows }: { header: string[]; rows: string[][] }) => {
 		[header, rows, effectiveScale],
 	);
 
-	const [viewportWidth, setViewportWidth] = useState(0);
-	const [contentWidth, setContentWidth] = useState(0);
+	/**
+	 * Two derivations, one measured input.
+	 *
+	 * `columnWidth` is the markdown column's own width, read from a wrapper
+	 * that never moves — and that is the whole point. The first version of this
+	 * measured the ScrollView's viewport and the priced row against each other
+	 * AND let the viewport depend on the measurement (the row bleeds 16pt past
+	 * the rail only while it overflows). Measured 2026-10-06 on the shipped web
+	 * build: the pair oscillated — the row at the un-bleeded 356pt measured
+	 * "fits", then the first paint's zero-width viewport classified it as
+	 * overflowing after all, the bleed widened the viewport to 372pt, and the
+	 * rendered frames alternated between a cued and an uncued state at the same
+	 * scale (the two U-40 failures of the second after-audit). A width that
+	 * cannot move is the fix: the column is the same number whether or not the
+	 * bleed applies, so the classification is a pure function of it.
+	 */
+	const [columnWidth, setColumnWidth] = useState(0);
 	const [scrollX, setScrollX] = useState(0);
+	const [atEnd, setAtEnd] = useState(false);
 	const scrollRef = useRef<ScrollView>(null);
 	/** The `lo-md-scroll=end` viewer has run for this table (it runs once). */
 	const scrolledToEnd = useRef(false);
 
-	/* The two booleans §1.6 names, from the layout the table actually got. A
-	 * table that fits draws no fade and does not bleed — a cue on a table that
-	 * does not scroll is the false affordance the anti-pattern exists to
-	 * prevent, inverted. */
-	const overflowing = contentWidth > viewportWidth + 0.5;
+	/* The two booleans §1.6 names. `bleeds`: the priced row is wider than the
+	 * column, so the viewport runs to the screen's right edge (the cut edge).
+	 * `scrolls`: it is ALSO wider than the bleeded viewport, i.e. there is
+	 * content the reader cannot reach without scrolling — only then is the fade
+	 * a true statement, and only then does the DOM's own `scrollWidth` exceed
+	 * its `clientWidth` (the pair U-40 reads). A table in between (wider than
+	 * the column, narrower than the bleeded edge) gets the extra width and no
+	 * cue: nothing is cut and nothing scrolls. A table that fits the column
+	 * gets neither — a cue on a table that does not scroll is the false
+	 * affordance the anti-pattern exists to prevent, inverted. */
+	const bleeds = columnWidth > 0 && pricing.naturalWidth > columnWidth + 0.5;
+	const scrolls =
+		bleeds && pricing.naturalWidth > columnWidth + TABLE_RAIL_PT - 0.5;
 	const forced = useMemo(() => forcedTableScroll(), []);
 
-	const onLayout = useCallback(
+	const onColumnLayout = useCallback(
 		(event: import("react-native").LayoutChangeEvent) => {
-			setViewportWidth(event.nativeEvent.layout.width);
+			setColumnWidth(event.nativeEvent.layout.width);
 		},
 		[],
 	);
-	const onContentSizeChange = useCallback((width: number) => {
-		setContentWidth(width);
-	}, []);
 	const onScroll = useCallback(
 		(
 			event: import("react-native").NativeSyntheticEvent<
 				import("react-native").NativeScrollEvent
 			>,
 		) => {
-			const x = event.nativeEvent.contentOffset.x;
+			const { contentOffset, contentSize, layoutMeasurement } =
+				event.nativeEvent;
+			const x = contentOffset.x;
 			// The scroll path runs at frame rate; only a real move reaches state.
 			setScrollX((current) => (Math.abs(current - x) < 0.5 ? current : x));
+			// "End" comes from the event's own metrics rather than from states
+			// that a re-render can move under it: at the end the offset plus the
+			// viewport covers the content.
+			setAtEnd(
+				contentOffset.x + layoutMeasurement.width >= contentSize.width - 1,
+			);
 		},
 		[],
 	);
@@ -213,14 +242,13 @@ const Table = ({ header, rows }: { header: string[]; rows: string[][] }) => {
 	 * overflow because scrolling a table that fits is a no-op with a cue bug
 	 * attached — nothing to scroll, and the mirror fade would be a lie. */
 	useEffect(() => {
-		if (forced !== "end" || scrolledToEnd.current || !overflowing) return;
+		if (forced !== "end" || scrolledToEnd.current || !scrolls) return;
 		scrolledToEnd.current = true;
 		scrollRef.current?.scrollToEnd({ animated: false });
-	}, [forced, overflowing]);
+	}, [forced, scrolls]);
 
-	const atEnd = overflowing && scrollX >= contentWidth - viewportWidth - 1;
-	const showRight = overflowing && !atEnd;
-	const showLeft = scrollX > 0.5;
+	const showRight = scrolls && !atEnd;
+	const showLeft = scrolls && scrollX > 0.5;
 
 	const cellStyle = (column: number) => {
 		// `box-sizing: border-box` (React Native's own default) means the cell's
@@ -254,57 +282,70 @@ const Table = ({ header, rows }: { header: string[]; rows: string[][] }) => {
 	);
 
 	return (
-		<View
-			testID={SURFACE.mdTable}
-			style={overflowing ? { marginRight: -TABLE_RAIL_PT } : undefined}
-		>
-			{/* The frame: 1pt `border-control`, because on a phone the grid is what
+		// The measuring wrapper: never styled with the bleed, so its width is the
+		// markdown column's own and the classification below cannot feed back
+		// into the thing it classifies.
+		<View onLayout={onColumnLayout}>
+			<View
+				testID={SURFACE.mdTable}
+				style={bleeds ? { marginRight: -TABLE_RAIL_PT } : undefined}
+			>
+				{/* The frame: 1pt `border-control`, because on a phone the grid is what
 			    makes a row-and-column read as rows and columns, and a hairline is
 			    measured as a wash (1.25:1), not an edge. */}
-			<View className="overflow-hidden rounded-sm border border-control">
-				<ScrollView
-					ref={scrollRef}
-					testID={SURFACE.mdTableScroll}
-					horizontal
-					// The cue is the fade, so the platform's own transient indicator
-					// has nothing to add; the Android glow would compete with it.
-					showsHorizontalScrollIndicator={false}
-					overScrollMode="never"
-					// Android: the outer container is a FlatList, and without this the
-					// table does not pan. iOS: a vertical drag must not become a table
-					// drag — the pair is what keeps both axes behaving.
-					nestedScrollEnabled
-					directionalLockEnabled
-					onLayout={onLayout}
-					onContentSizeChange={onContentSizeChange}
-					onScroll={onScroll}
-					scrollEventThrottle={16}
-					contentContainerStyle={{ minWidth: "100%" }}
-				>
-					<View style={{ minWidth: pricing.naturalWidth }}>
-						<View
-							testID={SURFACE.mdTableHead}
-							className="flex-row border-b border-control bg-sunken"
-						>
-							{header.map((cell, column) => renderCell(cell, column, true))}
-						</View>
-						{rows.map((row, rowIndex) => (
+				<View className="overflow-hidden rounded-sm border border-control">
+					<ScrollView
+						ref={scrollRef}
+						testID={SURFACE.mdTableScroll}
+						horizontal
+						// The cue is the fade, so the platform's own transient indicator
+						// has nothing to add; the Android glow would compete with it.
+						showsHorizontalScrollIndicator={false}
+						overScrollMode="never"
+						// Android: the outer container is a FlatList, and without this the
+						// table does not pan. iOS: a vertical drag must not become a table
+						// drag — the pair is what keeps both axes behaving.
+						nestedScrollEnabled
+						directionalLockEnabled
+						onScroll={onScroll}
+						scrollEventThrottle={16}
+						contentContainerStyle={{ minWidth: "100%" }}
+					>
+						{/* `flexGrow: 1` is load-bearing on web, measured 2026-10-06: the
+				    horizontal ScrollView's content container is a ROW flex box, and a
+				    child with only `minWidth` sized to its min-content — the priced row
+				    rendered 216pt wide inside a 356pt viewport, so a table that the
+				    pricing says FITS never received its slack and its header cells
+				    wrapped (`outcome` → `outcom`/`e`, the U-39 failure the first
+				    after-capture caught). With the grow the row fills the container and
+				    the cells' own `flexGrow: share` distributes the slack as §1.3
+				    specifies; when `naturalWidth` exceeds the viewport the min-width
+				    still wins and the row scrolls as before. */}
+						<View style={{ minWidth: pricing.naturalWidth, flexGrow: 1 }}>
 							<View
-								key={rowIndex}
-								testID={SURFACE.mdTableRow}
-								className={cx(
-									"flex-row",
-									rowIndex > 0 && "border-t border-hairline",
-								)}
+								testID={SURFACE.mdTableHead}
+								className="flex-row border-b border-control bg-sunken"
 							>
-								{row.map((cell, column) => renderCell(cell, column, false))}
+								{header.map((cell, column) => renderCell(cell, column, true))}
 							</View>
-						))}
-					</View>
-				</ScrollView>
+							{rows.map((row, rowIndex) => (
+								<View
+									key={rowIndex}
+									testID={SURFACE.mdTableRow}
+									className={cx(
+										"flex-row",
+										rowIndex > 0 && "border-t border-hairline",
+									)}
+								>
+									{row.map((cell, column) => renderCell(cell, column, false))}
+								</View>
+							))}
+						</View>
+					</ScrollView>
+				</View>
+				{showRight ? <TableFade side="right" colour={canvas} /> : null}
+				{showLeft ? <TableFade side="left" colour={canvas} /> : null}
 			</View>
-			{showRight ? <TableFade side="right" colour={canvas} /> : null}
-			{showLeft ? <TableFade side="left" colour={canvas} /> : null}
 		</View>
 	);
 };

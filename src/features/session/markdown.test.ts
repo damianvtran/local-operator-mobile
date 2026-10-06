@@ -5,6 +5,7 @@ import {
 	parseMarkdown,
 	splitTableRow,
 	TABLE_MONO_ADVANCE_PT,
+	TABLE_SANS_ADVANCE_PT,
 	TABLE_TOKEN_CAP,
 	tablePricing,
 } from "@/features/session/markdown";
@@ -227,18 +228,27 @@ describe("streamed frames", () => {
 });
 
 describe("column pricing", () => {
-	it("pins the mono advance to the measurement, not a 0.6em recomputation", () => {
-		// The measured basis: a 28-character code line spans ≈198pt of ink on the
-		// iphone-15 frame at 100 % (the design pass's number), and the box advance
-		// this constant prices with is its per-character value. The pin exists so a
-		// font or size change cannot move the price silently — 64 characters must
-		// stay whole (sha256-hex), and a table priced below the advance wraps a
-		// token that must not.
-		expect(TABLE_MONO_ADVANCE_PT).toBeCloseTo(198.33 / 28, 2);
+	it("pins both advances to their DOM measurements", () => {
+		// The measured basis is the live DOM on the shipped web build: an
+		// 11-character `mono-sm` run spans exactly 79.2pt of box at 100 % →
+		// 7.2pt/char (also 0.6em × 12pt), and a 20-`m` `body-sm` run spans
+		// 240pt → 12.0pt/char, the widest glyph of the regular face. The pin
+		// exists so a font or size change cannot move a price silently — 64
+		// characters must stay whole (sha256-hex), and a column priced below
+		// its tokens' advance wraps a token that must not.
+		expect(TABLE_MONO_ADVANCE_PT).toBeCloseTo(79.2 / 11, 5);
+		expect(TABLE_SANS_ADVANCE_PT).toBeCloseTo(240 / 20, 5);
+		expect(TABLE_SANS_ADVANCE_PT).toBeGreaterThan(TABLE_MONO_ADVANCE_PT);
+		// The design pass's 28-character code line spans ≈198.33pt of INK, which
+		// divides to 7.08 — and pricing at that under-sizes every mono column.
+		// The assertion is the guard that the mono constant never regresses to
+		// the ink division: a 64-character sha256 column priced at 7.08
+		// shortfalls by 7.7pt, exactly one mono glyph.
+		expect(TABLE_MONO_ADVANCE_PT).toBeGreaterThan(198.33 / 28);
 		expect(TABLE_TOKEN_CAP).toBe(64);
 	});
 
-	it("prices a column from its longest whitespace-delimited run", () => {
+	it("prices a column from its longest whitespace-delimited run, at its face", () => {
 		const pricing = tablePricing(
 			["key", "value"],
 			[
@@ -247,21 +257,54 @@ describe("column pricing", () => {
 			],
 			1,
 		);
-		expect(pricing.minWidths[0]).toBeCloseTo(6 * TABLE_MONO_ADVANCE_PT, 2);
-		expect(pricing.minWidths[1]).toBeCloseTo(16 * TABLE_MONO_ADVANCE_PT, 2);
+		// Both columns' longest runs render on the SANS face (no code spans),
+		// so both are priced at the sans bound: 6 and 16 characters.
+		expect(pricing.minWidths[0]).toBeCloseTo(6 * TABLE_SANS_ADVANCE_PT, 2);
+		expect(pricing.minWidths[1]).toBeCloseTo(16 * TABLE_SANS_ADVANCE_PT, 2);
 		// naturalW = Σ minW + (cols+1) borders + cols * 2 * 12 padding.
 		expect(pricing.naturalWidth).toBeCloseTo(
-			(6 + 16) * TABLE_MONO_ADVANCE_PT + 3 + 48,
+			(6 + 16) * TABLE_SANS_ADVANCE_PT + 3 + 48,
 			2,
 		);
 	});
 
+	it("prices a code-span token on the mono face, the cell's own text on sans", () => {
+		// The same token length in the two faces: 16 characters cost 16 × mono
+		// in a code span and 16 × sans as plain text, and a column takes the
+		// wider of its tokens. This is the split U-39 forced: the single-advance
+		// rule broke the header `outcome` at 200 %, and pricing sans tokens at
+		// the mono advance under-sized every proportional column the same way.
+		const code = tablePricing(
+			["k", "digest"],
+			[["x", "`abcdef0123456789`"]],
+			1,
+		);
+		expect(code.minWidths[1]).toBeCloseTo(16 * TABLE_MONO_ADVANCE_PT, 2);
+		const plain = tablePricing(["k", "digest"], [["x", "abcdef0123456789"]], 1);
+		expect(plain.minWidths[1]).toBeCloseTo(16 * TABLE_SANS_ADVANCE_PT, 2);
+		const mixed = tablePricing(["k", "v"], [["x", "plain `code` word"]], 1);
+		// Widest run of `plain `code` word`: `plain` (5 sans = 60) beats `code`
+		// (4 mono = 28.8) and `word` (4 sans = 48).
+		expect(mixed.minWidths[1]).toBeCloseTo(5 * TABLE_SANS_ADVANCE_PT, 2);
+	});
+
+	it("counts a token's glyphs, not its backticks or escaped pipes", () => {
+		const escaped = tablePricing(["k", "v"], [["x", "a\\|b"]], 1);
+		// `a\|b` renders as `a|b` — the backslash is not drawn, so the run is 3,
+		// under the clamp floor of 4.
+		expect(escaped.minWidths[1]).toBeCloseTo(4 * TABLE_SANS_ADVANCE_PT, 2);
+		const code = tablePricing(["k", "v"], [["x", "`abcdefgh`"]], 1);
+		// 8 mono glyphs (57.6) out-price the header's one sans glyph (the clamp
+		// floor, 48), so the mono advance is what the column took.
+		expect(code.minWidths[1]).toBeCloseTo(8 * TABLE_MONO_ADVANCE_PT, 2);
+	});
+
 	it("clamps a token at both ends", () => {
 		const short = tablePricing(["a", "b"], [], 1);
-		expect(short.minWidths[0]).toBeCloseTo(4 * TABLE_MONO_ADVANCE_PT, 2);
+		expect(short.minWidths[0]).toBeCloseTo(4 * TABLE_SANS_ADVANCE_PT, 2);
 		const giant = "f".repeat(96);
 		const long = tablePricing(["k", "digest"], [["x", giant]], 1);
-		expect(long.minWidths[1]).toBeCloseTo(64 * TABLE_MONO_ADVANCE_PT, 2);
+		expect(long.minWidths[1]).toBeCloseTo(64 * TABLE_SANS_ADVANCE_PT, 2);
 	});
 
 	it("scales every column by the text-scale factor", () => {
