@@ -174,8 +174,12 @@ describe("a private address reads its failures through the permission question",
 	/* The defect this pins: a same-Wi-Fi address that never answered used to render
 	 *  the generic sentence, which says nothing about the one cause a phone adds to
 	 *  that failure — the OS's local-network permission — and sends the reader to
-	 *  check a computer that may be fine. A private host changes the reading; a
-	 *  public host must NOT change, or the sentence becomes a misdiagnosis. */
+	 *  check a computer that may be fine. A private ADDRESS changes the reading; a
+	 *  public host must NOT change, or the sentence becomes a misdiagnosis — and a
+	 *  private NAME must not either: a name that fails to resolve cannot be told
+	 *  apart from one the OS gate blotted out on a platform that hides the DNS
+	 *  reason (measured on the web target, 2026-10-06), so the branch is claimed
+	 *  for literal addresses only (`isPrivateAddress`). */
 	it("gets the local-network verdict, with the Settings path and the retry", async () => {
 		const result = await runTunnelTest(
 			{
@@ -197,6 +201,24 @@ describe("a private address reads its failures through the permission question",
 	it("leaves a public address's identical failure on the generic sentence", async () => {
 		const result = await test("reject");
 		expect(result.verdict.kind).toBe("unreachable");
+	});
+
+	it("does not read a private NAME as the permission question", async () => {
+		// The measured web case: `…local` that does not resolve used to render the
+		// permission sentence the reader cannot act on (no typo is fixed in
+		// Settings). The promotion is literal-only, so this now renders what an
+		// unresolvable public name renders — never the Settings path.
+		const result = await runTunnelTest(
+			{
+				url: "http://no-such-host-9f3a4c.local:4098",
+				password: "[redacted]",
+				allowInsecure: true,
+				timeoutMs: 300,
+			},
+			{ fetchImpl: transport("reject") },
+		);
+		expect(result.verdict.kind).toBe("unreachable");
+		expect(verdictSentence(result.verdict, "ios")).not.toContain("Settings");
 	});
 });
 

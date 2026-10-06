@@ -32,7 +32,7 @@
 import {
 	canSendRelayPassword,
 	createRelayClient,
-	isPrivateHost,
+	isPrivateAddress,
 	validateCustomBaseUrl,
 } from "@/connection";
 import {
@@ -91,12 +91,14 @@ export async function runTunnelTest(
 		};
 	}
 	const route = validated.route;
-	/* What the classification needs to know about the address. A private host
-	 *  turns a connect that never completed into the `local-network` verdict —
-	 *  the one place the OS can be the reason, so the copy names it. Read from
-	 *  the VALIDATED origin: the raw input may lack a scheme or carry a path, and
-	 *  `URL` on the origin is the parse that always succeeds. */
-	const privateHost = isPrivateHost(new URL(route.baseUrl).hostname);
+	/* What the classification needs to know about the address: whether it is a
+	 *  private LITERAL address. A name never promotes — when a name fails to
+	 *  resolve, a platform that hides the DNS reason makes a typo and a gated
+	 *  host one shape (measured on the web target), and a typo must not be read as
+	 *  a permission problem; `isPrivateAddress` carries the full reasoning. Read
+	 *  from the VALIDATED origin: the raw input may lack a scheme or carry a path,
+	 *  and `URL` on the origin is the parse that always succeeds. */
+	const privateAddress = isPrivateAddress(new URL(route.baseUrl).hostname);
 	const timeoutMs = input.timeoutMs ?? TUNNEL_TEST_TIMEOUT_MS;
 	try {
 		const client = createRelayClient({
@@ -138,7 +140,7 @@ export async function runTunnelTest(
 		};
 	} catch (error) {
 		return {
-			verdict: classify(error, { privateHost }),
+			verdict: classify(error, { privateAddress }),
 			route,
 			password: input.password,
 		};

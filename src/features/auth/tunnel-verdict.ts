@@ -52,9 +52,10 @@ export type TunnelTestVerdict =
 	 *  never as the diagnosed cause — a denial that renders as a generic "couldn't
 	 *  connect" is the defect this kind exists to prevent, and a confident
 	 *  misdiagnosis would be the defect it must not introduce. Produced
-	 *  only when the caller says the tested address is a private host (see
-	 *  `classify`); the device procedure in ADR 0002 §7 S10 measures what a real
-	 *  denial looks like, so a future revision can match a signature if one exists. */
+	 *  only when the caller says the tested address is a private literal (see
+	 *  `isPrivateAddress`); the device procedure in ADR 0002 §7 S10 measures what
+	 *  a real denial looks like, so a future revision can match a signature if one
+	 *  exists. */
 	| { kind: "local-network" }
 	/** Anything else, with the relay's own words when it gave them. */
 	| { kind: "refused"; detail: string | null };
@@ -169,18 +170,21 @@ export function verdictSentence(
 /** Maps a `RelayError` (or a transport failure) onto a verdict. Pure. */
 export function classify(
 	error: unknown,
-	/** What the caller knows about the tested address: a private host changes what
-	 *  a connect that never completed most likely MEANS, and the verdict says so
-	 *  (`local-network`). Omitted, the classification is the failure's own. */
-	options: { privateHost?: boolean } = {},
+	/** What the caller knows about the tested address: a private LITERAL address
+	 *  changes what a connect that never completed most likely MEANS, and the
+	 *  verdict says so (`local-network`). Omitted, the classification is the
+	 *  failure's own. A name never promotes — see `isPrivateAddress`. */
+	options: { privateAddress?: boolean } = {},
 ): TunnelTestVerdict {
 	const verdict = verdictForError(error);
 	/* `unreachable` and `timeout` only. A rejected certificate stays `tls` even on
-	 *  a private host — retrying cannot fix it, and the local-network permission
+	 *  a private address — retrying cannot fix it, and the local-network permission
 	 *  cannot either, so folding it in would send the reader to the wrong fix. An
-	 *  unresolvable NAME stays `host` for the same reason. */
+	 *  unresolvable NAME stays `host` for the same reason — and a platform that
+	 *  hides the DNS reason makes "typo" and "gated host" one shape, so the caller
+	 *  passes literals only and a name cannot take this branch by accident. */
 	if (
-		options.privateHost === true &&
+		options.privateAddress === true &&
 		(verdict.kind === "unreachable" || verdict.kind === "timeout")
 	) {
 		return { kind: "local-network" };

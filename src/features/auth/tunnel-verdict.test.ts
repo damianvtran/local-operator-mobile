@@ -214,15 +214,17 @@ describe("verdictSentence", () => {
 describe("the local-network verdict", () => {
 	const unreachable = () => transport("Network request failed");
 
-	it("is produced for a private host only, and only for the outcomes the OS gate can mimic", () => {
-		expect(classify(unreachable(), { privateHost: true })).toEqual({
+	it("is produced for a private address only, and only for the outcomes the OS gate can mimic", () => {
+		// The seam's caller passes true only for literal addresses
+		// (`isPrivateAddress`); a name never reaches this branch.
+		expect(classify(unreachable(), { privateAddress: true })).toEqual({
 			kind: "local-network",
 		});
 		// Without the route context the same failure keeps its own reading; the
 		// verdict is a property of (failure, address), not of the failure.
 		expect(classify(unreachable()).kind).toBe("unreachable");
 		expect(
-			classify(new Error("The operation was aborted"), { privateHost: true })
+			classify(new Error("The operation was aborted"), { privateAddress: true })
 				.kind,
 		).toBe("local-network");
 		// A rejected certificate and an unresolvable name keep their verdicts on a
@@ -230,11 +232,11 @@ describe("the local-network verdict", () => {
 		// sentence would send the reader to the wrong one.
 		expect(
 			classify(transport("self signed certificate in certificate chain"), {
-				privateHost: true,
+				privateAddress: true,
 			}).kind,
 		).toBe("tls");
 		expect(
-			classify(new Error("getaddrinfo ENOTFOUND x"), { privateHost: true })
+			classify(new Error("getaddrinfo ENOTFOUND x"), { privateAddress: true })
 				.kind,
 		).toBe("host");
 	});
