@@ -12,6 +12,7 @@
  * "HTTP 503".
  */
 
+import type { SentencePlatform } from "@/lib/platform";
 import { RelayError } from "@/relay";
 
 /** How long a test may take before the app calls it a timeout — exported so the
@@ -40,6 +41,22 @@ export type TunnelTestVerdict =
 	| { kind: "unreachable"; detail: string | null }
 	/** The address did not answer in time. */
 	| { kind: "timeout" }
+	/** A PRIVATE-network address did not answer: either the computer is not
+	 *  reachable there, or the OS is holding the app's local-network access —
+	 *  iOS's one-time permission, or Android 17's blocked-by-default grant. The
+	 *  two causes are indistinguishable from the failure itself: neither platform
+	 *  reports its gate's state to the app, and neither denial carries a documented
+	 *  signature (TN3179 only describes the Network framework's `localNetworkDenied`
+	 *  state, which a `fetch` does not surface). So the sentence names the
+	 *  machine-side checks first and the permission as a POSSIBILITY after them,
+	 *  never as the diagnosed cause — a denial that renders as a generic "couldn't
+	 *  connect" is the defect this kind exists to prevent, and a confident
+	 *  misdiagnosis would be the defect it must not introduce. Produced
+	 *  only when the caller says the tested address is a private literal (see
+	 *  `isPrivateAddress`); the device procedure in ADR 0002 §7 S10 measures what
+	 *  a real denial looks like, so a future revision can match a signature if one
+	 *  exists. */
+	| { kind: "local-network" }
 	/** Anything else, with the relay's own words when it gave them. */
 	| { kind: "refused"; detail: string | null };
 
@@ -83,8 +100,13 @@ export function transportKind(
 }
 
 /** The one-line sentence beside each verdict, in the app's voice: no status code,
- *  no apology, and a remedy where one exists. */
-export function verdictSentence(verdict: TunnelTestVerdict): string {
+ *  no apology, and a remedy where one exists. `platform` is required rather than
+ *  defaulted: a wrong Settings path is worse than no Settings path, so every
+ *  caller has to say which platform it is rendering for. */
+export function verdictSentence(
+	verdict: TunnelTestVerdict,
+	platform: SentencePlatform,
+): string {
 	switch (verdict.kind) {
 		case "ok":
 			return verdict.sessions === 1
@@ -111,6 +133,32 @@ export function verdictSentence(verdict: TunnelTestVerdict): string {
 			return "The address could not be reached. Check the URL is the public one your tunnel printed, and that the tunnel is still running.";
 		case "timeout":
 			return `That address did not answer within ${Math.round(TUNNEL_TEST_TIMEOUT_MS / 1000)} seconds. Check the tunnel is running and the computer is awake.`;
+		case "local-network":
+			/* The machine-side check leads; the OS gate follows as a possibility,
+			 *  never as the diagnosed cause (see the kind's comment above). The retry is
+			 *  load-bearing, not politeness: the first connect can be refused while
+			 *  the iOS alert is still on screen (TN3179: the system "may deny the
+			 *  operation immediately, before the user has responded to the alert"),
+			 *  so granting changes nothing until the test runs again — and the sentence
+			 *  names that control by its real label, "Test the connection", because
+			 *  "test again" pointed at a button labelled otherwise. */
+			if (platform === "ios") {
+				/* Apple's own path, from TN3179 ("Settings > Privacy & Security >
+				 *  Local Network"); the OS adds the app to that list after an
+				 *  attempt. The permission stays a POSSIBILITY: whether a denial is
+				 *  even distinguishable from an unreachable computer is what S10
+				 *  measures, so the copy must not assert it (see the kind above). */
+				return "Nothing answered at that address on this network. Check the computer is awake and running the relay. If both are true, it may be the local-network permission: allow Local Operator under Settings → Privacy & Security → Local Network, then tap Test the connection.";
+			}
+			/* Android carries the machine-side half only while the build targets 36:
+			 *  local network is open there (legacy apps receive an implicit grant)
+			 *  and `ACCESS_LOCAL_NETWORK` is declared but deliberately never requested
+			 *  until the targetSdk-37 bump, so a Settings path would name a gate this
+			 *  build cannot have. The permission half lands WITH that bump, where
+			 *  Google's own path names the group: "Settings > Apps > [App Name] >
+			 *  Permissions > Nearby devices". Web keeps this same sentence: a browser
+			 *  has no such permission to grant. */
+			return "Nothing answered at that address on this network. Check the computer is awake and running the relay, then tap Test the connection.";
 		case "refused":
 			return (
 				verdict.detail ??
@@ -120,7 +168,33 @@ export function verdictSentence(verdict: TunnelTestVerdict): string {
 }
 
 /** Maps a `RelayError` (or a transport failure) onto a verdict. Pure. */
-export function classify(error: unknown): TunnelTestVerdict {
+export function classify(
+	error: unknown,
+	/** What the caller knows about the tested address: a private LITERAL address
+	 *  changes what a connect that never completed most likely MEANS, and the
+	 *  verdict says so (`local-network`). Omitted, the classification is the
+	 *  failure's own. A name never promotes — see `isPrivateAddress`. */
+	options: { privateAddress?: boolean } = {},
+): TunnelTestVerdict {
+	const verdict = verdictForError(error);
+	/* `unreachable` and `timeout` only. A rejected certificate stays `tls` even on
+	 *  a private address — retrying cannot fix it, and the local-network permission
+	 *  cannot either, so folding it in would send the reader to the wrong fix. An
+	 *  unresolvable NAME stays `host` for the same reason — and a platform that
+	 *  hides the DNS reason makes "typo" and "gated host" one shape, so the caller
+	 *  passes literals only and a name cannot take this branch by accident. */
+	if (
+		options.privateAddress === true &&
+		(verdict.kind === "unreachable" || verdict.kind === "timeout")
+	) {
+		return { kind: "local-network" };
+	}
+	return verdict;
+}
+
+/** The verdict a failure earns from itself alone; `classify` applies the route's
+ *  context on top, so the route-dependent reading has exactly one home. */
+function verdictForError(error: unknown): TunnelTestVerdict {
 	if (error instanceof RelayError) {
 		/* Every `detail` below is `displayableMessage`, never `summary`: the summary is
 		 *  the ONE loggable line (`"<kind> <status> <reason>"`) and it is what two of

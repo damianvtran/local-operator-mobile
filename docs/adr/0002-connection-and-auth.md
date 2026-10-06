@@ -499,34 +499,76 @@ then an authenticated cookie.
 Cleartext is refused by platform default on both platforms, so the switch above is
 only honest if the build carries the native change too:
 
-- **Android:** `expo-build-properties` with `android.usesCleartextTraffic: true`
-  ([docs.expo.dev/versions/latest/sdk/build-properties](https://docs.expo.dev/versions/latest/sdk/build-properties),
-  read 2026-09-29), which the prebuild template does not set and which the API-36
-  target ADR 0004 requires makes `http://192.168.x.x:4098` fail by default. A blunt
-  app-wide flag is the v1 cost; the tighter alternative is a
-  `networkSecurityConfig` limited to the specific host, which Expo config plugins can
-  inject but which cannot express a user-typed host at build time — so the honest
-  choice is the app-wide flag **plus** the in-app switch, and a sentence in the
-  product copy saying exactly that.
-- **iOS:** the same shape, using the key Apple provides for exactly this case:
-  `NSAllowsLocalNetworking = true`, set at build time through the config plugin /
-  `ios.infoPlist`. Apple's documentation for the key says it "controls whether App
-  Transport Security (ATS) allows your app to connect to unqualified domains,
-  `.local` domains, and IP addresses using IPv4 or IPv6", and that on **iOS 17+** —
-  where ATS no longer permits IP-address connections by default — the local
-  networking exception "tells newer versions of the OS to ignore the arbitrary loads
-  key, and enable access to unqualified domains, `.local` domains, and IP addresses
-  that they would otherwise restrict"
+- **Android (amended 2026-10-06 — what actually shipped):** a local config plugin,
+  `plugins/with-android-local-network.js`, sets `android:usesCleartextTraffic="true"`
+  on the MAIN manifest's `<application>`. The earlier plan named
+  `expo-build-properties`; it is not a dependency of this repository, and one more
+  dependency for a single manifest attribute buys nothing beyond what an in-tree
+  plugin does in the open. The
+  attribute is app-wide because no narrower build-time declaration is expressible:
+  the host is a private address the reader types at runtime, and a
+  `networkSecurityConfig` cannot cover it — its `<domain>` element takes a host, not
+  a range ("Network security configuration", developer.android.com, read
+  2026-10-06; the format's only IP-address handling is the implicit localhost
+  configuration added in Android 17). So the v1 cost stands as recorded: the blunt
+  flag **plus** the in-app switch, and a sentence in the product copy saying exactly
+  that. The debug variants set this attribute in their own overlays (for the Metro
+  dev server, with `tools:replace`), which is why CI asserts the RELEASE merged
+  manifest and not the debug APK — see the CI paragraph below.
+  **The permission half (amended):** `ACCESS_LOCAL_NETWORK` is declared through
+  `app.config.ts`'s `android.permissions`, inert while the app targets API 36.
+  Android 17 blocks local-network access by default for apps that target SDK 37,
+  but grants "legacy apps" (< 37) "an implicit permission grant for
+  `ACCESS_LOCAL_NETWORK`", and its guidance is explicit: "Don't request
+  `ACCESS_LOCAL_NETWORK` at runtime prior to targeting SDK 37"
+  ("Local network permission", developer.android.com, read 2026-10-06). The runtime
+  request therefore lands in the same change as the targetSdk-37 bump, where it
+  means something — and the COPY half lands with it: while the build targets 36
+  the permission cannot be the reason anything failed, so the Android sentence
+  ships the machine-side check only and takes its Settings path (Google's own
+  group, "Settings > Apps > [App Name] > Permissions > Nearby devices") in that
+  same change (`tunnel-verdict.ts`, the `local-network` verdict).
+- **iOS (amended 2026-10-06 — the page carries two readings, so both
+  mechanisms ship):** the same shape, set through `ios.infoPlist` in `app.config.ts`.
+  Apple's page for the key says it "controls whether App Transport Security (ATS)
+  allows your app to connect to unqualified domains, `.local` domains, and IP
+  addresses using IPv4 or IPv6", and that the local networking exception "tells
+  newer versions of the OS to ignore the arbitrary loads key, and enable access to
+  unqualified domains, `.local` domains, and IP addresses that they would otherwise
+  restrict"
   ([developer.apple.com/documentation/bundleresources/information-property-list/nsapptransportsecurity/nsallowslocalnetworking](https://developer.apple.com/documentation/bundleresources/information-property-list/nsapptransportsecurity/nsallowslocalnetworking),
-  read 2026-09-29). So it is a **single build-time boolean**, not a per-host
-  exception: `NSExceptionDomains` is the per-host mechanism and is *not* what this
-  uses, and `NSAllowsArbitraryLoadsInWebContent` is a WKWebView key with no bearing
-  on a native `fetch` (this app has no WebView in the data path at all). **iOS
+  read 2026-10-06). The same page also says, for iOS 17 and later: "ATS no longer
+  allows connections to IP addresses by default. Add individual IP addresses and
+  classless inter-domain routing (CIDR) ranges in the `NSExceptionDomains`
+  dictionary." A previous revision of this ADR read the first sentence alone and
+  concluded the key was a **single build-time boolean**; the page does not
+  support that conclusion, so the build ships **both**: `NSAllowsLocalNetworking =
+  true` and one `NSExceptionDomains` entry per literal private range the app's URL
+  validation accepts — `10.0.0.0/8`, `100.64.0.0/10` (CGNAT, which Tailscale
+  uses), `169.254.0.0/16`, `172.16.0.0/12`, `192.168.0.0/16` — each with
+  `NSExceptionAllowsInsecureHTTPLoads`, `NSAllowsArbitraryLoads` false, and no TLS
+  relaxation. Loopback is deliberately NOT listed: TN3179 defines a local network
+  as an IP network on a broadcast-capable interface, which loopback is not, and
+  the app's only loopback use is the OAuth listener on the phone itself, never a
+  route to the computer. (The `NSExceptionDomains` page confirms IP addresses and
+  CIDR ranges are legal keys on iOS 17+; read 2026-10-06.)
+  `NSAllowsArbitraryLoadsInWebContent` is a WKWebView key with no bearing on a
+  native `fetch` (this app has no WebView in the data path at all).
+  **The trade, stated rather than discovered:** the CIDR list is exactly the
+  private literal-IP ranges and nothing else. A literal address outside it still
+  depends on the boolean being read the lenient way, and a host named rather than
+  numbered — the URL validation accepts `.local` names (covered by the boolean)
+  and Tailscale MagicDNS names (which are not) — stays refused over `http://` on
+  iOS where Android's app-wide flag would allow it; those routes publish an
+  `https://` name, and that is the form to use. The same asymmetry also lets
+  Android reach a public `http://` host that iOS refuses. **iOS
   therefore keeps parity with Android: `http://` on a private-network host is
-  available on both platforms, off by default, behind the same explicit per-connection
-  opt-in.** A previous revision of this ADR dropped `http://` on iOS on the premise
-  that only a per-host exception could enable it; that premise was wrong, and this
-  paragraph replaces it. **Parity is the manager's decision, taken over a recorded
+  available on both platforms, off by default, behind the same explicit
+  per-connection opt-in** — as *configured* under both readings; which reading the
+  OS takes is the device procedure's question (§7, S10), not a claim here. The
+  earlier revision's sentence "that premise was wrong" is thereby narrowed: the
+  per-host-exception premise was not baseless — that mechanism is real and now
+  ships alongside the boolean. **Parity is the manager's decision, taken over a recorded
   objection** — that offering a cleartext LAN path *at all*, on either platform, is a
   product cost, because the relay password and the transcript then travel in the clear
   and a warning is easy to click past. The answer that carries the decision: the
@@ -534,34 +576,45 @@ only honest if the build carries the native change too:
   opt-in whose copy states the exposure, and without it the app is useless in exactly
   the situation a tunnel-less user is in (same Wi-Fi, no Radient account). The
   objection is recorded here so it need not be rediscovered at review.
-- Both changes live in `app.config.ts` + config plugins, are reviewed as native
-  configuration, and are asserted in CI by a check on the built artefacts
-  (`usesCleartextTraffic` in the merged Android manifest; `NSAllowsLocalNetworking`
-  in the built `Info.plist`) — the same "generated config must match what we think we
-  asked for" discipline ADR 0004 already applies to `expo prebuild`.
+- Both changes live in `app.config.ts` + one local config plugin, are reviewed as
+  native configuration, and are asserted in CI by `scripts/ci/native-config.ts`,
+  out of BUILT artefacts only: the RELEASE variant's merged Android manifest
+  (`android:usesCleartextTraffic="true"`, `ACCESS_LOCAL_NETWORK` — not the debug
+  APK, whose overlays set the cleartext attribute themselves) and the built app's
+  `Info.plist` (`NSLocalNetworkUsageDescription`, `NSAllowsLocalNetworking`, the
+  CIDR `NSExceptionDomains`) — the same "generated config must match what we think
+  we asked for" discipline ADR 0004 already applies to `expo prebuild`.
 
-**One reading of Apple's page that a spike must settle, stated because the page
-carries both.** The same document says, for iOS 17/macOS 14, that "ATS no longer
-allows connections to IP addresses by default. Add individual IP addresses and
-classless inter-domain routing (CIDR) ranges in the `NSExceptionDomains` dictionary",
-and then that the local networking exception "tells newer versions of the OS to ignore
-the arbitrary loads key, and enable access to unqualified domains, `.local` domains,
-**and IP addresses** that they would otherwise restrict". Read together with the
-page's own note — set the key to `YES` "as a declaration of intent … even if you don't
-support older OS versions" — the parity position holds, but the *mechanism* by which a
-literal `192.168.x.x` is permitted on the OS this app actually targets (iOS 26) is not
-something to take from a summary sentence. **Spike S10** settles it on a real build:
-with the key set, a `fetch` to a literal private-IP `http://` base URL succeeds and
-the same request with the key absent fails; if it turns out the key does not permit
-literal private addresses on the current OS, the fallback is a `NSExceptionDomains`
-entry per private CIDR range (`192.168.0.0/16`, `10.0.0.0/8`, `172.16.0.0/12`) — a
-build-time decision that covers the LAN case, though not an arbitrary user-typed host
-outside those ranges — and this ADR gets amended with the result.
+**What reading the sources settles, and what only a device can (amended
+2026-10-06).** The permission side is settled by reading, and shipped: TN3179 —
+which serves as plain text at its `.md` URL and was read in full on 2026-10-06 —
+says "If your app accesses the local network, add the `NSLocalNetworkUsageDescription`
+property to its `Info.plist` to explain its behavior to the user", and the key's own
+page widens the audience to "apps that use Bonjour and services implemented with
+Bonjour, as well as direct **unicast** or multicast connections to local hosts".
+The alert is **one-time per app** ("The system records their decision, so future
+accesses don't prompt"), a **direct outbound TCP connect is a trigger** ("Making an
+outgoing TCP connection — yes"), and the first attempt **may be refused while the
+alert is still on screen** ("it may deny the operation immediately, before the user
+has responded to the alert … add appropriate retry logic") — which is why the
+connection copy asks for the retry ("then tap Test the connection" — the control's
+own label), and why a denial that renders as an ordinary
+network failure is the defect the in-app copy exists to prevent. `NSBonjourServices`
+is **deliberately deferred, with its reason**: it attaches to Bonjour browsing or
+advertising, the app has no discovery, and declaring service types now would claim a
+capability the build does not have (the app-store notes already call discovery "a
+different review conversation").
+The ATS side is NOT settled by reading — the page carries both statements quoted in
+the iOS bullet above — so the build ships both mechanisms, and the procedure in §7
+S10 settles which one iOS honours, **on a real device**, because the simulator
+cannot: "The simulator doesn't support local network privacy. Test your local
+network privacy behavior on a real device" (TN3179). **Neither S10 nor the Android
+half of this section has been run; nothing here claims a device result.**
 
 **The two platforms are not perfectly symmetric, and the copy should not pretend
 otherwise.** Android's `usesCleartextTraffic` is app-wide — it permits cleartext to
-*any* host — while the iOS key covers unqualified, `.local` and IP-address
-destinations, and its per-CIDR fallback would cover private ranges only. The
+*any* host — while the iOS configuration covers unqualified domains, `.local`
+domains and IP addresses, with its CIDR entries limited to the private ranges. The
 difference does not change the product surface (the switch is described as a LAN
 option on both platforms, which is where it is meant to be used), but it does mean an
 iOS build would refuse a *public* `http://` host that an Android build would allow.
@@ -583,7 +636,16 @@ Caveats to state in the product copy rather than discover in the field:
 - **LAN:** plain `http://192.168.x.x:4098` is a LAN-only, cleartext choice, available
   on both platforms only when the transport-security keys above are in the build and
   the user has opted in; the password crossing it is a real exposure, stated in the
-  UI before the switch is flipped.
+  UI before the switch is flipped. When the OS itself blocks the attempt — an iOS
+  local-network denial, or Android 17's blocked-by-default grant — the copy names
+  the machine-side checks and the permission as a possibility (with a Settings path
+  where the build can honour one: iOS today, Android's from the targetSdk-37 bump),
+  never a generic "couldn't connect" (`tunnel-verdict.ts`, the `local-network`
+  verdict). The possibility is claimed for literal private ADDRESSES only: a name
+  that fails to resolve cannot be told apart from one the gate blotted out on a
+  platform that hides the DNS reason (measured on the web target, 2026-10-06), and
+  a typo must not be read as a permission problem. Reading the copy on real
+  hardware is part of the device round S10 belongs to.
 - **Tailscale:** `tailscale serve` gives a real `https://` name and is the
   recommended self-hosted route; Funnel publishes it publicly, which raises the
   stakes and deserves its own warning.
@@ -649,10 +711,11 @@ adding a proxy on the deployed edge will want the stale name gone.
 | S7 | A real tunnel, end to end | With a maintainer's own tunnel: sign in, mint, list sessions, stream, answer an approval, logout — captured as raw request/response evidence, hostnames redacted |
 | S8 | **The audience allow-list actually accepts `lop`** (§1, and the one assumption under the whole direct-mint path) | `POST https://api.radienthq.com/v1/tunnels/session/code` with a real `lop`-audienced access token from a live app sign-in: **pass** = any answer other than the audience rejection (400 for a bad body, 404/403 for a tunnel that is not `active`, or 200 with a code); **fail** = `401`…`invalid audience`, which is the exact string `service.go:145-156` returns when `aud ∉ cfg.JWTAudiences`. Run it once as the first thing the implementation does. If it fails, the app either needs `RADIENT_TUNNEL_JWT_AUDIENCES` to include `lop` (a deployment change, no code change) or needs the browser-redirect fallback — and the ADR gets amended with which |
 | S9 | **Logout actually revokes** | With a handle captured before logout: logout, then `POST /v1/tunnels/session/refresh` with that captured handle on another machine — **pass** = `401`…`invalid_grant` (`session.go:159-176`); **fail** = a new grant, which means the revoke never reached the control plane and the primary step is misordered |
-| S10 | **`NSAllowsLocalNetworking` really permits a literal private IP on the target OS** | On a real iOS build (iOS 26, the SDK ADR 0004 requires) with the key set: `GET http://<private-ip>:4098/healthz` succeeds; with the key absent (or the flag off) the same request fails with an ATS error. **Fail** = the key does not cover literal private addresses, in which case the fallback in §5 is a per-CIDR `NSExceptionDomains` entry and the parity claim is amended to name that |
+| S10 | **Which ATS mechanism lets a literal private IP through, and what a blocked app sees** | On a REAL iOS device (the simulator does not support local-network privacy — TN3179: "The simulator doesn't support local network privacy. Test your local network privacy behavior on a real device"): with the shipped configuration (`NSAllowsLocalNetworking` + the CIDR `NSExceptionDomains`), the first `GET http://<private-ip>:4098/healthz` shows the one-time local-network alert, and after Allow the fetch succeeds. Then compare the two configurations the page left ambiguous — (a) the boolean only, (b) the CIDR exceptions only — to learn which one the OS honours. Also record the DENIED state: whether a denial is distinguishable from an unreachable computer (the copy names the permission as a possibility because reading found no discriminator; a measurement that finds one is what a follow-up matches on) — and whether a name that fails to resolve is distinguishable from a gated host, because the copy claims the permission reading for literal addresses only until that is settled. **Pass** = at least one configuration lets the fetch through and the shipped belt-and-braces build works; **Fail** = neither does, which is a finding against the configuration (raise it with Apple) rather than a product fallback, and this ADR gets amended with the result. **Not yet run (as of 2026-10-06).** |
 
-S1–S5 and S10 run on a phone, simulator or emulator and need no credentials (S10
-needs a build with and without the ATS key); S6 is a unit-level test against the mock;
+S1–S5 run on a simulator or emulator and need no credentials; **S10 runs on a real
+device only** — the simulator does not support local-network privacy (TN3179) — and
+needs a build for each configuration it compares; S6 is a unit-level test against the mock;
 S7–S9 are manual, credentialed runs, and their output belongs in the pull request as
 redacted evidence, never in a committed file. S8 and S9 are the two that must run **before** any of §3 is treated as settled:
 S8 because every token the app mints depends on it, S9 because a logout that does not

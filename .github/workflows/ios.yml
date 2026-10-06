@@ -184,6 +184,20 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             build
 
+      - name: Assert the built Info.plist carries the local-network configuration
+        # THE BUILT PRODUCT, NOT THE SOURCE PLIST. `plutil` reads the plist INSIDE
+        # the .app this build just produced, so a config change that never reached
+        # the product fails here. WHICH mechanism iOS honours for a literal private
+        # IP — the local-networking boolean or the CIDR exception domains — is
+        # genuinely ambiguous in Apple's current documentation (ADR 0002 §5); the
+        # §7 S10 device procedure settles that, and this asserts what shipped.
+        run: |
+          set -euo pipefail
+          app=$(find "$RUNNER_TEMP/DerivedData/Build/Products" -maxdepth 2 -name "*.app" -type d | head -1)
+          echo "app: $app"
+          plutil -convert json -o "$RUNNER_TEMP/Info.json" "$app/Info.plist"
+          node scripts/ci/native-config.ts ios "$RUNNER_TEMP/Info.json"
+
       - name: Boot the simulator
         id: boot
         run: |

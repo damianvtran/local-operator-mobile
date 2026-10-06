@@ -126,6 +126,45 @@ const config: ExpoConfig = {
 		infoPlist: {
 			NSMicrophoneUsageDescription:
 				"Record a voice message and transcribe it on your own computer. The recording is sent for one transcription and not kept.",
+			// The local-network ACCESS declaration (ADR 0002 §5). iOS shows this
+			// string in its one-time "allow this app on your network" alert, which
+			// appears the first time the app reaches a local address — for this app,
+			// the relay on the reader's own computer at a same-Wi-Fi address such as
+			// http://192.168.1.50:4098 — never at launch. TN3179 is explicit that an
+			// app which accesses the local network adds the key, and that a direct
+			// TCP connection is a triggering operation. The permission is per-app and
+			// recorded, so a reader sees this alert at most once; when the app fails
+			// instead, the connection copy names the Settings path (tunnel-verdict).
+			NSLocalNetworkUsageDescription:
+				"Connect to the relay running on your own computer when it is on the same Wi-Fi network. The app reaches only the address you enter, and does not scan your network.",
+			// ATS for the same case, configured to be SAFE UNDER BOTH READINGS of
+			// Apple's own page, because that page carries two that disagree (quoted
+			// and kept in ADR 0002 §5): one says iOS 17+ "no longer allows
+			// connections to IP addresses by default" and directs you to add "IP
+			// addresses … in the NSExceptionDomains dictionary"; the other says the
+			// local networking exception enables "IP addresses that they would
+			// otherwise restrict". So this ships BOTH mechanisms: the boolean, and
+			// one CIDR exception for each literal private range the app's own URL
+			// validation accepts (connection/profile.ts). NSAllowsArbitraryLoads is
+			// false and the exception entries touch no TLS requirement.
+			//
+			// The trade, stated rather than discovered: the CIDR entries are the
+			// whole list — an address outside them still depends on the boolean
+			// being read the lenient way, and Android's equivalent flag is app-wide,
+			// so a public http:// host stays refused on iOS where Android would
+			// allow it. That asymmetry is recorded in ADR 0002 §5, and the device
+			// procedure that settles which mechanism the OS honours is §7 S10.
+			NSAppTransportSecurity: {
+				NSAllowsArbitraryLoads: false,
+				NSAllowsLocalNetworking: true,
+				NSExceptionDomains: {
+					"10.0.0.0/8": { NSExceptionAllowsInsecureHTTPLoads: true },
+					"100.64.0.0/10": { NSExceptionAllowsInsecureHTTPLoads: true },
+					"169.254.0.0/16": { NSExceptionAllowsInsecureHTTPLoads: true },
+					"172.16.0.0/12": { NSExceptionAllowsInsecureHTTPLoads: true },
+					"192.168.0.0/16": { NSExceptionAllowsInsecureHTTPLoads: true },
+				},
+			},
 		},
 	},
 	android: {
@@ -136,7 +175,19 @@ const config: ExpoConfig = {
 		// The Android half of the same declaration. Expo's plugin adds it from the
 		// recorder's own manifest anyway; declared here so the capability is visible in
 		// this file rather than implied by a dependency.
-		permissions: ["RECORD_AUDIO"],
+		//
+		// ACCESS_LOCAL_NETWORK is the local-network permission the Android 17
+		// enforcement (targetSdk 37) requires before an app may connect to a device
+		// on the reader's network. It is DECLARED now and deliberately not yet
+		// requested: while the app targets API 36 the platform grants it implicitly
+		// to legacy apps, and Google's guidance is explicit — "Don't request
+		// ACCESS_LOCAL_NETWORK at runtime prior to targeting SDK 37" — so the
+		// runtime request lands in the same change as the targetSdk bump, where it
+		// means something. The cleartext half of the Android configuration (what
+		// makes http:// to a private address possible at all) is
+		// `plugins/with-android-local-network.js`, because no app.config field
+		// writes it.
+		permissions: ["RECORD_AUDIO", "ACCESS_LOCAL_NETWORK"],
 		adaptiveIcon: {
 			foregroundImage:
 				"./design/app-icon/android/ic_launcher_foreground-432.png",
@@ -223,6 +274,12 @@ const config: ExpoConfig = {
 		// leaves the debug build untouched, so a contributor with no signing material
 		// can still build and test.
 		"./plugins/with-android-release-signing.js",
+		// The cleartext half of the local-network configuration: `http://` to the
+		// reader's own computer on the same Wi-Fi. Without it the API-36 target
+		// refuses cleartext by default and the app's own insecure-connection switch
+		// would promise something the platform refuses. Its comment has the why of
+		// the shape (app-wide; a user-typed host cannot be narrowed at build time).
+		"./plugins/with-android-local-network.js",
 	],
 	experiments: {
 		typedRoutes: true,

@@ -30,6 +30,7 @@ import {
 	exchangeCode,
 	grantNeedsRefresh,
 	handleExpired,
+	isPrivateAddress,
 	isPrivateHost,
 	isSignedOut,
 	LoopbackUnavailableError,
@@ -200,6 +201,33 @@ describe("a route is data, and it is validated rather than normalised", () => {
 		}
 		for (const host of ["relay.example.com", "8.8.8.8", "172.32.0.1"]) {
 			expect(isPrivateHost(host), host).toBe(false);
+		}
+	});
+
+	it("draws the verdict line at literal addresses, not names", () => {
+		// The `local-network` verdict asks a narrower question than the http
+		// opt-in: a name that fails to resolve must never be read as a permission
+		// problem (see `isPrivateAddress` for the measured reason).
+		for (const host of [
+			"127.0.0.1",
+			"10.1.2.3",
+			"192.168.0.9",
+			"172.20.0.1",
+			"100.101.102.103",
+			"169.254.10.1",
+		]) {
+			expect(isPrivateAddress(host), host).toBe(true);
+		}
+		for (const host of [
+			"localhost",
+			"mac.local",
+			"box.ts.net",
+			"relay.example.com",
+			// A name that merely begins with a private range is a name (Q54-1).
+			"10.0.0.1.example.com",
+			"192.168.1.1.nip.io",
+		]) {
+			expect(isPrivateAddress(host), host).toBe(false);
 		}
 	});
 });

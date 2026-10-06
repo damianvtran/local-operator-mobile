@@ -105,7 +105,9 @@ describe("runTunnelTest reaches its own verdict for every fault", () => {
 		// The finding: this rendered "That password was not accepted." before the fix.
 		const result = await test({ status: 403, body: "forbidden" });
 		expect(result.verdict.kind).toBe("forbidden");
-		expect(verdictSentence(result.verdict)).not.toContain("password was not");
+		expect(verdictSentence(result.verdict, "ios")).not.toContain(
+			"password was not",
+		);
 	});
 
 	it("reads a 503 as the computer being offline, NOT as a password", async () => {
@@ -114,10 +116,12 @@ describe("runTunnelTest reaches its own verdict for every fault", () => {
 			body: "Tunnel temporarily unavailable",
 		});
 		expect(result.verdict.kind).toBe("offline");
-		expect(verdictSentence(result.verdict)).toContain(
+		expect(verdictSentence(result.verdict, "ios")).toContain(
 			"Tunnel temporarily unavailable",
 		);
-		expect(verdictSentence(result.verdict)).not.toContain("password was not");
+		expect(verdictSentence(result.verdict, "ios")).not.toContain(
+			"password was not",
+		);
 	});
 
 	it("reads a 404 as unreachable rather than as a password problem", async () => {
@@ -126,7 +130,9 @@ describe("runTunnelTest reaches its own verdict for every fault", () => {
 		// the admission route means nothing is there, and the assertion says so.
 		const result = await test({ status: 404, body: "unknown tunnel host" });
 		expect(result.verdict.kind).toBe("unreachable");
-		expect(verdictSentence(result.verdict)).not.toContain("password was not");
+		expect(verdictSentence(result.verdict, "ios")).not.toContain(
+			"password was not",
+		);
 	});
 
 	it("reads a rejected request as unreachable rather than as a bad password", async () => {
@@ -135,7 +141,9 @@ describe("runTunnelTest reaches its own verdict for every fault", () => {
 		// `tls`/`host` are unevidenced on web rather than claimed.
 		const result = await test("reject");
 		expect(["unreachable", "host", "tls"]).toContain(result.verdict.kind);
-		expect(verdictSentence(result.verdict)).not.toContain("password was not");
+		expect(verdictSentence(result.verdict, "ios")).not.toContain(
+			"password was not",
+		);
 	});
 
 	it("reads a request that never answers as a timeout", async () => {
@@ -148,13 +156,69 @@ describe("runTunnelTest reaches its own verdict for every fault", () => {
 		// from a browser capture, reachable here.
 		const result = await test("tls");
 		expect(result.verdict.kind).toBe("tls");
-		expect(verdictSentence(result.verdict)).not.toContain("password was not");
+		expect(verdictSentence(result.verdict, "ios")).not.toContain(
+			"password was not",
+		);
 	});
 
 	it("names an unresolvable host as one", async () => {
 		const result = await test("host");
 		expect(result.verdict.kind).toBe("host");
-		expect(verdictSentence(result.verdict)).not.toContain("password was not");
+		expect(verdictSentence(result.verdict, "ios")).not.toContain(
+			"password was not",
+		);
+	});
+});
+
+describe("a private address reads its failures through the permission question", () => {
+	/* The defect this pins: a same-Wi-Fi address that never answered used to render
+	 *  the generic sentence, which says nothing about the one cause a phone adds to
+	 *  that failure — the OS's local-network permission — and sends the reader to
+	 *  check a computer that may be fine. A private ADDRESS changes the reading; a
+	 *  public host must NOT change, or the sentence becomes a misdiagnosis — and a
+	 *  private NAME must not either: a name that fails to resolve cannot be told
+	 *  apart from one the OS gate blotted out on a platform that hides the DNS
+	 *  reason (measured on the web target, 2026-10-06), so the branch is claimed
+	 *  for literal addresses only (`isPrivateAddress`). */
+	it("gets the local-network verdict, with the Settings path and the retry", async () => {
+		const result = await runTunnelTest(
+			{
+				url: "http://192.168.7.7:4098",
+				password: "[redacted]",
+				allowInsecure: true,
+				timeoutMs: 300,
+			},
+			{ fetchImpl: transport("reject") },
+		);
+		expect(result.verdict.kind).toBe("local-network");
+		const sentence = verdictSentence(result.verdict, "ios");
+		expect(sentence).toContain("Settings → Privacy & Security → Local Network");
+		// The retry is named for the control the reader sees ("Test the connection"),
+		// not for an action that has no matching label on screen.
+		expect(sentence).toContain("Test the connection");
+	});
+
+	it("leaves a public address's identical failure on the generic sentence", async () => {
+		const result = await test("reject");
+		expect(result.verdict.kind).toBe("unreachable");
+	});
+
+	it("does not read a private NAME as the permission question", async () => {
+		// The measured web case: `…local` that does not resolve used to render the
+		// permission sentence the reader cannot act on (no typo is fixed in
+		// Settings). The promotion is literal-only, so this now renders what an
+		// unresolvable public name renders — never the Settings path.
+		const result = await runTunnelTest(
+			{
+				url: "http://no-such-host-9f3a4c.local:4098",
+				password: "[redacted]",
+				allowInsecure: true,
+				timeoutMs: 300,
+			},
+			{ fetchImpl: transport("reject") },
+		);
+		expect(result.verdict.kind).toBe("unreachable");
+		expect(verdictSentence(result.verdict, "ios")).not.toContain("Settings");
 	});
 });
 
@@ -164,7 +228,7 @@ describe("the screen the reader actually sees", () => {
 			status: 503,
 			body: "Tunnel temporarily unavailable",
 		});
-		const sentence = verdictSentence(result.verdict);
+		const sentence = verdictSentence(result.verdict, "ios");
 		expect(sentence).not.toContain("computer-offline");
 		expect(sentence).not.toMatch(/\b[1-5]\d{2}\b/);
 	});

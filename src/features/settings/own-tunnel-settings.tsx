@@ -5,6 +5,7 @@ import { useConnection } from "@/features/auth/connection-provider";
 import { runTunnelTest } from "@/features/auth/tunnel-test";
 import type { TunnelTestVerdict } from "@/features/auth/tunnel-verdict";
 import { verdictSentence } from "@/features/auth/tunnel-verdict";
+import { sentencePlatform } from "@/lib/platform";
 import { CONTROL } from "@/ui/a11y";
 import { Alert } from "@/ui/components/alert";
 import { Button } from "@/ui/components/button";
@@ -129,7 +130,7 @@ export const OwnTunnelSettings = () => {
 							}
 							title={verdict.kind === "ok" ? "Connected" : "Not yet"}
 						>
-							{verdictSentence(verdict)}
+							{verdictSentence(verdict, sentencePlatform())}
 						</Alert>
 					) : null}
 					<View className="flex-row flex-wrap gap-2">
@@ -215,7 +216,7 @@ export const OwnTunnelSettings = () => {
 							}
 							title={verdict.kind === "ok" ? "Connected" : "Not yet"}
 						>
-							{verdictSentence(verdict)}
+							{verdictSentence(verdict, sentencePlatform())}
 						</Alert>
 					) : null}
 					<View className="flex-row flex-wrap gap-2">

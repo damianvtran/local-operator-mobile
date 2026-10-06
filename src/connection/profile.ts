@@ -83,9 +83,38 @@ const PRIVATE_HOST_PATTERNS = [
 	/^.+\.ts\.net$/, // Tailscale MagicDNS
 ];
 
+/** The subset of `PRIVATE_HOST_PATTERNS` that is a LITERAL address — no name
+ *  (`localhost`, `.local`, `.ts.net`) is in it. The split exists because the two
+ *  callers ask different questions: `isPrivateHost` answers "could http to this
+ *  host be a deliberate LAN choice", where a name counts; the `local-network`
+ *  verdict (`tunnel-verdict.ts`) answers "could the OS's local-network gate be
+ *  holding this attempt", and a NAME may not be read that way — when a name
+ *  fails to resolve, none of the platforms this app can measure lets it tell a
+ *  typo apart from a gated host (on the web target every transport failure
+ *  arrives detail-less; measured 2026-10-06), and sending a typo'd `.local` to a
+ *  Settings path is exactly the misdiagnosis the taxonomy exists to prevent.
+ *  Revisit when the device round (ADR 0002 §7, S10) can measure a denial on a
+ *  name. */
+const PRIVATE_ADDRESS_PATTERNS = [
+	/^127(\.\d{1,3}){3}$/,
+	/^10(\.\d{1,3}){3}$/,
+	/^192\.168(\.\d{1,3}){2}$/,
+	/^172\.(1[6-9]|2\d|3[01])(\.\d{1,3}){2}$/,
+	/^169\.254(\.\d{1,3}){2}$/,
+	/^\[::1\]$/,
+	/^100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])(\.\d{1,3}){2}$/, // CGNAT, which Tailscale uses
+];
+
 export function isPrivateHost(hostname: string): boolean {
 	const host = hostname.toLowerCase().replace(/^\[|\]$/g, "");
 	return PRIVATE_HOST_PATTERNS.some((pattern) => pattern.test(host));
+}
+
+/** Private by ADDRESS only: `isPrivateHost` minus the name patterns. Used by the
+ *  verdict path, which may not claim a name (see the comment above). */
+export function isPrivateAddress(hostname: string): boolean {
+	const host = hostname.toLowerCase().replace(/^\[|\]$/g, "");
+	return PRIVATE_ADDRESS_PATTERNS.some((pattern) => pattern.test(host));
 }
 
 /**

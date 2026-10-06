@@ -194,6 +194,30 @@ jobs:
             exit 1
           fi
 
+      - name: Assert the release merged manifest keeps the local-network configuration
+        # THE HALF THE DEBUG APK CANNOT PROVE. The template's `debug` and
+        # `debugOptimized` overlays set `usesCleartextTraffic` themselves (for the
+        # Metro dev server) with `tools:replace`, so a debug APK carries the
+        # attribute whether or not the app's own plugin ran — a check on it could
+        # not fail. The RELEASE variant's merged manifest is where the declaration
+        # must survive, and it is the manifest the Play upload is built from. So
+        # merge that manifest explicitly (`processReleaseMainManifest` merges
+        # manifests only and needs no signing material, so it runs on a pull
+        # request) and assert what `app.config.ts` and
+        # `plugins/with-android-local-network.js` ask for: the cleartext attribute
+        # and ACCESS_LOCAL_NETWORK.
+        run: |
+          set -euo pipefail
+          (cd android && ./gradlew :app:processReleaseMainManifest --no-daemon)
+          merged=$(find android/app/build/intermediates -name AndroidManifest.xml -path '*merged_manifest*' -path '*release*')
+          echo "$merged"
+          if [ -z "$merged" ]; then
+            echo "::error::no release merged manifest under android/app/build/intermediates — the merge produced its output somewhere this step does not look, and a check that cannot find its artefact must not pass"
+            exit 1
+          fi
+          manifest=$(printf '%s\n' "$merged" | head -1)
+          node scripts/ci/native-config.ts android "$manifest"
+
       - name: Upload the debug APK
         uses: actions/upload-artifact@v7
         with:
