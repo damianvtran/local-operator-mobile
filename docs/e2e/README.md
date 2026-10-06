@@ -206,6 +206,14 @@ cell asks for them:
   pre-paint probe, which is what makes it land before the app's first read). A draft
   is the one composer state no relay scenario can produce, and a review of the
   recording bar needs a filled field to judge against.
+- `lo-expand=<turnKey,…>` renders condensed transcript turns open
+  (`src/features/session/turn-condensing.ts`'s `parseExpandHook`, read once by the
+  transcript list — the `lo-recorder` pattern). A condensed turn is opened by a
+  TAP, and this harness drives no taps (the same limit the scroll position is
+  named under), so without the hook the OPEN state of a condensed turn has no
+  rendering a still can review. The keys are turn opening-row ids — for the
+  `long-transcript` scenario that is `tc-conv-<nn>-user` — so a cell names exactly
+  the turn it opens; absent, every turn renders its default state.
 
 A warm-up cell is needed for the FIRST relay-backed cell of a run: the browser
 profile has no cookie yet, so the cold start's own requests go out unauthenticated
