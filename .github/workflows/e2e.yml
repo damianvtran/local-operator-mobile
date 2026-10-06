@@ -579,6 +579,40 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      - name: Enable KVM (the emulator's hardware acceleration)
+        # WHY: GitHub-hosted Ubuntu runners can run the Android emulator on KVM, but
+        # they ship /dev/kvm with the runner user outside its owning group, so an
+        # unmodified job silently degrades to software emulation (measured: a
+        # ~15-minute boot, ~40-minute runs, and no flow output). This is the recipe
+        # GitHub's changelog for hardware-accelerated Android virtualization publishes
+        # (2024-04-02) and the emulator action's README carries: make the device
+        # world-readable/writable. Placed before the build so a KVM-less runner fails
+        # in seconds in the check below, not after the APK build.
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Assert the emulator can use KVM (fail fast, and name KVM)
+        # WHY: a runner that cannot open /dev/kvm must fail HERE, naming KVM — never
+        # as "no flow output" forty minutes later, which reads like an app failure.
+        # This mirrors the action's own check before it decides to fall back to
+        # software emulation: accessSync('/dev/kvm', R_OK | W_OK).
+        run: |
+          set -euo pipefail
+          echo "runner user: $(id -un); groups: $(id -Gn)"
+          if [ ! -e /dev/kvm ]; then
+            echo "::error title=KVM unavailable::/dev/kvm does not exist on this runner, so the Android emulator cannot use hardware acceleration — a software-emulated run is not a valid test of this app."
+            exit 1
+          fi
+          if [ ! -r /dev/kvm ] || [ ! -w /dev/kvm ]; then
+            ls -l /dev/kvm
+            echo "::error title=KVM unavailable::/dev/kvm is not readable+writable by the runner user $(id -un); the emulator would silently fall back to software emulation."
+            exit 1
+          fi
+          echo "KVM is usable: $(ls -l /dev/kvm)"
+
       - uses: pnpm/action-setup@v6
 
       - uses: actions/setup-node@v7
@@ -691,20 +725,18 @@ jobs:
           # A spell checker underlining as you type is a known source of text-input
           # flakiness.
           disable-spellchecker: true
+          # NB: the action parses `script:` into ONE COMMAND PER LINE and runs each
+          # line as its own `/usr/bin/sh -c` (dash, not bash) — keep every command on
+          # a single line, POSIX-only, no `\` continuations. `#` comment lines are
+          # dropped by the action's parser. A `set -o pipefail` here killed every run
+          # at line 1 (`set: Illegal option -o pipefail`, exit 2) before adb install
+          # or maestro ever ran.
           script: |
-            set -euo pipefail
             adb install -r android/app/build/outputs/apk/debug/app-debug.apk
-            maestro --config e2e/maestro/config.yaml test --retry 1 \
-              -e APP_ID="$APP_ID" \
-              -e RELAY_URL="$RELAY_URL_FOR_DEVICE" \
-              -e RELAY_PASSWORD="$(cat "$RUNNER_TEMP/relay-password")" \
-              # The harness's own fixture session id, from the corpus the mock
-              # relay serves (`fixtures/relay/**` — the id every captured
-              # projection uses). Named here because a bare constant in a file
-              # that names the source of every other constant is the one that
-              # gets copied somewhere it does not belong.
-              -e SESSION_ID=6714def86197 \
-              -e MAESTRO_SCREENSHOTS="$RUNNER_TEMP/maestro-screenshots"
+            # `SESSION_ID` is the harness's own fixture session id, from the corpus
+            # the mock relay serves (`fixtures/relay/**` — the id every captured
+            # projection uses).
+            maestro --config e2e/maestro/config.yaml test --retry 1 -e APP_ID="$APP_ID" -e RELAY_URL="$RELAY_URL_FOR_DEVICE" -e RELAY_PASSWORD="$(cat "$RUNNER_TEMP/relay-password")" -e SESSION_ID=6714def86197 -e MAESTRO_SCREENSHOTS="$RUNNER_TEMP/maestro-screenshots"
 
       - name: Stop the mock relay
         if: always()
