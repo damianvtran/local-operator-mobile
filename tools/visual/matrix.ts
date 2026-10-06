@@ -348,7 +348,7 @@ export function describeDeviceCoverage(coverage: {
  * WHY A THIRD TIER, AND WHY IT IS HERE RATHER THAN A `--devices` LIST IN YAML.
  * The `core` tier is 1512 cells: the whole declared cell list (42 cells) x 2 themes x
  * (3 phones x 4 scales + 2 tablets x 3 scales) — 42 x 2 x 18, the tier's 5 profiles —
- * and the CI job's capture step is bound at 20 minutes. Measured on the runner, that is
+ * and the CI job's capture step is bound at 30 minutes. Measured on the runner, that is
  * 2.24 s/cell: 403 cells in 903 s (run 37098393675, a plan of 403 cells then), so a core
  * run needs ~56 minutes. The job's first real
  * run of this path

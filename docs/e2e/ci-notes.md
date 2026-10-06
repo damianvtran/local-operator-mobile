@@ -128,7 +128,7 @@ job here that tests the *instrument* rather than the app.
 existed nothing automated covered the device variety the operator's rule asks
 for — phones in many sizes, tablets both ways. `web-audit-core` runs the `core`
 tier (5 profiles / 1512 cells) on the schedule and on demand only, so a pull
-request does not pay for it and the `ci` step's 20-minute bound is not stretched.
+request does not pay for it and the `ci` step's 30-minute bound is not stretched.
 
 Both bounds are derived from the measured rate and checked against the plan the
 run prints for itself, rather than guessed. The runner's rate is 2.24 s/cell, so

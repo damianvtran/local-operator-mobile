@@ -736,7 +736,7 @@ from `ALL_DEVICES`, so it cannot drift from this table.
 `.github/workflows/e2e.yml` `web-audit-core` captures and audits the `core` tier — 5 of
 the 19 profiles, 1512 cells / 4,536 frames and ~56 minutes at the measured 2.24 s/cell —
 on the schedule and on demand only. The `ci` sample stays the per-push one and keeps its
-own 20-minute capture bound; neither job is stretched to cover the other's tier.
+own 30-minute capture bound; neither job is stretched to cover the other's tier.
 
 ### Two cells that render byte-identically
 

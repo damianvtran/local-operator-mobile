@@ -133,6 +133,14 @@ const CONFIRM_THRESHOLD = 120;
  * HUNG, not to race one that is merely slower, and a bound that fires on an ordinary
  * machine is the very defect this replaces. It bounds the RUN, so it is a budget for the
  * whole plan; the per-cell bound is separate (`--cell-timeout`).
+ *
+ * THE HEADROOM IS THINNER THAN 1.34x AGAINST THE RUNNER SUGGESTS, and this is the number to
+ * look at when the plan next grows. The `ci` plan has measured 2.17 s/cell at its fastest and
+ * 2.74 s/cell at its slowest on this host (504 cells in 1093.7 s and 1380.5 s), so the slow end
+ * sits ~9 % inside this budget. It is NOT re-tuned here, because the bound's job is to catch a
+ * run that hung rather than to race one that is slow — but the day `CI_SCALES` or a device list
+ * grows, this margin is what is spent first, before the deadline fires on a run that was merely
+ * slower than the day it was sized.
  */
 const CELL_BUDGET_MS = 3000;
 const MIN_DERIVED_DEADLINE_MS = 900_000;

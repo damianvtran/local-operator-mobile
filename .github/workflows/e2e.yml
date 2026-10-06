@@ -260,15 +260,26 @@ jobs:
     # the fix is this one line, and the run will say so rather than pass.
     runs-on: ubuntu-latest
     # The capture matrix is minutes; the bound is the diagnosis, not the budget.
-    # THE BOUND COVERS THE JOB'S PARTS, NOT ITS LARGEST ONE, the invariant the
-    # mock-relay job below states as `install + 25 + 10 < 45`: here it is
-    # `install + typecheck 10 + capture 30 + audit 15 + canary 5 < 60`. It was 45,
-    # which the audit's raise to 10 pushed to exactly the sum of its parts with no
-    # room for the install — a bound under the work it contains, the shape this
-    # pass exists to remove. The capture and audit parts rose again when `CI_SCALES`
-    # gained the boundary step (336 -> 504 cells): that is a budget the per-push
-    # path now pays deliberately, because an axis that BRACKETS the band the footer
-    # breaks in cannot see that class of defect, and it reached review once already.
+    # THE BOUND COVERS THE JOB'S PARTS, NOT ITS LARGEST ONE — and it has to name EVERY
+    # part, which the form it used to carry did not. Measured on the runner
+    # (run 37379067992, this job, the tiers as they stand): setup and checkouts 21 s +
+    # install 4 s + typecheck 1 s + EXPORT 34 s + RELAY START 1 s + capture 1044 s +
+    # canary 81 s + stop relay 0 s + upload of the 91 MB artifact 6 s = 1192 s, the job's
+    # whole measured wall time, plus the audit at its own measured rate — 504 cells x
+    # 1.25 s = 630 s, which is DERIVED rather than taken from that run, whose capture
+    # failed the identical-state gate before the audit step ran. That is ~1,822 s ≈ 30
+    # min against the 60 below, so the bound is ~2x the work: the headroom is the point.
+    # THE OLD FORM WAS FALSE, not merely imprecise:
+    # `install + typecheck 10 + capture 30 + audit 15 + canary 5 < 60` sums to exactly
+    # 60, so `< 60` is untrue, and it omits the export and the relay start entirely —
+    # ~35 s of real work, and two steps a reader would have no account of when sizing
+    # the next raise. The per-step bounds are CEILINGS, not a budget, and they are
+    # deliberately not additive: what keeps the job inside 60 is the measured work
+    # above, which is why the measurement is stated here instead of a sum. The capture
+    # and audit parts rose when `CI_SCALES` gained the boundary step (336 -> 504 cells):
+    # a budget the per-push path now pays deliberately, because an axis that BRACKETS
+    # the band the footer breaks in cannot see that class of defect, and it reached
+    # review once already.
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v7
@@ -426,7 +437,7 @@ jobs:
     # 2 of the matrix's 19 declared profiles, and both `core` (5 profiles / 1512 cells) and
     # `full` (19 / 5544) were local or dispatched only. This job captures and audits `core`,
     # on the NIGHTLY schedule only, so the per-push path is untouched and the `ci` job keeps
-    # its own 20-minute capture bound rather than being stretched to fit a 56-minute one.
+    # its own 30-minute capture bound rather than being stretched to fit a 56-minute one.
     #
     # SIZED FROM THE MEASUREMENT, NOT FROM HOPE. The runner's own rate is 2.24 s/cell
     # (403 cells / 1209 frames in 903.1 s, run 37098393675, a plan of 403 cells then),
@@ -439,8 +450,8 @@ jobs:
     # at THIS head it prints `1512 cells x 3 frame(s) = 4536 frames` and `deadline: 4536 s`
     # (3000 ms/cell). The capture step's 90 is above both derived deadlines (so the step
     # cannot cut short the budget the run computed for itself) and ~1.6x the ~56 min the
-    # 1512 cells cost at 2.24 s/cell — the same headroom the per-push capture (20 for ~12)
-    # and audit (10 for ~7) steps carry.
+    # 1512 cells cost at 2.24 s/cell — the same headroom the per-push capture (30 for ~19)
+    # and audit (15 for ~10) steps carry.
     # The audit runs at 1.25 s/cell (250 of the 256 cells the tier held then in 312 s, run
     # 37167390506), so `core` is 1512 x 1.25 s = 1,890 s ≈ 32 min and its step bound is 50.
     # The job bound holds its parts, the invariant the other jobs in this file state:

@@ -93,6 +93,19 @@ export interface FrameRecord {
  * The most SPECIFIC match wins (fewest declared cells), so a broad class's reason is
  * never quoted for a narrower collision it happens to contain.
  *
+ * TIES. Two entries of the SAME arity can both contain the produced set once a ledger holds
+ * two classes of equal length. The FIRST in ledger order wins, because the comparison is `<`
+ * and not `<=` — reproduced by driving two three-cell classes that both contain one pair:
+ * swapping their order in the array swaps the reason quoted. That is deliberate, since
+ * neither entry is more specific than the other and the ledger's own order is then the only
+ * defensible tie-break — which makes the array a PRIORITY list wherever two classes are the
+ * same size, and is why an entry added above another can change which reason a run quotes
+ * without changing whether it passes.
+ *
+ * What is NOT order-dependent is the ordinary case: a narrower class beats a broader one
+ * whichever way round the two appear (verified both ways), so a tie is only ever reached
+ * between classes a reviewer deliberately declared at the same size.
+ *
  * Exported for the tests that pin the class semantics: the rule is shared by the
  * exemptions and the coincidences, and a test reaching it through only one of them could
  * not show that it holds for both.
@@ -111,7 +124,18 @@ export function matchDeclared(
 	return best;
 }
 
-/** The cells a produced group names, sorted — for the message that asks for a declaration. */
+/**
+ * The cells a produced group names, SORTED — for the message that asks for a declaration.
+ *
+ * It repeats `matchDeclared`'s first line ON PURPOSE rather than sharing it, and the reason is
+ * that the two want different things from the same set. The matcher tests CONTAINMENT, for
+ * which order is irrelevant — it keeps first-seen order and never sorts. The message is text a
+ * person pastes into the ledger, so it must be sorted, or one collision would print a different
+ * string depending on which record the capture happened to read first. Folding the two would
+ * either sort inside the matcher (work the containment test does not need) or hand the message
+ * an order-dependent string; a shared helper with a `sort` flag would cost more indirection
+ * than the two lines it saves.
+ */
 function producedCells(records: readonly FrameRecord[]): string[] {
 	return [...new Set(records.map((record) => record.cell))].sort();
 }
