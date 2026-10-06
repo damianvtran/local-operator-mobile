@@ -51,6 +51,7 @@
 import type { TranscriptEntry } from "@/contracts";
 import { entryComplete } from "@/features/session/completion-visibility";
 import { countLabel, elapsedLabel } from "@/lib/format";
+import { turnBarId } from "@/ui/a11y";
 
 /* -------------------------------------------------------------------- turns */
 
@@ -178,7 +179,9 @@ export interface LatchedTurn {
 	closingId: string;
 }
 
-/** One row of the rendered transcript list. */
+/** One row of the rendered transcript list. A bar's id is the a11y builder's
+ *  (`turn-bar-<key>`), so the list's key, the measured-height key and the
+ *  testID a flow selects are ONE string rather than three spellings of it. */
 export type TranscriptItem =
 	| { kind: "entry"; id: string; entry: TranscriptEntry }
 	| {
@@ -203,7 +206,10 @@ export interface TurnView {
 	bar: TurnBarFacts | null;
 	/** The ids of every item this turn contributes, in order. */
 	itemIds: string[];
-	/** The row ids the collapse hides; empty while the turn renders fully. */
+	/** The row ids the collapse stands for — the rows between the opening message
+	 *  and the closing answer. Emitted into `itemIds` as well when the turn is
+	 *  open, so the field answers "what did the collapse hide", not "what is on
+	 *  screen now". */
 	hiddenIds: string[];
 }
 
@@ -225,9 +231,6 @@ export interface CondensePlan {
 	 *  expansion. */
 	latch: ReadonlyMap<string, LatchedTurn>;
 }
-
-/** The bar's id, built from the turn's key so a flow can address one turn. */
-export const turnBarItemId = (turnKey: string): string => `turn-bar-${turnKey}`;
 
 /**
  * Plan the transcript: turn segmentation, the condense decision, and the item
@@ -317,7 +320,7 @@ export function condensePlan(input: CondenseInput): CondensePlan {
 			view.bar = facts;
 			view.hiddenIds = hiddenIds;
 			if (!open) {
-				const barId = turnBarItemId(turn.key);
+				const barId = turnBarId(turn.key);
 				items.push({
 					kind: "bar",
 					id: barId,
@@ -340,7 +343,7 @@ export function condensePlan(input: CondenseInput): CondensePlan {
 			}
 			// Expanded: the bar still leads the rows it was hiding, so the
 			// disclosure that opened them is where the reader left it.
-			const barId = turnBarItemId(turn.key);
+			const barId = turnBarId(turn.key);
 			items.push({
 				kind: "bar",
 				id: barId,
