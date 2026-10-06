@@ -314,6 +314,12 @@ function longConversation(
 			...structuredClone(user),
 			id: `tc-conv-${at}-user`,
 			text: PROMPTS[turn % PROMPTS.length] ?? "Continue the sweep.",
+			// The template carries an image reference; the mock has no bytes to
+			// serve for a fabricated row id, and a reference that can never resolve
+			// renders as the app's unloadable-image treatment in every frame (a red
+			// block the size of the bubble) — a defect the capture would rightly
+			// flag. A fabricated conversation carries text only.
+			images: [],
 		});
 		for (let step = 0; step < toolsPerTurn; step += 1) {
 			const stepId = String(step).padStart(2, "0");
@@ -1079,6 +1085,24 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 	add(
 		"long-transcript",
 		"A 520-row multi-turn conversation: thirteen completed turns of tool work, so the transcript has both its long case (the projection's 80-row cap and degradation tiers) and turns to condense.",
+		/* `S5/populated-long` FIRST, then the two path cells that carry the
+		 * transcript's TOP and its open state. Those two are the cells this scenario
+		 * exists for now that the collapse is real: a settled frame of any session
+		 * cell lands at the TAIL (the list follows new content), and the tail of a
+		 * long conversation is the ACTIVE turn — the one turn condensing never
+		 * touches — so without pinning the viewport the collapse itself has no
+		 * still. `lo-scroll=top` is the app-side affordance the harness's own note
+		 * asks for ("a scroll position is a viewport interaction the wire cannot
+		 * declare … needs a scroll action or an id the app itself exposes");
+		 * `lo-expand` opens one named turn, because the reader's open is a tap the
+		 * capture cannot drive. The pairs are declared here, in the scenario that
+		 * owns the conversation, so the tier counts keep reading off the registry
+		 * rather than a second hand-maintained list. */
+		[
+			"S5/populated-long",
+			"path:/session/{sessionId}?lo-scroll=top/condensed",
+			"path:/session/{sessionId}?lo-scroll=top&lo-expand=tc-conv-00-user/expanded",
+		],
 		/* `S5/populated-long` ALONE, and the second cell it declared is not a declaration the
 		 * relay can honour. This scenario builds ONE projection and both of its cells were
 		 * pinned from it, so `S5/scroll` was `S5/populated-long` rendered from the same
