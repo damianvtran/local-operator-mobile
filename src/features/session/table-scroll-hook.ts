@@ -20,11 +20,21 @@ import { Platform } from "react-native";
  * drives a real interaction. It sets one initial scroll offset on one viewer and
  * nothing else; an installed app (where `location` is not a web page) reads null,
  * and a page without the parameter renders the table at its start.
+ *
+ * TWO VALUES, because the two affordance directions live in two axes:
+ * - `end` scrolls the TABLE's own horizontal view to its end (the left-mirror
+ *   fade and the retired right fade; `S5/tables-end`).
+ * - `bring` scrolls the TRANSCRIPT vertically so the first table sits at the
+ *   transcript viewport's top (review round 1, D2): at 200 % text on a phone
+ *   the transcript window is ~59 pt tall and the settled frame otherwise shows
+ *   chrome above the fold, so no 200 % frame would ever show a table. It leaves
+ *   the horizontal offset alone (`inline: "nearest"`), so the state it lands in
+ *   is the same cut-edge state the un-hooked cell renders.
  */
 
-/** The values the hook accepts. One today; the record shape keeps the refusal of
- *  an unknown value explicit. */
-const FORCED = ["end"] as const;
+/** The values the hook accepts. The record shape keeps the refusal of an
+ *  unknown value explicit. */
+const FORCED = ["end", "bring"] as const;
 export type ForcedTableScroll = (typeof FORCED)[number];
 
 /** The state a `lo-md-scroll` value names, or `null` for an absent/unknown value.

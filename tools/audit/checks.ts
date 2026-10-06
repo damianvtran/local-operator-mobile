@@ -495,6 +495,9 @@ export const SUB_RULE_TEXT: Record<string, RegExp> = {
 	// self-test reads as a rule that is not exactly the one it names.
 	"U-38:leak": /^leaked source/,
 	"U-38:rows": /^table structure/,
+	// The marker↔render cross-check (review round 1): the parser's
+	// `session-tables` flag against the renderer's output.
+	"U-38:marker": /^declared table did not render/,
 	"U-40:cue": /^overflowing/,
 	"U-40:false": /^cue on/,
 	"U-41:rail": /^rail drift/,
@@ -1475,7 +1478,17 @@ const WHITESPACE_RUNS = /\s+/g;
  */
 export const U42_EXEMPTIONS: Array<{
 	path: string;
-	value: number;
+	/**
+	 * The off-scale value this record covers, matched at 0.01. Omitted when
+	 * `anyValue` is set: a value the TEXT SCALE computes (an optical alignment
+	 * offset like the refusal glyph's) resolves to a different off-grid number at
+	 * every scale — 1.475 at 100 %, 12.95 at 200 % — so no fixed number could
+	 * cover it, and exempting by value would also mask a real off-scale margin
+	 * that happened to resolve to the same number.
+	 */
+	value?: number;
+	/** Record the whole node whatever its value resolves to (see `value`). */
+	anyValue?: boolean;
 	reason: string;
 }> = [
 	{
@@ -1508,6 +1521,74 @@ export const U42_EXEMPTIONS: Array<{
 			"control as a `button` element in the composer and as a `div` in the empty/notice " +
 			"blocks, and both carry the §3.4 `gap-1.5` exemption",
 	},
+
+	{
+		path: "div.css-g5y9jx.px-4>div.css-g5y9jx.rounded-md",
+		value: 10,
+		reason:
+			"the ask/pending card's frame (`pending-card.tsx` `p-2.5`) — §3.4's flagged-not-absorbed " +
+			"list; the 892-row ci-tier audit's single largest family (S8 ask/approval/populated-long)",
+	},
+	{
+		path: "button.css-g5y9jx.r-1loqt21>div.css-g5y9jx.min-h-[56px]",
+		value: 10,
+		reason:
+			"the tall list row's own padding (`ui/variants.ts` `py-2.5`, the 56pt-row variant) — " +
+			"§3.4 flagged-not-absorbed; measured on the sessions list and the home screen",
+	},
+	{
+		path: "div.css-g5y9jx.min-h-[56px]>div.css-g5y9jx.flex-1",
+		value: 2,
+		reason:
+			"the same row's two-line inner block (`ui/components/list-row.tsx` `gap-0.5`) — §3.4 " +
+			"flagged-not-absorbed",
+	},
+	{
+		path: "div.css-g5y9jx.items-center>div.css-g5y9jx.w-full>div.css-g5y9jx.flex-row",
+		value: 6,
+		reason:
+			"a full-width row inside a centred wrapper (`gap-1.5`) on the welcome/list surfaces — " +
+			"flagged, not absorbed (§3.4); a UI-wide sweep is its own ticket",
+	},
+	{
+		path: "div.css-g5y9jx.flex-row>div.css-g5y9jx.self-start",
+		value: 2,
+		reason:
+			"the Badge (`ui/variants.ts` `px-2 py-0.5`) as several rows render it — §3.4 " +
+			"flagged-not-absorbed; one fragment covers the four measured chains (S16 projects, " +
+			"sessions list, error cards)",
+	},
+	{
+		path: "div.css-g5y9jx.rounded-md>div.css-g5y9jx.r-150rngu>div.css-g5y9jx>div.css-g5y9jx.gap-1",
+		value: 6,
+		reason:
+			"the pending card's inner rows (`pending-card.tsx` `py-1.5`/`pt-1.5`) — §3.4 " +
+			"flagged-not-absorbed; covers both the full-height and the top-only chains",
+	},
+	{
+		path: "div.css-g5y9jx.gap-3>div.css-g5y9jx.flex-row>div.css-g5y9jx.flex-1>div.css-g5y9jx.gap-1.5",
+		value: 6,
+		reason:
+			"a two-column row inside the list/settings surfaces (`gap-1.5`) — flagged, not " +
+			"absorbed (§3.4)",
+	},
+	{
+		path: "div.css-g5y9jx.rounded-md>div.css-g5y9jx.gap-3>div.css-g5y9jx.gap-4>div.css-g5y9jx.rounded-md>div.css-g5y9jx.gap-3>div.css-g5y9jx.gap-1.5",
+		value: 6,
+		reason:
+			"nested cards on the error/empty surfaces (`gap-1.5` rows within `gap-3`/`gap-4` " +
+			"stacks) — flagged, not absorbed (§3.4)",
+	},
+	{
+		path: "div.css-g5y9jx.gap-3>div.css-g5y9jx.flex-row>svg.lucide.lucide-triangle-alert",
+		anyValue: true,
+		reason:
+			"the refusal surface's alert glyph (`refusal-surface.tsx` `alertGlyphOffset`, an " +
+			"alignment correction DERIVED from the type token: 1.475 at 100 %, 12.95 at 200 %) — " +
+			"a layout offset, not a spacing decision, and one whose value moves with the reader's " +
+			"text size; flagged, not absorbed (§3.4). The fragment also covers the glyph's `path` " +
+			"child, which inherits the same box",
+	},
 ];
 
 /**
@@ -1528,33 +1609,66 @@ export const U40_DEFERRAL = {
 		"not a table scroll viewport — its cue is deferred to the code block's own change (§6.2), recorded rather than passed",
 };
 
+/** The U-38 shape the rubric makes legal rather than silent: §1.7 renders a
+ *  header-only table, and the fixture's clean page declares one so the rule
+ *  cannot creep into requiring a body row (review round 1). */
+export const U38_DECLARATION = {
+	HEADER_ONLY:
+		"a header-only table is legal — §1.7 renders its header and frame",
+};
+
 const round1 = (n: number): number => Math.round(n * 10) / 10;
 
 /**
  * U-38 — a markdown table renders as a table, not as its own pipe source.
  *
- * Two rules, and both are the spec's (§1.8): the FRAME-level escape scan
- * (`U-38:leak` — the literal `\|` must never appear in a rendered text node,
- * because the parser resolves escapes and the renderer must never see one) and
- * the TABLE-level structure (`U-38:rows` — every `md-table` renders at least a
- * header row and a body row, and no cell's text still carries the source's
- * `\|` or a `---` divider). A frame with no table at all is not-applicable for
- * the structure half but the escape half still runs: an unresolved escape is a
- * defect on any screen.
+ * Three rules, all the spec's (§1.8), each separately blindable:
+ *
+ * - `U-38:leak` — the FRAME-level escape scan: the literal `\|` must never
+ *   appear in a rendered text node, because the parser resolves escapes and
+ *   the renderer must never see one. It reads `escapeInText`, which the probe
+ *   computes on the node's FULL textContent: the 200-character `ownText` slice
+ *   cannot see an escape deeper in a long paragraph (review round 1).
+ * - `U-38:rows` — the TABLE-level structure: every `md-table` renders its
+ *   header row (§1.7 makes a header-only table legal — its divider is
+ *   structure, not content) and no cell's text still carries the source's `\|`
+ *   or a `---` divider.
+ * - `U-38:marker` (added review round 1, the reviewer-requested shape) — the
+ *   marker↔render cross-check. `session-tables` is derived from
+ *   `hasTableBlock`, the PARSER's reading, and rendered from the flags,
+ *   independently of what the markdown renderer drew. So a frame carrying the
+ *   marker with zero `md-table` nodes is the pipe-source defect BY
+ *   CONSTRUCTION: the transcript says it carries a table and the DOM says
+ *   nothing rendered one. This is the half that catches the REPORTED defect —
+ *   the leak scan cannot, because the source it leaks carries no `\|` at all
+ *   (it is the raw pipe text, as plain text). The structure half cannot
+ *   either: with no `md-table` node there is nothing to hold a header, so it
+ *   never runs. The earlier wording here claimed the opposite and was wrong.
+ *
+ * A frame with no table at all is not-applicable for the structure half, but
+ * the leak half still runs (an unresolved escape is a defect on any screen),
+ * and a frame with no marker is not-applicable for the cross-check.
+ *
+ * THE MARKER HALF HAS NO CANARY MUTATION, and that is a stated limit rather
+ * than an omission: its shape is "the marker is present while NO table
+ * renders", and the canary's single shared page necessarily carries the other
+ * fixtures' tables, so a zero-table frame cannot be staged beside them. Its
+ * failure direction is pinned by unit tests instead (`checks.test.ts`).
  *
  * The pipe-source line a malformed run renders verbatim is NOT a failure —
  * §1.2 makes that rendering deliberate, and a mid-stream frame is a malformed
- * run until its divider arrives. The structure half is what catches the
- * before-defect (a table arriving as prose has no `md-table` node to hold a
- * header and a body row).
+ * run until its divider arrives. That legal rendering carries no marker, which
+ * is exactly the distinction the cross-check rests on.
  */
 function u38TableRendered(state: AuditState): CheckRow[] {
 	const byIndex = new Map(state.nodes.map((n) => [n.index, n]));
 	const failures: CheckRow[] = [];
+	const escaped = (node: AuditNode): boolean =>
+		node.escapeInText ?? node.ownText.includes(LEAKED_ESCAPE);
 	let leaks = 0;
 	for (const node of state.nodes) {
 		if (node.ownText.length === 0) continue;
-		if (!node.ownText.includes(LEAKED_ESCAPE)) continue;
+		if (!escaped(node)) continue;
 		leaks += 1;
 		if (leaks > 8) continue;
 		failures.push({
@@ -1564,29 +1678,56 @@ function u38TableRendered(state: AuditState): CheckRow[] {
 			detail: `${node.path} — ${node.ownText.replace(WHITESPACE_RUNS, " ").trim().slice(0, 80)}`,
 		});
 	}
+	// The parser's marker against the renderer's output (U-38:marker).
+	if (
+		state.tables.length === 0 &&
+		state.nodes.some((n) => n.testId === "session-tables")
+	) {
+		failures.push({
+			check: "U-38",
+			verdict: "FAIL",
+			measured:
+				"declared table did not render: the transcript carries session-tables and no md-table node exists",
+			detail:
+				"hasTableBlock affirmed a table and the renderer drew none — the pipe-source defect",
+		});
+	}
 	let structures = 0;
 	let cells = 0;
+	const exceptions: CheckRow[] = [];
 	for (const table of state.tables) {
 		const wrapper = byIndex.get(table.index);
 		const where = wrapper?.path ?? `table at node #${table.index}`;
 		cells += table.cells.length;
-		if (table.headRows < 1 || table.bodyRows < 1) {
+		// §1.7's legal shape, RECORDED rather than silent (the canary asserts the
+		// recording — QA round 2's rule): a header-only table renders its header
+		// and frame, and the acceptance carries the declaration's own words.
+		if (table.headRows >= 1 && table.bodyRows === 0 && exceptions.length < 8) {
+			exceptions.push({
+				check: "U-38",
+				verdict: "EXCEPTION",
+				measured: `declared exception: ${U38_DECLARATION.HEADER_ONLY} — header-only table`,
+				detail: where,
+			});
+		}
+		if (table.headRows < 1) {
 			structures += 1;
 			if (structures <= 8) {
 				failures.push({
 					check: "U-38",
 					verdict: "FAIL",
-					measured: `table structure: ${table.headRows} header row(s), ${table.bodyRows} body row(s) — a table renders at least its header and one body row`,
+					measured: `table structure: ${table.headRows} header row(s) — a table renders at least its header (§1.7: a header-only table is legal)`,
 					detail: where,
 				});
 			}
 		}
 		for (const cell of table.cells) {
-			const stray = cell.text.includes("\\|")
-				? "\\|"
-				: cell.text.includes("---")
-					? "---"
-					: null;
+			const stray =
+				(cell.escapeInText ?? cell.text.includes("\\|"))
+					? "\\|"
+					: cell.text.includes("---")
+						? "---"
+						: null;
 			if (stray === null) continue;
 			structures += 1;
 			if (structures <= 8) {
@@ -1613,6 +1754,7 @@ function u38TableRendered(state: AuditState): CheckRow[] {
 		];
 	}
 	return [
+		...exceptions,
 		{
 			check: "U-38",
 			verdict: "PASS",
@@ -1932,10 +2074,30 @@ function u42SpacingScale(state: AuditState, floors: Floors): CheckRow[] {
 				Math.abs(state.insets[side] - value) < 0.01
 			)
 				continue;
+			/* AN `auto` MARGIN IS LAYOUT, NOT A SPACING STEP (review round 1).
+			 * `ml-auto` resolves to a USED pixel value the element's position decides
+			 * — 147.2pt here, 243.2pt on a tablet, a different number at any
+			 * viewport — so an exemption list could never name them all, and
+			 * exempting by value would also mask a real off-scale margin that
+			 * happened to resolve to the same number. The probe reads the keyword
+			 * through Typed OM, the only layer where Chrome still keeps it. */
+			if (
+				property.startsWith("margin-") &&
+				node.marginAuto?.[
+					property.slice("margin-".length) as
+						| "top"
+						| "right"
+						| "bottom"
+						| "left"
+				] === true
+			)
+				continue;
 			const exemption = U42_EXEMPTIONS.find(
 				(entry) =>
 					node.path.includes(entry.path) &&
-					Math.abs(entry.value - value) < 0.01,
+					(entry.anyValue === true ||
+						(entry.value !== undefined &&
+							Math.abs(entry.value - value) < 0.01)),
 			);
 			if (exemption !== undefined) {
 				exemptions.push({
@@ -2109,6 +2271,8 @@ export interface TableMeasure {
 	cells: Array<{
 		index: number;
 		text: string;
+		/** Whether the cell's FULL text still carries a `\|` (probe-computed). */
+		escapeInText?: boolean;
 		broken: Array<{ token: string; length: number }>;
 	}>;
 	scroll: {
@@ -2143,9 +2307,22 @@ export interface AuditNode {
 	ariaLabel: string | null;
 	hasAccessibleName: boolean;
 	accessibleName: string;
-	visibleLabel: string;
 	text: string;
 	ownText: string;
+	/**
+	 * Whether the node's FULL textContent still carries a `\|`, computed by the
+	 * probe beyond the 200-character `ownText` slice. Optional so unit fixtures
+	 * built by hand fall back to the slice; the live probe always sets it.
+	 */
+	escapeInText?: boolean;
+	/**
+	 * Which margin sides are the `auto` keyword rather than a length, read by the
+	 * probe through Typed OM (Chrome's string form resolves auto to its USED
+	 * pixels — a number a spacing scale cannot hold). Optional: the canary and
+	 * hand-built fixtures fall back to scoring the resolved value, and the live
+	 * probe always sets it.
+	 */
+	marginAuto?: { top: boolean; right: boolean; bottom: boolean; left: boolean };
 	rect: {
 		x: number;
 		y: number;

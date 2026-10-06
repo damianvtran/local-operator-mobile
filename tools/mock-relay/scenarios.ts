@@ -904,7 +904,7 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 	add(
 		"tables",
 		"A transcript ending in two tables: one priced to fit the rail exactly (no cue may appear) and a 3x64-character digest table that overflows, bleeds and cues.",
-		["S5/tables", "S5/tables-end"],
+		["S5/tables", "S5/tables-end", "S5/tables-in-view"],
 		() => ({
 			projections: {
 				[tablesFrame.session_id]: structuredClone(tablesFrame),
@@ -915,7 +915,30 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 	/* The table that ARRIVES: the same primitives as `tables`, grown one row per
 	 * frame with the divider and the first row in one tick (`growth: "table"`).
 	 * Consecutive frames of this cell are §4.1 #10's evidence that the table does
-	 * not reflow the row as its cells arrive. */
+	 * not reflow the row as its cells arrive.
+	 *
+	 * `intervalMs: 120` (review round 1, D4): at the default 700 ms pump every
+	 * tick landed outside the capture's fixed frame offsets, so the cell's frame
+	 * set read blank/complete/complete and sampled no arrival at all. At 120 ms
+	 * the `-f250` frame lands between two ticks — header, divider and some rows
+	 * on screen with the next one arriving — which is the motion this cell exists
+	 * to show.
+	 *
+	 * `settleAfterTurns: 80` at `intervalMs: 150` (review round 1's audit re-run):
+	 * twelve seconds of live stream, long enough that both the capture's 8 s
+	 * settled stamp and the AUDIT's re-drive window land INSIDE it — at the
+	 * original 6 × 700 ms the state was over before either reader looked, and
+	 * the settled stamp read unready (`session-streaming` already absent) while
+	 * the audit could not reproduce the state (measured: all eight combos
+	 * BLOCKED). The content stops growing after the fourth row, so the long
+	 * window changes what the readers see, not what the cell renders.
+	 * also ended the state in under a second, so the AUDIT's re-drive — which
+	 * reads its marker around 1.2 s in — saw a settled session and could not
+	 * reproduce the streaming state it declares (measured: all eight combos
+	 * BLOCKED as state-not-reproduced). Forty turns keep `session-streaming`
+	 * true across every reader's window while the content stops growing after
+	 * the fourth row, and the capture's own settle still lands after the last
+	 * turn. */
 	add(
 		"tables-streaming",
 		"A streaming turn whose answer introduces a table: the divider and the first row land in one frame, then the rows arrive one per frame.",
@@ -924,7 +947,12 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 			projections: {
 				[tablesFrame.session_id]: structuredClone(tablesFrame),
 			},
-			stream: { mode: "streaming", settleAfterTurns: 6, growth: "table" },
+			stream: {
+				mode: "streaming",
+				settleAfterTurns: 80,
+				growth: "table",
+				intervalMs: 150,
+			},
 		}),
 	);
 

@@ -127,6 +127,13 @@ export const STATE_MARKER_ALIASES: Record<string, string> = {
 	 *  frame, not from a marker). An entry here is what lets the cell borrow the
 	 *  `tables` marker rather than invent a second id for a scroll offset. */
 	"tables-end": "tables",
+	/** The table brought into view: the same state as `tables`, one viewer hook
+	 *  later — the cell `S5/tables-in-view` scrolls the TRANSCRIPT so the table
+	 *  sits at the viewport top (review round 1, D2: at 200 % text the settled
+	 *  frame otherwise shows only chrome, so no frame would show a table). Same
+	 *  look, one vertical offset apart; the alias borrows the `tables` marker
+	 *  rather than inventing a second id for a scroll position. */
+	"tables-in-view": "tables",
 	/** The table arriving: the same state as `streaming` — an assistant row whose
 	 *  text is still being written — with the row's content being a table. The
 	 *  app has no second streaming look for it, which is what the alias table is
@@ -639,6 +646,11 @@ export function captureHookQuery(): string {
  */
 export const CELL_HOOKS: Record<string, Record<string, string>> = {
 	"S5/tables-end": { "lo-md-scroll": "end" },
+	// Review round 1, D2: the 200 % frames otherwise show chrome above the fold
+	// (`S5/tables` shares bytes with `S5/rich-rows` there — the camera limit
+	// recorded in the matrix), so no frame showed a table at the largest text.
+	// `bring` scrolls the transcript so the last table sits at its viewport top.
+	"S5/tables-in-view": { "lo-md-scroll": "bring" },
 };
 
 /** The per-cell hook query for one cell name (empty when it declares none). */

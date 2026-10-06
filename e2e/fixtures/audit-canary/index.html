@@ -707,11 +707,18 @@
 </div>
 
 <div class="bad panel">
-	<h2>U-38 a table with no body rows</h2>
+	<h2>U-38 a table with no header row</h2>
+	<!-- The mutation for U-38:rows since review round 1. It used to be a
+	     HEADER-ONLY table, but §1.7 makes exactly that legal — a header-only
+	     table renders its header and frame, and the divider is structure, not
+	     content — so the rule now requires the header and may not require a
+	     body. A header-less table is the remaining shape a table check can
+	     rightly reject, and the legal header-only shape lives on the clean
+	     page as a must-not-report. -->
 	<div id="table-half" data-defect="U-38-rows" data-testid="md-table" style="display:inline-block;border:1px solid var(--border);border-radius:6px;overflow:hidden">
 		<div data-testid="md-table-scroll" style="overflow-x:auto">
 			<div>
-				<div data-testid="md-table-head" style="display:flex;background:var(--surface);border-bottom:1px solid var(--border)">
+				<div data-testid="md-table-row" style="display:flex">
 					<div data-testid="md-table-cell" style="flex:1;padding:8px 12px">key</div>
 					<div data-testid="md-table-cell" style="flex:1;padding:8px 12px">value</div>
 				</div>
@@ -719,6 +726,7 @@
 		</div>
 	</div>
 </div>
+
 
 <div class="bad panel">
 	<h2>U-39 a token the column cannot hold</h2>
@@ -897,6 +905,24 @@
 				<div data-testid="md-table-row" style="display:flex">
 					<div data-testid="md-table-cell" style="padding:8px 12px">seats</div>
 					<div data-testid="md-table-cell" style="padding:8px 12px">12</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+
+<div class="good panel">
+	<h2>A header-only table (clean)</h2>
+	<!-- §1.7's legal case: the header and frame render, there are no body
+	     rows, and the divider is structure, not content. U-38:rows must
+	     accept it — the mutation that used to prove this rule fired was this
+	     shape, and the rule was wrong, not the shape (review round 1). -->
+	<div id="good-header-only" data-not-defect="U-38" data-not-defect-reason="header-only-table" data-testid="md-table" style="display:inline-block;max-width:100%;border:1px solid var(--border);border-radius:6px;overflow:hidden">
+		<div data-testid="md-table-scroll" style="overflow-x:auto">
+			<div>
+				<div data-testid="md-table-head" style="display:flex;background:var(--surface);border-bottom:1px solid var(--border)">
+					<div data-testid="md-table-cell" style="flex:1;padding:8px 12px">key</div>
+					<div data-testid="md-table-cell" style="flex:1;padding:8px 12px">value</div>
 				</div>
 			</div>
 		</div>

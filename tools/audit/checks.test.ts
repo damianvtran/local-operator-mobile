@@ -150,10 +150,73 @@ describe("U-38 — a markdown table renders as a table", () => {
 		expect(rows[0]?.measured).toMatch(/^leaked source/);
 	});
 
-	it("fails a table with no body row", () => {
+	it("accepts a legal header-only table (§1.7 — the divider is structure, not content)", () => {
 		const rows = run(
 			"U-38",
 			state({ tables: [{ ...goodTable, bodyRows: 0 }] }),
+		);
+		expect(rows.map((r) => r.verdict)).toEqual(["EXCEPTION", "PASS"]);
+		expect(rows[0]?.measured).toContain("header-only table is legal");
+	});
+
+	it("fails a table with no header row", () => {
+		const rows = run(
+			"U-38",
+			state({ tables: [{ ...goodTable, headRows: 0 }] }),
+		);
+		expect(rows[0]?.verdict).toBe("FAIL");
+		expect(rows[0]?.measured).toMatch(/^table structure/);
+	});
+
+	it("reads the full-text escape flag even when the 200-character slice is clean", () => {
+		const rows = run(
+			"U-38",
+			state({
+				nodes: [
+					node({
+						ownText: "x".repeat(200),
+						escapeInText: true,
+					}),
+				],
+			}),
+		);
+		expect(rows[0]?.verdict).toBe("FAIL");
+		expect(rows[0]?.measured).toMatch(/^leaked source/);
+	});
+
+	it("fails the marker↔render cross-check: session-tables with no md-table", () => {
+		const rows = run(
+			"U-38",
+			state({ nodes: [node({ testId: "session-tables" })] }),
+		);
+		expect(rows[0]?.verdict).toBe("FAIL");
+		expect(rows[0]?.measured).toMatch(/^declared table did not render/);
+	});
+
+	it("passes the cross-check when the marker and the rendered table agree", () => {
+		const rows = run(
+			"U-38",
+			state({
+				nodes: [node({ testId: "session-tables" })],
+				tables: [goodTable],
+			}),
+		);
+		expect(rows[0]?.verdict).toBe("PASS");
+	});
+
+	it("fails a cell whose full text still carries the escape past the slice", () => {
+		const rows = run(
+			"U-38",
+			state({
+				tables: [
+					{
+						...goodTable,
+						cells: [
+							{ index: 1, text: "clean", escapeInText: true, broken: [] },
+						],
+					},
+				],
+			}),
 		);
 		expect(rows[0]?.verdict).toBe("FAIL");
 		expect(rows[0]?.measured).toMatch(/^table structure/);
@@ -449,6 +512,62 @@ describe("U-42 — spacing on the token scale", () => {
 		});
 		const rows = run("U-42", negative);
 		expect(rows.map((r) => r.verdict)).toEqual(["PASS"]);
+	});
+
+	it("does not score an `auto` margin — its pixels are layout, not a step", () => {
+		// `ml-auto` resolved to 147.2pt on one viewport and 243.2pt on another; no
+		// exemption list can name those, and the keyword is the only honest reading.
+		const autoMargin = state({
+			nodes: [
+				node({
+					path: "div#row-tail",
+					margin: { top: 0, bottom: 0, left: 147.2, right: 0 },
+					marginAuto: { top: false, bottom: false, left: true, right: false },
+				}),
+			],
+		});
+		expect(run("U-42", autoMargin).map((r) => r.verdict)).toEqual(["PASS"]);
+	});
+
+	it("records a scale-dependent value by path when anyValue is set", () => {
+		// The refusal glyph's alignment offset (refusal-surface.tsx): 1.475 at
+		// 100 %, 12.95 at 200 %. Its value moves with the reader's text size, so
+		// the record is the node, not a number.
+		const entry = {
+			path: "svg.lucide.lucide-triangle-alert",
+			anyValue: true,
+			reason: "scale-derived alignment offset",
+		};
+		U42_EXEMPTIONS.push(entry as never);
+		try {
+			const svg = state({
+				nodes: [
+					node({
+						path: "div.gap-3>div.flex-row>svg.lucide.lucide-triangle-alert",
+						margin: { top: 1.475, bottom: 0, left: 0, right: 0 },
+					}),
+				],
+			});
+			const rows = run("U-42", svg);
+			expect(rows.map((r) => r.verdict)).toEqual(["PASS", "EXCEPTION"]);
+		} finally {
+			U42_EXEMPTIONS.pop();
+		}
+	});
+
+	it("still fails the same resolved pixels when the margin is NOT auto", () => {
+		const realMargin = state({
+			nodes: [
+				node({
+					path: "div#row-tail",
+					margin: { top: 0, bottom: 0, left: 147.2, right: 0 },
+					marginAuto: { top: false, bottom: false, left: false, right: false },
+				}),
+			],
+		});
+		const rows = run("U-42", realMargin);
+		expect(rows[0]?.verdict).toBe("FAIL");
+		expect(rows[0]?.measured).toContain("margin-left");
 	});
 
 	it("accepts a padding that IS the frame's declared inset, per side", () => {

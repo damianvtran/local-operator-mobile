@@ -20,6 +20,13 @@ export const EXTRACT_PROBE = `
     const n = Number.parseFloat(value);
     return Number.isFinite(n) ? n : 0;
   };
+
+  // U-38's leak needle, at the IIFE's top level because BOTH sweeps read it
+  // (the node loop's escapeInText and the table cells'). The 200-character
+  // slices in the record cannot see an escape deeper in a long paragraph
+  // (review round 1, nit). Built from a char code because this source is
+  // embedded in a TS template where a literal backslash would be re-escaped.
+  const escapeNeedle = String.fromCharCode(92) + '|';
   const isVisible = (el, style, rect) => {
     if (!style) return false;
     if (style.display === 'none' || style.visibility === 'hidden') return false;
@@ -274,6 +281,7 @@ export const EXTRACT_PROBE = `
       visibleLabel: ownText,
       text: (el.textContent || '').trim().slice(0, 200),
       ownText: ownText.slice(0, 200),
+      escapeInText: ownText.includes(escapeNeedle),
       rect: {
         x: Math.round(rect.x), y: Math.round(rect.y), w: Math.round(rect.width), h: Math.round(rect.height),
         right: Math.round(rect.right), bottom: Math.round(rect.bottom),
@@ -302,6 +310,24 @@ export const EXTRACT_PROBE = `
       // writes gap as both row-gap and column-gap, and a flex container with no
       // gap computes "normal", which the px() helper folds to 0.
       margin: { top: px(style.marginTop), bottom: px(style.marginBottom), left: px(style.marginLeft), right: px(style.marginRight) },
+      // WHICH MARGINS ARE AUTO, read through Typed OM because the string form
+      // cannot say: Chrome's getComputedStyle resolves margin-left: auto to its
+      // USED pixels (measured: 192px on a 200px flex row, exactly like a plain
+      // margin), while computedStyleMap().get('margin-left') keeps the keyword.
+      // U-42 skips these sides: an auto margin is layout — where the content
+      // happened to land — not a spacing decision a scale can hold.
+      marginAuto: (() => {
+        const map = el.computedStyleMap ? el.computedStyleMap() : null;
+        const side = (name) => {
+          try {
+            const value = map ? map.get(name) : null;
+            return value ? value.toString() === 'auto' : false;
+          } catch {
+            return false;
+          }
+        };
+        return { top: side('margin-top'), right: side('margin-right'), bottom: side('margin-bottom'), left: side('margin-left') };
+      })(),
       rowGap: px(style.rowGap),
       columnGap: px(style.columnGap),
       scrollLeft: el.scrollLeft || 0,
@@ -423,6 +449,7 @@ export const EXTRACT_PROBE = `
       cells.push({
         index: cellIndex === undefined ? -1 : cellIndex,
         text: (cell.textContent || '').trim().slice(0, 200),
+        escapeInText: (cell.textContent || '').includes(escapeNeedle),
         broken: measureBrokenRuns(cell),
       });
     }

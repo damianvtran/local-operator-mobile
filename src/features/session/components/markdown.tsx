@@ -194,6 +194,8 @@ const Table = ({ header, rows }: { header: string[]; rows: string[][] }) => {
 	const scrollRef = useRef<ScrollView>(null);
 	/** The `lo-md-scroll=end` viewer has run for this table (it runs once). */
 	const scrolledToEnd = useRef(false);
+	/** The `lo-md-scroll=bring` viewer has run for this table (it runs once). */
+	const broughtIntoView = useRef(false);
 
 	/* The two booleans §1.6 names. `bleeds`: the priced row is wider than the
 	 * column, so the viewport runs to the screen's right edge (the cut edge).
@@ -247,6 +249,65 @@ const Table = ({ header, rows }: { header: string[]; rows: string[][] }) => {
 		scrollRef.current?.scrollToEnd({ animated: false });
 	}, [forced, scrolls]);
 
+	/* The `bring` half of the viewer: the transcript list's own scroll target is
+	 * not reachable from this component, so the frame asks the browser directly
+	 * (`scrollIntoView` walks every scrollable ancestor). It RE-ASSERTS on an
+	 * interval rather than firing once, and the first capture is what proved the
+	 * need: the transcript list runs its own initial scroll-to-end when its
+	 * content lays out, which lands AFTER a single early call and puts the frame
+	 * back at the bottom (measured — the one-shot version's 200 % frames were
+	 * byte-identical to the un-hooked cell's). The interval runs for six seconds
+	 * and the last assertion before the capture's settle wins.
+	 * `inline: "nearest"` leaves the horizontal offset alone, so the state the
+	 * frame lands in is the same cut-edge state the un-hooked cell renders.
+	 * Each table in a message asks; the last assertion comes from the last table
+	 * (the wide one with the cue), so that is what a `bring` frame shows. */
+	useEffect(() => {
+		if (forced !== "bring" || broughtIntoView.current) return;
+		broughtIntoView.current = true;
+		if (typeof document === "undefined") return;
+		/* The HOST NODE, read from the DOM rather than through a React ref: a
+		 * `View` ref in this tree is not the host element (measured — the scroll
+		 * never happened and the frame stayed on the chrome). Every table's
+		 * effect targets the LAST table, so the assertion is idempotent and the
+		 * wide one (the one with the cue) is what a `bring` frame shows. */
+		const assert = () => {
+			const nodes = document.querySelectorAll('[data-testid="md-table"]');
+			const target = nodes[nodes.length - 1];
+			if (!target) return;
+			/* Scroll the TRANSCRIPT to its own bottom rather than scrolling this
+			 * table into view: the transcript ENDS with the tables, so the bottom
+			 * is the same target the list's own scroll-to-end wants — the two
+			 * cannot fight — and the last band of the viewport is the tail of the
+			 * last table. Measured in the capture's cold-profile context, where
+			 * `scrollIntoView` lost the race with the list and the settled frame
+			 * kept showing chrome. */
+			let node: HTMLElement | null = target.parentElement;
+			while (node) {
+				const style = getComputedStyle(node);
+				if (style.overflowY === "auto" || style.overflowY === "scroll") {
+					node.scrollTop = node.scrollHeight;
+					break;
+				}
+				node = node.parentElement;
+			}
+		};
+		/* 150 ms, and measured rather than guessed: the transcript list's own
+		 * initial scroll-to-end lands around boot, and a later assertion has to
+		 * outlast it — at 400 ms the capture's 3 s settle could photograph the
+		 * state before the first assertion that the list did not override. */
+		const timer = setInterval(assert, 150);
+		/* Twenty seconds, not six: the capture's cold profile boots the session
+		 * several seconds in, and at 6 s the interval could retire before the
+		 * list's last content update on a loaded machine. The assertion is
+		 * idempotent; an early fire is a no-op. */
+		const stop = setTimeout(() => clearInterval(timer), 20000);
+		return () => {
+			clearInterval(timer);
+			clearTimeout(stop);
+		};
+	}, [forced]);
+
 	const showRight = scrolls && !atEnd;
 	const showLeft = scrolls && scrollX > 0.5;
 
@@ -290,10 +351,10 @@ const Table = ({ header, rows }: { header: string[]; rows: string[][] }) => {
 				testID={SURFACE.mdTable}
 				style={bleeds ? { marginRight: -TABLE_RAIL_PT } : undefined}
 			>
-				{/* The frame: 1pt `border-control`, because on a phone the grid is what
+				{/* The frame: 1pt `border-border-control` (the `control` colour role's utility), because on a phone the grid is what
 			    makes a row-and-column read as rows and columns, and a hairline is
 			    measured as a wash (1.25:1), not an edge. */}
-				<View className="overflow-hidden rounded-sm border border-control">
+				<View className="overflow-hidden rounded-sm border border-border-control">
 					<ScrollView
 						ref={scrollRef}
 						testID={SURFACE.mdTableScroll}
@@ -324,7 +385,7 @@ const Table = ({ header, rows }: { header: string[]; rows: string[][] }) => {
 						<View style={{ minWidth: pricing.naturalWidth, flexGrow: 1 }}>
 							<View
 								testID={SURFACE.mdTableHead}
-								className="flex-row border-b border-control bg-sunken"
+								className="flex-row border-b border-border-control bg-sunken"
 							>
 								{header.map((cell, column) => renderCell(cell, column, true))}
 							</View>

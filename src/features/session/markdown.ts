@@ -397,7 +397,7 @@ export const TABLE_TOKEN_FLOOR = 4;
 export const TABLE_CELL_PADDING_X_PT = 12;
 export const TABLE_CELL_PADDING_Y_PT = 8;
 
-/** The frame's border width in pt (`border-control`, 1pt). */
+/** The frame's border width in pt (`border-border-control`, 1pt). */
 export const TABLE_BORDER_PT = 1;
 
 const clampToken = (value: number): number =>

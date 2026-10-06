@@ -32,6 +32,7 @@ import {
 	U03_SUPPRESSION,
 	U08_SUPPRESSION,
 	U10_DECLARATION,
+	U38_DECLARATION,
 	U40_DEFERRAL,
 } from "../tools/audit/checks.ts";
 
@@ -169,9 +170,11 @@ const KNOWN_BLINDS = new Set([
 	"U-08:escape-absolute",
 	"U-08:escape-fixed",
 	// The S5 redesign's rules (U-38…U-42). Each is blindable so the mutation
-	// self-test proves it is the rule that fires: U-38 has two (the leak scan and
-	// the table structure), U-40's two directions are separately load-bearing
-	// (a missing cue and a false one), and U-41's rail and caret are independent.
+	// self-test proves it is the rule that fires: U-38 has two (the leak scan
+	// and the table structure — the marker↔render cross-check's shape needs a
+	// zero-table frame the shared page cannot stage, and is pinned by unit
+	// tests instead), U-40's two directions are separately load-bearing (a
+	// missing cue and a false one), and U-41's rail and caret are independent.
 	"U-38:leak",
 	"U-38:rows",
 	"U-39",
@@ -411,7 +414,7 @@ const declaredDefects = (): Defect[] => {
 	)) {
 		const marker = tag[1] ?? "";
 		if (marker === "" || marker.endsWith("-exception")) continue;
-		const element = /\bid="([^"]+)"/.exec(tag[0])?.[1];
+		const element = DECLARATION_ID_RE.exec(tag[0])?.[1];
 		if (element === undefined) {
 			console.error(
 				`canary: the defect '${marker}' is declared on an element with no id, so nothing ` +
@@ -546,6 +549,12 @@ const NOT_DEFECT_REASON_NAMES: Record<string, Record<string, string>> = {
 	"U-40": {
 		"code-block-deferral": U40_DEFERRAL.SCOPE,
 	},
+	// §1.7 makes a header-only table LEGAL, so the clean page declares one and
+	// U-38:rows must accept it. The entry is what stops the acceptance from
+	// being rewritten as "requires a body row" without the canary noticing.
+	"U-38": {
+		"header-only-table": U38_DECLARATION.HEADER_ONLY,
+	},
 };
 
 /**
@@ -556,13 +565,19 @@ const NOT_DEFECT_REASON_NAMES: Record<string, Record<string, string>> = {
  */
 const NOT_DEFECT_SILENT = /\bdata-not-defect-silent\b/;
 
+/** The two attributes a declaration tag carries, hoisted to the top level per
+ *  biome's `useTopLevelRegex`: they run once per tag, and the rule wants them
+ *  out of the loop bodies. */
+const DECLARATION_ID_RE = /\bid="([^"]+)"/;
+const DECLARATION_REASON_RE = /\bdata-not-defect-reason="([^"]+)"/;
+
 const declaredNotDefects = (): NotDefect[] => {
 	const out: NotDefect[] = [];
 	for (const tag of html.matchAll(
 		/<[a-z0-9]+\b[^>]*data-not-defect="([^"]+)"[^>]*>/gi,
 	)) {
 		const check = tag[1] ?? "";
-		const element = /\bid="([^"]+)"/.exec(tag[0])?.[1];
+		const element = DECLARATION_ID_RE.exec(tag[0])?.[1];
 		if (check === "" || element === undefined) {
 			console.error(
 				"canary: a data-not-defect declaration needs a check id and an element id; " +
@@ -570,7 +585,7 @@ const declaredNotDefects = (): NotDefect[] => {
 			);
 			process.exit(2);
 		}
-		const name = /\bdata-not-defect-reason="([^"]+)"/.exec(tag[0])?.[1];
+		const name = DECLARATION_REASON_RE.exec(tag[0])?.[1];
 		const silent = NOT_DEFECT_SILENT.test(tag[0]);
 		if (name !== undefined && silent) {
 			console.error(
