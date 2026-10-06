@@ -40,8 +40,10 @@ import { join, resolve } from "node:path";
 import { cellUrl } from "../audit/audit.ts";
 import {
 	type Affordance,
+	type AffordanceOutcome,
 	describeAffordances,
 	runAffordances,
+	waitForTestID,
 } from "../lib/affordance.ts";
 import { bool, csv, num, parseArgs, str } from "../lib/args.ts";
 import type { CdpPage } from "../lib/cdp.ts";
@@ -576,10 +578,27 @@ async function captureCell(
 	 * shipping another" the marker rule exists to prevent — and it is reported as an
 	 * issue, by name, with the control that was missing.
 	 */
-	const openerOutcomes =
-		(cell.openers ?? []).length > 0
-			? await runAffordances(page, cell.openers ?? [])
-			: [];
+	const openers = cell.openers ?? [];
+	const openerOutcomes: AffordanceOutcome[] = [];
+	if (openers.length > 0) {
+		/* WAIT FOR THE SCREEN FIRST. The control an opener presses lives inside the
+		 *  screen, and the screen root is the app's own declaration that it is up —
+		 *  where an action's own wait is a guess about which of the two is late.
+		 *  MEASURED on the ci-tier run that added these cells (this host at load 45,
+		 *  ~25 sessions live): thirteen create-family cells took longer than the
+		 *  action's own 8 s to render their header, so their opener reported a
+		 *  missing control and the capture stamped the state the cell does not name.
+		 *  The root is a longer, cheaper wait, and it fails loudly all the same. */
+		const ready = await waitForTestID(page, SCREEN_ROOTS[cell.screen] ?? "");
+		if (ready) {
+			openerOutcomes.push(...(await runAffordances(page, openers)));
+		} else {
+			/* The screen never came up: none of the actions was reached, and the
+			 *  FIRST one names the failure — the verdict is about the cell's state,
+			 *  not about a sequence of presses. */
+			openerOutcomes.push({ action: openers[0] as Affordance, result: "missing" });
+		}
+	}
 	if (cell.consecutive) {
 		// Consecutive frames: a first frame that differs from the settled frame is
 		// motion the user sees, whether or not it was intended, and a frame whose

@@ -113,6 +113,44 @@ export interface AffordanceOutcome {
 	result: string;
 }
 
+/**
+ * Whether an element with this `data-testid` is in the DOM.
+ *
+ * A presence probe, deliberately SEPARATE from `affordanceScript`: the caller that
+ * waits for a screen to come up must not press anything on the way.
+ */
+export function probeScript(testID: string): string {
+	return `(() => (document.querySelector(${selector(testID)}) ? "present" : "missing"))()`;
+}
+
+/**
+ * Wait for an element to appear, and say whether it did.
+ *
+ * WHY THE CALLER WAITS FOR A SCREEN ROOT FIRST, RATHER THAN ONLY FOR ITS OWN
+ * CONTROL. Every wait in this file is a wait on the EVENT, never on the clock —
+ * and under fleet load the event can be a long time coming: MEASURED on the
+ * `ci`-tier capture that added the lifecycle cells (2026-10-06, this host at load
+ * 45 with ~25 sessions live), the app's first render took past eight seconds on
+ * thirteen create-family cells, so an opener that waited only for ITS control
+ * reported `missing` and the cell was stamped as the state it does not name. The
+ * screen root is the app's own declaration that the screen is up; the control
+ * lives inside it, so waiting for the root first is both cheaper and honest.
+ */
+export async function waitForTestID(
+	page: CdpPage,
+	testID: string,
+	{ waitMs = 20_000, pollMs = 150 }: { waitMs?: number; pollMs?: number } = {},
+): Promise<boolean> {
+	if (testID === "") return true;
+	const deadline = Date.now() + waitMs;
+	for (;;) {
+		const reading: unknown = await page.evaluate(probeScript(testID));
+		if (reading === "present") return true;
+		if (Date.now() >= deadline) return false;
+		await sleep(pollMs);
+	}
+}
+
 const sleep = (ms: number): Promise<void> =>
 	new Promise((resolve) => setTimeout(resolve, ms));
 
