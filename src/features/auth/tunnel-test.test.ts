@@ -189,7 +189,9 @@ describe("a private address reads its failures through the permission question",
 		expect(result.verdict.kind).toBe("local-network");
 		const sentence = verdictSentence(result.verdict, "ios");
 		expect(sentence).toContain("Settings → Privacy & Security → Local Network");
-		expect(sentence).toContain("test again");
+		// The retry is named for the control the reader sees ("Test the connection"),
+		// not for an action that has no matching label on screen.
+		expect(sentence).toContain("Test the connection");
 	});
 
 	it("leaves a public address's identical failure on the generic sentence", async () => {

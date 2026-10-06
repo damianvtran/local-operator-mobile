@@ -595,7 +595,8 @@ accesses don't prompt"), a **direct outbound TCP connect is a trigger** ("Making
 outgoing TCP connection — yes"), and the first attempt **may be refused while the
 alert is still on screen** ("it may deny the operation immediately, before the user
 has responded to the alert … add appropriate retry logic") — which is why the
-connection copy ends "then test again", and why a denial that renders as an ordinary
+connection copy asks for the retry ("then tap Test the connection" — the control's
+own label), and why a denial that renders as an ordinary
 network failure is the defect the in-app copy exists to prevent. `NSBonjourServices`
 is **deliberately deferred, with its reason**: it attaches to Bonjour browsing or
 advertising, the app has no discovery, and declaring service types now would claim a

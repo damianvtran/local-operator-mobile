@@ -47,10 +47,11 @@ export type TunnelTestVerdict =
 	 *  two causes are indistinguishable from the failure itself: neither platform
 	 *  reports its gate's state to the app, and neither denial carries a documented
 	 *  signature (TN3179 only describes the Network framework's `localNetworkDenied`
-	 *  state, which a `fetch` does not surface). So the sentence names BOTH causes
-	 *  and the Settings path for the second — a denial that renders as a generic
-	 *  "couldn't connect" is the defect this kind exists to prevent, and a
-	 *  confident misdiagnosis would be the defect it must not introduce. Produced
+	 *  state, which a `fetch` does not surface). So the sentence names the
+	 *  machine-side checks first and the permission as a POSSIBILITY after them,
+	 *  never as the diagnosed cause — a denial that renders as a generic "couldn't
+	 *  connect" is the defect this kind exists to prevent, and a confident
+	 *  misdiagnosis would be the defect it must not introduce. Produced
 	 *  only when the caller says the tested address is a private host (see
 	 *  `classify`); the device procedure in ADR 0002 §7 S10 measures what a real
 	 *  denial looks like, so a future revision can match a signature if one exists. */
@@ -132,19 +133,28 @@ export function verdictSentence(
 		case "timeout":
 			return `That address did not answer within ${Math.round(TUNNEL_TEST_TIMEOUT_MS / 1000)} seconds. Check the tunnel is running and the computer is awake.`;
 		case "local-network":
-			/* Both phone sentences carry the same two halves: the machine-side check,
-			 *  then the OS gate with its exact Settings path and the retry. The retry is
+			/* The machine-side check leads; the OS gate follows as a possibility,
+			 *  never as the diagnosed cause (see the kind's comment above). The retry is
 			 *  load-bearing, not politeness: the first connect can be refused while
 			 *  the iOS alert is still on screen (TN3179: the system "may deny the
 			 *  operation immediately, before the user has responded to the alert"),
-			 *  so granting the prompt changes nothing until the test runs again. The
-			 *  Settings paths are the ones Apple and Google document; device QA
-			 *  confirms the labels on shipping OS versions (ADR 0002 §7 device plan). */
-			return platform === "ios"
-				? "Nothing answered at that address on this network. Check the computer is awake and running the relay. If both are true, the local-network permission is the remaining gate: iOS asks once before an app may reach devices on your network, and a declined app fails this way. Allow Local Operator under Settings → Privacy & Security → Local Network, then test again."
-				: platform === "android"
-					? "Nothing answered at that address on this network. Check the computer is awake and running the relay. If both are true, the local-network permission is the remaining gate: Android blocks an app from reaching devices on your network until it is allowed. Allow Local Operator under Settings → Apps → Local Operator → Permissions, then test again."
-					: "Nothing answered at that address on this network. Check the computer is awake and running the relay, then test again.";
+			 *  so granting changes nothing until the test runs again — and the sentence
+			 *  names that control by its real label, "Test the connection", because
+			 *  "test again" pointed at a button labelled otherwise. */
+			if (platform === "ios") {
+				/* Apple's own path, from TN3179 ("Settings > Privacy & Security >
+				 *  Local Network"); the OS adds the app to that list after an
+				 *  attempt. The permission stays a POSSIBILITY: whether a denial is
+				 *  even distinguishable from an unreachable computer is what S10
+				 *  measures, so the copy must not assert it (see the kind above). */
+				return "Nothing answered at that address on this network. Check the computer is awake and running the relay. If both are true, it may be the local-network permission: allow Local Operator under Settings → Privacy & Security → Local Network, then tap Test the connection.";
+			}
+			if (platform === "android") {
+				return "Nothing answered at that address on this network. Check the computer is awake and running the relay. If both are true, the local-network permission is the remaining gate: Android blocks an app from reaching devices on your network until it is allowed. Allow Local Operator under Settings → Apps → Local Operator → Permissions, then test again.";
+			}
+			/* Web keeps the machine-side sentence: a browser has no such permission to
+			 *  grant. */
+			return "Nothing answered at that address on this network. Check the computer is awake and running the relay, then tap Test the connection.";
 		case "refused":
 			return (
 				verdict.detail ??
