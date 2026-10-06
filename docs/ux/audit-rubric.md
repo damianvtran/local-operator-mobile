@@ -114,7 +114,7 @@ text is frozen. The measurement, its manifest fields and its controls are in
 | S13 | Connection loss, re-auth, relay refusal | F-9 |
 | S14 | Demo mode | F-10 |
 | S15 | Sessions (the conversations panel: live / degraded / ended, pinned, sections, search, past, computers; docked pane on a tablet) | F-5, F-8 |
-| S16 | Projects (the read path: the listing and its pushed detail) | F-10 |
+| S16 | Projects (the listing, its pushed detail, and the lifecycle writes: create, delete, milestones) | F-10 |
 
 ## 2. States to capture for every screen
 
@@ -199,13 +199,22 @@ a reason**, never skipped silently.
   visually distinct from an ended session's; loading and empty must be
   distinguishable to the eye (their markers are `sidebar/loading` and the
   sessions empty state).
-- **S16 Projects (the read path):** the listing's sections are the relay's own
-  board order and an unrecognised status takes its own trailing section rather
-  than vanishing; a milestone's chip is the status the RELAY derived (never one
-  the client recomputed from the dates); the stale badge is the relay's verdict
-  and clears with it; and a refusal shows the daemon's own sentence — including
-  the near-miss name a `404 project_not_found` carries — never a bare status.
-  The surface carries no mutation control at all.
+- **S16 Projects:** the listing's sections are the relay's own board order and an
+  unrecognised status takes its own trailing section rather than vanishing; a
+  milestone's chip is the status the RELAY derived (never one the client
+  recomputed from the dates); the stale badge is the relay's verdict and clears
+  with it; and a refusal shows the daemon's own sentence — including the
+  near-miss name a `404 project_not_found` carries — never a bare status.
+  **The writes are the surface now, and their rules are:** a create form offers
+  the status and the tags the relay accepts (not a read-path subset), and a taken
+  name or an invalid value comes back as the STORE's own sentence; the delete and
+  the milestone removal each sit behind a confirm whose FIRST press sends nothing
+  (neither is undoable); a milestone name carrying a slash is refused WHILE IT IS
+  TYPED, with the reason, rather than offered a control that cannot work; a write
+  in flight shows on the control that is waiting, and an unanswered one says the
+  outcome is unknown rather than that nothing happened; and a milestone whose
+  project vanished under the write returns to the listing with the relay's own
+  sentence rather than standing a refusal under a row that is gone.
 - **S5 Session / S8 Pending card:** the decision controls must be reachable with
   the keyboard open on the smallest supported device, and with a paragraph-length
   question. This is the highest-value screen in the app and the one with the

@@ -156,7 +156,7 @@ in `verify`'s readiness guard.
 # docs:needs mock-relay web-build
 #
 # The sample is EXPLICIT and small, for §2's reason: the default (`core`) tier plans
-# 1584 cells, one frame each, which is ~59 minutes at the measured 2.24 s/cell and is
+# 1836 cells, one frame each, which is ~69 minutes at the measured 2.24 s/cell and is
 # above the harness's own 120-frame confirmation threshold — so an un-narrowed run is
 # REFUSED without `--yes`, and even with it no documentation gate may spend 59 minutes
 # on one command. One phone, one theme, one scale is 44 frames, and it still proves what
@@ -370,12 +370,13 @@ second hand-maintained list.
 | `past-populated` | S10/populated | Past conversations to resume, including a fork wearing its parent's title. |
 | `projects-empty` | S16/empty | The listing answers an empty array, so the screen must show its own empty state rather than nothing. |
 | `projects-loading` | S16/loading, S16-detail/loading | No project read has been answered yet: every API route holds its response open. |
-| `projects-populated` | S16/populated, S16-detail/populated | The six-project seeded store, and one project's composed detail with a live and a stopped link. |
+| `projects-populated` | S16/populated, S16-detail/populated, **S16/create, S16/create-filled, S16/create-refused, S16-detail/milestone-editor, S16-detail/milestone-remove, S16-detail/slash, S16-detail/delete-confirm** | The six-project seeded store, and one project's composed detail with a live and a stopped link. The seven extra cells are the same world with a CONTROL PRESSED (`CELL_OPENERS`): the create sheet, the same sheet with a reader's values in it, the store's `409` for a name it already holds, the milestone editor, its remove confirm, the slash refusal while it is typed, and the project delete's first press — which sends nothing. |
+| `projects-write-busy` | S16/create-busy, S16-detail/busy | `hold: { mutations: "forever" }`: every write is read and never answered, so the two in-flight states are the app genuinely mid-write rather than asked to pretend. A READ hold would have rendered the loading skeleton instead of the surface under test, which is why the hold is per-verb. |
 | `projects-unknown-status` | S16/unknown-status | The captured listing with one row's status replaced by a word none of the relay's seven is: it must take its own trailing section rather than vanish. |
 | `projects-refused` | S16-detail/refused | The key-scoped read re-sent with the corpus's recorded 404, so the sentence the screen renders is one the relay actually wrote (including the prefix-matched near-miss name). |
 | `search-empty` | S15/populated | A search query with no results; a capture types no query, so the cell it fills is the world's one live row. |
 | `search-hit` | S15/populated | A search with body-only matches, which must be marked as such. |
-| `models-ranked` | — (no cell) | The full ranked model catalogue — order is the ranking, never re-sorted. It declared `S9/populated`, and that cell was removed: the sheets are modals the app opens from the composer, no wire action opens one, and the cell therefore rendered `S5/populated` byte-for-byte (see the capture section). |
+| `models-ranked` | — (no cell) | The full ranked model catalogue — order is the ranking, never re-sorted. It declared `S9/populated`, and that cell was removed: the sheets are modals the app opens from the composer, no wire action opens one, and the cell therefore rendered `S5/populated` byte-for-byte (see the capture section). `CELL_OPENERS` now gives the harness a way to press such a control, so a later slice can re-declare the cell; nothing in this one does. |
 | `multi-computer` | S3/populated | Three computers: active, suspended and a second active one. |
 | `no-computers` | S3/empty, S2/empty | No computer is registered yet: the set-up path. |
 | `billing-inactive` | S13/error | The tunnel's billing is past due: the gateway refuses with `authorization_refused`. It used to declare `S2/error` as well, which was a second name for this same state (see the capture section). |
@@ -602,12 +603,12 @@ node tools/visual/capture.ts --dir e2e/fixtures/audit-canary \
 # A real run against a real build. Build first — `pnpm export:web`, which writes `dist/`.
 #
 # The device/theme/scale set is EXPLICIT and small on purpose: the full `core` tier is
-# 1584 cells, which is ~59 minutes at the measured 2.24 s/cell (403 cells in 903 s on the
+# 1836 cells, which is ~69 minutes at the measured 2.24 s/cell (403 cells in 903 s on the
 # CI runner, a plan of 403 cells then), and no documentation gate may spend that on one
 # command. So this example is the bounded sample; `--plan` above prints the full count,
 # and dropping these three flags captures the whole `core` tier. `--tier ci` is the sample
 # the per-push CI job takes — every declared cell at two device profiles, both themes and
-# three scales, 528 cells — and `--full` is all 19 profiles at 5808 cells.
+# three scales, 612 cells — and `--full` is all 19 profiles at 6732 cells.
 #
 # The bound is DERIVED FROM THE PLAN unless you name one: `--deadline` defaults to
 # 3000 ms/cell with a 900 s floor, so a bound always holds the plan it was computed for,
@@ -707,6 +708,55 @@ one whose 100 % and 200 % role histograms match exactly. An inert dimension is n
 failed run — it is a run that cannot answer any large-text question, and the manifest
 says so instead of producing identical frames labelled as different scales.
 
+### How a cell reaches a state behind a control
+
+A cell is a state, and the harness reached one by URL alone — so a state behind a
+control had no cell at all. That is not a small gap: it is every sheet, every
+confirm and every refusal a form can produce, which is a whole class of surface a
+design or QA round is asked to sign off with no frame behind it. (`S9/populated` —
+the composer's sheets — was withdrawn as a cell for exactly that reason; the row
+in the scenario table below still says so.)
+
+`CELL_OPENERS` (`tools/visual/matrix.ts`) declares, PER CELL, the actions a
+capture takes before it settles. There are two, and both are things a READER
+does:
+
+| action | what it does |
+|---|---|
+| `{ click: "<test-id>" }` | presses the control carrying that id — a full pointer+mouse+click sequence, because React Native Web's `Pressable` resolves a press through the responder system and a bare `element.click()` leaves it unpressed (measured) |
+| `{ type: { testID, text } }` | puts text into the field carrying that id, through the native value setter plus one `input` event — the shape React's own value tracker does not de-duplicate, and one that needs no focus and no keyboard emulation |
+
+The ids come from the app's own contract (`src/ui/a11y.ts`), imported rather than
+copied, so a cell presses the name the app declares. Each action WAITS for its
+element (8 s, polled) rather than assuming the boot has finished; an element that
+never appears, or one that is disabled, is a **reported issue** on that cell —
+never a quiet skip — because the frame about to be stamped would be of the state
+BEFORE the one the cell declares.
+
+**Why a press, and not a hook.** The app carries judged `lo-*` hooks for states
+the real machine cannot produce on the web target (the dictation family). A hook
+is the wrong tool here in both directions: it puts harness-only state into the
+screens under review, and it cannot produce the two states that matter most — a
+relay REFUSAL and a write IN FLIGHT. A create refused by a taken name is refused
+because the app really asked and the store really answered `409`; the in-flight
+call is in flight because the relay really has not answered (`hold.mutations`,
+below). A forced snapshot of a 409 would be the harness writing the sentence it
+exists to check.
+
+**Recorded, not re-derived.** The capture writes the actions it applied into the
+manifest (`openers`) and the audit's re-drive REPLAYS them from that record — the
+rule `meta.seed` already follows, so a re-drive cannot measure whatever the table
+says today in place of what the frame was taken of. The plan prints them too
+(`--plan` shows `← click …  → type …` beside the frame name), so the actions are
+reviewable before the run costs twenty minutes.
+
+**What the harness does NOT do:** it does not scroll. A press that focuses a
+control below the fold makes the browser scroll it into view — visible in the
+`S16/create-refused` frames, where the sheet is shown scrolled past its name field
+— and there is no equivalent of that on a phone. The state markers are unaffected
+(the marker is in the DOM either way), but a reviewer reading that frame should
+know the scroll is the harness's, not the app's.
+
 ### Devices, themes and scales
 
 | Device | Viewport | DPR | Insets (top / bottom / left / right) | Tier |
@@ -737,7 +787,7 @@ All 19 profiles above are what the harness *can* plan, and they come from
 generated from it rather than maintained beside it. A default run captures the
 `core` tier only (5 profiles: the 320 pt floor, one typical phone,
 the landscape case whose side insets the notch rules need, and a tablet in each
-orientation) — 1584 cells, one frame each unless `--consecutive` asks for the +250 ms
+orientation) — 1836 cells, one frame each unless `--consecutive` asks for the +250 ms
 and settled frames too. A run states which tier it took,
 and a cell that was not captured is reported as having no frame rather than passed.
 
@@ -745,9 +795,9 @@ Three tiers are declared in `matrix.ts`, and each says what it is:
 
 | tier | sample | cells | why |
 |---|---|---|---|
-| `ci` | every declared cell × `iphone-se`, `tablet-landscape` × both themes × scales 100, 135 and 200 | 528 | the per-push CI job's sample. The step is bound at 30 minutes and the measured rate is 2.24 s/cell, so a 1584-cell `core` run cannot fit; this one lands ~20 minutes. It keeps the CELL axis whole — a state that is not captured is a state no review round can report on — and shrinks only the device, theme and scale axes, each to what its check needs: the narrowest and widest viewports (the two sides of the 768 breakpoint), because the theme check compares a cell's dark and light frames, and the 100 %/135 %/200 % set — the pair the text-scale guard measures plus the BOUNDARY step the footer's layout breaks at, because an axis that brackets that band cannot see a defect inside it. |
-| `core` | the 5 `core` profiles, both themes, every scale | 1584 | the default, and the local sample the operator's rule asks for. |
-| `full` | all 19 profiles | 5808 | the dispatched/nightly sample. |
+| `ci` | every declared cell × `iphone-se`, `tablet-landscape` × both themes × scales 100, 135 and 200 | 612 | the per-push CI job's sample. The step is bound at 40 minutes — above the plan's own derived deadline (612 × 3 s = 30.6 min) — and the measured rate is 2.24 s/cell, so a 1836-cell `core` run cannot fit; this one lands ~23 minutes. It keeps the CELL axis whole — a state that is not captured is a state no review round can report on — and shrinks only the device, theme and scale axes, each to what its check needs: the narrowest and widest viewports (the two sides of the 768 breakpoint), because the theme check compares a cell's dark and light frames, and the 100 %/135 %/200 % set — the pair the text-scale guard measures plus the BOUNDARY step the footer's layout breaks at, because an axis that brackets that band cannot see a defect inside it. |
+| `core` | the 5 `core` profiles, both themes, every scale | 1836 | the default, and the local sample the operator's rule asks for. |
+| `full` | all 19 profiles | 6732 | the dispatched/nightly sample. |
 
 `--tier <ci|core|full>` or `--full` selects one; `--devices`, `--themes` and
 `--scales` override any of them. The whole-run `--deadline` is derived from the
@@ -767,9 +817,9 @@ from `ALL_DEVICES`, so it cannot drift from this table.
 
 **The device variety that is not on the per-push path has its own nightly job.**
 `.github/workflows/e2e.yml` `web-audit-core` captures and audits the `core` tier — 5 of
-the 19 profiles, 1584 cells / 4,752 frames and ~59 minutes at the measured 2.24 s/cell —
+the 19 profiles, 1836 cells / 5,508 frames and ~69 minutes at the measured 2.24 s/cell —
 on the schedule and on demand only. The `ci` sample stays the per-push one and keeps its
-own 30-minute capture bound; neither job is stretched to cover the other's tier.
+own 40-minute capture bound; neither job is stretched to cover the other's tier.
 
 ### Two cells that render byte-identically
 
