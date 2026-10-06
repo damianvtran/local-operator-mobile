@@ -191,6 +191,19 @@ describe("checkAndroidManifest", () => {
 		]);
 	});
 
+	it("does not let the platform-gated <uses-permission-sdk-23 …> satisfy the check", () => {
+		// The tag-name boundary: a word boundary also matches before the hyphen, so
+		// a fixture whose ONLY local-network element is the sdk-23 form used to
+		// exit 0 while the release manifest carried no plain declaration at all.
+		const manifest = validManifest().replace(
+			'  <uses-permission android:name="android.permission.ACCESS_LOCAL_NETWORK"/>',
+			'  <uses-permission-sdk-23 android:name="android.permission.ACCESS_LOCAL_NETWORK"/>',
+		);
+		expect(fields(checkAndroidManifest(manifest))).toEqual([
+			`uses-permission[${ANDROID_LOCAL_NETWORK_PERMISSION}]`,
+		]);
+	});
+
 	it("reports a manifest that is not the shape expected", () => {
 		expect(fields(checkAndroidManifest("<manifest/>"))).toEqual([
 			"AndroidManifest.xml",

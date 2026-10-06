@@ -172,8 +172,13 @@ export function checkAndroidManifest(xml: string): Finding[] {
 		});
 	}
 
+	/* `<uses-permission(?![\w-])` and not `\b` after the tag name: a word
+	 *  boundary also matches before the hyphen in `<uses-permission-sdk-23 …>`,
+	 *  which is a different element (a platform-gated form), so `\b` let a
+	 *  fixture carrying only that element pass the check. The lookahead ends the
+	 *  tag name exactly where the element name ends. */
 	const permission = new RegExp(
-		`<uses-permission\\b[^>]*\\bandroid:name\\s*=\\s*"${ANDROID_LOCAL_NETWORK_PERMISSION.replace(/\./g, "\\.")}"`,
+		`<uses-permission(?![\\w-])[^>]*\\bandroid:name\\s*=\\s*"${ANDROID_LOCAL_NETWORK_PERMISSION.replace(/\./g, "\\.")}"`,
 		"i",
 	);
 	if (!permission.test(text)) {
