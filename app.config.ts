@@ -45,6 +45,16 @@ const color = (path: string, theme: "light" | "dark"): string => {
 // operation, and nothing in the app depends on the value.
 const BUNDLE_ID = "com.localoperator.mobile";
 
+/* The microphone usage string, named once because TWO consumers declare it: the
+ * `ios.infoPlist` block below, and the image-picker plugin's
+ * `microphonePermission` option. Passing the SAME sentence to both keeps the
+ * plugin a no-op for the microphone: its own default ("Allow $(PRODUCT_NAME) to
+ * access your microphone") would replace this sentence, and `false` — the way to
+ * keep the plugin from writing anything — would delete the key from the plist
+ * AND block `RECORD_AUDIO` on Android, which the STT feature needs. */
+const MICROPHONE_USAGE =
+	"Record a voice message and transcribe it on your own computer. The recording is sent for one transcription and not kept.";
+
 /* DERIVED, NOT REMEMBERED (ADR 0004, "Versioning").
  *
  * Every build path in `.github/workflows` runs `scripts/ci/version.ts --write`
@@ -124,8 +134,7 @@ const config: ExpoConfig = {
 		// unchanged. The string is the prompt iOS shows at the moment the reader
 		// presses the mic — never at first launch.
 		infoPlist: {
-			NSMicrophoneUsageDescription:
-				"Record a voice message and transcribe it on your own computer. The recording is sent for one transcription and not kept.",
+			NSMicrophoneUsageDescription: MICROPHONE_USAGE,
 			// The local-network ACCESS declaration (ADR 0002 §5). iOS shows this
 			// string in its one-time "allow this app on your network" alert, which
 			// appears the first time the app reaches a local address — for this app,
@@ -172,6 +181,23 @@ const config: ExpoConfig = {
 		// The value both stores compare for monotonicity. Omitted when there is no
 		// build number, for the same reason as `ios.buildNumber`.
 		...(buildNumber > 0 ? { versionCode: buildNumber } : {}),
+		// The permissions that may NEVER reach the manifest, whatever a dependency's
+		// library manifest declares. `expo-image-picker` ships CAMERA /
+		// READ_EXTERNAL_STORAGE / WRITE_EXTERNAL_STORAGE for camera-roll flows this
+		// app does not use (camera is denied through the plugin's own option), and
+		// the media-library pair is the Google Play-documented "approved core use
+		// case" permission this app deliberately does not need: attachments are
+		// picked through the system PHOTO pickers (iOS 14+ `PHPickerViewController`,
+		// Android 13+ Photo Picker), which grant per-item access without any
+		// library permission. Blocked here, asserted absent from the built release
+		// manifest by `scripts/ci/native-config.ts` — moving any of these back in is
+		// a deliberate change with a policy review, not a silent dependency bump.
+		blockedPermissions: [
+			"android.permission.READ_EXTERNAL_STORAGE",
+			"android.permission.WRITE_EXTERNAL_STORAGE",
+			"android.permission.READ_MEDIA_IMAGES",
+			"android.permission.READ_MEDIA_VIDEO",
+		],
 		// The Android half of the same declaration. Expo's plugin adds it from the
 		// recorder's own manifest anyway; declared here so the capability is visible in
 		// this file rather than implied by a dependency.
@@ -249,6 +275,26 @@ const config: ExpoConfig = {
 			},
 		],
 		"expo-image",
+		[
+			"expo-image-picker",
+			{
+				// CONFIGURED TO DECLARE NOTHING, and that is the point. The library
+				// picker is `PHPickerViewController` on iOS 14+ and the Android Photo
+				// Picker: both grant picker-only access without any photo-library
+				// permission, so `photosPermission: false` keeps
+				// `NSPhotoLibraryUsageDescription` OUT of the built plist (the plugin's
+				// default would add an "access your photos" string the app does not
+				// need) and the Android storage permissions are blocked in the
+				// `android.blockedPermissions` list above. The camera is not a feature
+				// of this app, so `cameraPermission: false` drops its plist string and
+				// blocks `android.permission.CAMERA`. `microphonePermission` receives
+				// the SAME sentence as `ios.infoPlist` — see `MICROPHONE_USAGE` for why
+				// neither the default nor `false` is acceptable there.
+				photosPermission: false,
+				cameraPermission: false,
+				microphonePermission: MICROPHONE_USAGE,
+			},
+		],
 		[
 			"expo-notifications",
 			{

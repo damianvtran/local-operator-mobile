@@ -78,6 +78,12 @@ export const COMPOSER_COPY = {
 	 *  into "nothing attached" tells the reader nothing happened when their image
 	 *  was lost. */
 	attachError: "Couldn’t attach that image. Try again.",
+	/** The paste affordance found no image to attach. Deliberately reports only the
+	 *  OUTCOME: `getImageAsync` answers `null` both for an empty clipboard and for
+	 *  an iOS 16+ paste denial, and the platform offers no way to tell them apart
+	 *  (`attach.ts`), so a sentence about the clipboard's CONTENTS would be false
+	 *  for the denial arm. */
+	pasteEmpty: "No image was pasted. Copy an image, then try again.",
 } as const;
 
 /* ------------------------------------------------------------------- the op */

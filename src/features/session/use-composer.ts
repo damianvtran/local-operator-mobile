@@ -1,7 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type { Capabilities, PromptImage, SlashCommand } from "@/contracts";
-import { pickImage } from "@/features/session/attach";
+import {
+	pasteImage,
+	pickImageFromFiles,
+	pickImageFromLibrary,
+	readWebImageFile,
+} from "@/features/session/attach";
+import type { AttachSource } from "@/features/session/attach-rule";
 import {
 	acknowledgedCurrentDraft,
 	ambiguousMessage,
@@ -68,9 +74,14 @@ export interface ComposerState {
 	addImage: (image: PromptImage) => void;
 	removeImage: (index: number) => void;
 	clearImages: () => void;
-	/** Opens the platform picker and adds the chosen image. A cancel adds nothing
-	 *  and says nothing; a failed read says so on the composer's error line. */
-	attach: () => void;
+	/** Opens the chosen attach source and adds the picked image. A cancel adds
+	 *  nothing and says nothing; a failed read says so on the composer's error
+	 *  line; a paste that found no image reports the outcome there too. */
+	attach: (source: AttachSource) => void;
+	/** A web paste event's image file, read and attached. The composer's listener
+	 *  hands the raw file here so the read and its failure copy live beside the
+	 *  pickers' own. */
+	pasteFile: (file: File) => void;
 	/** A picker is open or an image is being read. */
 	attaching: boolean;
 	/** The instruction retained under an unknown outcome, or `null`. */
@@ -519,12 +530,41 @@ export const useComposer = (input: {
 		[endpoints, sessionId],
 	);
 
-	const attach = useCallback(() => {
+	const attach = useCallback((source: AttachSource) => {
 		void (async () => {
 			setAttaching(true);
 			try {
-				const image = await pickImage();
-				if (image !== null) setImages((current) => [...current, image]);
+				const image =
+					source === "library"
+						? await pickImageFromLibrary()
+						: source === "paste"
+							? await pasteImage()
+							: await pickImageFromFiles();
+				if (image !== null) {
+					setImages((current) => [...current, image]);
+				} else if (source === "paste") {
+					/* The one arm that is not a cancel: the reader pressed Paste and no
+					 *  image came back. Told, because a press with no outcome reads as a
+					 *  broken control — the same rule `attachError` follows. */
+					setError(COMPOSER_COPY.pasteEmpty);
+				}
+			} catch {
+				setError(COMPOSER_COPY.attachError);
+			} finally {
+				setAttaching(false);
+			}
+		})();
+	}, []);
+
+	/** The web paste EVENT's file. Same failure copy as the pickers, same strip
+	 *  as its destination: the event and the sheet's Paste row are two doors into
+	 *  one attachment path. */
+	const pasteFile = useCallback((file: File) => {
+		void (async () => {
+			setAttaching(true);
+			try {
+				const image = await readWebImageFile(file);
+				setImages((current) => [...current, image]);
 			} catch {
 				setError(COMPOSER_COPY.attachError);
 			} finally {
@@ -606,6 +646,7 @@ export const useComposer = (input: {
 			setImages((current) => current.filter((_, at) => at !== index)),
 		clearImages: () => setImages([]),
 		attach,
+		pasteFile,
 		attaching,
 		retained,
 		sending,

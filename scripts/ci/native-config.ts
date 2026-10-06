@@ -53,6 +53,37 @@ export const IOS_EXCEPTION_DOMAINS = [
 export const ANDROID_LOCAL_NETWORK_PERMISSION =
 	"android.permission.ACCESS_LOCAL_NETWORK";
 
+/**
+ * The plist keys that may NEVER appear in the built app, however a dependency's
+ * default configuration would like it: attachments are picked through the system
+ * photo pickers (iOS 14+ `PHPickerViewController`, Android Photo Picker), which
+ * grant per-item access WITHOUT a library permission — so a photo-library or
+ * camera usage string here is over-declaration, the exact failure checklist B10
+ * (and the app.config.ts plugin options that keep these out) exists to prevent.
+ * Asserted against the BUILT artefact because a plugin's changed defaults fail
+ * silently in the other direction — nothing prompts, nothing crashes, the app
+ * just declares more than it uses.
+ */
+export const IOS_FORBIDDEN_KEYS = [
+	"NSPhotoLibraryUsageDescription",
+	"NSCameraUsageDescription",
+] as const;
+
+/** The Android permissions that may NEVER appear in the release merged
+ *  manifest. `expo-image-picker`'s library manifest declares CAMERA and both
+ *  storage permissions for camera-roll flows this app does not use; the
+ *  media-library pair is the Google Play "approved core use case" permission
+ *  the picker-only design does not need (checklist B10). Blocked in
+ *  `app.config.ts` (`blockedPermissions` + the plugin's `cameraPermission:
+ *  false`); asserted absent here, where the merge result is what is read. */
+export const ANDROID_FORBIDDEN_PERMISSIONS = [
+	"android.permission.CAMERA",
+	"android.permission.READ_EXTERNAL_STORAGE",
+	"android.permission.WRITE_EXTERNAL_STORAGE",
+	"android.permission.READ_MEDIA_IMAGES",
+	"android.permission.READ_MEDIA_VIDEO",
+] as const;
+
 export interface Finding {
 	/** What was expected, named the way the config names it. */
 	field: string;
@@ -73,6 +104,20 @@ export function checkIosInfoPlist(plist: unknown): Finding[] {
 		return [
 			{ field: "Info.plist", problem: "the file is not a plist dictionary" },
 		];
+	}
+
+	/* The forbidden keys FIRST, before the early returns below: a plist can be
+	 * missing a required key AND carry an over-declaration, and the
+	 * over-declaration is the finding a review round turns on — it must never be
+	 * hidden by a check that happens to return earlier. */
+	for (const key of IOS_FORBIDDEN_KEYS) {
+		if (key in plist) {
+			findings.push({
+				field: key,
+				problem:
+					"present — attachments go through the system photo picker, which needs no permission, so this usage string is over-declaration (checklist B10)",
+			});
+		}
 	}
 
 	const description = plist.NSLocalNetworkUsageDescription;
@@ -146,6 +191,36 @@ const CLEARTEXT_TRUE = /\bandroid:usesCleartextTraffic\s*=\s*"true"/i;
 const stripComments = (xml: string): string => xml.replace(XML_COMMENT, "");
 
 /**
+ * Whether the manifest declares `name` on a `<uses-permission …>` element.
+ *
+ * `<uses-permission(?![\w-])` and not `\b` after the tag name: a word boundary
+ * also matches before the hyphen in `<uses-permission-sdk-23 …>`, which is a
+ * different element (a platform-gated form), so `\b` let a fixture carrying
+ * only that element pass the required check. The lookahead ends the tag name
+ * exactly where the element name ends.
+ *
+ * `sdkGated` widens the match to that prefixed form, which is what the
+ * FORBIDDEN direction wants: a platform-gated grant is still a grant on the
+ * platforms it names, and a dependency that spells CAMERA that way must not
+ * walk around an absence check. The required direction keeps the strict form —
+ * a gated declaration is not the unconditional one `app.config.ts` asks for,
+ * and a test asserts exactly that.
+ */
+const declaresPermission = (
+	text: string,
+	name: string,
+	{ sdkGated = false }: { sdkGated?: boolean } = {},
+): boolean => {
+	const tag = sdkGated
+		? "<uses-permission(?:-[a-z0-9-]+)?"
+		: "<uses-permission(?![\\w-])";
+	return new RegExp(
+		`${tag}[^>]*\\bandroid:name\\s*=\\s*"${name.replace(/\./g, "\\.")}"`,
+		"i",
+	).test(text);
+};
+
+/**
  * Check the text of a merged Android manifest (the release variant's). Returns
  * one finding per missing declaration; an empty array is a pass.
  *
@@ -172,20 +247,24 @@ export function checkAndroidManifest(xml: string): Finding[] {
 		});
 	}
 
-	/* `<uses-permission(?![\w-])` and not `\b` after the tag name: a word
-	 *  boundary also matches before the hyphen in `<uses-permission-sdk-23 …>`,
-	 *  which is a different element (a platform-gated form), so `\b` let a
-	 *  fixture carrying only that element pass the check. The lookahead ends the
-	 *  tag name exactly where the element name ends. */
-	const permission = new RegExp(
-		`<uses-permission(?![\\w-])[^>]*\\bandroid:name\\s*=\\s*"${ANDROID_LOCAL_NETWORK_PERMISSION.replace(/\./g, "\\.")}"`,
-		"i",
-	);
-	if (!permission.test(text)) {
+	/* The tag-boundary rule and the forbidden direction's widening of it are
+	 *  documented on `declaresPermission`; this call keeps the STRICT form. */
+	if (!declaresPermission(text, ANDROID_LOCAL_NETWORK_PERMISSION)) {
 		findings.push({
 			field: `uses-permission[${ANDROID_LOCAL_NETWORK_PERMISSION}]`,
 			problem: "missing",
 		});
+	}
+
+	/* The forbidden permissions, in BOTH spellings — see `declaresPermission`. */
+	for (const permission of ANDROID_FORBIDDEN_PERMISSIONS) {
+		if (declaresPermission(text, permission, { sdkGated: true })) {
+			findings.push({
+				field: `uses-permission[${permission}]`,
+				problem:
+					"present — picker-only attachments need no media-or-camera permission (checklist B10); block it in app.config.ts's blockedPermissions and regenerate",
+			});
+		}
 	}
 
 	return findings;
@@ -194,8 +273,8 @@ export function checkAndroidManifest(xml: string): Finding[] {
 /** One line for the CI step summary, naming what was asserted. */
 export const summarize = (platform: "ios" | "android"): string =>
 	platform === "ios"
-		? `built Info.plist carries NSLocalNetworkUsageDescription and the ATS local-networking configuration (NSAllowsLocalNetworking + ${IOS_EXCEPTION_DOMAINS.length} CIDR exceptions)`
-		: `release merged manifest carries android:usesCleartextTraffic="true" and ${ANDROID_LOCAL_NETWORK_PERMISSION}`;
+		? `built Info.plist carries NSLocalNetworkUsageDescription and the ATS local-networking configuration (NSAllowsLocalNetworking + ${IOS_EXCEPTION_DOMAINS.length} CIDR exceptions) and none of the ${IOS_FORBIDDEN_KEYS.length} photo/camera permission keys`
+		: `release merged manifest carries android:usesCleartextTraffic="true" and ${ANDROID_LOCAL_NETWORK_PERMISSION}, and none of the ${ANDROID_FORBIDDEN_PERMISSIONS.length} camera/media-library permissions`;
 
 // ---------------------------------------------------------------------------
 // CLI

@@ -219,8 +219,15 @@ it does not remove the requirement, because account creation is still offered.
 | **Financial features** | **All** developers must complete the Financial features declaration, "including apps on closed testing, open testing, or production tracks", and apps with no financial features must still certify that | <https://support.google.com/googleplay/android-developer/answer/13849271> (read 2026-09-29) |
 
 **For this app:** the image-attachment feature sends one photo into a session.
-Use the **system photo picker** and request no media permission at all; the
-Play Photo and Video Permissions policy is then not engaged. On local network:
+Attachments go through the **system photo picker** (`PickVisualMedia`, i.e.
+`ACTION_PICK_IMAGES` on Android 13+, with the Play-services backport below it)
+and the app requests **no media permission at all**: `READ_MEDIA_IMAGES`,
+`READ_MEDIA_VIDEO` and both storage permissions are blocked in `app.config.ts`
+(`expo-image-picker`'s own library manifest declares some of them) and asserted
+ABSENT from the release merged manifest by `scripts/ci/native-config.ts`, so the
+Play Photo and Video Permissions policy is not engaged. The camera is not a
+feature of this app and its permission is blocked the same way. On local
+network:
 the Radient route reaches a tunnel over the internet, so it needs no LAN
 permission; the same-Wi-Fi path (a literal private address, no tunnel — ADR 0002
 § 5) is where the project lands, and the app is configured for it — the manifest
