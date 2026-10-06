@@ -24,5 +24,7 @@ flows:
   - "flows/*.yaml"
 
 # One retry is allowed, per ADR 0003 §"Layer 4": a second failure is a failure.
-# `retry` is set on the invocation in CI (`--retry`), not here, because the CI
-# job also has to distinguish "flaked once" from "flaked twice" in its report.
+# The retry lives on the CI invocation in `.github/workflows/e2e.yml` — the
+# invocation re-runs the flow set once on failure; Maestro 2.11.0 has no CLI
+# retry option — not here, because the CI job has to distinguish "flaked once"
+# (marked `::warning`, still green) from "flaked twice" (failed) in its report.

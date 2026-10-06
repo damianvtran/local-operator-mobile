@@ -152,7 +152,7 @@ the sample it is, and a green `ci` run cannot read as the whole matrix.
 
 ```yaml
 # iOS, macos runner
-- run: maestro --config e2e/maestro/config.yaml test --retry 1 \
+- run: maestro --config e2e/maestro/config.yaml test \
          -e APP_ID=com.radient.localoperator.mobile \
          -e RELAY_URL=http://127.0.0.1:$MOCK_RELAY_PORT \
          -e SESSION_ID=6714def86197
@@ -164,8 +164,10 @@ Two things to wire deliberately:
 - **One mock relay per job, started with the scenario the flow needs**, on an
   ephemeral port, and stopped by pid at the end of the job. `--print-port` puts
   the port alone on stdout; diagnostics go to stderr.
-- **`--retry 1`, not infinite.** ADR 0003 allows exactly one re-run; a second
-  failure is a failure. Report them separately so a flake is visible as a flake.
+- **One re-run, not infinite.** Maestro 2.11.0's CLI has no retry option, so
+  the CI invocation re-runs the set once on failure itself and raises a
+  `::warning` when it flaked; a second failure is a failure (ADR 0003 allows
+  exactly one re-run). Reported separately so a flake is visible as a flake.
 
 `RELAY_PASSWORD` must arrive from the job's own environment, read out of a
 `0600` file the job created. A literal password in a flow file could not be
