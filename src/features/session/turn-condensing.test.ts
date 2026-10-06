@@ -4,15 +4,15 @@ import type { TranscriptEntry } from "@/contracts";
 import {
 	barAccessibleName,
 	barPhrases,
+	type CondensePlan,
 	condensePlan,
 	HEADLINE_MAX_CHARS,
-	parseExpandHook,
-	transcriptTurns,
-	turnHeadline,
-	type CondensePlan,
 	type LatchedTurn,
+	parseExpandHook,
 	type TurnBarFacts,
 	type TurnView,
+	transcriptTurns,
+	turnHeadline,
 } from "@/features/session/turn-condensing";
 
 /* ------------------------------------------------------------------ helpers */
@@ -164,9 +164,7 @@ describe("the condense decision", () => {
 	it("never condenses the active (last) turn, however complete it looks", () => {
 		const plan = planOf([user("u1"), tool("t1"), answer("a1")]);
 		expect(plan.turns[0]?.condensed).toBe(false);
-		expect(
-			plan.items.every((item) => item.kind === "entry"),
-		).toBe(true);
+		expect(plan.items.every((item) => item.kind === "entry")).toBe(true);
 	});
 
 	it("does not condense a turn whose closing answer is unfinished, capped, or empty", () => {
@@ -176,8 +174,9 @@ describe("the condense decision", () => {
 		expect(settle(streaming("a1", "half")).turns[0]?.condensed).toBe(false);
 		// Settled but the representation is a transport-cap prefix.
 		expect(
-			settle(row({ id: "a1", kind: "assistant", text: "cut", text_complete: false }))
-				.turns[0]?.condensed,
+			settle(
+				row({ id: "a1", kind: "assistant", text: "cut", text_complete: false }),
+			).turns[0]?.condensed,
 		).toBe(false);
 		// Settled and complete but with no text: an empty answer is not an answer.
 		expect(
@@ -185,9 +184,9 @@ describe("the condense decision", () => {
 				?.condensed,
 		).toBe(false);
 		// A turn that ends on a notice (the death markers) has no closing answer.
-		expect(settle(notice("n1", "Stopped with an error")).turns[0]?.condensed).toBe(
-			false,
-		);
+		expect(
+			settle(notice("n1", "Stopped with an error")).turns[0]?.condensed,
+		).toBe(false);
 	});
 
 	it("does not condense when there is nothing to hide", () => {
@@ -251,12 +250,7 @@ describe("the condense decision", () => {
 
 describe("the latch: a condensed turn cannot be un-condensed by a frame", () => {
 	it("survives a later frame that regresses the closing answer", () => {
-		const settledFrames = [
-			user("u1"),
-			tool("t1", 2),
-			answer("a1"),
-			user("u2"),
-		];
+		const settledFrames = [user("u1"), tool("t1", 2), answer("a1"), user("u2")];
 		const first = condensePlan({
 			entries: settledFrames,
 			expanded: new Set(),
@@ -387,7 +381,12 @@ describe("no un-condense jitter: a condensed turn's rendering is a constant of e
 		[
 			user("u1", "Refactor the retry envelope"),
 			tool("t1", 900),
-			row({ id: "a1", kind: "assistant", text: "scanning shard", text_complete: false }),
+			row({
+				id: "a1",
+				kind: "assistant",
+				text: "scanning shard",
+				text_complete: false,
+			}),
 			user("u2", "Now add the backoff"),
 			tool("t2", 4),
 			answer("a2", "adding jitter\nbackoff written"),
@@ -396,7 +395,12 @@ describe("no un-condense jitter: a condensed turn's rendering is a constant of e
 		[
 			user("u1", "Refactor the retry envelope"),
 			tool("t1", 900),
-			row({ id: "a1", kind: "assistant", text: "scanning shard", text_complete: false }),
+			row({
+				id: "a1",
+				kind: "assistant",
+				text: "scanning shard",
+				text_complete: false,
+			}),
 			user("u2", "Now add the backoff"),
 			tool("t2", 4),
 			answer("a2", "adding jitter\nbackoff written"),

@@ -80,12 +80,22 @@ export function transcriptTurns(
 		const entry = entries[index];
 		if (entry === undefined) continue;
 		if (entry.kind === "user") {
-			open = { key: entry.id, opensWithUserRow: true, start: index, end: index };
+			open = {
+				key: entry.id,
+				opensWithUserRow: true,
+				start: index,
+				end: index,
+			};
 			turns.push(open);
 			continue;
 		}
 		if (open === null) {
-			open = { key: entry.id, opensWithUserRow: false, start: index, end: index };
+			open = {
+				key: entry.id,
+				opensWithUserRow: false,
+				start: index,
+				end: index,
+			};
 			turns.push(open);
 			continue;
 		}
