@@ -438,48 +438,78 @@ export const ConversationsPane = ({
 				}
 			/>
 
-			{/* The footer: the two secondary routes, each a 44 pt target. The
+			{/* The footer: the three secondary routes, each a 44 pt target. The
 			 *  panel's own navigation, always visible — the desktop sidebar's
-			 *  footer, phone-sized.
+			 *  footer, phone-sized. `docs/ux/flows.md` draws `--|projects|` as a
+			 *  PEER of `--|past|` off the conversations panel, so the entry point
+			 *  belongs here rather than behind a settings row.
 			 *
-			 *  Above `LARGE_TEXT_SCALE` the two RE-STACK into a column (the settings
-			 *  account row's idiom, not `flex-wrap`: with both children `flex-1` a
-			 *  wrap never engages — it would only squeeze). Side by side each label
-			 *  has ~104 dp and "Past sessions" needs 107.6 dp at 150 % and 143.5 dp
-			 *  at 200 %, so it wrapped to two lines inside a 48 dp control that does
-			 *  not grow with its label, and its box crossed the band's edges
-			 *  (744.4..811.6 against 745..810 at 200 %, review round 3, D1).
-			 *  Stacked, each label gets the panel's full width — 240 dp of text box
-			 *  inside the button at the drawer's 280 pt — and stays one line. */}
-			<View
-				className={
-					largeText
-						? "flex-col gap-2 border-hairline border-t px-2 pb-2 pt-2"
-						: "flex-row gap-2 border-hairline border-t px-2 pb-2 pt-2"
-				}
-			>
-				<View className={largeText ? "w-full" : "flex-1"}>
-					<Button
-						label="Past sessions"
-						onPress={() => {
-							onNavigate?.();
-							router.push("/past");
-						}}
-						variant="quiet"
-						size="sm"
-						testID={CONTROL.sidebarPast}
-					/>
+			 *  THE PAIR WRAPS ON ITS OWN CONTENT, AND THAT IS THE RULE — there is no
+			 *  scale threshold here on purpose. This footer used to switch
+			 *  row-versus-column on `effectiveScale > LARGE_TEXT_SCALE` (1.4), and that
+			 *  guard was answering a different question: the pair only broke ABOVE
+			 *  1.4, so the band from 1.35 to 1.4 — inside the very branch the guard
+			 *  was meant to protect — wrapped "Past sessions" onto two lines and
+			 *  left-aligned it while "Computers" stayed one line and centred, so the
+			 *  pair row read broken. Measured on the 320 pt phone at 1.3529411765
+			 *  (iOS xxxLarge, the largest standard Dynamic Type step) and at 1.375
+			 *  (the browser's own 22 px default) — both real user settings, and both
+			 *  BELOW the guard that was supposed to cover them (design review round 2, D6).
+			 *  The band existed because two numbers were being compared: a global
+			 *  scale constant and a per-cell text box.
+			 *
+			 *  So the BOX makes the decision instead. Each cell is `flex-auto`, which
+			 *  makes the flex line break on the label's own width: the two share a
+			 *  row while both labels fit, and a label that stops fitting moves to its
+			 *  own full-width row. Nothing here can drift the way the constant did,
+			 *  because nothing here is compared — the layout measures the thing it is
+			 *  laying out. (`flex-1` would NOT do: its zero base size means a wrap
+			 *  never engages and the cell only squeezes, which is the behaviour the
+			 *  older note here recorded, and it is still true of `flex-1`.) The third
+			 *  control keeps the full-width band beneath the pair, so the shape is
+			 *  2+1 when the pair fits and 1+1+1 when it does not.
+			 *
+			 *  That is why the scale axis carries a step inside the old band
+			 *  (`tools/visual/matrix.ts` SCALES, `135`): a re-capture at 100/150/200
+			 *  could not show this defect at all, because both bracketing scales sit
+			 *  outside it. */}
+			<View className="gap-2 border-hairline border-t px-2 pb-2 pt-2">
+				<View className="flex-row flex-wrap gap-2">
+					<View className="flex-auto">
+						<Button
+							label="Past sessions"
+							onPress={() => {
+								onNavigate?.();
+								router.push("/past");
+							}}
+							variant="quiet"
+							size="sm"
+							testID={CONTROL.sidebarPast}
+						/>
+					</View>
+					<View className="flex-auto">
+						<Button
+							label="Computers"
+							onPress={() => {
+								onNavigate?.();
+								router.push("/tunnels");
+							}}
+							variant="quiet"
+							size="sm"
+							testID={CONTROL.sidebarComputers}
+						/>
+					</View>
 				</View>
-				<View className={largeText ? "w-full" : "flex-1"}>
+				<View className="w-full">
 					<Button
-						label="Computers"
+						label="Projects"
 						onPress={() => {
 							onNavigate?.();
-							router.push("/tunnels");
+							router.push("/projects");
 						}}
 						variant="quiet"
 						size="sm"
-						testID={CONTROL.sidebarComputers}
+						testID={CONTROL.sidebarProjects}
 					/>
 				</View>
 			</View>

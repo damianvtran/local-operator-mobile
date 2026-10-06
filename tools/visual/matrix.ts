@@ -346,11 +346,11 @@ export function describeDeviceCoverage(coverage: {
  * The CI tier: the bounded sample the per-push capture job takes.
  *
  * WHY A THIRD TIER, AND WHY IT IS HERE RATHER THAN A `--devices` LIST IN YAML.
- * The `core` tier is 884 cells: the whole declared cell list (34 cells) x 2 themes x
- * (3 phones x 3 scales + 2 tablets x 2 scales) — 34 x 2 x 13, the tier's 5 profiles —
- * and the CI job's capture step is bound at 20 minutes. Measured on the runner, that is
+ * The `core` tier is 1512 cells: the whole declared cell list (42 cells) x 2 themes x
+ * (3 phones x 4 scales + 2 tablets x 3 scales) — 42 x 2 x 18, the tier's 5 profiles —
+ * and the CI job's capture step is bound at 30 minutes. Measured on the runner, that is
  * 2.24 s/cell: 403 cells in 903 s (run 37098393675, a plan of 403 cells then), so a core
- * run needs ~33 minutes. The job's first real
+ * run needs ~56 minutes. The job's first real
  * run of this path
  * was therefore cut off by the harness's own 900 s deadline with 585 cells
  * unvisited, and reported them as cells with no frame.
@@ -375,25 +375,58 @@ export function describeDeviceCoverage(coverage: {
  *   * both themes, because the theme-reached-the-render check compares a cell's
  *     dark and light frames — one theme cannot make it.
  *   * the 100% floor and the 200% ceiling, which is the pair the text-scale guard
- *     measures (200% over 100%). 150% is the phone-typical intermediate case and is
- *     left to `core`.
+ *     measures (200% over 100%), PLUS the boundary step between them — see
+ *     `CI_SCALES` below for why the boundary earns the third slot and 150% does
+ *     not. 150% stays in `core`, which sweeps every scale.
  *
- * That is 34 cells x 2 themes x (2 profiles x 2 scales) = 272 cells, ~10 minutes at
- * the measured rate: inside the step bound with most of it spare. `core` and
- * `full` are unchanged and stay the local and dispatched samples, so the full
- * 884-cell `core` matrix and the 3196-cell `full` matrix remain runnable — nothing
- * is only reachable through CI.
+ * That is 42 cells x 2 themes x (2 profiles x 3 scales) = 504 cells, ~19 minutes at
+ * the measured rate: inside the step bound (raised with it, see `CI_SCALES`) with
+ * the same headroom it always carried. `core` and `full` are unchanged and stay the
+ * local and dispatched samples, so the full 1512-cell `core` matrix and the
+ * 5544-cell `full` matrix remain runnable — nothing is only reachable through CI.
  */
 export const CI_DEVICES: string[] = ["iphone-se", "tablet-landscape"];
 
-/** The scale ids the CI tier runs: the 100% floor and the 200% ceiling. */
-export const CI_SCALES: string[] = ["100", "200"];
+/** The scale ids the CI tier runs: the 100% floor, the BOUNDARY step, and the 200%
+ * ceiling.
+ *
+ * WHY THE BOUNDARY IS HERE RATHER THAN A MID-POINT. This axis carried 100 and 200 —
+ * which BRACKET the band the footer's layout breaks in (1.35 to 1.4), and an axis that
+ * brackets a failure cannot see it. That defect reached review once, so its prior on
+ * this surface is high, and it is not worth waiting for the nightly to find the next
+ * one. `135` is that boundary: 1.3529411765, the largest standard iOS Dynamic Type
+ * step, and the value the web build derives from a 22 px root. A mid-point inside a
+ * range that now behaves continuously (there is no threshold left to sit between)
+ * earns less per push than the boundary itself does. The nightly `core` tier still
+ * sweeps every scale, so nothing is lost by composing the two sets differently.
+ *
+ * WHAT IT COSTS, because it is NOT free and the two are one decision. Three scales on
+ * both CI profiles is 504 cells, +50 % over the two-scale 336, so the per-push capture
+ * and audit bounds in `.github/workflows/e2e.yml` were raised with it (capture 20 → 30,
+ * audit 10 → 15, job 50 → 60). A bound that fires every run stops being a signal, so
+ * this list and that bound have to move together: reverting the bounds without
+ * reverting this list makes the job red, and reverting this list without the bounds
+ * wastes the budget it was sized for. */
+export const CI_SCALES: string[] = ["100", "135", "200"];
 
 export const THEMES = ["dark", "light"];
 
 /** Text scales as a multiplier of the app's default. 1 = the OS default. */
 export const SCALES = [
 	{ id: "100", factor: 1 },
+	/* THE IN-BETWEEN STEP, and it is here because an axis that BRACKETS a failure
+	 *  cannot see it. The footer's column-versus-pair boundary used to sit at
+	 *  `LARGE_TEXT_SCALE` (1.4), which left a band — 1.35 up to 1.4 — INSIDE the
+	 *  layout branch it was supposed to protect: the pair only broke above 1.4, so
+	 *  every scale in that band wrapped a label (design review round 2, D6). No cell could
+	 *  show it, because the nearest captured scales were 100 and 150 and both sit
+	 *  outside it. The factor is the exact iOS `xxxLarge` Dynamic Type step rather
+	 *  than a round 1.35: it is a setting a real user has, and it is on the failing
+	 *  side of the boundary the round measured (the browser's own 22 px default,
+	 *  1.375, is the other in-band value and behaves the same way). The footer fix
+	 *  removes the threshold entirely, so what this axis step now protects is the
+	 *  ABSENCE of a threshold — see `conversations-pane.tsx`. */
+	{ id: "135", factor: 1.3529411765 },
 	{ id: "150", factor: 1.5 },
 	{ id: "200", factor: 2 },
 ];
@@ -421,6 +454,13 @@ export const SCREENS: Record<string, { label: string; path: string }> = {
 	S13: { label: "Refused / unreachable", path: "/tunnels" },
 	S14: { label: "Demo mode", path: "/demo" },
 	S15: { label: "Conversations panel", path: "/conversations" },
+	/* The projects read path (rubric §1). Two entries for one surface because the
+	 * DETAIL is a route of its own — the app pushes it — so a capture has to be
+	 * able to ask for either. `{projectKey}` resolves to the captured row (`
+	 * tools/visual/capture.ts`, `resolvePath`), which is the row the mock relay's
+	 * key-scoped route answers for. */
+	S16: { label: "Projects", path: "/projects" },
+	"S16-detail": { label: "Project detail", path: "/projects/{projectKey}" },
 };
 
 /**
@@ -537,6 +577,8 @@ export const SCREEN_ROOTS: Record<string, string> = {
 	S13: "computers-screen",
 	S14: "welcome-screen",
 	S15: "sessions-screen",
+	S16: "projects-screen",
+	"S16-detail": "project-detail-screen",
 };
 
 /**
@@ -643,25 +685,65 @@ export const PENDING_CELLS: Record<string, string> = {
  *     (which viewport, and which content differs); an undeclared pair is still a
  *     FAILURE, so a new collapse cannot quietly exempt itself.
  *
- * The key is the group's distinct cell names, sorted, joined with `|`. Keep this table
- * EMPTY unless a pair is genuinely a camera limit, and let the reason name the viewport
+ * An entry declares the CLASS — the cells that may coincide at some device, scale or
+ * seed — and a produced group qualifies when it is CONTAINED in one. Keep this table
+ * EMPTY unless a class is genuinely a camera limit, and let the reason name the viewport
  * it was measured on: the exemption is a statement about the frame, not about the app.
+ *
+ * WHY A CLASS AND NOT A KEY. These entries replaced a `Record<string, string>` whose key
+ * was the colliding group's cell names sorted and joined with `|` — ONE EXACT SUBSET.
+ * That shape cannot state what the entries mean. The same three cells collide as a
+ * three-way group at 200 % and as a pair at 135 % (`S5/populated-long` = `S5/subagents`,
+ * measured on the ci tier the day its axis gained the 135 % step), so the pair matched no
+ * literal, the blocking gate red on a phenomenon a reviewer had already approved, and the
+ * only remedy the shape allowed was one literal per subset — whack-a-mole across every
+ * scale, device and seed that produces a different subset of the same cells. The class is
+ * what a reviewer approves; the subset is what a run happens to produce.
  */
-export const IDENTICAL_FRAME_EXEMPTIONS: Record<string, string> = {
-	"S5/populated-long|S5/rich-rows|S5/subagents":
-		"below-the-fold at iphone-se / 200 %: the 320 px column at 200 % text is filled by the " +
-		"session header (`Refactor… client`, the context/task/subagent panel rows), and the rows " +
-		"that distinguish these three cells — the 520-row transcript, the code-block/diff/table " +
-		"rows, and the subagent roster's own rows — start below the viewport, so the PNG is all " +
-		"chrome. The content differs at every device and scale (each cell reaches its own " +
-		"marker), which is what makes this a limit of the camera rather than a collapse. THE " +
-		"GROUP IS THREE NAMES ON ONE ENTRY on purpose: it was declared as " +
-		"`S5/populated-long|S5/rich-rows`, and a third cell joining it when the capture first " +
-		"completed a whole tier — until then the stalls left cells missing and the comparison " +
-		"could not form the group — is evidence that the phenomenon is the one this entry " +
-		"describes, so it extends the statement rather than opening a second entry for the " +
-		"same thing.",
-};
+export interface IdenticalFrameClass {
+	/** The cells that may coincide at SOME device, scale or seed — the class itself. */
+	cells: string[];
+	/** Why that coincidence is a limit of the comparison rather than a collapse. */
+	reason: string;
+}
+
+export const IDENTICAL_FRAME_EXEMPTIONS: IdenticalFrameClass[] = [
+	{
+		cells: ["S16/populated", "S16/unknown-status"],
+		reason:
+			"below-the-fold at iphone-se / 200 %: the 320 px column at 200 % text is filled by the " +
+			"list's own header (`Projects`) and its first two sections, and the one thing that " +
+			"distinguishes the two cells — the UNKNOWN STATUS section, which is the feature this " +
+			"cell exists to prove — is placed LAST by `groupProjectsByStatus` (a status this build " +
+			"does not know sorts after every known one) and starts below the viewport, so the PNG " +
+			"is the same chrome. The content differs (each cell reaches its own marker, " +
+			"`projects-populated` / `projects-unknown-status`), which is what makes this a limit " +
+			"of the camera rather than a collapse; at 100 % the swapped row is still above the " +
+			"fold and the two frames differ, and so does both cells at tablet-landscape, so " +
+			"the states are distinguishable everywhere except the narrowest column at the " +
+			"largest text. The two cells are the whole class: no other pair involving either has " +
+			"ever collided.",
+	},
+	{
+		cells: ["S5/populated-long", "S5/rich-rows", "S5/subagents"],
+		reason:
+			"below-the-fold at iphone-se / 200 %: the 320 px column at 200 % text is filled by the " +
+			"session header (`Refactor… client`, the context/task/subagent panel rows), and the rows " +
+			"that distinguish these three cells — the 520-row transcript, the code-block/diff/table " +
+			"rows, and the subagent roster's own rows — start below the viewport, so the PNG is all " +
+			"chrome. The content differs at every device and scale (each cell reaches its own " +
+			"marker), which is what makes this a limit of the camera rather than a collapse. THE " +
+			"CLASS IS THREE NAMES ON ONE ENTRY on purpose: it was declared for `S5/populated-long` " +
+			"and `S5/rich-rows`, and a third cell joining it when the capture first completed a " +
+			"whole tier — until then the stalls left cells missing and the comparison could not " +
+			"form the group — is evidence that the phenomenon is the one this entry describes, so " +
+			"it extends the statement rather than opening a second entry for the same thing. " +
+			"Declaring the CLASS is what makes that hold at every scale: the same three cells " +
+			"collide three ways at 200 % and only two ways at 135 % (`S5/populated-long` = " +
+			"`S5/subagents`), and both are this phenomenon — subsets of one class, not two " +
+			"findings.",
+	},
+];
 
 /**
  * Byte-identical frames whose cells are ONE VIEW at that device BY COMPOSITION.
@@ -681,25 +763,32 @@ export const IDENTICAL_FRAME_EXEMPTIONS: Record<string, string> = {
  * both declarations are needed: S4/idle is the home's own cell and S15/empty is the
  * panel's empty state and the `/conversations` route's capture.
  *
- * A pair is consulted ONLY when every cell in the partition is EVIDENTIAL (ready, not
+ * A class is consulted ONLY when every cell in the partition is EVIDENTIAL (ready, not
  * skipped), so a partition in which any state's own marker is missing can never declare
  * itself out of a collapse; an undeclared same-content partition still FAILS, exactly
- * as it did before this table existed.
+ * as it did before this table existed. The entries use the same `IdenticalFrameClass`
+ * shape and the same CONTAINMENT rule as the exemptions above — one class, whichever
+ * subset a run produces — for the same reason: a composition can coincide for a subset
+ * of its cells at one device and a superset at another, and a key per subset would red
+ * on the phenomenon the class already states.
  */
-export const IDENTICAL_FRAME_COINCIDENCES: Record<string, string> = {
-	"S15/empty|S4/idle":
-		"one view, two states at tablet-landscape: `/conversations` renders the same home " +
-		"with the panel open, and the panel is docked at this device, so the route and the " +
-		"home compose into ONE rendering — the same bytes AND the same content are both " +
-		"correct, and each cell still reaches its own root and marker in it (`home-idle` " +
-		"for S4, `sessions-empty` for S15 — present in both frames, which the byte-identity " +
-		"proves). Not a camera limit: the content really agrees, because the composition " +
-		"really is one view. The pair differs at iphone-se (the drawer overlays the home), " +
-		"which is why neither declaration can be removed — S4/idle is the home's own cell " +
-		"and S15/empty is the panel's empty state and the /conversations route's capture. " +
-		"Measured on the ci run at 0b414a4: four pairs, one per theme × scale " +
-		"(dark 07d9c40e1083 / d7ca9bcec45e; light 1623786f6c06 / f2ee0ac17b8f).",
-};
+export const IDENTICAL_FRAME_COINCIDENCES: IdenticalFrameClass[] = [
+	{
+		cells: ["S15/empty", "S4/idle"],
+		reason:
+			"one view, two states at tablet-landscape: `/conversations` renders the same home " +
+			"with the panel open, and the panel is docked at this device, so the route and the " +
+			"home compose into ONE rendering — the same bytes AND the same content are both " +
+			"correct, and each cell still reaches its own root and marker in it (`home-idle` " +
+			"for S4, `sessions-empty` for S15 — present in both frames, which the byte-identity " +
+			"proves). Not a camera limit: the content really agrees, because the composition " +
+			"really is one view. The pair differs at iphone-se (the drawer overlays the home), " +
+			"which is why neither declaration can be removed — S4/idle is the home's own cell " +
+			"and S15/empty is the panel's empty state and the /conversations route's capture. " +
+			"Measured on the ci run at 0b414a4: four pairs, one per theme × scale " +
+			"(dark 07d9c40e1083 / d7ca9bcec45e; light 1623786f6c06 / f2ee0ac17b8f).",
+	},
+];
 
 /** Read the resolved theme/scale and the app's own canvas colour, per frame. */
 /**

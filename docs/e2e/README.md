@@ -23,7 +23,7 @@ That figure is **load-dependent, and it is the one to quote**: `pnpm e2e:relay`
 against ~13 minutes on a quiet one. The README, `tools/lib/doc-commands.ts` and
 `tools/mock-relay/verify.ts` all state that single figure; if you change one,
 change all three. The app-build capture block — the other candidate for slowest —
-is bounded to a 68-cell sample: the whole declared cell list (34 cells on today's
+is bounded to an 84-cell sample: the whole declared cell list (42 cells on today's
 registry) at one device, one theme and two scales (`--devices iphone-15 --themes
 dark --scales 100,200`), so the gate can pass for the reason the block declares
 instead of by timing out. A command this
@@ -156,10 +156,10 @@ in `verify`'s readiness guard.
 # docs:needs mock-relay web-build
 #
 # The sample is EXPLICIT and small, for §2's reason: the default (`core`) tier plans
-# 884 cells, one frame each, which is ~33 minutes at the measured 2.24 s/cell and is
+# 1512 cells, one frame each, which is ~56 minutes at the measured 2.24 s/cell and is
 # above the harness's own 120-frame confirmation threshold — so an un-narrowed run is
-# REFUSED without `--yes`, and even with it no documentation gate may spend 33 minutes
-# on one command. One phone, one theme, one scale is 34 frames, and it still proves what
+# REFUSED without `--yes`, and even with it no documentation gate may spend 56 minutes
+# on one command. One phone, one theme, one scale is 42 frames, and it still proves what
 # this section is about: seeding is a property of `--relay`, not of the sample's size.
 # `web-build` is declared because the command reads `dist/`: without a build it does
 # not fall back to anything, it fails on `static root does not exist`.
@@ -360,6 +360,11 @@ second hand-maintained list.
 | `every-entry-kind` | S5/populated | One row of every TranscriptEntry kind, for the renderer's fallback path. |
 | `past-empty` | S10/empty | No past conversations. |
 | `past-populated` | S10/populated | Past conversations to resume, including a fork wearing its parent's title. |
+| `projects-empty` | S16/empty | The listing answers an empty array, so the screen must show its own empty state rather than nothing. |
+| `projects-loading` | S16/loading, S16-detail/loading | No project read has been answered yet: every API route holds its response open. |
+| `projects-populated` | S16/populated, S16-detail/populated | The six-project seeded store, and one project's composed detail with a live and a stopped link. |
+| `projects-unknown-status` | S16/unknown-status | The captured listing with one row's status replaced by a word none of the relay's seven is: it must take its own trailing section rather than vanish. |
+| `projects-refused` | S16-detail/refused | The key-scoped read re-sent with the corpus's recorded 404, so the sentence the screen renders is one the relay actually wrote (including the prefix-matched near-miss name). |
 | `search-empty` | S15/populated | A search query with no results; a capture types no query, so the cell it fills is the world's one live row. |
 | `search-hit` | S15/populated | A search with body-only matches, which must be marked as such. |
 | `models-ranked` | — (no cell) | The full ranked model catalogue — order is the ranking, never re-sorted. It declared `S9/populated`, and that cell was removed: the sheets are modals the app opens from the composer, no wire action opens one, and the cell therefore rendered `S5/populated` byte-for-byte (see the capture section). |
@@ -586,12 +591,12 @@ node tools/visual/capture.ts --dir e2e/fixtures/audit-canary \
 # A real run against a real build. Build first — `pnpm export:web`, which writes `dist/`.
 #
 # The device/theme/scale set is EXPLICIT and small on purpose: the full `core` tier is
-# 884 cells, which is ~33 minutes at the measured 2.24 s/cell (403 cells in 903 s on the
+# 1512 cells, which is ~56 minutes at the measured 2.24 s/cell (403 cells in 903 s on the
 # CI runner, a plan of 403 cells then), and no documentation gate may spend that on one
 # command. So this example is the bounded sample; `--plan` above prints the full count,
 # and dropping these three flags captures the whole `core` tier. `--tier ci` is the sample
 # the per-push CI job takes — every declared cell at two device profiles, both themes and
-# two scales, 272 cells — and `--full` is all 19 profiles at 3196 cells.
+# three scales, 504 cells — and `--full` is all 19 profiles at 5544 cells.
 #
 # The bound is DERIVED FROM THE PLAN unless you name one: `--deadline` defaults to
 # 3000 ms/cell with a 900 s floor, so a bound always holds the plan it was computed for,
@@ -721,7 +726,7 @@ All 19 profiles above are what the harness *can* plan, and they come from
 generated from it rather than maintained beside it. A default run captures the
 `core` tier only (5 profiles: the 320 pt floor, one typical phone,
 the landscape case whose side insets the notch rules need, and a tablet in each
-orientation) — 884 cells, one frame each unless `--consecutive` asks for the +250 ms
+orientation) — 1512 cells, one frame each unless `--consecutive` asks for the +250 ms
 and settled frames too. A run states which tier it took,
 and a cell that was not captured is reported as having no frame rather than passed.
 
@@ -729,9 +734,9 @@ Three tiers are declared in `matrix.ts`, and each says what it is:
 
 | tier | sample | cells | why |
 |---|---|---|---|
-| `ci` | every declared cell × `iphone-se`, `tablet-landscape` × both themes × scales 100 and 200 | 272 | the per-push CI job's sample. The step is bound at 20 minutes and the measured rate is 2.24 s/cell, so an 884-cell `core` run cannot fit; this one lands ~10 minutes. It keeps the CELL axis whole — a state that is not captured is a state no review round can report on — and shrinks only the device, theme and scale axes, each to what its check needs: the narrowest and widest viewports (the two sides of the 768 breakpoint), because the theme check compares a cell's dark and light frames, and the 100 %/200 % pair the text-scale guard measures. |
-| `core` | the 5 `core` profiles, both themes, all three scales | 884 | the default, and the local sample the operator's rule asks for. |
-| `full` | all 19 profiles | 3196 | the dispatched/nightly sample. |
+| `ci` | every declared cell × `iphone-se`, `tablet-landscape` × both themes × scales 100, 135 and 200 | 504 | the per-push CI job's sample. The step is bound at 30 minutes and the measured rate is 2.24 s/cell, so a 1512-cell `core` run cannot fit; this one lands ~19 minutes. It keeps the CELL axis whole — a state that is not captured is a state no review round can report on — and shrinks only the device, theme and scale axes, each to what its check needs: the narrowest and widest viewports (the two sides of the 768 breakpoint), because the theme check compares a cell's dark and light frames, and the 100 %/135 %/200 % set — the pair the text-scale guard measures plus the BOUNDARY step the footer's layout breaks at, because an axis that brackets that band cannot see a defect inside it. |
+| `core` | the 5 `core` profiles, both themes, every scale | 1512 | the default, and the local sample the operator's rule asks for. |
+| `full` | all 19 profiles | 5544 | the dispatched/nightly sample. |
 
 `--tier <ci|core|full>` or `--full` selects one; `--devices`, `--themes` and
 `--scales` override any of them. The whole-run `--deadline` is derived from the
@@ -751,9 +756,9 @@ from `ALL_DEVICES`, so it cannot drift from this table.
 
 **The device variety that is not on the per-push path has its own nightly job.**
 `.github/workflows/e2e.yml` `web-audit-core` captures and audits the `core` tier — 5 of
-the 19 profiles, 884 cells / 2,652 frames and ~33 minutes at the measured 2.24 s/cell —
+the 19 profiles, 1512 cells / 4,536 frames and ~56 minutes at the measured 2.24 s/cell —
 on the schedule and on demand only. The `ci` sample stays the per-push one and keeps its
-own 20-minute capture bound; neither job is stretched to cover the other's tier.
+own 30-minute capture bound; neither job is stretched to cover the other's tier.
 
 ### Two cells that render byte-identically
 
@@ -768,18 +773,25 @@ partitioned by what each cell is SHOWING, read without the viewport (`CONTENT_PR
 rendered text and accessibility labels, i.e. what a phone would read out), and:
 
 - **same bytes and same content** → a real collapse — unless every cell in the pair is
-  evidential and the pair is declared by name in `matrix.ts` `IDENTICAL_FRAME_COINCIDENCES`
-  as ONE VIEW. A device composes surfaces: at tablet-landscape the home docks the
-  conversations panel and `/conversations` renders the home itself, so two cells that each
-  reach their own root and marker can legitimately produce one image and one content
-  (`S15/empty = S4/idle`; the pair differs at iphone-se, where the drawer overlays the
-  home). Undeclared, it still FAILS — and a declaration is inert the moment any cell in
-  the pair stops being evidential, so a state the app ignored (its marker missing) can
-  never qualify.
+  evidential and the group is contained in a class declared in `matrix.ts`
+  `IDENTICAL_FRAME_COINCIDENCES` as ONE VIEW. A device composes surfaces: at
+  tablet-landscape the home docks the conversations panel and `/conversations` renders the
+  home itself, so two cells that each reach their own root and marker can legitimately
+  produce one image and one content (`S15/empty` + `S4/idle`; the class differs at
+  iphone-se, where the drawer overlays the home). Undeclared, it still FAILS — and a
+  declaration is inert the moment any cell in the group stops being evidential, so a state
+  the app ignored (its marker missing) can never qualify.
 - **same bytes, different content** → a limit of the camera. It passes **only** when the
-  pair is declared by name in `matrix.ts` `IDENTICAL_FRAME_EXEMPTIONS` with the reason a
-  reviewer needs (which viewport, and which content differs). An undeclared pair still
-  FAILS, naming the key to declare — so a new collapse cannot exempt itself by being
+  produced group is contained in a class declared in `matrix.ts`
+  `IDENTICAL_FRAME_EXEMPTIONS` with the reason a reviewer needs (which viewport, and which
+  content differs). **The ledgers declare CLASSES, not one colliding set:** a run produces
+  whichever SUBSET its device, scale and seed render identically — the `S5` class is a
+  three-way collision at 200 % and a two-way one at 135 % — so a group qualifies when every
+  cell in it is named by the entry, and the most specific entry wins. That is why the
+  ledgers are `IdenticalFrameClass[]` and not a key per subset: an exact key reds the gate
+  on a phenomenon a reviewer already approved, and asks for a fresh literal for every
+  scale, device or seed that shifts the subset. An undeclared group still FAILS, naming the
+  cells to declare — so a new collapse cannot exempt itself by being
   camera-shaped by accident, and the exemption table is a statement a reviewer reads
   rather than a knob that loosens the comparison.
 

@@ -126,12 +126,6 @@ function classifyHttp(rel: string, fixture: HttpFixture): Classification {
 			reason: "device pairing is a later stream; no schema in this slice",
 		};
 	}
-	if (path.startsWith("/api/projects")) {
-		return {
-			kind: "skip",
-			reason: "project routes are not in this stream's endpoint list",
-		};
-	}
 	if (path.startsWith("/api/transcribe")) {
 		return {
 			kind: "skip",
@@ -195,6 +189,16 @@ function classifyHttp(rel: string, fixture: HttpFixture): Classification {
 		return { kind: "schema", schema: "models", value: body };
 	if (route === "/api/directories")
 		return { kind: "schema", schema: "directories", value: body };
+	/* The two project READ families this build ships. The listing is the exact
+	 * route; the detail is the key-scoped one below it, and the ORDER matters —
+	 * a bare `startsWith` would classify the listing as a detail. The write
+	 * routes (create/patch/delete/links/milestones) are not read by this client
+	 * yet, so a capture of one is an unclassified fixture that throws here, which
+	 * is the loud reading rather than a silent pass. */
+	if (route === "/api/projects")
+		return { kind: "schema", schema: "projects", value: body };
+	if (route.startsWith("/api/projects/"))
+		return { kind: "schema", schema: "projectDetail", value: body };
 	if (idThen("/history"))
 		return { kind: "schema", schema: "history", value: body };
 	if (idThen("/command"))
@@ -405,6 +409,74 @@ const askRow = (
 		},
 	],
 	...overrides,
+});
+
+describe("the projects read path reads the relay's own values", () => {
+	/**
+	 * The four rules the two read schemas exist to hold, none of which a fixture can
+	 * prove on its own: an OPEN status vocabulary, a CLOSED milestone one, `null`
+	 * kept as `null`, and a refusal to coerce.
+	 */
+	it("accepts a project status this build has never heard of", () => {
+		/* Open on purpose. A newer relay's status must reach the screen's own trailing
+		 *  section — the failure this guards is the web client's hand-copied list,
+		 *  which had drifted to four of the seven statuses and silently mis-grouped
+		 *  the rest. A closed enum here would blank the whole listing instead. */
+		const parsed = safeParsePayload("projects", {
+			projects: [
+				{
+					id: "0f00000000000000000000000000000a",
+					name: "vendor-blocker",
+					status: "escalated",
+				},
+			],
+		});
+		expect(parsed.ok).toBe(true);
+	});
+
+	it("rejects a milestone status the relay does not derive", () => {
+		/* Closed, and the mirror image of the rule above: the relay's own model declares
+		 *  `Literal["completed", "overdue", "upcoming"]`, so a fourth value is a
+		 *  protocol change this client should hear about rather than paint. */
+		const parsed = safeParsePayload("projectDetail", {
+			project: {
+				id: "0f00000000000000000000000000000b",
+				name: "payments-migration",
+				status: "active",
+				milestones: [{ name: "beta cut", status: "nearly there" }],
+			},
+		});
+		expect(parsed.ok).toBe(false);
+	});
+
+	it("keeps a coordination link's unknown counts as null, never as zero", () => {
+		/* `null` means the relay cannot vouch for the row — no roster sidecar, no
+		 *  persisted snapshot — and `0` would be a count this client invented. A
+		 *  coordination row carries no liveness fields at all, which is the wired
+		 *  shape rather than an error. */
+		const parsed = safeParsePayload("projectDetail", {
+			project: { id: "p1", name: "payments-migration", status: "active" },
+			links: [
+				{
+					session_id: "aa11bb22cc33",
+					role: "coordination",
+					exists: true,
+					runtime: null,
+					subagents: null,
+					todos: null,
+				},
+			],
+		});
+		expect(parsed.ok).toBe(true);
+		if (!parsed.ok) throw new Error("unreachable");
+		const link = parsed.data.links[0] as { todos: unknown };
+		expect(link.todos).toBeNull();
+	});
+
+	it("rejects a listing whose rows are not objects", () => {
+		const parsed = safeParsePayload("projects", { projects: ["payments"] });
+		expect(parsed.ok).toBe(false);
+	});
 });
 
 describe("malformed frames are rejected, never coerced", () => {

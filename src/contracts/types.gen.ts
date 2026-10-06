@@ -678,3 +678,163 @@ export interface ResumeSessionResponse {
 	pid: number;
 	session_id: string;
 }
+
+/* ------------------------------------------------------------------- projects */
+
+/**
+ * One milestone, with a status the RELAY derived.
+ *
+ * `status` is never computed on the phone: `local_operator/projects.py`
+ * `milestone_status` decides it (`completed` when `completed_at` is set, else
+ * `overdue` when `target_date` has passed, else `upcoming`) and every relay
+ * reader — the tool, the desktop, the phone daemon — calls that one function.
+ * Re-deriving it from the dates here would let a chip in this app disagree with
+ * a line in a tool result about which milestone is late, which is the exact
+ * disagreement the single derivation exists to prevent.
+ */
+export interface ProjectMilestone {
+	name: string;
+	target_date: string | null;
+	completed_at: string | null;
+	/** Closed on purpose: the relay's own model declares this `Literal`, so an
+	 *  unknown value is a protocol change the client should hear about rather
+	 *  than silently render. */
+	status: "completed" | "overdue" | "upcoming";
+}
+
+/** One stored attachment on a history entry. `path` is the stored copy's
+ *  location and resolves on the MACHINE that serves the payload, not on the
+ *  phone — this client renders its name and size and never its path. */
+export interface ProjectAttachment {
+	name: string;
+	kind: string;
+	path: string;
+	bytes: number;
+	added_at: string;
+}
+
+/** One append-only history entry, newest last (the store's own order). */
+export interface ProjectUpdate {
+	at: string;
+	text: string;
+	by: string;
+	attachments: ProjectAttachment[];
+}
+
+/**
+ * One row of `GET /api/projects` (local-operator
+ * `server/models/desktop_projects.py` `ProjectSummary`, field for field).
+ *
+ * Two fields are the relay's arithmetic, never the client's:
+ * `milestones_completed`/`milestones_total` are counted server-side, and
+ * `live_sessions` comes from ONE machine-wide runtime scan per listing call —
+ * so the board's count and the detail view's per-session dots read the same
+ * number. `coordination_sessions` is a "filed by" count only; it is never added
+ * to `sessions` (which IS the work set) and a renderer must not paint it as a
+ * worker count.
+ *
+ * `description` is clamped by the relay to the listing row's own cell budget —
+ * the full text is `ProjectView.description`, which the detail route serves and
+ * which is NOT clamped.
+ */
+export interface ProjectSummary {
+	id: string;
+	name: string;
+	description: string;
+	owner: string | null;
+	team: string | null;
+	title: string | null;
+	/** Open on purpose: a status a newer relay invented must still render (its
+	 *  own trailing section) rather than vanish or crash a section sort. */
+	status: string;
+	tags: string[];
+	start_date: string | null;
+	target_date: string | null;
+	completed_at: string | null;
+	estimate: number | null;
+	estimate_unit: string;
+	milestones_completed: number;
+	milestones_total: number;
+	sessions: number;
+	live_sessions: number;
+	coordination_sessions: number;
+	/** The relay's staleness verdict, computed from the configured window — the
+	 *  client never compares `progress_updated_at` against its own clock. */
+	progress_stale: boolean;
+	progress_updated_at: number | null;
+	progress_refreshed_at: number | null;
+	progress_refreshed_by: string;
+	updated_at: number;
+}
+
+/**
+ * The full record — `GET /api/projects/{key}` and every write's own answer.
+ *
+ * `sessions` here is the work set (session ids); `coordination_sessions` is the
+ * filing provenance list and is never a working link. Unlike the summary,
+ * `description` carries the store's full text.
+ */
+export interface ProjectView {
+	id: string;
+	name: string;
+	description: string;
+	owner: string | null;
+	team: string | null;
+	title: string | null;
+	status: string;
+	progress: string;
+	progress_updated_at: number | null;
+	progress_reported_by: string;
+	progress_refreshed_at: number | null;
+	progress_refreshed_by: string;
+	progress_stale: boolean;
+	tags: string[];
+	sessions: string[];
+	coordination_sessions: string[];
+	created_at: number;
+	updated_at: number;
+	start_date: string | null;
+	target_date: string | null;
+	completed_at: string | null;
+	estimate: number | null;
+	estimate_unit: string;
+	milestones: ProjectMilestone[];
+	updates: ProjectUpdate[];
+}
+
+/**
+ * One linked session row of the composed detail view.
+ *
+ * `role` separates the two sets: a `work` row carries every liveness fact, while
+ * a `coordination` row ("filed by") carries NONE — no `runtime`, no `subagents`,
+ * no `todos` — so a renderer that gates its liveness chrome on those fields
+ * cannot paint a filing as a worker. `runtime: null` is therefore the WIRED
+ * shape of a coordination row, not an error.
+ *
+ * For `subagents` and `todos`, `null` means UNKNOWN and must never be rendered
+ * as `0` (no roster sidecar, no persisted snapshot). `runtime.state` is one of
+ * `live` / `wedged` / `stale` / `stopped`, and `stopped` means no runtime record
+ * at all — the ordinary state of a session the operator finished with.
+ */
+export interface LinkedSession {
+	session_id: string;
+	role: "work" | "coordination";
+	exists: boolean;
+	title: string | null;
+	created_at: number | null;
+	archived: boolean;
+	runtime: Record<string, unknown> | null;
+	subagents: Record<string, unknown> | null;
+	todos: Record<string, unknown> | null;
+}
+
+/** `GET /api/projects` — the listing, in the relay's board order. */
+export interface ProjectsResponse {
+	projects: ProjectSummary[];
+}
+
+/** `GET /api/projects/{key}` — one row plus its linked sessions. */
+export interface ProjectDetailResponse {
+	project: ProjectView;
+	links: LinkedSession[];
+}

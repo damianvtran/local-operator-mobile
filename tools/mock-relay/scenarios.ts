@@ -122,6 +122,18 @@ export interface ScenarioWorld {
 	search?: FixtureOverride;
 	models?: Json[];
 	/**
+	 * The projects surface this state pins (S16, the read path).
+	 *
+	 * `list` replaces the `GET /api/projects` body and `detail` the key-scoped one;
+	 * either may be a RECORDED RESPONSE (`FixtureOverride`) instead of a bare body,
+	 * which is how a refusal cell drives a real status and body. Absent, the mock
+	 * serves the captured six-project listing, and the key-scoped route answers the
+	 * captured detail for the captured row's own id or name and the captured `404
+	 * project_not_found` sentence for anything else — so a refusal cell is driven
+	 * by the relay's real body rather than one this mock wrote.
+	 */
+	projects?: { list?: Json | FixtureOverride; detail?: Json | FixtureOverride };
+	/**
 	 * The voice-input surface this state pins — the only two answers a mic's
 	 * visibility and one transcription upload need, and they must agree: a state
 	 * that ADVERTISES a voice path is the state whose `POST /api/transcribe`
@@ -1082,6 +1094,81 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 			projections: {},
 			past: fix.past("past-with-rows").sessions,
 		}),
+	);
+
+	/* --------------------------------------------------------------- projects -- */
+
+	add(
+		"projects-empty",
+		"No projects yet: the listing answers an empty array, so the screen must show its own empty state rather than nothing.",
+		["S16/empty"],
+		() => ({ projects: { list: { projects: [] } } }),
+	);
+
+	add(
+		"projects-loading",
+		"No project read has been answered yet: every API route holds its response open and the streams stay silent with keepalives only.",
+		["S16/loading", "S16-detail/loading"],
+		/* `keepalive-only` as well as the held reads: the harness asserts a scenario
+		 *  filling a `loading` cell streams NO frame, and a stream that pushes one
+		 *  would make `S16/loading` a state that had in fact heard from the relay. */
+		() => ({ hold: { api: "forever" }, stream: { mode: "keepalive-only" } }),
+	);
+
+	add(
+		"projects-populated",
+		"The six-project seeded store, and one project's composed detail with a live and a stopped link.",
+		["S16/populated", "S16-detail/populated"],
+		() => ({}),
+	);
+
+	add(
+		"projects-unknown-status",
+		"A listing carrying a status this build has never heard of: it takes its own trailing section rather than vanishing.",
+		["S16/unknown-status"],
+		() => {
+			/* Built from the CAPTURED listing rather than hand-written: a row that did
+			 *  not carry the relay's own field set would make this cell measure a shape
+			 *  the wire never sends. One row's status is replaced with a word none of
+			 *  the relay's seven statuses is, and its name makes it obvious which one. */
+			const listing = fix.record("projects-list");
+			const rows = Array.isArray(listing.projects) ? listing.projects : [];
+			const unknown = rows.find(
+				(row) => isRecord(row) && row.status === "done",
+			);
+			const patched = rows.map((row) =>
+				row === unknown && isRecord(row)
+					? {
+							...row,
+							name: "vendor-blocker",
+							status: "escalated",
+						}
+					: row,
+			);
+			return { projects: { list: { projects: patched } } };
+		},
+	);
+
+	add(
+		"projects-refused",
+		"The key-scoped read for a project the store does not hold: the relay's own 404 sentence, with its near-miss name.",
+		["S16-detail/refused"],
+		() => {
+			/* The REFUSAL IS THE CAPTURED ONE: the 404 body is read out of the corpus and
+			 *  re-sent with its recorded status, so the sentence the screen renders is a
+			 *  sentence the relay actually wrote. Writing a plausible one here would make
+			 *  the cell assert this mock's copy rather than the daemon's. */
+			const notFound = fix.response("projects-not-found");
+			return {
+				projects: {
+					detail: {
+						status: notFound.status,
+						headers: notFound.headers,
+						json: notFound.json,
+					},
+				},
+			};
+		},
 	);
 
 	/* The two search scenarios carry RESPONSE fixtures (a search request's answer);

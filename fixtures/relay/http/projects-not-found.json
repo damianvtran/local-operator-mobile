@@ -1,0 +1,21 @@
+{
+  "provenance": {
+    "kind": "live",
+    "relay_ref": "local-operator 7d21201f",
+    "captured_at": "2026-10-05",
+    "how": "captured from an isolated, seeded `lop mobile` daemon (`scripts/mobile_projects_fixture.py` in damianvtran/local-operator, which re-homes HOME + LOCAL_OPERATOR_CONFIG_DIR through scripts/probe_isolation before any local_operator import); six projects seeded through the real `ProjectRegistry`, no runtime scanner and no registrant sockets dialled; see ../README.md",
+    "redactions": "the isolated home is shown as ~; the portal password appears nowhere; the linked runtime's `pid` is the throwaway fixture process's own"
+  },
+  "request": {
+    "method": "GET",
+    "path": "/api/projects/paymnts"
+  },
+  "status": 404,
+  "headers": {
+    "content-type": "application/json"
+  },
+  "body": {
+    "error": "no project with id or name 'paymnts' — closest: payments-migration",
+    "code": "project_not_found"
+  }
+}

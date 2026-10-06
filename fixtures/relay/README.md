@@ -23,7 +23,7 @@ wrong wire.
 Read [`../../docs/relay/contract.md`](../../docs/relay/contract.md) for what each
 sample means; this file is only about provenance and reproduction.
 
-The tree is currently **108 fixtures — 102 live, 6 synthetic** — plus this README. The split is counted from `provenance.kind` in the files
+The tree is currently **111 fixtures — 105 live, 6 synthetic** — plus this README. The split is counted from `provenance.kind` in the files
 themselves rather than typed here, so it cannot drift from them.
 
 **Three refs are represented, deliberately.** The bulk of the live captures were
@@ -150,7 +150,9 @@ The notification-path samples are the same recipe plus two turns:
 | `provenance` | object | **required in every fixture** — `kind` (`live`/`synthetic`), `relay_ref`, `captured_at`/`how` for live, `modelled_on`/`why` for synthetic. The in-file field, not the path, is the authority |
 | `list_row_live.json` | `GET /api/sessions` | 200 | the "before" sample for the ended pair: a running session's row (`ended: false`, `subagents_running: 0`) |
 | `list_row_ended.json` | `GET /api/sessions` | 200 | the same row ~8 s after its runtime was SIGKILLed: **`ended: true`**, `subagents_running: null`, and `section: "active"` because the completion is still unseen |
-| `projects-empty.json` | `GET /api/projects` | 200 | |
+| `projects-empty.json` | `GET /api/projects` | 200 | the empty arm: no projects yet |
+| `projects-list.json`, `projects-detail.json` | `GET /api/projects`, `GET /api/projects/{key}` | 200 | the six-project seeded store: every status (`active`/`paused`/`done`/`archived`), stale and fresh progress, a live and a stopped link, and the three derived milestone states |
+| `projects-not-found.json` | `GET /api/projects/{key}` | 404 | `project_not_found` carrying the relay's own sentence and its prefix-matched near-miss |
 | `mark-png.json` | `HEAD /mark.png` | 200 | the brand asset, deliberately unauthenticated |
 | `command-set-effort-bad.json`, `command-set-model-unknown.json`, `command-slash-unknown.json` | `POST …/command` | 422 / 200 / 422 | three refusals a model sheet and a slash sheet must render |
 | `prompt-image-2.json`, `prompt-image-3.json` | `POST …/command` (`prompt` with one image) | 200 | the second was sent with a payload that could not be decoded, and the relay **still answered `200 prompt admitted`** while dropping the attachment — the evidence behind the contract's “image ingest is best-effort and silent” note |

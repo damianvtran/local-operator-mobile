@@ -1,0 +1,112 @@
+{
+  "provenance": {
+    "kind": "live",
+    "relay_ref": "local-operator 7d21201f",
+    "captured_at": "2026-10-05",
+    "how": "captured from an isolated, seeded `lop mobile` daemon (`scripts/mobile_projects_fixture.py` in damianvtran/local-operator, which re-homes HOME + LOCAL_OPERATOR_CONFIG_DIR through scripts/probe_isolation before any local_operator import); six projects seeded through the real `ProjectRegistry`, no runtime scanner and no registrant sockets dialled; see ../README.md",
+    "redactions": "the isolated home is shown as ~; the portal password appears nowhere; the linked runtime's `pid` is the throwaway fixture process's own"
+  },
+  "request": {
+    "method": "GET",
+    "path": "/api/projects/payments-migration"
+  },
+  "status": 200,
+  "headers": {
+    "content-type": "application/json"
+  },
+  "body": {
+    "project": {
+      "id": "29f0d6df36ac4e2fbef1bf5ae1341d58",
+      "name": "payments-migration",
+      "description": "Move billing onto the new ledger, then cut the switch-over.",
+      "owner": null,
+      "team": null,
+      "title": null,
+      "status": "active",
+      "progress": "ledger cutover written; dry run green against staging",
+      "progress_updated_at": 1791209087.189986,
+      "progress_reported_by": "operator",
+      "progress_refreshed_at": null,
+      "progress_refreshed_by": "",
+      "progress_stale": false,
+      "tags": [
+        "q4",
+        "payments"
+      ],
+      "sessions": [
+        "aa11bb22cc33",
+        "dd44ee55ff66"
+      ],
+      "coordination_sessions": [],
+      "created_at": 1791209087.1871512,
+      "updated_at": 1791209087.216922,
+      "start_date": "2026-09-15",
+      "target_date": "2026-10-20",
+      "completed_at": null,
+      "estimate": 13.0,
+      "estimate_unit": "points",
+      "milestones": [
+        {
+          "name": "beta cut",
+          "target_date": null,
+          "completed_at": "2026-10-05",
+          "status": "completed"
+        },
+        {
+          "name": "audit",
+          "target_date": "2026-09-05",
+          "completed_at": null,
+          "status": "overdue"
+        },
+        {
+          "name": "cutover window",
+          "target_date": "2026-10-15",
+          "completed_at": null,
+          "status": "upcoming"
+        }
+      ],
+      "updates": [
+        {
+          "at": "2026-10-05T14:04:47Z",
+          "text": "ledger cutover written; dry run green against staging",
+          "by": "operator",
+          "attachments": []
+        }
+      ]
+    },
+    "links": [
+      {
+        "session_id": "aa11bb22cc33",
+        "role": "work",
+        "exists": true,
+        "title": "Payments cutover — ledger",
+        "created_at": 1791209087.2188294,
+        "archived": false,
+        "runtime": {
+          "state": "live",
+          "busy": true,
+          "heartbeat_age_s": 1.1344630718231201,
+          "pid": 84820
+        },
+        "subagents": null,
+        "todos": null
+      },
+      {
+        "session_id": "dd44ee55ff66",
+        "role": "work",
+        "exists": true,
+        "title": "Staging dry run fixes",
+        "created_at": 1791209087.2212832,
+        "archived": false,
+        "runtime": {
+          "state": "stopped",
+          "busy": null,
+          "heartbeat_age_s": null,
+          "pid": null
+        },
+        "subagents": null,
+        "todos": null
+      }
+    ]
+  }
+}

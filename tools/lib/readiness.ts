@@ -86,6 +86,11 @@ export const SCREEN_MARKER_SUBJECT: Record<string, string> = {
 	 *  route (`/conversations`) is the programmatic open and a deep-link failure's
 	 *  landing — the sessions list's cells and their markers live here now. */
 	S15: "sidebar",
+	/* The projects read path: the list and its pushed detail are one surface in two
+	 * routes, and each declares its own subject so a capture says which of the two
+	 * drew. */
+	S16: "projects",
+	"S16-detail": "project-detail",
 };
 
 /**
