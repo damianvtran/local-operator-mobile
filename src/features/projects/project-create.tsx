@@ -15,7 +15,6 @@ import { useUiStore } from "@/state/ui-store";
 import {
 	CONTROL,
 	projectCreateStatusId,
-	STATE_MARKER,
 	SURFACE,
 } from "@/ui/a11y";
 import { Alert } from "@/ui/components/alert";
@@ -164,7 +163,7 @@ export const ProjectCreateSheet = ({
 			 *  be able to make on its own (`docs/ux/audit-rubric.md` U-15). Absent
 			 *  otherwise, so a cell that declares it cannot be satisfied by a sheet
 			 *  that is merely open. */}
-			{busy ? <View testID={STATE_MARKER.projects["create-busy"]} /> : null}
+			{busy ? <View testID={SURFACE.projectCreateBusy} /> : null}
 
 			<View className="gap-3">
 				{keptDraft ? (

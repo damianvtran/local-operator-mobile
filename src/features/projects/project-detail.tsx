@@ -31,7 +31,6 @@ import {
 	projectMilestoneToggleId,
 	ROLE,
 	SCREEN,
-	STATE_MARKER,
 	SURFACE,
 } from "@/ui/a11y";
 import { Alert } from "@/ui/components/alert";
@@ -342,7 +341,7 @@ export default function ProjectDetail() {
 					 *  (audit rubric U-15). ONE site for it — a copy inside the sheet as
 					 *  well would be two elements carrying one identifier, which is what a
 					 *  selector must never have. */}
-					{busy ? <View testID={STATE_MARKER["project-detail"].busy} /> : null}
+					{busy ? <View testID={SURFACE.projectMilestoneBusy} /> : null}
 
 					<View className="flex-row flex-wrap items-center gap-2">
 						<Badge
