@@ -19,7 +19,6 @@ import type {
 	SessionProjection,
 	SessionSummary,
 	SttCapability,
-	ToolState,
 } from "../../docs/relay/types.ts";
 import type { Json } from "../lib/json.ts";
 import { isRecord } from "../lib/json.ts";
@@ -275,46 +274,109 @@ const longName =
 const longCwd =
 	"~/workspace/clients/meridian/operations/reporting/pipelines/nightly-reconciliation";
 
-/** A 500-row transcript of tool rows, which is what the projection cap is about. */
-function longTranscript(
+/**
+ * A 520-row multi-turn conversation: thirteen turns, each one `user · 38 tool
+ * rows · answer` rows.
+ *
+ * WHY TURNS AND NOT ONE LONG RUN OF TOOLS. This scenario is the transcript's
+ * long case (the projection's 80-row cap and the render window's 500+ rows
+ * budget), and since conversation condensing landed it is also the case that
+ * proves a phone can keep the SHAPE of a long conversation: every completed
+ * turn collapses to one summary bar once a newer turn exists, so the frames
+ * from this world exercise the collapse at real depth. A single 520-row turn
+ * cannot condense anything (the active turn never does), so the shape would be
+ * the one thing this scenario could not show.
+ *
+ * Uniform on purpose — 13 x (1 + 38 + 1) = 520 exactly — because the number is
+ * quoted in prose (`windowPolicy`'s comment, the geometry test, the e2e
+ * README) and a scenario that quietly changed it would turn those into lies.
+ */
+function longConversation(
 	base: SessionProjection,
-	rows = 520,
+	turns = 13,
+	toolsPerTurn = 38,
 ): SessionProjection["transcript"] {
-	const template = base.transcript.find((entry) => entry.kind === "tool");
-	if (template === undefined) {
-		// The long-transcript scenario is the one that proves the list can carry 500+
-		// rows; without a tool row to clone it would silently produce a short list and
-		// the capture would look like a pass.
-		throw new Error("the long-trace base projection has no tool row to clone");
+	const tool = base.transcript.find((entry) => entry.kind === "tool");
+	const user = base.transcript.find((entry) => entry.kind === "user");
+	const answer = base.transcript.find((entry) => entry.kind === "assistant");
+	if (tool === undefined || user === undefined || answer === undefined) {
+		// Without a template of each kind the builder would silently produce a
+		// shorter or answer-less list, and every capture of it would look like a
+		// pass for the states this scenario exists to feed.
+		throw new Error(
+			"the long-conversation base projection is missing a row to clone",
+		);
 	}
-	const states: ToolState[] = [
-		"done",
-		"failed",
-		"queued",
-		"composing",
-		"running",
-		"interrupted",
-	];
-	const out = base.transcript
-		.filter((entry) => entry.kind === "user" || entry.kind === "assistant")
-		.slice(0, 2);
-	for (let i = 0; i < rows; i += 1) {
+	const out: SessionProjection["transcript"] = [];
+	for (let turn = 0; turn < turns; turn += 1) {
+		const at = String(turn).padStart(2, "0");
 		out.push({
-			...structuredClone(template),
-			id: `tc-long-${String(i).padStart(4, "0")}`,
-			tool_call_id: `long-${i}`,
-			tool_name: ["bash", "read", "edit", "glob", "grep"][i % 5] ?? "bash",
-			tool_state: states[i % states.length] ?? "done",
-			summary: `step ${i + 1} of the reconciliation sweep`,
-			text: `Step ${i + 1}: processed ${i * 37} records`,
-			elapsed_s: (i % 90) / 10,
-			error: i % 6 === 1 ? "exit status 2: ledger mismatch" : "",
-			diff_added: i % 7 === 0 ? 12 : 0,
-			diff_removed: i % 7 === 0 ? 3 : 0,
+			...structuredClone(user),
+			id: `tc-conv-${at}-user`,
+			text: PROMPTS[turn % PROMPTS.length] ?? "Continue the sweep.",
+		});
+		for (let step = 0; step < toolsPerTurn; step += 1) {
+			const stepId = String(step).padStart(2, "0");
+			out.push({
+				...structuredClone(tool),
+				id: `tc-conv-${at}-tool-${stepId}`,
+				tool_call_id: `conv-${turn}-${step}`,
+				tool_name: ["bash", "read", "edit", "glob", "grep"][step % 5] ?? "bash",
+				// Settled states only: a condensed turn summarises work that FINISHED,
+				// and a running row inside a completed turn would be a state no relay
+				// can actually persist (`docs/relay/contract.md` — `interrupted` is the
+				// default precisely because a call nobody saw return must not look done).
+				tool_state: step % 9 === 4 ? "failed" : "done",
+				summary: `turn ${turn + 1}, step ${step + 1}: sweeping the reconciliation ledger`,
+				text: "",
+				elapsed_s: ((step * 7) % 40) / 10,
+				error: "",
+				diff_added: step % 7 === 0 ? 12 : 0,
+				diff_removed: step % 7 === 0 ? 3 : 0,
+			});
+		}
+		out.push({
+			...structuredClone(answer),
+			id: `tc-conv-${at}-answer`,
+			text: `Turn ${turn + 1} done: ${ANSWERS[turn % ANSWERS.length] ?? "ledger reconciled."}`,
 		});
 	}
 	return out;
 }
+
+/** The opening messages, one per turn, in the register a real session has. */
+const PROMPTS: readonly string[] = [
+	"Reconcile last night's ledger and tell me what slipped.",
+	"Now add retry backoff to the exporter.",
+	"Write a test for the backoff, not just the happy path.",
+	"Why did turn one miss the euro conversions?",
+	"Fix the euro conversion rounding and note it in the changelog.",
+	"Check the staging bucket for stale exports.",
+	"Add the nightly sweep to the runbook.",
+	"Which services still retry without jitter?",
+	"Tighten the retry timeout and rerun the sweep.",
+	"Summarise what changed this week for the standup.",
+	"Draft the migration note for the ledger cutover.",
+	"Re-run the reconciliation with the verbose flag.",
+	"Close out the sweep and mark the task done.",
+];
+
+/** The closing answers, one per turn — short, the way a real answer reads. */
+const ANSWERS: readonly string[] = [
+	"three records were late, all from the same shard",
+	"backoff added with full jitter",
+	"seven cases covered, two of them failures",
+	"the shard clock, not the maths",
+	"rounding pinned to the ledger's own scale",
+	"two stale files found and quarantined",
+	"runbook updated with the 03:00 sweep",
+	"four services, listed in the summary",
+	"timeout halved, sweep clean in 6 minutes",
+	"a short paragraph you can paste as-is",
+	"the note is in docs/migration.md",
+	"sweep verbose output attached below",
+	"done — nothing left open",
+];
 
 /**
  * Build the scenario registry against a loaded fixture corpus.
@@ -1016,7 +1078,7 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 
 	add(
 		"long-transcript",
-		"A 520-row tool transcript: the case the projection's 80-row cap and degradation tiers exist for.",
+		"A 520-row multi-turn conversation: thirteen completed turns of tool work, so the transcript has both its long case (the projection's 80-row cap and degradation tiers) and turns to condense.",
 		/* `S5/populated-long` ALONE, and the second cell it declared is not a declaration the
 		 * relay can honour. This scenario builds ONE projection and both of its cells were
 		 * pinned from it, so `S5/scroll` was `S5/populated-long` rendered from the same
@@ -1032,7 +1094,7 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 		["S5/populated-long"],
 		() => {
 			const projection = projectionFrom(everyKind, {
-				transcript: longTranscript(everyKind, 520),
+				transcript: longConversation(everyKind),
 			});
 			return { projections: { [projection.session_id]: projection } };
 		},

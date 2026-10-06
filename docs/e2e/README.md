@@ -354,7 +354,7 @@ second hand-maintained list.
 | `ask-multi` | S8/ask-multi | The second of two questions in one pending ask, with a parallel count above one. |
 | `subagent-running` | S5/subagents, S6/populated | A running subagent with a queued sibling and a parked one, plus a detail route. |
 | `subagent-completed` | S6/populated, S6/populated-long | A completed subagent carrying a result, with a blocked second child. |
-| `long-transcript` | S5/populated-long | A 520-row tool transcript: the case the projection's 80-row cap and degradation tiers exist for. (`S5/scroll` is not declared beside it: the relay builds ONE projection for this scenario, so the two cells were one state under two names, and a scroll position is a viewport interaction the wire cannot declare.) |
+| `long-transcript` | S5/populated-long | A 520-row **multi-turn** conversation (thirteen completed turns of tool work): the case the projection's 80-row cap and degradation tiers exist for, and the case the transcript's condensing collapses. (`S5/scroll` is not declared beside it: the relay builds ONE projection for this scenario, so the two cells were one state under two names, and a scroll position is a viewport interaction the wire cannot declare.) |
 | `long-names` | S5/populated-long, S15/populated-long, S8/populated-long | A 64-character conversation name, a deep cwd, and a 400-character pending question. |
 | `empty-transcript` | S5/empty | A session that has just started: the seed projection, no rows. |
 | `every-entry-kind` | S5/populated | One row of every TranscriptEntry kind, for the renderer's fallback path. |
