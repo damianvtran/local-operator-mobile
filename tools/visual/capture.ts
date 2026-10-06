@@ -596,7 +596,10 @@ async function captureCell(
 			/* The screen never came up: none of the actions was reached, and the
 			 *  FIRST one names the failure — the verdict is about the cell's state,
 			 *  not about a sequence of presses. */
-			openerOutcomes.push({ action: openers[0] as Affordance, result: "missing" });
+			openerOutcomes.push({
+				action: openers[0] as Affordance,
+				result: "missing",
+			});
 		}
 	}
 	if (cell.consecutive) {

@@ -625,8 +625,9 @@ node tools/visual/capture.ts --dir e2e/fixtures/audit-canary \
 #     single refusal surface and `STATE_MARKER.computers` declares a single `error` — so
 #     `S2/error` was removed from `billing-inactive`'s `shows`.
 #   * `S9/populated` was the same state as `S5/populated`: the sheets are modals opened
-#     from the composer, the harness reaches a screen only by URL, and the cell declared
-#     the session's own marker. It was removed from `models-ranked`'s `shows`.
+#     from the composer, the harness reached a screen only by URL (`CELL_OPENERS` did not
+#     exist yet — see "How a cell reaches a state behind a control"), and the cell
+#     declared the session's own marker. It was removed from `models-ranked`'s `shows`.
 # A group made ONLY of DECLARED SKIPS is not reported at all — this head's 9 skips are
 # one placeholder screen between them — but a group with ANY evidential cell in it is.
 # The text-scale guard is REPORTED, never blocking: `themeProblems` comes from
