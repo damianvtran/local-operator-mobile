@@ -223,6 +223,9 @@ describe("a route is data, and it is validated rather than normalised", () => {
 			"mac.local",
 			"box.ts.net",
 			"relay.example.com",
+			// A name that merely begins with a private range is a name (Q54-1).
+			"10.0.0.1.example.com",
+			"192.168.1.1.nip.io",
 		]) {
 			expect(isPrivateAddress(host), host).toBe(false);
 		}

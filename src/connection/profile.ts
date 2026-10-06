@@ -96,13 +96,13 @@ const PRIVATE_HOST_PATTERNS = [
  *  Revisit when the device round (ADR 0002 §7, S10) can measure a denial on a
  *  name. */
 const PRIVATE_ADDRESS_PATTERNS = [
-	/^127\./,
-	/^10\./,
-	/^192\.168\./,
-	/^172\.(1[6-9]|2\d|3[01])\./,
-	/^169\.254\./,
+	/^127(\.\d{1,3}){3}$/,
+	/^10(\.\d{1,3}){3}$/,
+	/^192\.168(\.\d{1,3}){2}$/,
+	/^172\.(1[6-9]|2\d|3[01])(\.\d{1,3}){2}$/,
+	/^169\.254(\.\d{1,3}){2}$/,
 	/^\[::1\]$/,
-	/^100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\./, // CGNAT, which Tailscale uses
+	/^100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])(\.\d{1,3}){2}$/, // CGNAT, which Tailscale uses
 ];
 
 export function isPrivateHost(hostname: string): boolean {
