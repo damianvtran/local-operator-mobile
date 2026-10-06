@@ -1098,24 +1098,25 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 		 * capture cannot drive. The pairs are declared here, in the scenario that
 		 * owns the conversation, so the tier counts keep reading off the registry
 		 * rather than a second hand-maintained list. */
-		/* SCRATCH EVIDENCE REFERENCE: main + this scenario + the `lo-scroll` hook only.
-		 * The `lo-expand` cell the feature branch declares is omitted here — main has
-		 * no expansion to drive, and a second cell rendering this same view would be
-		 * an undeclared identical-state collapse against the `condensed` cell. */
-		["S5/populated-long", "path:/session/{sessionId}?lo-scroll=top/condensed"],
-		/* `S5/populated-long` ALONE, and the second cell it declared is not a declaration the
-		 * relay can honour. This scenario builds ONE projection and both of its cells were
-		 * pinned from it, so `S5/scroll` was `S5/populated-long` rendered from the same
-		 * projection at the same viewport: the identical-state check reported the pair on the
-		 * ci tier (light, iphone-se and tablet-landscape) and the readiness table already
-		 * aliases `scroll` onto `populated`. A scroll POSITION is a viewport interaction, not
-		 * a state the wire can declare — driving the two apart needs a scroll action or an id
-		 * the app itself exposes, and neither exists yet — so the duplicate name goes the way
-		 * `S2/error` went from `billing-inactive`. The coverage it claimed (a cell evidencing
-		 * a scrolled transcript) is named as a gap in the PR rather than papered over with an
-		 * exemption: an exemption is for two states a camera cannot tell apart, and this is
-		 * one state wearing two names. */
-		["S5/populated-long"],
+		/* `S5/populated-long` ALONE among the app's own names, and the second cell it
+		 * declared is not a declaration the relay can honour. This scenario builds ONE
+		 * projection and both of its cells were pinned from it, so `S5/scroll` was
+		 * `S5/populated-long` rendered from the same projection at the same viewport:
+		 * the identical-state check reported the pair on the ci tier and the readiness
+		 * table already aliases `scroll` onto `populated`. A scroll POSITION is a
+		 * viewport interaction, not a state the wire can declare — driving the two
+		 * apart needs a scroll action or an id the app itself exposes — so the
+		 * duplicate name goes the way `S2/error` went from `billing-inactive`.
+		 *
+		 * SCRATCH EVIDENCE REFERENCE: the `lo-scroll` path cell is the id, now that
+		 * this ref carries the hook; the `lo-expand` cell the feature branch declares
+		 * is omitted — main has no expansion to drive, and a second cell rendering
+		 * this same view would be an undeclared identical-state collapse against the
+		 * `condensed` cell. */
+		[
+			"S5/populated-long",
+			"path:/session/{sessionId}?lo-scroll=top/condensed",
+		],
 		() => {
 			const projection = projectionFrom(everyKind, {
 				transcript: longConversation(everyKind),
