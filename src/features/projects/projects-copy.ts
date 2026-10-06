@@ -204,9 +204,15 @@ export function linkedSessionState(link: LinkedSession): string | null {
  * daemon, both raw and percent-encoded). The real remedy is a relay route that
  * does not put the key in the path; until then the honest control is an
  * explanation rather than a button that cannot work.
+ *
+ * THE MECHANISM STAYS HERE AND DOES NOT TRAVEL INTO THE SENTENCE. Both review
+ * rounds took the first wording apart for it: a reader has no "route", and the
+ * half they can act on is the consequence (U-21 — no jargon noun; say what
+ * happens). What the reader needs is above the line; the paragraph you are
+ * reading is where the why for the next maintainer lives.
  */
 export const MILESTONE_SLASH_NOTE =
-	"Milestone names can't contain a slash. The route that removes one carries the name in its path, so a name with a slash could never be removed.";
+	"Milestone names can't contain a slash. A milestone with one could never be removed.";
 
 /** Whether a typed milestone name is one this build will send. */
 export function milestoneNameUsable(name: string): boolean {
@@ -219,6 +225,32 @@ export function milestoneNameUsable(name: string): boolean {
 export function milestoneUnremovable(name: string): boolean {
 	return name.includes("/");
 }
+
+/**
+ * The name grammar, said BEFORE the tap.
+ *
+ * The relay's own refusal is `project name must be 1-64 characters of letters,
+ * digits, dot, underscore or hyphen, and cannot start with a hyphen` — and this
+ * hint exists so a reader does not spend a round trip learning the rule, so it
+ * has to carry the WHOLE rule: the first version named the alphabet and stopped,
+ * which still cost a round trip for a 65-character name or a leading hyphen
+ * (U4). The wording stays in the reader's terms rather than the store's.
+ */
+export const PROJECT_NAME_HINT =
+	"1-64 characters: letters, digits, dot, underscore or hyphen. No spaces, and it can't start with a hyphen.";
+
+/**
+ * What a form says when it reopens holding the reader's unfinished work.
+ *
+ * One string, used by both forms, because the behaviour had to become ONE rule:
+ * the create sheet kept a dismissed draft silently while the milestone editor
+ * reset itself, and neither reader could tell which was happening (U3). The rule
+ * now is that a draft SURVIVES a dismissal — losing typed work to a stray tap is
+ * the worse of the two failures — and the form says so, so a reader opening the
+ * sheet to start something else is not silently handed the last attempt.
+ */
+export const DRAFT_KEPT_NOTE =
+	"Kept from your last visit. Clear the fields to start something new.";
 
 /**
  * The tags a reader typed, split the way a list is typed.

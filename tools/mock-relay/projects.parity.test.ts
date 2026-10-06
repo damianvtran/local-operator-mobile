@@ -84,6 +84,85 @@ describe("the mock's project store against the captured reads", () => {
 });
 
 describe("the mock's project store on the writes the relay was measured to take", () => {
+	it("answers the captured refusal fixtures with the fixture's own sentence", () => {
+		/*
+		 * REVIEW ROUND 1, R8. The refusal fixtures exist to record what the real
+		 * daemon WROTE, and nothing read them: `classifyHttp` validated their SHAPE,
+		 * and the sentences were asserted against strings typed into this file. A
+		 * capture that stopped describing the relay would therefore have gone on
+		 * passing. Here the mock is driven through each fixture's OWN recorded
+		 * request, after being put into the state that request presupposes, and the
+		 * whole answer is compared with the fixture's whole body — every one of these
+		 * bodies is id-free, which is what makes byte-equality the right assertion
+		 * rather than a field-by-field walk.
+		 */
+		const fix = loadFixtures();
+		const fixture = (name: string) =>
+			fix.http.get(name) as unknown as {
+				request: { method: string; path: string; body: unknown };
+				json: Json;
+			};
+
+		/* The row every write fixture is written against, in the state the capture
+		 *  left it in: it exists (so a create of it is refused as taken) and it holds
+		 *  no milestone called `never added` (so removing one is refused). */
+		const withCaptureWrites = () => {
+			const projects = store();
+			answerOf(
+				projects.create({
+					name: "capture-writes",
+					description:
+						"A row created over the write route, for parity capture.",
+					status: "active",
+					tags: ["capture"],
+				}),
+			);
+			return projects;
+		};
+
+		const takenName = fixture("projects-create-refused");
+		expect(
+			refusalOf(withCaptureWrites().create(takenName.request.body)).json,
+		).toEqual(takenName.json);
+
+		const invalid = fixture("projects-create-invalid");
+		expect(refusalOf(store().create(invalid.request.body)).json).toEqual(
+			invalid.json,
+		);
+
+		const deleteRefused = fixture("projects-delete-refused");
+		expect(
+			refusalOf(
+				withCaptureWrites().remove(
+					"capture-writes",
+					deleteRefused.request.body as never,
+				),
+			).json,
+		).toEqual(deleteRefused.json);
+
+		const milestoneRefused = fixture("projects-milestone-refused");
+		expect(
+			refusalOf(
+				withCaptureWrites().removeMilestone(
+					"capture-writes",
+					decodeURIComponent(
+						milestoneRefused.request.path.replace(/^.*\/milestones\//, ""),
+					),
+				),
+			).json,
+		).toEqual(milestoneRefused.json);
+
+		const deleted = fixture("projects-deleted");
+		expect(
+			answerOf(
+				withCaptureWrites().remove(
+					"capture-writes",
+					deleted.request.body as never,
+				),
+			).json,
+		).toEqual(deleted.json);
+	});
+
 	it("creates a row with the store's own defaults and shows it in the listing", () => {
 		const projects = store();
 		const created = answerOf(
@@ -174,6 +253,62 @@ describe("the mock's project store on the writes the relay was measured to take"
 				}
 			).project?.milestones?.find((row) => row.name === "release cut")?.status,
 		).toBe("completed");
+	});
+
+	it("reproduces the captured `target_date` tri-state, read from the fixtures it was captured into", () => {
+		/*
+		 * REVIEW ROUND 1, R3 AND R8. The milestone family's whole write-side evidence
+		 * used to be one body — `{"name": … , "completed": true}` — while the app's
+		 * ordinary add path sends `target_date: ""` and its sheet advertises "Empty the
+		 * box to clear the date." So the tri-state (absent = leave it, `""` = clear it,
+		 * a date = set it) rested on the MOCK this same change wrote, and the refusal
+		 * fixtures were checked for shape only.
+		 *
+		 * Both halves are closed here, and the shape of the fix is the point: the case
+		 * this drives is the fixture's OWN recorded request, and the value it expects is
+		 * the fixture's own recorded answer. Nothing in this test is a literal the
+		 * relay was asked about once — a captured body that changes stops matching,
+		 * which is the drift R8 was about.
+		 */
+		const fix = loadFixtures();
+		const projects = store();
+		answerOf(
+			projects.create({
+				name: "capture-writes",
+				description: "A row created over the write route, for parity capture.",
+				status: "active",
+				tags: ["capture"],
+			}),
+		);
+		/* In the order the capture made them: the date is SET, then CLEARED, so the
+		 *  clear is answering a milestone that really holds a date. */
+		for (const name of [
+			"projects-milestone-dated",
+			"projects-milestone-cleared",
+		]) {
+			const captured = fix.http.get(name) as {
+				request?: { body?: Record<string, unknown> };
+				json?: {
+					project?: { milestones?: Array<{ name?: string; target_date?: unknown }> };
+				};
+			};
+			const requestBody = captured.request?.body;
+			expect(requestBody, `${name} records the request it captured`).toBeDefined();
+			const expected = captured.json?.project?.milestones?.find(
+				(row) => row.name === "beta cut",
+			)?.target_date;
+			const answered = answerOf(
+				projects.setMilestone("capture-writes", requestBody as never),
+			).json as {
+				project?: { milestones?: Array<{ name?: string; target_date?: unknown }> };
+			};
+			const actual = answered.project?.milestones?.find(
+				(row) => row.name === "beta cut",
+			)?.target_date;
+			/* `undefined` in the capture means the field was absent; the store answers
+			 *  `null` for a cleared date, which is the wire's own spelling of it. */
+			expect(actual ?? null).toBe(expected ?? null);
+		}
 	});
 
 	it("clears a milestone's date with the empty string, and refuses a bad one", () => {

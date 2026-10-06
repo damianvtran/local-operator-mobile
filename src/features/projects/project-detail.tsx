@@ -6,6 +6,7 @@ import { Pressable, Text, View } from "react-native";
 import type { LinkedSession, ProjectMilestone, ProjectView } from "@/contracts";
 import { useConnection } from "@/features/auth/connection-provider";
 import {
+	DRAFT_KEPT_NOTE,
 	deleteProjectBody,
 	isVanishRefusal,
 	linkedSessionLabel,
@@ -98,6 +99,9 @@ export default function ProjectDetail() {
 	);
 	const [draftName, setDraftName] = useState("");
 	const [draftDate, setDraftDate] = useState("");
+	/** Whether the ADD sheet opened onto a draft the reader left behind — the
+	 *  marker the create sheet carries for the same rule (U3). */
+	const [keptDraft, setKeptDraft] = useState(false);
 	/** The two irreversible actions, each its own confirm. */
 	const [confirmDelete, setConfirmDelete] = useState(false);
 	const [confirmRemove, setConfirmRemove] = useState(false);
@@ -178,8 +182,21 @@ export default function ProjectDetail() {
 	 *  previous failure is cleared, because the sheet is a new attempt. */
 	const openEditor = (milestone: ProjectMilestone | null) => {
 		setProblem(null);
-		setDraftName(milestone?.name ?? "");
-		setDraftDate(milestone?.target_date ?? "");
+		if (milestone !== null) {
+			/* An EDIT always re-seeds from the record: the sheet is about THIS
+			 *  milestone, and showing anything else would be the screen inventing
+			 *  state the store does not hold. */
+			setDraftName(milestone.name);
+			setDraftDate(milestone.target_date ?? "");
+			setKeptDraft(false);
+		} else {
+			/* The ADD path deliberately keeps whatever was typed last time, and
+			 *  says so — the half of U3 that had to become ONE rule with the create
+			 *  sheet: losing a typed draft to a stray tap is the worse of the two
+			 *  failures, so a draft survives a dismissal in both forms, and the form
+			 *  tells the reader it did (`DRAFT_KEPT_NOTE`). */
+			setKeptDraft(draftName.trim() !== "" || draftDate.trim() !== "");
+		}
 		setEditor({ editingName: milestone?.name ?? null });
 	};
 
@@ -292,7 +309,6 @@ export default function ProjectDetail() {
 			}
 		>
 			<ProjectDetailStateMarkers refused={failed} />
-
 			{refusal !== null ? (
 				<RefusalSurface
 					kind={refusal.kind}
@@ -444,21 +460,69 @@ export default function ProjectDetail() {
 					</View>
 				</View>
 			)}
-
 			<Sheet
-				/* THE SHEET STANDS DOWN WHILE ITS CONFIRM IS UP. Two open modals at once
-				 *  is a shape this app does not use anywhere else — the project delete's
-				 *  confirm is raised over the SCREEN — and it is what the audit's U-08 rule
-				 *  reports as a 320x568pt full-viewport overlap on the remove cell, because
-				 *  the two modal layers cover each other exactly. Hiding rather than
-				 *  unmounting keeps the reader's typing and the milestone being edited, so
-				 *  Cancel returns to the sheet they were in. */
-				visible={editor !== null && !confirmRemove}
+				/* THE ACTION REGION IS PINNED, for the reason the create form's is: the
+				 *  submit and the refusal were inside the scroll region, and on a phone at
+				 *  large text the editor's `Save` and `Remove milestone` sat below the fold
+				 *  (measured at iphone-se/200 %: a 470 pt band with neither control in it).
+				 *  A control that answers a sheet may not scroll out of reach — `Sheet`'s
+				 *  `footer` is the kit's three-region rule (§ 8/§ 13). */
+				/* The sheet is simply VISIBLE while the editor is open: "never stack two
+				 *  modals" is the PRIMITIVE's rule now (`@/ui/modal-stack`, applied inside
+				 *  `Sheet` and `Dialog`). The previous shape was an `&&` here —
+				 *  `visible={editor !== null && !confirmRemove}` — and it was wrong twice
+				 *  over: it guarded ONE PAIRING (this screen's own project-delete confirm
+				 *  re-created the identical overlap), and it left the invariant as a
+				 *  convention every future caller has to remember rather than a property
+				 *  of the component that renders the thing. Hiding rather than unmounting
+				 *  is still what happens — the store stands the covered sheet down — which
+				 *  is what keeps the reader's typing and returns them here on Cancel. */
+				visible={editor !== null}
 				onClose={closeEditor}
 				title={editingName === null ? "Add milestone" : "Edit milestone"}
 				testID={SURFACE.projectMilestoneSheet}
+				footer={
+					<View className="gap-3">
+						{problem !== null && editor !== null ? (
+							<Alert severity="error" testID={SURFACE.projectMilestoneRefusal}>
+								{problem}
+							</Alert>
+						) : null}
+
+						<Button
+							testID={CONTROL.projectMilestoneSubmit}
+							label={editingName === null ? "Add" : "Save"}
+							onPress={() => void submitMilestone()}
+							/* Inert while the name cannot be sent: an empty one is a round
+							 *  trip spent to be told `name is required`, and a slashed one
+							 *  could never be removed from here. */
+							disabled={busy || !milestoneNameUsable(typedName)}
+							loading={busy}
+						/>
+
+						{editingName !== null && !slashOnExisting ? (
+							<Button
+								testID={CONTROL.projectMilestoneRemove}
+								label="Remove milestone"
+								onPress={() => setConfirmRemove(true)}
+								variant="danger"
+								size="sm"
+								disabled={busy}
+							/>
+						) : null}
+					</View>
+				}
 			>
 				<View className="gap-3">
+					{keptDraft ? (
+						<Text
+							testID={SURFACE.projectMilestoneDraftNote}
+							className="text-meta text-ink-muted"
+						>
+							{DRAFT_KEPT_NOTE}
+						</Text>
+					) : null}
+
 					<Input
 						testID={CONTROL.projectMilestoneName}
 						label="Name"
@@ -474,11 +538,15 @@ export default function ProjectDetail() {
 					/>
 
 					{slashWhileAdding || slashOnExisting ? (
-						/* An EXPLANATION, not a control: the control that cannot work
-						 *  is not offered at all. */
+						/* An EXPLANATION, not a control: the control that cannot work is not
+						 *  offered at all. Painted as HELPER TEXT rather than as `danger`: the
+						 *  rule is met the moment `/` is typed, and red says "an error you
+						 *  caused" for what is a rule the reader cannot argue with — the
+						 *  submit's own inertness is the other half of the same signal
+						 *  (design D3, rubric U-21). */
 						<Text
 							testID={SURFACE.projectMilestoneSlashNote}
-							className="text-body-sm text-danger"
+							className="text-body-sm text-ink-muted"
 						>
 							{MILESTONE_SLASH_NOTE}
 						</Text>
@@ -495,39 +563,8 @@ export default function ProjectDetail() {
 					<Text className="text-meta text-ink-dim">
 						Empty the box to clear the date.
 					</Text>
-
-					{problem !== null && editor !== null ? (
-						<Alert severity="error" testID={SURFACE.projectMilestoneRefusal}>
-							{problem}
-						</Alert>
-					) : null}
-
-					<Button
-						testID={CONTROL.projectMilestoneSubmit}
-						label={editingName === null ? "Add" : "Save"}
-						onPress={() => void submitMilestone()}
-						/* Inert while the name cannot be sent: an empty one is a round
-						 *  trip spent to be told `name is required`, and a slashed one
-						 *  could never be removed from here. */
-						disabled={busy || !milestoneNameUsable(typedName)}
-						loading={busy}
-					/>
-
-					{editingName !== null && !slashOnExisting ? (
-						<View className="pt-1">
-							<Button
-								testID={CONTROL.projectMilestoneRemove}
-								label="Remove milestone"
-								onPress={() => setConfirmRemove(true)}
-								variant="danger"
-								size="sm"
-								disabled={busy}
-							/>
-						</View>
-					) : null}
 				</View>
 			</Sheet>
-
 			<Dialog
 				visible={confirmRemove}
 				testID={CONTROL.projectMilestoneRemoveDialog}
@@ -539,7 +576,6 @@ export default function ProjectDetail() {
 				onConfirm={() => void removeMilestone()}
 				onCancel={() => setConfirmRemove(false)}
 			/>
-
 			<Dialog
 				visible={confirmDelete}
 				testID={CONTROL.projectDeleteDialog}

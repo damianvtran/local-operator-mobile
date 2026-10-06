@@ -28,6 +28,9 @@ interface StubNode {
 	tagName?: string;
 	getAttribute: (name: string) => string | null;
 	dispatchEvent: (event: { type: string }) => boolean;
+	/** Present on the node `stubDom` builds; a test may override it to answer as a
+	 *  PARENT answering for a child (the labelled-button case). */
+	contains?: (other: unknown) => boolean;
 }
 
 interface StubGlobal {
@@ -58,10 +61,31 @@ function valueAccessor(): object {
 	return proto;
 }
 
-/** Build the page-side environment one script run needs, and record it. */
-function stubDom(node: StubNode | null): { events: string[]; nodes: string[] } {
+/** The box a stubbed control reports, and what is under the point a press lands on. */
+interface ReachOptions {
+	/** The control's own box. `{0,0,0,0}` is a control with no box at all. */
+	rect?: { left: number; top: number; width: number; height: number };
+	/** What `elementFromPoint` answers — the covering surface, when one is wanted. */
+	hit?: unknown;
+}
+
+/**
+ * Build the page-side environment one script run needs, and record it.
+ *
+ * The stubbed node is REACHABLE by default — a 40×40 box with itself under the
+ * press point — because every action now runs the reader's own test first (a
+ * non-zero box and `elementFromPoint` inside the element). A test that wants the
+ * unreachable answer passes a zero box or a different element under the point.
+ * Until this stub existed those calls were simply absent, which is how the old
+ * script could press a covered control: it never asked.
+ */
+function stubDom(
+	node: StubNode | null,
+	reach: ReachOptions = {},
+): { events: string[]; nodes: string[]; scrolled: number[] } {
 	const events: string[] = [];
 	const nodes: string[] = [];
+	const scrolled: number[] = [];
 	/* The events are recorded where they are CONSTRUCTED, which is also where they
 	 *  are dispatched — the script builds one per press and dispatches it once, so
 	 *  a constructor-side record is the press sequence in order. */
@@ -77,11 +101,36 @@ function stubDom(node: StubNode | null): { events: string[]; nodes: string[] } {
 	saved.HTMLInputElement = globals.HTMLInputElement;
 	saved.HTMLTextAreaElement = globals.HTMLTextAreaElement;
 
+	const rect = reach.rect ?? { left: 0, top: 0, width: 40, height: 40 };
+	/* The annotation is load-bearing: `contains` names the object it belongs to, so
+	 *  without it the initializer is circular and TypeScript refuses the whole
+	 *  stub rather than the one member. */
+	type Reachable = StubNode & {
+		getBoundingClientRect: () => {
+			left: number;
+			top: number;
+			width: number;
+			height: number;
+		};
+		scrollIntoView: () => void;
+		contains: (other: unknown) => boolean;
+	};
+	const reachable: Reachable | null =
+		node === null
+			? null
+			: {
+					getBoundingClientRect: () => rect,
+					scrollIntoView: () => scrolled.push(1),
+					contains: (other: unknown) => other === reachable,
+					...node,
+				};
+
 	globals.document = {
 		querySelector: (selector: string) => {
 			nodes.push(selector);
-			return node;
+			return reachable;
 		},
+		elementFromPoint: () => ("hit" in reach ? reach.hit : reachable),
 	};
 	globals.window = {};
 	globals.PointerEvent = class {
@@ -105,7 +154,7 @@ function stubDom(node: StubNode | null): { events: string[]; nodes: string[] } {
 	 *  instance — either stub would make the script throw rather than type. */
 	globals.HTMLInputElement = { prototype: valueAccessor() };
 	globals.HTMLTextAreaElement = { prototype: valueAccessor() };
-	return { events, nodes };
+	return { events, nodes, scrolled };
 }
 
 function restore(): void {
@@ -182,6 +231,84 @@ describe("the affordance script", () => {
 			dispatchEvent: () => true,
 		});
 		expect(run(affordanceScript({ click: "x" }))).toBe("inert");
+		expect(events).toEqual([]);
+	});
+
+	it("scrolls the control into view before pressing it", () => {
+		/* A control below the fold is one a reader reaches by scrolling, so the
+		 *  action does what the reader does. Measured through the stub rather than
+		 *  assumed: the press that lands after a scroll is the reader's own
+		 *  sequence, and it is the difference between `ok` and `unreachable` for
+		 *  every control on a screen taller than its window. */
+		const { events, scrolled } = stubDom({
+			getAttribute: () => null,
+			dispatchEvent: () => true,
+		});
+		expect(run(affordanceScript({ click: "projects-new" }))).toBe("ok");
+		expect(scrolled).toHaveLength(1);
+		expect(events).toHaveLength(5);
+	});
+
+	it("reports a control with no box as unreachable, and does not press it", () => {
+		/* THE DEFECT THIS PINS (review round 1, R1): `dispatchEvent` delivers
+		 *  straight to the target, so the first version of this script pressed a
+		 *  zero-size control and reported `ok`. A frame of that state is a frame of
+		 *  something no reader could have reached. */
+		const { events } = stubDom(
+			{ getAttribute: () => null, dispatchEvent: () => true },
+			{ rect: { left: 0, top: 0, width: 0, height: 0 } },
+		);
+		expect(run(affordanceScript({ click: "covered" }))).toBe("unreachable");
+		expect(events).toEqual([]);
+	});
+
+	it("reports a control something else is drawn over as unreachable", () => {
+		/* The shape a second modal leaves: the control is in the page, enabled and
+		 *  sized, and the point a press would land on belongs to the surface on top
+		 *  of it. This is the class the audit's U-08 overlap rule catches by hand and
+		 *  the opener could previously press straight through. */
+		const { events } = stubDom(
+			{ getAttribute: () => null, dispatchEvent: () => true },
+			{ hit: { tagName: "DIV" } },
+		);
+		expect(run(affordanceScript({ click: "under-a-modal" }))).toBe(
+			"unreachable",
+		);
+		expect(events).toEqual([]);
+	});
+
+	it("accepts a press whose point lands on a descendant of the control", () => {
+		/* A button's own box is under its label as often as under nothing: the label
+		 *  is a child of the pressable, so `elementFromPoint` answers the `<Text>`.
+		 *  Requiring identity rather than containment would report every labelled
+		 *  control unreachable — which is why this case is asserted rather than
+		 *  assumed. */
+		const child = { tagName: "SPAN" };
+		const { events } = stubDom(
+			{
+				getAttribute: () => null,
+				dispatchEvent: () => true,
+				contains: (other: unknown) => other === child,
+			},
+			{ hit: child },
+		);
+		expect(run(affordanceScript({ click: "labelled" }))).toBe("ok");
+		expect(events).toHaveLength(5);
+	});
+
+	it("reports a non-field as not-a-field rather than throwing", () => {
+		/* `setter.call(el, …)` against a `div` throws `Illegal invocation` INSIDE
+		 *  the page, which aborted the whole run instead of answering — a cell's id
+		 *  pointing at the wrong kind of element is a cell problem, and it has its
+		 *  own answer. */
+		const { events } = stubDom({
+			tagName: "DIV",
+			getAttribute: () => null,
+			dispatchEvent: () => true,
+		});
+		expect(
+			run(affordanceScript({ type: { testID: "not-a-field", text: "x" } })),
+		).toBe("not-a-field");
 		expect(events).toEqual([]);
 	});
 

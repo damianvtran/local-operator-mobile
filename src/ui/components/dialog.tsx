@@ -1,4 +1,4 @@
-import { Modal, Pressable, Text, View } from "react-native";
+import { Modal, Pressable, Text, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { ScopedVariables } from "uniwind";
@@ -6,6 +6,8 @@ import { CONTROL, ROLE } from "@/ui/a11y";
 import { useTokenColor } from "@/ui/appearance";
 import { Button } from "@/ui/components/button";
 import { Heading } from "@/ui/components/heading";
+import { useModalStackEntry } from "@/ui/components/modal-stack-entry";
+import { maxColumnWidth } from "@/ui/column";
 import { useShadow } from "@/ui/elevation";
 import { useTextScale } from "@/ui/text-scale-provider";
 import { DIALOG_SURFACE_CLASS } from "@/ui/variants";
@@ -63,10 +65,23 @@ export const Dialog = ({
 	 *  setting the dialog still rendered its 15 px and 20 px roles at 15 and 20, and
 	 *  the cell was correctly reported as unmeasurable for large text. */
 	const { variables } = useTextScale();
+	/* THE KIT'S PROSE MEASURE APPLIES TO A DIALOG TOO. The surface is content-sized,
+	 *  so on a tablet it grew to whatever its longest line wanted: measured at
+	 *  tablet-landscape/100 % the delete confirm's sentence rendered on one line,
+	 *  ~105 characters, 758 pt of an 834 pt surface — and at 135 % the surface grew
+	 *  to nearly the whole landscape screen. `Screen` caps every prose column at the
+	 *  same three widths for exactly this reason (§ 22: a line of prose does not run
+	 *  1,200 px wide); a dialog body is prose, so it takes the same cap. `null`
+	 *  means "no cap" — the phone in portrait — and is left alone. */
+	const maxWidth = maxColumnWidth(useWindowDimensions());
+	/* A dialog raised while another modal is up stands down rather than painting a
+	 *  second full-viewport surface over it — `@/ui/modal-stack` carries the rule and
+	 *  why it is the primitive's job rather than a caller's prop. */
+	const covered = useModalStackEntry(visible);
 
 	return (
 		<Modal
-			visible={visible}
+			visible={visible && !covered}
 			transparent
 			animationType="fade"
 			onRequestClose={onCancel}
@@ -87,6 +102,7 @@ export const Dialog = ({
 						className={DIALOG_SURFACE_CLASS}
 						style={{
 							...shadow,
+							...(maxWidth === null ? {} : { maxWidth }),
 							/* A MARGIN on the surface, not padding on the modal's root. `px-6` on the
 							 *  root is the phone's own margin, and an inline `paddingLeft` would
 							 *  OVERRIDE it rather than add to it; padding the root would also move the

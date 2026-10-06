@@ -1,0 +1,60 @@
+{
+  "provenance": {
+    "kind": "live",
+    "relay_ref": "local-operator d0e4cbce7",
+    "captured_at": "2026-10-06",
+    "how": "captured from an isolated, seeded `lop mobile` daemon (`scripts/mobile_projects_fixture.py` in damianvtran/local-operator, which re-homes HOME + LOCAL_OPERATOR_CONFIG_DIR through scripts/probe_isolation before any local_operator import); the route was then exercised over loopback HTTP with the per-run password, never through a browser or the app. The worktree it ran from carries `local_operator/mobile/projects.py` and `local_operator/mobile/daemon.py` BYTE-IDENTICAL to `origin/main` at capture time, which is what makes this a capture of the shipped route rather than of a branch; a milestone write that CLEARS a target date with the empty string \u2014 the body the app's default add path sends and its \"Empty the box to clear the date.\" affordance depends on",
+    "redactions": "the isolated home is shown as ~; the portal password appears nowhere; the created row's id is the fixture store's own (minted from the store's uuid column, not typed)"
+  },
+  "request": {
+    "method": "POST",
+    "path": "/api/projects/capture-writes/milestones",
+    "body": {
+      "name": "beta cut",
+      "target_date": ""
+    }
+  },
+  "status": 200,
+  "headers": {
+    "content-type": "application/json"
+  },
+  "body": {
+    "ok": true,
+    "project": {
+      "id": "85de5b2a7dd64055b0d973e8dfd11f8c",
+      "name": "capture-writes",
+      "description": "A row created over the write route, for parity capture.",
+      "owner": null,
+      "team": null,
+      "title": null,
+      "status": "active",
+      "progress": "",
+      "progress_updated_at": null,
+      "progress_reported_by": "",
+      "progress_refreshed_at": null,
+      "progress_refreshed_by": "",
+      "progress_stale": true,
+      "tags": [
+        "capture"
+      ],
+      "sessions": [],
+      "coordination_sessions": [],
+      "created_at": 1791309271.0359318,
+      "updated_at": 1791309271.0728178,
+      "start_date": null,
+      "target_date": null,
+      "completed_at": null,
+      "estimate": null,
+      "estimate_unit": "points",
+      "milestones": [
+        {
+          "name": "beta cut",
+          "target_date": null,
+          "completed_at": null,
+          "status": "upcoming"
+        }
+      ],
+      "updates": []
+    }
+  }
+}

@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Text, View } from "react-native";
 
 import { PROJECT_STATUS_ORDER } from "@/contracts";
 import { useConnection } from "@/features/auth/connection-provider";
 import {
+	DRAFT_KEPT_NOTE,
+	PROJECT_NAME_HINT,
 	parseTags,
 	projectRefusalSentence,
 	WRITE_UNKNOWN_NOTE,
@@ -71,6 +73,22 @@ export const ProjectCreateSheet = ({
 	const [tags, setTags] = useState("");
 	const [busy, setBusy] = useState(false);
 	const [problem, setProblem] = useState<string | null>(null);
+	/* Whether the sheet OPENED onto work the reader left behind. The sheet stays
+	 *  mounted between openings (the listing keeps it in the tree), so the drafts
+	 *  survive a dismissal by construction — and that is the rule this slice chose
+	 *  deliberately: a stray tap on the scrim must not throw away a filled form,
+	 *  which is the failure the milestone editor's reset sat on the other side of.
+	 *  What was missing is the reader being TOLD (`DRAFT_KEPT_NOTE`), which is what
+	 *  this flag gates. It is read on the transition, so it never reports the text
+	 *  the reader is typing right now as "kept from last time". */
+	const [keptDraft, setKeptDraft] = useState(false);
+
+	useEffect(() => {
+		if (!visible) return;
+		setKeptDraft(
+			name.trim() !== "" || description.trim() !== "" || tags.trim() !== "",
+		);
+	}, [visible, name, description, tags]);
 
 	const submit = async () => {
 		const client = relay();
@@ -108,10 +126,38 @@ export const ProjectCreateSheet = ({
 
 	return (
 		<Sheet
+			/* THE ANSWERING CONTROL IS PINNED, and so is the surface that says why it
+			 *  refused. Both sat inside the scroll region, which put them below the fold
+			 *  at EVERY scale on both phones — the refusal element was in the DOM in 27
+			 *  of the 28 measured combinations and painted in 11 — so the one control a
+			 *  reader has to reach, and the one sentence they need when it refuses, were
+			 *  the two things the sheet could hide. `Sheet`'s `footer` is the kit's
+			 *  three-region rule; its doc says why a taller detent is not the fix (the
+			 *  form is taller than the window at every detent). */
 			visible={visible}
 			onClose={onClose}
 			title="New project"
 			testID={SURFACE.projectCreateSheet}
+			footer={
+				<View className="gap-3">
+					{problem !== null ? (
+						<Alert severity="error" testID={SURFACE.projectCreateRefusal}>
+							{problem}
+						</Alert>
+					) : null}
+					<Button
+						testID={CONTROL.projectCreateSubmit}
+						label="Create"
+						onPress={() => void submit()}
+						/* The empty-name case is the ONLY client-side refusal: the relay
+						 *  would answer `name is required`, and that tap is worth saving.
+						 *  Every other value is sent as typed and refused by the store,
+						 *  which is the surface that owns the grammar. */
+						disabled={busy || name.trim() === ""}
+						loading={busy}
+					/>
+				</View>
+			}
 		>
 			{/* The in-flight state as a marker rather than as an inference: the button
 			 *  shows a spinner, and "the write is in flight" is a claim a frame has to
@@ -121,12 +167,19 @@ export const ProjectCreateSheet = ({
 			{busy ? <View testID={STATE_MARKER.projects["create-busy"]} /> : null}
 
 			<View className="gap-3">
+				{keptDraft ? (
+					<Text
+						testID={SURFACE.projectCreateDraftNote}
+						className="text-meta text-ink-muted"
+					>
+						{DRAFT_KEPT_NOTE}
+					</Text>
+				) : null}
+
 				{/* The name grammar, said BEFORE the tap: the relay's own 422 sentence
 				 *  names it too, but a reader should not spend a round trip to learn
 				 *  that a space is not allowed. */}
-				<Text className="text-meta text-ink-dim">
-					Letters, digits, dot, underscore and hyphen. No spaces.
-				</Text>
+				<Text className="text-meta text-ink-dim">{PROJECT_NAME_HINT}</Text>
 
 				<Input
 					testID={CONTROL.projectCreateName}
@@ -179,24 +232,6 @@ export const ProjectCreateSheet = ({
 				<Text className="text-meta text-ink-dim">
 					Separate with commas or spaces.
 				</Text>
-
-				{problem !== null ? (
-					<Alert severity="error" testID={SURFACE.projectCreateRefusal}>
-						{problem}
-					</Alert>
-				) : null}
-
-				<Button
-					testID={CONTROL.projectCreateSubmit}
-					label="Create"
-					onPress={() => void submit()}
-					/* The empty-name case is the ONLY client-side refusal: the relay
-					 *  would answer `name is required`, and that tap is worth saving.
-					 *  Every other value is sent as typed and refused by the store,
-					 *  which is the surface that owns the grammar. */
-					disabled={busy || name.trim() === ""}
-					loading={busy}
-				/>
 			</View>
 		</Sheet>
 	);

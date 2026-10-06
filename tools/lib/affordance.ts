@@ -33,6 +33,27 @@
  * through a bare `click`. WHAT TYPING IS: the native value setter plus one
  * `input` event, the shape React's own value tracker does not de-duplicate — no
  * focus, no keyboard emulation, nothing that depends on where the caret is.
+ *
+ * WHAT A PRESS IS NOT: `dispatchEvent` delivers straight to the target, so it
+ * bypasses hit-testing entirely — the first version of this file pressed a
+ * control under an open modal, a zero-size control, and one with
+ * `pointer-events: none`, and reported `ok` for all three. A frame of such a
+ * state is a frame of something no reader could have reached, which is the exact
+ * failure this module exists to prevent (review round 1, R1), and the repository
+ * had already codified the distinction it was missing: `readiness.ts` separates a
+ * marker's PRESENCE from its root's VISIBILITY. So every action now runs the
+ * reader's own two tests before it acts — is the thing on screen, and is it the
+ * thing under my finger — and answers `unreachable` when they fail.
+ *
+ * SCROLLING IS PART OF THE READER'S TEST. A control below the fold is one a
+ * reader reaches by scrolling, so an action scrolls it into view first (the
+ * `block: "center"` shape a reader's own swipe lands on) and hit-tests where the
+ * finger would then be. Refusing to press anything off-screen would instead
+ * reject states a reader CAN reach — a milestone row on a 320 pt phone at 200 %,
+ * say — and the question this guard answers is "could a reader have done this?",
+ * not "could a reader have done this without moving?". The position of a control
+ * that answers a sheet is a DESIGN question, and it is answered by the frames and
+ * the audit's geometry rules (U-05, U-08), not by whether the press could happen.
  */
 
 import type { CdpPage } from "./cdp.ts";
@@ -70,20 +91,36 @@ const selector = (testID: string): string =>
  * The page-side expression for one affordance.
  *
  * Returns `"ok"` when it acted, `"missing"` when the element is not in the DOM
- * (the caller polls before believing that), and `"inert"` when the element is
- * DISABLED — a control that cannot be pressed. The third answer is separate
- * because the two failures need different readings: a missing element is a
- * harness/cell disagreement about the id, while an inert one is a cell asserting
- * a state its own control refuses to reach (a form whose submit is disabled
- * because the field is empty, say), and reporting it as "missing" would send the
- * next reader looking for the wrong thing.
+ * (the caller polls before believing that), `"inert"` when the element is
+ * DISABLED — a control that cannot be pressed — and `"unreachable"` when it is
+ * in the DOM and enabled but a reader could not put a finger on it: no box at
+ * all, or something else is under the point the press would land on. The four are
+ * separate because they need different readings: a missing element is a
+ * harness/cell disagreement about the id, an inert one is a cell asserting a
+ * state its own control refuses to reach (a form whose submit is disabled because
+ * the field is empty, say), and an unreachable one is a control behind something
+ * — the shape a second modal produces — where reporting it as "missing" would
+ * send the next reader looking for the wrong thing.
+ *
+ * `THE READER'S OWN TEST` is the shared preamble of both scripts: scroll the
+ * control into view, then require a non-zero box and that `elementFromPoint` at
+ * its centre is the element or inside it. `pointer-events: none` falls out of the
+ * hit test for free (the point resolves to whatever is painted behind), which is
+ * why there is no separate check for it.
  */
+const REACHABLE = `
+  if (typeof el.scrollIntoView === "function") el.scrollIntoView({ block: "center", inline: "center" });
+  const rect = el.getBoundingClientRect();
+  if (rect.width <= 0 || rect.height <= 0) return "unreachable";
+  const hit = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
+  if (!hit || !(hit === el || el.contains(hit))) return "unreachable";`;
+
 export function affordanceScript(action: Affordance): string {
 	if ("click" in action) {
 		return `(() => {
   const el = document.querySelector(${selector(action.click)});
   if (!el) return "missing";
-  if (el.disabled === true || el.getAttribute("aria-disabled") === "true") return "inert";
+  if (el.disabled === true || el.getAttribute("aria-disabled") === "true") return "inert";${REACHABLE}
   const fire = (type) => el.dispatchEvent(
     type.startsWith("pointer")
       ? new PointerEvent(type, { bubbles: true, cancelable: true, pointerId: 1, isPrimary: true })
@@ -98,6 +135,7 @@ export function affordanceScript(action: Affordance): string {
   const el = document.querySelector(${selector(testID)});
   if (!el) return "missing";
   if (el.disabled === true || el.getAttribute("aria-disabled") === "true") return "inert";
+  if (el.tagName !== "INPUT" && el.tagName !== "TEXTAREA") return "not-a-field";${REACHABLE}
   const proto = el.tagName === "TEXTAREA" ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
   const setter = Object.getOwnPropertyDescriptor(proto, "value").set;
   setter.call(el, ${JSON.stringify(text)});
@@ -109,7 +147,7 @@ export function affordanceScript(action: Affordance): string {
 /** The result of one affordance, as the page reported it. */
 export interface AffordanceOutcome {
 	action: Affordance;
-	/** `ok`, `inert`, or `missing`. */
+	/** `ok`, `inert`, `missing`, `unreachable`, or `not-a-field`. */
 	result: string;
 }
 
@@ -162,6 +200,15 @@ const sleep = (ms: number): Promise<void> =>
  * own boot plus a relay round trip, and a bound that fires produces a `missing`
  * outcome the caller reports rather than a hang. `pollMs` is small because the
  * cost of a poll is one `Runtime.evaluate`.
+ *
+ * `inert` IS RETRIED, like `missing` — and that is a fix, not symmetry for its
+ * own sake. The cells whose submit is opened by a PRECEDING action (`S16/create-busy`,
+ * `S16/create-refused` and `S16/detail-busy` all type into a field before they
+ * press) submit a control that is correctly inert until React has re-rendered
+ * with the typed value, so a single read could report a control as refusing a
+ * state it accepts a poll later — the same hazard the capture's screen-root wait
+ * was added for, on the other side of the boundary. It stays a bounded wait, so a
+ * control that is genuinely disabled still ends as `inert`.
  */
 export async function runAffordances(
 	page: CdpPage,
@@ -175,7 +222,8 @@ export async function runAffordances(
 		for (;;) {
 			const reading: unknown = await page.evaluate(affordanceScript(action));
 			result = typeof reading === "string" ? reading : "missing";
-			if (result !== "missing" || Date.now() >= deadline) break;
+			if (result === "ok" || result === "unreachable" || result === "not-a-field") break;
+			if (Date.now() >= deadline) break;
 			await sleep(pollMs);
 		}
 		outcomes.push({ action, result });

@@ -16,6 +16,7 @@ import { CONTROL, ROLE } from "@/ui/a11y";
 import { useReducedMotion, useTokenColor } from "@/ui/appearance";
 import { Heading } from "@/ui/components/heading";
 import { IconButton } from "@/ui/components/icon-button";
+import { useModalStackEntry } from "@/ui/components/modal-stack-entry";
 import { useShadow } from "@/ui/elevation";
 import { effectiveDuration, parseCubicBezier } from "@/ui/motion";
 import { useTextScale } from "@/ui/text-scale-provider";
@@ -25,6 +26,21 @@ import {
 	SHEET_SURFACE_CLASS,
 	type SheetDetent,
 } from "@/ui/variants";
+
+/**
+ * What the header and the pinned footer are assumed to cost on the FIRST frame,
+ * before `onLayout` has answered.
+ *
+ * Deliberately generous (a 56 pt title row and a 104 pt action region at 100 %,
+ * against 56 + 52 measured on the narrowest phone): these only shrink the body
+ * for one frame, and the failure they guard against is a surface drawn taller
+ * than the column — which is the shape that puts a sheet's own title in the
+ * device's top unsafe band.
+ */
+const CHROME_SEED_HEADER = 64;
+const CHROME_SEED_FOOTER = 112;
+/** The body never collapses to nothing, however tall the reader's type is. */
+const MIN_CONTENT_HEIGHT = 120;
 
 /**
  * A bottom sheet: bottom-anchored, never centred — a centred dialog on a phone is
@@ -51,6 +67,21 @@ export type SheetProps = {
 	title: string;
 	detent?: SheetDetent;
 	children: React.ReactNode;
+	/**
+	 * The pinned region: what answers the sheet, and the surface that reports why
+	 * it refused, OUTSIDE the scroll region (docs/design/components.md § 8/§ 13).
+	 *
+	 * Why this exists rather than "make the sheet taller". A form whose answering
+	 * control scrolls with its fields can put that control out of reach — measured
+	 * on this slice's own create form at the `content` detent: on a 320 pt phone at
+	 * 100 % the visible band ended at the Status chips, so `Create` and the relay's
+	 * refusal were both below the fold, and at 200 % they were on EVERY phone; the
+	 * refusal element was in the DOM in 27 of 28 captured combinations and painted
+	 * in 11. Raising the detent does not fix it (the form is taller than the window
+	 * at every detent), which is why the kit's rule is the three-region one: the
+	 * header, the scrolling body, and a pinned action region that never scrolls.
+	 */
+	footer?: React.ReactNode;
 	testID?: string;
 };
 
@@ -60,6 +91,7 @@ export const Sheet = ({
 	title,
 	detent = "content",
 	children,
+	footer,
 	testID,
 }: SheetProps) => {
 	const reduceMotion = useReducedMotion();
@@ -122,12 +154,48 @@ export const Sheet = ({
 	 */
 	const windowHeight = useWindowDimensions().height;
 	const capHeight = columnHeight > 0 ? columnHeight : windowHeight;
+	/*
+	 * THE CAP IS SPENT ACROSS THREE REGIONS, not on the body alone.
+	 *
+	 * The detent bounds the SURFACE — header, scrolling body, pinned footer — so the
+	 * body gets the cap MINUS the two rows that never scroll. Bounding only the body
+	 * (what this did before the footer existed) drew a surface as tall as the cap
+	 * PLUS the header, and with a footer it would have been the cap plus both: the
+	 * header could pass the column's own top and land in the unsafe band, which is
+	 * the `U-05` shape this file already carries a fix for. Bounding the surface
+	 * itself (`maxHeight` on it, with `flexShrink` on the body) was tried first and
+	 * measured WRONG: react-native-web does not shrink a `ScrollView` inside a
+	 * max-constrained column, so the surface was bounded while its content spilled
+	 * past the sheet's own edge over the scrim — the audit's `U-08` reported the
+	 * spill as a 318x238pt overlap on every scale, and the pinned action was drawn
+	 * below the viewport rather than above it.
+	 *
+	 * The two measured rows are what they are only after `onLayout`, so the first
+	 * frame uses `CHROME_SEED` — deliberately generous, because the failure it
+	 * guards against is a surface that is too tall rather than too short.
+	 */
+	const [headerHeight, setHeaderHeight] = useState(0);
+	const [footerHeight, setFooterHeight] = useState(0);
+	const measuredChrome = headerHeight + footerHeight;
+	const chrome =
+		measuredChrome > 0
+			? measuredChrome
+			: footer === undefined
+				? CHROME_SEED_HEADER
+				: CHROME_SEED_HEADER + CHROME_SEED_FOOTER;
 	const maxContentHeight =
-		fraction === null ? undefined : Math.round(capHeight * fraction);
+		fraction === null
+			? undefined
+			: Math.max(MIN_CONTENT_HEIGHT, Math.round(capHeight * fraction) - chrome);
+	/* A modal that mounts while another is up stands down rather than painting a
+	 *  second full-viewport surface over it — the rule and its reasoning are in
+	 *  `@/ui/modal-stack`, and the registration lives here because this is where the
+	 *  `Modal` is rendered. */
+	const covered = useModalStackEntry(visible);
 
 	return (
 		<Modal
-			visible={visible}
+			visible={visible && !covered}
 			transparent
 			animationType="none"
 			onRequestClose={onClose}
@@ -193,7 +261,12 @@ export const Sheet = ({
 							],
 						}}
 					>
-						<View className="flex-row items-center gap-2 px-4 py-3">
+						<View
+							className="flex-row items-center gap-2 px-4 py-3"
+							onLayout={(event) =>
+								setHeaderHeight(event.nativeEvent.layout.height)
+							}
+						>
 							<Heading level={2} className="flex-1 text-title text-ink">
 								{title}
 							</Heading>
@@ -213,11 +286,27 @@ export const Sheet = ({
 							contentContainerClassName="px-4"
 							/* `pb-6` (24) plus the safe-area inset, computed rather than spelled
 							 *  as a class so the indicator's height rides the DEVICE, and the model /
-							 *  effort / slash sheets are corrected by the same line. */
-							contentContainerStyle={{ paddingBottom: 24 + insets.bottom }}
+							 *  effort / slash sheets are corrected by the same line. With a pinned
+							 *  footer the inset belongs to the FOOTER (it is the last thing drawn),
+							 *  so the body keeps only the gutters — double-spending it would leave a
+							 *  dead band between the last field and the action. */
+							contentContainerStyle={{
+								paddingBottom: footer === undefined ? 24 + insets.bottom : 16,
+							}}
 						>
 							{children}
 						</ScrollView>
+						{footer === undefined ? null : (
+							<View
+								className="px-4 pt-3"
+								onLayout={(event) =>
+									setFooterHeight(event.nativeEvent.layout.height)
+								}
+								style={{ paddingBottom: 24 + insets.bottom }}
+							>
+								{footer}
+							</View>
+						)}
 					</Animated.View>
 				</View>
 			</ScopedVariables>

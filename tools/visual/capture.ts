@@ -654,12 +654,23 @@ async function captureCell(
 				"click" in outcome.action
 					? outcome.action.click
 					: outcome.action.type.testID;
+			/* One sentence per answer, because each names a different repair: the
+			 *  page does not carry the id, the app refuses the state, a reader could
+			 *  not put a finger on the control (something is over it — the shape a
+			 *  second modal leaves), or the id belongs to something that is not a
+			 *  field. Collapsing `unreachable` into the missing sentence was the
+			 *  first version of this line and it pointed the next reader at the
+			 *  selector when the control was there all along (review round 1, R1). */
 			found.push({
 				kind: "affordance",
 				message:
 					outcome.result === "inert"
 						? `the control '${target}' was disabled, so the state this cell declares was never opened`
-						: `the control '${target}' is not on the page, so the state this cell declares was never opened`,
+						: outcome.result === "unreachable"
+							? `the control '${target}' is in the page but nothing can press it — no box, or something is drawn over it — so the state this cell declares was never opened`
+							: outcome.result === "not-a-field"
+								? `'${target}' is declared as a text field but the element is not one, so the state this cell declares was never opened`
+								: `the control '${target}' is not on the page, so the state this cell declares was never opened`,
 			});
 		}
 		return found;

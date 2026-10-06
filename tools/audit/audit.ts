@@ -54,7 +54,13 @@
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { type Affordance, runAffordances } from "../lib/affordance.ts";
+import {
+	type Affordance,
+	describeAffordance,
+	runAffordances,
+	type AffordanceOutcome,
+	waitForTestID,
+} from "../lib/affordance.ts";
 import { bool, csv, num, parseArgs, str } from "../lib/args.ts";
 import type { CdpPage } from "../lib/cdp.ts";
 import { sleep } from "../lib/cdp.ts";
@@ -646,7 +652,22 @@ async function auditCell(
 	 * reports by name rather than as a silent green.
 	 */
 	const openers = recordedOpeners(record.openers);
-	if (openers.length > 0) await runAffordances(page, openers);
+	/*
+	 * WAIT FOR THE SCREEN ROOT FIRST, as the capture does, before replaying.
+	 *
+	 * The capture added this wait after thirteen create-family cells took past
+	 * eight seconds to render under fleet load; the re-drive had it not, and ran the
+	 * actions after `settleMs` with only the per-action bound — so the same cell
+	 * could open in the capture and not here. Both sides now ask the app the same
+	 * question (`SCREEN_ROOTS`) before they press anything.
+	 */
+	let openerOutcomes: AffordanceOutcome[] = [];
+	if (openers.length > 0) {
+		const ready = await waitForTestID(page, SCREEN_ROOTS[record.screen] ?? "");
+		openerOutcomes = ready
+			? await runAffordances(page, openers)
+			: [{ action: openers[0] as Affordance, result: "missing" }];
+	}
 	/*
 	 * WAIT FOR THE EVENT, NOT THE CLOCK — the same rule the capture applies, and for the
 	 * same measured reason (`lib/readiness.ts` `STATE_WAIT_MS`): a declared state can
@@ -695,6 +716,10 @@ async function auditCell(
 	return {
 		...geometry,
 		ax,
+		/* The action outcomes, THREADED OUT rather than discarded: the audit's verdict
+		 *  reads them (a non-`ok` replay is a gap of its own — review round 1, R6),
+		 *  and they are computed in this function's scope. */
+		openerOutcomes,
 		platform: record.device?.startsWith("android") ? "android" : "ios",
 		screen: record.screen,
 		state: record.state,
@@ -911,9 +936,35 @@ export async function runAudit(options: AuditOptions) {
 						reading: state.reading ?? null,
 					})
 				: null;
+			/*
+			 * A REPLAYED ACTION THAT DID NOT LAND IS A GAP OF ITS OWN.
+			 *
+			 * The outcomes were computed and then thrown away, on the argument that a
+			 * failed opener shows up as the state marker it never opened. That holds
+			 * for eight of this slice's nine opener cells and fails for the ninth:
+			 * `S16/create-filled`'s marker comes from its first action ALONE (opening
+			 * the sheet), so a `type` that stopped landing — a renamed field, a broken
+			 * value path — still re-drove to the declared state and contributed PASS
+			 * rows about a form nobody had filled in. Reading the outcomes the module
+			 * already returns is what makes the TYPING checkable on re-drive (review
+			 * round 1, R6), and it costs one line per action.
+			 */
+			const openerGap =
+				(state.openerOutcomes ?? []).find(
+					(outcome) => outcome.result !== "ok",
+				) ?? null;
+			const gap =
+				mismatch ??
+				(openerGap === null
+					? null
+					: `${describeAffordance(openerGap.action)} reported '${openerGap.result}' when the capture's record applied it`);
 			if (mismatch !== null) {
 				console.error(
 					`  ${String(record.name)}: the re-drive did not reach the state this record names — ${mismatch}`,
+				);
+			} else if (gap !== null) {
+				console.error(
+					`  ${String(record.name)}: the re-drive could not replay an action the capture applied — ${gap}`,
 				);
 			}
 			// A cell whose declared state was never reached is not measurable, and its
@@ -991,14 +1042,14 @@ export async function runAudit(options: AuditOptions) {
 								`${row.detail ?? ""} — this cell did not reach the state it declares in the ` +
 								"capture run, so the row describes the fallback screen",
 						}))
-					: mismatch !== null
+					: gap !== null
 						? produced.map((row) => ({
 								...row,
 								verdict: "BLOCKED" as const,
 								blockedKind: "state-not-reproduced" as const,
 								detail:
 									`${row.detail ?? ""} — the capture's record for this cell WAS ready and the ` +
-									`re-drive does not reach the state it names, so the row describes another screen: ${mismatch}`,
+									`re-drive does not reach the state it names, so the row describes another screen: ${gap}`,
 							}))
 						: produced;
 			const blinded = measured.map((row) => {

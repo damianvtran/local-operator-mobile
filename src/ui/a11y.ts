@@ -418,6 +418,22 @@ export const SURFACE = {
 	/** The create SHEET's own surface, so "the form is open" is asserted from the
 	 *  frame rather than inferred from a control the screen behind it also has. */
 	projectCreateSheet: "project-create-sheet",
+	/** The in-flight marker of a create write: a zero-size probe present only while
+	 *  the write has not answered. It is a marker rather than an inference because
+	 *  "the control is showing in-flight feedback" has to be measurable from a
+	 *  frame (`docs/ux/audit-rubric.md` U-15) — and it is a named constant rather
+	 *  than a literal in the marker table because that table is what the a11y test
+	 *  folds back into itself, so a literal there is a convention nothing checks. */
+	projectCreateBusy: "project-create-busy",
+	/** The create sheet's kept-draft line: shown only when the sheet reopens onto
+	 *  work the reader left behind, so a frame can tell "the form came back with your
+	 *  draft" from "the form kept the text silently". */
+	projectCreateDraftNote: "project-create-draft-note",
+	/** The milestone editor's kept-draft line, the other half of the same rule. */
+	projectMilestoneDraftNote: "project-milestone-draft-note",
+	/** The milestone family's own in-flight probe, for the same reason
+	 *  `projectCreateBusy` is one. */
+	projectMilestoneBusy: "project-milestone-busy",
 	/** The milestone editor sheet's own surface: the region a flow asserts when
 	 *  the sheet is up, so "the editor is open" is measurable rather than inferred
 	 *  from a button that could equally be on the screen behind it. */
@@ -807,7 +823,7 @@ export const STATE_MARKER = {
 		 *  frame instead of trusted. */
 		create: SURFACE.projectCreateSheet,
 		"create-refused": SURFACE.projectCreateRefusal,
-		"create-busy": "project-create-busy",
+		"create-busy": SURFACE.projectCreateBusy,
 	},
 	/* The pushed detail's own subject. The KEY is the id PREFIX, not a camelCase
 	 *  spelling of it: `tools/mock-relay/verify.ts` requires every subject the
@@ -826,7 +842,7 @@ export const STATE_MARKER = {
 		"milestone-editor": SURFACE.projectMilestoneSheet,
 		"milestone-remove": CONTROL.projectMilestoneRemoveDialog,
 		slash: SURFACE.projectMilestoneSlashNote,
-		busy: "project-milestone-busy",
+		busy: SURFACE.projectMilestoneBusy,
 		"delete-confirm": CONTROL.projectDeleteDialog,
 	},
 	computers: {

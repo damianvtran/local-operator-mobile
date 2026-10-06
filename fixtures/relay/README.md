@@ -23,7 +23,7 @@ wrong wire.
 Read [`../../docs/relay/contract.md`](../../docs/relay/contract.md) for what each
 sample means; this file is only about provenance and reproduction.
 
-The tree is currently **119 fixtures — 113 live, 6 synthetic** — plus this README. The split is counted from `provenance.kind` in the files
+The tree is currently **121 fixtures — 115 live, 6 synthetic** — plus this README. The split is counted from `provenance.kind` in the files
 themselves rather than typed here, so it cannot drift from them.
 
 **Four refs are represented, deliberately.** The bulk of the live captures were
@@ -36,7 +36,8 @@ own, and no capture was restamped to look newer than it is.
 
 The projects WRITE samples (`projects-created`, `projects-create-refused`,
 `projects-create-invalid`, `projects-delete-refused`, `projects-deleted`,
-`projects-milestone`, `projects-milestone-removed`,
+`projects-milestone`, `projects-milestone-dated`, `projects-milestone-cleared`,
+`projects-milestone-removed`,
 `projects-milestone-refused`) are a fourth: they were captured on the same
 `scripts/mobile_projects_fixture.py` recipe as the projects READS, at a
 local-operator worktree whose `mobile/projects.py` and `mobile/daemon.py` were

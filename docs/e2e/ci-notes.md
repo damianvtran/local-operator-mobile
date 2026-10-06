@@ -71,7 +71,7 @@ doc drifts from the run the first time anyone adds a check.
 
 **`--tier ci` is the sample, and it is not optional.** A default (`core`) run is 1836
 cells; at the 2.24 s/cell this harness measured on the runner (403 cells in 903 s) that
-is ~59 minutes, against a step bound of 30. The tier is declared in
+is ~69 minutes, against a step bound of 40. The tier is declared in
 `tools/visual/matrix.ts` rather than spelled here as a `--devices` list so the sample,
 the plan and the manifest all read one list a reviewer can argue with, and it captures
 every declared cell at two device profiles, both themes and scales 100/135/200 — 612
@@ -128,20 +128,20 @@ job here that tests the *instrument* rather than the app.
 existed nothing automated covered the device variety the operator's rule asks
 for — phones in many sizes, tablets both ways. `web-audit-core` runs the `core`
 tier (5 profiles / 1836 cells) on the schedule and on demand only, so a pull
-request does not pay for it and the `ci` step's 30-minute bound is not stretched.
+request does not pay for it and the `ci` step's 40-minute bound is not stretched.
 
 Both bounds are derived from the measured rate and checked against the plan the
 run prints for itself, rather than guessed. The runner's rate is 2.24 s/cell, so
 the 1836-cell `core` capture is ~69 min, and `--plan --tier core --consecutive`
-prints the 4,536 frames and derives a deadline of 4,536 s. Those two numbers agree
+prints the 5,508 frames and derives a deadline of 5,508 s. Those two numbers agree
 because both are 1836 x 3 — three frames per cell with `--consecutive`, and the
 budget's three seconds per cell — not because the deadline is frame-derived. The
 capture step is
-bound at 60, which is above that
+bound at 95, which is above that
 derived deadline — so the step cannot cut short the budget the run computes for
-itself — and ~1.9x the measured cost. The audit runs at 1.25 s/cell, so it is
-~18 min and its step is bound at 35. The job holds its parts:
-`install + export + capture 60 + audit 35 < 120`.
+itself — and ~1.4x the measured cost. The audit runs at 1.25 s/cell, so it is
+~38 min and its step is bound at 50. The job holds its parts:
+`install + export + capture 95 + audit 50 < 170`.
 
 The capture states its own device coverage — which declared profiles it covered
 and which it did not, by name — in the plan block, beside the run's verdict, in

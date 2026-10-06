@@ -23,7 +23,7 @@ That figure is **load-dependent, and it is the one to quote**: `pnpm e2e:relay`
 against ~13 minutes on a quiet one. The README, `tools/lib/doc-commands.ts` and
 `tools/mock-relay/verify.ts` all state that single figure; if you change one,
 change all three. The app-build capture block — the other candidate for slowest —
-is bounded to an 88-cell sample: the whole declared cell list (44 cells on today's
+is bounded to a 102-cell sample: the whole declared cell list (51 cells on today's
 registry) at one device, one theme and two scales (`--devices iphone-15 --themes
 dark --scales 100,200`), so the gate can pass for the reason the block declares
 instead of by timing out. A command this
@@ -158,8 +158,8 @@ in `verify`'s readiness guard.
 # The sample is EXPLICIT and small, for §2's reason: the default (`core`) tier plans
 # 1836 cells, one frame each, which is ~69 minutes at the measured 2.24 s/cell and is
 # above the harness's own 120-frame confirmation threshold — so an un-narrowed run is
-# REFUSED without `--yes`, and even with it no documentation gate may spend 59 minutes
-# on one command. One phone, one theme, one scale is 44 frames, and it still proves what
+# REFUSED without `--yes`, and even with it no documentation gate may spend 69 minutes
+# on one command. One phone, one theme, one scale is 51 frames, and it still proves what
 # this section is about: seeding is a property of `--relay`, not of the sample's size.
 # `web-build` is declared because the command reads `dist/`: without a build it does
 # not fall back to anything, it fails on `static root does not exist`.

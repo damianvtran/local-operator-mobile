@@ -449,29 +449,31 @@ jobs:
     # WHY THIS JOB EXISTS. The operator's requirement is QA "across a variety of different
     # device sizes of phone … and tablets both vertical and horizontal", and until this job
     # nothing automated covered it: the per-push `web-audit` job runs `--tier ci`, which is
-    # 2 of the matrix's 19 declared profiles, and both `core` (5 profiles / 1584 cells) and
-    # `full` (19 / 5808) were local or dispatched only. This job captures and audits `core`,
+    # 2 of the matrix's 19 declared profiles, and both `core` (5 profiles / 1836 cells) and
+    # `full` (19 / 6732) were local or dispatched only. This job captures and audits `core`,
     # on the NIGHTLY schedule only, so the per-push path is untouched and the `ci` job keeps
-    # its own 30-minute capture bound rather than being stretched to fit a 59-minute one.
+    # its own 40-minute capture bound rather than being stretched to fit a 69-minute one.
     #
     # SIZED FROM THE MEASUREMENT, NOT FROM HOPE. The runner's own rate is 2.24 s/cell
     # (403 cells / 1209 frames in 903.1 s, run 37098393675, a plan of 403 cells then),
-    # which is also the number `docs/e2e/README.md` uses to say a `core` run is ~59
-    # minutes: 1584 x 2.24 s = 3,548 s.
+    # which is also the number `docs/e2e/README.md` uses to say a `core` run is ~69
+    # minutes: 1836 x 2.24 s = 3,873 s.
     # The plan this job holds is the one the capture prints before it renders anything, so
     # the bound is checked against THAT rather than against a table, and each plan is
     # pinned to the ref that printed it: at 85b2785 `--plan --tier core --consecutive`
     # printed `858 cells x 3 frame(s) = 2574 frames` with a derived `deadline: 2574 s`, and
-    # at THIS head it prints `1584 cells x 3 frame(s) = 4752 frames` and `deadline: 4752 s`
-    # (3000 ms/cell). The capture step's 90 is above both derived deadlines (so the step
-    # cannot cut short the budget the run computed for itself) and ~1.5x the ~59 min the
-    # 1584 cells cost at 2.24 s/cell — the same headroom the per-push capture (30 for ~20)
-    # and audit (15 for ~11) steps carry.
+    # at THIS head it prints `1836 cells x 3 frame(s) = 5508 frames` and `deadline: 5508 s`
+    # (3000 ms/cell). The capture step's 95 is above both derived deadlines (so the step
+    # cannot cut short the budget the run computed for itself) and ~1.4x the ~69 min the
+    # 1836 cells cost at 2.24 s/cell. The per-push steps carry the same relationship:
+    # capture 40 against a derived 1836 s (30.6 min) and audit 20 against 612 x 1.25 s
+    # (12.8 min). 95 rather than a rounder 120 because 120 would make capture + audit
+    # equal this job's own 170-minute bound exactly, which is the defect one level up.
     # The audit runs at 1.25 s/cell (250 of the 256 cells the tier held then in 312 s, run
-    # 37167390506), so `core` is 1584 x 1.25 s = 1,980 s ≈ 33 min and its step bound is 50.
+    # 37167390506), so `core` is 1836 x 1.25 s = 2,295 s ≈ 38 min and its step bound is 50.
     # The job bound holds its parts, the invariant the other jobs in this file state:
-    # `install + export + capture 90 + audit 50 < 170`. This is a ~2.5-hour nightly job
-    # (~59 min of capture and ~33 min of audit); it does not run on a pull request.
+    # `install + export + capture 95 + audit 50 < 170`. This is a nightly job of ~69 min of
+    # capture and ~38 min of audit inside that bound; it does not run on a pull request.
     #
     # EXPECTED FIRST-RUN VERDICT: THIS JOB IS RED, AND THAT IS WHAT IT IS FOR. It has
     # never executed (schedule/dispatch only). A real local `--tier core --consecutive`
@@ -550,7 +552,7 @@ jobs:
         # `--tier core` names the sample the run states for itself: the capture prints its own
         # device coverage, so this job's log says which of the 19 declared profiles it covered
         # and which it did not, rather than leaving a green job to read as the whole matrix.
-        timeout-minutes: 90
+        timeout-minutes: 95
         run: pnpm audit:capture --dir dist --out "$RUNNER_TEMP/frames" --relay "$MOCK_RELAY_URL" --tier core --consecutive --yes
 
       - name: Audit the frames against the rubric

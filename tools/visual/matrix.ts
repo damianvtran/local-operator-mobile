@@ -356,9 +356,11 @@ export function describeDeviceCoverage(coverage: {
  * WHY A THIRD TIER, AND WHY IT IS HERE RATHER THAN A `--devices` LIST IN YAML.
  * The `core` tier is 1836 cells: the whole declared cell list (51 cells) x 2 themes x
  * (3 phones x 4 scales + 2 tablets x 3 scales) — 51 x 2 x 18, the tier's 5 profiles —
- * and the CI job's capture step is bound at 30 minutes. Measured on the runner, that is
+ * and the CI job's capture step is bound at 40 minutes. Measured on the runner, that is
  * 2.24 s/cell: 403 cells in 903 s (run 37098393675, a plan of 403 cells then), so a core
- * run needs ~59 minutes. The job's first real
+ * run needs ~69 minutes. The `core` job's own bound is 95 (see `.github/workflows/e2e.yml`,
+ * `web-audit-core`), which is above the 5508 s deadline its plan derives for itself. The
+ * job's first real
  * run of this path
  * was therefore cut off by the harness's own 900 s deadline with 585 cells
  * unvisited, and reported them as cells with no frame.
