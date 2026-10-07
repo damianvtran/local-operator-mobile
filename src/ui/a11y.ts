@@ -363,6 +363,10 @@ export const SURFACE = {
 	projectDetailRefusal: "project-detail-refusal",
 	sessionTranscript: "session-transcript",
 	sessionComposer: "session-composer",
+	/** The composer's attach sheet (one entry point, the sources each build kind
+	 *  actually has). Its rows are the `attach-option-` family below — the rows
+	 *  differ per build kind, the sheet does not. */
+	attachSheet: "attach-sheet",
 	sessionColumn: "session-column",
 	sessionContext: "session-context",
 	sessionLoading: "session-loading",
@@ -481,6 +485,7 @@ export const IDENTIFIER_FAMILIES: readonly string[] = [
 	"turn-bar-",
 	"completion-anchor-",
 	"transcript-image-",
+	"attach-option-",
 	"model-option-",
 	"effort-rung-",
 	"slash-command-",
@@ -951,6 +956,13 @@ export const slashCommandId = (name: string): string => `slash-command-${name}`;
 /** One attached image in the composer, by its position. */
 export const composerAttachmentId = (index: number): string =>
 	`composer-attachment-${index}`;
+
+/** One row of the composer's attach sheet, keyed by its source (`library`,
+ *  `files`, `paste`). A builder rather than three statics because the row set is
+ *  platform-shaped (`attachActions`) — a static per source would declare rows a
+ *  build kind does not render. */
+export const attachOptionId = (source: string): string =>
+	`attach-option-${source}`;
 
 /** One row of the subagents panel, keyed by the job it reports on. */
 export const subagentChipId = (jobId: string): string =>

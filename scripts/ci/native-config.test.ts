@@ -6,10 +6,12 @@ import { fileURLToPath } from "node:url";
 import { afterAll, describe, expect, it } from "vitest";
 
 import {
+	ANDROID_FORBIDDEN_PERMISSIONS,
 	ANDROID_LOCAL_NETWORK_PERMISSION,
 	checkAndroidManifest,
 	checkIosInfoPlist,
 	IOS_EXCEPTION_DOMAINS,
+	IOS_FORBIDDEN_KEYS,
 	summarize,
 } from "./native-config";
 
@@ -64,6 +66,7 @@ const validManifest = (): string => `<?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">
   <uses-permission android:name="android.permission.ACCESS_LOCAL_NETWORK"/>
   <uses-permission android:name="android.permission.INTERNET"/>
+  <uses-permission android:name="android.permission.RECORD_AUDIO"/>
   <application android:name=".MainApplication" android:label="@string/app_name" android:usesCleartextTraffic="true" android:theme="@style/AppTheme">
     <activity android:name=".MainActivity" android:exported="true"/>
   </application>
@@ -135,6 +138,37 @@ describe("checkIosInfoPlist", () => {
 
 	it("rejects a non-dictionary, which is what a wrong file looks like", () => {
 		expect(fields(checkIosInfoPlist("nope"))).toEqual(["Info.plist"]);
+	});
+
+	it("reports a photo-library usage string as over-declaration, naming it", () => {
+		/* The picker-only design needs no library permission (checklist B10); a
+		 * string here means a plugin default crept back in. */
+		const plist = validPlist();
+		plist[IOS_FORBIDDEN_KEYS[0]] =
+			"Allow $(PRODUCT_NAME) to access your photos";
+		expect(fields(checkIosInfoPlist(plist))).toEqual([IOS_FORBIDDEN_KEYS[0]]);
+	});
+
+	it("reports the add-only photo usage string too — over-declaration the same way", () => {
+		/* The picker path never WRITES to the photo library, and the transitive
+		 * vector (a merged Info key) does not distinguish read from add: an
+		 * "add" string the app does not use is exactly the drift R2 names. */
+		const plist = validPlist();
+		plist.NSPhotoLibraryAddUsageDescription = "Add to your photos";
+		expect(fields(checkIosInfoPlist(plist))).toEqual([
+			"NSPhotoLibraryAddUsageDescription",
+		]);
+	});
+
+	it("reports the over-declaration even when a required key is missing too", () => {
+		/* The early returns must not hide it: both findings, one run. */
+		const plist = validPlist();
+		delete plist.NSLocalNetworkUsageDescription;
+		plist[IOS_FORBIDDEN_KEYS[1]] = "Allow camera";
+		expect(fields(checkIosInfoPlist(plist))).toEqual([
+			IOS_FORBIDDEN_KEYS[1],
+			"NSLocalNetworkUsageDescription",
+		]);
 	});
 });
 
@@ -209,6 +243,67 @@ describe("checkAndroidManifest", () => {
 			"AndroidManifest.xml",
 			`uses-permission[${ANDROID_LOCAL_NETWORK_PERMISSION}]`,
 		]);
+	});
+
+	it("reports a library-manifest media permission the merge brought in", () => {
+		/* What expo-image-picker's own manifest would contribute without the
+		 * blockedPermissions + plugin options: CAMERA and the storage pair. */
+		const manifest = validManifest().replace(
+			'  <uses-permission android:name="android.permission.INTERNET"/>',
+			'  <uses-permission android:name="android.permission.INTERNET"/>\n  <uses-permission android:name="android.permission.CAMERA"/>\n  <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"/>',
+		);
+		expect(fields(checkAndroidManifest(manifest))).toEqual([
+			"uses-permission[android.permission.CAMERA]",
+			"uses-permission[android.permission.READ_MEDIA_IMAGES]",
+		]);
+	});
+
+	it("reports a platform-gated permission too — it still declares on old platforms", () => {
+		const permutation = ANDROID_FORBIDDEN_PERMISSIONS[2] ?? "";
+		const manifest = validManifest().replace(
+			'  <uses-permission android:name="android.permission.INTERNET"/>',
+			`  <uses-permission android:name="android.permission.INTERNET"/>\n  <uses-permission-sdk-23 android:name="${permutation}"/>`,
+		);
+		expect(fields(checkAndroidManifest(manifest))).toEqual([
+			`uses-permission[${permutation}]`,
+		]);
+	});
+
+	it("reports the adjacent media/storage spellings a plugin bump could contribute", () => {
+		/* Agent review round 1, R2: the names a transitively-merged library
+		 * manifest could declare while the five original entries stay absent.
+		 * Drift-protection — QA round 1 found none of them live in the built
+		 * artefacts — and this keeps that true. */
+		for (const permission of [
+			"android.permission.READ_MEDIA_VISUAL_USER_SELECTED",
+			"android.permission.ACCESS_MEDIA_LOCATION",
+			"android.permission.MANAGE_EXTERNAL_STORAGE",
+			"android.permission.READ_MEDIA_AUDIO",
+		]) {
+			const manifest = validManifest().replace(
+				'  <uses-permission android:name="android.permission.INTERNET"/>',
+				`  <uses-permission android:name="android.permission.INTERNET"/>\n  <uses-permission android:name="${permission}"/>`,
+			);
+			expect(fields(checkAndroidManifest(manifest))).toEqual([
+				`uses-permission[${permission}]`,
+			]);
+		}
+	});
+
+	it("catches a single-quoted declaration — quote style cannot slip an absence check", () => {
+		const manifest = validManifest().replace(
+			'  <uses-permission android:name="android.permission.INTERNET"/>',
+			"  <uses-permission android:name='android.permission.CAMERA'/>",
+		);
+		expect(fields(checkAndroidManifest(manifest))).toEqual([
+			"uses-permission[android.permission.CAMERA]",
+		]);
+	});
+
+	it("does not flag the microphone, which the STT feature declares", () => {
+		/* The forbidden list is media-and-camera only; RECORD_AUDIO is in the
+		 * valid manifest above precisely so this direction is asserted. */
+		expect(checkAndroidManifest(validManifest())).toEqual([]);
 	});
 });
 

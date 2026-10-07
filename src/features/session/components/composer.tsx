@@ -1,7 +1,7 @@
 // biome-ignore-all lint/suspicious/noArrayIndexKey: every list in this file is regenerated from the same source on each render (a parsed string, a diff, a todo phase), so position IS the identity — the case React's own key docs exempt. A content-derived key would be recomputed every frame to produce the same value.
 
-import { Mic, Square } from "lucide-react-native";
-import { useEffect, useMemo, useRef } from "react";
+import { Mic, Square, X } from "lucide-react-native";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
 	Image,
 	Platform,
@@ -13,6 +13,10 @@ import {
 } from "react-native";
 
 import type { PromptImage } from "@/contracts";
+import {
+	type AttachSource,
+	attachActions,
+} from "@/features/session/attach-rule";
 import type { ComposerChip } from "@/features/session/chip-labels";
 import { ComposerStateMarkers } from "@/features/session/components/state-markers";
 import {
@@ -25,6 +29,7 @@ import type { DictationState } from "@/features/session/use-dictation";
 import { formatDuration } from "@/stt/dictation";
 import { MIC_HINT, micLabel } from "@/stt/dictation-machine";
 import {
+	attachOptionId,
 	CONTROL,
 	composerAttachmentId,
 	LIVE_REGION,
@@ -32,11 +37,13 @@ import {
 	SURFACE,
 	state,
 } from "@/ui/a11y";
+import { useTokenColor } from "@/ui/appearance";
 import {
 	Button,
 	Chip,
 	DictationMeter,
 	IconButton,
+	Sheet,
 	Skeleton,
 	Textarea,
 } from "@/ui/components";
@@ -113,16 +120,25 @@ const asKeyEvent = (event: WebKeyEvent, field: unknown) => ({
 	fromField: field !== null && field === event.target,
 });
 type WebFieldNode = {
-	addEventListener: (
-		type: string,
-		listener: (event: WebKeyEvent) => void,
-	) => void;
-	removeEventListener: (
-		type: string,
-		listener: (event: WebKeyEvent) => void,
-	) => void;
+	addEventListener: (type: string, listener: WebListener) => void;
+	removeEventListener: (type: string, listener: WebListener) => void;
 	querySelector: (selector: string) => unknown;
 };
+
+/** The paste event the composer listens for: a real Cmd+V's clipboard payload.
+ *  `clipboardData` is `null` when the browser withholds it, and its `files` is
+ *  what a screenshot paste actually carries. */
+type WebPasteEvent = {
+	clipboardData: { files: ArrayLike<File> } | null;
+	preventDefault: () => void;
+};
+
+/** Either listener this file installs: the keydown the send key reads, the paste
+ *  the image attach reads. A union — not `any` — so each effect keeps its own
+ *  event's type, and the one platform bridge here stays the cast it always was. */
+type WebListener =
+	| ((event: WebKeyEvent) => void)
+	| ((event: WebPasteEvent) => void);
 
 /**
  * The composer (`docs/design/components.md` § 12).
@@ -149,7 +165,13 @@ export type ComposerProps = {
 	onDraftChange: (text: string) => void;
 	images: PromptImage[];
 	onRemoveImage: (index: number) => void;
-	onAttach: () => void;
+	/** The attach sheet's chosen source. The sheet itself is this component's;
+	 *  reading the image is the host's — the composer home and the session view
+	 *  both hand in their own `attach`, and both land on the same strip. */
+	onAttach: (source: AttachSource) => void;
+	/** A web paste event's image file. Only the web build can raise the event;
+	 *  the listener that reads it lives here, the read lives with the host. */
+	onPasteFile: (file: File) => void;
 	attaching?: boolean;
 	/** The voice mic's state. `null`/absent means this surface shows no mic — the
 	 *  composer home passes nothing (its mic belongs with the new-chat flow), and a
@@ -309,6 +331,7 @@ export const Composer = ({
 	images,
 	onRemoveImage,
 	onAttach,
+	onPasteFile,
 	attaching = false,
 	voice = null,
 	onSend,
@@ -335,6 +358,11 @@ export const Composer = ({
 		[images],
 	);
 
+	/* The ✕ badge's glyph ink. `ink` on the badge's `elevated` fill is the kit's
+	 * strongest plain pair (11.81:1 dark / 16.34:1 light), so the removal cue
+	 * reads over any photo the badge floats above. */
+	const removeInk = useTokenColor("ink");
+
 	/* The dictation row's layout is scale-dependent (D1/D2/D3): beside the controls a
 	 * squeezed status clipped and the meter's flex bars collapsed to zero width, so
 	 * past `LARGE_TEXT_SCALE` the row stacks and its box is fixed. See the row's own
@@ -348,12 +376,20 @@ export const Composer = ({
 	 * it drops keydowns in the gap between removing and adding. */
 	const sendRef = useRef(onSend);
 	const canSendRef = useRef(false);
+	/* The paste listener is installed once and reads this ref, for the same reason
+	 *  the keydown handler reads `sendRef`: re-binding the listener on every render
+	 *  drops events in the gap between removing and adding it. */
+	const pasteFileRef = useRef(onPasteFile);
 	useEffect(() => {
 		sendRef.current = onSend;
+		pasteFileRef.current = onPasteFile;
 		canSendRef.current = !controls.primary.disabled && !attaching;
-	}, [onSend, controls.primary.disabled, attaching]);
+	}, [onSend, onPasteFile, controls.primary.disabled, attaching]);
 
 	const rootRef = useRef<View | null>(null);
+	/* The attach sheet's open state. Local, not the host's: the sheet is this
+	 *  component's own surface, so both hosts inherit it without a second copy. */
+	const [attachSheetOpen, setAttachSheetOpen] = useState(false);
 	useEffect(() => {
 		/* Enter sends, Shift+Enter inserts a newline, on a hardware keyboard. On web
 		 * that is a `keydown` the field would otherwise spend on a newline: a multiline
@@ -386,6 +422,29 @@ export const Composer = ({
 		};
 		node.addEventListener("keydown", onKeyDown);
 		return () => node.removeEventListener("keydown", onKeyDown);
+	}, []);
+
+	/* A pasted image is an ATTACHMENT, not a dropped no-op — the web build's half
+	 * of the paste affordance (native reads the clipboard from the sheet's Paste
+	 * row, because a RN text field never hands an image over). Same shape as the
+	 * keydown listener above: installed once, reads a ref, and only CONSUMES the
+	 * event when the payload is one this component owns. A paste with no image in
+	 * it — plain text — stays the field's own business. */
+	useEffect(() => {
+		if (Platform.OS !== "web") return;
+		const node = rootRef.current as unknown as WebFieldNode | null;
+		if (node === null || typeof node.addEventListener !== "function") return;
+		const onPaste = (event: WebPasteEvent) => {
+			const files = Array.from(event.clipboardData?.files ?? []);
+			const image = files.find((file) => file.type.startsWith("image/"));
+			if (image === undefined) return;
+			/* The image must not ALSO land as the browser's default (a filename, at
+			 * best): what it becomes is an attachment, and only that. */
+			event.preventDefault();
+			pasteFileRef.current(image);
+		};
+		node.addEventListener("paste", onPaste);
+		return () => node.removeEventListener("paste", onPaste);
 	}, []);
 
 	/* The dictation row's pieces, built once and laid out by the row below. Extracting
@@ -482,14 +541,13 @@ export const Composer = ({
 					<ScrollView horizontal showsHorizontalScrollIndicator={false}>
 						<View className="flex-row gap-1.5">
 							{images.map((image, index) => (
-								<Pressable
-									key={`${index}-${image.mime_type}`}
-									accessibilityRole={ROLE.button}
-									accessibilityLabel={`Remove attachment ${index + 1}`}
-									onPress={() => onRemoveImage(index)}
-									testID={composerAttachmentId(index)}
-								>
-									<View className="overflow-hidden rounded-sm border border-control">
+								<View key={`${index}-${image.mime_type}`} className="relative">
+									{/* The thumbnail is NOT the control. A tap on the image used to remove it
+									    with nothing visible saying so — a thumb reaching to preview silently
+									    deleted the attachment, and no glyph, badge or word marked the image as
+									    a button (design round 1, D58-1). Removal now lives on the badge
+									    below, the only control on this chip. */}
+									<View className="overflow-hidden rounded-sm border border-border-control">
 										<Image
 											source={{
 												uri: `data:${image.mime_type};base64,${image.data_b64}`,
@@ -498,7 +556,30 @@ export const Composer = ({
 											accessibilityLabel={`Attachment ${index + 1}`}
 										/>
 									</View>
-								</Pressable>
+									{/* The one removal affordance: a visible ✕ badge with a real accessible
+									    name (glyph, never colour alone) and a 44 pt hit area on the
+									    pressable — the shape the audit measures, the same one `IconButton`
+									    uses. The badge is opaque (`elevated` fill, `border-control` edge,
+									    `ink` glyph) so its contrast holds over ANY photo underneath. */}
+									<Pressable
+										accessibilityRole={ROLE.button}
+										accessibilityLabel={`Remove attachment ${index + 1}`}
+										onPress={() => onRemoveImage(index)}
+										testID={composerAttachmentId(index)}
+										style={{
+											position: "absolute",
+											top: 0,
+											right: 0,
+											width: TOUCH_FLOOR,
+											height: TOUCH_FLOOR,
+											alignItems: "flex-end",
+										}}
+									>
+										<View className="m-0.5 h-5 w-5 items-center justify-center rounded-full border border-border-control bg-elevated">
+											<X color={removeInk} size={12} />
+										</View>
+									</Pressable>
+								</View>
 							))}
 						</View>
 					</ScrollView>
@@ -610,7 +691,7 @@ export const Composer = ({
 					accessibilityLabel="Attach an image"
 					accessibilityState={state({ busy: attaching, disabled: attaching })}
 					disabled={attaching}
-					onPress={onAttach}
+					onPress={() => setAttachSheetOpen(true)}
 					testID={CONTROL.composerAttach}
 				>
 					<View className="h-11 w-11 items-center justify-center rounded-full border border-control">
@@ -821,6 +902,43 @@ export const Composer = ({
 			    across a reconnect: it is the composer's own "the instruction left" mark. */}
 			<View testID={SURFACE.composerReceipt} aria-hidden />
 			{slashQuery !== null ? slashSheet : null}
+
+			{/* The attach sheet: one entry point, and the sources each platform actually
+			    has — the photo picker, the document picker, the clipboard (web: file
+			    input and clipboard). It renders through the shared `Sheet` primitive,
+			    like the model and effort sheets, so it dismisses the same way (scrim,
+			    Close, Escape), and every row lands in the attachment strip above the
+			    field — one chip treatment, one removal, one send path. */}
+			<Sheet
+				visible={attachSheetOpen}
+				onClose={() => setAttachSheetOpen(false)}
+				title="attach"
+				testID={SURFACE.attachSheet}
+			>
+				<View className="py-1">
+					{attachActions(Platform.OS === "web" ? "web" : "native").map(
+						(action) => (
+							<Pressable
+								key={action.source}
+								accessibilityRole={ROLE.button}
+								accessibilityLabel={action.label}
+								onPress={() => {
+									/* Closed first: the picker opens over a dismissed sheet, never
+									 *  under one — a system picker presented from behind a modal is
+									 *  how a cancel lands back on a sheet nobody reopened. */
+									setAttachSheetOpen(false);
+									onAttach(action.source);
+								}}
+								testID={attachOptionId(action.source)}
+							>
+								<View className="min-h-11 flex-row items-center px-3">
+									<Text className="text-body-sm text-ink">{action.label}</Text>
+								</View>
+							</Pressable>
+						),
+					)}
+				</View>
+			</Sheet>
 		</View>
 	);
 };

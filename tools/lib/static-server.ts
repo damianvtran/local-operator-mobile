@@ -297,6 +297,26 @@ export async function serveDir(
 		createReadStream(target).pipe(res);
 	});
 
+	/* The browser reuses an idle socket on its own schedule — Chrome holds them
+	 * for minutes — while a Node server drops one after `keepAliveTimeout` (5 s by
+	 * default). In the overlap the page reuses a socket the server just closed and
+	 * writes its next request into it: a GET the browser will retry on a fresh
+	 * socket, so the loss is invisible, but a POST with a body no client silently
+	 * retries — it pends until its own deadline and the server never sees it.
+	 * Measured in the frame rig's per-run records: the failing runs correlated
+	 * with send clicks landing just past the old 5 s window (5.13–5.34 s after
+	 * their page's request batch; in run `2026-10-07T00-14-45` the relay never saw
+	 * its `POST …/command`), and a stock-default control server closes at ~6.0 s
+	 * and never sees the second request while this pair serves it (QA round 2,
+	 * raw sockets). So this is a plausible widening, not the demonstrated root:
+	 * two failing runs postdate it, and the rest-layer stall behind the missing
+	 * sends still recurs with the wider windows live. Raising the window past any
+	 * client's reuse leaves the kill to the client, where it is safe (Node's own
+	 * guidance for servers browsers talk to; 65 s is the nginx-family default for
+	 * the same reason). `headersTimeout` must exceed `keepAliveTimeout`. */
+	server.keepAliveTimeout = 65_000;
+	server.headersTimeout = 66_000;
+
 	await new Promise<void>((resolvePromise, reject) => {
 		server.once("error", reject);
 		server.listen(port, host, () => resolvePromise());

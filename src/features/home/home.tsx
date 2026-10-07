@@ -18,7 +18,13 @@ import {
 } from "@/features/home/home-copy";
 import { HomeStateMarkers } from "@/features/home/home-markers";
 import { HomeSplash } from "@/features/home/home-splash";
-import { pickImage } from "@/features/session/attach";
+import {
+	pasteImage,
+	pickImageFromFiles,
+	pickImageFromLibrary,
+	readWebImageFile,
+} from "@/features/session/attach";
+import type { AttachSource } from "@/features/session/attach-rule";
 import { composerChipLabels } from "@/features/session/chip-labels";
 import { Composer } from "@/features/session/components/composer";
 import { ConnectionBanner } from "@/features/session/components/connection-banner";
@@ -269,15 +275,44 @@ export default function Home({
 		[offline, computers, tunnelId, route],
 	);
 
-	const attach = useCallback(() => {
+	const attach = useCallback((source: AttachSource) => {
 		void (async () => {
 			setAttaching(true);
 			setComposerError(null);
 			try {
-				const image = await pickImage();
-				if (image !== null) setImages((current) => [...current, image]);
+				const image =
+					source === "library"
+						? await pickImageFromLibrary()
+						: source === "paste"
+							? await pasteImage()
+							: await pickImageFromFiles();
+				if (image !== null) {
+					setImages((current) => [...current, image]);
+				} else if (source === "paste") {
+					/* A press with no outcome reads as a broken control — the same rule
+					 *  `attachError` follows in the other direction. */
+					setComposerError(COMPOSER_COPY.pasteEmpty);
+				}
 			} catch {
 				/* Said, never swallowed — the composer's own error line. */
+				setComposerError(COMPOSER_COPY.attachError);
+			} finally {
+				setAttaching(false);
+			}
+		})();
+	}, []);
+
+	/** The web paste event's image file: same strip, same failure line as the
+	 *  sheet's own rows (`use-composer.ts`'s `pasteFile` is the session view's
+	 *  copy of this handler). */
+	const pasteFile = useCallback((file: File) => {
+		void (async () => {
+			setAttaching(true);
+			setComposerError(null);
+			try {
+				const image = await readWebImageFile(file);
+				setImages((current) => [...current, image]);
+			} catch {
 				setComposerError(COMPOSER_COPY.attachError);
 			} finally {
 				setAttaching(false);
@@ -487,6 +522,7 @@ export default function Home({
 						setImages((current) => current.filter((_, at) => at !== index))
 					}
 					onAttach={attach}
+					onPasteFile={pasteFile}
 					attaching={attaching}
 					onSend={send}
 					onStop={() => undefined}

@@ -240,4 +240,11 @@ describe("attachment metadata shown before send", () => {
 		const image = { data_b64: "A".repeat(4096), mime_type: "image/png" };
 		expect(attachmentLabel(image)).toBe("PNG · 3 KB");
 	});
+
+	it("floors a sub-kilobyte size instead of rounding it to zero", () => {
+		// D58-2: the 70-byte fixture chip read `PNG · 0 KB` beside a visible image,
+		// which reads as a broken or empty attachment. Anything under 1 KB says so.
+		const image = { data_b64: "A".repeat(96), mime_type: "image/png" };
+		expect(attachmentLabel(image)).toBe("PNG · < 1 KB");
+	});
 });
