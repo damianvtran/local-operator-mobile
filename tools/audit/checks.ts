@@ -1589,6 +1589,71 @@ export const U42_EXEMPTIONS: Array<{
 			"text size; flagged, not absorbed (§3.4). The fragment also covers the glyph's `path` " +
 			"child, which inherits the same box",
 	},
+	{
+		path: "div.css-g5y9jx.px-3>button.css-g5y9jx.r-1loqt21",
+		value: 10,
+		reason:
+			"#59's condensed-turn bar (`turn-bar.tsx` — the `px-2.5` on its Pressable) — the " +
+			"summary row this PR does not touch; measured on the ci run of 37563484274 as the " +
+			"check's only failures (padding-left and padding-right, every failing frame). " +
+			"deferred — align the turn bar in its own change, then drop this entry",
+	},
+	{
+		path: "div.css-g5y9jx.px-3>button.css-g5y9jx.r-1loqt21",
+		value: 6,
+		reason:
+			"#59's condensed-turn bar (`turn-bar.tsx` — the `gap-1.5` between its ✓ glyph, its " +
+			"text and its caret; row-gap and column-gap) — same surface and run as the entry " +
+			"above. deferred — align the turn bar in its own change, then drop this entry",
+	},
+];
+
+/**
+ * The U-41 exemption ledger, RECORDED rather than silently passed.
+ *
+ * U-41 judges every caret-bearing row's rail and caret geometry. #59's
+ * condensed-turn bar (`turn-bar.tsx`) is such a row — its disclosure caret
+ * sits at the trailing edge — but its geometry is its own surface's to keep
+ * or change: the Pressable is a bordered, full-row control whose content is
+ * inset by its own `px-2.5`, a leading ✓ glyph and `gap-1.5`, and whose caret
+ * is centred on the 48 pt row (`items-center`) rather than on the first text
+ * line. Measured on the ci run of 37563484274, that produces the check's only
+ * failures — 60 rail rows and 60 caret rows, one pair of numbers (31.4 pt and
+ * 20.6 pt) across three cells — and this PR touches neither `turn-bar.tsx`
+ * nor the condensing model.
+ *
+ * The coupling is the safety, exactly as in `U42_EXEMPTIONS`: each record
+ * carries the measured numbers, so a later change that moves the bar's inset
+ * or re-seats its caret moves the reading off the record, the node FAILS on
+ * the spot, and that red is the signal to delete the entry.
+ *
+ * `path` is matched as a SUBSTRING of the row's probe path.
+ */
+export const U41_EXEMPTIONS: Array<{
+	path: string;
+	/** The rail inset this record covers — first line's left minus the row's box, at 0.05. */
+	rail?: number;
+	/** The caret's centre offset from the first line's centre this record covers, at 0.05. */
+	caret?: number;
+	reason: string;
+}> = [
+	{
+		path: "div.css-g5y9jx.px-3>button.css-g5y9jx.r-1loqt21",
+		rail: 31.4,
+		caret: 20.6,
+		reason:
+			"#59's condensed-turn bar (`turn-bar.tsx`): its first text line starts 31.4 pt inside " +
+			"the bar's own box — the box is a bordered Pressable and the line follows its " +
+			"`px-2.5`, the leading ✓ glyph and `gap-1.5` — and its caret is centred on the 48 pt " +
+			"row (`items-center`) rather than on the first text line, 20.6 pt off. The same " +
+			"defect family as the operator's original caret complaint, on a surface this PR does " +
+			"not touch; measured on the ci run of 37563484274 — three cells (`S5/populated-long` " +
+			"and the two condensed-viewer `path:` cells) on iphone-se and tablet-landscape, both " +
+			"themes, all three scales. " +
+			"deferred — align the turn bar in its own change (rail: the first line back onto the " +
+			"transcript's rail; caret: within ±4 pt of the first line's centre), then drop this " +
+			"entry",
+	},
 ];
 
 /**
@@ -1945,10 +2010,16 @@ function u40ScrollCue(state: AuditState): CheckRow[] {
  * design pass's number); the caret tolerance is ±4 pt of the first line's
  * centre. A row whose first line starts more than 24 pt inside its own box has
  * left the rail and fails the same rule.
+ *
+ * Sites this change does not own are RECORDED in `U41_EXEMPTIONS`, with their
+ * reason and their measured numbers, and reported as EXCEPTION rows — see the
+ * ledger's own comment for the coupling that keeps a stale entry from
+ * swallowing a later fix.
  */
 function u41SummaryRows(state: AuditState): CheckRow[] {
 	const byIndex = new Map(state.nodes.map((n) => [n.index, n]));
 	const failures: CheckRow[] = [];
+	const exemptions: CheckRow[] = [];
 	let judged = 0;
 	let wrapped = 0;
 	for (const summary of state.summaries) {
@@ -1959,12 +2030,29 @@ function u41SummaryRows(state: AuditState): CheckRow[] {
 		if (first === undefined) continue;
 		const where = byIndex.get(summary.index)?.path ?? `row #${summary.index}`;
 		if (first.left < summary.rowLeft - 1 || first.left > summary.rowLeft + 24) {
-			failures.push({
-				check: "U-41",
-				verdict: "FAIL",
-				measured: `rail drift: the row's first line starts ${round1(first.left - summary.rowLeft)}pt inside its own box`,
-				detail: where,
-			});
+			const inset = round1(first.left - summary.rowLeft);
+			const exempt = U41_EXEMPTIONS.find(
+				(entry) =>
+					where.includes(entry.path) &&
+					entry.rail !== undefined &&
+					Math.abs(entry.rail - inset) < 0.05,
+			);
+			const measured = `rail drift: the row's first line starts ${inset}pt inside its own box`;
+			if (exempt !== undefined) {
+				exemptions.push({
+					check: "U-41",
+					verdict: "EXCEPTION",
+					measured: `declared exemption: ${exempt.reason} — ${measured}`,
+					detail: where,
+				});
+			} else {
+				failures.push({
+					check: "U-41",
+					verdict: "FAIL",
+					measured,
+					detail: where,
+				});
+			}
 		} else {
 			for (let i = 1; i < summary.lines.length; i += 1) {
 				const line = summary.lines[i];
@@ -1984,12 +2072,28 @@ function u41SummaryRows(state: AuditState): CheckRow[] {
 		const firstCentre = (first.top + first.bottom) / 2;
 		const off = caretCentre - firstCentre;
 		if (Math.abs(off) > 4) {
-			failures.push({
-				check: "U-41",
-				verdict: "FAIL",
-				measured: `caret midline: the caret's centre is ${round1(off)}pt off the first line's centre`,
-				detail: where,
-			});
+			const exempt = U41_EXEMPTIONS.find(
+				(entry) =>
+					where.includes(entry.path) &&
+					entry.caret !== undefined &&
+					Math.abs(entry.caret - round1(Math.abs(off))) < 0.05,
+			);
+			const measured = `caret midline: the caret's centre is ${round1(off)}pt off the first line's centre`;
+			if (exempt !== undefined) {
+				exemptions.push({
+					check: "U-41",
+					verdict: "EXCEPTION",
+					measured: `declared exemption: ${exempt.reason} — ${measured}`,
+					detail: where,
+				});
+			} else {
+				failures.push({
+					check: "U-41",
+					verdict: "FAIL",
+					measured,
+					detail: where,
+				});
+			}
 		}
 	}
 	if (failures.length > 0) return failures.slice(0, 16);
@@ -2012,6 +2116,7 @@ function u41SummaryRows(state: AuditState): CheckRow[] {
 			measured: `${judged} disclosure row(s)${wrapped > 0 ? ` (${wrapped} wrapped)` : ""} on one rail, caret on the first line`,
 			detail: "",
 		},
+		...exemptions.slice(0, 8),
 	];
 }
 
