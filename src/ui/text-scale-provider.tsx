@@ -8,7 +8,9 @@ import {
 	scaledTextVariables,
 	TEXT_SCALE_PERCENTS,
 	type TextScalePreference,
+	type TextScaleVariables,
 	type TextUnit,
+	textUnit,
 } from "@/ui/text-scale";
 
 /**
@@ -81,8 +83,9 @@ export type TextScale = {
 	/** The platform's own signal, before the preference is applied. Shown in
 	 *  Settings so "System" is a number the reader can check rather than a word. */
 	platformScale: number;
-	/** The scaled token variables. */
-	variables: Record<string, string>;
+	/** The scaled token variables, in the form their target accepts — a CSS length on
+	 *  the web, a bare number on a device (see `TextScaleVariables`). */
+	variables: TextScaleVariables;
 };
 
 /**
@@ -116,18 +119,19 @@ export function useTextScale(): TextScale {
 	 * well squares it — measured: the harness's 200 % captured at a median text
 	 * height of 4.00x before this line existed. On native there is no root font
 	 * size to do the work, so the factor is applied to the values instead — by
-	 * `scaledTextVariables` for `px`, which is a different place from this line but
-	 * still exactly once. */
+	 * `scaledTextVariables` for the `native` emission, which is a different place from
+	 * this line but still exactly once. */
 	const scale = resolveTextScale(preference);
 
 	/* ONE rule, in the one place the factor is decided: the emitted value never
 	 * carries the platform's factor, and the unit selects which mechanism applies it
 	 * (`TextUnit` in `text-scale.ts` carries the reasoning and the measurements).
-	 * `rem` on the web hands it to the browser's root font size; `px` everywhere else
-	 * hands it to nobody — React Native's own text scaling applies it on native, and an
-	 * explicit preference REPLACES the browser's on web rather than compounding. */
-	const unit: TextUnit =
-		Platform.OS === "web" && preference === "system" ? "rem" : "px";
+	 * The CHOICE is `textUnit` in that module rather than a ternary here, so the line
+	 * that decides the FORM of a native style value is testable without a React
+	 * Native host — it is the line that used to answer `px` for a device, which is a
+	 * `"16px"` string, which is a fatal `ClassCastException: String -> Double` in
+	 * `RCTText` on Android. */
+	const unit: TextUnit = textUnit(Platform.OS === "web", preference);
 
 	const variables = useMemo(
 		() => scaledTextVariables(scale, unit),

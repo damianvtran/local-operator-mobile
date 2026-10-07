@@ -143,8 +143,42 @@ const CHROME_SCALE_CAP = 1.5;
  * On native there is no root font size to multiply, and React Native applies
  * `PixelRatio.getFontScale()` to a `fontSize` itself — see `TextUnit` below, which is
  * the one place that decision is written down.
+ *
+ * **`native` is not a length; it names the CONSUMER, and it exists because the two
+ * consumers disagree about what a value may be.** A CSS custom property must carry
+ * its unit or the browser cannot use it; React Native's `fontSize` must NOT — it is
+ * typed as a number, and a `"16px"` string does not degrade there, it is fatal:
+ * `Error while updating property 'fontSize' of a view managed by: RCTText` /
+ * `ClassCastException: String -> Double`, thrown while the property is applied, so
+ * the app dies on the first frame that renders any `text-*` role. Web has no such
+ * cast (CSS accepts the string), so a build can be crashing on every device frame
+ * while every web frame the harness captured agrees with it. The decision belongs
+ * here, in the one place the type-scale variables are cut, so no call site can
+ * reintroduce the suffix on the way out — see `scaledTextVariables`.
  */
-export type TextUnit = "px" | "rem";
+export type TextUnit = "px" | "rem" | "native";
+
+/**
+ * Which unit a target gets — and therefore which FORM its value must take.
+ *
+ * This is the decision the Android crash turned on, so it lives here rather than
+ * as a ternary in the provider: the provider needs React Native to know its
+ * platform, and this module is the half that has to stay unit-testable in Node, so
+ * the target arrives as a `boolean` and the test states a target instead of
+ * mocking a module. Answering `px` for a device is what put a `"16px"` string in
+ * a `fontSize`; the shape rule and why it is fatal on one platform and silent on
+ * the other is on `TextUnit`. The two web answers stay distinct for the reason
+ * given there: `rem` lets the browser's own root font size do the multiplying
+ * under the `system` preference, and an explicit preference emits `px` so it
+ * REPLACES that factor instead of compounding with it.
+ */
+export function textUnit(
+	isWeb: boolean,
+	preference: TextScalePreference,
+): TextUnit {
+	if (!isWeb) return "native";
+	return preference === "system" ? "rem" : "px";
+}
 
 /** The px value of one root font size. `rem` is defined against the CSS default,
  *  so this is a constant rather than a reading. */
@@ -162,15 +196,29 @@ const CHROME_STEPS: ReadonlySet<TypeStepName> = new Set<TypeStepName>([
 	"mono-label",
 ]);
 
+/**
+ * The value form a type-scale variable takes, and the reason `scaledTextVariables`
+ * is not `Record<string, string>`.
+ *
+ * Structurally this is uniwind's own `CSSVariables`, which is what
+ * `ScopedVariables` accepts and what its `createVarGetter` reads: a NUMBER passes
+ * through untouched, any other value is returned as the string it is. So a CSS
+ * target gets a length string (`16px`, `1rem`) and a device target gets a bare
+ * number — and a `"16px"` string sent to a device target is not a bigger number,
+ * it is a `ClassCastException` in `RCTText`. See `TextUnit`.
+ */
+export type TextScaleVariables = Record<string, string | number>;
+
 export function scaledTextVariables(
 	scale: number,
-	/** The unit the platform's text scaling acts on. The caller decides — this
-	 *  module holds no platform at all — and the CHOICE is what selects which
-	 *  mechanism applies the platform's factor (see `TextUnit` above). */
+	/** The unit the platform's text scaling acts on, and the form the consumer
+	 *  accepts. The caller decides — this module holds no platform at all — and the
+	 *  CHOICE selects which mechanism applies the platform's factor AND whether the
+	 *  emitted value carries a unit suffix (see `TextUnit` above). */
 	unit: TextUnit = "rem",
-): Record<string, string> {
+): TextScaleVariables {
 	const factor = clampTextScale(scale);
-	const out: Record<string, string> = {};
+	const out: TextScaleVariables = {};
 	for (const name of Object.keys(TYPE_STEPS) as TypeStepName[]) {
 		const step = TYPE_STEPS[name];
 		/* The cap bounds the PREFERENCE, never the platform.
@@ -192,7 +240,15 @@ export function scaledTextVariables(
 		const stepFactor = CHROME_STEPS.has(name)
 			? Math.min(factor, CHROME_SCALE_CAP)
 			: factor;
-		out[`--text-${name}`] = `${round(step.size * stepFactor, unit)}${unit}`;
+		const size = round(step.size * stepFactor, unit);
+		/* The suffix is appended ONLY for a CSS target, and that `unit !== "native"`
+		 *  guard is the whole fix for the Android crash: `${size}px` is a valid custom
+		 *  property and a fatal React Native style value at the same time, so the shape
+		 *  has to be decided here rather than by a caller that appends the unit it was
+		 *  handed. `native` emits the bare number the platform style wants, and the
+		 *  platform's own factor is still applied by React Native's
+		 *  `PixelRatio.getFontScale()` — exactly once, as before. */
+		out[`--text-${name}`] = unit === "native" ? size : `${size}${unit}`;
 	}
 	return out;
 }
