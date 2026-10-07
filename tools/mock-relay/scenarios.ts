@@ -58,6 +58,12 @@ export interface StreamSpec {
 	settleAfterTurns?: number;
 	settleStopReason?: string;
 	settleCutOff?: boolean;
+	/** What the growing assistant row grows INTO. `"table"` makes the frames a
+	 *  markdown table arriving piece by piece instead of prose passes — the one
+	 *  shape §4.1 #10 of the S5 design pass needs consecutive frames of. See
+	 *  `sessionFrames`'s `tableArrival` for the tick order and why the divider
+	 *  never arrives alone. */
+	growth?: "table";
 }
 
 /** A refusal the mock answers before (or instead of) reaching the relay. */
@@ -396,6 +402,7 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 	const seed = fix.projection("sse-projection-seed");
 	const approvalFrame = fix.projection("sse-projection-pending-approval");
 	const richRowsFrame = fix.projection("sse-projection-rich-rows");
+	const tablesFrame = fix.projection("sse-projection-tables");
 	const queuedFrame = fix.projection("sse-projection-queued-steer");
 	const afterDeath = fix.projection("sse-projection-durable-after-death");
 	const everyKind = fix.projection("sse-projection-every-entry-kind");
@@ -882,6 +889,64 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 		() => ({
 			projections: {
 				[richRowsFrame.session_id]: structuredClone(richRowsFrame),
+			},
+		}),
+	);
+
+	/* The hero tables: one priced to fit the rail exactly and one three-column
+	 * 64-character digest table. The pair is what the S5 table checks need in ONE
+	 * state: `S5/tables` shows both directions of the scroll affordance (the wide
+	 * table's fade + cut edge, and the fitting table's silence), and `S5/tables-end`
+	 * re-renders the same state with the wide table scrolled to its end via the
+	 * `lo-md-scroll` viewer hook, where the left-mirror fade and the retired right
+	 * fade have a frame. Two cells over ONE projection, so the scroll pair cannot
+	 * drift apart. See `sse-projection-tables.json`'s provenance for the arithmetic. */
+	add(
+		"tables",
+		"A transcript ending in two tables: one priced to fit the rail exactly (no cue may appear) and a 3x64-character digest table that overflows, bleeds and cues.",
+		["S5/tables", "S5/tables-end", "S5/tables-in-view"],
+		() => ({
+			projections: {
+				[tablesFrame.session_id]: structuredClone(tablesFrame),
+			},
+		}),
+	);
+
+	/* The table that ARRIVES: the same primitives as `tables`, grown one row per
+	 * frame with the divider and the first row in one tick (`growth: "table"`).
+	 * Consecutive frames of this cell are §4.1 #10's evidence that the table does
+	 * not reflow the row as its cells arrive.
+	 *
+	 * `intervalMs: 150` and `settleAfterTurns: 80` (review rounds 1–2): at the
+	 * default 700 ms pump every tick landed outside the capture's fixed frame
+	 * offsets, so the cell's frame set sampled no arrival at all; the faster pump
+	 * fixed that but ended the state in under a second, and BOTH the capture's
+	 * 8 s settled stamp and the audit's re-drive window (it reads the marker
+	 * around 1.2 s in) then landed after the stream was over — the records read
+	 * unready and the re-drive could not reproduce the state (measured: all eight
+	 * combos BLOCKED). Eighty turns at 150 ms keep `session-streaming` true for
+	 * twelve seconds, covering every reader's window, while the content stops
+	 * growing after the fourth row — the windows moved, not the cell's render.
+	 *
+	 * What the consecutive frames show (review rounds 2–3, D4): `-f0` is the
+	 * pre-first-paint blank, and the `-f250` → `-settled` pair is §4.1 #10's
+	 * evidence — no reflow between the first painted frame and the settled
+	 * one. A stamp's position against the stream depends on the boot, which
+	 * is why the durable claim is the pair's, not one frame's, and why this
+	 * comment does not claim a particular frame catches a particular tick. */
+	add(
+		"tables-streaming",
+		"A streaming turn whose answer introduces a table: the divider and the first row land in one frame, then the rows arrive one per frame.",
+		["S5/streaming-tables"],
+		() => ({
+			projections: {
+				[tablesFrame.session_id]: structuredClone(tablesFrame),
+			},
+			stream: {
+				mode: "streaming",
+				settleAfterTurns: 80,
+				growth: "table",
+				intervalMs: 150,
 			},
 		}),
 	);

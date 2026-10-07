@@ -80,7 +80,7 @@ export const TranscriptRow = ({
 
 	if (kind === "tool") {
 		return (
-			<View className="px-3">
+			<View className="px-4">
 				<ToolRow entry={entry} testID={testID} />
 				{anchors}
 			</View>
@@ -89,7 +89,7 @@ export const TranscriptRow = ({
 
 	if (kind === "ask") {
 		return (
-			<View className="px-3" testID={testID}>
+			<View className="px-4" testID={testID}>
 				{/* The card carries the kind's own id (`ask-response-card` /
 				 *  `ask-timeout-card`) UNDER the row's standard anchor, because the
 				 *  transcript row keeps one addressable name per row while the audit
@@ -109,7 +109,7 @@ export const TranscriptRow = ({
 
 	if (kind === "assistant") {
 		return (
-			<View className="px-3 py-1" testID={testID}>
+			<View className="px-4 py-1" testID={testID}>
 				<Markdown text={entry.text} />
 				{anchors}
 			</View>
@@ -119,7 +119,7 @@ export const TranscriptRow = ({
 	if (kind === "user" || kind === "steer") {
 		const isSteer = kind === "steer";
 		return (
-			<View className="items-end px-3 py-1" testID={testID}>
+			<View className="items-end px-4 py-1" testID={testID}>
 				<View
 					className={cx(
 						"max-w-[85%]",
@@ -194,7 +194,7 @@ export const TranscriptRow = ({
 			? (sender?.conversation_name ?? sender?.session_id ?? "another session")
 			: label;
 	return (
-		<View className="px-3 py-1" testID={testID}>
+		<View className="px-4 py-1" testID={testID}>
 			<View
 				className={cx(
 					"border-l-2 pl-2",

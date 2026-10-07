@@ -117,6 +117,14 @@ export interface Floors {
 		minimum: number;
 		minimumVisualWithSlop: number;
 	};
+	/**
+	 * The allowed spacing steps, in pt: `space.scale` × `space.base`, read from
+	 * the tokens so U-42 measures against the same ramp the utilities compile from
+	 * (`--spacing: 4px`, so a step's pt value is exact). An empty kit falls back to
+	 * the documented scale rather than to no scale at all — a check that skipped
+	 * because the tokens were unreadable would pass everything.
+	 */
+	spacing: number[];
 }
 
 export function floorsFromTokens(tokens: unknown): Floors {
@@ -138,6 +146,16 @@ export function floorsFromTokens(tokens: unknown): Floors {
 			: {};
 	const number = (value: unknown, fallback: number): number =>
 		typeof value === "number" ? value : fallback;
+	const space =
+		typeof root.space === "object" && root.space !== null
+			? (root.space as Record<string, unknown>)
+			: {};
+	const base = number(space.base, 4);
+	const scale = Array.isArray(space.scale)
+		? space.scale.filter(
+				(step): step is number => typeof step === "number" && step > 0,
+			)
+		: [];
 	return {
 		bodyText: number(declared.bodyText, 4.5),
 		largeText: number(declared.largeText, 3),
@@ -148,5 +166,9 @@ export function floorsFromTokens(tokens: unknown): Floors {
 			minimum: number(touch.minimum, 44),
 			minimumVisualWithSlop: number(touch.minimumVisualWithSlop, 32),
 		},
+		spacing:
+			scale.length > 0
+				? scale.map((step) => step * base)
+				: [4, 8, 12, 16, 20, 24, 32, 40, 48, 64, 80, 96],
 	};
 }

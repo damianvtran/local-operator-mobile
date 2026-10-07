@@ -5,7 +5,7 @@ import {
 	type ComposerControls,
 } from "@/features/session/composer";
 import { sendDeliveryStateOf } from "@/features/session/delivery";
-import { hasFencedBlock } from "@/features/session/markdown";
+import { hasFencedBlock, hasTableBlock } from "@/features/session/markdown";
 import { classifyEntry } from "@/features/session/projection";
 
 /**
@@ -56,6 +56,11 @@ export interface SessionStateFacts {
 	queued: number;
 	/** Rows that carry more than text: a tool call, or an image. */
 	richRows: boolean;
+	/** A transcript row whose text carries a markdown TABLE — the rows-and-columns
+	 *  rendering U-38 exists to measure, and the state `S5/tables` names. Derived
+	 *  from the same parser the renderer uses, so the marker can never affirm a
+	 *  table the reader would not see. */
+	tables: boolean;
 	/** At least one settled row states a `send` delivery outcome (the four-state
 	 *  arm — `S5/send-delivery`). Deliberately ANY of the four: the cell's claim is
 	 *  "this frame shows the delivery vocabulary", and which state a given frame
@@ -84,6 +89,7 @@ export interface SessionStateFlags {
 	degraded: boolean;
 	queued: boolean;
 	richRows: boolean;
+	tables: boolean;
 	delivery: boolean;
 	pendingApproval: boolean;
 	pendingAsk: boolean;
@@ -102,6 +108,7 @@ const NOTHING: SessionStateFlags = {
 	degraded: false,
 	queued: false,
 	richRows: false,
+	tables: false,
 	delivery: false,
 	pendingApproval: false,
 	pendingAsk: false,
@@ -155,6 +162,14 @@ export const sessionFactsFrom = (
 		(entry) =>
 			classifyEntry(entry) === "assistant" && hasFencedBlock(entry.text),
 	),
+	/* The same parser, the same gate: `S5/tables` claims a frame renders a table
+	 * as a table, so the marker is derived from the row the READER would see (an
+	 * assistant row whose text parses to a table block) and never from a tool row,
+	 * a quote or a paragraph that merely contains a pipe. */
+	tables: input.entries.some(
+		(entry) =>
+			classifyEntry(entry) === "assistant" && hasTableBlock(entry.text),
+	),
 	/* Read through the same function the row renders with, so a marker can never
 	 * affirm a state the reader's row would not show — the `richRows` lesson.
 	 * `sendDeliveryStateOf` carries the `send` gate the row applies, so a
@@ -201,6 +216,7 @@ export const sessionStateFlags = (
 		degraded: facts.degraded,
 		queued: facts.queued > 0,
 		richRows: facts.richRows,
+		tables: facts.tables,
 		delivery: facts.delivery,
 		pendingApproval: facts.pending === "approval",
 		pendingAsk: facts.pending === "ask",

@@ -120,6 +120,25 @@ export const STATE_MARKER_ALIASES: Record<string, string> = {
 	 *  look for a list, so the variant borrows the state's marker — which is
 	 *  what this table is for. */
 	"degraded-listing": "degraded",
+	/** The table's scroll position: the same look, one interaction later — the
+	 *  cell `S5/tables-end` renders the wide table scrolled to its end so the
+	 *  left-mirror fade and the retired right fade have a frame (design pass
+	 *  `fix/hero-tables-strips` §4.1 #7; §4.3 says the cue is read from that
+	 *  frame, not from a marker). An entry here is what lets the cell borrow the
+	 *  `tables` marker rather than invent a second id for a scroll offset. */
+	"tables-end": "tables",
+	/** The table brought into view: the same state as `tables`, one viewer hook
+	 *  later — the cell `S5/tables-in-view` scrolls the TRANSCRIPT so the table
+	 *  sits at the viewport top (review round 1, D2: at 200 % text the settled
+	 *  frame otherwise shows only chrome, so no frame would show a table). Same
+	 *  look, one vertical offset apart; the alias borrows the `tables` marker
+	 *  rather than inventing a second id for a scroll position. */
+	"tables-in-view": "tables",
+	/** The table arriving: the same state as `streaming` — an assistant row whose
+	 *  text is still being written — with the row's content being a table. The
+	 *  app has no second streaming look for it, which is what the alias table is
+	 *  for; §4.1 #10 reads the consecutive frames, not a marker. */
+	"streaming-tables": "streaming",
 };
 
 /** Every empty-state marker ends with this, which is what the prohibition matches. */
@@ -611,4 +630,30 @@ export function seedQuery(
  */
 export function captureHookQuery(): string {
 	return new URLSearchParams({ "lo-recorder": "supported" }).toString();
+}
+
+/**
+ * Per-cell viewer hooks: a query value that steers ONE cell's page, keyed by the
+ * cell name and merged by BOTH halves of the harness through this one builder —
+ * the capture and the audit render the same screen, or the audit measures a page
+ * the frame was never taken from.
+ *
+ * `S5/tables-end` is the case: it shows the wide table scrolled to its end, so
+ * the left-mirror fade and the retired right fade have a frame, and a scroll
+ * offset is a viewport interaction no wire action can declare. The value is the
+ * app-side `lo-md-scroll` hook (`src/features/session/table-scroll-hook.ts`),
+ * which is scoped to the table's own scroll view and inert everywhere else.
+ */
+export const CELL_HOOKS: Record<string, Record<string, string>> = {
+	"S5/tables-end": { "lo-md-scroll": "end" },
+	// Review round 1, D2: the 200 % frames otherwise show chrome above the fold
+	// (`S5/tables` shares bytes with `S5/rich-rows` there — the camera limit
+	// recorded in the matrix), so no frame showed a table at the largest text.
+	// `bring` scrolls the transcript so the last table sits at its viewport top.
+	"S5/tables-in-view": { "lo-md-scroll": "bring" },
+};
+
+/** The per-cell hook query for one cell name (empty when it declares none). */
+export function cellHookQuery(cell: string): string {
+	return new URLSearchParams(CELL_HOOKS[cell] ?? {}).toString();
 }

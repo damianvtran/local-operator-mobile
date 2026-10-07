@@ -3,8 +3,9 @@
  *
  * Each check takes one extracted state (geometry + colours + the accessibility
  * tree) and returns rows of `{check, verdict, measured, detail}`. The check ids
- * are the rubric's own (`U-01`…`U-10` in `docs/ux/audit-rubric.md` §3), so a
- * report row and a rubric row are the same thing.
+ * are the rubric's own (`U-01`…`U-10` and `U-38`…`U-42` in
+ * `docs/ux/audit-rubric.md` §3), so a report row and a rubric row are the same
+ * thing.
  *
  * Three rules this file follows, because they are what make the numbers usable
  * in a review round:
@@ -18,6 +19,7 @@
  *    every interactive node has a name.
  */
 
+import { TABLE_TOKEN_CAP } from "../../src/features/session/markdown.ts";
 import { LEVEL_BARS } from "../../src/stt/levels.ts";
 import type { Floors } from "./color.ts";
 import { composite, contrastRatio, parseCssColor } from "./color.ts";
@@ -486,6 +488,20 @@ export const SUB_RULE_TEXT: Record<string, RegExp> = {
 	"U-08:escape-absolute": /^painted over a clipping ancestor \(absolute\)/,
 	"U-08:escape-fixed": /^painted over a clipping ancestor \(fixed\)/,
 	"U-08:escape-sticky": /^painted over a clipping ancestor \(sticky\)/,
+	// The S5 redesign's rules (U-38…U-42). Each is separately blindable because
+	// each answers a different question about a table or a strip, and the review
+	// round that added them found the shape here the hard way on U-05/U-08: one
+	// text for two shapes makes a blind report two fixtures, which the mutation
+	// self-test reads as a rule that is not exactly the one it names.
+	"U-38:leak": /^leaked source/,
+	"U-38:rows": /^table structure/,
+	// The marker↔render cross-check (review round 1): the parser's
+	// `session-tables` flag against the renderer's output.
+	"U-38:marker": /^declared table did not render/,
+	"U-40:cue": /^overflowing/,
+	"U-40:false": /^cue on/,
+	"U-41:rail": /^rail drift/,
+	"U-41:caret": /^caret midline/,
 };
 
 /** U-05 — nothing sits under a notch, a home indicator or an Android gesture bar. */
@@ -1426,6 +1442,801 @@ function u10LabelInName(state: AuditState): CheckRow[] {
 	return [...rows.slice(0, 8), ...declared.slice(0, 8)];
 }
 
+/* --------------------------------------- the S5 redesign's five checks -- */
+
+/** The literal escape U-38 hunts: a backslash-pipe that reached the rendered
+ *  text, meaning a `\|` in the model's answer was never resolved. The spec's
+ *  leak half reads exactly this string; a pipe-delimited SOURCE line is a
+ *  different thing entirely and is NOT a leak — §1.2 renders a malformed run
+ *  verbatim on purpose ("ugly and honest"), and a mid-stream frame is a
+ *  malformed run until its divider lands. Flagging those would fail every
+ *  streaming cell for being mid-stream. Top-level for biome's `useTopLevelRegex`. */
+const LEAKED_ESCAPE = "\\|";
+
+/** Whitespace runs, for collapsing a finding's excerpt to one line. */
+const WHITESPACE_RUNS = /\s+/g;
+
+/**
+ * The spacing-check exemptions, RECORDED rather than silently passed.
+ *
+ * U-42 measures every element's computed padding, margin and gap against the
+ * token scale, and the first time it ran it found the sites the design pass
+ * listed as "flagged, not absorbed" — a `py-1.5` on the pending card, a
+ * `gap-1.5` in the tool row, the six `1.5` sites in `ui/variants.ts`. They are
+ * off-scale and they are NOT this change's to move (each belongs to the surface
+ * that owns it), so each one is named here with its reason and reported as an
+ * EXCEPTION on every frame it renders on. `value` is the off-scale value in pt,
+ * and the coupling is the safety: retargeting a class to the scale moves the
+ * node's value off the entry's, so the node FAILS on the spot and the stale
+ * entry cannot swallow it — that red is the signal to delete the entry. There
+ * is deliberately no run-level "unused entry" detector beside it: the canary
+ * page renders none of the app's classes, so such a detector would red every
+ * canary run for entries that are correct on the app. The value match is the
+ * detector that works on both.
+ *
+ * `path` is matched as a SUBSTRING of the node's probe path.
+ */
+export const U42_EXEMPTIONS: Array<{
+	path: string;
+	/**
+	 * The off-scale value this record covers, matched at 0.01. Omitted when
+	 * `anyValue` is set: a value the TEXT SCALE computes (an optical alignment
+	 * offset like the refusal glyph's) resolves to a different off-grid number at
+	 * every scale — 1.475 at 100 %, 12.95 at 200 % — so no fixed number could
+	 * cover it, and exempting by value would also mask a real off-scale margin
+	 * that happened to resolve to the same number.
+	 */
+	value?: number;
+	/** Record the whole node whatever its value resolves to (see `value`). */
+	anyValue?: boolean;
+	reason: string;
+}> = [
+	{
+		path: "items-end>div.css-g5y9jx.max-w-[85%]",
+		value: 6,
+		reason:
+			"the ask/pending card bubble and its action row — §3.4's flagged-not-absorbed " +
+			"list (`pending-card.tsx`, `ask-response-row.tsx`); a UI-wide sweep of the 43 " +
+			"sites is its own ticket, and this PR touches neither surface",
+	},
+	{
+		path: "div.css-g5y9jx.min-w-0>div.css-g5y9jx.gap-1.5",
+		value: 6,
+		reason:
+			"the composer's field-row gap — one of the `composer.tsx` 1.5 sites §3.4 leaves " +
+			"outside the pt/pb/mb trio this PR moves to pt-2/pb-2/mb-2",
+	},
+	{
+		path: "button.css-g5y9jx.r-1loqt21>div.css-g5y9jx",
+		value: 6,
+		reason:
+			"the Button's inner label row (`ui/variants.ts` `gap-1.5`, §3.4 flagged-not-absorbed) — " +
+			"the composer's send/attach controls render it on every scored frame",
+	},
+	{
+		path: "r-12vffkv>div.css-g5y9jx",
+		value: 6,
+		reason:
+			"the same Button inner row through the second pressable styling — RNW renders that " +
+			"control as a `button` element in the composer and as a `div` in the empty/notice " +
+			"blocks, and both carry the §3.4 `gap-1.5` exemption",
+	},
+
+	{
+		path: "div.css-g5y9jx.px-4>div.css-g5y9jx.rounded-md",
+		value: 10,
+		reason:
+			"the ask/pending card's frame (`pending-card.tsx` `p-2.5`) — §3.4's flagged-not-absorbed " +
+			"list; the 892-row ci-tier audit's single largest family (S8 ask/approval/populated-long)",
+	},
+	{
+		path: "button.css-g5y9jx.r-1loqt21>div.css-g5y9jx.min-h-[56px]",
+		value: 10,
+		reason:
+			"the tall list row's own padding (`ui/variants.ts` `py-2.5`, the 56pt-row variant) — " +
+			"§3.4 flagged-not-absorbed; measured on the sessions list and the home screen",
+	},
+	{
+		path: "div.css-g5y9jx.min-h-[56px]>div.css-g5y9jx.flex-1",
+		value: 2,
+		reason:
+			"the same row's two-line inner block (`ui/components/list-row.tsx` `gap-0.5`) — §3.4 " +
+			"flagged-not-absorbed",
+	},
+	{
+		path: "div.css-g5y9jx.items-center>div.css-g5y9jx.w-full>div.css-g5y9jx.flex-row",
+		value: 6,
+		reason:
+			"a full-width row inside a centred wrapper (`gap-1.5`) on the welcome/list surfaces — " +
+			"flagged, not absorbed (§3.4); a UI-wide sweep is its own ticket",
+	},
+	{
+		path: "div.css-g5y9jx.flex-row>div.css-g5y9jx.self-start",
+		value: 2,
+		reason:
+			"the Badge (`ui/variants.ts` `px-2 py-0.5`) as several rows render it — §3.4 " +
+			"flagged-not-absorbed; one fragment covers the four measured chains (S16 projects, " +
+			"sessions list, error cards)",
+	},
+	{
+		path: "div.css-g5y9jx.rounded-md>div.css-g5y9jx.r-150rngu>div.css-g5y9jx>div.css-g5y9jx.gap-1",
+		value: 6,
+		reason:
+			"the pending card's inner rows (`pending-card.tsx` `py-1.5`/`pt-1.5`) — §3.4 " +
+			"flagged-not-absorbed; covers both the full-height and the top-only chains",
+	},
+	{
+		path: "div.css-g5y9jx.gap-3>div.css-g5y9jx.flex-row>div.css-g5y9jx.flex-1>div.css-g5y9jx.gap-1.5",
+		value: 6,
+		reason:
+			"a two-column row inside the list/settings surfaces (`gap-1.5`) — flagged, not " +
+			"absorbed (§3.4)",
+	},
+	{
+		path: "div.css-g5y9jx.rounded-md>div.css-g5y9jx.gap-3>div.css-g5y9jx.gap-4>div.css-g5y9jx.rounded-md>div.css-g5y9jx.gap-3>div.css-g5y9jx.gap-1.5",
+		value: 6,
+		reason:
+			"nested cards on the error/empty surfaces (`gap-1.5` rows within `gap-3`/`gap-4` " +
+			"stacks) — flagged, not absorbed (§3.4)",
+	},
+	{
+		path: "div.css-g5y9jx.gap-3>div.css-g5y9jx.flex-row>svg.lucide.lucide-triangle-alert",
+		anyValue: true,
+		reason:
+			"the refusal surface's alert glyph (`refusal-surface.tsx` `alertGlyphOffset`, an " +
+			"alignment correction DERIVED from the type token: 1.475 at 100 %, 12.95 at 200 %) — " +
+			"a layout offset, not a spacing decision, and one whose value moves with the reader's " +
+			"text size; flagged, not absorbed (§3.4). The fragment also covers the glyph's `path` " +
+			"child, which inherits the same box",
+	},
+	{
+		path: "div.css-g5y9jx.px-3>button.css-g5y9jx.r-1loqt21",
+		value: 10,
+		reason:
+			"#59's condensed-turn bar (`turn-bar.tsx` — the `px-2.5` on its Pressable) — the " +
+			"summary row this PR does not touch; measured on the ci run of 37563484274 as the " +
+			"check's only failures (padding-left and padding-right, every failing frame). " +
+			"deferred — align the turn bar in its own change, then drop this entry",
+	},
+	{
+		path: "div.css-g5y9jx.px-3>button.css-g5y9jx.r-1loqt21",
+		value: 6,
+		reason:
+			"#59's condensed-turn bar (`turn-bar.tsx` — the `gap-1.5` between its ✓ glyph, its " +
+			"text and its caret; row-gap and column-gap) — same surface and run as the entry " +
+			"above. deferred — align the turn bar in its own change, then drop this entry",
+	},
+];
+
+/**
+ * The U-41 exemption ledger, RECORDED rather than silently passed.
+ *
+ * U-41 judges every caret-bearing row's rail and caret geometry. #59's
+ * condensed-turn bar (`turn-bar.tsx`) is such a row — its disclosure caret
+ * sits at the trailing edge — but its geometry is its own surface's to keep
+ * or change: the Pressable is a bordered, full-row control whose content is
+ * inset by its own `px-2.5`, a leading ✓ glyph and `gap-1.5`, and whose caret
+ * is centred on the 48 pt row (`items-center`) rather than on the first text
+ * line. Measured on the ci run of 37563484274, that produces the check's only
+ * failures — 60 rail rows and 60 caret rows, one pair of numbers (31.4 pt and
+ * 20.6 pt) across three cells — and this PR touches neither `turn-bar.tsx`
+ * nor the condensing model.
+ *
+ * The coupling is the safety, exactly as in `U42_EXEMPTIONS`: each record
+ * carries the measured numbers, so a later change that moves the bar's inset
+ * or re-seats its caret moves the reading off the record, the node FAILS on
+ * the spot, and that red is the signal to delete the entry.
+ *
+ * `path` is matched as a SUBSTRING of the row's probe path.
+ */
+export const U41_EXEMPTIONS: Array<{
+	path: string;
+	/** The rail inset this record covers — first line's left minus the row's box, at 0.05. */
+	rail?: number;
+	/** The caret's centre offset from the first line's centre this record covers, at 0.05. */
+	caret?: number;
+	reason: string;
+}> = [
+	{
+		path: "div.css-g5y9jx.px-3>button.css-g5y9jx.r-1loqt21",
+		rail: 31.4,
+		caret: 20.6,
+		reason:
+			"#59's condensed-turn bar (`turn-bar.tsx`): its first text line starts 31.4 pt inside " +
+			"the bar's own box — the box is a bordered Pressable and the line follows its " +
+			"`px-2.5`, the leading ✓ glyph and `gap-1.5` — and its caret is centred on the 48 pt " +
+			"row (`items-center`) rather than on the first text line, 20.6 pt off. The same " +
+			"defect family as the operator's original caret complaint, on a surface this PR does " +
+			"not touch; measured on the ci run of 37563484274 — three cells (`S5/populated-long` " +
+			"and the two condensed-viewer `path:` cells) on iphone-se and tablet-landscape, both " +
+			"themes, all three scales. " +
+			"deferred — align the turn bar in its own change (rail: the first line back onto the " +
+			"transcript's rail; caret: within ±4 pt of the first line's centre), then drop this " +
+			"entry",
+	},
+];
+
+/**
+ * The deferral U-40 records for scrollers that are not a table's viewport.
+ *
+ * The rubric's pass criterion speaks about "every overflowing horizontal
+ * scroller", and the design pass's own decision (§1.6) deliberately fixed the
+ * cue for the TABLE only: the code block predates it, renders with
+ * `showsHorizontalScrollIndicator={false}` in the shipped app, and changing it
+ * is a separate, recorded decision (§6.2 — the design pass lists it as one of
+ * the things it deliberately did not absorb). So an overflowing non-table
+ * scroller is reported as an EXCEPTION naming this deferral, never as a pass:
+ * the reader of a report can see exactly which scrollers carry a cue and which
+ * wait on the follow-up.
+ */
+export const U40_DEFERRAL = {
+	SCOPE:
+		"not a table scroll viewport — its cue is deferred to the code block's own change (§6.2), recorded rather than passed",
+};
+
+/** The U-38 shape the rubric makes legal rather than silent: §1.7 renders a
+ *  header-only table, and the fixture's clean page declares one so the rule
+ *  cannot creep into requiring a body row (review round 1). */
+export const U38_DECLARATION = {
+	HEADER_ONLY:
+		"a header-only table is legal — §1.7 renders its header and frame",
+};
+
+const round1 = (n: number): number => Math.round(n * 10) / 10;
+
+/**
+ * U-38 — a markdown table renders as a table, not as its own pipe source.
+ *
+ * Three rules, all the spec's (§1.8), each separately blindable:
+ *
+ * - `U-38:leak` — the FRAME-level escape scan: the literal `\|` must never
+ *   appear in a rendered text node, because the parser resolves escapes and
+ *   the renderer must never see one. It reads `escapeInText`, which the probe
+ *   computes on the node's FULL textContent: the 200-character `ownText` slice
+ *   cannot see an escape deeper in a long paragraph (review round 1).
+ * - `U-38:rows` — the TABLE-level structure: every `md-table` renders its
+ *   header row (§1.7 makes a header-only table legal — its divider is
+ *   structure, not content) and no cell's text still carries the source's `\|`
+ *   or a `---` divider.
+ * - `U-38:marker` (added review round 1, the reviewer-requested shape) — the
+ *   marker↔render cross-check. `session-tables` is derived from
+ *   `hasTableBlock`, the PARSER's reading, and rendered from the flags,
+ *   independently of what the markdown renderer drew. So a frame carrying the
+ *   marker with zero `md-table` nodes is the pipe-source defect BY
+ *   CONSTRUCTION: the transcript says it carries a table and the DOM says
+ *   nothing rendered one. This is the half that catches the REPORTED defect —
+ *   the leak scan cannot, because the source it leaks carries no `\|` at all
+ *   (it is the raw pipe text, as plain text). The structure half cannot
+ *   either: with no `md-table` node there is nothing to hold a header, so it
+ *   never runs. The earlier wording here claimed the opposite and was wrong.
+ *
+ * A frame with no table at all is not-applicable for the structure half, but
+ * the leak half still runs (an unresolved escape is a defect on any screen),
+ * and a frame with no marker is not-applicable for the cross-check.
+ *
+ * THE MARKER HALF HAS NO CANARY MUTATION, and that is a stated limit rather
+ * than an omission: its shape is "the marker is present while NO table
+ * renders", and the canary's single shared page necessarily carries the other
+ * fixtures' tables, so a zero-table frame cannot be staged beside them. Its
+ * failure direction is pinned by unit tests instead (`checks.test.ts`).
+ *
+ * The pipe-source line a malformed run renders verbatim is NOT a failure —
+ * §1.2 makes that rendering deliberate, and a mid-stream frame is a malformed
+ * run until its divider arrives. That legal rendering carries no marker, which
+ * is exactly the distinction the cross-check rests on.
+ */
+function u38TableRendered(state: AuditState): CheckRow[] {
+	const byIndex = new Map(state.nodes.map((n) => [n.index, n]));
+	const failures: CheckRow[] = [];
+	const escaped = (node: AuditNode): boolean =>
+		node.escapeInText ?? node.ownText.includes(LEAKED_ESCAPE);
+	let leaks = 0;
+	for (const node of state.nodes) {
+		if (node.ownText.length === 0) continue;
+		if (!escaped(node)) continue;
+		leaks += 1;
+		if (leaks > 8) continue;
+		failures.push({
+			check: "U-38",
+			verdict: "FAIL",
+			measured: "leaked source: a \\| escape reached the rendered text",
+			detail: `${node.path} — ${node.ownText.replace(WHITESPACE_RUNS, " ").trim().slice(0, 80)}`,
+		});
+	}
+	// The parser's marker against the renderer's output (U-38:marker). The marker
+	// is read from the RE-DRIVEN page's PRESENCE reading (`state.reading.testIds`),
+	// not from `state.nodes`: the app's derived markers are zero-size Views by
+	// design and the probe's node sweep drops zero-area elements (measured — review
+	// round 2, R2-2: the node-based reading could never fire live). `readiness.ts`
+	// teaches the same presence-vs-visibility split.
+	const markerPresent =
+		state.reading?.testIds?.includes("session-tables") ?? false;
+	if (state.tables.length === 0 && markerPresent) {
+		failures.push({
+			check: "U-38",
+			verdict: "FAIL",
+			measured:
+				"declared table did not render: the transcript carries session-tables and no md-table node exists",
+			detail:
+				"hasTableBlock affirmed a table and the renderer drew none — the pipe-source defect",
+		});
+	}
+	let structures = 0;
+	let cells = 0;
+	const exceptions: CheckRow[] = [];
+	for (const table of state.tables) {
+		const wrapper = byIndex.get(table.index);
+		const where = wrapper?.path ?? `table at node #${table.index}`;
+		cells += table.cells.length;
+		// §1.7's legal shape, RECORDED rather than silent (the canary asserts the
+		// recording — QA round 2's rule): a header-only table renders its header
+		// and frame, and the acceptance carries the declaration's own words.
+		if (table.headRows >= 1 && table.bodyRows === 0 && exceptions.length < 8) {
+			exceptions.push({
+				check: "U-38",
+				verdict: "EXCEPTION",
+				measured: `declared exception: ${U38_DECLARATION.HEADER_ONLY} — header-only table`,
+				detail: where,
+			});
+		}
+		if (table.headRows < 1) {
+			structures += 1;
+			if (structures <= 8) {
+				failures.push({
+					check: "U-38",
+					verdict: "FAIL",
+					measured: `table structure: ${table.headRows} header row(s) — a table renders at least its header (§1.7: a header-only table is legal)`,
+					detail: where,
+				});
+			}
+		}
+		for (const cell of table.cells) {
+			const stray =
+				(cell.escapeInText ?? cell.text.includes("\\|"))
+					? "\\|"
+					: cell.text.includes("---")
+						? "---"
+						: null;
+			if (stray === null) continue;
+			structures += 1;
+			if (structures <= 8) {
+				failures.push({
+					check: "U-38",
+					verdict: "FAIL",
+					measured: `table structure: a cell's text still carries ${stray}`,
+					detail: `${byIndex.get(cell.index)?.path ?? where} — ${cell.text.slice(0, 60)}`,
+				});
+			}
+		}
+	}
+	if (failures.length > 0) return failures.slice(0, 16);
+	if (state.tables.length === 0) {
+		return [
+			{
+				check: "U-38",
+				verdict: "BLOCKED",
+				blockedKind: "not-applicable",
+				measured: "no markdown table in this frame",
+				detail:
+					"the structure half of the check applies to frames carrying a md-table; the leak half found nothing",
+			},
+		];
+	}
+	return [
+		...exceptions,
+		{
+			check: "U-38",
+			verdict: "PASS",
+			measured: `${state.tables.length} table(s), ${cells} cell(s), no leaked source and no stray divider`,
+			detail: "",
+		},
+	];
+}
+
+/**
+ * U-39 — no column breaks a token the 64-character cap should have kept whole.
+ *
+ * The probe measures each cell per whitespace run with a Range (a word's rects
+ * live inside one text node; only a Range can see them), and this check reads
+ * the cap: a token of ≤ 64 characters occupies ONE line box or the column is
+ * too narrow for it. sha256-hex is exactly 64 and must stay whole, so the cap
+ * is inclusive; a longer token is allowed to wrap by design (§1.7) and is not
+ * a finding.
+ */
+function u39TableTokens(state: AuditState): CheckRow[] {
+	const byIndex = new Map(state.nodes.map((n) => [n.index, n]));
+	const failures: CheckRow[] = [];
+	let cells = 0;
+	let broken = 0;
+	for (const table of state.tables) {
+		for (const cell of table.cells) {
+			cells += 1;
+			for (const run of cell.broken) {
+				if (run.length > TABLE_TOKEN_CAP) continue;
+				broken += 1;
+				if (broken > 8) continue;
+				failures.push({
+					check: "U-39",
+					verdict: "FAIL",
+					measured: `token of ${run.length} characters broken by its column (cap ${TABLE_TOKEN_CAP})`,
+					detail: `${byIndex.get(cell.index)?.path ?? `cell #${cell.index}`} — ${JSON.stringify(run.token.slice(0, 32))}`,
+				});
+			}
+		}
+	}
+	if (failures.length > 0) return failures.slice(0, 8);
+	if (cells === 0) {
+		return [
+			{
+				check: "U-39",
+				verdict: "BLOCKED",
+				blockedKind: "not-applicable",
+				measured: "no table cells in this frame",
+				detail: "the token check reads table cells; this frame carries none",
+			},
+		];
+	}
+	return [
+		{
+			check: "U-39",
+			verdict: "PASS",
+			measured: `${cells} cell(s), no token under the ${TABLE_TOKEN_CAP}-character cap broken`,
+			detail: "",
+		},
+	];
+}
+
+/**
+ * U-40 — an overflowing table scroller carries a cue (and the cut edge that is
+ * the cue's other half); a table scroller that fits carries none.
+ *
+ * Two rules, and they point in opposite directions on purpose, because the
+ * anti-pattern this check closes has two shapes: a scroller with no signal
+ * that it scrolls (the operator's third report) and a cue drawn on a table that
+ * does not scroll, which is an affordance promising content that is not there.
+ * The cue is read by id (`md-table-scroll-cue`, §4.3 of the design pass), and
+ * "bleeds" means the viewport's right edge runs past the content rail its
+ * ancestors sit on — the cut edge, without which a fade at the gutter would be
+ * a gradient over nothing.
+ *
+ * A scroller that is not a table's viewport is reported as a recorded deferral
+ * (`U40_DEFERRAL`), never passed silently: the code block's own cue is a
+ * separate decision (the design pass §6.2 lists it as deliberately not
+ * absorbed).
+ */
+function u40ScrollCue(state: AuditState): CheckRow[] {
+	const byIndex = new Map(state.nodes.map((n) => [n.index, n]));
+	const tableScrolls = new Set(
+		state.tables.flatMap((table) => (table.scroll ? [table.scroll.index] : [])),
+	);
+	const rows: CheckRow[] = [];
+	const failures: CheckRow[] = [];
+	let scrollers = 0;
+	for (const node of state.nodes) {
+		const scrollable =
+			node.overflowX === "auto" ||
+			node.overflowX === "scroll" ||
+			node.overflowX === "overlay";
+		if (!scrollable) continue;
+		scrollers += 1;
+		if (tableScrolls.has(node.index)) continue;
+		if (node.scrollWidth > node.clientWidth + 1) {
+			rows.push({
+				check: "U-40",
+				verdict: "EXCEPTION",
+				measured: `declared deferral: ${U40_DEFERRAL.SCOPE} — ${Math.round(node.scrollWidth)}pt of content in a ${Math.round(node.clientWidth)}pt viewport`,
+				detail: node.path,
+			});
+		}
+	}
+	// A table's scroller counts whether or not its node made the visible list —
+	// the probe emits both from one tree, but a caller assembling a state by hand
+	// must not see a frame full of tables report "no scroller".
+	const tableScrollers = state.tables.filter(
+		(table) => table.scroll !== null,
+	).length;
+	for (const table of state.tables) {
+		const scroll = table.scroll;
+		if (!scroll) continue;
+		const where =
+			byIndex.get(scroll.index)?.path ?? `table at node #${table.index}`;
+		if (scroll.overflow) {
+			if (scroll.cues === 0) {
+				failures.push({
+					check: "U-40",
+					verdict: "FAIL",
+					measured: "overflowing table scroller without a cue",
+					detail: `${where} — ${Math.round(scroll.scrollWidth)}pt of content in a ${Math.round(scroll.clientWidth)}pt viewport`,
+				});
+			} else if (!scroll.bleeds) {
+				failures.push({
+					check: "U-40",
+					verdict: "FAIL",
+					measured:
+						"overflowing table viewport does not bleed past the rail — the cut edge is the primary cue",
+					detail: `${where} — its right edge stops at the gutter instead of running past it`,
+				});
+			}
+		} else if (scroll.cues > 0) {
+			failures.push({
+				check: "U-40",
+				verdict: "FAIL",
+				measured: "cue on a table scroller that does not overflow",
+				detail: `${where} — ${Math.round(scroll.scrollWidth)}pt of content in a ${Math.round(scroll.clientWidth)}pt viewport`,
+			});
+		}
+	}
+	// The deferral rows ride WITH the failures rather than being skipped by them:
+	// the canary audits a page that carries both shapes, and the suppression
+	// ledger that proves the deferral is recorded reads the SAME run — an early
+	// return here made every recorded exemption invisible on the defects page.
+	if (failures.length > 0)
+		return [...failures.slice(0, 8), ...rows.slice(0, 8)];
+	const totalScrollers = scrollers + tableScrollers;
+	if (totalScrollers === 0) {
+		return [
+			{
+				check: "U-40",
+				verdict: "BLOCKED",
+				blockedKind: "not-applicable",
+				measured: "no horizontal scroller in this frame",
+				detail: "the cue check reads scrollers; this frame carries none",
+			},
+		];
+	}
+	const cued = state.tables.filter((t) => t.scroll?.overflow).length;
+	return [
+		{
+			check: "U-40",
+			verdict: "PASS",
+			measured: `${totalScrollers} scroller(s); ${cued} overflowing table viewport(s), all cued and bleeding; no cue on a fitting scroller`,
+			detail: "",
+		},
+		...rows.slice(0, 8),
+	];
+}
+
+/**
+ * U-41 — a wrapped summary row keeps one rail, and its disclosure caret rides
+ * the FIRST line.
+ *
+ * Two rules (`U-41:rail`, `U-41:caret`) over the same measurement. The row is
+ * found by shape (an interactive element carrying a caret glyph) rather than by
+ * class, because this is the check that has to keep working when the strip is
+ * refactored again: the before-state defect is geometric — the clause block was
+ * given half the row and wrapped AROUND the label, clause line 1 above the
+ * label's line and the caret centred on the block — and both halves of that are
+ * visible without knowing one class name. The rail tolerance is ±2 pt (the
+ * design pass's number); the caret tolerance is ±4 pt of the first line's
+ * centre. A row whose first line starts more than 24 pt inside its own box has
+ * left the rail and fails the same rule.
+ *
+ * Sites this change does not own are RECORDED in `U41_EXEMPTIONS`, with their
+ * reason and their measured numbers, and reported as EXCEPTION rows — see the
+ * ledger's own comment for the coupling that keeps a stale entry from
+ * swallowing a later fix.
+ */
+function u41SummaryRows(state: AuditState): CheckRow[] {
+	const byIndex = new Map(state.nodes.map((n) => [n.index, n]));
+	const failures: CheckRow[] = [];
+	const exemptions: CheckRow[] = [];
+	let judged = 0;
+	let wrapped = 0;
+	for (const summary of state.summaries) {
+		if (summary.lines.length === 0) continue;
+		judged += 1;
+		if (summary.lines.length > 1) wrapped += 1;
+		const first = summary.lines[0];
+		if (first === undefined) continue;
+		const where = byIndex.get(summary.index)?.path ?? `row #${summary.index}`;
+		if (first.left < summary.rowLeft - 1 || first.left > summary.rowLeft + 24) {
+			const inset = round1(first.left - summary.rowLeft);
+			const exempt = U41_EXEMPTIONS.find(
+				(entry) =>
+					where.includes(entry.path) &&
+					entry.rail !== undefined &&
+					Math.abs(entry.rail - inset) < 0.05,
+			);
+			const measured = `rail drift: the row's first line starts ${inset}pt inside its own box`;
+			if (exempt !== undefined) {
+				exemptions.push({
+					check: "U-41",
+					verdict: "EXCEPTION",
+					measured: `declared exemption: ${exempt.reason} — ${measured}`,
+					detail: where,
+				});
+			} else {
+				failures.push({
+					check: "U-41",
+					verdict: "FAIL",
+					measured,
+					detail: where,
+				});
+			}
+		} else {
+			for (let i = 1; i < summary.lines.length; i += 1) {
+				const line = summary.lines[i];
+				if (line === undefined) continue;
+				const delta = line.left - first.left;
+				if (Math.abs(delta) > 2) {
+					failures.push({
+						check: "U-41",
+						verdict: "FAIL",
+						measured: `rail drift: line ${i + 1} starts ${round1(delta)}pt off the row's rail`,
+						detail: where,
+					});
+				}
+			}
+		}
+		const caretCentre = (summary.caret.top + summary.caret.bottom) / 2;
+		const firstCentre = (first.top + first.bottom) / 2;
+		const off = caretCentre - firstCentre;
+		if (Math.abs(off) > 4) {
+			const exempt = U41_EXEMPTIONS.find(
+				(entry) =>
+					where.includes(entry.path) &&
+					entry.caret !== undefined &&
+					Math.abs(entry.caret - round1(Math.abs(off))) < 0.05,
+			);
+			const measured = `caret midline: the caret's centre is ${round1(off)}pt off the first line's centre`;
+			if (exempt !== undefined) {
+				exemptions.push({
+					check: "U-41",
+					verdict: "EXCEPTION",
+					measured: `declared exemption: ${exempt.reason} — ${measured}`,
+					detail: where,
+				});
+			} else {
+				failures.push({
+					check: "U-41",
+					verdict: "FAIL",
+					measured,
+					detail: where,
+				});
+			}
+		}
+	}
+	if (failures.length > 0) return failures.slice(0, 16);
+	if (judged === 0) {
+		return [
+			{
+				check: "U-41",
+				verdict: "BLOCKED",
+				blockedKind: "not-applicable",
+				measured: "no disclosure row in this frame",
+				detail:
+					"the strip check reads caret-bearing rows; this frame carries none",
+			},
+		];
+	}
+	return [
+		{
+			check: "U-41",
+			verdict: "PASS",
+			measured: `${judged} disclosure row(s)${wrapped > 0 ? ` (${wrapped} wrapped)` : ""} on one rail, caret on the first line`,
+			detail: "",
+		},
+		...exemptions.slice(0, 8),
+	];
+}
+
+/**
+ * U-42 — every non-zero spacing value on the scored screen is a step of
+ * `space.scale`.
+ *
+ * The seam D7 names: the app's spacing vocabulary is the token scale (the
+ * project's comment on the pipeline says Tailwind's own ramp IS this system's
+ * 4 pt base), and a utility one step off it — `py-1.5`, `gap-0.5` — is a value
+ * no reader notices and no contract records. The check reads computed values, so
+ * a class that stops compiling is a measurement rather than a missing field,
+ * and it lands with the recorded `U42_EXEMPTIONS` list rather than silently
+ * passing: the sites the design pass flagged but did not absorb are named
+ * there, reported as EXCEPTION rows with their reason.
+ */
+function u42SpacingScale(state: AuditState, floors: Floors): CheckRow[] {
+	const allowed = floors.spacing;
+	const failures: CheckRow[] = [];
+	const exemptions: CheckRow[] = [];
+	let checked = 0;
+	for (const node of state.nodes) {
+		const values: Array<[string, number]> = [
+			["padding-top", node.padding.top],
+			["padding-right", node.padding.right],
+			["padding-bottom", node.padding.bottom],
+			["padding-left", node.padding.left],
+			["margin-top", node.margin.top],
+			["margin-right", node.margin.right],
+			["margin-bottom", node.margin.bottom],
+			["margin-left", node.margin.left],
+			["row-gap", node.rowGap],
+			["column-gap", node.columnGap],
+		];
+		for (const [property, value] of values) {
+			if (value === 0) continue;
+			checked += 1;
+			if (
+				allowed.some(
+					(step) =>
+						Math.abs(step - value) < 0.01 ||
+						// A NEGATIVE STEP IS STILL THE SCALE'S WORD. The bleed (the table
+						// viewport's `-gutters.phone`) is the reviewer-visible case: the
+						// magnitude is a step, the sign is the direction the element moves.
+						// Rejecting the negation would fail the app's own sanctioned bleed.
+						Math.abs(step + value) < 0.01,
+				)
+			)
+				continue;
+			/* A PADDING THAT IS THE DEVICE'S DECLARED SAFE-AREA INSET IS THE
+			 * INSET, not a spacing decision. The screen root resolves
+			 * `env(safe-area-inset-*)` to the values the capture injected — 59pt on
+			 * iphone-15's top — and 59 is no more a spacing step than 0 is. Read
+			 * PER SIDE: a stray 59pt bottom padding on a 59pt-top device is still
+			 * off-scale, and a device with no insets inherits no allowance. */
+			const side = property.slice("padding-".length) as
+				| "top"
+				| "right"
+				| "bottom"
+				| "left";
+			if (
+				property.startsWith("padding-") &&
+				state.insets[side] !== 0 &&
+				Math.abs(state.insets[side] - value) < 0.01
+			)
+				continue;
+			/* AN `auto` MARGIN IS LAYOUT, NOT A SPACING STEP (review round 1).
+			 * `ml-auto` resolves to a USED pixel value the element's position decides
+			 * — 147.2pt here, 243.2pt on a tablet, a different number at any
+			 * viewport — so an exemption list could never name them all, and
+			 * exempting by value would also mask a real off-scale margin that
+			 * happened to resolve to the same number. The probe reads the keyword
+			 * through Typed OM, the only layer where Chrome still keeps it. */
+			if (
+				property.startsWith("margin-") &&
+				node.marginAuto?.[
+					property.slice("margin-".length) as
+						| "top"
+						| "right"
+						| "bottom"
+						| "left"
+				] === true
+			)
+				continue;
+			const exemption = U42_EXEMPTIONS.find(
+				(entry) =>
+					node.path.includes(entry.path) &&
+					(entry.anyValue === true ||
+						(entry.value !== undefined &&
+							Math.abs(entry.value - value) < 0.01)),
+			);
+			if (exemption !== undefined) {
+				exemptions.push({
+					check: "U-42",
+					verdict: "EXCEPTION",
+					measured: `declared exemption: ${exemption.reason} — ${property} ${round1(value)}pt`,
+					detail: node.path,
+				});
+				continue;
+			}
+			failures.push({
+				check: "U-42",
+				verdict: "FAIL",
+				measured: `off-scale ${property} ${round1(value)}pt — not a step of space.scale`,
+				detail: node.path,
+			});
+		}
+	}
+	if (failures.length > 0) return failures.slice(0, 8);
+	return [
+		{
+			check: "U-42",
+			verdict: "PASS",
+			measured: `${checked} non-zero spacing value(s) across ${state.nodes.length} node(s), every one a step of space.scale`,
+			detail: "",
+		},
+		...exemptions.slice(0, 8),
+	];
+}
+
 /**
  * The check registry. `needs` declares what a check requires so the runner can
  * mark it BLOCKED rather than pass it when a state cannot answer.
@@ -1453,6 +2264,14 @@ export const CHECKS: Record<
 	"U-08": { label: "Overlap", run: u08Overlap },
 	"U-09": { label: "Accessible name", run: u09AccessibleName },
 	"U-10": { label: "Label-in-name", run: u10LabelInName },
+	"U-38": {
+		label: "Markdown table rendered as a table",
+		run: u38TableRendered,
+	},
+	"U-39": { label: "Table token breaks", run: u39TableTokens },
+	"U-40": { label: "Table scroll cue", run: u40ScrollCue },
+	"U-41": { label: "Summary row rail and caret", run: u41SummaryRows },
+	"U-42": { label: "Spacing on the token scale", run: u42SpacingScale },
 };
 
 /**
@@ -1545,6 +2364,49 @@ export interface CheckRow {
  * the probe genuinely reports a missing computed value (`getAttribute` for an
  * absent role), which is a different thing from a field that is not there.
  */
+/**
+ * One markdown table, as the probe measures it.
+ *
+ * `headRows`/`bodyRows` count the renderer's declared row nodes, `cells` carries
+ * each cell's text (for the pipe/divider scan) and the whitespace runs that
+ * wrapped (for the token check), and `scroll` is the viewport's overflow facts —
+ * null when a table renders without its scroller, which the table checks treat
+ * as a missing measurement rather than a pass.
+ */
+export interface TableMeasure {
+	index: number;
+	headRows: number;
+	bodyRows: number;
+	cells: Array<{
+		index: number;
+		text: string;
+		/** Whether the cell's FULL text still carries a `\|` (probe-computed). */
+		escapeInText?: boolean;
+		broken: Array<{ token: string; length: number }>;
+	}>;
+	scroll: {
+		index: number;
+		scrollWidth: number;
+		clientWidth: number;
+		scrollLeft: number;
+		overflow: boolean;
+		bleeds: boolean;
+		cues: number;
+	} | null;
+}
+
+/**
+ * One disclosure row's geometry, as the probe measures it: each text line's box
+ * (grouped by top, so one line's label and count are one entry) and the caret's
+ * box, both in CSS pixels of the frame's viewport.
+ */
+export interface SummaryMeasure {
+	index: number;
+	rowLeft: number;
+	lines: Array<{ left: number; top: number; bottom: number }>;
+	caret: { left: number; top: number; bottom: number };
+}
+
 export interface AuditNode {
 	index: number;
 	tag: string;
@@ -1554,9 +2416,22 @@ export interface AuditNode {
 	ariaLabel: string | null;
 	hasAccessibleName: boolean;
 	accessibleName: string;
-	visibleLabel: string;
 	text: string;
 	ownText: string;
+	/**
+	 * Whether the node's FULL textContent still carries a `\|`, computed by the
+	 * probe beyond the 200-character `ownText` slice. Optional so unit fixtures
+	 * built by hand fall back to the slice; the live probe always sets it.
+	 */
+	escapeInText?: boolean;
+	/**
+	 * Which margin sides are the `auto` keyword rather than a length, read by the
+	 * probe through Typed OM (Chrome's string form resolves auto to its USED
+	 * pixels — a number a spacing scale cannot hold). Optional: the canary and
+	 * hand-built fixtures fall back to scoring the resolved value, and the live
+	 * probe always sets it.
+	 */
+	marginAuto?: { top: boolean; right: boolean; bottom: boolean; left: boolean };
 	rect: {
 		x: number;
 		y: number;
@@ -1610,6 +2485,18 @@ export interface AuditNode {
 	clientHeight: number;
 	borderWidth: number;
 	padding: { top: number; bottom: number; left: number; right: number };
+	/**
+	 * The computed spacing vocabulary U-42 scores, and the horizontal scroll
+	 * position U-40 reads. Present on every node for the same reason `padding`
+	 * is: a value the probe always emits cannot be "absent" in a way a check
+	 * would read as zero.
+	 */
+	margin: { top: number; bottom: number; left: number; right: number };
+	rowGap: number;
+	columnGap: number;
+	scrollLeft: number;
+	/** The machine-readable name (`data-testid`), or null when the node carries none. */
+	testId: string | null;
 	/**
 	 * Whether an ancestor clips this node away, and whether it draws ink of its own.
 	 *
@@ -1690,6 +2577,14 @@ export interface AuditState {
 	theme: string;
 	canvas: { root: string; body: string };
 	nodeCount: number;
+	/**
+	 * Every markdown table in the frame, as the probe measured it: its rows, its
+	 * cells (each with the whitespace runs that occupied more than one line box),
+	 * and its scroll viewport's overflow/bleed/cue facts (U-38…U-40).
+	 */
+	tables: TableMeasure[];
+	/** Every caret-bearing disclosure row's line and caret geometry (U-41). */
+	summaries: SummaryMeasure[];
 	ax: AuditAxNode[];
 	/** Injected by the audit runner rather than by the probe. */
 	frame?: string | null;

@@ -969,21 +969,48 @@ export function createRelay(options: RelayOptions = {}) {
 	 * then a settle. Deterministic by tick, so "streaming then settled" is
 	 * reproducible rather than flaky.
 	 */
+	/**
+	 * The S5 streaming-tables growth: a table that arrives a piece at a time.
+	 *
+	 * Deterministic by tick, and the ORDER matters: the divider and the first row
+	 * land in the SAME tick, because a divider alone is a legal 0-row table (the
+	 * parser's own "grows rows one frame at a time" contract) and U-38's structure
+	 * rule reads a 0-body-row frame as the half-recognised-table defect. The first
+	 * tick — header only — is deliberately NOT a table (the divider rule), which
+	 * is the honest source frame a mid-stream reader sees.
+	 */
+	const tableArrival = (tick: number, settled: boolean): string => {
+		const header = "| shard | state |";
+		const divider = "| --- | --- |";
+		const rows = ["| 1 | ok |", "| 2 | ok |", "| 3 | ok |", "| 4 | ok |"];
+		const body =
+			tick === 0
+				? ""
+				: [divider, ...rows.slice(0, Math.min(tick, rows.length))].join("\n");
+		const text = `Reconciling the shards:\n\n${header}${body === "" ? "" : `\n${body}`}`;
+		return settled ? `${text}\n\n214 shards scanned, 0 failed.` : text;
+	};
+
 	const sessionFrames = (
 		projection: SessionProjection,
 	): ((tick: number) => StreamFrame | "end" | null) => {
 		const stream = state.world.stream ?? { mode: "idle" };
 		if (stream.mode !== "streaming") return () => null;
 		const settleAfter = stream.settleAfterTurns ?? 6;
+		const growth = stream.growth === "table" ? tableArrival : null;
 		let version = projection.version ?? 1;
 		let text = "";
 		return (tick) => {
 			if (tick > settleAfter) return null;
 			version += 1;
 			const settled = tick === settleAfter;
-			text = settled
-				? `${text}\n\nReconciliation finished: 214 files scanned, 3 edits applied.`
-				: `${text}${" ".repeat(0)}${tick === 0 ? "" : "\n"}pass ${tick}: scanning shard ${tick}…`;
+			if (growth !== null) {
+				text = growth(tick, settled);
+			} else {
+				text = settled
+					? `${text}\n\nReconciliation finished: 214 files scanned, 3 edits applied.`
+					: `${text}${" ".repeat(0)}${tick === 0 ? "" : "\n"}pass ${tick}: scanning shard ${tick}…`;
+			}
 			const frame = structuredClone(projection);
 			frame.version = version;
 			frame.streaming = !settled;

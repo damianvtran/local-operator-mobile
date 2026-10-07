@@ -32,6 +32,8 @@ import {
 	U03_SUPPRESSION,
 	U08_SUPPRESSION,
 	U10_DECLARATION,
+	U38_DECLARATION,
+	U40_DEFERRAL,
 } from "../tools/audit/checks.ts";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -167,6 +169,20 @@ const KNOWN_BLINDS = new Set([
 	// must make the canary miss exactly that shape's fixture (review rounds 3 and 4).
 	"U-08:escape-absolute",
 	"U-08:escape-fixed",
+	// The S5 redesign's rules (U-38…U-42). Each is blindable so the mutation
+	// self-test proves it is the rule that fires: U-38 has two (the leak scan
+	// and the table structure — the marker↔render cross-check's shape needs a
+	// zero-table frame the shared page cannot stage, and is pinned by unit
+	// tests instead), U-40's two directions are separately load-bearing (a
+	// missing cue and a false one), and U-41's rail and caret are independent.
+	"U-38:leak",
+	"U-38:rows",
+	"U-39",
+	"U-40:cue",
+	"U-40:false",
+	"U-41:rail",
+	"U-41:caret",
+	"U-42",
 ]);
 
 // An empty `--manifest` is a caller bug, not "no override". Treating it as the
@@ -390,6 +406,17 @@ interface Defect {
 	element: string;
 }
 
+/**
+ * The fixture's opt-out for a `data-not-defect` shape the rule must not reach AT ALL,
+ * and the two attributes a declaration tag carries. All three sit ABOVE their first
+ * call on purpose: `declaredDefects()` runs at module level, so declarations placed
+ * after it initialize too late — measured, that ReferenceError'd every canary run
+ * (review round 2, R2-1); biome's `useTopLevelRegex` wants them out of loop bodies.
+ */
+const NOT_DEFECT_SILENT = /\bdata-not-defect-silent\b/;
+const DECLARATION_ID_RE = /\bid="([^"]+)"/;
+const DECLARATION_REASON_RE = /\bdata-not-defect-reason="([^"]+)"/;
+
 const declaredDefects = (): Defect[] => {
 	const out: Defect[] = [];
 	// Every tag carrying a `data-defect`, with its own `id` read from the same tag.
@@ -398,7 +425,7 @@ const declaredDefects = (): Defect[] => {
 	)) {
 		const marker = tag[1] ?? "";
 		if (marker === "" || marker.endsWith("-exception")) continue;
-		const element = /\bid="([^"]+)"/.exec(tag[0])?.[1];
+		const element = DECLARATION_ID_RE.exec(tag[0])?.[1];
 		if (element === undefined) {
 			console.error(
 				`canary: the defect '${marker}' is declared on an element with no id, so nothing ` +
@@ -527,15 +554,19 @@ const NOT_DEFECT_REASON_NAMES: Record<string, Record<string, string>> = {
 	"U-10": {
 		"text-entry-value": U10_DECLARATION.TEXT_ENTRY_VALUE,
 	},
+	// The code block's own cue is a separate decision (design pass §6.2): U-40
+	// must REPORT the overflowing non-table scroller as a declared deferral,
+	// never pass it silently, and this entry is what asserts the recording.
+	"U-40": {
+		"code-block-deferral": U40_DEFERRAL.SCOPE,
+	},
+	// §1.7 makes a header-only table LEGAL, so the clean page declares one and
+	// U-38:rows must accept it. The entry is what stops the acceptance from
+	// being rewritten as "requires a body row" without the canary noticing.
+	"U-38": {
+		"header-only-table": U38_DECLARATION.HEADER_ONLY,
+	},
 };
-
-/**
- * The fixture's opt-out for a `data-not-defect` shape the rule must not reach AT ALL.
- *
- * A module-level constant so the parser does not rebuild it per tag (biome's
- * `useTopLevelRegex`).
- */
-const NOT_DEFECT_SILENT = /\bdata-not-defect-silent\b/;
 
 const declaredNotDefects = (): NotDefect[] => {
 	const out: NotDefect[] = [];
@@ -543,7 +574,7 @@ const declaredNotDefects = (): NotDefect[] => {
 		/<[a-z0-9]+\b[^>]*data-not-defect="([^"]+)"[^>]*>/gi,
 	)) {
 		const check = tag[1] ?? "";
-		const element = /\bid="([^"]+)"/.exec(tag[0])?.[1];
+		const element = DECLARATION_ID_RE.exec(tag[0])?.[1];
 		if (check === "" || element === undefined) {
 			console.error(
 				"canary: a data-not-defect declaration needs a check id and an element id; " +
@@ -551,7 +582,7 @@ const declaredNotDefects = (): NotDefect[] => {
 			);
 			process.exit(2);
 		}
-		const name = /\bdata-not-defect-reason="([^"]+)"/.exec(tag[0])?.[1];
+		const name = DECLARATION_REASON_RE.exec(tag[0])?.[1];
 		const silent = NOT_DEFECT_SILENT.test(tag[0]);
 		if (name !== undefined && silent) {
 			console.error(

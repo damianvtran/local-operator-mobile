@@ -45,6 +45,7 @@ import { launchChrome } from "../lib/chrome.ts";
 import { freshPage, withDeadline } from "../lib/page.ts";
 import {
 	captureHookQuery,
+	cellHookQuery,
 	declaredSkipFor,
 	type ReadinessIssue,
 	readinessIssues,
@@ -448,6 +449,13 @@ async function captureCell(
 	// The web-only hooks every harness page carries (`lo-recorder`), merged through the
 	// SHARED builder the audit also uses, so the two render one screen rather than two.
 	for (const [key, value] of new URLSearchParams(captureHookQuery())) {
+		query.set(key, value);
+	}
+	// The per-cell viewer hooks (`lo-md-scroll=end`), for the same reason through
+	// the same kind of shared builder: `S5/tables-end` must render scrolled-to-end
+	// in the frame AND in the audit's re-drive, or the audit measures a different
+	// page than the frame shows.
+	for (const [key, value] of new URLSearchParams(cellHookQuery(cell.cell))) {
 		query.set(key, value);
 	}
 	const path = resolvePath(cell.path, state);

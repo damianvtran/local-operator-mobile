@@ -119,6 +119,15 @@
 		--danger: #ef8078;
 		--border: #837c6d;
 	}
+	/* The UA's heading margins are fractions of the heading's own font size —
+	   10.72px for `h1`, 19.92px for `h2` at 100 %, and other fractions at every
+	   other scale — so they are off the token scale at every size the matrix
+	   uses. U-42 measures computed margins, and on the CLEAN page every one of
+	   them must be a step: pin them to the 8px step in px (px does not follow
+	   the root font size, so the value stays on the scale at 200 % as well).
+	   `p`'s 1em default is left alone: it computes to 16px at 100 % and 32px
+	   at 200 %, both steps. */
+	h1, h2, h3 { margin: 0 0 8px; }
 	html, body { margin: 0; padding: 0; }
 	body {
 		font-size: 1rem;
@@ -151,7 +160,7 @@
 	   its pinned footer `absolute`, so `fixed | sticky` missed it and 32 rows on a
 	   correct screen followed. */
 	.scroll-region { height: 90px; overflow: auto; margin: 0 0 8px; }
-	.pinned-footer { position: absolute; left: var(--lo-inset-left, 0px); right: var(--lo-inset-right, 0px); height: 44px; padding: 10px; background: var(--surface); border-top: 1px solid var(--border); }
+	.pinned-footer { position: absolute; left: var(--lo-inset-left, 0px); right: var(--lo-inset-right, 0px); height: 44px; padding: 8px; background: var(--surface); border-top: 1px solid var(--border); }
 	/* The clean case's bar rides at the TOP, clear of both the notch and the
 	   bottom-pinned clean bar. */
 	#good-pinned-footer { border-top: none; border-bottom: 1px solid var(--border); }
@@ -208,7 +217,7 @@
 	#too-wide { width: 480px; height: 20px; background: var(--surface); border: 1px solid var(--border); }
 	#clipped { height: 16px; overflow: hidden; background: var(--surface); }
 	#unnamed-icon { width: 44px; height: 44px; padding: 0; }
-	.status { display: inline-flex; align-items: center; gap: 6px; }
+	.status { display: inline-flex; align-items: center; gap: 4px; }
 </style>
 <script>
   // Mode and pre-paint theme/scale come from the URL, so a cell is reproducible
@@ -666,6 +675,267 @@
 	     each other IS a defect by the rule below — the fixture must not create one
 	     while proving that pin-over-scroll is fine. -->
 	<div id="good-pinned-footer" class="pinned-footer good" style="top: var(--lo-inset-top, 0px)">Pinned action bar</div>
+</div>
+
+<!-- ================================================================== -->
+<!-- U-38…U-42: the S5 redesign's checks (design pass `fix/hero-tables-strips`).
+
+     Same convention as every block above: `.bad` renders on /defects and
+     DECLARES what the audit must catch; `.good` renders on /clean and must stay
+     silent. The table fixtures carry the app's own testIDs (`md-table`, its
+     scroller, its rows, its cells and the fade) because the checks read the
+     same names the renderer writes — a canary the checks cannot tell from the
+     app is the whole point.
+
+     Two geometry notes the fixtures depend on, both mirroring the app:
+       - the rail is the page's OWN 16px gutter (body padding-right), so a
+         scroller "bleeds past the rail" exactly when it reaches past that
+         gutter — the overflowing fixtures carry `margin-right:-16px` and the
+         no-bleed one does not;
+       - a token breaks only where the cell allows it, so the U-39 fixture sets
+         `overflow-wrap: break-word` on the cell the way the app's cells do. -->
+
+<div class="bad panel">
+	<h2>U-38 a table rendered as its own source</h2>
+	<!-- Both leak shapes in one element, so one declared defect covers them and
+	     the mutation self-test names this element once. `pre-wrap` keeps the pipe
+	     lines as lines; the escape is written verbatim (backslash is plain text
+	     in HTML). -->
+	<p id="table-leak" data-defect="U-38-leak" style="white-space: pre-wrap; margin: 0 0 8px">| defect element | check | what is wrong |
+| --- | --- | --- |
+| \| escape | U-38 | a backslash-pipe reached the rendered text |</p>
+</div>
+
+<div class="bad panel">
+	<h2>U-38 a table with no header row</h2>
+	<!-- The mutation for U-38:rows since review round 1. It used to be a
+	     HEADER-ONLY table, but §1.7 makes exactly that legal — a header-only
+	     table renders its header and frame, and the divider is structure, not
+	     content — so the rule now requires the header and may not require a
+	     body. A header-less table is the remaining shape a table check can
+	     rightly reject, and the legal header-only shape lives on the clean
+	     page as a must-not-report. -->
+	<div id="table-half" data-defect="U-38-rows" data-testid="md-table" style="display:inline-block;border:1px solid var(--border);border-radius:6px;overflow:hidden">
+		<div data-testid="md-table-scroll" style="overflow-x:auto">
+			<div>
+				<div data-testid="md-table-row" style="display:flex">
+					<div data-testid="md-table-cell" style="flex:1;padding:8px 12px">key</div>
+					<div data-testid="md-table-cell" style="flex:1;padding:8px 12px">value</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+
+
+<div class="bad panel">
+	<h2>U-39 a token the column cannot hold</h2>
+	<div data-testid="md-table" style="border:1px solid var(--border);border-radius:6px;overflow:hidden">
+		<div data-testid="md-table-scroll" style="overflow-x:auto">
+			<div style="min-width:0">
+				<div data-testid="md-table-head" style="display:flex;background:var(--surface);border-bottom:1px solid var(--border)">
+					<div data-testid="md-table-cell" style="padding:8px 12px">token</div>
+				</div>
+				<div data-testid="md-table-row" style="display:flex">
+					<div id="narrow-column" data-defect="U-39" data-testid="md-table-cell" style="box-sizing:border-box;width:40px;flex:0 0 40px;padding:8px;overflow-wrap:break-word">abcdefghijklmnop</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+
+<div class="bad panel">
+	<h2>U-40 an overflowing table with no cue</h2>
+	<!-- THE RAIL, mirrored from the app: the fixture's content box sits on the
+	     safe area's edge, and this inner 16px rail is what a bleeding viewport
+	     runs past. Bleeding against the body's padding alone put the table's
+	     right edge INSIDE the 59pt landscape inset (U-05, measured on the clean
+	     page); one rail in both orientations lands it exactly on the boundary. -->
+	<div style="padding-right:16px">
+		<div id="no-cue-overflow" data-defect="U-40-cue" data-testid="md-table" style="position:relative;border:1px solid var(--border);border-radius:6px;overflow:hidden;margin-right:-16px">
+			<div data-testid="md-table-scroll" style="overflow-x:auto">
+				<div style="min-width:780px">
+					<div data-testid="md-table-head" style="display:flex;background:var(--surface);border-bottom:1px solid var(--border)">
+						<div data-testid="md-table-cell" style="min-width:160px;padding:8px 12px">alpha</div>
+						<div data-testid="md-table-cell" style="min-width:160px;padding:8px 12px">beta</div>
+						<div data-testid="md-table-cell" style="min-width:160px;padding:8px 12px">gamma</div>
+					</div>
+					<div data-testid="md-table-row" style="display:flex">
+						<div data-testid="md-table-cell" style="min-width:160px;padding:8px 12px">1</div>
+						<div data-testid="md-table-cell" style="min-width:160px;padding:8px 12px">2</div>
+						<div data-testid="md-table-cell" style="min-width:160px;padding:8px 12px">3</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+
+<div class="bad panel">
+	<h2>U-40 an overflowing table whose viewport stops at the rail</h2>
+	<!-- A cue IS drawn here, so only the cut edge is missing: the scroller fills
+	     the rail's content box instead of running past it, and the fade at the
+	     gutter is a gradient over content that visibly ENDS. -->
+	<!-- The same rail as #no-cue-overflow: the bleed lands on the safe edge. -->
+	<div style="padding-right:16px">
+		<div id="no-bleed-overflow" data-defect="U-40-cue" data-testid="md-table" style="position:relative;border:1px solid var(--border);border-radius:6px;overflow:hidden">
+			<div data-testid="md-table-scroll" style="overflow-x:auto">
+				<div style="min-width:780px">
+					<div data-testid="md-table-head" style="display:flex;background:var(--surface);border-bottom:1px solid var(--border)">
+						<div data-testid="md-table-cell" style="min-width:160px;padding:8px 12px">alpha</div>
+						<div data-testid="md-table-cell" style="min-width:160px;padding:8px 12px">beta</div>
+						<div data-testid="md-table-cell" style="min-width:160px;padding:8px 12px">gamma</div>
+					</div>
+					<div data-testid="md-table-row" style="display:flex">
+						<div data-testid="md-table-cell" style="min-width:160px;padding:8px 12px">1</div>
+						<div data-testid="md-table-cell" style="min-width:160px;padding:8px 12px">2</div>
+						<div data-testid="md-table-cell" style="min-width:160px;padding:8px 12px">3</div>
+					</div>
+				</div>
+			</div>
+			<div data-testid="md-table-scroll-cue" style="position:absolute;top:0;bottom:0;right:0;width:24px;background:linear-gradient(to right, transparent, var(--canvas))"></div>
+		</div>
+	</div>
+</div>
+
+<div class="bad panel">
+	<h2>U-40 a cue on a table that fits</h2>
+	<!-- The false-affordance direction: this table does not overflow, and a cue
+	     on it promises content that is not there. -->
+	<!-- The same rail as #no-cue-overflow: the bleed lands on the safe edge. -->
+	<div style="padding-right:16px">
+		<div id="fit-with-cue" data-defect="U-40-false" data-testid="md-table" style="position:relative;border:1px solid var(--border);border-radius:6px;overflow:hidden">
+			<div data-testid="md-table-scroll" style="overflow-x:auto">
+				<div style="min-width:0">
+					<div data-testid="md-table-head" style="display:flex;background:var(--surface);border-bottom:1px solid var(--border)">
+						<div data-testid="md-table-cell" style="padding:8px 12px">plan</div>
+						<div data-testid="md-table-cell" style="padding:8px 12px">pro</div>
+					</div>
+					<div data-testid="md-table-row" style="display:flex">
+						<div data-testid="md-table-cell" style="padding:8px 12px">seats</div>
+						<div data-testid="md-table-cell" style="padding:8px 12px">12</div>
+					</div>
+				</div>
+			</div>
+			<div data-testid="md-table-scroll-cue" style="position:absolute;top:0;bottom:0;right:0;width:24px;background:linear-gradient(to right, transparent, var(--canvas))"></div>
+		</div>
+	</div>
+</div>
+
+<div class="bad panel">
+	<h2>U-40 the code block's deferral, recorded</h2>
+	<!-- A non-table scroller that overflows and carries NO cue. The check reports
+	     it as a declared deferral (EXCEPTION, never a silent pass), and this
+	     declaration is what asserts the recording — the mirror of the meter's
+	     `data-not-defect-reason` above. -->
+	<div id="deferred-scroller" data-not-defect="U-40" data-not-defect-reason="code-block-deferral" style="overflow-x:auto">
+		<div style="min-width:780px">A code line far wider than the phone, with no cue of its own.</div>
+	</div>
+</div>
+
+<div class="bad panel">
+	<h2>U-41 a wrapped row with two rails</h2>
+	<!-- Line two is indented 12px: the shape the operator reported — a clause
+	     block that wrapped beside its label and came back on a second rail. The
+	     caret rides line one, so only the rail rule fires. -->
+	<button class="control" id="rail-drift" data-defect="U-41-rail" style="display:block;width:100%;text-align:left;padding:8px 16px">
+		<span style="display:block;width:max-content">Runbook <span aria-hidden="true">▸</span></span>
+		<span style="display:block;width:max-content;padding-left:12px">3 tasks</span>
+	</button>
+</div>
+
+<div class="bad panel">
+	<h2>U-41 a caret between the lines</h2>
+	<!-- Both lines share the rail; the caret is centred on the BLOCK, halfway
+	     between the two lines — the before-state's "midpoint of the clause
+	     lines" the design pass measured (638.83pt). -->
+	<button class="control" id="caret-midline" data-defect="U-41-caret" style="display:block;width:100%;text-align:left;padding:8px 16px;position:relative">
+		<span style="display:block;width:max-content">Runbook</span>
+		<span style="display:block;width:max-content">3 tasks</span>
+		<span aria-hidden="true" style="position:absolute;right:16px;top:50%;transform:translateY(-50%)">▸</span>
+	</button>
+</div>
+
+<div class="bad panel">
+	<h2>U-42 spacing off the scale</h2>
+	<!-- 6px: no step of space.scale carries it (the scale is 4/8/12/16/20/24/32/40/48/64/80/96).
+	     The four padding sides report as four rows; all name this element. -->
+	<div id="off-scale-pad" data-defect="U-42" style="padding: 6px; background: var(--surface); border: 1px solid var(--border); border-radius: 6px">A box whose padding is 6px — off the scale no reader notices and no contract records.</div>
+</div>
+
+<!-- ---------------------------------------------------------- clean halves -->
+
+<div class="good panel">
+	<h2>The table, at the right price (clean)</h2>
+	<!-- Overflows, bleeds past the rail, and carries its cue: the shape U-38,
+	     U-39 and U-40 must all pass. The cue is INSIDE the wrapper, which is how
+	     the probe associates it with this scroller. -->
+	<!-- The same rail as #no-cue-overflow: the bleed lands on the safe edge. -->
+	<div style="padding-right:16px">
+		<div id="good-cue-table" data-testid="md-table" style="position:relative;border:1px solid var(--border);border-radius:6px;overflow:hidden;margin-right:-16px">
+			<div data-testid="md-table-scroll" style="overflow-x:auto">
+				<div style="min-width:780px">
+					<div data-testid="md-table-head" style="display:flex;background:var(--surface);border-bottom:1px solid var(--border)">
+						<div data-testid="md-table-cell" style="min-width:160px;padding:8px 12px">alpha</div>
+						<div data-testid="md-table-cell" style="min-width:160px;padding:8px 12px">beta</div>
+						<div data-testid="md-table-cell" style="min-width:160px;padding:8px 12px">gamma</div>
+					</div>
+					<div data-testid="md-table-row" style="display:flex">
+						<div data-testid="md-table-cell" style="min-width:160px;padding:8px 12px">1</div>
+						<div data-testid="md-table-cell" style="min-width:160px;padding:8px 12px">2</div>
+						<div data-testid="md-table-cell" style="min-width:160px;padding:8px 12px">3</div>
+					</div>
+				</div>
+			</div>
+			<div data-testid="md-table-scroll-cue" style="position:absolute;top:0;bottom:0;right:0;width:24px;background:linear-gradient(to right, transparent, var(--canvas))"></div>
+		</div>
+	</div>
+</div>
+
+<div class="good panel">
+	<h2>A table that fits (clean)</h2>
+	<!-- No overflow, no cue: the false-affordance direction in reverse. -->
+	<div id="good-fit-table" data-testid="md-table" style="border:1px solid var(--border);border-radius:6px;overflow:hidden">
+		<div data-testid="md-table-scroll" style="overflow-x:auto">
+			<div style="min-width:0">
+				<div data-testid="md-table-head" style="display:flex;background:var(--surface);border-bottom:1px solid var(--border)">
+					<div data-testid="md-table-cell" style="padding:8px 12px">plan</div>
+					<div data-testid="md-table-cell" style="padding:8px 12px">pro</div>
+				</div>
+				<div data-testid="md-table-row" style="display:flex">
+					<div data-testid="md-table-cell" style="padding:8px 12px">seats</div>
+					<div data-testid="md-table-cell" style="padding:8px 12px">12</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+
+<div class="good panel">
+	<h2>A header-only table (clean)</h2>
+	<!-- §1.7's legal case: the header and frame render, there are no body
+	     rows, and the divider is structure, not content. U-38:rows must
+	     accept it — the mutation that used to prove this rule fired was this
+	     shape, and the rule was wrong, not the shape (review round 1). -->
+	<div id="good-header-only" data-not-defect="U-38" data-not-defect-reason="header-only-table" data-testid="md-table" style="display:inline-block;max-width:100%;border:1px solid var(--border);border-radius:6px;overflow:hidden">
+		<div data-testid="md-table-scroll" style="overflow-x:auto">
+			<div>
+				<div data-testid="md-table-head" style="display:flex;background:var(--surface);border-bottom:1px solid var(--border)">
+					<div data-testid="md-table-cell" style="flex:1;padding:8px 12px">key</div>
+					<div data-testid="md-table-cell" style="flex:1;padding:8px 12px">value</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+
+<div class="good panel">
+	<h2>A wrapped row on one rail (clean)</h2>
+	<!-- Two lines, one rail, caret on the first line: U-41's pass shape. -->
+	<button class="control" id="good-rail-row" style="display:block;width:100%;text-align:left;padding:8px 16px">
+		<span style="display:block;width:max-content">Runbook <span aria-hidden="true">▸</span></span>
+		<span style="display:block;width:max-content">3 tasks</span>
+	</button>
 </div>
 
 <!-- The page's own bottom padding, so the scroll text above cannot reach another

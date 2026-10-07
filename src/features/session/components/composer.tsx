@@ -530,14 +530,14 @@ export const Composer = ({
 	return (
 		<View
 			ref={rootRef}
-			className="border-t border-hairline px-3 pt-1.5 pb-2"
+			className="border-t border-hairline px-4 pt-2 pb-2"
 			testID={testID}
 		>
 			<ComposerStateMarkers controls={controls} />
 			{/* Attachments, above the field: an attachment changes what send means, so it
 			    is read before the control that is pressed. */}
 			{images.length > 0 ? (
-				<View className="pb-1.5">
+				<View className="pb-2">
 					<ScrollView horizontal showsHorizontalScrollIndicator={false}>
 						<View className="flex-row gap-1.5">
 							{images.map((image, index) => (
@@ -595,7 +595,7 @@ export const Composer = ({
 			    was aborted — a completed turn also stops streaming, and offering to
 			    "resume" a finished conversation is a control with no meaning. */}
 			{showResume ? (
-				<View className="pb-1.5">
+				<View className="pb-2">
 					<Button
 						label={COMPOSER_COPY.resumeLabel}
 						variant="outline"
@@ -607,7 +607,7 @@ export const Composer = ({
 			) : null}
 
 			{notice !== null ? (
-				<View className="pb-1.5 rounded-sm border border-success-border bg-success-wash px-3 py-2">
+				<View className="pb-2 rounded-sm border border-success-border bg-success-wash px-3 py-2">
 					<Text
 						className="text-body-sm text-success"
 						accessibilityLiveRegion="polite"
@@ -619,7 +619,7 @@ export const Composer = ({
 			) : null}
 
 			{retainedMessage !== null ? (
-				<View className="mb-1.5 rounded-sm border border-danger-border bg-danger-wash px-3 py-2">
+				<View className="mb-2 rounded-sm border border-danger-border bg-danger-wash px-3 py-2">
 					<Text
 						className="text-body-sm text-danger"
 						accessibilityRole={ROLE.alert}
@@ -641,7 +641,7 @@ export const Composer = ({
 			) : null}
 
 			{error !== null ? (
-				<View className="mb-1.5 rounded-sm border border-danger-border bg-danger-wash px-3 py-2">
+				<View className="mb-2 rounded-sm border border-danger-border bg-danger-wash px-3 py-2">
 					<Text
 						className="text-body-sm text-danger"
 						accessibilityLiveRegion="assertive"
@@ -798,7 +798,7 @@ export const Composer = ({
 			{voice?.micVisible && (rowIsLive(voice.phase) || voice.status !== "") ? (
 				<View
 					className={cx(
-						"mb-1.5 rounded-sm border px-3",
+						"mb-2 rounded-sm border px-3",
 						dictationLargeText
 							? "flex-col items-stretch justify-center gap-2"
 							: "flex-row items-center gap-2",
@@ -839,7 +839,7 @@ export const Composer = ({
 			    (measured: `composer-effort-chip` 267.2 → 336.4 at 150 %, 335.6 → 419.2 at
 			    200 %) — a control no finger can reach. Wrapping costs a second line only
 			    at the scales that need one, and takes nothing away at 100 %. */}
-			<View className="flex-row flex-wrap items-center gap-2 pt-1.5">
+			<View className="flex-row flex-wrap items-center gap-2 pt-2">
 				{leadingChip}
 				{queuedCount > 0 ? (
 					<Text

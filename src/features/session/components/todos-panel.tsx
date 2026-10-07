@@ -50,7 +50,7 @@ export const TodosPanel = ({
 				onPress={onToggle}
 				testID={CONTROL.todosDisclosure}
 			>
-				<View className="min-h-11 flex-row items-center gap-2 px-4">
+				<View className="min-h-11 flex-row items-center gap-2 px-4 py-2">
 					<Text
 						className={cx(
 							"text-mono-sm text-ink-dim",

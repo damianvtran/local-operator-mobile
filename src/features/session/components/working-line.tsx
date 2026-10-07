@@ -82,7 +82,7 @@ export const WorkingLine = ({
 
 	return (
 		<View
-			className="flex-row items-center gap-2 px-4 py-1.5"
+			className="flex-row items-center gap-2 px-4 py-2"
 			accessibilityRole="progressbar"
 			accessibilityLabel={
 				hasClock ? `${activity}, ${elapsedLabel(elapsed)}` : activity

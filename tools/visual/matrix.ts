@@ -729,8 +729,13 @@ export const IDENTICAL_FRAME_EXEMPTIONS: IdenticalFrameClass[] = [
 			"S5/populated-long",
 			"S5/rich-rows",
 			"S5/subagents",
+			"S5/tables",
+			"S5/tables-end",
+			"S5/tables-in-view",
+			"S5/streaming-tables",
 			"path:/session/{sessionId}?lo-scroll=top/condensed",
 			"path:/session/{sessionId}?lo-scroll=top&lo-expand=tc-conv-00-user/expanded",
+			"path:/session/6714def86197/warm",
 		],
 		reason:
 			"below-the-fold at iphone-se / 200 %: the 320 px column at 200 % text is filled by the " +
@@ -738,28 +743,51 @@ export const IDENTICAL_FRAME_EXEMPTIONS: IdenticalFrameClass[] = [
 			"that distinguish these cells — the 520-row transcript, the code-block/diff/table " +
 			"rows, the subagent roster's own rows, and the transcript's TOP (the message-plus-bar " +
 			"rows the two `path:` cells pin the viewport to) — start below the viewport, so the PNG " +
-			"is all chrome. The content differs for every subset the one-view coincidence on this " +
-			"class's cells does not carry — each such cell reaches its own root or marker — which is " +
-			"what makes this a limit of the camera rather than a collapse. The one subset the " +
-			"coincidence entry carries — `S5/populated-long` against the `?lo-scroll=top/condensed` " +
-			"cell at iphone-se / 200 % — is a composition declared there (content digests EQUAL: " +
-			"`3911696863f1487d` dark, `0063b6b8723f5676` light — run 37529153608); the check " +
-			"consults that table for a same-content partition before this one, so this entry is " +
-			"only ever asked for the subsets it can describe. " +
-			"THE CLASS IS FIVE NAMES ON ONE ENTRY on purpose: it was declared for `S5/populated-long` " +
-			"and `S5/rich-rows`, a third cell joined it when the capture first completed a whole " +
-			"tier — until then the stalls left cells missing and the comparison could not form the " +
-			"group — and the two `path:` cells joined it when the long-transcript scenario grew a " +
-			"top and an open state of its own (measured on the ci run of 37522263768, where the five " +
-			"rendered byte-identical at iphone-se and their content digests differed for every " +
-			"subset except the `S5/populated-long` = `?lo-scroll=top/condensed` pair the coincidence " +
-			"entry carries). A cell " +
-			"joining an existing entry is evidence that the phenomenon is the one that entry " +
+			"is all chrome. The content differs for every subset the one-view coincidences on this " +
+			"class's cells do not carry — each such cell reaches its own root or marker — which is " +
+			"what makes this a limit of the camera rather than a collapse. The subsets the " +
+			"coincidence entries carry — `S5/populated-long` against the `?lo-scroll=top/condensed` " +
+			"cell at iphone-se / 200 % (content digests EQUAL: `3911696863f1487d` dark, " +
+			"`0063b6b8723f5676` light — run 37529153608), `S5/tables` against `S5/tables-end` at " +
+			"iphone-se / light / 200 %, and the warm-up cell against `S5/streaming-tables` where " +
+			"both read the pre-stream chrome — are compositions declared there; the check consults " +
+			"that " +
+			"table for a same-content partition before this one, so this entry is only ever asked " +
+			"for the subsets it can describe. " +
+			"THE CLASS IS ONE ENTRY ACROSS EVERY NAME IT HAS GROWN, on purpose: it was declared " +
+			"for `S5/populated-long` and `S5/rich-rows`, a third cell joined it when the capture " +
+			"first completed a whole tier — until then the stalls left cells missing and the " +
+			"comparison could not form the group — and the two `path:` cells joined it when the " +
+			"long-transcript scenario grew a top and an open state of its own (measured on the ci " +
+			"run of 37522263768, where the five rendered byte-identical at iphone-se and their " +
+			"content digests differed for every subset except the `S5/populated-long` = " +
+			"`?lo-scroll=top/condensed` pair the coincidence entries carry). The S5 redesign's " +
+			"two table cells JOIN the class (measured 2026-10-06 on `fix/hero-tables-strips`): " +
+			"at 200 % their wide table and the code rows above it are below the same fold, so " +
+			"`S5/tables` at iphone-15/light/200 % and `S5/tables-end` at iphone-se/dark/200 % " +
+			"share bytes with `S5/rich-rows` while the three cells' content digests all differ " +
+			"(`rich-rows` 0f1e6030ab8f, `tables` 1bc50098bd2d). `S5/tables-in-view` " +
+			"JOINS (review rounds 2–3): the pair it produces here is content-differs-frames-agree — " +
+			"measured at iphone-se/dark/100 and tablet-landscape/dark/100 — where the assertion's " +
+			"scroll re-renders the transcript's virtualization window without moving a drawn " +
+			"pixel, which is this camera limit; wherever the assertion cannot move anything the " +
+			"contents agree and the pair is the COINCIDENCE below. `S5/streaming-tables` " +
+			"JOINS (review round 3): wherever its settled frame is the same chrome the warm-up " +
+			"cell draws (its transcript below the fold) the bytes agree while its content digest " +
+			"still carries the streaming rows — the same bytes with different content, which is " +
+			"this camera limit. The WARM-UP " +
+			"CELL JOINS " +
+			"TOO, and it is the class's clearest case: it is the run's first navigation " +
+			"(`path:/session/6714def86197/warm`, the cell that burns the cold start), it " +
+			"renders the same idle world at the same 320 pt column, and at 200 % its " +
+			"frame is the identical chrome — while it declares no state a frame could " +
+			"deny (its capture record is the run's one recorded unready cell, by design). " +
+			"A cell joining an existing entry is evidence that the phenomenon is the one that entry " +
 			"describes, so it extends the statement rather than opening a second entry for the same " +
 			"thing. Declaring the CLASS is what makes that hold at every scale: these cells collide " +
-			"in whichever SUBSET a device, theme and scale produce — five ways at 200 % on the " +
-			"narrowest column, narrower subsets at 135 % and 100 % — and every subset not carried by " +
-			"the coincidence entry is this phenomenon, not a finding of its own.",
+			"in whichever SUBSET a device, theme and scale produce — the widest subsets at 200 % on " +
+			"the narrowest column, narrower subsets at 135 % and 100 % — and every subset not carried " +
+			"by the coincidence entries is this phenomenon, not a finding of its own.",
 	},
 ];
 
@@ -829,6 +857,42 @@ export const IDENTICAL_FRAME_COINCIDENCES: IdenticalFrameClass[] = [
 			"this exact combo both carry the condensed turn bars as visible ids " +
 			"(`session-screen`, `turn-bar-tc-conv-00-user` … in the visible set), which is what " +
 			"keeps this a composition at that viewport rather than a collapse of either state.",
+	},
+	{
+		cells: ["S5/tables", "S5/tables-end", "S5/tables-in-view"],
+		reason:
+			"one state, one scroll offset apart, at iphone-se / light / 200 %: the two cells are " +
+			"the SAME transcript — `tables-end` is `tables` with the wide table scrolled to its " +
+			"end by the `lo-md-scroll` viewer hook — and at 200 % on the 320 px column that table " +
+			"sits below the viewport in BOTH frames, so the drawn bytes (9d2fd4f444d83737) and the " +
+			"content digest are identical while each cell still reaches `session-tables` and " +
+			"renders its own state. Wherever the table IS on screen the frames differ — every " +
+			"100 % frame on both devices, and dark/200 on iphone-15 — which is what makes this a " +
+			"camera limit written as a coincidence rather than two cells that collapsed: the " +
+			"state really is the same content one interaction later, and the viewport is the " +
+			"only thing that hides the difference. Measured 2026-10-06 on " +
+			"`fix/hero-tables-strips`. `S5/tables-in-view` joins the class for the variants " +
+			"where ITS assertion moves nothing — the same view AND the same content — measured " +
+			"at 135 %/200 % on both phones, all four phone-200 pairs included; the 100 % pairs, " +
+			"where the assertion does change the rendered content, are the camera-limit " +
+			"exemption above.",
+	},
+	{
+		cells: ["path:/session/6714def86197/warm", "S5/streaming-tables"],
+		reason:
+			"one view, two moments at the run's cold start: the warm-up cell is the run's first " +
+			"navigation and the streaming cell's first recorded frame is the app before its " +
+			"stream paints, so wherever both frames are the pre-stream chrome their bytes AND " +
+			"their content readings agree — measured in the round-3 manifest as three instances " +
+			"with equal content digests (frame shas 8ec3af99 and dce80132 both carrying " +
+			"518394c9dde43c82; b1902fcc carrying f636734bed283eb7). The same bytes are correct " +
+			"there: at that instant the app really is one view — the session screen ahead of the " +
+			"stream — and each cell still reaches the run it declares. Once the stream paints " +
+			"the frames differ (the transcript arrives), and where the frame is the pre-paint " +
+			"blank while the streaming cell's CONTENT reading already carries the streamed rows, " +
+			"the pair is the camera-limit exemption above, not this entry: the halves are " +
+			"declared separately because they are different phenomena, and only a run in which " +
+			"the warm-up cell is itself evidential can consult this entry at all.",
 	},
 ];
 
