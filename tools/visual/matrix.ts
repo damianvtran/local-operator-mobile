@@ -748,8 +748,10 @@ export const IDENTICAL_FRAME_EXEMPTIONS: IdenticalFrameClass[] = [
 			"what makes this a limit of the camera rather than a collapse. The subsets the " +
 			"coincidence entries carry — `S5/populated-long` against the `?lo-scroll=top/condensed` " +
 			"cell at iphone-se / 200 % (content digests EQUAL: `3911696863f1487d` dark, " +
-			"`0063b6b8723f5676` light — run 37529153608) and `S5/tables` against `S5/tables-end` at " +
-			"iphone-se / light / 200 % — are compositions declared there; the check consults that " +
+			"`0063b6b8723f5676` light — run 37529153608), `S5/tables` against `S5/tables-end` at " +
+			"iphone-se / light / 200 %, and the warm-up cell against `S5/streaming-tables` where " +
+			"both read the pre-stream chrome — are compositions declared there; the check consults " +
+			"that " +
 			"table for a same-content partition before this one, so this entry is only ever asked " +
 			"for the subsets it can describe. " +
 			"THE CLASS IS ONE ENTRY ACROSS EVERY NAME IT HAS GROWN, on purpose: it was declared " +
@@ -833,6 +835,30 @@ export const IDENTICAL_FRAME_COINCIDENCES: IdenticalFrameClass[] = [
 			"(dark 07d9c40e1083 / d7ca9bcec45e; light 1623786f6c06 / f2ee0ac17b8f).",
 	},
 	{
+		cells: [
+			"S5/populated-long",
+			"path:/session/{sessionId}?lo-scroll=top/condensed",
+		],
+		reason:
+			"one view, two scroll positions at iphone-se / 200 %: at 320 px with 200 % text the " +
+			"transcript's visible area is a sliver between the session header and its panels, and " +
+			"the list's window sits at its TOP in both cells — the tail-following " +
+			"`S5/populated-long` renders the same first rows as the anchored " +
+			"`path:…condensed`, which is why the same bytes carry the same content and the " +
+			"identical-state check reads one view. The readings agree on it: at dark/200 both " +
+			"cells' `readiness.text` begins `Refactor… client … Reconcile last night's ledger " +
+			"and tell me what slipped. ✓ completed · 38 steps …` and their content digests are " +
+			"EQUAL (3911696863f1487d; 0063b6b8723f5676 at light/200 — run 37529153608). The " +
+			"claims do not collide where the transcript has room: at 100 % and 135 % the two " +
+			"cells render different bytes (dark/100 152d8908 vs 0bd818dc; light/100 922d64ec vs " +
+			"3b9115da; dark/135 d8d3dafb vs e66aba68; light/135 c7a6c724 vs 4eece5e6), so " +
+			"neither cell is a duplicate of the other and neither declaration can be removed. " +
+			"Every cell still reaches the session screen with its relay-backed session, and at " +
+			"this exact combo both carry the condensed turn bars as visible ids " +
+			"(`session-screen`, `turn-bar-tc-conv-00-user` … in the visible set), which is what " +
+			"keeps this a composition at that viewport rather than a collapse of either state.",
+	},
+	{
 		cells: ["S5/tables", "S5/tables-end", "S5/tables-in-view"],
 		reason:
 			"one state, one scroll offset apart, at iphone-se / light / 200 %: the two cells are " +
@@ -850,6 +876,23 @@ export const IDENTICAL_FRAME_COINCIDENCES: IdenticalFrameClass[] = [
 			"at 135 %/200 % on both phones, all four phone-200 pairs included; the 100 % pairs, " +
 			"where the assertion does change the rendered content, are the camera-limit " +
 			"exemption above.",
+	},
+	{
+		cells: ["path:/session/6714def86197/warm", "S5/streaming-tables"],
+		reason:
+			"one view, two moments at the run's cold start: the warm-up cell is the run's first " +
+			"navigation and the streaming cell's first recorded frame is the app before its " +
+			"stream paints, so wherever both frames are the pre-stream chrome their bytes AND " +
+			"their content readings agree — measured in the round-3 manifest as three instances " +
+			"with equal content digests (frame shas 8ec3af99 and dce80132 both carrying " +
+			"518394c9dde43c82; b1902fcc carrying f636734bed283eb7). The same bytes are correct " +
+			"there: at that instant the app really is one view — the session screen ahead of the " +
+			"stream — and each cell still reaches the run it declares. Once the stream paints " +
+			"the frames differ (the transcript arrives), and where the frame is the pre-paint " +
+			"blank while the streaming cell's CONTENT reading already carries the streamed rows, " +
+			"the pair is the camera-limit exemption above, not this entry: the halves are " +
+			"declared separately because they are different phenomena, and only a run in which " +
+			"the warm-up cell is itself evidential can consult this entry at all.",
 	},
 ];
 
