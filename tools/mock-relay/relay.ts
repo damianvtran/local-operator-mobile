@@ -1208,6 +1208,14 @@ export function createRelay(options: RelayOptions = {}) {
 					sendJson(res, 422, errorBody(textRefusal));
 					return;
 				}
+				// The images shape check follows the text rule, exactly as it does in
+				// `validate_control_frame` — and it is asked HERE for `prompt` only, because
+				// `steer` already passed it through `shapeRefusal` above.
+				const imagesShape = imagesRefusal(body);
+				if (imagesShape !== null) {
+					sendJson(res, 422, errorBody(imagesShape));
+					return;
+				}
 			}
 			// Bound once, narrowed once: every later use (the ledger, the duplicate
 			// row) has to agree on which identity was admitted.
@@ -1306,6 +1314,29 @@ export function createRelay(options: RelayOptions = {}) {
 	}
 
 	/**
+	 * `prompt`/`steer` images rule — the frame validator's SECOND check, the one
+	 * that runs only after the text rule has passed (`types.py`, pinned ref
+	 * `fc851a94e`): `images` must be a list whose every item is an object, or the
+	 * frame is refused `images must be a list of objects`. The sentence is the live
+	 * capture `op-prompt-images-not-list.json`'s own, and the check shape matches
+	 * the pinned `frame.get("images", [])` exactly: an ABSENT key is `[]` (pass), a
+	 * present non-list — `null` included — is refused.
+	 *
+	 * This closes QA round 1's Q58-2: the mock used to accept a non-list `images`
+	 * on `prompt` (`200 prompt admitted`) where the relay refuses 422, so a client
+	 * regression the mock cannot see would pass here and fail live. `verify.ts`
+	 * asserts the refusal; `docs/e2e/README.md` D11 moves this rule into the
+	 * replicated list.
+	 */
+	function imagesRefusal(body: Record<string, unknown>): string | null {
+		const images = "images" in body ? body.images : [];
+		if (!Array.isArray(images) || !images.every((item) => isRecord(item))) {
+			return "images must be a list of objects";
+		}
+		return null;
+	}
+
+	/**
 	 * What the relay's frame validation refuses, for the op it is about.
 	 *
 	 * The contract makes the order part of the contract (`docs/relay/contract.md` §4.3,
@@ -1317,8 +1348,10 @@ export function createRelay(options: RelayOptions = {}) {
 	 * daemon at `d27e4716a`.
 	 *
 	 * This is a SUBSET of that chain, deliberately and by name: it covers `prompt`/`steer`
-	 * (text-or-image, in the relay's order and with its sentence), `approval_answer`
-	 * (`request_id`, `approved`, `remember`) and `ask_answer` (`request_id`, `value`).
+	 * (text-or-image, in the relay's order and with its sentence, plus the
+	 * `images must be a list of objects` shape check that follows the text rule),
+	 * `approval_answer` (`request_id`, `approved`, `remember`) and `ask_answer`
+	 * (`request_id`, `value`).
 	 * It does NOT replicate the checks for `cancel`'s `mode`, `slash`'s `command`/`args`,
 	 * `recall_steer`'s `command_id`, `credential`, `variables`, `register_secret_redaction`,
 	 * `adopt_aside`, `peer_message`/`peer_set_model`, `input_mode` membership or
@@ -1361,6 +1394,11 @@ export function createRelay(options: RelayOptions = {}) {
 			// sentence is the pinned source's, not one this mock invented.
 			const refusal = textOrImageRefusal(body);
 			if (refusal !== null) return { status: 422, body: { error: refusal } };
+			// ... and the images SHAPE check follows the text rule in the same validator
+			// (`images must be a list of objects`), before anything downstream reads them.
+			const imagesShape = imagesRefusal(body);
+			if (imagesShape !== null)
+				return { status: 422, body: { error: imagesShape } };
 		}
 		return null;
 	}
@@ -2436,6 +2474,15 @@ export function createRelay(options: RelayOptions = {}) {
 		handler: server,
 		/** Listen on `host:port` (port 0 picks a free one) and resolve the handle. */
 		async listen({ host = "127.0.0.1", port = 0 } = {}) {
+			/* Browsers talk to this server directly (the web target and both harnesses),
+			 * and they reuse an idle socket on their own schedule — minutes for Chrome —
+			 * while Node drops one after `keepAliveTimeout` (5 s by default). In the
+			 * overlap the client writes into a socket the server just closed: a request
+			 * with a body is never retried and pends, and the relay never sees it.
+			 * Raised past any client's reuse so the kill stays on the client's side;
+			 * `headersTimeout` must exceed `keepAliveTimeout`. */
+			server.keepAliveTimeout = 65_000;
+			server.headersTimeout = 66_000;
 			await new Promise<void>((resolvePromise, reject) => {
 				server.once("error", reject);
 				server.listen(port, host, () => resolvePromise());

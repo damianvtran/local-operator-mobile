@@ -149,6 +149,17 @@ describe("checkIosInfoPlist", () => {
 		expect(fields(checkIosInfoPlist(plist))).toEqual([IOS_FORBIDDEN_KEYS[0]]);
 	});
 
+	it("reports the add-only photo usage string too — over-declaration the same way", () => {
+		/* The picker path never WRITES to the photo library, and the transitive
+		 * vector (a merged Info key) does not distinguish read from add: an
+		 * "add" string the app does not use is exactly the drift R2 names. */
+		const plist = validPlist();
+		plist.NSPhotoLibraryAddUsageDescription = "Add to your photos";
+		expect(fields(checkIosInfoPlist(plist))).toEqual([
+			"NSPhotoLibraryAddUsageDescription",
+		]);
+	});
+
 	it("reports the over-declaration even when a required key is missing too", () => {
 		/* The early returns must not hide it: both findings, one run. */
 		const plist = validPlist();
@@ -255,6 +266,37 @@ describe("checkAndroidManifest", () => {
 		);
 		expect(fields(checkAndroidManifest(manifest))).toEqual([
 			`uses-permission[${permutation}]`,
+		]);
+	});
+
+	it("reports the adjacent media/storage spellings a plugin bump could contribute", () => {
+		/* Agent review round 1, R2: the names a transitively-merged library
+		 * manifest could declare while the five original entries stay absent.
+		 * Drift-protection — QA round 1 found none of them live in the built
+		 * artefacts — and this keeps that true. */
+		for (const permission of [
+			"android.permission.READ_MEDIA_VISUAL_USER_SELECTED",
+			"android.permission.ACCESS_MEDIA_LOCATION",
+			"android.permission.MANAGE_EXTERNAL_STORAGE",
+			"android.permission.READ_MEDIA_AUDIO",
+		]) {
+			const manifest = validManifest().replace(
+				'  <uses-permission android:name="android.permission.INTERNET"/>',
+				`  <uses-permission android:name="android.permission.INTERNET"/>\n  <uses-permission android:name="${permission}"/>`,
+			);
+			expect(fields(checkAndroidManifest(manifest))).toEqual([
+				`uses-permission[${permission}]`,
+			]);
+		}
+	});
+
+	it("catches a single-quoted declaration — quote style cannot slip an absence check", () => {
+		const manifest = validManifest().replace(
+			'  <uses-permission android:name="android.permission.INTERNET"/>',
+			"  <uses-permission android:name='android.permission.CAMERA'/>",
+		);
+		expect(fields(checkAndroidManifest(manifest))).toEqual([
+			"uses-permission[android.permission.CAMERA]",
 		]);
 	});
 

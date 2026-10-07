@@ -296,13 +296,21 @@ export const acknowledgedCurrentDraft = (
  * Base64 is the wire form and is 4/3 of the bytes plus padding, so a reader shown
  * the encoded length would be shown a number a third too large. The estimate is
  * labelled as one for that reason.
+ *
+ * Anything under 1 KB reports `< 1 KB`, never `0 KB`: a rounded-to-zero size
+ * beside a visible image reads as a broken or empty attachment (design round 1,
+ * D58-2).
  */
 export const attachmentLabel = (image: PromptImage): string => {
 	const encoded = image.data_b64.length;
 	const bytes = Math.floor((encoded * 3) / 4);
 	const kb = bytes / 1024;
 	const size =
-		kb >= 1024 ? `${(kb / 1024).toFixed(1)} MB` : `${Math.round(kb)} KB`;
+		kb >= 1024
+			? `${(kb / 1024).toFixed(1)} MB`
+			: kb < 1
+				? "< 1 KB"
+				: `${Math.round(kb)} KB`;
 	const kind = image.mime_type.replace("image/", "").toUpperCase();
 	return `${kind} · ${size}`;
 };

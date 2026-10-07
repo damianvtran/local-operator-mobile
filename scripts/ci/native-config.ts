@@ -60,6 +60,15 @@ export const ANDROID_LOCAL_NETWORK_PERMISSION =
  * grant per-item access WITHOUT a library permission — so a photo-library or
  * camera usage string here is over-declaration, the exact failure checklist B10
  * (and the app.config.ts plugin options that keep these out) exists to prevent.
+ *
+ * `NSPhotoLibraryAddUsageDescription` is in the list although the picker path
+ * never writes to the photo library: an app that declares ADD access it never
+ * uses is over-declaring in exactly the same way, and the transitive-plugin
+ * vector (a library manifest/Info key merging in) does not distinguish read from
+ * add. Agent review round 1, R2 — the names are drift-protection: none are live
+ * in the built artefacts today (QA round 1 verified the debug APK and the
+ * simulator bundle), and that is the property this list keeps true.
+ *
  * Asserted against the BUILT artefact because a plugin's changed defaults fail
  * silently in the other direction — nothing prompts, nothing crashes, the app
  * just declares more than it uses.
@@ -67,6 +76,7 @@ export const ANDROID_LOCAL_NETWORK_PERMISSION =
 export const IOS_FORBIDDEN_KEYS = [
 	"NSPhotoLibraryUsageDescription",
 	"NSCameraUsageDescription",
+	"NSPhotoLibraryAddUsageDescription",
 ] as const;
 
 /** The Android permissions that may NEVER appear in the release merged
@@ -75,13 +85,26 @@ export const IOS_FORBIDDEN_KEYS = [
  *  media-library pair is the Google Play "approved core use case" permission
  *  the picker-only design does not need (checklist B10). Blocked in
  *  `app.config.ts` (`blockedPermissions` + the plugin's `cameraPermission:
- *  false`); asserted absent here, where the merge result is what is read. */
+ *  false`); asserted absent here, where the merge result is what is read.
+ *
+ *  The four entries added by agent review round 1 (R2) are the adjacent
+ *  spellings a transitively-merged library manifest could contribute without
+ *  tripping the five above: the Android 14 partial-access companion, the exif
+ *  location companion, all-files access, and audio media (the picker paths this
+ *  app uses produce images only). Drift-protection, stated as such: none are
+ *  live in the built artefacts today (QA round 1 read the debug APK's binary
+ *  manifest and found none of them); this list exists so the next plugin bump
+ *  that adds one is a CI failure rather than a silent over-declaration. */
 export const ANDROID_FORBIDDEN_PERMISSIONS = [
 	"android.permission.CAMERA",
 	"android.permission.READ_EXTERNAL_STORAGE",
 	"android.permission.WRITE_EXTERNAL_STORAGE",
 	"android.permission.READ_MEDIA_IMAGES",
 	"android.permission.READ_MEDIA_VIDEO",
+	"android.permission.READ_MEDIA_VISUAL_USER_SELECTED",
+	"android.permission.ACCESS_MEDIA_LOCATION",
+	"android.permission.MANAGE_EXTERNAL_STORAGE",
+	"android.permission.READ_MEDIA_AUDIO",
 ] as const;
 
 export interface Finding {
@@ -214,8 +237,13 @@ const declaresPermission = (
 	const tag = sdkGated
 		? "<uses-permission(?:-[a-z0-9-]+)?"
 		: "<uses-permission(?![\\w-])";
+	/* BOTH quote styles are accepted (agent review round 1, R2): AGP writes
+	 * double quotes, so this is non-material today — but single-quoted attribute
+	 * values are XML-legal, and a banned name must not be able to slip an
+	 * absence check by quote style. Cheap widening, no false-positive path: the
+	 * name between the quotes still has to match exactly. */
 	return new RegExp(
-		`${tag}[^>]*\\bandroid:name\\s*=\\s*"${name.replace(/\./g, "\\.")}"`,
+		`${tag}[^>]*\\bandroid:name\\s*=\\s*["']${name.replace(/\./g, "\\.")}["']`,
 		"i",
 	).test(text);
 };

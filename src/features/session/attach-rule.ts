@@ -48,14 +48,18 @@ const IMAGE_MAGIC: ReadonlyArray<readonly [string, string]> = [
  * JPEG regardless of the source file's original format", its own comment, read at
  * 57.0.20), while `mimeType` still reports the SOURCE asset's type. Taking
  * `mimeType` at face value therefore labels JPEG bytes `image/heic` (or
- * `image/png`), and the relay forwards the label to the model.
+ * `image/png`) — and that label is what this client shows on the chip and
+ * declares on the wire.
  *
- * Sniffing the prefix is the same judgement the relay makes on ingest
- * (`server.py` `image_blocks` drops an entry "whose bytes do not sniff as an
- * image"), so a declared type that matches the bytes is a type the relay's own
- * reading agrees with. The set is deliberately small — the formats these pickers
- * and clipboards actually produce — and everything else falls back to the
- * reported type (when it is an image type) or JPEG.
+ * The relay does not read that declared label: `server.py`'s `image_blocks`
+ * decides the format by CONTENT ("the client's declared `mime_type` is
+ * deliberately NOT read … the wire mime comes back from the bound") and drops an
+ * entry whose bytes it does not recognise. The sniff here is the same judgement
+ * made at the client edge, so the declared type is true to the bytes it describes
+ * instead of whatever the picker's metadata claimed. The set is deliberately
+ * small — the formats these pickers and clipboards actually produce — and
+ * everything else falls back to the reported type (when it is an image type) or
+ * JPEG.
  */
 export const sniffImageMime = (dataB64: string, reported: string): string => {
 	for (const [prefix, mime] of IMAGE_MAGIC) {

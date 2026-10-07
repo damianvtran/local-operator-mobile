@@ -1,6 +1,6 @@
 // biome-ignore-all lint/suspicious/noArrayIndexKey: every list in this file is regenerated from the same source on each render (a parsed string, a diff, a todo phase), so position IS the identity — the case React's own key docs exempt. A content-derived key would be recomputed every frame to produce the same value.
 
-import { Mic, Square } from "lucide-react-native";
+import { Mic, Square, X } from "lucide-react-native";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
 	Image,
@@ -37,6 +37,7 @@ import {
 	SURFACE,
 	state,
 } from "@/ui/a11y";
+import { useTokenColor } from "@/ui/appearance";
 import {
 	Button,
 	Chip,
@@ -357,6 +358,11 @@ export const Composer = ({
 		[images],
 	);
 
+	/* The ✕ badge's glyph ink. `ink` on the badge's `elevated` fill is the kit's
+	 * strongest plain pair (11.81:1 dark / 16.34:1 light), so the removal cue
+	 * reads over any photo the badge floats above. */
+	const removeInk = useTokenColor("ink");
+
 	/* The dictation row's layout is scale-dependent (D1/D2/D3): beside the controls a
 	 * squeezed status clipped and the meter's flex bars collapsed to zero width, so
 	 * past `LARGE_TEXT_SCALE` the row stacks and its box is fixed. See the row's own
@@ -535,14 +541,13 @@ export const Composer = ({
 					<ScrollView horizontal showsHorizontalScrollIndicator={false}>
 						<View className="flex-row gap-1.5">
 							{images.map((image, index) => (
-								<Pressable
-									key={`${index}-${image.mime_type}`}
-									accessibilityRole={ROLE.button}
-									accessibilityLabel={`Remove attachment ${index + 1}`}
-									onPress={() => onRemoveImage(index)}
-									testID={composerAttachmentId(index)}
-								>
-									<View className="overflow-hidden rounded-sm border border-control">
+								<View key={`${index}-${image.mime_type}`} className="relative">
+									{/* The thumbnail is NOT the control. A tap on the image used to remove it
+									    with nothing visible saying so — a thumb reaching to preview silently
+									    deleted the attachment, and no glyph, badge or word marked the image as
+									    a button (design round 1, D58-1). Removal now lives on the badge
+									    below, the only control on this chip. */}
+									<View className="overflow-hidden rounded-sm border border-border-control">
 										<Image
 											source={{
 												uri: `data:${image.mime_type};base64,${image.data_b64}`,
@@ -551,7 +556,30 @@ export const Composer = ({
 											accessibilityLabel={`Attachment ${index + 1}`}
 										/>
 									</View>
-								</Pressable>
+									{/* The one removal affordance: a visible ✕ badge with a real accessible
+									    name (glyph, never colour alone) and a 44 pt hit area on the
+									    pressable — the shape the audit measures, the same one `IconButton`
+									    uses. The badge is opaque (`elevated` fill, `border-control` edge,
+									    `ink` glyph) so its contrast holds over ANY photo underneath. */}
+									<Pressable
+										accessibilityRole={ROLE.button}
+										accessibilityLabel={`Remove attachment ${index + 1}`}
+										onPress={() => onRemoveImage(index)}
+										testID={composerAttachmentId(index)}
+										style={{
+											position: "absolute",
+											top: 0,
+											right: 0,
+											width: TOUCH_FLOOR,
+											height: TOUCH_FLOOR,
+											alignItems: "flex-end",
+										}}
+									>
+										<View className="m-0.5 h-5 w-5 items-center justify-center rounded-full border border-border-control bg-elevated">
+											<X color={removeInk} size={12} />
+										</View>
+									</Pressable>
+								</View>
 							))}
 						</View>
 					</ScrollView>

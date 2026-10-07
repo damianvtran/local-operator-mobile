@@ -533,6 +533,12 @@ export const useComposer = (input: {
 	const attach = useCallback((source: AttachSource) => {
 		void (async () => {
 			setAttaching(true);
+			/* A new attach supersedes the last failure the way `home.tsx`'s copies of
+			 * this handler already do (`setComposerError(null)`): without it, "No image
+			 * was pasted…" stayed up after a later SUCCESSFUL attach, so the error line
+			 * described a state the composer was no longer in (agent review round 1,
+			 * R3). */
+			setError(null);
 			try {
 				const image =
 					source === "library"
@@ -562,6 +568,9 @@ export const useComposer = (input: {
 	const pasteFile = useCallback((file: File) => {
 		void (async () => {
 			setAttaching(true);
+			/* Same clear as `attach` above, for the same reason: this is the session
+			 * view's copy of home's handler and the two must not disagree. */
+			setError(null);
 			try {
 				const image = await readWebImageFile(file);
 				setImages((current) => [...current, image]);

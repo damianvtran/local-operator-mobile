@@ -297,6 +297,22 @@ export async function serveDir(
 		createReadStream(target).pipe(res);
 	});
 
+	/* The browser reuses an idle socket on its own schedule — Chrome holds them
+	 * for minutes — while a Node server drops one after `keepAliveTimeout` (5 s by
+	 * default). In the overlap the page reuses a socket the server just closed and
+	 * writes its next request into it: a GET the browser will retry on a fresh
+	 * socket, so the loss is invisible, but a POST with a body no client silently
+	 * retries — it pends until its own deadline and the server never sees it.
+	 * Measured: the frame rig's send click landed 5.1 s after the last request and
+	 * the relay never saw its `POST …/command` (frames-rig run
+	 * 2026-10-07T00-14-45), the same drive clicking inside the window always sent.
+	 * Raising the window past any client's reuse leaves the kill to the client,
+	 * where it is safe (Node's own guidance for servers browsers talk to; 65 s is
+	 * the nginx-family default for the same reason). `headersTimeout` must exceed
+	 * `keepAliveTimeout`. */
+	server.keepAliveTimeout = 65_000;
+	server.headersTimeout = 66_000;
+
 	await new Promise<void>((resolvePromise, reject) => {
 		server.once("error", reject);
 		server.listen(port, host, () => resolvePromise());

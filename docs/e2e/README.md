@@ -505,8 +505,11 @@ session:
 
 - **replicated**: `prompt`/`steer` text-or-image in the relay's order (a present-but-blank
   `text` can be rescued by a non-blank `data_b64`/`data`, a MISSING `text` key cannot) with
-  the relay's own sentence; `approval_answer`'s `request_id`/`approved`/`remember`;
-  `ask_answer`'s `request_id`/`value`.
+  the relay's own sentence, **and the `images must be a list of objects` shape check that
+  follows it** (the live capture `op-prompt-images-not-list.json`; QA round 1, Q58-2 —
+  a non-list `images` was accepted `200` before the fix, so a client regression the relay
+  refuses could pass this instrument and only fail live); `approval_answer`'s
+  `request_id`/`approved`/`remember`; `ask_answer`'s `request_id`/`value`.
 - **NOT replicated**: `cancel`'s `mode`, `slash`'s `command`/`args`, `recall_steer`'s
   `command_id`, `credential`, `variables`, `register_secret_redaction`, `adopt_aside`,
   `peer_message`/`peer_set_model`, `input_mode`'s membership, `input_path`'s length bound.

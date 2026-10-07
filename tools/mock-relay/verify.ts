@@ -789,6 +789,82 @@ async function main() {
 			"command_id must be a valid UUID",
 		);
 
+		/* The images shape rule (QA round 1, Q58-2): `validate_control_frame`
+		 * checks it straight after the text rule, with the live capture's own
+		 * sentence (`op-prompt-images-not-list.json`). The mock used to accept a
+		 * non-list here (`200 prompt admitted`), so a client regression the relay
+		 * refuses could pass this instrument and only fail live. */
+		const imagesNotList = await client.post(`/api/sessions/${SID}/command`, {
+			op: "prompt",
+			command_id: "11111111-2222-4333-8444-00000000000b",
+			text: "hello",
+			images: { not: "a list" },
+		});
+		check("a non-list images payload is 422", imagesNotList.status, 422);
+		check("422 sentence is the relay's images rule", imagesNotList.json, {
+			error: "images must be a list of objects",
+		});
+
+		const imagesWithPrimitives = await client.post(
+			`/api/sessions/${SID}/command`,
+			{
+				op: "prompt",
+				command_id: "11111111-2222-4333-8444-00000000000c",
+				text: "hello",
+				images: [1, "two"],
+			},
+		);
+		check(
+			"a list whose items are not objects is refused the same way",
+			imagesWithPrimitives.status,
+			422,
+		);
+		check(
+			"with the same sentence",
+			bag(imagesWithPrimitives.json).error,
+			"images must be a list of objects",
+		);
+
+		const steerImagesNotList = await client.post(
+			`/api/sessions/${SID}/command`,
+			{
+				op: "steer",
+				command_id: "11111111-2222-4333-8444-00000000000d",
+				text: "hello",
+				images: "nope",
+			},
+		);
+		check(
+			"steer refuses a non-list images the same way",
+			steerImagesNotList.status,
+			422,
+		);
+		check(
+			"with the relay's sentence",
+			bag(steerImagesNotList.json).error,
+			"images must be a list of objects",
+		);
+
+		const blankTextMalformedImages = await client.post(
+			`/api/sessions/${SID}/command`,
+			{
+				op: "prompt",
+				command_id: "11111111-2222-4333-8444-00000000000e",
+				text: "   ",
+				images: { not: "a list" },
+			},
+		);
+		check(
+			"the text rule still runs FIRST for a blank text with malformed images",
+			blankTextMalformedImages.status,
+			422,
+		);
+		check(
+			"and the sentence is the text rule's, not the images rule's",
+			bag(blankTextMalformedImages.json).error,
+			"text must be a non-empty string",
+		);
+
 		const unknownSession = await client.post(
 			"/api/sessions/ffffffffffff/command",
 			{ op: "ping" },
