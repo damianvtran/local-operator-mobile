@@ -480,8 +480,41 @@ export default function ProjectDetail() {
 				onClose={closeEditor}
 				title={editingName === null ? "Add milestone" : "Edit milestone"}
 				testID={SURFACE.projectMilestoneSheet}
+				/* THE BAND IS TALLER THAN THE CREATE FORM'S, and that is INTENDED (design
+				 *  round 4, D3: 60.3–60.5 pt here against the create sheet's 27.0 pt). Both
+				 *  footers hold an optional Alert and a submit; this one carries a SECOND
+				 *  control — the irreversible `Remove milestone` — so its action region is
+				 *  two controls plus their gap. The difference is the sheet's own content,
+				 *  not two readings of the primitive: `Sheet`'s footer padding is one value
+				 *  for both. Left as measured rather than levelled, because equalising them
+				 *  would mean shrinking one sheet's controls to match the other's. */
 				footer={
 					<View className="gap-3">
+						{slashWhileAdding || slashOnExisting ? (
+							/* An EXPLANATION, not a control: the control that cannot work is not
+							 *  offered at all. Painted as HELPER TEXT rather than as `danger`: the
+							 *  rule is met the moment `/` is typed, and red says "an error you
+							 *  caused" for what is a rule the reader cannot argue with — the
+							 *  submit's own inertness is the other half of the same signal
+							 *  (design D3, rubric U-21).
+							 *
+							 * IN THE PINNED REGION, not after the field it is about: at 200 % on
+							 * `iphone-se` the sentence that explains the inert submit sat 172 pt
+							 * BEHIND the pinned footer (measured: body region ending at y 667 with
+							 * the footer's control at 495–543), so the one reader who needs it —
+							 * the one at the largest text on the smallest phone — could read only
+							 * its first two words. A refusal the reader cannot read is the same
+							 * defect as one that never paints (review round 4, U2), and the help
+							 * belongs beside the control it explains rather than beside the field
+							 * that raised it. */
+							<Text
+								testID={SURFACE.projectMilestoneSlashNote}
+								className="text-body-sm text-ink-muted"
+							>
+								{MILESTONE_SLASH_NOTE}
+							</Text>
+						) : null}
+
 						{problem !== null && editor !== null ? (
 							<Alert severity="error" testID={SURFACE.projectMilestoneRefusal}>
 								{problem}
@@ -535,21 +568,6 @@ export default function ProjectDetail() {
 						disabled={editingName !== null || busy}
 						autoCapitalize="none"
 					/>
-
-					{slashWhileAdding || slashOnExisting ? (
-						/* An EXPLANATION, not a control: the control that cannot work is not
-						 *  offered at all. Painted as HELPER TEXT rather than as `danger`: the
-						 *  rule is met the moment `/` is typed, and red says "an error you
-						 *  caused" for what is a rule the reader cannot argue with — the
-						 *  submit's own inertness is the other half of the same signal
-						 *  (design D3, rubric U-21). */
-						<Text
-							testID={SURFACE.projectMilestoneSlashNote}
-							className="text-body-sm text-ink-muted"
-						>
-							{MILESTONE_SLASH_NOTE}
-						</Text>
-					) : null}
 
 					<Input
 						testID={CONTROL.projectMilestoneDate}

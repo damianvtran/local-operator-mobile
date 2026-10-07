@@ -282,7 +282,7 @@ jobs:
     # a budget the per-push path now pays deliberately, because an axis that BRACKETS
     # the band the footer breaks in cannot see that class of defect, and it reached
     # review once already. THEY ROSE AGAIN with the projects lifecycle slice, which
-    # added nine declared cells (504 -> 612 on `ci`, 1512 -> 1836 on `core`, 5544 ->
+    # added ten declared cells (504 -> 612 on `ci`, 1512 -> 1836 on `core`, 5544 ->
     # 6732 on `full`), and round 3's remediation one more (`S15/menu-open`, the pane's
     # long-press menu: 612 -> 624, 1836 -> 1872, 6732 -> 6864), and the fold onto the
     # moved base two more from upstream (`S5/populated-long`, `S5/rich-rows`): the plans
@@ -461,7 +461,7 @@ jobs:
     #
     # SIZED FROM THE MEASUREMENT, NOT FROM HOPE. The runner's own rate is 2.24 s/cell
     # (403 cells / 1209 frames in 903.1 s, run 37098393675, a plan of 403 cells then),
-    # which is also the number `docs/e2e/README.md` uses to say a `core` run is ~69
+    # which is also the number `docs/e2e/README.md` uses to say a `core` run is ~73
     # minutes: 1944 x 2.24 s = 4,355 s.
     # The plan this job holds is the one the capture prints before it renders anything, so
     # the bound is checked against THAT rather than against a table, and each plan is
@@ -482,7 +482,7 @@ jobs:
     # 37167390506), so `core` is 1944 x 1.25 s = 2,430 s ≈ 41 min and its step bound is 50.
     # The job bound holds its parts, the invariant the other jobs in this file state:
     # `install + export + capture 100 + audit 50 < 170`. This is a nightly job of ~73 min of
-    # capture and ~39 min of audit inside that bound; it does not run on a pull request.
+    # capture and ~41 min of audit inside that bound; it does not run on a pull request.
     #
     # EXPECTED FIRST-RUN VERDICT: THIS JOB IS RED, AND THAT IS WHAT IT IS FOR. It has
     # never executed (schedule/dispatch only). A real local `--tier core --consecutive`

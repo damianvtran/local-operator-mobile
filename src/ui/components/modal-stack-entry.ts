@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useRef, useState } from "react";
 
 import {
 	closeModal,
+	hasNestedModal,
 	isCovered,
 	type ModalScope,
 	openModal,
@@ -22,6 +23,12 @@ export const ModalScopeContext = createContext<ModalScope | null>(null);
 export interface ModalStackEntry {
 	/** Whether this modal should actually be DRAWN (a newer, overlapping modal is up). */
 	covered: boolean;
+	/**
+	 * Whether a modal raised INSIDE this one is up. The host's own scrim stands
+	 * down while it is — the inner surface already dims the host and takes its
+	 * dismiss press — and the host's panel and content stay (design round 4, D1).
+	 */
+	nested: boolean;
 	/**
 	 * This modal's own scope: pass it to `<ModalScopeContext.Provider value={scope}>`
 	 * around the `Modal`. A renderer that nests a modal in its own content — the
@@ -62,15 +69,22 @@ export function useModalStackEntry(visible: boolean): ModalStackEntry {
 	const scope = held.current;
 
 	const [covered, setCovered] = useState(false);
+	/* A modal raised INSIDE this one, which the host's own scrim and surface must
+	 *  account for (see `hasNestedModal`). */
+	const [nested, setNested] = useState(false);
 
 	useEffect(() => {
 		if (!visible) {
 			setCovered(false);
+			setNested(false);
 			return;
 		}
 		const opened = openModal(scope, parent);
 		scope.current = opened;
-		const sync = () => setCovered(isCovered(opened));
+		const sync = () => {
+			setCovered(isCovered(opened));
+			setNested(hasNestedModal(opened));
+		};
 		/* READ ONCE IMMEDIATELY, then on every change: a modal that opens while a
 		 *  later one is already mounted (two sheets driven at once, a confirm raised
 		 *  in the same commit) would otherwise keep whatever it last computed, and
@@ -87,5 +101,5 @@ export function useModalStackEntry(visible: boolean): ModalStackEntry {
 		};
 	}, [visible, parent, scope]);
 
-	return { covered, scope };
+	return { covered, nested, scope };
 }

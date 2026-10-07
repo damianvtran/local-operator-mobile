@@ -128,7 +128,7 @@ export const ConversationsDrawer = ({
 	 *  it stands down if a newer modal is mounted over it rather than painting two
 	 *  full-viewport surfaces over each other (`@/ui/modal-stack`). It was the
 	 *  renderer that made that module's "only two callers" claim false. */
-	const { covered, scope } = useModalStackEntry(visible);
+	const { covered, nested, scope } = useModalStackEntry(visible);
 
 	return (
 		/* The scope is what keeps this fix and R13's together: the pane's long-press
@@ -148,18 +148,41 @@ export const ConversationsDrawer = ({
 				accessibilityViewIsModal
 			>
 				<View className="flex-1">
-					<Animated.View
-						style={{ opacity: scrimFade }}
-						className="absolute inset-0"
-					>
-						<Pressable
-							className="flex-1"
-							style={{ backgroundColor: scrimColour }}
-							accessibilityRole={ROLE.button}
-							accessibilityLabel="Close conversations"
-							onPress={close}
-						/>
-					</Animated.View>
+					{/*
+					 * THE SCRIM IS NOT DRAWN WHILE A MODAL NESTED IN THIS DRAWER IS UP
+					 * (design round 4, D1 — the round's blocker). The pane's long-press
+					 * menu is a `Sheet` rendered inside this drawer's `Modal`, and its own
+					 * scrim already covers the whole viewport: two dims stack into a
+					 * second, undeclared ground. Measured by the design round — the drawer
+					 * panel's edge, which the contract pins at 5.68:1 light / 4.53:1 dark
+					 * against the scrim, renders 1.77:1 / 1.41:1 with the menu up, and the
+					 * app strip beside the drawer drops from rgb(84,82,81) to
+					 * rgb(32,30,28), i.e. two 0.7-alpha layers. The outer scrim also could
+					 * not receive the dismiss press it exists for: the inner one is above
+					 * it.
+					 *
+					 * NOT DRAWN RATHER THAN DRAWN TRANSPARENT, and that is not the same
+					 * fix: `opacity: 0` leaves a full-viewport box in the layout, which is
+					 * exactly what the audit's overlap rule measures (it clips by
+					 * ancestors' overflow, deliberately, not by paint alpha) — so a
+					 * transparent scrim would keep reporting the overlap it no longer
+					 * causes. The panel and the content stay either way, and the reader
+					 * who closes the menu gets the scrim they came from.
+					 */}
+					{nested ? null : (
+						<Animated.View
+							style={{ opacity: scrimFade }}
+							className="absolute inset-0"
+						>
+							<Pressable
+								className="flex-1"
+								style={{ backgroundColor: scrimColour }}
+								accessibilityRole={ROLE.button}
+								accessibilityLabel="Close conversations"
+								onPress={close}
+							/>
+						</Animated.View>
+					)}
 
 					<Animated.View
 						className="absolute inset-y-0 left-0"

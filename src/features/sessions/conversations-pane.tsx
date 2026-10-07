@@ -529,6 +529,17 @@ export const ConversationsPane = ({
 				testID={SURFACE.sessionMenuSheet}
 			>
 				<View className="gap-2 pb-4">
+					{/*
+					 * RECORDED, NOT FIXED (review round 4, U4): this sheet is the only route
+					 * to `Pin to the top`, and a held press is the only way to reach the
+					 * sheet — the row itself is a focusable button whose Enter opens the
+					 * session, and nothing advertises the hold. So the action has no
+					 * non-touch route today, for a keyboard or switch-control reader. The
+					 * follow-up is an accessibility action on the row (or a visible affordance
+					 * beside the timestamp), which is a pane-wide change rather than a fix to
+					 * this sheet; recorded here because the alternative is that the next
+					 * reader re-derives it from the frames.
+					 */}
 					<Button
 						testID={CONTROL.sessionOpenCurrent}
 						label={menuTarget?.pinned ? "Unpin" : "Pin to the top"}

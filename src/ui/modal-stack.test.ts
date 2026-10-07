@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import {
 	closeModal,
+	hasNestedModal,
 	isCovered,
 	type ModalHandle,
 	type ModalScope,
@@ -125,6 +126,35 @@ describe("the modal stack", () => {
 		expect(isCovered(drawer)).toBe(false);
 		expect(isCovered(menu)).toBe(false);
 		expect(isCovered(confirm)).toBe(false);
+	});
+
+	it("reports a HOST as hosting while a modal raised inside it is open", () => {
+		/* THE SURFACE SIDE OF CONTAINMENT (design round 4, D1). Standing the drawer's scrim
+		 *  down belongs to the host, and this is the fact it stands down on: a modal nested
+		 *  inside it is up, so the inner surface already dims the host and takes the dismiss
+		 *  press the outer scrim exists for. Two dims stack into a second, undeclared ground
+		 *  — measured at 1.77:1 light / 1.41:1 dark where the contract pins the drawer
+		 *  panel's edge at 5.68:1 / 4.53:1 — and the outer scrim cannot receive its own press
+		 *  under the inner one. */
+		const drawer = open();
+		expect(hasNestedModal(drawer)).toBe(false);
+
+		const menu = openInside(drawer);
+		expect(hasNestedModal(drawer)).toBe(true);
+		expect(hasNestedModal(menu)).toBe(false);
+
+		closeModal(menu);
+		expect(hasNestedModal(drawer)).toBe(false);
+
+		// A SIBLING is not a host: the drawer does not dim its own surface for a confirm
+		// that lives outside it (that is the standing-down rule, not this one).
+		const confirm = open();
+		expect(hasNestedModal(drawer)).toBe(false);
+		closeModal(confirm);
+		expect(hasNestedModal(drawer)).toBe(false);
+
+		// A handle the store has never seen hosts nothing rather than throwing.
+		expect(hasNestedModal({ scope: { current: null } })).toBe(false);
 	});
 
 	it("returns a nested modal's host to normal when the nested one closes", () => {

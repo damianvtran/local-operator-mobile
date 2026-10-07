@@ -137,11 +137,11 @@ prints the 5,832 frames and derives a deadline of 5,832 s. Those two numbers agr
 because both are 1944 x 3 — three frames per cell with `--consecutive`, and the
 budget's three seconds per cell — not because the deadline is frame-derived. The
 capture step is
-bound at 95, which is above that
+bound at 100, which is above that
 derived deadline — so the step cannot cut short the budget the run computes for
 itself — and ~1.4x the measured cost. The audit runs at 1.25 s/cell, so it is
-~38 min and its step is bound at 50. The job holds its parts:
-`install + export + capture 95 + audit 50 < 170`.
+~41 min and its step is bound at 50. The job holds its parts:
+`install + export + capture 100 + audit 50 < 170`.
 
 The capture states its own device coverage — which declared profiles it covered
 and which it did not, by name — in the plan block, beside the run's verdict, in

@@ -96,18 +96,26 @@ export const ProjectCreateSheet = ({
 	 */
 	const fields = useRef({ name, description, tags });
 	fields.current = { name, description, tags };
-	/*
-	 * THE NOTE GOES WHEN THE THING IT DESCRIBES GOES. `keptDraft` is the opening's
-	 * fact and must stay keyed to the transition (see above); this second half is
-	 * read per render, and the two together are what the sentence is about: a draft
-	 * that is still there. The reader who follows the note's own instruction and
-	 * clears the fields loses the note with the draft (review round 3, U2) — and
-	 * the round-2 defect cannot come back, because a fresh form's first keystroke
-	 * cannot empty a form that was never kept (`keptDraft` is false there by
-	 * construction, whatever the reader types).
-	 */
 	const holdsSomething =
 		name.trim() !== "" || description.trim() !== "" || tags.trim() !== "";
+	/*
+	 * THE LATCH, AND WHY THE NOTE IS NOT SIMPLY `keptDraft && !empty`.
+	 *
+	 * `keptDraft` is the OPENING's fact and must stay keyed to the transition (see
+	 * above). The note is about a draft that is STILL THERE, and "the fields are
+	 * empty right now" is not the same fact as "the reader emptied this draft":
+	 * reading it per render meant the note vanished when the reader cleared the
+	 * fields and then CAME BACK, and lied, on the next keystroke — the reader had
+	 * just typed a brand-new value and were told it was kept from a previous visit
+	 * (review round 4, U1). So the clearing is LATCHED: the first time the fields go
+	 * empty while a kept draft is open, the note is done for this opening, whatever
+	 * is typed afterwards, and the next opening starts clean.
+	 *
+	 * The round-2 defect cannot come back through this: a fresh form's first
+	 * keystroke cannot empty a form that was never kept — `keptDraft` is false there
+	 * by construction, so the latch never arms.
+	 */
+	const [clearedDraft, setClearedDraft] = useState(false);
 
 	useEffect(() => {
 		if (!visible) return;
@@ -117,7 +125,12 @@ export const ProjectCreateSheet = ({
 				held.description.trim() !== "" ||
 				held.tags.trim() !== "",
 		);
+		setClearedDraft(false);
 	}, [visible]);
+
+	useEffect(() => {
+		if (keptDraft && !holdsSomething) setClearedDraft(true);
+	}, [keptDraft, holdsSomething]);
 
 	const submit = async () => {
 		const client = relay();
@@ -196,7 +209,7 @@ export const ProjectCreateSheet = ({
 			{busy ? <View testID={SURFACE.projectCreateBusy} /> : null}
 
 			<View className="gap-3">
-				{keptDraft && holdsSomething ? (
+				{keptDraft && !clearedDraft ? (
 					<Text
 						testID={SURFACE.projectCreateDraftNote}
 						className="text-meta text-ink-muted"

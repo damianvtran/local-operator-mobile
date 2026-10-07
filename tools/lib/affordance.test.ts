@@ -644,7 +644,11 @@ describe("the affordance script", () => {
 		).toBe("ok");
 		/* ONE event, and it is `input`: a second (`change`) would fire a second
 		 *  React update, and an app listening to `onChange` sees both as one. */
-		expect(events).toEqual(["input"]);
+		// FOCUS FIRST, THEN ONE INPUT EVENT (review round 4, U3): the app's own states are
+		// built on focus — the milestone form shows its slash rule while the field is
+		// being typed in — so a cell that only sets the value reaches a state the reader
+		// never sees, and cannot fail on what it claims to check.
+		expect(events).toEqual(["focus", "focusin", "input"]);
 	});
 
 	it("holds a press for the cell's duration and releases it, as ONE outcome", async () => {
@@ -740,8 +744,15 @@ describe("the affordance script", () => {
 			actions.map((action) => ({ cell, action })),
 		);
 		expect(declared.length).toBeGreaterThan(0);
+		/* DEEP, not just "something came back" (review round 4, Q2): a length check passes
+		 *  when a new FIELD on an existing kind is silently dropped — the same loss with a
+		 *  smaller footprint (measured: an `{ hold: { testID, ms, button: "right" } }`
+		 *  entry narrows to a `hold` without its button and nothing fails). Round-tripping
+		 *  the value closes it: the guard compares the matrix's declarations as DATA. */
 		const lost = declared.filter(
-			({ action }) => narrowAffordances([action]).length !== 1,
+			({ action }) =>
+				JSON.stringify(narrowAffordances([action])) !==
+				JSON.stringify([action]),
 		);
 		expect(lost).toEqual([]);
 		// And the shapes round-trip as themselves, not merely as "something".

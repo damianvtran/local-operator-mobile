@@ -366,6 +366,15 @@ export function affordanceScript(action: Affordance): string {
   if (el.tagName !== "INPUT" && el.tagName !== "TEXTAREA") return JSON.stringify({ result: "not-a-field" });${READER}
   const reached = await approach();
   if (reached.stop) return reached.stop;
+  /*
+   * FOCUS FIRST, because that is what a reader does: the app's own states are
+   * built on it (the milestone form shows its slash rule while the field is being
+   * typed in), and a cell whose subject only appears under a focused field has to
+   * reach the state the way the reader reaches it — otherwise the cell cannot fail
+   * on the thing it claims to check (review round 4, U3).
+   */
+  if (typeof el.focus === "function") el.focus();
+  for (const type of ["focus", "focusin"]) el.dispatchEvent(new Event(type, { bubbles: true }));
   const proto = el.tagName === "TEXTAREA" ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
   const setter = Object.getOwnPropertyDescriptor(proto, "value").set;
   setter.call(el, ${JSON.stringify(text)});

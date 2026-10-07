@@ -135,6 +135,28 @@ export function isCovered(handle: ModalHandle): boolean {
 	return open.slice(at + 1).some((later) => !isNestedIn(later, handle));
 }
 
+/**
+ * Whether a modal raised INSIDE this one is open.
+ *
+ * The host needs this for its own SURFACE, not for the standing-down rule: a
+ * drawer's scrim exists to dim the app it covers and to take the dismiss press,
+ * and when a modal nested in the drawer is up, that inner surface's scrim already
+ * does both. Two dims stack into a **second, undeclared ground** — measured by the
+ * design round at 1.77:1 light / 1.41:1 dark where this repository's contract pins
+ * the drawer panel's edge at 5.68:1 / 4.53:1 — and the outer scrim cannot even
+ * receive its own dismiss press, because the inner one is above it. So the host
+ * stands its scrim down while this is true, and keeps its panel and content, which
+ * is the containment relation stated as a measurement rather than as intent
+ * (design round 4, D1 — the round's blocker).
+ */
+export function hasNestedModal(handle: ModalHandle): boolean {
+	const at = open.findIndex((entry) => entry.handle === handle);
+	if (at === -1) return false;
+	return open.some(
+		(other) => other.handle !== handle && isNestedIn(other, handle),
+	);
+}
+
 /** How many modals are mounted. The store's snapshot, for `useSyncExternalStore`. */
 export function modalStackDepth(): number {
 	return open.length;
