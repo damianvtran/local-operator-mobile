@@ -189,6 +189,23 @@ interface StreamOptions {
 /** The mock's mutable state: everything a request handler reads. */
 export interface RelayState {
 	scenario: string;
+	/**
+	 * Which harness client pinned the current scenario, and when it last spoke.
+	 *
+	 * WHY THIS EXISTS (review round 3, Q7). The scenario pin reloads the world, so
+	 * two harness PROCESSES sharing one relay interleave their worlds: a cell
+	 * re-driven while another rig's world is pinned sees its refusal never arrive.
+	 * Measured by QA at 1/10 contended against 0/10 isolated — and it silently
+	 * invalidates any local write-cell number taken while a second rig drives the
+	 * same relay, which is exactly what a remediation round does. Namespacing the
+	 * whole world per client is a much larger change than this defect justifies, so
+	 * the second half of the remedy is taken: a pin from a DIFFERENT client while
+	 * the owner is still talking is refused, loudly, with the fix in the message.
+	 * A client that has gone quiet for `SCENARIO_CONTENTION_MS` is treated as gone,
+	 * so a sequential run of separate rigs is unaffected.
+	 */
+	pinnedBy: string | null;
+	pinnedAt: number;
 	world: ScenarioWorld;
 	faults: FaultSet;
 	startedAt: number;
@@ -355,6 +372,8 @@ export function createRelay(options: RelayOptions = {}) {
 
 	const state: RelayState = {
 		scenario: options.scenario ?? "idle",
+		pinnedBy: null,
+		pinnedAt: 0,
 		world: {},
 		// The registries refuse an unknown name; this refuses an unknown *reason*,
 		// which is the one typo that used to survive startup.
@@ -2373,6 +2392,13 @@ export function createRelay(options: RelayOptions = {}) {
 		return true;
 	};
 
+	/**
+	 * How long a pin's owner may stay silent before another client may take the
+	 * relay over. The harness talks to the relay every few seconds per cell, so a
+	 * live rig is never quiet this long; a finished one is, immediately.
+	 */
+	const SCENARIO_CONTENTION_MS = 60_000;
+
 	/* ------------------------------------------------------------ the server -- */
 
 	const server = createServer(async (req, res) => {
@@ -2385,6 +2411,12 @@ export function createRelay(options: RelayOptions = {}) {
 		const method = (req.method ?? "GET").toUpperCase();
 		const started = Date.now();
 		res.req = req;
+		/* One header identifies a harness PROCESS (see `tools/lib/relay.ts`), and a
+		 *  request from the pin's owner is what keeps its ownership alive. */
+		const client = req.headers["x-lo-harness"];
+		const clientId = typeof client === "string" ? client : "";
+		if (clientId !== "" && clientId === state.pinnedBy)
+			state.pinnedAt = started;
 
 		const finish = (status: number, note = ""): void => {
 			if (state.record) {
@@ -2447,7 +2479,33 @@ export function createRelay(options: RelayOptions = {}) {
 						sendJson(res, 400, errorBody(`unknown scenario: '${next}'`));
 						return;
 					}
+					const quietFor = Date.now() - state.pinnedAt;
+					if (
+						state.pinnedBy !== null &&
+						state.pinnedBy !== clientId &&
+						quietFor < SCENARIO_CONTENTION_MS
+					) {
+						/* TWO RIGS, ONE WORLD (review round 3, Q7). A silent takeover is
+						 *  what makes the other rig's cells flaky in a way that looks like
+						 *  an app defect, so it is refused with the remedy in the message. */
+						sendJson(
+							res,
+							409,
+							errorBody(
+								`another harness process is driving this relay: client ` +
+									`'${state.pinnedBy}' pinned a scenario ${quietFor} ms ago and the ` +
+									"world is shared, so a second pin would interleave the two " +
+									"rigs' states (measured: 1/10 contended cells come back " +
+									"`state-not-reproduced` against 0/10 in isolation). " +
+									"Start your own relay (`node tools/mock-relay/relay.ts " +
+									"--port 0`), or wait until this one is quiet.",
+							),
+						);
+						return;
+					}
 					state.scenario = next;
+					state.pinnedBy = clientId;
+					state.pinnedAt = Date.now();
 					resetWorld();
 					sendJson(res, 200, { scenario: next });
 					return;
@@ -2462,6 +2520,20 @@ export function createRelay(options: RelayOptions = {}) {
 					state.baseFaults = names;
 					state.faults = parseFaults([...names, ...(state.world.faults ?? [])]);
 					sendJson(res, 200, { faults: state.faults.applied });
+					return;
+				}
+				if (pathname === "/__mock/release" && method === "POST") {
+					/* A RIG SAYS WHEN IT IS DONE, which is what makes the contention rule
+					 *  survivable (review round 3, Q7): sequential harness PROCESSES are the
+					 *  normal way to work, and a claim that only expired on a timer would
+					 *  refuse the next child of the same shell. Released here, the rule
+					 *  catches exactly the case it is for — two rigs alive at once — and a
+					 *  crashed one still ages out after `SCENARIO_CONTENTION_MS`. */
+					if (state.pinnedBy !== null && state.pinnedBy === clientId) {
+						state.pinnedBy = null;
+						state.pinnedAt = 0;
+					}
+					sendJson(res, 200, { released: true });
 					return;
 				}
 				if (pathname === "/__mock/reset" && method === "POST") {

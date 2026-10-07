@@ -534,7 +534,16 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 	add(
 		"idle",
 		"One live conversation, idle, after a completed turn (the corpus capture).",
-		["S15/populated", "S5/populated"],
+		[
+			"S15/populated",
+			"S5/populated",
+			/* The pane's long-press menu, which is the only surface in this app a
+			 *  HELD press reaches (`hold`, `tools/lib/affordance.ts`). It rides the
+			 *  one-row world because the gesture needs a row and nothing else, and it
+			 *  is declared here rather than beside the projects cells because the
+			 *  menu belongs to the conversations pane. */
+			"S15/menu-open",
+		],
 		() => idleWorld(),
 	);
 

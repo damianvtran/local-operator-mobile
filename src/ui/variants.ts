@@ -451,11 +451,17 @@ export const SHEET_CONTENT_MAX_FRACTION = 0.6;
  *  3. The cost is bounded and legible: the body scrolls, and the reader can see
  *     roughly a control and a half at the largest type step on the smallest phone.
  *
- * WHAT WOULD CHANGE IT: a form whose body needs more than about three screens of
- * scroll at the DEFAULT scale (100 %) — at that point the detent is what is making
- * a sheet behave like a page, and `full` becomes the cheaper answer than a longer
- * scroll. Recorded so the next reader argues with a measurement instead of with a
- * reason that no longer applies (design round 2, D8).
+ * WHAT WOULD CHANGE IT, AND THE MEASURE THAT DECIDES (design round 3, D10 — the
+ * trigger used to say "more than about three screens", which read two ways and the
+ * two readings disagree on this very form): the measure is **bands of SCROLLING**,
+ * `(body content − body band) / body band`, at the default scale on the narrowest
+ * phone. The create form at 100 % on `iphone-se` is 538 pt of content in a 185 pt
+ * band — 2.9 bands of content but only **1.9 bands of scrolling**, and 623 pt with a
+ * retained draft, which is **2.4 bands of scrolling**. So the line is > 3 bands of
+ * scrolling and this form sits under it, deliberately: at that point the detent is
+ * what is making a sheet behave like a page, and `full` becomes the cheaper answer
+ * than a longer scroll. Recorded so the next reader argues with a measurement
+ * instead of with a reason that no longer applies.
  */
 export const SHEET_DETENTS: Record<SheetDetent, number | null> = {
 	content: SHEET_CONTENT_MAX_FRACTION,

@@ -96,6 +96,18 @@ export const ProjectCreateSheet = ({
 	 */
 	const fields = useRef({ name, description, tags });
 	fields.current = { name, description, tags };
+	/*
+	 * THE NOTE GOES WHEN THE THING IT DESCRIBES GOES. `keptDraft` is the opening's
+	 * fact and must stay keyed to the transition (see above); this second half is
+	 * read per render, and the two together are what the sentence is about: a draft
+	 * that is still there. The reader who follows the note's own instruction and
+	 * clears the fields loses the note with the draft (review round 3, U2) — and
+	 * the round-2 defect cannot come back, because a fresh form's first keystroke
+	 * cannot empty a form that was never kept (`keptDraft` is false there by
+	 * construction, whatever the reader types).
+	 */
+	const holdsSomething =
+		name.trim() !== "" || description.trim() !== "" || tags.trim() !== "";
 
 	useEffect(() => {
 		if (!visible) return;
@@ -184,7 +196,7 @@ export const ProjectCreateSheet = ({
 			{busy ? <View testID={SURFACE.projectCreateBusy} /> : null}
 
 			<View className="gap-3">
-				{keptDraft ? (
+				{keptDraft && holdsSomething ? (
 					<Text
 						testID={SURFACE.projectCreateDraftNote}
 						className="text-meta text-ink-muted"

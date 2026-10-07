@@ -63,11 +63,31 @@ export type Affordance =
 	/** Press the control carrying this `data-testid`. */
 	| { click: string }
 	/** Put this text into the field carrying this `data-testid`. */
-	| { type: { testID: string; text: string } };
+	| { type: { testID: string; text: string } }
+	/**
+	 * PRESS AND HOLD the control carrying this `data-testid` for `ms`.
+	 *
+	 * A held press is not a slow click: React Native's `onLongPress` fires on a
+	 * timer WHILE the finger is down, so a gesture the app renders (the
+	 * conversations row's menu) is unreachable by any amount of clicking. Its
+	 * absence is why round 3's BLOCKER — a modal raised inside the drawer's own
+	 * `Modal` destroying itself — passed every gate: there was no action in this
+	 * file that could make the press at all. It is therefore one affordance with
+	 * two page evaluations (down, wait, up), not a pair a cell has to sequence
+	 * itself.
+	 */
+	| { hold: { testID: string; ms: number } };
+
+/** How long a held press lasts when a cell does not say. React Native's own
+ *  `delayLongPress` default, so a bare hold is the gesture the app is built for. */
+export const DEFAULT_HOLD_MS = 500;
 
 /** A compact label for a log line, a manifest or a failure sentence. */
-export const describeAffordance = (action: Affordance): string =>
-	"click" in action ? `click ${action.click}` : `type ${action.type.testID}`;
+export const describeAffordance = (action: Affordance): string => {
+	if ("click" in action) return `click ${action.click}`;
+	if ("hold" in action) return `hold ${action.hold.testID} ${action.hold.ms}ms`;
+	return `type ${action.type.testID}`;
+};
 
 /** Every action of a cell, as one label. */
 export const describeAffordances = (actions: readonly Affordance[]): string =>
@@ -126,6 +146,25 @@ const selector = (testID: string): string =>
  */
 const READER = `
   const finish = (result, pre) => JSON.stringify(pre ? { result, pre } : { result });
+  /*
+   * WAIT FOR THE LAYOUT TO STOP MOVING, then measure once. Deciding off a live
+   * measurement made the answer nondeterministic (review round 3, R15): the
+   * description field's box ends at y 564 of a 568 pt phone, and the sheet RISES
+   * 40 pt on entry, so the same press read "already on screen" or "needed a
+   * scroll" depending on which animation frame the opener happened to run on —
+   * the frames were byte-identical and the label was not. Two consecutive
+   * animation frames with the same box is the event to wait for; thirty of them
+   * is the bound, and a box still moving after ~1 s is measured where it is.
+   */
+  const settle = async (node) => {
+    let last = null;
+    for (let i = 0; i < 30; i += 1) {
+      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+      const r = node.getBoundingClientRect();
+      if (last && r.left === last.left && r.top === last.top && r.width === last.width && r.height === last.height) return;
+      last = r;
+    }
+  };
   const paints = (node) => {
     for (let n = node, hops = 0; n && hops < 12; n = n.parentElement, hops++) {
       const s = getComputedStyle(n);
@@ -133,15 +172,23 @@ const READER = `
     }
     return true;
   };
-  const onScreen = (node) => {
+  /* Geometry, not the hit test: whether the box is inside the viewport is a fact
+   * about the layout, while whether the centre point resolves to the element can
+   * change with what is painted over it — which is what made the same press answer
+   * \`ok\` on one run and \`ok-after-scroll\` on the next. */
+  const withinViewport = (node) => {
     const r = node.getBoundingClientRect();
     if (r.width <= 0 || r.height <= 0) return false;
     const cx = r.left + r.width / 2;
     const cy = r.top + r.height / 2;
     const vw = document.documentElement.clientWidth;
     const vh = document.documentElement.clientHeight;
-    if (cx < 0 || cy < 0 || cx > vw || cy > vh) return false;
-    const hit = document.elementFromPoint(cx, cy);
+    return cx >= 0 && cy >= 0 && cx <= vw && cy <= vh;
+  };
+  const hitSelf = (node) => {
+    const r = node.getBoundingClientRect();
+    if (r.width <= 0 || r.height <= 0) return false;
+    const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
     return !!hit && (hit === node || node.contains(hit));
   };
   const boxOf = (r) => ({ x: Math.round(r.left), y: Math.round(r.top), w: Math.round(r.width), h: Math.round(r.height) });
@@ -156,51 +203,154 @@ const READER = `
     const r = el.getBoundingClientRect();
     if (r.bottom <= outer.top || r.top >= outer.bottom || r.right <= outer.left || r.left >= outer.right) behindAHiddenClip = true;
   }
-  const marks = () => scrollers.map((n) => [n, n.scrollTop, n.scrollLeft]);
-  const restore = (saved) => { for (const [n, top, left] of saved) { n.scrollTop = top; n.scrollLeft = left; } };`;
+  /*
+   * The scrollers an action moved, AND THE DOCUMENT ITSELF: a press that scrolls
+   * the document is one a bare \`overflow\` walk does not see, and a frame after it
+   * would be of a page displaced by however far the document moved (review round
+   * 3, Q6 — latent on this app, whose root leaves the document unscrollable, and
+   * cheap to close rather than to leave as a carve-out against the property).
+   */
+  const marks = () => [
+    ...scrollers.map((n) => [n, n.scrollTop, n.scrollLeft]),
+    [document.scrollingElement || document.documentElement, (document.scrollingElement || document.documentElement).scrollTop, (document.scrollingElement || document.documentElement).scrollLeft],
+  ];
+  const restore = (saved) => { for (const [n, top, left] of saved) { if (n) { n.scrollTop = top; n.scrollLeft = left; } } };
+  const press = (node, types) => {
+    for (const type of types) node.dispatchEvent(
+      type.startsWith("pointer")
+        ? new PointerEvent(type, { bubbles: true, cancelable: true, pointerId: 1, isPrimary: true })
+        : new MouseEvent(type, { bubbles: true, cancelable: true, view: window })
+    );
+  };
+  const PRESS = ["pointerdown", "mousedown", "pointerup", "mouseup", "click"];
+  /*
+   * THE READER'S APPROACH, shared by every action: settle, refuse anything a
+   * reader could not touch or see, then bring an off-screen control in with a
+   * scroll a reader could actually make. Returns the verdict to report — the
+   * press itself is the caller's, because a hold is the same approach with a
+   * different release.
+   */
+  const approach = async () => {
+    await settle(el);
+    if (!paints(el)) return { stop: finish("unreachable") };
+    const atRest = withinViewport(el) && !behindAHiddenClip;
+    const before = boxOf(el.getBoundingClientRect());
+    const saved = marks();
+    if (!hitSelf(el)) {
+      if (behindAHiddenClip) return { stop: finish("unreachable") };
+      if (typeof el.scrollIntoView === "function") el.scrollIntoView({ block: "center", inline: "center" });
+      if (!hitSelf(el)) { restore(saved); return { stop: finish("unreachable") }; }
+    }
+    return { saved, verdict: atRest ? finish("ok") : finish("ok-after-scroll", before) };
+  };`;
 
+/**
+ * The page-side expression for one affordance.
+ *
+ * WHAT IT RETURNS, and why each answer is its own: a JSON object whose `result`
+ * is `"ok"` when it acted, `"missing"` when the element is not in the DOM (the
+ * caller polls before believing that), `"inert"` when the element is DISABLED,
+ * `"not-a-field"` when a `type` action addressed something that is not an
+ * input or a textarea, and `"unreachable"` when a reader could not have put a
+ * finger on the control: no box at all, nothing painted, something else under
+ * the point a press would land on, or a position only a HIDDEN ancestor's
+ * programmatic scroll could reach. A missing element is a harness/cell
+ * disagreement about the id; an inert one is a cell asserting a state its own
+ * control refuses to reach; an unreachable one is a control behind something —
+ * the shape a second modal produces — where reporting it as "missing" would send
+ * the next reader looking for the wrong thing.
+ *
+ * `"ok-after-scroll"` IS `ok` WITH A FACT ATTACHED, and the distinction is the
+ * point of this version. A control a reader reaches by scrolling is genuinely
+ * pressable, so refusing it would fail states the app really ships (a milestone
+ * row on a 320 pt phone at 200 %), and the action therefore scrolls it in — but
+ * `ok` alone would silently convert "the reader could not see this control" into
+ * a pass, which is exactly the class this harness exists to catch. So the answer
+ * names it and carries the control's PRE-SCROLL box, the scroll is RESTORED
+ * after the press (the frame is of the resting page again, which is what the
+ * design round's bounds were reasoned against), and a control declared as one
+ * that must be reachable without a scroll can fail by name on that answer. The
+ * label is decided by the SETTLED geometry, never by whether a scroll happened
+ * to be needed, because the same press must give the same answer on the same
+ * layout (review round 3, R15).
+ *
+ * A HOLD is two evaluations — down, wait the cell's own duration, up — because
+ * `onLongPress` fires on a timer while the finger is down. The gap is real time
+ * in the page rather than a synthetic event pair, which is what makes the state
+ * behind a gesture reachable at all (round 3's BLOCKER was invisible to every
+ * gate for exactly its absence).
+ */
 export function affordanceScript(action: Affordance): string {
 	if ("click" in action) {
-		return `(() => {
+		return `(async () => {
   const el = document.querySelector(${selector(action.click)});
   if (!el) return JSON.stringify({ result: "missing" });
   if (el.disabled === true || el.getAttribute("aria-disabled") === "true") return JSON.stringify({ result: "inert" });${READER}
-  if (!paints(el)) return finish("unreachable");
-  const wasOnScreen = onScreen(el);
-  if (!wasOnScreen && behindAHiddenClip) return finish("unreachable");
-  const before = boxOf(el.getBoundingClientRect());
-  const saved = marks();
-  if (!wasOnScreen && typeof el.scrollIntoView === "function") el.scrollIntoView({ block: "center", inline: "center" });
-  if (!onScreen(el)) { restore(saved); return finish("unreachable"); }
+  const reached = await approach();
+  if (reached.stop) return reached.stop;
+  press(el, PRESS);
+  restore(reached.saved);
+  return reached.verdict;
+})()`;
+	}
+	if ("hold" in action) {
+		return `(async () => {
+  const el = document.querySelector(${selector(action.hold.testID)});
+  if (!el) return JSON.stringify({ result: "missing" });
+  if (el.disabled === true || el.getAttribute("aria-disabled") === "true") return JSON.stringify({ result: "inert" });${READER}
+  const reached = await approach();
+  if (reached.stop) return reached.stop;
+  /* The gesture is left OPEN: the caller waits the cell's own duration and then
+   *  runs the release, which is what makes the hold a hold rather than a click
+   *  with a pause after it. */
+  window.__loHold = { saved: reached.saved, verdict: reached.verdict };
+  press(el, ["pointerdown", "mousedown"]);
+  return JSON.stringify({ result: "holding" });
+})()`;
+	}
+	const { testID, text } = action.type;
+	return `(async () => {
+  const el = document.querySelector(${selector(testID)});
+  if (!el) return JSON.stringify({ result: "missing" });
+  if (el.disabled === true || el.getAttribute("aria-disabled") === "true") return JSON.stringify({ result: "inert" });
+  if (el.tagName !== "INPUT" && el.tagName !== "TEXTAREA") return JSON.stringify({ result: "not-a-field" });${READER}
+  const reached = await approach();
+  if (reached.stop) return reached.stop;
+  const proto = el.tagName === "TEXTAREA" ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+  const setter = Object.getOwnPropertyDescriptor(proto, "value").set;
+  setter.call(el, ${JSON.stringify(text)});
+  el.dispatchEvent(new Event("input", { bubbles: true }));
+  restore(reached.saved);
+  return reached.verdict;
+})()`;
+}
+
+/**
+ * The page-side release of a held press, paired with the `hold` script above.
+ *
+ * It answers with the HELD press's verdict, not its own: the gesture is one
+ * action, and what a cell wants to know is whether the control it held was where
+ * the reader meets it. A release against an element that has gone (the surface it
+ * was on was unmounted mid-hold) is reported as `missing` — a fact about the
+ * gesture, and the same reading a `click` on a gone control gives.
+ */
+export function releaseAffordanceScript(action: Affordance): string {
+	const testID = "hold" in action ? action.hold.testID : "";
+	return `(() => {
+  const held = window.__loHold || null;
+  window.__loHold = null;
+  const el = document.querySelector(${selector(testID)});
+  if (!el) return JSON.stringify({ result: "missing" });
   const fire = (type) => el.dispatchEvent(
     type.startsWith("pointer")
       ? new PointerEvent(type, { bubbles: true, cancelable: true, pointerId: 1, isPrimary: true })
       : new MouseEvent(type, { bubbles: true, cancelable: true, view: window })
   );
-  for (const type of ["pointerdown", "mousedown", "pointerup", "mouseup", "click"]) fire(type);
-  restore(saved);
-  return wasOnScreen ? finish("ok") : finish("ok-after-scroll", before);
-})()`;
-	}
-	const { testID, text } = action.type;
-	return `(() => {
-  const el = document.querySelector(${selector(testID)});
-  if (!el) return JSON.stringify({ result: "missing" });
-  if (el.disabled === true || el.getAttribute("aria-disabled") === "true") return JSON.stringify({ result: "inert" });
-  if (el.tagName !== "INPUT" && el.tagName !== "TEXTAREA") return JSON.stringify({ result: "not-a-field" });${READER}
-  if (!paints(el)) return finish("unreachable");
-  const wasOnScreen = onScreen(el);
-  if (!wasOnScreen && behindAHiddenClip) return finish("unreachable");
-  const before = boxOf(el.getBoundingClientRect());
-  const saved = marks();
-  if (!wasOnScreen && typeof el.scrollIntoView === "function") el.scrollIntoView({ block: "center", inline: "center" });
-  if (!onScreen(el)) { restore(saved); return finish("unreachable"); }
-  const proto = el.tagName === "TEXTAREA" ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
-  const setter = Object.getOwnPropertyDescriptor(proto, "value").set;
-  setter.call(el, ${JSON.stringify(text)});
-  el.dispatchEvent(new Event("input", { bubbles: true }));
-  restore(saved);
-  return wasOnScreen ? finish("ok") : finish("ok-after-scroll", before);
+  for (const type of ["pointerup", "mouseup", "click"]) fire(type);
+  if (held && held.saved) {
+    for (const [node, top, left] of held.saved) { if (node) { node.scrollTop = top; node.scrollLeft = left; } }
+  }
+  return held && held.verdict ? held.verdict : JSON.stringify({ result: "ok" });
 })()`;
 }
 
@@ -329,8 +479,21 @@ export async function runAffordances(
 				await page.evaluate(affordanceScript(action)),
 				action,
 			);
-			/* TWO ANSWERS ARE NOT RETRYABLE. `ok` (and `ok-after-scroll`) is the
-			 *  press landing, and `not-a-field` is a DOM fact that cannot change —
+			/* THE TWO HALVES OF A HOLD. The down answers `holding` — the finger is on
+			 *  the control and this function owes the release — and the wait between
+			 *  them is the cell's own duration. The release reports the DOWN's verdict,
+			 *  so the outcome a manifest carries is one gesture rather than an
+			 *  implementation detail of how it was made. */
+			if ("hold" in action && outcome.result === "holding") {
+				await sleep(action.hold.ms);
+				outcome = readOutcome(
+					await page.evaluate(releaseAffordanceScript(action)),
+					action,
+				);
+				break;
+			}
+			/* THREE ANSWERS ARE NOT RETRYABLE. `ok` (and `ok-after-scroll`) is the
+			 *  press landing, `not-a-field` is a DOM fact that cannot change —
 			 *  retrying either would only spend the bound. `missing`, `inert` and
 			 *  `unreachable` are all "not yet": an element still arriving, a control
 			 *  inert until React has re-rendered with the typed value, and a control

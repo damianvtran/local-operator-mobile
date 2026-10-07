@@ -523,6 +523,10 @@ export const ConversationsPane = ({
 				visible={menuTarget !== null}
 				onClose={() => setMenuTarget(null)}
 				title={menuTarget?.conversation_name.trim() || "untitled"}
+				/* The id is the STATE's marker, not decoration: a held press is the only
+				 *  way to reach this sheet, and `S15/menu-open` asserts it from a frame
+				 *  (round 3, R14). */
+				testID={SURFACE.sessionMenuSheet}
 			>
 				<View className="gap-2 pb-4">
 					<Button

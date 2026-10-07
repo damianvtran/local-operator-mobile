@@ -17,7 +17,11 @@
  * second spelling here would be a cell that fails the day the control is renamed
  * (`tools/lib/readiness.ts` imports the same module for the same reason). It is
  * plain TypeScript with no imports of its own, so the tooling can load it. */
-import { CONTROL, projectMilestoneEditId } from "../../src/ui/a11y.ts";
+import {
+	CONTROL,
+	projectMilestoneEditId,
+	sessionRowId,
+} from "../../src/ui/a11y.ts";
 import type { Affordance } from "../lib/affordance.ts";
 
 /**
@@ -354,12 +358,12 @@ export function describeDeviceCoverage(coverage: {
  * The CI tier: the bounded sample the per-push capture job takes.
  *
  * WHY A THIRD TIER, AND WHY IT IS HERE RATHER THAN A `--devices` LIST IN YAML.
- * The `core` tier is 1836 cells: the whole declared cell list (51 cells) x 2 themes x
- * (3 phones x 4 scales + 2 tablets x 3 scales) — 51 x 2 x 18, the tier's 5 profiles —
+ * The `core` tier is 1872 cells: the whole declared cell list (52 cells) x 2 themes x
+ * (3 phones x 4 scales + 2 tablets x 3 scales) — 52 x 2 x 18, the tier's 5 profiles —
  * and the CI job's capture step is bound at 40 minutes. Measured on the runner, that is
  * 2.24 s/cell: 403 cells in 903 s (run 37098393675, a plan of 403 cells then), so a core
- * run needs ~69 minutes. The `core` job's own bound is 95 (see `.github/workflows/e2e.yml`,
- * `web-audit-core`), which is above the 5508 s deadline its plan derives for itself. The
+ * run needs ~70 minutes. The `core` job's own bound is 95 (see `.github/workflows/e2e.yml`,
+ * `web-audit-core`), which is above the 5616 s deadline its plan derives for itself. The
  * job's first real
  * run of this path
  * was therefore cut off by the harness's own 900 s deadline with 585 cells
@@ -392,8 +396,8 @@ export function describeDeviceCoverage(coverage: {
  * That is 51 cells x 2 themes x (2 profiles x 3 scales) = 612 cells, ~23 minutes at
  * the measured rate: inside the step bound (raised with it, see `CI_SCALES`) with
  * the same headroom it always carried. `core` and `full` are unchanged and stay the
- * local and dispatched samples, so the full 1836-cell `core` matrix and the
- * 6732-cell `full` matrix remain runnable — nothing is only reachable through CI.
+ * local and dispatched samples, so the full 1872-cell `core` matrix and the
+ * 6864-cell `full` matrix remain runnable — nothing is only reachable through CI.
  */
 export const CI_DEVICES: string[] = ["iphone-se", "tablet-landscape"];
 
@@ -414,7 +418,7 @@ export const CI_DEVICES: string[] = ["iphone-se", "tablet-landscape"];
  * both CI profiles is 612 cells, +50 % over the two-scale 408, so the per-push capture
  * and audit bounds in `.github/workflows/e2e.yml` were raised with it — most recently to
  * capture 40 / audit 20 / job 80, when the lifecycle cells took the cell list from 42 to
- * 51 and the sample from 504 to 612. A bound that fires every run stops being a signal, so
+ * 52 and the sample from 504 to 624. A bound that fires every run stops being a signal, so
  * this list and that bound have to move together: reverting the bounds without
  * reverting this list makes the job red, and reverting this list without the bounds
  * wastes the budget it was sized for. */
@@ -645,7 +649,34 @@ export const UNSCROLLED_CONTROLS: readonly string[] = [
 	CONTROL.projectMilestoneRemove,
 ];
 
+/**
+ * The cells reach a state by PRESSING controls, declared per cell here and
+ * replayed by the audit's re-drive.
+ *
+ * `S15/menu-open` is the one cell in this matrix reached by HOLDING a control: the
+ * conversations pane's row menu is a long-press surface, `onLongPress` fires on a
+ * timer while the finger is down, and no click can produce it. It is the cell that
+ * makes round 3's BLOCKER observable — the menu is a `Sheet` rendered inside the
+ * drawer's own `Modal`, so a drawer that stands down for it unmounts the press
+ * that opened it.
+ *
+ * 1200 ms, and the duration is MEASURED rather than chosen: React Native's own
+ * `delayLongPress` is 500 ms, but a held press delivered to a just-booted page
+ * does not always reach the responder system in time — at 600 ms the menu opened
+ * on three of four cells and the cold-boot cell instead took the release as a TAP
+ * and navigated to the session (the cell then failed its own marker, which is how
+ * the gap was found rather than shipped). At 1200 ms all four open it.
+ */
 export const CELL_OPENERS: Record<string, Affordance[]> = {
+	/* --- the pane's long-press menu (S15) --- */
+	"S15/menu-open": [
+		{
+			hold: {
+				testID: sessionRowId("6714def86197"),
+				ms: 1200,
+			},
+		},
+	],
 	/* --- the create sheet, over the listing (S16) --- */
 	"S16/create": [{ click: CONTROL.projectsNew }],
 	/* The same sheet with a reader's own values in it: what the form looks like
@@ -1242,6 +1273,25 @@ export const MEASURE_PROBE = `
     rootFontSizePx: Number.isFinite(rootFontSizePx) ? rootFontSizePx : null,
     route: location.pathname + location.search,
     title: document.title,
+    /*
+     * WHERE THE PAGE IS SCROLLED TO at the moment the frame is taken — the number a
+     * reviewer needs and no PNG can give (review round 3, D9).
+     *
+     * The guard restores every scroll it moved, so the claim "this frame is of the
+     * resting page" is checkable only against these offsets: a frame of a displaced
+     * page has a non-zero entry here, and a byte-stability argument cannot tell the
+     * two apart because a displaced page is just as stable as a rested one. The
+     * document and the body are read directly; every other scroller that is
+     * actually displaced is listed by its own offset.
+     */
+    scroll: {
+      document: root.scrollTop,
+      body: body ? body.scrollTop : 0,
+      displaced: [...document.querySelectorAll('body *')]
+        .filter((el) => el.scrollTop !== 0 || el.scrollLeft !== 0)
+        .slice(0, 8)
+        .map((el) => ({ top: el.scrollTop, left: el.scrollLeft })),
+    },
     // A blank render is the failure that looks like success: a screenshot of
     // nothing has a stable hash and zero console errors.
     mountedElements: document.querySelectorAll('body *').length,

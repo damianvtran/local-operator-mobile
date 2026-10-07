@@ -1149,6 +1149,42 @@ async function main() {
 		await relay.stop();
 	}
 
+	/* ---- 1b. the scenario pin's contention rule (round 3, Q7) ---- */
+	{
+		const relay = await startRelay({ scenario: "idle" });
+		group = "the scenario pin's contention rule";
+		const pin = (client: string, scenario: string) =>
+			fetch(new URL("/__mock/scenario", relay.base), {
+				method: "POST",
+				headers: {
+					"content-type": "application/json",
+					"x-lo-harness": client,
+				},
+				body: JSON.stringify({ scenario }),
+			});
+
+		const first = await pin("client-a", "idle");
+		check("a first client's pin is accepted", first.status, 200);
+		const other = await pin("client-b", "many");
+		check(
+			"a DIFFERENT client's pin is refused 409 while the owner is live",
+			other.status,
+			409,
+		);
+		check(
+			"the refusal says which client and how to stop sharing",
+			str((await other.json()).error ?? null).includes("another harness"),
+			true,
+		);
+		const owner = await pin("client-a", "many");
+		check("the owner may re-pin its own relay", owner.status, 200);
+		/* The expiry window (60 s of silence hands the relay over) is deliberately
+		 *  NOT exercised here: twenty such checks would add twenty minutes to a suite
+		 *  that runs on every push, for a comparison this file already reads as a
+		 *  single `quietFor < SCENARIO_CONTENTION_MS` line in the route. */
+		await relay.stop();
+	}
+
 	/* ---- 2. the state table ---- */
 	group = "state table";
 	// The table is driven by the registry itself, not by a second hand-written

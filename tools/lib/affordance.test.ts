@@ -43,6 +43,7 @@ interface StubGlobal {
 	HTMLInputElement?: unknown;
 	HTMLTextAreaElement?: unknown;
 	getComputedStyle?: unknown;
+	requestAnimationFrame?: unknown;
 }
 
 const globals = globalThis as StubGlobal;
@@ -113,6 +114,13 @@ interface ReachOptions {
 	/** Where the control IS after a scroll brought it in — absent means the scroll
 	 *  did not help, which is its own case. */
 	afterScroll?: Box;
+	/**
+	 * A sequence of boxes, one per reading, the last repeating: what an entry
+	 * animation looks like from the page's side. Used to pin that a verdict is
+	 * taken from the SETTLED box rather than from whichever frame the opener
+	 * happened to run on (round 3, R15).
+	 */
+	rects?: Box[];
 }
 
 /**
@@ -152,6 +160,7 @@ function stubDom(
 	saved.HTMLInputElement = globals.HTMLInputElement;
 	saved.HTMLTextAreaElement = globals.HTMLTextAreaElement;
 	saved.getComputedStyle = globals.getComputedStyle;
+	saved.requestAnimationFrame = globals.requestAnimationFrame;
 
 	const rect = reach.rect ?? { left: 0, top: 0, width: 40, height: 40 };
 	/* The annotation is load-bearing: `contains` names the object it belongs to, so
@@ -192,6 +201,18 @@ function stubDom(
 						),
 					scrollIntoView: () => {
 						scrolled.push(1);
+						/* A real `scrollIntoView` moves the scrollers AND, when the
+						 *  control needs it, the document — which is the offset the
+						 *  restore has to cover (round 3, Q6). */
+						const scrolling = (
+							globals.document as {
+								scrollingElement?: { scrollTop: number; scrollLeft: number };
+							}
+						)?.scrollingElement;
+						if (scrolling) {
+							scrolling.scrollTop = 500;
+							scrolling.scrollLeft = 7;
+						}
 						for (const ancestor of ancestors) {
 							if (!ancestor.movesOnScroll) continue;
 							ancestor.scrollTop = 100;
@@ -214,16 +235,56 @@ function stubDom(
 		for (const ancestor of ancestors) styleOf.set(ancestor, ancestor.style);
 	}
 
+	/*
+	 * THE HIT TEST ANSWERS THE WAY A BROWSER DOES: a point outside the viewport is
+	 * nothing, and an element clipped away by an ancestor resolves to that ancestor.
+	 * A stub that always answered "the element" made every off-screen control look
+	 * reachable in place — so `ok-after-scroll` and the hidden-clip refusal could
+	 * not be distinguished from `ok` here, which is exactly what these cases test.
+	 */
+	const clippedAway = (): boolean => {
+		const r = reachable?.getBoundingClientRect();
+		if (!r) return false;
+		for (const ancestor of ancestors) {
+			const overflow = ancestor.style.overflowY ?? "visible";
+			if (overflow === "visible") continue;
+			const outer = ancestor.rect;
+			if (
+				r.top + r.height <= outer.top ||
+				r.top >= outer.top + outer.height ||
+				r.left + r.width <= outer.left ||
+				r.left >= outer.left + outer.width
+			)
+				return true;
+		}
+		return false;
+	};
+
 	globals.document = {
 		querySelector: (selector: string) => {
 			nodes.push(selector);
 			return reachable;
 		},
-		elementFromPoint: () => ("hit" in reach ? reach.hit : reachable),
-		documentElement: { clientWidth: 400, clientHeight: 800 },
+		elementFromPoint: (x: number, y: number) => {
+			if ("hit" in reach) return reach.hit;
+			if (x < 0 || y < 0 || x > 400 || y > 800) return null;
+			if (clippedAway()) return ancestors[0] ?? null;
+			return reachable;
+		},
+		documentElement: {
+			clientWidth: 400,
+			clientHeight: 800,
+			scrollTop: 0,
+			scrollLeft: 0,
+		},
+		scrollingElement: { scrollTop: 0, scrollLeft: 0 },
 	};
 	globals.getComputedStyle = (element: unknown) =>
 		styleOf.get(element) ?? VISIBLE;
+	/* The settle loop is two frames per reading. Real timers, zero delay: the
+	 *  stubbed box does not move, so two readings agree immediately. */
+	globals.requestAnimationFrame = (callback: (time: number) => void) =>
+		setTimeout(() => callback(0), 0) as unknown as number;
 	globals.window = {};
 	globals.PointerEvent = class {
 		constructor(public type: string) {
@@ -256,23 +317,27 @@ function restore(): void {
 	}
 }
 
-/** The page's reply, parsed the way `runAffordances` parses it. */
-function answer(script: string): { result: string; pre?: Box } {
-	return JSON.parse(String(run(script))) as { result: string; pre?: Box };
+/** The page's reply, parsed the way `runAffordances` parses it.
+ *
+ *  AWAITED, because every script is now an `async` IIFE: the reader's approach
+ *  waits for the layout to stop moving before it measures (round 3, R15), and the
+ *  page's `Runtime.evaluate` is called with `awaitPromise`. */
+async function answer(script: string): Promise<{ result: string; pre?: Box }> {
+	return JSON.parse(String(await run(script))) as { result: string; pre?: Box };
 }
 
 /** Run one script the way `page.evaluate` does: as an expression, by value. */
-function run(script: string): unknown {
+async function run(script: string): Promise<unknown> {
 	/* The script is an IIFE, so the expression's value IS the result: one call, and
 	 *  the second `()` this used to carry called the string it returned. */
 	const factory = new Function(`return (${script})`) as () => unknown;
-	return factory();
+	return await (factory() as Promise<unknown>);
 }
 
 afterEach(restore);
 
 describe("the affordance script", () => {
-	it("compiles as an expression, whatever the id contains", () => {
+	it("compiles as an expression, whatever the id contains", async () => {
 		/* The bug this pins: a selector spliced in unquoted is a SyntaxError, and
 		 *  the page reports it as an arithmetic error rather than as a bad
 		 *  selector. `new Function` is the cheapest compile check available. */
@@ -291,21 +356,21 @@ describe("the affordance script", () => {
 		}
 	});
 
-	it("addresses the control by its declared id", () => {
+	it("addresses the control by its declared id", async () => {
 		const { nodes } = stubDom(null);
-		expect(answer(affordanceScript({ click: "projects-new" })).result).toBe(
-			"missing",
-		);
+		expect(
+			(await answer(affordanceScript({ click: "projects-new" }))).result,
+		).toBe("missing");
 		expect(nodes).toEqual(['[data-testid="projects-new"]']);
 	});
 
-	it("quotes an id that contains a quote, rather than ending the selector", () => {
+	it("quotes an id that contains a quote, rather than ending the selector", async () => {
 		const { nodes } = stubDom(null);
-		run(affordanceScript({ click: 'a"b' }));
+		await run(affordanceScript({ click: 'a"b' }));
 		expect(nodes).toEqual(['[data-testid="a\\"b"]']);
 	});
 
-	it("presses with the whole pointer+mouse+click sequence", () => {
+	it("presses with the whole pointer+mouse+click sequence", async () => {
 		/* React Native Web resolves a press through the responder system, which a
 		 *  bare `click` does not drive — that is the whole reason the sequence is
 		 *  spelled out rather than left to `element.click()`. */
@@ -313,9 +378,9 @@ describe("the affordance script", () => {
 			getAttribute: () => null,
 			dispatchEvent: () => true,
 		});
-		expect(answer(affordanceScript({ click: "projects-new" })).result).toBe(
-			"ok",
-		);
+		expect(
+			(await answer(affordanceScript({ click: "projects-new" }))).result,
+		).toBe("ok");
 		expect(events).toEqual([
 			"pointerdown",
 			"mousedown",
@@ -325,17 +390,19 @@ describe("the affordance script", () => {
 		]);
 	});
 
-	it("reports a disabled control as inert, not as missing", () => {
+	it("reports a disabled control as inert, not as missing", async () => {
 		const { events } = stubDom({
 			disabled: true,
 			getAttribute: () => null,
 			dispatchEvent: () => true,
 		});
-		expect(answer(affordanceScript({ click: "x" })).result).toBe("inert");
+		expect((await answer(affordanceScript({ click: "x" }))).result).toBe(
+			"inert",
+		);
 		expect(events).toEqual([]);
 	});
 
-	it("leaves a control that is already on screen where it is", () => {
+	it("leaves a control that is already on screen where it is", async () => {
 		/* The scroll is a REPAIR, not a routine: `scrollIntoView({block: "center"})`
 		 *  moves a scroller even when the control is fully visible, which is how an
 		 *  earlier version of this guard scrolled eight of nine real cells to the
@@ -345,13 +412,13 @@ describe("the affordance script", () => {
 			getAttribute: () => null,
 			dispatchEvent: () => true,
 		});
-		const reply = answer(affordanceScript({ click: "projects-new" }));
+		const reply = await answer(affordanceScript({ click: "projects-new" }));
 		expect(reply.result).toBe("ok");
 		expect(scrolled).toHaveLength(0);
 		expect(events).toHaveLength(5);
 	});
 
-	it("scrolls an off-screen control in, answers ok-after-scroll with its resting box, and puts the scroll back", () => {
+	it("scrolls an off-screen control in, answers ok-after-scroll with its resting box, and puts the scroll back", async () => {
 		/* A control below the fold is one a reader reaches by scrolling, so the
 		 *  action does what the reader does — but the answer SAYS so, carrying where
 		 *  the control was, and the scroll is restored afterwards so the frame is of
@@ -372,7 +439,7 @@ describe("the affordance script", () => {
 				],
 			},
 		);
-		const reply = answer(affordanceScript({ click: "projects-new" }));
+		const reply = await answer(affordanceScript({ click: "projects-new" }));
 		expect(reply.result).toBe("ok-after-scroll");
 		expect(reply.pre).toEqual({ x: 0, y: 900, w: 40, h: 40 });
 		expect(scrolled).toHaveLength(1);
@@ -382,18 +449,18 @@ describe("the affordance script", () => {
 		expect(scroller?.scrollLeft).toBe(0);
 	});
 
-	it("reports a control that scrolling cannot bring in as unreachable", () => {
+	it("reports a control that scrolling cannot bring in as unreachable", async () => {
 		const { events } = stubDom(
 			{ getAttribute: () => null, dispatchEvent: () => true },
 			{ rect: { left: 0, top: 900, width: 40, height: 40 } },
 		);
-		expect(answer(affordanceScript({ click: "never-in-view" })).result).toBe(
-			"unreachable",
-		);
+		expect(
+			(await answer(affordanceScript({ click: "never-in-view" }))).result,
+		).toBe("unreachable");
 		expect(events).toEqual([]);
 	});
 
-	it("refuses a control only a HIDDEN box's programmatic scroll could reveal", () => {
+	it("refuses a control only a HIDDEN box's programmatic scroll could reveal", async () => {
 		/* `scrollIntoView` reaches into an `overflow: hidden` ancestor a reader
 		 *  cannot scroll, so the press would land on a control no reader could bring
 		 *  into view — measured as a real leak of the older guard (`scrollTop` 0→140
@@ -411,20 +478,20 @@ describe("the affordance script", () => {
 				],
 			},
 		);
-		expect(answer(affordanceScript({ click: "clipped-away" })).result).toBe(
-			"unreachable",
-		);
+		expect(
+			(await answer(affordanceScript({ click: "clipped-away" }))).result,
+		).toBe("unreachable");
 		expect(events).toEqual([]);
 	});
 
-	it("refuses a control nothing paints, on itself or on an ancestor", () => {
+	it("refuses a control nothing paints, on itself or on an ancestor", async () => {
 		/* `opacity: 0` is a sized, hit-testable, invisible control — transparent is
 		 *  not visible, and the older guard pressed it and reported `ok`. */
 		const onElement = stubDom(
 			{ getAttribute: () => null, dispatchEvent: () => true },
 			{ style: { opacity: "0" } },
 		);
-		expect(answer(affordanceScript({ click: "faded" })).result).toBe(
+		expect((await answer(affordanceScript({ click: "faded" }))).result).toBe(
 			"unreachable",
 		);
 		expect(onElement.events).toEqual([]);
@@ -441,12 +508,12 @@ describe("the affordance script", () => {
 			},
 		);
 		expect(
-			answer(affordanceScript({ click: "inside-a-faded-box" })).result,
+			(await answer(affordanceScript({ click: "inside-a-faded-box" }))).result,
 		).toBe("unreachable");
 		expect(onAncestor.events).toEqual([]);
 	});
 
-	it("retries the not-ready answers and stops on the terminal ones", () => {
+	it("retries the not-ready answers and stops on the terminal ones", async () => {
 		/* THE RETRY RULE, pinned because it is asymmetric on purpose: `missing`,
 		 *  `inert` and `unreachable` are all "not yet" (an element arriving, a
 		 *  control React has not re-rendered, a control covered while a scrim
@@ -487,7 +554,7 @@ describe("the affordance script", () => {
 		})();
 	});
 
-	it("reports a control with no box as unreachable, and does not press it", () => {
+	it("reports a control with no box as unreachable, and does not press it", async () => {
 		/* THE DEFECT THIS PINS (review round 1, R1): `dispatchEvent` delivers
 		 *  straight to the target, so the first version of this script pressed a
 		 *  zero-size control and reported `ok`. A frame of that state is a frame of
@@ -496,13 +563,13 @@ describe("the affordance script", () => {
 			{ getAttribute: () => null, dispatchEvent: () => true },
 			{ rect: { left: 0, top: 0, width: 0, height: 0 } },
 		);
-		expect(answer(affordanceScript({ click: "covered" })).result).toBe(
+		expect((await answer(affordanceScript({ click: "covered" }))).result).toBe(
 			"unreachable",
 		);
 		expect(events).toEqual([]);
 	});
 
-	it("reports a control something else is drawn over as unreachable", () => {
+	it("reports a control something else is drawn over as unreachable", async () => {
 		/* The shape a second modal leaves: the control is in the page, enabled and
 		 *  sized, and the point a press would land on belongs to the surface on top
 		 *  of it. This is the class the audit's U-08 overlap rule catches by hand and
@@ -511,13 +578,13 @@ describe("the affordance script", () => {
 			{ getAttribute: () => null, dispatchEvent: () => true },
 			{ hit: { tagName: "DIV" } },
 		);
-		expect(answer(affordanceScript({ click: "under-a-modal" })).result).toBe(
-			"unreachable",
-		);
+		expect(
+			(await answer(affordanceScript({ click: "under-a-modal" }))).result,
+		).toBe("unreachable");
 		expect(events).toEqual([]);
 	});
 
-	it("accepts a press whose point lands on a descendant of the control", () => {
+	it("accepts a press whose point lands on a descendant of the control", async () => {
 		/* A button's own box is under its label as often as under nothing: the label
 		 *  is a child of the pressable, so `elementFromPoint` answers the `<Text>`.
 		 *  Requiring identity rather than containment would report every labelled
@@ -532,11 +599,13 @@ describe("the affordance script", () => {
 			},
 			{ hit: child },
 		);
-		expect(answer(affordanceScript({ click: "labelled" })).result).toBe("ok");
+		expect((await answer(affordanceScript({ click: "labelled" }))).result).toBe(
+			"ok",
+		);
 		expect(events).toHaveLength(5);
 	});
 
-	it("reports a non-field as not-a-field rather than throwing", () => {
+	it("reports a non-field as not-a-field rather than throwing", async () => {
 		/* `setter.call(el, …)` against a `div` throws `Illegal invocation` INSIDE
 		 *  the page, which aborted the whole run instead of answering — a cell's id
 		 *  pointing at the wrong kind of element is a cell problem, and it has its
@@ -547,23 +616,28 @@ describe("the affordance script", () => {
 			dispatchEvent: () => true,
 		});
 		expect(
-			answer(affordanceScript({ type: { testID: "not-a-field", text: "x" } }))
-				.result,
+			(
+				await answer(
+					affordanceScript({ type: { testID: "not-a-field", text: "x" } }),
+				)
+			).result,
 		).toBe("not-a-field");
 		expect(events).toEqual([]);
 	});
 
-	it("types through the native value setter and one input event", () => {
+	it("types through the native value setter and one input event", async () => {
 		const { events } = stubDom({
 			tagName: "INPUT",
 			getAttribute: () => null,
 			dispatchEvent: () => true,
 		});
 		expect(
-			answer(
-				affordanceScript({
-					type: { testID: "project-create-name", text: "vendor-sso-cutover" },
-				}),
+			(
+				await answer(
+					affordanceScript({
+						type: { testID: "project-create-name", text: "vendor-sso-cutover" },
+					}),
+				)
 			).result,
 		).toBe("ok");
 		/* ONE event, and it is `input`: a second (`change`) would fire a second
@@ -571,7 +645,87 @@ describe("the affordance script", () => {
 		expect(events).toEqual(["input"]);
 	});
 
-	it("describes an action in one phrase, for a manifest or a failure", () => {
+	it("holds a press for the cell's duration and releases it, as ONE outcome", async () => {
+		/* THE ACTION THIS FILE WAS MISSING, and the reason round 3's BLOCKER was
+		 *  invisible to every gate: `onLongPress` fires on a timer WHILE the finger
+		 *  is down, so no amount of clicking reaches a gesture the app renders. The
+		 *  pair is asserted here as one action — the down, the wait, the release —
+		 *  and the outcome is the DOWN's verdict, so a manifest carries the gesture
+		 *  rather than how it was made. */
+		const { events, nodes } = stubDom({
+			getAttribute: () => null,
+			dispatchEvent: () => true,
+		});
+		const page = { evaluate: async (script: string) => await run(script) };
+		const landed = await runAffordances(
+			page as never,
+			[{ hold: { testID: "session-row-abc", ms: 5 } }],
+			{ waitMs: 50, pollMs: 1 },
+		);
+
+		expect(landed[0]?.result).toBe("ok");
+		expect(nodes).toEqual([
+			'[data-testid="session-row-abc"]',
+			'[data-testid="session-row-abc"]',
+		]);
+		expect(events).toEqual([
+			"pointerdown",
+			"mousedown",
+			"pointerup",
+			"mouseup",
+			"click",
+		]);
+	});
+
+	it("takes its verdict from the SETTLED box, not from the frame it ran on", async () => {
+		/* ROUND 3, R15. The description field's box ends at y 564 of a 568 pt phone
+		 *  and the sheet RISES 40 pt on entry, so the same press read "on screen" or
+		 *  "needed a scroll" depending on the animation frame — the frames were
+		 *  byte-identical and the label was not. The approach waits for two frames
+		 *  with the same box, so the verdict is a fact about the layout the reader
+		 *  ends up looking at. */
+		const animating = stubDom(
+			{ getAttribute: () => null, dispatchEvent: () => true },
+			{
+				/* Down in the fold while the sheet rises, then at rest on screen. */
+				rects: [
+					{ left: 0, top: 900, width: 40, height: 40 },
+					{ left: 0, top: 900, width: 40, height: 40 },
+					{ left: 0, top: 300, width: 40, height: 40 },
+					{ left: 0, top: 300, width: 40, height: 40 },
+				],
+			},
+		);
+		expect(
+			(await answer(affordanceScript({ click: "rising-field" }))).result,
+		).toBe("ok");
+		expect(animating.scrolled).toHaveLength(0);
+	});
+
+	it("puts the DOCUMENT's scroll back too, not only the scrollers", async () => {
+		/* Round 3, Q6: the walk collects `overflow: auto|scroll` ancestors, so a
+		 *  press that moves the document was left displaced — latent on this app,
+		 *  whose root leaves the document unscrollable, and wrong against the
+		 *  property all the same. */
+		const { events } = stubDom(
+			{ getAttribute: () => null, dispatchEvent: () => true },
+			{ rect: { left: 0, top: 900, width: 40, height: 40 } },
+		);
+		await answer(affordanceScript({ click: "below-the-fold" }));
+
+		const scrolling = (
+			globalThis as {
+				document?: {
+					scrollingElement?: { scrollTop: number; scrollLeft: number };
+				};
+			}
+		).document?.scrollingElement;
+		expect(scrolling?.scrollTop).toBe(0);
+		expect(scrolling?.scrollLeft).toBe(0);
+		expect(events).toHaveLength(0);
+	});
+
+	it("describes an action in one phrase, for a manifest or a failure", async () => {
 		expect(describeAffordance({ click: "projects-new" })).toBe(
 			"click projects-new",
 		);
@@ -584,5 +738,11 @@ describe("the affordance script", () => {
 			"click a, click b",
 		);
 		expect(describeAffordances([])).toBe("");
+		expect(
+			describeAffordance({ hold: { testID: "session-row-abc", ms: 600 } }),
+		).toBe("hold session-row-abc 600ms");
+		expect(
+			describeAffordance({ hold: { testID: "session-row-abc", ms: 600 } }),
+		).toBe("hold session-row-abc 600ms");
 	});
 });

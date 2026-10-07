@@ -550,6 +550,16 @@ export const SURFACE = {
 	 *  pane, which renders it under the panel's header — that route is the
 	 *  deep-link-to-nothing destination's landing. */
 	sidebarNotice: "sidebar-notice",
+	/**
+	 * The conversations pane's long-press menu — the `Sheet` a held row raises.
+	 *
+	 * It carries an id because a HELD press is a state nothing else can reach: the
+	 * menu is the app's only long-press surface, and the cell that exercises it
+	 * (`S15/menu-open`) is what makes the gesture observable to the harness at all
+	 * (round 3's BLOCKER — a modal raised inside the drawer's own `Modal` — was
+	 * invisible to every gate because no action could hold a press).
+	 */
+	sessionMenuSheet: "session-menu-sheet",
 } as const;
 
 /**
@@ -907,6 +917,10 @@ export const STATE_MARKER = {
 	 * one family, so `sessionRowId` serves both subjects). */
 	sidebar: {
 		open: SURFACE.sidebar,
+		/* The pane's long-press menu, OPEN. `open` above is the panel itself, so this
+		 *  is the one marker that distinguishes "the list is up" from "a row's menu
+		 *  is" — and it is produced by a HELD press, which is the point. */
+		"menu-open": SURFACE.sessionMenuSheet,
 		loading: "sidebar-loading",
 		empty: EMPTY.sessions,
 		populated: "session-row-",

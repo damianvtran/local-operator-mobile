@@ -13,7 +13,10 @@ import { useTokenColor } from "@/ui/appearance";
 import { maxColumnWidth } from "@/ui/column";
 import { Button } from "@/ui/components/button";
 import { Heading } from "@/ui/components/heading";
-import { useModalStackEntry } from "@/ui/components/modal-stack-entry";
+import {
+	ModalScopeContext,
+	useModalStackEntry,
+} from "@/ui/components/modal-stack-entry";
 import { useShadow } from "@/ui/elevation";
 import { useTextScale } from "@/ui/text-scale-provider";
 import { DIALOG_SURFACE_CLASS } from "@/ui/variants";
@@ -83,64 +86,66 @@ export const Dialog = ({
 	/* A dialog raised while another modal is up stands down rather than painting a
 	 *  second full-viewport surface over it — `@/ui/modal-stack` carries the rule and
 	 *  why it is the primitive's job rather than a caller's prop. */
-	const covered = useModalStackEntry(visible);
+	const { covered, scope } = useModalStackEntry(visible);
 
 	return (
-		<Modal
-			visible={visible && !covered}
-			transparent
-			animationType="fade"
-			onRequestClose={onCancel}
-			accessibilityViewIsModal
-			testID={testID}
-		>
-			<ScopedVariables variables={variables}>
-				<View className="flex-1 items-center justify-center px-6">
-					<Pressable
-						className="absolute inset-0"
-						style={{ backgroundColor: scrimColour }}
-						accessibilityRole={ROLE.button}
-						accessibilityLabel="Cancel"
-						testID={CONTROL.dialogScrim}
-						onPress={onCancel}
-					/>
-					<View
-						className={DIALOG_SURFACE_CLASS}
-						style={{
-							...shadow,
-							...(maxWidth === null ? {} : { maxWidth }),
-							/* A MARGIN on the surface, not padding on the modal's root. `px-6` on the
-							 *  root is the phone's own margin, and an inline `paddingLeft` would
-							 *  OVERRIDE it rather than add to it; padding the root would also move the
-							 *  scrim, which is `absolute inset-0` on that same box, and leave the
-							 *  band it no longer covers undimmed. The margin is outside the dialog, so
-							 *  both the surface and the band keep the meaning they had. */
-							marginLeft: insets.left,
-							marginRight: insets.right,
-						}}
-					>
-						<Heading level={2} className="text-title text-ink">
-							{title}
-						</Heading>
-						<Text className="mt-2 text-body-sm text-ink-muted">{body}</Text>
-						<View className="mt-4 flex-row justify-end gap-2">
-							<Button
-								label="Cancel"
-								variant="quiet"
-								testID={CONTROL.dialogCancel}
-								onPress={onCancel}
-							/>
-							<Button
-								label={confirmLabel}
-								variant={destructive ? "danger" : "primary"}
-								loading={busy}
-								testID={CONTROL.dialogConfirm}
-								onPress={onConfirm}
-							/>
+		<ModalScopeContext.Provider value={scope}>
+			<Modal
+				visible={visible && !covered}
+				transparent
+				animationType="fade"
+				onRequestClose={onCancel}
+				accessibilityViewIsModal
+				testID={testID}
+			>
+				<ScopedVariables variables={variables}>
+					<View className="flex-1 items-center justify-center px-6">
+						<Pressable
+							className="absolute inset-0"
+							style={{ backgroundColor: scrimColour }}
+							accessibilityRole={ROLE.button}
+							accessibilityLabel="Cancel"
+							testID={CONTROL.dialogScrim}
+							onPress={onCancel}
+						/>
+						<View
+							className={DIALOG_SURFACE_CLASS}
+							style={{
+								...shadow,
+								...(maxWidth === null ? {} : { maxWidth }),
+								/* A MARGIN on the surface, not padding on the modal's root. `px-6` on the
+								 *  root is the phone's own margin, and an inline `paddingLeft` would
+								 *  OVERRIDE it rather than add to it; padding the root would also move the
+								 *  scrim, which is `absolute inset-0` on that same box, and leave the
+								 *  band it no longer covers undimmed. The margin is outside the dialog, so
+								 *  both the surface and the band keep the meaning they had. */
+								marginLeft: insets.left,
+								marginRight: insets.right,
+							}}
+						>
+							<Heading level={2} className="text-title text-ink">
+								{title}
+							</Heading>
+							<Text className="mt-2 text-body-sm text-ink-muted">{body}</Text>
+							<View className="mt-4 flex-row justify-end gap-2">
+								<Button
+									label="Cancel"
+									variant="quiet"
+									testID={CONTROL.dialogCancel}
+									onPress={onCancel}
+								/>
+								<Button
+									label={confirmLabel}
+									variant={destructive ? "danger" : "primary"}
+									loading={busy}
+									testID={CONTROL.dialogConfirm}
+									onPress={onConfirm}
+								/>
+							</View>
 						</View>
 					</View>
-				</View>
-			</ScopedVariables>
-		</Modal>
+				</ScopedVariables>
+			</Modal>
+		</ModalScopeContext.Provider>
 	);
 };

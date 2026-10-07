@@ -66,7 +66,7 @@ import { bool, csv, num, parseArgs, str } from "../lib/args.ts";
 import type { CdpPage } from "../lib/cdp.ts";
 import { sleep } from "../lib/cdp.ts";
 import { launchChrome } from "../lib/chrome.ts";
-import { freshPage, withDeadline } from "../lib/page.ts";
+import { applySafeAreaInsets, freshPage, withDeadline } from "../lib/page.ts";
 import {
 	captureHookQuery,
 	cellHookQuery,
@@ -77,7 +77,7 @@ import {
 	seedQuery,
 	stateStillComing,
 } from "../lib/readiness.ts";
-import { selectScenario } from "../lib/relay.ts";
+import { releaseScenarioClaim, selectScenario } from "../lib/relay.ts";
 import { serveDir } from "../lib/static-server.ts";
 import {
 	PRE_PAINT_PROBE,
@@ -610,30 +610,19 @@ async function auditCell(
 	});
 	// The real insets, so the app's own env() resolves them (see
 	// tools/visual/capture.ts § applySafeAreaInsets).
-	let insetsOverride: { applied: boolean; reason: string | null } = {
-		applied: false,
-		reason: null,
-	};
-	try {
-		await page.send("Emulation.setSafeAreaInsetsOverride", {
-			insets: {
-				top: record.insets?.top ?? 0,
-				bottom: record.insets?.bottom ?? 0,
-				left: record.insets?.left ?? 0,
-				right: record.insets?.right ?? 0,
-			},
-		});
-		insetsOverride = { applied: true, reason: null };
-	} catch (error) {
-		// Without the override the page reports 0 insets, so the check says the
-		// state could not answer rather than passing it — and it carries the
-		// *reason* here, because "the app declares no unsafe edges" and "CDP
-		// refused the override" are different findings that read the same.
-		insetsOverride = {
-			applied: false,
-			reason: error instanceof Error ? error.message : String(error),
-		};
-	}
+	const insetsOverride = await applySafeAreaInsets(page, {
+		insets: {
+			top: record.insets?.top ?? 0,
+			bottom: record.insets?.bottom ?? 0,
+			left: record.insets?.left ?? 0,
+			right: record.insets?.right ?? 0,
+		},
+	});
+	/* Without the override the page reports 0 insets, so the check says the state
+	 *  could not answer rather than passing it — and the helper carries the REASON,
+	 *  because "the app declares no unsafe edges" and "CDP refused the override" are
+	 *  different findings that read the same. It is the same call the capture makes
+	 *  (`tools/lib/page.ts`), so the two cannot drift into measuring different pages. */
 	await page.send("Page.addScriptToEvaluateOnNewDocument", {
 		source: PRE_PAINT_PROBE,
 	});
@@ -1089,6 +1078,11 @@ export async function runAudit(options: AuditOptions) {
 	} finally {
 		const reaped = await chrome.close();
 		await server.close();
+		/* The relay keeps one world, so a claim left behind would refuse the next rig
+		 *  in this shell (round 3, Q7). Best-effort: a teardown never fails a run, and
+		 *  `relay` is the one the manifest names (the audit spawns its own when it does
+		 *  not name one, and that one dies with this process). */
+		if (relay) await releaseScenarioClaim(relay);
 		if (reaped.survivors !== 0) {
 			console.error(
 				`WARNING: ${reaped.survivors} Chrome process(es) survived the sweep of ${reaped.profile}. ` +

@@ -16,7 +16,10 @@ import { CONTROL, ROLE } from "@/ui/a11y";
 import { useReducedMotion, useTokenColor } from "@/ui/appearance";
 import { Heading } from "@/ui/components/heading";
 import { IconButton } from "@/ui/components/icon-button";
-import { useModalStackEntry } from "@/ui/components/modal-stack-entry";
+import {
+	ModalScopeContext,
+	useModalStackEntry,
+} from "@/ui/components/modal-stack-entry";
 import { useShadow } from "@/ui/elevation";
 import { effectiveDuration, parseCubicBezier } from "@/ui/motion";
 import { useTextScale } from "@/ui/text-scale-provider";
@@ -191,125 +194,131 @@ export const Sheet = ({
 	 *  second full-viewport surface over it — the rule and its reasoning are in
 	 *  `@/ui/modal-stack`, and the registration lives here because this is where the
 	 *  `Modal` is rendered. */
-	const covered = useModalStackEntry(visible);
+	const { covered, scope } = useModalStackEntry(visible);
 
 	return (
-		<Modal
-			visible={visible && !covered}
-			transparent
-			animationType="none"
-			onRequestClose={onClose}
-			// The covered application is inert while the sheet is up: `aria-modal`
-			// alone does not remove it from keyboard or screen-reader navigation.
-			accessibilityViewIsModal
-			testID={testID}
-		>
-			{/* The scaled type-scale variables are RE-PUBLISHED inside the modal:
-			 *  a React Native `Modal` renders through its own root — on the web,
-			 *  react-native-web portals it to a fresh node under `document.body` —
-			 *  which sits outside the element `TextScaleProvider` writes the scaled
-			 *  variables onto, so the sheet's own type kept the 100 % sizes while
-			 *  everything around it scaled (measured: the sheet title stayed 20 px
-			 *  at a 200 % setting — design D2). This is the provider's own mechanism
-			 *  applied one level down; on native it merely re-provides the same
-			 *  context. */}
-			<ScopedVariables variables={variables}>
-				<View
-					className="flex-1 justify-end"
-					onLayout={(event) => setColumnHeight(event.nativeEvent.layout.height)}
-				>
-					<Animated.View
-						style={{ opacity: scrimFade }}
-						className="absolute inset-0"
+		/* The scope publishes this sheet as the HOST of anything a modal is raised
+		 *  inside it — the conversations pane's menu is the app's nested case. */
+		<ModalScopeContext.Provider value={scope}>
+			<Modal
+				visible={visible && !covered}
+				transparent
+				animationType="none"
+				onRequestClose={onClose}
+				// The covered application is inert while the sheet is up: `aria-modal`
+				// alone does not remove it from keyboard or screen-reader navigation.
+				accessibilityViewIsModal
+				testID={testID}
+			>
+				{/* The scaled type-scale variables are RE-PUBLISHED inside the modal:
+				 *  a React Native `Modal` renders through its own root — on the web,
+				 *  react-native-web portals it to a fresh node under `document.body` —
+				 *  which sits outside the element `TextScaleProvider` writes the scaled
+				 *  variables onto, so the sheet's own type kept the 100 % sizes while
+				 *  everything around it scaled (measured: the sheet title stayed 20 px
+				 *  at a 200 % setting — design D2). This is the provider's own mechanism
+				 *  applied one level down; on native it merely re-provides the same
+				 *  context. */}
+				<ScopedVariables variables={variables}>
+					<View
+						className="flex-1 justify-end"
+						onLayout={(event) =>
+							setColumnHeight(event.nativeEvent.layout.height)
+						}
 					>
-						<Pressable
-							className="flex-1"
-							style={{ backgroundColor: scrimColour }}
-							accessibilityRole={ROLE.button}
-							accessibilityLabel="Close"
-							testID={CONTROL.sheetScrim}
-							onPress={onClose}
-						/>
-					</Animated.View>
-
-					<Animated.View
-						className={SHEET_SURFACE_CLASS}
-						style={{
-							...shadow,
-							/* THE SIDE BANDS, for the same reason the bottom one below is spent on
-							 *  the scroll content: a bottom sheet is full-bleed, so the moment the notch
-							 *  moves to an edge — landscape — its title AND its close control paint
-							 *  inside the unsafe band. Measured at iphone-15-landscape (insets 59/59,
-							 *  resolved by the capture rig): the title's left edge is x = 17, and the
-							 *  close control's right edge reaches x = 828 of 844.
-							 *
-							 *  The padding rides on the SURFACE, which carries the fill, so the sheet
-							 *  stays full-bleed behind the band and only its content is inset — the
-							 *  shape `Screen` uses (it pads its root, not its children). It is NOT
-							 *  `ConversationsDrawer`'s widen-and-pad: that spends the inset out of a
-							 *  FIXED-width panel's outer geometry, and a full-viewport surface has no
-							 *  outer geometry left to widen. */
-							paddingLeft: insets.left,
-							paddingRight: insets.right,
-							transform: [
-								{
-									translateY: rise.interpolate({
-										inputRange: [0, 1],
-										outputRange: [40, 0],
-									}),
-								},
-							],
-						}}
-					>
-						<View
-							className="flex-row items-center gap-2 px-4 py-3"
-							onLayout={(event) =>
-								setHeaderHeight(event.nativeEvent.layout.height)
-							}
+						<Animated.View
+							style={{ opacity: scrimFade }}
+							className="absolute inset-0"
 						>
-							<Heading level={2} className="flex-1 text-title text-ink">
-								{title}
-							</Heading>
-							<IconButton
+							<Pressable
+								className="flex-1"
+								style={{ backgroundColor: scrimColour }}
+								accessibilityRole={ROLE.button}
 								accessibilityLabel="Close"
-								testID={CONTROL.sheetClose}
+								testID={CONTROL.sheetScrim}
 								onPress={onClose}
-								icon={({ color, size }) => <X color={color} size={size} />}
 							/>
-						</View>
-						<ScrollView
-							style={
-								maxContentHeight === undefined
-									? undefined
-									: { maxHeight: maxContentHeight }
-							}
-							contentContainerClassName="px-4"
-							/* `pb-6` (24) plus the safe-area inset, computed rather than spelled
-							 *  as a class so the indicator's height rides the DEVICE, and the model /
-							 *  effort / slash sheets are corrected by the same line. With a pinned
-							 *  footer the inset belongs to the FOOTER (it is the last thing drawn),
-							 *  so the body keeps only the gutters — double-spending it would leave a
-							 *  dead band between the last field and the action. */
-							contentContainerStyle={{
-								paddingBottom: footer === undefined ? 24 + insets.bottom : 16,
+						</Animated.View>
+
+						<Animated.View
+							className={SHEET_SURFACE_CLASS}
+							style={{
+								...shadow,
+								/* THE SIDE BANDS, for the same reason the bottom one below is spent on
+								 *  the scroll content: a bottom sheet is full-bleed, so the moment the notch
+								 *  moves to an edge — landscape — its title AND its close control paint
+								 *  inside the unsafe band. Measured at iphone-15-landscape (insets 59/59,
+								 *  resolved by the capture rig): the title's left edge is x = 17, and the
+								 *  close control's right edge reaches x = 828 of 844.
+								 *
+								 *  The padding rides on the SURFACE, which carries the fill, so the sheet
+								 *  stays full-bleed behind the band and only its content is inset — the
+								 *  shape `Screen` uses (it pads its root, not its children). It is NOT
+								 *  `ConversationsDrawer`'s widen-and-pad: that spends the inset out of a
+								 *  FIXED-width panel's outer geometry, and a full-viewport surface has no
+								 *  outer geometry left to widen. */
+								paddingLeft: insets.left,
+								paddingRight: insets.right,
+								transform: [
+									{
+										translateY: rise.interpolate({
+											inputRange: [0, 1],
+											outputRange: [40, 0],
+										}),
+									},
+								],
 							}}
 						>
-							{children}
-						</ScrollView>
-						{footer === undefined ? null : (
 							<View
-								className="px-4 pt-3"
+								className="flex-row items-center gap-2 px-4 py-3"
 								onLayout={(event) =>
-									setFooterHeight(event.nativeEvent.layout.height)
+									setHeaderHeight(event.nativeEvent.layout.height)
 								}
-								style={{ paddingBottom: 24 + insets.bottom }}
 							>
-								{footer}
+								<Heading level={2} className="flex-1 text-title text-ink">
+									{title}
+								</Heading>
+								<IconButton
+									accessibilityLabel="Close"
+									testID={CONTROL.sheetClose}
+									onPress={onClose}
+									icon={({ color, size }) => <X color={color} size={size} />}
+								/>
 							</View>
-						)}
-					</Animated.View>
-				</View>
-			</ScopedVariables>
-		</Modal>
+							<ScrollView
+								style={
+									maxContentHeight === undefined
+										? undefined
+										: { maxHeight: maxContentHeight }
+								}
+								contentContainerClassName="px-4"
+								/* `pb-6` (24) plus the safe-area inset, computed rather than spelled
+								 *  as a class so the indicator's height rides the DEVICE, and the model /
+								 *  effort / slash sheets are corrected by the same line. With a pinned
+								 *  footer the inset belongs to the FOOTER (it is the last thing drawn),
+								 *  so the body keeps only the gutters — double-spending it would leave a
+								 *  dead band between the last field and the action. */
+								contentContainerStyle={{
+									paddingBottom: footer === undefined ? 24 + insets.bottom : 16,
+								}}
+							>
+								{children}
+							</ScrollView>
+							{footer === undefined ? null : (
+								<View
+									className="px-4 pt-3"
+									onLayout={(event) =>
+										setFooterHeight(event.nativeEvent.layout.height)
+									}
+									style={{ paddingBottom: 24 + insets.bottom }}
+								>
+									{footer}
+								</View>
+							)}
+						</Animated.View>
+					</View>
+				</ScopedVariables>
+			</Modal>
+		</ModalScopeContext.Provider>
 	);
 };

@@ -49,7 +49,7 @@ import { bool, csv, num, parseArgs, str } from "../lib/args.ts";
 import type { CdpPage } from "../lib/cdp.ts";
 import { sleep } from "../lib/cdp.ts";
 import { launchChrome } from "../lib/chrome.ts";
-import { freshPage, withDeadline } from "../lib/page.ts";
+import { applySafeAreaInsets, freshPage, withDeadline } from "../lib/page.ts";
 import {
 	captureHookQuery,
 	cellHookQuery,
@@ -61,7 +61,7 @@ import {
 	seedQuery,
 	stateStillComing,
 } from "../lib/readiness.ts";
-import { selectScenario } from "../lib/relay.ts";
+import { releaseScenarioClaim, selectScenario } from "../lib/relay.ts";
 import { serveDir } from "../lib/static-server.ts";
 import { DEFAULT_PASSWORD } from "../mock-relay/relay.ts";
 import { renderGallery } from "./gallery.ts";
@@ -113,7 +113,7 @@ let settledRetakes = 0;
  * not a size policy: it catches a plan far larger than any sample this harness
  * offers (an inflated cell registry, a cell list copied from another tree), and it
  * is why a big run is always something the caller typed `--yes` for. It sits BELOW
- * every tier on purpose — `ci` plans 612 cells, `core` 1836, `full` 6732 — so none of
+ * every tier on purpose — `ci` plans 624 cells, `core` 1872, `full` 6864 — so none of
  * them starts by accident; the CI job passes `--yes` for exactly that reason. It is
  * NOT tied to the default tier, so it must not be raised to "let the default run": a
  * documented invocation that plans the whole `core` tier is a 69-minute command, and
@@ -128,7 +128,7 @@ const CONFIRM_THRESHOLD = 120;
  * the floor a small plan still gets.
  *
  * WHY THE DEFAULT IS DERIVED RATHER THAN FIXED. It used to be a flat 900 s, which
- * holds about 400 cells: a `core` run (1836 cells) or a dispatched `full` run (6732)
+ * holds about 400 cells: a `core` run (1872 cells) or a dispatched `full` run (6864)
  * was therefore cut off by the harness's own default and reported hundreds of cells
  * as having no frame — a bound firing on a plan it was never sized for, which reads
  * like a finding about the app and is not one. Deriving it from the plan makes the
@@ -396,25 +396,6 @@ const frameName = (cell: FramePlan): string =>
  * capture carries on with the custom properties alone and says so, because
  * silently reporting 0 insets would make every safe-area frame a false pass.
  */
-async function applySafeAreaInsets(
-	page: CdpPage,
-	device: DeviceProfile,
-): Promise<boolean> {
-	try {
-		await page.send("Emulation.setSafeAreaInsetsOverride", {
-			insets: { ...device.insets },
-		});
-		return true;
-	} catch (error) {
-		const reason = error instanceof Error ? error.message : String(error);
-		console.error(
-			`  note: Emulation.setSafeAreaInsetsOverride unavailable (${reason}); ` +
-				"safe-area frames carry custom properties only, so env()-based layout will read 0",
-		);
-		return false;
-	}
-}
-
 /**
  * Capture one cell: set the metrics, navigate, wait for the app to render, and
  * take the screenshot(s). The measurements are taken *after* the screenshot so
@@ -510,7 +491,8 @@ async function captureCell(
 			{ name: "prefers-reduced-motion", value: "no-preference" },
 		],
 	});
-	await applySafeAreaInsets(page, device);
+	const insets = await applySafeAreaInsets(page, device);
+	void insets;
 
 	// A web build has no single "rendered" event, so the boot budget is a wait on
 	// time — the thing §"Wait on the event" warns about. It is bounded and it is
@@ -654,7 +636,9 @@ async function captureCell(
 			const target =
 				"click" in outcome.action
 					? outcome.action.click
-					: outcome.action.type.testID;
+					: "hold" in outcome.action
+						? outcome.action.hold.testID
+						: outcome.action.type.testID;
 			/*
 			 * `ok-after-scroll` IS A PASS WITH A FACT ATTACHED, and the fact is
 			 * recorded rather than judged — unless the control is one this repository
@@ -917,6 +901,46 @@ export interface Measurements {
 	route?: string;
 	title?: string;
 	mountedElements?: number;
+	/**
+	 * Where the page was scrolled to when the frame was taken.
+	 *
+	 * The guard restores every scroll it moved, so "this frame is of the resting
+	 * page" is a claim only these offsets can settle (review round 3, D9): a
+	 * displaced page is as byte-stable as a rested one, and the cells whose press
+	 * took the scroll path are exactly the ones a PNG cannot discriminate.
+	 */
+	scroll?: {
+		document: number;
+		body: number;
+		displaced: Array<{ top: number; left: number }>;
+	};
+}
+
+/**
+ * Narrow the probe's frame-time scroll reading. A malformed entry is dropped
+ * rather than defaulted: "the page was at rest" must never be the answer a
+ * missing field produces.
+ */
+function asScroll(value: unknown): Measurements["scroll"] | undefined {
+	if (typeof value !== "object" || value === null || Array.isArray(value))
+		return undefined;
+	const bag = value as Record<string, unknown>;
+	const displaced = Array.isArray(bag.displaced)
+		? bag.displaced
+				.map((entry) => {
+					const row =
+						typeof entry === "object" && entry !== null
+							? (entry as Record<string, unknown>)
+							: {};
+					return { top: Number(row.top), left: Number(row.left) };
+				})
+				.filter((row) => Number.isFinite(row.top) && Number.isFinite(row.left))
+		: [];
+	return {
+		document: Number(bag.document ?? 0),
+		body: Number(bag.body ?? 0),
+		displaced,
+	};
 }
 
 /** Narrow the measurement probe's reply; a non-object is reported as no reading. */
@@ -956,6 +980,7 @@ function asMeasurements(value: unknown): Measurements | null {
 		documentClientWidth: count("documentClientWidth"),
 		bodyScrollWidth: count("bodyScrollWidth"),
 		textNodeCount: count("textNodeCount"),
+		scroll: asScroll(bag.scroll),
 		medianTextHeight:
 			typeof bag.medianTextHeight === "number" ? bag.medianTextHeight : null,
 		textRoleSizes: Array.isArray(bag.textRoleSizes)
@@ -1957,6 +1982,9 @@ export async function runCapture(options: CaptureOptions) {
 	} finally {
 		reaped = await chrome.close();
 		await server.close();
+		/* The relay keeps one world, so a claim left behind would refuse the next rig
+		 *  in this shell (round 3, Q7). Best-effort: a teardown never fails a run. */
+		if (options.relay) await releaseScenarioClaim(options.relay);
 	}
 
 	// The two-part teardown guarantee is only true if the run that ended normally says
@@ -2787,9 +2815,9 @@ if (isMain) {
 				"                      share it covered, and names the profiles it did not.",
 				"                        ci    2 of 19 profiles — 612 cells, both themes, scales 100,",
 				"                              135 and 200 (~19 min) — the per-push CI job's sample",
-				"                        core  5 of 19 profiles — 1836 cells, both themes,",
+				"                        core  5 of 19 profiles — 1872 cells, both themes,",
 				"                              every scale — the local default",
-				"                        full  19 of 19 profiles — 6732 cells",
+				"                        full  19 of 19 profiles — 6864 cells",
 				"  --devices <names>   comma list. Default: the tier's profiles (ci 2, core 5 by",
 				"                      default, --full for all 19)",
 				"  --themes <names>    default dark,light",
@@ -2816,7 +2844,7 @@ if (isMain) {
 	// overrides any of them.
 	//
 	// An unknown tier is an ERROR rather than a silent fall back to `core`: a typo'd
-	// `--tier ci` that quietly ran 1836 cells would spend ~69 minutes on a capture the
+	// `--tier ci` that quietly ran 1872 cells would spend ~70 minutes on a capture the
 	// caller did not ask for, and the whole point of naming the sample is that the
 	// run you get is the one you asked for.
 	const tierFlag = bool(flags, "full") ? "full" : str(flags, "tier", "core");
