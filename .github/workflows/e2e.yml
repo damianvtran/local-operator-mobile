@@ -630,15 +630,39 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build the debug APK to install on the emulator
-        # Built here rather than downloaded from the Android workflow: a
-        # cross-workflow artefact download couples two independent triggers, and
-        # the debug APK is exactly what the flows should run against.
+      - name: Build the APK the flows run against
+        # WHY RELEASE AND NOT DEBUG: a Debug build of a React Native app expects
+        # a Metro dev server at runtime — this job starts no dev server, so the
+        # launched app renders a red error screen and the flows then assert
+        # against a UI that does not exist. ios.yml states the rule for its own
+        # simulator job: "a Debug build of a React Native app expects a Metro
+        # dev server at runtime … it renders a red error screen. A Release build
+        # embeds the JavaScript bundle, so the launched app renders the real UI."
+        #
+        # WHY THIS JOB GENERATES ITS OWN KEY: the workflow carries no signing
+        # material and must not get any. The release signing plugin
+        # (plugins/with-android-release-signing.js) deliberately fails loudly
+        # without LO_RELEASE_* material rather than fall back to the debug key,
+        # so this job generates a throwaway keystore for the emulator install
+        # only. The real signing stays in release.yml, where the secrets live.
+        #
+        # Built here rather than downloaded from the Android workflow: that job
+        # uploads the debug, Metro-dependent APK, and a cross-workflow artefact
+        # download would couple two independent triggers.
         run: |
           set -euo pipefail
           pnpm exec expo prebuild --platform android --clean --no-install
+          keystore="$RUNNER_TEMP/e2e-release.keystore"
+          keytool -genkeypair -v -keystore "$keystore" -alias lo-e2e \
+            -keyalg RSA -keysize 2048 -validity 30 \
+            -storepass lo-e2e-ci -keypass lo-e2e-ci \
+            -dname "CN=lo-e2e, OU=ci, O=local-operator, C=US"
           cd android
-          ./gradlew assembleDebug --no-daemon
+          LO_RELEASE_STORE_FILE="$keystore" \
+          LO_RELEASE_STORE_PASSWORD=lo-e2e-ci \
+          LO_RELEASE_KEY_ALIAS=lo-e2e \
+          LO_RELEASE_KEY_PASSWORD=lo-e2e-ci \
+            ./gradlew assembleRelease --no-daemon
 
       - name: Read the app's identity from the APK it just built
         # The flows are told the APP_ID they should launch, and until this step
@@ -658,10 +682,10 @@ jobs:
           set -euo pipefail
           aapt=$(find "${ANDROID_HOME:-$ANDROID_SDK_ROOT}" -name aapt2 -type f | sort | tail -1)
           echo "aapt2: $aapt"
-          package=$("$aapt" dump badging android/app/build/outputs/apk/debug/app-debug.apk \
+          package=$("$aapt" dump badging android/app/build/outputs/apk/release/app-release.apk \
             | sed -n "s/^package: name='\\([^']*\\)'.*/\\1/p" | head -1)
           if [ -z "$package" ]; then
-            echo "::error::could not read the package name out of the debug APK"
+            echo "::error::could not read the package name out of the release APK"
             exit 1
           fi
           echo "APP_ID=$package" >> "$GITHUB_ENV"
@@ -738,18 +762,23 @@ jobs:
           # at line 1 (`set: Illegal option -o pipefail`, exit 2) before adb install
           # or maestro ever ran.
           script: |
-            adb install -r android/app/build/outputs/apk/debug/app-debug.apk
+            adb install -r android/app/build/outputs/apk/release/app-release.apk
             # `SESSION_ID` is the harness's own fixture session id, from the corpus
             # the mock relay serves (`fixtures/relay/**` — the id every captured
             # projection uses).
             # The `test` subcommand requires the flow target positional: pass the
             # workspace root (`e2e/maestro`) — its `flows:` list selects which flows
             # run, and the config's globs resolve against the directory passed.
+            # Per-step screenshots and per-flow logs land under `--test-output-dir`
+            # — v2.11.0 writes its run artifacts (manifest, logs, takeScreenshot/)
+            # into that directory — and that directory is what the upload step
+            # takes. `-e` values reach the flows' own environment; they cannot
+            # route the CLI's outputs.
             # One retry, and only one (ADR 0003): Maestro 2.11.0's CLI has no retry
             # flag, so the invocation itself re-runs the set once on failure and
             # raises a ::warning — a flake stays visible, a second failure is a
             # failure (the step's exit code).
-            run_flows() { maestro test --config e2e/maestro/config.yaml -e APP_ID="$APP_ID" -e RELAY_URL="$RELAY_URL_FOR_DEVICE" -e RELAY_PASSWORD="$(cat "$RUNNER_TEMP/relay-password")" -e SESSION_ID=6714def86197 -e MAESTRO_SCREENSHOTS="$RUNNER_TEMP/maestro-screenshots" e2e/maestro; }; run_flows || { echo "::warning title=Maestro flaked once::the flow set failed; re-running it once, per ADR 0003 — a second failure is a failure"; run_flows; }
+            run_flows() { maestro test --config e2e/maestro/config.yaml -e APP_ID="$APP_ID" -e RELAY_URL="$RELAY_URL_FOR_DEVICE" -e RELAY_PASSWORD="$(cat "$RUNNER_TEMP/relay-password")" -e SESSION_ID=6714def86197 --test-output-dir "$RUNNER_TEMP/maestro-screenshots" e2e/maestro; }; run_flows || { echo "::warning title=Maestro flaked once::the flow set failed; re-running it once, per ADR 0003 — a second failure is a failure"; run_flows; }
 
       - name: Stop the mock relay
         if: always()
