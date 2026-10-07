@@ -267,7 +267,7 @@ jobs:
     # (run 37379067992, this job, the tiers as they stand): setup and checkouts 21 s +
     # install 4 s + typecheck 1 s + EXPORT 34 s + RELAY START 1 s + capture 1044 s +
     # canary 81 s + stop relay 0 s + upload of the 91 MB artifact 6 s = 1192 s, the job's
-    # whole measured wall time, plus the audit at its own measured rate — 624 cells x
+    # whole measured wall time, plus the audit at its own measured rate — 648 cells x
     # 1.25 s = 765 s, which is DERIVED rather than taken from that run, whose capture
     # failed the identical-state gate before the audit step ran. That is ~1,957 s ≈ 33
     # min against the 80 below, so the bound is ~2.4x the work: the headroom is the point.
@@ -284,7 +284,10 @@ jobs:
     # review once already. THEY ROSE AGAIN with the projects lifecycle slice, which
     # added nine declared cells (504 -> 612 on `ci`, 1512 -> 1836 on `core`, 5544 ->
     # 6732 on `full`), and round 3's remediation one more (`S15/menu-open`, the pane's
-    # long-press menu: 612 -> 624, 1836 -> 1872, 6732 -> 6864). Those cells are states
+    # long-press menu: 612 -> 624, 1836 -> 1872, 6732 -> 6864), and the fold onto the
+    # moved base two more from upstream (`S5/populated-long`, `S5/rich-rows`): the plans
+    # at THIS head are 648 / 1944 / 7128, each re-derived from the folded tree's own
+    # `--plan` rather than scaled. Those cells are states
     # that had no cell at all — the create sheet,
     # its relay refusal, the milestone editor, the remove confirm, the slash refusal
     # and the in-flight writes — so shrinking them is not an option the way a scale or
@@ -351,9 +354,9 @@ jobs:
         # 36669731994) without GitHub reaping it, so the run said only that it was
         # still going. Measured again on 2026-10-03 (run 37098393675), the capture
         # costs 2.24 s/cell — 403 cells / 1209 frames in 903.1 s — so the `core`
-        # plan of 1872 cells needs ~70 min and cannot finish inside this bound. The
-        # `--tier ci` sample can: 624 cells, ~23 min at the same rate, which leaves
-        # the audit and the canary their own steps below. (`full` is 6864 cells, and
+        # plan of 1944 cells needs ~73 min and cannot finish inside this bound. The
+        # `--tier ci` sample can: 648 cells, ~24 min at the same rate, which leaves
+        # the audit and the canary their own steps below. (`full` is 7128 cells, and
         # stays a dispatched or local run.)
         #
         # RAISED 20 -> 30 WITH THE CI AXIS, and the two move together: `CI_SCALES`
@@ -364,7 +367,7 @@ jobs:
         # steps here carry.
         #
         # RAISED 30 -> 40 WITH THE LIFECYCLE CELLS, for exactly that property: nine new
-        # declared cells put this sample at 624, and 624 x 3 s = 31.2 min is ABOVE the
+        # declared cells put this sample at 648, and 648 x 3 s = 32.4 min is ABOVE the
         # old bound — a step bound that the plan's own deadline can exceed would fire on
         # a healthy run and stop being a signal. 40 holds the derived deadline with
         # ~1.7x the measured cost on top of it.
@@ -392,7 +395,7 @@ jobs:
         # BOUND DERIVED FROM THE CELL COUNT, not guessed. On run 37167390506 this
         # step audited 250 of the ci tier's 256 cells in 312 s — 1.25 s/cell, with
         # no FAIL row — so the tier as it stood then was 256 x 1.25 s = ~5.3 min. It
-        # plans 624 cells today (~13 min at that rate) and 20 gives ~1.5x headroom
+        # plans 648 cells today (~13.5 min at that rate) and 20 gives ~1.5x headroom
         # over that, the ratio this bound has always carried; it moved 10 -> 15 with
         # the capture above when `CI_SCALES` gained the boundary step, and 15 -> 20 with
         # the lifecycle cells (504 -> 612). At 5 it was killed with six cells to go: a bound below the
@@ -451,33 +454,34 @@ jobs:
     # WHY THIS JOB EXISTS. The operator's requirement is QA "across a variety of different
     # device sizes of phone … and tablets both vertical and horizontal", and until this job
     # nothing automated covered it: the per-push `web-audit` job runs `--tier ci`, which is
-    # 2 of the matrix's 19 declared profiles, and both `core` (5 profiles / 1872 cells) and
-    # `full` (19 / 6864) were local or dispatched only. This job captures and audits `core`,
+    # 2 of the matrix's 19 declared profiles, and both `core` (5 profiles / 1944 cells) and
+    # `full` (19 / 7128) were local or dispatched only. This job captures and audits `core`,
     # on the NIGHTLY schedule only, so the per-push path is untouched and the `ci` job keeps
     # its own 40-minute capture bound rather than being stretched to fit a 69-minute one.
     #
     # SIZED FROM THE MEASUREMENT, NOT FROM HOPE. The runner's own rate is 2.24 s/cell
     # (403 cells / 1209 frames in 903.1 s, run 37098393675, a plan of 403 cells then),
     # which is also the number `docs/e2e/README.md` uses to say a `core` run is ~69
-    # minutes: 1872 x 2.24 s = 4,193 s.
+    # minutes: 1944 x 2.24 s = 4,355 s.
     # The plan this job holds is the one the capture prints before it renders anything, so
     # the bound is checked against THAT rather than against a table, and each plan is
     # pinned to the ref that printed it: at 85b2785 `--plan --tier core --consecutive`
     # printed `858 cells x 3 frame(s) = 2574 frames` with a derived `deadline: 2574 s`, and
-    # at THIS head it prints `1872 cells x 3 frame(s) = 5616 frames` and `deadline: 5616 s`
+    # at THIS head it prints `1944 cells x 3 frame(s) = 5832 frames` and `deadline: 5832 s`
     # (3000 ms/cell). The capture step's 100 is above both derived deadlines (so the step
-    # cannot cut short the budget the run computed for itself) and ~1.4x the ~70 min the
-    # 1872 cells cost at 2.24 s/cell. It moved 95 -> 100 in round 3 for the reason the
-    # step exists: 5616 s is 93.6 min, so 95 cleared the run's own deadline by 1.4 minutes
+    # cannot cut short the budget the run computed for itself) and ~1.45x the ~73 min the
+    # 1944 cells cost at 2.24 s/cell. It moved 95 -> 100 in round 3 for the reason the
+    # step exists: 5832 s is 97.2 min, so the 95 this job carried would have cleared the
+    # run's own deadline by ~2 minutes
     # — a bound that tight turns a slightly slow runner into a step that cuts the run
     # short, which is the defect this comment refuses one level up. 100 rather than a
     # rounder 120 because 120 would make capture + audit equal this job's own 170-minute
     # bound exactly. The per-push steps carry the same relationship: capture 40 against a
-    # derived 1872 s (31.2 min) and audit 20 against 624 x 1.25 s (13 min).
+    # derived 1944 s (32.4 min) and audit 20 against 648 x 1.25 s (13.5 min).
     # The audit runs at 1.25 s/cell (250 of the 256 cells the tier held then in 312 s, run
-    # 37167390506), so `core` is 1872 x 1.25 s = 2,340 s ≈ 39 min and its step bound is 50.
+    # 37167390506), so `core` is 1944 x 1.25 s = 2,430 s ≈ 41 min and its step bound is 50.
     # The job bound holds its parts, the invariant the other jobs in this file state:
-    # `install + export + capture 100 + audit 50 < 170`. This is a nightly job of ~70 min of
+    # `install + export + capture 100 + audit 50 < 170`. This is a nightly job of ~73 min of
     # capture and ~39 min of audit inside that bound; it does not run on a pull request.
     #
     # EXPECTED FIRST-RUN VERDICT: THIS JOB IS RED, AND THAT IS WHAT IT IS FOR. It has
@@ -496,7 +500,7 @@ jobs:
     # every term reproduces). The head they were taken at (`15deac3`) planned 504 cells on
     # `ci` and 1512 on `core` — re-derived with `--plan` AT THAT REF, and NOT the 1092 this
     # sentence used to quote: 1092 is not any tier's plan at any ref the review derived
-    # (85b2785 264/858, 4649a08 884, 756a6af 910, 15deac3 504/1512, this head 624/1872), it
+    # (85b2785 264/858, 4649a08 884, 756a6af 910, 15deac3 504/1512, the folded head 648/1944), it
     # came in with the PR that wrote the paragraph, and a figure nothing prints is a figure
     # nobody can check. The plans at THIS head are in the SIZING note above, each with the
     # ref that prints it.

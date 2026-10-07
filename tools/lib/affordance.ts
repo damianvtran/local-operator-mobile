@@ -82,6 +82,56 @@ export type Affordance =
  *  `delayLongPress` default, so a bare hold is the gesture the app is built for. */
 export const DEFAULT_HOLD_MS = 500;
 
+/**
+ * The recorded openers, narrowed from a manifest's `unknown`.
+ *
+ * EVERY SHAPE THIS FILE CAN EMIT BELONGS HERE, and that is not a formality: the
+ * audit re-drives a cell by replaying what the manifest recorded, so a shape this
+ * function does not know is DROPPED and the re-drive silently runs with no actions
+ * at all — the state then never arrives and the cell is reported as
+ * `state-not-reproduced`, which reads like the app's defect rather than the
+ * harness's. It happened the moment `hold` was added (`S15/menu-open` re-driven
+ * with an empty action list), which is why the shapes are enumerated here rather
+ * than in the audit, and why `affordance.test.ts` asserts that EVERY action the
+ * matrix declares survives this narrowing.
+ *
+ * A malformed entry is still DROPPED rather than thrown on — the manifest is
+ * written by this repository's own capture, and a shape this cannot read is a
+ * mismatch the readiness comparison surfaces as a missing state marker: a failure
+ * that names the cell, rather than a crash that names nothing.
+ */
+export function narrowAffordances(value: unknown): Affordance[] {
+	if (!Array.isArray(value)) return [];
+	const out: Affordance[] = [];
+	for (const entry of value) {
+		if (typeof entry !== "object" || entry === null) continue;
+		const row = entry as Record<string, unknown>;
+		if (typeof row.click === "string") {
+			out.push({ click: row.click });
+			continue;
+		}
+		const hold =
+			typeof row.hold === "object" && row.hold !== null
+				? (row.hold as Record<string, unknown>)
+				: null;
+		if (hold !== null) {
+			if (typeof hold.testID === "string" && typeof hold.ms === "number") {
+				out.push({ hold: { testID: hold.testID, ms: hold.ms } });
+			}
+			continue;
+		}
+		const spec =
+			typeof row.type === "object" && row.type !== null
+				? (row.type as Record<string, unknown>)
+				: null;
+		if (spec === null) continue;
+		if (typeof spec.testID === "string" && typeof spec.text === "string") {
+			out.push({ type: { testID: spec.testID, text: spec.text } });
+		}
+	}
+	return out;
+}
+
 /** A compact label for a log line, a manifest or a failure sentence. */
 export const describeAffordance = (action: Affordance): string => {
 	if ("click" in action) return `click ${action.click}`;

@@ -1,10 +1,12 @@
 import { afterEach, describe, expect, it } from "vitest";
 
+import { CELL_OPENERS } from "../visual/matrix.ts";
 import {
 	type Affordance,
 	affordanceScript,
 	describeAffordance,
 	describeAffordances,
+	narrowAffordances,
 	runAffordances,
 } from "./affordance.ts";
 
@@ -723,6 +725,36 @@ describe("the affordance script", () => {
 		expect(scrolling?.scrollTop).toBe(0);
 		expect(scrolling?.scrollLeft).toBe(0);
 		expect(events).toHaveLength(0);
+	});
+
+	it("narrows every action the MATRIX declares, so no re-drive runs with an empty list", () => {
+		/* THE GUARD FOR A SILENT NO-OP (round 3, found during the fold). The audit re-drives
+		 *  a cell by replaying the openers the manifest recorded, so an action shape the
+		 *  narrowing does not know is DROPPED — the re-drive then presses nothing at all,
+		 *  which surfaces as `state-not-reproduced` and reads like the app's defect. That is
+		 *  exactly what happened when `hold` was added: `S15/menu-open` re-driven with an
+		 *  empty action list, three times, before the cause was read off the narrowing.
+		 *  Asserting the SHAPES would not have caught it; asserting the matrix's own
+		 *  declarations does, and it catches the next new shape on the day it lands. */
+		const declared = Object.entries(CELL_OPENERS).flatMap(([cell, actions]) =>
+			actions.map((action) => ({ cell, action })),
+		);
+		expect(declared.length).toBeGreaterThan(0);
+		const lost = declared.filter(
+			({ action }) => narrowAffordances([action]).length !== 1,
+		);
+		expect(lost).toEqual([]);
+		// And the shapes round-trip as themselves, not merely as "something".
+		expect(narrowAffordances([{ hold: { testID: "row", ms: 1200 } }])).toEqual([
+			{ hold: { testID: "row", ms: 1200 } },
+		]);
+		expect(
+			narrowAffordances([{ click: "a" }, { type: { testID: "b", text: "c" } }]),
+		).toEqual([{ click: "a" }, { type: { testID: "b", text: "c" } }]);
+		// A malformed entry is still dropped rather than thrown on.
+		expect(
+			narrowAffordances([{ hold: { testID: "row" } }, "nonsense", 7]),
+		).toEqual([]);
 	});
 
 	it("describes an action in one phrase, for a manifest or a failure", async () => {
