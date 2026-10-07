@@ -10,6 +10,14 @@ import {
 import type { TranscriptEntry } from "@/contracts";
 import { anchorBottomVisible } from "@/features/session/completion-visibility";
 import { TranscriptRow } from "@/features/session/components/transcript-row";
+import { TurnBar } from "@/features/session/components/turn-bar";
+import { scrollAnchorFromHook } from "@/features/session/scroll-hook";
+import {
+	condensePlan,
+	type LatchedTurn,
+	parseExpandHook,
+	type TranscriptItem,
+} from "@/features/session/turn-condensing";
 import { windowPolicy } from "@/features/session/windowing";
 import { completionAnchorId, transcriptRowId } from "@/ui/a11y";
 
@@ -33,6 +41,13 @@ import { completionAnchorId, transcriptRowId } from "@/ui/a11y";
  * **The last-good rows stay on screen through a connection loss** — that is the
  * projection store's `stale beats blank` rule, and this component inherits it by
  * simply rendering whatever rows it is given. It never clears on its own.
+ *
+ * **Completed turns condense; the active one never does.** Which turns collapse
+ * into a summary bar, and what the bar says, is `turn-condensing.ts`'s decision
+ * (pure, and pinned by its no-un-condense-jitter test). It is APPLIED here
+ * because the list is where the rendered rows and their measured heights live:
+ * the collapse and the anchor geometry must agree about what occupies the
+ * screen, or one of them is lying.
  */
 export type TranscriptListProps = {
 	sessionId: string;
@@ -64,6 +79,26 @@ export type TranscriptListProps = {
  *  would silently stop following on almost every device. */
 const TAIL_BAND_PT = 48;
 
+/** No turns open — a shared empty so a session-switch reset bails out of a
+ *  render instead of committing an equal-but-new set. */
+const NO_TURNS: ReadonlySet<string> = new Set();
+
+/**
+ * The capture hook's turn keys: `lo-expand` on the page's query string names
+ * turn keys to render expanded. `parseExpandHook` owns the parse (and why a
+ * harness page may ask at all — the audit rig drives no taps); this reads it
+ * off `globalThis`, guarded the way `src/stt/recorder.ts` reads `lo-recorder`, so
+ * the module stays importable off-web.
+ */
+const expandHookKeys = (): ReadonlySet<string> => {
+	const locationLike = (globalThis as { location?: { search?: string } })
+		.location;
+	if (locationLike?.search === undefined) return NO_TURNS;
+	return parseExpandHook(
+		new URLSearchParams(locationLike.search).get("lo-expand"),
+	);
+};
+
 /**
  * Scroll offsets, per session, for the life of the process.
  *
@@ -85,17 +120,70 @@ export const TranscriptList = ({
 	onAnchorVisible,
 	testID,
 }: TranscriptListProps) => {
-	const listRef = useRef<FlatList<TranscriptEntry>>(null);
-	const atTail = useRef(true);
+	const listRef = useRef<FlatList<TranscriptItem>>(null);
+	/** The capture hook's anchor: `top` starts the list unfollowed so a still can
+	 *  show the conversation's shape (see `scroll-hook.ts` for why the app exposes
+	 *  one position). Read once — it is a statement about the page. */
+	const [scrollAnchor] = useState(scrollAnchorFromHook);
+	const atTail = useRef(scrollAnchor !== "top");
 	/** Which session's offset has already been restored, held as a ref rather than
 	 *  in an effect keyed on `sessionId`: the restore has to run when the list first
 	 *  has content, which is an event the list emits, not a render this hook sees. */
 	const restoredFor = useRef<string | null>(null);
 	const [viewportPt, setViewportPt] = useState(0);
 
+	/* ---------------------------------------------------------------- condense --
+	 *
+	 * The plan over the current entries, plus the two facts that are NOT derivable
+	 * from the current frame:
+	 *
+	 *  - `latchRef` is the transcript's memory that a turn has condensed, and the
+	 *    bar facts it froze with (`turn-condensing.ts`'s invariant 2: a later
+	 *    frame may regress a row it already summarised, and must not be able to
+	 *    re-open a bar the reader has seen). It is written during render — the
+	 *    same pattern the anchor refs below use — because an effect would lag by a
+	 *    frame, and the lag is visible as a bar that arrives late.
+	 *  - `readerExpanded` is the reader's own open/close state; the session-switch
+	 *    effect below resets it (another conversation's turns are not this one's).
+	 *
+	 * The capture hook joins the reader's set so a harness page can render the
+	 * open state as a still. */
+	const [hookExpanded] = useState(expandHookKeys);
+	const [readerExpanded, setReaderExpanded] =
+		useState<ReadonlySet<string>>(NO_TURNS);
+	const latchRef = useRef<{
+		session: string;
+		latch: ReadonlyMap<string, LatchedTurn>;
+	}>({ session: sessionId, latch: new Map() });
+	if (latchRef.current.session !== sessionId) {
+		// A session switch starts the memory over — the `heightsRef` own rule.
+		latchRef.current = { session: sessionId, latch: new Map() };
+	}
+	const expanded = useMemo(() => {
+		if (hookExpanded.size === 0) return readerExpanded;
+		return new Set([...readerExpanded, ...hookExpanded]);
+	}, [readerExpanded, hookExpanded]);
+	const plan = useMemo(
+		() => condensePlan({ entries, expanded, latch: latchRef.current.latch }),
+		[entries, expanded],
+	);
+	/* Idempotent for a given `entries` (the latch only grows), so a
+	 * double-invoked render computes the same plan. */
+	latchRef.current.latch = plan.latch;
+	const toggleTurn = useCallback((turnKey: string, open: boolean) => {
+		setReaderExpanded((current) => {
+			const next = new Set(current);
+			if (open) next.add(turnKey);
+			else next.delete(turnKey);
+			return next;
+		});
+	}, []);
+
 	const policy = useMemo(
-		() => windowPolicy(viewportPt > 0 ? viewportPt : 844, entries.length),
-		[viewportPt, entries.length],
+		// The window's unit is what the FlatList MOUNTS, so it counts the plan's
+		// items: a condensed turn mounts its bar, not the work behind it.
+		() => windowPolicy(viewportPt > 0 ? viewportPt : 844, plan.items.length),
+		[viewportPt, plan.items.length],
 	);
 
 	/* ---------------------------------------------------- the anchor geometry --
@@ -123,8 +211,10 @@ export const TranscriptList = ({
 	 * handler is fine, but the refs keep the decision ONE function. */
 	const anchorIdRef = useRef<string | null>(anchorId);
 	anchorIdRef.current = anchorId;
-	const entriesRef = useRef(entries);
-	entriesRef.current = entries;
+	/* The plan's items, not the raw entries: the anchor's position is computed
+	 * over what is RENDERED (see `recompute`), and this is that list. */
+	const itemsRef = useRef<readonly TranscriptItem[]>(plan.items);
+	itemsRef.current = plan.items;
 	const viewportRef = useRef(0);
 	viewportRef.current = viewportPt;
 	const onAnchorVisibleRef = useRef(onAnchorVisible);
@@ -141,15 +231,20 @@ export const TranscriptList = ({
 			report(false);
 			return;
 		}
-		const rows = entriesRef.current;
-		const index = rows.findIndex((entry) => entry.id === anchor);
+		/* The walk runs over the RENDERED items, not the wire rows: a condensed
+		 * turn's hidden rows take no space, so counting them (or waiting for
+		 * heights they never get) would misreport where the anchor sits. Every
+		 * item AFTER the anchor must have a measured height, or the anchor's
+		 * position relative to the content's end is unknown — and unknown must
+		 * never read as "visible" (see `anchorBottomVisible`). */
+		const rows = itemsRef.current;
+		const index = rows.findIndex(
+			(item) => item.kind === "entry" && item.id === anchor,
+		);
 		if (index < 0) {
 			report(false);
 			return;
 		}
-		/* Every row AFTER the anchor must have a measured height, or the anchor's
-		 * position relative to the content's end is unknown — and unknown must
-		 * never read as "visible" (see `anchorBottomVisible`). */
 		let afterHeight: number | null = 0;
 		for (let i = index + 1; i < rows.length; i += 1) {
 			const height = heightsRef.current.get(rows[i]?.id ?? "");
@@ -181,7 +276,8 @@ export const TranscriptList = ({
 	);
 
 	/* A session switch starts the geometry over: heights belong to the rows that
-	 *  laid out, and the previous conversation's are not this one's. `sessionId`
+	 *  laid out, and the previous conversation's are not this one's; the reader's
+	 *  open turns belong to the conversation that was open too. `sessionId`
 	 *  is a dependency the exhaustive-deps rule cannot justify from the body (the
 	 *  refs carry the data), and it is exactly the trigger that matters: without
 	 *  it a switch would recompute against the previous conversation's heights
@@ -189,6 +285,7 @@ export const TranscriptList = ({
 	// biome-ignore lint/correctness/useExhaustiveDependencies: see the comment above
 	useEffect(() => {
 		heightsRef.current.clear();
+		setReaderExpanded(NO_TURNS);
 		recompute();
 	}, [sessionId, recompute]);
 
@@ -239,7 +336,9 @@ export const TranscriptList = ({
 			if (restoredFor.current !== sessionId) {
 				restoredFor.current = sessionId;
 				const saved = scrollOffsets.get(sessionId);
-				if (saved !== undefined && saved > 0) {
+				// The capture hook's anchor outranks a saved offset: a page that asked
+				// for `top` asked for the top.
+				if (scrollAnchor !== "top" && saved !== undefined && saved > 0) {
 					listRef.current?.scrollToOffset({ offset: saved, animated: false });
 					recompute();
 					return;
@@ -250,44 +349,62 @@ export const TranscriptList = ({
 			}
 			recompute();
 		},
-		[sessionId, recompute],
+		[sessionId, recompute, scrollAnchor],
 	);
 
 	const renderItem = useCallback(
-		({ item }: { item: TranscriptEntry }) => (
-			/* The measuring wrapper: one `onLayout` per row is what makes the
-			 * anchor's position knowable at all in a virtualised list that refuses
-			 * fixed row heights. It adds no styling and no size of its own. */
-			<View
-				onLayout={(event) =>
-					measureRow(item.id, event.nativeEvent.layout.height)
-				}
-			>
-				<TranscriptRow
-					entry={item}
-					streaming={streamingRowId !== null && item.id === streamingRowId}
-					loadImage={loadImage}
-					onOpenAgent={onOpenAgent}
-				/>
-				{/* The completion anchor: a zero-size sibling at the row's bottom edge
-				 * (an element carries one testID, so the anchor is its own element —
-				 * the streaming anchor's note), named by the attention's `anchor_id`
-				 * so flows and the ack gate can address the row the completion ended
-				 * on. */}
-				{item.id === anchorId ? (
-					<View testID={completionAnchorId(item.id)} aria-hidden />
-				) : null}
-			</View>
-		),
-		[streamingRowId, loadImage, onOpenAgent, anchorId, measureRow],
+		({ item }: { item: TranscriptItem }) =>
+			item.kind === "bar" ? (
+				/* The bar is measured like any row: it stands in the list, so the
+				 * anchor geometry (which walks the RENDERED items) must know its
+				 * height. */
+				<View
+					onLayout={(event) =>
+						measureRow(item.id, event.nativeEvent.layout.height)
+					}
+				>
+					<TurnBar
+						turnKey={item.turnKey}
+						facts={item.facts}
+						headline={item.headline}
+						open={item.expanded}
+						onToggle={(open) => toggleTurn(item.turnKey, open)}
+					/>
+				</View>
+			) : (
+				/* The measuring wrapper: one `onLayout` per row is what makes the
+				 * anchor's position knowable at all in a virtualised list that refuses
+				 * fixed row heights. It adds no styling and no size of its own. */
+				<View
+					onLayout={(event) =>
+						measureRow(item.id, event.nativeEvent.layout.height)
+					}
+				>
+					<TranscriptRow
+						entry={item.entry}
+						streaming={streamingRowId !== null && item.id === streamingRowId}
+						loadImage={loadImage}
+						onOpenAgent={onOpenAgent}
+					/>
+					{/* The completion anchor: a zero-size sibling at the row's bottom edge
+					 * (an element carries one testID, so the anchor is its own element —
+					 * the streaming anchor's note), named by the attention's `anchor_id`
+					 * so flows and the ack gate can address the row the completion ended
+					 * on. */}
+					{item.id === anchorId ? (
+						<View testID={completionAnchorId(item.id)} aria-hidden />
+					) : null}
+				</View>
+			),
+		[toggleTurn, streamingRowId, loadImage, onOpenAgent, anchorId, measureRow],
 	);
 
 	return (
 		<FlatList
 			ref={listRef}
 			testID={testID}
-			data={entries}
-			keyExtractor={(entry) => entry.id}
+			data={plan.items}
+			keyExtractor={(item) => item.id}
 			renderItem={renderItem}
 			onLayout={onLayout}
 			onScroll={onScroll}

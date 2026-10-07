@@ -346,11 +346,11 @@ export function describeDeviceCoverage(coverage: {
  * The CI tier: the bounded sample the per-push capture job takes.
  *
  * WHY A THIRD TIER, AND WHY IT IS HERE RATHER THAN A `--devices` LIST IN YAML.
- * The `core` tier is 1512 cells: the whole declared cell list (42 cells) x 2 themes x
- * (3 phones x 4 scales + 2 tablets x 3 scales) — 42 x 2 x 18, the tier's 5 profiles —
+ * The `core` tier is 1584 cells: the whole declared cell list (44 cells) x 2 themes x
+ * (3 phones x 4 scales + 2 tablets x 3 scales) — 44 x 2 x 18, the tier's 5 profiles —
  * and the CI job's capture step is bound at 30 minutes. Measured on the runner, that is
  * 2.24 s/cell: 403 cells in 903 s (run 37098393675, a plan of 403 cells then), so a core
- * run needs ~56 minutes. The job's first real
+ * run needs ~59 minutes. The job's first real
  * run of this path
  * was therefore cut off by the harness's own 900 s deadline with 585 cells
  * unvisited, and reported them as cells with no frame.
@@ -379,11 +379,11 @@ export function describeDeviceCoverage(coverage: {
  *     `CI_SCALES` below for why the boundary earns the third slot and 150% does
  *     not. 150% stays in `core`, which sweeps every scale.
  *
- * That is 42 cells x 2 themes x (2 profiles x 3 scales) = 504 cells, ~19 minutes at
+ * That is 44 cells x 2 themes x (2 profiles x 3 scales) = 528 cells, ~20 minutes at
  * the measured rate: inside the step bound (raised with it, see `CI_SCALES`) with
  * the same headroom it always carried. `core` and `full` are unchanged and stay the
- * local and dispatched samples, so the full 1512-cell `core` matrix and the
- * 5544-cell `full` matrix remain runnable — nothing is only reachable through CI.
+ * local and dispatched samples, so the full 1584-cell `core` matrix and the
+ * 5808-cell `full` matrix remain runnable — nothing is only reachable through CI.
  */
 export const CI_DEVICES: string[] = ["iphone-se", "tablet-landscape"];
 
@@ -401,7 +401,7 @@ export const CI_DEVICES: string[] = ["iphone-se", "tablet-landscape"];
  * sweeps every scale, so nothing is lost by composing the two sets differently.
  *
  * WHAT IT COSTS, because it is NOT free and the two are one decision. Three scales on
- * both CI profiles is 504 cells, +50 % over the two-scale 336, so the per-push capture
+ * both CI profiles is 528 cells, +57 % over the two-scale 336, so the per-push capture
  * and audit bounds in `.github/workflows/e2e.yml` were raised with it (capture 20 → 30,
  * audit 10 → 15, job 50 → 60). A bound that fires every run stops being a signal, so
  * this list and that bound have to move together: reverting the bounds without
@@ -725,23 +725,41 @@ export const IDENTICAL_FRAME_EXEMPTIONS: IdenticalFrameClass[] = [
 			"ever collided.",
 	},
 	{
-		cells: ["S5/populated-long", "S5/rich-rows", "S5/subagents"],
+		cells: [
+			"S5/populated-long",
+			"S5/rich-rows",
+			"S5/subagents",
+			"path:/session/{sessionId}?lo-scroll=top/condensed",
+			"path:/session/{sessionId}?lo-scroll=top&lo-expand=tc-conv-00-user/expanded",
+		],
 		reason:
 			"below-the-fold at iphone-se / 200 %: the 320 px column at 200 % text is filled by the " +
 			"session header (`Refactor… client`, the context/task/subagent panel rows), and the rows " +
-			"that distinguish these three cells — the 520-row transcript, the code-block/diff/table " +
-			"rows, and the subagent roster's own rows — start below the viewport, so the PNG is all " +
-			"chrome. The content differs at every device and scale (each cell reaches its own " +
-			"marker), which is what makes this a limit of the camera rather than a collapse. THE " +
-			"CLASS IS THREE NAMES ON ONE ENTRY on purpose: it was declared for `S5/populated-long` " +
-			"and `S5/rich-rows`, and a third cell joining it when the capture first completed a " +
-			"whole tier — until then the stalls left cells missing and the comparison could not " +
-			"form the group — is evidence that the phenomenon is the one this entry describes, so " +
-			"it extends the statement rather than opening a second entry for the same thing. " +
-			"Declaring the CLASS is what makes that hold at every scale: the same three cells " +
-			"collide three ways at 200 % and only two ways at 135 % (`S5/populated-long` = " +
-			"`S5/subagents`), and both are this phenomenon — subsets of one class, not two " +
-			"findings.",
+			"that distinguish these cells — the 520-row transcript, the code-block/diff/table " +
+			"rows, the subagent roster's own rows, and the transcript's TOP (the message-plus-bar " +
+			"rows the two `path:` cells pin the viewport to) — start below the viewport, so the PNG " +
+			"is all chrome. The content differs for every subset the one-view coincidence on this " +
+			"class's cells does not carry — each such cell reaches its own root or marker — which is " +
+			"what makes this a limit of the camera rather than a collapse. The one subset the " +
+			"coincidence entry carries — `S5/populated-long` against the `?lo-scroll=top/condensed` " +
+			"cell at iphone-se / 200 % — is a composition declared there (content digests EQUAL: " +
+			"`3911696863f1487d` dark, `0063b6b8723f5676` light — run 37529153608); the check " +
+			"consults that table for a same-content partition before this one, so this entry is " +
+			"only ever asked for the subsets it can describe. " +
+			"THE CLASS IS FIVE NAMES ON ONE ENTRY on purpose: it was declared for `S5/populated-long` " +
+			"and `S5/rich-rows`, a third cell joined it when the capture first completed a whole " +
+			"tier — until then the stalls left cells missing and the comparison could not form the " +
+			"group — and the two `path:` cells joined it when the long-transcript scenario grew a " +
+			"top and an open state of its own (measured on the ci run of 37522263768, where the five " +
+			"rendered byte-identical at iphone-se and their content digests differed for every " +
+			"subset except the `S5/populated-long` = `?lo-scroll=top/condensed` pair the coincidence " +
+			"entry carries). A cell " +
+			"joining an existing entry is evidence that the phenomenon is the one that entry " +
+			"describes, so it extends the statement rather than opening a second entry for the same " +
+			"thing. Declaring the CLASS is what makes that hold at every scale: these cells collide " +
+			"in whichever SUBSET a device, theme and scale produce — five ways at 200 % on the " +
+			"narrowest column, narrower subsets at 135 % and 100 % — and every subset not carried by " +
+			"the coincidence entry is this phenomenon, not a finding of its own.",
 	},
 ];
 
@@ -787,6 +805,30 @@ export const IDENTICAL_FRAME_COINCIDENCES: IdenticalFrameClass[] = [
 			"and S15/empty is the panel's empty state and the /conversations route's capture. " +
 			"Measured on the ci run at 0b414a4: four pairs, one per theme × scale " +
 			"(dark 07d9c40e1083 / d7ca9bcec45e; light 1623786f6c06 / f2ee0ac17b8f).",
+	},
+	{
+		cells: [
+			"S5/populated-long",
+			"path:/session/{sessionId}?lo-scroll=top/condensed",
+		],
+		reason:
+			"one view, two scroll positions at iphone-se / 200 %: at 320 px with 200 % text the " +
+			"transcript's visible area is a sliver between the session header and its panels, and " +
+			"the list's window sits at its TOP in both cells — the tail-following " +
+			"`S5/populated-long` renders the same first rows as the anchored " +
+			"`path:…condensed`, which is why the same bytes carry the same content and the " +
+			"identical-state check reads one view. The readings agree on it: at dark/200 both " +
+			"cells' `readiness.text` begins `Refactor… client … Reconcile last night's ledger " +
+			"and tell me what slipped. ✓ completed · 38 steps …` and their content digests are " +
+			"EQUAL (3911696863f1487d; 0063b6b8723f5676 at light/200 — run 37529153608). The " +
+			"claims do not collide where the transcript has room: at 100 % and 135 % the two " +
+			"cells render different bytes (dark/100 152d8908 vs 0bd818dc; light/100 922d64ec vs " +
+			"3b9115da; dark/135 d8d3dafb vs e66aba68; light/135 c7a6c724 vs 4eece5e6), so " +
+			"neither cell is a duplicate of the other and neither declaration can be removed. " +
+			"Every cell still reaches the session screen with its relay-backed session, and at " +
+			"this exact combo both carry the condensed turn bars as visible ids " +
+			"(`session-screen`, `turn-bar-tc-conv-00-user` … in the visible set), which is what " +
+			"keeps this a composition at that viewport rather than a collapse of either state.",
 	},
 ];
 

@@ -478,6 +478,7 @@ export const IDENTIFIER_FAMILIES: readonly string[] = [
 	"command-",
 	/* The session view's own parameterised identifiers, adopted with its block above. */
 	"transcript-row-",
+	"turn-bar-",
 	"completion-anchor-",
 	"transcript-image-",
 	"model-option-",
@@ -920,6 +921,11 @@ export const computerRowIds = (
 /** One transcript row. The row's own id is the projection's entry id. */
 export const transcriptRowId = (rowId: string): string =>
 	`transcript-row-${rowId}`;
+
+/** One condensed turn's summary bar. The key is the turn's OPENING row id
+ *  (`turn-condensing.ts`), so a bar is addressable by the message that started
+ *  the turn — the same identity the reader's expansion and the latch use. */
+export const turnBarId = (turnKey: string): string => `turn-bar-${turnKey}`;
 
 /** The completion attention's anchor row (ADR 0006 §3.1): the row a read
  *  receipt is ABOUT. It sits on a zero-size sibling at the row's bottom edge,
