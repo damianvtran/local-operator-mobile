@@ -5,6 +5,7 @@ import {
 	parseTextScalePreference,
 	resolveTextScale,
 	scaledTextVariables,
+	textUnit,
 } from "@/ui/text-scale";
 import { TYPE_STEPS } from "@/ui/tokens.gen";
 
@@ -103,14 +104,12 @@ describe("the value never carries the platform's factor", () => {
 		 *  (Settings) that is most of the text — the run reported a median of 1.40x and
 		 *  failed the cell by name. */
 		const web = scaledTextVariables(1, "rem");
-		expect(Number.parseFloat(web["--text-body"] ?? "") * 16).toBeCloseTo(
-			TYPE_STEPS.body.size,
-			1,
-		);
-		expect(Number.parseFloat(web["--text-display"] ?? "") * 16).toBeCloseTo(
-			TYPE_STEPS.display.size,
-			1,
-		);
+		expect(
+			Number.parseFloat(String(web["--text-body"] ?? "")) * 16,
+		).toBeCloseTo(TYPE_STEPS.body.size, 1);
+		expect(
+			Number.parseFloat(String(web["--text-display"] ?? "")) * 16,
+		).toBeCloseTo(TYPE_STEPS.display.size, 1);
 	});
 
 	it("emits `px` values that nothing multiplies — neither the browser nor RN twice", () => {
@@ -122,12 +121,11 @@ describe("the value never carries the platform's factor", () => {
 		 *    the factor too would square it — measured at 64 px for an authored 16 pt
 		 *    body on a platform at 2, with both caps bypassed. */
 		const explicit = scaledTextVariables(1.5, "px");
-		expect(Number.parseFloat(explicit["--text-body"] ?? "")).toBeCloseTo(
-			TYPE_STEPS.body.size * 1.5,
-			1,
-		);
+		expect(
+			Number.parseFloat(String(explicit["--text-body"] ?? "")),
+		).toBeCloseTo(TYPE_STEPS.body.size * 1.5, 1);
 		const system = scaledTextVariables(1, "px");
-		expect(Number.parseFloat(system["--text-body"] ?? "")).toBeCloseTo(
+		expect(Number.parseFloat(String(system["--text-body"] ?? ""))).toBeCloseTo(
 			TYPE_STEPS.body.size,
 			1,
 		);
@@ -138,12 +136,63 @@ describe("the value never carries the platform's factor", () => {
 		// the app chose those sizes and a 28 pt title is already large.
 		const preferred = scaledTextVariables(2, "rem");
 		expect(
-			Number.parseFloat(preferred["--text-display"] ?? "") * 16,
+			Number.parseFloat(String(preferred["--text-display"] ?? "")) * 16,
 		).toBeCloseTo(TYPE_STEPS.display.size * 1.5, 1);
-		expect(Number.parseFloat(preferred["--text-body"] ?? "") * 16).toBeCloseTo(
-			TYPE_STEPS.body.size * 2,
-			1,
-		);
+		expect(
+			Number.parseFloat(String(preferred["--text-body"] ?? "")) * 16,
+		).toBeCloseTo(TYPE_STEPS.body.size * 2, 1);
+	});
+});
+
+describe("the value's FORM, which is a type and not a pixel", () => {
+	/* A web build CANNOT catch a defect here: CSS accepts `"16px"` where React
+	 *  Native's `fontSize` requires a number, so every frame the project captured was
+	 *  consistent with the crash. The guard therefore asserts the type at the
+	 *  boundary between the two styling worlds, not a rendered size. */
+	it("hands a device target the number form, for every preference", () => {
+		/* This is the exact line that crashed: it used to answer `px` off the web, and
+		 *  `px` means the value is a `"16px"` string, which `RCTText` casts to Double
+		 *  and dies on (`Error while updating property 'fontSize'`, Android). */
+		for (const preference of ["system", "100", "150", "200"] as const) {
+			expect(textUnit(false, preference)).toBe("native");
+		}
+	});
+
+	it("keeps the unit the web target needs, where it is not optional", () => {
+		expect(textUnit(true, "system")).toBe("rem");
+		expect(textUnit(true, "200")).toBe("px");
+	});
+
+	it("emits no string at all for the native target", () => {
+		/* Asserted over EVERY step rather than one, because the emission is a loop and
+		 *  a per-caller guard would leave the next step free to reintroduce the suffix. */
+		const native = scaledTextVariables(2, "native");
+		for (const [key, value] of Object.entries(native)) {
+			expect(typeof value, `${key} must be a number natively`).toBe("number");
+			expect(Number.isFinite(value)).toBe(true);
+		}
+	});
+
+	it("natively emits the same sizes it emits today, without the suffix", () => {
+		// The fix changes the form and nothing else: content doubles, chrome caps, and
+		// the numbers are the ones the web build states in `px`.
+		const native = scaledTextVariables(2, "native");
+		const css = scaledTextVariables(2, "px");
+		expect(native["--text-body"]).toBe(TYPE_STEPS.body.size * 2);
+		expect(native["--text-display"]).toBe(TYPE_STEPS.display.size * 1.5);
+		for (const key of Object.keys(native)) {
+			expect(native[key]).toBe(Number.parseFloat(String(css[key])));
+		}
+	});
+
+	it("keeps a unit on every CSS value, so the web build cannot regress", () => {
+		for (const unit of ["px", "rem"] as const) {
+			const css = scaledTextVariables(1, unit);
+			for (const [key, value] of Object.entries(css)) {
+				expect(typeof value, `${key} must stay a string`).toBe("string");
+				expect(String(value).endsWith(unit)).toBe(true);
+			}
+		}
 	});
 });
 
