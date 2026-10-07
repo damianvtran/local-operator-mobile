@@ -33,7 +33,6 @@
 appId: ${APP_ID}
 name: "F-7 subagent drill-down"
 env:
-  APP_ID: com.radient.localoperator.mobile
   SESSION_ID: 6714def86197
   JOB_ID: job-1
 ---

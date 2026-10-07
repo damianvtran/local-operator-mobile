@@ -18,9 +18,11 @@ name: E2E (mock relay, audit and Maestro)
 # them had. Until the harness lands, this workflow is red on every ref, which is
 # the honest state: what it exists to run is not in the tree.
 #
-# ONE RETRY, AND ONLY FOR THE FLOWS (ADR 0004). Maestro gets `--retry`, which the
-# harness's own config asks CI to pass, and the retry is reported separately so a
-# flake is visible as a flake. Nothing else in the repository retries.
+# ONE RETRY, AND ONLY FOR THE FLOWS (ADR 0004). Maestro 2.11.0's CLI has no retry
+# option — `--retry` fails at argument parsing — so the flow run re-runs the set
+# once itself and raises a `::warning` when it flaked: the retry is reported
+# separately so a flake is visible as a flake. Nothing else in the repository
+# retries.
 #
 # WHAT IS DELIBERATELY NOT HERE, rather than quietly missing:
 #   * the **re-capture diff** (ADR 0003, §6 of the harness notes). It needs an
@@ -579,6 +581,40 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      - name: Enable KVM (the emulator's hardware acceleration)
+        # WHY: GitHub-hosted Ubuntu runners can run the Android emulator on KVM, but
+        # they ship /dev/kvm with the runner user outside its owning group, so an
+        # unmodified job silently degrades to software emulation (measured: a
+        # ~15-minute boot, ~40-minute runs, and no flow output). This is the recipe
+        # GitHub's changelog for hardware-accelerated Android virtualization publishes
+        # (2024-04-02) and the emulator action's README carries: make the device
+        # world-readable/writable. Placed before the build so a KVM-less runner fails
+        # in seconds in the check below, not after the APK build.
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Assert the emulator can use KVM (fail fast, and name KVM)
+        # WHY: a runner that cannot open /dev/kvm must fail HERE, naming KVM — never
+        # as "no flow output" forty minutes later, which reads like an app failure.
+        # This mirrors the action's own check before it decides to fall back to
+        # software emulation: accessSync('/dev/kvm', R_OK | W_OK).
+        run: |
+          set -euo pipefail
+          echo "runner user: $(id -un); groups: $(id -Gn)"
+          if [ ! -e /dev/kvm ]; then
+            echo "::error title=KVM unavailable::/dev/kvm does not exist on this runner, so the Android emulator cannot use hardware acceleration — a software-emulated run is not a valid test of this app."
+            exit 1
+          fi
+          if [ ! -r /dev/kvm ] || [ ! -w /dev/kvm ]; then
+            ls -l /dev/kvm
+            echo "::error title=KVM unavailable::/dev/kvm is not readable+writable by the runner user $(id -un); the emulator would silently fall back to software emulation."
+            exit 1
+          fi
+          echo "KVM is usable: $(ls -l /dev/kvm)"
+
       - uses: pnpm/action-setup@v6
 
       - uses: actions/setup-node@v7
@@ -594,15 +630,39 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build the debug APK to install on the emulator
-        # Built here rather than downloaded from the Android workflow: a
-        # cross-workflow artefact download couples two independent triggers, and
-        # the debug APK is exactly what the flows should run against.
+      - name: Build the APK the flows run against
+        # WHY RELEASE AND NOT DEBUG: a Debug build of a React Native app expects
+        # a Metro dev server at runtime — this job starts no dev server, so the
+        # launched app renders a red error screen and the flows then assert
+        # against a UI that does not exist. ios.yml states the rule for its own
+        # simulator job: "a Debug build of a React Native app expects a Metro
+        # dev server at runtime … it renders a red error screen. A Release build
+        # embeds the JavaScript bundle, so the launched app renders the real UI."
+        #
+        # WHY THIS JOB GENERATES ITS OWN KEY: the workflow carries no signing
+        # material and must not get any. The release signing plugin
+        # (plugins/with-android-release-signing.js) deliberately fails loudly
+        # without LO_RELEASE_* material rather than fall back to the debug key,
+        # so this job generates a throwaway keystore for the emulator install
+        # only. The real signing stays in release.yml, where the secrets live.
+        #
+        # Built here rather than downloaded from the Android workflow: that job
+        # uploads the debug, Metro-dependent APK, and a cross-workflow artefact
+        # download would couple two independent triggers.
         run: |
           set -euo pipefail
           pnpm exec expo prebuild --platform android --clean --no-install
+          keystore="$RUNNER_TEMP/e2e-release.keystore"
+          keytool -genkeypair -v -keystore "$keystore" -alias lo-e2e \
+            -keyalg RSA -keysize 2048 -validity 30 \
+            -storepass lo-e2e-ci -keypass lo-e2e-ci \
+            -dname "CN=lo-e2e, OU=ci, O=local-operator, C=US"
           cd android
-          ./gradlew assembleDebug --no-daemon
+          LO_RELEASE_STORE_FILE="$keystore" \
+          LO_RELEASE_STORE_PASSWORD=lo-e2e-ci \
+          LO_RELEASE_KEY_ALIAS=lo-e2e \
+          LO_RELEASE_KEY_PASSWORD=lo-e2e-ci \
+            ./gradlew assembleRelease --no-daemon
 
       - name: Read the app's identity from the APK it just built
         # The flows are told the APP_ID they should launch, and until this step
@@ -613,15 +673,19 @@ jobs:
         # pipeline is whatever the build actually produced, because that is the
         # app installed on the emulator. Reading it out of the APK removes the
         # second copy entirely, and the bundle id itself stays an operator
-        # decision rather than something CI invents.
+        # decision rather than something CI invents. The flows deliberately
+        # declare no `APP_ID` default of their own, for this reason: Maestro
+        # 2.11.0 applies a flow-level `env:` value after the CLI's `-e` values
+        # and overwrites them, so a committed default would silently beat this
+        # step's value.
         run: |
           set -euo pipefail
           aapt=$(find "${ANDROID_HOME:-$ANDROID_SDK_ROOT}" -name aapt2 -type f | sort | tail -1)
           echo "aapt2: $aapt"
-          package=$("$aapt" dump badging android/app/build/outputs/apk/debug/app-debug.apk \
+          package=$("$aapt" dump badging android/app/build/outputs/apk/release/app-release.apk \
             | sed -n "s/^package: name='\\([^']*\\)'.*/\\1/p" | head -1)
           if [ -z "$package" ]; then
-            echo "::error::could not read the package name out of the debug APK"
+            echo "::error::could not read the package name out of the release APK"
             exit 1
           fi
           echo "APP_ID=$package" >> "$GITHUB_ENV"
@@ -691,20 +755,30 @@ jobs:
           # A spell checker underlining as you type is a known source of text-input
           # flakiness.
           disable-spellchecker: true
+          # NB: the action parses `script:` into ONE COMMAND PER LINE and runs each
+          # line as its own `/usr/bin/sh -c` (dash, not bash) — keep every command on
+          # a single line, POSIX-only, no `\` continuations. `#` comment lines are
+          # dropped by the action's parser. A `set -o pipefail` here killed every run
+          # at line 1 (`set: Illegal option -o pipefail`, exit 2) before adb install
+          # or maestro ever ran.
           script: |
-            set -euo pipefail
-            adb install -r android/app/build/outputs/apk/debug/app-debug.apk
-            maestro --config e2e/maestro/config.yaml test --retry 1 \
-              -e APP_ID="$APP_ID" \
-              -e RELAY_URL="$RELAY_URL_FOR_DEVICE" \
-              -e RELAY_PASSWORD="$(cat "$RUNNER_TEMP/relay-password")" \
-              # The harness's own fixture session id, from the corpus the mock
-              # relay serves (`fixtures/relay/**` — the id every captured
-              # projection uses). Named here because a bare constant in a file
-              # that names the source of every other constant is the one that
-              # gets copied somewhere it does not belong.
-              -e SESSION_ID=6714def86197 \
-              -e MAESTRO_SCREENSHOTS="$RUNNER_TEMP/maestro-screenshots"
+            adb install -r android/app/build/outputs/apk/release/app-release.apk
+            # `SESSION_ID` is the harness's own fixture session id, from the corpus
+            # the mock relay serves (`fixtures/relay/**` — the id every captured
+            # projection uses).
+            # The `test` subcommand requires the flow target positional: pass the
+            # workspace root (`e2e/maestro`) — its `flows:` list selects which flows
+            # run, and the config's globs resolve against the directory passed.
+            # Per-step screenshots and per-flow logs land under `--test-output-dir`
+            # — v2.11.0 writes its run artifacts (manifest, logs, takeScreenshot/)
+            # into that directory — and that directory is what the upload step
+            # takes. `-e` values reach the flows' own environment; they cannot
+            # route the CLI's outputs.
+            # One retry, and only one (ADR 0003): Maestro 2.11.0's CLI has no retry
+            # flag, so the invocation itself re-runs the set once on failure and
+            # raises a ::warning — a flake stays visible, a second failure is a
+            # failure (the step's exit code).
+            run_flows() { maestro test --config e2e/maestro/config.yaml -e APP_ID="$APP_ID" -e RELAY_URL="$RELAY_URL_FOR_DEVICE" -e RELAY_PASSWORD="$(cat "$RUNNER_TEMP/relay-password")" -e SESSION_ID=6714def86197 --test-output-dir "$RUNNER_TEMP/maestro-screenshots" e2e/maestro; }; run_flows || { echo "::warning title=Maestro flaked once::the flow set failed; re-running it once, per ADR 0003 — a second failure is a failure"; run_flows; }
 
       - name: Stop the mock relay
         if: always()
