@@ -1,0 +1,73 @@
+(node:32951) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/damian/local-operator-mobile-worktrees/transcript-depth/tools/visual/capture.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/damian/local-operator-mobile-worktrees/transcript-depth/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+capture plan: 48 cells × 3 frame(s) = 144 frames
+  screens: S5, path:/session/6714def86197
+  devices planned: iphone-se, iphone-15 — 2 of 19 declared profiles, the other 17 not in this run's plan
+  themes:  dark, light
+  scales:  100, 200
+  out:     /Users/damian/.local-operator/sessions/c4098271221c/scratchpad/rem63-frames
+  deadline: 3600 s (explicit)
+[1/48] path--session-6714def86197__warm__iphone-se__dark__100  theme=dark(q) canvas=rgb(34, 32, 28) els=99 text=20.296875px 30061b cc68e87b8af2bd35
+[2/48] path--session-6714def86197__warm__iphone-se__dark__200  theme=dark(q) canvas=rgb(34, 32, 28) els=123 text=40.59375px 54365b 91bca7e67f7faf34
+[3/48] path--session-6714def86197__warm__iphone-se__light__100  theme=light(q) canvas=rgb(242, 237, 227) els=123 text=20.296875px 62917b 12998ac059d2cd82
+[4/48] path--session-6714def86197__warm__iphone-se__light__200  theme=light(q) canvas=rgb(242, 237, 227) els=123 text=40.59375px 39870b 91c4b839020b2e03
+[5/48] path--session-6714def86197__warm__iphone-15__dark__100  theme=dark(q) canvas=rgb(34, 32, 28) els=121 text=20.296875px 14080b 06b4abaa60a98a14
+[6/48] path--session-6714def86197__warm__iphone-15__dark__200  theme=dark(q) canvas=rgb(34, 32, 28) els=123 text=40.59375px 151889b 33bd52d2684da02b
+[7/48] path--session-6714def86197__warm__iphone-15__light__100  theme=light(q) canvas=rgb(242, 237, 227) els=121 text=20.296875px 105403b 45423a13893742d1
+[8/48] path--session-6714def86197__warm__iphone-15__light__200  theme=light(q) canvas=rgb(242, 237, 227) els=123 text=40.59375px 150053b 1c56e11b537e487b
+[9/48] S5__find-results__iphone-se__dark__100  theme=dark(q) canvas=rgb(34, 32, 28) els=283 text=17.390625px 65877b aa213298f1229256
+[10/48] S5__find-results__iphone-se__dark__200  theme=dark(q) canvas=rgb(34, 32, 28) els=298 text=39.015625px 74168b 05601568af683cb7
+[11/48] S5__find-results__iphone-se__light__100  theme=light(q) canvas=rgb(242, 237, 227) els=283 text=17.390625px 65690b d44b52e22fa685e9
+[12/48] S5__find-results__iphone-se__light__200  theme=light(q) canvas=rgb(242, 237, 227) els=298 text=39.015625px 75195b f0ff59448a8b9fa2
+[13/48] S5__find-results__iphone-15__dark__100  theme=dark(q) canvas=rgb(34, 32, 28) els=395 text=17.390625px 166769b 9049e9ecc0eb27a0
+[14/48] S5__find-results__iphone-15__dark__200  theme=dark(q) canvas=rgb(34, 32, 28) els=291 text=39.015625px 148684b 361baefeef6e3977
+[15/48] S5__find-results__iphone-15__light__100  theme=light(q) canvas=rgb(242, 237, 227) els=395 text=17.390625px 167287b 79e1190ca5926455
+[16/48] S5__find-results__iphone-15__light__200  theme=light(q) canvas=rgb(242, 237, 227) els=291 text=39.015625px 149818b da348777a317ab46
+[17/48] S5__find-related__iphone-se__dark__100  theme=dark(q) canvas=rgb(34, 32, 28) els=284 text=17.390625px 73639b c208c3402c5ca688
+[18/48] S5__find-related__iphone-se__dark__200  theme=dark(q) canvas=rgb(34, 32, 28) els=299 text=39.015625px 86695b e7d7be1913edd705
+[19/48] S5__find-related__iphone-se__light__100  theme=light(q) canvas=rgb(242, 237, 227) els=284 text=17.390625px 73675b 1b345b048961a331
+[20/48] S5__find-related__iphone-se__light__200  theme=light(q) canvas=rgb(242, 237, 227) els=299 text=39.015625px 87507b af445123efa01a00
+[21/48] S5__find-related__iphone-15__dark__100  theme=dark(q) canvas=rgb(34, 32, 28) els=396 text=17.390625px 185906b 7aefd347eb50894f
+[22/48] S5__find-related__iphone-15__dark__200  theme=dark(q) canvas=rgb(34, 32, 28) els=292 text=39.015625px 172088b 7bf07c0a9e181203
+[23/48] S5__find-related__iphone-15__light__100  theme=light(q) canvas=rgb(242, 237, 227) els=464 text=17.390625px 186206b 66198b6ae5296c4c
+[24/48] S5__find-related__iphone-15__light__200  theme=light(q) canvas=rgb(242, 237, 227) els=292 text=39.015625px 173182b 30b90ab37e4e0b97
+[25/48] S5__find-empty__iphone-se__dark__100  theme=dark(q) canvas=rgb(34, 32, 28) els=269 text=17.390625px 53426b f180e3335785abf3
+[26/48] S5__find-empty__iphone-se__dark__200  theme=dark(q) canvas=rgb(34, 32, 28) els=277 text=40.59375px 68558b ce07c0ecc5346525
+[27/48] S5__find-empty__iphone-se__light__100  theme=light(q) canvas=rgb(242, 237, 227) els=269 text=17.390625px 53528b fd34cb8ec832878b
+[28/48] S5__find-empty__iphone-se__light__200  theme=light(q) canvas=rgb(242, 237, 227) els=277 text=40.59375px 68828b 1002c253f54bfd70
+[29/48] S5__find-empty__iphone-15__dark__100  theme=dark(q) canvas=rgb(34, 32, 28) els=449 text=17.390625px 169050b ee6b8a8135785ba4
+[30/48] S5__find-empty__iphone-15__dark__200  theme=dark(q) canvas=rgb(34, 32, 28) els=277 text=40.59375px 145327b 9249abcca2993e29
+[31/48] S5__find-empty__iphone-15__light__100  theme=light(q) canvas=rgb(242, 237, 227) els=609 text=17.390625px 169501b 85ce117b27451d93
+[32/48] S5__find-empty__iphone-15__light__200  theme=light(q) canvas=rgb(242, 237, 227) els=277 text=40.59375px 145418b 44292cbee81d9c31
+[33/48] S5__find-hit__iphone-se__dark__100  theme=dark(q) canvas=rgb(34, 32, 28) els=354 text=17.390625px 71996b 0e4ff0a1ce69f462
+[34/48] S5__find-hit__iphone-se__dark__200  theme=dark(q) canvas=rgb(34, 32, 28) els=273 text=39.015625px 67163b ad08917139d01d26
+[35/48] S5__find-hit__iphone-se__light__100  theme=light(q) canvas=rgb(242, 237, 227) els=365 text=17.390625px 71656b 2b2a344fcf48cb8f
+[36/48] S5__find-hit__iphone-se__light__200  theme=light(q) canvas=rgb(242, 237, 227) els=273 text=39.015625px 67150b 788a2ef5446ef498
+[37/48] S5__find-hit__iphone-15__dark__100  theme=dark(q) canvas=rgb(34, 32, 28) els=339 text=17.390625px 224833b e9ef194cc1e03c2a
+[38/48] S5__find-hit__iphone-15__dark__200  theme=dark(q) canvas=rgb(34, 32, 28) els=273 text=39.015625px 179143b d6fd9ab27b862d7e
+[39/48] S5__find-hit__iphone-15__light__100  theme=light(q) canvas=rgb(242, 237, 227) els=339 text=17.390625px 222932b 58738c14176dda99
+[40/48] S5__find-hit__iphone-15__light__200  theme=light(q) canvas=rgb(242, 237, 227) els=273 text=39.015625px 177919b b3f25027c78ecb13
+[41/48] S5__find-caveat__iphone-se__dark__100  theme=dark(q) canvas=rgb(34, 32, 28) els=278 text=17.390625px 73847b 387548b006b1254b
+[42/48] S5__find-caveat__iphone-se__dark__200  theme=dark(q) canvas=rgb(34, 32, 28) els=376 text=34.796875px 91919b ad8b3e299aebe089
+[43/48] S5__find-caveat__iphone-se__light__100  theme=light(q) canvas=rgb(242, 237, 227) els=278 text=17.390625px 73768b 215c94ceaadebb6d
+[44/48] S5__find-caveat__iphone-se__light__200  theme=light(q) canvas=rgb(242, 237, 227) els=376 text=34.796875px 93132b ea015e458f46d6e3
+[45/48] S5__find-caveat__iphone-15__dark__100  theme=dark(q) canvas=rgb(34, 32, 28) els=624 text=17.390625px 197189b 43b9d76b7c87a60b
+[46/48] S5__find-caveat__iphone-15__dark__200  theme=dark(q) canvas=rgb(34, 32, 28) els=369 text=34.796875px 194403b 40c375c73c9ffcf0
+[47/48] S5__find-caveat__iphone-15__light__100  theme=light(q) canvas=rgb(242, 237, 227) els=624 text=17.390625px 197513b 298eab4800cf89d5
+[48/48] S5__find-caveat__iphone-15__light__200  theme=light(q) canvas=rgb(242, 237, 227) els=369 text=34.796875px 194583b 1c10a275ababf81e
+  teardown: 0 process(es) left by this run, 0 orphan(s) from earlier runs reaped, 0 live owner(s) left alone, 38 cell(s) whose settled frame was retaken to agree with its readings
+
+captured 48 cells / 144 frames in 463.2 s
+device coverage: 2 of 19 declared profiles captured (iphone-se, iphone-15); 17 NOT captured (iphone-se2, android-compact, android-small, android-large, iphone-max, fold-cover, fold-open, iphone-15-landscape, android-large-landscape, tablet-768, tablet-768-landscape, tablet, tablet-landscape, tablet-pro, tablet-pro-landscape, android-tablet, android-tablet-landscape)
+frames that changed after first paint: 42
+text-scale dimension: scale dimension is live across 24/24 measured pairs (every type role grew by the cell's own factor)
+  text-scale notes: 21 pair(s) show a size only at 200% — a node that did not move with the root font size, or a layout that introduced it at this scale; named, not failed
+theme problems: none — every frame's resolved theme and canvas match its cell, and no dark/light pair is identical
+scrolled presses: none — every opener pressed a control that was already on screen
+UNREADY CELLS (1):
+  - path--session-6714def86197__warm__iphone-se__dark__100: the cell declares 'warm' but the app is showing an empty state (session-transcript-empty): the state was never reached
+NOT MEASURABLE: 1 of 48 cells — their frames are the app's fallback screen, not the declared state
+capture rc=0
+

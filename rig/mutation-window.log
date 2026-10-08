@@ -1,0 +1,316 @@
+
+ RUN  v5.0.2 /Users/damian/local-operator-mobile-worktrees/transcript-depth
+
+·xxxxxx·xxxxxxx···········
+::error file=/Users/damian/local-operator-mobile-worktrees/transcript-depth/src/features/session/find.test.ts,title=src/features/session/find.test.ts > searchConversation — the exact tier > maps occurrences through casefold expansions (ß → ss) onto the original characters,line=87,column=16::AssertionError: expected [] to have a length of 1 but got +0%0A%0A- Expected%0A+ Received%0A%0A- 1%0A+ 0%0A%0A ❯ src/features/session/find.test.ts:87:16%0A%0A
+
+::error file=/Users/damian/local-operator-mobile-worktrees/transcript-depth/src/features/session/find.test.ts,title=src/features/session/find.test.ts > searchConversation — the exact tier > reads the message rows and the folded notice family — never tool output or reasoning,line=114,column=37::AssertionError: expected [ 'u1', 'a1' ] to deeply equal [ 'u1', 's1', 'a1', 'p1', 'sa1', …(5) ]%0A%0A- Expected%0A+ Received%0A%0A  [%0A    "u1",%0A-   "s1",%0A    "a1",%0A-   "p1",%0A-   "sa1",%0A-   "pm1",%0A-   "n1",%0A-   "k1",%0A-   "k2",%0A-   "c1",%0A  ]%0A%0A ❯ src/features/session/find.test.ts:114:37%0A%0A
+
+::error file=/Users/damian/local-operator-mobile-worktrees/transcript-depth/src/features/session/find.test.ts,title=src/features/session/find.test.ts > searchConversation — the exact tier > labels the folded families honestly and demotes them,line=138,column=54::AssertionError: expected [ 'u1:user', 'a1:agent' ] to deeply equal [ 'u1:user', 'n1:notice', …(2) ]%0A%0A- Expected%0A+ Received%0A%0A  [%0A    "u1:user",%0A-   "n1:notice",%0A-   "c1:compaction",%0A-   "k1:ask",%0A+   "a1:agent",%0A  ]%0A%0A ❯ src/features/session/find.test.ts:138:54%0A%0A
+
+::error file=/Users/damian/local-operator-mobile-worktrees/transcript-depth/src/features/session/find.test.ts,title=src/features/session/find.test.ts > searchConversation — the exact tier > folds ẞ the way the desktop's casefold does — `strasse` finds `STRAẞE`,line=149,column=37::AssertionError: expected [] to deeply equal [ 'u1' ]%0A%0A- Expected%0A+ Received%0A%0A- [%0A-   "u1",%0A- ]%0A+ []%0A%0A ❯ src/features/session/find.test.ts:149:37%0A%0A
+
+::error file=/Users/damian/local-operator-mobile-worktrees/transcript-depth/src/features/session/find.test.ts,title=src/features/session/find.test.ts > searchConversation — the exact tier > trims the query to Python's `strip()` — the desktop's own cut (QA Q63-4),line=165,column=45::AssertionError: expected [] to deeply equal [ 'u1', 'u2' ]%0A%0A- Expected%0A+ Received%0A%0A- [%0A-   "u1",%0A-   "u2",%0A- ]%0A+ []%0A%0A ❯ src/features/session/find.test.ts:165:45%0A%0A
+
+::error file=/Users/damian/local-operator-mobile-worktrees/transcript-depth/src/features/session/find.test.ts,title=src/features/session/find.test.ts > searchConversation — the exact tier > caps the ranges a hit carries at five%2C non-overlapping,line=177,column=27::AssertionError: Target cannot be null or undefined.%0A ❯ src/features/session/find.test.ts:177:27%0A%0A
+
+::error file=/Users/damian/local-operator-mobile-worktrees/transcript-depth/src/features/session/find.test.ts,title=src/features/session/find.test.ts > searchConversation — the soft tier > stays off while the exact hits are enough (PRECISE_HITS_ENOUGH),line=201,column=37::AssertionError: expected [] to deeply equal [ 'u1', 'u2', 'u3' ]%0A%0A- Expected%0A+ Received%0A%0A- [%0A-   "u1",%0A-   "u2",%0A-   "u3",%0A- ]%0A+ []%0A%0A ❯ src/features/session/find.test.ts:201:37%0A%0A
+
+::error file=/Users/damian/local-operator-mobile-worktrees/transcript-depth/src/features/session/find.test.ts,title=src/features/session/find.test.ts > searchConversation — the soft tier > runs below the floor%3A one-edit typos and order-independent token-AND%2C marked related,line=215,column=42::AssertionError: expected [] to deeply equal [ 'u2' ]%0A%0A- Expected%0A+ Received%0A%0A- [%0A-   "u2",%0A- ]%0A+ []%0A%0A ❯ src/features/session/find.test.ts:215:42%0A%0A
+
+::error file=/Users/damian/local-operator-mobile-worktrees/transcript-depth/src/features/session/find.test.ts,title=src/features/session/find.test.ts > searchConversation — the soft tier > never fuzzes a token shorter than four characters,line=241,column=60::AssertionError: expected undefined to be 'exact' // Object.is equality%0A%0A- Expected:%0A"exact"%0A%0A+ Received:%0Aundefined%0A%0A ❯ src/features/session/find.test.ts:241:60%0A%0A
+
+::error file=/Users/damian/local-operator-mobile-worktrees/transcript-depth/src/features/session/find.test.ts,title=src/features/session/find.test.ts > searchConversation — the soft tier > ranks exact before soft and genuine before injected%2C oldest first inside each class,line=251,column=37::AssertionError: expected [] to deeply equal [ 'u1', 'u2', 'sa1' ]%0A%0A- Expected%0A+ Received%0A%0A- [%0A-   "u1",%0A-   "u2",%0A-   "sa1",%0A- ]%0A+ []%0A%0A ❯ src/features/session/find.test.ts:251:37%0A%0A
+
+::error file=/Users/damian/local-operator-mobile-worktrees/transcript-depth/src/features/session/find.test.ts,title=src/features/session/find.test.ts > searchConversation — truncation > cuts at the limit and says so,line=274,column=21::AssertionError: expected false to be true // Object.is equality%0A%0A- Expected%0A+ Received%0A%0A- true%0A+ false%0A%0A ❯ src/features/session/find.test.ts:274:21%0A%0A
+
+::error file=/Users/damian/local-operator-mobile-worktrees/transcript-depth/src/features/session/find.test.ts,title=src/features/session/find.test.ts > searchConversation — the loaded window%2C honestly > finds a hit while its message is carried%2C and misses it honestly after the window slides past it,line=310,column=5::AssertionError: expected [] to deeply equal [ 'u1' ]%0A%0A- Expected%0A+ Received%0A%0A- [%0A-   "u1",%0A- ]%0A+ []%0A%0A ❯ src/features/session/find.test.ts:310:5%0A%0A
+
+::error file=/Users/damian/local-operator-mobile-worktrees/transcript-depth/src/features/session/find.test.ts,title=src/features/session/find.test.ts > searchConversation — the loaded window%2C honestly > keeps a hit findable across a SLIDING window while the message stays carried,line=333,column=68::AssertionError: expected [] to deeply equal [ 'u1' ]%0A%0A- Expected%0A+ Received%0A%0A- [%0A-   "u1",%0A- ]%0A+ []%0A%0A ❯ src/features/session/find.test.ts:333:68%0A%0A
+
+
+ Test Files  1 failed (1)
+      Tests  13 failed | 13 passed (26)
+   Start at  17:42:32
+   Duration  559ms (transform 78%, import 10%, tests 9%, worker 2%)
+
+(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
+  - ESM syntax in a file loaded as CommonJS (vitest.config.ts:1:1). Use a `.mjs` extension or set `"type": "module"` in the closest package.json
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 13 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/features/session/find.test.ts > searchConversation — the exact tier > maps occurrences through casefold expansions (ß → ss) onto the original characters
+AssertionError: expected [] to have a length of 1 but got +0
+
+- Expected
++ Received
+
+- 1
++ 0
+
+ ❯ src/features/session/find.test.ts:87:16
+     85|   const entries = [user("u1", "Die Straße bleibt gesperrt.")];
+     86|   const { hits } = searchConversation(entries, "strasse");
+     87|   expect(hits).toHaveLength(1);
+       |                ^
+     88|   const [start, end] = hits[0]?.ranges[0] ?? [0, 0];
+     89|   // The range must cover the ORIGINAL word — ß included — not a shift…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/13]⎯
+
+ FAIL  src/features/session/find.test.ts > searchConversation — the exact tier > reads the message rows and the folded notice family — never tool output or reasoning
+AssertionError: expected [ 'u1', 'a1' ] to deeply equal [ 'u1', 's1', 'a1', 'p1', 'sa1', …(5) ]
+
+- Expected
++ Received
+
+  [
+    "u1",
+-   "s1",
+    "a1",
+-   "p1",
+-   "sa1",
+-   "pm1",
+-   "n1",
+-   "k1",
+-   "k2",
+-   "c1",
+  ]
+
+ ❯ src/features/session/find.test.ts:114:37
+    112|   // the folded notice family included, matching the desktop index's o…
+    113|   // set ("hub, wake, compaction, … has to stay findable").
+    114|   expect(hits.map((hit) => hit.id)).toEqual([
+       |                                     ^
+    115|    "u1",
+    116|    "s1",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/13]⎯
+
+ FAIL  src/features/session/find.test.ts > searchConversation — the exact tier > labels the folded families honestly and demotes them
+AssertionError: expected [ 'u1:user', 'a1:agent' ] to deeply equal [ 'u1:user', 'n1:notice', …(2) ]
+
+- Expected
++ Received
+
+  [
+    "u1:user",
+-   "n1:notice",
+-   "c1:compaction",
+-   "k1:ask",
++   "a1:agent",
+  ]
+
+ ❯ src/features/session/find.test.ts:138:54
+    136|   // The genuine row outranks newer injected rows even though it is ol…
+    137|   // the demotion — and each family carries a label that is not a lie.
+    138|   expect(hits.map((hit) => `${hit.id}:${hit.role}`)).toEqual([
+       |                                                      ^
+    139|    "u1:user",
+    140|    "n1:notice",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/13]⎯
+
+ FAIL  src/features/session/find.test.ts > searchConversation — the exact tier > folds ẞ the way the desktop's casefold does — `strasse` finds `STRAẞE`
+AssertionError: expected [] to deeply equal [ 'u1' ]
+
+- Expected
++ Received
+
+- [
+-   "u1",
+- ]
++ []
+
+ ❯ src/features/session/find.test.ts:149:37
+    147|   const entries = [user("u1", "DIE STRAẞE BLEIBT GESPERRT.")];
+    148|   const { hits } = searchConversation(entries, "strasse");
+    149|   expect(hits.map((hit) => hit.id)).toEqual(["u1"]);
+       |                                     ^
+    150|   expect(hits[0]?.tier).toBe("exact");
+    151|   const [start, end] = hits[0]?.ranges[0] ?? [0, 0];
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/13]⎯
+
+ FAIL  src/features/session/find.test.ts > searchConversation — the exact tier > trims the query to Python's `strip()` — the desktop's own cut (QA Q63-4)
+AssertionError: expected [] to deeply equal [ 'u1', 'u2' ]
+
+- Expected
++ Received
+
+- [
+-   "u1",
+-   "u2",
+- ]
++ []
+
+ ❯ src/features/session/find.test.ts:165:45
+    163|   // which used to push this query from the exact tier into the soft o…
+    164|   const control = searchConversation(entries, "retry\x1c");
+    165|   expect(control.hits.map((hit) => hit.id)).toEqual(["u1", "u2"]);
+       |                                             ^
+    166|   expect(control.hits.every((hit) => hit.tier === "exact")).toBe(true);
+    167|   // U+FEFF is NOT whitespace to Python and stays: there is no literal
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/13]⎯
+
+ FAIL  src/features/session/find.test.ts > searchConversation — the exact tier > caps the ranges a hit carries at five, non-overlapping
+AssertionError: Target cannot be null or undefined.
+ ❯ src/features/session/find.test.ts:177:27
+    175|   const entries = [user("u1", "aa aa aa aa aa aa aa")];
+    176|   const { hits } = searchConversation(entries, "aa");
+    177|   expect(hits[0]?.ranges).toHaveLength(5);
+       |                           ^
+    178|  });
+    179|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/13]⎯
+
+ FAIL  src/features/session/find.test.ts > searchConversation — the soft tier > stays off while the exact hits are enough (PRECISE_HITS_ENOUGH)
+AssertionError: expected [] to deeply equal [ 'u1', 'u2', 'u3' ]
+
+- Expected
++ Received
+
+- [
+-   "u1",
+-   "u2",
+-   "u3",
+- ]
++ []
+
+ ❯ src/features/session/find.test.ts:201:37
+    199|   ];
+    200|   const { hits } = searchConversation(entries, "retry");
+    201|   expect(hits.map((hit) => hit.id)).toEqual(["u1", "u2", "u3"]);
+       |                                     ^
+    202|   expect(hits.every((hit) => hit.tier === "exact")).toBe(true);
+    203|  });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/13]⎯
+
+ FAIL  src/features/session/find.test.ts > searchConversation — the soft tier > runs below the floor: one-edit typos and order-independent token-AND, marked related
+AssertionError: expected [] to deeply equal [ 'u2' ]
+
+- Expected
++ Received
+
+- [
+-   "u2",
+- ]
++ []
+
+ ❯ src/features/session/find.test.ts:215:42
+    213|   // is THE one message whose word is one edit away.
+    214|   const typo = searchConversation(entries, "classifer");
+    215|   expect(typo.hits.map((hit) => hit.id)).toEqual(["u2"]);
+       |                                          ^
+    216|   expect(typo.hits[0]?.tier).toBe("soft");
+    217|   // A soft hit carries no ranges (there is no literal occurrence to m…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/13]⎯
+
+ FAIL  src/features/session/find.test.ts > searchConversation — the soft tier > never fuzzes a token shorter than four characters
+AssertionError: expected undefined to be 'exact' // Object.is equality
+
+- Expected:
+"exact"
+
++ Received:
+undefined
+
+ ❯ src/features/session/find.test.ts:241:60
+    239|   expect(searchConversation(entries, "adt").hits).toEqual([]);
+    240|   // "add" itself is a literal substring — exact.
+    241|   expect(searchConversation(entries, "add").hits[0]?.tier).toBe("exact…
+       |                                                            ^
+    242|  });
+    243|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/13]⎯
+
+ FAIL  src/features/session/find.test.ts > searchConversation — the soft tier > ranks exact before soft and genuine before injected, oldest first inside each class
+AssertionError: expected [] to deeply equal [ 'u1', 'u2', 'sa1' ]
+
+- Expected
++ Received
+
+- [
+-   "u1",
+-   "u2",
+-   "sa1",
+- ]
++ []
+
+ ❯ src/features/session/find.test.ts:251:37
+    249|   ];
+    250|   const { hits } = searchConversation(entries, "retry");
+    251|   expect(hits.map((hit) => hit.id)).toEqual(["u1", "u2", "sa1"]);
+       |                                     ^
+    252|
+    253|   // With only soft hits on both sides, genuine still outranks injecte…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/13]⎯
+
+ FAIL  src/features/session/find.test.ts > searchConversation — truncation > cuts at the limit and says so
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ src/features/session/find.test.ts:274:21
+    272|   const { hits, truncated } = searchConversation(entries, "ledger", 2);
+    273|   expect(hits).toHaveLength(2);
+    274|   expect(truncated).toBe(true);
+       |                     ^
+    275|   const full = searchConversation(entries, "ledger");
+    276|   expect(full.hits).toHaveLength(5);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[11/13]⎯
+
+ FAIL  src/features/session/find.test.ts > searchConversation — the loaded window, honestly > finds a hit while its message is carried, and misses it honestly after the window slides past it
+AssertionError: expected [] to deeply equal [ 'u1' ]
+
+- Expected
++ Received
+
+- [
+-   "u1",
+- ]
++ []
+
+ ❯ src/features/session/find.test.ts:310:5
+    308|   expect(
+    309|    searchConversation(capTail(whole, 5), "euro").hits.map((h) => h.id),
+    310|   ).toEqual(["u1"]);
+       |     ^
+    311|   // Two appends with a cap of four push u1 out: the same query over t…
+    312|   // same conversation now finds nothing — from this device's frames t…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[12/13]⎯
+
+ FAIL  src/features/session/find.test.ts > searchConversation — the loaded window, honestly > keeps a hit findable across a SLIDING window while the message stays carried
+AssertionError: expected [] to deeply equal [ 'u1' ]
+
+- Expected
++ Received
+
+- [
+-   "u1",
+- ]
++ []
+
+ ❯ src/features/session/find.test.ts:333:68
+    331|   ];
+    332|   const frame1 = capTail(whole, 3);
+    333|   expect(searchConversation(frame1, "euro").hits.map((h) => h.id)).toE…
+       |                                                                    ^
+    334|    "u1",
+    335|   ]);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[13/13]⎯
+

@@ -1,0 +1,5 @@
+ranking: vitest rc=1 (expected non-zero) | restored: byte-identical
+reveal: vitest rc=1 (expected non-zero) | restored: byte-identical
+window: vitest rc=1 (expected non-zero) | restored: byte-identical
+caveat-clause: vitest rc=1 (expected non-zero) | restored: byte-identical
+all mutations fired and all restores verified

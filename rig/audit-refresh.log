@@ -1,0 +1,10 @@
+### audit refresh ###
+(node:85715) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/damian/local-operator-mobile-worktrees/transcript-depth/tools/audit/audit.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/damian/local-operator-mobile-worktrees/transcript-depth/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+audit: re-driving with the relay seed at http://127.0.0.1:52903
+  10/16 cells audited
+audit: 16 cells, 745 check rows, 678 measured, 0 FAIL, 67 BLOCKED (30 unmeasurable) · palette loaded
+audit rc=0
+relay reaped

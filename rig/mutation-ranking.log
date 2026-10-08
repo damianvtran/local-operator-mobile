@@ -1,0 +1,101 @@
+
+ RUN  v5.0.2 /Users/damian/local-operator-mobile-worktrees/transcript-depth
+
+··xx·······x··············
+::error file=/Users/damian/local-operator-mobile-worktrees/transcript-depth/src/features/session/find.test.ts,title=src/features/session/find.test.ts > searchConversation — the exact tier > reads the message rows and the folded notice family — never tool output or reasoning,line=114,column=37::AssertionError: expected [ Array(10) ] to deeply equal [ 'u1', 's1', 'a1', 'p1', 'sa1', …(5) ]%0A%0A- Expected%0A+ Received%0A%0A  [%0A-   "u1",%0A-   "s1",%0A-   "a1",%0A    "p1",%0A    "sa1",%0A    "pm1",%0A    "n1",%0A    "k1",%0A    "k2",%0A    "c1",%0A+   "u1",%0A+   "s1",%0A+   "a1",%0A  ]%0A%0A ❯ src/features/session/find.test.ts:114:37%0A%0A
+
+::error file=/Users/damian/local-operator-mobile-worktrees/transcript-depth/src/features/session/find.test.ts,title=src/features/session/find.test.ts > searchConversation — the exact tier > labels the folded families honestly and demotes them,line=138,column=54::AssertionError: expected [ 'n1:notice', 'c1:compaction', …(2) ] to deeply equal [ 'u1:user', 'n1:notice', …(2) ]%0A%0A- Expected%0A+ Received%0A%0A  [%0A-   "u1:user",%0A    "n1:notice",%0A    "c1:compaction",%0A    "k1:ask",%0A+   "u1:user",%0A  ]%0A%0A ❯ src/features/session/find.test.ts:138:54%0A%0A
+
+::error file=/Users/damian/local-operator-mobile-worktrees/transcript-depth/src/features/session/find.test.ts,title=src/features/session/find.test.ts > searchConversation — the soft tier > ranks exact before soft and genuine before injected%2C oldest first inside each class,line=251,column=37::AssertionError: expected [ 'sa1', 'u1', 'u2' ] to deeply equal [ 'u1', 'u2', 'sa1' ]%0A%0A- Expected%0A+ Received%0A%0A  [%0A+   "sa1",%0A    "u1",%0A    "u2",%0A-   "sa1",%0A  ]%0A%0A ❯ src/features/session/find.test.ts:251:37%0A%0A
+
+
+ Test Files  1 failed (1)
+      Tests  3 failed | 23 passed (26)
+   Start at  17:42:29
+   Duration  467ms (transform 74%, import 16%, tests 8%, worker 2%)
+
+(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
+  - ESM syntax in a file loaded as CommonJS (vitest.config.ts:1:1). Use a `.mjs` extension or set `"type": "module"` in the closest package.json
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/features/session/find.test.ts > searchConversation — the exact tier > reads the message rows and the folded notice family — never tool output or reasoning
+AssertionError: expected [ Array(10) ] to deeply equal [ 'u1', 's1', 'a1', 'p1', 'sa1', …(5) ]
+
+- Expected
++ Received
+
+  [
+-   "u1",
+-   "s1",
+-   "a1",
+    "p1",
+    "sa1",
+    "pm1",
+    "n1",
+    "k1",
+    "k2",
+    "c1",
++   "u1",
++   "s1",
++   "a1",
+  ]
+
+ ❯ src/features/session/find.test.ts:114:37
+    112|   // the folded notice family included, matching the desktop index's o…
+    113|   // set ("hub, wake, compaction, … has to stay findable").
+    114|   expect(hits.map((hit) => hit.id)).toEqual([
+       |                                     ^
+    115|    "u1",
+    116|    "s1",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  src/features/session/find.test.ts > searchConversation — the exact tier > labels the folded families honestly and demotes them
+AssertionError: expected [ 'n1:notice', 'c1:compaction', …(2) ] to deeply equal [ 'u1:user', 'n1:notice', …(2) ]
+
+- Expected
++ Received
+
+  [
+-   "u1:user",
+    "n1:notice",
+    "c1:compaction",
+    "k1:ask",
++   "u1:user",
+  ]
+
+ ❯ src/features/session/find.test.ts:138:54
+    136|   // The genuine row outranks newer injected rows even though it is ol…
+    137|   // the demotion — and each family carries a label that is not a lie.
+    138|   expect(hits.map((hit) => `${hit.id}:${hit.role}`)).toEqual([
+       |                                                      ^
+    139|    "u1:user",
+    140|    "n1:notice",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+ FAIL  src/features/session/find.test.ts > searchConversation — the soft tier > ranks exact before soft and genuine before injected, oldest first inside each class
+AssertionError: expected [ 'sa1', 'u1', 'u2' ] to deeply equal [ 'u1', 'u2', 'sa1' ]
+
+- Expected
++ Received
+
+  [
++   "sa1",
+    "u1",
+    "u2",
+-   "sa1",
+  ]
+
+ ❯ src/features/session/find.test.ts:251:37
+    249|   ];
+    250|   const { hits } = searchConversation(entries, "retry");
+    251|   expect(hits.map((hit) => hit.id)).toEqual(["u1", "u2", "sa1"]);
+       |                                     ^
+    252|
+    253|   // With only soft hits on both sides, genuine still outranks injecte…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+

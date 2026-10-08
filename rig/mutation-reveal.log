@@ -1,0 +1,64 @@
+
+ RUN  v5.0.2 /Users/damian/local-operator-mobile-worktrees/transcript-depth
+
+················x·x·······
+::error file=/Users/damian/local-operator-mobile-worktrees/transcript-depth/src/features/session/find.test.ts,title=src/features/session/find.test.ts > revealTarget — landing on a hit > names the condensed turn when the row is inside its collapse — the expand-first walk,line=382,column=36::AssertionError: expected null to deeply equal { kind: 'turn', turnKey: 'q1' }%0A%0A- Expected:%0A{%0A  "kind": "turn",%0A  "turnKey": "q1",%0A}%0A%0A+ Received:%0Anull%0A%0A ❯ src/features/session/find.test.ts:382:36%0A%0A
+
+::error file=/Users/damian/local-operator-mobile-worktrees/transcript-depth/src/features/session/find.test.ts,title=src/features/session/find.test.ts > revealTarget — landing on a hit > still lands on a hit whose own turn condensed BEFORE the window slid its rows away,line=420,column=36::AssertionError: expected null to deeply equal { kind: 'turn', turnKey: 'q1' }%0A%0A- Expected:%0A{%0A  "kind": "turn",%0A  "turnKey": "q1",%0A}%0A%0A+ Received:%0Anull%0A%0A ❯ src/features/session/find.test.ts:420:36%0A%0A
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 24 passed (26)
+   Start at  17:42:31
+   Duration  599ms (transform 65%, import 17%, tests 12%, worker 6%)
+
+(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
+  - ESM syntax in a file loaded as CommonJS (vitest.config.ts:1:1). Use a `.mjs` extension or set `"type": "module"` in the closest package.json
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/features/session/find.test.ts > revealTarget — landing on a hit > names the condensed turn when the row is inside its collapse — the expand-first walk
+AssertionError: expected null to deeply equal { kind: 'turn', turnKey: 'q1' }
+
+- Expected:
+{
+  "kind": "turn",
+  "turnKey": "q1",
+}
+
++ Received:
+null
+
+ ❯ src/features/session/find.test.ts:382:36
+    380|   const bar = plan.items.find((item) => item.kind === "bar");
+    381|   expect(bar).toBeDefined();
+    382|   expect(revealTarget(plan, "t1")).toEqual({ kind: "turn", turnKey: "q…
+       |                                    ^
+    383|   // Opening the turn puts the row back, and the same lookup now lands…
+    384|   // the row itself.
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  src/features/session/find.test.ts > revealTarget — landing on a hit > still lands on a hit whose own turn condensed BEFORE the window slid its rows away
+AssertionError: expected null to deeply equal { kind: 'turn', turnKey: 'q1' }
+
+- Expected:
+{
+  "kind": "turn",
+  "turnKey": "q1",
+}
+
++ Received:
+null
+
+ ❯ src/features/session/find.test.ts:420:36
+    418|    latch: first.latch,
+    419|   });
+    420|   expect(revealTarget(slid, "t1")).toEqual({ kind: "turn", turnKey: "q…
+       |                                    ^
+    421|  });
+    422| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+

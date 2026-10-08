@@ -1,0 +1,58 @@
+
+ RUN  v5.0.2 /Users/damian/local-operator-mobile-worktrees/transcript-depth
+
+····x·x·
+::error file=/Users/damian/local-operator-mobile-worktrees/transcript-depth/src/features/session/runtime.test.ts,title=src/features/session/runtime.test.ts > olderThanLoaded > claims when the page's oldest row is the oldest thing held — or is not held at all,line=170,column=5::AssertionError: expected false to be true // Object.is equality%0A%0A- Expected%0A+ Received%0A%0A- true%0A+ false%0A%0A ❯ src/features/session/runtime.test.ts:170:5%0A%0A
+
+::error file=/Users/damian/local-operator-mobile-worktrees/transcript-depth/src/features/session/runtime.test.ts,title=src/features/session/runtime.test.ts > olderThanLoaded > fires for the grow-in-place window%3A a complete-at-fetch page the cap slides under,line=197,column=5::AssertionError: expected false to be true // Object.is equality%0A%0A- Expected%0A+ Received%0A%0A- true%0A+ false%0A%0A ❯ src/features/session/runtime.test.ts:197:5%0A%0A
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 6 passed (8)
+   Start at  17:42:34
+   Duration  1.74s (transform 53%, import 46%, tests 1%)
+
+(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
+  - ESM syntax in a file loaded as CommonJS (vitest.config.ts:1:1). Use a `.mjs` extension or set `"type": "module"` in the closest package.json
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/features/session/runtime.test.ts > olderThanLoaded > claims when the page's oldest row is the oldest thing held — or is not held at all
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ src/features/session/runtime.test.ts:170:5
+    168|     slid: false,
+    169|    }),
+    170|   ).toBe(true);
+       |     ^
+    171|  });
+    172|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  src/features/session/runtime.test.ts > olderThanLoaded > fires for the grow-in-place window: a complete-at-fetch page the cap slides under
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ src/features/session/runtime.test.ts:197:5
+    195|   expect(
+    196|    olderThanLoaded({ hasMore: false, page, entries: slid, slid: false …
+    197|   ).toBe(true);
+       |     ^
+    198|  });
+    199|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+

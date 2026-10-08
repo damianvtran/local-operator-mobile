@@ -1,0 +1,27 @@
+### audit s16 ###
+(node:11182) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/damian/local-operator-mobile-worktrees/transcript-depth/tools/audit/audit.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/damian/local-operator-mobile-worktrees/transcript-depth/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+audit: re-driving with the relay seed at http://127.0.0.1:58591
+  path--session-6714def86197__warm__iphone-se__dark__200: the re-drive did not reach the state this record names — the cell declares 'warm' but the app is showing an empty state (session-transcript-empty): the state was never reached
+  path--session-6714def86197__warm__iphone-se__light__100: the re-drive did not reach the state this record names — the cell declares 'warm' but the app is showing an empty state (session-transcript-empty): the state was never reached
+  path--session-6714def86197__warm__iphone-se__light__200: the re-drive did not reach the state this record names — the cell declares 'warm' but the app is showing an empty state (session-transcript-empty): the state was never reached
+  path--session-6714def86197__warm__iphone-15__dark__100: the re-drive did not reach the state this record names — the cell declares 'warm' but the app is showing an empty state (session-transcript-empty): the state was never reached
+  path--session-6714def86197__warm__iphone-15__dark__200: the re-drive did not reach the state this record names — the cell declares 'warm' but the app is showing an empty state (session-transcript-empty): the state was never reached
+  path--session-6714def86197__warm__iphone-15__light__100: the re-drive did not reach the state this record names — the cell declares 'warm' but the app is showing an empty state (session-transcript-empty): the state was never reached
+  path--session-6714def86197__warm__iphone-15__light__200: the re-drive did not reach the state this record names — the cell declares 'warm' but the app is showing an empty state (session-transcript-empty): the state was never reached
+  10/32 cells audited
+  20/32 cells audited
+  30/32 cells audited
+audit: 32 cells, 914 check rows, 688 measured, 0 FAIL, 226 BLOCKED (142 unmeasurable) · palette loaded
+audit: 119 row(s) are BLOCKED as state-not-reproduced — the capture's record for these cells was ready and the re-drive did not reach the state it names:
+  - path--session-6714def86197__warm__iphone-se__dark__200-settled.png
+  - path--session-6714def86197__warm__iphone-se__light__100-settled.png
+  - path--session-6714def86197__warm__iphone-se__light__200-settled.png
+  - path--session-6714def86197__warm__iphone-15__dark__100-settled.png
+  - path--session-6714def86197__warm__iphone-15__dark__200-settled.png
+  … 2 more, in audit-report.md
+audit rc=0
+relay reaped
+done rc=0

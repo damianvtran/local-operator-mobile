@@ -1,0 +1,19 @@
+login: 303 cookie present: true
+
+=== long-transcript (6714def86197) ===
+pin: 200 {"scenario":"long-transcript"}
+history page: 80 entries; has_more: true ; oldest id: tc-conv-11-user
+projection seed: transcript rows: 520
+find scans: 26 message docs held by the window
+olderThanLoaded(...) -> false (held extends past the page (oldest at index 440))
+
+=== long-transcript-history (6714def86197) ===
+pin: 200 {"scenario":"long-transcript-history"}
+history page: 80 entries; has_more: true ; oldest id: tc-conv-11-user
+projection seed: transcript rows: 0
+find scans: 4 message docs held by the window
+olderThanLoaded(...) -> true (page incomplete; nothing held past its oldest row)
+
+=== verdict ===
+control (long-transcript): caveat off — correct (held extends past the page)
+history-first (long-transcript-history): caveat ON — correct (the S5/find-caveat premise)

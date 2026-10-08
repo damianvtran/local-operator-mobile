@@ -1,0 +1,37 @@
+capture plan: 16 cells × 3 frame(s) = 48 frames
+  screens: S5
+  devices planned: iphone-se, iphone-15 — 2 of 19 declared profiles, the other 17 not in this run's plan
+  themes:  dark, light
+  scales:  100, 200
+  out:     /Users/damian/.local-operator/sessions/c4098271221c/scratchpad/rem63-frames-refresh
+  deadline: 3600 s (explicit)
+[1/16] S5__find-related__iphone-se__dark__100  theme=dark(q) canvas=rgb(34, 32, 28) els=128 text=20.296875px 46868b bb58973f3a35e149
+[2/16] S5__find-related__iphone-se__dark__200  theme=dark(q) canvas=rgb(34, 32, 28) els=299 text=39.015625px 86967b 5bf855f7b8786a8a
+[3/16] S5__find-related__iphone-se__light__100  theme=light(q) canvas=rgb(242, 237, 227) els=284 text=17.390625px 73834b 0c616193de6aac82
+[4/16] S5__find-related__iphone-se__light__200  theme=light(q) canvas=rgb(242, 237, 227) els=299 text=39.015625px 87761b 6d4507024a5b881e
+[5/16] S5__find-related__iphone-15__dark__100  theme=dark(q) canvas=rgb(34, 32, 28) els=396 text=17.390625px 186186b 28448227399c86e0
+[6/16] S5__find-related__iphone-15__dark__200  theme=dark(q) canvas=rgb(34, 32, 28) els=292 text=39.015625px 172887b 48f6ddb576878ea7
+[7/16] S5__find-related__iphone-15__light__100  theme=light(q) canvas=rgb(242, 237, 227) els=464 text=17.390625px 186494b 14dcccaa5dc7821b
+[8/16] S5__find-related__iphone-15__light__200  theme=light(q) canvas=rgb(242, 237, 227) els=292 text=39.015625px 173814b a5af6429cc8dcf69
+[9/16] S5__find-caveat__iphone-se__dark__100  theme=dark(q) canvas=rgb(34, 32, 28) els=278 text=17.390625px 73953b a26d76f760bdef56
+[10/16] S5__find-caveat__iphone-se__dark__200  theme=dark(q) canvas=rgb(34, 32, 28) els=376 text=34.796875px 92109b 612aca3f7376bb1a
+[11/16] S5__find-caveat__iphone-se__light__100  theme=light(q) canvas=rgb(242, 237, 227) els=278 text=17.390625px 73862b 32f608499c0ce542
+[12/16] S5__find-caveat__iphone-se__light__200  theme=light(q) canvas=rgb(242, 237, 227) els=376 text=34.796875px 93271b 59761220d3df595a
+[13/16] S5__find-caveat__iphone-15__dark__100  theme=dark(q) canvas=rgb(34, 32, 28) els=624 text=17.390625px 197348b 6f6ba7f9af7615d0
+[14/16] S5__find-caveat__iphone-15__dark__200  theme=dark(q) canvas=rgb(34, 32, 28) els=369 text=34.796875px 195118b c2ce5a3c040043bb
+[15/16] S5__find-caveat__iphone-15__light__100  theme=light(q) canvas=rgb(242, 237, 227) els=624 text=17.390625px 197696b 60e3362252e45693
+[16/16] S5__find-caveat__iphone-15__light__200  theme=light(q) canvas=rgb(242, 237, 227) els=369 text=34.796875px 194938b 6e739530c69b8fae
+  teardown: 0 process(es) left by this run, 0 orphan(s) from earlier runs reaped, 0 live owner(s) left alone, 14 cell(s) whose settled frame was retaken to agree with its readings
+
+captured 16 cells / 48 frames in 162.8 s
+device coverage: 2 of 19 declared profiles captured (iphone-se, iphone-15); 17 NOT captured (iphone-se2, android-compact, android-small, android-large, iphone-max, fold-cover, fold-open, iphone-15-landscape, android-large-landscape, tablet-768, tablet-768-landscape, tablet, tablet-landscape, tablet-pro, tablet-pro-landscape, android-tablet, android-tablet-landscape)
+frames that changed after first paint: 14
+text-scale dimension: scale dimension is live across 8/8 measured pairs (every type role grew by the cell's own factor)
+  text-scale notes: 8 pair(s) show a size only at 200% — a node that did not move with the root font size, or a layout that introduced it at this scale; named, not failed
+theme problems: none — every frame's resolved theme and canvas match its cell, and no dark/light pair is identical
+scrolled presses: none — every opener pressed a control that was already on screen
+UNREADY CELLS (1):
+  - S5__find-related__iphone-se__dark__100: the cell declares 'find-related' but the marker 'session-find-related' is not in the DOM: nothing in the frame affirms that state, so the cell is NOT MEASURABLE for it; the cell declares 'find-related' but the app is showing an empty state (session-transcript-empty): the state was never reached
+NOT MEASURABLE: 1 of 16 cells — their frames are the app's fallback screen, not the declared state
+capture rc=0
+
