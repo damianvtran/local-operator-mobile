@@ -97,13 +97,15 @@ export const useAsksSheet = (input: AsksSheetInput): AsksSheetControl => {
 	const [controller] = useState(() => createAsksAutoOpen());
 
 	/* Whether the sheet is open is the controller's fact, KEYED BY CONVERSATION -
-	 * not a `useState(false)` this hook owns. The distinction is the contract's
-	 * rule 4 holding across a re-point: a boolean kept here would survive the same
-	 * mounted screen being pointed at another conversation and back (dismiss A,
-	 * land on B where the policy opens it, return to A: A's sheet would show
-	 * though nothing opened it), and would show A's sheet over B for the frame
-	 * before an effect could correct it. Derived from the id on every render, it
-	 * is simply "no" for any conversation the controller did not open it for.
+	 * not a `useState(false)` this hook owns. That is rule 4 holding if the same
+	 * mounted screen were ever pointed at another conversation and back (dismiss A,
+	 * land on B where the policy opens it, return to A: a boolean kept here would
+	 * show A's sheet though nothing opened it, and A's sheet over B for the frame
+	 * before an effect could correct it). No navigation call in this app does that
+	 * today - see `AsksAutoOpen.openFor` for the router reading - so this is
+	 * hardening, not the repair of a known leak. Derived from the id on every
+	 * render, the answer is simply "no" for any conversation the controller did
+	 * not open it for.
 	 * `useSyncExternalStore` because the controller changes it from an effect
 	 * (the policy), from the bar (a press) and from the sheet (a close), none of
 	 * which are this component's state. */

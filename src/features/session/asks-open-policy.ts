@@ -2,18 +2,18 @@
  * When the asks sheet opens BY ITSELF — this app's copy of the shared open-policy
  * contract.
  *
- * WHY THIS EXISTS. The sheet used to open only from the bar above the composer
- * (design §5.0: "entered only by the user"). The bar is one line and easy to
- * miss, so a first-time reader of a conversation with a question waiting had
- * nothing telling them it was there. The operator's ruling (2026-10-07) is that a
+ * WHY THIS EXISTS. The sheet used to open only from the bar above the composer -
+ * the screen's own comment said so, citing design §5.0's rule that the surface is
+ * never automatic on arrival. The bar is one line and easy to miss, so a
+ * first-time reader of a conversation with a question waiting had nothing
+ * telling them it was there. The operator's ruling (2026-10-07) is that a
  * conversation with PENDING asks opens its primary asks surface by default, on
  * EVERY surface, with the same semantics — so someone moving between the TUI, the
  * desktop, the phone web and this app meets one behaviour, not four.
  *
- * §5.0's "never automatic on ask ARRIVAL" is narrowed, not repealed: an ask that
- * arrives while the reader is already here still must not displace what they are
- * doing (rule 4's last sentence). What changes is the moment a conversation is
- * OPENED.
+ * That rule is narrowed, not repealed: an ask that arrives while the reader is
+ * already here still must not displace what they are doing (rule 4's last
+ * sentence). What changes is the moment a conversation is OPENED.
  *
  * THE CONTRACT (six rules; the numbers are the contract's own, so a reviewer can
  * check each against the code that enforces it):
@@ -45,8 +45,8 @@
  * which rule 4 forbids from forcing it open. `readQueue` therefore compares each
  * outstanding ask's own `created_at` with the instant the view began, and an
  * ask raised after it is an `arrived` reading, which settles the view closed.
- * (This is the TUI lane's race, found there first and mirrored here so the five
- * surfaces agree: `local_operator/tui/ask_open_policy.py`.)
+ * (Found in the TUI lane first and mirrored here, so the surfaces agree:
+ * `local_operator/tui/ask_open_policy.py`.)
  *
  * AND THE WAIT FOR A RESOLVED FRAME IS BOUNDED. A frame that resolves later than
  * `OPEN_WINDOW_MS` after the view began can never auto-open: by then it is no
@@ -70,12 +70,13 @@ import type { ProjectionEntry } from "@/state";
 /* ---------------------------------------------------------- the queue reading */
 
 /**
- * How long after a view begins it may still choose to open (rules 2 and 5; the
- * TUI lane's `OPEN_WINDOW_S`, carried over so every surface draws the line in the
- * same place). 45 s is the engage seam's own bound — 30 s to bring a cold runtime
- * up plus 15 s to be acknowledged — so a queue that only exists once its runtime
- * is engaged is still "on open", while a frame that resolves well into the view
- * is not. Compared with `>`: a frame landing exactly on the bound still opens.
+ * How long after a view begins it may still choose to open (rules 2 and 5). The
+ * value is the TUI lane's `OPEN_WINDOW_S`, carried over so every surface draws
+ * the line in the same place; that module derives it as the engage seam's own
+ * bound — 30 s to bring a cold runtime up plus 15 s to be acknowledged — so a
+ * queue that only exists once its runtime is engaged is still "on open", while a
+ * frame that resolves well into the view is not. This surface has not re-derived
+ * it. Compared with `>`: a frame landing exactly on the bound still opens.
  */
 export const OPEN_WINDOW_MS = 45_000;
 
@@ -357,11 +358,13 @@ export interface QueueObservation {
  *
  * A VIEW IS A MOUNT OF A CONVERSATION, not the conversation: leaving the screen
  * and coming back makes a new controller (rule 2's "opened/switched-to"), while
- * the ledger carries the one thing that must survive that (rule 4). The route
- * carries no `getId`, so the SAME screen instance can be re-pointed at another
- * conversation by a deep link; the controller notices the id change itself and
- * starts a fresh view, which is why `sessionId` rides on every call rather than
- * being fixed at construction.
+ * the ledger carries the one thing that must survive that (rule 4).
+ *
+ * `sessionId` rides on every call rather than being fixed at construction
+ * because nothing here may depend on a screen never being re-pointed at another
+ * conversation. Whether this app CAN be is the router's to say, read in
+ * expo-router 57.0.24 rather than assumed (`openFor` carries the details);
+ * either way the controller notices an id change itself and starts a fresh view.
  */
 export interface AsksAutoOpen {
 	/**
@@ -372,16 +375,25 @@ export interface AsksAutoOpen {
 	/**
 	 * Which conversation the sheet is open FOR, or `null`.
 	 *
-	 * THE OPEN STATE IS KEYED BY CONVERSATION, NOT HELD AS A FLAG, and this is the
-	 * contract's rule 4 holding across a re-point. The route carries no `getId`, so
-	 * `router.navigate('/session/B')` from `/session/A` (a push tap or a link while a
-	 * conversation is open - `use-deep-link-resolution.ts`) re-uses the SAME mounted
-	 * screen with new params, no remount. A bare boolean survives that: dismiss A,
-	 * be taken to B (the policy opens it), come back to A, and A's sheet would be
-	 * showing though nothing opened it - the leak the desktop UI found on its
+	 * THE OPEN STATE IS KEYED BY CONVERSATION, NOT HELD AS A FLAG. That makes rule 4
+	 * hold even if one mounted screen were ever pointed at another conversation and
+	 * back: a bare boolean would show A's sheet again after "dismiss A, be taken to
+	 * B (the policy opens it), return to A" - the leak the desktop UI found on its
 	 * window-wide drawer flag. Keyed, the answer for A is simply "no" the moment the
-	 * params change, before any effect has run, so there is no frame of the sheet
-	 * over the wrong conversation either.
+	 * params change, before any effect has run, so there would be no frame of the
+	 * sheet over the wrong conversation either.
+	 *
+	 * WHETHER THIS APP CAN BE RE-POINTED IN PLACE is the router's answer, READ in
+	 * expo-router 57.0.24 rather than assumed, and it is "not by any navigation
+	 * call in this repo": a `navigate`/`push` to another `[id]` gets a NEW route key
+	 * (`layouts/StackClient.js`; the same-key arms there are an equal-id NAVIGATE,
+	 * i.e. the SAME conversation), `replace` goes to the base `StackRouter.js`,
+	 * which mints one (`createRouteFromAction`), and scenes are React-keyed by
+	 * `route.key` on web and native (`native-stack/views/NativeStackView(.native).js`).
+	 * Only `setParams` keeps a key and swaps params, and nothing in `src/` or `app/`
+	 * calls it. So this keying is defence in depth that removes a dependency on
+	 * those internals - NOT the repair of a leak this app is known to have, and the
+	 * A-B-A tests below pin the policy, not a reproduced defect.
 	 */
 	openFor(): string | null;
 	/** `openFor() === sessionId`, for a non-empty id. The screen's `visible`. */

@@ -500,10 +500,13 @@ describe("the sheet's open state is keyed by conversation", () => {
 		expect(view.controller.isOpenFor("")).toBe(false);
 	});
 
-	it("DISMISS A -> ARRIVE AT B (the policy opens it) -> BACK TO A, one screen re-pointed: A's sheet is not showing", () => {
+	it("DISMISS A -> ARRIVE AT B (the policy opens it) -> BACK TO A, one controller re-pointed: A's sheet is not showing", () => {
 		// The sequence the desktop drawer leaked on, because its open state was one
-		// window-wide flag that followed the reader. Here the same mounted screen is
-		// pointed at A, then B, then A again, with no remount between.
+		// window-wide flag that followed the reader. Here the same controller is
+		// pointed at A, then B, then A again, with no new view between. That is a
+		// property of the POLICY: expo-router 57 gives each `[id]` navigation in
+		// this app its own route key (`AsksAutoOpen.openFor`), so the app does not do
+		// this today - the test pins that it would be safe if it did.
 		const view = mount();
 		expect(view.see(fresh(PENDING), { sessionId: SESSION })).toBe(true);
 		view.controller.closed({ sessionId: SESSION, asksRemain: true });
