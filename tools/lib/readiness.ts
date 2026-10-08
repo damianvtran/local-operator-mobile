@@ -91,6 +91,11 @@ export const SCREEN_MARKER_SUBJECT: Record<string, string> = {
 	 * drew. */
 	S16: "projects",
 	"S16-detail": "project-detail",
+	/** The armed index (S17): wakes and monitors carrying conversations, read
+	 *  from the machine-wide indexes. One screen, one subject — the two families
+	 *  are sections of it, and the sheet/panel entries above stay separate
+	 *  subjects only where the app really renders two roots. */
+	S17: "schedules",
 };
 
 /**

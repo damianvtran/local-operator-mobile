@@ -23,16 +23,24 @@ wrong wire.
 Read [`../../docs/relay/contract.md`](../../docs/relay/contract.md) for what each
 sample means; this file is only about provenance and reproduction.
 
-The tree is currently **121 fixtures — 115 live, 6 synthetic** — plus this README. The split is counted from `provenance.kind` in the files
+The tree is currently **125 fixtures — 119 live, 6 synthetic** — plus this README. The split is counted from `provenance.kind` in the files
 themselves rather than typed here, so it cannot drift from them.
 
-**Four refs are represented, deliberately.** The bulk of the live captures were
+**Five refs are represented, deliberately.** The bulk of the live captures were
 taken at local-operator `52c1df35`; the session-state receipts (`ended`,
 `degraded`) were added by #1784, so the captures that show them are taken at
 `fc851a94e`; and the push/ack-sync samples (the frame-level `unread` block, the
 handle-resolution route, and the superseded-token refusal) are taken at
 `ca0569855`, where S1/S2/S4 shipped. Each file's `provenance.relay_ref` names its
 own, and no capture was restamped to look newer than it is.
+
+The schedules samples (`schedules-empty`, `schedules-populated`,
+`schedules-truncated`, `schedules-read-error`) are a fifth: captured at
+`5e59e0cd06` — the merge of #2061, the route's own — from an isolated
+`build_app(MobileDaemon)` daemon on loopback with the stores seeded in their own
+JSON shapes (the `wakes/store.py` and `monitors/store.py` indexes), plus one
+capture with the wakes directory at mode `000` so `read_error` is the store's
+own flag rather than a written-in one.
 
 The projects WRITE samples (`projects-created`, `projects-create-refused`,
 `projects-create-invalid`, `projects-delete-refused`, `projects-deleted`,
@@ -164,6 +172,10 @@ The notification-path samples are the same recipe plus two turns:
 | `projects-empty.json` | `GET /api/projects` | 200 | the empty arm: no projects yet |
 | `projects-list.json`, `projects-detail.json` | `GET /api/projects`, `GET /api/projects/{key}` | 200 | the six-project seeded store: every status (`active`/`paused`/`done`/`archived`), stale and fresh progress, a live and a stopped link, and the three derived milestone states |
 | `projects-not-found.json` | `GET /api/projects/{key}` | 404 | `project_not_found` carrying the relay's own sentence and its prefix-matched near-miss |
+| `schedules-empty.json` | `GET /api/schedules` | 200 | the empty arm: both families readable, nothing armed |
+| `schedules-populated.json` | `GET /api/schedules` | 200 | wakes armed / overdue / stale / dormant (stopped) / ghost (no session on disk) with a hidden patience timer; monitors armed / dormant / disabled / expired, one never-checked watch and one unavailable episode |
+| `schedules-truncated.json` | `GET /api/schedules` | 200 | 205 wake-carrying conversations against `WAKE_LIST_LIMIT = 200`: `truncated: true`, `total: 205`, 200 entries — kept whole, not trimmed |
+| `schedules-read-error.json` | `GET /api/schedules` | 200 | the wakes index unreadable (directory mode `000`): `wakes.read_error: true` with empty entries while the monitors family stays readable — the two answers that must never collapse into one |
 | `mark-png.json` | `HEAD /mark.png` | 200 | the brand asset, deliberately unauthenticated |
 | `command-set-effort-bad.json`, `command-set-model-unknown.json`, `command-slash-unknown.json` | `POST …/command` | 422 / 200 / 422 | three refusals a model sheet and a slash sheet must render |
 | `prompt-image-2.json`, `prompt-image-3.json` | `POST …/command` (`prompt` with one image) | 200 | the second was sent with a payload that could not be decoded, and the relay **still answered `200 prompt admitted`** while dropping the attachment — the evidence behind the contract's “image ingest is best-effort and silent” note |

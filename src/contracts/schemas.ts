@@ -67,6 +67,14 @@ import type {
 	PushDeviceRow,
 	PushDevicesResponse,
 	PushRegisterResponse,
+	ScheduleMonitorEntry,
+	ScheduleMonitorListing,
+	ScheduleMonitorRow,
+	ScheduleSupervisorInfo,
+	SchedulesResponse,
+	ScheduleWakeEntry,
+	ScheduleWakeListing,
+	ScheduleWakeRow,
 	SearchSessionsResponse,
 	SeenResponse,
 	SessionListFrame,
@@ -328,6 +336,151 @@ export const pendingAskSchema = z.looseObject({
 export const asksResponseSchema = z.looseObject({
 	asks: z.array(pendingAskSchema),
 	asks_truncated: z.boolean().optional(),
+});
+
+/* -------------------------------------------------------------- schedules -- */
+
+/**
+ * One wake schedule row (`GET /api/schedules`; local-operator `5e59e0cd`,
+ * `mobile/schedules.py` mirroring `server/models/desktop_wakes.py`).
+ *
+ * NOTHING IS DEFAULTED for the same reason the asks rows state: a runtime with
+ * this route live always publishes every field (the desktop models are dumped
+ * whole), and the fields that can be `null` have a specific reading — `null`
+ * is "the server did not make this measurement", never `0`.
+ *
+ * `overdue_s`/`stale` are WRITTEN BY THE SERVER from the supervisor's own
+ * predicates and are read, not re-derived: a client that recomputed freshness
+ * from `next_due_at` would be the second verdict this field pair exists to
+ * stop.
+ */
+export const scheduleWakeRowSchema = z.looseObject({
+	id: z.string(),
+	message: z.string(),
+	/** Epoch MILLISECONDS — unlike every session clock on this wire. */
+	next_due_at: z.number(),
+	every_ms: z.number().nullable(),
+	until_at: z.number().nullable(),
+	limit: z.number().nullable(),
+	fired_count: z.number(),
+	overdue_s: z.number(),
+	stale: z.boolean(),
+	last_fired_at: z.number().nullable(),
+	last_attempt_at: z.number().nullable(),
+});
+
+/** One wake-carrying conversation (`desktop_wakes.WakeEntry`). */
+export const scheduleWakeEntrySchema = z.looseObject({
+	session_id: nonEmpty,
+	name: z.string(),
+	cwd: z.string(),
+	/** `""` / `"subagent"` / `"fork"` / `"team"`; labels, never filters. */
+	origin: z.string(),
+	updated_at: z.number(),
+	dormant: z.boolean(),
+	ghost: z.boolean(),
+	next_due_at: z.number().nullable(),
+	schedules: z.array(scheduleWakeRowSchema),
+});
+
+/**
+ * The supervisor's verdict (`desktop_wakes.SupervisorInfo`).
+ *
+ * `verifiable` is optional on purpose, the desktop's own reading
+ * (`shared/desktop-contract.ts`): a runtime that stops sending it reads as
+ * "the probe can speak", which is the pre-field behaviour.
+ */
+export const scheduleSupervisorSchema = z.looseObject({
+	supported: z.boolean(),
+	running: z.boolean(),
+	detail: z.string(),
+	verifiable: z.boolean().optional(),
+});
+
+/** `GET /api/schedules`'s `wakes` half: every wake-carrying conversation on
+ *  this machine. `read_error` is the store's own verdict — an unreadable
+ *  index must never be rendered as "nothing is armed". */
+export const scheduleWakeListingSchema = z.looseObject({
+	entries: z.array(scheduleWakeEntrySchema),
+	generated_at: z.number(),
+	/** Entries before the 200-row cap, so a client can say "showing 200 of
+	 *  205" rather than implying the store holds only what it was sent. */
+	total: z.number(),
+	truncated: z.boolean(),
+	supervisor: scheduleSupervisorSchema,
+	read_error: z.boolean(),
+});
+
+/** One standing watch (`desktop_monitors.MonitorRow`). `state` stays an open
+ *  string: the four words are known today, and a newer runtime's word must
+ *  render as its own.
+ *
+ *  `health` is the store's own sentence (`monitors/store.py::health_hint`) —
+ *  rendered, not re-derived, so one monitor cannot read as healthy here and
+ *  stalled on another surface. `null` when there is nothing to say, which is
+ *  the common case and must stay silent. */
+export const scheduleMonitorRowSchema = z.looseObject({
+	id: z.string(),
+	name: z.string(),
+	tool: z.string(),
+	arguments: z.record(z.string(), z.unknown()),
+	description: z.string(),
+	every_ms: z.number().nullable(),
+	until_at: z.number().nullable(),
+	notify: z.boolean(),
+	sort_lines: z.boolean(),
+	ignore: z.array(z.string()),
+	cwd: z.string(),
+	created_at: z.number(),
+	next_due_at: z.number().nullable(),
+	last_check_at: z.number(),
+	checks: z.number(),
+	deliveries: z.number(),
+	consecutive_failures: z.number(),
+	disabled: z.boolean(),
+	disabled_reason: z.string(),
+	/** NEGATIVE when the check is late — ordinary between change events. */
+	due_in_s: z.number().nullable(),
+	last_check_age_s: z.number().nullable(),
+	state: z.string(),
+	unavailable_since: z.number(),
+	health: z.string().nullable(),
+});
+
+/** One monitor-carrying conversation (`desktop_monitors.MonitorEntry`). */
+export const scheduleMonitorEntrySchema = z.looseObject({
+	session_id: nonEmpty,
+	name: z.string(),
+	cwd: z.string(),
+	origin: z.string(),
+	updated_at: z.number(),
+	dormant: z.boolean(),
+	ghost: z.boolean(),
+	next_due_at: z.number().nullable(),
+	monitors: z.array(scheduleMonitorRowSchema),
+});
+
+/** `GET /api/schedules`'s `monitors` half. Deliberately no `supervisor` block:
+ *  monitors never engage a cold session, so a supervisor-shaped field would
+ *  advertise a watcher that does not exist. */
+export const scheduleMonitorListingSchema = z.looseObject({
+	entries: z.array(scheduleMonitorEntrySchema),
+	generated_at: z.number(),
+	total: z.number(),
+	truncated: z.boolean(),
+	read_error: z.boolean(),
+});
+
+/**
+ * `GET /api/schedules` — the machine-wide armed index: every wake- and
+ * monitor-carrying conversation in one answer, from the derived indexes, with
+ * no runtime needed. The two empty answers stay distinguishable per family:
+ * `read_error` is how the wire tells "nothing is armed" apart from "this
+ * process could not read the store".
+ */
+export const schedulesResponseSchema = z.looseObject({
+	wakes: scheduleWakeListingSchema,
+	monitors: scheduleMonitorListingSchema,
 });
 
 /** The completion-attention record. This — not transcript activity, not
@@ -962,6 +1115,10 @@ export const SCHEMAS = {
 	commandAck: commandAckSchema,
 	/** `GET /api/asks`: the aggregate route the asks sheet reads. */
 	asks: asksResponseSchema,
+	/** `GET /api/schedules`: the machine-wide armed index — the Schedules
+	 *  surface's one read, and like `asks` a route this client consumes at the
+	 *  parse boundary. */
+	schedules: schedulesResponseSchema,
 	/** Registered as well as exported so the request body a caller sends is
 	 *  validated by the same boundary as every response: an op with a missing or
 	 *  mistyped field fails on the device, not as a `422` the UI has to explain. */
@@ -1092,6 +1249,10 @@ type WireMirror = {
 	commandAck: CommandAck;
 	seen: SeenResponse;
 	asks: AsksResponse;
+	/* The armed index (`GET /api/schedules`): asserted, not excused, like every
+	 *  read family around it — a schema whose output stops being assignable to
+	 *  these mirror declarations trips `AssertAll`. */
+	schedules: SchedulesResponse;
 	pushConversation: PushConversationResponse;
 	pushRegister: PushRegisterResponse;
 	pushDevices: PushDevicesResponse;
@@ -1281,6 +1442,14 @@ export type {
 	PushDeviceRow,
 	PushDevicesResponse,
 	PushRegisterResponse,
+	ScheduleMonitorEntry,
+	ScheduleMonitorListing,
+	ScheduleMonitorRow,
+	ScheduleSupervisorInfo,
+	SchedulesResponse,
+	ScheduleWakeEntry,
+	ScheduleWakeListing,
+	ScheduleWakeRow,
 	SearchSessionsResponse,
 	SeenResponse,
 	SessionListFrame,

@@ -2012,6 +2012,22 @@ export function createRelay(options: RelayOptions = {}) {
 			return;
 		}
 
+		if (pathname === "/api/schedules" && method === "GET") {
+			/* The armed index (S17): the scenario's whole body when it declares
+			 *  one (a bare body or a recorded response), else the captured EMPTY
+			 *  listing — the answer a machine with nothing armed gives, and what
+			 *  a scenario silent about schedules means. The route is read-only:
+			 *  arm, edit and cancel stay on the desktop/terminal plane, and a
+			 *  non-GET on this path is the table's 405, not an invented write. */
+			const schedules = world.schedules;
+			if (schedules !== undefined) {
+				sendRecordedOrBody(res, schedules);
+				return;
+			}
+			sendFixture(res, "schedules-empty");
+			return;
+		}
+
 		if (pathname === "/api/pair" && method === "POST") {
 			sendFixture(res, "pair-no-code");
 			return;
@@ -2367,6 +2383,8 @@ export function createRelay(options: RelayOptions = {}) {
 		},
 		{ match: /^\/api\/projects\/[^/]+\/milestones$/, methods: ["POST"] },
 		{ match: /^\/api\/projects\/[^/]+$/, methods: ["GET", "HEAD", "DELETE"] },
+		/* The armed index (S17) is read-only, like the relay's own route. */
+		{ match: /^\/api\/schedules$/, methods: ["GET", "HEAD"] },
 		{ match: /^\/api\/pair$/, methods: ["POST"] },
 		{ match: /^\/healthz$/, methods: ["GET", "HEAD"] },
 		{ match: /^\/login$/, methods: ["GET", "POST"] },

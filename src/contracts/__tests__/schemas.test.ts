@@ -208,6 +208,11 @@ function classifyHttp(rel: string, fixture: HttpFixture): Classification {
 		return { kind: "schema", schema: "projects", value: body };
 	if (route.startsWith("/api/projects/"))
 		return { kind: "schema", schema: "projectDetail", value: body };
+	/* The armed index (S17): one route carrying both families — wakes and
+	 *  monitors — which is why it is classified by the exact route and not a
+	 *  prefix. */
+	if (route === "/api/schedules")
+		return { kind: "schema", schema: "schedules", value: body };
 	if (idThen("/history"))
 		return { kind: "schema", schema: "history", value: body };
 	if (idThen("/command"))
@@ -484,6 +489,176 @@ describe("the projects read path reads the relay's own values", () => {
 
 	it("rejects a listing whose rows are not objects", () => {
 		const parsed = safeParsePayload("projects", { projects: ["payments"] });
+		expect(parsed.ok).toBe(false);
+	});
+});
+
+describe("the schedules read path reads the relay's own values", () => {
+	const base = {
+		wakes: {
+			entries: [],
+			generated_at: 1_791_491_000_000,
+			total: 0,
+			truncated: false,
+			supervisor: {
+				supported: true,
+				running: true,
+				detail: "launchd reports the agent as running",
+			},
+			read_error: false,
+		},
+		monitors: {
+			entries: [],
+			generated_at: 1_791_491_000_000,
+			total: 0,
+			truncated: false,
+			read_error: false,
+		},
+	};
+
+	/** One monitor row with every field the route always publishes, so a test
+	 *  varies only what it is about — the wire sends whole rows (`model_dump`
+	 *  emits every declared field), and a test that sends a partial one would be
+	 *  practising a shape no relay serves. */
+	const monitorRow = (overrides: Record<string, unknown> = {}) => ({
+		id: "m1",
+		name: "build status",
+		tool: "bash",
+		arguments: { command: "gh pr list --state open" },
+		description: "watch the repo for new pull requests",
+		every_ms: 300_000,
+		until_at: null,
+		notify: true,
+		sort_lines: false,
+		ignore: [],
+		cwd: "~",
+		created_at: 1_791_000_000_000,
+		next_due_at: 1_791_491_300_000,
+		last_check_at: 1_791_490_000_000,
+		checks: 3,
+		deliveries: 1,
+		consecutive_failures: 0,
+		disabled: false,
+		disabled_reason: "",
+		due_in_s: 240,
+		last_check_age_s: 1000,
+		state: "armed",
+		unavailable_since: 0,
+		health: null,
+		...overrides,
+	});
+
+	const monitorEntry = (rows: unknown[]) => ({
+		session_id: "aa11bb22cc33",
+		name: "Nightly builds",
+		cwd: "~",
+		origin: "",
+		updated_at: 1_791_490_000_000,
+		dormant: false,
+		ghost: false,
+		next_due_at: 1_791_491_300_000,
+		monitors: rows,
+	});
+
+	it("keeps the two empty answers distinguishable, per family", () => {
+		/* The captured pair: a readable empty store and an unreadable one. Both
+		 *  parse — the SCREEN is what must keep them apart — but the read_error
+		 *  flag has to survive the boundary as `true`, because a schema that
+		 *  dropped it would render "nothing is armed" over a store nobody read.
+		 *  The monitors half of the read-error capture stays readable, which is
+		 *  the shape that proves the flag is per-family. */
+		const empty = safeParsePayload(
+			"schedules",
+			fixture<{ body: unknown }>("http/schedules-empty.json").body,
+		);
+		expect(empty.ok).toBe(true);
+		if (!empty.ok) throw new Error("unreachable");
+		expect(empty.data.wakes.read_error).toBe(false);
+		expect(empty.data.wakes.entries).toEqual([]);
+
+		const failed = safeParsePayload(
+			"schedules",
+			fixture<{ body: unknown }>("http/schedules-read-error.json").body,
+		);
+		expect(failed.ok).toBe(true);
+		if (!failed.ok) throw new Error("unreachable");
+		expect(failed.data.wakes.read_error).toBe(true);
+		expect(failed.data.monitors.read_error).toBe(false);
+	});
+
+	it("carries the bounded listing's own numbers, unedited", () => {
+		/* 205 conversations against the route's 200 cap: the fixture is kept
+		 *  whole so this asserts the route's own arithmetic rather than a hand
+		 *  count a capture note could contradict. */
+		const parsed = safeParsePayload(
+			"schedules",
+			fixture<{ body: unknown }>("http/schedules-truncated.json").body,
+		);
+		expect(parsed.ok).toBe(true);
+		if (!parsed.ok) throw new Error("unreachable");
+		expect(parsed.data.wakes.truncated).toBe(true);
+		expect(parsed.data.wakes.total).toBe(205);
+		expect(parsed.data.wakes.entries).toHaveLength(200);
+	});
+
+	it("passes an unknown monitor state through as its own word", () => {
+		/* Open on purpose, like the project status: a newer runtime's state word
+		 *  must reach the row verbatim rather than blank the listing. */
+		const parsed = safeParsePayload("schedules", {
+			...base,
+			monitors: {
+				...base.monitors,
+				entries: [monitorEntry([monitorRow({ state: "hibernating" })])],
+			},
+		});
+		expect(parsed.ok).toBe(true);
+		if (!parsed.ok) throw new Error("unreachable");
+		expect(parsed.data.monitors.entries[0]?.monitors[0]?.state).toBe("hibernating");
+	});
+
+	it("keeps a null due time and a null health as null, never as 0", () => {
+		/* `null` is "the server did not make this measurement" — the monitor
+		 *  index is only rewritten on change events, so a watch that has never
+		 *  been read a due time must not grow a 1970 clock on a card. */
+		const parsed = safeParsePayload("schedules", {
+			...base,
+			monitors: {
+				...base.monitors,
+				entries: [
+					monitorEntry([
+						monitorRow({
+							next_due_at: null,
+							due_in_s: null,
+							health: null,
+							last_check_age_s: null,
+						}),
+					]),
+				],
+			},
+		});
+		expect(parsed.ok).toBe(true);
+		if (!parsed.ok) throw new Error("unreachable");
+		const row = parsed.data.monitors.entries[0]?.monitors[0];
+		expect(row?.next_due_at).toBeNull();
+		expect(row?.due_in_s).toBeNull();
+		expect(row?.health).toBeNull();
+	});
+
+	it("reads a supervisor that stopped sending verifiable as able to speak", () => {
+		/* The field is absent on runtimes that predate it, and absence reads as
+		 *  "the probe can speak" — the desktop's own reading. A schema that
+		 *  defaulted it to `false` would paint "nothing supervises these" over
+		 *  a healthy machine. */
+		const parsed = safeParsePayload("schedules", base);
+		expect(parsed.ok).toBe(true);
+		if (!parsed.ok) throw new Error("unreachable");
+		expect(parsed.data.wakes.supervisor.verifiable).toBeUndefined();
+	});
+
+	it("rejects a payload missing a family", () => {
+		/* Both families are the route's contract; half a document is a protocol
+		 *  change, not a shape to fill in with an empty section. */
+		const parsed = safeParsePayload("schedules", { wakes: base.wakes });
 		expect(parsed.ok).toBe(false);
 	});
 });

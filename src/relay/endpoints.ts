@@ -283,6 +283,25 @@ export class RelayEndpoints {
 		});
 	}
 
+	/**
+	 * Every conversation on this machine carrying wakes and monitors, in one
+	 * answer (`GET /api/schedules`; the Schedules screen's one read).
+	 *
+	 * Index-backed like `asks` and for the same reason: a schedule outlives the
+	 * runtime it was armed from, so this answers with nothing running. The two
+	 * families share the route because they share every surface they are drawn
+	 * on, so the screen makes ONE call. `signal` bounds the read — a hung read is
+	 * itself a failure the screen must show rather than a blank list
+	 * (`READ_TIMEOUT_MS`).
+	 */
+	async schedules(signal?: AbortSignal): Promise<Payload<"schedules">> {
+		return this.http.json("schedules", {
+			method: "GET",
+			path: "/api/schedules",
+			signal,
+		});
+	}
+
 	/** Past conversations. **Cannot be paged**: the route takes no `limit`, and a
 	 *  client must not promise "load more" (`contract.md` §3.3). */
 	async pastSessions(): Promise<Payload<"pastSessions">> {

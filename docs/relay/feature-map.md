@@ -106,7 +106,7 @@ Priority follows #1598's own suggested order, adjusted for what a phone can show
 | Tool-card detail + copy actions | `tool_card`, `copy_picker` | `P1` | The expand payload exists but is bounded; copy actions are net-new (native gives a system share/copy sheet cheaply) |
 | Session info / report | `info_panel`, `report_view`, `session_panel` | `P1` | A sheet off the session header |
 | Sidebar: pins, subagent layer | `session_sidebar` | `P0` for pins (already a route), `P1` for the layer view | Pins are the one sidebar feature with a relay route today |
-| Wakes / schedules | `wake_panel` | `P2` | No relay route; needs control-plane work first |
+| Wakes / schedules | `wake_panel` | **shipped** (the Schedules surface, S17 — relay side `5e59e0cd06`, #2061) | The relay route landed 2026-10-08 (`GET /api/schedules`, [`contract.md`](contract.md) §4.12): the machine-wide wake and monitor indexes in one answer, `read_error` per family. Read-only on the phone — arm, edit and cancel stay on the desktop/terminal plane until a write half ships |
 | Settings | `settings_view` | `P2` | `capabilities.features.settings` exists on the relay but no phone route consumes it |
 | Move session | `move_picker` | `P2` | No relay route |
 | Org chart / team view | `org_chart_view` | `P2` | No relay route |
@@ -322,6 +322,7 @@ the real wire rather than a hand-written mock.
 | T-52 | **Degraded row** | `GET /api/sessions` | runtime frozen (`SIGSTOP`): counts `null` at ~45 s, `degraded: true` at ~48 s, `section` stays `active`; and the unstamped-runtime caveat where it never fires | P0/P1 | `fixtures/relay/probes/degraded-row-signal.json`, `fixtures/relay/probes/degraded-never-fires-unstamped.json` |
 | T-53 | **Receipt absence (old relay)** | any list frame from a relay older than `fc851a94e` | keys absent → read `false`; the fallback is `subagents_running: 0 → null` | P0 | `fixtures/relay/sse/sse-list-frame.json` — a real summary row captured at `52c1df35` with neither key present |
 | T-54 | **Durable-only row** | `GET /api/sessions` after a restart | a conversation nothing has registered since boot: `ended: false`, `degraded: false` — **no liveness claim may be rendered from them** | P0 | `fixtures/relay/probes/durable-only-row.json` (captured by restarting an isolated daemon with the runtime dead) |
+| T-55 | **Armed index** | `GET /api/schedules` | readable empty; populated (wakes armed · overdue · stale · dormant · ghost with a hidden patience timer; monitors armed · dormant · disabled · expired, one never-checked, one unavailable episode); truncated 200-of-205; and `read_error` in the wakes family with the monitors family readable | P0 (S17) | `fixtures/relay/http/schedules-empty.json`, `schedules-populated.json`, `schedules-truncated.json`, `schedules-read-error.json` |
 
 ### How to build more fixtures
 

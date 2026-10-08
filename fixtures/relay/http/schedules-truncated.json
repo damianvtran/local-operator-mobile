@@ -1,0 +1,5040 @@
+{
+  "provenance": {
+    "kind": "live",
+    "relay_ref": "local-operator 5e59e0cd",
+    "captured_at": "2026-10-08",
+    "how": "captured from the same isolated daemon at local-operator 5e59e0cd06 seeded with 205 wake-carrying conversations against the route's WAKE_LIST_LIMIT = 200; kept whole rather than trimmed, so `total`/`truncated` are the route's own numbers and not a hand count",
+    "redactions": "the isolated home is shown as ~ (store seeds are fixture-owned paths); the portal password appears nowhere; the sandbox's temp path appears nowhere"
+  },
+  "request": {
+    "method": "GET",
+    "path": "/api/schedules"
+  },
+  "status": 200,
+  "headers": {
+    "content-type": "application/json"
+  },
+  "body": {
+    "wakes": {
+      "entries": [
+        {
+          "session_id": "t00000000000",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791491563135,
+          "schedules": [
+            {
+              "id": "w-000",
+              "message": "scheduled run 000",
+              "next_due_at": 1791491563135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000001",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791491623135,
+          "schedules": [
+            {
+              "id": "w-001",
+              "message": "scheduled run 001",
+              "next_due_at": 1791491623135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000002",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791491683135,
+          "schedules": [
+            {
+              "id": "w-002",
+              "message": "scheduled run 002",
+              "next_due_at": 1791491683135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000003",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791491743135,
+          "schedules": [
+            {
+              "id": "w-003",
+              "message": "scheduled run 003",
+              "next_due_at": 1791491743135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000004",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791491803135,
+          "schedules": [
+            {
+              "id": "w-004",
+              "message": "scheduled run 004",
+              "next_due_at": 1791491803135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000005",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791491863135,
+          "schedules": [
+            {
+              "id": "w-005",
+              "message": "scheduled run 005",
+              "next_due_at": 1791491863135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000006",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791491923135,
+          "schedules": [
+            {
+              "id": "w-006",
+              "message": "scheduled run 006",
+              "next_due_at": 1791491923135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000007",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791491983135,
+          "schedules": [
+            {
+              "id": "w-007",
+              "message": "scheduled run 007",
+              "next_due_at": 1791491983135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000008",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791492043135,
+          "schedules": [
+            {
+              "id": "w-008",
+              "message": "scheduled run 008",
+              "next_due_at": 1791492043135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000009",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791492103135,
+          "schedules": [
+            {
+              "id": "w-009",
+              "message": "scheduled run 009",
+              "next_due_at": 1791492103135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000010",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791492163135,
+          "schedules": [
+            {
+              "id": "w-010",
+              "message": "scheduled run 010",
+              "next_due_at": 1791492163135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000011",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791492223135,
+          "schedules": [
+            {
+              "id": "w-011",
+              "message": "scheduled run 011",
+              "next_due_at": 1791492223135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000012",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791492283135,
+          "schedules": [
+            {
+              "id": "w-012",
+              "message": "scheduled run 012",
+              "next_due_at": 1791492283135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000013",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791492343135,
+          "schedules": [
+            {
+              "id": "w-013",
+              "message": "scheduled run 013",
+              "next_due_at": 1791492343135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000014",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791492403135,
+          "schedules": [
+            {
+              "id": "w-014",
+              "message": "scheduled run 014",
+              "next_due_at": 1791492403135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000015",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791492463135,
+          "schedules": [
+            {
+              "id": "w-015",
+              "message": "scheduled run 015",
+              "next_due_at": 1791492463135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000016",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791492523135,
+          "schedules": [
+            {
+              "id": "w-016",
+              "message": "scheduled run 016",
+              "next_due_at": 1791492523135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000017",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791492583135,
+          "schedules": [
+            {
+              "id": "w-017",
+              "message": "scheduled run 017",
+              "next_due_at": 1791492583135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000018",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791492643135,
+          "schedules": [
+            {
+              "id": "w-018",
+              "message": "scheduled run 018",
+              "next_due_at": 1791492643135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000019",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791492703135,
+          "schedules": [
+            {
+              "id": "w-019",
+              "message": "scheduled run 019",
+              "next_due_at": 1791492703135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000020",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791492763135,
+          "schedules": [
+            {
+              "id": "w-020",
+              "message": "scheduled run 020",
+              "next_due_at": 1791492763135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000021",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791492823135,
+          "schedules": [
+            {
+              "id": "w-021",
+              "message": "scheduled run 021",
+              "next_due_at": 1791492823135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000022",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791492883135,
+          "schedules": [
+            {
+              "id": "w-022",
+              "message": "scheduled run 022",
+              "next_due_at": 1791492883135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000023",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791492943135,
+          "schedules": [
+            {
+              "id": "w-023",
+              "message": "scheduled run 023",
+              "next_due_at": 1791492943135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000024",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791493003135,
+          "schedules": [
+            {
+              "id": "w-024",
+              "message": "scheduled run 024",
+              "next_due_at": 1791493003135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000025",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791493063135,
+          "schedules": [
+            {
+              "id": "w-025",
+              "message": "scheduled run 025",
+              "next_due_at": 1791493063135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000026",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791493123135,
+          "schedules": [
+            {
+              "id": "w-026",
+              "message": "scheduled run 026",
+              "next_due_at": 1791493123135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000027",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791493183135,
+          "schedules": [
+            {
+              "id": "w-027",
+              "message": "scheduled run 027",
+              "next_due_at": 1791493183135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000028",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791493243135,
+          "schedules": [
+            {
+              "id": "w-028",
+              "message": "scheduled run 028",
+              "next_due_at": 1791493243135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000029",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791493303135,
+          "schedules": [
+            {
+              "id": "w-029",
+              "message": "scheduled run 029",
+              "next_due_at": 1791493303135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000030",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791493363135,
+          "schedules": [
+            {
+              "id": "w-030",
+              "message": "scheduled run 030",
+              "next_due_at": 1791493363135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000031",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791493423135,
+          "schedules": [
+            {
+              "id": "w-031",
+              "message": "scheduled run 031",
+              "next_due_at": 1791493423135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000032",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791493483135,
+          "schedules": [
+            {
+              "id": "w-032",
+              "message": "scheduled run 032",
+              "next_due_at": 1791493483135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000033",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791493543135,
+          "schedules": [
+            {
+              "id": "w-033",
+              "message": "scheduled run 033",
+              "next_due_at": 1791493543135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000034",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791493603135,
+          "schedules": [
+            {
+              "id": "w-034",
+              "message": "scheduled run 034",
+              "next_due_at": 1791493603135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000035",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791493663135,
+          "schedules": [
+            {
+              "id": "w-035",
+              "message": "scheduled run 035",
+              "next_due_at": 1791493663135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000036",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791493723135,
+          "schedules": [
+            {
+              "id": "w-036",
+              "message": "scheduled run 036",
+              "next_due_at": 1791493723135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000037",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791493783135,
+          "schedules": [
+            {
+              "id": "w-037",
+              "message": "scheduled run 037",
+              "next_due_at": 1791493783135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000038",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791493843135,
+          "schedules": [
+            {
+              "id": "w-038",
+              "message": "scheduled run 038",
+              "next_due_at": 1791493843135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000039",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791493903135,
+          "schedules": [
+            {
+              "id": "w-039",
+              "message": "scheduled run 039",
+              "next_due_at": 1791493903135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000040",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791493963135,
+          "schedules": [
+            {
+              "id": "w-040",
+              "message": "scheduled run 040",
+              "next_due_at": 1791493963135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000041",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791494023135,
+          "schedules": [
+            {
+              "id": "w-041",
+              "message": "scheduled run 041",
+              "next_due_at": 1791494023135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000042",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791494083135,
+          "schedules": [
+            {
+              "id": "w-042",
+              "message": "scheduled run 042",
+              "next_due_at": 1791494083135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000043",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791494143135,
+          "schedules": [
+            {
+              "id": "w-043",
+              "message": "scheduled run 043",
+              "next_due_at": 1791494143135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000044",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791494203135,
+          "schedules": [
+            {
+              "id": "w-044",
+              "message": "scheduled run 044",
+              "next_due_at": 1791494203135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000045",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791494263135,
+          "schedules": [
+            {
+              "id": "w-045",
+              "message": "scheduled run 045",
+              "next_due_at": 1791494263135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000046",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791494323135,
+          "schedules": [
+            {
+              "id": "w-046",
+              "message": "scheduled run 046",
+              "next_due_at": 1791494323135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000047",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791494383135,
+          "schedules": [
+            {
+              "id": "w-047",
+              "message": "scheduled run 047",
+              "next_due_at": 1791494383135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000048",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791494443135,
+          "schedules": [
+            {
+              "id": "w-048",
+              "message": "scheduled run 048",
+              "next_due_at": 1791494443135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000049",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791494503135,
+          "schedules": [
+            {
+              "id": "w-049",
+              "message": "scheduled run 049",
+              "next_due_at": 1791494503135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000050",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791494563135,
+          "schedules": [
+            {
+              "id": "w-050",
+              "message": "scheduled run 050",
+              "next_due_at": 1791494563135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000051",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791494623135,
+          "schedules": [
+            {
+              "id": "w-051",
+              "message": "scheduled run 051",
+              "next_due_at": 1791494623135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000052",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791494683135,
+          "schedules": [
+            {
+              "id": "w-052",
+              "message": "scheduled run 052",
+              "next_due_at": 1791494683135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000053",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791494743135,
+          "schedules": [
+            {
+              "id": "w-053",
+              "message": "scheduled run 053",
+              "next_due_at": 1791494743135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000054",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791494803135,
+          "schedules": [
+            {
+              "id": "w-054",
+              "message": "scheduled run 054",
+              "next_due_at": 1791494803135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000055",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791494863135,
+          "schedules": [
+            {
+              "id": "w-055",
+              "message": "scheduled run 055",
+              "next_due_at": 1791494863135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000056",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791494923135,
+          "schedules": [
+            {
+              "id": "w-056",
+              "message": "scheduled run 056",
+              "next_due_at": 1791494923135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000057",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791494983135,
+          "schedules": [
+            {
+              "id": "w-057",
+              "message": "scheduled run 057",
+              "next_due_at": 1791494983135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000058",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791495043135,
+          "schedules": [
+            {
+              "id": "w-058",
+              "message": "scheduled run 058",
+              "next_due_at": 1791495043135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000059",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791495103135,
+          "schedules": [
+            {
+              "id": "w-059",
+              "message": "scheduled run 059",
+              "next_due_at": 1791495103135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000060",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791495163135,
+          "schedules": [
+            {
+              "id": "w-060",
+              "message": "scheduled run 060",
+              "next_due_at": 1791495163135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000061",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791495223135,
+          "schedules": [
+            {
+              "id": "w-061",
+              "message": "scheduled run 061",
+              "next_due_at": 1791495223135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000062",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791495283135,
+          "schedules": [
+            {
+              "id": "w-062",
+              "message": "scheduled run 062",
+              "next_due_at": 1791495283135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000063",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791495343135,
+          "schedules": [
+            {
+              "id": "w-063",
+              "message": "scheduled run 063",
+              "next_due_at": 1791495343135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000064",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791495403135,
+          "schedules": [
+            {
+              "id": "w-064",
+              "message": "scheduled run 064",
+              "next_due_at": 1791495403135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000065",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791495463135,
+          "schedules": [
+            {
+              "id": "w-065",
+              "message": "scheduled run 065",
+              "next_due_at": 1791495463135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000066",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791495523135,
+          "schedules": [
+            {
+              "id": "w-066",
+              "message": "scheduled run 066",
+              "next_due_at": 1791495523135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000067",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791495583135,
+          "schedules": [
+            {
+              "id": "w-067",
+              "message": "scheduled run 067",
+              "next_due_at": 1791495583135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000068",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791495643135,
+          "schedules": [
+            {
+              "id": "w-068",
+              "message": "scheduled run 068",
+              "next_due_at": 1791495643135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000069",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791495703135,
+          "schedules": [
+            {
+              "id": "w-069",
+              "message": "scheduled run 069",
+              "next_due_at": 1791495703135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000070",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791495763135,
+          "schedules": [
+            {
+              "id": "w-070",
+              "message": "scheduled run 070",
+              "next_due_at": 1791495763135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000071",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791495823135,
+          "schedules": [
+            {
+              "id": "w-071",
+              "message": "scheduled run 071",
+              "next_due_at": 1791495823135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000072",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791495883135,
+          "schedules": [
+            {
+              "id": "w-072",
+              "message": "scheduled run 072",
+              "next_due_at": 1791495883135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000073",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791495943135,
+          "schedules": [
+            {
+              "id": "w-073",
+              "message": "scheduled run 073",
+              "next_due_at": 1791495943135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000074",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791496003135,
+          "schedules": [
+            {
+              "id": "w-074",
+              "message": "scheduled run 074",
+              "next_due_at": 1791496003135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000075",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791496063135,
+          "schedules": [
+            {
+              "id": "w-075",
+              "message": "scheduled run 075",
+              "next_due_at": 1791496063135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000076",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791496123135,
+          "schedules": [
+            {
+              "id": "w-076",
+              "message": "scheduled run 076",
+              "next_due_at": 1791496123135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000077",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791496183135,
+          "schedules": [
+            {
+              "id": "w-077",
+              "message": "scheduled run 077",
+              "next_due_at": 1791496183135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000078",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791496243135,
+          "schedules": [
+            {
+              "id": "w-078",
+              "message": "scheduled run 078",
+              "next_due_at": 1791496243135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000079",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791496303135,
+          "schedules": [
+            {
+              "id": "w-079",
+              "message": "scheduled run 079",
+              "next_due_at": 1791496303135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000080",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791496363135,
+          "schedules": [
+            {
+              "id": "w-080",
+              "message": "scheduled run 080",
+              "next_due_at": 1791496363135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000081",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791496423135,
+          "schedules": [
+            {
+              "id": "w-081",
+              "message": "scheduled run 081",
+              "next_due_at": 1791496423135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000082",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791496483135,
+          "schedules": [
+            {
+              "id": "w-082",
+              "message": "scheduled run 082",
+              "next_due_at": 1791496483135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000083",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791496543135,
+          "schedules": [
+            {
+              "id": "w-083",
+              "message": "scheduled run 083",
+              "next_due_at": 1791496543135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000084",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791496603135,
+          "schedules": [
+            {
+              "id": "w-084",
+              "message": "scheduled run 084",
+              "next_due_at": 1791496603135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000085",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791496663135,
+          "schedules": [
+            {
+              "id": "w-085",
+              "message": "scheduled run 085",
+              "next_due_at": 1791496663135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000086",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791496723135,
+          "schedules": [
+            {
+              "id": "w-086",
+              "message": "scheduled run 086",
+              "next_due_at": 1791496723135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000087",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791496783135,
+          "schedules": [
+            {
+              "id": "w-087",
+              "message": "scheduled run 087",
+              "next_due_at": 1791496783135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000088",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791496843135,
+          "schedules": [
+            {
+              "id": "w-088",
+              "message": "scheduled run 088",
+              "next_due_at": 1791496843135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000089",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791496903135,
+          "schedules": [
+            {
+              "id": "w-089",
+              "message": "scheduled run 089",
+              "next_due_at": 1791496903135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000090",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791496963135,
+          "schedules": [
+            {
+              "id": "w-090",
+              "message": "scheduled run 090",
+              "next_due_at": 1791496963135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000091",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791497023135,
+          "schedules": [
+            {
+              "id": "w-091",
+              "message": "scheduled run 091",
+              "next_due_at": 1791497023135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000092",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791497083135,
+          "schedules": [
+            {
+              "id": "w-092",
+              "message": "scheduled run 092",
+              "next_due_at": 1791497083135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000093",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791497143135,
+          "schedules": [
+            {
+              "id": "w-093",
+              "message": "scheduled run 093",
+              "next_due_at": 1791497143135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000094",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791497203135,
+          "schedules": [
+            {
+              "id": "w-094",
+              "message": "scheduled run 094",
+              "next_due_at": 1791497203135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000095",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791497263135,
+          "schedules": [
+            {
+              "id": "w-095",
+              "message": "scheduled run 095",
+              "next_due_at": 1791497263135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000096",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791497323135,
+          "schedules": [
+            {
+              "id": "w-096",
+              "message": "scheduled run 096",
+              "next_due_at": 1791497323135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000097",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791497383135,
+          "schedules": [
+            {
+              "id": "w-097",
+              "message": "scheduled run 097",
+              "next_due_at": 1791497383135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000098",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791497443135,
+          "schedules": [
+            {
+              "id": "w-098",
+              "message": "scheduled run 098",
+              "next_due_at": 1791497443135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000099",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791497503135,
+          "schedules": [
+            {
+              "id": "w-099",
+              "message": "scheduled run 099",
+              "next_due_at": 1791497503135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000100",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791497563135,
+          "schedules": [
+            {
+              "id": "w-100",
+              "message": "scheduled run 100",
+              "next_due_at": 1791497563135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000101",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791497623135,
+          "schedules": [
+            {
+              "id": "w-101",
+              "message": "scheduled run 101",
+              "next_due_at": 1791497623135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000102",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791497683135,
+          "schedules": [
+            {
+              "id": "w-102",
+              "message": "scheduled run 102",
+              "next_due_at": 1791497683135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000103",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791497743135,
+          "schedules": [
+            {
+              "id": "w-103",
+              "message": "scheduled run 103",
+              "next_due_at": 1791497743135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000104",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791497803135,
+          "schedules": [
+            {
+              "id": "w-104",
+              "message": "scheduled run 104",
+              "next_due_at": 1791497803135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000105",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791497863135,
+          "schedules": [
+            {
+              "id": "w-105",
+              "message": "scheduled run 105",
+              "next_due_at": 1791497863135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000106",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791497923135,
+          "schedules": [
+            {
+              "id": "w-106",
+              "message": "scheduled run 106",
+              "next_due_at": 1791497923135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000107",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791497983135,
+          "schedules": [
+            {
+              "id": "w-107",
+              "message": "scheduled run 107",
+              "next_due_at": 1791497983135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000108",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791498043135,
+          "schedules": [
+            {
+              "id": "w-108",
+              "message": "scheduled run 108",
+              "next_due_at": 1791498043135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000109",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791498103135,
+          "schedules": [
+            {
+              "id": "w-109",
+              "message": "scheduled run 109",
+              "next_due_at": 1791498103135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000110",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791498163135,
+          "schedules": [
+            {
+              "id": "w-110",
+              "message": "scheduled run 110",
+              "next_due_at": 1791498163135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000111",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791498223135,
+          "schedules": [
+            {
+              "id": "w-111",
+              "message": "scheduled run 111",
+              "next_due_at": 1791498223135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000112",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791498283135,
+          "schedules": [
+            {
+              "id": "w-112",
+              "message": "scheduled run 112",
+              "next_due_at": 1791498283135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000113",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791498343135,
+          "schedules": [
+            {
+              "id": "w-113",
+              "message": "scheduled run 113",
+              "next_due_at": 1791498343135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000114",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791498403135,
+          "schedules": [
+            {
+              "id": "w-114",
+              "message": "scheduled run 114",
+              "next_due_at": 1791498403135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000115",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791498463135,
+          "schedules": [
+            {
+              "id": "w-115",
+              "message": "scheduled run 115",
+              "next_due_at": 1791498463135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000116",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791498523135,
+          "schedules": [
+            {
+              "id": "w-116",
+              "message": "scheduled run 116",
+              "next_due_at": 1791498523135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000117",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791498583135,
+          "schedules": [
+            {
+              "id": "w-117",
+              "message": "scheduled run 117",
+              "next_due_at": 1791498583135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000118",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791498643135,
+          "schedules": [
+            {
+              "id": "w-118",
+              "message": "scheduled run 118",
+              "next_due_at": 1791498643135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000119",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791498703135,
+          "schedules": [
+            {
+              "id": "w-119",
+              "message": "scheduled run 119",
+              "next_due_at": 1791498703135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000120",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791498763135,
+          "schedules": [
+            {
+              "id": "w-120",
+              "message": "scheduled run 120",
+              "next_due_at": 1791498763135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000121",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791498823135,
+          "schedules": [
+            {
+              "id": "w-121",
+              "message": "scheduled run 121",
+              "next_due_at": 1791498823135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000122",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791498883135,
+          "schedules": [
+            {
+              "id": "w-122",
+              "message": "scheduled run 122",
+              "next_due_at": 1791498883135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000123",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791498943135,
+          "schedules": [
+            {
+              "id": "w-123",
+              "message": "scheduled run 123",
+              "next_due_at": 1791498943135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000124",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791499003135,
+          "schedules": [
+            {
+              "id": "w-124",
+              "message": "scheduled run 124",
+              "next_due_at": 1791499003135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000125",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791499063135,
+          "schedules": [
+            {
+              "id": "w-125",
+              "message": "scheduled run 125",
+              "next_due_at": 1791499063135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000126",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791499123135,
+          "schedules": [
+            {
+              "id": "w-126",
+              "message": "scheduled run 126",
+              "next_due_at": 1791499123135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000127",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791499183135,
+          "schedules": [
+            {
+              "id": "w-127",
+              "message": "scheduled run 127",
+              "next_due_at": 1791499183135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000128",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791499243135,
+          "schedules": [
+            {
+              "id": "w-128",
+              "message": "scheduled run 128",
+              "next_due_at": 1791499243135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000129",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791499303135,
+          "schedules": [
+            {
+              "id": "w-129",
+              "message": "scheduled run 129",
+              "next_due_at": 1791499303135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000130",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791499363135,
+          "schedules": [
+            {
+              "id": "w-130",
+              "message": "scheduled run 130",
+              "next_due_at": 1791499363135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000131",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791499423135,
+          "schedules": [
+            {
+              "id": "w-131",
+              "message": "scheduled run 131",
+              "next_due_at": 1791499423135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000132",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791499483135,
+          "schedules": [
+            {
+              "id": "w-132",
+              "message": "scheduled run 132",
+              "next_due_at": 1791499483135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000133",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791499543135,
+          "schedules": [
+            {
+              "id": "w-133",
+              "message": "scheduled run 133",
+              "next_due_at": 1791499543135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000134",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791499603135,
+          "schedules": [
+            {
+              "id": "w-134",
+              "message": "scheduled run 134",
+              "next_due_at": 1791499603135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000135",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791499663135,
+          "schedules": [
+            {
+              "id": "w-135",
+              "message": "scheduled run 135",
+              "next_due_at": 1791499663135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000136",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791499723135,
+          "schedules": [
+            {
+              "id": "w-136",
+              "message": "scheduled run 136",
+              "next_due_at": 1791499723135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000137",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791499783135,
+          "schedules": [
+            {
+              "id": "w-137",
+              "message": "scheduled run 137",
+              "next_due_at": 1791499783135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000138",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791499843135,
+          "schedules": [
+            {
+              "id": "w-138",
+              "message": "scheduled run 138",
+              "next_due_at": 1791499843135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000139",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791499903135,
+          "schedules": [
+            {
+              "id": "w-139",
+              "message": "scheduled run 139",
+              "next_due_at": 1791499903135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000140",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791499963135,
+          "schedules": [
+            {
+              "id": "w-140",
+              "message": "scheduled run 140",
+              "next_due_at": 1791499963135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000141",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791500023135,
+          "schedules": [
+            {
+              "id": "w-141",
+              "message": "scheduled run 141",
+              "next_due_at": 1791500023135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000142",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791500083135,
+          "schedules": [
+            {
+              "id": "w-142",
+              "message": "scheduled run 142",
+              "next_due_at": 1791500083135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000143",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791500143135,
+          "schedules": [
+            {
+              "id": "w-143",
+              "message": "scheduled run 143",
+              "next_due_at": 1791500143135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000144",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791500203135,
+          "schedules": [
+            {
+              "id": "w-144",
+              "message": "scheduled run 144",
+              "next_due_at": 1791500203135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000145",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791500263135,
+          "schedules": [
+            {
+              "id": "w-145",
+              "message": "scheduled run 145",
+              "next_due_at": 1791500263135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000146",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791500323135,
+          "schedules": [
+            {
+              "id": "w-146",
+              "message": "scheduled run 146",
+              "next_due_at": 1791500323135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000147",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791500383135,
+          "schedules": [
+            {
+              "id": "w-147",
+              "message": "scheduled run 147",
+              "next_due_at": 1791500383135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000148",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791500443135,
+          "schedules": [
+            {
+              "id": "w-148",
+              "message": "scheduled run 148",
+              "next_due_at": 1791500443135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000149",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791500503135,
+          "schedules": [
+            {
+              "id": "w-149",
+              "message": "scheduled run 149",
+              "next_due_at": 1791500503135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000150",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791500563135,
+          "schedules": [
+            {
+              "id": "w-150",
+              "message": "scheduled run 150",
+              "next_due_at": 1791500563135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000151",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791500623135,
+          "schedules": [
+            {
+              "id": "w-151",
+              "message": "scheduled run 151",
+              "next_due_at": 1791500623135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000152",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791500683135,
+          "schedules": [
+            {
+              "id": "w-152",
+              "message": "scheduled run 152",
+              "next_due_at": 1791500683135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000153",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791500743135,
+          "schedules": [
+            {
+              "id": "w-153",
+              "message": "scheduled run 153",
+              "next_due_at": 1791500743135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000154",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791500803135,
+          "schedules": [
+            {
+              "id": "w-154",
+              "message": "scheduled run 154",
+              "next_due_at": 1791500803135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000155",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791500863135,
+          "schedules": [
+            {
+              "id": "w-155",
+              "message": "scheduled run 155",
+              "next_due_at": 1791500863135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000156",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791500923135,
+          "schedules": [
+            {
+              "id": "w-156",
+              "message": "scheduled run 156",
+              "next_due_at": 1791500923135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000157",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791500983135,
+          "schedules": [
+            {
+              "id": "w-157",
+              "message": "scheduled run 157",
+              "next_due_at": 1791500983135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000158",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791501043135,
+          "schedules": [
+            {
+              "id": "w-158",
+              "message": "scheduled run 158",
+              "next_due_at": 1791501043135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000159",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791501103135,
+          "schedules": [
+            {
+              "id": "w-159",
+              "message": "scheduled run 159",
+              "next_due_at": 1791501103135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000160",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791501163135,
+          "schedules": [
+            {
+              "id": "w-160",
+              "message": "scheduled run 160",
+              "next_due_at": 1791501163135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000161",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791501223135,
+          "schedules": [
+            {
+              "id": "w-161",
+              "message": "scheduled run 161",
+              "next_due_at": 1791501223135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000162",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791501283135,
+          "schedules": [
+            {
+              "id": "w-162",
+              "message": "scheduled run 162",
+              "next_due_at": 1791501283135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000163",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791501343135,
+          "schedules": [
+            {
+              "id": "w-163",
+              "message": "scheduled run 163",
+              "next_due_at": 1791501343135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000164",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791501403135,
+          "schedules": [
+            {
+              "id": "w-164",
+              "message": "scheduled run 164",
+              "next_due_at": 1791501403135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000165",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791501463135,
+          "schedules": [
+            {
+              "id": "w-165",
+              "message": "scheduled run 165",
+              "next_due_at": 1791501463135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000166",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791501523135,
+          "schedules": [
+            {
+              "id": "w-166",
+              "message": "scheduled run 166",
+              "next_due_at": 1791501523135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000167",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791501583135,
+          "schedules": [
+            {
+              "id": "w-167",
+              "message": "scheduled run 167",
+              "next_due_at": 1791501583135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000168",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791501643135,
+          "schedules": [
+            {
+              "id": "w-168",
+              "message": "scheduled run 168",
+              "next_due_at": 1791501643135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000169",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791501703135,
+          "schedules": [
+            {
+              "id": "w-169",
+              "message": "scheduled run 169",
+              "next_due_at": 1791501703135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000170",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791501763135,
+          "schedules": [
+            {
+              "id": "w-170",
+              "message": "scheduled run 170",
+              "next_due_at": 1791501763135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000171",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791501823135,
+          "schedules": [
+            {
+              "id": "w-171",
+              "message": "scheduled run 171",
+              "next_due_at": 1791501823135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000172",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791501883135,
+          "schedules": [
+            {
+              "id": "w-172",
+              "message": "scheduled run 172",
+              "next_due_at": 1791501883135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000173",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791501943135,
+          "schedules": [
+            {
+              "id": "w-173",
+              "message": "scheduled run 173",
+              "next_due_at": 1791501943135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000174",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791502003135,
+          "schedules": [
+            {
+              "id": "w-174",
+              "message": "scheduled run 174",
+              "next_due_at": 1791502003135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000175",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791502063135,
+          "schedules": [
+            {
+              "id": "w-175",
+              "message": "scheduled run 175",
+              "next_due_at": 1791502063135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000176",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791502123135,
+          "schedules": [
+            {
+              "id": "w-176",
+              "message": "scheduled run 176",
+              "next_due_at": 1791502123135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000177",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791502183135,
+          "schedules": [
+            {
+              "id": "w-177",
+              "message": "scheduled run 177",
+              "next_due_at": 1791502183135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000178",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791502243135,
+          "schedules": [
+            {
+              "id": "w-178",
+              "message": "scheduled run 178",
+              "next_due_at": 1791502243135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000179",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791502303135,
+          "schedules": [
+            {
+              "id": "w-179",
+              "message": "scheduled run 179",
+              "next_due_at": 1791502303135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000180",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791502363135,
+          "schedules": [
+            {
+              "id": "w-180",
+              "message": "scheduled run 180",
+              "next_due_at": 1791502363135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000181",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791502423135,
+          "schedules": [
+            {
+              "id": "w-181",
+              "message": "scheduled run 181",
+              "next_due_at": 1791502423135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000182",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791502483135,
+          "schedules": [
+            {
+              "id": "w-182",
+              "message": "scheduled run 182",
+              "next_due_at": 1791502483135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000183",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791502543135,
+          "schedules": [
+            {
+              "id": "w-183",
+              "message": "scheduled run 183",
+              "next_due_at": 1791502543135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000184",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791502603135,
+          "schedules": [
+            {
+              "id": "w-184",
+              "message": "scheduled run 184",
+              "next_due_at": 1791502603135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000185",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791502663135,
+          "schedules": [
+            {
+              "id": "w-185",
+              "message": "scheduled run 185",
+              "next_due_at": 1791502663135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000186",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791502723135,
+          "schedules": [
+            {
+              "id": "w-186",
+              "message": "scheduled run 186",
+              "next_due_at": 1791502723135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000187",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791502783135,
+          "schedules": [
+            {
+              "id": "w-187",
+              "message": "scheduled run 187",
+              "next_due_at": 1791502783135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000188",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791502843135,
+          "schedules": [
+            {
+              "id": "w-188",
+              "message": "scheduled run 188",
+              "next_due_at": 1791502843135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000189",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791502903135,
+          "schedules": [
+            {
+              "id": "w-189",
+              "message": "scheduled run 189",
+              "next_due_at": 1791502903135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000190",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791502963135,
+          "schedules": [
+            {
+              "id": "w-190",
+              "message": "scheduled run 190",
+              "next_due_at": 1791502963135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000191",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791503023135,
+          "schedules": [
+            {
+              "id": "w-191",
+              "message": "scheduled run 191",
+              "next_due_at": 1791503023135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000192",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791503083135,
+          "schedules": [
+            {
+              "id": "w-192",
+              "message": "scheduled run 192",
+              "next_due_at": 1791503083135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000193",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791503143135,
+          "schedules": [
+            {
+              "id": "w-193",
+              "message": "scheduled run 193",
+              "next_due_at": 1791503143135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000194",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791503203135,
+          "schedules": [
+            {
+              "id": "w-194",
+              "message": "scheduled run 194",
+              "next_due_at": 1791503203135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000195",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791503263135,
+          "schedules": [
+            {
+              "id": "w-195",
+              "message": "scheduled run 195",
+              "next_due_at": 1791503263135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000196",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791503323135,
+          "schedules": [
+            {
+              "id": "w-196",
+              "message": "scheduled run 196",
+              "next_due_at": 1791503323135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000197",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791503383135,
+          "schedules": [
+            {
+              "id": "w-197",
+              "message": "scheduled run 197",
+              "next_due_at": 1791503383135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000198",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791503443135,
+          "schedules": [
+            {
+              "id": "w-198",
+              "message": "scheduled run 198",
+              "next_due_at": 1791503443135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        },
+        {
+          "session_id": "t00000000199",
+          "name": "t0000000 (batch)",
+          "cwd": "~/work/batch",
+          "origin": "",
+          "updated_at": 1791491413135,
+          "dormant": false,
+          "ghost": true,
+          "next_due_at": 1791503503135,
+          "schedules": [
+            {
+              "id": "w-199",
+              "message": "scheduled run 199",
+              "next_due_at": 1791503503135,
+              "every_ms": null,
+              "until_at": null,
+              "limit": null,
+              "fired_count": 0,
+              "overdue_s": 0.0,
+              "stale": false,
+              "last_fired_at": null,
+              "last_attempt_at": null
+            }
+          ]
+        }
+      ],
+      "generated_at": 1791491503396,
+      "total": 205,
+      "truncated": true,
+      "supervisor": {
+        "supported": true,
+        "running": false,
+        "detail": "this store is outside the real home; launchd cannot supervise it",
+        "verifiable": false
+      },
+      "read_error": false
+    },
+    "monitors": {
+      "entries": [],
+      "generated_at": 1791491503409,
+      "total": 0,
+      "truncated": false,
+      "read_error": false
+    }
+  }
+}

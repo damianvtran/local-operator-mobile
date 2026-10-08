@@ -880,3 +880,210 @@ export interface ProjectMilestoneResponse {
 	ok: true;
 	project: ProjectView;
 }
+
+/* ------------------------------------------------------------- schedules --- */
+
+/**
+ * One wake schedule row — one conversation's schedule, as the machine-wide
+ * armed index sends it (`GET /api/schedules`; local-operator merge `5e59e0cd`,
+ * `local_operator/mobile/schedules.py` mirroring `server/models/desktop_wakes.py`
+ * field for field).
+ *
+ * `next_due_at` is epoch MILLISECONDS (the wire's clocks are mixed by design:
+ * session clocks are seconds, every wake/monitor instant is milliseconds), and
+ * the label is the client's to render — the desktop spent a measured defect on
+ * a stray `× 1000`, so the unit is named here rather than inferred.
+ *
+ * `overdue_s` and `stale` come from the supervisor's own predicates (`wakes/
+ * supervisor.py`), not from client arithmetic: a row can be overdue without
+ * being stale (stale = past `STALE_AFTER_S`, the point the supervisor stops
+ * engaging), and a surface that re-derived freshness said "1 armed, 10m
+ * overdue" about a wake the supervisor had already given up on — the defect
+ * class this field pair exists to close.
+ */
+export interface ScheduleWakeRow {
+	id: string;
+	/** The schedule's own prompt: what a delivery would carry. Empty is a real
+	 *  state (a wake armed with no message), never an error. */
+	message: string;
+	next_due_at: number;
+	every_ms: number | null;
+	until_at: number | null;
+	limit: number | null;
+	fired_count: number;
+	overdue_s: number;
+	stale: boolean;
+	/** Written by the session as it passes each instant; absent rather than
+	 *  zeroed on an entry that predates them — a defaulted stamp is a
+	 *  measurement the server never made. */
+	last_fired_at: number | null;
+	last_attempt_at: number | null;
+}
+
+/**
+ * One wake-carrying conversation, with its schedules beneath it.
+ *
+ * One entry per SESSION rather than per schedule: the object a user opens is
+ * the conversation, and a session may legally hold up to `MAX_WAKE_SCHEDULES`
+ * (16) rows.
+ */
+export interface ScheduleWakeEntry {
+	session_id: string;
+	/** `resume.session_name`: the stored title, else the opening message, else a
+	 *  floor composed of the shortened id and the cwd's basename. Never empty. */
+	name: string;
+	cwd: string;
+	/** `""` for the user's own conversations, `"subagent"`/`"fork"`/`"team"` for
+	 *  what the harness made — for grouping and labelling only, never hiding. */
+	origin: string;
+	updated_at: number;
+	/** A conversation the operator STOPPED: its wakes stay armed but do not fire
+	 *  until it is reopened. */
+	dormant: boolean;
+	/** The index has an entry and the session has no transcript on disk, so the
+	 *  supervisor will refuse to engage it. Distinct from `dormant`: nothing is
+	 *  parked here, the session is gone. */
+	ghost: boolean;
+	next_due_at: number | null;
+	schedules: ScheduleWakeRow[];
+}
+
+/**
+ * Whether anything on this machine would actually fire a cold wake.
+ *
+ * The index alone cannot answer that: the supervisor is a separate process
+ * whose states — unsupported platform, plist written but launchd not
+ * addressable, loaded-but-exited — are invisible from the files. A surface
+ * that omitted this would invite a reader to trust a schedule nothing is
+ * watching.
+ */
+export interface ScheduleSupervisorInfo {
+	supported: boolean;
+	running: boolean;
+	/** The backend's own word for the state, shown verbatim. */
+	detail: string;
+	/**
+	 * Whether the probe could speak about THIS store at all. A fourth field the
+	 * contract names three of and the route sends anyway: on a store outside the
+	 * real home (every sandboxed run) launchd cannot speak about it, and
+	 * reporting `running: false` there would be a claim about someone else's
+	 * domain. Optional, so a runtime that stops sending it reads as "the probe
+	 * can speak" — the pre-field behaviour.
+	 */
+	verifiable?: boolean;
+}
+
+/** `GET /api/schedules`'s `wakes` half: every wake-carrying conversation. */
+export interface ScheduleWakeListing {
+	entries: ScheduleWakeEntry[];
+	generated_at: number;
+	/** Entries before the route's cap was applied, so a client can say "showing
+	 *  200 of 205" rather than implying the store holds only what it was sent. */
+	total: number;
+	truncated: boolean;
+	supervisor: ScheduleSupervisorInfo;
+	/** The index DIRECTORY could not be listed. Distinguishable from an empty
+	 *  store on purpose: "no wakes" over a store this process could not read is
+	 *  a claim it has not earned, and the honest answer is that the read failed.
+	 *  A surface that renders this as an empty list is the defect the field
+	 *  exists to prevent. */
+	read_error: boolean;
+}
+
+/**
+ * One standing watch — one condition a conversation re-checks on an interval,
+ * as the machine-wide armed index sends it (mirroring
+ * `server/models/desktop_monitors.py`).
+ *
+ * The clock fields are best-effort and the contract says so: the index is only
+ * rewritten on change events, not on every quiet tick, so `next_due_at`/
+ * `due_in_s` are the last values a writer recorded and can be behind the live
+ * schedule by up to a tick. The `state` word is what a surface leads with when
+ * the two seem to disagree.
+ */
+export interface ScheduleMonitorRow {
+	id: string;
+	name: string;
+	/** The session tool re-run each tick, and the exact arguments it is given. */
+	tool: string;
+	arguments: Record<string, unknown>;
+	description: string;
+	every_ms: number | null;
+	until_at: number | null;
+	notify: boolean;
+	sort_lines: boolean;
+	ignore: string[];
+	cwd: string;
+	created_at: number;
+	next_due_at: number | null;
+	last_check_at: number;
+	checks: number;
+	deliveries: number;
+	consecutive_failures: number;
+	disabled: boolean;
+	disabled_reason: string;
+	/** Seconds until `next_due_at` — NEGATIVE when the check is late, which is
+	 *  ordinary between change events; `null` when no due time is recorded. */
+	due_in_s: number | null;
+	last_check_age_s: number | null;
+	/** `"dormant"` | `"disabled"` | `"expired"` | `"armed"` — the CLI's
+	 *  precedence (`cli._monitor_state_word`), passed through as an open string
+	 *  so a newer runtime's word renders as its own, never mapped onto a known
+	 *  one. */
+	state: string;
+	/** When an unavailable episode began (epoch ms; 0 = none). An episode is a
+	 *  tool temporarily out of reach — an MCP server reconnecting — and it is
+	 *  deliberately NOT a failure: the watch keeps retrying without counting
+	 *  strikes. */
+	unavailable_since: number;
+	/** The §D6 health line every monitor surface shares (`monitors/store.py::
+	 *  health_hint`), or `null` when there is nothing to say. Rendered, not
+	 *  re-derived: the CLI, the agent tool and the TUI band read the same
+	 *  sentence. */
+	health: string | null;
+}
+
+/** One monitor-carrying conversation, with its monitors beneath it. */
+export interface ScheduleMonitorEntry {
+	session_id: string;
+	name: string;
+	cwd: string;
+	origin: string;
+	updated_at: number;
+	dormant: boolean;
+	ghost: boolean;
+	next_due_at: number | null;
+	monitors: ScheduleMonitorRow[];
+}
+
+/**
+ * `GET /api/schedules`'s `monitors` half. Deliberately NO `supervisor` block:
+ * monitors never engage a cold session (§10.4 — dormancy is the honest state),
+ * so a supervisor-shaped field would advertise a watcher that does not exist.
+ */
+export interface ScheduleMonitorListing {
+	entries: ScheduleMonitorEntry[];
+	generated_at: number;
+	total: number;
+	truncated: boolean;
+	read_error: boolean;
+}
+
+/**
+ * `GET /api/schedules` — the machine-wide read of what is ARMED: every
+ * conversation carrying wakes and monitors, in ONE answer.
+ *
+ * Index-backed like the asks aggregate and for the same reason — a schedule
+ * outlives the runtime it was armed from, so this answers with nothing
+ * running: one directory scan per store, no session opened and no owner
+ * dialled. The two families share one route because they share every surface
+ * they are drawn on (the TUI paints both into its single wake band), and two
+ * routes would make the phone do two round trips for one screen.
+ *
+ * Read-only by design: arm, edit and cancel stay on the terminal/desktop plane
+ * until the phone's write half ships.
+ */
+export interface SchedulesResponse {
+	wakes: ScheduleWakeListing;
+	monitors: ScheduleMonitorListing;
+}

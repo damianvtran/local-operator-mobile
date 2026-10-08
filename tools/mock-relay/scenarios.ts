@@ -139,6 +139,14 @@ export interface ScenarioWorld {
 	 */
 	projects?: { list?: Json | FixtureOverride; detail?: Json | FixtureOverride };
 	/**
+	 * The armed-index surface this state pins (S17): the whole
+	 * `GET /api/schedules` body, or a RECORDED RESPONSE (`FixtureOverride`)
+	 * when a cell needs a status the route does not produce. Absent, the mock
+	 * serves the captured EMPTY listing — the answer a machine with nothing
+	 * armed gives, which is what a scenario silent about schedules means.
+	 */
+	schedules?: Json | FixtureOverride;
+	/**
 	 * The voice-input surface this state pins — the only two answers a mic's
 	 * visibility and one transcription upload need, and they must agree: a state
 	 * that ADVERTISES a voice path is the state whose `POST /api/transcribe`
@@ -1363,6 +1371,46 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 				},
 			};
 		},
+	);
+
+	/* -------------------------------------------------------------- schedules -- */
+
+	add(
+		"schedules-empty",
+		"Nothing is armed: both stores read OK and hold nothing, so the screen shows its own empty state — never a strip standing in for one.",
+		["S17/empty"],
+		() => ({ schedules: fix.body("schedules-empty") }),
+	);
+
+	add(
+		"schedules-loading",
+		"No schedules read has been answered yet: the API routes hold their responses open and the streams stay silent with keepalives only.",
+		["S17/loading"],
+		/* `keepalive-only` as well as the held reads, the `projects-loading` rule:
+		 *  a `loading` cell must pick up NO payload — a stream that pushed one
+		 *  would make the cell a state that had in fact heard from the relay. */
+		() => ({ hold: { api: "forever" }, stream: { mode: "keepalive-only" } }),
+	);
+
+	add(
+		"schedules-populated",
+		"The captured populated store: wakes armed / overdue / past the staleness bound / dormant / ghost with a hidden patience timer, monitors armed / dormant / disabled / expired, one never-checked watch and one unavailable episode.",
+		["S17/populated"],
+		() => ({ schedules: fix.body("schedules-populated") }),
+	);
+
+	add(
+		"schedules-truncated",
+		"A BOUNDED answer: 205 wake-carrying conversations against the route's 200 cap, so the screen must say \"Showing 200 of 205\" rather than imply the store holds only what it sent.",
+		["S17/truncated"],
+		() => ({ schedules: fix.body("schedules-truncated") }),
+	);
+
+	add(
+		"schedules-read-error",
+		"The wakes index could NOT be read (the captured EACCES case) while the monitors store stayed readable: the screen must render the unreadable strip, never \"Nothing is armed\".",
+		["S17/read-error"],
+		() => ({ schedules: fix.body("schedules-read-error") }),
 	);
 
 	/* The two search scenarios carry RESPONSE fixtures (a search request's answer);

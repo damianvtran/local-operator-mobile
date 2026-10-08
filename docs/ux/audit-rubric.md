@@ -115,6 +115,7 @@ text is frozen. The measurement, its manifest fields and its controls are in
 | S14 | Demo mode | F-10 |
 | S15 | Sessions (the conversations panel: live / degraded / ended, pinned, sections, search, past, computers; docked pane on a tablet) | F-5, F-8 |
 | S16 | Projects (the listing, its pushed detail, and the lifecycle writes: create, delete, milestones) | F-10 |
+| S17 | Schedules (the machine-wide armed index: wakes and monitors, each family answering empty / unreadable / bounded separately) | F-8 |
 
 ## 2. States to capture for every screen
 
@@ -229,6 +230,17 @@ call it too, or it measures a page with no clearance at all.
   outcome is unknown rather than that nothing happened; and a milestone whose
   project vanished under the write returns to the listing with the relay's own
   sentence rather than standing a refusal under a row that is gone.
+- **S17 Schedules:** the surface's whole point is that three answers stay three:
+  a readable empty store shows the empty state; a store `read_error` shows the
+  unreadable strip and NEVER the empty state (the cell for it is
+  `schedules-read-error`); a capped listing says "Showing N of M" rather than
+  implying completeness. Each family answers the three separately — the wakes
+  store can be unreadable while the monitors store is read fine. A wake the
+  supervisor no longer fires says `stale`, not a clock; a parked conversation
+  says what a wake waits for; a conversation no longer on the machine says so
+  rather than claiming its wakes resume. Nothing on the screen is tappable
+  except the back, the disclosure and the retry — arm, edit and cancel are not
+  on the phone yet, and the screen must not imply otherwise.
 - **S5 Session / S8 Pending card:** the decision controls must be reachable with
   the keyboard open on the smallest supported device, and with a paragraph-length
   question. This is the highest-value screen in the app and the one with the

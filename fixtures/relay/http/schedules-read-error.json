@@ -1,0 +1,268 @@
+{
+  "provenance": {
+    "kind": "live",
+    "relay_ref": "local-operator 5e59e0cd",
+    "captured_at": "2026-10-08",
+    "how": "captured from the same isolated daemon at local-operator 5e59e0cd06 with the wakes store's directory at mode 000 (EACCES on listdir) while the monitors store stayed readable; `read_error` is the store's own flag (`wakes/store.py::read_index_report`), never set by the capture",
+    "redactions": "the isolated home is shown as ~ (store seeds are fixture-owned paths); the portal password appears nowhere; the sandbox's temp path appears nowhere"
+  },
+  "request": {
+    "method": "GET",
+    "path": "/api/schedules"
+  },
+  "status": 200,
+  "headers": {
+    "content-type": "application/json"
+  },
+  "body": {
+    "wakes": {
+      "entries": [],
+      "generated_at": 1791491503433,
+      "total": 0,
+      "truncated": false,
+      "supervisor": {
+        "supported": true,
+        "running": false,
+        "detail": "this store is outside the real home; launchd cannot supervise it",
+        "verifiable": false
+      },
+      "read_error": true
+    },
+    "monitors": {
+      "entries": [
+        {
+          "session_id": "aaaa11112222",
+          "name": "Invoices follow-up",
+          "cwd": "~/work/repo",
+          "origin": "",
+          "updated_at": 1791491473135,
+          "dormant": false,
+          "ghost": false,
+          "next_due_at": 1791491743135,
+          "monitors": [
+            {
+              "id": "m-prs",
+              "name": "Repo pull requests",
+              "tool": "bash",
+              "arguments": {
+                "command": "gh pr list --state open"
+              },
+              "description": "watch the repo for new pull requests",
+              "every_ms": 300000,
+              "until_at": null,
+              "notify": true,
+              "sort_lines": false,
+              "ignore": [],
+              "cwd": "~/work/repo",
+              "created_at": 1791477103135,
+              "next_due_at": 1791491743135,
+              "last_check_at": 1791491263135,
+              "checks": 12,
+              "deliveries": 3,
+              "consecutive_failures": 0,
+              "disabled": false,
+              "disabled_reason": "",
+              "due_in_s": 239.702,
+              "last_check_age_s": 240.298,
+              "state": "armed",
+              "unavailable_since": 0,
+              "health": null
+            },
+            {
+              "id": "m-inbox",
+              "name": "Inbox watch",
+              "tool": "bash",
+              "arguments": {
+                "command": "gh pr list --state open"
+              },
+              "description": "watch the repo for new pull requests",
+              "every_ms": 600000,
+              "until_at": null,
+              "notify": true,
+              "sort_lines": false,
+              "ignore": [],
+              "cwd": "~/work/repo",
+              "created_at": 1791484303135,
+              "next_due_at": 1791491983135,
+              "last_check_at": 0,
+              "checks": 0,
+              "deliveries": 0,
+              "consecutive_failures": 0,
+              "disabled": false,
+              "disabled_reason": "",
+              "due_in_s": 479.702,
+              "last_check_age_s": null,
+              "state": "armed",
+              "unavailable_since": 0,
+              "health": "never checked \u2014 its session was not open since arming"
+            }
+          ]
+        },
+        {
+          "session_id": "ffff00001111",
+          "name": "Release watch",
+          "cwd": "~/work/release",
+          "origin": "",
+          "updated_at": 1791491473135,
+          "dormant": false,
+          "ghost": false,
+          "next_due_at": 1791492403135,
+          "monitors": [
+            {
+              "id": "m-release",
+              "name": "Release pipeline",
+              "tool": "bash",
+              "arguments": {
+                "command": "gh pr list --state open"
+              },
+              "description": "watch the repo for new pull requests",
+              "every_ms": 60000,
+              "until_at": null,
+              "notify": true,
+              "sort_lines": false,
+              "ignore": [],
+              "cwd": "~/work/repo",
+              "created_at": 1791477103135,
+              "next_due_at": 1791492403135,
+              "last_check_at": 1791491263135,
+              "checks": 41,
+              "deliveries": 8,
+              "consecutive_failures": 2,
+              "disabled": false,
+              "disabled_reason": "",
+              "due_in_s": 899.702,
+              "last_check_age_s": 240.298,
+              "state": "armed",
+              "unavailable_since": 1791491143135,
+              "health": "tool unavailable since 16:25 \u2014 retrying"
+            }
+          ]
+        },
+        {
+          "session_id": "dddd77778888",
+          "name": "Nightly builds",
+          "cwd": "~/work/ci",
+          "origin": "",
+          "updated_at": 1791491473135,
+          "dormant": false,
+          "ghost": false,
+          "next_due_at": 1791493303135,
+          "monitors": [
+            {
+              "id": "m-build",
+              "name": "Nightly build status",
+              "tool": "bash",
+              "arguments": {
+                "command": "gh pr list --state open"
+              },
+              "description": "watch the repo for new pull requests",
+              "every_ms": 300000,
+              "until_at": null,
+              "notify": true,
+              "sort_lines": false,
+              "ignore": [],
+              "cwd": "~/work/repo",
+              "created_at": 1791477103135,
+              "next_due_at": 1791493303135,
+              "last_check_at": 1791491263135,
+              "checks": 12,
+              "deliveries": 0,
+              "consecutive_failures": 3,
+              "disabled": true,
+              "disabled_reason": "3 consecutive failures",
+              "due_in_s": 1799.702,
+              "last_check_age_s": 240.298,
+              "state": "disabled",
+              "unavailable_since": 0,
+              "health": null
+            }
+          ]
+        },
+        {
+          "session_id": "bbbb33334444",
+          "name": "Portfolio rebalance",
+          "cwd": "~",
+          "origin": "",
+          "updated_at": 1791491473135,
+          "dormant": true,
+          "ghost": false,
+          "next_due_at": 1791513103135,
+          "monitors": [
+            {
+              "id": "m-drift",
+              "name": "Allocation drift",
+              "tool": "bash",
+              "arguments": {
+                "command": "gh pr list --state open"
+              },
+              "description": "watch the repo for new pull requests",
+              "every_ms": 300000,
+              "until_at": null,
+              "notify": true,
+              "sort_lines": false,
+              "ignore": [],
+              "cwd": "~/work/repo",
+              "created_at": 1791477103135,
+              "next_due_at": 1791513103135,
+              "last_check_at": 1791491263135,
+              "checks": 12,
+              "deliveries": 3,
+              "consecutive_failures": 0,
+              "disabled": false,
+              "disabled_reason": "",
+              "due_in_s": 21599.702,
+              "last_check_age_s": 240.298,
+              "state": "dormant",
+              "unavailable_since": 0,
+              "health": null
+            }
+          ]
+        },
+        {
+          "session_id": "eeee99990000",
+          "name": "Ticket sweep",
+          "cwd": "~/work/support",
+          "origin": "",
+          "updated_at": 1791491473135,
+          "dormant": false,
+          "ghost": false,
+          "next_due_at": 1791534703135,
+          "monitors": [
+            {
+              "id": "m-tickets",
+              "name": "Sweep the ticket queue",
+              "tool": "bash",
+              "arguments": {
+                "command": "gh pr list --state open"
+              },
+              "description": "watch the repo for new pull requests",
+              "every_ms": 300000,
+              "until_at": 1791491443135,
+              "notify": true,
+              "sort_lines": false,
+              "ignore": [],
+              "cwd": "~/work/repo",
+              "created_at": 1791477103135,
+              "next_due_at": 1791534703135,
+              "last_check_at": 1791491263135,
+              "checks": 12,
+              "deliveries": 3,
+              "consecutive_failures": 0,
+              "disabled": false,
+              "disabled_reason": "",
+              "due_in_s": 43199.702,
+              "last_check_age_s": 240.298,
+              "state": "expired",
+              "unavailable_since": 0,
+              "health": null
+            }
+          ]
+        }
+      ],
+      "generated_at": 1791491503433,
+      "total": 5,
+      "truncated": false,
+      "read_error": false
+    }
+  }
+}

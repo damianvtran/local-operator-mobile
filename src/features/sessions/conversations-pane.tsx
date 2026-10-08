@@ -438,11 +438,13 @@ export const ConversationsPane = ({
 				}
 			/>
 
-			{/* The footer: the three secondary routes, each a 44 pt target. The
+			{/* The footer: the four secondary routes, each a 44 pt target. The
 			 *  panel's own navigation, always visible — the desktop sidebar's
 			 *  footer, phone-sized. `docs/ux/flows.md` draws `--|projects|` as a
 			 *  PEER of `--|past|` off the conversations panel, so the entry point
-			 *  belongs here rather than behind a settings row.
+			 *  belongs here rather than behind a settings row — and Schedules
+			 *  (S17) reads the same way: the desktop sidebar carries it as a
+			 *  top-level destination beside Projects.
 			 *
 			 *  THE PAIR WRAPS ON ITS OWN CONTENT, AND THAT IS THE RULE — there is no
 			 *  scale threshold here on purpose. This footer used to switch
@@ -465,9 +467,9 @@ export const ConversationsPane = ({
 			 *  because nothing here is compared — the layout measures the thing it is
 			 *  laying out. (`flex-1` would NOT do: its zero base size means a wrap
 			 *  never engages and the cell only squeezes, which is the behaviour the
-			 *  older note here recorded, and it is still true of `flex-1`.) The third
-			 *  control keeps the full-width band beneath the pair, so the shape is
-			 *  2+1 when the pair fits and 1+1+1 when it does not.
+			 *  older note here recorded, and it is still true of `flex-1`.) The
+			 *  full-width controls beneath the pair keep that band, so the shape is
+			 *  2+1+1 when the pair fits and 1+1+1+1 when it does not.
 			 *
 			 *  That is why the scale axis carries a step inside the old band
 			 *  (`tools/visual/matrix.ts` SCALES, `135`): a re-capture at 100/150/200
@@ -510,6 +512,24 @@ export const ConversationsPane = ({
 						variant="quiet"
 						size="sm"
 						testID={CONTROL.sidebarProjects}
+					/>
+				</View>
+				{/* The fourth route, for the same stated reason as Projects: the
+				 *  machine-wide armed index (S17) is a peer of `past`/`projects` — a
+				 *  view of what is running on the machine, not a row in Settings —
+				 *  and the desktop sidebar carries Schedules as a top-level
+				 *  destination beside them. Full-width beneath the pair, like Projects,
+				 *  so the wrap band stays 2+1+1. */}
+				<View className="w-full">
+					<Button
+						label="Schedules"
+						onPress={() => {
+							onNavigate?.();
+							router.push("/schedules");
+						}}
+						variant="quiet"
+						size="sm"
+						testID={CONTROL.sidebarSchedules}
 					/>
 				</View>
 			</View>
