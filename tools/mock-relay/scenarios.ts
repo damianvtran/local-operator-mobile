@@ -1401,14 +1401,14 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 
 	add(
 		"schedules-truncated",
-		"A BOUNDED answer: 205 wake-carrying conversations against the route's 200 cap, so the screen must say \"Showing 200 of 205\" rather than imply the store holds only what it sent.",
+		'A BOUNDED answer: 205 wake-carrying conversations against the route\'s 200 cap, so the screen must say "Showing 200 of 205" rather than imply the store holds only what it sent.',
 		["S17/truncated"],
 		() => ({ schedules: fix.body("schedules-truncated") }),
 	);
 
 	add(
 		"schedules-read-error",
-		"The wakes index could NOT be read (the captured EACCES case) while the monitors store stayed readable: the screen must render the unreadable strip, never \"Nothing is armed\".",
+		'The wakes index could NOT be read (the captured EACCES case) while the monitors store stayed readable: the screen must render the unreadable strip, never "Nothing is armed".',
 		["S17/read-error"],
 		() => ({ schedules: fix.body("schedules-read-error") }),
 	);

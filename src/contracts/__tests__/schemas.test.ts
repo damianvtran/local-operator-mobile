@@ -613,7 +613,9 @@ describe("the schedules read path reads the relay's own values", () => {
 		});
 		expect(parsed.ok).toBe(true);
 		if (!parsed.ok) throw new Error("unreachable");
-		expect(parsed.data.monitors.entries[0]?.monitors[0]?.state).toBe("hibernating");
+		expect(parsed.data.monitors.entries[0]?.monitors[0]?.state).toBe(
+			"hibernating",
+		);
 	});
 
 	it("keeps a null due time and a null health as null, never as 0", () => {

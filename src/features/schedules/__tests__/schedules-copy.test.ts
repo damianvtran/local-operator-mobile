@@ -4,9 +4,9 @@ import type {
 	ScheduleMonitorListing,
 	ScheduleMonitorRow,
 	ScheduleSupervisorInfo,
+	SchedulesResponse,
 	ScheduleWakeListing,
 	ScheduleWakeRow,
-	SchedulesResponse,
 } from "@/contracts";
 import {
 	dueLabel,
@@ -14,10 +14,10 @@ import {
 	formatWakeDuration,
 	GONE_MONITORS_CLAUSE,
 	GONE_WAKES_CLAUSE,
+	type MonitorLineView,
 	monitorAlerting,
 	monitorEntryClause,
 	monitorEntryViews,
-	type MonitorLineView,
 	monitorSectionSummary,
 	monitorSlot,
 	monitorTail,
@@ -47,7 +47,9 @@ import { RelayError } from "@/relay";
 
 const NOW = 1_791_491_000_000;
 
-const wakeRow = (overrides: Partial<ScheduleWakeRow> = {}): ScheduleWakeRow => ({
+const wakeRow = (
+	overrides: Partial<ScheduleWakeRow> = {},
+): ScheduleWakeRow => ({
 	id: "w1",
 	message: "check the shared inbox",
 	next_due_at: NOW + 3_600_000,
@@ -303,9 +305,9 @@ describe("monitor row vocabulary", () => {
 		expect(
 			monitorSlot(monitorRow({ due_in_s: -300, next_due_at: NOW - 300_000 })),
 		).toBe("5m overdue");
-		expect(
-			monitorSlot(monitorRow({ next_due_at: null, due_in_s: null })),
-		).toBe("waiting");
+		expect(monitorSlot(monitorRow({ next_due_at: null, due_in_s: null }))).toBe(
+			"waiting",
+		);
 	});
 
 	it("suppresses the slot under a parked or gone entry", () => {
@@ -333,7 +335,8 @@ describe("monitor row vocabulary", () => {
 		expect(
 			monitorTail(
 				monitorRow({
-					health: "9 checks, 0 deliveries — nothing has changed (confirm the call observes what you expect)",
+					health:
+						"9 checks, 0 deliveries — nothing has changed (confirm the call observes what you expect)",
 				}),
 			),
 		).toBe(
@@ -494,9 +497,9 @@ describe("the supervisor sentences", () => {
 	});
 
 	it("reads an absent verifiable as able to speak", () => {
-		expect(supervisorFires({ supported: true, running: true, detail: "" })).toBe(
-			true,
-		);
+		expect(
+			supervisorFires({ supported: true, running: true, detail: "" }),
+		).toBe(true);
 		expect(
 			supervisorFires({
 				supported: true,
@@ -611,27 +614,29 @@ describe("section summaries", () => {
 	it("calls out how many monitors need attention", () => {
 		expect(monitorSectionSummary([])).toBe("0 armed");
 		expect(
-			monitorSectionSummary([
-				monitorEntryViews(
-					monitorListing({
-						entries: [
-							{
-								session_id: "a",
-								name: "a",
-								cwd: "",
-								origin: "",
-								updated_at: NOW,
-								dormant: false,
-								ghost: false,
-								next_due_at: NOW,
-								monitors: [monitorRow(), monitorRow({ id: "m2" })],
-							},
-						],
-					}),
-					NOW,
-				)[0]?.rows ?? [],
-			][0] ?? [],
-		)).toBe("2 armed");
+			monitorSectionSummary(
+				[
+					monitorEntryViews(
+						monitorListing({
+							entries: [
+								{
+									session_id: "a",
+									name: "a",
+									cwd: "",
+									origin: "",
+									updated_at: NOW,
+									dormant: false,
+									ghost: false,
+									next_due_at: NOW,
+									monitors: [monitorRow(), monitorRow({ id: "m2" })],
+								},
+							],
+						}),
+						NOW,
+					)[0]?.rows ?? [],
+				][0] ?? [],
+			),
+		).toBe("2 armed");
 		expect(
 			monitorSectionSummary([
 				monitorLineViewFor(monitorRow({ state: "disabled" })),
@@ -681,7 +686,9 @@ describe("scheduleRefusalSentence", () => {
 
 	it("leaves connection failures to the connection's own surface", () => {
 		expect(
-			scheduleRefusalSentence(new RelayError("transport", "could not reach it")),
+			scheduleRefusalSentence(
+				new RelayError("transport", "could not reach it"),
+			),
 		).toBeNull();
 		expect(scheduleRefusalSentence(new Error("plain"))).toBeNull();
 	});
@@ -718,6 +725,7 @@ function monitorLineViewFor(
 		NOW,
 	);
 	const view = entry?.rows[0];
-	if (view === undefined) throw new Error("unreachable: the helper seeds one row");
+	if (view === undefined)
+		throw new Error("unreachable: the helper seeds one row");
 	return view;
 }

@@ -33,8 +33,6 @@ import {
 import type { AddressInfo } from "node:net";
 
 import { afterEach, describe, expect, it } from "vitest";
-
-import { loadFixture } from "../testing/fixtures";
 import { type CustomRoute, createRelayClient } from "../connection";
 import {
 	familyState,
@@ -42,6 +40,7 @@ import {
 	wakeEntryViews,
 } from "../features/schedules/schedules-copy";
 import { isRelayError } from "../relay";
+import { loadFixture } from "../testing/fixtures";
 
 interface Recorded {
 	method: string;
@@ -66,11 +65,13 @@ afterEach(async () => {
 
 /** A local server answering every request with one canned body. */
 async function serve(status: number, body: unknown): Promise<string> {
-	const server = createServer((request: IncomingMessage, response: ServerResponse) => {
-		recorded.push({ method: request.method ?? "", path: request.url ?? "" });
-		response.writeHead(status, { "content-type": "application/json" });
-		response.end(JSON.stringify(body));
-	});
+	const server = createServer(
+		(request: IncomingMessage, response: ServerResponse) => {
+			recorded.push({ method: request.method ?? "", path: request.url ?? "" });
+			response.writeHead(status, { "content-type": "application/json" });
+			response.end(JSON.stringify(body));
+		},
+	);
 	servers.push(server);
 	await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
 	const { port } = server.address() as AddressInfo;
