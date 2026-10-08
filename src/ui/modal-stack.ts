@@ -251,6 +251,43 @@ export function dimmer(): ModalHandle | null {
 	return lastDimmer;
 }
 
+/** Everything a renderer needs to know about its own place in the stack. */
+export interface ModalStackReading {
+	/** A later modal is over this one. */
+	covered: boolean;
+	/** This modal is the one drawing the dim. */
+	dims: boolean;
+	/** An enclosing modal already dims, so this one must not. */
+	hostDims: boolean;
+	/** A modal raised inside this one is up, so its surface stands down. */
+	nested: boolean;
+}
+
+/**
+ * The ONE place a modal's place in the stack is decided, so the hook above it is pure
+ * plumbing and this has a test that fails when the rule does.
+ *
+ * `handle` is the caller's LAST registration and stays valid after that modal leaves
+ * the list, which is the point (round 10, R43): a dismissal is exactly the moment the
+ * entry goes, and the dim it is still painting is identified by this handle. `dimmer()`
+ * keeps answering with it until another modal registers — so a standalone Dialog holds
+ * its dim through the fade (R34), while a modal that opens mid-fade takes the dim away
+ * from the closing one instead of both drawing it. Round 9's hook wrote `dims: false`
+ * into its `!visible` branch, which clobbered exactly this reading one tick after the
+ * close had produced it; the decision now lives here, where that cannot happen
+ * silently.
+ */
+export function readModalStack(handle: ModalHandle | null): ModalStackReading {
+	if (handle === null)
+		return { covered: false, dims: false, hostDims: false, nested: false };
+	return {
+		covered: isCovered(handle),
+		dims: dimmer() === handle,
+		hostDims: hostDims(handle),
+		nested: hasNestedModal(handle),
+	};
+}
+
 /** Whether a modal ENCLOSING this one already dims — a `Sheet` inside a drawer. */
 function hasAncestor(entry: Entry): boolean {
 	for (let scope: ModalScope | null = entry.parent; scope !== null; ) {

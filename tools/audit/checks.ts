@@ -1543,10 +1543,15 @@ export const U42_EXEMPTIONS: Array<{
 		 *  names what is actually there instead of what the reason mentioned. */
 		properties: ["row-gap", "column-gap", "padding-top", "padding-bottom"],
 		reason:
-			"the right-aligned bubble and its action row — §3.4's flagged-not-absorbed " +
-			"list (`transcript-row.tsx` `py-1.5`, `pending-card.tsx`, `ask-response-row.tsx`); " +
-			"a UI-wide sweep of the 43 sites is its own ticket, and this PR touches none " +
-			"of those surfaces",
+			"the right-aligned bubble's own `py-1.5` (`features/session/components/" +
+			"transcript-row.tsx`, the user/steer bubble) AND the transcript image row's " +
+			"`pt-1.5` under the same container — §3.4's flagged-not-absorbed list " +
+			"(`pending-card.tsx`, `ask-response-row.tsx` are the same 6pt half-step); a " +
+			"UI-wide sweep of the 43 sites is its own ticket, and this PR touches none of " +
+			"those surfaces. WHAT THIS EXEMPTS: any node under that path at 6pt on " +
+			"`row-gap`, `column-gap`, `padding-top` or `padding-bottom` — the key is path, " +
+			"value and property, not the element, so a future descendant at the same value " +
+			"is covered too rather than reported",
 	},
 	{
 		path: "div.css-g5y9jx.min-w-0>div.css-g5y9jx.gap-1.5",

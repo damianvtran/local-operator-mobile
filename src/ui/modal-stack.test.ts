@@ -9,6 +9,7 @@ import {
 	type ModalScope,
 	modalStackDepth,
 	openModal,
+	readModalStack,
 	subscribeToModalStack,
 } from "@/ui/modal-stack";
 
@@ -129,7 +130,77 @@ describe("the modal stack", () => {
 		expect(isCovered(confirm)).toBe(false);
 	});
 
-	it("leaves EXACTLY ONE dimmer in every stack it can be put in", () => {
+	it("keeps the dim alive through a dismissal, and hands it over at most once", () => {
+		/* THE READING A RENDERER DRAWS FROM, walked through the dismissals (round 10,
+		 *  R43). R34 has been fixed twice and regressed twice, and each time the store's
+		 *  own rule was right — what broke was the reading a closing modal took. So this
+		 *  asserts `readModalStack` at the moments the fade passes through: while a
+		 *  modal's content is still mounted there is exactly ONE dimmer, never none and
+		 *  never two. The React plumbing above it is not covered here — a Node test has
+		 *  no renderer (vitest.config.ts) — and the capture is what exercises the hook;
+		 *  what IS covered is every decision the hook makes, because it makes none. */
+		const openWithin = (
+			parent: ModalScope | null,
+			scrim = true,
+		): ModalHandle => {
+			const scope: ModalScope = { current: null };
+			const handle = openModal(scope, parent, scrim);
+			return handle;
+		};
+		const dimmersIn = (handles: ModalHandle[]): number =>
+			handles.filter((handle) => readModalStack(handle).dims).length;
+
+		// (a) a standalone Dialog, dismissing: its own content is still mounted, so the
+		// dim stays with it — this is the reading round 9's hook overwrote one tick later
+		const dialog = openWithin(null, true);
+		expect(readModalStack(dialog).dims).toBe(true);
+		closeModal(dialog);
+		expect(readModalStack(dialog).dims).toBe(true);
+
+		// (e) …and if ANOTHER modal opens during that fade it takes the dim, rather than
+		// both drawing it — the case that made retaining the reading unsafe
+		const later = openWithin(null, true);
+		expect(readModalStack(dialog).dims).toBe(false);
+		expect(readModalStack(later).dims).toBe(true);
+		expect(dimmersIn([dialog, later])).toBe(1);
+		closeModal(later);
+		expect(readModalStack(later).dims).toBe(true);
+
+		// (b) the sibling resurface: the Sheet that comes back takes the dim as the
+		// confirm goes, and the confirm stops drawing it — exactly one, at every step
+		const sheet = openWithin(null, true);
+		const confirm = openWithin(null, true);
+		expect(dimmersIn([sheet, confirm])).toBe(1);
+		expect(readModalStack(confirm).dims).toBe(true);
+		closeModal(confirm);
+		expect(dimmersIn([sheet, confirm])).toBe(1);
+		expect(readModalStack(sheet).dims).toBe(true);
+		closeModal(sheet);
+
+		// (c) a Dialog raised inside a hosted Sheet: the outermost modal of the branch
+		// dims for the whole chain, so the guest never paints a second one
+		const host = openWithin(null, true);
+		const guest = openWithin(host.scope, true);
+		expect(dimmersIn([host, guest])).toBe(1);
+		expect(readModalStack(host).dims).toBe(true);
+		expect(readModalStack(guest).dims).toBe(false);
+		closeModal(guest);
+		closeModal(host);
+
+		// (d) drawer, its pane's menu, and a Dialog from the menu: one throughout
+		const drawer = openWithin(null, true);
+		const menu = openWithin(drawer.scope, true);
+		const inner = openWithin(menu.scope, true);
+		expect(dimmersIn([drawer, menu, inner])).toBe(1);
+		closeModal(inner);
+		expect(dimmersIn([drawer, menu])).toBe(1);
+		closeModal(menu);
+		expect(dimmersIn([drawer, menu])).toBe(1);
+		closeModal(drawer);
+		expect(readModalStack(drawer).dims).toBe(true);
+	});
+
+	it("names ONE dimmer for every stack shape it can be put in", () => {
 		/* ONE DIMMER PER FRAME (round 9, R39). Round 8 asserted a per-modal predicate
 		 *  (`!covered && !hostDims`), which could be satisfied TWICE — a Dialog closing
 		 *  over a Sheet left both drawing — so the question now has one answer, from

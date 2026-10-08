@@ -2,12 +2,11 @@ import { createContext, useContext, useEffect, useRef, useState } from "react";
 
 import {
 	closeModal,
-	dimmer,
-	hasNestedModal,
-	hostDims,
-	isCovered,
+	type ModalHandle,
 	type ModalScope,
+	type ModalStackReading,
 	openModal,
+	readModalStack,
 	subscribeToModalStack,
 } from "@/ui/modal-stack";
 
@@ -86,64 +85,58 @@ export function useModalStackEntry(
 	const held = useRef<ModalScope | null>(null);
 	if (held.current === null) held.current = { current: null };
 	const scope = held.current;
-
-	const [covered, setCovered] = useState(false);
-	const [hostScrimmed, setHostScrimmed] = useState(false);
-	const [nested, setNested] = useState(false);
+	/* The handle OUTLIVES the registration. A dismissal is exactly the moment the entry
+	 *  leaves the list, and the reading that keeps the dim on screen during the fade is
+	 *  the one taken with this handle (round 10, R43 — see `readModalStack`). */
+	const last = useRef<ModalHandle | null>(null);
 	/* Read off the options object so the effect's dependency is the primitive, not the
 	 *  object literal every caller writes inline — a fresh `{}` per render would
 	 *  re-register the modal on every render. */
 	const scrim = options.scrim ?? true;
 
-	const [snapshot, setSnapshot] = useState({
+	const [snapshot, setSnapshot] = useState<ModalStackReading>({
 		covered: false,
-		hostScrimmed: false,
-		nested: false,
 		dims: false,
+		hostDims: false,
+		nested: false,
 	});
 
+	/* SUBSCRIBED FOR THE COMPONENT'S LIFETIME, not for as long as it is visible: a
+	 *  modal that is dismissing has to hear about the next one registering, or it would
+	 *  keep painting its dim under a modal that has taken it (R43's second case), and a
+	 *  modal that has closed has to be able to read the dim it still owns (R34). The
+	 *  reading is `readModalStack`, so nothing here decides anything — round 9's version
+	 *  wrote `dims: false` into a `!visible` branch and overwrote the very reading the
+	 *  close had just produced. */
+	const sync = useRef<() => void>(() => {});
 	useEffect(() => {
-		if (!visible) {
-			setSnapshot({
-				covered: false,
-				hostScrimmed: false,
-				nested: false,
-				dims: false,
-			});
-			return;
-		}
+		const read = () => setSnapshot(readModalStack(last.current));
+		sync.current = read;
+		read();
+		return subscribeToModalStack(read);
+	}, []);
+
+	useEffect(() => {
+		if (!visible) return;
 		const opened = openModal(scope, parent, scrim);
+		last.current = opened;
 		scope.current = opened;
-		const sync = () => {
-			setSnapshot({
-				covered: isCovered(opened),
-				hostScrimmed: hostDims(opened),
-				nested: hasNestedModal(opened),
-				/* THE ONE DIMMER IS ASKED ONCE, OF THE STACK (round 9, R39) — not
-				 *  answered per modal by two predicates that can both say yes. */
-				dims: dimmer() === opened,
-			});
-		};
-		/* Read once immediately, then on every change: a modal that opens while a later
-		 *  one is already mounted would otherwise keep a stale reading. */
-		sync();
-		const unsubscribe = subscribeToModalStack(sync);
+		/* `openModal` emits, but at that instant `last.current` was still the previous
+		 *  handle, so read once more now that it is ours. */
+		sync.current();
 		return () => {
-			/* CLOSE FIRST, THEN UNSUBSCRIBE: `closeModal` emits, and this component's
-			 *  last reading has to be the one taken AFTER it left the list. That is what
-			 *  makes a dismissal hand the dim on — to the modal underneath when there is
-			 *  one (the sibling Sheet case), and to itself when there is not (a standalone
-			 *  Dialog's fade, R34, where it is deliberately still the remembered dimmer). */
 			closeModal(opened);
-			unsubscribe();
 			scope.current = null;
+			/* Re-read AFTER the close: the entry is gone, and the answer — whether this
+			 *  modal still owns the dim — is what the fade is drawn from. */
+			sync.current();
 		};
 	}, [visible, parent, scope, scrim]);
 
 	return {
 		covered: snapshot.covered,
 		dims: snapshot.dims,
-		hostDims: snapshot.hostScrimmed,
+		hostDims: snapshot.hostDims,
 		nested: snapshot.nested,
 		scope,
 	};
