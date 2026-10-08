@@ -14,6 +14,12 @@ import {
 } from "@/ui/modal-stack";
 
 /**
+ * THE STORE'S RULE, NOT THE HOOK. This file stays green when the hook regresses — it
+ * did, twice, and that is why `src/ui/components/modal-stack-entry.test.ts` exists: it
+ * renders the real hook and fails by name on a `!visible` branch that overwrites the
+ * close's reading, or on a handle dropped at cleanup. What this file covers is
+ * `dimmer()`/`readModalStack` themselves, which the hook calls and does not duplicate.
+ *
  * The stacking rule, asserted on the store rather than through a renderer.
  *
  * WHY THIS FILE EXISTS. The first version of this guard was a prop on one screen

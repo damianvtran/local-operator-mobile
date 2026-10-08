@@ -110,7 +110,16 @@ export function useModalStackEntry(
 	 *  close had just produced. */
 	const sync = useRef<() => void>(() => {});
 	useEffect(() => {
-		const read = () => setSnapshot(readModalStack(last.current));
+		const read = () => {
+			const next = readModalStack(last.current);
+			/* BAIL OUT ON AN EQUAL READING (round 10, R2). Every stack change notifies
+			 *  every mounted modal, and a fresh object literal is never `Object.is` its
+			 *  predecessor — so React re-rendered all of them, including sheets that were
+			 *  closed and had nothing to redraw (measured: eight renders on one closed
+			 *  modal across two toggles of another). Returning `prev` is the only way a
+			 *  `useState` setter can say "nothing changed". */
+			setSnapshot((prev) => (sameReading(prev, next) ? prev : next));
+		};
 		sync.current = read;
 		read();
 		return subscribeToModalStack(read);
@@ -140,4 +149,14 @@ export function useModalStackEntry(
 		nested: snapshot.nested,
 		scope,
 	};
+}
+
+/** Whether two readings agree on everything a renderer draws from. */
+function sameReading(a: ModalStackReading, b: ModalStackReading): boolean {
+	return (
+		a.covered === b.covered &&
+		a.dims === b.dims &&
+		a.hostDims === b.hostDims &&
+		a.nested === b.nested
+	);
 }
