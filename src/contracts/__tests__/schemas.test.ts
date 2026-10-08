@@ -189,12 +189,21 @@ function classifyHttp(rel: string, fixture: HttpFixture): Classification {
 		return { kind: "schema", schema: "models", value: body };
 	if (route === "/api/directories")
 		return { kind: "schema", schema: "directories", value: body };
-	/* The two project READ families this build ships. The listing is the exact
-	 * route; the detail is the key-scoped one below it, and the ORDER matters —
-	 * a bare `startsWith` would classify the listing as a detail. The write
-	 * routes (create/patch/delete/links/milestones) are not read by this client
-	 * yet, so a capture of one is an unclassified fixture that throws here, which
-	 * is the loud reading rather than a silent pass. */
+	/* The two project READ families, and the three WRITE answers this build
+	 *  now reads. The listing is the exact route; the detail is the key-scoped
+	 *  one below it, and the ORDER matters — a bare `startsWith` would classify
+	 *  the listing as a detail, and the milestone family below would be read as
+	 *  a detail too (`{ok, project}` is not `{project, links}`, but both are an
+	 *  object with a `project`). The METHOD is part of the classification: the
+	 *  same path is a read with `GET` and a write with `DELETE`, so a fixture
+	 *  cannot be classified from its path alone. */
+	const method = fixture.request?.method ?? "GET";
+	if (/^\/api\/projects\/[^/]+\/milestones(\/[^/]+)?$/.test(route))
+		return { kind: "schema", schema: "projectMilestone", value: body };
+	if (route === "/api/projects" && method === "POST")
+		return { kind: "schema", schema: "projectWrite", value: body };
+	if (route.startsWith("/api/projects/") && method === "DELETE")
+		return { kind: "schema", schema: "projectDelete", value: body };
 	if (route === "/api/projects")
 		return { kind: "schema", schema: "projects", value: body };
 	if (route.startsWith("/api/projects/"))

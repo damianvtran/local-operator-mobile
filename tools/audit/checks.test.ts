@@ -525,6 +525,181 @@ describe("U-42 — spacing on the token scale", () => {
 		}
 	});
 
+	it("reports an inset PLUS a step on the SHEET SURFACE as an exception, and nowhere else", () => {
+		/* 24 + 20 = 44pt: the sheet pads its action region by one step of the scale on
+		 *  top of the device's declared inset. Thirty rows in CI's run 37705167165 were
+		 *  exactly this, all on the sheet's scroll body (round 5, D2's attribution). */
+		const sheetPath =
+			"div.css-g5y9jx.r-13awgt0>div.css-g5y9jx.rounded-t-lg>div.css-g5y9jx.px-4";
+		const onSheet = state({
+			insets: { top: 0, right: 0, bottom: 20, left: 0 },
+			nodes: [
+				node({
+					path: sheetPath,
+					padding: { top: 0, bottom: 44, left: 0, right: 0 },
+				}),
+			],
+		});
+		const rows = run("U-42", onSheet);
+		const verdicts = rows.map((r) => r.verdict);
+		expect(verdicts).toContain("EXCEPTION");
+		expect(verdicts).not.toContain("FAIL");
+		expect(rows.find((r) => r.verdict === "EXCEPTION")?.measured).toContain(
+			"plus the declared bottom inset",
+		);
+
+		/* AND THE SAME VALUE OFF THE SHEET IS STILL A FAILURE. This is the reviewer's
+		 *  counter-example kept as a test: an unscoped allowance passed `pt-7`/`pt-9`/
+		 *  `pt-11` (28/36/44pt) on any node on both per-push devices (R24). */
+		for (const value of [28, 36, 44]) {
+			const offSheet = state({
+				insets: { top: 0, right: 0, bottom: 20, left: 0 },
+				nodes: [
+					node({
+						path: "div.css-g5y9jx.flex-1>div#somewhere",
+						padding: { top: 0, bottom: value, left: 0, right: 0 },
+					}),
+				],
+			});
+			expect(run("U-42", offSheet)[0]?.verdict).toBe("FAIL");
+		}
+	});
+
+	it("bounds the sheet allowance to the clearance region, not to anything below the surface", () => {
+		/* R30: `path.includes("rounded-t-lg")` passed any descendant in the six levels a
+		 *  path keeps, so a sheet descendant padded to 20+8 on iphone-se read as an
+		 *  inset-plus-step it is not. The clearance lives at depth 1, or 2 through the
+		 *  scroll view between the surface and the padded body. */
+		const deep = state({
+			insets: { top: 0, right: 0, bottom: 20, left: 0 },
+			nodes: [
+				node({
+					path: "div.css-g5y9jx.rounded-t-lg>div.css-g5y9jx.gap-2>div.css-g5y9jx.p-1>div.css-g5y9jx.px-4",
+					padding: { top: 0, bottom: 44, left: 0, right: 0 },
+				}),
+			],
+		});
+		expect(run("U-42", deep)[0]?.verdict).toBe("FAIL");
+
+		const scroll = state({
+			insets: { top: 0, right: 0, bottom: 20, left: 0 },
+			nodes: [
+				node({
+					path: "div.css-g5y9jx.rounded-t-lg>div.css-g5y9jx.r-150rngu>div.css-g5y9jx.px-4",
+					padding: { top: 0, bottom: 44, left: 0, right: 0 },
+				}),
+			],
+		});
+		const verdicts = run("U-42", scroll).map((r) => r.verdict);
+		expect(verdicts).toContain("EXCEPTION");
+		expect(verdicts).not.toContain("FAIL");
+	});
+
+	it("reports the sheet allowance even when the ledger fills the cap", () => {
+		/* R30's second half: the EXCEPTION row was pushed into the same list that
+		 *  `.slice(0, 8)` cuts, and CI's artifact shows 464 of 696 cells at that cap with
+		 *  the carve-out row present ZERO times — an allowance nobody could see. */
+		const path = "div.css-g5y9jx.rounded-t-lg>div.css-g5y9jx.px-4";
+		const pushed = [];
+		for (let i = 0; i < 12; i += 1) {
+			const entry = {
+				path: `div#filler-${i}`,
+				value: 6,
+				properties: ["row-gap", "column-gap"],
+				reason: `filler ${i}`,
+			};
+			U42_EXEMPTIONS.push(entry);
+			pushed.push(entry);
+		}
+		try {
+			const rows = run(
+				"U-42",
+				state({
+					insets: { top: 0, right: 0, bottom: 20, left: 0 },
+					nodes: [
+						node({
+							path,
+							padding: { top: 0, bottom: 44, left: 0, right: 0 },
+						}),
+					],
+				}),
+			);
+			const sheetRows = rows.filter((r) =>
+				(r.measured ?? "").includes("the sheet's own clearance"),
+			);
+			expect(sheetRows).toHaveLength(1);
+		} finally {
+			for (const entry of pushed) U42_EXEMPTIONS.pop();
+		}
+	});
+
+	it("needs BOTH the inset and the surface: a sheet padding on an inset-free device still fails", () => {
+		const sheetPath = "div.css-g5y9jx.rounded-t-lg>div.css-g5y9jx.px-4";
+		const noInset = state({
+			nodes: [
+				node({
+					path: sheetPath,
+					padding: { top: 0, bottom: 44, left: 0, right: 0 },
+				}),
+			],
+		});
+		expect(run("U-42", noInset)[0]?.verdict).toBe("FAIL");
+		/* 47 is inset + 27, a sum no step can produce, so the bound is asserted too. */
+		const offSum = state({
+			insets: { top: 0, right: 0, bottom: 20, left: 0 },
+			nodes: [
+				node({
+					path: sheetPath,
+					padding: { top: 0, bottom: 47, left: 0, right: 0 },
+				}),
+			],
+		});
+		expect(run("U-42", offSum)[0]?.verdict).toBe("FAIL");
+	});
+
+	it("a recorded site is exempt for the PROPERTIES its reason names, not for the path alone", () => {
+		/* R28 / QA Q1: matching on path substring plus value alone also exempted
+		 *  `padding-left 2pt` — and any descendant at that value — on the badge path. */
+		const entry = {
+			path: ">div.css-g5y9jx.self-start",
+			value: 2,
+			properties: ["padding-top", "padding-bottom"],
+			reason: "test site",
+		};
+		U42_EXEMPTIONS.push(entry);
+		try {
+			const badgePath =
+				"div.css-g5y9jx.flex-row>div.css-g5y9jx.r-1loqt21>div.css-g5y9jx.self-start";
+			const vertical = state({
+				nodes: [
+					node({
+						path: badgePath,
+						padding: { top: 2, bottom: 2, left: 0, right: 0 },
+					}),
+				],
+			});
+			// the two properties the record names come back as exceptions
+			const named = run("U-42", vertical).map((r) => r.verdict);
+			expect(named.filter((v) => v === "EXCEPTION")).toHaveLength(2);
+			expect(named).not.toContain("FAIL");
+
+			const horizontal = state({
+				nodes: [
+					node({
+						path: badgePath,
+						padding: { top: 0, bottom: 0, left: 2, right: 2 },
+					}),
+				],
+			});
+			// and the same value on an axis the record does not cover still fails
+			const other = run("U-42", horizontal).map((r) => r.verdict);
+			expect(other.filter((v) => v === "FAIL")).toHaveLength(2);
+			expect(other).not.toContain("EXCEPTION");
+		} finally {
+			U42_EXEMPTIONS.pop();
+		}
+	});
+
 	it("accepts a negated step, because the bleed is `-gutters.phone`", () => {
 		const negative = state({
 			nodes: [

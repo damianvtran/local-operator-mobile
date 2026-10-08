@@ -12,6 +12,18 @@
  * assumed rather than set.
  */
 
+/* The app's own identifier contract, IMPORTED rather than copied: an opener is a
+ * press on a control the app declares, so the name it presses is the app's, and a
+ * second spelling here would be a cell that fails the day the control is renamed
+ * (`tools/lib/readiness.ts` imports the same module for the same reason). It is
+ * plain TypeScript with no imports of its own, so the tooling can load it. */
+import {
+	CONTROL,
+	projectMilestoneEditId,
+	sessionRowId,
+} from "../../src/ui/a11y.ts";
+import type { Affordance } from "../lib/affordance.ts";
+
 /**
  * Safe-area insets per device class, in CSS pixels. `env(safe-area-inset-*)`
  * cannot be overridden through CDP, so the harness declares them as custom
@@ -346,11 +358,13 @@ export function describeDeviceCoverage(coverage: {
  * The CI tier: the bounded sample the per-push capture job takes.
  *
  * WHY A THIRD TIER, AND WHY IT IS HERE RATHER THAN A `--devices` LIST IN YAML.
- * The `core` tier is 1584 cells: the whole declared cell list (44 cells) x 2 themes x
- * (3 phones x 4 scales + 2 tablets x 3 scales) — 44 x 2 x 18, the tier's 5 profiles —
- * and the CI job's capture step is bound at 30 minutes. Measured on the runner, that is
+ * The `core` tier is 2088 cells: the whole declared cell list (58 cells) x 2 themes x
+ * (3 phones x 4 scales + 2 tablets x 3 scales) — 58 x 2 x 18, the tier's 5 profiles —
+ * and the CI job's capture step is bound at 40 minutes. Measured on the runner, that is
  * 2.24 s/cell: 403 cells in 903 s (run 37098393675, a plan of 403 cells then), so a core
- * run needs ~59 minutes. The job's first real
+ * run needs ~78 minutes. The `core` job's own bound is 110 (see `.github/workflows/e2e.yml`,
+ * `web-audit-core`), which is above the 6264 s deadline its plan derives for itself. The
+ * job's first real
  * run of this path
  * was therefore cut off by the harness's own 900 s deadline with 585 cells
  * unvisited, and reported them as cells with no frame.
@@ -379,11 +393,11 @@ export function describeDeviceCoverage(coverage: {
  *     `CI_SCALES` below for why the boundary earns the third slot and 150% does
  *     not. 150% stays in `core`, which sweeps every scale.
  *
- * That is 44 cells x 2 themes x (2 profiles x 3 scales) = 528 cells, ~20 minutes at
+ * That is 58 cells x 2 themes x (2 profiles x 3 scales) = 696 cells, ~26 minutes at
  * the measured rate: inside the step bound (raised with it, see `CI_SCALES`) with
  * the same headroom it always carried. `core` and `full` are unchanged and stay the
- * local and dispatched samples, so the full 1584-cell `core` matrix and the
- * 5808-cell `full` matrix remain runnable — nothing is only reachable through CI.
+ * local and dispatched samples, so the full 2088-cell `core` matrix and the
+ * 7656-cell `full` matrix remain runnable — nothing is only reachable through CI.
  */
 export const CI_DEVICES: string[] = ["iphone-se", "tablet-landscape"];
 
@@ -401,9 +415,12 @@ export const CI_DEVICES: string[] = ["iphone-se", "tablet-landscape"];
  * sweeps every scale, so nothing is lost by composing the two sets differently.
  *
  * WHAT IT COSTS, because it is NOT free and the two are one decision. Three scales on
- * both CI profiles is 528 cells, +57 % over the two-scale 336, so the per-push capture
- * and audit bounds in `.github/workflows/e2e.yml` were raised with it (capture 20 → 30,
- * audit 10 → 15, job 50 → 60). A bound that fires every run stops being a signal, so
+ * both CI profiles is 696 cells, +50 % over the two-scale 464, so the per-push capture
+ * and audit bounds in `.github/workflows/e2e.yml` were raised with it — most recently to
+ * capture 40 / audit 20 / job 80. That is this slice's ten cells (nine lifecycle surfaces
+ * and the pane's long-press menu) on top of the base the branch was cut from, plus the
+ * four cells upstream landed while it was open: the cell list is 58 and the sample
+ * is 696, both re-derived from this head's own `--plan` rather than scaled. A bound that fires every run stops being a signal, so
  * this list and that bound have to move together: reverting the bounds without
  * reverting this list makes the job red, and reverting this list without the bounds
  * wastes the budget it was sized for. */
@@ -579,6 +596,155 @@ export const SCREEN_ROOTS: Record<string, string> = {
 	S15: "sessions-screen",
 	S16: "projects-screen",
 	"S16-detail": "project-detail-screen",
+};
+
+/**
+ * The actions a cell takes before it settles — the harness's own press.
+ *
+ * A cell is a state, and until this table existed a state had to be reachable by
+ * URL alone: the harness navigates and waits, it does not open a panel. So every
+ * state BEHIND A CONTROL had no cell, which is a whole class of surface a design
+ * or QA round is asked to sign off with no frame behind it — `S9/populated` was
+ * withdrawn as a cell for exactly that reason.
+ *
+ * WHAT AN ENTRY MAY DO is deliberately two things (`tools/lib/affordance.ts`):
+ * press a control by its declared id, and put text into a field. Both are things
+ * a READER does; neither is a hook the app has to carry for the harness. The
+ * states they reach are reached through the app's own code and the relay's own
+ * wire — a refusal cell gets the relay's sentence because the app really asked
+ * and was really refused, and a busy cell is busy because the relay really has
+ * not answered.
+ *
+ * RECORDED, NOT RE-DERIVED. The capture writes the actions it applied into the
+ * manifest and the audit REPLAYS them from that record, the same rule the seed
+ * follows: a re-drive that re-derived the list from this table would be measuring
+ * whatever this table says today rather than what the frame was taken of.
+ *
+ * ONE ENTRY PER CELL, and the cell name is the key: a cell whose opener moved is
+ * a cell that fails, loudly, with the missing id in the sentence.
+ */
+/**
+ * Controls a reader must be able to press WITHOUT scrolling first.
+ *
+ * WHY THIS LIST EXISTS. The guard in `lib/affordance.ts` scrolls an off-screen
+ * control into view before pressing it, because that is what a reader does — but
+ * then `ok` alone would turn "the reader could not see this control" into a pass,
+ * which is exactly the class the projects lifecycle's round-1 design finding was
+ * about (the create sheet's `Create` and its refusal both below the fold at every
+ * scale on both phones, the refusal painting in 11 of 28 combinations). Relying on
+ * U-05/U-08 to catch that after the fact is what let an automated capture pass a
+ * screen a human had to find by eye. So a control can be DECLARED here, and a
+ * press that needed a scroll then fails the cell by name, with the control's
+ * resting box in the sentence.
+ *
+ * WHAT BELONGS ON IT: the control that ANSWERS a surface — the submit of a form, a
+ * confirm's action — never a control the reader navigates with (a row, a header
+ * action, a list item). Those are reachable by scrolling on any scrolling screen,
+ * which is why the guard presses them and why they are not declared.
+ *
+ * The answer carries the pre-scroll box, so the sentence reads as evidence rather
+ * than as a complaint: `x=17 y=812` is where the reader would have had to look.
+ */
+export const UNSCROLLED_CONTROLS: readonly string[] = [
+	CONTROL.projectCreateSubmit,
+	CONTROL.projectMilestoneSubmit,
+	CONTROL.projectMilestoneRemove,
+];
+
+/**
+ * The cells reach a state by PRESSING controls, declared per cell here and
+ * replayed by the audit's re-drive.
+ *
+ * `S15/menu-open` is the one cell in this matrix reached by HOLDING a control: the
+ * conversations pane's row menu is a long-press surface, `onLongPress` fires on a
+ * timer while the finger is down, and no click can produce it. It is the cell that
+ * makes round 3's BLOCKER observable — the menu is a `Sheet` rendered inside the
+ * drawer's own `Modal`, so a drawer that stands down for it unmounts the press
+ * that opened it.
+ *
+ * 1200 ms, and the duration is MEASURED rather than chosen: React Native's own
+ * `delayLongPress` is 500 ms, but a held press delivered to a just-booted page
+ * does not always reach the responder system in time — at 600 ms the menu opened
+ * on three of four cells and the cold-boot cell instead took the release as a TAP
+ * and navigated to the session (the cell then failed its own marker, which is how
+ * the gap was found rather than shipped). At 1200 ms all four open it.
+ */
+export const CELL_OPENERS: Record<string, Affordance[]> = {
+	/* --- the pane's long-press menu (S15) --- */
+	"S15/menu-open": [
+		{
+			hold: {
+				testID: sessionRowId("6714def86197"),
+				ms: 1200,
+			},
+		},
+	],
+	/* --- the create sheet, over the listing (S16) --- */
+	"S16/create": [{ click: CONTROL.projectsNew }],
+	/* The same sheet with a reader's own values in it: what the form looks like
+	 *  filled, which is the state a design round judges the spacing and the
+	 *  wrapping against. The description is deliberately a sentence rather than a
+	 *  word — the field is the one that has to hold prose. */
+	"S16/create-filled": [
+		{ click: CONTROL.projectsNew },
+		{
+			type: {
+				testID: CONTROL.projectCreateName,
+				text: "vendor-sso-cutover",
+			},
+		},
+		{
+			type: {
+				testID: CONTROL.projectCreateDescription,
+				text: "Move the last three services off the vendor's SSO before the contract lapses.",
+			},
+		},
+	],
+	/* A name the seeded store ALREADY holds, submitted: the store answers its own
+	 *  `409 project_name_exists` and the sheet renders that sentence. Nothing in
+	 *  the harness writes the refusal — the mock is the store, and the sentence is
+	 *  the one the app prints from the answer. */
+	"S16/create-refused": [
+		{ click: CONTROL.projectsNew },
+		{ type: { testID: CONTROL.projectCreateName, text: "payments-migration" } },
+		{ click: CONTROL.projectCreateSubmit },
+	],
+	/* The same submit against a relay that never answers (`projects-write-busy`). */
+	"S16/create-busy": [
+		{ click: CONTROL.projectsNew },
+		{ type: { testID: CONTROL.projectCreateName, text: "vendor-sso-cutover" } },
+		{ click: CONTROL.projectCreateSubmit },
+	],
+
+	/* --- the milestone editor and the two confirms (S16 detail) --- */
+	"S16-detail/milestone-editor": [{ click: CONTROL.projectAddMilestone }],
+	/* The slash refusal, WHILE IT IS TYPED: the guard is the phone's, because the
+	 *  route that removes a milestone carries its name in the path. Nothing is
+	 *  submitted, so the explanation is what the frame is about. */
+	"S16-detail/slash": [
+		{ click: CONTROL.projectAddMilestone },
+		{ type: { testID: CONTROL.projectMilestoneName, text: "ship/v2" } },
+	],
+	/* Removal lives inside the editor of an EXISTING milestone, behind its own
+	 *  confirm — two presses, which is the point: the first opens the editor, the
+	 *  second asks. */
+	"S16-detail/milestone-remove": [
+		{ click: projectMilestoneEditId("beta cut") },
+		{ click: CONTROL.projectMilestoneRemove },
+	],
+	/* A milestone write the relay never answers, pressed from the EDITOR rather
+	 *  than from a row toggle, and for an evidence reason worth stating: the sheet
+	 *  is an overlay, so the in-flight state is on screen at every scale, while a
+	 *  row toggle's own row sits below the fold on a 320 pt phone at 200 %. The
+	 *  screen-level `project-milestone-busy` marker is the same either way — this
+	 *  is about what the FRAME can show, not about what the app does. */
+	"S16-detail/busy": [
+		{ click: projectMilestoneEditId("beta cut") },
+		{ click: CONTROL.projectMilestoneSubmit },
+	],
+	/* The project delete's confirm: the first tap sends NOTHING (the deletion is
+	 *  not undoable), so this frame is the question, not the answer. */
+	"S16-detail/delete-confirm": [{ click: CONTROL.projectDelete }],
 };
 
 /**
@@ -1109,6 +1275,25 @@ export const MEASURE_PROBE = `
     rootFontSizePx: Number.isFinite(rootFontSizePx) ? rootFontSizePx : null,
     route: location.pathname + location.search,
     title: document.title,
+    /*
+     * WHERE THE PAGE IS SCROLLED TO at the moment the frame is taken — the number a
+     * reviewer needs and no PNG can give (review round 3, D9).
+     *
+     * The guard restores every scroll it moved, so the claim "this frame is of the
+     * resting page" is checkable only against these offsets: a frame of a displaced
+     * page has a non-zero entry here, and a byte-stability argument cannot tell the
+     * two apart because a displaced page is just as stable as a rested one. The
+     * document and the body are read directly; every other scroller that is
+     * actually displaced is listed by its own offset.
+     */
+    scroll: {
+      document: root.scrollTop,
+      body: body ? body.scrollTop : 0,
+      displaced: [...document.querySelectorAll('body *')]
+        .filter((el) => el.scrollTop !== 0 || el.scrollLeft !== 0)
+        .slice(0, 8)
+        .map((el) => ({ top: el.scrollTop, left: el.scrollLeft })),
+    },
     // A blank render is the failure that looks like success: a screenshot of
     // nothing has a stable hash and zero console errors.
     mountedElements: document.querySelectorAll('body *').length,

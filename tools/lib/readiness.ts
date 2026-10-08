@@ -139,6 +139,12 @@ export const STATE_MARKER_ALIASES: Record<string, string> = {
 	 *  app has no second streaming look for it, which is what the alias table is
 	 *  for; §4.1 #10 reads the consecutive frames, not a marker. */
 	"streaming-tables": "streaming",
+	/** The create sheet with values in it is the SAME state as the empty one —
+	 *  the form is open — and the app marks it once (`SURFACE.projectCreateSheet`).
+	 *  A second marker name for "there is text in the field" would be a claim
+	 *  about the reader's typing rather than about the screen, and the identical-*
+	 *  frame check already tells the two frames apart by their content. */
+	"create-filled": "create",
 };
 
 /** Every empty-state marker ends with this, which is what the prohibition matches. */

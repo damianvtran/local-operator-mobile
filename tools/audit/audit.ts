@@ -54,11 +54,20 @@
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
+import {
+	type Affordance,
+	type AffordanceOutcome,
+	describeAffordance,
+	narrowAffordances,
+	outcomeFailed,
+	runAffordances,
+	waitForTestID,
+} from "../lib/affordance.ts";
 import { bool, csv, num, parseArgs, str } from "../lib/args.ts";
 import type { CdpPage } from "../lib/cdp.ts";
 import { sleep } from "../lib/cdp.ts";
 import { launchChrome } from "../lib/chrome.ts";
-import { freshPage, withDeadline } from "../lib/page.ts";
+import { applySafeAreaInsets, freshPage, withDeadline } from "../lib/page.ts";
 import {
 	captureHookQuery,
 	cellHookQuery,
@@ -69,7 +78,7 @@ import {
 	seedQuery,
 	stateStillComing,
 } from "../lib/readiness.ts";
-import { selectScenario } from "../lib/relay.ts";
+import { releaseScenarioClaim, selectScenario } from "../lib/relay.ts";
 import { serveDir } from "../lib/static-server.ts";
 import {
 	PRE_PAINT_PROBE,
@@ -419,6 +428,18 @@ interface AuditRecord {
 	 * cells, which are the known residue and are named where the rule is documented.
 	 */
 	/**
+	 * The page actions the CAPTURE applied to reach this cell's state, replayed by the
+	 * re-drive rather than re-derived from `CELL_OPENERS` — the rule `meta.seed` already
+	 * follows: a re-drive that re-read the table would be measuring whatever the table
+	 * says at re-drive time rather than what the frame was taken of.
+	 *
+	 * Read as `unknown` and narrowed by `narrowAffordances` (`lib/affordance.ts`), because the manifest is
+	 * JSON. Absent (a manifest written before the hook existed) means "no actions", which
+	 * is the safe direction: the re-drive renders the PRE-state, its state marker is
+	 * missing, and the comparison reports the mismatch instead of a quiet green.
+	 */
+	openers?: unknown;
+	/**
 	 * The relay scenario the capture pinned before rendering this cell, or absent/null
 	 * for a cell no scenario declares. The re-drive pins the same one: the relay holds a
 	 * single scenario, so without this the page is whatever the previous cell left.
@@ -560,30 +581,19 @@ async function auditCell(
 	});
 	// The real insets, so the app's own env() resolves them (see
 	// tools/visual/capture.ts § applySafeAreaInsets).
-	let insetsOverride: { applied: boolean; reason: string | null } = {
-		applied: false,
-		reason: null,
-	};
-	try {
-		await page.send("Emulation.setSafeAreaInsetsOverride", {
-			insets: {
-				top: record.insets?.top ?? 0,
-				bottom: record.insets?.bottom ?? 0,
-				left: record.insets?.left ?? 0,
-				right: record.insets?.right ?? 0,
-			},
-		});
-		insetsOverride = { applied: true, reason: null };
-	} catch (error) {
-		// Without the override the page reports 0 insets, so the check says the
-		// state could not answer rather than passing it — and it carries the
-		// *reason* here, because "the app declares no unsafe edges" and "CDP
-		// refused the override" are different findings that read the same.
-		insetsOverride = {
-			applied: false,
-			reason: error instanceof Error ? error.message : String(error),
-		};
-	}
+	const insetsOverride = await applySafeAreaInsets(page, {
+		insets: {
+			top: record.insets?.top ?? 0,
+			bottom: record.insets?.bottom ?? 0,
+			left: record.insets?.left ?? 0,
+			right: record.insets?.right ?? 0,
+		},
+	});
+	/* Without the override the page reports 0 insets, so the check says the state
+	 *  could not answer rather than passing it — and the helper carries the REASON,
+	 *  because "the app declares no unsafe edges" and "CDP refused the override" are
+	 *  different findings that read the same. It is the same call the capture makes
+	 *  (`tools/lib/page.ts`), so the two cannot drift into measuring different pages. */
 	await page.send("Page.addScriptToEvaluateOnNewDocument", {
 		source: PRE_PAINT_PROBE,
 	});
@@ -591,6 +601,34 @@ async function auditCell(
 	const url = cellUrl(origin, record.path, cellQuery(record, seed));
 	await page.send("Page.navigate", { url });
 	await sleep(settleMs);
+	/*
+	 * REPLAY WHAT THE CAPTURE APPLIED to reach this cell's state, before the readiness
+	 * wait below.
+	 *
+	 * The list comes from the manifest (`record.openers`), not from `CELL_OPENERS`: a
+	 * re-drive that re-read the table would be measuring whatever the table says at
+	 * re-drive time rather than what the frame was taken of — the same reasoning
+	 * `meta.seed` records for the seed. A cell whose control is gone therefore shows up
+	 * as the state marker it never opened, which the comparison against the record
+	 * reports by name rather than as a silent green.
+	 */
+	const openers = narrowAffordances(record.openers);
+	/*
+	 * WAIT FOR THE SCREEN ROOT FIRST, as the capture does, before replaying.
+	 *
+	 * The capture added this wait after thirteen create-family cells took past
+	 * eight seconds to render under fleet load; the re-drive had it not, and ran the
+	 * actions after `settleMs` with only the per-action bound — so the same cell
+	 * could open in the capture and not here. Both sides now ask the app the same
+	 * question (`SCREEN_ROOTS`) before they press anything.
+	 */
+	let openerOutcomes: AffordanceOutcome[] = [];
+	if (openers.length > 0) {
+		const ready = await waitForTestID(page, SCREEN_ROOTS[record.screen] ?? "");
+		openerOutcomes = ready
+			? await runAffordances(page, openers)
+			: [{ action: openers[0] as Affordance, result: "missing" }];
+	}
 	/*
 	 * WAIT FOR THE EVENT, NOT THE CLOCK — the same rule the capture applies, and for the
 	 * same measured reason (`lib/readiness.ts` `STATE_WAIT_MS`): a declared state can
@@ -639,6 +677,10 @@ async function auditCell(
 	return {
 		...geometry,
 		ax,
+		/* The action outcomes, THREADED OUT rather than discarded: the audit's verdict
+		 *  reads them (a non-`ok` replay is a gap of its own — review round 1, R6),
+		 *  and they are computed in this function's scope. */
+		openerOutcomes,
 		platform: record.device?.startsWith("android") ? "android" : "ios",
 		screen: record.screen,
 		state: record.state,
@@ -855,9 +897,39 @@ export async function runAudit(options: AuditOptions) {
 						reading: state.reading ?? null,
 					})
 				: null;
+			/*
+			 * A REPLAYED ACTION THAT DID NOT LAND IS A GAP OF ITS OWN.
+			 *
+			 * The outcomes were computed and then thrown away, on the argument that a
+			 * failed opener shows up as the state marker it never opened. That holds
+			 * for eight of this slice's nine opener cells and fails for the ninth:
+			 * `S16/create-filled`'s marker comes from its first action ALONE (opening
+			 * the sheet), so a `type` that stopped landing — a renamed field, a broken
+			 * value path — still re-drove to the declared state and contributed PASS
+			 * rows about a form nobody had filled in. Reading the outcomes the module
+			 * already returns is what makes the TYPING checkable on re-drive (review
+			 * round 1, R6), and it costs one line per action.
+			 */
+			/* `ok-after-scroll` is a replay that LANDED — the press happened, the way
+			 *  a reader makes it — so it is not this gap; the capture is where a declared
+			 *  no-scroll control is judged (`UNSCROLLED_CONTROLS`). What counts here is
+			 *  an action that could not be replayed at all. */
+			const openerGap =
+				(state.openerOutcomes ?? []).find((outcome) =>
+					outcomeFailed(outcome.result),
+				) ?? null;
+			const gap =
+				mismatch ??
+				(openerGap === null
+					? null
+					: `${describeAffordance(openerGap.action)} reported '${openerGap.result}' when the capture's record applied it`);
 			if (mismatch !== null) {
 				console.error(
 					`  ${String(record.name)}: the re-drive did not reach the state this record names — ${mismatch}`,
+				);
+			} else if (gap !== null) {
+				console.error(
+					`  ${String(record.name)}: the re-drive could not replay an action the capture applied — ${gap}`,
 				);
 			}
 			// A cell whose declared state was never reached is not measurable, and its
@@ -935,14 +1007,14 @@ export async function runAudit(options: AuditOptions) {
 								`${row.detail ?? ""} — this cell did not reach the state it declares in the ` +
 								"capture run, so the row describes the fallback screen",
 						}))
-					: mismatch !== null
+					: gap !== null
 						? produced.map((row) => ({
 								...row,
 								verdict: "BLOCKED" as const,
 								blockedKind: "state-not-reproduced" as const,
 								detail:
 									`${row.detail ?? ""} — the capture's record for this cell WAS ready and the ` +
-									`re-drive does not reach the state it names, so the row describes another screen: ${mismatch}`,
+									`re-drive does not reach the state it names, so the row describes another screen: ${gap}`,
 							}))
 						: produced;
 			const blinded = measured.map((row) => {
@@ -977,6 +1049,11 @@ export async function runAudit(options: AuditOptions) {
 	} finally {
 		const reaped = await chrome.close();
 		await server.close();
+		/* The relay keeps one world, so a claim left behind would refuse the next rig
+		 *  in this shell (round 3, Q7). Best-effort: a teardown never fails a run, and
+		 *  `relay` is the one the manifest names (the audit spawns its own when it does
+		 *  not name one, and that one dies with this process). */
+		if (relay) await releaseScenarioClaim(relay);
 		if (reaped.survivors !== 0) {
 			console.error(
 				`WARNING: ${reaped.survivors} Chrome process(es) survived the sweep of ${reaped.profile}. ` +

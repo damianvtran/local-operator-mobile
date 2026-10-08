@@ -2,16 +2,25 @@ import { describe, expect, it } from "vitest";
 
 import type { LinkedSession, ProjectSummary } from "@/contracts";
 import {
+	deleteProjectBody,
+	isVanishRefusal,
 	linkedSessionLabel,
 	linkedSessionState,
+	MILESTONE_SLASH_NOTE,
 	milestoneCountLabel,
+	milestoneNameUsable,
+	milestoneUnremovable,
+	parseTags,
 	projectDisplayName,
 	projectRefusalSentence,
 	projectRowMeta,
 	projectStatusTone,
+	removeMilestoneBody,
 	STALE_BADGE_LABEL,
 	sessionCountLabel,
 	showsStaleMark,
+	WRITE_UNKNOWN_NOTE,
+	writeReceipt,
 } from "@/features/projects/projects-copy";
 import { RelayError } from "@/relay";
 
@@ -187,5 +196,93 @@ describe("the refusal sentence", () => {
 	it("has nothing to say about a non-relay error", () => {
 		expect(projectRefusalSentence(new TypeError("Failed to fetch"))).toBeNull();
 		expect(projectRefusalSentence(undefined)).toBeNull();
+	});
+});
+
+describe("the write helpers", () => {
+	it("refuses a milestone name the remove route could never address", () => {
+		/* The guard is the SLASH, and it is the phone's because the route carries the
+		 *  name in its path: measured against an isolated daemon, `ship/v2` CREATES
+		 *  (200) and `DELETE …/milestones/ship%2Fv2` answers a bare `404 Not Found`
+		 *  with no JSON body at all — the name is unaddressable, so the honest control
+		 *  is an explanation rather than a button that cannot work. */
+		expect(milestoneNameUsable("beta cut")).toBe(true);
+		expect(milestoneNameUsable("ship/v2")).toBe(false);
+		expect(milestoneNameUsable("  ship / v2  ")).toBe(false);
+		expect(milestoneNameUsable("")).toBe(false);
+		expect(milestoneNameUsable("   ")).toBe(false);
+	});
+
+	it("marks a milestone another surface made with a slash as unremovable", () => {
+		/* The other half: such a milestone already EXISTS, so the editor explains
+		 *  rather than offering Remove. */
+		expect(milestoneUnremovable("ship/v2")).toBe(true);
+		expect(milestoneUnremovable("beta cut")).toBe(false);
+		expect(MILESTONE_SLASH_NOTE).toContain("slash");
+	});
+
+	it("splits tags the way a list is typed, and rewrites nothing", () => {
+		expect(parseTags("q4, payments")).toEqual(["q4", "payments"]);
+		expect(parseTags("q4  payments")).toEqual(["q4", "payments"]);
+		expect(parseTags("  ")).toEqual([]);
+		/* Upper case and a leading `#` are the STORE's to refuse, with its own
+		 *  sentence — silently lower-casing here would send a value the reader did
+		 *  not type and hide a refusal they should see. */
+		expect(parseTags("Q4, #launch")).toEqual(["Q4", "#launch"]);
+	});
+
+	it("names what a destructive confirm loses, and what it does not", () => {
+		expect(deleteProjectBody("payments-migration")).toContain(
+			"Delete payments-migration?",
+		);
+		expect(deleteProjectBody("payments-migration")).toContain("goes for good");
+		expect(deleteProjectBody("payments-migration")).toContain(
+			"sessions and their transcripts are not touched",
+		);
+		expect(removeMilestoneBody("beta cut")).toContain(
+			"Remove beta cut from this project?",
+		);
+	});
+
+	it("says the outcome is UNKNOWN when a write got no answer", () => {
+		/* The one failure whose result this client cannot know: the request may have
+		 *  landed with its answer lost. The sentence must not claim nothing happened. */
+		expect(WRITE_UNKNOWN_NOTE).toContain("can't tell whether that was saved");
+	});
+
+	it("leaves a receipt that names the action and its subject", () => {
+		expect(writeReceipt("Created", "payments-migration")).toBe(
+			"Created payments-migration.",
+		);
+	});
+
+	it("recognises the row vanishing under a write, and nothing else", () => {
+		/* Another surface deleted the project between the read and the write. The
+		 *  screen returns to the listing with the relay's own sentence rather than
+		 *  standing a refusal under a row that no longer exists. */
+		const vanished = new RelayError(
+			"rejected",
+			"no project with id or name 'x'",
+			{
+				status: 404,
+				code: "project_not_found",
+			},
+		);
+		expect(isVanishRefusal(vanished)).toBe(true);
+		const refused = new RelayError("rejected", "project 'x' already exists", {
+			status: 409,
+			code: "project_name_exists",
+		});
+		expect(isVanishRefusal(refused)).toBe(false);
+		/* A 404 that is NOT the projects route's own code, and a transport failure:
+		 *  neither is "the row vanished". */
+		expect(
+			isVanishRefusal(
+				new RelayError("rejected", "not found", { status: 404, code: "other" }),
+			),
+		).toBe(false);
+		expect(
+			isVanishRefusal(new RelayError("transport", "Network request failed")),
+		).toBe(false);
 	});
 });

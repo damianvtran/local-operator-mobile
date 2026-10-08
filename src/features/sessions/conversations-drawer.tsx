@@ -13,6 +13,10 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ConversationsPane } from "@/features/sessions/conversations-pane";
 import { ROLE, SURFACE } from "@/ui/a11y";
 import { useReducedMotion, useTokenColor } from "@/ui/appearance";
+import {
+	ModalScopeContext,
+	useModalStackEntry,
+} from "@/ui/components/modal-stack-entry";
 import { useShadow } from "@/ui/elevation";
 import { sidebarWidthFor } from "@/ui/layout";
 import { effectiveDuration, parseCubicBezier } from "@/ui/motion";
@@ -120,96 +124,155 @@ export const ConversationsDrawer = ({
 		onClose();
 	};
 
-	return (
-		<Modal
-			visible={visible}
-			transparent
-			animationType="none"
-			onRequestClose={close}
-			// The covered application is inert while the drawer is up: `aria-modal`
-			// alone does not remove it from keyboard or screen-reader navigation.
-			accessibilityViewIsModal
-		>
-			<View className="flex-1">
-				<Animated.View
-					style={{ opacity: scrimFade }}
-					className="absolute inset-0"
-				>
-					<Pressable
-						className="flex-1"
-						style={{ backgroundColor: scrimColour }}
-						accessibilityRole={ROLE.button}
-						accessibilityLabel="Close conversations"
-						onPress={close}
-					/>
-				</Animated.View>
+	/* The drawer is a THIRD `Modal` renderer, and the stack rule is the primitive's:
+	 *  it stands down if a newer modal is mounted over it rather than painting two
+	 *  full-viewport surfaces over each other (`@/ui/modal-stack`). It was the
+	 *  renderer that made that module's "only two callers" claim false. */
+	const { covered, nested, scope } = useModalStackEntry(visible, {
+		scrim: true,
+	});
 
-				<Animated.View
-					className="absolute inset-y-0 left-0"
-					testID={SURFACE.sidebar}
-					style={{
-						width: panelWidth,
-						...shadow,
-						transform: [
-							{
-								translateX: slide.interpolate({
-									inputRange: [0, 1],
-									outputRange: [-panelWidth, 0],
-								}),
-							},
-						],
-					}}
-				>
-					<View
-						className="flex-1 border-panel-edge border-r bg-elevated"
+	return (
+		/* The scope is what keeps this fix and R13's together: the pane's long-press
+		 *  menu is a `Sheet` rendered INSIDE this `Modal`, so the scope tells the
+		 *  primitive that the menu is this drawer's CONTENT — a modal nested in
+		 *  another is not a second full-viewport layer, and standing this drawer down
+		 *  would unmount the pane, the menu and the reader's press with it (measured:
+		 *  a ~9 ms flicker and no menu). */
+		<ModalScopeContext.Provider value={scope}>
+			<Modal
+				visible={visible && !covered}
+				transparent
+				animationType="none"
+				onRequestClose={close}
+				// The covered application is inert while the drawer is up: `aria-modal`
+				// alone does not remove it from keyboard or screen-reader navigation.
+				accessibilityViewIsModal
+			>
+				<View className="flex-1">
+					{/*
+					 * THE HOST KEEPS THE ONE DIM (design round 5, D7/D8/D9).
+					 *
+					 * Round 4 stood this scrim down while the pane's long-press menu was up,
+					 * so two dims could not stack into a second, undeclared ground — measured
+					 * at 1.77:1 light / 1.41:1 dark where the contract pins this panel's edge
+					 * at 5.68:1 / 4.53:1 alone, and the app strip beside the drawer dropping
+					 * from rgb(84,82,81) to rgb(32,30,28). (Those numbers are the drawer's
+					 * ALONE, with nothing nested — that is the contract's scope; with a menu
+					 * up the panel edge against the strip reads 1.36:1 / 1.13:1, and the
+					 * number is expected to move.) The state was right; the TRANSITION was
+					 * wrong, and every one of the designer's three findings was the
+					 * transition: the strip beside the drawer went fully undimmed for 40-89 ms
+					 * on close (rgb(80,78,74) -> rgb(242,237,227) -> back, in 30 of 32 reps),
+					 * the dim dipped to 0.570 on open when the release timer fired mid-fade,
+					 * and the overlap itself pulsed 0.70 -> 0.91.
+					 *
+					 * So the drawer keeps its dim for as long as it is up, and the nested
+					 * sheet's scrim becomes the press layer it always also was: `Sheet` and
+					 * `Dialog` render no dim when `hostDims` says an ancestor already does
+					 * (`@/ui/modal-stack`). There is NO transition in the dim to get wrong,
+					 * which is why all three close at once instead of becoming rarer. The panel
+					 * and content are unchanged, and the reader who closes the menu gets the same
+					 * scrim back because it was never taken away.
+					 *
+					 * IT STOPS BEING A CONTROL WHILE A MODAL INSIDE IT IS UP (round 7, R29 =
+					 * QA Q1). Round 6 claimed a transparent guest scrim was "a ghost to the
+					 * audit's overlap rule" and CI disproved it — six `U-08` FAILs on the
+					 * `S15/menu-open` iphone-se cells, `Close conversations ∩ Close`, because
+					 * `isGhost` is `clippedAway || (ariaHidden && !ownInk)` and a transparent
+					 * PRESSABLE is neither. The honest repair is on this side: a nested modal's
+					 * scrim is above this one, so this one can never receive the press it exists
+					 * for, and a painter with no text and no interactivity is outside the rule's
+					 * pair set. So while `nested` it renders as a plain painted `View` — same
+					 * colour, same box, same frames — and the guest's scrim takes the dismiss,
+					 * which is what round 5 verified happens. Nothing about the rendering
+					 * changes; one attribute of the tree does.
+					 */}
+					<Animated.View
+						style={{ opacity: scrimFade }}
+						className="absolute inset-0"
+					>
+						{nested ? (
+							/* The dim, with no claim to a press this layer cannot receive. */
+							<View style={{ flex: 1, backgroundColor: scrimColour }} />
+						) : (
+							<Pressable
+								className="flex-1"
+								style={{ backgroundColor: scrimColour }}
+								accessibilityRole={ROLE.button}
+								accessibilityLabel="Close conversations"
+								onPress={close}
+							/>
+						)}
+					</Animated.View>
+
+					<Animated.View
+						className="absolute inset-y-0 left-0"
+						testID={SURFACE.sidebar}
 						style={{
-							paddingTop: insets.top,
-							paddingBottom: insets.bottom,
-							/* The panel is anchored to the viewport's LEFT edge, so its own left inset is
-							 *  the horizontal safe area that applies to it — and it has to carry it
-							 *  itself: a Modal portals onto `document.body` (the note below), which puts
-							 *  the panel OUTSIDE the `Screen` that applies `paddingLeft` for every other
-							 *  surface, so its rows painted inside the unsafe band on anything with a
-							 *  side inset. Measured at iphone-15-landscape (insets 59/59, the env() value
-							 *  resolved by the capture rig): the header's host label painted at x=16 and
-							 *  the footer tabs at x=35.9, both inside the 59 pt band.
-							 *
-							 *  The padding goes on the panel's own content view, and the panel ITSELF is
-							 *  widened by the same inset (see `panelWidth` above): together they spend the
-							 *  inset out of the panel's OUTER geometry while the fill stays full-bleed
-							 *  behind the band and the content column keeps its designed width — the same
-							 *  shape as the `Screen`, which pads its root rather than its children.
-							 *
-							 *  LEFT ONLY. The panel is anchored to the left edge and never reaches the
-							 *  right one (339 pt of an 844 pt landscape phone, a 505 pt sliver behind),
-							 *  so `insets.right` describes a screen edge the panel does not touch;
-							 *  reserving it would cost another 59 pt for nothing. `left` is the one that
-							 *  moves when the notch (or a rounded corner) is on the side the drawer
-							 *  slides in from. */
-							paddingLeft: insets.left,
+							width: panelWidth,
+							...shadow,
+							transform: [
+								{
+									translateX: slide.interpolate({
+										inputRange: [0, 1],
+										outputRange: [-panelWidth, 0],
+									}),
+								},
+							],
 						}}
 					>
-						{/* The type scale is re-published INSIDE the Modal because a modal is a
-						 *  PORTAL: react-native-web appends its node to `document.body`, OUTSIDE the
-						 *  `ScopedVariables` div the app's provider renders, so the pane's
-						 *  `var(--text-*)` fell back to the stylesheet's fixed px values and the
-						 *  drawer was the one surface that ignored the reader's text size —
-						 *  measured by the capture: at iphone-se / 200 % the drawer's cells scaled
-						 *  1.0-1.17x while every surface beside them scaled 2.00x (PR #34 review
-						 *  round 2, F1). On native the provider is context-only, so this
-						 *  re-declares the same values rather than computing a second scale. */}
-						<TextScaleProvider>
-							<ConversationsPane
-								onClose={close}
-								onNavigate={close}
-								onNewChat={onNewChat}
-								notice={notice}
-								homeDirectory={homeDirectory}
-							/>
-						</TextScaleProvider>
-					</View>
-				</Animated.View>
-			</View>
-		</Modal>
+						<View
+							className="flex-1 border-panel-edge border-r bg-elevated"
+							style={{
+								paddingTop: insets.top,
+								paddingBottom: insets.bottom,
+								/* The panel is anchored to the viewport's LEFT edge, so its own left inset is
+								 *  the horizontal safe area that applies to it — and it has to carry it
+								 *  itself: a Modal portals onto `document.body` (the note below), which puts
+								 *  the panel OUTSIDE the `Screen` that applies `paddingLeft` for every other
+								 *  surface, so its rows painted inside the unsafe band on anything with a
+								 *  side inset. Measured at iphone-15-landscape (insets 59/59, the env() value
+								 *  resolved by the capture rig): the header's host label painted at x=16 and
+								 *  the footer tabs at x=35.9, both inside the 59 pt band.
+								 *
+								 *  The padding goes on the panel's own content view, and the panel ITSELF is
+								 *  widened by the same inset (see `panelWidth` above): together they spend the
+								 *  inset out of the panel's OUTER geometry while the fill stays full-bleed
+								 *  behind the band and the content column keeps its designed width — the same
+								 *  shape as the `Screen`, which pads its root rather than its children.
+								 *
+								 *  LEFT ONLY. The panel is anchored to the left edge and never reaches the
+								 *  right one (339 pt of an 844 pt landscape phone, a 505 pt sliver behind),
+								 *  so `insets.right` describes a screen edge the panel does not touch;
+								 *  reserving it would cost another 59 pt for nothing. `left` is the one that
+								 *  moves when the notch (or a rounded corner) is on the side the drawer
+								 *  slides in from. */
+								paddingLeft: insets.left,
+							}}
+						>
+							{/* The type scale is re-published INSIDE the Modal because a modal is a
+							 *  PORTAL: react-native-web appends its node to `document.body`, OUTSIDE the
+							 *  `ScopedVariables` div the app's provider renders, so the pane's
+							 *  `var(--text-*)` fell back to the stylesheet's fixed px values and the
+							 *  drawer was the one surface that ignored the reader's text size —
+							 *  measured by the capture: at iphone-se / 200 % the drawer's cells scaled
+							 *  1.0-1.17x while every surface beside them scaled 2.00x (PR #34 review
+							 *  round 2, F1). On native the provider is context-only, so this
+							 *  re-declares the same values rather than computing a second scale. */}
+							<TextScaleProvider>
+								<ConversationsPane
+									onClose={close}
+									onNavigate={close}
+									onNewChat={onNewChat}
+									notice={notice}
+									homeDirectory={homeDirectory}
+								/>
+							</TextScaleProvider>
+						</View>
+					</Animated.View>
+				</View>
+			</Modal>
+		</ModalScopeContext.Provider>
 	);
 };

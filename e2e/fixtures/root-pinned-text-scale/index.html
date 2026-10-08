@@ -32,6 +32,10 @@
 	/* The pin. This is the fixture's whole point: `!important` here outranks the inline
 	   `documentElement.style.fontSize` the harness writes before each capture, so both
 	   frames are rendered at 16 px and no role can grow. */
+	/* `!important` IS the case this fixture exists to produce. It is reported as a
+	   WARNING by `biome check .`, not an error, so it does not fail the lint gate and
+	   no exemption for it exists or is needed — the gate was red on a formatter error
+	   in a test file, which is where it was fixed. */
 	html { font-size: 16px !important; }
 	/* The canvas follows the resolved theme, so the root pin stays the ONLY failure this
 	   page produces — a fixture that also failed the theme check would be ambiguous about

@@ -1,11 +1,24 @@
-import { Modal, Pressable, Text, View } from "react-native";
+import {
+	Modal,
+	Pressable,
+	Text,
+	useWindowDimensions,
+	View,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { ScopedVariables } from "uniwind";
 import { CONTROL, ROLE } from "@/ui/a11y";
 import { useTokenColor } from "@/ui/appearance";
+import { maxColumnWidth } from "@/ui/column";
 import { Button } from "@/ui/components/button";
 import { Heading } from "@/ui/components/heading";
+import {
+	ModalScopeContext,
+	useModalStackEntry,
+} from "@/ui/components/modal-stack-entry";
 import { useShadow } from "@/ui/elevation";
+import { useTextScale } from "@/ui/text-scale-provider";
 import { DIALOG_SURFACE_CLASS } from "@/ui/variants";
 
 /**
@@ -51,60 +64,92 @@ export const Dialog = ({
 	 *  capture rig) it spans x = 24…820 of 844, so the title paints at x = 41 and the
 	 *  confirm action's right edge reaches x = 800 — both inside the band. */
 	const insets = useSafeAreaInsets();
+	/* The scaled type variables, republished INSIDE the modal — the same defect the
+	 *  sheet carries the fix for, and the reason it is here rather than assumed. A
+	 *  React Native `Modal` renders through its own root (on the web,
+	 *  react-native-web portals it to a fresh node under `document.body`), which sits
+	 *  outside the element `TextScaleProvider` writes the scaled variables onto. So
+	 *  the dialog's own type kept the 100 % sizes while everything around it scaled —
+	 *  MEASURED on the capture that added the delete confirm's cell: at a 200 %
+	 *  setting the dialog still rendered its 15 px and 20 px roles at 15 and 20, and
+	 *  the cell was correctly reported as unmeasurable for large text. */
+	const { variables } = useTextScale();
+	/* THE KIT'S PROSE MEASURE APPLIES TO A DIALOG TOO. The surface is content-sized,
+	 *  so on a tablet it grew to whatever its longest line wanted: measured at
+	 *  tablet-landscape/100 % the delete confirm's sentence rendered on one line,
+	 *  ~105 characters, 758 pt of an 834 pt surface — and at 135 % the surface grew
+	 *  to nearly the whole landscape screen. `Screen` caps every prose column at the
+	 *  same three widths for exactly this reason (§ 22: a line of prose does not run
+	 *  1,200 px wide); a dialog body is prose, so it takes the same cap. `null`
+	 *  means "no cap" — the phone in portrait — and is left alone. */
+	const maxWidth = maxColumnWidth(useWindowDimensions());
+	/* A dialog raised while another modal is up stands down rather than painting a
+	 *  second full-viewport surface over it — `@/ui/modal-stack` carries the rule and
+	 *  why it is the primitive's job rather than a caller's prop. */
+	const { covered, dims: drawsDim, scope } = useModalStackEntry(visible);
 
 	return (
-		<Modal
-			visible={visible}
-			transparent
-			animationType="fade"
-			onRequestClose={onCancel}
-			accessibilityViewIsModal
-			testID={testID}
-		>
-			<View className="flex-1 items-center justify-center px-6">
-				<Pressable
-					className="absolute inset-0"
-					style={{ backgroundColor: scrimColour }}
-					accessibilityRole={ROLE.button}
-					accessibilityLabel="Cancel"
-					testID={CONTROL.dialogScrim}
-					onPress={onCancel}
-				/>
-				<View
-					className={DIALOG_SURFACE_CLASS}
-					style={{
-						...shadow,
-						/* A MARGIN on the surface, not padding on the modal's root. `px-6` on the
-						 *  root is the phone's own margin, and an inline `paddingLeft` would
-						 *  OVERRIDE it rather than add to it; padding the root would also move the
-						 *  scrim, which is `absolute inset-0` on that same box, and leave the
-						 *  band it no longer covers undimmed. The margin is outside the dialog, so
-						 *  both the surface and the band keep the meaning they had. */
-						marginLeft: insets.left,
-						marginRight: insets.right,
-					}}
-				>
-					<Heading level={2} className="text-title text-ink">
-						{title}
-					</Heading>
-					<Text className="mt-2 text-body-sm text-ink-muted">{body}</Text>
-					<View className="mt-4 flex-row justify-end gap-2">
-						<Button
-							label="Cancel"
-							variant="quiet"
-							testID={CONTROL.dialogCancel}
+		<ModalScopeContext.Provider value={scope}>
+			<Modal
+				visible={visible && !covered}
+				transparent
+				animationType="fade"
+				onRequestClose={onCancel}
+				accessibilityViewIsModal
+				testID={testID}
+			>
+				<ScopedVariables variables={variables}>
+					<View className="flex-1 items-center justify-center px-6">
+						{/* Same rule as `Sheet`: one dim per stack, and a hosted dialog's
+						 *  scrim is the press layer with no dim of its own. */}
+						<Pressable
+							className="absolute inset-0"
+							style={{
+								backgroundColor: drawsDim ? scrimColour : "transparent",
+							}}
+							accessibilityRole={ROLE.button}
+							accessibilityLabel="Cancel"
+							testID={CONTROL.dialogScrim}
 							onPress={onCancel}
 						/>
-						<Button
-							label={confirmLabel}
-							variant={destructive ? "danger" : "primary"}
-							loading={busy}
-							testID={CONTROL.dialogConfirm}
-							onPress={onConfirm}
-						/>
+						<View
+							className={DIALOG_SURFACE_CLASS}
+							style={{
+								...shadow,
+								...(maxWidth === null ? {} : { maxWidth }),
+								/* A MARGIN on the surface, not padding on the modal's root. `px-6` on the
+								 *  root is the phone's own margin, and an inline `paddingLeft` would
+								 *  OVERRIDE it rather than add to it; padding the root would also move the
+								 *  scrim, which is `absolute inset-0` on that same box, and leave the
+								 *  band it no longer covers undimmed. The margin is outside the dialog, so
+								 *  both the surface and the band keep the meaning they had. */
+								marginLeft: insets.left,
+								marginRight: insets.right,
+							}}
+						>
+							<Heading level={2} className="text-title text-ink">
+								{title}
+							</Heading>
+							<Text className="mt-2 text-body-sm text-ink-muted">{body}</Text>
+							<View className="mt-4 flex-row justify-end gap-2">
+								<Button
+									label="Cancel"
+									variant="quiet"
+									testID={CONTROL.dialogCancel}
+									onPress={onCancel}
+								/>
+								<Button
+									label={confirmLabel}
+									variant={destructive ? "danger" : "primary"}
+									loading={busy}
+									testID={CONTROL.dialogConfirm}
+									onPress={onConfirm}
+								/>
+							</View>
+						</View>
 					</View>
-				</View>
-			</View>
-		</Modal>
+				</ScopedVariables>
+			</Modal>
+		</ModalScopeContext.Provider>
 	);
 };

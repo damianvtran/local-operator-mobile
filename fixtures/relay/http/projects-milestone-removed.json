@@ -1,0 +1,55 @@
+{
+  "provenance": {
+    "kind": "live",
+    "relay_ref": "local-operator a0abf8a82",
+    "captured_at": "2026-10-06",
+    "how": "captured from an isolated, seeded `lop mobile` daemon (`scripts/mobile_projects_fixture.py` in damianvtran/local-operator, which re-homes HOME + LOCAL_OPERATOR_CONFIG_DIR through scripts/probe_isolation before any local_operator import); the route was then exercised over loopback HTTP with the per-run password, never through a browser or the app. The worktree it ran from (`a0abf8a82`) carries `local_operator/mobile/projects.py` and `local_operator/mobile/daemon.py` BYTE-IDENTICAL to `origin/main` at capture time, which is what makes this a capture of the shipped route rather than of a branch; a milestone removed by name, answered with the whole view",
+    "redactions": "the isolated home is shown as ~; the portal password appears nowhere; the created row's id is the fixture store's own (minted from the store's uuid column, not typed)"
+  },
+  "request": {
+    "method": "DELETE",
+    "path": "/api/projects/minimal-row/milestones/dated",
+    "body": null
+  },
+  "status": 200,
+  "headers": {
+    "content-type": "application/json"
+  },
+  "body": {
+    "ok": true,
+    "project": {
+      "id": "e32e850e9f864de1bb68fa7ff95553cc",
+      "name": "minimal-row",
+      "description": "",
+      "owner": null,
+      "team": null,
+      "title": null,
+      "status": "active",
+      "progress": "",
+      "progress_updated_at": null,
+      "progress_reported_by": "",
+      "progress_refreshed_at": null,
+      "progress_refreshed_by": "",
+      "progress_stale": true,
+      "tags": [],
+      "sessions": [],
+      "coordination_sessions": [],
+      "created_at": 1791290869.8557749,
+      "updated_at": 1791290870.50417,
+      "start_date": null,
+      "target_date": null,
+      "completed_at": null,
+      "estimate": null,
+      "estimate_unit": "points",
+      "milestones": [
+        {
+          "name": "ship/v3",
+          "target_date": null,
+          "completed_at": null,
+          "status": "upcoming"
+        }
+      ],
+      "updates": []
+    }
+  }
+}

@@ -319,13 +319,55 @@ export const CONTROL = {
 	 *  projects surface as a peer of `past` off the conversations panel, so it
 	 *  lives in the same footer rather than behind a settings row. */
 	sidebarProjects: "sidebar-projects",
-	/** The projects list's own controls (S16). Read-only in this build: the list
-	 *  and the pushed detail have a retry and a back, and NO mutation control —
-	 *  a row pushes, it does not create, edit or delete. */
+	/** The projects list's own controls (S16). The list and the pushed detail have
+	 *  a retry and a back; the listing's one write is the create route's entry
+	 *  point, and the detail's are named below. */
 	projectsBack: "projects-back",
 	projectsRetry: "projects-retry",
 	projectDetailBack: "project-detail-back",
 	projectDetailRetry: "project-detail-retry",
+	/* --- the lifecycle writes (S16, the write slice). Named one at a time: two
+	 *  controls on one screen must not share an identifier (`e2e/maestro/**`
+	 *  addresses this vocabulary), and the per-ROW controls are families below
+	 *  because their identity is data. --- */
+	/**
+	 * The listing's one write: the create SHEET's entry point in the header.
+	 *
+	 *  A sheet rather than a pushed route, and the reason is the harness's: a
+	 *  state is reachable only by URL, so a form on the listing's own route is a
+	 *  state a capture can render, while `/projects/new` would be a screen whose
+	 *  cells never reach the relay at all (the readiness rule BLOCKS a
+	 *  relay-declared cell the app never asked the relay for anything on). The
+	 *  read path's "screen, not sheet" decision was about the list and one
+	 *  project's detail — two routes a reader moves between. A form is not a
+	 *  destination.
+	 */
+	projectsNew: "projects-new",
+	projectCreateName: "project-create-name",
+	projectCreateDescription: "project-create-description",
+	/** The tags field. A text field rather than a chip editor: the store's tag
+	 *  grammar is what refuses a value, and a second parser here would drift from
+	 *  it a release later. */
+	projectCreateTags: "project-create-tags",
+	/** The create action. It carries the in-flight state (`loading`), which is this
+	 *  app's whole answer to "what happens between the tap and the answer" — see
+	 *  `features/projects/project-create.tsx` for why there is no optimistic row. */
+	projectCreateSubmit: "project-create-submit",
+	/** The detail's delete control. It opens a `Dialog` and sends NOTHING: the
+	 *  deletion is not undoable, so the first tap can only ask. */
+	projectDelete: "project-delete",
+	projectDeleteDialog: "project-delete-dialog",
+	/** The detail's add-milestone control, opening the editor sheet on an empty
+	 *  name. Tapping a milestone ROW opens the same sheet on that milestone. */
+	projectAddMilestone: "project-add-milestone",
+	projectMilestoneName: "project-milestone-name",
+	projectMilestoneDate: "project-milestone-date",
+	projectMilestoneSubmit: "project-milestone-submit",
+	/** Removal, inside the editor sheet, behind its own confirm: the milestone is
+	 *  gone for good, and it is not a neighbour of Save (a mis-tap in that row
+	 *  destroyed a milestone in the web client before its design round moved it). */
+	projectMilestoneRemove: "project-milestone-remove",
+	projectMilestoneRemoveDialog: "project-milestone-remove-dialog",
 } as const;
 
 /**
@@ -361,6 +403,45 @@ export const SURFACE = {
 	 *  name one id twice (`src/ui/a11y.test.ts`): two states claiming one frame is
 	 *  how "the refusal is on screen" stops meaning which surface it is on. */
 	projectDetailRefusal: "project-detail-refusal",
+	/** A failed WRITE on the pushed detail, when the surface that failed is the
+	 *  screen itself (the delete's confirm). A failure INSIDE the editor sheet
+	 *  renders through its own id below: a Modal covers the screen, so the two are
+	 *  different places on a frame and must be different ids. */
+	projectWriteRefusal: "project-write-refusal",
+	/** The milestone editor's own refusal, rendered inside the sheet. */
+	projectMilestoneRefusal: "project-milestone-refusal",
+	/** The create sheet's refusal — the relay's own sentence for a taken name
+	 *  (`409 project_name_exists`) or a value the store's grammar refuses
+	 *  (`422 project_invalid`), rendered verbatim. Its own id, not the listing's:
+	 *  "which surface refused" is what a frame has to answer. */
+	projectCreateRefusal: "project-create-refusal",
+	/** The create SHEET's own surface, so "the form is open" is asserted from the
+	 *  frame rather than inferred from a control the screen behind it also has. */
+	projectCreateSheet: "project-create-sheet",
+	/** The in-flight marker of a create write: a zero-size probe present only while
+	 *  the write has not answered. It is a marker rather than an inference because
+	 *  "the control is showing in-flight feedback" has to be measurable from a
+	 *  frame (`docs/ux/audit-rubric.md` U-15) — and it is a named constant rather
+	 *  than a literal in the marker table because that table is what the a11y test
+	 *  folds back into itself, so a literal there is a convention nothing checks. */
+	projectCreateBusy: "project-create-busy",
+	/** The create sheet's kept-draft line: shown only when the sheet reopens onto
+	 *  work the reader left behind, so a frame can tell "the form came back with your
+	 *  draft" from "the form kept the text silently". */
+	projectCreateDraftNote: "project-create-draft-note",
+	/** The milestone editor's kept-draft line, the other half of the same rule. */
+	projectMilestoneDraftNote: "project-milestone-draft-note",
+	/** The milestone family's own in-flight probe, for the same reason
+	 *  `projectCreateBusy` is one. */
+	projectMilestoneBusy: "project-milestone-busy",
+	/** The milestone editor sheet's own surface: the region a flow asserts when
+	 *  the sheet is up, so "the editor is open" is measurable rather than inferred
+	 *  from a button that could equally be on the screen behind it. */
+	projectMilestoneSheet: "project-milestone-sheet",
+	/** The slash refusal, said where the name is typed. It is an EXPLANATION
+	 *  rather than a control, which is why it is a surface: nothing here can be
+	 *  pressed, because the route that would carry it cannot address the name. */
+	projectMilestoneSlashNote: "project-milestone-slash-note",
 	sessionTranscript: "session-transcript",
 	sessionComposer: "session-composer",
 	/** The composer's attach sheet (one entry point, the sources each build kind
@@ -469,6 +550,16 @@ export const SURFACE = {
 	 *  pane, which renders it under the panel's header — that route is the
 	 *  deep-link-to-nothing destination's landing. */
 	sidebarNotice: "sidebar-notice",
+	/**
+	 * The conversations pane's long-press menu — the `Sheet` a held row raises.
+	 *
+	 * It carries an id because a HELD press is a state nothing else can reach: the
+	 * menu is the app's only long-press surface, and the cell that exercises it
+	 * (`S15/menu-open`) is what makes the gesture observable to the harness at all
+	 * (round 3's BLOCKER — a modal raised inside the drawer's own `Modal` — was
+	 * invisible to every gate because no action could hold a press).
+	 */
+	sessionMenuSheet: "session-menu-sheet",
 } as const;
 
 /**
@@ -514,6 +605,15 @@ export const IDENTIFIER_FAMILIES: readonly string[] = [
 	/* The projects listing's own row family (S16): one row per project, keyed by
 	 *  the project's id, so a flow reaches a row without counting rows. */
 	"project-row-",
+	/* The milestone rows (S16 detail): one TOGGLE control and one EDIT control per
+	 *  milestone, keyed by the milestone's name (the store's own key for it within
+	 *  one project). Two families rather than one because they are two controls
+	 *  with two verbs, and a flow that means "check this off" must not be able to
+	 *  land on "open the editor". */
+	"project-milestone-toggle-",
+	"project-milestone-edit-",
+	/* The create sheet's status options, one per status the contract ranks. */
+	"project-create-status-",
 ];
 
 /**
@@ -723,6 +823,17 @@ export const STATE_MARKER = {
 		populated: "project-row-",
 		refused: SURFACE.projectRefusal,
 		"unknown-status": SURFACE.projectsUnknownStatus,
+		/* The create sheet, over the listing. `create` is the sheet OPEN;
+		 *  `create-filled` is a rendering of the same state and takes its alias in
+		 *  `STATE_MARKER_ALIASES` below rather than a second marker name (two names
+		 *  for one state is what the withdrawn `S4/narrow` cell was). `create-refused`
+		 *  is the relay's own sentence after a real submit, and `create-busy` is a
+		 *  write IN FLIGHT: a zero-size marker present only while one is, which is
+		 *  what makes "the control is showing in-flight feedback" measurable from a
+		 *  frame instead of trusted. */
+		create: SURFACE.projectCreateSheet,
+		"create-refused": SURFACE.projectCreateRefusal,
+		"create-busy": SURFACE.projectCreateBusy,
 	},
 	/* The pushed detail's own subject. The KEY is the id PREFIX, not a camelCase
 	 *  spelling of it: `tools/mock-relay/verify.ts` requires every subject the
@@ -734,6 +845,15 @@ export const STATE_MARKER = {
 		loading: SURFACE.projectDetailLoading,
 		populated: SURFACE.projectLinks,
 		refused: SURFACE.projectDetailRefusal,
+		/* The lifecycle's own states, each with a marker that is present ONLY in
+		 *  it: the editor sheet, the two confirms (they are `Dialog`s, whose own
+		 *  surface id is what a frame carries), the slash explanation, and the
+		 *  in-flight one. */
+		"milestone-editor": SURFACE.projectMilestoneSheet,
+		"milestone-remove": CONTROL.projectMilestoneRemoveDialog,
+		slash: SURFACE.projectMilestoneSlashNote,
+		busy: SURFACE.projectMilestoneBusy,
+		"delete-confirm": CONTROL.projectDeleteDialog,
 	},
 	computers: {
 		/** The refusal surface, which the set-up path does not render: the one
@@ -797,6 +917,10 @@ export const STATE_MARKER = {
 	 * one family, so `sessionRowId` serves both subjects). */
 	sidebar: {
 		open: SURFACE.sidebar,
+		/* The pane's long-press menu, OPEN. `open` above is the panel itself, so this
+		 *  is the one marker that distinguishes "the list is up" from "a row's menu
+		 *  is" — and it is produced by a HELD press, which is the point. */
+		"menu-open": SURFACE.sessionMenuSheet,
 		loading: "sidebar-loading",
 		empty: EMPTY.sessions,
 		populated: "session-row-",
@@ -907,6 +1031,30 @@ export const sessionRowId = (sessionId: string): string =>
  *  not at each call site (the `pastRowId` shape). */
 export const projectRowId = (projectId: string): string =>
 	`project-row-${projectId}`;
+
+/**
+ * The identifying half of a milestone name, for the two per-row controls.
+ *
+ * Slugged the way `commandCopyId` slugs a label, and with the same recorded
+ * caveat: two names differing only in punctuation (or in case) share a selector.
+ * The store keys a milestone by its name case-INSENSITIVELY, so such a pair
+ * cannot coexist in one project — which is what makes the slug safe here and is
+ * the reason it is stated rather than assumed.
+ */
+export const milestoneSlug = (name: string): string =>
+	name.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+
+/** One milestone's completion toggle (the row's own control). */
+export const projectMilestoneToggleId = (name: string): string =>
+	`project-milestone-toggle-${milestoneSlug(name)}`;
+
+/** One milestone's editor opener (the row's trailing control). */
+export const projectMilestoneEditId = (name: string): string =>
+	`project-milestone-edit-${milestoneSlug(name)}`;
+
+/** One status option in the create sheet. */
+export const projectCreateStatusId = (status: string): string =>
+	`project-create-status-${status}`;
 
 /** The row identifier for one past session, so the prefix lives in the contract
  *  rather than in a template literal at the call site (the e2e check reads this

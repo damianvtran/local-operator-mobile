@@ -1,0 +1,24 @@
+{
+  "provenance": {
+    "kind": "live",
+    "relay_ref": "local-operator a0abf8a82",
+    "captured_at": "2026-10-06",
+    "how": "captured from an isolated, seeded `lop mobile` daemon (`scripts/mobile_projects_fixture.py` in damianvtran/local-operator, which re-homes HOME + LOCAL_OPERATOR_CONFIG_DIR through scripts/probe_isolation before any local_operator import); the route was then exercised over loopback HTTP with the per-run password, never through a browser or the app. The worktree it ran from (`a0abf8a82`) carries `local_operator/mobile/projects.py` and `local_operator/mobile/daemon.py` BYTE-IDENTICAL to `origin/main` at capture time, which is what makes this a capture of the shipped route rather than of a branch; the delete's own answer",
+    "redactions": "the isolated home is shown as ~; the portal password appears nowhere; the created row's id is the fixture store's own (minted from the store's uuid column, not typed)"
+  },
+  "request": {
+    "method": "DELETE",
+    "path": "/api/projects/capture-writes",
+    "body": {
+      "confirm": "capture-writes"
+    }
+  },
+  "status": 200,
+  "headers": {
+    "content-type": "application/json"
+  },
+  "body": {
+    "ok": true,
+    "deleted": true
+  }
+}

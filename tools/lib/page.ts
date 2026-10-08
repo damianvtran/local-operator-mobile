@@ -92,6 +92,43 @@ export async function withDeadline<T>(
  * report on. It is called from the ONE place a page is opened (`freshPage`),
  * so the arming cannot drift from the page it arms.
  */
+/**
+ * Apply a device profile's safe-area insets to the page, so the app's own
+ * `env(safe-area-inset-*)` resolves them.
+ *
+ * EXPORTED, and that is the point of where it lives (review round 3, R18/Q9): the
+ * capture and the audit both apply it, but a bespoke rig built on this module's
+ * `freshPage`/`armPage` used to render a page with **zero** insets and report the
+ * result as a property of the frames — two rigs did exactly that tonight, and one
+ * of them filed the number as a product defect. A rig that opens its own page MUST
+ * call this before it navigates, and the failure it prevents is silent: the page
+ * renders, the numbers look plausible, and the clearance is missing.
+ *
+ * `false` means the browser refused the override (an older CDP), which is reported
+ * rather than thrown: frames still carry the harness's custom properties, and the
+ * caller decides whether that is fatal for the state it is capturing.
+ */
+export async function applySafeAreaInsets(
+	page: CdpPage,
+	device: {
+		insets: { top: number; bottom: number; left: number; right: number };
+	},
+): Promise<{ applied: boolean; reason: string | null }> {
+	try {
+		await page.send("Emulation.setSafeAreaInsetsOverride", {
+			insets: { ...device.insets },
+		});
+		return { applied: true, reason: null };
+	} catch (error) {
+		const reason = error instanceof Error ? error.message : String(error);
+		console.error(
+			`  note: Emulation.setSafeAreaInsetsOverride unavailable (${reason}); ` +
+				"safe-area frames carry custom properties only, so env()-based layout will read 0",
+		);
+		return { applied: false, reason };
+	}
+}
+
 export async function armPage(
 	page: CdpPage,
 	ms: number,
@@ -148,8 +185,8 @@ export async function armPage(
  * frames in 240 s.
  *
  * The cost is one target create/close per cell, and it is not a regression in
- * rate: the `ci` tier runs at 2.12 s/cell (measured at 256 cells; 504 on this head's
- * registry), against the 2.24 s/cell the per-cell budget was titrated from. It
+ * rate: the `ci` tier runs at 2.12 s/cell (measured at a plan of 256 cells; 696 on
+ * this head's registry), against the 2.24 s/cell the per-cell budget was titrated from. It
  * also leaves the cell loop with ONE shape instead of two — a wedged cell and a
  * healthy one now take the same path, so the recovery cannot rot out of use as the
  * failure it exists for stops happening.

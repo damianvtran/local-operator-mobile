@@ -114,7 +114,7 @@ text is frozen. The measurement, its manifest fields and its controls are in
 | S13 | Connection loss, re-auth, relay refusal | F-9 |
 | S14 | Demo mode | F-10 |
 | S15 | Sessions (the conversations panel: live / degraded / ended, pinned, sections, search, past, computers; docked pane on a tablet) | F-5, F-8 |
-| S16 | Projects (the read path: the listing and its pushed detail) | F-10 |
+| S16 | Projects (the listing, its pushed detail, and the lifecycle writes: create, delete, milestones) | F-10 |
 
 ## 2. States to capture for every screen
 
@@ -144,6 +144,20 @@ a reason**, never skipped silently.
 | U-03 | Contrast, non-text carriers | For each status that uses colour (pending, failed, streaming), check the colour is not the only carrier | A word, glyph or shape accompanies every colour-coded state | P-3, P-11 |
 | U-04 | Font scale to 200 % | Set the OS text size to each of 100/150/200 % (iOS: Accessibility text sizes; Android: `fontScale`) and re-capture every screen | No clipped text, no overlap, no horizontal scroll, no control below 44 pt, no truncation of a *controlling* label (a title may ellipsize; a button label may not) | P-11 |
 | U-05 | Safe areas | Capture on a device/home-indicator and one with a notch/Dynamic Island; measure content box vs unsafe inset | No content under the notch or the home indicator; no control within 8 pt of an unsafe edge; safe-area padding present on every full-bleed scroll. Three shapes are set aside and counted with their reason on the pass: a full-bleed **container that is not a control** (>= 90 % of the viewport wide, >= 60 % tall) — its background is not content, and the text and controls inside it are judged on their own; a **modal dialog's own ground** (no word and no control of its own, reaching an unsafe edge); and a modal's **full-bleed dismiss layer**, which is not a control a reader must reach | P-2, P-11 |
+
+**What `U-05` cannot see (design round 3, D11), recorded where the check is
+defined.** The rule judges `position: fixed | sticky` nodes only
+(`tools/audit/checks.ts:531`), so a FOOTERED SHEET is invisible to it on every
+tier, inset or not: the footer is a normal-flow flex region inside the fixed
+surface. Measured on `iphone-15` frames (34 pt bottom inset): 0 FAIL, `U-05` pass
+on all 48 cells. Two consequences to carry: (a) inset clearance for a sheet
+footer is covered by a different property — reachability, `UNSCROLLED_CONTROLS` in
+`tools/visual/matrix.ts`; (b) a tier only exercises a bottom band where its device
+declares one — `iphone-se` declares 0, `tablet-landscape` 20. The insets
+themselves are applied through `applySafeAreaInsets` (`tools/lib/page.ts`), which
+both the capture and the audit call; a bespoke rig that opens its own page must
+call it too, or it measures a page with no clearance at all.
+
 | U-06 | Horizontal overflow | Measure content width vs viewport at every state and every text scale | Never exceeds the viewport at 100 %; at 200 % overflowing *only* inside an explicitly scrollable region | P-11 |
 | U-07 | Clipped text | For each text node, compare rendered box vs scroll extent; flag `overflow: hidden`/clip with hidden content | No clipped text except deliberate single-line ellipsis with a full value available on tap or in the accessibility label | P-11 |
 | U-08 | Overlap | Pair-wise rectangle intersection over text and interactive boxes | Zero overlaps between two elements that both convey meaning. **Judged on PAINTED regions**, never on layout boxes: a node an ancestor clips part of the way keeps its full layout box, so a pair whose layout boxes intersect while their painted regions do not is *not* an overlap | P-11 |
@@ -199,13 +213,22 @@ a reason**, never skipped silently.
   visually distinct from an ended session's; loading and empty must be
   distinguishable to the eye (their markers are `sidebar/loading` and the
   sessions empty state).
-- **S16 Projects (the read path):** the listing's sections are the relay's own
-  board order and an unrecognised status takes its own trailing section rather
-  than vanishing; a milestone's chip is the status the RELAY derived (never one
-  the client recomputed from the dates); the stale badge is the relay's verdict
-  and clears with it; and a refusal shows the daemon's own sentence — including
-  the near-miss name a `404 project_not_found` carries — never a bare status.
-  The surface carries no mutation control at all.
+- **S16 Projects:** the listing's sections are the relay's own board order and an
+  unrecognised status takes its own trailing section rather than vanishing; a
+  milestone's chip is the status the RELAY derived (never one the client
+  recomputed from the dates); the stale badge is the relay's verdict and clears
+  with it; and a refusal shows the daemon's own sentence — including the
+  near-miss name a `404 project_not_found` carries — never a bare status.
+  **The writes are the surface now, and their rules are:** a create form offers
+  the status and the tags the relay accepts (not a read-path subset), and a taken
+  name or an invalid value comes back as the STORE's own sentence; the delete and
+  the milestone removal each sit behind a confirm whose FIRST press sends nothing
+  (neither is undoable); a milestone name carrying a slash is refused WHILE IT IS
+  TYPED, with the reason, rather than offered a control that cannot work; a write
+  in flight shows on the control that is waiting, and an unanswered one says the
+  outcome is unknown rather than that nothing happened; and a milestone whose
+  project vanished under the write returns to the listing with the relay's own
+  sentence rather than standing a refusal under a row that is gone.
 - **S5 Session / S8 Pending card:** the decision controls must be reachable with
   the keyboard open on the smallest supported device, and with a paragraph-length
   question. This is the highest-value screen in the app and the one with the

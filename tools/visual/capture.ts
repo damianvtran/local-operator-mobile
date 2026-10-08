@@ -38,11 +38,18 @@ import { createHash } from "node:crypto";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { cellUrl } from "../audit/audit.ts";
+import {
+	type Affordance,
+	type AffordanceOutcome,
+	describeAffordances,
+	runAffordances,
+	waitForTestID,
+} from "../lib/affordance.ts";
 import { bool, csv, num, parseArgs, str } from "../lib/args.ts";
 import type { CdpPage } from "../lib/cdp.ts";
 import { sleep } from "../lib/cdp.ts";
 import { launchChrome } from "../lib/chrome.ts";
-import { freshPage, withDeadline } from "../lib/page.ts";
+import { applySafeAreaInsets, freshPage, withDeadline } from "../lib/page.ts";
 import {
 	captureHookQuery,
 	cellHookQuery,
@@ -54,13 +61,14 @@ import {
 	seedQuery,
 	stateStillComing,
 } from "../lib/readiness.ts";
-import { selectScenario } from "../lib/relay.ts";
+import { releaseScenarioClaim, selectScenario } from "../lib/relay.ts";
 import { serveDir } from "../lib/static-server.ts";
 import { DEFAULT_PASSWORD } from "../mock-relay/relay.ts";
 import { renderGallery } from "./gallery.ts";
 import { findIdenticalFrames } from "./identical-states.ts";
 import {
 	ALL_DEVICES,
+	CELL_OPENERS,
 	CI_DEVICES,
 	CI_SCALES,
 	CONTENT_PROBE,
@@ -76,6 +84,7 @@ import {
 	SCREEN_ROOTS,
 	SCREENS,
 	THEMES,
+	UNSCROLLED_CONTROLS,
 } from "./matrix.ts";
 import {
 	type CanvasTokens,
@@ -104,10 +113,10 @@ let settledRetakes = 0;
  * not a size policy: it catches a plan far larger than any sample this harness
  * offers (an inflated cell registry, a cell list copied from another tree), and it
  * is why a big run is always something the caller typed `--yes` for. It sits BELOW
- * every tier on purpose — `ci` plans 528 cells, `core` 1584, `full` 5808 — so none of
+ * every tier on purpose — `ci` plans 696 cells, `core` 2088, `full` 7656 — so none of
  * them starts by accident; the CI job passes `--yes` for exactly that reason. It is
  * NOT tied to the default tier, so it must not be raised to "let the default run": a
- * documented invocation that plans the whole `core` tier is a 59-minute command, and
+ * documented invocation that plans the whole `core` tier is a 78-minute command, and
  * the defect is the invocation, not the bound. Deriving it from the plan the way
  * `CELL_BUDGET_MS` is derived would be circular — the guard would then never fire —
  * so it stays a constant, and this comment is what it is derived from.
@@ -119,7 +128,7 @@ const CONFIRM_THRESHOLD = 120;
  * the floor a small plan still gets.
  *
  * WHY THE DEFAULT IS DERIVED RATHER THAN FIXED. It used to be a flat 900 s, which
- * holds about 400 cells: a `core` run (1584 cells) or a dispatched `full` run (5808)
+ * holds about 400 cells: a `core` run (2088 cells) or a dispatched `full` run (7656)
  * was therefore cut off by the harness's own default and reported hundreds of cells
  * as having no frame — a bound firing on a plan it was never sized for, which reads
  * like a finding about the app and is not one. Deriving it from the plan makes the
@@ -138,7 +147,7 @@ const CONFIRM_THRESHOLD = 120;
  *
  * THE HEADROOM IS THINNER THAN 1.34x AGAINST THE RUNNER SUGGESTS, and this is the number to
  * look at when the plan next grows. The `ci` plan has measured 2.17 s/cell at its fastest and
- * 2.74 s/cell at its slowest on this host (504 cells in 1093.7 s and 1380.5 s), so the slow end
+ * 2.74 s/cell at its slowest on this host (a plan of 504 cells then: 1093.7 s and 1380.5 s), so the slow end
  * sits ~9 % inside this budget. It is NOT re-tuned here, because the bound's job is to catch a
  * run that hung rather than to race one that is slow — but the day `CI_SCALES` or a device list
  * grows, this margin is what is spent first, before the deadline fires on a run that was merely
@@ -340,6 +349,10 @@ function buildPlan({
 						deviceSpec: device,
 						scaleSpec: scale,
 						consecutive,
+						/* The actions this cell takes to reach its state, per FRAME so the
+						 *  capture, the manifest and the audit's re-drive all read one list.
+						 *  Most cells have none: a URL is what most states are. */
+						openers: CELL_OPENERS[cell] ?? [],
 					});
 				}
 			}
@@ -383,25 +396,6 @@ const frameName = (cell: FramePlan): string =>
  * capture carries on with the custom properties alone and says so, because
  * silently reporting 0 insets would make every safe-area frame a false pass.
  */
-async function applySafeAreaInsets(
-	page: CdpPage,
-	device: DeviceProfile,
-): Promise<boolean> {
-	try {
-		await page.send("Emulation.setSafeAreaInsetsOverride", {
-			insets: { ...device.insets },
-		});
-		return true;
-	} catch (error) {
-		const reason = error instanceof Error ? error.message : String(error);
-		console.error(
-			`  note: Emulation.setSafeAreaInsetsOverride unavailable (${reason}); ` +
-				"safe-area frames carry custom properties only, so env()-based layout will read 0",
-		);
-		return false;
-	}
-}
-
 /**
  * Capture one cell: set the metrics, navigate, wait for the app to render, and
  * take the screenshot(s). The measurements are taken *after* the screenshot so
@@ -497,7 +491,8 @@ async function captureCell(
 			{ name: "prefers-reduced-motion", value: "no-preference" },
 		],
 	});
-	await applySafeAreaInsets(page, device);
+	const insets = await applySafeAreaInsets(page, device);
+	void insets;
 
 	// A web build has no single "rendered" event, so the boot budget is a wait on
 	// time — the thing §"Wait on the event" warns about. It is bounded and it is
@@ -549,6 +544,47 @@ async function captureCell(
 	};
 
 	await loaded;
+	/*
+	 * THE CELL'S OWN ACTIONS, before any frame is stamped.
+	 *
+	 * A cell that declares a state BEHIND A CONTROL says how to reach it in
+	 * `CELL_OPENERS`; the press is a press (the app's own path, the relay's own
+	 * wire), never a hook the screens carry for the harness. Running it here —
+	 * after the load event and before `f0` and the settled frame — is what makes the
+	 * frames of a cell the frames of the state it names, and it is why the readiness
+	 * loop below (which waits on a missing MARKER) also covers the opened state's
+	 * arrival: the app re-renders once the press lands, and the loop is what waits.
+	 *
+	 * A press that found nothing is NOT a quiet skip. It means the id this table
+	 * names is not on the page, so the frame about to be stamped is of the state
+	 * BEFORE the one the cell declares — the exact shape of "asserting one thing and
+	 * shipping another" the marker rule exists to prevent — and it is reported as an
+	 * issue, by name, with the control that was missing.
+	 */
+	const openers = cell.openers ?? [];
+	const openerOutcomes: AffordanceOutcome[] = [];
+	if (openers.length > 0) {
+		/* WAIT FOR THE SCREEN FIRST. The control an opener presses lives inside the
+		 *  screen, and the screen root is the app's own declaration that it is up —
+		 *  where an action's own wait is a guess about which of the two is late.
+		 *  MEASURED on the ci-tier run that added these cells (this host at load 45,
+		 *  ~25 sessions live): thirteen create-family cells took longer than the
+		 *  action's own 8 s to render their header, so their opener reported a
+		 *  missing control and the capture stamped the state the cell does not name.
+		 *  The root is a longer, cheaper wait, and it fails loudly all the same. */
+		const ready = await waitForTestID(page, SCREEN_ROOTS[cell.screen] ?? "");
+		if (ready) {
+			openerOutcomes.push(...(await runAffordances(page, openers)));
+		} else {
+			/* The screen never came up: none of the actions was reached, and the
+			 *  FIRST one names the failure — the verdict is about the cell's state,
+			 *  not about a sequence of presses. */
+			openerOutcomes.push({
+				action: openers[0] as Affordance,
+				result: "missing",
+			});
+		}
+	}
 	if (cell.consecutive) {
 		// Consecutive frames: a first frame that differs from the settled frame is
 		// motion the user sees, whether or not it was intended, and a frame whose
@@ -595,6 +631,51 @@ async function captureCell(
 					`'${String(measurements?.route ?? "")}' without it: the harness's own half of ` +
 					"the seed hook failed",
 			});
+		for (const outcome of openerOutcomes) {
+			if (outcome.result === "ok") continue;
+			const target =
+				"click" in outcome.action
+					? outcome.action.click
+					: "hold" in outcome.action
+						? outcome.action.hold.testID
+						: outcome.action.type.testID;
+			/*
+			 * `ok-after-scroll` IS A PASS WITH A FACT ATTACHED, and the fact is
+			 * recorded rather than judged — unless the control is one this repository
+			 * DECLARES must be reachable where the reader meets it. That declaration
+			 * is the instrument the design round asked for: without it, "the answering
+			 * control was below the fold" can only be caught after the fact by U-05 or
+			 * U-08, which is exactly why round 1's automation missed it and a human
+			 * reading frames found it. With it, the cell fails by name, at the moment
+			 * the press had to scroll.
+			 */
+			if (outcome.result === "ok-after-scroll") {
+				if (!UNSCROLLED_CONTROLS.includes(target)) continue;
+				found.push({
+					kind: "affordance",
+					message: `the control '${target}' is declared as one a reader must reach WITHOUT scrolling, and the press required scrolling it into view (its resting box was x=${outcome.preScroll?.x ?? "?"} y=${outcome.preScroll?.y ?? "?"})`,
+				});
+				continue;
+			}
+			/* One sentence per answer, because each names a different repair: the
+			 *  page does not carry the id, the app refuses the state, a reader could
+			 *  not put a finger on the control (something is over it — the shape a
+			 *  second modal leaves), or the id belongs to something that is not a
+			 *  field. Collapsing `unreachable` into the missing sentence was the
+			 *  first version of this line and it pointed the next reader at the
+			 *  selector when the control was there all along (review round 1, R1). */
+			found.push({
+				kind: "affordance",
+				message:
+					outcome.result === "inert"
+						? `the control '${target}' was disabled, so the state this cell declares was never opened`
+						: outcome.result === "unreachable"
+							? `the control '${target}' is in the page but nothing can press it — no box, or something is drawn over it — so the state this cell declares was never opened`
+							: outcome.result === "not-a-field"
+								? `'${target}' is declared as a text field but the element is not one, so the state this cell declares was never opened`
+								: `the control '${target}' is not on the page, so the state this cell declares was never opened`,
+			});
+		}
 		return found;
 	};
 	/** Everything about the cell that must hold still across the settled frame. */
@@ -708,6 +789,14 @@ async function captureCell(
 		ready: readinessProblems.length === 0,
 		contentDigest,
 		declaredSkip,
+		/* What this capture DID to reach the state, for the audit's re-drive: the
+		 *  actions it applied, not the table it read them from. */
+		openers: cell.openers ?? [],
+		/* WHAT EACH ACTION ANSWERED, and for a press that needed a scroll, where the
+		 *  control was before it: the audit replays these and reports a replay that
+		 *  did not land, and a reader can see from here which frames were taken of a
+		 *  page the harness had to scroll first. */
+		openerOutcomes,
 		consoleErrors,
 	};
 }
@@ -812,6 +901,46 @@ export interface Measurements {
 	route?: string;
 	title?: string;
 	mountedElements?: number;
+	/**
+	 * Where the page was scrolled to when the frame was taken.
+	 *
+	 * The guard restores every scroll it moved, so "this frame is of the resting
+	 * page" is a claim only these offsets can settle (review round 3, D9): a
+	 * displaced page is as byte-stable as a rested one, and the cells whose press
+	 * took the scroll path are exactly the ones a PNG cannot discriminate.
+	 */
+	scroll?: {
+		document: number;
+		body: number;
+		displaced: Array<{ top: number; left: number }>;
+	};
+}
+
+/**
+ * Narrow the probe's frame-time scroll reading. A malformed entry is dropped
+ * rather than defaulted: "the page was at rest" must never be the answer a
+ * missing field produces.
+ */
+function asScroll(value: unknown): Measurements["scroll"] | undefined {
+	if (typeof value !== "object" || value === null || Array.isArray(value))
+		return undefined;
+	const bag = value as Record<string, unknown>;
+	const displaced = Array.isArray(bag.displaced)
+		? bag.displaced
+				.map((entry) => {
+					const row =
+						typeof entry === "object" && entry !== null
+							? (entry as Record<string, unknown>)
+							: {};
+					return { top: Number(row.top), left: Number(row.left) };
+				})
+				.filter((row) => Number.isFinite(row.top) && Number.isFinite(row.left))
+		: [];
+	return {
+		document: Number(bag.document ?? 0),
+		body: Number(bag.body ?? 0),
+		displaced,
+	};
 }
 
 /** Narrow the measurement probe's reply; a non-object is reported as no reading. */
@@ -851,6 +980,7 @@ function asMeasurements(value: unknown): Measurements | null {
 		documentClientWidth: count("documentClientWidth"),
 		bodyScrollWidth: count("bodyScrollWidth"),
 		textNodeCount: count("textNodeCount"),
+		scroll: asScroll(bag.scroll),
 		medianTextHeight:
 			typeof bag.medianTextHeight === "number" ? bag.medianTextHeight : null,
 		textRoleSizes: Array.isArray(bag.textRoleSizes)
@@ -988,7 +1118,11 @@ function digestContent(content: CellContent): string {
 type CellIssue =
 	| ReadinessIssue
 	| { kind: "reading"; message: string }
-	| { kind: "seed"; message: string };
+	| { kind: "seed"; message: string }
+	/** A control this cell presses was not there, or was disabled — the state the
+	 *  cell names was never opened, which is a fact about the frame rather than a
+	 *  success with a surprising picture in it. */
+	| { kind: "affordance"; message: string };
 
 function readinessIssuesFor(
 	cell: FramePlan,
@@ -1217,6 +1351,9 @@ interface FramePlan {
 	deviceSpec: DeviceProfile;
 	scaleSpec: { id: string; factor: number };
 	consecutive: boolean;
+	/** The actions this cell takes to reach its state, from `CELL_OPENERS`. Empty
+	 *  for a cell a URL expresses on its own, which is most of them. */
+	openers: Affordance[];
 }
 
 /**
@@ -1347,6 +1484,16 @@ export interface CaptureRecord {
 	 */
 	declaredSkip: { cell: string; owner: string; reason: string } | null;
 	/**
+	 * What each opener ANSWERED, in order — and, for a press that had to scroll the
+	 * control into view, the box it had before the scroll.
+	 *
+	 * Recorded because the answer is not an implementation detail of the run: the
+	 * audit replays these actions and compares, and a reader asking "is this frame of
+	 * the page AT REST" needs the scroll fact to be somewhere other than a diff of two
+	 * capture runs. `R10`/`Q5`.
+	 */
+	openerOutcomes: AffordanceOutcome[];
+	/**
 	 * The relay scenario this cell's state comes from (the first scenario whose `shows`
 	 * declares it), or null for a cell no scenario declares (an ad-hoc `path:` page).
 	 *
@@ -1356,6 +1503,16 @@ export interface CaptureRecord {
 	 */
 	pinnedScenario?: string | null;
 	consoleErrors: string[];
+	/**
+	 * The page actions this capture APPLIED to reach the cell's state, in order.
+	 *
+	 * Empty for a cell a URL can express on its own, which is most of them. The audit
+	 * REPLAYS this list rather than re-deriving it from `CELL_OPENERS`: a re-drive that
+	 * re-read the table would be measuring whatever the table says at re-drive time
+	 * instead of what the frame was actually taken of — the rule `meta.seed` already
+	 * follows for the seed.
+	 */
+	openers: Affordance[];
 	/**
 	 * Whether the text-scale dimension was LIVE for this frame's cell, and — on the
 	 * 200 % frame only — the roles that failed. `null` means the run did not capture
@@ -1535,7 +1692,17 @@ export async function runCapture(options: CaptureOptions) {
 		);
 	}
 	if (options.plan) {
-		for (const cell of plan) console.log(`   ${frameName(cell)}`);
+		/* The openers are part of the plan, not a detail of the run: a cell that
+		 *  reaches its state by PRESSING something is a different promise from one a
+		 *  URL expresses, and a reviewer reading the plan is the person who has to
+		 *  agree with it before it costs twenty minutes. */
+		for (const cell of plan) {
+			const openers =
+				cell.openers.length > 0
+					? `  ← ${describeAffordances(cell.openers)}`
+					: "";
+			console.log(`   ${frameName(cell)}${openers}`);
+		}
 		return { planned: plannedFrames, plan, dryRun: true };
 	}
 	if (plannedFrames > CONFIRM_THRESHOLD && !options.yes) {
@@ -1815,6 +1982,9 @@ export async function runCapture(options: CaptureOptions) {
 	} finally {
 		reaped = await chrome.close();
 		await server.close();
+		/* The relay keeps one world, so a claim left behind would refuse the next rig
+		 *  in this shell (round 3, Q7). Best-effort: a teardown never fails a run. */
+		if (options.relay) await releaseScenarioClaim(options.relay);
 	}
 
 	// The two-part teardown guarantee is only true if the run that ended normally says
@@ -2150,6 +2320,28 @@ export async function runCapture(options: CaptureOptions) {
 			"theme problems: none — every frame's resolved theme and canvas match its cell, and no dark/light pair is identical",
 		);
 	}
+	/*
+	 * WHICH FRAMES ARE OF A PAGE THE HARNESS HAD TO SCROLL — stated, not discovered.
+	 *
+	 * The guard scrolls an off-screen control into view the way a reader does, and
+	 * restores the scroll afterwards, so a frame is of the resting page again. What
+	 * remains is the FACT: this cell's state was reached by scrolling, which is
+	 * exactly the property the design rounds reason about when they ask whether an
+	 * answering control is where the reader meets it. Left in the manifest alone it
+	 * would be a number nobody reads, so the run says it, by cell.
+	 */
+	const scrolled = records.filter((record) =>
+		(record.openerOutcomes ?? []).some(
+			(outcome) => outcome.result === "ok-after-scroll",
+		),
+	);
+	console.log(
+		scrolled.length === 0
+			? "scrolled presses: none — every opener pressed a control that was already on screen"
+			: `scrolled presses: ${scrolled.length} cell(s) needed a scroll to reach a control (${scrolled
+					.map((record) => record.name)
+					.join(", ")})`,
+	);
 	// The theme check has two halves, and only the first can run without tokens: the
 	// theme the page RESOLVED, and the canvas it painted against the design token for
 	// that theme. When the second half cannot be made, printing nothing would leave the
@@ -2621,11 +2813,11 @@ if (isMain) {
 				"  --tier <name>       the sample to capture: ci | core (default) | full.",
 				"                      The matrix declares 19 device profiles; the run prints the",
 				"                      share it covered, and names the profiles it did not.",
-				"                        ci    2 of 19 profiles — 528 cells, both themes, scales 100,",
-				"                              135 and 200 (~20 min) — the per-push CI job's sample",
-				"                        core  5 of 19 profiles — 1584 cells, both themes,",
+				"                        ci    2 of 19 profiles — 696 cells, both themes, scales 100,",
+				"                              135 and 200 (~26 min) — the per-push CI job's sample",
+				"                        core  5 of 19 profiles — 2088 cells, both themes,",
 				"                              every scale — the local default",
-				"                        full  19 of 19 profiles — 5808 cells",
+				"                        full  19 of 19 profiles — 7656 cells",
 				"  --devices <names>   comma list. Default: the tier's profiles (ci 2, core 5 by",
 				"                      default, --full for all 19)",
 				"  --themes <names>    default dark,light",
@@ -2648,11 +2840,12 @@ if (isMain) {
 	// Which devices a run covers. `core` is the sample the operator's rule asks to be
 	// run first — smallest phone, a typical phone, phone landscape, a tablet in each
 	// orientation — `ci` is the bounded sample the per-push job takes (matrix.ts
-	// `CI_DEVICES`, ~11 minutes), and `--full` covers every size. `--devices`
+	// `CI_DEVICES`, 696 cells — ~26 minutes at the 2.24 s/cell this harness measured on
+	// the runner), and `--full` covers every size. `--devices`
 	// overrides any of them.
 	//
 	// An unknown tier is an ERROR rather than a silent fall back to `core`: a typo'd
-	// `--tier ci` that quietly ran 1584 cells would spend ~59 minutes on a capture the
+	// `--tier ci` that quietly ran 2088 cells would spend ~78 minutes on a capture the
 	// caller did not ask for, and the whole point of naming the sample is that the
 	// run you get is the one you asked for.
 	const tierFlag = bool(flags, "full") ? "full" : str(flags, "tier", "core");

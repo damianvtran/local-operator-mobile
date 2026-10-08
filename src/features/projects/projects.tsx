@@ -1,9 +1,10 @@
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import { Pressable, Text, View } from "react-native";
 
 import { groupProjectsByStatus, type ProjectSummary } from "@/contracts";
 import { useConnection } from "@/features/auth/connection-provider";
+import { ProjectCreateSheet } from "@/features/projects/project-create";
 import {
 	projectDisplayName,
 	projectRefusalSentence,
@@ -31,14 +32,14 @@ import { Skeleton } from "@/ui/components/skeleton";
  * modal (the web client nests only because its sheet system draws one panel at a
  * time). The list pushes the detail; Back pops.
  *
- * READ-ONLY, DELIBERATELY. This slice ships no mutation: no create, no edit, no
- * delete, no milestone change, no link or unlink. A row is a link, not a control
- * with verbs. The relay's write routes and their refusals (`409
- * project_name_exists`, `409 project_schema_newer`, `422 project_invalid`, `422
- * project_confirm_mismatch`, `503 project_store_busy`, `400` for a non-object
- * body) belong to the slices that add those calls; the one refusal THIS path can
- * receive is the detail's `404 project_not_found`, and it is rendered verbatim
- * (see `projectRefusalSentence`).
+ * A WRITE, AND EXACTLY ONE. The listing's own mutation is CREATE, behind the
+ * header action and inside a sheet that this screen owns. Nothing here edits or
+ * deletes: a row is still a link, and the verbs a reader can reach from it live
+ * on the pushed detail, next to the row they act on. The relay's write refusals
+ * (`409 project_name_exists`, `409 project_schema_newer`, `422 project_invalid`,
+ * `422 project_confirm_mismatch`, `503 project_store_busy`, `400` for a
+ * non-object body) are the sheet's to render, verbatim; THIS read path's own
+ * refusal is still the listing's, and still rendered as the relay wrote it.
  *
  * NOTHING IS DERIVED HERE. `progress_stale`, a milestone's status and the live
  * count all cross the wire computed by the relay, and the sections are the
@@ -58,24 +59,64 @@ export default function Projects() {
 	/** A read that failed without a sentence: a transport drop, which the
 	 *  connection's own surface owns rather than this screen re-wording it. */
 	const [unreachable, setUnreachable] = useState(false);
+	/** Whether the create sheet is up. The header action opens it; nothing on the
+	 *  wire can, which is why a reader's only way in is one tap away from here. */
+	const [creating, setCreating] = useState(false);
 
-	const load = useCallback(async () => {
-		const client = relay();
-		if (!client) return;
-		setLoading(true);
-		setRefused(null);
-		setUnreachable(false);
-		try {
-			const answer = await client.projects();
-			setRows(answer.projects);
-		} catch (error) {
-			const sentence = projectRefusalSentence(error);
-			if (sentence !== null) setRefused(sentence);
-			else setUnreachable(true);
-		} finally {
-			setLoading(false);
-		}
-	}, [relay]);
+	/**
+	 * The listing read, in two modes.
+	 *
+	 * `silent` is the FOCUS refresh (a write on the pushed detail, or this
+	 * screen's own create) and it deliberately does not raise `loading`: the rows
+	 * on screen are still the relay's last answer, and a spinner over them would
+	 * say the list is being read for the first time. A silent refresh that fails
+	 * leaves the rows it has — the failure is already visible where the write
+	 * happened, and blanking a good listing to show an old error would be worse
+	 * than the error.
+	 */
+	const load = useCallback(
+		async (options?: { silent?: boolean }) => {
+			const client = relay();
+			if (!client) return;
+			if (options?.silent !== true) {
+				setLoading(true);
+				setRefused(null);
+				setUnreachable(false);
+			}
+			try {
+				const answer = await client.projects();
+				setRows(answer.projects);
+				setRefused(null);
+				setUnreachable(false);
+			} catch (error) {
+				if (options?.silent === true) return;
+				const sentence = projectRefusalSentence(error);
+				if (sentence !== null) setRefused(sentence);
+				else setUnreachable(true);
+			} finally {
+				if (options?.silent !== true) setLoading(false);
+			}
+		},
+		[relay],
+	);
+
+	/*
+	 * A REFRESH ON FOCUS, because a write on the pushed detail pops back to this
+	 * list: deleting a project or adding a milestone leaves the row the reader is
+	 * looking at stale, and this app holds no projects STREAM to correct it (the
+	 * conversations panel has one; this surface is a plain read). Re-reading when
+	 * the route becomes the top of the stack is the cheapest honest correction,
+	 * and it is silent so a reader returning to a good list sees no flicker.
+	 *
+	 * `useFocusEffect` is expo-router's own hook and runs on the first focus too,
+	 * so it also carries the initial read — the `useEffect` below is what makes
+	 * the first paint a skeleton rather than a blank screen while that happens.
+	 */
+	useFocusEffect(
+		useCallback(() => {
+			void load({ silent: true });
+		}, [load]),
+	);
 
 	useEffect(() => {
 		void load();
@@ -104,7 +145,26 @@ export default function Projects() {
 					size="sm"
 				/>
 			}
+			headerAction={
+				/* The listing's one write. It sends NOTHING on its own: it opens a
+				 *  sheet, and the sheet's own Create is what writes. */
+				<Button
+					testID={CONTROL.projectsNew}
+					label="New project"
+					onPress={() => setCreating(true)}
+					variant="quiet"
+					size="sm"
+				/>
+			}
 		>
+			<ProjectCreateSheet
+				visible={creating}
+				onClose={() => setCreating(false)}
+				onCreated={() => {
+					void load({ silent: true });
+				}}
+			/>
+
 			<ProjectsStateMarkers
 				empty={empty}
 				refused={failed}
@@ -161,9 +221,9 @@ export default function Projects() {
 					testID={EMPTY.projects}
 					headline="No projects yet."
 					/* The second line names an ACTION, and it is honest about where that
-					 *  action lives: this screen cannot create one, so it must not imply
-					 *  it can. */
-					next="Start one from the desktop app, or ask an agent to open a project."
+					 *  action lives: this screen can create one (the header action above),
+					 *  so the copy points at it rather than at another device. */
+					next="Start one with New project, or ask an agent to open one."
 				/>
 			) : (
 				<View>

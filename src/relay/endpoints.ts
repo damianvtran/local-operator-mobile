@@ -66,6 +66,33 @@ export interface StartSessionRequest {
 }
 
 /**
+ * The create body (`POST /api/projects`), as the relay's `ProjectCreate`
+ * declares it: a name, and three optional keys. Dates, the estimate and
+ * milestones are set afterwards — the relay's create body deliberately carries
+ * none of them, so this client does not offer them at creation either.
+ *
+ * `undefined` means "no opinion" and the key is left off the wire; the store's
+ * own defaults then apply (`status` becomes `active`).
+ */
+export interface CreateProjectRequest {
+	name: string;
+	description?: string;
+	status?: string;
+	tags?: string[];
+}
+
+/**
+ * The milestone body (`POST /api/projects/{key}/milestones`), as the relay's
+ * `MilestoneMutation` declares it. `target_date: ""` clears the date and an
+ * absent key leaves it alone; `completed` is the completion toggle.
+ */
+export interface SetProjectMilestoneRequest {
+	name: string;
+	target_date?: string;
+	completed?: boolean;
+}
+
+/**
  * One audio recording for `POST /api/transcribe`.
  *
  * Two shapes, because the runtime's `FormData` and the browser's are different
@@ -268,9 +295,6 @@ export class RelayEndpoints {
 	/** The projects listing (`GET /api/projects`), in the relay's own board order —
 	 *  the sections are the relay's `STATUS_RANK`, not a client sort.
 	 *
-	 *  Read-only in this build: the mutation routes (create, patch, delete, links,
-	 *  milestones) exist on the relay and are deliberately not called from here.
-	 *
 	 *  A refusal carries the relay's own sentence (`RelayError.displayableMessage`)
 	 *  — the 5xx arm of this route is `503 project_store_busy`, retryable rather
 	 *  than malformed — so a screen shows that sentence instead of re-wording it. */
@@ -298,6 +322,107 @@ export class RelayEndpoints {
 			method: "GET",
 			path: `/api/projects/${encodeURIComponent(key)}`,
 			signal,
+		});
+	}
+
+	/**
+	 * Creates one project (`POST /api/projects`) from the create body's four keys.
+	 *
+	 *  The body is the relay's `ProjectCreate` vocabulary and nothing else: an
+	 *  unknown key is a `422 project_invalid` (`"unknown field(s): …"`, measured
+	 *  against an isolated daemon), so this method sends only what the route
+	 *  declares — a body invented here would be refused by the store rather than
+	 *  by a schema. `status` and `tags` are omitted when the caller has no opinion,
+	 *  which is the relay's own default arm (`status` defaults to `active`).
+	 *
+	 *  A taken name (case-insensitive) is the relay's `409 project_name_exists`,
+	 *  and a name or tag the store's grammar refuses is a `422 project_invalid`;
+	 *  both sentences are the relay's and a caller renders them verbatim.
+	 */
+	async createProject(
+		request: CreateProjectRequest,
+	): Promise<Payload<"projectWrite">> {
+		return this.http.json("projectWrite", {
+			method: "POST",
+			path: "/api/projects",
+			body: {
+				name: request.name,
+				...(request.description !== undefined
+					? { description: request.description }
+					: {}),
+				...(request.status !== undefined ? { status: request.status } : {}),
+				...(request.tags !== undefined ? { tags: request.tags } : {}),
+			},
+		});
+	}
+
+	/**
+	 * Deletes one project (`DELETE /api/projects/{key}`).
+	 *
+	 *  `confirm` must repeat the row's NAME — the relay compares it to `name`,
+	 *  case-insensitively, and refuses anything else as `422
+	 *  project_confirm_mismatch` (an ID is a mismatch: the route says so in its own
+	 *  sentence). `key` may be either the id or the name, which is the route's own
+	 *  addressing rule. This call is the one that actually destroys the row, so the
+	 *  caller owns the confirmation that precedes it.
+	 */
+	async deleteProject(
+		key: string,
+		confirm: string,
+	): Promise<Payload<"projectDelete">> {
+		return this.http.json("projectDelete", {
+			method: "DELETE",
+			path: `/api/projects/${encodeURIComponent(key)}`,
+			body: { confirm },
+		});
+	}
+
+	/**
+	 * Adds or updates ONE milestone (`POST /api/projects/{key}/milestones`).
+	 *
+	 *  Add-or-update is keyed by `name`, case-insensitively — the route is not a
+	 *  "create" — so the same call both adds a milestone and edits the two fields
+	 *  the phone owns. The tri-state is the relay's and is carried here rather than
+	 *  guessed: a key that is ABSENT is left untouched, `target_date: ""` CLEARS
+	 *  the date, and `completed: true`/`false` stamps today / clears it.
+	 */
+	async setProjectMilestone(
+		key: string,
+		request: SetProjectMilestoneRequest,
+	): Promise<Payload<"projectMilestone">> {
+		return this.http.json("projectMilestone", {
+			method: "POST",
+			path: `/api/projects/${encodeURIComponent(key)}/milestones`,
+			body: {
+				name: request.name,
+				...(request.target_date !== undefined
+					? { target_date: request.target_date }
+					: {}),
+				...(request.completed !== undefined
+					? { completed: request.completed }
+					: {}),
+			},
+		});
+	}
+
+	/**
+	 * Removes ONE milestone by name (`DELETE /api/projects/{key}/milestones/{name}`).
+	 *
+	 *  THE NAME TRAVELS IN THE PATH, and that is the whole reason the phone carries
+	 *  a slash guard: the route's `{name:str}` is `[^/]+` upstream, so a milestone
+	 *  named `ship/v2` is CREATABLE (the add route carries its name in the body)
+	 *  and unremovable — a percent-encoded `%2F` does not reach the route and the
+	 *  relay answers a bare `404 Not Found` with no JSON body at all (measured
+	 *  against an isolated daemon, both `ship/v3` and `ship%2Fv3`). Encoding is
+	 *  still applied here, because it is right for every name that can be removed.
+	 */
+	async removeProjectMilestone(
+		key: string,
+		name: string,
+	): Promise<Payload<"projectMilestone">> {
+		return this.http.json("projectMilestone", {
+			method: "DELETE",
+			path: `/api/projects/${encodeURIComponent(key)}/milestones/${encodeURIComponent(name)}`,
 		});
 	}
 

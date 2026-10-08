@@ -401,13 +401,73 @@ export const SHEET_SURFACE_CLASS =
  * are the same number until a keyboard opens, which is when the mistake bites. */
 export type SheetDetent = "content" | "half" | "full";
 
+/**
+ * `content` fits its content, capped at this fraction of the column.
+ *
+ * THE CAP WAS DOCUMENTED AND NOT IMPLEMENTED for as long as this table has
+ * existed: the `content` entry was `null`, which `Sheet` reads as "no bound at
+ * all", so a content-detent sheet could grow past the column it lives in and its
+ * own header row would be drawn INSIDE the device's top unsafe band. MEASURED on
+ * the capture that added the projects lifecycle's forms (this slice, at iphone-se
+ * / 200 %): the create and milestone sheets put their first row at 6-15 pt
+ * against a 20 pt declared inset, and the audit's U-05 rule failed them — the
+ * frames show the sheet's title scrolled off the top of the screen. This constant
+ * was declared beside the table for exactly that cap and referenced nowhere.
+ *
+ * Declared BEFORE the table that now uses it: a `const` read in an initializer
+ * above its own declaration is a TDZ error at module load, not a compile error.
+ */
+export const SHEET_CONTENT_MAX_FRACTION = 0.6;
+
+/** Detents, as a fraction of the scroll COLUMN — not of the viewport. The two
+ * are the same number until a keyboard opens, which is when the mistake bites.
+ *
+ * The other two detents are bounded already; `content` was the one that was not.
+ */
+/**
+ * WHICH DETENT A FOOTERED FORM TAKES, DECIDED HERE RATHER THAN IMPLIED.
+ *
+ * The forms (create a project; edit a milestone) take `content` — 0.6 — and that
+ * choice was challenged in review round 1 on the ground that a six-control form
+ * does not fit, with `full` (0.92) offered as the alternative. That round's
+ * rejection of `full` was reasoned about the ACTION ("the form is taller than the
+ * window at every detent"), and the pinned `footer` has since made the action's
+ * reachability independent of the detent — so the reason moved and the decision
+ * has to be re-stated rather than inherited.
+ *
+ * MEASURED, at the extreme corner (iphone-se, 200 %, which is a 320 pt phone at
+ * the largest type step): the `content` cap splits 76 / 181 / 84 pt into header /
+ * body / footer, so the body band is 181 pt for 926 pt of form. `full` would make
+ * that band 362 pt. The decision is `content`, for three reasons:
+ *
+ *  1. The sheet is anchored over a listing or a detail the reader is working in,
+ *     and it is a task handed out by that screen rather than a destination
+ *     (`project-create.tsx` says why it is a sheet and not a route). At 0.92 the
+ *     surface leaves ~26 pt of that context on the narrowest phone at 100 %, which
+ *     reads as a page that happens to sit over another one.
+ *  2. The load-bearing half of round 1's finding was the ANSWERING CONTROL and its
+ *     refusal being out of reach, and the pinned footer settles that at any detent
+ *     — the band the reader scrolls is a comfort question, not a reachability one.
+ *  3. The cost is bounded and legible: the body scrolls, and the reader can see
+ *     roughly a control and a half at the largest type step on the smallest phone.
+ *
+ * WHAT WOULD CHANGE IT, AND THE MEASURE THAT DECIDES (design round 3, D10 — the
+ * trigger used to say "more than about three screens", which read two ways and the
+ * two readings disagree on this very form): the measure is **bands of SCROLLING**,
+ * `(body content − body band) / body band`, at the default scale on the narrowest
+ * phone. The create form at 100 % on `iphone-se` is 538 pt of content in a 185 pt
+ * band — 2.9 bands of content but only **1.9 bands of scrolling**, and 623 pt with a
+ * retained draft, which is **2.4 bands of scrolling**. So the line is > 3 bands of
+ * scrolling and this form sits under it, deliberately: at that point the detent is
+ * what is making a sheet behave like a page, and `full` becomes the cheaper answer
+ * than a longer scroll. Recorded so the next reader argues with a measurement
+ * instead of with a reason that no longer applies.
+ */
 export const SHEET_DETENTS: Record<SheetDetent, number | null> = {
-	content: null, // fit content, capped at 60% of the column
+	content: SHEET_CONTENT_MAX_FRACTION,
 	half: 0.5,
 	full: 0.92,
 };
-
-export const SHEET_CONTENT_MAX_FRACTION = 0.6;
 
 export const DIALOG_SURFACE_CLASS =
 	"rounded-lg border border-hairline bg-elevated p-4";

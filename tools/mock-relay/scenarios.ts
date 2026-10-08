@@ -110,7 +110,7 @@ export interface ScenarioWorld {
 	 * `commands` is the relay's reply window in milliseconds, after which a command
 	 * to an unreachable runtime is answered 504 (the state a `degraded` row is in).
 	 */
-	hold?: { api?: "forever"; commands?: number };
+	hold?: { api?: "forever"; commands?: number; mutations?: "forever" };
 	listOverrides?: { degraded?: string[] };
 	/** Field overrides applied to every derived row; `null` means "not reported". */
 	rowOverrides?: Record<string, SessionSummary[keyof SessionSummary]>;
@@ -534,7 +534,16 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 	add(
 		"idle",
 		"One live conversation, idle, after a completed turn (the corpus capture).",
-		["S15/populated", "S5/populated"],
+		[
+			"S15/populated",
+			"S5/populated",
+			/* The pane's long-press menu, which is the only surface in this app a
+			 *  HELD press reaches (`hold`, `tools/lib/affordance.ts`). It rides the
+			 *  one-row world because the gesture needs a row and nothing else, and it
+			 *  is declared here rather than beside the projects cells because the
+			 *  menu belongs to the conversations pane. */
+			"S15/menu-open",
+		],
 		() => idleWorld(),
 	);
 
@@ -1279,9 +1288,32 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 
 	add(
 		"projects-populated",
-		"The six-project seeded store, and one project's composed detail with a live and a stopped link.",
-		["S16/populated", "S16-detail/populated"],
+		"The six-project seeded store, and one project's composed detail with a live and a stopped link — plus every lifecycle WRITE surface, which is this same world with a control pressed.",
+		[
+			"S16/populated",
+			"S16-detail/populated",
+			/* The write surfaces are reached by PRESSING a control, declared per cell
+			 *  in `CELL_OPENERS` (`tools/visual/matrix.ts`) and replayed by the audit's
+			 *  re-drive. One world, several cells: a cell here is a STATE, and "the
+			 *  create sheet is open over the listing" is a state of this listing. */
+			"S16/create",
+			"S16/create-filled",
+			"S16/create-refused",
+			"S16-detail/milestone-editor",
+			"S16-detail/milestone-remove",
+			"S16-detail/slash",
+			"S16-detail/delete-confirm",
+		],
 		() => ({}),
+	);
+
+	add(
+		"projects-write-busy",
+		"A project write IN FLIGHT: the relay reads the body and never answers it, which is the only honest source of the in-flight state — the app is mid-write, not asked to pretend.",
+		["S16/create-busy", "S16-detail/busy"],
+		/* `hold.mutations`, not `hold.api`: a cell whose listing read were held too
+		 *  would render the loading skeleton instead of the surface under test. */
+		() => ({ hold: { mutations: "forever" } }),
 	);
 
 	add(

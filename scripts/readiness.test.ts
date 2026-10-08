@@ -154,7 +154,12 @@ describe("presence and visibility are two different questions", () => {
 });
 
 describe("the marker is the app's, read rather than built", () => {
-	it("asks for the id the app declares, not `${subject}-${state}`", () => {
+	/* The title says `${subject}-${state}` in words rather than in a template literal:
+	 *  biome's `noTemplateCurlyInString` reads the literal as a missed interpolation,
+	 *  and it is a rule this tree carries at ERROR level, so the old title failed the
+	 *  pipeline's lint step for every branch cut from this base. Fixed here because it
+	 *  blocks this PR's own gate; the rule is right and the title was the mistake. */
+	it("asks for the id the app declares, not a subject-and-state pair", () => {
 		// `past/populated` is `past-row-`, a family prefix; the derivation would be
 		// `past-populated`, which no frame can carry. The old `sessions` subject is
 		// the PANEL's `sidebar` now, and the home (`S4`) answers with its own ids.
