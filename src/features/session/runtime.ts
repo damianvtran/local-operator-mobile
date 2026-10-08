@@ -155,6 +155,40 @@ export const transcriptRows = (
 	return history;
 };
 
+/**
+ * Whether the conversation demonstrably runs deeper than the rows this device
+ * holds — the honest gate for the find sheet's "older messages aren't loaded"
+ * caveat.
+ *
+ * THE ONE WIRE FACT IS THE HISTORY PAGE'S `has_more`, and it is a fact about
+ * THE PAGE, not about what the app holds: it says the relay answered with fewer
+ * rows than the conversation has beyond that page. Reading it as "older rows
+ * are missing from this device" is a claim the wire does not make — the capture
+ * mock's projection carries rows older than the page (it serves the whole
+ * conversation), and the caveat would then be false about rows sitting in
+ * `entries`. So the caveat is gated on the two facts agreeing: the page is
+ * incomplete AND nothing held extends past the page's oldest row.
+ *
+ * THE COMPARISON IS EXACT UNDER THE RELAY'S OWN SHAPES, both contiguous TAILS
+ * of one conversation — the projection is `_cap_tail`'s last ≤80 rows, the page
+ * is the newest `limit` — so "held extends past the page" is exactly "the
+ * page's oldest row is in `entries` at an index > 0": not held at all (`-1`,
+ * nothing older can be), the oldest thing held (`0`, nothing older is), or with
+ * older rows above it (don't claim).
+ */
+export const olderThanLoaded = (input: {
+	hasMore: boolean;
+	/** The oldest row of the fetched history page, or `null` when no page
+	 *  arrived (a failed read makes no claim either way). */
+	pageOldestId: string | null;
+	entries: readonly TranscriptEntry[];
+}): boolean => {
+	if (!input.hasMore || input.pageOldestId === null) return false;
+	return (
+		input.entries.findIndex((entry) => entry.id === input.pageOldestId) <= 0
+	);
+};
+
 /** The failure's own surface, or `null`. Used to hand a refusal to the state
  *  derivation without re-deriving anything from a status code. */
 export const surfaceOf = (error: unknown): ErrorSurface | null =>

@@ -102,8 +102,22 @@ describe("sessionStateFlags", () => {
 		// (`loading`, `empty`) are the exception, and they are named here rather than
 		// quietly excluded: no runtime fact decides them, the route does.
 		const screenLevel = ["loading", "empty"];
+		// The find states are the second exception, one layer down from the route:
+		// their derivation is `FindStateMarkers`' own inputs (the find session's
+		// mode/query/answer — `components/state-markers.tsx`), never a projection
+		// fact. A completion does not decide whether a search sheet is open, so
+		// requiring a `sessionStateFlags` entry for them would demand a derivation
+		// from the wrong layer. Named, like the route pair, rather than excluded.
+		const findLevel = [
+			"find-results",
+			"find-related",
+			"find-empty",
+			"find-hit",
+		];
 		const derived = Object.keys(STATE_MARKER.session)
-			.filter((state) => !screenLevel.includes(state))
+			.filter(
+				(state) => !screenLevel.includes(state) && !findLevel.includes(state),
+			)
 			.sort();
 		expect(
 			Object.keys(sessionStateFlags(facts())).map(stateKeyFor).sort(),

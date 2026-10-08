@@ -34,6 +34,7 @@ import {
 	getActiveRoute,
 	INITIAL_STREAM_FACTS,
 	loadAttachments,
+	olderThanLoaded,
 	type StreamFacts,
 	sessions,
 	subscribeRoute,
@@ -68,6 +69,13 @@ export interface SessionRuntime {
 	commands: SlashCommand[];
 	models: ModelEntry[];
 	loading: boolean;
+	/** Whether the conversation provably runs deeper than the rows this device
+	 *  holds — `olderThanLoaded`, derived from the history page's own facts and
+	 *  the held rows, not from `has_more` alone (a page fact is about the page).
+	 *  False when nothing proves it: a failed history read, a complete
+	 *  conversation, or a held set that already extends past the page. The find
+	 *  sheet's caveat line is its one reader. */
+	olderThanLoaded: boolean;
 	error: RelayError | null;
 	/** Loads one attachment's bytes as a data URI, or `null` when the relay no
 	 *  longer has them. */
@@ -107,6 +115,13 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 
 	const [facts, setFacts] = useState<StreamFacts>(INITIAL_STREAM_FACTS);
 	const [history, setHistory] = useState<TranscriptEntry[]>([]);
+	/** The last history page's OWN facts, for the find sheet's caveat: the page's
+	 *  oldest row and whether the conversation runs past it. `null` until a page
+	 *  arrives — a failed read makes no claim, rather than a false one. */
+	const [historyInfo, setHistoryInfo] = useState<{
+		oldestId: string | null;
+		hasMore: boolean;
+	} | null>(null);
 	const [commands, setCommands] = useState<SlashCommand[]>([]);
 	const [models, setModels] = useState<ModelEntry[]>([]);
 	const [error, setError] = useState<RelayError | null>(null);
@@ -302,7 +317,17 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 			])
 				.then(([historyPage, commandList, modelList]) => {
 					if (cancelled) return;
-					if (historyPage) setHistory(historyPage.entries);
+					if (historyPage) {
+						setHistory(historyPage.entries);
+						// The find caveat reads these, so they move with every successful
+						// page — a reload that finds the transcript complete must retract the
+						// claim rather than keep it stale. They describe the PAGE; where the
+						// page and the held rows must agree is `olderThanLoaded`.
+						setHistoryInfo({
+							oldestId: historyPage.entries[0]?.id ?? null,
+							hasMore: historyPage.has_more,
+						});
+					}
 					if (commandList) setCommands(commandList.commands);
 					if (modelList) setModels(modelList.models);
 				})
@@ -325,6 +350,15 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 	const entries = useMemo(
 		() => transcriptRows(projection, history),
 		[projection, history],
+	);
+	const olderRowClaim = useMemo(
+		() =>
+			olderThanLoaded({
+				hasMore: historyInfo?.hasMore ?? false,
+				pageOldestId: historyInfo?.oldestId ?? null,
+				entries,
+			}),
+		[historyInfo, entries],
 	);
 
 	const connection = useMemo((): ConnectionView => {
@@ -400,6 +434,7 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 		commands,
 		models,
 		loading,
+		olderThanLoaded: olderRowClaim,
 		error,
 		loadImage,
 		loadAgent,

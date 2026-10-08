@@ -19,6 +19,7 @@
  * plain TypeScript with no imports of its own, so the tooling can load it. */
 import {
 	CONTROL,
+	findResultId,
 	projectMilestoneEditId,
 	sessionRowId,
 } from "../../src/ui/a11y.ts";
@@ -358,12 +359,12 @@ export function describeDeviceCoverage(coverage: {
  * The CI tier: the bounded sample the per-push capture job takes.
  *
  * WHY A THIRD TIER, AND WHY IT IS HERE RATHER THAN A `--devices` LIST IN YAML.
- * The `core` tier is 2088 cells: the whole declared cell list (58 cells) x 2 themes x
- * (3 phones x 4 scales + 2 tablets x 3 scales) — 58 x 2 x 18, the tier's 5 profiles —
+ * The `core` tier is 2232 cells: the whole declared cell list (62 cells) x 2 themes x
+ * (3 phones x 4 scales + 2 tablets x 3 scales) — 62 x 2 x 18, the tier's 5 profiles —
  * and the CI job's capture step is bound at 40 minutes. Measured on the runner, that is
  * 2.24 s/cell: 403 cells in 903 s (run 37098393675, a plan of 403 cells then), so a core
- * run needs ~78 minutes. The `core` job's own bound is 110 (see `.github/workflows/e2e.yml`,
- * `web-audit-core`), which is above the 6264 s deadline its plan derives for itself. The
+ * run needs ~83 minutes. The `core` job's own bound is 115 (see `.github/workflows/e2e.yml`,
+ * `web-audit-core`), which is above the 6696 s deadline its plan derives for itself. The
  * job's first real
  * run of this path
  * was therefore cut off by the harness's own 900 s deadline with 585 cells
@@ -393,11 +394,11 @@ export function describeDeviceCoverage(coverage: {
  *     `CI_SCALES` below for why the boundary earns the third slot and 150% does
  *     not. 150% stays in `core`, which sweeps every scale.
  *
- * That is 58 cells x 2 themes x (2 profiles x 3 scales) = 696 cells, ~26 minutes at
+ * That is 62 cells x 2 themes x (2 profiles x 3 scales) = 744 cells, ~28 minutes at
  * the measured rate: inside the step bound (raised with it, see `CI_SCALES`) with
  * the same headroom it always carried. `core` and `full` are unchanged and stay the
- * local and dispatched samples, so the full 2088-cell `core` matrix and the
- * 7656-cell `full` matrix remain runnable — nothing is only reachable through CI.
+ * local and dispatched samples, so the full 2232-cell `core` matrix and the
+ * 8184-cell `full` matrix remain runnable — nothing is only reachable through CI.
  */
 export const CI_DEVICES: string[] = ["iphone-se", "tablet-landscape"];
 
@@ -415,12 +416,13 @@ export const CI_DEVICES: string[] = ["iphone-se", "tablet-landscape"];
  * sweeps every scale, so nothing is lost by composing the two sets differently.
  *
  * WHAT IT COSTS, because it is NOT free and the two are one decision. Three scales on
- * both CI profiles is 696 cells, +50 % over the two-scale 464, so the per-push capture
+ * both CI profiles is 744 cells, +50 % over the two-scale 496, so the per-push capture
  * and audit bounds in `.github/workflows/e2e.yml` were raised with it — most recently to
  * capture 40 / audit 20 / job 80. That is this slice's ten cells (nine lifecycle surfaces
  * and the pane's long-press menu) on top of the base the branch was cut from, plus the
- * four cells upstream landed while it was open: the cell list is 58 and the sample
- * is 696, both re-derived from this head's own `--plan` rather than scaled. A bound that fires every run stops being a signal, so
+ * four cells upstream landed while it was open, plus the find slice's four: the cell list
+ * is 62 and the sample is 744, both re-derived from this head's own `--plan` rather than
+ * scaled — still inside the 40-minute capture bound (744 x 3 s = 37.2 min). A bound that fires every run stops being a signal, so
  * this list and that bound have to move together: reverting the bounds without
  * reverting this list makes the job red, and reverting this list without the bounds
  * wastes the budget it was sized for. */
@@ -745,6 +747,34 @@ export const CELL_OPENERS: Record<string, Affordance[]> = {
 	/* The project delete's confirm: the first tap sends NOTHING (the deletion is
 	 *  not undoable), so this frame is the question, not the answer. */
 	"S16-detail/delete-confirm": [{ click: CONTROL.projectDelete }],
+
+	/* --- the in-conversation find, over the long conversation (see the cells
+	 * on the `long-transcript` scenario). The lever and the field are the app's
+	 * controls; the result press is a reader choosing a hit, addressed by the
+	 * message it will land on. "conversion" matches exactly two user messages
+	 * and nothing else (the soft tier's neighbourhood was probed: "euro" would
+	 * also have caught "turn" in every closing answer, two edits away), and the
+	 * ranking is oldest-first, so the press lands on `tc-conv-03-user` — inside
+	 * a CONDENSED turn, which is what makes the cell exercise the expand-first
+	 * walk (the sheet closes, the turn opens, the transcript scrolls, the wash
+	 * lands, the bar is up). */
+	"S5/find-results": [
+		{ click: CONTROL.sessionFind },
+		{ type: { testID: CONTROL.findField, text: "retry" } },
+	],
+	"S5/find-related": [
+		{ click: CONTROL.sessionFind },
+		{ type: { testID: CONTROL.findField, text: "ledgr" } },
+	],
+	"S5/find-empty": [
+		{ click: CONTROL.sessionFind },
+		{ type: { testID: CONTROL.findField, text: "zebra" } },
+	],
+	"S5/find-hit": [
+		{ click: CONTROL.sessionFind },
+		{ type: { testID: CONTROL.findField, text: "conversion" } },
+		{ click: findResultId("tc-conv-03-user") },
+	],
 };
 
 /**
@@ -902,6 +932,7 @@ export const IDENTICAL_FRAME_EXEMPTIONS: IdenticalFrameClass[] = [
 			"path:/session/{sessionId}?lo-scroll=top/condensed",
 			"path:/session/{sessionId}?lo-scroll=top&lo-expand=tc-conv-00-user/expanded",
 			"path:/session/6714def86197/warm",
+			"S5/find-hit",
 		],
 		reason:
 			"below-the-fold at iphone-se / 200 %: the 320 px column at 200 % text is filled by the " +
@@ -953,7 +984,12 @@ export const IDENTICAL_FRAME_EXEMPTIONS: IdenticalFrameClass[] = [
 			"thing. Declaring the CLASS is what makes that hold at every scale: these cells collide " +
 			"in whichever SUBSET a device, theme and scale produce — the widest subsets at 200 % on " +
 			"the narrowest column, narrower subsets at 135 % and 100 % — and every subset not carried " +
-			"by the coincidence entries is this phenomenon, not a finding of its own.",
+			"by the coincidence entries is this phenomenon, not a finding of its own. " +
+			"`S5/find-hit` JOINS (this slice's find landing, measured on its own capture): " +
+			"its settled frame at iphone-se / 200 % is the same chrome the warm-up cell draws — " +
+			"the find bar it adds to the column sits under the same fold — while its content " +
+			"digest still carries the landed transcript, which is the same-bytes-different-" +
+			"content shape this entry describes.",
 	},
 ];
 

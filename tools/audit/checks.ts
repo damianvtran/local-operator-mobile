@@ -833,6 +833,18 @@ function u05SafeAreas(state: AuditState): CheckRow[] {
 }
 
 /** U-06 — nothing exceeds the viewport at 100 %, and only a scroll region at 200 %. */
+
+/**
+ * U-06's allowance reasons, exported so the canary asserts the RECORDED wording
+ * through this one table instead of copying it (`NOT_DEFECT_REASON_NAMES` in
+ * `e2e/run-canary.ts` reads this; a reworded detail fails there rather than
+ * leaving the canary asserting a sentence the audit no longer writes).
+ */
+export const U06_ALLOWANCE = {
+	ELLIPSIS_CLIP:
+		"whose own single-line ellipsis (text-overflow: ellipsis / white-space: nowrap) draws the run inside the viewport",
+} as const;
+
 function u06HorizontalOverflow(state: AuditState): CheckRow[] {
 	const rows: CheckRow[] = [];
 	const docOverflow = state.document.scrollWidth - state.document.clientWidth;
@@ -862,18 +874,54 @@ function u06HorizontalOverflow(state: AuditState): CheckRow[] {
 	// fires — so the EXCEPTION cannot be emitted in that case. The verdict is still
 	// FAIL there, so nothing false passes; and the app's own U-06 rows are unaffected,
 	// because its overflow is contained by the scroller and the reading stays 320.
+	//
+	// THE SECOND SANCTIONED CONTAINER: A SINGLE-LINE ELLIPSIS CLIP. The allowance
+	// above names the explicitly scrollable region because a reader can REACH what
+	// overflows there; a one-line truncated run (`text-overflow: ellipsis` +
+	// `white-space: nowrap` on an ancestor) draws its whole drawing inside the
+	// ancestor's box — nothing is painted past the viewport and nothing is left
+	// unreachable that the idiom does not already account for, under the same
+	// reachability rule U-07 records (the full value on the control's accessible
+	// label or behind the tap). Measured on the find slice's own capture: the
+	// matched run inside a truncated result snippet kept its full inline LAYOUT box
+	// (right edge 330 on a 320 pt viewport, +10) while the ancestor clipped the
+	// drawing, and the row failed for a drawing nobody can see. The exemption names
+	// the clipping ancestor and is reported, not passed over — an allowance a report
+	// cannot show is the failure mode the ledger rules exist against — and the
+	// canary holds both directions: `#too-wide` still fails and `#ellipsis-clip`'s
+	// overrunning run is an EXCEPTION.
 	const offenders = state.nodes.filter(
 		(n) => n.rect.x + n.rect.w > state.viewport.width + 1 && n.rect.w > 8,
 	);
+	/* The ancestor whose own single-line ellipsis clip draws this node inside the
+	 * viewport, or none. Read off the ancestors' own recorded styles, so the
+	 * judgement is the probe's measurements rather than a second reading of the
+	 * DOM — and resolved through an index map, because `ancestors` holds indices
+	 * into the probe's FULL element sweep while `state.nodes` is the VISIBLE
+	 * subset (the same `byIndex` shape U-03 uses; a positional lookup silently
+	 * reads the wrong node for every index past the first invisible one). */
+	const byIndex = new Map(state.nodes.map((n) => [n.index, n]));
+	const ellipsisClip = (n: AuditNode): AuditNode | undefined =>
+		n.ancestors
+			.map((index) => byIndex.get(index))
+			.find(
+				(a): a is AuditNode =>
+					a !== undefined &&
+					a.textOverflow === "ellipsis" &&
+					a.whiteSpace === "nowrap",
+			);
 	for (const node of offenders.slice(0, 8)) {
 		const overflow = node.rect.x + node.rect.w - state.viewport.width;
+		const clipped = node.scrollsX ? undefined : ellipsisClip(node);
 		rows.push({
 			check: "U-06",
-			verdict: node.scrollsX ? "EXCEPTION" : "FAIL",
+			verdict: node.scrollsX || clipped !== undefined ? "EXCEPTION" : "FAIL",
 			measured: `right edge ${node.rect.x + node.rect.w}px vs viewport ${state.viewport.width}px (+${overflow}px)`,
 			detail: node.scrollsX
 				? `${node.path} — inside an ancestor with overflow-x: auto|scroll, the explicitly scrollable region the rubric allows`
-				: node.path,
+				: clipped !== undefined
+					? `${node.path} — clipped by ${clipped.path}, ${U06_ALLOWANCE.ELLIPSIS_CLIP}; the overrun is the clipped tail, recorded as U-07's idiom`
+					: node.path,
 		});
 	}
 	if (rows.length === 0) {
@@ -1502,16 +1550,25 @@ export const U42_EXEMPTIONS: Array<{
 	reason: string;
 }> = [
 	{
-		path: "gap-3>div.css-g5y9jx.gap-1.5",
+		path: ">div.css-g5y9jx.gap-1.5",
 		value: 6,
 		properties: ["row-gap", "column-gap"],
 		reason:
 			"the `Input`/`Textarea` field wrapper's own `gap-1.5` (`input.tsx`, `textarea.tsx`) — " +
-			"the primitive's label-to-field step, which is not this slice's to change: the " +
+			"the primitive's label-to-field step, which is not this change's to change: the " +
 			"projects sheets are the first SCORED surface to render those primitives, which is " +
 			"why it surfaces at all (360 rows in CI run 37705167165). Changing it moves every " +
 			"form in the app, so it belongs to the same UI-wide vocabulary sweep the entry " +
-			"below names, not to the projects write path",
+			"below names, not to the projects write path — nor to the find sheet's, which is " +
+			"the second surface to score the primitive. THE PATH IS THE ELEMENT ITSELF, not one " +
+			"surface's parent chain: the first spelling required a `gap-3` parent (the projects " +
+			"form column's own class), and the find sheet renders the same primitive directly " +
+			"in the sheet's content column, whose path carries no `gap-3` ancestor — so the " +
+			"step failed there (every find cell, both gap properties, on this slice's own " +
+			"capture) while the app-wide sweep it waits for is unchanged. An element whose " +
+			"class list IS `gap-1.5` is the primitive's wrapper wherever it renders; the " +
+			"value-and-properties coupling below is the detector that still fails a " +
+			"retargeted class.",
 	},
 	{
 		/* THE PATH IS THE FAMILY, NOT ONE VARIANT'S HASH. Two pressable variants render

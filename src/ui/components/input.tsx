@@ -1,3 +1,4 @@
+import { useRef } from "react";
 import { Text, TextInput, type TextInputProps, View } from "react-native";
 
 import { ROLE, state } from "@/ui/a11y";
@@ -34,6 +35,11 @@ export type InputProps = {
 	 *  capitalisation — a capitalised hostname is a different string. */
 	autoCapitalize?: TextInputProps["autoCapitalize"];
 	autoFocus?: boolean;
+	/** A handle to the platform field, for the one caller that must FOCUS it —
+	 *  the find sheet, which puts the caret in the box the moment it opens (the
+	 *  `Textarea`'s `fieldRef`, one control over). Optional: every other caller
+	 *  leaves it out and the internal ref is used as before. */
+	fieldRef?: React.RefObject<TextInput | null>;
 	onSubmitEditing?: () => void;
 	returnKeyType?: TextInputProps["returnKeyType"];
 	testID: string;
@@ -49,10 +55,13 @@ export const Input = ({
 	secureTextEntry,
 	autoFocus,
 	autoCapitalize,
+	fieldRef,
 	onSubmitEditing,
 	returnKeyType,
 	testID,
 }: InputProps) => {
+	const inputRef = useRef<TextInput | null>(null);
+	const resolvedRef = fieldRef ?? inputRef;
 	const fieldState: FieldState = disabled
 		? "disabled"
 		: invalid
@@ -69,6 +78,7 @@ export const Input = ({
 			 * which disappears the moment they type. */}
 			<Text className="text-body-sm text-ink-muted">{label}</Text>
 			<TextInput
+				ref={resolvedRef}
 				className={fieldClasses(fieldState)}
 				/* The platform floor, measured as BOX height — 48 wherever `Platform.OS`
 				 *  is not iOS, which includes the web/audit profile. `fieldClasses`

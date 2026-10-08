@@ -810,3 +810,82 @@ describe("U-42 — spacing on the token scale", () => {
 		expect(rows[0]?.verdict).toBe("FAIL"); // 6 is not a step of THIS scale either
 	});
 });
+
+describe("U-06 — an overrunning run inside a single-line ellipsis clip", () => {
+	/** The find sheet's measured shape: a matched inline run keeps its full
+	 *  layout box (330 on a 320 viewport) while its ancestor's `text-overflow:
+	 *  ellipsis` + `white-space: nowrap` draws everything inside the box. */
+	const runNode = () =>
+		node({
+			index: 9,
+			path: "div.truncator>div.text>span.text-ink",
+			ancestors: [7],
+			rect: { x: 0, y: 0, w: 330, h: 17, right: 330, bottom: 17 },
+			visibleRect: { x: 0, y: 0, w: 320, h: 17, right: 320, bottom: 17 },
+			ownText: "retry",
+		});
+	const truncator = (over: Partial<AuditNode> = {}) =>
+		node({
+			index: 7,
+			path: "div.truncator",
+			rect: { x: 0, y: 0, w: 320, h: 17, right: 320, bottom: 17 },
+			visibleRect: { x: 0, y: 0, w: 320, h: 17, right: 320, bottom: 17 },
+			...over,
+		});
+
+	it("records the pair as an EXCEPTION naming the clipping ancestor, never a FAIL", () => {
+		const rows = run(
+			"U-06",
+			state({
+				nodes: [
+					truncator({ textOverflow: "ellipsis", whiteSpace: "nowrap" }),
+					runNode(),
+				],
+			}),
+		);
+		expect(rows.map((r) => r.verdict)).toEqual(["EXCEPTION"]);
+		expect(rows[0]?.detail).toContain("div.truncator");
+		expect(rows[0]?.detail).toContain("single-line ellipsis");
+	});
+
+	it("still fails the same overrun when no ancestor carries the idiom", () => {
+		const rows = run("U-06", state({ nodes: [truncator(), runNode()] }));
+		expect(rows.map((r) => r.verdict)).toEqual(["FAIL"]);
+	});
+
+	it("does not accept a multi-line clamp's `ellipsis` (white-space stays normal)", () => {
+		const rows = run(
+			"U-06",
+			state({
+				nodes: [
+					truncator({ textOverflow: "ellipsis", whiteSpace: "normal" }),
+					runNode(),
+				],
+			}),
+		);
+		expect(rows.map((r) => r.verdict)).toEqual(["FAIL"]);
+	});
+
+	it("keeps both allowance branches as named EXCEPTIONs", () => {
+		const code = node({
+			index: 2,
+			path: "span.code",
+			rect: { x: 0, y: 40, w: 400, h: 17, right: 400, bottom: 57 },
+			visibleRect: { x: 0, y: 40, w: 400, h: 17, right: 400, bottom: 57 },
+			scrollsX: true,
+		});
+		const rows = run(
+			"U-06",
+			state({
+				nodes: [
+					truncator({ textOverflow: "ellipsis", whiteSpace: "nowrap" }),
+					runNode(),
+					code,
+				],
+			}),
+		);
+		expect(rows.map((r) => r.verdict)).toEqual(["EXCEPTION", "EXCEPTION"]);
+		expect(rows[0]?.detail).toContain("single-line ellipsis");
+		expect(rows[1]?.detail).toContain("overflow-x: auto|scroll");
+	});
+});

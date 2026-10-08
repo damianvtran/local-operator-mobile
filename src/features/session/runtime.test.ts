@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { loadAttachments } from "@/features/session/runtime";
+import type { TranscriptEntry } from "@/contracts";
+import { loadAttachments, olderThanLoaded } from "@/features/session/runtime";
 import {
 	type RelayEndpoints,
 	type RelayResponseFacts,
@@ -85,5 +86,84 @@ describe("loadAttachments tells a gone attachment from an unreachable host", () 
 		await expect(
 			loadAttachments(imageRejects(offline), "s", "e", 0),
 		).rejects.toBe(offline);
+	});
+});
+
+describe("olderThanLoaded", () => {
+	/**
+	 * The find sheet's caveat gate: "older messages aren't loaded here" may only
+	 * be said when the page is incomplete AND nothing held extends past it. The
+	 * cases are the wire's own shapes — both the page and the projection are
+	 * contiguous tails, so the page's oldest row is either absent from the held
+	 * rows, at their head, or somewhere down their middle.
+	 */
+	const row = (id: string): TranscriptEntry => ({
+		id,
+		kind: "user",
+		text: "",
+		tool_call_id: "",
+		tool_name: "",
+		tool_state: "done",
+		summary: "",
+		intent: "",
+		diff_added: 0,
+		diff_removed: 0,
+		elapsed_s: 0,
+		error: "",
+		details: {},
+		images: [],
+		final: true,
+		text_complete: true,
+	});
+
+	it("claims nothing without a page fact, or when the page is the whole story", () => {
+		expect(
+			olderThanLoaded({
+				hasMore: false,
+				pageOldestId: "a",
+				entries: [row("a")],
+			}),
+		).toBe(false);
+		expect(
+			olderThanLoaded({
+				hasMore: true,
+				pageOldestId: null,
+				entries: [row("a")],
+			}),
+		).toBe(false);
+	});
+
+	it("claims when the page's oldest row is the oldest thing held — or is not held at all", () => {
+		// The history-only shape (a reopened conversation): entries ARE the page,
+		// so its oldest row heads them and there is nothing older on the device.
+		expect(
+			olderThanLoaded({
+				hasMore: true,
+				pageOldestId: "p1",
+				entries: [row("p1"), row("p2")],
+			}),
+		).toBe(true);
+		// A projection tail shorter than the page: the page's oldest row never
+		// made it to the device, so rows older than it certainly did not.
+		expect(
+			olderThanLoaded({
+				hasMore: true,
+				pageOldestId: "p1",
+				entries: [row("p40"), row("p41")],
+			}),
+		).toBe(true);
+	});
+
+	it("stays quiet when the held rows already reach past the page — the claim would be false", () => {
+		// The capture mock's shape: the projection serves the whole conversation,
+		// so rows older than the page's oldest sit in `entries` and the caveat
+		// would describe rows the reader can search.
+		expect(
+			olderThanLoaded({
+				hasMore: true,
+				pageOldestId: "p10",
+				entries: [row("p1"), row("p5"), row("p10"), row("p11")],
+			}),
+		).toBe(false);
 	});
 });

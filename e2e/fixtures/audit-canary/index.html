@@ -471,6 +471,25 @@
 	<div id="good-width" style="max-width:100%;height:20px;background:var(--surface);border:1px solid var(--border)"></div>
 </div>
 
+<!-- U-06: the single-line ellipsis clip. The inline run keeps its full layout
+     box past the viewport (the clipped tail); the ancestor draws it inside, so
+     the rule records the pair as an EXCEPTION naming the clipper — never a
+     FAIL. #too-wide above is the shape that must still fail, and the audit's
+     own --blind self-test keeps this branch from swallowing it. The wrapper is
+     `.bad` for the reason `#inset-clipped`'s is: a `data-not-defect` shape is
+     asserted against the DEFECTS page's rows, so the panel has to be visible
+     there (a `.good` panel renders only on the clean page, where the assertion
+     never looks — measured: the fixture passed its own presence check and the
+     row simply did not exist). -->
+<div class="bad panel">
+	<h2>U-06 ellipsis clip</h2>
+	<div id="ellipsis-clip" data-not-defect="U-06" data-not-defect-reason="ellipsis-clip" style="max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+		A truncated single line whose matched
+		<span id="ellipsis-run" style="text-decoration:underline">run continues far enough past the right edge that its own layout box overruns the viewport while the ancestor clips the drawing</span>
+		tail.
+	</div>
+</div>
+
 <!-- U-07: text clipped by a fixed height. -->
 <div class="bad panel">
 	<h2>U-07 clipped text</h2>

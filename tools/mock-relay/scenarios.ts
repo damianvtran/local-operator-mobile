@@ -1200,6 +1200,17 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 			"S5/populated-long",
 			"path:/session/{sessionId}?lo-scroll=top/condensed",
 			"path:/session/{sessionId}?lo-scroll=top&lo-expand=tc-conv-00-user/expanded",
+			/* The in-conversation find, on the same 520-row conversation — four
+			 *  states, each reached by pressing the app's own controls (declared in
+			 *  `CELL_OPENERS`: the header lever, typing into the field, one result
+			 *  press). `find-results` is the settled answer, `find-related` the soft
+			 *  tier (a typo query: "ledgr"), `find-empty` a settled miss, and
+			 *  `find-hit` a landing — the sheet closed, the transcript scrolled to
+			 *  the hit inside a CONDENSED turn (the expand-first walk), the bar up. */
+			"S5/find-results",
+			"S5/find-related",
+			"S5/find-empty",
+			"S5/find-hit",
 		],
 		() => {
 			const projection = projectionFrom(everyKind, {
