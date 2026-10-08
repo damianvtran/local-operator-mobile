@@ -29,11 +29,13 @@
  *      coming back. Kept by conversation id, in memory, so a
  *      fresh app start may open it again. A genuinely NEW ask
  *      does not force it open; the bar covers that.
- *      REFINED (round 1, U4): the dismissal is FORGOTTEN once
- *      the conversation's queue EMPTIES - every ask answered,
- *      declined, withdrawn or expired - so a LATER batch gets
- *      the same discoverability as the first. Until then it
- *      holds, across re-renders and switches.                 `AsksOpenLedger`, the latch
+ *      REFINED (round 1 U4, final wording round 2): a dismissal
+ *      records the ASK IDS waved off (the pending set at close
+ *      time) and is FORGOTTEN once NONE of those ids is still
+ *      outstanding - answered, declined, withdrawn or expired -
+ *      so a LATER batch gets the same discoverability as the
+ *      first. While any waved-off ask remains it holds, across
+ *      re-renders and switches.                              `AsksOpenLedger`, the latch
  *   5. Never steals focus from a composer in use, never traps
  *      (the sheet keeps its unconditional Close — `Sheet` is
  *      untouched), and never fires on an UNRESOLVED queue: a
@@ -201,6 +203,14 @@ export function readQueue(entry: QueueEntry, openedAtMs: number): QueueReading {
 	return projection.asks_open === 0 ? "empty" : "unresolved";
 }
 
+/** The ids a frame lists as outstanding - the set a dismissal is reconciled
+ *  against (`AsksOpenLedger.reconcile`) and the set a close records
+ *  (`closed.pending`). The same filter the bar draws from, so "outstanding" means
+ *  one thing on every path. */
+export const outstandingAskIds = (
+	rows: PendingAsk[] | undefined | null,
+): Set<string> => new Set(outstandingAsks(rows).map((row) => row.ask_id));
+
 /**
  * Whether one ask existed by `cutoff` (epoch ms, the computer's clock).
  *
@@ -276,29 +286,58 @@ export const readerEngaged = (engagement: Engagement): boolean =>
  */
 export interface AsksOpenLedger {
 	isDismissed(sessionId: string): boolean;
-	dismiss(sessionId: string): void;
 	/**
-	 * Drop a conversation's dismissal: its queue EMPTIED (rule 4's refinement,
-	 * round 1 U4).
+	 * Record a dismissal: the reader waved off THESE asks (the pending set at the
+	 * moment they closed). An empty set records nothing - nothing was refused.
 	 *
-	 * WHY IT EXISTS. A dismissal means "not THESE questions", and the module's own
-	 * rationale for remembering it is that the reader has already seen them. Once
-	 * every one of them is resolved there is nothing left that the reflex refused,
-	 * and keeping the entry for the life of the app would make a conversation quiet
-	 * for good after one swipe - a later batch would meet only the bar, against the
-	 * discoverability this feature is for. While ANY ask remains the entry holds
-	 * (same batch: never re-nagged); this is the only way it leaves.
+	 * WHY IDS AND NOT A BARE FLAG (round 2, U10). A dismissal means "not THESE
+	 * questions". Keyed by conversation alone, the only way to tell the reader's
+	 * questions from a later batch was to WATCH the queue go empty, and a batch
+	 * that emptied and refilled while the phone was elsewhere left the entry in
+	 * place - the conversation stayed quiet for good after one swipe. With the ids
+	 * recorded the question answers itself from any fresh frame (see `reconcile`).
+	 * The contract is the shared one: the TUI and the web lanes record the same
+	 * thing, so the same words mean the same behaviour on every surface.
+	 */
+	dismiss(sessionId: string, askIds: Iterable<string>): void;
+	/**
+	 * Reconcile a dismissal with a RESOLVED reading of the queue: forget it once
+	 * NONE of the dismissed ids is still outstanding (`outstanding` is the ids the
+	 * frame lists as open or timed-out-and-answerable). While any waved-off ask
+	 * remains the entry holds - the same batch is never re-nagged, however the
+	 * queue around it changes. Subsumes the earlier "forget when seen empty" rule:
+	 * an empty queue has none of them outstanding.
+	 */
+	reconcile(sessionId: string, outstanding: ReadonlySet<string>): void;
+	/**
+	 * Drop a conversation's dismissal outright: the reader closed with nothing
+	 * left to ask, or the frame is a resolved tally of zero. Nothing to compare ids
+	 * against, and nothing could still be outstanding.
 	 */
 	forget(sessionId: string): void;
 }
 
 export const createAsksOpenLedger = (): AsksOpenLedger => {
-	const dismissed = new Set<string>();
+	const dismissed = new Map<string, Set<string>>();
 	return {
 		isDismissed: (sessionId) => dismissed.has(sessionId),
 		// An empty id is the screen's "no route param" fallback, not a conversation.
-		dismiss: (sessionId) => {
-			if (sessionId !== "") dismissed.add(sessionId);
+		dismiss: (sessionId, askIds) => {
+			if (sessionId === "") return;
+			const ids = new Set(askIds);
+			if (ids.size === 0) return;
+			// MERGED, not replaced: a second close in the same sitting (hand-opened
+			// after a dismissal) waves off what it saw too, and the first batch must
+			// not become re-openable because the second named different ids.
+			const held = dismissed.get(sessionId);
+			if (held === undefined) dismissed.set(sessionId, ids);
+			else for (const id of ids) held.add(id);
+		},
+		reconcile: (sessionId, outstanding) => {
+			const held = dismissed.get(sessionId);
+			if (held === undefined) return;
+			for (const id of held) if (outstanding.has(id)) return;
+			dismissed.delete(sessionId);
 		},
 		forget: (sessionId) => {
 			dismissed.delete(sessionId);
@@ -453,11 +492,12 @@ export interface AsksAutoOpen {
 	 * platform's back gesture. The policy cannot tell those apart and must not
 	 * (rule 5: the reader can always close, by any door).
 	 *
-	 * `asksRemain` is whether THIS conversation still has outstanding asks: only
-	 * then was the close a refusal worth remembering. Closing a sheet whose
-	 * questions are all answered dismisses nothing.
+	 * `pending` is the ask ids THIS conversation still has outstanding at the
+	 * moment of the close: those are the asks waved off, and the dismissal is
+	 * remembered against exactly them (`AsksOpenLedger.dismiss`). Closing a sheet
+	 * whose questions are all answered (`pending` empty) dismisses nothing.
 	 */
-	closed(input: { sessionId: string; asksRemain: boolean }): void;
+	closed(input: { sessionId: string; pending: readonly string[] }): void;
 	/**
 	 * The reader left the sheet FOR another conversation, through the "Open
 	 * conversation" control on one of its rows.
@@ -466,10 +506,12 @@ export interface AsksAutoOpen {
 	 * raise the very queue the reader just walked out of, over the conversation
 	 * they chose to read - the trap rule 5 forbids. They have already been shown
 	 * its asks (the row they pressed is one of them), so there is nothing left to
-	 * discover; it is recorded like a refusal, keyed to the DESTINATION. Nothing is
-	 * recorded for the conversation they left: navigating away refused nothing.
+	 * discover; it is recorded like a refusal, keyed to the DESTINATION and to the
+	 * asks the sheet listed for it (`pending`: the ids the reader was just shown).
+	 * Nothing is recorded for the conversation they left: navigating away refused
+	 * nothing.
 	 */
-	navigated(input: { to: string }): void;
+	navigated(input: { to: string; pending: readonly string[] }): void;
 	/**
 	 * Who opened the sheet that is open now: the policy (`"policy"`, an auto-open)
 	 * or the reader through the bar (`"reader"`), or `null` when none is open.
@@ -485,10 +527,23 @@ export interface AsksAutoOpen {
 	openOrigin(): OpenOrigin | null;
 	/**
 	 * The first read of the sheet's own list FAILED while the sheet is up for this
-	 * conversation. When it was opened by the policy, close it back to the bar:
-	 * an unprompted modal whose whole body is an error line (and no way to retry
-	 * but to close and reopen) is worse than the one-line bar it covered. Returns
-	 * whether it closed.
+	 * conversation. When it was opened by the policy AND NOTHING IS DRAWN
+	 * (`drawn === 0`: no seed rows), close it back to the bar: an unprompted modal
+	 * whose whole body is an error line (and no way to retry but to close and
+	 * reopen) is worse than the one-line bar it covered. Returns whether it closed.
+	 *
+	 * ROWS DRAWN KEEP THE SHEET (round 2, U9/M1). The policy only opens over rows
+	 * the projection frame already holds, and the sheet draws those from its first
+	 * frame, so the form is interactive for as long as the opening read takes - up
+	 * to the 8 s read bound. Closing then took the sheet from under a reader who was
+	 * mid-answer, with their selection (measured: a 4 s failing read, an option
+	 * picked at ~2 s, the sheet gone at ~5 s), and on a fast failure it flashed
+	 * shut ~24 ms after opening. The failure only concerns the AGGREGATE list (other
+	 * conversations' asks); the drawn rows are the session's own and still
+	 * answerable, so the error line goes beneath them instead. This option over
+	 * "skip the close once the reader has interacted" because it needs no
+	 * interaction tracking across the nested answer form, and it removes the flash
+	 * too (that option would still close a form nobody had touched yet).
 	 *
 	 * NOTHING IS REMEMBERED. The reader refused nothing - the app failed - so the
 	 * ledger is untouched, and the view's decision stays spent (it already was: the
@@ -497,7 +552,7 @@ export interface AsksAutoOpen {
 	 * for it, the error line is the honest answer, and closing it under them would
 	 * hide the very thing they pressed for.
 	 */
-	readFailed(input: { sessionId: string }): boolean;
+	readFailed(input: { sessionId: string; drawn: number }): boolean;
 }
 
 /** The door a sheet was opened through (see `AsksAutoOpen.openOrigin`). */
@@ -530,6 +585,68 @@ export const expandTargetFor = (
 	const head = dockAsk(asks);
 	return head === null || head.ask_id === "" ? null : head.ask_id;
 };
+
+/**
+ * The sheet's expansion choice, as a pure reducer (round 2, Q5/M2).
+ *
+ * `undefined` = the reader has not chosen in THIS opening, so the opening's own
+ * pre-expanded ask (`initialOpenAsk`) applies from the first render; a string or
+ * `null` is the reader's (or the walk's) own pick.
+ *
+ * WHY `closed` EXISTS. The sheet component stays mounted while it is hidden, so a
+ * choice left over from one opening was still in state when the next began: a
+ * policy open (which writes the head ask in) followed by a bar press painted one
+ * stale EXPANDED frame (292 -> 86 px, measured) before the opening effect
+ * collapsed it. Forgetting the choice whenever the sheet goes away makes the next
+ * opening start from `initialOpenAsk` alone - which is `null` for a bar press -
+ * on its very first render. Pure and exported because the component cannot be
+ * rendered in this repository's Node test environment.
+ */
+export type ExpansionChoice = string | null | undefined;
+export type ExpansionAction =
+	| { type: "opening"; initial: string | null }
+	| { type: "pick"; ask: string | null }
+	| { type: "toggle"; ask: string }
+	| { type: "closed" };
+
+export const reduceExpansion = (
+	choice: ExpansionChoice,
+	action: ExpansionAction,
+): ExpansionChoice => {
+	switch (action.type) {
+		case "opening":
+			return action.initial;
+		case "pick":
+			return action.ask;
+		case "toggle":
+			return choice === action.ask ? null : action.ask;
+		case "closed":
+			return undefined;
+	}
+};
+
+/** The ask drawn expanded: the reader's choice, else the opening's own. */
+export const shownExpansion = (
+	choice: ExpansionChoice,
+	initial: string | null,
+): string | null => (choice === undefined ? initial : choice);
+
+/**
+ * The rows the sheet draws: the frame's own SEED until the aggregate has been
+ * read SUCCESSFULLY, then the aggregate.
+ *
+ * It is the first SUCCESS, not the first read: a failed opening read leaves the
+ * aggregate empty, and swapping the seed for that empty list would make the very
+ * question a reader is answering vanish when the error line appears (round 2, U9
+ * - the failure keeps the sheet up, so the rows it is up for must stay). A seed
+ * is passed for a policy open only, so a reader-opened sheet is unaffected.
+ */
+export const drawnRows = (
+	seed: readonly PendingAsk[] | null,
+	aggregate: readonly PendingAsk[],
+	aggregateRead: boolean,
+): readonly PendingAsk[] =>
+	!aggregateRead && seed !== null ? seed : aggregate;
 
 /**
  * `now` is the clock the view's start is read on, in epoch milliseconds — the unit
@@ -589,20 +706,27 @@ export const createAsksAutoOpen = (
 		observe({ sessionId, entry, draftKnown, screenFocused, engagement }) {
 			if (sessionId === "") return false;
 			enter(sessionId);
-			// A dismissal is forgotten the moment the queue is seen EMPTY (rule 4,
-			// refined by UX round 1, U4). It runs BEFORE the decided latch on purpose:
-			// the usual shape is a view that has already decided (the reader closed the
-			// sheet) and then watches the asks get answered, and that is exactly the
-			// frame that must clear the entry. The guard is one Set lookup, so a
-			// streaming session repainting many times a second still pays only that
-			// while nothing is dismissed. Only a RESOLVED, fresh, empty reading counts:
-			// a leftover frame from the last visit, or a tally with no rows, is not
-			// "the queue emptied" (`readQueue` -> `empty` is the sole way in).
-			if (
-				ledger.isDismissed(sessionId) &&
-				readQueue(entry, openedAt) === "empty"
-			) {
-				ledger.forget(sessionId);
+			// A dismissal is reconciled with every RESOLVED frame (rule 4, round 2 U10):
+			// forgotten once none of the asks the reader waved off is still
+			// outstanding. It runs BEFORE the decided latch on purpose: the usual shape
+			// is a view that has already decided (the reader closed the sheet) and then
+			// watches the asks get answered, and that is exactly the frame that must
+			// clear the entry - and a fresh view that meets only a LATER batch (the
+			// waved-off asks answered while the phone was elsewhere) must find the
+			// entry already gone when `decideAutoOpen` reads it. The guard is one Map
+			// lookup, so a streaming session repainting many times a second still pays
+			// only that while nothing is dismissed. Only a fresh frame counts: a
+			// leftover from the last visit says nothing about which asks are still
+			// outstanding. A frame with rows is compared id by id; a tally of zero with
+			// no rows is an empty queue (`readQueue` -> `empty`); any other bare tally
+			// cannot name ids, so it decides nothing.
+			if (ledger.isDismissed(sessionId) && isFreshFrame(entry)) {
+				const rows = entry.projection?.asks;
+				if (Array.isArray(rows)) {
+					ledger.reconcile(sessionId, outstandingAskIds(rows));
+				} else if (readQueue(entry, openedAt) === "empty") {
+					ledger.forget(sessionId);
+				}
 			}
 			// Once a view has decided, every later frame costs one boolean: frames
 			// land on every state change, and a streaming session repaints many
@@ -631,13 +755,13 @@ export const createAsksAutoOpen = (
 			decided = true;
 			setOpenFor(sessionId, "reader");
 		},
-		navigated({ to }) {
-			ledger.dismiss(to);
+		navigated({ to, pending }) {
+			ledger.dismiss(to, pending);
 			// The sheet the reader is leaving is hidden; the destination is a screen
 			// of its own, with its own controller.
 			setOpenFor(null);
 		},
-		closed({ sessionId, asksRemain }) {
+		closed({ sessionId, pending }) {
 			if (sessionId === "") return;
 			enter(sessionId);
 			// A reader who has closed the sheet has seen the queue: whatever the
@@ -645,17 +769,23 @@ export const createAsksAutoOpen = (
 			decided = true;
 			// A close with the queue already clear refused nothing - and if an EARLIER
 			// close left an entry (the reader dismissed, then opened the sheet by hand,
-			// answered the rest and closed), the queue has emptied, so it is forgotten
-			// here as `observe` would on the next frame, without waiting for one.
-			if (asksRemain) ledger.dismiss(sessionId);
+			// answered the rest and closed), nothing it named can still be outstanding,
+			// so it is forgotten here as `observe` would on the next frame, without
+			// waiting for one.
+			if (pending.length > 0) ledger.dismiss(sessionId, pending);
 			else ledger.forget(sessionId);
 			// After `enter`, `openForId` is this conversation's or null, so this only
 			// ever shuts the sheet the reader just closed.
 			if (openForId === sessionId) setOpenFor(null);
 		},
 		openOrigin: () => origin,
-		readFailed({ sessionId }) {
-			if (sessionId === "" || openForId !== sessionId || origin !== "policy") {
+		readFailed({ sessionId, drawn }) {
+			if (
+				sessionId === "" ||
+				openForId !== sessionId ||
+				origin !== "policy" ||
+				drawn > 0
+			) {
 				return false;
 			}
 			setOpenFor(null);

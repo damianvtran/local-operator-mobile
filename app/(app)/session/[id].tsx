@@ -596,8 +596,8 @@ export default function Session() {
 				client={runtime.source.endpoints}
 				currentSessionId={sessionId}
 				sessions={listSessions}
-				onOpenConversation={(target) => {
-					asksSheet.leave(target);
+				onOpenConversation={(target, askIds) => {
+					asksSheet.leave(target, askIds);
 					router.push(`/session/${target}`);
 				}}
 			/>

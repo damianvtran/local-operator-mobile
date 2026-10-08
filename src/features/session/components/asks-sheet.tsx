@@ -1,6 +1,13 @@
 // biome-ignore-all lint/suspicious/noArrayIndexKey: the settled record's question list is regenerated whole on every render — a parsed detail, not an editable collection — so position IS the identity, the case React's own key docs exempt. A content-derived key would be recomputed every frame to produce the same value.
 import { ArrowUpRight } from "lucide-react-native";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+	useCallback,
+	useEffect,
+	useMemo,
+	useReducer,
+	useRef,
+	useState,
+} from "react";
 import { Pressable, Text, TextInput, View } from "react-native";
 
 import type { AskQuestion, PendingAsk, SessionSummary } from "@/contracts";
@@ -19,6 +26,12 @@ import {
 	refusalText,
 	unansweredQuestions,
 } from "@/features/session/asks";
+import {
+	drawnRows,
+	type ExpansionChoice,
+	reduceExpansion,
+	shownExpansion,
+} from "@/features/session/asks-open-policy";
 import type { RelayEndpoints } from "@/relay";
 import {
 	askFieldId,
@@ -104,8 +117,11 @@ export type AsksSheetProps = {
 	 *  labelled with a conversation name (the reader is already there). */
 	currentSessionId?: string;
 	/** Navigate to a row's conversation (and close). Absent on screens that
-	 *  cannot navigate — the row then carries no such control. */
-	onOpenConversation?: (sessionId: string) => void;
+	 *  cannot navigate — the row then carries no such control. `askIds` are the
+	 *  destination's outstanding asks this sheet is listing, i.e. the ones the
+	 *  reader was just shown: the destination's dismissal is recorded against
+	 *  exactly them (see `AsksOpenLedger.dismiss`). */
+	onOpenConversation?: (sessionId: string, askIds: string[]) => void;
 	/** The list frame's rows, for conversation names `GET /api/asks` does not
 	 *  carry. Optional: without it a foreign row names its session id. */
 	sessions?: readonly SessionSummary[];
@@ -125,10 +141,13 @@ export type AsksSheetProps = {
 	 *  only, which need neither. Passed for a policy open only. */
 	seedRows?: readonly PendingAsk[] | null;
 	/** The sheet's FIRST read after opening failed. The screen decides what to do
-	 *  (an auto-opened sheet closes back to the bar); only the opening read
-	 *  reports, so a backstop or population re-read failing later - while the
-	 *  reader may be mid-answer - can never reach it. */
-	onReadFailed?: () => void;
+	 *  (an auto-opened sheet with NOTHING drawn closes back to the bar; one that
+	 *  is drawing the seed stays, with the error line under the rows - round 2,
+	 *  U9). `drawn` is how many rows the sheet is drawing, which is what that
+	 *  decision turns on. Only the opening read reports, so a backstop or
+	 *  population re-read failing later - while the reader may be mid-answer - can
+	 *  never reach it. */
+	onReadFailed?: (info: { drawn: number }) => void;
 };
 
 /** One question's control: a picker of consequence-carrying options, or a
@@ -472,6 +491,11 @@ export const AsksSheet = ({
 }: AsksSheetProps) => {
 	const [rows, setRows] = useState<PendingAsk[]>([]);
 	const [loaded, setLoaded] = useState(false);
+	/** Whether the AGGREGATE has been read successfully at least once. Not
+	 *  `loaded` (which a failed read also sets): the seed is replaced by the
+	 *  aggregate only when there is an aggregate to replace it with, or a failed
+	 *  opening read would empty the very form the reader is answering. */
+	const [aggregateRead, setAggregateRead] = useState(false);
 	/** The read's own bound statement (`asks_truncated`): true only when the wire
 	 *  dropped rows, so a prefix is never drawn beside a full count. */
 	const [truncated, setTruncated] = useState(false);
@@ -481,10 +505,11 @@ export const AsksSheet = ({
 	 *  (`initialOpenAsk`) applies from the very first render. Writing it in the
 	 *  opening effect alone would paint one collapsed frame first, and that frame is
 	 *  the whole defect (design D1). */
-	const [openAskChoice, setOpenAsk] = useState<string | null | undefined>(
-		undefined,
+	const [openAskChoice, dispatchExpansion] = useReducer(
+		reduceExpansion,
+		undefined as ExpansionChoice,
 	);
-	const openAsk = openAskChoice === undefined ? initialOpenAsk : openAskChoice;
+	const openAsk = shownExpansion(openAskChoice, initialOpenAsk);
 	const [pendingAction, setPendingAction] = useState<PendingAction>(null);
 	const [rowError, setRowError] = useState<{
 		askId: string;
@@ -520,6 +545,7 @@ export const AsksSheet = ({
 		try {
 			const answer = await client.asks(signal);
 			setRows(Array.isArray(answer.asks) ? answer.asks : []);
+			setAggregateRead(true);
 			setTruncated(answer.asks_truncated === true);
 			setError("");
 			return true;
@@ -550,18 +576,25 @@ export const AsksSheet = ({
 	useEffect(() => {
 		if (!visible) {
 			wasVisible.current = false;
+			/* Forget the expansion the last opening left behind. This component
+			 *  stays mounted while hidden, so without it a policy open (which put the
+			 *  head ask here) followed by a bar press painted one stale EXPANDED frame
+			 *  before the opening effect collapsed it (Q5: 292 -> 86 px). The next
+			 *  opening then starts from `initialOpenAsk` alone, on its first render. */
+			dispatchExpansion({ type: "closed" });
 			return;
 		}
 		const opening = !wasVisible.current;
 		wasVisible.current = true;
 		if (opening) {
-			setOpenAsk(initialOpenAsk);
+			dispatchExpansion({ type: "opening", initial: initialOpenAsk });
 			setRowError(null);
 		}
 		void load().then((ok) => {
 			/* Only the read that OPENED the sheet reports its failure (see
-			 *  `onReadFailed`). */
-			if (opening && !ok) onReadFailed?.();
+			 *  `onReadFailed`), with how many rows it is drawing: a seeded sheet is
+			 *  already interactive, so the screen must not close it under the reader. */
+			if (opening && !ok) onReadFailed?.({ drawn: seedRows?.length ?? 0 });
 		});
 	}, [visible, population, load]);
 
@@ -594,10 +627,14 @@ export const AsksSheet = ({
 	}, [sessions]);
 
 	/* Until the first aggregate read has landed, a policy open draws the frame's own
-	 *  rows (see `seedRows`); after it, only the aggregate. `loaded` is per mount of
-	 *  this component and a policy open is a view's FIRST open, so it is `false`
-	 *  exactly when the seed is wanted. */
-	const shownRows = !loaded && seedRows !== null ? [...seedRows] : rows;
+	 *  rows (see `seedRows`); after it, only the aggregate (`drawnRows`: the first
+	 *  SUCCESSFUL read, so a failed one keeps the rows the reader is answering).
+	 *  `aggregateRead` is per mount of this component and a policy open is a view's
+	 *  FIRST open, so it is `false` exactly when the seed is wanted. */
+	const shownRows = useMemo(
+		() => [...drawnRows(seedRows, rows, aggregateRead)],
+		[seedRows, rows, aggregateRead],
+	);
 	/* The head first, then the wire's own order — the order the bar names. */
 	const listed = useMemo(() => orderedForDisplay(shownRows), [shownRows]);
 	/* QUESTIONS, the unit the bar counts (E2 spec §1.3, the manager's ruling):
@@ -657,12 +694,12 @@ export const AsksSheet = ({
 				/* Advance the walk from the list as it stood: the re-read below
 				 *  refreshes the truth, but the reader's next ask is already
 				 *  visible here. */
-				const next = orderedForDisplay(rows).find(
+				const next = orderedForDisplay(shownRows).find(
 					(candidate) =>
 						candidate.ask_id !== row.ask_id &&
 						isAnswerable(String(candidate.status || "open")),
 				);
-				setOpenAsk(next ? next.ask_id : null);
+				dispatchExpansion({ type: "pick", ask: next ? next.ask_id : null });
 				await load();
 			} catch (failure) {
 				setRowError({ askId: row.ask_id, message: refusalText(failure) });
@@ -670,7 +707,7 @@ export const AsksSheet = ({
 				setPendingAction(null);
 			}
 		},
-		[client, currentSessionId, load, pendingAction, rows],
+		[client, currentSessionId, load, pendingAction, shownRows],
 	);
 
 	return (
@@ -700,14 +737,6 @@ export const AsksSheet = ({
 				{truncated ? (
 					<Text className="text-meta text-ink-dim">
 						Showing the newest questions — open a conversation to see the rest
-					</Text>
-				) : null}
-				{error !== "" ? (
-					<Text
-						className="text-body-sm text-danger"
-						testID={SURFACE.asksSheetError}
-					>
-						{error}
 					</Text>
 				) : null}
 				{/* The loading line is not decoration: without it the sheet paints
@@ -753,9 +782,7 @@ export const AsksSheet = ({
 								accessibilityLabel={stateLine.text}
 								accessibilityState={state({ expanded })}
 								onPress={() =>
-									setOpenAsk((current) =>
-										current === row.ask_id ? null : row.ask_id,
-									)
+									dispatchExpansion({ type: "toggle", ask: row.ask_id })
 								}
 								testID={askRowId(row.ask_id)}
 								style={{ minHeight: TOUCH_FLOOR }}
@@ -818,7 +845,20 @@ export const AsksSheet = ({
 											<IconButton
 												accessibilityLabel="Open conversation"
 												outlined
-												onPress={() => onOpenConversation(sessionId)}
+												onPress={() =>
+													onOpenConversation(
+														sessionId,
+														/* The destination's asks the reader is looking at
+														 *  now: what a dismissal there is recorded against. */
+														outstandingAsks(shownRows)
+															.filter(
+																(candidate) =>
+																	String(candidate.session_id || "") ===
+																	sessionId,
+															)
+															.map((candidate) => candidate.ask_id),
+													)
+												}
 												icon={({ color, size }) => (
 													<ArrowUpRight color={color} size={size} />
 												)}
@@ -849,6 +889,19 @@ export const AsksSheet = ({
 						</View>
 					);
 				})}
+				{/* The read's failure line sits BELOW the rows, not above them: a
+				 *  policy-opened sheet keeps its seeded rows when the opening read fails
+				 *  (round 2, U9), and a line that appeared ABOVE an answer form the reader
+				 *  is filling in would push it down mid-tap. With no rows there is nothing
+				 *  to push, so the position costs the empty case nothing. */}
+				{error !== "" ? (
+					<Text
+						className="text-body-sm text-danger"
+						testID={SURFACE.asksSheetError}
+					>
+						{error}
+					</Text>
+				) : null}
 			</View>
 		</Sheet>
 	);

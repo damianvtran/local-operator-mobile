@@ -8,6 +8,7 @@ import {
 	createAsksAutoOpen,
 	createAsksOpenLedger,
 	decideAutoOpen,
+	drawnRows,
 	type Engagement,
 	expandTargetFor,
 	isFreshFrame,
@@ -15,6 +16,8 @@ import {
 	type QueueEntry,
 	readerEngaged,
 	readQueue,
+	reduceExpansion,
+	shownExpansion,
 } from "@/features/session/asks-open-policy";
 
 /**
@@ -197,7 +200,7 @@ describe("state 2 — pending asks on open: opens once", () => {
 	it("does not re-open when the reader's own close is followed by a re-render", () => {
 		const view = mount();
 		expect(view.see(fresh(PENDING))).toBe(true);
-		view.controller.closed({ sessionId: SESSION, asksRemain: true });
+		view.controller.closed({ sessionId: SESSION, pending: ["a1"] });
 		expect(view.see(fresh(PENDING))).toBe(false);
 	});
 
@@ -232,7 +235,7 @@ describe("state 3 — all asks addressed on open: closed, and never re-opens", (
 	it("does not open when the queue empties and then refills in the same view", () => {
 		const view = mount();
 		expect(view.see(fresh(PENDING))).toBe(true);
-		view.controller.closed({ sessionId: SESSION, asksRemain: false });
+		view.controller.closed({ sessionId: SESSION, pending: [] });
 		expect(view.see(fresh({ asks: [], asks_open: 0 }))).toBe(false);
 		expect(
 			view.see(fresh({ asks: [ask({ ask_id: "a9" })], asks_open: 1 })),
@@ -242,7 +245,7 @@ describe("state 3 — all asks addressed on open: closed, and never re-opens", (
 	it("does not remember a close taken once the queue was clear", () => {
 		const view = mount();
 		view.see(fresh(PENDING));
-		view.controller.closed({ sessionId: SESSION, asksRemain: false });
+		view.controller.closed({ sessionId: SESSION, pending: [] });
 		expect(view.ledger.isDismissed(SESSION)).toBe(false);
 	});
 });
@@ -251,7 +254,7 @@ describe("state 4 — dismissed while pending: stays closed", () => {
 	it("stays closed on a re-render and on a queue refresh after the close", () => {
 		const view = mount();
 		expect(view.see(fresh(PENDING))).toBe(true);
-		view.controller.closed({ sessionId: SESSION, asksRemain: true });
+		view.controller.closed({ sessionId: SESSION, pending: ["a1"] });
 		expect(view.see(fresh(PENDING))).toBe(false);
 		// A refresh that changes the rows (an ask answered elsewhere, one added).
 		expect(
@@ -267,7 +270,7 @@ describe("state 4 — dismissed while pending: stays closed", () => {
 	it("stays closed after leaving the screen and coming back to the conversation", () => {
 		const first = mount();
 		first.see(fresh(PENDING));
-		first.controller.closed({ sessionId: SESSION, asksRemain: true });
+		first.controller.closed({ sessionId: SESSION, pending: ["a1"] });
 
 		// A new mount shares the app's ledger, and sees the previous visit's frame
 		// until the new connection seeds.
@@ -279,7 +282,7 @@ describe("state 4 — dismissed while pending: stays closed", () => {
 	it("stays closed after switching to another conversation and back", () => {
 		const first = mount();
 		first.see(fresh(PENDING));
-		first.controller.closed({ sessionId: SESSION, asksRemain: true });
+		first.controller.closed({ sessionId: SESSION, pending: ["a1"] });
 
 		// Another conversation is its own view, and opens.
 		const elsewhere = mount(first.ledger);
@@ -292,7 +295,7 @@ describe("state 4 — dismissed while pending: stays closed", () => {
 	it("is per conversation: dismissing one does not silence another", () => {
 		const view = mount();
 		view.see(fresh(PENDING));
-		view.controller.closed({ sessionId: SESSION, asksRemain: true });
+		view.controller.closed({ sessionId: SESSION, pending: ["a1"] });
 		expect(view.ledger.isDismissed(SESSION)).toBe(true);
 		expect(view.ledger.isDismissed(OTHER)).toBe(false);
 	});
@@ -300,7 +303,7 @@ describe("state 4 — dismissed while pending: stays closed", () => {
 	it("may open again after an app restart, because the ledger is memory only", () => {
 		const before = mount();
 		before.see(fresh(PENDING));
-		before.controller.closed({ sessionId: SESSION, asksRemain: true });
+		before.controller.closed({ sessionId: SESSION, pending: ["a1"] });
 
 		const afterRestart = mount(createAsksOpenLedger());
 		expect(afterRestart.see(fresh(PENDING))).toBe(true);
@@ -310,7 +313,7 @@ describe("state 4 — dismissed while pending: stays closed", () => {
 		// The reader opens the sheet from the bar the instant it renders — before
 		// the policy's own frame — and closes it. That close is a refusal too.
 		const view = mount();
-		view.controller.closed({ sessionId: SESSION, asksRemain: true });
+		view.controller.closed({ sessionId: SESSION, pending: ["a1"] });
 		expect(view.see(fresh(PENDING))).toBe(false);
 	});
 });
@@ -474,7 +477,7 @@ describe("leaving the sheet for another conversation", () => {
 	it("keeps the destination from re-raising the queue the reader just walked out of", () => {
 		const origin = mount();
 		origin.see(fresh(PENDING));
-		origin.controller.navigated({ to: OTHER });
+		origin.controller.navigated({ to: OTHER, pending: ["a1"] });
 
 		// The destination screen is a new mount of a different conversation, and
 		// shares only the app's ledger with the origin.
@@ -485,7 +488,7 @@ describe("leaving the sheet for another conversation", () => {
 	it("records nothing for the conversation that was left", () => {
 		const origin = mount();
 		origin.see(fresh(PENDING));
-		origin.controller.navigated({ to: OTHER });
+		origin.controller.navigated({ to: OTHER, pending: ["a1"] });
 		expect(origin.ledger.isDismissed(SESSION)).toBe(false);
 		expect(origin.ledger.isDismissed(OTHER)).toBe(true);
 	});
@@ -511,7 +514,7 @@ describe("the sheet's open state is keyed by conversation", () => {
 		// this today - the test pins that it would be safe if it did.
 		const view = mount();
 		expect(view.see(fresh(PENDING), { sessionId: SESSION })).toBe(true);
-		view.controller.closed({ sessionId: SESSION, asksRemain: true });
+		view.controller.closed({ sessionId: SESSION, pending: ["a1"] });
 		expect(view.controller.isOpenFor(SESSION)).toBe(false);
 
 		expect(view.see(fresh(PENDING), { sessionId: OTHER })).toBe(true);
@@ -534,7 +537,7 @@ describe("the sheet's open state is keyed by conversation", () => {
 		const a = mount(ledger);
 		const b = mount(ledger);
 		expect(a.see(fresh(PENDING), { sessionId: SESSION })).toBe(true);
-		a.controller.closed({ sessionId: SESSION, asksRemain: true });
+		a.controller.closed({ sessionId: SESSION, pending: ["a1"] });
 
 		expect(b.see(fresh(PENDING), { sessionId: OTHER })).toBe(true);
 		// B on top: A is mounted but not focused, and frames keep arriving for it.
@@ -592,7 +595,7 @@ describe("the sheet's open state is keyed by conversation", () => {
 	it("hides the sheet and dismisses the destination when the reader leaves for another conversation", () => {
 		const view = mount();
 		view.see(fresh(PENDING));
-		view.controller.navigated({ to: OTHER });
+		view.controller.navigated({ to: OTHER, pending: ["a1"] });
 		expect(view.controller.isOpenFor(SESSION)).toBe(false);
 		expect(view.controller.openFor()).toBeNull();
 		expect(view.ledger.isDismissed(OTHER)).toBe(true);
@@ -602,7 +605,7 @@ describe("the sheet's open state is keyed by conversation", () => {
 		const view = mount();
 		view.controller.opened({ sessionId: SESSION });
 		expect(view.controller.isOpenFor(SESSION)).toBe(true);
-		view.controller.closed({ sessionId: SESSION, asksRemain: true });
+		view.controller.closed({ sessionId: SESSION, pending: ["a1"] });
 		expect(view.controller.isOpenFor(SESSION)).toBe(false);
 	});
 
@@ -614,8 +617,8 @@ describe("the sheet's open state is keyed by conversation", () => {
 		);
 		view.see(fresh(PENDING)); // opens
 		view.see(fresh(PENDING)); // decided: nothing
-		view.controller.closed({ sessionId: SESSION, asksRemain: true }); // shuts
-		view.controller.closed({ sessionId: SESSION, asksRemain: true }); // already shut
+		view.controller.closed({ sessionId: SESSION, pending: ["a1"] }); // shuts
+		view.controller.closed({ sessionId: SESSION, pending: ["a1"] }); // already shut
 		off();
 		view.controller.opened({ sessionId: SESSION }); // unsubscribed: nothing
 		expect(seen).toEqual([SESSION, null]);
@@ -630,7 +633,7 @@ describe("the sheet's open state is keyed by conversation", () => {
 		});
 		view.controller.subscribe(() => calls.push("second"));
 		view.controller.opened({ sessionId: SESSION });
-		view.controller.closed({ sessionId: SESSION, asksRemain: false });
+		view.controller.closed({ sessionId: SESSION, pending: [] });
 		expect(calls).toEqual(["first", "second", "second"]);
 	});
 });
@@ -647,7 +650,7 @@ describe("the reader got to the door first", () => {
 		const view = mount();
 		view.controller.opened({ sessionId: SESSION });
 		expect(view.ledger.isDismissed(SESSION)).toBe(false);
-		view.controller.closed({ sessionId: SESSION, asksRemain: true });
+		view.controller.closed({ sessionId: SESSION, pending: ["a1"] });
 		expect(view.ledger.isDismissed(SESSION)).toBe(true);
 	});
 });
@@ -977,6 +980,10 @@ describe("U4 - a dismissal is forgotten once the queue empties", () => {
 		asks: [ask({ ask_id: "b2", created_at: BEFORE })],
 		asks_open: 1,
 	};
+	const TWO_PENDING = {
+		asks: [ask({ ask_id: "a1" }), ask({ ask_id: "a2" })],
+		asks_open: 2,
+	};
 
 	it("the exact sequence: dismiss with asks -> resolve all -> leave and return -> a new pending batch -> a fresh view auto-opens", () => {
 		const ledger = createAsksOpenLedger();
@@ -984,7 +991,7 @@ describe("U4 - a dismissal is forgotten once the queue empties", () => {
 		// Dismiss with an ask pending.
 		const first = mount(ledger);
 		expect(first.see(fresh(PENDING))).toBe(true);
-		first.controller.closed({ sessionId: SESSION, asksRemain: true });
+		first.controller.closed({ sessionId: SESSION, pending: ["a1"] });
 		expect(ledger.isDismissed(SESSION)).toBe(true);
 
 		// Resolve all, watched on the same screen: the empty frame clears it.
@@ -1004,33 +1011,87 @@ describe("U4 - a dismissal is forgotten once the queue empties", () => {
 	it("holds while ANY ask remains - across re-renders, changed queues and switches (the same batch is never re-nagged)", () => {
 		const ledger = createAsksOpenLedger();
 		const first = mount(ledger);
-		first.see(fresh(PENDING));
-		first.controller.closed({ sessionId: SESSION, asksRemain: true });
+		first.see(fresh(TWO_PENDING));
+		first.controller.closed({ sessionId: SESSION, pending: ["a1", "a2"] });
 
-		// One of two is answered; another arrives; the queue is never empty.
-		expect(
-			first.see(fresh({ asks: [ask(), ask({ ask_id: "a2" })], asks_open: 2 })),
-		).toBe(false);
+		// One of the two waved-off asks is answered; another arrives. A waved-off
+		// ask is still outstanding, so the entry holds - however the rest changes.
 		expect(
 			first.see(
 				fresh({
-					asks: [ask({ ask_id: "a2", created_at: BEFORE })],
-					asks_open: 1,
+					asks: [ask({ ask_id: "a2" }), ask({ ask_id: "a3" })],
+					asks_open: 2,
 				}),
 			),
 		).toBe(false);
 		expect(ledger.isDismissed(SESSION)).toBe(true);
 
 		const second = mount(ledger);
-		expect(second.see(fresh(PENDING))).toBe(false);
+		expect(
+			second.see(fresh({ asks: [ask({ ask_id: "a2" })], asks_open: 1 })),
+		).toBe(false);
 		expect(ledger.isDismissed(SESSION)).toBe(true);
+	});
+
+	it("(a) dismiss {a, b}, resolve a but not b, leave and return: still closed", () => {
+		const ledger = createAsksOpenLedger();
+		const first = mount(ledger);
+		first.see(fresh(TWO_PENDING));
+		first.controller.closed({ sessionId: SESSION, pending: ["a1", "a2"] });
+
+		const second = mount(ledger);
+		expect(second.see(leftover(TWO_PENDING))).toBe(false);
+		expect(
+			second.see(fresh({ asks: [ask({ ask_id: "a2" })], asks_open: 1 })),
+		).toBe(false);
+		expect(ledger.isDismissed(SESSION)).toBe(true);
+	});
+
+	it("(b) resolve both, leave and return, a new batch arrives: a fresh view auto-opens", () => {
+		const ledger = createAsksOpenLedger();
+		const first = mount(ledger);
+		first.see(fresh(TWO_PENDING));
+		first.controller.closed({ sessionId: SESSION, pending: ["a1", "a2"] });
+		first.see(fresh(empty));
+		expect(ledger.isDismissed(SESSION)).toBe(false);
+
+		const second = mount(ledger);
+		expect(second.see(fresh(batch2))).toBe(true);
+	});
+
+	it("keeps a second close's ids beside the first's: the first batch does not become re-openable", () => {
+		const ledger = createAsksOpenLedger();
+		const view = mount(ledger);
+		view.see(fresh(TWO_PENDING));
+		view.controller.closed({ sessionId: SESSION, pending: ["a1"] });
+		view.controller.opened({ sessionId: SESSION });
+		view.controller.closed({ sessionId: SESSION, pending: ["a2"] });
+		// a1 alone remains: it was waved off by the first close.
+		mount(ledger).see(fresh({ asks: [ask({ ask_id: "a1" })], asks_open: 1 }));
+		expect(ledger.isDismissed(SESSION)).toBe(true);
+	});
+
+	it("records nothing for an empty id set: nothing was refused", () => {
+		const ledger = createAsksOpenLedger();
+		ledger.dismiss(SESSION, []);
+		expect(ledger.isDismissed(SESSION)).toBe(false);
+	});
+
+	it("reconciles against a ledger entry directly: any listed id holds, none forgets", () => {
+		const ledger = createAsksOpenLedger();
+		ledger.dismiss(SESSION, ["a1", "a2"]);
+		ledger.reconcile(SESSION, new Set(["a2", "zz"]));
+		expect(ledger.isDismissed(SESSION)).toBe(true);
+		ledger.reconcile(SESSION, new Set(["zz"]));
+		expect(ledger.isDismissed(SESSION)).toBe(false);
+		ledger.reconcile(SESSION, new Set()); // nothing held: a no-op, not a throw
 	});
 
 	it("does not take an unresolved reading for an empty queue", () => {
 		const ledger = createAsksOpenLedger();
 		const first = mount(ledger);
 		first.see(fresh(PENDING));
-		first.controller.closed({ sessionId: SESSION, asksRemain: true });
+		first.controller.closed({ sessionId: SESSION, pending: ["a1"] });
 
 		const second = mount(ledger);
 		// The previous visit's frame, a tally-only frame, an older relay's bare
@@ -1046,7 +1107,7 @@ describe("U4 - a dismissal is forgotten once the queue empties", () => {
 		const ledger = createAsksOpenLedger();
 		const view = mount(ledger);
 		view.see(fresh(PENDING));
-		view.controller.closed({ sessionId: SESSION, asksRemain: true });
+		view.controller.closed({ sessionId: SESSION, pending: ["a1"] });
 		view.advance(OPEN_WINDOW_MS * 10);
 		view.see(fresh(empty));
 		expect(ledger.isDismissed(SESSION)).toBe(false);
@@ -1056,9 +1117,9 @@ describe("U4 - a dismissal is forgotten once the queue empties", () => {
 		const ledger = createAsksOpenLedger();
 		const view = mount(ledger);
 		view.see(fresh(PENDING));
-		view.controller.closed({ sessionId: SESSION, asksRemain: true });
+		view.controller.closed({ sessionId: SESSION, pending: ["a1"] });
 		view.controller.opened({ sessionId: SESSION });
-		view.controller.closed({ sessionId: SESSION, asksRemain: false });
+		view.controller.closed({ sessionId: SESSION, pending: [] });
 		expect(ledger.isDismissed(SESSION)).toBe(false);
 	});
 
@@ -1066,34 +1127,45 @@ describe("U4 - a dismissal is forgotten once the queue empties", () => {
 		const ledger = createAsksOpenLedger();
 		const a = mount(ledger);
 		a.see(fresh(PENDING));
-		a.controller.closed({ sessionId: SESSION, asksRemain: true });
+		a.controller.closed({ sessionId: SESSION, pending: ["a1"] });
 		const b = mount(ledger);
 		b.see(fresh(PENDING), { sessionId: OTHER });
-		b.controller.closed({ sessionId: OTHER, asksRemain: true });
+		b.controller.closed({ sessionId: OTHER, pending: ["a1"] });
 
 		a.see(fresh(empty));
 		expect(ledger.isDismissed(SESSION)).toBe(false);
 		expect(ledger.isDismissed(OTHER)).toBe(true);
 	});
 
-	// The known edge of the literal contract, written down rather than discovered:
-	// the queue must be OBSERVED empty. A batch that empties AND refills entirely
-	// while this phone is not looking at the conversation leaves the entry in
-	// place, and the re-entry meets the bar only. See the PR's remediation note.
-	it("cannot forget what it never observed: emptied-and-refilled while away still holds", () => {
+	// Round 2 (U10) closed the edge the old rule documented: keyed on ask ids, an
+	// emptied-and-refilled-while-away queue no longer needs to be OBSERVED empty -
+	// the waved-off id is simply not in the new batch.
+	it("(c) emptied and refilled while the phone was away: the return auto-opens", () => {
 		const ledger = createAsksOpenLedger();
 		const first = mount(ledger);
 		first.see(fresh(PENDING));
-		first.controller.closed({ sessionId: SESSION, asksRemain: true });
+		first.controller.closed({ sessionId: SESSION, pending: ["a1"] });
 		const second = mount(ledger);
-		expect(second.see(fresh(batch2))).toBe(false);
+		expect(second.see(fresh(batch2))).toBe(true);
+		expect(ledger.isDismissed(SESSION)).toBe(false);
+	});
+
+	it("a bare tally cannot name ids, so it neither forgets nor holds against them", () => {
+		const ledger = createAsksOpenLedger();
+		const view = mount(ledger);
+		view.see(fresh(PENDING));
+		view.controller.closed({ sessionId: SESSION, pending: ["a1"] });
+		view.see(fresh({ asks_open: 2 }));
+		expect(ledger.isDismissed(SESSION)).toBe(true);
+		view.see(fresh({ asks_open: 0 }));
+		expect(ledger.isDismissed(SESSION)).toBe(false);
 	});
 });
 
 describe("the ledger (R1: the mutants that survived)", () => {
 	it("ignores the empty id on both sides: it is the route's fallback, not a conversation", () => {
 		const ledger = createAsksOpenLedger();
-		ledger.dismiss("");
+		ledger.dismiss("", ["a1"]);
 		expect(ledger.isDismissed("")).toBe(false);
 		ledger.forget("");
 		expect(ledger.isDismissed("")).toBe(false);
@@ -1108,7 +1180,7 @@ describe("the ledger (R1: the mutants that survived)", () => {
 		try {
 			const first = createAsksAutoOpen(undefined, () => T0);
 			const second = createAsksAutoOpen(undefined, () => T0);
-			first.closed({ sessionId: id, asksRemain: true });
+			first.closed({ sessionId: id, pending: ["a1"] });
 			expect(asksOpenLedger.isDismissed(id)).toBe(true);
 			expect(
 				second.observe({
@@ -1136,7 +1208,7 @@ describe("D1/U1 - an auto-opened sheet shows the question", () => {
 		expect(policy.controller.openOrigin()).toBeNull();
 		policy.see(fresh(PENDING));
 		expect(policy.controller.openOrigin()).toBe("policy");
-		policy.controller.closed({ sessionId: SESSION, asksRemain: true });
+		policy.controller.closed({ sessionId: SESSION, pending: ["a1"] });
 		expect(policy.controller.openOrigin()).toBeNull();
 
 		const reader = mount();
@@ -1180,16 +1252,29 @@ describe("U5/D4 - a failed opening read closes an auto-opened sheet back to the 
 	it("closes a POLICY-opened sheet and remembers nothing: the app failed, the reader refused nothing", () => {
 		const view = mount();
 		view.see(fresh(PENDING));
-		expect(view.controller.readFailed({ sessionId: SESSION })).toBe(true);
+		expect(view.controller.readFailed({ sessionId: SESSION, drawn: 0 })).toBe(
+			true,
+		);
 		expect(view.controller.isOpenFor(SESSION)).toBe(false);
 		expect(view.controller.openOrigin()).toBeNull();
+		expect(view.ledger.isDismissed(SESSION)).toBe(false);
+	});
+
+	it("U9: KEEPS a policy-opened sheet that is drawing rows - the reader may be mid-answer, so the error line goes under them", () => {
+		const view = mount();
+		view.see(fresh(PENDING));
+		expect(view.controller.readFailed({ sessionId: SESSION, drawn: 1 })).toBe(
+			false,
+		);
+		expect(view.controller.isOpenFor(SESSION)).toBe(true);
+		expect(view.controller.openOrigin()).toBe("policy");
 		expect(view.ledger.isDismissed(SESSION)).toBe(false);
 	});
 
 	it("does not re-raise the sheet on the next frame: the view's one decision stays spent", () => {
 		const view = mount();
 		view.see(fresh(PENDING));
-		view.controller.readFailed({ sessionId: SESSION });
+		view.controller.readFailed({ sessionId: SESSION, drawn: 0 });
 		expect(view.see(fresh(PENDING))).toBe(false);
 		expect(view.controller.isOpenFor(SESSION)).toBe(false);
 	});
@@ -1197,15 +1282,19 @@ describe("U5/D4 - a failed opening read closes an auto-opened sheet back to the 
 	it("leaves a sheet the READER opened alone: they asked for it, and the error is the honest answer", () => {
 		const view = mount();
 		view.controller.opened({ sessionId: SESSION });
-		expect(view.controller.readFailed({ sessionId: SESSION })).toBe(false);
+		expect(view.controller.readFailed({ sessionId: SESSION, drawn: 0 })).toBe(
+			false,
+		);
 		expect(view.controller.isOpenFor(SESSION)).toBe(true);
 	});
 
 	it("ignores a failure reported for a conversation the sheet is not open for", () => {
 		const view = mount();
 		view.see(fresh(PENDING));
-		expect(view.controller.readFailed({ sessionId: OTHER })).toBe(false);
-		expect(view.controller.readFailed({ sessionId: "" })).toBe(false);
+		expect(view.controller.readFailed({ sessionId: OTHER, drawn: 0 })).toBe(
+			false,
+		);
+		expect(view.controller.readFailed({ sessionId: "", drawn: 0 })).toBe(false);
 		expect(view.controller.isOpenFor(SESSION)).toBe(true);
 	});
 });
@@ -1236,7 +1325,94 @@ describe("U3 - the notification that raises an auto-open already knows its door"
 	it("clears the origin when the sheet closes", () => {
 		const view = mount();
 		view.see(fresh(PENDING));
-		view.controller.closed({ sessionId: SESSION, asksRemain: true });
+		view.controller.closed({ sessionId: SESSION, pending: ["a1"] });
 		expect(view.controller.openOrigin()).toBeNull();
+	});
+});
+
+describe("U9/M1 - the reader mid-answer when the opening read fails", () => {
+	// The sheet component cannot be rendered in this repository's Node test
+	// environment, so the race is pinned as the same SEQUENCE the component runs,
+	// through the exported pure pieces it is built from: seed drawn -> reader picks
+	// an option's row -> the opening read fails.
+	const SEED = [ask({ ask_id: "a1" }), ask({ ask_id: "a2" })];
+
+	it("keeps the sheet, the seeded rows and the reader's pick; the error line has rows to sit under", () => {
+		const view = mount();
+		view.see(fresh({ asks: SEED, asks_open: 2 }));
+		expect(view.controller.isOpenFor(SESSION)).toBe(true);
+
+		// The form is interactive from frame one: the head is pre-expanded, and the
+		// reader moves to the second ask while the read is still in flight.
+		let choice = reduceExpansion(undefined, { type: "opening", initial: "a1" });
+		choice = reduceExpansion(choice, { type: "toggle", ask: "a2" });
+		expect(shownExpansion(choice, "a1")).toBe("a2");
+
+		// The opening read fails - seconds later. It reports what is DRAWN.
+		const aggregate: PendingAsk[] = []; // a failed read never sets the rows
+		const drawn = drawnRows(SEED, aggregate, false);
+		expect(drawn).toHaveLength(2);
+		expect(
+			view.controller.readFailed({ sessionId: SESSION, drawn: drawn.length }),
+		).toBe(false);
+
+		expect(view.controller.isOpenFor(SESSION)).toBe(true);
+		expect(shownExpansion(choice, "a1")).toBe("a2");
+		expect(view.ledger.isDismissed(SESSION)).toBe(false);
+	});
+
+	it("still closes back to the bar when NOTHING is drawn, remembering nothing", () => {
+		const view = mount();
+		view.see(fresh({ asks: SEED, asks_open: 2 }));
+		expect(drawnRows(null, [], false)).toHaveLength(0);
+		expect(view.controller.readFailed({ sessionId: SESSION, drawn: 0 })).toBe(
+			true,
+		);
+		expect(view.controller.isOpenFor(SESSION)).toBe(false);
+		expect(view.ledger.isDismissed(SESSION)).toBe(false);
+	});
+
+	it("draws the seed until the aggregate has been read SUCCESSFULLY, then the aggregate", () => {
+		const aggregate = [ask({ ask_id: "a1", status: "answered" })];
+		expect(drawnRows(SEED, [], false)).toBe(SEED);
+		// A failed read leaves `aggregateRead` false and the rows empty: the seed stays.
+		expect(drawnRows(SEED, [], false)).toBe(SEED);
+		expect(drawnRows(SEED, aggregate, true)).toBe(aggregate);
+		// No seed (a reader-opened sheet): always the aggregate.
+		expect(drawnRows(null, aggregate, false)).toBe(aggregate);
+	});
+});
+
+describe("Q5/M2 - no stale expanded frame after a policy open", () => {
+	it("starts a bar-opened sheet from the opening's own expansion after a policy open was closed", () => {
+		// Policy open: the opening effect writes the head ask in.
+		let choice = reduceExpansion(undefined, { type: "opening", initial: "a1" });
+		expect(shownExpansion(choice, "a1")).toBe("a1");
+		// The reader closes the sheet: the choice must not outlive it.
+		choice = reduceExpansion(choice, { type: "closed" });
+		expect(choice).toBeUndefined();
+		// The bar press: the FIRST render of the new opening is collapsed
+		// (`initialOpenAsk` is null for a reader's open) - no stale frame.
+		expect(
+			shownExpansion(choice, expandTargetFor("reader", [ask()])),
+		).toBeNull();
+	});
+
+	it("without the reset the stale pick would paint on that first frame (the defect, as a control)", () => {
+		const choice = reduceExpansion(undefined, {
+			type: "opening",
+			initial: "a1",
+		});
+		expect(shownExpansion(choice, null)).toBe("a1");
+	});
+
+	it("keeps the reader's own pick and toggle semantics inside one opening", () => {
+		let choice = reduceExpansion(undefined, { type: "opening", initial: null });
+		choice = reduceExpansion(choice, { type: "toggle", ask: "a2" });
+		expect(choice).toBe("a2");
+		choice = reduceExpansion(choice, { type: "toggle", ask: "a2" });
+		expect(choice).toBeNull();
+		choice = reduceExpansion(choice, { type: "pick", ask: "a3" });
+		expect(choice).toBe("a3");
 	});
 });

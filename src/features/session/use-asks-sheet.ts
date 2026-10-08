@@ -10,10 +10,11 @@ import type { TextInput, View } from "react-native";
 import { useStore } from "zustand";
 
 import type { PendingAsk } from "@/contracts";
-import { blockingPending, outstandingAsks } from "@/features/session/asks";
+import { blockingPending } from "@/features/session/asks";
 import {
 	createAsksAutoOpen,
 	expandTargetFor,
+	outstandingAskIds,
 } from "@/features/session/asks-open-policy";
 import { sessions } from "@/features/session/runtime";
 import { readEntry } from "@/state";
@@ -62,9 +63,10 @@ export interface AsksSheetControl {
 	/** Attach to the ask bar: it is the auto-opened sheet's opener, so the platform
 	 *  returns focus to it on close (see the focus note in the hook). */
 	barRef: React.RefObject<View | null>;
-	/** The sheet's opening read failed: an auto-opened sheet closes back to the
-	 *  bar (see `AsksAutoOpen.readFailed`). Wire to `AsksSheet.onReadFailed`. */
-	readFailed: () => void;
+	/** The sheet's opening read failed: an auto-opened sheet with nothing drawn
+	 *  closes back to the bar (see `AsksAutoOpen.readFailed`). Wire to
+	 *  `AsksSheet.onReadFailed`. */
+	readFailed: (info: { drawn: number }) => void;
 	/** The bar's press. An auto-open is NOT this (contract rule 6): the door keeps
 	 *  its own meaning, and pressing it never touches the dismissal record — it
 	 *  only tells the policy the reader got there first. */
@@ -75,8 +77,9 @@ export interface AsksSheetControl {
 	close: () => void;
 	/** Hide the sheet because the reader picked another conversation from inside
 	 *  it. A navigation, not a refusal of THIS conversation's asks, so nothing is
-	 *  remembered for it; the destination is (see `AsksAutoOpen.navigated`). */
-	leave: (target: string) => void;
+	 *  remembered for it; the destination is, against the ask ids the reader was
+	 *  just shown there (see `AsksAutoOpen.navigated`). */
+	leave: (target: string, askIds: readonly string[]) => void;
 }
 
 export const useAsksSheet = (input: AsksSheetInput): AsksSheetControl => {
@@ -235,19 +238,23 @@ export const useAsksSheet = (input: AsksSheetInput): AsksSheetControl => {
 		const latest = readEntry(sessions.getState(), sessionId);
 		controller.closed({
 			sessionId,
-			asksRemain: outstandingAsks(latest.projection?.asks).length > 0,
+			/* The asks waved off: what is outstanding NOW, not at the last render. */
+			pending: [...outstandingAskIds(latest.projection?.asks)],
 		});
 	}, [controller, sessionId]);
 
-	const readFailed = useCallback(() => {
-		/* Not a close by the reader: no focus to restore (nothing had it) and
-		 * nothing to remember. The controller owns whether it applies. */
-		controller.readFailed({ sessionId });
-	}, [controller, sessionId]);
+	const readFailed = useCallback(
+		({ drawn }: { drawn: number }) => {
+			/* Not a close by the reader: no focus to restore (nothing had it) and
+			 * nothing to remember. The controller owns whether it applies. */
+			controller.readFailed({ sessionId, drawn });
+		},
+		[controller, sessionId],
+	);
 
 	const leave = useCallback(
-		(target: string) => {
-			controller.navigated({ to: target });
+		(target: string, askIds: readonly string[]) => {
+			controller.navigated({ to: target, pending: askIds });
 		},
 		[controller],
 	);
