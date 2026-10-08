@@ -48,3 +48,17 @@ round-1 comparison pairs against the previous head (`025da93`):
 
 Local home-directory paths are scrubbed from every committed log and JSON
 (`~/` in place of the home prefix).
+
+
+## Round 2 remediation (head after `19ef825`)
+
+`r2/` + `rig/r2-driver.mjs` (log `rig/r2-driver.log`, 4/4 PASS) drive the web export of
+the round-2 head against `19ef825`, same world and facade as `r1-driver.mjs` (the facade
+gains one knob: hold `GET /api/asks` for N ms before answering/failing):
+
+- `U9/M1` — the opening read fails after 4 s; an option is picked at ~0.7 s. `19ef825`:
+  sheet gone after the failure. Round-2 head: sheet stays, the pick is kept, the error
+  line sits under the rows (`r2/new-u9-picked.png`, `r2/new-u9-after-failure.png`).
+- `Q5/M2` — policy open -> close -> bar press, sheet-body height sampled every animation
+  frame, 6 runs each. `19ef825`: 6/6 paint a stale 292 px expanded frame before 86 px.
+  Round-2 head: 0/6, 86 px from the first frame.

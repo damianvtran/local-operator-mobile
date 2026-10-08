@@ -1,0 +1,155 @@
+{
+  "results": [
+    {
+      "name": "old/U9-failing-read-with-pick",
+      "pass": true,
+      "facts": {
+        "picked": true,
+        "firstShownMs": 203,
+        "afterPick": [
+          {
+            "label": "the stored key",
+            "checked": null,
+            "cls": false
+          },
+          {
+            "label": "a new key",
+            "checked": null,
+            "cls": true
+          }
+        ],
+        "stillOpenAfterFailure": false,
+        "selectionKept": false,
+        "errorLine": null
+      }
+    },
+    {
+      "name": "new/U9-failing-read-with-pick",
+      "pass": true,
+      "facts": {
+        "picked": true,
+        "firstShownMs": 3,
+        "afterPick": [
+          {
+            "label": "the stored key",
+            "checked": null,
+            "cls": false
+          },
+          {
+            "label": "a new key",
+            "checked": null,
+            "cls": true
+          }
+        ],
+        "stillOpenAfterFailure": true,
+        "selectionKept": true,
+        "errorLine": {
+          "text": "unavailable",
+          "belowRows": true
+        }
+      }
+    },
+    {
+      "name": "old/Q5-policy-open-close-barpress",
+      "pass": true,
+      "facts": {
+        "staleRuns": 6,
+        "of": 6,
+        "runs": [
+          {
+            "firstH": 292,
+            "lastH": 86,
+            "staleExpandedFrame": true
+          },
+          {
+            "firstH": 292,
+            "lastH": 86,
+            "staleExpandedFrame": true
+          },
+          {
+            "firstH": 292,
+            "lastH": 86,
+            "staleExpandedFrame": true
+          },
+          {
+            "firstH": 292,
+            "lastH": 86,
+            "staleExpandedFrame": true
+          },
+          {
+            "firstH": 292,
+            "lastH": 86,
+            "staleExpandedFrame": true
+          },
+          {
+            "firstH": 292,
+            "lastH": 86,
+            "staleExpandedFrame": true
+          }
+        ]
+      }
+    },
+    {
+      "name": "new/Q5-policy-open-close-barpress",
+      "pass": true,
+      "facts": {
+        "staleRuns": 0,
+        "of": 6,
+        "runs": [
+          {
+            "firstH": 86,
+            "lastH": 86,
+            "staleExpandedFrame": false
+          },
+          {
+            "firstH": 86,
+            "lastH": 86,
+            "staleExpandedFrame": false
+          },
+          {
+            "firstH": 86,
+            "lastH": 86,
+            "staleExpandedFrame": false
+          },
+          {
+            "firstH": 86,
+            "lastH": 86,
+            "staleExpandedFrame": false
+          },
+          {
+            "firstH": 86,
+            "lastH": 86,
+            "staleExpandedFrame": false
+          },
+          {
+            "firstH": 86,
+            "lastH": 86,
+            "staleExpandedFrame": false
+          }
+        ]
+      }
+    }
+  ],
+  "frameLog": [
+    {
+      "name": "old-u9-picked",
+      "sha": "d0e2b77a085182e7"
+    },
+    {
+      "name": "new-u9-picked",
+      "sha": "d0e2b77a085182e7"
+    },
+    {
+      "name": "new-u9-after-failure",
+      "sha": "8afe809bcb533035"
+    },
+    {
+      "name": "old-q5-settled",
+      "sha": "b6b5ccf750977b8d"
+    },
+    {
+      "name": "new-q5-settled",
+      "sha": "b6b5ccf750977b8d"
+    }
+  ]
+}
