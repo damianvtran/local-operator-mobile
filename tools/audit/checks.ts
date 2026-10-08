@@ -1532,11 +1532,21 @@ export const U42_EXEMPTIONS: Array<{
 	{
 		path: "items-end>div.css-g5y9jx.max-w-[85%]",
 		value: 6,
-		properties: ["row-gap", "column-gap"],
+		/* WHICH PROPERTIES, MEASURED RATHER THAN INFERRED (round 9). R31 bounded every
+		 *  record to the properties its reason names, and I read this one's reason as
+		 *  being about a gap. CI's next run said otherwise: 936 `U-42` FAILs, all 6pt,
+		 *  `padding-top` (504) and `padding-bottom` (432), on the S5 cells — run
+		 *  37729721144's own artifact. They are the right-aligned bubble's own `py-1.5`
+		 *  (`features/session/components/transcript-row.tsx`, `px-3 py-1.5` on the
+		 *  user/steer bubble) plus the action row under it: the same §3.4 half-step the
+		 *  record was always about, so the record keeps them and the property list
+		 *  names what is actually there instead of what the reason mentioned. */
+		properties: ["row-gap", "column-gap", "padding-top", "padding-bottom"],
 		reason:
-			"the ask/pending card bubble and its action row — §3.4's flagged-not-absorbed " +
-			"list (`pending-card.tsx`, `ask-response-row.tsx`); a UI-wide sweep of the 43 " +
-			"sites is its own ticket, and this PR touches neither surface",
+			"the right-aligned bubble and its action row — §3.4's flagged-not-absorbed " +
+			"list (`transcript-row.tsx` `py-1.5`, `pending-card.tsx`, `ask-response-row.tsx`); " +
+			"a UI-wide sweep of the 43 sites is its own ticket, and this PR touches none " +
+			"of those surfaces",
 	},
 	{
 		path: "div.css-g5y9jx.min-w-0>div.css-g5y9jx.gap-1.5",

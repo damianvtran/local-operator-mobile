@@ -2,11 +2,13 @@ import { createContext, useContext, useEffect, useRef, useState } from "react";
 
 import {
 	closeModal,
+	dimmer,
 	hasNestedModal,
 	hostDims,
 	isCovered,
 	type ModalScope,
 	openModal,
+	setModalLive,
 	subscribeToModalStack,
 } from "@/ui/modal-stack";
 
@@ -31,6 +33,13 @@ export interface ModalStackEntry {
 	 * keeps the audit's overlap rule from counting two dims (see `hasNestedModal`).
 	 */
 	nested: boolean;
+	/**
+	 * Whether THIS modal is the one drawing the dim. One modal answers yes per frame
+	 * (see `dimmer`), and a modal that is mid-dismissal keeps the answer while its own
+	 * content is still on screen — which is the whole of round 9's R39 and round 8's
+	 * R34 at once.
+	 */
+	dims: boolean;
 	/**
 	 * Whether a modal raised inside this one already dims the screen. A modal whose
 	 * host dims renders its scrim as a press layer with no dim of its own — one dim
@@ -87,31 +96,34 @@ export function useModalStackEntry(
 	 *  re-register the modal on every render. */
 	const scrim = options.scrim ?? true;
 
+	const [snapshot, setSnapshot] = useState({
+		covered: false,
+		hostScrimmed: false,
+		nested: false,
+		dims: false,
+	});
+
+	/* REGISTERED FOR THE COMPONENT'S LIFETIME, and `visible` is a flag on the entry
+	 *  (round 9, R39). Every screen here keeps its sheets in the tree, so registering
+	 *  on `visible` meant an entry existed only while a modal was showing — and the
+	 *  modal that a dismissal uncovers then had no way to be told it was the dimmer
+	 *  again while the closing one was still painting. Only LIVE entries cover, dim,
+	 *  nest or stand anything down, so a closed sheet in the tree is inert. */
 	useEffect(() => {
-		if (!visible) {
-			/* `hostScrimmed` is deliberately NOT cleared here (round 8, R34). The
-			 *  Dialog's `fade` keeps its content — this scrim among it — mounted while
-			 *  it dismisses, so a hosted modal must keep yielding the dim through its
-			 *  own fade-out; clearing it here is what made a nested Dialog repaint a
-			 *  second dim while fading (round 6, D11). `covered` and `nested` are
-			 *  re-derived on the next open and nothing paints while the Modal is
-			 *  unmounted, so leaving them stale is harmless.
-			 */
-			setCovered(false);
-			setNested(false);
-			return;
-		}
-		const opened = openModal(scope, parent, scrim);
+		const opened = openModal(scope, parent, scrim, visible);
 		scope.current = opened;
 		const sync = () => {
-			setCovered(isCovered(opened));
-			setHostScrimmed(hostDims(opened));
-			setNested(hasNestedModal(opened));
+			setSnapshot({
+				covered: isCovered(opened),
+				hostScrimmed: hostDims(opened),
+				nested: hasNestedModal(opened),
+				dims: dimmer() === opened,
+			});
 		};
 		/* READ ONCE IMMEDIATELY, then on every change: a modal that opens while a
 		 *  later one is already mounted (two sheets driven at once, a confirm raised
 		 *  in the same commit) would otherwise keep whatever it last computed, and
-		 *  the mount-order rule would be applied to a stale list. */
+		 *  the stack rules would be applied to a stale list. */
 		sync();
 		const unsubscribe = subscribeToModalStack(sync);
 		return () => {
@@ -122,7 +134,20 @@ export function useModalStackEntry(
 			 *  reader returns to comes back without a second prop. */
 			closeModal(opened);
 		};
-	}, [visible, parent, scope, scrim]);
+		// eslint-disable-next-line react-hooks/exhaustive-deps -- registration is per mount
+	}, [parent, scope, scrim]);
 
-	return { covered, hostDims: hostScrimmed, nested, scope };
+	/* Showing and hiding is a FLAG, not a re-registration: the entry stays, and every
+	 *  other live entry re-reads the stack when it changes. */
+	useEffect(() => {
+		if (scope.current !== null) setModalLive(scope.current, visible);
+	}, [visible, scope]);
+
+	return {
+		covered: snapshot.covered,
+		dims: snapshot.dims,
+		hostDims: snapshot.hostScrimmed,
+		nested: snapshot.nested,
+		scope,
+	};
 }

@@ -2,12 +2,14 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import {
 	closeModal,
+	dimmer,
 	hostDims,
 	isCovered,
 	type ModalHandle,
 	type ModalScope,
 	modalStackDepth,
 	openModal,
+	setModalLive,
 	subscribeToModalStack,
 } from "@/ui/modal-stack";
 
@@ -37,9 +39,13 @@ describe("the modal stack", () => {
 	/* A registration the way a renderer makes one: its OWN scope holder (filled on
 	 *  registration, exactly as the hook fills it) and the scope of the modal it is
 	 *  drawn inside — null at the root. */
-	const openWithin = (parent: ModalScope | null, scrim = true): ModalHandle => {
+	const openWithin = (
+		parent: ModalScope | null,
+		scrim = true,
+		live = true,
+	): ModalHandle => {
 		const scope: ModalScope = { current: null };
-		const handle = openModal(scope, parent, scrim);
+		const handle = openModal(scope, parent, scrim, live);
 		scope.current = handle;
 		opened.push(handle);
 		return handle;
@@ -129,42 +135,61 @@ describe("the modal stack", () => {
 	});
 
 	it("leaves EXACTLY ONE dimmer in every stack it can be put in", () => {
-		/* The rule the components apply is `!covered && !hostDims` (round 8, R34). The
-		 *  reviewer asked which modal draws the dim in each of these shapes and whether
-		 *  any frame can have NONE; this is that question asked of the predicate itself,
-		 *  with the same inputs the components pass in. */
-		const draws = (handle: ModalHandle): boolean =>
-			!isCovered(handle) && !hostDims(handle);
+		/* ONE DIMMER PER FRAME (round 9, R39). Round 8 asserted a per-modal predicate
+		 *  (`!covered && !hostDims`), which could be satisfied TWICE — a Dialog closing
+		 *  over a Sheet left both drawing — so the invariant now lives in one place
+		 *  (`dimmer`) and this is the table of shapes, including the SIBLING resurface
+		 *  that the per-modal version could not express. */
+		const who = (): ModalHandle | null => dimmer();
 
 		// the shipped shape: drawer, its pane's menu, a dialog raised from the menu
 		const drawer = openWithin(null, true);
 		const menu = openWithin(drawer.scope, true);
 		const dialog = openWithin(menu.scope, true);
-		expect([drawer, menu, dialog].filter(draws)).toEqual([drawer]);
+		expect(who()).toBe(drawer);
 
-		// two unrelated roots: the newer covers the older
+		// the SIBLING case: a dialog closing over a sheet that is not its ancestor.
+		// The sheet is live again, the dialog is not — so the SHEET dims, once.
+		setModalLive(dialog, false);
+		expect(who()).toBe(drawer);
 		closeModal(dialog);
 		closeModal(menu);
-		const sheetA = openWithin(null, true);
-		const sheetB = openWithin(null, true);
-		expect([sheetA, sheetB].filter(draws)).toEqual([sheetB]);
-
-		// a guest that registers BEFORE its host still finds it, because the chain is
-		// the context and not the mount order
-		closeModal(sheetB);
-		closeModal(sheetA);
-		const guest = openWithin(drawer.scope, true);
-		expect([drawer, guest].filter(draws)).toEqual([drawer]);
-
-		// the host goes first: the guest takes the dim over rather than leaving a frame
-		// with none, and it is the guest that draws from then on
 		closeModal(drawer);
-		expect([guest].filter(draws)).toEqual([guest]);
 
-		// a Sheet raised over a Dialog: the Dialog is the dimmer, the sheet is not
-		const base = openWithin(null, true);
-		const overDialog = openWithin(base.scope, true);
-		expect([base, overDialog].filter(draws)).toEqual([base]);
+		const sheet = openWithin(null, true);
+		const confirm = openWithin(null, true);
+		expect(who()).toBe(confirm);
+		// the confirm is dismissed: the sheet resurfaces as the dimmer, and the
+		// dismissed one — still mounted, still fading — draws nothing
+		setModalLive(confirm, false);
+		expect(who()).toBe(sheet);
+		closeModal(confirm);
+
+		// nothing live: the dim stays with the modal that was the dimmer, which is the
+		// one whose own Modal is still on screen mid-fade (R34)
+		setModalLive(sheet, false);
+		expect(who()).toBe(sheet);
+		closeModal(sheet);
+
+		// a guest whose host goes first takes the dim over rather than leaving a frame
+		// with none
+		const host = openWithin(null, true);
+		const guest = openWithin(host.scope, true);
+		expect(who()).toBe(host);
+		setModalLive(host, false);
+		expect(who()).toBe(guest);
+		closeModal(guest);
+		closeModal(host);
+
+		// a modal mounted but never shown is inert: it neither dims nor covers
+		const sleeping = openWithin(null, false);
+		const showing = openWithin(null, true);
+		expect(who()).toBe(showing);
+		/* The inert one must not MASK the live one — that is the property that matters,
+		 *  not whether the inert one is itself "covered". */
+		expect(isCovered(showing)).toBe(false);
+		closeModal(showing);
+		closeModal(sleeping);
 	});
 
 	it("reports a scrimmed ancestor, and only a scrimmed one", () => {

@@ -86,19 +86,7 @@ export const Dialog = ({
 	/* A dialog raised while another modal is up stands down rather than painting a
 	 *  second full-viewport surface over it — `@/ui/modal-stack` carries the rule and
 	 *  why it is the primitive's job rather than a caller's prop. */
-	const { covered, hostDims, scope } = useModalStackEntry(visible);
-	/* THE DIMMER'S LIFETIME IS ITS CONTENT'S, NOT ITS `visible` PROP (round 8, R34).
-	 *  `animationType="fade"` keeps this Modal's children — this scrim among them —
-	 *  mounted while it dismisses, so gating on `visible` stopped the dim the instant
-	 *  the fade began and left the card fading over an undimmed page. Measured on
-	 *  `3f6c1c5` on the real path: the standalone delete confirm's scrim read
-	 *  `rgba(0,0,0,0)` while the card was still at opacity 0.58, where `26f3682` held
-	 *  0.7 and faded with it. The predicate is about the STACK, not the prop: a modal
-	 *  that is not covered and has no dimming ancestor IS the dimmer, and it paints
-	 *  whenever its own Modal renders it — which yields exactly one dim per stack in
-	 *  every frame, and keeps a Dialog raised inside a hosted Sheet from repainting a
-	 *  second one while it fades (round 6, D11). */
-	const drawsDim = !covered && !hostDims;
+	const { covered, dims: drawsDim, scope } = useModalStackEntry(visible);
 
 	return (
 		<ModalScopeContext.Provider value={scope}>

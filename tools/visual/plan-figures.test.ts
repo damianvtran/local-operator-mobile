@@ -20,15 +20,22 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
  * (`deadline: K s` and `a deadline of K s`), per-cell rate products
  * (`N cells x R s = K s`).
  *
- * WHAT IT DOES NOT COVER, and this is a real limit rather than a caveat: a figure that
- * stands alone with no equation around it. The documents legitimately carry many
- * counts that are not tier plans — the README's one-phone sample (`58 cells`), a
- * dispatcher's partial plan (`400 cells`), a mean of 12 cells, a historical `256` from
- * the run that measured the rate — so a rule that forced every `N cells` to be a tier
- * count would fail on true statements. A bare `5,832 frames` is likewise not asserted:
- * the README quotes `58 frames` for a sample that is not a tier. What this gate does
- * catch is every figure stated IN AN EQUATION, which is where six rounds of sweeps
- * went wrong, and it catches a stale deadline wherever it is written.
+ * WHICH SPELLINGS IT READS, so nobody has to guess (round 9, R42): the plan product
+ * (`N cells × M frame(s) = K frames`), the derived deadline (`deadline: K s` and
+ * `a deadline of K s`), and a rate product (`N × R s = K s` or `… = K min`, with or
+ * without the word `cells`). It reads them with whitespace collapsed, so a figure the
+ * formatter wrapped across two lines is still one figure.
+ *
+ * WHAT IT DOES NOT READ, which is a limit rather than a caveat: a figure standing alone
+ * with no equation around it. The documents legitimately carry many counts that are not
+ * tier plans — the README's one-phone sample (`58 cells`), a dispatcher's partial plan
+ * (`400 cells`), a mean of 12 cells, a historical `256` from the rate run — so forcing
+ * every `N cells` to be a tier count would fail on true statements. Nor does it read the
+ * slash form (`403 cells / 1209 frames in 903.1 s`), a bare `N frames`, or prose minutes
+ * that are not written as a product (`~78 minutes at 2.24 s/cell`): those are checked by
+ * hand and by the rate they name. What it does catch is every figure stated IN AN
+ * EQUATION, which is where six rounds of sweeps went wrong, and every derived deadline
+ * wherever it is written.
  *
  * WHAT IT DOES NOT COVER, named rather than implied: prose minutes (`~78 minutes`)
  * are a *rate* the harness measures on a runner, not a number it prints, so a stale
@@ -199,68 +206,102 @@ describe("the figures in the tree are the plan the harness prints", () => {
 		 *  counts are asserted at the end of the sweep rather than per file. */
 		const matched = { plan: 0, deadline: 0, rate: 0 };
 		for (const file of SCANNED) {
-			const lines = readFileSync(join(root, file), "utf8").split("\n");
-			lines.forEach((line, index) => {
-				/* A statement pinned to another ref is history, not a claim about this
-				 *  head — and it has to say so ON ITS OWN LINE. A wider window was tried
-				 *  and rejected: it let a genuinely stale figure hide inside a paragraph
-				 *  about an older ref, which is exactly the drift this gate exists for
-				 *  (measured: mutating this head's `6,264` back to `5,832` passed a
-				 *  five-line window and fails this rule). */
-				const historical =
-					/\b(85b2785|4649a08|756a6af|15deac3|37167390506|37098393675)\b|->|→/.test(
-						line,
-					);
-				const at = `${file}:${index + 1}`;
+			const text = readFileSync(join(root, file), "utf8");
+			/* READ THE WHOLE FILE WITH WHITESPACE COLLAPSED, so a figure the formatter
+			 *  wrapped across two lines is still one figure (round 9, R42) — and report
+			 *  the line by counting the newlines before the match. A statement pinned to
+			 *  another ref is history and has to say so ON ITS OWN LINE: a wider window
+			 *  was tried and rejected, because it let a stale figure hide inside a
+			 *  paragraph about an older ref, which is exactly the drift this gate is for
+			 *  (measured: mutating this head's `6,264` back to `5,832` passed a five-line
+			 *  window and fails this rule). */
+			/* A FLAT COPY WITH AN INDEX MAP, so a match's line and its own source text
+			 *  are recoverable exactly: flattening alone shifts every offset after the
+			 *  first whitespace run, and a history check reading the wrong line turns a
+			 *  historical figure into a red gate (measured before this map existed). */
+			/* ONE FLAT, LINE-MAPPED COPY. Prose in `.github/workflows/*.yml` starts every
+			 *  line with `# `, so a figure the formatter wrapped there is `… = #\n#  4,677 s`
+			 *  — not one figure until the markers go. Each flat character remembers the
+			 *  ORIGINAL line it came from, so a match can still report its line and hand
+			 *  the history check the real text of every line it spans (whole lines: the ref
+			 *  that makes a figure history is written beside it, not inside it). */
+			const lines = text.split("\n");
+			let flat = "";
+			const flatLine: number[] = [];
+			for (let li = 0; li < lines.length; li += 1) {
+				const content = (lines[li] ?? "").replace(/^\s*#\s?/, "");
+				for (const ch of content) {
+					flat += ch;
+					flatLine.push(li);
+				}
+				flat += " ";
+				flatLine.push(li);
+			}
+			const scan = (
+				re: RegExp,
+				handle: (m: RegExpExecArray, where: string) => void,
+			) => {
+				let m = re.exec(flat);
+				while (m !== null) {
+					const first = flatLine[m.index] ?? 0;
+					const last =
+						flatLine[Math.max(0, m.index + m[0].length - 1)] ?? first;
+					const source = lines.slice(first, last + 1).join(" ");
+					const historical =
+						/\b(85b2785|4649a08|756a6af|15deac3|37167390506|37098393675)\b|->|→/.test(
+							source,
+						);
+					if (!historical) handle(m, `${file}:${first + 1}`);
+					m = re.exec(flat);
+				}
+			};
 
-				const plan = line.match(
-					/(\d+) cells? (?:×|x) (\d+) frame\(s\) = (\d+) frames/,
-				);
-				if (plan && !historical) {
-					const cells = Number(plan[1] ?? 0);
-					const per = Number(plan[2] ?? 0);
-					const frames = Number(plan[3] ?? 0);
+			scan(
+				/(\d+) cells?\s*(?:×|x)\s*(\d+) frame\(s\)\s*=\s*([\d,]+) frames/g,
+				(m, where) => {
+					const cells = Number(m[1] ?? 0);
+					const per = Number(m[2] ?? 0);
+					const frames = Number((m[3] ?? "0").replace(/,/g, ""));
 					if (cells * per !== frames)
-						problems.push(`${at}: ${cells} x ${per} != ${frames}`);
+						problems.push(`${where}: ${cells} x ${per} != ${frames}`);
 					if (!byCells.has(cells))
-						problems.push(`${at}: ${cells} cells is no tier's plan`);
+						problems.push(`${where}: ${cells} cells is no tier's plan`);
 					matched.plan += 1;
-				}
+				},
+			);
 
-				const deadline = line.match(/deadline(?::| of) ([\d,]+) s/);
-				if (deadline && !historical) {
-					const value = Number((deadline[1] ?? "0").replace(/,/g, ""));
-					if (![...byCells.values()].some((p) => p.deadline === value))
-						problems.push(`${at}: deadline ${value} s is no tier's`);
-					matched.deadline += 1;
-				}
-
-				/* The rate form is written both ways in this tree — `2088 x 2.24 s =
-				 *  4,677 s` and `696 cells x 1.25 s = 870 s` — so the branch matches
-				 *  either. It used to require the word "cells", which meant it matched
-				 *  NOTHING, and a branch that matches nothing is a gate that cannot fail
-				 *  (review round 7, R37: a mutation of `34.8 min` to `35.8 min` passed).
-				 *  `matched` below is what stops that happening again. */
-				const rate = line.match(
-					/([\d,]+) (?:cells? )?x ([\d.]+) s = ([\d,.]+) (min|s)\b/,
-				);
-				if (rate && !historical) {
-					const cells = Number((rate[1] ?? "0").replace(/,/g, ""));
-					const per = Number(rate[2] ?? 0);
-					const product = Number((rate[3] ?? "0").replace(/,/g, ""));
-					/* Seconds are the unit everywhere but the per-push bound, which
-					 *  states its sample in minutes. The tolerance is a ROUNDING STEP in
-					 *  the unit written — half a minute for a one-decimal minute figure,
-					 *  two seconds for an integer one — and not a slack: a whole minute
-					 *  was tried first and passed the very mutation this branch exists to
-					 *  catch (`34.8 min` -> `35.8 min`, which is 60 s of drift). */
-					const seconds = rate[4] === "min" ? product * 60 : product;
-					const slack = rate[4] === "min" ? 30 : 2;
-					if (Math.abs(cells * per - seconds) > slack)
-						problems.push(`${at}: ${cells} x ${per} s != ${product} ${rate[4]}`);
-					matched.rate += 1;
-				}
+			scan(/deadline(?::| of)\s+([\d,]+) s/g, (m, where) => {
+				const value = Number((m[1] ?? "0").replace(/,/g, ""));
+				if (![...byCells.values()].some((plan) => plan.deadline === value))
+					problems.push(`${where}: deadline ${value} s is no tier's`);
+				matched.deadline += 1;
 			});
+
+			/* The rate form is written both ways in this tree — `2088 × 2.24 s = 4,677 s`
+			 *  and `696 cells x 1.25 s = 870 s`, and in minutes for the per-push bound.
+			 *  It used to require the word "cells", which meant it matched NOTHING, and a
+			 *  branch that matches nothing is a gate that cannot fail (review round 7,
+			 *  R37: a mutation of `34.8 min` to `35.8 min` passed it). */
+			scan(
+				/([\d,]+)\s*(?:cells?\s*)?(?:×|x)\s*([\d.]+) s\s*=\s*([\d,.]+) (min|s)\b/g,
+				(m, where) => {
+					const cells = Number((m[1] ?? "0").replace(/,/g, ""));
+					const per = Number(m[2] ?? 0);
+					const product = Number((m[3] ?? "0").replace(/,/g, ""));
+					const unit = m[4];
+					const seconds = unit === "min" ? product * 60 : product;
+					/* The tolerance is a ROUNDING STEP in the unit written — half a minute
+					 *  for a one-decimal minute figure, two seconds for an integer one —
+					 *  and not a slack: a whole minute was tried first and passed the very
+					 *  mutation this branch exists to catch. */
+					const slack = unit === "min" ? 30 : 2;
+					if (Math.abs(cells * per - seconds) > slack)
+						problems.push(
+							`${where}: ${cells} x ${per} s != ${product} ${unit}`,
+						);
+					matched.rate += 1;
+				},
+			);
 		}
 		expect(problems).toEqual([]);
 		for (const [branch, count] of Object.entries(matched)) {

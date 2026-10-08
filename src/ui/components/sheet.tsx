@@ -194,21 +194,7 @@ export const Sheet = ({
 	 *  second full-viewport surface over it — the rule and its reasoning are in
 	 *  `@/ui/modal-stack`, and the registration lives here because this is where the
 	 *  `Modal` is rendered. */
-	const { covered, hostDims, scope } = useModalStackEntry(visible);
-	/* THE DIMMER'S LIFETIME IS ITS CONTENT'S, NOT ITS `visible` PROP (round 8, R34).
-	 *  A Modal with `animationType` keeps its children mounted while it dismisses, and
-	 *  this scrim is one of them — so gating on `visible` stopped the dim at the same
-	 *  instant the fade began and left the card fading over an undimmed page. Measured
-	 *  on `3f6c1c5`: the standalone delete confirm's scrim read `rgba(0,0,0,0)` while
-	 *  the card was still at opacity 0.58. The predicate is therefore about the STACK
-	 *  and not about the prop: a modal that is not covered and has no dimming ancestor
-	 *  IS the dimmer, and it paints whenever its own Modal renders it.
-	 *
-	 *  That also yields the invariant the stack wants — EXACTLY ONE dim per stack in
-	 *  every frame: the drawer keeps its dim (nested children are not "covered"), a
-	 *  modal raised inside it yields because `hostDims` is true, and unrelated roots
-	 *  are covered by the newer one. */
-	const drawsDim = !covered && !hostDims;
+	const { covered, dims: drawsDim, scope } = useModalStackEntry(visible);
 
 	return (
 		/* The scope publishes this sheet as the HOST of anything a modal is raised
