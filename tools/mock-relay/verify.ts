@@ -2878,9 +2878,33 @@ async function main() {
 				// and the test would prove nothing.
 				`const { spawn } = require("node:child_process");
 				 const profile = process.env.LO_RESPAWN_PROFILE;
-				 const ensure = () => spawn(process.execPath, ["-e", "setTimeout(() => {}, 600000)", "--", \`--user-data-dir=\${profile}\`], { stdio: "ignore" });
-				 ensure();
-				 setInterval(ensure, 300);`,
+				 const parent = process.ppid;
+				 let child = null;
+				 const ensure = () => {
+				   // One placeholder at a time: spawn only when the previous child has exited.
+				   // Spawning on a bare interval held every child for its 600 s timer — 600 / 0.3
+				   // ≈ 2,000 live processes at steady state (1,996 measured on this host, with
+				   // ~48-58 GB RSS and the compressor and swap that came with it).
+				   if (child !== null && child.exitCode === null && child.signalCode === null) return;
+				   child = spawn(process.execPath, ["-e", "setTimeout(() => {}, 600000)", "--", \`--user-data-dir=\${profile}\`], { stdio: "ignore" });
+				 };
+				 const tick = () => {
+				   // Self-destruct, for the SIGKILL no handler can catch: a reparented process
+				   // has no owner left to reap it — the shape of the orphan that kept spawning
+				   // for 1 h 44 m — so it takes the live child and exits. A parent probe, not a
+				   // wall-clock deadline: the capture it must outlive is bounded at 300 s, and a
+				   // clock short enough to matter could fire mid-run and starve the reap that
+				   // counts it (a zero count would flip this test's own assertion).
+				   if (process.ppid !== parent) {
+				     if (child !== null) {
+				       try { child.kill("SIGKILL"); } catch { /* already gone */ }
+				     }
+				     process.exit(0);
+				   }
+				   ensure();
+				 };
+				 tick();
+				 setInterval(tick, 300);`,
 			],
 			{
 				stdio: "ignore",
@@ -2888,75 +2912,107 @@ async function main() {
 				env: { ...process.env, LO_RESPAWN_PROFILE: profile },
 			},
 		);
-		await sleep(700);
-		const run = spawnSync(
-			process.execPath,
-			[
-				join(WORKTREE, "tools", "visual", "capture.ts"),
-				"--dir",
-				join(WORKTREE, "e2e", "fixtures", "audit-canary"),
-				"--out",
-				out,
-				"--cells",
-				"path:/clean/clean",
-				"--devices",
-				"iphone-15",
-				"--themes",
-				"dark",
-				"--scales",
-				"100",
-				"--profile",
-				profile,
-				"--yes",
-			],
-			{ encoding: "utf8", timeout: 300_000, env: { ...process.env } },
-		);
-		const output = `${run.stdout ?? ""}${run.stderr ?? ""}`;
-		if (!capture.runnable) {
-			skip(
-				"a clean matrix that leaks a process exits non-zero",
-				capture.reason,
-			);
-		} else {
-			check(
-				"a clean matrix that leaks a process exits non-zero",
-				run.status !== 0,
-				true,
-				`exit ${String(run.status)}`,
-			);
-		}
-		// The count must be NON-ZERO: `0 surviving process(es)` is the tail of every
-		// CaptureFailure message, so the bare phrase would be satisfied by any strict
-		// failure of the matrix and would prove nothing about the survivor gate.
-		if (!capture.runnable) {
-			skip(
-				"and the failure names a non-zero survivor count rather than the matrix",
-				capture.reason,
-			);
-		} else {
-			check(
-				"and the failure names a non-zero survivor count rather than the matrix",
-				/[1-9]\d* surviving process\(es\)|survived this run's teardown/.test(
-					output,
-				),
-				true,
-				output.split("\n").find((line) => line.includes("surviv")) ??
-					"(no line)",
-			);
-		}
-		// Reap the respawner and everything it made, by pid and by the profile it carries.
-		if (respawner.pid !== undefined) {
-			try {
-				process.kill(-respawner.pid, "SIGKILL");
-			} catch {
+		// The reap must run on EVERY exit path, not just the happy one: the measured
+		// failure was a parent KILLED mid-group (a killed parent runs no `finally`),
+		// and the orphaned respawner kept re-creating placeholders for 1 h 44 m until
+		// someone reaped it by hand. Three layers cover the paths: `finally` for a
+		// throw, the signals for a graceful kill, and the respawner's own parent probe
+		// for SIGKILL, which no handler here can catch.
+		const reapRespawner = (): void => {
+			if (respawner.pid !== undefined) {
 				try {
-					process.kill(respawner.pid, "SIGKILL");
+					process.kill(-respawner.pid, "SIGKILL");
 				} catch {
-					/* already gone */
+					try {
+						process.kill(respawner.pid, "SIGKILL");
+					} catch {
+						/* already gone */
+					}
 				}
 			}
+			spawnSync("pkill", ["-9", "-f", profile]);
+		};
+		const onSignal = (signal: NodeJS.Signals): void => {
+			reapRespawner();
+			process.exit(signal === "SIGINT" ? 130 : 143);
+		};
+		process.on("SIGINT", onSignal);
+		process.on("SIGTERM", onSignal);
+		try {
+			await sleep(700);
+			// THE GUARD THE LEAK LANDED WITHOUT: while the respawner runs, its live
+			// children must hold at one or two, never ramp. Sampled either side of the
+			// capture — its `spawnSync` blocks this process, so no reading exists while
+			// it runs — and the 0 is a bound too: an upper bound alone passes vacuously
+			// with a respawner that died.
+			const liveBefore = countProcesses(profile);
+			const run = spawnSync(
+				process.execPath,
+				[
+					join(WORKTREE, "tools", "visual", "capture.ts"),
+					"--dir",
+					join(WORKTREE, "e2e", "fixtures", "audit-canary"),
+					"--out",
+					out,
+					"--cells",
+					"path:/clean/clean",
+					"--devices",
+					"iphone-15",
+					"--themes",
+					"dark",
+					"--scales",
+					"100",
+					"--profile",
+					profile,
+					"--yes",
+				],
+				{ encoding: "utf8", timeout: 300_000, env: { ...process.env } },
+			);
+			const output = `${run.stdout ?? ""}${run.stderr ?? ""}`;
+			const liveAfter = countProcesses(profile);
+			if (!capture.runnable) {
+				skip(
+					"a clean matrix that leaks a process exits non-zero",
+					capture.reason,
+				);
+			} else {
+				check(
+					"a clean matrix that leaks a process exits non-zero",
+					run.status !== 0,
+					true,
+					`exit ${String(run.status)}`,
+				);
+			}
+			// The count must be NON-ZERO: `0 surviving process(es)` is the tail of every
+			// CaptureFailure message, so the bare phrase would be satisfied by any strict
+			// failure of the matrix and would prove nothing about the survivor gate.
+			if (!capture.runnable) {
+				skip(
+					"and the failure names a non-zero survivor count rather than the matrix",
+					capture.reason,
+				);
+			} else {
+				check(
+					"and the failure names a non-zero survivor count rather than the matrix",
+					/[1-9]\d* surviving process\(es\)|survived this run's teardown/.test(
+						output,
+					),
+					true,
+					output.split("\n").find((line) => line.includes("surviv")) ??
+						"(no line)",
+				);
+			}
+			check(
+				"the respawner's placeholder count holds at one or two, never a fan-out",
+				[liveBefore, liveAfter].filter((n) => n < 1 || n > 2),
+				[],
+				`sampled ${liveBefore} then ${liveAfter}`,
+			);
+		} finally {
+			reapRespawner();
+			process.off("SIGINT", onSignal);
+			process.off("SIGTERM", onSignal);
 		}
-		spawnSync("pkill", ["-9", "-f", profile]);
 		await sleep(400);
 		check("and the rig leaves nothing behind", countProcesses(profile), 0);
 		rmSync(root, { recursive: true, force: true });
