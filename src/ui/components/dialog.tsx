@@ -87,6 +87,8 @@ export const Dialog = ({
 	 *  second full-viewport surface over it — `@/ui/modal-stack` carries the rule and
 	 *  why it is the primitive's job rather than a caller's prop. */
 	const { covered, hostDims, scope } = useModalStackEntry(visible);
+	/* Same rule as `Sheet`, including the not-registered half (D11). */
+	const drawsDim = visible && !covered && !hostDims;
 
 	return (
 		<ModalScopeContext.Provider value={scope}>
@@ -105,7 +107,7 @@ export const Dialog = ({
 						<Pressable
 							className="absolute inset-0"
 							style={{
-								backgroundColor: hostDims ? "transparent" : scrimColour,
+								backgroundColor: drawsDim ? scrimColour : "transparent",
 							}}
 							accessibilityRole={ROLE.button}
 							accessibilityLabel="Cancel"

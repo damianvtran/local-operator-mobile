@@ -1,5 +1,6 @@
 import { type ChildProcess, spawn, spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
+import { createServer } from "node:net";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -62,18 +63,58 @@ interface Plan {
 let plans: Record<Tier, Plan> | null = null;
 let relay: ChildProcess | null = null;
 
-const relayUrl = "http://127.0.0.1:4493";
+/**
+ * A port nobody else holds, asked of the kernel rather than assumed (review round 6,
+ * R33): a hardcoded 4493 is how this gate flakes on a fleet host where a sibling
+ * session's relay already has it. Bound and released, then handed to the relay — the
+ * gap between the two is one syscall wide and the failure mode is a red gate with the
+ * relay's own error in it, not a wrong number.
+ */
+async function freePort(): Promise<number> {
+	return new Promise((resolve, reject) => {
+		const probe = createServer();
+		probe.on("error", reject);
+		probe.listen(0, "127.0.0.1", () => {
+			const address = probe.address();
+			const port =
+				typeof address === "object" && address !== null ? address.port : 0;
+			probe.close(() => resolve(port));
+		});
+	});
+}
+
+let relayUrl = "";
+
+/** Wait until the relay ANSWERS, rather than sleeping and hoping (R33). Its replies
+ *  are authenticated and a bare `GET /` is a 404 or a 401 — either one proves the
+ *  socket is serving, which is all the plan needs. */
+async function waitForRelay(url: string, ms: number): Promise<boolean> {
+	const deadline = Date.now() + ms;
+	for (;;) {
+		try {
+			await fetch(url, { method: "GET" });
+			return true;
+		} catch {
+			if (Date.now() >= deadline) return false;
+			await new Promise((resolve) => setTimeout(resolve, 100));
+		}
+	}
+}
 
 beforeAll(async () => {
 	/* `spawn`, not `spawnSync`: the relay has to KEEP RUNNING while the plans are
 	 *  read, so the synchronous call would block on it for its whole timeout. */
+	const port = await freePort();
+	relayUrl = `http://127.0.0.1:${port}`;
 	relay = spawn(
 		"node",
-		["tools/mock-relay/relay.ts", "--scenario", "idle", "--port", "4493"],
+		["tools/mock-relay/relay.ts", "--scenario", "idle", "--port", String(port)],
 		{ cwd: root, detached: true, stdio: "ignore" },
 	);
 	relay.unref();
-	await new Promise((resolve) => setTimeout(resolve, 2500));
+	if (!(await waitForRelay(relayUrl, 30000))) {
+		throw new Error(`the mock relay never answered on ${relayUrl}`);
+	}
 	const read = (tier: Tier): Plan | null => {
 		const out = spawnSync(
 			"node",

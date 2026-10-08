@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import {
 	Animated,
 	Easing,
@@ -128,7 +128,7 @@ export const ConversationsDrawer = ({
 	 *  it stands down if a newer modal is mounted over it rather than painting two
 	 *  full-viewport surfaces over each other (`@/ui/modal-stack`). It was the
 	 *  renderer that made that module's "only two callers" claim false. */
-	const { covered, scope } = useModalStackEntry(visible, { scrim: true });
+	const { covered, nested, scope } = useModalStackEntry(visible, { scrim: true });
 
 	return (
 		/* The scope is what keeps this fix and R13's together: the pane's long-press
@@ -169,24 +169,39 @@ export const ConversationsDrawer = ({
 					 * sheet's scrim becomes the press layer it always also was: `Sheet` and
 					 * `Dialog` render no dim when `hostDims` says an ancestor already does
 					 * (`@/ui/modal-stack`). There is NO transition in the dim to get wrong,
-					 * which is why all three close at once instead of becoming rarer — and a
-					 * transparent, childless, borderless box is a ghost to the audit's overlap
-					 * rule, so one dim does not read as two. The panel and content are
-					 * unchanged, the dismiss press still reaches the topmost scrim (the
-					 * sheet's, which closes the sheet), and the reader who closes the menu gets
-					 * the same scrim back because it was never taken away.
+					 * which is why all three close at once instead of becoming rarer. The panel
+					 * and content are unchanged, and the reader who closes the menu gets the same
+					 * scrim back because it was never taken away.
+					 *
+					 * IT STOPS BEING A CONTROL WHILE A MODAL INSIDE IT IS UP (round 7, R29 =
+					 * QA Q1). Round 6 claimed a transparent guest scrim was "a ghost to the
+					 * audit's overlap rule" and CI disproved it — six `U-08` FAILs on the
+					 * `S15/menu-open` iphone-se cells, `Close conversations ∩ Close`, because
+					 * `isGhost` is `clippedAway || (ariaHidden && !ownInk)` and a transparent
+					 * PRESSABLE is neither. The honest repair is on this side: a nested modal's
+					 * scrim is above this one, so this one can never receive the press it exists
+					 * for, and a painter with no text and no interactivity is outside the rule's
+					 * pair set. So while `nested` it renders as a plain painted `View` — same
+					 * colour, same box, same frames — and the guest's scrim takes the dismiss,
+					 * which is what round 5 verified happens. Nothing about the rendering
+					 * changes; one attribute of the tree does.
 					 */}
 					<Animated.View
 						style={{ opacity: scrimFade }}
 						className="absolute inset-0"
 					>
-						<Pressable
-							className="flex-1"
-							style={{ backgroundColor: scrimColour }}
-							accessibilityRole={ROLE.button}
-							accessibilityLabel="Close conversations"
-							onPress={close}
-						/>
+						{nested ? (
+							/* The dim, with no claim to a press this layer cannot receive. */
+							<View style={{ flex: 1, backgroundColor: scrimColour }} />
+						) : (
+							<Pressable
+								className="flex-1"
+								style={{ backgroundColor: scrimColour }}
+								accessibilityRole={ROLE.button}
+								accessibilityLabel="Close conversations"
+								onPress={close}
+							/>
+						)}
 					</Animated.View>
 
 					<Animated.View

@@ -195,6 +195,10 @@ export const Sheet = ({
 	 *  `@/ui/modal-stack`, and the registration lives here because this is where the
 	 *  `Modal` is rendered. */
 	const { covered, hostDims, scope } = useModalStackEntry(visible);
+	/* A modal that is not the one dimming draws no dim: nested (an ancestor dims) or
+	 *  not registered at all — the second half is D11, a Dialog raised inside a hosted
+	 *  Sheet repainting a second dim while its own Modal fades out. */
+	const drawsDim = visible && !covered && !hostDims;
 
 	return (
 		/* The scope publishes this sheet as the HOST of anything a modal is raised
@@ -236,18 +240,24 @@ export const Sheet = ({
 						 * 40-89 ms on close, dipped to 0.570 on open and pulsed to 0.91).
 						 * `opacity` stays 1 rather than animating: there is no dim here
 						 * to fade, and a faded press layer would swallow presses while
-						 * invisible. A transparent, childless, borderless box is a ghost
-						 * to the audit's overlap rule, so the one dim does not read as
-						 * two dims either.
+						 * invisible.
+						 *
+						 * What keeps the audit's overlap rule quiet is NOT this layer's
+						 * transparency — round 6 claimed that and CI disproved it (six
+						 * `U-08` FAILs on `S15/menu-open`). `isGhost` is
+						 * `clippedAway || (ariaHidden && !ownInk)`, so an interactive,
+						 * non-aria-hidden box stays in the pair set however transparent it
+						 * is; the host's layer leaves it instead, by stopping being a
+						 * control while this modal owns the dismiss.
 						 */}
 						<Animated.View
-							style={{ opacity: hostDims ? 1 : scrimFade }}
+							style={{ opacity: drawsDim ? scrimFade : 1 }}
 							className="absolute inset-0"
 						>
 							<Pressable
 								className="flex-1"
 								style={{
-									backgroundColor: hostDims ? "transparent" : scrimColour,
+									backgroundColor: drawsDim ? scrimColour : "transparent",
 								}}
 								accessibilityRole={ROLE.button}
 								accessibilityLabel="Close"

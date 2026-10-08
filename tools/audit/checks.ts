@@ -1532,6 +1532,7 @@ export const U42_EXEMPTIONS: Array<{
 	{
 		path: "items-end>div.css-g5y9jx.max-w-[85%]",
 		value: 6,
+		properties: ["row-gap", "column-gap"],
 		reason:
 			"the ask/pending card bubble and its action row — §3.4's flagged-not-absorbed " +
 			"list (`pending-card.tsx`, `ask-response-row.tsx`); a UI-wide sweep of the 43 " +
@@ -1540,6 +1541,7 @@ export const U42_EXEMPTIONS: Array<{
 	{
 		path: "div.css-g5y9jx.min-w-0>div.css-g5y9jx.gap-1.5",
 		value: 6,
+		properties: ["row-gap", "column-gap"],
 		reason:
 			"the composer's field-row gap — one of the `composer.tsx` 1.5 sites §3.4 leaves " +
 			"outside the pt/pb/mb trio this PR moves to pt-2/pb-2/mb-2",
@@ -1547,6 +1549,7 @@ export const U42_EXEMPTIONS: Array<{
 	{
 		path: "button.css-g5y9jx.r-1loqt21>div.css-g5y9jx",
 		value: 6,
+		properties: ["row-gap", "column-gap"],
 		reason:
 			"the Button's inner label row (`ui/variants.ts` `gap-1.5`, §3.4 flagged-not-absorbed) — " +
 			"the composer's send/attach controls render it on every scored frame",
@@ -1554,6 +1557,7 @@ export const U42_EXEMPTIONS: Array<{
 	{
 		path: "r-12vffkv>div.css-g5y9jx",
 		value: 6,
+		properties: ["row-gap", "column-gap"],
 		reason:
 			"the same Button inner row through the second pressable styling — RNW renders that " +
 			"control as a `button` element in the composer and as a `div` in the empty/notice " +
@@ -1563,6 +1567,12 @@ export const U42_EXEMPTIONS: Array<{
 	{
 		path: "div.css-g5y9jx.px-4>div.css-g5y9jx.rounded-md",
 		value: 10,
+		properties: [
+			"padding-top",
+			"padding-right",
+			"padding-bottom",
+			"padding-left",
+		],
 		reason:
 			"the ask/pending card's frame (`pending-card.tsx` `p-2.5`) — §3.4's flagged-not-absorbed " +
 			"list; the 892-row ci-tier audit's single largest family (S8 ask/approval/populated-long)",
@@ -1570,6 +1580,7 @@ export const U42_EXEMPTIONS: Array<{
 	{
 		path: "button.css-g5y9jx.r-1loqt21>div.css-g5y9jx.min-h-[56px]",
 		value: 10,
+		properties: ["padding-top", "padding-bottom"],
 		reason:
 			"the tall list row's own padding (`ui/variants.ts` `py-2.5`, the 56pt-row variant) — " +
 			"§3.4 flagged-not-absorbed; measured on the sessions list and the home screen",
@@ -1577,6 +1588,7 @@ export const U42_EXEMPTIONS: Array<{
 	{
 		path: "div.css-g5y9jx.min-h-[56px]>div.css-g5y9jx.flex-1",
 		value: 2,
+		properties: ["row-gap", "column-gap"],
 		reason:
 			"the same row's two-line inner block (`ui/components/list-row.tsx` `gap-0.5`) — §3.4 " +
 			"flagged-not-absorbed",
@@ -1584,6 +1596,7 @@ export const U42_EXEMPTIONS: Array<{
 	{
 		path: "div.css-g5y9jx.items-center>div.css-g5y9jx.w-full>div.css-g5y9jx.flex-row",
 		value: 6,
+		properties: ["row-gap", "column-gap"],
 		reason:
 			"a full-width row inside a centred wrapper (`gap-1.5`) on the welcome/list surfaces — " +
 			"flagged, not absorbed (§3.4); a UI-wide sweep is its own ticket",
@@ -1591,6 +1604,7 @@ export const U42_EXEMPTIONS: Array<{
 	{
 		path: "div.css-g5y9jx.rounded-md>div.css-g5y9jx.r-150rngu>div.css-g5y9jx>div.css-g5y9jx.gap-1",
 		value: 6,
+		properties: ["padding-top", "padding-bottom"],
 		reason:
 			"the pending card's inner rows (`pending-card.tsx` `py-1.5`/`pt-1.5`) — §3.4 " +
 			"flagged-not-absorbed; covers both the full-height and the top-only chains",
@@ -1598,6 +1612,7 @@ export const U42_EXEMPTIONS: Array<{
 	{
 		path: "div.css-g5y9jx.gap-3>div.css-g5y9jx.flex-row>div.css-g5y9jx.flex-1>div.css-g5y9jx.gap-1.5",
 		value: 6,
+		properties: ["row-gap", "column-gap"],
 		reason:
 			"a two-column row inside the list/settings surfaces (`gap-1.5`) — flagged, not " +
 			"absorbed (§3.4)",
@@ -1605,11 +1620,14 @@ export const U42_EXEMPTIONS: Array<{
 	{
 		path: "div.css-g5y9jx.rounded-md>div.css-g5y9jx.gap-3>div.css-g5y9jx.gap-4>div.css-g5y9jx.rounded-md>div.css-g5y9jx.gap-3>div.css-g5y9jx.gap-1.5",
 		value: 6,
+		properties: ["row-gap", "column-gap"],
 		reason:
 			"nested cards on the error/empty surfaces (`gap-1.5` rows within `gap-3`/`gap-4` " +
 			"stacks) — flagged, not absorbed (§3.4)",
 	},
 	{
+		/* No `properties`, deliberately: `anyValue` records the whole node whatever its
+		 *  value resolves to, so a property list would say nothing (R31's exception). */
 		path: "div.css-g5y9jx.gap-3>div.css-g5y9jx.flex-row>svg.lucide.lucide-triangle-alert",
 		anyValue: true,
 		reason:
@@ -1622,6 +1640,7 @@ export const U42_EXEMPTIONS: Array<{
 	{
 		path: "div.css-g5y9jx.px-3>button.css-g5y9jx.r-1loqt21",
 		value: 10,
+		properties: ["padding-left", "padding-right"],
 		reason:
 			"#59's condensed-turn bar (`turn-bar.tsx` — the `px-2.5` on its Pressable) — the " +
 			"summary row this PR does not touch; measured on the ci run of 37563484274 as the " +
@@ -1631,6 +1650,7 @@ export const U42_EXEMPTIONS: Array<{
 	{
 		path: "div.css-g5y9jx.px-3>button.css-g5y9jx.r-1loqt21",
 		value: 6,
+		properties: ["row-gap", "column-gap"],
 		reason:
 			"#59's condensed-turn bar (`turn-bar.tsx` — the `gap-1.5` between its ✓ glyph, its " +
 			"text and its caret; row-gap and column-gap) — same surface and run as the entry " +
@@ -2175,10 +2195,31 @@ function u41SummaryRows(state: AuditState): CheckRow[] {
  */
 const SHEET_SURFACE_PATH = "rounded-t-lg";
 
+/**
+ * Whether this node IS the sheet's own clearance region rather than merely below it.
+ *
+ * The path runs from the node upward (six levels, then truncated), so the depth is
+ * the number of segments after the surface. The app computes "one scale step plus the
+ * declared inset" on the sheet's content region — depth 1, or depth 2 through the
+ * scroll view that stands between the surface and the padded body — and nowhere else
+ * (review round 6, R30: with `includes` alone, any descendant in those six levels
+ * passed, so a sheet descendant padded to 20+8 on iphone-se or 20+16 on the tablet
+ * was reported as an inset-plus-step it is not).
+ */
+function onSheetClearance(path: string): boolean {
+	const parts = path.split(">");
+	const at = parts.findIndex((part) => part.includes(SHEET_SURFACE_PATH));
+	return at !== -1 && parts.length - at - 1 <= SHEET_CLEARANCE_DEPTH;
+}
+
+/** How far below the sheet's surface the app's own inset+step clearance lives. */
+const SHEET_CLEARANCE_DEPTH = 2;
+
 function u42SpacingScale(state: AuditState, floors: Floors): CheckRow[] {
 	const allowed = floors.spacing;
 	const failures: CheckRow[] = [];
 	const exemptions: CheckRow[] = [];
+	const carveOuts: CheckRow[] = [];
 	let checked = 0;
 	for (const node of state.nodes) {
 		const values: Array<[string, number]> = [
@@ -2248,16 +2289,22 @@ function u42SpacingScale(state: AuditState, floors: Floors): CheckRow[] {
 			if (
 				property.startsWith("padding-") &&
 				state.insets[side] !== 0 &&
-				node.path.includes(SHEET_SURFACE_PATH) &&
+				onSheetClearance(node.path) &&
 				allowed.some(
 					(step) => Math.abs(state.insets[side] + step - value) < 0.01,
 				)
 			) {
-				exemptions.push({
+				/* ITS OWN LIST, AND NOT CAPPED (review round 6, R30; QA Q2). Pushed into
+				 *  `exemptions` it was cut by `.slice(0, 8)` — the ledger floods that list
+				 *  in 464 of 696 cells — so the allowance ran in CI with its EXCEPTION row
+				 *  visible ZERO times, which is an audit-rule weakening nobody could see.
+				 *  These rows are bounded (one per padded element per side) and they always
+				 *  reach the report. */
+				carveOuts.push({
 					check: "U-42",
 					verdict: "EXCEPTION",
 					measured:
-						`the sheet's own surface: ${property} ${round1(value)}pt is a scale step ` +
+						`the sheet's own clearance: ${property} ${round1(value)}pt is a scale step ` +
 						`plus the declared ${side} inset (${round1(state.insets[side])}pt)`,
 					detail: node.path,
 				});
@@ -2316,6 +2363,9 @@ function u42SpacingScale(state: AuditState, floors: Floors): CheckRow[] {
 			detail: "",
 		},
 		...exemptions.slice(0, 8),
+		/* After the cap, on purpose: the ledger's records are many and repetitive, the
+		 *  carve-out's are few and are the one reading a reviewer must be able to see. */
+		...carveOuts,
 	];
 }
 

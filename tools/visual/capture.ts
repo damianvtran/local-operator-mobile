@@ -2840,7 +2840,8 @@ if (isMain) {
 	// Which devices a run covers. `core` is the sample the operator's rule asks to be
 	// run first — smallest phone, a typical phone, phone landscape, a tablet in each
 	// orientation — `ci` is the bounded sample the per-push job takes (matrix.ts
-	// `CI_DEVICES`, ~11 minutes), and `--full` covers every size. `--devices`
+	// `CI_DEVICES`, 696 cells — ~26 minutes at the 2.24 s/cell this harness measured on
+	// the runner), and `--full` covers every size. `--devices`
 	// overrides any of them.
 	//
 	// An unknown tier is an ERROR rather than a silent fall back to `core`: a typo'd

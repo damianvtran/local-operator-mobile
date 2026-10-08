@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useRef, useState } from "react";
 
 import {
 	closeModal,
+	hasNestedModal,
 	hostDims,
 	isCovered,
 	type ModalScope,
@@ -23,6 +24,13 @@ export const ModalScopeContext = createContext<ModalScope | null>(null);
 export interface ModalStackEntry {
 	/** Whether this modal should actually be DRAWN (a newer, overlapping modal is up). */
 	covered: boolean;
+	/**
+	 * Whether a modal raised INSIDE this one is up. The host keeps painting its dim —
+	 * it must, or the dim would have to be handed over and every frame of that hand-over
+	 * is a frame that can be wrong — but it stops being a dismiss CONTROL, which is what
+	 * keeps the audit's overlap rule from counting two dims (see `hasNestedModal`).
+	 */
+	nested: boolean;
 	/**
 	 * Whether a modal raised inside this one already dims the screen. A modal whose
 	 * host dims renders its scrim as a press layer with no dim of its own — one dim
@@ -73,6 +81,7 @@ export function useModalStackEntry(
 
 	const [covered, setCovered] = useState(false);
 	const [hostScrimmed, setHostScrimmed] = useState(false);
+	const [nested, setNested] = useState(false);
 	/* Read off the options object so the effect's dependency is the primitive, not the
 	 *  object literal every caller writes inline — a fresh `{}` per render would
 	 *  re-register the modal on every render. */
@@ -82,6 +91,7 @@ export function useModalStackEntry(
 		if (!visible) {
 			setCovered(false);
 			setHostScrimmed(false);
+			setNested(false);
 			return;
 		}
 		const opened = openModal(scope, parent, scrim);
@@ -89,6 +99,7 @@ export function useModalStackEntry(
 		const sync = () => {
 			setCovered(isCovered(opened));
 			setHostScrimmed(hostDims(opened));
+			setNested(hasNestedModal(opened));
 		};
 		/* READ ONCE IMMEDIATELY, then on every change: a modal that opens while a
 		 *  later one is already mounted (two sheets driven at once, a confirm raised
@@ -106,5 +117,5 @@ export function useModalStackEntry(
 		};
 	}, [visible, parent, scope, scrim]);
 
-	return { covered, hostDims: hostScrimmed, scope };
+	return { covered, hostDims: hostScrimmed, nested, scope };
 }

@@ -565,6 +565,74 @@ describe("U-42 — spacing on the token scale", () => {
 		}
 	});
 
+	it("bounds the sheet allowance to the clearance region, not to anything below the surface", () => {
+		/* R30: `path.includes("rounded-t-lg")` passed any descendant in the six levels a
+		 *  path keeps, so a sheet descendant padded to 20+8 on iphone-se read as an
+		 *  inset-plus-step it is not. The clearance lives at depth 1, or 2 through the
+		 *  scroll view between the surface and the padded body. */
+		const deep = state({
+			insets: { top: 0, right: 0, bottom: 20, left: 0 },
+			nodes: [
+				node({
+					path: "div.css-g5y9jx.rounded-t-lg>div.css-g5y9jx.gap-2>div.css-g5y9jx.p-1>div.css-g5y9jx.px-4",
+					padding: { top: 0, bottom: 44, left: 0, right: 0 },
+				}),
+			],
+		});
+		expect(run("U-42", deep)[0]?.verdict).toBe("FAIL");
+
+		const scroll = state({
+			insets: { top: 0, right: 0, bottom: 20, left: 0 },
+			nodes: [
+				node({
+					path: "div.css-g5y9jx.rounded-t-lg>div.css-g5y9jx.r-150rngu>div.css-g5y9jx.px-4",
+					padding: { top: 0, bottom: 44, left: 0, right: 0 },
+				}),
+			],
+		});
+		const verdicts = run("U-42", scroll).map((r) => r.verdict);
+		expect(verdicts).toContain("EXCEPTION");
+		expect(verdicts).not.toContain("FAIL");
+	});
+
+	it("reports the sheet allowance even when the ledger fills the cap", () => {
+		/* R30's second half: the EXCEPTION row was pushed into the same list that
+		 *  `.slice(0, 8)` cuts, and CI's artifact shows 464 of 696 cells at that cap with
+		 *  the carve-out row present ZERO times — an allowance nobody could see. */
+		const path = "div.css-g5y9jx.rounded-t-lg>div.css-g5y9jx.px-4";
+		const pushed = [];
+		for (let i = 0; i < 12; i += 1) {
+			const entry = {
+				path: `div#filler-${i}`,
+				value: 6,
+				properties: ["row-gap", "column-gap"],
+				reason: `filler ${i}`,
+			};
+			U42_EXEMPTIONS.push(entry);
+			pushed.push(entry);
+		}
+		try {
+			const rows = run(
+				"U-42",
+				state({
+					insets: { top: 0, right: 0, bottom: 20, left: 0 },
+					nodes: [
+						node({
+							path,
+							padding: { top: 0, bottom: 44, left: 0, right: 0 },
+						}),
+					],
+				}),
+			);
+			const sheetRows = rows.filter((r) =>
+				(r.measured ?? "").includes("the sheet's own clearance"),
+			);
+			expect(sheetRows).toHaveLength(1);
+		} finally {
+			for (const entry of pushed) U42_EXEMPTIONS.pop();
+		}
+	});
+
 	it("needs BOTH the inset and the surface: a sheet padding on an inset-free device still fails", () => {
 		const sheetPath = "div.css-g5y9jx.rounded-t-lg>div.css-g5y9jx.px-4";
 		const noInset = state({
