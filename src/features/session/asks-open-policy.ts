@@ -217,36 +217,42 @@ export const outstandingAskIds = (
  *
  * `reconcile` forgets a dismissal once none of the dismissed ids is outstanding
  * in the rows it is handed, so it is only sound when those rows are the whole
- * queue. The wire's text budget can DROP a row that is still outstanding; the
- * frame then names fewer asks than its `asks_open` tally counts. Reconciling
- * against such a frame would forget the dismissal of a clipped-but-live ask, and
- * the next fresh view would auto-open the sheet over a refusal the reader
- * already gave - the over-open direction this policy exists to avoid.
+ * queue. If a frame names fewer outstanding asks than its `asks_open` tally
+ * counts, some outstanding row was clipped on the way to this app; reconciling
+ * against it would forget the dismissal of a clipped-but-live ask, and the next
+ * fresh view would auto-open the sheet over a refusal the reader already gave -
+ * the over-open direction this policy exists to avoid.
  *
- * WHY THE TALLY AND NOT `asks_truncated`: that flag is STICKY (set the first time
- * the budget drops any row and never cleared), so a queue that was clipped once
- * and has since shrunk back under the budget still carries it. Gating on it would
- * hold a dismissal forever on a perfectly complete frame. A dropped outstanding
- * row, by contrast, ALWAYS shows as tally > named, and a complete frame never
- * does. (This is also why the app deliberately does not read the flag; see the
- * note on `asks_truncated` in `contracts/schemas.ts`.)
+ * WHY THE TALLY: the guard is correct whichever mechanism clipped the row,
+ * because a dropped outstanding row ALWAYS shows as tally > named and a
+ * complete frame never does. It needs no knowledge of the cause. The cause that
+ * is reachable on this app's path (the phone relay's projection, as read from
+ * the Local Operator daemon source at `local_operator/mobile/projection.py` and
+ * `local_operator/asks/queue.py`) is the projection's own row cap,
+ * `PROJECTION_CAP` (20 rows, open first), which counts SETTLED rows too: a
+ * queue with outstanding asks plus recently settled ones can exceed it and
+ * clip an outstanding row while `asks_open` - passed through from the runtime's
+ * own tally, not recounted from the rows - still counts it. The desktop wire has
+ * a second, text-budget clip (`bound_ask_rows`, flagged `asks_truncated`); the
+ * phone projection reads neither, and this app deliberately does not read the
+ * flag (see its note in `contracts/schemas.ts`), so nothing here depends on it.
  *
  * WHY HOLD AND NOT FORGET: an incomplete frame cannot say whether the dismissed
  * ids are still outstanding, and the two mistakes are not symmetric. Holding
  * wrongly leaves a dead entry behind (it is memory only, and the next complete
- * frame clears it); forgetting wrongly pops a sheet the reader refused.
+ * frame clears it); forgetting wrongly pops a sheet the reader refused. The
+ * price of holding is on the OTHER side: while a hold lasts it also suppresses
+ * the auto-open of a genuinely NEW ask. That is the under-open direction, which
+ * the operator accepts.
  *
  * An absent `asks_open` is an older relay that publishes rows without the tally
  * (the presence of the field is the capability proxy, ADR 0005 s1); there is
  * nothing to compare against, so the rows are taken as the truth, as before.
  *
- * HONEST RESIDUE: if a queue ever exceeds the projection's own row cap
- * (`PROJECTION_CAP`, defined by the relay in the Local Operator repository and
- * not mirrored here) the named set is clipped even when the tally is exact on
- * the wire. The guard then reads tally > named and HOLDS, which is the safe
- * direction; the dismissal is cleared by a later frame once the queue is back
- * under the cap. This function does not change the cap and cannot tell that case
- * from a budget drop - it does not need to.
+ * A queue longer than `PROJECTION_CAP` therefore reads tally > named and HOLDS;
+ * the dismissal is cleared by a later complete frame once the queue is back
+ * under the cap. This function does not change the cap and does not need to tell
+ * that case from any other clip.
  */
 export const namesEveryOutstandingAsk = (
 	rows: PendingAsk[],

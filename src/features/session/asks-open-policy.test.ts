@@ -1285,6 +1285,13 @@ describe("U4 - a dismissal is forgotten once the queue empties", () => {
 			expect(namesEveryOutstandingAsk([settled], 1)).toBe(false);
 			expect(namesEveryOutstandingAsk([], 0)).toBe(true);
 		});
+
+		it("treats tally < named as complete: the rows are fresher than the count", () => {
+			// Pins the `<=` (not `===`): a tally that lags behind the rows must not
+			// hold a dismissal, since nothing is missing from the frame.
+			const rows = [ask({ ask_id: "a1" }), ask({ ask_id: "a2" })];
+			expect(namesEveryOutstandingAsk(rows, 1)).toBe(true);
+		});
 	});
 
 	it("a bare tally cannot name ids, so it neither forgets nor holds against them", () => {
