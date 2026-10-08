@@ -74,16 +74,6 @@ interface Entry {
 	 * `hostDims` — so this is "would", not "does".
 	 */
 	scrim: boolean;
-	/**
-	 * Whether the app is currently SHOWING this modal (`visible` on the caller).
-	 *
-	 * A modal is registered for as long as its component is mounted — every screen in
-	 * this app keeps its sheets in the tree — so `live` is what distinguishes the one
-	 * the reader is looking at from the ones waiting. Only live modals cover, dim,
-	 * nest or stand anything down; a modal that is mounted but closed must not
-	 * silence the one on screen.
-	 */
-	live: boolean;
 }
 
 /**
@@ -109,25 +99,11 @@ export function openModal(
 	scope: ModalScope,
 	parent: ModalScope | null,
 	scrim = true,
-	live = true,
 ): ModalHandle {
 	const handle: ModalHandle = { scope };
-	open.push({ handle, parent, scrim, live });
+	open.push({ handle, parent, scrim });
 	emit();
 	return handle;
-}
-
-/**
- * Tell the stack whether this modal is being shown.
- *
- * Emitted on every change, because it is not only the caller's business: the modal
- * that a dismissal uncovers decides from this whether it is the dimmer again.
- */
-export function setModalLive(handle: ModalHandle, live: boolean): void {
-	const entry = open.find((candidate) => candidate.handle === handle);
-	if (entry === undefined || entry.live === live) return;
-	entry.live = live;
-	emit();
 }
 
 /** Unregister a modal. A handle that is not open is ignored, not an error. */
@@ -168,8 +144,7 @@ export function hasNestedModal(handle: ModalHandle): boolean {
 	const at = open.findIndex((entry) => entry.handle === handle);
 	if (at === -1) return false;
 	return open.some(
-		(other) =>
-			other.live && other.handle !== handle && isNestedIn(other, handle),
+		(other) => other.handle !== handle && isNestedIn(other, handle),
 	);
 }
 
@@ -202,9 +177,7 @@ function isNestedIn(entry: Entry, ancestor: ModalHandle): boolean {
 export function isCovered(handle: ModalHandle): boolean {
 	const at = open.findIndex((entry) => entry.handle === handle);
 	if (at === -1) return false;
-	return open
-		.slice(at + 1)
-		.some((later) => later.live && !isNestedIn(later, handle));
+	return open.slice(at + 1).some((later) => !isNestedIn(later, handle));
 }
 
 /**
@@ -239,7 +212,7 @@ export function hostDims(handle: ModalHandle): boolean {
 			(candidate) => candidate.handle.scope === entry?.parent,
 		);
 		if (owner === undefined) return false;
-		if (owner.scrim && owner.live) return true;
+		if (owner.scrim) return true;
 		entry = owner;
 	}
 	return false;
@@ -255,39 +228,36 @@ export function hostDims(handle: ModalHandle): boolean {
  * the composite peaked at 0.906-0.91 for 133-200 ms on a cancel of the destructive
  * confirm. Asking "who is the dimmer?" once, here, cannot produce two or none.
  *
- * The answer is the LAST LIVE modal with no live ancestor — the outermost modal of the
- * topmost branch, which is the surface the reader is looking at. When nothing is live,
- * the dim belongs to whichever modal was last the dimmer and is still mounted: the one
- * mid-dismissal, whose own Modal keeps its content (and this scrim) on screen while it
- * fades out. That fallback is R34 — gating the dim on `visible` stopped it the instant
- * the fade began, and the card faded over an undimmed page.
+ * The answer is the OUTERMOST modal of the topmost branch — the surface the reader is
+ * looking at — and, when nothing is registered at all, whichever modal was last the
+ * dimmer: that is the one mid-dismissal, whose own `Modal` keeps its content (and this
+ * scrim) on screen while it fades, which is R34. Gating the dim on `visible` stopped
+ * it the instant the fade began and the card faded over an undimmed page.
+ *
+ * THE FALLBACK DOES NOT REQUIRE THE ENTRY TO STILL BE REGISTERED, deliberately: a
+ * dismissal is exactly the moment the handle leaves the list, and a dim that ends with
+ * the registration is the regression this exists to prevent.
  */
 let lastDimmer: ModalHandle | null = null;
 
 export function dimmer(): ModalHandle | null {
 	for (let i = open.length - 1; i >= 0; i -= 1) {
 		const entry = open[i];
-		if (entry === undefined || !entry.live) continue;
-		if (hasLiveAncestor(entry)) continue;
+		if (entry === undefined) continue;
+		if (hasAncestor(entry)) continue;
 		lastDimmer = entry.handle;
 		return lastDimmer;
 	}
-	if (
-		lastDimmer !== null &&
-		open.some((entry) => entry.handle === lastDimmer)
-	) {
-		return lastDimmer;
-	}
-	return null;
+	return lastDimmer;
 }
 
-/** Whether any ENCLOSING modal of this one is live — those are the ones that dim. */
-function hasLiveAncestor(entry: Entry): boolean {
+/** Whether a modal ENCLOSING this one already dims — a `Sheet` inside a drawer. */
+function hasAncestor(entry: Entry): boolean {
 	for (let scope: ModalScope | null = entry.parent; scope !== null; ) {
 		const here = scope;
 		const owner = open.find((candidate) => candidate.handle.scope === here);
 		if (owner === undefined) return false;
-		if (owner.live) return true;
+		if (owner.scrim) return true;
 		scope = owner.parent;
 	}
 	return false;

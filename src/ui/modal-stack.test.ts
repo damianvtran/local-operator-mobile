@@ -9,7 +9,6 @@ import {
 	type ModalScope,
 	modalStackDepth,
 	openModal,
-	setModalLive,
 	subscribeToModalStack,
 } from "@/ui/modal-stack";
 
@@ -39,13 +38,9 @@ describe("the modal stack", () => {
 	/* A registration the way a renderer makes one: its OWN scope holder (filled on
 	 *  registration, exactly as the hook fills it) and the scope of the modal it is
 	 *  drawn inside — null at the root. */
-	const openWithin = (
-		parent: ModalScope | null,
-		scrim = true,
-		live = true,
-	): ModalHandle => {
+	const openWithin = (parent: ModalScope | null, scrim = true): ModalHandle => {
 		const scope: ModalScope = { current: null };
-		const handle = openModal(scope, parent, scrim, live);
+		const handle = openModal(scope, parent, scrim);
 		scope.current = handle;
 		opened.push(handle);
 		return handle;
@@ -137,9 +132,8 @@ describe("the modal stack", () => {
 	it("leaves EXACTLY ONE dimmer in every stack it can be put in", () => {
 		/* ONE DIMMER PER FRAME (round 9, R39). Round 8 asserted a per-modal predicate
 		 *  (`!covered && !hostDims`), which could be satisfied TWICE — a Dialog closing
-		 *  over a Sheet left both drawing — so the invariant now lives in one place
-		 *  (`dimmer`) and this is the table of shapes, including the SIBLING resurface
-		 *  that the per-modal version could not express. */
+		 *  over a Sheet left both drawing — so the question now has one answer, from
+		 *  one place, and this is the table of shapes it has to answer for. */
 		const who = (): ModalHandle | null => dimmer();
 
 		// the shipped shape: drawer, its pane's menu, a dialog raised from the menu
@@ -148,48 +142,39 @@ describe("the modal stack", () => {
 		const dialog = openWithin(menu.scope, true);
 		expect(who()).toBe(drawer);
 
-		// the SIBLING case: a dialog closing over a sheet that is not its ancestor.
-		// The sheet is live again, the dialog is not — so the SHEET dims, once.
-		setModalLive(dialog, false);
-		expect(who()).toBe(drawer);
+		// SIBLINGS, not nested — `project-detail.tsx`'s milestone editor and its
+		// destructive confirm. Closing the confirm hands the dim to the sheet that
+		// resurfaces, instead of the two of them drawing it (the measured 0.91 pulse).
 		closeModal(dialog);
 		closeModal(menu);
 		closeModal(drawer);
-
 		const sheet = openWithin(null, true);
 		const confirm = openWithin(null, true);
 		expect(who()).toBe(confirm);
-		// the confirm is dismissed: the sheet resurfaces as the dimmer, and the
-		// dismissed one — still mounted, still fading — draws nothing
-		setModalLive(confirm, false);
-		expect(who()).toBe(sheet);
 		closeModal(confirm);
-
-		// nothing live: the dim stays with the modal that was the dimmer, which is the
-		// one whose own Modal is still on screen mid-fade (R34)
-		setModalLive(sheet, false);
 		expect(who()).toBe(sheet);
+
+		// nothing registered: the dim stays with the modal that had it, because that is
+		// the one whose own Modal is still painting its content through the fade (R34)
 		closeModal(sheet);
+		expect(who()).toBe(sheet);
 
 		// a guest whose host goes first takes the dim over rather than leaving a frame
 		// with none
 		const host = openWithin(null, true);
 		const guest = openWithin(host.scope, true);
 		expect(who()).toBe(host);
-		setModalLive(host, false);
-		expect(who()).toBe(guest);
-		closeModal(guest);
 		closeModal(host);
+		expect(who()).toBe(guest);
 
-		// a modal mounted but never shown is inert: it neither dims nor covers
-		const sleeping = openWithin(null, false);
-		const showing = openWithin(null, true);
-		expect(who()).toBe(showing);
-		/* The inert one must not MASK the live one — that is the property that matters,
-		 *  not whether the inert one is itself "covered". */
-		expect(isCovered(showing)).toBe(false);
-		closeModal(showing);
-		closeModal(sleeping);
+		// a Sheet over a Dialog: the outer one dims for both
+		const base = openWithin(null, true);
+		const overDialog = openWithin(base.scope, true);
+		expect(who()).toBe(base);
+
+		closeModal(overDialog);
+		closeModal(guest);
+		closeModal(base);
 	});
 
 	it("reports a scrimmed ancestor, and only a scrimmed one", () => {

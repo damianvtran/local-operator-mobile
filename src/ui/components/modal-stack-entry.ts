@@ -8,7 +8,6 @@ import {
 	isCovered,
 	type ModalScope,
 	openModal,
-	setModalLive,
 	subscribeToModalStack,
 } from "@/ui/modal-stack";
 
@@ -103,50 +102,43 @@ export function useModalStackEntry(
 		dims: false,
 	});
 
-	/* REGISTERED FOR THE COMPONENT'S LIFETIME, and `visible` is a flag on the entry
-	 *  (round 9, R39). Every screen here keeps its sheets in the tree, so registering
-	 *  on `visible` meant an entry existed only while a modal was showing — and the
-	 *  modal that a dismissal uncovers then had no way to be told it was the dimmer
-	 *  again while the closing one was still painting. Only LIVE entries cover, dim,
-	 *  nest or stand anything down, so a closed sheet in the tree is inert. */
 	useEffect(() => {
-		const opened = openModal(scope, parent, scrim, false);
+		if (!visible) {
+			setSnapshot({
+				covered: false,
+				hostScrimmed: false,
+				nested: false,
+				dims: false,
+			});
+			return;
+		}
+		const opened = openModal(scope, parent, scrim);
 		scope.current = opened;
 		const sync = () => {
 			setSnapshot({
 				covered: isCovered(opened),
 				hostScrimmed: hostDims(opened),
 				nested: hasNestedModal(opened),
+				/* THE ONE DIMMER IS ASKED ONCE, OF THE STACK (round 9, R39) — not
+				 *  answered per modal by two predicates that can both say yes. */
 				dims: dimmer() === opened,
 			});
 		};
-		/* READ ONCE IMMEDIATELY, then on every change: a modal that opens while a
-		 *  later one is already mounted (two sheets driven at once, a confirm raised
-		 *  in the same commit) would otherwise keep whatever it last computed, and
-		 *  the stack rules would be applied to a stale list. */
+		/* Read once immediately, then on every change: a modal that opens while a later
+		 *  one is already mounted would otherwise keep a stale reading. */
 		sync();
 		const unsubscribe = subscribeToModalStack(sync);
 		return () => {
+			/* CLOSE FIRST, THEN UNSUBSCRIBE: `closeModal` emits, and this component's
+			 *  last reading has to be the one taken AFTER it left the list. That is what
+			 *  makes a dismissal hand the dim on — to the modal underneath when there is
+			 *  one (the sibling Sheet case), and to itself when there is not (a standalone
+			 *  Dialog's fade, R34, where it is deliberately still the remembered dimmer). */
+			closeModal(opened);
 			unsubscribe();
 			scope.current = null;
-			/* Closing is what un-covers the modal underneath — the store's `emit` runs
-			 *  the listeners of every other live entry, which is how the sheet the
-			 *  reader returns to comes back without a second prop. */
-			closeModal(opened);
 		};
-		/* `visible` is deliberately NOT read here: it belongs to the flag effect below,
-		 *  and a registration that depended on it would have to re-register the entry —
-		 *  moving it in the mount order the stack rules are written against — every time
-		 *  a sheet opened. The entry starts inert and the flag lands in this same commit,
-		 *  which is what every caller here does anyway: a screen mounts its sheets
-		 *  closed (`visible=false`) and opens them by state. */
-	}, [parent, scope, scrim]);
-
-	/* Showing and hiding is a FLAG, not a re-registration: the entry stays, and every
-	 *  other live entry re-reads the stack when it changes. */
-	useEffect(() => {
-		if (scope.current !== null) setModalLive(scope.current, visible);
-	}, [visible, scope]);
+	}, [visible, parent, scope, scrim]);
 
 	return {
 		covered: snapshot.covered,
