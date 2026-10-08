@@ -341,7 +341,13 @@ const allMonitorRows = (
 
 /** One wake-carrying conversation: its name and head clause, then its wake
  *  lines, capped per the desktop's rule with the disclosure putting the rest
- *  back. Non-interactive except the disclosure — this surface is a read. */
+ *  back. Non-interactive except the disclosure — this surface is a read.
+ *
+ *  THE CLAUSE WRAPS, deliberately: it is the sentence that says `Gone` or
+ *  `Parked`, and a `numberOfLines` clamp clipped it mid-sentence at 135/200 %
+ *  rather than wrapping (audit U-04/U-07, which reads a multi-line clamp as
+ *  clipped text) — the honesty this surface exists for is exactly that
+ *  sentence staying readable. */
 const WakeEntry = ({
 	entry,
 	expanded,
@@ -364,9 +370,7 @@ const WakeEntry = ({
 			>
 				{entry.name}
 			</Text>
-			<Text className="text-meta text-ink-dim" numberOfLines={2}>
-				{entry.clause}
-			</Text>
+			<Text className="text-meta text-ink-dim">{entry.clause}</Text>
 			<View className="gap-2 pl-3 pt-2">
 				{rows.map((row) => (
 					<WakeLine key={row.id} row={row} />
@@ -391,17 +395,13 @@ const WakeEntry = ({
 
 /** One wake line: the message (what it will say), then the facts — the due
  *  slot (or `stale`, which replaces the clock because nothing will fire it)
- *  and the cadence. */
+ *  and the cadence. The message wraps rather than clamping for the clause's
+ *  reason (audit U-04/U-07), and the stack steps by `gap-1` — 4 pt, the
+ *  smallest step of the token scale; `gap-0.5`'s 2 pt is off it (audit U-42). */
 const WakeLine = ({ row }: { row: WakeLineView }) => (
-	<View className="gap-0.5">
+	<View className="gap-1">
 		{row.message !== "" ? (
-			<Text
-				className="text-body-sm text-ink"
-				numberOfLines={2}
-				ellipsizeMode="tail"
-			>
-				{row.message}
-			</Text>
+			<Text className="text-body-sm text-ink">{row.message}</Text>
 		) : null}
 		<View className="flex-row flex-wrap gap-x-2">
 			{row.due !== "" ? (
@@ -417,7 +417,8 @@ const WakeLine = ({ row }: { row: WakeLineView }) => (
 );
 
 /** One monitor-carrying conversation, the wake entry's twin: name, head
- *  clause, then one line per watch. */
+ *  clause, then one line per watch. The clause wraps for the same reason its
+ *  twin's note gives (audit U-04/U-07). */
 const MonitorEntry = ({
 	entry,
 	expanded,
@@ -440,9 +441,7 @@ const MonitorEntry = ({
 			>
 				{entry.name}
 			</Text>
-			<Text className="text-meta text-ink-dim" numberOfLines={2}>
-				{entry.clause}
-			</Text>
+			<Text className="text-meta text-ink-dim">{entry.clause}</Text>
 			<View className="gap-2 pl-3 pt-2">
 				{rows.map((row) => (
 					<MonitorLine key={row.id} row={row} />
@@ -469,9 +468,9 @@ const MonitorEntry = ({
 
 /** One watch: what it is watching (name, description), then the facts — the
  *  due-or-state slot, the cadence, and the store's health sentence when there
- *  is one. */
+ *  is one. Its stack steps by `gap-1` for the wake line's reason (audit U-42). */
 const MonitorLine = ({ row }: { row: MonitorLineView }) => (
-	<View className="gap-0.5">
+	<View className="gap-1">
 		<Text
 			className="text-body-sm text-ink"
 			numberOfLines={1}
