@@ -362,7 +362,7 @@ export function describeDeviceCoverage(coverage: {
  * (3 phones x 4 scales + 2 tablets x 3 scales) — 58 x 2 x 18, the tier's 5 profiles —
  * and the CI job's capture step is bound at 40 minutes. Measured on the runner, that is
  * 2.24 s/cell: 403 cells in 903 s (run 37098393675, a plan of 403 cells then), so a core
- * run needs ~73 minutes. The `core` job's own bound is 100 (see `.github/workflows/e2e.yml`,
+ * run needs ~78 minutes. The `core` job's own bound is 110 (see `.github/workflows/e2e.yml`,
  * `web-audit-core`), which is above the 6264 s deadline its plan derives for itself. The
  * job's first real
  * run of this path

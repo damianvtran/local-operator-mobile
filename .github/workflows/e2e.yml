@@ -268,9 +268,9 @@ jobs:
     # install 4 s + typecheck 1 s + EXPORT 34 s + RELAY START 1 s + capture 1044 s +
     # canary 81 s + stop relay 0 s + upload of the 91 MB artifact 6 s = 1192 s, the job's
     # whole measured wall time, plus the audit at its own measured rate — 696 cells x
-    # 1.25 s = 765 s, which is DERIVED rather than taken from that run, whose capture
-    # failed the identical-state gate before the audit step ran. That is ~1,957 s ≈ 33
-    # min against the 80 below, so the bound is ~2.4x the work: the headroom is the point.
+    # 1.25 s = 870 s, which is DERIVED rather than taken from that run, whose capture
+    # failed the identical-state gate before the audit step ran. That is ~2,062 s ≈ 34
+    # min against the 80 below, so the bound is ~2.3x the work: the headroom is the point.
     # THE OLD FORM WAS FALSE, not merely imprecise:
     # `install + typecheck 10 + capture 40 + audit 20 + canary 5 < 80` sums to exactly
     # 60, so `< 60` is untrue, and it omits the export and the relay start entirely —
@@ -369,6 +369,8 @@ jobs:
         # RAISED 30 -> 40 WITH THE LIFECYCLE CELLS, for exactly that property: ten new
         # declared cells put this sample at 648 (34.8 min today, at 696), and the sample
         # is deliberately held AT 40 while the deadline still fits inside it: 696 x 3 s =
+        # 34.8 min, so the bound stays above the plan's own deadline with room for a slow
+        # runner rather than being raised to a rounder number.
         # old bound — a step bound that the plan's own deadline can exceed would fire on
         # a healthy run and stop being a signal. 40 holds the derived deadline with
         # ~1.7x the measured cost on top of it.
@@ -467,7 +469,8 @@ jobs:
     # The plan this job holds is the one the capture prints before it renders anything, so
     # the bound is checked against THAT rather than against a table, and each plan is
     # pinned to the ref that printed it: at 85b2785 `--plan --tier core --consecutive`
-    # printed `858 cells x 3 frame(s) = 2574 frames` with a derived `deadline: 2574 s`, and
+    # printed 858 cells x 3 frame(s) = 2574 frames (85b2785, a plan of 858 cells then)
+    # with a derived deadline of 2574 s (85b2785), and
     # at THIS head it prints `2088 cells x 3 frame(s) = 6264 frames` and `deadline: 6264 s`
     # (3000 ms/cell). The capture step's 110 is above both derived deadlines (so the step
     # cannot cut short the budget the run computed for itself) and ~1.4x the ~78 min the

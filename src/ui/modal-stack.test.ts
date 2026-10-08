@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import {
 	closeModal,
-	hasNestedModal,
+	hostDims,
 	isCovered,
 	type ModalHandle,
 	type ModalScope,
@@ -37,9 +37,9 @@ describe("the modal stack", () => {
 	/* A registration the way a renderer makes one: its OWN scope holder (filled on
 	 *  registration, exactly as the hook fills it) and the scope of the modal it is
 	 *  drawn inside — null at the root. */
-	const openWithin = (parent: ModalScope | null): ModalHandle => {
+	const openWithin = (parent: ModalScope | null, scrim = true): ModalHandle => {
 		const scope: ModalScope = { current: null };
-		const handle = openModal(scope, parent);
+		const handle = openModal(scope, parent, scrim);
 		scope.current = handle;
 		opened.push(handle);
 		return handle;
@@ -128,33 +128,30 @@ describe("the modal stack", () => {
 		expect(isCovered(confirm)).toBe(false);
 	});
 
-	it("reports a HOST as hosting while a modal raised inside it is open", () => {
-		/* THE SURFACE SIDE OF CONTAINMENT (design round 4, D1). Standing the drawer's scrim
-		 *  down belongs to the host, and this is the fact it stands down on: a modal nested
-		 *  inside it is up, so the inner surface already dims the host and takes the dismiss
-		 *  press the outer scrim exists for. Two dims stack into a second, undeclared ground
-		 *  — measured at 1.77:1 light / 1.41:1 dark where the contract pins the drawer
-		 *  panel's edge at 5.68:1 / 4.53:1 — and the outer scrim cannot receive its own press
-		 *  under the inner one. */
-		const drawer = open();
-		expect(hasNestedModal(drawer)).toBe(false);
+	it("reports a scrimmed ancestor, and only a scrimmed one", () => {
+		/* ONE DIM PER STACK (design round 5, D7/D8/D9). The guest asks this to
+		 *  decide whether it draws a dim of its own, and the walk is the whole
+		 *  chain: a dialog raised over a sheet that is itself hosted by the drawer
+		 *  must still find the drawer's dim, or it would paint the second one the
+		 *  round-4 blocker was about. */
+		const drawer = openWithin(null, true);
+		expect(hostDims(drawer)).toBe(false);
 
-		const menu = openInside(drawer);
-		expect(hasNestedModal(drawer)).toBe(true);
-		expect(hasNestedModal(menu)).toBe(false);
+		const menu = openWithin(drawer.scope, true);
+		expect(hostDims(menu)).toBe(true);
 
-		closeModal(menu);
-		expect(hasNestedModal(drawer)).toBe(false);
+		// A GRANDCHILD still finds the drawer, through the sheet between them.
+		const confirm = openWithin(menu.scope, true);
+		expect(hostDims(confirm)).toBe(true);
 
-		// A SIBLING is not a host: the drawer does not dim its own surface for a confirm
-		// that lives outside it (that is the standing-down rule, not this one).
-		const confirm = open();
-		expect(hasNestedModal(drawer)).toBe(false);
-		closeModal(confirm);
-		expect(hasNestedModal(drawer)).toBe(false);
+		// A host that draws no dim passes none down.
+		const plain = openWithin(null, false);
+		const insidePlain = openWithin(plain.scope, true);
+		expect(hostDims(insidePlain)).toBe(false);
 
-		// A handle the store has never seen hosts nothing rather than throwing.
-		expect(hasNestedModal({ scope: { current: null } })).toBe(false);
+		// A SIBLING is not an ancestor.
+		const sibling = openWithin(null, true);
+		expect(hostDims(sibling)).toBe(false);
 	});
 
 	it("returns a nested modal's host to normal when the nested one closes", () => {

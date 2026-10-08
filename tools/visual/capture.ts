@@ -116,7 +116,7 @@ let settledRetakes = 0;
  * every tier on purpose — `ci` plans 696 cells, `core` 2088, `full` 7656 — so none of
  * them starts by accident; the CI job passes `--yes` for exactly that reason. It is
  * NOT tied to the default tier, so it must not be raised to "let the default run": a
- * documented invocation that plans the whole `core` tier is a 69-minute command, and
+ * documented invocation that plans the whole `core` tier is a 78-minute command, and
  * the defect is the invocation, not the bound. Deriving it from the plan the way
  * `CELL_BUDGET_MS` is derived would be circular — the guard would then never fire —
  * so it stays a constant, and this comment is what it is derived from.
@@ -2814,7 +2814,7 @@ if (isMain) {
 				"                      The matrix declares 19 device profiles; the run prints the",
 				"                      share it covered, and names the profiles it did not.",
 				"                        ci    2 of 19 profiles — 696 cells, both themes, scales 100,",
-				"                              135 and 200 (~24 min) — the per-push CI job's sample",
+				"                              135 and 200 (~26 min) — the per-push CI job's sample",
 				"                        core  5 of 19 profiles — 2088 cells, both themes,",
 				"                              every scale — the local default",
 				"                        full  19 of 19 profiles — 7656 cells",

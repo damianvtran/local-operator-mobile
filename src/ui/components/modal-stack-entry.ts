@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useRef, useState } from "react";
 
 import {
 	closeModal,
-	hasNestedModal,
+	hostDims,
 	isCovered,
 	type ModalScope,
 	openModal,
@@ -24,11 +24,11 @@ export interface ModalStackEntry {
 	/** Whether this modal should actually be DRAWN (a newer, overlapping modal is up). */
 	covered: boolean;
 	/**
-	 * Whether a modal raised INSIDE this one is up. The host's own scrim stands
-	 * down while it is — the inner surface already dims the host and takes its
-	 * dismiss press — and the host's panel and content stay (design round 4, D1).
+	 * Whether a modal raised inside this one already dims the screen. A modal whose
+	 * host dims renders its scrim as a press layer with no dim of its own — one dim
+	 * per stack, with no hand-over to get wrong (design round 5, D7/D8/D9).
 	 */
-	nested: boolean;
+	hostDims: boolean;
 	/**
 	 * This modal's own scope: pass it to `<ModalScopeContext.Provider value={scope}>`
 	 * around the `Modal`. A renderer that nests a modal in its own content — the
@@ -57,7 +57,10 @@ export interface ModalStackEntry {
  * but closed (the shape every caller here uses — a screen keeps its sheets in the
  * tree) does not stand down the sheet the reader is actually in.
  */
-export function useModalStackEntry(visible: boolean): ModalStackEntry {
+export function useModalStackEntry(
+	visible: boolean,
+	options: { scrim?: boolean } = {},
+): ModalStackEntry {
 	const parent = useContext(ModalScopeContext);
 	/* The holder is created during render and filled by the effect below: a nested
 	 *  modal's own registration effect runs BEFORE its host's (React runs the
@@ -69,21 +72,23 @@ export function useModalStackEntry(visible: boolean): ModalStackEntry {
 	const scope = held.current;
 
 	const [covered, setCovered] = useState(false);
-	/* A modal raised INSIDE this one, which the host's own scrim and surface must
-	 *  account for (see `hasNestedModal`). */
-	const [nested, setNested] = useState(false);
+	const [hostScrimmed, setHostScrimmed] = useState(false);
+	/* Read off the options object so the effect's dependency is the primitive, not the
+	 *  object literal every caller writes inline — a fresh `{}` per render would
+	 *  re-register the modal on every render. */
+	const scrim = options.scrim ?? true;
 
 	useEffect(() => {
 		if (!visible) {
 			setCovered(false);
-			setNested(false);
+			setHostScrimmed(false);
 			return;
 		}
-		const opened = openModal(scope, parent);
+		const opened = openModal(scope, parent, scrim);
 		scope.current = opened;
 		const sync = () => {
 			setCovered(isCovered(opened));
-			setNested(hasNestedModal(opened));
+			setHostScrimmed(hostDims(opened));
 		};
 		/* READ ONCE IMMEDIATELY, then on every change: a modal that opens while a
 		 *  later one is already mounted (two sheets driven at once, a confirm raised
@@ -99,7 +104,7 @@ export function useModalStackEntry(visible: boolean): ModalStackEntry {
 			 *  reader returns to comes back without a second prop. */
 			closeModal(opened);
 		};
-	}, [visible, parent, scope]);
+	}, [visible, parent, scope, scrim]);
 
-	return { covered, nested, scope };
+	return { covered, hostDims: hostScrimmed, scope };
 }

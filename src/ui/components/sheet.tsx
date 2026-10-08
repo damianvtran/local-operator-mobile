@@ -194,7 +194,7 @@ export const Sheet = ({
 	 *  second full-viewport surface over it — the rule and its reasoning are in
 	 *  `@/ui/modal-stack`, and the registration lives here because this is where the
 	 *  `Modal` is rendered. */
-	const { covered, scope } = useModalStackEntry(visible);
+	const { covered, hostDims, scope } = useModalStackEntry(visible);
 
 	return (
 		/* The scope publishes this sheet as the HOST of anything a modal is raised
@@ -226,13 +226,29 @@ export const Sheet = ({
 							setColumnHeight(event.nativeEvent.layout.height)
 						}
 					>
+						{/*
+						 * THE SCRIM IS DRAWN ONLY WHEN THIS SHEET IS THE ONE DIM. Hosted
+						 * by a surface that already dims the screen (the conversations
+						 * drawer), this stays exactly what it also always was — the
+						 * topmost PRESS LAYER, so a tap outside still closes the sheet —
+						 * and paints no dim of its own (design round 5, D7/D8/D9: the
+						 * hand-over between two dimmers flashed the strip undimmed for
+						 * 40-89 ms on close, dipped to 0.570 on open and pulsed to 0.91).
+						 * `opacity` stays 1 rather than animating: there is no dim here
+						 * to fade, and a faded press layer would swallow presses while
+						 * invisible. A transparent, childless, borderless box is a ghost
+						 * to the audit's overlap rule, so the one dim does not read as
+						 * two dims either.
+						 */}
 						<Animated.View
-							style={{ opacity: scrimFade }}
+							style={{ opacity: hostDims ? 1 : scrimFade }}
 							className="absolute inset-0"
 						>
 							<Pressable
 								className="flex-1"
-								style={{ backgroundColor: scrimColour }}
+								style={{
+									backgroundColor: hostDims ? "transparent" : scrimColour,
+								}}
 								accessibilityRole={ROLE.button}
 								accessibilityLabel="Close"
 								testID={CONTROL.sheetScrim}

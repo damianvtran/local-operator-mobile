@@ -68,6 +68,12 @@ interface Entry {
 	handle: ModalHandle;
 	/** The scope this modal was raised inside, or null when it is at the root. */
 	parent: ModalScope | null;
+	/**
+	 * Whether this renderer draws a DIM of its own when nothing above it does.
+	 * A modal whose host already dims does not draw a second one — see
+	 * `hostDims` — so this is "would", not "does".
+	 */
+	scrim: boolean;
 }
 
 /**
@@ -92,9 +98,10 @@ const emit = (): void => {
 export function openModal(
 	scope: ModalScope,
 	parent: ModalScope | null,
+	scrim = true,
 ): ModalHandle {
 	const handle: ModalHandle = { scope };
-	open.push({ handle, parent });
+	open.push({ handle, parent, scrim });
 	emit();
 	return handle;
 }
@@ -136,25 +143,49 @@ export function isCovered(handle: ModalHandle): boolean {
 }
 
 /**
- * Whether a modal raised INSIDE this one is open.
+ * Whether a modal raised inside this one already DIMS THE SCREEN.
  *
- * The host needs this for its own SURFACE, not for the standing-down rule: a
- * drawer's scrim exists to dim the app it covers and to take the dismiss press,
- * and when a modal nested in the drawer is up, that inner surface's scrim already
- * does both. Two dims stack into a **second, undeclared ground** — measured by the
- * design round at 1.77:1 light / 1.41:1 dark where this repository's contract pins
- * the drawer panel's edge at 5.68:1 / 4.53:1 — and the outer scrim cannot even
- * receive its own dismiss press, because the inner one is above it. So the host
- * stands its scrim down while this is true, and keeps its panel and content, which
- * is the containment relation stated as a measurement rather than as intent
- * (design round 4, D1 — the round's blocker).
+ * ONE DIM PER STACK (design round 5, D7/D8/D9 — the round's MAJOR and its two
+ * companions). Round 4 stood the host's scrim down while a nested modal was up and
+ * handed the dim to the nested surface; every frame of that hand-over was then a
+ * frame that could be got wrong, and all three findings were the hand-over:
+ *   D7 — on close the guest zeroed its scrim in its own effect while the host
+ *        learned about it a commit later, so the strip beside the drawer went
+ *        fully undimmed for 40-89 ms (measured: rgb(80,78,74) -> rgb(242,237,227)
+ *        -> back, 30 of 32 reps);
+ *   D8 — on open the host's release was a `setTimeout`, so under jitter it could
+ *        fire mid-fade and the composite dipped to 0.570;
+ *   D9 — the overlap itself pulsed, 0.70 -> 0.91 and back, a visible darkening in
+ *        light theme.
+ * No tuning of the hand-over removes the class: two dimmers exchanging a job have
+ * to be right at EVERY instant, and the guest's own fade is a moving target. So the
+ * host keeps the dim for as long as it is up, and the guest's scrim becomes the
+ * PRESS LAYER it always also was — rendered, topmost, dismissable, and painting no
+ * dim of its own (a transparent, childless, borderless box is a ghost to the
+ * audit's overlap rule, so the pair is not reported either). There is no transition
+ * in the dim at all, which is why all three findings close at once rather than
+ * being made rarer.
+ *
+ * The walk is the whole ancestor chain rather than the immediate parent: a dialog
+ * raised over a sheet that is itself hosted by the drawer must still find the
+ * drawer's dim, or it would draw the second dim the round-4 blocker was about.
  */
-export function hasNestedModal(handle: ModalHandle): boolean {
-	const at = open.findIndex((entry) => entry.handle === handle);
-	if (at === -1) return false;
-	return open.some(
-		(other) => other.handle !== handle && isNestedIn(other, handle),
-	);
+export function hostDims(handle: ModalHandle): boolean {
+	let entry = open.find((candidate) => candidate.handle === handle);
+	while (entry !== undefined && entry.parent !== null) {
+		const owner = open.find(
+			(candidate) => candidate.handle.scope === entry?.parent,
+		);
+		if (owner === undefined) return false;
+		if (owner.scrim) return true;
+		entry = owner;
+	}
+	return false;
+}
+
+/** The scope a handle was raised inside, or null. */
+function parentScope(handle: ModalHandle): ModalScope | null {
+	return open.find((entry) => entry.handle === handle)?.parent ?? null;
 }
 
 /** How many modals are mounted. The store's snapshot, for `useSyncExternalStore`. */

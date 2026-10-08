@@ -181,7 +181,7 @@ in `verify`'s readiness guard.
 # The sample is EXPLICIT and small, for §2's reason: the default (`core`) tier plans
 # 2088 cells, one frame each, which is ~78 minutes at the measured 2.24 s/cell and is
 # above the harness's own 120-frame confirmation threshold — so an un-narrowed run is
-# REFUSED without `--yes`, and even with it no documentation gate may spend 73 minutes
+# REFUSED without `--yes`, and even with it no documentation gate may spend 78 minutes
 # on one command. One phone, one theme, one scale is 58 frames, and it still proves what
 # this section is about: seeding is a property of `--relay`, not of the sample's size.
 # `web-build` is declared because the command reads `dist/`: without a build it does

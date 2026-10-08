@@ -86,7 +86,7 @@ export const Dialog = ({
 	/* A dialog raised while another modal is up stands down rather than painting a
 	 *  second full-viewport surface over it — `@/ui/modal-stack` carries the rule and
 	 *  why it is the primitive's job rather than a caller's prop. */
-	const { covered, scope } = useModalStackEntry(visible);
+	const { covered, hostDims, scope } = useModalStackEntry(visible);
 
 	return (
 		<ModalScopeContext.Provider value={scope}>
@@ -100,9 +100,13 @@ export const Dialog = ({
 			>
 				<ScopedVariables variables={variables}>
 					<View className="flex-1 items-center justify-center px-6">
+						{/* Same rule as `Sheet`: one dim per stack, and a hosted dialog's
+						 *  scrim is the press layer with no dim of its own. */}
 						<Pressable
 							className="absolute inset-0"
-							style={{ backgroundColor: scrimColour }}
+							style={{
+								backgroundColor: hostDims ? "transparent" : scrimColour,
+							}}
 							accessibilityRole={ROLE.button}
 							accessibilityLabel="Cancel"
 							testID={CONTROL.dialogScrim}

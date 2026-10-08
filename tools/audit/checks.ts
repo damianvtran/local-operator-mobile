@@ -1489,11 +1489,22 @@ export const U42_EXEMPTIONS: Array<{
 	value?: number;
 	/** Record the whole node whatever its value resolves to (see `value`). */
 	anyValue?: boolean;
+	/**
+	 * The properties this record covers, as the rule names them (`padding-left`,
+	 * `row-gap`, …). Omitted means all of them, which is how the older records read.
+	 *
+	 * WHY IT EXISTS: matching on path substring plus value alone made the Badge
+	 * record also exempt `padding-left 2pt` and any descendant at that value — a
+	 * wider exemption than its reason described (review round 5, R28; QA Q1). The
+	 * record now says which properties it is about.
+	 */
+	properties?: string[];
 	reason: string;
 }> = [
 	{
 		path: "gap-3>div.css-g5y9jx.gap-1.5",
 		value: 6,
+		properties: ["row-gap", "column-gap"],
 		reason:
 			"the `Input`/`Textarea` field wrapper's own `gap-1.5` (`input.tsx`, `textarea.tsx`) — " +
 			"the primitive's label-to-field step, which is not this slice's to change: the " +
@@ -1510,6 +1521,7 @@ export const U42_EXEMPTIONS: Array<{
 		 *  element itself, which is also where the value is read. */
 		path: ">div.css-g5y9jx.self-start",
 		value: 2,
+		properties: ["padding-top", "padding-bottom"],
 		reason:
 			"the `Badge`'s own `py-0.5` (`variants.ts`) — a pre-existing primitive step, newly " +
 			"SCORED because this slice's sheets are the first scored surface to show a badge " +
@@ -1575,14 +1587,6 @@ export const U42_EXEMPTIONS: Array<{
 		reason:
 			"a full-width row inside a centred wrapper (`gap-1.5`) on the welcome/list surfaces — " +
 			"flagged, not absorbed (§3.4); a UI-wide sweep is its own ticket",
-	},
-	{
-		path: "div.css-g5y9jx.flex-row>div.css-g5y9jx.self-start",
-		value: 2,
-		reason:
-			"the Badge (`ui/variants.ts` `px-2 py-0.5`) as several rows render it — §3.4 " +
-			"flagged-not-absorbed; one fragment covers the four measured chains (S16 projects, " +
-			"sessions list, error cards)",
 	},
 	{
 		path: "div.css-g5y9jx.rounded-md>div.css-g5y9jx.r-150rngu>div.css-g5y9jx>div.css-g5y9jx.gap-1",
@@ -2159,6 +2163,18 @@ function u41SummaryRows(state: AuditState): CheckRow[] {
  * passing: the sites the design pass flagged but did not absorb are named
  * there, reported as EXCEPTION rows with their reason.
  */
+/**
+ * The sheet's own surface, as the selector fragment every sheet cell carries.
+ *
+ * `SHEET_SURFACE_CLASS` is `rounded-t-lg …` (`@/ui/components/sheet`), and this
+ * module is renderer-free on purpose, so the marker is the class rather than an
+ * import. It is what keeps the inset-plus-step allowance to the surface that
+ * legitimately carries it (review round 5, R24): a sheet's descendants are the
+ * only nodes whose bottom padding the app computes as an inset plus a step, and an
+ * unscoped allowance passed unrelated off-scale paddings instead.
+ */
+const SHEET_SURFACE_PATH = "rounded-t-lg";
+
 function u42SpacingScale(state: AuditState, floors: Floors): CheckRow[] {
 	const allowed = floors.spacing;
 	const failures: CheckRow[] = [];
@@ -2209,27 +2225,44 @@ function u42SpacingScale(state: AuditState, floors: Floors): CheckRow[] {
 				Math.abs(state.insets[side] - value) < 0.01
 			)
 				continue;
-			/* AN INSET PLUS A SCALE STEP IS STILL THE INSET. The sheet's action region
-			 * pads by one step of the scale ON TOP of the device's inset — 44pt on
-			 * tablet-landscape's 20pt, 58pt on iphone-15's 34 — and that sum is the
-			 * same runtime value the branch above exempts with the design's own step
-			 * added to it. Measured before this: 30 rows in CI's run 37705167165
-			 * (`U-42`, `padding-bottom 44pt`/`58pt`) on the projects sheets and the
-			 * conversations menu.
+			/* AN INSET PLUS A SCALE STEP IS STILL THE INSET — ON THE SHEET'S OWN
+			 * SURFACE. The sheet pads its action region by one step of the scale ON
+			 * TOP of the device's inset — 44pt on tablet-landscape's 20pt — which is
+			 * the same runtime value the branch above exempts with the design's own
+			 * step added to it. Measured before this: 30 rows in CI's run 37705167165,
+			 * all on the sheet's scroll body, all on the one inset-carrying per-push
+			 * device.
 			 *
-			 * THE ALLOWANCE IS BOUNDED TO ONE STEP ON PURPOSE, and what it stops
-			 * catching is worth naming: a padding HARD-CODED to one step more than
-			 * the device's inset cannot be told apart from an inset-plus-step, and is
-			 * now passed. `>= inset` would have stopped catching every value above
-			 * the inset instead, which is why the sum is matched, not a floor. */
+			 * SCOPED, and the reviewer's counter-examples are why: an unscoped version
+			 * passed `pt-7`/`pt-9`/`pt-11` (28/36/44pt) on ANY node, on BOTH per-push
+			 * devices — about ten off-scale paddings per device with no relation to a
+			 * sheet (review round 5, R24; QA Q2). It is now the sheet's surface that
+			 * carries it, and the reading is REPORTED as an EXCEPTION rather than
+			 * passing silently, so a report says which values were allowed and why.
+			 *
+			 * WHAT IT STILL STOPS CATCHING, stated because the allowance is real: a
+			 * padding hard-coded to one step more than the device's inset, ON THE
+			 * SHEET SURFACE, cannot be told apart from an inset plus a step. Everything
+			 * else off the scale still fails — the rule is bounded to one step, not to
+			 * a floor, and to this one surface. */
 			if (
 				property.startsWith("padding-") &&
 				state.insets[side] !== 0 &&
+				node.path.includes(SHEET_SURFACE_PATH) &&
 				allowed.some(
 					(step) => Math.abs(state.insets[side] + step - value) < 0.01,
 				)
-			)
+			) {
+				exemptions.push({
+					check: "U-42",
+					verdict: "EXCEPTION",
+					measured:
+						`the sheet's own surface: ${property} ${round1(value)}pt is a scale step ` +
+						`plus the declared ${side} inset (${round1(state.insets[side])}pt)`,
+					detail: node.path,
+				});
 				continue;
+			}
 			/* AN `auto` MARGIN IS LAYOUT, NOT A SPACING STEP (review round 1).
 			 * `ml-auto` resolves to a USED pixel value the element's position decides
 			 * — 147.2pt here, 243.2pt on a tablet, a different number at any
@@ -2251,6 +2284,8 @@ function u42SpacingScale(state: AuditState, floors: Floors): CheckRow[] {
 			const exemption = U42_EXEMPTIONS.find(
 				(entry) =>
 					node.path.includes(entry.path) &&
+					(entry.properties === undefined ||
+						entry.properties.includes(property)) &&
 					(entry.anyValue === true ||
 						(entry.value !== undefined &&
 							Math.abs(entry.value - value) < 0.01)),
