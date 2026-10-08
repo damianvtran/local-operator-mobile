@@ -426,6 +426,21 @@ export function outstandingQuestions(
  *  how the two drift (design D4). */
 export const READ_FAILED = TRANSPORT_SENTENCE;
 
+/** What the sheet says about a failed list read while rows are still on screen.
+ *
+ *  The read being refreshed and the answer being sent are different requests, and
+ *  the sheet stays interactive over its drawn rows (round 2, U9), so a bare
+ *  transport sentence under a live Answer button reads as "answering will fail" -
+ *  which it does not. This scopes the failure to the list and says the form works
+ *  (round 3, U12). With nothing drawn there is no form to reassure about and the
+ *  read's own sentence is the whole explanation (the older-daemon line is the one
+ *  a reader can act on), so it is shown as it is. */
+export const REFRESH_FAILED_ROWS_DRAWN =
+	"Couldn't refresh the list — you can still answer.";
+
+export const readFailureNotice = (error: string, drawn: number): string =>
+	error !== "" && drawn > 0 ? REFRESH_FAILED_ROWS_DRAWN : error;
+
 /** A 404 on the aggregate route is an OLDER daemon: the route is additive and
  *  its absence is the one read failure that is not a transport problem. The
  *  noun is the COMPUTER's relay, never "this session" — the sheet is

@@ -69,6 +69,13 @@ import {
  */
 export interface ComposerState {
 	draft: string;
+	/** Whether the persisted draft for THIS session has been read yet. The restore
+	 *  below is asynchronous, so `draft === ""` is true both for "nothing was
+	 *  written" and for "not read yet"; a caller that needs to know the draft is
+	 *  EMPTY (the asks sheet's auto-open must not open over a restored draft) has
+	 *  to ask this first. It is `false` from the render in which the session id
+	 *  changes until that session's read lands. */
+	draftReady: boolean;
 	setDraft: (text: string) => void;
 	images: PromptImage[];
 	addImage: (image: PromptImage) => void;
@@ -136,6 +143,17 @@ export const useComposer = (input: {
 	const envelopeStore = envelopeStoreFor(sessionId);
 
 	const [draft, setDraftState] = useState("");
+	/* Keyed by the session it was read for, not a bare boolean: a session switch
+	 * re-points this hook without remounting it, and a boolean left `true` from the
+	 * previous session would read the NEW session's still-unread draft as known.
+	 * Comparing ids makes the re-arm structural for the render in which the id
+	 * changes (before any effect has run); the restore effect below ALSO clears it
+	 * beside the draft, so a hook re-pointed A -> B -> A while B's read is still
+	 * pending cannot find the key still equal to `A` and report an unread draft as
+	 * known (agent review round 1, R4). That sequence is unreachable in this app -
+	 * every cross-conversation navigation mounts a fresh screen - which is why the
+	 * clear is a one-line belt, not a repair of a seen defect. */
+	const [draftReadFor, setDraftReadFor] = useState<string | null>(null);
 	const [images, setImages] = useState<PromptImage[]>([]);
 	const [retained, setRetained] = useState<ContinuationEnvelope | null>(null);
 	const [sending, setSending] = useState(false);
@@ -172,6 +190,7 @@ export const useComposer = (input: {
 	useEffect(() => {
 		let cancelled = false;
 		setDraftState("");
+		setDraftReadFor(null);
 		setImages([]);
 		setError(null);
 		setNotice(null);
@@ -183,7 +202,9 @@ export const useComposer = (input: {
 		 * review round 1, M1). It resets with the rest of the per-session state. */
 		provenanceRef.current = resetOnSessionSwitch();
 		readDraft(sessionId).then((stored) => {
-			if (!cancelled) setDraftState(stored);
+			if (cancelled) return;
+			setDraftState(stored);
+			setDraftReadFor(sessionId);
 		});
 		// The retained envelope is re-read from storage rather than kept in memory:
 		// that is the point of it being durable, and it is how a retry survives a
@@ -648,6 +669,7 @@ export const useComposer = (input: {
 
 	return {
 		draft,
+		draftReady: draftReadFor === sessionId,
 		setDraft,
 		images,
 		addImage: (image) => setImages((current) => [...current, image]),

@@ -1,3 +1,4 @@
+import type { Ref } from "react";
 import { Pressable, Text, View } from "react-native";
 
 import type { PendingAsk } from "@/contracts";
@@ -46,9 +47,13 @@ export type AskBarProps = {
 	asks: PendingAsk[] | undefined | null;
 	/** Expand the asks sheet — the answer surface. */
 	onOpen: () => void;
+	/** The bar's own handle, so the screen can return focus here when a sheet it
+	 *  opened on the reader's behalf closes (an auto-open has no opener for the
+	 *  platform to return focus to - UX round 1, U3). */
+	barRef?: Ref<View>;
 };
 
-export const AskBar = ({ asks, onOpen }: AskBarProps) => {
+export const AskBar = ({ asks, onOpen, barRef }: AskBarProps) => {
 	const { effectiveScale } = useTextScale();
 	const outstanding = outstandingAsks(asks);
 	if (outstanding.length === 0) return null;
@@ -63,6 +68,7 @@ export const AskBar = ({ asks, onOpen }: AskBarProps) => {
 
 	return (
 		<Pressable
+			ref={barRef}
 			accessibilityRole="button"
 			accessibilityLabel={label}
 			accessibilityHint="Show the questions"
