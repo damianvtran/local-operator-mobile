@@ -461,7 +461,7 @@ jobs:
     # device sizes of phone … and tablets both vertical and horizontal", and until this job
     # nothing automated covered it: the per-push `web-audit` job runs `--tier ci`, which is
     # 2 of the matrix's 19 declared profiles, and both `core` (5 profiles / 2268 cells) and
-    # `full` (19 / 7656) were local or dispatched only. This job captures and audits `core`,
+    # `full` (19 / 8316) were local or dispatched only. This job captures and audits `core`,
     # on the NIGHTLY schedule only, so the per-push path is untouched and the `ci` job keeps
     # its own 40-minute capture bound rather than being stretched to fit a 78-minute one.
     #

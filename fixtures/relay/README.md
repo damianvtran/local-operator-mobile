@@ -23,8 +23,12 @@ wrong wire.
 Read [`../../docs/relay/contract.md`](../../docs/relay/contract.md) for what each
 sample means; this file is only about provenance and reproduction.
 
-The tree is currently **125 fixtures — 119 live, 6 synthetic** — plus this README. The split is counted from `provenance.kind` in the files
-themselves rather than typed here, so it cannot drift from them.
+The tree is currently **126 fixtures — 119 live, 7 synthetic** — plus this README. The split is counted from `provenance.kind` in the files
+themselves rather than typed here, so it cannot drift from them. (This count is
+re-derived at the schedules fold: the previous 121/115/6 was one short on the
+total and the synthetic half — `synthetic/sse-projection-tables.json` had
+arrived with #55 without the line being recounted, which is exactly the drift
+the rule above exists to catch.)
 
 **Five refs are represented, deliberately.** The bulk of the live captures were
 taken at local-operator `52c1df35`; the session-state receipts (`ended`,
@@ -33,14 +37,6 @@ taken at local-operator `52c1df35`; the session-state receipts (`ended`,
 handle-resolution route, and the superseded-token refusal) are taken at
 `ca0569855`, where S1/S2/S4 shipped. Each file's `provenance.relay_ref` names its
 own, and no capture was restamped to look newer than it is.
-
-The schedules samples (`schedules-empty`, `schedules-populated`,
-`schedules-truncated`, `schedules-read-error`) are a fifth: captured at
-`5e59e0cd06` — the merge of #2061, the route's own — from an isolated
-`build_app(MobileDaemon)` daemon on loopback with the stores seeded in their own
-JSON shapes (the `wakes/store.py` and `monitors/store.py` indexes), plus one
-capture with the wakes directory at mode `000` so `read_error` is the store's
-own flag rather than a written-in one.
 
 The projects WRITE samples (`projects-created`, `projects-create-refused`,
 `projects-create-invalid`, `projects-delete-refused`, `projects-deleted`,
@@ -52,6 +48,14 @@ local-operator worktree whose `mobile/projects.py` and `mobile/daemon.py` were
 byte-identical to `origin/main` when the capture ran. Their `provenance.how`
 records that rather than a bare ref, because the sha they name is the worktree's
 and the claim a reader needs is about the ROUTE.
+
+The schedules samples (`schedules-empty`, `schedules-populated`,
+`schedules-truncated`, `schedules-read-error`) are a fifth: captured at
+`5e59e0cd06` — the merge of #2061, the route's own — from an isolated
+`build_app(MobileDaemon)` daemon on loopback with the stores seeded in their own
+JSON shapes (the `wakes/store.py` and `monitors/store.py` indexes), plus one
+capture with the wakes directory at mode `000` so `read_error` is the store's
+own flag rather than a written-in one.
 
 ## Provenance
 
