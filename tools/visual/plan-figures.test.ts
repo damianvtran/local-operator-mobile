@@ -195,6 +195,9 @@ describe("the figures in the tree are the plan the harness prints", () => {
 		}
 
 		const problems: string[] = [];
+		/* Every branch must MATCH something, or it is a rule that cannot fire. The
+		 *  counts are asserted at the end of the sweep rather than per file. */
+		const matched = { plan: 0, deadline: 0, rate: 0 };
 		for (const file of SCANNED) {
 			const lines = readFileSync(join(root, file), "utf8").split("\n");
 			lines.forEach((line, index) => {
@@ -221,6 +224,7 @@ describe("the figures in the tree are the plan the harness prints", () => {
 						problems.push(`${at}: ${cells} x ${per} != ${frames}`);
 					if (!byCells.has(cells))
 						problems.push(`${at}: ${cells} cells is no tier's plan`);
+					matched.plan += 1;
 				}
 
 				const deadline = line.match(/deadline(?::| of) ([\d,]+) s/);
@@ -228,18 +232,39 @@ describe("the figures in the tree are the plan the harness prints", () => {
 					const value = Number((deadline[1] ?? "0").replace(/,/g, ""));
 					if (![...byCells.values()].some((p) => p.deadline === value))
 						problems.push(`${at}: deadline ${value} s is no tier's`);
+					matched.deadline += 1;
 				}
 
-				const rate = line.match(/(\d+) cells? x ([\d.]+) s = ([\d,]+) s/);
+				/* The rate form is written both ways in this tree — `2088 x 2.24 s =
+				 *  4,677 s` and `696 cells x 1.25 s = 870 s` — so the branch matches
+				 *  either. It used to require the word "cells", which meant it matched
+				 *  NOTHING, and a branch that matches nothing is a gate that cannot fail
+				 *  (review round 7, R37: a mutation of `34.8 min` to `35.8 min` passed).
+				 *  `matched` below is what stops that happening again. */
+				const rate = line.match(
+					/([\d,]+) (?:cells? )?x ([\d.]+) s = ([\d,.]+) (min|s)\b/,
+				);
 				if (rate && !historical) {
-					const cells = Number(rate[1] ?? 0);
+					const cells = Number((rate[1] ?? "0").replace(/,/g, ""));
 					const per = Number(rate[2] ?? 0);
 					const product = Number((rate[3] ?? "0").replace(/,/g, ""));
-					if (Math.abs(cells * per - product) > 1)
-						problems.push(`${at}: ${cells} x ${per} != ${product}`);
+					/* Seconds are the unit everywhere but the per-push bound, which
+					 *  states its sample in minutes. The tolerance is a ROUNDING STEP in
+					 *  the unit written — half a minute for a one-decimal minute figure,
+					 *  two seconds for an integer one — and not a slack: a whole minute
+					 *  was tried first and passed the very mutation this branch exists to
+					 *  catch (`34.8 min` -> `35.8 min`, which is 60 s of drift). */
+					const seconds = rate[4] === "min" ? product * 60 : product;
+					const slack = rate[4] === "min" ? 30 : 2;
+					if (Math.abs(cells * per - seconds) > slack)
+						problems.push(`${at}: ${cells} x ${per} s != ${product} ${rate[4]}`);
+					matched.rate += 1;
 				}
 			});
 		}
 		expect(problems).toEqual([]);
+		for (const [branch, count] of Object.entries(matched)) {
+			expect(`${branch}:${count > 0}`).toBe(`${branch}:true`);
+		}
 	});
 });

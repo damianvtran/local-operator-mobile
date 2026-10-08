@@ -89,8 +89,15 @@ export function useModalStackEntry(
 
 	useEffect(() => {
 		if (!visible) {
+			/* `hostScrimmed` is deliberately NOT cleared here (round 8, R34). The
+			 *  Dialog's `fade` keeps its content — this scrim among it — mounted while
+			 *  it dismisses, so a hosted modal must keep yielding the dim through its
+			 *  own fade-out; clearing it here is what made a nested Dialog repaint a
+			 *  second dim while fading (round 6, D11). `covered` and `nested` are
+			 *  re-derived on the next open and nothing paints while the Modal is
+			 *  unmounted, so leaving them stale is harmless.
+			 */
 			setCovered(false);
-			setHostScrimmed(false);
 			setNested(false);
 			return;
 		}

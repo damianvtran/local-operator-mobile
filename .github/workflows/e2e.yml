@@ -367,10 +367,11 @@ jobs:
         # steps here carry.
         #
         # RAISED 30 -> 40 WITH THE LIFECYCLE CELLS, for exactly that property: ten new
-        # declared cells put this sample at 648 (34.8 min today, at 696), and the sample
-        # is deliberately held AT 40 while the deadline still fits inside it: 696 x 3 s =
-        # 34.8 min, so the bound stays above the plan's own deadline with room for a slow
-        # runner rather than being raised to a rounder number.
+        # declared cells put this sample at 648 (648 x 3 s = 32.4 min at that rate; at
+        # this head's plan of 696 it is 696 x 3 s = 34.8 min), and the sample is
+        # deliberately held AT 40 while the deadline still fits inside it, so the bound
+        # stays above the plan's own deadline with room for a slow runner rather than
+        # being raised to a rounder number.
         # old bound — a step bound that the plan's own deadline can exceed would fire on
         # a healthy run and stop being a signal. 40 holds the derived deadline with
         # ~1.7x the measured cost on top of it.

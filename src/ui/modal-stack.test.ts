@@ -128,6 +128,45 @@ describe("the modal stack", () => {
 		expect(isCovered(confirm)).toBe(false);
 	});
 
+	it("leaves EXACTLY ONE dimmer in every stack it can be put in", () => {
+		/* The rule the components apply is `!covered && !hostDims` (round 8, R34). The
+		 *  reviewer asked which modal draws the dim in each of these shapes and whether
+		 *  any frame can have NONE; this is that question asked of the predicate itself,
+		 *  with the same inputs the components pass in. */
+		const draws = (handle: ModalHandle): boolean =>
+			!isCovered(handle) && !hostDims(handle);
+
+		// the shipped shape: drawer, its pane's menu, a dialog raised from the menu
+		const drawer = openWithin(null, true);
+		const menu = openWithin(drawer.scope, true);
+		const dialog = openWithin(menu.scope, true);
+		expect([drawer, menu, dialog].filter(draws)).toEqual([drawer]);
+
+		// two unrelated roots: the newer covers the older
+		closeModal(dialog);
+		closeModal(menu);
+		const sheetA = openWithin(null, true);
+		const sheetB = openWithin(null, true);
+		expect([sheetA, sheetB].filter(draws)).toEqual([sheetB]);
+
+		// a guest that registers BEFORE its host still finds it, because the chain is
+		// the context and not the mount order
+		closeModal(sheetB);
+		closeModal(sheetA);
+		const guest = openWithin(drawer.scope, true);
+		expect([drawer, guest].filter(draws)).toEqual([drawer]);
+
+		// the host goes first: the guest takes the dim over rather than leaving a frame
+		// with none, and it is the guest that draws from then on
+		closeModal(drawer);
+		expect([guest].filter(draws)).toEqual([guest]);
+
+		// a Sheet raised over a Dialog: the Dialog is the dimmer, the sheet is not
+		const base = openWithin(null, true);
+		const overDialog = openWithin(base.scope, true);
+		expect([base, overDialog].filter(draws)).toEqual([base]);
+	});
+
 	it("reports a scrimmed ancestor, and only a scrimmed one", () => {
 		/* ONE DIM PER STACK (design round 5, D7/D8/D9). The guest asks this to
 		 *  decide whether it draws a dim of its own, and the walk is the whole

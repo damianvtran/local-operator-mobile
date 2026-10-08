@@ -148,6 +148,15 @@ export function hasNestedModal(handle: ModalHandle): boolean {
 	);
 }
 
+/**
+ * Whether `entry` was raised inside `ancestor`, through any number of levels.
+ *
+ * The chain is the modal's own `parent` scope and then each owner's `parent`, rather
+ * than a comparison of positions in the list: a modal raised inside another is that
+ * one's CONTENT, not a later sibling of it, and the two rules that need the
+ * distinction (`isCovered`, `hasNestedModal`) would both be wrong on mount order
+ * alone — the drawer's sheet mounts after the drawer and is not over it.
+ */
 function isNestedIn(entry: Entry, ancestor: ModalHandle): boolean {
 	for (let scope = entry.parent; scope; ) {
 		if (scope.current === ancestor) return true;
@@ -174,61 +183,27 @@ export function isCovered(handle: ModalHandle): boolean {
 /**
  * Whether an ANCESTOR of this modal already dims the screen.
  *
- * ONE DIM PER STACK (design round 5, D7/D8/D9 — the round's MAJOR and its two
- * companions). Round 4 stood the host's scrim down while a nested modal was up and
- * handed the dim to the nested surface; every frame of that hand-over was then a
- * frame that could be got wrong, and all three findings were the hand-over:
- *   D7 — on close the guest zeroed its scrim in its own effect while the host
- *        learned about it a commit later, so the strip beside the drawer went
- *        fully undimmed for 40-89 ms (measured: rgb(80,78,74) -> rgb(242,237,227)
- *        -> back, 30 of 32 reps);
- *   D8 — on open the host's release was a `setTimeout`, so under jitter it could
- *        fire mid-fade and the composite dipped to 0.570;
- *   D9 — the overlap itself pulsed, 0.70 -> 0.91 and back, a visible darkening in
- *        light theme.
- * No tuning of the hand-over removes the class: two dimmers exchanging a job have
- * to be right at EVERY instant, and the guest's own fade is a moving target. So the
- * host keeps the dim for as long as it is up, and the guest's scrim becomes the
- * PRESS LAYER it always also was — rendered, topmost, dismissable, and painting no
- * dim of its own (a transparent, childless, borderless box is a ghost to the
- * audit's overlap rule, so the pair is not reported either). There is no transition
-}
-
-/**
- * Whether a modal raised inside this one already DIMS THE SCREEN.
+ * ONE DIM PER STACK (design round 5, D7/D8/D9). Round 4 stood the host's scrim down
+ * while a nested modal was up and handed the dim to the nested surface; every frame of
+ * that hand-over was a frame that could be wrong, and all three findings were the
+ * hand-over — the strip beside the drawer going fully undimmed for 40-89 ms on close
+ * (30 of 32 reps), the dim dipping to 0.570 when a release timer fired mid-fade, and
+ * the overlap pulsing 0.70 -> 0.91. No tuning removes the class, so the host keeps the
+ * dim and the guest paints none while an ancestor holds it. This is the question the
+ * guest asks; `hasNestedModal` is the one the host asks about its own layer.
  *
- * ONE DIM PER STACK (design round 5, D7/D8/D9 — the round's MAJOR and its two
- * companions). Round 4 stood the host's scrim down while a nested modal was up and
- * handed the dim to the nested surface; every frame of that hand-over was then a
- * frame that could be got wrong, and all three findings were the hand-over:
- *   D7 — on close the guest zeroed its scrim in its own effect while the host
- *        learned about it a commit later, so the strip beside the drawer went
- *        fully undimmed for 40-89 ms (measured: rgb(80,78,74) -> rgb(242,237,227)
- *        -> back, 30 of 32 reps);
- *   D8 — on open the host's release was a `setTimeout`, so under jitter it could
- *        fire mid-fade and the composite dipped to 0.570;
- *   D9 — the overlap itself pulsed, 0.70 -> 0.91 and back, a visible darkening in
- *        light theme.
- * No tuning of the hand-over removes the class: two dimmers exchanging a job have
- * to be right at EVERY instant, and the guest's own fade is a moving target. So the
- * host keeps the dim for as long as it is up, and the guest's scrim becomes the
- * PRESS LAYER it always also was — rendered, topmost, dismissable, and painting no
- * dim of its own. There is no transition in the dim at all, which is why all three
- * findings close at once rather than being made rarer.
+ * THE WALK IS THE WHOLE CHAIN, not the immediate parent: a dialog raised over a sheet
+ * that is itself hosted by the drawer must still find the drawer's dim, or it would
+ * paint the second dim the round-4 blocker was about.
  *
- * ROUND 7 CORRECTED ONE CLAIM HERE. Round 6 said a transparent guest scrim "is a
- * ghost to the audit's overlap rule"; CI run 37721652724 disproved it — six `U-08`
- * FAILs on the `S15/menu-open` iphone-se cells, `Close conversations ∩ Close`.
- * `isGhost` is `clippedAway || (ariaHidden && !ownInk)`, and a transparent
- * PRESSABLE is neither clipped nor aria-hidden, so it stays in the pair set. What
- * keeps the pair out is the HOST's side of it: while a nested modal owns the
- * dismiss, the host's layer stops being interactive, and a painter with no text and
- * no interactivity is the node the rule excludes. A transparent host box is not a
- * ghost because of its colour; it is out because it is not a control.
- *
- * The walk is the whole ancestor chain rather than the immediate parent: a dialog
- * raised over a sheet that is itself hosted by the drawer must still find the
- * drawer's dim, or it would draw the second dim the round-4 blocker was about.
+ * ROUND 7 CORRECTED A CLAIM THAT USED TO SIT HERE. Round 6 said a transparent guest
+ * scrim "is a ghost to the audit's overlap rule" and CI disproved it (run
+ * 37721652724: six `U-08` FAILs on the `S15/menu-open` iphone-se cells,
+ * `Close conversations ∩ Close`). `isGhost` is `clippedAway || (ariaHidden &&
+ * !ownInk)`, and a transparent PRESSABLE is neither. What keeps that pair out is the
+ * HOST's side of it: while a nested modal owns the dismiss the host's layer stops
+ * being interactive, and a painter with no text and no interactivity is the node the
+ * rule excludes.
  */
 export function hostDims(handle: ModalHandle): boolean {
 	let entry = open.find((candidate) => candidate.handle === handle);

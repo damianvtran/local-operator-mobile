@@ -128,7 +128,9 @@ export const ConversationsDrawer = ({
 	 *  it stands down if a newer modal is mounted over it rather than painting two
 	 *  full-viewport surfaces over each other (`@/ui/modal-stack`). It was the
 	 *  renderer that made that module's "only two callers" claim false. */
-	const { covered, nested, scope } = useModalStackEntry(visible, { scrim: true });
+	const { covered, nested, scope } = useModalStackEntry(visible, {
+		scrim: true,
+	});
 
 	return (
 		/* The scope is what keeps this fix and R13's together: the pane's long-press
