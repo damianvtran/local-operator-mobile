@@ -104,12 +104,16 @@ export const FindStateMarkers = ({
 	hits,
 	soft,
 	barVisible,
+	caveat,
 }: {
 	sheetOpen: boolean;
 	settled: boolean;
 	hits: number;
 	soft: boolean;
 	barVisible: boolean;
+	/** Older rows provably exist beyond the rows this device holds (the find
+	 *  scope line's caveat is showing). */
+	caveat: boolean;
 }) => (
 	<View aria-hidden>
 		{sheetOpen && settled && hits > 0 ? (
@@ -120,6 +124,9 @@ export const FindStateMarkers = ({
 		) : null}
 		{sheetOpen && settled && hits === 0 ? (
 			<View testID={STATE_MARKER.session["find-empty"]} />
+		) : null}
+		{sheetOpen && caveat ? (
+			<View testID={STATE_MARKER.session["find-caveat"]} />
 		) : null}
 		{barVisible ? <View testID={STATE_MARKER.session["find-hit"]} /> : null}
 	</View>

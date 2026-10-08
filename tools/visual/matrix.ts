@@ -359,12 +359,12 @@ export function describeDeviceCoverage(coverage: {
  * The CI tier: the bounded sample the per-push capture job takes.
  *
  * WHY A THIRD TIER, AND WHY IT IS HERE RATHER THAN A `--devices` LIST IN YAML.
- * The `core` tier is 2232 cells: the whole declared cell list (62 cells) x 2 themes x
- * (3 phones x 4 scales + 2 tablets x 3 scales) — 62 x 2 x 18, the tier's 5 profiles —
+ * The `core` tier is 2268 cells: the whole declared cell list (63 cells) x 2 themes x
+ * (3 phones x 4 scales + 2 tablets x 3 scales) — 63 x 2 x 18, the tier's 5 profiles —
  * and the CI job's capture step is bound at 40 minutes. Measured on the runner, that is
  * 2.24 s/cell: 403 cells in 903 s (run 37098393675, a plan of 403 cells then), so a core
- * run needs ~83 minutes. The `core` job's own bound is 115 (see `.github/workflows/e2e.yml`,
- * `web-audit-core`), which is above the 6696 s deadline its plan derives for itself. The
+ * run needs ~85 minutes. The `core` job's own bound is 115 (see `.github/workflows/e2e.yml`,
+ * `web-audit-core`), which is above the 6804 s deadline its plan derives for itself. The
  * job's first real
  * run of this path
  * was therefore cut off by the harness's own 900 s deadline with 585 cells
@@ -394,11 +394,11 @@ export function describeDeviceCoverage(coverage: {
  *     `CI_SCALES` below for why the boundary earns the third slot and 150% does
  *     not. 150% stays in `core`, which sweeps every scale.
  *
- * That is 62 cells x 2 themes x (2 profiles x 3 scales) = 744 cells, ~28 minutes at
+ * That is 63 cells x 2 themes x (2 profiles x 3 scales) = 756 cells, ~28 minutes at
  * the measured rate: inside the step bound (raised with it, see `CI_SCALES`) with
  * the same headroom it always carried. `core` and `full` are unchanged and stay the
- * local and dispatched samples, so the full 2232-cell `core` matrix and the
- * 8184-cell `full` matrix remain runnable — nothing is only reachable through CI.
+ * local and dispatched samples, so the full 2268-cell `core` matrix and the
+ * 8316-cell `full` matrix remain runnable — nothing is only reachable through CI.
  */
 export const CI_DEVICES: string[] = ["iphone-se", "tablet-landscape"];
 
@@ -416,13 +416,13 @@ export const CI_DEVICES: string[] = ["iphone-se", "tablet-landscape"];
  * sweeps every scale, so nothing is lost by composing the two sets differently.
  *
  * WHAT IT COSTS, because it is NOT free and the two are one decision. Three scales on
- * both CI profiles is 744 cells, +50 % over the two-scale 496, so the per-push capture
+ * both CI profiles is 756 cells, +50 % over the two-scale 504, so the per-push capture
  * and audit bounds in `.github/workflows/e2e.yml` were raised with it — most recently to
  * capture 40 / audit 20 / job 80. That is this slice's ten cells (nine lifecycle surfaces
  * and the pane's long-press menu) on top of the base the branch was cut from, plus the
  * four cells upstream landed while it was open, plus the find slice's four: the cell list
- * is 62 and the sample is 744, both re-derived from this head's own `--plan` rather than
- * scaled — still inside the 40-minute capture bound (744 x 3 s = 37.2 min). A bound that fires every run stops being a signal, so
+ * is 63 and the sample is 756, both re-derived from this head's own `--plan` rather than
+ * scaled — still inside the 40-minute capture bound (756 x 3 s = 37.8 min). A bound that fires every run stops being a signal, so
  * this list and that bound have to move together: reverting the bounds without
  * reverting this list makes the job red, and reverting this list without the bounds
  * wastes the budget it was sized for. */
@@ -774,6 +774,17 @@ export const CELL_OPENERS: Record<string, Affordance[]> = {
 		{ click: CONTROL.sessionFind },
 		{ type: { testID: CONTROL.findField, text: "conversion" } },
 		{ click: findResultId("tc-conv-03-user") },
+	],
+	/* The scope line's caveat (design D63-3), on the history-first world (`the
+	 * `long-transcript-history` scenario`): the device holds ONE incomplete
+	 * history page — 4 of the conversation's 26 docs — so the sheet's footer
+	 * must say so. "euro" is a query the held page CAN answer (two related
+	 * answers in the closing turns), which is the point: the caveat is not the
+	 * empty state's excuse, it is the scope every answer on this device is read
+	 * within. */
+	"S5/find-caveat": [
+		{ click: CONTROL.sessionFind },
+		{ type: { testID: CONTROL.findField, text: "euro" } },
 	],
 };
 

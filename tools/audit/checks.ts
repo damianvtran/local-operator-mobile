@@ -894,22 +894,41 @@ function u06HorizontalOverflow(state: AuditState): CheckRow[] {
 		(n) => n.rect.x + n.rect.w > state.viewport.width + 1 && n.rect.w > 8,
 	);
 	/* The ancestor whose own single-line ellipsis clip draws this node inside the
-	 * viewport, or none. Read off the ancestors' own recorded styles, so the
-	 * judgement is the probe's measurements rather than a second reading of the
-	 * DOM — and resolved through an index map, because `ancestors` holds indices
-	 * into the probe's FULL element sweep while `state.nodes` is the VISIBLE
-	 * subset (the same `byIndex` shape U-03 uses; a positional lookup silently
-	 * reads the wrong node for every index past the first invisible one). */
+	 * viewport, or none — and BOTH halves of that sentence are verified, because
+	 * the exemption claims both. MAJOR-3 of this slice's review measured why the
+	 * idiom alone is not enough: a `text-overflow: ellipsis` / `white-space:
+	 * nowrap` STYLE over `overflow: visible` still reads `ellipsis` from computed
+	 * style while painting past the viewport — a clip that cannot fail would
+	 * exempt exactly the overrun the rule exists to catch — and a clipper whose
+	 * own box hangs off the viewport cannot vouch for anything inside it. The
+	 * clip half is U-07's own measured pattern (`scrollWidth > clientWidth`
+	 * under `overflow-x: hidden|clip`); the containment half is the clipper's
+	 * box within the viewport, with the same 1px slack the offender test uses.
+	 * A node the probe itself reports as having ESCAPED a clipping ancestor
+	 * (`escapedClip`: clipped per the every-ancestor walk while painting anyway)
+	 * never takes the allowance — "clipped by X" would be false for it. Read
+	 * off the ancestors' own recorded styles, so the judgement is the probe's
+	 * measurements rather than a second reading of the DOM — and resolved
+	 * through an index map, because `ancestors` holds indices into the probe's
+	 * FULL element sweep while `state.nodes` is the VISIBLE subset (the same
+	 * `byIndex` shape U-03 uses; a positional lookup silently reads the wrong
+	 * node for every index past the first invisible one). */
 	const byIndex = new Map(state.nodes.map((n) => [n.index, n]));
 	const ellipsisClip = (n: AuditNode): AuditNode | undefined =>
-		n.ancestors
-			.map((index) => byIndex.get(index))
-			.find(
-				(a): a is AuditNode =>
-					a !== undefined &&
-					a.textOverflow === "ellipsis" &&
-					a.whiteSpace === "nowrap",
-			);
+		n.escapedClip
+			? undefined
+			: n.ancestors
+					.map((index) => byIndex.get(index))
+					.find(
+						(a): a is AuditNode =>
+							a !== undefined &&
+							a.textOverflow === "ellipsis" &&
+							a.whiteSpace === "nowrap" &&
+							/hidden|clip/.test(a.overflowX) &&
+							a.scrollWidth > a.clientWidth + 1 &&
+							a.rect.x >= -1 &&
+							a.rect.x + a.rect.w <= state.viewport.width + 1,
+					);
 	for (const node of offenders.slice(0, 8)) {
 		const overflow = node.rect.x + node.rect.w - state.viewport.width;
 		const clipped = node.scrollsX ? undefined : ellipsisClip(node);
@@ -1561,12 +1580,14 @@ export const U42_EXEMPTIONS: Array<{
 			"form in the app, so it belongs to the same UI-wide vocabulary sweep the entry " +
 			"below names, not to the projects write path — nor to the find sheet's, which is " +
 			"the second surface to score the primitive. THE PATH IS THE ELEMENT ITSELF, not one " +
-			"surface's parent chain: the first spelling required a `gap-3` parent (the projects " +
+			"surface's parent chain (matched as a substring, so a descendant of such an element " +
+			"matches too — the value-and-properties coupling below is what still bounds the " +
+			"family): the first spelling required a `gap-3` parent (the projects " +
 			"form column's own class), and the find sheet renders the same primitive directly " +
 			"in the sheet's content column, whose path carries no `gap-3` ancestor — so the " +
 			"step failed there (every find cell, both gap properties, on this slice's own " +
 			"capture) while the app-wide sweep it waits for is unchanged. An element whose " +
-			"class list IS `gap-1.5` is the primitive's wrapper wherever it renders; the " +
+			"class list CONTAINS `gap-1.5` is the primitive's wrapper wherever it renders; the " +
 			"value-and-properties coupling below is the detector that still fails a " +
 			"retargeted class.",
 	},

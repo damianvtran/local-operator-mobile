@@ -70,11 +70,10 @@ export interface SessionRuntime {
 	models: ModelEntry[];
 	loading: boolean;
 	/** Whether the conversation provably runs deeper than the rows this device
-	 *  holds — `olderThanLoaded`, derived from the history page's own facts and
-	 *  the held rows, not from `has_more` alone (a page fact is about the page).
-	 *  False when nothing proves it: a failed history read, a complete
-	 *  conversation, or a held set that already extends past the page. The find
-	 *  sheet's caveat line is its one reader. */
+	 *  holds — `olderThanLoaded`, which reads the page's own rows, the page's
+	 *  `has_more`, and whether the screen watched its window slide, and claims
+	 *  only what those facts prove. The find sheet's caveat line is its one
+	 *  reader. */
 	olderThanLoaded: boolean;
 	error: RelayError | null;
 	/** Loads one attachment's bytes as a data URI, or `null` when the relay no
@@ -115,13 +114,13 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 
 	const [facts, setFacts] = useState<StreamFacts>(INITIAL_STREAM_FACTS);
 	const [history, setHistory] = useState<TranscriptEntry[]>([]);
-	/** The last history page's OWN facts, for the find sheet's caveat: the page's
-	 *  oldest row and whether the conversation runs past it. `null` until a page
-	 *  arrives — a failed read makes no claim, rather than a false one. */
-	const [historyInfo, setHistoryInfo] = useState<{
-		oldestId: string | null;
-		hasMore: boolean;
-	} | null>(null);
+	/** Whether the last successful page read said the conversation runs deeper
+	 *  than the page's oldest row. The find caveat reads it together with the
+	 *  page's own rows (`history`), so the facts move with every successful page
+	 *  — a reload that finds the transcript complete must retract the claim
+	 *  rather than keep it stale. A failed read leaves this false: no page, no
+	 *  claim. */
+	const [pageHasMore, setPageHasMore] = useState(false);
 	const [commands, setCommands] = useState<SlashCommand[]>([]);
 	const [models, setModels] = useState<ModelEntry[]>([]);
 	const [error, setError] = useState<RelayError | null>(null);
@@ -319,14 +318,11 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 					if (cancelled) return;
 					if (historyPage) {
 						setHistory(historyPage.entries);
-						// The find caveat reads these, so they move with every successful
-						// page — a reload that finds the transcript complete must retract the
-						// claim rather than keep it stale. They describe the PAGE; where the
-						// page and the held rows must agree is `olderThanLoaded`.
-						setHistoryInfo({
-							oldestId: historyPage.entries[0]?.id ?? null,
-							hasMore: historyPage.has_more,
-						});
+						// The find caveat reads this, so it moves with every successful page —
+						// a reload that finds the transcript complete must retract the claim
+						// rather than keep it stale. It describes the PAGE; where the page and
+						// the held rows must agree is `olderThanLoaded`.
+						setPageHasMore(historyPage.has_more);
 					}
 					if (commandList) setCommands(commandList.commands);
 					if (modelList) setModels(modelList.models);
@@ -351,14 +347,44 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 		() => transcriptRows(projection, history),
 		[projection, history],
 	);
+	/* The frame watch behind the find caveat's third proof (reviewer MAJOR-2):
+	 * a row held in an earlier frame and gone from this one left the ≤80-row
+	 * tail window — the frames only append or slide, so it still exists
+	 * conversation-side and cannot be searched. This is the one channel that
+	 * needs no history page at all (the failed-read case), and it is sticky on
+	 * purpose: nothing re-enters the window, so a claim that could flicker off
+	 * would be a lie twice. The PREVIOUS frame lives in a ref; only the verdict
+	 * is state. */
+	const heldIdsRef = useRef<{ sessionId: string; ids: Set<string> } | null>(
+		null,
+	);
+	const [slidUnderWindow, setSlidUnderWindow] = useState(false);
+	useEffect(() => {
+		const ids = new Set(entries.map((entry) => entry.id));
+		const before = heldIdsRef.current;
+		heldIdsRef.current = { sessionId, ids };
+		if (before === null) return;
+		if (before.sessionId !== sessionId) {
+			// Another conversation's rows are not this one's: start clean.
+			setSlidUnderWindow(false);
+			return;
+		}
+		for (const id of before.ids) {
+			if (!ids.has(id)) {
+				setSlidUnderWindow(true);
+				return;
+			}
+		}
+	}, [entries, sessionId]);
 	const olderRowClaim = useMemo(
 		() =>
 			olderThanLoaded({
-				hasMore: historyInfo?.hasMore ?? false,
-				pageOldestId: historyInfo?.oldestId ?? null,
+				hasMore: pageHasMore,
+				page: history,
 				entries,
+				slid: slidUnderWindow,
 			}),
-		[historyInfo, entries],
+		[pageHasMore, history, entries, slidUnderWindow],
 	);
 
 	const connection = useMemo((): ConnectionView => {

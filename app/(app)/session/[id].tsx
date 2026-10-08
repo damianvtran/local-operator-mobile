@@ -408,15 +408,16 @@ export default function Session() {
 		>
 			<SessionStateMarkers facts={stateFacts} />
 			{/* The find states, asserted by the capture cells that declare them
-			    (`S5/find-results`, `S5/find-empty`, `S5/find-hit`): each marker is
-			    present ONLY in the state it names, so a frame that stops showing one
-			    fails that cell by name. */}
+			    (`S5/find-results`, `S5/find-empty`, `S5/find-hit`, `S5/find-caveat`):
+			    each marker is present ONLY in the state it names, so a frame that
+			    stops showing one fails that cell by name. */}
 			<FindStateMarkers
 				sheetOpen={find.sheetOpen}
 				settled={find.query.trim().length > 0}
 				hits={find.hits.length}
 				soft={find.hits.some((hit) => hit.tier === "soft")}
 				barVisible={find.barVisible}
+				caveat={runtime.olderThanLoaded}
 			/>
 			{/* The status strip: every number the reader needs while reading, in one
 			    band. Only rendered when the wire reports something — a strip that showed

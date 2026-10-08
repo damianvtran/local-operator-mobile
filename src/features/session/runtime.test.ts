@@ -92,10 +92,11 @@ describe("loadAttachments tells a gone attachment from an unreachable host", () 
 describe("olderThanLoaded", () => {
 	/**
 	 * The find sheet's caveat gate: "older messages aren't loaded here" may only
-	 * be said when the page is incomplete AND nothing held extends past it. The
-	 * cases are the wire's own shapes — both the page and the projection are
-	 * contiguous tails, so the page's oldest row is either absent from the held
-	 * rows, at their head, or somewhere down their middle.
+	 * be said when a fact proves a row exists conversation-side that this device
+	 * cannot search. The cases are the wire's own shapes — both the page and the
+	 * projection are contiguous tails of one append-only conversation, so the
+	 * page's rows are either all still held, or the cap has slid the window out
+	 * from under them.
 	 */
 	const row = (id: string): TranscriptEntry => ({
 		id,
@@ -115,20 +116,33 @@ describe("olderThanLoaded", () => {
 		final: true,
 		text_complete: true,
 	});
+	const rows = (...ids: string[]) => ids.map(row);
 
-	it("claims nothing without a page fact, or when the page is the whole story", () => {
+	it("claims nothing without a page, or when the page is the whole story", () => {
+		// A failed read makes no claim either way — there is no page to read.
 		expect(
 			olderThanLoaded({
 				hasMore: false,
-				pageOldestId: "a",
-				entries: [row("a")],
+				page: [],
+				entries: rows("a"),
+				slid: false,
 			}),
 		).toBe(false);
 		expect(
 			olderThanLoaded({
 				hasMore: true,
-				pageOldestId: null,
-				entries: [row("a")],
+				page: [],
+				entries: rows("a"),
+				slid: false,
+			}),
+		).toBe(false);
+		// The page was complete and every row it carried is still held.
+		expect(
+			olderThanLoaded({
+				hasMore: false,
+				page: rows("a"),
+				entries: rows("a", "b"),
+				slid: false,
 			}),
 		).toBe(false);
 	});
@@ -139,8 +153,9 @@ describe("olderThanLoaded", () => {
 		expect(
 			olderThanLoaded({
 				hasMore: true,
-				pageOldestId: "p1",
-				entries: [row("p1"), row("p2")],
+				page: rows("p1", "p2"),
+				entries: rows("p1", "p2"),
+				slid: false,
 			}),
 		).toBe(true);
 		// A projection tail shorter than the page: the page's oldest row never
@@ -148,8 +163,9 @@ describe("olderThanLoaded", () => {
 		expect(
 			olderThanLoaded({
 				hasMore: true,
-				pageOldestId: "p1",
-				entries: [row("p40"), row("p41")],
+				page: rows("p1"),
+				entries: rows("p40", "p41"),
+				slid: false,
 			}),
 		).toBe(true);
 	});
@@ -161,9 +177,34 @@ describe("olderThanLoaded", () => {
 		expect(
 			olderThanLoaded({
 				hasMore: true,
-				pageOldestId: "p10",
-				entries: [row("p1"), row("p5"), row("p10"), row("p11")],
+				page: rows("p10"),
+				entries: rows("p1", "p5", "p10", "p11"),
+				slid: false,
 			}),
 		).toBe(false);
+	});
+
+	it("fires for the grow-in-place window: a complete-at-fetch page the cap slides under", () => {
+		// QA Q63-1's F1, at its smallest reproduction: mounted at three rows with
+		// a complete page (`has_more=false`); the conversation grows in place and
+		// the relay's `_cap_tail` drops a row per append, so the page's own rows
+		// are the witness that something it carried is no longer searchable — the
+		// stale `has_more=false` must not silence it.
+		const page = rows("r0", "r1", "r2");
+		const slid = rows("r0", "r3", "r4", "r5"); // pinned opener + newest tail
+		expect(
+			olderThanLoaded({ hasMore: false, page, entries: slid, slid: false }),
+		).toBe(true);
+	});
+
+	it("fires on an observed slide even with no page at all — the frames are the proof", () => {
+		expect(
+			olderThanLoaded({
+				hasMore: false,
+				page: [],
+				entries: rows("r9"),
+				slid: true,
+			}),
+		).toBe(true);
 	});
 });

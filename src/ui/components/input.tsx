@@ -42,6 +42,10 @@ export type InputProps = {
 	fieldRef?: React.RefObject<TextInput | null>;
 	onSubmitEditing?: () => void;
 	returnKeyType?: TextInputProps["returnKeyType"];
+	/** A hard character bound — for a field whose value has the same bound on
+	 *  the wire (the find sheet's 256, the desktop route's own `q` bound), so a
+	 *  paste is cut the way typing is rather than refused later. */
+	maxLength?: number;
 	testID: string;
 };
 
@@ -58,6 +62,7 @@ export const Input = ({
 	fieldRef,
 	onSubmitEditing,
 	returnKeyType,
+	maxLength,
 	testID,
 }: InputProps) => {
 	const inputRef = useRef<TextInput | null>(null);
@@ -99,6 +104,7 @@ export const Input = ({
 				autoCapitalize={autoCapitalize}
 				onSubmitEditing={onSubmitEditing}
 				returnKeyType={returnKeyType}
+				maxLength={maxLength}
 				testID={testID}
 			/>
 		</View>

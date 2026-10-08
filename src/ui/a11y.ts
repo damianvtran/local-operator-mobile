@@ -532,6 +532,12 @@ export const SURFACE = {
 	findCount: "find-count",
 	findEmpty: "find-empty",
 	findScope: "find-scope",
+	/** The Sheet kit's cut-edge fade: the band of surface colour over the bottom
+	 *  of a sheet's scrolling body while there is content below the fold (design
+	 *  D63-1 — the boundary cue a sheet with a pinned footer owes the reader).
+	 *  Present only while it is telling the truth (the body overflows and is not
+	 *  scrolled to its end), so a frame can measure the cue its own state earns. */
+	sheetBodyFade: "sheet-body-fade",
 
 	/* --- the subagent detail route (stream D2), adopted with the session view's
 	 * vocabulary above. The drill-down flow asserts these by name
@@ -904,13 +910,16 @@ export const STATE_MARKER = {
 		 *  the soft tier (a refinement of `find-results`, the way `rich-rows` is
 		 *  one of `populated`, so a related frame carries both); `find-empty` —
 		 *  the sheet open, a query typed, nothing matched; `find-hit` — the reader
-		 *  has LANDED on a message (the navigate bar is up). Each is present only
+		 *  has LANDED on a message (the navigate bar is up); `find-caveat` — the
+		 *  sheet open over a conversation that provably runs deeper than the rows
+		 *  this device holds (the scope line's caveat shows). Each is present only
 		 *  in its state, so a frame that stops showing one fails that cell by name
 		 *  rather than passing on its neighbours' evidence. */
 		"find-results": "session-find-results",
 		"find-related": "session-find-related",
 		"find-empty": "session-find-empty",
 		"find-hit": "session-find-hit",
+		"find-caveat": "session-find-caveat",
 		"rich-rows": "session-rich-rows",
 		/* A transcript that carries a markdown table — the rows U-38's check
 		 * exists for. Derived from the same parser the renderer uses

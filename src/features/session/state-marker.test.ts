@@ -113,6 +113,7 @@ describe("sessionStateFlags", () => {
 			"find-related",
 			"find-empty",
 			"find-hit",
+			"find-caveat",
 		];
 		const derived = Object.keys(STATE_MARKER.session)
 			.filter(

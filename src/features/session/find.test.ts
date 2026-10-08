@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 import type { TranscriptEntry } from "@/contracts";
 import {
 	FIND_LIMIT,
+	type FindHit,
+	findActiveIndex,
 	findCountLabel,
 	findCursorMove,
 	findScopeLines,
@@ -35,6 +37,14 @@ const row = (
 	final: true,
 	text_complete: true,
 	...over,
+});
+
+const hit = (id: string): FindHit => ({
+	id,
+	role: "user",
+	snippet: id,
+	ranges: [],
+	tier: "exact",
 });
 
 const user = (id: string, text: string) => row({ id, kind: "user", text });
@@ -82,7 +92,7 @@ describe("searchConversation — the exact tier", () => {
 		expect(hits[0]?.snippet.slice(start, end)).toBe("Straße");
 	});
 
-	it("reads message text only — never tool output, chrome, reasoning or ask receipts", () => {
+	it("reads the message rows and the folded notice family — never tool output or reasoning", () => {
 		const entries = [
 			user("u1", "ledger reconciliation"),
 			steer("s1", "check the ledger again"),
@@ -93,10 +103,14 @@ describe("searchConversation — the exact tier", () => {
 			tool("t1", "ledger sweep command"),
 			notice("n1", "the ledger tool was denied"),
 			reasoning("r1", "thinking about the ledger"),
-			row({ id: "k1", kind: "ask_response", text: "ledger question" }),
+			row({ id: "k1", kind: "ask_response", text: "ledger question answered" }),
+			row({ id: "k2", kind: "ask_timeout", text: "ledger question timed out" }),
 			row({ id: "c1", kind: "compaction", text: "ledger context folded" }),
 		];
 		const { hits } = searchConversation(entries, "ledger");
+		// Genuine messages first, then every injected row in journal order —
+		// the folded notice family included, matching the desktop index's own
+		// set ("hub, wake, compaction, … has to stay findable").
 		expect(hits.map((hit) => hit.id)).toEqual([
 			"u1",
 			"s1",
@@ -104,7 +118,57 @@ describe("searchConversation — the exact tier", () => {
 			"p1",
 			"sa1",
 			"pm1",
+			"n1",
+			"k1",
+			"k2",
+			"c1",
 		]);
+	});
+
+	it("labels the folded families honestly and demotes them", () => {
+		const entries = [
+			user("u1", "ledger reconciliation"),
+			notice("n1", "the ledger tool was denied"),
+			row({ id: "c1", kind: "compaction", text: "ledger context folded" }),
+			row({ id: "k1", kind: "ask_response", text: "ledger receipt" }),
+		];
+		const { hits } = searchConversation(entries, "ledger");
+		// The genuine row outranks newer injected rows even though it is older —
+		// the demotion — and each family carries a label that is not a lie.
+		expect(hits.map((hit) => `${hit.id}:${hit.role}`)).toEqual([
+			"u1:user",
+			"n1:notice",
+			"c1:compaction",
+			"k1:ask",
+		]);
+	});
+
+	it("folds ẞ the way the desktop's casefold does — `strasse` finds `STRAẞE`", () => {
+		const entries = [user("u1", "DIE STRAẞE BLEIBT GESPERRT.")];
+		const { hits } = searchConversation(entries, "strasse");
+		expect(hits.map((hit) => hit.id)).toEqual(["u1"]);
+		expect(hits[0]?.tier).toBe("exact");
+		const [start, end] = hits[0]?.ranges[0] ?? [0, 0];
+		// The range covers the ORIGINAL characters — ẞ included — not a slice
+		// shifted by the one-character-two-unit expansion (QA Q63-3).
+		expect(hits[0]?.snippet.slice(start, end)).toBe("STRAẞE");
+	});
+
+	it("trims the query to Python's `strip()` — the desktop's own cut (QA Q63-4)", () => {
+		const entries = [
+			user("u1", "retry the export"),
+			user("u2", "retry policy"),
+		];
+		// \x1c is stripped by the desktop's `str.strip()`; JS `trim()` keeps it,
+		// which used to push this query from the exact tier into the soft one.
+		const control = searchConversation(entries, "retry\x1c");
+		expect(control.hits.map((hit) => hit.id)).toEqual(["u1", "u2"]);
+		expect(control.hits.every((hit) => hit.tier === "exact")).toBe(true);
+		// U+FEFF is NOT whitespace to Python and stays: there is no literal
+		// occurrence left to find, so the hit is soft — as the desktop reads it.
+		const bom = searchConversation(entries, "\uFEFFretry");
+		expect(bom.hits.map((hit) => hit.id)).toEqual(["u1", "u2"]);
+		expect(bom.hits.every((hit) => hit.tier === "soft")).toBe(true);
 	});
 
 	it("caps the ranges a hit carries at five, non-overlapping", () => {
@@ -441,5 +505,19 @@ describe("findCursorMove", () => {
 		expect(findCursorMove(1, 1, 3)).toBe(2);
 		expect(findCursorMove(5, 1, 3)).toBe(0);
 		expect(findCursorMove(0, 1, 0)).toBe(-1);
+	});
+});
+
+describe("findActiveIndex — the landing is an identity, resolved per render", () => {
+	it("finds the landed message at its CURRENT rank, however the frames moved", () => {
+		// The window slid; the landed message that was rank 2 now leads.
+		expect(findActiveIndex([hit("c"), hit("x"), hit("y")], "c")).toBe(0);
+		expect(findActiveIndex([hit("x"), hit("c"), hit("y")], "c")).toBe(1);
+	});
+
+	it("clears when the landed message left the frames, or was never set", () => {
+		expect(findActiveIndex([hit("x"), hit("y")], "c")).toBe(-1);
+		expect(findActiveIndex([hit("x")], null)).toBe(-1);
+		expect(findActiveIndex([], "c")).toBe(-1);
 	});
 });

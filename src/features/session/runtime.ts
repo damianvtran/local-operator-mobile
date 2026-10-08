@@ -160,32 +160,57 @@ export const transcriptRows = (
  * holds — the honest gate for the find sheet's "older messages aren't loaded"
  * caveat.
  *
- * THE ONE WIRE FACT IS THE HISTORY PAGE'S `has_more`, and it is a fact about
- * THE PAGE, not about what the app holds: it says the relay answered with fewer
- * rows than the conversation has beyond that page. Reading it as "older rows
- * are missing from this device" is a claim the wire does not make — the capture
- * mock's projection carries rows older than the page (it serves the whole
- * conversation), and the caveat would then be false about rows sitting in
- * `entries`. So the caveat is gated on the two facts agreeing: the page is
- * incomplete AND nothing held extends past the page's oldest row.
+ * THREE FACTS EACH PROVE A ROW THE READER CANNOT SEARCH, and any one of them
+ * fires. The gate keeps its founding rule — a claim is made only when it can
+ * be backed — but it no longer reads mount-time page facts alone, because
+ * those go stale in exactly the flow the find exists for (reviewer MAJOR-2 /
+ * QA Q63-1: open a young conversation, watch it grow past the ≤80-row tail
+ * cap while the screen stays foregrounded, search later):
  *
- * THE COMPARISON IS EXACT UNDER THE RELAY'S OWN SHAPES, both contiguous TAILS
- * of one conversation — the projection is `_cap_tail`'s last ≤80 rows, the page
- * is the newest `limit` — so "held extends past the page" is exactly "the
- * page's oldest row is in `entries` at an index > 0": not held at all (`-1`,
- * nothing older can be), the oldest thing held (`0`, nothing older is), or with
- * older rows above it (don't claim).
+ *   1. A PAGE ROW IS NO LONGER HELD. The conversation only appends and the
+ *      window only drops its oldest rows, so a row the last successful page
+ *      read carried that is absent from `entries` is a row that exists
+ *      conversation-side and cannot be searched. This is what makes the
+ *      grow-in-place sequence visible: the page fetched at mount said
+ *      `has_more: false` (the conversation WAS complete), the window slid
+ *      anyway, and the held page's own rows are the witness — no refetch
+ *      needed. A dead page read (`page: []`) holds no witness and makes no
+ *      claim by itself.
+ *   2. `hasMore` WITH NOTHING HELD PAST THE PAGE. The page proves rows older
+ *      than its oldest exist, and the held rows do not reach them: the page's
+ *      oldest row sits at the head of `entries` (or, subsumed by 1, is not
+ *      held at all). This is the reopened-conversation shape (the device holds
+ *      one incomplete history page and nothing older).
+ *   3. THE WINDOW WAS OBSERVED TO SLIDE (`slid`). The screen watched a held
+ *      row leave between two frames, which needs no page at all — the frames
+ *      themselves are the proof. Sticky by nature: a dropped row never
+ *      re-enters the window, so once true it stays true for the session.
+ *
+ * THE COMPARISON STAYS EXACT UNDER THE RELAY'S OWN SHAPES, both the page and
+ * the projection being contiguous TAILS of one append-only conversation: the
+ * projection is `_cap_tail`'s pinned opener + newest ≤79 rows, the page is the
+ * newest `limit`, so "held extends past the page" is exactly "the page's
+ * oldest row heads `entries`": it is not held at all (`-1`: nothing older can
+ * be — case 1), the oldest thing held (`0`: nothing older is), or sits below
+ * older rows (don't claim).
  */
 export const olderThanLoaded = (input: {
 	hasMore: boolean;
-	/** The oldest row of the fetched history page, or `null` when no page
-	 *  arrived (a failed read makes no claim either way). */
-	pageOldestId: string | null;
+	/** The rows the last successful page read returned, oldest first — `[]`
+	 *  when no page arrived (a failed read makes no claim either way). */
+	page: readonly TranscriptEntry[];
 	entries: readonly TranscriptEntry[];
+	/** Whether the screen has watched a held row leave the window. The frames
+	 *  only append or slide, so a row that left exists conversation-side. */
+	slid: boolean;
 }): boolean => {
-	if (!input.hasMore || input.pageOldestId === null) return false;
+	if (input.slid) return true;
+	if (input.page.length === 0) return false;
+	const held = new Set(input.entries.map((entry) => entry.id));
+	if (input.page.some((row) => !held.has(row.id))) return true;
+	if (!input.hasMore) return false;
 	return (
-		input.entries.findIndex((entry) => entry.id === input.pageOldestId) <= 0
+		input.entries.findIndex((entry) => entry.id === input.page[0]?.id) === 0
 	);
 };
 

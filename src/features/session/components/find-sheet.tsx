@@ -6,6 +6,7 @@ import {
 	FIND_FIELD_LABEL,
 	FIND_FIELD_PLACEHOLDER,
 	FIND_HINT_COPY,
+	FIND_QUERY_MAX,
 	FIND_TIER_HINT,
 	FIND_TITLE,
 	type FindHit,
@@ -106,6 +107,10 @@ export const FindSheet = ({
 				onChangeText={onQueryChange}
 				placeholder={FIND_FIELD_PLACEHOLDER}
 				fieldRef={fieldRef}
+				/* The desktop route's own bound (`q` 1..256), enforced where the query
+				 *  is typed so both surfaces refuse the same input for the same reason —
+				 *  every character is compared against every doc. */
+				maxLength={FIND_QUERY_MAX}
 				testID={CONTROL.findField}
 			/>
 			<Text
@@ -156,7 +161,10 @@ export const FindSheet = ({
 								{findRoleLabel(hit.role)}
 							</Text>
 							{hit.tier === "soft" ? (
-								<Text className="text-meta text-ink-dim">{FIND_TIER_HINT}</Text>
+								/* A separator, not just the row's gap (design D63-4): at 100 % the
+								 *  two runs read as one phrase ("Agent related match"), so the
+								 *  reason the row is here vanishes into the provenance. */
+								<Text className="text-meta text-ink-dim">{`· ${FIND_TIER_HINT}`}</Text>
 							) : null}
 						</View>
 						<Text className="text-body-sm text-ink-muted" numberOfLines={1}>

@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { TranscriptEntry } from "@/contracts";
 import {
 	type FindHit,
+	findActiveIndex,
 	findCursorMove,
 	findDocs,
 	searchConversation,
@@ -44,13 +45,17 @@ import {
  */
 
 /** The find session's whole state, as one object: the sheet, the query, the
- *  landed position, and the landing counter. */
+ *  landed hit's IDENTITY, and the landing counter. */
 export interface FindState {
 	/** The results sheet is up (browse mode). */
 	open: boolean;
 	query: string;
-	/** The landed hit's index into the current hits, or `-1`. */
-	active: number;
+	/** The landed hit's message id, or `null`. An ID rather than an index: the
+	 *  hits array is recomputed on every frame and the window slides under it, so
+	 *  an index silently re-points at whatever message now occupies that rank —
+	 *  the bar's `n of m` moves, the wash moves, and a step walks from a message
+	 *  the reader never chose. The id re-resolves to the same message or clears. */
+	activeId: string | null;
 	/** Bumps on every landing so the reveal re-runs even for the same id. */
 	nonce: number;
 }
@@ -58,7 +63,7 @@ export interface FindState {
 export const FIND_INITIAL: FindState = {
 	open: false,
 	query: "",
-	active: -1,
+	activeId: null,
 	nonce: 0,
 };
 
@@ -73,9 +78,13 @@ export type FindEvent =
 	/** The bar's close: find mode over, everything cleared. */
 	| { type: "exit" }
 	| { type: "query"; query: string }
-	/** A result was chosen: land on it (sheet closed, bar up). */
-	| { type: "activate"; index: number }
-	| { type: "step"; delta: 1 | -1; count: number };
+	/** A result was chosen: land on it (sheet closed, bar up). The hits array
+	 *  rides along so the landing is recorded as an IDENTITY — the index alone
+	 *  is a rank in a list that recomputes under it. */
+	| { type: "activate"; hits: readonly FindHit[]; index: number }
+	/** Step from the CURRENT position of the landed id (never from a stalely
+	 *  ranked index — the same array rides along). */
+	| { type: "step"; hits: readonly FindHit[]; delta: 1 | -1 };
 
 export const findNextState = (
 	state: FindState,
@@ -93,7 +102,7 @@ export const findNextState = (
 		case "reopen":
 			return { ...state, open: true };
 		case "closeSheet":
-			return state.active >= 0
+			return state.activeId !== null
 				? { ...state, open: false }
 				: { ...FIND_INITIAL, nonce: state.nonce };
 		case "exit":
@@ -102,19 +111,20 @@ export const findNextState = (
 			// A new query is a new answer set: the old landing cannot describe
 			// it, so the position resets rather than silently pointing at
 			// whatever message now occupies that rank.
-			return { ...state, query: event.query, active: -1 };
-		case "activate":
-			return {
-				...state,
-				open: false,
-				active: event.index,
-				nonce: state.nonce + 1,
-			};
+			return { ...state, query: event.query, activeId: null };
+		case "activate": {
+			const activeId = event.hits[event.index]?.id ?? null;
+			return activeId === null
+				? { ...state, open: false, activeId: null }
+				: { ...state, open: false, activeId, nonce: state.nonce + 1 };
+		}
 		case "step": {
-			const active = findCursorMove(state.active, event.delta, event.count);
-			return active < 0
-				? { ...state, active }
-				: { ...state, active, nonce: state.nonce + 1 };
+			const from = findActiveIndex(event.hits, state.activeId);
+			const next = findCursorMove(from, event.delta, event.hits.length);
+			const id = next < 0 ? null : (event.hits[next]?.id ?? null);
+			return id === null
+				? { ...state, activeId: null }
+				: { ...state, activeId: id, nonce: state.nonce + 1 };
 		}
 	}
 };
@@ -126,6 +136,8 @@ export interface FindSession {
 	query: string;
 	hits: FindHit[];
 	truncated: boolean;
+	/** The landed hit's index into the CURRENT hits — resolved from the landed
+	 *  id, so it tracks a rank that shifted — or `-1` while nothing is landed. */
 	active: number;
 	activeHit: FindHit | null;
 	/** How many messages the search covers — the scope line's own count. */
@@ -163,13 +175,12 @@ export const useFind = (input: {
 		[entries, state.query],
 	);
 	const messages = useMemo(() => findDocs(entries).length, [entries]);
-	const activeHit =
-		state.active >= 0 && state.active < answer.hits.length
-			? (answer.hits[state.active] ?? null)
-			: null;
-	// The bar exists only when there is something to navigate; a hit that
-	// slid out of the frames takes the bar with it rather than pointing at
-	// nothing (the frames only append or slide — see `find.ts`).
+	// The landing is an IDENTITY resolved against the CURRENT hits: a rank shift
+	// under it keeps the same message selected ("n of m" re-reads the message's
+	// new rank; the wash follows the id); a message that slid out of the frames
+	// resolves to -1 and takes the bar with it rather than pointing at nothing.
+	const active = findActiveIndex(answer.hits, state.activeId);
+	const activeHit = active >= 0 ? (answer.hits[active] ?? null) : null;
 	const barVisible = !state.open && activeHit !== null;
 
 	const dispatch = useCallback((event: FindEvent) => {
@@ -188,13 +199,12 @@ export const useFind = (input: {
 		[dispatch],
 	);
 	const activate = useCallback(
-		(index: number) => dispatch({ type: "activate", index }),
-		[dispatch],
+		(index: number) => dispatch({ type: "activate", index, hits: answer.hits }),
+		[dispatch, answer.hits],
 	);
-	const hitCount = answer.hits.length;
 	const step = useCallback(
-		(delta: 1 | -1) => dispatch({ type: "step", delta, count: hitCount }),
-		[dispatch, hitCount],
+		(delta: 1 | -1) => dispatch({ type: "step", delta, hits: answer.hits }),
+		[dispatch, answer.hits],
 	);
 
 	const reveal = useMemo(
@@ -209,7 +219,7 @@ export const useFind = (input: {
 		query: state.query,
 		hits: answer.hits,
 		truncated: answer.truncated,
-		active: activeHit === null ? -1 : state.active,
+		active: activeHit === null ? -1 : active,
 		activeHit,
 		messages,
 		reveal,

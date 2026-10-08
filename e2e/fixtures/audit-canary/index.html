@@ -38,6 +38,7 @@
   | #side-left            | U-05-left   | a bar flush to the left edge (landscape)       |
   | #side-right           | U-05-right  | a FULL-WIDTH bar reaching BOTH side bands — the only right-edge fixture that fails if the two edges stop being evaluated independently |
   | #too-wide             | U-06  | a 480px block in a 320px viewport                    |
+  | #ellipsis-noclip      | U-06  | a nowrap+ellipsis run with NO overflow clip — the allowance's premise must FAIL (review round 1, MAJOR-3) |
   | #clipped              | U-07-y | two lines of text in a 16px-tall overflow:hidden box |
   | #clipped-x            | U-07-x | a line wider than its box, clipped horizontally      |
   | #scale-clip           | U-04  | a px-height box that only clips once text scales     |
@@ -486,6 +487,22 @@
 	<div id="ellipsis-clip" data-not-defect="U-06" data-not-defect-reason="ellipsis-clip" style="max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
 		A truncated single line whose matched
 		<span id="ellipsis-run" style="text-decoration:underline">run continues far enough past the right edge that its own layout box overruns the viewport while the ancestor clips the drawing</span>
+		tail.
+	</div>
+</div>
+
+<!-- U-06: the OTHER half of the ellipsis allowance (review round 1, MAJOR-3 /
+     QA Q63-5): `text-overflow: ellipsis` + `white-space: nowrap` WITHOUT a
+     working clip is not a clip — computed `text-overflow` reads `ellipsis`
+     under `overflow: visible` too, and the run paints straight past the
+     viewport — so the exemption's premise must FAIL here. Together with
+     `#ellipsis-clip` above (the same shape with a real clip) this pins both
+     directions of the allowance. -->
+<div class="bad panel">
+	<h2>U-06 ellipsis without a clip</h2>
+	<div id="ellipsis-noclip" data-defect="U-06" style="text-overflow:ellipsis;white-space:nowrap">
+		A line styled as if it were clipped whose matched
+		<span id="ellipsis-noclip-run" style="text-decoration:underline">run overruns the viewport while the ancestor promises — but does not perform — a clip, so nothing draws it inside</span>
 		tail.
 	</div>
 </div>

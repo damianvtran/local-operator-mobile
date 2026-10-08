@@ -37,19 +37,36 @@
  * What the search READS is message text only — the same set the desktop index
  * builds docs from, mapped onto the wire's kinds: `user`/`steer` and
  * `assistant` are the genuine messages; `parent_message`/`subagent_message`/
- * `peer_message` are injected inputs and rank after them. Tool output, notices,
- * compaction markers, reasoning rows and ask receipts are never searchable —
- * tool rows are machine output, and the rest is chrome (the index skips
- * harness chrome whole for find's own reason: a hit's landing row must be one
- * a reader can see, and chrome renders as nothing to find).
+ * `peer_message` are injected inputs; and the folded notice family the relay
+ * paints (`notice`, `compaction`, `ask_response`, `ask_timeout` — wake
+ * deliveries, gate/job receipts, compaction markers, ask receipts and
+ * timeouts) is searchable too, because the desktop index makes a doc for every
+ * injected row and each of these is a row this app PAINTS — find's own rule
+ * for a landing is that its row be one a reader can see. All injected kinds
+ * rank after the genuine messages. Tool output and reasoning rows are never
+ * searchable: tool rows are machine output, and reasoning rows never join the
+ * durable transcript either surface indexes.
  *
- * ## The one divergence from the desktop, stated
+ * ## The divergences from the desktop, stated
  *
- * The desktop files injected docs under the wire's two-role vocabulary
- * (`user | agent`), so its result rows label a peer delivery "You". This app
- * already paints those rows with their own labels (Parent / Subagent / Peer),
- * so the find rows use the transcript's vocabulary — same inclusion set, same
- * demotion, a label that is not a lie.
+ * 1. LABELS. The desktop files injected docs under the wire's two-role
+ *    vocabulary (`user | agent`), so its result rows label a peer delivery
+ *    "You". This app already paints those rows with their own labels (Parent /
+ *    Subagent / Peer — and Notice / Compaction / Ask for the folded
+ *    families), so the find rows use the transcript's vocabulary — same
+ *    inclusion set, same demotion, a label that is not a lie.
+ * 2. FOLDED TEXT. The rows the relay folds (wake deliveries, ask receipts,
+ *    compaction markers and refusals) are searched as the folded line the
+ *    surface paints, not as the raw journal payload the desktop's index still
+ *    reads — a word that exists only in the payload the fold strips (model
+ *    markup, envelope scaffolding) is not findable here.
+ * 3. THE HUB ENVELOPE. The desktop indexes a hub delivery's `details.text`,
+ *    the model-facing envelope; the envelope deliberately never crosses the
+ *    wire (it would paint raw markup — the fold reads `details.body` instead),
+ *    so this search reads the body the parent or child authored. A term that
+ *    occurs only in the envelope — its tags, the label and job ids — is not
+ *    findable here. Same row, same demotion; the one part of the desktop's
+ *    text the phone cannot hold.
  */
 
 import type { TranscriptEntry } from "@/contracts";
@@ -60,7 +77,9 @@ import type { CondensePlan } from "@/features/session/turn-condensing";
 /** Most characters of query the field takes — the desktop route's own bound
  *  (`q` 1..256, `desktop_sessions.py`), mirrored so both surfaces refuse the
  *  same input for the same reason: every character is compared against every
- *  doc, and a find query is only ever a reader's typing. */
+ *  doc, and a find query is only ever a reader's typing. ENFORCED by the find
+ *  field's `maxLength` (so a paste is cut the way typing is); the search
+ *  itself stays a pure function over whatever it is handed. */
 export const FIND_QUERY_MAX = 256;
 
 /** Most hits the answer carries — the desktop route's default `limit` (1..200
@@ -86,24 +105,92 @@ export const SOFT_MIN_TOKEN = 4;
 /** Maximum edit distance for a soft token match (desktop `_SOFT_MAX_DISTANCE`). */
 export const SOFT_MAX_DISTANCE = 2;
 
+/* --------------------------------------------------------------------- trim */
+
+/**
+ * The query's trim, with Python's `str.strip()` semantics — the desktop's own
+ * cut (`query.strip().casefold()` in `transcript_find.py`). The two disagree
+ * in BOTH directions and the disagreement is observable: Python strips the
+ * file separators (\x1c–\x1f) that JS `trim()` leaves on, and JS strips
+ * U+FEFF, which Python leaves — either way the same query lands in a
+ * different tier across the surfaces (QA Q63-4: `retry\x1c` read soft here
+ * and exact there).
+ *
+ * The set below is Python `str.isspace()`'s, written out rather than
+ * approximated: whitespace plus \x1c-\x1f, \x85, \xa0 and the Unicode space
+ * separators — deliberately WITHOUT U+FEFF. A Set walked by index rather
+ * than a regex, because the characters ARE the set and a pattern spelling
+ * them out is one escaping mistake away from a silent divergence; every
+ * entry is a single BMP code unit, so index access is exact.
+ */
+const DESKTOP_SPACE = new Set([
+	"\t",
+	"\n",
+	"\v",
+	"\f",
+	"\r",
+	"\x1c",
+	"\x1d",
+	"\x1e",
+	"\x1f",
+	" ",
+	"\x85",
+	"\xa0",
+	"\u1680",
+	"\u2000",
+	"\u2001",
+	"\u2002",
+	"\u2003",
+	"\u2004",
+	"\u2005",
+	"\u2006",
+	"\u2007",
+	"\u2008",
+	"\u2009",
+	"\u200a",
+	"\u2028",
+	"\u2029",
+	"\u202f",
+	"\u205f",
+	"\u3000",
+]);
+
+const desktopTrim = (text: string): string => {
+	let start = 0;
+	let end = text.length;
+	while (start < end && DESKTOP_SPACE.has(text[start] ?? "")) start += 1;
+	while (end > start && DESKTOP_SPACE.has(text[end - 1] ?? "")) end -= 1;
+	return text.slice(start, end);
+};
+
 /* ---------------------------------------------------------------------- fold */
 
 /**
- * The fold both tiers compare through: `String#toUpperCase().toLowerCase()`,
- * applied per code point.
+ * One code point's folded piece — the fold both tiers compare through.
  *
- * JS has no `String#casefold`, so this is the standard approximation, and the
- * two documented expansions survive it (`ß` → `ss`, `İ` → `i̇`). Folding PER
- * CODE POINT — rather than the whole string — is what makes the offset map in
- * `literalOccurrences` exact: the folded string and the map back to original
- * positions are one computation, so a highlighted range covers exactly the
- * characters the match touched. The cost is that a context-sensitive fold the
- * platform might do across characters (Greek final sigma) never runs; matches
- * stay self-consistent because both sides fold the same way.
+ * JS has no `String#casefold`, so `toUpperCase().toLowerCase()` is the standard
+ * approximation, and the documented expansions survive it (`ß` → `ss`, `İ` →
+ * `i̇`). It misses exactly one of the scripts this app sees: U+1E9E (ẞ)
+ * lowercases to ß (U+00DF), which does NOT itself expand — Python's
+ * `str.casefold()` (the desktop's comparison) maps BOTH ß and ẞ to `ss`, so
+ * the shortcut made a message the desktop finds invisible to `strasse` (QA
+ * Q63-3: "DIE STRAẞE BLEIBT GESPERRT."). Everything else in the battery
+ * (İ, ς, ﬁ, emoji, Cherokee) already agrees.
+ *
+ * Folding PER CODE POINT — rather than the whole string — is what makes the
+ * offset map in `literalOccurrences` exact: the folded string and the map back
+ * to original positions are one computation, so a highlighted range covers
+ * exactly the characters the match touched. The cost is that a
+ * context-sensitive fold the platform might do across characters (Greek final
+ * sigma) never runs; matches stay self-consistent because both sides fold the
+ * same way.
  */
+export const foldPiece = (char: string): string =>
+	char === "\u1E9E" ? "ss" : char.toUpperCase().toLowerCase();
+
 export const casefold = (text: string): string => {
 	let out = "";
-	for (const char of text) out += char.toUpperCase().toLowerCase();
+	for (const char of text) out += foldPiece(char);
 	return out;
 };
 
@@ -125,7 +212,7 @@ const foldText = (text: string): FoldedText => {
 	let origUnits = 0;
 	let aligned = true;
 	for (const char of text) {
-		const piece = char.toUpperCase().toLowerCase();
+		const piece = foldPiece(char);
 		if (piece.length !== char.length) aligned = false;
 		folded += piece;
 		origUnits += char.length;
@@ -256,7 +343,15 @@ export const softMatches = (text: string, query: string): boolean => {
 
 /* ------------------------------------------------------------------ the docs */
 
-export type FindRole = "user" | "agent" | "parent" | "subagent" | "peer";
+export type FindRole =
+	| "user"
+	| "agent"
+	| "parent"
+	| "subagent"
+	| "peer"
+	| "notice"
+	| "compaction"
+	| "ask";
 export type FindTier = "exact" | "soft";
 
 /**
@@ -265,6 +360,17 @@ export type FindTier = "exact" | "soft";
  * One row per kind rather than a set of predicates, so the inclusion decision
  * is one table a reviewer can read against the desktop's rule ("one doc per
  * user/assistant message row and per injected row; tool rows never").
+ */
+/**
+ * The wire kinds find reads, and how each ranks.
+ *
+ * One row per kind rather than a set of predicates, so the inclusion decision
+ * is one table a reviewer can read against the desktop's rule ("one doc per
+ * user/assistant message row and per injected row; tool rows never"): the
+ * genuine messages, the injected deliveries, and the folded notice family the
+ * desktop also indexes (`notice`/`compaction`/`ask_response`/`ask_timeout` —
+ * the wake/ask/job receipts and compaction markers). Every non-genuine kind is
+ * injected, so the desktop's demotion carries over unchanged.
  */
 const DOC_KINDS: Record<
 	string,
@@ -276,6 +382,10 @@ const DOC_KINDS: Record<
 	parent_message: { role: "parent", injected: true },
 	subagent_message: { role: "subagent", injected: true },
 	peer_message: { role: "peer", injected: true },
+	notice: { role: "notice", injected: true },
+	compaction: { role: "compaction", injected: true },
+	ask_response: { role: "ask", injected: true },
+	ask_timeout: { role: "ask", injected: true },
 };
 
 export interface FindDoc {
@@ -378,7 +488,7 @@ export const searchConversation = (
 	query: string,
 	limit: number = FIND_LIMIT,
 ): FindAnswer => {
-	const needle = casefold(query.trim());
+	const needle = casefold(desktopTrim(query));
 	const docs = findDocs(entries);
 	if (needle.length === 0 || limit <= 0) return { hits: [], truncated: false };
 
@@ -512,12 +622,29 @@ export const findCursorMove = (
 	return (((from + delta) % count) + count) % count;
 };
 
+/** Where the landed id sits in the CURRENT hits, or -1 when it is gone.
+ *
+ * The landing is resolved per render, never stored as a rank: the hits array
+ * recomputes on every frame and the window slides under it, so a stored index
+ * silently re-points at whatever message now occupies that rank — the bar's
+ * `n of m`, the wash and the next step would all describe a message the reader
+ * never landed on (reviewer MINOR-3). The id re-resolves to the same message
+ * or clears. */
+export const findActiveIndex = (
+	hits: readonly FindHit[],
+	activeId: string | null,
+): number =>
+	activeId === null ? -1 : hits.findIndex((hit) => hit.id === activeId);
+
 const ROLE_LABELS: Record<FindRole, string> = {
 	user: "You",
 	agent: "Agent",
 	parent: "Parent",
 	subagent: "Subagent",
 	peer: "Peer",
+	notice: "Notice",
+	compaction: "Compaction",
+	ask: "Ask",
 };
 
 export const findRoleLabel = (role: FindRole): string => ROLE_LABELS[role];
