@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
 	Animated,
 	Easing,
@@ -129,6 +129,39 @@ export const ConversationsDrawer = ({
 	 *  full-viewport surfaces over each other (`@/ui/modal-stack`). It was the
 	 *  renderer that made that module's "only two callers" claim false. */
 	const { covered, nested, scope } = useModalStackEntry(visible);
+	/*
+	 * THE OUTGOING SCRIM IS HELD UNTIL THE INCOMING ONE IS OPAQUE (round 5, D4).
+	 *
+	 * The nested sheet's scrim fades up from zero over `duration.fast`, so standing
+	 * this drawer's scrim down in the SAME render the sheet mounts drops the
+	 * effective dim to zero for the length of that fade. Measured by the design
+	 * round: an rAF trace of the dim going 0.702 → 0.000 → 0.702 over 137 ms, and
+	 * the strip beside the drawer going rgb(79,78,74) → rgb(241,237,226) → back in
+	 * ~105 ms in light theme — a bright flash on a phone, and a class the harness's
+	 * `f0`/`f250` frames cannot see because they are taken after the hold and its
+	 * release have finished.
+	 *
+	 * The rule this encodes: the swap must OVERLAP, not hand over. The two scrims
+	 * are layered for the length of the incoming fade (the dim peaks a little above
+	 * either one alone, which is the overlap working), and this side is restored
+	 * SYNCHRONOUSLY when `nested` goes false — so the same rule cannot produce the
+	 * mirror flash on close, where the outgoing fade would otherwise leave the same
+	 * gap. It is a timer on the SAME token the sheet uses (`DURATIONS.fast` through
+	 * `effectiveDuration`), so reduced motion collapses both to zero together and
+	 * the two cannot drift apart.
+	 */
+	const scrimHoldMs = effectiveDuration(DURATIONS.fast, reduceMotion);
+	const [nestedScrimSettled, setNestedScrimSettled] = useState(false);
+	useEffect(() => {
+		if (!nested) {
+			// Back at once: the sheet's scrim is still fading out, and letting this
+			// side wait for it would open the same gap in the other direction.
+			setNestedScrimSettled(false);
+			return;
+		}
+		const timer = setTimeout(() => setNestedScrimSettled(true), scrimHoldMs);
+		return () => clearTimeout(timer);
+	}, [nested, scrimHoldMs]);
 
 	return (
 		/* The scope is what keeps this fix and R13's together: the pane's long-press
@@ -153,13 +186,19 @@ export const ConversationsDrawer = ({
 					 * (design round 4, D1 — the round's blocker). The pane's long-press
 					 * menu is a `Sheet` rendered inside this drawer's `Modal`, and its own
 					 * scrim already covers the whole viewport: two dims stack into a
-					 * second, undeclared ground. Measured by the design round — the drawer
-					 * panel's edge, which the contract pins at 5.68:1 light / 4.53:1 dark
-					 * against the scrim, renders 1.77:1 / 1.41:1 with the menu up, and the
-					 * app strip beside the drawer drops from rgb(84,82,81) to
-					 * rgb(32,30,28), i.e. two 0.7-alpha layers. The outer scrim also could
-					 * not receive the dismiss press it exists for: the inner one is above
-					 * it.
+					 * second, undeclared ground. Measured by the design round — the app
+					 * strip beside the drawer drops from rgb(84,82,81) to rgb(32,30,28),
+					 * i.e. two 0.7-alpha layers — and the drawer panel's edge falls to
+					 * 1.77:1 light / 1.41:1 dark with the menu up.
+					 *
+					 * THE CONTRACT'S 5.68:1 / 4.53:1 IS THE DRAWER'S ALONE (round 5, D5):
+					 * it is the panel's edge against the scrim when nothing is nested in
+					 * the drawer. With a nested modal up, the panel edge against the app
+					 * strip reads 1.36:1 / 1.13:1 — the inner scrim dims the panel too,
+					 * which is the containment this fix is about, so the number is
+					 * expected to move and only the un-nested case is the contract's. The
+					 * outer scrim also could not receive the dismiss press it exists for:
+					 * the inner one is above it.
 					 *
 					 * NOT DRAWN RATHER THAN DRAWN TRANSPARENT, and that is not the same
 					 * fix: `opacity: 0` leaves a full-viewport box in the layout, which is
@@ -169,7 +208,7 @@ export const ConversationsDrawer = ({
 					 * causes. The panel and the content stay either way, and the reader
 					 * who closes the menu gets the scrim they came from.
 					 */}
-					{nested ? null : (
+					{nestedScrimSettled ? null : (
 						<Animated.View
 							style={{ opacity: scrimFade }}
 							className="absolute inset-0"

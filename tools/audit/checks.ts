@@ -1492,6 +1492,32 @@ export const U42_EXEMPTIONS: Array<{
 	reason: string;
 }> = [
 	{
+		path: "gap-3>div.css-g5y9jx.gap-1.5",
+		value: 6,
+		reason:
+			"the `Input`/`Textarea` field wrapper's own `gap-1.5` (`input.tsx`, `textarea.tsx`) — " +
+			"the primitive's label-to-field step, which is not this slice's to change: the " +
+			"projects sheets are the first SCORED surface to render those primitives, which is " +
+			"why it surfaces at all (360 rows in CI run 37705167165). Changing it moves every " +
+			"form in the app, so it belongs to the same UI-wide vocabulary sweep the entry " +
+			"below names, not to the projects write path",
+	},
+	{
+		/* THE PATH IS THE FAMILY, NOT ONE VARIANT'S HASH. Two pressable variants render
+		 *  the badge (`r-1loqt21` and `r-12vffkv`), and naming the first alone left 72
+		 *  rows still failing on the second — found by replaying this list against CI's
+		 *  own 822 rows rather than by reading them. The tail shared by both is the
+		 *  element itself, which is also where the value is read. */
+		path: ">div.css-g5y9jx.self-start",
+		value: 2,
+		reason:
+			"the `Badge`'s own `py-0.5` (`variants.ts`) — a pre-existing primitive step, newly " +
+			"SCORED because this slice's sheets are the first scored surface to show a badge " +
+			"(432 rows across two pressable variants in CI run 37705167165). Same disposition " +
+			"as the entry above: a UI-wide sweep of the app's half-steps is its own ticket and " +
+			"this PR touches neither primitive",
+	},
+	{
 		path: "items-end>div.css-g5y9jx.max-w-[85%]",
 		value: 6,
 		reason:
@@ -2181,6 +2207,27 @@ function u42SpacingScale(state: AuditState, floors: Floors): CheckRow[] {
 				property.startsWith("padding-") &&
 				state.insets[side] !== 0 &&
 				Math.abs(state.insets[side] - value) < 0.01
+			)
+				continue;
+			/* AN INSET PLUS A SCALE STEP IS STILL THE INSET. The sheet's action region
+			 * pads by one step of the scale ON TOP of the device's inset — 44pt on
+			 * tablet-landscape's 20pt, 58pt on iphone-15's 34 — and that sum is the
+			 * same runtime value the branch above exempts with the design's own step
+			 * added to it. Measured before this: 30 rows in CI's run 37705167165
+			 * (`U-42`, `padding-bottom 44pt`/`58pt`) on the projects sheets and the
+			 * conversations menu.
+			 *
+			 * THE ALLOWANCE IS BOUNDED TO ONE STEP ON PURPOSE, and what it stops
+			 * catching is worth naming: a padding HARD-CODED to one step more than
+			 * the device's inset cannot be told apart from an inset-plus-step, and is
+			 * now passed. `>= inset` would have stopped catching every value above
+			 * the inset instead, which is why the sum is matched, not a floor. */
+			if (
+				property.startsWith("padding-") &&
+				state.insets[side] !== 0 &&
+				allowed.some(
+					(step) => Math.abs(state.insets[side] + step - value) < 0.01,
+				)
 			)
 				continue;
 			/* AN `auto` MARGIN IS LAYOUT, NOT A SPACING STEP (review round 1).

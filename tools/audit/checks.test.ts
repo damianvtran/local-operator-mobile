@@ -525,6 +525,55 @@ describe("U-42 — spacing on the token scale", () => {
 		}
 	});
 
+	it("accepts an inset PLUS a step — the sheet's action region — and nothing else", () => {
+		/* 24 + 20 = 44pt on tablet-landscape, 24 + 34 = 58pt on iphone-15: the sheet
+		 *  pads its action region by one step of the scale ON TOP of the device's
+		 *  declared inset, which is the runtime inset the branch above already
+		 *  exempts with the design's own step added. Thirty rows in CI's run
+		 *  37705167165 were exactly this, on the projects sheets and the
+		 *  conversations menu (round 5). */
+		const insetStep = state({
+			insets: { top: 0, right: 0, bottom: 20, left: 0 },
+			nodes: [
+				node({
+					path: "div#action",
+					padding: { top: 0, bottom: 44, left: 0, right: 0 },
+				}),
+			],
+		});
+		expect(run("U-42", insetStep).map((r) => r.verdict)).toEqual(["PASS"]);
+
+		/* AND THE ALLOWANCE IS BOUNDED TO A STEP, which is the half worth pinning:
+		 *  47 is inset + 27, a sum no step can produce, so it still fails. What the
+		 *  carve-out therefore stops catching is a padding hard-coded to one step
+		 *  more than the device's inset — named in the rule's comment rather than
+		 *  left for a reader to discover. */
+		const offSum = state({
+			insets: { top: 0, right: 0, bottom: 20, left: 0 },
+			nodes: [
+				node({
+					path: "div#action",
+					padding: { top: 0, bottom: 47, left: 0, right: 0 },
+				}),
+			],
+		});
+		expect(run("U-42", offSum)[0]?.verdict).toBe("FAIL");
+	});
+
+	it("inherits no allowance on a device whose inset is zero", () => {
+		// Per side, like the exact-inset branch: a 44pt bottom padding on a device
+		// with no bottom inset is a spacing decision, not an inset plus a step.
+		const noInset = state({
+			nodes: [
+				node({
+					path: "div#action",
+					padding: { top: 0, bottom: 44, left: 0, right: 0 },
+				}),
+			],
+		});
+		expect(run("U-42", noInset)[0]?.verdict).toBe("FAIL");
+	});
+
 	it("accepts a negated step, because the bleed is `-gutters.phone`", () => {
 		const negative = state({
 			nodes: [
