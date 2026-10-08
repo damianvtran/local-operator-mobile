@@ -1150,6 +1150,84 @@ describe("U4 - a dismissal is forgotten once the queue empties", () => {
 		expect(ledger.isDismissed(SESSION)).toBe(false);
 	});
 
+	// Round 3 (U11/Q1): the store hands a returning view the LAST visit's frame
+	// first. `decideAutoOpen` tests `dismissed` before `reading`, so a dismissal
+	// read off that stale frame latched the view closed before the fresh frame
+	// could reconcile the entry away. Every test above feeds a fresh frame first,
+	// which is why none of them could see it.
+	describe("a returning view meets the leftover frame first (U11/Q1)", () => {
+		it("(c) refilled while away: the stale frame spends nothing, the fresh batch opens", () => {
+			const ledger = createAsksOpenLedger();
+			const first = mount(ledger);
+			first.see(fresh(PENDING));
+			first.controller.closed({ sessionId: SESSION, pending: ["a1"] });
+
+			const second = mount(ledger);
+			// What the store holds on a return: the last visit's projection.
+			expect(second.see(leftover(PENDING))).toBe(false);
+			expect(second.see(fresh(batch2))).toBe(true);
+			expect(ledger.isDismissed(SESSION)).toBe(false);
+		});
+
+		it("also holds when the stale frame is disconnected rather than awaiting a snapshot", () => {
+			const ledger = createAsksOpenLedger();
+			const first = mount(ledger);
+			first.see(fresh(PENDING));
+			first.controller.closed({ sessionId: SESSION, pending: ["a1"] });
+
+			const second = mount(ledger);
+			expect(
+				second.see({
+					projection: projectionWith(PENDING),
+					connected: false,
+					awaitingSnapshot: false,
+				}),
+			).toBe(false);
+			expect(second.see(fresh(batch2))).toBe(true);
+		});
+
+		it("same batch: stale then fresh frame stays closed, and the latch is spent by the fresh one", () => {
+			const ledger = createAsksOpenLedger();
+			const first = mount(ledger);
+			first.see(fresh(PENDING));
+			first.controller.closed({ sessionId: SESSION, pending: ["a1"] });
+
+			const second = mount(ledger);
+			expect(second.see(leftover(PENDING))).toBe(false);
+			expect(second.see(fresh(PENDING))).toBe(false);
+			expect(ledger.isDismissed(SESSION)).toBe(true);
+			// Decided closed: a later frame with the same ask cannot reopen it.
+			expect(second.see(fresh(PENDING))).toBe(false);
+		});
+
+		it("partly answered while away: a1 outstanding still holds the dismissal", () => {
+			const ledger = createAsksOpenLedger();
+			const first = mount(ledger);
+			first.see(fresh(TWO_PENDING));
+			first.controller.closed({ sessionId: SESSION, pending: ["a1", "a2"] });
+
+			const second = mount(ledger);
+			expect(second.see(leftover(TWO_PENDING))).toBe(false);
+			expect(
+				second.see(fresh({ asks: [ask({ ask_id: "a2" })], asks_open: 1 })),
+			).toBe(false);
+			expect(ledger.isDismissed(SESSION)).toBe(true);
+		});
+
+		it("an unread draft or a screen under another route does not spend the dismissal either", () => {
+			const ledger = createAsksOpenLedger();
+			const first = mount(ledger);
+			first.see(fresh(PENDING));
+			first.controller.closed({ sessionId: SESSION, pending: ["a1"] });
+
+			const second = mount(ledger);
+			expect(second.see(fresh(PENDING), { draftKnown: false })).toBe(false);
+			expect(second.see(fresh(PENDING), { screenFocused: false })).toBe(false);
+			// Neither frame decided: the view can still make its decision.
+			expect(second.see(fresh(batch2))).toBe(true);
+		});
+	});
+
 	it("a bare tally cannot name ids, so it neither forgets nor holds against them", () => {
 		const ledger = createAsksOpenLedger();
 		const view = mount(ledger);

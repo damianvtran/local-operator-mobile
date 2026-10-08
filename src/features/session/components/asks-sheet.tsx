@@ -23,6 +23,7 @@ import {
 	outstandingAsks,
 	questionsWaitingLabel,
 	READ_FAILED,
+	readFailureNotice,
 	refusalText,
 	unansweredQuestions,
 } from "@/features/session/asks";
@@ -522,6 +523,12 @@ export const AsksSheet = ({
 	 *  opening collapses the walk and a population-driven re-read does not
 	 *  (spec §2.3; agent review round 1, m2). */
 	const wasVisible = useRef(false);
+	/* How many rows the sheet is drawing RIGHT NOW, read when the opening read
+	 *  settles rather than captured when it started: the seed is the live frame's
+	 *  rows, so it can empty (answered elsewhere) while the read is in flight, and
+	 *  a count closed over at the opening would still say "rows drawn" and leave an
+	 *  empty sheet up with only an error line. Assigned after `shownRows` below. */
+	const drawnCount = useRef(0);
 	const population = useMemo(
 		() => asksPopulationSignature(sessions),
 		[sessions],
@@ -594,7 +601,7 @@ export const AsksSheet = ({
 			/* Only the read that OPENED the sheet reports its failure (see
 			 *  `onReadFailed`), with how many rows it is drawing: a seeded sheet is
 			 *  already interactive, so the screen must not close it under the reader. */
-			if (opening && !ok) onReadFailed?.({ drawn: seedRows?.length ?? 0 });
+			if (opening && !ok) onReadFailed?.({ drawn: drawnCount.current });
 		});
 	}, [visible, population, load]);
 
@@ -635,6 +642,7 @@ export const AsksSheet = ({
 		() => [...drawnRows(seedRows, rows, aggregateRead)],
 		[seedRows, rows, aggregateRead],
 	);
+	drawnCount.current = shownRows.length;
 	/* The head first, then the wire's own order — the order the bar names. */
 	const listed = useMemo(() => orderedForDisplay(shownRows), [shownRows]);
 	/* QUESTIONS, the unit the bar counts (E2 spec §1.3, the manager's ruling):
@@ -737,6 +745,25 @@ export const AsksSheet = ({
 				{truncated ? (
 					<Text className="text-meta text-ink-dim">
 						Showing the newest questions — open a conversation to see the rest
+					</Text>
+				) : null}
+				{/* The read's failure line sits ABOVE the rows, and that is the placement
+				 *  that does not move the form. The sheet is bottom-anchored and grows
+				 *  UPWARD (`Sheet`: `justify-end`), so a line inserted above the rows
+				 *  leaves everything beneath it where it was, while one below them lifts
+				 *  the answer form by the line's height (measured on the round-2 build:
+				 *  Answer 729 -> 705 px, round 3 U13). One regime still moves: a queue
+				 *  tall enough to scroll sits at offset 0, where a line at the top pushes
+				 *  the rows down by its height (and none would have moved below them) -
+				 *  accepted, because the common failure is a short seeded queue that fits
+				 *  its detent, and a line scrolled out of sight would hide the failure.
+				 *  Its copy is scoped to the list while rows are drawn (`readFailureNotice`). */}
+				{error !== "" ? (
+					<Text
+						className="text-body-sm text-danger"
+						testID={SURFACE.asksSheetError}
+					>
+						{readFailureNotice(error, shownRows.length)}
 					</Text>
 				) : null}
 				{/* The loading line is not decoration: without it the sheet paints
@@ -889,19 +916,6 @@ export const AsksSheet = ({
 						</View>
 					);
 				})}
-				{/* The read's failure line sits BELOW the rows, not above them: a
-				 *  policy-opened sheet keeps its seeded rows when the opening read fails
-				 *  (round 2, U9), and a line that appeared ABOVE an answer form the reader
-				 *  is filling in would push it down mid-tap. With no rows there is nothing
-				 *  to push, so the position costs the empty case nothing. */}
-				{error !== "" ? (
-					<Text
-						className="text-body-sm text-danger"
-						testID={SURFACE.asksSheetError}
-					>
-						{error}
-					</Text>
-				) : null}
 			</View>
 		</Sheet>
 	);

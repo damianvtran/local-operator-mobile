@@ -20,7 +20,9 @@ import {
 	questionProgress,
 	questionsWaitingLabel,
 	READ_FAILED,
+	REFRESH_FAILED_ROWS_DRAWN,
 	RUNTIME_PREDATES_ASKS,
+	readFailureNotice,
 	refusalText,
 	remainingMs,
 	unansweredQuestions,
@@ -470,5 +472,23 @@ describe("the sheet's line for a failed aggregate read", () => {
 
 	it("reads a failure with no relay sentence, and a non-relay one, as unreachable", () => {
 		expect(asksReadFailureLine(new TypeError("boom"))).toBe(READ_FAILED);
+	});
+});
+
+describe("the failure line over drawn rows (round 3, U12)", () => {
+	it("scopes the failure to the list and says answering still works while rows are drawn", () => {
+		expect(readFailureNotice(READ_FAILED, 1)).toBe(REFRESH_FAILED_ROWS_DRAWN);
+		expect(REFRESH_FAILED_ROWS_DRAWN).toContain("list");
+		expect(REFRESH_FAILED_ROWS_DRAWN).toContain("still answer");
+	});
+
+	it("keeps the read's own sentence when nothing is drawn: there is no form to reassure about", () => {
+		expect(readFailureNotice(RUNTIME_PREDATES_ASKS, 0)).toBe(
+			RUNTIME_PREDATES_ASKS,
+		);
+	});
+
+	it("says nothing when the read did not fail", () => {
+		expect(readFailureNotice("", 3)).toBe("");
 	});
 });

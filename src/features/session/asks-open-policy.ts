@@ -732,17 +732,28 @@ export const createAsksAutoOpen = (
 			// land on every state change, and a streaming session repaints many
 			// times a second. `decideAutoOpen` repeats the rule for the table.
 			if (decided) return false;
+			// An unread draft, or a screen that is not on top, is "unresolved"
+			// for the same reason a stale frame is: a fact the policy depends on
+			// has not arrived, so it says nothing.
+			const meaningful = draftKnown && screenFocused && isFreshFrame(entry);
 			const verdict = decideAutoOpen({
 				decided,
 				expired: now() - openedAt > OPEN_WINDOW_MS,
-				// An unread draft, or a screen that is not on top, is "unresolved"
-				// for the same reason a stale frame is: a fact the policy depends on
-				// has not arrived, so it says nothing.
 				reading:
 					draftKnown && screenFocused
 						? readQueue(entry, openedAt)
 						: "unresolved",
-				dismissed: ledger.isDismissed(sessionId),
+				// A dismissal is only a verdict on a frame that MEANS something. The
+				// store hands a returning view the last visit's projection first
+				// (`connected:false` / `awaitingSnapshot`), and `decideAutoOpen` tests
+				// `dismissed` before `reading`: read unconditionally, that stale frame
+				// latched `decided` closed while the entry still stood, so the fresh
+				// frame - which reconciles the entry away when the queue was refilled
+				// while the phone was elsewhere - arrived to a view that had already
+				// spent its one decision (round 3, U11/Q1). Gated on the same
+				// conditions that make a reading meaningful, a stale frame leaves the
+				// decision unspent and the fresh one makes it.
+				dismissed: meaningful && ledger.isDismissed(sessionId),
 				engaged: readerEngaged(engagement),
 			});
 			decided = verdict.decided;
