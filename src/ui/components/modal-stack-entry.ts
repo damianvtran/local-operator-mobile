@@ -110,7 +110,7 @@ export function useModalStackEntry(
 	 *  again while the closing one was still painting. Only LIVE entries cover, dim,
 	 *  nest or stand anything down, so a closed sheet in the tree is inert. */
 	useEffect(() => {
-		const opened = openModal(scope, parent, scrim, visible);
+		const opened = openModal(scope, parent, scrim, false);
 		scope.current = opened;
 		const sync = () => {
 			setSnapshot({
@@ -134,7 +134,12 @@ export function useModalStackEntry(
 			 *  reader returns to comes back without a second prop. */
 			closeModal(opened);
 		};
-		// eslint-disable-next-line react-hooks/exhaustive-deps -- registration is per mount
+		/* `visible` is deliberately NOT read here: it belongs to the flag effect below,
+		 *  and a registration that depended on it would have to re-register the entry —
+		 *  moving it in the mount order the stack rules are written against — every time
+		 *  a sheet opened. The entry starts inert and the flag lands in this same commit,
+		 *  which is what every caller here does anyway: a screen mounts its sheets
+		 *  closed (`visible=false`) and opens them by state. */
 	}, [parent, scope, scrim]);
 
 	/* Showing and hiding is a FLAG, not a re-registration: the entry stays, and every

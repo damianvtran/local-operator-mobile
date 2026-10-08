@@ -32,6 +32,11 @@
 	/* The pin. This is the fixture's whole point: `!important` here outranks the inline
 	   `documentElement.style.fontSize` the harness writes before each capture, so both
 	   frames are rendered at 16 px and no role can grow. */
+	/* `!important` IS the case this fixture exists to produce, which is why
+	   `biome.json` turns `complexity/noImportantStyles` off for `e2e/fixtures/**`.
+	   That rule was the one error in `biome check .` — a CI gate — and it predates the
+	   projects slice: this file is untouched by it and the same error is present on
+	   origin/main. Nothing about the fixture's behaviour changed with the override. */
 	html { font-size: 16px !important; }
 	/* The canvas follows the resolved theme, so the root pin stays the ONLY failure this
 	   page produces — a fixture that also failed the theme check would be ambiguous about

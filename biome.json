@@ -58,6 +58,16 @@
 	},
 	"overrides": [
 		{
+			"includes": ["e2e/fixtures/**"],
+			"linter": {
+				"rules": {
+					"complexity": {
+						"noImportantStyles": "off"
+					}
+				}
+			}
+		},
+		{
 			"includes": ["scripts/build-theme.ts"],
 			"linter": {
 				"rules": {
