@@ -364,8 +364,32 @@ export interface QueueObservation {
  * being fixed at construction.
  */
 export interface AsksAutoOpen {
-	/** Feed one observation. True exactly when the sheet should open now. */
+	/**
+	 * Feed one observation. True exactly when the sheet should open now - and when
+	 * it does, the sheet IS open for this conversation (`isOpenFor`).
+	 */
 	observe(frame: QueueObservation): boolean;
+	/**
+	 * Which conversation the sheet is open FOR, or `null`.
+	 *
+	 * THE OPEN STATE IS KEYED BY CONVERSATION, NOT HELD AS A FLAG, and this is the
+	 * contract's rule 4 holding across a re-point. The route carries no `getId`, so
+	 * `router.navigate('/session/B')` from `/session/A` (a push tap or a link while a
+	 * conversation is open - `use-deep-link-resolution.ts`) re-uses the SAME mounted
+	 * screen with new params, no remount. A bare boolean survives that: dismiss A,
+	 * be taken to B (the policy opens it), come back to A, and A's sheet would be
+	 * showing though nothing opened it - the leak the desktop UI found on its
+	 * window-wide drawer flag. Keyed, the answer for A is simply "no" the moment the
+	 * params change, before any effect has run, so there is no frame of the sheet
+	 * over the wrong conversation either.
+	 */
+	openFor(): string | null;
+	/** `openFor() === sessionId`, for a non-empty id. The screen's `visible`. */
+	isOpenFor(sessionId: string): boolean;
+	/** Subscribe to changes of `openFor` (the `useSyncExternalStore` shape). Called
+	 *  only when the value actually changes, so an effect that observes on every
+	 *  frame cannot loop. */
+	subscribe(listener: () => void): () => void;
 	/**
 	 * The reader opened the sheet themselves, through the bar (rule 6: the door
 	 * got there first). Settles this view's decision so the policy has nothing
@@ -412,15 +436,39 @@ export const createAsksAutoOpen = (
 	let viewOf: string | null = null;
 	let openedAt = 0;
 	let decided = false;
+	/** The conversation the sheet is open for (see `AsksAutoOpen.openFor`). */
+	let openForId: string | null = null;
+	const listeners = new Set<() => void>();
+
+	const setOpenFor = (next: string | null): void => {
+		if (openForId === next) return;
+		openForId = next;
+		// A copy: a listener may unsubscribe (or subscribe) from inside its own call.
+		for (const listener of [...listeners]) listener();
+	};
 
 	const enter = (sessionId: string): void => {
 		if (sessionId === viewOf) return;
 		viewOf = sessionId;
 		openedAt = now();
 		decided = false;
+		// A new view starts with the sheet shut. Without this a sheet left open for
+		// the conversation the screen was just re-pointed AWAY from would be shown
+		// again, un-decided, when the screen is re-pointed back - over a queue the
+		// policy would not have opened (answered elsewhere meanwhile, or a draft now
+		// in the composer).
+		setOpenFor(null);
 	};
 
 	return {
+		openFor: () => openForId,
+		isOpenFor: (sessionId) => sessionId !== "" && openForId === sessionId,
+		subscribe(listener) {
+			listeners.add(listener);
+			return () => {
+				listeners.delete(listener);
+			};
+		},
 		observe({ sessionId, entry, draftKnown, screenFocused, engagement }) {
 			if (sessionId === "") return false;
 			enter(sessionId);
@@ -442,15 +490,20 @@ export const createAsksAutoOpen = (
 				engaged: readerEngaged(engagement),
 			});
 			decided = verdict.decided;
+			if (verdict.open) setOpenFor(sessionId);
 			return verdict.open;
 		},
 		opened({ sessionId }) {
 			if (sessionId === "") return;
 			enter(sessionId);
 			decided = true;
+			setOpenFor(sessionId);
 		},
 		navigated({ to }) {
 			ledger.dismiss(to);
+			// The sheet the reader is leaving is hidden; the destination is a screen
+			// of its own, with its own controller.
+			setOpenFor(null);
 		},
 		closed({ sessionId, asksRemain }) {
 			if (sessionId === "") return;
@@ -459,6 +512,9 @@ export const createAsksAutoOpen = (
 			// latch said before, nothing later in this view opens it for them.
 			decided = true;
 			if (asksRemain) ledger.dismiss(sessionId);
+			// After `enter`, `openForId` is this conversation's or null, so this only
+			// ever shuts the sheet the reader just closed.
+			if (openForId === sessionId) setOpenFor(null);
 		},
 	};
 };

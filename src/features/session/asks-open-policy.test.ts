@@ -489,6 +489,147 @@ describe("leaving the sheet for another conversation", () => {
 	});
 });
 
+describe("the sheet's open state is keyed by conversation", () => {
+	it("reports the sheet open only for the conversation it was opened for", () => {
+		const view = mount();
+		expect(view.controller.openFor()).toBeNull();
+		expect(view.see(fresh(PENDING))).toBe(true);
+		expect(view.controller.openFor()).toBe(SESSION);
+		expect(view.controller.isOpenFor(SESSION)).toBe(true);
+		expect(view.controller.isOpenFor(OTHER)).toBe(false);
+		expect(view.controller.isOpenFor("")).toBe(false);
+	});
+
+	it("DISMISS A -> ARRIVE AT B (the policy opens it) -> BACK TO A, one screen re-pointed: A's sheet is not showing", () => {
+		// The sequence the desktop drawer leaked on, because its open state was one
+		// window-wide flag that followed the reader. Here the same mounted screen is
+		// pointed at A, then B, then A again, with no remount between.
+		const view = mount();
+		expect(view.see(fresh(PENDING), { sessionId: SESSION })).toBe(true);
+		view.controller.closed({ sessionId: SESSION, asksRemain: true });
+		expect(view.controller.isOpenFor(SESSION)).toBe(false);
+
+		expect(view.see(fresh(PENDING), { sessionId: OTHER })).toBe(true);
+		expect(view.controller.isOpenFor(OTHER)).toBe(true);
+		expect(view.controller.isOpenFor(SESSION)).toBe(false);
+
+		// Back to A: the policy did not re-open it, so nothing may be showing - not
+		// A's sheet, and not B's carried over onto A.
+		expect(view.see(fresh(PENDING), { sessionId: SESSION })).toBe(false);
+		expect(view.controller.isOpenFor(SESSION)).toBe(false);
+		expect(view.controller.isOpenFor(OTHER)).toBe(false);
+		expect(view.controller.openFor()).toBeNull();
+	});
+
+	it("the same sequence with a screen per conversation (the router pushes a new route): popping B leaves A's still-mounted screen closed", () => {
+		// expo-router 57's `navigate` to another `[id]` pushes a fresh route, so A's
+		// screen - and its controller - stays mounted under B. They share only the
+		// app's ledger.
+		const ledger = createAsksOpenLedger();
+		const a = mount(ledger);
+		const b = mount(ledger);
+		expect(a.see(fresh(PENDING), { sessionId: SESSION })).toBe(true);
+		a.controller.closed({ sessionId: SESSION, asksRemain: true });
+
+		expect(b.see(fresh(PENDING), { sessionId: OTHER })).toBe(true);
+		// B on top: A is mounted but not focused, and frames keep arriving for it.
+		expect(
+			a.see(fresh(PENDING), { sessionId: SESSION, screenFocused: false }),
+		).toBe(false);
+		// B popped: A is focused again.
+		expect(
+			a.see(fresh(PENDING), { sessionId: SESSION, screenFocused: true }),
+		).toBe(false);
+		expect(a.controller.isOpenFor(SESSION)).toBe(false);
+	});
+
+	it("never shows A's open sheet over B, not even for the frame before B has been observed", () => {
+		const view = mount();
+		expect(view.see(fresh(PENDING), { sessionId: SESSION })).toBe(true);
+		// The screen has just been re-pointed at B and has rendered once, but its
+		// effect has not run yet: the render reads `isOpenFor(B)`.
+		expect(view.controller.isOpenFor(OTHER)).toBe(false);
+	});
+
+	it("shuts a sheet left open on A when the screen is re-pointed, and does not resurrect it un-decided on the way back", () => {
+		const view = mount();
+		expect(view.see(fresh(PENDING), { sessionId: SESSION })).toBe(true);
+		// Never dismissed: the reader was taken to B with A's sheet still up. B is
+		// held back by a draft, so it does not open.
+		expect(
+			view.see(fresh(PENDING), {
+				sessionId: OTHER,
+				engagement: { draft: "typing" },
+			}),
+		).toBe(false);
+		expect(view.controller.openFor()).toBeNull();
+
+		// Back on A, where the reader has since left a draft: A is a new view, and
+		// the policy declines for the same reason it would on a fresh mount. A flag
+		// left true would have shown the sheet over that draft.
+		expect(
+			view.see(fresh(PENDING), {
+				sessionId: SESSION,
+				engagement: { draft: "typing" },
+			}),
+		).toBe(false);
+		expect(view.controller.isOpenFor(SESSION)).toBe(false);
+	});
+
+	it("opens again for a re-pointed view that was never dismissed, because a view is a visit", () => {
+		const view = mount();
+		expect(view.see(fresh(PENDING), { sessionId: SESSION })).toBe(true);
+		expect(view.see(fresh(PENDING), { sessionId: OTHER })).toBe(true);
+		expect(view.see(fresh(PENDING), { sessionId: SESSION })).toBe(true);
+		expect(view.controller.isOpenFor(SESSION)).toBe(true);
+	});
+
+	it("hides the sheet and dismisses the destination when the reader leaves for another conversation", () => {
+		const view = mount();
+		view.see(fresh(PENDING));
+		view.controller.navigated({ to: OTHER });
+		expect(view.controller.isOpenFor(SESSION)).toBe(false);
+		expect(view.controller.openFor()).toBeNull();
+		expect(view.ledger.isDismissed(OTHER)).toBe(true);
+	});
+
+	it("opens for the conversation the reader pressed the bar on, and closes with it", () => {
+		const view = mount();
+		view.controller.opened({ sessionId: SESSION });
+		expect(view.controller.isOpenFor(SESSION)).toBe(true);
+		view.controller.closed({ sessionId: SESSION, asksRemain: true });
+		expect(view.controller.isOpenFor(SESSION)).toBe(false);
+	});
+
+	it("notifies subscribers only when the open state actually changes", () => {
+		const view = mount();
+		const seen: Array<string | null> = [];
+		const off = view.controller.subscribe(() =>
+			seen.push(view.controller.openFor()),
+		);
+		view.see(fresh(PENDING)); // opens
+		view.see(fresh(PENDING)); // decided: nothing
+		view.controller.closed({ sessionId: SESSION, asksRemain: true }); // shuts
+		view.controller.closed({ sessionId: SESSION, asksRemain: true }); // already shut
+		off();
+		view.controller.opened({ sessionId: SESSION }); // unsubscribed: nothing
+		expect(seen).toEqual([SESSION, null]);
+	});
+
+	it("lets a subscriber unsubscribe from inside its own notification without skipping the others", () => {
+		const view = mount();
+		const calls: string[] = [];
+		const offFirst = view.controller.subscribe(() => {
+			calls.push("first");
+			offFirst();
+		});
+		view.controller.subscribe(() => calls.push("second"));
+		view.controller.opened({ sessionId: SESSION });
+		view.controller.closed({ sessionId: SESSION, asksRemain: false });
+		expect(calls).toEqual(["first", "second", "second"]);
+	});
+});
+
 describe("the reader got to the door first", () => {
 	it("opened() settles the view so a still-waiting policy cannot open what is already open", () => {
 		const view = mount();

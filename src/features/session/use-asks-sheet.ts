@@ -1,5 +1,5 @@
 import { useIsFocused } from "expo-router";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import type { TextInput } from "react-native";
 import { useStore } from "zustand";
 
@@ -95,12 +95,28 @@ export const useAsksSheet = (input: AsksSheetInput): AsksSheetControl => {
 	/* One controller per MOUNT of the screen: a view is a mount (rule 2), and the
 	 * ledger it writes to is module-scoped so it outlives that mount (rule 4). */
 	const [controller] = useState(() => createAsksAutoOpen());
-	const [visible, setVisible] = useState(false);
-	const visibleRef = useRef(visible);
-	visibleRef.current = visible;
+
+	/* Whether the sheet is open is the controller's fact, KEYED BY CONVERSATION -
+	 * not a `useState(false)` this hook owns. The distinction is the contract's
+	 * rule 4 holding across a re-point: a boolean kept here would survive the same
+	 * mounted screen being pointed at another conversation and back (dismiss A,
+	 * land on B where the policy opens it, return to A: A's sheet would show
+	 * though nothing opened it), and would show A's sheet over B for the frame
+	 * before an effect could correct it. Derived from the id on every render, it
+	 * is simply "no" for any conversation the controller did not open it for.
+	 * `useSyncExternalStore` because the controller changes it from an effect
+	 * (the policy), from the bar (a press) and from the sheet (a close), none of
+	 * which are this component's state. */
+	const visible = useSyncExternalStore(
+		controller.subscribe,
+		() => controller.isOpenFor(sessionId),
+		() => false,
+	);
 
 	useEffect(() => {
-		const opens = controller.observe({
+		/* The verdict is applied INSIDE the controller (`openFor`), so the return
+		 * value is not needed here: an open reaches the screen through the store. */
+		controller.observe({
 			sessionId,
 			entry,
 			draftKnown: draftReady,
@@ -117,7 +133,6 @@ export const useAsksSheet = (input: AsksSheetInput): AsksSheetControl => {
 				approvalOpen,
 			},
 		});
-		if (opens) setVisible(true);
 	}, [
 		controller,
 		sessionId,
@@ -133,15 +148,13 @@ export const useAsksSheet = (input: AsksSheetInput): AsksSheetControl => {
 	]);
 
 	const open = useCallback(() => {
-		setVisible(true);
 		controller.opened({ sessionId });
 	}, [controller, sessionId]);
 
 	const close = useCallback(() => {
 		/* A close of a sheet that is not showing is no decision: nothing was
 		 * refused, so nothing is remembered. */
-		if (!visibleRef.current) return;
-		setVisible(false);
+		if (!controller.isOpenFor(sessionId)) return;
 		/* The FRESHEST frame the app holds, read at the moment of the close rather
 		 * than captured at the last render: a reader who answers the last ask and
 		 * closes in the same breath has refused nothing, and a closure over the
@@ -157,7 +170,6 @@ export const useAsksSheet = (input: AsksSheetInput): AsksSheetControl => {
 
 	const leave = useCallback(
 		(target: string) => {
-			setVisible(false);
 			controller.navigated({ to: target });
 		},
 		[controller],
