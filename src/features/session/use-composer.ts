@@ -73,7 +73,8 @@ export interface ComposerState {
 	 *  below is asynchronous, so `draft === ""` is true both for "nothing was
 	 *  written" and for "not read yet"; a caller that needs to know the draft is
 	 *  EMPTY (the asks sheet's auto-open must not open over a restored draft) has
-	 *  to ask this first. It re-arms to `false` whenever the session changes. */
+	 *  to ask this first. It is `false` from the render in which the session id
+	 *  changes until that session's read lands. */
 	draftReady: boolean;
 	setDraft: (text: string) => void;
 	images: PromptImage[];
@@ -145,8 +146,13 @@ export const useComposer = (input: {
 	/* Keyed by the session it was read for, not a bare boolean: a session switch
 	 * re-points this hook without remounting it, and a boolean left `true` from the
 	 * previous session would read the NEW session's still-unread draft as known.
-	 * Comparing ids makes the re-arm structural rather than something the restore
-	 * effect has to remember to do first. */
+	 * Comparing ids makes the re-arm structural for the render in which the id
+	 * changes (before any effect has run); the restore effect below ALSO clears it
+	 * beside the draft, so a hook re-pointed A -> B -> A while B's read is still
+	 * pending cannot find the key still equal to `A` and report an unread draft as
+	 * known (agent review round 1, R4). That sequence is unreachable in this app -
+	 * every cross-conversation navigation mounts a fresh screen - which is why the
+	 * clear is a one-line belt, not a repair of a seen defect. */
 	const [draftReadFor, setDraftReadFor] = useState<string | null>(null);
 	const [images, setImages] = useState<PromptImage[]>([]);
 	const [retained, setRetained] = useState<ContinuationEnvelope | null>(null);
@@ -184,6 +190,7 @@ export const useComposer = (input: {
 	useEffect(() => {
 		let cancelled = false;
 		setDraftState("");
+		setDraftReadFor(null);
 		setImages([]);
 		setError(null);
 		setNotice(null);

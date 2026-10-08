@@ -508,7 +508,11 @@ export default function Session() {
 					    It renders itself away at zero outstanding, so its presence is
 					    the statement. */}
 					<View className="px-4 pb-1">
-						<AskBar asks={projection?.asks} onOpen={asksSheet.open} />
+						<AskBar
+							asks={projection?.asks}
+							onOpen={asksSheet.open}
+							barRef={asksSheet.barRef}
+						/>
 					</View>
 
 					<Composer
@@ -586,6 +590,9 @@ export default function Session() {
 			<AsksSheet
 				visible={asksOpen}
 				onClose={asksSheet.close}
+				initialOpenAsk={asksSheet.initialOpenAsk}
+				seedRows={asksSheet.seedRows}
+				onReadFailed={asksSheet.readFailed}
 				client={runtime.source.endpoints}
 				currentSessionId={sessionId}
 				sessions={listSessions}

@@ -14,6 +14,7 @@ import {
 	isAnswerable,
 	orderedForDisplay,
 	outstandingAsks,
+	questionsWaitingLabel,
 	READ_FAILED,
 	refusalText,
 	unansweredQuestions,
@@ -108,6 +109,26 @@ export type AsksSheetProps = {
 	/** The list frame's rows, for conversation names `GET /api/asks` does not
 	 *  carry. Optional: without it a foreign row names its session id. */
 	sessions?: readonly SessionSummary[];
+	/** The ask to show EXPANDED when the sheet opens, in place of the collapsed
+	 *  list. Read once, on the opening transition: it is how an auto-open puts the
+	 *  head question in front of a reader who did not ask to see anything (design
+	 *  D1 / UX U1), while a sheet the reader opened from the bar passes nothing and
+	 *  keeps the collapsed walk. An id the read does not return expands nothing. */
+	initialOpenAsk?: string | null;
+	/** The session's own outstanding rows, as the projection frame that raised the
+	 *  sheet already holds them. Drawn ONLY until the sheet's first aggregate read
+	 *  lands, then replaced by it (design D3): without a seed an auto-opened sheet
+	 *  paints `reading questions…`, then grows when the rows arrive - and with the
+	 *  head question now expanded that growth is a whole answer form, not 28 px.
+	 *  The aggregate stays the sheet's source of truth (its rows carry the
+	 *  `session_id`/`cwd` the frame's do not); a seed is current-session rows
+	 *  only, which need neither. Passed for a policy open only. */
+	seedRows?: readonly PendingAsk[] | null;
+	/** The sheet's FIRST read after opening failed. The screen decides what to do
+	 *  (an auto-opened sheet closes back to the bar); only the opening read
+	 *  reports, so a backstop or population re-read failing later - while the
+	 *  reader may be mid-answer - can never reach it. */
+	onReadFailed?: () => void;
 };
 
 /** One question's control: a picker of consequence-carrying options, or a
@@ -445,6 +466,9 @@ export const AsksSheet = ({
 	currentSessionId,
 	onOpenConversation,
 	sessions,
+	initialOpenAsk = null,
+	seedRows = null,
+	onReadFailed,
 }: AsksSheetProps) => {
 	const [rows, setRows] = useState<PendingAsk[]>([]);
 	const [loaded, setLoaded] = useState(false);
@@ -453,7 +477,14 @@ export const AsksSheet = ({
 	const [truncated, setTruncated] = useState(false);
 	const [error, setError] = useState("");
 	const [nowMs, setNowMs] = useState(() => Date.now());
-	const [openAsk, setOpenAsk] = useState<string | null>(null);
+	/* `undefined` = the reader has not chosen yet, so the OPENING's pre-expanded ask
+	 *  (`initialOpenAsk`) applies from the very first render. Writing it in the
+	 *  opening effect alone would paint one collapsed frame first, and that frame is
+	 *  the whole defect (design D1). */
+	const [openAskChoice, setOpenAsk] = useState<string | null | undefined>(
+		undefined,
+	);
+	const openAsk = openAskChoice === undefined ? initialOpenAsk : openAskChoice;
 	const [pendingAction, setPendingAction] = useState<PendingAction>(null);
 	const [rowError, setRowError] = useState<{
 		askId: string;
@@ -471,12 +502,13 @@ export const AsksSheet = ({
 		[sessions],
 	);
 
-	const load = useCallback(async () => {
+	/** Resolves to whether the read succeeded: the opening effect needs to know. */
+	const load = useCallback(async (): Promise<boolean> => {
 		if (client === null) {
 			setRows([]);
 			setError(READ_FAILED);
 			setLoaded(true);
-			return;
+			return false;
 		}
 		/* THE READ IS BOUNDED: `AbortSignal.timeout` is the platform's own
 		 *  answer where the engine has it; where it does not, the read is
@@ -490,15 +522,17 @@ export const AsksSheet = ({
 			setRows(Array.isArray(answer.asks) ? answer.asks : []);
 			setTruncated(answer.asks_truncated === true);
 			setError("");
+			return true;
 		} catch (failure) {
 			if (failure instanceof DOMException && failure.name === "TimeoutError") {
 				setError(READ_TIMED_OUT);
-				return;
+				return false;
 			}
 			/* The read's failure line lives in `asks.ts` with its own both-directions
 			 *  test: a 404 is the older-daemon answer only when the RELAY sent it, and a
 			 *  dead tunnel's 404 must read as unreachable rather than as an old daemon. */
 			setError(asksReadFailureLine(failure));
+			return false;
 		} finally {
 			setLoaded(true);
 		}
@@ -521,10 +555,14 @@ export const AsksSheet = ({
 		const opening = !wasVisible.current;
 		wasVisible.current = true;
 		if (opening) {
-			setOpenAsk(null);
+			setOpenAsk(initialOpenAsk);
 			setRowError(null);
 		}
-		void load();
+		void load().then((ok) => {
+			/* Only the read that OPENED the sheet reports its failure (see
+			 *  `onReadFailed`). */
+			if (opening && !ok) onReadFailed?.();
+		});
 	}, [visible, population, load]);
 
 	/* The deadline backstop, while the sheet is open only. */
@@ -555,18 +593,27 @@ export const AsksSheet = ({
 		return map;
 	}, [sessions]);
 
+	/* Until the first aggregate read has landed, a policy open draws the frame's own
+	 *  rows (see `seedRows`); after it, only the aggregate. `loaded` is per mount of
+	 *  this component and a policy open is a view's FIRST open, so it is `false`
+	 *  exactly when the seed is wanted. */
+	const shownRows = !loaded && seedRows !== null ? [...seedRows] : rows;
 	/* The head first, then the wire's own order — the order the bar names. */
-	const listed = useMemo(() => orderedForDisplay(rows), [rows]);
+	const listed = useMemo(() => orderedForDisplay(shownRows), [shownRows]);
 	/* QUESTIONS, the unit the bar counts (E2 spec §1.3, the manager's ruling):
 	 *  the header says how much the queue owes in the same unit the bar does. */
-	const outstandingQuestions = outstandingAsks(rows).reduce(
+	const outstandingQuestions = outstandingAsks(shownRows).reduce(
 		(total, row) =>
 			total + (Array.isArray(row.questions) ? row.questions.length : 0),
 		0,
 	);
+	/* The bar's own sentence, so the sheet that arrives by itself names what the
+	 *  reader was about to meet in the bar's words ("1 question waiting"), not the
+	 *  queue's internal noun (design D5). Bare `asks` stays for a queue with nothing
+	 *  outstanding - answered rows can still be listed, and they are not waiting. */
 	const title =
 		outstandingQuestions > 0
-			? `asks · ${outstandingQuestions} question${outstandingQuestions === 1 ? "" : "s"}`
+			? questionsWaitingLabel(outstandingQuestions)
 			: "asks";
 
 	/** Settle one ask, then advance the walk and re-read. On success the
@@ -666,7 +713,7 @@ export const AsksSheet = ({
 				{/* The loading line is not decoration: without it the sheet paints
 				 *  its empty state while the read is still in flight, so "nothing
 				 *  waiting" is shown about an answer that has not arrived yet. */}
-				{!loaded && error === "" ? (
+				{!loaded && error === "" && shownRows.length === 0 ? (
 					<Text
 						className="text-body-sm text-ink-muted"
 						testID={SURFACE.asksSheetLoading}
@@ -714,51 +761,72 @@ export const AsksSheet = ({
 								style={{ minHeight: TOUCH_FLOOR }}
 								className="justify-center"
 							>
-								<View className="flex-row flex-wrap items-baseline gap-x-2">
-									<Text className={cx("text-meta", askToneInk(stateLine.tone))}>
+								{/* NOT `flex-wrap`: the sentence is the flexible child and the
+								 *  caret never wraps away from it (see the caret's note). */}
+								<View className="flex-row items-baseline gap-x-2">
+									<Text
+										className={cx(
+											"min-w-0 flex-1 text-meta",
+											askToneInk(stateLine.tone),
+										)}
+									>
 										{stateLine.text}
 									</Text>
 									{urgent ? (
-										<Text className="text-meta text-ink-dim">· urgent</Text>
-									) : null}
-								</View>
-								<View className="flex-row flex-wrap items-center gap-x-2">
-									{foreign && row.cwd ? (
-										<Text className="min-w-0 flex-1 truncate text-mono-sm text-ink-dim">
-											{row.cwd}
+										<Text className="shrink-0 text-meta text-ink-dim">
+											· urgent
 										</Text>
 									) : null}
-									{left <= 0 ? (
-										<Text className="font-mono text-meta text-ink-dim">
-											deadline {durationLabel(-left)} ago
-										</Text>
-									) : null}
-									<Text className="text-meta text-ink-dim" aria-hidden>
+									{/* THE DISCLOSURE CARET LIVES ON THE FIRST LINE, trailing (design
+									 *  D2 / rubric U-41: its centre within ±4 pt of the FIRST line's).
+									 *  It used to sit on the meta line below, which for a row of THIS
+									 *  conversation has nothing else on it - so it rendered as a stray
+									 *  6x17 glyph 17 px under the sentence, alone on its own line,
+									 *  and an auto-opened sheet shows exactly such rows first. */}
+									<Text className="shrink-0 text-meta text-ink-dim" aria-hidden>
 										{expanded ? "▾" : "▸"}
 									</Text>
-									{/* The route from a foreign ask to its own conversation, as the
-									 *  META line's trailing control — below the sentence that says what
-									 *  the ask is, in a real control's shape (design D3). As a bare
-									 *  "open" word it collided with the status vocabulary, sat ABOVE
-									 *  the sentence, and was transparent; an outlined icon button with
-									 *  the accessible name "Open conversation" replaces all three. A
-									 *  press resolves to the innermost control on both platforms
-									 *  (react-native-web runs only the first PressResponder
-									 *  ancestor's onPress), so this cannot also toggle the row's
-									 *  expansion. The parent owns the transition (clear the sheet,
-									 *  then navigate) so the sheet cannot outlive the row it opened. */}
-									{foreign && onOpenConversation ? (
-										<IconButton
-											accessibilityLabel="Open conversation"
-											outlined
-											onPress={() => onOpenConversation(sessionId)}
-											icon={({ color, size }) => (
-												<ArrowUpRight color={color} size={size} />
-											)}
-											testID={CONTROL.askOpenConversation}
-										/>
-									) : null}
 								</View>
+								{/* The meta line exists only when it has something to carry; an
+								 *  empty one would add a blank 'gap' row beneath the sentence. */}
+								{(foreign && row.cwd) ||
+								left <= 0 ||
+								(foreign && onOpenConversation) ? (
+									<View className="flex-row flex-wrap items-center gap-x-2">
+										{foreign && row.cwd ? (
+											<Text className="min-w-0 flex-1 truncate text-mono-sm text-ink-dim">
+												{row.cwd}
+											</Text>
+										) : null}
+										{left <= 0 ? (
+											<Text className="font-mono text-meta text-ink-dim">
+												deadline {durationLabel(-left)} ago
+											</Text>
+										) : null}
+										{/* The route from a foreign ask to its own conversation, as the
+										 *  META line's trailing control — below the sentence that says what
+										 *  the ask is, in a real control's shape (design D3). As a bare
+										 *  "open" word it collided with the status vocabulary, sat ABOVE
+										 *  the sentence, and was transparent; an outlined icon button with
+										 *  the accessible name "Open conversation" replaces all three. A
+										 *  press resolves to the innermost control on both platforms
+										 *  (react-native-web runs only the first PressResponder
+										 *  ancestor's onPress), so this cannot also toggle the row's
+										 *  expansion. The parent owns the transition (clear the sheet,
+										 *  then navigate) so the sheet cannot outlive the row it opened. */}
+										{foreign && onOpenConversation ? (
+											<IconButton
+												accessibilityLabel="Open conversation"
+												outlined
+												onPress={() => onOpenConversation(sessionId)}
+												icon={({ color, size }) => (
+													<ArrowUpRight color={color} size={size} />
+												)}
+												testID={CONTROL.askOpenConversation}
+											/>
+										) : null}
+									</View>
+								) : null}
 							</Pressable>
 							{/* The audit's `timed-out-mixed` cell proves the state from
 							 *  this zero-size anchor — an EXTRA id on the row, the

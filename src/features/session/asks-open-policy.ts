@@ -28,7 +28,12 @@
  *      refresh, an ask arriving or changing, or leaving and
  *      coming back. Kept by conversation id, in memory, so a
  *      fresh app start may open it again. A genuinely NEW ask
- *      does not force it open; the bar covers that.           `AsksOpenLedger`, the latch
+ *      does not force it open; the bar covers that.
+ *      REFINED (round 1, U4): the dismissal is FORGOTTEN once
+ *      the conversation's queue EMPTIES - every ask answered,
+ *      declined, withdrawn or expired - so a LATER batch gets
+ *      the same discoverability as the first. Until then it
+ *      holds, across re-renders and switches.                 `AsksOpenLedger`, the latch
  *   5. Never steals focus from a composer in use, never traps
  *      (the sheet keeps its unconditional Close — `Sheet` is
  *      untouched), and never fires on an UNRESOLVED queue: a
@@ -45,8 +50,11 @@
  * which rule 4 forbids from forcing it open. `readQueue` therefore compares each
  * outstanding ask's own `created_at` with the instant the view began, and an
  * ask raised after it is an `arrived` reading, which settles the view closed.
- * (Found in the TUI lane first and mirrored here, so the surfaces agree:
- * `local_operator/tui/ask_open_policy.py`.)
+ * (Found in the TUI lane first and mirrored here, so the surfaces agree. The TUI's
+ * module is `local_operator/tui/ask_open_policy.py` on the local-operator
+ * `feat/asks-open-by-default` branch; it is UNMERGED as of this change, so that
+ * path does not exist on that repository's `main` yet - read it on the branch
+ * until it lands.)
  *
  * AND THE WAIT FOR A RESOLVED FRAME IS BOUNDED. A frame that resolves later than
  * `OPEN_WINDOW_MS` after the view began can never auto-open: by then it is no
@@ -64,7 +72,7 @@
  */
 
 import type { PendingAsk } from "@/contracts";
-import { outstandingAsks } from "@/features/session/asks";
+import { dockAsk, outstandingAsks } from "@/features/session/asks";
 import type { ProjectionEntry } from "@/state";
 
 /* ---------------------------------------------------------- the queue reading */
@@ -155,6 +163,20 @@ export const isFreshFrame = (entry: QueueEntry): boolean =>
  *                                  Outstanding rows are then split by whether ANY
  *                                  predates the view (`pending`) or all were raised
  *                                  after it (`arrived`).
+ *                                  A DELIBERATE DIFFERENCE FROM THE TUI: an EMPTY
+ *                                  list beside a tally `> 0` (`asks: []`,
+ *                                  `asks_open: 4`) reads `empty` here, where the
+ *                                  TUI's clause ("N > 0 with no rows leaves the
+ *                                  question open") would keep waiting. The bar
+ *                                  draws from the rows and would draw nothing, so
+ *                                  "the sheet opens iff the bar would be drawn"
+ *                                  settles it: an empty list is a settled-closed
+ *                                  view here, never an open sheet over an empty
+ *                                  bar. The error is on the safe side (this surface
+ *                                  can only under-open, never open on a bare count)
+ *                                  and the relay cannot produce the shape today
+ *                                  (`[]` is only ever published with the real fold).
+ *                                  Pinned by a test, not left as an accident.
  *  - `asks` absent, tally `0`    → `empty`: the runtime publishes asks and has
  *                                  none. Resolved.
  *  - `asks` absent, tally `> 0`  → `unresolved`: a count with no rows is a
@@ -255,6 +277,19 @@ export const readerEngaged = (engagement: Engagement): boolean =>
 export interface AsksOpenLedger {
 	isDismissed(sessionId: string): boolean;
 	dismiss(sessionId: string): void;
+	/**
+	 * Drop a conversation's dismissal: its queue EMPTIED (rule 4's refinement,
+	 * round 1 U4).
+	 *
+	 * WHY IT EXISTS. A dismissal means "not THESE questions", and the module's own
+	 * rationale for remembering it is that the reader has already seen them. Once
+	 * every one of them is resolved there is nothing left that the reflex refused,
+	 * and keeping the entry for the life of the app would make a conversation quiet
+	 * for good after one swipe - a later batch would meet only the bar, against the
+	 * discoverability this feature is for. While ANY ask remains the entry holds
+	 * (same batch: never re-nagged); this is the only way it leaves.
+	 */
+	forget(sessionId: string): void;
 }
 
 export const createAsksOpenLedger = (): AsksOpenLedger => {
@@ -264,6 +299,9 @@ export const createAsksOpenLedger = (): AsksOpenLedger => {
 		// An empty id is the screen's "no route param" fallback, not a conversation.
 		dismiss: (sessionId) => {
 			if (sessionId !== "") dismissed.add(sessionId);
+		},
+		forget: (sessionId) => {
+			dismissed.delete(sessionId);
 		},
 	};
 };
@@ -432,7 +470,66 @@ export interface AsksAutoOpen {
 	 * recorded for the conversation they left: navigating away refused nothing.
 	 */
 	navigated(input: { to: string }): void;
+	/**
+	 * Who opened the sheet that is open now: the policy (`"policy"`, an auto-open)
+	 * or the reader through the bar (`"reader"`), or `null` when none is open.
+	 *
+	 * WHY IT IS KEPT. Two things differ between the doors and neither can be
+	 * recovered later. (1) An auto-open arrives with NOTHING the reader asked for,
+	 * so it pre-expands the head question (`expandTargetFor`) - a reader who pressed
+	 * the bar already knows what they are opening and keeps the collapsed list.
+	 * (2) A sheet the reader opened has an opener whose focus the platform returns
+	 * on close; an auto-open has none, and focus drops to the document body
+	 * (UX round 1, U3), so only a policy-opened close restores it by hand.
+	 */
+	openOrigin(): OpenOrigin | null;
+	/**
+	 * The first read of the sheet's own list FAILED while the sheet is up for this
+	 * conversation. When it was opened by the policy, close it back to the bar:
+	 * an unprompted modal whose whole body is an error line (and no way to retry
+	 * but to close and reopen) is worse than the one-line bar it covered. Returns
+	 * whether it closed.
+	 *
+	 * NOTHING IS REMEMBERED. The reader refused nothing - the app failed - so the
+	 * ledger is untouched, and the view's decision stays spent (it already was: the
+	 * open that raised the sheet latched it), so the failed read cannot re-raise the
+	 * sheet on the next frame. A sheet the READER opened is left alone: they asked
+	 * for it, the error line is the honest answer, and closing it under them would
+	 * hide the very thing they pressed for.
+	 */
+	readFailed(input: { sessionId: string }): boolean;
 }
+
+/** The door a sheet was opened through (see `AsksAutoOpen.openOrigin`). */
+export type OpenOrigin = "policy" | "reader";
+
+/**
+ * The ask a freshly opened sheet should show EXPANDED, or `null` for the
+ * collapsed list the reader's own open has always started from.
+ *
+ * WHY. Design round 1 (D1) and UX round 1 (U1) found the same thing from two
+ * sides: an auto-opened sheet is a scrimmed modal over the bar, and the bar was
+ * the only place that NAMED the question - so the sheet that arrived by itself
+ * said LESS than the line it covered (a title, a disclaimer and a `Queued - the
+ * agent is continuing` row, with the question one unlabelled tap away). The
+ * point of opening it is that the reader meets the question, so the HEAD ask -
+ * the one the bar names (`dockAsk`), which the sheet already lists first - opens
+ * expanded, with its options and Answer/Decline.
+ *
+ * Read from the projection's own rows rather than the sheet's aggregate read: it
+ * is in hand at the moment of the open, so the question is on the first painted
+ * frame instead of after a round trip. The ask ids are the same set (the sheet's
+ * rows are the same asks with the session columns added); an id the aggregate does
+ * not return simply expands nothing.
+ */
+export const expandTargetFor = (
+	origin: OpenOrigin | null,
+	asks: PendingAsk[] | undefined | null,
+): string | null => {
+	if (origin !== "policy") return null;
+	const head = dockAsk(asks);
+	return head === null || head.ask_id === "" ? null : head.ask_id;
+};
 
 /**
  * `now` is the clock the view's start is read on, in epoch milliseconds — the unit
@@ -450,9 +547,17 @@ export const createAsksAutoOpen = (
 	let decided = false;
 	/** The conversation the sheet is open for (see `AsksAutoOpen.openFor`). */
 	let openForId: string | null = null;
+	let origin: OpenOrigin | null = null;
 	const listeners = new Set<() => void>();
 
-	const setOpenFor = (next: string | null): void => {
+	const setOpenFor = (
+		next: string | null,
+		by: OpenOrigin | null = null,
+	): void => {
+		// The origin moves with the open state in the SAME step, before any listener
+		// runs, so a render that reads `isOpenFor` and `openOrigin` after a
+		// notification sees one consistent pair.
+		origin = next === null ? null : by;
 		if (openForId === next) return;
 		openForId = next;
 		// A copy: a listener may unsubscribe (or subscribe) from inside its own call.
@@ -484,6 +589,21 @@ export const createAsksAutoOpen = (
 		observe({ sessionId, entry, draftKnown, screenFocused, engagement }) {
 			if (sessionId === "") return false;
 			enter(sessionId);
+			// A dismissal is forgotten the moment the queue is seen EMPTY (rule 4,
+			// refined by UX round 1, U4). It runs BEFORE the decided latch on purpose:
+			// the usual shape is a view that has already decided (the reader closed the
+			// sheet) and then watches the asks get answered, and that is exactly the
+			// frame that must clear the entry. The guard is one Set lookup, so a
+			// streaming session repainting many times a second still pays only that
+			// while nothing is dismissed. Only a RESOLVED, fresh, empty reading counts:
+			// a leftover frame from the last visit, or a tally with no rows, is not
+			// "the queue emptied" (`readQueue` -> `empty` is the sole way in).
+			if (
+				ledger.isDismissed(sessionId) &&
+				readQueue(entry, openedAt) === "empty"
+			) {
+				ledger.forget(sessionId);
+			}
 			// Once a view has decided, every later frame costs one boolean: frames
 			// land on every state change, and a streaming session repaints many
 			// times a second. `decideAutoOpen` repeats the rule for the table.
@@ -502,14 +622,14 @@ export const createAsksAutoOpen = (
 				engaged: readerEngaged(engagement),
 			});
 			decided = verdict.decided;
-			if (verdict.open) setOpenFor(sessionId);
+			if (verdict.open) setOpenFor(sessionId, "policy");
 			return verdict.open;
 		},
 		opened({ sessionId }) {
 			if (sessionId === "") return;
 			enter(sessionId);
 			decided = true;
-			setOpenFor(sessionId);
+			setOpenFor(sessionId, "reader");
 		},
 		navigated({ to }) {
 			ledger.dismiss(to);
@@ -523,10 +643,23 @@ export const createAsksAutoOpen = (
 			// A reader who has closed the sheet has seen the queue: whatever the
 			// latch said before, nothing later in this view opens it for them.
 			decided = true;
+			// A close with the queue already clear refused nothing - and if an EARLIER
+			// close left an entry (the reader dismissed, then opened the sheet by hand,
+			// answered the rest and closed), the queue has emptied, so it is forgotten
+			// here as `observe` would on the next frame, without waiting for one.
 			if (asksRemain) ledger.dismiss(sessionId);
+			else ledger.forget(sessionId);
 			// After `enter`, `openForId` is this conversation's or null, so this only
 			// ever shuts the sheet the reader just closed.
 			if (openForId === sessionId) setOpenFor(null);
+		},
+		openOrigin: () => origin,
+		readFailed({ sessionId }) {
+			if (sessionId === "" || openForId !== sessionId || origin !== "policy") {
+				return false;
+			}
+			setOpenFor(null);
+			return true;
 		},
 	};
 };

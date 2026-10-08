@@ -1,10 +1,20 @@
 import { useIsFocused } from "expo-router";
-import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
-import type { TextInput } from "react-native";
+import {
+	useCallback,
+	useEffect,
+	useRef,
+	useState,
+	useSyncExternalStore,
+} from "react";
+import type { TextInput, View } from "react-native";
 import { useStore } from "zustand";
 
+import type { PendingAsk } from "@/contracts";
 import { blockingPending, outstandingAsks } from "@/features/session/asks";
-import { createAsksAutoOpen } from "@/features/session/asks-open-policy";
+import {
+	createAsksAutoOpen,
+	expandTargetFor,
+} from "@/features/session/asks-open-policy";
 import { sessions } from "@/features/session/runtime";
 import { readEntry } from "@/state";
 
@@ -43,6 +53,18 @@ export interface AsksSheetInput {
 
 export interface AsksSheetControl {
 	visible: boolean;
+	/** The ask the sheet should open EXPANDED, or `null` (see `expandTargetFor`).
+	 *  Non-null only while the sheet is up because the POLICY opened it. */
+	initialOpenAsk: string | null;
+	/** The frame's own rows, to draw the sheet's first frame from while its first
+	 *  read is in flight - for a policy open only (see `AsksSheet.seedRows`). */
+	seedRows: PendingAsk[] | null;
+	/** Attach to the ask bar: it is the auto-opened sheet's opener, so the platform
+	 *  returns focus to it on close (see the focus note in the hook). */
+	barRef: React.RefObject<View | null>;
+	/** The sheet's opening read failed: an auto-opened sheet closes back to the
+	 *  bar (see `AsksAutoOpen.readFailed`). Wire to `AsksSheet.onReadFailed`. */
+	readFailed: () => void;
 	/** The bar's press. An auto-open is NOT this (contract rule 6): the door keeps
 	 *  its own meaning, and pressing it never touches the dismissal record — it
 	 *  only tells the policy the reader got there first. */
@@ -115,6 +137,53 @@ export const useAsksSheet = (input: AsksSheetInput): AsksSheetControl => {
 		() => false,
 	);
 
+	/* The head question, for a sheet the POLICY raised. Derived per render from the
+	 * frame already in hand (not the sheet's own read) so the question is on the
+	 * first painted frame; the sheet reads it once, on the opening transition. */
+	const initialOpenAsk = visible
+		? expandTargetFor(controller.openOrigin(), entry.projection?.asks)
+		: null;
+	const seedRows =
+		visible && controller.openOrigin() === "policy"
+			? (entry.projection?.asks ?? null)
+			: null;
+
+	/* THE BAR IS THE AUTO-OPENED SHEET'S OPENER (UX round 1, U3). The platform's
+	 * `Modal` returns focus, when it closes, to whatever held it when it OPENED
+	 * (react-native-web's `ModalFocusTrap`: "refocus element that triggered opening
+	 * modal after closing it"). A sheet the reader opened has that: they pressed the
+	 * bar. An auto-open has no press, so the thing focused at that moment was the
+	 * document body, and every close dropped focus there - the next Tab started from
+	 * the top of the page, which is what a keyboard or screen-reader reader hits.
+	 *
+	 * The fix is to give the auto-open the opener it lacks rather than to chase focus
+	 * after the fact: an earlier attempt focused the bar once the sheet had closed
+	 * and lost twice (measured) - the sheet was still mounted and its trap pulled
+	 * focus straight back, and the platform's own restore to the body then landed
+	 * after. So the bar takes focus at the instant the POLICY raises the sheet, from
+	 * the controller's synchronous notification (which runs before React renders the
+	 * `Modal`, so its mount-time snapshot sees the bar), and the platform does the
+	 * restore on every way out - Close, scrim, Escape, back - with no close-side code.
+	 *
+	 * This is not focus theft: `readerEngaged` has already established the composer
+	 * does not hold focus, and the sheet moves focus into itself on mount anyway.
+	 * `focus` is optional-chained: a platform whose handle has none keeps the old
+	 * behaviour rather than throwing. Native focus behaviour is NOT verified here
+	 * (no simulator on the build host). */
+	const barRef = useRef<View | null>(null);
+	useEffect(
+		() =>
+			controller.subscribe(() => {
+				if (
+					controller.isOpenFor(sessionId) &&
+					controller.openOrigin() === "policy"
+				) {
+					barRef.current?.focus?.();
+				}
+			}),
+		[controller, sessionId],
+	);
+
 	useEffect(() => {
 		/* The verdict is applied INSIDE the controller (`openFor`), so the return
 		 * value is not needed here: an open reaches the screen through the store. */
@@ -170,6 +239,12 @@ export const useAsksSheet = (input: AsksSheetInput): AsksSheetControl => {
 		});
 	}, [controller, sessionId]);
 
+	const readFailed = useCallback(() => {
+		/* Not a close by the reader: no focus to restore (nothing had it) and
+		 * nothing to remember. The controller owns whether it applies. */
+		controller.readFailed({ sessionId });
+	}, [controller, sessionId]);
+
 	const leave = useCallback(
 		(target: string) => {
 			controller.navigated({ to: target });
@@ -177,5 +252,14 @@ export const useAsksSheet = (input: AsksSheetInput): AsksSheetControl => {
 		[controller],
 	);
 
-	return { visible, open, close, leave };
+	return {
+		visible,
+		initialOpenAsk,
+		seedRows,
+		barRef,
+		readFailed,
+		open,
+		close,
+		leave,
+	};
 };
