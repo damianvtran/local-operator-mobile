@@ -1,0 +1,18 @@
+PASS old/open/iphone-15/dark  {"collapsedCaret":{"firstTop":538,"firstH":17,"caretTop":555,"caretH":17,"centreDeltaPt":16.8},"shown":true,"questionVisibleWithoutTap":false,"options":false,"answerDecline":false,"title":"asks · 1 question","geom":{"w":356,"h":86,"top":699,"vh":844},"sha":"9923fded2f63063f"}
+PASS new/open/iphone-15/dark  {"collapsedCaret":{"firstTop":753,"firstH":17,"caretTop":753,"caretH":17,"centreDeltaPt":0},"shown":true,"questionVisibleWithoutTap":true,"options":true,"answerDecline":true,"title":"1 question waiting","geom":{"w":356,"h":292,"top":493,"vh":844},"sha":"af335a3624d0c4a2"}
+PASS old/open/iphone-15/light  {"collapsedCaret":{"firstTop":538,"firstH":17,"caretTop":555,"caretH":17,"centreDeltaPt":16.8},"shown":true,"questionVisibleWithoutTap":false,"options":false,"answerDecline":false,"title":"asks · 1 question","geom":{"w":356,"h":86,"top":699,"vh":844},"sha":"9e6e11e5e0a44653"}
+PASS new/open/iphone-15/light  {"collapsedCaret":{"firstTop":753,"firstH":17,"caretTop":753,"caretH":17,"centreDeltaPt":0},"shown":true,"questionVisibleWithoutTap":true,"options":true,"answerDecline":true,"title":"1 question waiting","geom":{"w":356,"h":292,"top":493,"vh":844},"sha":"a64ec0a3b9f0b815"}
+PASS old/open/iphone-se/dark  {"collapsedCaret":{"firstTop":272,"firstH":17,"caretTop":289,"caretH":17,"centreDeltaPt":16.8},"shown":true,"questionVisibleWithoutTap":false,"options":false,"answerDecline":false,"title":"asks · 1 question","geom":{"w":286,"h":86,"top":457,"vh":568},"sha":"f4d49b72a24f9c38"}
+PASS new/open/iphone-se/dark  {"collapsedCaret":{"firstTop":502,"firstH":34,"caretTop":502,"caretH":17,"centreDeltaPt":8.4},"shown":true,"questionVisibleWithoutTap":true,"options":true,"answerDecline":true,"title":"1 question waiting","geom":{"w":286,"h":316,"top":227,"vh":568},"sha":"b31d983502aba7e0"}
+PASS old/focus-after-x  {"closed":true,"activeElement":"BODY"}
+PASS old/focus-after-escape  {"closed":true,"activeElement":"BODY"}
+PASS new/focus-after-x  {"closed":true,"activeElement":"ask-bar"}
+PASS new/focus-after-escape  {"closed":true,"activeElement":"ask-bar"}
+PASS old/read-fails  {"sheetOpenAfter3_5s":true,"barVisible":true,"errorLineShown":true,"handOpen":null}
+PASS new/read-fails  {"sheetOpenAfter3_5s":false,"barVisible":true,"errorLineShown":false,"handOpen":{"sheet":true,"error":true}}
+PASS new/late-seed-9s/ask-existed-before-view (fixture, 8 days old)  {"sheetAtMsAfterRowTap":9133,"expectOpen":true}
+   [facade] seed sent at 1791451104162
+PASS new/late-seed-9s/ask-created-at-seed-instant  {"sheetAtMsAfterRowTap":null,"expectOpen":false}
+PASS new/U4-forget-after-empty  {"dismissed":true,"focusAfterClose":"ask-bar","sameBatchReenterStaysClosed":true,"emptyViewClosed":true,"newBatchAutoOpens":true}
+
+15/15 PASS; 15 frames

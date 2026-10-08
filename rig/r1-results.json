@@ -1,0 +1,298 @@
+{
+  "results": [
+    {
+      "name": "old/open/iphone-15/dark",
+      "pass": true,
+      "facts": {
+        "collapsedCaret": {
+          "firstTop": 538,
+          "firstH": 17,
+          "caretTop": 555,
+          "caretH": 17,
+          "centreDeltaPt": 16.8
+        },
+        "shown": true,
+        "questionVisibleWithoutTap": false,
+        "options": false,
+        "answerDecline": false,
+        "title": "asks · 1 question",
+        "geom": {
+          "w": 356,
+          "h": 86,
+          "top": 699,
+          "vh": 844
+        },
+        "sha": "9923fded2f63063f"
+      }
+    },
+    {
+      "name": "new/open/iphone-15/dark",
+      "pass": true,
+      "facts": {
+        "collapsedCaret": {
+          "firstTop": 753,
+          "firstH": 17,
+          "caretTop": 753,
+          "caretH": 17,
+          "centreDeltaPt": 0
+        },
+        "shown": true,
+        "questionVisibleWithoutTap": true,
+        "options": true,
+        "answerDecline": true,
+        "title": "1 question waiting",
+        "geom": {
+          "w": 356,
+          "h": 292,
+          "top": 493,
+          "vh": 844
+        },
+        "sha": "af335a3624d0c4a2"
+      }
+    },
+    {
+      "name": "old/open/iphone-15/light",
+      "pass": true,
+      "facts": {
+        "collapsedCaret": {
+          "firstTop": 538,
+          "firstH": 17,
+          "caretTop": 555,
+          "caretH": 17,
+          "centreDeltaPt": 16.8
+        },
+        "shown": true,
+        "questionVisibleWithoutTap": false,
+        "options": false,
+        "answerDecline": false,
+        "title": "asks · 1 question",
+        "geom": {
+          "w": 356,
+          "h": 86,
+          "top": 699,
+          "vh": 844
+        },
+        "sha": "9e6e11e5e0a44653"
+      }
+    },
+    {
+      "name": "new/open/iphone-15/light",
+      "pass": true,
+      "facts": {
+        "collapsedCaret": {
+          "firstTop": 753,
+          "firstH": 17,
+          "caretTop": 753,
+          "caretH": 17,
+          "centreDeltaPt": 0
+        },
+        "shown": true,
+        "questionVisibleWithoutTap": true,
+        "options": true,
+        "answerDecline": true,
+        "title": "1 question waiting",
+        "geom": {
+          "w": 356,
+          "h": 292,
+          "top": 493,
+          "vh": 844
+        },
+        "sha": "a64ec0a3b9f0b815"
+      }
+    },
+    {
+      "name": "old/open/iphone-se/dark",
+      "pass": true,
+      "facts": {
+        "collapsedCaret": {
+          "firstTop": 272,
+          "firstH": 17,
+          "caretTop": 289,
+          "caretH": 17,
+          "centreDeltaPt": 16.8
+        },
+        "shown": true,
+        "questionVisibleWithoutTap": false,
+        "options": false,
+        "answerDecline": false,
+        "title": "asks · 1 question",
+        "geom": {
+          "w": 286,
+          "h": 86,
+          "top": 457,
+          "vh": 568
+        },
+        "sha": "f4d49b72a24f9c38"
+      }
+    },
+    {
+      "name": "new/open/iphone-se/dark",
+      "pass": true,
+      "facts": {
+        "collapsedCaret": {
+          "firstTop": 502,
+          "firstH": 34,
+          "caretTop": 502,
+          "caretH": 17,
+          "centreDeltaPt": 8.4
+        },
+        "shown": true,
+        "questionVisibleWithoutTap": true,
+        "options": true,
+        "answerDecline": true,
+        "title": "1 question waiting",
+        "geom": {
+          "w": 286,
+          "h": 316,
+          "top": 227,
+          "vh": 568
+        },
+        "sha": "b31d983502aba7e0"
+      }
+    },
+    {
+      "name": "old/focus-after-x",
+      "pass": true,
+      "facts": {
+        "closed": true,
+        "activeElement": "BODY"
+      }
+    },
+    {
+      "name": "old/focus-after-escape",
+      "pass": true,
+      "facts": {
+        "closed": true,
+        "activeElement": "BODY"
+      }
+    },
+    {
+      "name": "new/focus-after-x",
+      "pass": true,
+      "facts": {
+        "closed": true,
+        "activeElement": "ask-bar"
+      }
+    },
+    {
+      "name": "new/focus-after-escape",
+      "pass": true,
+      "facts": {
+        "closed": true,
+        "activeElement": "ask-bar"
+      }
+    },
+    {
+      "name": "old/read-fails",
+      "pass": true,
+      "facts": {
+        "sheetOpenAfter3_5s": true,
+        "barVisible": true,
+        "errorLineShown": true,
+        "handOpen": null
+      }
+    },
+    {
+      "name": "new/read-fails",
+      "pass": true,
+      "facts": {
+        "sheetOpenAfter3_5s": false,
+        "barVisible": true,
+        "errorLineShown": false,
+        "handOpen": {
+          "sheet": true,
+          "error": true
+        }
+      }
+    },
+    {
+      "name": "new/late-seed-9s/ask-existed-before-view (fixture, 8 days old)",
+      "pass": true,
+      "facts": {
+        "sheetAtMsAfterRowTap": 9133,
+        "expectOpen": true
+      }
+    },
+    {
+      "name": "new/late-seed-9s/ask-created-at-seed-instant",
+      "pass": true,
+      "facts": {
+        "sheetAtMsAfterRowTap": null,
+        "expectOpen": false
+      }
+    },
+    {
+      "name": "new/U4-forget-after-empty",
+      "pass": true,
+      "facts": {
+        "dismissed": true,
+        "focusAfterClose": "ask-bar",
+        "sameBatchReenterStaysClosed": true,
+        "emptyViewClosed": true,
+        "newBatchAutoOpens": true
+      }
+    }
+  ],
+  "frameLog": [
+    {
+      "name": "before-r1__open__iphone-15__dark",
+      "sha": "9923fded2f63063f"
+    },
+    {
+      "name": "before-r1__collapsed__iphone-15__dark",
+      "sha": "93109432bad6fb29"
+    },
+    {
+      "name": "after-r1__open__iphone-15__dark",
+      "sha": "af335a3624d0c4a2"
+    },
+    {
+      "name": "after-r1__collapsed__iphone-15__dark",
+      "sha": "699411fe28cc46ec"
+    },
+    {
+      "name": "before-r1__open__iphone-15__light",
+      "sha": "9e6e11e5e0a44653"
+    },
+    {
+      "name": "before-r1__collapsed__iphone-15__light",
+      "sha": "4cab2aac3b758e1e"
+    },
+    {
+      "name": "after-r1__open__iphone-15__light",
+      "sha": "a64ec0a3b9f0b815"
+    },
+    {
+      "name": "after-r1__collapsed__iphone-15__light",
+      "sha": "72050b49e90f3c49"
+    },
+    {
+      "name": "before-r1__open__iphone-se__dark",
+      "sha": "f4d49b72a24f9c38"
+    },
+    {
+      "name": "before-r1__collapsed__iphone-se__dark",
+      "sha": "d9115bf23aa6b4ac"
+    },
+    {
+      "name": "after-r1__open__iphone-se__dark",
+      "sha": "b31d983502aba7e0"
+    },
+    {
+      "name": "after-r1__collapsed__iphone-se__dark",
+      "sha": "2ef3c05bfa793d25"
+    },
+    {
+      "name": "before-r1__readfail__iphone-15__dark",
+      "sha": "d5d63a0e8e3832cd"
+    },
+    {
+      "name": "after-r1__readfail__iphone-15__dark",
+      "sha": "dc23b3d3a7280b1f"
+    },
+    {
+      "name": "after-r1__dismissed__iphone-15__dark",
+      "sha": "5275b69d1e7476b1"
+    }
+  ]
+}

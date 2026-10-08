@@ -1,0 +1,138 @@
+{
+  "results": [
+    {
+      "build": "after",
+      "state": "none",
+      "theme": "dark",
+      "device": "iphone-15",
+      "scenario": "ev-none",
+      "assertions": {
+        "sheetOpen": false,
+        "barVisible": false
+      },
+      "frames": [
+        "after__none__iphone-15__dark"
+      ],
+      "pass": true,
+      "notes": []
+    },
+    {
+      "build": "after",
+      "state": "none",
+      "theme": "light",
+      "device": "iphone-15",
+      "scenario": "ev-none",
+      "assertions": {
+        "sheetOpen": false,
+        "barVisible": false
+      },
+      "frames": [
+        "after__none__iphone-15__light"
+      ],
+      "pass": true,
+      "notes": []
+    },
+    {
+      "build": "after",
+      "state": "answered",
+      "theme": "dark",
+      "device": "iphone-15",
+      "scenario": "ev-answered",
+      "assertions": {
+        "sheetOpen": false,
+        "barVisible": false
+      },
+      "frames": [
+        "after__answered__iphone-15__dark"
+      ],
+      "pass": true,
+      "notes": []
+    },
+    {
+      "build": "after",
+      "state": "answered",
+      "theme": "light",
+      "device": "iphone-15",
+      "scenario": "ev-answered",
+      "assertions": {
+        "sheetOpen": false,
+        "barVisible": false
+      },
+      "frames": [
+        "after__answered__iphone-15__light"
+      ],
+      "pass": true,
+      "notes": []
+    },
+    {
+      "build": "before",
+      "state": "none",
+      "theme": "dark",
+      "device": "iphone-15",
+      "scenario": "ev-none",
+      "assertions": {
+        "sheetOpen": false,
+        "barVisible": false
+      },
+      "frames": [
+        "before__none__iphone-15__dark"
+      ],
+      "pass": true,
+      "notes": []
+    },
+    {
+      "build": "before",
+      "state": "answered",
+      "theme": "dark",
+      "device": "iphone-15",
+      "scenario": "ev-answered",
+      "assertions": {
+        "sheetOpen": false,
+        "barVisible": false
+      },
+      "frames": [
+        "before__answered__iphone-15__dark"
+      ],
+      "pass": true,
+      "notes": []
+    }
+  ],
+  "frames": [
+    {
+      "file": "~/.local-operator/sessions/56033d616376/scratchpad/evidence/frames/after__none__iphone-15__dark.png",
+      "sha256": "08139933b192b8f0",
+      "bytes": 77505,
+      "step": "none"
+    },
+    {
+      "file": "~/.local-operator/sessions/56033d616376/scratchpad/evidence/frames/after__none__iphone-15__light.png",
+      "sha256": "c7d7133acc1ea52e",
+      "bytes": 78263,
+      "step": "none"
+    },
+    {
+      "file": "~/.local-operator/sessions/56033d616376/scratchpad/evidence/frames/after__answered__iphone-15__dark.png",
+      "sha256": "08139933b192b8f0",
+      "bytes": 77505,
+      "step": "answered"
+    },
+    {
+      "file": "~/.local-operator/sessions/56033d616376/scratchpad/evidence/frames/after__answered__iphone-15__light.png",
+      "sha256": "c7d7133acc1ea52e",
+      "bytes": 78263,
+      "step": "answered"
+    },
+    {
+      "file": "~/.local-operator/sessions/56033d616376/scratchpad/evidence/frames/before__none__iphone-15__dark.png",
+      "sha256": "08139933b192b8f0",
+      "bytes": 77505,
+      "step": "none"
+    },
+    {
+      "file": "~/.local-operator/sessions/56033d616376/scratchpad/evidence/frames/before__answered__iphone-15__dark.png",
+      "sha256": "08139933b192b8f0",
+      "bytes": 77505,
+      "step": "answered"
+    }
+  ]
+}

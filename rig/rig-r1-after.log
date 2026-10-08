@@ -1,0 +1,11 @@
+PASS  after/none/iphone-15/dark  {"sheetOpen":false,"barVisible":false}
+PASS  after/none/iphone-15/light  {"sheetOpen":false,"barVisible":false}
+PASS  after/open/iphone-15/dark  {"sheetOpen":true,"barVisible":true,"sheetError":false}
+PASS  after/open/iphone-15/light  {"sheetOpen":true,"barVisible":true,"sheetError":false}
+PASS  after/answered/iphone-15/dark  {"sheetOpen":false,"barVisible":false}
+PASS  after/answered/iphone-15/light  {"sheetOpen":false,"barVisible":false}
+PASS  after/dismiss/iphone-15/dark  {"sheetOpen":true,"barVisible":true,"sheetError":false,"closedByControl":true,"staysClosedAfterReenter":true,"barStillVisible":true}
+PASS  after/dismiss/iphone-15/light  {"sheetOpen":true,"barVisible":true,"sheetError":false,"closedByControl":true,"staysClosedAfterReenter":true,"barStillVisible":true}
+PASS  after/open/iphone-se/dark  {"sheetOpen":true,"barVisible":true,"sheetError":false}
+
+9/9 flows PASS; 13 frames
