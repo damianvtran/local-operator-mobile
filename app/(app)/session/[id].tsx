@@ -1,6 +1,7 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { ArrowLeft } from "lucide-react-native";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
+import type { TextInput } from "react-native";
 import { Text, useWindowDimensions, View } from "react-native";
 import { useListState } from "@/features/auth/connection-provider";
 import { blockingPending } from "@/features/session/asks";
@@ -31,6 +32,7 @@ import {
 	workingLine,
 } from "@/features/session/projection";
 import { sessionFactsFrom } from "@/features/session/state-marker";
+import { useAsksSheet } from "@/features/session/use-asks-sheet";
 import { useCompletionAck } from "@/features/session/use-completion-ack";
 import { draftSlashQuery, useComposer } from "@/features/session/use-composer";
 import { useSessionRuntime } from "@/features/session/use-session";
@@ -90,9 +92,23 @@ export default function Session() {
 
 	const [modelsOpen, setModelsOpen] = useState(false);
 	const [effortOpen, setEffortOpen] = useState(false);
-	/** The asks sheet's visibility — entered only by the reader (§5.0: never
-	 *  automatic on arrival), from the bar. */
-	const [asksOpen, setAsksOpen] = useState(false);
+	/** The composer's field, so the asks sheet's auto-open can READ focus at the
+	 *  moment it decides (focus is not React state). */
+	const composerFieldRef = useRef<TextInput | null>(null);
+	/** The asks sheet's visibility. Opened by the reader from the bar, and ALSO by
+	 *  default when the conversation is opened with questions already waiting
+	 *  (`asks-open-policy.ts` — §5.0 narrowed: an ask ARRIVING still never forces
+	 *  it, a conversation being OPENED does). */
+	const asksSheet = useAsksSheet({
+		sessionId,
+		fieldRef: composerFieldRef,
+		draft: composer.draft,
+		draftReady: composer.draftReady,
+		attachments: composer.images.length,
+		dictating: composer.voice.phase !== "idle",
+		otherSheetOpen: modelsOpen || effortOpen,
+	});
+	const asksOpen = asksSheet.visible;
 
 	/* The list frame's rows: names for the sheet's foreign-ask rows, which the
 	 *  aggregate route deliberately does not carry. */
@@ -492,7 +508,7 @@ export default function Session() {
 					    It renders itself away at zero outstanding, so its presence is
 					    the statement. */}
 					<View className="px-4 pb-1">
-						<AskBar asks={projection?.asks} onOpen={() => setAsksOpen(true)} />
+						<AskBar asks={projection?.asks} onOpen={asksSheet.open} />
 					</View>
 
 					<Composer
@@ -521,6 +537,7 @@ export default function Session() {
 						effortChip={chipLabels.effort}
 						onOpenModels={() => setModelsOpen(true)}
 						onOpenEffort={() => setEffortOpen(true)}
+						fieldRef={composerFieldRef}
 						slashQuery={slash}
 						slashSheet={
 							<SlashSheet
@@ -568,12 +585,12 @@ export default function Session() {
 			    its own rows carry `session_id` + `cwd` for the foreign ones. */}
 			<AsksSheet
 				visible={asksOpen}
-				onClose={() => setAsksOpen(false)}
+				onClose={asksSheet.close}
 				client={runtime.source.endpoints}
 				currentSessionId={sessionId}
 				sessions={listSessions}
 				onOpenConversation={(target) => {
-					setAsksOpen(false);
+					asksSheet.leave(target);
 					router.push(`/session/${target}`);
 				}}
 			/>

@@ -2,12 +2,14 @@ import { describe, expect, it } from "vitest";
 
 import type { PendingAsk, SessionProjection } from "@/contracts";
 import {
+	ARRIVAL_SKEW_MS,
 	type AsksAutoOpen,
 	createAsksAutoOpen,
 	createAsksOpenLedger,
 	decideAutoOpen,
 	type Engagement,
 	isFreshFrame,
+	OPEN_WINDOW_MS,
 	type QueueEntry,
 	readerEngaged,
 	readQueue,
@@ -29,11 +31,18 @@ import {
 const SESSION = "6714def86197";
 const OTHER = "9ed9e2f534cd";
 
+/** The instant every view in this file begins, in the unit an ask's `created_at`
+ *  uses (epoch ms). Fixed rather than `Date.now()` so the arrival tests can step
+ *  time across the skew tolerance and the window to the millisecond. */
+const T0 = 1_790_000_000_000;
+/** An ask created a minute BEFORE the view began: pending on open. */
+const BEFORE = T0 - 60_000;
+
 function ask(patch: Partial<PendingAsk> = {}): PendingAsk {
 	return {
 		ask_id: "a1",
-		created_at: 1_000,
-		expires_at: 1_000_000,
+		created_at: BEFORE,
+		expires_at: T0 + 900_000,
 		timeout_s: 900,
 		urgent: false,
 		status: "open",
@@ -85,29 +94,48 @@ const QUIET: Engagement = {
 	attachments: 0,
 	dictating: false,
 	otherSheetOpen: false,
+	approvalOpen: false,
 };
 
 /** One screen mount's view of a conversation, against a ledger the test owns. */
 function mount(ledger = createAsksOpenLedger()) {
-	const controller: AsksAutoOpen = createAsksAutoOpen(ledger);
+	let clock = T0;
+	const controller: AsksAutoOpen = createAsksAutoOpen(ledger, () => clock);
+	/** One render's observation. */
+	const see = (
+		entry: QueueEntry,
+		over: Partial<{
+			sessionId: string;
+			draftKnown: boolean;
+			screenFocused: boolean;
+			engagement: Partial<Engagement>;
+		}> = {},
+	): boolean =>
+		controller.observe({
+			sessionId: over.sessionId ?? SESSION,
+			entry,
+			draftKnown: over.draftKnown ?? true,
+			screenFocused: over.screenFocused ?? true,
+			engagement: { ...QUIET, ...over.engagement },
+		});
 	return {
 		ledger,
 		controller,
-		/** One render's observation. */
-		see(
-			entry: QueueEntry,
-			over: Partial<{
-				sessionId: string;
-				composerReady: boolean;
-				engagement: Partial<Engagement>;
-			}> = {},
-		): boolean {
-			return controller.observe({
-				sessionId: over.sessionId ?? SESSION,
-				entry,
-				composerReady: over.composerReady ?? true,
-				engagement: { ...QUIET, ...over.engagement },
-			});
+		see,
+		/**
+		 * The screen mounted. A view BEGINS at its first observation, and in
+		 * production that is the mount effect, which runs before any frame can
+		 * resolve (the store holds a leftover or nothing). A test that wants time
+		 * to pass between "opened" and "the first resolved frame" must begin
+		 * first - advancing the clock before the first observation would start
+		 * the view late and make every ask look older than it was.
+		 */
+		begin(sessionId = SESSION): void {
+			see(leftover({}), { sessionId });
+		},
+		/** Move this mount's clock forward (the view began at `T0`). */
+		advance(ms: number): void {
+			clock += ms;
 		},
 	};
 }
@@ -285,6 +313,199 @@ describe("state 4 — dismissed while pending: stays closed", () => {
 	});
 });
 
+/* ------------------------------------------- "on open" means it existed before */
+
+describe("an ask that ARRIVES is not pending on open", () => {
+	/** The race the TUI lane found first: a conversation whose queue resolves on
+	 *  the same frame that carries the agent's FIRST question. The reader is just
+	 *  watching the agent work, so this is an arrival and rule 4 forbids forcing
+	 *  the sheet over it. */
+	const raisedAfterOpen = (ms: number) => ({
+		asks: [ask({ ask_id: "fresh", created_at: T0 + ms })],
+		asks_open: 1,
+	});
+
+	it("stays closed when the first resolved frame carries only an ask raised after the view began", () => {
+		const view = mount();
+		view.begin();
+		view.advance(8_000);
+		expect(view.see(fresh(raisedAfterOpen(7_000)))).toBe(false);
+	});
+
+	it("latches that closed: the same ask, re-rendered, never opens it later", () => {
+		const view = mount();
+		view.begin();
+		view.advance(8_000);
+		expect(view.see(fresh(raisedAfterOpen(7_000)))).toBe(false);
+		expect(view.see(fresh(raisedAfterOpen(7_000)))).toBe(false);
+		view.advance(1_000);
+		expect(view.see(fresh(raisedAfterOpen(7_000)))).toBe(false);
+	});
+
+	it("stays closed for a brand-new conversation whose first frame is unresolved and whose second carries the first question", () => {
+		const view = mount();
+		expect(view.see(fresh({}))).toBe(false); // the runtime cannot say yet
+		view.advance(3_000);
+		// Raised six seconds after the view began: beyond the skew tolerance.
+		expect(view.see(fresh(raisedAfterOpen(6_000)))).toBe(false);
+	});
+
+	it("opens when ONE ask predates the view even though a newer one arrived with it", () => {
+		const view = mount();
+		view.begin();
+		view.advance(2_000);
+		expect(
+			view.see(
+				fresh({
+					asks: [
+						ask({ ask_id: "new", created_at: T0 + 1_500 }),
+						ask({ ask_id: "old", created_at: BEFORE }),
+					],
+					asks_open: 2,
+				}),
+			),
+		).toBe(true);
+	});
+
+	it("opens for an ask created a moment before the view: the skew tolerance leans toward opening", () => {
+		const view = mount();
+		// `created_at` stamped by a peer whose clock runs a few seconds ahead of
+		// this one lands INSIDE the view; within the tolerance it still counts.
+		expect(
+			view.see(
+				fresh({
+					asks: [ask({ created_at: T0 + ARRIVAL_SKEW_MS })],
+					asks_open: 1,
+				}),
+			),
+		).toBe(true);
+	});
+
+	it("reads an ask one millisecond past the tolerance as an arrival", () => {
+		const view = mount();
+		expect(
+			view.see(
+				fresh({
+					asks: [ask({ created_at: T0 + ARRIVAL_SKEW_MS + 1 })],
+					asks_open: 1,
+				}),
+			),
+		).toBe(false);
+	});
+
+	it("treats a row with no usable created_at as old, so it is pending rather than an arrival", () => {
+		const view = mount();
+		expect(
+			view.see(
+				fresh({
+					asks: [ask({ created_at: Number.NaN })],
+					asks_open: 1,
+				}),
+			),
+		).toBe(true);
+	});
+
+	it("reads each reading by name", () => {
+		const queue = (rows: PendingAsk[]) => fresh({ asks: rows, asks_open: 1 });
+		expect(readQueue(queue([ask({ created_at: BEFORE })]), T0)).toBe("pending");
+		expect(readQueue(queue([ask({ created_at: T0 + 60_000 })]), T0)).toBe(
+			"arrived",
+		);
+		expect(
+			readQueue(
+				queue([
+					ask({ ask_id: "x", created_at: T0 + 60_000 }),
+					ask({ ask_id: "y", created_at: BEFORE }),
+				]),
+				T0,
+			),
+		).toBe("pending");
+	});
+});
+
+describe("the wait for a resolved frame is bounded", () => {
+	it("opens on a frame that resolves exactly at the bound", () => {
+		const view = mount();
+		view.begin();
+		view.advance(OPEN_WINDOW_MS);
+		expect(view.see(fresh(PENDING))).toBe(true);
+	});
+
+	it("never opens on a frame that resolves later than the bound", () => {
+		const view = mount();
+		expect(view.see(fresh({ asks_open: 1 }))).toBe(false); // tally-only: unresolved
+		view.advance(OPEN_WINDOW_MS + 1);
+		expect(view.see(fresh(PENDING))).toBe(false);
+	});
+
+	it("stays shut for every frame after the bound, however many follow", () => {
+		const view = mount();
+		view.begin();
+		view.advance(OPEN_WINDOW_MS + 1);
+		expect(view.see(fresh(PENDING))).toBe(false);
+		view.advance(1_000);
+		expect(view.see(fresh(PENDING))).toBe(false);
+	});
+
+	it("bounds every reason a reading can stay unresolved, not only a missing frame", () => {
+		for (const over of [
+			{ draftKnown: false },
+			{ screenFocused: false },
+		] as const) {
+			const view = mount();
+			expect(view.see(fresh(PENDING), over)).toBe(false);
+			view.advance(OPEN_WINDOW_MS + 1);
+			expect(view.see(fresh(PENDING))).toBe(false);
+		}
+	});
+
+	it("starts a new window for each view: a re-pointed screen gets its own 45 s", () => {
+		const view = mount();
+		view.begin();
+		view.advance(OPEN_WINDOW_MS + 1);
+		expect(view.see(fresh(PENDING))).toBe(false); // the first view is spent
+		expect(view.see(fresh(PENDING), { sessionId: OTHER })).toBe(true);
+	});
+});
+
+describe("leaving the sheet for another conversation", () => {
+	it("keeps the destination from re-raising the queue the reader just walked out of", () => {
+		const origin = mount();
+		origin.see(fresh(PENDING));
+		origin.controller.navigated({ to: OTHER });
+
+		// The destination screen is a new mount of a different conversation, and
+		// shares only the app's ledger with the origin.
+		const destination = mount(origin.ledger);
+		expect(destination.see(fresh(PENDING), { sessionId: OTHER })).toBe(false);
+	});
+
+	it("records nothing for the conversation that was left", () => {
+		const origin = mount();
+		origin.see(fresh(PENDING));
+		origin.controller.navigated({ to: OTHER });
+		expect(origin.ledger.isDismissed(SESSION)).toBe(false);
+		expect(origin.ledger.isDismissed(OTHER)).toBe(true);
+	});
+});
+
+describe("the reader got to the door first", () => {
+	it("opened() settles the view so a still-waiting policy cannot open what is already open", () => {
+		const view = mount();
+		expect(view.see(fresh({ asks_open: 1 }))).toBe(false); // waiting
+		view.controller.opened({ sessionId: SESSION });
+		expect(view.see(fresh(PENDING))).toBe(false);
+	});
+
+	it("opened() records no dismissal: closing the hand-opened sheet is closed()'s to record", () => {
+		const view = mount();
+		view.controller.opened({ sessionId: SESSION });
+		expect(view.ledger.isDismissed(SESSION)).toBe(false);
+		view.controller.closed({ sessionId: SESSION, asksRemain: true });
+		expect(view.ledger.isDismissed(SESSION)).toBe(true);
+	});
+});
+
 /* ---------------------------------------------------------------- rule 5: guards */
 
 describe("an unresolved queue opens nothing", () => {
@@ -327,10 +548,21 @@ describe("an unresolved queue opens nothing", () => {
 		expect(view.see(fresh(PENDING), { sessionId: "" })).toBe(false);
 	});
 
+	it("waits until the session screen is the focused route, then decides once", () => {
+		// The stack keeps this screen mounted under the agent drill-down; a frame
+		// landing while another screen is on top must not raise a window-level
+		// modal over that screen.
+		const view = mount();
+		expect(view.see(fresh(PENDING), { screenFocused: false })).toBe(false);
+		expect(view.see(fresh(PENDING), { screenFocused: false })).toBe(false);
+		expect(view.see(fresh(PENDING), { screenFocused: true })).toBe(true);
+		expect(view.see(fresh(PENDING), { screenFocused: true })).toBe(false);
+	});
+
 	it("waits for the composer's draft restore before it decides", () => {
 		const view = mount();
-		expect(view.see(fresh(PENDING), { composerReady: false })).toBe(false);
-		expect(view.see(fresh(PENDING), { composerReady: true })).toBe(true);
+		expect(view.see(fresh(PENDING), { draftKnown: false })).toBe(false);
+		expect(view.see(fresh(PENDING), { draftKnown: true })).toBe(true);
 	});
 });
 
@@ -356,11 +588,12 @@ describe("no focus theft", () => {
 		);
 	});
 
-	it("does not open over an attached image, a live dictation or another open sheet", () => {
+	it("does not open over an attached image, a live dictation, another open sheet or a pending approval", () => {
 		for (const engagement of [
 			{ attachments: 1 },
 			{ dictating: true },
 			{ otherSheetOpen: true },
+			{ approvalOpen: true },
 		]) {
 			const view = mount();
 			expect(view.see(fresh(PENDING), { engagement })).toBe(false);
@@ -383,6 +616,7 @@ describe("no focus theft", () => {
 describe("decideAutoOpen", () => {
 	const base = {
 		decided: false,
+		expired: false,
 		reading: "pending",
 		dismissed: false,
 		engaged: false,
@@ -406,10 +640,20 @@ describe("decideAutoOpen", () => {
 		});
 	});
 
-	it("settles closed on empty, on a dismissal and on engagement", () => {
+	it("closes an unresolved view for good once the window or a dismissal has spoken", () => {
+		for (const patch of [{ expired: true }, { dismissed: true }] as const) {
+			expect(
+				decideAutoOpen({ ...base, reading: "unresolved", ...patch }),
+			).toEqual({ open: false, decided: true });
+		}
+	});
+
+	it("settles closed on empty, arrived, a dismissal, an expired window and engagement", () => {
 		for (const patch of [
 			{ reading: "empty" },
+			{ reading: "arrived" },
 			{ dismissed: true },
+			{ expired: true },
 			{ engaged: true },
 		] as const) {
 			expect(decideAutoOpen({ ...base, ...patch })).toEqual({
@@ -422,15 +666,15 @@ describe("decideAutoOpen", () => {
 
 describe("readQueue and isFreshFrame", () => {
 	it("reads rows as the truth when they are published, empty or not", () => {
-		expect(readQueue(fresh({ asks: [], asks_open: 4 }))).toBe("empty");
-		expect(readQueue(fresh(PENDING))).toBe("pending");
-		expect(readQueue(fresh(ADDRESSED))).toBe("empty");
+		expect(readQueue(fresh({ asks: [], asks_open: 4 }), T0)).toBe("empty");
+		expect(readQueue(fresh(PENDING), T0)).toBe("pending");
+		expect(readQueue(fresh(ADDRESSED), T0)).toBe("empty");
 	});
 
 	it("reads an absent list as unresolved unless the tally says zero", () => {
-		expect(readQueue(fresh({}))).toBe("unresolved");
-		expect(readQueue(fresh({ asks_open: 2 }))).toBe("unresolved");
-		expect(readQueue(fresh({ asks_open: 0 }))).toBe("empty");
+		expect(readQueue(fresh({}), T0)).toBe("unresolved");
+		expect(readQueue(fresh({ asks_open: 2 }), T0)).toBe("unresolved");
+		expect(readQueue(fresh({ asks_open: 0 }), T0)).toBe("empty");
 	});
 
 	it("calls a frame fresh only when it is the connection's own", () => {
@@ -461,5 +705,6 @@ describe("readerEngaged", () => {
 		expect(readerEngaged({ ...QUIET, attachments: 2 })).toBe(true);
 		expect(readerEngaged({ ...QUIET, dictating: true })).toBe(true);
 		expect(readerEngaged({ ...QUIET, otherSheetOpen: true })).toBe(true);
+		expect(readerEngaged({ ...QUIET, approvalOpen: true })).toBe(true);
 	});
 });
