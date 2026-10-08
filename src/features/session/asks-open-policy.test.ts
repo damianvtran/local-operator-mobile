@@ -12,6 +12,7 @@ import {
 	type Engagement,
 	expandTargetFor,
 	isFreshFrame,
+	namesEveryOutstandingAsk,
 	OPEN_WINDOW_MS,
 	type QueueEntry,
 	readerEngaged,
@@ -1225,6 +1226,64 @@ describe("U4 - a dismissal is forgotten once the queue empties", () => {
 			expect(second.see(fresh(PENDING), { screenFocused: false })).toBe(false);
 			// Neither frame decided: the view can still make its decision.
 			expect(second.see(fresh(batch2))).toBe(true);
+		});
+	});
+
+	// The wire's text budget can DROP a row that is still outstanding, so a frame
+	// may name fewer asks than its `asks_open` tally counts. Reconciling against
+	// such a frame would forget the dismissal of a clipped-but-live ask.
+	describe("an incomplete frame (tally > named rows) holds the dismissal", () => {
+		/** a2 was waved off; the budget then dropped its row, leaving a1 named. */
+		const CLIPPED = { asks: [ask({ ask_id: "a1" })], asks_open: 2 };
+
+		it("keeps the dismissal when the dismissed row was dropped but is still counted, so a later fresh view stays closed", () => {
+			const ledger = createAsksOpenLedger();
+			const first = mount(ledger);
+			first.see(fresh(TWO_PENDING));
+			first.controller.closed({ sessionId: SESSION, pending: ["a2"] });
+
+			expect(first.see(fresh(CLIPPED))).toBe(false);
+			expect(ledger.isDismissed(SESSION)).toBe(true);
+
+			// Leave and return: the fresh view meets a named, pre-existing ask and
+			// would auto-open if the entry had been forgotten.
+			const second = mount(ledger);
+			expect(second.see(leftover(CLIPPED))).toBe(false);
+			expect(second.see(fresh(CLIPPED))).toBe(false);
+			expect(ledger.isDismissed(SESSION)).toBe(true);
+		});
+
+		it("still forgets on a complete frame once the dismissed ids are answered (tally == named)", () => {
+			const ledger = createAsksOpenLedger();
+			const view = mount(ledger);
+			view.see(fresh(TWO_PENDING));
+			view.controller.closed({ sessionId: SESSION, pending: ["a2"] });
+
+			view.see(fresh(CLIPPED));
+			expect(ledger.isDismissed(SESSION)).toBe(true);
+			// a2 answered; only a1 remains and the frame names it: complete.
+			view.see(fresh({ asks: [ask({ ask_id: "a1" })], asks_open: 1 }));
+			expect(ledger.isDismissed(SESSION)).toBe(false);
+		});
+
+		it("reconciles as before on an older relay that publishes rows and no tally", () => {
+			const ledger = createAsksOpenLedger();
+			const view = mount(ledger);
+			view.see(fresh(TWO_PENDING));
+			view.controller.closed({ sessionId: SESSION, pending: ["a2"] });
+			view.see(fresh({ asks: [ask({ ask_id: "a1" })] }));
+			expect(ledger.isDismissed(SESSION)).toBe(false);
+		});
+
+		it("names the decision: absent tally or tally <= named is complete; tally > named is not", () => {
+			const one = [ask({ ask_id: "a1" })];
+			const settled = ask({ ask_id: "a9", status: "answered" });
+			expect(namesEveryOutstandingAsk(one, undefined)).toBe(true);
+			expect(namesEveryOutstandingAsk(one, 1)).toBe(true);
+			expect(namesEveryOutstandingAsk(one, 2)).toBe(false);
+			// A settled row is not outstanding, so it cannot make a frame complete.
+			expect(namesEveryOutstandingAsk([settled], 1)).toBe(false);
+			expect(namesEveryOutstandingAsk([], 0)).toBe(true);
 		});
 	});
 
