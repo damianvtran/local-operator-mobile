@@ -357,7 +357,8 @@ changes is what the client reads and what it renders:
 | **Terminal transcript rows** (§1.3) | one answer row; no timeout state exists | two new `EntryKind`s, `ask_response` and `ask_timeout`, each expanding to the questions, the answers and the surface that gave them — the same record the agent sees |
 
 Per-ask state a client renders, from the wire `status` and nowhere else:
-`open` · `answered` · `declined` · `timed_out` · `late` · `dismissed` · `expired`.
+`open` · `answered` · `declined` · `timed_out` · `late` · `dismissed` ·
+`withdrawn` · `expired`.
 Copy is the core's shared copy contract; the app quotes it rather than writing its
 own (ADR 0005 §3).
 

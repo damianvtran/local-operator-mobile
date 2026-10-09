@@ -78,7 +78,7 @@ purely additive on the `peer_message` precedent — `types.py:389-391`):
 ```
 PendingAsk
   ask_id, session_id?, created_at, expires_at, timeout_s, urgent,
-  status (open|answered|declined|timed_out|late|dismissed|expired),
+  status (open|answered|declined|timed_out|late|dismissed|withdrawn|expired),
   answered_at?, delivered: bool,
   questions[{id, question, options[{label, description?, recommended?}],
              multi, secret, persist}],
@@ -146,13 +146,14 @@ is durably stored on the phone.
 ### 3. Terminal states, rendered from the wire and nowhere else
 
 The app renders **`status` as it arrives**: `open`, `answered`, `declined`,
-`timed_out`, `late`, `dismissed`, `expired`. It never infers a state from elapsed
-time, from the absence of a field, or from the session's own status (`working` /
-`idle` is activity-derived and says nothing about asks — core §4, "Backend-owned
-session status").
+`timed_out`, `late`, `dismissed`, `withdrawn`, `expired`. It never infers a
+state from elapsed time, from the absence of a field, or from the session's own
+status (`working` / `idle` is activity-derived and says nothing about asks —
+core §4, "Backend-owned session status").
 
 Copy is the core's shared copy contract, quoted so the app can be built against it
-(core `docs/design/ask-nonblocking.md` §5), and rendered **verbatim**:
+(core `docs/design/ask-nonblocking.md` §5; the `withdrawn` clause per §12.1), and
+rendered **verbatim**:
 
 | `status` | Copy |
 |---|---|
@@ -162,6 +163,7 @@ Copy is the core's shared copy contract, quoted so the app can be built against 
 | `late` | "Answered late — the agent was told" |
 | `declined` | "Declined — the agent was told" |
 | `dismissed` | "Dismissed — no reply was sent" |
+| `withdrawn` | "Withdrawn — the agent no longer needs an answer" |
 | `expired` | "Expired — this ask is too old to answer; ask the agent again" |
 
 The honesty rules behind that table, in the app's terms:

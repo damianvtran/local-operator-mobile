@@ -130,6 +130,16 @@ describe("askStateLine", () => {
 		});
 	});
 
+	it("names a withdrawal as the agent's own retraction, never a failure", () => {
+		/* The agent retracted the question and nothing will be sent for it
+		   (design §12; the web lane's settled register carries the identical
+		   sentence, word for word). */
+		expect(askStateLine(ask({ status: "withdrawn" }), 1)).toEqual({
+			text: "Withdrawn — the agent no longer needs an answer",
+			tone: "gone",
+		});
+	});
+
 	it("keeps a late answer a receipt the reader should notice", () => {
 		expect(askStateLine(ask({ status: "late" }), 1).text).toBe(
 			"Answered late — the agent was told",
@@ -246,11 +256,26 @@ describe("outstanding / answerable", () => {
 		expect(outstandingAsks(rows).map((row) => row.ask_id)).toEqual(["a", "b"]);
 	});
 
+	it("keeps a withdrawn ask out of the outstanding set — and off the bar", () => {
+		/* Design §12: a withdrawn ask "is not answerable from any surface (its
+		   box hides everywhere — `withdrawn` is not outstanding)". Not the bar,
+		   not its count, not the dock — and the sheet's answer controls gate on
+		   the same predicate (`isAnswerable`), so they hide with it. */
+		const rows = [ask({ ask_id: "w", status: "withdrawn" })];
+		expect(outstandingAsks(rows)).toEqual([]);
+		expect(outstandingQuestions(rows)).toBe(0);
+		expect(dockAsk(rows)).toBeNull();
+	});
+
 	it("treats a timed-out ask as answerable and an answered one as not", () => {
 		expect(isAnswerable("timed_out")).toBe(true);
 		expect(isAnswerable("answered")).toBe(false);
 		expect(isOutstanding("open")).toBe(true);
 		expect(isOutstanding("late")).toBe(false);
+		/* The retracted state in the same breath — this ONE predicate is what
+		   hides its answer controls (§12). */
+		expect(isAnswerable("withdrawn")).toBe(false);
+		expect(isOutstanding("withdrawn")).toBe(false);
 	});
 
 	it("has no opinion of its own when the field is absent — absence is not empty", () => {

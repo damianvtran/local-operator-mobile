@@ -1540,6 +1540,31 @@ describe("the queued-ask fields are read by presence, never defaulted", () => {
 		expect(row?.questions[0]?.recommended).toBe(0);
 	});
 
+	it("accepts a withdrawn ask — a retraction is a wire word, not a rejected frame", () => {
+		/* `withdrawn` is what the agent's own retraction folds to (design §12,
+		   core #2006) and it reaches both routes the app reads. `status` rides
+		   as an open string — deliberately: a closed enum here is the
+		   frame-rejection class the peer's `ask` gate paid for (R1-1). */
+		const projection = parsePayload(
+			"sessionProjection",
+			projectionWith({
+				asks: [askRow({ status: "withdrawn" })],
+				asks_open: 0,
+			}),
+		);
+		expect(projection.asks?.[0]?.status).toBe("withdrawn");
+		const aggregate = parsePayload("asks", {
+			asks: [
+				{
+					...askRow({ status: "withdrawn" }),
+					session_id: "6714def86197",
+					cwd: "~/work",
+				},
+			],
+		});
+		expect(aggregate.asks[0]?.status).toBe("withdrawn");
+	});
+
 	it("carries session_id and cwd on aggregate rows, so a foreign row is answerable", () => {
 		const parsed = parsePayload("asks", {
 			asks: [{ ...askRow(), session_id: "6714def86197", cwd: "~/work" }],
