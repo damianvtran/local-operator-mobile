@@ -810,3 +810,126 @@ describe("U-42 — spacing on the token scale", () => {
 		expect(rows[0]?.verdict).toBe("FAIL"); // 6 is not a step of THIS scale either
 	});
 });
+
+describe("U-06 — an overrunning run inside a single-line ellipsis clip", () => {
+	/** The find sheet's measured shape: a matched inline run keeps its full
+	 *  layout box (330 on a 320 viewport) while its ancestor's `text-overflow:
+	 *  ellipsis` + `white-space: nowrap` draws everything inside the box — and
+	 *  the ancestor MEASURABLY cuts (scrollWidth past clientWidth), which the
+	 *  allowance now verifies rather than trusts. */
+	const runNode = (over: Partial<AuditNode> = {}) =>
+		node({
+			index: 9,
+			path: "div.truncator>div.text>span.text-ink",
+			ancestors: [7],
+			rect: { x: 0, y: 0, w: 330, h: 17, right: 330, bottom: 17 },
+			visibleRect: { x: 0, y: 0, w: 320, h: 17, right: 320, bottom: 17 },
+			ownText: "retry",
+			...over,
+		});
+	const truncator = (over: Partial<AuditNode> = {}) =>
+		node({
+			index: 7,
+			path: "div.truncator",
+			rect: { x: 0, y: 0, w: 320, h: 17, right: 320, bottom: 17 },
+			visibleRect: { x: 0, y: 0, w: 320, h: 17, right: 320, bottom: 17 },
+			// The clip half the allowance verifies (U-07's own pattern): the box
+			// genuinely cuts content, and it sits inside the viewport.
+			overflowX: "hidden",
+			scrollWidth: 330,
+			clientWidth: 320,
+			...over,
+		});
+
+	it("records the pair as an EXCEPTION naming the clipping ancestor, never a FAIL", () => {
+		const rows = run(
+			"U-06",
+			state({
+				nodes: [
+					truncator({ textOverflow: "ellipsis", whiteSpace: "nowrap" }),
+					runNode(),
+				],
+			}),
+		);
+		expect(rows.map((r) => r.verdict)).toEqual(["EXCEPTION"]);
+		expect(rows[0]?.detail).toContain("div.truncator");
+		expect(rows[0]?.detail).toContain("single-line ellipsis");
+	});
+
+	it("still fails the same overrun when no ancestor carries the idiom", () => {
+		const rows = run("U-06", state({ nodes: [truncator(), runNode()] }));
+		expect(rows.map((r) => r.verdict)).toEqual(["FAIL"]);
+	});
+
+	it("does not accept a multi-line clamp's `ellipsis` (white-space stays normal)", () => {
+		const rows = run(
+			"U-06",
+			state({
+				nodes: [
+					truncator({ textOverflow: "ellipsis", whiteSpace: "normal" }),
+					runNode(),
+				],
+			}),
+		);
+		expect(rows.map((r) => r.verdict)).toEqual(["FAIL"]);
+	});
+
+	it("does not accept a nowrap+ellipsis ancestor with no working clip", () => {
+		// The style without the clip: computed `text-overflow` reads `ellipsis`
+		// even under `overflow: visible`, and the run paints past the viewport —
+		// the clip the allowance names cannot be taken on its word (MAJOR-3).
+		const rows = run(
+			"U-06",
+			state({
+				nodes: [
+					truncator({
+						textOverflow: "ellipsis",
+						whiteSpace: "nowrap",
+						overflowX: "visible",
+					}),
+					runNode(),
+				],
+			}),
+		);
+		expect(rows.map((r) => r.verdict)).toEqual(["FAIL"]);
+	});
+
+	it("never exempts a node the probe reports as having escaped its clip", () => {
+		// `escapedClip` is the probe's own reading that the node paints OUTSIDE
+		// a clipping ancestor; for that node "clipped by X, the drawing stays
+		// inside" would be false (QA Q63-5's second probe case).
+		const rows = run(
+			"U-06",
+			state({
+				nodes: [
+					truncator({ textOverflow: "ellipsis", whiteSpace: "nowrap" }),
+					runNode({ escapedClip: true }),
+				],
+			}),
+		);
+		expect(rows.map((r) => r.verdict)).toEqual(["FAIL"]);
+	});
+
+	it("keeps both allowance branches as named EXCEPTIONs", () => {
+		const code = node({
+			index: 2,
+			path: "span.code",
+			rect: { x: 0, y: 40, w: 400, h: 17, right: 400, bottom: 57 },
+			visibleRect: { x: 0, y: 40, w: 400, h: 17, right: 400, bottom: 57 },
+			scrollsX: true,
+		});
+		const rows = run(
+			"U-06",
+			state({
+				nodes: [
+					truncator({ textOverflow: "ellipsis", whiteSpace: "nowrap" }),
+					runNode(),
+					code,
+				],
+			}),
+		);
+		expect(rows.map((r) => r.verdict)).toEqual(["EXCEPTION", "EXCEPTION"]);
+		expect(rows[0]?.detail).toContain("single-line ellipsis");
+		expect(rows[1]?.detail).toContain("overflow-x: auto|scroll");
+	});
+});

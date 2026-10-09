@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { ArrowLeft } from "lucide-react-native";
+import { ArrowLeft, Search } from "lucide-react-native";
 import { useCallback, useMemo, useRef, useState } from "react";
 import type { TextInput } from "react-native";
 import { Text, useWindowDimensions, View } from "react-native";
@@ -11,13 +11,18 @@ import { AskBar } from "@/features/session/components/ask-bar";
 import { AsksSheet } from "@/features/session/components/asks-sheet";
 import { Composer } from "@/features/session/components/composer";
 import { ConnectionBanner } from "@/features/session/components/connection-banner";
+import { FindBar } from "@/features/session/components/find-bar";
+import { FindSheet } from "@/features/session/components/find-sheet";
 import {
 	EffortSheet,
 	ModelSheet,
 } from "@/features/session/components/model-sheet";
 import { PendingCard } from "@/features/session/components/pending-card";
 import { SlashSheet } from "@/features/session/components/slash-sheet";
-import { SessionStateMarkers } from "@/features/session/components/state-markers";
+import {
+	FindStateMarkers,
+	SessionStateMarkers,
+} from "@/features/session/components/state-markers";
 import { SubagentsPanel } from "@/features/session/components/subagents-panel";
 import { TodosPanel } from "@/features/session/components/todos-panel";
 import { TranscriptList } from "@/features/session/components/transcript-list";
@@ -35,6 +40,7 @@ import { sessionFactsFrom } from "@/features/session/state-marker";
 import { useAsksSheet } from "@/features/session/use-asks-sheet";
 import { useCompletionAck } from "@/features/session/use-completion-ack";
 import { draftSlashQuery, useComposer } from "@/features/session/use-composer";
+import { useFind } from "@/features/session/use-find";
 import { useSessionRuntime } from "@/features/session/use-session";
 import { CONTROL, EMPTY, SCREEN, SURFACE } from "@/ui/a11y";
 import {
@@ -114,6 +120,12 @@ export default function Session() {
 	 *  aggregate route deliberately does not carry. */
 	const listSessions = useListState((state) => state.sessions);
 
+	/* The in-conversation find: its own session of state (which mode, query,
+	 *  landed hit), over the frames this device holds. Declared here because the
+	 *  header lever, the sheet, the bar, the transcript's wash/reveal and the
+	 *  ack gate all read it. */
+	const find = useFind({ sessionId, entries: runtime.entries });
+
 	/** Whether the completion's anchor row bottom is inside the transcript's
 	 *  viewport — measured by `TranscriptList` (the list owns the geometry; this
 	 *  screen only carries the answer to the ack gate). */
@@ -142,6 +154,8 @@ export default function Session() {
 			panel: openPanel !== null,
 			asks: asksOpen,
 			slash: slash !== null,
+			find: find.sheetOpen,
+			findBar: find.barVisible,
 		}),
 	});
 
@@ -347,6 +361,11 @@ export default function Session() {
 				onOpenAgent={openAgent}
 				anchorId={runtime.projection?.attention?.anchor_id ?? null}
 				onAnchorVisible={setCompletionVisible}
+				// The find session's two outputs into the list: the wash on the current
+				// hit, and the jump to reveal it (opening a condensed turn on the way
+				// when one hides it).
+				highlightId={find.activeHit?.id ?? null}
+				reveal={find.reveal}
 				empty={
 					<EmptyState
 						headline="Nothing here yet."
@@ -372,12 +391,34 @@ export default function Session() {
 					icon={({ color, size }) => <ArrowLeft color={color} size={size} />}
 				/>
 			}
-			/* NO header action, deliberately. The subagents chip used to sit here and
-			   took 127 of a 390 pt row — measured — which is why the name was clipped at
-			   every phone width. The chip is status, the context strip is status, and
-			   the strip has room for both (design round 1, D2 and D8). */
+			headerAction={
+				/* The find lever. It is a 44×44 icon, not the 127 pt chip this slot
+				   used to carry, so the width constraint that banished that chip (design
+				   round 1, D2) does not apply — the icon cannot clip the middle
+				   truncation's budget. The kit's own header control (`IconButton`),
+				   which measures 48 pt on the web/audit build and 44 on iOS. */
+				<IconButton
+					accessibilityLabel="Search this conversation"
+					accessibilityHint="Finds messages in the transcript loaded on this device"
+					testID={CONTROL.sessionFind}
+					onPress={find.open}
+					icon={({ color, size }) => <Search color={color} size={size} />}
+				/>
+			}
 		>
 			<SessionStateMarkers facts={stateFacts} />
+			{/* The find states, asserted by the capture cells that declare them
+			    (`S5/find-results`, `S5/find-empty`, `S5/find-hit`, `S5/find-caveat`):
+			    each marker is present ONLY in the state it names, so a frame that
+			    stops showing one fails that cell by name. */}
+			<FindStateMarkers
+				sheetOpen={find.sheetOpen}
+				settled={find.query.trim().length > 0}
+				hits={find.hits.length}
+				soft={find.hits.some((hit) => hit.tier === "soft")}
+				barVisible={find.barVisible}
+				caveat={runtime.olderThanLoaded}
+			/>
 			{/* The status strip: every number the reader needs while reading, in one
 			    band. Only rendered when the wire reports something — a strip that showed
 			    `—` for unknown would be a row of noise on every session. `min-h-11` is
@@ -454,6 +495,18 @@ export default function Session() {
 							activity={working.activity}
 							startedS={working.startedS}
 							testID={SURFACE.sessionWorkingLine}
+						/>
+					) : null}
+					{/* The find navigate bar. It sits directly above the composer's stack
+					    (thumb reach, U-31) and BELOW the panels — and above the pending
+					    card, which must stay adjacent to the control that answers it. */}
+					{find.barVisible ? (
+						<FindBar
+							active={find.active}
+							count={find.hits.length}
+							onEdit={find.reopen}
+							onStep={find.step}
+							onExit={find.exit}
 						/>
 					) : null}
 					{pendingViewProps !== null ? (
@@ -582,6 +635,19 @@ export default function Session() {
 						effort,
 					});
 				}}
+			/>
+
+			<FindSheet
+				visible={find.sheetOpen}
+				onClose={find.closeSheet}
+				query={find.query}
+				onQueryChange={find.setQuery}
+				hits={find.hits}
+				truncated={find.truncated}
+				active={find.active}
+				onActivate={find.activate}
+				messages={find.messages}
+				older={runtime.olderThanLoaded}
 			/>
 
 			{/* The walked queue (§5.3): the aggregate route, so a sitting can clear

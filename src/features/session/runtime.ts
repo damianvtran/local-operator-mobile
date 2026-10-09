@@ -155,6 +155,77 @@ export const transcriptRows = (
 	return history;
 };
 
+/**
+ * Whether the conversation demonstrably runs deeper than the rows this device
+ * holds — the honest gate for the find sheet's "older messages aren't
+ * searched" caveat.
+ *
+ * SILENCE IS THE CLAIM — "this is everything" — so the gate fires unless a
+ * successful page read backs the quiet. Four facts, any one fires:
+ *
+ *   1. THE READ DID NOT SUCCEED (`read`). A history read that failed, or that
+ *      has not settled at all, leaves the device unable to tell a whole
+ *      conversation from the relay's capped window (`_cap_tail`: ≤80 rows of
+ *      a journal that may run to hundreds) — the shape a cold open past the
+ *      cap lands in when its first read fails and no slide is ever watched
+ *      (reviewer MAJOR-2 residual / QA Q63-7). Only `"ok"` may back the
+ *      silence; every other outcome fires. The founding rule — a claim is
+ *      made only when it can be backed — now also binds the claim that
+ *      SILENCE makes.
+ *   2. A PAGE ROW IS NO LONGER HELD. The conversation only appends and the
+ *      window only drops its oldest rows, so a row the last successful page
+ *      read carried that is absent from `entries` is a row that exists
+ *      conversation-side and cannot be searched. This is what makes the
+ *      grow-in-place sequence visible: the page fetched at mount said
+ *      `has_more: false` (the conversation WAS complete), the window slid
+ *      anyway, and the held page's own rows are the witness — no refetch
+ *      needed.
+ *   3. `hasMore` WITH NOTHING HELD PAST THE PAGE. The page proves rows older
+ *      than its oldest exist, and the held rows do not reach them: the page's
+ *      oldest row sits at the head of `entries` (or, subsumed by 2, is not
+ *      held at all). This is the reopened-conversation shape (the device holds
+ *      one incomplete history page and nothing older).
+ *   4. THE WINDOW WAS OBSERVED TO SLIDE (`slid`). The screen watched a held
+ *      row leave between two frames, which needs no page at all — the frames
+ *      themselves are the proof. Sticky by nature: a dropped row never
+ *      re-enters the window, so once true it stays true for the session.
+ *
+ * THE COMPARISON STAYS EXACT UNDER THE RELAY'S OWN SHAPES, both the page and
+ * the projection being contiguous TAILS of one append-only conversation: the
+ * projection is `_cap_tail`'s pinned opener + newest ≤79 rows, the page is the
+ * newest `limit`, so "held extends past the page" is exactly "the page's
+ * oldest row heads `entries`": it is not held at all (`-1`: nothing older can
+ * be — case 2), the oldest thing held (`0`: nothing older is), or sits below
+ * older rows (don't claim).
+ */
+export const olderThanLoaded = (input: {
+	hasMore: boolean;
+	/** The last settled read of the page: `"ok"` (the page facts below are
+	 *  current), `"failed"` (the attempt came back with nothing), or
+	 *  `"unknown"` (no attempt has settled — in flight, or no endpoints to
+	 *  read from). Only `"ok"` can back the silence; the others cannot know
+	 *  whether older rows exist, so they fire (the capped-window shape above). */
+	read: "ok" | "failed" | "unknown";
+	/** The rows the last successful page read returned, oldest first — `[]`
+	 *  when no page arrived; whether that reads as completeness is the `read`
+	 *  fact's call, never the empty array's. */
+	page: readonly TranscriptEntry[];
+	entries: readonly TranscriptEntry[];
+	/** Whether the screen has watched a held row leave the window. The frames
+	 *  only append or slide, so a row that left exists conversation-side. */
+	slid: boolean;
+}): boolean => {
+	if (input.slid) return true;
+	if (input.read !== "ok") return true;
+	if (input.page.length === 0) return false;
+	const held = new Set(input.entries.map((entry) => entry.id));
+	if (input.page.some((row) => !held.has(row.id))) return true;
+	if (!input.hasMore) return false;
+	return (
+		input.entries.findIndex((entry) => entry.id === input.page[0]?.id) === 0
+	);
+};
+
 /** The failure's own surface, or `null`. Used to hand a refusal to the state
  *  derivation without re-deriving anything from a status code. */
 export const surfaceOf = (error: unknown): ErrorSurface | null =>

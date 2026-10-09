@@ -19,6 +19,7 @@ import type {
 	SessionProjection,
 	SessionSummary,
 	SttCapability,
+	TranscriptEntry,
 } from "../../docs/relay/types.ts";
 import type { Json } from "../lib/json.ts";
 import { isRecord } from "../lib/json.ts";
@@ -90,6 +91,19 @@ export interface FixtureOverride {
 export interface ScenarioWorld {
 	/** Session id → projection. An empty object is "no conversations at all". */
 	projections?: Record<string, SessionProjection>;
+	/**
+	 * The conversation the `/history` route pages, when the session's own frame
+	 * must not carry it.
+	 *
+	 * Declared for the states where the JOURNAL runs deeper than what one
+	 * projection can express: a slice of the projection can never extend past
+	 * it, so the single-source route can only ever answer a complete page — the
+	 * find scope line's "older messages aren't searched" caveat (`S5/find-
+	 * caveat`) needs a device that holds one INCOMPLETE page of a conversation
+	 * that exists elsewhere (the history-first/reopened shape). Absent, the
+	 * route keeps slicing the projection's own transcript, exactly as before.
+	 */
+	history?: TranscriptEntry[];
 	stream?: StreamSpec;
 	/**
 	 * Faults this state NEEDS, in the `faults.ts` spelling (`401-mid-session=2`).
@@ -1208,12 +1222,41 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 			"S5/populated-long",
 			"path:/session/{sessionId}?lo-scroll=top/condensed",
 			"path:/session/{sessionId}?lo-scroll=top&lo-expand=tc-conv-00-user/expanded",
+			/* The in-conversation find, on the same 520-row conversation — four
+			 *  states, each reached by pressing the app's own controls (declared in
+			 *  `CELL_OPENERS`: the header lever, typing into the field, one result
+			 *  press). `find-results` is the settled answer, `find-related` the soft
+			 *  tier (a typo query: "ledgr"), `find-empty` a settled miss, and
+			 *  `find-hit` a landing — the sheet closed, the transcript scrolled to
+			 *  the hit inside a CONDENSED turn (the expand-first walk), the bar up. */
+			"S5/find-results",
+			"S5/find-related",
+			"S5/find-empty",
+			"S5/find-hit",
 		],
 		() => {
 			const projection = projectionFrom(everyKind, {
 				transcript: longConversation(everyKind),
 			});
 			return { projections: { [projection.session_id]: projection } };
+		},
+	);
+
+	add(
+		"long-transcript-history",
+		"The same 520-row conversation reached history-first: the session's own frame carries no rows and /history serves one incomplete page of the journal — the device holds a window, not the conversation. This is the state the find sheet's scope line exists for (design D63-3), and the one shape a single-source /history cannot express.",
+		["S5/find-caveat"],
+		() => {
+			/* The seed frame carries NO rows, exactly as a reopened session's first
+			 *  frame can: the transcript on the device IS the one history page
+			 *  (`transcriptRows` falls back to it), which is what makes the find
+			 *  sheet's scope line honest — older rows exist conversation-side and
+			 *  cannot be searched here. */
+			const projection = projectionFrom(everyKind, { transcript: [] });
+			return {
+				projections: { [projection.session_id]: projection },
+				history: longConversation(everyKind),
+			};
 		},
 	);
 

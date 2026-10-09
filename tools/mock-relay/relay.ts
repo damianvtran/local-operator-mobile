@@ -2127,7 +2127,14 @@ export function createRelay(options: RelayOptions = {}) {
 						: Math.min(200, Math.max(1, Number(limitRaw)));
 				// `before` is the id of the oldest entry the client already holds;
 				// the page is the entries immediately older than it.
-				const all = projection.transcript ?? [];
+				//
+				// THE SOURCE IS THE WORLD'S `history` WHEN IT DECLARES ONE: a scenario
+				// models a conversation whose JOURNAL runs deeper than the session's own
+				// frame (a device holding one incomplete page — the find scope line's
+				// caveat state), which a slice of the projection cannot express because
+				// the page could never extend past it. Absent, the route keeps slicing
+				// the projection's transcript, exactly as before.
+				const all = world.history ?? projection.transcript ?? [];
 				const before = url.searchParams.get("before");
 				const end = before
 					? all.findIndex((entry) => entry.id === before)
