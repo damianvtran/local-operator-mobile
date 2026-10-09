@@ -81,10 +81,24 @@ class RecordingHttp {
 		return this.responder(request, "").text ?? "";
 	}
 
-	stream(): never {
-		/* The stream shape is asserted in sse.test.ts against a real reader; here it
-		 * would only restate the stub. */
-		throw new Error("not used in this suite");
+	/** The stream open: recorded, then left PENDING (never EOF).
+	 *
+	 * `sessionsStream` builds an `SseConnection` around this call, so a path
+	 * assertion needs the request recorded and the reader not to fire the
+	 * reconnect policy; `stop()` in the test ends the connection. A test that
+	 * wants frames feeds them through a real reader in `sse.test.ts`, not here. */
+	readonly streamRequests: RelayRequest[] = [];
+	async stream(request: RelayRequest): Promise<{
+		reader: ReadableStreamDefaultReader<Uint8Array>;
+		release: () => Promise<void>;
+	}> {
+		this.streamRequests.push(request);
+		const reader = {
+			read: () => new Promise<never>(() => {}),
+			cancel: () => Promise.resolve(),
+			releaseLock: () => {},
+		} as unknown as ReadableStreamDefaultReader<Uint8Array>;
+		return { reader, release: async () => {} };
 	}
 }
 
@@ -137,6 +151,78 @@ describe("reads use the contract's paths and query", () => {
 		/* A limit that IS given goes on the wire, as `search-hit.json` records. */
 		await client.searchSessions({ query: "hi", limit: 5 });
 		expect(http.requests[1]?.path).toBe("/api/sessions/search?q=hi&limit=5");
+	});
+
+	it("asks for the peers' rows on BOTH list transports, or not at all", async () => {
+		/* The relay reads `include_peers` once per request (and once per stream
+		 * connection), so a client that asked on one transport and not the other
+		 * would watch the remote rows vanish on the next repaint — the flap the
+		 * relay's own contract warns about. The endpoints layer's half of the rule
+		 * is that the SAME flag exists on both, and that leaving it off is exactly
+		 * what every older build asked for. */
+		const frame = loadFixture<{ data: unknown }>(
+			"synthetic/sessions-frame-with-peers.json",
+		);
+		const { http, client } = endpoints(() => ({ json: frame.data }));
+		const answer = await client.sessions({ includePeers: true });
+		expect(http.requests[0]?.path).toBe("/api/sessions?include_peers=true");
+		expect(answer.sessions.some((row) => row.locality === "remote")).toBe(true);
+		await client.sessions();
+		expect(http.requests[1]?.path).toBe("/api/sessions");
+		const stream = client.sessionsStream({
+			includePeers: true,
+			onFrame: () => {},
+		});
+		/* STARTED EXPLICITLY: an `SseConnection` is inert until `start()` — the
+		 * provider does this in the app (`connection-provider.tsx`), and a test
+		 * that skipped it measured nothing (which is how the provider's own
+		 * missing start stayed invisible). */
+		stream.connection.start();
+		// One macrotask for the connection's own `open` to run; the reader above
+		// never ends, so nothing but `stop()` moves the connection afterwards.
+		await new Promise((resolve) => setTimeout(resolve, 10));
+		expect(http.streamRequests[0]?.path).toBe(
+			"/api/sessions/events?include_peers=true",
+		);
+		stream.stop();
+		const plain = client.sessionsStream({ onFrame: () => {} });
+		plain.connection.start();
+		await new Promise((resolve) => setTimeout(resolve, 10));
+		expect(http.streamRequests[1]?.path).toBe("/api/sessions/events");
+		plain.stop();
+	});
+
+	it("sends the transfer body exactly as the route validates it, deadline override included", async () => {
+		/* The body carries the route's four keys and nothing else — the route
+		 * refuses extras — and the per-request deadline rides OUTSIDE it, because
+		 * a transport budget is not a wire field. The first attempt keeps the
+		 * transport's default; only the user-asked claim extends it. */
+		const receipt = loadFixture<{ body: unknown }>(
+			"synthetic/transfer-receipt.json",
+		);
+		const { http, client } = endpoints(() => ({ json: receipt.body }));
+		const id = "01234567-89ab-cdef-0123-456789abcdef";
+		await client.transfer("9f2c1a7b0d3e", {
+			to: "local",
+			keep: false,
+			wait_s: 0,
+			request_id: id,
+		});
+		expect(http.requests[0]?.method).toBe("POST");
+		expect(http.requests[0]?.path).toBe("/api/sessions/9f2c1a7b0d3e/transfer");
+		expect(http.requests[0]?.body).toEqual({
+			to: "local",
+			keep: false,
+			wait_s: 0,
+			request_id: id,
+		});
+		expect(http.requests[0]?.timeoutMs).toBeUndefined();
+		await client.transfer(
+			"9f2c1a7b0d3e",
+			{ to: "local", keep: false, wait_s: 300, request_id: id },
+			{ timeoutMs: 330_000 },
+		);
+		expect(http.requests[1]?.timeoutMs).toBe(330_000);
 	});
 });
 

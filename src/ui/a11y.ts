@@ -231,6 +231,15 @@ export const CONTROL = {
 	sessionsDegradedBanner: "sessions-degraded-banner",
 	sessionOpenCurrent: "session-open-current",
 	sessionOpenPrevious: "session-open-previous",
+	/* --- the move/offload sheet (the sessions-and-delegation half, S15's mesh
+	 *  states). `confirm` and `copy` are the two verbs of ONE destination
+	 *  choice; `wait` is the same-id claim the busy/unconfirmed states offer;
+	 *  `check` is the read that resolves every unconfirmed outcome. */
+	sessionMoveOpen: "session-move-open",
+	sessionMoveConfirm: "session-move-confirm",
+	sessionMoveCopy: "session-move-copy",
+	sessionMoveWait: "session-move-wait",
+	sessionMoveCheck: "session-move-check",
 	/* --- the queued-ask surfaces (E2, design §4/§5.0). The sheet's controls are
 	 *  named one at a time like every other surface's.
 	 *
@@ -638,6 +647,20 @@ export const SURFACE = {
 	 * invisible to every gate because no action could hold a press).
 	 */
 	sessionMenuSheet: "session-menu-sheet",
+	/* --- the move/offload sheet's states. Each is painted ONLY in its own state,
+	 *  because a frame asserting "the move is in progress" must not also satisfy
+	 *  "the receipt is up" — and the sheet is a state a person reaches by an
+	 *  ACTION (a tap on a remote row, or the menu's move item), so its markers are
+	 *  what makes those states measurable at all. */
+	sessionMoveSheet: "session-move-sheet",
+	sessionMoveProgress: "session-move-progress",
+	sessionMoveReceipt: "session-move-receipt",
+	sessionMoveBusy: "session-move-busy",
+	sessionMoveUnconfirmed: "session-move-unconfirmed",
+	sessionMoveRefused: "session-move-refused",
+	/** A remote row the mesh cannot reach — the word and gloss on the row
+	 *  itself, painted only while `reachable` is false. */
+	sessionRemoteUnreachable: "session-remote-unreachable",
 } as const;
 
 /**
@@ -685,6 +708,15 @@ export const IDENTIFIER_FAMILIES: readonly string[] = [
 	 *  will land on, so a flow (or the capture's press) reaches a specific hit
 	 *  without counting rows. */
 	"find-result-",
+	/* The remote (another device's) session rows: keyed by the peer session id, so
+	 *  a flow or capture reaches one without counting rows — and so "the list drew
+	 *  a REMOTE row" is a marker distinct from `session-row-`, whose length clause
+	 *  would otherwise let the local half satisfy a mesh cell. */
+	"session-remote-",
+	/* The move sheet's destination options: one per device, keyed by the device id
+	 *  (`local` for this computer), so a capture picks a destination without
+	 *  counting options. */
+	"session-move-dest-",
 	/* The projects listing's own row family (S16): one row per project, keyed by
 	 *  the project's id, so a flow reaches a row without counting rows. */
 	"project-row-",
@@ -1071,6 +1103,19 @@ export const STATE_MARKER = {
 		"empty-search": "sidebar-empty-search",
 		degraded: CONTROL.sessionsDegradedBanner,
 		stale: "sidebar-stale",
+		/* The sessions-and-delegation half (S15's mesh cells). `mesh-remote` is
+		 *  the remote-row family — present only when at least one row belongs to
+		 *  another device — and `mesh-unreachable` is the unreachable word on such
+		 *  a row. The sheet's four states are each their own marker (see
+		 *  `SURFACE.sessionMove*`). */
+		"mesh-remote": "session-remote-",
+		"mesh-unreachable": SURFACE.sessionRemoteUnreachable,
+		"move-pick": SURFACE.sessionMoveSheet,
+		"move-progress": SURFACE.sessionMoveProgress,
+		"move-receipt": SURFACE.sessionMoveReceipt,
+		"move-busy": SURFACE.sessionMoveBusy,
+		"move-unconfirmed": SURFACE.sessionMoveUnconfirmed,
+		"move-refused": SURFACE.sessionMoveRefused,
 	},
 	/* The queued-ask surfaces (E2). `bar` is the one state a session screen
 	 *  carries while anything is outstanding — the marker must NOT paint in an
@@ -1154,6 +1199,25 @@ export const IDENTIFIERS: readonly string[] = [
  *  row without the screen inventing a second naming scheme. */
 export const sessionRowId = (sessionId: string): string =>
 	`session-row-${sessionId}`;
+
+/**
+ * A REMOTE (another device's) row's identifier — a second family beside
+ * `sessionRowId`, on purpose.
+ *
+ * The row itself still carries `sessionRowId` (one list, one row family, and
+ * the press targets stay the same); this id rides the row's remote indicator.
+ * The separation is what lets a marker say "the list drew a row from ANOTHER
+ * device": `session-row-` is satisfied by the local half alone, and a mesh cell
+ * that passed on local rows would be measuring nothing.
+ */
+export const remoteSessionRowId = (sessionId: string): string =>
+	`session-remote-${sessionId}`;
+
+/** A move-sheet destination option's identifier, keyed by the DESTINATION
+ *  (a device id, or `local` for this computer) so a capture selects one without
+ *  counting options. */
+export const sessionMoveDestId = (to: string): string =>
+	`session-move-dest-${to}`;
 
 /**
  * The two facts a computer row states separately, on purpose.

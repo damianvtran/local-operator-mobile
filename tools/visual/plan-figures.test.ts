@@ -21,9 +21,9 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
  * (`N cells x R s = K s`), and — added after a "+5 cells" copy of the tier figures
  * hid in more than a dozen prose spots the equation-only reader could not see —
  * four count forms that may only state a tier's plan or the relay's own registry:
- * the tier-adjective form (`2592-cell `core``), the verb form (`plans 864 cells`),
- * the tier-help form (`profiles — 864 cells`), and the registry forms
- * (`declared cell list (72 cells`, `cell list is 72`, `sample is 864`) — the last
+ * the tier-adjective form (`2844-cell `core``), the verb form (`plans 948 cells`),
+ * the tier-help form (`profiles — 948 cells`), and the registry forms
+ * (`declared cell list (79 cells`, `cell list is 79`, `sample is 948`) — the last
  * three read against the registry the relay itself serves.
  *
  * WHICH SPELLINGS IT READS, so nobody has to guess (round 9, R42): the plan product
@@ -36,19 +36,20 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
  *
  * WHAT IT DOES NOT READ, which is a limit rather than a caveat: a figure standing alone
  * with no equation and no count form around it. The documents legitimately carry counts
- * that are not tier plans — a dated run record (`audit: 36 cells`), a measurement
- * (`403 cells in 903 s`), a mean of 12 cells, a quoted historical plan (`910 cells`) —
- * so forcing every `N cells` to be a tier count would fail on true statements. Nor does
- * it read the slash form (`403 cells / 1209 frames in 903.1 s`), a bare `N frames`, a
- * BARE rate product (`504 x 3 s = K` — arithmetic only: the ci-bound raise history
- * states past sample sizes in exactly this form and cannot be pinned to a ref; every
- * current-claim rate line spells `cells` so the membership rule reaches it), a bound
- * figure (`bound is 140`), or an elided continuation list (`` `core` 2592, `full`
- * 9504``): those are checked by hand and by the rate they name. What it does catch is
- * every figure stated IN AN EQUATION OR ONE OF THE COUNT FORMS, which is where the
- * sweeps have gone wrong, and every derived deadline wherever it is written.
+ * that are not tier plans — the README's one-phone sample (`79 cells`), a dispatcher's
+ * partial plan (`400 cells`), a dated run record (`audit: 36 cells`), a measurement
+ * (`403 cells in 903 s`, the rate run's historical `256`), a mean of 12 cells, a quoted
+ * historical plan (`910 cells`) — so forcing every `N cells` to be a tier count would
+ * fail on true statements. Nor does it read the slash form (`403 cells / 1209 frames in
+ * 903.1 s`), a bare `N frames`, a BARE rate product (`504 x 3 s = K` — arithmetic only:
+ * the ci-bound raise history states past sample sizes in exactly this form and cannot be
+ * pinned to a ref; every current-claim rate line spells `cells` so the membership rule
+ * reaches it), a bound figure (`bound is 150`), or an elided continuation list (`` `core`
+ * 2844, `full` 10428``): those are checked by hand and by the rate they name. What it
+ * does catch is every figure stated IN AN EQUATION OR ONE OF THE COUNT FORMS, which is
+ * where the sweeps have gone wrong, and every derived deadline wherever it is written.
  *
- * WHAT IT DOES NOT COVER, named rather than implied: prose minutes (`~97 minutes`)
+ * WHAT IT DOES NOT COVER, named rather than implied: prose minutes (`~106 minutes`)
  * are a *rate* the harness measures on a runner, not a number it prints, so a stale
  * minute figure is invisible here — those are checked by hand against the rate and
  * said so in each document; and a figure in a line that names a DIFFERENT ref

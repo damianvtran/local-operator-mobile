@@ -9,14 +9,19 @@ import {
 	useConnectionState,
 	useListState,
 } from "@/features/auth/connection-provider";
+import { SessionMoveSheet } from "@/features/sessions/move-sheet";
 import {
 	attentionWord,
 	degradedNote,
 	degradedShortNote,
+	isRemoteRow,
 	relativeTimeFor,
+	remoteAttention,
+	remoteDeviceLabel,
 	splitSidebarSections,
 	staleNote,
 	staleShortNote,
+	visiblePeers,
 } from "@/features/sessions/session-projection";
 import { homeShortened } from "@/lib/format";
 import { listLabel } from "@/lib/route-label";
@@ -26,6 +31,7 @@ import {
 	EMPTY,
 	REGION,
 	ROLE,
+	remoteSessionRowId,
 	STATE_MARKER,
 	SURFACE,
 	sessionRowId,
@@ -132,6 +138,16 @@ export const ConversationsPane = ({
 	const [searching, setSearching] = useState(false);
 	const [query, setQuery] = useState("");
 	const [menuTarget, setMenuTarget] = useState<SessionSummary | null>(null);
+	/* The move/offload sheet's subject. A REMOTE row's tap opens it directly
+	 *  (that IS its detail affordance — there is no local session screen for
+	 *  another device's conversation); a local row reaches it through the
+	 *  long-press menu. */
+	const [moveTarget, setMoveTarget] = useState<SessionSummary | null>(null);
+
+	/* The devices the LOADED LIST reveals — the whole destination catalogue the
+	 *  phone has today (`visiblePeers` states the gap). Computed from the
+	 *  UNFILTERED list: a search that hides a row must not hide a destination. */
+	const peers = useMemo(() => visiblePeers(sessions), [sessions]);
 
 	const routed = route !== null;
 
@@ -222,6 +238,18 @@ export const ConversationsPane = ({
 	const openSession = (session: SessionSummary) => {
 		onNavigate?.();
 		router.push(`/session/${session.session_id}`);
+	};
+
+	/* One tap's meaning, decided by the row's kind: a local row opens its
+	 * session; a REMOTE row opens the move sheet, because this device cannot
+	 * tail another device's conversation and the sheet is where its one verb
+	 * lives. */
+	const activate = (session: SessionSummary) => {
+		if (isRemoteRow(session)) {
+			setMoveTarget(session);
+			return;
+		}
+		openSession(session);
 	};
 
 	return (
@@ -384,13 +412,23 @@ export const ConversationsPane = ({
 						return <SectionHeader label={item.label} testID={item.testID} />;
 					}
 					const session = item.session;
+					/* The row's kind decides the live facts' SOURCE, and the two must not
+					 * be mixed: a local row's `streaming`/`needs_attention`/`degraded` are
+					 * the relay's local vocabulary, while a remote row's are the
+					 * transport's `live_state`/`pending` VERBATIM (`session-projection`
+					 * states the mapping). The boundary's defaults make a remote row READ
+					 * as an idle local one, which is why every live field below is branched
+					 * on the row's kind rather than read through the default. */
+					const remote = isRemoteRow(session);
 					return (
 						<ListRow
 							title={session.conversation_name.trim() || "untitled"}
 							cwd={
-								homeDirectory
-									? homeShortened(session.cwd, homeDirectory)
-									: session.cwd
+								remote
+									? undefined
+									: homeDirectory
+										? homeShortened(session.cwd, homeDirectory)
+										: session.cwd
 							}
 							model={session.model_label}
 							time={
@@ -398,16 +436,39 @@ export const ConversationsPane = ({
 									? undefined
 									: (relativeTimeFor(session, now) ?? undefined)
 							}
-							pending={session.needs_attention}
+							pending={
+								remote
+									? remoteAttention(session) !== null
+									: session.needs_attention
+							}
 							attentionWord={attentionWord(session)}
-							streaming={session.streaming}
+							streaming={
+								remote ? session.live_state === "busy" : session.streaming
+							}
 							unread={session.unseen}
 							ended={session.ended === true}
-							degraded={session.degraded === true}
+							degraded={
+								remote
+									? session.live_state === "wedged"
+									: session.degraded === true
+							}
 							subagentCount={session.subagents_running ?? 0}
-							onPress={() => openSession(session)}
-							onLongPress={() => setMenuTarget(session)}
-							longPressAccessibilityHint="Pin or open"
+							remote={
+								remote
+									? {
+											device: remoteDeviceLabel(session),
+											reachable: session.reachable !== false,
+											indicatorTestID: remoteSessionRowId(session.session_id),
+										}
+									: undefined
+							}
+							onPress={() => activate(session)}
+							onLongPress={() =>
+								remote ? setMoveTarget(session) : setMenuTarget(session)
+							}
+							longPressAccessibilityHint={
+								remote ? "Move or copy" : "Pin or open"
+							}
 							testID={sessionRowId(session.session_id)}
 						/>
 					);
@@ -570,6 +631,21 @@ export const ConversationsPane = ({
 						}}
 						variant="outline"
 					/>
+					{/* The move/offload entry: the OTHER half of what a conversation's row
+					 *  can do. A local row can only reach the move sheet from here; a
+					 *  remote row opens the sheet on a TAP and never sees this menu
+					 *  (pinning refuses an id with no local folder, so a menu that offered
+					 *  it for a peer row would offer a dead control). */}
+					<Button
+						testID={CONTROL.sessionMoveOpen}
+						label="Move or copy…"
+						onPress={() => {
+							const target = menuTarget;
+							setMenuTarget(null);
+							if (target) setMoveTarget(target);
+						}}
+						variant="outline"
+					/>
 					<Button
 						testID={CONTROL.sessionOpenPrevious}
 						label="Open"
@@ -581,6 +657,17 @@ export const ConversationsPane = ({
 					/>
 				</View>
 			</Sheet>
+
+			{/* The move/offload sheet, for whichever row asked for it — a remote row's
+			 *  tap or a local row's menu. It renders its own states (pick, in flight,
+			 *  receipt, refusal) and refreshes the list after every settled outcome;
+			 *  its subject is `moveTarget`, which is null while closed. */}
+			<SessionMoveSheet
+				visible={moveTarget !== null}
+				session={moveTarget}
+				peers={peers}
+				onClose={() => setMoveTarget(null)}
+			/>
 		</View>
 	);
 };

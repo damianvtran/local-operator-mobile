@@ -272,6 +272,27 @@ function classifyFixture(rel: string, value: unknown): Classification {
 			}
 			return { kind: "schema-list", schema: "modelEntry", values: ranked };
 		}
+		/* The mesh half's own samples (#2083): the transfer receipt and the two
+		 *  refusal families. The frame sample classifies through its `event` above;
+		 *  these three carry an HTTP-shaped envelope like the `http/` corpus, and
+		 *  their bodies are what a client parses. */
+		if (rel === "synthetic/transfer-receipt.json") {
+			return {
+				kind: "schema",
+				schema: "transferReceipt",
+				value: (value as { body?: unknown }).body,
+			};
+		}
+		if (
+			rel === "synthetic/transfer-unconfirmed.json" ||
+			rel === "synthetic/transfer-refused.json"
+		) {
+			return {
+				kind: "schema",
+				schema: "apiError",
+				value: (value as { body?: unknown }).body,
+			};
+		}
 	}
 
 	if (rel === "gateway/gateway-refusal-constants.json") {
@@ -1106,6 +1127,146 @@ function probeRows(rel: string): Record<string, unknown>[] {
 		return row;
 	});
 }
+
+describe("the mesh wire reads as the relay's builders shape it", () => {
+	/* The sessions-and-delegation half (#2083 at `f5071030df`): the peers' rows
+	 * and the transfer route's three answer families. These samples are
+	 * SYNTHETIC (their `provenance.why` says so — a real mesh cannot be captured
+	 * from an isolated daemon), so what they pin is the READING: which fields a
+	 * remote row carries, which it must NOT, and how the two refusal statuses
+	 * split. */
+
+	it("a remote row carries the flat locality fields and OMITS the local-only ones", () => {
+		const raw = fixture<{ data: { sessions: Record<string, unknown>[] } }>(
+			"synthetic/sessions-frame-with-peers.json",
+		);
+		const parsed = parsePayload("sessionsStreamFrame", raw);
+		const remote = parsed.data.sessions.find(
+			(row) => row.session_id === "9f2c1a7b0d3e",
+		);
+		expect(remote?.locality).toBe("remote");
+		expect(remote?.owner_device_name).toBe("Studio mini");
+		expect(remote?.live_state).toBe("busy");
+		expect(remote?.pending).toBeNull();
+		/* The raw wire is where the OMISSION lives — the parsed row's `false`/
+		 * `""` values are the boundary's inert defaults, never the relay's
+		 * words. A row that started carrying `cwd`/`streaming` would stop being
+		 * the federated row this contract describes, and this is the assertion
+		 * that would notice. */
+		const rawRemote = raw.data.sessions.find(
+			(row) => row.session_id === "9f2c1a7b0d3e",
+		);
+		if (rawRemote === undefined)
+			throw new Error("the fixture lost its remote row");
+		for (const absent of [
+			"cwd",
+			"model_label",
+			"streaming",
+			"needs_attention",
+			"unseen",
+			"pending_kind",
+			"subagents_running",
+			"todos_open",
+			"completion_kind",
+		]) {
+			expect(absent in rawRemote).toBe(false);
+		}
+		// The local row is untouched by all of this: same frame, no `locality`.
+		const local = parsed.data.sessions.find(
+			(row) => row.session_id === "6714def86197",
+		);
+		expect(local?.locality).toBeUndefined();
+		expect(local?.cwd).toBe("~/work");
+	});
+
+	it("a peer's `ask` gate parses — the wire's vocabulary is open, not an enum", () => {
+		/* Round 1, R1-1. `pending` used to be `z.enum(["approval", "answer"])`,
+		 *  and a live peer waiting on a free-text question publishes `ask` — so
+		 *  the enum failed the WHOLE sessions frame, both list transports dropped
+		 *  it silently, and the phone's list froze on its last snapshot for as
+		 *  long as any peer waited. The wire vocabulary is ADDITIVE
+		 *  (`set_record_pending` documents `approval` / `ask` / None), so the
+		 *  schema accepts any string; the fixed READING lives in
+		 *  `remoteAttention`. */
+		const raw = fixture<{ data: { sessions: Record<string, unknown>[] } }>(
+			"synthetic/sessions-frame-with-peers.json",
+		);
+		const mutated = structuredClone(raw);
+		const row = mutated.data.sessions.find(
+			(row) => row.session_id === "4c5d6e7f8091",
+		);
+		if (row === undefined) throw new Error("the fixture lost its gate row");
+		row.pending = "ask";
+		const parsed = parsePayload("sessionsStreamFrame", mutated);
+		expect(
+			parsed.data.sessions.find((row) => row.session_id === "4c5d6e7f8091")
+				?.pending,
+		).toBe("ask");
+	});
+
+	it("a gate word from a NEWER relay parses too — a future value freezes nothing", () => {
+		// The same frame with a word this build has never seen: additive by
+		// contract means unknown ≠ unreadable, and the reading is one fixed
+		// rule (only `approval` spells approval).
+		const raw = fixture<{ data: { sessions: Record<string, unknown>[] } }>(
+			"synthetic/sessions-frame-with-peers.json",
+		);
+		const mutated = structuredClone(raw);
+		const row = mutated.data.sessions.find(
+			(row) => row.session_id === "4c5d6e7f8091",
+		);
+		if (row === undefined) throw new Error("the fixture lost its gate row");
+		row.pending = "future_gate";
+		const parsed = parsePayload("sessionsStreamFrame", mutated);
+		expect(
+			parsed.data.sessions.find((row) => row.session_id === "4c5d6e7f8091")
+				?.pending,
+		).toBe("future_gate");
+	});
+
+	it("a no-claim clock reaches the client as it left the relay — the render rule refuses it", () => {
+		// An old-build peer's non-number birth stamp is read as `0.0` at the
+		// relay's own boundary (`session/peer_rows._started_epoch`); the wire
+		// keeps the zero, and NO surface may render it as an ancient date.
+		const raw = fixture<{ data: { sessions: Record<string, unknown>[] } }>(
+			"synthetic/sessions-frame-with-peers.json",
+		);
+		const parsed = parsePayload("sessionsStreamFrame", raw);
+		const oldBuild = parsed.data.sessions.find(
+			(row) => row.session_id === "0a1b2c3d4e5f",
+		);
+		expect(oldBuild?.created_at).toBe(0);
+		expect(oldBuild?.section).toBe("previous");
+	});
+
+	it("the receipt's phases are the machine facts a surface renders", () => {
+		const raw = fixture<{ body: unknown }>("synthetic/transfer-receipt.json");
+		const receipt = parsePayload("transferReceipt", raw.body);
+		expect(receipt.mode).toBe("move");
+		expect(receipt.source_retired).toBe(true);
+		expect(receipt.replayed).toBe(false);
+		expect(receipt.phases.map((phase) => phase.phase)).toEqual([
+			"prepared",
+			"handing_off",
+			"committed",
+			"done",
+		]);
+		expect(receipt.phases.at(-1)?.progress).toBe(1);
+	});
+
+	it("the two refusal families keep their codes: 503 unconfirmed, 409 refused", () => {
+		const unconfirmed = parsePayload(
+			"apiError",
+			fixture<{ body: unknown }>("synthetic/transfer-unconfirmed.json").body,
+		);
+		const refused = parsePayload(
+			"apiError",
+			fixture<{ body: unknown }>("synthetic/transfer-refused.json").body,
+		);
+		expect(unconfirmed.code).toBe("relay_unavailable");
+		expect(refused.code).toBe("busy");
+	});
+});
 
 describe("every fixture names its own origin", () => {
 	const files = listFixtureJsonFiles().map((path) =>

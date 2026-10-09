@@ -386,6 +386,29 @@ export interface SessionProjection {
 
 /* --------------------------------------------------------------- session list */
 
+/**
+ * One session-list row: a LOCAL conversation (this device's) or a REMOTE one
+ * (another device's, appended only when the client asked `include_peers`).
+ *
+ * THE TWO ROW KINDS, stated once because every field below is read against it
+ * (`local-operator` docs/mobile.md §"The peers' rows"):
+ *
+ * - a LOCAL row carries the whole shape below (id, section, name, cwd, model,
+ *   the live marks, the counts, the clocks);
+ * - a REMOTE row carries `session_id`/`section`/`pinned`/`conversation_name`/
+ *   `mtime`/`created_at` PLUS the flat locality fields and the transport's
+ *   `live_state`/`pending` at the bottom of this interface — and OMITS the
+ *   local-only fields (no cwd, no model, no streaming/unseen/pending_kind, no
+ *   counts). `locality` is the discriminator: a row without it is local. The
+ *   nested transport `peer` block is deliberately NOT published and must never
+ *   be read.
+ *
+ * The boundary (`schemas.sessionSummarySchema`) resolves each omitted
+ * local-only field to an INERT default (false/""/null/0) so no `undefined`
+ * reaches a render; a remote row's live facts are read from `live_state`/
+ * `pending` alone (`features/sessions/session-projection.ts`), never through
+ * those defaults.
+ */
 export interface SessionSummary {
 	session_id: string;
 	section: "active" | "previous";
@@ -424,9 +447,88 @@ export interface SessionSummary {
 	 *  stays the APPROVAL signal. */
 	asks_open?: number;
 	mtime: number;
-	/** Absent on an older relay; `createdAt()` falls back to `mtime`. */
+	/** Absent on an older relay; `createdAt()` falls back to `mtime`.
+	 *  A non-number or `<= 0` stamp is the relay's NO CLAIM: a remote row's
+	 *  old-build peer sends `0.0` here, and the row must paint NO label and sort
+	 *  last rather than render it as an ancient date (the desktop sidebar's rule,
+	 *  #903). */
 	created_at?: number;
 	completion_kind: string;
+	/* ------------------------------------------------ the remote row's own
+	 *
+	 * ABSENT ON A LOCAL ROW; present with real values on every remote one — the
+	 * desktop row's flat locality fields field for field (Addendum 2 B). */
+	/** The discriminator: `"remote"` on another device's row; absent on a local
+	 *  one. Present-with-`"local"` is tolerated for a future relay that stamps
+	 *  every row, and reads exactly like absence. */
+	locality?: "local" | "remote";
+	/** The owning device's id; `""` when the transport did not name one. */
+	owner_device?: string;
+	/** The owner's display name, or `""` — the row falls back to the id's TAIL,
+	 *  never the id whole. */
+	owner_device_name?: string;
+	/** Whether the mesh currently reaches the owner. Absent only on a local row. */
+	reachable?: boolean;
+	/** One sentence when `reachable` is false, already glossed at the relay's
+	 *  boundary so this client keeps no glossary; `""` when reachable. */
+	unreachable_reason?: string;
+	/** The transport's own state token, VERBATIM — `busy`, `idle`, `attached`,
+	 *  `wedged`, or `""` for a stored row with no runtime behind it. The row's
+	 *  mark and bin are read from exactly these words; never a third spelling. */
+	live_state?: "busy" | "idle" | "attached" | "wedged" | "";
+	/** The gate kind, verbatim — an OPEN string, not a closed union (round 1,
+	 *  R1-1): `approval` / `ask` today, any future word tomorrow; only `approval`
+	 *  spells approval and every other non-empty word is the answer family
+	 *  (`remoteAttention`). `null` is no gate. */
+	pending?: string | null;
+	/** Declared for the mirror only — never read by this client. A null is no
+	 *  claim: the federated row carries no owner's stamp, so nothing may be
+	 *  derived from these three. */
+	placement?: Record<string, unknown> | null;
+	origin?: Record<string, unknown> | null;
+	last_synced_at?: number | null;
+}
+
+/* ---------------------------------------------------------------- transfer */
+
+/**
+ * A finished move, in the backend's own words — the answer to
+ * `POST /api/sessions/{id}/transfer`.
+ *
+ * THE RECEIPT IS THE ONLY THING THAT MAY CLAIM WHERE A CONVERSATION LIVES: the
+ * move may hold the request for minutes and may still be refused after it
+ * started, so no client may paint an ownership it was not handed. The refusal
+ * shapes (a refusal, an unconfirmed outcome, a same-id/different-body conflict)
+ * arrive as the plane's `{error, code}` bodies, never as this type.
+ */
+export interface TransferReceipt {
+	/** The phases the move reached, in order, as the backend recorded them. */
+	phases: TransferReceiptPhase[];
+	/** Where the session ended up: `local` means it landed on this device. */
+	locality: "local" | "remote";
+	/** The device that holds it now; `""` when the transport named none. */
+	owner_device: string;
+	/** True when the source's copy is gone (a `move`); a `keep` never retires it. */
+	source_retired: boolean;
+	session_id: string;
+	/** The id to open: equal to `session_id` for a move, freshly minted for a
+	 *  `keep` copy. */
+	new_session_id: string;
+	mode: "move" | "keep";
+	/** The at-most-once journal's mark: `true` means this answer replayed a
+	 *  recorded outcome and dialled no second move. */
+	replayed: boolean;
+}
+
+/** One phase stamp of a transfer receipt (`TransferReceipt.phases`). `phase` is
+ *  open (`prepared`/`handing_off`/`committed`/`done` today) because a newer
+ *  backend's phase word must reach the surface verbatim rather than fail the
+ *  receipt; `progress` is the step on the monotone list, `0` for an unknown
+ *  phase. */
+export interface TransferReceiptPhase {
+	phase: string;
+	peer: string;
+	progress: number;
 }
 
 export interface SttCapability {

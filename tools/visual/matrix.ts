@@ -360,12 +360,12 @@ export function describeDeviceCoverage(coverage: {
  * The CI tier: the bounded sample the per-push capture job takes.
  *
  * WHY A THIRD TIER, AND WHY IT IS HERE RATHER THAN A `--devices` LIST IN YAML.
- * The `core` tier is 2592 cells: the whole declared cell list (72 cells) x 2 themes x
- * (3 phones x 4 scales + 2 tablets x 3 scales) — 72 x 2 x 18, the tier's 5 profiles —
- * and the CI job's capture step is bound at 45 minutes. Measured on the runner, that is
+ * The `core` tier is 2844 cells: the whole declared cell list (79 cells) x 2 themes x
+ * (3 phones x 4 scales + 2 tablets x 3 scales) — 79 x 2 x 18, the tier's 5 profiles —
+ * and the CI job's capture step is bound at 55 minutes. Measured on the runner, that is
  * 2.24 s/cell: 403 cells in 903 s (run 37098393675, a plan of 403 cells then), so a core
- * run needs ~97 minutes. The `core` job's own bound is 140 (see `.github/workflows/e2e.yml`,
- * `web-audit-core`), which is above the 7776 s deadline its plan derives for itself. The
+ * run needs ~106 minutes. The `core` job's own bound is 150 (see `.github/workflows/e2e.yml`,
+ * `web-audit-core`), which is above the 8532 s deadline its plan derives for itself. The
  * job's first real
  * run of this path
  * was therefore cut off by the harness's own 900 s deadline with 585 cells
@@ -395,11 +395,11 @@ export function describeDeviceCoverage(coverage: {
  *     `CI_SCALES` below for why the boundary earns the third slot and 150% does
  *     not. 150% stays in `core`, which sweeps every scale.
  *
- * That is 72 cells x 2 themes x (2 profiles x 3 scales) = 864 cells, ~32 minutes at
+ * That is 79 cells x 2 themes x (2 profiles x 3 scales) = 948 cells, ~35 minutes at
  * the measured rate: inside the step bound (raised with it, see `CI_SCALES`) with
  * the same headroom it always carried. `core` and `full` are unchanged and stay the
- * local and dispatched samples, so the full 2592-cell `core` matrix and the
- * 9504-cell `full` matrix remain runnable — nothing is only reachable through CI.
+ * local and dispatched samples, so the full 2844-cell `core` matrix and the
+ * 10428-cell `full` matrix remain runnable — nothing is only reachable through CI.
  */
 export const CI_DEVICES: string[] = ["iphone-se", "tablet-landscape"];
 
@@ -417,15 +417,17 @@ export const CI_DEVICES: string[] = ["iphone-se", "tablet-landscape"];
  * sweeps every scale, so nothing is lost by composing the two sets differently.
  *
  * WHAT IT COSTS, because it is NOT free and the two are one decision. Three scales on
- * both CI profiles is 864 cells, +50 % over the two-scale 576, so the per-push capture
+ * both CI profiles is 948 cells, +50 % over the two-scale 632, so the per-push capture
  * and audit bounds in `.github/workflows/e2e.yml` were raised with it — most recently to
- * capture 45 / audit 25 / job 80. That is this slice's ten cells (nine lifecycle surfaces
+ * capture 55 / audit 25 / job 85. That is this slice's ten cells (nine lifecycle surfaces
  * and the pane's long-press menu) on top of the base the branch was cut from, plus the
- * four cells upstream landed while it was open, plus the find slice's five cells (four
- * find states and the caveat) and the schedules slice's five S17 cells (the armed
- * index's five states): the cell list is 72 and the sample is 864, both re-derived from
- * this head's own `--plan` rather than scaled — still inside the 45-minute capture bound
- * (864 cells x 3 s = 43.2 min). A bound that fires every run stops being a signal, so
+ * four cells upstream landed while it was open, the find slice's five cells (four
+ * find states and the caveat), the schedules slice's five S17 cells (the armed
+ * index's five states), the mesh slice's seven cells (the S15 remote rows, the
+ * tap-reveal and the move sheet's five states), and the checkpoint rail's four more,
+ * folded from main: the cell list is 79 and the sample is 948, both re-derived from
+ * this head's own `--plan` rather than scaled — still inside the 55-minute capture bound
+ * (948 cells x 3 s = 47.4 min). A bound that fires every run stops being a signal, so
  * this list and that bound have to move together: reverting the bounds without
  * reverting this list makes the job red, and reverting this list without the bounds
  * wastes the budget it was sized for. */
@@ -660,6 +662,16 @@ export const UNSCROLLED_CONTROLS: readonly string[] = [
 	CONTROL.projectCreateSubmit,
 	CONTROL.projectMilestoneSubmit,
 	CONTROL.projectMilestoneRemove,
+	/* The move sheet's answering controls (S15's mesh states): the pick's two
+	 *  verbs and the remedies the busy / unconfirmed / receipt states offer.
+	 *  They are pinned in the Sheet's `footer` (round 1, D69-1) — the fix that
+	 *  brought them back above the fold at 200 % on a 320 pt phone — and a
+	 *  regression that lets one sit below the fold again fails its capture cell
+	 *  by name from here. */
+	CONTROL.sessionMoveConfirm,
+	CONTROL.sessionMoveCopy,
+	CONTROL.sessionMoveWait,
+	CONTROL.sessionMoveCheck,
 ];
 
 /**
@@ -689,6 +701,39 @@ export const CELL_OPENERS: Record<string, Affordance[]> = {
 				ms: 1200,
 			},
 		},
+	],
+	/* --- the mesh sheet's states (S15, the sessions-and-delegation half) ---
+	 *
+	 * Every move state presses the SAME remote row (`mesh-rows` declares it),
+	 * and the four after the pick press the sheet's own confirm — which is what
+	 * makes the in-flight, busy, receipt and unconfirmed states the app's own
+	 * renderings rather than staged ones: the wire answers differ per scenario,
+	 * the app does the rest. The pick state stops at the sheet, because the sheet
+	 * IS the state under capture there; the unreachable cell presses its OWN row,
+	 * so its frame is the tap-reveal detail (device + glossed reason) and not a
+	 * second copy of the plain list. */
+	/* The unreachable row's TAP-REVEAL: the sheet names the device and the
+	 * relay's own glossed reason ("it did not answer"), which is the detail a
+	 * list row has no room for — and it is what makes this cell a different
+	 * frame from `mesh-remote`'s plain list rather than a second copy of it. */
+	"S15/mesh-unreachable": [{ click: sessionRowId("4c5d6e7f8091") }],
+	"S15/move-pick": [{ click: sessionRowId("9f2c1a7b0d3e") }],
+
+	"S15/move-busy": [
+		{ click: sessionRowId("9f2c1a7b0d3e") },
+		{ click: CONTROL.sessionMoveConfirm },
+	],
+	"S15/move-progress": [
+		{ click: sessionRowId("9f2c1a7b0d3e") },
+		{ click: CONTROL.sessionMoveConfirm },
+	],
+	"S15/move-receipt": [
+		{ click: sessionRowId("9f2c1a7b0d3e") },
+		{ click: CONTROL.sessionMoveConfirm },
+	],
+	"S15/move-unconfirmed": [
+		{ click: sessionRowId("9f2c1a7b0d3e") },
+		{ click: CONTROL.sessionMoveConfirm },
 	],
 	/* --- the create sheet, over the listing (S16) --- */
 	"S16/create": [{ click: CONTROL.projectsNew }],

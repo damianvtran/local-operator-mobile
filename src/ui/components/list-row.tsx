@@ -8,7 +8,7 @@ import {
 } from "react-native";
 
 import { countLabel } from "@/lib/format";
-import { ROLE, state } from "@/ui/a11y";
+import { ROLE, SURFACE, state } from "@/ui/a11y";
 import { useReducedMotion, useTokenColor } from "@/ui/appearance";
 import { metaLineFor, metaPathFloorDp } from "@/ui/components/list-row-meta";
 import { Shimmer } from "@/ui/components/shimmer";
@@ -81,6 +81,23 @@ export type ListRowProps = {
 	/** The session currently open. Selection is never colour alone: the title
 	 * also takes the accent role. */
 	selected?: boolean;
+	/**
+	 * Present when this row is ANOTHER device's conversation (`locality:
+	 * "remote"`). The row then paints the device line — "On <device>" — in
+	 * place of the folder/model metadata, notes a device the mesh cannot reach,
+	 * and carries the remote family id (`remoteSessionRowId`) on that line, so a
+	 * mesh cell can assert "the list drew a row from another device" without
+	 * the local half satisfying it.
+	 */
+	remote?: {
+		/** The device's display label (`session-projection.remoteDeviceLabel`). */
+		device: string;
+		/** False when the mesh cannot reach the owner: the row says so, muted —
+		 *  a dead mesh is a condition, not an error a session caused. */
+		reachable: boolean;
+		/** `remoteSessionRowId(id)` — built by the caller, which owns the id. */
+		indicatorTestID: string;
+	};
 	onPress: () => void;
 	/** Keeps the existing pin/open sheet reachable from the conversations pane,
 	 *  where a swipe is not a gesture a list under a drawer should own. Optional:
@@ -108,6 +125,7 @@ export const ListRow = ({
 	ended = false,
 	degraded = false,
 	selected = false,
+	remote,
 	onPress,
 	onLongPress,
 	longPressAccessibilityHint,
@@ -156,14 +174,19 @@ export const ListRow = ({
 
 	/* One word per row, by the precedence `docs/ux/flows.md` § 5 fixes: a decision
 	 * outranks everything, then the receipts. The word is never shown for a live
-	 * idle session, because there is nothing to say about one. */
+	 * idle session, because there is nothing to say about one. An unreachable
+	 * REMOTE row states its own condition where a session cannot: the mesh has
+	 * stopped reaching the device, so the row is stale as a whole. */
+	const remoteUnreachable = remote !== undefined && !remote.reachable;
 	const statusWord = pending
 		? attentionWord
-		: ended
-			? "ended"
-			: degraded
-				? "not answering"
-				: null;
+		: remoteUnreachable
+			? "not reachable"
+			: ended
+				? "ended"
+				: degraded
+					? "not answering"
+					: null;
 
 	return (
 		<Pressable
@@ -177,6 +200,8 @@ export const ListRow = ({
 				selected,
 				ended,
 				degraded,
+				remoteDevice: remote?.device,
+				remoteUnreachable,
 			})}
 			accessibilityState={state({ selected })}
 			accessibilityHint={longPressAccessibilityHint}
@@ -234,6 +259,11 @@ export const ListRow = ({
 							 * receipts are muted, because neither is an error. */}
 							{statusWord ? (
 								<Text
+									testID={
+										remoteUnreachable
+											? SURFACE.sessionRemoteUnreachable
+											: undefined
+									}
 									className={`shrink-0 text-meta ${
 										pending ? "text-danger" : "text-ink-dim"
 									}`}
@@ -320,7 +350,22 @@ export const ListRow = ({
 						 *  The title's row above keeps its own wrap on purpose (design round 2, D13),
 						 *  because there the marks are unshrinkable and a mark pushed past the pane edge
 						 *  is worse than a second line. */}
-						{meta.cwd || meta.model ? (
+						{remote !== undefined ? (
+							/* A remote row's device line, in place of the folder/model meta:
+							 * another device's conversation carries no cwd or model on this wire,
+							 * and the device is what the reader needs to know. Plain prose, not
+							 * the mono meta style — a device name is a name, not a path. The id
+							 * is the remote family's, so a marker can tell a mesh row from the
+							 * local rows that share this list. */
+							<Text
+								testID={remote.indicatorTestID}
+								className="text-body-sm text-ink-dim"
+								numberOfLines={1}
+								ellipsizeMode="tail"
+							>
+								On {remote.device}
+							</Text>
+						) : meta.cwd || meta.model ? (
 							<View
 								className="flex-row items-center gap-2"
 								onLayout={(event) => {
@@ -493,6 +538,10 @@ const rowAccessibilityLabel = (options: {
 	selected: boolean;
 	ended?: boolean;
 	degraded?: boolean;
+	/** The owning device, for a remote row: the visible line reads "On X",
+	 *  and a reader who cannot see it deserves the same fact. */
+	remoteDevice?: string;
+	remoteUnreachable?: boolean;
 }): string => {
 	const parts = [options.title];
 	if (options.attention === "pending") {
@@ -506,6 +555,10 @@ const rowAccessibilityLabel = (options: {
 	 * receipt still hears that this session ended or stopped answering. */
 	if (options.ended) parts.push("ended");
 	else if (options.degraded) parts.push("not answering");
+	if (options.remoteDevice !== undefined) {
+		parts.push(`on ${options.remoteDevice}`);
+		if (options.remoteUnreachable === true) parts.push("not reachable");
+	}
 	if (options.selected) parts.push("open");
 	return parts.join(", ");
 };

@@ -1,0 +1,105 @@
+{
+  "provenance": {
+    "kind": "synthetic",
+    "relay_ref": "local-operator f5071030d",
+    "modelled_on": "local_operator/mobile/mesh.py:remote_session_rows at f5071030df (the phone plane's builder, itself the mirror of server/utils/desktop_mesh.py's function of the same name and of session/peer_rows.py's federated row), field for field; the local row is copied from sse/sse-list-frame.json's own row",
+    "why": "the include_peers half of GET /api/sessions and its SSE twin was added by #2083, and an isolated daemon in NO network answers an empty peers set — so the rows another device holds cannot be captured locally. The row CONTENT is invented; every field name, the omission set (no cwd, no model, no local live marks, no nested peer block) and the null shapes come from the builders, not from a running relay. A remote row carries ONE clock twice: both `mtime` and `created_at` are stamped from the peer's single `started` claim (`session/peer_rows._started_epoch`, 'the two must not disagree about when the peer says the row began'), so the two fields are equal here (round 1, R1-3)."
+  },
+  "event": "sessions",
+  "data": {
+    "sessions": [
+      {
+        "session_id": "6714def86197",
+        "section": "active",
+        "pinned": false,
+        "conversation_name": "Hello from the mock provider",
+        "cwd": "~/work",
+        "model_label": "test/mock",
+        "streaming": false,
+        "leaving": "",
+        "updating": "",
+        "needs_attention": false,
+        "pending_kind": "",
+        "subagents_running": 0,
+        "subagents_queued": 0,
+        "todos_open": 0,
+        "mtime": 1790727325.4341204,
+        "created_at": 1790727304.181217,
+        "completion_kind": "complete",
+        "unseen": true
+      },
+      {
+        "session_id": "9f2c1a7b0d3e",
+        "section": "active",
+        "pinned": false,
+        "conversation_name": "Deploy the staging stack",
+        "mtime": 1790724600.0,
+        "created_at": 1790724600.0,
+        "live_state": "busy",
+        "pending": null,
+        "locality": "remote",
+        "owner_device": "d_1f2e3d4c5b6a",
+        "owner_device_name": "Studio mini",
+        "reachable": true,
+        "unreachable_reason": "",
+        "placement": null,
+        "origin": null,
+        "last_synced_at": null
+      },
+      {
+        "session_id": "4c5d6e7f8091",
+        "section": "active",
+        "pinned": false,
+        "conversation_name": "Nightly reconciliation",
+        "mtime": 1790724100.0,
+        "created_at": 1790724100.0,
+        "live_state": "",
+        "pending": "approval",
+        "locality": "remote",
+        "owner_device": "d_1f2e3d4c5b6a",
+        "owner_device_name": "Studio mini",
+        "reachable": false,
+        "unreachable_reason": "it did not answer",
+        "placement": null,
+        "origin": null,
+        "last_synced_at": null
+      },
+      {
+        "session_id": "0a1b2c3d4e5f",
+        "section": "previous",
+        "pinned": false,
+        "conversation_name": "An old-build peer's session",
+        "mtime": 0.0,
+        "created_at": 0.0,
+        "live_state": "",
+        "pending": null,
+        "locality": "remote",
+        "owner_device": "d_6b5a4c3d2e1f",
+        "owner_device_name": "",
+        "reachable": true,
+        "unreachable_reason": "",
+        "placement": null,
+        "origin": null,
+        "last_synced_at": null
+      }
+    ],
+    "degraded": [],
+    "capabilities": {
+      "features": {
+        "auth": 1,
+        "settings": 1,
+        "commands": 2
+      },
+      "stt": {
+        "available": false,
+        "path": null,
+        "reason": "No transcription provider is available and no model is selected for the audio path."
+      }
+    },
+    "unread": {
+      "count": 1,
+      "revision": [4, 1, 0],
+      "degraded": []
+    }
+  }
+}

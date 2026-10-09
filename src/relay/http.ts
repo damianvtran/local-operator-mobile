@@ -121,6 +121,18 @@ export interface RelayRequest {
 	 */
 	accept?: readonly number[];
 	signal?: AbortSignal;
+	/**
+	 * Per-request deadline override, in ms. Omitted, the client's own
+	 * `timeoutMs` applies (20 s by default); `0` disables the deadline for this
+	 * request, as the client option does.
+	 *
+	 * It exists for exactly one shape on this wire: the session-transfer CLAIM
+	 * (a same-id re-issue of a move), whose wait the contract bounds in minutes
+	 * and which is a deliberate, user-asked wait — not the sub-second control
+	 * read every other route is. A move's FIRST attempt deliberately keeps the
+	 * default deadline (the two-step design: a short attempt, then the claim).
+	 */
+	timeoutMs?: number;
 }
 
 /** A response whose body is a byte stream, handed to `sse.ts`. */
@@ -272,9 +284,10 @@ export class RelayHttpClient {
 		 * A refusal body (the non-2xx arm below) is read with the deadline still armed
 		 * for both classes: it is a short read, and it is what turns a 503 into the
 		 * gateway's own sentence. */
+		const deadlineMs = request.timeoutMs ?? this.timeoutMs;
 		const deadline =
-			this.timeoutMs > 0
-				? setTimeout(() => controller.abort(), this.timeoutMs)
+			deadlineMs > 0
+				? setTimeout(() => controller.abort(), deadlineMs)
 				: undefined;
 		/* The caller's signal wins: a route switch must be able to abort an in-flight
 		 * request — including its BODY, which is why this listener now outlives the

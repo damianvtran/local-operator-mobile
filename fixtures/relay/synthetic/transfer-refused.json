@@ -1,0 +1,20 @@
+{
+  "provenance": {
+    "kind": "synthetic",
+    "relay_ref": "local-operator f5071030d",
+    "modelled_on": "local_operator/mobile/daemon.py:api_transfer_session at f5071030df — a refusal that left nothing behind answers 409 with the move's sentence in `error` and its code beside it, and the `busy` code's sentence is the SOURCE RUNTIME's own idle reason relayed verbatim (network/mobility.py:336) — so the message here is representative of that class, not a captured string",
+    "why": "a busy-source refusal needs a live mesh to produce, so it cannot be captured from an isolated daemon. The body is the route's verbatim refusal shape; what it pins is the other half of the classification rule: a 409 is a REFUSAL (nothing changed, the id is released), and the copy must still point at the read — a fresh-id 409 after a completed move can read as 'nothing changed' while the listing shows it moved"
+  },
+  "request": {
+    "method": "POST",
+    "path": "/api/sessions/9f2c1a7b0d3e/transfer"
+  },
+  "status": 409,
+  "headers": {
+    "content-type": "application/json"
+  },
+  "body": {
+    "error": "a turn is in flight",
+    "code": "busy"
+  }
+}

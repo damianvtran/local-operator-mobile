@@ -23,13 +23,16 @@ wrong wire.
 Read [`../../docs/relay/contract.md`](../../docs/relay/contract.md) for what each
 sample means; this file is only about provenance and reproduction.
 
-The tree is currently **138 fixtures — 131 live, 7 synthetic** — plus this README. The split is counted from `provenance.kind` in the files
-themselves rather than typed here, so it cannot drift from them. (This count is
-re-derived at the checkpoints fold: the previous 126/119/7 was recounted when
-the twelve checkpoint samples landed. The earlier note stands as the reason the
-rule exists — the count before that was one short on the total and the
-synthetic half, `synthetic/sse-projection-tables.json` having arrived with #55
-without the line being recounted.)
+The tree is currently **142 fixtures — 131 live, 11 synthetic** — plus this
+README. The split is counted from `provenance.kind` in the files themselves
+rather than typed here, so it cannot drift from them. (This count is re-derived
+at the fold that merged the checkpoint rail in: main's side recounted to
+138/131/7 when the twelve checkpoint samples landed, this branch sat at
+130/119/11, and the merged tree is 142/131/11 — counted, not assumed, as the
+mesh half's four synthetic samples (#2083) were. The earlier note stands as
+the reason the rule exists: a count before that was one short on the total and
+the synthetic half, `synthetic/sse-projection-tables.json` having arrived with
+#55 without the line being recounted.)
 
 **Six refs are represented, deliberately.** The bulk of the live captures were
 taken at local-operator `52c1df35`; the session-state receipts (`ended`,

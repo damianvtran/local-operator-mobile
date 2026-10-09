@@ -90,6 +90,7 @@ import type {
 	TranscriptEntry,
 	TranscriptEntryDetails,
 	TranscriptImageRef,
+	TransferReceipt,
 	UnreadBlock,
 } from "./types.gen";
 
@@ -646,19 +647,42 @@ export const sessionSummarySchema = z.looseObject({
 	/** An older relay may omit this; absence means `false`. */
 	pinned: z.boolean().default(false),
 	conversation_name: z.string(),
-	cwd: z.string(),
-	model_label: z.string(),
-	streaming: z.boolean(),
-	needs_attention: z.boolean(),
-	unseen: z.boolean(),
-	pending_kind: z.enum(["approval", "ask", ""]),
+	/**
+	 * The row's local half — the fields a REMOTE row does not carry.
+	 *
+	 * THE LIST CARRIES TWO KINDS OF ROW, and this schema is where they meet
+	 * (`docs/mobile.md` §"The peers' rows"): a LOCAL row (this device's
+	 * conversation) carries every field below; a REMOTE row (another device's
+	 * conversation, appended only when the client asked `include_peers`) carries
+	 * the same id/section/pinned/name/mtime/created_at plus the desktop's flat
+	 * locality fields and the transport's `live_state`/`pending` verbatim — and
+	 * NONE of the local-only fields: no cwd, no model, no streaming/unseen/
+	 * pending_kind, no counts, and no nested `peer` block (deliberately not
+	 * published).
+	 *
+	 * SO EACH LOCAL-ONLY FIELD DEFAULTS TO THE INERT value for a row that has
+	 * none, and the defaults are load-bearing in one direction only: they must
+	 * never state [redacted] the row has not said. A remote row's live facts are
+	 * read from `live_state`/`pending` (ONE home: `session-projection.remoteMark`),
+	 * never from these fields, and its action set is locality-gated — a counter
+	 * that reads `0` here paints nothing because the remote row renders no local
+	 * counts at all. The alternative — letting `undefined` reach a render — is the
+	 * defect this file exists to prevent (see the header).
+	 */
+	cwd: z.string().default(""),
+	model_label: z.string().default(""),
+	streaming: z.boolean().default(false),
+	needs_attention: z.boolean().default(false),
+	unseen: z.boolean().default(false),
+	pending_kind: z.enum(["approval", "ask", ""]).default(""),
 	/** Additive; older relays omit both. */
 	leaving: z.string().default(""),
 	updating: z.string().default(""),
-	/** `null` = the relay cannot vouch for this row. Never read as `0`. */
-	subagents_running: z.number().nullable(),
-	subagents_queued: z.number().nullable(),
-	todos_open: z.number().int(),
+	/** `null` = the relay cannot vouch for this row. Never read as `0`; a remote
+	 *  row omits the pair, and absence reads as the same `null`. */
+	subagents_running: z.number().nullable().default(null),
+	subagents_queued: z.number().nullable().default(null),
+	todos_open: z.number().int().default(0),
 	/** Outstanding asks on the row. ABSENT — never `0` — while the runtime does
 	 *  not publish asks: presence is the capability proxy the row badge obeys, and
 	 *  a `.default(0)` would erase exactly the distinction. */
@@ -685,6 +709,96 @@ export const sessionSummarySchema = z.looseObject({
 	 *  none. Defaulted rather than required: `""` is exactly what "no completion"
 	 *  means, so an older relay that omits it is not an error. */
 	completion_kind: z.string().default(""),
+	/* ------------------------------------------------ the remote row's own
+	 *
+	 * ABSENT ON A LOCAL ROW, present with real values on every remote one — the
+	 * desktop row's flat locality fields, field for field (Addendum 2 B), so a
+	 * client that groups or labels by them cannot disagree with the desktop.
+	 * `locality` is the discriminator and the ONLY one: a row without it is a
+	 * local row. The nested transport `peer` block is deliberately NOT published
+	 * and must not be read. */
+	locality: z.enum(["local", "remote"]).optional(),
+	/** The owning device's id; `""` when the transport did not name one. */
+	owner_device: z.string().optional(),
+	/** The owner's display name, or `""` — fall back to the id's tail, never to
+	 *  the id whole (a 34-character hash names nothing a person recognises). */
+	owner_device_name: z.string().optional(),
+	/** Whether the mesh currently reaches the owner. Absent only on a local row. */
+	reachable: z.boolean().optional(),
+	/** One sentence when `reachable` is false, in the relay's words — glossed at
+	 *  the relay's boundary (`resume.peer_reason_words`), so this client keeps no
+	 *  glossary. `""` when reachable. */
+	unreachable_reason: z.string().optional(),
+	/** The transport's own state token, VERBATIM: `busy`, `idle`, `attached`,
+	 *  `wedged`, or `""` for a stored row with no runtime behind it. Never a
+	 *  third spelling — the row's mark and bin are read from exactly these words
+	 *  (`remoteMark`), which are the desktop's own ranking vocabulary. */
+	live_state: z.enum(["busy", "idle", "attached", "wedged", ""]).optional(),
+	/** The gate kind, verbatim — an OPEN string, not an enum (round 1, R1-1).
+	 *  The relay's vocabulary is `approval` / `ask` today (`set_record_pending`)
+	 *  and additive by contract: an enum froze the WHOLE `sessions` frame on the
+	 *  first `ask` a busy peer published, and both list transports then dropped
+	 *  it silently. Only `approval` spells approval; any other non-empty word is
+	 *  the answer family — the relay's own reading (`session/catalog.py`
+	 *  `status_code`: `if self.row.pending:` → approval iff `== "approval"`, else
+	 *  "answer`), which `remoteAttention` mirrors. `null` (or an empty word, which
+	 *  the relay's boundary turns into `null`: `mesh.py` `or None`) is no gate. */
+	pending: z.string().nullable().optional(),
+	/** Declared for the mirror only — never read by this client. The federated
+	 *  row carries no owner's stamp, so the relay publishes nulls, and a null is
+	 *  no claim: nothing may be derived from these three. */
+	placement: z.record(z.string(), z.unknown()).nullable().optional(),
+	origin: z.record(z.string(), z.unknown()).nullable().optional(),
+	last_synced_at: z.number().nullable().optional(),
+});
+
+/**
+ * The transfer receipt (`POST /api/sessions/{id}/transfer`) — a finished move,
+ * in the backend's own words.
+ *
+ * THE RECEIPT IS THE ONLY THING THAT MAY MOVE A ROW OR CLAIM AN OWNER: the move
+ * may hold the request for minutes and may still be refused after it starts, so
+ * the gesture is optimistic and the OUTCOME is this structure or nothing (the
+ * desktop lane's rule, `local-operator-ui` `mesh-types.transferReceipt`).
+ *
+ * `new_session_id` is required rather than defaulted for the reason the desktop
+ * normaliser refuses it: a `keep` copy mints a NEW id at the destination, and a
+ * receipt without one cannot say which conversation the copy lives under — an
+ * answer nobody can act on is re-read, not defaulted through.
+ * `mode`/`source_retired` are the two halves one fact: a `keep` never retires
+ * the source, and `source_retired` must agree with `mode == "move"`.
+ * `replayed` defaults to `false`: the flag is informational (a same-id retry
+ * that answered with `true` dialled nothing), and a receipt that does not state
+ * it cannot be a replay the client must act on.
+ */
+export const transferPhaseSchema = z.looseObject({
+	/** The phase word as the backend recorded it (`prepared`, `handing_off`,
+	 *  `committed`, `done`). Open, not an enum: a phase word a newer backend adds
+	 *  must reach the surface verbatim rather than fail the receipt. */
+	phase: z.string(),
+	/** The move's other end for this phase (a stamp carries no per-phase device). */
+	peer: z.string(),
+	/** The step on the monotone list; `0` for a phase this build does not know. */
+	progress: z.number(),
+});
+
+export const transferReceiptSchema = z.looseObject({
+	phases: z.array(transferPhaseSchema),
+	/** Where the session ended up: `local` means it landed here. */
+	locality: z.enum(["local", "remote"]),
+	/** The device that holds it now; may be `""` when the transport named none
+	 *  (the destination for an offload, this device for a recall). */
+	owner_device: z.string(),
+	/** True when the source's copy is gone (a `move`); a `keep` never retires it. */
+	source_retired: z.boolean(),
+	session_id: nonEmpty,
+	/** The id to open: equal to `session_id` for a move, freshly minted for a
+	 *  `keep` copy. */
+	new_session_id: nonEmpty,
+	mode: z.enum(["move", "keep"]),
+	/** The at-most-once journal's mark: `true` means this answer replayed a
+	 *  recorded outcome and dialled no second move. */
+	replayed: z.boolean().default(false),
 });
 
 export const sttCapabilitySchema = z.looseObject({
@@ -1177,6 +1291,11 @@ export const SCHEMAS = {
 	healthz: healthzResponseSchema,
 	sessionListFrame: sessionListFrameSchema,
 	sessionSummary: sessionSummarySchema,
+	/** `POST /api/sessions/{id}/transfer`: the move's receipt. A refusal is NOT
+	 *  parsed as a receipt — it arrives as the plane's `{error, code}` body and
+	 *  travels through the error taxonomy, where its status (503 unconfirmed vs
+	 *  409 refused) survives for the move surface to read. */
+	transferReceipt: transferReceiptSchema,
 	sessionProjection: sessionProjectionSchema,
 	pastSessions: pastSessionsResponseSchema,
 	searchSessions: searchSessionsResponseSchema,
@@ -1318,6 +1437,7 @@ type WireMirror = {
 	healthz: HealthzResponse;
 	sessionListFrame: SessionListFrame;
 	sessionSummary: SessionSummary;
+	transferReceipt: TransferReceipt;
 	sessionProjection: SessionProjection;
 	pastSessions: PastSessionsResponse;
 	searchSessions: SearchSessionsResponse;
@@ -1550,5 +1670,6 @@ export type {
 	TranscriptEntry,
 	TranscriptEntryDetails,
 	TranscriptImageRef,
+	TransferReceipt,
 	UnreadBlock,
 };

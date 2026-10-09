@@ -59,6 +59,25 @@ export interface SearchRequest {
 	limit?: number;
 }
 
+/**
+ * The `POST /api/sessions/{id}/transfer` body.
+ *
+ * EXACTLY the route's accepted keys, because the route refuses extras
+ * (`parse_transfer_body`) and a misspelt key here would be a silently dropped
+ * intent — `keeep: true` must not move a conversation the user asked to copy.
+ * `to` is a mesh device id or `"local"`; `wait_s` is a ceiling in 0..300; and
+ * `request_id` is the at-most-once key (`transfer.ts` mints it and owns the
+ * re-issue rules). The per-request deadline deliberately lives OUTSIDE this
+ * body (`transfer()`'s options): it is a transport concern, not a wire field
+ * the relay would refuse.
+ */
+export interface TransferRequest {
+	to: string;
+	keep?: boolean;
+	wait_s?: number;
+	request_id?: string;
+}
+
 export interface StartSessionRequest {
 	cwd?: string;
 	provider?: string;
@@ -260,12 +279,65 @@ export class RelayEndpoints {
 		return this.http.json("healthz", { method: "GET", path: "/healthz" });
 	}
 
-	/** The session list. The phone's home screen reads the SSE form of the same
-	 *  payload; this exists for the cold-start render and for diagnostics. */
-	async sessions(): Promise<Payload<"sessionListFrame">> {
+	/**
+	 * The session list. The phone's home screen reads the SSE form of the same
+	 * payload; this exists for the cold-start render and for diagnostics.
+	 *
+	 * `includePeers` appends the sessions OTHER devices hold — the relay's
+	 * federated rows (`docs/mobile.md` §"The peers' rows"). It is asked for on
+	 * BOTH list transports or not at all: a repaint that drops the flag drops
+	 * the remote rows (`connection-provider` is the one caller, and it passes
+	 * the flag to the GET and to `sessionsStream` together). Omitted — the
+	 * default — the request is byte-identical to what every older build asked
+	 * for, which is why it is `undefined` rather than `false`.
+	 */
+	async sessions(
+		options: { includePeers?: boolean } = {},
+	): Promise<Payload<"sessionListFrame">> {
 		return this.http.json("sessionListFrame", {
 			method: "GET",
-			path: "/api/sessions",
+			path: `/api/sessions${query({
+				include_peers: options.includePeers ? "true" : undefined,
+			})}`,
+		});
+	}
+
+	/**
+	 * `POST /api/sessions/{id}/transfer` — move (or copy) one conversation.
+	 *
+	 * THE BODY'S `request_id` IS THE AT-MOST-ONCE KEY, and the caller owns it:
+	 * one id per move INTENT, reused on every re-issue, or a retry can run a
+	 * second move for one user action. `features/sessions/transfer.ts` is the
+	 * only caller that mints one and states the re-issue rules.
+	 *
+	 * A receipt answers a `2xx`; every refusal — `409` refused, `503`
+	/**
+	 * `POST /api/sessions/{id}/transfer` — move (or copy) one conversation.
+	 *
+	 * THE BODY'S `request_id` IS THE AT-MOST-ONCE KEY, and the caller owns it:
+	 * one id per move INTENT, reused on every re-issue, or a retry can run a
+	 * second move for one user action. `features/sessions/transfer.ts` is the
+	 * only caller that mints one and states the re-issue rules.
+	 *
+	 * A receipt answers a `2xx`; every refusal — `409` refused, `503`
+	 * unconfirmed, `422`/`507` — arrives as the plane's `{error, code}` body and
+	 * is classified by the error taxonomy, which is what carries the STATUS the
+	 * move surface branches on. `options.timeoutMs` is the caller's per-request
+	 * deadline override: the first attempt keeps the transport default on
+	 * purpose, and only the user-asked CLAIM extends it (`transfer.ts` states
+	 * why) — so the deadline lives here, beside the route, not in the wire body
+	 * the relay validates.
+	 */
+	async transfer(
+		sessionId: string,
+		request: TransferRequest,
+		options: { timeoutMs?: number } = {},
+	): Promise<Payload<"transferReceipt">> {
+		return this.http.json("transferReceipt", {
+			method: "POST",
+			path: `/api/sessions/${encodeURIComponent(sessionId)}/transfer`,
+			body: request,
+			timeoutMs: options.timeoutMs,
 		});
 	}
 
@@ -890,11 +962,26 @@ export class RelayEndpoints {
 	}
 
 	/** `GET /api/sessions/events`: the list stream. Frames are the same payload as
-	 *  `sessions()`, repainted wholesale. */
+	 *  `sessions()`, repainted wholesale.
+	 *
+	 *  `includePeers` is the same flag as `sessions()`'s, and it must be passed
+	 *  here whenever it is passed there: the relay reads the flag ONCE at
+	 *  connection open and every frame on that connection carries it — a stream
+	 *  that asked without it would drop the remote rows the initial GET painted
+	 *  on its next repaint (the flap the relay's contract warns about). */
 	sessionsStream(
-		options: Omit<SseConnectionOptions, "open"> & { signal?: AbortSignal },
+		options: Omit<SseConnectionOptions, "open"> & {
+			signal?: AbortSignal;
+			includePeers?: boolean;
+		},
 	): RelayStream {
-		return this.stream("/api/sessions/events", options);
+		const { includePeers, ...connection } = options;
+		return this.stream(
+			`/api/sessions/events${query({
+				include_peers: includePeers ? "true" : undefined,
+			})}`,
+			connection,
+		);
 	}
 
 	/** `GET /api/sessions/{id}/events`: one session's projection stream. The relay

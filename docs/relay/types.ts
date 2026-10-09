@@ -511,7 +511,19 @@ export interface SessionProjection {
 
 /** One row of the list. Section is the SHARED `active` rule, not "a live entry
  *  exists" — a durable-only conversation with an unseen completion is Active on
- *  every surface (`daemon.py:958-964`, `daemon.py:351-463`). */
+ *  every surface (`daemon.py:958-964`, `daemon.py:351-463`).
+ *
+ *  TWO KINDS OF ROW, one shape: a LOCAL row carries every field below; a
+ *  REMOTE row (another device's conversation, appended only for a client that
+ *  asked `GET /api/sessions?include_peers=true` — or its SSE twin
+ *  `/api/sessions/events?include_peers=true`, both reading the one flag at
+ *  connection open) carries `session_id`/`section`/`pinned`/
+ *  `conversation_name`/`mtime`/`created_at` plus the flat locality block at the
+ *  bottom of this interface, and OMITS the local-only fields: no `cwd`, no
+ *  `model_label`, no `streaming`/`needs_attention`/`unseen`/`pending_kind`, no
+ *  counts. `locality` is the discriminator; the nested transport `peer` block is
+ *  deliberately NOT published (`local_operator/mobile/mesh.py`,
+ *  `remote_session_rows`). */
 export interface SessionSummary {
   session_id: string;
   section: "active" | "previous";
@@ -561,10 +573,41 @@ export interface SessionSummary {
   asks_open?: number;
   mtime: number;
   /** The same value the rank used, so wire and order cannot disagree about a
-   *  row's birth (`daemon.py:1029-1033`). */
+   *  row's birth (`daemon.py:1029-1033`). On a REMOTE row this is the peer's
+   *  `started` claim — and a claim that is not a number arrives as the no-claim
+   *  `0.0` (`session/peer_rows._started_epoch`): `<= 0` means NO LABEL and the
+   *  relay's last-in-bin order, never a 1970 date. */
   created_at: number;
   /** The attention record's `kind` for this conversation (`""` when none). */
   completion_kind: string;
+  /* ------------------------------------------------ the remote row's own
+   *
+   * ABSENT on a local row; present with real values on every remote one
+   * (`local_operator/mobile/mesh.py:remote_session_rows`, the mirror of
+   * `server/utils/desktop_mesh.py:remote_session_rows` — same names, same
+   * meanings). */
+  /** The discriminator: `"remote"`; absent (or `"local"`) reads local. */
+  locality?: "local" | "remote";
+  owner_device?: string;
+  owner_device_name?: string;
+  /** Whether the mesh currently reaches the owner; `false` rows carry the
+   *  glossed sentence in `unreachable_reason`. */
+  reachable?: boolean;
+  /** One sentence, GLOSSED at the relay's boundary (`resume.peer_reason_words`),
+   *  so a client keeps no glossary; `""` when reachable. */
+  unreachable_reason?: string;
+  /** The transport's own state token, VERBATIM: `busy`, `idle`, `attached`,
+   *  `wedged`, or `""` for a stored row with no runtime behind it. */
+  live_state?: "busy" | "idle" | "attached" | "wedged" | "";
+  /** The gate kind, verbatim — an OPEN string, not a closed union (round 1,
+   *  R1-1): `approval` / `ask` today, any future word tomorrow. Only `approval`
+   *  spells approval; every other non-empty word is the answer family
+   *  (`session/catalog.py` `status_code`). `null` is no gate. */
+  pending?: string | null;
+  /** Nulls, never guesses: the federated row carries no owner's stamp. */
+  placement?: Record<string, unknown> | null;
+  origin?: Record<string, unknown> | null;
+  last_synced_at?: number | null;
 }
 
 /** Capabilities ride the SAME list frames (`daemon.py:3485-3518`): one answer,
@@ -612,6 +655,55 @@ export interface UnreadBlock {
   revision: [number, number, number];
   /** `["attention"]` when the completion-receipt store could not be read. */
   degraded: string[];
+}
+
+/* ------------------------------------------------------------- the transfer */
+
+/**
+ * `POST /api/sessions/{id}/transfer` — the body (the write half of "sessions
+ * and delegation", `local_operator/mobile/daemon.py:api_transfer_session`).
+ *
+ * `to` names a mesh device id or `"local"` (a recall); `keep: true` forks at
+ * the destination and leaves the source running; `wait_s` is a ceiling on
+ * waiting for a busy source INSIDE the request (0..300, refused by name
+ * outside); `request_id` is the at-most-once key — a replay returns the
+ * recorded receipt with `replayed: true` and dials nothing, a same-id retry
+ * mid-move waits on the journal's per-key lock and then replays, and a same id
+ * with a DIFFERENT body is a `409`.
+ */
+export interface TransferRequest {
+  to: string;
+  keep?: boolean;
+  wait_s?: number;
+  request_id?: string;
+}
+
+/** One phase stamp of the receipt: the backend's own words (`prepared`,
+ *  `handing_off`, `committed`, `done` today — an unknown word is rendered
+ *  verbatim, never dropped), the move's other end, and the step on the
+ *  monotone progress list (`0` for an unknown phase). */
+export interface TransferReceiptPhase {
+  phase: string;
+  peer: string;
+  progress: number;
+}
+
+/** The receipt — the ONLY thing that may claim where a conversation now lives
+ *  (`server/utils/desktop_mesh.transfer_receipt`). `new_session_id` is
+ *  required for a `keep` (the fork's id at the destination); `source_retired`
+ *  is `mode == "move"`. */
+export interface TransferReceipt {
+  phases: TransferReceiptPhase[];
+  /** `local` means it landed on this device. */
+  locality: "local" | "remote";
+  owner_device: string;
+  source_retired: boolean;
+  session_id: string;
+  new_session_id: string;
+  mode: "move" | "keep";
+  /** The at-most-once journal's mark: `true` means a recorded outcome replayed
+   *  and no second move was dialled. */
+  replayed: boolean;
 }
 
 /* ------------------------------------------------------------- side payloads */

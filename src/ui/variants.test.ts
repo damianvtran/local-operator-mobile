@@ -93,6 +93,32 @@ describe("button", () => {
 		}
 	});
 
+	it("holds a MINIMUM height, so a wrapped label grows the box (D69-5)", () => {
+		/* At 200 % a two-line label is ~72 pt against the designed pill; with a
+		 *  FIXED height it overhung the fill by ~14 pt top and bottom, unclipped
+		 *  (design round 2, D69-5). The label-bearing sizes are minimums — the box
+		 *  grows with its content — while the label-less sizes keep fixed boxes. */
+		const expectations = [
+			["sm", "min-h-8", "h-8"],
+			["md", "min-h-11", "h-11"],
+			["lg", "min-h-[50px]", "h-[50px]"],
+		] as const;
+		for (const [size, floor, banned] of expectations) {
+			const tokens = buttonClasses("primary", size, {}).split(" ");
+			expect(tokens).toContain(floor);
+			expect(tokens).not.toContain(banned);
+		}
+		const fixed = [
+			["icon", "h-11"],
+			["fab", "h-14"],
+		] as const;
+		for (const [size, expected] of fixed) {
+			const tokens = buttonClasses("primary", size, {}).split(" ");
+			expect(tokens).toContain(expected);
+			expect(tokens.some((token) => token.startsWith("min-h-"))).toBe(false);
+		}
+	});
+
 	it("states the floor per platform, which is the only floor rule in the kit", () => {
 		/* One rule, two numbers, and the number a control needs depends on the
 		 *  platform it renders on — the web build the audit measures takes 48, iOS 44.
