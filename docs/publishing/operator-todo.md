@@ -1,204 +1,145 @@
 # Operator to-do — the days-to-weeks items
 
 One sheet, in dependency order, for the work only a human with account access can
-do. Everything an agent can do is in the appendix and does not wait on this list.
+do. **Apple first; Google Play is parked** (see the parked section at the end).
 
 Each row: **what to do · where · expected lead time · what it unblocks.**
-
-Sources are cited with the date they were read. Where a lead time is a range, the
-range is the published one, not an estimate. Read `checklist.md` for the full
-programme; this sheet is the critical path only.
+Sources are cited with the date they were read; where a lead time is a range, the
+range is the published one, not an estimate.
 
 ---
 
-## 0. Confirm which Apple account accepted the licence agreement
+## 0. Confirm the Apple account you are shipping under
 
-**What:** the operator has accepted Apple's updated Developer Program Licence
-Agreement (Attachment 14 took effect 2026-10-01). Acceptance requires an Apple
-Account with *some* developer membership, and the stated position is that no
-enrolment is active. Both can be true — acceptance may have been on an older or
-personal account, possibly a different team.
+**What:** the app ships under the **existing individual enrolment** — the local
+signing identity is `Developer ID Application: Damian Tran (SHA2U6KT7V)`, and the
+desktop app already signs and notarizes with that team. Two things to confirm in
+the console, because only it can settle them:
 
-**Where:** <https://appstoreconnect.apple.com> → *Business* / *Agreements* shows
-which team holds the accepted agreement; the account name is on the top-right menu.
+1. **The team id is `SHA2U6KT7V`** and the account holding it is the one you want.
+2. **The Developer Program membership is active for App Store distribution.** A
+   Developer ID certificate evidences a paid membership at issue time — the
+   certificate on this machine is valid to **2031-09-17** — but *membership
+   status* is only shown in App Store Connect. Do not assume it; look.
+
+**Where:** <https://appstoreconnect.apple.com> → *Business* / *Agreements*, and
+the Apple Developer account's *Membership details*.
 
 **Lead time:** minutes.
 
-**Unblocks: nothing directly.** It removes the one unknown that decides whether
-step 3 is a fresh enrolment or a migration, and it tells us which team id the
-future API key will belong to.
+**Unblocks:** everything Apple below. If the membership turns out to be lapsed,
+renewal comes first and every date on this sheet moves with it.
+
+**The trade-off, plainly:** an individual enrolment shows the **operator's
+personal legal name as the App Store seller**. That is acceptable for this
+release; if an organization seller is wanted later, the route is an **App
+Transfer** to an organization account (which then needs a D-U-N-S number), not a
+change of this account's type.
 
 ---
 
-## 1. Decide the legal seller
+## 1. Create the App Store Connect API key (the four `APPLE_*` secrets)
 
-**What:** who appears as the seller on both stores. Recommendation, from
-`apple-app-store.md` § 1 and `google-play.md` § 1: **Radient Inc., as an
-organization on both stores**, which matches the privacy policy and the brand.
-
-**Where:** a decision, not a form.
-
-**Lead time:** immediate.
-
-**Unblocks:** steps 2–4 — both stores bind the seller identity into the account
-that holds the apps, and it cannot be changed without a transfer afterwards.
-
----
-
-## 2. Get a D-U-N-S number for Radient Inc.
-
-**What:** the free business identifier from Dun & Bradstreet. It is required by
-**both** Apple organization enrolment and the Play organization account.
-
-**Where:** <https://developer.apple.com/help/account/membership/D-U-N-S> links the
-request flow; it is free, and Apple's page warns about third parties charging for
-it.
-
-**Lead time:** typically **1–5 business days** after the entity is found in
-Dun & Bradstreet; allow longer if the entity is not yet listed. `checklist.md` A2
-budgeted up to 30 days.
-
-**Unblocks:** step 3 and step 4.
-
----
-
-## 3. Enrol in the Apple Developer Program — organization, not individual
-
-**What:** the membership that carries the API key and the submission.
-
-**Trade-off, stated plainly:**
-
-| | Individual | Organization |
-|---|---|---|
-| Needs | Apple Account with 2FA, payment | The above **plus D-U-N-S**, a legal entity, and a person with authority to bind it |
-| Lead time | ~24–48 h after payment | **1–2 weeks** (manual legal-entity verification), plus the D-U-N-S wait |
-| Seller shown on the App Store | the person's legal name | the organization's name |
-| Fits this app | the privacy policy and the Radient brand say otherwise | yes — and it is what `checklist.md` A1/A3 recommend |
-
-Membership is **99 USD/year** either way. The account type is effectively
-**permanent**: an individual account cannot be converted to an organization, and
-moving later means an App Transfer, so decide before the first upload. Ship under
-the organization.
-
-**Where:** <https://developer.apple.com/programs/enroll/>. The organization path
-also expects a work email on the organization's domain and a publicly reachable
-website on it.
-
-**Lead time:** 1–2 weeks, from a valid D-U-N-S.
-
-**Unblocks:** the ASC API key (step 5), TestFlight, and App Review submission.
-
----
-
-## 4. Create the Google Play Console organization account
-
-**What:** the Play developer account, as an organization.
-
-**Required information** (Google's own list, read 2026-10-09): D-U-N-S number,
-organization name and address (taken from the linked Google Payments profile),
-organization phone number and website, a contact name and email, and a developer
-email address and phone number. Google displays the legal name, address and
-developer contact details on the store. The contact email and phone must stay
-operational — Google verifies them by OTP and may use them to check the account
-is active.
-
-**Where:** <https://play.google.com/console> → create developer account. There is
-a one-time **25 USD** registration fee. Identity verification follows.
-
-**Lead time:** days for verification, plus the D-U-N-S wait.
-
-**Unblocks:** the Play service-account JSON (step 6) and every Play upload.
-
-**The testing rule, checked today because it decides weeks:** Google requires a
-closed test with **at least 12 testers opted in continuously for 14 days** before
-production access — but that requirement is scoped to **personal accounts created
-after 2023-11-13** (<https://support.google.com/googleplay/android-developer/answer/14151465>,
-read 2026-10-09). An **organization account skips it**, which is a second reason
-the seller decision in step 1 matters: choosing a personal account adds two weeks
-of closed testing plus 12 testers to the critical path (this is `checklist.md` G3,
-marked "conditional" for exactly this reason). If the operator prefers a personal
-account, that is a deliberate two-week trade, not a shortcut.
-
----
-
-## 5. Create the App Store Connect Team API key (the four `APPLE_*` secrets)
-
-**What:** two things from the same account — the **Team ID** (Apple Developer
-account → **Membership details**, the 10-character id) which becomes
-`APPLE_TEAM_ID`, and a **Team API key** which supplies the other three:
-`APPLE_ASC_KEY_ID`, `APPLE_ASC_ISSUER_ID` and `APPLE_ASC_PRIVATE_KEY_BASE64`.
+**What:** two things from the same account — the **Team ID** (`SHA2U6KT7V`, from
+*Membership details*) which becomes `APPLE_TEAM_ID`, and a **Team API key** which
+supplies the other three: `APPLE_ASC_KEY_ID`, `APPLE_ASC_ISSUER_ID` and
+`APPLE_ASC_PRIVATE_KEY_BASE64`.
 
 **Exact path** (Apple's current documentation, read 2026-10-09):
 
 1. <https://appstoreconnect.apple.com> → **Users and Access**.
 2. **Integrations** tab → **App Store Connect API** in the left column.
-3. Make sure the **Team Keys** tab is selected. *(Generating a team key requires
-   the Admin role on the account.)*
+3. Select the **Team Keys** tab. *(Generating a team key requires the Admin role
+   on the account.)*
 4. **Generate API Key** / the **+** button.
-5. Name it (for your reference only) and pick its **role** under Access. For this
-   pipeline the key must be able to manage signing assets and upload builds.
+5. Give it a name and pick its role under Access — it must be able to manage
+   signing assets and upload builds.
 6. **Generate.**
 7. **Download API Key** — the `.p8` is downloadable **once**; Apple keeps no copy.
-   Note the **Key ID** and the **Issuer ID** shown on the page.
+   Note the **Key ID** and the **Issuer ID** shown beside it.
 
-**Lead time:** minutes, once the enrolment exists.
+**Not the same credential as the desktop app's.** The desktop CI notarizes with
+an **app-specific password** (`APPLE_ID_PASSWORD`-style secret) against a
+Developer ID identity. That credential **cannot** upload to TestFlight and cannot
+manage signing assets; TestFlight and App Store submission need the API key
+above. Two credentials, two purposes.
 
-**Unblocks:** iOS signing, the IPA export, and the TestFlight upload in
-`release.yml`.
+**Lead time:** minutes.
 
-**Hand-over:** the `.p8`, the Key ID and the Issuer ID go to the agents
-out-of-band. They are then written into the `release` environment's secrets; they
-never appear in a transcript, a commit, or a chat message.
+**Unblocks:** iOS signing and export, the TestFlight upload, and — once
+submitted — App Review.
 
----
-
-## 6. Create the Play service-account JSON (`PLAY_SERVICE_ACCOUNT_JSON_BASE64`)
-
-**What:** the JSON key that lets CI publish to Play. This is the credential
-`fastlane supply` consumes.
-
-**Exact path** (fastlane's canonical setup, read 2026-10-09):
-
-1. Play Console → **Account details** → note the **Google Cloud Project ID**.
-2. Enable the **Google Play Developer API** in that project:
-   <https://console.developers.google.com/apis/api/androidpublisher.googleapis.com>.
-3. <https://console.cloud.google.com/iam-admin/serviceaccounts> → select the
-   project → **CREATE SERVICE ACCOUNT** → give it a name → copy the generated
-   **email address** → **DONE**.
-4. On that service account: **Manage keys → ADD KEY → Create new key → JSON →
-   CREATE**; save the file.
-5. Back in Play Console → **Users and permissions → Invite new users** → paste the
-   service-account email → **Account permissions** → grant the release permissions
-   this pipeline needs (fastlane recommends Admin (all permissions); the release
-   permission may be narrowed if preferred) → **Invite user**.
-
-**One operational note, from the same documentation:** Play needs **at least one
-build uploaded manually in the console** before the API can publish to the app —
-budget one hand-upload of the first AAB.
-
-**Lead time:** under an hour, once the account exists.
-
-**Unblocks:** every Play upload (`supply`, internal track, then production).
+**Hand-over:** the `.p8` and the two ids go to the agents out-of-band. They are
+written into the `release` environment's secrets and never printed in a
+transcript or a commit.
 
 ---
 
-## Where the two console credentials go
+## 2. Sequence from here (iOS-first)
 
-Both go into the repository's **`release` environment** as environment secrets —
+1. **TestFlight** — the release workflow uploads the signed IPA; the operator
+   invites external testers (a handful of people who have never run `lop`
+   qualifies, `checklist.md` G1).
+2. **App Store submission** — with the review notes, the demo mode and the § E
+   answers in `checklist.md`; then the App Review round.
+3. **Play** — parked, see below.
+
+**One dependency that is not a console step:** `checklist.md` **A8** — account
+deletion does not exist in Radient (no console control, no API), and both stores
+require it once account creation is possible in the app. It is the critical path
+for submission and lives in a different repository. **A10** (the OAuth
+`client_id` for the mobile app) is the same kind of item and sits beside it.
+Neither waits on the operator.
+
+---
+
+## Parked — Google Play (not being pursued now)
+
+Parked deliberately. Kept here so nothing has to be re-derived when it is picked
+up; **no operator action until then**.
+
+- **The Android build and CI path stays as it is.** The internal Android job is
+  already *skipped* (not failed) when its secrets are absent, so nothing reds.
+- **When Play is unparked**, the required artifacts are: the Play Console
+  organization account (D-U-N-S, organization name/address/phone/website, $25
+  one-time fee; Google's required-information page, read 2026-10-09), the upload
+  keystore (agent-side procedure ready, see the appendix) and the service-account
+  JSON (`PLAY_SERVICE_ACCOUNT_JSON_BASE64`).
+- **The service-account path for later** (fastlane's canonical setup, read
+  2026-10-09): Play Console → *Account details* → note the Google Cloud Project
+  ID → enable the **Google Play Developer API** in that project → create a
+  service account in that project → *Keys → Add key → JSON* → back in Play
+  Console, **Users and permissions → Invite new users**, paste the service
+  account's email, grant the release permissions. Play also wants **one build
+  uploaded manually** before the API can publish.
+- **Testing requirement to remember:** Google requires personal developer
+  accounts created after **2023-11-13** to run a **closed test with 12 testers
+  opted in continuously for 14 days** before production access (Google's app
+  testing requirements page, read 2026-10-09). Organization accounts are outside
+  that page's scope. If a personal account is used, budget the 14 days.
+
+---
+
+## Where the credentials go
+
+Straight into the repository's **`release` environment** as environment secrets —
 the nine names and the reason are in `docs/ci.md` "Secrets". The environment and
 its two deployment rules (branch `main`, tag `v*`) were configured by the agents
-on 2026-10-09, so only the values are missing.
+on 2026-10-09; only the values are missing, and only the four Apple ones are
+needed for the iOS-first path.
 
 ---
 
 ## Appendix — already done or agent-side, no operator action
 
-- **`release` environment rules** — created 2026-10-09 (branch `main`, tag `v*`;
+- **`release` environment rules** — created 2026-10-09 (branch `main`, tag `v*`,
   custom branch policies enabled, which is what makes the tag rule possible).
-- **Android upload keystore procedure** — prepared, ready to execute the moment
-  step 1's answer lands: generation, storage and hand-over are scripted so no
-  password is ever printed. Needs nothing from the operator until it runs.
+- **iOS-only release path** — the release workflow currently requires every
+  credential for both platforms; a PR makes it build and publish what the
+  configured platforms say (Apple first), so a tag will not fail on the parked
+  Play secrets.
+- **Android upload keystore procedure** — prepared but **not executed**; only
+  needed when Play is unparked or signed Android artifacts are wanted for the
+  GitHub Release. Password handling is scripted so nothing is ever printed.
 - **Store metadata** — exists in `store/` (13 files, iOS and Android), all still
   carrying `DRAFT — not submitted` markers that must be removed before upload.
-- **Release pipeline** — on `main`; a `v*` tag builds, signs, uploads and attaches
-  the artefacts. Untested by a real tag until the secrets exist.
