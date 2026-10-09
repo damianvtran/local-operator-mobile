@@ -192,7 +192,11 @@ jobs:
         # Not run while `android` is absent from RELEASE_PLATFORMS: a parked
         # platform's missing secrets are not this release's problem. Enabled and
         # missing is still a hard failure.
-        if: contains(steps.platforms.outputs.platforms, 'android')
+        # `!cancelled() &&` so an Apple gap does not hide a Play gap behind it: the
+        # default would stop at the first failed step, and the operator would fix
+        # one platform per run. If `Resolve` failed, `platforms` is empty and this
+        # still does not run.
+        if: ${{ !cancelled() && contains(steps.platforms.outputs.platforms, 'android') }}
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
