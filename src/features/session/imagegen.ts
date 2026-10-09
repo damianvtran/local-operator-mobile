@@ -2,30 +2,38 @@
  * The image-generation tool surface: which tool rows are cards, and the ONE
  * entry→view-model adapter those cards render from.
  *
- * The programme this file belongs to freezes the WIRE SHAPE incrementally: the
- * harness tool (`generate_image` — image-to-image is a `source_image_path`
- * parameter on the SAME tool; there is no second name) lands in another lane,
- * and the platform's live-detail fields (`queue_position`, a progress fraction,
- * `logs`, the platform's stable `error` sentence and its `error_type` code)
- * freeze after it. So this module is the
- * single place in this app where those field names appear — when the freeze
- * brings a rename, this file and its test change and nothing else does. That is
- * `delivery.ts`'s rule (one reader per tool field), applied to a live one.
+ * The wire shape FROZE on 2026-10-09 (the harness lane's local-operator
+ * #2089): every `generate_image` update carries the canonical field set —
+ * `stage`, `queue_position`, `progress_fraction`, `log_lines`, `error`,
+ * `error_type` — with every key PRESENT and `None` where no provider supplied
+ * one. So this module stays the single place in this app where those field
+ * names appear — the freeze landed, and this file and its test were the whole
+ * change, which is `delivery.ts`'s rule (one reader per tool field) holding.
  *
- * Vocabulary, from the frozen facts of the programme:
+ * The card's state maps from `stage` first:
  *
- *   - Surface states: `queued -> running -> done | failed | cancelled`, plus
- *     `cancelling` — which is NOT a wire state. It is the overlay the card
- *     applies after a cancel is requested and until the confirmation lands
- *     (`never optimistically "cancelled"`). It lives in the component, and the
- *     WORD table below is shared so the overlay and the wire states read as one
- *     vocabulary.
- *   - The projection's own `tool_state` is the mapping's source: `composing`
- *     and `queued` are "not started" (the reduced `queued` state — a call the
- *     model is still writing is no more running than one behind a sibling),
- *     `running` is running, `done` is done, `failed` is failed, and
- *     `interrupted` is the surface's `cancelled` (an aborted call, whether the
- *     reader stopped it or the turn did).
+ *   - `stage`: `queued` / `in_progress` / `completed` / `cancelled` /
+ *     `cancelling`, and an explicit `None` on a mid-walk failure update, whose
+ *     semantics ride the `error`/`error_type` pair instead (mapped to
+ *     `failed`). An UNKNOWN value reads as absent — a future stage renders the
+ *     reduced fallback rather than a state this build guessed.
+ *   - `cancelling` is a WIRE state now (the cancel-confirmation hold). The
+ *     card's local overlay still covers the window between the press and the
+ *     feed's first `cancelling`, and both draw the same word.
+ *   - A row with no `stage` at all (a pre-freeze fixture, or a final row that
+ *     never carried a live stage) falls back to the projection's own
+ *     `tool_state`: `composing` and `queued` are "not started" (the reduced
+ *     `queued` state — a call the model is still writing is no more running
+ *     than one behind a sibling), `running` is running, `done` is done,
+ *     `failed` is failed, and `interrupted` is the surface's `cancelled` (an
+ *     aborted call, whether the reader stopped it or the turn did).
+ *
+ * `log_lines` is the provider's own logs list passed through verbatim as
+ * `[{message, timestamp}]`; the card renders the messages in order and does
+ * not render timestamps yet (they are in the bag for whenever a design wants
+ * them). `progress_fraction` stays `None` until a provider reports one — the
+ * feed's own note is that elapsed-vs-budget is a TIMEOUT, never a bar — so
+ * the indeterminate branch is the one that renders today.
  *
  * The reduced state is the honest one: every live detail is optional, and an
  * absent field renders the state without it — never a default, never a zero
@@ -57,20 +65,17 @@ export const isImageGenTool = (
 
 /* ------------------------------------------------------------- the vocabulary */
 
-/** The card's states, mapped from the wire's `tool_state`. */
+/** The card's states. `cancelling` was the component's local overlay alone
+ *  until the freeze made it a wire stage too (the cancel-confirmation hold);
+ *  the overlay still covers the window before the feed confirms, and the WORD
+ *  table below is shared so the two read as one vocabulary. */
 export type ImageGenPhase =
 	| "queued"
 	| "running"
 	| "done"
 	| "failed"
-	| "cancelled";
-
-/**
- * The phase the card DRAWS — `ImageGenPhase` plus the local overlay. Exported
- * because the component and its copy table both speak it, and because the
- * restart/steer slots (unwired) will join it rather than invent a second one.
- */
-export type ImageGenCardPhase = ImageGenPhase | "cancelling";
+	| "cancelled"
+	| "cancelling";
 
 const PHASE_OF_TOOL_STATE: Record<ToolState, ImageGenPhase> = {
 	composing: "queued",
@@ -81,6 +86,52 @@ const PHASE_OF_TOOL_STATE: Record<ToolState, ImageGenPhase> = {
 	interrupted: "cancelled",
 };
 
+/** The canonical `stage` vocabulary (harness-lane freeze, 2026-10-09). */
+const STAGE_VALUES = [
+	"queued",
+	"in_progress",
+	"completed",
+	"cancelled",
+	"cancelling",
+] as const;
+export type ImageGenStage = (typeof STAGE_VALUES)[number];
+
+/** `stage` → phase. Total over the canonical vocabulary by construction: a new
+ *  stage must fail typecheck here rather than fall through to a wrong state. */
+const PHASE_OF_STAGE: Record<ImageGenStage, ImageGenPhase> = {
+	queued: "queued",
+	in_progress: "running",
+	completed: "done",
+	cancelled: "cancelled",
+	cancelling: "cancelling",
+};
+
+/**
+ * The phase of one row, from the canonical `stage` first and the projection's
+ * `tool_state` as the fallback.
+ *
+ * `stage: null` is the mid-walk failure update BY CONTRACT ("no canonical
+ * stage names a mid-walk failure — the pair is the semantics"), so it maps to
+ * `failed`; the platform's sentence rides the same update and renders from it.
+ * `undefined` (no stage in the bag at all — a pre-freeze row) falls back to
+ * `tool_state`.
+ *
+ * `completed` reads to the done-arm wherever it appears — the live completion
+ * update (which the transcript does not receive today) and a settled receipt
+ * that one day carries the terminal value alike: the vocabulary value is the
+ * same statement in either place, so the read stays tolerant by construction
+ * (wiring round, 2026-10-09).
+ */
+const phaseOf = (
+	stage: ImageGenStage | null | undefined,
+	toolState: ToolState,
+): ImageGenPhase =>
+	stage === null
+		? "failed"
+		: stage !== undefined
+			? PHASE_OF_STAGE[stage]
+			: PHASE_OF_TOOL_STATE[toolState];
+
 /** The glyph and identity colour of each state, in the tool row's own eight
  *  characters (`docs/design/components.md` § 15) — the card is the same visual
  *  family as the tool row, and a second pen for state is the anti-pattern the
@@ -90,7 +141,7 @@ export interface ImageGenTone {
 	inkClass: string;
 }
 
-export const IMAGEGEN_TONE: Record<ImageGenCardPhase, ImageGenTone> = {
+export const IMAGEGEN_TONE: Record<ImageGenPhase, ImageGenTone> = {
 	queued: { glyph: "⋯", inkClass: "text-ink-dim" },
 	running: { glyph: "⟳", inkClass: "text-accent" },
 	/* Still running until the confirmation lands, so the tone stays the
@@ -121,8 +172,10 @@ export const IMAGEGEN_ALREADY_FINISHED_TONE: ImageGenTone = {
  * The state's own word, one per state.
  *
  * `cancelling` carries the ellipsis because it is a phase in progress, not an
- * outcome (`Reconnecting…` is the same register); every other word is a state
- * the reader can act on, and none of them is a verdict the feed has not stated.
+ * outcome — the wire's cancel-confirmation hold and the card's local overlay
+ * draw the same word (`Reconnecting…` is the same register); every other word
+ * is a state the reader can act on, and none of them is a verdict the feed has
+ * not stated.
  * `done`'s word is chosen by `imageGenStateLine` — "Image ready" claims an image
  * is there, which is only true once the artifact has arrived.
  *
@@ -133,7 +186,7 @@ export const IMAGEGEN_ALREADY_FINISHED_TONE: ImageGenTone = {
  * (its artifact either arrived or did not). One wire state, two sentences
  * answering two different questions (design round 1, D3).
  */
-export const IMAGEGEN_STATE_WORD: Record<ImageGenCardPhase, string> = {
+export const IMAGEGEN_STATE_WORD: Record<ImageGenPhase, string> = {
 	queued: "Queued",
 	running: "Generating image",
 	cancelling: "Cancelling…",
@@ -150,11 +203,13 @@ export const IMAGEGEN_STATE_WORD: Record<ImageGenCardPhase, string> = {
  * reduced state. `done` degrades to `Done` when no artifact arrived, because
  * "Image ready" beside no image would be the card claiming bytes it cannot
  * show (the reduced state, again — never a claim the feed did not make).
- * `failed` says "Already finished" when the row is the cancel-vs-finished
- * conflict — a conflict the frozen rules refuse to paint as an error.
+ * `failed`'s sentence is withheld when the row is the cancel-vs-finished
+ * conflict, and an already-finished reading says "Already finished" wherever
+ * the row settles — the conflict folds as `cancelled` on the canonical wire
+ * and `failed` on the tool_state fallback, and both draw the same quiet line.
  */
 export const imageGenStateLine = (
-	phase: ImageGenCardPhase,
+	phase: ImageGenPhase,
 	state: {
 		queuePosition: number | null;
 		hasArtifact: boolean;
@@ -166,7 +221,7 @@ export const imageGenStateLine = (
 		return `${IMAGEGEN_STATE_WORD.queued} · position ${state.queuePosition}`;
 	}
 	if (phase === "done" && !state.hasArtifact) return "Done";
-	if (phase === "failed" && state.alreadyFinished) return "Already finished";
+	if (state.alreadyFinished) return "Already finished";
 	return IMAGEGEN_STATE_WORD[phase];
 };
 
@@ -188,7 +243,7 @@ export const imageGenLivePhase = (phase: ImageGenPhase): boolean =>
 export const imageGenCardPhase = (
 	phase: ImageGenPhase,
 	requested: boolean,
-): ImageGenCardPhase =>
+): ImageGenPhase =>
 	imageGenLivePhase(phase) && requested ? "cancelling" : phase;
 
 /**
@@ -232,35 +287,69 @@ export const imageGenCancelOverlay = (
 /* ------------------------------------------------------------ the live detail */
 
 /**
- * The provider's live-detail payload, as far as this build reads it.
+ * The provider's live-detail payload, as far as this build reads it, from the
+ * canonical field set (harness-lane freeze, 2026-10-09).
  *
  * Every field is validated and every failure reads as ABSENT: a queue position
- * that is not a non-negative integer, a progress value outside `[0, 1]`, a
- * `logs` array that is not all strings, an `error` that is not a string — each
- * one renders as the reduced state rather than as a number or a sentence this
- * build invented. Values pass through UNMODIFIED (a log line and an error say
- * what the provider said; clamping or trimming them would be this client
- * editing the machine's words).
+ * that is not a non-negative integer, a fraction outside `[0, 1]`, a
+ * `log_lines` entry without a string `message`, an `error` that is not a
+ * string, an unknown `stage` — each one renders as the reduced state rather
+ * than as a number or a sentence this build invented. Values pass through
+ * UNMODIFIED (a log message and an error say what the provider said; clamping
+ * or trimming them would be this client editing the machine's words).
+ *
+ * `stage` is the one field with THREE readings, because the canonical shape
+ * gives it three: one of the five values; an explicit `null` (the mid-walk
+ * failure, whose semantics ride `error`/`error_type` — `phaseOf` maps it); or
+ * absent, for a bag from before the freeze — the caller then falls back to
+ * `tool_state`.
  */
 export interface ImageGenLiveDetail {
+	/** The canonical `stage`: a value, the stated `null` of a failure update, or
+	 *  `undefined` when the bag carried none at all. */
+	stage: ImageGenStage | null | undefined;
 	/** The provider's queue placement, when it stated one. */
 	queuePosition: number | null;
-	/** The provider's progress fraction in `[0, 1]`, or `null` (indeterminate). */
+	/** The progress fraction in `[0, 1]` (`progress_fraction`), or `null` —
+	 *  which is INDETERMINATE, never a synthesized zero. */
 	progress: number | null;
-	/** The provider's log lines, in its own order; possibly empty. */
+	/** The provider's log messages (`log_lines`'s `message`s), in its own
+	 *  order; possibly empty. Timestamps ride the wire and are not rendered
+	 *  yet. */
 	logs: string[];
 	/** The platform's error sentence, verbatim — the sanctioned form of a
-	 *  failure (harness-lane freeze, 2026-10-08: surfaces never receive FAL
-	 *  free-text, so this text is safe to render as-is). `null` when none was
-	 *  stated. */
+	 *  failure (surfaces never receive FAL free-text, so this text is safe to
+	 *  render as-is). `null` when none was stated. */
 	error: string | null;
 	/** The platform's structured code (`media_rejected | media_failed |
-	 *  media_rate_limited | media_unavailable`, or FAL's own code where one
-	 *  exists); `null` when none was stated. The one code that changes the
-	 *  card's reading is `media_already_completed` — see
-	 *  `IMAGEGEN_ALREADY_FINISHED`. */
+	 *  media_rate_limited | media_unavailable`, a rung failure's own
+	 *  classification, or the cancel conflict's `media_already_completed` — see
+	 *  `IMAGEGEN_ALREADY_FINISHED`); `null` when none was stated. */
 	errorType: string | null;
 }
+
+/** The canonical `stage`, read with its three outcomes (see the interface). */
+const stageOrNull = (
+	bag: Record<string, unknown>,
+): ImageGenStage | null | undefined => {
+	if (!("stage" in bag)) return undefined;
+	const value = bag.stage;
+	if (value === null) return null;
+	return typeof value === "string" &&
+		(STAGE_VALUES as readonly string[]).includes(value)
+		? (value as ImageGenStage)
+		: undefined;
+};
+
+/** The `message`s of a canonical `log_lines` array; non-object rows dropped. */
+const logMessages = (value: unknown): string[] =>
+	Array.isArray(value)
+		? value.flatMap((line) => {
+				if (line === null || typeof line !== "object") return [];
+				const message = (line as { message?: unknown }).message;
+				return typeof message === "string" ? [message] : [];
+			})
+		: [];
 
 /** A finite non-negative integer, or `null`. */
 const nonNegativeInt = (value: unknown): number | null =>
@@ -284,14 +373,12 @@ const stringOrNull = (value: unknown): string | null =>
 /**
  * Read the live detail out of an entry's `details`.
  *
- * The field names below are the ONE place they appear. `queue_position` and
- * `logs` are the frozen vocabulary's own names; `progress` is the one name this
- * lane had to choose for the progress fraction (flagged to the harness lane —
- * if the freeze brings another spelling, this function is the whole change).
- * `error` is read from the ENTRY's own field first (the field every other
- * surface already reads) and falls back to the provisionally-named
- * `details.error` — the platform's stable sentence in either place.
- * `error_type` rides `details` beside it (the same freeze).
+ * The field names below are the ONE place they appear — the canonical set the
+ * harness lane froze on 2026-10-09 (`stage`, `queue_position`,
+ * `progress_fraction`, `log_lines`; `error`/`error_type` beside them). `error`
+ * is read from the ENTRY's own field first (the field every other surface
+ * already reads) and falls back to `details.error` — the platform's stable
+ * sentence in either place.
  *
  * `details` is read through an unknown-key widening rather than a widened
  * schema, for `delivery.ts`'s reason: the wire's `details` is a loose bag by
@@ -302,13 +389,11 @@ export const imageGenLiveDetail = (
 	entry: Pick<TranscriptEntry, "details" | "error">,
 ): ImageGenLiveDetail => {
 	const bag = entry.details as unknown as Record<string, unknown>;
-	const logs = Array.isArray(bag.logs)
-		? bag.logs.filter((line): line is string => typeof line === "string")
-		: [];
 	return {
+		stage: stageOrNull(bag),
 		queuePosition: nonNegativeInt(bag.queue_position),
-		progress: fraction(bag.progress),
-		logs,
+		progress: fraction(bag.progress_fraction),
+		logs: logMessages(bag.log_lines),
 		error: stringOrNull(entry.error) ?? stringOrNull(bag.error),
 		errorType: stringOrNull(bag.error_type),
 	};
@@ -342,8 +427,11 @@ export interface ImageGenView {
 	elapsed: string | null;
 	/** The generated image, once the call is done and the row carries one. */
 	artifact: ImageGenArtifact | null;
-	/** Whether a failed row is really the cancel-vs-finished conflict rather
-	 *  than a failure: rendered quietly, never with the failure treatment. */
+	/** Whether a settled row is really the cancel-vs-finished conflict rather
+	 *  than a failure: rendered quietly, never with the failure treatment. The
+	 *  conflict folds as `cancelled` on the canonical wire and `failed` on the
+	 *  tool_state fallback; on a live or done row the code is not a reading this
+	 *  client is entitled to make. */
 	alreadyFinished: boolean;
 	/** Whether the cancel affordance applies: live phases only. */
 	cancelable: boolean;
@@ -362,13 +450,13 @@ export interface ImageGenView {
  */
 export const imageGenView = (entry: TranscriptEntry): ImageGenView | null => {
 	if (!isImageGenTool(entry)) return null;
-	const phase = PHASE_OF_TOOL_STATE[entry.tool_state];
+	const live = imageGenLiveDetail(entry);
+	const phase = phaseOf(live.stage, entry.tool_state);
 	const image = entry.images[0];
 	const artifact =
 		phase === "done" && image !== undefined
 			? { index: image.index, mimeType: image.mime_type }
 			: null;
-	const live = imageGenLiveDetail(entry);
 	return {
 		tool: entry.tool_name,
 		summary: entry.summary,
@@ -377,7 +465,8 @@ export const imageGenView = (entry: TranscriptEntry): ImageGenView | null => {
 		elapsed: toolElapsed(entry),
 		artifact,
 		alreadyFinished:
-			phase === "failed" && live.errorType === IMAGEGEN_ALREADY_FINISHED,
+			(phase === "failed" || phase === "cancelled") &&
+			live.errorType === IMAGEGEN_ALREADY_FINISHED,
 		cancelable: imageGenLivePhase(phase),
 	};
 };

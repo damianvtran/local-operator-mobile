@@ -19,12 +19,12 @@ import {
  * The image-gen surface's own vocabulary: detection, the one adapter, and the
  * absence paths.
  *
- * The coverage is deliberately shaped around the freeze: the LIVE DETAIL tests
- * are the contract this lane will have to re-pin when the harness lane freezes
- * the field names, so every field has a PRESENT case, an ABSENT case, and a
- * stated-but-unreadable case — the three shapes a live feed actually produces.
- * Everything else (phases, copy, gating) is the surface's own vocabulary and
- * should not need to move at the freeze at all.
+ * The freeze LANDED (harness-lane, 2026-10-09): the LIVE DETAIL tests now pin
+ * the canonical field names (`stage`, `queue_position`, `progress_fraction`,
+ * `log_lines`, `error`, `error_type`) — a PRESENT case, an ABSENT case and a
+ * stated-but-unreadable case for every field, the three shapes a live feed
+ * actually produces — and the STAGE tests pin the five values, the stated
+ * `null` failure, and the fallback for everything else.
  */
 
 /**
@@ -33,7 +33,7 @@ import {
  * `details` takes a plain bag and widens through the same cast the adapter
  * reads with: the wire's `details` is a LOOSE bag (`looseObject` in
  * `schemas.ts`) while the generated mirror type is closed, so a fixture that
- * writes the provisional live-detail keys passes them through — exactly the
+ * writes the canonical live-detail keys passes them through — exactly the
  * direction the boundary is built for — rather than this lane widening a type
  * it does not own.
  */
@@ -101,8 +101,82 @@ describe("imageGenView", () => {
 		["done", "done"],
 		["failed", "failed"],
 		["interrupted", "cancelled"],
-	] as const)("maps tool_state %s to %s", (state, phase) => {
-		expect(imageGenView(row({ tool_state: state }))?.phase).toBe(phase);
+	] as const)(
+		"falls back to tool_state %s (no stage) as %s",
+		(state, phase) => {
+			expect(imageGenView(row({ tool_state: state }))?.phase).toBe(phase);
+		},
+	);
+
+	it.each([
+		["queued", "queued"],
+		["in_progress", "running"],
+		["completed", "done"],
+		["cancelled", "cancelled"],
+		["cancelling", "cancelling"],
+	] as const)("maps a present stage %s to %s", (stage, phase) => {
+		expect(imageGenView(row({ details: { stage } }))?.phase).toBe(phase);
+	});
+
+	it("maps the stated `null` stage to failed — the mid-walk failure", () => {
+		const view = imageGenView(
+			row({
+				tool_state: "running",
+				details: {
+					stage: null,
+					error: "FAL (flux-schnell) exceeded its 120s generation budget.",
+					error_type: "timeout",
+				},
+			}),
+		);
+		expect(view?.phase).toBe("failed");
+		expect(view?.live.error).toBe(
+			"FAL (flux-schnell) exceeded its 120s generation budget.",
+		);
+	});
+
+	it("lets a present stage beat the tool_state fallback, and falls back on an unknown one", () => {
+		/* The feed's stage is the finer truth; an unknown value is not a state
+		 * this build knows — it reads as absent and the reduced fallback renders
+		 * instead of a guess. */
+		expect(
+			imageGenView(
+				row({ tool_state: "queued", details: { stage: "in_progress" } }),
+			)?.phase,
+		).toBe("running");
+		expect(
+			imageGenView(
+				row({ tool_state: "running", details: { stage: "future-stage" } }),
+			)?.phase,
+		).toBe("running");
+	});
+
+	it("reads a terminal `completed` on a settled record to the done-arm", () => {
+		/* The live completion update does not reach the transcript today, but the
+		 * vocabulary value is documented (harness-lane freeze) and a settled
+		 * receipt carrying it must render the done-arm: the artifact through the
+		 * existing image path, no live treatment (the card's live guard is pinned
+		 * against `done` in `imagegen-card.test.ts`). Stray live fields on the
+		 * settled record change nothing. */
+		const view = imageGenView(
+			row({
+				tool_state: "done",
+				images: [{ index: 0, mime_type: "image/png" }],
+				details: {
+					stage: "completed",
+					log_lines: [
+						{
+							message: "IN_PROGRESS — upscaling",
+							timestamp: "2026-10-09T01:02:31Z",
+						},
+					],
+					progress_fraction: 0.9,
+				},
+			}),
+		);
+		expect(view?.phase).toBe("done");
+		expect(view?.artifact).toEqual({ index: 0, mimeType: "image/png" });
+		expect(view?.cancelable).toBe(false);
 	});
 
 	it("carries the tool's name and summary through verbatim", () => {
@@ -123,16 +197,21 @@ describe("imageGenView", () => {
 });
 
 describe("the live detail (the one place the field names live)", () => {
-	it("reads queue_position, progress and logs as sent", () => {
+	it("reads the canonical fields as sent", () => {
 		const live = imageGenLiveDetail(
 			row({
 				details: {
+					stage: "in_progress",
 					queue_position: 3,
-					progress: 0.42,
-					logs: ["IN_QUEUE", "IN_PROGRESS"],
+					progress_fraction: 0.42,
+					log_lines: [
+						{ message: "IN_QUEUE", timestamp: "2026-10-09T00:00:00Z" },
+						{ message: "IN_PROGRESS", timestamp: "2026-10-09T00:00:02Z" },
+					],
 				},
 			}),
 		);
+		expect(live.stage).toBe("in_progress");
 		expect(live.queuePosition).toBe(3);
 		expect(live.progress).toBe(0.42);
 		expect(live.logs).toEqual(["IN_QUEUE", "IN_PROGRESS"]);
@@ -154,14 +233,24 @@ describe("the live detail (the one place the field names live)", () => {
 		expect(live.errorType).toBe("media_failed");
 	});
 
-	it("keeps a log array to its string lines, verbatim", () => {
+	it("keeps a log array to its message lines, verbatim", () => {
 		const live = imageGenLiveDetail(
-			row({ details: { logs: ["first", 7, null, "second"] } }),
+			row({
+				details: {
+					log_lines: [
+						{ message: "first", timestamp: "t1" },
+						{ timestamp: "t2" },
+						{ message: 7 },
+						"second",
+						{ message: "third" },
+					],
+				},
+			}),
 		);
-		/* Non-strings are DROPPED rather than stringified: a `7` was never a log
-		 * line, and rendering "7" would be this client writing the machine's
-		 * script for it. */
-		expect(live.logs).toEqual(["first", "second"]);
+		/* Entries without a string `message` are DROPPED rather than stringified:
+		 * a `7` was never a log line, and rendering "7" would be this client
+		 * writing the machine's script for it. */
+		expect(live.logs).toEqual(["first", "third"]);
 	});
 
 	it("reads the provider's error from the entry, falling back to details", () => {
@@ -189,11 +278,11 @@ describe("the live detail (the one place the field names live)", () => {
 		],
 		["a fractional queue position", { queue_position: 3.5 }, "queuePosition"],
 		["a negative queue position", { queue_position: -1 }, "queuePosition"],
-		["a string progress", { progress: "0.5" }, "progress"],
-		["a fraction above one", { progress: 1.5 }, "progress"],
-		["a negative fraction", { progress: -0.01 }, "progress"],
-		["NaN", { progress: Number.NaN }, "progress"],
-		["logs that are not an array", { logs: "IN_PROGRESS" }, "logs"],
+		["a string fraction", { progress_fraction: "0.5" }, "progress"],
+		["a fraction above one", { progress_fraction: 1.5 }, "progress"],
+		["a negative fraction", { progress_fraction: -0.01 }, "progress"],
+		["NaN", { progress_fraction: Number.NaN }, "progress"],
+		["log_lines that are not an array", { log_lines: "IN_PROGRESS" }, "logs"],
 		["a non-string error", { error: 500 }, "error"],
 		["a non-string error_type", { error_type: 7 }, "errorType"],
 	])("reads %s as absent", (_case, details, field) => {
@@ -210,20 +299,50 @@ describe("the live detail (the one place the field names live)", () => {
 	it("reads the boundary fractions as present", () => {
 		/* 0 and 1 are real states — "barely started" and "done bar-wise" — and
 		 * the falsy trap is exactly how a `0` gets rendered as "no progress". */
-		expect(imageGenLiveDetail(row({ details: { progress: 0 } })).progress).toBe(
-			0,
-		);
-		expect(imageGenLiveDetail(row({ details: { progress: 1 } })).progress).toBe(
-			1,
-		);
+		expect(
+			imageGenLiveDetail(row({ details: { progress_fraction: 0 } })).progress,
+		).toBe(0);
+		expect(
+			imageGenLiveDetail(row({ details: { progress_fraction: 1 } })).progress,
+		).toBe(1);
 		expect(
 			imageGenLiveDetail(row({ details: { queue_position: 0 } })).queuePosition,
 		).toBe(0);
 	});
 
+	it("reads the five canonical stages", () => {
+		for (const stage of [
+			"queued",
+			"in_progress",
+			"completed",
+			"cancelled",
+			"cancelling",
+		] as const) {
+			expect(imageGenLiveDetail(row({ details: { stage } })).stage).toBe(stage);
+		}
+	});
+
+	it("reads an explicit `stage: null` as the failure the contract says it is", () => {
+		expect(
+			imageGenLiveDetail(row({ details: { stage: null } })).stage,
+		).toBeNull();
+	});
+
+	it("reads an unknown stage as absent, so the fallback renders instead", () => {
+		/* A future vocabulary value must not crash or mispaint: it reads as
+		 * absent and the tool_state fallback draws the reduced state. */
+		expect(
+			imageGenLiveDetail(row({ details: { stage: "downloading" } })).stage,
+		).toBeUndefined();
+		expect(
+			imageGenLiveDetail(row({ details: { stage: 3 } })).stage,
+		).toBeUndefined();
+	});
+
 	it("reads everything as absent from an empty details bag", () => {
 		const live = imageGenLiveDetail(row({}));
 		expect(live).toEqual({
+			stage: undefined,
 			queuePosition: null,
 			progress: null,
 			logs: [],
@@ -322,11 +441,11 @@ describe("cancel gating", () => {
 });
 
 describe("the already-finished conflict", () => {
-	/* Harness-lane freeze (2026-10-08): a cancel that races a job which already
-	 * finished answers a CONFLICT with `error_type: media_already_completed`,
-	 * and the frozen rule is that no surface paints it as an error. The card's
-	 * half of that rule is this derivation — "Already finished", quiet tone,
-	 * no failure sentence. */
+	/* Harness-lane freeze (2026-10-09): a cancel that races a job which already
+	 * finished answers a CONFLICT with `error_type: media_already_completed` +
+	 * the platform's own sentence, and the frozen rule is that no surface paints
+	 * it as an error. The card's half of that rule is this derivation — "Already
+	 * finished", quiet tone, no failure sentence. */
 	it("marks a failed row whose code is the conflict", () => {
 		const view = imageGenView(
 			row({
@@ -335,6 +454,25 @@ describe("the already-finished conflict", () => {
 				details: { error_type: "media_already_completed" },
 			}),
 		);
+		expect(view?.alreadyFinished).toBe(true);
+	});
+
+	it("marks the canonical cancelled fold of the same conflict", () => {
+		/* The producer's final row carries `stage: "cancelled"` + the pair; the
+		 * tool_state fold may read failed — BOTH folds must render "Already
+		 * finished", and this is the shape the freeze landed. */
+		const view = imageGenView(
+			row({
+				tool_state: "failed",
+				details: {
+					stage: "cancelled",
+					error:
+						"The generation had already completed when the cancel arrived; its result was discarded.",
+					error_type: "media_already_completed",
+				},
+			}),
+		);
+		expect(view?.phase).toBe("cancelled");
 		expect(view?.alreadyFinished).toBe(true);
 	});
 
@@ -352,10 +490,12 @@ describe("the already-finished conflict", () => {
 		expect(view?.alreadyFinished).toBe(false);
 	});
 
-	it("is false for any phase other than failed, even when the row carries the code", () => {
-		/* The code is a CONFLICT's; on a done or running row it is not the
-		 * reading this client is entitled to make. */
-		for (const state of ["queued", "running", "done", "interrupted"] as const) {
+	it("is false for any LIVE or done row, even when the row carries the code", () => {
+		/* The code is a CONFLICT's, and a conflict is a settled row: on a done,
+		 * queued or running row it is not the reading this client is entitled to
+		 * make. The settled fallback (`interrupted`) does read it — that is the
+		 * same conflict fold the fallback exists for. */
+		for (const state of ["queued", "running", "done"] as const) {
 			expect(
 				imageGenView(
 					row({
@@ -365,6 +505,14 @@ describe("the already-finished conflict", () => {
 				)?.alreadyFinished,
 			).toBe(false);
 		}
+		expect(
+			imageGenView(
+				row({
+					tool_state: "interrupted",
+					details: { error_type: "media_already_completed" },
+				}),
+			)?.alreadyFinished,
+		).toBe(true);
 	});
 });
 
@@ -400,11 +548,10 @@ describe("the copy and the tone tables", () => {
 		});
 	});
 
-	it("does not let a running row claim a cancellation in progress", () => {
-		/* `cancelling` is NOT produced by the adapter at all: it is the component's
-		 * local overlay on a live phase, applied after the press and until the
-		 * entry settles. A view that could say `cancelling` on its own would be a
-		 * state the wire never stated. */
+	it("produces `cancelling` only from the wire's own stage", () => {
+		/* The tool_state fallback never produces it. The canonical stage carries
+		 * it (the cancel-confirmation hold), and the card's local overlay covers
+		 * the window before the feed's first update — the two draw one word. */
 		for (const state of [
 			"queued",
 			"running",
@@ -416,6 +563,11 @@ describe("the copy and the tone tables", () => {
 				"cancelling",
 			);
 		}
+		expect(
+			imageGenView(
+				row({ tool_state: "running", details: { stage: "cancelling" } }),
+			)?.phase,
+		).toBe("cancelling");
 	});
 
 	it("composes the queued word with the position only when one arrived", () => {
