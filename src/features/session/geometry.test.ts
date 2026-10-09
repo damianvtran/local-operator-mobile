@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import {
+	ESTIMATED_ROW_PT,
 	estimateVisibleRows,
+	rowLayout,
+	tailStartIndex,
 	windowPolicy,
 } from "@/features/session/windowing";
 
@@ -118,5 +121,96 @@ describe("the transcript's render window", () => {
 		const policy = windowPolicy(844, 7);
 		expect(policy.estimatedMountedRows).toBe(7);
 		expect(policy.initialNumToRender).toBe(7);
+	});
+});
+
+/**
+ * The list's placement arithmetic: where the tail start is, and what one row
+ * occupies.
+ *
+ * These are pinned because both failures are SILENT. A tail start that is off by
+ * the render window leaves the first frame showing rows the reader did not come
+ * for (the defect: the transcript opened at the top and was scrolled down after
+ * it painted); and a row layout that ignores the measured heights makes
+ * `getItemLayout` place its jumps from the estimate alone, so a find jump lands
+ * near the target rather than on it. Neither shows up as a thrown error, and a
+ * still frame of the settled state cannot tell either apart from the correct
+ * one.
+ */
+describe("tailStartIndex", () => {
+	it("starts at the first row of the last screenful, so the first render mounts the tail", () => {
+		// 520 rows, a 12-row window: rows 508..519 mount on the first render —
+		// the tail the reader asked for, at the heights the list already knows.
+		expect(tailStartIndex(520, 12)).toBe(508);
+	});
+
+	it("starts at 0 for a conversation shorter than the window", () => {
+		expect(tailStartIndex(7, 12)).toBe(0);
+		expect(tailStartIndex(12, 12)).toBe(0);
+		expect(tailStartIndex(0, 12)).toBe(0);
+	});
+
+	it("never returns a negative index, whatever window it is handed", () => {
+		// A window of 0 or less is not a thing the policy produces, but the
+		// arithmetic must not depend on that: a negative index is a list that
+		// throws rather than a list that opens at the top.
+		expect(tailStartIndex(5, 0)).toBe(4);
+		expect(tailStartIndex(5, -3)).toBe(4);
+	});
+});
+
+describe("rowLayout", () => {
+	const ids = ["a", "b", "c", "d"];
+	const idAt = (at: number) => ids[at];
+
+	it("offsets a row by the MEASURED heights above it", () => {
+		const heights = new Map([
+			["a", 100],
+			["b", 20],
+			["c", 60],
+		]);
+		expect(rowLayout(0, idAt, heights)).toEqual({
+			index: 0,
+			offset: 0,
+			length: 100,
+		});
+		expect(rowLayout(2, idAt, heights)).toEqual({
+			index: 2,
+			offset: 120,
+			length: 60,
+		});
+	});
+
+	it("falls back to the estimate for a row nobody has measured", () => {
+		const heights = new Map([["a", 100]]);
+		// b and c have never laid out: the estimate is the small side of the real
+		// distribution (windowing.ts's note), so the tail the list asks for is
+		// reached as the rows above it mount rather than overshot into blank space.
+		// b has not measured either, so the offset is a's real height plus b's
+		// estimate — never a re-estimate of the row being asked about.
+		expect(rowLayout(2, idAt, heights)).toEqual({
+			index: 2,
+			offset: 100 + ESTIMATED_ROW_PT,
+			length: ESTIMATED_ROW_PT,
+		});
+		// An index with no id at all (the list asking about a row it does not have)
+		// is the estimate, never NaN.
+		expect(rowLayout(9, idAt, heights).length).toBe(ESTIMATED_ROW_PT);
+	});
+
+	it("is the same answer the list's own metrics would give when every row is measured", () => {
+		const heights = new Map([
+			["a", 100],
+			["b", 20],
+			["c", 60],
+			["d", 40],
+		]);
+		// Sum of the heights above equals the offset, for every index: the property
+		// that makes the layout consistent enough to place an initial scroll.
+		let expected = 0;
+		for (let at = 0; at < ids.length; at += 1) {
+			expect(rowLayout(at, idAt, heights).offset).toBe(expected);
+			expected += heights.get(ids[at] as string) ?? 0;
+		}
 	});
 });

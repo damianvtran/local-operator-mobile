@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+	useCallback,
+	useEffect,
+	useLayoutEffect,
+	useMemo,
+	useRef,
+	useState,
+} from "react";
 import {
 	FlatList,
 	type LayoutChangeEvent,
@@ -19,7 +26,12 @@ import {
 	parseExpandHook,
 	type TranscriptItem,
 } from "@/features/session/turn-condensing";
-import { windowPolicy } from "@/features/session/windowing";
+import {
+	rowLayout,
+	TAIL_CLAMP_OFFSET_PT,
+	tailStartIndex,
+	windowPolicy,
+} from "@/features/session/windowing";
 import { completionAnchorId, transcriptRowId } from "@/ui/a11y";
 import { cx } from "@/ui/variants";
 
@@ -29,9 +41,23 @@ import { cx } from "@/ui/variants";
  * **Virtualised for the long case, not the common one.** The relay's own
  * `long-transcript` scenario is 520 rows and every row can change height while it
  * streams, so the list is a `FlatList` with a window derived from the viewport
- * (`windowing.ts`) rather than a plain scroller. `getItemLayout` is deliberately
- * NOT used: it requires a fixed row height, and lying about it to the virtualiser
- * is how a streaming transcript jumps under the reader's finger.
+ * (`windowing.ts`) rather than a plain scroller. `getItemLayout` answers from the
+ * MEASURED height cache (`windowing.ts`'s layout facts): a row that has laid out
+ * once keeps the height it laid out with, so the list can place itself and jump
+ * to an index without the virtualiser guessing, and a row nobody has seen yet
+ * falls back to the estimate.
+ *
+ * **The first frame is the tail.** The list OPENS at the last screenful
+ * (`initialScrollIndex`, `tailStartIndex`) instead of rendering from the top and
+ * being scrolled down afterwards by `onContentSizeChange`. That mattered because
+ * the old path's first frame was the top of the conversation at estimated
+ * heights, and every later frame was a correction the reader watched: the tail
+ * pin is now a clamp to the content's end (`TAIL_CLAMP_OFFSET_PT`) that only
+ * runs while the reader is already at the tail — the auto-follow below, not the
+ * thing that decides where the list starts. `initialScrollIndex` is deliberately
+ * NOT passed when this session has a saved offset to restore or a capture hook
+ * asked for the top: those are the two cases where the reader is not going to
+ * the tail, and opening there first would be a jump they see.
  *
  * **Auto-follow only at the tail.** The view follows new content while the reader
  * is already at the bottom, and stops the moment they scroll up — the web client
@@ -145,6 +171,18 @@ export const TranscriptList = ({
 	 *  one position). Read once — it is a statement about the page. */
 	const [scrollAnchor] = useState(scrollAnchorFromHook);
 	const atTail = useRef(scrollAnchor !== "top");
+	/** Whether this mount opens somewhere other than the tail — a saved offset to
+	 *  restore (`F-6.11` — Back preserves scroll) or the capture hook's `top`.
+	 *  Read ONCE, at mount, because `initialScrollIndex` is read once by the list
+	 *  too: a value that changed later would be a statement the list never acts on.
+	 *  A session switch after mount keeps today's behaviour (the restore in
+	 *  `onContentSizeChange` puts the reader back and the tail pin does not run),
+	 *  so the cost of the latch is only that a switch cannot open at the tail in
+	 *  its very first frame — the cold open, which is the case the tail start
+	 *  exists for, is unaffected. */
+	const [openElsewhere] = useState(
+		() => scrollAnchor === "top" || (scrollOffsets.get(sessionId) ?? 0) > 0,
+	);
 	/** Which session's offset has already been restored, held as a ref rather than
 	 *  in an effect keyed on `sessionId`: the restore has to run when the list first
 	 *  has content, which is an event the list emits, not a render this hook sees. */
@@ -284,14 +322,38 @@ export const TranscriptList = ({
 		);
 	}, []);
 
+	/**
+	 * The per-row `onLayout` storm, coalesced to one recompute per frame.
+	 *
+	 * WHY. Opening a transcript lays out every mounted row in a burst (and a
+	 * streaming answer re-lays out its row every few frames). Each of those used to
+	 * run the anchor walk immediately, so a window full of rows walked once per row
+	 * inside one frame to answer a question whose answer cannot change before that
+	 * frame is painted anyway. Every OTHER path still runs the walk synchronously —
+	 * the scroll handler, a new frame's rows, the list's own layout event — so the
+	 * first truthful reading is never late; only the redundant repeats inside one
+	 * frame are dropped.
+	 */
+	const recomputeFrameRef = useRef<number | null>(null);
+	const scheduleRecompute = useCallback(() => {
+		if (recomputeFrameRef.current !== null) return;
+		recomputeFrameRef.current = requestAnimationFrame(() => {
+			recomputeFrameRef.current = null;
+			recompute();
+		});
+	}, [recompute]);
+
 	/** One row's laid-out height arrived. Heights change while text streams, so
-	 *  a re-measure overwrites — the latest layout is the truth. */
+	 *  a re-measure overwrites — the latest layout is the truth. The height is
+	 *  written SYNCHRONOUSLY, because the layout cache `getItemLayout` answers from
+	 *  must be current before the next scroll request is computed; only the
+	 *  downstream recompute is deferred (see `scheduleRecompute`). */
 	const measureRow = useCallback(
 		(id: string, height: number) => {
 			heightsRef.current.set(id, height);
-			recompute();
+			scheduleRecompute();
 		},
-		[recompute],
+		[scheduleRecompute],
 	);
 
 	/* A session switch starts the geometry over: heights belong to the rows that
@@ -327,6 +389,22 @@ export const TranscriptList = ({
 	const planRef = useRef(plan);
 	planRef.current = plan;
 
+	/**
+	 * Where one RENDERED item sits, for the virtualiser's placement and jumps.
+	 *
+	 * It answers from the measured height cache, falling back to the estimate for
+	 * rows nobody has laid out yet (`windowing.ts` owns both numbers and why the
+	 * estimate errs small). Stable across renders on purpose: the list holds this
+	 * function for the lifetime of the mount, and the data it answers about arrives
+	 * as `data`/the item ref rather than as a dependency, so a frame that re-emits
+	 * the same rows does not hand the virtualiser a different metric source.
+	 */
+	const getItemLayout = useCallback(
+		(data: ArrayLike<TranscriptItem> | null | undefined, index: number) =>
+			rowLayout(index, (at) => data?.[at]?.id, heightsRef.current),
+		[],
+	);
+
 	const revealToIndex = useCallback((index: number) => {
 		// A jump is the reader leaving the tail: following the next frame would
 		// yank them off the message they just landed on.
@@ -336,35 +414,38 @@ export const TranscriptList = ({
 			viewPosition: 0.3,
 			animated: false,
 		});
-	}, []);
-
-	const onScrollToIndexFailed = useCallback(
-		(info: { index: number; averageItemLength: number }) => {
-			const list = listRef.current;
-			if (list === null) return;
-			// Land near the target using what the list knows (its average row),
-			// then ask again for the exact index once the rows around it have
-			// mounted and been measured — the documented recovery for a
-			// variable-height list with no `getItemLayout`.
-			list.scrollToOffset({
-				offset: Math.max(0, info.averageItemLength * info.index),
+		/* THE DEEP JUMP'S SECOND HALF, now armed here.
+		 *
+		 * With `getItemLayout` present the list never reports
+		 * `onScrollToIndexFailed` — it trusts the metrics it was handed — so the
+		 * recovery that used to arrive from that callback has to be armed on this
+		 * side: a row nobody has measured is placed by the ESTIMATE, and the row's
+		 * real height differs, so the landing is approximate. Re-issuing the same
+		 * index after the rows around it have mounted and measured lands it
+		 * exactly. 75 ms is the delay the old callback used, kept because it was
+		 * measured against this list's mount batching. */
+		const id = itemsRef.current[index]?.id;
+		if (id === undefined || heightsRef.current.has(id)) return;
+		if (revealTimerRef.current !== null) {
+			clearTimeout(revealTimerRef.current);
+		}
+		revealTimerRef.current = setTimeout(() => {
+			revealTimerRef.current = null;
+			listRef.current?.scrollToIndex({
+				index,
+				viewPosition: 0.3,
 				animated: false,
 			});
-			if (revealTimerRef.current !== null) {
-				clearTimeout(revealTimerRef.current);
-			}
-			revealTimerRef.current = setTimeout(() => {
-				revealTimerRef.current = null;
-				revealToIndex(info.index);
-			}, 75);
-		},
-		[revealToIndex],
-	);
+		}, 75);
+	}, []);
 
 	useEffect(
 		() => () => {
 			if (revealTimerRef.current !== null) {
 				clearTimeout(revealTimerRef.current);
+			}
+			if (recomputeFrameRef.current !== null) {
+				cancelAnimationFrame(recomputeFrameRef.current);
 			}
 		},
 		[],
@@ -438,31 +519,70 @@ export const TranscriptList = ({
 		[sessionId, recompute],
 	);
 
+	/**
+	 * Pin the list to its end, before the frame is painted.
+	 *
+	 * WHY A LAYOUT EFFECT AND NOT ONLY THE CONTENT-SIZE EVENT. The list's rows
+	 * arrive in a commit, and on the web the browser can paint that commit before
+	 * the content-size callback arrives (a resize observer callback is delivered
+	 * after the mutation, and this was MEASURED: the first frame carrying rows had
+	 * `scrollTop` 0 while the mounted window was already the tail, so the reader got
+	 * a blank frame before the jump to the end). A layout effect runs after the DOM
+	 * is committed and before paint, so the clamp lands in the same frame as the
+	 * rows — the first frame that carries content is already the tail. The
+	 * content-size clamp below stays for what the rows' own later layout does (a
+	 * streaming answer growing its row, an image arriving), where the commit that
+	 * changes the height is not a commit of this component's at all.
+	 */
+	const pinTail = useCallback(() => {
+		if (!atTail.current) return;
+		listRef.current?.scrollToOffset({
+			offset: TAIL_CLAMP_OFFSET_PT,
+			animated: false,
+		});
+	}, []);
+	// biome-ignore lint/correctness/useExhaustiveDependencies: `plan.items.length` is the trigger (a commit that brought rows); the body reads refs by design.
+	useLayoutEffect(() => {
+		if (openElsewhere) return;
+		pinTail();
+	}, [openElsewhere, pinTail, plan.items.length]);
+
 	/* The offset is restored once, after the first content change: before that there
 	 * is nothing to scroll, and a restore that ran into an empty list would silently
 	 * lose the position (F-6.11 — Back preserves scroll). Keyed on the session so a
-	 * session switch restores ITS offset rather than the previous one's. */
-	const onContentSizeChange = useCallback(
-		(_width: number, height: number) => {
-			factsRef.current = { ...factsRef.current, contentPt: height };
-			if (restoredFor.current !== sessionId) {
-				restoredFor.current = sessionId;
-				const saved = scrollOffsets.get(sessionId);
-				// The capture hook's anchor outranks a saved offset: a page that asked
-				// for `top` asked for the top.
-				if (scrollAnchor !== "top" && saved !== undefined && saved > 0) {
-					listRef.current?.scrollToOffset({ offset: saved, animated: false });
-					recompute();
-					return;
+	 * session switch restores ITS offset rather than the previous one's. */ const onContentSizeChange =
+		useCallback(
+			(_width: number, height: number) => {
+				factsRef.current = { ...factsRef.current, contentPt: height };
+				if (restoredFor.current !== sessionId) {
+					restoredFor.current = sessionId;
+					const saved = scrollOffsets.get(sessionId);
+					// The capture hook's anchor outranks a saved offset: a page that asked
+					// for `top` asked for the top.
+					if (scrollAnchor !== "top" && saved !== undefined && saved > 0) {
+						listRef.current?.scrollToOffset({ offset: saved, animated: false });
+						recompute();
+						return;
+					}
 				}
-			}
-			if (atTail.current) {
-				listRef.current?.scrollToEnd({ animated: false });
-			}
-			recompute();
-		},
-		[sessionId, recompute, scrollAnchor],
-	);
+				if (atTail.current) {
+					/* The tail pin, and why it is a CLAMP rather than `scrollToEnd`.
+					 *
+					 * `scrollToEnd` computes its destination from the row metrics, and rows
+					 * nobody has measured are ESTIMATED (`windowing.ts`), so on a long
+					 * conversation it stops short of the true end and the newest row sits
+					 * just off screen. An offset past the content's end is clamped by every
+					 * platform to the content's end, which is exactly the answer wanted and
+					 * needs no height to be right. It runs ONLY while the reader is already
+					 * at the tail (the auto-follow rule above): it is the correction that
+					 * keeps a growing row from pushing the newest line away, not the thing
+					 * that decides where the list starts — that is `initialScrollIndex`. */
+					pinTail();
+				}
+				recompute();
+			},
+			[sessionId, recompute, scrollAnchor, pinTail],
+		);
 
 	const renderItem = useCallback(
 		({ item }: { item: TranscriptItem }) =>
@@ -551,7 +671,24 @@ export const TranscriptList = ({
 			onScroll={onScroll}
 			scrollEventThrottle={16}
 			onContentSizeChange={onContentSizeChange}
-			onScrollToIndexFailed={onScrollToIndexFailed}
+			/* The two props that make the FIRST frame the one the reader came for.
+			 *
+			 * `initialScrollIndex` mounts the LAST screenful, and `getItemLayout`
+			 * tells the list where that screenful sits — so the open renders its
+			 * final rows and the tail `onContentSizeChange` clamp is a correction
+			 * rather than the mechanism that gets there. Omitted when this mount is
+			 * headed somewhere else (`openElsewhere`): a restored offset or the
+			 * capture hook's top. There is deliberately no
+			 * `onScrollToIndexFailed` beside them — the list never reports a failed
+			 * jump when it has metrics, so the deep-jump recovery lives in
+			 * `revealToIndex`, which is the only place that knows a target is
+			 * unmeasured. */
+			initialScrollIndex={
+				openElsewhere
+					? undefined
+					: tailStartIndex(plan.items.length, policy.initialNumToRender)
+			}
+			getItemLayout={getItemLayout}
 			// Keyboard stays open while scrolling: the reader is scrolling to read the
 			// answer to what they just typed.
 			keyboardShouldPersistTaps="handled"
