@@ -418,7 +418,7 @@ export const CI_DEVICES: string[] = ["iphone-se", "tablet-landscape"];
  * WHAT IT COSTS, because it is NOT free and the two are one decision. Three scales on
  * both CI profiles is 816 cells, +50 % over the two-scale 544, so the per-push capture
  * and audit bounds in `.github/workflows/e2e.yml` were raised with it — most recently to
- * capture 45 / audit 20 / job 80. That is this slice's ten cells (nine lifecycle surfaces
+ * capture 45 / audit 25 / job 80. That is this slice's ten cells (nine lifecycle surfaces
  * and the pane's long-press menu) on top of the base the branch was cut from, plus the
  * four cells upstream landed while it was open, plus the find slice's five cells (four
  * find states and the caveat) and the schedules slice's five S17 cells (the armed
