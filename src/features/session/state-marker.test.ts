@@ -143,6 +143,20 @@ describe("sessionStateFlags", () => {
 		).toEqual(derived);
 	});
 
+	it("keeps the rail's zero-tick marker out of the `-empty` vocabulary", () => {
+		// An empty RAIL is not an empty SCREEN. The readiness sweep reads every id
+		// ending `-empty` as a screen-level empty state — and for an ad-hoc `path:`
+		// cell it reads them ALL (`tools/lib/readiness.ts`, `EMPTY_MARKER_SUFFIX`).
+		// The rail's zero-tick marker is present under ANY session screen whose
+		// manifest is ready-empty, so as `session-checkpoint-rail-empty` it failed
+		// all 24 `long-transcript` path cells on the ci tier (run 37903228591);
+		// this pins the id out of the suffix.
+		expect(STATE_MARKER.session["rail-empty"].endsWith("-empty")).toBe(false);
+		expect(STATE_MARKER.session["rail-empty"]).toBe(
+			"session-checkpoint-rail-no-ticks",
+		);
+	});
+
 	it("points the empty and loading states at the id a connected frame carries", () => {
 		// QA round 6, Q1. `session-empty` is `EMPTY.session`, painted on the NOT-connected
 		// branch; a connected session that has answered with no rows paints the

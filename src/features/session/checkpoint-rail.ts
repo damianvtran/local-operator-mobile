@@ -83,10 +83,11 @@ export interface PositionedRailMark {
 /**
  * The rail's whole renderable state — the state set the capture cells declare
  * (S5/rail, S5/rail-deep, S5/rail-building, S5/rail-error). The `ready`+[]
- * state draws no rail and is pinned by the unit and e2e suites instead — the
- * readiness harness reads any empty marker for a cell that does not declare
- * `empty`, so a rail-empty cell would be misread as a miss, and S5/empty
- * already proves the empty-shaped screen.
+ * state draws no rail and is pinned by the unit and e2e suites instead — a
+ * cell for it would be the empty-shaped frame S5/empty already proves, and
+ * its marker deliberately stays out of the `-empty` suffix (see `rail-empty`
+ * in `src/ui/a11y.ts`: the readiness sweep reads that suffix as a screen
+ * empty wherever a `path:` cell can see it).
  *
  * `waiting` and `unavailable` BOTH render nothing, and they are still two
  * states because they are different facts: `waiting` has not heard from the

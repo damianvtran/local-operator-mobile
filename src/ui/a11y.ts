@@ -1005,12 +1005,18 @@ export const STATE_MARKER = {
 		 *  its own `error` state (a failed refresh, never an empty rail);
 		 *  `rail-empty` — `ready` with genuinely no ticks (a zero-size marker:
 		 *  the empty rail draws nothing VISIBLE, and the marker's job is to
-		 *  keep "empty" from being confused with "nothing answered"). */
+		 *  keep "empty" from being confused with "nothing answered"). Its id
+		 *  deliberately does NOT end `-empty`: the readiness sweep reads every
+		 *  id with that suffix as a screen-level empty state, and for an ad-hoc
+		 *  `path:` cell it reads them all (`tools/lib/readiness.ts`,
+		 *  `EMPTY_MARKER_SUFFIX`) — an empty rail is not an empty screen. Named
+		 *  `…-rail-empty`, it failed all 24 `long-transcript` path cells on the
+		 *  ci tier (run 37903228591); the id must stay out of the suffix. */
 		rail: "session-checkpoint-rail-ready",
 		"rail-deep": "session-checkpoint-rail-deep",
 		"rail-building": "session-checkpoint-rail-building",
 		"rail-error": "session-checkpoint-rail-error",
-		"rail-empty": "session-checkpoint-rail-empty",
+		"rail-empty": "session-checkpoint-rail-no-ticks",
 		"rich-rows": "session-rich-rows",
 		/* A transcript that carries a markdown table — the rows U-38's check
 		 * exists for. Derived from the same parser the renderer uses
