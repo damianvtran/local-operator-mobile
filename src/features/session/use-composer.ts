@@ -496,6 +496,10 @@ export const useComposer = (input: {
 	 */
 	const stop = useCallback(async (): Promise<boolean> => {
 		if (endpoints === null) return false;
+		/* The attempt clears the line it is about to replace, exactly as `send`
+		 * and `answerApproval` do: a stale "the relay could not be reached." must
+		 * not outlive the retry that worked (QA round 2's NIT). */
+		setError(null);
 		try {
 			await endpoints.command(sessionId, { op: "abort" });
 			return true;

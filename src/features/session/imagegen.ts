@@ -125,6 +125,13 @@ export const IMAGEGEN_ALREADY_FINISHED_TONE: ImageGenTone = {
  * the reader can act on, and none of them is a verdict the feed has not stated.
  * `done`'s word is chosen by `imageGenStateLine` — "Image ready" claims an image
  * is there, which is only true once the artifact has arrived.
+ *
+ * `cancelled` is the provider's own terminal word for an aborted generation
+ * (the frozen wire vocabulary's `CANCELLED`) and is deliberately NOT the
+ * generic tool row's "Interrupted — the output above is partial." — that
+ * sentence warns about partial TEXT output, which a generation does not have
+ * (its artifact either arrived or did not). One wire state, two sentences
+ * answering two different questions (design round 1, D3).
  */
 export const IMAGEGEN_STATE_WORD: Record<ImageGenCardPhase, string> = {
 	queued: "Queued",

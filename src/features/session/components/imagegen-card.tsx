@@ -13,7 +13,7 @@ import {
 import { imagegenCancelId, transcriptImageId } from "@/ui/a11y";
 import { Button, Shimmer, useReducedMotion } from "@/ui/components";
 import { parseCubicBezier } from "@/ui/motion";
-import { DURATIONS, EASINGS } from "@/ui/tokens.gen";
+import { EASINGS } from "@/ui/tokens.gen";
 import { cx } from "@/ui/variants";
 
 /**
@@ -29,9 +29,10 @@ import { cx } from "@/ui/variants";
  *
  * The card's own states, and the two that are load-bearing:
  *
- *   - **`cancelling` is local and never optimistic.** Pressing Cancel requests
- *     the EXISTING turn interrupt (`composer.stop` — the composer's own Stop
- *     semantics, threaded in by the screen; there is no second mechanism), and
+ *   - **`cancelling` is local and never optimistic.** Pressing `Stop turn`
+ *     requests the EXISTING turn interrupt (`composer.stop` — the composer's
+ *     own Stop semantics, threaded in by the screen; there is no second
+ *     mechanism), and
  *     the card then draws "Cancelling…" until the entry settles into its real
  *     state. A client that painted "Cancelled" on the press would be claiming a
  *     confirmation the provider has not given.
@@ -66,10 +67,14 @@ export type ImageGenCardProps = {
  *  new geometry into the transcript. */
 const FRAME_HEIGHT_PX = 64;
 
-/** The moving segment's width, and its sweep. One token: the app's "something
- *  is still happening" beat (the shimmer's half-period). */
+/** The moving segment's width, and its sweep. The sweep takes the kit's own
+ *  loop role for this element — `motion.looping.loadbar` ({duration: 1100,
+ *  easing: "in-out"}, `design/tokens/tokens.json`) — rather than a value from
+ *  the one-shot duration ramp: `DURATIONS.beat` is an emphasis token, and a
+ *  loop drawn from it out-beats every loop the kit budgets (design round 1,
+ *  D1). */
 const SEGMENT_PCT = 38;
-const SWEEP_MS = DURATIONS.beat;
+const SWEEP_MS = 1100;
 
 /** The log tail: how many of the provider's last lines the card shows. Two
  *  mono-sm lines are a current activity plus its predecessor; more is the
@@ -80,12 +85,20 @@ const LOG_TAIL_LINES = 2;
 /**
  * The indeterminate progress: a segment sweeping the track, left to right.
  *
+ * The segment moves by `translateX` (a transform) rather than `left` (a layout
+ * property), which is what lets the whole loop take the kit's canonical native
+ * shape (`motion.native.coreAnimated`, `tokens.json`: `Animated.timing(value,
+ * { …, useNativeDriver: true })`). That needs the track's width in points —
+ * measured once through `onLayout` in the parent — so the sweep HOLDS at its
+ * start until the width is real rather than animating against a guess (design
+ * round 1, D5).
+ *
  * Reduced motion stops it at its RESTING frame — mid-track, where a static
  * segment still reads as a progress control — because a looping animation is
  * removed rather than slowed (`tokens.json § motion.reducedMotion`; the
  * shimmer and the skeleton do the same).
  */
-const IndeterminateTrack = () => {
+const IndeterminateTrack = ({ trackWidth }: { trackWidth: number }) => {
 	const reduceMotion = useReducedMotion();
 	const value = useRef(new Animated.Value(0)).current;
 
@@ -94,32 +107,45 @@ const IndeterminateTrack = () => {
 			value.setValue(0.5);
 			return;
 		}
+		if (trackWidth <= 0) {
+			// Not measured yet: nothing to sweep across.
+			value.setValue(0);
+			return;
+		}
 		value.setValue(0);
 		const loop = Animated.loop(
 			Animated.timing(value, {
 				toValue: 1,
 				duration: SWEEP_MS,
-				// The token's own linear curve, through the one adapter — a sweep
-				// is a position change, and the system's easings are the only
-				// allowed timings (`motion.ts`).
-				easing: Easing.bezier(...parseCubicBezier(EASINGS.linear)),
-				// `left` is a layout property: it cannot run on the native driver.
-				useNativeDriver: false,
+				// `motion.looping.loadbar`'s own curve, through the one adapter
+				// (`motion.ts`): the segment eases in and out of each pass.
+				easing: Easing.bezier(...parseCubicBezier(EASINGS["in-out"])),
+				// The kit's canonical native shape — the animated property is a
+				// transform now, so the driver is the native one.
+				useNativeDriver: true,
 			}),
 		);
 		loop.start();
 		return () => loop.stop();
-	}, [reduceMotion, value]);
+	}, [reduceMotion, trackWidth, value]);
 
 	return (
 		<Animated.View
 			className="absolute bottom-0 top-0 rounded-full bg-accent"
 			style={{
 				width: `${SEGMENT_PCT}%`,
-				left: value.interpolate({
-					inputRange: [0, 1],
-					outputRange: [`-${SEGMENT_PCT}%`, "100%"],
-				}),
+				transform: [
+					{
+						translateX: value.interpolate({
+							inputRange: [0, 1],
+							// Start: the segment fully off the LEFT edge (its own width to
+							// the negative); end: its left edge one track-width right, so
+							// it exits cleanly off the right — the traversal the previous
+							// `left: -38% → 100%` drew, now measured in points.
+							outputRange: [-(SEGMENT_PCT / 100) * trackWidth, trackWidth],
+						}),
+					},
+				],
 			}}
 		/>
 	);
@@ -135,31 +161,47 @@ const DeterminateTrack = ({ fraction }: { fraction: number }) => (
 );
 
 /** The image's slot while it is generated: a sunken frame whose bottom edge is
- *  the progress track. */
+ *  the progress track. The track reports its measured width here — the one
+ *  number the indeterminate sweep needs — and the fraction, when one arrived,
+ *  reaches assistive tech as a VALUE: sighted readers get width-only by design,
+ *  but without `accessibilityValue` a reader who cannot see the bar got no
+ *  measurement at all (design round 1, D4). The indeterminate branch states no
+ *  value on purpose: there is no number to state. */
 const GeneratingFrame = ({
 	fraction,
 	label,
 }: {
 	fraction: number | null;
 	label: string;
-}) => (
-	<View
-		className="overflow-hidden rounded-sm border border-hairline bg-sunken"
-		style={{ height: FRAME_HEIGHT_PX }}
-		// The region a screen reader hears as the live part of the card; the
-		// visible word beside it is the same sentence, so nothing is announce-only.
-		accessibilityRole="progressbar"
-		accessibilityLabel={label}
-	>
-		<View className="absolute bottom-0 left-0 right-0 h-1 bg-elevated">
-			{fraction === null ? (
-				<IndeterminateTrack />
-			) : (
-				<DeterminateTrack fraction={fraction} />
-			)}
+}) => {
+	const [trackWidth, setTrackWidth] = useState(0);
+	return (
+		<View
+			className="overflow-hidden rounded-sm border border-hairline bg-sunken"
+			style={{ height: FRAME_HEIGHT_PX }}
+			// The region a screen reader hears as the live part of the card; the
+			// visible word beside it is the same sentence, so nothing is announce-only.
+			accessibilityRole="progressbar"
+			accessibilityLabel={label}
+			accessibilityValue={
+				fraction === null
+					? undefined
+					: { min: 0, max: 100, now: Math.round(fraction * 100) }
+			}
+		>
+			<View
+				className="absolute bottom-0 left-0 right-0 h-1 bg-elevated"
+				onLayout={(event) => setTrackWidth(event.nativeEvent.layout.width)}
+			>
+				{fraction === null ? (
+					<IndeterminateTrack trackWidth={trackWidth} />
+				) : (
+					<DeterminateTrack fraction={fraction} />
+				)}
+			</View>
 		</View>
-	</View>
-);
+	);
+};
 
 /** The tail of the provider's own log, last lines first in reading order. */
 const LogTail = ({ lines }: { lines: string[] }) => (
@@ -239,10 +281,17 @@ export const ImageGenCard = ({
 		hasArtifact: view.artifact !== null,
 		alreadyFinished: view.alreadyFinished,
 	});
-	/* The control is shown only where it applies: a live phase, no request in
-	 * flight, and a live turn to interrupt (the screen withholds `onCancelTurn`
+	/* The control is shown only where it applies — a live phase, no request in
+	 * flight, a live turn to interrupt (the screen withholds `onCancelTurn`
 	 * while the composer's own Stop is not visible, so the two controls share
-	 * one gate). */
+	 * one gate) — and its LABEL names the scope, not the card. The press is the
+	 * turn's own stop (the composer's `{op:"abort"}`), so a card-scoped word —
+	 * "Cancel" — promised a scope the mechanism does not have. "Stop turn" is
+	 * that action in the product's own vocabulary (the composer's control is
+	 * "Stop the running turn"; brand-kit's button verbs include `Stop`), and
+	 * every visible card shares the one label because they share the one
+	 * action — distinct labels per card would invent a per-card scope (design
+	 * round 1, D2). */
 	const showCancel =
 		view.cancelable && !cancelRequested && onCancelTurn !== undefined;
 	const liveTone = phase === "running" || phase === "cancelling";
@@ -285,7 +334,7 @@ export const ImageGenCard = ({
 				) : null}
 				{showCancel ? (
 					<Button
-						label="Cancel"
+						label="Stop turn"
 						variant="outline"
 						size="sm"
 						accessibilityHint="Stops the running turn, which cancels this generation."
