@@ -115,14 +115,46 @@ describe("sessionStateFlags", () => {
 			"find-hit",
 			"find-caveat",
 		];
+		// The checkpoint rail states are the third exception, the same shape one
+		// layer down from find: their derivation is the rail's OWN state (the
+		// manifest's `index.state`, read by `railState` — `features/session/
+		// components/checkpoint-rail.tsx`), which is a relay answer about a
+		// journal, never a projection fact. A streaming turn does not decide
+		// whether a checkpoint scan is building, so requiring a
+		// `sessionStateFlags` entry would demand a derivation from the wrong layer
+		// — and a flag derived from the wrong layer is how a marker starts lying.
+		const railLevel = [
+			"rail",
+			"rail-deep",
+			"rail-building",
+			"rail-error",
+			"rail-empty",
+		];
 		const derived = Object.keys(STATE_MARKER.session)
 			.filter(
-				(state) => !screenLevel.includes(state) && !findLevel.includes(state),
+				(state) =>
+					!screenLevel.includes(state) &&
+					!findLevel.includes(state) &&
+					!railLevel.includes(state),
 			)
 			.sort();
 		expect(
 			Object.keys(sessionStateFlags(facts())).map(stateKeyFor).sort(),
 		).toEqual(derived);
+	});
+
+	it("keeps the rail's zero-tick marker out of the `-empty` vocabulary", () => {
+		// An empty RAIL is not an empty SCREEN. The readiness sweep reads every id
+		// ending `-empty` as a screen-level empty state — and for an ad-hoc `path:`
+		// cell it reads them ALL (`tools/lib/readiness.ts`, `EMPTY_MARKER_SUFFIX`).
+		// The rail's zero-tick marker is present under ANY session screen whose
+		// manifest is ready-empty, so as `session-checkpoint-rail-empty` it failed
+		// all 24 `long-transcript` path cells on the ci tier (run 37903228591);
+		// this pins the id out of the suffix.
+		expect(STATE_MARKER.session["rail-empty"].endsWith("-empty")).toBe(false);
+		expect(STATE_MARKER.session["rail-empty"]).toBe(
+			"session-checkpoint-rail-no-ticks",
+		);
 	});
 
 	it("points the empty and loading states at the id a connected frame carries", () => {

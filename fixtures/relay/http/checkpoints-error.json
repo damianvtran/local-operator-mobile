@@ -1,0 +1,25 @@
+{
+ "provenance": {
+  "kind": "live",
+  "relay_ref": "local-operator ae6c9eb6",
+  "captured_at": "2026-10-09",
+  "how": "captured from an isolated `lop mobile serve` daemon (fresh HOME + LOCAL_OPERATOR_CONFIG_DIR, own ephemeral port, hosting=test/model_name=mock) running local-operator merge ae6c9eb6 from a clean worktree via PYTHONPATH; the conversation was driven over the relay's own `POST /api/sessions/{id}/command` and each turn waited for via `GET /api/sessions`, so every checkpoint below is what the runtime wrote, not what a script seeded. This sample: the journal chmod 000 before its first scan: state error, no ticks \u2014 never an empty rail.",
+  "redactions": "isolated home shown as ~; portal password and cookie signatures absent"
+ },
+ "request": {
+  "method": "GET",
+  "path": "/api/sessions/d3044c49505c/checkpoints"
+ },
+ "status": 200,
+ "headers": {
+  "content-type": "application/json"
+ },
+ "body": {
+  "session_id": "d3044c49505c",
+  "index": {
+   "state": "error",
+   "built_at": null
+  },
+  "checkpoints": []
+ }
+}

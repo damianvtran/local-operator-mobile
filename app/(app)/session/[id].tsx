@@ -6,9 +6,13 @@ import { Text, useWindowDimensions, View } from "react-native";
 import { useListState } from "@/features/auth/connection-provider";
 import { blockingPending } from "@/features/session/asks";
 import { composerChipLabels } from "@/features/session/chip-labels";
-import { overlaysBlocked } from "@/features/session/completion-ack";
+import {
+	attentionRecord,
+	overlaysBlocked,
+} from "@/features/session/completion-ack";
 import { AskBar } from "@/features/session/components/ask-bar";
 import { AsksSheet } from "@/features/session/components/asks-sheet";
+import { CheckpointRail } from "@/features/session/components/checkpoint-rail";
 import { Composer } from "@/features/session/components/composer";
 import { ConnectionBanner } from "@/features/session/components/connection-banner";
 import { FindBar } from "@/features/session/components/find-bar";
@@ -38,6 +42,7 @@ import {
 } from "@/features/session/projection";
 import { sessionFactsFrom } from "@/features/session/state-marker";
 import { useAsksSheet } from "@/features/session/use-asks-sheet";
+import { useCheckpoints } from "@/features/session/use-checkpoints";
 import { useCompletionAck } from "@/features/session/use-completion-ack";
 import { draftSlashQuery, useComposer } from "@/features/session/use-composer";
 import { useFind } from "@/features/session/use-find";
@@ -125,6 +130,22 @@ export default function Session() {
 	 *  header lever, the sheet, the bar, the transcript's wash/reveal and the
 	 *  ack gate all read it. */
 	const find = useFind({ sessionId, entries: runtime.entries });
+
+	/* The transcript's checkpoint rail: one manifest read per conversation
+	 *  (`GET /api/sessions/{id}/checkpoints`), polled while the relay says
+	 *  `building`. The rail's marks come from the journal-derived manifest —
+	 *  NEVER from `runtime.entries`, whose projection is a bounded tail window
+	 *  and would silently mark only the tail. `loadedIds` is the one thing the
+	 *  rail reads from the frames: it is how a frame can prove a mark is for a
+	 *  row this device does NOT hold (`rail-deep`). */
+	const checkpoints = useCheckpoints({
+		sessionId,
+		endpoints: runtime.source.endpoints,
+	});
+	const loadedIds = useMemo(
+		() => new Set(runtime.entries.map((entry) => entry.id)),
+		[runtime.entries],
+	);
 
 	/** Whether the completion's anchor row bottom is inside the transcript's
 	 *  viewport — measured by `TranscriptList` (the list owns the geometry; this
@@ -352,35 +373,49 @@ export default function Session() {
 				<Skeleton lines={3} testID={SURFACE.sessionLoading} />
 			</View>
 		) : (
-			<TranscriptList
-				testID={SURFACE.sessionTranscript}
-				sessionId={sessionId}
-				entries={runtime.entries}
-				streamingRowId={runtime.streamingRowId}
-				loadImage={runtime.loadImage}
-				onOpenAgent={openAgent}
-				/* The image-gen card's Cancel is the composer's OWN stop path (the
-				   one turn-interrupt — no second mechanism). The gate is the
-				   composer's own (`stopVisible` = a turn is running), so the two
-				   controls cannot diverge about when a cancel is real: while the
-				   gate is closed the card hides the control rather than offering
-				   a dead one. */
-				onCancelTurn={composer.controls.stopVisible ? composer.stop : undefined}
-				anchorId={runtime.projection?.attention?.anchor_id ?? null}
-				onAnchorVisible={setCompletionVisible}
-				// The find session's two outputs into the list: the wash on the current
-				// hit, and the jump to reveal it (opening a condensed turn on the way
-				// when one hides it).
-				highlightId={find.activeHit?.id ?? null}
-				reveal={find.reveal}
-				empty={
-					<EmptyState
-						headline="Nothing here yet."
-						next="Send the first message below."
-						testID={SURFACE.sessionTranscriptEmpty}
-					/>
-				}
-			/>
+			/* The rail overlays the transcript's own area — its `flex-1` wrapper
+			 *  is what bounds the column to the transcript (the parent spans the
+			 *  panels and composer too), and the rail itself is ABSOLUTE, so it
+			 *  takes no layout width from the rows (the defect the web client's
+			 *  two-pane rail once was). */
+			<View className="flex-1">
+				<TranscriptList
+					testID={SURFACE.sessionTranscript}
+					sessionId={sessionId}
+					entries={runtime.entries}
+					streamingRowId={runtime.streamingRowId}
+					loadImage={runtime.loadImage}
+					onOpenAgent={openAgent}
+					/* The image-gen card's Cancel is the composer's OWN stop path (the
+					   one turn-interrupt — no second mechanism). The gate is the
+					   composer's own (`stopVisible` = a turn is running), so the two
+					   controls cannot diverge about when a cancel is real: while the
+					   gate is closed the card hides the control rather than offering
+					   a dead one. */
+					onCancelTurn={
+						composer.controls.stopVisible ? composer.stop : undefined
+					}
+					anchorId={attentionRecord(runtime.projection)?.anchor_id ?? null}
+					onAnchorVisible={setCompletionVisible}
+					// The find session's two outputs into the list: the wash on the current
+					// hit, and the jump to reveal it (opening a condensed turn on the way
+					// when one hides it).
+					highlightId={find.activeHit?.id ?? null}
+					reveal={find.reveal}
+					empty={
+						<EmptyState
+							headline="Nothing here yet."
+							next="Send the first message below."
+							testID={SURFACE.sessionTranscriptEmpty}
+						/>
+					}
+				/>
+				<CheckpointRail
+					manifest={checkpoints.manifest}
+					readFailed={checkpoints.readFailed}
+					loadedIds={loadedIds}
+				/>
+			</View>
 		);
 
 	return (

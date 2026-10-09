@@ -48,6 +48,7 @@ import {
 	ACK_CHECK_MS,
 	ACK_FAILURES_BEFORE_BACKOFF,
 	type AckGates,
+	attentionRecord,
 	mayAcknowledge,
 	retryDelayMs,
 	settlesCompletion,
@@ -104,7 +105,7 @@ export const useCompletionAck = ({
 		return () => subscription.remove();
 	}, []);
 
-	const attention = projection?.attention ?? null;
+	const attention = attentionRecord(projection);
 
 	/* The dependency list is FIELD-level on purpose — the web client's own list —
 	 * and exhaustive-deps wants the OBJECTS (`attention`/`projection`). Listing
@@ -157,7 +158,7 @@ export const useCompletionAck = ({
 			if (Date.now() < nextAttempt) return;
 			const live = liveRef.current;
 			const client = live.endpoints;
-			const current = live.projection?.attention ?? null;
+			const current = attentionRecord(live.projection);
 			/* The anchored row's completeness, re-read per attempt like every other
 			 * gate — the transcript can change between attempts, and a row that is
 			 * not loaded resolves to NOT complete (the unknown-geometry direction,

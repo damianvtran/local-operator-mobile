@@ -471,6 +471,29 @@ export class RelayEndpoints {
 	}
 
 	/**
+	 * One conversation's checkpoint manifest — the transcript rail's ticks
+	 * (`GET /api/sessions/{id}/checkpoints`; local-operator `ae6c9eb6`).
+	 *
+	 * Derived from the JOURNAL, so it covers every turn of the conversation,
+	 * loaded or not — the whole reason the rail reads this rather than folding
+	 * the frames the phone happens to hold (its projection is a bounded tail
+	 * window). One request per conversation; the caller polls while
+	 * `index.state === "building"` (a cold cache's first answer IS `building`).
+	 * `signal` bounds the read — a hung read is itself a failure the rail must
+	 * degrade through, never a hang.
+	 */
+	async checkpoints(
+		sessionId: string,
+		signal?: AbortSignal,
+	): Promise<Payload<"checkpoints">> {
+		return this.http.json("checkpoints", {
+			method: "GET",
+			path: `/api/sessions/${encodeURIComponent(sessionId)}/checkpoints`,
+			signal,
+		});
+	}
+
+	/**
 	 * An image block's bytes.
 	 *
 	 * Requires a LIVE generation (`daemon.py:3782-3784`): a previous conversation's
