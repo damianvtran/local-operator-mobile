@@ -1,0 +1,1226 @@
+{
+ "provenance": {
+  "kind": "live",
+  "relay_ref": "local-operator ae6c9eb6",
+  "captured_at": "2026-10-09",
+  "how": "captured from an isolated `lop mobile serve` daemon (fresh HOME + LOCAL_OPERATOR_CONFIG_DIR, own ephemeral port, hosting=test/model_name=mock) running local-operator merge ae6c9eb6 from a clean worktree via PYTHONPATH; the conversation was driven over the relay's own `POST /api/sessions/{id}/command` and each turn waited for via `GET /api/sessions`, so every checkpoint below is what the runtime wrote, not what a script seeded. This sample: 50 turns (100 ticks, seq 3..250) \u2014 far more than the phone's 80-row tail window.",
+  "redactions": "isolated home shown as ~; portal password and cookie signatures absent"
+ },
+ "request": {
+  "method": "GET",
+  "path": "/api/sessions/a751eae8b897/checkpoints"
+ },
+ "status": 200,
+ "headers": {
+  "content-type": "application/json"
+ },
+ "body": {
+  "session_id": "a751eae8b897",
+  "index": {
+   "state": "ready",
+   "built_at": 1791528045.799404
+  },
+  "checkpoints": [
+   {
+    "id": "813d5134-90f8-46f8-b3df-156ef45b1cd6",
+    "kind": "user",
+    "turn": 1,
+    "ts": 1791527961.0525281,
+    "seq": 3,
+    "text": "Deep turn 1: keep the journal long.",
+    "outcome": null,
+    "naming": null
+   },
+   {
+    "id": "28a4da072e494ea3b6eee74f22b5123b",
+    "kind": "completion",
+    "turn": 1,
+    "ts": 1791527961.063881,
+    "seq": 5,
+    "text": "Hello from the mock provider!",
+    "outcome": "complete",
+    "naming": {
+     "state": "pending",
+     "name": null,
+     "summary": null
+    }
+   },
+   {
+    "id": "ecc80cd1-3476-4638-88b7-308816b63de7",
+    "kind": "user",
+    "turn": 2,
+    "ts": 1791527962.105154,
+    "seq": 9,
+    "text": "Deep turn 2: keep the journal long.",
+    "outcome": null,
+    "naming": null
+   },
+   {
+    "id": "fa9690e4854b46fda42c795d67ed4a92",
+    "kind": "completion",
+    "turn": 2,
+    "ts": 1791527962.112809,
+    "seq": 10,
+    "text": "Hello from the mock provider!",
+    "outcome": "complete",
+    "naming": {
+     "state": "pending",
+     "name": null,
+     "summary": null
+    }
+   },
+   {
+    "id": "ca3a1fd5-1199-4ba5-b484-976408b1782d",
+    "kind": "user",
+    "turn": 3,
+    "ts": 1791527963.9302669,
+    "seq": 14,
+    "text": "Deep turn 3: keep the journal long.",
+    "outcome": null,
+    "naming": null
+   },
+   {
+    "id": "8c53100ef61446f6b9acfe1e79d657a1",
+    "kind": "completion",
+    "turn": 3,
+    "ts": 1791527963.937692,
+    "seq": 15,
+    "text": "Hello from the mock provider!",
+    "outcome": "complete",
+    "naming": {
+     "state": "pending",
+     "name": null,
+     "summary": null
+    }
+   },
+   {
+    "id": "f9a3d9d3-4a89-4481-a46c-f83b2481b0f6",
+    "kind": "user",
+    "turn": 4,
+    "ts": 1791527964.9763799,
+    "seq": 19,
+    "text": "Deep turn 4: keep the journal long.",
+    "outcome": null,
+    "naming": null
+   },
+   {
+    "id": "c77d50b2a77d43dbb13c1d62ddaba48e",
+    "kind": "completion",
+    "turn": 4,
+    "ts": 1791527964.983967,
+    "seq": 20,
+    "text": "Hello from the mock provider!",
+    "outcome": "complete",
+    "naming": {
+     "state": "pending",
+     "name": null,
+     "summary": null
+    }
+   },
+   {
+    "id": "9a45f9c7-0f37-4d58-867c-a3b39b2e02ad",
+    "kind": "user",
+    "turn": 5,
+    "ts": 1791527966.0277162,
+    "seq": 24,
+    "text": "Deep turn 5: keep the journal long.",
+    "outcome": null,
+    "naming": null
+   },
+   {
+    "id": "dc045be6f0474c369cc076f307e19b40",
+    "kind": "completion",
+    "turn": 5,
+    "ts": 1791527966.0411148,
+    "seq": 25,
+    "text": "Hello from the mock provider!",
+    "outcome": "complete",
+    "naming": {
+     "state": "pending",
+     "name": null,
+     "summary": null
+    }
+   },
+   {
+    "id": "4c5f9258-eafa-4a56-a5d7-e69fe03e3b17",
+    "kind": "user",
+    "turn": 6,
+    "ts": 1791527967.074503,
+    "seq": 29,
+    "text": "Deep turn 6: keep the journal long.",
+    "outcome": null,
+    "naming": null
+   },
+   {
+    "id": "1c1ca721b068478f8a268c00fc9c0ae4",
+    "kind": "completion",
+    "turn": 6,
+    "ts": 1791527967.082231,
+    "seq": 30,
+    "text": "Hello from the mock provider!",
+    "outcome": "complete",
+    "naming": {
+     "state": "pending",
+     "name": null,
+     "summary": null
+    }
+   },
+   {
+    "id": "e18ee1ed-c91a-4fc6-91f7-cdd995be1d3a",
+    "kind": "user",
+    "turn": 7,
+    "ts": 1791527968.123755,
+    "seq": 34,
+    "text": "Deep turn 7: keep the journal long.",
+    "outcome": null,
+    "naming": null
+   },
+   {
+    "id": "3c67d2a6c6c34933bbc3abeebe1bfac5",
+    "kind": "completion",
+    "turn": 7,
+    "ts": 1791527968.132365,
+    "seq": 35,
+    "text": "Hello from the mock provider!",
+    "outcome": "complete",
+    "naming": {
+     "state": "pending",
+     "name": null,
+     "summary": null
+    }
+   },
+   {
+    "id": "b822e787-c178-4349-9ae5-7e521cc842a5",
+    "kind": "user",
+    "turn": 8,
+    "ts": 1791527969.937283,
+    "seq": 39,
+    "text": "Deep turn 8: keep the journal long.",
+    "outcome": null,
+    "naming": null
+   },
+   {
+    "id": "d689e1ac1d954406b7384765d79b7d33",
+    "kind": "completion",
+    "turn": 8,
+    "ts": 1791527969.9447942,
+    "seq": 40,
+    "text": "Hello from the mock provider!",
+    "outcome": "complete",
+    "naming": {
+     "state": "pending",
+     "name": null,
+     "summary": null
+    }
+   },
+   {
+    "id": "a529e308-d6be-4ce4-8c5e-b71d255e2021",
+    "kind": "user",
+    "turn": 9,
+    "ts": 1791527970.973444,
+    "seq": 44,
+    "text": "Deep turn 9: keep the journal long.",
+    "outcome": null,
+    "naming": null
+   },
+   {
+    "id": "553c61b2e3044ca89257bede6f4b8bc1",
+    "kind": "completion",
+    "turn": 9,
+    "ts": 1791527970.980886,
+    "seq": 45,
+    "text": "Hello from the mock provider!",
+    "outcome": "complete",
+    "naming": {
+     "state": "pending",
+     "name": null,
+     "summary": null
+    }
+   },
+   {
+    "id": "53c74cd1-122c-4130-a2d3-08d346509d69",
+    "kind": "user",
+    "turn": 10,
+    "ts": 1791527972.008636,
+    "seq": 49,
+    "text": "Deep turn 10: keep the journal long.",
+    "outcome": null,
+    "naming": null
+   },
+   {
+    "id": "87c61cc3c33a48ca8e78fbc769a1a10d",
+    "kind": "completion",
+    "turn": 10,
+    "ts": 1791527972.016928,
+    "seq": 50,
+    "text": "Hello from the mock provider!",
+    "outcome": "complete",
+    "naming": {
+     "state": "pending",
+     "name": null,
+     "summary": null
+    }
+   },
+   {
+    "id": "35e0d6d5-d424-4e0a-bb59-0397347d3d30",
+    "kind": "user",
+    "turn": 11,
+    "ts": 1791527973.045457,
+    "seq": 54,
+    "text": "Deep turn 11: keep the journal long.",
+    "outcome": null,
+    "naming": null
+   },
+   {
+    "id": "c86387d4a0c846dc983b6758d8f4e137",
+    "kind": "completion",
+    "turn": 11,
+    "ts": 1791527973.0536242,
+    "seq": 55,
+    "text": "Hello from the mock provider!",
+    "outcome": "complete",
+    "naming": {
+     "state": "pending",
+     "name": null,
+     "summary": null
+    }
+   },
+   {
+    "id": "b3c5f0ee-fde0-4b0f-8f54-582f931f227a",
+    "kind": "user",
+    "turn": 12,
+    "ts": 1791527974.088479,
+    "seq": 59,
+    "text": "Deep turn 12: keep the journal long.",
+    "outcome": null,
+    "naming": null
+   },
+   {
+    "id": "b90024e1763644cf9fccb4e66be0e157",
+    "kind": "completion",
+    "turn": 12,
+    "ts": 1791527974.097526,
+    "seq": 60,
+    "text": "Hello from the mock provider!",
+    "outcome": "complete",
+    "naming": {
+     "state": "pending",
+     "name": null,
+     "summary": null
+    }
+   },
+   {
+    "id": "c559c4a9-ebe7-41d3-bf59-35e240e7cf51",
+    "kind": "user",
+    "turn": 13,
+    "ts": 1791527975.1220381,
+    "seq": 64,
+    "text": "Deep turn 13: keep the journal long.",
+    "outcome": null,
+    "naming": null
+   },
+   {
+    "id": "c15bb6309da647d4b94bca0a8de6dcf6",
+    "kind": "completion",
+    "turn": 13,
+    "ts": 1791527975.129628,
+    "seq": 65,
+    "text": "Hello from the mock provider!",
+    "outcome": "complete",
+    "naming": {
+     "state": "pending",
+     "name": null,
+     "summary": null
+    }
+   },
+   {
+    "id": "fa82c2ea-d76c-4a91-97fb-df1e9db3967e",
+    "kind": "user",
+    "turn": 14,
+    "ts": 1791527976.159756,
+    "seq": 69,
+    "text": "Deep turn 14: keep the journal long.",
+    "outcome": null,
+    "naming": null
+   },
+   {
+    "id": "58fb139370124678b059695edfe3190b",
+    "kind": "completion",
+    "turn": 14,
+    "ts": 1791527976.167305,
+    "seq": 70,
+    "text": "Hello from the mock provider!",
+    "outcome": "complete",
+    "naming": {
+     "state": "pending",
+     "name": null,
+     "summary": null
+    }
+   },
+   {
+    "id": "424fe663-105a-41ed-b478-9e24791fdd91",
+    "kind": "user",
+    "turn": 15,
+    "ts": 1791527977.97315,
+    "seq": 74,
+    "text": "Deep turn 15: keep the journal long.",
+    "outcome": null,
+    "naming": null
+   },
+   {
+    "id": "d31c48bf5e5940b3822972a60c4040c6",
+    "kind": "completion",
+    "turn": 15,
+    "ts": 1791527977.980603,
+    "seq": 75,
+    "text": "Hello from the mock provider!",
+    "outcome": "complete",
+    "naming": {
+     "state": "pending",
+     "name": null,
+     "summary": null
+    }
+   },
+   {
+    "id": "ead4509f-11ea-4697-b7e8-1a683996c991",
+    "kind": "user",
+    "turn": 16,
+    "ts": 1791527979.027074,
+    "seq": 79,
+    "text": "Deep turn 16: keep the journal long.",
+    "outcome": null,
+    "naming": null
+   },
+   {
+    "id": "06e67b5d266d42109fc46c5fb23df927",
+    "kind": "completion",
+    "turn": 16,
+    "ts": 1791527979.042515,
+    "seq": 80,
+    "text": "Hello from the mock provider!",
+    "outcome": "complete",
+    "naming": {
+     "state": "pending",
+     "name": null,
+     "summary": null
+    }
+   },
+   {
+    "id": "56596b5e-2d34-47ba-8cf3-0dfe0e875dfc",
+    "kind": "user",
+    "turn": 17,
+    "ts": 1791527980.080439,
+    "seq": 84,
+    "text": "Deep turn 17: keep the journal long.",
+    "outcome": null,
+    "naming": null
+   },
+   {
+    "id": "5645c9633bca44efa2442f88c305cc5c",
+    "kind": "completion",
+    "turn": 17,
+    "ts": 1791527980.087761,
+    "seq": 85,
+    "text": "Hello from the mock provider!",
+    "outcome": "complete",
+    "naming": {
+     "state": "pending",
+     "name": null,
+     "summary": null
+    }
+   },
+   {
+    "id": "f5ef4898-d830-4050-847e-c2052868f469",
+    "kind": "user",
+    "turn": 18,
+    "ts": 1791527981.118476,
+    "seq": 89,
+    "text": "Deep turn 18: keep the journal long.",
+    "outcome": null,
+    "naming": null
+   },
+   {
+    "id": "3493a85a9d344abe9860dd7cd264e1c5",
+    "kind": "completion",
+    "turn": 18,
+    "ts": 1791527981.126705,
+    "seq": 90,
+    "text": "Hello from the mock provider!",
+    "outcome": "complete",
+    "naming": {
+     "state": "pending",
+     "name": null,
+     "summary": null
+    }
+   },
+   {
+    "id": "f367a345-1c8c-4264-b554-69f31b970a3b",
+    "kind": "user",
+    "turn": 19,
+    "ts": 1791527982.160019,
+    "seq": 94,
+    "text": "Deep turn 19: keep the journal long.",
+    "outcome": null,
+    "naming": null
+   },
+   {
+    "id": "1d44b71c12ad4d6aa5d3098375207043",
+    "kind": "completion",
+    "turn": 19,
+    "ts": 1791527982.16809,
+    "seq": 95,
+    "text": "Hello from the mock provider!",
+    "outcome": "complete",
+    "naming": {
+     "state": "pending",
+     "name": null,
+     "summary": null
+    }
+   },
+   {
+    "id": "5aff0e00-ec40-458c-8cbf-c408554820af",
+    "kind": "user",
+    "turn": 20,
+    "ts": 1791527983.191827,
+    "seq": 99,
+    "text": "Deep turn 20: keep the journal long.",
+    "outcome": null,
+    "naming": null
+   },
+   {
+    "id": "70ed10e5b9904695971f264fc78b153b",
+    "kind": "completion",
+    "turn": 20,
+    "ts": 1791527983.203,
+    "seq": 100,
+    "text": "Hello from the mock provider!",
+    "outcome": "complete",
+    "naming": {
+     "state": "pending",
+     "name": null,
+     "summary": null
+    }
+   },
+   {
+    "id": "3243add3-c97a-48b3-a090-153f44304b7d",
+    "kind": "user",
+    "turn": 21,
+    "ts": 1791527984.244203,
+    "seq": 104,
+    "text": "Deep turn 21: keep the journal long.",
+    "outcome": null,
+    "naming": null
+   },
+   {
+    "id": "e8a9786e2c5a490e8977e7ea42082d2f",
+    "kind": "completion",
+    "turn": 21,
+    "ts": 1791527984.252061,
+    "seq": 105,
+    "text": "Hello from the mock provider!",
+    "outcome": "complete",
+    "naming": {
+     "state": "pending",
+     "name": null,
+     "summary": null
+    }
+   },
+   {
+    "id": "733bc080-eadd-430f-8688-544cce09b913",
+    "kind": "user",
+    "turn": 22,
+    "ts": 1791527986.0444438,
+    "seq": 109,
+    "text": "Deep turn 22: keep the journal long.",
+    "outcome": null,
+    "naming": null
+   },
+   {
+    "id": "30014a8bf5ef40eeba7a6dc3a3decea0",
+    "kind": "completion",
+    "turn": 22,
+    "ts": 1791527986.053118,
+    "seq": 110,
+    "text": "Hello from the mock provider!",
+    "outcome": "complete",
+    "naming": {
+     "state": "pending",
+     "name": null,
+     "summary": null
+    }
+   },
+   {
+    "id": "1b5e1c7f-fe6c-4502-89d6-818328f8a061",
+    "kind": "user",
+    "turn": 23,
+    "ts": 1791527987.0828469,
+    "seq": 114,
+    "text": "Deep turn 23: keep the journal long.",
+    "outcome": null,
+    "naming": null
+   },
+   {
+    "id": "ae848a45bb7b4d16ace96593b891fac6",
+    "kind": "completion",
+    "turn": 23,
+    "ts": 1791527987.0929291,
+    "seq": 115,
+    "text": "Hello from the mock provider!",
+    "outcome": "complete",
+    "naming": {
+     "state": "pending",
+     "name": null,
+     "summary": null
+    }
+   },
+   {
+    "id": "dab8f82a-b10c-4d73-9915-a589bb9e5c5d",
+    "kind": "user",
+    "turn": 24,
+    "ts": 1791527988.1150122,
+    "seq": 119,
+    "text": "Deep turn 24: keep the journal long.",
+    "outcome": null,
+    "naming": null
+   },
+   {
+    "id": "14535eb266bc4e55b073650982dd7d2a",
+    "kind": "completion",
+    "turn": 24,
+    "ts": 1791527988.12371,
+    "seq": 120,
+    "text": "Hello from the mock provider!",
+    "outcome": "complete",
+    "naming": {
+     "state": "pending",
+     "name": null,
+     "summary": null
+    }
+   },
+   {
+    "id": "17c2e73a-1042-44a0-ab29-22167c0342ea",
+    "kind": "user",
+    "turn": 25,
+    "ts": 1791527989.1496692,
+    "seq": 124,
+    "text": "Deep turn 25: keep the journal long.",
+    "outcome": null,
+    "naming": null
+   },
+   {
+    "id": "62a93ab0273341a8bba5d0fa69d59957",
+    "kind": "completion",
+    "turn": 25,
+    "ts": 1791527989.157808,
+    "seq": 125,
+    "text": "Hello from the mock provider!",
+    "outcome": "complete",
+    "naming": {
+     "state": "pending",
+     "name": null,
+     "summary": null
+    }
+   },
+   {
+    "id": "aacbbecf-eb29-4340-8ea7-37e61ca16df0",
+    "kind": "user",
+    "turn": 26,
+    "ts": 1791527990.187786,
+    "seq": 129,
+    "text": "Deep turn 26: keep the journal long.",
+    "outcome": null,
+    "naming": null
+   },
+   {
+    "id": "4b987511395049738bef7d3b8c8d1122",
+    "kind": "completion",
+    "turn": 26,
+    "ts": 1791527990.195979,
+    "seq": 130,
+    "text": "Hello from the mock provider!",
+    "outcome": "complete",
+    "naming": {
+     "state": "pending",
+     "name": null,
+     "summary": null
+    }
+   },
+   {
+    "id": "3610ec12-6b67-4758-8965-92a5b23ad7d7",
+    "kind": "user",
+    "turn": 27,
+    "ts": 1791527991.999678,
+    "seq": 134,
+    "text": "Deep turn 27: keep the journal long.",
+    "outcome": null,
+    "naming": null
+   },
+   {
+    "id": "df03223981a545df872e2253070e57e1",
+    "kind": "completion",
+    "turn": 27,
+    "ts": 1791527992.008034,
+    "seq": 135,
+    "text": "Hello from the mock provider!",
+    "outcome": "complete",
+    "naming": {
+     "state": "pending",
+     "name": null,
+     "summary": null
+    }
+   },
+   {
+    "id": "8d46f5c0-ea1e-4f0a-b8c2-395753ae8b86",
+    "kind": "user",
+    "turn": 28,
+    "ts": 1791527993.040899,
+    "seq": 139,
+    "text": "Deep turn 28: keep the journal long.",
+    "outcome": null,
+    "naming": null
+   },
+   {
+    "id": "605fe17511254817b44063d4b0fc7bb1",
+    "kind": "completion",
+    "turn": 28,
+    "ts": 1791527993.049284,
+    "seq": 140,
+    "text": "Hello from the mock provider!",
+    "outcome": "complete",
+    "naming": {
+     "state": "pending",
+     "name": null,
+     "summary": null
+    }
+   },
+   {
+    "id": "79ca63b4-1fce-4dd0-9fea-ded7bf58b4a1",
+    "kind": "user",
+    "turn": 29,
+    "ts": 1791527994.080596,
+    "seq": 144,
+    "text": "Deep turn 29: keep the journal long.",
+    "outcome": null,
+    "naming": null
+   },
+   {
+    "id": "374a82f1c12945fea622911b40a44d4d",
+    "kind": "completion",
+    "turn": 29,
+    "ts": 1791527994.089374,
+    "seq": 145,
+    "text": "Hello from the mock provider!",
+    "outcome": "complete",
+    "naming": {
+     "state": "pending",
+     "name": null,
+     "summary": null
+    }
+   },
+   {
+    "id": "f80ef7b1-7cb1-441e-a2a9-eadfd2750c0c",
+    "kind": "user",
+    "turn": 30,
+    "ts": 1791527995.123956,
+    "seq": 149,
+    "text": "Deep turn 30: keep the journal long.",
+    "outcome": null,
+    "naming": null
+   },
+   {
+    "id": "604c88cf6845405c910e5e5f747d6a07",
+    "kind": "completion",
+    "turn": 30,
+    "ts": 1791527995.163478,
+    "seq": 150,
+    "text": "Hello from the mock provider!",
+    "outcome": "complete",
+    "naming": {
+     "state": "pending",
+     "name": null,
+     "summary": null
+    }
+   },
+   {
+    "id": "1b58c7ad-d081-47d1-a0f5-27fd0df9eb94",
+    "kind": "user",
+    "turn": 31,
+    "ts": 1791527996.166198,
+    "seq": 154,
+    "text": "Deep turn 31: keep the journal long.",
+    "outcome": null,
+    "naming": null
+   },
+   {
+    "id": "59c5edf56d6745ab8d6c2d0f54465050",
+    "kind": "completion",
+    "turn": 31,
+    "ts": 1791527996.174639,
+    "seq": 155,
+    "text": "Hello from the mock provider!",
+    "outcome": "complete",
+    "naming": {
+     "state": "pending",
+     "name": null,
+     "summary": null
+    }
+   },
+   {
+    "id": "d4b78ee1-9283-4c76-a206-a5c7705e518a",
+    "kind": "user",
+    "turn": 32,
+    "ts": 1791527997.2096472,
+    "seq": 159,
+    "text": "Deep turn 32: keep the journal long.",
+    "outcome": null,
+    "naming": null
+   },
+   {
+    "id": "f4758911ba1745539fd2dd4d6f7aca12",
+    "kind": "completion",
+    "turn": 32,
+    "ts": 1791527997.218538,
+    "seq": 160,
+    "text": "Hello from the mock provider!",
+    "outcome": "complete",
+    "naming": {
+     "state": "pending",
+     "name": null,
+     "summary": null
+    }
+   },
+   {
+    "id": "560c532e-b4ee-40f4-b908-5ed4a7e15863",
+    "kind": "user",
+    "turn": 33,
+    "ts": 1791527998.2493591,
+    "seq": 164,
+    "text": "Deep turn 33: keep the journal long.",
+    "outcome": null,
+    "naming": null
+   },
+   {
+    "id": "21b94afe350347429d2d3c304c725fbf",
+    "kind": "completion",
+    "turn": 33,
+    "ts": 1791527998.257976,
+    "seq": 165,
+    "text": "Hello from the mock provider!",
+    "outcome": "complete",
+    "naming": {
+     "state": "pending",
+     "name": null,
+     "summary": null
+    }
+   },
+   {
+    "id": "5edb487c-7e88-45a5-b455-e04cf89f776b",
+    "kind": "user",
+    "turn": 34,
+    "ts": 1791528000.0502799,
+    "seq": 169,
+    "text": "Deep turn 34: keep the journal long.",
+    "outcome": null,
+    "naming": null
+   },
+   {
+    "id": "a3f4a3406077454ea4c5fc9f7499a130",
+    "kind": "completion",
+    "turn": 34,
+    "ts": 1791528000.058922,
+    "seq": 170,
+    "text": "Hello from the mock provider!",
+    "outcome": "complete",
+    "naming": {
+     "state": "pending",
+     "name": null,
+     "summary": null
+    }
+   },
+   {
+    "id": "0efeb8d3-f4bf-4c75-ae36-180d7792d525",
+    "kind": "user",
+    "turn": 35,
+    "ts": 1791528001.081006,
+    "seq": 174,
+    "text": "Deep turn 35: keep the journal long.",
+    "outcome": null,
+    "naming": null
+   },
+   {
+    "id": "98178f57f33f4dd3bd489845176a010e",
+    "kind": "completion",
+    "turn": 35,
+    "ts": 1791528001.089212,
+    "seq": 175,
+    "text": "Hello from the mock provider!",
+    "outcome": "complete",
+    "naming": {
+     "state": "pending",
+     "name": null,
+     "summary": null
+    }
+   },
+   {
+    "id": "e3c048a6-384e-4957-9a30-a475a07be805",
+    "kind": "user",
+    "turn": 36,
+    "ts": 1791528002.127579,
+    "seq": 179,
+    "text": "Deep turn 36: keep the journal long.",
+    "outcome": null,
+    "naming": null
+   },
+   {
+    "id": "67eac39fb53242c8bda74dacb4f4bdb2",
+    "kind": "completion",
+    "turn": 36,
+    "ts": 1791528002.1366668,
+    "seq": 180,
+    "text": "Hello from the mock provider!",
+    "outcome": "complete",
+    "naming": {
+     "state": "pending",
+     "name": null,
+     "summary": null
+    }
+   },
+   {
+    "id": "56a9517f-886a-4a78-8747-65d9de4ea33f",
+    "kind": "user",
+    "turn": 37,
+    "ts": 1791528003.162824,
+    "seq": 184,
+    "text": "Deep turn 37: keep the journal long.",
+    "outcome": null,
+    "naming": null
+   },
+   {
+    "id": "c62869194ce544a1ac1bdb800bac3141",
+    "kind": "completion",
+    "turn": 37,
+    "ts": 1791528003.171656,
+    "seq": 185,
+    "text": "Hello from the mock provider!",
+    "outcome": "complete",
+    "naming": {
+     "state": "pending",
+     "name": null,
+     "summary": null
+    }
+   },
+   {
+    "id": "b6885eee-c987-4f39-985f-51c0093fcc3f",
+    "kind": "user",
+    "turn": 38,
+    "ts": 1791528004.200072,
+    "seq": 189,
+    "text": "Deep turn 38: keep the journal long.",
+    "outcome": null,
+    "naming": null
+   },
+   {
+    "id": "ef9ca2e5afa041b0b3eab68bd8cba3e0",
+    "kind": "completion",
+    "turn": 38,
+    "ts": 1791528004.2094588,
+    "seq": 190,
+    "text": "Hello from the mock provider!",
+    "outcome": "complete",
+    "naming": {
+     "state": "pending",
+     "name": null,
+     "summary": null
+    }
+   },
+   {
+    "id": "7ce6d3a3-d5da-4733-a2de-1364a734b724",
+    "kind": "user",
+    "turn": 39,
+    "ts": 1791528005.2585359,
+    "seq": 194,
+    "text": "Deep turn 39: keep the journal long.",
+    "outcome": null,
+    "naming": null
+   },
+   {
+    "id": "15e57702c8964933be8c694e340654b5",
+    "kind": "completion",
+    "turn": 39,
+    "ts": 1791528005.281408,
+    "seq": 195,
+    "text": "Hello from the mock provider!",
+    "outcome": "complete",
+    "naming": {
+     "state": "pending",
+     "name": null,
+     "summary": null
+    }
+   },
+   {
+    "id": "76d32733-94cb-4921-b427-e44ca2201d18",
+    "kind": "user",
+    "turn": 40,
+    "ts": 1791528006.3228748,
+    "seq": 199,
+    "text": "Deep turn 40: keep the journal long.",
+    "outcome": null,
+    "naming": null
+   },
+   {
+    "id": "5eedf0a10d634b96ac3c5015034f9d87",
+    "kind": "completion",
+    "turn": 40,
+    "ts": 1791528006.3325682,
+    "seq": 200,
+    "text": "Hello from the mock provider!",
+    "outcome": "complete",
+    "naming": {
+     "state": "pending",
+     "name": null,
+     "summary": null
+    }
+   },
+   {
+    "id": "470ebd68-7b96-4f7a-8194-f0c60e388122",
+    "kind": "user",
+    "turn": 41,
+    "ts": 1791528008.137922,
+    "seq": 204,
+    "text": "Deep turn 41: keep the journal long.",
+    "outcome": null,
+    "naming": null
+   },
+   {
+    "id": "825a215de1874a03b6bee2e8661b4ecc",
+    "kind": "completion",
+    "turn": 41,
+    "ts": 1791528008.1460512,
+    "seq": 205,
+    "text": "Hello from the mock provider!",
+    "outcome": "complete",
+    "naming": {
+     "state": "pending",
+     "name": null,
+     "summary": null
+    }
+   },
+   {
+    "id": "c6bfd554-821d-40a4-a14d-1f229bd117d2",
+    "kind": "user",
+    "turn": 42,
+    "ts": 1791528009.179882,
+    "seq": 209,
+    "text": "Deep turn 42: keep the journal long.",
+    "outcome": null,
+    "naming": null
+   },
+   {
+    "id": "0b6c94a00ca14e84b1f64644004d2e41",
+    "kind": "completion",
+    "turn": 42,
+    "ts": 1791528009.1917481,
+    "seq": 210,
+    "text": "Hello from the mock provider!",
+    "outcome": "complete",
+    "naming": {
+     "state": "pending",
+     "name": null,
+     "summary": null
+    }
+   },
+   {
+    "id": "6e8a9816-7108-4590-8b6e-f7ec72bfd6ae",
+    "kind": "user",
+    "turn": 43,
+    "ts": 1791528010.235378,
+    "seq": 214,
+    "text": "Deep turn 43: keep the journal long.",
+    "outcome": null,
+    "naming": null
+   },
+   {
+    "id": "c5818f2d66ac4374abcc143f8242b12a",
+    "kind": "completion",
+    "turn": 43,
+    "ts": 1791528010.261097,
+    "seq": 215,
+    "text": "Hello from the mock provider!",
+    "outcome": "complete",
+    "naming": {
+     "state": "pending",
+     "name": null,
+     "summary": null
+    }
+   },
+   {
+    "id": "272c0019-f872-49e8-baad-85335fb156d7",
+    "kind": "user",
+    "turn": 44,
+    "ts": 1791528012.072211,
+    "seq": 219,
+    "text": "Deep turn 44: keep the journal long.",
+    "outcome": null,
+    "naming": null
+   },
+   {
+    "id": "506522f964ea4f20975b20a84ade519b",
+    "kind": "completion",
+    "turn": 44,
+    "ts": 1791528012.091379,
+    "seq": 220,
+    "text": "Hello from the mock provider!",
+    "outcome": "complete",
+    "naming": {
+     "state": "pending",
+     "name": null,
+     "summary": null
+    }
+   },
+   {
+    "id": "dca9ca5a-97f2-43af-a8d3-5ecba4540550",
+    "kind": "user",
+    "turn": 45,
+    "ts": 1791528013.131297,
+    "seq": 224,
+    "text": "Deep turn 45: keep the journal long.",
+    "outcome": null,
+    "naming": null
+   },
+   {
+    "id": "86b56cf5c6a04526ada147a969bddd1a",
+    "kind": "completion",
+    "turn": 45,
+    "ts": 1791528013.1534321,
+    "seq": 225,
+    "text": "Hello from the mock provider!",
+    "outcome": "complete",
+    "naming": {
+     "state": "pending",
+     "name": null,
+     "summary": null
+    }
+   },
+   {
+    "id": "bd1a8ade-7f0f-4c96-abfc-7920edbc28b9",
+    "kind": "user",
+    "turn": 46,
+    "ts": 1791528014.206466,
+    "seq": 229,
+    "text": "Deep turn 46: keep the journal long.",
+    "outcome": null,
+    "naming": null
+   },
+   {
+    "id": "13de85b73e5a4d60989b773f2b752c8b",
+    "kind": "completion",
+    "turn": 46,
+    "ts": 1791528014.2292988,
+    "seq": 230,
+    "text": "Hello from the mock provider!",
+    "outcome": "complete",
+    "naming": {
+     "state": "pending",
+     "name": null,
+     "summary": null
+    }
+   },
+   {
+    "id": "c651dcb4-fe45-4974-b40f-458bcad0b343",
+    "kind": "user",
+    "turn": 47,
+    "ts": 1791528015.255767,
+    "seq": 234,
+    "text": "Deep turn 47: keep the journal long.",
+    "outcome": null,
+    "naming": null
+   },
+   {
+    "id": "5d794e66b35640ceafa28568a344b21e",
+    "kind": "completion",
+    "turn": 47,
+    "ts": 1791528015.264342,
+    "seq": 235,
+    "text": "Hello from the mock provider!",
+    "outcome": "complete",
+    "naming": {
+     "state": "pending",
+     "name": null,
+     "summary": null
+    }
+   },
+   {
+    "id": "c4c194d2-27fd-4d5e-828a-b9c41f83d0f9",
+    "kind": "user",
+    "turn": 48,
+    "ts": 1791528016.301847,
+    "seq": 239,
+    "text": "Deep turn 48: keep the journal long.",
+    "outcome": null,
+    "naming": null
+   },
+   {
+    "id": "440344c0003c4c4e9bdefbf02b83440a",
+    "kind": "completion",
+    "turn": 48,
+    "ts": 1791528016.310681,
+    "seq": 240,
+    "text": "Hello from the mock provider!",
+    "outcome": "complete",
+    "naming": {
+     "state": "pending",
+     "name": null,
+     "summary": null
+    }
+   },
+   {
+    "id": "6a683137-49c9-44e9-acb4-4a1550af02f4",
+    "kind": "user",
+    "turn": 49,
+    "ts": 1791528018.146106,
+    "seq": 244,
+    "text": "Deep turn 49: keep the journal long.",
+    "outcome": null,
+    "naming": null
+   },
+   {
+    "id": "8e2b2e3c38214c5d99564d8a6f659e60",
+    "kind": "completion",
+    "turn": 49,
+    "ts": 1791528018.163436,
+    "seq": 245,
+    "text": "Hello from the mock provider!",
+    "outcome": "complete",
+    "naming": {
+     "state": "pending",
+     "name": null,
+     "summary": null
+    }
+   },
+   {
+    "id": "9f7bfdd5-e130-4aa7-a986-c9804bdcde7b",
+    "kind": "user",
+    "turn": 50,
+    "ts": 1791528019.219297,
+    "seq": 249,
+    "text": "Deep turn 50: keep the journal long.",
+    "outcome": null,
+    "naming": null
+   },
+   {
+    "id": "39cba9c335504c9891e4b2475c825a92",
+    "kind": "completion",
+    "turn": 50,
+    "ts": 1791528019.237545,
+    "seq": 250,
+    "text": "Hello from the mock provider!",
+    "outcome": "complete",
+    "naming": {
+     "state": "pending",
+     "name": null,
+     "summary": null
+    }
+   }
+  ]
+ }
+}

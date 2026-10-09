@@ -115,9 +115,27 @@ describe("sessionStateFlags", () => {
 			"find-hit",
 			"find-caveat",
 		];
+		// The checkpoint rail states are the third exception, the same shape one
+		// layer down from find: their derivation is the rail's OWN state (the
+		// manifest's `index.state`, read by `railState` — `features/session/
+		// components/checkpoint-rail.tsx`), which is a relay answer about a
+		// journal, never a projection fact. A streaming turn does not decide
+		// whether a checkpoint scan is building, so requiring a
+		// `sessionStateFlags` entry would demand a derivation from the wrong layer
+		// — and a flag derived from the wrong layer is how a marker starts lying.
+		const railLevel = [
+			"rail",
+			"rail-deep",
+			"rail-building",
+			"rail-error",
+			"rail-empty",
+		];
 		const derived = Object.keys(STATE_MARKER.session)
 			.filter(
-				(state) => !screenLevel.includes(state) && !findLevel.includes(state),
+				(state) =>
+					!screenLevel.includes(state) &&
+					!findLevel.includes(state) &&
+					!railLevel.includes(state),
 			)
 			.sort();
 		expect(

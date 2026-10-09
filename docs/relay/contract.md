@@ -152,6 +152,7 @@ The routes that *do* set cache headers are the SSE streams
 | POST | `/api/projects/{key}/links` | gate | `daemon.py:4646-4658` |
 | DELETE | `/api/projects/{key}/links/{session_id}` | gate | `daemon.py:4660-4672` |
 | GET | `/api/schedules` | gate | the armed index, `daemon.py:5376-5398` (at `5e59e0cd06`) |
+| GET | `/api/sessions/{id}/checkpoints` | gate | the rail manifest (D9), `daemon.py:4870-4911` (at `ae6c9eb6`) |
 
 There is **no `GET /api/sessions/{id}`** — a single session's state arrives only
 over its SSE stream or as a row of `/api/sessions`. A client that wants
@@ -463,6 +464,63 @@ already-acknowledged conversation is the whole point. It is minted
 deterministically per conversation (`base64url(HMAC-SHA256(key, identity))[:22]`
 over the conversation's stable identity; `push_handles.py`) and appears as
 `push_handle` on the rows of `GET /api/attention/unread`.
+
+### 3.13 `GET /api/sessions/{id}/checkpoints` — one conversation's rail ticks
+
+> Citations in this section are against local-operator `ae6c9eb6` (the merge of
+> #2068, the route's own), not the document-wide pin — see the header.
+
+`{session_id, index: {state, built_at}, checkpoints: [...]}` — the transcript
+rail's manifest, derived from the journal by `session/transcript_index.py`
+(`checkpoints_view`, `transcript_index.py:1513`) — the same derivation the
+desktop rail reads — and served in the desktop's own wire models
+(`server/models/desktop_sessions.py:740-745`), so the two surfaces cannot
+drift; the relay's suite pins the declared field sets on both sides
+(`tests/unit/mobile/test_checkpoints_relay.py`). **Why a route and not the
+phone's own frames**: the phone's projection is a bounded tail window (the
+window `GET /api/sessions/{id}/history` back-fills), so a rail built from the
+frames a phone happens to hold would silently mark only the tail; this
+manifest covers every turn, loaded or not, and needs no runtime — a
+conversation nothing is serving still has its journal.
+
+Each row is a REAL journal id mapped to a tick: `{id, kind, turn, ts, seq,
+text, outcome, naming}` (`desktop_sessions.py:699-721`, served at
+`daemon.py:4870-4911`). `kind` is `user` or `completion`; `seq` is the journal
+row ordinal (0-based) that places a tick proportionally; `turn` is 1-based.
+`outcome` is null unless the turn's own completion marker carried a kind, and
+`open` on the live unsettled tail — a rail paints it as an in-progress dot,
+never a tick. `naming` is present on completions only (`null` on user ticks,
+present-as-null fields when not ready); on this route nothing warms names
+(the `warm` op is a desktop-plane spend), so a completion's naming stays
+`pending` until the desktop names it. `id` is the user row, or the
+completion's closing ANSWER row (falling back to the last message row only
+when the turn has no answer), so a future click-to-jump maps to a loaded row
+without translation.
+
+`index.state` is the honesty the client must keep, and the three answers it
+keeps apart:
+
+- `ready` — a fresh scan. With NO ticks it is a conversation with nothing
+  written yet: genuinely empty, not a failure and not a loading state.
+- `building` — a scan is in flight and `checkpoints` carries the previous
+  scan where one exists (a cold cache's FIRST answer is `building`). The
+  client paints what it has and POLLS; the desktop rail's own discipline.
+  `stale` is reserved for a manifest deliberately served out of date (no
+  caller emits it today, `desktop_sessions.py:723-737`).
+- `error` — the last refresh failed and is inside its cooldown: a journal
+  that fails to READ after a successful stat (the pinned case is a
+  `chmod 000` file). This must never render as "no checkpoints". The bound is
+  stated rather than hidden: a journal that cannot be `stat`-ed at all still
+  maps to `missing` → `ready` + `[]` in the shared derivation
+  (`transcript_index.py:1335` catches any `OSError`) — pre-existing and
+  deferred on local-operator #2068, whose fix changes the desktop rail's and
+  `find`'s semantics too.
+
+Session resolution mirrors the history read beside it: a live generation,
+else a durable user conversation, else `404 {"error": "unknown session"}`
+(`daemon.py:4904-4907`). Read-only: nothing here writes or dials a session.
+Live `fixtures/relay/http/checkpoints-ready.json`, `checkpoints-empty.json`,
+`checkpoints-building.json`, `checkpoints-error.json`.
 
 ---
 

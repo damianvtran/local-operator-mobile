@@ -1,0 +1,140 @@
+{
+ "provenance": {
+  "kind": "live",
+  "relay_ref": "local-operator ae6c9eb6",
+  "captured_at": "2026-10-09",
+  "how": "captured from an isolated `lop mobile serve` daemon (fresh HOME + LOCAL_OPERATOR_CONFIG_DIR, own ephemeral port, hosting=test/model_name=mock) running local-operator merge ae6c9eb6 from a clean worktree via PYTHONPATH; the conversation was driven over the relay's own `POST /api/sessions/{id}/command` and each turn waited for via `GET /api/sessions`, so every checkpoint below is what the runtime wrote, not what a script seeded. This sample: the error session's seed (two settled turns).",
+  "redactions": "isolated home shown as ~; portal password and cookie signatures absent"
+ },
+ "event": "projection",
+ "data": {
+  "session_id": "d3044c49505c",
+  "pid": 95314,
+  "kind": "daemon",
+  "conversation_name": "Hello from the mock provider",
+  "cwd": "~",
+  "model_label": "test/mock",
+  "model_selector": "test/mock",
+  "effort": "",
+  "effort_ladder": [],
+  "streaming": false,
+  "activity": "",
+  "activity_started_s": null,
+  "stop_reason": "completed",
+  "cut_off": false,
+  "queued_count": 0,
+  "ended": false,
+  "degraded": false,
+  "transcript": [
+   {
+    "id": "0d369c2e-31a3-4939-9879-df12bdb6a2d1",
+    "kind": "user",
+    "text": "Error turn 1: written before the failure.",
+    "tool_call_id": "",
+    "tool_name": "",
+    "tool_state": "interrupted",
+    "summary": "",
+    "intent": "",
+    "diff_added": 0,
+    "diff_removed": 0,
+    "elapsed_s": 0.0,
+    "error": "",
+    "details": {},
+    "images": [],
+    "final": true,
+    "text_complete": true
+   },
+   {
+    "id": "cfce452536234571b4c4ae41347434a1",
+    "kind": "assistant",
+    "text": "Hello from the mock provider!",
+    "tool_call_id": "",
+    "tool_name": "",
+    "tool_state": "interrupted",
+    "summary": "",
+    "intent": "",
+    "diff_added": 0,
+    "diff_removed": 0,
+    "elapsed_s": 0.0,
+    "error": "",
+    "details": {},
+    "images": [],
+    "final": true,
+    "text_complete": true
+   },
+   {
+    "id": "2896273e-f858-4d50-850f-c11a46b5881f",
+    "kind": "user",
+    "text": "Error turn 2: written before the failure.",
+    "tool_call_id": "",
+    "tool_name": "",
+    "tool_state": "interrupted",
+    "summary": "",
+    "intent": "",
+    "diff_added": 0,
+    "diff_removed": 0,
+    "elapsed_s": 0.0,
+    "error": "",
+    "details": {},
+    "images": [],
+    "final": true,
+    "text_complete": true
+   },
+   {
+    "id": "f0bc76ccd6d44d11a0dfebad4f0b53b9",
+    "kind": "assistant",
+    "text": "Hello from the mock provider!",
+    "tool_call_id": "",
+    "tool_name": "",
+    "tool_state": "interrupted",
+    "summary": "",
+    "intent": "",
+    "diff_added": 0,
+    "diff_removed": 0,
+    "elapsed_s": 0.0,
+    "error": "",
+    "details": {},
+    "images": [],
+    "final": true,
+    "text_complete": true
+   }
+  ],
+  "todos": [
+   {
+    "name": "Todos",
+    "items": []
+   }
+  ],
+  "subagents": [],
+  "pending": null,
+  "pending_count": 0,
+  "asks_open": 0,
+  "usage": {
+   "input_tokens": 10,
+   "output_tokens": 8
+  },
+  "cumulative_parent_cost": null,
+  "child_costs": {},
+  "subagent_cost": null,
+  "subagent_cost_knowledge": "exact",
+  "cost_knowledge": "unknown",
+  "context_tokens": null,
+  "context_window": 128000,
+  "context_is_estimate": false,
+  "version": 129,
+  "attention": {
+   "conversation_id": "session/d3044c49505c",
+   "completion_token": "875497b8-cf5a-4982-8a91-16aeb99e2085",
+   "anchor_id": "f0bc76ccd6d44d11a0dfebad4f0b53b9",
+   "kind": "complete",
+   "reason": "",
+   "cause": "",
+   "notify": true,
+   "unseen": true,
+   "revision": [
+    60,
+    0
+   ]
+  }
+ }
+}

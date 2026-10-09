@@ -1,0 +1,218 @@
+{
+ "provenance": {
+  "kind": "live",
+  "relay_ref": "local-operator ae6c9eb6",
+  "captured_at": "2026-10-09",
+  "how": "captured from an isolated `lop mobile serve` daemon (fresh HOME + LOCAL_OPERATOR_CONFIG_DIR, own ephemeral port, hosting=test/model_name=mock) running local-operator merge ae6c9eb6 from a clean worktree via PYTHONPATH; the conversation was driven over the relay's own `POST /api/sessions/{id}/command` and each turn waited for via `GET /api/sessions`, so every checkpoint below is what the runtime wrote, not what a script seeded. This sample: a settled 8-turn conversation: every tick complete, names pending.",
+  "redactions": "isolated home shown as ~; portal password and cookie signatures absent"
+ },
+ "request": {
+  "method": "GET",
+  "path": "/api/sessions/7859176f7f2c/checkpoints"
+ },
+ "status": 200,
+ "headers": {
+  "content-type": "application/json"
+ },
+ "body": {
+  "session_id": "7859176f7f2c",
+  "index": {
+   "state": "ready",
+   "built_at": 1791528341.9458601
+  },
+  "checkpoints": [
+   {
+    "id": "de4c9dc1-fe1e-41ef-acc3-a3c87afbc03f",
+    "kind": "user",
+    "turn": 1,
+    "ts": 1791527948.872301,
+    "seq": 3,
+    "text": "Short turn 1: say something brief.",
+    "outcome": null,
+    "naming": null
+   },
+   {
+    "id": "349660565f234982b8a2c1d804320988",
+    "kind": "completion",
+    "turn": 1,
+    "ts": 1791527948.884866,
+    "seq": 5,
+    "text": "Hello from the mock provider!",
+    "outcome": "complete",
+    "naming": {
+     "state": "pending",
+     "name": null,
+     "summary": null
+    }
+   },
+   {
+    "id": "f62c60cd-be26-4cf4-b68d-985afd69c601",
+    "kind": "user",
+    "turn": 2,
+    "ts": 1791527949.923352,
+    "seq": 9,
+    "text": "Short turn 2: say something brief.",
+    "outcome": null,
+    "naming": null
+   },
+   {
+    "id": "9157a3f22fc8498891fee9ea464f9e8d",
+    "kind": "completion",
+    "turn": 2,
+    "ts": 1791527949.942701,
+    "seq": 10,
+    "text": "Hello from the mock provider!",
+    "outcome": "complete",
+    "naming": {
+     "state": "pending",
+     "name": null,
+     "summary": null
+    }
+   },
+   {
+    "id": "7dd11d39-68fb-484e-92a5-33839e0d93c3",
+    "kind": "user",
+    "turn": 3,
+    "ts": 1791527950.970452,
+    "seq": 14,
+    "text": "Short turn 3: say something brief.",
+    "outcome": null,
+    "naming": null
+   },
+   {
+    "id": "d914a718bc4b4878b6a1ae1732c928b6",
+    "kind": "completion",
+    "turn": 3,
+    "ts": 1791527950.9960241,
+    "seq": 15,
+    "text": "Hello from the mock provider!",
+    "outcome": "complete",
+    "naming": {
+     "state": "pending",
+     "name": null,
+     "summary": null
+    }
+   },
+   {
+    "id": "acefbd48-46db-480c-8e0b-c6d8cfef6ecf",
+    "kind": "user",
+    "turn": 4,
+    "ts": 1791527952.023106,
+    "seq": 19,
+    "text": "Short turn 4: say something brief.",
+    "outcome": null,
+    "naming": null
+   },
+   {
+    "id": "856144604ebf4fa8aefe0b66a7f74de6",
+    "kind": "completion",
+    "turn": 4,
+    "ts": 1791527952.0310159,
+    "seq": 20,
+    "text": "Hello from the mock provider!",
+    "outcome": "complete",
+    "naming": {
+     "state": "pending",
+     "name": null,
+     "summary": null
+    }
+   },
+   {
+    "id": "c7386c94-58b9-439d-a2b3-24a18a328dd1",
+    "kind": "user",
+    "turn": 5,
+    "ts": 1791527953.104491,
+    "seq": 24,
+    "text": "Short turn 5: the live tail.",
+    "outcome": null,
+    "naming": null
+   },
+   {
+    "id": "d54e0d4a6a7549deb5184bf1d1d90344",
+    "kind": "completion",
+    "turn": 5,
+    "ts": 1791527953.112326,
+    "seq": 25,
+    "text": "Hello from the mock provider!",
+    "outcome": "complete",
+    "naming": {
+     "state": "pending",
+     "name": null,
+     "summary": null
+    }
+   },
+   {
+    "id": "0a588d8f-b978-4a17-b8b6-904418fd9989",
+    "kind": "user",
+    "turn": 6,
+    "ts": 1791528245.12757,
+    "seq": 29,
+    "text": "Short turn 6: the live tail.",
+    "outcome": null,
+    "naming": null
+   },
+   {
+    "id": "2ce98080b263409cb9b96931bb51c9e2",
+    "kind": "completion",
+    "turn": 6,
+    "ts": 1791528245.136105,
+    "seq": 31,
+    "text": "Hello from the mock provider!",
+    "outcome": "complete",
+    "naming": {
+     "state": "pending",
+     "name": null,
+     "summary": null
+    }
+   },
+   {
+    "id": "4fdba005-c709-43dc-8c24-05a0eb94e7e2",
+    "kind": "user",
+    "turn": 7,
+    "ts": 1791528286.349097,
+    "seq": 35,
+    "text": "Short turn 6: a tool that waits for approval. [tool]",
+    "outcome": null,
+    "naming": null
+   },
+   {
+    "id": "51c4928f425f42b58b802e205983e654",
+    "kind": "completion",
+    "turn": 7,
+    "ts": 1791528286.357697,
+    "seq": 37,
+    "text": "Hello from the mock provider!",
+    "outcome": "complete",
+    "naming": {
+     "state": "pending",
+     "name": null,
+     "summary": null
+    }
+   },
+   {
+    "id": "b7fd9777-934a-4fdf-9a82-5b389c9b7bf4",
+    "kind": "user",
+    "turn": 8,
+    "ts": 1791528341.652417,
+    "seq": 41,
+    "text": "Short turn 7: a tool that waits. [bash:15]",
+    "outcome": null,
+    "naming": null
+   },
+   {
+    "id": "31465e28d19344b581d312d9c57e8fa0",
+    "kind": "completion",
+    "turn": 8,
+    "ts": 1791528341.66577,
+    "seq": 43,
+    "text": "Hello from the mock provider!",
+    "outcome": "complete",
+    "naming": {
+     "state": "pending",
+     "name": null,
+     "summary": null
+    }
+   }
+  ]
+ }
+}

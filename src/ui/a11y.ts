@@ -509,6 +509,14 @@ export const SURFACE = {
 	sessionLoading: "session-loading",
 	sessionTranscriptEmpty: "session-transcript-empty",
 	sessionWorkingLine: "session-working-line",
+	/** The checkpoint rail's overlay column over the transcript (the whole
+	 *  column, marks included). Present whenever the rail draws anything —
+	 *  ticks, the liveness mark or the failure mark — and absent when the
+	 *  manifest is genuinely empty or nothing answered, so a flow can assert
+	 *  "the rail drew" without claiming which state drew it. DISTINCT from the
+	 *  state markers below on purpose: this id is on screen in several states,
+	 *  and a marker must be present in only the state it names. */
+	checkpointRail: "session-checkpoint-rail",
 	/* --- the markdown table (design pass `fix/hero-tables-strips` §1.4–§1.6).
 	 *  The wrapper, its scrolling viewport and the fade are what U-38/U-40
 	 *  address by name; the two row ids and the cell id are what let U-38 count
@@ -987,6 +995,22 @@ export const STATE_MARKER = {
 		"find-empty": "session-find-empty",
 		"find-hit": "session-find-hit",
 		"find-caveat": "session-find-caveat",
+		/* The checkpoint rail (this slice): one marker per state a cell
+		 *  declares. `rail` — the manifest is `ready` and the rail draws at
+		 *  least one tick; `rail-deep` — a refinement of `rail` (a frame may
+		 *  carry both, the `find-related` rule): at least one mark is for a row
+		 *  this device does NOT hold, so the whole-conversation claim is a fact
+		 *  in the DOM rather than a sentence in a test; `rail-building` — the
+		 *  manifest is `building`/`stale`; `rail-error` — the relay answered
+		 *  its own `error` state (a failed refresh, never an empty rail);
+		 *  `rail-empty` — `ready` with genuinely no ticks (a zero-size marker:
+		 *  the empty rail draws nothing VISIBLE, and the marker's job is to
+		 *  keep "empty" from being confused with "nothing answered"). */
+		rail: "session-checkpoint-rail-ready",
+		"rail-deep": "session-checkpoint-rail-deep",
+		"rail-building": "session-checkpoint-rail-building",
+		"rail-error": "session-checkpoint-rail-error",
+		"rail-empty": "session-checkpoint-rail-empty",
 		"rich-rows": "session-rich-rows",
 		/* A transcript that carries a markdown table — the rows U-38's check
 		 * exists for. Derived from the same parser the renderer uses
