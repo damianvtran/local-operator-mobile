@@ -22,8 +22,10 @@
  *    disagree about one session's same fact.
  *  * `wakeCadence` follows the desktop's `formatWakeCadence`: `once`, `every
  *    1d`, `every 1d · 3 left`, `every 1d · no deliveries left`. `remaining` is
- *    derived from `limit - fired_count`, the BACKEND's own arithmetic
- *    (`harness/wake.py::due_while_down`), never a second opinion.
+ *    `limit - fired_count` floored at 0, the same expression the backend clamps
+ *    a delivery budget with (`harness/wake.py::missed_occurrences`:
+ *    `max(limit - fired_count, 0)`; `advance_wake_schedule` retires a spent
+ *    schedule at `fired >= limit`), never a second opinion.
  *  * The supervisor sentences come from the desktop's `supervisorLead`
  *    verbatim, including the ORDER: a store the probe cannot speak for
  *    reports `supported: false` AND `verifiable: false`, and the platform
@@ -133,6 +135,26 @@ export const wakeCountClause = (count: number): string =>
 /** `1 monitor` / `2 monitors` — the twin of `wakeCountClause`. */
 export const monitorCountClause = (count: number): string =>
 	count === 1 ? "1 monitor" : `${count} monitors`;
+
+/**
+ * The head clause's instant tail: the desktop's own `· next <label>` splice,
+ * over the phone's RELATIVE label (`dueLabel`).
+ *
+ * WHY "next" DROPS WHEN OVERDUE. The desktop splices `next` onto an absolute
+ * clock (`next 2:14 PM EDT`) — a noun phrase with no tense, reading the same
+ * before and after the instant. The phone's label is relative, and once the
+ * instant is past it reads `8d overdue`; splicing `next` onto that would say
+ * `next 8d overdue`, a forward word against a past one (design round 1,
+ * D64-3). So the phone drops `next` when the instant has passed: `3 wakes ·
+ * 8d overdue`. Composition only — the label itself is the CLI's vocabulary,
+ * unchanged.
+ */
+export const nextDueClause = (countClause: string, seconds: number): string => {
+	const label = dueLabel(seconds);
+	return seconds < 0
+		? `${countClause} · ${label}`
+		: `${countClause} · next ${label}`;
+};
 
 /* --------------------------------------------------------- the two clauses */
 
@@ -270,8 +292,9 @@ export type WakeEntryView = {
 	sessionId: string;
 	name: string;
 	cwd: string;
-	/** The head clause: `2 wakes · next in 1h`, or the parked/gone sentence,
-	 *  which REPLACES count and instant (neither is fireable). */
+	/** The head clause: `2 wakes · next in 1h` (`3 wakes · 8d overdue` once
+	 *  the instant has passed), or the parked/gone sentence, which REPLACES
+	 *  count and instant (neither is fireable). */
 	clause: string;
 	parked: boolean;
 	ghost: boolean;
@@ -334,8 +357,9 @@ export const wakeDueWord = (row: ScheduleWakeRow, nowMs: number): string => {
 };
 
 /** The entry's head clause: parked/gone sentences replace the count and the
- *  soonest instant; otherwise `2 wakes · next in 1h` (the desktop's own head
- *  shape, whose `next` is the soonest due label). */
+ *  soonest instant; otherwise `2 wakes · next in 1h` — the desktop's head
+ *  shape over the phone's label (`nextDueClause`; `next` drops once the
+ *  instant is overdue: `3 wakes · 8d overdue`). */
 export const wakeEntryClause = (
 	entry: ScheduleWakeEntry,
 	nowMs: number,
@@ -344,7 +368,7 @@ export const wakeEntryClause = (
 	if (entry.ghost) return GONE_WAKES_CLAUSE;
 	const count = wakeCountClause(entry.schedules.length);
 	if (entry.next_due_at === null) return count;
-	return `${count} · next ${dueLabel((entry.next_due_at - nowMs) / 1000)}`;
+	return nextDueClause(count, (entry.next_due_at - nowMs) / 1000);
 };
 
 /* --------------------------------------------------------- monitor rows */
@@ -440,7 +464,8 @@ export const monitorLineView = (
 });
 
 /** The monitor entry's head clause; `2 monitors · next in 4m` mirrors the
- *  wake head, parked/gone replace it. */
+ *  wake head (`nextDueClause`, overdue drop included), parked/gone replace
+ *  it. */
 export const monitorEntryClause = (
 	entry: ScheduleMonitorEntry,
 	nowMs: number,
@@ -449,7 +474,7 @@ export const monitorEntryClause = (
 	if (entry.ghost) return GONE_MONITORS_CLAUSE;
 	const count = monitorCountClause(entry.monitors.length);
 	if (entry.next_due_at === null) return count;
-	return `${count} · next ${dueLabel((entry.next_due_at - nowMs) / 1000)}`;
+	return nextDueClause(count, (entry.next_due_at - nowMs) / 1000);
 };
 
 /* --------------------------------------------------------- view derivation */

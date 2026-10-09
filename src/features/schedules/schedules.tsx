@@ -214,19 +214,25 @@ export default function Schedules() {
 										: `Wakes · ${wakeSectionSummary(allWakeRows(wakes, nowMs))}`
 								}
 							/>
-							{supervisorLead(wakes.supervisor) !== "" ? (
-								<Alert severity="warning" testID={SURFACE.schedulesSupervisor}>
-									{supervisorLead(wakes.supervisor)}
-								</Alert>
-							) : null}
-							{familyState(wakes) === "unreadable" ? (
+							{/* The read_error strip LEADS — directly under the section header
+							    (design round 1, D64-1): at 200 % the fault has to be what a
+							    reader meets, not a fold-edge card under a supervisor sentence
+							    whose "wakes below" this state never draws. The supervisor
+							    sentence then follows it, the order the desktop's page uses. */}
+							{wakeState === "unreadable" ? (
 								<Alert
 									severity="warning"
 									testID={SURFACE.schedulesWakesUnreadable}
 								>
 									{readErrorClause("wakes")}
 								</Alert>
-							) : (
+							) : null}
+							{supervisorLead(wakes.supervisor) !== "" ? (
+								<Alert severity="warning" testID={SURFACE.schedulesSupervisor}>
+									{supervisorLead(wakes.supervisor)}
+								</Alert>
+							) : null}
+							{wakeState === "unreadable" ? null : (
 								<>
 									{wakes.truncated ? (
 										<Text
@@ -468,24 +474,16 @@ const MonitorEntry = ({
 
 /** One watch: what it is watching (name, description), then the facts — the
  *  due-or-state slot, the cadence, and the store's health sentence when there
- *  is one. Its stack steps by `gap-1` for the wake line's reason (audit U-42). */
+ *  is one. The name and the description WRAP rather than clamping — the
+ *  one-line clamps measured as single-line ellipsis at 135/200 %, with the
+ *  full string left to the accessibility tree (audit U-07, design round 1
+ *  D64-2); the wake message wraps for the same reason. The stack steps by
+ *  `gap-1` for the wake line's reason (audit U-42). */
 const MonitorLine = ({ row }: { row: MonitorLineView }) => (
 	<View className="gap-1">
-		<Text
-			className="text-body-sm text-ink"
-			numberOfLines={1}
-			ellipsizeMode="tail"
-		>
-			{row.name}
-		</Text>
+		<Text className="text-body-sm text-ink">{row.name}</Text>
 		{row.description !== "" ? (
-			<Text
-				className="text-meta text-ink-dim"
-				numberOfLines={1}
-				ellipsizeMode="tail"
-			>
-				{row.description}
-			</Text>
+			<Text className="text-meta text-ink-dim">{row.description}</Text>
 		) : null}
 		<View className="flex-row flex-wrap gap-x-2">
 			{row.slot !== "" ? (

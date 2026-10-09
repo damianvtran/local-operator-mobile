@@ -20,9 +20,10 @@ rather than from prose.
 >
 > **Material added after the pin carries its own ref, named inline.** §4.12 (the
 > armed index, S17) and its route-table row arrived with local-operator `5e59e0cd06`
-> (2026-10-08, #2061), which is three weeks past this document's pin — so those
-> citations are written against `5e59e0cd06` and are qualified as such, rather
-> than silently re-numbered in a table whose other rows still mean the pinned ref.
+> (2026-10-08, #2061), eight days after this document's pin (`fc851a94e`,
+> 2026-09-30) — so those citations are written against `5e59e0cd06` and are
+> qualified as such, rather than silently re-numbered in a table whose other rows
+> still mean the pinned ref.
 
 Paths are relative to the local-operator repository root:
 `local_operator/mobile/daemon.py` → `daemon.py`; `local_operator/mobile/web/src/api.ts`
@@ -770,7 +771,7 @@ collapsed into one array:
   holds only what it sent. The desktop `limit`/`include_dormant` query
   parameters are deliberately not mirrored yet.
 
-Wake rows are the desktop `WakeScheduleRow` shape plus `stale` — the
+Wake rows are the desktop `WakeScheduleRow` shape, `stale` included — the
 supervisor's own staleness predicate (imported from `wakes/supervisor.py`, not
 re-derived, so the listing and the supervisor cannot disagree) — and include
 dormant (stopped/held) and ghost (no session on disk) entries: the mirror's

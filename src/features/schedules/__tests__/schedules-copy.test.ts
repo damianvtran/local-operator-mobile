@@ -223,7 +223,8 @@ describe("wake row vocabulary", () => {
 	it("derives the remaining budget with the backend's own arithmetic", () => {
 		/* `remaining` is not on this wire — the row carries `limit` and
 		 *  `fired_count` — so the same `max(limit - fired_count, 0)` the harness
-		 *  uses (`wake.py::due_while_down`) is the one derivation allowed here. */
+		 *  clamps with (`wake.py::missed_occurrences`) is the one derivation
+		 *  allowed here. */
 		const row = wakeLineView(
 			wakeRow({ limit: 5, fired_count: 4, every_ms: 3_600_000 }),
 			NOW,
@@ -266,6 +267,16 @@ describe("wake entry heads", () => {
 				NOW,
 			),
 		).toBe("2 wakes · next in 60m");
+	});
+
+	it("drops `next` on an overdue head so the tenses agree", () => {
+		/* The one splice the phone cannot keep verbatim: the desktop's `next`
+		 *  rides an absolute clock (no tense), and over the phone's relative
+		 *  label it would read `next 8d overdue` — forward against past
+		 *  (design round 1, D64-3). */
+		expect(
+			wakeEntryClause(entry({ next_due_at: NOW - 8 * 86_400_000 }), NOW),
+		).toBe("1 wake · 8d overdue");
 	});
 
 	it("replaces count and instant with the parked sentence", () => {
@@ -368,6 +379,10 @@ describe("monitor row vocabulary", () => {
 			monitors: [monitorRow()],
 		};
 		expect(monitorEntryClause(entry, NOW)).toBe("1 monitor · next in 4m");
+		/* Overdue drops `next` here the same way it does on the wake head. */
+		expect(
+			monitorEntryClause({ ...entry, next_due_at: NOW - 7_200_000 }, NOW),
+		).toBe("1 monitor · 2h overdue");
 		expect(monitorEntryClause({ ...entry, dormant: true }, NOW)).toBe(
 			PARKED_MONITORS_CLAUSE,
 		);
