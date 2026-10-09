@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import type { TranscriptEntry } from "@/contracts";
-import { loadAttachments, olderThanLoaded } from "@/features/session/runtime";
+import type { SessionProjection, TranscriptEntry } from "@/contracts";
+import {
+	loadAttachments,
+	mergeTranscript,
+	olderThanLoaded,
+} from "@/features/session/runtime";
 import {
 	type RelayEndpoints,
 	type RelayResponseFacts,
@@ -134,6 +138,7 @@ describe("olderThanLoaded", () => {
 				page: [],
 				entries: rows("a"),
 				slid: false,
+				holeBelowPage: false,
 			}),
 		).toBe(true);
 		// No attempt has settled either (in flight, or no endpoints to read
@@ -145,6 +150,7 @@ describe("olderThanLoaded", () => {
 				page: [],
 				entries: rows("a"),
 				slid: false,
+				holeBelowPage: false,
 			}),
 		).toBe(true);
 		// A successful read of a conversation with nothing in it: the one state
@@ -156,6 +162,7 @@ describe("olderThanLoaded", () => {
 				page: [],
 				entries: [],
 				slid: false,
+				holeBelowPage: false,
 			}),
 		).toBe(false);
 	});
@@ -169,6 +176,7 @@ describe("olderThanLoaded", () => {
 				page: rows("a"),
 				entries: rows("a", "b"),
 				slid: false,
+				holeBelowPage: false,
 			}),
 		).toBe(false);
 	});
@@ -183,6 +191,7 @@ describe("olderThanLoaded", () => {
 				page: rows("p1", "p2"),
 				entries: rows("p1", "p2"),
 				slid: false,
+				holeBelowPage: false,
 			}),
 		).toBe(true);
 		// A projection tail shorter than the page: the page's oldest row never
@@ -194,6 +203,7 @@ describe("olderThanLoaded", () => {
 				page: rows("p1"),
 				entries: rows("p40", "p41"),
 				slid: false,
+				holeBelowPage: false,
 			}),
 		).toBe(true);
 	});
@@ -209,6 +219,7 @@ describe("olderThanLoaded", () => {
 				page: rows("p10"),
 				entries: rows("p1", "p5", "p10", "p11"),
 				slid: false,
+				holeBelowPage: false,
 			}),
 		).toBe(false);
 	});
@@ -228,6 +239,7 @@ describe("olderThanLoaded", () => {
 				page,
 				entries: slid,
 				slid: false,
+				holeBelowPage: false,
 			}),
 		).toBe(true);
 	});
@@ -240,7 +252,167 @@ describe("olderThanLoaded", () => {
 				page: [],
 				entries: rows("r9"),
 				slid: true,
+				holeBelowPage: false,
 			}),
 		).toBe(true);
+	});
+
+	it("fires on the pinned opener: a row held below the page with a hole under it", () => {
+		/* The merged list's steady state on a capped frame: every page row is held
+		 * (so the "a page row left the window" clause is silent), nothing slid, and
+		 * the frame's opener sits above the page's oldest row — with the rows between
+		 * them held by nobody. `has_more` says older rows exist, and the id walk's own
+		 * clause cannot see the hole (the opener is a held row below the page, which
+		 * it reads as "rows past the page, nothing to claim"), so without this fact
+		 * the caveat went silent on exactly the shape the merge creates. */
+		expect(
+			olderThanLoaded({
+				hasMore: true,
+				read: "ok",
+				page: rows("p0", "p1"),
+				entries: rows("open", "p0", "p1"),
+				slid: false,
+				holeBelowPage: true,
+			}),
+		).toBe(true);
+		// And the fact alone is not the claim: a complete conversation still says
+		// nothing, and a contiguous older run (a second page's rows, which ARE
+		// searchable) is what the id walk exists for.
+		expect(
+			olderThanLoaded({
+				hasMore: false,
+				read: "ok",
+				page: rows("p0", "p1"),
+				entries: rows("open", "p0", "p1"),
+				slid: false,
+				holeBelowPage: true,
+			}),
+		).toBe(false);
+	});
+});
+
+/**
+ * The open's rows, from the two sources the screen holds.
+ *
+ * This pins the CONTRACT that made the first paint flip: the list the screen
+ * renders must be the same list before and after the live frame lands — the
+ * page's rows stay, in order, and the frame's rows join it instead of replacing
+ * it. Every assertion here fails against the shape this replaced, where the
+ * frame's transcript was returned whole (dropping the page's oldest row, moving
+ * every remaining row's index and re-emitting it from a different array, which
+ * is what made rows remount and condensation re-run over a different head).
+ */
+describe("mergeTranscript: one list from the page and the frame", () => {
+	const rowAt = (id: string, text = ""): TranscriptEntry => ({
+		id,
+		kind: "user",
+		text,
+		tool_call_id: "",
+		tool_name: "",
+		tool_state: "done",
+		summary: "",
+		intent: "",
+		diff_added: 0,
+		diff_removed: 0,
+		elapsed_s: 0,
+		error: "",
+		details: {},
+		images: [],
+		final: true,
+		text_complete: true,
+	});
+	const listOf = (...ids: string[]) => ids.map((id) => rowAt(id));
+	/** Only `transcript` is read by the merge; the rest of the frame's shape is
+	 *  irrelevant to it, so the stand-in is cast rather than filled in. */
+	const frameOf = (...rows: TranscriptEntry[]) =>
+		({ transcript: rows }) as unknown as SessionProjection;
+	const idsOf = (rows: readonly TranscriptEntry[]) =>
+		rows.map((entry) => entry.id);
+
+	it("keeps every page row, in order, when the capped frame lands", () => {
+		// The wire's real shape (`_cap_tail`): the frame carries the conversation's
+		// opening user row pinned at the head plus the newest tail rows, and the
+		// page carries the newest 80 of the fold — so the two windows overlap by all
+		// but one row per side.
+		const page = listOf("p0", "p1", "p2", "p3");
+		const merged = mergeTranscript(
+			frameOf(rowAt("open"), ...listOf("p1", "p2", "p3")),
+			page,
+		);
+		expect(idsOf(merged.rows)).toEqual(["open", "p0", "p1", "p2", "p3"]);
+		expect(merged.holeBelowPage).toBe(true);
+	});
+
+	it("takes the frame's copy of a shared row — the live version, in place", () => {
+		const page = listOf("p0", "p1", "p2", "p3");
+		const live = rowAt("p3", "streamed so far");
+		const merged = mergeTranscript(
+			frameOf(listOf("p1")[0] as TranscriptEntry, live),
+			page,
+		);
+		expect(idsOf(merged.rows)).toEqual(["p0", "p1", "p2", "p3"]);
+		expect(merged.rows.at(-1)).toBe(live);
+		// The row that is NOT in the frame keeps the page's own copy rather than
+		// vanishing or being re-created.
+		expect(merged.rows[0]).toBe(page[0]);
+		expect(merged.holeBelowPage).toBe(false);
+	});
+
+	it("appends a row that arrived while the page was in flight", () => {
+		const merged = mergeTranscript(
+			frameOf(rowAt("open"), ...listOf("p3", "p4")),
+			listOf("p2", "p3"),
+		);
+		expect(idsOf(merged.rows)).toEqual(["open", "p2", "p3", "p4"]);
+	});
+
+	it("appends a frame that shares no row with the page — the windows moved past each other", () => {
+		/* The frame is the newer window: both are tails of one append-only fold, and
+		 * a page that were newer would carry the frame's rows above its own oldest.
+		 * So the frame's rows go AFTER the page, which keeps the list's tail the
+		 * newest row — the end the reader is looking at. */
+		const merged = mergeTranscript(
+			frameOf(rowAt("open"), ...listOf("p5", "p6")),
+			listOf("p2", "p3", "p4"),
+		);
+		expect(idsOf(merged.rows)).toEqual(["p2", "p3", "p4", "open", "p5", "p6"]);
+		expect(merged.holeBelowPage).toBe(true);
+		// The hole is claimed: the two windows did not meet, so the rows between
+		// them are held by nobody and the caveat must not go silent on it.
+	});
+
+	it("keeps a page row the frame no longer carries — the cap slid, the row did not go", () => {
+		// The frame's window has slid one row past the page's oldest: p2 is on the
+		// page and not in the frame, and a list built from the frame alone would
+		// have dropped it.
+		const merged = mergeTranscript(
+			frameOf(rowAt("open"), ...listOf("p4", "p5")),
+			listOf("p2", "p3", "p4"),
+		);
+		expect(idsOf(merged.rows)).toEqual(["open", "p2", "p3", "p4", "p5"]);
+	});
+
+	it("leaves the page alone for a seed frame with no rows — the reopened shape", () => {
+		const page = listOf("p0", "p1");
+		const merged = mergeTranscript(frameOf(), page);
+		expect(idsOf(merged.rows)).toEqual(["p0", "p1"]);
+		expect(merged.holeBelowPage).toBe(false);
+	});
+
+	it("is the frame when there is no page yet", () => {
+		const merged = mergeTranscript(frameOf(...listOf("a", "b")), []);
+		expect(idsOf(merged.rows)).toEqual(["a", "b"]);
+	});
+
+	it("holds the same rows across a reconnect — stale beats blank", () => {
+		// A stream cut and reopened: the same frame lands again, and the merge must
+		// produce the same list rather than a shorter one (the store keeps the last
+		// projection through the cut for exactly this reason).
+		const page = listOf("p0", "p1");
+		const frame = frameOf(rowAt("open"), ...listOf("p1"));
+		const before = idsOf(mergeTranscript(frame, page).rows);
+		const after = idsOf(mergeTranscript(frame, page).rows);
+		expect(after).toEqual(before);
+		expect(before).toEqual(["open", "p0", "p1"]);
 	});
 });

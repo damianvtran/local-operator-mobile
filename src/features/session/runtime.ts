@@ -138,21 +138,105 @@ export const toBase64 = (bytes: Uint8Array): string => {
 
 /* --------------------------------------------------------------- projections */
 
+/** What the transcript should render, plus the one fact the merge is the only
+ *  place that can know. */
+export interface TranscriptMerge {
+	rows: TranscriptEntry[];
+	/** True when the held rows have a HOLE under the page: a row exists below
+	 *  the page's oldest row that the page did not supply (the relay's pinned
+	 *  opener — the only such row in practice), or `rows` is two windows that
+	 *  share no row at all. Either way the rows between them are held by
+	 *  nobody, which is what `olderThanLoaded` needs to know and cannot see
+	 *  from the ids alone. */
+	holeBelowPage: boolean;
+}
+
 /**
- * The rows to render.
+ * The rows to render: ONE list, from the first paint, out of the two sources
+ * the screen holds.
  *
- * The projection's tail wins when it has one. When it is empty and the session has
- * older history, the fetched page is used instead: a session reopened from the
- * past list has a seed frame with no rows, and showing an empty transcript for a
- * conversation that has forty would read as data loss.
+ * WHY THIS IS A MERGE AND NOT A SWAP. This used to return the projection whole
+ * as soon as it had any rows, discarding the page — so the open painted the
+ * page's rows and then replaced them with the projection's different window (a
+ * different tail cut, the opener pinned at the head, live rows), which moved
+ * every row, re-ran condensation over a different head, and remounted the lot.
+ * The two windows are not alternatives: both are TAILS of one append-only
+ * conversation, so their union is the honest answer, and the page's rows stay
+ * held while the live frame slides its own window on top.
+ *
+ * HOW THE ORDER IS DECIDED, without a timestamp. The page is the spine (it is
+ * the older, already-settled read). The projection's rows that the page also
+ * carries are the same rows — the projection's copy wins, because the frame is
+ * the live authority and is what the reader is currently watching. A projection
+ * row the page does NOT carry follows the last row the page does carry, which
+ * places the pinned opener (older than everything, so it precedes them all) at
+ * the head and a row appended while the page was in flight at the tail. That is
+ * exact for an append-only log — the only order the wire can produce — and it
+ * needs no clock, which is what the wire does not carry.
+ *
+ * The result is bounded by the two windows (`history` + projection rows, so
+ * about twice the page) and NEVER reorders or drops a row that is already on
+ * screen, which is what keeps a row from remounting when the frame lands.
  */
-export const transcriptRows = (
+export const mergeTranscript = (
 	projection: SessionProjection | null,
-	history: TranscriptEntry[],
-): TranscriptEntry[] => {
-	if (projection && projection.transcript.length > 0)
-		return projection.transcript;
-	return history;
+	history: readonly TranscriptEntry[],
+): TranscriptMerge => {
+	const frame = projection?.transcript ?? [];
+	// A seed frame with no rows is the reopened-session shape: the page IS the
+	// conversation on this device. And with no page yet the frame is all there is.
+	if (frame.length === 0) return { rows: [...history], holeBelowPage: false };
+	if (history.length === 0) return { rows: [...frame], holeBelowPage: false };
+
+	const onPage = new Set(history.map((row) => row.id));
+	/** The projection's copy of a shared row: the live authority. */
+	const live = new Map<string, TranscriptEntry>();
+	/** Rows the page does not carry, keyed by the id of the last row the page DOES
+	 *  carry before them — `""` for the head, where the pinned opener lands. */
+	const insertedAt = new Map<string, TranscriptEntry[]>();
+	let anchor = "";
+	for (const row of frame) {
+		if (onPage.has(row.id)) {
+			live.set(row.id, row);
+			anchor = row.id;
+			continue;
+		}
+		const bucket = insertedAt.get(anchor);
+		if (bucket === undefined) insertedAt.set(anchor, [row]);
+		else bucket.push(row);
+	}
+
+	/* NO ROW IN COMMON: the two windows have moved past each other, and the frame
+	 * is the NEWER one. Which is provable from the wire rather than assumed: both
+	 * are tails of one append-only fold, and the frame is built when the stream
+	 * opens (after the page read started). If the page were the newer of the two it
+	 * would carry every row the frame has that is newer than its own oldest row —
+	 * it is the newest pageful — so the absence of ANY shared row means the frame's
+	 * rows were appended after the page's last row. Appending them keeps the tail
+	 * the newest row, which is the only end the reader is looking at. (A frame that
+	 * is instead a stale projection held through a reconnect is the one shape this
+	 * does not order — and it is also the shape today paints whole, so this is no
+	 * regression on it.)
+	 *
+	 * The hole is CLAIMED here, one window down: whatever sits between the page's
+	 * last row and the frame's first is held by nobody, which is the same fact the
+	 * pinned opener states below the page and the same reason the find caveat
+	 * fires — silence is a claim, and this shape cannot back it. */
+	if (live.size === 0) {
+		return { rows: [...history, ...frame], holeBelowPage: true };
+	}
+
+	const rows: TranscriptEntry[] = [];
+	// A frame row before every shared row is older than the page's oldest — and
+	// the page proves the rows between them are not held at all.
+	const head = insertedAt.get("");
+	if (head !== undefined) rows.push(...head);
+	for (const row of history) {
+		rows.push(live.get(row.id) ?? row);
+		const after = insertedAt.get(row.id);
+		if (after !== undefined) rows.push(...after);
+	}
+	return { rows, holeBelowPage: head !== undefined };
 };
 
 /**
@@ -214,6 +298,16 @@ export const olderThanLoaded = (input: {
 	/** Whether the screen has watched a held row leave the window. The frames
 	 *  only append or slide, so a row that left exists conversation-side. */
 	slid: boolean;
+	/** Whether the held rows carry a row older than the page's oldest that the
+	 *  page did not supply — `mergeTranscript`'s `disjointBelow`, which is the
+	 *  pinned opener on a capped frame. The rows BETWEEN that row and the page's
+	 *  oldest are held by nobody, so the conversation demonstrably runs deeper
+	 *  than this device can search and the caveat must fire. It is a separate
+	 *  fact rather than something the id walk below could see: that walk asks
+	 *  whether anything is held BELOW the page, and it cannot tell a contiguous
+	 *  older run (a second page's rows — searchable) from one pinned row with a
+	 *  hole under it (not searchable). */
+	holeBelowPage: boolean;
 }): boolean => {
 	if (input.slid) return true;
 	if (input.read !== "ok") return true;
@@ -221,6 +315,7 @@ export const olderThanLoaded = (input: {
 	const held = new Set(input.entries.map((entry) => entry.id));
 	if (input.page.some((row) => !held.has(row.id))) return true;
 	if (!input.hasMore) return false;
+	if (input.holeBelowPage) return true;
 	return (
 		input.entries.findIndex((entry) => entry.id === input.page[0]?.id) === 0
 	);

@@ -34,11 +34,11 @@ import {
 	getActiveRoute,
 	INITIAL_STREAM_FACTS,
 	loadAttachments,
+	mergeTranscript,
 	olderThanLoaded,
 	type StreamFacts,
 	sessions,
 	subscribeRoute,
-	transcriptRows,
 } from "@/features/session/runtime";
 import type { RelayError } from "@/relay";
 import { readEntry } from "@/state";
@@ -365,10 +365,16 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 
 	/* ------------------------------------------------------------- derivations */
 	const projection = entry.projection;
-	const entries = useMemo(
-		() => transcriptRows(projection, history),
+	/* ONE list, from the first paint, out of both sources: the page's rows stay
+	 * held when the live frame lands, so the open paints its page and then GROWS
+	 * with the frame instead of being replaced by it (`mergeTranscript`). The
+	 * `holeBelowPage` fact rides along because the merge is the only place that
+	 * can see it, and the find caveat needs it (see `olderThanLoaded`). */
+	const merged = useMemo(
+		() => mergeTranscript(projection, history),
 		[projection, history],
 	);
+	const entries = merged.rows;
 	/* The frame watch behind the find caveat's third proof (reviewer MAJOR-2):
 	 * a row held in an earlier frame and gone from this one left the ≤80-row
 	 * tail window — the frames only append or slide, so it still exists
@@ -406,8 +412,16 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 				page: history,
 				entries,
 				slid: slidUnderWindow,
+				holeBelowPage: merged.holeBelowPage,
 			}),
-		[pageHasMore, historyRead, history, entries, slidUnderWindow],
+		[
+			pageHasMore,
+			historyRead,
+			history,
+			entries,
+			slidUnderWindow,
+			merged.holeBelowPage,
+		],
 	);
 
 	const connection = useMemo((): ConnectionView => {
