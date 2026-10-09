@@ -127,10 +127,10 @@ deployment rules: a BRANCH rule `main` and a TAG rule `v*`.** Both halves matter
   is exactly the gap the environment exists to close (QA round 3, Q1).
 
 A pull request cannot reach any of those jobs, so a branch pushed here cannot
-print a key. **Today the mechanism behind that sentence is the `if:` conditions,
-not the environment**, because this repository has no environment configured yet
-— see the action item below. The environment is what makes it an enforced rule
-rather than a workflow convention.
+print a key. **Since 2026-10-09 the environment exists and its deployment rules
+are the mechanism** — branch `main` and tag `v*`, alongside the workflows' own
+`if:` conditions. The environment is what makes it an enforced rule rather than a
+workflow convention.
 
 **A cost of that arrangement, stated because it is a choice.** If the environment
 is given required reviewers, the `credentials` gate waits for approval *before* it
@@ -140,14 +140,15 @@ answers). A review-free environment with the same two deployment rules keeps the
 protection against a feature branch reaching the secrets without the second
 prompt, and is the configuration this pipeline expects.
 
-**OPERATOR ACTION ITEM — `environment: release` protects nothing yet.** Create the
-environment, add a **branch** rule `main` and a **tag** rule `v*`, put the
-credentials above for the platforms you release in it (four Apple secrets for the
-default `ios`; nine for both) as **environment secrets**, and decide whether it requires
-reviewers (the paragraph above). Until then the environment resolves to nothing,
-the jobs are guarded by their `if:` conditions alone, and the signing material is
-only as private as the repository's secret scope. Verified 2026-09-30: `gh api
-repos/damianvtran/local-operator-mobile/environments` returns **0**.
+**STATE (2026-10-09): the environment exists; its secrets do not.** `release`
+was created with a **branch** rule `main` and a **tag** rule `v*` (custom branch
+policies enabled, which is what makes a tag rule possible at all), so the jobs
+above can reach it from tags and from `main`. The nine credentials, however, are
+still **unset** — the repository and environment secret counts are both 0 — so a
+`v*` tag fails at the `credentials` gate today, by design, naming every missing
+name. Add the nine as **environment secrets** when the account work resumes (see
+`docs/publishing/submission-runbook.md`), and decide then whether the environment
+requires reviewers (the paragraph above).
 
 ### What a missing credential means, per platform
 
