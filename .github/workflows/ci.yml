@@ -273,6 +273,24 @@ jobs:
         # release.yml runs this same script, so the two cannot drift.
         run: scripts/ci/stage-release-assets.sh artifacts 1.2.3
 
+      - name: Stage an iOS-only release, which is what RELEASE_PLATFORMS=ios produces
+        # The default platform set is iOS only, so the path a tag takes today is a
+        # download holding an IPA and NOTHING else. Staging must succeed on exactly
+        # that, and must still fail when an enabled platform's artefact is absent —
+        # both asserted, because a staging script that quietly accepted a missing
+        # IPA would publish an empty Release.
+        run: |
+          set -euo pipefail
+          rm -rf ios-only && mkdir ios-only
+          head -c 4096 /dev/urandom > ios-only/exported.ipa
+          scripts/ci/stage-release-assets.sh ios-only 1.2.3 ios
+          test -s ios-only/local-operator-1.2.3.ipa
+          rm -rf empty && mkdir empty
+          if scripts/ci/stage-release-assets.sh empty 1.2.3 ios; then
+            echo "::error::staging an iOS release with no IPA must fail"
+            exit 1
+          fi
+
       - name: Assert the release still uses what this probe exercises
         # THE SINGLE-SOURCING IS OTHERWISE ONE-DIRECTIONAL (review round 4, n2).
         # This job proves the composite action and the staging script work; nothing
@@ -286,7 +304,7 @@ jobs:
           # variable, quoted literally so the grep matches the file's text.
           for expected in \
             'uses: ./.github/actions/upload-android-release' \
-            'run: scripts/ci/stage-release-assets.sh artifacts "$VERSION"'; do
+            'run: scripts/ci/stage-release-assets.sh artifacts "$VERSION" "$PLATFORMS"'; do
             grep -qF "$expected" .github/workflows/release.yml || {
               echo "::error::release.yml no longer contains: $expected"
               echo "::error::this probe exercises that shape, so release.yml and the probe have drifted — fix release.yml (or the probe) rather than deleting this check."
