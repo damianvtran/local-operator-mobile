@@ -108,7 +108,7 @@ Priority follows #1598's own suggested order, adjusted for what a phone can show
 | Sidebar: pins, subagent layer | `session_sidebar` | `P0` for pins (already a route), `P1` for the layer view | Pins are the one sidebar feature with a relay route today |
 | Wakes / schedules | `wake_panel` | **shipped** (the Schedules surface, S17 — relay side `5e59e0cd06`, #2061) | The relay route landed 2026-10-08 (`GET /api/schedules`, [`contract.md`](contract.md) §4.12): the machine-wide wake and monitor indexes in one answer, `read_error` per family. Read-only on the phone — arm, edit and cancel stay on the desktop/terminal plane until a write half ships |
 | Settings | `settings_view` | `P2` | `capabilities.features.settings` exists on the relay but no phone route consumes it |
-| Move session | `move_picker` | `P2` | No relay route |
+| Move session | `move_picker` | **shipped, phone half** (mesh sessions, relay side `f5071030df`, #2083) | The relay route landed 2026-10-09 (`POST /api/sessions/{id}/transfer`, [`contract.md`](contract.md) §4.13) with the peers' rows on both list transports (§3.2). The phone half landed with the sessions-and-delegation PR: remote rows render in the ordinary bins, and the move sheet offers move / recall (`to: "local"`) / copy (`keep: true`) over the SAME request id. One named gap: the destination picker lists only the devices the sessions payload reveals — a full peer picker needs a network device listing served to this plane. |
 | Org chart / team view | `org_chart_view` | `P2` | No relay route |
 | Analytics | `analytics_panel` | `P2` | No relay route |
 | Aside panel | `aside_panel` | `P2` | No relay route |

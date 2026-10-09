@@ -46,7 +46,7 @@ import { FAULT_NAMES, parseFaults, summariseFaults } from "./faults.ts";
 import type { FixtureResponseOverride } from "./fixtures.ts";
 import { defaultFixturesDir, loadFixtures, textOf } from "./fixtures.ts";
 import { createProjectsStore, isProjectsRefusal } from "./projects.ts";
-import type { ScenarioWorld, StreamSpec } from "./scenarios.ts";
+import type { ScenarioWorld, StreamSpec, TransferScript } from "./scenarios.ts";
 import {
 	buildScenarios,
 	capabilityBlock,
@@ -116,6 +116,144 @@ const TINY_PNG = Buffer.from(
 
 const UUID_RE =
 	/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/* ----------------------------------------------------- the transfer route --
+ *
+ * The mock's reads for `POST /api/sessions/{id}/transfer` (#2083 at
+ * `f5071030df`), mirroring the relay's own field rules and sentences
+ * (`local_operator/mobile/mesh.py:parse_transfer_body`,
+ * `server/models/desktop_mesh.TransferSession`): strict rather than coercing,
+ * because on this route an under-validated field is a conversation moved when
+ * a copy was asked for. */
+
+/** A mesh device id or `"local"` — the relay's `MESH_ID_PATTERN`, PATH-SAFE so
+ *  the value can reach the move op without carrying `/`, `.` or `%`. */
+const MESH_ID_RE = /^[A-Za-z0-9_-]{1,128}$/;
+
+/** `LOWERCASE` hex, as the relay's `REQUEST_ID_PATTERN` is: a UUID a client
+ *  mints through `randomUUID()` must be lowercased or the route refuses it,
+ *  and mirroring the case here is what would catch that on a wire proof. (The
+ *  older `UUID_RE` above is case-insensitive because the command ids that use
+ *  it are.) */
+const TRANSFER_REQUEST_ID_RE =
+	/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/;
+
+/** The body keys the route accepts, mirroring the relay's `_TRANSFER_KEYS`:
+ *  it REFUSES extras, so a misspelt key is a refused request rather than a
+ *  silently dropped intent. */
+const TRANSFER_KEYS = new Set(["to", "keep", "wait_s", "request_id"]);
+
+export interface TransferFields {
+	to: string;
+	keep: boolean;
+	wait_s: number;
+	request_id: string | null;
+}
+
+/** `{ fields, refusal: null }` or `{ refusal: the sentence }` — the relay's
+ *  checks in the relay's order, with the relay's own sentences. */
+export function parseTransferBody(body: unknown): {
+	fields?: TransferFields;
+	refusal: string | null;
+} {
+	if (!isRecord(body))
+		return { refusal: "a JSON object with 'to' is required" };
+	const unknown = Object.keys(body).filter((key) => !TRANSFER_KEYS.has(key));
+	if (unknown.length > 0) {
+		return {
+			refusal:
+				`unknown field${unknown.length === 1 ? "" : "s"} ` +
+				unknown.map((key) => `'${key}'`).join(", ") +
+				" — this route takes to, keep, wait_s, request_id",
+		};
+	}
+	const to = body.to;
+	if (typeof to !== "string" || !MESH_ID_RE.test(to))
+		return { refusal: "'to' must name a device id or 'local'" };
+	const keep = body.keep ?? false;
+	if (typeof keep !== "boolean")
+		return { refusal: "'keep' must be true or false" };
+	const waitS = body.wait_s ?? 0.0;
+	// `bool` is excluded explicitly: `typeof true === "boolean"`, and a
+	// `wait_s: true` is not a duration anybody meant.
+	if (typeof waitS === "boolean" || typeof waitS !== "number")
+		return {
+			refusal: "'wait_s' must be a number of seconds between 0 and 300",
+		};
+	if (!(waitS >= 0 && waitS <= 300))
+		return { refusal: "'wait_s' must be between 0 and 300 seconds" };
+	const requestId = body.request_id;
+	if (
+		requestId !== undefined &&
+		(typeof requestId !== "string" || !TRANSFER_REQUEST_ID_RE.test(requestId))
+	)
+		return { refusal: "'request_id' must be a UUID" };
+	return {
+		fields: {
+			to,
+			keep,
+			wait_s: waitS,
+			request_id: typeof requestId === "string" ? requestId : null,
+		},
+		refusal: null,
+	};
+}
+
+/** The receipt this mock returns: composed from the request's own `to`/`keep`,
+ *  the way `server/utils/desktop_mesh.transfer_receipt` composes it — a `keep`
+ *  has mode `keep`, a FRESH `new_session_id` (the fork at the destination), and
+ *  a source that is never retired. */
+export function transferReceiptFrom(
+	sessionId: string,
+	fields: Pick<TransferFields, "to" | "keep">,
+	overrides: Record<string, unknown> = {},
+): Record<string, unknown> {
+	const local = fields.to === "local";
+	return {
+		phases: [
+			{ phase: "prepared", peer: fields.to, progress: 0.25 },
+			{ phase: "handing_off", peer: fields.to, progress: 0.5 },
+			{ phase: "committed", peer: fields.to, progress: 0.75 },
+			{ phase: "done", peer: fields.to, progress: 1 },
+		],
+		locality: local ? "local" : "remote",
+		owner_device: local ? "" : fields.to,
+		source_retired: !fields.keep,
+		session_id: sessionId,
+		// A keep's fork id, fixed because a mock needs no CSPRNG: the client
+		// renders the receipt's own fields, and the value only has to be a
+		// non-empty id distinct from the source.
+		new_session_id: fields.keep ? "f0f0c0de0001" : sessionId,
+		mode: fields.keep ? "keep" : "move",
+		replayed: false,
+		...overrides,
+	};
+}
+
+/**
+ * The refusal codes the transfer JOURNAL remembers, beside the settled receipts
+ * it always remembers.
+ *
+ * These are the relay's own recorded family (verified against
+ * `local_operator/mobile/transfer_receipts.py` and
+ * `local_operator/server/routes/desktop_mesh.py` at `f5071030df`): an
+ * UNCONFIRMED move (`relay_unavailable` / `deadline_exceeded` /
+ * `peer_unreachable` — the request may be in flight, or was never answered)
+ * and a control reply the build cannot read (`frame_unreadable` /
+ * `frame_too_large` — the relay answered, so whether the move ran is unknown).
+ * Every other refusal left nothing behind and RELEASES the id, which is what
+ * lets the busy remedy re-issue the same request id to actually run the move
+ * (`desktop_mesh.py`: "NOTHING WAS MOVED, so the id stays usable" —
+ * `raise Unclaimed(document)` for everything outside its unconfirmed set;
+ * an unconfirmed outcome is RETURNed so the journal records it).
+ */
+const RECORDED_REFUSAL_CODES: ReadonlySet<string> = new Set([
+	"relay_unavailable",
+	"deadline_exceeded",
+	"peer_unreachable",
+	"frame_unreadable",
+	"frame_too_large",
+]);
 
 /** One event the stream writes: the SSE event name and its payload. */
 export interface StreamFrame {
@@ -232,6 +370,18 @@ export interface RelayState {
 	admitted: Map<string, { op: string; at: number }>;
 	seenTokens: Set<string>;
 	pins: Map<string, boolean>;
+	/**
+	 * The mesh half's own observations, on the mock's control surface.
+	 *
+	 * `transferDials` counts transfers actually DIALED (a replayed request id
+	 * dials nothing — the at-most-once property a wire proof asserts), and
+	 * `transferJournal` is the per-key store the relay's own
+	 * `mobile/transfer_receipts.py` keeps: a same-id/same-body request replays
+	 * the recorded answer, a same-id/different-body request is a `409
+	 * receipt_conflict`.
+	 */
+	transferDials: number;
+	transferJournal: Map<string, { body: string; status: number; payload: Json }>;
 	/** Origins a mutation may come from; unset means the same-origin rule is off. */
 	allowedOrigins?: string[];
 	submittedAt: number | null;
@@ -391,6 +541,8 @@ export function createRelay(options: RelayOptions = {}) {
 		admitted: new Map(),
 		seenTokens: new Set(),
 		pins: new Map(),
+		transferDials: 0,
+		transferJournal: new Map(),
 		// Wired from the options, which it must be: this field decides whether the
 		// same-origin rule can *ever* allow an origin. It was declared on
 		// `RelayOptions` and never copied here, so `createRelay({ allowedOrigins })`
@@ -768,10 +920,28 @@ export function createRelay(options: RelayOptions = {}) {
 		return rows.sort((a, b) => rank(a) - rank(b) || b.mtime - a.mtime);
 	};
 
-	const listBody = (): SessionListFrame => {
+	/** The peer rows a client asked for — WIRE rows, served verbatim.
+	 *
+	 * Partial BY DESIGN: a remote row carries no `cwd`/`model_label` and none of
+	 * the local live fields (`ScenarioWorld.peerRows` states the split). The one
+	 * cast here is the type system meeting the wire: `SessionSummary` describes
+	 * the phone row, while these are the relay's raw federated rows, and the
+	 * frame's `sessions` array is the WIRE's shape rather than this mock's object
+	 * model. Nothing is filled in — a client that needs a default reads it at its
+	 * own boundary. */
+	const peerRowsFor = (): SessionSummary[] =>
+		(state.world.peerRows ?? []) as unknown as SessionSummary[];
+
+	const listBody = (includePeers: boolean): SessionListFrame => {
 		const world = state.world;
 		const degraded = world.listOverrides?.degraded ?? [];
-		const rows = rowsFor();
+		/* The peers' rows are appended BELOW the local ones — the relay's own order
+		 * (`mobile/mesh.py` pages the local rows first, then the ranked extras) —
+		 * and ONLY when the request asked for them: a client that asks on one
+		 * transport and not the other watches the rows vanish on the next repaint,
+		 * which is the flap the relay's contract warns about and the wire proof
+		 * asserts against. */
+		const rows = includePeers ? [...rowsFor(), ...peerRowsFor()] : rowsFor();
 		/* The frame-level `unread` block (S1, ADR 0006 §1.1): `count` is computed
 		 * from the SAME rows this frame carries, so the equality the daemon
 		 * guarantees (count == unseen rows) cannot drift here either. `attention`
@@ -1711,7 +1881,11 @@ export function createRelay(options: RelayOptions = {}) {
 		/* ----------------------------------------------------------- api: list -- */
 
 		if (pathname === "/api/sessions" && method === "GET") {
-			const gzipped = sendJson(res, 200, listBody());
+			const gzipped = sendJson(
+				res,
+				200,
+				listBody(url.searchParams.get("include_peers") === "true"),
+			);
 			return gzipped;
 		}
 
@@ -1720,7 +1894,10 @@ export function createRelay(options: RelayOptions = {}) {
 			const seed =
 				stream.mode === "keepalive-only"
 					? null
-					: { event: "sessions", data: listBody() };
+					: {
+							event: "sessions",
+							data: listBody(url.searchParams.get("include_peers") === "true"),
+						};
 			return openStream(req, res, {
 				kind: "sessions",
 				seed,
@@ -1782,6 +1959,97 @@ export function createRelay(options: RelayOptions = {}) {
 				return;
 			}
 			sendFixture(res, "start-session");
+			return;
+		}
+
+		/* ------------------------------------------------------- api: transfer --
+		 *
+		 * `POST /api/sessions/{id}/transfer` (#2083 at `f5071030df`): the body's
+		 * checks are the relay's own (`parseTransferBody` above — strict, no
+		 * coercion), and the answer is the scenario's script. The request-id
+		 * journal below is the relay's at-most-once behaviour in miniature: same
+		 * id/same body REPLAYS the recorded outcome (a receipt comes back with
+		 * `replayed: true`), same id/different body is `409 receipt_conflict`, and
+		 * a replay dials nothing — which is what `transferDials` counts and the
+		 * wire proof asserts. WHAT THE ID REMEMBERS is narrower than "any answer":
+		 * settled receipts and the unconfirmed family only
+		 * (`RECORDED_REFUSAL_CODES`); a plain refusal releases the id so a retry
+		 * runs, and that release is the opposite half of at-most-once — asserting
+		 * it needs a refusal the journal did NOT keep, not a second replay. */
+		const transferMatch = /^\/api\/sessions\/([^/]+)\/transfer$/.exec(pathname);
+		if (transferMatch && method === "POST") {
+			const sessionId = transferMatch[1] ?? "";
+			const parsed = parseTransferBody(parseJsonBody(rawBody ?? ""));
+			if (parsed.fields === undefined) {
+				sendJson(
+					res,
+					422,
+					errorBody(parsed.refusal ?? "a JSON object with 'to' is required"),
+				);
+				return;
+			}
+			const fields = parsed.fields;
+			const script: TransferScript = world.transfer ?? { kind: "receipt" };
+			const key =
+				fields.request_id === null
+					? null
+					: `transfer:${sessionId}:${fields.request_id}`;
+			// The fingerprint is the BODY the journal keys on: `wait_s` is part of
+			// it because the relay's own fingerprint is the parsed request, and a
+			// claim that raised the wait is the SAME intent only under the same
+			// id — a same-id request that changed `to`/`keep` is the conflict.
+			const fingerprint = JSON.stringify({
+				to: fields.to,
+				keep: fields.keep,
+				wait_s: fields.wait_s,
+				request_id: fields.request_id,
+			});
+			if (key !== null) {
+				const recorded = state.transferJournal.get(key);
+				if (recorded !== undefined) {
+					if (recorded.body !== fingerprint) {
+						sendJson(
+							res,
+							409,
+							errorBody(
+								"Request ID was already used with different input",
+								"receipt_conflict",
+							),
+						);
+						return;
+					}
+					const payload = recorded.payload;
+					sendJson(
+						res,
+						recorded.status,
+						recorded.status === 200 && isRecord(payload)
+							? { ...payload, replayed: true }
+							: payload,
+					);
+					return;
+				}
+			}
+			if (script.delayMs !== undefined && script.delayMs > 0) {
+				// The move-in-progress state: hold the answer, unref'd so the process
+				// can still exit while a rig is mid-cell.
+				await new Promise((resolve) => {
+					const timer = setTimeout(resolve, script.delayMs);
+					timer.unref?.();
+				});
+			}
+			state.transferDials += 1;
+			const status = script.kind === "refused" ? script.status : 200;
+			const payload =
+				script.kind === "refused"
+					? errorBody(script.message, script.code)
+					: transferReceiptFrom(sessionId, fields, script.receipt ?? {});
+			const remembers =
+				status === 200 ||
+				(script.kind === "refused" && RECORDED_REFUSAL_CODES.has(script.code));
+			if (key !== null && remembers) {
+				state.transferJournal.set(key, { body: fingerprint, status, payload });
+			}
+			sendJson(res, status, payload);
 			return;
 		}
 
@@ -2473,6 +2741,10 @@ export function createRelay(options: RelayOptions = {}) {
 						admittedCommands: state.admitted.size,
 						duplicateDelivered: state.duplicateDelivered,
 						duplicateFramePending: state.duplicateFramePending,
+						// The mesh half's own counter: transfers actually DIALED. A wire
+						// proof reads it before and after a same-id retry to show the
+						// replay dialled nothing.
+						transferDials: state.transferDials,
 						// `requests` is traffic served; `recorded` is the transcript's own
 						// length, named so the two can never be confused again.
 						requests: state.requestsServed,

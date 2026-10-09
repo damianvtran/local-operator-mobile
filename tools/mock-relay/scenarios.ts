@@ -184,7 +184,52 @@ export interface ScenarioWorld {
 		 *  available; `transcribe.ts`'s default stands in when this is absent. */
 		answer?: TranscribeAnswer;
 	};
+	/**
+	 * The mesh half this state pins (the sessions-and-delegation parity): the peer
+	 * rows a client that asked `include_peers` receives, and the transfer route's
+	 * script.
+	 *
+	 * The rows are appended to the list body BELOW the local rows — the relay's
+	 * own order (`mobile/mesh.py` `remote_session_rows` returns already ranked,
+	 * and the caller pages the local rows first) — and ONLY when the request
+	 * carried `include_peers=true`. That conditional is the whole point of the
+	 * mock's form: a client that asks on one transport and not the other sees
+	 * the rows VANISH on the next repaint, which is the flap the relay's
+	 * contract warns about, and the wire proof asserts the flag on both.
+	 */
+	peerRows?: Json[];
+	/**
+	 * What `POST /api/sessions/{id}/transfer` answers for this state.
+	 *
+	 * The request is validated like the relay's own route (unknown keys and a
+	 * bad `to`/`keep`/`wait_s`/`request_id` are `422` with the relay's sentence
+	 * shapes), then the script answers: a RECEIPT (composed from the request's
+	 * own `to`/`keep`, so a copy's receipt is a copy's), or a REFUSAL with the
+	 * status the relay would use. `delayMs` holds the answer open — the
+	 * move-in-progress state — and a `replayed` request (same id, same body)
+	 * replays the recorded outcome exactly as the relay's journal does, which
+	 * is what the wire proof drives. Absent, every request answers an immediate
+	 * receipt.
+	 */
+	transfer?: TransferScript;
 }
+
+/** The transfer route's script for one scenario (see `ScenarioWorld.transfer`). */
+export type TransferScript =
+	| {
+			kind: "receipt";
+			/** Hold the answer this long before sending it (the in-progress state). */
+			delayMs?: number;
+			/** Overrides for the composed receipt (phases, progress, …). */
+			receipt?: Partial<Record<string, unknown>>;
+	  }
+	| {
+			kind: "refused";
+			status: number;
+			code: string;
+			message: string;
+			delayMs?: number;
+	  };
 
 /** One registered scenario. */
 export interface ScenarioEntry {
@@ -1954,6 +1999,124 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 		() => ({
 			projections: {},
 			failure: { surface: "gateway", key: "502-relay-down" },
+		}),
+	);
+
+	/* ------------------------------------------------ the mesh half (S15) --
+	 *
+	 * The sessions-and-delegation parity's states (#2083 at `f5071030df`): the
+	 * peers' rows, and the transfer route's answers. The peer rows are WIRE rows
+	 * — the shape `mobile/mesh.py:remote_session_rows` publishes, with the
+	 * local-only fields ABSENT (no cwd, no model, no local live marks) — and they
+	 * are served only to a request that asked for them
+	 * (`ScenarioWorld.peerRows`), which is what makes the both-transports rule
+	 * measurable: a client that asks on the GET alone watches them vanish on the
+	 * first stream repaint. */
+
+	/** One remote row, as the relay shapes it: the phone's own fields plus the
+	 *  flat locality block. Clocks are frozen as the rest of the corpus is; the
+	 *  old-build row carries the no-claim zeros. */
+	const remoteRow = (overrides: Record<string, unknown>): Json => ({
+		session_id: "9f2c1a7b0d3e",
+		section: "active",
+		pinned: false,
+		conversation_name: "Deploy the staging stack",
+		mtime: 1790724900.0,
+		created_at: 1790724600.0,
+		live_state: "",
+		pending: null,
+		locality: "remote",
+		owner_device: "d_1f2e3d4c5b6a",
+		owner_device_name: "Studio mini",
+		reachable: true,
+		unreachable_reason: "",
+		placement: null,
+		origin: null,
+		last_synced_at: null,
+		...overrides,
+	});
+
+	const meshRows = (): Json[] => [
+		remoteRow({
+			session_id: "9f2c1a7b0d3e",
+			conversation_name: "Deploy the staging stack",
+			live_state: "busy",
+		}),
+		remoteRow({
+			session_id: "4c5d6e7f8091",
+			conversation_name: "Nightly reconciliation",
+			reachable: false,
+			unreachable_reason: "it did not answer",
+			live_state: "",
+		}),
+		remoteRow({
+			session_id: "0a1b2c3d4e5f",
+			conversation_name: "An old-build peer's session",
+			section: "previous",
+			// The no-claim pair: a non-number birth stamp reads as `0.0` at the
+			// relay's boundary, and the row must paint NO time.
+			mtime: 0.0,
+			created_at: 0.0,
+		}),
+	];
+
+	const meshWorld = (): ScenarioWorld => ({
+		projections: { [liveIdle.session_id]: structuredClone(liveIdle) },
+		peerRows: meshRows(),
+	});
+
+	add(
+		"mesh-rows",
+		"Another device's sessions: a busy reachable one, an unreachable one, and an old-build row whose clocks are the no-claim zeros — appended below the local row, and only for a client that asked `include_peers`.",
+		["S15/mesh-remote", "S15/mesh-unreachable", "S15/move-pick"],
+		() => meshWorld(),
+	);
+
+	add(
+		"mesh-move-hold",
+		"A move under way: the transfer route holds its answer, so the sheet's in-flight state is the one a person sees rather than a fabricated one.",
+		["S15/move-progress"],
+		() => ({ ...meshWorld(), transfer: { kind: "receipt", delayMs: 30_000 } }),
+	);
+
+	add(
+		"mesh-move-receipt",
+		"The receipt: the route answers the phase transcript, which is the only claim about where the conversation now lives.",
+		["S15/move-receipt"],
+		() => ({ ...meshWorld(), transfer: { kind: "receipt" } }),
+	);
+
+	add(
+		"mesh-move-busy",
+		"A refused move: the source has a turn in flight (409 `busy`), so nothing changed and the id is RELEASED — the sheet's wait remedy, and the wire proof's release check, both need a refusal the journal did not keep.",
+		["S15/move-busy"],
+		() => ({
+			...meshWorld(),
+			transfer: {
+				kind: "refused",
+				status: 409,
+				code: "busy",
+				// The refusal's message is the source's idle reason verbatim
+				// (mobility.py: "the source has a turn in flight; message is its
+				// idle reason verbatim"), so the fixture states a plausible reason
+				// rather than inventing a sentence shape of its own.
+				message: "a turn is in flight",
+			},
+		}),
+	);
+
+	add(
+		"mesh-move-unconfirmed",
+		"No answer: the relay cannot be asked (503 `relay_unavailable`), so the outcome is UNKNOWN — re-read the row, never blind-retry.",
+		["S15/move-unconfirmed"],
+		() => ({
+			...meshWorld(),
+			transfer: {
+				kind: "refused",
+				status: 503,
+				code: "relay_unavailable",
+				message: "the relay is not running; start it with `lop network start`",
+			},
 		}),
 	);
 

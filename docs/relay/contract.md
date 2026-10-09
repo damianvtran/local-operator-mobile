@@ -119,7 +119,7 @@ The routes that *do* set cache headers are the SSE streams
 | GET | `/` | gate | `daemon.py:3471-3483` |
 | GET | `/assets/*` | **public** (StaticFiles mount) | `daemon.py:4733-4740` |
 | GET | `/mark.png` | public | `daemon.py:3458-3469` |
-| GET | `/api/sessions` | gate | `daemon.py:3520-3524` |
+| GET | `/api/sessions` | gate | `daemon.py:3520-3524`; `?include_peers=true` appends the peers' rows (#2083, `f5071030df`) |
 | GET | `/api/sessions/events` | gate | SSE, `daemon.py:3602-3626` |
 | POST | `/api/sessions/start` | gate | `daemon.py:4239-4280` |
 | GET | `/api/sessions/past` | gate | `daemon.py:4361-4371` |
@@ -152,6 +152,7 @@ The routes that *do* set cache headers are the SSE streams
 | POST | `/api/projects/{key}/links` | gate | `daemon.py:4646-4658` |
 | DELETE | `/api/projects/{key}/links/{session_id}` | gate | `daemon.py:4660-4672` |
 | GET | `/api/schedules` | gate | the armed index, `daemon.py:5376-5398` (at `5e59e0cd06`) |
+| POST | `/api/sessions/{id}/transfer` | gate | the mesh move — body `{to, keep?, wait_s?, request_id?}`, §4.13 (#2083, `f5071030df`) |
 
 There is **no `GET /api/sessions/{id}`** — a single session's state arrives only
 over its SSE stream or as a row of `/api/sessions`. A client that wants
@@ -264,6 +265,29 @@ Ordering: rows come back **already ordered** by the shared catalogue rank
 §session list). The per-row `degraded`-style marker on the listing is the
 top-level `degraded` array above; **the row's own health is `ended`/`degraded`,
 which are per-row booleans** (`daemon.py:906-914`).
+
+#### `?include_peers=true` — the peers' rows (the mesh half, #2083 at `f5071030df`)
+
+The flag appends the sessions OTHER devices hold, BELOW the local rows: the
+federated projection (`session/peer_rows.py`) the sidebar and the desktop list
+already read, shaped for the phone by `mobile/mesh.py:remote_session_rows`. The
+SSE twin (`/api/sessions/events`, §6.1) takes the SAME flag, and a client must
+ask on BOTH transports or its repaint drops the rows its first GET painted.
+Without the flag every answer is byte-identical to what it was before.
+
+A remote row carries the phone's own `session_id`/`section`/`pinned`/
+`conversation_name`/`mtime`/`created_at`, the transport's `live_state`/`pending`
+VERBATIM, and the desktop row's flat locality fields — `locality: "remote"`,
+`owner_device`, `owner_device_name`, `reachable`, `unreachable_reason` (glossed,
+so no client keeps a glossary) — plus `placement`/`origin`/`last_synced_at` as
+nulls (the federated row carries no owner's stamp; a null is no claim). It does
+NOT carry `cwd`, `model_label`, `streaming`, `needs_attention`, `unseen`,
+`pending_kind` or the counts, and the nested transport `peer` block is
+deliberately NOT published — read the flat fields only. `section` files a remote
+row into the ordinary bins through the shared `active` rule (pending, unseen or
+live is active); a cold row lands `previous`. **`created_at <= 0` is the
+no-claim** an old-build peer's non-number birth stamp reads as: render NO label
+and keep the relay's last-in-bin order (`session/peer_rows._started_epoch`).
 
 ### 3.3 `GET /api/sessions/past`
 
@@ -785,6 +809,61 @@ do not have). Live `fixtures/relay/http/schedules-empty.json`,
 
 ---
 
+### 4.13 `POST /api/sessions/{id}/transfer` — the mesh move (#2083 at `f5071030df`)
+
+> Citations in this section are against local-operator `f5071030df`, the merge of
+> #2083, not the document-wide pin — see the header.
+
+Move (or copy) one conversation between devices. Body, exactly:
+
+```json
+{ "to": "<device id> | local", "keep": false, "wait_s": 0, "request_id": "<uuid>" }
+```
+
+- **`request_id` is the at-most-once key, and the client owns it.** One id per
+  move INTENT, reused on every re-issue: a recorded outcome replays at once
+  with `replayed: true` and dials nothing; a same-id re-issue that arrives
+  WHILE the move runs waits on the journal's per-key lock and then replays the
+  settled outcome; a same id with a DIFFERENT body is a `409`; a FRESH id
+  starts a new move. A retry under a new id is a second move for one user
+  action — the defect this field exists to prevent.
+- **`wait_s` (0..300) is a ceiling on waiting for a BUSY source, inside the
+  request.** `0` refuses a busy session at once with `{code: "busy"}` — the
+  shape a phone issues first, then re-issues the SAME id with the wait raised
+  to claim the outcome; the relay coalesces the pair on the journal's lock. The
+  first request is deliberately SHORT and the user-asked claim carries the long
+  wait; no client may hold one connection for the copy-sized bound.
+- **`keep: true` forks at the destination** and leaves the source running; a
+  plain move retires the source's copy (`source_retired`).
+
+**A `2xx` is the receipt** (`TransferReceipt`, `types.ts`): `phases`
+(`{phase, peer, progress}` — `prepared`/`handing_off`/`committed`/`done`
+today, render an unknown word verbatim), `locality`, `owner_device`,
+`source_retired`, `session_id`, `new_session_id` (the fork's id for a `keep`),
+`mode`, `replayed`. **The receipt is the only thing that may move a row or
+claim an owner** — a surface renders its phases as the machine facts they are,
+never an indefinite spinner; the desktop mesh surface's rule.
+
+**Refusals are `{error, code}` and the STATUS is the split that matters:**
+
+- `503` — **UNCONFIRMED**: the request was sent and the outcome was never
+  learned (`relay_unavailable`, `deadline_exceeded`, `peer_unreachable`;
+  `mobile/mesh.py:MOVE_UNCONFIRMED_CODES`, pinned equal to the desktop route's
+  set). **A client re-reads the row — never blind-retries** — and must not
+  report "nothing changed" about a move that may have run.
+- `409` — refused: `busy` (a turn owns the session; remedy: same id, raised
+  `wait_s`), a same-id/different-body conflict, or the move's own refusals
+  (`session_retired`, `not_a_peer`, …). Nothing changed.
+- `422`/`507` — validation and capacity refusals, shape-checked before any
+  work (`parse_transfer_body`); nothing changed.
+
+One honesty note the client must carry: a **fresh-id** `409` after a completed
+move can read as "nothing changed" while the listing already shows the row
+moved — the read is the resolution for every move that ends badly, which is why
+the surface points at it even on a plain refusal.
+
+---
+
 ## 5. Idempotency, the retry envelope, and what "already admitted" means
 
 Three layers cooperate, and a native client must implement all three.
@@ -872,8 +951,11 @@ There are exactly **two** streams, both snapshot-based, both with the same
 framing.
 
 ### 6.1 `GET /api/sessions/events` — the list stream
-
-- Frames: `event: sessions` + `data: <the same body as GET /api/sessions>`.
+- Frames: `event: sessions` + `data: <the same body as GET /api/sessions>` —
+  **including the `?include_peers=true` form**: the route reads the flag once at
+  connection open and every frame on that connection carries the peers'
+  rows (§3.2), so a client asks on BOTH transports or its repaint drops what
+  its first GET painted.
 - Opens with one immediate frame, then one per list change. — code
   `daemon.py:3602-3626`
 - Changes that wake it: a projection arriving from a runtime (which bumps a row's

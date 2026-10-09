@@ -690,6 +690,39 @@ export const CELL_OPENERS: Record<string, Affordance[]> = {
 			},
 		},
 	],
+	/* --- the mesh sheet's states (S15, the sessions-and-delegation half) ---
+	 *
+	 * Every move state presses the SAME remote row (`mesh-rows` declares it),
+	 * and the four after the pick press the sheet's own confirm — which is what
+	 * makes the in-flight, busy, receipt and unconfirmed states the app's own
+	 * renderings rather than staged ones: the wire answers differ per scenario,
+	 * the app does the rest. The pick state stops at the sheet, because the sheet
+	 * IS the state under capture there; the unreachable cell presses its OWN row,
+	 * so its frame is the tap-reveal detail (device + glossed reason) and not a
+	 * second copy of the plain list. */
+	/* The unreachable row's TAP-REVEAL: the sheet names the device and the
+	 * relay's own glossed reason ("it did not answer"), which is the detail a
+	 * list row has no room for — and it is what makes this cell a different
+	 * frame from `mesh-remote`'s plain list rather than a second copy of it. */
+	"S15/mesh-unreachable": [{ click: sessionRowId("4c5d6e7f8091") }],
+	"S15/move-pick": [{ click: sessionRowId("9f2c1a7b0d3e") }],
+
+	"S15/move-busy": [
+		{ click: sessionRowId("9f2c1a7b0d3e") },
+		{ click: CONTROL.sessionMoveConfirm },
+	],
+	"S15/move-progress": [
+		{ click: sessionRowId("9f2c1a7b0d3e") },
+		{ click: CONTROL.sessionMoveConfirm },
+	],
+	"S15/move-receipt": [
+		{ click: sessionRowId("9f2c1a7b0d3e") },
+		{ click: CONTROL.sessionMoveConfirm },
+	],
+	"S15/move-unconfirmed": [
+		{ click: sessionRowId("9f2c1a7b0d3e") },
+		{ click: CONTROL.sessionMoveConfirm },
+	],
 	/* --- the create sheet, over the listing (S16) --- */
 	"S16/create": [{ click: CONTROL.projectsNew }],
 	/* The same sheet with a reader's own values in it: what the form looks like

@@ -1,0 +1,20 @@
+{
+  "provenance": {
+    "kind": "synthetic",
+    "relay_ref": "local-operator f5071030d",
+    "modelled_on": "local_operator/mobile/daemon.py:api_transfer_session's refusal mapping at f5071030df — a code in mobile/mesh.py:MOVE_UNCONFIRMED_CODES answers 503 with the move's own sentence in `error` and its code beside it — and local_operator/network/cli.py:_relay_unavailable_message for the sentence, which is the one the relay composes when its own control socket cannot be asked",
+    "why": "the unconfirmed outcome needs a mesh (or a wedged relay) to occur, so it cannot be captured from an isolated daemon. The body is the route's verbatim refusal shape; what it pins is the CLASSIFICATION rule clients share: a 503 is UNCONFIRMED — the request was sent and the outcome was never learned — never a refusal that reads as 'nothing changed'"
+  },
+  "request": {
+    "method": "POST",
+    "path": "/api/sessions/9f2c1a7b0d3e/transfer"
+  },
+  "status": 503,
+  "headers": {
+    "content-type": "application/json"
+  },
+  "body": {
+    "error": "the relay is not running; start it with `lop network start`",
+    "code": "relay_unavailable"
+  }
+}

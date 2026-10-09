@@ -5,12 +5,16 @@ import {
 	attentionWord,
 	degradedNote,
 	degradedShortNote,
+	isRemoteRow,
 	relativeTimeFor,
+	remoteAttention,
+	remoteDeviceLabel,
 	rowMark,
 	splitSidebarSections,
 	staleNote,
 	staleShortNote,
 	unreadBadgeCount,
+	visiblePeers,
 } from "@/features/sessions/session-projection";
 
 /**
@@ -45,6 +49,23 @@ function session(overrides: Partial<SessionSummary> = {}): SessionSummary {
 		completion_kind: "",
 		...overrides,
 	};
+}
+
+/** A REMOTE row (another device's conversation), with only its own fields set:
+ *  the local-only fields are ABSENT on the wire — the boundary's defaults fill
+ *  them, and these cases exist to prove nothing reads those defaults. */
+function remoteSession(
+	overrides: Partial<SessionSummary> = {},
+): SessionSummary {
+	return session({
+		locality: "remote",
+		owner_device: "d_peer000001",
+		owner_device_name: "Studio mini",
+		reachable: true,
+		live_state: "",
+		pending: null,
+		...overrides,
+	});
 }
 
 describe("rowMark", () => {
@@ -368,5 +389,196 @@ describe("the narrow-configuration short forms", () => {
 			const age = short.slice(0, -1);
 			expect(long.toLowerCase()).toContain(age.toLowerCase());
 		}
+	});
+});
+
+describe("remote rows", () => {
+	const at = (ms: number) => NOON / 1000 - ms / 1000;
+
+	it("is decided by `locality` alone — never by a missing cwd or a defaulted flag", () => {
+		expect(isRemoteRow(remoteSession())).toBe(true);
+		expect(isRemoteRow(session())).toBe(false);
+		// A future relay that stamps `"local"` on every row reads exactly like
+		// absence, and a row that merely LOOKS incomplete (no cwd, no model) is
+		// not remote: the boundary defaults make every local row look complete and
+		// every remote row look local. The discriminator is the only reading.
+		expect(isRemoteRow(session({ locality: "local", cwd: "" }))).toBe(false);
+	});
+
+	it("bins by the transport's own words: approval/answer/busy/wedged are Running", () => {
+		// The relay's vocabulary, verbatim. A live but idle row is NOT Running (it
+		// is live, not working), and an `attached` row means a terminal is
+		// watching — neither invents a third spelling of "running".
+		const sections = splitSidebarSections(
+			[
+				remoteSession({
+					session_id: "approval",
+					pending: "approval",
+					mtime: at(30 * DAY_MS_T),
+				}),
+				remoteSession({
+					session_id: "answer",
+					pending: "answer",
+					mtime: at(30 * DAY_MS_T),
+				}),
+				remoteSession({
+					session_id: "busy",
+					live_state: "busy",
+					mtime: at(30 * DAY_MS_T),
+				}),
+				remoteSession({
+					session_id: "wedged",
+					live_state: "wedged",
+					mtime: at(30 * DAY_MS_T),
+				}),
+				remoteSession({
+					session_id: "idle",
+					live_state: "idle",
+					mtime: at(5 * MINUTE_MS),
+				}),
+				remoteSession({
+					session_id: "attached",
+					live_state: "attached",
+					mtime: at(5 * MINUTE_MS),
+				}),
+				remoteSession({
+					session_id: "cold",
+					live_state: "",
+					mtime: at(40 * DAY_MS_T),
+				}),
+			],
+			NOON,
+		);
+		expect(sections.running.map((s) => s.session_id)).toEqual([
+			"approval",
+			"answer",
+			"busy",
+			"wedged",
+		]);
+		expect(sections.today.map((s) => s.session_id)).toEqual([
+			"idle",
+			"attached",
+		]);
+		expect(sections.older.map((s) => s.session_id)).toEqual(["cold"]);
+	});
+
+	it("pins a remote row by this device's own pin, before any bin", () => {
+		const sections = splitSidebarSections(
+			[
+				remoteSession({
+					session_id: "pinned",
+					pinned: true,
+					mtime: at(30 * DAY_MS_T),
+				}),
+			],
+			NOON,
+		);
+		expect(sections.pinned.map((s) => s.session_id)).toEqual(["pinned"]);
+		expect(sections.running).toEqual([]);
+	});
+
+	it("a <= 0 stamp is a NO CLAIM: no label, Older, and never an ancient date", () => {
+		// An old-build peer's non-number birth stamp arrives as `0.0`; the row
+		// must paint NO label and file by the time branch (Older) with the relay's
+		// own order kept (it ranked the no-claim row last inside its bin).
+		const zero = remoteSession({ session_id: "zero", created_at: 0, mtime: 0 });
+		const negative = remoteSession({
+			session_id: "negative",
+			created_at: -5,
+			mtime: -5,
+		});
+		const real = remoteSession({
+			session_id: "real",
+			created_at: at(40 * DAY_MS_T),
+			mtime: at(40 * DAY_MS_T),
+		});
+		expect(relativeTimeFor(zero, NOON)).toBeNull();
+		expect(relativeTimeFor(negative, NOON)).toBeNull();
+		expect(relativeTimeFor(real, NOON)).toBe("5w");
+		const sections = splitSidebarSections([real, zero, negative], NOON);
+		expect(sections.older.map((s) => s.session_id)).toEqual([
+			"real",
+			"zero",
+			"negative",
+		]);
+	});
+
+	it("a remote row's gate words map onto the two words this surface shows", () => {
+		expect(remoteAttention(remoteSession({ pending: "approval" }))).toBe(
+			"approval",
+		);
+		expect(remoteAttention(remoteSession({ pending: "answer" }))).toBe(
+			"answer",
+		);
+		expect(remoteAttention(remoteSession())).toBeNull();
+		expect(attentionWord(remoteSession({ pending: "approval" }))).toBe(
+			"approval",
+		);
+		expect(attentionWord(remoteSession({ pending: "answer" }))).toBe(
+			"question",
+		);
+		// A local row's reading is untouched.
+		expect(attentionWord(session({ pending_kind: "ask" }))).toBe("question");
+	});
+
+	it("marks a remote row from the transport's words, with the local ladder untouched", () => {
+		expect(rowMark(remoteSession({ pending: "approval" }))).toBe("decision");
+		expect(rowMark(remoteSession({ live_state: "busy" }))).toBe("running");
+		// `wedged` is the owner having STOPPED reporting: the degraded mark, which
+		// says a person is needed, not a spinner.
+		expect(rowMark(remoteSession({ live_state: "wedged" }))).toBe("degraded");
+		expect(rowMark(remoteSession({ live_state: "idle" }))).toBe("idle");
+		// The local defaults a remote row carries (streaming false, unseen false)
+		// must not be consulted: a busy remote row is running, not idle.
+		expect(
+			rowMark(remoteSession({ live_state: "busy", streaming: false })),
+		).toBe("running");
+	});
+
+	it("labels a device by its name, else the id's tail — never the id whole", () => {
+		expect(remoteDeviceLabel(remoteSession())).toBe("Studio mini");
+		expect(
+			remoteDeviceLabel(
+				remoteSession({
+					owner_device_name: "",
+					owner_device: "d_0000a1b2c3d4",
+				}),
+			),
+		).toBe("device …b2c3d4");
+		expect(
+			remoteDeviceLabel(
+				remoteSession({ owner_device_name: "", owner_device: "" }),
+			),
+		).toBe("another device");
+	});
+
+	it("reveals each device once, in first-seen order, and skips rows with no id", () => {
+		const peers = visiblePeers([
+			session({ session_id: "local" }),
+			remoteSession({
+				session_id: "a",
+				owner_device: "d_a",
+				owner_device_name: "Alpha",
+			}),
+			remoteSession({
+				session_id: "b",
+				owner_device: "d_b",
+				owner_device_name: "Beta",
+			}),
+			remoteSession({
+				session_id: "a2",
+				owner_device: "d_a",
+				owner_device_name: "Alpha",
+			}),
+			remoteSession({
+				session_id: "anon",
+				owner_device: "",
+				owner_device_name: "",
+			}),
+		]);
+		expect(peers).toEqual([
+			{ deviceId: "d_a", label: "Alpha" },
+			{ deviceId: "d_b", label: "Beta" },
+		]);
 	});
 });

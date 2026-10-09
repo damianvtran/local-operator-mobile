@@ -34,7 +34,75 @@ export type RowMark =
 	| "degraded"
 	| "idle";
 
+/**
+ * True when the row is ANOTHER device's conversation.
+ *
+ * `locality` is the relay's own discriminator and the only one: a remote row is
+ * exactly the one whose `locality` is `"remote"` (the phone's local rows carry
+ * no `locality` key at all, and a future relay that stamps `"local"` on them
+ * reads the same way here). Nothing else about a row — a missing `cwd`, a
+ * defaulted `streaming` — may be used to infer it: the boundary defaults make
+ * every omitted local-only field look like an ordinary inert local value.
+ */
+export function isRemoteRow(session: SessionSummary): boolean {
+	return session.locality === "remote";
+}
+
+/** The gate a REMOTE row is waiting on, in the relay's own words — or `null`.
+ *
+ * `pending` is the transport's pair VERBATIM (`"approval"` / `"answer"`), and
+ * this is its one reading on the phone: never mapped into the local
+ * `pending_kind` vocabulary, never guessed from a mark. A local row answers
+ * `null` here — its gates are `needs_attention`/`pending_kind`, which is the
+ * sibling function below, and mixing the two vocabularies on one row is how a
+ * remote row would silently read as idle. */
+export function remoteAttention(
+	session: SessionSummary,
+): "approval" | "answer" | null {
+	if (session.pending === "approval" || session.pending === "answer") {
+		return session.pending;
+	}
+	return null;
+}
+
+/**
+ * True when the row belongs in the Running bin — a turn is live on it, or it
+ * waits on the reader.
+ *
+ * LOCAL rows read the relay's `streaming`/`needs_attention` pair. REMOTE rows
+ * read the transport's `pending`/`live_state` VERBATIM, per the relay's own
+ * staging rule: a gate (`approval`/`answer`) or a busy/wedged owner. The other
+ * two live words are deliberately NOT Running: `idle` is live but not working,
+ * and `attached` means a terminal is watching — neither is this list's
+ * "Running", and inventing a third spelling for either is the drift the shared
+ * vocabulary exists to stop.
+ */
+export function rowIsRunning(session: SessionSummary): boolean {
+	if (isRemoteRow(session)) {
+		return (
+			remoteAttention(session) !== null ||
+			session.live_state === "busy" ||
+			session.live_state === "wedged"
+		);
+	}
+	return session.streaming || session.needs_attention;
+}
+
 export function rowMark(session: SessionSummary): RowMark {
+	if (isRemoteRow(session)) {
+		/* The remote ladder, in the same precedence order as the local one: the
+		 * gate outranks everything (a decision runs INSIDE a turn), then the two
+		 * live words that are this list's Running. `wedged` takes the degraded
+		 * mark, not the running one: `wedged` is the owner having STOPPED
+		 * reporting, and the mark's job is to say what the reader needs to know —
+		 * that row needs a person, not a spinner. `unseen`/`ended` cannot occur:
+		 * this device holds no attention store or generation record for a peer's
+		 * conversation, so their defaults read `false` and are not consulted. */
+		if (remoteAttention(session) !== null) return "decision";
+		if (session.live_state === "busy") return "running";
+		if (session.live_state === "wedged") return "degraded";
+		return "idle";
+	}
 	if (session.needs_attention) return "decision";
 	if (session.streaming) return "running";
 	if (session.unseen) return "new";
@@ -45,10 +113,16 @@ export function rowMark(session: SessionSummary): RowMark {
 
 /** The attention word a decision row carries. `pending_kind` is `"approval"`,
  *  `"ask"`, or empty, and the empty case still has to say something: the relay
- *  said something needs a decision and did not say which. */
+ *  said something needs a decision and did not say which. A REMOTE row's gate
+ *  is its `pending` pair (`approval`/`answer`), mapped onto the same two words
+ *  this surface already shows — `answer` is what the app spells "question"
+ *  for the local ask gate, and the mapping is the one shared reading. */
 export function attentionWord(
 	session: SessionSummary,
 ): "approval" | "question" {
+	if (isRemoteRow(session)) {
+		return remoteAttention(session) === "approval" ? "approval" : "question";
+	}
 	return session.pending_kind === "ask" ? "question" : "approval";
 }
 
@@ -194,7 +268,13 @@ export function degradedNote(degraded: readonly string[]): string | null {
  * as it did in the old sections; bucketing is `filter`.
  *
  * The time basis is `(created_at ?? mtime) × 1000` — both are epoch SECONDS on
- * the wire (`SessionSummary`), and `created_at` is absent on older relays.
+ * the wire (`SessionSummary`), and `created_at` is absent on older relays. A
+ * REMOTE row's two clocks are the same number (the peer's `started` claim), so
+ * the basis is that claim either way. A basis of `<= 0` is the relay's NO CLAIM
+ * — an old-build peer's non-number birth stamp arrives as `0.0` — and such a
+ * row bins by the time branch below (→ Older) with NO label (`relativeTimeFor`),
+ * exactly where the relay ranked it last; never as a 1970 date (the desktop
+ * sidebar's rule, `local-operator-ui` #903).
  */
 export type SidebarSections = {
 	pinned: SessionSummary[];
@@ -207,9 +287,17 @@ export type SidebarSections = {
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 /** A row's time in epoch MILLISECONDS: the activity clock, or the conversation's
- *  birth when a relay predates `created_at`. */
-export function rowTimeMs(session: SessionSummary): number {
-	return (session.created_at ?? session.mtime) * 1000;
+ *  birth when a relay predates `created_at` — or `null` when the row carries NO
+ *  usable clock.
+ *
+ * `null` is a REAL reading here, not an error: `created_at`/`mtime` `<= 0` is
+ * the relay's no-claim (a non-number birth stamp — an old-build peer's — is read
+ * as `0.0` at the relay's own boundary), and no surface may render a no-claim as
+ * an ancient date. The row paints no label and the relay's own ranking has
+ * already placed it last inside its bin. */
+export function rowTimeMs(session: SessionSummary): number | null {
+	const stamp = session.created_at ?? session.mtime;
+	return typeof stamp === "number" && stamp > 0 ? stamp * 1000 : null;
 }
 
 /** Local midnight for `now` — the boundary "Today" means. */
@@ -236,13 +324,13 @@ export function splitSidebarSections(
 			out.pinned.push(session);
 			continue;
 		}
-		if (session.streaming || session.needs_attention) {
+		if (rowIsRunning(session)) {
 			out.running.push(session);
 			continue;
 		}
 		const at = rowTimeMs(session);
-		if (at >= startOfDay) out.today.push(session);
-		else if (now - at < 7 * DAY_MS) out.week.push(session);
+		if (at !== null && at >= startOfDay) out.today.push(session);
+		else if (at !== null && now - at < 7 * DAY_MS) out.week.push(session);
 		else out.older.push(session);
 	}
 	return out;
@@ -257,15 +345,18 @@ export function splitSidebarSections(
  * same way the desktop's `relativeTime` does, so a long-cold row stays short.
  *
  * `null` for a row the panel paints no time on — a running row (see the section
- * comment above). The rule lives HERE, not at the render site, so the row and
- * the section cannot disagree about which rows carry a time.
+ * comment above), or a row whose clock is a NO CLAIM (`rowTimeMs`). The rule
+ * lives HERE, not at the render site, so the row and the section cannot disagree
+ * about which rows carry a time.
  */
 export function relativeTimeFor(
 	session: SessionSummary,
 	now: number = Date.now(),
 ): string | null {
-	if (session.streaming || session.needs_attention) return null;
-	const minutes = Math.floor(Math.max(0, now - rowTimeMs(session)) / 60_000);
+	if (rowIsRunning(session)) return null;
+	const at = rowTimeMs(session);
+	if (at === null) return null;
+	const minutes = Math.floor(Math.max(0, now - at) / 60_000);
 	if (minutes < 1) return "now";
 	if (minutes < 60) return `${minutes} min`;
 	const hours = Math.floor(minutes / 60);
@@ -282,4 +373,54 @@ export function degradedShortNote(degraded: readonly string[]): string {
 		return "This list may be incomplete.";
 	if (degraded.includes("sessions")) return "Some rows may be missing.";
 	return "New markers may be stale.";
+}
+
+/**
+ * A remote row's device label: the owner's name, else the id's TAIL — the
+ * desktop's own `deviceLabel` rule, adopted so one device is never spelled two
+ * ways across two clients.
+ *
+ * The tail rather than the id whole because a 34-character hash does not fit a
+ * row and says nothing a person recognises; the tail still tells two unnamed
+ * devices apart. "another device" is the honest last resort when the transport
+ * named neither — never an empty string on a line the reader must understand.
+ */
+export function remoteDeviceLabel(
+	session: Pick<SessionSummary, "owner_device" | "owner_device_name">,
+): string {
+	const name = session.owner_device_name?.trim();
+	if (name) return name;
+	const id = session.owner_device?.trim() ?? "";
+	return id.length > 0 ? `device …${id.slice(-6)}` : "another device";
+}
+
+/** One peer the loaded list reveals: the device id a move can name, and the
+ *  label to show for it. */
+export type VisiblePeer = { deviceId: string; label: string };
+
+/**
+ * The devices the sessions payload ITSELF reveals, in first-seen order.
+ *
+ * This is the whole destination catalogue the phone has today: a device appears
+ * when it owns at least one visible session, and disappears when it owns none.
+ * That is a named GAP, not the design — a full peer picker needs the network's
+ * own device listing (the desktop's peers route, `lop network peers`) served to
+ * this plane; until that route exists, offering exactly the devices whose rows
+ * the reader can see is the honest scope. A device the transport did not give
+ * an id for cannot be a destination (the move takes an id or `"local"`), so
+ * such rows contribute no entry rather than a dead one.
+ */
+export function visiblePeers(
+	sessions: readonly SessionSummary[],
+): VisiblePeer[] {
+	const out: VisiblePeer[] = [];
+	const seen = new Set<string>();
+	for (const session of sessions) {
+		if (!isRemoteRow(session)) continue;
+		const deviceId = session.owner_device?.trim() ?? "";
+		if (deviceId.length === 0 || seen.has(deviceId)) continue;
+		seen.add(deviceId);
+		out.push({ deviceId, label: remoteDeviceLabel(session) });
+	}
+	return out;
 }

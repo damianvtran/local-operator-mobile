@@ -23,12 +23,14 @@ wrong wire.
 Read [`../../docs/relay/contract.md`](../../docs/relay/contract.md) for what each
 sample means; this file is only about provenance and reproduction.
 
-The tree is currently **126 fixtures — 119 live, 7 synthetic** — plus this README. The split is counted from `provenance.kind` in the files
-themselves rather than typed here, so it cannot drift from them. (This count is
+The tree is currently **130 fixtures — 119 live, 11 synthetic** — plus this
+README. The split is counted from `provenance.kind` in the files themselves
+rather than typed here, so it cannot drift from them. (This count is
 re-derived at the schedules fold: the previous 121/115/6 was one short on the
 total and the synthetic half — `synthetic/sse-projection-tables.json` had
 arrived with #55 without the line being recounted, which is exactly the drift
-the rule above exists to catch.)
+the rule above exists to catch. The mesh half's four synthetic samples (#2083)
+were added the same way, counted rather than assumed.)
 
 **Five refs are represented, deliberately.** The bulk of the live captures were
 taken at local-operator `52c1df35`; the session-state receipts (`ended`,

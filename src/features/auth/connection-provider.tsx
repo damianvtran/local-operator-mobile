@@ -319,6 +319,11 @@ export const ConnectionProvider = ({
 			const run = () => {
 				if (stopped) return;
 				const stream = client.sessionsStream({
+					/* The flag goes to the STREAM as well as the REST read below, together:
+					 * the relay reads it once at connection open, so a repaint from a
+					 * stream that did not ask would drop the remote rows the cold-start
+					 * GET painted — the flap the relay's contract warns about. */
+					includePeers: true,
 					onFrame: (frame) => {
 						if (frame.kind === "sessions") {
 							_attempt = 0;
@@ -363,6 +368,25 @@ export const ConnectionProvider = ({
 					},
 				});
 				streamRef.current = stream;
+				/*
+				 * START IT. `SseConnection` is inert until `start()` — the
+				 * constructor only stores its options — and this stream was built
+				 * and parked for as long as the provider has existed: the list
+				 * repainted only on the cold-start REST read and a pull-to-refresh,
+				 * never on a wire frame. MEASURED (2026-10-09, the mesh half's
+				 * capture): four app loads against the mock relay recorded four
+				 * `GET /api/sessions` and ZERO `/api/sessions/events`, and the mock
+				 * serves the stream route correctly — the request was simply never
+				 * made. The socket is a route property (see this file's header), so
+				 * it is started HERE, where the route is decided, and re-started on
+				 * every `run()` — the retry path builds a new stream, and a stream
+				 * that is not started is the same defect with a fresh object.
+				 *
+				 * The slice that found this is the one that needs it most: remote
+				 * rows arrive on BOTH transports, and a stream that never opens is a
+				 * list that never learns a peer's row changed.
+				 */
+				stream.connection.start();
 			};
 
 			run();
@@ -387,8 +411,11 @@ export const ConnectionProvider = ({
 			startStream(client, route);
 			/* The first paint is the REST read, not the stream's seed: the cold-start
 			 * rule is that the list renders immediately, and a stream that opens in a
-			 * second must not be the reason the screen is empty. */
-			const frame = await client.sessions().catch(() => null);
+			 * second must not be the reason the screen is empty. It asks for the
+			 * peers' rows exactly as the stream does — one list, one population. */
+			const frame = await client
+				.sessions({ includePeers: true })
+				.catch(() => null);
 			if (frame) {
 				listStore.getState().applyFrame({
 					sessions: frame.sessions,
@@ -657,7 +684,7 @@ export const ConnectionProvider = ({
 		if (!client) return;
 		setBusy(true);
 		try {
-			const frame = await client.sessions();
+			const frame = await client.sessions({ includePeers: true });
 			listStore.getState().applyFrame({
 				sessions: frame.sessions,
 				degraded: frame.degraded,

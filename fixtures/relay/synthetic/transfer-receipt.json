@@ -1,0 +1,31 @@
+{
+  "provenance": {
+    "kind": "synthetic",
+    "relay_ref": "local-operator f5071030d",
+    "modelled_on": "server/utils/desktop_mesh.transfer_receipt at f5071030df (the one implementation both planes answer from) and the phone route's JSONResponse of it (local_operator/mobile/daemon.py:api_transfer_session); the phase words and their progress steps are the desktop lane's own",
+    "why": "the transfer route needs a real mesh to run, so a receipt cannot be captured from an isolated daemon in no network. The envelope is the route's verbatim response body; the phase transcript is the shape transfer_receipt composes (a move to another device), which is what a client renders as the machine facts of a finished move"
+  },
+  "request": {
+    "method": "POST",
+    "path": "/api/sessions/9f2c1a7b0d3e/transfer"
+  },
+  "status": 200,
+  "headers": {
+    "content-type": "application/json"
+  },
+  "body": {
+    "phases": [
+      { "phase": "prepared", "peer": "d_1f2e3d4c5b6a", "progress": 0.25 },
+      { "phase": "handing_off", "peer": "d_1f2e3d4c5b6a", "progress": 0.5 },
+      { "phase": "committed", "peer": "d_1f2e3d4c5b6a", "progress": 0.75 },
+      { "phase": "done", "peer": "d_1f2e3d4c5b6a", "progress": 1.0 }
+    ],
+    "locality": "remote",
+    "owner_device": "d_1f2e3d4c5b6a",
+    "source_retired": true,
+    "session_id": "9f2c1a7b0d3e",
+    "new_session_id": "9f2c1a7b0d3e",
+    "mode": "move",
+    "replayed": false
+  }
+}
