@@ -164,9 +164,14 @@ const DeterminateTrack = ({ fraction }: { fraction: number }) => (
  *  the progress track. The track reports its measured width here — the one
  *  number the indeterminate sweep needs — and the fraction, when one arrived,
  *  reaches assistive tech as a VALUE: sighted readers get width-only by design,
- *  but without `accessibilityValue` a reader who cannot see the bar got no
- *  measurement at all (design round 1, D4). The indeterminate branch states no
- *  value on purpose: there is no number to state. */
+ *  but without a value a reader who cannot see the bar got no measurement at
+ *  all (design round 1, D4). The value rides the FLAT `aria-valuemin` /
+ *  `aria-valuemax` / `aria-valuenow` aliases, not the `accessibilityValue`
+ *  object: react-native-web silently drops the object form (measured, design
+ *  round 2, D6), while the aliases render on the web build and are equally
+ *  valid on native (RN 0.86's types and view config both carry them). The
+ *  indeterminate branch states no value on purpose: there is no number to
+ *  state. */
 const GeneratingFrame = ({
 	fraction,
 	label,
@@ -183,11 +188,9 @@ const GeneratingFrame = ({
 			// visible word beside it is the same sentence, so nothing is announce-only.
 			accessibilityRole="progressbar"
 			accessibilityLabel={label}
-			accessibilityValue={
-				fraction === null
-					? undefined
-					: { min: 0, max: 100, now: Math.round(fraction * 100) }
-			}
+			aria-valuemin={fraction === null ? undefined : 0}
+			aria-valuemax={fraction === null ? undefined : 100}
+			aria-valuenow={fraction === null ? undefined : Math.round(fraction * 100)}
 		>
 			<View
 				className="absolute bottom-0 left-0 right-0 h-1 bg-elevated"
