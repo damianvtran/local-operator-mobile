@@ -1,0 +1,25 @@
+{
+ "provenance": {
+  "kind": "live",
+  "relay_ref": "local-operator ae6c9eb6",
+  "captured_at": "2026-10-09",
+  "how": "captured from an isolated `lop mobile serve` daemon (fresh HOME + LOCAL_OPERATOR_CONFIG_DIR, own ephemeral port, hosting=test/model_name=mock) running local-operator merge ae6c9eb6 from a clean worktree via PYTHONPATH; the conversation was driven over the relay's own `POST /api/sessions/{id}/command` and each turn waited for via `GET /api/sessions`, so every checkpoint below is what the runtime wrote, not what a script seeded. This sample: a session started and never prompted: ready with no ticks.",
+  "redactions": "isolated home shown as ~; portal password and cookie signatures absent"
+ },
+ "request": {
+  "method": "GET",
+  "path": "/api/sessions/51d24dbedb2b/checkpoints"
+ },
+ "status": 200,
+ "headers": {
+  "content-type": "application/json"
+ },
+ "body": {
+  "session_id": "51d24dbedb2b",
+  "index": {
+   "state": "ready",
+   "built_at": null
+  },
+  "checkpoints": []
+ }
+}

@@ -162,6 +162,16 @@ export interface ScenarioWorld {
 	 */
 	schedules?: Json | FixtureOverride;
 	/**
+	 * The checkpoint rail's manifest (S5): the whole
+	 * `GET /api/sessions/{id}/checkpoints` body, or a RECORDED RESPONSE
+	 * (`FixtureOverride`) when a cell needs a status the route does not
+	 * produce. Absent, the mock answers `ready` + `[]` — a conversation with
+	 * nothing written yet, the quietest honest answer: a scenario silent about
+	 * checkpoints draws NO rail and no failure mark, so every frame without a
+	 * rail cell stays what it was before the rail existed.
+	 */
+	checkpoints?: Json | FixtureOverride;
+	/**
 	 * The voice-input surface this state pins — the only two answers a mic's
 	 * visibility and one transcription upload need, and they must agree: a state
 	 * that ADVERTISES a voice path is the state whose `POST /api/transcribe`
@@ -1609,6 +1619,113 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 			const projection = structuredClone(seed);
 			return { projections: { [projection.session_id]: projection } };
 		},
+	);
+
+	/* ------------------------------------------------------------- checkpoints -- */
+
+	/**
+	 * A captured checkpoint manifest admitted as the world's, re-addressed to
+	 * the session the harness opens.
+	 *
+	 * `resolvePath` navigates every `{sessionId}` cell at `CAPTURED_SESSION`, so
+	 * a capture whose own conversation id differs is served under the id the run
+	 * actually opens — the ROUTING id changes and nothing else does. The stray
+	 * manifest field is the one edit, and every other byte is the capture.
+	 */
+	const checkpointsFor = (
+		name: string,
+		mutate?: (body: Record<string, unknown>) => void,
+	) => {
+		const body = fix.body(name) as Record<string, unknown>;
+		body.session_id = CAPTURED_SESSION;
+		mutate?.(body);
+		return body as Json;
+	};
+
+	/** The deep conversation's full journal as the mock can page it: the oldest
+	 *  twenty entries (captured with `before=`) followed by the newest eighty
+	 *  (the before-less page) — together the 100 message rows behind the deep
+	 *  MANIFEST's 100 ticks, so the rail-beyond-the-window claim is a fact about
+	 *  one coherent conversation rather than two fixtures spliced at random. */
+	const deepJournal = [
+		...(fix.record("checkpoints-deep-history-older").entries as unknown[]),
+		...(fix.record("checkpoints-deep-history").entries as unknown[]),
+	] as TranscriptEntry[];
+
+	add(
+		"checkpoints-ready",
+		"The rail's common state: a settled conversation whose manifest marks every turn — user dashes and completed ticks (uniform compact dashes where the track is too dense for glyphs), all loaded by the device.",
+		["S5/rail"],
+		() => ({
+			projections: {
+				[CAPTURED_SESSION]: projectionFrom(
+					fix.projection("sse-projection-checkpoints-ready"),
+					{ session_id: CAPTURED_SESSION },
+				),
+			},
+			history: fix.record("checkpoints-ready-history")
+				.entries as unknown as TranscriptEntry[],
+			checkpoints: checkpointsFor("checkpoints-ready", (body) => {
+				/* The wire's `open` is the live unsettled tail
+				 *  (`transcript_index.py:1085`); the mock's turns settle in ~1 s and
+				 *  this host has no interactive approver, so the capture's tail is
+				 *  settled and the last completion is re-worded to the state the
+				 *  rail draws as the in-progress mark: the dot where the track
+				 *  allows it, the compact dash on the narrowest phone (the same
+				 *  density rule its neighbours obey — D68-2). One field, named
+				 *  here — never an edited fixture. */
+				const ticks = body.checkpoints as Array<Record<string, unknown>>;
+				const last = ticks[ticks.length - 1];
+				if (last !== undefined) last.outcome = "open";
+			}),
+		}),
+	);
+
+	add(
+		"checkpoints-deep",
+		"The whole-conversation claim made visible: 100 ticks over 50 turns while the device holds the newest 80-row window — 19 of the marks are for turns the window cannot show.",
+		["S5/rail-deep"],
+		() => ({
+			projections: {
+				[CAPTURED_SESSION]: projectionFrom(
+					fix.projection("sse-projection-checkpoints-deep"),
+					{ session_id: CAPTURED_SESSION },
+				),
+			},
+			history: deepJournal,
+			checkpoints: checkpointsFor("checkpoints-deep"),
+		}),
+	);
+
+	add(
+		"checkpoints-building",
+		"A scan in flight: the manifest answers `building` with the previous scan's full rail attached, so the previous marks keep painting under the liveness mark.",
+		["S5/rail-building"],
+		() => ({
+			projections: {
+				[CAPTURED_SESSION]: projectionFrom(
+					fix.projection("sse-projection-checkpoints-deep"),
+					{ session_id: CAPTURED_SESSION },
+				),
+			},
+			history: deepJournal,
+			checkpoints: checkpointsFor("checkpoints-building"),
+		}),
+	);
+
+	add(
+		"checkpoints-error",
+		"The relay's own failure state: the journal could not be read, so the rail must say so — never the empty rail a `ready` manifest with no ticks means.",
+		["S5/rail-error"],
+		() => ({
+			projections: {
+				[CAPTURED_SESSION]: projectionFrom(
+					fix.projection("sse-projection-checkpoints-error"),
+					{ session_id: CAPTURED_SESSION },
+				),
+			},
+			checkpoints: checkpointsFor("checkpoints-error"),
+		}),
 	);
 
 	add(

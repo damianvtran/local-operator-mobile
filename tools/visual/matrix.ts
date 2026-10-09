@@ -360,12 +360,12 @@ export function describeDeviceCoverage(coverage: {
  * The CI tier: the bounded sample the per-push capture job takes.
  *
  * WHY A THIRD TIER, AND WHY IT IS HERE RATHER THAN A `--devices` LIST IN YAML.
- * The `core` tier is 2700 cells: the whole declared cell list (75 cells) x 2 themes x
- * (3 phones x 4 scales + 2 tablets x 3 scales) — 75 x 2 x 18, the tier's 5 profiles —
- * and the CI job's capture step is bound at 50 minutes. Measured on the runner, that is
+ * The `core` tier is 2844 cells: the whole declared cell list (79 cells) x 2 themes x
+ * (3 phones x 4 scales + 2 tablets x 3 scales) — 79 x 2 x 18, the tier's 5 profiles —
+ * and the CI job's capture step is bound at 55 minutes. Measured on the runner, that is
  * 2.24 s/cell: 403 cells in 903 s (run 37098393675, a plan of 403 cells then), so a core
- * run needs ~101 minutes. The `core` job's own bound is 140 (see `.github/workflows/e2e.yml`,
- * `web-audit-core`), which is above the 8100 s deadline its plan derives for itself. The
+ * run needs ~106 minutes. The `core` job's own bound is 150 (see `.github/workflows/e2e.yml`,
+ * `web-audit-core`), which is above the 8532 s deadline its plan derives for itself. The
  * job's first real
  * run of this path
  * was therefore cut off by the harness's own 900 s deadline with 585 cells
@@ -395,11 +395,11 @@ export function describeDeviceCoverage(coverage: {
  *     `CI_SCALES` below for why the boundary earns the third slot and 150% does
  *     not. 150% stays in `core`, which sweeps every scale.
  *
- * That is 75 cells x 2 themes x (2 profiles x 3 scales) = 900 cells, ~34 minutes at
+ * That is 79 cells x 2 themes x (2 profiles x 3 scales) = 948 cells, ~35 minutes at
  * the measured rate: inside the step bound (raised with it, see `CI_SCALES`) with
  * the same headroom it always carried. `core` and `full` are unchanged and stay the
- * local and dispatched samples, so the full 2700-cell `core` matrix and the
- * 9900-cell `full` matrix remain runnable — nothing is only reachable through CI.
+ * local and dispatched samples, so the full 2844-cell `core` matrix and the
+ * 10428-cell `full` matrix remain runnable — nothing is only reachable through CI.
  */
 export const CI_DEVICES: string[] = ["iphone-se", "tablet-landscape"];
 
@@ -417,17 +417,17 @@ export const CI_DEVICES: string[] = ["iphone-se", "tablet-landscape"];
  * sweeps every scale, so nothing is lost by composing the two sets differently.
  *
  * WHAT IT COSTS, because it is NOT free and the two are one decision. Three scales on
- * both CI profiles is 900 cells, +50 % over the two-scale 600, so the per-push capture
+ * both CI profiles is 948 cells, +50 % over the two-scale 632, so the per-push capture
  * and audit bounds in `.github/workflows/e2e.yml` were raised with it — most recently to
- * capture 50 / audit 25 / job 80. That is this slice's ten cells (nine lifecycle surfaces
+ * capture 55 / audit 25 / job 85. That is this slice's ten cells (nine lifecycle surfaces
  * and the pane's long-press menu) on top of the base the branch was cut from, plus the
  * four cells upstream landed while it was open, the find slice's five cells (four
  * find states and the caveat), the schedules slice's five S17 cells (the armed
- * index's five states) and the mesh slice's seven cells (the S15 remote rows, the
- * tap-reveal and the move sheet's five states): the cell list is 75 and the sample is
- * 900, both re-derived from this head's own `--plan` rather than scaled — still inside
- * the 50-minute capture bound (900 x 3 s = 45 min). A bound that fires every run stops
- * being a signal, so
+ * index's five states), the mesh slice's seven cells (the S15 remote rows, the
+ * tap-reveal and the move sheet's five states), and the checkpoint rail's four more,
+ * folded from main: the cell list is 79 and the sample is 948, both re-derived from
+ * this head's own `--plan` rather than scaled — still inside the 55-minute capture bound
+ * (948 cells x 3 s = 47.4 min). A bound that fires every run stops being a signal, so
  * this list and that bound have to move together: reverting the bounds without
  * reverting this list makes the job red, and reverting this list without the bounds
  * wastes the budget it was sized for. */

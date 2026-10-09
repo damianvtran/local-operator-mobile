@@ -18,26 +18,38 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
  *
  * WHAT IT COVERS: plan lines (`N cells x M frame(s) = K frames`), derived deadlines
  * (`deadline: K s` and `a deadline of K s`), per-cell rate products
- * (`N cells x R s = K s`).
+ * (`N cells x R s = K s`), and — added after a "+5 cells" copy of the tier figures
+ * hid in more than a dozen prose spots the equation-only reader could not see —
+ * four count forms that may only state a tier's plan or the relay's own registry:
+ * the tier-adjective form (`2844-cell `core``), the verb form (`plans 948 cells`),
+ * the tier-help form (`profiles — 948 cells`), and the registry forms
+ * (`declared cell list (79 cells`, `cell list is 79`, `sample is 948`) — the last
+ * three read against the registry the relay itself serves.
  *
  * WHICH SPELLINGS IT READS, so nobody has to guess (round 9, R42): the plan product
  * (`N cells × M frame(s) = K frames`), the derived deadline (`deadline: K s` and
- * `a deadline of K s`), and a rate product (`N × R s = K s` or `… = K min`, with or
- * without the word `cells`). It reads them with whitespace collapsed, so a figure the
- * formatter wrapped across two lines is still one figure.
+ * `a deadline of K s`), a rate product (`N × R s = K s` or `… = K min`, with or
+ * without the word `cells` — but a product that SPELLS `cells` must take its left
+ * operand from a tier's plan, so a stale count cannot hide behind correct
+ * arithmetic), and the four count forms above. It reads them with whitespace
+ * collapsed, so a figure the formatter wrapped across two lines is still one figure.
  *
  * WHAT IT DOES NOT READ, which is a limit rather than a caveat: a figure standing alone
- * with no equation around it. The documents legitimately carry many counts that are not
- * tier plans — the README's one-phone sample (`75 cells`), a dispatcher's partial plan
- * (`400 cells`), a mean of 12 cells, a historical `256` from the rate run — so forcing
- * every `N cells` to be a tier count would fail on true statements. Nor does it read the
- * slash form (`403 cells / 1209 frames in 903.1 s`), a bare `N frames`, or prose minutes
- * that are not written as a product (`~78 minutes at 2.24 s/cell`): those are checked by
- * hand and by the rate they name. What it does catch is every figure stated IN AN
- * EQUATION, which is where six rounds of sweeps went wrong, and every derived deadline
- * wherever it is written.
+ * with no equation and no count form around it. The documents legitimately carry counts
+ * that are not tier plans — the README's one-phone sample (`79 cells`), a dispatcher's
+ * partial plan (`400 cells`), a dated run record (`audit: 36 cells`), a measurement
+ * (`403 cells in 903 s`, the rate run's historical `256`), a mean of 12 cells, a quoted
+ * historical plan (`910 cells`) — so forcing every `N cells` to be a tier count would
+ * fail on true statements. Nor does it read the slash form (`403 cells / 1209 frames in
+ * 903.1 s`), a bare `N frames`, a BARE rate product (`504 x 3 s = K` — arithmetic only:
+ * the ci-bound raise history states past sample sizes in exactly this form and cannot be
+ * pinned to a ref; every current-claim rate line spells `cells` so the membership rule
+ * reaches it), a bound figure (`bound is 150`), or an elided continuation list (`` `core`
+ * 2844, `full` 10428``): those are checked by hand and by the rate they name. What it
+ * does catch is every figure stated IN AN EQUATION OR ONE OF THE COUNT FORMS, which is
+ * where the sweeps have gone wrong, and every derived deadline wherever it is written.
  *
- * WHAT IT DOES NOT COVER, named rather than implied: prose minutes (`~78 minutes`)
+ * WHAT IT DOES NOT COVER, named rather than implied: prose minutes (`~106 minutes`)
  * are a *rate* the harness measures on a runner, not a number it prints, so a stale
  * minute figure is invisible here — those are checked by hand against the rate and
  * said so in each document; and a figure in a line that names a DIFFERENT ref
@@ -68,6 +80,10 @@ interface Plan {
 }
 
 let plans: Record<Tier, Plan> | null = null;
+/** The relay's declared cell list — the union of every scenario's `shows`, read
+ *  from the same control surface `--plan` builds its counts from. A read that fails
+ *  fails the suite rather than skipping the registry forms. */
+let registryCells: number | null = null;
 let relay: ChildProcess | null = null;
 
 /**
@@ -105,6 +121,28 @@ async function waitForRelay(url: string, ms: number): Promise<boolean> {
 			if (Date.now() >= deadline) return false;
 			await new Promise((resolve) => setTimeout(resolve, 100));
 		}
+	}
+}
+
+/** The relay's own declared cell list: the union of every scenario's `shows`.
+ *  `--plan` counts are built from THIS registry, so the documents' registry
+ *  mentions (`the whole declared cell list (72 cells`) are checked against the
+ *  surface itself rather than a copy of it. `null` (a failed read) fails the
+ *  suite — a registry that cannot be read is a failure, not a skip. */
+async function readRegistry(url: string): Promise<number | null> {
+	try {
+		const response = await fetch(`${url}/__mock/scenarios`);
+		if (!response.ok) return null;
+		const body = (await response.json()) as {
+			scenarios?: Array<{ shows?: string[] }>;
+		};
+		const cells = new Set<string>();
+		for (const scenario of body.scenarios ?? []) {
+			for (const cell of scenario.shows ?? []) cells.add(cell);
+		}
+		return cells.size > 0 ? cells.size : null;
+	} catch {
+		return null;
 	}
 }
 
@@ -162,6 +200,7 @@ beforeAll(async () => {
 		found[tier] = plan;
 	}
 	plans = ok ? found : null;
+	registryCells = await readRegistry(relayUrl);
 }, 240000);
 
 afterAll(() => {
@@ -183,6 +222,8 @@ afterAll(() => {
 describe("the figures in the tree are the plan the harness prints", () => {
 	it("reads a plan for every tier — a missing plan is a failure, not a skip", () => {
 		expect(plans).not.toBeNull();
+		expect(registryCells).not.toBeNull();
+		expect(registryCells ?? 0).toBeGreaterThan(0);
 		for (const tier of TIERS) {
 			const plan = plans?.[tier];
 			expect(plan?.cells ?? 0).toBeGreaterThan(0);
@@ -196,15 +237,32 @@ describe("the figures in the tree are the plan the harness prints", () => {
 		const known = plans;
 		expect(known).not.toBeNull();
 		const byCells = new Map<number, Plan>();
+		const tierCells = new Set<number>();
 		for (const tier of TIERS) {
 			const plan = known?.[tier];
-			if (plan) byCells.set(plan.cells, plan);
+			if (plan) {
+				byCells.set(plan.cells, plan);
+				tierCells.add(plan.cells);
+			}
 		}
+		/* What a count may say without lying: a tier's plan, or the relay's own
+		 *  registry (`plans 72 cells on today's registry`). */
+		const declarable = new Set<number>(tierCells);
+		if (registryCells !== null) declarable.add(registryCells);
 
 		const problems: string[] = [];
 		/* Every branch must MATCH something, or it is a rule that cannot fire. The
 		 *  counts are asserted at the end of the sweep rather than per file. */
-		const matched = { plan: 0, deadline: 0, rate: 0 };
+		const matched = {
+			plan: 0,
+			deadline: 0,
+			rate: 0,
+			adjective: 0,
+			plans: 0,
+			profiles: 0,
+			registry: 0,
+			sample: 0,
+		};
 		for (const file of SCANNED) {
 			const text = readFileSync(join(root, file), "utf8");
 			/* READ THE WHOLE FILE WITH WHITESPACE COLLAPSED, so a figure the formatter
@@ -281,14 +339,19 @@ describe("the figures in the tree are the plan the harness prints", () => {
 			 *  and `696 cells x 1.25 s = 870 s`, and in minutes for the per-push bound.
 			 *  It used to require the word "cells", which meant it matched NOTHING, and a
 			 *  branch that matches nothing is a gate that cannot fail (review round 7,
-			 *  R37: a mutation of `34.8 min` to `35.8 min` passed it). */
+			 *  R37: a mutation of `34.8 min` to `35.8 min` passed it). The word is now a
+			 *  CAPTURE: a product that spells it must take its left operand from a tier's
+			 *  plan, so a stale count cannot hide behind correct arithmetic — the exact
+			 *  way `876 x 3 s = 43.8 min` survived every earlier sweep. A bare product
+			 *  stays arithmetic-only; the docstring says why. */
 			scan(
-				/([\d,]+)\s*(?:cells?\s*)?(?:×|x)\s*([\d.]+) s\s*=\s*([\d,.]+) (min|s)\b/g,
+				/([\d,]+)\s*(cells?\s*)?(?:×|x)\s*([\d.]+) s\s*=\s*([\d,.]+) (min|s)\b/g,
 				(m, where) => {
 					const cells = Number((m[1] ?? "0").replace(/,/g, ""));
-					const per = Number(m[2] ?? 0);
-					const product = Number((m[3] ?? "0").replace(/,/g, ""));
-					const unit = m[4];
+					const spelled = (m[2] ?? "").trim().length > 0;
+					const per = Number(m[3] ?? 0);
+					const product = Number((m[4] ?? "0").replace(/,/g, ""));
+					const unit = m[5];
 					const seconds = unit === "min" ? product * 60 : product;
 					/* The tolerance is a ROUNDING STEP in the unit written — half a minute
 					 *  for a one-decimal minute figure, two seconds for an integer one —
@@ -299,9 +362,71 @@ describe("the figures in the tree are the plan the harness prints", () => {
 						problems.push(
 							`${where}: ${cells} x ${per} s != ${product} ${unit}`,
 						);
+					if (spelled && !tierCells.has(cells))
+						problems.push(
+							`${where}: rate line names ${cells} cells, no tier's plan`,
+						);
 					matched.rate += 1;
 				},
 			);
+
+			/* THE COUNT FORMS — one scan each, because each fixes its own subject:
+			 *  a tier by name, a plan by its verb, a tier by its help line, or the
+			 *  registry the relay itself serves. A count outside these shapes is read
+			 *  by the branches above, or is one of the shapes the docstring names as
+			 *  unread (and checked by hand at fold time). */
+			scan(/([\d,]+)-cell\s+`?(ci|core|full)`?/g, (m, where) => {
+				const cells = Number((m[1] ?? "0").replace(/,/g, ""));
+				const tier = m[2] as Tier;
+				if (known?.[tier]?.cells !== cells)
+					problems.push(
+						`${where}: ${cells}-cell '${tier}' is not that tier's plan`,
+					);
+				matched.adjective += 1;
+			});
+
+			scan(/\bplans?\s+([\d,]+) cells\b/g, (m, where) => {
+				const cells = Number((m[1] ?? "0").replace(/,/g, ""));
+				if (!declarable.has(cells))
+					problems.push(
+						`${where}: 'plans ${cells} cells' is no tier's plan or the registry`,
+					);
+				matched.plans += 1;
+			});
+
+			scan(/\bprofiles\s+—\s*([\d,]+) cells\b/g, (m, where) => {
+				const cells = Number((m[1] ?? "0").replace(/,/g, ""));
+				if (!tierCells.has(cells))
+					problems.push(
+						`${where}: '${cells} cells' beside a profile count is no tier's plan`,
+					);
+				matched.profiles += 1;
+			});
+
+			scan(/declared cell list \(([\d,]+) cells/g, (m, where) => {
+				const cells = Number((m[1] ?? "0").replace(/,/g, ""));
+				if (registryCells === null || cells !== registryCells)
+					problems.push(
+						`${where}: declared ${cells} cells against registry ${registryCells ?? "?"}`,
+					);
+				matched.registry += 1;
+			});
+
+			scan(/\bcell list is ([\d,]+)\b/g, (m, where) => {
+				const cells = Number((m[1] ?? "0").replace(/,/g, ""));
+				if (registryCells === null || cells !== registryCells)
+					problems.push(
+						`${where}: cell list ${cells} against registry ${registryCells ?? "?"}`,
+					);
+				matched.registry += 1;
+			});
+
+			scan(/\bsample is ([\d,]+)\b/g, (m, where) => {
+				const cells = Number((m[1] ?? "0").replace(/,/g, ""));
+				if (!tierCells.has(cells))
+					problems.push(`${where}: sample ${cells} is no tier's plan`);
+				matched.sample += 1;
+			});
 		}
 		expect(problems).toEqual([]);
 		for (const [branch, count] of Object.entries(matched)) {

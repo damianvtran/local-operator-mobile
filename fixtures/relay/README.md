@@ -23,16 +23,18 @@ wrong wire.
 Read [`../../docs/relay/contract.md`](../../docs/relay/contract.md) for what each
 sample means; this file is only about provenance and reproduction.
 
-The tree is currently **130 fixtures — 119 live, 11 synthetic** — plus this
+The tree is currently **142 fixtures — 131 live, 11 synthetic** — plus this
 README. The split is counted from `provenance.kind` in the files themselves
-rather than typed here, so it cannot drift from them. (This count is
-re-derived at the schedules fold: the previous 121/115/6 was one short on the
-total and the synthetic half — `synthetic/sse-projection-tables.json` had
-arrived with #55 without the line being recounted, which is exactly the drift
-the rule above exists to catch. The mesh half's four synthetic samples (#2083)
-were added the same way, counted rather than assumed.)
+rather than typed here, so it cannot drift from them. (This count is re-derived
+at the fold that merged the checkpoint rail in: main's side recounted to
+138/131/7 when the twelve checkpoint samples landed, this branch sat at
+130/119/11, and the merged tree is 142/131/11 — counted, not assumed, as the
+mesh half's four synthetic samples (#2083) were. The earlier note stands as
+the reason the rule exists: a count before that was one short on the total and
+the synthetic half, `synthetic/sse-projection-tables.json` having arrived with
+#55 without the line being recounted.)
 
-**Five refs are represented, deliberately.** The bulk of the live captures were
+**Six refs are represented, deliberately.** The bulk of the live captures were
 taken at local-operator `52c1df35`; the session-state receipts (`ended`,
 `degraded`) were added by #1784, so the captures that show them are taken at
 `fc851a94e`; and the push/ack-sync samples (the frame-level `unread` block, the
@@ -58,6 +60,18 @@ The schedules samples (`schedules-empty`, `schedules-populated`,
 JSON shapes (the `wakes/store.py` and `monitors/store.py` indexes), plus one
 capture with the wakes directory at mode `000` so `read_error` is the store's
 own flag rather than a written-in one.
+
+The checkpoint samples (`checkpoints-ready`, `checkpoints-deep`,
+`checkpoints-building`, `checkpoints-empty`, `checkpoints-error`, the two
+history pages and the four projection seeds) are a sixth: captured at
+`ae6c9eb6` — the merge of local-operator #2068, the route's own — from an
+isolated `lop mobile serve` daemon driving REAL conversations over
+`POST /api/sessions/{id}/command` (`hosting=test/model_name=mock`): four
+sessions (8 turns settled; 50 turns deep; started-never-prompted; two turns
+with the journal at mode `000` before its first scan) so no field of the
+manifest was written by hand. The `building` sample is a live in-flight scan
+caught by a second overlapping poll — it carries the PREVIOUS scan's 100
+entries, which is exactly what the wire documents for that state.
 
 ## Provenance
 
@@ -182,6 +196,13 @@ The notification-path samples are the same recipe plus two turns:
 | `schedules-populated.json` | `GET /api/schedules` | 200 | wakes armed / overdue / stale / dormant (stopped) / ghost (no session on disk) with a hidden patience timer; monitors armed / dormant / disabled / expired, one never-checked watch and one unavailable episode |
 | `schedules-truncated.json` | `GET /api/schedules` | 200 | 205 wake-carrying conversations against `WAKE_LIST_LIMIT = 200`: `truncated: true`, `total: 205`, 200 entries — kept whole, not trimmed |
 | `schedules-read-error.json` | `GET /api/schedules` | 200 | the wakes index unreadable (directory mode `000`): `wakes.read_error: true` with empty entries while the monitors family stays readable — the two answers that must never collapse into one |
+| `checkpoints-ready.json` | `GET /api/sessions/{id}/checkpoints` | 200 | a settled 8-turn conversation: 16 ticks (`user`/`completion`), every outcome `complete`, every naming `pending` — the rail's full vocabulary in its common state |
+| `checkpoints-deep.json` | `GET /api/sessions/{id}/checkpoints` | 200 | 50 turns, 100 ticks, `seq` 3..250 — far beyond the phone's 80-row tail window, which is the whole point of the route (compare the `checkpoints-deep-history*` pages: 19 of these ticks are for rows NO loaded window holds) |
+| `checkpoints-building.json` | `GET /api/sessions/{id}/checkpoints` | 200 | a scan IN FLIGHT: `index.state: "building"` with the previous scan's 100 entries attached — caught live by a second overlapping poll while the first awaited its first-paint budget |
+| `checkpoints-empty.json` | `GET /api/sessions/{id}/checkpoints` | 200 | a session started and never prompted: `ready`, `built_at: null`, no ticks — genuinely empty, which must never render as a failure |
+| `checkpoints-error.json` | `GET /api/sessions/{id}/checkpoints` | 200 | the journal `chmod 000` before its first scan: `index.state: "error"`, no ticks — the state that must never render as "no checkpoints" |
+| `checkpoints-deep-history.json`, `checkpoints-deep-history-older.json` | `GET /api/sessions/{id}/history[?before=]` | 200 | the deep conversation's two pages: the before-less newest 80 (what the app's first read receives) and, with `before=`, the oldest 20 — together the full 100-row journal as the phone can reach it |
+| `checkpoints-ready-history.json` | `GET /api/sessions/{id}/history` | 200 | the settled conversation's whole history (every entry fits the page; `has_more: false`) |
 | `mark-png.json` | `HEAD /mark.png` | 200 | the brand asset, deliberately unauthenticated |
 | `command-set-effort-bad.json`, `command-set-model-unknown.json`, `command-slash-unknown.json` | `POST …/command` | 422 / 200 / 422 | three refusals a model sheet and a slash sheet must render |
 | `prompt-image-2.json`, `prompt-image-3.json` | `POST …/command` (`prompt` with one image) | 200 | the second was sent with a payload that could not be decoded, and the relay **still answered `200 prompt admitted`** while dropping the attachment — the evidence behind the contract's “image ingest is best-effort and silent” note |
@@ -200,6 +221,10 @@ The notification-path samples are the same recipe plus two turns:
 | `sse-attention-complete.json` | — | the `attention` object of a completed turn |
 | `sse_projection_ended.json` | — | the frame published after a runtime was SIGKILLed, at `fc851a94e`: **`pid: 0`, `ended: true`**, transcript folded from disk (compare `sse-projection-durable-after-death.json`, the same event at `52c1df35` where `ended` read `false`) |
 | `sse-keepalive.json` | — | the literal keep-alive bytes in its `literal` field (`": keepalive\n\n"`), kept as a string so the sample stays byte-exact while still carrying a provenance marker |
+| `sse-projection-checkpoints-deep.json` | `projection` | the deep conversation's seed at `ae6c9eb6`: a live, idle runtime whose tail window is the newest 80 rows — the window the rail must NOT be folded from |
+| `sse-projection-checkpoints-ready.json` | `projection` | the settled conversation's seed (18 rows; everything fits the window) |
+| `sse-projection-checkpoints-empty.json` | `projection` | the never-prompted session's seed (`transcript: []`) |
+| `sse-projection-checkpoints-error.json` | `projection` | the two-turn session whose journal was made unreadable — the transcript still renders; only the rail's read failed |
 
 ### Gateway constants (`gateway/`)
 

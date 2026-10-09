@@ -10,7 +10,7 @@
  * everything left in the hook is plumbing.
  */
 
-import type { CompletionAttention } from "@/contracts";
+import type { CompletionAttention, EmptyAttention } from "@/contracts";
 
 /** The flat poll cadence while the completion has not been acknowledged. */
 export const ACK_CHECK_MS = 500;
@@ -28,6 +28,28 @@ export function retryDelayMs(refusals: number): number {
 		ACK_MAX_BACKOFF_MS,
 		ACK_CHECK_MS * 2 ** (refusals - ACK_FAILURES_BEFORE_BACKOFF + 1),
 	);
+}
+
+/**
+ * The projection's attention RECORD, or `null` when there is none.
+ *
+ * The wire serves the EXACTLY-EMPTY object when a conversation has no folded
+ * attention yet (a durable rebuild of a never-completed session — captured
+ * live at `ae6c9eb6`, `sse-projection-checkpoints-empty.json`), and the field
+ * is optional besides. Both read as "no record": every consumer reads the
+ * record's FIELDS, so the empty shape narrows to `null` in one place instead
+ * of an `in`-check at each call site — and nothing is defaulted from an absent
+ * record, so no fabricated `unseen: false` can claim a completion was seen.
+ */
+export function attentionRecord(
+	projection:
+		| { attention?: CompletionAttention | EmptyAttention }
+		| null
+		| undefined,
+): CompletionAttention | null {
+	const attention = projection?.attention;
+	if (attention === undefined) return null;
+	return "conversation_id" in attention ? attention : null;
 }
 
 /** Every gate of one attempt, as facts. */

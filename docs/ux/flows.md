@@ -414,6 +414,19 @@ States to specify for every element below: **loading** (history fetch),
      doing (already in the codebase) and the elapsed time; the transcript
      auto-follows only when the user is at the tail (the web client learned this
      the hard way — see PR #1784's U27/U28).
+   - *Checkpoint rail:* the right-edge column of marks over the transcript —
+     one per user turn and one per completed agent turn, read from the
+     JOURNAL-derived manifest (`GET /api/sessions/{id}/checkpoints`) so it
+     covers the WHOLE conversation rather than the ≤80-row window the device
+     happens to hold. `ready`+[] draws nothing; `building` keeps the last rail
+     painting under a liveness mark while the client polls; the relay's own
+     `error` draws a failure mark and **never** reads as "no checkpoints"
+     (`contract.md` §3.13). A user turn's mark is a quiet dash, a completed
+     turn's is the ✓-family glyph with `outcome` choosing it, and
+     `outcome: "open"` is an in-progress DOT. Decorative and not tappable in
+     v1: per-tick controls cannot pass U-01 at phone density, and jumping to a
+     newer-than-loaded turn needs an around-id read the phone's paging does not
+     do — the click-to-jump lane ships with that read.
 3. **Todos:** collapsed header `todos n/m` with a phase-aware panel; open items
    first. Never pushes the composer off screen (v1 rule: at most one of
    todos/subagents expands by default).

@@ -36,6 +36,7 @@ import type {
 	AskQuestion,
 	AsksResponse,
 	Capabilities,
+	CheckpointManifest,
 	CommandAck,
 	CommandsResponse,
 	CompletionAttention,
@@ -484,6 +485,64 @@ export const schedulesResponseSchema = z.looseObject({
 	monitors: scheduleMonitorListingSchema,
 });
 
+/* ------------------------------------------------------------ checkpoints -- */
+
+/**
+ * One rail tick (`GET /api/sessions/{id}/checkpoints`; local-operator #2068,
+ * merge `ae6c9eb6`, `mobile/checkpoints.py` serving the desktop rail's own
+ * models).
+ *
+ * NOTHING IS DEFAULTED, the schedules rows' rule one route over: the emitter
+ * validates against the desktop's Pydantic models, so every declared field is
+ * present in an answer this build produces — and the fields that CAN be null
+ * have a specific reading (`outcome` null is "the marker carried no kind",
+ * never "complete"; `naming` null is "a user tick, nothing to name").
+ *
+ * The four vocabularies stay CLOSED (`kind`, `outcome`, `index.state`,
+ * `naming.state`): each word maps to a distinct thing the rail or its caller
+ * does, so a new word is a protocol change this client must hear about at the
+ * boundary — the failure mode a widened string would hide is a mark painted
+ * with a meaning nothing ever assigned it. This is the monitor-state rule's
+ * opposite for a reason: a monitor's `state` is a display word rendered as
+ * itself, while these four drive branches.
+ */
+export const checkpointNamingSchema = z.looseObject({
+	state: z.enum(["ready", "pending", "unavailable"]),
+	name: z.string().nullable(),
+	summary: z.string().nullable(),
+});
+
+export const checkpointEntrySchema = z.looseObject({
+	/** A REAL journal entry id: the user row, or the turn's closing answer
+	 *  row. Non-empty because an empty id could never resolve to a row. */
+	id: nonEmpty,
+	kind: z.enum(["user", "completion"]),
+	/** 1-based turn ordinal. */
+	turn: z.number(),
+	ts: epochSeconds,
+	/** The journal row ordinal (0-based) — the tick's place on the rail. */
+	seq: z.number(),
+	text: z.string(),
+	outcome: z.enum(["complete", "error", "interrupted", "open"]).nullable(),
+	naming: checkpointNamingSchema.nullable(),
+});
+
+/** The manifest's state block. `error` is the state that must never render as
+ *  "no checkpoints": the journal is there and failed to read. `stale` is
+ *  reserved (no caller emits it today); the rail reads it like `building`. */
+export const checkpointIndexSchema = z.looseObject({
+	state: z.enum(["ready", "building", "stale", "error", "unsupported"]),
+	built_at: z.number().nullable(),
+});
+
+/** `GET /api/sessions/{id}/checkpoints` — one conversation's rail ticks,
+ *  derived from the journal, whole-conversation by construction. */
+export const checkpointManifestSchema = z.looseObject({
+	session_id: nonEmpty,
+	index: checkpointIndexSchema,
+	checkpoints: z.array(checkpointEntrySchema),
+});
+
 /** The completion-attention record. This — not transcript activity, not
  *  heartbeat freshness — is how a client learns a turn ENDED. */
 export const completionAttentionSchema = z.looseObject({
@@ -501,6 +560,21 @@ export const completionAttentionSchema = z.looseObject({
 	cause: z.string().optional(),
 	notify: z.boolean().optional(),
 });
+
+/**
+ * The attention block as it arrives on a PROJECTION: the populated record, or
+ * the EXACTLY-EMPTY object a durable rebuild of a conversation with no folded
+ * attention carries (`_projection_frame` writes `projection.attention`
+ * verbatim; captured live at `ae6c9eb6`, `sse-projection-checkpoints-empty
+ * .json`). The union is exact-empty OR full record, never a partial one, and
+ * `{}` narrows to "no record" in one place (`attentionRecord()`) — nothing is
+ * defaulted from it, because a fabricated `unseen: false` would be a claim the
+ * relay never made (`types.gen.ts` `EmptyAttention`).
+ */
+export const projectionAttentionSchema = z.union([
+	completionAttentionSchema,
+	z.strictObject({}),
+]);
 
 export const sessionProjectionSchema = z.looseObject({
 	session_id: nonEmpty,
@@ -560,7 +634,11 @@ export const sessionProjectionSchema = z.looseObject({
 	context_is_estimate: z.boolean().nullable(),
 	/** The projection epoch. Comparable only within one stream connection. */
 	version: z.number(),
-	attention: completionAttentionSchema,
+	/* The projection's OWN record-OR-EMPTY union (`projectionAttentionSchema`):
+	 *  a durable rebuild of a never-completed conversation carries `{}`. The
+	 *  `/seen` answer's attention stays the strict record — it is only ever
+	 *  written from a populated store. */
+	attention: projectionAttentionSchema,
 });
 
 export const sessionSummarySchema = z.looseObject({
@@ -1238,6 +1316,9 @@ export const SCHEMAS = {
 	 *  surface's one read, and like `asks` a route this client consumes at the
 	 *  parse boundary. */
 	schedules: schedulesResponseSchema,
+	/** `GET /api/sessions/{id}/checkpoints`: one conversation's rail ticks —
+	 *  the transcript rail's one read, whole-conversation by construction. */
+	checkpoints: checkpointManifestSchema,
 	/** Registered as well as exported so the request body a caller sends is
 	 *  validated by the same boundary as every response: an op with a missing or
 	 *  mistyped field fails on the device, not as a `422` the UI has to explain. */
@@ -1373,6 +1454,11 @@ type WireMirror = {
 	 *  read family around it — a schema whose output stops being assignable to
 	 *  these mirror declarations trips `AssertAll`. */
 	schedules: SchedulesResponse;
+	/* The checkpoint manifest (`GET /api/sessions/{id}/checkpoints`) — the
+	 *  transcript rail's read. Asserted for the same reason: a declared field
+	 *  that moves on the mirror reds `tsc` here before a phone can read a
+	 *  default the desktop never serves. */
+	checkpoints: CheckpointManifest;
 	pushConversation: PushConversationResponse;
 	pushRegister: PushRegisterResponse;
 	pushDevices: PushDevicesResponse;

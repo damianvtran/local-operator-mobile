@@ -929,3 +929,109 @@ export type HttpStatus =
   /** Voice input unavailable; mobile bundle not built. */
   | 503
   | 504;
+
+/* --------------------------------------------------------- checkpoint rail */
+
+/**
+ * `GET /api/sessions/{id}/checkpoints` — one conversation's rail ticks
+ * (local-operator #2068, merge `ae6c9eb6`).
+ *
+ * **Citations in this block are against `ae6c9eb6`** — the merge that added the
+ * route — not the document-wide `fc851a94e` pin, which predates it. Read them
+ * with `git show ae6c9eb6:<path>`.
+ *
+ * The manifest is derived from the journal by
+ * `local_operator/session/transcript_index.py:1513` (`checkpoints_view`) — the
+ * same function the desktop route calls — and served in the desktop rail's own
+ * wire models (`local_operator/server/models/desktop_sessions.py:668-745`),
+ * validated through them in `local_operator/mobile/checkpoints.py:53-69` so the
+ * two surfaces cannot drift. It covers EVERY turn, loaded or not: the phone's
+ * own projection is a bounded tail window, and this route exists because a rail
+ * built from the frames a phone happens to hold would silently mark only the
+ * tail. No runtime is needed — a conversation nothing is serving still has its
+ * journal (`transcript_index.py:1335` probes it).
+ *
+ * The three states a client must keep apart (`daemon.py:4870-4911` scopes the
+ * claims): `ready` with no ticks is a conversation with nothing written yet;
+ * `building` means a scan is in flight and `checkpoints` carries the previous
+ * scan where one exists (poll); `error` means the last refresh failed inside
+ * its cooldown — a journal that fails to READ after a successful stat must
+ * never render as "no checkpoints". One bound, stated rather than hidden: a
+ * journal that cannot be `stat`-ed at all still maps to `missing` -> `ready` +
+ * `[]` in the shared derivation (`transcript_index.py:1335` catches any
+ * `OSError`) — pre-existing, deferred on local-operator #2068.
+ *
+ * Read-only: nothing here writes or dials a session, and the naming warm stays
+ * a desktop-plane spend.
+ */
+
+/** `desktop_sessions.py:668`. What one rail tick is: a user message or a
+ *  completed agent turn. */
+export type CheckpointKind = "user" | "completion";
+
+/** `desktop_sessions.py:673`. `open` is the live tail that has no evidence of
+ *  settling yet — the rail paints it as an in-progress dot rather than a tick.
+ *  The other three are the attention marker's own kinds; `null` (no word on
+ *  the wire) must not be read as `complete`. */
+export type CheckpointOutcome = "complete" | "error" | "interrupted" | "open";
+
+/** `desktop_sessions.py:677`. `building` = a refresh in flight, entries are the
+ *  previous scan's; `error` = failed refresh inside its cooldown; `stale` is
+ *  reserved (no caller emits it today); `unsupported` is the peer/remote
+ *  degradation — a conversation this daemon cannot see locally is refused
+ *  `404` before the derivation runs, so the phone route never emits it. */
+export type CheckpointIndexState =
+  | "ready"
+  | "building"
+  | "stale"
+  | "error"
+  | "unsupported";
+
+/** `desktop_sessions.py:680`. `pending` is the pre-generation state `warm`
+ *  clears on the desktop; on this route nothing warms names, so a completion
+ *  stays `pending` until the desktop names it. */
+export type CheckpointNamingState = "ready" | "pending" | "unavailable";
+
+/** `desktop_sessions.py:683-696`. Non-ready states carry null `name`/`summary`
+ *  rather than omitting the keys — a present-null, never an absent key. */
+export interface CheckpointNaming {
+  state: CheckpointNamingState;
+  name: string | null;
+  summary: string | null;
+}
+
+/** `desktop_sessions.py:699-721`. `id` is a REAL journal entry id — the user
+ *  row, or the turn's closing ANSWER row (falling back to the last message row
+ *  only when the turn has no answer) — so a future click-to-jump needs no
+ *  translation and forks keep their checkpoints. `seq` is the journal row
+ *  ordinal (0-based), which places a tick proportionally without loading the
+ *  row; `turn` is 1-based. `naming` is present on completions only; user ticks
+ *  carry `null`. */
+export interface CheckpointEntry {
+  id: string;
+  kind: CheckpointKind;
+  turn: number;
+  ts: number;
+  seq: number;
+  text: string;
+  outcome: CheckpointOutcome | null;
+  naming: CheckpointNaming | null;
+}
+
+/** `desktop_sessions.py:723-737`. `built_at` is the index cache file's mtime —
+ *  the moment the served scan was written, not the moment a request read it. */
+export interface CheckpointIndex {
+  state: CheckpointIndexState;
+  built_at: number | null;
+}
+
+/** `desktop_sessions.py:740-745`; the payload is a `CheckpointManifest`
+ *  validated against that model and dumped in JSON mode
+ *  (`checkpoints.py:69`), so every declared field is present and a shape change
+ *  on the desktop models fails the relay's own suite before this route can
+ *  serve a default the desktop never sends. */
+export interface CheckpointManifest {
+  session_id: string;
+  index: CheckpointIndex;
+  checkpoints: CheckpointEntry[];
+}

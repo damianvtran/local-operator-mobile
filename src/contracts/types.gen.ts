@@ -311,6 +311,19 @@ export interface CompletionAttention {
 	notify?: boolean;
 }
 
+/**
+ * The attention block when the conversation has NO folded attention yet: the
+ * EXACTLY-EMPTY object, not a record with null fields.
+ *
+ * `_projection_frame` writes `projection.attention` verbatim, and a durable
+ * rebuild of a conversation nothing has completed in carries `{}` — captured
+ * live at `ae6c9eb6` (`fixtures/relay/sse/sse-projection-checkpoints-empty
+ * .json`). It reads as "no record": every consumer reads the record's FIELDS
+ * (`attentionRecord()` narrows it in one place), and nothing may be defaulted
+ * from an absent record — a fabricated `unseen: false` would be a claim the
+ * relay never made. */
+export type EmptyAttention = Record<never, never>;
+
 /* --------------------------------------------------------------- the session */
 
 export interface SessionProjection {
@@ -368,7 +381,7 @@ export interface SessionProjection {
 	context_is_estimate: boolean | null;
 	/** Epoch, not a per-process counter: compare only within one connection. */
 	version: number;
-	attention?: CompletionAttention;
+	attention?: CompletionAttention | EmptyAttention;
 }
 
 /* --------------------------------------------------------------- session list */
@@ -1188,4 +1201,98 @@ export interface ScheduleMonitorListing {
 export interface SchedulesResponse {
 	wakes: ScheduleWakeListing;
 	monitors: ScheduleMonitorListing;
+}
+
+/* ------------------------------------------------------- checkpoint rail -- */
+
+/**
+ * `GET /api/sessions/{id}/checkpoints` — one conversation's rail ticks
+ * (local-operator #2068, merge `ae6c9eb6`).
+ *
+ * The transcript rail's manifest, derived from the JOURNAL by
+ * `session/transcript_index.py` — the same function the desktop rail calls —
+ * and served in the desktop's own wire models (`server/models/desktop_sessions
+ * .py`), so the two surfaces cannot drift. WHY A ROUTE AND NOT THE FRAMES: the
+ * phone's projection is a bounded tail window, so a rail built from the
+ * frames a phone happens to hold would silently mark only the tail of the
+ * conversation — the manifest covers every turn, loaded or not. A conversation
+ * nothing is serving still has its journal, so no runtime is needed.
+ *
+ * Read-only by design: the naming warm stays a desktop-plane spend, so a
+ * completion's `naming` stays `pending` on this route until the desktop (or a
+ * future write half) names it.
+ */
+
+/** What one rail tick is: a user message or a completed agent turn. Closed:
+ *  the two shapes are the rail's whole vocabulary, and a clock on the phone
+ *  cannot draw a third meaningfully. */
+export type CheckpointKind = "user" | "completion";
+
+/** A completion tick's outcome. `open` is the live tail that has no evidence
+ *  of settling yet — the rail paints it as an in-progress dot rather than a
+ *  tick. The other three are the attention marker's own kinds; `null` (no
+ *  word on the wire) must not be read as `complete`. */
+export type CheckpointOutcome = "complete" | "error" | "interrupted" | "open";
+
+/** The manifest's own lifecycle state. `building` means a scan is in flight
+ *  and `checkpoints` carries the previous scan where one exists (the client
+ *  polls); `error` means the last refresh failed inside its cooldown — a
+ *  journal that fails to read must never render as "no checkpoints". `stale`
+ *  is reserved for a manifest deliberately served out of date (no caller emits
+ *  it today; it reads like `building`); `unsupported` is the peer/remote
+ *  degradation the phone route cannot produce (an unknown session is a `404`
+ *  before the derivation runs). */
+export type CheckpointIndexState =
+	| "ready"
+	| "building"
+	| "stale"
+	| "error"
+	| "unsupported";
+
+/** The naming overlay's state. `pending` is the pre-generation state the rail
+ *  would poll on; on this route nothing warms names, so `pending` is where a
+ *  completion stays until the desktop names it. */
+export type CheckpointNamingState = "ready" | "pending" | "unavailable";
+
+/** The naming overlay for one completion checkpoint. Non-ready states carry
+ *  null `name`/`summary` keys — present-as-null, never absent — so a client
+ *  cannot tell "not named yet" from "field this build does not know". */
+export interface CheckpointNaming {
+	state: CheckpointNamingState;
+	name: string | null;
+	summary: string | null;
+}
+
+/** One rail tick. `id` is a REAL journal entry id — the user row, or the
+ *  turn's closing ANSWER row (falling back to the last message row only when
+ *  the turn has no answer) — so a future click-to-jump needs no translation
+ *  and forks keep their checkpoints. `seq` is the journal row ordinal (0-based),
+ *  which is what places a tick proportionally in the rail WITHOUT loading the
+ *  row; `turn` is 1-based. `outcome` is null unless the turn's own completion
+ *  marker carried a kind, and `open` on the live unsettled tail. `naming` is
+ *  present on completions only — user ticks have nothing to name (`null`, not
+ *  an absent key). */
+export interface CheckpointEntry {
+	id: string;
+	kind: CheckpointKind;
+	turn: number;
+	ts: number;
+	seq: number;
+	text: string;
+	outcome: CheckpointOutcome | null;
+	naming: CheckpointNaming | null;
+}
+
+/** The manifest's state block. `built_at` is the index cache file's mtime —
+ *  the moment the served scan was written, not the moment this request read
+ *  it. */
+export interface CheckpointIndex {
+	state: CheckpointIndexState;
+	built_at: number | null;
+}
+
+export interface CheckpointManifest {
+	session_id: string;
+	index: CheckpointIndex;
+	checkpoints: CheckpointEntry[];
 }

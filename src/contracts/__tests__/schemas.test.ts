@@ -213,6 +213,11 @@ function classifyHttp(rel: string, fixture: HttpFixture): Classification {
 	 *  prefix. */
 	if (route === "/api/schedules")
 		return { kind: "schema", schema: "schedules", value: body };
+	/* The checkpoint manifest (the transcript rail's read): the route added at
+	 *  local-operator `ae6c9eb6`. Classified by its own suffix, like the
+	 *  session-scoped reads beside it. */
+	if (idThen("/checkpoints"))
+		return { kind: "schema", schema: "checkpoints", value: body };
 	if (idThen("/history"))
 		return { kind: "schema", schema: "history", value: body };
 	if (idThen("/command"))

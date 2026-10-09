@@ -2418,6 +2418,25 @@ export function createRelay(options: RelayOptions = {}) {
 				return;
 			}
 
+			if (rest === "/checkpoints" && method === "GET") {
+				/* One conversation's rail manifest (local-operator `ae6c9eb6`):
+				 *  journal-derived, whole-conversation, read-only. The scenario's whole
+				 *  body when it declares one, else `ready` + `[]` — a conversation with
+				 *  nothing written yet, which is what a scenario silent about
+				 *  checkpoints means. */
+				const checkpoints = world.checkpoints;
+				if (checkpoints !== undefined) {
+					sendRecordedOrBody(res, checkpoints);
+					return;
+				}
+				sendJson(res, 200, {
+					session_id: sessionId,
+					index: { state: "ready", built_at: null },
+					checkpoints: [],
+				});
+				return;
+			}
+
 			if (rest === "/image" && method === "GET") {
 				// The session is resolved FIRST, as the real relay does: an unknown
 				// session is `404 unknown session` even with the parameter missing, and
@@ -2642,6 +2661,11 @@ export function createRelay(options: RelayOptions = {}) {
 		{
 			match: /^\/api\/sessions\/[^/]+\/operator\/challenge$/,
 			methods: ["POST"],
+		},
+		/* The rail manifest (S5) is read-only, like the relay's own route. */
+		{
+			match: /^\/api\/sessions\/[^/]+\/checkpoints$/,
+			methods: ["GET", "HEAD"],
 		},
 		{ match: /^\/api\/sessions\/[^/]+$/, methods: ["GET", "HEAD"] },
 		{ match: /^\/api\/sessions$/, methods: ["GET", "HEAD"] },
