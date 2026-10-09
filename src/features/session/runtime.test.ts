@@ -5,12 +5,14 @@ import {
 	loadAttachments,
 	mergeTranscript,
 	olderThanLoaded,
+	rowIdentity,
 } from "@/features/session/runtime";
 import {
 	type RelayEndpoints,
 	type RelayResponseFacts,
 	relayErrorFromResponse,
 } from "@/relay";
+import { loadFixture } from "@/testing/fixtures";
 
 /**
  * Which failure lets `loadAttachments` say "the bytes are gone".
@@ -428,6 +430,85 @@ describe("mergeTranscript: one list from the page and the frame", () => {
 		]);
 		expect(merged.rows.some((row) => row.text.includes("```"))).toBe(true);
 		expect(merged.holeBelowPage).toBe(false);
+	});
+
+	it("pairs the two folds' copies of one tool call — the recorded wire pair", () => {
+		/* THE BLOCKER THIS PINS (review round 1, BLOCKER-1). These are the two
+		 * files `src/testing/fixture-relay.ts` serves for one session, so this is
+		 * the wire's own shape and not a construction: the durable fold names a
+		 * tool row `<message.id>:<call.id>` and the live fold names the same call
+		 * `tc-<tool_call_id>` (core `mobile/projection.py`, `_tool_row`). Matching
+		 * on the raw id rendered the call twice — two cards for one bash call —
+		 * and `main` cannot show it because it discards the page the moment the
+		 * frame has rows. A merge that is total over `rowIdentity` instead of the
+		 * id keeps exactly one.
+		 *
+		 * Read from the corpus through its own loader rather than re-typed: a copy
+		 * would stop tracking the recorded pair the app is served, which is the whole
+		 * value of pinning it, and `src/testing/fixtures.ts` is the one way a test
+		 * reads the corpus (the guard in `src/testing/__tests__/fixtures.test.ts`
+		 * fails a self-built path — it caught this test's first form).
+		 */
+		const projection = loadFixture<{ data: SessionProjection }>(
+			"sse/sse-projection-live-idle.json",
+		).data;
+		const page = loadFixture<{ body: { entries: TranscriptEntry[] } }>(
+			"http/history-ok.json",
+		).body.entries;
+		const frame = projection.transcript;
+
+		// The shape the fix is about, asserted on the fixtures themselves so a
+		// future fixture edit cannot quietly stop exercising it.
+		expect(
+			page.flatMap((row) =>
+				row.kind === "tool" ? [[row.id, row.tool_call_id]] : [],
+			),
+		).toEqual([
+			["66ae3bcaa2194753b7e24ef2b69e53ca:call_mock_bash", "call_mock_bash"],
+		]);
+		expect(
+			frame.flatMap((row) =>
+				row.kind === "tool" ? [[row.id, row.tool_call_id]] : [],
+			),
+		).toEqual([["tc-call_mock_bash", "call_mock_bash"]]);
+
+		const merged = mergeTranscript(projection, page);
+
+		// One tool row, the live fold's copy of it (the frame is the authority for
+		// a row both sources carry — the reader is watching it).
+		expect(
+			merged.rows.flatMap((row) => (row.kind === "tool" ? [row.id] : [])),
+		).toEqual(["tc-call_mock_bash"]);
+		// …and the whole list is the frame's window: the page's five rows are all
+		// covered by frame copies, so nothing from the page is left over, and the
+		// pinned opener the page cannot reach says the conversation runs deeper.
+		expect(idsOf(merged.rows)).toEqual([
+			"c71b41b3-f11f-48c7-902e-edf2fa39d307",
+			"8674620948364825a916ce9d8c8f3eda",
+			"1351662b-8dc8-4fd7-a70b-ca7a6b61dd3b",
+			"66ae3bcaa2194753b7e24ef2b69e53ca",
+			"tc-call_mock_bash",
+			"86a7ef49-68da-4c3e-ab8b-ccd84c5b31d2",
+			"cf13127c65234138a2250eccdba095da",
+		]);
+		expect(merged.holeBelowPage).toBe(true);
+	});
+
+	it("identifies a tool row by the call it names, whatever id its fold minted", () => {
+		// The identity is the pairing key, so it decides both the merge above and
+		// whether the find caveat reads a relabelled row as a row that left the
+		// window (use-session's held-row watch compares identities for this
+		// reason). A tool row with no call id is the durable fold's never-started
+		// row: it has only its id to be known by.
+		expect(rowIdentity(rowAt("a"))).toBe("a");
+		expect(
+			rowIdentity({
+				...rowAt("tc-call_x"),
+				kind: "tool",
+				tool_call_id: "call_x",
+			}),
+		).toBe("tool-call:call_x");
+		expect(rowIdentity({ ...rowAt("m-3"), kind: "tool" })).toBe("m-3");
 	});
 
 	it("is the frame when there is no page yet", () => {

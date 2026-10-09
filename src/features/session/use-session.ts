@@ -36,6 +36,7 @@ import {
 	loadAttachments,
 	mergeTranscript,
 	olderThanLoaded,
+	rowIdentity,
 	type StreamFacts,
 	sessions,
 	subscribeRoute,
@@ -382,13 +383,20 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 	 * needs no history page at all (the failed-read case), and it is sticky on
 	 * purpose: nothing re-enters the window, so a claim that could flicker off
 	 * would be a lie twice. The PREVIOUS frame lives in a ref; only the verdict
-	 * is state. */
+	 * is state.
+	 *
+	 * BY IDENTITY, NOT BY ID (review round 1, BLOCKER-1 secondary). The two
+	 * folds disagree about a tool row's id (`rowIdentity`), so a later frame
+	 * that rebuilds a row under the page's naming swaps `tc-call-x` for
+	 * `<message>:call-x` — the SAME row, re-labelled. Comparing raw ids read
+	 * that as a slide and made the caveat claim a row had left the window when
+	 * only its label had changed. Identity is what the claim is about. */
 	const heldIdsRef = useRef<{ sessionId: string; ids: Set<string> } | null>(
 		null,
 	);
 	const [slidUnderWindow, setSlidUnderWindow] = useState(false);
 	useEffect(() => {
-		const ids = new Set(entries.map((entry) => entry.id));
+		const ids = new Set(entries.map(rowIdentity));
 		const before = heldIdsRef.current;
 		heldIdsRef.current = { sessionId, ids };
 		if (before === null) return;

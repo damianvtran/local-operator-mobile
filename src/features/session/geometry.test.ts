@@ -4,6 +4,7 @@ import {
 	ESTIMATED_ROW_PT,
 	estimateVisibleRows,
 	rowLayout,
+	rowOffsets,
 	tailStartIndex,
 	windowPolicy,
 } from "@/features/session/windowing";
@@ -156,6 +157,42 @@ describe("tailStartIndex", () => {
 		// throws rather than a list that opens at the top.
 		expect(tailStartIndex(5, 0)).toBe(4);
 		expect(tailStartIndex(5, -3)).toBe(4);
+	});
+});
+
+describe("rowOffsets: the table `getItemLayout` answers from", () => {
+	const ids = ["a", "b", "c", "d"];
+	const idAt = (at: number) => ids[at];
+
+	it("carries the content's height and agrees with rowLayout at every index", () => {
+		/* The list answers a batch from this table rather than walking per call
+		 * (review NIT-2), so the table IS the layout: if the two ever disagree, a
+		 * jump lands somewhere the virtualiser does not expect. */
+		const heights = new Map([
+			["a", 100],
+			["c", 60],
+		]);
+		const offsets = rowOffsets(ids.length, idAt, heights);
+		expect(offsets).toEqual([
+			0,
+			100,
+			100 + ESTIMATED_ROW_PT,
+			100 + ESTIMATED_ROW_PT + 60,
+			100 + ESTIMATED_ROW_PT + 60 + ESTIMATED_ROW_PT,
+		]);
+		for (let at = 0; at < ids.length; at += 1) {
+			const row = rowLayout(at, idAt, heights);
+			expect(row.offset).toBe(offsets[at]);
+			expect(row.length).toBe((offsets[at + 1] ?? 0) - (offsets[at] ?? 0));
+		}
+	});
+
+	it("is monotone and never NaN, for a table with no rows and one with unmeasured ids", () => {
+		expect(rowOffsets(0, idAt, new Map())).toEqual([0]);
+		const offsets = rowOffsets(6, () => undefined, new Map());
+		expect(offsets).toHaveLength(7);
+		for (let at = 1; at < offsets.length; at += 1)
+			expect(offsets[at]).toBeGreaterThan(offsets[at - 1] as number);
 	});
 });
 

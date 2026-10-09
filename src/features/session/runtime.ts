@@ -138,6 +138,37 @@ export const toBase64 = (bytes: Uint8Array): string => {
 
 /* --------------------------------------------------------------- projections */
 
+/**
+ * A row's identity across the two folds: what says "this is the same row" when
+ * the page and the live frame name it differently.
+ *
+ * TOOL ROWS ARE THE CASE. The relay folds the same journal twice — the durable
+ * fold behind `/history` mints a tool row `<message.id>:<call.id>`, while the
+ * live projection fold mints the same call `tc-<tool_call_id>`
+ * (`local_operator/mobile/projection.py`, `_tool_row`). Both copies carry
+ * `tool_call_id`, and the call it names is the row; the id is a label minted by
+ * whichever fold produced it, and the two folds disagree exactly here. Measured
+ * on the repository's own recorded pair (`fixtures/relay/sse/
+ * sse-projection-live-idle.json` + `fixtures/relay/http/history-ok.json`, the
+ * two files `src/testing/fixture-relay.ts` serves for one session):
+ *
+ *   PAGE  tool 66ae3bcaa2194753b7e24ef2b69e53ca:call_mock_bash  tc=call_mock_bash
+ *   FRAME tool tc-call_mock_bash                                 tc=call_mock_bash
+ *
+ * Matching those by id alone rendered the call twice (review BLOCKER-1). A
+ * tool row with no `tool_call_id` falls back to its id, which is what the
+ * durable fold emits for a row that never started a call.
+ *
+ * NOTHING ELSE TAKES THIS PATH. Every other kind's id is minted from the
+ * journal entry itself, so the two folds agree and the id is the identity.
+ * The prefix keeps the two namespaces from ever colliding should an id
+ * literally read `tool-call:<something>`.
+ */
+export const rowIdentity = (row: TranscriptEntry): string =>
+	row.kind === "tool" && row.tool_call_id !== ""
+		? `tool-call:${row.tool_call_id}`
+		: row.id;
+
 /** What the transcript should render, plus the one fact the merge is the only
  *  place that can know. */
 export interface TranscriptMerge {
@@ -174,16 +205,15 @@ export interface TranscriptMerge {
  * exact for an append-only log — the only order the wire can produce — and it
  * needs no clock, which is what the wire does not carry.
  *
- * ROWS ARE MATCHED BY POSITION WITHIN AN ID, not by id alone. The wire's ids are
- * the transcript's identity and the list keys rows by them, but a row id is not
- * guaranteed unique on the wire (the harness's own synthetic `rich-rows`
+ * ROWS ARE MATCHED BY IDENTITY AND POSITION, not by a raw id. The wire's ids are
+ * the transcript's identity and the list keys rows by them, but the two folds
+ * disagree about a tool row's id (`rowIdentity` below) and a row id is not
+ * guaranteed unique on the wire at all (the harness's own synthetic `rich-rows`
  * fixture stamps every row `m-1`, and it is the capture matrix's case for fenced
- * rows). Matching purely by id then collapses those rows into one — measured:
- * the cell rendered the last row six times and the `session-rich-rows` marker
- * (an assistant row with a fence) disappeared, failing 12 capture cells that
- * `main` passes. So the page's rows are indexed BY ID AND ORDER (the n-th page
- * row with an id matches the n-th frame row with it) and the merge is total for
- * any id it is handed, however many times that id appears.
+ * rows). So the page's rows are indexed by identity AND ORDER — the n-th page
+ * row with an identity matches the n-th frame row with it — which pairs the two
+ * folds' copies of one call and is total for any id sequence it is handed,
+ * however many times an id appears.
  *
  * The result is bounded by the two windows (`history` + projection rows, so
  * about twice the page) and NEVER reorders or drops a row that is already on
@@ -199,12 +229,14 @@ export const mergeTranscript = (
 	if (frame.length === 0) return { rows: [...history], holeBelowPage: false };
 	if (history.length === 0) return { rows: [...frame], holeBelowPage: false };
 
-	/** The page's indices for each id, in order, consumed as the frame is walked:
-	 *  the n-th frame row with an id claims the n-th page row with it. */
+	/** The page's indices for each identity, in order, consumed as the frame is
+	 *  walked: the n-th frame row with an identity claims the n-th page row with
+	 *  it. */
 	const pageSlots = new Map<string, number[]>();
 	history.forEach((row, at) => {
-		const slots = pageSlots.get(row.id);
-		if (slots === undefined) pageSlots.set(row.id, [at]);
+		const key = rowIdentity(row);
+		const slots = pageSlots.get(key);
+		if (slots === undefined) pageSlots.set(key, [at]);
 		else slots.push(at);
 	});
 	/** The projection's copy of a shared row, by PAGE INDEX: the live authority. */
@@ -214,7 +246,7 @@ export const mergeTranscript = (
 	const insertedAfter = new Map<number, TranscriptEntry[]>();
 	let anchor = -1;
 	for (const row of frame) {
-		const claimed = pageSlots.get(row.id)?.shift();
+		const claimed = pageSlots.get(rowIdentity(row))?.shift();
 		if (claimed !== undefined) {
 			live.set(claimed, row);
 			anchor = claimed;

@@ -89,6 +89,31 @@ export const rowHeightPt = (
 	(id === undefined ? undefined : heights.get(id)) ?? ESTIMATED_ROW_PT;
 
 /**
+ * The offset of every row, in one O(n) walk: `offsets[at]` is where row `at`
+ * starts and `offsets[count]` is the content's estimated height.
+ *
+ * WHY A TABLE AND NOT `rowLayout` PER CALL. The list asks for a layout once per
+ * row per batch, and `rowLayout` walks every row above the index, so answering a
+ * batch with it is O(n²) in the plan's length — ~26 000 additions per batch at the
+ * merge's ≤161 rows, and unbounded growth if a later page read lengthens the plan
+ * (review round 1, NIT-2). The list memoises this table and invalidates it when a
+ * row's height changes, so a batch costs one walk.
+ *
+ * The single arithmetic lives here: `rowLayout` is this table read at one index.
+ */
+export const rowOffsets = (
+	count: number,
+	itemIdAt: (at: number) => string | undefined,
+	heights: ReadonlyMap<string, number>,
+): number[] => {
+	const offsets = [0];
+	for (let at = 0; at < count; at += 1) {
+		offsets.push((offsets[at] ?? 0) + rowHeightPt(itemIdAt(at), heights));
+	}
+	return offsets;
+};
+
+/**
  * The layout of one rendered row, from the top of the content.
  *
  * `itemIdAt` is the rendered item's id at an index (a `transcript-row-…` entry
@@ -100,11 +125,12 @@ export const rowLayout = (
 	itemIdAt: (at: number) => string | undefined,
 	heights: ReadonlyMap<string, number>,
 ): RowLayout => {
-	let offset = 0;
-	for (let at = 0; at < index; at += 1) {
-		offset += rowHeightPt(itemIdAt(at), heights);
-	}
-	return { length: rowHeightPt(itemIdAt(index), heights), offset, index };
+	const offsets = rowOffsets(index + 1, itemIdAt, heights);
+	return {
+		length: (offsets[index + 1] ?? 0) - (offsets[index] ?? 0),
+		offset: offsets[index] ?? 0,
+		index,
+	};
 };
 
 /**
@@ -132,11 +158,13 @@ export const tailStartIndex = (
  * needs no height to be right.
  *
  * A billion points, not `Number.MAX_SAFE_INTEGER`: Android's `ReactScrollView`
- * takes the destination as an `int`, and a double that does not fit it is a
- * platform conversion this code cannot see (measured signature:
- * `ReactScrollView.java` `public void scrollTo(int x, int y)`). A billion points
- * is ~1.2 million phone screens, which no content reaches, and it is exactly
- * representable in every type on the path.
+ * takes the destination as an `int`, reached through `PixelUtil.toPixelFromDIP`,
+ * which multiplies by the display density and converts the double back to an int
+ * (`ReactScrollViewCommandHelper.kt` → `scrollTo(int, int)`); the conversion
+ * SATURATES, so a value that overflows the int is `Int.MAX_VALUE` — still a
+ * clamp to the content's end, which is the whole requirement. The value is
+ * therefore safe for the same reason an even larger one would be, and a billion
+ * points is simply far more than any content reaches.
  */
 export const TAIL_CLAMP_OFFSET_PT = 1_000_000_000;
 
