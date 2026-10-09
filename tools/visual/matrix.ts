@@ -19,6 +19,7 @@
  * plain TypeScript with no imports of its own, so the tooling can load it. */
 import {
 	CONTROL,
+	imagegenCancelId,
 	projectMilestoneEditId,
 	sessionRowId,
 } from "../../src/ui/a11y.ts";
@@ -745,6 +746,17 @@ export const CELL_OPENERS: Record<string, Affordance[]> = {
 	/* The project delete's confirm: the first tap sends NOTHING (the deletion is
 	 *  not undoable), so this frame is the question, not the answer. */
 	"S16-detail/delete-confirm": [{ click: CONTROL.projectDelete }],
+
+	/* The image-gen card's CANCEL-REQUESTED state, on the ad-hoc path cell the
+	 *  `imagegen-progress` fixture drives. The press is the app's own Cancel —
+	 *  the existing turn interrupt — against a relay whose scenario never
+	 *  confirms it, so the frame shows the honest in-between state this lane
+	 *  exists to get right: pressed and not yet settled, never optimistic
+	 *  "cancelled". The target is the row the fixture's determinate card owns
+	 *  (`tc-img-running-determinate`), which the tail view reaches. */
+	"path:/session/{sessionId}/imagegen-cancel": [
+		{ click: imagegenCancelId("tc-img-running-determinate") },
+	],
 };
 
 /**
