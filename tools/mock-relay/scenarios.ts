@@ -98,7 +98,7 @@ export interface ScenarioWorld {
 	 * Declared for the states where the JOURNAL runs deeper than what one
 	 * projection can express: a slice of the projection can never extend past
 	 * it, so the single-source route can only ever answer a complete page — the
-	 * find scope line's "older messages aren't loaded here" caveat (`S5/find-
+	 * find scope line's "older messages aren't searched" caveat (`S5/find-
 	 * caveat`) needs a device that holds one INCOMPLETE page of a conversation
 	 * that exists elsewhere (the history-first/reopened shape). Absent, the
 	 * route keeps slicing the projection's own transcript, exactly as before.

@@ -58,15 +58,21 @@
  * 2. FOLDED TEXT. The rows the relay folds (wake deliveries, ask receipts,
  *    compaction markers and refusals) are searched as the folded line the
  *    surface paints, not as the raw journal payload the desktop's index still
- *    reads — a word that exists only in the payload the fold strips (model
- *    markup, envelope scaffolding) is not findable here.
- * 3. THE HUB ENVELOPE. The desktop indexes a hub delivery's `details.text`,
- *    the model-facing envelope; the envelope deliberately never crosses the
- *    wire (it would paint raw markup — the fold reads `details.body` instead),
- *    so this search reads the body the parent or child authored. A term that
- *    occurs only in the envelope — its tags, the label and job ids — is not
- *    findable here. Same row, same demotion; the one part of the desktop's
- *    text the phone cannot hold.
+ *    reads — a word that exists only in what the fold drops (model markup,
+ *    envelope scaffolding) is not findable here, and a wake catch-up is not
+ *    carried at all (the fold drops it whole — there is no folded line), so
+ *    its prose is not findable either. Where a payload detail does survive
+ *    the fold into the paint — an ask timeout's `details.text` is carried and
+ *    rendered verbatim in the row's disclosure — the search still compares
+ *    the row's lead line only: text carried only in `details` (disclosures)
+ *    is not compared.
+ * 3. THE HUB ENVELOPE. The desktop indexes a hub/peer delivery's
+ *    `details.text`, the model-facing envelope; the envelope deliberately
+ *    never crosses the wire (it would paint raw markup — the fold reads
+ *    `details.body` instead), so this search reads the body the sender
+ *    authored. A term that occurs only in the envelope — its tags, the label
+ *    and job ids — is not findable here. Same row, same demotion; the one
+ *    part of the desktop's text the phone cannot hold.
  */
 
 import type { TranscriptEntry } from "@/contracts";
@@ -571,8 +577,14 @@ export const splitRanges = (
 
 /* ------------------------------------------------------------------- the copy */
 
-/** The sheet's title, the desktop panel's own words for the same gesture. */
-export const FIND_TITLE = "Search this conversation";
+/** The sheet's title: one word — the single-noun idiom of its sibling sheets
+ *  (`model`, `effort`, `commands`) — for the desktop panel's same gesture.
+ *  The desktop's full phrase ("Search this conversation") truncated to
+ *  `Search this…` at 200 % on a 320 pt phone; a shorter title that renders
+ *  whole is the fix (design D63-7). The scope the phrase carried is stated
+ *  where it is a fact — the footer's "Searched N messages on this device" —
+ *  not in a header that clips. */
+export const FIND_TITLE = "search";
 /** The field's visible label — never the placeholder alone (components.md §4). */
 export const FIND_FIELD_LABEL = "Find a message";
 export const FIND_FIELD_PLACEHOLDER = "Type a word or phrase";
@@ -652,10 +664,13 @@ export const findRoleLabel = (role: FindRole): string => ROLE_LABELS[role];
 /**
  * What the search could and could not cover, as the sentence(s) the footer
  * carries. The count is always known (it is the loaded set's own size); the
- * older-messages caveat appears only when the screen PROVED the conversation
- * runs deeper than what is held — the history page incomplete AND nothing held
- * extends past it (`olderThanLoaded`, `runtime.ts`; a page fact alone is about
- * the page, and this sheet may not turn it into a claim about the rows).
+ * older-messages caveat fires unless a successful history read backs the
+ * silence (`olderThanLoaded`, `runtime.ts` — proven rows beyond the window, a
+ * read that failed, a read that never settled). Its wording says exactly that
+ * much and no more: the search does not cover older messages, whether they
+ * were seen to exist or could not be checked for — the longer "not loaded
+ * here" sentence was not true for the failed read it must also describe, and
+ * a shorter line is what 200 % type on a 320 pt phone needs (design D63-6).
  */
 export const findScopeLines = (input: {
 	messages: number;
@@ -665,7 +680,7 @@ export const findScopeLines = (input: {
 		`Searched ${input.messages} ${messageWord(input.messages)} on this device.`,
 	];
 	if (input.older) {
-		lines.push("Older messages aren't loaded here, so they can't be searched.");
+		lines.push("Older messages aren't searched.");
 	}
 	return lines;
 };

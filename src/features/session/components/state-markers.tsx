@@ -111,8 +111,9 @@ export const FindStateMarkers = ({
 	hits: number;
 	soft: boolean;
 	barVisible: boolean;
-	/** Older rows provably exist beyond the rows this device holds (the find
-	 *  scope line's caveat is showing). */
+	/** The find scope line's older-messages caveat is showing — rows beyond
+	 *  this device's hold, or a history read that could not check (the gate is
+	 *  `olderThanLoaded`). */
 	caveat: boolean;
 }) => (
 	<View aria-hidden>

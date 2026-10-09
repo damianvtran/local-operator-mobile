@@ -91,12 +91,14 @@ describe("loadAttachments tells a gone attachment from an unreachable host", () 
 
 describe("olderThanLoaded", () => {
 	/**
-	 * The find sheet's caveat gate: "older messages aren't loaded here" may only
-	 * be said when a fact proves a row exists conversation-side that this device
-	 * cannot search. The cases are the wire's own shapes — both the page and the
-	 * projection are contiguous tails of one append-only conversation, so the
-	 * page's rows are either all still held, or the cap has slid the window out
-	 * from under them.
+	 * The find sheet's caveat gate: "older messages aren't searched" may be
+	 * SILENT only when a successful history read backs the silence and no fact
+	 * shows a row the reader cannot search — a page row the window slid out
+	 * from under, `has_more` with nothing held past the page, or a watched
+	 * slide. A failed or unsettled read cannot know, so it fires (reviewer
+	 * MAJOR-2 residual / QA Q63-7). The cases are the wire's own shapes — both
+	 * the page and the projection are contiguous tails of one append-only
+	 * conversation.
 	 */
 	const row = (id: string): TranscriptEntry => ({
 		id,
@@ -118,28 +120,52 @@ describe("olderThanLoaded", () => {
 	});
 	const rows = (...ids: string[]) => ids.map(row);
 
-	it("claims nothing without a page, or when the page is the whole story", () => {
-		// A failed read makes no claim either way — there is no page to read.
+	it("fires when the read failed or never settled — completeness needs the read", () => {
+		// Reviewer MAJOR-2 residual / QA Q63-7, at its smallest reproduction: a
+		// cold open past the cap whose first `/history` read fails, with no slide
+		// ever watched. `history = []` and `pageHasMore = false` (set only by a
+		// successful read), `entries` = the capped projection — the old gate went
+		// SILENT here, reading as completeness while 80 of a 520-row journal sat
+		// unsearchable.
 		expect(
 			olderThanLoaded({
 				hasMore: false,
+				read: "failed",
 				page: [],
 				entries: rows("a"),
 				slid: false,
 			}),
-		).toBe(false);
+		).toBe(true);
+		// No attempt has settled either (in flight, or no endpoints to read
+		// from): the app cannot know, so it must not read as completeness.
 		expect(
 			olderThanLoaded({
-				hasMore: true,
+				hasMore: false,
+				read: "unknown",
 				page: [],
 				entries: rows("a"),
 				slid: false,
 			}),
+		).toBe(true);
+		// A successful read of a conversation with nothing in it: the one state
+		// an empty page may read as complete in.
+		expect(
+			olderThanLoaded({
+				hasMore: false,
+				read: "ok",
+				page: [],
+				entries: [],
+				slid: false,
+			}),
 		).toBe(false);
+	});
+
+	it("claims nothing when the page is the whole story", () => {
 		// The page was complete and every row it carried is still held.
 		expect(
 			olderThanLoaded({
 				hasMore: false,
+				read: "ok",
 				page: rows("a"),
 				entries: rows("a", "b"),
 				slid: false,
@@ -153,6 +179,7 @@ describe("olderThanLoaded", () => {
 		expect(
 			olderThanLoaded({
 				hasMore: true,
+				read: "ok",
 				page: rows("p1", "p2"),
 				entries: rows("p1", "p2"),
 				slid: false,
@@ -163,6 +190,7 @@ describe("olderThanLoaded", () => {
 		expect(
 			olderThanLoaded({
 				hasMore: true,
+				read: "ok",
 				page: rows("p1"),
 				entries: rows("p40", "p41"),
 				slid: false,
@@ -177,6 +205,7 @@ describe("olderThanLoaded", () => {
 		expect(
 			olderThanLoaded({
 				hasMore: true,
+				read: "ok",
 				page: rows("p10"),
 				entries: rows("p1", "p5", "p10", "p11"),
 				slid: false,
@@ -193,7 +222,13 @@ describe("olderThanLoaded", () => {
 		const page = rows("r0", "r1", "r2");
 		const slid = rows("r0", "r3", "r4", "r5"); // pinned opener + newest tail
 		expect(
-			olderThanLoaded({ hasMore: false, page, entries: slid, slid: false }),
+			olderThanLoaded({
+				hasMore: false,
+				read: "ok",
+				page,
+				entries: slid,
+				slid: false,
+			}),
 		).toBe(true);
 	});
 
@@ -201,6 +236,7 @@ describe("olderThanLoaded", () => {
 		expect(
 			olderThanLoaded({
 				hasMore: false,
+				read: "ok",
 				page: [],
 				entries: rows("r9"),
 				slid: true,

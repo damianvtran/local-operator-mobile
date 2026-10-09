@@ -319,7 +319,7 @@ describe("searchConversation — the loaded window, honestly", () => {
 		expect(searchConversation(slid, "euro").hits).toEqual([]);
 		expect(findScopeLines({ messages: 4, older: true })).toEqual([
 			"Searched 4 messages on this device.",
-			"Older messages aren't loaded here, so they can't be searched.",
+			"Older messages aren't searched.",
 		]);
 	});
 
@@ -486,12 +486,16 @@ describe("the copy", () => {
 		expect(findTruncatedLabel(100)).toBe("(first 100 shown)");
 	});
 
-	it("scope lines: the count is always stated; the older caveat only when proven", () => {
+	it("scope lines: the count is always stated; the older caveat when the gate fires", () => {
 		expect(findScopeLines({ messages: 1, older: false })).toEqual([
 			"Searched 1 message on this device.",
 		]);
 		expect(findScopeLines({ messages: 0, older: false })).toEqual([
 			"Searched 0 messages on this device.",
+		]);
+		expect(findScopeLines({ messages: 2, older: true })).toEqual([
+			"Searched 2 messages on this device.",
+			"Older messages aren't searched.",
 		]);
 	});
 });

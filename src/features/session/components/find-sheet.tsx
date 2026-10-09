@@ -31,8 +31,9 @@ import { cx } from "@/ui/variants";
  * answer says exactly what it is: the count line carries the tier split (the
  * soft tier is WHY a near-miss is here at all), the empty state is its own
  * sentence, and the pinned footer states the search's scope — the messages on
- * this device, plus the caveat when the conversation holds older ones the
- * frames do not carry. That footer is the honest half of a windowed search: a
+ * this device, plus the caveat unless a successful history read backs the
+ * silence (rows the frames do not carry, or a read that could not check).
+ * That footer is the honest half of a windowed search: a
  * miss above it is a miss IN THE LOADED FRAMES, not about the conversation.
  *
  * A row PRESSES to a landing (`onActivate`): the sheet closes, the transcript
@@ -51,7 +52,9 @@ export type FindSheetProps = {
 	onActivate: (index: number) => void;
 	/** How many messages the search covered. */
 	messages: number;
-	/** Older messages exist beyond the loaded frames (the history read's proof). */
+	/** The older-messages caveat shows: rows provably beyond the loaded frames,
+	 *  or a history read that failed or never settled — coverage unknown
+	 *  (`olderThanLoaded`, `runtime.ts`). */
 	older: boolean;
 };
 
@@ -163,8 +166,16 @@ export const FindSheet = ({
 							{hit.tier === "soft" ? (
 								/* A separator, not just the row's gap (design D63-4): at 100 % the
 								 *  two runs read as one phrase ("Agent related match"), so the
-								 *  reason the row is here vanishes into the provenance. */
-								<Text className="text-meta text-ink-dim">{`· ${FIND_TIER_HINT}`}</Text>
+								 *  reason the row is here vanishes into the provenance. The dot is
+								 *  its OWN run so the flex gap spaces it equally on both sides —
+								 *  as one run with the space baked in it sat 8 pt from the label
+								 *  but ~4 pt from the hint (design D63-8). */
+								<>
+									<Text className="text-meta text-ink-dim">·</Text>
+									<Text className="text-meta text-ink-dim">
+										{FIND_TIER_HINT}
+									</Text>
+								</>
 							) : null}
 						</View>
 						<Text className="text-body-sm text-ink-muted" numberOfLines={1}>
