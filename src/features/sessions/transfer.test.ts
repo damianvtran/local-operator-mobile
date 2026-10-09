@@ -20,8 +20,10 @@ import { RelayError, type TransferRequest } from "@/relay";
  *
  * The wire side (the route's at-most-once journal) is the relay's own test
  * suite; what this file pins is the CLIENT's half: the id is minted once per
- * intent and re-used by the claim, `wait_s` runs 0 -> 300 across the two steps,
- * and the classification never reads an unconfirmed outcome as a refusal.
+ * intent and re-used by the claim, `wait_s` stays 0 through the claim — the
+ * raised wait belongs to the busy remedy alone, which is where a released id
+ * makes it legal — and the classification never reads an unconfirmed outcome
+ * as a refusal.
  */
 
 const ASK: MoveAsk = {

@@ -656,8 +656,16 @@ export const sessionSummarySchema = z.looseObject({
 	 *  third spelling — the row's mark and bin are read from exactly these words
 	 *  (`remoteMark`), which are the desktop's own ranking vocabulary. */
 	live_state: z.enum(["busy", "idle", "attached", "wedged", ""]).optional(),
-	/** The gate kind, verbatim: `approval`, `answer`, or `null` for none. */
-	pending: z.enum(["approval", "answer"]).nullable().optional(),
+	/** The gate kind, verbatim — an OPEN string, not an enum (round 1, R1-1).
+	 *  The relay's vocabulary is `approval` / `ask` today (`set_record_pending`)
+	 *  and additive by contract: an enum froze the WHOLE `sessions` frame on the
+	 *  first `ask` a busy peer published, and both list transports then dropped
+	 *  it silently. Only `approval` spells approval; any other non-empty word is
+	 *  the answer family — the relay's own reading (`session/catalog.py`
+	 *  `status_code`: `if self.row.pending:` → approval iff `== "approval"`, else
+	 *  "answer`), which `remoteAttention` mirrors. `null` (or an empty word, which
+	 *  the relay's boundary turns into `null`: `mesh.py` `or None`) is no gate. */
+	pending: z.string().nullable().optional(),
 	/** Declared for the mirror only — never read by this client. The federated
 	 *  row carries no owner's stamp, so the relay publishes nulls, and a null is
 	 *  no claim: nothing may be derived from these three. */

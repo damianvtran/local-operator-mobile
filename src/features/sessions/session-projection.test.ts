@@ -422,6 +422,14 @@ describe("remote rows", () => {
 					mtime: at(30 * DAY_MS_T),
 				}),
 				remoteSession({
+					/* Round 1, R1-1: the live wire's OTHER gate word — a peer waiting
+					 *  on a free-text question. It bins and marks exactly like the
+					 *  answer family it belongs to. */
+					session_id: "ask",
+					pending: "ask",
+					mtime: at(30 * DAY_MS_T),
+				}),
+				remoteSession({
 					session_id: "busy",
 					live_state: "busy",
 					mtime: at(30 * DAY_MS_T),
@@ -452,6 +460,7 @@ describe("remote rows", () => {
 		expect(sections.running.map((s) => s.session_id)).toEqual([
 			"approval",
 			"answer",
+			"ask",
 			"busy",
 			"wedged",
 		]);
@@ -510,6 +519,16 @@ describe("remote rows", () => {
 		expect(remoteAttention(remoteSession({ pending: "answer" }))).toBe(
 			"answer",
 		);
+		// Round 1, R1-1: the vocabulary is OPEN — `ask` is a real gate word, and
+		// only `approval` spells approval; every other non-empty word is the
+		// answer family this surface spells "question".
+		expect(remoteAttention(remoteSession({ pending: "ask" }))).toBe("answer");
+		expect(remoteAttention(remoteSession({ pending: "future_gate" }))).toBe(
+			"answer",
+		);
+		// An empty word is NO gate, not an answer: the relay's boundary turns it
+		// into `null`, and the truthiness reading keeps that true if one arrives.
+		expect(remoteAttention(remoteSession({ pending: "" }))).toBeNull();
 		expect(remoteAttention(remoteSession())).toBeNull();
 		expect(attentionWord(remoteSession({ pending: "approval" }))).toBe(
 			"approval",
@@ -517,12 +536,16 @@ describe("remote rows", () => {
 		expect(attentionWord(remoteSession({ pending: "answer" }))).toBe(
 			"question",
 		);
+		expect(attentionWord(remoteSession({ pending: "ask" }))).toBe("question");
 		// A local row's reading is untouched.
 		expect(attentionWord(session({ pending_kind: "ask" }))).toBe("question");
 	});
 
 	it("marks a remote row from the transport's words, with the local ladder untouched", () => {
 		expect(rowMark(remoteSession({ pending: "approval" }))).toBe("decision");
+		// The answer family — `ask` included — is the same decision mark.
+		expect(rowMark(remoteSession({ pending: "ask" }))).toBe("decision");
+		expect(rowMark(remoteSession({ pending: "future_gate" }))).toBe("decision");
 		expect(rowMark(remoteSession({ live_state: "busy" }))).toBe("running");
 		// `wedged` is the owner having STOPPED reporting: the degraded mark, which
 		// says a person is needed, not a spinner.

@@ -220,8 +220,9 @@ export type TransferScript =
 			kind: "receipt";
 			/** Hold the answer this long before sending it (the in-progress state). */
 			delayMs?: number;
-			/** Overrides for the composed receipt (phases, progress, …). */
-			receipt?: Partial<Record<string, unknown>>;
+			/** Overrides for the composed receipt (phases, progress, …) — JSON
+			 *  values only: the transfer journal stores the composed answer. */
+			receipt?: Partial<Record<string, Json>>;
 	  }
 	| {
 			kind: "refused";
@@ -2014,14 +2015,16 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 	 * first stream repaint. */
 
 	/** One remote row, as the relay shapes it: the phone's own fields plus the
-	 *  flat locality block. Clocks are frozen as the rest of the corpus is; the
-	 *  old-build row carries the no-claim zeros. */
+	 *  flat locality block. The two clocks are ONE number — both `mtime` and
+	 *  `created_at` are stamped from the peer's single `started` claim
+	 *  (`session/peer_rows._started_epoch`) — frozen as the rest of the corpus
+	 *  is; the old-build row carries the no-claim zeros. */
 	const remoteRow = (overrides: Record<string, unknown>): Json => ({
 		session_id: "9f2c1a7b0d3e",
 		section: "active",
 		pinned: false,
 		conversation_name: "Deploy the staging stack",
-		mtime: 1790724900.0,
+		mtime: 1790724600.0,
 		created_at: 1790724600.0,
 		live_state: "",
 		pending: null,

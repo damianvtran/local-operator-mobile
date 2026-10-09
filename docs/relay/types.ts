@@ -599,8 +599,11 @@ export interface SessionSummary {
   /** The transport's own state token, VERBATIM: `busy`, `idle`, `attached`,
    *  `wedged`, or `""` for a stored row with no runtime behind it. */
   live_state?: "busy" | "idle" | "attached" | "wedged" | "";
-  /** The gate kind, verbatim: `approval`, `answer`, or `null` for none. */
-  pending?: "approval" | "answer" | null;
+  /** The gate kind, verbatim — an OPEN string, not a closed union (round 1,
+   *  R1-1): `approval` / `ask` today, any future word tomorrow. Only `approval`
+   *  spells approval; every other non-empty word is the answer family
+   *  (`session/catalog.py` `status_code`). `null` is no gate. */
+  pending?: string | null;
   /** Nulls, never guesses: the federated row carries no owner's stamp. */
   placement?: Record<string, unknown> | null;
   origin?: Record<string, unknown> | null;

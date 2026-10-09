@@ -10,26 +10,33 @@
  * a surface renders, and it is pure TypeScript with an injected port so every
  * branch is testable without a relay.
  *
- * THE TWO-STEP SHAPE — `wait_s: 0` first, then the SAME id with the wait
- * ceiling — is the contract's own instruction for a phone:
+ * THE THREE-STEP SHAPE — attempt (`wait_s: 0`), claim (same id, same body,
+ * long deadline), raised wait (only from a released `busy`) — is the contract's
+ * own instruction for a phone:
  *
  * 1. {@link moveAttempt} issues with `wait_s: 0` and the transport's ordinary
  *    deadline. It returns the move's answer whenever the relay can give one
  *    quickly — a receipt, or a fast refusal (`busy` is instant, which is the
  *    point of `wait_s: 0`).
- * 2. {@link moveClaim} re-issues the SAME `request_id` with `wait_s: 300` (the
- *    contract's ceiling) and a longer, user-asked deadline. It exists to CLAIM
+ * 2. {@link moveClaim} re-issues the SAME `request_id` with the SAME body —
+ *    `wait_s` included — and a longer, user-asked deadline. It exists to CLAIM
  *    the outcome of the first attempt: a mid-move re-issue coalesces on the
  *    relay's per-key lock and answers the settled outcome; an already-recorded
- *    outcome replays at once; and if the first attempt never reached the relay,
- *    the raised wait lets the relay wait out a busy source before moving.
- *    Because the id is the same, none of this can run a second move.
+ *    outcome replays at once; and an id the relay never recorded DIALS, which
+ *    is the retry the user asked for, at-most-once. Because the id is the same,
+ *    none of this can run a second move.
+ * 3. The relay-side wait is RAISED in exactly one place, {@link moveWait}: a
+ *    `busy` refusal RELEASES the id, so a fresh claim under it may state the
+ *    ceiling (`wait_s: 300`) and let the relay wait the source out. On an id
+ *    the relay has already recorded the raised wait is refused as a conflict —
+ *    the journal fingerprints the whole body — which is why the claim's body
+ *    must not change.
  *
  * WHY NOT ONE HELD CONNECTION: the possible waits here are minutes (a copy or a
  * recall is bounded in the hundreds of seconds — `mobility.move_client_bound_s`),
- * and ""a phone cannot hold a socket that long without the reader having to
- * watch it. The two-step shape keeps the FIRST request short; the long wait is
- * the claim, which is user-asked and whose own give-up is still reported as
+ * and a phone cannot hold a socket that long without the reader having to
+ * watch it. The staged shape keeps the FIRST request short; the long wait is
+ * the claim's own deadline, user-asked, whose give-up is still reported as
  * UNCONFIRMED, never as a refusal.
  *
  * A REFUSAL AND AN UNKNOWN OUTCOME ARE DIFFERENT INSTRUCTIONS. A `409` is a
@@ -64,10 +71,11 @@ export const MOVE_WAIT_CEILING_S = 300;
 
 /**
  * The claim's own deadline, in ms: the wait ceiling plus a margin so the answer
- * is never cut exactly at the relay's own bound. It applies ONLY to
- * {@link moveClaim} — the attempt deliberately keeps the transport default
- * (20 s), because its whole job is to return fast and let the claim own the
- * long wait.
+ * is never cut exactly at the relay's own bound. It applies to {@link moveClaim}
+ * and {@link moveWait} — both may hold the answer for as long as a move can run
+ * (the claim waits out a mid-move re-issue on the journal's lock; the busy
+ * remedy waits the source out) — while the attempt deliberately keeps the
+ * transport default (20 s), because its whole job is to return fast.
  */
 export const MOVE_CLAIM_TIMEOUT_MS = MOVE_WAIT_CEILING_S * 1000 + 30_000;
 

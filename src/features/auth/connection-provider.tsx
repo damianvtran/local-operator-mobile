@@ -325,6 +325,22 @@ export const ConnectionProvider = ({
 					 * GET painted — the flap the relay's contract warns about. */
 					includePeers: true,
 					onFrame: (frame) => {
+						if (frame.kind === "malformed") {
+							/* NOT SILENT (round 1, R1-1). This handler used to fall through for a
+							 *  frame the schema refused, so a relay answer this build cannot read
+							 *  left the list frozen on its last snapshot with nothing said — the
+							 *  shape measured when an `ask` gate failed the whole `sessions`
+							 *  frame. The frame is still dropped (the last good list stays), but
+							 *  the drop is REPORTED: a line for the diagnosis, and the stale mark
+							 *  (`Last updated …`) so the reader can see the list is no longer
+							 *  being kept current. The next readable frame clears it. */
+							console.warn(
+								`[sessions] an unreadable ${frame.event} frame was dropped; the list keeps its last good frame`,
+								frame.error,
+							);
+							if (frame.event === "sessions") listStore.getState().markStale();
+							return;
+						}
 						if (frame.kind === "sessions") {
 							_attempt = 0;
 							listStore.getState().applyFrame({
@@ -413,9 +429,23 @@ export const ConnectionProvider = ({
 			 * rule is that the list renders immediately, and a stream that opens in a
 			 * second must not be the reason the screen is empty. It asks for the
 			 * peers' rows exactly as the stream does — one list, one population. */
-			const frame = await client
-				.sessions({ includePeers: true })
-				.catch(() => null);
+			const frame = await client.sessions({ includePeers: true }).catch(
+				/* NOT SILENT (round 1, R1-1): this used to be `.catch(() => null)`, so
+				 *  a cold-start answer the schema refused (or a transport that never
+				 *  answered) left an empty list with nothing on screen or in the log
+				 *  saying why. The stream's seed frame is the other carrier of the
+				 *  same list, so the read is not fatal — but the failure is said out
+				 *  loud and the list carries the same stale mark a dropped stream
+				 *  paints. */
+				(error: unknown) => {
+					console.warn(
+						"[sessions] the cold-start list read could not be applied; the stream's seed frame is the fallback",
+						error,
+					);
+					listStore.getState().markStale();
+					return null;
+				},
+			);
 			if (frame) {
 				listStore.getState().applyFrame({
 					sessions: frame.sessions,

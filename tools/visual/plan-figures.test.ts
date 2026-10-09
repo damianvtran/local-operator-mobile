@@ -28,7 +28,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
  *
  * WHAT IT DOES NOT READ, which is a limit rather than a caveat: a figure standing alone
  * with no equation around it. The documents legitimately carry many counts that are not
- * tier plans — the README's one-phone sample (`68 cells`), a dispatcher's partial plan
+ * tier plans — the README's one-phone sample (`75 cells`), a dispatcher's partial plan
  * (`400 cells`), a mean of 12 cells, a historical `256` from the rate run — so forcing
  * every `N cells` to be a tier count would fail on true statements. Nor does it read the
  * slash form (`403 cells / 1209 frames in 903.1 s`), a bare `N frames`, or prose minutes

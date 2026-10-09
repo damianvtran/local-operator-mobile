@@ -48,21 +48,26 @@ export function isRemoteRow(session: SessionSummary): boolean {
 	return session.locality === "remote";
 }
 
-/** The gate a REMOTE row is waiting on, in the relay's own words — or `null`.
+/** The gate a REMOTE row is waiting on, in the answer family's own words — or
+ *  `null`.
  *
- * `pending` is the transport's pair VERBATIM (`"approval"` / `"answer"`), and
- * this is its one reading on the phone: never mapped into the local
- * `pending_kind` vocabulary, never guessed from a mark. A local row answers
- * `null` here — its gates are `needs_attention`/`pending_kind`, which is the
- * sibling function below, and mixing the two vocabularies on one row is how a
- * remote row would silently read as idle. */
+ *  `pending` is the transport's gate word VERBATIM, and this is its one reading
+ *  on the phone: never mapped into the local `pending_kind` vocabulary, never
+ *  guessed from a mark. The vocabulary is OPEN by contract (`approval` / `ask`
+ *  today, additive tomorrow — round 1, R1-1), so the reading is the relay's own
+ *  (`session/catalog.py` `status_code`): a truthy gate that is exactly
+ *  `"approval"` spells approval; EVERY other gate word reads as the answer
+ *  family, this surface's "question" (`attentionWord`). A falsy gate (`null` /
+ *  absent — or an empty word, which the relay's own boundary already turns into
+ *  `null`) is no gate. A local row answers `null` here — its gates are
+ *  `needs_attention`/`pending_kind`, which is the sibling function below, and
+ *  mixing the two vocabularies on one row is how a remote row would silently
+ *  read as idle. */
 export function remoteAttention(
 	session: SessionSummary,
 ): "approval" | "answer" | null {
-	if (session.pending === "approval" || session.pending === "answer") {
-		return session.pending;
-	}
-	return null;
+	if (!session.pending) return null;
+	return session.pending === "approval" ? "approval" : "answer";
 }
 
 /**
@@ -71,7 +76,7 @@ export function remoteAttention(
  *
  * LOCAL rows read the relay's `streaming`/`needs_attention` pair. REMOTE rows
  * read the transport's `pending`/`live_state` VERBATIM, per the relay's own
- * staging rule: a gate (`approval`/`answer`) or a busy/wedged owner. The other
+ * staging rule: any gate word, or a busy/wedged owner. The other
  * two live words are deliberately NOT Running: `idle` is live but not working,
  * and `attached` means a terminal is watching — neither is this list's
  * "Running", and inventing a third spelling for either is the drift the shared
@@ -114,9 +119,9 @@ export function rowMark(session: SessionSummary): RowMark {
 /** The attention word a decision row carries. `pending_kind` is `"approval"`,
  *  `"ask"`, or empty, and the empty case still has to say something: the relay
  *  said something needs a decision and did not say which. A REMOTE row's gate
- *  is its `pending` pair (`approval`/`answer`), mapped onto the same two words
- *  this surface already shows — `answer` is what the app spells "question"
- *  for the local ask gate, and the mapping is the one shared reading. */
+ *  is its `pending` word, mapped onto the same two words this surface already
+ *  shows — only `approval` spells approval, and every other gate word is what
+ *  the app spells "question" for the local ask gate. */
 export function attentionWord(
 	session: SessionSummary,
 ): "approval" | "question" {

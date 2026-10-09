@@ -202,12 +202,17 @@ export function parseTransferBody(body: unknown): {
 /** The receipt this mock returns: composed from the request's own `to`/`keep`,
  *  the way `server/utils/desktop_mesh.transfer_receipt` composes it — a `keep`
  *  has mode `keep`, a FRESH `new_session_id` (the fork at the destination), and
- *  a source that is never retired. */
+ *  a source that is never retired.
+ *
+ *  `Record<string, Json>`, not `Record<string, unknown>`: the transfer journal
+ *  STORES this answer beside the unconfirmed refusals so a replay can return it,
+ *  and a stored payload must round-trip JSON — the type is what keeps the
+ *  journal's `payload: Json` honest instead of a cast (round 1, Q69-1). */
 export function transferReceiptFrom(
 	sessionId: string,
 	fields: Pick<TransferFields, "to" | "keep">,
-	overrides: Record<string, unknown> = {},
-): Record<string, unknown> {
+	overrides: Partial<Record<string, Json>> = {},
+): Record<string, Json> {
 	const local = fields.to === "local";
 	return {
 		phases: [

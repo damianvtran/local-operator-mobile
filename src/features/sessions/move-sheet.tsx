@@ -73,9 +73,11 @@ export type SessionMoveSheetProps = {
 /** The sheet's life: which phase of the move is on screen. */
 type SheetState =
 	| { kind: "pick" }
-	/** The request is in flight: `attempt` is the first ask (`wait_s: 0`), the
-	 *  `claim` is the same-id re-issue with the wait ceiling. `keep` is the
-	 *  intent's verb — the words must not say "Moving" about a copy. */
+	/** The request is in flight: `attempt` is the first ask (`wait_s: 0`); the
+	 *  `claim` is the SAME id and the SAME body re-issued with the long
+	 *  deadline — the raised wait is the busy remedy (`moveWait`), never the
+	 *  claim (`transfer.ts` states why). `keep` is the intent's verb — the words
+	 *  must not say "Moving" about a copy. */
 	| { kind: "in-flight"; phase: "attempt" | "claim"; keep: boolean }
 	| { kind: "moved"; receipt: TransferReceipt }
 	| { kind: "busy"; refusal: TransferRefusal }
@@ -95,6 +97,33 @@ const PHASE_WORDS: Record<string, string> = {
 function destPhrase(destination: MoveDestination): string {
 	return destination.to === "local" ? "this computer" : destination.label;
 }
+
+/** The non-keep verb's consequence, stated AT the choice (round 1, U69-1).
+ *
+ *  A plain move RETIRES the source's copy — the module's own semantics ("the
+ *  mesh's one destructive verb") and the contract's §4.13 — and before this
+ *  line the sheet said so only on the RECEIPT, after the fact. The `keep` copy
+ *  never retires anything, so this sentence belongs to the Move/Recall group
+ *  and rides the footer with it, never beside the Copy verb alone. */
+function retireLine(
+	session: SessionSummary,
+	destination: MoveDestination,
+): string {
+	const source = isRemoteRow(session)
+		? remoteDeviceLabel(session)
+		: "this computer";
+	return destination.to === "local"
+		? `Recall brings it here and removes it from ${source}.`
+		: `Move to ${destPhrase(destination)} removes it from ${source}.`;
+}
+
+/** One action the sheet's pinned footer offers. */
+type SheetAction = {
+	label: string;
+	onPress: () => void;
+	testID: string;
+	variant?: "outline";
+};
 
 export const SessionMoveSheet = ({
 	visible,
@@ -194,6 +223,13 @@ export const SessionMoveSheet = ({
 	const start = (keep: boolean) => {
 		const client = relay();
 		if (!client || session === null || selected === null) return;
+		/* ONE INTENT, ONE ID (round 1, Q69-5): two presses delivered before the
+		 *  re-render would otherwise mint two request ids and DIAL twice — the
+		 *  measured wire behaviour of two ids is two moves. The held intent is the
+		 *  guard: while the sheet carries one, a second press changes nothing until
+		 *  the sheet closes (which is when an intent is dropped, by the effect
+		 *  above). */
+		if (askRef.current !== null) return;
 		const ask: MoveAsk = {
 			sessionId: session.session_id,
 			to: selected.to,
@@ -234,16 +270,124 @@ export const SessionMoveSheet = ({
 
 	const sessionName = session ? sessionTitle(session) : "untitled";
 
+	/* THE ACTING STATES' ACTION REGIONS LIVE IN THE SHEET'S FOOTER (round 1,
+	 * D69-1). They used to ride their scrolling bodies, which put them below the
+	 * fold — measured at 200 % on a 320 pt phone in every acting state, the 503's
+	 * secondary even at 100 % — and the cut-edge cue never drew because
+	 * `sheet.tsx` renders it only when a `footer` exists. The kit's rule is the
+	 * three-region sheet ("a pinned action region that never scrolls"), and
+	 * `UNSCROLLED_CONTROLS` (`tools/visual/matrix.ts`) now names these controls,
+	 * so a regression that unpins one fails its capture cell by name. The pick
+	 * state's non-keep consequence line rides here beside its verbs (U69-1): it
+	 * is about the verb it sits over, and this placement is flagged for the
+	 * design re-round rather than settled here. */
+	const footerActions: SheetAction[] = (() => {
+		switch (sheetState.kind) {
+			case "pick":
+				if (destinations.length === 0 || selected === null) return [];
+				return [
+					{
+						label:
+							selected.to === "local"
+								? "Recall to this computer"
+								: `Move to ${destPhrase(selected)}`,
+						onPress: () => start(false),
+						testID: CONTROL.sessionMoveConfirm,
+					},
+					{
+						label:
+							selected.to === "local"
+								? "Copy to this computer"
+								: `Copy to ${destPhrase(selected)}`,
+						onPress: () => start(true),
+						testID: CONTROL.sessionMoveCopy,
+						variant: "outline",
+					},
+				];
+			case "moved":
+				return [
+					{
+						label: "Check the list",
+						onPress: checkTheList,
+						testID: CONTROL.sessionMoveCheck,
+					},
+				];
+			case "busy":
+				return [
+					{
+						label: "Wait for the turn to finish",
+						onPress: waitForTurn,
+						testID: CONTROL.sessionMoveWait,
+					},
+					{
+						label: "Check the list",
+						onPress: checkTheList,
+						testID: CONTROL.sessionMoveCheck,
+						variant: "outline",
+					},
+				];
+			case "unconfirmed":
+				return [
+					{
+						label: "Check the list",
+						onPress: checkTheList,
+						testID: CONTROL.sessionMoveCheck,
+					},
+					{
+						label: "Ask about the same request",
+						onPress: askAgain,
+						testID: CONTROL.sessionMoveWait,
+						variant: "outline",
+					},
+				];
+			case "refused":
+				return [
+					{
+						label: "Check the list",
+						onPress: checkTheList,
+						testID: CONTROL.sessionMoveCheck,
+					},
+				];
+			case "in-flight":
+				/* In flight there is nothing to press: the whole point of the copy is
+				 * that the sheet can be closed safely, and it says so. */
+				return [];
+		}
+	})();
+
+	const footer =
+		footerActions.length === 0 ? undefined : (
+			<View className="gap-2">
+				{sheetState.kind === "pick" && session !== null && selected !== null ? (
+					<Text className="text-body-sm text-ink-dim">
+						{retireLine(session, selected)}
+					</Text>
+				) : null}
+				{footerActions.map((action) => (
+					<Button
+						key={action.testID}
+						label={action.label}
+						onPress={action.onPress}
+						testID={action.testID}
+						variant={action.variant}
+					/>
+				))}
+			</View>
+		);
+
 	return (
-		<Sheet visible={visible} onClose={onClose} title={sessionName}>
+		<Sheet
+			visible={visible}
+			onClose={onClose}
+			title={sessionName}
+			footer={footer}
+		>
 			{sheetState.kind === "pick" ? (
 				<PickBody
 					session={session}
 					destinations={destinations}
 					selected={selected}
 					onSelect={setSelectedTo}
-					onMove={() => start(false)}
-					onCopy={() => start(true)}
 				/>
 			) : null}
 			{sheetState.kind === "in-flight" ? (
@@ -260,25 +404,14 @@ export const SessionMoveSheet = ({
 					session={session}
 					destination={selected}
 					receipt={sheetState.receipt}
-					onCheck={checkTheList}
 				/>
 			) : null}
 			{sheetState.kind === "busy" ? (
 				<RefusalBody
 					headline="The session is busy."
 					sentence={sheetState.refusal.sentence}
-					note="The move has not started. Waiting re-asks the same request with a patience of a few minutes, so the move cannot run twice."
+					note="The move has not started. Waiting re-asks the same request for a few minutes — the move cannot start twice."
 					marker={SURFACE.sessionMoveBusy}
-					primary={{
-						label: "Wait for the turn to finish",
-						onPress: waitForTurn,
-						testID: CONTROL.sessionMoveWait,
-					}}
-					secondary={{
-						label: "Check the list",
-						onPress: checkTheList,
-						testID: CONTROL.sessionMoveCheck,
-					}}
 				/>
 			) : null}
 			{sheetState.kind === "unconfirmed" ? (
@@ -287,16 +420,6 @@ export const SessionMoveSheet = ({
 					sentence={sheetState.refusal.sentence}
 					note="The request was sent, so whether the conversation moved is unknown from here. The list shows where it is now. Asking about the same request again can only repeat its answer or wait for a move already running — it can never start a second one."
 					marker={SURFACE.sessionMoveUnconfirmed}
-					primary={{
-						label: "Check the list",
-						onPress: checkTheList,
-						testID: CONTROL.sessionMoveCheck,
-					}}
-					secondary={{
-						label: "Ask about the same request",
-						onPress: askAgain,
-						testID: CONTROL.sessionMoveWait,
-					}}
 				/>
 			) : null}
 			{sheetState.kind === "refused" ? (
@@ -305,32 +428,24 @@ export const SessionMoveSheet = ({
 					sentence={sheetState.refusal.sentence}
 					note="The list shows where the conversation is now — a refusal and a move that already happened can look the same from here, so the read is the answer."
 					marker={SURFACE.sessionMoveRefused}
-					primary={{
-						label: "Check the list",
-						onPress: checkTheList,
-						testID: CONTROL.sessionMoveCheck,
-					}}
 				/>
 			) : null}
 		</Sheet>
 	);
 };
 
-/** The pick state: where it is now, then the destinations and the two verbs. */
+/** The pick state: where it is now and the destinations; the two verbs are
+ *  pinned in the sheet's footer (round 1, D69-1). */
 const PickBody = ({
 	session,
 	destinations,
 	selected,
 	onSelect,
-	onMove,
-	onCopy,
 }: {
 	session: SessionSummary | null;
 	destinations: MoveDestination[];
 	selected: MoveDestination | null;
 	onSelect: (to: string) => void;
-	onMove: () => void;
-	onCopy: () => void;
 }) => {
 	const accent = useTokenColor("accent");
 	if (session === null) return null;
@@ -402,30 +517,6 @@ const PickBody = ({
 					</View>
 				</View>
 			)}
-
-			{destinations.length > 0 && selected !== null ? (
-				<View className="gap-2">
-					<Button
-						label={
-							selected.to === "local"
-								? "Recall to this computer"
-								: `Move to ${destPhrase(selected)}`
-						}
-						onPress={onMove}
-						testID={CONTROL.sessionMoveConfirm}
-					/>
-					<Button
-						label={
-							selected.to === "local"
-								? "Copy to this computer"
-								: `Copy to ${destPhrase(selected)}`
-						}
-						onPress={onCopy}
-						variant="outline"
-						testID={CONTROL.sessionMoveCopy}
-					/>
-				</View>
-			) : null}
 		</View>
 	);
 };
@@ -465,19 +556,18 @@ const InFlightBody = ({
 	);
 };
 
-/** The receipt: the one thing that may claim where the conversation lives. */
+/** The receipt: the one thing that may claim where the conversation lives;
+ *  its action is pinned in the sheet's footer. */
 const MovedBody = ({
 	sessionName,
 	session,
 	destination,
 	receipt,
-	onCheck,
 }: {
 	sessionName: string;
 	session: SessionSummary | null;
 	destination: MoveDestination | null;
 	receipt: TransferReceipt;
-	onCheck: () => void;
 }) => {
 	const where = destination ? destPhrase(destination) : "the destination";
 	const source =
@@ -515,11 +605,6 @@ const MovedBody = ({
 					</View>
 				))}
 			</View>
-			<Button
-				label="Check the list"
-				onPress={onCheck}
-				testID={CONTROL.sessionMoveCheck}
-			/>
 		</View>
 	);
 };
@@ -541,41 +626,23 @@ const PhaseBar = ({ progress }: { progress: number }) => {
 	);
 };
 
-/** The three refusal-shaped states share one body: the relay's own sentence,
- *  this sheet's reading of it, and the actions that are safe from there. */
+/** The three refusal-shaped states share one body: the relay's own sentence
+ *  and this sheet's reading of it. The actions are pinned in the sheet's
+ *  footer (round 1, D69-1). */
 const RefusalBody = ({
 	headline,
 	sentence,
 	note,
 	marker,
-	primary,
-	secondary,
 }: {
 	headline: string;
 	sentence: string;
 	note: string;
 	marker: string;
-	primary: { label: string; onPress: () => void; testID: string };
-	secondary?: { label: string; onPress: () => void; testID: string };
 }) => (
 	<View className="gap-3 pb-2" testID={marker}>
 		<Text className="text-body text-ink">{headline}</Text>
 		<Text className="text-body-sm text-ink">{sentence}</Text>
 		<Text className="text-body-sm text-ink-dim">{note}</Text>
-		<View className="gap-2">
-			<Button
-				label={primary.label}
-				onPress={primary.onPress}
-				testID={primary.testID}
-			/>
-			{secondary ? (
-				<Button
-					label={secondary.label}
-					onPress={secondary.onPress}
-					variant="outline"
-					testID={secondary.testID}
-				/>
-			) : null}
-		</View>
 	</View>
 );

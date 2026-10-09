@@ -463,8 +463,11 @@ export interface SessionSummary {
 	 *  `wedged`, or `""` for a stored row with no runtime behind it. The row's
 	 *  mark and bin are read from exactly these words; never a third spelling. */
 	live_state?: "busy" | "idle" | "attached" | "wedged" | "";
-	/** The gate kind, verbatim: `approval`, `answer`, or `null` for none. */
-	pending?: "approval" | "answer" | null;
+	/** The gate kind, verbatim — an OPEN string, not a closed union (round 1,
+	 *  R1-1): `approval` / `ask` today, any future word tomorrow; only `approval`
+	 *  spells approval and every other non-empty word is the answer family
+	 *  (`remoteAttention`). `null` is no gate. */
+	pending?: string | null;
 	/** Declared for the mirror only — never read by this client. A null is no
 	 *  claim: the federated row carries no owner's stamp, so nothing may be
 	 *  derived from these three. */

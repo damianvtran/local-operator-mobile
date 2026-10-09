@@ -1174,6 +1174,51 @@ describe("the mesh wire reads as the relay's builders shape it", () => {
 		expect(local?.cwd).toBe("~/work");
 	});
 
+	it("a peer's `ask` gate parses — the wire's vocabulary is open, not an enum", () => {
+		/* Round 1, R1-1. `pending` used to be `z.enum(["approval", "answer"])`,
+		 *  and a live peer waiting on a free-text question publishes `ask` — so
+		 *  the enum failed the WHOLE sessions frame, both list transports dropped
+		 *  it silently, and the phone's list froze on its last snapshot for as
+		 *  long as any peer waited. The wire vocabulary is ADDITIVE
+		 *  (`set_record_pending` documents `approval` / `ask` / None), so the
+		 *  schema accepts any string; the fixed READING lives in
+		 *  `remoteAttention`. */
+		const raw = fixture<{ data: { sessions: Record<string, unknown>[] } }>(
+			"synthetic/sessions-frame-with-peers.json",
+		);
+		const mutated = structuredClone(raw);
+		const row = mutated.data.sessions.find(
+			(row) => row.session_id === "4c5d6e7f8091",
+		);
+		if (row === undefined) throw new Error("the fixture lost its gate row");
+		row.pending = "ask";
+		const parsed = parsePayload("sessionsStreamFrame", mutated);
+		expect(
+			parsed.data.sessions.find((row) => row.session_id === "4c5d6e7f8091")
+				?.pending,
+		).toBe("ask");
+	});
+
+	it("a gate word from a NEWER relay parses too — a future value freezes nothing", () => {
+		// The same frame with a word this build has never seen: additive by
+		// contract means unknown ≠ unreadable, and the reading is one fixed
+		// rule (only `approval` spells approval).
+		const raw = fixture<{ data: { sessions: Record<string, unknown>[] } }>(
+			"synthetic/sessions-frame-with-peers.json",
+		);
+		const mutated = structuredClone(raw);
+		const row = mutated.data.sessions.find(
+			(row) => row.session_id === "4c5d6e7f8091",
+		);
+		if (row === undefined) throw new Error("the fixture lost its gate row");
+		row.pending = "future_gate";
+		const parsed = parsePayload("sessionsStreamFrame", mutated);
+		expect(
+			parsed.data.sessions.find((row) => row.session_id === "4c5d6e7f8091")
+				?.pending,
+		).toBe("future_gate");
+	});
+
 	it("a no-claim clock reaches the client as it left the relay — the render rule refuses it", () => {
 		// An old-build peer's non-number birth stamp is read as `0.0` at the
 		// relay's own boundary (`session/peer_rows._started_epoch`); the wire

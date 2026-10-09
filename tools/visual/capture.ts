@@ -113,10 +113,10 @@ let settledRetakes = 0;
  * not a size policy: it catches a plan far larger than any sample this harness
  * offers (an inflated cell registry, a cell list copied from another tree), and it
  * is why a big run is always something the caller typed `--yes` for. It sits BELOW
- * every tier on purpose — `ci` plans 816 cells, `core` 2448, `full` 8976 — so none of
+ * every tier on purpose — `ci` plans 900 cells, `core` 2700, `full` 9900 — so none of
  * them starts by accident; the CI job passes `--yes` for exactly that reason. It is
  * NOT tied to the default tier, so it must not be raised to "let the default run": a
- * documented invocation that plans the whole `core` tier is a 91-minute command, and
+ * documented invocation that plans the whole `core` tier is a ~101-minute command, and
  * the defect is the invocation, not the bound. Deriving it from the plan the way
  * `CELL_BUDGET_MS` is derived would be circular — the guard would then never fire —
  * so it stays a constant, and this comment is what it is derived from.
@@ -128,7 +128,7 @@ const CONFIRM_THRESHOLD = 120;
  * the floor a small plan still gets.
  *
  * WHY THE DEFAULT IS DERIVED RATHER THAN FIXED. It used to be a flat 900 s, which
- * holds about 400 cells: a `core` run (2448 cells) or a dispatched `full` run (8976)
+ * holds about 400 cells: a `core` run (2700 cells) or a dispatched `full` run (9900)
  * was therefore cut off by the harness's own default and reported hundreds of cells
  * as having no frame — a bound firing on a plan it was never sized for, which reads
  * like a finding about the app and is not one. Deriving it from the plan makes the
@@ -2813,11 +2813,11 @@ if (isMain) {
 				"  --tier <name>       the sample to capture: ci | core (default) | full.",
 				"                      The matrix declares 19 device profiles; the run prints the",
 				"                      share it covered, and names the profiles it did not.",
-				"                        ci    2 of 19 profiles — 816 cells, both themes, scales 100,",
-				"                              135 and 200 (~30 min) — the per-push CI job's sample",
-				"                        core  5 of 19 profiles — 2448 cells, both themes,",
+				"                        ci    2 of 19 profiles — 900 cells, both themes, scales 100,",
+				"                              135 and 200 (~34 min) — the per-push CI job's sample",
+				"                        core  5 of 19 profiles — 2700 cells, both themes,",
 				"                              every scale — the local default",
-				"                        full  19 of 19 profiles — 8976 cells",
+				"                        full  19 of 19 profiles — 9900 cells",
 				"  --devices <names>   comma list. Default: the tier's profiles (ci 2, core 5 by",
 				"                      default, --full for all 19)",
 				"  --themes <names>    default dark,light",
@@ -2840,12 +2840,12 @@ if (isMain) {
 	// Which devices a run covers. `core` is the sample the operator's rule asks to be
 	// run first — smallest phone, a typical phone, phone landscape, a tablet in each
 	// orientation — `ci` is the bounded sample the per-push job takes (matrix.ts
-	// `CI_DEVICES`, 816 cells — ~30 minutes at the 2.24 s/cell this harness measured on
+	// `CI_DEVICES`, 900 cells — ~34 minutes at the 2.24 s/cell this harness measured on
 	// the runner), and `--full` covers every size. `--devices`
 	// overrides any of them.
 	//
 	// An unknown tier is an ERROR rather than a silent fall back to `core`: a typo'd
-	// `--tier ci` that quietly ran 2448 cells would spend ~91 minutes on a capture the
+	// `--tier ci` that quietly ran 2700 cells would spend ~101 minutes on a capture the
 	// caller did not ask for, and the whole point of naming the sample is that the
 	// run you get is the one you asked for.
 	const tierFlag = bool(flags, "full") ? "full" : str(flags, "tier", "core");
