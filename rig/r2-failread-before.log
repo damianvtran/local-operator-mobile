@@ -1,0 +1,26 @@
+(node:5485) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/damian/local-operator-mobile-worktrees/transcript-depth/tools/visual/capture.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/damian/local-operator-mobile-worktrees/transcript-depth/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+capture plan: 4 cells × 3 frame(s) = 12 frames
+  screens: S5, path:/session/6714def86197
+  devices planned: iphone-se — 1 of 19 declared profiles, the other 18 not in this run's plan
+  themes:  dark, light
+  scales:  100
+  out:     /Users/damian/.local-operator/sessions/057953fbc8f0/scratchpad/rem63r2/failread-before
+  deadline: 900 s (explicit)
+[1/4] path--session-6714def86197__warm__iphone-se__dark__100  theme=dark(q) canvas=rgb(34, 32, 28) els=99 text=20.296875px 4376b b4eb8588bfa4f25f
+[2/4] path--session-6714def86197__warm__iphone-se__light__100  theme=light(q) canvas=rgb(242, 237, 227) els=123 text=20.296875px 4375b 9555d827c3d211c5
+[3/4] S5__find-results__iphone-se__dark__100  theme=dark(q) canvas=rgb(34, 32, 28) els=283 text=17.390625px 65877b aa213298f1229256
+[4/4] S5__find-results__iphone-se__light__100  theme=light(q) canvas=rgb(242, 237, 227) els=283 text=17.390625px 65690b d44b52e22fa685e9
+  teardown: 0 process(es) left by this run, 0 orphan(s) from earlier runs reaped, 0 live owner(s) left alone, 2 cell(s) whose settled frame was retaken to agree with its readings
+
+captured 4 cells / 12 frames in 41.3 s
+device coverage: 1 of 19 declared profiles captured (iphone-se); 18 NOT captured (iphone-se2, android-compact, android-small, iphone-15, android-large, iphone-max, fold-cover, fold-open, iphone-15-landscape, android-large-landscape, tablet-768, tablet-768-landscape, tablet, tablet-landscape, tablet-pro, tablet-pro-landscape, android-tablet, android-tablet-landscape)
+frames that changed after first paint: 2
+text-scale dimension: not measured (needs both 100% and 200% in one run)
+theme problems: none — every frame's resolved theme and canvas match its cell, and no dark/light pair is identical
+scrolled presses: none — every opener pressed a control that was already on screen
+UNREADY CELLS (1):
+  - path--session-6714def86197__warm__iphone-se__dark__100: the cell declares 'warm' but the app is showing an empty state (session-transcript-empty): the state was never reached
+NOT MEASURABLE: 1 of 4 cells — their frames are the app's fallback screen, not the declared state

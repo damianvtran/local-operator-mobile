@@ -1,0 +1,39 @@
+(node:11745) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/damian/local-operator-mobile-worktrees/transcript-depth/tools/visual/capture.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/damian/local-operator-mobile-worktrees/transcript-depth/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+capture plan: 16 cells × 3 frame(s) = 48 frames
+  screens: S5, path:/session/6714def86197
+  devices planned: iphone-se — 1 of 19 declared profiles, the other 18 not in this run's plan
+  themes:  dark, light
+  scales:  100, 200
+  out:     /Users/damian/.local-operator/sessions/057953fbc8f0/scratchpad/rem63r2/frames-after
+  deadline: 1800 s (explicit)
+[1/16] path--session-6714def86197__warm__iphone-se__dark__100  theme=dark(q) canvas=rgb(34, 32, 28) els=99 text=20.296875px 30061b cc68e87b8af2bd35
+[2/16] path--session-6714def86197__warm__iphone-se__dark__200  theme=dark(q) canvas=rgb(34, 32, 28) els=123 text=40.59375px 39997b f7cfba072e179127
+[3/16] path--session-6714def86197__warm__iphone-se__light__100  theme=light(q) canvas=rgb(242, 237, 227) els=123 text=20.296875px 59944b 521a4d685b1b31b0
+[4/16] path--session-6714def86197__warm__iphone-se__light__200  theme=light(q) canvas=rgb(242, 237, 227) els=123 text=40.59375px 55526b 92d65599e5cf67b2
+[5/16] S5__find-caveat__iphone-se__dark__100  theme=dark(q) canvas=rgb(34, 32, 28) els=280 text=17.390625px 64416b f62b95a9b6b5c75e
+[6/16] S5__find-caveat__iphone-se__dark__200  theme=dark(q) canvas=rgb(34, 32, 28) els=378 text=34.796875px 86747b 2dbb01c7cc0fcce6
+[7/16] S5__find-caveat__iphone-se__light__100  theme=light(q) canvas=rgb(242, 237, 227) els=280 text=17.390625px 64501b 3babb5d41a017a5b
+[8/16] S5__find-caveat__iphone-se__light__200  theme=light(q) canvas=rgb(242, 237, 227) els=378 text=34.796875px 87766b 681cad744c1fd158
+[9/16] S5__find-related__iphone-se__dark__100  theme=dark(q) canvas=rgb(34, 32, 28) els=287 text=17.390625px 69542b 82f6734621775047
+[10/16] S5__find-related__iphone-se__dark__200  theme=dark(q) canvas=rgb(34, 32, 28) els=302 text=34.796875px 83437b 127d048580ee1d1c
+[11/16] S5__find-related__iphone-se__light__100  theme=light(q) canvas=rgb(242, 237, 227) els=287 text=17.390625px 69645b 145a92dc4068208b
+[12/16] S5__find-related__iphone-se__light__200  theme=light(q) canvas=rgb(242, 237, 227) els=302 text=34.796875px 84223b 6b51a74d454e66f5
+[13/16] S5__find-results__iphone-se__dark__100  theme=dark(q) canvas=rgb(34, 32, 28) els=283 text=17.390625px 60951b 1b7b4628c0c7d6c6
+[14/16] S5__find-results__iphone-se__dark__200  theme=dark(q) canvas=rgb(34, 32, 28) els=298 text=39.015625px 71362b f80ee359e2a5d7af
+[15/16] S5__find-results__iphone-se__light__100  theme=light(q) canvas=rgb(242, 237, 227) els=283 text=17.390625px 60964b e72e0a85d8e11eb7
+[16/16] S5__find-results__iphone-se__light__200  theme=light(q) canvas=rgb(242, 237, 227) els=298 text=39.015625px 72322b bd678ea2a7ad2df8
+  teardown: 0 process(es) left by this run, 0 orphan(s) from earlier runs reaped, 0 live owner(s) left alone, 11 cell(s) whose settled frame was retaken to agree with its readings
+
+captured 16 cells / 48 frames in 149.7 s
+device coverage: 1 of 19 declared profiles captured (iphone-se); 18 NOT captured (iphone-se2, android-compact, android-small, iphone-15, android-large, iphone-max, fold-cover, fold-open, iphone-15-landscape, android-large-landscape, tablet-768, tablet-768-landscape, tablet, tablet-landscape, tablet-pro, tablet-pro-landscape, android-tablet, android-tablet-landscape)
+frames that changed after first paint: 10
+text-scale dimension: scale dimension is live across 8/8 measured pairs (every type role grew by the cell's own factor)
+  text-scale notes: 7 pair(s) show a size only at 200% — a node that did not move with the root font size, or a layout that introduced it at this scale; named, not failed
+theme problems: none — every frame's resolved theme and canvas match its cell, and no dark/light pair is identical
+scrolled presses: none — every opener pressed a control that was already on screen
+UNREADY CELLS (1):
+  - path--session-6714def86197__warm__iphone-se__dark__100: the cell declares 'warm' but the app is showing an empty state (session-transcript-empty): the state was never reached
+NOT MEASURABLE: 1 of 16 cells — their frames are the app's fallback screen, not the declared state

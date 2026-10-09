@@ -1,0 +1,11 @@
+case  old    new    expected  verdict
+A     false  true   [false, true]  OK — cold-open past the cap, FIRST /history read fails, no slide ever watched (reviewer MAJOR-2 / QA Q63-7)
+A′    true   true   [true, true]  OK — the reviewer's control: one page witness present
+B     false  true   [false, true]  OK — no attempt has settled (in flight / no endpoints)
+C     false  false  [false, false]  OK — a successful read of a complete conversation (the legitimately silent state)
+D     true   true   [true, true]  OK — fresh boot past the cap, read OK: the page's oldest row is not held (S-G shape)
+E     true   true   [true, true]  OK — grow-in-place: complete-at-fetch page the cap slid under (QA Q63-1 F1)
+F     true   true   [true, true]  OK — observed slide, no page at all (frames are the proof)
+
+VERDICT: the counterexample fires on the new gate (old gate: silent/false); all controls hold.
+

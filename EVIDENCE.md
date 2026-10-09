@@ -1,16 +1,88 @@
 # Evidence — the in-conversation find (PR #63)
 
-The rendered frames, the wire proof and the mutation proofs behind
-[damianvtran/local-operator-mobile#63](https://github.com/damianvtran/local-operator-mobile/pull/63)
-(`feat/transcript-depth`, head `aca28c0c494c9412ce5e5345ec99a97c4ec3e0e4`). This push is the round-1 remediation —
-the three review/QA/design rounds of `1e2b3aa9` answered in one commit; the
-pre-remediation evidence is the parent commit (fecbe36c35dba108a4d952bab523b5bc1251c9ba, the tree of head
-`1e2b3aa9`), and its frames stay readable at `fecbe36:frames/…`.
+The rendered frames, the capture runs, the failed-read drive and the counterexample
+proof behind [damianvtran/local-operator-mobile#63](https://github.com/damianvtran/local-operator-mobile/pull/63)
+(`feat/transcript-depth`). **This push is the round-2 remediation** — the review/QA/design
+round-2s of `aca28c0c` answered in one commit, head `3f014a44567e7a3fa4eaf5f3b8aa9f6bb3852545`
+(`3f014a4`). The round-1 evidence stays readable at `dc38516:frames/…` (its sections are
+kept below, labelled).
 
 Everything here is produced by the tree of that head; nothing is retouched. The branch
 carries evidence only — it is never merged.
 
-## What round 1 changed
+## What round 2 changed (this push)
+
+- **The caveat's failed-read state fires** (`olderThanLoaded`, `runtime.ts` + `use-session.ts`):
+  the history read's own outcome is a fact on the gate — only a successful page read backs
+  the silence, so a failed or never-settled read can no longer read as completeness
+  (reviewer MAJOR-2 residual / QA Q63-7). The relay carrying its trimmed fact on the seed
+  is recorded on the PR as a deferred core-side item: precision, not truth.
+- **The caveat copy shortens** to `Older messages aren't searched.` (design D63-6) — true
+  of the proven and the unchecked state alike, and the shorter footer the crowding needs.
+- **The title shortens** to `search` (design D63-7) — the full phrase truncated at 200 %.
+- **The separator's spacing equalizes** (design D63-8) — the dot is its own run, so the
+  flex gap spaces it equally on both sides.
+- The round-2 record fixes (the wake catch-up class; the ask rows' carried-and-painted
+  `details.text`; `hub/peer`), and `docs/e2e/README.md`'s stale combo figure (33 → 63,
+  re-derived by a live `--plan`).
+
+## The round-2 capture
+
+The whole find set re-captured at head `3f014a4` on `iphone-se` and `iphone-15`, both themes,
+100 % and 200 % — `rig/r2-capture-full.log` (40 cells / 120 frames in 363.7 s), with the
+`S5/find-caveat` cells from their own runs (`rig/r2-capture-caveat-se.log`,
+`rig/r2-capture-caveat-15.log`). One headless Chrome per run, reaped by exact pid; every
+run's own `teardown: 0 process(es) left`. The refreshed find frames are the table below;
+the `S16/create-filled` and `path:/projects/payments-migration` frames are unchanged from
+`dc38516` (this round does not touch the create sheet).
+
+## The failed-read drive (MAJOR-2 residual / Q63-7)
+
+Driven against the **real app**, old head vs this head, through a pass-through proxy that
+fails only `/api/sessions/<id>/history` with a 503 (`rig/r2-proxy-*.log` — four intercepted
+reads per run, each logged). Same cell, same world (`long-transcript`), both runs:
+
+- **`aca28c0c` (before):** the footer reads `Searched 26 messages on this device.` — the
+  failed read is silent (`rig/r2-failread-before--iphone-se--dark--100-settled.png`; no
+  `session-find-caveat` marker in the manifest).
+- **`3f014a4` (after):** the footer reads `Searched 26 messages on this device. Older
+  messages aren't searched.` (`rig/r2-failread-after--iphone-se--dark--100-settled.png`;
+  the `session-find-caveat` marker is present, both themes).
+
+## The counterexample drive (function level)
+
+The reviewer's construction — a 520-row journal, the 80-row capped window, no slide — run
+against the verbatim old gate (inlined from `aca28c0c`) and this head's function, same
+inputs; full table in `rig/r2-drive-caveat.log`:
+
+| case | old gate | new gate |
+| --- | --- | --- |
+| A — cold-open past the cap, first read fails, no slide watched | **false (silent)** | **true (fires)** |
+| A′ — same, with one page witness | true | true |
+| B — no attempt settled (in flight / no endpoints) | false | true |
+| C — successful read of a complete conversation | false | false |
+| D — fresh boot past the cap, read OK | true | true |
+| E — grow-in-place (Q63-1 F1) | true | true |
+| F — observed slide, no page | true | true |
+
+## Round-2 measurements (design D63-6, D63-7, D63-8)
+
+Pixel scans of the committed frames (640×1136 px = 320×568 pt; 2 px = 1 pt), dark and light
+identical to the pt:
+
+| Measure (iphone-se, 200 %) | `aca28c0c` | `3f014a4` |
+| --- | --- | --- |
+| Caveat footer height | 206 pt (5 lines) | **139 pt (3 lines)** |
+| Divider top | 362 pt | 429 pt |
+| Results space (count line's foot → divider) | 91 pt | **158 pt** |
+| Whole rows at the row's 103 pt pitch | none (91 < 103) | **row 1 whole + row 2's label; its snippet under the fade** |
+
+- iphone-15, 200 %: footer 205 pt / 4 lines → **173 pt / 3 lines**.
+- Separator (iphone-se, 100 %, `find-related`): the dot's ink gaps were **9.5 pt left /
+  4.5 pt right**; now **9.5 pt / 9.5 pt** (row 2 within ±1 pt from glyph side-bearings).
+- Title, 200 %: `Search this…` → `search`, whole, one line.
+
+## What round 1 changed (kept — the dc38516 push)
 
 - **The caveat derives from the CURRENT drops** (`olderThanLoaded`, `runtime.ts`): a held
   page row the window no longer carries, `has_more` with nothing held past the page's
@@ -26,7 +98,7 @@ carries evidence only — it is never merged.
   id, `FIND_QUERY_MAX` enforced at the field, the figures re-derived, and this branch's
   rig logs published under `rig/`.
 
-## The capture
+## The capture (round 1)
 
 Main run — 6 cells over the settled grid, one headless Chrome reused across all frames
 (reaped by exact pid; the run's own `teardown: 0 process(es) left`):
@@ -60,7 +132,7 @@ and `-f250` per cell, kept only in the run's scratch output. The frames committe
 `S5/find-related` and `S5/find-caveat` are the refresh- and s16-run takes; every other
 find frame is the main run's.
 
-## The audit
+## The audit (round 1)
 
 ```sh
 node tools/audit/audit.ts --manifest <out>/manifest.json --out <audit> --settle 8000 --allow-blocked --tokens design/tokens/tokens.json
@@ -144,52 +216,52 @@ byte-identical (each restore verified in `rig/mutation-run.log`).
 | --- | --- | --- | --- | --- | --- |
 | `path:/session/6714def86197/warm` | iphone-se | dark | 100 % | `frames/path--session-6714def86197__warm__iphone-se__dark__100-settled.png` | `96739a9d56858d24` |
 | `path:/session/6714def86197/warm` | iphone-se | dark | 200 % | `frames/path--session-6714def86197__warm__iphone-se__dark__200-settled.png` | `4cc0c6c8bb47d524` |
-| `path:/session/6714def86197/warm` | iphone-se | light | 100 % | `frames/path--session-6714def86197__warm__iphone-se__light__100-settled.png` | `c5268698603b68e4` |
+| `path:/session/6714def86197/warm` | iphone-se | light | 100 % | `frames/path--session-6714def86197__warm__iphone-se__light__100-settled.png` | `23d5f67b24575738` |
 | `path:/session/6714def86197/warm` | iphone-se | light | 200 % | `frames/path--session-6714def86197__warm__iphone-se__light__200-settled.png` | `f940dbc30b4e2467` |
 | `path:/session/6714def86197/warm` | iphone-15 | dark | 100 % | `frames/path--session-6714def86197__warm__iphone-15__dark__100-settled.png` | `9b4a65a7ff9ca62f` |
 | `path:/session/6714def86197/warm` | iphone-15 | dark | 200 % | `frames/path--session-6714def86197__warm__iphone-15__dark__200-settled.png` | `c33aca6ed64ae3ae` |
 | `path:/session/6714def86197/warm` | iphone-15 | light | 100 % | `frames/path--session-6714def86197__warm__iphone-15__light__100-settled.png` | `45423a13893742d1` |
 | `path:/session/6714def86197/warm` | iphone-15 | light | 200 % | `frames/path--session-6714def86197__warm__iphone-15__light__200-settled.png` | `4091964987b96be6` |
-| `S5/find-results` | iphone-se | dark | 100 % | `frames/S5__find-results__iphone-se__dark__100-settled.png` | `aa213298f1229256` |
-| `S5/find-results` | iphone-se | dark | 200 % | `frames/S5__find-results__iphone-se__dark__200-settled.png` | `b4e9ff26177cec2a` |
-| `S5/find-results` | iphone-se | light | 100 % | `frames/S5__find-results__iphone-se__light__100-settled.png` | `d44b52e22fa685e9` |
-| `S5/find-results` | iphone-se | light | 200 % | `frames/S5__find-results__iphone-se__light__200-settled.png` | `802630c89a7214d9` |
-| `S5/find-results` | iphone-15 | dark | 100 % | `frames/S5__find-results__iphone-15__dark__100-settled.png` | `b6adda5ae5bbfda0` |
-| `S5/find-results` | iphone-15 | dark | 200 % | `frames/S5__find-results__iphone-15__dark__200-settled.png` | `eef73447b25d31a9` |
-| `S5/find-results` | iphone-15 | light | 100 % | `frames/S5__find-results__iphone-15__light__100-settled.png` | `43c5def3033d6517` |
-| `S5/find-results` | iphone-15 | light | 200 % | `frames/S5__find-results__iphone-15__light__200-settled.png` | `ac502125c4274c63` |
-| `S5/find-related` | iphone-se | dark | 100 % | `frames/S5__find-related__iphone-se__dark__100-settled.png` | `89e6ee11b46e9c50` |
-| `S5/find-related` | iphone-se | dark | 200 % | `frames/S5__find-related__iphone-se__dark__200-settled.png` | `c96781300660793b` |
-| `S5/find-related` | iphone-se | light | 100 % | `frames/S5__find-related__iphone-se__light__100-settled.png` | `0c616193de6aac82` |
-| `S5/find-related` | iphone-se | light | 200 % | `frames/S5__find-related__iphone-se__light__200-settled.png` | `61f30604e5d19e24` |
-| `S5/find-related` | iphone-15 | dark | 100 % | `frames/S5__find-related__iphone-15__dark__100-settled.png` | `f1c052d1fe7748a8` |
-| `S5/find-related` | iphone-15 | dark | 200 % | `frames/S5__find-related__iphone-15__dark__200-settled.png` | `44fecdd4d8b7d01a` |
-| `S5/find-related` | iphone-15 | light | 100 % | `frames/S5__find-related__iphone-15__light__100-settled.png` | `42410d13e2c6611e` |
-| `S5/find-related` | iphone-15 | light | 200 % | `frames/S5__find-related__iphone-15__light__200-settled.png` | `5ff41900d7128310` |
-| `S5/find-empty` | iphone-se | dark | 100 % | `frames/S5__find-empty__iphone-se__dark__100-settled.png` | `e78758637f4d916f` |
-| `S5/find-empty` | iphone-se | dark | 200 % | `frames/S5__find-empty__iphone-se__dark__200-settled.png` | `a8bf46f92b03a44a` |
-| `S5/find-empty` | iphone-se | light | 100 % | `frames/S5__find-empty__iphone-se__light__100-settled.png` | `a242d38a1710dca0` |
-| `S5/find-empty` | iphone-se | light | 200 % | `frames/S5__find-empty__iphone-se__light__200-settled.png` | `e44c9af1b16b1967` |
-| `S5/find-empty` | iphone-15 | dark | 100 % | `frames/S5__find-empty__iphone-15__dark__100-settled.png` | `df22b92006367753` |
-| `S5/find-empty` | iphone-15 | dark | 200 % | `frames/S5__find-empty__iphone-15__dark__200-settled.png` | `40a1a6bc5215fb2a` |
-| `S5/find-empty` | iphone-15 | light | 100 % | `frames/S5__find-empty__iphone-15__light__100-settled.png` | `d4fc30dc7244e695` |
-| `S5/find-empty` | iphone-15 | light | 200 % | `frames/S5__find-empty__iphone-15__light__200-settled.png` | `ceb1d2db48ae71a5` |
-| `S5/find-hit` | iphone-se | dark | 100 % | `frames/S5__find-hit__iphone-se__dark__100-settled.png` | `fc2450b39860a94d` |
+| `S5/find-results` | iphone-se | dark | 100 % | `frames/S5__find-results__iphone-se__dark__100-settled.png` | `1b7b4628c0c7d6c6` |
+| `S5/find-results` | iphone-se | dark | 200 % | `frames/S5__find-results__iphone-se__dark__200-settled.png` | `0e3beab4bc022801` |
+| `S5/find-results` | iphone-se | light | 100 % | `frames/S5__find-results__iphone-se__light__100-settled.png` | `e72e0a85d8e11eb7` |
+| `S5/find-results` | iphone-se | light | 200 % | `frames/S5__find-results__iphone-se__light__200-settled.png` | `3eadc7c05ec2b2a7` |
+| `S5/find-results` | iphone-15 | dark | 100 % | `frames/S5__find-results__iphone-15__dark__100-settled.png` | `98b2dd0ee5774ac2` |
+| `S5/find-results` | iphone-15 | dark | 200 % | `frames/S5__find-results__iphone-15__dark__200-settled.png` | `ca36d39d33749714` |
+| `S5/find-results` | iphone-15 | light | 100 % | `frames/S5__find-results__iphone-15__light__100-settled.png` | `2d7de2494649fbe1` |
+| `S5/find-results` | iphone-15 | light | 200 % | `frames/S5__find-results__iphone-15__light__200-settled.png` | `754ff2283bf5d456` |
+| `S5/find-related` | iphone-se | dark | 100 % | `frames/S5__find-related__iphone-se__dark__100-settled.png` | `82f6734621775047` |
+| `S5/find-related` | iphone-se | dark | 200 % | `frames/S5__find-related__iphone-se__dark__200-settled.png` | `0f31ab52d594bf6d` |
+| `S5/find-related` | iphone-se | light | 100 % | `frames/S5__find-related__iphone-se__light__100-settled.png` | `145a92dc4068208b` |
+| `S5/find-related` | iphone-se | light | 200 % | `frames/S5__find-related__iphone-se__light__200-settled.png` | `6d0eac3e8a180cd5` |
+| `S5/find-related` | iphone-15 | dark | 100 % | `frames/S5__find-related__iphone-15__dark__100-settled.png` | `6aef2227919b963e` |
+| `S5/find-related` | iphone-15 | dark | 200 % | `frames/S5__find-related__iphone-15__dark__200-settled.png` | `cd3638b92af7adb6` |
+| `S5/find-related` | iphone-15 | light | 100 % | `frames/S5__find-related__iphone-15__light__100-settled.png` | `b6c7f1a0054fd637` |
+| `S5/find-related` | iphone-15 | light | 200 % | `frames/S5__find-related__iphone-15__light__200-settled.png` | `01a94683755f41ba` |
+| `S5/find-empty` | iphone-se | dark | 100 % | `frames/S5__find-empty__iphone-se__dark__100-settled.png` | `fe65d03549f269f1` |
+| `S5/find-empty` | iphone-se | dark | 200 % | `frames/S5__find-empty__iphone-se__dark__200-settled.png` | `77b8c2f1e07ca56a` |
+| `S5/find-empty` | iphone-se | light | 100 % | `frames/S5__find-empty__iphone-se__light__100-settled.png` | `028842daae8e6e60` |
+| `S5/find-empty` | iphone-se | light | 200 % | `frames/S5__find-empty__iphone-se__light__200-settled.png` | `512a928724947260` |
+| `S5/find-empty` | iphone-15 | dark | 100 % | `frames/S5__find-empty__iphone-15__dark__100-settled.png` | `22349bd1e6684a6e` |
+| `S5/find-empty` | iphone-15 | dark | 200 % | `frames/S5__find-empty__iphone-15__dark__200-settled.png` | `e387a8eee9e85068` |
+| `S5/find-empty` | iphone-15 | light | 100 % | `frames/S5__find-empty__iphone-15__light__100-settled.png` | `353277af16a6207f` |
+| `S5/find-empty` | iphone-15 | light | 200 % | `frames/S5__find-empty__iphone-15__light__200-settled.png` | `7e7295b5669309f5` |
+| `S5/find-hit` | iphone-se | dark | 100 % | `frames/S5__find-hit__iphone-se__dark__100-settled.png` | `6a4d1bf43427411d` |
 | `S5/find-hit` | iphone-se | dark | 200 % | `frames/S5__find-hit__iphone-se__dark__200-settled.png` | `2767b574099d7ef1` |
-| `S5/find-hit` | iphone-se | light | 100 % | `frames/S5__find-hit__iphone-se__light__100-settled.png` | `b5dbda75dd456a4e` |
+| `S5/find-hit` | iphone-se | light | 100 % | `frames/S5__find-hit__iphone-se__light__100-settled.png` | `d2758b00bb17752c` |
 | `S5/find-hit` | iphone-se | light | 200 % | `frames/S5__find-hit__iphone-se__light__200-settled.png` | `1781809b837228e3` |
-| `S5/find-hit` | iphone-15 | dark | 100 % | `frames/S5__find-hit__iphone-15__dark__100-settled.png` | `6bebe0965dd8dcf6` |
-| `S5/find-hit` | iphone-15 | dark | 200 % | `frames/S5__find-hit__iphone-15__dark__200-settled.png` | `768406b11fedf82a` |
-| `S5/find-hit` | iphone-15 | light | 100 % | `frames/S5__find-hit__iphone-15__light__100-settled.png` | `bedf4ccf17dccf10` |
-| `S5/find-hit` | iphone-15 | light | 200 % | `frames/S5__find-hit__iphone-15__light__200-settled.png` | `cd44bbc4068092fd` |
-| `S5/find-caveat` | iphone-se | dark | 100 % | `frames/S5__find-caveat__iphone-se__dark__100-settled.png` | `20f2af3218a4b5da` |
-| `S5/find-caveat` | iphone-se | dark | 200 % | `frames/S5__find-caveat__iphone-se__dark__200-settled.png` | `7a9cd2cc27d4195d` |
-| `S5/find-caveat` | iphone-se | light | 100 % | `frames/S5__find-caveat__iphone-se__light__100-settled.png` | `32f608499c0ce542` |
-| `S5/find-caveat` | iphone-se | light | 200 % | `frames/S5__find-caveat__iphone-se__light__200-settled.png` | `d07e8b463bfd5d04` |
-| `S5/find-caveat` | iphone-15 | dark | 100 % | `frames/S5__find-caveat__iphone-15__dark__100-settled.png` | `8d91e0d52dfb1eec` |
-| `S5/find-caveat` | iphone-15 | dark | 200 % | `frames/S5__find-caveat__iphone-15__dark__200-settled.png` | `247634fc8539c93c` |
-| `S5/find-caveat` | iphone-15 | light | 100 % | `frames/S5__find-caveat__iphone-15__light__100-settled.png` | `54299b3867f468f2` |
-| `S5/find-caveat` | iphone-15 | light | 200 % | `frames/S5__find-caveat__iphone-15__light__200-settled.png` | `8f0893b6251c9bea` |
+| `S5/find-hit` | iphone-15 | dark | 100 % | `frames/S5__find-hit__iphone-15__dark__100-settled.png` | `3e345901003e23dc` |
+| `S5/find-hit` | iphone-15 | dark | 200 % | `frames/S5__find-hit__iphone-15__dark__200-settled.png` | `eba498ce9bedaaff` |
+| `S5/find-hit` | iphone-15 | light | 100 % | `frames/S5__find-hit__iphone-15__light__100-settled.png` | `c7f70969a5bc4ed2` |
+| `S5/find-hit` | iphone-15 | light | 200 % | `frames/S5__find-hit__iphone-15__light__200-settled.png` | `b825d354bb5406b6` |
+| `S5/find-caveat` | iphone-se | dark | 100 % | `frames/S5__find-caveat__iphone-se__dark__100-settled.png` | `f62b95a9b6b5c75e` |
+| `S5/find-caveat` | iphone-se | dark | 200 % | `frames/S5__find-caveat__iphone-se__dark__200-settled.png` | `8892236a008510b8` |
+| `S5/find-caveat` | iphone-se | light | 100 % | `frames/S5__find-caveat__iphone-se__light__100-settled.png` | `3babb5d41a017a5b` |
+| `S5/find-caveat` | iphone-se | light | 200 % | `frames/S5__find-caveat__iphone-se__light__200-settled.png` | `d98d260b0d29b63e` |
+| `S5/find-caveat` | iphone-15 | dark | 100 % | `frames/S5__find-caveat__iphone-15__dark__100-settled.png` | `27bf1780556b1903` |
+| `S5/find-caveat` | iphone-15 | dark | 200 % | `frames/S5__find-caveat__iphone-15__dark__200-settled.png` | `87f8b867a7ffdee4` |
+| `S5/find-caveat` | iphone-15 | light | 100 % | `frames/S5__find-caveat__iphone-15__light__100-settled.png` | `ad4d31a1b3d6ceec` |
+| `S5/find-caveat` | iphone-15 | light | 200 % | `frames/S5__find-caveat__iphone-15__light__200-settled.png` | `46cecff0e7133911` |
 | `S16/create-filled` | iphone-se | dark | 100 % | `frames/S16__create-filled__iphone-se__dark__100-settled.png` | `3ce756d2a34c21d4` |
 | `S16/create-filled` | iphone-se | dark | 200 % | `frames/S16__create-filled__iphone-se__dark__200-settled.png` | `719fc81fad4225df` |
 | `S16/create-filled` | iphone-se | light | 100 % | `frames/S16__create-filled__iphone-se__light__100-settled.png` | `c7c1d4a13c3b1f49` |
@@ -208,5 +280,6 @@ byte-identical (each restore verified in `rig/mutation-run.log`).
 | `path:/projects/payments-migration` | iphone-15 | light | 200 % | `frames/path--projects__payments-migration__iphone-15__light__200-settled.png` | `3a66bc78157b9cef` |
 
 Frames are PNGs at the device's DPR (iphone-se 640x1136 at 2x; iphone-15 1170x2532 at
-3x). The `S16/create-filled` and `path:/projects/payments-migration` frames are this
-push's added coverage for the shared `Sheet` change (the two other footer surfaces).
+3x). The `S5/find-*` and warm frames above are the round-2 takes (this push, head
+`3f014a4`); the `S16/create-filled` and `path:/projects/payments-migration` frames are
+round 1's coverage of the shared `Sheet` change, unchanged by this round.

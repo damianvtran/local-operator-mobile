@@ -1,0 +1,5 @@
+history-fail proxy on http://127.0.0.1:46527 -> http://127.0.0.1:46526 (failing /api/sessions/*/history)
+[proxy] intercepted GET /api/sessions/6714def86197/history -> 503
+[proxy] intercepted GET /api/sessions/6714def86197/history -> 503
+[proxy] intercepted GET /api/sessions/6714def86197/history -> 503
+[proxy] intercepted GET /api/sessions/6714def86197/history -> 503
