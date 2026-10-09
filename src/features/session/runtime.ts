@@ -174,6 +174,17 @@ export interface TranscriptMerge {
  * exact for an append-only log — the only order the wire can produce — and it
  * needs no clock, which is what the wire does not carry.
  *
+ * ROWS ARE MATCHED BY POSITION WITHIN AN ID, not by id alone. The wire's ids are
+ * the transcript's identity and the list keys rows by them, but a row id is not
+ * guaranteed unique on the wire (the harness's own synthetic `rich-rows`
+ * fixture stamps every row `m-1`, and it is the capture matrix's case for fenced
+ * rows). Matching purely by id then collapses those rows into one — measured:
+ * the cell rendered the last row six times and the `session-rich-rows` marker
+ * (an assistant row with a fence) disappeared, failing 12 capture cells that
+ * `main` passes. So the page's rows are indexed BY ID AND ORDER (the n-th page
+ * row with an id matches the n-th frame row with it) and the merge is total for
+ * any id it is handed, however many times that id appears.
+ *
  * The result is bounded by the two windows (`history` + projection rows, so
  * about twice the page) and NEVER reorders or drops a row that is already on
  * screen, which is what keeps a row from remounting when the frame lands.
@@ -188,21 +199,29 @@ export const mergeTranscript = (
 	if (frame.length === 0) return { rows: [...history], holeBelowPage: false };
 	if (history.length === 0) return { rows: [...frame], holeBelowPage: false };
 
-	const onPage = new Set(history.map((row) => row.id));
-	/** The projection's copy of a shared row: the live authority. */
-	const live = new Map<string, TranscriptEntry>();
-	/** Rows the page does not carry, keyed by the id of the last row the page DOES
-	 *  carry before them — `""` for the head, where the pinned opener lands. */
-	const insertedAt = new Map<string, TranscriptEntry[]>();
-	let anchor = "";
+	/** The page's indices for each id, in order, consumed as the frame is walked:
+	 *  the n-th frame row with an id claims the n-th page row with it. */
+	const pageSlots = new Map<string, number[]>();
+	history.forEach((row, at) => {
+		const slots = pageSlots.get(row.id);
+		if (slots === undefined) pageSlots.set(row.id, [at]);
+		else slots.push(at);
+	});
+	/** The projection's copy of a shared row, by PAGE INDEX: the live authority. */
+	const live = new Map<number, TranscriptEntry>();
+	/** Rows the page does not carry, keyed by the page index they follow — `-1` for
+	 *  the head, where the pinned opener lands. */
+	const insertedAfter = new Map<number, TranscriptEntry[]>();
+	let anchor = -1;
 	for (const row of frame) {
-		if (onPage.has(row.id)) {
-			live.set(row.id, row);
-			anchor = row.id;
+		const claimed = pageSlots.get(row.id)?.shift();
+		if (claimed !== undefined) {
+			live.set(claimed, row);
+			anchor = claimed;
 			continue;
 		}
-		const bucket = insertedAt.get(anchor);
-		if (bucket === undefined) insertedAt.set(anchor, [row]);
+		const bucket = insertedAfter.get(anchor);
+		if (bucket === undefined) insertedAfter.set(anchor, [row]);
 		else bucket.push(row);
 	}
 
@@ -229,13 +248,13 @@ export const mergeTranscript = (
 	const rows: TranscriptEntry[] = [];
 	// A frame row before every shared row is older than the page's oldest — and
 	// the page proves the rows between them are not held at all.
-	const head = insertedAt.get("");
+	const head = insertedAfter.get(-1);
 	if (head !== undefined) rows.push(...head);
-	for (const row of history) {
-		rows.push(live.get(row.id) ?? row);
-		const after = insertedAt.get(row.id);
+	history.forEach((row, at) => {
+		rows.push(live.get(at) ?? row);
+		const after = insertedAfter.get(at);
 		if (after !== undefined) rows.push(...after);
-	}
+	});
 	return { rows, holeBelowPage: head !== undefined };
 };
 

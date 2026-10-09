@@ -399,6 +399,37 @@ describe("mergeTranscript: one list from the page and the frame", () => {
 		expect(merged.holeBelowPage).toBe(false);
 	});
 
+	it("keeps every row when the wire repeats an id — the synthetic rich-rows shape", () => {
+		/* `fixtures/relay/synthetic/sse-projection-rich-rows.json` stamps EVERY
+		 * row `m-1` (measured). A merge that matched rows by id alone collapsed
+		 * the six into one — the capture matrix caught it as 12 unready
+		 * `S5/rich-rows` cells, because the marker is "an assistant row with a
+		 * fence" and the fenced rows had been replaced by the last one. Rows are
+		 * matched by position within an id for exactly this.
+		 */
+		const page = [
+			rowAt("m-1", "Show me the patch."),
+			rowAt("m-1", "Here is the file: ```ts\n"),
+			rowAt("m-1", "applied 1 hunk"),
+		];
+		const frame = [
+			rowAt("m-1", "Show me the patch. LIVE"),
+			rowAt("m-1", "Here is the file: ```ts\nLIVE"),
+			rowAt("m-1", "applied 1 hunk LIVE"),
+		];
+		const merged = mergeTranscript(frameOf(...frame), page);
+		expect(idsOf(merged.rows)).toEqual(["m-1", "m-1", "m-1"]);
+		// Each frame row claimed its OWN page row: nothing was collapsed onto the
+		// last copy, so the fenced row survives on the list.
+		expect(merged.rows.map((row) => row.text)).toEqual([
+			"Show me the patch. LIVE",
+			"Here is the file: ```ts\nLIVE",
+			"applied 1 hunk LIVE",
+		]);
+		expect(merged.rows.some((row) => row.text.includes("```"))).toBe(true);
+		expect(merged.holeBelowPage).toBe(false);
+	});
+
 	it("is the frame when there is no page yet", () => {
 		const merged = mergeTranscript(frameOf(...listOf("a", "b")), []);
 		expect(idsOf(merged.rows)).toEqual(["a", "b"]);
