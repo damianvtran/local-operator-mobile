@@ -69,6 +69,11 @@ export const SCREEN = {
 	 *  list, and a capture must be able to tell which of the two drew. */
 	projects: "projects-screen",
 	projectDetail: "project-detail-screen",
+	/** The Schedules screen (S17): the machine-wide armed index — every
+	 *  conversation carrying wakes and monitors, read from the derived indexes
+	 *  with no runtime running. One root: the two families are sections of one
+	 *  screen, and a capture must be able to tell it drew. */
+	schedules: "schedules-screen",
 	newSession: "new-session-screen",
 	settings: "settings-screen",
 	notFound: "not-found-screen",
@@ -88,6 +93,11 @@ export const EMPTY = {
 	/** The projects list with nothing in it. Its own id, so "this screen is
 	 *  honestly empty" cannot be satisfied by another screen's empty state. */
 	projects: "projects-empty",
+	/** The schedules screen with NOTHING ARMED: both families read OK and are
+	 *  empty. Rendered only under that conjunction (`schedulesEmpty`), so an
+	 *  unreadable store can never produce it — the defect this surface exists
+	 *  to avoid. */
+	schedules: "schedules-empty",
 	notFound: "not-found-empty",
 } as const;
 
@@ -332,6 +342,17 @@ export const CONTROL = {
 	 *  projects surface as a peer of `past` off the conversations panel, so it
 	 *  lives in the same footer rather than behind a settings row. */
 	sidebarProjects: "sidebar-projects",
+	/** The footer's next route (S17's entry point): the machine-wide armed
+	 *  index. The desktop sidebar carries Schedules as a top-level destination
+	 *  beside Projects, and the pane footer is this app's phone-sized rendering
+	 *  of that sidebar — the same place a reader looks for `past`, `projects`
+	 *  and `computers` already. */
+	sidebarSchedules: "sidebar-schedules",
+	/** The Schedules screen's own controls (S17): back, and the retry on a
+	 *  failed read (the desktop's own "Try again", kept because a roll of the
+	 *  dice is the one remedy a read failure has). */
+	schedulesBack: "schedules-back",
+	schedulesRetry: "schedules-retry",
 	/** The projects list's own controls (S16). The list and the pushed detail have
 	 *  a retry and a back; the listing's one write is the create route's entry
 	 *  point, and the detail's are named below. */
@@ -393,6 +414,28 @@ export const CONTROL = {
  * a state ("the certificate was rejected") without inventing a control for it.
  */
 export const SURFACE = {
+	/** The Schedules screen's loading skeleton (S17). Its own id because the
+	 *  loading state must be distinguishable from the empty state — and on a
+	 *  320 pt phone the two frames once came out byte-identical on the
+	 *  conversations pane (R-2), which is why every loading state carries a
+	 *  marker of its own. */
+	schedulesLoading: "schedules-loading",
+	/** The supervisor strip: present ONLY when nothing on this machine would
+	 *  actually fire a cold wake (`supervisorLead` returns "" otherwise). The
+	 *  index alone cannot answer "will these fire" — the strip is that answer,
+	 *  and its presence is what a frame asserts. */
+	schedulesSupervisor: "schedules-supervisor",
+	/** The wake listing was capped: "Showing N of M" — the sentence that keeps
+	 *  a bounded page from implying the store holds only what it sent. */
+	schedulesWakesTruncated: "schedules-wakes-truncated",
+	/** The wake index could NOT be read. A first-class state, never an empty
+	 *  list: "no wakes" and "this process could not read the store" are
+	 *  different claims, and this id is how a frame proves the distinction. */
+	schedulesWakesUnreadable: "schedules-wakes-unreadable",
+	/** The monitor listing was capped (the twin of the wakes strip). */
+	schedulesMonitorsTruncated: "schedules-monitors-truncated",
+	/** The monitor index could not be read (the twin of the wakes strip). */
+	schedulesMonitorsUnreadable: "schedules-monitors-unreadable",
 	projectsLoading: "projects-loading",
 	/** The list's unknown-status section. Its own id because the state it proves
 	 *  is the ABSENCE of a status from `PROJECT_STATUS_ORDER` — a section that
@@ -637,6 +680,15 @@ export const IDENTIFIER_FAMILIES: readonly string[] = [
 	/* The projects listing's own row family (S16): one row per project, keyed by
 	 *  the project's id, so a flow reaches a row without counting rows. */
 	"project-row-",
+	/* The Schedules surface's row families (S17): one row per carrying
+	 *  conversation per family, keyed by session id — two families rather than
+	 *  one because a conversation can carry wakes AND monitors, and the two
+	 *  entries sit in different sections with different facts (one shows fire
+	 *  instants, the other watch health). `schedule-more-` is the per-entry
+	 *  disclosure that puts a capped conversation's hidden rows back. */
+	"schedule-wake-row-",
+	"schedule-monitor-row-",
+	"schedule-more-",
 	/* The milestone rows (S16 detail): one TOGGLE control and one EDIT control per
 	 *  milestone, keyed by the milestone's name (the store's own key for it within
 	 *  one project). Two families rather than one because they are two controls
@@ -887,6 +939,20 @@ export const STATE_MARKER = {
 		busy: SURFACE.projectMilestoneBusy,
 		"delete-confirm": CONTROL.projectDeleteDialog,
 	},
+	/* The Schedules screen (S17). `populated` is the WAKE row family (a screen
+	 *  can draw wakes, monitors, or both; the wake family is the anchor, and
+	 *  the monitors-only state is not a cell because the route serves one
+	 *  answer — a scenario that emptied the wakes but kept monitors would pin
+	 *  a shape the wire cannot send). `read-error` and `truncated` are the two
+	 *  honest-answer strips, each rendered in ITS state only — and the empty
+	 *  state is `EMPTY.schedules`, unreachable while either family errored. */
+	schedules: {
+		loading: SURFACE.schedulesLoading,
+		empty: EMPTY.schedules,
+		populated: "schedule-wake-row-",
+		truncated: SURFACE.schedulesWakesTruncated,
+		"read-error": SURFACE.schedulesWakesUnreadable,
+	},
 	computers: {
 		/** The refusal surface, which the set-up path does not render: the one
 		 *  state of this screen the relay can drive — the computer LIST comes from
@@ -1079,6 +1145,24 @@ export const sessionRowId = (sessionId: string): string =>
  *  not at each call site (the `pastRowId` shape). */
 export const projectRowId = (projectId: string): string =>
 	`project-row-${projectId}`;
+
+/**
+ * The Schedules surface's row builders (S17), one per section — the same shape
+ * (`<family>-<key>` in the contract, never a template literal at the call
+ * site). Two families rather than one because a conversation can carry wakes
+ * AND monitors, and its two entries sit in different sections: a single
+ * `schedule-row-<id>` would address two elements.
+ */
+export const scheduleWakeRowId = (sessionId: string): string =>
+	`schedule-wake-row-${sessionId}`;
+
+export const scheduleMonitorRowId = (sessionId: string): string =>
+	`schedule-monitor-row-${sessionId}`;
+
+/** One entry's `Show N more` disclosure, keyed by the conversation — the
+ *  control that puts a capped conversation's hidden rows back. */
+export const scheduleMoreId = (sessionId: string): string =>
+	`schedule-more-${sessionId}`;
 
 /**
  * The identifying half of a milestone name, for the two per-row controls.

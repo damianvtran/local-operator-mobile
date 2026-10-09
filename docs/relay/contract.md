@@ -17,6 +17,13 @@ rather than from prose.
 > checked to land on a line whose text is byte-identical across the two refs, so
 > nothing changed meaning in the move. An older copy of this file carries the old
 > numbers.
+>
+> **Material added after the pin carries its own ref, named inline.** §4.12 (the
+> armed index, S17) and its route-table row arrived with local-operator `5e59e0cd06`
+> (2026-10-08, #2061), eight days after this document's pin (`fc851a94e`,
+> 2026-09-30) — so those citations are written against `5e59e0cd06` and are
+> qualified as such, rather than silently re-numbered in a table whose other rows
+> still mean the pinned ref.
 
 Paths are relative to the local-operator repository root:
 `local_operator/mobile/daemon.py` → `daemon.py`; `local_operator/mobile/web/src/api.ts`
@@ -144,6 +151,7 @@ The routes that *do* set cache headers are the SSE streams
 | DELETE | `/api/projects/{key}/milestones/{name}` | gate | `daemon.py:4632-4644` |
 | POST | `/api/projects/{key}/links` | gate | `daemon.py:4646-4658` |
 | DELETE | `/api/projects/{key}/links/{session_id}` | gate | `daemon.py:4660-4672` |
+| GET | `/api/schedules` | gate | the armed index, `daemon.py:5376-5398` (at `5e59e0cd06`) |
 
 There is **no `GET /api/sessions/{id}`** — a single session's state arrives only
 over its SSE stream or as a row of `/api/sessions`. A client that wants
@@ -733,6 +741,47 @@ failures flow through `mobile_projects.ProjectRouteError` →
 (`web/src/types.ts:491-594`); `ProjectMilestone.status` is **derived**
 server-side (`completed|overdue|upcoming`) and must not be recomputed by the
 client. Live `fixtures/relay/http/projects-empty.json`.
+
+### 4.12 `GET /api/schedules` — the machine-wide armed index
+
+> Citations in this section are against local-operator `5e59e0cd06` (the merge
+> of #2061), not the document-wide pin — see the header.
+
+`{"wakes": WakeListing, "monitors": MonitorListing}` — the relay half of the
+desktop's `GET /v1/desktop/wakes` and `GET /v1/desktop/monitors`, in ONE answer
+because one phone surface (S17) draws both. Read-only by design: arm, edit and
+cancel stay on the desktop/terminal plane until a write half ships. Index-backed
+(one directory scan per store — `wakes/store.py`, `monitors/store.py` — no
+session opened, no owner dialled), so a schedule outlives the runtime it was
+armed from.
+
+Each listing is `{entries, generated_at, total, truncated, read_error}`,
+mirroring the desktop wire models field for field
+(`local_operator/mobile/schedules.py`; the wake listing additionally carries
+`supervisor`: `{supported, running, detail, verifiable?}`) and deliberately not
+collapsed into one array:
+
+- **`read_error` is first-class per family.** A store this process could not
+  read answers `read_error: true` with empty `entries`; a client MUST render
+  that as its own state, never as "nothing is armed", and the two families
+  fail independently (one can be unreadable while the other is fine).
+- **`truncated`/`total` are honest bounds.** Each listing caps at its
+  `WAKE_LIST_LIMIT`/`MONITOR_LIST_LIMIT` (200 entries), with `total` counting
+  the store; a client says "showing N of M" rather than implying the store
+  holds only what it sent. The desktop `limit`/`include_dormant` query
+  parameters are deliberately not mirrored yet.
+
+Wake rows are the desktop `WakeScheduleRow` shape, `stale` included — the
+supervisor's own staleness predicate (imported from `wakes/supervisor.py`, not
+re-derived, so the listing and the supervisor cannot disagree) — and include
+dormant (stopped/held) and ghost (no session on disk) entries: the mirror's
+include-dormant default. Monitor rows are the desktop `MonitorRow` shape with
+**open** `state` (`dormant | disabled | expired | armed` today; render an
+unknown word as itself), the shared `health` hint, and no `supervisor` block
+(monitors never engage a cold session, so one would advertise supervision they
+do not have). Live `fixtures/relay/http/schedules-empty.json`,
+`schedules-populated.json`, `schedules-truncated.json`,
+`schedules-read-error.json`.
 
 ---
 

@@ -23,7 +23,7 @@ That figure is **load-dependent, and it is the one to quote**: `pnpm e2e:relay`
 against ~13 minutes on a quiet one. The README, `tools/lib/doc-commands.ts` and
 `tools/mock-relay/verify.ts` all state that single figure; if you change one,
 change all three. The app-build capture block — the other candidate for slowest —
-is bounded to a 126-cell sample: the whole declared cell list (63 cells on today's
+is bounded to a 136-cell sample: the whole declared cell list (68 cells on today's
 registry) at one device, one theme and two scales (`--devices iphone-15 --themes
 dark --scales 100,200`), so the gate can pass for the reason the block declares
 instead of by timing out. A command this
@@ -77,7 +77,7 @@ the three answer different questions:
 | `notMeasurableCells` | cells that did NOT, each with its reasons. A finding about the harness or the app. |
 | `declaredSkips` | cells whose state this head does not render yet, each with the work that owns it. NOT a gap, and NOT evidence. |
 
-One device and theme (`--devices iphone-15 --themes dark --scales 100`) plans 63
+One device and theme (`--devices iphone-15 --themes dark --scales 100`) plans 68
 cells on today's registry — 36 when the run below was taken — so that output is
 quoted from the run that produced it rather than re-derived from today's count:
 
@@ -179,10 +179,10 @@ in `verify`'s readiness guard.
 # docs:needs mock-relay web-build
 #
 # The sample is EXPLICIT and small, for §2's reason: the default (`core`) tier plans
-# 2268 cells, one frame each, which is ~85 minutes at the measured 2.24 s/cell and is
+# 2448 cells, one frame each, which is ~91 minutes at the measured 2.24 s/cell and is
 # above the harness's own 120-frame confirmation threshold — so an un-narrowed run is
-# REFUSED without `--yes`, and even with it no documentation gate may spend 85 minutes
-# on one command. One phone, one theme, one scale is 63 frames, and it still proves what
+# REFUSED without `--yes`, and even with it no documentation gate may spend 91 minutes
+# on one command. One phone, one theme, one scale is 68 frames, and it still proves what
 # this section is about: seeding is a property of `--relay`, not of the sample's size.
 # `web-build` is declared because the command reads `dist/`: without a build it does
 # not fall back to anything, it fails on `static root does not exist`.
@@ -397,6 +397,11 @@ second hand-maintained list.
 | `projects-write-busy` | S16/create-busy, S16-detail/busy | `hold: { mutations: "forever" }`: every write is read and never answered, so the two in-flight states are the app genuinely mid-write rather than asked to pretend. A READ hold would have rendered the loading skeleton instead of the surface under test, which is why the hold is per-verb. |
 | `projects-unknown-status` | S16/unknown-status | The captured listing with one row's status replaced by a word none of the relay's seven is: it must take its own trailing section rather than vanish. |
 | `projects-refused` | S16-detail/refused | The key-scoped read re-sent with the corpus's recorded 404, so the sentence the screen renders is one the relay actually wrote (including the prefix-matched near-miss name). |
+| `schedules-empty` | S17/empty | `GET /api/schedules` answers the captured empty listing: both families readable and holding nothing, so the screen shows its own empty state — never a strip standing in for one. |
+| `schedules-loading` | S17/loading | No schedules read has been answered yet: `hold: { api: "forever" }` plus `keepalive-only`, the same shape as `projects-loading` — the loading frame is an unanswered read, not a body the app pretends about. |
+| `schedules-populated` | S17/populated | The captured populated store: wakes armed / overdue / stale / dormant / ghost with a hidden patience timer, monitors armed / dormant / disabled / expired, one never-checked watch and one unavailable episode. |
+| `schedules-truncated` | S17/truncated | The captured BOUNDED answer: 205 wake-carrying conversations against the route's 200 cap, so the screen must say "Showing 200 of 205" rather than imply the store holds only what it sent. |
+| `schedules-read-error` | S17/read-error | The captured unreadable-wakes answer (directory mode `000`): `wakes.read_error: true`, monitors readable. The cell exists to prove the screen renders the strip — an unreadable store must NEVER paint as "Nothing is armed". |
 | `search-empty` | S15/populated | A search query with no results; a capture types no query, so the cell it fills is the world's one live row. |
 | `search-hit` | S15/populated | A search with body-only matches, which must be marked as such. |
 | `models-ranked` | — (no cell) | The full ranked model catalogue — order is the ranking, never re-sorted. It declared `S9/populated`, and that cell was removed: the sheets are modals the app opens from the composer, no wire action opens one, and the cell therefore rendered `S5/populated` byte-for-byte (see the capture section). `CELL_OPENERS` now gives the harness a way to press such a control, so a later slice can re-declare the cell; nothing in this one does. |
@@ -626,12 +631,12 @@ node tools/visual/capture.ts --dir e2e/fixtures/audit-canary \
 # A real run against a real build. Build first — `pnpm export:web`, which writes `dist/`.
 #
 # The device/theme/scale set is EXPLICIT and small on purpose: the full `core` tier is
-# 2268 cells, which is ~85 minutes at the measured 2.24 s/cell (403 cells in 903 s on the
+# 2448 cells, which is ~91 minutes at the measured 2.24 s/cell (403 cells in 903 s on the
 # CI runner, a plan of 403 cells then), and no documentation gate may spend that on one
 # command. So this example is the bounded sample; `--plan` above prints the full count,
 # and dropping these three flags captures the whole `core` tier. `--tier ci` is the sample
 # the per-push CI job takes — every declared cell at two device profiles, both themes and
-# three scales, 756 cells — and `--full` is all 19 profiles at 8316 cells.
+# three scales, 816 cells — and `--full` is all 19 profiles at 8976 cells.
 #
 # The bound is DERIVED FROM THE PLAN unless you name one: `--deadline` defaults to
 # 3000 ms/cell with a 900 s floor, so a bound always holds the plan it was computed for,
@@ -811,7 +816,7 @@ All 19 profiles above are what the harness *can* plan, and they come from
 generated from it rather than maintained beside it. A default run captures the
 `core` tier only (5 profiles: the 320 pt floor, one typical phone,
 the landscape case whose side insets the notch rules need, and a tablet in each
-orientation) — 2268 cells, one frame each unless `--consecutive` asks for the +250 ms
+orientation) — 2448 cells, one frame each unless `--consecutive` asks for the +250 ms
 and settled frames too. A run states which tier it took,
 and a cell that was not captured is reported as having no frame rather than passed.
 
@@ -819,9 +824,9 @@ Three tiers are declared in `matrix.ts`, and each says what it is:
 
 | tier | sample | cells | why |
 |---|---|---|---|
-| `ci` | every declared cell × `iphone-se`, `tablet-landscape` × both themes × scales 100, 135 and 200 | 756 | the per-push CI job's sample. The step is bound at 40 minutes — above the plan's own derived deadline (756 × 3 s = 37.8 min) — and the measured rate is 2.24 s/cell, so a 2268-cell `core` run cannot fit; this one lands ~28 minutes. It keeps the CELL axis whole — a state that is not captured is a state no review round can report on — and shrinks only the device, theme and scale axes, each to what its check needs: the narrowest and widest viewports (the two sides of the 768 breakpoint), because the theme check compares a cell's dark and light frames, and the 100 %/135 %/200 % set — the pair the text-scale guard measures plus the BOUNDARY step the footer's layout breaks at, because an axis that brackets that band cannot see a defect inside it. |
-| `core` | the 5 `core` profiles, both themes, every scale | 2268 | the default, and the local sample the operator's rule asks for. |
-| `full` | all 19 profiles | 8316 | the dispatched/nightly sample. |
+| `ci` | every declared cell × `iphone-se`, `tablet-landscape` × both themes × scales 100, 135 and 200 | 816 | the per-push CI job's sample. The step is bound at 45 minutes — above the plan's own derived deadline (816 × 3 s = 40.8 min) — and the measured rate is 2.24 s/cell, so a 2448-cell `core` run cannot fit; this one lands ~30 minutes. It keeps the CELL axis whole — a state that is not captured is a state no review round can report on — and shrinks only the device, theme and scale axes, each to what its check needs: the narrowest and widest viewports (the two sides of the 768 breakpoint), because the theme check compares a cell's dark and light frames, and the 100 %/135 %/200 % set — the pair the text-scale guard measures plus the BOUNDARY step the footer's layout breaks at, because an axis that brackets that band cannot see a defect inside it. |
+| `core` | the 5 `core` profiles, both themes, every scale | 2448 | the default, and the local sample the operator's rule asks for. |
+| `full` | all 19 profiles | 8976 | the dispatched/nightly sample. |
 
 `--tier <ci|core|full>` or `--full` selects one; `--devices`, `--themes` and
 `--scales` override any of them. The whole-run `--deadline` is derived from the
@@ -841,9 +846,9 @@ from `ALL_DEVICES`, so it cannot drift from this table.
 
 **The device variety that is not on the per-push path has its own nightly job.**
 `.github/workflows/e2e.yml` `web-audit-core` captures and audits the `core` tier — 5 of
-the 19 profiles, 2268 cells / 6,804 frames and ~85 minutes at the measured 2.24 s/cell —
+the 19 profiles, 2448 cells / 7,344 frames and ~91 minutes at the measured 2.24 s/cell —
 on the schedule and on demand only. The `ci` sample stays the per-push one and keeps its
-own 40-minute capture bound; neither job is stretched to cover the other's tier.
+own 45-minute capture bound; neither job is stretched to cover the other's tier.
 
 ### Two cells that render byte-identically
 

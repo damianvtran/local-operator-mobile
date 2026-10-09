@@ -56,6 +56,7 @@ graph TD
   D1 -->|row| G
   D1 -->|past| I[Past sessions]
   D1 -->|projects| J[Projects]
+  D1 -->|schedules| J2[Schedules]
   D1 -->|switcher| C
   D -->|avatar| K[Settings]
   G -->|subagent row| L[Subagent]
@@ -78,6 +79,7 @@ Screen names (final): **Computers** (host list), **Home** (the new-chat
 composer — the destination ADR 0006 § 6 records), **Sessions** (the
 conversations panel behind Home's sidebar, and a docked pane on a tablet),
 **Session**, **Subagent**, **New session**, **Past sessions**, **Projects**,
+**Schedules** (what is armed on the machine: wakes and monitors),
 **Settings**, **Set up a computer**, **Sign in**.
 
 ### Flow → principle index
@@ -95,7 +97,7 @@ becomes a screen.
 | F-5 session list | Sessions (the panel behind Home) | P-1, P-3, P-5, P-9 |
 | F-6 session view | Session, sheets, pending card | P-1, P-2, P-4, P-7, P-8, P-9 |
 | F-7 subagents | Subagent | P-3, P-10 |
-| F-8 new / past / projects | New session, Past sessions, Projects | P-1, P-2, P-10 |
+| F-8 new / past / projects / schedules | New session, Past sessions, Projects, Schedules | P-1, P-2, P-10 |
 | F-9 connection states | all | P-4, P-5, P-6, P-9 |
 | F-10 settings, demo mode | Settings | P-8, P-10, P-11, P-12 |
 
@@ -460,7 +462,7 @@ Long children page their history (the `history` endpoint) with the same
 auto-follow rule. Failed children show the failure reason above the transcript,
 not only in the parent's count.
 
-## 8. F-8 New session, past sessions, projects
+## 8. F-8 New session, past sessions, projects, schedules
 
 - **New session:** working directory (Home, recents, free-text path with
   validation), model picker, optional name, optional prompt, and *Start*.
@@ -479,6 +481,18 @@ not only in the parent's count.
   linked sessions), create, delete. Timeline is out of scope (the web client's
   own note). Editing milestones from the phone is worth having because it is the
   one project operation a decision makes urgent.
+- **Schedules:** read-only, and honest about it — the machine-wide armed index:
+  every conversation carrying wakes and monitors in one list, answered from the
+  derived indexes with no runtime running. The three answers that must never
+  collapse into one another are *nothing is armed*, *the index could not be
+  read* (a first-class state of its own, never an empty list) and *the list is
+  bounded* ("Showing 200 of 205" rather than implying completeness). A wake row
+  carries its message, when it next fires and its cadence; a wake the supervisor
+  has given up on says `stale` instead of promising a clock, a parked
+  conversation says its wakes resume after its next turn, and a conversation no
+  longer on the machine says so. A monitor row carries its due-or-state slot and
+  the store's own health sentence. Arming, editing and cancelling stay on the
+  terminal and the desktop until the write half ships.
 
 ## 9. F-9 Connection states: rotation, loss, re-auth, refusals
 

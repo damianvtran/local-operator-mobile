@@ -1,0 +1,39 @@
+{
+  "provenance": {
+    "kind": "live",
+    "relay_ref": "local-operator 5e59e0cd",
+    "captured_at": "2026-10-08",
+    "how": "captured from an isolated daemon \u2014 `build_app(MobileDaemon)` served by uvicorn on loopback, with `scripts/probe_isolation` re-homing HOME and LOCAL_OPERATOR_CONFIG_DIR before any local_operator import \u2014 at local-operator merge 5e59e0cd06 (the `/api/schedules` route's own merge); fresh empty config dir; login and GET are the real HTTP stack's",
+    "redactions": "the isolated home is shown as ~ (store seeds are fixture-owned paths); the portal password appears nowhere; the sandbox's temp path appears nowhere"
+  },
+  "request": {
+    "method": "GET",
+    "path": "/api/schedules"
+  },
+  "status": 200,
+  "headers": {
+    "content-type": "application/json"
+  },
+  "body": {
+    "wakes": {
+      "entries": [],
+      "generated_at": 1791491503293,
+      "total": 0,
+      "truncated": false,
+      "supervisor": {
+        "supported": true,
+        "running": false,
+        "detail": "this store is outside the real home; launchd cannot supervise it",
+        "verifiable": false
+      },
+      "read_error": false
+    },
+    "monitors": {
+      "entries": [],
+      "generated_at": 1791491503310,
+      "total": 0,
+      "truncated": false,
+      "read_error": false
+    }
+  }
+}
