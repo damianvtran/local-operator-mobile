@@ -40,6 +40,28 @@
 			 * that will not be visible at listing scale, and a 1024x500 crop of a
 			 * 390-wide phone UI is exactly that failure.
 			 */
+			/* The vendored faces. Without a @font-face, `font-family: "Figtree"`
+			 * below matches nothing on a machine where the font is not installed,
+			 * and the headline silently falls back to the platform sans — wrong type
+			 * scale, wrong line breaks, in an asset whose whole point is exactness.
+			 * design/preview/index.html loads its faces for the same reason; this
+			 * one is self-contained, pointing at the woff2s committed in design/. */
+			@font-face {
+				font-family: "Figtree";
+				src: url("../../fonts/figtree-variable-latin.woff2") format("woff2");
+				font-weight: 300 900;
+				font-style: normal;
+				font-display: block;
+			}
+
+			@font-face {
+				font-family: "JetBrains Mono";
+				src: url("../../fonts/jetbrains-mono-variable.woff2") format("woff2");
+				font-weight: 100 800;
+				font-style: normal;
+				font-display: block;
+			}
+
 			* {
 				box-sizing: border-box;
 				margin: 0;
