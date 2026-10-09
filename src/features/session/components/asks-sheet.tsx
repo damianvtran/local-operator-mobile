@@ -12,15 +12,20 @@ import { Pressable, Text, TextInput, View } from "react-native";
 
 import type { AskQuestion, PendingAsk, SessionSummary } from "@/contracts";
 import {
+	type AskOther,
 	answeredPairs,
+	askResponseBody,
 	askStateLine,
 	asksPopulationSignature,
 	asksReadFailureLine,
 	askToneInk,
 	durationLabel,
+	EMPTY_OTHER,
+	hasOtherDoor,
 	isAnswerable,
 	orderedForDisplay,
 	outstandingAsks,
+	questionIsAnswered,
 	questionsWaitingLabel,
 	READ_FAILED,
 	readFailureNotice,
@@ -36,6 +41,8 @@ import {
 import type { RelayEndpoints } from "@/relay";
 import {
 	askFieldId,
+	askOtherFieldId,
+	askOtherId,
 	askQuestionId,
 	askRowId,
 	CONTROL,
@@ -72,7 +79,10 @@ import { cx } from "@/ui/variants";
  * hold the answers anyway, and a form is what makes "you have answered 2 of 3"
  * visible. Answering advances the expansion to the next outstanding ask, which
  * is the walk §5.3 promises: one sitting clears asks from several conversations
- * without navigating.
+ * without navigating. And the form's free-text door is explicit: every
+ * non-secret question that offers options ends in the trailing `Other` row with
+ * its own input (design §5.0), so a reader can answer in their own words, not
+ * only with the offered options.
  *
  * NOTHING IS PERSISTED. The draft map lives in this component and dies with it —
  * that is the app's rule, not an omission (ADR 0005 §2: the queue's authority is
@@ -151,14 +161,18 @@ export type AsksSheetProps = {
 	onReadFailed?: (info: { drawn: number }) => void;
 };
 
-/** One question's control: a picker of consequence-carrying options, or a
- *  free-text/secret field. Mirrors `PendingCard`'s option row (§13: every
+/** One question's control: a picker of consequence-carrying options — ended by
+ *  the explicit `Other` row, the free-text door of design §5.0 (a requirement,
+ *  2026-10-05: every question accepts free text, not only the offered options)
+ *  — or a free-text/secret field. Mirrors `PendingCard`'s option row (§13: every
  *  option carries its consequence line) without reusing the component — that
  *  one is bound to the single-slot `PendingView`, and this form is per-ask. */
 const QuestionField = ({
 	question,
 	value,
+	other,
 	onChange,
+	onOtherChange,
 	disabled,
 }: {
 	question: AskQuestion;
@@ -166,7 +180,11 @@ const QuestionField = ({
 	 *  deliberate skip is a separate state, because an empty value IS an answer
 	 *  to the queue (the contract's spelling for "no answer"). */
 	value: string[];
+	/** The `Other` door's own record (`AskOther` in `asks.ts`): never folded into
+	 *  `value`, so a typed string cannot read back as an option tick. */
+	other: AskOther;
 	onChange: (next: string[]) => void;
+	onOtherChange: (next: AskOther) => void;
 	disabled: boolean;
 }) => {
 	const options = Array.isArray(question.options) ? question.options : [];
@@ -195,10 +213,15 @@ const QuestionField = ({
 			</View>
 		);
 	}
+	const door = hasOtherDoor(question);
 	return (
 		<View className="gap-1">
 			{options.map((option, index) => {
-				const on = chosen.has(option.label);
+				/* Single-select: the `Other` row and the option rows exclude each other
+				   (design §5.0's door), so while it is selected no option reads as
+				   chosen beside it. Multi-select: `Other` is additive, and the ticks
+				   stand on their own. */
+				const on = chosen.has(option.label) && (question.multi || !other.open);
 				/* The recommendation is an INDEX into `options` AS CARRIED (the
 				   runtime hoists the recommended option to 0 and states the
 				   position); a client that re-sorted and kept the index would mark
@@ -214,6 +237,9 @@ const QuestionField = ({
 						onPress={() => {
 							if (!question.multi) {
 								onChange([option.label]);
+								/* Choosing an option closes the door — the exclusion's card
+								   half — but its text stays for a mis-click. */
+								if (other.open) onOtherChange({ ...other, open: false });
 								return;
 							}
 							const next = new Set(chosen);
@@ -247,6 +273,62 @@ const QuestionField = ({
 			})}
 			{question.multi ? (
 				<Text className="text-meta text-ink-dim">choose any that apply</Text>
+			) : null}
+			{door ? (
+				/* THE EXPLICIT FREE-TEXT DOOR (design §5.0, core note
+				 *  `docs/design/ask-nonblocking.md`): every non-secret question that
+				 *  offers options ends in this trailing `Other` row, with its own
+				 *  input, so an answer the list did not offer is on the card rather
+				 *  than something the reader has to know. It is the same kind of choice
+				 *  as the rows above — same mark and ground on press — not a bare
+				 *  afterthought; what it composes is `asks.ts`'s `composedAnswer`. */
+				<Pressable
+					accessibilityRole={ROLE.radio}
+					accessibilityLabel="Other"
+					accessibilityHint="type your own answer"
+					accessibilityState={state({ selected: other.open, disabled })}
+					disabled={disabled}
+					onPress={() => {
+						/* A ticked multi-select `Other` unticks, as any checkbox does;
+						   the single-select radio re-selects rather than toggling off. */
+						if (question.multi && other.open) {
+							onOtherChange({ ...other, open: false });
+							return;
+						}
+						onOtherChange({ ...other, open: true });
+					}}
+					testID={askOtherId(String(question.id))}
+				>
+					<View
+						className={cx(
+							"rounded-sm border px-2 py-1.5",
+							other.open
+								? "border-accent-border bg-accent-muted"
+								: "border-control bg-surface",
+						)}
+					>
+						<Text className="text-body-sm text-ink">Other</Text>
+						{other.open ? null : (
+							<Text className="text-meta text-ink-dim">
+								type your own answer
+							</Text>
+						)}
+					</View>
+				</Pressable>
+			) : null}
+			{door && other.open ? (
+				<TextInput
+					className="min-h-11 rounded-sm border border-control bg-elevated px-3 text-body text-ink"
+					value={other.text}
+					onChangeText={(text) => onOtherChange({ open: true, text })}
+					editable={!disabled}
+					placeholder="Your answer"
+					// 16 pt or the OS zooms the whole page on focus, which moves
+					// every control the reader was about to press.
+					style={{ fontSize: 16 }}
+					accessibilityLabel={`Your own answer to: ${question.question}`}
+					testID={askOtherFieldId(String(question.id))}
+				/>
 			) : null}
 		</View>
 	);
@@ -290,19 +372,28 @@ const AskDetail = ({
 	 * with this expansion and dies when it collapses — see the module note. */
 	const [answers, setAnswers] = useState<Record<string, string[]>>({});
 	const [skipped, setSkipped] = useState<readonly string[]>([]);
+	/* The `Other` doors' own records, keyed by question id — card state beside
+	 * the draft, never derived from it (`AskOther` in `asks.ts` states why). */
+	const [others, setOthers] = useState<Record<string, AskOther>>({});
 
 	/* Whether every still-open question carries a usable cell. A question counts
-	 * as answered when it has a non-empty draft, or was explicitly skipped
-	 * (which is sent as the empty list the queue's own contract defines); a
-	 * whitespace-only text is not an answer. */
-	const filled = (id: string): boolean => {
+	 * as answered when its composition (option ticks plus the `Other` door) has a
+	 * non-empty value, or it was explicitly skipped (which is sent as the empty
+	 * list the queue's own contract defines); an open-but-empty `Other` is not an
+	 * answer — `questionIsAnswered` holds the rule once for the gate and the body
+	 * both (a whitespace-only text is not an answer). */
+	const filled = (question: AskQuestion): boolean => {
+		const id = String(question.id);
 		if (skipped.includes(id)) return true;
-		const cell = answers[id] ?? [];
-		return cell.some((value) => value.trim() !== "");
+		return questionIsAnswered(
+			question,
+			answers[id] ?? [],
+			others[id] ?? EMPTY_OTHER,
+		);
 	};
 	const complete =
 		openQuestions.length > 0 &&
-		openQuestions.every((question) => filled(String(question.id)));
+		openQuestions.every((question) => filled(question));
 
 	const disabled = !answerable || busy !== null;
 	/* Fields to draw: the open set while answerable, every question for an
@@ -320,16 +411,12 @@ const AskDetail = ({
 
 	if (answerable || expired) {
 		/* The atomic submit: one body for EVERY question of the ask (the queue
-		 * refuses a partial map), a skipped question riding as the empty list. */
-		const respondBody = () => {
-			const body: Record<string, string[]> = {};
-			for (const question of questions) {
-				const id = String(question.id);
-				if (skipped.includes(id)) body[id] = [];
-				else body[id] = (answers[id] ?? []).map((value) => value.trim());
-			}
-			return body;
-		};
+		 * refuses a partial map), a skipped question riding as the empty list.
+		 * Built by `asks.ts`'s ONE composition, so the `Other` door's typed text
+		 * rides the way the contract expects: a plain string in the question's
+		 * list — alone on a single-select, last on a multi-select. */
+		const respondBody = () =>
+			askResponseBody(questions, { answers, others, skipped });
 
 		return (
 			<View className="gap-2 pb-2 pt-1">
@@ -373,10 +460,14 @@ const AskDetail = ({
 							<QuestionField
 								question={question}
 								value={answers[id] ?? []}
-								disabled={disabled || isSkipped}
+								other={others[id] ?? EMPTY_OTHER}
 								onChange={(next) =>
 									setAnswers((current) => ({ ...current, [id]: next }))
 								}
+								onOtherChange={(next) =>
+									setOthers((current) => ({ ...current, [id]: next }))
+								}
+								disabled={disabled || isSkipped}
 							/>
 							{/* A 44 pt target, not a link: it is the only way to say
 							 *  "no answer to this question", and the queue needs every

@@ -700,10 +700,12 @@ export const IDENTIFIER_FAMILIES: readonly string[] = [
 	"ask-question-",
 	"ask-option-",
 	/* The queued-ask surfaces' parameterised identifiers (E2): one row per ask,
-	 *  one count chip per session row, one field per question. */
+	 *  one count chip per session row, one field per question, and the `Other`
+	 *  door plus its input (design §5.0's free-text door). */
 	"ask-row-",
 	"asks-badge-",
 	"ask-field-",
+	"ask-other-",
 	/* The find sheet's result rows: one per hit, keyed by the message the row
 	 *  will land on, so a flow (or the capture's press) reaches a specific hit
 	 *  without counting rows. */
@@ -1395,6 +1397,20 @@ export const asksBadgeId = (sessionId: string): string =>
  *  a flow can reach a question without counting controls. */
 export const askFieldId = (questionId: string): string =>
 	`ask-field-${questionId}`;
+
+/** The trailing `Other` row of one question's answer form — the explicit
+ *  free-text door (design §5.0, `docs/design/ask-nonblocking.md`: "the explicit
+ *  free-text door is the trailing `Other` row on every non-secret question, with
+ *  its own input"). Keyed by the question id like `askFieldId`, so a flow
+ *  reaches the door of a named question rather than counting rows. */
+export const askOtherId = (questionId: string): string =>
+	`ask-other-${questionId}`;
+
+/** The input the `Other` row opens. `ask-other-field-<qid>` sits inside the
+ *  `ask-other-` family by construction, so a flow that addresses the door
+ *  family also reaches its field. */
+export const askOtherFieldId = (questionId: string): string =>
+	`ask-other-field-${questionId}`;
 
 /** One row of the todos panel, by its position in the list. */
 export const todosRowId = (index: number): string => `todos-row-${index}`;

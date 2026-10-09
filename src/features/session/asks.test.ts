@@ -1,22 +1,27 @@
 import { describe, expect, it } from "vitest";
 
-import type { PendingAsk, SessionSummary } from "@/contracts";
+import type { AskQuestion, PendingAsk, SessionSummary } from "@/contracts";
 import {
 	answeredBySurface,
 	answeredPairs,
+	askResponseBody,
 	askStateLine,
 	asksPopulationSignature,
 	asksReadFailureLine,
 	askToneInk,
 	blockingPending,
+	composedAnswer,
 	dockAsk,
 	durationLabel,
+	EMPTY_OTHER,
+	hasOtherDoor,
 	headAsk,
 	isAnswerable,
 	isOutstanding,
 	orderedForDisplay,
 	outstandingAsks,
 	outstandingQuestions,
+	questionIsAnswered,
 	questionProgress,
 	questionsWaitingLabel,
 	READ_FAILED,
@@ -35,8 +40,10 @@ import { type RelayResponseFacts, relayErrorFromResponse } from "@/relay";
  * wire leads with the newest, and a bar that jumped to each arrival would move
  * under a thumb), whether the legacy mirrored card is still a blocking gate
  * (design §4's client rule N3: once `asks` is present, `kind === "ask"` is
- * not), and the unit split the manager of this round fixed (the bar counts
- * QUESTIONS, the badge counts ASKS).
+ * not), the unit split the manager of this round fixed (the bar counts
+ * QUESTIONS, the badge counts ASKS), and the `Other` door: where it stands,
+ * what its text does on a single- vs a multi-select question, and that an empty
+ * door is not an answer.
  */
 
 function ask(patch: Partial<PendingAsk> = {}): PendingAsk {
@@ -332,6 +339,172 @@ describe("unansweredQuestions", () => {
 			draft_question_ids: ["q2"],
 		});
 		expect(unansweredQuestions(row)).toEqual([]);
+	});
+});
+
+describe("the Other door (design §5.0)", () => {
+	/** One option question carrying only what the door reads. */
+	function question(patch: Partial<AskQuestion> = {}): AskQuestion {
+		return {
+			id: "q1",
+			question: "which?",
+			options: [
+				{ label: "safe", description: "keeps the data" },
+				{ label: "fast", description: "ships sooner" },
+			],
+			multi: false,
+			secret: false,
+			persist: false,
+			...patch,
+		};
+	}
+
+	it("stands on every non-secret option question, in both select modes", () => {
+		expect(hasOtherDoor(question())).toBe(true);
+		expect(hasOtherDoor(question({ multi: true }))).toBe(true);
+	});
+
+	it("is absent on a free-text-only question — its input is its only control", () => {
+		expect(hasOtherDoor(question({ options: [] }))).toBe(false);
+	});
+
+	it("is absent on a secret question — the masked field is its free-form entry", () => {
+		expect(hasOtherDoor(question({ secret: true, options: [] }))).toBe(false);
+		/* Secret questions carry no options today; the gate is on `secret` so a
+		 * future shape cannot smuggle the door in beside a credential. */
+		expect(hasOtherDoor(question({ secret: true }))).toBe(false);
+	});
+
+	describe("the composed answer", () => {
+		it("single-select: an open Other excludes the options — its text alone", () => {
+			expect(
+				composedAnswer(question(), ["safe"], {
+					open: true,
+					text: "  something else  ",
+				}),
+			).toEqual(["something else"]);
+		});
+
+		it("single-select: an empty open Other is not an answer", () => {
+			expect(
+				composedAnswer(question(), ["safe"], { open: true, text: "   " }),
+			).toEqual([]);
+		});
+
+		it("single-select: a closed Other leaves the option's label", () => {
+			expect(composedAnswer(question(), ["safe"], EMPTY_OTHER)).toEqual([
+				"safe",
+			]);
+		});
+
+		it("multi-select: Other is additive and last — the order the card draws", () => {
+			expect(
+				composedAnswer(question({ multi: true }), ["safe", "fast"], {
+					open: true,
+					text: "cheap",
+				}),
+			).toEqual(["safe", "fast", "cheap"]);
+		});
+
+		it("multi-select: an empty open Other contributes nothing; the ticks stay", () => {
+			expect(
+				composedAnswer(question({ multi: true }), ["safe"], {
+					open: true,
+					text: " ",
+				}),
+			).toEqual(["safe"]);
+		});
+
+		it("multi-select: a closed Other keeps its text out of the answer", () => {
+			expect(
+				composedAnswer(question({ multi: true }), ["safe"], {
+					open: false,
+					text: "cheap",
+				}),
+			).toEqual(["safe"]);
+		});
+
+		it("free-text-only: the cell is the answer, door or none", () => {
+			expect(
+				composedAnswer(question({ options: [] }), ["typed"], EMPTY_OTHER),
+			).toEqual(["typed"]);
+		});
+	});
+
+	describe("the Answer gate", () => {
+		it("opens on a typed Other and stays shut on an empty one", () => {
+			expect(
+				questionIsAnswered(question(), [], { open: true, text: "x" }),
+			).toBe(true);
+			expect(
+				questionIsAnswered(question(), [], { open: true, text: "  " }),
+			).toBe(false);
+		});
+
+		it("keeps reading a plain option tick as answered", () => {
+			expect(questionIsAnswered(question(), ["safe"], EMPTY_OTHER)).toBe(true);
+		});
+	});
+
+	it("walks the card's own sequence: option → Other → type → option → Other", () => {
+		/* The transitions the sheet performs, read through the ONE composition —
+		 * including the two the desktop card's regressions named: an option press
+		 * closes the door but KEEPS its text, and coming back restores it. */
+		const q = question();
+		/* 1. An option press: the label is the answer. */
+		expect(composedAnswer(q, ["safe"], EMPTY_OTHER)).toEqual(["safe"]);
+		/* 2. Pressing Other opens it; empty and open is NOT an answer. */
+		expect(questionIsAnswered(q, ["safe"], { open: true, text: "" })).toBe(
+			false,
+		);
+		/* 3. Typing: the text alone — the exclusion. */
+		expect(
+			composedAnswer(q, ["safe"], { open: true, text: "neither" }),
+		).toEqual(["neither"]);
+		/* 4. An option press closes the door, its text kept for a mis-click. */
+		const closed = { open: false, text: "neither" };
+		expect(composedAnswer(q, ["fast"], closed)).toEqual(["fast"]);
+		/* 5. Coming back restores the typed text. */
+		expect(composedAnswer(q, ["fast"], { ...closed, open: true })).toEqual([
+			"neither",
+		]);
+	});
+
+	describe("the whole-ask body (ask_respond)", () => {
+		it("carries the typed Other text as a plain string — alone, or last on a multi", () => {
+			const body = askResponseBody(
+				[question({ id: "q1" }), question({ id: "q2", multi: true })],
+				{
+					answers: { q1: ["safe"], q2: ["fast"] },
+					others: {
+						q1: { open: true, text: "another plan" },
+						q2: { open: true, text: "and cheap" },
+					},
+					skipped: [],
+				},
+			);
+			expect(body).toEqual({
+				q1: ["another plan"],
+				q2: ["fast", "and cheap"],
+			});
+		});
+
+		it("keeps every question id present, a skip as the empty list", () => {
+			const body = askResponseBody(
+				[question({ id: "q1" }), question({ id: "q2" })],
+				{ answers: { q1: ["safe"] }, others: {}, skipped: ["q2"] },
+			);
+			expect(body).toEqual({ q1: ["safe"], q2: [] });
+		});
+
+		it("trims what travels", () => {
+			const body = askResponseBody([question({ id: "q1" })], {
+				answers: {},
+				others: { q1: { open: true, text: "  spaced  " } },
+				skipped: [],
+			});
+			expect(body.q1).toEqual(["spaced"]);
+		});
 	});
 });
 

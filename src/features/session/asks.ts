@@ -331,6 +331,121 @@ export function unansweredQuestions(row: PendingAsk): AskQuestion[] {
 	return questions.filter((q) => !taken.has(String(q?.id || "")));
 }
 
+/** The `Other` door's own state for one question — whether it is the selected
+ *  row (single-select) or ticked (multi-select), and what its field holds,
+ *  UNTRIMMED.
+ *
+ *  Kept apart from the answer cell on purpose, the way the desktop card keeps
+ *  it: a typed string living in the same array as the option labels reads back
+ *  as an option — typing `No, thanks` beside an option `No` would light it up —
+ *  and the cell is trimmed on its way to the wire, so a field fed from the cell
+ *  would drop the space between two typed words. The field keeps the reader's
+ *  text exactly; only what travels is trimmed. */
+export interface AskOther {
+	open: boolean;
+	text: string;
+}
+
+/** No door opened. Shared so a lookup miss never mints a new object per render. */
+export const EMPTY_OTHER: AskOther = { open: false, text: "" };
+
+/** Whether this question ends in the explicit `Other` row — the free-text door
+ *  of design §5.0 (`docs/design/ask-nonblocking.md`): "the explicit free-text
+ *  door is the trailing `Other` row on every non-secret question, with its own
+ *  input."
+ *
+ *  False in the two cases the note itself names, so the condition and its
+ *  reasons live in one place:
+ *
+ *   - a **free-text-only** question — "its input is the question's only
+ *     control and is shown open", so a row that merely reveals the only
+ *     possible input would be ceremony;
+ *   - a **secret** question — its masked field IS its free-form entry, and a
+ *     plain box beside a credential is the failure the secret-ask rules exist
+ *     for. The gate is on `secret`, not on an empty option list: secret
+ *     questions carry no options today, and the door must stay out if one ever
+ *     arrives with them. */
+export function hasOtherDoor(question: AskQuestion): boolean {
+	const options = Array.isArray(question.options) ? question.options : [];
+	return !question.secret && options.length > 0;
+}
+
+/** The values one question's answer will carry, from its option ticks and its
+ *  `Other` door — the ONE composition rule, read by both the submit's
+ *  enabled-state and the body it sends (two copies is how a button and its
+ *  body come to disagree about what an answer is).
+ *
+ *  The ask family's shipped behaviour, which this mirrors (the TUI picker's
+ *  `_chosen` and the desktop card's `askCellWith`):
+ *
+ *   - **Single-select: `Other` and the options exclude each other.** An open
+ *     `Other` makes the answer its typed text ALONE — whatever was chosen
+ *     before — so an option press is what switches the answer back (the card
+ *     runs that half: choosing an option closes the row, and its text is kept
+ *     for a mis-click).
+ *   - **Multi-select: `Other` is ADDITIVE and goes LAST**, the order the card
+ *     draws: the ticks keep their order and the typed text appends after them.
+ *   - **An empty `Other` is not an answer, in either mode.** Blank text
+ *     contributes nothing — not an empty string — so a single-select question
+ *     whose only selection is an empty `Other` stays incomplete and `Answer`
+ *     stays disabled, while a multi-select keeps its ticks. */
+export function composedAnswer(
+	question: AskQuestion,
+	ticks: readonly string[],
+	other: AskOther,
+): string[] {
+	if (!hasOtherDoor(question)) return [...ticks];
+	const entry = other.open ? other.text.trim() : "";
+	if (!question.multi) {
+		if (!other.open) return [...ticks];
+		return entry === "" ? [] : [entry];
+	}
+	return entry === "" ? [...ticks] : [...ticks, entry];
+}
+
+/** Whether this question carries a usable cell: any non-empty value after
+ *  composition. The sheet's `Answer` gate reads this for every still-open
+ *  question — and a selected-but-empty `Other` is exactly what it refuses, so
+ *  the wire never carries emptiness dressed as an answer. */
+export function questionIsAnswered(
+	question: AskQuestion,
+	cell: readonly string[],
+	other: AskOther,
+): boolean {
+	return composedAnswer(question, cell, other).some(
+		(value) => value.trim() !== "",
+	);
+}
+
+/** The whole-ask `ask_respond` body: one entry per question id, a skipped
+ *  question riding as the empty list the queue's contract defines — never a
+ *  missing key, because the wire refuses a partial map. Extracted from the
+ *  sheet so the composition has a seam the Node tests can READ (the sheet
+ *  itself cannot load there): the sheet renders it, the tests pin it. */
+export function askResponseBody(
+	questions: readonly AskQuestion[],
+	drafts: {
+		answers: Record<string, string[]>;
+		others: Record<string, AskOther>;
+		skipped: readonly string[];
+	},
+): Record<string, string[]> {
+	const body: Record<string, string[]> = {};
+	for (const question of questions) {
+		const id = String(question.id);
+		if (drafts.skipped.includes(id)) {
+			body[id] = [];
+			continue;
+		}
+		body[id] = composedAnswer(
+			question,
+			drafts.answers[id] ?? [],
+			drafts.others[id] ?? EMPTY_OTHER,
+		).map((value) => value.trim());
+	}
+	return body;
+}
+
 /** The whole response as one line per question — what a response card shows
  *  behind its disclosure. A secret answer holds the KEY the runtime stored
  *  (`[<key>]`), never the value: this renders that key, so the card can say
