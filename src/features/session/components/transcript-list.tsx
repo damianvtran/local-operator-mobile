@@ -11,6 +11,7 @@ import type { TranscriptEntry } from "@/contracts";
 import { anchorBottomVisible } from "@/features/session/completion-visibility";
 import { TranscriptRow } from "@/features/session/components/transcript-row";
 import { TurnBar } from "@/features/session/components/turn-bar";
+import { revealTarget } from "@/features/session/find";
 import { scrollAnchorFromHook } from "@/features/session/scroll-hook";
 import {
 	condensePlan,
@@ -20,6 +21,7 @@ import {
 } from "@/features/session/turn-condensing";
 import { windowPolicy } from "@/features/session/windowing";
 import { completionAnchorId, transcriptRowId } from "@/ui/a11y";
+import { cx } from "@/ui/variants";
 
 /**
  * The transcript: virtualised, tail-following, and never blank.
@@ -75,6 +77,16 @@ export type TranscriptListProps = {
 	/** Fired when "the anchor row's bottom is inside this list's viewport"
 	 *  flips. The list owns the measurements; the screen owns the meaning. */
 	onAnchorVisible?: (visible: boolean) => void;
+	/** The landed find hit: its row wears the selection wash while it is the
+	 *  current hit, and nothing otherwise. A colour wash alone is never the
+	 *  only signal — the find bar's `n of m` and the results list's selected
+	 *  row state the same fact in words. */
+	highlightId?: string | null;
+	/** A jump request from the find session: reveal this entry — open the
+	 *  condensed turn that hides it (the desktop's expand-first walk), scroll
+	 *  to it, and let the wash say where it is. `nonce` distinguishes two
+	 *  landings on the same id (stepping wraps), so a repeat still re-runs. */
+	reveal?: { id: string; nonce: number } | null;
 	testID: string;
 };
 
@@ -123,6 +135,8 @@ export const TranscriptList = ({
 	header,
 	anchorId = null,
 	onAnchorVisible,
+	highlightId = null,
+	reveal = null,
 	testID,
 }: TranscriptListProps) => {
 	const listRef = useRef<FlatList<TranscriptItem>>(null);
@@ -294,6 +308,99 @@ export const TranscriptList = ({
 		recompute();
 	}, [sessionId, recompute]);
 
+	/* ------------------------------------------------------------ the find jump --
+	 *
+	 * A reveal is TWO steps when the target is inside a condensed turn: open
+	 * the turn, then scroll once the plan re-emits the row. Opening changes the
+	 * plan, and scrolling before that would aim at an index that is about to
+	 * move — the same reason the desktop's reveal opens the collapse on the way
+	 * to a hit. The pending id is a ref because it is consumed by the plan
+	 * effect, not rendered.
+	 *
+	 * `nonce` is the caller's key, not the id: stepping wraps onto the SAME
+	 * message when there is one hit, and a repeat must still re-run — the
+	 * screen bumps the nonce on every landing.
+	 */
+	const pendingRevealRef = useRef<string | null>(null);
+	const revealNonceRef = useRef(0);
+	const revealTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+	const planRef = useRef(plan);
+	planRef.current = plan;
+
+	const revealToIndex = useCallback((index: number) => {
+		// A jump is the reader leaving the tail: following the next frame would
+		// yank them off the message they just landed on.
+		atTail.current = false;
+		listRef.current?.scrollToIndex({
+			index,
+			viewPosition: 0.3,
+			animated: false,
+		});
+	}, []);
+
+	const onScrollToIndexFailed = useCallback(
+		(info: { index: number; averageItemLength: number }) => {
+			const list = listRef.current;
+			if (list === null) return;
+			// Land near the target using what the list knows (its average row),
+			// then ask again for the exact index once the rows around it have
+			// mounted and been measured — the documented recovery for a
+			// variable-height list with no `getItemLayout`.
+			list.scrollToOffset({
+				offset: Math.max(0, info.averageItemLength * info.index),
+				animated: false,
+			});
+			if (revealTimerRef.current !== null) {
+				clearTimeout(revealTimerRef.current);
+			}
+			revealTimerRef.current = setTimeout(() => {
+				revealTimerRef.current = null;
+				revealToIndex(info.index);
+			}, 75);
+		},
+		[revealToIndex],
+	);
+
+	useEffect(
+		() => () => {
+			if (revealTimerRef.current !== null) {
+				clearTimeout(revealTimerRef.current);
+			}
+		},
+		[],
+	);
+
+	useEffect(() => {
+		if (reveal === null || reveal.nonce === revealNonceRef.current) return;
+		revealNonceRef.current = reveal.nonce;
+		const target = revealTarget(planRef.current, reveal.id);
+		if (target === null) return;
+		if (target.kind === "item") {
+			revealToIndex(target.index);
+			return;
+		}
+		pendingRevealRef.current = reveal.id;
+		setReaderExpanded((current) => {
+			if (current.has(target.turnKey)) return current;
+			const next = new Set(current);
+			next.add(target.turnKey);
+			return next;
+		});
+	}, [reveal, revealToIndex]);
+
+	// The second half of the expand-first walk: once the opened turn's rows are
+	// back in the plan, scroll to the one the reader asked for.
+	useEffect(() => {
+		const id = pendingRevealRef.current;
+		if (id === null) return;
+		const index = plan.items.findIndex(
+			(item) => item.kind === "entry" && item.id === id,
+		);
+		if (index < 0) return;
+		pendingRevealRef.current = null;
+		revealToIndex(index);
+	}, [plan, revealToIndex]);
+
 	/* Anchors and frames change outside scroll events too (a new frame appends
 	 * rows; the attention moves to a new anchor). The rule reads the body —
 	 * `recompute` alone — while these deps are the EVENTS that must re-ask the
@@ -379,12 +486,31 @@ export const TranscriptList = ({
 			) : (
 				/* The measuring wrapper: one `onLayout` per row is what makes the
 				 * anchor's position knowable at all in a virtualised list that refuses
-				 * fixed row heights. It adds no styling and no size of its own. */
+				 * fixed row heights. It adds no styling and no size of its own —
+				 * except the find wash, which is a background on THIS box so it spans
+				 * the row's full bleed without touching any kind's own treatment. */
 				<View
 					onLayout={(event) =>
 						measureRow(item.id, event.nativeEvent.layout.height)
 					}
+					className={cx(
+						item.id === highlightId ? "bg-row-selected" : undefined,
+					)}
 				>
+					{/*
+					 * The find hit's own edge. The wash alone is `row-selected` on the row's
+					 * ground — a ~1.0x luminance step the kit's own contrast contract calls
+					 * out, and invisible for a right-aligned bubble that paints over most of
+					 * it — so the landed row also carries a 2 px accent bar at the list's
+					 * left edge: the same accent-edge motif the user bubble and the
+					 * subagent rows already wear, and a signal that is not colour alone.
+					 * Absolutely positioned so a landing shifts no row's geometry. */}
+					{item.id === highlightId ? (
+						<View
+							className="absolute bottom-0 left-0 top-0 w-0.5 bg-accent"
+							aria-hidden
+						/>
+					) : null}
 					<TranscriptRow
 						entry={item.entry}
 						streaming={streamingRowId !== null && item.id === streamingRowId}
@@ -410,6 +536,7 @@ export const TranscriptList = ({
 			onCancelTurn,
 			anchorId,
 			measureRow,
+			highlightId,
 		],
 	);
 
@@ -424,6 +551,7 @@ export const TranscriptList = ({
 			onScroll={onScroll}
 			scrollEventThrottle={16}
 			onContentSizeChange={onContentSizeChange}
+			onScrollToIndexFailed={onScrollToIndexFailed}
 			// Keyboard stays open while scrolling: the reader is scrolling to read the
 			// answer to what they just typed.
 			keyboardShouldPersistTaps="handled"

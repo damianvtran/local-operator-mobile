@@ -10,9 +10,10 @@ import {
 	View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Svg, { Defs, LinearGradient, Rect, Stop } from "react-native-svg";
 import { ScopedVariables } from "uniwind";
 
-import { CONTROL, ROLE } from "@/ui/a11y";
+import { CONTROL, ROLE, SURFACE } from "@/ui/a11y";
 import { useReducedMotion, useTokenColor } from "@/ui/appearance";
 import { Heading } from "@/ui/components/heading";
 import { IconButton } from "@/ui/components/icon-button";
@@ -25,6 +26,7 @@ import { effectiveDuration, parseCubicBezier } from "@/ui/motion";
 import { useTextScale } from "@/ui/text-scale-provider";
 import { DURATIONS, EASINGS } from "@/ui/tokens.gen";
 import {
+	cx,
 	SHEET_DETENTS,
 	SHEET_SURFACE_CLASS,
 	type SheetDetent,
@@ -44,6 +46,28 @@ const CHROME_SEED_HEADER = 64;
 const CHROME_SEED_FOOTER = 112;
 /** The body never collapses to nothing, however tall the reader's type is. */
 const MIN_CONTENT_HEIGHT = 120;
+
+/**
+ * The cut-edge fade's height, in pt — the markdown table's own band width.
+ *
+ * WHY IT EXISTS (design D63-1): at 200 % on a 320 pt phone the sheet's fixed
+ * chrome left a ~145 pt body, and the second result row was cut to a 5 pt
+ * strip of ascender tops a hair above the pinned footer with NO cue between —
+ * a partially drawn row reads as a rendering fault, not as content. The band
+ * paints the sheet's own ground, transparent at the content edge and solid at
+ * the footer edge, so a cut row fades INTO the chrome: the standard "there is
+ * more below" of the app's own table scrollers. It is drawn only while that
+ * is true (the body overflows and is not scrolled to its end).
+ */
+const SHEET_BODY_FADE = 24;
+
+/**
+ * Gradient ids must be unique per instance (two sheets can share one document,
+ * and `url(#…)` resolves to the first id in it). A module counter, like the
+ * markdown table's fades: the id must be stable across re-renders — a
+ * recomputed id would drop the fill mid-frame.
+ */
+let sheetFadeSeq = 0;
 
 /**
  * A bottom sheet: bottom-anchored, never centred — a centred dialog on a phone is
@@ -190,6 +214,25 @@ export const Sheet = ({
 		fraction === null
 			? undefined
 			: Math.max(MIN_CONTENT_HEIGHT, Math.round(capHeight * fraction) - chrome);
+	/* The body's scroll facts collapse to ONE boolean ("there is more below"):
+	 * the raw numbers live in a ref because a state update per scroll tick would
+	 * re-render the sheet's whole subtree to move a gradient; `syncBodyCue` is
+	 * the only writer of the state, and it is called only from the ScrollView's
+	 * own handlers. */
+	const scrollFacts = useRef({ contentH: 0, viewportH: 0, y: 0 });
+	const [bodyCue, setBodyCue] = useState(false);
+	const syncBodyCue = () => {
+		const { contentH, viewportH, y } = scrollFacts.current;
+		setBodyCue(
+			viewportH > 0 && contentH > viewportH + 1 && y + viewportH < contentH - 2,
+		);
+	};
+	const fadeId = useRef("");
+	if (fadeId.current === "") {
+		sheetFadeSeq += 1;
+		fadeId.current = `sheet-body-fade-${sheetFadeSeq}`;
+	}
+	const ground = useTokenColor("elevated");
 	/* A modal that mounts while another is up stands down rather than painting a
 	 *  second full-viewport surface over it — the rule and its reasoning are in
 	 *  `@/ui/modal-stack`, and the registration lives here because this is where the
@@ -297,7 +340,16 @@ export const Sheet = ({
 									setHeaderHeight(event.nativeEvent.layout.height)
 								}
 							>
-								<Heading level={2} className="flex-1 text-title text-ink">
+								<Heading
+									level={2}
+									className="flex-1 text-title text-ink"
+									/* ONE LINE, the app's truncation idiom (36 call sites, the rows
+									 * themselves included): at 200 % on a 320 pt phone the WRAPPED
+									 * title was the sheet's single biggest chrome block — 81 pt of a
+									 * 525 pt surface (design D63-1) — and a single-line title that
+									 * ellipsizes keeps its full accessible name. */
+									numberOfLines={1}
+								>
 									{title}
 								</Heading>
 								<IconButton
@@ -323,12 +375,37 @@ export const Sheet = ({
 								contentContainerStyle={{
 									paddingBottom: footer === undefined ? 24 + insets.bottom : 16,
 								}}
+								/* The three readings the cut-edge fade is earned from (its own
+								 *  comment on `syncBodyCue`): the viewport, the content, and the scroll
+								 *  position. A ref, not state — the state they collapse to is the one
+								 *  boolean below. */
+								onLayout={(event) => {
+									scrollFacts.current.viewportH =
+										event.nativeEvent.layout.height;
+									syncBodyCue();
+								}}
+								onContentSizeChange={(_width, height) => {
+									scrollFacts.current.contentH = height;
+									syncBodyCue();
+								}}
+								onScroll={(event) => {
+									scrollFacts.current.y = event.nativeEvent.contentOffset.y;
+									syncBodyCue();
+								}}
+								scrollEventThrottle={16}
 							>
 								{children}
 							</ScrollView>
 							{footer === undefined ? null : (
 								<View
-									className="px-4 pt-3"
+									className={cx(
+										"px-4 pt-3",
+										/* The divider is the cut region's CLOSE, paired with the fade below:
+										 * the fade fades the body's last partial row into the surface, and
+										 * the hairline traces where content stops being scrollable — the
+										 * pair is the boundary cue design D63-1 asked for. */
+										"border-t border-hairline",
+									)}
 									onLayout={(event) =>
 										setFooterHeight(event.nativeEvent.layout.height)
 									}
@@ -337,6 +414,56 @@ export const Sheet = ({
 									{footer}
 								</View>
 							)}
+							{footer !== undefined && footerHeight > 0 && bodyCue ? (
+								/* The cut-edge cue (design D63-1): a band of the sheet's own ground
+								 *  over the bottom of the scrolling body, transparent at the content
+								 *  edge and solid at the footer edge, so a partially drawn row reads as
+								 *  "more below" instead of as a rendering fault. Truthful by
+								 *  construction: shown only while the body overflows and is not
+								 *  scrolled to its end. */
+								<View
+									pointerEvents="none"
+									aria-hidden
+									testID={SURFACE.sheetBodyFade}
+									style={{
+										position: "absolute",
+										left: insets.left,
+										right: insets.right,
+										bottom: footerHeight,
+										height: SHEET_BODY_FADE,
+									}}
+								>
+									<Svg width="100%" height="100%">
+										<Defs>
+											<LinearGradient
+												id={fadeId.current}
+												x1="0%"
+												y1="0%"
+												x2="0%"
+												y2="100%"
+											>
+												<Stop
+													key="near"
+													offset="0"
+													stopColor={ground}
+													stopOpacity={0}
+												/>
+												<Stop
+													key="far"
+													offset="1"
+													stopColor={ground}
+													stopOpacity={1}
+												/>
+											</LinearGradient>
+										</Defs>
+										<Rect
+											width="100%"
+											height="100%"
+											fill={`url(#${fadeId.current})`}
+										/>
+									</Svg>
+								</View>
+							) : null}
 						</Animated.View>
 					</View>
 				</ScopedVariables>
