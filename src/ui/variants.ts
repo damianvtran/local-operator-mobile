@@ -69,15 +69,27 @@ export type ButtonSize = "sm" | "md" | "lg" | "icon" | "fab";
 /**
  * Sizes, from components.md § 2. `sm` is the one place the 44pt floor is met by
  * slop rather than by the box, and it is limited to dense chrome.
+ *
+ * The heights are MINIMUM heights, not fixed ones (design round 2, D69-5). At
+ * 200 % text the label scales but a fixed box would not: a wrapped two-line
+ * `label` is ~72 pt against the 44 pt `md` pill, so it overhung the fill by
+ * ~14 pt top and bottom — unclipped, with the border crossing its own text —
+ * measured on this slice's cells, the first to render these buttons at that
+ * scale. `min-h-*` keeps the designed height whenever the label fits — every
+ * 100 % cell in the captured matrix — and lets the box grow with the wrapped
+ * label at large scales instead of hiding the overflow — the same shape
+ * `screen.tsx`'s header uses (`min-h-14`, not `h-14`) and the same class the
+ * design spec's source implementation already carried (`min-h-11`). `icon` and
+ * `fab` keep fixed boxes: they carry no label, so nothing can wrap.
  */
 const BUTTON_SIZES: Record<ButtonSize, string> = {
-	sm: "h-8 px-3 gap-1.5",
-	md: "h-11 px-4 gap-2",
+	sm: "min-h-8 px-3 gap-1.5",
+	md: "min-h-11 px-4 gap-2",
 	// `lg` is 50pt (`tokens.json` size.controls.lg.height), the one height that is
-	// not on the 4pt scale, so no `h-*` step exists for it. HAND-WRITTEN: changing
-	// the token regenerates nothing here, and `BUTTON_VISUAL_HEIGHT.lg` below must
-	// move with it.
-	lg: "h-[50px] px-6 gap-2.5",
+	// not on the 4pt scale, so no numeric `min-h-*` step exists for it. HAND-WRITTEN:
+	// changing the token regenerates nothing here, and `BUTTON_VISUAL_HEIGHT.lg`
+	// below must move with it.
+	lg: "min-h-[50px] px-6 gap-2.5",
 	icon: "h-11 w-11",
 	fab: "h-14 w-14",
 };

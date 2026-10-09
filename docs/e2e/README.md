@@ -77,7 +77,7 @@ the three answer different questions:
 | `notMeasurableCells` | cells that did NOT, each with its reasons. A finding about the harness or the app. |
 | `declaredSkips` | cells whose state this head does not render yet, each with the work that owns it. NOT a gap, and NOT evidence. |
 
-One device and theme (`--devices iphone-15 --themes dark --scales 100`) plans 68
+One device and theme (`--devices iphone-15 --themes dark --scales 100`) plans 75
 cells on today's registry — 36 when the run below was taken — so that output is
 quoted from the run that produced it rather than re-derived from today's count:
 
