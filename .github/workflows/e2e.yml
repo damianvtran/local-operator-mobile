@@ -377,7 +377,7 @@ jobs:
         # fold's five S17 cells one more took it to 816 — a derived deadline of 816 x 3 s
         # = 40.8 min, ABOVE the 40 the sample had carried, so the bound moved to 45
         # rather than being left below the deadline. The checkpoint rail's four cells took
-        # it to 864 — 864 x 3 s = 43.2 min, still under the 45 with 1.8 min to spare
+        # it to 864 — 864 cells x 3 s = 43.2 min, still under the 45 with 1.8 min to spare
         # (named, not left to be discovered) — and 45 holds ~1.4x the measured cost
         # (864 x 2.24 s ≈ 32.3 min). A step bound the plan's own deadline can exceed
         # would fire on a healthy run and stop being a signal.
@@ -405,7 +405,7 @@ jobs:
         # BOUND DERIVED FROM THE CELL COUNT, not guessed. On run 37167390506 this
         # step audited 250 of the ci tier's 256 cells in 312 s — 1.25 s/cell, with
         # no FAIL row — so the tier as it stood then was 256 x 1.25 s = ~5.3 min. It
-        # plans 864 cells today (864 x 1.25 s = 1,080 s ≈ 18 min) and 25 gives ~1.39x
+        # plans 864 cells today (864 cells x 1.25 s = 1,080 s ≈ 18 min) and 25 gives ~1.39x
         # headroom over that — 20 had fallen to ~1.2x, thinner than this bound has ever
         # carried, and the fold's cells are what moved it; it moved 10 -> 15 with
         # the capture above when `CI_SCALES` gained the boundary step, and 15 -> 20 with
@@ -469,12 +469,12 @@ jobs:
     # 2 of the matrix's 19 declared profiles, and both `core` (5 profiles / 2592 cells) and
     # `full` (19 / 9504) were local or dispatched only. This job captures and audits `core`,
     # on the NIGHTLY schedule only, so the per-push path is untouched and the `ci` job keeps
-    # its own 45-minute capture bound rather than being stretched to fit a 98-minute one.
+    # its own 45-minute capture bound rather than being stretched to fit a 97-minute one.
     #
     # SIZED FROM THE MEASUREMENT, NOT FROM HOPE. The runner's own rate is 2.24 s/cell
     # (403 cells / 1209 frames in 903.1 s, run 37098393675, a plan of 403 cells then),
-    # which is also the number `docs/e2e/README.md` uses to say a `core` run is ~91
-    # minutes: 2592 x 2.24 s = 5,806 s.
+    # which is also the number `docs/e2e/README.md` uses to say a `core` run is ~97
+    # minutes: 2592 cells x 2.24 s = 5,806 s.
     # The plan this job holds is the one the capture prints before it renders anything, so
     # the bound is checked against THAT rather than against a table, and each plan is
     # pinned to the ref that printed it: at 85b2785 `--plan --tier core --consecutive`
@@ -497,10 +497,10 @@ jobs:
     # (`140 + 60 = 200 < 210`). The per-push steps carry the same relationship: capture
     # 45 against a derived 2592 s (43.2 min) and audit 25 against 864 x 1.25 s (18 min).
     # The audit runs at 1.25 s/cell (250 of the 256 cells the tier held then in 312 s, run
-    # 37167390506), so `core` is 2592 x 1.25 s = 3,240 s ≈ 54 min and its step bound is 60.
+    # 37167390506), so `core` is 2592 cells x 1.25 s = 3,240 s ≈ 54 min and its step bound is 60.
     # The job bound holds its parts, the invariant the other jobs in this file state:
-    # `install + export + capture 140 + audit 60 < 210`. This is a nightly job of ~98 min of
-    # capture and ~55 min of audit inside that bound; it does not run on a pull request.
+    # `install + export + capture 140 + audit 60 < 210`. This is a nightly job of ~97 min of
+    # capture and ~54 min of audit inside that bound; it does not run on a pull request.
     #
     # EXPECTED FIRST-RUN VERDICT: THIS JOB IS RED, AND THAT IS WHAT IT IS FOR. It has
     # never executed (schedule/dispatch only). A real local `--tier core --consecutive`
@@ -518,7 +518,7 @@ jobs:
     # every term reproduces). The head they were taken at (`15deac3`) planned 504 cells on
     # `ci` and 1512 on `core` — re-derived with `--plan` AT THAT REF, and NOT the 1092 this
     # sentence used to quote: 1092 is not any tier's plan at any ref the review derived
-    # (85b2785 264/858, 4649a08 884, 756a6af 910, 15deac3 504/1512, this head 876/2628), it
+    # (85b2785 264/858, 4649a08 884, 756a6af 910, 15deac3 504/1512, this head 864/2592), it
     # came in with the PR that wrote the paragraph, and a figure nothing prints is a figure
     # nobody can check. The plans at THIS head are in the SIZING note above, each with the
     # ref that prints it.

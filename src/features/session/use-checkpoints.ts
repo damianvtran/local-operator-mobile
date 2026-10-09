@@ -20,6 +20,14 @@ import type { RelayEndpoints } from "@/relay";
  * projection frames as they stream would be a second derivation beside the
  * journal's, and the wire has no per-frame checkpoint signal to follow.
  *
+ * THE SNAPSHOT CONSEQUENCE, named so it is not mistaken for a bug: a turn
+ * that completes while the reader is on the screen is not marked until the
+ * conversation is reopened (the desktop rail's own behaviour — parity, not
+ * a regression), and past the 45 s ceiling the last answer keeps painting —
+ * a slow scan's `building` pulse can outlive its poll. A refresh on
+ * completion settle is a possible follow-up lane, deliberately not built
+ * here.
+ *
  * THE FAILURES, TOLD APART (the rail's whole honesty story, `checkpoint-rail
  * .ts`): a read that FAILS with no manifest held reads as `unavailable` — no
  * claim either way, which is what an older relay's 404 must keep rendering

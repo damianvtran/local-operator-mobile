@@ -23,7 +23,7 @@ That figure is **load-dependent, and it is the one to quote**: `pnpm e2e:relay`
 against ~13 minutes on a quiet one. The README, `tools/lib/doc-commands.ts` and
 `tools/mock-relay/verify.ts` all state that single figure; if you change one,
 change all three. The app-build capture block — the other candidate for slowest —
-is bounded to a 136-cell sample: the whole declared cell list (68 cells on today's
+is bounded to a 144-cell sample: the whole declared cell list (72 cells on today's
 registry) at one device, one theme and two scales (`--devices iphone-15 --themes
 dark --scales 100,200`), so the gate can pass for the reason the block declares
 instead of by timing out. A command this
@@ -181,7 +181,7 @@ in `verify`'s readiness guard.
 # The sample is EXPLICIT and small, for §2's reason: the default (`core`) tier plans
 # 2592 cells, one frame each, which is ~97 minutes at the measured 2.24 s/cell and is
 # above the harness's own 120-frame confirmation threshold — so an un-narrowed run is
-# REFUSED without `--yes`, and even with it no documentation gate may spend 98 minutes
+# REFUSED without `--yes`, and even with it no documentation gate may spend 97 minutes
 # on one command. One phone, one theme, one scale is 72 frames, and it still proves what
 # this section is about: seeding is a property of `--relay`, not of the sample's size.
 # `web-build` is declared because the command reads `dist/`: without a build it does
@@ -824,7 +824,7 @@ Three tiers are declared in `matrix.ts`, and each says what it is:
 
 | tier | sample | cells | why |
 |---|---|---|---|
-| `ci` | every declared cell × `iphone-se`, `tablet-landscape` × both themes × scales 100, 135 and 200 | 864 | the per-push CI job's sample. The step is bound at 45 minutes — above the plan's own derived deadline (864 × 3 s = 43.2 min) — and the measured rate is 2.24 s/cell, so a 2592-cell `core` run cannot fit; this one lands ~32 minutes. It keeps the CELL axis whole — a state that is not captured is a state no review round can report on — and shrinks only the device, theme and scale axes, each to what its check needs: the narrowest and widest viewports (the two sides of the 768 breakpoint), because the theme check compares a cell's dark and light frames, and the 100 %/135 %/200 % set — the pair the text-scale guard measures plus the BOUNDARY step the footer's layout breaks at, because an axis that brackets that band cannot see a defect inside it. |
+| `ci` | every declared cell × `iphone-se`, `tablet-landscape` × both themes × scales 100, 135 and 200 | 864 | the per-push CI job's sample. The step is bound at 45 minutes — above the plan's own derived deadline (864 cells × 3 s = 43.2 min) — and the measured rate is 2.24 s/cell, so a 2592-cell `core` run cannot fit; this one lands ~32 minutes. It keeps the CELL axis whole — a state that is not captured is a state no review round can report on — and shrinks only the device, theme and scale axes, each to what its check needs: the narrowest and widest viewports (the two sides of the 768 breakpoint), because the theme check compares a cell's dark and light frames, and the 100 %/135 %/200 % set — the pair the text-scale guard measures plus the BOUNDARY step the footer's layout breaks at, because an axis that brackets that band cannot see a defect inside it. |
 | `core` | the 5 `core` profiles, both themes, every scale | 2592 | the default, and the local sample the operator's rule asks for. |
 | `full` | all 19 profiles | 9504 | the dispatched/nightly sample. |
 

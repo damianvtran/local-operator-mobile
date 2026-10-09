@@ -364,7 +364,7 @@ export function describeDeviceCoverage(coverage: {
  * (3 phones x 4 scales + 2 tablets x 3 scales) — 72 x 2 x 18, the tier's 5 profiles —
  * and the CI job's capture step is bound at 45 minutes. Measured on the runner, that is
  * 2.24 s/cell: 403 cells in 903 s (run 37098393675, a plan of 403 cells then), so a core
- * run needs ~91 minutes. The `core` job's own bound is 125 (see `.github/workflows/e2e.yml`,
+ * run needs ~97 minutes. The `core` job's own bound is 140 (see `.github/workflows/e2e.yml`,
  * `web-audit-core`), which is above the 7776 s deadline its plan derives for itself. The
  * job's first real
  * run of this path
@@ -395,11 +395,11 @@ export function describeDeviceCoverage(coverage: {
  *     `CI_SCALES` below for why the boundary earns the third slot and 150% does
  *     not. 150% stays in `core`, which sweeps every scale.
  *
- * That is 73 cells x 2 themes x (2 profiles x 3 scales) = 876 cells, ~30 minutes at
+ * That is 72 cells x 2 themes x (2 profiles x 3 scales) = 864 cells, ~32 minutes at
  * the measured rate: inside the step bound (raised with it, see `CI_SCALES`) with
  * the same headroom it always carried. `core` and `full` are unchanged and stay the
- * local and dispatched samples, so the full 2628-cell `core` matrix and the
- * 9636-cell `full` matrix remain runnable — nothing is only reachable through CI.
+ * local and dispatched samples, so the full 2592-cell `core` matrix and the
+ * 9504-cell `full` matrix remain runnable — nothing is only reachable through CI.
  */
 export const CI_DEVICES: string[] = ["iphone-se", "tablet-landscape"];
 
@@ -417,15 +417,15 @@ export const CI_DEVICES: string[] = ["iphone-se", "tablet-landscape"];
  * sweeps every scale, so nothing is lost by composing the two sets differently.
  *
  * WHAT IT COSTS, because it is NOT free and the two are one decision. Three scales on
- * both CI profiles is 876 cells, +50 % over the two-scale 584, so the per-push capture
+ * both CI profiles is 864 cells, +50 % over the two-scale 576, so the per-push capture
  * and audit bounds in `.github/workflows/e2e.yml` were raised with it — most recently to
  * capture 45 / audit 25 / job 80. That is this slice's ten cells (nine lifecycle surfaces
  * and the pane's long-press menu) on top of the base the branch was cut from, plus the
  * four cells upstream landed while it was open, plus the find slice's five cells (four
  * find states and the caveat) and the schedules slice's five S17 cells (the armed
- * index's five states): the cell list is 73 and the sample is 876, both re-derived from
+ * index's five states): the cell list is 72 and the sample is 864, both re-derived from
  * this head's own `--plan` rather than scaled — still inside the 45-minute capture bound
- * (876 x 3 s = 43.8 min). A bound that fires every run stops being a signal, so
+ * (864 cells x 3 s = 43.2 min). A bound that fires every run stops being a signal, so
  * this list and that bound have to move together: reverting the bounds without
  * reverting this list makes the job red, and reverting this list without the bounds
  * wastes the budget it was sized for. */

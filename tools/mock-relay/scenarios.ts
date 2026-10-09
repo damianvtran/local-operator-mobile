@@ -1519,7 +1519,7 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 
 	add(
 		"checkpoints-ready",
-		"The rail's common state: a settled conversation whose manifest marks every turn — user dashes and completed ticks, all loaded by the device.",
+		"The rail's common state: a settled conversation whose manifest marks every turn — user dashes and completed ticks (uniform compact dashes where the track is too dense for glyphs), all loaded by the device.",
 		["S5/rail"],
 		() => ({
 			projections: {
@@ -1529,14 +1529,16 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 				),
 			},
 			history: fix.record("checkpoints-ready-history")
-				.entries as TranscriptEntry[],
+				.entries as unknown as TranscriptEntry[],
 			checkpoints: checkpointsFor("checkpoints-ready", (body) => {
 				/* The wire's `open` is the live unsettled tail
 				 *  (`transcript_index.py:1085`); the mock's turns settle in ~1 s and
 				 *  this host has no interactive approver, so the capture's tail is
 				 *  settled and the last completion is re-worded to the state the
-				 *  rail must draw as an in-progress dot. One field, named here —
-				 *  never an edited fixture. */
+				 *  rail draws as the in-progress mark: the dot where the track
+				 *  allows it, the compact dash on the narrowest phone (the same
+				 *  density rule its neighbours obey — D68-2). One field, named
+				 *  here — never an edited fixture. */
 				const ticks = body.checkpoints as Array<Record<string, unknown>>;
 				const last = ticks[ticks.length - 1];
 				if (last !== undefined) last.outcome = "open";

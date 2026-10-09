@@ -167,9 +167,12 @@ const RailMarkView = ({
 		);
 	}
 	/* The dash forms: a user mark, a completion with no outcome word, and any
-	 *  mark at glyph-failing density (compact). Heights come from the table;
-	 *  the compact form takes the completion-family ink so a dense stretch
-	 *  still separates "turns I completed" from "messages I sent". */
+	 *  mark at glyph-failing density (compact). Heights come from the table.
+	 *  Compact is ONE muted dash for every family — a user mark's ink-dim
+	 *  drops as it compacts — because where the ✓/dot vocabulary cannot hold
+	 *  the glyph clearance, a dense stretch reads as uniform rungs. That is
+	 *  the stated density decision (D68-2), not a separation: the family
+	 *  distinction is dropped rather than faked. */
 	const variant =
 		form === "compact"
 			? "compact"

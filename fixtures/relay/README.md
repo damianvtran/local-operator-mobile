@@ -31,7 +31,7 @@ rule exists — the count before that was one short on the total and the
 synthetic half, `synthetic/sse-projection-tables.json` having arrived with #55
 without the line being recounted.)
 
-**Five refs are represented, deliberately.** The bulk of the live captures were
+**Six refs are represented, deliberately.** The bulk of the live captures were
 taken at local-operator `52c1df35`; the session-state receipts (`ended`,
 `degraded`) were added by #1784, so the captures that show them are taken at
 `fc851a94e`; and the push/ack-sync samples (the frame-level `unread` block, the
