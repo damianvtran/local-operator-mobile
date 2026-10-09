@@ -11,6 +11,8 @@ import {
 import { ROLE } from "@/ui/a11y";
 import { cx } from "@/ui/variants";
 
+import { AnsweredValues } from "./answered-values";
+
 /**
  * The ask response card — a settled ask's record in the transcript
  * (`ask_response` for answered / late / declined, `ask_timeout` for the
@@ -114,9 +116,9 @@ export const AskResponseRow = ({ entry, testID }: AskResponseRowProps) => {
 									<Text className="text-body-sm text-ink-muted">
 										{pair.question}
 									</Text>
-									<Text className="text-body-sm text-ink">
-										{pair.answer || "—"}
-									</Text>
+									{/* One value per line with the `Other` boundary — the same frame the
+									 *  asks sheet's settled row draws (`answered-values.tsx`). */}
+									<AnsweredValues values={pair.values} />
 								</View>
 							))
 						: null}
