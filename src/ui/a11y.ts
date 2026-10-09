@@ -285,6 +285,19 @@ export const CONTROL = {
 	connectionSignIn: "connection-sign-in",
 	connectionConsole: "connection-console",
 	codeBlockCopy: "code-block-copy",
+	/* --- the in-conversation find. One header lever, the sheet's own field, and
+	 *  the navigate bar's three controls. `findEdit` is the bar's count segment,
+	 *  which reopens the sheet with the query intact — deliberately NOT folded
+	 *  into `sheetClose`: the sheet's close and the bar's edit both exist at
+	 *  different times and do different things (close leaves find mode and keeps
+	 *  the bar when a hit is active; edit goes back to the results). Two controls,
+	 *  two names, so a flow cannot pass by pressing the wrong one. --- */
+	sessionFind: "session-find",
+	findField: "find-field",
+	findEdit: "find-edit",
+	findPrev: "find-prev",
+	findNext: "find-next",
+	findClose: "find-close",
 
 	/* --- the composer home and the conversations panel (the Part 2 slice).
 	 *
@@ -511,6 +524,20 @@ export const SURFACE = {
 	askResponseCard: "ask-response-card",
 	askTimeoutCard: "ask-timeout-card",
 	transcriptStreaming: "transcript-streaming",
+	/* --- the in-conversation find's surfaces: the sheet, the navigate bar, its
+	 *  count line, the settled-empty state, and the scope line that states what
+	 *  the search could and could not cover. --- */
+	findSheet: "find-sheet",
+	findBar: "find-bar",
+	findCount: "find-count",
+	findEmpty: "find-empty",
+	findScope: "find-scope",
+	/** The Sheet kit's cut-edge fade: the band of surface colour over the bottom
+	 *  of a sheet's scrolling body while there is content below the fold (design
+	 *  D63-1 — the boundary cue a sheet with a pinned footer owes the reader).
+	 *  Present only while it is telling the truth (the body overflows and is not
+	 *  scrolled to its end), so a frame can measure the cue its own state earns. */
+	sheetBodyFade: "sheet-body-fade",
 
 	/* --- the subagent detail route (stream D2), adopted with the session view's
 	 * vocabulary above. The drill-down flow asserts these by name
@@ -602,6 +629,10 @@ export const IDENTIFIER_FAMILIES: readonly string[] = [
 	"ask-row-",
 	"asks-badge-",
 	"ask-field-",
+	/* The find sheet's result rows: one per hit, keyed by the message the row
+	 *  will land on, so a flow (or the capture's press) reaches a specific hit
+	 *  without counting rows. */
+	"find-result-",
 	/* The projects listing's own row family (S16): one row per project, keyed by
 	 *  the project's id, so a flow reaches a row without counting rows. */
 	"project-row-",
@@ -873,6 +904,22 @@ export const STATE_MARKER = {
 		error: "session-error",
 		degraded: "session-degraded",
 		queued: "session-queued",
+		/* The in-conversation find (this slice): one marker per state a cell
+		 *  declares. `find-results` — the sheet open with a query typed and at
+		 *  least one match; `find-related` — the same sheet whose matches include
+		 *  the soft tier (a refinement of `find-results`, the way `rich-rows` is
+		 *  one of `populated`, so a related frame carries both); `find-empty` —
+		 *  the sheet open, a query typed, nothing matched; `find-hit` — the reader
+		 *  has LANDED on a message (the navigate bar is up); `find-caveat` — the
+		 *  sheet open over a conversation that provably runs deeper than the rows
+		 *  this device holds (the scope line's caveat shows). Each is present only
+		 *  in its state, so a frame that stops showing one fails that cell by name
+		 *  rather than passing on its neighbours' evidence. */
+		"find-results": "session-find-results",
+		"find-related": "session-find-related",
+		"find-empty": "session-find-empty",
+		"find-hit": "session-find-hit",
+		"find-caveat": "session-find-caveat",
 		"rich-rows": "session-rich-rows",
 		/* A transcript that carries a markdown table — the rows U-38's check
 		 * exists for. Derived from the same parser the renderer uses
@@ -1096,6 +1143,13 @@ export const transcriptRowId = (rowId: string): string =>
  *  (`turn-condensing.ts`), so a bar is addressable by the message that started
  *  the turn — the same identity the reader's expansion and the latch use. */
 export const turnBarId = (turnKey: string): string => `turn-bar-${turnKey}`;
+
+/** One hit of the find sheet's results, keyed by the message it will land on.
+ *  The KEY is the message's own id — not its rank — so a flow (and the
+ *  capture rig's press) addresses "the hit on this message" however the ranking
+ *  reorders around it. */
+export const findResultId = (entryId: string): string =>
+	`find-result-${entryId}`;
 
 /** The completion attention's anchor row (ADR 0006 §3.1): the row a read
  *  receipt is ABOUT. It sits on a zero-size sibling at the row's bottom edge,

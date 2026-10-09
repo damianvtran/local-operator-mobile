@@ -267,9 +267,9 @@ jobs:
     # (run 37379067992, this job, the tiers as they stand): setup and checkouts 21 s +
     # install 4 s + typecheck 1 s + EXPORT 34 s + RELAY START 1 s + capture 1044 s +
     # canary 81 s + stop relay 0 s + upload of the 91 MB artifact 6 s = 1192 s, the job's
-    # whole measured wall time, plus the audit at its own measured rate — 696 cells x
-    # 1.25 s = 870 s, which is DERIVED rather than taken from that run, whose capture
-    # failed the identical-state gate before the audit step ran. That is ~2,062 s ≈ 34
+    # whole measured wall time, plus the audit at its own measured rate — 756 cells x
+    # 1.25 s = 945 s, which is DERIVED rather than taken from that run, whose capture
+    # failed the identical-state gate before the audit step ran. That is ~2,122 s ≈ 35
     # min against the 80 below, so the bound is ~2.3x the work: the headroom is the point.
     # THE OLD FORM WAS FALSE, not merely imprecise:
     # `install + typecheck 10 + capture 40 + audit 20 + canary 5 < 80` sums to exactly
@@ -285,9 +285,11 @@ jobs:
     # added ten declared cells (504 -> 612 on `ci`, 1512 -> 1836 on `core`, 5544 ->
     # 6732 on `full`), and round 3's remediation one more (`S15/menu-open`, the pane's
     # long-press menu: 612 -> 624, 1836 -> 1872, 6732 -> 6864), and the fold onto the
-    # moved base two more from upstream (`S5/populated-long`, `S5/rich-rows`): the plans
-    # at THIS head are 696 / 2088 / 7656, each re-derived from the folded tree's own
-    # `--plan` rather than scaled. Those cells are states
+    # moved base two more from upstream (`S5/populated-long`, `S5/rich-rows`), and the
+    # find slice's four cells one more (696 -> 744, 2088 -> 2232, 7656 -> 8184), and this
+    # remediation's caveat cell one more again (744 -> 756, 2232 -> 2268, 8184 -> 8316):
+    # the plans at THIS head are 756 / 2268 / 8316, each re-derived from the folded tree's
+    # own `--plan` rather than scaled. Those cells are states
     # that had no cell at all — the create sheet,
     # its relay refusal, the milestone editor, the remove confirm, the slash refusal
     # and the in-flight writes — so shrinking them is not an option the way a scale or
@@ -354,9 +356,9 @@ jobs:
         # 36669731994) without GitHub reaping it, so the run said only that it was
         # still going. Measured again on 2026-10-03 (run 37098393675), the capture
         # costs 2.24 s/cell — 403 cells / 1209 frames in 903.1 s — so the `core`
-        # plan of 2088 cells needs ~78 min and cannot finish inside this bound. The
-        # `--tier ci` sample can: 696 cells, ~26 min at the same rate, which leaves
-        # the audit and the canary their own steps below. (`full` is 7656 cells, and
+        # plan of 2268 cells needs ~85 min and cannot finish inside this bound. The
+        # `--tier ci` sample can: 756 cells, ~28 min at the same rate, which leaves
+        # the audit and the canary their own steps below. (`full` is 8316 cells, and
         # stays a dispatched or local run.)
         #
         # RAISED 20 -> 30 WITH THE CI AXIS, and the two move together: `CI_SCALES`
@@ -366,15 +368,16 @@ jobs:
         # stops being a signal — and ~1.6x the measured cost, the headroom the other
         # steps here carry.
         #
-        # RAISED 30 -> 40 WITH THE LIFECYCLE CELLS, for exactly that property: ten new
-        # declared cells put this sample at 648 (648 x 3 s = 32.4 min at that rate; at
-        # this head's plan of 696 it is 696 x 3 s = 34.8 min), and the sample is
-        # deliberately held AT 40 while the deadline still fits inside it, so the bound
+        # RAISED 30 -> 40 WITH THE LIFECYCLE CELLS, and HELD since: the lifecycle cells
+        # put this sample at 648 (648 x 3 s = 32.4 min at that rate), the fold onto the
+        # moved base left it at 696 (696 x 3 s = 34.8 min), the find slice's four cells
+        # took it to 744 (744 x 3 s = 37.2 min), and this remediation's caveat cell one
+        # more to 756 (756 x 3 s = 37.8 min) — each still inside 40, so the
+        # sample is deliberately held AT 40 while the deadline fits inside it: the bound
         # stays above the plan's own deadline with room for a slow runner rather than
-        # being raised to a rounder number.
-        # old bound — a step bound that the plan's own deadline can exceed would fire on
-        # a healthy run and stop being a signal. 40 holds the derived deadline with
-        # ~1.7x the measured cost on top of it.
+        # being raised to a rounder number, because a step bound the plan's own deadline
+        # can exceed would fire on a healthy run and stop being a signal. 40 is ~1.4x
+        # the measured cost (756 x 2.24 s ≈ 28 min).
         timeout-minutes: 40
         # THE DOCUMENTED INVOCATION, through the harness's own script
         # (`docs/e2e/ci-notes.md` §3). An earlier version derived the cell list here
@@ -399,8 +402,8 @@ jobs:
         # BOUND DERIVED FROM THE CELL COUNT, not guessed. On run 37167390506 this
         # step audited 250 of the ci tier's 256 cells in 312 s — 1.25 s/cell, with
         # no FAIL row — so the tier as it stood then was 256 x 1.25 s = ~5.3 min. It
-        # plans 696 cells today (~14.5 min at that rate) and 20 gives ~1.4x headroom
-        # over that, the ratio this bound has always carried; it moved 10 -> 15 with
+        # plans 756 cells today (756 x 1.25 s = 945 s ≈ 15.8 min) and 20 gives ~1.3x
+        # headroom over that, the ratio this bound has always carried; it moved 10 -> 15 with
         # the capture above when `CI_SCALES` gained the boundary step, and 15 -> 20 with
         # the lifecycle cells (504 -> 612). At 5 it was killed with six cells to go: a bound below the
         # work it contains, the same shape that made the capture's deadline derive
@@ -458,37 +461,39 @@ jobs:
     # WHY THIS JOB EXISTS. The operator's requirement is QA "across a variety of different
     # device sizes of phone … and tablets both vertical and horizontal", and until this job
     # nothing automated covered it: the per-push `web-audit` job runs `--tier ci`, which is
-    # 2 of the matrix's 19 declared profiles, and both `core` (5 profiles / 2088 cells) and
-    # `full` (19 / 7656) were local or dispatched only. This job captures and audits `core`,
+    # 2 of the matrix's 19 declared profiles, and both `core` (5 profiles / 2268 cells) and
+    # `full` (19 / 8316) were local or dispatched only. This job captures and audits `core`,
     # on the NIGHTLY schedule only, so the per-push path is untouched and the `ci` job keeps
     # its own 40-minute capture bound rather than being stretched to fit a 78-minute one.
     #
     # SIZED FROM THE MEASUREMENT, NOT FROM HOPE. The runner's own rate is 2.24 s/cell
     # (403 cells / 1209 frames in 903.1 s, run 37098393675, a plan of 403 cells then),
-    # which is also the number `docs/e2e/README.md` uses to say a `core` run is ~78
-    # minutes: 2088 x 2.24 s = 4,677 s.
+    # which is also the number `docs/e2e/README.md` uses to say a `core` run is ~83
+    # minutes: 2268 x 2.24 s ≈ 5,080 s.
     # The plan this job holds is the one the capture prints before it renders anything, so
     # the bound is checked against THAT rather than against a table, and each plan is
     # pinned to the ref that printed it: at 85b2785 `--plan --tier core --consecutive`
     # printed 858 cells x 3 frame(s) = 2574 frames (85b2785, a plan of 858 cells then)
     # with a derived deadline of 2574 s (85b2785), and
-    # at THIS head it prints `2088 cells x 3 frame(s) = 6264 frames` and `deadline: 6264 s`
-    # (3000 ms/cell). The capture step's 110 is above both derived deadlines (so the step
-    # cannot cut short the budget the run computed for itself) and ~1.4x the ~78 min the
-    # 2088 cells cost at 2.24 s/cell. It moved 95 -> 100 in round 3, and 100 -> 110 in
+    # at THIS head it prints `2268 cells x 3 frame(s) = 6804 frames` and `deadline: 6804 s`
+    # (3000 ms/cell). The capture step's 115 is above both derived deadlines (so the step
+    # cannot cut short the budget the run computed for itself) and ~1.4x the ~85 min the
+    # 2268 cells cost at 2.24 s/cell. It moved 95 -> 100 in round 3, and 100 -> 110 in
     # round 5: the fold's four extra cells took the derived deadline to 6264 s = 104.4 min,
     # ABOVE the 100 the job had carried, and a bound below its own deadline is the defect
     # this comment refuses one level up — the step would cut short the budget the run
-    # computes for itself. 110 rather than the rounder 120 because capture + audit then
-    # stays inside this job's own 170-minute bound with room to spare (`110 + 50 = 160`),
-    # which 120 would have closed exactly. The per-push steps carry the same relationship:
-    # capture 40 against a derived 2088 s (34.8 min) and audit 20 against 696 x 1.25 s
-    # (14.5 min).
+    # computes for itself. 110 -> 115 with this slice's find cells, for the same reason:
+    # their derived deadline is 6804 s = 113.4 min, ABOVE the 110 the job carried. 115
+    # rather than the rounder 120 because capture + audit then stays inside this job's own
+    # 170-minute bound with room to spare (`115 + 50 = 165`), which 120 would have closed
+    # exactly. The per-push steps carry the same relationship:
+    # capture 40 against a derived 2268 s (37.8 min) and audit 20 against 756 x 1.25 s
+    # (15.8 min).
     # The audit runs at 1.25 s/cell (250 of the 256 cells the tier held then in 312 s, run
-    # 37167390506), so `core` is 2088 x 1.25 s = 2,610 s ≈ 43.5 min and its step bound is 50.
+    # 37167390506), so `core` is 2268 x 1.25 s = 2,835 s ≈ 47.3 min and its step bound is 50.
     # The job bound holds its parts, the invariant the other jobs in this file state:
-    # `install + export + capture 110 + audit 50 < 170`. This is a nightly job of ~78 min of
-    # capture and ~43 min of audit inside that bound; it does not run on a pull request.
+    # `install + export + capture 115 + audit 50 < 170`. This is a nightly job of ~85 min of
+    # capture and ~47 min of audit inside that bound; it does not run on a pull request.
     #
     # EXPECTED FIRST-RUN VERDICT: THIS JOB IS RED, AND THAT IS WHAT IT IS FOR. It has
     # never executed (schedule/dispatch only). A real local `--tier core --consecutive`
@@ -506,7 +511,7 @@ jobs:
     # every term reproduces). The head they were taken at (`15deac3`) planned 504 cells on
     # `ci` and 1512 on `core` — re-derived with `--plan` AT THAT REF, and NOT the 1092 this
     # sentence used to quote: 1092 is not any tier's plan at any ref the review derived
-    # (85b2785 264/858, 4649a08 884, 756a6af 910, 15deac3 504/1512, this head 696/2088), it
+    # (85b2785 264/858, 4649a08 884, 756a6af 910, 15deac3 504/1512), it
     # came in with the PR that wrote the paragraph, and a figure nothing prints is a figure
     # nobody can check. The plans at THIS head are in the SIZING note above, each with the
     # ref that prints it.
@@ -573,7 +578,10 @@ jobs:
         # `--tier core` names the sample the run states for itself: the capture prints its own
         # device coverage, so this job's log says which of the 19 declared profiles it covered
         # and which it did not, rather than leaving a green job to read as the whole matrix.
-        timeout-minutes: 110
+        # 115 (not 110): the find slice's cells took the plan's own derived deadline to
+        # 6804 s = 113.4 min, and a step bound the plan's deadline can exceed would cut
+        # short the budget the run computes for itself.
+        timeout-minutes: 115
         run: pnpm audit:capture --dir dist --out "$RUNNER_TEMP/frames" --relay "$MOCK_RELAY_URL" --tier core --consecutive --yes
 
       - name: Audit the frames against the rubric

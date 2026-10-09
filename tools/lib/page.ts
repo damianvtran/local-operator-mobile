@@ -185,7 +185,7 @@ export async function armPage(
  * frames in 240 s.
  *
  * The cost is one target create/close per cell, and it is not a regression in
- * rate: the `ci` tier runs at 2.12 s/cell (measured at a plan of 256 cells; 696 on
+ * rate: the `ci` tier runs at 2.12 s/cell (measured at a plan of 256 cells; 756 on
  * this head's registry), against the 2.24 s/cell the per-cell budget was titrated from. It
  * also leaves the cell loop with ONE shape instead of two — a wedged cell and a
  * healthy one now take the same path, so the recovery cannot rot out of use as the

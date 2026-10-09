@@ -34,6 +34,7 @@ import {
 	getActiveRoute,
 	INITIAL_STREAM_FACTS,
 	loadAttachments,
+	olderThanLoaded,
 	type StreamFacts,
 	sessions,
 	subscribeRoute,
@@ -68,6 +69,12 @@ export interface SessionRuntime {
 	commands: SlashCommand[];
 	models: ModelEntry[];
 	loading: boolean;
+	/** Whether the conversation provably runs deeper than the rows this device
+	 *  holds — `olderThanLoaded`, which fires unless a successful page read
+	 *  backs the silence: a failed or unsettled read, a page row the window no
+	 *  longer carries, `has_more` with nothing held past the page, or an
+	 *  observed slide. The find sheet's caveat line is its one reader. */
+	olderThanLoaded: boolean;
 	error: RelayError | null;
 	/** Loads one attachment's bytes as a data URI, or `null` when the relay no
 	 *  longer has them. */
@@ -107,6 +114,23 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 
 	const [facts, setFacts] = useState<StreamFacts>(INITIAL_STREAM_FACTS);
 	const [history, setHistory] = useState<TranscriptEntry[]>([]);
+	/** Whether the last successful page read said the conversation runs deeper
+	 *  than the page's oldest row. The find caveat reads it together with the
+	 *  page's own rows (`history`), so the facts move with every successful page
+	 *  — a reload that finds the transcript complete must retract the claim
+	 *  rather than keep it stale. A failed read leaves this false — and it is
+	 *  `historyRead` beside it, not this default, that keeps the failure from
+	 *  reading as completeness. */
+	const [pageHasMore, setPageHasMore] = useState(false);
+	/** The last settled history read: `"ok"` once a page has landed, `"failed"`
+	 *  when the most recent attempt came back with nothing, `"unknown"` before
+	 *  any attempt settles (in flight, or no endpoints to read from). The find
+	 *  caveat's first fact: only `"ok"` may back its silence, because a capped
+	 *  projection (≤80 rows) cannot be told from a whole conversation without
+	 *  a read (reviewer MAJOR-2 residual / QA Q63-7). */
+	const [historyRead, setHistoryRead] = useState<"ok" | "failed" | "unknown">(
+		"unknown",
+	);
 	const [commands, setCommands] = useState<SlashCommand[]>([]);
 	const [models, setModels] = useState<ModelEntry[]>([]);
 	const [error, setError] = useState<RelayError | null>(null);
@@ -292,17 +316,36 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 			if (endpoints === null) return;
 			let cancelled = false;
 			setLoading(true);
+			/* The history read records its OUTCOME as well as its result: a failure is
+			 * swallowed here (the screen's connection state owns the sentence), but it
+			 * must not read as completeness for the find caveat — a device that cannot
+			 * read the page cannot know whether a capped window holds a whole
+			 * conversation (reviewer MAJOR-2 residual / QA Q63-7). */
+			const readHistory = endpoints.history(sessionId).then(
+				(page) => {
+					if (cancelled) return;
+					setHistory(page.entries);
+					// The find caveat reads this, so it moves with every successful page —
+					// a reload that finds the transcript complete must retract the claim
+					// rather than keep it stale. It describes the PAGE; where the page and
+					// the held rows must agree is `olderThanLoaded`.
+					setPageHasMore(page.has_more);
+					setHistoryRead("ok");
+				},
+				() => {
+					if (!cancelled) setHistoryRead("failed");
+				},
+			);
 			Promise.all([
 				// One page of history, always: the projection's tail is capped at 80 rows,
 				// so a long conversation needs the page beneath it even when the stream is
 				// healthy.
-				endpoints.history(sessionId).catch(() => null),
+				readHistory,
 				endpoints.commands().catch(() => null),
 				endpoints.models().catch(() => null),
 			])
-				.then(([historyPage, commandList, modelList]) => {
+				.then(([, commandList, modelList]) => {
 					if (cancelled) return;
-					if (historyPage) setHistory(historyPage.entries);
 					if (commandList) setCommands(commandList.commands);
 					if (modelList) setModels(modelList.models);
 				})
@@ -325,6 +368,46 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 	const entries = useMemo(
 		() => transcriptRows(projection, history),
 		[projection, history],
+	);
+	/* The frame watch behind the find caveat's third proof (reviewer MAJOR-2):
+	 * a row held in an earlier frame and gone from this one left the ≤80-row
+	 * tail window — the frames only append or slide, so it still exists
+	 * conversation-side and cannot be searched. This is the one channel that
+	 * needs no history page at all (the failed-read case), and it is sticky on
+	 * purpose: nothing re-enters the window, so a claim that could flicker off
+	 * would be a lie twice. The PREVIOUS frame lives in a ref; only the verdict
+	 * is state. */
+	const heldIdsRef = useRef<{ sessionId: string; ids: Set<string> } | null>(
+		null,
+	);
+	const [slidUnderWindow, setSlidUnderWindow] = useState(false);
+	useEffect(() => {
+		const ids = new Set(entries.map((entry) => entry.id));
+		const before = heldIdsRef.current;
+		heldIdsRef.current = { sessionId, ids };
+		if (before === null) return;
+		if (before.sessionId !== sessionId) {
+			// Another conversation's rows are not this one's: start clean.
+			setSlidUnderWindow(false);
+			return;
+		}
+		for (const id of before.ids) {
+			if (!ids.has(id)) {
+				setSlidUnderWindow(true);
+				return;
+			}
+		}
+	}, [entries, sessionId]);
+	const olderRowClaim = useMemo(
+		() =>
+			olderThanLoaded({
+				hasMore: pageHasMore,
+				read: historyRead,
+				page: history,
+				entries,
+				slid: slidUnderWindow,
+			}),
+		[pageHasMore, historyRead, history, entries, slidUnderWindow],
 	);
 
 	const connection = useMemo((): ConnectionView => {
@@ -400,6 +483,7 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 		commands,
 		models,
 		loading,
+		olderThanLoaded: olderRowClaim,
 		error,
 		loadImage,
 		loadAgent,

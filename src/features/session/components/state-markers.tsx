@@ -85,3 +85,50 @@ export const ComposerStateMarkers = ({
 		</View>
 	);
 };
+
+/**
+ * The find session's markers, one per state the capture cells declare.
+ *
+ * These facts are UI state (which mode find is in), not projection facts, so
+ * they live here beside the composer's rather than in `sessionStateFlags`.
+ * `settled` is the query having text in it: the empty-query sheet is a resting
+ * hint, not an answer, and neither `find-results` nor `find-empty` may claim
+ * it. `soft` marks the related tier's presence — a refinement of the results
+ * state (the frame carries both markers, as a rich-rows frame carries
+ * `populated` too), so a cell that declares the soft tier is measured on the
+ * tier itself rather than on the sheet merely being open.
+ */
+export const FindStateMarkers = ({
+	sheetOpen,
+	settled,
+	hits,
+	soft,
+	barVisible,
+	caveat,
+}: {
+	sheetOpen: boolean;
+	settled: boolean;
+	hits: number;
+	soft: boolean;
+	barVisible: boolean;
+	/** The find scope line's older-messages caveat is showing — rows beyond
+	 *  this device's hold, or a history read that could not check (the gate is
+	 *  `olderThanLoaded`). */
+	caveat: boolean;
+}) => (
+	<View aria-hidden>
+		{sheetOpen && settled && hits > 0 ? (
+			<View testID={STATE_MARKER.session["find-results"]} />
+		) : null}
+		{sheetOpen && settled && hits > 0 && soft ? (
+			<View testID={STATE_MARKER.session["find-related"]} />
+		) : null}
+		{sheetOpen && settled && hits === 0 ? (
+			<View testID={STATE_MARKER.session["find-empty"]} />
+		) : null}
+		{sheetOpen && caveat ? (
+			<View testID={STATE_MARKER.session["find-caveat"]} />
+		) : null}
+		{barVisible ? <View testID={STATE_MARKER.session["find-hit"]} /> : null}
+	</View>
+);

@@ -100,6 +100,13 @@ export interface ScreenOverlays {
 	asks: boolean;
 	/** The slash-command sheet (open while the composer's draft leads with `/`). */
 	slash: boolean;
+	/** The find sheet (browse mode: the results cover the transcript). */
+	find: boolean;
+	/** The find navigate bar. Like a panel, it takes a band of the screen and
+	 *  the reader is MID-JUMP while it is up — a completion the jump passed
+	 *  over has not been read by this app's definition, and the conservative
+	 *  arm (hold the ack) is the one the rest of this list takes. */
+	findBar: boolean;
 }
 
 /** Whether any open overlay holds the screen — the `blocked` gate's own list,
@@ -110,7 +117,9 @@ export function overlaysBlocked(overlays: ScreenOverlays): boolean {
 		overlays.effort ||
 		overlays.panel ||
 		overlays.asks ||
-		overlays.slash
+		overlays.slash ||
+		overlays.find ||
+		overlays.findBar
 	);
 }
 

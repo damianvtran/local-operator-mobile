@@ -79,6 +79,8 @@ describe("overlaysBlocked", () => {
 		panel: false,
 		asks: false,
 		slash: false,
+		find: false,
+		findBar: false,
 	};
 
 	it("holds nothing when nothing is open — no over-gating", () => {
@@ -102,12 +104,17 @@ describe("overlaysBlocked", () => {
 		).toBe(true);
 	});
 
-	it.each([["models"], ["effort"], ["panel"], ["asks"], ["slash"]] as const)(
-		"holds the screen while %s is open",
-		(overlay) => {
-			expect(overlaysBlocked({ ...closed, [overlay]: true })).toBe(true);
-		},
-	);
+	it.each([
+		["models"],
+		["effort"],
+		["panel"],
+		["asks"],
+		["slash"],
+		["find"],
+		["findBar"],
+	] as const)("holds the screen while %s is open", (overlay) => {
+		expect(overlaysBlocked({ ...closed, [overlay]: true })).toBe(true);
+	});
 });
 
 describe("settlesCompletion", () => {

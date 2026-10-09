@@ -30,6 +30,7 @@ import { fileURLToPath } from "node:url";
 import {
 	SUB_RULE_TEXT,
 	U03_SUPPRESSION,
+	U06_ALLOWANCE,
 	U08_SUPPRESSION,
 	U10_DECLARATION,
 	U38_DECLARATION,
@@ -514,7 +515,7 @@ interface NotDefect {
 	/**
 	 * The suppression reason this element must be RECORDED with, resolved from the
 	 * rule's own exported table (`U08_SUPPRESSION`, `U03_SUPPRESSION`,
-	 * `U10_DECLARATION`) by the fixture's `data-not-defect-reason`. `null` for a
+	 * `U06_ALLOWANCE`, `U10_DECLARATION`) by the fixture's `data-not-defect-reason`. `null` for a
 	 * shape the fixture declares SILENT (`data-not-defect-silent`): the rule must not
 	 * reach it at all — no row, of any verdict, under its own check — and the
 	 * assertion is that absence rather than a recording.
@@ -553,6 +554,13 @@ const NOT_DEFECT_REASON_NAMES: Record<string, Record<string, string>> = {
 	},
 	"U-10": {
 		"text-entry-value": U10_DECLARATION.TEXT_ENTRY_VALUE,
+	},
+	// U-06's second allowance: an inline run clipped by an ancestor's single-line
+	// ellipsis keeps its full layout box past the viewport while the drawing stays
+	// inside it — recorded, never a FAIL. The fixture `#ellipsis-clip` is the shape;
+	// `#too-wide` above stays the defect that proves the rule still fires.
+	"U-06": {
+		"ellipsis-clip": U06_ALLOWANCE.ELLIPSIS_CLIP,
 	},
 	// The code block's own cue is a separate decision (design pass §6.2): U-40
 	// must REPORT the overflowing non-table scroller as a declared deferral,
@@ -601,7 +609,7 @@ const declaredNotDefects = (): NotDefect[] => {
 			reason = NOT_DEFECT_REASON_NAMES[check]?.[name] ?? null;
 			if (reason === null) {
 				console.error(
-					`canary: #${element} declares data-not-defect="${check}" with unknown reason '${name}'; add it to NOT_DEFECT_REASON_NAMES here and to the matching table in tools/audit/checks.ts (U08_SUPPRESSION / U03_SUPPRESSION / U10_DECLARATION) rather than letting the assertion weaken to "some row exists".`,
+					`canary: #${element} declares data-not-defect="${check}" with unknown reason '${name}'; add it to NOT_DEFECT_REASON_NAMES here and to the matching table in tools/audit/checks.ts (U08_SUPPRESSION / U03_SUPPRESSION / U06_ALLOWANCE / U10_DECLARATION) rather than letting the assertion weaken to "some row exists".`,
 				);
 				process.exit(2);
 			}
@@ -648,7 +656,13 @@ for (const entry of notDefects) {
 		(row: AuditRow) =>
 			row.verdict === "EXCEPTION" &&
 			rowNames(row).includes(`#${entry.element}`) &&
-			(row.measured ?? "").includes(reason),
+			/* The WHOLE row text, not `measured` alone: U-08 records its suppression
+			 * reason in `measured` ("suppressed: <reason>") and U-06 records its
+			 * allowance in `detail` ("clipped by <path>, <reason> …"), and the
+			 * contract both must meet is that the row carries the declared reason
+			 * wherever the rule's own table puts it. Reading one field would make
+			 * the other check's fixtures unassertable rather than stricter. */
+			rowNames(row).includes(reason),
 	);
 	if (!recorded)
 		unrecordedSuppressions.push(`${entry.check} (#${entry.element})`);
