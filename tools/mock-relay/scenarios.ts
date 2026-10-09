@@ -204,16 +204,46 @@ export const CAPTURED_SESSION = "6714def86197";
 /**
  * The imagegen live-detail bag, widened into a row's `details`.
  *
- * `queue_position` and `logs` are the frozen vocabulary's names and `progress`
- * is the native lane's provisional name for the fraction — the relay-side
- * mirror (`docs/relay/types.ts`) does not carry them yet and this harness does
- * not own that contract, so the fixture passes them through one cast instead of
- * widening the doc. The app reads them in ONE place
- * (`src/features/session/imagegen.ts`); when the freeze lands, that file and
- * this helper are the pair that changes.
+ * The canonical field names froze on 2026-10-09 (harness lane, local-operator
+ * #2089): `stage`, `queue_position`, `progress_fraction`, `log_lines`, `error`,
+ * `error_type` — every key PRESENT on a live update, `None` where no provider
+ * supplied one. The relay-side mirror (`docs/relay/types.ts`) does not carry
+ * them yet and this harness does not own that contract, so the fixtures pass
+ * them through one cast instead of widening the doc. The app reads them in ONE
+ * place (`src/features/session/imagegen.ts`).
  */
 const liveDetails = (bag: Record<string, unknown>): TranscriptEntryDetails =>
 	bag as TranscriptEntryDetails;
+
+/**
+ * One LIVE update's canonical `details` — every key present, `null` where
+ * unsupplied, mirroring the harness's own `progress_details` helper.
+ *
+ * The live feed also carries `provider`, `model`, `elapsed_s` and
+ * `num_images`, which this app does not render yet — recorded here rather than
+ * invented into the rows. The FINAL result rows carry their own narrower bags
+ * (`stage` only where the producer writes it, or none at all), which is why
+ * the terminal rows below use `liveDetails` directly.
+ */
+const progressDetails = (
+	over: Partial<{
+		stage: string | null;
+		queue_position: number | null;
+		progress_fraction: number | null;
+		log_lines: { message: string; timestamp: string }[] | null;
+		error: string | null;
+		error_type: string | null;
+	}>,
+): TranscriptEntryDetails =>
+	liveDetails({
+		stage: null,
+		queue_position: null,
+		progress_fraction: null,
+		log_lines: null,
+		error: null,
+		error_type: null,
+		...over,
+	});
 
 /**
  * The list frame's `capabilities` block, with the scenario's own voice override
@@ -1129,11 +1159,14 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 	);
 
 	/* The image-generation card's states, as the app renders them (the native
-	 * surface's `feat/imagegen-surfaces` lane). One row per state the card draws:
-	 * queued without and with a queue position, running indeterminate and with a
-	 * progress fraction, done with its artifact, failed with the provider's own
-	 * error, the cancel-vs-finished conflict (`media_already_completed`, the
-	 * quiet "Already finished" treatment), and an interrupted call beside them.
+	 * surface's imagegen lane; the wire shape froze 2026-10-09, local-operator
+	 * #2089). One row per state the card draws: queued without and with a queue
+	 * position, running indeterminate and with a progress fraction, done with
+	 * its artifact, failed with the provider's own error, the cancel-vs-finished
+	 * conflict (`media_already_completed`, the quiet "Already finished"
+	 * treatment), the cancelling hold (`stage: "cancelling"` — the wire's own
+	 * state now), a mid-walk failure (`stage: null` riding the error pair), and
+	 * an interrupted call beside them.
 	 *
 	 * The world carries a SECOND session beside the showroom: the seed
 	 * projection under a deterministic id (`syntheticSessionId("imagegen-empty")`
@@ -1155,27 +1188,36 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 	 *   path:/session/9f448c4f83d0/empty                 the first-navigation absorber
 	 *   path:/session/{sessionId}/imagegen               the tail
 	 *   path:/session/{sessionId}?lo-scroll=top/imagegen-head
-	 *                                                    the head; nine rows do not fit
+	 *                                                    the head; eleven rows do not fit
 	 *                                                    one phone frame, so this cell
 	 *                                                    runs at `iphone-max`, where the
 	 *                                                    whole already-finished row is
-	 *                                                    in frame
+	 *                                                    in frame (the first five rows
+	 *                                                    plus the conflict stay exactly
+	 *                                                    as the design round saw them)
 	 *   path:/session/{sessionId}/imagegen-cancel        the cancelling overlay — the
 	 *                                                    same key carries the Cancel press
 	 *                                                    in `CELL_OPENERS`
 	 *                                                    (`tools/visual/matrix.ts`)
 	 *
+	 * The two rows the canonical-shape round added (the cancelling hold and the
+	 * mid-walk failure) sit between the conflict and the done row, out of both
+	 * framed views; they need their own cell in the next visual round.
+	 *
 	 * When the marker lands, this shows list grows the cell.
 	 *
-	 * The live-detail keys (`queue_position`, `progress`, `logs`) are the ONE
-	 * place the fixtures write them, through the `liveDetails` widening declared
-	 * above: `queue_position` and `logs` are the frozen vocabulary's names and
-	 * `progress` is this lane's provisional name for the fraction, read by
-	 * `src/features/session/imagegen.ts` — the app's single reader, and the file
-	 * that changes if the freeze renames one. */
+	 * The live rows write the canonical live-detail set through
+	 * `progressDetails` (every key present, `None` where unsupplied); the
+	 * terminal rows write the producer's own final bags. `queue_position`,
+	 * `progress_fraction`, `log_lines`, `error` and `error_type` are the frozen
+	 * vocabulary's names — read by `src/features/session/imagegen.ts`, the app's
+	 * single reader. The determinate row's `progress_fraction` is AHEAD of the
+	 * producer (the harness comment: neither transport carries a fraction today,
+	 * and one is never synthesized), kept because the card is built for the
+	 * branch and this frame is how the branch stays exercised. */
 	add(
 		"imagegen-progress",
-		"A transcript of image generations in every state the card renders — queued with and without a position, running indeterminate and determinate, done with its artifact, failed with the provider's error, the already-finished conflict, and an interrupted call.",
+		"A transcript of image generations in every state the card renders — queued with and without a position, running indeterminate and determinate, done with its artifact, failed with the provider's error, the already-finished conflict, the cancelling hold, a mid-walk failure, and an interrupted call.",
 		[],
 		() => {
 			const base = structuredClone(everyKind);
@@ -1223,18 +1265,26 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 					imageRow("img-queued", {
 						tool_state: "queued",
 						summary: "an icon set, 8 tiles",
+						details: progressDetails({ stage: "queued" }),
 					}),
 					imageRow("img-queued-position", {
 						tool_state: "queued",
 						summary: "a favicon, 512",
-						details: liveDetails({ queue_position: 3 }),
+						details: progressDetails({ stage: "queued", queue_position: 3 }),
 					}),
 					imageRow("img-running-indeterminate", {
 						tool_state: "running",
 						summary: "hero, 16:9",
 						elapsed_s: 7.4,
-						details: liveDetails({
-							logs: ["IN_QUEUE", "IN_PROGRESS — diffusion step 12 of 30"],
+						details: progressDetails({
+							stage: "in_progress",
+							log_lines: [
+								{ message: "IN_QUEUE", timestamp: "2026-10-09T01:02:03Z" },
+								{
+									message: "IN_PROGRESS — diffusion step 12 of 30",
+									timestamp: "2026-10-09T01:02:11Z",
+								},
+							],
 						}),
 					}),
 					/* Fifth row on purpose: the head cell at `iphone-max` fits exactly the
@@ -1244,8 +1294,41 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 						tool_state: "failed",
 						summary: "hero, square",
 						elapsed_s: 3.2,
-						error: "This generation had already finished.",
-						details: liveDetails({ error_type: "media_already_completed" }),
+						error:
+							"The generation had already completed when the cancel arrived; its result was discarded.",
+						details: liveDetails({
+							stage: "cancelled",
+							error:
+								"The generation had already completed when the cancel arrived; its result was discarded.",
+							error_type: "media_already_completed",
+						}),
+					}),
+					/* The canonical-shape round's two middle rows — out of both framed views
+					 * (their own cell arrives in the next visual round; the docblock above
+					 * names it) but in the fixture so the states render at all. */
+					imageRow("img-cancelling", {
+						tool_state: "running",
+						summary: "hero, square",
+						elapsed_s: 5.6,
+						details: progressDetails({
+							stage: "cancelling",
+							log_lines: [
+								{
+									message: "IN_PROGRESS — diffusion step 18 of 30",
+									timestamp: "2026-10-09T01:02:24Z",
+								},
+							],
+						}),
+					}),
+					imageRow("img-midwalk-failure", {
+						tool_state: "running",
+						summary: "hero alt, 16:9 (failover)",
+						elapsed_s: 121.4,
+						details: progressDetails({
+							stage: null,
+							error: "FAL (flux-schnell) exceeded its 120s generation budget.",
+							error_type: "timeout",
+						}),
 					}),
 					imageRow("img-done", {
 						tool_state: "done",
@@ -1258,11 +1341,15 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 						summary: "hero alt, 16:9 (retry)",
 						elapsed_s: 214.8,
 						error: "This generation failed before producing output.",
-						details: liveDetails({ error_type: "media_failed" }),
+						details: liveDetails({
+							error: "This generation failed before producing output.",
+							error_type: "media_failed",
+						}),
 					}),
 					imageRow("img-interrupted", {
 						tool_state: "interrupted",
 						summary: "sticker pass",
+						details: liveDetails({ stage: "cancelled" }),
 					}),
 					/* LAST, so the tail view frames it whole: it is the row the
 					 * cancel cell presses — a control must be on screen for the still
@@ -1272,9 +1359,15 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 						tool_state: "running",
 						summary: "hero alt, 16:9",
 						elapsed_s: 4.9,
-						details: liveDetails({
-							progress: 0.42,
-							logs: ["IN_PROGRESS — upscaling"],
+						details: progressDetails({
+							stage: "in_progress",
+							progress_fraction: 0.42,
+							log_lines: [
+								{
+									message: "IN_PROGRESS — upscaling",
+									timestamp: "2026-10-09T01:02:31Z",
+								},
+							],
 						}),
 					}),
 				],
