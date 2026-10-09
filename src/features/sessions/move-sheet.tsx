@@ -598,7 +598,10 @@ const MovedBody = ({
 						<Text className="w-24 text-body-sm text-ink">
 							{PHASE_WORDS[phase.phase] ?? phase.phase}
 						</Text>
-						<PhaseBar progress={phase.progress} />
+						<PhaseBar
+							progress={phase.progress}
+							name={PHASE_WORDS[phase.phase] ?? phase.phase}
+						/>
 						<Text className="w-12 text-right text-meta text-ink-dim">
 							{Math.round(Math.max(0, Math.min(1, phase.progress)) * 100)}%
 						</Text>
@@ -609,16 +612,36 @@ const MovedBody = ({
 	);
 };
 
-/** One phase's step on the monotone list, as a small track. */
-const PhaseBar = ({ progress }: { progress: number }) => {
+/** One phase's step on the monotone list, as a small track.
+ *
+ *  THE FILL CARRIES THE NAME, ON THE FILL. A bare semantic-coloured fill is a
+ *  colour-only status the rubric's U-03 reports ("no word/glyph/name") — this
+ *  receipt's fills were 48 of those rows in CI (both devices, both themes, all
+ *  three scales, run 37911837728). The audit reads the carrier off the node
+ *  that DRAWS the colour, so a name on the track around the fill would not
+ *  clear it. The name is the phase's word plus its measured progress, from the
+ *  same clamped value the width uses, so the two cannot disagree.
+ *
+ *  The value rides the flat `aria-valuemin`/`aria-valuemax`/`aria-valuenow`
+ *  aliases rather than the `accessibilityValue` object, for the measured reason
+ *  `imagegen-card.tsx` records: react-native-web silently drops the object
+ *  form, while the aliases render on the web build and are equally valid on
+ *  native. */
+const PhaseBar = ({ progress, name }: { progress: number; name: string }) => {
 	const fill = useTokenColor("accent");
 	const clamped = Math.max(0, Math.min(1, progress));
+	const pct = Math.round(clamped * 100);
 	return (
 		<View className="h-1 flex-1 overflow-hidden rounded-full bg-ink-dim/20">
 			<View
 				className="h-1 rounded-full"
+				accessibilityRole={ROLE.progressbar}
+				accessibilityLabel={`${name}, ${pct}%`}
+				aria-valuemin={0}
+				aria-valuemax={100}
+				aria-valuenow={pct}
 				style={{
-					width: `${Math.round(clamped * 100)}%`,
+					width: `${pct}%`,
 					backgroundColor: fill,
 				}}
 			/>
