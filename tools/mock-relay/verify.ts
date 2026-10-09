@@ -2878,7 +2878,13 @@ async function main() {
 				// and the test would prove nothing.
 				`const { spawn } = require("node:child_process");
 				 const profile = process.env.LO_RESPAWN_PROFILE;
-				 const parent = process.ppid;
+				 // The expected parent travels by ENV, set at spawn time: it must be known
+				 // before this child exists. Reading process.ppid at boot instead misses a
+				 // kill inside the spawn-to-first-read window — ~300 ms on a quiet host,
+				 // measured up to ~1.8 s under load — because the child then starts ALREADY
+				 // reparented and records parent=1; the probe below would compare 1 against
+				 // 1 forever, which is the orphan this group exists to remove.
+				 const expectedParent = Number(process.env.LO_RESPAWN_PARENT);
 				 let child = null;
 				 const ensure = () => {
 				   // One placeholder at a time: spawn only when the previous child has exited.
@@ -2887,6 +2893,13 @@ async function main() {
 				   // ~48-58 GB RSS and the compressor and swap that came with it).
 				   if (child !== null && child.exitCode === null && child.signalCode === null) return;
 				   child = spawn(process.execPath, ["-e", "setTimeout(() => {}, 600000)", "--", \`--user-data-dir=\${profile}\`], { stdio: "ignore" });
+				   child.on("error", (error) => {
+				     // A failed spawn emits 'error'; unhandled, that is a fatal node:events throw
+				     // and the respawner dies (rc=1, measured). Handle it so the failed child's
+				     // exitCode settles at -2 — the gate above clears and the next tick retries
+				     // — and log distinctly, so a spawn failure is never read as a quiet exit.
+				     console.error("respawner: placeholder spawn failed:", error.message);
+				   });
 				 };
 				 const tick = () => {
 				   // Self-destruct, for the SIGKILL no handler can catch: a reparented process
@@ -2895,7 +2908,7 @@ async function main() {
 				   // wall-clock deadline: the capture it must outlive is bounded at 300 s, and a
 				   // clock short enough to matter could fire mid-run and starve the reap that
 				   // counts it (a zero count would flip this test's own assertion).
-				   if (process.ppid !== parent) {
+				   if (process.ppid !== expectedParent) {
 				     if (child !== null) {
 				       try { child.kill("SIGKILL"); } catch { /* already gone */ }
 				     }
@@ -2909,7 +2922,13 @@ async function main() {
 			{
 				stdio: "ignore",
 				detached: true,
-				env: { ...process.env, LO_RESPAWN_PROFILE: profile },
+				env: {
+					...process.env,
+					LO_RESPAWN_PROFILE: profile,
+					// The expected parent must be known before the child exists — see the
+					// spawn-to-first-read note in the script above.
+					LO_RESPAWN_PARENT: String(process.pid),
+				},
 			},
 		);
 		// The reap must run on EVERY exit path, not just the happy one: the measured
