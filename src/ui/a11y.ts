@@ -588,6 +588,7 @@ export const IDENTIFIER_FAMILIES: readonly string[] = [
 	"turn-bar-",
 	"completion-anchor-",
 	"transcript-image-",
+	"imagegen-cancel-",
 	"attach-option-",
 	"model-option-",
 	"effort-rung-",
@@ -1107,6 +1108,13 @@ export const completionAnchorId = (anchorId: string): string =>
 /** One image inside a transcript row, disambiguated by its index within the row. */
 export const transcriptImageId = (entryId: string, index: number): string =>
 	`transcript-image-${entryId}-${index}`;
+
+/** One image-gen card's cancel control, keyed by the entry it belongs to. A
+ *  transcript can carry several generation rows (a turn may generate more than
+ *  one image), so the control is addressed by its row rather than as a static —
+ *  Maestro's `id:` matching would otherwise pick one arbitrarily. */
+export const imagegenCancelId = (entryId: string): string =>
+	`imagegen-cancel-${entryId}`;
 
 /** One model in the model sheet. */
 export const modelOptionId = (modelId: string): string =>

@@ -345,6 +345,13 @@ export default function Session() {
 				streamingRowId={runtime.streamingRowId}
 				loadImage={runtime.loadImage}
 				onOpenAgent={openAgent}
+				/* The image-gen card's Cancel is the composer's OWN stop path (the
+				   one turn-interrupt — no second mechanism). The gate is the
+				   composer's own (`stopVisible` = a turn is running), so the two
+				   controls cannot diverge about when a cancel is real: while the
+				   gate is closed the card hides the control rather than offering
+				   a dead one. */
+				onCancelTurn={composer.controls.stopVisible ? composer.stop : undefined}
 				anchorId={runtime.projection?.attention?.anchor_id ?? null}
 				onAnchorVisible={setCompletionVisible}
 				empty={
