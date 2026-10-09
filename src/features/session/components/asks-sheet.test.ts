@@ -33,6 +33,15 @@ const DOOR_BINDING = /const (\w+) = hasOtherDoor\(/;
 /** The door field's writer: `onChangeText={(text) => onOtherChange(`. */
 const FIELD_WRITER = /onChangeText=\{\(\w+\) => onOtherChange\(/;
 
+/** The dead class: `border-control` without its `border-` prefix — a token name
+ *  the web export never generates (only `border-border-control` exists), so it
+ *  left every ask border at full ink instead of the control token's. */
+const DEAD_BORDER_CLASS = /(?<!-)border-control/;
+
+/** The dropped hint conditional: `other.open ? null :` — the shape that
+ *  unmounted the hint and shrank the row while the door was open (D1). */
+const DROPPED_HINT_CONDITIONAL = /other\.open \? null :/;
+
 describe("the asks sheet's Other door", () => {
 	it("gates the row on the tested predicate, not a private condition", () => {
 		const bound = SOURCE.match(DOOR_BINDING)?.[1] ?? "";
@@ -86,5 +95,33 @@ describe("the asks sheet's Other door", () => {
 		 * sheet that inlined either would be the second copy this pins out. */
 		expect(SOURCE).toContain("askResponseBody(");
 		expect(SOURCE).toContain("questionIsAnswered(");
+	});
+
+	it("keeps the hint line in every state — the row neither shrinks nor jumps (D1)", () => {
+		/* Opening the door used to unmount the hint and shrink the row 51.1 →
+		 * 34.3 pt, below the sheet's own touch floor, exactly as the field
+		 * arrived. The hint stays (with a kept-text sentence of its own) and the
+		 * desktop's one prompt is the string it says. */
+		expect(SOURCE).not.toMatch(DROPPED_HINT_CONDITIONAL);
+		expect(SOURCE).toContain('"Type your answer"');
+		expect(SOURCE).toContain("your text is kept");
+	});
+
+	it("pins the answering verbs in Sheet's footer — the three-region rule (D2)", () => {
+		/* The actions must not scroll with the questions: on iphone-se they sat
+		 * wholly below the fold. The sheet passes `footer`, and its controls read
+		 * the shared composition through the same gate the body does. */
+		expect(SOURCE).toContain("footer={");
+		expect(SOURCE).toContain("settleFromFooter(");
+	});
+
+	it("uses the control border token and the muted placeholder ink (D4/D5)", () => {
+		/* `border-control` generates no CSS in the web export, so it left every
+		 * ask border at full ink; and a raw `TextInput` takes its placeholder
+		 * colour as a VALUE, so it must come from the same `ink-muted` token
+		 * `Input` reads. */
+		expect(SOURCE).not.toMatch(DEAD_BORDER_CLASS);
+		expect(SOURCE).toContain('useTokenColor("ink-muted")');
+		expect(SOURCE).toContain("placeholderTextColor={placeholderColour}");
 	});
 });

@@ -444,6 +444,37 @@ describe("the Other door (design §5.0)", () => {
 		it("keeps reading a plain option tick as answered", () => {
 			expect(questionIsAnswered(question(), ["safe"], EMPTY_OTHER)).toBe(true);
 		});
+
+		it("holds a multi-select open while the door is open and empty — the desktop's rule", () => {
+			/* R1-1/Q4: ticks beside an open, empty `Other` used to complete the
+			 * question, so the submit sent them and silently dropped the door the
+			 * reader had just opened. The desktop card refuses exactly this state
+			 * (`askQuestionIsAnswered`, UI #892), and the app takes that rule —
+			 * THIS cell is what fails if it is ever removed (the reviewer inserted
+			 * the rule and the whole suite stayed green: R1-4). */
+			const multi = question({ multi: true });
+			expect(
+				questionIsAnswered(multi, ["safe", "fast"], {
+					open: true,
+					text: "   ",
+				}),
+			).toBe(false);
+			/* The other direction, so the rule cannot over-apply: one typed
+			 * character completes the question, and an untick that keeps its text
+			 * (a closed door) sends the ticks alone as before. */
+			expect(
+				questionIsAnswered(multi, ["safe", "fast"], {
+					open: true,
+					text: "cheap",
+				}),
+			).toBe(true);
+			expect(
+				questionIsAnswered(multi, ["safe", "fast"], {
+					open: false,
+					text: "cheap",
+				}),
+			).toBe(true);
+		});
 	});
 
 	it("walks the card's own sequence: option → Other → type → option → Other", () => {
@@ -505,26 +536,108 @@ describe("the Other door (design §5.0)", () => {
 			});
 			expect(body.q1).toEqual(["spaced"]);
 		});
+
+		it("dedupes an `Other` text equal to a ticked label — once on the wire, first kept", () => {
+			/* R1-3: `["fast","fast"]` used to travel and render twice. The
+			 * desktop dedupes before the wire (`askAnswerMap`, UI #892) and this
+			 * takes the same rule where the whole-ask body is built. */
+			const body = askResponseBody([question({ id: "q2", multi: true })], {
+				answers: { q2: ["safe", "fast"] },
+				others: { q2: { open: true, text: "safe" } },
+				skipped: [],
+			});
+			expect(body).toEqual({ q2: ["safe", "fast"] });
+		});
+
+		it("composes the ticks for an open-empty door — the gate is what refuses, not the composition", () => {
+			/* R1-4's request-body twin of the gate cell: the composition still holds
+			 * the ticks (the empty door contributes nothing), while
+			 * `questionIsAnswered` — not this function — is what stops the submit
+			 * carrying them silently past the door the reader opened. Pinned beside
+			 * the gate cell so a future change cannot flip either half alone. */
+			const multi = askResponseBody([question({ id: "q2", multi: true })], {
+				answers: { q2: ["safe", "fast"] },
+				others: { q2: { open: true, text: "   " } },
+				skipped: [],
+			});
+			expect(multi).toEqual({ q2: ["safe", "fast"] });
+			const single = askResponseBody([question({ id: "q1" })], {
+				answers: {},
+				others: { q1: { open: true, text: "" } },
+				skipped: [],
+			});
+			expect(single).toEqual({ q1: [] });
+		});
 	});
 });
 
 describe("answeredPairs", () => {
-	it("renders one line per question, option label plus its consequence", () => {
-		const pairs = answeredPairs(
-			[
-				{
-					id: "q1",
-					question: "which?",
-					options: [{ label: "safe", description: "keeps the data" }],
-					multi: false,
-					secret: false,
-					persist: false,
-				},
+	/** One option question carrying only what the frame reads. */
+	function question(patch: Partial<AskQuestion> = {}): AskQuestion {
+		return {
+			id: "q1",
+			question: "which?",
+			options: [
+				{ label: "safe", description: "keeps the data" },
+				{ label: "fast", description: "ships sooner" },
 			],
-			{ q1: ["safe"] },
-		);
-		expect(pairs).toEqual([
-			{ question: "which?", answer: "safe — keeps the data" },
+			multi: false,
+			secret: false,
+			persist: false,
+			...patch,
+		};
+	}
+
+	it("keeps each value as written — a list per question, no description attached", () => {
+		/* The desktop's answer frame "keeps what was written" (UI #892) and draws
+		 * each value on its own line; the old ` — description` suffix is gone (see
+		 * the function's note). */
+		expect(answeredPairs([question()], { q1: ["safe"] })).toEqual([
+			{ question: "which?", values: [{ text: "safe", other: false }] },
+		]);
+	});
+
+	it("tags a value the list did not offer — the desktop's muted `Other`", () => {
+		expect(
+			answeredPairs([question()], { q1: ["safe", "the canary cluster"] }),
+		).toEqual([
+			{
+				question: "which?",
+				values: [
+					{ text: "safe", other: false },
+					{ text: "the canary cluster", other: true },
+				],
+			},
+		]);
+	});
+
+	it("never attaches an option's description to typed text that equals a label", () => {
+		/* `safe` here may be a tick OR the reader's own words: the wire carries
+		 * plain strings and cannot say which, so NO value may carry its option's
+		 * description. The check U1 asked for is enforced by the absence of any
+		 * attachment at all, pinned by exact equality rather than a substring
+		 * read. */
+		expect(answeredPairs([question()], { q1: ["safe"] })).toEqual([
+			{ question: "which?", values: [{ text: "safe", other: false }] },
+		]);
+	});
+
+	it("tags nothing on a secret question or a question with no list", () => {
+		expect(
+			answeredPairs([question({ secret: true })], { q1: ["DEPLOY_KEY"] }),
+		).toEqual([
+			{ question: "which?", values: [{ text: "DEPLOY_KEY", other: false }] },
+		]);
+		expect(
+			answeredPairs([question({ options: [] })], { q1: ["anything"] }),
+		).toEqual([
+			{ question: "which?", values: [{ text: "anything", other: false }] },
+		]);
+	});
+
+	it("keeps the frame's shape for a question with no answer — an empty list", () => {
+		expect(answeredPairs([question()], {})).toEqual([
+			{ question: "which?", values: [] },
 		]);
 	});
 });

@@ -51,11 +51,14 @@ import {
 	state,
 	timedOutAskRowId,
 } from "@/ui/a11y";
+import { useTokenColor } from "@/ui/appearance";
 import { Button } from "@/ui/components/button";
 import { IconButton } from "@/ui/components/icon-button";
 import { Sheet } from "@/ui/components/sheet";
 import { TOUCH_FLOOR } from "@/ui/layout";
 import { cx } from "@/ui/variants";
+
+import { AnsweredValues } from "./answered-values";
 
 /**
  * The asks sheet — every queued ask, across conversations (design §5.3's
@@ -114,6 +117,21 @@ const TICK_MS = 20000;
 
 /** A capitalised sentence, like the sheet's empty state (design D4). */
 const READ_TIMED_OUT = "The read timed out — the computer is not answering.";
+
+/** The door's one prompt — the row's consequence line, and the field's
+ *  accessible hint. It is the desktop's `OTHER_PROMPT` (UI #892), whose design
+ *  round 1 retired its old two-phrasing pair (`Type your own answer` on the
+ *  row, `Type your answer` in the field) for ONE sentence the reader meets
+ *  every time. The field's placeholder keeps this app's own string from the
+ *  note's per-surface copy table — `Your answer` (§5.0) — and its accessible
+ *  name is the desktop's `Your answer to: <question>`. */
+const OTHER_HINT = "Type your answer";
+
+/** What the row's consequence line says when the door is closed but holds the
+ *  reader's text: without it the closed row looks empty although a mis-click
+ *  kept the text (UX N1 / design D6). Lower-case like the sheet's other
+ *  consequence lines. */
+const KEPT_TEXT_HINT = "your text is kept";
 
 type SettleKind = "respond" | "decline" | "dismiss";
 type PendingAction = { askId: string; kind: SettleKind } | null;
@@ -189,6 +207,11 @@ const QuestionField = ({
 }) => {
 	const options = Array.isArray(question.options) ? question.options : [];
 	const chosen = new Set(value);
+	/* The placeholder ink, read exactly as `Input` reads it: a raw `TextInput`
+	 *  has no class to hang a placeholder colour on — `placeholderTextColor` is
+	 *  a colour VALUE — so the raw field rendered its placeholder at full ink,
+	 *  reading as a prefilled answer (design D4). */
+	const placeholderColour = useTokenColor("ink-muted");
 	if (options.length === 0) {
 		return (
 			<View>
@@ -199,11 +222,12 @@ const QuestionField = ({
 					</Text>
 				) : null}
 				<TextInput
-					className="min-h-11 rounded-sm border border-control bg-elevated px-3 text-body text-ink"
+					className="min-h-11 rounded-sm border border-border-control bg-elevated px-3 text-body text-ink"
 					value={value[0] ?? ""}
 					onChangeText={(text) => onChange([text])}
 					editable={!disabled}
 					placeholder={question.secret ? "Secret value" : "Your answer"}
+					placeholderTextColor={placeholderColour}
 					secureTextEntry={question.secret}
 					// 16 pt or the OS zooms the whole page on focus, which moves
 					// every control the reader was about to press.
@@ -216,6 +240,12 @@ const QuestionField = ({
 	const door = hasOtherDoor(question);
 	return (
 		<View className="gap-1">
+			{/* The caption belongs to the WHOLE group, so it leads it: it used to
+			 *  render between the last option and the door, splitting the family the
+			 *  door exists to join (design D3). */}
+			{question.multi ? (
+				<Text className="text-meta text-ink-dim">choose any that apply</Text>
+			) : null}
 			{options.map((option, index) => {
 				/* Single-select: the `Other` row and the option rows exclude each other
 				   (design §5.0's door), so while it is selected no option reads as
@@ -253,7 +283,7 @@ const QuestionField = ({
 								"rounded-sm border px-2 py-1.5",
 								on
 									? "border-accent-border bg-accent-muted"
-									: "border-control bg-surface",
+									: "border-border-control bg-surface",
 							)}
 						>
 							<Text className="text-body-sm text-ink">
@@ -271,9 +301,6 @@ const QuestionField = ({
 					</Pressable>
 				);
 			})}
-			{question.multi ? (
-				<Text className="text-meta text-ink-dim">choose any that apply</Text>
-			) : null}
 			{door ? (
 				/* THE EXPLICIT FREE-TEXT DOOR (design §5.0, core note
 				 *  `docs/design/ask-nonblocking.md`): every non-secret question that
@@ -285,7 +312,7 @@ const QuestionField = ({
 				<Pressable
 					accessibilityRole={ROLE.radio}
 					accessibilityLabel="Other"
-					accessibilityHint="type your own answer"
+					accessibilityHint={OTHER_HINT}
 					accessibilityState={state({ selected: other.open, disabled })}
 					disabled={disabled}
 					onPress={() => {
@@ -304,29 +331,36 @@ const QuestionField = ({
 							"rounded-sm border px-2 py-1.5",
 							other.open
 								? "border-accent-border bg-accent-muted"
-								: "border-control bg-surface",
+								: "border-border-control bg-surface",
 						)}
 					>
 						<Text className="text-body-sm text-ink">Other</Text>
-						{other.open ? null : (
-							<Text className="text-meta text-ink-dim">
-								type your own answer
-							</Text>
-						)}
+						{/* The consequence line stays in EVERY state — it is what holds the
+						 *  row's height: it used to unmount while the door was open, shrinking
+						 *  the row 51.1 → 34.3 pt, below the sheet's own touch floor, exactly
+						 *  as the field appeared (design D1). A kept-text row gets its own
+						 *  sentence, because a closed row otherwise looks empty (UX N1 /
+						 *  design D6). */}
+						<Text className="text-meta text-ink-dim">
+							{other.open || other.text.trim() === ""
+								? OTHER_HINT
+								: KEPT_TEXT_HINT}
+						</Text>
 					</View>
 				</Pressable>
 			) : null}
 			{door && other.open ? (
 				<TextInput
-					className="min-h-11 rounded-sm border border-control bg-elevated px-3 text-body text-ink"
+					className="min-h-11 rounded-sm border border-border-control bg-elevated px-3 text-body text-ink"
 					value={other.text}
 					onChangeText={(text) => onOtherChange({ open: true, text })}
 					editable={!disabled}
 					placeholder="Your answer"
+					placeholderTextColor={placeholderColour}
 					// 16 pt or the OS zooms the whole page on focus, which moves
 					// every control the reader was about to press.
 					style={{ fontSize: 16 }}
-					accessibilityLabel={`Your own answer to: ${question.question}`}
+					accessibilityLabel={`Your answer to: ${question.question}`}
 					testID={askOtherFieldId(String(question.id))}
 				/>
 			) : null}
@@ -334,96 +368,64 @@ const QuestionField = ({
 	);
 };
 
-/** The expanded detail of ONE ask: its form, its controls, its refusal. */
+/** The expanded form's whole draft, keyed to the ask it belongs to. One object so
+ *  the reset below is one write, and `ask` so the reset can TELL when the
+ *  expansion moved. */
+type AnswerDraft = {
+	ask: string | null;
+	answers: Record<string, string[]>;
+	skipped: readonly string[];
+	others: Record<string, AskOther>;
+};
+
+const emptyDraft = (ask: string | null): AnswerDraft => ({
+	ask,
+	answers: {},
+	skipped: [],
+	others: {},
+});
+
+/** The expanded detail of ONE ask: its questions and controls, drawn INSIDE
+ *  the sheet's scroll region. THE VERBS ARE NOT HERE — `Answer`/`Decline`, and
+ *  the refusal line, live in the sheet's pinned footer (`Sheet.footer`),
+ *  because a control that answers the sheet must not scroll: measured on
+ *  iphone-se the actions sat wholly below the fold, and the door adds ~55 pt
+ *  more (design D2; the kit's three-region rule, `Sheet`'s own doc). The draft
+ *  is the SHEET's state for the same reason the footer needs it — one draft,
+ *  two regions — and it still dies with its expansion (see `draft` below). */
 const AskDetail = ({
 	row,
-	nowMs,
-	busy,
-	error,
-	onSettle,
+	questions,
+	fields,
+	draft,
+	disabled,
+	onAnswer,
+	onOtherChange,
+	onToggleSkip,
 }: {
 	row: PendingAsk;
-	nowMs: number;
-	busy: SettleKind | null;
-	error: string | null;
-	onSettle: (
-		kind: SettleKind,
-		row: PendingAsk,
-		body?: { answers: Record<string, string[]> },
-	) => void;
+	questions: readonly AskQuestion[];
+	fields: readonly AskQuestion[];
+	draft: AnswerDraft;
+	disabled: boolean;
+	onAnswer: (id: string, next: string[]) => void;
+	onOtherChange: (id: string, next: AskOther) => void;
+	onToggleSkip: (id: string) => void;
 }) => {
 	const status = String(row.status || "open");
 	const answerable = isAnswerable(status);
-	/* `expired` disables every control WITHOUT an error register: nothing went
-	 * wrong, the window closed, and the state line names the remedy. Settled
-	 * asks render their record instead — a control that cannot work is worse
-	 * than no control (the same rule `pending.ts` states for approvals). */
+	/* `expired` draws its fields (the reader still sees what was asked) but
+	 *  disables every control WITHOUT an error register: nothing went wrong, the
+	 *  window closed, and the state line names the remedy. */
 	const expired = status === "expired";
-	const questions = useMemo(
-		() => (Array.isArray(row.questions) ? row.questions : []),
-		[row.questions],
-	);
-	const openQuestions = useMemo(
-		() => (answerable ? unansweredQuestions(row) : []),
-		[answerable, row],
-	);
-
-	/* The draft map: question id → chosen labels (or the typed string). Lives
-	 * with this expansion and dies when it collapses — see the module note. */
-	const [answers, setAnswers] = useState<Record<string, string[]>>({});
-	const [skipped, setSkipped] = useState<readonly string[]>([]);
-	/* The `Other` doors' own records, keyed by question id — card state beside
-	 * the draft, never derived from it (`AskOther` in `asks.ts` states why). */
-	const [others, setOthers] = useState<Record<string, AskOther>>({});
-
-	/* Whether every still-open question carries a usable cell. A question counts
-	 * as answered when its composition (option ticks plus the `Other` door) has a
-	 * non-empty value, or it was explicitly skipped (which is sent as the empty
-	 * list the queue's own contract defines); an open-but-empty `Other` is not an
-	 * answer — `questionIsAnswered` holds the rule once for the gate and the body
-	 * both (a whitespace-only text is not an answer). */
-	const filled = (question: AskQuestion): boolean => {
-		const id = String(question.id);
-		if (skipped.includes(id)) return true;
-		return questionIsAnswered(
-			question,
-			answers[id] ?? [],
-			others[id] ?? EMPTY_OTHER,
-		);
-	};
-	const complete =
-		openQuestions.length > 0 &&
-		openQuestions.every((question) => filled(question));
-
-	const disabled = !answerable || busy !== null;
-	/* Fields to draw: the open set while answerable, every question for an
-	 *  expired ask (nothing can be submitted, but the reader still sees what was
-	 *  asked — the state line is the whole explanation and no error register is
-	 *  drawn). */
-	const fields = answerable ? openQuestions : expired ? questions : [];
-	const settle = (
-		kind: SettleKind,
-		body?: { answers: Record<string, string[]> },
-	) => {
-		if (busy !== null) return;
-		onSettle(kind, row, body);
-	};
 
 	if (answerable || expired) {
-		/* The atomic submit: one body for EVERY question of the ask (the queue
-		 * refuses a partial map), a skipped question riding as the empty list.
-		 * Built by `asks.ts`'s ONE composition, so the `Other` door's typed text
-		 * rides the way the contract expects: a plain string in the question's
-		 * list — alone on a single-select, last on a multi-select. */
-		const respondBody = () =>
-			askResponseBody(questions, { answers, others, skipped });
-
 		return (
 			<View className="gap-2 pb-2 pt-1">
 				{/* A question taken elsewhere (the legacy incremental path's drafts)
 				 *  is not this card's to submit — say so instead of inviting a tap
 				 *  that cannot land (the relay card's R6 fix, same sentence). */}
-				{answerable && openQuestions.length === 0 ? (
+				{answerable && fields.length === 0 ? (
 					<Text className="text-body-sm text-ink-muted">
 						nothing left to answer here — another surface has already taken
 						these questions.
@@ -436,7 +438,7 @@ const AskDetail = ({
 				 *  relay card draws it. */}
 				{fields.map((question, index) => {
 					const id = String(question.id);
-					const isSkipped = skipped.includes(id);
+					const isSkipped = draft.skipped.includes(id);
 					/* The number is the question's ABSOLUTE position in the full list,
 					 *  never the field's ordinal in the unanswered subset: with a legacy
 					 *  draft already taken, subset numbering restarted and the second
@@ -459,14 +461,10 @@ const AskDetail = ({
 							</Text>
 							<QuestionField
 								question={question}
-								value={answers[id] ?? []}
-								other={others[id] ?? EMPTY_OTHER}
-								onChange={(next) =>
-									setAnswers((current) => ({ ...current, [id]: next }))
-								}
-								onOtherChange={(next) =>
-									setOthers((current) => ({ ...current, [id]: next }))
-								}
+								value={draft.answers[id] ?? []}
+								other={draft.others[id] ?? EMPTY_OTHER}
+								onChange={(next) => onAnswer(id, next)}
+								onOtherChange={(next) => onOtherChange(id, next)}
 								disabled={disabled || isSkipped}
 							/>
 							{/* A 44 pt target, not a link: it is the only way to say
@@ -479,13 +477,7 @@ const AskDetail = ({
 									accessibilityRole={ROLE.button}
 									accessibilityState={state({ disabled })}
 									disabled={disabled}
-									onPress={() =>
-										setSkipped((current) =>
-											current.includes(id)
-												? current.filter((value) => value !== id)
-												: [...current, id],
-										)
-									}
+									onPress={() => onToggleSkip(id)}
 									style={{ minHeight: TOUCH_FLOOR }}
 									className="justify-center self-start"
 								>
@@ -504,46 +496,6 @@ const AskDetail = ({
 						</View>
 					);
 				})}
-				{error !== null ? (
-					<Text className="text-body-sm text-danger">{error}</Text>
-				) : null}
-				<View className="flex-row gap-2">
-					<View className="flex-1">
-						<Button
-							label="Answer"
-							onPress={() => settle("respond", { answers: respondBody() })}
-							disabled={disabled || !complete}
-							loading={busy === "respond"}
-							testID={CONTROL.askRespond}
-						/>
-					</View>
-					<View className="flex-1">
-						<Button
-							label="Decline"
-							variant="danger"
-							accessibilityHint="no answer — decide yourself"
-							onPress={() => settle("decline")}
-							disabled={disabled}
-							loading={busy === "decline"}
-							testID={CONTROL.askDecline}
-						/>
-					</View>
-				</View>
-				{/* Dismiss is a third, quieter action and deliberately not beside
-				 *  Decline: declining ANSWERS the agent ("decide yourself"), while
-				 *  dismissing answers nobody and buys no turn — and it is offered
-				 *  only on a timed-out ask, which is what keeps it from shadowing
-				 *  an in-window answer. */}
-				{status === "timed_out" ? (
-					<Button
-						label="Dismiss"
-						variant="quiet"
-						onPress={() => settle("dismiss")}
-						disabled={disabled}
-						loading={busy === "dismiss"}
-						testID={CONTROL.askDismiss}
-					/>
-				) : null}
 			</View>
 		);
 	}
@@ -558,7 +510,10 @@ const AskDetail = ({
 				pairs.map((pair, index) => (
 					<View key={index}>
 						<Text className="text-body-sm text-ink-muted">{pair.question}</Text>
-						<Text className="text-body-sm text-ink">{pair.answer || "—"}</Text>
+						{/* One value per line, the `Other` boundary included — the settled
+						 *  frame's own component, shared with the transcript card so the two
+						 *  cannot disagree about where an answer ends (UX U1). */}
+						<AnsweredValues values={pair.values} />
 					</View>
 				))
 			) : (
@@ -602,6 +557,24 @@ export const AsksSheet = ({
 		undefined as ExpansionChoice,
 	);
 	const openAsk = shownExpansion(openAskChoice, initialOpenAsk);
+	/* The expanded form's draft — the SHEET's state because two regions render
+	 *  from it (the scrolling questions and the pinned footer's verbs), and it
+	 *  must still die with its expansion, the way it did when it lived inside
+	 *  `AskDetail` and the unmount cleared it: "the native app deliberately
+	 *  persists nothing — and re-expands empty" (ADR 0005 §2; the module note).
+	 *
+	 *  THE RESET RUNS IN RENDER, deliberately: an effect would paint the next
+	 *  ask's questions (`q1`… — ids repeat across asks) against the last ask's
+	 *  answers for one frame before clearing, and that first frame is the class
+	 *  of defect this sheet refuses (`openAskChoice` above). Adjusting state
+	 *  during render is React's own answer to "reset state when the identity
+	 *  changes": the mismatched pass is discarded before it can commit, so no
+	 *  frame exists with the two asks mixed. */
+	const [draft, setDraft] = useState<AnswerDraft>(() => emptyDraft(null));
+	const expansion = openAsk ?? null;
+	if (draft.ask !== expansion) {
+		setDraft(emptyDraft(expansion));
+	}
 	const [pendingAction, setPendingAction] = useState<PendingAction>(null);
 	const [rowError, setRowError] = useState<{
 		askId: string;
@@ -736,6 +709,73 @@ export const AsksSheet = ({
 	drawnCount.current = shownRows.length;
 	/* The head first, then the wire's own order — the order the bar names. */
 	const listed = useMemo(() => orderedForDisplay(shownRows), [shownRows]);
+
+	/* The expanded ask and its form facts. Both regions read these — the body
+	 *  (`AskDetail`) draws the questions, the footer draws the verbs — so the
+	 *  `Answer` gate and the submitted body cannot disagree about the same
+	 *  draft. */
+	const openRow = useMemo(
+		() => listed.find((row) => row.ask_id === openAsk) ?? null,
+		[listed, openAsk],
+	);
+	const openStatus = openRow ? String(openRow.status || "open") : "";
+	const openAnswerable = openRow !== null && isAnswerable(openStatus);
+	/* `expired` keeps its fields and its disabled controls WITHOUT an error
+	 *  register: nothing went wrong, the window closed, and the state line names
+	 *  the remedy. */
+	const openExpired = openStatus === "expired";
+	const openQuestions = useMemo(
+		() => (openRow && openAnswerable ? unansweredQuestions(openRow) : []),
+		[openRow, openAnswerable],
+	);
+	const openAllQuestions = useMemo(
+		() =>
+			openRow && Array.isArray(openRow.questions) ? openRow.questions : [],
+		[openRow],
+	);
+	const openFields = openAnswerable
+		? openQuestions
+		: openExpired
+			? openAllQuestions
+			: [];
+	const openBusy =
+		openRow && pendingAction?.askId === openRow.ask_id
+			? pendingAction.kind
+			: null;
+	const openDisabled = !openAnswerable || openBusy !== null;
+	const openError =
+		openRow && rowError?.askId === openRow.ask_id ? rowError.message : null;
+	/* Whether every still-open question carries a usable cell. A question counts
+	 *  as answered when its composition (option ticks plus the `Other` door) has
+	 *  a non-empty value — and NOT while the door stands open and empty, even
+	 *  beside ticks (`questionIsAnswered` holds that rule once for the gate and
+	 *  the body both) — or it was explicitly skipped (sent as the empty list the
+	 *  queue's own contract defines). */
+	const openFilled = (question: AskQuestion): boolean => {
+		const id = String(question.id);
+		if (draft.skipped.includes(id)) return true;
+		return questionIsAnswered(
+			question,
+			draft.answers[id] ?? [],
+			draft.others[id] ?? EMPTY_OTHER,
+		);
+	};
+	const openComplete =
+		openQuestions.length > 0 &&
+		openQuestions.every((question) => openFilled(question));
+	/* The atomic submit: one body for EVERY question of the ask (the queue
+	 *  refuses a partial map), a skipped question riding as the empty list.
+	 *  Built by `asks.ts`'s ONE composition, so the `Other` door's typed text
+	 *  rides the way the contract expects: a plain string in the question's
+	 *  list — alone on a single-select, last on a multi-select. */
+	const respondBody = (): Record<string, string[]> =>
+		openRow
+			? askResponseBody(openAllQuestions, {
+					answers: draft.answers,
+					others: draft.others,
+					skipped: draft.skipped,
+				})
+			: {};
 	/* QUESTIONS, the unit the bar counts (E2 spec §1.3, the manager's ruling):
 	 *  the header says how much the queue owes in the same unit the bar does. */
 	const outstandingQuestions = outstandingAsks(shownRows).reduce(
@@ -809,6 +849,16 @@ export const AsksSheet = ({
 		[client, currentSessionId, load, pendingAction, shownRows],
 	);
 
+	/* The footer's settle — the only submit path, and the guard keeps a second
+	 *  press out while one is in flight, exactly as the in-body version did. */
+	const settleFromFooter = (
+		kind: SettleKind,
+		body?: { answers: Record<string, string[]> },
+	) => {
+		if (openRow === null || openBusy !== null) return;
+		void settle(kind, openRow, body);
+	};
+
 	return (
 		<Sheet
 			visible={visible}
@@ -818,6 +868,61 @@ export const AsksSheet = ({
 			/* The queue is a list, so it takes the half detent; one ask fits its
 			 *  content (the model-list precedent, components.md §8). */
 			detent={listed.length > 1 ? "half" : "content"}
+			/* THE ANSWERING CONTROLS ARE PINNED, and so is the refusal line — the
+			 *  kit's three-region rule (`Sheet`'s `footer` doc; the #69 precedent
+			 *  on three sibling sheets). Measured on iphone-se at 100 %: the
+			 *  actions sat WHOLLY below the fold (design D2), and a scrolling
+			 *  control is the one thing an answer sheet must not hide. The
+			 *  scrolling body keeps the questions; the footer holds the verbs for
+			 *  whichever ask is expanded. */
+			footer={
+				openRow !== null && (openAnswerable || openExpired) ? (
+					<View className="gap-2">
+						{openError !== null ? (
+							<Text className="text-body-sm text-danger">{openError}</Text>
+						) : null}
+						<View className="flex-row gap-2">
+							<View className="flex-1">
+								<Button
+									label="Answer"
+									onPress={() =>
+										settleFromFooter("respond", { answers: respondBody() })
+									}
+									disabled={openDisabled || !openComplete}
+									loading={openBusy === "respond"}
+									testID={CONTROL.askRespond}
+								/>
+							</View>
+							<View className="flex-1">
+								<Button
+									label="Decline"
+									variant="danger"
+									accessibilityHint="no answer — decide yourself"
+									onPress={() => settleFromFooter("decline")}
+									disabled={openDisabled}
+									loading={openBusy === "decline"}
+									testID={CONTROL.askDecline}
+								/>
+							</View>
+						</View>
+						{/* Dismiss is a third, quieter action and deliberately not
+						 *  beside Decline: declining ANSWERS the agent ("decide
+						 *  yourself"), while dismissing answers nobody and buys no turn —
+						 *  and it is offered only on a timed-out ask, which is what keeps
+						 *  it from shadowing an in-window answer. */}
+						{openStatus === "timed_out" ? (
+							<Button
+								label="Dismiss"
+								variant="quiet"
+								onPress={() => settleFromFooter("dismiss")}
+								disabled={openDisabled}
+								loading={openBusy === "dismiss"}
+								testID={CONTROL.askDismiss}
+							/>
+						) : null}
+					</View>
+				) : undefined
+			}
 		>
 			<View className="gap-1" testID={SURFACE.asksSheetBody}>
 				{/* §1.4's honesty line, ALWAYS first (§5): the app cannot alert while
@@ -884,10 +989,6 @@ export const AsksSheet = ({
 					const left = Number(row.expires_at) - nowMs;
 					const urgent = row.urgent && isAnswerable(status);
 					const expanded = openAsk === row.ask_id;
-					const busy =
-						pendingAction?.askId === row.ask_id ? pendingAction.kind : null;
-					const error =
-						rowError?.askId === row.ask_id ? rowError.message : null;
 					return (
 						<View key={row.ask_id} className="gap-1">
 							{foreign ? (
@@ -996,11 +1097,29 @@ export const AsksSheet = ({
 							{expanded ? (
 								<AskDetail
 									row={row}
-									nowMs={nowMs}
-									busy={busy}
-									error={error}
-									onSettle={(kind, target, body) =>
-										void settle(kind, target, body)
+									questions={openAllQuestions}
+									fields={openFields}
+									draft={draft}
+									disabled={openDisabled}
+									onAnswer={(id, next) =>
+										setDraft((current) => ({
+											...current,
+											answers: { ...current.answers, [id]: next },
+										}))
+									}
+									onOtherChange={(id, next) =>
+										setDraft((current) => ({
+											...current,
+											others: { ...current.others, [id]: next },
+										}))
+									}
+									onToggleSkip={(id) =>
+										setDraft((current) => ({
+											...current,
+											skipped: current.skipped.includes(id)
+												? current.skipped.filter((value) => value !== id)
+												: [...current.skipped, id],
+										}))
 									}
 								/>
 							) : null}
