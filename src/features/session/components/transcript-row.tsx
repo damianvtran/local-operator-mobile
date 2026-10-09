@@ -45,8 +45,9 @@ export type TranscriptRowProps = {
 	onOpenAgent?: (jobId: string) => void;
 	/** The turn interrupt, threaded to the image-gen card's Cancel. The screen
 	 *  withholds it while the composer's own Stop is not visible, so the two
-	 *  controls share one gate (`composer.controls.stopVisible`). */
-	onCancelTurn?: () => void;
+	 *  controls share one gate (`composer.controls.stopVisible`). Resolves
+	 *  whether the request reached the relay (review round 1, F2). */
+	onCancelTurn?: () => Promise<boolean>;
 };
 
 const SEVERITY_CLASS: Record<string, string> = {

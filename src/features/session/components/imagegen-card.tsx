@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { Animated, Easing, Text, View } from "react-native";
 import { TranscriptImage } from "@/features/session/components/transcript-image";
-import type {
-	ImageGenCardPhase,
-	ImageGenView,
-} from "@/features/session/imagegen";
+import type { ImageGenView } from "@/features/session/imagegen";
 import {
 	IMAGEGEN_ALREADY_FINISHED_TONE,
 	IMAGEGEN_TONE,
+	imageGenCancelOverlay,
+	imageGenCardPhase,
+	imageGenLivePhase,
 	imageGenStateLine,
 } from "@/features/session/imagegen";
 import { imagegenCancelId, transcriptImageId } from "@/ui/a11y";
@@ -53,8 +53,11 @@ export type ImageGenCardProps = {
 	 *  path, injected like every other image loader. */
 	loadImage?: (entryId: string, index: number) => Promise<string | null>;
 	/** The turn interrupt (the composer's Stop, threaded from the screen).
-	 *  `undefined` while no turn is live — which is what hides the control. */
-	onCancelTurn?: () => void;
+	 *  `undefined` while no turn is live — which is what hides the control.
+	 *  Resolves `false` when the request never reached the relay (no route, or
+	 *  the command failed), which is what clears the overlay (review round 1,
+	 *  F2). */
+	onCancelTurn?: () => Promise<boolean>;
 	testID?: string;
 };
 
@@ -176,29 +179,55 @@ export const ImageGenCard = ({
 	testID,
 }: ImageGenCardProps) => {
 	/**
-	 * Whether a cancel has been requested and its confirmation has not landed.
-	 * `null` would be wrong: the press is the reader's act and it survives
-	 * re-renders until the ENTRY settles (the effect below), which is the
-	 * confirmation the card waits for.
+	 * The cancel overlay's state: a request the reader made whose confirmation
+	 * has not landed. It clears on the entry settling (the effect below) AND on
+	 * a request that never reached the relay (`requestCancel` reads the stop
+	 * path's answer): a command that never went out leaves nothing in flight,
+	 * so "Cancelling…" over it would be a claim the app cannot make — the
+	 * composer's error line carries that failure (review round 1, F2).
 	 */
 	const [cancelRequested, setCancelRequested] = useState(false);
 
-	// The overlay clears when the entry leaves its live phases: the state the
-	// card then draws is the wire's own, whatever it is. This is the ONLY path
-	// that clears it — a cancel whose command failed leaves the entry running,
-	// and the card keeps saying "Cancelling…" rather than snap back to
-	// "Generating image" as if the request had never been made (the composer,
-	// whose error surface is where the failure is stated, is beside it).
+	// The settled half: once the entry leaves its live phases the state the card
+	// draws is the wire's own, whatever it is, and the overlay is retired with
+	// it. `imageGenCardPhase` already refuses to draw `cancelling` on a settled
+	// phase, so this update is hygiene rather than the only defence.
 	useEffect(() => {
-		if (view.phase !== "queued" && view.phase !== "running") {
-			setCancelRequested(false);
+		if (!imageGenLivePhase(view.phase)) {
+			setCancelRequested((requested) =>
+				imageGenCancelOverlay(requested, "settled"),
+			);
 		}
 	}, [view.phase]);
 
-	const phase: ImageGenCardPhase =
-		cancelRequested && (view.phase === "queued" || view.phase === "running")
-			? "cancelling"
-			: view.phase;
+	/**
+	 * The press, as the overlay's own events: raise on the press, then resolve
+	 * the request — keeping the overlay ONLY when the request was delivered. A
+	 * rejected promise is treated as undelivered rather than letting the overlay
+	 * latch on a caller that broke its contract.
+	 */
+	const requestCancel = () => {
+		if (onCancelTurn === undefined) return;
+		setCancelRequested((requested) =>
+			imageGenCancelOverlay(requested, "press"),
+		);
+		void onCancelTurn()
+			.then((delivered) => {
+				setCancelRequested((requested) =>
+					imageGenCancelOverlay(
+						requested,
+						delivered ? "request-delivered" : "request-failed",
+					),
+				);
+			})
+			.catch(() => {
+				setCancelRequested((requested) =>
+					imageGenCancelOverlay(requested, "request-failed"),
+				);
+			});
+	};
+
+	const phase = imageGenCardPhase(view.phase, cancelRequested);
 	/* The already-finished reading (a failed row that is really the
 	 *  cancel-vs-finished conflict) takes the quiet tone: the frozen rule is
 	 *  that the conflict is never painted as an error. */
@@ -260,10 +289,7 @@ export const ImageGenCard = ({
 						variant="outline"
 						size="sm"
 						accessibilityHint="Stops the running turn, which cancels this generation."
-						onPress={() => {
-							setCancelRequested(true);
-							onCancelTurn();
-						}}
+						onPress={requestCancel}
 						testID={imagegenCancelId(entryId)}
 					/>
 				) : null}

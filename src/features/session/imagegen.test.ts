@@ -6,7 +6,10 @@ import {
 	IMAGEGEN_STATE_WORD,
 	IMAGEGEN_TONE,
 	IMAGEGEN_TOOLS,
+	imageGenCancelOverlay,
+	imageGenCardPhase,
 	imageGenLiveDetail,
+	imageGenLivePhase,
 	imageGenStateLine,
 	imageGenView,
 	isImageGenTool,
@@ -274,6 +277,47 @@ describe("cancel gating", () => {
 		expect(imageGenView(row({ tool_state: state }))?.cancelable).toBe(
 			cancelable,
 		);
+	});
+
+	/* The overlay's two directions are the review round 1 F2 finding: it must
+	 * hold over a request that WAS delivered (the confirmation has not landed),
+	 * and it must DROP over one that was not (nothing is in flight, and the
+	 * composer's error line carries the failure). A regression to the latching
+	 * behaviour is a red test here, not a code read. */
+	it("keeps the overlay when the request was delivered", () => {
+		expect(imageGenCancelOverlay(true, "request-delivered")).toBe(true);
+	});
+
+	it("clears the overlay when the request never reached the relay", () => {
+		expect(imageGenCancelOverlay(true, "request-failed")).toBe(false);
+	});
+
+	it("raises the overlay on the press and retires it on settle", () => {
+		expect(imageGenCancelOverlay(false, "press")).toBe(true);
+		expect(imageGenCancelOverlay(true, "settled")).toBe(false);
+	});
+
+	it("draws `cancelling` only over a live phase that was requested", () => {
+		expect(imageGenCardPhase("running", true)).toBe("cancelling");
+		expect(imageGenCardPhase("queued", true)).toBe("cancelling");
+		// A settled phase is never overlaid, even if the flag has not cleared yet.
+		expect(imageGenCardPhase("done", true)).toBe("done");
+		expect(imageGenCardPhase("failed", true)).toBe("failed");
+		expect(imageGenCardPhase("running", false)).toBe("running");
+	});
+
+	it("keeps `cancelable` and `live phase` one definition", () => {
+		for (const state of [
+			"queued",
+			"running",
+			"done",
+			"failed",
+			"interrupted",
+		] as const) {
+			const view = imageGenView(row({ tool_state: state }));
+			if (view === null) throw new Error(`no view for ${state}`);
+			expect(imageGenLivePhase(view.phase)).toBe(view.cancelable);
+		}
 	});
 });
 

@@ -307,3 +307,49 @@ describe("a re-driven page must reach the state its record names", () => {
 		).toContain("the app is on '/defects' but the cell asked for '/clean'");
 	});
 });
+
+describe("an ad-hoc cell that CLAIMS the empty state must show it", () => {
+	/*
+	 * The affirmative half for `path:` cells, added by QA round 1 on the imagegen
+	 * surface (Q1). Before it, `state: "empty"` was the one name an ad-hoc cell
+	 * could declare and render ANYTHING under: the prohibition below only fires
+	 * when the declared state is another one, and the required-marker check has
+	 * no subject to look up. A sacrificial first cell whose dark frame rendered
+	 * the populated transcript rode inside a run summary that read "every
+	 * captured cell reached the screen it names".
+	 */
+	const adhoc = (over: Partial<ReadinessFacts> = {}): ReadinessFacts =>
+		frame({
+			screen: "path:/session/abc123",
+			state: "empty",
+			askedPath: "/session/abc123",
+			actualPath: "/session/abc123",
+			root: undefined,
+			...over,
+		});
+
+	it("refuses an `empty` cell with no empty-state marker in the DOM", () => {
+		const issues = readinessIssues(adhoc({ presentIds: ["session-screen"] }));
+		expect(issues.map((issue) => issue.kind)).toEqual(["marker"]);
+		expect(issues[0]?.message).toContain("no empty-state marker");
+	});
+
+	it("passes an `empty` cell carrying the app's own marker", () => {
+		expect(
+			readinessProblems(adhoc({ presentIds: ["session-transcript-empty"] })),
+		).toEqual([]);
+	});
+
+	it("leaves an ad-hoc cell that claims another state alone", () => {
+		// The other direction stays the prohibition's job: a populated ad-hoc cell
+		// with no markers has made no empty claim and must not be failed by this rule.
+		expect(
+			readinessProblems(
+				adhoc({
+					state: "populated",
+					presentIds: ["session-row-abc123"],
+				}),
+			),
+		).toEqual([]);
+	});
+});

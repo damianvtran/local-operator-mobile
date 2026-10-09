@@ -102,7 +102,9 @@ export interface ComposerState {
 	send: () => void;
 	/** Replays the retained instruction under its own UUID. */
 	retry: () => void;
-	stop: () => void;
+	/** The turn interrupt. Resolves whether the request reached the relay — see
+	 *  the implementation; callers that ignore the value are unaffected. */
+	stop: () => Promise<boolean>;
 	/** Runs or fills a slash command the reader tapped in the sheet. It takes the
 	 *  COMMAND, not the text it would produce: the request is derived from the
 	 *  command, so a tap cannot send whatever the draft happened to hold. */
@@ -480,19 +482,31 @@ export const useComposer = (input: {
 		})();
 	}, [endpoints, envelopeStore, sessionId, streaming, cancelDictationForSend]);
 
-	const stop = useCallback(() => {
-		void (async () => {
-			if (endpoints === null) return;
-			try {
-				await endpoints.command(sessionId, { op: "abort" });
-			} catch (failure) {
-				setError(
-					isRelayError(failure)
-						? (failure.displayableMessage ?? COMPOSER_COPY.steerError)
-						: COMPOSER_COPY.steerError,
-				);
-			}
-		})();
+	/**
+	 * The turn interrupt — the stop button's action, and the whole cancel
+	 * mechanism this app has (contract.md, "the stop button": `{op: "abort"}`).
+	 *
+	 * Returns whether the request REACHED the relay: `false` when nothing was
+	 * sent — no route, or the command failed, in which case the failure is
+	 * stated on the composer's own error line. Beside the composer, the
+	 * image-gen card reads exactly this answer to drop a "Cancelling…" overlay
+	 * it must not latch over a request that never went out (review round 1, F2);
+	 * the returned promise therefore never rejects, and a caller that ignores
+	 * the value is unaffected.
+	 */
+	const stop = useCallback(async (): Promise<boolean> => {
+		if (endpoints === null) return false;
+		try {
+			await endpoints.command(sessionId, { op: "abort" });
+			return true;
+		} catch (failure) {
+			setError(
+				isRelayError(failure)
+					? (failure.displayableMessage ?? COMPOSER_COPY.steerError)
+					: COMPOSER_COPY.steerError,
+			);
+			return false;
+		}
 	}, [endpoints, sessionId]);
 
 	/* ------------------------------------------------------------- the answers */

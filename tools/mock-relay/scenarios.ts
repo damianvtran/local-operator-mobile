@@ -1110,15 +1110,37 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 	 * surface's `feat/imagegen-surfaces` lane). One row per state the card draws:
 	 * queued without and with a queue position, running indeterminate and with a
 	 * progress fraction, done with its artifact, failed with the provider's own
-	 * error, and an interrupted call beside them.
+	 * error, the cancel-vs-finished conflict (`media_already_completed`, the
+	 * quiet "Already finished" treatment), and an interrupted call beside them.
+	 *
+	 * The world carries a SECOND session beside the showroom: the seed
+	 * projection under a deterministic id (`syntheticSessionId("imagegen-empty")`
+	 * = `9f448c4f83d0`), no rows. The first cell of every capture run navigates
+	 * to IT, because the app's very first cold navigation races its own login
+	 * (its first requests 401 and the stream is not retried): whatever the race
+	 * does, an empty transcript renders the empty state, so the sacrificial
+	 * cell's declared `empty` name is true in both themes and can never collapse
+	 * into the populated transcript's byte-identical twin — the two QA round 1
+	 * findings (Q1 the false claim, Q2 the flake) both lived in the version where
+	 * that cell navigated to the showroom instead.
 	 *
 	 * `shows` is EMPTY on purpose, and the omission is named rather than silent:
 	 * the S5 cell this state will fill needs an app-side marker, which round 1 of
 	 * the card does not add; until that lands, the cell that would name it would
 	 * be a cell the readiness guard has no subject for. The scenario still earns
-	 * its place — it is what the visual rounds drive (`--cells` ad-hoc paths, and
-	 * `lo-scroll=top` for the top of the transcript, since eight rows do not fit
-	 * one phone frame). When the marker lands, this shows list grows the cell.
+	 * its place — it is what the visual rounds drive, with ad-hoc cells:
+	 *
+	 *   path:/session/9f448c4f83d0/empty                 the first-navigation absorber
+	 *   path:/session/{sessionId}                        the tail; the cancel cell adds
+	 *                                                    the matrix's
+	 *                                                    `imagegen-cancel-to-img-running-determinate`
+	 *   path:/session/{sessionId}-lo-scroll=top__imagegen-head
+	 *                                                    the head. Nine rows do not fit
+	 *                                                    one phone frame; this cell runs
+	 *                                                    at `iphone-max`, where the whole
+	 *                                                    already-finished row is in frame.
+	 *
+	 * When the marker lands, this shows list grows the cell.
 	 *
 	 * The live-detail keys (`queue_position`, `progress`, `logs`) are the ONE
 	 * place the fixtures write them, through the `liveDetails` widening declared
@@ -1128,7 +1150,7 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 	 * that changes if the freeze renames one. */
 	add(
 		"imagegen-progress",
-		"A transcript of image generations in every state the card renders — queued with and without a position, running indeterminate and determinate, done with its artifact, failed with the provider's error, and an interrupted call.",
+		"A transcript of image generations in every state the card renders — queued with and without a position, running indeterminate and determinate, done with its artifact, failed with the provider's error, the already-finished conflict, and an interrupted call.",
 		[],
 		() => {
 			const base = structuredClone(everyKind);
@@ -1190,6 +1212,16 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 							logs: ["IN_QUEUE", "IN_PROGRESS — diffusion step 12 of 30"],
 						}),
 					}),
+					/* Fifth row on purpose: the head cell at `iphone-max` fits exactly the
+					 * five rows above it plus this one, which is the frame the design round
+					 * reads the quiet "Already finished" treatment from (review round 1, F1). */
+					imageRow("img-already-finished", {
+						tool_state: "failed",
+						summary: "hero, square",
+						elapsed_s: 3.2,
+						error: "This generation had already finished.",
+						details: liveDetails({ error_type: "media_already_completed" }),
+					}),
 					imageRow("img-done", {
 						tool_state: "done",
 						summary: "hero, 16:9",
@@ -1206,9 +1238,6 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 					imageRow("img-interrupted", {
 						tool_state: "interrupted",
 						summary: "sticker pass",
-						details: liveDetails({
-							output: "IN_PROGRESS — cancelled by the reader",
-						}),
 					}),
 					/* LAST, so the tail view frames it whole: it is the row the
 					 * cancel cell presses — a control must be on screen for the still
@@ -1225,7 +1254,21 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 					}),
 				],
 			});
-			return { projections: { [projection.session_id]: projection } };
+			/* The rig's first-navigation absorber: a second session whose transcript
+			 * is empty, so the app's cold-boot race (the first navigation's requests
+			 * 401 before login, and the stream is not retried) renders the empty state
+			 * either way — the scenario docblock names why the sacrificial cell must
+			 * be THIS session and not the showroom. */
+			const empty = projectionFrom(seed, {
+				session_id: syntheticSessionId("imagegen-empty"),
+				conversation_name: "New conversation",
+			});
+			return {
+				projections: {
+					[projection.session_id]: projection,
+					[empty.session_id]: empty,
+				},
+			};
 		},
 	);
 

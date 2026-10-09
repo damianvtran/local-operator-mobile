@@ -163,6 +163,65 @@ export const imageGenStateLine = (
 	return IMAGEGEN_STATE_WORD[phase];
 };
 
+/* ------------------------------------------------------------ the cancel overlay */
+
+/**
+ * Whether a phase can still be cancelled: the call has not settled.
+ *
+ * ONE predicate for the card's Cancel gate and its overlay, so "cancelable"
+ * and "still live" cannot drift apart.
+ */
+export const imageGenLivePhase = (phase: ImageGenPhase): boolean =>
+	phase === "queued" || phase === "running";
+
+/**
+ * The phase the card DRAWS: the cancelling overlay on a live phase once a
+ * request has been made, the wire's own phase otherwise.
+ */
+export const imageGenCardPhase = (
+	phase: ImageGenPhase,
+	requested: boolean,
+): ImageGenCardPhase =>
+	imageGenLivePhase(phase) && requested ? "cancelling" : phase;
+
+/**
+ * The cancel overlay's lifecycle, as one pure step.
+ *
+ * The transition that matters is `request-failed`: a request that never
+ * reached the relay — no route, or the abort command answered an error — has
+ * NOTHING in flight, so the overlay it raised must drop and the card must fall
+ * back to its real phase (the composer's error line already carries the
+ * failure). Latching "Cancelling…" over a request that was never made was
+ * review round 1's finding F2.
+ *
+ * `request-delivered` keeps the current value: the request IS in flight, and
+ * the overlay lives until the entry settles. `settled` clears it; the phase
+ * itself also carries the truth once it leaves the live pair
+ * (`imageGenCardPhase`), which is why this clear is hygiene rather than the
+ * only defence.
+ */
+export type ImageGenCancelEvent =
+	| "press"
+	| "request-delivered"
+	| "request-failed"
+	| "settled";
+
+export const imageGenCancelOverlay = (
+	requested: boolean,
+	event: ImageGenCancelEvent,
+): boolean => {
+	switch (event) {
+		case "press":
+			return true;
+		case "request-delivered":
+			return requested;
+		case "request-failed":
+			return false;
+		case "settled":
+			return false;
+	}
+};
+
 /* ------------------------------------------------------------ the live detail */
 
 /**
@@ -312,6 +371,6 @@ export const imageGenView = (entry: TranscriptEntry): ImageGenView | null => {
 		artifact,
 		alreadyFinished:
 			phase === "failed" && live.errorType === IMAGEGEN_ALREADY_FINISHED,
-		cancelable: phase === "queued" || phase === "running",
+		cancelable: imageGenLivePhase(phase),
 	};
 };
