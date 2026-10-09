@@ -19,13 +19,81 @@ import { describe, expect, it } from "vitest";
  * cannot import (the same constraint as `model-sheet.test.ts`). The guard is
  * read out of the source rather than hardcoded, so a rename keeps passing
  * while `done` joining the set — the failure this exists for — fails by name.
+ * Comments are stripped before any match (see `stripComments`): the reviewer
+ * demonstrated that a stale commented guard above a `done`-joined one kept the
+ * suite green, which is exactly the masking this test must not have (review
+ * round 1, F2).
  */
-const SOURCE = readFileSync(
-	fileURLToPath(new URL("./imagegen-card.tsx", import.meta.url)),
-	"utf8",
+
+/** The residual leading-`*` filter, top-level for the lint's reason. */
+const LEADING_STAR = /^\s*\*/;
+
+/**
+ * Comments out of a source file before anything is matched against it.
+ *
+ * The pattern adopted from `src/ui/a11y.e2e.test.ts`: without it this test's
+ * first match can be a COMMENT — a stale `// const liveTone = running ||
+ * cancelling` left above a `done`-joined guard read as the guard and kept the
+ * suite green (review round 1, F2, demonstrated on this very guard), and a
+ * comment merely mentioning `<LogTail>` reddened the element counts, the
+ * opposite false reading.
+ *
+ * Quote-aware on purpose (the a11y module's recorded reason): a naive
+ * `/\/\/.*$/` also truncates `https://…` inside a string and HIDES the real
+ * code after it — the direction that matters. The residual hole is the same
+ * one, recorded rather than hidden: a mention inside a string still counts.
+ */
+const stripComments = (text: string): string => {
+	let out = "";
+	let quote: string | null = null;
+	for (let i = 0; i < text.length; i += 1) {
+		const ch = text[i] ?? "";
+		const next = text[i + 1] ?? "";
+		if (quote !== null) {
+			out += ch;
+			if (ch === "\\") {
+				out += next;
+				i += 1;
+				continue;
+			}
+			if (ch === quote) quote = null;
+			continue;
+		}
+		if (ch === '"' || ch === "'" || ch === "`") {
+			quote = ch;
+			out += ch;
+			continue;
+		}
+		if (ch === "/" && next === "/") {
+			while (i < text.length && text[i] !== "\n") i += 1;
+			out += "\n";
+			continue;
+		}
+		if (ch === "/" && next === "*") {
+			i += 2;
+			while (i < text.length && !(text[i] === "*" && text[i + 1] === "/")) {
+				i += 1;
+			}
+			i += 1;
+			continue;
+		}
+		out += ch;
+	}
+	return out
+		.split("\n")
+		.filter((line) => !LEADING_STAR.test(line))
+		.join("\n");
+};
+
+/** The card's source, comments STRIPPED — every match below measures the live
+ *  code, never a comment standing in for it. */
+const SOURCE = stripComments(
+	readFileSync(
+		fileURLToPath(new URL("./imagegen-card.tsx", import.meta.url)),
+		"utf8",
+	),
 );
 
-/** The expression every live-only element sits under, as the source writes it. */
 /** The expression every live-only element sits under (top-level literal: the
  *  module is read once, and the lint's rule keeps it off the hot path). */
 const LIVE_GUARD = /const liveTone = ([^;]+);/;

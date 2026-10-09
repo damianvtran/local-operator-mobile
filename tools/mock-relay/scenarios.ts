@@ -1310,15 +1310,11 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 						tool_state: "running",
 						summary: "hero, square",
 						elapsed_s: 5.6,
-						details: progressDetails({
-							stage: "cancelling",
-							log_lines: [
-								{
-									message: "IN_PROGRESS — diffusion step 18 of 30",
-									timestamp: "2026-10-09T01:02:24Z",
-								},
-							],
-						}),
+						/* No `log_lines` on the hold: the producer's cancelling update
+						 * (`_emit_cancel_stage`, harness #2089) passes only stage/provider/
+						 * model, so every other key — the tail included — is None. The fixture
+						 * never shows a state the wire cannot produce (review round 1, F1). */
+						details: progressDetails({ stage: "cancelling" }),
 					}),
 					imageRow("img-midwalk-failure", {
 						tool_state: "running",
