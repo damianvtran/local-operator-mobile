@@ -108,6 +108,77 @@ describe("imageGenView", () => {
 		},
 	);
 
+	it.each([
+		["queued", "queued"],
+		["in_progress", "running"],
+		["completed", "done"],
+		["cancelled", "cancelled"],
+		["cancelling", "cancelling"],
+	] as const)("maps a present stage %s to %s", (stage, phase) => {
+		expect(imageGenView(row({ details: { stage } }))?.phase).toBe(phase);
+	});
+
+	it("maps the stated `null` stage to failed — the mid-walk failure", () => {
+		const view = imageGenView(
+			row({
+				tool_state: "running",
+				details: {
+					stage: null,
+					error: "FAL (flux-schnell) exceeded its 120s generation budget.",
+					error_type: "timeout",
+				},
+			}),
+		);
+		expect(view?.phase).toBe("failed");
+		expect(view?.live.error).toBe(
+			"FAL (flux-schnell) exceeded its 120s generation budget.",
+		);
+	});
+
+	it("lets a present stage beat the tool_state fallback, and falls back on an unknown one", () => {
+		/* The feed's stage is the finer truth; an unknown value is not a state
+		 * this build knows — it reads as absent and the reduced fallback renders
+		 * instead of a guess. */
+		expect(
+			imageGenView(
+				row({ tool_state: "queued", details: { stage: "in_progress" } }),
+			)?.phase,
+		).toBe("running");
+		expect(
+			imageGenView(
+				row({ tool_state: "running", details: { stage: "future-stage" } }),
+			)?.phase,
+		).toBe("running");
+	});
+
+	it("reads a terminal `completed` on a settled record to the done-arm", () => {
+		/* The live completion update does not reach the transcript today, but the
+		 * vocabulary value is documented (harness-lane freeze) and a settled
+		 * receipt carrying it must render the done-arm: the artifact through the
+		 * existing image path, no live treatment (the card's live guard is pinned
+		 * against `done` in `imagegen-card.test.ts`). Stray live fields on the
+		 * settled record change nothing. */
+		const view = imageGenView(
+			row({
+				tool_state: "done",
+				images: [{ index: 0, mime_type: "image/png" }],
+				details: {
+					stage: "completed",
+					log_lines: [
+						{
+							message: "IN_PROGRESS — upscaling",
+							timestamp: "2026-10-09T01:02:31Z",
+						},
+					],
+					progress_fraction: 0.9,
+				},
+			}),
+		);
+		expect(view?.phase).toBe("done");
+		expect(view?.artifact).toEqual({ index: 0, mimeType: "image/png" });
+		expect(view?.cancelable).toBe(false);
+	});
+
 	it("carries the tool's name and summary through verbatim", () => {
 		const view = imageGenView(
 			row({ summary: "a wide shot, golden hour", tool_state: "queued" }),

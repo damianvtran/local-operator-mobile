@@ -115,6 +115,12 @@ const PHASE_OF_STAGE: Record<ImageGenStage, ImageGenPhase> = {
  * `failed`; the platform's sentence rides the same update and renders from it.
  * `undefined` (no stage in the bag at all — a pre-freeze row) falls back to
  * `tool_state`.
+ *
+ * `completed` reads to the done-arm wherever it appears — the live completion
+ * update (which the transcript does not receive today) and a settled receipt
+ * that one day carries the terminal value alike: the vocabulary value is the
+ * same statement in either place, so the read stays tolerant by construction
+ * (wiring round, 2026-10-09).
  */
 const phaseOf = (
 	stage: ImageGenStage | null | undefined,
