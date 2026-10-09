@@ -60,6 +60,10 @@ export type TranscriptListProps = {
 	loadImage?: (entryId: string, index: number) => Promise<string | null>;
 	/** Opens a subagent's own view. */
 	onOpenAgent?: (jobId: string) => void;
+	/** The turn interrupt, threaded to image-gen cards (the composer's Stop
+	 *  path). `undefined` while no turn is live; resolves whether the request
+	 *  reached the relay (review round 1, F2). */
+	onCancelTurn?: () => Promise<boolean>;
 	/** Rendered when there are no rows at all (a seeded but empty session). An
 	 *  ELEMENT rather than arbitrary nodes, because `ListEmptyComponent` takes a
 	 *  component or an element and not a node list. */
@@ -126,6 +130,7 @@ export const TranscriptList = ({
 	streamingRowId,
 	loadImage,
 	onOpenAgent,
+	onCancelTurn,
 	empty,
 	header,
 	anchorId = null,
@@ -511,6 +516,7 @@ export const TranscriptList = ({
 						streaming={streamingRowId !== null && item.id === streamingRowId}
 						loadImage={loadImage}
 						onOpenAgent={onOpenAgent}
+						onCancelTurn={onCancelTurn}
 					/>
 					{/* The completion anchor: a zero-size sibling at the row's bottom edge
 					 * (an element carries one testID, so the anchor is its own element —
@@ -527,6 +533,7 @@ export const TranscriptList = ({
 			streamingRowId,
 			loadImage,
 			onOpenAgent,
+			onCancelTurn,
 			anchorId,
 			measureRow,
 			highlightId,

@@ -20,6 +20,7 @@ import type {
 	SessionSummary,
 	SttCapability,
 	TranscriptEntry,
+	TranscriptEntryDetails,
 } from "../../docs/relay/types.ts";
 import type { Json } from "../lib/json.ts";
 import { isRecord } from "../lib/json.ts";
@@ -191,6 +192,20 @@ export type ScenarioRegistry = Record<string, ScenarioEntry>;
 
 /** The session id every live capture in the corpus uses. */
 export const CAPTURED_SESSION = "6714def86197";
+
+/**
+ * The imagegen live-detail bag, widened into a row's `details`.
+ *
+ * `queue_position` and `logs` are the frozen vocabulary's names and `progress`
+ * is the native lane's provisional name for the fraction — the relay-side
+ * mirror (`docs/relay/types.ts`) does not carry them yet and this harness does
+ * not own that contract, so the fixture passes them through one cast instead of
+ * widening the doc. The app reads them in ONE place
+ * (`src/features/session/imagegen.ts`); when the freeze lands, that file and
+ * this helper are the pair that changes.
+ */
+const liveDetails = (bag: Record<string, unknown>): TranscriptEntryDetails =>
+	bag as TranscriptEntryDetails;
 
 /**
  * The list frame's `capabilities` block, with the scenario's own voice override
@@ -1102,6 +1117,175 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 				],
 			});
 			return { projections: { [projection.session_id]: projection } };
+		},
+	);
+
+	/* The image-generation card's states, as the app renders them (the native
+	 * surface's `feat/imagegen-surfaces` lane). One row per state the card draws:
+	 * queued without and with a queue position, running indeterminate and with a
+	 * progress fraction, done with its artifact, failed with the provider's own
+	 * error, the cancel-vs-finished conflict (`media_already_completed`, the
+	 * quiet "Already finished" treatment), and an interrupted call beside them.
+	 *
+	 * The world carries a SECOND session beside the showroom: the seed
+	 * projection under a deterministic id (`syntheticSessionId("imagegen-empty")`
+	 * = `9f448c4f83d0`), no rows. The first cell of every capture run navigates
+	 * to IT, because the app's very first cold navigation races its own login
+	 * (its first requests 401 and the stream is not retried): whatever the race
+	 * does, an empty transcript renders the empty state, so the sacrificial
+	 * cell's declared `empty` name is true in both themes and can never collapse
+	 * into the populated transcript's byte-identical twin — the two QA round 1
+	 * findings (Q1 the false claim, Q2 the flake) both lived in the version where
+	 * that cell navigated to the showroom instead.
+	 *
+	 * `shows` is EMPTY on purpose, and the omission is named rather than silent:
+	 * the S5 cell this state will fill needs an app-side marker, which round 1 of
+	 * the card does not add; until that lands, the cell that would name it would
+	 * be a cell the readiness guard has no subject for. The scenario still earns
+	 * its place — it is what the visual rounds drive, with ad-hoc cells:
+	 *
+	 *   path:/session/9f448c4f83d0/empty                 the first-navigation absorber
+	 *   path:/session/{sessionId}/imagegen               the tail
+	 *   path:/session/{sessionId}?lo-scroll=top/imagegen-head
+	 *                                                    the head; nine rows do not fit
+	 *                                                    one phone frame, so this cell
+	 *                                                    runs at `iphone-max`, where the
+	 *                                                    whole already-finished row is
+	 *                                                    in frame
+	 *   path:/session/{sessionId}/imagegen-cancel        the cancelling overlay — the
+	 *                                                    same key carries the Cancel press
+	 *                                                    in `CELL_OPENERS`
+	 *                                                    (`tools/visual/matrix.ts`)
+	 *
+	 * When the marker lands, this shows list grows the cell.
+	 *
+	 * The live-detail keys (`queue_position`, `progress`, `logs`) are the ONE
+	 * place the fixtures write them, through the `liveDetails` widening declared
+	 * above: `queue_position` and `logs` are the frozen vocabulary's names and
+	 * `progress` is this lane's provisional name for the fraction, read by
+	 * `src/features/session/imagegen.ts` — the app's single reader, and the file
+	 * that changes if the freeze renames one. */
+	add(
+		"imagegen-progress",
+		"A transcript of image generations in every state the card renders — queued with and without a position, running indeterminate and determinate, done with its artifact, failed with the provider's error, the already-finished conflict, and an interrupted call.",
+		[],
+		() => {
+			const base = structuredClone(everyKind);
+			const template = base.transcript.find((entry) => entry.kind === "tool");
+			if (template === undefined) {
+				throw new Error(
+					"the imagegen-progress base projection has no tool row to clone",
+				);
+			}
+			type Row = SessionProjection["transcript"][number];
+			const imageRow = (id: string, overrides: Partial<Row>): Row => ({
+				...structuredClone(template),
+				id: `tc-${id}`,
+				tool_call_id: id,
+				tool_name: "generate_image",
+				tool_state: "running",
+				text: "",
+				summary: "",
+				intent: "",
+				diff_added: 0,
+				diff_removed: 0,
+				elapsed_s: 0,
+				error: "",
+				images: [],
+				final: false,
+				text_complete: false,
+				details: {},
+				...overrides,
+			});
+			const projection = projectionFrom(base, {
+				conversation_name: "Launch art",
+				transcript: [
+					{
+						...structuredClone(template),
+						id: "m-image-1",
+						kind: "user",
+						tool_call_id: "",
+						tool_name: "",
+						text: "Generate the launch art: a lighthouse at dusk, wide, then a few variants.",
+						summary: "",
+						intent: "",
+						details: {},
+						images: [],
+					},
+					imageRow("img-queued", {
+						tool_state: "queued",
+						summary: "an icon set, 8 tiles",
+					}),
+					imageRow("img-queued-position", {
+						tool_state: "queued",
+						summary: "a favicon, 512",
+						details: liveDetails({ queue_position: 3 }),
+					}),
+					imageRow("img-running-indeterminate", {
+						tool_state: "running",
+						summary: "hero, 16:9",
+						elapsed_s: 7.4,
+						details: liveDetails({
+							logs: ["IN_QUEUE", "IN_PROGRESS — diffusion step 12 of 30"],
+						}),
+					}),
+					/* Fifth row on purpose: the head cell at `iphone-max` fits exactly the
+					 * five rows above it plus this one, which is the frame the design round
+					 * reads the quiet "Already finished" treatment from (review round 1, F1). */
+					imageRow("img-already-finished", {
+						tool_state: "failed",
+						summary: "hero, square",
+						elapsed_s: 3.2,
+						error: "This generation had already finished.",
+						details: liveDetails({ error_type: "media_already_completed" }),
+					}),
+					imageRow("img-done", {
+						tool_state: "done",
+						summary: "hero, 16:9",
+						elapsed_s: 12.3,
+						images: [{ index: 0, mime_type: "image/png" }],
+					}),
+					imageRow("img-failed", {
+						tool_state: "failed",
+						summary: "hero alt, 16:9 (retry)",
+						elapsed_s: 214.8,
+						error: "This generation failed before producing output.",
+						details: liveDetails({ error_type: "media_failed" }),
+					}),
+					imageRow("img-interrupted", {
+						tool_state: "interrupted",
+						summary: "sticker pass",
+					}),
+					/* LAST, so the tail view frames it whole: it is the row the
+					 * cancel cell presses — a control must be on screen for the still
+					 * to show the state its press produced — and a later call still
+					 * running reads plausibly after the settled ones beside it. */
+					imageRow("img-running-determinate", {
+						tool_state: "running",
+						summary: "hero alt, 16:9",
+						elapsed_s: 4.9,
+						details: liveDetails({
+							progress: 0.42,
+							logs: ["IN_PROGRESS — upscaling"],
+						}),
+					}),
+				],
+			});
+			/* The rig's first-navigation absorber: a second session whose transcript
+			 * is empty, so the app's cold-boot race (the first navigation's requests
+			 * 401 before login, and the stream is not retried) renders the empty state
+			 * either way — the scenario docblock names why the sacrificial cell must
+			 * be THIS session and not the showroom. */
+			const empty = projectionFrom(seed, {
+				session_id: syntheticSessionId("imagegen-empty"),
+				conversation_name: "New conversation",
+			});
+			return {
+				projections: {
+					[projection.session_id]: projection,
+					[empty.session_id]: empty,
+				},
+			};
 		},
 	);
 

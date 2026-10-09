@@ -2,9 +2,11 @@ import { Text, View } from "react-native";
 
 import type { TranscriptEntry } from "@/contracts";
 import { AskResponseRow } from "@/features/session/components/ask-response-row";
+import { ImageGenCard } from "@/features/session/components/imagegen-card";
 import { Markdown } from "@/features/session/components/markdown";
 import { ToolRow } from "@/features/session/components/tool-row";
 import { TranscriptImage } from "@/features/session/components/transcript-image";
+import { imageGenView } from "@/features/session/imagegen";
 import {
 	classifyEntry,
 	transcriptRowTestID,
@@ -41,6 +43,11 @@ export type TranscriptRowProps = {
 	loadImage?: (entryId: string, index: number) => Promise<string | null>;
 	/** Opens a subagent's own view, for a `subagent_message` row. */
 	onOpenAgent?: (jobId: string) => void;
+	/** The turn interrupt, threaded to the image-gen card's Cancel. The screen
+	 *  withholds it while the composer's own Stop is not visible, so the two
+	 *  controls share one gate (`composer.controls.stopVisible`). Resolves
+	 *  whether the request reached the relay (review round 1, F2). */
+	onCancelTurn?: () => Promise<boolean>;
 };
 
 const SEVERITY_CLASS: Record<string, string> = {
@@ -63,9 +70,14 @@ export const TranscriptRow = ({
 	streaming = false,
 	loadImage,
 	onOpenAgent,
+	onCancelTurn,
 }: TranscriptRowProps) => {
 	const kind = classifyEntry(entry);
 	const testID = transcriptRowTestID(entry);
+	/* The image-gen arm: a tool row in the detection set renders as the progress
+	 *  card instead of the generic tool row (`imagegen.ts` owns the set and the
+	 *  view-model; this file only chooses which treatment to hand it to). */
+	const imageGen = kind === "tool" ? imageGenView(entry) : null;
 	/* The streaming anchor is an EXTRA id on the row it belongs to, so a flow can
 	 * wait for it to appear and then for it to disappear (`04-session-view-steer`).
 	 * It is on a zero-size sibling rather than on the row itself because an element
@@ -81,7 +93,17 @@ export const TranscriptRow = ({
 	if (kind === "tool") {
 		return (
 			<View className="px-4">
-				<ToolRow entry={entry} testID={testID} />
+				{imageGen !== null ? (
+					<ImageGenCard
+						view={imageGen}
+						entryId={entry.id}
+						loadImage={loadImage}
+						onCancelTurn={onCancelTurn}
+						testID={testID}
+					/>
+				) : (
+					<ToolRow entry={entry} testID={testID} />
+				)}
 				{anchors}
 			</View>
 		);

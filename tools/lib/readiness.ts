@@ -375,6 +375,23 @@ export function readinessIssues(facts: ReadinessFacts): ReadinessIssue[] {
 				"the state was never reached",
 		});
 	}
+	// The affirmative half for an ad-hoc page CLAIMING the empty state. With no
+	// subject there is no marker NAME to require (the branch above), but the
+	// claim is still checkable in the shape this file already reads: a cell that
+	// declares `empty` must carry an empty-state marker. Without this, a `path:`
+	// cell could declare `empty` and render anything at all — measured on the
+	// image-gen rig, whose sacrificial first cell rendered the POPULATED
+	// transcript in one theme while the run's own summary read "every captured
+	// cell reached the screen it names" (QA round 1, Q1: the guard could not
+	// flag that direction).
+	if (subject === undefined && state === "empty" && emptyMarkers.length === 0) {
+		issues.push({
+			kind: "marker",
+			message:
+				"the cell declares 'empty' but no empty-state marker is in the DOM: " +
+				"nothing in the frame affirms the state, so the cell is NOT MEASURABLE for it",
+		});
+	}
 	// A cell the RELAY's own registry declared is a state the relay serves, so the app
 	// has to have talked to the relay to render it.
 	if (facts.relayRegistryBacked && !facts.relayReached) {

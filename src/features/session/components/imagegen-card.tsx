@@ -1,0 +1,417 @@
+import { useEffect, useRef, useState } from "react";
+import { Animated, Easing, Text, View } from "react-native";
+import { TranscriptImage } from "@/features/session/components/transcript-image";
+import type { ImageGenView } from "@/features/session/imagegen";
+import {
+	IMAGEGEN_ALREADY_FINISHED_TONE,
+	IMAGEGEN_TONE,
+	imageGenCancelOverlay,
+	imageGenCardPhase,
+	imageGenLivePhase,
+	imageGenStateLine,
+} from "@/features/session/imagegen";
+import { imagegenCancelId, transcriptImageId } from "@/ui/a11y";
+import { Button, Shimmer, useReducedMotion } from "@/ui/components";
+import { parseCubicBezier } from "@/ui/motion";
+import { EASINGS } from "@/ui/tokens.gen";
+import { cx } from "@/ui/variants";
+
+/**
+ * The image-generation progress card: the transcript row for the generation
+ * tools (`imagegen.ts` owns detection and the view-model; this file renders it).
+ *
+ * VISUAL FAMILY: the tool row (glyph, one line, elapsed), not the pending card's
+ * accent frame. The three fills are the tool row's own, extended to the card
+ * for the same reason they exist there — a long transcript is scanned for "what
+ * is still moving" and "what broke", and the glyph repeats the fact so colour is
+ * never the only channel (`tool-row.tsx` keeps the interim record of that
+ * extension for the kit).
+ *
+ * The card's own states, and the two that are load-bearing:
+ *
+ *   - **`cancelling` is local and never optimistic.** Pressing `Stop turn`
+ *     requests the EXISTING turn interrupt (`composer.stop` — the composer's
+ *     own Stop semantics, threaded in by the screen; there is no second
+ *     mechanism), and
+ *     the card then draws "Cancelling…" until the entry settles into its real
+ *     state. A client that painted "Cancelled" on the press would be claiming a
+ *     confirmation the provider has not given.
+ *   - **Reduced detail renders reduced.** Every live field is optional; no
+ *     fraction means the indeterminate sweep, no queue position means the plain
+ *     word, no logs means no line — the card never invents a number
+ *     (`imagegen.ts` validates and widens to absent).
+ *
+ * The restart/steer affordances are DELIBERATELY not wired: v1 is interrupt +
+ * a new call, the named op does not exist yet, and the slot below is the place
+ * they will mount — a comment, not a control, until the op is defined.
+ */
+export type ImageGenCardProps = {
+	/** The entry-derived view-model. This component renders this and nothing else. */
+	view: ImageGenView;
+	/** The entry's id, for the artifact's URL and the cancel control's name. */
+	entryId: string;
+	/** Resolves the finished artifact's bytes — the existing transcript image
+	 *  path, injected like every other image loader. */
+	loadImage?: (entryId: string, index: number) => Promise<string | null>;
+	/** The turn interrupt (the composer's Stop, threaded from the screen).
+	 *  `undefined` while no turn is live — which is what hides the control.
+	 *  Resolves `false` when the request never reached the relay (no route, or
+	 *  the command failed), which is what clears the overlay (review round 1,
+	 *  F2). */
+	onCancelTurn?: () => Promise<boolean>;
+	testID?: string;
+};
+
+/** The frame the image will occupy while it is generated. 64 pt is the kit's
+ *  attachment thumbnail height (`components.md` § 12), so the card argues no
+ *  new geometry into the transcript. */
+const FRAME_HEIGHT_PX = 64;
+
+/** The moving segment's width, and its sweep. The sweep takes the kit's own
+ *  loop role for this element — `motion.looping.loadbar` ({duration: 1100,
+ *  easing: "in-out"}, `design/tokens/tokens.json`) — rather than a value from
+ *  the one-shot duration ramp: `DURATIONS.beat` is an emphasis token, and a
+ *  loop drawn from it out-beats every loop the kit budgets (design round 1,
+ *  D1). */
+const SEGMENT_PCT = 38;
+const SWEEP_MS = 1100;
+
+/** The log tail: how many of the provider's last lines the card shows. Two
+ *  mono-sm lines are a current activity plus its predecessor; more is the
+ *  expansion's job, and the card must not grow a second transcript inside a
+ *  row. */
+const LOG_TAIL_LINES = 2;
+
+/**
+ * The indeterminate progress: a segment sweeping the track, left to right.
+ *
+ * The segment moves by `translateX` (a transform) rather than `left` (a layout
+ * property), which is what lets the whole loop take the kit's canonical native
+ * shape (`motion.native.coreAnimated`, `tokens.json`: `Animated.timing(value,
+ * { …, useNativeDriver: true })`). That needs the track's width in points —
+ * measured once through `onLayout` in the parent — so the sweep HOLDS at its
+ * start until the width is real rather than animating against a guess (design
+ * round 1, D5).
+ *
+ * Reduced motion stops it at its RESTING frame — mid-track, where a static
+ * segment still reads as a progress control — because a looping animation is
+ * removed rather than slowed (`tokens.json § motion.reducedMotion`; the
+ * shimmer and the skeleton do the same).
+ */
+const IndeterminateTrack = ({ trackWidth }: { trackWidth: number }) => {
+	const reduceMotion = useReducedMotion();
+	const value = useRef(new Animated.Value(0)).current;
+
+	useEffect(() => {
+		if (reduceMotion) {
+			value.setValue(0.5);
+			return;
+		}
+		if (trackWidth <= 0) {
+			// Not measured yet: nothing to sweep across.
+			value.setValue(0);
+			return;
+		}
+		value.setValue(0);
+		const loop = Animated.loop(
+			Animated.timing(value, {
+				toValue: 1,
+				duration: SWEEP_MS,
+				// `motion.looping.loadbar`'s own curve, through the one adapter
+				// (`motion.ts`): the segment eases in and out of each pass.
+				easing: Easing.bezier(...parseCubicBezier(EASINGS["in-out"])),
+				// The kit's canonical native shape — the animated property is a
+				// transform now, so the driver is the native one.
+				useNativeDriver: true,
+			}),
+		);
+		loop.start();
+		return () => loop.stop();
+	}, [reduceMotion, trackWidth, value]);
+
+	return (
+		<Animated.View
+			className="absolute bottom-0 top-0 rounded-full bg-accent"
+			style={{
+				width: `${SEGMENT_PCT}%`,
+				transform: [
+					{
+						translateX: value.interpolate({
+							inputRange: [0, 1],
+							// Start: the segment fully off the LEFT edge (its own width to
+							// the negative); end: its left edge one track-width right, so
+							// it exits cleanly off the right — the traversal the previous
+							// `left: -38% → 100%` drew, now measured in points.
+							outputRange: [-(SEGMENT_PCT / 100) * trackWidth, trackWidth],
+						}),
+					},
+				],
+			}}
+		/>
+	);
+};
+
+/** The determinate branch: the feed stated a fraction, so the bar draws it —
+ *  width only; a percentage numeral would be a second, redundant measurement. */
+const DeterminateTrack = ({ fraction }: { fraction: number }) => (
+	<View
+		className="absolute bottom-0 left-0 top-0 rounded-full bg-accent"
+		style={{ width: `${Math.round(fraction * 100)}%` }}
+	/>
+);
+
+/** The image's slot while it is generated: a sunken frame whose bottom edge is
+ *  the progress track. The track reports its measured width here — the one
+ *  number the indeterminate sweep needs — and the fraction, when one arrived,
+ *  reaches assistive tech as a VALUE: sighted readers get width-only by design,
+ *  but without a value a reader who cannot see the bar got no measurement at
+ *  all (design round 1, D4). The value rides the FLAT `aria-valuemin` /
+ *  `aria-valuemax` / `aria-valuenow` aliases, not the `accessibilityValue`
+ *  object: react-native-web silently drops the object form (measured, design
+ *  round 2, D6), while the aliases render on the web build and are equally
+ *  valid on native (RN 0.86's types and view config both carry them). The
+ *  indeterminate branch states no value on purpose: there is no number to
+ *  state. */
+const GeneratingFrame = ({
+	fraction,
+	label,
+}: {
+	fraction: number | null;
+	label: string;
+}) => {
+	const [trackWidth, setTrackWidth] = useState(0);
+	return (
+		<View
+			className="overflow-hidden rounded-sm border border-hairline bg-sunken"
+			style={{ height: FRAME_HEIGHT_PX }}
+			// The region a screen reader hears as the live part of the card; the
+			// visible word beside it is the same sentence, so nothing is announce-only.
+			accessibilityRole="progressbar"
+			accessibilityLabel={label}
+			aria-valuemin={fraction === null ? undefined : 0}
+			aria-valuemax={fraction === null ? undefined : 100}
+			aria-valuenow={fraction === null ? undefined : Math.round(fraction * 100)}
+		>
+			<View
+				className="absolute bottom-0 left-0 right-0 h-1 bg-elevated"
+				onLayout={(event) => setTrackWidth(event.nativeEvent.layout.width)}
+			>
+				{fraction === null ? (
+					<IndeterminateTrack trackWidth={trackWidth} />
+				) : (
+					<DeterminateTrack fraction={fraction} />
+				)}
+			</View>
+		</View>
+	);
+};
+
+/** The tail of the provider's own log, last lines first in reading order. */
+const LogTail = ({ lines }: { lines: string[] }) => (
+	<Text
+		className="font-mono text-mono-sm text-ink-dim"
+		numberOfLines={LOG_TAIL_LINES}
+	>
+		{lines.slice(-LOG_TAIL_LINES).join("\n")}
+	</Text>
+);
+
+export const ImageGenCard = ({
+	view,
+	entryId,
+	loadImage,
+	onCancelTurn,
+	testID,
+}: ImageGenCardProps) => {
+	/**
+	 * The cancel overlay's state: a request the reader made whose confirmation
+	 * has not landed. It clears on the entry settling (the effect below) AND on
+	 * a request that never reached the relay (`requestCancel` reads the stop
+	 * path's answer): a command that never went out leaves nothing in flight,
+	 * so "Cancelling…" over it would be a claim the app cannot make — the
+	 * composer's error line carries that failure (review round 1, F2).
+	 */
+	const [cancelRequested, setCancelRequested] = useState(false);
+
+	// The settled half: once the entry leaves its live phases the state the card
+	// draws is the wire's own, whatever it is, and the overlay is retired with
+	// it. `imageGenCardPhase` already refuses to draw `cancelling` on a settled
+	// phase, so this update is hygiene rather than the only defence.
+	useEffect(() => {
+		if (!imageGenLivePhase(view.phase)) {
+			setCancelRequested((requested) =>
+				imageGenCancelOverlay(requested, "settled"),
+			);
+		}
+	}, [view.phase]);
+
+	/**
+	 * The press, as the overlay's own events: raise on the press, then resolve
+	 * the request — keeping the overlay ONLY when the request was delivered. A
+	 * rejected promise is treated as undelivered rather than letting the overlay
+	 * latch on a caller that broke its contract.
+	 */
+	const requestCancel = () => {
+		if (onCancelTurn === undefined) return;
+		setCancelRequested((requested) =>
+			imageGenCancelOverlay(requested, "press"),
+		);
+		void onCancelTurn()
+			.then((delivered) => {
+				setCancelRequested((requested) =>
+					imageGenCancelOverlay(
+						requested,
+						delivered ? "request-delivered" : "request-failed",
+					),
+				);
+			})
+			.catch(() => {
+				setCancelRequested((requested) =>
+					imageGenCancelOverlay(requested, "request-failed"),
+				);
+			});
+	};
+
+	const phase = imageGenCardPhase(view.phase, cancelRequested);
+	/* The already-finished reading (a failed row that is really the
+	 *  cancel-vs-finished conflict) takes the quiet tone: the frozen rule is
+	 *  that the conflict is never painted as an error. */
+	const tone = view.alreadyFinished
+		? IMAGEGEN_ALREADY_FINISHED_TONE
+		: IMAGEGEN_TONE[phase];
+	const line = imageGenStateLine(phase, {
+		queuePosition: view.live.queuePosition,
+		hasArtifact: view.artifact !== null,
+		alreadyFinished: view.alreadyFinished,
+	});
+	/* The control is shown only where it applies — a live phase, no request in
+	 * flight, a live turn to interrupt (the screen withholds `onCancelTurn`
+	 * while the composer's own Stop is not visible, so the two controls share
+	 * one gate) — and its LABEL names the scope, not the card. The press is the
+	 * turn's own stop (the composer's `{op:"abort"}`), so a card-scoped word —
+	 * "Cancel" — promised a scope the mechanism does not have. "Stop turn" is
+	 * that action in the product's own vocabulary (the composer's control is
+	 * "Stop the running turn"; brand-kit's button verbs include `Stop`), and
+	 * every visible card shares the one label because they share the one
+	 * action — distinct labels per card would invent a per-card scope (design
+	 * round 1, D2). */
+	const showCancel =
+		view.cancelable && !cancelRequested && onCancelTurn !== undefined;
+	const liveTone = phase === "running" || phase === "cancelling";
+
+	return (
+		<View
+			className={cx(
+				"rounded-sm px-2",
+				(phase === "queued" || liveTone) && "bg-elevated",
+				phase === "failed" && !view.alreadyFinished && "bg-danger-wash",
+			)}
+			testID={testID}
+		>
+			<View className="min-h-11 flex-row items-center gap-1.5">
+				<Text
+					className={cx(
+						"w-4 shrink-0 text-center font-mono text-mono-sm",
+						tone.inkClass,
+					)}
+					aria-hidden
+				>
+					{tone.glyph}
+				</Text>
+				<Text
+					className="min-w-0 shrink truncate font-mono text-mono-sm text-ink-muted"
+					numberOfLines={1}
+				>
+					{view.tool}
+				</Text>
+				<Text
+					className="min-w-0 flex-1 text-body-sm text-ink-dim"
+					numberOfLines={1}
+				>
+					{view.summary}
+				</Text>
+				{view.elapsed !== null ? (
+					<Text className="shrink-0 font-mono text-mono-sm text-ink-dim tabular-nums">
+						{view.elapsed}
+					</Text>
+				) : null}
+				{showCancel ? (
+					<Button
+						label="Stop turn"
+						variant="outline"
+						size="sm"
+						accessibilityHint="Stops the running turn, which cancels this generation."
+						onPress={requestCancel}
+						testID={imagegenCancelId(entryId)}
+					/>
+				) : null}
+			</View>
+			{phase === "queued" ? (
+				<View className="pb-1.5 pl-6">
+					<Text className="text-body-sm text-ink-muted">{line}</Text>
+				</View>
+			) : null}
+			{liveTone ? (
+				<View className="gap-1.5 pb-1.5 pl-6">
+					{/* The word shimmers while the call is still moving — the kit's
+					 *  own "still arriving" signal, shared with the streaming row —
+					 *  and stops at its resting frame under reduced motion like
+					 *  every other loop. */}
+					<Shimmer active>
+						<Text className="text-body-sm text-ink-muted">{line}</Text>
+					</Shimmer>
+					<GeneratingFrame
+						fraction={view.live.progress}
+						label={view.elapsed === null ? line : `${line}, ${view.elapsed}`}
+					/>
+					{view.live.logs.length > 0 ? (
+						<LogTail lines={view.live.logs} />
+					) : null}
+				</View>
+			) : null}
+			{phase === "done" ? (
+				<View className="flex-row items-center gap-2 pb-1.5 pl-6">
+					{/* The finished image through the EXISTING transcript image path:
+					 *  artifact blocks are indexed like images and served by the same
+					 *  route, so the card hands `TranscriptImage` the same two facts
+					 *  the assistant rows do. */}
+					{view.artifact !== null && loadImage !== undefined ? (
+						<TranscriptImage
+							entryId={entryId}
+							index={view.artifact.index}
+							mimeType={view.artifact.mimeType}
+							load={loadImage}
+							testID={transcriptImageId(entryId, view.artifact.index)}
+						/>
+					) : null}
+					<Text className="min-w-0 flex-1 text-body-sm text-ink-muted">
+						{line}
+					</Text>
+				</View>
+			) : null}
+			{phase === "failed" ? (
+				<View className="gap-1 pb-1.5 pl-6">
+					<Text className="text-body-sm text-ink-muted">{line}</Text>
+					{/* The platform's own sentence, verbatim — the one place on this
+					 *  card where the machine speaks. WITHHELD for the
+					 *  cancel-vs-finished conflict: that reading is "Already
+					 *  finished", and a conflict must never be dressed as an error
+					 *  (the frozen rule); the sentence is the conflict's own, so it
+					 *  has no quieter register to take here. */}
+					{view.live.error !== null && !view.alreadyFinished ? (
+						<Text className="text-body-sm text-danger">{view.live.error}</Text>
+					) : null}
+				</View>
+			) : null}
+			{phase === "cancelled" ? (
+				<View className="gap-1 pb-1.5 pl-6">
+					<Text className="text-body-sm text-ink-muted">{line}</Text>
+					{/* Affordance slot: restart / steer (v1 = interrupt + a NEW
+					 *  generate call) mounts HERE once its op is defined. NOT wired:
+					 *  the frozen facts reserve it, and a control that cannot work is
+					 *  worse than its absence. */}
+				</View>
+			) : null}
+		</View>
+	);
+};

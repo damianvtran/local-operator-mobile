@@ -20,6 +20,7 @@
 import {
 	CONTROL,
 	findResultId,
+	imagegenCancelId,
 	projectMilestoneEditId,
 	sessionRowId,
 } from "../../src/ui/a11y.ts";
@@ -748,6 +749,16 @@ export const CELL_OPENERS: Record<string, Affordance[]> = {
 	 *  not undoable), so this frame is the question, not the answer. */
 	"S16-detail/delete-confirm": [{ click: CONTROL.projectDelete }],
 
+	/* The image-gen card's CANCEL-REQUESTED state, on the ad-hoc path cell the
+	 *  `imagegen-progress` fixture drives. The press is the app's own stop
+	 *  control ("Stop turn" — the existing turn interrupt) against a relay whose
+	 *  scenario never confirms it, so the frame shows the honest in-between
+	 *  state this lane exists to get right: pressed and not yet settled, never
+	 *  optimistic "cancelled". The target is the row the fixture's determinate
+	 *  card owns (`tc-img-running-determinate`), which the tail view reaches. */
+	"path:/session/{sessionId}/imagegen-cancel": [
+		{ click: imagegenCancelId("tc-img-running-determinate") },
+	],
 	/* --- the in-conversation find, over the long conversation (see the cells
 	 * on the `long-transcript` scenario). The lever and the field are the app's
 	 * controls; the result press is a reader choosing a hit, addressed by the
