@@ -60,9 +60,10 @@ checklist: the **bundle ID** and the **app record**.
    (that is why `checklist.md` F2's `.p12` line is superseded). The desktop app's
    notarization credential is a different thing again — an app-specific password
    against a Developer ID identity, which is not what this pipeline uses.
-5. **Land the release workflow's platform selection** — see the platform note
-   below. `RELEASE_PLATFORMS=ios` is already set as a repository variable, but
-   nothing reads it until that PR merges.
+5. **The release workflow's platform selection is landed** — PR #75 merged
+   2026-10-09. `RELEASE_PLATFORMS=ios` (a repository variable) is read by the
+   `credentials` job, which now checks only the enabled platforms' secrets. See
+   the platform note below.
 6. **The first tag is the credential check.** `credentials` runs first on every
    release and fails there, naming the missing variable, before any build or
    upload — so a mis-set secret costs one re-tag, not a half-release. (A
@@ -106,16 +107,15 @@ Organization accounts are outside that page's scope.
 
 ---
 
-## The platform variable and the platform-selection fix
+## The platform variable and platform selection
 
 `RELEASE_PLATFORMS` is a **repository variable** holding a comma-separated list:
-`ios`, `android`, or `ios,android`. Unset/empty means `ios`. A PR from branch
-`fix/release-platforms` changes `release.yml` so the `credentials` job checks only
-the enabled platforms' secrets, the platform jobs are skipped when not enabled,
-and `publish` tolerates a skipped platform (today a `v*` tag requires **all
-nine** credentials and fails on the parked Play secrets). Link this file to that
-PR once it lands. Tag runs are unaffected until then: do not cut a release tag
-before it merges.
+`ios`, `android`, or `ios,android`. Unset/empty means `ios`. The `credentials`
+job checks only the enabled platforms' secrets, the platform jobs are skipped
+when not enabled, and `publish` tolerates a skipped platform — landed in PR #75
+(merged 2026-10-09). A `v*` tag with the variable at its default therefore
+requires **only the four `APPLE_*` secrets**; the five Play/Android names become
+required once `android` is enabled.
 
 ---
 

@@ -128,9 +128,9 @@ deployment rules: a BRANCH rule `main` and a TAG rule `v*`.** Both halves matter
 
 A pull request cannot reach any of those jobs, so a branch pushed here cannot
 print a key. **The environment exists (created 2026-10-04), and its deployment
-rules are the mechanism** — branch `main` and tag `v*` added 2026-10-09,
-alongside the workflows' own `if:` conditions. The environment is what makes it
-an enforced rule rather than a workflow convention.
+rules are the mechanism** — branch `main` and tag `v*`, alongside the
+workflows' own `if:` conditions. The environment is what makes it an enforced
+rule rather than a workflow convention.
 
 **A cost of that arrangement, stated because it is a choice.** If the environment
 is given required reviewers, the `credentials` gate waits for approval *before* it
@@ -143,10 +143,12 @@ prompt, and is the configuration this pipeline expects.
 **STATE (2026-10-09): the environment exists; its secrets do not.** `release`
 was created with a **branch** rule `main` and a **tag** rule `v*` (custom branch
 policies enabled, which is what makes a tag rule possible at all), so the jobs
-above can reach it from tags and from `main`. The nine credentials, however, are
+above can reach it from tags and from `main`. The credentials, however, are
 still **unset** — the repository and environment secret counts are both 0 — so a
-`v*` tag fails at the `credentials` gate today, by design, naming every missing
-name. Add the nine as **environment secrets** when the account work resumes (see
+`v*` tag fails at the `credentials` gate today, by design, naming the missing
+names for the **enabled** platforms (the four `APPLE_*` names with
+`RELEASE_PLATFORMS` at its default `ios`; nine only once `android` is enabled).
+Add them as **environment secrets** when the account work resumes (see
 `docs/publishing/submission-runbook.md`), and decide then whether the environment
 requires reviewers (the paragraph above).
 

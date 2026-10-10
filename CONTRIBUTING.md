@@ -31,7 +31,7 @@ A passing test suite shows the code does what the test expected; it does not sho
 
 ### Versions and releases
 
-Pull requests never change the app's version number. Releases are cut by a release owner in a dedicated `chore(release):` pull request, which gathers everything merged since the last release. Say in your pull request whether the change is user-visible, so the release notes can describe it.
+Pull requests never change the app's version number — the git tag is the release (`docs/ci.md`, "Versioning"). A maintainer cuts a `vX.Y.Z` tag on `main` once a release window's work is merged. The one exception is `release/build-number.txt`, which a release pull request may raise only when the release job's floor check asks for it. Say in your pull request whether the change is user-visible, so the release notes can describe it.
 
 ## Guidelines
 
