@@ -98,6 +98,12 @@ const SOURCE = stripComments(
  *  module is read once, and the lint's rule keeps it off the hot path). */
 const LIVE_GUARD = /const liveTone = ([^;]+);/;
 
+/** The generating body's gate, and the cancel control's (top-level literals:
+ *  the lint's rule keeps regex construction off the hot path). */
+const BODY_GATE = /const generatingBody = ([^;]+);/;
+const CANCEL_GATE =
+	/const showCancel =\s*view\.cancelable && !cancelRequested && onCancelTurn !== undefined;/;
+
 const liveGuard = (): string => {
 	const match = SOURCE.match(LIVE_GUARD);
 	expect(match, "the card must declare its live guard").not.toBeNull();
@@ -152,5 +158,54 @@ describe("the card's live guard", () => {
 			SOURCE.indexOf('{phase === "failed" ?'),
 		);
 		expect(doneArm).toContain("<TranscriptImage");
+	});
+});
+
+describe("the generating body's gate (the F3 guard)", () => {
+	/* The frame (whose track IS the bar) and the log tail are one body, behind
+	 * ONE predicate: `generatingBody`. A hold that never generated must draw the
+	 * word alone, so neither element may be reachable from `liveTone` alone. */
+	it("derives the body from the live guard AND the generating fact", () => {
+		const match = SOURCE.match(BODY_GATE);
+		expect(match, "the card must declare its body gate").not.toBeNull();
+		const gate = match?.[1] ?? "";
+		expect(gate).toContain("liveTone");
+		expect(gate).toContain("generating");
+		// Negative control: the gate is not a bare re-spelling of the live guard.
+		expect(gate.trim()).not.toBe("liveTone");
+	});
+
+	it("reads the fact through the shared predicate, from the WIRE phase", () => {
+		expect(SOURCE).toContain("imageGenGenerating(view,");
+		// The drawn phase carries the overlay; the fact must not be read from it.
+		expect(SOURCE).not.toContain("imageGenGenerating(phase,");
+	});
+
+	it("puts the frame and the log tail behind the gate, and the word outside it", () => {
+		const block = liveBlock();
+		const frame = block.indexOf("<GeneratingFrame");
+		const tail = block.indexOf("<LogTail");
+		const gate = block.indexOf("generatingBody ?");
+		expect(gate).toBeGreaterThan(-1);
+		expect(frame).toBeGreaterThan(gate);
+		expect(tail).toBeGreaterThan(block.indexOf("generatingBody &&"));
+		// The gate appears once per element it covers — two, not zero, not three.
+		expect((block.match(/generatingBody/g) ?? []).length).toBe(2);
+		// The shimmer word is the hold's own content and renders before any gate.
+		const word = block.indexOf("<Shimmer active>");
+		expect(word).toBeGreaterThan(-1);
+		expect(word).toBeLessThan(gate);
+	});
+
+	it("keeps ONE motion: the shimmer word plus the frame's single sweep", () => {
+		// Exactly one indeterminate sweep element exists, inside the frame, and
+		// only the fraction-less branch of it — no second loop beside the word.
+		expect((SOURCE.match(/<IndeterminateTrack/g) ?? []).length).toBe(1);
+		expect((SOURCE.match(/Animated\.loop\(/g) ?? []).length).toBe(1);
+		expect((SOURCE.match(/<DeterminateTrack/g) ?? []).length).toBe(1);
+	});
+
+	it("keeps the cancel gate on the unsettled phases, queued included", () => {
+		expect(SOURCE).toMatch(CANCEL_GATE);
 	});
 });

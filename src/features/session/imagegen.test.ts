@@ -8,6 +8,7 @@ import {
 	IMAGEGEN_TOOLS,
 	imageGenCancelOverlay,
 	imageGenCardPhase,
+	imageGenGenerating,
 	imageGenLiveDetail,
 	imageGenLivePhase,
 	imageGenStateLine,
@@ -570,21 +571,59 @@ describe("the copy and the tone tables", () => {
 		).toBe("cancelling");
 	});
 
-	it("composes the queued word with the position only when one arrived", () => {
-		expect(
+	it("composes the queued word with the datum only when one arrived", () => {
+		const line = (queuePosition: number | null) =>
 			imageGenStateLine("queued", {
-				queuePosition: 3,
+				queuePosition,
 				hasArtifact: false,
 				alreadyFinished: false,
-			}),
-		).toBe("Queued · position 3");
-		expect(
+			});
+		/* The datum counts requests AHEAD, so the copy is "N ahead" on every
+		 * surface (desktop, relay: "N ahead"; TUI: "N requests ahead"). Asserted
+		 * with toBe — whole-string, edge-anchored — so "13 ahead" or a trailing
+		 * suffix cannot satisfy the "3 ahead" case by containing it. */
+		expect(line(3)).toBe("Queued · 3 ahead");
+		expect(line(null)).toBe("Queued");
+	});
+
+	it("renders a zero datum: nothing ahead is a measurement, not an absence", () => {
+		const line = imageGenStateLine("queued", {
+			queuePosition: 0,
+			hasArtifact: false,
+			alreadyFinished: false,
+		});
+		expect(line).toBe("Queued · 0 ahead");
+		// Negative control: the zero must not collapse to the bare word.
+		expect(line).not.toBe("Queued");
+	});
+
+	it("does not alias adjacent datums or keep the old 'position' wording", () => {
+		const line = (queuePosition: number) =>
 			imageGenStateLine("queued", {
-				queuePosition: null,
+				queuePosition,
 				hasArtifact: false,
 				alreadyFinished: false,
-			}),
-		).toBe("Queued");
+			});
+		expect(line(12)).toBe("Queued · 12 ahead");
+		expect(line(2)).toBe("Queued · 2 ahead");
+		// Negative controls: a "12" never reads as "2" (or the reverse), and the
+		// retired "position N" spelling is gone from every datum.
+		expect(line(12)).not.toBe(line(2));
+		for (const n of [0, 1, 2, 12]) {
+			expect(line(n)).not.toContain("position");
+		}
+	});
+
+	it("keeps the datum off every state but queued", () => {
+		for (const phase of ["running", "cancelling", "done", "failed"] as const) {
+			expect(
+				imageGenStateLine(phase, {
+					queuePosition: 3,
+					hasArtifact: true,
+					alreadyFinished: false,
+				}),
+			).not.toContain("ahead");
+		}
 	});
 
 	it("says 'Image ready' only when the artifact is actually there", () => {
@@ -629,5 +668,97 @@ describe("the copy and the tone tables", () => {
 	it("names the cancelling phase as in-progress, not as an outcome", () => {
 		expect(IMAGEGEN_STATE_WORD.cancelling).toBe("Cancelling…");
 		expect(IMAGEGEN_STATE_WORD.cancelled).toBe("Cancelled");
+	});
+});
+
+describe("the generating fact (the desktop's F3 rule, mirrored)", () => {
+	const generating = (
+		tool_state: TranscriptEntry["tool_state"],
+		stage?: string,
+	) =>
+		imageGenView(row({ tool_state, details: stage ? { stage } : {} }))
+			?.generating;
+
+	it("is true for a running call, by stage or by projection", () => {
+		expect(generating("running")).toBe(true);
+		expect(generating("running", "in_progress")).toBe(true);
+	});
+
+	it("is false for a call that has not started", () => {
+		expect(generating("queued")).toBe(false);
+		expect(generating("composing")).toBe(false);
+		expect(generating("running", "queued")).toBe(false);
+	});
+
+	it("keeps the wire hold's body only when the projection says it ran", () => {
+		// Both directions of the predicate on the wire `cancelling` stage.
+		expect(generating("running", "cancelling")).toBe(true);
+		expect(generating("queued", "cancelling")).toBe(false);
+		expect(generating("composing", "cancelling")).toBe(false);
+	});
+
+	it.each([
+		["done", "completed"],
+		["failed", undefined],
+		["interrupted", "cancelled"],
+	] as const)("is false once settled (%s)", (state, stage) => {
+		expect(generating(state, stage)).toBe(false);
+	});
+
+	it("lets the card's history overrule the entry only during a hold", () => {
+		const hold = imageGenView(
+			row({ tool_state: "running", details: { stage: "cancelling" } }),
+		);
+		const queued = imageGenView(
+			row({ tool_state: "running", details: { stage: "queued" } }),
+		);
+		const running = imageGenView(
+			row({ tool_state: "running", details: { stage: "in_progress" } }),
+		);
+		if (hold === null || queued === null || running === null) {
+			throw new Error("the fixtures are image-gen rows");
+		}
+		// The entry says "ran" (tool_state running); a card that watched the
+		// provider-side queue knows it never did — and the reverse for a card
+		// that watched it generate.
+		expect(imageGenGenerating(hold, false)).toBe(false);
+		expect(imageGenGenerating(hold, true)).toBe(true);
+		// No history: the entry's reading stands.
+		expect(imageGenGenerating(hold, null)).toBe(true);
+		// Outside a hold, history never changes the answer.
+		expect(imageGenGenerating(queued, true)).toBe(false);
+		expect(imageGenGenerating(running, false)).toBe(true);
+	});
+
+	it("follows a card's life: running -> hold keeps, provider-queued -> hold drops", () => {
+		/* Drive it the way the card does: each render's answer is the next
+		 * render's `before`. */
+		const walk = (rows: [TranscriptEntry["tool_state"], string][]) => {
+			let before: boolean | null = null;
+			return rows.map(([tool_state, stage]) => {
+				const view = imageGenView(row({ tool_state, details: { stage } }));
+				if (view === null) throw new Error("not an image-gen row");
+				before = imageGenGenerating(view, before);
+				return before;
+			});
+		};
+		expect(
+			walk([
+				["running", "in_progress"],
+				["running", "cancelling"],
+			]),
+		).toEqual([true, true]);
+		expect(
+			walk([
+				["running", "queued"],
+				["running", "cancelling"],
+			]),
+		).toEqual([false, false]);
+		expect(
+			walk([
+				["queued", "queued"],
+				["queued", "cancelling"],
+			]),
+		).toEqual([false, false]);
 	});
 });

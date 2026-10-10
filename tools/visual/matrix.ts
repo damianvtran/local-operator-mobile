@@ -812,6 +812,14 @@ export const CELL_OPENERS: Record<string, Affordance[]> = {
 	"path:/session/{sessionId}/imagegen-cancel": [
 		{ click: imagegenCancelId("tc-img-running-determinate") },
 	],
+	/* The same press on a QUEUED card: the hold that replaced a call which
+	 *  never generated. This is the frame the F3 guard exists for — it must
+	 *  show the word alone, with no generating frame or bar the card never
+	 *  had. Targets `tc-img-queued-position`, whose "N ahead" line is also on
+	 *  screen in the before-press frame. */
+	"path:/session/{sessionId}?lo-scroll=top/imagegen-cancel-queued": [
+		{ click: imagegenCancelId("tc-img-queued-position") },
+	],
 	/* --- the in-conversation find, over the long conversation (see the cells
 	 * on the `long-transcript` scenario). The lever and the field are the app's
 	 * controls; the result press is a reader choosing a hit, addressed by the

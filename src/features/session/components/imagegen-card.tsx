@@ -7,6 +7,7 @@ import {
 	IMAGEGEN_TONE,
 	imageGenCancelOverlay,
 	imageGenCardPhase,
+	imageGenGenerating,
 	imageGenLivePhase,
 	imageGenStateLine,
 } from "@/features/session/imagegen";
@@ -298,6 +299,23 @@ export const ImageGenCard = ({
 	const showCancel =
 		view.cancelable && !cancelRequested && onCancelTurn !== undefined;
 	const liveTone = phase === "running" || phase === "cancelling";
+	/* THE GENERATING BODY'S GATE (the desktop's F3 rule, mirrored from the
+	 * relay card's `view.generating`): the frame — its track is the bar — and
+	 * the log tail render while the call is running, and during a `cancelling`
+	 * hold only when the call had already generated. A hold that replaced the
+	 * QUEUED card (the press, or the wire's own hold on a call that never ran)
+	 * draws the word ALONE: neither a frame nor a bar it never had. Frame and
+	 * bar are one element here, so ONE predicate gates both.
+	 *
+	 * The ref carries the last answer across renders because the wire's own
+	 * `cancelling` frame erases what it replaced (`imageGenGenerating` has the
+	 * full reasoning); `null` until the first render, so a card mounted
+	 * straight into a hold takes the entry's own reading. The write is
+	 * idempotent, so a double render (StrictMode) cannot change the answer. */
+	const generatedRef = useRef<boolean | null>(null);
+	const generating = imageGenGenerating(view, generatedRef.current);
+	generatedRef.current = generating;
+	const generatingBody = liveTone && generating;
 
 	return (
 		<View
@@ -360,11 +378,13 @@ export const ImageGenCard = ({
 					<Shimmer active>
 						<Text className="text-body-sm text-ink-muted">{line}</Text>
 					</Shimmer>
-					<GeneratingFrame
-						fraction={view.live.progress}
-						label={view.elapsed === null ? line : `${line}, ${view.elapsed}`}
-					/>
-					{view.live.logs.length > 0 ? (
+					{generatingBody ? (
+						<GeneratingFrame
+							fraction={view.live.progress}
+							label={view.elapsed === null ? line : `${line}, ${view.elapsed}`}
+						/>
+					) : null}
+					{generatingBody && view.live.logs.length > 0 ? (
 						<LogTail lines={view.live.logs} />
 					) : null}
 				</View>

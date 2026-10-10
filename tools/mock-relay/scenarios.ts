@@ -1255,6 +1255,11 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 	 *                                                    same key carries the Cancel press
 	 *                                                    in `CELL_OPENERS`
 	 *                                                    (`tools/visual/matrix.ts`)
+	 *   path:/session/{sessionId}?lo-scroll=top/imagegen-cancel-queued
+	 *                                                    the hold that replaced the QUEUED
+	 *                                                    card: the word alone, no
+	 *                                                    generating frame it never had
+	 *                                                    (the F3 guard's own frame)
 	 *
 	 * The two rows the canonical-shape round added (the cancelling hold and the
 	 * mid-walk failure) sit between the conflict and the done row, out of both
