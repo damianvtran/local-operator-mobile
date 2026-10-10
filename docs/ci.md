@@ -295,9 +295,11 @@ command.
 
 ## Versioning
 
-**The git tag is the only source of truth, and nothing is bumped in a pull
-request.** `scripts/ci/version.ts` derives everything from the ref and exports
-it to the job:
+**The git tag is the only source of truth, and nothing in the repository is
+bumped to release.** `scripts/ci/version.ts` derives everything from the ref and
+exports it to the job. The one exception a release may require is
+`release/build-number.txt` (the row below): it is raised in a pull request only
+when the floor check names a higher minimum.
 
 | Value | Rule |
 |---|---|

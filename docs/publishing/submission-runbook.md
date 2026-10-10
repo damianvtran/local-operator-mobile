@@ -122,7 +122,7 @@ required once `android` is enabled.
 ## Already done — no action on resume
 
 - `release` environment created **2026-10-04**; its two deployment rules
-  (branch `main`, tag `v*`) were added **2026-10-09**. Custom branch policies are
+  (branch `main`, tag `v*`) are in place. Custom branch policies are
   enabled, which is what makes a tag rule possible at all.
 - Repository variable `RELEASE_PLATFORMS=ios` (2026-10-09).
 - Android upload-keystore procedure written down (`docs/publishing/android-keystore.md`),
