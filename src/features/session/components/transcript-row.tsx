@@ -9,6 +9,7 @@ import { TranscriptImage } from "@/features/session/components/transcript-image"
 import { imageGenView } from "@/features/session/imagegen";
 import {
 	classifyEntry,
+	peerLabel,
 	transcriptRowTestID,
 } from "@/features/session/projection";
 import { SURFACE, transcriptImageId } from "@/ui/a11y";
@@ -211,10 +212,7 @@ export const TranscriptRow = ({
 	 * without a card inside the column. */
 	const label = BLOCK_LABEL[kind] ?? kind;
 	const sender = entry.details.sender;
-	const who =
-		kind === "peer"
-			? (sender?.conversation_name ?? sender?.session_id ?? "another session")
-			: label;
+	const who = kind === "peer" ? peerLabel(sender) : label;
 	return (
 		<View className="px-4 py-1" testID={testID}>
 			<View

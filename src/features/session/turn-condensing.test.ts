@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+
 import { describe, expect, it } from "vitest";
 
 import type { TranscriptEntry } from "@/contracts";
@@ -6,9 +8,16 @@ import {
 	barPhrases,
 	type CondensePlan,
 	condensePlan,
+	groupAccessibleName,
+	groupPhrases,
+	groupPlan,
 	HEADLINE_MAX_CHARS,
 	type LatchedTurn,
 	parseExpandHook,
+	type QuietGroup,
+	quietGroupOfSpan,
+	quietGroupsOf,
+	type TranscriptItem,
 	type TurnBarFacts,
 	type TurnView,
 	transcriptTurns,
@@ -62,6 +71,47 @@ const streaming = (id: string, text: string) =>
 
 const notice = (id: string, text: string) =>
 	row({ id, kind: "notice", text, details: { severity: "error" } });
+
+/** One inbound peer receipt, with an optional named sender. */
+const peer = (id: string, sender?: string) =>
+	row({
+		id,
+		kind: "peer_message",
+		text: "a peer note",
+		details:
+			sender === undefined ? {} : { sender: { conversation_name: sender } },
+	});
+
+/** The quiet-turn tool's own row, as the wire would carry it if the relay's
+ *  fold did not hide the pair (`local-operator` S1 hides it on this route;
+ *  the shared fixture still pins its exclusion from the action count). */
+const quietTool = (id: string) =>
+	row({ id, kind: "tool", tool_name: "no_reply" });
+
+const failedTool = (id: string) =>
+	row({ id, kind: "tool", tool_name: "read", tool_state: "failed" });
+
+/** One wire row as the list's item. */
+const itemOf = (entry: TranscriptEntry): TranscriptItem => ({
+	kind: "entry",
+	id: entry.id,
+	entry,
+});
+
+const itemsOf = (entries: readonly TranscriptEntry[]): TranscriptItem[] =>
+	entries.map(itemOf);
+
+/** One group's facts, complete unless a case says otherwise. */
+const groupOf = (over: Partial<QuietGroup>): QuietGroup => ({
+	key: "qg:p1",
+	count: 2,
+	senders: [],
+	actions: 0,
+	failed: 0,
+	open: true,
+	rowIds: ["p1", "p2"],
+	...over,
+});
 
 /**
  * The geometry a turn occupies, as the facts that decide it: the ids of the
@@ -818,4 +868,552 @@ describe("the cap-shaped drive: a latched turn's render is a function of the lat
 			expect(last.condensed, `f${frame}: active turn condensed`).toBe(false);
 		}
 	});
+});
+
+/* --------------------------------------------------------------- the group */
+
+describe("quietGroupsOf — the derivation", () => {
+	it("folds consecutive receipts and counts only the work between them", () => {
+		const items = itemsOf([
+			peer("p1", "ingest-rail"),
+			tool("t1", 3),
+			quietTool("q1"),
+			peer("p2", "hermes"),
+			failedTool("t2"),
+			quietTool("q2"),
+		]);
+		expect(quietGroupsOf(items)).toEqual([
+			{
+				key: "qg:p1",
+				count: 2,
+				senders: [
+					{ label: "ingest-rail", count: 1 },
+					{ label: "hermes", count: 1 },
+				],
+				actions: 2,
+				failed: 1,
+				open: true,
+				rowIds: ["p1", "t1", "q1", "p2", "t2", "q2"],
+			},
+		]);
+	});
+
+	it("one receipt is not a group", () => {
+		expect(
+			quietGroupsOf(itemsOf([peer("p1"), tool("t1"), quietTool("q1")])),
+		).toEqual([]);
+	});
+
+	it("ends a run at a steer, a notice or a compaction statement", () => {
+		const split = (middle: TranscriptEntry) =>
+			quietGroupsOf(
+				itemsOf([peer("p1"), peer("p2"), middle, peer("p3"), peer("p4")]),
+			).map((group) => group.key);
+		expect(
+			split(row({ id: "s1", kind: "steer", text: "also the ledger" })),
+		).toEqual(["qg:p1", "qg:p3"]);
+		expect(split(notice("n1", "Interrupted"))).toEqual(["qg:p1", "qg:p3"]);
+		expect(
+			split(row({ id: "c1", kind: "compaction", text: "Context compacted" })),
+		).toEqual(["qg:p1", "qg:p3"]);
+		// Visible assistant text splits; a textless assistant row sits inside.
+		expect(split(answer("a1", "on it"))).toEqual(["qg:p1", "qg:p3"]);
+		const inside = quietGroupsOf(
+			itemsOf([
+				peer("p1"),
+				row({ id: "a1", kind: "assistant", text: "" }),
+				peer("p2"),
+			]),
+		);
+		expect(inside).toHaveLength(1);
+		expect(inside[0]?.rowIds).toEqual(["p1", "a1", "p2"]);
+	});
+
+	it("summarizes the top two senders, then one `N more` entry", () => {
+		const groups = quietGroupsOf(
+			itemsOf([
+				peer("p1", "alpha"),
+				peer("p2", "alpha"),
+				peer("p3", "alpha"),
+				peer("p4", "beta"),
+				peer("p5", "beta"),
+				peer("p6", "gamma"),
+				peer("p7", "delta"),
+			]),
+		);
+		expect(groups[0]?.senders).toEqual([
+			{ label: "alpha", count: 3 },
+			{ label: "beta", count: 2 },
+			{ label: "2 more", count: 2 },
+		]);
+	});
+
+	it("refuses a span that is not the whole group", () => {
+		const items = itemsOf([
+			peer("p1"),
+			tool("t1"),
+			quietTool("q1"),
+			peer("p2"),
+		]);
+		expect(quietGroupOfSpan(items, { from: 0, to: 3 })).not.toBeNull();
+		// A sub-span of a wider stretch, and a slice through one, both refuse:
+		// a bar states a whole group, never a fragment of one.
+		expect(quietGroupOfSpan(items, { from: 1, to: 2 })).toBeNull();
+		expect(quietGroupOfSpan(items, { from: 0, to: 1 })).toBeNull();
+	});
+
+	it("keeps an unknown row kind as a boundary, never a hideable passenger", () => {
+		// The wire's kind union is open; a row this build does not know must
+		// not vanish inside a bar that cannot mention it.
+		const groups = quietGroupsOf(
+			itemsOf([
+				peer("p1"),
+				row({ id: "x1", kind: "future_kind", text: "?" }),
+				peer("p2"),
+			]),
+		);
+		expect(groups).toEqual([]);
+	});
+});
+
+describe("groupPlan — the fold the list renders", () => {
+	it("folds in the ACTIVE turn — the one turn condensing may never touch", () => {
+		const entries = [user("u1"), peer("p1"), peer("p2"), tool("t1")];
+		const plan = condensePlan({
+			entries,
+			expanded: new Set(),
+			latch: new Map(),
+		});
+		expect(plan.turns[0]?.condensed).toBe(false);
+		const grouped = groupPlan({
+			items: plan.items,
+			expanded: new Set(),
+			latch: new Map(),
+		});
+		expect(grouped.items.map((item) => item.id)).toEqual([
+			"u1",
+			"quiet-group-qg:p1",
+		]);
+		// The whole stretch is what the bar stands for: the receipts AND the
+		// tool row they sit beside.
+		expect(grouped.groups[0]).toMatchObject({
+			key: "qg:p1",
+			hiddenIds: ["p1", "p2", "t1"],
+		});
+	});
+
+	it("leaves the rows behind a turn's bar to the turn, and folds what stays visible", () => {
+		const entries = [
+			user("u1"),
+			tool("t1"),
+			answer("a1"),
+			user("u2"),
+			peer("p1"),
+			peer("p2"),
+		];
+		const plan = condensePlan({
+			entries,
+			expanded: new Set(),
+			latch: new Map(),
+		});
+		expect(plan.turns[0]?.condensed).toBe(true);
+		const grouped = groupPlan({
+			items: plan.items,
+			expanded: new Set(),
+			latch: new Map(),
+		});
+		expect(grouped.groups.map((group) => group.key)).toEqual(["qg:p1"]);
+		expect(grouped.items.map((item) => item.id)).toEqual([
+			"u1",
+			"turn-bar-u1",
+			"a1",
+			"u2",
+			"quiet-group-qg:p1",
+		]);
+	});
+
+	it("puts the member rows back when the reader opens the group", () => {
+		const entries = [user("u1"), peer("p1"), peer("p2")];
+		const plan = condensePlan({
+			entries,
+			expanded: new Set(),
+			latch: new Map(),
+		});
+		const grouped = groupPlan({
+			items: plan.items,
+			expanded: new Set(["qg:p1"]),
+			latch: new Map(),
+		});
+		expect(grouped.items.map((item) => item.id)).toEqual([
+			"u1",
+			"quiet-group-qg:p1",
+			"p1",
+			"p2",
+		]);
+	});
+
+	it("folds the receipts a reader opens behind a turn's bar too", () => {
+		const entries = [
+			user("u1"),
+			peer("p1"),
+			peer("p2"),
+			answer("a1"),
+			user("u2"),
+			tool("t1"),
+		];
+		const plan = condensePlan({
+			entries,
+			expanded: new Set(["u1"]),
+			latch: new Map(),
+		});
+		const grouped = groupPlan({
+			items: plan.items,
+			expanded: new Set(["u1"]),
+			latch: new Map(),
+		});
+		// The turn is open, so its receipts are visible rows — and visible
+		// receipts fold, wherever they came from.
+		expect(grouped.items.map((item) => item.id)).toEqual([
+			"u1",
+			"turn-bar-u1",
+			"quiet-group-qg:p1",
+			"a1",
+			"u2",
+			"t1",
+		]);
+	});
+});
+
+describe("the group latch — facts freeze at the close", () => {
+	it("derives twice identically, latch included", () => {
+		const items = itemsOf([
+			user("u1"),
+			peer("p1"),
+			peer("p2"),
+			answer("a1"),
+			user("u2"),
+		]);
+		const first = groupPlan({ items, expanded: new Set(), latch: new Map() });
+		const second = groupPlan({
+			items,
+			expanded: new Set(),
+			latch: first.latch,
+		});
+		expect(second.items).toEqual(first.items);
+		expect(second.groups).toEqual(first.groups);
+		expect([...second.latch]).toEqual([...first.latch]);
+	});
+
+	it("grows the open tail group in place — same bar, count up, expansion kept", () => {
+		const frame = (count: number) =>
+			itemsOf([
+				user("u1"),
+				...Array.from({ length: count }, (_, index) => peer(`p${index + 1}`)),
+			]);
+		const one = groupPlan({
+			items: frame(1),
+			expanded: new Set(),
+			latch: new Map(),
+		});
+		expect(one.groups).toEqual([]);
+		const two = groupPlan({
+			items: frame(2),
+			expanded: new Set(),
+			latch: one.latch,
+		});
+		const barId = two.groups[0]?.itemIds[0];
+		expect(barId).toBe("quiet-group-qg:p1");
+		expect(two.groups[0]?.group.count).toBe(2);
+		const three = groupPlan({
+			items: frame(3),
+			expanded: new Set(["qg:p1"]),
+			latch: two.latch,
+		});
+		// The bar element and its key do not move, the count updates in place,
+		// and the reader's expansion survives the append — the same frame the
+		// members grow in.
+		expect(three.groups[0]?.itemIds[0]).toBe(barId);
+		expect(three.groups[0]?.group.count).toBe(3);
+		expect(three.groups[0]?.itemIds).toEqual([barId, "p1", "p2", "p3"]);
+		// A group that has never closed is never latched.
+		expect(three.latch.size).toBe(0);
+	});
+
+	it("freezes a closed group's facts — a later frame cannot move them", () => {
+		const closed = itemsOf([peer("p1"), tool("t1"), peer("p2"), answer("a1")]);
+		const first = groupPlan({
+			items: closed,
+			expanded: new Set(),
+			latch: new Map(),
+		});
+		expect(first.groups[0]?.group.failed).toBe(0);
+		// The transport-cap class: a row inside the group comes back changed.
+		const regressed = closed.map((item) =>
+			item.kind === "entry" && item.id === "t1" && item.entry.kind === "tool"
+				? itemOf({ ...item.entry, tool_state: "failed" })
+				: item,
+		);
+		const after = groupPlan({
+			items: regressed,
+			expanded: new Set(),
+			latch: first.latch,
+		});
+		expect(after.groups[0]?.group.failed).toBe(0);
+		// Without the latch the same frame WOULD count the failure — the proof
+		// the freeze is load-bearing.
+		const unlatch = groupPlan({
+			items: regressed,
+			expanded: new Set(),
+			latch: new Map(),
+		});
+		expect(unlatch.groups[0]?.group.failed).toBe(1);
+	});
+
+	it("keeps a closed group's identity when the window slides its head away", () => {
+		const full = itemsOf([peer("p1"), peer("p2"), answer("a1")]);
+		const first = groupPlan({
+			items: full,
+			expanded: new Set(),
+			latch: new Map(),
+		});
+		expect(first.groups[0]?.key).toBe("qg:p1");
+		const slid = groupPlan({
+			items: itemsOf([peer("p2"), answer("a1")]),
+			expanded: new Set(),
+			latch: first.latch,
+		});
+		// Same bar, frozen facts: the surviving member answers with the latch's
+		// key, not a new group minted around a fragment.
+		expect(slid.groups[0]?.key).toBe("qg:p1");
+		expect(slid.groups[0]?.group.count).toBe(2);
+		expect(slid.groups[0]?.hiddenIds).toEqual(["p1", "p2"]);
+		expect(slid.items.map((item) => item.id)).toEqual([
+			"quiet-group-qg:p1",
+			"a1",
+		]);
+	});
+});
+
+describe("the group bar's copy", () => {
+	it("states the fold and its count, and names the senders", () => {
+		expect(groupPhrases(groupOf({ count: 12 }))).toEqual([
+			"Peer messages",
+			"12",
+		]);
+		const withSenders = groupOf({
+			count: 12,
+			senders: [
+				{ label: "alpha", count: 3 },
+				{ label: "2 more", count: 2 },
+			],
+		});
+		expect(groupAccessibleName(withSenders)).toBe(
+			"Peer messages: 12, from alpha, 2 more",
+		);
+		expect(groupAccessibleName(groupOf({ count: 2 }))).toBe("Peer messages: 2");
+	});
+});
+
+/* ----------------------------------------------- the shared parity fixture */
+
+/**
+ * THE SHARED QUIET-GROUP PARITY FIXTURE, case by case
+ * (`fixtures/quiet-groups.parity.json`, copied from local-operator-ui's S2
+ * branch; the file's own header is the contract).
+ *
+ * WHAT IS COMPARED. Every case's rows are mapped onto this wire's entries and
+ * driven through the same entry points the UI's suite drives: `quietGroupOfSpan`
+ * for the span cases, `quietGroupsOf` for the rest. The expected value is the
+ * fixture's own, mapped onto this client's spelling in exactly TWO ways, both
+ * forced by the wire, never by convenience:
+ *
+ *   1. NO TIMES. The mobile wire carries no timestamps on this route, so the
+ *      native group has no time fields and the comparison drops the fixture's
+ *      `firstTs`/`lastTs`.
+ *   2. THE NATIVE IDENTITY LADDER'S SPELLING. The fixture spells a named
+ *      sender with the UI's quoting (`"alpha"`); this app's ladder — the
+ *      same label the receipt row itself prints — spells it unquoted. The
+ *      mapping strips the UI's quotes; "another session" (and `N more`) pass
+ *      through untouched.
+ *
+ * WHAT IS NAMED, NOT SKIPPED. Cases whose EXPECTED group needs a delivery
+ * kind this wire does not carry as a receipt — wake / monitor / job rows (all
+ * three arrive as `notice` lines here, not as receipt kinds) — cannot produce
+ * that group from the native definition
+ * (design §5's native bullet: the consecutive `peer_message` run). Those cases
+ * are pinned as their wire-boundary outcome with the reason, so the difference
+ * is a recorded boundary rather than silent drift.
+ */
+interface ParityRow {
+	kind: string;
+	id: string;
+	ts?: number;
+	text?: string;
+	body?: string;
+	sender?: { conversationName?: string };
+	customType?: string;
+	level?: string;
+	toolName?: string;
+	phase?: string;
+	isError?: boolean;
+	complete?: boolean;
+	durationS?: number;
+}
+
+interface ParityGroup {
+	key: string;
+	family: string;
+	count: number;
+	firstTs: number | null;
+	lastTs: number | null;
+	senders: { label: string; count: number }[];
+	actions: number;
+	failed: number;
+	open: boolean;
+	rowIds: string[];
+}
+
+interface ParityCase {
+	name: string;
+	span?: [number, number];
+	spanHeadLoaded?: boolean;
+	open?: boolean;
+	rows: ParityRow[];
+	expected: ParityGroup[] | ParityGroup | null;
+}
+
+const PARITY = JSON.parse(
+	readFileSync(
+		new URL("../../../fixtures/quiet-groups.parity.json", import.meta.url),
+		"utf8",
+	),
+) as { cases: ParityCase[] };
+
+/** One fixture row, mapped onto this wire's entry shape — only the fields the
+ *  group derivation reads. */
+const parityEntry = (fixtureRow: ParityRow): TranscriptEntry => {
+	switch (fixtureRow.kind) {
+		case "user":
+			return user(fixtureRow.id, fixtureRow.text ?? "hi");
+		case "peer":
+			return peer(fixtureRow.id, fixtureRow.sender?.conversationName);
+		case "tool":
+			return row({
+				id: fixtureRow.id,
+				kind: "tool",
+				tool_name: fixtureRow.toolName ?? "bash",
+				tool_state: fixtureRow.isError === true ? "failed" : "done",
+				elapsed_s: fixtureRow.durationS ?? 0,
+			});
+		case "assistant":
+			return answer(fixtureRow.id, fixtureRow.text ?? "text");
+		case "notice":
+			return notice(fixtureRow.id, fixtureRow.text ?? "notice");
+		case "compaction":
+			return row({
+				id: fixtureRow.id,
+				kind: "compaction",
+				text: fixtureRow.text ?? "Context compacted",
+			});
+		case "wake":
+			// A wake is a notice LINE on this wire, not a receipt kind — the
+			// boundary cases below pin that difference.
+			return row({
+				id: fixtureRow.id,
+				kind: "notice",
+				text: fixtureRow.text ?? "wake",
+				details: { notice_kind: "wake" },
+			});
+		case "custom":
+			// monitor_prompt / job_result: plain `notice` rows here too (the
+			// phone's custom-message fold has no receipt arm for either).
+			return row({
+				id: fixtureRow.id,
+				kind: "notice",
+				text: fixtureRow.text ?? "",
+			});
+		default:
+			throw new Error(`unhandled parity row kind: ${fixtureRow.kind}`);
+	}
+};
+
+/** The native ladder prints an identified sender unquoted; the fixture carries
+ *  the UI's `"name"` quoting. */
+const unquoted = (label: string): string =>
+	label.startsWith('"') && label.endsWith('"') ? label.slice(1, -1) : label;
+
+/** The fixture's expected, mapped onto this client's spelling (see the block
+ *  comment): times dropped, the UI's sender quoting stripped. */
+const parityExpected = (group: ParityGroup) => {
+	// The native trigger set is the receipt kind itself, so a fixture group of
+	// another family cannot come from this wire; a case expecting one belongs
+	// in the boundary map, and this guard makes a misplacement fail loudly.
+	expect(group.family, `${group.key}: family`).toBe("peer");
+	return {
+		key: group.key,
+		count: group.count,
+		senders: group.senders.map((sender) => ({
+			label: unquoted(sender.label),
+			count: sender.count,
+		})),
+		actions: group.actions,
+		failed: group.failed,
+		open: group.open,
+		rowIds: group.rowIds,
+	};
+};
+
+/** Case indexes whose EXPECTED fold needs a delivery kind this wire does not
+ *  carry as a receipt (wake / monitor / job). The native definition is the
+ *  `peer_message` run, so these rows yield no group here; the pin records
+ *  that boundary deliberately. */
+const WIRE_BOUNDARY: ReadonlyMap<number, string> = new Map([
+	[5, "mixed peer+wake: a wake is a `notice` line here, not a receipt kind"],
+	[10, "wake-only run: same boundary"],
+	[
+		11,
+		"monitor-only run: a monitor prompt is a `notice` here, not a receipt kind",
+	],
+	[12, "job-only run: a job result is a `notice` here, not a receipt kind"],
+]);
+
+describe("the quiet-group derivation matches the shared parity fixture, case by case", () => {
+	it("carries every case with rows and an expectation", () => {
+		expect(PARITY.cases.length).toBe(13);
+		for (const entry of PARITY.cases) {
+			expect(entry.rows.length).toBeGreaterThan(0);
+		}
+	});
+
+	for (const [index, entry] of PARITY.cases.entries()) {
+		const boundary = WIRE_BOUNDARY.get(index);
+		it(`case ${index + 1}: ${entry.name}`, () => {
+			const items = entry.rows.map((fixtureRow) =>
+				itemOf(parityEntry(fixtureRow)),
+			);
+			const actual =
+				entry.span === undefined
+					? quietGroupsOf(items)
+					: quietGroupOfSpan(
+							items,
+							{ from: entry.span[0], to: entry.span[1] },
+							{ open: entry.open },
+						);
+			if (boundary !== undefined) {
+				// The fixture expects a fold here; this client cannot make it from
+				// its own definition — pin the boundary rather than pretend.
+				expect(entry.expected, boundary).not.toEqual([]);
+				expect(actual, boundary).toEqual([]);
+				return;
+			}
+			if (entry.expected === null) {
+				expect(actual).toBeNull();
+				return;
+			}
+			const expected = Array.isArray(entry.expected)
+				? entry.expected.map(parityExpected)
+				: parityExpected(entry.expected);
+			expect(actual).toEqual(expected);
+		});
+	}
 });

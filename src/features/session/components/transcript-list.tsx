@@ -16,14 +16,17 @@ import {
 
 import type { TranscriptEntry } from "@/contracts";
 import { anchorBottomVisible } from "@/features/session/completion-visibility";
+import { QuietGroupBar } from "@/features/session/components/quiet-group-bar";
 import { TranscriptRow } from "@/features/session/components/transcript-row";
 import { TurnBar } from "@/features/session/components/turn-bar";
-import { revealTarget } from "@/features/session/find";
+import { type RevealSubject, revealTarget } from "@/features/session/find";
 import { scrollAnchorFromHook } from "@/features/session/scroll-hook";
 import {
 	condensePlan,
+	groupPlan,
 	type LatchedTurn,
 	parseExpandHook,
+	type QuietGroup,
 	type TranscriptItem,
 } from "@/features/session/turn-condensing";
 import {
@@ -266,11 +269,38 @@ export const TranscriptList = ({
 	/* Idempotent for a given `entries` (the latch only grows), so a
 	 * double-invoked render computes the same plan. */
 	latchRef.current.latch = plan.latch;
-	const toggleTurn = useCallback((turnKey: string, open: boolean) => {
+	/*
+	 * The group fold, over the planned items (design §5): consecutive
+	 * `peer_message` receipts become one bar wherever they are visible —
+	 * including the ACTIVE turn, which turn condensing may never fold. Its own
+	 * latch freezes a closed group's facts the same way (`turn-condensing.ts`'s
+	 * `groupPlan`), and its keys share the reader's expansion set: the two key
+	 * spaces cannot collide ("a user row id" vs "qg:<first row id>").
+	 */
+	const groupLatchRef = useRef<{
+		session: string;
+		latch: ReadonlyMap<string, QuietGroup>;
+	}>({ session: sessionId, latch: new Map() });
+	if (groupLatchRef.current.session !== sessionId) {
+		// A session switch starts this memory over too — the `latchRef` rule.
+		groupLatchRef.current = { session: sessionId, latch: new Map() };
+	}
+	const grouped = useMemo(
+		() =>
+			groupPlan({
+				items: plan.items,
+				expanded,
+				latch: groupLatchRef.current.latch,
+			}),
+		[plan, expanded],
+	);
+	/* Idempotent like the turn plan: the latch only grows. */
+	groupLatchRef.current.latch = grouped.latch;
+	const toggleExpansion = useCallback((key: string, open: boolean) => {
 		setReaderExpanded((current) => {
 			const next = new Set(current);
-			if (open) next.add(turnKey);
-			else next.delete(turnKey);
+			if (open) next.add(key);
+			else next.delete(key);
 			return next;
 		});
 	}, []);
@@ -278,8 +308,8 @@ export const TranscriptList = ({
 	const policy = useMemo(
 		// The window's unit is what the FlatList MOUNTS, so it counts the plan's
 		// items: a condensed turn mounts its bar, not the work behind it.
-		() => windowPolicy(viewportPt > 0 ? viewportPt : 844, plan.items.length),
-		[viewportPt, plan.items.length],
+		() => windowPolicy(viewportPt > 0 ? viewportPt : 844, grouped.items.length),
+		[viewportPt, grouped.items.length],
 	);
 
 	/* ---------------------------------------------------- the anchor geometry --
@@ -320,8 +350,8 @@ export const TranscriptList = ({
 	anchorIdRef.current = anchorId;
 	/* The plan's items, not the raw entries: the anchor's position is computed
 	 * over what is RENDERED (see `recompute`), and this is that list. */
-	const itemsRef = useRef<readonly TranscriptItem[]>(plan.items);
-	itemsRef.current = plan.items;
+	const itemsRef = useRef<readonly TranscriptItem[]>(grouped.items);
+	itemsRef.current = grouped.items;
 	const viewportRef = useRef(0);
 	viewportRef.current = viewportPt;
 	const onAnchorVisibleRef = useRef(onAnchorVisible);
@@ -443,8 +473,15 @@ export const TranscriptList = ({
 	const pendingRevealRef = useRef<string | null>(null);
 	const revealNonceRef = useRef(0);
 	const revealTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-	const planRef = useRef(plan);
-	planRef.current = plan;
+	/* What a reveal reads: the rendered items, and every fold's hidden rows —
+	 * turn bars and group bars alike (`find.ts`'s `RevealSubject`). */
+	const revealSubject: RevealSubject = {
+		items: grouped.items,
+		turns: plan.turns,
+		groups: grouped.groups,
+	};
+	const planRef = useRef<RevealSubject>(revealSubject);
+	planRef.current = revealSubject;
 
 	/**
 	 * Where one RENDERED item sits, for the virtualiser's placement and jumps.
@@ -547,36 +584,55 @@ export const TranscriptList = ({
 		[],
 	);
 
-	useEffect(() => {
-		if (reveal === null || reveal.nonce === revealNonceRef.current) return;
-		revealNonceRef.current = reveal.nonce;
-		const target = revealTarget(planRef.current, reveal.id);
-		if (target === null) return;
+	/**
+	 * One step of the expand-first walk: land on the row when the list renders
+	 * it, otherwise open the fold that CURRENTLY hides it — one layer per pass,
+	 * so a row behind two layers (a latched quiet group inside a condensed
+	 * turn) resolves layer by layer instead of stalling on an open gate
+	 * (review round 1, MAJOR-1; the desktop walk loops the same way). Each
+	 * pass either lands, opens exactly one fold (and waits for the re-plan),
+	 * or gives up when the frame does not carry the row at all. It converges
+	 * because `revealTarget` skips folds that are already open.
+	 */
+	const resolveRevealWalk = useCallback(() => {
+		const id = pendingRevealRef.current;
+		if (id === null) return;
+		const target = revealTarget(planRef.current, expanded, id);
+		if (target === null) {
+			// A frame slid between the search and the press: no fold leads to
+			// the row, so the walk ends here rather than waiting forever.
+			pendingRevealRef.current = null;
+			return;
+		}
 		if (target.kind === "item") {
+			pendingRevealRef.current = null;
 			revealToIndex(target.index);
 			return;
 		}
-		pendingRevealRef.current = reveal.id;
+		const key = target.kind === "turn" ? target.turnKey : target.groupKey;
 		setReaderExpanded((current) => {
-			if (current.has(target.turnKey)) return current;
+			if (current.has(key)) return current;
 			const next = new Set(current);
-			next.add(target.turnKey);
+			next.add(key);
 			return next;
 		});
-	}, [reveal, revealToIndex]);
+	}, [expanded, revealToIndex]);
 
-	// The second half of the expand-first walk: once the opened turn's rows are
-	// back in the plan, scroll to the one the reader asked for.
 	useEffect(() => {
-		const id = pendingRevealRef.current;
-		if (id === null) return;
-		const index = plan.items.findIndex(
-			(item) => item.kind === "entry" && item.id === id,
-		);
-		if (index < 0) return;
-		pendingRevealRef.current = null;
-		revealToIndex(index);
-	}, [plan, revealToIndex]);
+		if (reveal === null || reveal.nonce === revealNonceRef.current) return;
+		revealNonceRef.current = reveal.nonce;
+		pendingRevealRef.current = reveal.id;
+		resolveRevealWalk();
+	}, [reveal, resolveRevealWalk]);
+
+	/* The walk's other half: every fold it opens re-plans the items, and a new
+	 * frame can move the plan under a pending request — both are EVENTS that
+	 * must re-ask the walk, while the body reads the plan through the ref. The
+	 * same shape, and the same exemption, as the recompute effect below. */
+	// biome-ignore lint/correctness/useExhaustiveDependencies: grouped is the re-plan event; the body reads the plan through planRef
+	useEffect(() => {
+		resolveRevealWalk();
+	}, [grouped, resolveRevealWalk]);
 
 	/* Anchors and frames change outside scroll events too (a new frame appends
 	 * rows; the attention moves to a new anchor). The rule reads the body —
@@ -641,11 +697,11 @@ export const TranscriptList = ({
 			animated: false,
 		});
 	}, []);
-	// biome-ignore lint/correctness/useExhaustiveDependencies: `plan.items.length` is the trigger (a commit that brought rows); the body reads refs by design.
+	// biome-ignore lint/correctness/useExhaustiveDependencies: `grouped.items.length` is the trigger (a commit that brought rows); the body reads refs by design.
 	useLayoutEffect(() => {
 		if (openElsewhere) return;
 		pinTail();
-	}, [openElsewhere, pinTail, plan.items.length]);
+	}, [openElsewhere, pinTail, grouped.items.length]);
 
 	/* The offset is restored once, after the first content change: before that there
 	 * is nothing to scroll, and a restore that ran into an empty list would silently
@@ -720,7 +776,22 @@ export const TranscriptList = ({
 						facts={item.facts}
 						headline={item.headline}
 						open={item.expanded}
-						onToggle={(open) => toggleTurn(item.turnKey, open)}
+						onToggle={(open) => toggleExpansion(item.turnKey, open)}
+					/>
+				</View>
+			) : item.kind === "group" ? (
+				/* The group bar is measured like the turn bar, for the same reason:
+				 * the anchor geometry walks the RENDERED items. */
+				<View
+					onLayout={(event) =>
+						measureRow(item.id, event.nativeEvent.layout.height)
+					}
+				>
+					<QuietGroupBar
+						groupKey={item.groupKey}
+						group={item.group}
+						open={item.expanded}
+						onToggle={(open) => toggleExpansion(item.groupKey, open)}
 					/>
 				</View>
 			) : (
@@ -769,7 +840,7 @@ export const TranscriptList = ({
 				</View>
 			),
 		[
-			toggleTurn,
+			toggleExpansion,
 			streamingRowId,
 			loadImage,
 			onOpenAgent,
@@ -784,7 +855,7 @@ export const TranscriptList = ({
 		<FlatList
 			ref={listRef}
 			testID={testID}
-			data={plan.items}
+			data={grouped.items}
 			keyExtractor={(item) => item.id}
 			renderItem={renderItem}
 			onLayout={onLayout}
@@ -806,7 +877,7 @@ export const TranscriptList = ({
 			initialScrollIndex={
 				openElsewhereAtMount
 					? undefined
-					: tailStartIndex(plan.items.length, policy.initialNumToRender)
+					: tailStartIndex(grouped.items.length, policy.initialNumToRender)
 			}
 			getItemLayout={getItemLayout}
 			// Keyboard stays open while scrolling: the reader is scrolling to read the
