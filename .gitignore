@@ -1,5 +1,7 @@
 # Dependencies
-node_modules/
+# Directories and symlinks: a worktree's `node_modules` is often a link to a
+# shared tree, and `node_modules/` (with the slash) does not match a symlink.
+node_modules
 .pnpm-store/
 .pnpm-debug.log*
 
