@@ -33,17 +33,20 @@ checklist: the **bundle ID** and the **app record**.
    placeholder `com.localoperator.mobile`. Pick the real reverse-DNS id for the
    entity and change it in `app.config.ts` in a PR. The Android package name
    (B2) is the same string.
-3. **Confirm the App Store Connect app record** exists for that bundle ID (or
-   create it), and confirm the **Program License Agreement** is accepted for the
-   new team (the acceptance on the old account does not transfer) — `checklist.md`
-   A5.
+3. **Confirm the App Store Connect app record** exists for that bundle ID, or
+   create it: App Store Connect → **My Apps** → **+** → **New App** → platform
+   iOS, the app name, primary language, the **bundle ID from step 2**, and a SKU
+   of your choosing. Also confirm the **Program License Agreement** is accepted
+   for the new team (the acceptance on the old account does not transfer) —
+   `checklist.md` A5.
 4. **Create the Team API key**: `https://appstoreconnect.apple.com` → **Users and
    Access** → **Integrations** → **App Store Connect API** → **Team Keys**
    (<https://developer.apple.com/documentation/appstoreconnectapi/creating-api-keys-for-app-store-connect-api>).
-   Two preconditions the page states: the **Account Holder must have requested API
-   access** for the team first, and generating a team key requires an **Admin**
-   account. Record the **Team ID** (*Membership details*), the **Key ID**, the
-   **Issuer ID**, and download the `.p8` — **once**; Apple keeps no copy.
+   Generating a team key requires an **Admin** account on the team; App Store
+   Connect states any remaining precondition (an API-access request) on the page
+   itself when you open it. Record the **Team ID** (*Membership details*), the
+   **Key ID**, the **Issuer ID**, and download the `.p8` — **once**; Apple keeps
+   no copy.
    These become the four `APPLE_*` secrets in the `release` environment
    (`docs/ci.md` "Secrets"): `APPLE_TEAM_ID`, `APPLE_ASC_KEY_ID`,
    `APPLE_ASC_ISSUER_ID`, `APPLE_ASC_PRIVATE_KEY_BASE64`. The key's role must be
@@ -114,9 +117,9 @@ before it merges.
 
 ## Already done — no action on resume
 
-- `release` environment created (2026-10-09) with its two deployment rules:
-  branch `main` and tag `v*`. Custom branch policies are enabled, which is what
-  makes a tag rule possible at all.
+- `release` environment created **2026-10-04**; its two deployment rules
+  (branch `main`, tag `v*`) were added **2026-10-09**. Custom branch policies are
+  enabled, which is what makes a tag rule possible at all.
 - Repository variable `RELEASE_PLATFORMS=ios` (2026-10-09).
 - Android upload-keystore procedure written down (`docs/publishing/android-keystore.md`),
   deliberately not executed.
