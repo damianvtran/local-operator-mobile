@@ -687,6 +687,7 @@ export const IDENTIFIER_FAMILIES: readonly string[] = [
 	/* The session view's own parameterised identifiers, adopted with its block above. */
 	"transcript-row-",
 	"turn-bar-",
+	"quiet-group-",
 	"completion-anchor-",
 	"transcript-image-",
 	"imagegen-cancel-",
@@ -1324,6 +1325,12 @@ export const transcriptRowId = (rowId: string): string =>
  *  (`turn-condensing.ts`), so a bar is addressable by the message that started
  *  the turn — the same identity the reader's expansion and the latch use. */
 export const turnBarId = (turnKey: string): string => `turn-bar-${turnKey}`;
+
+/** One quiet group's bar. The key is the group's own `qg:<first row id>`
+ *  (`turn-condensing.ts`), so a group is addressable by the receipt that
+ *  started it — the same identity the latch and the reader's expansion use. */
+export const quietGroupId = (groupKey: string): string =>
+	`quiet-group-${groupKey}`;
 
 /** One hit of the find sheet's results, keyed by the message it will land on.
  *  The KEY is the message's own id — not its rank — so a flow (and the

@@ -13,7 +13,7 @@ import {
 	searchConversation,
 	splitRanges,
 } from "@/features/session/find";
-import { condensePlan } from "@/features/session/turn-condensing";
+import { condensePlan, groupPlan } from "@/features/session/turn-condensing";
 
 /* ------------------------------------------------------------------ fixtures */
 
@@ -53,6 +53,8 @@ const answer = (id: string, text: string) =>
 	row({ id, kind: "assistant", text });
 const tool = (id: string, summary = "running the retry sweep") =>
 	row({ id, kind: "tool", tool_name: "bash", summary });
+const peer = (id: string, body = "peer note") =>
+	row({ id, kind: "peer_message", text: body });
 const notice = (id: string, text: string) =>
 	row({ id, kind: "notice", text, details: { severity: "info" } });
 const parent = (id: string, text: string) =>
@@ -355,13 +357,21 @@ describe("revealTarget — landing on a hit", () => {
 		answer("a2", "jitter fixed"),
 	];
 
+	/** The subject the list assembles for a reveal: the turn plan's items and
+	 *  turns, plus the group pass over them (these fixtures carry no peer runs
+	 *  except where a case says so). */
+	const subjectOf = (
+		plan: ReturnType<typeof condensePlan>,
+		groups: ReturnType<typeof groupPlan>["groups"] = [],
+	) => ({ items: plan.items, turns: plan.turns, groups });
+
 	it("lands directly on a row the plan renders", () => {
 		const plan = condensePlan({
 			entries,
 			expanded: new Set(),
 			latch: new Map(),
 		});
-		expect(revealTarget(plan, "q2")).toEqual({
+		expect(revealTarget(subjectOf(plan), "q2")).toEqual({
 			kind: "item",
 			index: plan.items.findIndex(
 				(item) => item.kind === "entry" && item.id === "q2",
@@ -379,7 +389,10 @@ describe("revealTarget — landing on a hit", () => {
 		// complete), so its tool rows are hidden behind the bar.
 		const bar = plan.items.find((item) => item.kind === "bar");
 		expect(bar).toBeDefined();
-		expect(revealTarget(plan, "t1")).toEqual({ kind: "turn", turnKey: "q1" });
+		expect(revealTarget(subjectOf(plan), "t1")).toEqual({
+			kind: "turn",
+			turnKey: "q1",
+		});
 		// Opening the turn puts the row back, and the same lookup now lands on
 		// the row itself.
 		const opened = condensePlan({
@@ -387,7 +400,49 @@ describe("revealTarget — landing on a hit", () => {
 			expanded: new Set(["q1"]),
 			latch: plan.latch,
 		});
-		const target = revealTarget(opened, "t1");
+		const target = revealTarget(subjectOf(opened), "t1");
+		expect(target?.kind).toBe("item");
+	});
+
+	it("names the quiet group when the row is inside one — and opening it lands on the row", () => {
+		// The peers sit OUTSIDE every condensed span (an earlier turn with
+		// nothing to hide), so they are visible rows the group pass folds.
+		const quiet = [
+			user("q1", "first question"),
+			answer("a1", "answered"),
+			peer("p1"),
+			peer("p2"),
+			user("q2", "second question"),
+			answer("a2", "answered again"),
+		];
+		const plan = condensePlan({
+			entries: quiet,
+			expanded: new Set(),
+			latch: new Map(),
+		});
+		const grouped = groupPlan({
+			items: plan.items,
+			expanded: new Set(),
+			latch: new Map(),
+		});
+		const folded = grouped.groups.find((group) => group.key === "qg:p1");
+		expect(folded?.hiddenIds).toEqual(["p1", "p2"]);
+		expect(revealTarget(subjectOf(plan, grouped.groups), "p2")).toEqual({
+			kind: "group",
+			groupKey: "qg:p1",
+		});
+
+		const openedPlan = condensePlan({
+			entries: quiet,
+			expanded: new Set(),
+			latch: plan.latch,
+		});
+		const opened = groupPlan({
+			items: openedPlan.items,
+			expanded: new Set(["qg:p1"]),
+			latch: grouped.latch,
+		});
+		const target = revealTarget(subjectOf(openedPlan, opened.groups), "p2");
 		expect(target?.kind).toBe("item");
 	});
 
@@ -397,7 +452,7 @@ describe("revealTarget — landing on a hit", () => {
 			expanded: new Set(),
 			latch: new Map(),
 		});
-		expect(revealTarget(plan, "not-a-row")).toBeNull();
+		expect(revealTarget(subjectOf(plan), "not-a-row")).toBeNull();
 	});
 
 	it("still lands on a hit whose own turn condensed BEFORE the window slid its rows away", () => {
@@ -417,7 +472,10 @@ describe("revealTarget — landing on a hit", () => {
 			expanded: new Set(),
 			latch: first.latch,
 		});
-		expect(revealTarget(slid, "t1")).toEqual({ kind: "turn", turnKey: "q1" });
+		expect(revealTarget(subjectOf(slid), "t1")).toEqual({
+			kind: "turn",
+			turnKey: "q1",
+		});
 	});
 });
 

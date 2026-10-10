@@ -76,7 +76,11 @@
  */
 
 import type { TranscriptEntry } from "@/contracts";
-import type { CondensePlan } from "@/features/session/turn-condensing";
+import type {
+	GroupView,
+	TranscriptItem,
+	TurnView,
+} from "@/features/session/turn-condensing";
 
 /* ----------------------------------------------------------------- constants */
 
@@ -687,26 +691,41 @@ export const findScopeLines = (input: {
 
 /* -------------------------------------------------------------------- reveal */
 
+/** What a reveal reads: the rendered items, and every fold's hidden rows —
+ *  the condensed turns' frozen spans and the quiet groups' row lists. The
+ *  list assembles it from the two passes (`condensePlan` + `groupPlan`). */
+export interface RevealSubject {
+	items: readonly TranscriptItem[];
+	turns: readonly TurnView[];
+	groups: readonly GroupView[];
+}
+
 /**
  * Where a hit lands in the transcript's plan: an item already on the list, or
- * the condensed turn whose collapse hides it (the reveal opens that turn
- * first — the desktop's expand-first walk). `null` for an id the plan does not
- * carry at all, which find never produces (hits come from the same frames) —
- * the arm exists so a frame that slid between the search and the press cannot
- * scroll to nowhere.
+ * the fold whose collapse hides it — the condensed turn or the quiet group,
+ * which the reveal opens first (the desktop's expand-first walk). `null` for
+ * an id the plan does not carry at all, which find never produces (hits come
+ * from the same frames) — the arm exists so a frame that slid between the
+ * search and the press cannot scroll to nowhere.
  */
 export type RevealPlan =
 	| { kind: "item"; index: number }
 	| { kind: "turn"; turnKey: string }
+	| { kind: "group"; groupKey: string }
 	| null;
 
-export const revealTarget = (plan: CondensePlan, id: string): RevealPlan => {
+export const revealTarget = (plan: RevealSubject, id: string): RevealPlan => {
 	const index = plan.items.findIndex(
 		(item) => item.kind === "entry" && item.id === id,
 	);
 	if (index >= 0) return { kind: "item", index };
 	for (const turn of plan.turns) {
 		if (turn.hiddenIds.includes(id)) return { kind: "turn", turnKey: turn.key };
+	}
+	for (const group of plan.groups) {
+		if (group.hiddenIds.includes(id)) {
+			return { kind: "group", groupKey: group.key };
+		}
 	}
 	return null;
 };
