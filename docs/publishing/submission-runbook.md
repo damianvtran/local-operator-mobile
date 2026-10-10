@@ -2,8 +2,9 @@
 
 **Status: PARKED at the operator's call (2026-10-09).** Both stores. Publishing
 will happen under the operator's **legal entity** — Radient Inc. as named in
-`checklist.md` A1 — which already holds a **D-U-N-S number**. It will **not** be
-published under the individual team `SHA2U6KT7V` that signs the desktop app.
+`checklist.md` A1 — which, **per the operator (2026-10-09), already holds a
+D-U-N-S number**. It will **not** be published under the individual team that
+signs the desktop app (`security find-identity` names it on this machine).
 
 **Resume trigger: the operator says go.** Until then nothing in this file runs.
 This file supersedes, for the parked period: `checklist.md` F2's `.p12` line (the
@@ -11,7 +12,7 @@ pipeline signs via `-allowProvisioningUpdates`, see § "iOS signing" below) and
 `docs/ci.md`'s old "`environment: release` protects nothing yet" action item —
 the environment and its rules now exist, and that section says so.
 
-**"No agent-side blocker" means for the *park* itself.** Two in-repository items
+**There is no agent-side blocker for the park itself.** Two in-repository items
 must be settled before the first tag, and both are listed in the resume
 checklist: the **bundle ID** and the **app record**.
 
@@ -49,8 +50,11 @@ checklist: the **bundle ID** and the **app record**.
    no copy.
    These become the four `APPLE_*` secrets in the `release` environment
    (`docs/ci.md` "Secrets"): `APPLE_TEAM_ID`, `APPLE_ASC_KEY_ID`,
-   `APPLE_ASC_ISSUER_ID`, `APPLE_ASC_PRIVATE_KEY_BASE64`. The key's role must be
-   able to manage signing assets and upload builds.
+   `APPLE_ASC_ISSUER_ID`, `APPLE_ASC_PRIVATE_KEY_BASE64`. **This pipeline's
+   requirement** (not an Apple statement) is that the key's role can manage
+   signing assets and upload builds — Admin is the role Apple requires to
+   generate the key at all; App Manager is the narrower alternative if the
+   console offers it.
    **iOS signing, for the record:** this pipeline uses `-allowProvisioningUpdates`
    with that key, so no `.p12` or provisioning profile is carried as a secret
    (that is why `checklist.md` F2's `.p12` line is superseded). The desktop app's
@@ -144,9 +148,9 @@ before it merges.
   (a named peer computer is fine) and re-verify with the token scan.
 - **Two follow-ups for that re-shoot:** the store README's "390 × 844 at dpr 3"
   is wrong as written (the arithmetically right pairs are **430×932 @3 =
-  1290×2796**, or 440×956 → 1320×2868); and `capture --target frames --check`
-  asserts sizes only, so it cannot catch a silent font fallback — add a
-  rendered-font assertion.
+  1290×2796**, or 440×956 → 1320×2868); and `node design/preview/capture.mjs
+  --target frames --check` asserts sizes only, so it cannot catch a silent font
+  fallback — add a rendered-font assertion.
 - **Template facts:** the compose pipeline is committed and fixed (vendored
   `@font-face`, PR #70); the per-shot caption copy is editable in one re-render;
   the iPad caption rhythm wants ~16 px loosening; the spec colophon on each frame

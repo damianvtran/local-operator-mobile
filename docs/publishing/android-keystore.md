@@ -18,12 +18,14 @@ a copy for their records, out-of-band.
   reset it (`google-play.md` § 3). That is the recovery path, not a reason to be
   casual about the passwords.
 - The same upload key must serve Play, GitHub Releases and any F-Droid entry, so
-  sideloaded installs keep updating (`google-play.md` § 3 and § 4).
+  sideloaded installs keep updating (`google-play.md` § 3; the cross-channel rule
+  is `checklist.md` F4, sourced to `other-channels.md` § 8).
 
 ## Execution plan
 
-1. **Storage path outside every repository** — convention
-   `~/Documents/keys/local-operator/` (`chmod 700`).
+1. **Storage path outside every repository** — the operator decides where; a
+   directory of their own with `chmod 700` is the convention, not a path this
+   document dictates.
 2. **Generate ONE password**, without printing it — `umask 077`,
    `openssl rand -base64 24`, written to a file. **A PKCS12 keystore ignores a
    separate key password**: `keytool` accepts `-keypass` and stores nothing of
@@ -50,8 +52,7 @@ a copy for their records, out-of-band.
    truncated paste; redo that one.
 7. **Hand the operator their record** — the keystore file plus alias, the
    password, creation date, DN, the keystore's `SHA-256`, where the CI secrets
-   live, and the reset note. Suggested destinations: their password manager (or
-   `lop secret store` for the password value).
+   live, and the reset note. Suggested destination: their own password manager.
 
 ## What must never happen
 
