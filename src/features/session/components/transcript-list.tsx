@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+	useCallback,
+	useEffect,
+	useLayoutEffect,
+	useMemo,
+	useRef,
+	useState,
+} from "react";
 import {
 	FlatList,
 	type LayoutChangeEvent,
@@ -19,7 +26,13 @@ import {
 	parseExpandHook,
 	type TranscriptItem,
 } from "@/features/session/turn-condensing";
-import { windowPolicy } from "@/features/session/windowing";
+import {
+	rowLayout,
+	rowOffsets,
+	TAIL_CLAMP_OFFSET_PT,
+	tailStartIndex,
+	windowPolicy,
+} from "@/features/session/windowing";
 import { completionAnchorId, transcriptRowId } from "@/ui/a11y";
 import { cx } from "@/ui/variants";
 
@@ -29,9 +42,23 @@ import { cx } from "@/ui/variants";
  * **Virtualised for the long case, not the common one.** The relay's own
  * `long-transcript` scenario is 520 rows and every row can change height while it
  * streams, so the list is a `FlatList` with a window derived from the viewport
- * (`windowing.ts`) rather than a plain scroller. `getItemLayout` is deliberately
- * NOT used: it requires a fixed row height, and lying about it to the virtualiser
- * is how a streaming transcript jumps under the reader's finger.
+ * (`windowing.ts`) rather than a plain scroller. `getItemLayout` answers from the
+ * MEASURED height cache (`windowing.ts`'s layout facts): a row that has laid out
+ * once keeps the height it laid out with, so the list can place itself and jump
+ * to an index without the virtualiser guessing, and a row nobody has seen yet
+ * falls back to the estimate.
+ *
+ * **The first frame is the tail.** The list OPENS at the last screenful
+ * (`initialScrollIndex`, `tailStartIndex`) instead of rendering from the top and
+ * being scrolled down afterwards by `onContentSizeChange`. That mattered because
+ * the old path's first frame was the top of the conversation at estimated
+ * heights, and every later frame was a correction the reader watched: the tail
+ * pin is now a clamp to the content's end (`TAIL_CLAMP_OFFSET_PT`) that only
+ * runs while the reader is already at the tail — the auto-follow below, not the
+ * thing that decides where the list starts. `initialScrollIndex` is deliberately
+ * NOT passed when this session has a saved offset to restore or a capture hook
+ * asked for the top: those are the two cases where the reader is not going to
+ * the tail, and opening there first would be a jump they see.
  *
  * **Auto-follow only at the tail.** The view follows new content while the reader
  * is already at the bottom, and stops the moment they scroll up — the web client
@@ -116,13 +143,43 @@ const expandHookKeys = (): ReadonlySet<string> => {
 };
 
 /**
- * Scroll offsets, per session, for the life of the process.
+ * Where the reader left each conversation, for the life of the process: the
+ * offset they were at, and whether they were close enough to the end to call it
+ * the tail.
+ *
+ * WHY THE TAIL IS A FLAG AND NOT A NUMBER (review round 1 MINOR-1; QA round 1 Q2).
+ * An absolute `contentOffset.y` means "this far down the CONTENT", and the list
+ * the reader comes back to is not the list they left: the first paint merges the
+ * relay's page with the live frame and holds both, so the merged list carries
+ * rows theirs did not, and the remembered offset points at a different row —
+ * thousands of points above the newest message (QA measured S2/S4/S5 at
+ * 7 722 / 2 404 / 4 387 px off on the ordinary "go back into the conversation I
+ * was reading" path). For a reader who was following the end, the end itself is
+ * the exact answer and needs no number at all.
+ *
+ * The two ways of making the ELSEWHERE case survive the merge were both tried and
+ * both measured worse than the plain offset here: a row anchor (the top row's id
+ * plus how far above the edge it sat) double-counts the estimate for the rows
+ * nobody has measured — QA's S2 Back scenario landed 2 209 px past the position
+ * it saved — and a distance-from-the-end reserve lands +438 px off on the same
+ * scenario, because the unmeasured mass above the reader is estimated at 44 pt
+ * when they return and was measured when they left. That residual is the estimate
+ * error MAJOR-1/Q1 names; it closes when the relay can state real heights (audit
+ * C1), not with a better guess here. The offset is clamped to the content that
+ * exists, so a list that shrank cannot leave the reader past its end.
  *
  * In memory rather than in device storage on purpose: this is a navigational
  * convenience, and making it durable would put a write on the scroll path — the
  * one path on this screen that runs at frame rate.
  */
-const scrollOffsets = new Map<string, number>();
+interface ScrollPlace {
+	/** The offset they were scrolled to, as the platform reported it. */
+	offset: number;
+	/** Within the follow band of the end: reopen at the tail, not at a position. */
+	atTail: boolean;
+}
+
+const scrollPlaces = new Map<string, ScrollPlace>();
 
 export const TranscriptList = ({
 	sessionId,
@@ -145,6 +202,26 @@ export const TranscriptList = ({
 	 *  one position). Read once — it is a statement about the page. */
 	const [scrollAnchor] = useState(scrollAnchorFromHook);
 	const atTail = useRef(scrollAnchor !== "top");
+	/** Whether THIS MOUNT opens somewhere other than the tail — a saved offset to
+	 *  restore (`F-6.11` — Back preserves scroll) or the capture hook's `top`.
+	 *  `initialScrollIndex` is read once by the list, so the statement it feeds is
+	 *  unavoidably made at mount; the conversation on screen can change afterwards
+	 *  (see `openElsewhere` below). */
+	const [openElsewhereAtMount] = useState(
+		() =>
+			scrollAnchor === "top" || scrollPlaces.get(sessionId)?.atTail === false,
+	);
+	/** The same question, asked again for whichever conversation is open NOW.
+	 *
+	 * A switch does not always remount this screen: the deep-link path is a
+	 * `router.navigate`, which reuses the mounted list and swaps its props, so a
+	 * mount-latched answer would speak for a conversation that is gone — the new
+	 * conversation would get no `initialScrollIndex` (unavoidable) and, worse, no
+	 * layout clamp either, resting at the top until the reader scrolled (review
+	 * round 1, MINOR-1). The switch effect below re-answers it, and `atTail` with
+	 * it: the tail is the default for a conversation this device has nowhere else
+	 * to open. */
+	const [openElsewhere, setOpenElsewhere] = useState(openElsewhereAtMount);
 	/** Which session's offset has already been restored, held as a ref rather than
 	 *  in an effect keyed on `sessionId`: the restore has to run when the list first
 	 *  has content, which is an event the list emits, not a render this hook sees. */
@@ -224,6 +301,17 @@ export const TranscriptList = ({
 	/** Measured row heights, keyed by entry id. Persisted across repaints so an
 	 *  unmounted-then-remounted row keeps the height it laid out with. */
 	const heightsRef = useRef(new Map<string, number>());
+	/** Bumped by every measurement, to invalidate the cached offset table that
+	 *  `getItemLayout` answers from (review round 1, NIT-2): `heightsRef` is
+	 *  mutated in place and cannot be a dependency, so a version is. */
+	const heightsVersionRef = useRef(0);
+	/** The offset table `getItemLayout` answers from, rebuilt when the row list
+	 *  changes identity or a row has been measured since it was built. */
+	const layoutTable = useRef<{
+		rows: unknown;
+		version: number;
+		offsets: number[];
+	}>({ rows: null, version: -1, offsets: [] });
 	/** The last boolean reported upward; only flips are reported. */
 	const lastAnchorVisibleRef = useRef(false);
 	/* Latest props read by `recompute`, which must be stable: a re-created scroll
@@ -284,29 +372,60 @@ export const TranscriptList = ({
 		);
 	}, []);
 
+	/**
+	 * The per-row `onLayout` storm, coalesced to one recompute per frame.
+	 *
+	 * WHY. Opening a transcript lays out every mounted row in a burst (and a
+	 * streaming answer re-lays out its row every few frames). Each of those used to
+	 * run the anchor walk immediately, so a window full of rows walked once per row
+	 * inside one frame to answer a question whose answer cannot change before that
+	 * frame is painted anyway. Every OTHER path still runs the walk synchronously —
+	 * the scroll handler, a new frame's rows, the list's own layout event — so the
+	 * first truthful reading is never late; only the redundant repeats inside one
+	 * frame are dropped.
+	 */
+	const recomputeFrameRef = useRef<number | null>(null);
+	const scheduleRecompute = useCallback(() => {
+		if (recomputeFrameRef.current !== null) return;
+		recomputeFrameRef.current = requestAnimationFrame(() => {
+			recomputeFrameRef.current = null;
+			recompute();
+		});
+	}, [recompute]);
+
 	/** One row's laid-out height arrived. Heights change while text streams, so
-	 *  a re-measure overwrites — the latest layout is the truth. */
+	 *  a re-measure overwrites — the latest layout is the truth. The height is
+	 *  written SYNCHRONOUSLY, because the layout cache `getItemLayout` answers from
+	 *  must be current before the next scroll request is computed; only the
+	 *  downstream recompute is deferred (see `scheduleRecompute`). */
 	const measureRow = useCallback(
 		(id: string, height: number) => {
 			heightsRef.current.set(id, height);
-			recompute();
+			// Invalidates the cached offset table (`getItemLayout`'s, review NIT-2).
+			heightsVersionRef.current += 1;
+			scheduleRecompute();
 		},
-		[recompute],
+		[scheduleRecompute],
 	);
 
 	/* A session switch starts the geometry over: heights belong to the rows that
 	 *  laid out, and the previous conversation's are not this one's; the reader's
-	 *  open turns belong to the conversation that was open too. `sessionId`
-	 *  is a dependency the exhaustive-deps rule cannot justify from the body (the
-	 *  refs carry the data), and it is exactly the trigger that matters: without
-	 *  it a switch would recompute against the previous conversation's heights
-	 *  (the working-line precedent: `activity`'s own note). */
-	// biome-ignore lint/correctness/useExhaustiveDependencies: see the comment above
+	 *  open turns belong to the conversation that was open too, and so does the
+	 *  answer to "does this conversation open at the tail" — a switch can reuse
+	 *  this mounted screen (`router.navigate`), so both of those are re-answered
+	 *  here rather than latched at mount (review MINOR-1, QA Q2). `sessionId` is
+	 *  the trigger that matters: without it a switch would recompute against the
+	 *  previous conversation's heights (the working-line precedent: `activity`'s
+	 *  own note). */
 	useEffect(() => {
 		heightsRef.current.clear();
 		setReaderExpanded(NO_TURNS);
+		const elsewhere =
+			scrollAnchor === "top" || scrollPlaces.get(sessionId)?.atTail === false;
+		setOpenElsewhere(elsewhere);
+		atTail.current = !elsewhere;
 		recompute();
-	}, [sessionId, recompute]);
+	}, [sessionId, recompute, scrollAnchor]);
 
 	/* ------------------------------------------------------------ the find jump --
 	 *
@@ -327,6 +446,61 @@ export const TranscriptList = ({
 	const planRef = useRef(plan);
 	planRef.current = plan;
 
+	/**
+	 * Where one RENDERED item sits, for the virtualiser's placement and jumps.
+	 *
+	 * It answers from the measured height cache, falling back to the estimate for
+	 * rows nobody has laid out yet (`windowing.ts` owns both numbers and why the
+	 * estimate errs small). Stable across renders on purpose: the list holds this
+	 * function for the lifetime of the mount, and the data it answers about arrives
+	 * as `data`/the item ref rather than as a dependency, so a frame that re-emits
+	 * the same rows does not hand the virtualiser a different metric source.
+	 *
+	 * THE OFFSET TABLE IS CACHED (review round 1, NIT-2): `getItemLayout` is called
+	 * once per row per batch, so answering each call by walking the rows above it
+	 * would be quadratic in the plan's length. The table is rebuilt when the row
+	 * list changes identity or when a row has been measured since it was built —
+	 * `heightsRef` is mutated in place, by rows laying out, so it cannot be a
+	 * dependency and `heightsVersionRef` is what makes the invalidation exact.
+	 * Measurements land in the layout phase, before the next batch of calls, so a
+	 * batch is one walk.
+	 */
+	/** The offset table `getItemLayout` and the scroll anchor both read, from the
+	 *  cache `layoutTable` holds: rebuilt when the row list changes identity or a
+	 *  row has measured since (`heightsVersionRef`), O(1) otherwise. */
+	const offsetsFor = useCallback(
+		(rows: ArrayLike<TranscriptItem> | null | undefined): number[] => {
+			const cache = layoutTable.current;
+			if (cache.rows !== rows || cache.version !== heightsVersionRef.current) {
+				cache.rows = rows;
+				cache.version = heightsVersionRef.current;
+				cache.offsets = rowOffsets(
+					rows?.length ?? 0,
+					(at) => rows?.[at]?.id,
+					heightsRef.current,
+				);
+			}
+			return cache.offsets;
+		},
+		[],
+	);
+
+	const getItemLayout = useCallback(
+		(data: ArrayLike<TranscriptItem> | null | undefined, index: number) => {
+			const offsets = offsetsFor(data);
+			// Past the table: the estimate alone, which is what a row beyond the
+			// rendered plan has. `rowLayout` keeps one arithmetic for both answers.
+			if (index >= offsets.length - 1)
+				return rowLayout(index, (at) => data?.[at]?.id, heightsRef.current);
+			return {
+				length: (offsets[index + 1] ?? 0) - (offsets[index] ?? 0),
+				offset: offsets[index] ?? 0,
+				index,
+			};
+		},
+		[offsetsFor],
+	);
+
 	const revealToIndex = useCallback((index: number) => {
 		// A jump is the reader leaving the tail: following the next frame would
 		// yank them off the message they just landed on.
@@ -336,35 +510,38 @@ export const TranscriptList = ({
 			viewPosition: 0.3,
 			animated: false,
 		});
-	}, []);
-
-	const onScrollToIndexFailed = useCallback(
-		(info: { index: number; averageItemLength: number }) => {
-			const list = listRef.current;
-			if (list === null) return;
-			// Land near the target using what the list knows (its average row),
-			// then ask again for the exact index once the rows around it have
-			// mounted and been measured — the documented recovery for a
-			// variable-height list with no `getItemLayout`.
-			list.scrollToOffset({
-				offset: Math.max(0, info.averageItemLength * info.index),
+		/* THE DEEP JUMP'S SECOND HALF, now armed here.
+		 *
+		 * With `getItemLayout` present the list never reports
+		 * `onScrollToIndexFailed` — it trusts the metrics it was handed — so the
+		 * recovery that used to arrive from that callback has to be armed on this
+		 * side: a row nobody has measured is placed by the ESTIMATE, and the row's
+		 * real height differs, so the landing is approximate. Re-issuing the same
+		 * index after the rows around it have mounted and measured lands it
+		 * exactly. 75 ms is the delay the old callback used, kept because it was
+		 * measured against this list's mount batching. */
+		const id = itemsRef.current[index]?.id;
+		if (id === undefined || heightsRef.current.has(id)) return;
+		if (revealTimerRef.current !== null) {
+			clearTimeout(revealTimerRef.current);
+		}
+		revealTimerRef.current = setTimeout(() => {
+			revealTimerRef.current = null;
+			listRef.current?.scrollToIndex({
+				index,
+				viewPosition: 0.3,
 				animated: false,
 			});
-			if (revealTimerRef.current !== null) {
-				clearTimeout(revealTimerRef.current);
-			}
-			revealTimerRef.current = setTimeout(() => {
-				revealTimerRef.current = null;
-				revealToIndex(info.index);
-			}, 75);
-		},
-		[revealToIndex],
-	);
+		}, 75);
+	}, []);
 
 	useEffect(
 		() => () => {
 			if (revealTimerRef.current !== null) {
 				clearTimeout(revealTimerRef.current);
+			}
+			if (recomputeFrameRef.current !== null) {
+				cancelAnimationFrame(recomputeFrameRef.current);
 			}
 		},
 		[],
@@ -427,8 +604,12 @@ export const TranscriptList = ({
 				event.nativeEvent;
 			const distance =
 				contentSize.height - contentOffset.y - layoutMeasurement.height;
-			atTail.current = distance < TAIL_BAND_PT;
-			scrollOffsets.set(sessionId, contentOffset.y);
+			const atEnd = distance < TAIL_BAND_PT;
+			atTail.current = atEnd;
+			scrollPlaces.set(sessionId, {
+				offset: contentOffset.y,
+				atTail: atEnd,
+			});
 			factsRef.current = {
 				contentPt: contentSize.height,
 				offsetY: contentOffset.y,
@@ -438,31 +619,90 @@ export const TranscriptList = ({
 		[sessionId, recompute],
 	);
 
+	/**
+	 * Pin the list to its end, before the frame is painted.
+	 *
+	 * WHY A LAYOUT EFFECT AND NOT ONLY THE CONTENT-SIZE EVENT. The list's rows
+	 * arrive in a commit, and on the web the browser can paint that commit before
+	 * the content-size callback arrives (a resize observer callback is delivered
+	 * after the mutation, and this was MEASURED: the first frame carrying rows had
+	 * `scrollTop` 0 while the mounted window was already the tail, so the reader got
+	 * a blank frame before the jump to the end). A layout effect runs after the DOM
+	 * is committed and before paint, so the clamp lands in the same frame as the
+	 * rows — the first frame that carries content is already the tail. The
+	 * content-size clamp below stays for what the rows' own later layout does (a
+	 * streaming answer growing its row, an image arriving), where the commit that
+	 * changes the height is not a commit of this component's at all.
+	 */
+	const pinTail = useCallback(() => {
+		if (!atTail.current) return;
+		listRef.current?.scrollToOffset({
+			offset: TAIL_CLAMP_OFFSET_PT,
+			animated: false,
+		});
+	}, []);
+	// biome-ignore lint/correctness/useExhaustiveDependencies: `plan.items.length` is the trigger (a commit that brought rows); the body reads refs by design.
+	useLayoutEffect(() => {
+		if (openElsewhere) return;
+		pinTail();
+	}, [openElsewhere, pinTail, plan.items.length]);
+
 	/* The offset is restored once, after the first content change: before that there
 	 * is nothing to scroll, and a restore that ran into an empty list would silently
 	 * lose the position (F-6.11 — Back preserves scroll). Keyed on the session so a
-	 * session switch restores ITS offset rather than the previous one's. */
-	const onContentSizeChange = useCallback(
-		(_width: number, height: number) => {
-			factsRef.current = { ...factsRef.current, contentPt: height };
-			if (restoredFor.current !== sessionId) {
-				restoredFor.current = sessionId;
-				const saved = scrollOffsets.get(sessionId);
-				// The capture hook's anchor outranks a saved offset: a page that asked
-				// for `top` asked for the top.
-				if (scrollAnchor !== "top" && saved !== undefined && saved > 0) {
-					listRef.current?.scrollToOffset({ offset: saved, animated: false });
-					recompute();
-					return;
+	 * session switch restores ITS offset rather than the previous one's. */ const onContentSizeChange =
+		useCallback(
+			(_width: number, height: number) => {
+				factsRef.current = { ...factsRef.current, contentPt: height };
+				if (restoredFor.current !== sessionId) {
+					restoredFor.current = sessionId;
+					const saved = scrollPlaces.get(sessionId);
+					// The capture hook's anchor outranks a saved position: a page that
+					// asked for `top` asked for the top.
+					if (scrollAnchor !== "top" && saved !== undefined) {
+						if (saved.atTail) {
+							/* They were following the end when they left, so the END is what
+							 * to restore — not a number and not a row. This is the reopen
+							 * path QA failed: a saved offset resolved against a taller
+							 * merged list parked the reader thousands of points above the
+							 * newest message. */
+							pinTail();
+							recompute();
+							return;
+						}
+						/* Elsewhere: their offset, clamped to the content that exists now —
+						 * the merge can only have made the list taller, but a reader who
+						 * left near the end of a list that then shrank must not be left past
+						 * it (see `ScrollPlace` for why the offset is kept for this case). */
+						listRef.current?.scrollToOffset({
+							offset: Math.min(
+								saved.offset,
+								Math.max(0, height - viewportRef.current),
+							),
+							animated: false,
+						});
+						recompute();
+						return;
+					}
 				}
-			}
-			if (atTail.current) {
-				listRef.current?.scrollToEnd({ animated: false });
-			}
-			recompute();
-		},
-		[sessionId, recompute, scrollAnchor],
-	);
+				if (atTail.current) {
+					/* The tail pin, and why it is a CLAMP rather than `scrollToEnd`.
+					 *
+					 * `scrollToEnd` computes its destination from the row metrics, and rows
+					 * nobody has measured are ESTIMATED (`windowing.ts`), so on a long
+					 * conversation it stops short of the true end and the newest row sits
+					 * just off screen. An offset past the content's end is clamped by every
+					 * platform to the content's end, which is exactly the answer wanted and
+					 * needs no height to be right. It runs ONLY while the reader is already
+					 * at the tail (the auto-follow rule above): it is the correction that
+					 * keeps a growing row from pushing the newest line away, not the thing
+					 * that decides where the list starts — that is `initialScrollIndex`. */
+					pinTail();
+				}
+				recompute();
+			},
+			[sessionId, recompute, scrollAnchor, pinTail],
+		);
 
 	const renderItem = useCallback(
 		({ item }: { item: TranscriptItem }) =>
@@ -551,7 +791,24 @@ export const TranscriptList = ({
 			onScroll={onScroll}
 			scrollEventThrottle={16}
 			onContentSizeChange={onContentSizeChange}
-			onScrollToIndexFailed={onScrollToIndexFailed}
+			/* The two props that make the FIRST frame the one the reader came for.
+			 *
+			 * `initialScrollIndex` mounts the LAST screenful, and `getItemLayout`
+			 * tells the list where that screenful sits — so the open renders its
+			 * final rows and the tail `onContentSizeChange` clamp is a correction
+			 * rather than the mechanism that gets there. Omitted when this mount is
+			 * headed somewhere else (`openElsewhere`): a restored offset or the
+			 * capture hook's top. There is deliberately no
+			 * `onScrollToIndexFailed` beside them — the list never reports a failed
+			 * jump when it has metrics, so the deep-jump recovery lives in
+			 * `revealToIndex`, which is the only place that knows a target is
+			 * unmeasured. */
+			initialScrollIndex={
+				openElsewhereAtMount
+					? undefined
+					: tailStartIndex(plan.items.length, policy.initialNumToRender)
+			}
+			getItemLayout={getItemLayout}
 			// Keyboard stays open while scrolling: the reader is scrolling to read the
 			// answer to what they just typed.
 			keyboardShouldPersistTaps="handled"

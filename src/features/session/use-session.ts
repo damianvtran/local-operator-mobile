@@ -34,11 +34,12 @@ import {
 	getActiveRoute,
 	INITIAL_STREAM_FACTS,
 	loadAttachments,
+	mergeTranscript,
 	olderThanLoaded,
+	rowIdentity,
 	type StreamFacts,
 	sessions,
 	subscribeRoute,
-	transcriptRows,
 } from "@/features/session/runtime";
 import type { RelayError } from "@/relay";
 import { readEntry } from "@/state";
@@ -365,10 +366,16 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 
 	/* ------------------------------------------------------------- derivations */
 	const projection = entry.projection;
-	const entries = useMemo(
-		() => transcriptRows(projection, history),
+	/* ONE list, from the first paint, out of both sources: the page's rows stay
+	 * held when the live frame lands, so the open paints its page and then GROWS
+	 * with the frame instead of being replaced by it (`mergeTranscript`). The
+	 * `holeBelowPage` fact rides along because the merge is the only place that
+	 * can see it, and the find caveat needs it (see `olderThanLoaded`). */
+	const merged = useMemo(
+		() => mergeTranscript(projection, history),
 		[projection, history],
 	);
+	const entries = merged.rows;
 	/* The frame watch behind the find caveat's third proof (reviewer MAJOR-2):
 	 * a row held in an earlier frame and gone from this one left the ≤80-row
 	 * tail window — the frames only append or slide, so it still exists
@@ -376,13 +383,20 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 	 * needs no history page at all (the failed-read case), and it is sticky on
 	 * purpose: nothing re-enters the window, so a claim that could flicker off
 	 * would be a lie twice. The PREVIOUS frame lives in a ref; only the verdict
-	 * is state. */
+	 * is state.
+	 *
+	 * BY IDENTITY, NOT BY ID (review round 1, BLOCKER-1 secondary). The two
+	 * folds disagree about a tool row's id (`rowIdentity`), so a later frame
+	 * that rebuilds a row under the page's naming swaps `tc-call-x` for
+	 * `<message>:call-x` — the SAME row, re-labelled. Comparing raw ids read
+	 * that as a slide and made the caveat claim a row had left the window when
+	 * only its label had changed. Identity is what the claim is about. */
 	const heldIdsRef = useRef<{ sessionId: string; ids: Set<string> } | null>(
 		null,
 	);
 	const [slidUnderWindow, setSlidUnderWindow] = useState(false);
 	useEffect(() => {
-		const ids = new Set(entries.map((entry) => entry.id));
+		const ids = new Set(entries.map(rowIdentity));
 		const before = heldIdsRef.current;
 		heldIdsRef.current = { sessionId, ids };
 		if (before === null) return;
@@ -406,8 +420,16 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 				page: history,
 				entries,
 				slid: slidUnderWindow,
+				holeBelowPage: merged.holeBelowPage,
 			}),
-		[pageHasMore, historyRead, history, entries, slidUnderWindow],
+		[
+			pageHasMore,
+			historyRead,
+			history,
+			entries,
+			slidUnderWindow,
+			merged.holeBelowPage,
+		],
 	);
 
 	const connection = useMemo((): ConnectionView => {
