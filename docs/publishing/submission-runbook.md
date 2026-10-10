@@ -133,11 +133,13 @@ required once `android` is enabled.
 
 ## Store assets — produced, parked with the work
 
-- **26 frames verified off `main`** (the `02da0334` tree): App Store 6.9" ×9
+- **26 frames verified off `main`** (the `02da0334` tree; the set — counts,
+  order, theme, captions — is defined in
+  [`listing-screenshots.md`](./listing-screenshots.md)): App Store 6.9" ×9
   (1320×2868), **iPad 13" ×9 (2064×2752)**, Play ×8 (1080×1920), plus
-  `MANIFEST.sha256` and raw captures. They live in the parity lane's `store-shots`
-  worktree (`design/store-screenshots/out/`, gitignored by design) and its
-  scratchpad mirror.
+  `MANIFEST.sha256` and raw captures. They live in the parity lane's
+  `store-shots` worktree (`design/store-screenshots/out/`, gitignored by
+  design) and its scratchpad mirror.
 - **The iPad class is required**, not optional: the app sets `supportsTablet: true`
   and ships two-pane layouts.
 - **The pre-upload content pass is the one quality gate left on those frames.**

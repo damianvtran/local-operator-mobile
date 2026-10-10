@@ -226,8 +226,11 @@ and the app requests **no media permission at all**: `READ_MEDIA_IMAGES`,
 (`expo-image-picker`'s own library manifest declares some of them) and asserted
 ABSENT from the release merged manifest by `scripts/ci/native-config.ts`, so the
 Play Photo and Video Permissions policy is not engaged. The camera is not a
-feature of this app and its permission is blocked the same way. On local
-network:
+feature of this app and its permission is blocked the same way. The composer's
+voice input (STT) uses the microphone: the manifest declares `RECORD_AUDIO`,
+requested at the mic press and never at launch, and each recording is sent to
+the reader's own computer for one transcription and not kept — the same
+sentence the iOS usage string carries (`app.config.ts`). On local network:
 the Radient route reaches a tunnel over the internet, so it needs no LAN
 permission; the same-Wi-Fi path (a literal private address, no tunnel — ADR 0002
 § 5) is where the project lands, and the app is configured for it — the manifest
