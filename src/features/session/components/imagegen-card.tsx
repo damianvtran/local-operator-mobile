@@ -311,7 +311,12 @@ export const ImageGenCard = ({
 	 * `cancelling` frame erases what it replaced (`imageGenGenerating` has the
 	 * full reasoning); `null` until the first render, so a card mounted
 	 * straight into a hold takes the entry's own reading. The write is
-	 * idempotent, so a double render (StrictMode) cannot change the answer. */
+	 * idempotent, so a double render (StrictMode) cannot change the answer. A
+	 * REMOUNT mid-hold (the FlatList window recycling the row) loses the
+	 * history by design — the ref does not survive it — so a provider-queued
+	 * hold takes the entry's reading and redraws the frame until the hold
+	 * settles: the documented `null` case, accepted as cosmetic because
+	 * nothing is latched outside the render path (review round 1, MINOR 2). */
 	const generatedRef = useRef<boolean | null>(null);
 	const generating = imageGenGenerating(view, generatedRef.current);
 	generatedRef.current = generating;

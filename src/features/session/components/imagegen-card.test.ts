@@ -104,6 +104,11 @@ const BODY_GATE = /const generatingBody = ([^;]+);/;
 const CANCEL_GATE =
 	/const showCancel =\s*view\.cancelable && !cancelRequested && onCancelTurn !== undefined;/;
 
+/** The generating fact's wiring: the call site and the ref's write-back
+ *  (top-level literals, same rule as above). */
+const FACT_CALL = /imageGenGenerating\(\s*view,\s*generatedRef\.current\s*\)/;
+const FACT_WRITE_BACK = /generatedRef\.current = generating;/;
+
 const liveGuard = (): string => {
 	const match = SOURCE.match(LIVE_GUARD);
 	expect(match, "the card must declare its live guard").not.toBeNull();
@@ -176,9 +181,22 @@ describe("the generating body's gate (the F3 guard)", () => {
 	});
 
 	it("reads the fact through the shared predicate, from the WIRE phase", () => {
-		expect(SOURCE).toContain("imageGenGenerating(view,");
-		// The drawn phase carries the overlay; the fact must not be read from it.
-		expect(SOURCE).not.toContain("imageGenGenerating(phase,");
+		/* The exact call: `view` passed whole (never the drawn phase, which
+		 * carries the overlay) and the ref's CURRENT value as the history — a
+		 * `null` history or a renamed argument fails here (review round 1,
+		 * MINOR 1 / QA round 1, Q1: the wiring dies by test, not by code read). */
+		expect(SOURCE).toMatch(FACT_CALL);
+		/* ONE call site, so the match above cannot be satisfied by an unused
+		 * spelling beside a different, real one (review round 1, NIT 1). */
+		expect((SOURCE.match(/imageGenGenerating\(/g) ?? []).length).toBe(1);
+	});
+
+	it("writes the answer back, so the next render keeps the history", () => {
+		/* The half a delete-mutation kills silently: without the write-back the
+		 * ref stays `null` forever and every hold takes the entry's reading
+		 * (the provider-queued frame returns on the next render). The EXACT
+		 * assignment: a gated value (`liveTone && generating`) fails here. */
+		expect(SOURCE).toMatch(FACT_WRITE_BACK);
 	});
 
 	it("puts the frame and the log tail behind the gate, and the word outside it", () => {
