@@ -15,7 +15,7 @@ view — what runs, what it needs, and what to do when it goes red.
 | `android.yml` | `pull_request`, push to `main`, `workflow_dispatch` | `changes`, `android`, `internal` (main only) | `expo prebuild` produces the Android project from the config, Gradle assembles a debug APK, **the APK's manifest carries the version the ref derives** (`versionName`/`versionCode` read out of the built APK and asserted), **the release variant's merged manifest carries the local-network declarations** (`android:usesCleartextTraffic="true"`, `ACCESS_LOCAL_NETWORK` — asserted on the release manifest because the debug overlays set the cleartext attribute themselves), and the generated project re-generates identically (byte for byte, except that Xcode project files are compared with their object identifiers normalized — see below). On `main`, additionally an AAB/APK whose release certificate is verified **not** to be the debug key, and, when configured, a Play **internal** track upload. |
 | `ios.yml` | `pull_request`, push to `main`, `workflow_dispatch` | `changes`, `ios`, `internal` (main only) | The app builds for the iOS 26 SDK with Xcode 26 on `macos-26`, **launches on a simulator**, and the captured frame **rendered something** — it differs from a pre-install capture of the home screen, and the launch log carries no JavaScript fatal (the check that caught a real crash on a head where the app had no routes). The settle delta between two captures two seconds apart is **reported, not asserted**, in pixel-channel bytes: a byte-identity gate was tried and removed because a working UI with a caret moves (measured, run 36727261140). The version in the built app's `Info.plist` is asserted against the one the ref derived, **the built `Info.plist` carries `NSLocalNetworkUsageDescription` and the ATS local-networking configuration** (`NSAllowsLocalNetworking` plus the private-range `NSExceptionDomains` — which mechanism the OS honours is Apple's ambiguity, ADR 0002 §5), and the native project re-generates identically. Content is not judged here — a wrong screen renders just as green. On `main`, additionally a signed IPA and, when configured, a TestFlight upload. |
 | `e2e.yml` | `pull_request`, push to `main`, nightly, `workflow_dispatch` | `harness`, `mock-relay-contract`, `docs-commands`, `web-audit`, `maestro-android` | **The harness was present and its suites ran** — the `harness` job FAILS when it is absent rather than skipping, so a green `e2e` cannot mean "the thing did not run". Then: `pnpm e2e:relay` in its own job (which prints its own assertion count — quote that line, not a number written here) and `pnpm e2e:divergences`; `pnpm e2e:typecheck` in the audit job (the only typecheck `tools/**` and `e2e/**` get — `pnpm typecheck` covers the app and `scripts/**` only); the web export driven in headless Chrome into a frame per audit cell with every frame checked against the design kit's rubric, and `pnpm e2e:canary`. **Every command goes through the harness's own package scripts**, never a file path, so a rename inside the harness cannot silently disable this workflow. **The bounds come from measurements, not from hope**: `pnpm e2e:relay` is the harness's slowest documented command — its own note says the contract plus the canary's mutation self-test is "LOAD-DEPENDENT: 28 minutes measured on this host at load averages 32-46, ~13 minutes on a quiet one" and sizes its default bound at 45 (`--timeout 2700`), and a reviewer's attempt on this host was killed at ~14 minutes inside the mutation group at load 120-226 — so that job gets **45 minutes** and the step 25 — the job's bound covers its parts (install + the contract + the divergence check), not its largest one, and the install prints its own duration so the next person sizing this has a measurement — rather than the 15 minutes it had, which could only ever report a timeout. `pnpm e2e:docs` (every command `docs/e2e/README.md` names, the relay one included) runs only in the nightly `docs-commands` job; on a pull request it would run the relay contract a second time for no extra coverage. The relay job installs explicitly with `--frozen-lockfile`, because the implicit install pnpm 12 performs before a script (`verify-deps-before-run`) was already happening: measured, a "no install" job pulled 631 packages into a tree that had none. Maestro runs the flow set on an Android 16 emulator — nightly and on demand only, because it is the slowest job here and the harness's own note asks for it that way; it is the one job allowed to be absent from a green PR run. |
-| `release.yml` | tag `v*` (or `workflow_dispatch` with a tag and `dry_run`) | `version`, `credentials`, `gate` (= `ci.yml`), `android`, `ios`, `publish` | The same gate a pull request runs, both platforms built and signed, a GitHub Release carrying the APK/AAB/IPA, and uploads to the Play internal track and TestFlight. |
+| `release.yml` | tag `v*` (or `workflow_dispatch` with a tag and `dry_run`) | `version`, `credentials`, `gate` (= `ci.yml`), `android`, `ios`, `publish` | The same gate a pull request runs, the platforms named by `RELEASE_PLATFORMS` (default `ios`) built and signed, a GitHub Release carrying their artefacts (APK/AAB and/or IPA), and the matching uploads to the Play internal track and/or TestFlight. |
 
 Native jobs are **skipped, not failed**, on a change that touches only
 documentation. That decision is implemented inside the workflow by a `changes`
@@ -68,6 +68,34 @@ Secrets).
 | `APPLE_ASC_ISSUER_ID` | same | App Store Connect issuer id. |
 | `APPLE_ASC_PRIVATE_KEY_BASE64` | same | The `.p8`, base64. Decoded to `APPLE_ASC_PRIVATE_KEY_PATH`. |
 
+The Android rows and the Apple rows are independent: a release needs only the rows
+of the platforms it releases (see "Which platforms a tag releases" below).
+
+### Which platforms a tag releases: `RELEASE_PLATFORMS`
+
+A tag releases the platforms named by the repository **variable**
+`RELEASE_PLATFORMS` (Settings → Secrets and variables → Actions → **Variables**, not
+Secrets — it is a switch, not a credential): a comma-separated list of `ios` and/or
+`android`. Case and spaces do not matter (`iOS, Android` is fine).
+
+- **Unset or blank means `ios`.** This is a deliberate default, not an accident of
+  which secrets exist: Apple goes first and Google Play is parked, so a tag must
+  not fail on Play credentials nobody has yet. The run summary says when the value
+  came from the default.
+- **An unknown name fails the run** (`windows`, or the typo `andriod`) rather than
+  being ignored — a release does not guess which platform was meant.
+- **Enabled means required.** `release.yml`'s `credentials` job checks each enabled
+  platform's secrets in its own step, so a missing Apple variable and a missing Play
+  variable never appear in the same list. An enabled platform with a missing
+  credential still **fails** the release; a platform that is not enabled is not
+  checked, built, uploaded or attached.
+- **Re-enabling Android** takes two things together: set
+  `RELEASE_PLATFORMS=ios,android` **and** add the five Android secrets
+  (`ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`,
+  `ANDROID_KEY_PASSWORD`, `PLAY_SERVICE_ACCOUNT_JSON_BASE64`). Setting only the
+  variable is not a way to ship half a release: the gate fails on the missing
+  secrets. Adding only the secrets changes nothing — the variable decides.
+
 Optional, referenced by the ADR and not needed by anything here today:
 `EXPO_TOKEN` (EAS escape hatch) and `MAESTRO_CLOUD_API_KEY` (parallel device
 runs).
@@ -93,7 +121,7 @@ deployment rules: a BRANCH rule `main` and a TAG rule `v*`.** Both halves matter
 - **Environment** secrets are the point of the exercise: only a job that declares
   the environment can read them, so the deployment rules are what keep signing
   material out of a pull request that edits a workflow to drop an `if:`. Keeping
-  the same nine as **repository** secrets also works — every job that reads them
+  the same credentials as **repository** secrets also works — every job that reads them
   declares the environment, and a job in an environment sees both scopes — but
   repository secrets are readable by any workflow a collaborator can push, which
   is exactly the gap the environment exists to close (QA round 3, Q1).
@@ -113,8 +141,9 @@ protection against a feature branch reaching the secrets without the second
 prompt, and is the configuration this pipeline expects.
 
 **OPERATOR ACTION ITEM — `environment: release` protects nothing yet.** Create the
-environment, add a **branch** rule `main` and a **tag** rule `v*`, put the nine
-credentials above in it as **environment secrets**, and decide whether it requires
+environment, add a **branch** rule `main` and a **tag** rule `v*`, put the
+credentials above for the platforms you release in it (four Apple secrets for the
+default `ios`; nine for both) as **environment secrets**, and decide whether it requires
 reviewers (the paragraph above). Until then the environment resolves to nothing,
 the jobs are guarded by their `if:` conditions alone, and the signing material is
 only as private as the repository's secret scope. Verified 2026-09-30: `gh api
@@ -132,9 +161,12 @@ One policy, both platforms, decided by a `credentials` job in each workflow:
   push to `main`) cannot happen.
 - **`ios.yml`** — without the `APPLE_*` variables, the `internal` job is
   **skipped** the same way, with the same annotation.
-- **A tagged release FAILS rather than skipping** either of them: `release.yml`'s
-  credential check runs first and names every missing variable, so the release
-  path is a hard failure and the pull-request/main paths are a visible skip.
+- **A tagged release FAILS rather than skipping** a platform it was asked to
+  release: `release.yml`'s credential check runs first and names every missing
+  variable of each platform in `RELEASE_PLATFORMS`, so the release path is a hard
+  failure and the pull-request/main paths are a visible skip. A platform that
+  `RELEASE_PLATFORMS` does not name (the default is `ios`) is not checked at all —
+  that is a decision recorded in a variable, not a skip caused by an absent secret.
 
 Why a skip rather than a hard failure on `main`: an internal build without signing
 material is impossible, and reding `main` on every push until someone configures a
@@ -400,16 +432,20 @@ environment `bundleRelease` fails loudly instead of signing with the debug key.
 
    A tag is the whole instruction. There is no version bump to land first and no
    release branch to cut.
-4. **Watch `release.yml`.** In order: the version is derived, the credential
-   check passes (it names any missing secret and stops), the gate runs, both
-   platforms build and sign, the GitHub Release is created with the APK, AAB and
-   IPA attached, and only then do the Play and TestFlight uploads run. A release
+4. **Watch `release.yml`.** In order: the version is derived, the platforms are
+   resolved from `RELEASE_PLATFORMS` (default `ios`) and the credential check
+   passes for each (it names any missing secret and stops), the gate runs, the
+   enabled platforms build and sign, the GitHub Release is created with their
+   artefacts attached (APK + AAB for Android, IPA for iOS), and only then do the
+   matching Play and TestFlight uploads run. A release
    that dies half-way still leaves the Release — the artefact a user can install.
-5. **Verify**, in this order: the Release page lists three artefacts; the run
-   summary names the version and build number; the Play internal track shows the
-   new `versionCode`; the build appears in App Store Connect. TestFlight
+5. **Verify**, in this order: the Release page lists the artefacts of the enabled
+   platforms (the IPA alone for the default; three with Android); the run summary
+   names the version, build number and platforms; the Play internal track shows the
+   new `versionCode` (Android only); the build appears in App Store Connect. TestFlight
    processing is asynchronous — the job does not wait for it.
-6. **Install the APK** from the Release on an Android device and open it. The
+6. **Install the build** — the APK from the Release on an Android device (when
+   Android is enabled), or the TestFlight build on an iPhone — and open it. The
    artefacts being present is not the same claim as the app working.
 
 **A dry run.** `workflow_dispatch` with a tag and `dry_run: true` runs the version

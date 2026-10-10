@@ -2,15 +2,29 @@ name: Release
 
 # A tag is the release. `v1.2.3` on `main` is the whole instruction.
 #
-# THE ORDER MATTERS, and it is the ADR's order: the full gate runs, both
-# platforms build and sign, the GitHub Release is created with the APK, the AAB
-# and the IPA attached, and only then do the store uploads run. A release that
+# THE ORDER MATTERS, and it is the ADR's order: the full gate runs, the enabled
+# platforms build and sign, the GitHub Release is created with their artefacts
+# attached (APK + AAB for Android, IPA for iOS), and only then do the store
+# uploads run. A release that
 # dies half-way therefore leaves the artefact a user can install (the Release)
 # rather than a store listing nobody can point at.
 #
-# A MISSING CREDENTIAL IS A FAILURE HERE, NOT A SKIP. `credentials` below is a hard
-# gate: on a tag, absent signing material or an absent store credential stops the
-# run and names every variable that is missing. The unsigned, upload-free path
+# WHICH PLATFORMS A TAG RELEASES IS A DECISION, NOT AN ACCIDENT OF WHICH SECRETS
+# EXIST. The repository variable `RELEASE_PLATFORMS` (Settings → Secrets and
+# variables → Actions → Variables) is a comma-separated list of `ios` and/or
+# `android`; `scripts/ci/release-platforms.ts` parses it once, in `credentials`,
+# and every later job follows that one output. UNSET OR BLANK MEANS `ios` — a
+# deliberate default, printed in the run summary as such — so a tag cannot fail on
+# the credentials of a platform nobody asked to release (Google Play is parked
+# while Apple goes first). Re-enable Android with `RELEASE_PLATFORMS=ios,android`
+# AND its five secrets: the gate then fails if they are absent. An unknown name
+# (`windows`, or the typo `andriod`) fails the run rather than being ignored.
+#
+# A MISSING CREDENTIAL IS A FAILURE HERE, NOT A SKIP — FOR AN ENABLED PLATFORM.
+# `credentials` below is a hard gate: on a tag, absent signing material or an
+# absent store credential of a platform in `RELEASE_PLATFORMS` stops the run and
+# names every variable that is missing, per platform, so an Apple gap and a Play
+# gap never read alike. A platform that is not enabled is not checked at all. The unsigned, upload-free path
 # exists in android.yml and ios.yml for pull requests — where a fork cannot see a
 # secret anyway — and it is deliberately not reachable from a tag.
 #
@@ -128,13 +142,18 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
   credentials:
-    name: Every release credential is present
+    name: Every credential of an enabled platform is present
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    # The one place `RELEASE_PLATFORMS` is resolved. Consumers read this output,
+    # never the variable, so they cannot disagree with the credentials checked.
+    outputs:
+      platforms: ${{ steps.platforms.outputs.platforms }}
     # THE ENVIRONMENT, BECAUSE THIS IS WHERE THE SECRETS ARE READ. `docs/ci.md`
     # tells the operator to create `release` with a `main` branch rule and a `v*`
-    # tag rule and to keep the nine credentials there; a job that reads them but
-    # does not declare the environment sees them EMPTY once they live there, and
+    # tag rule and to keep the credentials of the platforms it releases there
+    # (nine for both, four for iOS only); a job that reads them but does not
+    # declare the environment sees them EMPTY once they live there, and
     # `--mode release` hard-fails on the first tag — before any build, and without
     # the approval prompt that would have surfaced it (QA round 3, Q1; the other
     # three jobs that touch secrets — `android`, `ios`, `publish` — already declare
@@ -145,23 +164,47 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - name: Check the signing and store credentials, by name
+      - name: Resolve which platforms this release builds
+        id: platforms
+        # Through `env:`, like every non-literal: a repository variable is free
+        # text. Unset/blank is `ios`; an unknown platform fails here, before any
+        # secret is read.
+        env:
+          RELEASE_PLATFORMS: ${{ vars.RELEASE_PLATFORMS }}
+        run: node scripts/ci/release-platforms.ts
+
+      - name: Check the Apple signing and store credentials, by name
         # `--mode release` is the difference between a release and a pull
         # request: here a missing variable is a hard failure that names it. The
         # alternative — a signed-build step that quietly skips — is a release
-        # that ships an unsigned APK and says nothing.
+        # that ships an unsigned build and says nothing. One step per platform so
+        # a failure names one platform's variables, never a mixed list.
+        if: contains(steps.platforms.outputs.platforms, 'ios')
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_ASC_KEY_ID: ${{ secrets.APPLE_ASC_KEY_ID }}
+          APPLE_ASC_ISSUER_ID: ${{ secrets.APPLE_ASC_ISSUER_ID }}
+          APPLE_ASC_PRIVATE_KEY_BASE64: ${{ secrets.APPLE_ASC_PRIVATE_KEY_BASE64 }}
+        run: |
+          node scripts/ci/check-secrets.ts --mode release --need APPLE_TEAM_ID,APPLE_ASC_KEY_ID,APPLE_ASC_ISSUER_ID,APPLE_ASC_PRIVATE_KEY_BASE64
+
+      - name: Check the Android signing and Play credentials, by name
+        # Not run while `android` is absent from RELEASE_PLATFORMS: a parked
+        # platform's missing secrets are not this release's problem. Enabled and
+        # missing is still a hard failure.
+        # `!cancelled() &&` so an Apple gap does not hide a Play gap behind it: the
+        # default would stop at the first failed step, and the operator would fix
+        # one platform per run. If `Resolve` failed, `platforms` is empty and this
+        # still does not run.
+        if: ${{ !cancelled() && contains(steps.platforms.outputs.platforms, 'android') }}
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
           PLAY_SERVICE_ACCOUNT_JSON_BASE64: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON_BASE64 }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          APPLE_ASC_KEY_ID: ${{ secrets.APPLE_ASC_KEY_ID }}
-          APPLE_ASC_ISSUER_ID: ${{ secrets.APPLE_ASC_ISSUER_ID }}
-          APPLE_ASC_PRIVATE_KEY_BASE64: ${{ secrets.APPLE_ASC_PRIVATE_KEY_BASE64 }}
         run: |
-          node scripts/ci/check-secrets.ts --mode release --need ANDROID_KEYSTORE_BASE64,ANDROID_KEYSTORE_PASSWORD,ANDROID_KEY_ALIAS,ANDROID_KEY_PASSWORD,PLAY_SERVICE_ACCOUNT_JSON_BASE64,APPLE_TEAM_ID,APPLE_ASC_KEY_ID,APPLE_ASC_ISSUER_ID,APPLE_ASC_PRIVATE_KEY_BASE64
+          node scripts/ci/check-secrets.ts --mode release --need ANDROID_KEYSTORE_BASE64,ANDROID_KEYSTORE_PASSWORD,ANDROID_KEY_ALIAS,ANDROID_KEY_PASSWORD,PLAY_SERVICE_ACCOUNT_JSON_BASE64
 
   gate:
     name: Full gate
@@ -174,8 +217,8 @@ jobs:
 
   android:
     name: Android (signed AAB + APK)
-    needs: [version, gate]
-    if: inputs.dry_run != true
+    needs: [version, credentials, gate]
+    if: ${{ inputs.dry_run != true && contains(needs.credentials.outputs.platforms, 'android') }}
     runs-on: ubuntu-latest
     timeout-minutes: 90
     # Where the signing material lives, and where required reviewers can be
@@ -284,8 +327,8 @@ jobs:
 
   ios:
     name: iOS (signed IPA)
-    needs: [version, gate]
-    if: inputs.dry_run != true
+    needs: [version, credentials, gate]
+    if: ${{ inputs.dry_run != true && contains(needs.credentials.outputs.platforms, 'ios') }}
     runs-on: macos-26
     timeout-minutes: 120
     environment: release
@@ -398,8 +441,17 @@ jobs:
 
   publish:
     name: GitHub Release, then the stores
-    needs: [version, android, ios]
-    if: inputs.dry_run != true
+    needs: [version, credentials, gate, android, ios]
+    # `always()` is what lets a SKIPPED platform job (one `RELEASE_PLATFORMS` did not
+    # enable) not skip the Release with it: without it a skipped `needs` entry skips
+    # this job. Everything `always()` would otherwise forgive is then required
+    # EXPLICITLY, because `!failure()` alone is only a transitive guarantee:
+    # `credentials` and `gate` must be `success` (a gate that was skipped or never
+    # resolved must not publish), and `!failure()` still stops the Release when an
+    # enabled platform failed to build. Only a platform's own SKIP is tolerated. An
+    # enabled platform whose artefact is absent still fails loudly at its
+    # `download-artifact` step.
+    if: ${{ always() && !cancelled() && !failure() && needs.credentials.result == 'success' && needs.gate.result == 'success' && inputs.dry_run != true }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
     environment: release
@@ -412,11 +464,13 @@ jobs:
           fetch-depth: 0
 
       - uses: actions/download-artifact@v8
+        if: contains(needs.credentials.outputs.platforms, 'android')
         with:
           name: android-release
           path: artifacts
 
       - uses: actions/download-artifact@v8
+        if: contains(needs.credentials.outputs.platforms, 'ios')
         with:
           name: ios-ipa
           path: artifacts
@@ -428,7 +482,10 @@ jobs:
         # (review m3).
         env:
           TAG: ${{ needs.version.outputs.tag }}
-        run: node scripts/ci/release-notes.ts --to "$TAG" --out notes.md
+          # The notes name only the artefacts this release actually has: an
+          # iOS-only Release that tells readers to install an APK is false.
+          PLATFORMS: ${{ needs.credentials.outputs.platforms }}
+        run: node scripts/ci/release-notes.ts --to "$TAG" --platforms "$PLATFORMS" --out notes.md
 
       - name: Stage the release assets under their published names
         # IN PLACE, inside `artifacts/`. The first version of this step renamed the
@@ -444,26 +501,46 @@ jobs:
         # which version it is.
         env:
           VERSION: ${{ needs.version.outputs.version }}
+          PLATFORMS: ${{ needs.credentials.outputs.platforms }}
         # The script, not three inline lines: `ci.yml`'s `release-staging` job runs
         # the same file against a real upload/download round trip on every pull
         # request, so a change to either half of this path is caught without a tag.
-        run: scripts/ci/stage-release-assets.sh artifacts "$VERSION"
+        run: scripts/ci/stage-release-assets.sh artifacts "$VERSION" "$PLATFORMS"
 
-      - name: Create the GitHub Release with the three artefacts
+      - name: Create the GitHub Release with the enabled platforms' artefacts
+        id: release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ needs.version.outputs.tag }}
           VERSION: ${{ needs.version.outputs.version }}
+          PLATFORMS: ${{ needs.credentials.outputs.platforms }}
         run: |
           set -euo pipefail
+          # Only the artefacts that exist: the platform → file-name mapping lives in
+          # ONE place, `stage-release-assets.sh --list`, which is also what the
+          # staging step renames by — so the names attached here cannot drift from
+          # the names staged, and `release-staging` in ci.yml exercises both.
+          # `$(...)` into a variable, NOT `done < <(...)`: a failure of the script
+          # aborts under `set -e` here, whereas a process substitution's exit status
+          # is discarded and an unresolved platform list would sail through. A
+          # `while read` rather than `mapfile`: no bash-4 dependency. The emptiness
+          # check also keeps `"${assets[@]}"` safe under `set -u` on bash < 4.4.
+          listing=$(scripts/ci/stage-release-assets.sh --list artifacts "$VERSION" "$PLATFORMS")
+          assets=()
+          while IFS= read -r asset; do
+            if [ -n "$asset" ]; then assets+=("$asset"); fi
+          done <<< "$listing"
+          if [ "${#assets[@]}" -eq 0 ]; then
+            echo "::error::no release asset for platforms '$PLATFORMS'"
+            exit 1
+          fi
           gh release create "$TAG" \
             --title "Local Operator $VERSION" \
             --notes-file notes.md \
-            "artifacts/local-operator-${VERSION}.apk" \
-            "artifacts/local-operator-${VERSION}.aab" \
-            "artifacts/local-operator-${VERSION}.ipa"
+            "${assets[@]}"
 
       - name: Decode the Play service account
+        if: contains(needs.credentials.outputs.platforms, 'android')
         env:
           PLAY_SERVICE_ACCOUNT_JSON_BASE64: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON_BASE64 }}
         run: |
@@ -472,6 +549,7 @@ jobs:
           printf '%s' "$PLAY_SERVICE_ACCOUNT_JSON_BASE64" | base64 --decode > "$RUNNER_TEMP/play-service-account.json"
 
       - name: Decode the App Store Connect API key
+        if: contains(needs.credentials.outputs.platforms, 'ios')
         env:
           APPLE_ASC_PRIVATE_KEY_BASE64: ${{ secrets.APPLE_ASC_PRIVATE_KEY_BASE64 }}
         run: |
@@ -480,6 +558,8 @@ jobs:
           printf '%s' "$APPLE_ASC_PRIVATE_KEY_BASE64" | base64 --decode > "$RUNNER_TEMP/asc-api-key.p8"
 
       - name: Upload the AAB to the Play internal track (fastlane)
+        id: play
+        if: contains(needs.credentials.outputs.platforms, 'android')
         env:
           SUPPLY_JSON_KEY: ${{ runner.temp }}/play-service-account.json
           # The SAME path the staging step produced, which is the whole of QA Q1:
@@ -488,6 +568,8 @@ jobs:
         run: fastlane android internal
 
       - name: Upload the IPA to TestFlight (fastlane)
+        id: testflight
+        if: contains(needs.credentials.outputs.platforms, 'ios')
         env:
           APPLE_ASC_KEY_ID: ${{ secrets.APPLE_ASC_KEY_ID }}
           APPLE_ASC_ISSUER_ID: ${{ secrets.APPLE_ASC_ISSUER_ID }}
@@ -508,7 +590,33 @@ jobs:
           VERSION: ${{ needs.version.outputs.version }}
           BUILD_NUMBER: ${{ needs.version.outputs.version_code }}
           REPOSITORY: ${{ github.repository }}
+          PLATFORMS: ${{ needs.credentials.outputs.platforms }}
+          # The OUTCOME of each step, not merely whether it was enabled: this step
+          # runs under `always()`, so a lane that failed or never started must not
+          # be reported as an upload. `outcome` is `success`, `failure`, `skipped`
+          # or `cancelled` (and empty if the step id does not exist).
+          RELEASE_OUTCOME: ${{ steps.release.outcome }}
+          PLAY_OUTCOME: ${{ steps.play.outcome }}
+          TESTFLIGHT_OUTCOME: ${{ steps.testflight.outcome }}
         run: |
+          # Built from the platforms AND the outcomes, so the summary claims no
+          # store the run never reached.
+          attached=()
+          uploaded=()
+          not_done=()
+          if [ "$RELEASE_OUTCOME" = success ]; then
+            case ",$PLATFORMS," in *,android,*) attached+=("signed APK" "signed AAB") ;; esac
+            case ",$PLATFORMS," in *,ios,*) attached+=("IPA") ;; esac
+          fi
+          case ",$PLATFORMS," in *,android,*)
+            if [ "$PLAY_OUTCOME" = success ]; then uploaded+=("Play internal track")
+            else not_done+=("Play internal track (${PLAY_OUTCOME:-not reached})"); fi ;;
+          esac
+          case ",$PLATFORMS," in *,ios,*)
+            if [ "$TESTFLIGHT_OUTCOME" = success ]; then uploaded+=("TestFlight")
+            else not_done+=("TestFlight (${TESTFLIGHT_OUTCOME:-not reached})"); fi ;;
+          esac
+          join_list() { local out="" item; for item in "$@"; do out="${out:+$out, }$item"; done; printf '%s' "${out:-nothing}"; }
           {
             echo "## $TAG"
             echo
@@ -518,5 +626,11 @@ jobs:
             echo "| published build number (versionCode / CFBundleVersion) | \`$BUILD_NUMBER\` |"
             echo "| GitHub Release | https://github.com/$REPOSITORY/releases/tag/$TAG |"
             echo
-            echo "Attached: signed APK, signed AAB, IPA. Uploaded: Play internal track, TestFlight."
+            echo "Platforms in this release: **${PLATFORMS:-none}**"
+            echo
+            echo "Attached: $(join_list ${attached[@]+"${attached[@]}"}). Uploaded: $(join_list ${uploaded[@]+"${uploaded[@]}"})."
+            if [ "${#not_done[@]}" -gt 0 ]; then
+              echo
+              echo "**Not uploaded:** $(join_list "${not_done[@]}")"
+            fi
           } >> "$GITHUB_STEP_SUMMARY"

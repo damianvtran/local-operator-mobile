@@ -108,7 +108,7 @@ Release has been cut. Here is everything you can get today:
 
 | Where | State today |
 | --- | --- |
-| **GitHub Releases** (signed APK, AAB and IPA) | No `v*` tag has been cut, so there is no Release to download. The [release pipeline](https://github.com/damianvtran/local-operator-mobile/blob/main/.github/workflows/release.yml) is on `main` ([#10](https://github.com/damianvtran/local-operator-mobile/pull/10)): a `v*` tag runs the full gate, builds and signs both platforms, and attaches the artefacts to a Release. |
+| **GitHub Releases** (signed APK, AAB and IPA) | No `v*` tag has been cut, so there is no Release to download. The [release pipeline](https://github.com/damianvtran/local-operator-mobile/blob/main/.github/workflows/release.yml) is on `main` ([#10](https://github.com/damianvtran/local-operator-mobile/pull/10)): a `v*` tag runs the full gate, builds and signs the platforms named by the `RELEASE_PLATFORMS` variable (default `ios`), and attaches their artefacts to a Release. |
 | **CI artefacts** | Every run that touches the native projects uploads a **debug APK** you can sideload and the **iOS simulator build plus the frame it rendered**; once the signing secrets below are configured, a push to `main` also uploads a **signed AAB and APK** to the `android-internal` artefact. |
 | **Google Play** | **Not yet published.** `docs/publishing/google-play.md` lists what a listing requires. |
 | **App Store** | **Not yet published.** `docs/publishing/apple-app-store.md` lists what a listing requires. |
