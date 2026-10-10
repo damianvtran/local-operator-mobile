@@ -303,7 +303,7 @@ it to the job:
 |---|---|
 | version (JS / `app.json` / Android `versionName` / iOS `CFBundleShortVersionString`) | `vX.Y.Z` without the `v` when the ref is a tag; `0.0.0` otherwise |
 | Android `versionCode`, iOS `CFBundleVersion`, internal builds | **the last release's counter plus the commits since it** — `base + git rev-list --count <last release tag>..HEAD`, and before the first release simply the commit count of the ref. Monotonic as the branch grows, identical for every workflow building the same commit, and stored nowhere |
-| Android `versionCode`, iOS `CFBundleVersion`, releases | **`release/build-number.txt`**, read as-is, and the release FAILS unless it is strictly greater than what an internal build of the same commit would claim (`base + commits since the last release`) |
+| Android `versionCode`, iOS `CFBundleVersion`, releases | **`release/build-number.txt`**, read as-is, and the release FAILS unless it is at least the floor: **one more than** the highest internal number `main` could claim — the greater of this commit's internal number (`base + commits since the last release`) and the one at the tip of `origin/main` (`floorFor` in `scripts/ci/version.ts`) |
 
 **What `release/build-number.txt = 1000` is for, and why the internal arm counts
 from the last release.** Both publishers write into one store sequence — Play
