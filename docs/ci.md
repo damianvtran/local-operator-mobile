@@ -52,9 +52,9 @@ only dependency mechanism.
 
 ## Secrets
 
-**Names only. No value is ever committed, printed or logged.** Set them in the
-repository's **Actions secrets** (Settings → Secrets and variables → Actions →
-Secrets).
+**Names only. No value is ever committed, printed or logged.** Set them as
+**environment secrets** on the `release` environment (Settings → Environments →
+release → Environment secrets) — see "Where they live, and why" below.
 
 | Secret | Used by | What it is |
 |---|---|---|
@@ -127,10 +127,10 @@ deployment rules: a BRANCH rule `main` and a TAG rule `v*`.** Both halves matter
   is exactly the gap the environment exists to close (QA round 3, Q1).
 
 A pull request cannot reach any of those jobs, so a branch pushed here cannot
-print a key. **Today the mechanism behind that sentence is the `if:` conditions,
-not the environment**, because this repository has no environment configured yet
-— see the action item below. The environment is what makes it an enforced rule
-rather than a workflow convention.
+print a key. **The environment exists (created 2026-10-04), and its deployment
+rules are the mechanism** — branch `main` and tag `v*`, alongside the
+workflows' own `if:` conditions. The environment is what makes it an enforced
+rule rather than a workflow convention.
 
 **A cost of that arrangement, stated because it is a choice.** If the environment
 is given required reviewers, the `credentials` gate waits for approval *before* it
@@ -140,14 +140,17 @@ answers). A review-free environment with the same two deployment rules keeps the
 protection against a feature branch reaching the secrets without the second
 prompt, and is the configuration this pipeline expects.
 
-**OPERATOR ACTION ITEM — `environment: release` protects nothing yet.** Create the
-environment, add a **branch** rule `main` and a **tag** rule `v*`, put the
-credentials above for the platforms you release in it (four Apple secrets for the
-default `ios`; nine for both) as **environment secrets**, and decide whether it requires
-reviewers (the paragraph above). Until then the environment resolves to nothing,
-the jobs are guarded by their `if:` conditions alone, and the signing material is
-only as private as the repository's secret scope. Verified 2026-09-30: `gh api
-repos/damianvtran/local-operator-mobile/environments` returns **0**.
+**STATE (2026-10-09): the environment exists; its secrets do not.** `release`
+was created with a **branch** rule `main` and a **tag** rule `v*` (custom branch
+policies enabled, which is what makes a tag rule possible at all), so the jobs
+above can reach it from tags and from `main`. The credentials, however, are
+still **unset** — the repository and environment secret counts are both 0 — so a
+`v*` tag fails at the `credentials` gate today, by design, naming the missing
+names for the **enabled** platforms (the four `APPLE_*` names with
+`RELEASE_PLATFORMS` at its default `ios`; nine only once `android` is enabled).
+Add them as **environment secrets** when the account work resumes (see
+`docs/publishing/submission-runbook.md`), and decide then whether the environment
+requires reviewers (the paragraph above).
 
 ### What a missing credential means, per platform
 
@@ -292,15 +295,17 @@ command.
 
 ## Versioning
 
-**The git tag is the only source of truth, and nothing is bumped in a pull
-request.** `scripts/ci/version.ts` derives everything from the ref and exports
-it to the job:
+**The git tag is the only source of truth, and nothing in the repository is
+bumped to release.** `scripts/ci/version.ts` derives everything from the ref and
+exports it to the job. The one exception a release may require is
+`release/build-number.txt` (the row below): it is raised in a pull request only
+when the floor check names a higher minimum.
 
 | Value | Rule |
 |---|---|
 | version (JS / `app.json` / Android `versionName` / iOS `CFBundleShortVersionString`) | `vX.Y.Z` without the `v` when the ref is a tag; `0.0.0` otherwise |
 | Android `versionCode`, iOS `CFBundleVersion`, internal builds | **the last release's counter plus the commits since it** — `base + git rev-list --count <last release tag>..HEAD`, and before the first release simply the commit count of the ref. Monotonic as the branch grows, identical for every workflow building the same commit, and stored nowhere |
-| Android `versionCode`, iOS `CFBundleVersion`, releases | **`release/build-number.txt`**, read as-is, and the release FAILS unless it is strictly greater than what an internal build of the same commit would claim (`base + commits since the last release`) |
+| Android `versionCode`, iOS `CFBundleVersion`, releases | **`release/build-number.txt`**, read as-is, and the release FAILS unless it is at least the floor: **one more than** the highest internal number `main` could claim — the greater of this commit's internal number (`base + commits since the last release`) and the one at the tip of `origin/main` (`floorFor` in `scripts/ci/version.ts`) |
 
 **What `release/build-number.txt = 1000` is for, and why the internal arm counts
 from the last release.** Both publishers write into one store sequence — Play

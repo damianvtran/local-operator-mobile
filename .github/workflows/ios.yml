@@ -373,14 +373,14 @@ jobs:
     # benefit. So on a pull request this job does not run, and no secret is resolved
     # anywhere in this workflow.
     #
-    # WHAT THE ENVIRONMENT BUYS depends on how the operator configures it, and the
-    # repository has NO environments configured today — so right now it is a no-op
-    # and the secrets are repository-scoped (docs/ci.md, "Secrets"). Once `release`
-    # exists with a `main`/`v*` deployment-branch rule, the credentials stored in it
-    # are unreachable from a feature branch. If it is given required reviewers, this
-    # job will wait for approval BEFORE it can report — the same prompt the signing
-    # job already triggers, twice per release rather than once. A review-free
-    # environment with the same branch rule avoids that at no loss.
+    # WHAT THE ENVIRONMENT BUYS depends on how the operator configures it. The
+    # `release` environment exists (created 2026-10-04; branch `main` and tag `v*`
+    # rules, docs/ci.md "Secrets"), so the credentials stored in it would be
+    # unreachable from a feature branch. Until the credentials are added, this
+    # job's skip is still what keeps `main` green. If it is given required
+    # reviewers, this job will wait for approval BEFORE it can report — the same
+    # prompt the signing job already triggers, twice per release rather than once.
+    # A review-free environment with the same branch rule avoids that at no loss.
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     environment: release
     outputs:

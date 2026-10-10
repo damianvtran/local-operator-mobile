@@ -5,9 +5,9 @@ What does this pull request change, and why?
 - Kind of change (feature, fix, refactor, docs, CI, …):
 - Key changes:
 
-<!-- Say in one line whether the change is user-visible; the release owner uses
-     it to write the release notes. Do NOT change the app version here — only a
-     `chore(release):` pull request does that. -->
+<!-- Say in one line whether the change is user-visible; release notes are
+     generated from the commits. Do NOT change the app version here: the tag is
+     the release. -->
 
 User impact: <none | one-line description of what a user will notice>
 
@@ -38,6 +38,6 @@ Show that it works by running the real thing, not only the test suite.
 - [ ] I reviewed my own diff.
 - [ ] Tests were added or updated where the change has behaviour to test.
 - [ ] The evidence above comes from a real run.
-- [ ] No version bump — only a `chore(release):` pull request changes the version.
+- [ ] No version change — the tag is the release (`docs/ci.md`, "Versioning").
 - [ ] No secrets, tokens, signing material, or real tunnel hostnames are committed or shown.
 - [ ] Docs are updated where behaviour or setup changed.
