@@ -52,9 +52,9 @@ only dependency mechanism.
 
 ## Secrets
 
-**Names only. No value is ever committed, printed or logged.** Set them in the
-repository's **Actions secrets** (Settings → Secrets and variables → Actions →
-Secrets).
+**Names only. No value is ever committed, printed or logged.** Set them as
+**environment secrets** on the `release` environment (Settings → Environments →
+release → Environment secrets) — see "Where they live, and why" below.
 
 | Secret | Used by | What it is |
 |---|---|---|
@@ -127,10 +127,10 @@ deployment rules: a BRANCH rule `main` and a TAG rule `v*`.** Both halves matter
   is exactly the gap the environment exists to close (QA round 3, Q1).
 
 A pull request cannot reach any of those jobs, so a branch pushed here cannot
-print a key. **Since 2026-10-09 the environment exists and its deployment rules
-are the mechanism** — branch `main` and tag `v*`, alongside the workflows' own
-`if:` conditions. The environment is what makes it an enforced rule rather than a
-workflow convention.
+print a key. **The environment exists (created 2026-10-04), and its deployment
+rules are the mechanism** — branch `main` and tag `v*` added 2026-10-09,
+alongside the workflows' own `if:` conditions. The environment is what makes it
+an enforced rule rather than a workflow convention.
 
 **A cost of that arrangement, stated because it is a choice.** If the environment
 is given required reviewers, the `credentials` gate waits for approval *before* it

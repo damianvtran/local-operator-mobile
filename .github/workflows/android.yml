@@ -264,11 +264,11 @@ jobs:
     # WHAT THE ENVIRONMENT BUYS depends on how the operator configures it. The
     # `release` environment now exists (created 2026-10-04; branch `main` and tag
     # `v*` rules added 2026-10-09, docs/ci.md "Secrets"), so the credentials stored
-    # in it are unreachable from a feature branch. Until the credentials are added,
+    # in it would be unreachable from a feature branch. Until the credentials are added,
     # this job's skip is still what keeps `main` green. If it is given required
     # reviewers, this job will wait for approval BEFORE it can report — the same
-    # prompt the signing job already triggers, twice per release rather than once. A review-free environment
-    # with the same branch rule avoids that at no loss.
+    # prompt the signing job already triggers, twice per release rather than once.
+    # A review-free environment with the same branch rule avoids that at no loss.
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     environment: release
     outputs:

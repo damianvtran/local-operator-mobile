@@ -39,8 +39,11 @@ once chosen — do not assume one before it lands.
   output, including failure cases (wrong password, expired token, dropped
   stream). If something genuinely cannot run where you are, say so and point at
   the CI run that covers it.
-- **Pull requests never bump the version.** A release owner cuts a dedicated
-  `chore(release): bump version to X.Y.Z` pull request per release window.
+- **The tag is the release; nothing is bumped in a repository.** Cut a `vX.Y.Z`
+  tag on `main` once a release window's work is merged — the version, the build
+  numbers and the asset names all derive from the ref (`scripts/ci/version.ts`;
+  `docs/ci.md`, "Versioning"). There is no bump pull request, and
+  `app.config.ts`'s version is a placeholder that is never edited to release.
 - **No automatic reviewer requests.** Do not add a `CODEOWNERS` file, and do not
   request reviewers or `@`-mention people on a pull request unless a maintainer
   asked for that review.

@@ -4,7 +4,7 @@
 will happen under the operator's **legal entity** — Radient Inc. as named in
 `checklist.md` A1 — which, **per the operator (2026-10-09), already holds a
 D-U-N-S number**. It will **not** be published under the individual team that
-signs the desktop app (`security find-identity` names it on this machine).
+signs the desktop app.
 
 **Resume trigger: the operator says go.** Until then nothing in this file runs.
 This file supersedes, for the parked period: `checklist.md` F2's `.p12` line (the
@@ -35,7 +35,7 @@ checklist: the **bundle ID** and the **app record**.
    entity and change it in `app.config.ts` in a PR. The Android package name
    (B2) is the same string.
 3. **Confirm the App Store Connect app record** exists for that bundle ID, or
-   create it: App Store Connect → **My Apps** → **+** → **New App** → platform
+   create it: App Store Connect → **Apps** → **+** → **New App** → platform
    iOS, the app name, primary language, the **bundle ID from step 2**, and a SKU
    of your choosing. Also confirm the **Program License Agreement** is accepted
    for the new team (the acceptance on the old account does not transfer) —

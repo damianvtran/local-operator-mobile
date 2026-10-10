@@ -42,7 +42,8 @@ a copy for their records, out-of-band.
 4. **Verify** — `keytool -list -keystore … -storepass:file …` lists the alias and
    prints the certificate; confirm the RSA size and validity end date. This is the
    same assertion `release.yml` performs after decoding the secret.
-5. **Base64 into CI** — the keystore into `ANDROID_KEYSTORE_BASE64` and the one
+5. **Base64 into CI** — the keystore into `ANDROID_KEYSTORE_BASE64`, the alias
+   (`local-operator-upload`) into `ANDROID_KEY_ALIAS`, and the one
    password into **both** `ANDROID_KEYSTORE_PASSWORD` and `ANDROID_KEY_PASSWORD`
    (`base64 -i <keystore> | tr -d '\n'` piped **straight into**
    `gh secret set --env release …`; never through a shell variable that could be
