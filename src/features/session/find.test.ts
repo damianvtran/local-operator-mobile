@@ -357,13 +357,17 @@ describe("revealTarget — landing on a hit", () => {
 		answer("a2", "jitter fixed"),
 	];
 
-	/** The subject the list assembles for a reveal: the turn plan's items and
-	 *  turns, plus the group pass over them (these fixtures carry no peer runs
-	 *  except where a case says so). */
+	/** The subject the list assembles for a reveal: the items the folds
+	 *  actually render (the group pass's items when one ran — a folded row is
+	 *  not an item), the turn plan's turns, and every group's hidden rows. */
 	const subjectOf = (
 		plan: ReturnType<typeof condensePlan>,
-		groups: ReturnType<typeof groupPlan>["groups"] = [],
-	) => ({ items: plan.items, turns: plan.turns, groups });
+		grouped?: ReturnType<typeof groupPlan>,
+	) => ({
+		items: grouped?.items ?? plan.items,
+		turns: plan.turns,
+		groups: grouped?.groups ?? [],
+	});
 
 	it("lands directly on a row the plan renders", () => {
 		const plan = condensePlan({
@@ -427,7 +431,7 @@ describe("revealTarget — landing on a hit", () => {
 		});
 		const folded = grouped.groups.find((group) => group.key === "qg:p1");
 		expect(folded?.hiddenIds).toEqual(["p1", "p2"]);
-		expect(revealTarget(subjectOf(plan, grouped.groups), "p2")).toEqual({
+		expect(revealTarget(subjectOf(plan, grouped), "p2")).toEqual({
 			kind: "group",
 			groupKey: "qg:p1",
 		});
@@ -442,7 +446,7 @@ describe("revealTarget — landing on a hit", () => {
 			expanded: new Set(["qg:p1"]),
 			latch: grouped.latch,
 		});
-		const target = revealTarget(subjectOf(openedPlan, opened.groups), "p2");
+		const target = revealTarget(subjectOf(openedPlan, opened), "p2");
 		expect(target?.kind).toBe("item");
 	});
 
