@@ -5,6 +5,12 @@
  *     node scripts/ci/release-notes.ts --to v1.2.3
  *     node scripts/ci/release-notes.ts --from v1.2.2 --to v1.2.3
  *     node scripts/ci/release-notes.ts --to v1.2.3 --out "$RUNNER_TEMP/notes.md"
+ *     node scripts/ci/release-notes.ts --to v1.2.3 --platforms ios
+ *
+ * `--platforms` (comma-separated `ios` / `android`; absent = both) is the list
+ * release.yml resolved from `RELEASE_PLATFORMS`. The closing paragraph names only
+ * the artefacts and install routes those platforms actually have: an iOS-only
+ * Release must not tell readers to install an APK that is not attached.
  *
  * Why not `gh release create --generate-notes`. GitHub's generator groups by
  * pull request, which reads well when every change arrived as one — but this
@@ -147,14 +153,39 @@ if (unreleased.length > 0) {
 	lines.push("");
 }
 
+/** What each platform contributes to the closing paragraph. */
+const PLATFORM_NOTES = {
+	android:
+		"Android: the signed APK and AAB are attached here; install the APK, or use the Play internal track.",
+	ios: "iOS: the IPA is attached here; builds go to TestFlight.",
+} as const;
+
+const rawPlatforms = arg("platforms", "android,ios");
+const wanted = rawPlatforms
+	.split(",")
+	.map((name) => name.trim().toLowerCase())
+	.filter(Boolean);
+const unknownPlatforms = wanted.filter(
+	(name) => name !== "ios" && name !== "android",
+);
+if (wanted.length === 0 || unknownPlatforms.length > 0) {
+	console.error(
+		`::error::--platforms "${rawPlatforms}" must be a comma-separated list of ios and/or android` +
+			(unknownPlatforms.length > 0
+				? ` (unknown: ${unknownPlatforms.join(", ")})`
+				: ""),
+	);
+	process.exit(1);
+}
+
 lines.push(
 	`${commits.length} commit(s) in ${range}.`,
 	"",
-	"Built by GitHub Actions from the tag; see the run's artefacts for the " +
-		"APK, AAB and IPA. Install on Android from the APK attached here, or from " +
-		"the Play internal track; iOS builds go to TestFlight.",
+	"Built by GitHub Actions from the tag.",
 	"",
 );
+if (wanted.includes("ios")) lines.push(PLATFORM_NOTES.ios, "");
+if (wanted.includes("android")) lines.push(PLATFORM_NOTES.android, "");
 
 const notes = lines.join("\n");
 const out = arg("out", "");
