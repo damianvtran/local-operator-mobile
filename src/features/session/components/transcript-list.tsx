@@ -584,16 +584,31 @@ export const TranscriptList = ({
 		[],
 	);
 
-	useEffect(() => {
-		if (reveal === null || reveal.nonce === revealNonceRef.current) return;
-		revealNonceRef.current = reveal.nonce;
-		const target = revealTarget(planRef.current, reveal.id);
-		if (target === null) return;
+	/**
+	 * One step of the expand-first walk: land on the row when the list renders
+	 * it, otherwise open the fold that CURRENTLY hides it — one layer per pass,
+	 * so a row behind two layers (a latched quiet group inside a condensed
+	 * turn) resolves layer by layer instead of stalling on an open gate
+	 * (review round 1, MAJOR-1; the desktop walk loops the same way). Each
+	 * pass either lands, opens exactly one fold (and waits for the re-plan),
+	 * or gives up when the frame does not carry the row at all. It converges
+	 * because `revealTarget` skips folds that are already open.
+	 */
+	const resolveRevealWalk = useCallback(() => {
+		const id = pendingRevealRef.current;
+		if (id === null) return;
+		const target = revealTarget(planRef.current, expanded, id);
+		if (target === null) {
+			// A frame slid between the search and the press: no fold leads to
+			// the row, so the walk ends here rather than waiting forever.
+			pendingRevealRef.current = null;
+			return;
+		}
 		if (target.kind === "item") {
+			pendingRevealRef.current = null;
 			revealToIndex(target.index);
 			return;
 		}
-		pendingRevealRef.current = reveal.id;
 		const key = target.kind === "turn" ? target.turnKey : target.groupKey;
 		setReaderExpanded((current) => {
 			if (current.has(key)) return current;
@@ -601,20 +616,23 @@ export const TranscriptList = ({
 			next.add(key);
 			return next;
 		});
-	}, [reveal, revealToIndex]);
+	}, [expanded, revealToIndex]);
 
-	// The second half of the expand-first walk: once the opened turn or group's
-	// rows are back in the plan, scroll to the one the reader asked for.
 	useEffect(() => {
-		const id = pendingRevealRef.current;
-		if (id === null) return;
-		const index = grouped.items.findIndex(
-			(item) => item.kind === "entry" && item.id === id,
-		);
-		if (index < 0) return;
-		pendingRevealRef.current = null;
-		revealToIndex(index);
-	}, [grouped, revealToIndex]);
+		if (reveal === null || reveal.nonce === revealNonceRef.current) return;
+		revealNonceRef.current = reveal.nonce;
+		pendingRevealRef.current = reveal.id;
+		resolveRevealWalk();
+	}, [reveal, resolveRevealWalk]);
+
+	/* The walk's other half: every fold it opens re-plans the items, and a new
+	 * frame can move the plan under a pending request — both are EVENTS that
+	 * must re-ask the walk, while the body reads the plan through the ref. The
+	 * same shape, and the same exemption, as the recompute effect below. */
+	// biome-ignore lint/correctness/useExhaustiveDependencies: grouped is the re-plan event; the body reads the plan through planRef
+	useEffect(() => {
+		resolveRevealWalk();
+	}, [grouped, resolveRevealWalk]);
 
 	/* Anchors and frames change outside scroll events too (a new frame appends
 	 * rows; the attention moves to a new anchor). The rule reads the body —

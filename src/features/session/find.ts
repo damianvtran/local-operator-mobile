@@ -702,11 +702,23 @@ export interface RevealSubject {
 
 /**
  * Where a hit lands in the transcript's plan: an item already on the list, or
- * the fold whose collapse hides it — the condensed turn or the quiet group,
- * which the reveal opens first (the desktop's expand-first walk). `null` for
- * an id the plan does not carry at all, which find never produces (hits come
- * from the same frames) — the arm exists so a frame that slid between the
- * search and the press cannot scroll to nowhere.
+ * the fold that CURRENTLY hides it — a collapsed condensed turn or a collapsed
+ * quiet group, either of which the reveal opens first (the desktop's
+ * expand-first walk, one layer per pass).
+ *
+ * A COLLAPSED fold is the only fold that can hide a row: an open fold's
+ * `hiddenIds` are what the collapse stood for — frozen facts, deliberately not
+ * what is on screen now — so once one layer is open the row is either an item
+ * or behind a NESTED fold (a latched quiet group inside a condensed turn), and
+ * the caller loops: resolve, open the named fold, resolve again. Skipping open
+ * folds is what makes that loop terminate on the right layer instead of
+ * re-naming a gate the reader already passed (review round 1, MAJOR-1: the
+ * walk stalled on a collapsed turn's group, and a tap on an already-open turn
+ * was inert).
+ *
+ * `null` for an id the plan does not carry at all, which find never produces
+ * (hits come from the same frames) — the arm exists so a frame that slid
+ * between the search and the press cannot scroll to nowhere.
  */
 export type RevealPlan =
 	| { kind: "item"; index: number }
@@ -714,15 +726,24 @@ export type RevealPlan =
 	| { kind: "group"; groupKey: string }
 	| null;
 
-export const revealTarget = (plan: RevealSubject, id: string): RevealPlan => {
+export const revealTarget = (
+	plan: RevealSubject,
+	expanded: ReadonlySet<string>,
+	id: string,
+): RevealPlan => {
 	const index = plan.items.findIndex(
 		(item) => item.kind === "entry" && item.id === id,
 	);
 	if (index >= 0) return { kind: "item", index };
+	// Turns first: they sit OUTSIDE groups in the nesting, and the walk costs
+	// one pass per layer either way. `expandHookKeys` are part of the set the
+	// list passes, so a hook-opened fold is as open here as it renders.
 	for (const turn of plan.turns) {
+		if (expanded.has(turn.key)) continue;
 		if (turn.hiddenIds.includes(id)) return { kind: "turn", turnKey: turn.key };
 	}
 	for (const group of plan.groups) {
+		if (expanded.has(group.key)) continue;
 		if (group.hiddenIds.includes(id)) {
 			return { kind: "group", groupKey: group.key };
 		}

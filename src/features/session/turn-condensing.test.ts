@@ -1237,9 +1237,9 @@ describe("the group bar's copy", () => {
  *      through untouched.
  *
  * WHAT IS NAMED, NOT SKIPPED. Cases whose EXPECTED group needs a delivery
- * kind this wire does not carry as a receipt — wake / monitor / job rows (a
- * wake arrives as a `notice` line here; monitor and job deliveries never
- * reach this route) — cannot produce that group from the native definition
+ * kind this wire does not carry as a receipt — wake / monitor / job rows (all
+ * three arrive as `notice` lines here, not as receipt kinds) — cannot produce
+ * that group from the native definition
  * (design §5's native bullet: the consecutive `peer_message` run). Those cases
  * are pinned as their wire-boundary outcome with the reason, so the difference
  * is a recorded boundary rather than silent drift.
@@ -1325,7 +1325,8 @@ const parityEntry = (fixtureRow: ParityRow): TranscriptEntry => {
 				details: { notice_kind: "wake" },
 			});
 		case "custom":
-			// monitor_prompt / job_result: no native receipt kind either.
+			// monitor_prompt / job_result: plain `notice` rows here too (the
+			// phone's custom-message fold has no receipt arm for either).
 			return row({
 				id: fixtureRow.id,
 				kind: "notice",
@@ -1367,10 +1368,13 @@ const parityExpected = (group: ParityGroup) => {
  *  `peer_message` run, so these rows yield no group here; the pin records
  *  that boundary deliberately. */
 const WIRE_BOUNDARY: ReadonlyMap<number, string> = new Map([
-	[5, "mixed peer+wake: a wake is a notice line here, not a receipt"],
+	[5, "mixed peer+wake: a wake is a `notice` line here, not a receipt kind"],
 	[10, "wake-only run: same boundary"],
-	[11, "monitor-only run: this wire carries no monitor receipt"],
-	[12, "job-only run: this wire carries no job receipt"],
+	[
+		11,
+		"monitor-only run: a monitor prompt is a `notice` here, not a receipt kind",
+	],
+	[12, "job-only run: a job result is a `notice` here, not a receipt kind"],
 ]);
 
 describe("the quiet-group derivation matches the shared parity fixture, case by case", () => {

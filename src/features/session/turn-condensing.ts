@@ -529,9 +529,9 @@ export interface QuietGroupSender {
  * WHAT THE MOBILE WIRE DOES NOT BRING. No timestamps on this route, so the
  * shared shape's time span is not a fact this client can state and has no
  * field here. And no distinct receipt kinds for wake / monitor / job
- * deliveries — a wake arrives as a `notice` line, the rest never reach this
- * wire — so the native definition is the peer_message run (design §5's native
- * bullet) and every notice is a boundary rather than a trigger. The parity
+ * deliveries — all three arrive as the one `notice` kind here — so the native
+ * definition is the peer_message run (design §5's native bullet) and every
+ * notice is a boundary rather than a trigger. The parity
  * suite pins every fixture case the wire can carry and NAMES the ones it
  * cannot.
  *

@@ -375,7 +375,7 @@ describe("revealTarget — landing on a hit", () => {
 			expanded: new Set(),
 			latch: new Map(),
 		});
-		expect(revealTarget(subjectOf(plan), "q2")).toEqual({
+		expect(revealTarget(subjectOf(plan), new Set(), "q2")).toEqual({
 			kind: "item",
 			index: plan.items.findIndex(
 				(item) => item.kind === "entry" && item.id === "q2",
@@ -393,7 +393,7 @@ describe("revealTarget — landing on a hit", () => {
 		// complete), so its tool rows are hidden behind the bar.
 		const bar = plan.items.find((item) => item.kind === "bar");
 		expect(bar).toBeDefined();
-		expect(revealTarget(subjectOf(plan), "t1")).toEqual({
+		expect(revealTarget(subjectOf(plan), new Set(), "t1")).toEqual({
 			kind: "turn",
 			turnKey: "q1",
 		});
@@ -404,7 +404,7 @@ describe("revealTarget — landing on a hit", () => {
 			expanded: new Set(["q1"]),
 			latch: plan.latch,
 		});
-		const target = revealTarget(subjectOf(opened), "t1");
+		const target = revealTarget(subjectOf(opened), new Set(["q1"]), "t1");
 		expect(target?.kind).toBe("item");
 	});
 
@@ -431,7 +431,7 @@ describe("revealTarget — landing on a hit", () => {
 		});
 		const folded = grouped.groups.find((group) => group.key === "qg:p1");
 		expect(folded?.hiddenIds).toEqual(["p1", "p2"]);
-		expect(revealTarget(subjectOf(plan, grouped), "p2")).toEqual({
+		expect(revealTarget(subjectOf(plan, grouped), new Set(), "p2")).toEqual({
 			kind: "group",
 			groupKey: "qg:p1",
 		});
@@ -446,8 +446,95 @@ describe("revealTarget — landing on a hit", () => {
 			expanded: new Set(["qg:p1"]),
 			latch: grouped.latch,
 		});
-		const target = revealTarget(subjectOf(openedPlan, opened), "p2");
+		const target = revealTarget(
+			subjectOf(openedPlan, opened),
+			new Set(["qg:p1"]),
+			"p2",
+		);
 		expect(target?.kind).toBe("item");
+	});
+
+	it("walks a latched group inside a condensed turn — one layer per pass (MAJOR-1)", () => {
+		// The frames that create the nesting: the peers' group closes while the
+		// turn is still the active one (its answer follows), so the latch holds
+		// qg:p1 — then a newer turn condenses the first, burying the group's
+		// rows behind the turn's bar.
+		const latched = [
+			user("q1", "first question"),
+			peer("p1"),
+			peer("p2"),
+			peer("p3"),
+			answer("a1", "the peers were answered"),
+		];
+		const settled = condensePlan({
+			entries: latched,
+			expanded: new Set(),
+			latch: new Map(),
+		});
+		const warm = groupPlan({
+			items: settled.items,
+			expanded: new Set(),
+			latch: new Map(),
+		});
+		expect(warm.latch.has("qg:p1")).toBe(true);
+
+		const nested = [...latched, user("q2", "second question"), tool("t1")];
+
+		// Shape 1 — the hit arrives while the turn is COLLAPSED: the turn is
+		// the first layer (the old code opened it and then stalled, because
+		// the re-planned group stayed shut).
+		const collapse = condensePlan({
+			entries: nested,
+			expanded: new Set(),
+			latch: settled.latch,
+		});
+		const behindBar = groupPlan({
+			items: collapse.items,
+			expanded: new Set(),
+			latch: warm.latch,
+		});
+		expect(
+			revealTarget(subjectOf(collapse, behindBar), new Set(), "p2"),
+		).toEqual({ kind: "turn", turnKey: "q1" });
+
+		// Shape 2 — the hit arrives with the turn ALREADY open: the open gate
+		// is skipped and the group is named (the old code re-named the open
+		// turn, so the press was inert). Both shapes continue down the same
+		// walk: opening the group renders the row.
+		const openTurn = new Set(["q1"]);
+		const openedTurn = condensePlan({
+			entries: nested,
+			expanded: openTurn,
+			latch: collapse.latch,
+		});
+		const behindGroup = groupPlan({
+			items: openedTurn.items,
+			expanded: openTurn,
+			latch: behindBar.latch,
+		});
+		expect(
+			revealTarget(subjectOf(openedTurn, behindGroup), openTurn, "p2"),
+		).toEqual({ kind: "group", groupKey: "qg:p1" });
+
+		const bothOpen = new Set(["q1", "qg:p1"]);
+		const finalPlan = condensePlan({
+			entries: nested,
+			expanded: bothOpen,
+			latch: openedTurn.latch,
+		});
+		const finalGroups = groupPlan({
+			items: finalPlan.items,
+			expanded: bothOpen,
+			latch: behindGroup.latch,
+		});
+		expect(
+			revealTarget(subjectOf(finalPlan, finalGroups), bothOpen, "p2"),
+		).toEqual({
+			kind: "item",
+			index: finalGroups.items.findIndex(
+				(item) => item.kind === "entry" && item.id === "p2",
+			),
+		});
 	});
 
 	it("is null for an id the plan does not carry", () => {
@@ -456,7 +543,7 @@ describe("revealTarget — landing on a hit", () => {
 			expanded: new Set(),
 			latch: new Map(),
 		});
-		expect(revealTarget(subjectOf(plan), "not-a-row")).toBeNull();
+		expect(revealTarget(subjectOf(plan), new Set(), "not-a-row")).toBeNull();
 	});
 
 	it("still lands on a hit whose own turn condensed BEFORE the window slid its rows away", () => {
@@ -476,7 +563,7 @@ describe("revealTarget — landing on a hit", () => {
 			expanded: new Set(),
 			latch: first.latch,
 		});
-		expect(revealTarget(subjectOf(slid), "t1")).toEqual({
+		expect(revealTarget(subjectOf(slid), new Set(), "t1")).toEqual({
 			kind: "turn",
 			turnKey: "q1",
 		});
