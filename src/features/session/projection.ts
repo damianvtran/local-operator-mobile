@@ -23,6 +23,7 @@
  */
 
 import type {
+	PeerSender,
 	SessionProjection,
 	SubagentRow,
 	TodoItem,
@@ -82,6 +83,14 @@ export const classifyEntry = (entry: TranscriptEntry): RowKind =>
 /** Whether the row is one the reader wrote. Used for alignment, and for the one
  *  place the transcript puts a bubble around text. */
 export const isOwnRow = (kind: RowKind): boolean => kind === "user";
+
+/** The identity a peer receipt leads with: the sender's conversation name,
+ *  its session id, or the shared fallback. ONE spelling for the receipt row
+ *  (`transcript-row.tsx`) and the quiet group's sender summary
+ *  (`turn-condensing.ts`), so a fold cannot disagree with the rows it stands
+ *  for about who sent them. */
+export const peerLabel = (sender: PeerSender | undefined): string =>
+	sender?.conversation_name ?? sender?.session_id ?? "another session";
 
 /* ---------------------------------------------------------------- the tool row */
 

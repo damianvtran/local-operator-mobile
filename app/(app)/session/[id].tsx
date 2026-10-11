@@ -477,11 +477,12 @@ export default function Session() {
 				/>
 			}
 			headerAction={
-				/* The find lever. It is a 44×44 icon, not the 127 pt chip this slot
-				   used to carry, so the width constraint that banished that chip (design
-				   round 1, D2) does not apply — the icon cannot clip the middle
-				   truncation's budget. The kit's own header control (`IconButton`),
-				   which measures 48 pt on the web/audit build and 44 on iOS. */
+				/* The find lever. It is the kit's own header control (`IconButton`) — 48 pt on
+				   the web/audit build, 44 on iOS — and it IS header chrome: `header.ts`
+				   counts it and its gap in the title budget. An earlier note here argued the
+				   icon "cannot clip the middle truncation's budget"; the 2026-10-11
+				   full-surface pass measured that it can and did, so the comment and the sum
+				   were corrected together (review round 1, F1). */
 				<IconButton
 					accessibilityLabel="Search this conversation"
 					accessibilityHint="Finds messages in the transcript loaded on this device"
