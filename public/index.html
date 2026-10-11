@@ -5,8 +5,12 @@
   WHY THIS FILE EXISTS: `expo export --platform web` uses the template at
   `@expo/cli/static/template/index.html` unless the project supplies its own
   `public/index.html`, which the CLI prefers (webTemplate.js
-  `getTemplateIndexHtmlAsync`). This file is that template, copied verbatim,
-  with the frame policy added.
+  `getTemplateIndexHtmlAsync`). This file is that template with the frame
+  policy added — and with the template's `httpEquiv` spelling repaired to
+  `http-equiv` on both metas: in raw HTML a camelCase `httpEquiv` parses to an
+  inert `httpequiv` attribute, so the template's own `X-UA-Compatible` was
+  harmless either way but the frame policy applied NO policy at all until
+  fixed (DOM-verified on the shipped build; QA round 1, Q1).
 
   The app's web build is the repo's capture/dev target, and it mounts turn
   supplement components in `<iframe sandbox="allow-scripts" src="data:…">`
@@ -27,12 +31,18 @@
 <html lang="%LANG_ISO_CODE%">
   <head>
     <meta charset="utf-8" />
-    <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
     <!-- The only frame a page of this app may ever load is a component's
          `data:` document; every other navigation is refused by the policy
-         before it leaves the page. -->
-    <meta httpEquiv="Content-Security-Policy" content="frame-src data:" />
+         before it leaves the page.
+
+         HYPHENATED, deliberately: `httpEquiv` — the spelling the Expo
+         template itself ships — is inert in raw HTML (the attribute parses
+         to `httpequiv` and applies no policy), which is exactly how a hostile
+         self-navigation left this page once (QA round 1, Q1). Repaired, the
+         same attempt is blocked PRE-REQUEST; keep the hyphen. -->
+    <meta http-equiv="Content-Security-Policy" content="frame-src data:" />
     <title>%WEB_TITLE%</title>
     <!-- The `react-native-web` recommended style reset: https://necolas.github.io/react-native-web/docs/setup/#root-element -->
     <style id="expo-reset">

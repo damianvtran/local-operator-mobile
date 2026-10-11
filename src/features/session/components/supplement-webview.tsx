@@ -22,6 +22,7 @@ import {
 	type SupplementComponent,
 	type SupplementTheme,
 	sourceLine,
+	supplementGroundDocument,
 	supplementThemeFor,
 	WATCHDOG_MS,
 } from "@/features/session/supplements";
@@ -75,7 +76,15 @@ import { Shimmer } from "@/ui/components";
  *
  * LIVENESS (§4.2): a frame that never posts `ready` within the watchdog, or
  * that fails to answer a ping, is unmounted into the frame-level fallback line —
- * never a rewrite of the row's own state (§2.8's precedence).
+ * never a rewrite of the row's own state (§2.8's precedence). Resize/error
+ * messages are COALESCED to at most one of each per animation frame (one rAF
+ * flush, latest resize wins, an error latches — R1, the web host's own pair),
+ * so a document holding the nonce cannot force a state update per message.
+ *
+ * THE FRAME'S GROUND is asserted in the mounted bytes
+ * (`supplementGroundDocument`): a live theme flip must keep the frame's ground
+ * a palette token rather than the platform's opaque default (design round 1,
+ * D1).
  *
  * THE HOST -> FRAME PUSH travels as `window.postMessage` inside the document
  * (`hostMessageScript`). That is an ordinary same-document message — the
@@ -142,6 +151,13 @@ export const SupplementWebView = ({
 	const bootDeadlineRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const pingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 	const pongDeadlineRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+	/** The coalescing pair for resize/error (R1): one rAF flush, latest resize
+	 *  wins, an error latches — the web host's semantic mirror. */
+	const coalescedRef = useRef<{ resize: number | null; error: boolean }>({
+		resize: null,
+		error: false,
+	});
+	const rafRef = useRef<number | null>(null);
 
 	const fail = useCallback(() => {
 		if (failedRef.current) return;
@@ -153,6 +169,37 @@ export const SupplementWebView = ({
 	const post = useCallback((message: Record<string, unknown>) => {
 		webRef.current?.injectJavaScript(hostMessageScript(message));
 	}, []);
+
+	/** One accepted resize's height, applied to the box and reported to the
+	 *  block: the same two writes the web host's `applyHeight` makes. */
+	const applyHeight = useCallback((next: number) => {
+		onHeightChangeRef.current?.(next);
+		if (next !== heightRef.current) {
+			heightRef.current = next;
+			setHeight(next);
+		}
+	}, []);
+
+	/** At most one resize/error application per animation frame: a hostile
+	 *  document holding the nonce can post alternating-height `resize` messages
+	 *  at message rate, and uncoalesced each one costs a `setHeight` plus a
+	 *  `setMeasured` Map write; the flush takes the LATEST resize and lets an
+	 *  error outrank it (R1 — §4.2's control, ported from
+	 *  `supplement-webview.web.tsx`'s `scheduleCoalesced`/`applyHeight` pair). */
+	const scheduleCoalesced = useCallback(() => {
+		if (rafRef.current !== null) return;
+		rafRef.current = requestAnimationFrame(() => {
+			rafRef.current = null;
+			const { resize, error } = coalescedRef.current;
+			coalescedRef.current.resize = null;
+			coalescedRef.current.error = false;
+			if (error) {
+				fail();
+				return;
+			}
+			if (resize !== null) applyHeight(resize);
+		});
+	}, [applyHeight, fail]);
 
 	const pushTheme = useCallback(
 		(next: SupplementTheme) => {
@@ -227,6 +274,16 @@ export const SupplementWebView = ({
 	 * probe; if a future platform version starts reporting the mount load here,
 	 * this arm fails closed — the frame would paint nothing, which is visible in
 	 * QA, rather than a hostile navigation being allowed once.)
+	 *
+	 * THE ANDROID RESIDUAL, recorded rather than implied (R2): the library
+	 * blocks on this JS decision for `SHOULD_OVERRIDE_URL_LOADING_TIMEOUT =
+	 * 250` ms and then DEFAULTS TO ALLOW — `RNCWebViewClient.java:42,112-115`
+	 * returns `false` and the navigation loads. A JS-thread stall longer than
+	 * that window therefore converts a denied navigation into a loaded one; the
+	 * second-`load` belt unmounts the frame after the fact, but the request has
+	 * already left. Not fixable in this lane — the security round's WebView arm
+	 * (S13) carries a burst-under-load row so this residual is probed on a
+	 * device rather than assumed away.
 	 */
 	const onShouldStartLoadWithRequest = useCallback(
 		(_request: ShouldStartLoadRequest) => {
@@ -288,22 +345,20 @@ export const SupplementWebView = ({
 			if (message.t === "resize") {
 				setAwaitingPaint(false);
 				/* The clamp is the HOST's: the nonce binds the browsing context, not
-				 * the code in it, so the range is enforced here too. Reported to the
-				 * block's budget on every accepted resize — the reserved hint is not a
-				 * rendered height. */
-				const next = clampFrameHeight(message.h ?? 0);
-				onHeightChangeRef.current?.(next);
-				if (next !== heightRef.current) {
-					heightRef.current = next;
-					setHeight(next);
-				}
+				 * the code in it, so the range is enforced here too. The value waits
+				 * for the flush (R1): the latest resize of an animation frame wins,
+				 * and the block hears only the applied height. */
+				coalescedRef.current.resize = clampFrameHeight(message.h ?? 0);
+				scheduleCoalesced();
 				return;
 			}
 			/* `error`: the document's own report. One quiet line replaces the frame
-			 * (§2.8); the row's committed state is never rewritten by it. */
-			fail();
+			 * (§2.8); the row's committed state is never rewritten by it. It rides
+			 * the same flush, where it outranks a pending resize. */
+			coalescedRef.current.error = true;
+			scheduleCoalesced();
 		},
-		[fail],
+		[scheduleCoalesced],
 	);
 
 	/*
@@ -327,12 +382,14 @@ export const SupplementWebView = ({
 		};
 	}, [documentHtml, fail]);
 
-	/* One cleanup for the cadence's own timers, owned by the component's life. */
+	/* One cleanup for the cadence's own timers and the coalescing flush, owned
+	 * by the component's life. */
 	useEffect(
 		() => () => {
 			if (pingTimerRef.current !== null) clearInterval(pingTimerRef.current);
 			if (pongDeadlineRef.current !== null)
 				clearTimeout(pongDeadlineRef.current);
+			if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
 		},
 		[],
 	);
@@ -349,14 +406,18 @@ export const SupplementWebView = ({
 		if (loadCountRef.current > 0 && !failedRef.current) pushTheme(theme);
 	}, [theme, pushTheme]);
 
-	/* The shim is injected into the fetched bytes before the frame mounts; the
-	 * served document is otherwise mounted byte-for-byte. */
+	/* Two injections ride the fetched bytes before the frame mounts — the native
+	 * shim (`nativeSupplementDocument`) and the ground rule
+	 * (`supplementGroundDocument`, whose docstring carries why — D1); the served
+	 * document is otherwise mounted byte-for-byte. */
 	const source = useMemo(
 		() =>
 			documentHtml === null
 				? null
 				: {
-						html: nativeSupplementDocument(documentHtml),
+						html: nativeSupplementDocument(
+							supplementGroundDocument(documentHtml),
+						),
 						baseUrl: "about:blank",
 					},
 		[documentHtml],

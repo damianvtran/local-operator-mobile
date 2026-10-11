@@ -29,7 +29,11 @@
  *     `planComponentMounts`);
  *   - the NATIVE-ONLY SHIM (`nativeSupplementDocument`) — see below; it is the
  *     one deliberate divergence from the relay web's module, and BUILD.md
- *     names it as this lane's obligation.
+ *     names it as this lane's obligation;
+ *   - the GROUND RULE (`supplementGroundDocument`) — one style inserted at
+ *     mount so a live theme flip keeps the frame's ground a palette token
+ *     instead of the platform's opaque default (design round 1, D1); both
+ *     hosts compose it with their own mount form.
  *
  * WHAT IT MUST NOT DO. No component document is assembled or interpreted here;
  * documents arrive as `{html}` from the relay's own route and are mounted in a
@@ -400,6 +404,11 @@ export const COPY_ADJUST = "Adjust…";
 export const COPY_CANCEL = "Cancel";
 /** The retry affordance the cancelled/failed/frame lines carry. */
 export const COPY_RETRY = "Retry";
+/** The disclosures' open-state words: `Show fewer` — the other half of the
+ *  sibling surfaces' toggle grammar (`N more files` ⇄ `Show fewer`; the relay
+ *  web and the desktop UI both ship it — UX review round 1, R6). The chevron
+ *  still carries the state; this label carries the action. */
+export const COPY_SHOW_FEWER = "Show fewer";
 
 /** The three op leads, one spelling per act (the refusal hygiene every surface
  *  shares: the lead names what the reader attempted, then the relay's own
@@ -524,24 +533,41 @@ export function showAllText(count: number): string {
 	return bounded === 1 ? "Show all 1 graphic" : `Show all ${bounded} graphics`;
 }
 
+/** One row of the ≤ 2 files one-liner: the display-stripped name, and — for a
+ *  FEATURED file — the row it addresses and its own class input, so the
+ *  affordance (a tap previews the bytes) can exist exactly where the file route
+ *  can serve one. `file`/`index` are null for a stored tail name: the route
+ *  addresses `files[i]`, and the tail has no index (UX round 1, U3). */
+export type FilesSummaryEntry = {
+	name: string;
+	file: SupplementFile | null;
+	index: number | null;
+};
+
 /**
- * The files-only one-liner's names: featured files first, then the stored tail
- * up to the known count, each as the display-stripped basename. Shared so a
- * counter and the expanded block can never summarize one set two ways.
+ * The files-only one-liner's rows: featured files first, then the stored tail
+ * up to the known count, each as the display-stripped basename, capped at the
+ * two the line shows. THE ONE WALK, shared by the copy and the affordance, so
+ * a counter and the expanded block can never summarize one set two ways.
  */
-export function filesSummaryOf(beat: SupplementBeat): string | null {
-	const names: string[] = [];
-	for (const file of beat.files) {
+export function filesSummaryEntries(beat: SupplementBeat): FilesSummaryEntry[] {
+	const entries: FilesSummaryEntry[] = [];
+	beat.files.forEach((file, index) => {
 		const { name, path } = fileRowParts(file);
-		if (name || path) names.push(name || path);
-	}
+		if (name || path) entries.push({ name: name || path, file, index });
+	});
 	if (beat.filesMore > 0) {
 		for (const item of beat.more.slice(0, beat.filesMore)) {
 			const base = displayText(item).split("/").pop() ?? "";
-			if (base) names.push(base);
+			if (base) entries.push({ name: base, file: null, index: null });
 		}
 	}
-	const shown = names.filter(Boolean).slice(0, 2);
+	return entries.slice(0, 2);
+}
+
+/** The one-liner's COPY, byte for byte: `2 files: latency.md, bench.csv`. */
+export function filesSummaryOf(beat: SupplementBeat): string | null {
+	const shown = filesSummaryEntries(beat).map((entry) => entry.name);
 	return shown.length > 0 ? filesSummaryLine(shown) : null;
 }
 
@@ -601,10 +627,11 @@ export type FrameMessage = {
  * `msg` is not a string of at most `ERROR_MSG_MAX_CHARS` — is `null`.
  *
  * NOT the whole check: on the web host, `event.source === iframe.contentWindow`
- * and `event.origin === "null"`, the load counter and the one-message-per-
- * animation-frame coalescing sit beside this call; on the native host the
- * message arrives through the WebView's own channel (which only the mounted
- * document can use) and the nonce is the binding.
+ * and `event.origin === "null"` and the load counter sit beside this call;
+ * BOTH hosts apply at most one resize/error per animation frame (one rAF
+ * flush, latest resize wins, an error latches — R1); and on the native host
+ * the message arrives through the WebView's own channel (which only the
+ * mounted document can use) and the nonce is the binding.
  */
 export function acceptFrameMessage(
 	message: unknown,
@@ -848,6 +875,50 @@ export function supplementFileClass(path: string): SupplementFileClass {
 	if (IMAGE_SUFFIXES.has(suffix)) return "image";
 	if (suffix === ".pdf") return "pdf";
 	return "other";
+}
+
+/* ---------------------------------------------------------------------------
+ * The frame's ground (design round 1, D1)
+ * ------------------------------------------------------------------------- */
+
+/** The marker attribute the ground rule's `<style>` carries, so the injection
+ *  is idempotent and a fixture can assert which document it is looking at. */
+export const FRAME_GROUND_MARKER = "data-lo-frame-ground";
+
+/**
+ * THE ONE STYLE THIS APP ADDS TO THE RELAY'S BYTES, and it exists because of
+ * what this surface promises: a live theme switch is one more push, never a
+ * reload. The assembled document paints no root background (`body` is
+ * transparent), so on a live `prefers-color-scheme` flip the platform repaints
+ * the frame's transparent canvas with its own default — an opaque `#ffffff`
+ * (flip to light) / `#121212` (flip to dark) that is not any palette token;
+ * reproduced on the app's own build, persisting (design round 1, D1).
+ *
+ * The rule makes the ground deterministic instead: `--lo-canvas` is the very
+ * variable the host's theme push sets on every change (and the prelude
+ * defaults it), so the ground follows the theme in both directions. On the
+ * load paths it is pixel-identical to the transparent ground it replaces (the
+ * pushed `--lo-canvas` IS the page ground there), and the `visibility:hidden` /
+ * `data-ready` gate keeps a defaulted first paint unshown. Both hosts mount
+ * the result — native composes it with `nativeSupplementDocument`, the web
+ * mirror with `supplementFrameUrl`.
+ *
+ * REMOVAL CONDITION: the relay web mounts these same bytes and carries the
+ * same exposure, so the durable fix belongs in the assembled document (the
+ * prelude); this rule can be deleted once the prelude carries its own root
+ * background.
+ *
+ * Injection is refused (the original bytes returned) when the document has no
+ * `<head>` to open or already carries the marker: this must never corrupt a
+ * document it does not recognise, and a second mount must not stack styles.
+ */
+export function supplementGroundDocument(html: string): string {
+	if (html.includes(FRAME_GROUND_MARKER)) return html;
+	const headEnd = html.indexOf("<head>");
+	if (headEnd < 0) return html;
+	const insertAt = headEnd + "<head>".length;
+	const style = `<style ${FRAME_GROUND_MARKER}>html{background:var(--lo-canvas)}</style>`;
+	return html.slice(0, insertAt) + style + html.slice(insertAt);
 }
 
 /* ---------------------------------------------------------------------------

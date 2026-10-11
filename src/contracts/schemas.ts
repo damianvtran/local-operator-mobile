@@ -1509,7 +1509,7 @@ export type Payload<K extends SchemaName> = z.output<SchemaRegistry[K]>;
  *  (`docs/architecture.md` item 2). An `unknown` field is the case that
  *  correctly fails.
  *
- *  The assertion covers the schemas keyed in `WireMirror` — 23 of the 32 in
+ *  The assertion covers the schemas keyed in `WireMirror` — 30 of the 39 in
  *  `SCHEMAS`; the nine named in `UnassertedSchema` (`commandOp`,
  *  `configStreamFrame`, `gatewayRefusal`, `modelEntry`, `projectionStreamFrame`,
  *  `resumeSession`, `sessionsStreamFrame`, `startSession`, `subagentRow`) are

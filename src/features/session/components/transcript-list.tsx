@@ -803,7 +803,10 @@ export const TranscriptList = ({
 						<View testID={completionAnchorId(item.id)} aria-hidden />
 					) : null}
 					{beat !== undefined && supplementClient !== undefined ? (
-						<View className="px-3">
+						/* The block's seat: the transcript's own content column (`px-4`, the
+						   answer text's step — `px-3` hung it ~4 px left of the column it
+						   belongs to; design round 1, D5). */
+						<View className="px-4">
 							<SupplementBlock
 								beat={beat}
 								jobLive={beatLive(beat, projectionPid)}

@@ -10,12 +10,15 @@ import {
 	COPY_CANCELLED,
 	COPY_FAILED,
 	COPY_PREPARING,
+	COPY_SHOW_FEWER,
 	clampedHeightHint,
 	clampFrameHeight,
 	countClause,
 	displayText,
 	ERROR_MSG_MAX_CHARS,
+	FRAME_GROUND_MARKER,
 	fileRowParts,
+	filesSummaryEntries,
 	filesSummaryLine,
 	filesSummaryOf,
 	frameBudgetPx,
@@ -34,6 +37,7 @@ import {
 	supplementDisposition,
 	supplementFileClass,
 	supplementFrameUrl,
+	supplementGroundDocument,
 	supplementsFromWire,
 	supplementThemeFor,
 	THEME_VARIABLE_NAMES,
@@ -42,6 +46,10 @@ import {
 
 const root = fileURLToPath(new URL("../../../", import.meta.url));
 const fixtures = join(root, "fixtures", "supplements");
+
+/** The ground rule's own marker style, stripped whole in the byte-identity
+ *  assertion below (top-level so the literal is not re-created per call). */
+const GROUND_STYLE = /<style data-lo-frame-ground>[\s\S]*?<\/style>/;
 
 /**
  * The mapping module against the SHARED fixtures, not a mock of my own.
@@ -318,6 +326,30 @@ describe("display copy and the paint boundary", () => {
 		expect(filesSummaryOf(beat("done_files_only"))).toBe(
 			"2 files: latency.md, bench.csv",
 		);
+		// The disclosures' open-state words: the relay web's and the desktop UI's
+		// own constant, adopted rather than reinvented (UX round 1, R6).
+		expect(COPY_SHOW_FEWER).toBe("Show fewer");
+		// The one-liner's rows carry the file and its index where the route can
+		// serve one — the affordance's data (U3) — and nothing where it cannot:
+		// a stored tail name has neither, so its row stays inert text.
+		const entries = filesSummaryEntries(beat("done_files_only"));
+		expect(entries.map((entry) => entry.name)).toEqual([
+			"latency.md",
+			"bench.csv",
+		]);
+		expect(entries.map((entry) => entry.index)).toEqual([0, 1]);
+		expect(entries.every((entry) => entry.file !== null)).toBe(true);
+		const withTail = {
+			...beat("done_files_only"),
+			files: beat("done_files_only").files.slice(0, 1),
+			filesMore: 1,
+			more: ["docs/extra.pdf"],
+		};
+		expect(filesSummaryOf(withTail)).toBe("2 files: latency.md, extra.pdf");
+		const tail = filesSummaryEntries(withTail);
+		expect(tail[1]?.name).toBe("extra.pdf");
+		expect(tail[1]?.index).toBeNull();
+		expect(tail[1]?.file).toBeNull();
 		expect(moreText(1)).toBe("1 more file");
 		expect(moreText(2)).toBe("2 more files");
 		expect(showAllText(1)).toBe("Show all 1 graphic");
@@ -414,6 +446,42 @@ describe("the native shim", () => {
 
 	it("refuses a document it does not recognise", () => {
 		expect(nativeSupplementDocument("plain text")).toBe("plain text");
+	});
+});
+
+describe("the frame ground rule", () => {
+	it("injects its style after <head>, leaving the document otherwise byte-identical", () => {
+		const injected = supplementGroundDocument(documentHtml);
+		expect(injected).not.toBe(documentHtml);
+		expect(injected).toContain(FRAME_GROUND_MARKER);
+		expect(injected).toContain("html{background:var(--lo-canvas)}");
+		expect(injected.indexOf(FRAME_GROUND_MARKER)).toBeGreaterThan(
+			injected.indexOf("<head>"),
+		);
+		// Removing the injected style returns the ORIGINAL bytes: the rule must
+		// never touch the served document beyond its own insertion.
+		const stripped = injected.replace(GROUND_STYLE, "");
+		expect(stripped).toBe(documentHtml);
+	});
+
+	it("is idempotent: a second mount of the same bytes adds nothing", () => {
+		const once = supplementGroundDocument(documentHtml);
+		expect(supplementGroundDocument(once)).toBe(once);
+	});
+
+	it("refuses a document it does not recognise", () => {
+		expect(supplementGroundDocument("plain text")).toBe("plain text");
+	});
+
+	it("composes with the native shim without disturbing either", () => {
+		const mounted = nativeSupplementDocument(
+			supplementGroundDocument(documentHtml),
+		);
+		expect(mounted).toContain(FRAME_GROUND_MARKER);
+		expect(mounted).toContain(NATIVE_SHIM_MARKER);
+		// The document's own CSP and prelude are untouched.
+		expect(mounted).toContain("connect-src 'none'");
+		expect(mounted).toContain("--lo-canvas");
 	});
 });
 

@@ -19,9 +19,12 @@ import {
 	COPY_FAILED,
 	COPY_PREPARING,
 	COPY_RETRY,
+	COPY_SHOW_FEWER,
+	countClause,
 	displayText,
+	type FilesSummaryEntry,
 	fileRowParts,
-	filesSummaryOf,
+	filesSummaryEntries,
 	frameBudgetPx,
 	MORE_MAX,
 	moreText,
@@ -31,12 +34,14 @@ import {
 	type SupplementBeat,
 	type SupplementComponent,
 	type SupplementFile,
+	type SupplementFileClass,
 	showAllText,
 	supplementDisposition,
 	supplementFileClass,
 } from "@/features/session/supplements";
 import { CONTROL, SURFACE, supplementFileId } from "@/ui/a11y";
 import { Input, Shimmer } from "@/ui/components";
+import { cx } from "@/ui/variants";
 
 /**
  * The block under a final answer: file callouts, the quiet state line and any
@@ -59,6 +64,17 @@ import { Input, Shimmer } from "@/ui/components";
  *   - `cancelled_retry` / `failed_retry` — the one quiet line with `· Retry`
  *     (`supplement_restart`, the runtime's own arm);
  *   - `nothing` — renders nothing at all.
+ *
+ * THE ADJUST FORM'S EXITS (UX round 1, U1/D3): the web pair closes it on
+ * Escape; a phone has no Escape key, so the phone's exits are explicit — the
+ * `Adjust…` trigger stays visible as a toggle, an empty Return closes the form,
+ * and the form closes itself the moment its row leaves `preparing` (it must
+ * not outlive the job it steers).
+ *
+ * DISABLED CONTROLS step their ink (`ink-dim` → `ink-disabled`): the kit's
+ * table makes disabled "a colour change, never an opacity change", and this
+ * surface's enabled ops already sit at `ink-dim`, so the next rung is the step
+ * (design round 1, D2).
  *
  * THE OPS RIDE THE SAME SESSION COMMAND ROUTE every other mutation uses
  * (`use-session.ts`'s supplement wiring → `POST /api/sessions/{id}/command`),
@@ -171,11 +187,30 @@ export const SupplementBlock = ({
 
 	const steer = () => {
 		const text = draft.trim();
-		if (!text) return;
+		if (!text) {
+			/* An empty Return is the phone's dismiss (there is no Escape key here;
+			   the web pair closes on one — U1/D3). */
+			setAdjusting(false);
+			setDraft("");
+			return;
+		}
 		setAdjusting(false);
 		setDraft("");
 		void sendOp("steer", text);
 	};
+
+	/*
+	 * The form's third exit (D3): the moment the row leaves `preparing` — the
+	 * job settled, failed, was cancelled, or the beat went stale — the form
+	 * closes. Left open it would outlive the line it steers and turn a Send
+	 * into the neutral `already finished` receipt with nothing to repaint.
+	 * Declared before the `nothing` early return so the hook order is fixed.
+	 */
+	const preparing =
+		disposition === "preparing" || disposition === "files_preparing";
+	useEffect(() => {
+		if (adjusting && !preparing) setAdjusting(false);
+	}, [adjusting, preparing]);
 
 	const noteHeight = useCallback((digest: string, height: number) => {
 		setMeasured((prev) => {
@@ -231,12 +266,12 @@ export const SupplementBlock = ({
 
 	/*
 	 * The one quiet line for the arms that carry one (§2.8's copy table). The
-	 * dot is the app's own Shimmer over a standing sunken fill — the same
-	 * motion vocabulary the transcript skeleton uses, and it parks (never
-	 * vanishes) under reduced motion.
+	 * dot is the app's own Shimmer over a standing `ink-dim` fill: the shimmer
+	 * is an opacity pulse (floor 0.72), so the fill underneath must itself be
+	 * perceptible — `sunken` measured 1.06:1 against the canvas and read as
+	 * nothing, parked or pulsing (design round 1, D4); `ink-dim` is 5.36/6.24:1,
+	 * and the mark still parks rather than vanishing under reduced motion.
 	 */
-	const preparing =
-		disposition === "preparing" || disposition === "files_preparing";
 	const cancelled =
 		disposition === "cancelled_retry" ||
 		disposition === "files_cancelled_retry";
@@ -251,7 +286,7 @@ export const SupplementBlock = ({
 				{preparing ? (
 					<>
 						<Shimmer active>
-							<View className="size-3 rounded-full bg-sunken" />
+							<View className="size-3 rounded-full bg-ink-dim" />
 						</Shimmer>
 						<Text className="text-meta text-ink-muted">{COPY_PREPARING}</Text>
 					</>
@@ -270,16 +305,19 @@ export const SupplementBlock = ({
 						<Text aria-hidden className="text-meta text-ink-dim">
 							·
 						</Text>
-						{!adjusting ? (
-							<Pressable
-								accessibilityRole="button"
-								className="min-h-11 justify-center px-1"
-								testID={CONTROL.supplementAdjust}
-								onPress={() => setAdjusting(true)}
-							>
-								<Text className="text-meta text-ink-dim">{COPY_ADJUST}</Text>
-							</Pressable>
-						) : null}
+						<Pressable
+							accessibilityRole="button"
+							/* A toggle, NOT a disappearing trigger (U1): the web pair closes the
+							   form on Escape, and a phone has no Escape key — the trigger itself
+							   is the explicit dismiss, so it stays visible while the form is
+							   open. */
+							accessibilityState={{ expanded: adjusting }}
+							className="min-h-11 justify-center px-1"
+							testID={CONTROL.supplementAdjust}
+							onPress={() => setAdjusting((open) => !open)}
+						>
+							<Text className="text-meta text-ink-dim">{COPY_ADJUST}</Text>
+						</Pressable>
 						<Pressable
 							accessibilityRole="button"
 							accessibilityState={{
@@ -290,7 +328,16 @@ export const SupplementBlock = ({
 							testID={CONTROL.supplementCancel}
 							onPress={() => void sendOp("cancel")}
 						>
-							<Text className="text-meta text-ink-dim">{COPY_CANCEL}</Text>
+							<Text
+								className={cx(
+									"text-meta",
+									busy || beat.state === "cancelling"
+										? "text-ink-disabled"
+										: "text-ink-dim",
+								)}
+							>
+								{COPY_CANCEL}
+							</Text>
 						</Pressable>
 					</>
 				) : null}
@@ -307,7 +354,14 @@ export const SupplementBlock = ({
 							testID={CONTROL.supplementRetry}
 							onPress={() => void sendOp("restart")}
 						>
-							<Text className="text-meta text-ink-dim">{COPY_RETRY}</Text>
+							<Text
+								className={cx(
+									"text-meta",
+									busy ? "text-ink-disabled" : "text-ink-dim",
+								)}
+							>
+								{COPY_RETRY}
+							</Text>
 						</Pressable>
 					</>
 				) : null}
@@ -333,6 +387,13 @@ export const SupplementBlock = ({
 					testID={CONTROL.supplementAdjustField}
 				/>
 			</View>
+			{draft.length >= STEER_TEXT_MAX_CHARS - 50 ? (
+				/* The bound is visible before it bites (U4): the field truncates at the
+				   same constant, so a pasted tail is never lost unseen. */
+				<Text className="text-meta text-ink-dim">
+					{draft.length}/{STEER_TEXT_MAX_CHARS}
+				</Text>
+			) : null}
 			<Pressable
 				accessibilityRole="button"
 				accessibilityState={{ disabled: busy || draft.trim() === "" }}
@@ -341,7 +402,14 @@ export const SupplementBlock = ({
 				testID={CONTROL.supplementSteerSend}
 				onPress={steer}
 			>
-				<Text className="text-meta text-ink-dim">Send</Text>
+				<Text
+					className={cx(
+						"text-meta",
+						busy || draft.trim() === "" ? "text-ink-disabled" : "text-ink-dim",
+					)}
+				>
+					Send
+				</Text>
 			</Pressable>
 		</View>
 	) : null;
@@ -358,21 +426,18 @@ export const SupplementBlock = ({
 	 * COMPONENT rides the row and the whole known set is two files or fewer
 	 * (the TUI's own rule, `total_files <= 2 and not components_present`), and
 	 * it serves the preparing arm's callouts too — they are the same callouts a
-	 * moment earlier. The names come from the model's own builder so the
-	 * one-liner and the expanded block can never disagree.
+	 * moment earlier. The copy comes from the model's own builder so the
+	 * one-liner and the expanded block can never disagree — and each FEATURED
+	 * name carries its own preview affordance (U3: the line must not be a dead
+	 * end on a phone).
 	 */
 	let filesSection: React.ReactNode = null;
 	if (files.length > 0 || moreCount > 0) {
 		if (totalFiles <= 2 && components.length === 0) {
-			const summary = filesSummaryOf(beat);
+			const entries = filesSummaryEntries(beat);
 			filesSection =
-				summary === null ? null : (
-					<Text
-						className="text-meta text-ink-muted"
-						testID={SURFACE.supplementFilesSummary}
-					>
-						{summary}
-					</Text>
+				entries.length === 0 ? null : (
+					<SummaryFilesLine entries={entries} job={beat.job} client={client} />
 				);
 		} else {
 			filesSection = (
@@ -387,11 +452,12 @@ export const SupplementBlock = ({
 						/>
 					))}
 					{moreCount > 0 ? (
-						/* The disclosure's words are the model's (`N more files`); the
-						   chevron is the state, the same idiom every disclosure on this
-						   surface uses. The tail's rows carry NO preview affordance: the
-						   file route addresses `files[i]` by index and the stored tail
-						   has none, so the honest row is name-only. */
+						/* The disclosure TOGGLES its words with the state, the sibling
+						   surfaces' grammar exactly (`N more files` ⇄ `Show fewer` — the
+						   relay web and the desktop UI; UX round 1, R6): the chevron says
+						   the state, the label says the action. The tail's rows carry NO
+						   preview affordance: the file route addresses `files[i]` by index
+						   and the stored tail has none, so the honest row is name-only. */
 						<View className="flex-col">
 							<Pressable
 								accessibilityRole="button"
@@ -404,7 +470,7 @@ export const SupplementBlock = ({
 									{moreOpen ? "▾" : "▸"}
 								</Text>
 								<Text className="text-meta text-ink-dim">
-									{moreText(moreCount)}
+									{moreOpen ? COPY_SHOW_FEWER : moreText(moreCount)}
 								</Text>
 							</Pressable>
 							{moreOpen ? (
@@ -445,6 +511,8 @@ export const SupplementBlock = ({
 				))}
 				{tail.length > 0 ? (
 					<View className="flex-col">
+						{/* The same toggle grammar as the files disclosure above
+						   (`Show all N graphics` ⇄ `Show fewer`). */}
 						<Pressable
 							accessibilityRole="button"
 							accessibilityState={{ expanded: showAllOpen }}
@@ -456,7 +524,7 @@ export const SupplementBlock = ({
 								{showAllOpen ? "▾" : "▸"}
 							</Text>
 							<Text className="text-meta text-ink-dim">
-								{showAllText(tail.length)}
+								{showAllOpen ? COPY_SHOW_FEWER : showAllText(tail.length)}
 							</Text>
 						</Pressable>
 						{showAllOpen ? (
@@ -498,6 +566,88 @@ type FilePreview =
 	| { kind: "image"; uri: string }
 	| { kind: "refused"; message: string };
 
+/** One callout's bytes → the preview state its row renders; shared by the
+ *  expanded rows and the ≤ 2 files one-liner's links so the fetch, the class
+ *  split and the refusal sentence can never drift between the two. */
+async function loadFilePreview(
+	client: SupplementClient,
+	job: string,
+	index: number,
+	fileClass: SupplementFileClass,
+): Promise<FilePreview> {
+	try {
+		const { bytes, mimeType } = await client.loadFile(job, index);
+		if (fileClass === "image") {
+			const type = mimeType ?? "image/png";
+			return { kind: "image", uri: `data:${type};base64,${toBase64(bytes)}` };
+		}
+		const text = new TextDecoder().decode(bytes);
+		return {
+			kind: "text",
+			text: text.slice(0, PREVIEW_TEXT_MAX_CHARS),
+			truncated: text.length > PREVIEW_TEXT_MAX_CHARS,
+		};
+	} catch (error) {
+		return {
+			kind: "refused",
+			message: `Could not preview: ${refusalText(error)}`,
+		};
+	}
+}
+
+/** The preview one open callout renders: the fetched bytes (text in a sunken
+ *  monospace panel, images as an `<Image>`), the said cut caption, or the
+ *  relay's own refusal sentence — shared like `loadFilePreview`. */
+function PreviewPanel({
+	preview,
+	label,
+}: {
+	preview: FilePreview;
+	label: string;
+}) {
+	return (
+		<View className="min-w-0" testID={SURFACE.supplementPreview}>
+			{preview.kind === "loading" ? (
+				<Shimmer active>
+					<View className="h-16 rounded-sm bg-sunken" />
+				</Shimmer>
+			) : null}
+			{preview.kind === "text" ? (
+				<>
+					<ScrollView
+						className="max-h-64 rounded-sm bg-sunken"
+						contentContainerStyle={{
+							paddingHorizontal: 8,
+							paddingVertical: 6,
+						}}
+						nestedScrollEnabled
+					>
+						<Text className="font-mono text-mono-sm text-ink-muted">
+							{preview.text}
+						</Text>
+					</ScrollView>
+					{preview.truncated ? (
+						<Text className="pt-1 text-meta text-ink-dim">
+							first {PREVIEW_TEXT_MAX_CHARS.toLocaleString()} characters
+						</Text>
+					) : null}
+				</>
+			) : null}
+			{preview.kind === "image" ? (
+				<Image
+					source={{ uri: preview.uri }}
+					resizeMode="contain"
+					className="max-h-64 w-full rounded-sm border border-hairline"
+					accessibilityLabel={label}
+				/>
+			) : null}
+			{preview.kind === "refused" ? (
+				<Text className="text-meta text-danger">{preview.message}</Text>
+			) : null}
+		</View>
+	);
+}
+
 function CalloutRow({
 	file,
 	index,
@@ -519,33 +669,16 @@ function CalloutRow({
 		if (!previewable) return;
 		if (open) {
 			setOpen(false);
+			/* A refusal is not a result: it belongs to the fetch that just failed,
+			   so closing drops it and the next open refetches — the row must not
+			   stay stuck on a stale refusal with no retry (UX round 1, U2). */
+			setPreview((current) => (current?.kind === "refused" ? null : current));
 			return;
 		}
 		setOpen(true);
 		if (preview !== null) return;
 		setPreview({ kind: "loading" });
-		try {
-			const { bytes, mimeType } = await client.loadFile(job, index);
-			if (fileClass === "image") {
-				const type = mimeType ?? "image/png";
-				setPreview({
-					kind: "image",
-					uri: `data:${type};base64,${toBase64(bytes)}`,
-				});
-			} else {
-				const text = new TextDecoder().decode(bytes);
-				setPreview({
-					kind: "text",
-					text: text.slice(0, PREVIEW_TEXT_MAX_CHARS),
-					truncated: text.length > PREVIEW_TEXT_MAX_CHARS,
-				});
-			}
-		} catch (error) {
-			setPreview({
-				kind: "refused",
-				message: `Could not preview: ${refusalText(error)}`,
-			});
-		}
+		setPreview(await loadFilePreview(client, job, index, fileClass));
 	};
 
 	const label = name || displayText(file.path);
@@ -582,45 +715,88 @@ function CalloutRow({
 				{size ? <Text className="text-meta text-ink-dim">{size}</Text> : null}
 			</View>
 			{open && preview !== null ? (
-				<View className="min-w-0" testID={SURFACE.supplementPreview}>
-					{preview.kind === "loading" ? (
-						<Shimmer active>
-							<View className="h-16 rounded-sm bg-sunken" />
-						</Shimmer>
-					) : null}
-					{preview.kind === "text" ? (
-						<>
-							<ScrollView
-								className="max-h-64 rounded-sm bg-sunken"
-								contentContainerStyle={{
-									paddingHorizontal: 8,
-									paddingVertical: 6,
-								}}
-								nestedScrollEnabled
+				<PreviewPanel preview={preview} label={label} />
+			) : null}
+		</View>
+	);
+}
+
+/* ---------------------------------------------------------------------------
+ * The ≤ 2 files one-liner, with its affordance (UX round 1, U3)
+ * ------------------------------------------------------------------------- */
+
+/**
+ * `2 files: latency.md, bench.csv` — the copy is the model's, byte for byte.
+ * The names that address a row carry the affordance: a tap opens that file's
+ * preview UNDER the line (one at a time), and a second tap closes it. A phone
+ * has no hover, and the one-liner must not be a dead end; a stored tail name
+ * (no row index) stays plain text, exactly as the expanded block renders it.
+ * The underline is the tappable run's mark, in the line's own ink — not new
+ * chrome, and the same "this run is addressable" idiom the find sheet uses.
+ */
+function SummaryFilesLine({
+	entries,
+	job,
+	client,
+}: {
+	entries: FilesSummaryEntry[];
+	job: string;
+	client: SupplementClient;
+}) {
+	const [openAt, setOpenAt] = useState<number | null>(null);
+	const [preview, setPreview] = useState<FilePreview | null>(null);
+
+	const previewable = (entry: FilesSummaryEntry): boolean => {
+		if (entry.file === null) return false;
+		const fileClass = supplementFileClass(entry.file.path);
+		return fileClass === "text" || fileClass === "image";
+	};
+
+	const toggle = async (at: number) => {
+		const entry = entries[at];
+		if (entry === undefined || entry.file === null || entry.index === null)
+			return;
+		if (openAt === at) {
+			setOpenAt(null);
+			setPreview(null);
+			return;
+		}
+		setOpenAt(at);
+		setPreview({ kind: "loading" });
+		setPreview(
+			await loadFilePreview(
+				client,
+				job,
+				entry.index,
+				supplementFileClass(entry.file.path),
+			),
+		);
+	};
+
+	const openEntry = openAt === null ? null : (entries[openAt] ?? null);
+
+	return (
+		<View className="flex-col gap-1" testID={SURFACE.supplementFilesSummary}>
+			<Text className="text-meta text-ink-muted">
+				{`${countClause(entries.length, "file")}: `}
+				{entries.map((entry, at) => (
+					<Text key={`${entry.index ?? "tail"}:${entry.name}`}>
+						{at > 0 ? ", " : ""}
+						{previewable(entry) ? (
+							<Text
+								onPress={() => void toggle(at)}
+								style={{ textDecorationLine: "underline" }}
 							>
-								<Text className="font-mono text-mono-sm text-ink-muted">
-									{preview.text}
-								</Text>
-							</ScrollView>
-							{preview.truncated ? (
-								<Text className="pt-1 text-meta text-ink-dim">
-									first {PREVIEW_TEXT_MAX_CHARS.toLocaleString()} characters
-								</Text>
-							) : null}
-						</>
-					) : null}
-					{preview.kind === "image" ? (
-						<Image
-							source={{ uri: preview.uri }}
-							resizeMode="contain"
-							className="max-h-64 w-full rounded-sm border border-hairline"
-							accessibilityLabel={label}
-						/>
-					) : null}
-					{preview.kind === "refused" ? (
-						<Text className="text-meta text-danger">{preview.message}</Text>
-					) : null}
-				</View>
+								{entry.name}
+							</Text>
+						) : (
+							entry.name
+						)}
+					</Text>
+				))}
+			</Text>
+			{openAt !== null && preview !== null && openEntry !== null ? (
+				<PreviewPanel preview={preview} label={openEntry.name} />
 			) : null}
 		</View>
 	);

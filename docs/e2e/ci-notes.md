@@ -71,7 +71,7 @@ doc drifts from the run the first time anyone adds a check.
 
 **`--tier ci` is the sample, and it is not optional.** A default (`core`) run is 3024
 cells; at the 2.24 s/cell this harness measured on the runner (403 cells in 903 s) that
-is ~113 minutes, against a step bound of 150. The tier is declared in
+is ~113 minutes, against a step bound of 160. The tier is declared in
 `tools/visual/matrix.ts` rather than spelled here as a `--devices` list so the sample,
 the plan and the manifest all read one list a reviewer can argue with, and it captures
 every declared cell at two device profiles, both themes and scales 100/135/200 — 1008
@@ -137,11 +137,11 @@ prints the 9,072 frames and derives a deadline of 9,072 s. Those two numbers agr
 because both are 3024 x 3 — three frames per cell with `--consecutive`, and the
 budget's three seconds per cell — not because the deadline is frame-derived. The
 capture step is
-bound at 150, which is above that
+bound at 160, which is above that
 derived deadline — so the step cannot cut short the budget the run computes for
 itself — and ~1.4x the measured cost. The audit runs at 1.25 s/cell, so it is
-~59 min and its step is bound at 70. The job holds its parts:
-`install + export + capture 150 + audit 70 < 225`.
+~63 min and its step is bound at 70. The job holds its parts:
+`install + export + capture 160 + audit 70 < 240`.
 
 The capture states its own device coverage — which declared profiles it covered
 and which it did not, by name — in the plan block, beside the run's verdict, in

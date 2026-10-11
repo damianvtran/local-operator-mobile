@@ -13,6 +13,7 @@ import {
 	type SupplementTheme,
 	sourceLine,
 	supplementFrameUrl,
+	supplementGroundDocument,
 	supplementThemeFor,
 	WATCHDOG_MS,
 } from "@/features/session/supplements";
@@ -35,13 +36,27 @@ import { Shimmer } from "@/ui/components";
  * messages wire, and the two controls the relay pair established —
  *
  *   - the EMBEDDING document's `frame-src data:` policy, declared as a
- *     `<meta http-equiv>` in `app/+html.tsx` (Chromium checks every navigation
- *     of an already-loaded child frame and blocks it before the request is
- *     issued); and
+ *     `<meta http-equiv>` in `public/index.html` — spelled with the hyphen:
+ *     camelCase `httpEquiv` is inert in raw HTML and applied no policy until
+ *     QA round 1, Q1 (Chromium checks every navigation of an already-loaded
+ *     child frame and blocks it before the request is issued); and
  *   - the `load` counter: the SECOND load is a hostile navigation or a blocked
  *     attempt (a blocked navigation fires a second `load` too), so the frame is
  *     torn down into the frame-level fallback line and every later message from
  *     it is dropped.
+ *
+ * THE DOWNLOAD CHANNEL (QA round 1, Q3; re-measured in the remediation
+ * round, same build, Chrome 155). With the parent policy INERT — the
+ * `httpEquiv` defect above — a `download`-attribute anchor click inside the
+ * sandboxed frame issued a GET that neither the parent's `frame-src` nor the
+ * document's `connect-src` governs: that was the measurement which showed the
+ * policy is load-bearing. With the policy REPAIRED the same attempt is
+ * blocked PRE-REQUEST (no `/dl` request leaves), and it ends the frame either
+ * way — the belt when the click lands after the first `load`, the ping
+ * watchdog when it lands during the initial parse. The download itself is
+ * refused for lack of `allow-downloads`, and the request was uncredentialed;
+ * the native WebView's download handling is platform-specific and owed a
+ * device probe.
  *
  * The wire is the contract's, exactly as on native: the host sends
  * `{lo:"supplement-host", t:"theme", mode, vars, nonce}` and `{t:"ping"}`; it
@@ -250,8 +265,11 @@ export const SupplementWebView = ({
 		 * scroller, which does not bubble a scroll event to the window. */
 		window.addEventListener("scroll", onScroll, true);
 
-		/* ---- the wire is live; now the document may start ---- */
-		frameEl.src = supplementFrameUrl(documentHtml);
+		/* ---- the wire is live; now the document may start ----
+		 * The mount asserts the frame's ground in the bytes before the `data:`
+		 * encoding (`supplementGroundDocument` — a live flip must keep the ground
+		 * a palette token, design round 1, D1). */
+		frameEl.src = supplementFrameUrl(supplementGroundDocument(documentHtml));
 
 		return () => {
 			window.clearTimeout(bootDeadline);
