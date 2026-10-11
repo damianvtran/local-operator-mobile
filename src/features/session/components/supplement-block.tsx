@@ -299,7 +299,14 @@ export const SupplementBlock = ({
 				) : null}
 				{/* The action pair is drawn TOGETHER or not at all (D10), both
 				    visible, each a ≥ 44 pt target: a phone has no hover, so a
-				    control that only appears on hover would not exist. */}
+				    control that only appears on hover would not exist.
+				    THE FLOOR IS `min-w-11`, not the label: `px-1` plus the
+				    glyphs only clears 44 pt for the longer words, so `Retry`
+				    measured 37 pt wide and failed U-01 on the failed line's
+				    own frame (2 rows at one phone/100 %, 4 at CI's two-profile
+				    scope) — a lone control, so the rubric's dense-list window
+				    cannot apply. `min-w-11` is the same token step `min-h-11`
+				    uses for height, so no label can shrink the target. */}
 				{preparing ? (
 					<>
 						<Text aria-hidden className="text-meta text-ink-dim">
@@ -312,7 +319,7 @@ export const SupplementBlock = ({
 							   is the explicit dismiss, so it stays visible while the form is
 							   open. */
 							accessibilityState={{ expanded: adjusting }}
-							className="min-h-11 justify-center px-1"
+							className="min-w-11 min-h-11 justify-center px-1"
 							testID={CONTROL.supplementAdjust}
 							onPress={() => setAdjusting((open) => !open)}
 						>
@@ -324,7 +331,7 @@ export const SupplementBlock = ({
 								disabled: busy || beat.state === "cancelling",
 							}}
 							disabled={busy || beat.state === "cancelling"}
-							className="min-h-11 justify-center px-1"
+							className="min-w-11 min-h-11 justify-center px-1"
 							testID={CONTROL.supplementCancel}
 							onPress={() => void sendOp("cancel")}
 						>
@@ -350,7 +357,7 @@ export const SupplementBlock = ({
 							accessibilityRole="button"
 							accessibilityState={{ disabled: busy }}
 							disabled={busy}
-							className="min-h-11 justify-center px-1"
+							className="min-w-11 min-h-11 justify-center px-1"
 							testID={CONTROL.supplementRetry}
 							onPress={() => void sendOp("restart")}
 						>
@@ -545,8 +552,15 @@ export const SupplementBlock = ({
 			</View>
 		) : null;
 
+	/* THE ROOT'S STEP IS `gap-2`, the block's own inter-part step — the same 8 pt
+	 *  `componentsSection` and the tail list use inside it, so the block reads as
+	 *  one rhythm rather than a root tighter than its own children. It was
+	 *  `gap-1.5` (6 pt): a half-step the utility vocabulary does not have, and the
+	 *  only off-scale value U-42 found in this block (16 rows on one phone at
+	 *  100 %, one per cell and scale — 96 at CI's six-cell x two-profile x
+	 *  three-scale scope). The audit reads the scale, and 8 is a step of it. */
 	return (
-		<View className="flex-col gap-1.5" testID={SURFACE.supplementBlock}>
+		<View className="flex-col gap-2" testID={SURFACE.supplementBlock}>
 			{filesSection}
 			{stateLine}
 			{adjustLine}
@@ -617,8 +631,13 @@ function PreviewPanel({
 					<ScrollView
 						className="max-h-64 rounded-sm bg-sunken"
 						contentContainerStyle={{
+							/* 8/8, not 8/6: `paddingVertical: 6` was the same off-scale
+							   half-step as the block root above (U-42); the preview panel is
+							   not in a scored cell yet, but it is owed one (design round 1's
+							   preview-panel captures), and a value that fails the rule
+							   there is not worth landing. */
 							paddingHorizontal: 8,
-							paddingVertical: 6,
+							paddingVertical: 8,
 						}}
 						nestedScrollEnabled
 					>
