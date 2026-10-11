@@ -43,8 +43,8 @@ handle-resolution route, and the superseded-token refusal) are taken at
 own, and no capture was restamped to look newer than it is.
 
 The config stream's synthetic sample (`synthetic/sse-config-frame.json`, wave-5
-slice D) names `94b8c6eb2` — the shared builder's ref at PR #2218, open at
-writing — for a frame whose live capture awaits the route's release.
+slice D) names `e5b317644` — the shared builder's ref at PR #2218's merge — for
+a frame whose live capture awaits the route's release.
 
 The projects WRITE samples (`projects-created`, `projects-create-refused`,
 `projects-create-invalid`, `projects-delete-refused`, `projects-deleted`,

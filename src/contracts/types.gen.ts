@@ -601,7 +601,7 @@ export interface UnreadBlock {
 
 /**
  * `GET /api/config/events` — one `config` frame's payload (wave-5 slice D,
- * introduced at `94b8c6eb2a`, PR #2218). The same frame the desktop feed
+ * merged at `e5b3176447fa`, PR #2218). The same frame the desktop feed
  * publishes; both surfaces build it through one shared builder
  * (`local_operator/i18n/frames.py::config_frame_payload`), so a field renamed
  * for one must be renamed for the other in the same edit — which is what this

@@ -26,11 +26,13 @@ rather than from prose.
 > still mean the pinned ref.
 >
 > **Two later additions, same rule.** §9's banner was refreshed to its shipped
-> status and §10 (the config stream) was written against local-operator **PR #2218
-> (`94b8c6eb2a`, 2026-10-11 — open at the time of writing**, so its route is not
-> yet on `main`); §9's status line names `ca0569855` (2026-10-03), the ref where
-> the asks route landed, and `v0.66.2`, the first release carrying it. Both are
-> qualified inline rather than re-numbered.
+> status and §10 (the config stream) is written against local-operator **PR #2218
+> as merged — `e5b3176447fa` (2026-10-11)**. §10 was first written against the
+> branch head (`94b8c6eb2a`) and re-resolved to the merge commit once it landed,
+> the same discipline as this document's own relocation note. §9's status line
+> names `ca0569855` (2026-10-03), the ref where the asks route landed, and
+> `v0.66.2`, the first release carrying it. Both are qualified inline rather
+> than re-numbered.
 
 Paths are relative to the local-operator repository root:
 `local_operator/mobile/daemon.py` → `daemon.py`; `local_operator/mobile/web/src/api.ts`
@@ -162,7 +164,7 @@ The routes that *do* set cache headers are the SSE streams
 | POST | `/api/sessions/{id}/transfer` | gate | the mesh move — body `{to, keep?, wait_s?, request_id?}`, §4.13 (#2083, `f5071030df`) |
 | GET | `/api/sessions/{id}/checkpoints` | gate | the rail manifest (D9), `daemon.py:4870-4911` (at `ae6c9eb6`) |
 | GET | `/api/asks` | gate | the queued-ask aggregate (§9), `daemon.py:5630` (`ca0569855`; first released in `v0.66.2`) |
-| GET | `/api/config/events` | gate | SSE, the resolved language (§10), `daemon.py:7242` (`94b8c6eb2a`, PR #2218 — not yet on `main`) |
+| GET | `/api/config/events` | gate | SSE, the resolved language (§10), `daemon.py:7250` (`e5b3176447fa`, PR #2218, merged 2026-10-11) |
 
 There is **no `GET /api/sessions/{id}`** — a single session's state arrives only
 over its SSE stream or as a row of `/api/sessions`. A client that wants
@@ -1434,16 +1436,17 @@ Two client-facing facts that are easy to get wrong:
 ## 10. The config stream — the relay's resolved language, live
 
 > **Arrived after the pin, and carries its own ref.** `GET /api/config/events`
-> and the frames below are at local-operator **`94b8c6eb2a` (PR #2218, open at
-> the time of writing — the route is not on `main` yet)**, branch
-> `feat/i18n-relay-config`. The frame SHAPE already ships: it is the same
-> `config` frame the desktop feed publishes (wave 4), and both surfaces build it
-> through ONE shared builder
+> and the frames below are at local-operator **`e5b3176447fa` (PR #2218, merged
+> 2026-10-11)** — first written against the branch head (`94b8c6eb2a`) and
+> re-resolved to the merge commit once it landed, the same re-pin discipline
+> this document's own relocation note records. The frame SHAPE already ships:
+> it is the same `config` frame the desktop feed publishes (wave 4), and both
+> surfaces build it through ONE shared builder
 > (`local_operator/i18n/frames.py::config_frame_payload`), pinned mechanically by
 > `tests/unit/test_i18n_config_frame_contract.py`. Re-check citations with
-> `git -C <local-operator> show 94b8c6eb2a:<path>`.
+> `git -C <local-operator> show e5b3176447fa:<path>`.
 
-**Route.** `GET /api/config/events` — cookie-gated like every `/api` sibling
+**Route.** `GET /api/config/events` (`daemon.py:7250`) — cookie-gated like every `/api` sibling
 (a request without the session cookie gets the standard `401`), body
 `text/event-stream`.
 
