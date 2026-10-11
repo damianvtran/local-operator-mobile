@@ -688,15 +688,23 @@ and say so quietly, and must never present a 60-second cut as a failure.
 
 | Property | Value |
 |---|---|
-| Fill | `elevated` — **not** `sunken` |
+| Fill | the pair is a property of the GROUND: on the **canvas** `elevated` → `sunken`; on a **raised** surface `sunken` → `canvas` |
 | Shape | three bars for a transcript, one row per list item |
 | Animation | a gentle brightness pulse at 1.4 s |
 | Under reduced motion | the pulse stops; the bars keep their resting tone |
 
-**`sunken` is the wrong fill and it was measured**: at ~1.3:1 a `sunken` skeleton
-bar vanishes in a still frame, so the loading state reads as an empty one. The
+**The pair flips with the ground, and getting it wrong was measured on both.**
+On the canvas, `sunken` is the wrong RESTING fill: at ~1.1:1 (`sunken` on
+`canvas` measures 1.06:1 dark / 1.07:1 light) a `sunken` bar vanishes in a still
+frame, so the loading state reads as an empty one. On a surface that is itself
+raised — the conversations pane draws on `elevated` — the same reasoning flips:
+an `elevated` bar vanishes into its own ground (1.00:1, the same-colour failure
+of the 2026-10-11 pass), so the raised ground pairs `sunken` resting with
+`canvas` dimming (1.25:1 / 1.19:1 dark against the surface it sits on). Both
+pairs keep every pulse end a visible step off the ground it is drawn on, and the
 resting tone must be visible without the animation, because the animation is the
-first thing reduced motion removes.
+first thing reduced motion removes. `Skeleton`'s `ground` prop names the case;
+the contrast contract carries both rows (`skeleton/bar`, `skeleton/bar-raised`).
 
 ---
 

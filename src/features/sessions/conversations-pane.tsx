@@ -761,9 +761,9 @@ const PaneEmpty = ({
 				aria-hidden
 				testID={STATE_MARKER.sidebar.loading}
 			>
-				<Skeleton lines={1} />
-				<Skeleton lines={1} />
-				<Skeleton lines={1} />
+				<Skeleton lines={1} ground="raised" />
+				<Skeleton lines={1} ground="raised" />
+				<Skeleton lines={1} ground="raised" />
 			</View>
 		);
 	}

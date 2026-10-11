@@ -367,6 +367,16 @@ const CONTROLS = [
 	{ id: "segmented/selected", fill: "accent-muted", border: null, ink: "accent-hover", themes: ["dark"], boundary: false },
 	{ id: "segmented/selected", fill: "accent-muted", border: null, ink: "accent-active", themes: ["light"], boundary: false },
 	{ id: "skeleton/bar", fill: "elevated", border: null, ink: "ink-dim", boundary: false },
+	/* The same bar on a RAISED ground (a surface above the canvas — the
+	   conversations pane draws on `elevated`): the component swaps the pulse's ends
+	   for that case (`Skeleton`'s `ground="raised"`), painting `sunken` at rest and
+	   dimming to `canvas`, because the canvas pair paints the bar in the ground's
+	   OWN colour there (measured 1.00:1 on the 2026-10-11 full-surface pass — the
+	   "loading reads as empty" failure). Carried as its own row so a token nudge
+	   re-opens this pair too: `sunken` must stay a step off the raised ground
+	   (1.25:1 dark / 1.22:1 light today), and `ink-dim` must still read on it.
+	   `components.md` § 19 states both pairs. */
+	{ id: "skeleton/bar-raised", fill: "sunken", border: null, ink: "ink-dim", boundary: false },
 ];
 
 /* ---- 6. accepted sub-floor pairs, each pinned to its ratio ------------- */

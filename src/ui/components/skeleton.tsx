@@ -15,12 +15,30 @@ import { SKELETON_PULSE_MS, skeletonBarClasses } from "@/ui/variants";
  * reads as an empty one. The resting tone therefore has to be visible on its own,
  * because the pulse is the first thing reduced motion removes
  * (docs/design/components.md § 19).
+ *
+ * **The pair is a property of the GROUND, which is why `ground` exists.** The
+ * `elevated`-on-`canvas` step above assumes the bars sit on the canvas — true for
+ * the transcript, the past list and the set-up screens, and false for any surface
+ * that is already raised. On those, a resting `elevated` bar is the SAME colour as
+ * the ground it is drawn on — measured on the 2026-10-11 full-surface pass: the
+ * conversations pane's loading cell (S15/loading, iphone-15, dark) carried zero
+ * non-background pixels in the bars' own band, because bar #322d22 sits on the
+ * pane's own #322d22 (light: #fefdfa on #fefdfa). That is the "loading reads as
+ * empty" failure this component was fixed for, surviving on the raised ground.
+ * `ground="raised"` swaps the ends (resting `sunken`, dimming `canvas`) so both
+ * ends of the pulse stay visible against everything above the canvas.
  */
 export type SkeletonProps = {
 	/** Number of bars. One bar is a single-line placeholder. */
 	lines?: number;
 	/** The bar's height and shape; defaults to a text-line height. */
 	barClassName?: string;
+	/**
+	 * The surface the bars will be drawn on: `canvas` (default — screen grounds)
+	 * or `raised` (anything whose own surface is above the canvas, where the
+	 * canvas pair would paint the bar in the ground's own colour).
+	 */
+	ground?: "canvas" | "raised";
 	/**
 	 * The bar's width, and the ONLY width in its class list.
 	 *
@@ -41,6 +59,7 @@ export const Skeleton = ({
 	lines = 3,
 	barClassName = "h-4",
 	widthClassName = "w-full",
+	ground = "canvas",
 	testID,
 }: SkeletonProps) => {
 	const reduceMotion = useReducedMotion();
@@ -57,9 +76,10 @@ export const Skeleton = ({
 		[lines],
 	);
 	// Both ends of the pulse are token roles, so the animation cannot drift out of
-	// theme and the resting tone stays visible on its own.
-	const resting = useTokenColor("elevated");
-	const dimmed = useTokenColor("sunken");
+	// theme and the resting tone stays visible on its own. Which two roles depends
+	// on the ground: see the note on `ground` in the type above.
+	const resting = useTokenColor(ground === "raised" ? "sunken" : "elevated");
+	const dimmed = useTokenColor(ground === "raised" ? "canvas" : "sunken");
 
 	useEffect(() => {
 		if (reduceMotion) {
