@@ -3,9 +3,11 @@ import { describe, expect, it } from "vitest";
 import type { SessionProjection, TranscriptEntry } from "@/contracts";
 import {
 	loadAttachments,
+	loadVideoSource,
 	mergeTranscript,
 	olderThanLoaded,
 	rowIdentity,
+	videoExtension,
 } from "@/features/session/runtime";
 import {
 	type RelayEndpoints,
@@ -92,6 +94,66 @@ describe("loadAttachments tells a gone attachment from an unreachable host", () 
 		await expect(
 			loadAttachments(imageRejects(offline), "s", "e", 0),
 		).rejects.toBe(offline);
+	});
+});
+
+/** The video sibling of `imageRejects` — same wide-interface stand-in, one
+ *  route (`video`) this time. */
+const videoRejects = (error: unknown): RelayEndpoints =>
+	({
+		video: async () => {
+			throw error;
+		},
+	}) as unknown as RelayEndpoints;
+
+describe("loadVideoSource tells a gone artifact from an unreachable host", () => {
+	it("resolves to null for the relay's own 404", async () => {
+		/* The same rule `loadAttachments` applies, at the video route: only the
+		 * relay's OWN 404 is proof the bytes are gone. */
+		const gone = relayErrorFromResponse(
+			facts(
+				404,
+				{ "content-type": "application/json" },
+				'{"error":"no such attachment"}',
+			),
+		);
+		expect(gone.kind).toBe("rejected");
+		await expect(
+			loadVideoSource(videoRejects(gone), "s", "e", 0),
+		).resolves.toBeNull();
+	});
+
+	it("rethrows a dead tunnel's 404 instead of claiming the video is gone", async () => {
+		const deadTunnel = relayErrorFromResponse(
+			facts(404, { "content-type": "text/plain" }, "Unknown tunnel"),
+		);
+		expect(deadTunnel.kind).toBe("unknown-tunnel");
+		await expect(
+			loadVideoSource(videoRejects(deadTunnel), "s", "e", 0),
+		).rejects.toBe(deadTunnel);
+	});
+
+	it("hands the fetched bytes to the platform as a playable source", async () => {
+		/* Node runs the WEB branch (the suite aliases `react-native` to
+		 * react-native-web), which is also the branch the web target — and every
+		 * captured frame — actually takes: a Blob object URL. The native branch
+		 * writes a cache file and is exercised by the native build in CI. */
+		const endpoints = {
+			video: async () => ({
+				bytes: new Uint8Array([0, 0, 0, 24]),
+				mimeType: "video/mp4",
+			}),
+		} as unknown as RelayEndpoints;
+		const source = await loadVideoSource(endpoints, "s", "e", 0);
+		expect(source?.startsWith("blob:")).toBe(true);
+	});
+
+	it("names the cache extension per mime, defaulting to mp4", () => {
+		expect(videoExtension(null)).toBe("mp4");
+		expect(videoExtension("video/mp4")).toBe("mp4");
+		expect(videoExtension("video/quicktime; codecs=hvc1")).toBe("mov");
+		expect(videoExtension("video/webm")).toBe("webm");
+		expect(videoExtension("video/x-matroska")).toBe("mp4");
 	});
 });
 

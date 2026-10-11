@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { Animated, Easing, Text, View } from "react-native";
+import { Animated, Easing, Platform, Text, View } from "react-native";
 import { TranscriptImage } from "@/features/session/components/transcript-image";
+import { TranscriptVideo } from "@/features/session/components/transcript-video";
 import type { ImageGenView } from "@/features/session/imagegen";
 import {
 	IMAGEGEN_ALREADY_FINISHED_TONE,
@@ -11,7 +12,11 @@ import {
 	imageGenLivePhase,
 	imageGenStateLine,
 } from "@/features/session/imagegen";
-import { imagegenCancelId, transcriptImageId } from "@/ui/a11y";
+import {
+	imagegenCancelId,
+	transcriptImageId,
+	transcriptVideoId,
+} from "@/ui/a11y";
 import { Button, Shimmer, useReducedMotion } from "@/ui/components";
 import { parseCubicBezier } from "@/ui/motion";
 import { EASINGS } from "@/ui/tokens.gen";
@@ -58,8 +63,14 @@ export type ImageGenCardProps = {
 	 *  `undefined` while no turn is live — which is what hides the control.
 	 *  Resolves `false` when the request never reached the relay (no route, or
 	 *  the command failed), which is what clears the overlay (review round 1,
-	 *  F2). */
+	 *  F2). A VIDEO row never shows this control at all — the view withholds
+	 *  `cancelable` for it (R4). */
 	onCancelTurn?: () => Promise<boolean>;
+	/** Opens the full-screen player for a video artifact this row carries
+	 *  (`entryId`, video-block `index`). `undefined` on a surface that cannot
+	 *  push the route (e.g. a child's transcript), which is what hides the
+	 *  frame — the same gate `loadImage` has. */
+	onOpenVideo?: (entryId: string, index: number) => void;
 	testID?: string;
 };
 
@@ -87,9 +98,10 @@ const LOG_TAIL_LINES = 2;
  * The indeterminate progress: a segment sweeping the track, left to right.
  *
  * The segment moves by `translateX` (a transform) rather than `left` (a layout
- * property), which is what lets the whole loop take the kit's canonical native
- * shape (`motion.native.coreAnimated`, `tokens.json`: `Animated.timing(value,
- * { …, useNativeDriver: true })`). That needs the track's width in points —
+ * property), which is what lets the loop take the kit's canonical native shape
+ * (`motion.native.coreAnimated`, `tokens.json`: `Animated.timing(value,
+ * { …, useNativeDriver: true })`) on the platforms that have the native driver.
+ * That needs the track's width in points —
  * measured once through `onLayout` in the parent — so the sweep HOLDS at its
  * start until the width is real rather than animating against a guess (design
  * round 1, D5).
@@ -121,9 +133,18 @@ const IndeterminateTrack = ({ trackWidth }: { trackWidth: number }) => {
 				// `motion.looping.loadbar`'s own curve, through the one adapter
 				// (`motion.ts`): the segment eases in and out of each pass.
 				easing: Easing.bezier(...parseCubicBezier(EASINGS["in-out"])),
-				// The kit's canonical native shape — the animated property is a
-				// transform now, so the driver is the native one.
-				useNativeDriver: true,
+				/* The kit's canonical native shape — the animated property is a
+				 * transform, so NATIVE takes the native driver. WEB may not: this
+				 * bundle has no native animated module, and RNW's fallback from
+				 * `true` marks the value native while running the animation in JS,
+				 * so `Animated.loop`'s per-iteration reset never reaches the value —
+				 * the segment runs ONE pass and parks fully off-track (measured,
+				 * design round 1 D1: `matrix(1,0,0,1,316,0)` static across 3.6 s on
+				 * both of the fixture's indeterminate tracks; RNW's own console
+				 * warning names the fallback). The explicit JS driver on web is the
+				 * driver RNW was falling back TO, asked for so the loop actually
+				 * repeats. */
+				useNativeDriver: Platform.OS !== "web",
 			}),
 		);
 		loop.start();
@@ -222,6 +243,7 @@ export const ImageGenCard = ({
 	entryId,
 	loadImage,
 	onCancelTurn,
+	onOpenVideo,
 	testID,
 }: ImageGenCardProps) => {
 	/**
@@ -280,11 +302,20 @@ export const ImageGenCard = ({
 	const tone = view.alreadyFinished
 		? IMAGEGEN_ALREADY_FINISHED_TONE
 		: IMAGEGEN_TONE[phase];
+	/* The artifact fact is the material's OWN artifact: an image row speaks
+	 * through its image reference, a video row through its video reference —
+	 * "Video ready" must not be satisfied by a stray image block, nor the
+	 * reverse. */
 	const line = imageGenStateLine(phase, {
+		material: view.material,
 		queuePosition: view.live.queuePosition,
-		hasArtifact: view.artifact !== null,
+		hasArtifact:
+			(view.material === "video" ? view.videoArtifact : view.artifact) !== null,
 		alreadyFinished: view.alreadyFinished,
 	});
+
+	/* Destructured so the done arm's JSX narrows once, at the gate. */
+	const videoArtifact = view.videoArtifact;
 	/* The control is shown only where it applies — a live phase, no request in
 	 * flight, a live turn to interrupt (the screen withholds `onCancelTurn`
 	 * while the composer's own Stop is not visible, so the two controls share
@@ -295,7 +326,9 @@ export const ImageGenCard = ({
 	 * "Stop the running turn"; brand-kit's button verbs include `Stop`), and
 	 * every visible card shares the one label because they share the one
 	 * action — distinct labels per card would invent a per-card scope (design
-	 * round 1, D2). */
+	 * round 1, D2). A VIDEO row never reaches this control: the view withholds
+	 * `cancelable` for it (R4 — a detached job the turn-interrupt cannot
+	 * cancel, and the hint below would be false). */
 	const showCancel =
 		view.cancelable && !cancelRequested && onCancelTurn !== undefined;
 	const liveTone = phase === "running" || phase === "cancelling";
@@ -407,6 +440,17 @@ export const ImageGenCard = ({
 							mimeType={view.artifact.mimeType}
 							load={loadImage}
 							testID={transcriptImageId(entryId, view.artifact.index)}
+						/>
+					) : null}
+					{/* The finished video frames itself: the frame opens the
+					 *  full-screen player, a pushed ROUTE — outside the FlatList, so
+					 *  recycling cannot kill playback, and the frame itself has no
+					 *  bytes or animations to lose on a remount. The player owns the
+					 *  byte fetch and every fallback state. */}
+					{videoArtifact !== null && onOpenVideo !== undefined ? (
+						<TranscriptVideo
+							onOpen={() => onOpenVideo(entryId, videoArtifact.index)}
+							testID={transcriptVideoId(entryId, videoArtifact.index)}
 						/>
 					) : null}
 					<Text className="min-w-0 flex-1 text-body-sm text-ink-muted">

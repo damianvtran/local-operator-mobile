@@ -19,6 +19,7 @@
  * objects, so `use-session.ts` is the only place that subscribes.
  */
 
+import { Platform } from "react-native";
 import type { RouteProfile } from "@/connection";
 import type { SessionProjection, TranscriptEntry } from "@/contracts";
 import {
@@ -134,6 +135,103 @@ export const toBase64 = (bytes: Uint8Array): string => {
 		out += c === undefined ? "=" : (alphabet[c & 63] ?? "");
 	}
 	return out;
+};
+
+/* ------------------------------------------------------------- video loading */
+
+/** The file extension for a video artifact's stored mime type; `mp4` when the
+ *  relay carried none or one this build does not know — the design's clips are
+ *  mp4, and the player sniffs the bytes regardless. */
+export const videoExtension = (mimeType: string | null): string => {
+	switch ((mimeType ?? "").split(";")[0]?.trim().toLowerCase()) {
+		case "video/quicktime":
+			return "mov";
+		case "video/webm":
+			return "webm";
+		default:
+			return "mp4";
+	}
+};
+
+/**
+ * A video artifact's bytes, cached into something the player can open.
+ *
+ * One function, two platforms, ONE contract (`string` = a playable source;
+ * `null` = the bytes are gone): on native the bytes are written to a cache
+ * file under `Paths.cache` (the OS reclaims it — the STT recording's own
+ * posture) so `expo-video` opens a `file://` URI; on web they become a Blob
+ * object URL, which is how a browser hands fetched bytes to a `<video>` and
+ * the one place `expo-file-system`'s web build is not a filesystem at all.
+ *
+ * Classification mirrors `loadAttachments`: only the relay's OWN 404 is proof
+ * of absence; anything else rethrows as "the host was not reached", so a
+ * dropped tunnel is never painted as a vanished artifact. A cache file that
+ * already exists with bytes is REUSED without a fetch — reopening the same
+ * artifact (the FlatList remount caveat's second visit) costs no request —
+ * and a zero-byte file (an interrupted write) is refetched rather than
+ * played. The web object URL is the CALLER's to revoke when it is done with
+ * it; the native cache file is deliberately not deleted (the cache directory
+ * is the OS's to reclaim, and the next open is then free).
+ */
+export const loadVideoSource = async (
+	endpoints: RelayEndpoints,
+	sessionId: string,
+	entryId: string,
+	index: number,
+): Promise<string | null> => {
+	try {
+		if (Platform.OS !== "web") {
+			const cached = await cachedVideoFile(entryId, index);
+			if (cached !== null) return cached;
+		}
+		const { bytes, mimeType } = await endpoints.video(
+			sessionId,
+			entryId,
+			index,
+		);
+		if (Platform.OS === "web") {
+			return URL.createObjectURL(
+				new Blob([bytes as BlobPart], { type: mimeType ?? "video/mp4" }),
+			);
+		}
+		const { Directory, File, Paths } = await import("expo-file-system");
+		const directory = new Directory(Paths.cache, "lo-video");
+		if (!directory.exists) directory.create({ intermediates: true });
+		const file = new File(
+			directory,
+			`${entryId}-${index}.${videoExtension(mimeType)}`,
+		);
+		// `write` needs a file that exists; the new API refuses a write to a
+		// missing path rather than creating it (device-storage's own note).
+		if (!file.exists) file.create({ intermediates: true });
+		file.write(bytes);
+		return file.uri;
+	} catch (error) {
+		if (isRelayMissing(error)) return null;
+		throw error;
+	}
+};
+
+/** Every extension `loadVideoSource` may have cached under (the mime-derived
+ *  name, so a lookup before the fetch must try each known one — the cost is a
+ *  stat call on a fresh cache and one on a warm one, never a network read). */
+const VIDEO_CACHE_EXTENSIONS = ["mp4", "mov", "webm"] as const;
+
+/** The cached file for one artifact, if a previous open wrote one with bytes.
+ *  A zero-byte file (an interrupted write) reads as no cache, so the artifact
+ *  is refetched rather than played from a truncated file. */
+const cachedVideoFile = async (
+	entryId: string,
+	index: number,
+): Promise<string | null> => {
+	const { Directory, File, Paths } = await import("expo-file-system");
+	const directory = new Directory(Paths.cache, "lo-video");
+	if (!directory.exists) return null;
+	for (const extension of VIDEO_CACHE_EXTENSIONS) {
+		const file = new File(directory, `${entryId}-${index}.${extension}`);
+		if (file.exists && file.size > 0) return file.uri;
+	}
+	return null;
 };
 
 /* --------------------------------------------------------------- projections */

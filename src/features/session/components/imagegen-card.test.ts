@@ -164,6 +164,24 @@ describe("the card's live guard", () => {
 		);
 		expect(doneArm).toContain("<TranscriptImage");
 	});
+
+	it("mounts the video frame only under its own reference gate", () => {
+		/* The surfaces programme's sibling: the done arm carries the frame that
+		 * opens the player, gated on BOTH the video reference (the row carries
+		 * one) and the destination (a surface that can push the route — a child
+		 * transcript cannot), the same shape `loadImage`'s gate has. Counted so
+		 * an unguarded second spelling fails by name. */
+		const doneArm = SOURCE.slice(
+			SOURCE.indexOf('{phase === "done" ?'),
+			SOURCE.indexOf('{phase === "failed" ?'),
+		);
+		expect(doneArm).toContain("<TranscriptVideo");
+		expect(doneArm).toContain(
+			"videoArtifact !== null && onOpenVideo !== undefined",
+		);
+		expect((SOURCE.match(/<TranscriptVideo/g) ?? []).length).toBe(1);
+		expect((SOURCE.match(/onOpenVideo\(/g) ?? []).length).toBe(1);
+	});
 });
 
 describe("the generating body's gate (the F3 guard)", () => {
@@ -221,6 +239,14 @@ describe("the generating body's gate (the F3 guard)", () => {
 		expect((SOURCE.match(/<IndeterminateTrack/g) ?? []).length).toBe(1);
 		expect((SOURCE.match(/Animated\.loop\(/g) ?? []).length).toBe(1);
 		expect((SOURCE.match(/<DeterminateTrack/g) ?? []).length).toBe(1);
+		/* And the loop's driver is platform-split (design round 1, D1): this
+		 * bundle has no native animated module, and RNW's fallback from `true`
+		 * marks the value native while running the animation in JS, so the
+		 * loop's per-iteration reset never lands — the segment runs one pass and
+		 * parks (measured: `matrix(1,0,0,1,316,0)` static across 3.6 s). A
+		 * revert to the unconditional `true` re-breaks every web capture, so the
+		 * split is pinned by name rather than left to a comment. */
+		expect(SOURCE).toContain('useNativeDriver: Platform.OS !== "web"');
 	});
 
 	it("keeps the cancel gate on the unsettled phases, queued included", () => {

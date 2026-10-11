@@ -308,6 +308,21 @@ export default function Session() {
 		[router, sessionId],
 	);
 
+	/* The video player is a PUSHED ROUTE, never an inline player: the
+	 * transcript recycles rows (FlatList) and playback must outlive a recycle —
+	 * the design's own flow, "receipt row → tap → player screen". The route
+	 * takes the entry id and the artifact's video index; the bytes resolve
+	 * there, so a recycled row costs nothing and no loop lives in the list. */
+	const openVideo = useCallback(
+		(entryId: string, index: number) => {
+			router.push({
+				pathname: "/session/[id]/video",
+				params: { id: sessionId, entry: entryId, i: String(index) },
+			});
+		},
+		[router, sessionId],
+	);
+
 	const title = projection?.conversation_name ?? "";
 	/* The header name is MIDDLE-truncated with a floor, because the shipped web
 	 * client collapsed it to a single glyph at 200 % text (`R14`) — the two ends of
@@ -386,6 +401,7 @@ export default function Session() {
 					streamingRowId={runtime.streamingRowId}
 					loadImage={runtime.loadImage}
 					onOpenAgent={openAgent}
+					onOpenVideo={openVideo}
 					/* The image-gen card's Cancel is the composer's OWN stop path (the
 					   one turn-interrupt — no second mechanism). The gate is the
 					   composer's own (`stopVisible` = a turn is running), so the two

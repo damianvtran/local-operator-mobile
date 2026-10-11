@@ -143,6 +143,24 @@ export const transcriptImageRefSchema = z.looseObject({
 	mime_type: z.string(),
 });
 
+/**
+ * A video artifact's reference on a row — the sibling of
+ * `transcriptImageRefSchema`, counting VIDEO blocks on their own video-only
+ * index (a text or image block does not shift it; the same
+ * producer-and-consumer share one index rule the image refs follow).
+ *
+ * The relay's video ref family is the producer-side item of the video phase
+ * (surfaces design §3.2/§3.4: "a parallel ref family"); this app consumes the
+ * parallel-of-images shape and, until the relay emits it, the field's
+ * absence reads as "no video artifact carried" — the receipt-only rendering
+ * the design freezes for v1. Extra keys a producer adds (the design names
+ * `duration_s`) are tolerated and unread.
+ */
+export const transcriptVideoRefSchema = z.looseObject({
+	index: z.number().int(),
+	mime_type: z.string(),
+});
+
 export const peerSenderSchema = z.looseObject({
 	pid: z.number().optional(),
 	session_id: z.string().optional(),
@@ -205,6 +223,10 @@ export const transcriptEntrySchema = z.looseObject({
 	error: z.string(),
 	details: transcriptEntryDetailsSchema,
 	images: z.array(transcriptImageRefSchema),
+	/* Additive and defaulted: a relay that predates the video phase omits the
+	 * key entirely, and the defensible reading of "omitted" is "this row
+	 * carries no video artifact" — never `undefined` reaching a screen. */
+	videos: z.array(transcriptVideoRefSchema).default([]),
 	final: z.boolean(),
 	text_complete: z.boolean(),
 });

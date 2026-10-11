@@ -89,6 +89,21 @@ export interface TranscriptImageRef {
 	mime_type: string;
 }
 
+/** A video artifact's reference on a row — the sibling of `TranscriptImageRef`.
+ *
+ *  Optional on the envelope because the relay's video ref family is the
+ *  producer-side item of the video phase (surfaces design §3.2/§3.4) and a
+ *  relay that predates it omits the key; `schemas.ts` turns that absence into
+ *  the explicit reading `[]` ("this row carries no video artifact"), which is
+ *  exactly the receipt-only v1 rendering. The index counts VIDEO blocks on
+ *  their own video-only index, shared with the byte route the way the image
+ *  refs share `/image`. */
+export interface TranscriptVideoRef {
+	/** Video-block index only: a text or image block does not shift it. */
+	index: number;
+	mime_type: string;
+}
+
 export interface PeerSender {
 	pid?: number;
 	session_id?: string;
@@ -170,6 +185,9 @@ export interface TranscriptEntry {
 	error: string;
 	details: TranscriptEntryDetails;
 	images: TranscriptImageRef[];
+	/** The row's video-artifact references (see `TranscriptVideoRef`). Absent on
+	 *  a relay that predates the video phase; the client reads absence as `[]`. */
+	videos?: TranscriptVideoRef[];
 	final: boolean;
 	text_complete: boolean;
 }

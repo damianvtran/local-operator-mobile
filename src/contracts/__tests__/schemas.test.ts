@@ -802,6 +802,18 @@ describe("malformed frames are rejected, never coerced", () => {
 			}),
 		],
 		[
+			"a video ref whose index is a string",
+			"sessionProjection",
+			projectionWith({
+				transcript: [
+					{
+						...(VALID_PROJECTION.transcript as Record<string, unknown>[])[0],
+						videos: [{ index: "0", mime_type: "video/mp4" }],
+					},
+				],
+			}),
+		],
+		[
 			"a section outside active|previous",
 			"sessionListFrame",
 			{
@@ -934,6 +946,34 @@ describe("absence and null carry the contract's meaning", () => {
 			projectionWith({ activity_started_s: 0 }),
 		);
 		expect(parsed.activity_started_s).toBe(0);
+	});
+
+	it("reads an absent video ref family as the empty list — the receipt-only rendering", () => {
+		/* The relay's `videos` family is the video phase's producer item; a relay
+		 * that predates it omits the key entirely, and the defensible reading is
+		 * "this row carries no video artifact" — never `undefined` reaching a
+		 * card. */
+		const parsed = parsePayload("sessionProjection", projectionWith({}));
+		expect(parsed.transcript[0]?.videos).toEqual([]);
+	});
+
+	it("carries a video ref family once the wire sends one", () => {
+		const entry =
+			(VALID_PROJECTION.transcript as Record<string, unknown>[])[0] ?? {};
+		const parsed = parsePayload(
+			"sessionProjection",
+			projectionWith({
+				transcript: [
+					{
+						...entry,
+						videos: [{ index: 0, mime_type: "video/mp4" }],
+					},
+				],
+			}),
+		);
+		expect(parsed.transcript[0]?.videos).toEqual([
+			{ index: 0, mime_type: "video/mp4" },
+		]);
 	});
 
 	it("defaults an absent pin to the state that cannot reorder a row", () => {

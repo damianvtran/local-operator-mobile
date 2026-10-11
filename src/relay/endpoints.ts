@@ -584,6 +584,36 @@ export class RelayEndpoints {
 		return { bytes: result.bytes, mimeType: result.mimeType };
 	}
 
+	/**
+	 * A video artifact's bytes — the video sibling of `image()`, on the route
+	 * the video phase names for the phone (`GET /api/sessions/{id}/attachment`
+	 * with the shared entry id, the video-block index and `kind=video`;
+	 * surfaces design §3.2: "a digest-keyed attachment route generalizing
+	 * `api_session_image`").
+	 *
+	 * The relay lane that serves this route is the producer side of the video
+	 * phase and may not be deployed yet: an unmounted route answers the edge's
+	 * `404`, which `isRelayMissing` refuses to read as "the bytes are gone"
+	 * unless it is the RELAY's own 404 — the same classification the image
+	 * route's caller applies, so an unreachable host is never painted as a
+	 * missing artifact.
+	 */
+	async video(
+		sessionId: string,
+		entryId: string,
+		index: number,
+	): Promise<ImageBytes> {
+		const result = await this.http.bytes({
+			method: "GET",
+			path: `/api/sessions/${encodeURIComponent(sessionId)}/attachment${query({
+				entry: entryId,
+				i: index,
+				kind: "video",
+			})}`,
+		});
+		return { bytes: result.bytes, mimeType: result.mimeType };
+	}
+
 	/** A subagent's full cached detail, including the transcript and todos the
 	 *  aggregate roster strips. */
 	async agentDetail(
