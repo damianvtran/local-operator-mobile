@@ -162,8 +162,8 @@ required once `android` is enabled.
 
 ## Out of scope of this park (still moving)
 
-- **Radient-side: account deletion and the mobile OAuth `client_id`** — required
-  by both stores eventually, and product work regardless of when submission
-  resumes.
+- **Radient-side: the mobile OAuth `client_id`** — required by both stores
+  eventually, and product work regardless of when submission resumes.
+  Account deletion shipped **2026-10-11** (`checklist.md` A8, D3).
 - The app's feature work: perf first-paint, push + STT + LAN, parity fixes.
 - No store-frame recapture for submission while parked.

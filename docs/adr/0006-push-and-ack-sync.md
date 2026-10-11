@@ -1753,9 +1753,9 @@ already implements the model; the aggregate over it is S. The genuinely hard hal
 want a second reviewer to attack.
 
 **On the blocked operator items.** Two are already recorded: Radient-side **account deletion**
-(checklist A8, a store-submission blocker, `docs/publishing/checklist.md`:33) and the **organisation
-developer accounts** (A2–A4: D-U-N-S, Apple Developer Program as the organisation, Play organisation
-account). **Push adds three more of the same kind:**
+(checklist A8, a store-submission blocker, `docs/publishing/checklist.md`:41 — **RESOLVED 2026-10-11**:
+shipped in Radient) and the **organisation developer accounts** (A2–A4: D-U-N-S, Apple Developer
+Program as the organisation, Play organisation account). **Push adds three more of the same kind:**
 
 - an **APNs key** and an **FCM service account** held by Radient — a new credential dependency whose
   loss breaks a user-visible feature rather than a submission;
