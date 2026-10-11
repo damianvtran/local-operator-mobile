@@ -19,8 +19,24 @@ import { maxColumnWidth, type Viewport } from "@/ui/column";
  * chip that used to sit beside it. The chip has moved into the status strip (D8),
  * so only the chrome above remains — and this module's whole job is to not be the
  * thing that yields to a status chip again.
+ *
+ * **The FIND LEVER is the row's second control now and it is chrome like any
+ * other.** The D8-era arithmetic dropped the chip from the sum, and when the
+ * find lever landed in the same slot its own comment argued an icon "cannot clip
+ * the middle truncation's budget" — measured on the 2026-10-11 full-surface
+ * pass, it can and did: the h1's real box on the web build is
+ * `width − 32 − 44 − 8 − 48 − 8` (the 48 pt `IconButton` the kit renders on
+ * web, and its own 8 pt gap), while the budget still claimed the chip's 127 pt
+ * back. The truncation therefore over-promised by ~50 pt at every phone width
+ * and the platform re-clipped the tail it had just preserved — every phone-sized
+ * session cell in that pass drew TWO ellipses (`Hello from…k prov…` at 390,
+ * `Refactor t…y enve…` at 430): the exact D2 relapse this module exists to
+ * prevent. 48 pt is the widest platform's box (web), so the constant stays
+ * honest for both platforms rather than narrowing it on iOS.
+ *
+ * The samples and the defect: `docs/ux/audits/2026-10-11-full-surface-pass.md`.
  */
-const HEADER_CHROME_PT = 32 + 44 + 8;
+const HEADER_CHROME_PT = 32 + 44 + 8 + 48 + 8;
 
 /**
  * **Calibrated at 100 % text, and the 2× case is a known, deferred residue.**

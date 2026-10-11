@@ -28,14 +28,21 @@ const phone = (width: number) => ({ width, height: 844 });
 const MEASURED_WIDEST_ADVANCE = 14.06;
 
 describe("the header's title budget", () => {
+	/* The chrome, as the module's constant derives it: the 16 pt gutters, the 44 pt
+	 * back control, the row's 8 pt gap — and, since the find lever, the 48 pt
+	 * `IconButton` the web build renders plus its 8 pt gap. Kept here as the sum it
+	 * is rather than read back from the module, for the reason `MEASURED_WIDEST_ADVANCE`
+	 * is: the assertion is that the budget never over-promises the row, and a constant
+	 * read from the code under test cannot fail. */
+	const CHROME = 32 + 44 + 8 + 48 + 8;
 	const available = (width: number, cap: number | null = null) =>
-		Math.min(width, cap ?? width) - 32 - 44 - 8;
+		Math.min(width, cap ?? width) - CHROME;
 
 	it("gives a phone's whole row to the name", () => {
-		// 390 − 32 (gutters) − 44 (back control) − 8 (row gap) = 306 pt available.
-		expect(headerTitleChars(phone(390))).toBe(21);
-		expect(headerTitleChars(phone(430))).toBe(24);
-		expect(headerTitleChars(phone(320))).toBe(16);
+		// 390 − 140 (gutters, back, two gaps, the find lever) = 250 pt available.
+		expect(headerTitleChars(phone(390))).toBe(17);
+		expect(headerTitleChars(phone(430))).toBe(20);
+		expect(headerTitleChars(phone(320))).toBe(12);
 	});
 
 	it("never admits a name wider than the row, at any phone width", () => {
