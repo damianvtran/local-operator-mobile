@@ -74,8 +74,7 @@ checklist: the **bundle ID** and the **app record**.
    request (Apple 2.1(a)). While the entity is being enrolled, the remaining
    Apple-path items in `checklist.md` § A can proceed in parallel: A6 (EU DSA
    trader status), A7 (legal review of the store copy — `store/`, which still
-   carries `DRAFT — not submitted` markers that must be removed), A8 (account
-   deletion, below) and A10.
+   carries `DRAFT — not submitted` markers that must be removed) and A10.
 
 ## Resume checklist — Google Play (organization path)
 
@@ -162,8 +161,8 @@ required once `android` is enabled.
 
 ## Out of scope of this park (still moving)
 
-- **Radient-side: account deletion and the mobile OAuth `client_id`** — required
-  by both stores eventually, and product work regardless of when submission
-  resumes.
+- **Radient-side: the mobile OAuth `client_id`** — required by both stores
+  eventually, and product work regardless of when submission resumes.
+  Account deletion shipped **2026-10-11** (`checklist.md` A8, D3).
 - The app's feature work: perf first-paint, push + STT + LAN, parity fixes.
 - No store-frame recapture for submission while parked.
