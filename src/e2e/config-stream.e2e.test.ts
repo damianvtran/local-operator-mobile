@@ -179,6 +179,48 @@ describe("a daemon that serves the route: baseline, then per-change frames", () 
 		expect(store.getState().supported).toBe(true);
 	});
 
+	it("drops a malformed frame with a warning, and keeps the stream", async () => {
+		const warns: unknown[][] = [];
+		const warn = vi.spyOn(console, "warn").mockImplementation((...args) => {
+			warns.push(args);
+		});
+		try {
+			const { baseUrl, requests } = await serve((_request, response) => {
+				openEventStream(response);
+				response.write(configWire(CONFIG_FRAME.data));
+				/* An empty `language` is not a tag the relay emits; the schema refuses it. */
+				response.write(
+					'event: config\ndata: {"changed_keys":[],"language":""}\n\n',
+				);
+				const timer = setTimeout(() => {
+					response.write(
+						configWire({ changed_keys: ["language"], language: "en" }),
+					);
+				}, RESTART_MS);
+				response.on("close", () => clearTimeout(timer));
+			});
+			const store = createConfigStore();
+			const handle = startConfigStream(clientFor(baseUrl), store, {
+				restartMs: RESTART_MS,
+			});
+			await vi.waitFor(() => expect(store.getState().frameCount).toBe(2), {
+				timeout: 5_000,
+			});
+			handle.stop();
+
+			/* The bad frame was REPORTED, dropped, and the stream carried on: the two
+			 * good frames landed, on the one connection, and the drop is not counted. */
+			expect(
+				warns.some((args) => String(args[0]).includes("[config]")),
+				"the drop is on the log, not silent",
+			).toBe(true);
+			expect(store.getState().language).toBe("en");
+			expect(requests.length).toBe(1);
+		} finally {
+			warn.mockRestore();
+		}
+	});
+
 	it("reopens after a transient failure instead of stopping the loop", async () => {
 		let connects = 0;
 		const { baseUrl, requests } = await serve((_request, response) => {

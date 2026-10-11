@@ -23,6 +23,10 @@
  * what will). That is also why the fatal branch does not touch the connection
  * store — the list stream owns the surfaces, and a second writer would
  * double-paint a refusal the reader has already been shown.
+ *
+ * One habit is borrowed from the sessions stream (its round-1 R1-1): a frame
+ * the schema refuses is DROPPED with a warning — the last good value stays,
+ * and the drop is never silent.
  */
 import { isRelayMissing, type RelayEndpoints, type RelayStream } from "@/relay";
 import type { ConfigStoreApi } from "@/state/config-store";
@@ -55,6 +59,19 @@ export function startConfigStream(
 		if (stopped) return;
 		stream = client.configStream({
 			onFrame: (frame) => {
+				if (frame.kind === "malformed") {
+					/* NOT SILENT — the sessions stream's own round-1 rule
+					 * (`connection-provider.tsx:341-356`): a frame the schema refuses is
+					 * dropped so the last good value stays, but the drop is REPORTED, on the
+					 * log, for whoever is diagnosing a language that stopped moving. No
+					 * stale mark: that mark exists to paint the list's "Last updated" label,
+					 * and nothing renders from this store yet. */
+					console.warn(
+						`[config] an unreadable ${frame.event} frame was dropped; the language keeps its last good value`,
+						frame.error,
+					);
+					return;
+				}
 				if (frame.kind !== "config") return;
 				store.getState().applyFrame(frame.data);
 			},
