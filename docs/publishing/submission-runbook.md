@@ -74,8 +74,7 @@ checklist: the **bundle ID** and the **app record**.
    request (Apple 2.1(a)). While the entity is being enrolled, the remaining
    Apple-path items in `checklist.md` § A can proceed in parallel: A6 (EU DSA
    trader status), A7 (legal review of the store copy — `store/`, which still
-   carries `DRAFT — not submitted` markers that must be removed), A8 (account
-   deletion, below) and A10.
+   carries `DRAFT — not submitted` markers that must be removed) and A10.
 
 ## Resume checklist — Google Play (organization path)
 
