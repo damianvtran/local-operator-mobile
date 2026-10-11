@@ -7,7 +7,9 @@ the checks table ([`../audit-checks.json`](../audit-checks.json)) and the design
 system ([`../../design/README.md`](../../design/README.md),
 [`../../docs/design/brand-kit.md`](../../design/brand-kit.md)).
 
-Two defects this pass measured are fixed here with before/after frames; one
+Two defects this pass measured are fixed here with before/after frames — one of
+them (D1) re-derived once more in round 1 for the stacked header, with its own
+before/after pair; one
 further candidate fix was tried, measured inert and reverted rather than shipped
 unverified (D3); the rest are recorded with
 their frames. The matrix, the frame accounting and the limits of a web-render
@@ -50,7 +52,22 @@ surfaces across the phone widths, and the pane's three states across
 `iphone-se` / `iphone-15` / `iphone-15-landscape` / `tablet-landscape` at
 100/135/200 % — all ready, themes clean, teardown 0, and the unchanged pane
 surfaces **pixel-identical to their before frames** (`AE = 0` below the header
-for every captured pane variant), so the pass's non-fixes move nothing. One
+for every captured pane variant), so the pass's non-fixes move nothing.
+
+**Round-1 remediation re-captures:** 70 cells / 210 frames in three bounded
+runs (iphone-se + iphone-15-landscape at 100/135/200 %; android-compact /
+iphone-15 / iphone-max at 100 %) — the stacked header (`S5/send-delivery`,
+`S5/populated`), the header rows at every phone width, and the pane's loading
+state. The documented first-cell race hit one cell on the first run exactly as
+before (same slot class) and was re-taken with a warm-up first cell; every cell
+ready on the re-take, themes clean, teardown 0. A second bounded re-capture
+(48 cells / 144 frames, warm-up first cell) followed the audit catch in § D1,
+and its audit re-drive — `48 cells, 1176 check rows, 1012 measured, 0 FAIL` —
+supersedes the first slice's six iphone-se rows (`U-07`/`U-04` on the first
+revision of the stacked budget, all cleared here); the first slice's remaining
+FAILs were the recorded D8 class only.
+
+One
 run-shape note: the FIRST cell of a fresh capture process can miss its first
 load against a freshly re-pinned relay (the app paints `authentication required`
 or an empty transcript) — the harness reports it as an unready cell, and the one
@@ -100,15 +117,19 @@ across 158/158 pairs (§ 1).
 
 **Repo gates on this PR:** `biome check`, `tsc --noEmit` (both projects),
 `vitest` — targeted locally, full suite in CI. The design-token gates
-(`contrast-contract.mjs` 1143 assertions, `build-preset --check`) run unmodified
-in CI; this PR does not change tokens.
+(`contrast-contract.mjs` — 1157 assertions, `build-preset --check`) pass in CI;
+no token VALUE changes — the contract gained one row (`skeleton/bar-raised`,
+round 1 § D2) and no existing assertion was relaxed.
 
 ## 3. Findings
 
 Cited frames live in
 `docs/assets/screenshots/audit-2026-10-11/{before,after}/`; a `before/` file is
 the defect as captured on the pre-fix head, the same-named `after/` file is the
-fixed surface re-captured with the same harness, size, theme and scale.
+fixed surface re-captured with the same harness, size, theme and scale. An
+item that is recorded-only carries a `before/` file with no fixed counterpart —
+where the PR does not touch the surface there is nothing to re-capture, and the
+frame is the state on the audit head (D3 and the loading variant below).
 
 ### D1 — the session header double-truncates on every phone — **MAJOR, fixed**
 
@@ -127,23 +148,56 @@ clip on the string it had just preserved:
 gutters, the back control, one gap — a sum written when the D8 round moved the
 old status chip out of the row. The find lever then took that slot, and its own
 comment argued "the icon cannot clip the middle truncation's budget". Measured
-this pass: it can and does. The h1's real box is `width − 32 − 44 − 8 − 48 − 8`
-(the 48 pt `IconButton` the web build renders plus its gap), so the budget
+this pass: it can and does. The h1's real box is `width − 32 − 48 − 8 − 48 − 8`
+(both controls at the 48 pt `IconButton` the web build renders, plus each gap —
+the pass's own U-07 rows measured the box at `width − 144`, so the earlier sum
+counting the back at 44 described a box 4 pt wider than the row has; round 1,
+F1), so the budget
 over-promised by ~50 pt at every width: 21 chars at 390 where ~17 fit, 24 at
 430 where ~20 fit.
 
-**Fix:** `HEADER_CHROME_PT` now counts the find lever (`32 + 44 + 8 + 48 + 8`),
-the comment records the relapse and the measurement, and `header.test.ts` pins
-the re-derived budgets (17 / 20 / 12 at 390 / 430 / 320) against the same
+**Fix:** `HEADER_CHROME_PT` now counts both controls at the web build's 48
+(`32 + 48 + 8 + 48 + 8`), the comment records the relapse and the measurement,
+and `header.test.ts` pins
+the re-derived budgets (17 / 20 single-line at 390 / 430, 15 at 360, 33 at the
+landscape cap) against the same
 measured advance. After frames: `after/d1-header-390-dark.png`,
 `-430-light.png`, `-360-dark.png` — one ellipsis, both ends intact, no clip.
+
+**Round 1 — the stacked header gets its own budget (its QA Q1).** The first
+correction counted the chrome for a row the title does NOT share below 354 pt:
+`Screen` stacks the header there (leading control, then the title on its own
+row — `headerStacks`, `src/ui/size-class.ts`), so budgeting that case with the
+single-line sum over-truncated a name the pre-fix frames rendered whole —
+`Release sweep` became `Releas…sweep` on `iphone-se`, ~110 pt of the 288 pt
+title box unused. `headerTitleChars` now budgets the stacked case from the row
+the title actually has (`width − 32`, the `px-4` gutters alone; no
+`maxColumnWidth` cap binds below the stack floor), bounded by what the title's
+TWO-line clamp can SHOW at the largest scale: a 2× line holds 10 characters at
+`iphone-se`, and word-wrapped prose does not pack break-free — the branch's
+first revision promised the full break-free capacity (20 characters) and the
+remediation's own audit re-drive caught it clipping (`U-07: content 202px in a
+134px box`: `Hello from…provider` wrapped to three lines, the clamp cut the
+tail and drew a second ellipsis in `S5/populated` at 200 %). The budget
+therefore keeps a four-character wrap margin back and lands on 16 — the value
+the pre-fix single-line arithmetic happened to produce at `iphone-se`, and the
+value every se cell of run 2 audited clean at 2×. Before/after:
+`before|after/d1-header-se320-{dark,light}.png` — the pair shows the name whole
+on BOTH heads: round 1 restored the pre-fix rendering (the over-truncated
+intermediate head is QA round 1's own frame), and the stacked budget's forward
+checks are the two-line wrap at 200 % (`after/d1-header-se320-200-dark.png`:
+`Release` / `sweep`), the corrected clip case
+(`after/d1-header-se320-clipcase.png`: `Hello fr…` / `rovider`, one ellipsis,
+tail intact), the clean re-driven audit (below), and the pinned tests.
 
 ### D2 — the drawer's loading skeletons are invisible — **MAJOR, fixed**
 
 `S15/loading` is supposed to show three skeleton bars in place of the session
 rows. In the captured frames the pane is blank between the "Not answering" pill
 and the footer. This is not a missing render: a pixel scan of the bars' own band
-(iphone-15, dark, settled frame — x 0–900, y 640–1898) found **zero
+(iphone-15, dark, settled frame — a band INSIDE the pane, x 0–836, y 640–1898;
+the 837–900 sliver of the original scan is the scrim beyond the drawer's edge,
+round 1 note 2) found **zero
 non-background pixels**, and the token table explains why: the bar's resting
 fill is `elevated` (#322d22) and the drawer's surface is `elevated` (#322d22) —
 the same colour (light theme: #fefdfa on #fefdfa). With reduced motion the
@@ -155,7 +209,9 @@ assumed the canvas ground, and the pane draws on its own raised surface.
 **Fix:** `Skeleton` takes a `ground` prop (`canvas`, the default, or `raised`,
 which swaps the pulse's ends to `sunken` → `canvas`), and the pane's waiting
 rows pass `ground="raised"`. Before/after: `d2-skeleton-390-dark.png`,
-`d2-skeleton-390-light.png`.
+`d2-skeleton-390-light.png`. **Round 1 (its D2):** the kit's records now match
+the component — `components.md` § 19 states both pairs, and the contrast
+contract carries `skeleton/bar-raised` (1157 assertions, still holding).
 
 ### D3 — the drawer's empty state renders a line sliced at the fold on short viewports — **MINOR, recorded**
 
@@ -179,10 +235,36 @@ rendered the identical frame on every variant — pixel diff `AE = 0` below the
 header for iphone-15 portrait, iphone-15-landscape, tablet-landscape and
 iphone-se at 135/200 %. The frames above are therefore `before/`-only.
 
+**Round 1 (its F3):** the re-capture's diff output was print-only, so the
+number above could not be recomputed from what survives; accepted as a process
+note — from this round on the diff output is kept beside the verdict — and
+re-derived here from the retained capture sets so this version is checkable: a
+fixed `-crop 1000x2200+0+300` of each settled pair, compared with
+`magick compare -metric AE`, measures **`AE = 0` on all ten checked pairs**
+(`run1` vs `after-pane`: iphone-15 portrait dark/light,
+iphone-15-landscape dark/light, tablet-landscape dark, `S15/populated`;
+`run2` vs `after-pane`: iphone-se at 100/135/200).
+
 Recorded, with the options a fix actually has — all product judgement, which is
 why this pass does not pick one: copy that shortens for short viewports, a
 cut-edge cue on the pane's list (as the Sheet has), a pinned `New chat`, or
 accepting the scroll.
+
+**The same family, the LOADING variant — recorded with a call (round 1, its
+D1).** At `iphone-15-landscape` × 200 % the waiting rows are clipped away
+entirely: the band between the "Not answering" pill and the footer carries the
+pill, a 3 px sliver and the footer's text — no bar rows — in both themes, and
+an independent re-take is identical (`before/d3-loading-landscape200-dark.png`;
+the pane's layout is untouched by this PR — the D2 fix is colour-only — so
+this frame is the recorded state, not a regression, and carries no `after/`).
+At 100 % the same combination still reads as loading (two bars visible, the
+third 8 % past the fold — QA round 1, note 3). **The call:** the waiting group
+needs a short-pane form — a single-bar compact shape is the option recommended
+to the short-viewport stream this section already defers — because "loading
+reads empty" is the exact symptom § D2 exists to prevent; the other options a
+fix has are the group's min-height (which cannot un-clip a group the pane has
+no room for) or accept-and-record (rejected: the state is the pane's only cue
+that the list is still coming).
 
 ### D4 — sheets are full-bleed on tablets — **MINOR, recorded**
 
@@ -216,7 +298,8 @@ functional today).
 longer available."* while its status badge still reads **loading** — the badge
 falls back to `loading` whenever the fetched detail is `null`, and the body is
 the `missing` branch, so a failed fetch shows both. Frame:
-`d6-subagent-state.png`. This cell is a declared skip in the audit (the build
+`d6-subagent-state.png` — badge and body line in one crop (round 1 re-crop).
+This cell is a declared skip in the audit (the build
 declares no populated marker for it) and the captured condition may be the
 harness's transport rather than a user path; the drill-down flow itself is
 covered by `e2e/maestro/flows/06-subagent-drilldown.yaml` in CI. **Recorded:**
@@ -224,12 +307,16 @@ the proposed one-liner is `label={detail?.status ?? (missing ? "unavailable" :
 "loading")}` in `app/(app)/session/[id]/agent/[jobId].tsx`, for the subagent
 stream to take with its own evidence.
 
-### D7 — the find sheet's title is lowercase while its siblings are title case — **NIT, recorded**
+### D7 — two sheet-title conventions coexist — **NIT, recorded**
 
-`FIND_TITLE = "search"` (`src/features/session/find.ts`) paints a lowercase
-sheet title; the menu, create and milestone sheets title-case theirs ("Pin to
-the top", "New project", "Add milestone"). It may be deliberate tool-voice; if
-not, the copy lane should align it. `d7-find-title.png`.
+`FIND_TITLE = "search"` (`src/features/session/find.ts`) paints a lowercase,
+single-noun sheet title — and `find.ts`'s own comment records that as
+deliberate (the truncation measurement that chose the short title; the sibling
+sheets render exactly that idiom: `model`, `effort`, `commands`), while the
+menu, create and milestone sheets title-case theirs and phrase them as
+sentences ("Pin to the top", "New project", "Add milestone"). Two conventions
+coexist across sheet families; the copy lane should decide once rather than
+align one to the other. `d7-find-title.png`.
 
 ### D8 — the Android 48 dp floor is unmet on the app's rows, strips, nav and dialog controls — **MAJOR, recorded**
 
@@ -324,8 +411,11 @@ report names each one.
 re-driven from the tree that merges: `18 cells, 473 check rows, 384 measured,
 4 FAIL, 89 BLOCKED (47 unmeasurable)`. **Every one of the 4 FAILs is a D8-class
 U-01 row on `android-compact`** (the recorded class, untouched by this pass);
-no fixed surface produced a FAIL on any check — in particular no U-07 clipped
-text on the header cells and no U-01/U-03 rows on the drawer's skeletons. 23
+**no check row of a fixed element failed** — in particular no U-07 clipped
+text on the header cells and no U-01/U-03 rows on the drawer's skeletons. (The
+4 FAILs sit on strip and footer controls of `S5/rich-rows` and `S15/loading`
+— 360×44 and 44×44, the recorded D8 family — not on the fixed elements;
+round 1, its D5.) 23
 rows were `state-not-reproduced` because the re-drive's own first cell hit the
 same first-load race § 1 describes — the flake reproduces on the harness's
 re-drive path, which is why it is described as a run-shape property rather than

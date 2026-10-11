@@ -1,5 +1,6 @@
 import { MIN_HEADER_NAME_CHARS } from "@/features/session/projection";
 import { maxColumnWidth, type Viewport } from "@/ui/column";
+import { HEADER_STACK_WIDTH } from "@/ui/size-class";
 
 /**
  * How many characters of the conversation name the session header can actually
@@ -25,18 +26,36 @@ import { maxColumnWidth, type Viewport } from "@/ui/column";
  * find lever landed in the same slot its own comment argued an icon "cannot clip
  * the middle truncation's budget" — measured on the 2026-10-11 full-surface
  * pass, it can and did: the h1's real box on the web build is
- * `width − 32 − 44 − 8 − 48 − 8` (the 48 pt `IconButton` the kit renders on
- * web, and its own 8 pt gap), while the budget still claimed the chip's 127 pt
- * back. The truncation therefore over-promised by ~50 pt at every phone width
- * and the platform re-clipped the tail it had just preserved — every phone-sized
- * session cell in that pass drew TWO ellipses (`Hello from…k prov…` at 390,
- * `Refactor t…y enve…` at 430): the exact D2 relapse this module exists to
- * prevent. 48 pt is the widest platform's box (web), so the constant stays
- * honest for both platforms rather than narrowing it on iOS.
+ * `width − 32 − 48 − 8 − 48 − 8` (both controls at the web build's 48 pt
+ * `IconButton` size, plus each one's 8 pt gap), while the budget still claimed
+ * the chip's 127 pt back. The truncation therefore over-promised by ~50 pt at
+ * every phone width and the platform re-clipped the tail it had just preserved —
+ * every phone-sized session cell in that pass drew TWO ellipses (`Hello from…k
+ * prov…` and `Refactor t…lay cli…` at 390, `Refactor the…elay cli…` at 430): the
+ * exact D2 relapse this module exists to prevent. 48 pt is the widest platform's
+ * box (web), so the constant stays honest for both platforms rather than
+ * narrowing it on iOS — and the BACK control counts at the same 48, not the 44 an
+ * earlier revision of this sum used: the pass's own U-07 rows measured the h1's
+ * box at `width − 144` at every phone width, so a constant summing to 140 was a
+ * box 4 pt wider than the row has (review round 1, F1). The budgets both sums
+ * produce are pinned in `header.test.ts`.
  *
  * The samples and the defect: `docs/ux/audits/2026-10-11-full-surface-pass.md`.
  */
-const HEADER_CHROME_PT = 32 + 44 + 8 + 48 + 8;
+const HEADER_GUTTERS_PT = 32;
+const HEADER_CHROME_PT = HEADER_GUTTERS_PT + 48 + 8 + 48 + 8;
+
+/**
+ * The wrap margin the stacked case keeps back from the two-line clamp's
+ * break-free capacity — two characters per line.
+ *
+ * Derived from the remediation's own audit catch, not taste: 20 characters (the
+ * full break-free capacity at 2x on `iphone-se`) word-wrapped to three lines
+ * and the clamp cut the tail; 16 characters of the same name (`Hello
+ * fr…rovider`) holds two lines. The margin is stated once, here, so the next
+ * reader can move it with the evidence rather than re-deriving it.
+ */
+const STACKED_WRAP_SLACK = 4;
 
 /**
  * **Calibrated at 100 % text, and the 2× case is a known, deferred residue.**
@@ -102,6 +121,44 @@ export const DISPLAY_ADVANCE_PT = 14.06;
  * computed below it is raised to it rather than to zero.
  */
 export const headerTitleChars = ({ width, height }: Viewport): number => {
+	/* **Below the stack floor the header STACKS, and the title gets its own
+	 * budget — bounded by the two lines it is allowed to draw.** `Screen` stacks
+	 * when `headerStacks` says so (`src/ui/size-class.ts`); the width half of that
+	 * predicate fires below `HEADER_STACK_WIDTH` (354), which is the session
+	 * screen's case — it passes no `stackBelowWidth`. Stacked, the leading control
+	 * sits on its OWN row above the title, so the title no longer shares its line
+	 * with the back control or the find lever, and the single-line chrome sum above
+	 * does not describe it: budgeting that way over-truncated a name the pre-fix
+	 * frames rendered whole (`Release sweep` became `Releas…sweep` on `iphone-se`,
+	 * ~110 pt of the 288 pt title box unused — QA round 1, Q1).
+	 *
+	 * **The first revision of this branch promised the row's FULL break-free
+	 * capacity at 2x (20 characters at `iphone-se`) and the remediation's own audit
+	 * re-drive caught it clipping**: the stacked title clamps at two lines
+	 * (`numberOfLines={2}` — a cap, not a truncation point), a 2x line holds
+	 * `floor((width − 32) / (2·advance))` = 10 characters break-free, and
+	 * word-wrapped prose does not pack break-free — `Hello from…provider` (20
+	 * characters) needed THREE lines at 2x, so the clamp cut its tail and drew a
+	 * second ellipsis (`U-07: content 202px in a 134px box`, `S5/populated`,
+	 * `iphone-se` 200 %). The usable budget is therefore the two clamped lines'
+	 * break-free capacity MINUS a wrap margin of `STACKED_WRAP_SLACK` characters
+	 * (two per line: a boundary can strand that much of a line's capacity before a
+	 * space). At `iphone-se` that lands on the value the matrix's pre-fix strings
+	 * rendered clean at every scale (16 — the pre-fix single-line arithmetic's own
+	 * accident, and every se cell of run 2 audited clean at 2x), while still using
+	 * more of the row than the single-line sum did. The scale half of
+	 * `headerStacks` (> 1.4) deliberately does NOT change the budget: that case
+	 * keeps the single-line arithmetic and the title wraps within its two permitted
+	 * lines — the 2x residue this module documents above. */
+	if (width < HEADER_STACK_WIDTH) {
+		const perLineAtLargestScale = Math.floor(
+			(width - HEADER_GUTTERS_PT) / (DISPLAY_ADVANCE_PT * 2),
+		);
+		return Math.max(
+			MIN_HEADER_NAME_CHARS,
+			perLineAtLargestScale * 2 - STACKED_WRAP_SLACK,
+		);
+	}
 	const row = Math.min(width, maxColumnWidth({ width, height }) ?? width);
 	const available = row - HEADER_CHROME_PT;
 	return Math.max(
