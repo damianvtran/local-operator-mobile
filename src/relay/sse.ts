@@ -189,13 +189,21 @@ export type ProjectionFrame = {
 	kind: "projection";
 	data: Payload<"sessionProjection">;
 };
+/** The relay's resolved language (`GET /api/config/events`, wave-5 slice D).
+ *  Decoded on any stream: the relay's streams are additive by contract, so a
+ *  `config` event appearing on another stream must not be a fatal surprise —
+ *  consumers switch on `kind` and ignore what is not theirs. */
+export type ConfigFrame = {
+	kind: "config";
+	data: Payload<"configFrame">;
+};
 /** A keep-alive comment, or an event name this build does not read. */
 export type IgnorableFrame = {
 	kind: "ignorable";
 	event: string;
 	reason: "keepalive" | "unknown-event";
 };
-/** A frame that claimed one of the two known events and did not match its schema. */
+/** A frame that claimed one of the known events and did not match its schema. */
 export type MalformedFrame = {
 	kind: "malformed";
 	event: string;
@@ -205,26 +213,36 @@ export type MalformedFrame = {
 export type DecodedFrame =
 	| SessionsFrame
 	| ProjectionFrame
+	| ConfigFrame
 	| IgnorableFrame
 	| MalformedFrame;
 
 /**
  * Decodes a framed event into the payload it claims to be.
  *
- * An unknown event name is *ignorable*, not malformed: the relay's streams are
- * additive by contract, and a future third event on the session stream must not
- * tear down a working client. A frame that names a known event and fails its
- * schema IS malformed, and the caller decides — the projection store keeps the
- * last good snapshot and counts the failure rather than blanking the screen.
+ * An event name this build does not know is *ignorable*, not malformed: the
+ * relay's streams are additive by contract, and a future event on any stream
+ * must not tear down a working client. A frame that names a known event
+ * (`sessions`, `projection`, `config`) and fails its schema IS malformed, and
+ * the caller decides — the projection store keeps the last good snapshot and
+ * counts the failure rather than blanking the screen.
  */
 export function decodeFrame(frame: SseFrame): DecodedFrame {
 	if (frame.event === "")
 		return { kind: "ignorable", event: "", reason: "keepalive" };
-	if (frame.event !== "sessions" && frame.event !== "projection") {
+	if (
+		frame.event !== "sessions" &&
+		frame.event !== "projection" &&
+		frame.event !== "config"
+	) {
 		return { kind: "ignorable", event: frame.event, reason: "unknown-event" };
 	}
 	const schema: SchemaName =
-		frame.event === "sessions" ? "sessionListFrame" : "sessionProjection";
+		frame.event === "sessions"
+			? "sessionListFrame"
+			: frame.event === "projection"
+				? "sessionProjection"
+				: "configFrame";
 	const result = safeParseJsonPayload(schema, frame.data);
 	if (!result.ok) {
 		/* The event name is retained so a caller can say which stream misbehaved
@@ -240,9 +258,17 @@ export function decodeFrame(frame: SseFrame): DecodedFrame {
 	 * over every registered schema, and the event name selected which schema ran,
 	 * which the compiler cannot correlate with the result. The data was validated by
 	 * that schema a line above, so the cast only names what zod already proved. */
-	return frame.event === "sessions"
-		? { kind: "sessions", data: result.data as Payload<"sessionListFrame"> }
-		: { kind: "projection", data: result.data as Payload<"sessionProjection"> };
+	if (frame.event === "sessions")
+		return {
+			kind: "sessions",
+			data: result.data as Payload<"sessionListFrame">,
+		};
+	if (frame.event === "projection")
+		return {
+			kind: "projection",
+			data: result.data as Payload<"sessionProjection">,
+		};
+	return { kind: "config", data: result.data as Payload<"configFrame"> };
 }
 
 /* ---------------------------------------------------------- the version fence */

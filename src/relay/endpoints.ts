@@ -1027,6 +1027,18 @@ export class RelayEndpoints {
 		);
 	}
 
+	/** `GET /api/config/events`: the relay's RESOLVED language, live (wave-5
+	 *  slice D). The stream opens with the current value as its baseline frame
+	 *  (`changed_keys: []`, never a replay) and then publishes one frame per real
+	 *  change. An older relay that does not serve this route answers `404` —
+	 *  callers read that as the stream being ABSENT rather than broken; the rule
+	 *  lives in `src/features/auth/config-stream.ts`. */
+	configStream(
+		options: Omit<SseConnectionOptions, "open"> & { signal?: AbortSignal },
+	): RelayStream {
+		return this.stream("/api/config/events", options);
+	}
+
 	private stream(
 		path: string,
 		options: Omit<SseConnectionOptions, "open"> & { signal?: AbortSignal },

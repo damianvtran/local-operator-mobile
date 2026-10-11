@@ -1,0 +1,13 @@
+{
+  "provenance": {
+    "kind": "synthetic",
+    "relay_ref": "local-operator 94b8c6eb2",
+    "modelled_on": "`local_operator/i18n/frames.py::config_frame_payload` at 94b8c6eb2a (PR #2218) — the one shared builder the desktop feed and `GET /api/config/events` both publish through — and the route's own tests (`tests/unit/mobile/test_config_events.py`, same ref), which pin the connect-time baseline frame to `config_frame_payload((), \"en\")`: the current resolved language with `changed_keys: []` and no historical replay",
+    "why": "the route is not on `main` yet (PR #2218, open at writing), so no live capture can exist; the payload's values are fixed by the builder's contract test, and this sample carries them as wire bytes so the client's decode and store are exercised against the real payload shape"
+  },
+  "event": "config",
+  "data": {
+    "changed_keys": [],
+    "language": "en"
+  }
+}
