@@ -6,7 +6,7 @@ lists the documentation sections.
 
 | Path | What it holds | Status |
 | --- | --- | --- |
-| `docs/adr/` | Architecture decision records: the app toolchain, connection and authentication, the e2e and audit harness, the CI/CD pipeline, queued asks, and push notifications. | 0001–0006 written |
+| `docs/adr/` | Architecture decision records: the app toolchain, connection and authentication, the e2e and audit harness, the CI/CD pipeline, queued asks, push notifications, and one source of truth for the brand theme. | 0001–0007 written |
 | `docs/relay/` | How the app talks to the Local Operator mobile relay and the Radient tunnel: auth, streaming, reconnects. | in progress |
 | `docs/e2e/` | The mock relay, the frame harness and the audit checker, and what each one can prove. | written |
 | `docs/ux/` | UX research, the target flows, principles, and the audit rubric the frames are scored against. | written |
