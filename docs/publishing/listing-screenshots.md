@@ -64,7 +64,7 @@ choice, and is not what these files were rendered from.
 | Rendered dir | Template | Canvas | App slot | Caption band |
 | --- | --- | --- | --- | --- |
 | `appstore-iphone-6.9/` | `iphone-6.9.html` | 1320 × 2868 | 1000 × 2172, radius 88 | top, 380 px (13.2 %) |
-| `appstore-ipad-13/` | `ipad-13.html` | 2064 × 2752 | 1400 × 1867, radius 110 | top, 470 px (≈16 %) |
+| `appstore-ipad-13/` | `ipad-13.html` | 2064 × 2752 | 1400 × 1867, radius 110 | top, 470 px (17.1 %) |
 | `play-phone/` | `play-phone.html` | 1080 × 1920 | 1080 × 1700, full-bleed | bottom, 220 px (11.5 %) |
 
 - The App Store frames **inset** the app so the caption never stacks on a
@@ -81,12 +81,13 @@ choice, and is not what these files were rendered from.
 ## How the final assets get made
 
 The flow the current files were made with — repeat it on the frozen
-pre-submission build:
+pre-submission build (step 1 is provisional until the capture-method item under
+"Open at resume" is decided):
 
 1. **Capture** from the app's web export on current `main`, driven in installed
-   headless Chrome against the mock relay (`tools/mock-relay/`), one run per
-   device class: `--devices iphone-max,tablet-pro,android-small --themes dark
-   --scales 100`.
+   headless Chrome against the mock relay (`tools/mock-relay/`), one run covering
+   the three device classes: `--devices iphone-max,tablet-pro,android-small
+   --themes dark --scales 100`.
 2. **Drop each capture into its template's slot** — keep the slot shell (radius
    and clip) and replace its contents; the eyebrow and headline keep their band.
 3. **Render** with `node design/preview/capture.mjs --target frames`, which
@@ -96,12 +97,16 @@ pre-submission build:
    every frame once — a size check is not visual evidence.
 
 The 26 rendered files (`appstore-iphone-6.9/` ×9, `appstore-ipad-13/` ×9,
-`play-phone/` ×8), the raw captures and `MANIFEST.sha256` live in the parity
-lane's `store-shots` worktree under `design/store-screenshots/out/` (gitignored
-by design) and its scratchpad mirror. They were rendered off the `02da0334`
-tree; main has since moved on, and the pre-upload content pass (13 of 26 frames
-carry harness-world text) is the standing gate before submission —
-`submission-runbook.md`, "Store assets — produced, parked with the work".
+`play-phone/` ×8), the raw captures and `MANIFEST.sha256` survive in the parity
+lane's scratchpad mirror —
+`~/.local-operator/sessions/0fb6ba9da093/scratchpad/appcaps/deliverable/`, its
+`MANIFEST.sha256` re-verified 26/26 (the lane's report and compose pipeline sit
+one level up in `appcaps/`) — after the `store-shots` worktree that rendered
+them (`design/store-screenshots/out/`, gitignored by design) was pruned.
+They were rendered off the `02da0334` tree; main has since moved on, and the
+pre-upload content pass (13 of 26 frames carry harness-world text) is the
+standing gate before submission — `submission-runbook.md`, "Store assets —
+produced, parked with the work".
 
 ## Related captures: the README screenshots are not this set
 

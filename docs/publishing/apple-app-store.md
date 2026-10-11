@@ -409,7 +409,7 @@ attaches to Bonjour browsing or advertising, the app has no discovery, and a
 discovery feature is a different review conversation.
 
 The microphone path (STT) ships `NSMicrophoneUsageDescription` in the same
-block; the sentence is shared with `expo-image-picker`'s `microphonePermission`
+block; the string is shared with `expo-image-picker`'s `microphonePermission`
 option so the plugin cannot replace it, and the alert appears at the mic press,
 never at launch. § 4.1 carries the label treatment.
 
