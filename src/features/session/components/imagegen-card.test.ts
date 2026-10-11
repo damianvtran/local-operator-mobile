@@ -239,6 +239,14 @@ describe("the generating body's gate (the F3 guard)", () => {
 		expect((SOURCE.match(/<IndeterminateTrack/g) ?? []).length).toBe(1);
 		expect((SOURCE.match(/Animated\.loop\(/g) ?? []).length).toBe(1);
 		expect((SOURCE.match(/<DeterminateTrack/g) ?? []).length).toBe(1);
+		/* And the loop's driver is platform-split (design round 1, D1): this
+		 * bundle has no native animated module, and RNW's fallback from `true`
+		 * marks the value native while running the animation in JS, so the
+		 * loop's per-iteration reset never lands — the segment runs one pass and
+		 * parks (measured: `matrix(1,0,0,1,316,0)` static across 3.6 s). A
+		 * revert to the unconditional `true` re-breaks every web capture, so the
+		 * split is pinned by name rather than left to a comment. */
+		expect(SOURCE).toContain('useNativeDriver: Platform.OS !== "web"');
 	});
 
 	it("keeps the cancel gate on the unsettled phases, queued included", () => {

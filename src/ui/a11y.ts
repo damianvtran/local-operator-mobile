@@ -626,6 +626,11 @@ export const SURFACE = {
 	videoPlayer: "video-player",
 	videoPlayerLoading: "video-player-loading",
 	videoPlayerMissing: "video-player-missing",
+	/** The bytes arrived but cannot be decoded (UX round 1, U3). It renders the
+	 *  SAME sentence as `videoPlayerMissing` — one copy for the readings the
+	 *  reader cannot act on differently — but keeps its own id so a probe can
+	 *  tell which reading it measured. */
+	videoPlayerUnplayable: "video-player-unplayable",
 
 	/* The three surfaces whose components carry a DEFAULT identifier rather than
 	 * taking one from a caller: a literal default is a second spelling of an id the

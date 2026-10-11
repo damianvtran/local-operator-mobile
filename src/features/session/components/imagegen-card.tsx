@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Animated, Easing, Text, View } from "react-native";
+import { Animated, Easing, Platform, Text, View } from "react-native";
 import { TranscriptImage } from "@/features/session/components/transcript-image";
 import { TranscriptVideo } from "@/features/session/components/transcript-video";
 import type { ImageGenView } from "@/features/session/imagegen";
@@ -98,9 +98,10 @@ const LOG_TAIL_LINES = 2;
  * The indeterminate progress: a segment sweeping the track, left to right.
  *
  * The segment moves by `translateX` (a transform) rather than `left` (a layout
- * property), which is what lets the whole loop take the kit's canonical native
- * shape (`motion.native.coreAnimated`, `tokens.json`: `Animated.timing(value,
- * { …, useNativeDriver: true })`). That needs the track's width in points —
+ * property), which is what lets the loop take the kit's canonical native shape
+ * (`motion.native.coreAnimated`, `tokens.json`: `Animated.timing(value,
+ * { …, useNativeDriver: true })`) on the platforms that have the native driver.
+ * That needs the track's width in points —
  * measured once through `onLayout` in the parent — so the sweep HOLDS at its
  * start until the width is real rather than animating against a guess (design
  * round 1, D5).
@@ -132,9 +133,18 @@ const IndeterminateTrack = ({ trackWidth }: { trackWidth: number }) => {
 				// `motion.looping.loadbar`'s own curve, through the one adapter
 				// (`motion.ts`): the segment eases in and out of each pass.
 				easing: Easing.bezier(...parseCubicBezier(EASINGS["in-out"])),
-				// The kit's canonical native shape — the animated property is a
-				// transform now, so the driver is the native one.
-				useNativeDriver: true,
+				/* The kit's canonical native shape — the animated property is a
+				 * transform, so NATIVE takes the native driver. WEB may not: this
+				 * bundle has no native animated module, and RNW's fallback from
+				 * `true` marks the value native while running the animation in JS,
+				 * so `Animated.loop`'s per-iteration reset never reaches the value —
+				 * the segment runs ONE pass and parks fully off-track (measured,
+				 * design round 1 D1: `matrix(1,0,0,1,316,0)` static across 3.6 s on
+				 * both of the fixture's indeterminate tracks; RNW's own console
+				 * warning names the fallback). The explicit JS driver on web is the
+				 * driver RNW was falling back TO, asked for so the loop actually
+				 * repeats. */
+				useNativeDriver: Platform.OS !== "web",
 			}),
 		);
 		loop.start();

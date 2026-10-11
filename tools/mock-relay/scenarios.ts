@@ -1461,7 +1461,9 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 	 * fetch), never a stand-in. Its bytes come from the mock's `/attachment`
 	 * route, which serves ONLY rows carrying a reference — which is why
 	 * `tc-vid-missing` carries none and its player cell reads "Video no longer
-	 * available." (design §4, V7).
+	 * available." (design §4, V7). `tc-vid-broken` carries a reference whose
+	 * bytes are 2 KB of non-media (see `UNDECODABLE_MEDIA`): the fetch succeeds
+	 * and the player cannot decode it — the third reading (UX round 1, U3).
 	 *
 	 * Ad-hoc cells (no `shows`), same as the imagegen scenario this mirrors:
 	 *
@@ -1472,6 +1474,8 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 	 *                                                 the player, a mounted <video>
 	 *   path:/session/{sessionId}/video?entry=tc-vid-missing&i=0/player-missing
 	 *                                                 the missing-bytes reading
+	 *   path:/session/{sessionId}/video?entry=tc-vid-broken&i=0/player-broken
+	 *                                                 the undecodable reading
 	 */
 	add(
 		"video-progress",
@@ -1569,6 +1573,16 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 						tool_state: "done",
 						summary: "a 6s cut, 16:9",
 						elapsed_s: 121.0,
+					}),
+					videoRow("vid-broken", {
+						/* The artifact's bytes are corrupt: the fetch SUCCEEDS and the
+						 * player cannot decode it (the route serves 2 KB of non-media
+						 * for this row — `UNDECODABLE_MEDIA`). The reading UX round 1
+						 * U3's fix renders a message for. */
+						tool_state: "done",
+						summary: "a corrupt cut, 16:9",
+						elapsed_s: 36.4,
+						videos: [{ index: 0, mime_type: "video/mp4" }],
 					}),
 					videoRow("vid-failed", {
 						tool_state: "failed",
