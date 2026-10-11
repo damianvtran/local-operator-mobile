@@ -24,6 +24,15 @@ rather than from prose.
 > 2026-09-30) — so those citations are written against `5e59e0cd06` and are
 > qualified as such, rather than silently re-numbered in a table whose other rows
 > still mean the pinned ref.
+>
+> **Two later additions, same rule.** §9's banner was refreshed to its shipped
+> status and §10 (the config stream) is written against local-operator **PR #2218
+> as merged — `e5b3176447fa` (2026-10-11)**. §10 was first written against the
+> branch head (`94b8c6eb2a`) and re-resolved to the merge commit once it landed,
+> the same discipline as this document's own relocation note. §9's status line
+> names `ca0569855` (2026-10-03), the ref where the asks route landed, and
+> `v0.66.2`, the first release carrying it. Both are qualified inline rather
+> than re-numbered.
 
 Paths are relative to the local-operator repository root:
 `local_operator/mobile/daemon.py` → `daemon.py`; `local_operator/mobile/web/src/api.ts`
@@ -154,6 +163,8 @@ The routes that *do* set cache headers are the SSE streams
 | GET | `/api/schedules` | gate | the armed index, `daemon.py:5376-5398` (at `5e59e0cd06`) |
 | POST | `/api/sessions/{id}/transfer` | gate | the mesh move — body `{to, keep?, wait_s?, request_id?}`, §4.13 (#2083, `f5071030df`) |
 | GET | `/api/sessions/{id}/checkpoints` | gate | the rail manifest (D9), `daemon.py:4870-4911` (at `ae6c9eb6`) |
+| GET | `/api/asks` | gate | the queued-ask aggregate (§9), `daemon.py:5630` (`ca0569855`; first released in `v0.66.2`) |
+| GET | `/api/config/events` | gate | SSE, the resolved language (§10), `daemon.py:7250` (`e5b3176447fa`, PR #2218, merged 2026-10-11) |
 
 There is **no `GET /api/sessions/{id}`** — a single session's state arrives only
 over its SSE stream or as a row of `/api/sessions`. A client that wants
@@ -1376,14 +1387,19 @@ The canonical list a test matrix should cover, each with how it is reached:
 
 ---
 
-## 9. Queued asks (pending core land — target state, not shipped)
+## 9. Queued asks (shipped — key on field presence)
 
-> **This section is not the relay today.** Everything below is the frozen target
-> contract from the Local Operator repository's design note
-> (`docs/design/ask-nonblocking.md` §4), committed with the core's first
-> implementation pull request. Nothing here is on `fc851a94e` or on any relay a
-> client can reach now. Do not build against it without checking that the relay in
-> front of you publishes `asks`. The decisions for the native app are in
+> **Status changed: the wire has SHIPPED.** This section was the frozen target
+> when written (`fc851a94e`, 2026-09-30); the queued-ask wire then landed and
+> released. Spot-verified against later refs: `Route("/api/asks", api_asks)` at
+> `daemon.py:5630` (`ca0569855`, 2026-10-03 — first released in `v0.66.2`),
+> present at `v0.68.28` and `origin/main`; the projection side is the runtime's
+> ask fold (`projection.py` `set_asks`, fed by `session/runtime/serving.py`).
+> The capability rule stands and is still what a client keys on: check that the
+> relay in front of you publishes `asks` — an older relay omits the field exactly
+> as a switched-off core does. The table's citations are the PINNED ref's and
+> are not re-audited here; the `withdrawn` row already carries its own later
+> ref. The decisions for the native app are in
 > [`../adr/0005-queued-asks.md`](../adr/0005-queued-asks.md); the wire itself is
 > defined by the core and **never** here.
 
@@ -1416,3 +1432,50 @@ Two client-facing facts that are easy to get wrong:
   `asks_open` is the separate count a badge may use.
 
 ---
+
+## 10. The config stream — the relay's resolved language, live
+
+> **Arrived after the pin, and carries its own ref.** `GET /api/config/events`
+> and the frames below are at local-operator **`e5b3176447fa` (PR #2218, merged
+> 2026-10-11)** — first written against the branch head (`94b8c6eb2a`) and
+> re-resolved to the merge commit once it landed, the same re-pin discipline
+> this document's own relocation note records. The frame SHAPE already ships:
+> it is the same `config` frame the desktop feed publishes (wave 4), and both
+> surfaces build it through ONE shared builder
+> (`local_operator/i18n/frames.py::config_frame_payload`), pinned mechanically by
+> `tests/unit/test_i18n_config_frame_contract.py`. Re-check citations with
+> `git -C <local-operator> show e5b3176447fa:<path>`.
+
+**Route.** `GET /api/config/events` (`daemon.py:7250`) — cookie-gated like every `/api` sibling
+(a request without the session cookie gets the standard `401`), body
+`text/event-stream`.
+
+**Frames.** `event: config` with one JSON payload per frame — the shared
+builder's output, field-for-field:
+
+| Field | Meaning |
+| --- | --- |
+| `changed_keys` | The sorted flat registry-key spellings that actually moved (`["language"]`, `["display.dock", "language"]`, …). Advisory: a frame is current-value either way. `[]` on the baseline frame. |
+| `language` | The RESOLVED locale tag. Never the raw setting — `auto` is resolved before it is sent, and a configured tag whose locale is not shipped resolves to `en` today. The same value `GET /v1/capabilities` answers. |
+
+**Discipline.** The FIRST frame on every connection is the BASELINE: the current
+resolved language with `changed_keys: []` — nothing historical is ever announced
+(the desktop feed's no-replay rule, on an SSE leg). Real changes after that
+publish one frame each, fanned out from the process `config_watch` watcher the
+daemon already runs for display-following: the first subscriber attaches the
+fan-out, the last detaches it, and the watcher itself stays (boot owns it). A
+frame is current truth; there is no version and nothing to replay.
+
+**Absence.** An older daemon without the route answers `404`; a client treats
+that as the stream being **absent** — not a failure, and never a retry loop
+(the relay web's client probes once and never subscribes; a client that can
+read the open status directly — this app's `http.ts::open` throws the classified
+non-2xx before the stream loop — only has to not retry it). Only the relay's own
+`404` means absence: an edge/gateway `404` ("this hostname is not a tunnel",
+`unknown-tunnel`) is a dead tunnel and proves nothing about the route.
+
+The native app's reading: schema `configFrame`, decoded as `kind: "config"`
+(`src/relay/sse.ts`); endpoint `configStream()` (`src/relay/endpoints.ts`);
+subscription `src/features/auth/config-stream.ts`; store
+`src/state/config-store.ts` (`supported: false` = absent, terminal for the
+route). Sample: `fixtures/relay/synthetic/sse-config-frame.json`.

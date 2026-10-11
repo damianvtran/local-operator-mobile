@@ -40,6 +40,7 @@ import type {
 	CommandAck,
 	CommandsResponse,
 	CompletionAttention,
+	ConfigFramePayload,
 	Directories,
 	HealthzResponse,
 	HistoryResponse,
@@ -1252,10 +1253,12 @@ export const commandOpSchema = z.discriminatedUnion("op", [
 
 /* --------------------------------------------------------------------- SSE */
 
-/** `GET /api/sessions/events` and `GET /api/sessions/{id}/events` are the only
- *  two streams, and both are snapshot-based. The event name is part of the
- *  framing contract, so it is validated rather than ignored. */
-export const sseEventNameSchema = z.enum(["sessions", "projection"]);
+/** The `event:` names the relay's streams carry: `sessions` and `projection`
+ *  ride `/api/sessions/events` and `/api/sessions/{id}/events`, and `config`
+ *  rides `/api/config/events` (wave-5 slice D, local-operator #2218). The event
+ *  name is part of the framing contract, so it is validated rather than
+ *  ignored. */
+export const sseEventNameSchema = z.enum(["sessions", "projection", "config"]);
 
 export const sessionsStreamFrameSchema = z.looseObject({
 	event: z.literal("sessions"),
@@ -1265,6 +1268,34 @@ export const sessionsStreamFrameSchema = z.looseObject({
 export const projectionStreamFrameSchema = z.looseObject({
 	event: z.literal("projection"),
 	data: sessionProjectionSchema,
+});
+
+/** `GET /api/config/events` (wave-5 slice D): one `config` frame's payload —
+ *  the relay's RESOLVED language, live.
+ *
+ *  The shape is not relay-web-only: the desktop feed publishes the same frame,
+ *  built by ONE shared builder on the core side
+ *  (`local_operator/i18n/frames.py::config_frame_payload`, local-operator
+ *  #2218 — pinned mechanically there by
+ *  `tests/unit/test_i18n_config_frame_contract.py`), so this schema is the
+ *  client's single reading of both surfaces. */
+export const configFrameSchema = z.looseObject({
+	/** The sorted flat registry-key spellings that actually moved (`["language"]`,
+	 *  `["display.dock", "language"]`, …). Advisory; `[]` on the connect-time
+	 *  baseline. */
+	changed_keys: z.array(z.string()),
+	/** The RESOLVED locale tag — never the raw setting (`auto` is resolved before
+	 *  it is sent; a configured tag whose locale is not shipped resolves to `en`
+	 *  today). The same value `GET /v1/capabilities` answers. Non-empty by
+	 *  schema: a blank tag is not a language, and `language: ""` must not reach
+	 *  the store as one. */
+	language: nonEmpty,
+});
+
+/** The `config` stream's envelope, mirroring the two session streams'. */
+export const configStreamFrameSchema = z.looseObject({
+	event: z.literal("config"),
+	data: configFrameSchema,
 });
 
 /* ----------------------------------------------------- gateway / edge errors */
@@ -1368,6 +1399,9 @@ export const SCHEMAS = {
 	resumeSession: resumeSessionResponseSchema,
 	sessionsStreamFrame: sessionsStreamFrameSchema,
 	projectionStreamFrame: projectionStreamFrameSchema,
+	/** `GET /api/config/events`: one `config` frame's payload, and its envelope. */
+	configFrame: configFrameSchema,
+	configStreamFrame: configStreamFrameSchema,
 	gatewayRefusal: gatewayRefusalSchema,
 } as const;
 
@@ -1427,12 +1461,13 @@ export type Payload<K extends SchemaName> = z.output<SchemaRegistry[K]>;
  *  (`docs/architecture.md` item 2). An `unknown` field is the case that
  *  correctly fails.
  *
- *  The assertion covers the schemas keyed in `WireMirror` — 22 of the 30 in
- *  `SCHEMAS`; the eight named in `UnassertedSchema` (`commandOp`,
- *  `gatewayRefusal`, `modelEntry`, `projectionStreamFrame`, `resumeSession`,
- *  `sessionsStreamFrame`, `startSession`, `subagentRow`) are request bodies,
- *  stream frames and element shapes outside the assertion; five already have a
- *  mirror type, so the gap is coverage rather than a missing declaration.
+ *  The assertion covers the schemas keyed in `WireMirror` — 23 of the 32 in
+ *  `SCHEMAS`; the nine named in `UnassertedSchema` (`commandOp`,
+ *  `configStreamFrame`, `gatewayRefusal`, `modelEntry`, `projectionStreamFrame`,
+ *  `resumeSession`, `sessionsStreamFrame`, `startSession`, `subagentRow`) are
+ *  request bodies, stream frames and element shapes outside the assertion; five
+ *  already have a mirror type, so the gap is coverage rather than a missing
+ *  declaration.
  *  `CoverageComplete` requires every `SCHEMAS` name to be covered or excused;
  *  what that does and does not promise is stated at the head of this section.
  *
@@ -1459,6 +1494,11 @@ type WireMirror = {
 	healthz: HealthzResponse;
 	sessionListFrame: SessionListFrame;
 	sessionSummary: SessionSummary;
+	/* The config stream's payload (`GET /api/config/events`, wave-5 slice D,
+	 *  local-operator #2218): asserted like every read family around it — a field
+	 *  that stops being assignable reds `WireConformance` before a phone reads a
+	 *  language the daemon no longer sends. */
+	configFrame: ConfigFramePayload;
 	transferReceipt: TransferReceipt;
 	sessionProjection: SessionProjection;
 	pastSessions: PastSessionsResponse;
@@ -1510,6 +1550,7 @@ type WireMirror = {
  *  the limit stated at the head of this section. */
 type UnassertedSchema =
 	| "commandOp"
+	| "configStreamFrame"
 	| "gatewayRefusal"
 	| "modelEntry"
 	| "projectionStreamFrame"
@@ -1518,7 +1559,7 @@ type UnassertedSchema =
 	| "startSession"
 	| "subagentRow";
 
-/** The same eight names, restated as a literal. `UnassertedSchema` is consulted
+/** The same nine names, restated as a literal. `UnassertedSchema` is consulted
  *  only as a union, so redefining it absorbs every schema added to `SCHEMAS`:
  *  `type UnassertedSchema = string` and `= SchemaName` both excuse anything, and
  *  `= Exclude<SchemaName, keyof WireMirror>` is the shape a loosening would
@@ -1530,6 +1571,7 @@ type UnassertedSchema =
  *  either statement fails the binding while an edit to both compiles. */
 type UnassertedSchemaPinned =
 	| "commandOp"
+	| "configStreamFrame"
 	| "gatewayRefusal"
 	| "modelEntry"
 	| "projectionStreamFrame"
@@ -1542,7 +1584,7 @@ type UnassertedSchemaPinned =
  *  Both directions, because `Exclude<A, B> extends never` is A ⊆ B — a subset,
  *  not an equality: the one-way form accepts a name added only to
  *  `UnassertedSchemaPinned`, leaving the two lists disagreeing about what the
- *  eight are with the build still green. A list widened to `string`, to
+ *  nine are with the build still green. A list widened to `string`, to
  *  `SchemaName`, or to the mirror's complement fails here instead. */
 type ExcusesEnumerated = [
 	Exclude<UnassertedSchema, UnassertedSchemaPinned>,
@@ -1609,7 +1651,7 @@ type CoverageGapRestated = Exclude<
 >;
 
 /** `true` only while both computations of the gap are empty: every `SCHEMAS` key
- *  is asserted in `WireMirror` or named in the enumerated eight. */
+ *  is asserted in `WireMirror` or named in the enumerated nine. */
 type CoverageComplete = [CoverageGap, CoverageGapRestated] extends [
 	never,
 	never,
@@ -1642,6 +1684,7 @@ export type {
 	CommandAck,
 	CommandsResponse,
 	CompletionAttention,
+	ConfigFramePayload,
 	Directories,
 	HealthzResponse,
 	HistoryResponse,

@@ -46,6 +46,10 @@ const PROJECTION_FRAME = loadFixture("sse/sse-projection-live-idle.json") as {
 	event: string;
 	data: unknown;
 };
+const CONFIG_FRAME = loadFixture("synthetic/sse-config-frame.json") as {
+	event: string;
+	data: unknown;
+};
 /* The keep-alive sample is JSON with its bytes in a `literal` field, because the
  * corpus requires a `provenance` marker on every file and `: keepalive\n\n` has
  * nowhere to carry one. It is still the captured string, fed to the parser as-is
@@ -228,6 +232,26 @@ describe("a frame becomes a typed value, or a survivable failure", () => {
 		if (decoded.kind !== "projection") return;
 		expect(decoded.data.session_id).toBe("6714def86197");
 		expect(decoded.data.version).toBeGreaterThan(0);
+	});
+
+	it("decodes the config frame — the resolved language (wave-5 slice D)", () => {
+		const [frame] = readAll(new SseFrameReader(), [
+			bytes(wire(CONFIG_FRAME.event, CONFIG_FRAME.data)),
+		]);
+		const decoded = decodeFrame(frame!);
+		expect(decoded.kind).toBe("config");
+		if (decoded.kind !== "config") return;
+		expect(decoded.data.language).toBe("en");
+		expect(decoded.data.changed_keys).toEqual([]);
+	});
+
+	it("refuses a config frame whose language is empty, without throwing", () => {
+		/* `language: ""` is not a tag the relay emits — the resolver always
+		 * answers a locale — and a blank must not reach the store as one. */
+		const [frame] = readAll(new SseFrameReader(), [
+			bytes('event: config\ndata: {"changed_keys":[],"language":""}\n\n'),
+		]);
+		expect(decodeFrame(frame!).kind).toBe("malformed");
 	});
 
 	it("decodes a frame whose payload the schema rejects WITHOUT throwing", () => {

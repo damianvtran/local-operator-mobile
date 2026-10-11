@@ -3,7 +3,10 @@
  *
  * Source of truth: `local_operator/mobile/{types,daemon,projection}.py` in
  * `damianvtran/local-operator`, which serialises its dataclasses with `asdict`
- * (so every declared field is present in a frame this build emits). Seeded from
+ * (so every declared field is present in a frame this build emits), plus one
+ * declaration that is not a dataclass: `ConfigFramePayload` comes from the
+ * core's shared builder `local_operator/i18n/frames.py` (local-operator #2218),
+ * declared here so the config stream keeps its mirror check. Seeded from
  * `docs/relay/types.ts`, which is the annotated reading of the same wire and
  * carries the `file:line` citations; this file is the field-for-field mirror the
  * runtime schemas are checked against.
@@ -592,6 +595,28 @@ export interface UnreadBlock {
 	revision: [number, number, number];
 	/** The daemon's own marker for "could not be read" (`["attention"]`). */
 	degraded: string[];
+}
+
+/* --------------------------------------------- the config stream (slice D) */
+
+/**
+ * `GET /api/config/events` — one `config` frame's payload (wave-5 slice D,
+ * merged at `e5b3176447fa`, PR #2218). The same frame the desktop feed
+ * publishes; both surfaces build it through one shared builder
+ * (`local_operator/i18n/frames.py::config_frame_payload`), so a field renamed
+ * for one must be renamed for the other in the same edit — which is what this
+ * declaration and its schema keep honest.
+ *
+ * `changed_keys` names the flat registry-key spellings that actually moved,
+ * sorted by the builder (`[]` on the connect-time baseline — nothing
+ * historical is ever announced); `language` is the RESOLVED locale tag, never
+ * the raw setting (`auto` is resolved before it is sent; an unshipped
+ * configured tag resolves to `en` today) — the same value
+ * `GET /v1/capabilities` answers.
+ */
+export interface ConfigFramePayload {
+	changed_keys: string[];
+	language: string;
 }
 
 /* ------------------------------------------------------------- side payloads */

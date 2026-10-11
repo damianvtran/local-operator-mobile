@@ -81,18 +81,20 @@ import {
 	type RelayStream,
 	type StreamStatus,
 } from "@/relay";
+import { createConfigStore } from "@/state/config-store";
 import {
 	type ConnectionSnapshot,
 	createConnectionStore,
 } from "@/state/connection-store";
 import { createListStore, type ListSnapshot } from "@/state/list-store";
+import { type ConfigStreamHandle, startConfigStream } from "./config-stream";
 import { adoptableSession, carryOutRestore } from "./radient-restore";
 
 import { beginRadientSignIn, type SignInState } from "./radient-sign-in";
 import { type RefusalView, refusalFromError } from "./refusal";
 
 /**
- * The two stores, as process-wide singletons.
+ * The three stores, as process-wide singletons.
  *
  * Built here rather than inside the provider so a hook can read them without a
  * second context, and so a test can build its own instance from the exported
@@ -101,6 +103,7 @@ import { type RefusalView, refusalFromError } from "./refusal";
  */
 export const connectionStore = createConnectionStore();
 export const listStore = createListStore();
+export const configStore = createConfigStore();
 
 export const useConnectionState = <T,>(
 	selector: (state: ConnectionSnapshot) => T,
@@ -254,6 +257,7 @@ export const ConnectionProvider = ({
 
 	const clientRef = useRef<ReturnType<typeof createRelayClient> | null>(null);
 	const streamRef = useRef<RelayStream | null>(null);
+	const configRef = useRef<ConfigStreamHandle | null>(null);
 	const tokensRef = useRef<RadientTokens | null>(null);
 	const managerRef = useRef<TunnelSessionManager | null>(null);
 	const retryRef = useRef<(() => Promise<void>) | null>(null);
@@ -267,6 +271,7 @@ export const ConnectionProvider = ({
 		return () => {
 			mountedRef.current = false;
 			streamRef.current?.stop();
+			configRef.current?.stop();
 		};
 	}, []);
 
@@ -299,6 +304,14 @@ export const ConnectionProvider = ({
 	const stopStream = useCallback(() => {
 		streamRef.current?.stop();
 		streamRef.current = null;
+	}, []);
+
+	/** Stops the config stream. Same lifecycle as the list's — it belongs to the
+	 *  route — and silent by design: this stream paints nothing, and its failure
+	 *  policy lives in `config-stream.ts`. */
+	const stopConfig = useCallback(() => {
+		configRef.current?.stop();
+		configRef.current = null;
 	}, []);
 
 	/**
@@ -416,6 +429,22 @@ export const ConnectionProvider = ({
 		[noteError, stopStream],
 	);
 
+	/**
+	 * Opens the config stream beside the list stream: the relay's resolved
+	 * language (wave-5 slice D). Its rules live in `config-stream.ts`, and one
+	 * differs from the list's on purpose — a relay-own `404` means an older
+	 * daemon's route is absent and is never retried.
+	 */
+	const startConfig = useCallback(
+		(client: ReturnType<typeof createRelayClient>) => {
+			stopConfig();
+			configRef.current = startConfigStream(client, configStore, {
+				restartMs: RESTART_MS,
+			});
+		},
+		[stopConfig],
+	);
+
 	/** Everything a route needs once its credentials are valid. */
 	const goLive = useCallback(
 		async (
@@ -425,6 +454,7 @@ export const ConnectionProvider = ({
 			clientRef.current = client;
 			connectionStore.getState().markLive({ accountLabel: null });
 			startStream(client, route);
+			startConfig(client);
 			/* The first paint is the REST read, not the stream's seed: the cold-start
 			 * rule is that the list renders immediately, and a stream that opens in a
 			 * second must not be the reason the screen is empty. It asks for the
@@ -455,7 +485,7 @@ export const ConnectionProvider = ({
 				});
 			}
 		},
-		[startStream],
+		[startStream, startConfig],
 	);
 
 	const connectCustom = useCallback(
@@ -747,6 +777,7 @@ export const ConnectionProvider = ({
 				await signOutOfCustomRoute(activeRoute).catch(() => undefined);
 			}
 			stopStream();
+			stopConfig();
 			clientRef.current = null;
 			tokensRef.current = null;
 			managerRef.current = null;
@@ -758,6 +789,7 @@ export const ConnectionProvider = ({
 			 *  computer") instead of the first-run surface (review round 4, M2). */
 			if (mountedRef.current) setRestoredAccount(false);
 			listStore.getState().reset();
+			configStore.getState().reset();
 			connectionStore.getState().endRoute();
 			/* Every stored credential goes with the sign-out. `removeSavedTunnel` stays the
 			 *  NARROWER delete for a good reason: forgetting a tunnel must not take the
@@ -771,7 +803,7 @@ export const ConnectionProvider = ({
 		} finally {
 			if (mountedRef.current) setBusy(false);
 		}
-	}, [stopStream]);
+	}, [stopStream, stopConfig]);
 
 	const retry = useCallback(async () => {
 		const pending = retryRef.current;
@@ -810,16 +842,18 @@ export const ConnectionProvider = ({
 		if (active?.mode === "custom") {
 			await signOutOfCustomRoute(active).catch(() => undefined);
 			stopStream();
+			stopConfig();
 			clientRef.current = null;
 			tokensRef.current = null;
 			retryRef.current = null;
 			listStore.getState().reset();
+			configStore.getState().reset();
 			connectionStore.getState().endRoute();
 			if (mountedRef.current) setLastError(null);
 		}
 		await removeSavedTunnel();
 		setSavedTunnel(null);
-	}, [stopStream]);
+	}, [stopStream, stopConfig]);
 
 	const tunnelStoragePersistent = useCallback(
 		async () => Platform.OS !== "web",

@@ -88,6 +88,7 @@ src/
     connection-store.ts               # profile, session, connection health
     list-store.ts                     # sessions list (from list SS E)
     projection-store.ts               # per-session projections (from SSE)
+    config-store.ts                   # the relay's resolved language (config SSE)
     ui-store.ts                       # theme, text scale, sheets, toasts
   features/
     sessions/                         # list screen composition
@@ -109,13 +110,14 @@ the mock relay (ADR 0003) usable from both unit tests and the web target.
 
 ## State management
 
-Three concerns, three stores, one rule each:
+Four concerns, four stores, one rule each:
 
 | Store | Holds | Rule |
 |---|---|---|
 | `connection-store` | active route, Radient identity (label only), tunnel session summary, connection health (`connecting \| live \| degraded \| refused \| signed-out`) | the only place that can start or end a route |
 | `list-store` | `SessionSummary[]` from `/api/sessions/events` | replaced wholesale on each push |
 | `projection-store` | `Map<sessionId, {projection, connected, awaitingSnapshot}>` | accepts a frame only if it is the first of a connection or newer than what it holds |
+| `config-store` | the relay's resolved language, from `/api/config/events` | frames replace, no versions; an older relay's `404` is ABSENT — terminal for the route |
 
 Why not a data-fetching library: the interesting state is *streamed snapshots*, not
 request caches, and the relay's own web client proves the hand-rolled store works at

@@ -3,7 +3,7 @@
 // biome-ignore-all lint/style/noNonNullAssertion: an assertion after an explicit
 // length/definedness check is the guard; a longhand local for it would obscure it.
 /**
- * The three stores, as state machines.
+ * The four stores, as state machines.
  *
  * These tests are about the RULES, not the plumbing: that only `startRoute` may
  * create a route, that a repaint arrives and leaves no stale row behind, that the
@@ -19,6 +19,7 @@ import { parsePayload } from "../../contracts";
 import { type ErrorSurface, relayErrorFromResponse } from "../../relay";
 import { loadFixture } from "../../testing/fixtures";
 import {
+	createConfigStore,
 	createConnectionStore,
 	createListStore,
 	createProjectionStore,
@@ -457,5 +458,52 @@ describe("the projection store fences per connection and keeps the last snapshot
 				listingRow: { subagents_running: null, leaving: "", updating: "" },
 			}),
 		).toBe(true);
+	});
+});
+
+describe("the config store treats frames as truth and absence as a state", () => {
+	it("applies a frame wholesale and adopts a changed tag", () => {
+		const store = createConfigStore();
+		store.getState().applyFrame({ changed_keys: [], language: "en" }, 1_000);
+		expect(store.getState().language).toBe("en");
+		expect(store.getState().frameCount).toBe(1);
+		expect(store.getState().lastFrameAt).toBe(1_000);
+		/* A change arrives as its own frame, and the value moves — including to a tag
+		 * this build renders nothing from yet: the client's contract is the tag the
+		 * relay resolved, not the set this build has copy for. */
+		store
+			.getState()
+			.applyFrame({ changed_keys: ["language"], language: "fr" }, 2_000);
+		expect(store.getState().language).toBe("fr");
+		expect(store.getState().frameCount).toBe(2);
+		expect(store.getState().lastFrameAt).toBe(2_000);
+	});
+
+	it("absence (an older relay's 404) is a state, never a frame", () => {
+		const store = createConfigStore();
+		expect(store.getState().supported).toBeNull();
+		store.getState().markAbsent();
+		expect(store.getState().supported).toBe(false);
+		/* Nothing arrived and nothing is inferred: absence is not a language. */
+		expect(store.getState().language).toBeNull();
+		expect(store.getState().frameCount).toBe(0);
+	});
+
+	it("an open marks the route supported without inventing a language", () => {
+		const store = createConfigStore();
+		store.getState().markSupported();
+		expect(store.getState().supported).toBe(true);
+		expect(store.getState().language).toBeNull();
+	});
+
+	it("reset forgets everything: the next route may be another machine", () => {
+		const store = createConfigStore();
+		store.getState().markSupported();
+		store.getState().applyFrame({ changed_keys: ["language"], language: "en" });
+		store.getState().reset();
+		expect(store.getState().supported).toBeNull();
+		expect(store.getState().language).toBeNull();
+		expect(store.getState().frameCount).toBe(0);
+		expect(store.getState().lastFrameAt).toBeNull();
 	});
 });

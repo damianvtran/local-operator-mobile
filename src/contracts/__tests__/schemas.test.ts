@@ -251,6 +251,9 @@ function classifyFixture(rel: string, value: unknown): Classification {
 		if (frame.event === "projection") {
 			return { kind: "schema", schema: "projectionStreamFrame", value: frame };
 		}
+		if (frame.event === "config") {
+			return { kind: "schema", schema: "configStreamFrame", value: frame };
+		}
 		if (rel === "sse/sse-attention-complete.json") {
 			// The attention record has no `event` of its own; it is only ever read as
 			// a field of a projection frame. Validated directly above instead.
