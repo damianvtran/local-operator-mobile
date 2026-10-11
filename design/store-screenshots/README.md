@@ -62,8 +62,10 @@ Source: <https://support.google.com/googleplay/android-developer/answer/9866151>
 
 1. Capture the app at 3x on a 6.9-inch device (or a 390 × 844 viewport at dpr 3,
    which is the same pixels) for iPhone.
-2. In the template, replace the `.slot` element with
-   `<img src="…" width="1000" height="2172">` and remove the `empty` class.
+2. In the template, replace the slot's contents with
+   `<img src="…" width="1000" height="2172">` and drop the `empty` class —
+   keep the `.slot` shell (radius, shadow, clip): a bare `<img>` replacement
+   loses the device rounding.
 3. Run the capture script, which re-asserts the output size, and view the result
    before uploading it.
 

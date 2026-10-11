@@ -408,6 +408,11 @@ connection, not at launch. `NSBonjourServices` remains deliberately absent: it
 attaches to Bonjour browsing or advertising, the app has no discovery, and a
 discovery feature is a different review conversation.
 
+The microphone path (STT) ships `NSMicrophoneUsageDescription` in the same
+block; the string is shared with `expo-image-picker`'s `microphonePermission`
+option so the plugin cannot replace it, and the alert appears at the mic press,
+never at launch. § 4.1 carries the label treatment.
+
 (Source: TN3179,
 <https://developer.apple.com/documentation/technotes/tn3179-understanding-local-network-privacy>
 — read in full on 2026-10-06. The technote serves as plain text at its `.md`
@@ -433,6 +438,7 @@ unusually good answer:
 | Data | Does the app collect it? | Why |
 | --- | --- | --- |
 | Transcript text, tool output, file paths, code the agent writes | **No** | It travels from the user's own computer, through the user's own relay/tunnel, to the user's own device. It is not transmitted *to us* and we cannot access it. |
+| Voice input (speech-to-text clip) | **No** | Recorded on the device at the mic press, sent to the user's own computer for one transcription, then discarded and not retained. It is not transmitted *to us* and we cannot access it. |
 | Relay password / tunnel credentials | **No** | Stored in the device keychain; used to authenticate to the user's endpoint. |
 | Radient account identifier (name, email) | **Yes — linked to the user** | Obtained from the Radient token endpoint at sign-in, used to list the user's tunnels. Disclose as Identifiers / Contact Info, purpose App Functionality. |
 | Crash logs, diagnostics | **Only if we add a crash reporter** | Do not add one. Apple's own collection does not fall on us. |
@@ -762,11 +768,9 @@ From
 | Apple TV / Vision Pro / Watch | — | Not applicable |
 
 **Practical plan:** capture at **6.9"** (1320×2868 covers the current Pro Max
-class) and **iPad 13"**, in **light and dark**, from the demo mode. Roughly four
-to six shots: session list with a live session; a streaming transcript with a
-tool call expanded; an approval card; the composer with the model sheet open;
-past sessions with search. Fewer, better shots beat eight screenshots of the same
-screen.
+class) and **iPad 13"**, from the demo mode, at the frozen pre-submission build.
+The set the listings ship — count, order, theme and captions — is defined in
+[`listing-screenshots.md`](./listing-screenshots.md).
 
 **Capture method on this project's machines.** There is no Xcode and no simulator
 here (`AGENTS.md`, "Build host assumptions"). Screenshots of the real app
