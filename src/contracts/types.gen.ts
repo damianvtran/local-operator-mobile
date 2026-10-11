@@ -403,6 +403,16 @@ export interface SessionProjection {
 	/** Epoch, not a per-process counter: compare only within one connection. */
 	version: number;
 	attention?: CompletionAttention | EmptyAttention;
+	/**
+	 * Turn supplements (memo §2.4/§3.1 row 18): the newest beat per anchor, a
+	 * SIBLING map keyed by the final assistant message id — `{anchor: beat}`.
+	 * Emitted only when non-empty: an empty map is absence, and the frame pin
+	 * holds a supplement-free frame to the parent bytes. Values are the live
+	 * `SupplementProgressEvent` fields (or, on a cold open, the same keys from
+	 * the durable journal row) and are read defensively at ONE place
+	 * (`supplementsFromWire`); an older relay omits the key entirely.
+	 */
+	supplements?: Record<string, Record<string, unknown>>;
 }
 
 /* --------------------------------------------------------------- session list */
@@ -721,12 +731,31 @@ export type CommandOp =
 	  }
 	| { op: "recall_steer"; command_id: string }
 	| { op: "ping" }
-	| { op: "snapshot" };
+	| { op: "snapshot" }
+	/* The turn-supplement control family (design `turn-supplements.md` §2.7):
+	 * additive typed frames on the one command route, scoped by the anchor+job
+	 * pair. `steer` carries a one-shot instruction (≤ 500 chars). */
+	| { op: "supplement_cancel"; anchor: string; job: string }
+	| {
+			op: "supplement_steer";
+			anchor: string;
+			job: string;
+			text: string;
+	  }
+	| { op: "supplement_restart"; anchor: string; job: string };
 
 export interface CommandAck {
 	ok: true;
 	/** Prose from the owning runtime; display verbatim, never parse. */
 	detail: string;
+}
+
+/** `GET /api/sessions/{id}/supplements/{digest}/document` — one stored turn
+ *  supplement component assembled to its document, as `{html}` (memo §2.7).
+ *  Never served as `text/html`: the host mounts the bytes in a sandboxed frame
+ *  and no browsing context is navigated to a URL. */
+export interface SupplementDocument {
+	html: string;
 }
 
 export interface ApiError {

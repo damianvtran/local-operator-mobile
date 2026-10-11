@@ -614,6 +614,44 @@ export class RelayEndpoints {
 		return { bytes: result.bytes, mimeType: result.mimeType };
 	}
 
+	/**
+	 * One turn-supplement component's assembled document, as `{html}` (memo §2.7).
+	 *
+	 * The bytes are JSON, never a navigable document: no host may navigate a
+	 * browsing context to this route, so the frame host fetches the document and
+	 * mounts it in a sandboxed frame (round-1 security S-R6).
+	 */
+	async supplementDocument(
+		sessionId: string,
+		digest: string,
+	): Promise<Payload<"supplementDocument">> {
+		return this.http.json("supplementDocument", {
+			method: "GET",
+			path: `/api/sessions/${encodeURIComponent(sessionId)}/supplements/${encodeURIComponent(digest)}/document`,
+		});
+	}
+
+	/**
+	 * One recorded file callout's bytes, addressed by the ROW's own index (§2.7).
+	 *
+	 * There is deliberately no path parameter: the only addressable file is the
+	 * one the row recorded, so these bytes render in-app (a text preview or an
+	 * image) and nothing ever navigates a browsing context to this route. The
+	 * route re-applies the sensitive-path denylist and a size cap and refuses
+	 * with sentences, so a caller should render its refusal like any other.
+	 */
+	async supplementFile(
+		sessionId: string,
+		job: string,
+		index: number,
+	): Promise<ImageBytes> {
+		const result = await this.http.bytes({
+			method: "GET",
+			path: `/api/sessions/${encodeURIComponent(sessionId)}/supplements/${encodeURIComponent(job)}/file${query({ i: index })}`,
+		});
+		return { bytes: result.bytes, mimeType: result.mimeType };
+	}
+
 	/** A subagent's full cached detail, including the transcript and todos the
 	 *  aggregate roster strips. */
 	async agentDetail(

@@ -28,6 +28,7 @@ import {
 	SessionStateMarkers,
 } from "@/features/session/components/state-markers";
 import { SubagentsPanel } from "@/features/session/components/subagents-panel";
+import type { SupplementClient } from "@/features/session/components/supplement-block";
 import { TodosPanel } from "@/features/session/components/todos-panel";
 import { TranscriptList } from "@/features/session/components/transcript-list";
 import { WorkingLine } from "@/features/session/components/working-line";
@@ -95,6 +96,22 @@ export default function Session() {
 		ended: runtime.projection?.ended === true,
 		capabilities,
 	});
+
+	/* The supplement block's host calls: one session-scoped client, built here
+	 *  from the runtime so the list and the block never hold a relay client.
+	 *  The ops are the relay's own command route (see `supplementCommand`). */
+	const supplementClient = useMemo<SupplementClient>(
+		() => ({
+			loadDocument: runtime.loadSupplementDocument,
+			loadFile: runtime.loadSupplementFile,
+			command: runtime.supplementCommand,
+		}),
+		[
+			runtime.loadSupplementDocument,
+			runtime.loadSupplementFile,
+			runtime.supplementCommand,
+		],
+	);
 
 	/** `null`, `"todos"` or `"subagents"`: one open panel at most. */
 	const [openPanel, setOpenPanel] = useState<null | "todos" | "subagents">(
@@ -261,12 +278,19 @@ export default function Session() {
 				 * `capabilities.stt`: a marker may only claim what the control
 				 * actually rendered, so both must come from one decision. */
 				micVisible: composer.voice.micVisible,
+				/* The supplement facts the markers affirm (`S5/supplement-*` cells):
+				 * the same reader the list renders from, so a marker can never claim a
+				 * state the visible block does not show. */
+				supplements: runtime.supplements,
+				supplementPid: runtime.projectionPid,
 			}),
 		[
 			projection,
 			runtime.streaming,
 			runtime.error,
 			runtime.entries,
+			runtime.supplements,
+			runtime.projectionPid,
 			subagents.total,
 			composer.voice.micVisible,
 		],
@@ -401,6 +425,9 @@ export default function Session() {
 					streamingRowId={runtime.streamingRowId}
 					loadImage={runtime.loadImage}
 					onOpenAgent={openAgent}
+					supplements={runtime.supplements}
+					projectionPid={runtime.projectionPid}
+					supplementClient={supplementClient}
 					onOpenVideo={openVideo}
 					/* The image-gen card's Cancel is the composer's OWN stop path (the
 					   one turn-interrupt — no second mechanism). The gate is the

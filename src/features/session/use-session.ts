@@ -42,7 +42,11 @@ import {
 	sessions,
 	subscribeRoute,
 } from "@/features/session/runtime";
-import type { RelayError } from "@/relay";
+import {
+	type SupplementBeat,
+	supplementsFromWire,
+} from "@/features/session/supplements";
+import type { ImageBytes, RelayError } from "@/relay";
 import { readEntry } from "@/state";
 
 /**
@@ -88,6 +92,25 @@ export interface SessionRuntime {
 	loadVideo: (entryId: string, index: number) => Promise<string | null>;
 	/** Loads a child's full detail, which the aggregate roster strips. */
 	loadAgent: (jobId: string) => Promise<SubagentDetail | null>;
+	/** Turn supplements (memo §2.4/§3.1 row 18): the projection's newest beat
+	 *  per anchor, read through `supplementsFromWire` — absent on an older relay
+	 *  and empty when no anchor carries one. */
+	supplements: Record<string, SupplementBeat>;
+	/** The projection's own process identity, for `beatLive` (0 is a disk
+	 *  rebuild). */
+	projectionPid: number;
+	/** One supplement component's assembled document, `{html}`. */
+	loadSupplementDocument: (digest: string) => Promise<string>;
+	/** One recorded callout's bytes, by the row's own index. */
+	loadSupplementFile: (job: string, index: number) => Promise<ImageBytes>;
+	/** `supplement_cancel|restart|steer` over the session command route — the
+	 *  same route every other mutation uses. */
+	supplementCommand: (
+		op: "cancel" | "restart" | "steer",
+		anchor: string,
+		job: string,
+		text?: string,
+	) => Promise<void>;
 	/** Re-runs the requests a refusal interrupted. */
 	reload: () => void;
 }
@@ -498,6 +521,69 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 		[endpoints, sessionId],
 	);
 
+	/* ------------------------------------------------------- turn supplements */
+	/* The projection's sibling map, re-read through its ONE reader at this trust
+	 * boundary (the store keeps the frame as parsed; a beat whose anchor/state
+	 * does not parse is dropped rather than rendered from a guess). ABSENT stays
+	 * absent: the daemon emits the key only when it carries beats. */
+	const supplements = useMemo(
+		() => supplementsFromWire(projection?.supplements),
+		[projection?.supplements],
+	);
+
+	const loadSupplementDocument = useCallback(
+		async (digest: string): Promise<string> => {
+			if (endpoints === null) throw new Error("no relay route");
+			const { html } = await endpoints.supplementDocument(sessionId, digest);
+			return html;
+		},
+		[endpoints, sessionId],
+	);
+
+	const loadSupplementFile = useCallback(
+		(job: string, index: number): Promise<ImageBytes> => {
+			if (endpoints === null) {
+				return Promise.reject(new Error("no relay route"));
+			}
+			return endpoints.supplementFile(sessionId, job, index);
+		},
+		[endpoints, sessionId],
+	);
+
+	const supplementCommand = useCallback(
+		async (
+			op: "cancel" | "restart" | "steer",
+			anchor: string,
+			job: string,
+			text?: string,
+		): Promise<void> => {
+			if (endpoints === null) throw new Error("no relay route");
+			if (op === "cancel") {
+				await endpoints.command(sessionId, {
+					op: "supplement_cancel",
+					anchor,
+					job,
+				});
+				return;
+			}
+			if (op === "restart") {
+				await endpoints.command(sessionId, {
+					op: "supplement_restart",
+					anchor,
+					job,
+				});
+				return;
+			}
+			await endpoints.command(sessionId, {
+				op: "supplement_steer",
+				anchor,
+				job,
+				text: text ?? "",
+			});
+		},
+		[endpoints, sessionId],
+	);
+
 	const reload = useCallback(() => {
 		reconnectRef.current();
 		rereadRef.current();
@@ -524,6 +610,11 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 		loadImage,
 		loadVideo,
 		loadAgent,
+		supplements,
+		projectionPid: projection?.pid ?? 0,
+		loadSupplementDocument,
+		loadSupplementFile,
+		supplementCommand,
 		reload,
 	};
 };

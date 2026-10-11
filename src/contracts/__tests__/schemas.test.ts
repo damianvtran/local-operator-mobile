@@ -319,6 +319,19 @@ function classifyFixture(rel: string, value: unknown): Classification {
 				"a probe transcript — excerpts of a row over time, not a payload frame; its rules are asserted in the probe block below",
 		};
 	}
+	if (rel.startsWith("supplements/")) {
+		/* The C0 contract fixtures of ANOTHER repo's generator (vendored
+		 * byte-exact; see that directory's README). The rows are journal entries
+		 * (not relay payloads this boundary parses), `dispositions.json` is the
+		 * surfaces' own paint matrix, and `messages/messages.json` is the
+		 * host↔frame channel — all asserted by features/session/
+		 * supplements.test.ts against the same bytes every other lane asserts. */
+		return {
+			kind: "skip",
+			reason:
+				"the turn-supplement contract fixtures: journal rows and internals of the block, not client payloads; asserted by features/session/supplements.test.ts",
+		};
+	}
 
 	throw new Error(
 		`${rel}: unclassified fixture. Add it to classifyFixture with a schema or an explicit skip reason.`,

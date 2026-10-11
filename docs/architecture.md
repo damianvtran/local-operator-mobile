@@ -250,8 +250,8 @@ against the wire instead:
    `src/contracts/schemas.ts` is a type-level assertion that each schema it covers
    produces a shape assignable to the mirror's declaration: a schema that answers
    `undefined` where the wire promises a string, or that widens an enum, fails
-   `pnpm typecheck`. It fires for the asserted subset — 20 of the 28 registered
-   schemas. The eight it does not yet cover (`commandOp`, `gatewayRefusal`,
+   `pnpm typecheck`. It fires for the asserted subset — 30 of the 39 registered
+   schemas. The nine it does not yet cover (`commandOp`, `gatewayRefusal`,
    `modelEntry`, `projectionStreamFrame`, `resumeSession`, `sessionsStreamFrame`,
    `startSession`, `subagentRow`) are request bodies, stream frames and element
    shapes outside the assertion; five of them already have a mirror type, so the

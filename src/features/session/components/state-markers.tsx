@@ -58,6 +58,25 @@ export const SessionStateMarkers = ({
 			{flags.populated ? (
 				<View testID={STATE_MARKER.session.populated} />
 			) : null}
+			{/* The turn-supplement block's states (memo §2.8, lane N). Rendered
+			 * here like every other derived claim, one line per state: the block
+			 * itself renders no header, so these markers are the only names its
+			 * states have in the DOM for the capture cells. */}
+			{flags.supplementPreparing ? (
+				<View testID={STATE_MARKER.session["supplement-preparing"]} />
+			) : null}
+			{flags.supplementPopulated ? (
+				<View testID={STATE_MARKER.session["supplement-populated"]} />
+			) : null}
+			{flags.supplementFiles ? (
+				<View testID={STATE_MARKER.session["supplement-files"]} />
+			) : null}
+			{flags.supplementFailed ? (
+				<View testID={STATE_MARKER.session["supplement-failed"]} />
+			) : null}
+			{flags.supplementEmpty ? (
+				<View testID={STATE_MARKER.session["supplement-empty"]} />
+			) : null}
 			{/* The mic is AFFIRMATIVE evidence in its own right: the cell `S5/voice`
 			 * declares the voice state, and this is what says the frame reached it.
 			 * Rendered beside the session markers rather than in the composer because
