@@ -51,24 +51,32 @@ one of the hops.
 | site → TUI | Values copied into `BRAND_TOKENS` | `theme.py:5-6` — "Values are the island palette from the brand kit"; `:22-23` — "Hex values are exact brand kit values and are asserted by tests — do not round or re-solve them." The tests assert the ramps against *themselves*. |
 | desktop app → this app | Values copied into `tokens.json` | `$meta.derivedFrom` (three upstreams, versions and dates) and `$meta.accentDivergence`. The most careful provenance in the family — and a receipt, not a mechanism. |
 | TUI → desktop app (the community set) | The TUI's curated palette families re-expressed in the desktop's palette files | `docs/branding.md:473` — "These palettes are ports of the TUI's token set". |
-| desktop app → core phone client | A verbatim copy of the file, docstring included | `local_operator/mobile/web/src/themes/local-operator.ts` at the pinned ref. |
+| desktop app → core phone client | A verbatim copy of the desktop file at its 2026-08-06 state (`bb57a408`, docstring included, import path adapted); unmaintained since core PR #188 (2026-08-20) — already misses the desktop file's 2026-09-15 → 2026-10-09 evolution | `local_operator/mobile/web/src/themes/local-operator.ts` at the pinned ref |
 
 **No script, test or CI job in any of the five repositories reads another repository's theme
 values.** The cross-references that do exist between these repositories read behaviour or cite
 documents (the desktop's `docs/evidence/tui-parity/` pages, its `tool-row` and `ask-options`
 scripts), not colours. Parity today is held by prose provenance with dates, "verified on
-<date>" audit comments, and the reviewers who remember them.
+<date>" audit comments, and the reviewers who remember them. **The phone client's copy is that
+failure already in the wild:** a verbatim copy when it was made, never touched since, and now
+missing the desktop file's entire 2026-09-15 → 2026-10-09 evolution.
 
 ### The mobile app's fork specifically
 
 This app is the newest surface, and it did the documentary half of this right: `tokens.json`'s
-`$meta.derivedFrom` names all three upstreams, and `$meta.accentDivergence` records the one value
-where two of them disagree and measures why. But the app's three gates — `preset:check`,
-`theme:check`, `contrast:check` — compare the app's generated artefacts against the app's own
-`tokens.json`, and nothing else. `scripts/build-theme.ts:28-35` makes the app's own palettes
-incapable of disagreeing with the kit's preset *inside this repository*; no check here can see a
-change in any other repository. When the desktop palette next moves — its own file records a
-legibility pass that re-seated eleven roles in one go — the mobile copy goes stale silently, which
+`$meta.derivedFrom` names all three upstreams, and `$meta.accentDivergence` records the light
+accent and measures why. Its framing that the accent is "the ONE value where the site and the
+desktop app disagree" is itself incomplete (QA round 1, Q2): two further light-mode values
+diverge the same way — `success` (site `#1e7b4e` / desktop and app `#19764a`) and `on-accent`
+(site `#ffffff` / desktop and app `#F6FAF8`) — and they belong in the divergence register too.
+But the app's three gates — `preset:check`, `theme:check`, `contrast:check` — compare the app's
+generated artefacts against the app's own `tokens.json`, and nothing else.
+`scripts/build-theme.ts:28-35` makes the app's own palettes incapable of disagreeing with the
+kit's preset *inside this repository*; no check here can see a change in any other repository.
+When the desktop palette next moves — its own history is a sequence of legibility passes, one of
+which retired eleven contrast exemptions at once (eight `danger-border` edges and three `danger`
+text pairs, all on `elevated`) by re-authoring the values they covered (desktop
+`docs/branding.md:591` at the pinned ref) — the mobile copy goes stale silently, which
 is the failure `scripts/build-theme.ts:23-26` names one level down: "a colour changed in the tokens
 and not in the app ships as a theme that half applies."
 
@@ -122,8 +130,9 @@ In full:
    the desktop's `local-operator.ts` / `palette-contract.ts` at the pinned ref), and a
    **divergence register** promoting the sanctioned differences from the three prose sites that
    record them today (`brand-kit.md` § 2.1, `local-operator.ts:14-29`, `tokens.json
-   § accentDivergence`) into one checked list. The kit keeps its defining property: plain files,
-   no build step, no dependencies — the one thing you run is the contract script.
+   § accentDivergence`) — plus the two light-mode values nothing records yet (`success`,
+   `on-accent`; QA round 1, Q2) — into one checked list. The kit keeps its defining property:
+   plain files, no build step, no dependencies — the one thing you run is the contract script.
 2. **Consumption is a pinned slice plus a parity gate, never a build-time import.** Each consumer
    commits the kit files it consumes (byte copies under its own tree) and a lock naming the kit
    version, git ref and SHA-256 per file. Its CI proves two things: the slice equals the kit at
@@ -250,8 +259,9 @@ otherwise untouched.
 
 1. **Operator:** the home's name and licence (§ Risks, last item). Proposal:
    `damianvtran/local-operator-design`, MIT.
-2. **Operator:** once phase 1 lands, the site's `docs/design-kit/` is removed there (history
-   preserved by the split). The site's `design-language.md` stays where it is.
+2. **Operator:** once phase 1 lands, the site's `docs/design-kit/` is replaced by a pointer to
+   the new home — the kit's files move, with their history, via the split. The site's
+   `design-language.md` stays where it is.
 3. **The accent reconciliation stays a brand decision.** This ADR gives the divergence a home and
    a check; it does not reconcile `#177b45` / `#137742`, and the recorded measurement says
    reconciliation means changing one of the two ramps, not shipping the page value into the app.
