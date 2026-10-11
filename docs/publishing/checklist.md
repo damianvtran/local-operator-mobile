@@ -38,7 +38,7 @@ long-lead items start first.
 | A5 | **Accept the Apple Developer Program License Agreement** (it was updated 2026-08-18 for EU business terms; Attachment 14 takes effect 2026-10-01) | yes | `apple-app-store.md` § 7 |
 | A6 | **Decide EU DSA trader status.** Recommendation: declare trader; it publishes a verifiable business address, phone and email on the app's EU product page and requires documentation upload | yes | <https://developer.apple.com/help/app-store-connect/manage-compliance-information/manage-european-union-digital-services-act-trader-requirements/> |
 | A7 | **Legal review of the store copy** (`store/`), especially the privacy claims, before submission. Apple's 5.1.1(i) makes the privacy policy the operative document for what the store text may say | yes | `apple-app-store.md` § 4.1 |
-| A8 | **Ship account deletion in Radient.** Blocking finding: the console has no delete-account control and the API exposes none, while the public FAQ tells users to use one. Also required: a web deletion resource for Play | **yes — critical path** | `apple-app-store.md` § 3.5, `google-play.md` § 5.2 |
+| A8 | **Ship account deletion in Radient** — `DELETE /v1/account` is live in production, the console carries the delete-account control, and <https://radienthq.com/account-deletion> serves the web resource Play requires | **done 2026-10-11** | `apple-app-store.md` § 3.5, `google-play.md` § 5.2 |
 | A9 | **Decide the pricing posture.** Recommendation: the app stays free with **no purchasing and no purchase call-to-action** in it, which is what Guideline 3.1.3(f) requires for a free companion to a paid web tool. Tunnels and credits are set up on the computer, not the phone | yes | `apple-app-store.md` § 3.6, `google-play.md` § 7.3 |
 | A10 | **Decide the Radient OAuth client_id for mobile.** The private-use scheme route is rejected today; mobile needs either a loopback listener during sign-in or a registered https/mobile callback | yes | `docs/relay/` (auth), `apple-app-store.md` § 3.8 |
 | A11 | **Recruit reviewers/testers**: if the Play account ends up personal, **12 testers for 14 continuous days**; for TestFlight, a handful of people who have never run `lop` | no (personal accounts only) | `google-play.md` § 2, `other-channels.md` § 1 |
@@ -86,7 +86,7 @@ long-lead items start first.
 | --- | --- | --- | --- |
 | D1 | **Privacy policy URL** for the App Store product page and the Play listing. Radient's is live at <https://radienthq.com/privacy-policy> (verified 200, 2026-09-29). **Open question:** whether the org wants the *site's* or a dedicated *app* policy — the app adds no collection the existing policy does not already cover, so the existing one should serve | yes | `apple-app-store.md` § 4.1 |
 | D2 | **Terms URL**: <https://radienthq.com/terms> (verified 200, 2026-09-29) | yes | same |
-| D3 | **Account-deletion web resource**, same as A8; must work without the app installed | yes | `google-play.md` § 5.2 |
+| D3 | **Account-deletion web resource**, same as A8 — live at <https://radienthq.com/account-deletion> and works without the app installed | **done 2026-10-11** | `google-play.md` § 5.2 |
 | D4 | **Support URL** that leads to real contact information — a contact page, not a repository. Radient's contact page is live: <https://radienthq.com/contact> (200, 2026-09-29). Do **not** use `local-operator.com/support`, which 404s | yes | <https://developer.apple.com/help/app-store-connect/reference/app-information/app-information> |
 | D5 | **Marketing URL** — <https://local-operator.com> (200) or the docs site <https://docs.local-operator.com> (200) | no | same |
 | D6 | **Privacy nutrition label** (App Store Connect) written from the same analysis as the Play Data safety form; "Data Not Collected" is only defensible if the Radient leg truly is authentication only | yes | `apple-app-store.md` § 4.1 |
@@ -139,14 +139,16 @@ long-lead items start first.
 
 ---
 
-## The two things that are genuinely blocked on someone else
+## The one thing that is genuinely blocked on someone else
 
-1. **A8 — account deletion does not exist in Radient.** Both stores require it
-   once account creation is possible in the app. Nothing in this repository can
-   fix it, and it blocks *both* first submissions.
-2. **A2/A3/A4 — organization identities.** A D-U-N-S number and two developer
+1. **A2/A3/A4 — organization identities.** A D-U-N-S number and two developer
    program enrollments take days to weeks and require a human who can sign for
    the company. They gate every upload, and starting them late costs a fortnight.
+
+**A8 — account deletion** is resolved: Radient shipped it on 2026-10-11 — the
+route is live in production, the console carries the delete-account control, and
+<https://radienthq.com/account-deletion> works without the app (rows A8 and D3
+above).
 
 Everything else on this list can be done by an agent, in this repository, without
 anyone's permission.

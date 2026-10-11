@@ -19,8 +19,8 @@ Sizes: **S** ≈ a day or two, **S–M**/**M**/**L** as used in the ADR §7. The
 re-derived.
 
 **Blocked on the operator, before any cloud work starts:**
-- **A8 — Radient account deletion** (`docs/publishing/checklist.md`:33), already blocking store
-  submission.
+- **A8 — Radient account deletion** (`docs/publishing/checklist.md`:41): **resolved 2026-10-11** —
+  shipped; no longer a blocker.
 - **A2–A4 — organisation developer accounts** (D-U-N-S, Apple Developer Program as Radient Inc.,
   Play organisation account).
 - **New, from this plan: the push credentials, the fan-out service, and a device-revocation surface
