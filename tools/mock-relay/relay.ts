@@ -27,7 +27,7 @@
  * own, so a `lop mobile` on 4098 keeps running untouched.
  */
 
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { createServer } from "node:http";
 import { join } from "node:path";
@@ -133,6 +133,64 @@ const TINY_MP4 = Buffer.from(
  *  (UX round 1, U3 — the QA round's own repro shape: 2 KB of garbage through
  *  the same route). Served only for the `tc-vid-broken` fixture row. */
 const UNDECODABLE_MEDIA = Buffer.from("z".repeat(2048));
+
+/* ---------------------------------------------------------------------------
+ * Turn supplements (memo §2.7): the relay's two read routes
+ * ------------------------------------------------------------------------- */
+
+/**
+ * The assembled document the document route serves: the C0 contract fixture
+ * (`fixtures/supplements/documents/populated.html`, vendored byte-exact — see
+ * that directory's README). Read lazily so a checkout without it still boots
+ * the mock for every other cell, and cached because it is the same bytes for
+ * every digest.
+ */
+let supplementDocumentCache: string | null = null;
+const supplementDocumentHtml = (): string => {
+	if (supplementDocumentCache === null) {
+		supplementDocumentCache = readFileSync(
+			join(
+				defaultFixturesDir,
+				"..",
+				"supplements",
+				"documents",
+				"populated.html",
+			),
+			"utf8",
+		);
+	}
+	return supplementDocumentCache;
+};
+
+/** The stand-in bytes a callout preview fetches: short prose the frame host
+ *  renders as text. The real route serves the recorded file's own bytes; this
+ *  mock has no journal to read them from, and the CLIENT's contract (fetch the
+ *  row's index, render the response in-app) is what the cells pin. */
+const SUPPLEMENT_TEXT = Buffer.from(
+	"# Latency by region\n\n" +
+		"| region | p50 | p95 |\n" +
+		"| --- | --- | --- |\n" +
+		"| eu-west | 41 ms | 96 ms |\n" +
+		"| us-east | 38 ms | 88 ms |\n" +
+		"| ap-south | 74 ms | 163 ms |\n",
+	"utf8",
+);
+
+/** The suffix allowlist's classes, as the real route resolves them. */
+const SUPPLEMENT_FILE_MIME: Record<string, string> = {
+	".md": "text/markdown",
+	".markdown": "text/markdown",
+	".txt": "text/plain",
+	".log": "text/plain",
+	".csv": "text/csv",
+	".tsv": "text/tab-separated-values",
+	".json": "application/json",
+	".png": "image/png",
+	".jpg": "image/jpeg",
+	".jpeg": "image/jpeg",
+	".gif": "image/gif",
+	".webp": "image/webp",
+};
 
 const UUID_RE =
 	/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -393,6 +451,13 @@ export interface RelayState {
 	approvalsAnswered: number;
 	/** Command ids that have been admitted: what `already admitted` is about. */
 	admitted: Map<string, { op: string; at: number }>;
+	/**
+	 * The turn-supplement ops served, with their anchor+job pair (memo §2.7).
+	 * A LIST rather than a map keyed by command id: these frames carry no
+	 * `command_id` (the runtime scopes them by the anchor+job pair), so there is
+	 * nothing to dedupe on and a run's whole history is the useful record.
+	 */
+	supplementOps: Array<{ op: string; anchor: string; job: string; at: number }>;
 	seenTokens: Set<string>;
 	pins: Map<string, boolean>;
 	/**
@@ -564,6 +629,7 @@ export function createRelay(options: RelayOptions = {}) {
 		requestsServed: 0,
 		approvalsAnswered: 0,
 		admitted: new Map(),
+		supplementOps: [],
 		seenTokens: new Set(),
 		pins: new Map(),
 		transferDials: 0,
@@ -646,6 +712,7 @@ export function createRelay(options: RelayOptions = {}) {
 		// Per-scenario ledgers reset with the scenario, so a duplicate-detection
 		// test cannot inherit an id admitted by the previous scenario.
 		state.admitted = new Map();
+		state.supplementOps = [];
 		state.seenTokens = new Set();
 		state.pins = new Map();
 		state.duplicateFramePending = false;
@@ -1581,6 +1648,52 @@ export function createRelay(options: RelayOptions = {}) {
 		const fixture = byOp[op];
 		if (fixture) {
 			sendFixture(res, fixture);
+			return;
+		}
+		/* The turn-supplement family (memo §2.7): three typed frames on this same
+		 * route, scoped by the anchor+job pair. No captured fixture exists for them
+		 * — the phone lane's cells drive the WIRE, and the receipt words are minted
+		 * in the runtime (`session/runtime/supplements.py`: `cancel_job` →
+		 * `cancelled`, `steer_job` → `steering`, `restart_job` → `restarting`, or
+		 * the neutral `already finished` when the named job is no longer the running
+		 * one) — so the mock answers them inline and records the command like any
+		 * other. The SHAPE refusals are the runtime's own sentences
+		 * (`session/runtime/server.py:7180-7196`); the refusals that depend on the
+		 * runtime's state (409 `session not connected`, 422 old owner, 504 no
+		 * answer) stay the world's, exactly as for every other op. */
+		const supplementReceipt: Record<string, string> = {
+			supplement_cancel: "cancelled",
+			supplement_steer: "steering",
+			supplement_restart: "restarting",
+		};
+		const receipt = supplementReceipt[op];
+		if (receipt !== undefined) {
+			const anchor = body?.anchor;
+			if (typeof anchor !== "string" || anchor === "") {
+				sendJson(res, 422, errorBody(`${op} needs the answer's anchor`));
+				return;
+			}
+			const job = body?.job;
+			if (typeof job !== "string" || job === "") {
+				sendJson(res, 422, errorBody(`${op} needs the job id`));
+				return;
+			}
+			if (op === "supplement_steer") {
+				const text = body?.text;
+				if (typeof text !== "string" || text.trim() === "") {
+					sendJson(
+						res,
+						422,
+						errorBody("supplement_steer needs a non-empty instruction"),
+					);
+					return;
+				}
+			}
+			/* Recorded with the pair the run actually sent, which is what makes a
+			 * frame's claim ("cancel for THIS anchor and job") checkable from outside
+			 * the app. */
+			state.supplementOps.push({ op, anchor, job, at: Date.now() });
+			sendJson(res, 200, { ok: true, detail: receipt });
 			return;
 		}
 		sendFixture(res, "command-unknown-op");
@@ -2581,6 +2694,76 @@ export function createRelay(options: RelayOptions = {}) {
 				return res.end(body);
 			}
 
+			/* ---- the turn-supplement read routes (memo §2.7) ----
+			 *
+			 * `/supplements/{digest}/document` serves one stored component
+			 * assembled to a document, as `{html}` — never `text/html`, so no
+			 * browsing context is ever navigated to this route; the frame hosts
+			 * mount the bytes in a sandboxed frame. `/supplements/{job}/file?i=N`
+			 * serves one callout's bytes, addressed by the ROW's own index (there
+			 * is no path parameter and there never may be). Both are scoped to the
+			 * session's own projection: a digest no beat references and an index no
+			 * row carries are the route's own refusals. */
+			if (rest.startsWith("/supplements/") && method === "GET") {
+				if (!projection) {
+					sendJson(res, 404, errorBody("unknown session"));
+					return;
+				}
+				const parts = rest.split("/").filter((part) => part !== "");
+				const identifier = parts[1] ?? "";
+				const kind = parts[2] ?? "";
+				const beats: Record<string, unknown>[] = Object.values(
+					projection.supplements ?? {},
+				);
+				if (kind === "document") {
+					const referenced = beats.some((beat) =>
+						(Array.isArray(beat.components) ? beat.components : []).some(
+							(component) =>
+								isRecord(component) && component.attachment === identifier,
+						),
+					);
+					if (!referenced) {
+						sendJson(res, 404, errorBody("no such supplement"));
+						return;
+					}
+					sendJson(res, 200, { html: supplementDocumentHtml() });
+					return;
+				}
+				if (kind === "file") {
+					const indexRaw = url.searchParams.get("i") ?? "";
+					if (!/^\d+$/.test(indexRaw)) {
+						// The real route's own 400; an out-of-range index resolves to
+						// nothing, the same 404 a missing file gets.
+						sendJson(res, 400, errorBody("bad file index"));
+						return;
+					}
+					const beat = beats.find((entry) => entry.job === identifier);
+					const files = Array.isArray(beat?.files) ? beat.files : [];
+					const entry = files.find((_candidate, at) => String(at) === indexRaw);
+					const path = isRecord(entry) ? (asString(entry.path) ?? "") : "";
+					const dot = path.lastIndexOf(".");
+					const mime =
+						dot >= 0
+							? SUPPLEMENT_FILE_MIME[path.slice(dot).toLowerCase()]
+							: undefined;
+					if (mime === undefined) {
+						sendJson(res, 404, errorBody("no such file"));
+						return;
+					}
+					// Images ride the real PNG; the text classes ride the stand-in
+					// prose. `no-store` is the one cache header the tunnel preserves.
+					const bytes = mime.startsWith("image/") ? TINY_PNG : SUPPLEMENT_TEXT;
+					res.writeHead(200, {
+						"content-type": mime,
+						"cache-control": "no-store",
+						"content-length": bytes.length,
+					});
+					return res.end(bytes);
+				}
+				sendJson(res, 404, errorBody("not found"));
+				return;
+			}
+
 			if (rest === "/seen" && method === "POST") {
 				if (!projection) {
 					sendFixture(res, "seen-unknown-session");
@@ -2733,6 +2916,10 @@ export function createRelay(options: RelayOptions = {}) {
 			methods: ["GET", "HEAD"],
 		},
 		{
+			match: /^\/api\/sessions\/[^/]+\/supplements\/[^/]+\/(document|file)$/,
+			methods: ["GET", "HEAD"],
+		},
+		{
 			match: /^\/api\/sessions\/[^/]+\/(pin|seen|transcribe|pair)$/,
 			methods: ["POST"],
 		},
@@ -2846,6 +3033,7 @@ export function createRelay(options: RelayOptions = {}) {
 						faults: state.faults.applied,
 						sessions: Object.keys(state.world.projections ?? {}).length,
 						admittedCommands: state.admitted.size,
+						supplementOps: state.supplementOps,
 						duplicateDelivered: state.duplicateDelivered,
 						duplicateFramePending: state.duplicateFramePending,
 						// The mesh half's own counter: transfers actually DIALED. A wire

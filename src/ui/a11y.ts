@@ -323,6 +323,29 @@ export const CONTROL = {
 	findNext: "find-next",
 	findClose: "find-close",
 
+	/* --- the turn-supplement block's controls (memo §2.8/D10, lane N): the
+	 *  action pair, the two disclosures and the callout rows' preview lever.
+	 *  On a phone there is no hover, so the pair is drawn together and each
+	 *  control is a ≥ 44 pt target; none of these exists while the block has
+	 *  no such thing to offer ("absent handler = absent control"). --- */
+	/** `Adjust…` — opens the steer form on a preparing block. */
+	supplementAdjust: "supplement-adjust",
+	/** `Cancel` — `supplement_cancel` for the running job. */
+	supplementCancel: "supplement-cancel",
+	/** `Retry` — `supplement_restart` under the cancelled/failed/frame lines. */
+	supplementRetry: "supplement-retry",
+	/** The steer form's send, once `Adjust…` opened it and text is present. */
+	supplementSteerSend: "supplement-steer-send",
+	/** The steer form's field. */
+	supplementAdjustField: "supplement-adjust-field",
+	/** The `N more files` disclosure. */
+	supplementMoreFiles: "supplement-more-files",
+	/** The `Show all N graphics` disclosure (the aggregate frame budget). */
+	supplementShowAll: "supplement-show-all",
+	/** A callout row's preview lever (`Preview` for text/image; the row is a
+	 *  text line for every other class). */
+	supplementFileOpen: "supplement-file-open",
+
 	/* --- the composer home and the conversations panel (the Part 2 slice).
 	 *
 	 * Named here in the same change that renders them. Two deliberate pairs of
@@ -604,6 +627,30 @@ export const SURFACE = {
 	 *  scrolled to its end), so a frame can measure the cue its own state earns. */
 	sheetBodyFade: "sheet-body-fade",
 
+	/* --- the turn-supplement block ("Highlights", memo §2.8, lane N): the
+	 *  pieces under a final answer. Named in full because the capture cells
+	 *  and the E2E flows address them individually, and the block itself
+	 *  renders NO header — these are the block's only names, not chrome. --- */
+	supplementBlock: "supplement-block",
+	supplementFiles: "supplement-files",
+	supplementFilesSummary: "supplement-files-summary",
+	supplementStateLine: "supplement-state-line",
+	supplementAdjustForm: "supplement-adjust-form",
+	supplementOpError: "supplement-op-error",
+	/** One component's reserved box (its height is the write-time hint, then
+	 *  the frame's own rendered height). Per component; the family is
+	 *  `supplement-frame-` for anything that must address one frame. */
+	supplementFrame: "supplement-frame",
+	/** The frame-level fallback line (`Couldn't render this graphic`), shown in
+	 *  place of a frame that died, hung or could not be fetched. */
+	supplementFrameFallback: "supplement-frame-fallback",
+	/** The one caption the host renders: `Source: …`, once per component. */
+	supplementSource: "supplement-source",
+	/** The expanded preview of one callout's bytes. */
+	supplementPreview: "supplement-preview",
+	/** The components half of a settled block (the frames' container). */
+	supplementComponents: "supplement-components",
+
 	/* --- the subagent detail route (stream D2), adopted with the session view's
 	 * vocabulary above. The drill-down flow asserts these by name
 	 * (`e2e/maestro/flows/06-subagent-drilldown.yaml`), so without them in the one
@@ -759,6 +806,10 @@ export const IDENTIFIER_FAMILIES: readonly string[] = [
 	"project-milestone-edit-",
 	/* The create sheet's status options, one per status the contract ranks. */
 	"project-create-status-",
+	/* One callout row per recorded file, addressed by its index within the row
+	 *  (`supplement-file-<i>`) — the one stable name a flow has for a callout,
+	 *  because the path is data. */
+	"supplement-file-",
 ];
 
 /**
@@ -1084,6 +1135,19 @@ export const STATE_MARKER = {
 		"pending-approval": "session-pending-approval",
 		"pending-ask": "session-pending-ask",
 		subagents: "session-subagents",
+		/* The turn-supplement block's own states (memo §2.8, lane N). ONE state
+		 *  per capture cell: the cell `S5/supplement-<state>` affirms the marker
+		 *  `session-supplement-<state>`, and each is rendered only while its own
+		 *  disposition holds for the newest beat on some anchor — so a frame that
+		 *  shows the preparing line cannot also be evidence for the settled block.
+		 *  `supplement-empty` is the `done` row with nothing to show: the
+		 *  disposition is `nothing`, the block paints nothing, and the marker is
+		 *  the only thing in the DOM that says the beat ARRIVED. */
+		"supplement-preparing": "session-supplement-preparing",
+		"supplement-populated": "session-supplement-populated",
+		"supplement-files": "session-supplement-files",
+		"supplement-failed": "session-supplement-failed",
+		"supplement-empty": "session-supplement-empty",
 		/* The composer's voice mic. Present in ONLY this state: the composer renders
 		 * the control iff `capabilities.stt.available` AND the build can record
 		 * (`stt/capability.ts`), so a session frame either carries `composer-mic` or
@@ -1402,6 +1466,11 @@ export const subagentChipId = (jobId: string): string =>
 
 /** One ask's row in the asks sheet, keyed by the ask's own id. */
 export const askRowId = (askId: string): string => `ask-row-${askId}`;
+
+/** One file-callout row of a supplement block: its index within the row's
+ *  featured `files` list (the recorded order, newest job version first). */
+export const supplementFileId = (index: number): string =>
+	`supplement-file-${index}`;
 
 /**
  * The anchor that marks one ask row as TIMED OUT — an EXTRA id on the row it

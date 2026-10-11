@@ -519,6 +519,18 @@ export interface SessionProjection {
   version: number;
   /** Attached by the relay on every published frame (`daemon.py:1825`). */
   attention: CompletionAttention;
+  /** The newest turn-supplement beat per ANCHOR (the final assistant message
+   *  id), keyed by the same `anchor` the beat carries — a sibling map rather
+   *  than a new `kind` in `transcript` (`types.py:1127-1136`).
+   *
+   *  PRESENCE IS THE CAPABILITY PROXY, like `asks`: the key is ABSENT (not
+   *  `{}`) when the map is empty — an older relay omits it entirely and a
+   *  client must render exactly today's transcript. A cold open carries the
+   *  durable rows' own details (`daemon.py:1691-1695`), which are the same
+   *  keys as the live event's. Values are read defensively at ONE place
+   *  (`src/features/session/supplements.ts`): a malformed beat is dropped,
+   *  never guessed. */
+  supplements?: Record<string, Record<string, unknown>>;
 }
 
 /* --------------------------------------------------------------- session list */

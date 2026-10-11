@@ -267,9 +267,9 @@ jobs:
     # (run 37379067992, this job, the tiers as they stand): setup and checkouts 21 s +
     # install 4 s + typecheck 1 s + EXPORT 34 s + RELAY START 1 s + capture 1044 s +
     # canary 81 s + stop relay 0 s + upload of the 91 MB artifact 6 s = 1192 s, the job's
-    # whole measured wall time, plus the audit at its own measured rate — 948 cells x
-    # 1.25 s = 1,185 s, which is DERIVED rather than taken from that run, whose capture
-    # failed the identical-state gate before the audit step ran. That is ~2,377 s ≈ 40
+    # whole measured wall time, plus the audit at its own measured rate — 1008 cells x
+    # 1.25 s = 1,260 s, which is DERIVED rather than taken from that run, whose capture
+    # failed the identical-state gate before the audit step ran. That is ~2,452 s ≈ 41
     # min against the 85 below, so the bound is ~2.1x the work: the headroom is the point.
     # THE OLD FORM WAS FALSE, not merely imprecise:
     # `install + typecheck 10 + capture 40 + audit 20 + canary 5 < 80` sums to exactly
@@ -291,8 +291,10 @@ jobs:
     # 816, 2268 -> 2448, 8316 -> 8976), the mesh slice's seven cells one more (the
     # S15 remote rows, the tap-reveal and the move sheet's five states: 816 -> 900,
     # 2448 -> 2700, 8976 -> 9900), and the checkpoint rail's four more, folded from
-    # main (900 -> 948, 2700 -> 2844, 9900 -> 10428): the plans at THIS head are
-    # 948 / 2844 / 10428,
+    # main (900 -> 948, 2700 -> 2844, 9900 -> 10428), and the supplement slice's five
+    # S5 cells one more (948 -> 1008, 2844 -> 3024, 10428 -> 11088): the plans at THIS
+    # head are
+    # 1008 / 3024 / 11088,
     # each re-derived from the folded tree's own `--plan` rather than scaled. Those
     # cells are states
     # that had no cell at all — the create sheet,
@@ -361,9 +363,9 @@ jobs:
         # 36669731994) without GitHub reaping it, so the run said only that it was
         # still going. Measured again on 2026-10-03 (run 37098393675), the capture
         # costs 2.24 s/cell — 403 cells / 1209 frames in 903.1 s — so the `core`
-        # plan of 2844 cells needs ~106 min and cannot finish inside this bound. The
-        # `--tier ci` sample can: 948 cells, ~35 min at the same rate, which leaves
-        # the audit and the canary their own steps below. (`full` is 10428 cells, and
+        # plan of 3024 cells needs ~113 min and cannot finish inside this bound. The
+        # `--tier ci` sample can: 1008 cells, ~38 min at the same rate, which leaves
+        # the audit and the canary their own steps below. (`full` is 11088 cells, and
         # stays a dispatched or local run.)
         #
         # RAISED 20 -> 30 WITH THE CI AXIS, and the two move together: `CI_SCALES`
@@ -388,7 +390,10 @@ jobs:
         # cost (900 x 2.24 s ≈ 33.6 min). The checkpoint rail's four more, folded from
         # main, took it to 948 — a derived deadline of 948 x 3 s = 47.4 min, leaving
         # the 50 only 2.6 min of room — so the bound moved 50 -> 55, keeping the same
-        # ~1.5x over the measured cost (948 x 2.24 s ≈ 35.4 min).
+        # ~1.5x over the measured cost (948 x 2.24 s ≈ 35.4 min). The supplement
+        # slice's five S5 cells one more took it to 1008 — a derived deadline of
+        # 1008 x 3 s = 50.4 min, 4.6 min inside the 55 — so the bound stays 55,
+        # keeping the same ~1.5x over the measured cost (1008 x 2.24 s ≈ 37.6 min).
         timeout-minutes: 55
         # THE DOCUMENTED INVOCATION, through the harness's own script
         # (`docs/e2e/ci-notes.md` §3). An earlier version derived the cell list here
@@ -413,13 +418,13 @@ jobs:
         # BOUND DERIVED FROM THE CELL COUNT, not guessed. On run 37167390506 this
         # step audited 250 of the ci tier's 256 cells in 312 s — 1.25 s/cell, with
         # no FAIL row — so the tier as it stood then was 256 x 1.25 s = ~5.3 min. It
-        # plans 948 cells today (948 x 1.25 s = 1,185 s ≈ 20 min) and 25 gives ~1.27x
+        # plans 1008 cells today (1008 x 1.25 s = 1,260 s ≈ 21 min) and 25 gives ~1.19x
         # headroom over that; 20 had fallen to ~1.2x, thinner than this bound has ever
         # carried, and the fold's cells are what moved it; it moved 10 -> 15 with
         # the capture above when `CI_SCALES` gained the boundary step, and 15 -> 20 with
         # the lifecycle cells (504 -> 612), and 20 -> 25 with the fold's cells (756 ->
-        # 816) — kept at 25 by the mesh slice's seven (816 -> 900) and the checkpoint
-        # fold's four (900 -> 948). At 5 it was killed with six cells to go: a bound below the
+        # 816) — kept at 25 by the mesh slice's seven (816 -> 900), the checkpoint
+        # fold's four (900 -> 948) and the supplement slice's five (948 -> 1008). At 5 it was killed with six cells to go: a bound below the
         # work it contains, the same shape that made the capture's deadline derive
         # from its own plan. It is DERIVED, not COMPUTED at runtime: GitHub evaluates
         # `timeout-minutes` before any step runs, and the count that matters is the
@@ -475,24 +480,24 @@ jobs:
     # WHY THIS JOB EXISTS. The operator's requirement is QA "across a variety of different
     # device sizes of phone … and tablets both vertical and horizontal", and until this job
     # nothing automated covered it: the per-push `web-audit` job runs `--tier ci`, which is
-    # 2 of the matrix's 19 declared profiles, and both `core` (5 profiles / 2844 cells) and
-    # `full` (19 / 10428) were local or dispatched only. This job captures and audits `core`,
+    # 2 of the matrix's 19 declared profiles, and both `core` (5 profiles / 3024 cells) and
+    # `full` (19 / 11088) were local or dispatched only. This job captures and audits `core`,
     # on the NIGHTLY schedule only, so the per-push path is untouched and the `ci` job keeps
-    # its own 55-minute capture bound rather than being stretched to fit a 106-minute one.
+    # its own 55-minute capture bound rather than being stretched to fit a 113-minute one.
     #
     # SIZED FROM THE MEASUREMENT, NOT FROM HOPE. The runner's own rate is 2.24 s/cell
     # (403 cells / 1209 frames in 903.1 s, run 37098393675, a plan of 403 cells then),
-    # which is also the number `docs/e2e/README.md` uses to say a `core` run is ~106
-    # minutes: 2844 cells x 2.24 s = 6,371 s.
+    # which is also the number `docs/e2e/README.md` uses to say a `core` run is ~113
+    # minutes: 3024 cells x 2.24 s = 6,774 s.
     # The plan this job holds is the one the capture prints before it renders anything, so
     # the bound is checked against THAT rather than against a table, and each plan is
     # pinned to the ref that printed it: at 85b2785 `--plan --tier core --consecutive`
     # printed 858 cells x 3 frame(s) = 2574 frames (85b2785, a plan of 858 cells then)
     # with a derived deadline of 2574 s (85b2785), and
-    # at THIS head it prints `2844 cells x 3 frame(s) = 8532 frames` and `deadline: 8532 s`
-    # (3000 ms/cell). The capture step's 150 is above both derived deadlines (so the step
-    # cannot cut short the budget the run computed for itself) and ~1.4x the ~106 min the
-    # 2844 cells cost at 2.24 s/cell. It moved 95 -> 100 in round 3, and 100 -> 110 in
+    # at THIS head it prints `3024 cells x 3 frame(s) = 9072 frames` and `deadline: 9072 s`
+    # (3000 ms/cell). The capture step's 160 is above both derived deadlines (so the step
+    # cannot cut short the budget the run computed for itself) and ~1.4x the ~113 min the
+    # 3024 cells cost at 2.24 s/cell. It moved 95 -> 100 in round 3, and 100 -> 110 in
     # round 5: the fold's four extra cells took the derived deadline to 6264 s = 104.4 min,
     # ABOVE the 100 the job had carried, and a bound below its own deadline is the defect
     # this comment refuses one level up — the step would cut short the budget the run
@@ -505,13 +510,17 @@ jobs:
     # 125 the step had carried; and the checkpoint rail's four more, folded from main,
     # took it to 8532 s = 142.2 min — ABOVE the 140 the step now carried — so capture
     # moved 140 -> 150, with the audit bound 60 -> 70 and the job bound 190 -> 225
-    # (`150 + 70 = 220 < 225`). The per-push steps carry the same relationship: capture
-    # 55 against a derived 2844 s (47.4 min) and audit 25 against 948 x 1.25 s (20 min).
+    # (`150 + 70 = 220 < 225`). The supplement slice's five cells one more took the
+    # derived deadline to 9072 s = 151.2 min — ABOVE the 150 the step carried — so
+    # capture moved 150 -> 160 and the job bound 225 -> 240 with it, keeping the parts
+    # inside the bound (`160 + 70 = 230 < 240`). The per-push steps carry the same
+    # relationship: capture
+    # 55 against a derived 3024 s (50.4 min) and audit 25 against 1008 x 1.25 s (21 min).
     # The audit runs at 1.25 s/cell (250 of the 256 cells the tier held then in 312 s, run
-    # 37167390506), so `core` is 2844 x 1.25 s = 3,555 s ≈ 59 min and its step bound is 70.
+    # 37167390506), so `core` is 3024 x 1.25 s = 3,780 s ≈ 63 min and its step bound is 70.
     # The job bound holds its parts, the invariant the other jobs in this file state:
-    # `install + export + capture 150 + audit 70 < 225`. This is a nightly job of ~106 min of
-    # capture and ~59 min of audit inside that bound; it does not run on a pull request.
+    # `install + export + capture 160 + audit 70 < 240`. This is a nightly job of ~113 min of
+    # capture and ~63 min of audit inside that bound; it does not run on a pull request.
     #
     # EXPECTED FIRST-RUN VERDICT: THIS JOB IS RED, AND THAT IS WHAT IT IS FOR. It has
     # never executed (schedule/dispatch only). A real local `--tier core --consecutive`
@@ -529,7 +538,7 @@ jobs:
     # every term reproduces). The head they were taken at (`15deac3`) planned 504 cells on
     # `ci` and 1512 on `core` — re-derived with `--plan` AT THAT REF, and NOT the 1092 this
     # sentence used to quote: 1092 is not any tier's plan at any ref the review derived
-    # (85b2785 264/858, 4649a08 884, 756a6af 910, 15deac3 504/1512, this head 948/2844), it
+    # (85b2785 264/858, 4649a08 884, 756a6af 910, 15deac3 504/1512, this head 1008/3024), it
     # came in with the PR that wrote the paragraph, and a figure nothing prints is a figure
     # nobody can check. The plans at THIS head are in the SIZING note above, each with the
     # ref that prints it.
@@ -553,7 +562,7 @@ jobs:
     # measured on this host.
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
-    timeout-minutes: 225
+    timeout-minutes: 240
     steps:
       - uses: actions/checkout@v7
 
@@ -596,11 +605,12 @@ jobs:
         # `--tier core` names the sample the run states for itself: the capture prints its own
         # device coverage, so this job's log says which of the 19 declared profiles it covered
         # and which it did not, rather than leaving a green job to read as the whole matrix.
-        # 150 (not 140): the mesh slice's seven cells and the checkpoint rail's four,
-        # folded from main, together took the plan's own derived deadline to
-        # 8532 s = 142.2 min, and a step bound the plan's deadline can exceed would cut
+        # 160 (not 150): the mesh slice's seven cells, the checkpoint rail's four, folded
+        # from main, and the supplement slice's five together took the plan's own derived
+        # deadline to
+        # 9072 s = 151.2 min, and a step bound the plan's deadline can exceed would cut
         # short the budget the run computes for itself.
-        timeout-minutes: 150
+        timeout-minutes: 160
         run: pnpm audit:capture --dir dist --out "$RUNNER_TEMP/frames" --relay "$MOCK_RELAY_URL" --tier core --consecutive --yes
 
       - name: Audit the frames against the rubric

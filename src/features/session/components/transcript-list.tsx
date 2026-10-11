@@ -16,10 +16,15 @@ import {
 
 import type { TranscriptEntry } from "@/contracts";
 import { anchorBottomVisible } from "@/features/session/completion-visibility";
+import {
+	SupplementBlock,
+	type SupplementClient,
+} from "@/features/session/components/supplement-block";
 import { TranscriptRow } from "@/features/session/components/transcript-row";
 import { TurnBar } from "@/features/session/components/turn-bar";
 import { revealTarget } from "@/features/session/find";
 import { scrollAnchorFromHook } from "@/features/session/scroll-hook";
+import { beatLive, type SupplementBeat } from "@/features/session/supplements";
 import {
 	condensePlan,
 	type LatchedTurn,
@@ -117,6 +122,18 @@ export type TranscriptListProps = {
 	 *  to it, and let the wash say where it is. `nonce` distinguishes two
 	 *  landings on the same id (stepping wraps), so a repeat still re-runs. */
 	reveal?: { id: string; nonce: number } | null;
+	/** Turn supplements (memo §2.4/§3.1 row 18): the projection's newest beat
+	 *  per ANCHOR — `{anchor: beat}`, read once by the screen. The block renders
+	 *  under the assistant row whose `id` the beat names; absent map (an older
+	 *  relay) renders exactly today's transcript. */
+	supplements?: Record<string, SupplementBeat>;
+	/** The projection's own process identity, for the stale-row rule's
+	 *  `job_live` (`beatLive`): 0 is a disk rebuild. */
+	projectionPid?: number;
+	/** The block's host calls (documents, callouts, the three ops) — threaded
+	 *  from the screen; absent on a route-less screen, where a beat still
+	 *  renders its files and lines but no frame can fetch. */
+	supplementClient?: SupplementClient;
 	testID: string;
 };
 
@@ -192,6 +209,9 @@ export const TranscriptList = ({
 	onOpenAgent,
 	onOpenVideo,
 	onCancelTurn,
+	supplements,
+	projectionPid = 0,
+	supplementClient,
 	empty,
 	header,
 	anchorId = null,
@@ -709,8 +729,19 @@ export const TranscriptList = ({
 		);
 
 	const renderItem = useCallback(
-		({ item }: { item: TranscriptItem }) =>
-			item.kind === "bar" ? (
+		({ item }: { item: TranscriptItem }) => {
+			/* The supplement block's seat: under the FINAL answer, inside the row's
+			 * measured wrapper — the block is the answer's supplement, and the row's
+			 * measured height must include it or the ack gate's arithmetic drifts by
+			 * one unknown block height. The row's own anchor element stays the
+			 * answer's end (`completionAnchorId`). Only an assistant row renders a
+			 * block, and only the beat that NAMES it, so a beat whose anchor is not
+			 * in this transcript renders nothing at all. */
+			const beat =
+				item.kind === "entry" && item.entry.kind === "assistant"
+					? supplements?.[item.id]
+					: undefined;
+			return item.kind === "bar" ? (
 				/* The bar is measured like any row: it stands in the list, so the
 				 * anchor geometry (which walks the RENDERED items) must know its
 				 * height. */
@@ -771,8 +802,18 @@ export const TranscriptList = ({
 					{item.id === anchorId ? (
 						<View testID={completionAnchorId(item.id)} aria-hidden />
 					) : null}
+					{beat !== undefined && supplementClient !== undefined ? (
+						<View className="px-3">
+							<SupplementBlock
+								beat={beat}
+								jobLive={beatLive(beat, projectionPid)}
+								client={supplementClient}
+							/>
+						</View>
+					) : null}
 				</View>
-			),
+			);
+		},
 		[
 			toggleTurn,
 			streamingRowId,
@@ -783,6 +824,9 @@ export const TranscriptList = ({
 			anchorId,
 			measureRow,
 			highlightId,
+			supplements,
+			projectionPid,
+			supplementClient,
 		],
 	);
 

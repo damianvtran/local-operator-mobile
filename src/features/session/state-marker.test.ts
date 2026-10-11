@@ -41,6 +41,8 @@ const facts = (over: Partial<SessionStateFacts> = {}): SessionStateFacts => ({
 	subagents: 0,
 	entries: 2,
 	voice: false,
+	supplements: {},
+	supplementPid: 1,
 	...over,
 });
 
@@ -473,6 +475,11 @@ const STATE_KEY: Record<keyof SessionStateFlags, string> = {
 	populated: "populated",
 	idle: "idle",
 	voice: "voice",
+	supplementPreparing: "supplement-preparing",
+	supplementPopulated: "supplement-populated",
+	supplementFiles: "supplement-files",
+	supplementFailed: "supplement-failed",
+	supplementEmpty: "supplement-empty",
 };
 
 const stateKeyFor = (key: string): string =>

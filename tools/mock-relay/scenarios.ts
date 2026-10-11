@@ -12,6 +12,9 @@
  * `tools/visual` walk the matrix without a second hand-maintained list.
  */
 
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
 import type {
 	Capabilities,
 	PastSession,
@@ -25,6 +28,7 @@ import type {
 import type { Json } from "../lib/json.ts";
 import { isRecord } from "../lib/json.ts";
 import type { FixtureCorpus } from "./fixtures.ts";
+import { repoRoot } from "./fixtures.ts";
 import type { TranscribeAnswer } from "./transcribe.ts";
 import { syntheticSessionId } from "./wire.ts";
 
@@ -2412,6 +2416,91 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 				message: "the relay is not running; start it with `lop network start`",
 			},
 		}),
+	);
+
+	/* ------------------------------------------------------- turn supplements -- */
+
+	/* The C0 contract fixtures, read where they live (see fixtures/supplements/
+	 * README.md): the row's `payload.details` IS the projection's wire beat, so a
+	 * cell renders the same bytes the other three surfaces render. Only the
+	 * anchor is rewritten — the map is keyed by the anchor the beat carries, and
+	 * these must name THIS transcript's final answer. */
+	const SUPPLEMENT_ANCHOR = "a1b2c3d4e5f60718293a4b5c6d7e8f90";
+
+	const supplementBeat = (name: string): Record<string, unknown> => {
+		const row = JSON.parse(
+			readFileSync(
+				join(repoRoot, "fixtures", "supplements", "rows", `${name}.json`),
+				"utf8",
+			),
+		) as { payload: { details: Record<string, unknown> } };
+		return { ...row.payload.details, anchor: SUPPLEMENT_ANCHOR };
+	};
+
+	/** The world every supplement cell starts from: the live capture's own
+	 *  session (so the `/session/{id}` route and every other S5 fact hold) plus
+	 *  one final answer that the beats anchor to. */
+	const supplementWorld = (beats: Record<string, unknown>[]): ScenarioWorld => {
+		const base = structuredClone(liveIdle);
+		const template = base.transcript.find((row) => row.kind === "assistant");
+		if (template === undefined) {
+			throw new Error("the live-idle fixture has no assistant row to clone");
+		}
+		const answer = {
+			...template,
+			id: SUPPLEMENT_ANCHOR,
+			text: "Sweep's green across every region. The per-region numbers and the raw bench data are below.",
+			final: true,
+			text_complete: true,
+		};
+		const projection = projectionFrom(base, {
+			transcript: [
+				...base.transcript.filter((row) => row.id !== SUPPLEMENT_ANCHOR),
+				answer,
+			],
+			supplements: Object.fromEntries(
+				beats.map((beat) => [String(beat.anchor), beat]),
+			),
+		});
+		return { projections: { [projection.session_id]: projection } };
+	};
+
+	add(
+		"supplement-preparing",
+		"A running highlight: the callouts are up and the quiet preparing line carries Adjust… and Cancel beside it (S5/supplement-preparing).",
+		["S5/supplement-preparing"],
+		() => supplementWorld([supplementBeat("queued_stale")]),
+	);
+
+	add(
+		"supplement-populated",
+		"A settled highlight: two callout rows, three more behind the disclosure, and one generated graphic in its frame (S5/supplement-populated).",
+		["S5/supplement-populated"],
+		() => supplementWorld([supplementBeat("done_populated")]),
+	);
+
+	add(
+		"supplement-files",
+		"Files only: callout rows plus the `N more files` disclosure, no graphic (S5/supplement-files).",
+		["S5/supplement-files"],
+		() =>
+			supplementWorld([
+				{ ...supplementBeat("done_populated"), components: [] },
+			]),
+	);
+
+	add(
+		"supplement-failed",
+		"The one quiet line a failed run leaves: `Couldn't prepare highlights` with Retry (S5/supplement-failed).",
+		["S5/supplement-failed"],
+		() => supplementWorld([supplementBeat("failed")]),
+	);
+
+	add(
+		"supplement-empty",
+		"A settled `done` highlight with nothing to show: the block paints nothing at all (S5/supplement-empty).",
+		["S5/supplement-empty"],
+		() => supplementWorld([supplementBeat("done_empty")]),
 	);
 
 	return scenarios;

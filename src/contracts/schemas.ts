@@ -86,6 +86,8 @@ import type {
 	SttCapability,
 	SubagentDetail,
 	SubagentRow,
+	/** One supplement component's assembled document, `{html}`. */
+	SupplementDocument,
 	TodoItem,
 	TodoPhase,
 	TranscriptEntry,
@@ -662,6 +664,17 @@ export const sessionProjectionSchema = z.looseObject({
 	 *  `/seen` answer's attention stays the strict record — it is only ever
 	 *  written from a populated store. */
 	attention: projectionAttentionSchema,
+	/**
+	 * Turn supplements (memo §2.4/§3.1 row 18): the newest beat per anchor, as
+	 * a SIBLING MAP keyed by the final assistant message id — `{anchor: beat}`,
+	 * emitted only when non-empty (an empty map is absence). DELIBERATELY NOT
+	 * VALIDATED HERE beyond a record: a malformed beat must drop to nothing at
+	 * the reader (`supplementsFromWire` in `features/session/supplements.ts`)
+	 * rather than fail the whole frame and blank a session.
+	 */
+	supplements: z
+		.record(z.string(), z.record(z.string(), z.unknown()))
+		.optional(),
 });
 
 export const sessionSummarySchema = z.looseObject({
@@ -1106,6 +1119,15 @@ export const commandAckSchema = z.looseObject({
 	detail: z.string(),
 });
 
+/** `GET /api/sessions/{id}/supplements/{digest}/document` — one stored turn
+ *  supplement component, assembled to its document, as `{html}` (memo §2.7;
+ *  the relay's read route). Never `text/html`: no host may navigate a browsing
+ *  context to a URL, so the bytes travel as JSON and the host mounts them in a
+ *  sandboxed frame (`features/session/supplements.ts`). */
+export const supplementDocumentSchema = z.looseObject({
+	html: z.string(),
+});
+
 export const seenResponseSchema = z.looseObject({
 	ok: z.literal(true),
 	attention: completionAttentionSchema,
@@ -1249,6 +1271,29 @@ export const commandOpSchema = z.discriminatedUnion("op", [
 	z.looseObject({ op: z.literal("recall_steer"), command_id: z.uuid() }),
 	z.looseObject({ op: z.literal("ping") }),
 	z.looseObject({ op: z.literal("snapshot") }),
+	/* THE TURN-SUPPLEMENT FAMILY (`docs/design/turn-supplements.md` §2.7).
+	 * Additive typed frames on the one command route every mutation uses; the
+	 * runtime re-checks the anchor+job pair against its own live registry, so a
+	 * stale pair is the runtime's refusal to make, not this schema's. `steer`
+	 * carries the one-shot instruction text, bounded by the contract's 500
+	 * characters (`STEER_TEXT_MAX_CHARS`) so an over-long instruction is
+	 * refused on the device rather than as a runtime 422. */
+	z.looseObject({
+		op: z.literal("supplement_cancel"),
+		anchor: nonEmpty,
+		job: nonEmpty,
+	}),
+	z.looseObject({
+		op: z.literal("supplement_steer"),
+		anchor: nonEmpty,
+		job: nonEmpty,
+		text: z.string().min(1).max(500),
+	}),
+	z.looseObject({
+		op: z.literal("supplement_restart"),
+		anchor: nonEmpty,
+		job: nonEmpty,
+	}),
 ]);
 
 /* --------------------------------------------------------------------- SSE */
@@ -1363,6 +1408,9 @@ export const SCHEMAS = {
 	directories: directoriesSchema,
 	apiError: apiErrorSchema,
 	commandAck: commandAckSchema,
+	/** `GET /api/sessions/{id}/supplements/{digest}/document` — a component's
+	 *  assembled document, `{html}`, fetched in-app by the frame host. */
+	supplementDocument: supplementDocumentSchema,
 	/** `GET /api/asks`: the aggregate route the asks sheet reads. */
 	asks: asksResponseSchema,
 	/** `GET /api/schedules`: the machine-wide armed index — the Schedules
@@ -1538,6 +1586,11 @@ type WireMirror = {
 	projectWrite: ProjectWriteResponse;
 	projectDelete: ProjectDeleteResponse;
 	projectMilestone: ProjectMilestoneResponse;
+	/* The supplement read route (`GET /api/sessions/{id}/supplements/{digest}/document`,
+	 *  memo §2.7): asserted like every read family around it — the frame host
+	 *  reads `{html}` off this parse, so a field that stops being assignable
+	 *  reds `WireConformance` before a phone renders a blank frame. */
+	supplementDocument: SupplementDocument;
 };
 
 /** `SCHEMAS` names deliberately outside the assertion, each the shape of a
@@ -1730,6 +1783,7 @@ export type {
 	SttCapability,
 	SubagentDetail,
 	SubagentRow,
+	SupplementDocument,
 	TodoItem,
 	TodoPhase,
 	TranscriptEntry,

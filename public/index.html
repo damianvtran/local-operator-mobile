@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<!--
+  The web shell (SPA output) — the built-in Expo template plus ONE meta tag.
+
+  WHY THIS FILE EXISTS: `expo export --platform web` uses the template at
+  `@expo/cli/static/template/index.html` unless the project supplies its own
+  `public/index.html`, which the CLI prefers (webTemplate.js
+  `getTemplateIndexHtmlAsync`). This file is that template, copied verbatim,
+  with the frame policy added.
+
+  The app's web build is the repo's capture/dev target, and it mounts turn
+  supplement components in `<iframe sandbox="allow-scripts" src="data:…">`
+  (`supplement-webview.web.tsx`, the semantic mirror of the relay web's frame).
+  A web host has no navigation-interception point for a subframe, so the belt
+  for that shape (`docs/design/turn-supplements.md` §4.1, the relay pair's own
+  control) is the EMBEDDING document's `frame-src data:` policy as a
+  `<meta http-equiv>`: Chromium consults it for every navigation of an
+  already-loaded child frame and blocks it before the request is issued. The
+  native surface needs none of this — a WebView's document is top-level, with
+  no parent policy to inherit.
+
+  %LANG_ISO_CODE% and %WEB_TITLE% are the CLI's own placeholders (it replaces
+  them and injects the CSS/JS); do not rename them. The style block is
+  `expo-reset`, the react-native-web reset the built-in template ships.
+-->
+<!-- biome-ignore lint/a11y/useValidLang: `%LANG_ISO_CODE%` is the Expo CLI's own placeholder, substituted with the app's configured locale at export time; hardcoding a language here would drop that mechanism to satisfy the linter. -->
+<html lang="%LANG_ISO_CODE%">
+  <head>
+    <meta charset="utf-8" />
+    <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    <!-- The only frame a page of this app may ever load is a component's
+         `data:` document; every other navigation is refused by the policy
+         before it leaves the page. -->
+    <meta httpEquiv="Content-Security-Policy" content="frame-src data:" />
+    <title>%WEB_TITLE%</title>
+    <!-- The `react-native-web` recommended style reset: https://necolas.github.io/react-native-web/docs/setup/#root-element -->
+    <style id="expo-reset">
+      /* These styles make the body full-height */
+      html,
+      body {
+        height: 100%;
+      }
+      /* These styles disable body scrolling if you are using <ScrollView> */
+      body {
+        overflow: hidden;
+      }
+      /* These styles make the root element full-height */
+      #root {
+        display: flex;
+        height: 100%;
+        flex: 1;
+      }
+    </style>
+  </head>
+
+  <body>
+    <!-- Use static rendering with Expo Router to support running without JavaScript. -->
+    <noscript>
+      You need to enable JavaScript to run this app.
+    </noscript>
+    <!-- The root element for your Expo app. -->
+    <div id="root"></div>
+  </body>
+</html>

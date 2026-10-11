@@ -7,6 +7,11 @@ import {
 import { sendDeliveryStateOf } from "@/features/session/delivery";
 import { hasFencedBlock, hasTableBlock } from "@/features/session/markdown";
 import { classifyEntry } from "@/features/session/projection";
+import {
+	beatLive,
+	type SupplementBeat,
+	supplementDisposition,
+} from "@/features/session/supplements";
 
 /**
  * Which of the session view's states are true, decided in one place.
@@ -78,6 +83,13 @@ export interface SessionStateFacts {
 	 *  recomputed here, so the marker and the control cannot disagree — the
 	 *  `richRows` lesson applied to an affordance. */
 	voice: boolean;
+	/** Turn supplements (`S5/supplement-*`): the projection's newest beat per
+	 *  anchor, through the SAME reader and disposition rule the block renders
+	 *  from — a marker may only affirm a state the visible block shows. */
+	supplements: Record<string, SupplementBeat>;
+	/** The projection's own process identity, for the stale-row rule
+	 *  (`beatLive`): 0 is a disk rebuild. */
+	supplementPid: number;
 }
 
 /** The markers' own booleans: one per declared state, named as the marker is. */
@@ -97,6 +109,14 @@ export interface SessionStateFlags {
 	populated: boolean;
 	idle: boolean;
 	voice: boolean;
+	/** The turn-supplement block's states, one per capture cell. Each is true
+	 *  while SOME anchor's newest beat renders with that disposition; the cells
+	 *  isolate them with one-beat scenarios. */
+	supplementPreparing: boolean;
+	supplementPopulated: boolean;
+	supplementFiles: boolean;
+	supplementFailed: boolean;
+	supplementEmpty: boolean;
 }
 
 /** No state is affirmed: nothing has arrived yet. */
@@ -116,6 +136,11 @@ const NOTHING: SessionStateFlags = {
 	populated: false,
 	idle: false,
 	voice: false,
+	supplementPreparing: false,
+	supplementPopulated: false,
+	supplementFiles: false,
+	supplementFailed: false,
+	supplementEmpty: false,
 };
 
 /** What the session route knows, which is all this derivation reads. */
@@ -131,6 +156,13 @@ export interface SessionStateInput {
 	/** Whether the composer renders its mic — `useDictation().micVisible`, which is
 	 *  the relay's `capabilities.stt` AND this build's own recorder gate. */
 	micVisible: boolean;
+	/** The projection's supplement map and process identity (`S5/supplement-*`).
+	 *  OPTIONAL, and defaulted to "no beats at pid 0": a caller that predates
+	 *  the block (or a pinned test) reads exactly the no-supplement frame, which
+	 *  no marker may affirm — the affirmative direction stays conservative. The
+	 *  route passes both. */
+	supplements?: Record<string, SupplementBeat>;
+	supplementPid?: number;
 }
 
 /**
@@ -180,7 +212,66 @@ export const sessionFactsFrom = (
 	subagents: input.subagents,
 	entries: input.entries.length,
 	voice: input.micVisible,
+	supplements: input.supplements ?? {},
+	supplementPid: input.supplementPid ?? 0,
 });
+
+/**
+ * The supplement block's states, one pass over the newest beat of every anchor.
+ *
+ * The disposition is the block's own rule (`supplementDisposition`) evaluated
+ * with the block's own `jobLive` (`beatLive`) — so `session-supplement-
+ * preparing` can only be present while a frame genuinely shows the preparing
+ * line, and the stale-row rule's `cancelled · Retry` is what a cold reader's
+ * non-terminal row affirms. `supplement-empty` is narrower than "the block
+ * renders nothing": it is specifically the `done` row with nothing to show,
+ * the one case the cell `S5/supplement-empty` exists for — superseded and
+ * dismissed rows also render nothing and deliberately affirm no marker. */
+const supplementStateFlags = (
+	supplements: Record<string, SupplementBeat>,
+	pid: number,
+): Pick<
+	SessionStateFlags,
+	| "supplementPreparing"
+	| "supplementPopulated"
+	| "supplementFiles"
+	| "supplementFailed"
+	| "supplementEmpty"
+> => {
+	const flags = {
+		supplementPreparing: false,
+		supplementPopulated: false,
+		supplementFiles: false,
+		supplementFailed: false,
+		supplementEmpty: false,
+	};
+	for (const beat of Object.values(supplements)) {
+		const disposition = supplementDisposition(beat, beatLive(beat, pid));
+		if (disposition === "preparing" || disposition === "files_preparing") {
+			flags.supplementPreparing = true;
+		}
+		if (
+			disposition === "failed_retry" ||
+			disposition === "files_failed_retry"
+		) {
+			flags.supplementFailed = true;
+		}
+		if (disposition === "block" && beat.components.length > 0) {
+			flags.supplementPopulated = true;
+		}
+		if (
+			disposition === "block" &&
+			beat.files.length > 0 &&
+			beat.components.length === 0
+		) {
+			flags.supplementFiles = true;
+		}
+		if (disposition === "nothing" && beat.state === "done") {
+			flags.supplementEmpty = true;
+		}
+	}
+	return flags;
+};
 
 /** The card the reader is being asked to answer, or `null`.
  *
@@ -224,6 +315,7 @@ export const sessionStateFlags = (
 		populated: facts.entries > 0,
 		idle: false,
 		voice: facts.voice,
+		...supplementStateFlags(facts.supplements, facts.supplementPid),
 	};
 	/* The fallback, so a connected session always affirms SOMETHING: a screen with a
 	 * root and no state marker is the case the affirmative rule exists to refuse.
