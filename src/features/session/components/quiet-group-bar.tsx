@@ -21,6 +21,16 @@ import { quietGroupId, ROLE } from "@/ui/a11y";
  * **The target is 48 pt**, the same as the turn bar and for the same reason:
  * it is the only way back into a collapsed group, so it takes the stricter of
  * the platforms rather than a platform branch.
+ *
+ * **The boundary is `border-control`, not the hairline.** The bar is
+ * pressable, and `design/tokens/tokens.json`'s rule for `hairline` is
+ * "NEVER the sole boundary of anything you can press or type into" (the
+ * token's own measurement: 1.25:1 light / 1.46:1 dark against the canvas).
+ * The card fill and the border are this control's only boundary, so it takes
+ * the structural token (`border-control`, measured 3.42:1 light / 3.93:1
+ * dark — the 3:1 non-text floor on all six grounds). The TURN bar shipped
+ * with the same hairline and moves with this one: the family resolves
+ * together (design round 1, D1).
  */
 export type QuietGroupBarProps = {
 	/** The group's `qg:<first row id>` — the stable key the latch and the
@@ -50,7 +60,7 @@ export const QuietGroupBar = ({
 				accessibilityLabel={groupAccessibleName(group)}
 				accessibilityState={{ expanded: open }}
 				onPress={() => onToggle(!open)}
-				className="min-h-12 flex-row items-center gap-1.5 rounded-sm border border-hairline bg-surface px-2.5"
+				className="min-h-12 flex-row items-center gap-1.5 rounded-sm border border-border-control bg-surface px-2.5"
 			>
 				<Text className="font-mono text-mono-sm text-ink-dim" aria-hidden>
 					↔
