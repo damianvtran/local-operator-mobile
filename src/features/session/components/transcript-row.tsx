@@ -43,6 +43,10 @@ export type TranscriptRowProps = {
 	loadImage?: (entryId: string, index: number) => Promise<string | null>;
 	/** Opens a subagent's own view, for a `subagent_message` row. */
 	onOpenAgent?: (jobId: string) => void;
+	/** Opens the full-screen player for a video artifact a generation row
+	 *  carries — threaded from the screen so the route push (and its
+	 *  session-scoped params) stays the screen's business. */
+	onOpenVideo?: (entryId: string, index: number) => void;
 	/** The turn interrupt, threaded to the image-gen card's Cancel. The screen
 	 *  withholds it while the composer's own Stop is not visible, so the two
 	 *  controls share one gate (`composer.controls.stopVisible`). Resolves
@@ -70,6 +74,7 @@ export const TranscriptRow = ({
 	streaming = false,
 	loadImage,
 	onOpenAgent,
+	onOpenVideo,
 	onCancelTurn,
 }: TranscriptRowProps) => {
 	const kind = classifyEntry(entry);
@@ -99,6 +104,7 @@ export const TranscriptRow = ({
 						entryId={entry.id}
 						loadImage={loadImage}
 						onCancelTurn={onCancelTurn}
+						onOpenVideo={onOpenVideo}
 						testID={testID}
 					/>
 				) : (

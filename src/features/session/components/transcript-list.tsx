@@ -87,6 +87,9 @@ export type TranscriptListProps = {
 	loadImage?: (entryId: string, index: number) => Promise<string | null>;
 	/** Opens a subagent's own view. */
 	onOpenAgent?: (jobId: string) => void;
+	/** Opens the full-screen player for a video artifact a generation row
+	 *  carries (threaded to the card; the screen owns the route push). */
+	onOpenVideo?: (entryId: string, index: number) => void;
 	/** The turn interrupt, threaded to image-gen cards (the composer's Stop
 	 *  path). `undefined` while no turn is live; resolves whether the request
 	 *  reached the relay (review round 1, F2). */
@@ -187,6 +190,7 @@ export const TranscriptList = ({
 	streamingRowId,
 	loadImage,
 	onOpenAgent,
+	onOpenVideo,
 	onCancelTurn,
 	empty,
 	header,
@@ -756,6 +760,7 @@ export const TranscriptList = ({
 						streaming={streamingRowId !== null && item.id === streamingRowId}
 						loadImage={loadImage}
 						onOpenAgent={onOpenAgent}
+						onOpenVideo={onOpenVideo}
 						onCancelTurn={onCancelTurn}
 					/>
 					{/* The completion anchor: a zero-size sibling at the row's bottom edge
@@ -773,6 +778,7 @@ export const TranscriptList = ({
 			streamingRowId,
 			loadImage,
 			onOpenAgent,
+			onOpenVideo,
 			onCancelTurn,
 			anchorId,
 			measureRow,

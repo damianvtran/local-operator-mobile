@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 import type { TranscriptEntry, TranscriptEntryDetails } from "@/contracts";
 import {
 	IMAGEGEN_ALREADY_FINISHED_TONE,
-	IMAGEGEN_STATE_WORD,
 	IMAGEGEN_TONE,
 	IMAGEGEN_TOOLS,
 	imageGenCancelOverlay,
@@ -11,9 +10,13 @@ import {
 	imageGenGenerating,
 	imageGenLiveDetail,
 	imageGenLivePhase,
+	imageGenMaterialOf,
 	imageGenStateLine,
+	imageGenStateWord,
 	imageGenView,
 	isImageGenTool,
+	isVideoGenTool,
+	VIDEO_GEN_TOOLS,
 } from "@/features/session/imagegen";
 
 /**
@@ -66,24 +69,48 @@ const row = (
 };
 
 describe("the detection set", () => {
-	it("names exactly the one frozen tool", () => {
-		/* Harness-lane update (2026-10-08): ONE tool — image-to-image is a
+	it("names exactly the two generation tools", () => {
+		/* Harness-lane update (2026-10-08): image-to-image is a
 		 * `source_image_path` parameter on `generate_image`, not a second name.
-		 * A new member here is a deliberate change, which is why this asserts the
-		 * whole set rather than membership. */
-		expect([...IMAGEGEN_TOOLS]).toEqual(["generate_image"]);
+		 * Surfaces programme (R1, 2026-10-10): `generate_video` joins as the
+		 * second — the ONE edit the whole surface keys off. A new member here is
+		 * a deliberate change, which is why this asserts the whole set rather
+		 * than membership. */
+		expect([...IMAGEGEN_TOOLS]).toEqual(["generate_image", "generate_video"]);
+		/* The video subset is a SUBSET: every video tool must also detect, or a
+		 * video row would fall through to the generic tool row. */
+		for (const name of VIDEO_GEN_TOOLS) {
+			expect(IMAGEGEN_TOOLS.has(name)).toBe(true);
+		}
 	});
 
-	it("detects the tool whatever casing the wire sends", () => {
+	it("detects the tools whatever casing the wire sends", () => {
 		expect(isImageGenTool(row({ tool_name: "generate_image" }))).toBe(true);
 		expect(isImageGenTool(row({ tool_name: "Generate_Image" }))).toBe(true);
 		expect(isImageGenTool(row({ tool_name: "GENERATE_IMAGE" }))).toBe(true);
+		expect(isImageGenTool(row({ tool_name: "generate_video" }))).toBe(true);
+		expect(isImageGenTool(row({ tool_name: "GENERATE_VIDEO" }))).toBe(true);
+	});
+
+	it("splits the material on the video subset alone", () => {
+		/* The ONE two-valued fact the material changes (V5/V6 words, and the
+		 * cancel gate below). Only called on detected rows, where the split is
+		 * exhaustive by construction. */
+		expect(imageGenMaterialOf(row({ tool_name: "generate_image" }))).toBe(
+			"image",
+		);
+		expect(imageGenMaterialOf(row({ tool_name: "generate_video" }))).toBe(
+			"video",
+		);
+		expect(isVideoGenTool(row({ tool_name: "Generate_Video" }))).toBe(true);
+		expect(isVideoGenTool(row({ tool_name: "generate_image" }))).toBe(false);
 	});
 
 	it.each([
 		["another tool", "bash"],
 		["the absent edit sibling", "generate_altered_image"],
 		["a name that merely contains the tool", "generate_image_v2"],
+		["a video name that merely contains the tool", "generate_video_v2"],
 		["an empty name", ""],
 	])("does not detect %s", (_case, name) => {
 		expect(isImageGenTool(row({ tool_name: name }))).toBe(false);
@@ -384,6 +411,46 @@ describe("the artifact", () => {
 		/* The pre-attachment feed: done, no block. The reduced state renders. */
 		expect(imageGenView(row({ tool_state: "done" }))?.artifact).toBeNull();
 	});
+
+	it("reads the video artifact for a video row, on its own field", () => {
+		/* The surfaces programme's sibling (V6's other half): the video ref
+		 * family is consumed under the same done-only rule, and the two fields
+		 * never cross-talk — an image row cannot satisfy a video artifact nor
+		 * the reverse. */
+		const view = imageGenView(
+			row({
+				tool_name: "generate_video",
+				tool_state: "done",
+				videos: [{ index: 0, mime_type: "video/mp4" }],
+			}),
+		);
+		expect(view?.videoArtifact).toEqual({ index: 0, mimeType: "video/mp4" });
+		expect(view?.artifact).toBeNull();
+		expect(view?.material).toBe("video");
+	});
+
+	it.each(["queued", "running", "failed", "interrupted"] as const)(
+		"withholds the video artifact while the call is %s, even with a video reference on the row",
+		(state) => {
+			const view = imageGenView(
+				row({
+					tool_name: "generate_video",
+					tool_state: state,
+					videos: [{ index: 0, mime_type: "video/mp4" }],
+				}),
+			);
+			expect(view?.videoArtifact).toBeNull();
+		},
+	);
+
+	it("is null when a done video row carries no reference", () => {
+		/* The wire before the relay's video ref family lands: done, no ref. The
+		 * receipt-only rendering — and the state line degrades to "Done". */
+		expect(
+			imageGenView(row({ tool_name: "generate_video", tool_state: "done" }))
+				?.videoArtifact,
+		).toBeNull();
+	});
 });
 
 describe("cancel gating", () => {
@@ -398,6 +465,23 @@ describe("cancel gating", () => {
 			cancelable,
 		);
 	});
+
+	it.each(["queued", "running"] as const)(
+		"withholds the control for a LIVE video row (%s): the job is detached",
+		(state) => {
+			/* Surfaces design R4: the tool returned a receipt and the job runs
+			 * on, so the composer's Stop would not cancel it and the card's hint
+			 * would be false. The phase is still LIVE — the wire's own
+			 * `cancelling` hold still renders (the job rail settles it) — but no
+			 * control is offered on this surface. */
+			const view = imageGenView(
+				row({ tool_name: "generate_video", tool_state: state }),
+			);
+			if (view === null) throw new Error(`no view for ${state}`);
+			expect(view.cancelable).toBe(false);
+			expect(imageGenLivePhase(view.phase)).toBe(true);
+		},
+	);
 
 	/* The overlay's two directions are the review round 1 F2 finding: it must
 	 * hold over a request that WAS delivered (the confirmation has not landed),
@@ -426,7 +510,10 @@ describe("cancel gating", () => {
 		expect(imageGenCardPhase("running", false)).toBe("running");
 	});
 
-	it("keeps `cancelable` and `live phase` one definition", () => {
+	it("keeps `cancelable` one definition: the live phases of an IMAGE call", () => {
+		/* An image call is the interruptible case, so the two definitions
+		 * coincide there; the video row is the one deliberate divergence (R4),
+		 * pinned above. */
 		for (const state of [
 			"queued",
 			"running",
@@ -436,6 +523,7 @@ describe("cancel gating", () => {
 		] as const) {
 			const view = imageGenView(row({ tool_state: state }));
 			if (view === null) throw new Error(`no view for ${state}`);
+			expect(view.material).toBe("image");
 			expect(imageGenLivePhase(view.phase)).toBe(view.cancelable);
 		}
 	});
@@ -530,7 +618,7 @@ describe("the copy and the tone tables", () => {
 			"failed",
 			"cancelled",
 		] as const) {
-			expect(IMAGEGEN_STATE_WORD[phase].length).toBeGreaterThan(0);
+			expect(imageGenStateWord("image")[phase].length).toBeGreaterThan(0);
 			expect(IMAGEGEN_TONE[phase].glyph.length).toBeGreaterThan(0);
 			expect(IMAGEGEN_TONE[phase].inkClass.startsWith("text-")).toBe(true);
 		}
@@ -574,6 +662,7 @@ describe("the copy and the tone tables", () => {
 	it("composes the queued word with the datum only when one arrived", () => {
 		const line = (queuePosition: number | null) =>
 			imageGenStateLine("queued", {
+				material: "image",
 				queuePosition,
 				hasArtifact: false,
 				alreadyFinished: false,
@@ -588,6 +677,7 @@ describe("the copy and the tone tables", () => {
 
 	it("renders a zero datum: nothing ahead is a measurement, not an absence", () => {
 		const line = imageGenStateLine("queued", {
+			material: "image",
 			queuePosition: 0,
 			hasArtifact: false,
 			alreadyFinished: false,
@@ -600,6 +690,7 @@ describe("the copy and the tone tables", () => {
 	it("does not alias adjacent datums or keep the old 'position' wording", () => {
 		const line = (queuePosition: number) =>
 			imageGenStateLine("queued", {
+				material: "image",
 				queuePosition,
 				hasArtifact: false,
 				alreadyFinished: false,
@@ -618,6 +709,7 @@ describe("the copy and the tone tables", () => {
 		for (const phase of ["running", "cancelling", "done", "failed"] as const) {
 			expect(
 				imageGenStateLine(phase, {
+					material: "image",
 					queuePosition: 3,
 					hasArtifact: true,
 					alreadyFinished: false,
@@ -629,6 +721,7 @@ describe("the copy and the tone tables", () => {
 	it("says 'Image ready' only when the artifact is actually there", () => {
 		expect(
 			imageGenStateLine("done", {
+				material: "image",
 				queuePosition: null,
 				hasArtifact: true,
 				alreadyFinished: false,
@@ -636,6 +729,7 @@ describe("the copy and the tone tables", () => {
 		).toBe("Image ready");
 		expect(
 			imageGenStateLine("done", {
+				material: "image",
 				queuePosition: null,
 				hasArtifact: false,
 				alreadyFinished: false,
@@ -643,9 +737,51 @@ describe("the copy and the tone tables", () => {
 		).toBe("Done");
 	});
 
+	it("says 'Video ready' for a video artifact, and 'Done' without one", () => {
+		/* V6's other half, on the material's own words: the video row's line
+		 * claims ready bytes only when a video artifact arrived, exactly as the
+		 * image row's does. */
+		expect(
+			imageGenStateLine("done", {
+				material: "video",
+				queuePosition: null,
+				hasArtifact: true,
+				alreadyFinished: false,
+			}),
+		).toBe("Video ready");
+		expect(
+			imageGenStateLine("done", {
+				material: "video",
+				queuePosition: null,
+				hasArtifact: false,
+				alreadyFinished: false,
+			}),
+		).toBe("Done");
+	});
+
+	it("changes exactly the two material words, and nothing else", () => {
+		const image = imageGenStateWord("image");
+		const video = imageGenStateWord("video");
+		expect(image.running).toBe("Generating image");
+		expect(video.running).toBe("Generating video");
+		expect(image.done).toBe("Image ready");
+		expect(video.done).toBe("Video ready");
+		/* V5/V6 are the ONLY deltas (surfaces design §4): every other word is
+		 * byte-identical across the materials. */
+		for (const phase of [
+			"queued",
+			"cancelling",
+			"failed",
+			"cancelled",
+		] as const) {
+			expect(video[phase]).toBe(image[phase]);
+		}
+	});
+
 	it("says 'Already finished' for the conflict, 'Failed' for a failure", () => {
 		expect(
 			imageGenStateLine("failed", {
+				material: "image",
 				queuePosition: null,
 				hasArtifact: false,
 				alreadyFinished: true,
@@ -653,6 +789,7 @@ describe("the copy and the tone tables", () => {
 		).toBe("Already finished");
 		expect(
 			imageGenStateLine("failed", {
+				material: "image",
 				queuePosition: null,
 				hasArtifact: false,
 				alreadyFinished: false,
@@ -666,8 +803,8 @@ describe("the copy and the tone tables", () => {
 	});
 
 	it("names the cancelling phase as in-progress, not as an outcome", () => {
-		expect(IMAGEGEN_STATE_WORD.cancelling).toBe("Cancelling…");
-		expect(IMAGEGEN_STATE_WORD.cancelled).toBe("Cancelled");
+		expect(imageGenStateWord("image").cancelling).toBe("Cancelling…");
+		expect(imageGenStateWord("image").cancelled).toBe("Cancelled");
 	});
 });
 

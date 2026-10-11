@@ -1,6 +1,10 @@
 /**
- * The image-generation tool surface: which tool rows are cards, and the ONE
- * entry→view-model adapter those cards render from.
+ * The generation-tool surface: which tool rows are cards, and the ONE
+ * entry→view-model adapter those cards render from. The detection set carries
+ * both generation tools (`generate_image`, `generate_video`); the ONE fact the
+ * material changes is this surface's two noun-bearing words, plus whether the
+ * turn-interrupt applies to the card at all (a video job is detached — see
+ * `imageGenMaterialOf` and the `cancelable` gate).
  *
  * The wire shape FROZE on 2026-10-09 (the harness lane's local-operator
  * #2089): every `generate_image` update carries the canonical field set —
@@ -46,19 +50,51 @@ import type { ToolState, TranscriptEntry } from "@/contracts";
 import { toolElapsed } from "@/features/session/projection";
 
 /**
- * The detection set: the tools whose transcript row is an image-gen card.
+ * The detection set: the tools whose transcript row is a generation card.
  *
  * ONE set for this surface — the transcript row and every test read this
  * constant. It is a SET rather than a bare string because the surface's shape
- * is "the generation tools", and a future name would join here once; today the
- * frozen contract has exactly one tool (harness-lane update, 2026-10-08 — the
- * image-to-image case folded into `generate_image` as `source_image_path`).
- * Lower-cased comparison below because the wire carries the tool's own
- * spelling.
+ * is "the generation tools", and a new name joins here once: `generate_video`
+ * is the second (the surfaces programme's R1 — "add `generate_video` there
+ * first, then emit"; the TUI's own set edit landed as core #2196). The
+ * image-to-image case is not a third name — it folded into `generate_image`
+ * as `source_image_path` (harness-lane update, 2026-10-08). Lower-cased
+ * comparison below because the wire carries the tool's own spelling.
  */
-export const IMAGEGEN_TOOLS: ReadonlySet<string> = new Set(["generate_image"]);
+export const IMAGEGEN_TOOLS: ReadonlySet<string> = new Set([
+	"generate_image",
+	"generate_video",
+]);
 
-/** Whether a transcript entry is an image-generation call. */
+/**
+ * The video subset — the ONE place the material noun is decided.
+ *
+ * A subset rather than a second full set, mirroring the TUI's own split
+ * (`IMAGE_GEN_TOOLS` / `VIDEO_GEN_TOOLS`, core `tui/imagegen.py`): detection
+ * reads `IMAGEGEN_TOOLS`, and everything material reads THIS set, so a new
+ * video tool's words can never disagree with the card that paints them.
+ */
+export const VIDEO_GEN_TOOLS: ReadonlySet<string> = new Set(["generate_video"]);
+
+/** Which artifact noun a generation call's words name. The ONE two-valued fact
+ *  the material changes (surfaces design §4, deltas V5/V6): the two words
+ *  `imageGenStateWord` selects, and — for the cancel affordance — the reason a
+ *  video call can be offered none at all (R4: the job is detached). */
+export type ImageGenMaterial = "image" | "video";
+
+/** Whether a call is a video generation, by its tool name. */
+export const isVideoGenTool = (
+	entry: Pick<TranscriptEntry, "tool_name">,
+): boolean => VIDEO_GEN_TOOLS.has(entry.tool_name.toLowerCase());
+
+/** The material of a detected call. Only called on rows `isImageGenTool`
+ *  admitted, where the two sets above are exhaustive: anything that is not in
+ *  the video subset is the image case — never a third material. */
+export const imageGenMaterialOf = (
+	entry: Pick<TranscriptEntry, "tool_name">,
+): ImageGenMaterial => (isVideoGenTool(entry) ? "video" : "image");
+
+/** Whether a transcript entry is a generation call. */
 export const isImageGenTool = (
 	entry: Pick<TranscriptEntry, "tool_name">,
 ): boolean => IMAGEGEN_TOOLS.has(entry.tool_name.toLowerCase());
@@ -169,15 +205,24 @@ export const IMAGEGEN_ALREADY_FINISHED_TONE: ImageGenTone = {
 };
 
 /**
- * The state's own word, one per state.
+ * The state's own word, one per state, per material.
+ *
+ * TWO words change with the material and they are the only ones (surfaces
+ * design §4, deltas V5/V6): `running` names what is being generated
+ * (`Generating image` / `Generating video`) and `done` names what is ready
+ * (`Image ready` / `Video ready`). Every other word is byte-identical across
+ * the two materials — the frozen enumeration is exactly these two, and a
+ * third divergence would be a finding back to the design, not a tweak here.
+ *
+ * `done`'s word is chosen by `imageGenStateLine` — "Video ready" claims bytes
+ * are there, which the card may say only once an artifact reference has
+ * arrived (the reduced reading is `Done`).
  *
  * `cancelling` carries the ellipsis because it is a phase in progress, not an
  * outcome — the wire's cancel-confirmation hold and the card's local overlay
  * draw the same word (`Reconnecting…` is the same register); every other word
  * is a state the reader can act on, and none of them is a verdict the feed has
  * not stated.
- * `done`'s word is chosen by `imageGenStateLine` — "Image ready" claims an image
- * is there, which is only true once the artifact has arrived.
  *
  * `cancelled` is the provider's own terminal word for an aborted generation
  * (the frozen wire vocabulary's `CANCELLED`) and is deliberately NOT the
@@ -186,13 +231,21 @@ export const IMAGEGEN_ALREADY_FINISHED_TONE: ImageGenTone = {
  * (its artifact either arrived or did not). One wire state, two sentences
  * answering two different questions (design round 1, D3).
  */
-export const IMAGEGEN_STATE_WORD: Record<ImageGenPhase, string> = {
-	queued: "Queued",
-	running: "Generating image",
-	cancelling: "Cancelling…",
-	done: "Image ready",
-	failed: "Failed",
-	cancelled: "Cancelled",
+export const imageGenStateWord = (
+	material: ImageGenMaterial,
+): Record<ImageGenPhase, string> => {
+	/* The two material words, adjacent so the pair is visible at one site. */
+	const running =
+		material === "video" ? "Generating video" : "Generating image";
+	const done = material === "video" ? "Video ready" : "Image ready";
+	return {
+		queued: "Queued",
+		running,
+		cancelling: "Cancelling…",
+		done,
+		failed: "Failed",
+		cancelled: "Cancelled",
+	};
 };
 
 /**
@@ -207,8 +260,10 @@ export const IMAGEGEN_STATE_WORD: Record<ImageGenPhase, string> = {
  * ahead" — one reading of the datum on every surface (media wave-2
  * conformance). `0 ahead` still renders: zero is a measurement, not an
  * absence. `done` degrades to `Done` when no artifact arrived, because
- * "Image ready" beside no image would be the card claiming bytes it cannot
- * show (the reduced state, again — never a claim the feed did not make).
+ * "Image ready" beside no image — and "Video ready" beside no playable video —
+ * would be the card claiming bytes it cannot show (the reduced state, again —
+ * never a claim the feed did not make). `material` selects the two
+ * noun-bearing words (`imageGenStateWord`) and branches nothing else.
  * `failed`'s sentence is withheld when the row is the cancel-vs-finished
  * conflict, and an already-finished reading says "Already finished" wherever
  * the row settles — the conflict folds as `cancelled` on the canonical wire
@@ -217,18 +272,21 @@ export const IMAGEGEN_STATE_WORD: Record<ImageGenPhase, string> = {
 export const imageGenStateLine = (
 	phase: ImageGenPhase,
 	state: {
+		/** Which material's words to draw (the two noun-bearing words only). */
+		material: ImageGenMaterial;
 		queuePosition: number | null;
 		hasArtifact: boolean;
 		/** The failed phase is actually the cancel-vs-finished conflict. */
 		alreadyFinished: boolean;
 	},
 ): string => {
+	const words = imageGenStateWord(state.material);
 	if (phase === "queued" && state.queuePosition !== null) {
-		return `${IMAGEGEN_STATE_WORD.queued} · ${state.queuePosition} ahead`;
+		return `${words.queued} · ${state.queuePosition} ahead`;
 	}
 	if (phase === "done" && !state.hasArtifact) return "Done";
 	if (state.alreadyFinished) return "Already finished";
-	return IMAGEGEN_STATE_WORD[phase];
+	return words[phase];
 };
 
 /* ------------------------------------------------------------ the cancel overlay */
@@ -449,10 +507,19 @@ export const imageGenLiveDetail = (
 
 /* -------------------------------------------------------------- the view model */
 
-/** The finished artifact, indexed exactly like the entry's other images — the
- *  existing phone image path serves its bytes, so the card only needs the two
- *  fields `TranscriptImage` already takes. */
+/** The finished image artifact, indexed exactly like the entry's other images —
+ *  the existing phone image path serves its bytes, so the card only needs the
+ *  two fields `TranscriptImage` already takes. */
 export interface ImageGenArtifact {
+	index: number;
+	mimeType: string;
+}
+
+/** The finished video, once the call is done and the row carries one. Same two
+ *  fields as the image artifact, but a separate type and field: the bytes come
+ *  from the video route (the player's loader), never from the image one, and
+ *  the two artifacts must not become interchangeable by shape accident. */
+export interface ImageGenVideoArtifact {
 	index: number;
 	mimeType: string;
 }
@@ -475,6 +542,15 @@ export interface ImageGenView {
 	elapsed: string | null;
 	/** The generated image, once the call is done and the row carries one. */
 	artifact: ImageGenArtifact | null;
+	/** The generated video, once the call is done and the row carries a video
+	 *  reference (the relay's `videos` ref family — absence reads as "none",
+	 *  the receipt-only rendering). The wire tells the card the artifact
+	 *  EXISTS; whether those bytes still resolve is the PLAYER's question, and
+	 *  its answer is "Video no longer available.". */
+	videoArtifact: ImageGenVideoArtifact | null;
+	/** Which material's words this call draws — and why its cancel affordance
+	 *  is what it is (see `cancelable`). */
+	material: ImageGenMaterial;
 	/** Whether a settled row is really the cancel-vs-finished conflict rather
 	 *  than a failure: rendered quietly, never with the failure treatment. The
 	 *  conflict folds as `cancelled` on the canonical wire and `failed` on the
@@ -484,7 +560,15 @@ export interface ImageGenView {
 	/** Whether a generation had started, from this entry alone — the gate for
 	 *  the card's generating body. See `generatingOf` and `imageGenGenerating`. */
 	generating: boolean;
-	/** Whether the cancel affordance applies: live phases only. */
+	/** Whether the cancel affordance applies: live phases of an INTERRUPTIBLE
+	 *  call — image generations only. A video job is DETACHED (the tool returns
+	 *  a receipt and the job runs on, surfaces design §2.1/R4), so the
+	 *  turn-interrupt this card offers would not cancel it: its label and hint
+	 *  ("Stops the running turn, which cancels this generation.") would be
+	 *  false. The wire's own `cancelling` hold still renders — the post-turn
+	 *  job rail can cancel it — but this card offers no control for it (v1,
+	 *  per the Schedules precedent: the phone's write half stays on the
+	 *  terminal and the desktop plane). */
 	cancelable: boolean;
 }
 
@@ -492,15 +576,18 @@ export interface ImageGenView {
  * The adapter. `null` for anything outside the detection set, so the transcript
  * row's dispatch is one call.
  *
- * The artifact is read only in `done`: a running row with a stray image
- * reference must not render bytes the call has not produced, and an interrupted
- * one is precisely the state whose output must not read as a result. The first
- * image reference is the row's artifact — artifact blocks are indexed like
- * images (the frozen attachment contract), and a `generate` row carries the
- * generated image as its own block.
+ * The artifact is read only in `done`: a running row with a stray image or
+ * video reference must not render bytes the call has not produced, and an
+ * interrupted one is precisely the state whose output must not read as a
+ * result. The first image reference is the row's image artifact — artifact
+ * blocks are indexed like images (the frozen attachment contract), and a
+ * `generate` row carries the generated image as its own block. The video
+ * sibling reads `videos[0]` under the same done-only rule; whether those bytes
+ * still resolve is the PLAYER's question, never the card's.
  */
 export const imageGenView = (entry: TranscriptEntry): ImageGenView | null => {
 	if (!isImageGenTool(entry)) return null;
+	const material = imageGenMaterialOf(entry);
 	const live = imageGenLiveDetail(entry);
 	const phase = phaseOf(live.stage, entry.tool_state);
 	const image = entry.images[0];
@@ -508,17 +595,24 @@ export const imageGenView = (entry: TranscriptEntry): ImageGenView | null => {
 		phase === "done" && image !== undefined
 			? { index: image.index, mimeType: image.mime_type }
 			: null;
+	const video = entry.videos?.[0];
+	const videoArtifact =
+		phase === "done" && video !== undefined
+			? { index: video.index, mimeType: video.mime_type }
+			: null;
 	return {
 		tool: entry.tool_name,
 		summary: entry.summary,
+		material,
 		phase,
 		live,
 		elapsed: toolElapsed(entry),
 		artifact,
+		videoArtifact,
 		alreadyFinished:
 			(phase === "failed" || phase === "cancelled") &&
 			live.errorType === IMAGEGEN_ALREADY_FINISHED,
 		generating: generatingOf(phase, entry.tool_state),
-		cancelable: imageGenLivePhase(phase),
+		cancelable: material === "image" && imageGenLivePhase(phase),
 	};
 };

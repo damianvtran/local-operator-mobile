@@ -63,6 +63,10 @@ export const SCREEN = {
 	 *  panel's route/root, so the harness's S4 relabel does not orphan it. */
 	home: "home-screen",
 	subagent: "subagent-screen",
+	/** The full-screen video player (`/session/[id]/video`), pushed from a
+	 *  generation row's video frame. Its own root so a capture can tell the
+	 *  player drew rather than the transcript behind it. */
+	video: "video-screen",
 	past: "past-sessions-screen",
 	/** The projects list (S16) and its pushed detail. Two roots, because the detail
 	 *  is a route of its own — the app pushes it — rather than a panel inside the
@@ -129,6 +133,7 @@ export const CONTROL = {
 	// because two screens are on the navigation stack at once during a transition.
 	sessionBack: "session-back",
 	subagentBack: "subagent-back",
+	videoBack: "video-back",
 
 	// Settings: the theme override, the one setting that needs no connection.
 
@@ -614,6 +619,14 @@ export const SURFACE = {
 	 *  switch to is `subagentRunning` below. */
 	subagentStatus: "subagent-detail-status",
 
+	/* --- the video player route (the surfaces programme's native playback item).
+	 *  Three states, three markers, each its own id because the loading frame
+	 *  and the missing frame must be tellable apart from the ready one — and
+	 *  from each other — in a capture. --- */
+	videoPlayer: "video-player",
+	videoPlayerLoading: "video-player-loading",
+	videoPlayerMissing: "video-player-missing",
+
 	/* The three surfaces whose components carry a DEFAULT identifier rather than
 	 * taking one from a caller: a literal default is a second spelling of an id the
 	 * flows select, which is exactly what the contract exists to prevent. */
@@ -689,6 +702,7 @@ export const IDENTIFIER_FAMILIES: readonly string[] = [
 	"turn-bar-",
 	"completion-anchor-",
 	"transcript-image-",
+	"transcript-video-",
 	"imagegen-cancel-",
 	"attach-option-",
 	"model-option-",
@@ -1342,6 +1356,12 @@ export const completionAnchorId = (anchorId: string): string =>
 /** One image inside a transcript row, disambiguated by its index within the row. */
 export const transcriptImageId = (entryId: string, index: number): string =>
 	`transcript-image-${entryId}-${index}`;
+
+/** One generation row's video frame, keyed by the entry and the video-index it
+ *  belongs to — the video sibling of `transcriptImageId`, addressed the same
+ *  way for the same reason (a transcript can carry several generation rows). */
+export const transcriptVideoId = (entryId: string, index: number): string =>
+	`transcript-video-${entryId}-${index}`;
 
 /** One image-gen card's cancel control, keyed by the entry it belongs to. A
  *  transcript can carry several generation rows (a turn may generate more than

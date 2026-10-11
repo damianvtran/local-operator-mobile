@@ -114,6 +114,17 @@ const TINY_PNG = Buffer.from(
 	"base64",
 );
 
+/** A real, single-frame MP4 (64×36, dark, ~1.5 KB): the bytes behind
+ *  `/attachment?kind=video`, so a `<video>` in a captured frame has something
+ *  decodable — the video sibling of `TINY_PNG`, and here for the same reason:
+ *  a route that answers nothing renders a player state the capture could not
+ *  tell apart from a broken one. Generated once with ffmpeg and inlined so the
+ *  mock stays self-contained (no binary fixture file to keep in sync). */
+const TINY_MP4 = Buffer.from(
+	"AAAAIGZ0eXBpc29tAAACAGlzb21pc28yYXZjMW1wNDEAAAMZbW9vdgAAAGxtdmhkAAAAAAAAAAAAAAAAAAAD6AAAADIAAQAAAQAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAAkN0cmFrAAAAXHRraGQAAAADAAAAAAAAAAAAAAABAAAAAAAAADIAAAAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAABAAAAAAEAAAAAkAAAAAAAkZWR0cwAAABxlbHN0AAAAAAAAAAEAAAAyAAAAAAABAAAAAAG7bWRpYQAAACBtZGhkAAAAAAAAAAAAAAAAAAAoAAAAAgBVxAAAAAAALWhkbHIAAAAAAAAAAHZpZGUAAAAAAAAAAAAAAABWaWRlb0hhbmRsZXIAAAABZm1pbmYAAAAUdm1oZAAAAAEAAAAAAAAAAAAAACRkaW5mAAAAHGRyZWYAAAAAAAAAAQAAAAx1cmwgAAAAAQAAASZzdGJsAAAAwnN0c2QAAAAAAAAAAQAAALJhdmMxAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAAEAAJABIAAAASAAAAAAAAAABFUxhdmM2Mi4yOC4xMDIgbGlieDI2NAAAAAAAAAAAAAAAGP//AAAAOGF2Y0MBZAAK/+EAGmdkAAqscgREf58BEAAAAwAQAAADAoDxIlhGAQAHaOhDgZSyLP34+AAAAAAQcGFzcAAAAAEAAAABAAAAFGJ0cnQAAAAAAAG8YAAAAAAAAAAYc3R0cwAAAAAAAAABAAAAAQAAAgAAAAAcc3RzYwAAAAAAAAABAAAAAQAAAAEAAAABAAAAFHN0c3oAAAAAAAACxwAAAAEAAAAUc3RjbwAAAAAAAAABAAADSQAAAGJ1ZHRhAAAAWm1ldGEAAAAAAAAAIWhkbHIAAAAAAAAAAG1kaXJhcHBsAAAAAAAAAAAAAAAALWlsc3QAAAAlqXRvbwAAAB1kYXRhAAAAAQAAAABMYXZmNjIuMTIuMTAyAAAACGZyZWUAAALPbWRhdAAAArAGBf//rNxF6b3m2Ui3lizYINkj7u94MjY0IC0gY29yZSAxNjUgcjMyMjIgYjM1NjA1YSAtIEguMjY0L01QRUctNCBBVkMgY29kZWMgLSBDb3B5bGVmdCAyMDAzLTIwMjUgLSBodHRwOi8vd3d3LnZpZGVvbGFuLm9yZy94MjY0Lmh0bWwgLSBvcHRpb25zOiBjYWJhYz0xIHJlZj0xNiBkZWJsb2NrPTE6MDowIGFuYWx5c2U9MHgzOjB4MTMzIG1lPXVtaCBzdWJtZT0xMCBwc3k9MSBwc3lfcmQ9MS4wMDowLjAwIG1peGVkX3JlZj0xIG1lX3JhbmdlPTI0IGNocm9tYV9tZT0xIHRyZWxsaXM9MiA4eDhkY3Q9MSBjcW09MCBkZWFkem9uZT0yMSwxMSBmYXN0X3Bza2lwPTEgY2hyb21hX3FwX29mZnNldD0tMiB0aHJlYWRzPTEgbG9va2FoZWFkX3RocmVhZHM9MSBzbGljZWRfdGhyZWFkcz0wIG5yPTAgZGVjaW1hdGU9MSBpbnRlcmxhY2VkPTAgYmx1cmF5X2NvbXBhdD0wIGNvbnN0cmFpbmVkX2ludHJhPTAgYmZyYW1lcz04IGJfcHlyYW1pZD0yIGJfYWRhcHQ9MiBiX2JpYXM9MCBkaXJlY3Q9MyB3ZWlnaHRiPTEgb3Blbl9nb3A9MCB3ZWlnaHRwPTIga2V5aW50PTI1MCBrZXlpbnRfbWluPTIwIHNjZW5lY3V0PTQwIGludHJhX3JlZnJlc2g9MCByY19sb29rYWhlYWQ9NjAgcmM9Y3JmIG1idHJlZT0xIGNyZj01MS4wIHFjb21wPTAuNjAgcXBtaW49MCBxcG1heD02OSBxcHN0ZXA9NCBpcF9yYXRpbz0xLjQwIGFxPTE6MS4wMACAAAAAD2WIgQAP/x3g/ZKapVOfiw==",
+	"base64",
+);
+
 const UUID_RE =
 	/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -2503,6 +2514,60 @@ export function createRelay(options: RelayOptions = {}) {
 				return res.end(TINY_PNG);
 			}
 
+			if (rest === "/attachment" && method === "GET") {
+				/* The video phase's byte route, as the surfaces design names it for
+				 * the phone (§3.2: `GET /api/sessions/{id}/attachment` with the
+				 * shared entry id, the video-block index and `kind=video`). The relay
+				 * lane that serves it for real is that phase's producer side; the mock
+				 * models it here so the native player's captured states are exercised
+				 * end to end (fetch → cache file / object URL → `<video>`), never
+				 * against a stand-in that cannot answer.
+				 *
+				 * Session resolution FIRST, as `/image` does: an unknown session is
+				 * `404 unknown session` even with a parameter missing. */
+				if (projection === undefined) {
+					sendJson(res, 404, errorBody("unknown session"));
+					return;
+				}
+				const entry = url.searchParams.get("entry");
+				if (!entry) {
+					sendJson(res, 400, errorBody("entry id is required"));
+					return;
+				}
+				const kind = url.searchParams.get("kind");
+				if (kind !== "video") {
+					/* v1 serves one kind; anything else is a client bug the mock
+					 * surfaces loudly rather than hiding as "missing". */
+					sendJson(res, 400, errorBody("unsupported attachment kind"));
+					return;
+				}
+				const index = url.searchParams.get("i");
+				if (index !== null && !/^\d+$/.test(index)) {
+					sendJson(res, 400, errorBody("bad attachment index"));
+					return;
+				}
+				const row = (projection.transcript ?? []).find(
+					(candidate) => candidate.id === entry,
+				);
+				const refs = row?.videos ?? [];
+				const known =
+					refs.length > 0 && (index === null || Number(index) < refs.length);
+				if (!known) {
+					/* The relay's "the bytes are gone" answer — what the player
+					 * renders as "Video no longer available." (design §3.4/§4, V7) —
+					 * and the honest answer for a transcript whose artifact the
+					 * store no longer holds. */
+					sendJson(res, 404, errorBody("no such attachment"));
+					return;
+				}
+				res.writeHead(200, {
+					"content-type": "video/mp4",
+					"cache-control": "public, max-age=31536000, immutable",
+					"content-length": TINY_MP4.length,
+				});
+				return res.end(TINY_MP4);
+			}
+
 			if (rest === "/seen" && method === "POST") {
 				if (!projection) {
 					sendFixture(res, "seen-unknown-session");
@@ -2651,7 +2716,7 @@ export function createRelay(options: RelayOptions = {}) {
 		{ match: /^\/api\/sessions\/[^/]+\/command$/, methods: ["POST"] },
 		{ match: /^\/api\/sessions\/(start|resume)$/, methods: ["POST"] },
 		{
-			match: /^\/api\/sessions\/[^/]+\/(events|image|history)$/,
+			match: /^\/api\/sessions\/[^/]+\/(events|image|history|attachment)$/,
 			methods: ["GET", "HEAD"],
 		},
 		{

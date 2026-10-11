@@ -108,6 +108,15 @@ export interface TranscriptImageRef {
   mime_type: string;
 }
 
+/** One video artifact a row carries — the sibling of `TranscriptImageRef`.
+ *  Indices count VIDEO blocks on their own video-only index, the way image
+ *  refs share `/image` (surfaces design §3.2: the phone's byte route is a
+ *  `kind=video` walk of this family). */
+export interface TranscriptVideoRef {
+  index: number;
+  mime_type: string;
+}
+
 /** Sender identity on a `peer_message` entry; all fields advisory.
  *  `web/src/types.ts:85-91`. */
 export interface PeerSender {
@@ -213,6 +222,11 @@ export interface TranscriptEntry {
   /** `[]` when the turn carried no images — including when an image was
    *  silently dropped at ingest (see `contract.md` §8.9). */
   images: TranscriptImageRef[];
+  /** The video artifact family — OPTIONAL because the relay lane that
+   *  produces it is the video phase's producer side and has not shipped;
+   *  absent reads as `[]` (the receipt-only rendering), exactly the way the
+   *  app's schema defaults it. */
+  videos?: TranscriptVideoRef[];
   /** Assistant rows stream: flips true on message end (`types.py:593`). */
   final: boolean;
   /** Settled streaming is not complete representation: transport caps can

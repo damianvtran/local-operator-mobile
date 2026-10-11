@@ -1447,6 +1447,161 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 		},
 	);
 
+	/* The video generation card's states, as the app renders them — the native
+	 * half of the surfaces programme (design §1.4/§3.4). One `generate_video`
+	 * row per state the card draws: queued with a queue position, running with
+	 * the provider's log tail, the cancelling hold, a done row carrying the
+	 * video reference the player mounts from, a done row whose artifact the
+	 * store does not hold (receipt only — and the PLAYER's 404 source), a
+	 * failure, and an interrupted call.
+	 *
+	 * The reference family is the design's "parallel ref family" (§3.2): the
+	 * mock emits `videos: [{index, mime_type}]` the way the relay lane will, so
+	 * the frames exercise the real consumer path (ref → frame → route →
+	 * fetch), never a stand-in. Its bytes come from the mock's `/attachment`
+	 * route, which serves ONLY rows carrying a reference — which is why
+	 * `tc-vid-missing` carries none and its player cell reads "Video no longer
+	 * available." (design §4, V7).
+	 *
+	 * Ad-hoc cells (no `shows`), same as the imagegen scenario this mirrors:
+	 *
+	 *   path:/session/{sessionId}/video               the tail
+	 *   path:/session/{sessionId}?lo-scroll=top/video-head
+	 *                                                 the head
+	 *   path:/session/{sessionId}/video?entry=tc-vid-done&i=0/player-ready
+	 *                                                 the player, a mounted <video>
+	 *   path:/session/{sessionId}/video?entry=tc-vid-missing&i=0/player-missing
+	 *                                                 the missing-bytes reading
+	 */
+	add(
+		"video-progress",
+		"A transcript of video generations in every state the card renders — queued with a position, running with the provider's log tail, the cancelling hold, done with the video reference the player opens, a done row without its artifact, a failure and an interrupted call.",
+		[],
+		() => {
+			const base = structuredClone(everyKind);
+			const template = base.transcript.find((entry) => entry.kind === "tool");
+			if (template === undefined) {
+				throw new Error(
+					"the video-progress base projection has no tool row to clone",
+				);
+			}
+			type Row = SessionProjection["transcript"][number];
+			const videoRow = (id: string, overrides: Partial<Row>): Row => ({
+				...structuredClone(template),
+				id: `tc-${id}`,
+				tool_call_id: id,
+				tool_name: "generate_video",
+				tool_state: "running",
+				text: "",
+				summary: "",
+				intent: "",
+				diff_added: 0,
+				diff_removed: 0,
+				elapsed_s: 0,
+				error: "",
+				images: [],
+				videos: [],
+				final: false,
+				text_complete: false,
+				details: {},
+				...overrides,
+			});
+			const projection = projectionFrom(base, {
+				conversation_name: "Launch film",
+				transcript: [
+					{
+						...structuredClone(template),
+						id: "m-video-1",
+						kind: "user",
+						tool_call_id: "",
+						tool_name: "",
+						text: "Generate the launch film: a lighthouse at dusk, 8 seconds, then a shorter cut.",
+						summary: "",
+						intent: "",
+						details: {},
+						images: [],
+						videos: [],
+					},
+					videoRow("vid-queued", {
+						tool_state: "queued",
+						summary: "an 8s loop, 16:9",
+						details: progressDetails({
+							stage: "queued",
+							queue_position: 2,
+						}),
+					}),
+					videoRow("vid-running", {
+						tool_state: "running",
+						summary: "a 6s cut, 16:9",
+						elapsed_s: 42.7,
+						details: progressDetails({
+							stage: "in_progress",
+							log_lines: [
+								{
+									message: "IN_QUEUE",
+									timestamp: "2026-10-10T20:00:00Z",
+								},
+								{
+									message: "IN_PROGRESS — generating frames 12 of 30",
+									timestamp: "2026-10-10T20:00:42Z",
+								},
+							],
+						}),
+					}),
+					videoRow("vid-cancelling", {
+						tool_state: "running",
+						summary: "a vertical cut, 9:16",
+						elapsed_s: 88.1,
+						/* The hold passes stage/provider/model only — every other key is
+						 * None (the producer's `_emit_cancel_stage`, #2089). */
+						details: progressDetails({ stage: "cancelling" }),
+					}),
+					videoRow("vid-done", {
+						tool_state: "done",
+						summary: "the 8s loop, 16:9",
+						elapsed_s: 187.3,
+						videos: [{ index: 0, mime_type: "video/mp4" }],
+					}),
+					videoRow("vid-missing", {
+						/* The bytes are gone: the row settles done with no reference
+						 * left, which the mock's byte route answers 404 for — the
+						 * player's own "Video no longer available." (V7). */
+						tool_state: "done",
+						summary: "a 6s cut, 16:9",
+						elapsed_s: 121.0,
+					}),
+					videoRow("vid-failed", {
+						tool_state: "failed",
+						summary: "a vertical cut, 9:16 (retry)",
+						elapsed_s: 214.8,
+						error: "This generation failed before producing output.",
+						details: liveDetails({
+							error: "This generation failed before producing output.",
+							error_type: "media_failed",
+						}),
+					}),
+					videoRow("vid-interrupted", {
+						tool_state: "interrupted",
+						summary: "sticker pass",
+						details: liveDetails({ stage: "cancelled" }),
+					}),
+				],
+			});
+			/* The rig's first-navigation absorber: an empty transcript, for the
+			 * same cold-boot race the imagegen scenario's own absorber exists for. */
+			const empty = projectionFrom(seed, {
+				session_id: syntheticSessionId("video-empty"),
+				conversation_name: "New conversation",
+			});
+			return {
+				projections: {
+					[projection.session_id]: projection,
+					[empty.session_id]: empty,
+				},
+			};
+		},
+	);
+
 	add(
 		"approval-destructive",
 		"A pending approval whose detail is a destructive command, tool still composing.",

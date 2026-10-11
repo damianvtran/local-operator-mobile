@@ -164,6 +164,24 @@ describe("the card's live guard", () => {
 		);
 		expect(doneArm).toContain("<TranscriptImage");
 	});
+
+	it("mounts the video frame only under its own reference gate", () => {
+		/* The surfaces programme's sibling: the done arm carries the frame that
+		 * opens the player, gated on BOTH the video reference (the row carries
+		 * one) and the destination (a surface that can push the route — a child
+		 * transcript cannot), the same shape `loadImage`'s gate has. Counted so
+		 * an unguarded second spelling fails by name. */
+		const doneArm = SOURCE.slice(
+			SOURCE.indexOf('{phase === "done" ?'),
+			SOURCE.indexOf('{phase === "failed" ?'),
+		);
+		expect(doneArm).toContain("<TranscriptVideo");
+		expect(doneArm).toContain(
+			"videoArtifact !== null && onOpenVideo !== undefined",
+		);
+		expect((SOURCE.match(/<TranscriptVideo/g) ?? []).length).toBe(1);
+		expect((SOURCE.match(/onOpenVideo\(/g) ?? []).length).toBe(1);
+	});
 });
 
 describe("the generating body's gate (the F3 guard)", () => {

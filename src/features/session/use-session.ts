@@ -34,6 +34,7 @@ import {
 	getActiveRoute,
 	INITIAL_STREAM_FACTS,
 	loadAttachments,
+	loadVideoSource,
 	mergeTranscript,
 	olderThanLoaded,
 	rowIdentity,
@@ -80,6 +81,11 @@ export interface SessionRuntime {
 	/** Loads one attachment's bytes as a data URI, or `null` when the relay no
 	 *  longer has them. */
 	loadImage: (entryId: string, index: number) => Promise<string | null>;
+	/** Loads one video artifact as a playable source URI (a cache file on
+	 *  native, a Blob object URL on web), or `null` when the relay no longer
+	 *  has the bytes. The caller revokes a web object URL when done with it
+	 *  (`loadVideoSource`'s contract). */
+	loadVideo: (entryId: string, index: number) => Promise<string | null>;
 	/** Loads a child's full detail, which the aggregate roster strips. */
 	loadAgent: (jobId: string) => Promise<SubagentDetail | null>;
 	/** Re-runs the requests a refusal interrupted. */
@@ -472,6 +478,14 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 		[endpoints, sessionId],
 	);
 
+	const loadVideo = useCallback(
+		async (entryId: string, index: number): Promise<string | null> => {
+			if (endpoints === null) return null;
+			return loadVideoSource(endpoints, sessionId, entryId, index);
+		},
+		[endpoints, sessionId],
+	);
+
 	const loadAgent = useCallback(
 		async (jobId: string): Promise<SubagentDetail | null> => {
 			if (endpoints === null) return null;
@@ -508,6 +522,7 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 		olderThanLoaded: olderRowClaim,
 		error,
 		loadImage,
+		loadVideo,
 		loadAgent,
 		reload,
 	};
