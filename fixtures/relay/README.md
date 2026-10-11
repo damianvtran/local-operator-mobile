@@ -23,7 +23,7 @@ wrong wire.
 Read [`../../docs/relay/contract.md`](../../docs/relay/contract.md) for what each
 sample means; this file is only about provenance and reproduction.
 
-The tree is currently **142 fixtures — 131 live, 11 synthetic** — plus this
+The tree is currently **143 fixtures — 131 live, 12 synthetic** — plus this
 README. The split is counted from `provenance.kind` in the files themselves
 rather than typed here, so it cannot drift from them. (This count is re-derived
 at the fold that merged the checkpoint rail in: main's side recounted to
@@ -41,6 +41,10 @@ taken at local-operator `52c1df35`; the session-state receipts (`ended`,
 handle-resolution route, and the superseded-token refusal) are taken at
 `ca0569855`, where S1/S2/S4 shipped. Each file's `provenance.relay_ref` names its
 own, and no capture was restamped to look newer than it is.
+
+The config stream's synthetic sample (`synthetic/sse-config-frame.json`, wave-5
+slice D) names `94b8c6eb2` — the shared builder's ref at PR #2218, open at
+writing — for a frame whose live capture awaits the route's release.
 
 The projects WRITE samples (`projects-created`, `projects-create-refused`,
 `projects-create-invalid`, `projects-delete-refused`, `projects-deleted`,
