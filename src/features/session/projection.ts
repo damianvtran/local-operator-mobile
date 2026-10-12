@@ -99,8 +99,15 @@ export const isHubReceipt = (entry: TranscriptEntry): boolean =>
 	(entry.details.direction === "to_child" ||
 		entry.details.direction === "to_parent");
 
-const HUB_IDENTITY_CONTROLS =
-	/[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u202a-\u202e\u2060-\u206f]/g;
+/** Display identity rejects control/bidi code points, never authored body.
+ * Numeric ranges make that boundary explicit without a regex whose embedded
+ * control escapes violate the pinned linter's source-safety rule. */
+const isHubIdentityControl = (point: number): boolean =>
+	point <= 0x1f ||
+	(point >= 0x7f && point <= 0x9f) ||
+	(point >= 0x200b && point <= 0x200f) ||
+	(point >= 0x202a && point <= 0x202e) ||
+	(point >= 0x2060 && point <= 0x206f);
 const HUB_IDENTITY_SPACE = /\s+/g;
 
 /** Same advisory label in the row and group; no manufactured parent/session ID. */
@@ -115,7 +122,9 @@ export function hubLabel(
 	]) {
 		if (typeof field !== "string") continue;
 		const value = field
-			.replace(HUB_IDENTITY_CONTROLS, "")
+			.split("")
+			.filter((character) => !isHubIdentityControl(character.charCodeAt(0)))
+			.join("")
 			.replace(HUB_IDENTITY_SPACE, " ")
 			.trim()
 			.slice(0, 120);
