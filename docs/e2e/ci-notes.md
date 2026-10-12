@@ -199,7 +199,18 @@ extra standalone flow. It walks the actual guided own-tunnel screen:
 Maestro [2.11.0's selector schema](https://github.com/mobile-dev-inc/maestro/blob/v2.11.0/maestro-orchestra/src/main/java/maestro/orchestra/yaml/YamlElementSelector.kt)
 supports `enabled: true` (checked 2026-10-12). These are bounded screen/element
 waits, not sleeps or expanded retry budgets. The Android action still parses
-`script:` one POSIX-shell command per line; no workflow changes are needed.
+`script:` one POSIX-shell command per line; that emulator-runner script is unchanged.
+
+The **native job's mock startup** explicitly passes
+`--allow-android-emulator-origin`. The native custom-route client sends
+`Origin: http://10.0.2.2:<mock-port>`, even though the host-side socket is loopback.
+Without that allowance the mock correctly refuses login with 403 before checking
+the password; a local probe omitting Origin cannot expose this mismatch. The
+opt-in constructs exactly that alias from the kernel-selected port **inside
+`listen`, before publishing readiness**. It neither predicts/releases a free
+port nor permits wildcards, unrelated origins or another port on the alias.
+Default/web mock callers keep their existing origin policy; this is isolated CI
+configuration, not a change to app credentials, production HTTP or CSRF policy.
 
 `02-tunnel-pick.yaml` retains its filename but now covers **F-3 own-tunnel setup
 and saved custom-route restoration**: stop/relaunch without clearing storage,
@@ -218,11 +229,16 @@ app dependencies:
 
 ```sh
 node scripts/maestro-flow-contract.ts
+node tools/mock-relay/android-origin-check.ts
 ```
 
 It parses the flows' block YAML subset, checks ordered prerequisites and the
 helper selection/identifier contract, and rejects unsupported syntax rather than
-silently overlooking it. CI runs the same assertions through Vitest. Full YAML
+silently overlooking it. The origin check derives the header from the app's
+`requestAuthFor`, exercises real sockets and the actual opt-in CLI, and checks
+wrong-password, unauthenticated, unrelated-origin, wrong-port and default-loopback
+behavior; synthetic credentials and cookie values are never printed. CI runs
+the same assertions through Vitest. Full YAML
 parsing and the native Maestro run remain separate gates: these checks do not
 prove an APK's HTTP permissions, native cookie handling, scrolling or rendering.
 

@@ -792,11 +792,15 @@ jobs:
           echo "relay password: $(wc -c < "$RUNNER_TEMP/relay-password") bytes, mode $(stat -c '%a' "$RUNNER_TEMP/relay-password")"
 
       - name: Start the mock relay for the flows
+        # The native app sends Origin for its custom URL. Admit ONLY the
+        # emulator's host-loopback alias at the kernel-picked relay port; the
+        # mock adds it before printing readiness. Other jobs keep default policy.
         run: |
           set -euo pipefail
           pnpm mock:relay \
             --scenario "${{ env.MOCK_RELAY_SCENARIO }}" \
             --password "$(cat "$RUNNER_TEMP/relay-password")" \
+            --allow-android-emulator-origin \
             --print-port --quiet \
             < /dev/null > "$RUNNER_TEMP/relay.port" 2> "$RUNNER_TEMP/relay.err" &
           echo $! > "$RUNNER_TEMP/relay.pid"

@@ -26,8 +26,8 @@ const mapping = (value: Value | undefined): Mapping => {
 };
 
 export function parseFlow(text: string): Value[] {
-	return text.split(/^---\s*$/m).map((document) => {
-		const lines = document.split("\n").flatMap((line) => {
+	return text.split(/^---\s*$/m).map((yamlDocument) => {
+		const lines = yamlDocument.split("\n").flatMap((line) => {
 			if (/^\s*(?:#.*)?$/.test(line)) return [];
 			assert(!line.includes("\t"), "YAML indentation must use spaces");
 			return [
@@ -38,11 +38,16 @@ export function parseFlow(text: string): Value[] {
 		const scalar = (raw: string): Value => {
 			if (raw.startsWith('"')) return JSON.parse(raw) as Value;
 			if (raw.startsWith("'")) {
-				assert(raw.endsWith("'"));
+				// YAML escapes a single quote by doubling it. A closing quote must
+				// end the scalar; trailing text is not another valid quoted segment.
+				assert(
+					/^'(?:[^']|'')*'$/.test(raw),
+					"invalid single-quoted YAML scalar",
+				);
 				return raw.slice(1, -1).replaceAll("''", "'");
 			}
 			assert(
-				!/[#\[\]{}&*!|>]/.test(raw.replaceAll(/\$\{[^}]+\}/g, "")),
+				!/[#\[\]{}&*!|>]|:(?:\s|$)/.test(raw.replaceAll(/\$\{[^}]+\}/g, "")),
 				`unsupported YAML scalar: ${raw}`,
 			);
 			if (raw === "true") return true;
@@ -246,6 +251,26 @@ function checkIdentifiers(value: Value) {
 }
 
 export const maestroChecks: [string, () => void][] = [
+	[
+		"scalar subset rejects malformed YAML and preserves escaped quoted values",
+		() => {
+			for (const invalid of [
+				"label: 'ok' trailing 'text'",
+				"label: value: nested",
+				"label: value:",
+				"label: 'missing closing quote",
+				'label: "ok" trailing "text"',
+			])
+				assert.throws(() => parseFlow(invalid));
+			assert.deepEqual(parseFlow("label: 'it''s ok'"), [{ label: "it's ok" }]);
+			assert.deepEqual(parseFlow('label: "a \\"quote\\""'), [
+				{ label: 'a "quote"' },
+			]);
+			assert.deepEqual(parseFlow("label: 'https://example.invalid:443'"), [
+				{ label: "https://example.invalid:443" },
+			]);
+		},
+	],
 	[
 		"F3 waits for the idle relay's populated sidebar rather than an empty state",
 		() => {
