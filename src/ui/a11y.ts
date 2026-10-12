@@ -728,7 +728,7 @@ export const SURFACE = {
 	sessionRemoteUnreachable: "session-remote-unreachable",
 	/** On the rendered receipt word, not the row's input flags: attention can
 	 * outrank a receipt, and a hidden receipt must not affirm that state. */
-	sessionEnded: "session-ended",
+	sessionEnded: "session-receipt-ended",
 	sessionDegraded: "session-not-answering",
 } as const;
 
