@@ -45,10 +45,14 @@ gh workflow run e2e.yml --ref <branch> -f proof_mode=s15-proof
 
 The selection is fixed: `S15/{populated,ended,degraded-row,mesh-remote,populated-long,menu-open}`,
 `iphone-15-landscape` plus portrait controls, both themes, and 100/150/200% text.
-The capture tool plans 72 cells / 216 consecutive frames. A single export and
-synthetic relay serve them; capture and audit failures stay failures (including
-an intentionally unchanged-app baseline). The seven-day `s15-proof-<SHA>`
-artifact contains only these frames, their manifest and corresponding audit.
+The final capture plans 72 cells / 216 consecutive frames. A driver-only leg
+first exports app source from the recorded unchanged-app baseline `1e7513f`
+and captures six landscape menu controls with the current driver and the same
+1200 ms hold. The job verifies the old source byte-for-byte, restores and verifies
+HEAD, then exports the fixed app. One synthetic relay serves both legs; capture
+and audit failures stay failures. The seven-day `s15-proof-<SHA>` artifact keeps
+the two legs' frames, manifests and audits separate, with source tree hashes and
+driver SHA, so a fixed app cannot stand in for proof of a fixed hold driver.
 The manifest records resting pane/list/footer heights and list scroll extents,
 so a screenshot of clipped rows has explanatory numbers, not an inferred cause.
 Record each dispatch's exact SHA and run URL when comparing baseline and fix.

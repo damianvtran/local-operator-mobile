@@ -927,11 +927,6 @@ export const PENDING_CELLS: Record<string, string> = {
 			],
 		),
 	),
-	/* The list states the app renders without an identifier of their own. */
-	"S15/ended":
-		"app (src/ui/a11y.ts STATE_MARKER) — ListRow's `ended` receipt changes copy and colour but carries no identifier",
-	"S15/degraded-row":
-		"app (src/ui/a11y.ts STATE_MARKER) — ListRow's `degraded` receipt renders 'not answering' but carries no identifier",
 	/* The scrolled transcript, and it is here rather than only in the PR because this
 	 * table is where a coverage gap is supposed to live. `S5/scroll` was
 	 * `S5/populated-long` under a second name — both were pinned from `long-transcript`'s

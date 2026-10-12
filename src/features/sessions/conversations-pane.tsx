@@ -48,7 +48,7 @@ import { tailFit } from "@/ui/components/list-row-meta";
 import { SectionHeader } from "@/ui/components/section-header";
 import { Sheet } from "@/ui/components/sheet";
 import { Skeleton } from "@/ui/components/skeleton";
-import { TOUCH_FLOOR } from "@/ui/layout";
+import { sidebarFooterScrolls, TOUCH_FLOOR, useLayout } from "@/ui/layout";
 import { LARGE_TEXT_SCALE } from "@/ui/text-scale";
 import { useTextScale } from "@/ui/text-scale-provider";
 
@@ -163,6 +163,7 @@ export const ConversationsPane = ({
 
 	const { effectiveScale } = useTextScale();
 	const largeText = effectiveScale > LARGE_TEXT_SCALE;
+	const scrollFooter = sidebarFooterScrolls(useLayout());
 
 	/* The switcher's painted label. The text box's OWN width is the budget —
 	 *  measured on the line, so it cannot drift from the flex rules — and the
@@ -251,6 +252,74 @@ export const ConversationsPane = ({
 		}
 		openSession(session);
 	};
+
+	/* Keep one navigation tree in both placements: compact landscape gives the
+	 * list all remaining height; the four unchanged routes follow its rows. The
+	 * negative margin only cancels the list's px-4, preserving the footer width
+	 * (and its content-driven wrapping) from the pinned portrait layout. */
+	const footer = (
+		<View
+			className="gap-2 border-hairline border-t px-2 pb-2 pt-2"
+			style={scrollFooter ? { marginHorizontal: -16 } : undefined}
+		>
+			<View className="flex-row flex-wrap gap-2">
+				<View className="flex-auto">
+					<Button
+						label="Past sessions"
+						onPress={() => {
+							onNavigate?.();
+							router.push("/past");
+						}}
+						variant="quiet"
+						size="sm"
+						testID={CONTROL.sidebarPast}
+					/>
+				</View>
+				<View className="flex-auto">
+					<Button
+						label="Computers"
+						onPress={() => {
+							onNavigate?.();
+							router.push("/tunnels");
+						}}
+						variant="quiet"
+						size="sm"
+						testID={CONTROL.sidebarComputers}
+					/>
+				</View>
+			</View>
+			<View className="w-full">
+				<Button
+					label="Projects"
+					onPress={() => {
+						onNavigate?.();
+						router.push("/projects");
+					}}
+					variant="quiet"
+					size="sm"
+					testID={CONTROL.sidebarProjects}
+				/>
+			</View>
+			{/* The fourth route, for the same stated reason as Projects: the
+			 *  machine-wide armed index (S17) is a peer of `past`/`projects` — a
+			 *  view of what is running on the machine, not a row in Settings —
+			 *  and the desktop sidebar carries Schedules as a top-level
+			 *  destination beside them. Full-width beneath the pair, like Projects,
+			 *  so the wrap band stays 2+1+1. */}
+			<View className="w-full">
+				<Button
+					label="Schedules"
+					onPress={() => {
+						onNavigate?.();
+						router.push("/schedules");
+					}}
+					variant="quiet"
+					size="sm"
+					testID={CONTROL.sidebarSchedules}
+				/>
+			</View>
+		</View>
+	);
 
 	return (
 		<View className="flex-1" style={{ paddingTop: 0 }}>
@@ -389,6 +458,7 @@ export const ConversationsPane = ({
 				accessibilityRole="none"
 				testID={REGION.sidebarList}
 				contentContainerClassName="grow px-4"
+				ListFooterComponent={scrollFooter ? footer : null}
 				data={items}
 				keyExtractor={(item) => item.key}
 				refreshControl={
@@ -499,101 +569,7 @@ export const ConversationsPane = ({
 				}
 			/>
 
-			{/* The footer: the four secondary routes, each a 44 pt target. The
-			 *  panel's own navigation, always visible — the desktop sidebar's
-			 *  footer, phone-sized. `docs/ux/flows.md` draws `--|projects|` as a
-			 *  PEER of `--|past|` off the conversations panel, so the entry point
-			 *  belongs here rather than behind a settings row — and Schedules
-			 *  (S17) reads the same way: the desktop sidebar carries it as a
-			 *  top-level destination beside Projects.
-			 *
-			 *  THE PAIR WRAPS ON ITS OWN CONTENT, AND THAT IS THE RULE — there is no
-			 *  scale threshold here on purpose. This footer used to switch
-			 *  row-versus-column on `effectiveScale > LARGE_TEXT_SCALE` (1.4), and that
-			 *  guard was answering a different question: the pair only broke ABOVE
-			 *  1.4, so the band from 1.35 to 1.4 — inside the very branch the guard
-			 *  was meant to protect — wrapped "Past sessions" onto two lines and
-			 *  left-aligned it while "Computers" stayed one line and centred, so the
-			 *  pair row read broken. Measured on the 320 pt phone at 1.3529411765
-			 *  (iOS xxxLarge, the largest standard Dynamic Type step) and at 1.375
-			 *  (the browser's own 22 px default) — both real user settings, and both
-			 *  BELOW the guard that was supposed to cover them (design review round 2, D6).
-			 *  The band existed because two numbers were being compared: a global
-			 *  scale constant and a per-cell text box.
-			 *
-			 *  So the BOX makes the decision instead. Each cell is `flex-auto`, which
-			 *  makes the flex line break on the label's own width: the two share a
-			 *  row while both labels fit, and a label that stops fitting moves to its
-			 *  own full-width row. Nothing here can drift the way the constant did,
-			 *  because nothing here is compared — the layout measures the thing it is
-			 *  laying out. (`flex-1` would NOT do: its zero base size means a wrap
-			 *  never engages and the cell only squeezes, which is the behaviour the
-			 *  older note here recorded, and it is still true of `flex-1`.) The
-			 *  full-width controls beneath the pair keep that band, so the shape is
-			 *  2+1+1 when the pair fits and 1+1+1+1 when it does not.
-			 *
-			 *  That is why the scale axis carries a step inside the old band
-			 *  (`tools/visual/matrix.ts` SCALES, `135`): a re-capture at 100/150/200
-			 *  could not show this defect at all, because both bracketing scales sit
-			 *  outside it. */}
-			<View className="gap-2 border-hairline border-t px-2 pb-2 pt-2">
-				<View className="flex-row flex-wrap gap-2">
-					<View className="flex-auto">
-						<Button
-							label="Past sessions"
-							onPress={() => {
-								onNavigate?.();
-								router.push("/past");
-							}}
-							variant="quiet"
-							size="sm"
-							testID={CONTROL.sidebarPast}
-						/>
-					</View>
-					<View className="flex-auto">
-						<Button
-							label="Computers"
-							onPress={() => {
-								onNavigate?.();
-								router.push("/tunnels");
-							}}
-							variant="quiet"
-							size="sm"
-							testID={CONTROL.sidebarComputers}
-						/>
-					</View>
-				</View>
-				<View className="w-full">
-					<Button
-						label="Projects"
-						onPress={() => {
-							onNavigate?.();
-							router.push("/projects");
-						}}
-						variant="quiet"
-						size="sm"
-						testID={CONTROL.sidebarProjects}
-					/>
-				</View>
-				{/* The fourth route, for the same stated reason as Projects: the
-				 *  machine-wide armed index (S17) is a peer of `past`/`projects` — a
-				 *  view of what is running on the machine, not a row in Settings —
-				 *  and the desktop sidebar carries Schedules as a top-level
-				 *  destination beside them. Full-width beneath the pair, like Projects,
-				 *  so the wrap band stays 2+1+1. */}
-				<View className="w-full">
-					<Button
-						label="Schedules"
-						onPress={() => {
-							onNavigate?.();
-							router.push("/schedules");
-						}}
-						variant="quiet"
-						size="sm"
-						testID={CONTROL.sidebarSchedules}
-					/>
-				</View>
-			</View>
+			{scrollFooter ? null : footer}
 
 			{/* Long-press rather than a swipe: the same action, a gesture a reader
 			 *  discovers by trying it, and a sheet that names what it is about to

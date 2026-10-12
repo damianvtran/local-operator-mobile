@@ -6,6 +6,7 @@ import {
 	headerStackWidth,
 	layoutFor,
 	SPLIT_MIN_HEIGHT,
+	sidebarFooterScrolls,
 } from "@/ui/size-class";
 import { LARGE_TEXT_SCALE } from "@/ui/text-scale";
 
@@ -19,6 +20,21 @@ import { LARGE_TEXT_SCALE } from "@/ui/text-scale";
  * which belongs to the capture harness in `tools/visual` where the frames and the
  * geometry come from the same run.
  */
+
+describe("sidebarFooterScrolls", () => {
+	it("preserves rows in short landscape without changing portrait or tablet flow", () => {
+		expect(sidebarFooterScrolls(layoutFor(844, 390))).toBe(true);
+		expect(sidebarFooterScrolls(layoutFor(568, 320))).toBe(true);
+		for (const [width, height] of [
+			[390, 844],
+			[320, 568],
+			[834, 1112],
+			[1112, 834],
+		] as const) {
+			expect(sidebarFooterScrolls(layoutFor(width, height))).toBe(false);
+		}
+	});
+});
 
 describe("layoutFor", () => {
 	it("calls a phone compact at every phone size the matrix covers", () => {

@@ -17,8 +17,12 @@ describe("optional S15 proof", () => {
 		const job =
 			workflow.split("  s15-proof:\n")[1]?.split("  web-audit-core:\n")[0] ??
 			"";
+		const finalCapture =
+			job
+				.split("- name: Capture affected cells and positive controls")[1]
+				?.split("- name: Audit")[0] ?? "";
 		const flag = (name: string) =>
-			job.match(new RegExp(`--${name} ([^\\s]+)`))?.[1] ?? "";
+			finalCapture.match(new RegExp(`--${name} ([^\\s]+)`))?.[1] ?? "";
 		const result = spawnSync(
 			process.execPath,
 			[
@@ -58,6 +62,10 @@ describe("optional S15 proof", () => {
 		expect(flag("scales")).toBe("100,150,200");
 		expect(flag("themes")).toBe("dark,light");
 		expect(job).not.toContain("continue-on-error");
+		expect(job).toContain('git diff --exit-code "$BASELINE_SHA" -- src app');
+		expect(job).toContain("git restore --source=HEAD --worktree -- src app");
+		expect(job).toContain("git diff --exit-code HEAD -- src app");
+		expect(job).toContain("--cells S15/menu-open");
 		for (const name of [
 			"mock-relay-contract",
 			"web-audit",
