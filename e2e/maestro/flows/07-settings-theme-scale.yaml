@@ -36,6 +36,7 @@ name: "S11 settings theme and text scale"
 ---
 - launchApp:
     clearState: true
+- runFlow: ../helpers/connect-relay.yaml
 - extendedWaitUntil:
     visible:
       id: "home-screen"

@@ -174,6 +174,58 @@ Two things to wire deliberately:
 `0600` file the job created. A literal password in a flow file could not be
 committed, and the mock's default is a placeholder that every run shares.
 
+#### Native connection prerequisite and coverage
+
+Passing `-e RELAY_URL` and `-e RELAY_PASSWORD` gives Maestro variables, not native
+app credentials. Every flow clears app state: first launch is Welcome. The
+scheduled [run 38201325824, job 114655201007](https://github.com/damianvtran/local-operator-mobile/actions/runs/38201325824/job/114655201007)
+proved that F1 reaches its Radient hand-off, while 02–09 incorrectly expected
+Home or Computers without ever connecting. Increasing waits or reducing the
+OS font scale cannot fix that missing prerequisite.
+
+Flows 02–09 now call `e2e/maestro/helpers/connect-relay.yaml` after clearing state.
+The helper is outside the workspace's `flows/*.yaml` selection, so it is not an
+extra standalone flow. It walks the actual guided own-tunnel screen:
+
+1. Wait for Welcome, select `welcome-custom-url`, wait for `own-tunnel-screen`.
+2. Scroll to the address and password, type the job's variables, and hide the
+   keyboard after each field. Keep the device's font/accessibility scale.
+3. Explicitly opt in to HTTP for this isolated mock (Android uses
+   `http://10.0.2.2:<mock-port>`; no production credentials).
+4. Press `own-tunnel-test`, scroll to and wait for its **Connected** verdict.
+   `runTunnelTest` logs in and reads `/api/sessions`; a form visit alone is not
+   success. Wait for enabled `custom-connect`, then save/connect and wait for Home.
+
+Maestro [2.11.0's selector schema](https://github.com/mobile-dev-inc/maestro/blob/v2.11.0/maestro-orchestra/src/main/java/maestro/orchestra/yaml/YamlElementSelector.kt)
+supports `enabled: true` (checked 2026-10-12). These are bounded screen/element
+waits, not sleeps or expanded retry budgets. The Android action still parses
+`script:` one POSIX-shell command per line; no workflow changes are needed.
+
+`02-tunnel-pick.yaml` retains its filename but now covers **F-3 own-tunnel setup
+and saved custom-route restoration**: stop/relaunch without clearing storage,
+wait for Home, then verify the restored route and Connected status in Settings.
+Radient F-2/F-4 computer discovery requires an account/control-plane API, neither
+of which the relay mock provides; the commented discovery markers are not
+executed coverage. F1 is unchanged. Other `SCENARIO`/`BLOCKED` steps remain
+unexecuted as documented in their flows. The `idle` scenario contains **one
+completed live conversation**, not an empty list: 03 now waits for that fixture's
+`session-row-${SESSION_ID}`, rejects the empty state and checks the populated
+sidebar's New chat action. Approvals, subagents, dropped-stream recovery and
+refusal scenarios do not become executed coverage merely by connecting.
+
+A dependency-free prerequisite regression is available without installing the
+app dependencies:
+
+```sh
+node scripts/maestro-flow-contract.ts
+```
+
+It parses the flows' block YAML subset, checks ordered prerequisites and the
+helper selection/identifier contract, and rejects unsupported syntax rather than
+silently overlooking it. CI runs the same assertions through Vitest. Full YAML
+parsing and the native Maestro run remain separate gates: these checks do not
+prove an APK's HTTP permissions, native cookie handling, scrolling or rendering.
+
 ### 6. The re-capture diff (nightly, opted in)
 
 ADR 0003 requires a script that re-captures against an isolated `lop mobile` and

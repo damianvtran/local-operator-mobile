@@ -45,6 +45,7 @@ env:
 ---
 - launchApp:
     clearState: true
+- runFlow: ../helpers/connect-relay.yaml
 - assertVisible:
     id: "home-screen"
 # SCENARIO: connection-banner from session

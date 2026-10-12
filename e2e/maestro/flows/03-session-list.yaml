@@ -41,6 +41,7 @@ env:
 ---
 - launchApp:
     clearState: true
+- runFlow: ../helpers/connect-relay.yaml
 - extendedWaitUntil:
     visible:
       id: "home-screen"
@@ -58,11 +59,17 @@ env:
       id: "conversations-sidebar"
     timeout: 10000
 - takeScreenshot: "05-01-panel-open"
-- assertVisible:
+# CI pins `idle`, whose real list has one completed conversation. Wait for the
+# snapshot's row, not just the overlay root or the store's initial empty value.
+- extendedWaitUntil:
+    visible:
+      id: "session-row-${SESSION_ID}"
+    timeout: 15000
+- assertNotVisible:
     id: "sessions-empty"
 - assertVisible:
-    id: "sessions-new-action"
-- takeScreenshot: "05-02-empty-state"
+    id: "sidebar-new-chat"
+- takeScreenshot: "05-02-populated-state"
 # The search affordance is rendered, and its field appears on the tap, so that
 # half of the header is assertable with no scenario pin: a search control that
 # does nothing when pressed is exactly what this pair of steps catches.
@@ -71,12 +78,8 @@ env:
 - assertVisible:
     id: "sidebar-search-field"
 - takeScreenshot: "05-03-search"
-# Rows and sections need the list populated, which needs the relay pinned to a
-# session scenario. The identifiers are rendered today; the state is not
-# reachable without it.
-# SCENARIO: session-row-<id> from sessions
-# - assertVisible:
-#     id: "session-row-${SESSION_ID}"
+# Section membership depends on the captured row's clocks and state, so those
+# assertions still need their own scenario pin; the idle row itself is live above.
 # SCENARIO: sidebar-section-running from sessions
 # - assertVisible:
 #     id: "sidebar-section-running"
