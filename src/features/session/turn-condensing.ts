@@ -950,10 +950,10 @@ export function groupPlan(input: GroupInput): GroupPlan {
 		const item = items[at];
 		if (item === undefined) continue;
 		const claim = claimed.get(item.id);
-		const group =
-			claim !== undefined
-				? (refreshed.get(claim) ?? latch.get(claim))
-				: fresh.get(at);
+		// `refreshed` holds an entry for EVERY latched key, so a claim always
+		// resolves through it; the fallback was unreachable and the explicit
+		// parentheses made the flat form wider than the formatter keeps.
+		const group = claim !== undefined ? refreshed.get(claim) : fresh.get(at);
 		if (group === undefined) {
 			emitted.push(item);
 			continue;

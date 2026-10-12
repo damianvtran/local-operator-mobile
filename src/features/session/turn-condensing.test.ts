@@ -1255,7 +1255,12 @@ describe("the group latch — facts freeze at the close", () => {
 			},
 		});
 		const after = groupPlan({
-			items: itemsOf([peer("p1", "worker name"), correctedHub, failedTool("t1"), answer("a1")]),
+			items: itemsOf([
+				peer("p1", "worker name"),
+				correctedHub,
+				failedTool("t1"),
+				answer("a1"),
+			]),
 			expanded: new Set(["qg:p1"]),
 			latch: first.latch,
 		});
