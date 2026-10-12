@@ -242,6 +242,41 @@ the same assertions through Vitest. Full YAML
 parsing and the native Maestro run remain separate gates: these checks do not
 prove an APK's HTTP permissions, native cookie handling, scrolling or rendering.
 
+#### Settings targets and text-scale reflow
+
+[QA round 2](https://github.com/damianvtran/local-operator-mobile/pull/86#issuecomment-6133314651)
+independently inspected the existing native run **38308549353**: the connection
+probe, enabled Connect, saved-route restart and populated conversation row passed.
+The remaining Settings failure was a viewport precondition, not a missing selector:
+on the 320×640 device its scroll viewport ended at y616, while the theme group
+started at y645. The connected custom-route screen places saved own-tunnel
+management before Appearance. A ready `settings-screen` root does not make those
+controls visible.
+
+`07-settings-theme-scale.yaml` scrolls to each actual assertion/tap target with
+bounded `scrollUntilVisible`, preserving all theme/scale/connection/sign-out/
+diagnostics assertions and the ten screenshot names. Theme System is earlier
+than Light, Connection is above Appearance, and Diagnostics is above the sign-out
+tail: those returns scroll **UP**, not DOWN. Theme selection is awaited before
+capturing its result.
+
+After selecting 200%, expanded content above the scale track invalidates the old
+scroll offset. First re-find the selected **200%** control **DOWN**, then capture
+a selected-state-ready frame. The 100% option is earlier in the wrapping track
+(`TEXT_SCALE_PERCENTS = [100, 150, 200]`), so the return to **100%** is **UP** only
+*after* that re-anchor. The 100% contraction also requires an **UP** re-anchor and
+selected-state wait before the reset frame. Neither the OS scale nor the app
+layout is changed to fit a test; there are no added sleeps or larger budgets.
+
+The parsed-flow contract guard rejects omitted target scrolls, wrong upward
+returns, missing/reversed post-scale remeasurement and a capture without its
+selected-state wait. These are Settings-control preconditions, not a global rule
+to scroll screen roots. **The repaired native Settings journey remains unproven
+until its next native execution**; structural checks do not establish geometry
+or UI success. The first-attempt custom-URL scrolling miss recovered on the
+existing retry in that prior run, with no proven causal root: no separate fix is
+claimed or included here.
+
 ### 6. The re-capture diff (nightly, opted in)
 
 ADR 0003 requires a script that re-captures against an isolated `lop mobile` and

@@ -250,7 +250,199 @@ function checkIdentifiers(value: Value) {
 	}
 }
 
+// Settings has a long saved-tunnel section above Appearance. Roots being ready
+// says nothing about its controls being in the viewport. These ordered targets
+// follow Settings/Segmented source order, not a requirement to scroll every id.
+const settingsTargets = [
+	["assertVisible", "settings-theme-group", "DOWN"],
+	["assertVisible", "settings-theme-system", "DOWN"],
+	["tapOn", "settings-theme-dark", "DOWN"],
+	["tapOn", "settings-theme-light", "DOWN"],
+	["tapOn", "settings-theme-system", "UP"],
+	["assertVisible", "settings-section-connection", "UP"],
+	["tapOn", "settings-text-scale-200", "DOWN"],
+	["tapOn", "settings-text-scale-100", "UP"],
+	["assertVisible", "settings-sign-out", "DOWN"],
+	["assertVisible", "settings-section-diagnostics", "UP"],
+] as const;
+
+function checkSettingsTraversal(steps: Mapping[]) {
+	const watched = new Set<string>(settingsTargets.map(([, id]) => id));
+	let targetIndex = 0;
+	let lastScroll: {
+		id: Value | undefined;
+		direction: Value | undefined;
+		index: number;
+	} | null = null;
+	let mutation: { id: string; index: number; ready: boolean } | null = null;
+	const captures: Value[] = [];
+	for (const [index, step] of steps.entries()) {
+		if (step.scrollUntilVisible !== undefined) {
+			const scroll = mapping(step.scrollUntilVisible);
+			lastScroll = {
+				id: mapping(scroll.element).id,
+				direction: scroll.direction,
+				index,
+			};
+			assert.equal(
+				scroll.timeout,
+				15000,
+				"Settings scroll budget must stay bounded",
+			);
+		}
+		for (const kind of ["assertVisible", "tapOn"] as const) {
+			if (step[kind] === undefined) continue;
+			const id = String(mapping(step[kind]).id);
+			if (!watched.has(id)) continue;
+			const expected = settingsTargets[targetIndex];
+			assert(expected, "unexpected Settings interaction");
+			assert.deepEqual(
+				[kind, id],
+				expected.slice(0, 2),
+				"preserve Settings traversal and assertions",
+			);
+			assert(
+				lastScroll?.id === id,
+				`Settings ${id} requires its own target scroll before ${kind}`,
+			);
+			assert.equal(
+				lastScroll.direction,
+				expected[2],
+				`Settings ${id} scroll direction`,
+			);
+			lastScroll = null;
+			targetIndex += 1;
+			if (kind === "tapOn") mutation = { id, index, ready: false };
+		}
+		if (step.extendedWaitUntil !== undefined && mutation !== null) {
+			const anchor = mapping(mapping(step.extendedWaitUntil).visible);
+			if (anchor.id === mutation.id && anchor.selected === true) {
+				if (mutation.id.startsWith("settings-text-scale-")) {
+					// Expansion moves the selected 200 control DOWN; first find it
+					// again, then 100 is earlier in the track and can be reached UP.
+					// Contraction after 100 likewise invalidates the old scroll offset.
+					assert(
+						lastScroll?.id === mutation.id && lastScroll.index > mutation.index,
+						`Settings ${mutation.id} needs post-scale remeasurement`,
+					);
+					assert.equal(
+						lastScroll.direction,
+						mutation.id.endsWith("200") ? "DOWN" : "UP",
+						"post-scale scroll direction",
+					);
+				}
+				mutation.ready = true;
+			}
+		}
+		if (step.takeScreenshot !== undefined) {
+			captures.push(step.takeScreenshot);
+			if (mutation !== null) {
+				assert(
+					mutation.ready,
+					`Settings screenshot must wait for selected ${mutation.id}`,
+				);
+				mutation = null;
+			}
+		}
+	}
+	assert.equal(
+		targetIndex,
+		settingsTargets.length,
+		"all Settings interactions remain covered",
+	);
+	assert.deepEqual(captures, [
+		"11-00-settings",
+		"11-01-theme-control",
+		"11-02-theme-dark",
+		"11-03-theme-light",
+		"11-04-theme-system",
+		"11-05-connection-section",
+		"11-06-text-200",
+		"11-07-text-100",
+		"11-08-sign-out",
+		"11-09-diagnostics",
+	]);
+}
+
 export const maestroChecks: [string, () => void][] = [
+	[
+		"Settings scrolls to each target and remeasures appearance changes before captures",
+		() => {
+			const steps = commands(
+				read(join(workspace, "flows/07-settings-theme-scale.yaml")),
+			);
+			checkSettingsTraversal(steps);
+			read(join(workspace, "flows/07-settings-theme-scale.yaml")).forEach(
+				checkIdentifiers,
+			);
+		},
+	],
+	[
+		"Settings traversal rejects omitted scrolls, backwards returns and stale scale geometry",
+		() => {
+			const steps = commands(
+				read(join(workspace, "flows/07-settings-theme-scale.yaml")),
+			);
+			checkSettingsTraversal(steps);
+			const mutateScroll = (id: string, remove: boolean, postScale = false) => {
+				const changed = structuredClone(steps);
+				const at = changed.findIndex(
+					(step) =>
+						step.scrollUntilVisible !== undefined &&
+						mapping(mapping(step.scrollUntilVisible).element).id === id &&
+						(!postScale ||
+							mapping(mapping(step.scrollUntilVisible).element).selected ===
+								true),
+				);
+				assert(at >= 0, `missing negative-control scroll for ${id}`);
+				if (remove) changed.splice(at, 1);
+				else {
+					const scroll = mapping(changed[at]?.scrollUntilVisible);
+					scroll.direction = scroll.direction === "UP" ? "DOWN" : "UP";
+				}
+				return changed;
+			};
+			assert.throws(
+				() =>
+					checkSettingsTraversal(mutateScroll("settings-theme-group", true)),
+				/requires its own target scroll/,
+			);
+			for (const id of [
+				"settings-section-connection",
+				"settings-text-scale-100",
+				"settings-section-diagnostics",
+			]) {
+				assert.throws(
+					() => checkSettingsTraversal(mutateScroll(id, true)),
+					/requires its own target scroll/,
+				);
+				assert.throws(
+					() => checkSettingsTraversal(mutateScroll(id, false)),
+					/scroll direction/,
+				);
+			}
+			for (const id of ["settings-text-scale-200", "settings-text-scale-100"]) {
+				assert.throws(
+					() => checkSettingsTraversal(mutateScroll(id, true, true)),
+					/post-scale remeasurement/,
+				);
+				assert.throws(
+					() => checkSettingsTraversal(mutateScroll(id, false, true)),
+					/post-scale scroll direction/,
+				);
+			}
+			const noSelectedWait = steps.filter(
+				(step) =>
+					step.extendedWaitUntil === undefined ||
+					mapping(mapping(step.extendedWaitUntil).visible).id !==
+						"settings-text-scale-200",
+			);
+			assert.throws(
+				() => checkSettingsTraversal(noSelectedWait),
+				/screenshot must wait for selected/,
+			);
+		},
+	],
 	[
 		"scalar subset rejects malformed YAML and preserves escaped quoted values",
 		() => {

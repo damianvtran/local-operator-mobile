@@ -48,32 +48,127 @@ name: "S11 settings theme and text scale"
       id: "settings-screen"
     timeout: 15000
 - takeScreenshot: "11-00-settings"
+# Connected custom routes put saved-tunnel management above Appearance. A ready
+# Settings root is not a visible theme control: walk the real ScrollView targets.
+- scrollUntilVisible:
+    element:
+      id: "settings-theme-group"
+    direction: DOWN
+    timeout: 15000
 - assertVisible:
     id: "settings-theme-group"
+- scrollUntilVisible:
+    element:
+      id: "settings-theme-system"
+    direction: DOWN
+    timeout: 15000
 - assertVisible:
     id: "settings-theme-system"
 - takeScreenshot: "11-01-theme-control"
+- scrollUntilVisible:
+    element:
+      id: "settings-theme-dark"
+    direction: DOWN
+    timeout: 15000
 - tapOn:
     id: "settings-theme-dark"
+- extendedWaitUntil:
+    visible:
+      id: "settings-theme-dark"
+      selected: true
+    timeout: 15000
 - takeScreenshot: "11-02-theme-dark"
+- scrollUntilVisible:
+    element:
+      id: "settings-theme-light"
+    direction: DOWN
+    timeout: 15000
 - tapOn:
     id: "settings-theme-light"
+- extendedWaitUntil:
+    visible:
+      id: "settings-theme-light"
+      selected: true
+    timeout: 15000
 - takeScreenshot: "11-03-theme-light"
+- scrollUntilVisible:
+    element:
+      id: "settings-theme-system"
+    direction: UP
+    timeout: 15000
 - tapOn:
     id: "settings-theme-system"
+- extendedWaitUntil:
+    visible:
+      id: "settings-theme-system"
+      selected: true
+    timeout: 15000
 - takeScreenshot: "11-04-theme-system"
+# Connection precedes Appearance, so this return must go upward.
+- scrollUntilVisible:
+    element:
+      id: "settings-section-connection"
+    direction: UP
+    timeout: 15000
 - assertVisible:
     id: "settings-section-connection"
 - takeScreenshot: "11-05-connection-section"
+- scrollUntilVisible:
+    element:
+      id: "settings-text-scale-200"
+    direction: DOWN
+    timeout: 15000
 - tapOn:
     id: "settings-text-scale-200"
+# Larger text expands everything above this track. Re-find selected 200 DOWN
+# after reflow before capturing it; only then is the earlier 100 option UP.
+- scrollUntilVisible:
+    element:
+      id: "settings-text-scale-200"
+      selected: true
+    direction: DOWN
+    timeout: 15000
+- extendedWaitUntil:
+    visible:
+      id: "settings-text-scale-200"
+      selected: true
+    timeout: 15000
 - takeScreenshot: "11-06-text-200"
+- scrollUntilVisible:
+    element:
+      id: "settings-text-scale-100"
+    direction: UP
+    timeout: 15000
 - tapOn:
     id: "settings-text-scale-100"
+# Returning to 100 contracts the preceding content and invalidates that offset
+# again. Re-anchor UP before the reset screenshot, rather than capturing mid-flow.
+- scrollUntilVisible:
+    element:
+      id: "settings-text-scale-100"
+      selected: true
+    direction: UP
+    timeout: 15000
+- extendedWaitUntil:
+    visible:
+      id: "settings-text-scale-100"
+      selected: true
+    timeout: 15000
 - takeScreenshot: "11-07-text-100"
+- scrollUntilVisible:
+    element:
+      id: "settings-sign-out"
+    direction: DOWN
+    timeout: 15000
 - assertVisible:
     id: "settings-sign-out"
 - takeScreenshot: "11-08-sign-out"
+# Diagnostics is above the sign-out tail, not farther down the page.
+- scrollUntilVisible:
+    element:
+      id: "settings-section-diagnostics"
+    direction: UP
+    timeout: 15000
 - assertVisible:
     id: "settings-section-diagnostics"
 - takeScreenshot: "11-09-diagnostics"
