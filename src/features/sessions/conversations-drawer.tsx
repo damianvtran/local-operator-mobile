@@ -4,6 +4,7 @@ import {
 	Easing,
 	Keyboard,
 	Modal,
+	Platform,
 	Pressable,
 	useWindowDimensions,
 	View,
@@ -11,6 +12,11 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { ConversationsPane } from "@/features/sessions/conversations-pane";
+import {
+	cancelDrawerNewChat,
+	finishDrawerDismiss,
+	requestDrawerNewChat,
+} from "@/features/sessions/drawer-focus";
 import { ROLE, SURFACE } from "@/ui/a11y";
 import { useReducedMotion, useTokenColor } from "@/ui/appearance";
 import {
@@ -116,12 +122,30 @@ export const ConversationsDrawer = ({
 		]).start();
 	}, [visible, slide, scrimFade, reduceMotion]);
 
-	const close = () => {
+	const newChatIntent = useRef(false);
+	// Changing the owning callback or unmounting cancels an old intent; reopening
+	// and non-New-chat dismissals must never focus a different conversation.
+	useEffect(() => {
+		if (!onNewChat) cancelDrawerNewChat(newChatIntent);
+		return () => cancelDrawerNewChat(newChatIntent);
+	}, [onNewChat]);
+	useEffect(() => {
+		if (visible) cancelDrawerNewChat(newChatIntent);
+	}, [visible]);
+	const dismiss = () => {
 		/* The keyboard yields first: the composer is where the reader came from,
 		 * and a keyboard that outlives the drawer would sit over the home at the
 		 * moment it is shown. */
 		Keyboard.dismiss();
 		onClose();
+	};
+	const close = () => {
+		cancelDrawerNewChat(newChatIntent);
+		dismiss();
+	};
+	const newChat = () => {
+		if (onNewChat)
+			requestDrawerNewChat(Platform.OS, newChatIntent, dismiss, onNewChat);
 	};
 
 	/* The drawer is a THIRD `Modal` renderer, and the stack rule is the primitive's:
@@ -145,6 +169,7 @@ export const ConversationsDrawer = ({
 				transparent
 				animationType="none"
 				onRequestClose={close}
+				onDismiss={() => finishDrawerDismiss(newChatIntent, onNewChat)}
 				// The covered application is inert while the drawer is up: `aria-modal`
 				// alone does not remove it from keyboard or screen-reader navigation.
 				accessibilityViewIsModal
@@ -264,7 +289,7 @@ export const ConversationsDrawer = ({
 								<ConversationsPane
 									onClose={close}
 									onNavigate={close}
-									onNewChat={onNewChat}
+									onNewChat={onNewChat ? newChat : undefined}
 									notice={notice}
 									homeDirectory={homeDirectory}
 								/>

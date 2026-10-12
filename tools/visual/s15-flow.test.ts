@@ -23,6 +23,8 @@ describe("bounded S15 interaction contract", () => {
 			footerTop: 313,
 			footerBottom: 361,
 			footerHit: true,
+			footerInsideList: true,
+			viewportHeight: 390,
 		};
 		const expanded = {
 			...oldTail,
@@ -36,6 +38,31 @@ describe("bounded S15 interaction contract", () => {
 		const realTail = { ...oldTail, height: 1996, top: 1731 };
 		expect(scrollBoundarySettled(realTail, expanded, true)).toBe(false);
 		expect(scrollBoundarySettled(realTail, realTail, true)).toBe(true);
+	});
+	it("keeps pinned portrait navigation outside the list clip but fully hit-testable", () => {
+		const portrait = {
+			top: 794,
+			client: 414,
+			height: 1208,
+			listTop: 163,
+			listBottom: 577,
+			footerTop: 762,
+			footerBottom: 810,
+			footerHit: true,
+			footerInsideList: false,
+			viewportHeight: 844,
+		};
+		expect(scrollBoundarySettled(portrait, portrait, true)).toBe(true);
+		expect(
+			scrollBoundarySettled({ ...portrait, footerHit: false }, portrait, true),
+		).toBe(false);
+		expect(
+			scrollBoundarySettled(
+				{ ...portrait, footerInsideList: true },
+				portrait,
+				true,
+			),
+		).toBe(false);
 	});
 	it("carries every canonical seed parameter including explicit HTTP opt-in", () => {
 		const origin = "http://127.0.0.1:12345";

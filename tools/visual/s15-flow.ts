@@ -40,6 +40,8 @@ export interface ScrollReading {
 	footerTop: number;
 	footerBottom: number;
 	footerHit: boolean;
+	footerInsideList: boolean;
+	viewportHeight: number;
 }
 /** Virtualized rows change their estimated extent after wheel delivery. A
  * transient old maximum is not a tail: require unchanged extents plus a real
@@ -60,8 +62,11 @@ export const scrollBoundarySettled = (
 		? now.top > 0 &&
 				now.top + now.client >= now.height - 1 &&
 				now.footerHit &&
-				now.footerTop >= now.listTop - 1 &&
-				now.footerBottom <= now.listBottom + 1
+				now.footerTop >= 0 &&
+				now.footerBottom <= now.viewportHeight + 1 &&
+				(!now.footerInsideList ||
+					(now.footerTop >= now.listTop - 1 &&
+						now.footerBottom <= now.listBottom + 1))
 		: now.top === 0;
 };
 
@@ -244,7 +249,8 @@ export async function runS15FlowProof({
 			 const hit = document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);
 			 return { top:el.scrollTop, client:el.clientHeight, height:el.scrollHeight,
 			  listTop:l.top, listBottom:l.bottom, footerTop:r.top, footerBottom:r.bottom,
-			  footerHit:Boolean(hit && (hit===f || f.contains(hit))) };
+			  footerHit:Boolean(hit && (hit===f || f.contains(hit))),
+			  footerInsideList:el.contains(f), viewportHeight:innerHeight };
 			})()`)) as ScrollReading;
 			journal.push({ action: "wheel", tail, reading });
 			stable = scrollBoundarySettled(reading, previous, tail) ? stable + 1 : 0;
@@ -438,6 +444,20 @@ export async function runS15FlowProof({
 		await press(selector(CONTROL.pastBack));
 		await returnPane();
 		await record("portrait-return-control");
+		await press(selector(CONTROL.sidebarNewChat));
+		await wait(
+			`Boolean(${present(SURFACE.homeComposer)}) && document.activeElement?.tagName === 'TEXTAREA'`,
+			"portrait New chat did not focus composer",
+		);
+		assert(page);
+		await page.send("Input.insertText", {
+			text: "Portrait focused composer control",
+		});
+		await wait(
+			`String(document.activeElement?.value).endsWith('Portrait focused composer control')`,
+			"portrait composer did not accept input",
+		);
+		await record("portrait-new-chat-focused");
 		writeFileSync(
 			join(out, "flow.json"),
 			JSON.stringify(
