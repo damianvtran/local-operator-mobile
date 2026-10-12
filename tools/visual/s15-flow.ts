@@ -31,6 +31,40 @@ export const FOOTER_DESTINATIONS = [
 ] as const;
 const selector = (id: string) => `[data-testid=${JSON.stringify(id)}]`;
 
+export interface ScrollReading {
+	top: number;
+	client: number;
+	height: number;
+	listTop: number;
+	listBottom: number;
+	footerTop: number;
+	footerBottom: number;
+	footerHit: boolean;
+}
+/** Virtualized rows change their estimated extent after wheel delivery. A
+ * transient old maximum is not a tail: require unchanged extents plus a real
+ * final target inside the clip before ending input. */
+export const scrollBoundarySettled = (
+	now: ScrollReading,
+	before: ScrollReading | undefined,
+	tail: boolean,
+) => {
+	if (
+		!before ||
+		now.top !== before.top ||
+		now.height !== before.height ||
+		now.client !== before.client
+	)
+		return false;
+	return tail
+		? now.top > 0 &&
+				now.top + now.client >= now.height - 1 &&
+				now.footerHit &&
+				now.footerTop >= now.listTop - 1 &&
+				now.footerBottom <= now.listBottom + 1
+		: now.top === 0;
+};
+
 /** Reuse the capture/audit seed contract: cleartext synthetic HTTP must carry
  * the app's explicit opt-in, and a second hand-built seed silently disconnects. */
 export const s15FlowQuery = (
@@ -187,27 +221,43 @@ export async function runS15FlowProof({
 	};
 	const wheel = async (tail: boolean) => {
 		assert(page);
-		const css = selector("conversations-list");
-		const rect = await rectFor(css);
-		// The centre may hit a row descendant; wheel still scrolls its list ancestor.
-		await page.send("Input.dispatchMouseEvent", {
-			type: "mouseWheel",
-			x: rect.x,
-			y: rect.y,
-			deltaX: 0,
-			deltaY: tail ? 10000 : -10000,
-		});
-		await wait(
-			`(() => {const el=${present("conversations-list")}; return el && ${tail ? "el.scrollTop > 0 && el.scrollTop + el.clientHeight >= el.scrollHeight - 1" : "el.scrollTop === 0"};})()`,
+		const until = Date.now() + 15000;
+		let previous: ScrollReading | undefined;
+		let stable = 0;
+		while (Date.now() < until) {
+			const rect = await rectFor(selector("conversations-list"));
+			// Keep scrolling through virtualized remeasurement, using actual input.
+			// No scrollTop write, sleep inflation or stale maximum is accepted.
+			await page.send("Input.dispatchMouseEvent", {
+				type: "mouseWheel",
+				x: rect.x,
+				y: rect.y,
+				deltaX: 0,
+				deltaY: tail ? 10000 : -10000,
+			});
+			await page.evaluate(
+				"new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))",
+			);
+			const reading = (await page.evaluate(`(() => {
+			 const el = ${present("conversations-list")}, f = ${present(CONTROL.sidebarSchedules)};
+			 const l = el.getBoundingClientRect(), r = f.getBoundingClientRect();
+			 const hit = document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);
+			 return { top:el.scrollTop, client:el.clientHeight, height:el.scrollHeight,
+			  listTop:l.top, listBottom:l.bottom, footerTop:r.top, footerBottom:r.bottom,
+			  footerHit:Boolean(hit && (hit===f || f.contains(hit))) };
+			})()`)) as ScrollReading;
+			journal.push({ action: "wheel", tail, reading });
+			stable = scrollBoundarySettled(reading, previous, tail) ? stable + 1 : 0;
+			if (stable >= 2) return;
+			previous = reading;
+		}
+		assert.fail(
 			tail
-				? "list did not reach its tail by wheel"
-				: "list did not return to top by wheel",
-		);
-		// Flush queued wheel/scroll delivery before starting any press.
-		await page.evaluate(
-			"new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))",
+				? "list did not settle at its visible tail by wheel"
+				: "list did not settle at top by wheel",
 		);
 	};
+
 	const returnPane = async () => {
 		await wait(
 			`Boolean(${present(SURFACE.sidebar)} || ${present(CONTROL.homeSidebar)})`,
