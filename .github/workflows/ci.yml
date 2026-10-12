@@ -179,7 +179,10 @@ jobs:
         run: pnpm export:web
 
       - name: Lint (biome check — linter, formatter and import order)
-        run: pnpm lint
+        # A warning-heavy tree can exhaust Biome's default diagnostic cap before
+        # any failure is printed. Keep the same whole-tree/error gate and expose
+        # its actionable diagnostics; a truncated warning list is not a diagnosis.
+        run: pnpm lint --max-diagnostics=1000
 
       - name: Format check (biome format)
         run: pnpm format:check
