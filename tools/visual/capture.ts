@@ -861,6 +861,8 @@ async function relayStep<T>(
 
 /** What the measurement probe reports, narrowed from the page's reply. */
 export interface Measurements {
+	/** Resting pane allocation and scroll extents; absent outside the drawer. */
+	paneGeometry?: Record<string, number>;
 	reported?: {
 		theme?: string;
 		scale?: number;
@@ -973,6 +975,15 @@ function asMeasurements(value: unknown): Measurements | null {
 								? reported.themeSource
 								: undefined,
 					},
+		paneGeometry:
+			typeof bag.paneGeometry === "object" && bag.paneGeometry !== null
+				? Object.fromEntries(
+						Object.entries(bag.paneGeometry).filter(
+							([, value]) =>
+								typeof value === "number" && Number.isFinite(value),
+						),
+					)
+				: undefined,
 		canvasColor: text("canvasColor"),
 		resolvedColorScheme: text("resolvedColorScheme"),
 		rootBackground: text("rootBackground"),

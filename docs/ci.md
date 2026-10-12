@@ -30,6 +30,29 @@ The only skip that can appear in a green run by design is the path-gated
 at all, and a run whose `harness` job fails is red, with the missing pieces named
 in the annotation.
 
+## Targeted S15 visual proof (not full E2E)
+
+`e2e.yml` has an optional `workflow_dispatch` input, `proof_mode=s15-proof`,
+for investigating the conversations pane. The default `full` mode, PRs, pushes
+and nightly runs retain their normal gates. Explicit targeted mode runs the
+harness detector plus one bounded web-proof job, not Maestro, the relay contract,
+the documentation sweep or the full visual samples. It is **targeted proof, not
+full E2E** and is not a substitute for the normal PR gate.
+
+```sh
+gh workflow run e2e.yml --ref <branch> -f proof_mode=s15-proof
+```
+
+The selection is fixed: `S15/{populated,ended,degraded-row,mesh-remote,populated-long,menu-open}`,
+`iphone-15-landscape` plus portrait controls, both themes, and 100/150/200% text.
+The capture tool plans 72 cells / 216 consecutive frames. A single export and
+synthetic relay serve them; capture and audit failures stay failures (including
+an intentionally unchanged-app baseline). The seven-day `s15-proof-<SHA>`
+artifact contains only these frames, their manifest and corresponding audit.
+The manifest records resting pane/list/footer heights and list scroll extents,
+so a screenshot of clipped rows has explanatory numbers, not an inferred cause.
+Record each dispatch's exact SHA and run URL when comparing baseline and fix.
+
 ## Third-party actions, and how they are pinned
 
 Two conventions, on purpose (ADR 0004, "Supply-chain hygiene"):
