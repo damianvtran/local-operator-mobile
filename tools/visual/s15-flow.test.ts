@@ -1,12 +1,26 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { CONTROL, SCREEN } from "../../src/ui/a11y.ts";
-import { FOOTER_DESTINATIONS } from "./s15-flow.ts";
+import { seedQuery } from "../lib/readiness.ts";
+import { DEFAULT_PASSWORD } from "../mock-relay/relay.ts";
+import { FOOTER_DESTINATIONS, s15FlowQuery } from "./s15-flow.ts";
 
 const scrollAssignment = /scrollTop\s*=(?!=)/;
 const source = readFileSync(new URL("./s15-flow.ts", import.meta.url), "utf8");
 
 describe("bounded S15 interaction contract", () => {
+	it("carries every canonical seed parameter including explicit HTTP opt-in", () => {
+		const origin = "http://127.0.0.1:12345";
+		const query = s15FlowQuery(origin, "dark", "iphone-15-landscape");
+		for (const [key, value] of new URLSearchParams(
+			seedQuery(origin, DEFAULT_PASSWORD),
+		)) {
+			expect(query.get(key)).toBe(value);
+		}
+		expect(query.get("lo-relay-insecure")).toBe("1");
+		expect(query.get("lo-inset-left")).toBe("59");
+		expect(query.get("lo-text-scale")).toBe("2");
+	});
 	it("pairs all four app destinations with their actual return controls", () => {
 		expect(FOOTER_DESTINATIONS).toEqual([
 			{

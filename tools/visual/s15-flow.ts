@@ -6,6 +6,7 @@ import { CONTROL, SCREEN, SURFACE } from "../../src/ui/a11y.ts";
 import type { CdpPage } from "../lib/cdp.ts";
 import type { launchChrome } from "../lib/chrome.ts";
 import { applySafeAreaInsets, freshPage } from "../lib/page.ts";
+import { seedQuery } from "../lib/readiness.ts";
 import { selectScenario } from "../lib/relay.ts";
 import { DEFAULT_PASSWORD } from "../mock-relay/relay.ts";
 import { DEVICES, MEASURE_PROBE } from "./matrix.ts";
@@ -29,6 +30,31 @@ export const FOOTER_DESTINATIONS = [
 	},
 ] as const;
 const selector = (id: string) => `[data-testid=${JSON.stringify(id)}]`;
+
+/** Reuse the capture/audit seed contract: cleartext synthetic HTTP must carry
+ * the app's explicit opt-in, and a second hand-built seed silently disconnects. */
+export const s15FlowQuery = (
+	baseUrl: string,
+	theme: string,
+	deviceId: string,
+) => {
+	const device = DEVICES[deviceId];
+	assert(device, "unknown flow device");
+	const query = new URLSearchParams({
+		"lo-theme": theme,
+		"lo-text-scale": "2",
+		"lo-reduce-motion": "0",
+		"lo-inset-top": String(device.insets.top),
+		"lo-inset-bottom": String(device.insets.bottom),
+		"lo-inset-left": String(device.insets.left),
+		"lo-inset-right": String(device.insets.right),
+	});
+	for (const [key, value] of new URLSearchParams(
+		seedQuery(baseUrl, DEFAULT_PASSWORD),
+	))
+		query.set(key, value);
+	return query;
+};
 
 /** CI-only interaction proof on the existing capture browser. Navigation inside
  * each journey uses controls, never location/history assignment; wheel input is
@@ -223,16 +249,7 @@ export async function runS15FlowProof({
 		});
 		const safe = await applySafeAreaInsets(page, device);
 		assert(safe.applied, safe.reason ?? "safe area unavailable");
-		const query = new URLSearchParams({
-			"lo-theme": theme,
-			"lo-text-scale": "2",
-			"lo-relay": baseUrl,
-			"lo-relay-password": DEFAULT_PASSWORD,
-			"lo-inset-top": String(device.insets.top),
-			"lo-inset-bottom": String(device.insets.bottom),
-			"lo-inset-left": String(device.insets.left),
-			"lo-inset-right": String(device.insets.right),
-		});
+		const query = s15FlowQuery(baseUrl, theme, deviceId);
 		prefix = `${deviceId}-${theme}-${scenario}`;
 		journal.push({
 			action: "isolated scenario boot",
