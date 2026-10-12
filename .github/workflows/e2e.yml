@@ -36,6 +36,14 @@ name: E2E (mock relay, audit and Maestro)
 
 on:
   workflow_dispatch:
+    inputs:
+      proof_mode:
+        description: "Optional bounded S15 proof (not full E2E); full preserves the normal gate"
+        type: choice
+        default: full
+        options:
+          - full
+          - s15-proof
   schedule:
     # Nightly, off-peak: the emulator job is the slowest thing here and the least
     # useful on a branch nobody is waiting for.
@@ -75,6 +83,19 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v7
+
+      # Only an explicit dispatch may narrow the gate. Inputs are data, not shell
+      # source; reject unknown values rather than accidentally running no jobs.
+      - name: Validate proof selection
+        env:
+          PROOF_MODE: ${{ inputs.proof_mode || 'full' }}
+        run: |
+          set -euo pipefail
+          case "$PROOF_MODE" in
+            full) ;;
+            s15-proof) test "$GITHUB_EVENT_NAME" = workflow_dispatch ;;
+            *) echo "::error::unknown proof mode"; exit 1 ;;
+          esac
 
       - name: Detect the harness
         # A GREEN RUN OF THIS WORKFLOW MUST MEAN THE SUITES RAN. Until this step
@@ -123,6 +144,7 @@ jobs:
   mock-relay-contract:
     name: Mock relay contract and divergence checks
     needs: harness
+    if: inputs.proof_mode != 's15-proof'
     runs-on: ubuntu-latest
     # BOUND SIZED FROM A MEASUREMENT, NOT FROM HOPE (review round 3, M3). The
     # harness documents `pnpm e2e:relay` as its slowest documented command, and its
@@ -203,7 +225,7 @@ jobs:
     # measurement of what happens when it does). So they print SKIP *with the reason*
     # rather than pretending, which names what was not proven — and their tool paths
     # and script names are still resolved, so a skip cannot hide a renamed file.
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    if: (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && inputs.proof_mode != 's15-proof'
     runs-on: ubuntu-latest
     timeout-minutes: 70
     steps:
@@ -251,6 +273,7 @@ jobs:
         run: pnpm e2e:docs
 
   web-audit:
+    if: inputs.proof_mode != 's15-proof'
     name: Web target — frames, audit and the canary
     needs: harness
     # LINUX, not macOS. This job ran on `macos-26` only because the harness's
@@ -474,6 +497,97 @@ jobs:
             ${{ runner.temp }}/audit
           retention-days: 30
 
+  s15-proof:
+    name: Targeted S15 proof — not full E2E
+    needs: harness
+    if: github.event_name == 'workflow_dispatch' && inputs.proof_mode == 's15-proof'
+    runs-on: ubuntu-latest
+    # 72 cells / 216 frames plus a bounded 300 s interaction delta on the same
+    # browser/export. No old-app leg: its causal separation is already recorded.
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - name: Install frozen dependencies
+        timeout-minutes: 5
+        run: pnpm install --frozen-lockfile
+      - name: Type-check the harness
+        timeout-minutes: 3
+        run: pnpm e2e:typecheck
+      - name: Export current app once
+        timeout-minutes: 5
+        run: |
+          set -euo pipefail
+          echo "current app and driver: $GITHUB_SHA; src tree $(git rev-parse HEAD:src)" | tee "$RUNNER_TEMP/fixed-source.txt"
+          pnpm export:web
+      - name: Start one synthetic relay
+        env:
+          SCENARIO: ${{ env.MOCK_RELAY_SCENARIO }}
+        run: |
+          set -euo pipefail
+          setsid pnpm mock:relay --scenario "$SCENARIO" --print-port --quiet \
+            < /dev/null > "$RUNNER_TEMP/relay.port" 2> "$RUNNER_TEMP/relay.err" &
+          echo $! > "$RUNNER_TEMP/relay.pid"
+          for _ in $(seq 1 60); do
+            port=$(head -1 "$RUNNER_TEMP/relay.port" 2>/dev/null || true)
+            case "$port" in ''|*[!0-9]*) sleep 0.5 ;; *) break ;; esac
+          done
+          port=$(head -1 "$RUNNER_TEMP/relay.port")
+          case "$port" in ''|*[!0-9]*) echo '::error::relay never printed a port'; cat "$RUNNER_TEMP/relay.err"; exit 1 ;; esac
+          echo "MOCK_RELAY_URL=http://127.0.0.1:$port" >> "$GITHUB_ENV"
+      - name: Capture affected cells and positive controls
+        if: ${{ !cancelled() }}
+        timeout-minutes: 21
+        run: |
+          pnpm audit:capture --dir dist --out "$RUNNER_TEMP/s15-frames" \
+            --relay "$MOCK_RELAY_URL" --tier core \
+            --cells S15/populated,S15/ended,S15/degraded-row,S15/mesh-remote,S15/populated-long,S15/menu-open \
+            --devices iphone-15-landscape,iphone-15 --themes dark,light \
+            --scales 100,150,200 --consecutive --deadline 900 --s15-flow-proof --yes
+      - name: Audit the same manifest even when baseline capture fails
+        if: ${{ !cancelled() }}
+        timeout-minutes: 5
+        run: |
+          test -s "$RUNNER_TEMP/s15-frames/manifest.json"
+          pnpm audit:run --manifest "$RUNNER_TEMP/s15-frames/manifest.json" --out "$RUNNER_TEMP/s15-audit"
+      - name: Report proof scope and revision
+        if: always()
+        run: |
+          {
+            echo '## Targeted proof, not full E2E'
+            echo "Revision: $GITHUB_SHA"
+            echo 'Current-head flow proof: both themes at 200% compact landscape; actual wheel scrolling, four footer destinations/returns, focused search, short tap/1200 ms hold, composer focus and fresh receipt acceptance; portrait control.'
+            echo 'Fixed-app leg: six S15 states; iphone-15 portrait + landscape; dark/light; 100/150/200%; 72 cells, 216 frames.'
+            cat "$RUNNER_TEMP/fixed-source.txt"
+            echo 'Manifest includes resting pane/list/footer geometry and scroll extents. Capture/audit failures remain job failures.'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Stop only this relay group
+        if: always()
+        run: |
+          if [ -f "$RUNNER_TEMP/relay.pid" ]; then
+            pid=$(cat "$RUNNER_TEMP/relay.pid")
+            # pnpm has a node child: reap the isolated group, not just its wrapper.
+            kill -- "-$pid" 2>/dev/null || true
+            for _ in $(seq 1 20); do kill -0 -- "-$pid" 2>/dev/null || break; sleep 0.25; done
+            kill -9 -- "-$pid" 2>/dev/null || true
+          fi
+      - name: Upload small targeted evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: s15-proof-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/s15-frames
+            ${{ runner.temp }}/s15-audit
+            ${{ runner.temp }}/fixed-source.txt
+            ${{ runner.temp }}/relay.err
+          if-no-files-found: error
+          retention-days: 7
+
   web-audit-core:
     name: Web target — the core device sample (nightly and on demand)
     needs: harness
@@ -560,7 +674,7 @@ jobs:
     # NOT yet verified, and not claimed here: whether a GitHub runner reproduces these
     # metric-sensitive results. That needs a `workflow_dispatch`; the figures above are
     # measured on this host.
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    if: (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && inputs.proof_mode != 's15-proof'
     runs-on: ubuntu-latest
     timeout-minutes: 240
     steps:
@@ -648,7 +762,7 @@ jobs:
     # release gate", and ADR 0003's risk table limits emulator flows for the same
     # reason — they are the slowest, flakiest part of the pipeline and the least
     # informative on a branch somebody is iterating on.
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    if: (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && inputs.proof_mode != 's15-proof'
     runs-on: ubuntu-latest
     timeout-minutes: 75
     steps:

@@ -116,6 +116,8 @@ interface ReachOptions {
 	/** Where the control IS after a scroll brought it in — absent means the scroll
 	 *  did not help, which is its own case. */
 	afterScroll?: Box;
+	/** Queue the browser scroll event independently of its synchronous box move. */
+	onScroll?: () => void;
 	/**
 	 * A sequence of boxes, one per reading, the last repeating: what an entry
 	 * animation looks like from the page's side. Used to pin that a verdict is
@@ -203,6 +205,7 @@ function stubDom(
 						),
 					scrollIntoView: () => {
 						scrolled.push(1);
+						reach.onScroll?.();
 						/* A real `scrollIntoView` moves the scrollers AND, when the
 						 *  control needs it, the document — which is the offset the
 						 *  restore has to cover (round 3, Q6). */
@@ -682,6 +685,39 @@ describe("the affordance script", () => {
 			"click",
 		]);
 	});
+
+	it.each([600, 1200])(
+		"delivers queued ancestor scroll before a %i ms hold starts",
+		async (ms) => {
+			let pendingScroll = false;
+			let downBeforeScroll = false;
+			stubDom(
+				{
+					getAttribute: () => null,
+					dispatchEvent: (event) => {
+						if (event.type === "mousedown") downBeforeScroll = pendingScroll;
+						return true;
+					},
+				},
+				{
+					rect: { left: 0, top: 900, width: 40, height: 40 },
+					afterScroll: { left: 0, top: 50, width: 40, height: 40 },
+					onScroll: () => {
+						pendingScroll = true;
+						setTimeout(() => {
+							pendingScroll = false;
+						}, 0);
+					},
+				},
+			);
+			const page = { evaluate: async (script: string) => await run(script) };
+			const outcomes = await runAffordances(page as never, [
+				{ hold: { testID: "row", ms } },
+			]);
+			expect(outcomes[0]?.result).toBe("ok-after-scroll");
+			expect(downBeforeScroll).toBe(false);
+		},
+	);
 
 	it("takes its verdict from the SETTLED box, not from the frame it ran on", async () => {
 		/* ROUND 3, R15. The description field's box ends at y 564 of a 568 pt phone

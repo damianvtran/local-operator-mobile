@@ -927,11 +927,6 @@ export const PENDING_CELLS: Record<string, string> = {
 			],
 		),
 	),
-	/* The list states the app renders without an identifier of their own. */
-	"S15/ended":
-		"app (src/ui/a11y.ts STATE_MARKER) — ListRow's `ended` receipt changes copy and colour but carries no identifier",
-	"S15/degraded-row":
-		"app (src/ui/a11y.ts STATE_MARKER) — ListRow's `degraded` receipt renders 'not answering' but carries no identifier",
 	/* The scrolled transcript, and it is here rather than only in the PR because this
 	 * table is where a coverage gap is supposed to live. `S5/scroll` was
 	 * `S5/populated-long` under a second name — both were pinned from `long-transcript`'s
@@ -1365,7 +1360,29 @@ export const MEASURE_PROBE = `
     roleSizes.set(size, (roleSizes.get(size) || 0) + 1);
   }
   const rootFontSizePx = Number.parseFloat(rootStyle ? rootStyle.fontSize : '');
+  // A screenshot cannot explain a collapsed list. Record its resting allocation
+  // and scroll extents without scrolling it or changing the app under review.
+  const pane = document.querySelector('[data-testid="conversations-sidebar"]');
+  const list = pane && pane.querySelector('[data-testid="conversations-list"]');
+  const past = pane && pane.querySelector('[data-testid="sidebar-past"]');
+  const schedules = pane && pane.querySelector('[data-testid="sidebar-schedules"]');
+  let footer = past;
+  while (footer && schedules && !footer.contains(schedules)) footer = footer.parentElement;
+  const paneGeometry = pane && list && footer && schedules ? (() => {
+    const p = pane.getBoundingClientRect(), l = list.getBoundingClientRect(), f = footer.getBoundingClientRect();
+    const rows = [...list.querySelectorAll('[data-testid^="session-row-"]')];
+    const first = rows[0] && rows[0].getBoundingClientRect();
+    return { paneHeight: p.height, paneWidth: p.width, listTop: l.top,
+      listHeight: l.height, listClientHeight: list.clientHeight, listScrollHeight: list.scrollHeight,
+      listScrollTop: list.scrollTop, footerTop: f.top, footerHeight: f.height,
+      rowCount: rows.length, visibleRows: rows.filter((row) => {
+        const r = row.getBoundingClientRect();
+        return r.height > 0 && r.bottom > l.top && r.top < l.bottom;
+      }).length,
+      ...(first ? { firstRowTop: first.top, firstRowHeight: first.height } : {}) };
+  })() : undefined;
   return {
+    paneGeometry,
     reported: { theme: info.theme, scale: info.scale, reduceMotion: info.reduceMotion,
                 themeSource: info.themeSource, insets: info.insets },
     // THE SCHEME THE RENDERER RESOLVED, read back from the same signal the app reads

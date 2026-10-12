@@ -726,6 +726,10 @@ export const SURFACE = {
 	/** A remote row the mesh cannot reach — the word and gloss on the row
 	 *  itself, painted only while `reachable` is false. */
 	sessionRemoteUnreachable: "session-remote-unreachable",
+	/** On the rendered receipt word, not the row's input flags: attention can
+	 * outrank a receipt, and a hidden receipt must not affirm that state. */
+	sessionEnded: "session-receipt-ended",
+	sessionDegraded: "session-not-answering",
 } as const;
 
 /**
@@ -1186,6 +1190,8 @@ export const STATE_MARKER = {
 		loading: "sidebar-loading",
 		empty: EMPTY.sessions,
 		populated: "session-row-",
+		ended: SURFACE.sessionEnded,
+		"degraded-row": SURFACE.sessionDegraded,
 		"empty-search": "sidebar-empty-search",
 		degraded: CONTROL.sessionsDegradedBanner,
 		stale: "sidebar-stale",

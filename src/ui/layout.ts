@@ -74,5 +74,6 @@ export {
 	SPLIT_MIN_HEIGHT,
 	SPLIT_MIN_WIDTH,
 	SPLIT_PANE_WIDTH,
+	sidebarFooterScrolls,
 	sidebarWidthFor,
 } from "@/ui/size-class";

@@ -8,9 +8,10 @@ import {
 } from "react-native";
 
 import { countLabel } from "@/lib/format";
-import { ROLE, SURFACE, state } from "@/ui/a11y";
+import { ROLE, state } from "@/ui/a11y";
 import { useReducedMotion, useTokenColor } from "@/ui/appearance";
 import { metaLineFor, metaPathFloorDp } from "@/ui/components/list-row-meta";
+import { listRowStatus } from "@/ui/components/list-row-status";
 import { Shimmer } from "@/ui/components/shimmer";
 import { LARGE_TEXT_SCALE } from "@/ui/text-scale";
 import { useTextScale } from "@/ui/text-scale-provider";
@@ -178,15 +179,13 @@ export const ListRow = ({
 	 * REMOTE row states its own condition where a session cannot: the mesh has
 	 * stopped reaching the device, so the row is stale as a whole. */
 	const remoteUnreachable = remote !== undefined && !remote.reachable;
-	const statusWord = pending
-		? attentionWord
-		: remoteUnreachable
-			? "not reachable"
-			: ended
-				? "ended"
-				: degraded
-					? "not answering"
-					: null;
+	const { word: statusWord, testID: statusTestID } = listRowStatus({
+		pending,
+		attentionWord,
+		remoteUnreachable,
+		ended,
+		degraded,
+	});
 
 	return (
 		<Pressable
@@ -259,11 +258,7 @@ export const ListRow = ({
 							 * receipts are muted, because neither is an error. */}
 							{statusWord ? (
 								<Text
-									testID={
-										remoteUnreachable
-											? SURFACE.sessionRemoteUnreachable
-											: undefined
-									}
+									testID={statusTestID}
 									className={`shrink-0 text-meta ${
 										pending ? "text-danger" : "text-ink-dim"
 									}`}

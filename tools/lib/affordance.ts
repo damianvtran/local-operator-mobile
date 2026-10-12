@@ -289,6 +289,11 @@ const READER = `
     if (!hitSelf(el)) {
       if (behindAHiddenClip) return { stop: finish("unreachable") };
       if (typeof el.scrollIntoView === "function") el.scrollIntoView({ block: "center", inline: "center" });
+      // The browser delivers scroll asynchronously. RN Web terminates a held
+      // responder on ancestor scroll, so pressing before that event arrives can
+      // cancel the long-press timer and turn its release into navigation. Wait
+      // for the same bounded layout settle AFTER scrolling, not a longer hold.
+      await settle(el);
       if (!hitSelf(el)) { restore(saved); return { stop: finish("unreachable") }; }
     }
     return { saved, verdict: atRest ? finish("ok") : finish("ok-after-scroll", before) };

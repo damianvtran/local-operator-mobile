@@ -93,6 +93,13 @@ export const sidebarWidthFor = (viewportWidth: number): number =>
 		Math.min(SIDEBAR_MOBILE_MAX, viewportWidth - SIDEBAR_SLIVER),
 	);
 
+/** In short landscape the stacked secondary routes cannot stay pinned without
+ * taking the conversation list's height. Use the same height policy that rejects
+ * a split pane there; portrait and roomy tablet layouts keep their pinned footer.
+ * Scrolling the routes with the list preserves text scaling and target sizes. */
+export const sidebarFooterScrolls = (layout: Layout): boolean =>
+	layout.orientation === "landscape" && !layout.split;
+
 /** The width below which a screen header stacks its title above its controls —
  *  the FLOOR, and the default for a screen that passes nothing else.
  *
