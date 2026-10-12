@@ -1287,15 +1287,53 @@ describe("the group latch — facts freeze at the close", () => {
 			"1 steered",
 		]);
 
-		// A slid frame (a member missing) keeps the frozen facts wholesale.
+		// The RETURNED latch is the next frame's authority: it carries the
+		// refreshed descriptors, not the ones this pass was fed (review round
+		// 4, U1 — the reviewer's "returned second.latch still stale" root).
+		expect(after.latch.get("qg:p1")).toMatchObject({
+			senders: [
+				{ label: "worker name", count: 1 },
+				{ label: "QA corrected", count: 1 },
+			],
+			steered: 1,
+		});
+		expect(after.latch.get("qg:p1")?.replyRequested).toBeUndefined();
+
+		// A slid frame (one member missing) keeps the LATEST validated facts
+		// wholesale, inherited from the RETURNED latch — not the first frame's
+		// stale copy (using first.latch here resurrected the old sender, which
+		// is exactly what QA Q-native-R4-1 reproduced).
 		const slid = groupPlan({
 			items: itemsOf([correctedHub, tool("t1"), answer("a1")]),
 			expanded: new Set(),
-			latch: first.latch,
+			latch: after.latch,
 		});
 		expect(slid.groups[0]?.group.senders).toEqual([
-			{ label: "worker name", count: 2 },
+			{ label: "worker name", count: 1 },
+			{ label: "QA corrected", count: 1 },
 		]);
+		expect(slid.groups[0]?.group.replyRequested).toBeUndefined();
+		expect(slid.groups[0]?.group.steered).toBe(1);
+		expect(slid.groups[0]?.group.failed).toBe(0);
+		expect(slid.latch.get("qg:p1")?.senders).toEqual([
+			{ label: "worker name", count: 1 },
+			{ label: "QA corrected", count: 1 },
+		]);
+
+		// A later FULL reload re-derives from live rows again and stays fresh.
+		const reload = groupPlan({
+			items: itemsOf([
+				peer("p1", "worker name"),
+				correctedHub,
+				failedTool("t1"),
+				answer("a1"),
+			]),
+			expanded: new Set(),
+			latch: slid.latch,
+		});
+		expect(reload.groups[0]?.group.steered).toBe(1);
+		expect(reload.groups[0]?.group.replyRequested).toBeUndefined();
+		expect(reload.groups[0]?.group.failed).toBe(0);
 	});
 
 	it("keeps a closed group's identity when the window slides its head away", () => {

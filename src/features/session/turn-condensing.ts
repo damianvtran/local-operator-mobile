@@ -879,8 +879,11 @@ export interface GroupPlan {
 	items: TranscriptItem[];
 	groups: GroupView[];
 	/** The latch, extended with every group that CLOSED in this pass. A group
-	 *  recorded here keeps its facts for every later frame, short of the
-	 *  reader's expansion. */
+	 *  recorded here keeps its MEMBERSHIP and arithmetic for every later
+	 *  frame, short of the reader's expansion; its DESCRIPTIVE words (senders,
+	 *  requested intent) re-derive on every pass whose frame carries every
+	 *  member, and the refreshed value is what the next frame receives
+	 *  (review round 4, U1). */
 	latch: ReadonlyMap<string, QuietGroup>;
 }
 
@@ -919,12 +922,17 @@ export function groupPlan(input: GroupInput): GroupPlan {
 	}
 	/* The descriptive refresh (native U1): every latched group states its
 	 * sender/intent facts from the member rows ON HAND, so a corrected same-ID
-	 * receipt moves the bar's words with the row behind it. Membership, the
-	 * arithmetic and a partial (slid) frame stay frozen — see
-	 * `refreshedGroupFacts`. */
-	const refreshed = new Map<string, QuietGroup>();
+	 * receipt moves the bar's words with the row behind it. The refreshed
+	 * value is written back into THIS pass's latch — the returned latch is the
+	 * next frame's authority, so a slid frame that cannot re-derive the
+	 * descriptors must inherit the corrected ones instead of resurrecting the
+	 * stale copy it was fed (review round 4, U1). Membership, the arithmetic
+	 * and a partial (slid) frame stay frozen — `refreshedGroupFacts` refuses
+	 * an incomplete membership by returning the group unchanged, so the last
+	 * COMPLETE frame's descriptors persist. `input.latch` itself is never
+	 * mutated: `latch` is its copy. */
 	for (const [key, group] of latch) {
-		refreshed.set(key, refreshedGroupFacts(group, items));
+		latch.set(key, refreshedGroupFacts(group, items));
 	}
 
 	/* (2) Fresh stretches and their groups. */
@@ -950,10 +958,9 @@ export function groupPlan(input: GroupInput): GroupPlan {
 		const item = items[at];
 		if (item === undefined) continue;
 		const claim = claimed.get(item.id);
-		// `refreshed` holds an entry for EVERY latched key, so a claim always
-		// resolves through it; the fallback was unreachable and the explicit
-		// parentheses made the flat form wider than the formatter keeps.
-		const group = claim !== undefined ? refreshed.get(claim) : fresh.get(at);
+		// Every latched key has a refreshed entry (write-back above), so a
+		// claim always resolves through the latch itself.
+		const group = claim !== undefined ? latch.get(claim) : fresh.get(at);
 		if (group === undefined) {
 			emitted.push(item);
 			continue;
