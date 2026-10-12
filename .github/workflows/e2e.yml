@@ -502,9 +502,9 @@ jobs:
     needs: harness
     if: github.event_name == 'workflow_dispatch' && inputs.proof_mode == 's15-proof'
     runs-on: ubuntu-latest
-    # Final leg: 72 cells / 216 frames; driver separation: six / 18. Two
-    # exports and the captures' 900 s floors fit this bound without the full matrix.
-    timeout-minutes: 50
+    # 72 cells / 216 frames plus a bounded 300 s interaction delta on the same
+    # browser/export. No old-app leg: its causal separation is already recorded.
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
@@ -518,17 +518,12 @@ jobs:
       - name: Type-check the harness
         timeout-minutes: 3
         run: pnpm e2e:typecheck
-      - name: Export byte-identical old app with the current driver
+      - name: Export current app once
         timeout-minutes: 5
-        env:
-          BASELINE_SHA: 1e7513f3a28a78cb7e3fd4fe2dc927d9d8903aad
         run: |
           set -euo pipefail
-          git fetch --depth=1 origin "$BASELINE_SHA"
-          git restore --source="$BASELINE_SHA" --worktree -- src app
-          git diff --exit-code "$BASELINE_SHA" -- src app
-          echo "old app source: $BASELINE_SHA; src tree $(git rev-parse "$BASELINE_SHA:src"); driver $GITHUB_SHA" | tee "$RUNNER_TEMP/driver-source.txt"
-          pnpm export:web --output-dir "$RUNNER_TEMP/s15-old-app"
+          echo "current app and driver: $GITHUB_SHA; src tree $(git rev-parse HEAD:src)" | tee "$RUNNER_TEMP/fixed-source.txt"
+          pnpm export:web
       - name: Start one synthetic relay
         env:
           SCENARIO: ${{ env.MOCK_RELAY_SCENARIO }}
@@ -544,39 +539,15 @@ jobs:
           port=$(head -1 "$RUNNER_TEMP/relay.port")
           case "$port" in ''|*[!0-9]*) echo '::error::relay never printed a port'; cat "$RUNNER_TEMP/relay.err"; exit 1 ;; esac
           echo "MOCK_RELAY_URL=http://127.0.0.1:$port" >> "$GITHUB_ENV"
-      # Driver-only separation: unchanged old footer + new scroll settle. Six
-      # menu controls, same 1200 ms hold, no timeout inflation or extra dispatch.
-      - name: Capture driver-only old-app controls
-        timeout-minutes: 16
-        run: |
-          pnpm audit:capture --dir "$RUNNER_TEMP/s15-old-app" --out "$RUNNER_TEMP/s15-driver-frames" \
-            --relay "$MOCK_RELAY_URL" --tier core --cells S15/menu-open \
-            --devices iphone-15-landscape --themes dark,light \
-            --scales 100,150,200 --consecutive --deadline 900 --yes
-      - name: Audit driver-only old-app controls
-        if: ${{ !cancelled() }}
-        timeout-minutes: 3
-        run: |
-          test -s "$RUNNER_TEMP/s15-driver-frames/manifest.json"
-          pnpm audit:run --manifest "$RUNNER_TEMP/s15-driver-frames/manifest.json" --out "$RUNNER_TEMP/s15-driver-audit"
-      - name: Restore and export the fixed app
-        if: ${{ !cancelled() }}
-        timeout-minutes: 5
-        run: |
-          set -euo pipefail
-          git restore --source=HEAD --worktree -- src app
-          git diff --exit-code HEAD -- src app
-          echo "fixed app source: $GITHUB_SHA; src tree $(git rev-parse HEAD:src); driver $GITHUB_SHA" | tee "$RUNNER_TEMP/fixed-source.txt"
-          pnpm export:web
       - name: Capture affected cells and positive controls
         if: ${{ !cancelled() }}
-        timeout-minutes: 16
+        timeout-minutes: 21
         run: |
           pnpm audit:capture --dir dist --out "$RUNNER_TEMP/s15-frames" \
             --relay "$MOCK_RELAY_URL" --tier core \
             --cells S15/populated,S15/ended,S15/degraded-row,S15/mesh-remote,S15/populated-long,S15/menu-open \
             --devices iphone-15-landscape,iphone-15 --themes dark,light \
-            --scales 100,150,200 --consecutive --deadline 900 --yes
+            --scales 100,150,200 --consecutive --deadline 900 --s15-flow-proof --yes
       - name: Audit the same manifest even when baseline capture fails
         if: ${{ !cancelled() }}
         timeout-minutes: 5
@@ -589,8 +560,7 @@ jobs:
           {
             echo '## Targeted proof, not full E2E'
             echo "Revision: $GITHUB_SHA"
-            echo 'Driver-only old-app leg: six menu controls (landscape, both themes, 100/150/200%), unchanged 1200 ms hold.'
-            cat "$RUNNER_TEMP/driver-source.txt"
+            echo 'Current-head flow proof: both themes at 200% compact landscape; actual wheel scrolling, four footer destinations/returns, focused search, short tap/1200 ms hold, composer focus and fresh receipt acceptance; portrait control.'
             echo 'Fixed-app leg: six S15 states; iphone-15 portrait + landscape; dark/light; 100/150/200%; 72 cells, 216 frames.'
             cat "$RUNNER_TEMP/fixed-source.txt"
             echo 'Manifest includes resting pane/list/footer geometry and scroll extents. Capture/audit failures remain job failures.'
@@ -613,9 +583,6 @@ jobs:
           path: |
             ${{ runner.temp }}/s15-frames
             ${{ runner.temp }}/s15-audit
-            ${{ runner.temp }}/s15-driver-frames
-            ${{ runner.temp }}/s15-driver-audit
-            ${{ runner.temp }}/driver-source.txt
             ${{ runner.temp }}/fixed-source.txt
             ${{ runner.temp }}/relay.err
           if-no-files-found: error

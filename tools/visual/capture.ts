@@ -86,6 +86,7 @@ import {
 	THEMES,
 	UNSCROLLED_CONTROLS,
 } from "./matrix.ts";
+import { runS15FlowProof } from "./s15-flow.ts";
 import {
 	type CanvasTokens,
 	canvasComparable,
@@ -1415,6 +1416,8 @@ function rgbEquals(
  * result, and a cell that was not captured is BLOCKED rather than passed.
  */
 export interface CaptureOptions {
+	/** Optional CI interaction delta; shares this capture's browser and relay. */
+	s15FlowProof?: boolean;
 	dir: string;
 	out: string;
 	relay?: string | undefined;
@@ -1554,6 +1557,11 @@ export interface CaptureRecord {
 }
 
 export async function runCapture(options: CaptureOptions) {
+	// This optional proof is the CI path when an operator browser host cannot
+	// render the flow. It must not silently start a local interaction rig.
+	if (options.s15FlowProof && process.env.GITHUB_ACTIONS !== "true") {
+		throw new Error("--s15-flow-proof is available only in GitHub Actions");
+	}
 	const outDir = options.out;
 	mkdirSync(join(outDir, "frames"), { recursive: true });
 	/*
@@ -1990,6 +1998,23 @@ export async function runCapture(options: CaptureOptions) {
 				for (const error of record.consoleErrors.slice(0, 3))
 					console.log(`      console: ${error.slice(0, 200)}`);
 			}
+		}
+		if (options.s15FlowProof) {
+			if (!options.relay)
+				throw new Error("S15 flow proof requires a synthetic relay");
+			const flow = await withDeadline(
+				runS15FlowProof({
+					browser: chrome,
+					previous: page,
+					baseUrl: server.url,
+					relay: options.relay,
+					out: join(options.out, "flow"),
+				}),
+				300_000,
+				"S15 current-head interaction proof",
+			);
+			if (!flow.ok)
+				abandoned.push({ cell: "S15/flow-proof", reason: flow.reason });
 		}
 	} finally {
 		reaped = await chrome.close();
@@ -2837,6 +2862,7 @@ if (isMain) {
 				"  --consecutive       also capture a +250 ms and a settled frame per cell",
 				"  --settle <ms>       boot budget before the first frame (default 1200)",
 				"  --tokens <path>     tokens.json, to check each frame's canvas against its theme",
+				"  --s15-flow-proof    also prove S15 footer navigation/return on the same browser (CI only)",
 				"  --plan              print the frame list and exit without capturing",
 				"  --yes               allow a run above the confirmation threshold",
 				"  --no-strict         report theme problems without failing the run",
@@ -2886,6 +2912,7 @@ if (isMain) {
 		scales: SCALES.filter((s) => effectiveScaleIds.includes(s.id)),
 		consecutive: bool(flags, "consecutive"),
 		settleMs: num(flags, "settle", 1200),
+		s15FlowProof: bool(flags, "s15-flow-proof"),
 		// The web build's own relay-override parameters: the harness puts the app's
 		// `lo-relay*` names on the page, and #11's `webRelayOverride()` adopts them.
 		seed: {

@@ -45,14 +45,23 @@ gh workflow run e2e.yml --ref <branch> -f proof_mode=s15-proof
 
 The selection is fixed: `S15/{populated,ended,degraded-row,mesh-remote,populated-long,menu-open}`,
 `iphone-15-landscape` plus portrait controls, both themes, and 100/150/200% text.
-The final capture plans 72 cells / 216 consecutive frames. A driver-only leg
-first exports app source from the recorded unchanged-app baseline `1e7513f`
-and captures six landscape menu controls with the current driver and the same
-1200 ms hold. The job verifies the old source byte-for-byte, restores and verifies
-HEAD, then exports the fixed app. One synthetic relay serves both legs; capture
-and audit failures stay failures. The seven-day `s15-proof-<SHA>` artifact keeps
-the two legs' frames, manifests and audits separate, with source tree hashes and
-driver SHA, so a fixed app cannot stand in for proof of a fixed hold driver.
+The capture plans 72 cells / 216 consecutive frames on the current head. It then
+runs a 300-second-bounded interaction proof on the **same browser and export**:
+both themes at 200% landscape, actual wheel scrolling to an overflowing list's
+tail, hit-tested footer targets, each destination and real-control return,
+conversation selection after every return, focused-search first-tap navigation,
+short tap versus unchanged 1200 ms hold, menu Escape, composer focus/input,
+current-head ended/degraded DOM receipts, and a portrait control. Initial
+scenario selection is isolated setup; navigation within each journey is never a
+location/history warp. `flow/flow.json` records routes, actions, focus, geometry
+and PASS/FAIL with corresponding screenshots. Native coverage is an independently
+executed installed responder-handler test, **not a native UI run**.
+
+The earlier baseline and driver-only old-app causal proof remain recorded in
+PR #87; remediation dispatches do not repeat that approved leg. One synthetic
+relay serves the matrix and interaction delta; failures stay failures. The
+seven-day `s15-proof-<SHA>` artifact records the current source SHA/tree hash and
+contains only this targeted evidence, not the full matrix.
 The manifest records resting pane/list/footer heights and list scroll extents,
 so a screenshot of clipped rows has explanatory numbers, not an inferred cause.
 Record each dispatch's exact SHA and run URL when comparing baseline and fix.

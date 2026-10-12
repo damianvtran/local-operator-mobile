@@ -62,10 +62,9 @@ describe("optional S15 proof", () => {
 		expect(flag("scales")).toBe("100,150,200");
 		expect(flag("themes")).toBe("dark,light");
 		expect(job).not.toContain("continue-on-error");
-		expect(job).toContain('git diff --exit-code "$BASELINE_SHA" -- src app');
-		expect(job).toContain("git restore --source=HEAD --worktree -- src app");
-		expect(job).toContain("git diff --exit-code HEAD -- src app");
-		expect(job).toContain("--cells S15/menu-open");
+		expect(job).toContain("--s15-flow-proof");
+		expect(job).not.toContain("git restore");
+		expect(job).not.toContain("s15-old-app");
 		for (const name of [
 			"mock-relay-contract",
 			"web-audit",

@@ -457,6 +457,10 @@ export const ConversationsPane = ({
 				className="flex-1"
 				accessibilityRole="none"
 				testID={REGION.sidebarList}
+				/* Search autofocus can keep a native keyboard open. The footer now
+				 * shares this scroller: handled taps must reach its navigation buttons
+				 * instead of being consumed solely to dismiss that keyboard. */
+				keyboardShouldPersistTaps="handled"
 				contentContainerClassName="grow px-4"
 				ListFooterComponent={scrollFooter ? footer : null}
 				data={items}
