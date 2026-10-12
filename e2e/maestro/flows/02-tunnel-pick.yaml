@@ -1,15 +1,10 @@
-# F-2/F-4 — pick a computer.
+# F-3 — connect your own tunnel and restore it after a cold restart.
 #
-# The tunnel list comes from the discovery API and the *reachability* comes from a
-# probe: ADR 0002 and `docs/relay/tunnel-edge.md` §4 are explicit that
-# `status: active` means the cloud route is provisioned, never that the machine is
-# awake. So the flow asserts both facts separately, because a screen that shows one
-# as the other is the defect that mapping warns about.
-#
-# Today the computers screen renders both of its states — the set-up path when the
-# account has no tunnel, the list when it has one — so the empty assertion runs live
-# and the row assertions carry a `SCENARIO` marker: they need discovery pinned to a
-# `--scenario` that answers with a tunnel, which the run below is not.
+# A fresh clearState lands on Welcome, not Computers. F-2/F-4 require a Radient
+# account and discovery API; the relay mock supplies neither. This file keeps its
+# stable filename but tests the honest no-account journey: configure, probe, save,
+# connect, then reopen without clearing storage and use the saved custom route.
+# Radient's unexecuted row assertions remain SCENARIO markers, not claimed coverage.
 #
 # IDENTIFIERS: every `id:` in this file is in `src/ui/a11y.ts` — the contract this
 # branch owns, which `src/ui/a11y.e2e.test.ts` checks these flows against. A step the
@@ -32,23 +27,40 @@
 #
 # CI-only: needs a booted simulator or emulator and an app build (ADR 0003).
 appId: ${APP_ID}
-name: "F-2 pick a computer"
-env:
-  TUNNEL_HOST: 0123456789abcdef0123456789abcdef-lop.example.invalid
+name: "F-3 own tunnel setup and saved-route restart"
 ---
 - launchApp:
     clearState: true
+- runFlow: ../helpers/connect-relay.yaml
+- takeScreenshot: "02-00-own-tunnel-connected"
+- stopApp
+- launchApp:
+    clearState: false
 - extendedWaitUntil:
     visible:
-      id: "computers-screen"
+      id: "home-screen"
     timeout: 15000
-- assertVisible:
-    id: "tunnel-path-radient"
-- takeScreenshot: "02-00-computers-empty"
-# Rows: the identifiers are rendered, but reaching a row needs discovery pinned to a
-# scenario that answers with a tunnel, which this run is not pinned to. The old marker
-# here said the app did not render these — it does (`computers.tsx`, one row per
-# discovered computer), which is exactly the difference `SCENARIO` records.
+# Home can render without a route. Check Settings' actual connection status after
+# restore as well, rather than counting a home-only assertion as reconnect proof.
+- tapOn:
+    id: "settings-button"
+- extendedWaitUntil:
+    visible:
+      id: "settings-screen"
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: "settings-section-connection"
+    direction: DOWN
+    timeout: 15000
+- extendedWaitUntil:
+    visible:
+      text: "Connected"
+    timeout: 15000
+- assertVisible: "Connected directly to ${RELAY_URL}"
+- takeScreenshot: "02-01-saved-route-restored"
+# These rows are rendered by computers.tsx, but a relay scenario cannot provide
+# the Radient account/discovery prerequisite. No live assertion above claims it.
 # SCENARIO: computer-row-<host> from computers
 # - assertVisible:
 #     id: "computer-row-${TUNNEL_HOST}"

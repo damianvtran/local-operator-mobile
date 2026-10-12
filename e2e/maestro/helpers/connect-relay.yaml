@@ -1,0 +1,78 @@
+# Native CI starts with no credentials; -e values are not app configuration.
+# Walk the reader's own-tunnel path, including its real login + sessions probe.
+# This helper lives outside flows/*.yaml so it never runs as a standalone test.
+# HTTP is permitted explicitly for the isolated CI mock, never for a real account.
+appId: ${APP_ID}
+---
+- extendedWaitUntil:
+    visible:
+      id: "welcome-screen"
+    timeout: 15000
+- tapOn:
+    id: "welcome-custom-url"
+- extendedWaitUntil:
+    visible:
+      id: "own-tunnel-screen"
+    timeout: 15000
+# The command guide precedes the form. Scroll at the device's actual font scale;
+# shrinking accessibility text or sleeping would hide a real user-path failure.
+- scrollUntilVisible:
+    element:
+      id: "custom-url-field"
+    direction: DOWN
+    timeout: 15000
+- tapOn:
+    id: "custom-url-field"
+- inputText: ${RELAY_URL}
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: "custom-password-field"
+    direction: DOWN
+    timeout: 15000
+- tapOn:
+    id: "custom-password-field"
+- inputText: ${RELAY_PASSWORD}
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: "custom-insecure-opt-in"
+    direction: DOWN
+    timeout: 15000
+- tapOn:
+    id: "custom-insecure-opt-in"
+- scrollUntilVisible:
+    element:
+      id: "own-tunnel-test"
+    direction: DOWN
+    timeout: 15000
+- tapOn:
+    id: "own-tunnel-test"
+# OwnTunnel disables Save until runTunnelTest admits the password and reads the
+# sessions endpoint. This verdict is its real success title, not a form label.
+- scrollUntilVisible:
+    element:
+      text: "Connected"
+    direction: DOWN
+    timeout: 15000
+- extendedWaitUntil:
+    visible:
+      text: "Connected"
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: "custom-connect"
+    direction: DOWN
+    timeout: 15000
+- extendedWaitUntil:
+    visible:
+      id: "custom-connect"
+      enabled: true
+    timeout: 15000
+- tapOn:
+    id: "custom-connect"
+    enabled: true
+- extendedWaitUntil:
+    visible:
+      id: "home-screen"
+    timeout: 15000

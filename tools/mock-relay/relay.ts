@@ -378,6 +378,9 @@ export interface RelayOptions {
 	 * with no way to opt out. The `--allow-origin` flag is the CLI's spelling of it.
 	 */
 	allowedOrigins?: string[];
+	/** Isolated Android-emulator CI only: admit its host-loopback alias at the
+	 *  actual listening port. Off by default; no wildcard or app policy change. */
+	allowAndroidEmulatorOrigin?: boolean;
 }
 
 /** A listening socket, closable and counted for teardown. */
@@ -3340,6 +3343,13 @@ export function createRelay(options: RelayOptions = {}) {
 			state.allowedOrigins = [
 				...(state.allowedOrigins ?? []),
 				...[...ownHosts].map((own) => `http://${own}:${actual}`),
+				// Native custom routes send their own Origin. The emulator reaches
+				// this socket through 10.0.2.2, not localhost. Assemble the exact
+				// alias AFTER the kernel chooses port 0 and BEFORE publishing ready:
+				// predicting/releasing a free port before bind would race other jobs.
+				...(options.allowAndroidEmulatorOrigin
+					? [`http://10.0.2.2:${actual}`]
+					: []),
 			];
 			state.servers.push({
 				port: actual,
@@ -3388,6 +3398,8 @@ if (import.meta.main) {
 				"  --max-body-bytes <n>  override the gateway's 10 MiB ceiling, for 413 tests",
 				"  --allow-origin <o>    also allow this Origin on mutations; repeatable. The",
 				"                        relay's own origin is always allowed once listening.",
+				"  --allow-android-emulator-origin  admit http://10.0.2.2 at the actual bound port",
+				"                        isolated native CI only; off by default (no wildcard).",
 				"  --print-port          print the chosen port alone on stdout",
 				"  --print-password      print the relay password alone on stdout and exit",
 				"  --list                print every scenario and exit",
@@ -3429,6 +3441,7 @@ if (import.meta.main) {
 		// behaviour; the gateway's cap is modelled by the `413-oversize` fault.
 		maxBodyBytes: num(flags, "max-body-bytes", 0),
 		allowedOrigins: list(flags, "allow-origin"),
+		allowAndroidEmulatorOrigin: bool(flags, "allow-android-emulator-origin"),
 		quiet: bool(flags, "quiet"),
 		record: recordDir ? { dir: recordDir } : false,
 	});

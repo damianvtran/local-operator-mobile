@@ -174,6 +174,109 @@ Two things to wire deliberately:
 `0600` file the job created. A literal password in a flow file could not be
 committed, and the mock's default is a placeholder that every run shares.
 
+#### Native connection prerequisite and coverage
+
+Passing `-e RELAY_URL` and `-e RELAY_PASSWORD` gives Maestro variables, not native
+app credentials. Every flow clears app state: first launch is Welcome. The
+scheduled [run 38201325824, job 114655201007](https://github.com/damianvtran/local-operator-mobile/actions/runs/38201325824/job/114655201007)
+proved that F1 reaches its Radient hand-off, while 02–09 incorrectly expected
+Home or Computers without ever connecting. Increasing waits or reducing the
+OS font scale cannot fix that missing prerequisite.
+
+Flows 02–09 now call `e2e/maestro/helpers/connect-relay.yaml` after clearing state.
+The helper is outside the workspace's `flows/*.yaml` selection, so it is not an
+extra standalone flow. It walks the actual guided own-tunnel screen:
+
+1. Wait for Welcome, select `welcome-custom-url`, wait for `own-tunnel-screen`.
+2. Scroll to the address and password, type the job's variables, and hide the
+   keyboard after each field. Keep the device's font/accessibility scale.
+3. Explicitly opt in to HTTP for this isolated mock (Android uses
+   `http://10.0.2.2:<mock-port>`; no production credentials).
+4. Press `own-tunnel-test`, scroll to and wait for its **Connected** verdict.
+   `runTunnelTest` logs in and reads `/api/sessions`; a form visit alone is not
+   success. Wait for enabled `custom-connect`, then save/connect and wait for Home.
+
+Maestro [2.11.0's selector schema](https://github.com/mobile-dev-inc/maestro/blob/v2.11.0/maestro-orchestra/src/main/java/maestro/orchestra/yaml/YamlElementSelector.kt)
+supports `enabled: true` (checked 2026-10-12). These are bounded screen/element
+waits, not sleeps or expanded retry budgets. The Android action still parses
+`script:` one POSIX-shell command per line; that emulator-runner script is unchanged.
+
+The **native job's mock startup** explicitly passes
+`--allow-android-emulator-origin`. The native custom-route client sends
+`Origin: http://10.0.2.2:<mock-port>`, even though the host-side socket is loopback.
+Without that allowance the mock correctly refuses login with 403 before checking
+the password; a local probe omitting Origin cannot expose this mismatch. The
+opt-in constructs exactly that alias from the kernel-selected port **inside
+`listen`, before publishing readiness**. It neither predicts/releases a free
+port nor permits wildcards, unrelated origins or another port on the alias.
+Default/web mock callers keep their existing origin policy; this is isolated CI
+configuration, not a change to app credentials, production HTTP or CSRF policy.
+
+`02-tunnel-pick.yaml` retains its filename but now covers **F-3 own-tunnel setup
+and saved custom-route restoration**: stop/relaunch without clearing storage,
+wait for Home, then verify the restored route and Connected status in Settings.
+Radient F-2/F-4 computer discovery requires an account/control-plane API, neither
+of which the relay mock provides; the commented discovery markers are not
+executed coverage. F1 is unchanged. Other `SCENARIO`/`BLOCKED` steps remain
+unexecuted as documented in their flows. The `idle` scenario contains **one
+completed live conversation**, not an empty list: 03 now waits for that fixture's
+`session-row-${SESSION_ID}`, rejects the empty state and checks the populated
+sidebar's New chat action. Approvals, subagents, dropped-stream recovery and
+refusal scenarios do not become executed coverage merely by connecting.
+
+A dependency-free prerequisite regression is available without installing the
+app dependencies:
+
+```sh
+node scripts/maestro-flow-contract.ts
+node tools/mock-relay/android-origin-check.ts
+```
+
+It parses the flows' block YAML subset, checks ordered prerequisites and the
+helper selection/identifier contract, and rejects unsupported syntax rather than
+silently overlooking it. The origin check derives the header from the app's
+`requestAuthFor`, exercises real sockets and the actual opt-in CLI, and checks
+wrong-password, unauthenticated, unrelated-origin, wrong-port and default-loopback
+behavior; synthetic credentials and cookie values are never printed. CI runs
+the same assertions through Vitest. Full YAML
+parsing and the native Maestro run remain separate gates: these checks do not
+prove an APK's HTTP permissions, native cookie handling, scrolling or rendering.
+
+#### Settings targets and text-scale reflow
+
+[QA round 2](https://github.com/damianvtran/local-operator-mobile/pull/86#issuecomment-6133314651)
+independently inspected the existing native run **38308549353**: the connection
+probe, enabled Connect, saved-route restart and populated conversation row passed.
+The remaining Settings failure was a viewport precondition, not a missing selector:
+on the 320×640 device its scroll viewport ended at y616, while the theme group
+started at y645. The connected custom-route screen places saved own-tunnel
+management before Appearance. A ready `settings-screen` root does not make those
+controls visible.
+
+`07-settings-theme-scale.yaml` scrolls to each actual assertion/tap target with
+bounded `scrollUntilVisible`, preserving all theme/scale/connection/sign-out/
+diagnostics assertions and the ten screenshot names. Theme System is earlier
+than Light, Connection is above Appearance, and Diagnostics is above the sign-out
+tail: those returns scroll **UP**, not DOWN. Theme selection is awaited before
+capturing its result.
+
+After selecting 200%, expanded content above the scale track invalidates the old
+scroll offset. First re-find the selected **200%** control **DOWN**, then capture
+a selected-state-ready frame. The 100% option is earlier in the wrapping track
+(`TEXT_SCALE_PERCENTS = [100, 150, 200]`), so the return to **100%** is **UP** only
+*after* that re-anchor. The 100% contraction also requires an **UP** re-anchor and
+selected-state wait before the reset frame. Neither the OS scale nor the app
+layout is changed to fit a test; there are no added sleeps or larger budgets.
+
+The parsed-flow contract guard rejects omitted target scrolls, wrong upward
+returns, missing/reversed post-scale remeasurement and a capture without its
+selected-state wait. These are Settings-control preconditions, not a global rule
+to scroll screen roots. **The repaired native Settings journey remains unproven
+until its next native execution**; structural checks do not establish geometry
+or UI success. The first-attempt custom-URL scrolling miss recovered on the
+existing retry in that prior run, with no proven causal root: no separate fix is
+claimed or included here.
+
 ### 6. The re-capture diff (nightly, opted in)
 
 ADR 0003 requires a script that re-captures against an isolated `lop mobile` and

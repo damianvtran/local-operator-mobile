@@ -43,6 +43,7 @@ name: "S13 refusal surfaces"
 ---
 - launchApp:
     clearState: true
+- runFlow: ../helpers/connect-relay.yaml
 - assertVisible:
     id: "home-screen"
 # The computer is offline: Cloudflare's 1033, or a gateway 502. The remedy is

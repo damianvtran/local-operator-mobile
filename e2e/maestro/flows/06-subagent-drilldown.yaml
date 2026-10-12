@@ -38,6 +38,7 @@ env:
 ---
 - launchApp:
     clearState: true
+- runFlow: ../helpers/connect-relay.yaml
 # Reaching the subagent needs the chip, which the session view renders; what is
 # missing is the session scenario that puts a roster on the screen, so this is a
 # SCENARIO rather than a PENDING marker.
