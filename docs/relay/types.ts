@@ -154,6 +154,15 @@ export interface TranscriptEntryDetails {
   diff?: string | string[];
   partial?: string;
   sender?: PeerSender;
+  /** View-only hub receipt facts. Absence is unknown; expects_reply records
+   * requested agent intent, not an outstanding reply or operator attention. */
+  body?: string;
+  direction?: string;
+  label?: string;
+  job_id?: string;
+  expects_reply?: boolean;
+  steer?: boolean;
+
   severity?: "info" | "warning" | "error";
   notice_kind?: "wake";
   user_run?: boolean;

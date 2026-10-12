@@ -73,7 +73,11 @@
 
 import type { TranscriptEntry } from "@/contracts";
 import { entryComplete } from "@/features/session/completion-visibility";
-import { peerLabel } from "@/features/session/projection";
+import {
+	hubLabel,
+	isHubReceipt,
+	peerLabel,
+} from "@/features/session/projection";
 import { countLabel, elapsedLabel } from "@/lib/format";
 import { quietGroupId, turnBarId } from "@/ui/a11y";
 
@@ -547,7 +551,7 @@ export interface QuietGroupSender {
 export interface QuietGroup {
 	/** `qg:<first row id>` — stable for the life of the transcript. */
 	key: string;
-	/** Receipts in the group (>= 2 by construction). */
+	/** Internal receipts; one needs at least three actual non-quiet calls. */
 	count: number;
 	/** The receipt senders, by count: the top 2, then one `<N> more` entry
 	 *  whose count sums the rest (ties resolve by first appearance). */
@@ -562,6 +566,11 @@ export interface QuietGroup {
 	open: boolean;
 	/** Every row the group stands for, in order. */
 	rowIds: readonly string[];
+	/** Optional facts keep the older peer-only parity shape unchanged. */
+	hubCount?: number;
+	mixedActions?: boolean;
+	replyRequested?: number;
+	steered?: number;
 }
 
 /** The quiet-turn tool's name. The relay's fold already hides the quiet pair
@@ -588,7 +597,12 @@ const isQuietToolRow = (entry: TranscriptEntry): boolean =>
  * that does not mention it.
  */
 const breaksPeerRun = (entry: TranscriptEntry): boolean => {
-	if (entry.kind === "peer_message" || entry.kind === "tool") return false;
+	if (
+		entry.kind === "peer_message" ||
+		isHubReceipt(entry) ||
+		entry.kind === "tool"
+	)
+		return false;
 	if (entry.kind === "assistant") {
 		return entry.text.length > 0 || entry.images.length > 0;
 	}
@@ -662,15 +676,24 @@ function groupFactsOf(
 	let count = 0;
 	let actions = 0;
 	let failed = 0;
+	let hubCount = 0;
+	let replyRequested = 0;
+	let steered = 0;
 	const rowIds: string[] = [];
 	for (let at = stretch.from; at <= stretch.to; at += 1) {
 		const item = items[at];
 		if (item === undefined || item.kind !== "entry") continue;
 		const entry = item.entry;
 		rowIds.push(entry.id);
-		if (entry.kind === "peer_message") {
+		if (entry.kind === "peer_message" || isHubReceipt(entry)) {
 			count += 1;
-			const label = peerLabel(entry.details.sender);
+			const hub = entry.kind !== "peer_message";
+			if (hub) {
+				hubCount += 1;
+				if (entry.details.expects_reply === true) replyRequested += 1;
+				if (entry.details.steer === true) steered += 1;
+			}
+			const label = hub ? hubLabel(entry) : peerLabel(entry.details.sender);
 			senders.set(label, (senders.get(label) ?? 0) + 1);
 			continue;
 		}
@@ -679,7 +702,9 @@ function groupFactsOf(
 			if (entry.tool_state === "failed") failed += 1;
 		}
 	}
-	if (count < 2) return null;
+	// One receipt can bridge three actual calls; receipt-only still needs two.
+	// This is the existing scanner/latch, not a new coordinator or row order.
+	if (count < 2 && !(count > 0 && actions >= 3)) return null;
 	return {
 		key: `qg:${first.id}`,
 		count,
@@ -688,6 +713,12 @@ function groupFactsOf(
 		failed,
 		open,
 		rowIds,
+		...(hubCount > 0 ? { hubCount } : {}),
+		...(actions >= 3 && (hubCount > 0 || count < 2)
+			? { mixedActions: true }
+			: {}),
+		...(replyRequested > 0 ? { replyRequested } : {}),
+		...(steered > 0 ? { steered } : {}),
 	};
 }
 
@@ -880,19 +911,32 @@ export function groupPlan(input: GroupInput): GroupPlan {
  *
  * No time clause: the wire carries no timestamps, so the span the shared
  * shape states on surfaces that have them cannot be stated here. No action
- * clause: the count of receipts is the fact the bar is about, and
- * `actions`/`failed` stay model facts (pinned by the parity suite) rather
- * than one more number in a line a phone reader scans.
+ * clause for the older peer-only groups: their action/failure arithmetic stays
+ * model facts. Newly mixed hub/action groups state actual calls separately,
+ * and requested intent is historical metadata, never current operator attention.
  */
 export function groupPhrases(group: QuietGroup): string[] {
-	return ["Peer messages", String(group.count)];
+	const what = group.hubCount
+		? group.hubCount === group.count
+			? "Hub messages"
+			: "Incoming messages"
+		: "Peer messages";
+	const phrases = [what, String(group.count)];
+	// Receipt count and actual work stay distinct. The older peer-only group
+	// remains terse; mixed hub/action bars expose their newly folded work.
+	if (group.mixedActions) phrases.push(countLabel(group.actions, "action"));
+	if (group.replyRequested)
+		phrases.push(`${group.replyRequested} reply requested`);
+	if (group.steered) phrases.push(`${group.steered} steered`);
+	return phrases;
 }
 
 /** The group bar's accessible name: what the fold is, and who it is from —
  *  the sender summary a one-line bar cannot show but a screen reader can
  *  hear. The open state rides `accessibilityState`, not this string. */
 export function groupAccessibleName(group: QuietGroup): string {
-	const base = `Peer messages: ${group.count}`;
+	const [what, count, ...facts] = groupPhrases(group);
+	const base = `${what}: ${count}${facts.length ? `, ${facts.join(", ")}` : ""}`;
 	if (group.senders.length === 0) return base;
 	const senders = group.senders.map((sender) => sender.label).join(", ");
 	return `${base}, from ${senders}`;

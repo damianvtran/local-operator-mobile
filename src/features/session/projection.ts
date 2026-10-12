@@ -92,6 +92,38 @@ export const isOwnRow = (kind: RowKind): boolean => kind === "user";
 export const peerLabel = (sender: PeerSender | undefined): string =>
 	sender?.conversation_name ?? sender?.session_id ?? "another session";
 
+/** A legacy parent-looking row may be a launch/user request. Only producer
+ * direction establishes hub continuation; body wording and IDs cannot do so. */
+export const isHubReceipt = (entry: TranscriptEntry): boolean =>
+	(entry.kind === "parent_message" || entry.kind === "subagent_message") &&
+	(entry.details.direction === "to_child" ||
+		entry.details.direction === "to_parent");
+
+const HUB_IDENTITY_CONTROLS =
+	/[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u202a-\u202e\u2060-\u206f]/g;
+const HUB_IDENTITY_SPACE = /\s+/g;
+
+/** Same advisory label in the row and group; no manufactured parent/session ID. */
+export function hubLabel(
+	entry: Pick<TranscriptEntry, "kind" | "details">,
+): string {
+	for (const field of [
+		entry.details.label,
+		entry.details.job_id,
+		entry.details.sender?.conversation_name,
+		entry.details.sender?.session_id,
+	]) {
+		if (typeof field !== "string") continue;
+		const value = field
+			.replace(HUB_IDENTITY_CONTROLS, "")
+			.replace(HUB_IDENTITY_SPACE, " ")
+			.trim()
+			.slice(0, 120);
+		if (value) return value;
+	}
+	return entry.kind === "parent_message" ? "Parent" : "Subagent";
+}
+
 /* ---------------------------------------------------------------- the tool row */
 
 export interface ToolGlyph {

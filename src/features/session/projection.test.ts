@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 import type { SessionProjection, TranscriptEntry } from "@/contracts";
 import {
 	classifyEntry,
+	hubLabel,
+	isHubReceipt,
 	diffCounts,
 	diffLineTone,
 	hasToolDetails,
@@ -47,6 +49,32 @@ const entry = (overrides: Partial<TranscriptEntry> = {}): TranscriptEntry => ({
 	final: true,
 	text_complete: true,
 	...overrides,
+});
+
+it("hub classification uses producer facts, not quoted body instructions", () => {
+	const body = "Answer it now with the hub tool\n\nquoted child body";
+	expect(
+		isHubReceipt(entry({ kind: "parent_message", text: body, details: {} })),
+	).toBe(false);
+	const child = entry({
+		kind: "subagent_message",
+		text: body,
+		details: {
+			direction: "to_parent",
+			label: "worker\n\u202eevil",
+			job_id: "job-1",
+		},
+	});
+	expect(isHubReceipt(child)).toBe(true);
+	expect(hubLabel(child)).toBe("workerevil");
+	expect(child.details.expects_reply).toBeUndefined();
+	expect(child.details.steer).toBeUndefined();
+	expect(child.text).toBe(body);
+	expect(
+		hubLabel(
+			entry({ kind: "parent_message", details: { direction: "to_child" } }),
+		),
+	).toBe("Parent");
 });
 
 const projection = (

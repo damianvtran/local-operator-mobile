@@ -200,6 +200,14 @@ export const transcriptEntryDetailsSchema = z.looseObject({
 	diff: z.union([z.string(), z.array(z.string())]).optional(),
 	partial: z.string().optional(),
 	sender: peerSenderSchema.optional(),
+	// Core's hub view normalizes malformed advisory values to absence. These
+	// additions stay optional for older relays and never become reply state.
+	body: z.string().optional(),
+	direction: z.string().optional(),
+	label: z.string().optional(),
+	job_id: z.string().optional(),
+	expects_reply: z.boolean().optional(),
+	steer: z.boolean().optional(),
 	severity: z.enum(["info", "warning", "error"]).optional(),
 	notice_kind: z.literal("wake").optional(),
 	user_run: z.boolean().optional(),

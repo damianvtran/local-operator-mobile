@@ -873,6 +873,53 @@ describe("the cap-shaped drive: a latched turn's render is a function of the lat
 /* --------------------------------------------------------------- the group */
 
 describe("quietGroupsOf — the derivation", () => {
+	it("one proven hub bridges three real tools while an unknown launch remains a boundary", () => {
+		const hub = row({
+			id: "h",
+			kind: "parent_message",
+			text: "  full body\n\nsecond  ",
+			details: { direction: "to_child", expects_reply: true, steer: true },
+		});
+		const entries = [tool("t1"), hub, tool("t2"), tool("t3")];
+		const groups = quietGroupsOf(itemsOf(entries));
+		expect(groups).toHaveLength(1);
+		expect(groups[0]).toMatchObject({
+			count: 1,
+			actions: 3,
+			hubCount: 1,
+			replyRequested: 1,
+			steered: 1,
+			rowIds: ["t1", "h", "t2", "t3"],
+		});
+		expect(groupPhrases(groups[0]!)).toEqual([
+			"Hub messages",
+			"1",
+			"3 actions",
+			"1 reply requested",
+			"1 steered",
+		]);
+		expect(quietGroupsOf(itemsOf(entries.slice(0, 3)))).toEqual([]);
+		expect(quietGroupsOf(itemsOf([tool("a"), tool("b"), tool("c")]))).toEqual(
+			[],
+		);
+		for (const kind of ["parent_message", "subagent_message"] as const) {
+			const launch = row({
+				id: "launch",
+				kind,
+				text: "any launch wording",
+				details: {},
+			});
+			expect(
+				quietGroupsOf(
+					itemsOf([peer("p1"), peer("p2"), launch, peer("p3"), peer("p4")]),
+				).map((group) => group.rowIds),
+			).toEqual([
+				["p1", "p2"],
+				["p3", "p4"],
+			]);
+		}
+	});
+
 	it("folds consecutive receipts and counts only the work between them", () => {
 		const items = itemsOf([
 			peer("p1", "ingest-rail"),
