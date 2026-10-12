@@ -64,9 +64,11 @@
  * rows a turn collapse hides are not the group pass's business (the rows a
  * reader opens behind a turn's bar are simply more visible rows, and fold like
  * any other), and a turn collapse that later subsumes a group's rows stands for
- * them itself. A closed group's facts freeze (the latch); the open tail group
- * grows while its bar stays a single line; a group's key is `qg:<first row
- * id>`. The derivation — the same one every client is pinned to by
+ * them itself. A closed group's facts freeze (the latch) — except the
+ * DESCRIPTIVE sender/intent metadata, which follows a corrected same-ID
+ * receipt so the bar cannot contradict the row behind it (native U1); the open
+ * tail group grows while its bar stays a single line; a group's key is
+ * `qg:<first row id>`. The derivation — the same one every client is pinned to by
  * `fixtures/quiet-groups.parity.json` — is `quietGroupsOf` /
  * `quietGroupOfSpan`, and `groupPlan` is the fold the list renders.
  */
@@ -540,13 +542,18 @@ export interface QuietGroupSender {
  * cannot.
  *
  * THE LATCH FREEZES A CLOSED GROUP (see `groupPlan`): a group closes the
- * moment any item follows it, and its count, summary and row list freeze
+ * moment any item follows it, and its membership, count and row list freeze
  * there, so no later frame — a tool inside flipping to failed, the relay's
- * capped window sliding rows away — can move its facts or re-attach it to
- * other rows. The OPEN tail group is the one that may grow: its facts
- * re-derive from the rows on hand while its bar stays a single line. The key
- * is `qg:<first row id>`, and a slid window still answers with it while any
- * member survives, so a group is never remounted under a new identity.
+ * capped window sliding rows away — can move its arithmetic or re-attach it
+ * to other rows. ONE THING still follows the frame: the descriptive sender
+ * and reply/steer intent metadata re-derives from the member rows on hand,
+ * because a same-ID receipt CORRECTION ("Check again" rewriting a delivery's
+ * facts) must move the bar's words with the row it stands for (native U1).
+ * See `refreshedGroupFacts`; the arithmetic and a slid frame stay frozen.
+ * The OPEN tail group is the one that may grow: its facts re-derive from the
+ * rows on hand while its bar stays a single line. The key is `qg:<first row
+ * id>`, and a slid window still answers with it while any member survives, so
+ * a group is never remounted under a new identity.
  */
 export interface QuietGroup {
 	/** `qg:<first row id>` — stable for the life of the transcript. */
@@ -723,6 +730,71 @@ function groupFactsOf(
 }
 
 /**
+ * The DESCRIPTIVE half of a latched group, re-derived from the member rows on
+ * hand (native U1).
+ *
+ * A same-ID receipt CORRECTION — the "Check again" refetch rewriting a
+ * delivery's label or intent — updates the member row in place, and the bar
+ * standing over it must state the corrected facts rather than contradict the
+ * row it stands for. So sender labels and the reply/steer intent counts
+ * re-derive from the CURRENT member entries; membership (key, rowIds, count),
+ * the tool-side arithmetic (actions, failed, mixedActions) and `open` keep the
+ * latch's freeze — which is what the transport-cap class needs: a tool flipping
+ * failed inside a group the reader already saw still cannot move a closed
+ * group's numbers.
+ *
+ * A frame that does not carry every member (the sliding window) keeps the
+ * frozen facts WHOLESALE — a partial walk cannot state senders over rows it
+ * cannot see — so the slid-window identity rule is unchanged.
+ */
+function refreshedGroupFacts(
+	group: QuietGroup,
+	items: readonly TranscriptItem[],
+): QuietGroup {
+	const byId = new Map<string, TranscriptEntry>();
+	for (const item of items) {
+		if (item.kind === "entry") byId.set(item.id, item.entry);
+	}
+	const members: TranscriptEntry[] = [];
+	for (const id of group.rowIds) {
+		const entry = byId.get(id);
+		if (entry === undefined) return group;
+		members.push(entry);
+	}
+	const senders = new Map<string, number>();
+	let replyRequested = 0;
+	let steered = 0;
+	for (const entry of members) {
+		if (entry.kind === "peer_message") {
+			const label = peerLabel(entry.details.sender);
+			senders.set(label, (senders.get(label) ?? 0) + 1);
+			continue;
+		}
+		if (!isHubReceipt(entry)) continue;
+		if (entry.details.expects_reply === true) replyRequested += 1;
+		if (entry.details.steer === true) steered += 1;
+		const label = hubLabel(entry);
+		senders.set(label, (senders.get(label) ?? 0) + 1);
+	}
+	// Rebuilt explicitly, NOT spread-and-override: a stale `replyRequested` or
+	// `steered` key must be able to DISAPPEAR when the correction clears it,
+	// and a spread would keep it.
+	return {
+		key: group.key,
+		count: group.count,
+		senders: topSenders(senders),
+		actions: group.actions,
+		failed: group.failed,
+		open: group.open,
+		rowIds: group.rowIds,
+		...(group.hubCount !== undefined ? { hubCount: group.hubCount } : {}),
+		...(group.mixedActions ? { mixedActions: true } : {}),
+		...(replyRequested > 0 ? { replyRequested } : {}),
+		...(steered > 0 ? { steered } : {}),
+	};
+}
+
+/**
  * The quiet group a single span IS, or null when the span is not one.
  *
  * THE SPAN MUST BE THE WHOLE GROUP (the shared definition): no boundary may
@@ -845,6 +917,15 @@ export function groupPlan(input: GroupInput): GroupPlan {
 			if (present.has(id)) claimed.set(id, key);
 		}
 	}
+	/* The descriptive refresh (native U1): every latched group states its
+	 * sender/intent facts from the member rows ON HAND, so a corrected same-ID
+	 * receipt moves the bar's words with the row behind it. Membership, the
+	 * arithmetic and a partial (slid) frame stay frozen — see
+	 * `refreshedGroupFacts`. */
+	const refreshed = new Map<string, QuietGroup>();
+	for (const [key, group] of latch) {
+		refreshed.set(key, refreshedGroupFacts(group, items));
+	}
 
 	/* (2) Fresh stretches and their groups. */
 	const fresh = new Map<number, QuietGroup>();
@@ -869,7 +950,10 @@ export function groupPlan(input: GroupInput): GroupPlan {
 		const item = items[at];
 		if (item === undefined) continue;
 		const claim = claimed.get(item.id);
-		const group = claim !== undefined ? latch.get(claim) : fresh.get(at);
+		const group =
+			claim !== undefined
+				? (refreshed.get(claim) ?? latch.get(claim))
+				: fresh.get(at);
 		if (group === undefined) {
 			emitted.push(item);
 			continue;

@@ -1216,6 +1216,83 @@ describe("the group latch — facts freeze at the close", () => {
 		expect(unlatch.groups[0]?.group.failed).toBe(1);
 	});
 
+	it("refreshes a latched group's sender and intent facts from a corrected same-ID receipt (U1)", () => {
+		const first = groupPlan({
+			items: itemsOf([
+				peer("p1", "worker name"),
+				row({
+					id: "h1",
+					kind: "parent_message",
+					text: "Focus",
+					details: {
+						direction: "to_child",
+						label: "worker name",
+						expects_reply: true,
+					},
+				}),
+				tool("t1"),
+				answer("a1"),
+			]),
+			expanded: new Set(),
+			latch: new Map(),
+		});
+		expect(first.groups[0]?.group).toMatchObject({
+			replyRequested: 1,
+			senders: [{ label: "worker name", count: 2 }],
+		});
+
+		// The "Check again" refetch: the SAME id carries corrected facts, and
+		// a tool inside regresses at the same time — the arithmetic must not move.
+		const correctedHub = row({
+			id: "h1",
+			kind: "parent_message",
+			text: "Focus",
+			details: {
+				direction: "to_child",
+				label: "QA corrected",
+				expects_reply: false,
+				steer: true,
+			},
+		});
+		const after = groupPlan({
+			items: itemsOf([peer("p1", "worker name"), correctedHub, failedTool("t1"), answer("a1")]),
+			expanded: new Set(["qg:p1"]),
+			latch: first.latch,
+		});
+		expect(after.groups[0]?.key).toBe("qg:p1");
+		expect(after.groups[0]?.group.replyRequested).toBeUndefined();
+		expect(after.groups[0]?.group.steered).toBe(1);
+		expect(after.groups[0]?.group.senders).toEqual([
+			{ label: "worker name", count: 1 },
+			{ label: "QA corrected", count: 1 },
+		]);
+		// Membership, order and the open disclosure stay put; the frozen
+		// arithmetic does too.
+		expect(after.groups[0]?.hiddenIds).toEqual(["p1", "h1", "t1"]);
+		expect(after.groups[0]?.itemIds).toEqual([
+			"quiet-group-qg:p1",
+			"p1",
+			"h1",
+			"t1",
+		]);
+		expect(after.groups[0]?.group.failed).toBe(0);
+		expect(groupPhrases(after.groups[0]!.group)).toEqual([
+			"Incoming messages",
+			"2",
+			"1 steered",
+		]);
+
+		// A slid frame (a member missing) keeps the frozen facts wholesale.
+		const slid = groupPlan({
+			items: itemsOf([correctedHub, tool("t1"), answer("a1")]),
+			expanded: new Set(),
+			latch: first.latch,
+		});
+		expect(slid.groups[0]?.group.senders).toEqual([
+			{ label: "worker name", count: 2 },
+		]);
+	});
+
 	it("keeps a closed group's identity when the window slides its head away", () => {
 		const full = itemsOf([peer("p1"), peer("p2"), answer("a1")]);
 		const first = groupPlan({
