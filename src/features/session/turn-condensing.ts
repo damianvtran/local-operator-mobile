@@ -64,16 +64,22 @@
  * rows a turn collapse hides are not the group pass's business (the rows a
  * reader opens behind a turn's bar are simply more visible rows, and fold like
  * any other), and a turn collapse that later subsumes a group's rows stands for
- * them itself. A closed group's facts freeze (the latch); the open tail group
- * grows while its bar stays a single line; a group's key is `qg:<first row
- * id>`. The derivation — the same one every client is pinned to by
+ * them itself. A closed group's facts freeze (the latch) — except the
+ * DESCRIPTIVE sender/intent metadata, which follows a corrected same-ID
+ * receipt so the bar cannot contradict the row behind it (native U1); the open
+ * tail group grows while its bar stays a single line; a group's key is
+ * `qg:<first row id>`. The derivation — the same one every client is pinned to by
  * `fixtures/quiet-groups.parity.json` — is `quietGroupsOf` /
  * `quietGroupOfSpan`, and `groupPlan` is the fold the list renders.
  */
 
 import type { TranscriptEntry } from "@/contracts";
 import { entryComplete } from "@/features/session/completion-visibility";
-import { peerLabel } from "@/features/session/projection";
+import {
+	hubLabel,
+	isHubReceipt,
+	peerLabel,
+} from "@/features/session/projection";
 import { countLabel, elapsedLabel } from "@/lib/format";
 import { quietGroupId, turnBarId } from "@/ui/a11y";
 
@@ -536,18 +542,23 @@ export interface QuietGroupSender {
  * cannot.
  *
  * THE LATCH FREEZES A CLOSED GROUP (see `groupPlan`): a group closes the
- * moment any item follows it, and its count, summary and row list freeze
+ * moment any item follows it, and its membership, count and row list freeze
  * there, so no later frame — a tool inside flipping to failed, the relay's
- * capped window sliding rows away — can move its facts or re-attach it to
- * other rows. The OPEN tail group is the one that may grow: its facts
- * re-derive from the rows on hand while its bar stays a single line. The key
- * is `qg:<first row id>`, and a slid window still answers with it while any
- * member survives, so a group is never remounted under a new identity.
+ * capped window sliding rows away — can move its arithmetic or re-attach it
+ * to other rows. ONE THING still follows the frame: the descriptive sender
+ * and reply/steer intent metadata re-derives from the member rows on hand,
+ * because a same-ID receipt CORRECTION ("Check again" rewriting a delivery's
+ * facts) must move the bar's words with the row it stands for (native U1).
+ * See `refreshedGroupFacts`; the arithmetic and a slid frame stay frozen.
+ * The OPEN tail group is the one that may grow: its facts re-derive from the
+ * rows on hand while its bar stays a single line. The key is `qg:<first row
+ * id>`, and a slid window still answers with it while any member survives, so
+ * a group is never remounted under a new identity.
  */
 export interface QuietGroup {
 	/** `qg:<first row id>` — stable for the life of the transcript. */
 	key: string;
-	/** Receipts in the group (>= 2 by construction). */
+	/** Internal receipts; one needs at least three actual non-quiet calls. */
 	count: number;
 	/** The receipt senders, by count: the top 2, then one `<N> more` entry
 	 *  whose count sums the rest (ties resolve by first appearance). */
@@ -562,6 +573,11 @@ export interface QuietGroup {
 	open: boolean;
 	/** Every row the group stands for, in order. */
 	rowIds: readonly string[];
+	/** Optional facts keep the older peer-only parity shape unchanged. */
+	hubCount?: number;
+	mixedActions?: boolean;
+	replyRequested?: number;
+	steered?: number;
 }
 
 /** The quiet-turn tool's name. The relay's fold already hides the quiet pair
@@ -588,7 +604,12 @@ const isQuietToolRow = (entry: TranscriptEntry): boolean =>
  * that does not mention it.
  */
 const breaksPeerRun = (entry: TranscriptEntry): boolean => {
-	if (entry.kind === "peer_message" || entry.kind === "tool") return false;
+	if (
+		entry.kind === "peer_message" ||
+		isHubReceipt(entry) ||
+		entry.kind === "tool"
+	)
+		return false;
 	if (entry.kind === "assistant") {
 		return entry.text.length > 0 || entry.images.length > 0;
 	}
@@ -662,15 +683,24 @@ function groupFactsOf(
 	let count = 0;
 	let actions = 0;
 	let failed = 0;
+	let hubCount = 0;
+	let replyRequested = 0;
+	let steered = 0;
 	const rowIds: string[] = [];
 	for (let at = stretch.from; at <= stretch.to; at += 1) {
 		const item = items[at];
 		if (item === undefined || item.kind !== "entry") continue;
 		const entry = item.entry;
 		rowIds.push(entry.id);
-		if (entry.kind === "peer_message") {
+		if (entry.kind === "peer_message" || isHubReceipt(entry)) {
 			count += 1;
-			const label = peerLabel(entry.details.sender);
+			const hub = entry.kind !== "peer_message";
+			if (hub) {
+				hubCount += 1;
+				if (entry.details.expects_reply === true) replyRequested += 1;
+				if (entry.details.steer === true) steered += 1;
+			}
+			const label = hub ? hubLabel(entry) : peerLabel(entry.details.sender);
 			senders.set(label, (senders.get(label) ?? 0) + 1);
 			continue;
 		}
@@ -679,7 +709,9 @@ function groupFactsOf(
 			if (entry.tool_state === "failed") failed += 1;
 		}
 	}
-	if (count < 2) return null;
+	// One receipt can bridge three actual calls; receipt-only still needs two.
+	// This is the existing scanner/latch, not a new coordinator or row order.
+	if (count < 2 && !(count > 0 && actions >= 3)) return null;
 	return {
 		key: `qg:${first.id}`,
 		count,
@@ -688,6 +720,77 @@ function groupFactsOf(
 		failed,
 		open,
 		rowIds,
+		...(hubCount > 0 ? { hubCount } : {}),
+		...(actions >= 3 && (hubCount > 0 || count < 2)
+			? { mixedActions: true }
+			: {}),
+		...(replyRequested > 0 ? { replyRequested } : {}),
+		...(steered > 0 ? { steered } : {}),
+	};
+}
+
+/**
+ * The DESCRIPTIVE half of a latched group, re-derived from the member rows on
+ * hand (native U1).
+ *
+ * A same-ID receipt CORRECTION — the "Check again" refetch rewriting a
+ * delivery's label or intent — updates the member row in place, and the bar
+ * standing over it must state the corrected facts rather than contradict the
+ * row it stands for. So sender labels and the reply/steer intent counts
+ * re-derive from the CURRENT member entries; membership (key, rowIds, count),
+ * the tool-side arithmetic (actions, failed, mixedActions) and `open` keep the
+ * latch's freeze — which is what the transport-cap class needs: a tool flipping
+ * failed inside a group the reader already saw still cannot move a closed
+ * group's numbers.
+ *
+ * A frame that does not carry every member (the sliding window) keeps the
+ * frozen facts WHOLESALE — a partial walk cannot state senders over rows it
+ * cannot see — so the slid-window identity rule is unchanged.
+ */
+function refreshedGroupFacts(
+	group: QuietGroup,
+	items: readonly TranscriptItem[],
+): QuietGroup {
+	const byId = new Map<string, TranscriptEntry>();
+	for (const item of items) {
+		if (item.kind === "entry") byId.set(item.id, item.entry);
+	}
+	const members: TranscriptEntry[] = [];
+	for (const id of group.rowIds) {
+		const entry = byId.get(id);
+		if (entry === undefined) return group;
+		members.push(entry);
+	}
+	const senders = new Map<string, number>();
+	let replyRequested = 0;
+	let steered = 0;
+	for (const entry of members) {
+		if (entry.kind === "peer_message") {
+			const label = peerLabel(entry.details.sender);
+			senders.set(label, (senders.get(label) ?? 0) + 1);
+			continue;
+		}
+		if (!isHubReceipt(entry)) continue;
+		if (entry.details.expects_reply === true) replyRequested += 1;
+		if (entry.details.steer === true) steered += 1;
+		const label = hubLabel(entry);
+		senders.set(label, (senders.get(label) ?? 0) + 1);
+	}
+	// Rebuilt explicitly, NOT spread-and-override: a stale `replyRequested` or
+	// `steered` key must be able to DISAPPEAR when the correction clears it,
+	// and a spread would keep it.
+	return {
+		key: group.key,
+		count: group.count,
+		senders: topSenders(senders),
+		actions: group.actions,
+		failed: group.failed,
+		open: group.open,
+		rowIds: group.rowIds,
+		...(group.hubCount !== undefined ? { hubCount: group.hubCount } : {}),
+		...(group.mixedActions ? { mixedActions: true } : {}),
+		...(replyRequested > 0 ? { replyRequested } : {}),
+		...(steered > 0 ? { steered } : {}),
 	};
 }
 
@@ -776,8 +879,11 @@ export interface GroupPlan {
 	items: TranscriptItem[];
 	groups: GroupView[];
 	/** The latch, extended with every group that CLOSED in this pass. A group
-	 *  recorded here keeps its facts for every later frame, short of the
-	 *  reader's expansion. */
+	 *  recorded here keeps its MEMBERSHIP and arithmetic for every later
+	 *  frame, short of the reader's expansion; its DESCRIPTIVE words (senders,
+	 *  requested intent) re-derive on every pass whose frame carries every
+	 *  member, and the refreshed value is what the next frame receives
+	 *  (review round 4, U1). */
 	latch: ReadonlyMap<string, QuietGroup>;
 }
 
@@ -814,6 +920,20 @@ export function groupPlan(input: GroupInput): GroupPlan {
 			if (present.has(id)) claimed.set(id, key);
 		}
 	}
+	/* The descriptive refresh (native U1): every latched group states its
+	 * sender/intent facts from the member rows ON HAND, so a corrected same-ID
+	 * receipt moves the bar's words with the row behind it. The refreshed
+	 * value is written back into THIS pass's latch — the returned latch is the
+	 * next frame's authority, so a slid frame that cannot re-derive the
+	 * descriptors must inherit the corrected ones instead of resurrecting the
+	 * stale copy it was fed (review round 4, U1). Membership, the arithmetic
+	 * and a partial (slid) frame stay frozen — `refreshedGroupFacts` refuses
+	 * an incomplete membership by returning the group unchanged, so the last
+	 * COMPLETE frame's descriptors persist. `input.latch` itself is never
+	 * mutated: `latch` is its copy. */
+	for (const [key, group] of latch) {
+		latch.set(key, refreshedGroupFacts(group, items));
+	}
 
 	/* (2) Fresh stretches and their groups. */
 	const fresh = new Map<number, QuietGroup>();
@@ -838,6 +958,8 @@ export function groupPlan(input: GroupInput): GroupPlan {
 		const item = items[at];
 		if (item === undefined) continue;
 		const claim = claimed.get(item.id);
+		// Every latched key has a refreshed entry (write-back above), so a
+		// claim always resolves through the latch itself.
 		const group = claim !== undefined ? latch.get(claim) : fresh.get(at);
 		if (group === undefined) {
 			emitted.push(item);
@@ -880,19 +1002,32 @@ export function groupPlan(input: GroupInput): GroupPlan {
  *
  * No time clause: the wire carries no timestamps, so the span the shared
  * shape states on surfaces that have them cannot be stated here. No action
- * clause: the count of receipts is the fact the bar is about, and
- * `actions`/`failed` stay model facts (pinned by the parity suite) rather
- * than one more number in a line a phone reader scans.
+ * clause for the older peer-only groups: their action/failure arithmetic stays
+ * model facts. Newly mixed hub/action groups state actual calls separately,
+ * and requested intent is historical metadata, never current operator attention.
  */
 export function groupPhrases(group: QuietGroup): string[] {
-	return ["Peer messages", String(group.count)];
+	const what = group.hubCount
+		? group.hubCount === group.count
+			? "Hub messages"
+			: "Incoming messages"
+		: "Peer messages";
+	const phrases = [what, String(group.count)];
+	// Receipt count and actual work stay distinct. The older peer-only group
+	// remains terse; mixed hub/action bars expose their newly folded work.
+	if (group.mixedActions) phrases.push(countLabel(group.actions, "action"));
+	if (group.replyRequested)
+		phrases.push(`${group.replyRequested} reply requested`);
+	if (group.steered) phrases.push(`${group.steered} steered`);
+	return phrases;
 }
 
 /** The group bar's accessible name: what the fold is, and who it is from —
  *  the sender summary a one-line bar cannot show but a screen reader can
  *  hear. The open state rides `accessibilityState`, not this string. */
 export function groupAccessibleName(group: QuietGroup): string {
-	const base = `Peer messages: ${group.count}`;
+	const [what, count, ...facts] = groupPhrases(group);
+	const base = `${what}: ${count}${facts.length ? `, ${facts.join(", ")}` : ""}`;
 	if (group.senders.length === 0) return base;
 	const senders = group.senders.map((sender) => sender.label).join(", ");
 	return `${base}, from ${senders}`;

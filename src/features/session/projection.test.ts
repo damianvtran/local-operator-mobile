@@ -6,6 +6,8 @@ import {
 	diffCounts,
 	diffLineTone,
 	hasToolDetails,
+	hubLabel,
+	isHubReceipt,
 	middleTruncate,
 	projectSubagents,
 	projectTodos,
@@ -47,6 +49,48 @@ const entry = (overrides: Partial<TranscriptEntry> = {}): TranscriptEntry => ({
 	final: true,
 	text_complete: true,
 	...overrides,
+});
+
+it("display controls are removed without changing raw body or identity fields", () => {
+	const hostile = `worker${String.fromCharCode(0, 31, 127, 159, 0x200b, 0x202e, 0x206f)} name`;
+	const rawBody = "  full body\n\nsecond paragraph  ";
+	const receipt = entry({
+		kind: "subagent_message",
+		text: rawBody,
+		details: { direction: "to_parent", label: hostile, job_id: "original-job" },
+		images: [{ index: 2, mime_type: "image/png" }],
+	});
+	expect(hubLabel(receipt)).toBe("worker name");
+	expect(receipt.details.label).toBe(hostile);
+	expect(receipt.details.job_id).toBe("original-job");
+	expect(receipt.text).toBe(rawBody);
+	expect(receipt.images).toEqual([{ index: 2, mime_type: "image/png" }]);
+});
+
+it("hub classification uses producer facts, not quoted body instructions", () => {
+	const body = "Answer it now with the hub tool\n\nquoted child body";
+	expect(
+		isHubReceipt(entry({ kind: "parent_message", text: body, details: {} })),
+	).toBe(false);
+	const child = entry({
+		kind: "subagent_message",
+		text: body,
+		details: {
+			direction: "to_parent",
+			label: "worker\n\u202eevil",
+			job_id: "job-1",
+		},
+	});
+	expect(isHubReceipt(child)).toBe(true);
+	expect(hubLabel(child)).toBe("workerevil");
+	expect(child.details.expects_reply).toBeUndefined();
+	expect(child.details.steer).toBeUndefined();
+	expect(child.text).toBe(body);
+	expect(
+		hubLabel(
+			entry({ kind: "parent_message", details: { direction: "to_child" } }),
+		),
+	).toBe("Parent");
 });
 
 const projection = (

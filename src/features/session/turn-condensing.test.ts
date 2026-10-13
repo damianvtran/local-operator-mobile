@@ -873,6 +873,53 @@ describe("the cap-shaped drive: a latched turn's render is a function of the lat
 /* --------------------------------------------------------------- the group */
 
 describe("quietGroupsOf — the derivation", () => {
+	it("one proven hub bridges three real tools while an unknown launch remains a boundary", () => {
+		const hub = row({
+			id: "h",
+			kind: "parent_message",
+			text: "  full body\n\nsecond  ",
+			details: { direction: "to_child", expects_reply: true, steer: true },
+		});
+		const entries = [tool("t1"), hub, tool("t2"), tool("t3")];
+		const groups = quietGroupsOf(itemsOf(entries));
+		expect(groups).toHaveLength(1);
+		expect(groups[0]).toMatchObject({
+			count: 1,
+			actions: 3,
+			hubCount: 1,
+			replyRequested: 1,
+			steered: 1,
+			rowIds: ["t1", "h", "t2", "t3"],
+		});
+		expect(groupPhrases(groups[0]!)).toEqual([
+			"Hub messages",
+			"1",
+			"3 actions",
+			"1 reply requested",
+			"1 steered",
+		]);
+		expect(quietGroupsOf(itemsOf(entries.slice(0, 3)))).toEqual([]);
+		expect(quietGroupsOf(itemsOf([tool("a"), tool("b"), tool("c")]))).toEqual(
+			[],
+		);
+		for (const kind of ["parent_message", "subagent_message"] as const) {
+			const launch = row({
+				id: "launch",
+				kind,
+				text: "any launch wording",
+				details: {},
+			});
+			expect(
+				quietGroupsOf(
+					itemsOf([peer("p1"), peer("p2"), launch, peer("p3"), peer("p4")]),
+				).map((group) => group.rowIds),
+			).toEqual([
+				["p1", "p2"],
+				["p3", "p4"],
+			]);
+		}
+	});
+
 	it("folds consecutive receipts and counts only the work between them", () => {
 		const items = itemsOf([
 			peer("p1", "ingest-rail"),
@@ -1167,6 +1214,126 @@ describe("the group latch — facts freeze at the close", () => {
 			latch: new Map(),
 		});
 		expect(unlatch.groups[0]?.group.failed).toBe(1);
+	});
+
+	it("refreshes a latched group's sender and intent facts from a corrected same-ID receipt (U1)", () => {
+		const first = groupPlan({
+			items: itemsOf([
+				peer("p1", "worker name"),
+				row({
+					id: "h1",
+					kind: "parent_message",
+					text: "Focus",
+					details: {
+						direction: "to_child",
+						label: "worker name",
+						expects_reply: true,
+					},
+				}),
+				tool("t1"),
+				answer("a1"),
+			]),
+			expanded: new Set(),
+			latch: new Map(),
+		});
+		expect(first.groups[0]?.group).toMatchObject({
+			replyRequested: 1,
+			senders: [{ label: "worker name", count: 2 }],
+		});
+
+		// The "Check again" refetch: the SAME id carries corrected facts, and
+		// a tool inside regresses at the same time — the arithmetic must not move.
+		const correctedHub = row({
+			id: "h1",
+			kind: "parent_message",
+			text: "Focus",
+			details: {
+				direction: "to_child",
+				label: "QA corrected",
+				expects_reply: false,
+				steer: true,
+			},
+		});
+		const after = groupPlan({
+			items: itemsOf([
+				peer("p1", "worker name"),
+				correctedHub,
+				failedTool("t1"),
+				answer("a1"),
+			]),
+			expanded: new Set(["qg:p1"]),
+			latch: first.latch,
+		});
+		expect(after.groups[0]?.key).toBe("qg:p1");
+		expect(after.groups[0]?.group.replyRequested).toBeUndefined();
+		expect(after.groups[0]?.group.steered).toBe(1);
+		expect(after.groups[0]?.group.senders).toEqual([
+			{ label: "worker name", count: 1 },
+			{ label: "QA corrected", count: 1 },
+		]);
+		// Membership, order and the open disclosure stay put; the frozen
+		// arithmetic does too.
+		expect(after.groups[0]?.hiddenIds).toEqual(["p1", "h1", "t1"]);
+		expect(after.groups[0]?.itemIds).toEqual([
+			"quiet-group-qg:p1",
+			"p1",
+			"h1",
+			"t1",
+		]);
+		expect(after.groups[0]?.group.failed).toBe(0);
+		expect(groupPhrases(after.groups[0]!.group)).toEqual([
+			"Incoming messages",
+			"2",
+			"1 steered",
+		]);
+
+		// The RETURNED latch is the next frame's authority: it carries the
+		// refreshed descriptors, not the ones this pass was fed (review round
+		// 4, U1 — the reviewer's "returned second.latch still stale" root).
+		expect(after.latch.get("qg:p1")).toMatchObject({
+			senders: [
+				{ label: "worker name", count: 1 },
+				{ label: "QA corrected", count: 1 },
+			],
+			steered: 1,
+		});
+		expect(after.latch.get("qg:p1")?.replyRequested).toBeUndefined();
+
+		// A slid frame (one member missing) keeps the LATEST validated facts
+		// wholesale, inherited from the RETURNED latch — not the first frame's
+		// stale copy (using first.latch here resurrected the old sender, which
+		// is exactly what QA Q-native-R4-1 reproduced).
+		const slid = groupPlan({
+			items: itemsOf([correctedHub, tool("t1"), answer("a1")]),
+			expanded: new Set(),
+			latch: after.latch,
+		});
+		expect(slid.groups[0]?.group.senders).toEqual([
+			{ label: "worker name", count: 1 },
+			{ label: "QA corrected", count: 1 },
+		]);
+		expect(slid.groups[0]?.group.replyRequested).toBeUndefined();
+		expect(slid.groups[0]?.group.steered).toBe(1);
+		expect(slid.groups[0]?.group.failed).toBe(0);
+		expect(slid.latch.get("qg:p1")?.senders).toEqual([
+			{ label: "worker name", count: 1 },
+			{ label: "QA corrected", count: 1 },
+		]);
+
+		// A later FULL reload re-derives from live rows again and stays fresh.
+		const reload = groupPlan({
+			items: itemsOf([
+				peer("p1", "worker name"),
+				correctedHub,
+				failedTool("t1"),
+				answer("a1"),
+			]),
+			expanded: new Set(),
+			latch: slid.latch,
+		});
+		expect(reload.groups[0]?.group.steered).toBe(1);
+		expect(reload.groups[0]?.group.replyRequested).toBeUndefined();
+		expect(reload.groups[0]?.group.failed).toBe(0);
 	});
 
 	it("keeps a closed group's identity when the window slides its head away", () => {

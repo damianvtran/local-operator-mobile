@@ -92,6 +92,47 @@ export const isOwnRow = (kind: RowKind): boolean => kind === "user";
 export const peerLabel = (sender: PeerSender | undefined): string =>
 	sender?.conversation_name ?? sender?.session_id ?? "another session";
 
+/** A legacy parent-looking row may be a launch/user request. Only producer
+ * direction establishes hub continuation; body wording and IDs cannot do so. */
+export const isHubReceipt = (entry: TranscriptEntry): boolean =>
+	(entry.kind === "parent_message" || entry.kind === "subagent_message") &&
+	(entry.details.direction === "to_child" ||
+		entry.details.direction === "to_parent");
+
+/** Display identity rejects control/bidi code points, never authored body.
+ * Numeric ranges make that boundary explicit without a regex whose embedded
+ * control escapes violate the pinned linter's source-safety rule. */
+const isHubIdentityControl = (point: number): boolean =>
+	point <= 0x1f ||
+	(point >= 0x7f && point <= 0x9f) ||
+	(point >= 0x200b && point <= 0x200f) ||
+	(point >= 0x202a && point <= 0x202e) ||
+	(point >= 0x2060 && point <= 0x206f);
+const HUB_IDENTITY_SPACE = /\s+/g;
+
+/** Same advisory label in the row and group; no manufactured parent/session ID. */
+export function hubLabel(
+	entry: Pick<TranscriptEntry, "kind" | "details">,
+): string {
+	for (const field of [
+		entry.details.label,
+		entry.details.job_id,
+		entry.details.sender?.conversation_name,
+		entry.details.sender?.session_id,
+	]) {
+		if (typeof field !== "string") continue;
+		const value = field
+			.split("")
+			.filter((character) => !isHubIdentityControl(character.charCodeAt(0)))
+			.join("")
+			.replace(HUB_IDENTITY_SPACE, " ")
+			.trim()
+			.slice(0, 120);
+		if (value) return value;
+	}
+	return entry.kind === "parent_message" ? "Parent" : "Subagent";
+}
+
 /* ---------------------------------------------------------------- the tool row */
 
 export interface ToolGlyph {

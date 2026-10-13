@@ -9,6 +9,8 @@ import { TranscriptImage } from "@/features/session/components/transcript-image"
 import { imageGenView } from "@/features/session/imagegen";
 import {
 	classifyEntry,
+	hubLabel,
+	isHubReceipt,
 	peerLabel,
 	transcriptRowTestID,
 } from "@/features/session/projection";
@@ -218,7 +220,19 @@ export const TranscriptRow = ({
 	 * without a card inside the column. */
 	const label = BLOCK_LABEL[kind] ?? kind;
 	const sender = entry.details.sender;
-	const who = kind === "peer" ? peerLabel(sender) : label;
+	const hub = isHubReceipt(entry);
+	const who =
+		kind === "peer" ? peerLabel(sender) : hub ? hubLabel(entry) : label;
+	const body =
+		hub && typeof entry.details.body === "string"
+			? entry.details.body
+			: entry.text;
+	const intent = hub
+		? [
+				entry.details.expects_reply === true ? "Reply requested" : "",
+				entry.details.steer === true ? "Steered" : "",
+			].filter(Boolean)
+		: [];
 	return (
 		<View className="px-4 py-1" testID={testID}>
 			<View
@@ -233,17 +247,46 @@ export const TranscriptRow = ({
 					</Text>
 					<Text className="text-meta text-ink-dim" numberOfLines={1}>
 						{who}
+						{intent.length ? ` · ${intent.join(" · ")}` : ""}
 					</Text>
-					{onOpenAgent && kind === "subagent" && sender?.session_id ? (
+					{/* A supplied job ID owns the agent route. A sender session ID is
+					    not that coordinate and must never stand in for one. */}
+					{onOpenAgent && kind === "subagent" && entry.details.job_id ? (
 						<Text
 							className="text-meta text-accent"
-							onPress={() => onOpenAgent(sender.session_id ?? "")}
+							onPress={() => onOpenAgent(entry.details.job_id ?? "")}
 						>
 							open
 						</Text>
 					) : null}
 				</View>
-				<Text className="text-body-sm text-ink">{entry.text}</Text>
+				{hub && entry.details.direction ? (
+					<Text className="text-meta text-ink-muted">
+						{entry.details.direction}
+						{entry.details.job_id && entry.details.label
+							? ` · Job ${entry.details.job_id}`
+							: ""}
+					</Text>
+				) : null}
+				<Text className="text-body-sm text-ink">{body}</Text>
+				{/* Already-provided refs retain the message's own ID/index. No
+				    producer upload support or synthetic media endpoint is implied. */}
+				{(kind === "parent" || kind === "subagent") &&
+				entry.images.length > 0 &&
+				loadImage ? (
+					<View className="flex-row flex-wrap gap-1.5 pt-1.5">
+						{entry.images.map((image) => (
+							<TranscriptImage
+								key={image.index}
+								entryId={entry.id}
+								index={image.index}
+								mimeType={image.mime_type}
+								testID={transcriptImageId(entry.id, image.index)}
+								load={loadImage}
+							/>
+						))}
+					</View>
+				) : null}
 			</View>
 			{anchors}
 		</View>
