@@ -993,9 +993,22 @@ jobs:
           # instead of going to /dev/null — while the install below stays a HARD
           # failure (no -d/-g/`|| true`): a signing mismatch must never be tolerated.
           # scripts/maestro-flow-contract.ts pins this pair.
+          #
+          # WHY THE READINESS GATE (the two `await-emulator-ready.sh` lines): the
+          # last two runs that reached the flows both "flaked once" on the FIRST
+          # flow's launchApp with `device offline` / `DeviceServerDiedException
+          # UNAVAILABLE` (10/13 nightly 38343203340, 10/14 dispatch 38530472075),
+          # because `sys.boot_completed` — all this action waits for — is reached
+          # while adbd can still drop the transport. The gate wants consecutive good
+          # adb probes (a ceiling, not a delay; it fails loudly when it times out),
+          # and the second call, after the install, warms the app once so the first
+          # flow does not carry the cold start. Read the script's header for the
+          # measurements. The retry path re-gates before re-running the set.
           script: |
+            sh scripts/ci/await-emulator-ready.sh
             adb uninstall "$APP_ID" || echo "no earlier $APP_ID on this AVD to remove"
             adb install -r android/app/build/outputs/apk/release/app-release.apk
+            EMULATOR_STABLE_PROBES=1 sh scripts/ci/await-emulator-ready.sh "$APP_ID"
             # `SESSION_ID` is the harness's own fixture session id, from the corpus
             # the mock relay serves (`fixtures/relay/**` — the id every captured
             # projection uses).
@@ -1011,7 +1024,7 @@ jobs:
             # flag, so the invocation itself re-runs the set once on failure and
             # raises a ::warning — a flake stays visible, a second failure is a
             # failure (the step's exit code).
-            run_flows() { maestro test --config e2e/maestro/config.yaml -e APP_ID="$APP_ID" -e RELAY_URL="$RELAY_URL_FOR_DEVICE" -e RELAY_PASSWORD="$(cat "$RUNNER_TEMP/relay-password")" -e SESSION_ID=6714def86197 --test-output-dir "$RUNNER_TEMP/maestro-screenshots" e2e/maestro; }; run_flows || { echo "::warning title=Maestro flaked once::the flow set failed; re-running it once, per ADR 0003 — a second failure is a failure"; run_flows; }
+            run_flows() { maestro test --config e2e/maestro/config.yaml -e APP_ID="$APP_ID" -e RELAY_URL="$RELAY_URL_FOR_DEVICE" -e RELAY_PASSWORD="$(cat "$RUNNER_TEMP/relay-password")" -e SESSION_ID=6714def86197 --test-output-dir "$RUNNER_TEMP/maestro-screenshots" e2e/maestro; }; run_flows || { echo "::warning title=Maestro flaked once::the flow set failed; re-running it once, per ADR 0003 — a second failure is a failure"; sh scripts/ci/await-emulator-ready.sh && run_flows; }
 
       - name: Stop the mock relay
         if: always()

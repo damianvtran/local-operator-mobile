@@ -433,6 +433,39 @@ export function checkEmulatorInstall(workflow: string) {
 	assert(!before.includes("/dev/null"), "the uninstall must stay visible");
 }
 
+/**
+ * The readiness gate must stay in front of the flows. Both nightly "flaked once"
+ * runs since #86 failed the first flow on `device offline`
+ * (`scripts/ci/await-emulator-ready.sh` carries the measurements), and the gate is
+ * three separate lines that an innocent edit to the `script:` block can drop
+ * without anything going red — the flake would simply come back and read as a pass:
+ * before the uninstall/install (a transport that has not held still), after the
+ * install (the warm-up, which needs the package to exist), and again before the
+ * one re-run (a retry into the same dropped transport is not a retry).
+ */
+export function checkEmulatorGate(workflow: string) {
+	const lines = emulatorScriptLines(workflow);
+	const install = lines.findIndex((line) => /^adb\b.*\binstall\b/.test(line));
+	assert(
+		lines[0] === "sh scripts/ci/await-emulator-ready.sh",
+		"the first script line must be the full readiness gate",
+	);
+	assert(install > 0, "the install line must exist");
+	assert(
+		lines[install + 1] ===
+			'EMULATOR_STABLE_PROBES=1 sh scripts/ci/await-emulator-ready.sh "$APP_ID"',
+		"the line after the install must warm the app through the gate",
+	);
+	const flows = lines.find((line) => line.startsWith("run_flows()"));
+	assert(flows !== undefined, "the flows invocation must exist");
+	assert(
+		/run_flows \|\| \{[^}]*sh scripts\/ci\/await-emulator-ready\.sh && run_flows; \}$/.test(
+			flows,
+		),
+		"the one re-run must be gated, and must not run when the gate fails",
+	);
+}
+
 export const maestroChecks: [string, () => void][] = [
 	[
 		"Settings scrolls to each target and remeasures appearance changes before captures",
@@ -642,6 +675,39 @@ export const maestroChecks: [string, () => void][] = [
 				"utf8",
 			);
 			checkEmulatorInstall(workflow);
+		},
+	],
+	[
+		"the emulator readiness gate precedes the install, follows it as a warm-up, and gates the one re-run",
+		() => {
+			const workflow = readFileSync(
+				join(root, ".github/workflows/e2e.yml"),
+				"utf8",
+			);
+			checkEmulatorGate(workflow);
+			// Negative controls: each removal must be named, not tolerated.
+			const gateLine = "            sh scripts/ci/await-emulator-ready.sh\n";
+			const warmLine =
+				'            EMULATOR_STABLE_PROBES=1 sh scripts/ci/await-emulator-ready.sh "$APP_ID"\n';
+			assert(workflow.includes(gateLine) && workflow.includes(warmLine));
+			assert.throws(
+				() => checkEmulatorGate(workflow.replace(gateLine, "")),
+				/first script line/,
+			);
+			assert.throws(
+				() => checkEmulatorGate(workflow.replace(warmLine, "")),
+				/warm the app/,
+			);
+			assert.throws(
+				() =>
+					checkEmulatorGate(
+						workflow.replace(
+							"sh scripts/ci/await-emulator-ready.sh && run_flows; }",
+							"run_flows; }",
+						),
+					),
+				/re-run must be gated/,
+			);
 		},
 	],
 	[
