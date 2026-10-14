@@ -169,7 +169,9 @@ jobs:
         run: pnpm typecheck
 
       - name: Unit tests (vitest, Node environment)
-        run: pnpm test
+        # Named case/file results make the new dependency-backed controls
+        # observable without paying for a second targeted/full suite run.
+        run: pnpm test --reporter=github-actions --reporter=verbose
 
       # LINT RUNS AFTER THE APP'S OWN GATES, and the ordering is deliberate: on a
       # tree where `tools/**` is still unformatted (the audit harness arrived

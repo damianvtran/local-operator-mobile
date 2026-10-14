@@ -117,8 +117,8 @@ export function checkHomeScope(sources: HomeSources): void {
 	expectExpression(child(disabled, "value"), "connected ? null : t(CONNECT_DISABLED_REASON)", "disabledReason");
 	const fallback = requireOne(descendants(home, (node) => node.type === "CallExpression" && identifier(child(node, "callee"), "setProblem") && list(node, "arguments")[0]?.type === "ConditionalExpression"), "refused-start state");
 	expectExpression(list(fallback, "arguments")[0], 'error instanceof RelayError ? { kind: "relay", text: error.displayableMessage } : { kind: "fallback" }', "refused-start state");
-	const alert = requireOne(descendants(home, (node) => tag(node, "Alert")), "refusal alert");
-	keyedBody(alert, 'problem.kind === "fallback" ? t(REFUSED_START_FALLBACK) : problem.text', "refused-start render");
+	const refusalElement = requireOne(descendants(home, (node) => tag(node, "Alert")), "refusal alert");
+	keyedBody(refusalElement, 'problem.kind === "fallback" ? t(REFUSED_START_FALLBACK) : problem.text', "refused-start render");
 	// An otherwise keyed label still goes stale if the composer memo omits t.
 	const controls = child(declaration(home, "controls"), "init");
 	const dependencies = controls && list(controls, "arguments")[1];
