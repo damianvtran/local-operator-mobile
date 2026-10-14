@@ -952,7 +952,23 @@ jobs:
           # dropped by the action's parser. A `set -o pipefail` here killed every run
           # at line 1 (`set: Illegal option -o pipefail`, exit 2) before adb install
           # or maestro ever ran.
+          #
+          # WHY THE UNINSTALL: the AVD cache above is keyed on e2e/maestro/** only, and
+          # the post-job step SAVES the AVD with this run's app still installed, signed
+          # by this run's throwaway keystore (`keytool -genkeypair` runs fresh every run).
+          # The next run hits that cache, builds a NEW keystore, and `adb install -r`
+          # cannot replace a package signed by a different key:
+          # INSTALL_FAILED_UPDATE_INCOMPATIBLE. Measured: run 38343203340 missed the
+          # cache, built the AVD, installed, passed and saved it; run 38506995844 hit it
+          # and failed at the install, and every night would after that until
+          # e2e/maestro changed. Removing the old copy first makes the install
+          # independent of what the cached AVD holds. An absent package is the normal
+          # case on a fresh AVD, so a failed uninstall must not abort — but it says so
+          # instead of going to /dev/null — while the install below stays a HARD
+          # failure (no -d/-g/`|| true`): a signing mismatch must never be tolerated.
+          # scripts/maestro-flow-contract.ts pins this pair.
           script: |
+            adb uninstall "$APP_ID" || echo "no earlier $APP_ID on this AVD to remove"
             adb install -r android/app/build/outputs/apk/release/app-release.apk
             # `SESSION_ID` is the harness's own fixture session id, from the corpus
             # the mock relay serves (`fixtures/relay/**` — the id every captured
