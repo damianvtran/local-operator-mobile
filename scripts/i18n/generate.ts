@@ -181,9 +181,7 @@ if (
 	const result = generate(loadSources(root));
 	if (process.argv.includes("--check")) {
 		if (!existsSync(path) || readFileSync(path, "utf8") !== result)
-			throw new Error(
-				"generated i18n key map drift; run pnpm i18n:generate",
-			);
+			throw new Error("generated i18n key map drift; run pnpm i18n:generate");
 		console.log(
 			"i18n generation current (source/context schema; ICU AST check is separate)",
 		);
