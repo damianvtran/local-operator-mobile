@@ -516,7 +516,9 @@ export default function Home({
 				{problem !== null ? (
 					<View className="px-4 pb-2">
 						<Alert severity="warning" title="Could not start">
-							{problem.kind === "fallback" ? t(REFUSED_START_FALLBACK) : problem.text}
+							{problem.kind === "fallback"
+								? t(REFUSED_START_FALLBACK)
+								: problem.text}
 						</Alert>
 					</View>
 				) : null}

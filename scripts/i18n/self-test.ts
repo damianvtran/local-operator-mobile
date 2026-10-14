@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { fileURLToPath } from "node:url";
 import { test } from "node:test";
+import { fileURLToPath } from "node:url";
 
 import { generate, loadSources, validateSources } from "./generate.ts";
 
@@ -41,7 +41,10 @@ test("an enabled locale cannot omit any enabled namespace or English key", () =>
 	const absentNamespace = sources();
 	absentNamespace.config.enabledLocales.push("fr");
 	absentNamespace.config.locales.fr = { direction: "ltr" };
-	assert.throws(() => validateSources(absentNamespace), /missing enabled namespace/);
+	assert.throws(
+		() => validateSources(absentNamespace),
+		/missing enabled namespace/,
+	);
 	const absentKey = sources();
 	absentKey.config.enabledLocales.push("fr");
 	absentKey.config.locales.fr = { direction: "ltr" };

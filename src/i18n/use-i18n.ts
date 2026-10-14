@@ -8,6 +8,10 @@ import { localeSource } from "./subscription";
  * catalogue logic must not boot auth/relay/native side effects in Node tests. */
 export function useI18n(store: ConfigStoreApi) {
 	const source = useMemo(() => localeSource(store), [store]);
-	const locale = useSyncExternalStore(source.subscribe, source.getSnapshot, source.getSnapshot);
+	const locale = useSyncExternalStore(
+		source.subscribe,
+		source.getSnapshot,
+		source.getSnapshot,
+	);
 	return useMemo(() => createTranslator(locale), [locale]);
 }

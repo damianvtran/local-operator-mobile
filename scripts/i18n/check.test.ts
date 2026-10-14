@@ -24,11 +24,23 @@ describe("six-slot Home guard (not a whole-repository extraction claim)", () => 
 		["splash", "{t(GREETING)}", "A new hardcoded headline"],
 		["splash", "{t(STARTING)}", '{"A new progress sentence"}'],
 		["splash", "label={t(CONNECT_COMPUTER)}", 'label="Pair another machine"'],
-		["home", "connected ? null : t(CONNECT_DISABLED_REASON)", 'connected ? null : "A novel disabled reason"'],
-		["home", "message={t(FOLDERS_READ_FAILED)}", 'message="A new folders failure"'],
+		[
+			"home",
+			"connected ? null : t(CONNECT_DISABLED_REASON)",
+			'connected ? null : "A novel disabled reason"',
+		],
+		[
+			"home",
+			"message={t(FOLDERS_READ_FAILED)}",
+			'message="A new folders failure"',
+		],
 		["home", "t(REFUSED_START_FALLBACK)", '"A new start failure"'],
 		["splash", "{t(GREETING)}", "{t(GREETING)} A new appended headline"],
-		["splash", "testID={SURFACE.homeGreeting}", 'testID={SURFACE.homeGreeting} accessibilityLabel="A new spoken headline"'],
+		[
+			"splash",
+			"testID={SURFACE.homeGreeting}",
+			'testID={SURFACE.homeGreeting} accessibilityLabel="A new spoken headline"',
+		],
 		["home", /problem\.text\s*\}/, "problem.text} Extra hardcoded body"],
 		["home", "starting, t]", "starting]"],
 	] as const) {
@@ -43,8 +55,14 @@ describe("six-slot Home guard (not a whole-repository extraction claim)", () => 
 
 	it("leaves suggestions, tips and unrelated Home controls outside the enforced scope", () => {
 		const source = homeSources();
-		source.copy = source.copy.replace("Turn on phone access", "Different model-facing suggestion");
-		source.home = source.home.replace('label: "Retry"', 'label: "Different unrelated action"');
+		source.copy = source.copy.replace(
+			"Turn on phone access",
+			"Different model-facing suggestion",
+		);
+		source.home = source.home.replace(
+			'label: "Retry"',
+			'label: "Different unrelated action"',
+		);
 		expect(() => checkHomeScope(source)).not.toThrow();
 	});
 });
@@ -81,7 +99,12 @@ describe("FormatJS AST source/schema validation", () => {
 		const input = loadSources(root);
 		input.config.enabledLocales.push("fr");
 		input.config.locales.fr = { direction: "ltr" };
-		input.catalogues.fr = { "mobile.home": { ...input.english, "mobile.home.greeting": "{count, number}" } };
+		input.catalogues.fr = {
+			"mobile.home": {
+				...input.english,
+				"mobile.home.greeting": "{count, number}",
+			},
+		};
 		expect(() => checkCatalogues(input)).toThrow(/source\/context params/);
 	});
 });

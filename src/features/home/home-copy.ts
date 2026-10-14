@@ -20,18 +20,21 @@ export const STARTING = "mobile.home.starting" satisfies MessageKey;
 
 /** The refused-start sentence, verbatim from `/new` (the relay's own sentence
  *  is preferred when it has one — see `home.tsx`). */
-export const REFUSED_START_FALLBACK = "mobile.home.start_refused" satisfies MessageKey;
+export const REFUSED_START_FALLBACK =
+	"mobile.home.start_refused" satisfies MessageKey;
 
 /** The composer's disabled reason when nothing is connected. Also the sentence
  *  the connect action's slot is named for in the spec. */
-export const CONNECT_DISABLED_REASON = "mobile.home.connect_disabled" satisfies MessageKey;
+export const CONNECT_DISABLED_REASON =
+	"mobile.home.connect_disabled" satisfies MessageKey;
 
 export const CONNECT_COMPUTER = "mobile.home.connect" satisfies MessageKey;
 
 /** The folders read failed — the same sentence `/new` uses for the same failure
  *  (`new-session.tsx`), so one failure has one voice. Carried here because the
  *  home also has to clear it on a successful re-read (review M2). */
-export const FOLDERS_READ_FAILED = "mobile.home.folders_failed" satisfies MessageKey;
+export const FOLDERS_READ_FAILED =
+	"mobile.home.folders_failed" satisfies MessageKey;
 
 /**
  * Whether the composer holds a draft at all.

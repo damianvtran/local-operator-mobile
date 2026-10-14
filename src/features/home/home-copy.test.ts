@@ -83,7 +83,9 @@ describe("the home's copy", () => {
 
 	it("states the fixed sentences", () => {
 		expect(t(CONNECT_COMPUTER)).toBe("Connect a computer");
-		expect(t(REFUSED_START_FALLBACK)).toBe("That folder doesn't exist on this computer.");
+		expect(t(REFUSED_START_FALLBACK)).toBe(
+			"That folder doesn't exist on this computer.",
+		);
 		// The splash's one-line replacement while the first send is in flight: a
 		// second line would move the composer.
 		expect(t(STARTING)).toBe("Starting…");

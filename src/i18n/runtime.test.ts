@@ -28,7 +28,9 @@ describe("mobile catalogue source and formatting locale", () => {
 			{ en: { fixture: english }, ru: { fixture: {} } },
 		];
 		for (const catalogues of cases) {
-			expect(resolveMessage("ru", "fixture.jobs", catalogues).locale).toBe("en");
+			expect(resolveMessage("ru", "fixture.jobs", catalogues).locale).toBe(
+				"en",
+			);
 			for (const count of [0, 1, 21]) {
 				expect(formatMessage("ru", "fixture.jobs", { count }, catalogues)).toBe(
 					`${count} ${count === 1 ? "job" : "jobs"}`,
@@ -42,9 +44,9 @@ describe("mobile catalogue source and formatting locale", () => {
 			en: { fixture: { "fixture.n": "{count, number}" } },
 			fr: { fixture: { "fixture.n": "{count, number}" } },
 		};
-		expect(formatMessage("fr", "fixture.n", { count: 1234.5 }, catalogues)).toBe(
-			new Intl.NumberFormat("fr").format(1234.5),
-		);
+		expect(
+			formatMessage("fr", "fixture.n", { count: 1234.5 }, catalogues),
+		).toBe(new Intl.NumberFormat("fr").format(1234.5));
 	});
 
 	it("does not activate backend Urdu/Chinese copy or RTL without a carried namespace", () => {
@@ -57,7 +59,9 @@ describe("mobile catalogue source and formatting locale", () => {
 	});
 
 	it("degrades a message absent even in English to its code", () => {
-		expect(formatMessage("en", "fixture.missing", {}, {})).toBe("fixture.missing");
+		expect(formatMessage("en", "fixture.missing", {}, {})).toBe(
+			"fixture.missing",
+		);
 	});
 
 	it("does not swallow missing parameters as success", () => {

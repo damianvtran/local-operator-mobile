@@ -7,8 +7,9 @@ export function localeSource(store: ConfigStoreApi) {
 	const getSnapshot = () => store.getState().language ?? "en";
 	return {
 		getSnapshot,
-		subscribe: (notify: () => void) => store.subscribe((next, previous) => {
-			if ((next.language ?? "en") !== (previous.language ?? "en")) notify();
-		}),
+		subscribe: (notify: () => void) =>
+			store.subscribe((next, previous) => {
+				if ((next.language ?? "en") !== (previous.language ?? "en")) notify();
+			}),
 	};
 }
