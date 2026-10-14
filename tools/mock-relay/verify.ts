@@ -49,6 +49,7 @@ import {
 } from "../lib/blind-report.ts";
 import {
 	countProcesses,
+	launchBoundMs,
 	mayRetry,
 	reapAttempt,
 	resolveChrome,
@@ -1430,7 +1431,7 @@ async function main() {
 	// run terminates at all.
 	group = "bounded work";
 	{
-		const out = join(tmpdir(), `lo-hang-${Date.now()}`);
+		const out = mkdtempSync(join(tmpdir(), `lo-hang-${process.pid}-`));
 		const started = Date.now();
 		const run = spawnSync(
 			process.execPath,
@@ -1453,10 +1454,22 @@ async function main() {
 				"--deadline",
 				"60",
 			],
-			{ encoding: "utf8", timeout: 120_000 },
+			{ encoding: "utf8", timeout: launchBoundMs(5000) + 90_000 },
 		);
 		const elapsedMs = Date.now() - started;
 		const output = `${run.stdout ?? ""}${run.stderr ?? ""}`;
+		// Asserted FIRST so a browser that never started is named as that, instead of
+		// surfacing as "the wedged cell fails with the deadline it hit" — which is what
+		// three CI runs reported when Chrome was slow to come up and the cell this group
+		// exists to test was never reached (see `CHROME_LAUNCH_TIMEOUT_MS`).
+		check(
+			"the wedged-cell capture got a browser (a launch failure is not a verdict on the cell)",
+			/no browser came up/.test(output),
+			false,
+			/no browser came up/.test(output)
+				? (/no browser came up[^\n]*/.exec(output)?.[0] ?? "")
+				: "",
+		);
 		check(
 			"a wedged cell terminates rather than hanging",
 			run.signal === null,
@@ -1481,9 +1494,9 @@ async function main() {
 		);
 		check(
 			"the whole run respects its own bound",
-			elapsedMs < 90_000,
+			elapsedMs < launchBoundMs(5000) + 60_000,
 			true,
-			`${(elapsedMs / 1000).toFixed(1)} s against a 60 s deadline`,
+			`${(elapsedMs / 1000).toFixed(1)} s against ${launchBoundMs(5000) / 1000} s launch + 60 s capture budgets`,
 		);
 	}
 

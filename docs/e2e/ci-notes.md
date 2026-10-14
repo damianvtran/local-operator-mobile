@@ -173,6 +173,17 @@ Two things to wire deliberately:
   the CI invocation re-runs the set once on failure itself and raises a
   `::warning` when it flaked; a second failure is a failure (ADR 0003 allows
   exactly one re-run). Reported separately so a flake is visible as a flake.
+- **A readiness gate before the first flow, and again before the re-run.**
+  `sys.boot_completed` — all `android-emulator-runner` waits for — is reached while
+  adbd can still drop the transport, and the two observed nightly/dispatch runs that reached the flows
+  after #86 failed the *first* flow on `device offline` (`DeviceServerDiedException`)
+  and went green only on the whole-set re-run, seven minutes later.
+  `scripts/ci/await-emulator-ready.sh` waits for consecutive good `adb` probes
+  (5 x 2 s by default; a ceiling, bounded at 180 s, failing loudly with the last
+  probe's reason) and, with an app id, independently bounds warm-up at 30 s and launches the installed app once so the first
+  flow does not carry the cold start. `scripts/maestro-flow-contract.ts` pins all
+  three call sites. This is a runner-capacity mitigation, not an app fix, and it is
+  stated as such so it is not mistaken for coverage.
 
 `RELAY_PASSWORD` must arrive from the job's own environment, read out of a
 `0600` file the job created. A literal password in a flow file could not be

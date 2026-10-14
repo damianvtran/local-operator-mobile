@@ -48,7 +48,7 @@ import {
 import { bool, csv, num, parseArgs, str } from "../lib/args.ts";
 import type { CdpPage } from "../lib/cdp.ts";
 import { sleep } from "../lib/cdp.ts";
-import { launchChrome } from "../lib/chrome.ts";
+import { launchBoundMs, launchChrome } from "../lib/chrome.ts";
 import { applySafeAreaInsets, freshPage, withDeadline } from "../lib/page.ts";
 import {
 	captureHookQuery,
@@ -1785,7 +1785,7 @@ export async function runCapture(options: CaptureOptions) {
 		);
 	}
 	/*
-	 * BOUNDED, with a floor above `launchChrome`'s own 30 s wait for the port file: a
+	 * BOUNDED, with a floor above `launchChrome`'s own CHROME_LAUNCH_TIMEOUT_MS wait for the port file: a
 	 * browser that starts far enough to be connected to and then never answers a CDP call
 	 * hangs HERE, before the two `chrome.page()` sites get a chance — measured with a stub
 	 * that writes `DevToolsActivePort` and then accepts and never replies: the run sat for
@@ -1794,7 +1794,7 @@ export async function runCapture(options: CaptureOptions) {
 	 */
 	const launched = await withDeadline(
 		launchChrome({ profile: options.profile }),
-		Math.max(45_000, options.cellTimeoutMs),
+		launchBoundMs(options.cellTimeoutMs),
 		"the browser's debug port",
 	);
 	if (!launched.ok) {
