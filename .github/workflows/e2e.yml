@@ -626,18 +626,20 @@ jobs:
     # moved 140 -> 150, with the audit bound 60 -> 70 and the job bound 190 -> 225
     # (`150 + 70 = 220 < 225`). The supplement slice's five cells one more took the
     # derived deadline to 9072 s = 151.2 min — ABOVE the 150 the step carried — so
-    # capture moved 150 -> 160 and the job bound 225 -> 240 with it, keeping the parts
-    # inside the bound (`160 + 70 = 230 < 240`). The per-push steps carry the same
+    # capture moved 150 -> 160 and the job bound 225 -> 240 with it,
+    # then inside the bound (`160 + 70 = 230 < 240`). The per-push steps carry the same
     # relationship: capture
     # 55 against a derived 3024 s (50.4 min) and audit 25 against 1008 x 1.25 s (21 min).
     # The per-push audit's rate is 1.25 s/cell (250 of the 256 cells the tier held then
     # in 312 s, run 37167390506) — but `core` is not that sample: its own audit measured
     # 1.47 s/cell and was killed at the old 70-minute bound (below). So 3024 cells x
-    # 1.47 s = 4,445 s ≈ 74 min; the step bound moved to 90 and the JOB bound no longer
-    # holds its parts on paper: `160 + 90 = 250 > 240`, where the caps summed to 230 of
-    # 240 before this change. Measured, the job is ~111 min of capture + ~74 min of
-    # audit ≈ 185 min; if either step ever binds, the job cap has to move with it. This
-    # is a nightly job; it does not run on a pull request.
+    # 1.47 s = 4,445 s ≈ 74 min; the step bound moved to 90, and the step caps no
+    # longer sum under the job: `160 + 90 = 250 > 240`, where they summed to 230 of
+    # 240 before this change — but the caps are ceilings, and the REAL requirement is
+    # what the guard asserts: capture 160 + the audit's measured ~74 = 234 < 240.
+    # Measured, the job is ~111 min of capture + ~74 min of audit ≈ 185 min; if either
+    # step ever binds, the job cap has to move with it. This is a nightly job; it does
+    # not run on a pull request.
     #
     # EXPECTED FIRST-RUN VERDICT: THIS JOB IS RED, AND THAT IS WHAT IT IS FOR. It has
     # never executed (schedule/dispatch only). A real local `--tier core --consecutive`
@@ -741,10 +743,10 @@ jobs:
         #   summary: the rubric rows it exists to report are not visible, which is the
         #   failure mode a bound below the work has.
         #
-        # 90, not 74: ~20% headroom over the measured need, the shape every step bound
-        # in this file carries, because a bound that fires every run stops being a
-        # signal. A step bound the audit's own cost can exceed would cut short the
-        # audit itself — the defect the capture bound above already refuses.
+        # 90, not 74: the ~20% headroom is a FLOOR THE GUARD ENFORCES — the bound
+        # must clear ceil(74 x 1.2) = 89 min — because a bound that fires every run
+        # stops being a signal. A step bound the audit's own cost can exceed would
+        # cut short the audit itself — the defect the capture bound above refuses.
         #
         # IT WAS LAST SIZED FOR AN EARLIER PLAN. The last core audit to run to
         # completion finished 1728 cells in 38m35s = 44.8 cells/min (the 2026-10-08

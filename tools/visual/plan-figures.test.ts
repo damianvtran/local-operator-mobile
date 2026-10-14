@@ -7,7 +7,9 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
 	auditBoundProblem,
 	auditPlanMinutes,
+	auditRequiredMinutes,
 	coreAuditBoundMinutes,
+	coreJobHeadroomProblem,
 } from "./audit-bound.ts";
 
 /**
@@ -441,7 +443,7 @@ describe("the figures in the tree are the plan the harness prints", () => {
 });
 
 describe("the audit step bound holds the plan it audits", () => {
-	it("holds the core plan and rejects a shorter bound", () => {
+	it("holds the plan's headroom floor and rejects a bound under it", () => {
 		const known = plans;
 		expect(known).not.toBeNull();
 		const workflowPath = join(root, ".github/workflows/e2e.yml");
@@ -451,15 +453,70 @@ describe("the audit step bound holds the plan it audits", () => {
 		const cells = known?.core.cells ?? 0;
 		expect(cells).toBeGreaterThan(0);
 		expect(auditBoundProblem(cells, bound)).toBeNull();
-		/* NEGATIVE CONTROL, because a guard that cannot fail is not a guard: a
-		 * bound just below the plan's own cost must be rejected, and one at the
-		 * requirement accepted — so a reject-everything bug fails this too. */
-		const required = auditPlanMinutes(cells);
-		const justBelow = Math.floor(required);
-		expect(justBelow).toBeLessThan(required);
-		expect(auditBoundProblem(cells, justBelow)).not.toBeNull();
-		expect(auditBoundProblem(cells, Math.ceil(required))).toBeNull();
+		/* NEGATIVE CONTROLS, because a guard that cannot fail is not a guard: a
+		 * bound at the measured need (zero headroom) must be refused, 88 is one
+		 * under the floor, and the floor and one above it pass — so neither a
+		 * reject-everything nor an accept-everything bug survives this. */
+		const measured = Math.ceil(auditPlanMinutes(cells));
+		const required = auditRequiredMinutes(cells);
+		expect(measured).toBeLessThan(required);
+		expect(auditBoundProblem(cells, measured)).not.toBeNull();
+		expect(auditBoundProblem(cells, required - 1)).not.toBeNull();
+		expect(auditBoundProblem(cells, required)).toBeNull();
+		expect(auditBoundProblem(cells, required + 1)).toBeNull();
 		/* And the extraction fails closed on a workflow it cannot read. */
 		expect(coreAuditBoundMinutes("jobs: {}")).toBeNull();
+	});
+
+	it("holds the job margin, and reads no bound from a comment", () => {
+		const known = plans;
+		expect(known).not.toBeNull();
+		const workflow = readFileSync(
+			join(root, ".github/workflows/e2e.yml"),
+			"utf8",
+		);
+		const cells = known?.core.cells ?? 0;
+		expect(cells).toBeGreaterThan(0);
+		expect(coreJobHeadroomProblem(workflow, cells)).toBeNull();
+		/* NEGATIVE CONTROLS: the capture bound rising, the cap falling and the
+		 * cap missing must all be refused, or the margin is prose again. */
+		const capture170 = workflow.replace(
+			"timeout-minutes: 160",
+			"timeout-minutes: 170",
+		);
+		expect(capture170).not.toBe(workflow);
+		expect(coreJobHeadroomProblem(capture170, cells)).not.toBeNull();
+		const capLowered = workflow.replace(
+			"    timeout-minutes: 240",
+			"    timeout-minutes: 230",
+		);
+		expect(capLowered).not.toBe(workflow);
+		expect(coreJobHeadroomProblem(capLowered, cells)).not.toBeNull();
+		const capMissing = workflow.replace("    timeout-minutes: 240\n", "");
+		expect(capMissing).not.toBe(workflow);
+		expect(coreJobHeadroomProblem(capMissing, cells)).not.toBeNull();
+		/* QA round 1, Q1: a comment is documentation, not a bound. 999 above
+		 * the real 90 changes nothing; it cannot rescue a real 70 either; and a
+		 * commented-out key is no bound at all. */
+		const commented = workflow.replace(
+			"        timeout-minutes: 90\n        run: pnpm audit:run",
+			"        # timeout-minutes: 999\n        timeout-minutes: 90\n        run: pnpm audit:run",
+		);
+		expect(commented).not.toBe(workflow);
+		expect(coreAuditBoundMinutes(commented)).toBe(90);
+		const noisy70 = commented.replace(
+			"        timeout-minutes: 90\n",
+			"        timeout-minutes: 70\n",
+		);
+		const noisy70Bound = coreAuditBoundMinutes(noisy70);
+		expect(noisy70Bound).toBe(70);
+		expect(auditBoundProblem(cells, noisy70Bound)).not.toBeNull();
+		const muted = workflow.replace(
+			"        timeout-minutes: 90\n",
+			"        # timeout-minutes: 90\n",
+		);
+		const mutedBound = coreAuditBoundMinutes(muted);
+		expect(mutedBound).toBeNull();
+		expect(auditBoundProblem(cells, mutedBound)).not.toBeNull();
 	});
 });
