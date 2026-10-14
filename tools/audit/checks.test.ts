@@ -5,6 +5,7 @@ import {
 	type AuditState,
 	runChecks,
 	U40_DEFERRAL,
+	U41_EXEMPTIONS,
 	U42_EXEMPTIONS,
 } from "./checks.ts";
 import { floorsFromTokens } from "./color.ts";
@@ -469,6 +470,80 @@ describe("U-41 — one rail, caret on the first line", () => {
 		expect(rows[0]?.measured).toMatch(/^caret midline/);
 	});
 
+	/* THE CONDENSED-TURN BAR, at the numbers the real app measured (browser rig on the
+	 *  unmodified `2b4f829` build and on the fix; see the PR's artifact index). The
+	 *  ledger that once covered it matched 31.4 / 20.6 only, so at 135 % and 200 % the
+	 *  defect was reported as an EXCEPTION and at 150 % (27.8 / 15.9) as a FAIL. With
+	 *  the ledger empty every one of them fails, and the fixed geometry passes. */
+	it("keeps the U-41 ledger empty: no record may hide the turn bar's old geometry", () => {
+		expect(U41_EXEMPTIONS).toEqual([]);
+	});
+
+	it.each([
+		["135 %", 26.7, 13.7],
+		["150 %", 27.8, 15.7],
+		["200 %", 31.4, 20.2],
+	])(
+		"fails the pre-fix turn bar at %s (rail %f, caret %f off)",
+		(_scale, inset, off) => {
+			const rows = run(
+				"U-41",
+				state({
+					summaries: [
+						summary({
+							rowLeft: 12,
+							lines: [
+								{ left: 12 + inset, top: 100, bottom: 120 },
+								{ left: 23, top: 124, bottom: 144 },
+							],
+							caret: { left: 300, top: 110 + off, bottom: 130 + off },
+						}),
+					],
+				}),
+			);
+			expect(rows.map((r) => r.verdict)).toEqual(["FAIL", "FAIL"]);
+		},
+	);
+
+	it("passes the fixed turn bar: glyph inline, caret on line one, both lines on one rail", () => {
+		const rows = run(
+			"U-41",
+			state({
+				summaries: [
+					summary({
+						rowLeft: 12,
+						lines: [
+							{ left: 25, top: 100, bottom: 120 },
+							{ left: 25, top: 124, bottom: 144 },
+						],
+						caret: { left: 300, top: 100, bottom: 120 },
+					}),
+				],
+			}),
+		);
+		expect(rows.map((r) => r.verdict)).toEqual(["PASS"]);
+	});
+
+	it("fails a wrapped line that starts 2.6 pt off the rail (the send-delivery row at 150 %)", () => {
+		const rows = run(
+			"U-41",
+			state({
+				summaries: [
+					summary({
+						rowLeft: 24,
+						lines: [
+							{ left: 26.6, top: 100, bottom: 120 },
+							{ left: 24, top: 124, bottom: 144 },
+						],
+						caret: { left: 300, top: 100, bottom: 120 },
+					}),
+				],
+			}),
+		);
+		expect(rows[0]?.verdict).toBe("FAIL");
+		expect(rows[0]?.measured).toMatch(/line 2 starts -2\.6pt/);
+	});
+
 	it("is not-applicable when the frame carries no disclosure row", () => {
 		const rows = run("U-41", state());
 		expect(rows[0]?.verdict).toBe("BLOCKED");
@@ -477,6 +552,90 @@ describe("U-41 — one rail, caret on the first line", () => {
 });
 
 describe("U-42 — spacing on the token scale", () => {
+	/* THE DIALOG'S SAFE-AREA BANDS. The inset is a device fact, and the allowance is
+	 *  padding-only by design: the landscape confirm used to carry it as a MARGIN on
+	 *  the surface and failed 32 rows; it now sits as padding on a wrapper. Both
+	 *  halves are pinned so the allowance cannot quietly widen to margins. */
+	/* THE TURN BAR'S RETIRED EXEMPTIONS. `px-2.5` (10 pt) and `gap-1.5` (6 pt) on the
+	 *  bar's Pressable were recorded as exceptions and are now on-scale (`px-3`, `gap-2`).
+	 *  With the records gone, a revert to the old classes must FAIL on the spot. */
+	const turnBarPath = "div.css-g5y9jx.px-3>button.css-g5y9jx.r-1loqt21";
+	it.each([
+		["padding-left", 10],
+		["padding-right", 10],
+	])(
+		"fails the old turn bar's %s of %d pt now that its record is gone",
+		(prop, value) => {
+			const side = prop === "padding-left" ? "left" : "right";
+			const rows = run(
+				"U-42",
+				state({
+					nodes: [
+						node({
+							path: turnBarPath,
+							padding: { top: 0, bottom: 0, left: 0, right: 0, [side]: value },
+						}),
+					],
+				}),
+			);
+			expect(rows.some((r) => r.verdict === "FAIL")).toBe(true);
+		},
+	);
+
+	it("fails the old turn bar's 6 pt gap, and passes the fixed 12 pt / 8 pt", () => {
+		const old = run(
+			"U-42",
+			state({ nodes: [node({ path: turnBarPath, rowGap: 6, columnGap: 6 })] }),
+		);
+		expect(old.some((r) => r.verdict === "FAIL")).toBe(true);
+		const fixed = run(
+			"U-42",
+			state({
+				nodes: [
+					node({
+						path: turnBarPath,
+						padding: { top: 8, bottom: 8, left: 12, right: 12 },
+						rowGap: 8,
+						columnGap: 8,
+					}),
+				],
+			}),
+		);
+		expect(fixed.every((r) => r.verdict !== "FAIL")).toBe(true);
+	});
+
+	it("accepts a 59 pt padding that is the declared side inset", () => {
+		const rows = run(
+			"U-42",
+			state({
+				insets: { top: 0, right: 59, bottom: 21, left: 59 },
+				nodes: [
+					node({
+						path: "div.w-full.items-center",
+						padding: { top: 0, bottom: 0, left: 59, right: 59 },
+					}),
+				],
+			}),
+		);
+		expect(rows[0]?.verdict).toBe("PASS");
+	});
+
+	it("still fails the same 59 pt as a MARGIN", () => {
+		const rows = run(
+			"U-42",
+			state({
+				insets: { top: 0, right: 59, bottom: 21, left: 59 },
+				nodes: [
+					node({
+						path: "div.rounded-lg",
+						margin: { top: 0, bottom: 0, left: 59, right: 59 },
+					}),
+				],
+			}),
+		);
+		expect(rows[0]?.verdict).toBe("FAIL");
+	});
+
 	const withPadding = (value: number) =>
 		state({
 			nodes: [

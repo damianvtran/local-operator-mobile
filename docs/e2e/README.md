@@ -109,8 +109,11 @@ The 9 declared skips are:
   `S15/ended` and `S15/degraded-row` (the row receipts change copy and colour —
   "ended", "not answering" — but carry no `testID`). The list's loading state
   used to be a third; the panel carries `sidebar/loading` now (R-2).
-- **2 subagent cells** (`S6/populated`, `S6/populated-long`): the app declares no
-  `subagent` subject, so nothing in a frame can affirm them.
+- ~~**2 subagent cells**~~ (`S6/populated`, `S6/populated-long`) are no longer
+  declared skips: the app declares `subagent/populated` (the loaded transcript), the
+  cells open a job id the roster really carries (`job-run`), and the `subagent-*`
+  scenarios give each child transcript rows of its own (4 in `S6/populated`, 36 in
+  `S6/populated-long`) so the two are different states.
 
 The 21 session-view cells used to be in that list. They are not any more: the app now
 declares `session-populated` and the rest, and a declared skip is honoured only while the

@@ -1,8 +1,8 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { ArrowLeft, Search } from "lucide-react-native";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { TextInput } from "react-native";
-import { Text, useWindowDimensions, View } from "react-native";
+import { ScrollView, Text, useWindowDimensions, View } from "react-native";
 import { useListState } from "@/features/auth/connection-provider";
 import { blockingPending } from "@/features/session/asks";
 import { composerChipLabels } from "@/features/session/chip-labels";
@@ -56,6 +56,16 @@ import {
 	Screen,
 	Skeleton,
 } from "@/ui/components";
+import { useCompactChrome } from "@/ui/layout";
+import {
+	COMPACT_COMPOSER_SHARE,
+	COMPACT_OPEN_PANEL_SHARE,
+	compactChromeShare,
+	type RegionKey,
+	regionOrder,
+	snapRegion,
+} from "@/ui/size-class";
+import { useTextScale } from "@/ui/text-scale-provider";
 
 /**
  * The session view (`docs/ux/flows.md` F-6): the product's core screen.
@@ -360,6 +370,24 @@ export default function Session() {
 	 * header no longer carries a status chip for the name to compete with. */
 	const { width: viewportWidth, height: viewportHeight } =
 		useWindowDimensions();
+	/* Short landscape only, and decided from the SCREEN's orientation so a keyboard-
+	 *  shortened portrait window never takes this branch (`compactChromeFor`). */
+	const compact = useCompactChrome();
+	const { effectiveScale } = useTextScale();
+	/* The secondary region's own scroller, and what it needs to behave: each child's
+	 *  measured height and offset (so the closed region can be cut on a ROW boundary and
+	 *  an opened panel can be scrolled to its header). `null` heights mean "not measured
+	 *  yet", and the region then uses its plain cap for one frame. */
+	const regionRef = useRef<ScrollView | null>(null);
+	const regionLayout = useRef<
+		Partial<Record<RegionKey, { y: number; h: number }>>
+	>({});
+	/* Whether the region is scrolled to its end: the cue below it says there is MORE
+	 *  and must go away once there is not. */
+	const [regionAtBottom, setRegionAtBottom] = useState(false);
+	const [regionHeights, setRegionHeights] = useState<
+		Partial<Record<RegionKey, number>>
+	>({});
 	const headerTitle =
 		title.length > 0
 			? middleTruncate(
@@ -371,27 +399,38 @@ export default function Session() {
 	/* The panels, in one place: they sit between the transcript and the composer.
 	 * One panel at a time, because a phone's column has room for one and a tablet's is
 	 * still one column (`src/ui/column.ts`). */
-	const panels = (
-		<>
-			<TodosPanel
-				testID={SURFACE.todosPanel}
-				todos={todos}
-				open={openPanel === "todos"}
-				onToggle={() => setOpenPanel(openPanel === "todos" ? null : "todos")}
-				heldShut={pending !== null}
-			/>
-			<SubagentsPanel
-				testID={SURFACE.subagentsPanel}
-				subagents={subagents}
-				viewportHeight={viewportHeight}
-				open={openPanel === "subagents"}
-				onToggle={() =>
-					setOpenPanel(openPanel === "subagents" ? null : "subagents")
-				}
-				onOpenAgent={openAgent}
-			/>
-		</>
+	const todosPanel = (
+		<TodosPanel
+			testID={SURFACE.todosPanel}
+			todos={todos}
+			open={openPanel === "todos"}
+			onToggle={() => setOpenPanel(openPanel === "todos" ? null : "todos")}
+			heldShut={pending !== null}
+			compact={compact}
+		/>
 	);
+	const subagentsPanel = (
+		<SubagentsPanel
+			testID={SURFACE.subagentsPanel}
+			subagents={subagents}
+			viewportHeight={viewportHeight}
+			compact={compact}
+			open={openPanel === "subagents"}
+			onToggle={() =>
+				setOpenPanel(openPanel === "subagents" ? null : "subagents")
+			}
+			onOpenAgent={openAgent}
+		/>
+	);
+	const workingLineView =
+		working !== null ? (
+			<WorkingLine
+				activity={working.activity}
+				startedS={working.startedS}
+				compact={compact}
+				testID={SURFACE.sessionWorkingLine}
+			/>
+		) : null;
 
 	const transcript =
 		runtime.source.reason === "no-route" ? (
@@ -461,9 +500,153 @@ export default function Session() {
 			</View>
 		);
 
+	/* The status strip: every number the reader needs while reading, in one
+			    band. Only rendered when the wire reports something — a strip that showed
+			    `—` for unknown would be a row of noise on every session. `min-h-11` is
+			    the chip's own touch floor, so moving the chip in here costs no target
+			    size and the band is one row instead of two.
+
+			    deferred — the chip's own breathing room (design round 2 D15): the chip is
+			    44 pt in a 44 pt band, so its edges touch the header and the hairline.
+			    Padding the band costs 8 pt of a phone's height at exactly the moment the
+			    composer is being pushed off a 568 pt screen (D11), and a 36 pt visual pill
+			    inside a 44 pt target changes `Chip`'s shape for every chip in the app — a
+			    kit decision, recorded here for the kit rather than taken in this screen. */
+	/* COMPACT: the context read and the cost stay (they are information, not a
+	 *  control), on a one-line band; the subagents CHIP is dropped because the roster
+	 *  panel directly below carries the same lever and the same counts in its own
+	 *  header, so nothing becomes unreachable — it is one control, not two. */
+	const showChip = !compact && subagents.total > 0;
+	const statusStrip =
+		hasStatus && (!compact || projection?.context_tokens != null) ? (
+			<View
+				className={
+					compact
+						? "min-h-8 flex-row flex-wrap items-center gap-2 border-b border-hairline px-4 py-1"
+						: "min-h-11 flex-row flex-wrap items-center gap-2 border-b border-hairline px-4"
+				}
+			>
+				{projection?.context_tokens != null &&
+				projection?.context_window != null ? (
+					<>
+						<Text
+							className="text-mono-sm text-ink-dim"
+							testID={SURFACE.sessionContext}
+						>
+							{Math.round(
+								(projection.context_tokens / projection.context_window) * 100,
+							)}
+							{/* `ctx` under 340 pt: `21% context (est.)` beside the cost and the
+						    subagents chip wraps to two lines inside the band, and the cost
+						    then floats between them (design round 2, D17). The abbreviation
+						    is the standard one and loses nothing; above 340 pt the word
+						    stays whole. */}
+							{viewportWidth < 340 ? "% ctx" : "% context"}
+							{projection.context_is_estimate === true ? " (est.)" : ""}
+						</Text>
+						{projection.cumulative_parent_cost != null ? (
+							<Text className="text-mono-sm text-ink-dim">
+								${projection.cumulative_parent_cost.toFixed(2)}
+							</Text>
+						) : null}
+					</>
+				) : null}
+				<View className="flex-1" />
+				{showChip ? (
+					<Chip
+						// Names the unit it counts, in the panel's own words, so the chip
+						// and the panel header cannot disagree: "1/6 agents" read as a
+						// fraction of something the reader could not see.
+						label={`${subagents.running} of ${subagents.total} running`}
+						onPress={() =>
+							setOpenPanel(openPanel === "subagents" ? null : "subagents")
+						}
+						accessibilityHint="Show the subagents"
+						// The panel lever. Its id is the contract's
+						// (`CONTROL.sessionSubagents`), like every other anchor on this
+						// screen: the drill-down flow addresses them by name, so a name
+						// that lives in the contract cannot drift from the flow.
+						testID={CONTROL.sessionSubagents}
+					/>
+				) : null}
+			</View>
+		) : null;
+
+	/* THE SECONDARY REGION, derived once. Order is urgency-first in compact (a roster
+	 *  with a failed or parked child leads). Heights come from `onLayout`, so the closed
+	 *  cap lands BETWEEN rows (`snapRegion`); while a panel is open the cap is lifted to
+	 *  `COMPACT_OPEN_PANEL_SHARE` so the opened rows are actually on screen — the
+	 *  transcript yields because the reader chose the panel, and closing it restores the
+	 *  reading. The cap is a share of the window and falls with text size
+	 *  (`compactChromeShare`), because the fixed chrome grows with it. */
+	const regionNodes: Record<RegionKey, React.ReactNode> = {
+		working: workingLineView,
+		subagents: subagentsPanel,
+		todos: todosPanel,
+		strip: compact ? statusStrip : null,
+	};
+	const regionItems = regionOrder(
+		compact,
+		subagents.clauses.some(
+			(clause) => clause.status === "failed" || clause.status === "parked",
+		),
+	)
+		.map((key) => ({ key, node: regionNodes[key] }))
+		.filter((item) => item.node !== null);
+	const panelOpen = openPanel !== null;
+	const regionCap = compact
+		? Math.round(
+				viewportHeight *
+					(panelOpen
+						? COMPACT_OPEN_PANEL_SHARE
+						: compactChromeShare(effectiveScale)),
+			)
+		: 0;
+	const regionSnap = compact
+		? snapRegion(
+				regionItems.map((item) => regionHeights[item.key] ?? 0),
+				regionCap,
+				// The cue is a meta-size line that grows with the reader's text (measured 37.6 pt
+				// at 200 %), so its reserve scales: 19 pt per unit of scale.
+				panelOpen ? 0 : Math.round(19 * effectiveScale),
+			)
+		: { height: 0, hidden: 0 };
+	// Wide: pinned to its content (`flexGrow/flexShrink: 0`) so the always-rendered
+	// ScrollView stays exactly the plain siblings this column has always been; the
+	// web default (`flexShrink: 1`) would let it shrink below its content.
+	/* Content taller than the region's cap, by the measured row heights: true both
+	 *  when the closed cut hides whole rows and when an opened panel is taller than the
+	 *  lifted cap. */
+	const regionContent = regionItems.reduce(
+		(sum, item) => sum + (regionHeights[item.key] ?? 0),
+		0,
+	);
+	const regionOverflows =
+		compact && regionContent > (panelOpen ? regionCap : regionSnap.height) + 1;
+	const regionStyle = compact
+		? { maxHeight: panelOpen ? regionCap : regionSnap.height || regionCap }
+		: ({ flexGrow: 0, flexShrink: 0 } as const);
+
+	/* Opening a panel scrolls the region to that panel's header, so the rows the
+	 *  reader asked for are the thing on screen — before this, the roster opened below
+	 *  the fold and the only change was the caret glyph (design D1, UX U2). */
+	// biome-ignore lint/correctness/useExhaustiveDependencies: a change of panel or mode is the trigger
+	useEffect(() => {
+		setRegionAtBottom(false);
+	}, [compact, openPanel]);
+
+	useEffect(() => {
+		if (!compact || openPanel === null) return;
+		const key: RegionKey = openPanel === "todos" ? "todos" : "subagents";
+		const at = regionLayout.current[key];
+		if (at !== undefined)
+			regionRef.current?.scrollTo({ y: Math.max(0, at.y), animated: false });
+	}, [compact, openPanel]);
+
 	return (
 		<Screen
 			title={headerTitle}
+			compact={compact}
 			// The transcript owns its own scrolling, so the screen must not add a
 			// second scroller around it.
 			scroll={false}
@@ -505,65 +688,7 @@ export default function Session() {
 				barVisible={find.barVisible}
 				caveat={runtime.olderThanLoaded}
 			/>
-			{/* The status strip: every number the reader needs while reading, in one
-			    band. Only rendered when the wire reports something — a strip that showed
-			    `—` for unknown would be a row of noise on every session. `min-h-11` is
-			    the chip's own touch floor, so moving the chip in here costs no target
-			    size and the band is one row instead of two.
-
-			    deferred — the chip's own breathing room (design round 2 D15): the chip is
-			    44 pt in a 44 pt band, so its edges touch the header and the hairline.
-			    Padding the band costs 8 pt of a phone's height at exactly the moment the
-			    composer is being pushed off a 568 pt screen (D11), and a 36 pt visual pill
-			    inside a 44 pt target changes `Chip`'s shape for every chip in the app — a
-			    kit decision, recorded here for the kit rather than taken in this screen. */}
-			{hasStatus ? (
-				<View className="min-h-11 flex-row flex-wrap items-center gap-2 border-b border-hairline px-4">
-					{projection?.context_tokens != null &&
-					projection?.context_window != null ? (
-						<>
-							<Text
-								className="text-mono-sm text-ink-dim"
-								testID={SURFACE.sessionContext}
-							>
-								{Math.round(
-									(projection.context_tokens / projection.context_window) * 100,
-								)}
-								{/* `ctx` under 340 pt: `21% context (est.)` beside the cost and the
-								    subagents chip wraps to two lines inside the band, and the cost
-								    then floats between them (design round 2, D17). The abbreviation
-								    is the standard one and loses nothing; above 340 pt the word
-								    stays whole. */}
-								{viewportWidth < 340 ? "% ctx" : "% context"}
-								{projection.context_is_estimate === true ? " (est.)" : ""}
-							</Text>
-							{projection.cumulative_parent_cost != null ? (
-								<Text className="text-mono-sm text-ink-dim">
-									${projection.cumulative_parent_cost.toFixed(2)}
-								</Text>
-							) : null}
-						</>
-					) : null}
-					<View className="flex-1" />
-					{subagents.total > 0 ? (
-						<Chip
-							// Names the unit it counts, in the panel's own words, so the chip
-							// and the panel header cannot disagree: "1/6 agents" read as a
-							// fraction of something the reader could not see.
-							label={`${subagents.running} of ${subagents.total} running`}
-							onPress={() =>
-								setOpenPanel(openPanel === "subagents" ? null : "subagents")
-							}
-							accessibilityHint="Show the subagents"
-							// The panel lever. Its id is the contract's
-							// (`CONTROL.sessionSubagents`), like every other anchor on this
-							// screen: the drill-down flow addresses them by name, so a name
-							// that lives in the contract cannot drift from the flow.
-							testID={CONTROL.sessionSubagents}
-						/>
-					) : null}
-				</View>
-			) : null}
+			{compact ? null : statusStrip}
 
 			{/* The transcript, the panels and the composer, in one measure-capped
 			    column. `Screen` applies the cap (`src/ui/column.ts`): a 1366 pt tablet
@@ -575,13 +700,64 @@ export default function Session() {
 			<View className="flex-1">
 				<View className="flex-1" testID={SURFACE.sessionColumn}>
 					{transcript}
-					{panels}
-					{working !== null ? (
-						<WorkingLine
-							activity={working.activity}
-							startedS={working.startedS}
-							testID={SURFACE.sessionWorkingLine}
-						/>
+					{/* SECONDARY CHROME. Wide: the panels and the working line are plain
+					    siblings, exactly the column this screen has always had. Short
+					    landscape: the SAME children go into ONE scroller — the status strip,
+					    the roster and the tasks panel, the working line — cut on a ROW
+					    boundary (never through a line of text) with a `+N more` cue when
+					    something is below, ordered urgent-first, and lifted while a panel is
+					    open so the reader sees what they opened. This is the only scroller in
+					    the region (the panels' bodies stop scrolling themselves in compact),
+					    so a thumb never has to pick between two. The ScrollView is rendered
+					    in BOTH modes with only its style and `scrollEnabled` changing, so
+					    rotating does not unmount the panels or the composer below. */}
+					<ScrollView
+						ref={regionRef}
+						style={regionStyle}
+						scrollEnabled={compact}
+						scrollEventThrottle={64}
+						onScroll={(event) => {
+							const { contentOffset, contentSize, layoutMeasurement } =
+								event.nativeEvent;
+							setRegionAtBottom(
+								contentOffset.y + layoutMeasurement.height >=
+									contentSize.height - 2,
+							);
+						}}
+						nestedScrollEnabled
+						testID={compact ? SURFACE.sessionSecondaryChrome : undefined}
+					>
+						{regionItems.map(({ key, node }) => (
+							<View
+								key={key}
+								onLayout={(event) => {
+									const { y, height } = event.nativeEvent.layout;
+									regionLayout.current[key] = { y, h: height };
+									setRegionHeights((prev) =>
+										prev[key] === Math.round(height)
+											? prev
+											: { ...prev, [key]: Math.round(height) },
+									);
+								}}
+							>
+								{node}
+							</View>
+						))}
+					</ScrollView>
+					{/* NEUTRAL wording on purpose: `hidden` counts the region's ROWS (a panel
+					    is one row whatever it holds), which a reader cannot map to "agents",
+					    so a number here read as a miscount (UX). It is a cue, not a tally —
+					    and it leaves once the region is scrolled to its end. While a panel is
+					    OPEN the cap is a share of the window and may land inside an opened row;
+					    the region is a scroller and the cue is shown, which is the truthful
+					    signal that the cut is not the end. */}
+					{compact && regionOverflows && !regionAtBottom ? (
+						<Text
+							className="px-4 pb-1 text-meta text-ink-dim"
+							testID={SURFACE.sessionSecondaryMore}
+						>
+							more below · scroll
+						</Text>
 					) : null}
 					{/* The find navigate bar. It sits directly above the composer's stack
 					    (thumb reach, U-31) and BELOW the panels — and above the pending
@@ -655,6 +831,15 @@ export default function Session() {
 					</View>
 
 					<Composer
+						compact={
+							compact
+								? {
+										maxHeight: Math.round(
+											viewportHeight * COMPACT_COMPOSER_SHARE,
+										),
+									}
+								: null
+						}
 						testID={SURFACE.sessionComposer}
 						controls={composer.controls}
 						draft={composer.draft}

@@ -52,9 +52,11 @@ const SURFACES = [
 	},
 	{
 		file: "dialog.tsx",
-		anchor: "className={DIALOG_SURFACE_CLASS}",
+		/* The carrier, not the surface: the inset is PADDING on a wrapper because U-42
+		 *  reads a margin of the same size as an off-scale step (32 landscape FAILs). */
+		anchor: 'className="w-full items-center"',
 		why: "a wide dialog surface reaches both side bands, taking its title and its actions with it",
-		terms: ["marginLeft: insets.left", "marginRight: insets.right"],
+		terms: ["paddingLeft: insets.left", "paddingRight: insets.right"],
 	},
 	{
 		file: "toast.tsx",

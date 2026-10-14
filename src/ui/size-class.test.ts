@@ -1,12 +1,16 @@
 import { describe, expect, it } from "vitest";
 
 import {
+	compactChromeFor,
+	compactChromeShare,
 	HEADER_STACK_WIDTH,
 	headerStacks,
 	headerStackWidth,
 	layoutFor,
+	regionOrder,
 	SPLIT_MIN_HEIGHT,
 	sidebarFooterScrolls,
+	snapRegion,
 } from "@/ui/size-class";
 import { LARGE_TEXT_SCALE } from "@/ui/text-scale";
 
@@ -161,5 +165,151 @@ describe("headerStackWidth", () => {
 	it("widens with further digits rather than clamping", () => {
 		expect(headerStackWidth(100, 99)).toBeGreaterThan(headerStackWidth(99, 99));
 		expect(headerStackWidth(9, 100)).toBeGreaterThan(headerStackWidth(9, 99));
+	});
+});
+
+describe("compactChromeFor", () => {
+	const screen = (width: number, height: number) => ({ width, height });
+
+	it("is on for a phone physically on its side, at every short landscape size", () => {
+		for (const [w, h] of [
+			[844, 390],
+			[915, 412],
+			[568, 320],
+		] as const) {
+			expect(
+				compactChromeFor({ window: screen(w, h), screen: screen(w, h) }),
+			).toBe(true);
+		}
+	});
+
+	it("stays off for portrait phones and portrait tablets", () => {
+		for (const [w, h] of [
+			[390, 844],
+			[320, 568],
+			[834, 1112],
+		] as const) {
+			expect(
+				compactChromeFor({ window: screen(w, h), screen: screen(w, h) }),
+			).toBe(false);
+		}
+	});
+
+	it("stays off for a landscape tablet that has the room", () => {
+		expect(
+			compactChromeFor({
+				window: screen(1112, 834),
+				screen: screen(1112, 834),
+			}),
+		).toBe(false);
+		expect(
+			compactChromeFor({
+				window: screen(1366, 1024),
+				screen: screen(1366, 1024),
+			}),
+		).toBe(false);
+	});
+
+	it("is NOT fooled by a keyboard-shortened portrait window", () => {
+		// 390x844 portrait with the keyboard up: the WINDOW is 390x300 (wider than
+		// tall) but the physical screen is still portrait. Deciding from the window
+		// would flip the whole screen to the landscape layout on every keystroke.
+		expect(
+			compactChromeFor({ window: screen(390, 300), screen: screen(390, 844) }),
+		).toBe(false);
+		expect(
+			compactChromeFor({ window: screen(320, 200), screen: screen(320, 568) }),
+		).toBe(false);
+	});
+
+	it("keeps the compact form while a landscape keyboard shortens the window further", () => {
+		expect(
+			compactChromeFor({ window: screen(844, 200), screen: screen(844, 390) }),
+		).toBe(true);
+	});
+});
+
+describe("compact secondary region", () => {
+	it("shrinks its share as text grows, inside the 0.27-0.34 band", () => {
+		expect(compactChromeShare(1)).toBeCloseTo(0.34);
+		expect(compactChromeShare(1.5)).toBeCloseTo(0.305);
+		expect(compactChromeShare(2)).toBeCloseTo(0.27);
+		expect(compactChromeShare(3)).toBeCloseTo(0.27);
+		expect(compactChromeShare(0.5)).toBeCloseTo(0.34);
+	});
+
+	it("keeps the transcript at >= 96 pt at 844x390 for 100 %, 150 % and 200 % text", () => {
+		// header + composer measured on the rig: 157 / 161 / 177 pt, plus the 4 pt gap.
+		for (const [scale, fixed] of [
+			[1, 157],
+			[1.5, 161],
+			[2, 177],
+		] as const) {
+			const region = Math.round(390 * compactChromeShare(scale));
+			expect(390 - fixed - 4 - region).toBeGreaterThanOrEqual(96);
+		}
+	});
+
+	it("cuts on a row boundary and reports what is hidden", () => {
+		expect(snapRegion([49, 72, 52, 44], 400, 24)).toEqual({
+			height: 217,
+			hidden: 0,
+		});
+		expect(snapRegion([49, 72, 52, 44], 117, 24)).toEqual({
+			height: 49,
+			hidden: 3,
+		});
+		expect(snapRegion([49, 72, 52, 44], 150, 24)).toEqual({
+			height: 121,
+			hidden: 2,
+		});
+	});
+
+	it("shows the first row whole when the cap holds it, even if the cue then no longer fits", () => {
+		// a wrapped roster header (89 pt) in a 111 pt cap with a 48 pt cue: 111 - 48 = 63 < 89
+		expect(snapRegion([89, 44, 52], 111, 48)).toEqual({
+			height: 89,
+			hidden: 2,
+		});
+	});
+
+	it("only cuts a first row that is taller than the whole cap", () => {
+		expect(snapRegion([200, 40], 117, 24)).toEqual({ height: 117, hidden: 1 });
+	});
+
+	it("ignores rows that are not rendered", () => {
+		expect(snapRegion([0, 49, 0, 52], 117, 24)).toEqual({
+			height: 101,
+			hidden: 0,
+		});
+	});
+});
+
+describe("regionOrder", () => {
+	it("keeps the wide column's order exactly", () => {
+		expect(regionOrder(false, false)).toEqual([
+			"todos",
+			"subagents",
+			"working",
+		]);
+		expect(regionOrder(false, true)).toEqual(["todos", "subagents", "working"]);
+	});
+
+	it("leads the compact region with live work, the strip before the tasks list", () => {
+		expect(regionOrder(true, false)).toEqual([
+			"working",
+			"subagents",
+			"strip",
+			"todos",
+		]);
+	});
+
+	it("lifts a roster with a failed or parked child above the working line", () => {
+		expect(regionOrder(true, true)).toEqual([
+			"subagents",
+			"working",
+			"strip",
+			"todos",
+		]);
 	});
 });

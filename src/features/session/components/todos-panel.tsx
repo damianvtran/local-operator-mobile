@@ -27,6 +27,9 @@ export type TodosPanelProps = {
 	onToggle: () => void;
 	/** Held shut while a decision is pending: the body does not render. */
 	heldShut: boolean;
+	/** Short landscape: the body is no longer its own scroller (the secondary region
+	 *  owns the one scroll), but stays a ScrollView so the tree keeps its shape. */
+	compact?: boolean;
 	testID: string;
 };
 
@@ -35,6 +38,7 @@ export const TodosPanel = ({
 	open,
 	onToggle,
 	heldShut,
+	compact = false,
 	testID,
 }: TodosPanelProps) => {
 	// Nothing to say. An empty header would claim a list the session does not have.
@@ -78,7 +82,11 @@ export const TodosPanel = ({
 			{expanded ? (
 				// Capped and internally scrollable: the panel must never be able to push
 				// the composer off screen (the v1 rule in F-6.3).
-				<ScrollView className="max-h-64" testID={SURFACE.todosBody}>
+				<ScrollView
+					className={compact ? undefined : "max-h-64"}
+					scrollEnabled={!compact}
+					testID={SURFACE.todosBody}
+				>
 					{todos.phases.map((phase) => (
 						<View key={phase.name} className="pb-1">
 							{/* A phase named exactly `Todos` is the TUI's implicit carrier and

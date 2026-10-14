@@ -216,6 +216,12 @@ export type ComposerProps = {
 	 *  home's New chat). The third mechanical prop beyond the spec's two chips:
 	 *  § 4.3 requires New chat to focus the composer, and focus needs a ref. */
 	fieldRef?: React.RefObject<TextInput | null>;
+	/** Short landscape (`compactChromeFor`): the label stops painting (the placeholder
+	 *  and the accessible name still say what the field is), the paddings tighten, and
+	 *  the composer is BOUNDED to `maxHeight` and scrolls internally — so a 200 % text
+	 *  size cannot push the composer, or the model and effort chips in it, off a 390 pt
+	 *  screen. Nothing is removed: every control stays in the one scrollable body. */
+	compact?: { maxHeight: number } | null;
 	testID: string;
 };
 
@@ -351,6 +357,7 @@ export const Composer = ({
 	slashQuery,
 	slashSheet,
 	fieldRef,
+	compact = null,
 	testID,
 }: ComposerProps) => {
 	const attachmentSummary = useMemo(
@@ -527,12 +534,10 @@ export const Composer = ({
 			</>
 		);
 
-	return (
-		<View
-			ref={rootRef}
-			className="border-t border-hairline px-4 pt-2 pb-2"
-			testID={testID}
-		>
+	/* Everything the composer shows, in ONE fragment so the compact form can put the
+	 *  whole of it inside a bounded scroller without a second copy of any control. */
+	const content = (
+		<>
 			<ComposerStateMarkers controls={controls} />
 			{/* Attachments, above the field: an attachment changes what send means, so it
 			    is read before the control that is pressed. */}
@@ -669,6 +674,7 @@ export const Composer = ({
 				<View className="min-w-0 flex-1">
 					<Textarea
 						label="Message"
+						hideLabel={compact !== null}
 						value={draft}
 						onChangeText={onDraftChange}
 						placeholder={COMPOSER_COPY.placeholder}
@@ -839,7 +845,13 @@ export const Composer = ({
 			    (measured: `composer-effort-chip` 267.2 → 336.4 at 150 %, 335.6 → 419.2 at
 			    200 %) — a control no finger can reach. Wrapping costs a second line only
 			    at the scales that need one, and takes nothing away at 100 %. */}
-			<View className="flex-row flex-wrap items-center gap-2 pt-2">
+			<View
+				className={
+					compact === null
+						? "flex-row flex-wrap items-center gap-2 pt-2"
+						: "flex-row flex-wrap items-center gap-2 pt-1"
+				}
+			>
 				{leadingChip}
 				{queuedCount > 0 ? (
 					<Text
@@ -939,6 +951,43 @@ export const Composer = ({
 					)}
 				</View>
 			</Sheet>
+		</>
+	);
+
+	return (
+		<View
+			ref={rootRef}
+			className={
+				compact === null
+					? "border-t border-hairline px-4 pt-2 pb-2"
+					: "border-t border-hairline px-4 pt-1 pb-1"
+			}
+			testID={testID}
+		>
+			{/* ONE parent shape in both modes: the ScrollView is always here and only its
+			    style and `scrollEnabled` change. Switching between a fragment and a
+			    ScrollView on rotation would unmount the field, and with it the caret,
+			    the selection, focus, an open attach sheet and the dictation row. In the
+			    wide form it has no height bound, so it is exactly its content's height
+			    and never scrolls. `nestedScrollEnabled` lets the field's own six-line
+			    scroll and this one coexist on Android. */}
+			<ScrollView
+				// Wide: `flexGrow/flexShrink: 0` is what keeps this EXACTLY the old plain
+				// column. A ScrollView defaults to `flexShrink: 1` on the web, which let the
+				// composer shrink and scroll inside a short portrait column where it used to
+				// overflow (measured: composer bottom 1092 -> 857 at 390x844 / 200 %) — a
+				// behaviour change this PR did not mean to make.
+				style={
+					compact === null
+						? { flexGrow: 0, flexShrink: 0 }
+						: { maxHeight: compact.maxHeight }
+				}
+				scrollEnabled={compact !== null}
+				nestedScrollEnabled
+				keyboardShouldPersistTaps="handled"
+			>
+				{content}
+			</ScrollView>
 		</View>
 	);
 };

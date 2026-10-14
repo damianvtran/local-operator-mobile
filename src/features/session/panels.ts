@@ -79,3 +79,52 @@ export const rosterBody = (input: {
 		hiddenRows: Math.max(0, input.rowCount - visibleRows),
 	};
 };
+
+/**
+ * The subagents header's clauses for the compact (short-landscape) form.
+ *
+ * Order is by URGENCY, not by the wire's rank: failed, parked, running, queued,
+ * then the settled statuses. Collapsed, only the ATTENTION three are shown (`queued` and the settled
+ * `done` and `cancelled` are not something a reader acts on from a status line);
+ * `open` = true lists every status (the body's own summary, if a caller wants it); the
+ * subagents header itself passes `false` in both states, because the opened rows carry
+ * each child's status and the accessible name always carries all of them. A clause is never clipped to fit: the region cuts on
+ * row boundaries instead (`snapRegion`).
+ */
+const COMPACT_CLAUSE_ORDER = [
+	"failed",
+	"parked",
+	"running",
+	"queued",
+	"completed",
+	"cancelled",
+] as const;
+/* `queued` is deliberately NOT collapsed-visible: at 200 % the fourth clause is what
+ *  wrapped the header onto a second line that the region then cut through (design D2).
+ *  Failed, parked and running are what a reader acts on; queued is announced in the
+ *  accessible name and shown once the panel is opened. */
+const COMPACT_ATTENTION = new Set<string>(["failed", "parked", "running"]);
+
+export const compactClauses = <T extends { status: string }>(
+	clauses: readonly T[],
+	open: boolean,
+): T[] =>
+	[...clauses]
+		.sort(
+			(left, right) =>
+				COMPACT_CLAUSE_ORDER.indexOf(
+					left.status as (typeof COMPACT_CLAUSE_ORDER)[number],
+				) -
+				COMPACT_CLAUSE_ORDER.indexOf(
+					right.status as (typeof COMPACT_CLAUSE_ORDER)[number],
+				),
+		)
+		.filter((clause) => open || COMPACT_ATTENTION.has(clause.status));
+
+/** A roster the reader must not miss: something failed or is parked. */
+export const rosterNeedsAttention = (
+	clauses: readonly { status: string }[],
+): boolean =>
+	clauses.some(
+		(clause) => clause.status === "failed" || clause.status === "parked",
+	);

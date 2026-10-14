@@ -305,6 +305,10 @@ export const CONTROL = {
 	 *  controls on different surfaces and a flow reaching for one must not be able
 	 *  to land on the other. */
 	sessionSubagents: "session-subagents-chip",
+	/* ABSENT in short landscape (`compactChromeFor`): the status strip moves into the
+	 * secondary region and drops this chip, because the roster header carries the same
+	 * lever. A flow reaching the roster there taps `subagentsDisclosure` — no flow
+	 * references this id today (06-subagent-drilldown.yaml is still a SCENARIO stub). */
 	connectionRetry: "connection-retry",
 	connectionSignIn: "connection-sign-in",
 	connectionConsole: "connection-console",
@@ -537,6 +541,12 @@ export const SURFACE = {
 	projectMilestoneSlashNote: "project-milestone-slash-note",
 	sessionTranscript: "session-transcript",
 	sessionComposer: "session-composer",
+	/** The panels + working line, bounded and internally scrolling in short landscape
+	 *  (`compactChromeFor`); absent elsewhere, where they are plain siblings. */
+	sessionSecondaryChrome: "session-secondary-chrome",
+	/** The `+N more · scroll` cue under the compact secondary region, present only
+	 *  while a whole row is hidden below its fold. */
+	sessionSecondaryMore: "session-secondary-more",
 	/** The composer's attach sheet (one entry point, the sources each build kind
 	 *  actually has). Its rows are the `attach-option-` family below — the rows
 	 *  differ per build kind, the sheet does not. */
@@ -1069,6 +1079,13 @@ export const STATE_MARKER = {
 		populated: "schedule-wake-row-",
 		truncated: SURFACE.schedulesWakesTruncated,
 		"read-error": SURFACE.schedulesWakesUnreadable,
+	},
+	/* The subagent detail route (S6). `populated` is the loaded transcript, rendered
+	 *  only once the child's detail resolved — never while loading and never on the
+	 *  "no longer available" empty, which is its own marker. */
+	subagent: {
+		populated: SURFACE.subagentTranscript,
+		empty: EMPTY.subagent,
 	},
 	computers: {
 		/** The refusal surface, which the set-up path does not render: the one

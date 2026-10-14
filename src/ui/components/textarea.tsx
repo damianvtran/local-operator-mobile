@@ -30,6 +30,11 @@ export type TextareaProps = {
 	placeholder?: string;
 	invalid?: boolean;
 	disabled?: boolean;
+	/** Keep the label as the field's ACCESSIBLE NAME only and do not paint it. For the
+	 *  short-landscape composer, where a visible "Message" line costs a whole text line
+	 *  of a 390 pt screen and the placeholder already says what the field is. The name
+	 *  is never removed: `accessibilityLabel` below still carries it. */
+	hideLabel?: boolean;
 	/** Six lines by default; the composer may raise it, never remove it. */
 	maxLines?: number;
 	/** The most lines a WRAPPED placeholder may add to the field's resting height.
@@ -91,6 +96,7 @@ export const Textarea = ({
 	placeholder,
 	invalid = false,
 	disabled = false,
+	hideLabel = false,
 	maxLines = 6,
 	placeholderMaxLines,
 	onSubmitEditing,
@@ -174,7 +180,9 @@ export const Textarea = ({
 
 	return (
 		<View className="gap-1.5">
-			<Text className="text-body-sm text-ink-muted">{label}</Text>
+			{hideLabel ? null : (
+				<Text className="text-body-sm text-ink-muted">{label}</Text>
+			)}
 			{/* Only while it is the thing on screen: any value hides it, so it can never
 			 *  need room the content is already taking. Zero height and clipped, so it
 			 *  lays out and reports its own height without moving anything — which is why

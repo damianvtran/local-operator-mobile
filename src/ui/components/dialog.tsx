@@ -112,39 +112,46 @@ export const Dialog = ({
 							testID={CONTROL.dialogScrim}
 							onPress={onCancel}
 						/>
+						{/* THE SAFE-AREA BANDS ARE PADDING ON A WRAPPER, NOT A MARGIN ON THE SURFACE.
+						 *  The inset is a device fact (59 pt on a landscape phone), not a spacing
+						 *  decision, and U-42 reads a padding equal to the declared inset as the
+						 *  inset but a MARGIN of the same size as an off-scale step — 32 FAILs on
+						 *  the landscape delete/milestone confirms. So the inset lives on a
+						 *  full-width carrier whose only job is to keep the surface out of the
+						 *  bands, and the surface keeps nothing but its own token spacing. The
+						 *  carrier sits INSIDE the root, so `px-6` (the phone's own margin) is not
+						 *  overridden and the scrim — `absolute inset-0` on the root — still dims
+						 *  the bands. Plain RN styles: identical on web, iOS and Android. */}
 						<View
-							className={DIALOG_SURFACE_CLASS}
-							style={{
-								...shadow,
-								...(maxWidth === null ? {} : { maxWidth }),
-								/* A MARGIN on the surface, not padding on the modal's root. `px-6` on the
-								 *  root is the phone's own margin, and an inline `paddingLeft` would
-								 *  OVERRIDE it rather than add to it; padding the root would also move the
-								 *  scrim, which is `absolute inset-0` on that same box, and leave the
-								 *  band it no longer covers undimmed. The margin is outside the dialog, so
-								 *  both the surface and the band keep the meaning they had. */
-								marginLeft: insets.left,
-								marginRight: insets.right,
-							}}
+							className="w-full items-center"
+							style={{ paddingLeft: insets.left, paddingRight: insets.right }}
 						>
-							<Heading level={2} className="text-title text-ink">
-								{title}
-							</Heading>
-							<Text className="mt-2 text-body-sm text-ink-muted">{body}</Text>
-							<View className="mt-4 flex-row justify-end gap-2">
-								<Button
-									label="Cancel"
-									variant="quiet"
-									testID={CONTROL.dialogCancel}
-									onPress={onCancel}
-								/>
-								<Button
-									label={confirmLabel}
-									variant={destructive ? "danger" : "primary"}
-									loading={busy}
-									testID={CONTROL.dialogConfirm}
-									onPress={onConfirm}
-								/>
+							<View
+								className={DIALOG_SURFACE_CLASS}
+								style={{
+									...shadow,
+									...(maxWidth === null ? {} : { maxWidth }),
+								}}
+							>
+								<Heading level={2} className="text-title text-ink">
+									{title}
+								</Heading>
+								<Text className="mt-2 text-body-sm text-ink-muted">{body}</Text>
+								<View className="mt-4 flex-row justify-end gap-2">
+									<Button
+										label="Cancel"
+										variant="quiet"
+										testID={CONTROL.dialogCancel}
+										onPress={onCancel}
+									/>
+									<Button
+										label={confirmLabel}
+										variant={destructive ? "danger" : "primary"}
+										loading={busy}
+										testID={CONTROL.dialogConfirm}
+										onPress={onConfirm}
+									/>
+								</View>
 							</View>
 						</View>
 					</View>

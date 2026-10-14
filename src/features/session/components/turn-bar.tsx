@@ -43,6 +43,12 @@ export type TurnBarProps = {
 	onToggle: (open: boolean) => void;
 };
 
+/* A detail like "1m 12s" or "38 steps" is ONE fact: breaking it at its space left "12s"
+ *  orphaned on line two at 150 % (design D8). Non-breaking spaces keep each detail whole
+ *  while the ` · ` separators stay breakable. Painted text only — the accessible name
+ *  is built from `barPhrases` and is untouched. */
+const unbreakable = (detail: string): string => detail.replace(/ /g, "\u00A0");
+
 export const TurnBar = ({
 	turnKey,
 	facts,
@@ -66,22 +72,39 @@ export const TurnBar = ({
 				// `numberOfLines`-capped below: a clipped "42s" is a shorter string
 				// that is still a valid duration, which is how a truncated clock
 				// survives review (`components.md` § 7) — the bar wraps instead.
-				className="min-h-12 flex-row items-center gap-1.5 rounded-sm border border-border-control bg-surface px-2.5"
+				className="min-h-12 justify-center rounded-sm border border-border-control bg-surface px-3 py-2"
 			>
-				<Text className="font-mono text-mono-sm text-success" aria-hidden>
-					✓
-				</Text>
-				<Text className="min-w-0 flex-1 text-body-sm text-ink">
-					{outcome}
-					{details.length > 0 ? (
-						<Text className="font-mono text-mono-sm text-ink-dim tabular-nums">
-							{` · ${details.join(" · ")}`}
+				{/* ONE RAIL, AND THE CARET RIDES THE FIRST LINE. The ✓ used to be its own
+				 *  flex column and the caret was centred on the whole row, so once the label
+				 *  wrapped (150 % on a phone) the first line sat 27.8 pt inside the row, the
+				 *  wrapped lines started under the glyph rather than beside it, and the caret
+				 *  floated 15.9 pt off line one — U-41's rail and caret rules. The glyph is
+				 *  now the first RUN of the label's own text, so every line shares the rail,
+				 *  and the row is `items-start` so the caret keys to line one at any scale.
+				 *  The outer Pressable centres this row vertically, which keeps a single-line
+				 *  bar optically centred inside its 48 pt target. */}
+				<View className="flex-row items-start gap-2">
+					<Text className="min-w-0 flex-1 text-body-sm text-ink">
+						<Text className="font-mono text-mono-sm text-success" aria-hidden>
+							{"✓ "}
 						</Text>
-					) : null}
-				</Text>
-				<Text className="font-mono text-mono-sm text-ink-dim" aria-hidden>
-					{open ? "▾" : "▸"}
-				</Text>
+						{outcome}
+						{details.length > 0 ? (
+							<Text className="font-mono text-mono-sm text-ink-dim tabular-nums">
+								{` · ${details.map(unbreakable).join(" · ")}`}
+							</Text>
+						) : null}
+					</Text>
+					{/* The caret is wrapped in the label's OWN type role, the way the label wraps
+					 *  its ✓: both lines then have the body-sm line box, and the caret's centre
+					 *  is the first line's centre by construction rather than 4 pt off at 200 %
+					 *  (a bare mono-sm caret has a shorter line box than the body-sm label). */}
+					<Text className="text-body-sm" aria-hidden>
+						<Text className="font-mono text-mono-sm text-ink-dim">
+							{open ? "▾" : "▸"}
+						</Text>
+					</Text>
+				</View>
 			</Pressable>
 		</View>
 	);
