@@ -1070,6 +1070,39 @@ export const IDENTICAL_FRAME_EXEMPTIONS: IdenticalFrameClass[] = [
 			"digest still carries the landed transcript, which is the same-bytes-different-" +
 			"content shape this entry describes.",
 	},
+	{
+		// EXACTLY the ten cells the nightly produced (run 38506995844, head 1c18c160) and no
+		// wider — no union with the iphone-se S5 entry above and no unobserved sibling — so
+		// a genuine collapse among these cells at another device or scale is still caught
+		// by the containment rule, and an eleventh cell joining the group still fails.
+		cells: [
+			"S5/populated",
+			"S5/queued",
+			"S5/rail",
+			"S5/rail-deep",
+			"S5/supplement-empty",
+			"S5/supplement-failed",
+			"S5/supplement-files",
+			"S5/supplement-populated",
+			"S5/supplement-preparing",
+			"S5/voice",
+		],
+		reason:
+			"viewport-filled-by-chrome at iphone-15-landscape / 200 % (844×390, both themes): the " +
+			"session title wraps to two lines (~41 px each), then a search icon and the composer fill " +
+			"the whole viewport, so ZERO transcript rows are visible and the PNG is the same chrome " +
+			"for all ten cells — measured as one byte-identical group per theme. The same ten cells " +
+			"are distinct at 100 %, 135 % and 150 % on this device, where only already-declared " +
+			"groups collide. The content differs (each cell reaches its own marker), which is what " +
+			"makes this a limit of the camera rather than a collapse. THIS ENTRY HIDES A " +
+			"READER-FACING CONDITION: in landscape at 200 % text there is no transcript above the " +
+			"fold at all, which is the same family as D3 in " +
+			"docs/ux/audits/2026-10-11-full-surface-pass.md (short viewports, text sliced or " +
+			"displaced at the fold), whose product call is deferred. Declaring the cells makes the " +
+			"capture gate stop failing on it; it does NOT fix it, and the entry should be removed " +
+			"once layout at that viewport keeps a transcript row in view. Deliberately a separate " +
+			"entry from the iphone-se S5 one: that reason makes claims about a 320 px column.",
+	},
 ];
 
 /**
