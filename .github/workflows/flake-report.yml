@@ -1,0 +1,39 @@
+name: Flake report
+
+# A weekly read of the Actions history for results that changed their mind about
+# the SAME code — and for the nightly Maestro runs that only went green on their
+# one re-run (a warning annotation nothing else reads). It costs one small Linux job
+# and no checkout of the app's dependencies: the script is plain Node over `gh api`.
+# It only writes a job summary; it never opens an issue and never fails, because a
+# report that can turn red is one more flaky thing. Read
+# scripts/ci/flake-report.ts for what counts and what deliberately does not.
+
+on:
+  schedule:
+    # Monday, after the weekend's nightlies and the Monday CI sweep (06:00).
+    - cron: "30 7 * * 1"
+  workflow_dispatch:
+    inputs:
+      days:
+        description: "How many days of history to read"
+        default: "7"
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  report:
+    name: Flake report
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - name: Read the history and write the summary
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DAYS: ${{ inputs.days || '7' }}
+        run: node scripts/ci/flake-report.ts "$DAYS"

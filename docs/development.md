@@ -57,6 +57,57 @@ below.
 `pnpm theme:check` fails when they are stale, which is what stops the app and the
 design kit drifting apart. Never hand-edit a generated file.
 
+## Flake rules
+
+A test that fails once in fifty runs costs more than one that fails every time: it
+gets re-run, then ignored, then trusted less. These are the rules every test, probe
+and CI step here follows. Each one is a failure this repository has already had.
+
+- **Never sleep to wait for something.** Wait on the condition — the element
+  (`extendedWaitUntil` / `scrollUntilVisible` with a timeout in a Maestro flow), the
+  event, the port file — with a *ceiling*. A ceiling returns the moment the thing
+  happens, so raising one costs nothing on a healthy run; a sleep costs its full
+  length every time and still fails on a slow one. A fixed sleep is acceptable only
+  to let a negative settle ("no further request arrives"), and then it asserts an
+  absence, not a presence.
+- **Bound everything, and make the outer bound longer than the inner one.** Two
+  nested timeouts fire in the order of their size, and the shorter one decides which
+  *reason* the log shows. `launchBoundMs` in `tools/lib/chrome.ts` exists so the
+  caller's bound is derived from the launcher's, not guessed beside it.
+- **Do not let one failure wear another's name.** A browser that never started must
+  not surface as "the wedged cell did not fail with its deadline". Assert the
+  precondition first, as its own check, so the red names the cause
+  (`tools/mock-relay/verify.ts`, "got a browser").
+- **Unique ports, directories and ids per test.** Listen on port `0` and read the
+  port back; make temp directories with `mkdtemp` under a pid-stamped root; never
+  hard-code `3000`/`8081` or a path under `/tmp`. Two suites on one machine — or one
+  suite twice — must not be able to collide.
+- **No real wall-clock assertions.** Do not assert "took at least/under N ms" on a
+  shared runner; inject the clock (`now: () => …`) or step it with fake timers. If a
+  real elapsed time is the property (a deadline that must fire), assert a wide band
+  and print the measured value in the failure message.
+- **Reset what you set.** A test that changes `process.env`, `TZ`, the locale, the
+  working directory or a module-level singleton restores it in `afterEach`, not at
+  the end of the happy path — the next test file in the same worker inherits it.
+- **Real child processes are fixtures with an owner.** Start them with a recorded
+  pid, kill the *group*, and assert nothing survives (`reap` in `tools/lib/chrome.ts`).
+  A test that leaves a process running is a flake in the next test.
+- **An emulator or simulator is not a unit.** `sys.boot_completed` does not mean the
+  device will stay reachable: the nightly gates on consecutive good `adb` probes
+  (`scripts/ci/await-emulator-ready.sh`) before the first flow, and that gate fails
+  loudly when it times out rather than retrying. The nightly's one re-run (ADR 0003)
+  stays, but it is not a reason to skip the gate: a flake that "only" costs a re-run
+  still hides behind a green job.
+- **Never paper over a flake.** No blanket retries, no `skip`/`xfail`, no widening a
+  tolerance until it passes. A retry or a longer wait is justified only for an
+  *external* cause (a runner that is slow to start a browser or boot an emulator), and
+  then it carries a comment naming the measurement that justified it.
+
+`.github/workflows/flake-report.yml` reads the Actions history once a week and writes
+a summary of the results that changed their mind about the same commit, and of
+nightlies that only passed on their re-run (`scripts/ci/flake-report.ts` says what
+counts). It reports; it never fails. Read it when a re-run "fixed" something.
+
 ## Looking at a change
 
 A green suite says the code does what you expected; it does not say the screen
