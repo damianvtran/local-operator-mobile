@@ -139,9 +139,13 @@ budget's three seconds per cell — not because the deadline is frame-derived. T
 capture step is
 bound at 160, which is above that
 derived deadline — so the step cannot cut short the budget the run computes for
-itself — and ~1.4x the measured cost. The audit runs at 1.25 s/cell, so it is
-~63 min and its step is bound at 70. The job holds its parts:
-`install + export + capture 160 + audit 70 < 240`.
+itself — and ~1.4x the measured cost. The audit's rate is its own, not the
+capture's: its run measured 1.47 s/cell — killed at the old 70-minute bound with
+2,870 of 3,024 cells done in 70m12s = 4,212 s (run 38530472075) — so 3024 cells x
+1.47 s = 4,445 s ≈ 74 min, and its step is bound at 90. The step caps now sum
+ABOVE the job's 240 on paper (`160 + 90 = 250`, where they summed to 230 of 240
+before this change); measured, the job runs ~111 min of capture + ~74 min of
+audit ≈ 185 min. Re-derive the job cap if either step's bound is raised again.
 
 The capture states its own device coverage — which declared profiles it covered
 and which it did not, by name — in the plan block, beside the run's verdict, in

@@ -4,6 +4,11 @@ import { createServer } from "node:net";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import {
+	auditBoundProblem,
+	auditPlanMinutes,
+	coreAuditBoundMinutes,
+} from "./audit-bound.ts";
 
 /**
  * THE FIGURES THE DOCUMENTS STATE ARE THE PLAN THE HARNESS PRINTS.
@@ -432,5 +437,29 @@ describe("the figures in the tree are the plan the harness prints", () => {
 		for (const [branch, count] of Object.entries(matched)) {
 			expect(`${branch}:${count > 0}`).toBe(`${branch}:true`);
 		}
+	});
+});
+
+describe("the audit step bound holds the plan it audits", () => {
+	it("holds the core plan and rejects a shorter bound", () => {
+		const known = plans;
+		expect(known).not.toBeNull();
+		const workflowPath = join(root, ".github/workflows/e2e.yml");
+		const workflow = readFileSync(workflowPath, "utf8");
+		const bound = coreAuditBoundMinutes(workflow);
+		expect(bound, "no core audit timeout-minutes").not.toBeNull();
+		const cells = known?.core.cells ?? 0;
+		expect(cells).toBeGreaterThan(0);
+		expect(auditBoundProblem(cells, bound)).toBeNull();
+		/* NEGATIVE CONTROL, because a guard that cannot fail is not a guard: a
+		 * bound just below the plan's own cost must be rejected, and one at the
+		 * requirement accepted — so a reject-everything bug fails this too. */
+		const required = auditPlanMinutes(cells);
+		const justBelow = Math.floor(required);
+		expect(justBelow).toBeLessThan(required);
+		expect(auditBoundProblem(cells, justBelow)).not.toBeNull();
+		expect(auditBoundProblem(cells, Math.ceil(required))).toBeNull();
+		/* And the extraction fails closed on a workflow it cannot read. */
+		expect(coreAuditBoundMinutes("jobs: {}")).toBeNull();
 	});
 });

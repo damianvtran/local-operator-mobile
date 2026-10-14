@@ -630,11 +630,14 @@ jobs:
     # inside the bound (`160 + 70 = 230 < 240`). The per-push steps carry the same
     # relationship: capture
     # 55 against a derived 3024 s (50.4 min) and audit 25 against 1008 x 1.25 s (21 min).
-    # The audit runs at 1.25 s/cell (250 of the 256 cells the tier held then in 312 s, run
-    # 37167390506), so `core` is 3024 x 1.25 s = 3,780 s ≈ 63 min and its step bound is 70.
-    # The job bound holds its parts, the invariant the other jobs in this file state:
-    # `install + export + capture 160 + audit 70 < 240`. This is a nightly job of ~113 min of
-    # capture and ~63 min of audit inside that bound; it does not run on a pull request.
+    # The per-push audit's rate is 1.25 s/cell (250 of the 256 cells the tier held then
+    # in 312 s, run 37167390506) — but `core` is not that sample: its own audit measured
+    # 1.47 s/cell and was killed at the old 70-minute bound (below). So 3024 cells x
+    # 1.47 s = 4,445 s ≈ 74 min; the step bound moved to 90 and the JOB bound no longer
+    # holds its parts on paper: `160 + 90 = 250 > 240`, where the caps summed to 230 of
+    # 240 before this change. Measured, the job is ~111 min of capture + ~74 min of
+    # audit ≈ 185 min; if either step ever binds, the job cap has to move with it. This
+    # is a nightly job; it does not run on a pull request.
     #
     # EXPECTED FIRST-RUN VERDICT: THIS JOB IS RED, AND THAT IS WHAT IT IS FOR. It has
     # never executed (schedule/dispatch only). A real local `--tier core --consecutive`
@@ -728,7 +731,28 @@ jobs:
         run: pnpm audit:capture --dir dist --out "$RUNNER_TEMP/frames" --relay "$MOCK_RELAY_URL" --tier core --consecutive --yes
 
       - name: Audit the frames against the rubric
-        timeout-minutes: 70
+        # SIZED FROM THE RUN THAT BROKE THE OLD BOUND, not from the capture's rate: the
+        # audit runs at its own cost, and the 70 it carried sat BELOW it.
+        #
+        #   run 38530472075 (head 80ed4a35, job 115741848014) was killed at 70m12s
+        #   (4,212 s) with `2870/3024 cells audited` — a steady 40.9 cells/min = 1.47
+        #   s/cell (first third 40.3/min, last third 46.0/min, so not degrading), so
+        #   3024 cells x 1.47 s = 4,445 s ≈ 74 min. Killed, the audit never writes its
+        #   summary: the rubric rows it exists to report are not visible, which is the
+        #   failure mode a bound below the work has.
+        #
+        # 90, not 74: ~20% headroom over the measured need, the shape every step bound
+        # in this file carries, because a bound that fires every run stops being a
+        # signal. A step bound the audit's own cost can exceed would cut short the
+        # audit itself — the defect the capture bound above already refuses.
+        #
+        # IT WAS LAST SIZED FOR AN EARLIER PLAN. The last core audit to run to
+        # completion finished 1728 cells in 38m35s = 44.8 cells/min (the 2026-10-08
+        # nightly, run 37723859463) and the plan grew to 3024 without the bound being
+        # re-derived; scaling that rate lands at 67.5 min, inside the 70 — but the audit
+        # at THIS size measured 1.47 s/cell and did not fit. RE-DERIVE THIS BOUND WHEN
+        # THE PLAN GROWS.
+        timeout-minutes: 90
         run: pnpm audit:run --manifest "$RUNNER_TEMP/frames/manifest.json" --out "$RUNNER_TEMP/audit"
 
       - name: Stop the mock relay
