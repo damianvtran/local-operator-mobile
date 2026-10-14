@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { createTranslator, formatMessage, resolveMessage } from "./runtime";
+import {
+	type Catalogues,
+	createTranslator,
+	formatMessage,
+	resolveMessage,
+} from "./runtime";
 
 describe("mobile catalogue source and formatting locale", () => {
 	it("bundles only the six English Home messages", () => {
@@ -11,22 +16,35 @@ describe("mobile catalogue source and formatting locale", () => {
 	});
 
 	it("uses English source AND plural rules for absent locale/namespace/key", () => {
-		const english = { "fixture.jobs": "{count, plural, one {# job} other {# jobs}}" };
-		for (const catalogues of [
+		const english = {
+			"fixture.jobs": "{count, plural, one {# job} other {# jobs}}",
+		};
+		// An absent member is a missing dictionary entry, not an explicitly
+		// undefined value. Contextual typing preserves all three fallback cases
+		// without weakening the production catalogue's present-value contract.
+		const cases: Catalogues[] = [
 			{ en: { fixture: english } },
 			{ en: { fixture: english }, ru: {} },
 			{ en: { fixture: english }, ru: { fixture: {} } },
-		]) {
+		];
+		for (const catalogues of cases) {
 			expect(resolveMessage("ru", "fixture.jobs", catalogues).locale).toBe("en");
 			for (const count of [0, 1, 21]) {
-				expect(formatMessage("ru", "fixture.jobs", { count }, catalogues)).toBe(`${count} ${count === 1 ? "job" : "jobs"}`);
+				expect(formatMessage("ru", "fixture.jobs", { count }, catalogues)).toBe(
+					`${count} ${count === 1 ? "job" : "jobs"}`,
+				);
 			}
 		}
 	});
 
 	it("uses the locale which actually supplied a present message", () => {
-		const catalogues = { en: { fixture: { "fixture.n": "{count, number}" } }, fr: { fixture: { "fixture.n": "{count, number}" } } };
-		expect(formatMessage("fr", "fixture.n", { count: 1234.5 }, catalogues)).toBe(new Intl.NumberFormat("fr").format(1234.5));
+		const catalogues: Catalogues = {
+			en: { fixture: { "fixture.n": "{count, number}" } },
+			fr: { fixture: { "fixture.n": "{count, number}" } },
+		};
+		expect(formatMessage("fr", "fixture.n", { count: 1234.5 }, catalogues)).toBe(
+			new Intl.NumberFormat("fr").format(1234.5),
+		);
 	});
 
 	it("does not activate backend Urdu/Chinese copy or RTL without a carried namespace", () => {
@@ -42,8 +60,20 @@ describe("mobile catalogue source and formatting locale", () => {
 		expect(formatMessage("en", "fixture.missing", {}, {})).toBe("fixture.missing");
 	});
 
-	it("does not swallow missing parameters or malformed ICU as success", () => {
-		const catalogues = { en: { fixture: { "fixture.jobs": "{count, plural, one {job} other {jobs}}" } } };
+	it("does not swallow missing parameters as success", () => {
+		const catalogues: Catalogues = {
+			en: {
+				fixture: { "fixture.jobs": "{count, plural, one {job} other {jobs}}" },
+			},
+		};
 		expect(() => formatMessage("en", "fixture.jobs", {}, catalogues)).toThrow();
+	});
+
+	it("rejects malformed ICU at the runtime boundary", () => {
+		const catalogues: Catalogues = {
+			en: { fixture: { "fixture.broken": "{broken" } },
+		};
+		const format = () => formatMessage("en", "fixture.broken", {}, catalogues);
+		expect(format).toThrow();
 	});
 });
