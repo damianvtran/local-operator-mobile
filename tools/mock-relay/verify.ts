@@ -1457,6 +1457,18 @@ async function main() {
 		);
 		const elapsedMs = Date.now() - started;
 		const output = `${run.stdout ?? ""}${run.stderr ?? ""}`;
+		// Asserted FIRST so a browser that never started is named as that, instead of
+		// surfacing as "the wedged cell fails with the deadline it hit" — which is what
+		// three CI runs reported when Chrome was slow to come up and the cell this group
+		// exists to test was never reached (see `CHROME_LAUNCH_TIMEOUT_MS`).
+		check(
+			"the wedged-cell capture got a browser (a launch failure is not a verdict on the cell)",
+			/no browser came up/.test(output),
+			false,
+			/no browser came up/.test(output)
+				? (/no browser came up[^\n]*/.exec(output)?.[0] ?? "")
+				: "",
+		);
 		check(
 			"a wedged cell terminates rather than hanging",
 			run.signal === null,

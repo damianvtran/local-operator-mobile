@@ -124,6 +124,35 @@ export function scratchRoot() {
 }
 
 /**
+ * How long a cold Chrome gets to write `DevToolsActivePort` before the launch is
+ * declared failed.
+ *
+ * WHY 90 s and not the 30 s it was: `pnpm e2e:relay`'s "bounded work" group runs a
+ * capture whose only job is to prove a WEDGED CELL fails with its deadline. Three CI
+ * runs (2026-10-04 main, 2026-10-05, 2026-10-08; three branches, green on re-run)
+ * failed that group with "the wedged cell fails with the deadline it hit" while "a
+ * wedged cell terminates rather than hanging" PASSED at 32.5–33.5 s. Passing runs
+ * finish in 8–17 s, so 33 s is exactly this 30 s wait expiring plus startup: Chrome on
+ * a loaded shared runner had not come up, the capture refused with "no browser came
+ * up", and the group never reached the cell it exists to test. The wait is a ceiling
+ * (it returns the moment the port file is written), so raising it costs nothing on a
+ * healthy start and only buys time on a slow one. It is still bounded: a Chrome that
+ * really cannot start fails loudly at this value.
+ */
+export const CHROME_LAUNCH_TIMEOUT_MS = 90_000;
+
+/**
+ * The bound a CALLER puts around `launchChrome`. It must exceed the launch's own
+ * wait, or the outer bound fires first and replaces the launcher's specific reason
+ * ("Chrome never wrote DevToolsActivePort", with Chrome's stderr) with a bare
+ * "did not complete" — the two bounds were 45 s outside / 30 s inside by accident of
+ * history, and raising only one of them would have silently inverted that.
+ */
+export function launchBoundMs(cellTimeoutMs: number): number {
+	return Math.max(CHROME_LAUNCH_TIMEOUT_MS + 15_000, cellTimeoutMs);
+}
+
+/**
  * Start headless Chrome with a fresh profile and return a handle.
  * `viewport` is applied per page over CDP, never with `--window-size`: on
  * Chrome 152 that flag clamps width at a 500px floor and loses 87px of height,
@@ -198,7 +227,7 @@ export async function launchChrome({
 	}
 
 	const portFile = join(profile, "DevToolsActivePort");
-	const deadline = Date.now() + 30_000;
+	const deadline = Date.now() + CHROME_LAUNCH_TIMEOUT_MS;
 	while (
 		!existsSync(portFile) ||
 		readFileSync(portFile, "utf8").trim() === ""
@@ -210,7 +239,7 @@ export async function launchChrome({
 			// hence a loud failure when the wait expires.
 			await reap(child.pid, profile);
 			throw new Error(
-				`Chrome never wrote DevToolsActivePort (30 s). stderr: ${stderr.slice(-800)}`,
+				`Chrome never wrote DevToolsActivePort (${CHROME_LAUNCH_TIMEOUT_MS / 1000} s). stderr: ${stderr.slice(-800)}`,
 			);
 		}
 		await sleep(150);
