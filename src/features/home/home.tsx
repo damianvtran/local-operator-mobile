@@ -7,6 +7,7 @@ import { Pressable, Text, View } from "react-native";
 
 import type { ModelEntry, PromptImage } from "@/contracts";
 import {
+	configStore,
 	useConnection,
 	useConnectionState,
 	useListState,
@@ -40,6 +41,7 @@ import { deviceOnline } from "@/features/session/runtime";
 import { ConversationsDrawer } from "@/features/sessions/conversations-drawer";
 import { ConversationsPane } from "@/features/sessions/conversations-pane";
 import { unreadBadgeCount } from "@/features/sessions/session-projection";
+import { useI18n } from "@/i18n/use-i18n";
 import { homeShortened } from "@/lib/format";
 import { listLabel } from "@/lib/route-label";
 import { RelayError } from "@/relay";
@@ -131,7 +133,12 @@ export default function Home({
 	const [topModel, setTopModel] = useState<ModelEntry | null>(null);
 	const [modelsLoaded, setModelsLoaded] = useState(false);
 	const [starting, setStarting] = useState(false);
-	const [problem, setProblem] = useState<string | null>(null);
+	const t = useI18n(configStore);
+	// Keep the local fallback semantic until render; otherwise an already-open
+	// failure alert would retain the previous computer's language after reset.
+	const [problem, setProblem] = useState<
+		{ kind: "relay"; text: string } | { kind: "fallback" } | null
+	>(null);
 	/** The composer's field, for the New chat affordance: only the home can
 	 *  focus it, and only after the drawer is gone. */
 	const fieldRef = useRef<TextInput | null>(null);
@@ -340,9 +347,9 @@ export default function Home({
 			/* The one sentence the composer says when it cannot send: with nothing
 			 * connected there is nothing to send to. An empty draft is disabled for
 			 * the self-evident reason and says nothing. */
-			disabledReason: connected ? null : CONNECT_DISABLED_REASON,
+			disabledReason: connected ? null : t(CONNECT_DISABLED_REASON),
 		}),
-		[connected, draft, homeDirectory, images.length, starting],
+		[connected, draft, homeDirectory, images.length, starting, t],
 	);
 
 	const chips = useMemo(
@@ -408,8 +415,8 @@ export default function Home({
 				 * reason), and never a runtime's prose — `/new`'s rule, verbatim. */
 				setProblem(
 					error instanceof RelayError
-						? error.displayableMessage
-						: REFUSED_START_FALLBACK,
+						? { kind: "relay", text: error.displayableMessage }
+						: { kind: "fallback" },
 				);
 			} finally {
 				setStarting(false);
@@ -480,6 +487,7 @@ export default function Home({
 			) : null}
 
 			<HomeSplash
+				t={t}
 				draft={draft}
 				connected={connected}
 				onPick={setDraft}
@@ -494,7 +502,7 @@ export default function Home({
 			{directoriesFailed && homeDirectory === null ? (
 				<Banner
 					tone="warning"
-					message={FOLDERS_READ_FAILED}
+					message={t(FOLDERS_READ_FAILED)}
 					action={{
 						label: "Retry",
 						onPress: retryDirectories,
@@ -508,7 +516,7 @@ export default function Home({
 				{problem !== null ? (
 					<View className="px-4 pb-2">
 						<Alert severity="warning" title="Could not start">
-							{problem}
+							{problem.kind === "fallback" ? t(REFUSED_START_FALLBACK) : problem.text}
 						</Alert>
 					</View>
 				) : null}

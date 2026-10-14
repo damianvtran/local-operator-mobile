@@ -159,6 +159,12 @@ jobs:
 
       # Ordered cheapest-and-most-likely-to-fail first, so a red run says what
       # is wrong in the first screen of output rather than after a test suite.
+      # A schema-only generator cannot prove ICU placeholder parity or prevent
+      # literal regressions in completed slots. This gate requires the pinned
+      # parser/compiler; missing dependencies fail rather than downgrade scope.
+      - name: Home i18n (generated schema, ICU AST, six-slot copy guard)
+        run: pnpm i18n:check
+
       - name: Typecheck (tsc --noEmit)
         run: pnpm typecheck
 

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+	CONNECT_COMPUTER,
 	CONNECT_DISABLED_REASON,
 	draftExistsFor,
 	FOLDERS_READ_FAILED,
@@ -8,6 +9,7 @@ import {
 	HOME_SUGGESTIONS,
 	HOME_TIP_ROTATE_MS,
 	HOME_TIPS,
+	REFUSED_START_FALLBACK,
 	STARTING,
 	SUGGESTION_CHAR_BUDGET,
 	suggestionCountFor,
@@ -15,6 +17,10 @@ import {
 	TIP_CHAR_BUDGET,
 	tipAt,
 } from "@/features/home/home-copy";
+
+import { createTranslator } from "@/i18n/runtime";
+
+const t = createTranslator("en");
 
 /** Hoisted so the check is compiled once (the same rule the kit's own modules
  *  follow — an inline regex in a callback is re-created per call). */
@@ -33,7 +39,7 @@ const AGENT_MAKER = /agent/i;
 describe("the home's copy", () => {
 	it("greets with the desktop's verbatim line", () => {
 		// Verbatim is the point: the two surfaces say the same first sentence.
-		expect(GREETING).toBe("What can I help you with today?");
+		expect(t(GREETING)).toBe("What can I help you with today?");
 	});
 
 	it("shows 3 suggestions at 390 and 2 at 320", () => {
@@ -76,14 +82,16 @@ describe("the home's copy", () => {
 	});
 
 	it("states the fixed sentences", () => {
+		expect(t(CONNECT_COMPUTER)).toBe("Connect a computer");
+		expect(t(REFUSED_START_FALLBACK)).toBe("That folder doesn't exist on this computer.");
 		// The splash's one-line replacement while the first send is in flight: a
 		// second line would move the composer.
-		expect(STARTING).toBe("Starting…");
-		expect(STARTING.includes("\n")).toBe(false);
+		expect(t(STARTING)).toBe("Starting…");
+		expect(t(STARTING).includes("\n")).toBe(false);
 		// The disabled reason is the sentence the composer's own surface carries.
-		expect(CONNECT_DISABLED_REASON).toBe("Connect a computer to send.");
+		expect(t(CONNECT_DISABLED_REASON)).toBe("Connect a computer to send.");
 		// The folders read's failure sentence, `/new`'s verbatim (review M2).
-		expect(FOLDERS_READ_FAILED).toBe(
+		expect(t(FOLDERS_READ_FAILED)).toBe(
 			"We couldn't read this computer's folders just now.",
 		);
 	});

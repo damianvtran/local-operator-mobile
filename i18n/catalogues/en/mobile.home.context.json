@@ -1,0 +1,50 @@
+{
+	"mobile.home.connect": {
+		"role": "Primary disconnected Home action in the suggestion-row slot",
+		"tone": "Direct imperative; computer means the machine running Local Operator, not a new account",
+		"length": "One full-width row at phone sizes; preserve the existing touch target, do not invent a character cap",
+		"params": {},
+		"placeholders": {},
+		"note": "Opens the saved-computer/tunnel picker. This is an action label, unlike the disabled composer's explanatory sentence."
+	},
+	"mobile.home.connect_disabled": {
+		"role": "Disabled composer explanation when Home has no connected computer",
+		"tone": "Brief instruction explaining the prerequisite, not a network error or blame",
+		"length": "Short sentence below the composer; may wrap at narrow phone widths",
+		"params": {},
+		"placeholders": {},
+		"note": "Shown only while disconnected, not when a connected draft is empty. Send means submit a prompt to the connected machine."
+	},
+	"mobile.home.folders_failed": {
+		"role": "Warning banner after reading the connected computer's folders fails",
+		"tone": "Temporary, recoverable failure; do not imply the folders were deleted",
+		"length": "Banner body may wrap; a separate Retry action must remain reachable",
+		"params": {},
+		"placeholders": {},
+		"note": "Only shown while no usable home directory is available; clears after a successful reread. This is not a permission-to-delete message."
+	},
+	"mobile.home.greeting": {
+		"role": "Home splash headline above suggestions before the first prompt",
+		"tone": "Welcoming, plain question matching the desktop's English greeting",
+		"length": "Title text centred in the available phone width; wrapping is allowed, no fixed cell budget",
+		"params": {},
+		"placeholders": {},
+		"note": "Not agent-generated conversation text. No name or personalisation placeholder. Suggestions below it are model-facing and outside this extraction."
+	},
+	"mobile.home.start_refused": {
+		"role": "Local fallback body when starting a session fails without a relay explanation",
+		"tone": "Matter-of-fact refusal about a missing folder on the connected machine",
+		"length": "Alert body may wrap beneath the separately owned alert title",
+		"params": {},
+		"placeholders": {},
+		"note": "Prefer the relay's own displayable message when available. No folder path placeholder: never interpolate an exception or infer that a real path was checked."
+	},
+	"mobile.home.starting": {
+		"role": "Transient Home splash replacement while the first send is in flight",
+		"tone": "Neutral progress state, not success; preserve the ellipsis convention",
+		"length": "Exactly one explicit line, no newline; the composer must not move when the splash yields",
+		"params": {},
+		"placeholders": {},
+		"note": "Describes starting a session, not merely sending a message to an existing session. No duration or count placeholder."
+	}
+}
