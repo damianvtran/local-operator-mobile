@@ -310,3 +310,70 @@ describe("findIdenticalFrames", () => {
 		expect(result.undeclared[0]).toContain("extend the `cells` of the entry");
 	});
 });
+
+/**
+ * The iphone-15-landscape / 200 % S5 group (nightly 38506995844): at 844×390 with 200 %
+ * text the session chrome fills the viewport, so ten S5 cells that each reach their own
+ * marker are byte-identical. These drive the REAL ledger through the real function, so
+ * they fail on a matrix that does not declare the group and on an entry that is wider
+ * than the ten cells observed.
+ */
+const LANDSCAPE_200 = [
+	"S5/populated",
+	"S5/queued",
+	"S5/rail",
+	"S5/rail-deep",
+	"S5/supplement-empty",
+	"S5/supplement-failed",
+	"S5/supplement-files",
+	"S5/supplement-populated",
+	"S5/supplement-preparing",
+	"S5/voice",
+];
+
+const landscapeGroup = (names: readonly string[]): FrameRecord[] =>
+	names.map((name) => {
+		const [screen = "", state = ""] = name.split("/");
+		return cell(screen, state, "e0928252f987643a", `content-of-${name}`, {
+			cell: name,
+			device: "iphone-15-landscape",
+		});
+	});
+
+describe("S5 at iphone-15-landscape / 200 %", () => {
+	it("declares the observed ten-cell group as a camera limit, not a collapse", () => {
+		const result = findIdenticalFrames(landscapeGroup(LANDSCAPE_200));
+		expect(result.undeclared).toEqual([]);
+		expect(result.collapses).toEqual([]);
+		expect(result.exemptions).toHaveLength(1);
+		expect(result.exemptions[0]).toContain("declared, not a collapse");
+		// The entry hides a reader-facing condition, and the reason must say so.
+		expect(result.exemptions[0]).toContain("iphone-15-landscape");
+		expect(result.exemptions[0]).toContain("no transcript");
+	});
+
+	it("still exempts the group minus one cell — a subset of the entry", () => {
+		const result = findIdenticalFrames(landscapeGroup(LANDSCAPE_200.slice(1)));
+		expect(result.undeclared).toEqual([]);
+		expect(result.exemptions).toHaveLength(1);
+	});
+
+	it("fails the ten plus one unlisted cell, and names it", () => {
+		const result = findIdenticalFrames([
+			...landscapeGroup(LANDSCAPE_200),
+			...landscapeGroup(["S5/empty"]),
+		]);
+		expect(result.exemptions).toEqual([]);
+		expect(result.undeclared).toHaveLength(1);
+		expect(result.undeclared[0]).toContain("'S5/empty'");
+	});
+
+	it("does not exempt a subset that includes a cell outside the entry", () => {
+		const result = findIdenticalFrames(
+			landscapeGroup(["S5/rail", "S5/voice", "S5/scroll"]),
+		);
+		expect(result.exemptions).toEqual([]);
+		expect(result.undeclared).toHaveLength(1);
+		expect(result.undeclared[0]).toContain("'S5/scroll'");
+	});
+});

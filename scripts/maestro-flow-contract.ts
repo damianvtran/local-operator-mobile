@@ -364,6 +364,75 @@ function checkSettingsTraversal(steps: Mapping[]) {
 	]);
 }
 
+/**
+ * The emulator-runner `script:` of the `maestro-android` job, as the action sees it.
+ *
+ * The action runs ONE COMMAND PER LINE and drops `#` lines, so the guard reads the
+ * block the same way instead of matching the raw YAML: a comment that merely mentions
+ * `adb uninstall` must not satisfy it. Scoped to the "Run the flows" step because the
+ * workflow has other `script:` keys that mean something else.
+ */
+function emulatorScriptLines(workflow: string): string[] {
+	const step = workflow.split("      - name: Run the flows\n")[1];
+	assert(step !== undefined, "the 'Run the flows' step must exist");
+	const lines = step.split("\n");
+	const start = lines.findIndex((line) => /^ {10}script: \|\s*$/.test(line));
+	assert(start >= 0, "the emulator-runner step must carry a `script: |` block");
+	const block: string[] = [];
+	for (const line of lines.slice(start + 1)) {
+		if (line.trim() !== "" && !line.startsWith(" ".repeat(12))) break;
+		block.push(line.trim());
+	}
+	return block.filter((line) => line !== "" && !line.startsWith("#"));
+}
+
+/**
+ * The AVD cache (`Linux-avd-<api>-<hash of e2e/maestro/**>`) outlives the job and is
+ * SAVED with the app already installed, signed by that run's throwaway keystore. A later
+ * run that hits the cache builds a NEW keystore, and `adb install -r` cannot replace a
+ * package signed by a different key (`INSTALL_FAILED_UPDATE_INCOMPATIBLE`; nightly
+ * 38506995844). So the install must be preceded, on the line immediately before, by an
+ * uninstall of the SAME `$APP_ID` the flows launch. The uninstall may fail (a fresh AVD
+ * has no app) but must say so rather than go to /dev/null, and the install itself must
+ * stay a hard failure: a tolerated install would turn a signing mismatch into a flow
+ * failure that reads like an app bug.
+ */
+export function checkEmulatorInstall(workflow: string) {
+	const lines = emulatorScriptLines(workflow);
+	// Any `adb … install` counts, whatever target flag it carries (`-s <serial>`,
+	// `-e`, `-d`): an edit that adds one must not turn the count into zero and the
+	// uninstall check into a check of nothing.
+	const installs = lines.flatMap((line, index) =>
+		/^adb\b.*\binstall\b/.test(line) ? [index] : [],
+	);
+	assert.equal(installs.length, 1, "exactly one `adb install` line");
+	const at = installs[0] as number;
+	const install = lines[at] as string;
+	// Only `adb [-s <serial>] install -r <apk>` is allowed, which excludes -d/-g,
+	// `|| true`, `;` and `&` in one assertion.
+	const installShape = /^adb(?: -s (\S+))? install -r \S+\.apk$/.exec(install);
+	assert(
+		installShape !== null,
+		"unexpected install shape: the install must stay a hard failure",
+	);
+	const before = lines[at - 1] ?? "";
+	const uninstallShape =
+		/^adb(?: -s (\S+))? uninstall "\$APP_ID" \|\| echo "[^"]+"$/.exec(before);
+	assert(
+		uninstallShape !== null,
+		'`adb uninstall "$APP_ID" || echo "<visible message>"` must be the line before `adb install`',
+	);
+	// A serial is allowed because it pins a command to one device, but the pair must
+	// agree: removing the app from one device and installing on another leaves the
+	// cached signer in place and the failure intact.
+	assert.equal(
+		uninstallShape[1],
+		installShape[1],
+		"the uninstall and the install must target the same device",
+	);
+	assert(!before.includes("/dev/null"), "the uninstall must stay visible");
+}
+
 export const maestroChecks: [string, () => void][] = [
 	[
 		"Settings scrolls to each target and remeasures appearance changes before captures",
@@ -563,6 +632,150 @@ export const maestroChecks: [string, () => void][] = [
 				() => parseFlow("flows: [inline, yaml]"),
 				/unsupported YAML scalar/,
 			);
+		},
+	],
+	[
+		"the emulator uninstalls the app before the hard-failing install, so a cached AVD cannot block it",
+		() => {
+			const workflow = readFileSync(
+				join(root, ".github/workflows/e2e.yml"),
+				"utf8",
+			);
+			checkEmulatorInstall(workflow);
+		},
+	],
+	[
+		"emulator install guard rejects uninstall after install, another id, silenced or tolerated forms",
+		() => {
+			const workflow = readFileSync(
+				join(root, ".github/workflows/e2e.yml"),
+				"utf8",
+			);
+			const install =
+				"            adb install -r android/app/build/outputs/apk/release/app-release.apk\n";
+			const uninstall =
+				'            adb uninstall "$APP_ID" || echo "no earlier $APP_ID on this AVD to remove"\n';
+			assert(
+				workflow.includes(uninstall + install),
+				"the repaired pair exists",
+			);
+			const swap = (replacement: string) =>
+				workflow.replace(uninstall + install, replacement);
+			const variants: [string, string, RegExp][] = [
+				["no uninstall", install, /must be the line before/],
+				[
+					"uninstall after install",
+					install + uninstall,
+					/must be the line before/,
+				],
+				[
+					"another id",
+					uninstall.replace("$APP_ID", "com.radient.localoperator.mobile") +
+						install,
+					/must be the line before/,
+				],
+				[
+					"silenced",
+					uninstall.replace("|| echo", ">/dev/null 2>&1 || echo") + install,
+					/must be the line before/,
+				],
+				[
+					"comment only",
+					"            # " + uninstall.trim() + "\n" + install,
+					/must be the line before/,
+				],
+				[
+					"tolerated install",
+					uninstall + install.replace(/\n$/, " || true\n"),
+					/hard failure|unexpected install shape/,
+				],
+				[
+					"downgrade flag",
+					uninstall + install.replace("-r ", "-r -d "),
+					/hard failure|unexpected install shape/,
+				],
+			];
+			for (const [name, replacement, expected] of variants)
+				assert.throws(
+					() => checkEmulatorInstall(swap(replacement)),
+					expected,
+					name,
+				);
+		},
+	],
+	[
+		"emulator install guard accepts one consistent -s <serial> and rejects every unguarded install",
+		() => {
+			const workflow = readFileSync(
+				join(root, ".github/workflows/e2e.yml"),
+				"utf8",
+			);
+			const pad = "            ";
+			const apk = "android/app/build/outputs/apk/release/app-release.apk";
+			const msg = '"no earlier $APP_ID on this AVD to remove"';
+			const install = (target = "") => `${pad}adb ${target}install -r ${apk}\n`;
+			const uninstall = (target = "", id = '"$APP_ID"') =>
+				`${pad}adb ${target}uninstall ${id} || echo ${msg}\n`;
+			const current = uninstall() + install();
+			assert(workflow.includes(current), "the repaired pair exists");
+			const swap = (replacement: string) =>
+				workflow.replace(current, replacement);
+			// A serial pins both commands to one device, so it is allowed — but only the
+			// SAME serial on both lines: uninstalling on one device and installing on
+			// another would leave the cached signer in place and the failure intact.
+			checkEmulatorInstall(
+				swap(uninstall("-s emulator-5554 ") + install("-s emulator-5554 ")),
+			);
+			const variants: [string, string, RegExp][] = [
+				[
+					"serial on install only",
+					uninstall() + install("-s emulator-5554 "),
+					/same device/,
+				],
+				[
+					"serial on uninstall only",
+					uninstall("-s emulator-5554 ") + install(),
+					/same device/,
+				],
+				[
+					"different serials",
+					uninstall("-s emulator-5554 ") + install("-s emulator-5556 "),
+					/same device/,
+				],
+				[
+					"serial uninstall of another id",
+					uninstall("-s emulator-5554 ", "com.radient.localoperator.mobile") +
+						install("-s emulator-5554 "),
+					/must be the line before/,
+				],
+				[
+					"serial install with no uninstall",
+					install("-s emulator-5554 "),
+					/must be the line before/,
+				],
+				[
+					"serial install tolerated",
+					uninstall("-s emulator-5554 ") +
+						install("-s emulator-5554 ").replace(/\n$/, " || true\n"),
+					/hard failure/,
+				],
+				[
+					"a second, unguarded -s install beside the guarded pair",
+					current + install("-s emulator-5554 "),
+					/exactly one `adb install`/,
+				],
+				[
+					"a second, unguarded -e install beside the guarded pair",
+					current + install("-e "),
+					/exactly one `adb install`/,
+				],
+			];
+			for (const [name, replacement, expected] of variants)
+				assert.throws(
+					() => checkEmulatorInstall(swap(replacement)),
+					expected,
+					name,
+				);
 		},
 	],
 ];
