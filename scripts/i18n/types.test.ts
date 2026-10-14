@@ -93,7 +93,7 @@ describe("generated two-overload Translator", () => {
 		[
 			"missing required param",
 			't("mobile.home.jobs", {})',
-			/error TS2345:[\s\S]*Property 'count' is missing/,
+			/error TS2741: Property '"count"' is missing/,
 		],
 		[
 			"extra param",
