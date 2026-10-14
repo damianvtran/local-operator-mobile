@@ -102,6 +102,13 @@ function main(): void {
 		throw new Error("GITHUB_REPOSITORY is not set");
 	}
 	const days = Number(process.argv[2] ?? 7);
+	if (
+		!Number.isFinite(days) ||
+		days <= 0 ||
+		days > 365 ||
+		!Number.isInteger(days)
+	)
+		throw new Error("days must be an integer between 1 and 365");
 	const since = new Date(Date.now() - days * 86_400_000)
 		.toISOString()
 		.slice(0, 10);
@@ -117,6 +124,7 @@ function main(): void {
 	// Paged: a week of this repository's history is several hundred runs, and the
 	// first page alone covers about three days — the report would silently describe
 	// only the newest half of the window it names.
+	let truncated = false;
 	const listing: { workflow_runs: ApiRun[] } = { workflow_runs: [] };
 	for (let page = 1; page <= 20; page += 1) {
 		const body = gh(
@@ -124,6 +132,7 @@ function main(): void {
 		) as { workflow_runs: ApiRun[] };
 		listing.workflow_runs.push(...body.workflow_runs);
 		if (body.workflow_runs.length < 100) break;
+		if (page === 20) truncated = true;
 	}
 	const rows: RunRow[] = listing.workflow_runs.map((run) => ({
 		id: run.id,
@@ -169,6 +178,11 @@ function main(): void {
 		`${rows.length} run(s) read. ${groups.length} flaky group(s), ${flakedOnce.length} green Maestro run(s) that only passed on the re-run.`,
 		"",
 	];
+	if (truncated)
+		lines.push(
+			"History truncated at 2000 runs; shorten the reporting window.",
+			"",
+		);
 	if (groups.length > 0) {
 		lines.push(
 			"| Why | Workflow | Event | Branch | Commit | Runs |",
@@ -194,4 +208,14 @@ function main(): void {
 	if (summary !== undefined && summary !== "") appendFileSync(summary, text);
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) main();
+if (import.meta.url === `file://${process.argv[1]}`) {
+	try {
+		main();
+	} catch (error) {
+		const text = `Flake report unavailable: ${error instanceof Error ? error.message : String(error)}`;
+		process.stdout.write(`${text}\n`);
+		// API outages and invalid dispatch inputs are report data, not a failed check.
+		const summary = process.env.GITHUB_STEP_SUMMARY;
+		if (summary) appendFileSync(summary, `${text}\n`);
+	}
+}

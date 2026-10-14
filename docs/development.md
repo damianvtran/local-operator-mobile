@@ -61,7 +61,7 @@ design kit drifting apart. Never hand-edit a generated file.
 
 A test that fails once in fifty runs costs more than one that fails every time: it
 gets re-run, then ignored, then trusted less. These are the rules every test, probe
-and CI step here follows. Each one is a failure this repository has already had.
+and CI step here follows. They prevent observed failures and related failure classes.
 
 - **Never sleep to wait for something.** Wait on the condition — the element
   (`extendedWaitUntil` / `scrollUntilVisible` with a timeout in a Maestro flow), the

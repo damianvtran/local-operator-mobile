@@ -49,6 +49,7 @@ import {
 } from "../lib/blind-report.ts";
 import {
 	countProcesses,
+	launchBoundMs,
 	mayRetry,
 	reapAttempt,
 	resolveChrome,
@@ -1430,7 +1431,7 @@ async function main() {
 	// run terminates at all.
 	group = "bounded work";
 	{
-		const out = join(tmpdir(), `lo-hang-${Date.now()}`);
+		const out = mkdtempSync(join(tmpdir(), `lo-hang-${process.pid}-`));
 		const started = Date.now();
 		const run = spawnSync(
 			process.execPath,
@@ -1453,7 +1454,7 @@ async function main() {
 				"--deadline",
 				"60",
 			],
-			{ encoding: "utf8", timeout: 120_000 },
+			{ encoding: "utf8", timeout: launchBoundMs(5000) + 90_000 },
 		);
 		const elapsedMs = Date.now() - started;
 		const output = `${run.stdout ?? ""}${run.stderr ?? ""}`;
@@ -1493,9 +1494,9 @@ async function main() {
 		);
 		check(
 			"the whole run respects its own bound",
-			elapsedMs < 90_000,
+			elapsedMs < launchBoundMs(5000) + 60_000,
 			true,
-			`${(elapsedMs / 1000).toFixed(1)} s against a 60 s deadline`,
+			`${(elapsedMs / 1000).toFixed(1)} s against ${launchBoundMs(5000) / 1000} s launch + 60 s capture budgets`,
 		);
 	}
 

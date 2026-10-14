@@ -1,3 +1,5 @@
+import { spawnSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { flakyGroups, type RunRow } from "./flake-report.ts";
 
@@ -57,4 +59,17 @@ describe("flakyGroups", () => {
 			]),
 		).toEqual([]);
 	});
+});
+
+// Exercise the actual CLI catch path, without network/credential access.
+it("invalid days writes an unavailable report and exits zero", () => {
+	const result = spawnSync(
+		process.execPath,
+		[fileURLToPath(new URL("./flake-report.ts", import.meta.url)), "abc"],
+		{ encoding: "utf8", env: { NODE_ENV: "test", GITHUB_REPOSITORY: "x/y" } },
+	);
+	expect(result.status).toBe(0);
+	expect(result.stdout).toContain(
+		"Flake report unavailable: days must be an integer",
+	);
 });

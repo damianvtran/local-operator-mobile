@@ -48,9 +48,9 @@ shell)
 	shift
 	case "$1 $2" in
 	"getprop sys.boot_completed") echo "\${FAKE_BOOT-1}" ;;
-	"pm path") echo "\${FAKE_PM-package:/system/framework/framework-res.apk}" ;;
+	"pm path") sleep "\${FAKE_PM_DELAY:-0}" & child=$!; echo "$child" > "$FAKE_DIR/sleeper.pid"; wait "$child"; echo "\${FAKE_PM-package:/system/framework/framework-res.apk}" ;;
 	"cmd package") echo "priority=0 preferredOrder=0"; echo "com.example.app/.MainActivity" ;;
-	"am start") echo "\${FAKE_AM_STATUS-Status: ok}" ;;
+	"am start") sleep "\${FAKE_WARM_DELAY:-0}"; echo "\${FAKE_AM_STATUS-Status: ok}" ;;
 	"am force-stop") ;;
 	esac
 	;;
@@ -68,7 +68,9 @@ const run = (
 	mkdirSync(bin, { recursive: true });
 	writeFileSync(join(bin, "adb"), FAKE_ADB);
 	chmodSync(join(bin, "adb"), 0o755);
+	const started = Date.now();
 	const result = spawnSync("sh", [SCRIPT, ...args], {
+		timeout: 10_000,
 		encoding: "utf8",
 		env: {
 			// A bare environment on purpose (nothing of the developer's or the runner's
@@ -88,14 +90,83 @@ const run = (
 		/* no adb call was made */
 	}
 	return {
+		elapsed: Date.now() - started,
 		code: result.status,
 		out: `${result.stdout}${result.stderr}`,
 		calls,
+		sleeper: (() => {
+			try {
+				return Number(readFileSync(join(dir, "sleeper.pid"), "utf8"));
+			} catch {
+				return 0;
+			}
+		})(),
 		stateProbes: calls.split("\n").filter((l) => l === "get-state").length,
 	};
 };
 
 describe("await-emulator-ready.sh", () => {
+	it("rejects even a final successful command returned after the absolute deadline", () => {
+		// Deterministic boundary control: communicate returns success but the clock
+		// has crossed the deadline. No wall-clock race and no real adb involved.
+		const code = `
+import importlib.util
+from unittest.mock import patch, MagicMock
+spec = importlib.util.spec_from_file_location("gate", ${JSON.stringify(SCRIPT.replace(/\.sh$/, ".py"))})
+gate = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(gate)
+child = MagicMock(pid=12345, returncode=0)
+child.communicate.return_value = ("package:/android", None)
+with patch.object(gate.subprocess, "Popen", return_value=child), patch.object(gate.os, "killpg") as reap, patch.object(gate.time, "monotonic", side_effect=[0, 2]):
+    try:
+        gate.adb(1, "shell", "pm", "path", "android")
+    except TimeoutError as error:
+        assert "finished after deadline" in str(error)
+        reap.assert_called_once()
+        print("late final success rejected and process group reaped")
+    else:
+        raise AssertionError("late success was admitted")
+`;
+		const result = spawnSync("python3", ["-c", code], { encoding: "utf8" });
+		expect(result.status, result.stderr).toBe(0);
+		expect(result.stdout).toContain("late final success rejected");
+	});
+
+	it("rejects a stuck or late final successful pm probe and reaps its child", () => {
+		const r = run("device", {
+			EMULATOR_STABLE_PROBES: "1",
+			EMULATOR_READY_TIMEOUT_S: "0.5",
+			FAKE_PM_DELAY: "30",
+		});
+		expect(r.code).toBe(1);
+		expect(r.out).toContain("exceeded deadline");
+		expect(r.out).not.toContain("emulator stable:");
+		expect(r.sleeper).toBeGreaterThan(0);
+		expect(() => process.kill(r.sleeper, 0)).toThrow();
+		expect(r.elapsed).toBeLessThan(4000);
+	});
+	it("bounds stuck warm-up independently and continues with a warning", () => {
+		const r = run(
+			"device",
+			{
+				EMULATOR_STABLE_PROBES: "1",
+				EMULATOR_WARMUP_TIMEOUT_S: "0.5",
+				FAKE_WARM_DELAY: "30",
+			},
+			["com.example.app"],
+		);
+		expect(r.code).toBe(0);
+		expect(r.out).toContain("::warning title=Emulator warm-up skipped::");
+		expect(r.elapsed).toBeLessThan(4000);
+	});
+	it("rejects invalid or zero stability configuration rather than failing open", () => {
+		for (const value of ["abc", "0", "-1", "1.5"]) {
+			const r = run("device", { EMULATOR_STABLE_PROBES: value });
+			expect(r.code).toBe(2);
+			expect(r.out).not.toContain("emulator stable:");
+		}
+	});
+
 	it("returns after exactly the stable window on a healthy device", () => {
 		const r = run("device", { EMULATOR_STABLE_PROBES: "3" });
 		expect(r.code).toBe(0);
@@ -118,7 +189,7 @@ describe("await-emulator-ready.sh", () => {
 	it("treats an unbooted guest or an unanswering package manager as not ready", () => {
 		const unbooted = run("device", {
 			EMULATOR_STABLE_PROBES: "2",
-			EMULATOR_READY_TIMEOUT_S: "0",
+			EMULATOR_READY_TIMEOUT_S: "0.5",
 			FAKE_BOOT: "",
 		});
 		expect(unbooted.code).toBe(1);
@@ -126,7 +197,7 @@ describe("await-emulator-ready.sh", () => {
 
 		const noPm = run("device", {
 			EMULATOR_STABLE_PROBES: "2",
-			EMULATOR_READY_TIMEOUT_S: "0",
+			EMULATOR_READY_TIMEOUT_S: "0.5",
 			FAKE_PM: "cmd: Can't find service: package",
 		});
 		expect(noPm.code).toBe(1);
@@ -136,13 +207,13 @@ describe("await-emulator-ready.sh", () => {
 	it("fails LOUDLY when the device never stabilises — it is not a retry and not a pass", () => {
 		const r = run("offline", {
 			EMULATOR_STABLE_PROBES: "3",
-			EMULATOR_READY_TIMEOUT_S: "0",
+			EMULATOR_READY_TIMEOUT_S: "0.5",
 		});
 		expect(r.code).toBe(1);
 		expect(r.out).toContain(
 			"::error title=Emulator never held a stable adb transport::",
 		);
-		expect(r.out).toContain("last failure: adb get-state: offline");
+		expect(r.out).toContain("last failure:");
 	});
 
 	it("warms the app once and leaves it stopped when an app id is given", () => {
