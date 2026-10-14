@@ -353,9 +353,7 @@ describe("S5 at iphone-15-landscape / 200 %", () => {
 	});
 
 	it("still exempts the group minus one cell — a subset of the entry", () => {
-		const result = findIdenticalFrames(
-			landscapeGroup(LANDSCAPE_200.slice(1)),
-		);
+		const result = findIdenticalFrames(landscapeGroup(LANDSCAPE_200.slice(1)));
 		expect(result.undeclared).toEqual([]);
 		expect(result.exemptions).toHaveLength(1);
 	});

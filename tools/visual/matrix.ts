@@ -1073,8 +1073,16 @@ export const IDENTICAL_FRAME_EXEMPTIONS: IdenticalFrameClass[] = [
 	{
 		// EXACTLY the ten cells the nightly produced (run 38506995844, head 1c18c160) and no
 		// wider — no union with the iphone-se S5 entry above and no unobserved sibling — so
-		// a genuine collapse among these cells at another device or scale is still caught
-		// by the containment rule, and an eleventh cell joining the group still fails.
+		// an eleventh cell joining a byte-identical group still fails as undeclared.
+		//
+		// WHAT THIS DOES NOT BIND, stated so nobody relies on it: matching is by CELL NAME
+		// ONLY (`matchDeclared` — the class carries no device or scale), so at any OTHER
+		// device or scale a byte-identical group drawn from these ten names is exempted too,
+		// and quoted with the iphone-15-landscape / 200 % reason below. What still catches a
+		// genuine collapse there is the content partition that runs BEFORE this ledger: it
+		// fires only when the cells' content digests also agree. Two of these cells
+		// rendering the same bytes with DIFFERING content at, say, iphone-15 portrait would
+		// pass as this entry — a regression the entry cannot see.
 		cells: [
 			"S5/populated",
 			"S5/queued",

@@ -399,22 +399,36 @@ function emulatorScriptLines(workflow: string): string[] {
  */
 export function checkEmulatorInstall(workflow: string) {
 	const lines = emulatorScriptLines(workflow);
+	// Any `adb … install` counts, whatever target flag it carries (`-s <serial>`,
+	// `-e`, `-d`): an edit that adds one must not turn the count into zero and the
+	// uninstall check into a check of nothing.
 	const installs = lines.flatMap((line, index) =>
-		/^adb install\b/.test(line) ? [index] : [],
+		/^adb\b.*\binstall\b/.test(line) ? [index] : [],
 	);
 	assert.equal(installs.length, 1, "exactly one `adb install` line");
 	const at = installs[0] as number;
 	const install = lines[at] as string;
-	// Only `adb install -r <apk>` is allowed, which excludes -d/-g, `|| true`, `;`
-	// and `&` in one assertion.
+	// Only `adb [-s <serial>] install -r <apk>` is allowed, which excludes -d/-g,
+	// `|| true`, `;` and `&` in one assertion.
+	const installShape = /^adb(?: -s (\S+))? install -r \S+\.apk$/.exec(install);
 	assert(
-		/^adb install -r \S+\.apk$/.test(install),
+		installShape !== null,
 		"unexpected install shape: the install must stay a hard failure",
 	);
 	const before = lines[at - 1] ?? "";
+	const uninstallShape =
+		/^adb(?: -s (\S+))? uninstall "\$APP_ID" \|\| echo "[^"]+"$/.exec(before);
 	assert(
-		/^adb uninstall "\$APP_ID" \|\| echo "[^"]+"$/.test(before),
+		uninstallShape !== null,
 		'`adb uninstall "$APP_ID" || echo "<visible message>"` must be the line before `adb install`',
+	);
+	// A serial is allowed because it pins a command to one device, but the pair must
+	// agree: removing the app from one device and installing on another leaves the
+	// cached signer in place and the failure intact.
+	assert.equal(
+		uninstallShape[1],
+		installShape[1],
+		"the uninstall and the install must target the same device",
 	);
 	assert(!before.includes("/dev/null"), "the uninstall must stay visible");
 }
@@ -679,6 +693,81 @@ export const maestroChecks: [string, () => void][] = [
 					"downgrade flag",
 					uninstall + install.replace("-r ", "-r -d "),
 					/hard failure|unexpected install shape/,
+				],
+			];
+			for (const [name, replacement, expected] of variants)
+				assert.throws(
+					() => checkEmulatorInstall(swap(replacement)),
+					expected,
+					name,
+				);
+		},
+	],
+	[
+		"emulator install guard accepts one consistent -s <serial> and rejects every unguarded install",
+		() => {
+			const workflow = readFileSync(
+				join(root, ".github/workflows/e2e.yml"),
+				"utf8",
+			);
+			const pad = "            ";
+			const apk = "android/app/build/outputs/apk/release/app-release.apk";
+			const msg = '"no earlier $APP_ID on this AVD to remove"';
+			const install = (target = "") => `${pad}adb ${target}install -r ${apk}\n`;
+			const uninstall = (target = "", id = '"$APP_ID"') =>
+				`${pad}adb ${target}uninstall ${id} || echo ${msg}\n`;
+			const current = uninstall() + install();
+			assert(workflow.includes(current), "the repaired pair exists");
+			const swap = (replacement: string) =>
+				workflow.replace(current, replacement);
+			// A serial pins both commands to one device, so it is allowed — but only the
+			// SAME serial on both lines: uninstalling on one device and installing on
+			// another would leave the cached signer in place and the failure intact.
+			checkEmulatorInstall(
+				swap(uninstall("-s emulator-5554 ") + install("-s emulator-5554 ")),
+			);
+			const variants: [string, string, RegExp][] = [
+				[
+					"serial on install only",
+					uninstall() + install("-s emulator-5554 "),
+					/same device/,
+				],
+				[
+					"serial on uninstall only",
+					uninstall("-s emulator-5554 ") + install(),
+					/same device/,
+				],
+				[
+					"different serials",
+					uninstall("-s emulator-5554 ") + install("-s emulator-5556 "),
+					/same device/,
+				],
+				[
+					"serial uninstall of another id",
+					uninstall("-s emulator-5554 ", "com.radient.localoperator.mobile") +
+						install("-s emulator-5554 "),
+					/must be the line before/,
+				],
+				[
+					"serial install with no uninstall",
+					install("-s emulator-5554 "),
+					/must be the line before/,
+				],
+				[
+					"serial install tolerated",
+					uninstall("-s emulator-5554 ") +
+						install("-s emulator-5554 ").replace(/\n$/, " || true\n"),
+					/hard failure/,
+				],
+				[
+					"a second, unguarded -s install beside the guarded pair",
+					current + install("-s emulator-5554 "),
+					/exactly one `adb install`/,
+				],
+				[
+					"a second, unguarded -e install beside the guarded pair",
+					current + install("-e "),
+					/exactly one `adb install`/,
 				],
 			];
 			for (const [name, replacement, expected] of variants)
