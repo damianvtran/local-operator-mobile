@@ -210,17 +210,23 @@ export const windowPolicy = (
 };
 
 /**
- * A scroll distance is not reader intent (D21). Mounting measured rows, changing the
- * viewport, or our own tail clamp can all change it. Preserve follow mode unless a
- * stable-geometry scroll moved UP away from the end. A geometry-change clamp that moves
- * the offset backwards is not a reader scroll; the next onLayout/content-size callback
- * must still be allowed to pin. No time-based "ignore user" window is used.
+ * A changed distance alone is not reader intent: estimated content settling, streaming,
+ * and our own end clamp can all change it (D21). But geometry changing is not a blanket
+ * exemption either (R4-1): a reader scrolling UP200 while a row grows1pt must leave
+ * following. Content growth cannot explain any backwards clamp.
  *
- * Our programmatic tail pin advances to the end (or is clamped there), so it either
- * increases the offset or lands in the tail band and cannot demote this flag. A reader
- * scrolling up in stable geometry does demote it, and subsequent typing/panel layouts
- * keep false until they deliberately return to the end. Content/viewport snapshots are
- * the PREVIOUS scroll event's, not refs already overwritten by onLayout.
+ * A clamp can only reduce the offset when the scrollable end SHRANK. Its maximum
+ * explainable movement is bounded by both the reduction in the end and the part of the
+ * previous offset beyond the new end:
+ *   oldEnd = max(0, oldContent - oldViewport)
+ *   newEnd = max(0, content - viewport)
+ *   allowance = min(max(0, oldEnd - newEnd), max(0, oldOffset - newEnd))
+ * Any upward movement beyond that allowance (plus half a point of rounding) belongs to
+ * the reader, even if a stream/layout change happened in the same scroll event. Returning
+ * false also persists in scrollPlaces: later content/layout callbacks cannot pin them.
+ * A real backwards clamp lands at the new end; our own pin advances or clamps there.
+ * Neither is reader movement. No time-based ignore window or geometry-wide exemption.
+ * Snapshots are from the PREVIOUS scroll event, not refs overwritten by onLayout.
  */
 export const nextAtTail = (input: {
 	wasAtTail: boolean;
@@ -235,8 +241,15 @@ export const nextAtTail = (input: {
 }): boolean => {
 	if (input.distanceToEnd < input.bandPt) return true;
 	if (!input.wasAtTail) return false;
-	const geometryChanged =
-		Math.abs(input.viewportPt - input.previousViewportPt) > 0.5 ||
-		Math.abs(input.contentPt - input.previousContentPt) > 0.5;
-	return geometryChanged || input.offsetY >= input.previousOffsetY - 0.5;
+	const previousEnd = Math.max(
+		0,
+		input.previousContentPt - input.previousViewportPt,
+	);
+	const currentEnd = Math.max(0, input.contentPt - input.viewportPt);
+	const clampAllowance = Math.min(
+		Math.max(0, previousEnd - currentEnd),
+		Math.max(0, input.previousOffsetY - currentEnd),
+	);
+	const upwardMovement = input.previousOffsetY - input.offsetY;
+	return upwardMovement <= clampAllowance + 0.5;
 };
