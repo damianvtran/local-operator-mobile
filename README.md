@@ -82,10 +82,11 @@ mock relay by the [frame audit](./docs/e2e/README.md):
 
 **Designed, and not implemented yet:**
 
-- **Push notifications** — the design for delivering a session's
+- **Push notifications** — Background push delivery is not implemented. Settings
+  includes permission handling and registered-device visibility; this build does
+  not register the phone for delivery. The design for delivering a session's
   attention-needing events to the phone, and for acknowledging them across
   surfaces, is recorded in [ADR 0006](./docs/adr/0006-push-and-ack-sync.md).
-  Nothing is wired up.
 - **Demo mode** — a build that lets someone try the app without owning a computer
   running `lop`, which the store review paths in [`docs/publishing/`](./docs/publishing/)
   ask for.
