@@ -36,8 +36,8 @@ Workflow checkout (full history, persist-credentials:false) then:
    after verification. Upload is additionally conditional on that output.
 
 Collector subprocesses (argv arrays, no shell):
-- node --version (must be24), pnpm --version (must be12.6.0), java -version
-  (must already be17), git diff --name-only baseline -- and git rev-parse HEAD.
+- node --version (must be24), pnpm --version (must be12.6.0),
+  git diff --name-only baseline -- and git rev-parse HEAD. No Java/JDK command.
 - pnpm install --frozen-lockfile in the future job's OWN ephemeral checkout.
 - node scripts/ci/producer-contract-sdk.cjs <actual-checkout-root>.
 - pnpm exec expo prebuild --platform ios --no-install.
@@ -50,10 +50,52 @@ Metro server/export, compiler/map collection, signing, TestFlight or store actio
 No generated bundle phase or resolved application entry is executed. The one
 SDK resolver script invocation computes a path; it is NOT compiled entry proof.
 
-Missing Node/pnpm/plutil/JDK17 stops before dependency install/prebuild. There is
-no provisioning fallback. Prebuild failures recognize only bounded known SDK/
-Java/xcrun prerequisite patterns and emit typed codes; otherwise PREBUILD_FAILED.
-Unclassified failure is not permission to install another tool or dump raw output.
+Missing Node/pnpm/plutil stops before dependency install/prebuild. There is no
+provisioning fallback. Java17 is not an evidenced prerequisite for this iOS-only
+source-generation operation; the collector no longer probes or gates on Java.
+Real nonzero prebuild exits STILL STOP. A JAVA_HOME marker in that failed
+prebuild's stderr emits PREBUILD_JAVA_HOME_ERROR, distinct from a missing-tool or
+resolver failure. This names the observed command/marker, NOT a Java version,
+missing JDK or causal diagnosis. SDK/xcrun markers and other errors retain their
+existing fail-closed codes. No actual prebuild error is suppressed or provisioned.
+
+### Why the old Java gate is removed — source argument, not a runtime diagnosis
+
+Exact pinned upstream source:
+- [CLI57.0.27 prebuild index](https://cdn.jsdelivr.net/npm/@expo/cli@57.0.27/build/src/prebuild/index.js)
+  passes install:!args['--no-install'] and resolvePlatformOption(args['--platform']).
+- [CLI57.0.27 resolveOptions](https://cdn.jsdelivr.net/npm/@expo/cli@57.0.27/build/src/prebuild/resolveOptions.js)
+  maps ios to ['ios']; it does not select Android for that explicit argument.
+- [CLI57.0.27 prebuildAsync](https://cdn.jsdelivr.net/npm/@expo/cli@57.0.27/build/src/prebuild/prebuildAsync.js)
+  generates/configures source; node installation and CocoaPods installation are
+  gated on options.install. No Java invocation appears in that orchestration.
+- [CLI57.0.27 configureProjectAsync](https://cdn.jsdelivr.net/npm/@expo/cli@57.0.27/build/src/prebuild/configureProjectAsync.js)
+  passes the selected platforms into compileModsAsync.
+- [config-plugins57.0.9 mod compiler](https://cdn.jsdelivr.net/npm/@expo/config-plugins@57.0.9/build/plugins/mod-compiler.js)
+  skips excluded platforms BEFORE evaluating their registered mods.
+
+Repository app.config.ts registers two local Android plugins; they register
+withAppBuildGradle/withAndroidManifest text modifications, with no Java/child
+process invocation at registration. They are not Android compilation commands.
+[Official Expo CNG documentation](https://docs.expo.dev/workflow/continuous-native-generation/)
+separates generating native directories using prebuild from building with run:ios
+or run:android. A full native workflow's Java setup is not evidence that this
+prebuild-only diagnostic needs exactly JDK17. All statements here are scoped
+source evidence, not an exhaustive proof about every transitive plugin or a real
+SDK-without-Java PASS. A future genuine Java-related prebuild failure remains a
+STOP requiring evidence and a new disposition, not installation fallback.
+
+### Historical STOP ambiguity is immutable
+
+Original producer P be9b6603181969e74ecbeff18cd5436308721eba produced run38787931606's
+legacy JDK17_REQUIRED/null-result STOP. That original code could arise from early
+which/version/failed Java command OR a later JAVA_HOME prebuild marker. Its null
+fields and short step duration do NOT identify which happened or which commands
+completed. Original P/E/artifact bytes and the historical16-unit PASS remain
+unchanged. JDK17_REQUIRED stays accepted in the closed vocabulary for historical
+bodies only; new source has no emitter for it. Do not upgrade old E to the new
+PREBUILD_JAVA_HOME_ERROR stage or claim Java21, missing Java, or no install/prebuild.
+Current working-delta tests and SDK/prebuild behavior are NOT RUN/UNVERIFIED.
 
 ## What is actually measured by the future diagnostic
 
@@ -96,7 +138,7 @@ CLI override hook. Even a plausible SDK-resolved entry remains SDK_RESOLVED_ONLY
 ## Budget, privacy and custody
 
 Collector deadline360s, each subprocess at most180s, dependency install180s,
-prebuild120s; other commands20s (Java5s). Exact owned process groups are terminated,
+prebuild120s; other commands20s. Exact owned process groups are terminated,
 killed and verified retired, including failure/timeout paths. The outer10minute
 job includes checkout/setup time; slow setup can still exhaust that platform
 ceiling. No current hosted time, physical CPU/RAM/disk or price is measured.
@@ -134,9 +176,12 @@ quarantine and primary PR92 remain outside this checkout/allocation.
 manual/default/invalid guard paths and existing native/signed workflow source;
 private/unknown phase content; zero/multiple phase/project counts; actual entry
 file hash, external/symlink escapes; SDK version mismatch/public schema/size;
-publication tamper/symlink/byte budget; missing tools before installs; known and
-unknown prebuild failure; bounded noisy/partial-output children; sanitized resolver
-failure. Future explicit cheap test command:
+publication tamper/symlink/byte budget; missing Node/pnpm/plutil before installs;
+synthetic successful iOS collection with neither Java nor javac available/queried/
+invoked; stage-specific prebuild JAVA_HOME marker versus resolver/generic command
+failure; historical legacy-body ambiguity and rejected fabricated stage fields;
+known/unknown prebuild failure; bounded noisy/partial-output children; sanitized
+resolver failure. The no-Java positive uses a Fake prebuild, not the real SDK. Future explicit cheap test command:
 
 `python3 -m unittest discover -s scripts/ci -p test_producer_contract_diagnostic.py`
 

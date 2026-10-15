@@ -36,7 +36,10 @@ CODES = {"INPUT_REJECTED", "SETUP_PREREQUISITE", "COMMAND_FAILED", "TIMEOUT", "B
          "NODE_REQUIRED", "PNPM_REQUIRED", "JDK17_REQUIRED", "PLUTIL_REQUIRED", "SOURCE_CHANGED",
          "SDK_PREREQUISITE", "PROJECT_COUNT", "PHASE_COUNT", "PBX_INVALID", "ENTRY_RESOLUTION_FAILED",
          "PATH_REFUSED", "PUBLIC_SCHEMA", "PREBUILD_FAILED", "SDK_REQUIRED", "XCODE_PREREQUISITE",
-         "COLLECTOR_FAILED", "OWNED_GROUP_NOT_REAPED"}
+         "COLLECTOR_FAILED", "OWNED_GROUP_NOT_REAPED", "PREBUILD_JAVA_HOME_ERROR"}
+# JDK17_REQUIRED remains valid ONLY for historical P artifacts: it conflated
+# initial tool/version checks and a later prebuild stderr marker. Never infer
+# an old artifact's execution stage from that code or its null result fields.
 
 
 class Stop(RuntimeError):
@@ -157,7 +160,9 @@ class Runner:
                     if b"Android SDK" in output[1]:
                         failure = "SDK_REQUIRED"
                     elif b"JAVA_HOME" in output[1]:
-                        failure = "JDK17_REQUIRED"
+                        # This proves only a nonzero PREBUILD command whose stderr
+                        # contains the marker, not a Java version or root cause.
+                        failure = "PREBUILD_JAVA_HOME_ERROR"
                     elif b"xcrun" in output[1]:
                         failure = "XCODE_PREREQUISITE"
                 raise Stop(failure)
@@ -290,14 +295,16 @@ def project_file(root):
 
 
 def collect(root, runner):
-    for tool, code in (("node", "NODE_REQUIRED"), ("pnpm", "PNPM_REQUIRED"), ("java", "JDK17_REQUIRED"), ("plutil", "PLUTIL_REQUIRED")):
+    # This path generates iOS source only. Pinned Expo CLI selects ios mods and
+    # --no-install skips native dependency installation; an exact Java17 gate
+    # borrowed from a full native/Android job is not an evidenced prerequisite.
+    # Actual prebuild failures still STOP below; no toolchain is provisioned.
+    for tool, code in (("node", "NODE_REQUIRED"), ("pnpm", "PNPM_REQUIRED"), ("plutil", "PLUTIL_REQUIRED")):
         need(shutil.which(tool), code)
     out, _ = runner.run(["node", "--version"])
     need(re.fullmatch(rb"v24\.[0-9]+\.[0-9]+\s*", out), "NODE_REQUIRED")
     out, _ = runner.run(["pnpm", "--version"])
     need(out.strip() == b"12.6.0", "PNPM_REQUIRED")
-    out, err = runner.run(["java", "-version"], timeout=5, failure="JDK17_REQUIRED")
-    need(re.search(rb'(?:openjdk|java) version "17\.', out + err), "JDK17_REQUIRED")
     out, _ = runner.run(["git", "diff", "--name-only", BASELINE, "--"], failure="SOURCE_CHANGED")
     need(all(path in FILES for path in out.decode().splitlines()), "SOURCE_CHANGED")
     out, _ = runner.run(["git", "rev-parse", "HEAD"])

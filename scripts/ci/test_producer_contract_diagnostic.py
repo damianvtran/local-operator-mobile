@@ -167,6 +167,19 @@ class PhaseAndPathTests(unittest.TestCase):
 
 
 class PublicationTests(unittest.TestCase):
+    def test_legacy_jdk_stop_cannot_be_promoted_to_an_execution_stage(self):
+        # The same old body represented missing-tool, version-command failure,
+        # non17, and late prebuild markers at P. Nulls/code cannot distinguish
+        # those histories; accepting old schema is not reclassifying old E.
+        legacy = diag.blocked("JDK17_REQUIRED")
+        diag.validate_public(legacy)
+        self.assertTrue(all(legacy[key] is None for key in ("checkout", "sdk", "phase", "entry")))
+        self.assertNotIn("stage", legacy)
+        self.assertNotEqual(legacy["code"], "PREBUILD_JAVA_HOME_ERROR")
+        for stage in ("early-missing-tool", "early-version-command-failed", "early-non17", "late-prebuild"):
+            with self.subTest(stage=stage), self.assertRaises(diag.Stop):
+                diag.validate_public(dict(legacy, stage=stage))
+
     def test_positive_publication_and_hash_before_upload(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -217,7 +230,7 @@ class PublicationTests(unittest.TestCase):
 
 
 class SyntheticCollectTests(unittest.TestCase):
-    def test_complete_source_only_collection_without_executing_sdk_or_prebuild(self):
+    def test_synthetic_ios_collection_with_no_java_lookup_or_command(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory).resolve()
             sdk = copy.deepcopy(payload()["sdk"])
@@ -244,8 +257,6 @@ class SyntheticCollectTests(unittest.TestCase):
                         return b"v24.1.0", b""
                     if args == ["pnpm", "--version"]:
                         return b"12.6.0", b""
-                    if args == ["java", "-version"]:
-                        return b"", b'openjdk version "17.0.1"'
                     if args[:2] == ["git", "diff"]:
                         return b"", b""
                     if args[:2] == ["git", "rev-parse"]:
@@ -264,8 +275,13 @@ class SyntheticCollectTests(unittest.TestCase):
                     if args[0] == "plutil":
                         return json.dumps(pbx()).encode(), b""
                     raise AssertionError("unexpected command in synthetic source fixture")
-            with patch.object(diag.shutil, "which", return_value="/synthetic/tool"):
+            # This fixture proves the collector itself does not require/invoke
+            # Java; Fake prebuild success is NOT real Expo-without-Java proof.
+            with patch.object(diag.shutil, "which", side_effect=lambda name: None if name in {"java", "javac"} else "/synthetic/tool") as which:
                 value = diag.collect(root, Fake())
+            self.assertNotIn(unittest.mock.call("java"), which.call_args_list)
+            self.assertNotIn(unittest.mock.call("javac"), which.call_args_list)
+            self.assertTrue(all(args[0] not in {"java", "javac"} for args in calls))
             diag.validate_public(value)
             self.assertFalse(value["nativeCompiled"])
             self.assertEqual(value["entry"]["kind"], "SDK_RESOLVED_ONLY")
@@ -276,7 +292,7 @@ class SyntheticCollectTests(unittest.TestCase):
 
 class ResourceAndPrerequisiteTests(unittest.TestCase):
     def test_missing_tools_stop_before_dependency_install(self):
-        for missing, code in [("node", "NODE_REQUIRED"), ("pnpm", "PNPM_REQUIRED"), ("java", "JDK17_REQUIRED"), ("plutil", "PLUTIL_REQUIRED")]:
+        for missing, code in [("node", "NODE_REQUIRED"), ("pnpm", "PNPM_REQUIRED"), ("plutil", "PLUTIL_REQUIRED")]:
             with self.subTest(missing=missing), patch.object(diag.shutil, "which", side_effect=lambda name: None if name == missing else "/synthetic/tool"):
                 runner = unittest.mock.Mock()
                 with self.assertRaisesRegex(diag.Stop, code):
@@ -284,7 +300,7 @@ class ResourceAndPrerequisiteTests(unittest.TestCase):
                 runner.run.assert_not_called()
 
     def test_prebuild_failures_are_typed_and_output_not_retained(self):
-        for message, expected in [("Android SDK missing", "SDK_REQUIRED"), ("JAVA_HOME missing", "JDK17_REQUIRED"),
+        for message, expected in [("Android SDK missing", "SDK_REQUIRED"), ("JAVA_HOME missing", "PREBUILD_JAVA_HOME_ERROR"),
                                   ("xcrun missing", "XCODE_PREREQUISITE"), ("synthetic-private-value", "PREBUILD_FAILED")]:
             with tempfile.TemporaryDirectory() as directory:
                 runner = diag.Runner(Path(directory))
@@ -293,6 +309,18 @@ class ResourceAndPrerequisiteTests(unittest.TestCase):
                     runner.run([sys.executable, "-c", script], failure="PREBUILD_FAILED")
                 for path in Path(directory).iterdir():
                     self.assertNotIn(message, path.read_text())
+
+    def test_java_home_marker_is_classified_only_at_failed_prebuild_stage(self):
+        for failure, expected in [("PREBUILD_FAILED", "PREBUILD_JAVA_HOME_ERROR"),
+                                  ("ENTRY_RESOLUTION_FAILED", "ENTRY_RESOLUTION_FAILED"),
+                                  ("COMMAND_FAILED", "COMMAND_FAILED")]:
+            with self.subTest(failure=failure), tempfile.TemporaryDirectory() as directory:
+                runner = diag.Runner(Path(directory))
+                # A marker from a different failed command must not fabricate a
+                # prebuild stage; no environment value or raw text is published.
+                with self.assertRaisesRegex(diag.Stop, expected):
+                    runner.run([sys.executable, "-c", "import sys;sys.stderr.write('JAVA_HOME synthetic-private-value');sys.exit(1)"], failure=failure)
+                self.assertTrue(all("synthetic-private-value" not in path.read_text() for path in Path(directory).iterdir()))
 
     def test_partial_output_no_eof_and_noisy_child_are_bounded(self):
         for script, timeout, cap, code in [("import os,time;os.write(1,b'x');time.sleep(10)", .15, 128, "TIMEOUT"),
