@@ -88,3 +88,23 @@ describe("overlay surfaces spend the side insets", () => {
 		});
 	}
 });
+
+/* SOURCE CHECKS, and only that: there is no render seam in the Node test environment
+ * (see the header). Each one pins a line whose removal is a visible defect the CI audit
+ * or a real click would catch, so a reader of a red test knows what it was protecting. */
+describe("Dialog carrier and bounds (source checks; real click proof is in the PR evidence)", () => {
+	const dialog = read("dialog.tsx");
+
+	it("the full-width inset carrier is not a press target (reviewer M1)", () => {
+		// as a hit-testable box it sat above the scrim and swallowed a tap beside the dialog
+		const carrier = dialog.slice(
+			dialog.indexOf('className="w-full items-center"') - 120,
+		);
+		expect(carrier.slice(0, 200)).toContain('pointerEvents="box-none"');
+	});
+
+	it("the surface is height-bounded and the body scrolls inside it (UX U7)", () => {
+		expect(dialog).toContain("maxHeight:");
+		expect(dialog).toContain("SURFACE.dialogBody");
+	});
+});

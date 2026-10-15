@@ -80,17 +80,6 @@ export const rosterBody = (input: {
 	};
 };
 
-/**
- * The subagents header's clauses for the compact (short-landscape) form.
- *
- * Order is by URGENCY, not by the wire's rank: failed, parked, running, queued,
- * then the settled statuses. Collapsed, only the ATTENTION three are shown (`queued` and the settled
- * `done` and `cancelled` are not something a reader acts on from a status line);
- * `open` = true lists every status (the body's own summary, if a caller wants it); the
- * subagents header itself passes `false` in both states, because the opened rows carry
- * each child's status and the accessible name always carries all of them. A clause is never clipped to fit: the region cuts on
- * row boundaries instead (`snapRegion`).
- */
 const COMPACT_CLAUSE_ORDER = [
 	"failed",
 	"parked",
@@ -105,6 +94,18 @@ const COMPACT_CLAUSE_ORDER = [
  *  accessible name and shown once the panel is opened. */
 const COMPACT_ATTENTION = new Set<string>(["failed", "parked", "running"]);
 
+/**
+ * The subagents header's clauses for the compact (short-landscape) form.
+ *
+ * Order is by URGENCY, not by the wire's rank: failed, parked, running, queued, then the
+ * settled statuses. With `open` false only the ATTENTION three are listed (`queued`,
+ * `completed` and `cancelled` are not something a reader acts on from a status line);
+ * with `open` true every status is listed. The screen passes `false` today in both the
+ * closed and the opened state, because opened rows carry each child's own status and the
+ * accessible name always names all of them; `open` stays for a caller that wants the
+ * full summary. A clause is never clipped to fit: the region cuts on ROW boundaries
+ * instead (`snapRegion`).
+ */
 export const compactClauses = <T extends { status: string }>(
 	clauses: readonly T[],
 	open: boolean,

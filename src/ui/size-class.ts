@@ -112,6 +112,11 @@ export const sidebarFooterScrolls = (layout: Layout): boolean =>
  * secondary chrome shrinks and the two regions that cannot shrink any further
  * (the secondary chrome and the composer) are bounded and scroll internally.
  *
+ * **Reach, stated.** Phones are portrait-locked natively (`app.config.ts`
+ * `orientation: "portrait"`), so this form is reachable on Android >= 600 dp devices
+ * (API 36 ignores the lock), tablets, multi-window and the web build; it is NOT
+ * reachable on an iPhone or a small Android phone today.
+ *
  * **The orientation comes from the SCREEN, not the window.** A portrait phone with
  * the keyboard up has a short WINDOW (390x300 under Android `adjustResize`) whose
  * width is greater than its height, so deciding from the window would flip the
@@ -125,6 +130,10 @@ export const compactChromeFor = (dims: {
 	screen: { width: number; height: number };
 }): boolean =>
 	dims.screen.width > dims.screen.height &&
+	// The WINDOW must be landscape-shaped too: a 400x600 floating window on a landscape
+	// tablet screen satisfies the two tests above and used to get landscape chrome in a
+	// portrait-shaped window (UX U6).
+	dims.window.width > dims.window.height &&
 	dims.window.height < SPLIT_MIN_HEIGHT;
 
 /**
@@ -141,12 +150,21 @@ export const compactChromeFor = (dims: {
  * at 200 % (0.29, less the "+N more" cue's line, so 0.27 is spent on content).
  */
 export const COMPACT_COMPOSER_SHARE = 0.45;
+
+/** The pending card's scrolling content, as a share of the window. Its title row and
+ *  its pinned controls (Approve/Deny/remember, or Submit) are outside this region, so
+ *  the share buys only the reading of the command or question. */
+export const COMPACT_PENDING_SHARE = 0.16;
 export const compactChromeShare = (effectiveScale: number): number =>
 	Math.min(0.34, Math.max(0.27, 0.34 - (effectiveScale - 1) * 0.07));
 
 /** While a panel is OPEN the reader has chosen it, so it may take most of the screen
  *  (the transcript can drop to nothing; closing the panel gives the reading back). */
 export const COMPACT_OPEN_PANEL_SHARE = 0.6;
+
+/** The least height worth showing the closed region at: one `meta` line at 100 % plus
+ *  its padding. Below it the region and its cue are dropped (see `snapRegion`). */
+export const COMPACT_MIN_REGION = 40;
 
 /**
  * How tall the closed secondary region should be, cut on a ROW boundary.
@@ -155,7 +173,8 @@ export const COMPACT_OPEN_PANEL_SHARE = 0.6;
  * invitation to scroll (design D2, UX U1), so the region shows a whole number of the
  * rows it holds. `heights` are the rows' measured heights in display order; the result
  * is the tallest prefix that fits `cap` (after reserving `cue` for the "+N more" line
- * when something is hidden), never less than the first row's own height up to `cap`.
+ * when something is hidden), never less than the first row's own height — and when the cap is too small to hold a
+ * line, nothing is shown (height 0) only if the cap is under `COMPACT_MIN_REGION`.
  * `hidden` is how many rows that leaves below the fold.
  */
 export const snapRegion = (
@@ -180,8 +199,20 @@ export const snapRegion = (
 	 *  exact half-line defect this function exists to prevent. The cue may then push the
 	 *  region a line past its share, which costs the transcript less than a clipped
 	 *  status costs the reader. Only a first row taller than the whole cap is cut. */
-	if (shown === 0)
-		return { height: Math.min(rows[0] ?? 0, cap), hidden: rows.length - 1 };
+	if (shown === 0) {
+		/* A cap too small to hold even a readable line shows nothing: a clipped
+		 *  sliver of one row plus a cue taller than the sliver is the half-line defect
+		 *  this function exists to prevent (UX U3: a 7 pt region and a 38 pt cue in a
+		 *  200 pt keyboard-shortened window). Height 0 with everything hidden tells the
+		 *  screen to render neither region nor cue; the transcript gets the room. A
+		 *  first row taller than a cap that CAN show a line is still cut at the cap and
+		 *  stays scrollable. */
+		if (usable < COMPACT_MIN_REGION) return { height: 0, hidden: rows.length };
+		return {
+			height: Math.min(rows[0] ?? 0, cap),
+			hidden: rows.length - 1,
+		};
+	}
 	return { height, hidden: rows.length - shown };
 };
 
@@ -321,3 +352,28 @@ function measureFor(width: number, height: number): number | null {
 	 *  column inside a 620 pt cap. One implementation now, and this one is a call. */
 	return maxColumnWidth({ width, height });
 }
+
+/**
+ * How the compact composer's height budget is spent, in order of what must never leave
+ * the screen: the receipt line (model/effort chips) and the field row's touch floor are
+ * RESERVED first; the extras (attachments, alerts, the disabled reason) then take what
+ * they naturally need out of what is left, and the field's ceiling is the remainder.
+ *
+ * Why a function: with the field and the extras in one scroller a 3-line draft at 200 %
+ * pushed Send off a 390 pt screen (UX U1). Send, Stop and Attach live in the field's row
+ * and the chips on the receipt line, so as long as `receipt + field + padding` fits the
+ * budget they cannot scroll away. `field` is a hard ceiling for the textarea: past it the
+ * FIELD scrolls its own text, never the controls beside it. `extras` is the extras
+ * scroller's ceiling: past it THEY scroll, never the field row.
+ */
+export const composerBudget = (
+	maxHeight: number,
+	receiptHeight: number,
+	extrasNatural: number,
+	touchFloor: number,
+	padding: number,
+): { field: number; extras: number } => {
+	const room = Math.max(touchFloor, maxHeight - receiptHeight - padding);
+	const extras = Math.min(extrasNatural, Math.max(0, room - touchFloor));
+	return { field: Math.max(touchFloor, room - extras), extras };
+};

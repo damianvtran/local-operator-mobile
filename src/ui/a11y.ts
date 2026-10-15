@@ -298,6 +298,10 @@ export const CONTROL = {
 	pendingRemember: "pending-remember",
 	pendingAskSubmit: "pending-ask-submit",
 	todosDisclosure: "todos-disclosure",
+	/** Short landscape only: closes the open panel once its own header has scrolled out
+	 *  of the secondary region, so the reader is never left inside a panel with no way
+	 *  back to the transcript. */
+	sessionPanelClose: "session-panel-close",
 	subagentsDisclosure: "subagents-disclosure",
 	/** The session header's subagents lever, which OPENS the roster panel.
 	 *  Deliberately not `subagentsDisclosure`: that one is the panel's own header
@@ -544,8 +548,12 @@ export const SURFACE = {
 	/** The panels + working line, bounded and internally scrolling in short landscape
 	 *  (`compactChromeFor`); absent elsewhere, where they are plain siblings. */
 	sessionSecondaryChrome: "session-secondary-chrome",
-	/** The `+N more · scroll` cue under the compact secondary region, present only
-	 *  while a whole row is hidden below its fold. */
+	/** The confirm dialog's body, a bounded scroller so a long body never pushes the
+	 *  actions off a short screen. */
+	dialogBody: "dialog-body",
+	/** The cue under the compact secondary region ("<what is below> · scroll ↓", or the
+	 *  neutral "more below · scroll ↓"), present only while the region overflows and is not
+	 *  scrolled to its end. It never carries a count. */
 	sessionSecondaryMore: "session-secondary-more",
 	/** The composer's attach sheet (one entry point, the sources each build kind
 	 *  actually has). Its rows are the `attach-option-` family below — the rows

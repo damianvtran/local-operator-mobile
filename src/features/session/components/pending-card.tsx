@@ -41,6 +41,12 @@ export type PendingCardProps = {
 	onDeny?: (remember: boolean) => void;
 	/** An ask's answer: the chosen option's label, or the typed value. */
 	onAnswer?: (value: string) => void;
+	/** Short landscape: the content region's max height in pt, derived from the window
+	 *  by the screen. The card's content already scrolls inside a bounded region with
+	 *  its controls pinned below; the fixed `max-h-64` (256 pt) is wider than a 390 pt
+	 *  screen can spare once the composer is under it, which put Send and the chips 80 pt
+	 *  below the fold with a pending approval (UX U2). */
+	bodyMaxHeight?: number;
 };
 
 /** The frame: `accent-wash` on `accent-border` at `radius.md`, the one card the
@@ -54,6 +60,7 @@ export const PendingCard = ({
 	onApprove,
 	onDeny,
 	onAnswer,
+	bodyMaxHeight,
 }: PendingCardProps) => {
 	/** The typed answer. Seeded empty and NOT carried across a question: the screen
 	 *  remounts this component per question, which is what makes that true. */
@@ -74,6 +81,43 @@ export const PendingCard = ({
 	const answerValue =
 		chosen !== null ? (view.options[chosen]?.label ?? "") : text.trim();
 	const answerDisabled = busy || answerValue.length === 0;
+
+	/* The "remember this choice" row, a 44 pt target. In the full form it is pinned under
+	 *  Approve/Deny. In short landscape (`bodyMaxHeight` set) it rides at the END of the
+	 *  scrolling body instead: pinned it cost a 48 pt strip the 390 pt screen cannot spare, which
+	 *  left the composer's chips below the fold with an approval pending (UX U2). Approve and
+	 *  Deny stay pinned; only this secondary option scrolls. */
+	const compactBody = bodyMaxHeight !== undefined;
+	/* A 44-high row with a 16 checkbox. The label NAMES THE SCOPE (`R12`): "remember
+	 *  this choice" never said which choice. */
+	const rememberRow = (
+		<Pressable
+			accessibilityRole={ROLE.checkbox}
+			accessibilityLabel={view.rememberLabel}
+			accessibilityState={{ checked: remember, disabled: busy }}
+			disabled={busy}
+			onPress={() => setRemember((current) => !current)}
+			testID={CONTROL.pendingRemember}
+		>
+			<View className="min-h-11 flex-row items-center gap-2">
+				<View
+					className={cx(
+						"h-4 w-4 items-center justify-center rounded-sm border",
+						remember ? "border-accent bg-accent" : "border-control bg-surface",
+					)}
+				>
+					{remember ? (
+						<Text className="text-meta text-on-accent" aria-hidden>
+							✓
+						</Text>
+					) : null}
+				</View>
+				<Text className="min-w-0 flex-1 text-body-sm text-ink-muted">
+					{view.rememberLabel}
+				</Text>
+			</View>
+		</Pressable>
+	);
 
 	// The key lives at the RENDER SITE and is built from the two numbers, so a
 	// re-render for the next question remounts the form: without it a stale `busy`
@@ -98,7 +142,13 @@ export const PendingCard = ({
 			</View>
 
 			{/* Region 2 — the content, scrollable and bounded. */}
-			<ScrollView className="max-h-64" testID={SURFACE.pendingCardBody}>
+			<ScrollView
+				className={bodyMaxHeight === undefined ? "max-h-64" : undefined}
+				style={
+					bodyMaxHeight === undefined ? undefined : { maxHeight: bodyMaxHeight }
+				}
+				testID={SURFACE.pendingCardBody}
+			>
 				{view.boundarySentence !== null ? (
 					/* The honest boundary. One sentence, no control: either the approval
 					   belongs to the reader's terminal, or the session is over. The
@@ -214,6 +264,7 @@ export const PendingCard = ({
 						) : null}
 					</View>
 				) : null}
+				{compactBody && isApproval ? rememberRow : null}
 			</ScrollView>
 
 			{/* Region 3 — the controls, pinned BELOW the scroller so they can never
@@ -241,36 +292,7 @@ export const PendingCard = ({
 								/>
 							</View>
 						</View>
-						{/* A 44-high row with a 16 checkbox. The label NAMES THE SCOPE
-						    (`R12`): "remember this choice" never said which choice. */}
-						<Pressable
-							accessibilityRole={ROLE.checkbox}
-							accessibilityLabel={view.rememberLabel}
-							accessibilityState={{ checked: remember, disabled: busy }}
-							disabled={busy}
-							onPress={() => setRemember((current) => !current)}
-							testID={CONTROL.pendingRemember}
-						>
-							<View className="min-h-11 flex-row items-center gap-2">
-								<View
-									className={cx(
-										"h-4 w-4 items-center justify-center rounded-sm border",
-										remember
-											? "border-accent bg-accent"
-											: "border-control bg-surface",
-									)}
-								>
-									{remember ? (
-										<Text className="text-meta text-on-accent" aria-hidden>
-											✓
-										</Text>
-									) : null}
-								</View>
-								<Text className="min-w-0 flex-1 text-body-sm text-ink-muted">
-									{view.rememberLabel}
-								</Text>
-							</View>
-						</Pressable>
+						{compactBody ? null : rememberRow}
 					</>
 				) : (
 					<Button

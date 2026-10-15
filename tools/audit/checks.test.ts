@@ -479,10 +479,15 @@ describe("U-41 — one rail, caret on the first line", () => {
 		expect(U41_EXEMPTIONS).toEqual([]);
 	});
 
+	/* Sources: 31.4 / 20.6 is the PAIR THE RETIRED LEDGER MATCHED (the reading it hid at
+	 *  135 % and 200 %); the other rows were measured on the unmodified build in the browser
+	 *  rig (`raw-runchecks-base-14states.json` in the PR's artifact index: 150 % = the
+	 *  27.8 / 15.9 CI FAIL, 135 % and 200 % = the hidden readings). */
 	it.each([
 		["135 %", 26.7, 13.7],
 		["150 %", 27.8, 15.7],
 		["200 %", 31.4, 20.2],
+		["200 % (the exact pair the retired ledger matched)", 31.4, 20.6],
 	])(
 		"fails the pre-fix turn bar at %s (rail %f, caret %f off)",
 		(_scale, inset, off) => {

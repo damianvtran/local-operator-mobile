@@ -2,7 +2,13 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { ArrowLeft, Search } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { TextInput } from "react-native";
-import { ScrollView, Text, useWindowDimensions, View } from "react-native";
+import {
+	Pressable,
+	ScrollView,
+	Text,
+	useWindowDimensions,
+	View,
+} from "react-native";
 import { useListState } from "@/features/auth/connection-provider";
 import { blockingPending } from "@/features/session/asks";
 import { composerChipLabels } from "@/features/session/chip-labels";
@@ -33,7 +39,8 @@ import { TodosPanel } from "@/features/session/components/todos-panel";
 import { TranscriptList } from "@/features/session/components/transcript-list";
 import { WorkingLine } from "@/features/session/components/working-line";
 import { isRouteRefused } from "@/features/session/connection-view";
-import { headerTitleChars } from "@/features/session/header";
+import { compactTitleChars, headerTitleChars } from "@/features/session/header";
+import { rosterNeedsAttention } from "@/features/session/panels";
 import { pendingView } from "@/features/session/pending";
 import {
 	middleTruncate,
@@ -48,7 +55,7 @@ import { useCompletionAck } from "@/features/session/use-completion-ack";
 import { draftSlashQuery, useComposer } from "@/features/session/use-composer";
 import { useFind } from "@/features/session/use-find";
 import { useSessionRuntime } from "@/features/session/use-session";
-import { CONTROL, EMPTY, SCREEN, SURFACE } from "@/ui/a11y";
+import { CONTROL, EMPTY, ROLE, SCREEN, SURFACE } from "@/ui/a11y";
 import {
 	Chip,
 	EmptyState,
@@ -60,6 +67,7 @@ import { useCompactChrome } from "@/ui/layout";
 import {
 	COMPACT_COMPOSER_SHARE,
 	COMPACT_OPEN_PANEL_SHARE,
+	COMPACT_PENDING_SHARE,
 	compactChromeShare,
 	type RegionKey,
 	regionOrder,
@@ -384,7 +392,21 @@ export default function Session() {
 	>({});
 	/* Whether the region is scrolled to its end: the cue below it says there is MORE
 	 *  and must go away once there is not. */
+	/* The cue's own height at this text size. It is also the "at the bottom" TOLERANCE:
+	 *  the cue sits in the same flex column as the region, so showing it takes that much
+	 *  height FROM the region and hiding it gives it back. Measured: with a strict
+	 *  end-of-scroll test the cue never cleared (at the end it hid, the region grew by the
+	 *  cue's height, the reader was then one cue-height short of the new end, and it came
+	 *  back: max scroll 572 -> 611, a loop). Treating "within one cue-height of the end" as
+	 *  the end is exactly consistent with the space the cue releases. */
+	const cueReserve = Math.round(19 * effectiveScale);
 	const [regionAtBottom, setRegionAtBottom] = useState(false);
+	/* The region's last scroll offset and viewport, kept in refs so a CONTENT change
+	 *  (a row appears, a roster changes) can re-derive "at the bottom" without waiting
+	 *  for a scroll that never comes (reviewer m3: the flag went stale and hid the cue
+	 *  while rows were below). `regionScrollY` state drives the pinned close bar. */
+	const regionScrollRef = useRef({ y: 0, viewport: 0 });
+	const [regionScrollY, setRegionScrollY] = useState(0);
 	const [regionHeights, setRegionHeights] = useState<
 		Partial<Record<RegionKey, number>>
 	>({});
@@ -392,7 +414,15 @@ export default function Session() {
 		title.length > 0
 			? middleTruncate(
 					title,
-					headerTitleChars({ width: viewportWidth, height: viewportHeight }),
+					compact
+						? compactTitleChars(
+								{ width: viewportWidth, height: viewportHeight },
+								effectiveScale,
+							)
+						: headerTitleChars({
+								width: viewportWidth,
+								height: viewportHeight,
+							}),
 				)
 			: "session";
 
@@ -587,9 +617,7 @@ export default function Session() {
 	};
 	const regionItems = regionOrder(
 		compact,
-		subagents.clauses.some(
-			(clause) => clause.status === "failed" || clause.status === "parked",
-		),
+		rosterNeedsAttention(subagents.clauses),
 	)
 		.map((key) => ({ key, node: regionNodes[key] }))
 		.filter((item) => item.node !== null);
@@ -608,7 +636,7 @@ export default function Session() {
 				regionCap,
 				// The cue is a meta-size line that grows with the reader's text (measured 37.6 pt
 				// at 200 %), so its reserve scales: 19 pt per unit of scale.
-				panelOpen ? 0 : Math.round(19 * effectiveScale),
+				panelOpen ? 0 : cueReserve,
 			)
 		: { height: 0, hidden: 0 };
 	// Wide: pinned to its content (`flexGrow/flexShrink: 0`) so the always-rendered
@@ -622,9 +650,50 @@ export default function Session() {
 		0,
 	);
 	const regionOverflows =
-		compact && regionContent > (panelOpen ? regionCap : regionSnap.height) + 1;
+		compact &&
+		// A region snapRegion dropped (too short for a line plus its cue) has no cue either.
+		(panelOpen || regionSnap.height > 0) &&
+		regionContent > (panelOpen ? regionCap : regionSnap.height) + 1;
+	/* What the closed cut hides, by name. The shown rows are the longest prefix whose
+	 *  measured heights fit `regionSnap.height`. */
+	const REGION_LABEL: Record<RegionKey, string> = {
+		working: "activity",
+		subagents: "agents",
+		todos: "tasks",
+		strip: "status",
+	};
+	const hiddenRegionLabels = (() => {
+		if (!compact || panelOpen) return [];
+		let used = 0;
+		const hidden: string[] = [];
+		for (const item of regionItems) {
+			const h = regionHeights[item.key] ?? 0;
+			if (hidden.length === 0 && used + h <= regionSnap.height + 1) used += h;
+			else hidden.push(REGION_LABEL[item.key]);
+		}
+		return hidden;
+	})();
+	const openPanelHeaderGone = (() => {
+		if (!compact || openPanel === null) return false;
+		const at =
+			regionLayout.current[openPanel === "todos" ? "todos" : "subagents"];
+		// the panel's header is its first ~48 pt; once the scroll offset passes it, the
+		// toggle is off screen
+		return at !== undefined && regionScrollY > at.y + 48;
+	})();
 	const regionStyle = compact
-		? { maxHeight: panelOpen ? regionCap : regionSnap.height || regionCap }
+		? {
+				// Before the first measure every height is 0 and snapRegion reports height 0
+				// with nothing hidden: the region must stay laid out then (`|| regionCap`) or
+				// it would never measure its rows and never appear.
+				maxHeight: panelOpen ? regionCap : regionSnap.height || regionCap,
+				// Hidden ONLY when rows are measured and the cap cannot hold a readable line
+				// (snapRegion: height 0 with rows hidden). The scroller is kept in the tree so
+				// rotating or a keyboard going away does not unmount the panels.
+				display: (!panelOpen && regionSnap.height === 0 && regionSnap.hidden > 0
+					? "none"
+					: "flex") as "none" | "flex",
+			}
 		: ({ flexGrow: 0, flexShrink: 0 } as const);
 
 	/* Opening a panel scrolls the region to that panel's header, so the rows the
@@ -719,9 +788,20 @@ export default function Session() {
 						onScroll={(event) => {
 							const { contentOffset, contentSize, layoutMeasurement } =
 								event.nativeEvent;
+							regionScrollRef.current = {
+								y: contentOffset.y,
+								viewport: layoutMeasurement.height,
+							};
+							setRegionScrollY(Math.round(contentOffset.y));
 							setRegionAtBottom(
 								contentOffset.y + layoutMeasurement.height >=
-									contentSize.height - 2,
+									contentSize.height - 2 - cueReserve,
+							);
+						}}
+						onContentSizeChange={(_width, height) => {
+							const { y, viewport } = regionScrollRef.current;
+							setRegionAtBottom(
+								viewport > 0 && y + viewport >= height - 2 - cueReserve,
 							);
 						}}
 						nestedScrollEnabled
@@ -732,6 +812,10 @@ export default function Session() {
 								key={key}
 								onLayout={(event) => {
 									const { y, height } = event.nativeEvent.layout;
+									/* A row laid out inside a `display: none` region reports 0. Taking
+									 *  that as its height would flip the region back on, re-measure it
+									 *  and hide it again: a loop. The last real measurement stands. */
+									if (height <= 0) return;
 									regionLayout.current[key] = { y, h: height };
 									setRegionHeights((prev) =>
 										prev[key] === Math.round(height)
@@ -744,20 +828,42 @@ export default function Session() {
 							</View>
 						))}
 					</ScrollView>
-					{/* NEUTRAL wording on purpose: `hidden` counts the region's ROWS (a panel
-					    is one row whatever it holds), which a reader cannot map to "agents",
-					    so a number here read as a miscount (UX). It is a cue, not a tally —
-					    and it leaves once the region is scrolled to its end. While a panel is
-					    OPEN the cap is a share of the window and may land inside an opened row;
-					    the region is a scroller and the cue is shown, which is the truthful
-					    signal that the cut is not the end. */}
+					{/* THE CUE, honest about what it is. It is not a tally (`hidden` counts the
+					    region's ROWS, which a reader cannot map to "agents": a number read as
+					    a miscount) — it NAMES what the cut hides ("tasks · status below"),
+					    because with the working line, context/cost and Tasks all behind it a
+					    bare "more below" told a reader nothing about whether to scroll (UX U5).
+					    A hairline above it separates it from a row the cut stops beside (design
+					    D3). It leaves once the region is scrolled to its end. While a panel is
+					    open the cap may land inside an opened row, and the cue is then the
+					    truthful signal that the cut is not the end. */}
 					{compact && regionOverflows && !regionAtBottom ? (
 						<Text
-							className="px-4 pb-1 text-meta text-ink-dim"
+							className="border-t border-hairline px-4 pt-1 text-meta text-ink-dim"
 							testID={SURFACE.sessionSecondaryMore}
 						>
-							more below · scroll
+							{hiddenRegionLabels.length > 0
+								? `${hiddenRegionLabels.join(" · ")} below · scroll ↓`
+								: "more below · scroll ↓"}
 						</Text>
+					) : null}
+					{/* An open panel's own toggle scrolls out of the region with its header;
+					    this keeps a way to CLOSE it on screen (UX U4). Shown only once the
+					    header has scrolled out, so it is not a second toggle in the common
+					    case. */}
+					{compact && openPanelHeaderGone ? (
+						<Pressable
+							accessibilityRole={ROLE.button}
+							accessibilityLabel={`Close ${openPanel === "todos" ? "tasks" : "subagents"}`}
+							onPress={() => setOpenPanel(null)}
+							testID={CONTROL.sessionPanelClose}
+						>
+							<View className="min-h-11 justify-center border-t border-hairline px-4">
+								<Text className="text-meta text-ink-muted">
+									{`Close ${openPanel === "todos" ? "tasks" : "subagents"} ▴`}
+								</Text>
+							</View>
+						</Pressable>
 					) : null}
 					{/* The find navigate bar. It sits directly above the composer's stack
 					    (thumb reach, U-31) and BELOW the panels — and above the pending
@@ -775,6 +881,14 @@ export default function Session() {
 						<View className="px-4 pb-1">
 							<PendingCard
 								view={pendingViewProps}
+								bodyMaxHeight={
+									compact
+										? Math.max(
+												72,
+												Math.round(viewportHeight * COMPACT_PENDING_SHARE),
+											)
+										: undefined
+								}
 								busy={composer.sending}
 								error={composer.error}
 								onApprove={(remember) =>

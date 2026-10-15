@@ -71,7 +71,7 @@ export function useLayout(): Layout {
  * separately because the hook does not carry it, and a rotation changes both.
  */
 export function useCompactChrome(): boolean {
-	const window = useWindowDimensions();
+	const windowDims = useWindowDimensions();
 	const [screen, setScreen] = useState(() => Dimensions.get("screen"));
 	useEffect(() => {
 		const subscription = Dimensions.addEventListener("change", (next) =>
@@ -79,7 +79,7 @@ export function useCompactChrome(): boolean {
 		);
 		return () => subscription.remove();
 	}, []);
-	return compactChromeFor({ window, screen });
+	return compactChromeFor({ window: windowDims, screen });
 }
 
 /* Re-exported so a screen imports the vocabulary from one place whether it needs

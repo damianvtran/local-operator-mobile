@@ -48,6 +48,7 @@ import {
 	Textarea,
 } from "@/ui/components";
 import { TOUCH_FLOOR } from "@/ui/layout";
+import { composerBudget } from "@/ui/size-class";
 import { LARGE_TEXT_SCALE } from "@/ui/text-scale";
 import { useTextScale } from "@/ui/text-scale-provider";
 import { CONTROL_DISABLED_INK, cx } from "@/ui/variants";
@@ -534,9 +535,37 @@ export const Composer = ({
 			</>
 		);
 
-	/* Everything the composer shows, in ONE fragment so the compact form can put the
-	 *  whole of it inside a bounded scroller without a second copy of any control. */
-	const content = (
+	/* The compact budget, spent in order of what must never leave the screen: the receipt
+	 *  line (chips), then the field's one-line floor, then whatever is left is the field's
+	 *  growth, and the extras scroller gets the rest. `compact.maxHeight` is the whole
+	 *  composer's share of the window (`COMPACT_COMPOSER_SHARE`). */
+	const [receiptHeight, setReceiptHeight] = useState(48);
+	/* The extras' natural height, from the scroller's own content size, so the budget can
+	 *  give them what they need and no more. */
+	const [extrasHeight, setExtrasHeight] = useState(0);
+	const COMPOSER_PAD = 8;
+	const budget =
+		compact === null
+			? null
+			: composerBudget(
+					compact.maxHeight,
+					receiptHeight,
+					extrasHeight,
+					TOUCH_FLOOR,
+					COMPOSER_PAD,
+				);
+	const fieldMaxHeight = budget?.field;
+	const extrasMaxHeight = budget?.extras;
+
+	/* TWO fragments, one scroll owner. `extras` is everything ABOVE the field —
+	 *  attachments, the retained-instruction alert, the error, the disabled reason — and
+	 *  is the ONLY part that may scroll in the compact form. `main` is the field row, the
+	 *  dictation row, the receipt line (queued count + model/effort chips) and the
+	 *  sheets: it is never inside a scroller, so Attach, Send, Stop and both chips stay on
+	 *  screen however long the draft is (UX U1: with everything in one scroller a 3-line
+	 *  draft at 200 % pushed Send off a 390 pt screen). The FIELD scrolls itself, capped
+	 *  by `fieldMaxHeight` below. */
+	const extras = (
 		<>
 			<ComposerStateMarkers controls={controls} />
 			{/* Attachments, above the field: an attachment changes what send means, so it
@@ -669,7 +698,11 @@ export const Composer = ({
 					{controls.disabledReason}
 				</Text>
 			) : null}
+		</>
+	);
 
+	const main = (
+		<>
 			<View className="flex-row items-end gap-2">
 				<View className="min-w-0 flex-1">
 					<Textarea
@@ -679,6 +712,7 @@ export const Composer = ({
 						onChangeText={onDraftChange}
 						placeholder={COMPOSER_COPY.placeholder}
 						maxLines={6}
+						maxHeightPx={fieldMaxHeight}
 						/* One line of placeholder, always (§2.5 D1): the field's resting height
 						 * must not grow with a wrapped placeholder, or the last transcript row is
 						 * pushed past the scroller at 200 % text (design round 1, D1/D2). */
@@ -846,6 +880,9 @@ export const Composer = ({
 			    200 %) — a control no finger can reach. Wrapping costs a second line only
 			    at the scales that need one, and takes nothing away at 100 %. */}
 			<View
+				onLayout={(event) =>
+					setReceiptHeight(Math.round(event.nativeEvent.layout.height))
+				}
 				className={
 					compact === null
 						? "flex-row flex-wrap items-center gap-2 pt-2"
@@ -964,30 +1001,31 @@ export const Composer = ({
 			}
 			testID={testID}
 		>
-			{/* ONE parent shape in both modes: the ScrollView is always here and only its
-			    style and `scrollEnabled` change. Switching between a fragment and a
-			    ScrollView on rotation would unmount the field, and with it the caret,
-			    the selection, focus, an open attach sheet and the dictation row. In the
-			    wide form it has no height bound, so it is exactly its content's height
-			    and never scrolls. `nestedScrollEnabled` lets the field's own six-line
-			    scroll and this one coexist on Android. */}
+			{/* ONE parent shape in both modes: the extras ScrollView is always here and only
+			    its style and `scrollEnabled` change. Switching between a fragment and a
+			    ScrollView on rotation would unmount the field, and with it the caret, the
+			    selection, focus, an open attach sheet and the dictation row. Wide: it has no
+			    height bound and `flexGrow/flexShrink: 0` keeps it EXACTLY the old plain
+			    column (a ScrollView defaults to `flexShrink: 1` on the web, which shrank the
+			    composer inside a short portrait column: bottom 1092 -> 857 at 390x844 /
+			    200 %). `nestedScrollEnabled` lets this and the field's own scroll coexist
+			    on Android. */}
 			<ScrollView
-				// Wide: `flexGrow/flexShrink: 0` is what keeps this EXACTLY the old plain
-				// column. A ScrollView defaults to `flexShrink: 1` on the web, which let the
-				// composer shrink and scroll inside a short portrait column where it used to
-				// overflow (measured: composer bottom 1092 -> 857 at 390x844 / 200 %) — a
-				// behaviour change this PR did not mean to make.
 				style={
 					compact === null
 						? { flexGrow: 0, flexShrink: 0 }
-						: { maxHeight: compact.maxHeight }
+						: { flexGrow: 0, flexShrink: 0, maxHeight: extrasMaxHeight }
 				}
 				scrollEnabled={compact !== null}
+				onContentSizeChange={(_width, height) =>
+					setExtrasHeight(Math.round(height))
+				}
 				nestedScrollEnabled
 				keyboardShouldPersistTaps="handled"
 			>
-				{content}
+				{extras}
 			</ScrollView>
+			{main}
 		</View>
 	);
 };

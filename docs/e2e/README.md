@@ -97,7 +97,7 @@ cells became capturable, and the audit now measures 252 rows and finds this. It 
 app finding, not a harness one, and it is named here so the `Web target` job's audit
 step is read as "the session view's composer fails contrast", never as a broken checker.
 
-The 9 declared skips are:
+The 7 declared skips are:
 
 - **5 computer cells** (`S2/empty`, `S3/empty`, `S3/populated`, `S13/loading`,
   `S13/degraded`) need something the relay cannot serve: the computer LIST comes
@@ -663,7 +663,7 @@ node tools/visual/capture.ts --dir e2e/fixtures/audit-canary \
 #     from the composer, the harness reached a screen only by URL (`CELL_OPENERS` did not
 #     exist yet — see "How a cell reaches a state behind a control"), and the cell
 #     declared the session's own marker. It was removed from `models-ranked`'s `shows`.
-# A group made ONLY of DECLARED SKIPS is not reported at all — this head's 9 skips are
+# A group made ONLY of DECLARED SKIPS is not reported at all — this head's 7 skips are
 # one placeholder screen between them — but a group with ANY evidential cell in it is.
 # The text-scale guard is REPORTED, never blocking: `themeProblems` comes from
 # `verifyThemes` and the scale verdict does not feed it, so it cannot fail this run.

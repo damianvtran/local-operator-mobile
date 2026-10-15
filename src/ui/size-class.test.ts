@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
 	compactChromeFor,
 	compactChromeShare,
+	composerBudget,
 	HEADER_STACK_WIDTH,
 	headerStacks,
 	headerStackWidth,
@@ -222,6 +223,12 @@ describe("compactChromeFor", () => {
 		).toBe(false);
 	});
 
+	it("stays off for a portrait-SHAPED window even on a landscape screen (floating window)", () => {
+		expect(
+			compactChromeFor({ window: screen(400, 600), screen: screen(1112, 834) }),
+		).toBe(false);
+	});
+
 	it("keeps the compact form while a landscape keyboard shortens the window further", () => {
 		expect(
 			compactChromeFor({ window: screen(844, 200), screen: screen(844, 390) }),
@@ -273,6 +280,14 @@ describe("compact secondary region", () => {
 		});
 	});
 
+	it("shows neither region nor cue when the cap cannot hold a readable line (UX U3)", () => {
+		// the 7.4 pt sliver measured at a 200 pt keyboard-shortened window
+		expect(snapRegion([89, 44], 7, 38)).toEqual({ height: 0, hidden: 2 });
+		expect(snapRegion([89, 44], 39, 38)).toEqual({ height: 0, hidden: 2 });
+		// the 844x200 keyboard-shortened window: a 54 pt cap less the 38 pt cue is 16 pt
+		expect(snapRegion([49, 44], 54, 38)).toEqual({ height: 0, hidden: 2 });
+	});
+
 	it("only cuts a first row that is taller than the whole cap", () => {
 		expect(snapRegion([200, 40], 117, 24)).toEqual({ height: 117, hidden: 1 });
 	});
@@ -311,5 +326,34 @@ describe("regionOrder", () => {
 			"strip",
 			"todos",
 		]);
+	});
+});
+
+describe("composerBudget (UX U1: the actions never scroll away)", () => {
+	it("on a tight screen the field gets everything and the extras scroll in what is left", () => {
+		// 390 pt screen at 200 %: composer share 0.45 -> 175 pt; receipt line 52; padding 8.
+		// An error line (40 pt) is above the field.
+		const budget = composerBudget(175, 52, 40, 48, 8);
+		expect(budget).toEqual({ extras: 40, field: 75 });
+		// the controls (field row + receipt) never exceed the budget
+		expect(budget.field + budget.extras + 52 + 8).toBeLessThanOrEqual(175);
+	});
+
+	it("never takes the field's touch floor for the extras: they scroll instead", () => {
+		// 150 pt of attachments in 115 pt of room: the extras are capped, the field keeps 48
+		const budget = composerBudget(175, 52, 150, 48, 8);
+		expect(budget.field).toBe(48);
+		expect(budget.extras).toBe(115 - 48);
+	});
+
+	it("with nothing above the field the field takes the whole remainder", () => {
+		expect(composerBudget(175, 52, 0, 48, 8)).toEqual({
+			extras: 0,
+			field: 115,
+		});
+	});
+
+	it("never shrinks the field below its touch floor, even if the budget is smaller", () => {
+		expect(composerBudget(90, 52, 30, 48, 8).field).toBe(48);
 	});
 });
