@@ -31,9 +31,20 @@ on:
       - main
   pull_request:
   workflow_dispatch:
+    inputs:
+      producer_mode:
+        description: Native gate, or source-only prebuild contract diagnostic
+        type: choice
+        required: true
+        default: native
+        options:
+          - native
+          - contract-only
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  # The opt-in diagnostic must neither cancel nor occupy the ordinary native
+  # window. Invalid manual modes route to its rejecting guard, never to builds.
+  group: ${{ github.workflow }}-${{ github.ref }}${{ github.event_name == 'workflow_dispatch' && inputs.producer_mode != 'native' && '-contract-only' || '' }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 permissions:
@@ -48,8 +59,50 @@ env:
   IOS_SIMULATOR_DEVICE: iPhone 17
 
 jobs:
+  producer-contract:
+    name: Source-only producer contract diagnostic (no native compile)
+    if: github.event_name == 'workflow_dispatch' && inputs.producer_mode != 'native'
+    runs-on: macos-26
+    timeout-minutes: 10
+    env:
+      DIAGNOSTIC_EVENT: ${{ github.event_name }}
+      # Actions may display env values. Never echo an arbitrary invalid input;
+      # its only observable form is this canonical rejecting token.
+      DIAGNOSTIC_MODE: ${{ inputs.producer_mode == 'contract-only' && 'contract-only' || 'invalid' }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Reject invalid opt-in before any dependency setup
+        run: python3 scripts/ci/producer-contract-diagnostic.py guard --output "$RUNNER_TEMP/producer-contract-diagnostic"
+      - uses: pnpm/action-setup@v6
+        with:
+          run_install: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: Inspect installed SDK and prebuild source contract only
+        run: python3 scripts/ci/producer-contract-diagnostic.py collect --output "$RUNNER_TEMP/producer-contract-diagnostic"
+      - name: Emit bounded setup STOP and verify publication
+        id: publication
+        if: always()
+        run: python3 scripts/ci/producer-contract-diagnostic.py failure --output "$RUNNER_TEMP/producer-contract-diagnostic"
+      - name: Upload only typed diagnostic or STOP (never raw output)
+        if: always() && steps.publication.outputs.safe == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: producer-contract-diagnostic-only
+          path: |
+            ${{ runner.temp }}/producer-contract-diagnostic/public/diagnostic.json
+            ${{ runner.temp }}/producer-contract-diagnostic/public/STOP.json
+            ${{ runner.temp }}/producer-contract-diagnostic/public/sha256.json
+          retention-days: 14
+          if-no-files-found: error
+
   changes:
     name: Does this change touch anything native?
+    if: github.event_name != 'workflow_dispatch' || inputs.producer_mode == 'native'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
