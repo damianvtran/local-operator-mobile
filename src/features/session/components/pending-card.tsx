@@ -1,7 +1,13 @@
 import { useState } from "react";
 import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
 
-import { type PendingView, pendingBodyCue } from "@/features/session/pending";
+import {
+	type PendingView,
+	pendingBodyCue,
+	pendingCueLabel,
+	pendingScrollFacts,
+	riskDestinationPreview,
+} from "@/features/session/pending";
 import { CONTROL, ROLE, SURFACE, state } from "@/ui/a11y";
 import { Button } from "@/ui/components";
 import { TOUCH_FLOOR } from "@/ui/layout";
@@ -47,6 +53,8 @@ export type PendingCardProps = {
 	 *  screen can spare once the composer is under it, which put Send and the chips 80 pt
 	 *  below the fold with a pending approval (UX U2). */
 	bodyMaxHeight?: number;
+	/** Actual space remaining above the composer; measured by the parent wrapper. */
+	maxHeight?: number;
 };
 
 /** The least a compact body may shrink to, in pt: about two lines of body text at 100 %.
@@ -65,6 +73,7 @@ export const PendingCard = ({
 	onDeny,
 	onAnswer,
 	bodyMaxHeight,
+	maxHeight,
 }: PendingCardProps) => {
 	/** The typed answer. Seeded empty and NOT carried across a question: the screen
 	 *  remounts this component per question, which is what makes that true. */
@@ -132,21 +141,56 @@ export const PendingCard = ({
 	 *  the body. In the compact form it moves to the PINNED title row: with the body cut to
 	 *  72 pt the line was 0 % visible at 200 % on a force-push approval, so the one piece of
 	 *  text that says "Destructive" could be scrolled out of sight under a pinned, enabled
-	 *  Approve (UX U11). The same testID, rendered in exactly one place per mode. */
+	 *  Approve (UX U11). The full destination remains in the body. The PINNED preview is one middle-ellipsised
+	 * line: two lines plus a 56 pt command and 48 pt actions cannot fit the 205 pt left
+	 * above the composer at 844×390 @200 %. A longer preview used to push Approve under
+	 * Message (D20). This does not alter the command, risk classification or approval. */
 	const markerNode = view.runsOnComputer ? (
-		<Text
-			className={cx(
-				compactBody ? "text-meta" : "pt-1 text-meta",
-				view.destructive ? "text-danger" : "text-ink-dim",
-			)}
-			testID={SURFACE.pendingCardDestructiveMarker}
-		>
-			{view.riskLabel}
-		</Text>
+		compactBody ? (
+			<View
+				className="flex-row items-center"
+				accessible
+				accessibilityLabel={view.riskLabel}
+				testID={SURFACE.pendingCardDestructiveMarker}
+			>
+				{/* The classification is NEVER ellipsised (D20). Only the variable destination yields. */}
+				<Text
+					className={cx(
+						"shrink-0 text-meta",
+						view.destructive ? "text-danger" : "text-ink-dim",
+					)}
+				>
+					{view.destructive ? "Destructive — runs on " : "Runs on "}
+				</Text>
+				<Text
+					className={cx(
+						"min-w-0 flex-1 text-meta",
+						view.destructive ? "text-danger" : "text-ink-dim",
+					)}
+					numberOfLines={1}
+					ellipsizeMode="middle"
+				>
+					{riskDestinationPreview(view.riskDestination)}
+				</Text>
+			</View>
+		) : (
+			<Text
+				className={cx(
+					"pt-1 text-meta",
+					view.destructive ? "text-danger" : "text-ink-dim",
+				)}
+				testID={SURFACE.pendingCardDestructiveMarker}
+			>
+				{view.riskLabel}
+			</Text>
+		)
 	) : null;
 
-	const bodyScrolls = bodyScroll.content > bodyScroll.view + 1;
-	const bodyAtEnd = bodyScroll.y + bodyScroll.view >= bodyScroll.content - 2;
+	const { scrolls: bodyScrolls, atEnd: bodyAtEnd } = pendingScrollFacts(
+		bodyScroll.y,
+		bodyScroll.view,
+		bodyScroll.content,
+	);
 	const bodyCue = compactBody
 		? pendingBodyCue(view, bodyScrolls, bodyAtEnd)
 		: null;
@@ -162,7 +206,9 @@ export const PendingCard = ({
 			// Compact: the card may shrink so the composer below it keeps its chips on screen.
 			// RN's default `flexShrink` is 0, so without this the card kept its natural height
 			// and pushed the composer off a 390 pt window (measured: chips 439 of 390).
-			style={compactBody ? { flexShrink: 1, minHeight: 0 } : undefined}
+			style={
+				compactBody ? { flexShrink: 1, minHeight: 0, maxHeight } : undefined
+			}
 			testID={rootTestID}
 		>
 			{/* Region 1 — meta, pinned above the scroller. In the compact form this is the
@@ -182,6 +228,7 @@ export const PendingCard = ({
 					{bodyCue !== null ? (
 						<Text
 							className="shrink-0 text-meta text-ink-dim"
+							accessibilityLabel={pendingCueLabel(bodyCue)}
 							testID={SURFACE.pendingCardMore}
 						>
 							{bodyCue}
@@ -217,10 +264,17 @@ export const PendingCard = ({
 				onScroll={(event) => {
 					const { contentOffset, contentSize, layoutMeasurement } =
 						event.nativeEvent;
-					setBodyScroll({
-						y: contentOffset.y,
-						view: layoutMeasurement.height,
-						content: contentSize.height,
+					setBodyScroll((prev) => {
+						const next = {
+							y: contentOffset.y,
+							view: layoutMeasurement.height,
+							content: contentSize.height,
+						};
+						return prev.y === next.y &&
+							prev.view === next.view &&
+							prev.content === next.content
+							? prev
+							: next;
 					});
 				}}
 				onContentSizeChange={(_width, height) =>
@@ -250,7 +304,12 @@ export const PendingCard = ({
 						{view.questionLabel}
 					</Text>
 				) : null}
-				{view.title.length > 0 ? (
+				{view.title.length > 0 &&
+				!(
+					compactBody &&
+					isApproval &&
+					view.meta.endsWith(` · ${view.title}`)
+				) ? (
 					<Text className="text-body font-medium text-ink">{view.title}</Text>
 				) : null}
 				{/* The detail is presented VERBATIM and `pre-wrap`: a command keeps its
@@ -262,6 +321,14 @@ export const PendingCard = ({
 						testID={SURFACE.pendingCardDetail}
 					>
 						{view.detail}
+					</Text>
+				) : null}
+				{compactBody && view.runsOnComputer ? (
+					<Text
+						className="pt-1 text-meta text-ink-dim"
+						testID={SURFACE.pendingCardDestination}
+					>
+						{view.riskLabel}
 					</Text>
 				) : null}
 				{compactBody ? null : markerNode}

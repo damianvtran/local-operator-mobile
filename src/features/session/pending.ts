@@ -72,6 +72,8 @@ export interface PendingView {
 	destructive: boolean;
 	/** The sentence beside the destructive marker. */
 	riskLabel: string;
+	/** Exact destination, kept separate so ellipsis can never remove the risk classification. */
+	riskDestination: string;
 }
 
 /**
@@ -184,7 +186,7 @@ export const pendingView = (input: PendingViewInput): PendingView => {
 		meta: kind === "approval" ? `approval requested · ${tool}` : "question",
 		title: pending.title,
 		detail: pending.detail,
-		badge: input.pendingCount > 1 ? `1 of ${input.pendingCount}` : null,
+		badge: input.pendingCount > 1 ? `request 1 of ${input.pendingCount}` : null,
 		questionLabel:
 			pending.question_total > 1
 				? `Question ${pending.question_index + 1} of ${pending.question_total}`
@@ -239,6 +241,7 @@ export const pendingView = (input: PendingViewInput): PendingView => {
 			kind === "approval" &&
 			(isExecutionDetail(pending.detail, pending.title) || destructive),
 		destructive,
+		riskDestination: input.cwd.length > 0 ? input.cwd : input.computerLabel,
 		riskLabel: riskSentence({
 			destructive,
 			cwd: input.cwd,
@@ -261,7 +264,8 @@ export const pendingView = (input: PendingViewInput): PendingView => {
  *
  * The wording is SHORT on purpose: it shares the meta line, and at 200 % a longer one
  * ("command continues · scroll ↓") wrapped onto its own line, which pushed Approve under the
- * composer on a 390 pt screen (measured 22.8 pt overlap). The arrow carries "scroll".
+ * composer on a 390 pt screen (measured 22.8 pt overlap). The arrow carries "scroll". Approvals now use a neutral "more below": overflow can
+ * belong only to the remember-choice setting, not to the command (U17).
  *
  * `scrolls` / `atEnd` come from the scroller's own measurements, so the cue is shown only
  * while there is something below the fold and leaves when the reader reaches the end.
@@ -276,6 +280,35 @@ export const pendingBodyCue = (
 		if (view.options.length > 0) return "choices below ↓";
 		if (view.freeText) return "answer below ↓";
 	}
-	if (view.detail.length > 0) return "full command ↓";
+	// The overflow may be only the remember-choice row, not the command (UX U17).
+	// A neutral cue never promises more command text where there is none.
 	return "more below ↓";
 };
+
+/** Measurements belong to the scroll body, not a guessed number of visible lines. */
+export const pendingScrollFacts = (
+	y: number,
+	viewport: number,
+	content: number,
+) => ({
+	scrolls: content > viewport + 1,
+	atEnd: viewport > 0 && y + viewport >= content - 2,
+});
+
+/** Screen-reader copy describes the scroll, not the visual arrow glyph (UX U19). */
+export const pendingCueLabel = (cue: string): string =>
+	cue === "choices below ↓"
+		? "More choices below. Scroll the question to read them."
+		: cue === "answer below ↓"
+			? "Answer field below. Scroll the question to reach it."
+			: "More content below. Scroll the request to read it, including the remember-choice setting.";
+
+/** RN Web only supports tail ellipsis even when Text asks for middle. Bound the VARIABLE
+ * destination preview explicitly so both platforms retain its beginning and basename.
+ * 24 meta characters fit beside the fixed classification in the 844pt landscape fixture
+ * at 200%; the exact destination remains in the body and the marker's accessible label.
+ * This is presentation only: riskSentence, detail and approval arguments are untouched. */
+export const riskDestinationPreview = (destination: string): string =>
+	destination.length <= 24
+		? destination
+		: `${destination.slice(0, 11)}…${destination.slice(-12)}`;

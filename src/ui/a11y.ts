@@ -614,8 +614,10 @@ export const SURFACE = {
 	subagentRunning: "subagent-running",
 	pendingCard: "pending-card",
 	pendingCardBody: "pending-card-body",
+	/** Full destination in the scroll body; the pinned marker is only a bounded preview. */
+	pendingCardDestination: "pending-card-destination",
 	/** Compact only: the line between the bounded body and the actions that names what the
-	 *  body hides ("full command ↓", "choices below ↓"), on the meta line. */
+	 *  body hides ("more below ↓", "choices below ↓"), on the meta line. */
 	pendingCardMore: "pending-card-more",
 	pendingCardDetail: "pending-card-detail",
 	pendingCardDestructiveMarker: "pending-card-destructive-marker",

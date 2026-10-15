@@ -35,6 +35,7 @@ import {
 	type TranscriptItem,
 } from "@/features/session/turn-condensing";
 import {
+	nextAtTail,
 	rowLayout,
 	rowOffsets,
 	TAIL_CLAMP_OFFSET_PT,
@@ -377,6 +378,8 @@ export const TranscriptList = ({
 	const itemsRef = useRef<readonly TranscriptItem[]>(grouped.items);
 	itemsRef.current = grouped.items;
 	const viewportRef = useRef(0);
+	// Event snapshots must not be overwritten by onLayout before onScroll gets them.
+	const previousScrollGeometry = useRef({ viewport: 0, content: 0 });
 	viewportRef.current = viewportPt;
 	const onAnchorVisibleRef = useRef(onAnchorVisible);
 	onAnchorVisibleRef.current = onAnchorVisible;
@@ -674,7 +677,21 @@ export const TranscriptList = ({
 				event.nativeEvent;
 			const distance =
 				contentSize.height - contentOffset.y - layoutMeasurement.height;
-			const atEnd = distance < TAIL_BAND_PT;
+			const atEnd = nextAtTail({
+				wasAtTail: atTail.current,
+				distanceToEnd: distance,
+				bandPt: TAIL_BAND_PT,
+				offsetY: contentOffset.y,
+				previousOffsetY: factsRef.current.offsetY,
+				viewportPt: layoutMeasurement.height,
+				previousViewportPt: previousScrollGeometry.current.viewport,
+				contentPt: contentSize.height,
+				previousContentPt: previousScrollGeometry.current.content,
+			});
+			previousScrollGeometry.current = {
+				viewport: layoutMeasurement.height,
+				content: contentSize.height,
+			};
 			atTail.current = atEnd;
 			scrollPlaces.set(sessionId, {
 				offset: contentOffset.y,

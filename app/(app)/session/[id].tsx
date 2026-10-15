@@ -392,9 +392,13 @@ export default function Session() {
 	>({});
 	/* Whether the region is scrolled to its end: the cue below it says there is MORE
 	 *  and must go away once there is not. */
-	/* The cue's own height at this text size, reserved out of the closed region's cap. */
+	/* The cue's own height, reserved out of the closed cap. Its slot and the Close bar
+	 * stay constant while open, so the strict bottom test is safe: neither showing nor
+	 * hiding a cue changes the viewport we are comparing to the content. */
 	const cueReserve = Math.round(19 * effectiveScale);
 	const [regionAtBottom, setRegionAtBottom] = useState(false);
+	const [pendingAvailableHeight, setPendingAvailableHeight] =
+		useState<number>();
 	/* The region's last scroll offset and viewport, kept in refs so a CONTENT change
 	 *  (a row appears, a roster changes) can re-derive "at the bottom" without waiting
 	 *  for a scroll that never comes (reviewer m3: the flag went stale and hid the cue
@@ -479,7 +483,16 @@ export default function Session() {
 			 *  panels and composer too), and the rail itself is ABSOLUTE, so it
 			 *  takes no layout width from the rows (the defect the web client's
 			 *  two-pane rail once was). */
-			<View className="flex-1">
+			<View
+				className="flex-1"
+				// Keep the list mounted (and its historical offset), but do not show a 17 pt
+				// message sliver above an ask. The decision owns this short window (D22).
+				style={
+					compact && pendingViewProps !== null
+						? { height: 0, flex: 0, overflow: "hidden" }
+						: undefined
+				}
+			>
 				<TranscriptList
 					testID={SURFACE.sessionTranscript}
 					sessionId={sessionId}
@@ -881,9 +894,15 @@ export default function Session() {
 							className="px-4 pb-1"
 							// shrinkable in compact so the card can yield to the composer below
 							style={compact ? { flexShrink: 1, minHeight: 0 } : undefined}
+							onLayout={(event) =>
+								setPendingAvailableHeight(
+									Math.max(0, event.nativeEvent.layout.height - 4),
+								)
+							}
 						>
 							<PendingCard
 								view={pendingViewProps}
+								maxHeight={compact ? pendingAvailableHeight : undefined}
 								bodyMaxHeight={
 									compact
 										? Math.max(

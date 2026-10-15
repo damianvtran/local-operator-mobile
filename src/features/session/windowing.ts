@@ -208,3 +208,35 @@ export const windowPolicy = (
 		estimatedMountedRows,
 	};
 };
+
+/**
+ * A scroll distance is not reader intent (D21). Mounting measured rows, changing the
+ * viewport, or our own tail clamp can all change it. Preserve follow mode unless a
+ * stable-geometry scroll moved UP away from the end. A geometry-change clamp that moves
+ * the offset backwards is not a reader scroll; the next onLayout/content-size callback
+ * must still be allowed to pin. No time-based "ignore user" window is used.
+ *
+ * Our programmatic tail pin advances to the end (or is clamped there), so it either
+ * increases the offset or lands in the tail band and cannot demote this flag. A reader
+ * scrolling up in stable geometry does demote it, and subsequent typing/panel layouts
+ * keep false until they deliberately return to the end. Content/viewport snapshots are
+ * the PREVIOUS scroll event's, not refs already overwritten by onLayout.
+ */
+export const nextAtTail = (input: {
+	wasAtTail: boolean;
+	distanceToEnd: number;
+	bandPt: number;
+	offsetY: number;
+	previousOffsetY: number;
+	viewportPt: number;
+	previousViewportPt: number;
+	contentPt: number;
+	previousContentPt: number;
+}): boolean => {
+	if (input.distanceToEnd < input.bandPt) return true;
+	if (!input.wasAtTail) return false;
+	const geometryChanged =
+		Math.abs(input.viewportPt - input.previousViewportPt) > 0.5 ||
+		Math.abs(input.contentPt - input.previousContentPt) > 0.5;
+	return geometryChanged || input.offsetY >= input.previousOffsetY - 0.5;
+};

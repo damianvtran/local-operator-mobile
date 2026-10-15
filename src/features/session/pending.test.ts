@@ -5,7 +5,10 @@ import {
 	isDestructiveDetail,
 	PENDING_BOUNDARY_COPY,
 	pendingBodyCue,
+	pendingCueLabel,
+	pendingScrollFacts,
 	pendingView,
+	riskDestinationPreview,
 } from "@/features/session/pending";
 
 /**
@@ -141,7 +144,7 @@ describe("the card's counts and shapes", () => {
 				computerLabel: "c",
 				cwd: "~/w",
 			}).badge,
-		).toBe("1 of 3");
+		).toBe("request 1 of 3");
 		expect(view().badge).toBeNull();
 	});
 
@@ -246,7 +249,7 @@ describe("pendingBodyCue (UX U11: a bounded body must say what it hides)", () =>
 	});
 
 	it("names the command for an approval, the choices for an ask, the field for a free answer", () => {
-		expect(pendingBodyCue(approval, true, false)).toBe("full command ↓");
+		expect(pendingBodyCue(approval, true, false)).toBe("more below ↓");
 		expect(pendingBodyCue(askOptions, true, false)).toBe("choices below ↓");
 		expect(pendingBodyCue(askFree, true, false)).toBe("answer below ↓");
 	});
@@ -255,5 +258,66 @@ describe("pendingBodyCue (UX U11: a bounded body must say what it hides)", () =>
 		expect(pendingBodyCue({ ...approval, detail: "" }, true, false)).toBe(
 			"more below ↓",
 		);
+	});
+});
+
+describe("risk projection remains exact while the pinned destination can ellipsise", () => {
+	it("keeps Destructive and the entire deep destination in both full-text fields", () => {
+		const path =
+			"~/workspace/clients/meridian/operations/reporting/pipelines/nightly-reconciliation";
+		const request = pending({
+			detail: "run: git push --force-with-lease origin main",
+		});
+		const result = pendingView({
+			pending: request,
+			sessionKind: "daemon",
+			ended: false,
+			pendingCount: 1,
+			computerLabel: "c",
+			cwd: path,
+		});
+		expect(result.destructive).toBe(true);
+		expect(result.riskDestination).toBe(path);
+		expect(result.riskLabel).toBe(`Destructive — runs on ${path}`);
+		expect(result.detail).toBe(request.detail);
+	});
+});
+
+describe("pending scroll thresholds and accessible cues", () => {
+	it("does not claim overflow for one rounding pixel", () => {
+		expect(pendingScrollFacts(0, 56, 57)).toEqual({
+			scrolls: false,
+			atEnd: true,
+		});
+		expect(pendingScrollFacts(0, 56, 58)).toEqual({
+			scrolls: true,
+			atEnd: true,
+		});
+		expect(pendingScrollFacts(0, 56, 90)).toEqual({
+			scrolls: true,
+			atEnd: false,
+		});
+	});
+	it("clears at the actual end, not a cue-height early", () => {
+		expect(pendingScrollFacts(20, 56, 100).atEnd).toBe(false);
+		expect(pendingScrollFacts(42, 56, 100).atEnd).toBe(true);
+	});
+	it("announces the scroll action and remember setting without reading an arrow", () => {
+		expect(pendingCueLabel("more below ↓")).toContain("remember-choice");
+		expect(pendingCueLabel("choices below ↓")).toContain("More choices below");
+		expect(pendingCueLabel("answer below ↓")).toContain("Answer field below");
+		expect(pendingCueLabel("more below ↓")).not.toContain("↓");
+	});
+});
+
+describe("destination-only preview", () => {
+	it("does not truncate a short path", () =>
+		expect(riskDestinationPreview("~/work")).toBe("~/work"));
+	it("retains both ends of a long path and never includes the classification", () => {
+		const path = "~/workspace/clients/meridian/nightly-reconciliation";
+		expect(riskDestinationPreview(path)).toBe(
+			`${path.slice(0, 11)}…${path.slice(-12)}`,
+		);
+		expect(riskDestinationPreview(path)).toHaveLength(24);
 	});
 });
