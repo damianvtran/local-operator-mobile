@@ -41,9 +41,30 @@ Collector subprocesses (argv arrays, no shell):
 - pnpm install --frozen-lockfile in the future job's OWN ephemeral checkout.
 - node scripts/ci/producer-contract-sdk.cjs <actual-checkout-root>.
 - pnpm exec expo prebuild --platform ios --no-install.
-- Recheck the measured installed SDK hashes after generation, then node
-  <actual-resolved-expo-dir>/scripts/resolveAppEntry.js <root> ios absolute.
+- Recheck the measured installed SDK hashes after generation, then invoke this
+  exact argv layout (the eval body is constant; the final path is data):
+  `["node", "--eval", "require(process.argv[4]);", "<root>", "ios", "absolute", "<validated-installed-Expo-script>"]`.
+  The script must be the measured pinned Expo package's own
+  `scripts/resolveAppEntry.js`, not an arbitrary module or the app entry.
 - plutil -convert json -o - <the-single-generated-ios-project.pbxproj>.
+
+Why the loader: [Expo57.0.26 resolveAppEntry.js](https://cdn.jsdelivr.net/npm/expo@57.0.26/scripts/resolveAppEntry.js)
+reads projectRoot/platform/format from process.argv[1]/[2]/[3] (lines20–22),
+despite its contradictory direct-script usage comment. Direct script invocation
+puts the script itself at [1]. The constant eval loader leaves root/ios/absolute
+at [1]/[2]/[3] and requires only the validated script passed at [4]. Realpath,
+package/version/hash checks and post-prebuild rehashes still apply. This is an
+adaptation to the inspected SDK contract, not a claim that an actual generated
+Xcode phase used it or that this is a verified template-prescribed launcher.
+
+A separately authorized synthetic argument-only check observed old-direct
+mismatch/exit2 and corrected-layout match/exit0 on Node26.5.0. It loaded only an
+owned assertion fixture, not the SDK/application; it does not prove Node24 SDK
+success. New collector-unit controls are source-prepared, not executed here.
+P2's public ENTRY_RESOLUTION_FAILED identifies the failed resolver operation by
+code order; its private SDK path/output/exit number and actual cause remain
+unobserved. Original P's JDK17_REQUIRED stage remains unknown. Neither historical
+artifact is reinterpreted or rewritten by this change.
 
 No pod install, xcodebuild, simctl, app installation, native bundling/compiler,
 Metro server/export, compiler/map collection, signing, TestFlight or store action.

@@ -294,6 +294,28 @@ def project_file(root):
     return projects[0]
 
 
+def resolver_argv(root, sdk):
+    # Expo 57.0.26 reads argv[1:4], despite its direct-script usage comment.
+    # A constant eval loader preserves that layout without interpolating paths
+    # into executable code. Only the measured, pinned Expo script may be loaded;
+    # never require the resolved application entry or an arbitrary helper role.
+    packages = [item for item in sdk["packages"] if item.get("name") == "expo"]
+    sources = [item for item in sdk["sources"] if item.get("role") == "resolve-entry"]
+    need(len(packages) == 1 and packages[0].get("version") == VERSIONS["expo"]
+         and len(sources) == 1, "SDK_PREREQUISITE")
+    package, source = packages[0], sources[0]
+    measured_package = file_info(root, package["path"], cap=65536)
+    need(measured_package["sha256"] == package["sha256"]
+         and Path(measured_package["path"]).name == "package.json"
+         and measured_package["path"].startswith("node_modules/"), "SDK_PREREQUISITE")
+    expo = (root / measured_package["path"]).parent
+    expected = (expo / "scripts/resolveAppEntry.js").resolve(strict=True)
+    actual = file_info(root, source["path"])
+    need(expected.is_relative_to(expo) and root / actual["path"] == expected
+         and all(actual[key] == source[key] for key in actual), "SDK_PREREQUISITE")
+    return ["node", "--eval", "require(process.argv[4]);", str(root), "ios", "absolute", str(expected)]
+
+
 def collect(root, runner):
     # This path generates iOS source only. Pinned Expo CLI selects ios mods and
     # --no-install skips native dependency installation; an exact Java17 gate
@@ -327,7 +349,7 @@ def collect(root, runner):
         need(file_info(root, source["path"])["sha256"] == source["sha256"], "SDK_PREREQUISITE")
     for package in sdk["packages"]:
         need(file_info(root, package["path"], cap=65536)["sha256"] == package["sha256"], "SDK_PREREQUISITE")
-    out, _ = runner.run(["node", str(root / resolver[0]["path"]), str(root), "ios", "absolute"], failure="ENTRY_RESOLUTION_FAILED")
+    out, _ = runner.run(resolver_argv(root, sdk), failure="ENTRY_RESOLUTION_FAILED")
     entry = file_info(root, out.decode().strip())
     entry["kind"] = "SDK_RESOLVED_ONLY"
     project = project_file(root)

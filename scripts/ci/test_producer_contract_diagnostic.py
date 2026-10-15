@@ -29,7 +29,7 @@ def payload():
             "checkout": "a" * 40,
             "sdk": {"schema": 1, "kind": "installed-sdk-metadata-only",
                     "packages": [{"name": name, "version": version, "path": f"node_modules/{name}/package.json", "sha256": "b" * 64} for name, version in diag.VERSIONS.items()],
-                    "sources": [{"role": role, "path": f"node_modules/example/{role}.js", "bytes": 1, "sha256": "c" * 64} for role in sorted(diag.ROLES)]},
+                    "sources": [{"role": role, "path": "node_modules/expo/scripts/resolveAppEntry.js" if role == "resolve-entry" else f"node_modules/example/{role}.js", "bytes": 1, "sha256": "c" * 64} for role in sorted(diag.ROLES)]},
             "phase": diag.phase_facts(pbx()),
             "entry": {"kind": "SDK_RESOLVED_ONLY", "path": "node_modules/expo-router/entry.js", "bytes": 1, "sha256": "d" * 64}}
 
@@ -230,6 +230,59 @@ class PublicationTests(unittest.TestCase):
 
 
 class SyntheticCollectTests(unittest.TestCase):
+    def assert_resolver_invocation(self, args, root):
+        self.assertEqual(args, ["node", "--eval", "require(process.argv[4]);", str(root), "ios", "absolute",
+                                str(root / "node_modules/expo/scripts/resolveAppEntry.js")])
+
+    def test_argument_contract_rejects_old_direct_shifted_and_extra_vectors(self):
+        root = Path("/synthetic/mobile91-root")
+        script = str(root / "node_modules/expo/scripts/resolveAppEntry.js")
+        correct = ["node", "--eval", "require(process.argv[4]);", str(root), "ios", "absolute", script]
+        self.assert_resolver_invocation(correct, root)
+        for wrong in (["node", script, str(root), "ios", "absolute"],
+                      ["node", "--eval", "require(process.argv[4]);", script, str(root), "ios", "absolute"],
+                      correct + ["unexpected"]):
+            with self.subTest(argv=wrong), self.assertRaises(AssertionError):
+                self.assert_resolver_invocation(wrong, root)
+
+    def test_resolver_requires_pinned_measured_expo_script_not_arbitrary_loads(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            package = root / "node_modules/expo/package.json"
+            script = package.parent / "scripts/resolveAppEntry.js"
+            script.parent.mkdir(parents=True)
+            package.write_text('{"name":"expo","version":"57.0.26"}')
+            script.write_text("synthetic metadata only; never executed")
+            sdk = {"packages": [{"name": "expo", "version": "57.0.26", **diag.file_info(root, str(package))}],
+                   "sources": [{"role": "resolve-entry", **diag.file_info(root, str(script))}]}
+            self.assert_resolver_invocation(diag.resolver_argv(root, sdk), root)
+            for field in ("version", "package_hash", "script_hash", "duplicate_role", "other_script"):
+                bad = copy.deepcopy(sdk)
+                if field == "version":
+                    bad["packages"][0]["version"] = "0.0.0"
+                elif field == "package_hash":
+                    bad["packages"][0]["sha256"] = "0" * 64
+                elif field == "script_hash":
+                    bad["sources"][0]["sha256"] = "0" * 64
+                elif field == "duplicate_role":
+                    bad["sources"].append(copy.deepcopy(bad["sources"][0]))
+                else:
+                    other = script.with_name("other.js")
+                    other.write_text("must not load arbitrary module")
+                    bad["sources"][0].update(diag.file_info(root, str(other)))
+                with self.subTest(field=field), self.assertRaises(diag.Stop):
+                    diag.resolver_argv(root, bad)
+            # Even a re-hashed role cannot turn the expected SDK filename into
+            # a symlink load outside its actual package root.
+            outside = root / "node_modules/other.js"
+            outside.write_text("never loaded")
+            script.unlink()
+            script.symlink_to(outside)
+            escaped = copy.deepcopy(sdk)
+            escaped["sources"][0].update(diag.file_info(root, str(script)))
+            with self.assertRaises(diag.Stop):
+                diag.resolver_argv(root, escaped)
+
     def test_synthetic_ios_collection_with_no_java_lookup_or_command(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory).resolve()
@@ -250,6 +303,7 @@ class SyntheticCollectTests(unittest.TestCase):
             entry.parent.mkdir()
             entry.write_text("synthetic application entry, never executed")
             calls = []
+            assert_resolver_invocation = self.assert_resolver_invocation
             class Fake:
                 def run(self, args, **kwargs):
                     calls.append(args)
@@ -270,7 +324,8 @@ class SyntheticCollectTests(unittest.TestCase):
                         project.parent.mkdir(parents=True)
                         project.write_text("synthetic PBX, parsed only by the fake below")
                         return b"", b""
-                    if args[0] == "node" and args[-2:] == ["ios", "absolute"]:
+                    if args[:2] == ["node", "--eval"]:
+                        assert_resolver_invocation(args, root)
                         return str(entry).encode(), b""
                     if args[0] == "plutil":
                         return json.dumps(pbx()).encode(), b""
@@ -286,8 +341,11 @@ class SyntheticCollectTests(unittest.TestCase):
             self.assertFalse(value["nativeCompiled"])
             self.assertEqual(value["entry"]["kind"], "SDK_RESOLVED_ONLY")
             self.assertEqual(value["phase"]["precedence"], "UNKNOWN")
+            resolver_path = root / next(source["path"] for source in sdk["sources"] if source["role"] == "resolve-entry")
+            expected_resolver = ["node", "--eval", "require(process.argv[4]);", str(root), "ios", "absolute", str(resolver_path)]
+            self.assertEqual(calls.count(expected_resolver), 1)
             self.assertLess(next(i for i, args in enumerate(calls) if args[:3] == ["pnpm", "exec", "expo"]),
-                            next(i for i, args in enumerate(calls) if args[-2:] == ["ios", "absolute"]))
+                            next(i for i, args in enumerate(calls) if args == expected_resolver))
 
 
 class ResourceAndPrerequisiteTests(unittest.TestCase):
