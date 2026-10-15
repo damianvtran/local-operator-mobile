@@ -1,0 +1,11 @@
+{
+	"enabledLocales": ["en"],
+	"namespaces": ["mobile.home"],
+	"locales": {
+		"en": { "direction": "ltr" },
+		"ur": {
+			"direction": "rtl",
+			"hold": "Native RTL and independent translation/render audits are not complete; metadata is not activation."
+		}
+	}
+}

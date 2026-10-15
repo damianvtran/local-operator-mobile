@@ -1,0 +1,8 @@
+{
+	"mobile.home.connect": "Connect a computer",
+	"mobile.home.connect_disabled": "Connect a computer to send.",
+	"mobile.home.folders_failed": "We couldn't read this computer's folders just now.",
+	"mobile.home.greeting": "What can I help you with today?",
+	"mobile.home.start_refused": "That folder doesn't exist on this computer.",
+	"mobile.home.starting": "Starting…"
+}
