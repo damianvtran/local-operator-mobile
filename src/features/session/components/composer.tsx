@@ -544,6 +544,12 @@ export const Composer = ({
 	 *  give them what they need and no more. */
 	const [extrasHeight, setExtrasHeight] = useState(0);
 	const COMPOSER_PAD = 8;
+	/* The same condition the row itself renders under, so the reserve and the row cannot
+	 *  disagree. `mb-2` is its bottom margin. */
+	const dictationShowing =
+		voice?.micVisible === true &&
+		(rowIsLive(voice.phase) || voice.status !== "");
+	const DICTATION_ROW_MARGIN_PX = 8;
 	const budget =
 		compact === null
 			? null
@@ -553,6 +559,9 @@ export const Composer = ({
 					extrasHeight,
 					TOUCH_FLOOR,
 					COMPOSER_PAD,
+					dictationShowing
+						? dictationRowBox(effectiveScale) + DICTATION_ROW_MARGIN_PX
+						: 0,
 				);
 	const fieldMaxHeight = budget?.field;
 	const extrasMaxHeight = budget?.extras;

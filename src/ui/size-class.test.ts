@@ -353,6 +353,13 @@ describe("composerBudget (UX U1: the actions never scroll away)", () => {
 		});
 	});
 
+	it("reserves the dictation row so a recording take cannot push the composer past its share", () => {
+		// 175 pt share, 52 receipt, 8 pad, 49 + 8 dictation: only 58 pt left for the field
+		const budget = composerBudget(175, 52, 0, 48, 8, 57);
+		expect(budget.field).toBe(58);
+		expect(budget.field + 52 + 8 + 57).toBeLessThanOrEqual(175);
+	});
+
 	it("never shrinks the field below its touch floor, even if the budget is smaller", () => {
 		expect(composerBudget(90, 52, 30, 48, 8).field).toBe(48);
 	});

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
 
-import type { PendingView } from "@/features/session/pending";
+import { type PendingView, pendingBodyCue } from "@/features/session/pending";
 import { CONTROL, ROLE, SURFACE, state } from "@/ui/a11y";
 import { Button } from "@/ui/components";
 import { TOUCH_FLOOR } from "@/ui/layout";
@@ -49,6 +49,10 @@ export type PendingCardProps = {
 	bodyMaxHeight?: number;
 };
 
+/** The least a compact body may shrink to, in pt: about two lines of body text at 100 %.
+ *  The pinned header, cue and actions are sized first; the body takes what is left, down to this. */
+export const PENDING_BODY_MIN_PT = 56;
+
 /** The frame: `accent-wash` on `accent-border` at `radius.md`, the one card the
  *  kit paints in accent because it is the only thing that needs a decision. */
 const FRAME = "rounded-md border border-accent-border bg-accent-wash p-2.5";
@@ -68,6 +72,11 @@ export const PendingCard = ({
 	/** The option the reader has chosen, as an index into the options AS CARRIED. */
 	const [chosen, setChosen] = useState<number | null>(null);
 	const [remember, setRemember] = useState(false);
+	/* The compact body's own scroll state, measured, so the cue below it shows only while
+	 *  something is actually hidden and clears at the end (UX U11). The strict end test is
+	 *  safe HERE because the cue sits OUTSIDE the scroller's own box, so showing it cannot
+	 *  change how far the body can scroll. */
+	const [bodyScroll, setBodyScroll] = useState({ y: 0, view: 0, content: 0 });
 
 	const isApproval = view.kind === "approval";
 	/* The card's own root, which is TWO ids: an approval gate and a question are the
@@ -119,6 +128,29 @@ export const PendingCard = ({
 		</Pressable>
 	);
 
+	/* The destination, named rather than implied. In the full form it is the last line of
+	 *  the body. In the compact form it moves to the PINNED title row: with the body cut to
+	 *  72 pt the line was 0 % visible at 200 % on a force-push approval, so the one piece of
+	 *  text that says "Destructive" could be scrolled out of sight under a pinned, enabled
+	 *  Approve (UX U11). The same testID, rendered in exactly one place per mode. */
+	const markerNode = view.runsOnComputer ? (
+		<Text
+			className={cx(
+				compactBody ? "text-meta" : "pt-1 text-meta",
+				view.destructive ? "text-danger" : "text-ink-dim",
+			)}
+			testID={SURFACE.pendingCardDestructiveMarker}
+		>
+			{view.riskLabel}
+		</Text>
+	) : null;
+
+	const bodyScrolls = bodyScroll.content > bodyScroll.view + 1;
+	const bodyAtEnd = bodyScroll.y + bodyScroll.view >= bodyScroll.content - 2;
+	const bodyCue = compactBody
+		? pendingBodyCue(view, bodyScrolls, bodyAtEnd)
+		: null;
+
 	// The key lives at the RENDER SITE and is built from the two numbers, so a
 	// re-render for the next question remounts the form: without it a stale `busy`
 	// flag leaves the next question's options disabled and untappable, and a stale
@@ -127,27 +159,79 @@ export const PendingCard = ({
 		<View
 			key={`${view.requestId}:${view.questionTestID ?? "single"}`}
 			className={FRAME}
+			// Compact: the card may shrink so the composer below it keeps its chips on screen.
+			// RN's default `flexShrink` is 0, so without this the card kept its natural height
+			// and pushed the composer off a 390 pt window (measured: chips 439 of 390).
+			style={compactBody ? { flexShrink: 1, minHeight: 0 } : undefined}
 			testID={rootTestID}
 		>
-			{/* Region 1 — meta, pinned above the scroller. */}
-			<View className="shrink-0 flex-row items-center gap-2 pb-1">
-				<Text className="text-meta text-accent">{view.meta}</Text>
-				<View className="flex-1" />
-				{view.badge !== null ? (
-					// The badge is the count of decisions, not the count of questions:
-					// a reader who does not know more are waiting will answer one and
-					// wonder why the session is still blocked.
-					<Text className="text-meta text-ink-dim">{view.badge}</Text>
-				) : null}
+			{/* Region 1 — meta, pinned above the scroller. In the compact form this is the
+			    ONE pinned header for everything the bounded body might hide: line one is the
+			    meta, the body's cue and the badge; line two is the destructive marker. Putting
+			    the cue on this line costs no extra row (a separate cue line pushed the chips 49 pt
+			    off a 390 pt screen), and the marker can never be scrolled out of sight (UX U11). */}
+			<View className="shrink-0 pb-1">
+				<View className="flex-row items-center gap-2">
+					<Text
+						className="min-w-0 shrink text-meta text-accent"
+						numberOfLines={compactBody ? 1 : undefined}
+					>
+						{view.meta}
+					</Text>
+					<View className="flex-1" />
+					{bodyCue !== null ? (
+						<Text
+							className="shrink-0 text-meta text-ink-dim"
+							testID={SURFACE.pendingCardMore}
+						>
+							{bodyCue}
+						</Text>
+					) : null}
+					{view.badge !== null ? (
+						// The badge is the count of decisions, not the count of questions:
+						// a reader who does not know more are waiting will answer one and
+						// wonder why the session is still blocked.
+						<Text className="text-meta text-ink-dim">{view.badge}</Text>
+					) : null}
+				</View>
+				{compactBody ? markerNode : null}
 			</View>
 
 			{/* Region 2 — the content, scrollable and bounded. */}
 			<ScrollView
 				className={bodyMaxHeight === undefined ? "max-h-64" : undefined}
 				style={
-					bodyMaxHeight === undefined ? undefined : { maxHeight: bodyMaxHeight }
+					bodyMaxHeight === undefined
+						? undefined
+						: {
+								maxHeight: bodyMaxHeight,
+								// The body gives way to the pinned header, cue and actions, but never
+								// below two lines of body text: a command you cannot read is not
+								// something to approve.
+								flexShrink: 1,
+								minHeight: PENDING_BODY_MIN_PT,
+							}
 				}
 				testID={SURFACE.pendingCardBody}
+				scrollEventThrottle={64}
+				onScroll={(event) => {
+					const { contentOffset, contentSize, layoutMeasurement } =
+						event.nativeEvent;
+					setBodyScroll({
+						y: contentOffset.y,
+						view: layoutMeasurement.height,
+						content: contentSize.height,
+					});
+				}}
+				onContentSizeChange={(_width, height) =>
+					setBodyScroll((prev) => ({ ...prev, content: height }))
+				}
+				onLayout={(event) =>
+					setBodyScroll((prev) => ({
+						...prev,
+						view: event.nativeEvent.layout.height,
+					}))
+				}
 			>
 				{view.boundarySentence !== null ? (
 					/* The honest boundary. One sentence, no control: either the approval
@@ -180,18 +264,7 @@ export const PendingCard = ({
 						{view.detail}
 					</Text>
 				) : null}
-				{/* The destination, named rather than implied. */}
-				{view.runsOnComputer ? (
-					<Text
-						className={cx(
-							"pt-1 text-meta",
-							view.destructive ? "text-danger" : "text-ink-dim",
-						)}
-						testID={SURFACE.pendingCardDestructiveMarker}
-					>
-						{view.riskLabel}
-					</Text>
-				) : null}
+				{compactBody ? null : markerNode}
 
 				{/* Ask options: each a tap target with its own consequence line. */}
 				{view.options.length > 0 ? (

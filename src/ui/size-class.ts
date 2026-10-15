@@ -355,8 +355,8 @@ function measureFor(width: number, height: number): number | null {
 
 /**
  * How the compact composer's height budget is spent, in order of what must never leave
- * the screen: the receipt line (model/effort chips) and the field row's touch floor are
- * RESERVED first; the extras (attachments, alerts, the disabled reason) then take what
+ * the screen: the receipt line (model/effort chips), the dictation row while it shows, and the field
+ * row's touch floor are RESERVED first; the extras (attachments, alerts, the disabled reason) then take what
  * they naturally need out of what is left, and the field's ceiling is the remainder.
  *
  * Why a function: with the field and the extras in one scroller a 3-line draft at 200 %
@@ -372,8 +372,15 @@ export const composerBudget = (
 	extrasNatural: number,
 	touchFloor: number,
 	padding: number,
+	/** The dictation row's box plus its margin while it is showing, else 0. It is part of
+	 *  the pinned `main` fragment, so it is reserved with the receipt line; without it a
+	 *  recording take pushed the composer past its share (reviewer m3). */
+	dictationReserve = 0,
 ): { field: number; extras: number } => {
-	const room = Math.max(touchFloor, maxHeight - receiptHeight - padding);
+	const room = Math.max(
+		touchFloor,
+		maxHeight - receiptHeight - padding - dictationReserve,
+	);
 	const extras = Math.min(extrasNatural, Math.max(0, room - touchFloor));
 	return { field: Math.max(touchFloor, room - extras), extras };
 };

@@ -4,6 +4,7 @@ import type { PendingRequest } from "@/contracts";
 import {
 	isDestructiveDetail,
 	PENDING_BOUNDARY_COPY,
+	pendingBodyCue,
 	pendingView,
 } from "@/features/session/pending";
 
@@ -208,5 +209,51 @@ describe("the destructive sentence", () => {
 		const ask = view({ kind: "ask", detail: "run: rm -rf build" });
 		expect(ask.runsOnComputer).toBe(false);
 		expect(ask.destructive).toBe(false);
+	});
+});
+
+describe("pendingBodyCue (UX U11: a bounded body must say what it hides)", () => {
+	const approval = {
+		kind: "approval" as const,
+		options: [],
+		detail: "git push --force",
+		freeText: false,
+	};
+	const askOptions = {
+		kind: "ask" as const,
+		options: [
+			{
+				label: "a",
+				description: "",
+				index: 0,
+				recommended: false,
+				testID: "x",
+			},
+		],
+		detail: "",
+		freeText: false,
+	};
+	const askFree = {
+		kind: "ask" as const,
+		options: [],
+		detail: "",
+		freeText: true,
+	};
+
+	it("is silent when nothing is hidden or the reader is at the end", () => {
+		expect(pendingBodyCue(approval, false, false)).toBeNull();
+		expect(pendingBodyCue(approval, true, true)).toBeNull();
+	});
+
+	it("names the command for an approval, the choices for an ask, the field for a free answer", () => {
+		expect(pendingBodyCue(approval, true, false)).toBe("full command ↓");
+		expect(pendingBodyCue(askOptions, true, false)).toBe("choices below ↓");
+		expect(pendingBodyCue(askFree, true, false)).toBe("answer below ↓");
+	});
+
+	it("falls back to a neutral cue rather than saying nothing", () => {
+		expect(pendingBodyCue({ ...approval, detail: "" }, true, false)).toBe(
+			"more below ↓",
+		);
 	});
 });

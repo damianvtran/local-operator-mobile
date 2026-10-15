@@ -392,21 +392,14 @@ export default function Session() {
 	>({});
 	/* Whether the region is scrolled to its end: the cue below it says there is MORE
 	 *  and must go away once there is not. */
-	/* The cue's own height at this text size. It is also the "at the bottom" TOLERANCE:
-	 *  the cue sits in the same flex column as the region, so showing it takes that much
-	 *  height FROM the region and hiding it gives it back. Measured: with a strict
-	 *  end-of-scroll test the cue never cleared (at the end it hid, the region grew by the
-	 *  cue's height, the reader was then one cue-height short of the new end, and it came
-	 *  back: max scroll 572 -> 611, a loop). Treating "within one cue-height of the end" as
-	 *  the end is exactly consistent with the space the cue releases. */
+	/* The cue's own height at this text size, reserved out of the closed region's cap. */
 	const cueReserve = Math.round(19 * effectiveScale);
 	const [regionAtBottom, setRegionAtBottom] = useState(false);
 	/* The region's last scroll offset and viewport, kept in refs so a CONTENT change
 	 *  (a row appears, a roster changes) can re-derive "at the bottom" without waiting
 	 *  for a scroll that never comes (reviewer m3: the flag went stale and hid the cue
-	 *  while rows were below). `regionScrollY` state drives the pinned close bar. */
+	 *  while rows were below). */
 	const regionScrollRef = useRef({ y: 0, viewport: 0 });
-	const [regionScrollY, setRegionScrollY] = useState(0);
 	const [regionHeights, setRegionHeights] = useState<
 		Partial<Record<RegionKey, number>>
 	>({});
@@ -673,14 +666,6 @@ export default function Session() {
 		}
 		return hidden;
 	})();
-	const openPanelHeaderGone = (() => {
-		if (!compact || openPanel === null) return false;
-		const at =
-			regionLayout.current[openPanel === "todos" ? "todos" : "subagents"];
-		// the panel's header is its first ~48 pt; once the scroll offset passes it, the
-		// toggle is off screen
-		return at !== undefined && regionScrollY > at.y + 48;
-	})();
 	const regionStyle = compact
 		? {
 				// Before the first measure every height is 0 and snapRegion reports height 0
@@ -690,7 +675,15 @@ export default function Session() {
 				// Hidden ONLY when rows are measured and the cap cannot hold a readable line
 				// (snapRegion: height 0 with rows hidden). The scroller is kept in the tree so
 				// rotating or a keyboard going away does not unmount the panels.
-				display: (!panelOpen && regionSnap.height === 0 && regionSnap.hidden > 0
+				// ALSO hidden while a pending approval/ask owns the screen (UX U12): the card,
+				// the composer and the header already fill a 390 pt window, so flex shrank the
+				// region to a 17 pt strip cut through the middle of its text, with no cue and no
+				// conversation above it. A whole region or none: the roster comes back the moment
+				// the decision is made, and the header's roster lever is still there.
+				display: ((!panelOpen &&
+					regionSnap.height === 0 &&
+					regionSnap.hidden > 0) ||
+				pendingViewProps !== null
 					? "none"
 					: "flex") as "none" | "flex",
 			}
@@ -792,17 +785,14 @@ export default function Session() {
 								y: contentOffset.y,
 								viewport: layoutMeasurement.height,
 							};
-							setRegionScrollY(Math.round(contentOffset.y));
 							setRegionAtBottom(
 								contentOffset.y + layoutMeasurement.height >=
-									contentSize.height - 2 - cueReserve,
+									contentSize.height - 2,
 							);
 						}}
 						onContentSizeChange={(_width, height) => {
 							const { y, viewport } = regionScrollRef.current;
-							setRegionAtBottom(
-								viewport > 0 && y + viewport >= height - 2 - cueReserve,
-							);
+							setRegionAtBottom(viewport > 0 && y + viewport >= height - 2);
 						}}
 						nestedScrollEnabled
 						testID={compact ? SURFACE.sessionSecondaryChrome : undefined}
@@ -834,31 +824,40 @@ export default function Session() {
 					    because with the working line, context/cost and Tasks all behind it a
 					    bare "more below" told a reader nothing about whether to scroll (UX U5).
 					    A hairline above it separates it from a row the cut stops beside (design
-					    D3). It leaves once the region is scrolled to its end. While a panel is
+					    D3). The slot is PERMANENT while the region overflows and only its text changes
+					    at the end ("end · scroll ↑"): a cue that appeared and disappeared changed how
+					    much room the flex column gave the region, so the end moved as the reader
+					    reached it and the cue oscillated (max scroll 572 → 611). A constant slot
+					    needs no tolerance, so the true last row is always reachable. While a panel is
 					    open the cap may land inside an opened row, and the cue is then the
 					    truthful signal that the cut is not the end. */}
-					{compact && regionOverflows && !regionAtBottom ? (
+					{compact && regionOverflows && pendingViewProps === null ? (
 						<Text
 							className="border-t border-hairline px-4 pt-1 text-meta text-ink-dim"
 							testID={SURFACE.sessionSecondaryMore}
 						>
-							{hiddenRegionLabels.length > 0
-								? `${hiddenRegionLabels.join(" · ")} below · scroll ↓`
-								: "more below · scroll ↓"}
+							{regionAtBottom
+								? "end · scroll ↑"
+								: hiddenRegionLabels.length > 0
+									? `${hiddenRegionLabels.join(" · ")} below · scroll ↓`
+									: "more below · scroll ↓"}
 						</Text>
 					) : null}
-					{/* An open panel's own toggle scrolls out of the region with its header;
-					    this keeps a way to CLOSE it on screen (UX U4). Shown only once the
-					    header has scrolled out, so it is not a second toggle in the common
-					    case. */}
-					{compact && openPanelHeaderGone ? (
+					{/* A way to CLOSE the open panel that is always on screen (UX U4). The panel's own
+					    header scrolls out of the region with its rows, and with it the only toggle.
+					    The bar is a CONSTANT slot while a panel is open, not one that appears once the
+					    header has scrolled away: appearing took its 48 pt from the region, so the end
+					    of the scroll moved by 48 as the reader reached it and the "end" was never
+					    reached (measured gap 48.5 at the supposed end). A bar that is always there
+					    costs the same 48 pt but keeps the geometry still. */}
+					{compact && openPanel !== null ? (
 						<Pressable
 							accessibilityRole={ROLE.button}
 							accessibilityLabel={`Close ${openPanel === "todos" ? "tasks" : "subagents"}`}
 							onPress={() => setOpenPanel(null)}
 							testID={CONTROL.sessionPanelClose}
 						>
-							<View className="min-h-11 justify-center border-t border-hairline px-4">
+							<View className="min-h-12 justify-center border-t border-hairline px-4">
 								<Text className="text-meta text-ink-muted">
 									{`Close ${openPanel === "todos" ? "tasks" : "subagents"} ▴`}
 								</Text>
@@ -878,7 +877,11 @@ export default function Session() {
 						/>
 					) : null}
 					{pendingViewProps !== null ? (
-						<View className="px-4 pb-1">
+						<View
+							className="px-4 pb-1"
+							// shrinkable in compact so the card can yield to the composer below
+							style={compact ? { flexShrink: 1, minHeight: 0 } : undefined}
+						>
 							<PendingCard
 								view={pendingViewProps}
 								bodyMaxHeight={

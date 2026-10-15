@@ -614,6 +614,9 @@ export const SURFACE = {
 	subagentRunning: "subagent-running",
 	pendingCard: "pending-card",
 	pendingCardBody: "pending-card-body",
+	/** Compact only: the line between the bounded body and the actions that names what the
+	 *  body hides ("full command ↓", "choices below ↓"), on the meta line. */
+	pendingCardMore: "pending-card-more",
 	pendingCardDetail: "pending-card-detail",
 	pendingCardDestructiveMarker: "pending-card-destructive-marker",
 	pendingCardAnswer: "pending-card-answer",
