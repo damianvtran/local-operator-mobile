@@ -267,6 +267,9 @@ export const CONTROL = {
 	settingsTextScaleGroup: "settings-text-scale-group",
 	settingsRetryLastAction: "settings-retry-last-action",
 	settingsNotificationsEnable: "settings-notifications-enable",
+	settingsAccountRoutingGroup: "settings-account-routing-group",
+	settingsAccountRoutingSave: "settings-account-routing-save",
+	settingsAccountRoutingRetry: "settings-account-routing-retry",
 	refusalSignIn: "refusal-sign-in",
 	refusalRetry: "refusal-retry",
 	refusalAnotherAddress: "refusal-another-address",
@@ -914,6 +917,7 @@ export const REGION = {
 	 *  (ADR 0006 §2.4, §5). The marker is the section's own region id so the
 	 *  capture can assert the section rendered. */
 	settingsNotifications: "settings-section-notifications",
+	settingsAccountRouting: "settings-section-account-routing",
 
 	/** The refusal surfaces (`docs/ux/flows.md` § 9, C5/C6/C7). Each id names a
 	 *  CAUSE the flow asserts by name, so a control or a sentence that goes missing

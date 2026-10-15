@@ -273,6 +273,23 @@ export class RelayEndpoints {
 		this.http = http;
 	}
 
+	/** The selected computer's canonical non-security setting projection.
+	 * No arbitrary key/path or local policy enum is accepted by this client. */
+	async accountRouting(): Promise<Payload<"accountRouting">> {
+		return this.http.json("accountRouting", {
+			method: "GET",
+			path: "/api/settings/account-routing",
+		});
+	}
+
+	async setAccountRouting(value: string): Promise<Payload<"accountRouting">> {
+		return this.http.json("accountRouting", {
+			method: "PATCH",
+			path: "/api/settings/account-routing",
+			body: { value },
+		});
+	}
+
 	/** The reachability probe. Public, no cookie, and `dist: false` is not a
 	 *  health problem — the native client never needs the web bundle. */
 	async healthz(): Promise<Payload<"healthz">> {

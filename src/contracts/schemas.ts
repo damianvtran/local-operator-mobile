@@ -32,6 +32,7 @@
 import { z } from "zod";
 
 import type {
+	AccountRoutingPayload,
 	ApiError,
 	AskQuestion,
 	AsksResponse,
@@ -1323,6 +1324,41 @@ export const projectionStreamFrameSchema = z.looseObject({
 	data: sessionProjectionSchema,
 });
 
+/** Specific safe setting only, never a generic config mutation capability.
+ * The backend owns policy choices, labels and defaults, including additions.
+ * Refuse inconsistent/missing metadata rather than invent a saved phone value. */
+export const accountRoutingSchema = z.looseObject({
+	capability: z.literal("account-routing-v1"),
+	setting: z
+		.looseObject({
+			key: z.literal("retry.accountSelectionPolicy"),
+			label: z.string().min(1),
+			help: z.string(),
+			kind: z.literal("enum"),
+			value: z.string().min(1),
+			default: z.string().min(1),
+			is_default: z.boolean(),
+			choices: z
+				.array(
+					z.looseObject({
+						value: z.string().min(1),
+						label: z.string().min(1),
+						description: z.string(),
+					}),
+				)
+				.min(1),
+		})
+		.refine((row) => {
+			const values = row.choices.map((choice) => choice.value);
+			return (
+				new Set(values).size === values.length &&
+				values.includes(row.value) &&
+				values.includes(row.default) &&
+				row.is_default === (row.value === row.default)
+			);
+		}, "inconsistent account-routing metadata"),
+});
+
 /** `GET /api/config/events` (wave-5 slice D): one `config` frame's payload —
  *  the relay's RESOLVED language, live.
  *
@@ -1456,6 +1492,7 @@ export const SCHEMAS = {
 	sessionsStreamFrame: sessionsStreamFrameSchema,
 	projectionStreamFrame: projectionStreamFrameSchema,
 	/** `GET /api/config/events`: one `config` frame's payload, and its envelope. */
+	accountRouting: accountRoutingSchema,
 	configFrame: configFrameSchema,
 	configStreamFrame: configStreamFrameSchema,
 	gatewayRefusal: gatewayRefusalSchema,
@@ -1554,6 +1591,7 @@ type WireMirror = {
 	 *  local-operator #2218): asserted like every read family around it — a field
 	 *  that stops being assignable reds `WireConformance` before a phone reads a
 	 *  language the daemon no longer sends. */
+	accountRouting: AccountRoutingPayload;
 	configFrame: ConfigFramePayload;
 	transferReceipt: TransferReceipt;
 	sessionProjection: SessionProjection;
@@ -1738,6 +1776,7 @@ export type _WireConformanceChecked = AssertAll<
  * inferred one, and to keep the unused-import lints honest in files that only
  * need types. */
 export type {
+	AccountRoutingPayload,
 	ApiError,
 	AskQuestion,
 	AsksResponse,

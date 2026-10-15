@@ -27,6 +27,7 @@ import { Segmented } from "@/ui/components/segmented";
 import { LARGE_TEXT_SCALE } from "@/ui/text-scale";
 import { TEXT_SCALE_OPTIONS, useTextScale } from "@/ui/text-scale-provider";
 import type { ThemePreference } from "@/ui/tokens.gen";
+import { AccountRoutingSection } from "./account-routing-section";
 import { NotificationsSection } from "./notifications-section";
 import { OwnTunnelSettings } from "./own-tunnel-settings";
 
@@ -238,6 +239,8 @@ export default function Settings() {
 				 *  a tunnel provider hands out a new hostname. */}
 				<OwnTunnelSettings />
 
+				<Divider />
+				<AccountRoutingSection />
 				<Divider />
 
 				{/* -------------------------------------------------------- appearance */}
