@@ -28,10 +28,13 @@ CORE = "c1b7083a5371d60aa4ad58dbb54fd30d1a25857c"
 BLOB = "b08458247ac5babb43acd696c44bc3630e01d787"
 
 
-def core_metadata(core: Path) -> tuple[list[str], str]:
+def core_metadata(core: Path) -> tuple[list[str], str, list[str]]:
     project = tomllib.loads((core / "pyproject.toml").read_text())["project"]
+    build = tomllib.loads((core / "pyproject.toml").read_text())["build-system"]
     values = project["dependencies"]
     version = project["version"]
+    requires = build["requires"]
+    backend = build["build-backend"]
     if (
         len(values) != 23
         or any(not isinstance(value, str) or "\n" in value for value in values)
@@ -40,6 +43,15 @@ def core_metadata(core: Path) -> tuple[list[str], str]:
         raise ValueError("CoreC1 base dependency metadata changed")
     if not isinstance(version, str) or not version.strip() or "\n" in version:
         raise ValueError("pinned CoreC1 project version missing")
+    # The backend is asserted too: pinning terms without checking the backend can
+    # still be built by would leave the isolation boundary unverified.
+    if (
+        not isinstance(requires, list)
+        or not requires
+        or any(not isinstance(entry, str) or not entry.strip() for entry in requires)
+        or backend != "setuptools.build_meta"
+    ):
+        raise ValueError("unexpected CoreC1 build-system metadata")
     raw = (core / "local_operator/mobile/account_routing.py").read_bytes()
     if (
         hashlib.sha1(
@@ -48,7 +60,7 @@ def core_metadata(core: Path) -> tuple[list[str], str]:
         != BLOB
     ):
         raise ValueError("CoreC1 facade source mismatch before dependency setup")
-    return values, version.strip()
+    return values, version.strip(), [entry.strip() for entry in requires]
 
 
 def verify_metadata(executable: str, expected: str, environment: Path, env: dict) -> dict:
@@ -122,7 +134,7 @@ def main() -> None:
         env=safe,
         check=True,
     )
-    declared, version = core_metadata(core)
+    declared, version, build_requires = core_metadata(core)
     identity = hashlib.sha256(json.dumps(declared).encode()).hexdigest()
     receipt_file = work / "core-bootstrap.json"
     environment = work / "core-python"
@@ -163,9 +175,25 @@ def main() -> None:
         timeout=240,
         check=True,
     )
-    # `--no-deps`: distribution metadata only, so the 23 base requirements remain
-    # the sole runtime dependency set. A wheel is built from the pinned checkout
-    # into the venv's own temp; the checkout itself is left untouched by pip.
+    # Build requirements are installed EXPLICITLY and recorded, then the checkout
+    # is built with --no-build-isolation. Without this, PEP 517 isolation resolved
+    # setuptools/wheel from the index at build time, unpinned and unrecorded (R4-1,
+    # review 6206979138): the same source could build under a different backend on
+    # a different day with nothing in the receipt to show it.
+    subprocess.run(
+        [
+            str(executable),
+            "-m",
+            "pip",
+            "install",
+            "--only-binary=:all:",
+            "--disable-pip-version-check",
+            *build_requires,
+        ],
+        env=safe,
+        timeout=180,
+        check=True,
+    )
     subprocess.run(
         [
             str(executable),
@@ -173,6 +201,7 @@ def main() -> None:
             "pip",
             "install",
             "--no-deps",
+            "--no-build-isolation",
             "--disable-pip-version-check",
             str(core),
         ],
@@ -180,6 +209,20 @@ def main() -> None:
         timeout=300,
         check=True,
     )
+    # The checkout must be untouched ANYWHERE after the build: an egg-info or
+    # build/ directory written by the backend is an install-time artifact, and the
+    # earlier check only covered `local_operator/` (R4-1).
+    stray = subprocess.check_output(
+        ["git", "-C", str(core), "status", "--porcelain"], env=safe, text=True
+    ).strip()
+    if stray:
+        raise ValueError(
+            "install-time artifact modified the pinned checkout: "
+            + stray.splitlines()[0]
+        )
+    build_resolved = subprocess.check_output(
+        [str(executable), "-m", "pip", "freeze", "--all"], env=safe, text=True
+    ).splitlines()
     metadata = verify_metadata(str(executable), version, environment, safe)
     resolved = subprocess.check_output(
         [str(executable), "-m", "pip", "freeze", "--all"], env=safe, text=True
@@ -191,7 +234,12 @@ def main() -> None:
         "requirementsSha256": identity,
         "declared": declared,
         "resolved": resolved,
-        "metadataInstallCommand": f"pip install --no-deps <core checkout> ({version})",
+        "buildRequiresDeclared": build_requires,
+        "buildRequiresResolved": build_resolved,
+        "buildIsolation": False,
+        "metadataInstallCommand": (
+            f"pip install --no-deps --no-build-isolation <core checkout> ({version})"
+        ),
         "python": str(executable),
         "version": subprocess.check_output(
             [str(executable), "--version"], text=True

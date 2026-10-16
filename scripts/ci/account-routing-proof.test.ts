@@ -14,12 +14,14 @@ import {
 	assertMaestroHelp,
 	assertNativeOrigin,
 	assertProofCI,
+	COLD_MAESTRO_CAP_SECONDS,
 	COLD_SIMULATOR_CAP_SECONDS,
 	mdnsCommand,
 	PINS,
 	PROOF_MODE,
 	runProof,
 	STAGE_SECONDS,
+	STEADY_MAESTRO_CAP_SECONDS,
 	safeArchiveName,
 	selectProof,
 } from "./account-routing-proof-contract.ts";
@@ -295,6 +297,37 @@ describe("staged proof source contract — mocks only, no mDNS/native/CI executi
 		} finally {
 			rmSync(root, { recursive: true, force: true });
 		}
+	});
+	it("warms the iOS driver before the first evidence flow, under its own cold cap", () => {
+		// The repository's Android playbook already launches the installed app once
+		// "so the first flow does not carry the cold start"; the missing iOS
+		// equivalent let the driver bring-up blow the steady 120s budget
+		// (CI 38844597781: 123170ms, empty log).
+		const setup = NativeProof.prototype as unknown as {
+			warmDriver: () => Promise<void>;
+		};
+		expect(typeof setup.warmDriver).toBe("function");
+		expect(COLD_MAESTRO_CAP_SECONDS).toBeGreaterThan(
+			STEADY_MAESTRO_CAP_SECONDS,
+		);
+		// Justified by the observed 123170ms cold flow plus driver install cost,
+		// and still far inside setup's own stage budget.
+		expect(COLD_MAESTRO_CAP_SECONDS).toBeGreaterThanOrEqual(240);
+		expect(COLD_MAESTRO_CAP_SECONDS).toBeLessThan(STAGE_SECONDS.setup - 120);
+	});
+	it("keeps steady per-flow budgets steady, so a cold cost cannot hide behind them", () => {
+		expect(STEADY_MAESTRO_CAP_SECONDS).toBe(120);
+	});
+	it("orders the warm-up before the first evidence flow in the source", () => {
+		const source = readFileSync(
+			new URL("./account-routing-ios-proof.ts", import.meta.url),
+			"utf8",
+		);
+		const warm = source.indexOf("await this.warmDriver()");
+		const firstFlow = source.indexOf('"base-real-form"');
+		expect(warm).toBeGreaterThan(-1);
+		expect(firstFlow).toBeGreaterThan(-1);
+		expect(warm).toBeLessThan(firstFlow);
 	});
 	it("gives every stage room for a cold simulator on its own clock", () => {
 		// Each stage is its own workflow step (own `timeout-minutes`), so a stage

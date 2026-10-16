@@ -34,6 +34,17 @@ export const STAGE_SECONDS: Record<ProofStage, number> = {
  * no unbounded wait — the cap is what a cold start is allowed, and hitting it
  * is a named deadline failure rather than a fabricated exit code. */
 export const COLD_SIMULATOR_CAP_SECONDS = 180;
+
+/** Cold cap for the FIRST Maestro invocation of a stage.
+ * The iOS XCUITest driver comes up on it — runner install and boot with no
+ * output — and the observed cold first flow consumed 123170ms against the 120s
+ * steady cap (CI 38844597781). Steady per-flow budgets stay at 120s: raising
+ * that to hide a one-off cold cost would make every later regression invisible.
+ * Bounded like the simulator cap: no retry loop, no unbounded wait. */
+export const COLD_MAESTRO_CAP_SECONDS = 300;
+
+/** Steady-state cap for an evidence flow once the driver is warm. */
+export const STEADY_MAESTRO_CAP_SECONDS = 120;
 const SHA = /^[a-f0-9]{40}$/;
 const HASH = /^[a-f0-9]{64}$/;
 const UDID = /^[a-fA-F0-9-]{36}$/;

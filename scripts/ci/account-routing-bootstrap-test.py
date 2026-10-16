@@ -68,6 +68,21 @@ def write_pinned_checkout(root: Path, version: str = "9.9.9", deps: int = 23, uv
     )
     if uv_lock:
         (core / "uv.lock").write_text("")
+    # The cleanliness assertion reads `git status`, so the synthetic checkout needs
+    # a repository; committing isolates it from an inherited user/global config.
+    subprocess.run(
+        ["git", "-C", str(core), "init", "--quiet"], check=True,
+        env={**os.environ, "GIT_CONFIG_SYSTEM": os.devnull},
+    )
+    subprocess.run(
+        ["git", "-C", str(core), "-c", "user.email=t@example.invalid",
+         "-c", "user.name=proof", "add", "-A"], check=True,
+    )
+    subprocess.run(
+        ["git", "-C", str(core), "-c", "user.email=t@example.invalid",
+         "-c", "user.name=proof", "commit", "--quiet", "-m", "fixture"],
+        check=True,
+    )
     return core
 
 
@@ -172,6 +187,41 @@ class BootstrapPortabilityControls(unittest.TestCase):
             )
         self.assertIn("pinned CoreC1 checkout", str(caught.exception))
 
+    def test_build_requirements_are_declared_not_left_to_the_index(self):
+        """R4-1: PEP 517 isolation resolved setuptools/wheel unpinned at build time.
+
+        The fix installs the checkout's declared build requirements explicitly and
+        builds with --no-build-isolation, so this control asserts the declaration is
+        readable and recorded rather than left implicit.
+        """
+        core = write_pinned_checkout(self.root / "build", version="3.1.4")
+        requires = self._build_requires(core)
+        self.assertEqual(requires, ["setuptools>=61.0.0"])
+        unreadable = self.root / "nobuild"
+        (unreadable / "local_operator" / "mobile").mkdir(parents=True)
+        (unreadable / "pyproject.toml").write_text(
+            "[project]\nname = \"local-operator\"\nversion = \"1.0.0\"\n"
+            'dependencies = [\n    "dep0>=1.0",\n]\n'
+        )
+        with self.assertRaises((KeyError, ValueError)):
+            self._build_requires(unreadable)
+
+    def test_planted_stray_artifact_fails_the_cleanliness_assertion(self):
+        """R4-1: the pre-install check only covered `local_operator/`.
+
+        A build artifact landing anywhere else in the checkout must fail closed, so
+        the assertion reads whole-tree status rather than that one directory.
+        """
+        core = write_pinned_checkout(self.root / "stray")
+        self.assertFalse(self._stray_artifacts(core))
+        # A real egg-info carries files; an EMPTY directory is invisible to
+        # `git status`, which is exactly how a bare mkdir would slip past.
+        stray = core / "local_operator.egg-info"
+        stray.mkdir()
+        self.assertFalse(self._stray_artifacts(core))
+        (stray / "PKG-INFO").write_text("Name: local-operator\n")
+        self.assertTrue(self._stray_artifacts(core))
+
     def test_checkout_shape_guards_fail_before_any_facade_read(self):
         """Wrong dependency count or a uv.lock is refused without a real checkout."""
         wrong = write_pinned_checkout(self.root / "a", deps=22)
@@ -184,6 +234,21 @@ class BootstrapPortabilityControls(unittest.TestCase):
     def test_absent_checkout_is_refused_not_defaulted(self):
         with self.assertRaises((FileNotFoundError, NotADirectoryError, ValueError)):
             self._declared_and_version(self.root / "does-not-exist")
+
+    def _build_requires(self, core: Path) -> list[str]:
+        build = tomllib.loads((core / "pyproject.toml").read_text())["build-system"]
+        requires = build["requires"]
+        if build["build-backend"] != "setuptools.build_meta" or not requires:
+            raise ValueError("synthetic build-system rejected")
+        return list(requires)
+
+    def _stray_artifacts(self, core: Path) -> bool:
+        """Mirror the bootstrap's whole-checkout cleanliness assertion."""
+        return bool(
+            subprocess.check_output(
+                ["git", "-C", str(core), "status", "--porcelain"], text=True
+            ).strip()
+        )
 
     def _declared_and_version(self, core: Path):
         """Read the pinned metadata without requiring the production blob pin.

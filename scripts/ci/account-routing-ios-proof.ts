@@ -32,6 +32,7 @@ import {
 	assertNativeOrigin,
 	assertOwnedUdid,
 	assertProofCI,
+	COLD_MAESTRO_CAP_SECONDS,
 	COLD_SIMULATOR_CAP_SECONDS,
 	FROZEN_PATHS,
 	hierarchyFacts,
@@ -40,6 +41,7 @@ import {
 	type ProofStage,
 	runProof,
 	STAGE_SECONDS,
+	STEADY_MAESTRO_CAP_SECONDS,
 	selectProof,
 } from "./account-routing-proof-contract.ts";
 import * as flows from "./account-routing-proof-flows.ts";
@@ -86,6 +88,8 @@ export class NativeProof {
 	private baseline: Bundle | undefined;
 	private candidate: Bundle | undefined;
 	private udid: string | undefined;
+	/** The first Maestro invocation of a stage pays driver bring-up. */
+	private maestroWarm = false;
 	private frames = 0;
 	private readonly secret = randomUUID();
 	readonly host: ProofHost;
@@ -493,6 +497,38 @@ export class NativeProof {
 		if (!value) throw new Error("missing owned slot");
 		return value;
 	}
+	/** Pay the cold driver bring-up OUTSIDE the evidence flows.
+	 *
+	 * The repository's own Android playbook already does this
+	 * (docs/e2e/ci-notes.md §"Native E2E": a readiness gate plus one launch of the
+	 * installed app "so the first flow does not carry the cold start"), and there
+	 * was no iOS equivalent: the first iOS flow paid the XCUITest driver install
+	 * and boot with no output, then hit the steady 120s budget (CI 38844597781,
+	 * 123170ms, empty log). The warm-up is diagnosed as its own step under its own
+	 * COLD cap, so a driver that genuinely never comes up is a named
+	 * `deadline exceeded` here rather than a mystery inside the first evidence
+	 * flow. It uses the real driver-touch command (hierarchy) and does not walk or
+	 * fake any policy state.
+	 */
+	private async warmDriver() {
+		if (!this.udid || !this.baseline)
+			throw new Error("cannot warm an uninstalled driver");
+		await this.host.run(
+			"warm-launch-base-app",
+			"xcrun",
+			["simctl", "launch", this.udid, this.baseline.bundleId],
+			COLD_SIMULATOR_CAP_SECONDS,
+		);
+		await this.host.run(
+			"warm-maestro-driver",
+			"maestro",
+			["--device", this.udid, "hierarchy"],
+			COLD_MAESTRO_CAP_SECONDS,
+		);
+		this.maestroWarm = true;
+		this.receipt.driverWarmUp =
+			"PASS actual simctl launch + driver hierarchy before the first evidence flow";
+	}
 	private async flow(
 		name: string,
 		commands: flows.NativeStep[],
@@ -522,6 +558,12 @@ export class NativeProof {
 			`appId: ${this.baseline.bundleId}\n---\n${JSON.stringify(scoped, null, 2)}\n`,
 		);
 		writeFileSync(config, JSON.stringify({ flows: [`flow-${label}.yaml`] }));
+		// Cold vs steady: the FIRST Maestro call of a stage pays XCUITest driver
+		// bring-up, so it takes the cold cap; later flows stay on the steady one.
+		const cap = this.maestroWarm
+			? STEADY_MAESTRO_CAP_SECONDS
+			: COLD_MAESTRO_CAP_SECONDS;
+		this.maestroWarm = true;
 		await this.host.run(
 			`maestro-${label}`,
 			"maestro",
@@ -541,7 +583,7 @@ export class NativeProof {
 				join(this.root, "frames"),
 				file,
 			],
-			120,
+			cap,
 		);
 		const hierarchy = await this.host.run(
 			`hierarchy-${name}`,
@@ -672,6 +714,7 @@ export class NativeProof {
 			COLD_SIMULATOR_CAP_SECONDS,
 		);
 		await this.installedMatches(this.baseline, "Base");
+		await this.warmDriver();
 		const before = this.slot("a").fixture.wireTrace.length;
 		await this.flow(
 			"base-real-form",
