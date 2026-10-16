@@ -27,6 +27,7 @@
  * own, so a `lop mobile` on 4098 keeps running untouched.
  */
 
+import { randomUUID } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { createServer } from "node:http";
@@ -38,9 +39,14 @@ import type {
 	SessionProjection,
 	SessionSummary,
 } from "../../docs/relay/types.ts";
+import type { FlagValue } from "../lib/args.ts";
 import { bool, list, num, parseArgs, str } from "../lib/args.ts";
 import type { Json } from "../lib/json.ts";
 import { asString, isRecord } from "../lib/json.ts";
+import {
+	createCanonicalPolicyFixture,
+	type PolicyFixtureMode,
+} from "./account-routing.ts";
 import type { FaultSet } from "./faults.ts";
 import { FAULT_NAMES, parseFaults, summariseFaults } from "./faults.ts";
 import type { FixtureResponseOverride } from "./fixtures.ts";
@@ -3434,6 +3440,53 @@ export function createRelay(options: RelayOptions = {}) {
 // did print the password and then STARTED A LISTENING RELAY, keeping the event loop
 // alive forever: the command substitution never completed and the capture sat on it.
 // Importing a module must have no side effects; only the entry point runs the CLI.
+/** The canonical pinned-core policy fixture, built only when a CI job asks for it.
+ *
+ * WHY IT LIVES HERE AND NOT INSIDE `if (import.meta.main)`: the construction is the
+ * part worth testing, so it is exported and the CLI is a thin caller. The fixture
+ * needs a bootstrapped core checkout (scripts/ci/account-routing-bootstrap.py) and
+ * an owned scratch root; both come from the environment/flags, and a missing one
+ * fails loudly rather than serving a policy the app would wrongly trust.
+ *
+ * Source identity is asserted by `createCanonicalPolicyFixture` itself (the pinned
+ * CORE_HEAD + facade blob), never restated here: one pin, one place to update.
+ */
+export function buildAccountRoutingFixture(
+	flags: Record<string, FlagValue>,
+): import("./account-routing.ts").CanonicalPolicyFixture {
+	const coreRoot = str(flags, "account-routing-core-root");
+	const python = str(flags, "account-routing-python");
+	if (!coreRoot || !python)
+		throw new Error(
+			"--account-routing-fixture needs --account-routing-core-root and --account-routing-python",
+		);
+	const profile = str(flags, "account-routing-profile", "a");
+	if (profile !== "a" && profile !== "b")
+		throw new Error("--account-routing-profile must be a or b");
+	const mode = str(
+		flags,
+		"account-routing-mode",
+		"normal",
+	) as PolicyFixtureMode;
+	const scratch =
+		process.env.LOCAL_OPERATOR_SCRATCHPAD ??
+		(process.env.GITHUB_ACTIONS === "true"
+			? process.env.RUNNER_TEMP
+			: undefined);
+	if (!scratch)
+		throw new Error(
+			"the account-routing fixture needs an owned scratch root: set LOCAL_OPERATOR_SCRATCHPAD (CI: RUNNER_TEMP)",
+		);
+	const fixture = createCanonicalPolicyFixture({
+		python,
+		coreRoot,
+		privateRoot: join(scratch, `account-routing-fixture-${randomUUID()}`),
+		profile,
+	});
+	fixture.controls.mode = mode;
+	return fixture;
+}
+
 if (import.meta.main) {
 	const { flags } = parseArgs(process.argv.slice(2));
 	if (bool(flags, "help")) {
@@ -3453,6 +3506,14 @@ if (import.meta.main) {
 				"                        relay's own origin is always allowed once listening.",
 				"  --allow-android-emulator-origin  admit http://10.0.2.2 at the actual bound port",
 				"                        isolated native CI only; off by default (no wildcard).",
+				"  --account-routing-fixture  serve the canonical pinned-core account-routing",
+				"                        policy facade. OFF by default, so every other job's",
+				"                        behaviour (nightly included) is byte-identical.",
+				"  --account-routing-core-root <dir>  the pinned core checkout the fixture",
+				"                        adapts (required with the flag).",
+				"  --account-routing-python <path>    that checkout's interpreter (required).",
+				"  --account-routing-profile <a|b>    private computer profile (default a).",
+				"  --account-routing-mode <name>      fixture mode (default normal).",
 				"  --print-port          print the chosen port alone on stdout",
 				"  --print-password      print the relay password alone on stdout and exit",
 				"  --list                print every scenario and exit",
@@ -3485,7 +3546,16 @@ if (import.meta.main) {
 	}
 
 	const recordDir = str(flags, "record", undefined);
+	// The canonical account-routing facade, OFF unless a job asks for it. Default
+	// behaviour stays byte-identical for every existing caller (the nightly relay
+	// serves no /api/settings/account-routing and must keep 404ing), so this is
+	// opt-in rather than a second default: the fixture adapts a PINNED core checkout
+	// in a fresh process, and a job that has not bootstrapped one cannot serve it.
+	const accountRouting = bool(flags, "account-routing-fixture")
+		? buildAccountRoutingFixture(flags)
+		: undefined;
 	const relay = createRelay({
+		accountRouting,
 		fixturesDir,
 		scenario: str(flags, "scenario", "idle"),
 		faults: list(flags, "fault"),

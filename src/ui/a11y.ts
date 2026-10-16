@@ -818,6 +818,14 @@ export const IDENTIFIER_FAMILIES: readonly string[] = [
 	 *  (`supplement-file-<i>`) — the one stable name a flow has for a callout,
 	 *  because the path is data. */
 	"supplement-file-",
+	/* One identifier per account-routing choice, built by
+	 *  `accountRoutingChoiceId` and keyed by the choice VALUE
+	 *  (`settings-account-routing-group:<value>`). COLON-separated rather than
+	 *  dash-terminated because the value IS the backend's own enum member, so a
+	 *  dash would make `reset-soonest` ambiguous with the family's own text. The
+	 *  family is rendered: the settings section builds each option's id with the
+	 *  builder above, and the Android proof flow addresses a concrete member. */
+	"settings-account-routing-group:",
 ];
 
 /**
