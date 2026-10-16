@@ -27,58 +27,146 @@ export const STAGE_SECONDS: Record<ProofStage, number> = {
 	full: 4500,
 };
 
-/** Bounded cap for the FIRST `xcrun simctl` call of a stage.
- * A cold macOS runner starts CoreSimulator on that first call and routinely
- * exceeds the old 60s default, which killed a legitimate command and reported
- * it as `rc=128` (CI 38842647133). This stays a real bound: no retry loop and
- * no unbounded wait — the cap is what a cold start is allowed, and hitting it
- * is a named deadline failure rather than a fabricated exit code. */
-export const COLD_SIMULATOR_CAP_SECONDS = 180;
-
-/** Cold cap for the FIRST Maestro invocation of a stage.
- * The iOS XCUITest driver comes up on it — runner install and boot with no
- * output — and the observed cold first flow consumed 123170ms against the 120s
- * steady cap (CI 38844597781). Steady per-flow budgets stay at 120s: raising
- * that to hide a one-off cold cost would make every later regression invisible.
- * Bounded like the simulator cap: no retry loop, no unbounded wait. */
-export const COLD_MAESTRO_CAP_SECONDS = 300;
-
-/** Steady-state cap for an evidence flow once the driver is warm. */
-export const STEADY_MAESTRO_CAP_SECONDS = 120;
-
-/** Every bounded cap must sit ABOVE the observed cost of the operation it bounds.
+/** EVERY observation of a bounded operation, with the run it came from.
  *
- * Measured on real hosted runs and recorded here as the justification, so a cap
- * is never chosen below a measurement and then reported as a policy failure:
- * run 38844597781 (setup, passed) and run 38845929163 (setup, killed by the 90s
- * cap this table replaced). A cold simulator's first boot is the classic
- * offender — ~92s of it is data migration, not the app's work.
+ * A single number is not a distribution: the selector measured 6107ms, 7267ms and
+ * then 15021ms, so a cap sized just above the SMALLEST observation (15s, F5) was
+ * still under-sized one run later (CI 38847064654). Recording the whole sample
+ * set is what makes the derived cap data-driven instead of hand-tuned.
  *
- * `simctl shutdown`/`delete` are also not 20s operations on a cold runner: the
- * killed run measured 23.3s and 22.0s. They get their own entries rather than
- * borrowing the simulator cap, because they are different operations with
- * different observed costs.
+ * Entries are SAMPLES, not budgets: adding a measured run is the only way a cap
+ * moves. Milliseconds, as observed and reported by the proof host.
  */
-export const MEASURED_OPERATION_SECONDS = {
-	bootReady: 92.6,
-	shutdown: 23.3,
-	delete: 22.0,
-	install: 24.6,
-	selector: 7.3,
-	boot: 2.8,
-	list: 0.4,
-	create: 0.3,
+export const OPERATION_OBSERVATIONS = {
+	selector: [
+		{ run: 38845929163, ms: 6107 },
+		{ run: 38844597781, ms: 7267 },
+		{ run: 38847064654, ms: 15021 },
+	],
+	bootReady: [
+		{ run: 38844597781, ms: 92562 },
+		{ run: 38845929163, ms: 91663 },
+	],
+	shutdown: [{ run: 38845929163, ms: 23349 }],
+	delete: [{ run: 38845929163, ms: 22002 }],
+	install: [{ run: 38844597781, ms: 24619 }],
+	boot: [
+		{ run: 38844597781, ms: 2400 },
+		{ run: 38845929163, ms: 2832 },
+	],
+	list: [{ run: 38845929163, ms: 400 }],
+	create: [{ run: 38845929163, ms: 300 }],
+	maestroCold: [{ run: 38844597781, ms: 123170 }],
+	maestroSteady: [
+		{ run: 38844597781, ms: 42000 },
+		{ run: 38844597781, ms: 46000 },
+	],
+	coreDoctor: [{ run: 38845929163, ms: 14100 }],
+	coreBootstrap: [{ run: 38845929163, ms: 500 }],
+	maestroVersion: [{ run: 38845929163, ms: 4000 }],
+	maestroHelp: [{ run: 38845929163, ms: 2600 }],
 } as const;
 
-/** Headroom above a measured cost: covers run-to-run variance on a shared runner
- * without turning the bound into no bound at all. */
-export const OBSERVED_HEADROOM = 2;
+/** Heavy PRODUCER steps that have never run in a recorded setup/preflight run, so
+ * they have no observations to derive from. These keep their existing documented
+ * stage budgets, labelled as budgets rather than measurements — recording a cap
+ * as an "observation" would be fabricating the very data the derivation rests on.
+ * When a real full run records them, they move into OPERATION_OBSERVATIONS. */
+export const PRODUCER_BUDGET_SECONDS = {
+	expoPrebuild: 180,
+	podInstall: 600,
+	xcodebuild: 3600,
+	checkoutSnapshot: 60,
+	coreClone: 90,
+} as const;
 
-/** A cap sized FROM its measurement: strictly greater than what the operation has
- * actually cost, never below it. */
-export function capFor(operation: keyof typeof MEASURED_OPERATION_SECONDS) {
-	return Math.ceil(MEASURED_OPERATION_SECONDS[operation] * OBSERVED_HEADROOM);
+export type BoundedOperation = keyof typeof OPERATION_OBSERVATIONS;
+
+/** Operations whose FIRST call of a run pays a cold, unoutputted start
+ * (CoreSimulator launch, XCUITest driver bring-up). These get a floor with real
+ * headroom on top of the derived cap, because the tail of a cold start is not
+ * bounded by the samples in front of it. */
+export const COLD_OPERATIONS: Partial<Record<BoundedOperation, number>> = {
+	selector: 60,
+	bootReady: 300,
+	maestroCold: 300,
+	// Teardown of a JUST-BOOTED simulator is the same cold service as the selector
+	// (the manager's own classification: "shutdown/delete after a boot"). Without a
+	// floor the derivation gives 36s/34s against 23.3s/22.0s observations — barely
+	// above 1.5x, i.e. exactly the thin margin that broke the selector at F6.
+	shutdown: 60,
+	delete: 60,
+};
+
+/** The smallest sensible bound per operation, so a single fast sample cannot
+ * derive a cap that a normal slow run immediately breaks. */
+export const OPERATION_MINIMUM_SECONDS: Partial<
+	Record<BoundedOperation, number>
+> = {
+	list: 30,
+	create: 30,
+	coreBootstrap: 240,
+	coreDoctor: 120,
+	maestroVersion: 60,
+	maestroHelp: 60,
+	// The steady value is the flow CONTRACT, not an observation: evidence flows are
+	// budgeted at 120s once warm, so the derived cap is floored there and a couple
+	// of fast samples cannot derive a budget below what a flow is allowed.
+	maestroSteady: 120,
+};
+
+/** Headroom over the largest observation. 1.5x, not 1.05x: a cap is a bound on
+ * the NEXT run, and the next run is drawn from the same heavy-tailed cost the
+ * samples came from. */
+export const OBSERVED_HEADROOM = 1.5;
+
+/** The largest observation recorded for an operation, in seconds. */
+export function observedMaxSeconds(operation: BoundedOperation) {
+	return Math.max(...OPERATION_OBSERVATIONS[operation].map((s) => s.ms)) / 1000;
 }
+
+/** A cap DERIVED from the samples: above every observation, above the cold floor
+ * where the operation is cold, and never below its per-operation minimum.
+ *
+ * `headroom` is a parameter so a control can prove the derivation is data-driven
+ * rather than reading a constant back.
+ */
+export function deriveCapSeconds(
+	operation: BoundedOperation,
+	headroom = OBSERVED_HEADROOM,
+	samples: readonly { run: number; ms: number }[] = OPERATION_OBSERVATIONS[
+		operation
+	],
+) {
+	if (samples.length === 0) throw new Error(`no observations for ${operation}`);
+	const maxSeconds = Math.max(...samples.map((sample) => sample.ms)) / 1000;
+	const derived = Math.ceil(maxSeconds * headroom);
+	return Math.max(
+		derived,
+		OPERATION_MINIMUM_SECONDS[operation] ?? 0,
+		COLD_OPERATIONS[operation] ?? 0,
+	);
+}
+
+/** The single entry the proof host uses, so no call site hand-writes a number. */
+export function capFor(operation: BoundedOperation) {
+	return deriveCapSeconds(operation);
+}
+
+/** Receipt-facing derivation record: the samples, their run ids, the max used and
+ * the resulting cap, so a reader can see WHY a bound is what it is. */
+export function capDerivation(operation: BoundedOperation) {
+	return {
+		operation,
+		observations: OPERATION_OBSERVATIONS[operation],
+		maxObservedSeconds: observedMaxSeconds(operation),
+		headroom: OBSERVED_HEADROOM,
+		coldFloorSeconds: COLD_OPERATIONS[operation] ?? null,
+		minimumSeconds: OPERATION_MINIMUM_SECONDS[operation] ?? null,
+		capSeconds: capFor(operation),
+	};
+}
+
 const SHA = /^[a-f0-9]{40}$/;
 const HASH = /^[a-f0-9]{64}$/;
 const UDID = /^[a-fA-F0-9-]{36}$/;

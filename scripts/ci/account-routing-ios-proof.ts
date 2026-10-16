@@ -32,17 +32,17 @@ import {
 	assertNativeOrigin,
 	assertOwnedUdid,
 	assertProofCI,
-	COLD_MAESTRO_CAP_SECONDS,
-	COLD_SIMULATOR_CAP_SECONDS,
+	type BoundedOperation,
+	capDerivation,
 	capFor,
 	FROZEN_PATHS,
 	hierarchyFacts,
 	mdnsCommand,
 	PINS,
+	PRODUCER_BUDGET_SECONDS,
 	type ProofStage,
 	runProof,
 	STAGE_SECONDS,
-	STEADY_MAESTRO_CAP_SECONDS,
 	selectProof,
 } from "./account-routing-proof-contract.ts";
 import * as flows from "./account-routing-proof-flows.ts";
@@ -80,6 +80,18 @@ const hash = (bytes: Uint8Array | string) =>
 const UDID_LINE = /^udid=(.+)$/m;
 const WORKSPACE_LINE = /^workspace=(.+)$/m;
 const SCHEME_LINE = /^scheme=(.+)$/m;
+const DERIVED_OPS = [
+	"selector",
+	"bootReady",
+	"shutdown",
+	"delete",
+	"install",
+	"boot",
+	"list",
+	"create",
+	"maestroCold",
+	"maestroSteady",
+] as const;
 const markers = [
 	REGION.settingsAccountRouting,
 	"mobile.account_routing.reload",
@@ -119,6 +131,9 @@ export class NativeProof {
 		);
 		this.receipt = {
 			kind: "targeted-native-evidence-NOT-full-E2E",
+			// Data-driven: each cap records its samples, the max used and the
+			// resulting seconds, so no bound is a hand-written number.
+			capDerivations: DERIVED_OPS.map(capDerivation),
 			stage,
 			source: env.GITHUB_SHA,
 			productSource: PINS.product,
@@ -207,7 +222,7 @@ export class NativeProof {
 					"https://github.com/damianvtran/local-operator.git",
 					this.core,
 				],
-				90,
+				PRODUCER_BUDGET_SECONDS.coreClone,
 			);
 			await this.host.run(
 				"public-core-pin",
@@ -522,13 +537,13 @@ export class NativeProof {
 			"warm-launch-base-app",
 			"xcrun",
 			["simctl", "launch", this.udid, this.baseline.bundleId],
-			COLD_SIMULATOR_CAP_SECONDS,
+			capFor("selector"),
 		);
 		await this.host.run(
 			"warm-maestro-driver",
 			"maestro",
 			["--device", this.udid, "hierarchy"],
-			COLD_MAESTRO_CAP_SECONDS,
+			capFor("maestroCold"),
 		);
 		this.maestroWarm = true;
 		this.receipt.driverWarmUp =
@@ -566,8 +581,8 @@ export class NativeProof {
 		// Cold vs steady: the FIRST Maestro call of a stage pays XCUITest driver
 		// bring-up, so it takes the cold cap; later flows stay on the steady one.
 		const cap = this.maestroWarm
-			? STEADY_MAESTRO_CAP_SECONDS
-			: COLD_MAESTRO_CAP_SECONDS;
+			? capFor("maestroSteady")
+			: capFor("maestroCold");
 		this.maestroWarm = true;
 		await this.host.run(
 			`maestro-${label}`,
@@ -797,20 +812,20 @@ export class NativeProof {
 				"--clean",
 				"--no-install",
 			],
-			180,
+			PRODUCER_BUDGET_SECONDS.expoPrebuild,
 			versionEnv,
 		);
 		await this.host.run(
 			"pre-pods-determinism-snapshot",
 			"/bin/cp",
 			["-R", "ios", join(this.root, "ios-built")],
-			60,
+			PRODUCER_BUDGET_SECONDS.checkoutSnapshot,
 		);
 		await this.host.run(
 			"candidate-pods",
 			"pod",
 			["install", "--project-directory=ios"],
-			600,
+			PRODUCER_BUDGET_SECONDS.podInstall,
 		);
 		const project = await this.host.run("existing-workspace-resolver", "node", [
 			"scripts/ci/ios-project.ts",
@@ -838,7 +853,7 @@ export class NativeProof {
 				"CODE_SIGNING_ALLOWED=NO",
 				"build",
 			],
-			3600,
+			PRODUCER_BUDGET_SECONDS.xcodebuild,
 			versionEnv,
 		);
 		const products = join(
@@ -1120,18 +1135,22 @@ export class NativeProof {
 			}
 		}
 		if (this.udid) {
-			// Measured 23.3s / 22.0s: both were capped at 20s, i.e. below their
-			// own observation. An already-shutdown or already-gone device is a
-			// tolerable success, not a deadline (verified against stderr, never
-			// by matching the process's exit text alone).
-			for (const [name, args, operation] of [
+			// Sized from the samples above, not from the smallest one: an
+			// already-shutdown or already-gone device is a tolerable success,
+			// matched on simctl's own wording, never on "any teardown error".
+			const teardown: readonly (readonly [
+				string,
+				string[],
+				BoundedOperation,
+			])[] = [
 				[
 					"shutdown-owned-simulator",
 					["simctl", "shutdown", this.udid],
 					"shutdown",
 				],
 				["delete-owned-simulator", ["simctl", "delete", this.udid], "delete"],
-			] as const) {
+			];
+			for (const [name, args, operation] of teardown) {
 				try {
 					await this.host.run(name, "xcrun", [...args], capFor(operation));
 				} catch (error) {

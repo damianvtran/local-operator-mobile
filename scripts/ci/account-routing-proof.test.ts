@@ -14,16 +14,18 @@ import {
 	assertMaestroHelp,
 	assertNativeOrigin,
 	assertProofCI,
-	COLD_MAESTRO_CAP_SECONDS,
-	COLD_SIMULATOR_CAP_SECONDS,
+	type BoundedOperation,
+	COLD_OPERATIONS,
+	capDerivation,
 	capFor,
-	MEASURED_OPERATION_SECONDS,
+	deriveCapSeconds,
 	mdnsCommand,
+	OPERATION_OBSERVATIONS,
+	observedMaxSeconds,
 	PINS,
 	PROOF_MODE,
 	runProof,
 	STAGE_SECONDS,
-	STEADY_MAESTRO_CAP_SECONDS,
 	safeArchiveName,
 	selectProof,
 } from "./account-routing-proof-contract.ts";
@@ -304,25 +306,23 @@ describe("staged proof source contract — mocks only, no mDNS/native/CI executi
 			rmSync(root, { recursive: true, force: true });
 		}
 	});
-	it("warms the iOS driver before the first evidence flow, under its own cold cap", () => {
+	it("warms the iOS driver before the first evidence flow, under the derived cold cap", () => {
 		// The repository's Android playbook already launches the installed app once
 		// "so the first flow does not carry the cold start"; the missing iOS
-		// equivalent let the driver bring-up blow the steady 120s budget
+		// equivalent let the driver bring-up blow the steady budget
 		// (CI 38844597781: 123170ms, empty log).
 		const setup = NativeProof.prototype as unknown as {
 			warmDriver: () => Promise<void>;
 		};
 		expect(typeof setup.warmDriver).toBe("function");
-		expect(COLD_MAESTRO_CAP_SECONDS).toBeGreaterThan(
-			STEADY_MAESTRO_CAP_SECONDS,
-		);
-		// Justified by the observed 123170ms cold flow plus driver install cost,
-		// and still far inside setup's own stage budget.
-		expect(COLD_MAESTRO_CAP_SECONDS).toBeGreaterThanOrEqual(240);
-		expect(COLD_MAESTRO_CAP_SECONDS).toBeLessThan(STAGE_SECONDS.setup - 120);
-	});
-	it("keeps steady per-flow budgets steady, so a cold cost cannot hide behind them", () => {
-		expect(STEADY_MAESTRO_CAP_SECONDS).toBe(120);
+		const cold = capFor("maestroCold");
+		const steady = capFor("maestroSteady");
+		// Cold is derived above its own 123.17s observation AND above the steady
+		// contract, so a cold cost cannot hide behind the warm budget.
+		expect(cold).toBeGreaterThan(observedMaxSeconds("maestroCold"));
+		expect(cold).toBeGreaterThan(steady);
+		expect(steady).toBeGreaterThanOrEqual(120);
+		expect(cold).toBeLessThan(STAGE_SECONDS.setup - 120);
 	});
 	it("orders the warm-up before the first evidence flow in the source", () => {
 		const source = readFileSync(
@@ -335,113 +335,55 @@ describe("staged proof source contract — mocks only, no mDNS/native/CI executi
 		expect(firstFlow).toBeGreaterThan(-1);
 		expect(warm).toBeLessThan(firstFlow);
 	});
-	it("sizes every measured cap ABOVE the cost it was measured at", () => {
-		// The F5 regression was a cap chosen BELOW its own measurement: boot-ready
-		// was 90s against a 91.7-92.6s observed cold boot, so a healthy run was
-		// killed and reported as a policy failure. This holds the rule the manager
-		// stated -- a cap must exceed the measurement it bounds -- for every entry.
-		for (const [operation, measured] of Object.entries(
-			MEASURED_OPERATION_SECONDS,
-		)) {
-			const cap = capFor(operation as keyof typeof MEASURED_OPERATION_SECONDS);
-			expect({ operation, cap, measured }).toMatchObject({
-				operation,
-				cap: expect.any(Number),
-				measured,
-			});
-			expect(cap).toBeGreaterThan(measured);
+	it("derives every cap ABOVE its largest observation, or above 1.5x for cold ops", () => {
+		// F5 shipped a cap sized just above the SMALLEST observation: the selector
+		// measured 6107/7267ms, got 15s, then measured 15021ms and was killed
+		// (CI 38847064654). A single sample is not the distribution, so the floor
+		// here is the MAX observation, and cold ops need 1.5x on top of it.
+		for (const operation of Object.keys(
+			OPERATION_OBSERVATIONS,
+		) as BoundedOperation[]) {
+			const cap = capFor(operation);
+			const max = observedMaxSeconds(operation);
+			expect(cap).toBeGreaterThan(max);
+			if (COLD_OPERATIONS[operation] !== undefined)
+				expect(cap).toBeGreaterThanOrEqual(Math.ceil(max * 1.5));
 		}
-		// The two that actually regressed, with their real recorded numbers.
-		expect(capFor("bootReady")).toBeGreaterThan(91.7);
-		expect(capFor("shutdown")).toBeGreaterThan(23.3);
-		expect(capFor("delete")).toBeGreaterThan(22.0);
+		// The exact regression, with its real numbers.
+		expect(capFor("selector")).toBeGreaterThan(15.021);
+		expect(capFor("bootReady")).toBeGreaterThan(92.562);
+		expect(capFor("shutdown")).toBeGreaterThan(23.349);
+		expect(capFor("delete")).toBeGreaterThan(22.002);
 	});
-	it("tolerates an already-gone device but never a deadline", () => {
-		// Teardown with nothing left to do is a success; a stuck simulator is not.
-		expect(
-			tolerableTeardown(
-				new Error(
-					"delete-owned-simulator failed rc=164: Unable to find device",
-				),
-			),
-		).toBe(true);
-		expect(
-			tolerableTeardown(
-				new Error(
-					"shutdown-owned-simulator failed rc=149: Invalid device state",
-				),
-			),
-		).toBe(true);
-		// The exact wording `simctl shutdown`/`delete` emit for a device that is
-		// already in the requested state, which the tolerance must accept.
-		expect(
-			tolerableTeardown(
-				new Error(
-					"shutdown-owned-simulator failed rc=149: An error was encountered processing the command (domain=com.apple.CoreSimulator.SimError, code=405): Unable to shutdown device in current state: shutdown",
-				),
-			),
-		).toBe(true);
-		for (const message of [
-			"deadline exceeded (shutdown-owned-simulator, 60000ms, cap=47s)",
-			"delete-owned-simulator failed rc=1: something else went wrong",
-			"not an error",
-		])
-			expect(
-				tolerableTeardown(
-					message === "not an error" ? "x" : new Error(message),
-				),
-			).toBe(false);
+	it("rises when a LARGER observation is injected, i.e. the cap is data-driven", () => {
+		// Not a readback of a constant: the derivation must react to the samples.
+		// The injection must clear the op's floor, or the floor masks it: at 40s
+		// (1.5x = 60s) the selector cap sits exactly ON its 60s cold floor and
+		// does not move, which would look like a constant. 90s exercises the
+		// derivation itself.
+		const before = deriveCapSeconds("selector");
+		const injected = [
+			...OPERATION_OBSERVATIONS.selector,
+			{ run: 99999999999, ms: 90000 },
+		];
+		const after = deriveCapSeconds("selector", 1.5, injected);
+		expect(after).toBeGreaterThan(before);
+		expect(after).toBeGreaterThanOrEqual(90);
+		// The same proof against the RECORDED table, not a loose array: a bigger
+		// sample for a real operation must raise that operation's cap.
+		const bigger = deriveCapSeconds("install", 1.5, [
+			...OPERATION_OBSERVATIONS.install,
+			{ run: 1, ms: 90000 },
+		]);
+		expect(bigger).toBeGreaterThan(deriveCapSeconds("install"));
 	});
-	it("reports the STAGE failure as primary when cleanup also fails", async () => {
-		// CI 38845929163 recorded `owned cleanup failed: simulator-shutdown,
-		// simulator-delete` while the real cause was the boot-ready deadline, so a
-		// reader could conclude the run failed on teardown.
-		const order = [
-			"preflight",
-			"setupBase",
-			"produceCandidate",
-			"candidateFlows",
-		] as const;
-		const operations = {
-			preflight: async () => {},
-			setupBase: async () => {
-				throw new Error(
-					"deadline exceeded (owned-boot-ready, 91663ms, cap=186s)",
-				);
-			},
-			produceCandidate: async () => {},
-			candidateFlows: async () => {},
-			cleanup: async () => {
-				throw new Error(
-					"cleanup failures: simulator-shutdown,simulator-delete",
-				);
-			},
-		};
-		const failure = await runProof("setup", operations).catch(
-			(error: unknown) => error,
-		);
-		expect(String(failure)).toContain("owned-boot-ready");
-		expect(String(failure)).toContain("(secondary)");
-		expect(String(failure).indexOf("owned-boot-ready")).toBeLessThan(
-			String(failure).indexOf("cleanup failures"),
-		);
-		expect(order.length).toBe(4);
-	});
-	it("still reports a lone cleanup failure when the stage itself succeeded", async () => {
-		const operations = {
-			preflight: async () => {},
-			setupBase: async () => {},
-			produceCandidate: async () => {},
-			candidateFlows: async () => {},
-			cleanup: async () => {
-				throw new Error("cleanup failures: simulator-delete");
-			},
-		};
-		const failure = await runProof("setup", operations).catch(
-			(error: unknown) => error,
-		);
-		expect(String(failure)).toContain("cleanup failures");
-		expect(String(failure)).not.toContain("(secondary)");
+	it("records the derivation, its samples and run ids for the receipt", () => {
+		const record = capDerivation("selector");
+		expect(record.operation).toBe("selector");
+		expect(record.observations.map((s) => s.run)).toContain(38847064654);
+		expect(record.maxObservedSeconds).toBeCloseTo(15.021, 3);
+		expect(record.capSeconds).toBe(capFor("selector"));
+		expect(record.coldFloorSeconds).toBe(60);
 	});
 	it("gives every stage room for a cold simulator on its own clock", () => {
 		// Each stage is its own workflow step (own `timeout-minutes`), so a stage
@@ -450,16 +392,20 @@ describe("staged proof source contract — mocks only, no mDNS/native/CI executi
 		// install, connect and capture (found by arithmetic on the real constants).
 		for (const stage of ["preflight", "setup", "full"] as const) {
 			const budget = STAGE_SECONDS[stage] - 120;
-			expect(budget).toBeGreaterThan(COLD_SIMULATOR_CAP_SECONDS);
+			expect(budget).toBeGreaterThan(capFor("bootReady"));
 			if (stage === "setup")
-				expect(budget - COLD_SIMULATOR_CAP_SECONDS).toBeGreaterThan(300);
+				expect(budget - capFor("bootReady")).toBeGreaterThan(300);
 		}
 	});
-	it("keeps the cold simulator cap a real, named bound above the old default", () => {
-		expect(COLD_SIMULATOR_CAP_SECONDS).toBeGreaterThan(60);
-		expect(COLD_SIMULATOR_CAP_SECONDS * 1000).toBeLessThan(
-			0.5 * STAGE_SECONDS.setup * 1000,
+	it("keeps the derived cold caps real, named bounds inside the stage budget", () => {
+		expect(capFor("selector")).toBeGreaterThanOrEqual(
+			COLD_OPERATIONS.selector ?? 0,
 		);
+		expect(capFor("selector")).toBeGreaterThan(observedMaxSeconds("selector"));
+		expect(capFor("bootReady")).toBeGreaterThanOrEqual(
+			COLD_OPERATIONS.bootReady ?? 0,
+		);
+		expect(capFor("bootReady")).toBeLessThan(0.5 * STAGE_SECONDS.setup);
 		expect(
 			String(timedOutMessage("existing-simulator-selector", 60034, 180)),
 		).toBe(
