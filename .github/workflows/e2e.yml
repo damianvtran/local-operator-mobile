@@ -134,7 +134,7 @@ jobs:
               || missing+=("package script $script")
           done
           if [ "$PROOF_MODE" = account-routing-ios-proof ]; then
-            for script in e2e:account-routing-proof e2e:account-routing-artifact-tests; do
+            for script in e2e:account-routing-proof e2e:account-routing-artifact-tests e2e:account-routing-bootstrap-tests; do
               node -e "process.exit(require('./package.json').scripts?.[process.argv[1]] ? 0 : 1)" "$script" || missing+=("package script $script")
             done
           fi
@@ -1096,8 +1096,9 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Source and safe-archive controls (no native execution)
         run: |
-          pnpm exec vitest run scripts/ci/account-routing-proof.test.ts tools/mock-relay/account-routing-identity.test.ts --maxWorkers=1 --no-file-parallelism
+          pnpm exec vitest run scripts/ci/account-routing-proof.test.ts tools/mock-relay/account-routing-identity.test.ts tools/mock-relay/account-routing-gate.test.ts --maxWorkers=1 --no-file-parallelism
           pnpm e2e:account-routing-artifact-tests
+          pnpm e2e:account-routing-bootstrap-tests
       - name: Actual prerequisites before simulator or candidate SDK work
         env:
           GITHUB_TOKEN: ${{ github.token }}

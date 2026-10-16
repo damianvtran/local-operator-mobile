@@ -144,8 +144,19 @@ node_modules/.bin/vitest run scripts/ci/account-routing-proof.test.ts \
   tools/mock-relay/account-routing-identity.test.ts \
   tools/mock-relay/account-routing-gate.test.ts --maxWorkers=1 --no-file-parallelism
 python3 scripts/ci/account-routing-artifact-test.py
+python3 scripts/ci/account-routing-bootstrap-test.py
 node_modules/.bin/tsc --noEmit -p tsconfig.tools.json
 ```
+
+`account-routing-bootstrap.py` installs the pinned checkout's own distribution
+metadata (`--no-deps`) after the base requirements, because the facade imports
+`local_operator.config`, whose import-time `importlib.metadata.version(
+"local-operator")` call had no distribution in a base-deps venv (CI run
+38840447956). Its controls prove a clean venv lacks that metadata, that the
+installed version equals the pinned checkout's, and that a MATCHING version
+resolved outside the isolated venv is still refused — so an ambient editable
+install cannot silently satisfy the check. Dependency resolution stays honestly
+reported as `frozenResolution:false`.
 
 The offline tests use real production URL validation but MOCK stage operations;
 ZIP/plist/Mach-O fixtures are synthetic stdlib files. They exercise stale
