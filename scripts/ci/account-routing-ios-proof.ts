@@ -110,9 +110,6 @@ export class NativeProof {
 	private udid: string | undefined;
 	/** The first Maestro invocation of a stage pays driver bring-up. */
 	private maestroWarm = false;
-	// Distinct from `maestroWarm`: the driver can be warm while the first
-	// PATH-WALKING flow is still a cold app launch (R10).
-	private flowsWalkedPath = false;
 	private frames = 0;
 	private readonly secret = randomUUID();
 	readonly host: ProofHost;
@@ -617,13 +614,23 @@ export class NativeProof {
 		// still launches the app cold with clearState and runs the whole connect
 		// handshake (maestroFirstFlow). Run 38857164876 got the steady 120s for
 		// that flow and was killed at 120170ms.
-		const cap = this.maestroWarm
-			? this.flowsWalkedPath
-				? STEADY_FLOW_CAP_SECONDS
-				: capFor("maestroFirstFlow")
-			: capFor("maestroCold");
+		// The cap follows the flow's own SHAPE. The driver bring-up is paid once
+		// (`maestroCold`); a flow that launches the app itself with `clearState`
+		// pays a cold app launch every time it runs, so it takes the derived
+		// path-walking cap wherever it sits in the stage. Run 38857164876 was killed
+		// by a first-flow-only flag handing the steady 120s to a path-walking flow.
+		const launchesCold = commands.some(
+			(step) =>
+				typeof step.launchApp === "object" &&
+				step.launchApp !== null &&
+				(step.launchApp as { clearState?: boolean }).clearState === true,
+		);
+		const cap = !this.maestroWarm
+			? capFor("maestroCold")
+			: launchesCold
+				? capFor("maestroFirstFlow")
+				: STEADY_FLOW_CAP_SECONDS;
 		this.maestroWarm = true;
-		this.flowsWalkedPath = true;
 		await this.host.run(
 			`maestro-${label}`,
 			"maestro",
@@ -991,7 +998,11 @@ export class NativeProof {
 			"install-candidate",
 			"xcrun",
 			["simctl", "install", this.udid, this.candidate.app],
-			UNOBSERVED_BUDGET_SECONDS.installCandidate,
+			// R7-2: the SAME simctl install operation as `install-exact-base`, on a
+			// later and colder candidate build — so it takes that op's own derived
+			// cap (300s cold floor) rather than a smaller hand-written budget that
+			// contradicted the floor for the identical operation.
+			capFor("install"),
 		);
 		await this.installedMatches(this.candidate, "Candidate");
 		this.receipt.candidate = this.candidate;

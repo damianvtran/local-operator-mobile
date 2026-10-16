@@ -410,9 +410,13 @@ describe("staged proof source contract — mocks only, no mDNS/native/CI executi
 		expect(record.spread?.ratio).toBeGreaterThan(5);
 	});
 	it("derives the path-walking first flow's cap from its own observations (R10)", () => {
-		// R10: the flow that walks the connect path measured 104115ms, 104569ms and
-		// then 120170ms KILLED, against a hand-set steady cap of exactly 120s — the
-		// last non-derived bound in the proof. It is now derived like every other op.
+		// R10: the flow that walks the connect path measured 104569ms, 104115ms and
+		// then 120170ms KILLED, against a hand-set cap of exactly 120s. That cap was
+		// the last bound serving MEASURED work without being derived from its own
+		// observations; it is now derived like every other measured operation.
+		// (STEADY_FLOW_CAP_SECONDS remains hand-set, and correctly so — it is a
+		// warm-stage POLICY value with no completed sample behind it, not a
+		// measurement, and this control asserts the derived cap exceeds it.)
 		const cap = capFor("maestroFirstFlow");
 		// Above the observed max, and above the 3x factor for a cold op.
 		expect(cap).toBeGreaterThan(observedMaxSeconds("maestroFirstFlow"));
@@ -439,8 +443,114 @@ describe("staged proof source contract — mocks only, no mDNS/native/CI executi
 			new URL("./account-routing-ios-proof.ts", import.meta.url),
 			"utf8",
 		);
-		expect(source).toContain("private flowsWalkedPath = false");
 		expect(source).toContain('capFor("maestroFirstFlow")');
+		// R7-1: the cap must follow the flow's own SHAPE, not its position, and no
+		// cross-call state may decide it — a sticky "first flow" flag left `full`'s
+		// SECOND clearState path-walking flow (candidate-real-form, after the
+		// producer) on the steady 120s that killed run 38857164876.
+		expect(source).not.toContain("flowsWalkedPath");
+		expect(source).toContain("launchesCold");
+		expect(source).toContain("clearState === true");
+		// Both connectSettings call sites exist in the proof (base and candidate), so
+		// the shape rule is what both of them depend on.
+		const connectSites = source.match(/flows\.connectSettings\(/g) ?? [];
+		expect(connectSites.length).toBe(2);
+	});
+	it("never bounds a simctl install below that operation's own floor (R7-2)", () => {
+		// The candidate install is the SAME simctl install as install-exact-base, on a
+		// later and colder build, so a separate 120s budget contradicted the op's own
+		// 300s cold floor. Both call sites now use that operation's cap.
+		const source = readFileSync(
+			new URL("./account-routing-ios-proof.ts", import.meta.url),
+			"utf8",
+		);
+		// Skip comment lines: the call site documents WHY it takes that cap, and a
+		// match on the prose would assert against the explanation instead of the arg.
+		const installCaps = source
+			.split("\n")
+			.flatMap((line, index) =>
+				/"simctl",\s*"install"/.test(line) ? [index] : [],
+			)
+			.map(
+				(index) =>
+					source
+						.split("\n")
+						.slice(index + 1)
+						.find((line) => line.trim() && !line.trim().startsWith("//"))
+						?.trim()
+						.replace(/,$/, "") ?? "",
+			);
+		expect(installCaps.length).toBe(2);
+		for (const cap of installCaps) expect(cap).toBe('capFor("install")');
+		expect(capFor("install")).toBeGreaterThanOrEqual(
+			COLD_OPERATION_FLOOR_SECONDS.install ?? 0,
+		);
+	});
+	it("gives a cold cap to EVERY clearState flow in a full-stage sequence (R7-1)", async () => {
+		// The fresh-object control is what let R7-1 through, so this exercises the
+		// FULL-stage SEQUENCE inside ONE proof object: base-real-form, then the
+		// producer, then candidate-real-form. No hosted run: the host is stubbed and
+		// each flow's chosen cap is recorded.
+		const root = mkdtempSync(join(tmpdir(), "loh12-seq-"));
+		try {
+			const proof = new NativeProof(root, process.cwd(), "full", {
+				...hosted,
+			}) as unknown as {
+				udid?: string;
+				baseline?: unknown;
+				candidate?: unknown;
+				flow: (name: string, commands: flow.NativeStep[]) => Promise<void>;
+				host: { run: (...args: unknown[]) => Promise<string> };
+				slots: Map<"a" | "b", unknown>;
+			};
+			const caps: { name: string; cap: number }[] = [];
+			proof.host = {
+				run: async (...args: unknown[]) => {
+					const name = String(args[0]);
+					// run(name, command, args, cap, extra) — cap is the FOURTH arg.
+					const cap = args[3];
+					if (name.startsWith("maestro-") && typeof cap === "number")
+						caps.push({ name, cap });
+					return "bounds: [0,0][1,1] frame: {}";
+				},
+			} as unknown as { run: (...args: unknown[]) => Promise<string> };
+			proof.udid = "0".repeat(8) + "-0000-0000-0000-" + "0".repeat(12);
+			proof.baseline = { bundleId: "com.example.app", app: "/tmp/a" };
+			// `flow()` reads only the slot's origin for its `-e RELAY_URL`; the cap
+			// decision is what this control is about, so a minimal slot stands in the
+			// same way the host is stubbed.
+			for (const profile of ["a", "b"] as const)
+				proof.slots.set(profile, {
+					origin: `http://127.0.0.1:1`,
+					port: 1,
+				} as unknown as typeof proof.slots extends Map<infer _K, infer V>
+					? V
+					: never);
+			// The DRIVER bring-up first, as the real stage does.
+			await proof.flow("driver-touch", [{ assertVisible: { id: "x" } }]);
+			// Then the two clearState path-walking flows of a `full` stage.
+			await proof.flow("base-real-form", flow.connectSettings("/h.yaml"));
+			await proof.flow("candidate-real-form", flow.connectSettings("/h.yaml"));
+			// Labels carry the frame counter (`maestro-2-base-real-form`), so match by
+			// suffix: an exact-name lookup misses silently and would prove nothing.
+			const capOf = (fragment: string) => {
+				const hit = caps.find((c) => c.name.includes(fragment));
+				expect(hit, `no Maestro call for ${fragment}`).toBeDefined();
+				return hit?.cap;
+			};
+			expect(caps.length).toBe(3);
+			// First Maestro call: the driver bring-up.
+			expect(capOf("driver-touch")).toBe(capFor("maestroCold"));
+			// BOTH path-walking flows take the derived cold cap — including the second,
+			// which a sticky first-flow flag left on the steady 120s (R7-1).
+			expect(capOf("base-real-form")).toBe(capFor("maestroFirstFlow"));
+			expect(capOf("candidate-real-form")).toBe(capFor("maestroFirstFlow"));
+			expect(capOf("candidate-real-form")).toBeGreaterThan(
+				STEADY_FLOW_CAP_SECONDS,
+			);
+		} finally {
+			rmSync(root, { recursive: true, force: true });
+		}
 	});
 	it("keeps the proof's iOS connect sequence free of iOS-unsupported steps (R9)", () => {
 		// The base helper `e2e/maestro/helpers/connect-relay.yaml` is Android-only
@@ -800,6 +910,24 @@ describe("staged proof source contract — mocks only, no mDNS/native/CI executi
 				`${known.operation} run ${known.run} was killed by its cap (${known.evidence}) but is not flagged censored`,
 			).toBe(true);
 		}
+		// TWO-DIRECTIONAL (review R7-3): a quote must match a flag, AND every flag
+		// must quote its artifact record. One-directional checking let a flag be
+		// SELF-DECLARED — a hand-written `censored: true` with no artifact behind it
+		// would satisfy "quoted sample still flagged" while proving nothing, which is
+		// the pattern R6-1 existed to end.
+		const flagged: [string, number][] = [];
+		for (const [operation, samples] of Object.entries(OPERATION_OBSERVATIONS))
+			for (const sample of samples)
+				if ((sample as { censored?: boolean }).censored)
+					flagged.push([operation, sample.run]);
+		const quoted: [string, number][] = ARTIFACT_CENSORED_SAMPLES.map(
+			(entry) => [entry.operation, entry.run],
+		);
+		const key = ([operation, run]: [string, number]) => `${operation}:${run}`;
+		expect(flagged.map(key).sort()).toEqual(quoted.map(key).sort());
+		// Every quote carries raw artifact text, not a bare assertion.
+		for (const entry of ARTIFACT_CENSORED_SAMPLES)
+			expect(entry.evidence.length).toBeGreaterThan(10);
 		// The R6-1 regression, stated with its real numbers: bootReady's 91.7s is
 		// the censored kill, while the deciding bound is the genuine 92.6s sample
 		// and the cold floor — so the FLAG must not move the cap.

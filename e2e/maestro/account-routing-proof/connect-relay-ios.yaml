@@ -24,8 +24,9 @@ appId: ${APP_ID}
 ---
 # COLD budget (78000ms): this is the FIRST assertion after the caller's
 # `launchApp: {clearState: true}`, so it waits on the app's own cold launch and
-# first paint. Measured 25869ms for the launch alone (run 38854849272,
-# `warm-launch-base-app`, rc0); it is the proof's derived `capFor("coldAppLaunch")`.
+# first paint. Measured 25869ms for the launch alone (run 38853165349,
+# `warm-launch-base-app`, rc0 — run 38854849272 measured 23286ms for the same step);
+# it is the proof's derived `capFor("coldAppLaunch")`.
 - extendedWaitUntil:
     visible:
       id: "welcome-screen"

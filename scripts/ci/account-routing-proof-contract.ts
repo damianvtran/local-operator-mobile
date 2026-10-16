@@ -29,16 +29,13 @@ export type ProofStage = "preflight" | "setup" | "full";
  * as a policy failure — the class this loop kept rediscovering. The workflow's
  * `timeout-minutes` is this number; the arithmetic below is asserted by a control.
  *
- * Measured basis (run 38850837889, the coldest run to date), in seconds:
- *   setup payload  = selector 300 + bootReady 367 + install 300 + shutdown 300
- *                  + delete 120 + maestroCold 420 + warm launch 91 + 3 warm flows
- *                  360 + version/help 120 + simctl 36  -> ~2100s (35 min)
- *   preflight payload = clone 90 + pin 60 + bootstrap 300 + socket doctor 29
- *                  + extraction 120 + the sub-second git/node steps -> ~800s
- *   full adds the xcodebuild producer 3600 + pod install 600 + prebuild 360
- *                  + ~30 warm flows 3600 -> ~9000s more
- * Each stage keeps substantial headroom above its payload, and the control below
- * fails if a budget ever drops to or below the sum of the cold caps in it. */
+ * The ENFORCED payloads are STAGE_PAYLOAD_SECONDS' values, computed from the caps
+ * themselves so they cannot drift from them; the control below fails if a budget
+ * drops to or below its payload. At this revision: preflight 810s, setup 2984s,
+ * full 11744s, against budgets of 1200 / 4200 / 14400 — 48% / 41% / 23% headroom.
+ * The dominant terms are the cold caps in each stage, the ONE candidate producer
+ * (xcodebuild 3600s) and the warm-flow budgets; see STAGE_PAYLOAD_SECONDS for the
+ * exact sum rather than a prose approximation that can go stale. */
 export const STAGE_SECONDS: Record<ProofStage, number> = {
 	preflight: 1200,
 	setup: 4200,
@@ -145,9 +142,10 @@ export const OPERATION_OBSERVATIONS = {
 	// A flow that WALKS the connect path: it launches the app cold (clearState),
 	// waits for the real Welcome screen, taps through the own-tunnel form, runs the
 	// real login + sessions probe and only then reaches Settings. Three real runs
-	// of exactly this flow: 104115ms and 104569ms completed (both failed later on
-	// an assertion, so the FLOW ran to completion and the times are measurements),
-	// and 120170ms KILLED at the hand-set 120s steady cap (R10). Its cost is
+	// of exactly this flow, and NONE completed the path: 104569ms and 104115ms both
+	// stopped on an assertion (the base helper's `hideKeyboard`), and 120170ms was
+	// KILLED at the hand-set 120s steady cap (R10). All three are lower bounds on
+	// the full path's cost, which is why every one carries `censored: true`. Its cost is
 	// 104-120s while that cap sat exactly on top of the measurement — the last
 	// non-derived bound in the proof.
 	maestroFirstFlow: [
@@ -269,9 +267,6 @@ export const UNOBSERVED_BUDGET_SECONDS = {
 	nativeConfig: 60,
 	// `node scripts/ci/prebuild-determinism.ts` over two prebuild trees.
 	determinism: 180,
-	// `simctl install` of the produced candidate — the same operation as
-	// `install-exact-base` (24.6s measured), but on the candidate build.
-	installCandidate: 120,
 } as const;
 
 export type BoundedOperation = keyof typeof OPERATION_OBSERVATIONS;
@@ -321,6 +316,39 @@ export const ARTIFACT_CENSORED_SAMPLES = [
 		run: 38845929163,
 		evidence:
 			'{"rc":null,"elapsedMs":22002,"deadlineExceeded":true,"capSeconds":20}',
+	},
+	{
+		operation: "shutdown",
+		run: 38850837889,
+		evidence:
+			'{"rc":null,"elapsedMs":63481,"deadlineExceeded":true,"capSeconds":60}',
+	},
+	{
+		operation: "install",
+		run: 38850837889,
+		evidence:
+			'{"rc":null,"elapsedMs":47798,"deadlineExceeded":true,"capSeconds":37}',
+	},
+	{
+		// Ended on the `Hide Keyboard` assertion, so the flow stopped before its
+		// Connected gate: a lower bound, which is why it is censored rather than a
+		// completed measurement.
+		operation: "maestroFirstFlow",
+		run: 38853165349,
+		evidence:
+			'{"rc":1,"elapsedMs":104569} — ended on the Hide Keyboard assertion',
+	},
+	{
+		operation: "maestroFirstFlow",
+		run: 38854849272,
+		evidence:
+			'{"rc":1,"elapsedMs":104115} — ended on the Hide Keyboard assertion',
+	},
+	{
+		operation: "maestroFirstFlow",
+		run: 38857164876,
+		evidence:
+			'{"rc":null,"elapsedMs":120170,"deadlineExceeded":true,"capSeconds":120}',
 	},
 ] as const satisfies readonly {
 	operation: BoundedOperation;
@@ -386,13 +414,15 @@ export const OPERATION_MINIMUM_SECONDS: Partial<
 	publicCoreIdentity: 60,
 };
 
-/** The steady per-flow budget, as a CONTRACT rather than an observation.
+/** The steady per-flow budget, as a POLICY value rather than a measurement.
  *
- * An evidence flow is allowed this much once the driver is warm. No artifact
- * sample exists for a warm flow — the only steady flow ever attempted was the
- * COLD one (run 38844597781, 121.9s) — so deriving it from data would mean
- * inventing a sample. The cold cap is required to exceed it so a cold cost cannot
- * hide behind the warm budget. */
+ * A warm evidence flow is allowed this much, and this is deliberately NOT derived
+ * from observations: no warm flow has ever completed in a recorded run (the only
+ * substantial one attempted was cold — run 38844597781, 121.9s — and was killed),
+ * so deriving it would mean inventing a sample. Any bound serving MEASURED work is
+ * derived from those measurements instead; this one serves a policy choice, and the
+ * control asserts every derived flow cap exceeds it so a cold cost cannot hide
+ * behind it. Do not read it as an observation. */
 export const STEADY_FLOW_CAP_SECONDS = 120;
 
 /** Factor over the largest observation for a NON-cold operation. */
@@ -501,8 +531,11 @@ export const STAGE_PAYLOAD_SECONDS: Partial<Record<ProofStage, number>> = {
 		UNOBSERVED_BUDGET_SECONDS.plistJson +
 		UNOBSERVED_BUDGET_SECONDS.nativeConfig +
 		UNOBSERVED_BUDGET_SECONDS.determinism +
-		UNOBSERVED_BUDGET_SECONDS.installCandidate +
 		UNOBSERVED_BUDGET_SECONDS.candidateRefVersion +
+		// R7-2: the candidate install is the SAME simctl install operation as
+		// `install-exact-base`, so both call sites spend that op's derived cap, and the
+		// payload counts it where the stage can spend it.
+		capFor("install") +
 		30 * STEADY_FLOW_CAP_SECONDS,
 };
 
