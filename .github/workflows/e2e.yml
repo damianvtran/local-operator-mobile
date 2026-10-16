@@ -1302,12 +1302,14 @@ jobs:
             # ONLY the proof-owned flow, by absolute path: `config.yaml`'s `flows:`
             # glob selects the nightly set, so the flow is passed directly and the
             # nightly set is not run here.
-            maestro test --config e2e/maestro/config.yaml \
-              -e APP_ID="$APP_ID" \
-              -e RELAY_URL="$RELAY_URL_FOR_DEVICE" \
-              -e RELAY_PASSWORD="$(cat "$RUNNER_TEMP/relay-password")" \
-              --test-output-dir "$RUNNER_TEMP/maestro-screenshots" \
-              e2e/maestro/account-routing-proof/connect-android.yaml
+            # ONE LINE, deliberately: the action runs `script:` one command per line
+            # through `sh -c`, so a `\` continuation splits it and the first line is
+            # executed on its own with a literal backslash as its flow path
+            # (measured: run 38916253711 failed in ~2s with `Flow path does not
+            # exist: .../\`). This is the same reason `maestro-android` above keeps
+            # its own invocation on one line; scripts/maestro-flow-contract.ts pins
+            # the rule for the copied job and a control below now pins it for this one.
+            maestro test --config e2e/maestro/config.yaml -e APP_ID="$APP_ID" -e RELAY_URL="$RELAY_URL_FOR_DEVICE" -e RELAY_PASSWORD="$(cat "$RUNNER_TEMP/relay-password")" --test-output-dir "$RUNNER_TEMP/maestro-screenshots" e2e/maestro/account-routing-proof/connect-android.yaml
 
       - name: Record what the fixture served
         if: always()

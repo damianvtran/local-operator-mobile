@@ -47,7 +47,7 @@ export function parseFlow(text: string): Value[] {
 				return raw.slice(1, -1).replaceAll("''", "'");
 			}
 			assert(
-				!/[#\[\]{}&*!|>]|:(?:\s|$)/.test(raw.replaceAll(/\$\{[^}]+\}/g, "")),
+				!/[#[\]{}&*!|>]|:(?:\s|$)/.test(raw.replaceAll(/\$\{[^}]+\}/g, "")),
 				`unsupported YAML scalar: ${raw}`,
 			);
 			if (raw === "true") return true;
@@ -466,7 +466,88 @@ export function checkEmulatorGate(workflow: string) {
 	);
 }
 
+/**
+ * EVERY `android-emulator-runner` `script:` block in the workflow must keep each
+ * command on ONE line.
+ *
+ * The action parses `script:` into one command per line and runs each through
+ * `/usr/bin/sh -c`, so a `\` continuation splits a command and the FIRST line runs
+ * alone — with a literal backslash where the continuation was. Measured: the
+ * account-routing Android proof job (run 38916253711) put its `maestro test`
+ * invocation across six lines and died in ~2s with
+ * `Flow path does not exist: .../local-operator-mobile/\`.
+ *
+ * WHY THIS IS A TEST AND NOT ONLY A COMMENT: the rule is documented in the very
+ * job the new one was copied from, and the copy still broke it. `emulatorScriptLines`
+ * above is scoped to the "Run the flows" step, so it could not see the new block;
+ * this check walks EVERY emulator step instead, which is what makes the class
+ * closed rather than the one instance.
+ */
+export function checkEmulatorScriptContinuations(workflow: string) {
+	const blocks: { name: string; lines: string[] }[] = [];
+	const marks = [...workflow.matchAll(/^ {6}- (?:uses|name):[^\n]*\n/gm)];
+	for (const mark of marks) {
+		const start = mark.index as number;
+		const next = marks.find((candidate) => (candidate.index as number) > start);
+		const step = workflow.slice(
+			start,
+			next ? (next.index as number) : undefined,
+		);
+		if (!/android-emulator-runner/.test(step)) continue;
+		const lines = step.split("\n");
+		const at = lines.findIndex((line) => /^ {10}script: \|\s*$/.test(line));
+		if (at < 0) continue;
+		const label =
+			step
+				.split("\n")
+				.find((line) => /^ {6}- name:/.test(line))
+				?.trim() ??
+			step.split("\n")[0]?.trim() ??
+			"emulator step";
+		const block: string[] = [];
+		for (const line of lines.slice(at + 1)) {
+			if (line.trim() !== "" && !line.startsWith(" ".repeat(12))) break;
+			block.push(line);
+		}
+		blocks.push({ name: label, lines: block });
+	}
+	assert.ok(
+		blocks.length > 0,
+		"at least one emulator `script:` block must exist",
+	);
+	for (const { name, lines } of blocks)
+		for (const [index, line] of lines.entries())
+			assert.ok(
+				!line.trimEnd().endsWith("\\"),
+				`${name}: line ${index + 1} ends in a backslash — the action runs one command per line, so a continuation splits it`,
+			);
+}
+
 export const maestroChecks: [string, () => void][] = [
+	[
+		"every emulator script block keeps each command on one line",
+		() => {
+			// `readFileSync`, not `read`: `read` is the Maestro FLOW parser, and the
+			// workflow is not a flow (it would reject `${{ … }}` scalars).
+			const workflow = readFileSync(
+				join(root, ".github/workflows/e2e.yml"),
+				"utf8",
+			);
+			checkEmulatorScriptContinuations(workflow);
+			// Discriminating: a block with a continuation must be rejected, so the
+			// check cannot pass by reading nothing.
+			assert.throws(
+				() =>
+					checkEmulatorScriptContinuations(
+						workflow.replace(
+							"            adb install -r android/app/build/outputs/apk/release/app-release.apk",
+							"            adb install -r android/app/build/outputs/apk/release/app-release.apk \\",
+						),
+					),
+				/ends in a backslash/,
+			);
+		},
+	],
 	[
 		"Settings scrolls to each target and remeasures appearance changes before captures",
 		() => {
