@@ -1,5 +1,5 @@
 import { execFileSync, spawnSync } from "node:child_process";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import {
 	existsSync,
 	mkdirSync,
@@ -10,14 +10,23 @@ import {
 import type { IncomingMessage } from "node:http";
 import { basename, dirname, isAbsolute, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { createResponseGate } from "./account-routing-gate.ts";
+
+import {
+	assertDedicatedNativeCI,
+	assertPolicyFixtureIdentity,
+	type PolicyTransport,
+	policyIdentity,
+	requirePolicyTransport,
+} from "./account-routing-identity.ts";
+
+export { assertPolicyFixtureIdentity } from "./account-routing-identity.ts";
 
 const CORE_HEAD = "c1b7083a5371d60aa4ad58dbb54fd30d1a25857c";
 const CORE_BLOB = "b08458247ac5babb43acd696c44bc3630e01d787";
 const FIXTURE_SHA256 =
 	"ff4f4b39f7f12cf8fa8bf546f0ef4aa7c91b3bd2e4ad63ce48cafbb22b8297a0";
 const MARKER = "loh12-canonical-account-routing-v1\n";
-const COOKIE_NAME = /^loh12_fixture_[a-f0-9]{32}_[ab]$/;
-const HOST_NAME = /^loh12-[a-f0-9]{32}-[ab]\.localhost$/;
 const BRIDGE = fileURLToPath(
 	new URL("./core-account-routing.py", import.meta.url),
 );
@@ -29,6 +38,8 @@ export type CanonicalPolicyOptions = {
 	/** New/marked root inside the caller's scratchpad (CI: RUNNER_TEMP). */
 	privateRoot: string;
 	profile: "a" | "b";
+	/** Explicit CI-native proof only; default/browser .localhost is unchanged. */
+	transport?: PolicyTransport;
 };
 export type PolicyFixtureMode =
 	| "normal"
@@ -41,19 +52,6 @@ export type PolicyFixtureReply = {
 	body: unknown;
 	drop?: boolean;
 };
-
-/** Exported for a discriminating future-misconfiguration negative control.
- * Production cookie names and shared localhost/IP origins must fail BEFORE any
- * server is started; a unique port alone does not isolate a real browser jar. */
-export function assertPolicyFixtureIdentity(
-	hostname: string,
-	cookieName: string,
-) {
-	if (!HOST_NAME.test(hostname) || !COOKIE_NAME.test(cookieName))
-		throw new Error(
-			"canonical fixture requires a unique per-run .localhost host and cookie namespace",
-		);
-}
 
 const inside = (base: string, path: string) => {
 	const part = relative(base, path);
@@ -75,6 +73,8 @@ const record = (value: unknown): value is Record<string, unknown> =>
  * Startup validates source/import/fixture identity before a socket/native rig.
  */
 export function createCanonicalPolicyFixture(options: CanonicalPolicyOptions) {
+	const transport = requirePolicyTransport(options.transport);
+	if (transport === "ci-native-mdns") assertDedicatedNativeCI(process.env);
 	if (options.profile !== "a" && options.profile !== "b")
 		throw new Error("unknown private computer profile");
 	const privateRoot = resolve(options.privateRoot);
@@ -106,6 +106,7 @@ export function createCanonicalPolicyFixture(options: CanonicalPolicyOptions) {
 	mkdirSync(home, { mode: 0o700, recursive: true });
 	const coreRoot = realpathSync(options.coreRoot);
 	const env = {
+		NODE_ENV: "test" as const,
 		HOME: home,
 		PATH: process.env.PATH ?? "",
 		LOCAL_OPERATOR_CONFIG_DIR: resolve(privateRoot, options.profile),
@@ -177,21 +178,41 @@ export function createCanonicalPolicyFixture(options: CanonicalPolicyOptions) {
 	};
 	invoke("PROBE");
 	const nonce = randomUUID().replaceAll("-", "");
-	const hostname = `loh12-${nonce}-${options.profile}.localhost`;
-	const cookieName = `loh12_fixture_${nonce}_${options.profile}`;
-	assertPolicyFixtureIdentity(hostname, cookieName);
+	const { hostname, cookieName } = policyIdentity(
+		nonce,
+		options.profile,
+		transport,
+	);
+	assertPolicyFixtureIdentity(hostname, cookieName, transport);
 	const controls = {
 		mode: "normal" as PolicyFixtureMode,
 		readDelayMs: 0,
 		writeDelayMs: 0,
+		holdReads: false,
+		holdWrites: false,
 	};
-	const trace: { method: string; status: number; profile: string }[] = [];
+	const gate = createResponseGate();
+	const trace: {
+		method: string;
+		status: number;
+		profile: string;
+		value?: string;
+		configSha256?: string;
+	}[] = [];
+	const wireTrace: {
+		method: string;
+		path: string;
+		status: number;
+		ownCookie: boolean;
+		unexpectedCookieNames: string[];
+	}[] = [];
 	return {
 		cookieName,
 		hostname,
 		identity: {
 			hostname,
 			cookieName,
+			transport,
 			path: "/",
 			domain: null,
 			createdAt: new Date().toISOString(),
@@ -200,7 +221,24 @@ export function createCanonicalPolicyFixture(options: CanonicalPolicyOptions) {
 			fixtureSha256: FIXTURE_SHA256,
 		},
 		controls,
+		releaseHeld: gate.release,
+		pendingResponses: () => gate.pending,
 		trace,
+		wireTrace,
+		observeWire: (req: IncomingMessage, status: number) => {
+			// CI's fresh OS jar is observed by name/presence only, never values.
+			const names = (req.headers.cookie ?? "")
+				.split(";")
+				.map((part) => part.split("=", 1)[0]?.trim() ?? "")
+				.filter(Boolean);
+			wireTrace.push({
+				method: req.method ?? "GET",
+				path: (req.url ?? "").split("?", 1)[0] ?? "",
+				status,
+				ownCookie: names.includes(cookieName),
+				unexpectedCookieNames: names.filter((name) => name !== cookieName),
+			});
+		},
 		sessionKey: (password: string) => `${password}:${cookieName}`,
 		acceptHost: (req: IncomingMessage) => {
 			try {
@@ -228,6 +266,14 @@ export function createCanonicalPolicyFixture(options: CanonicalPolicyOptions) {
 		async respond(method: string, body: unknown): Promise<PolicyFixtureReply> {
 			if (method !== "GET" && method !== "PATCH")
 				return { status: 405, body: { error: "Method Not Allowed" } };
+			if (method === "GET" ? controls.holdReads : controls.holdWrites) {
+				// Release AFTER real B is visible, not after a guessed form latency.
+				if (!(await gate.wait()))
+					return {
+						status: 503,
+						body: { error: "Owned fixture response hold expired." },
+					};
+			}
 			const delay =
 				method === "GET" ? controls.readDelayMs : controls.writeDelayMs;
 			if (!Number.isFinite(delay) || delay < 0 || delay > 2000)
@@ -256,7 +302,24 @@ export function createCanonicalPolicyFixture(options: CanonicalPolicyOptions) {
 				)
 					reply.drop = true;
 			}
-			trace.push({ method, status: reply.status, profile: options.profile });
+			const configPath = resolve(privateRoot, options.profile, "config.yml");
+			const setting =
+				record(reply.body) && record(reply.body.setting)
+					? reply.body.setting
+					: undefined;
+			trace.push({
+				method,
+				status: reply.status,
+				profile: options.profile,
+				...(typeof setting?.value === "string" ? { value: setting.value } : {}),
+				...(existsSync(configPath)
+					? {
+							configSha256: createHash("sha256")
+								.update(readFileSync(configPath))
+								.digest("hex"),
+						}
+					: {}),
+			});
 			return reply;
 		},
 	};

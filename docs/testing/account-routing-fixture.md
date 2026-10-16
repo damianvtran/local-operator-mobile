@@ -96,6 +96,15 @@ There is no unsafe host bypass. Startup prints/writes hostname, origin, cookie
 SIGTERM/SIGINT shut down owned mock sockets; the supervisor must still reap the
 exact process group, including any bridge child. Do not leave a server running.
 
+**Dedicated native-proof transport (source wiring only).** The shipped app
+validator rejects unique `*.localhost` names, so a separately allocated hosted
+CI proof may use an explicit `ci-native-mdns` transport: same nonce/slot in a
+unique `*.local` hostname and cookie, published only by an owned stock
+`dns-sd -P` process on a dedicated GitHub-hosted macOS runner. This never
+changes the app allowlist, the default/browser `.localhost` mode above, or any
+operator machine. See `e2e/maestro/account-routing-proof/README.md`. No local
+run of this transport is authorized by the source pass.
+
 **Each surface's resolution is a hard prerequisite.** The socket gate uses
 actual OS DNS and connects to the unique advertised `*.localhost` hostname; it
 has no header-only stand-in or shared-IP URL fallback. A pass proves that Node

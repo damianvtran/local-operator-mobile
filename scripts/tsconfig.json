@@ -1,0 +1,8 @@
+{
+	"$comment": "Scripts are Node tooling, not an Expo render target. Vite 8/Oxc selects the nearest tsconfig while loading these source-only proof tests; inheriting the app's extensionless expo/tsconfig.base fails before both the new proof test and unchanged native-config.test.ts collect. Reuse the existing tools Node semantics rather than change the app config, install another dependency tree or stub a native target. The root tsconfig.tools.json remains the production script type gate.",
+	"extends": "../tools/tsconfig.json",
+	"compilerOptions": {
+		"erasableSyntaxOnly": true
+	},
+	"include": ["**/*.ts"]
+}

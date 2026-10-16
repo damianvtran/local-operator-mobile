@@ -44,6 +44,15 @@ on:
         options:
           - full
           - s15-proof
+          - account-routing-ios-proof
+      proof_stage:
+        description: "Targeted iOS proof only; never a full-E2E verdict"
+        type: choice
+        default: full
+        options:
+          - preflight
+          - setup
+          - full
   schedule:
     # Nightly, off-peak: the emulator job is the slowest thing here and the least
     # useful on a branch nobody is waiting for.
@@ -54,8 +63,8 @@ on:
   pull_request:
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+  group: ${{ inputs.proof_mode == 'account-routing-ios-proof' && format('account-routing-ios-{0}', github.ref) || format('{0}-{1}', github.workflow, github.ref) }}
+  cancel-in-progress: ${{ inputs.proof_mode != 'account-routing-ios-proof' && github.ref != 'refs/heads/main' }}
 
 permissions:
   contents: read
@@ -89,11 +98,13 @@ jobs:
       - name: Validate proof selection
         env:
           PROOF_MODE: ${{ inputs.proof_mode || 'full' }}
+          PROOF_STAGE: ${{ inputs.proof_stage || 'full' }}
         run: |
           set -euo pipefail
           case "$PROOF_MODE" in
-            full) ;;
-            s15-proof) test "$GITHUB_EVENT_NAME" = workflow_dispatch ;;
+            full) test "$PROOF_STAGE" = full ;;
+            s15-proof) test "$GITHUB_EVENT_NAME" = workflow_dispatch; test "$PROOF_STAGE" = full ;;
+            account-routing-ios-proof) test "$GITHUB_EVENT_NAME" = workflow_dispatch; case "$PROOF_STAGE" in preflight|setup|full) ;; *) exit 1 ;; esac ;;
             *) echo "::error::unknown proof mode"; exit 1 ;;
           esac
 
@@ -116,11 +127,17 @@ jobs:
         id: detect
         run: |
           set -euo pipefail
+          PROOF_MODE="${{ inputs.proof_mode || 'full' }}"
           missing=()
           for script in e2e:relay e2e:divergences e2e:canary e2e:typecheck e2e:docs audit:capture audit:run mock:relay; do
             node -e "process.exit(require('./package.json').scripts?.[process.argv[1]] ? 0 : 1)" "$script" \
               || missing+=("package script $script")
           done
+          if [ "$PROOF_MODE" = account-routing-ios-proof ]; then
+            for script in e2e:account-routing-proof e2e:account-routing-artifact-tests; do
+              node -e "process.exit(require('./package.json').scripts?.[process.argv[1]] ? 0 : 1)" "$script" || missing+=("package script $script")
+            done
+          fi
           if ! find e2e/maestro -name '*.yaml' -print -quit 2>/dev/null | grep -q .; then
             missing+=("e2e/maestro/**/*.yaml")
           fi
@@ -128,7 +145,11 @@ jobs:
             echo "## End-to-end harness"
             echo
             if [ ${#missing[@]} -eq 0 ]; then
-              echo "Every piece of the harness is present; the suites below ran."
+              if [ "$PROOF_MODE" = account-routing-ios-proof ]; then
+                echo "Targeted native proof only; this is NOT full E2E green."
+              else
+                echo "Every piece of the harness is present; the suites below ran."
+              fi
             else
               echo "**The harness is not in this tree.** Missing:"
               echo
@@ -144,7 +165,7 @@ jobs:
   mock-relay-contract:
     name: Mock relay contract and divergence checks
     needs: harness
-    if: inputs.proof_mode != 's15-proof'
+    if: (inputs.proof_mode || 'full') == 'full'
     runs-on: ubuntu-latest
     # BOUND SIZED FROM A MEASUREMENT, NOT FROM HOPE (review round 3, M3). The
     # harness documents `pnpm e2e:relay` as its slowest documented command, and its
@@ -225,7 +246,7 @@ jobs:
     # measurement of what happens when it does). So they print SKIP *with the reason*
     # rather than pretending, which names what was not proven — and their tool paths
     # and script names are still resolved, so a skip cannot hide a renamed file.
-    if: (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && inputs.proof_mode != 's15-proof'
+    if: (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && (inputs.proof_mode || 'full') == 'full'
     runs-on: ubuntu-latest
     timeout-minutes: 70
     steps:
@@ -273,7 +294,7 @@ jobs:
         run: pnpm e2e:docs
 
   web-audit:
-    if: inputs.proof_mode != 's15-proof'
+    if: (inputs.proof_mode || 'full') == 'full'
     name: Web target — frames, audit and the canary
     needs: harness
     # LINUX, not macOS. This job ran on `macos-26` only because the harness's
@@ -679,7 +700,7 @@ jobs:
     # NOT yet verified, and not claimed here: whether a GitHub runner reproduces these
     # metric-sensitive results. That needs a `workflow_dispatch`; the figures above are
     # measured on this host.
-    if: (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && inputs.proof_mode != 's15-proof'
+    if: (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && (inputs.proof_mode || 'full') == 'full'
     runs-on: ubuntu-latest
     timeout-minutes: 240
     steps:
@@ -788,7 +809,7 @@ jobs:
     # release gate", and ADR 0003's risk table limits emulator flows for the same
     # reason — they are the slowest, flakiest part of the pipeline and the least
     # informative on a branch somebody is iterating on.
-    if: (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && inputs.proof_mode != 's15-proof'
+    if: (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && (inputs.proof_mode || 'full') == 'full'
     runs-on: ubuntu-latest
     timeout-minutes: 75
     steps:
@@ -1044,3 +1065,72 @@ jobs:
           name: maestro-screenshots
           path: ${{ runner.temp }}/maestro-screenshots
           retention-days: 30
+
+  account-routing-ios-proof:
+    name: Targeted account-routing iOS proof (NOT full E2E)
+    needs: harness
+    if: github.event_name == 'workflow_dispatch' && inputs.proof_mode == 'account-routing-ios-proof'
+    runs-on: macos-26
+    timeout-minutes: ${{ inputs.proof_stage == 'preflight' && 10 || inputs.proof_stage == 'setup' && 20 || 75 }}
+    permissions:
+      contents: read
+      actions: read
+    env:
+      PROOF_MODE: account-routing-ios-proof
+      PROOF_STAGE: ${{ inputs.proof_stage || 'full' }}
+      LOH12_NATIVE_PROOF_ADMITTED: "1"
+      PNPM_CONFIG_VERIFY_DEPS_BEFORE_RUN: error
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Install the existing locked JavaScript dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Source and safe-archive controls (no native execution)
+        run: |
+          pnpm exec vitest run scripts/ci/account-routing-proof.test.ts tools/mock-relay/account-routing-identity.test.ts --maxWorkers=1 --no-file-parallelism
+          pnpm e2e:account-routing-artifact-tests
+      - name: Actual prerequisites before simulator or candidate SDK work
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: pnpm e2e:account-routing-proof --stage preflight
+      - uses: actions/setup-java@v6
+        if: inputs.proof_stage != 'preflight'
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+      - name: Provision the existing pinned Maestro driver
+        if: inputs.proof_stage != 'preflight'
+        run: |
+          set -euo pipefail
+          export MAESTRO_VERSION
+          curl -fsSL "https://get.maestro.mobile.dev" | bash
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+      - name: Selected setup/full stage (base setup before ONE candidate producer)
+        if: inputs.proof_stage != 'preflight'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: pnpm e2e:account-routing-proof --stage "$PROOF_STAGE"
+      - uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: account-routing-ios-${{ inputs.proof_stage || 'full' }}-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/account-routing-proof-${{ github.run_id }}/proof.json
+            ${{ runner.temp }}/account-routing-proof-${{ github.run_id }}/commands.json
+            ${{ runner.temp }}/account-routing-proof-${{ github.run_id }}/commands/*.log
+            ${{ runner.temp }}/account-routing-proof-${{ github.run_id }}/wire-*.json
+            ${{ runner.temp }}/account-routing-proof-${{ github.run_id }}/base-bundle.json
+            ${{ runner.temp }}/account-routing-proof-${{ github.run_id }}/core-bootstrap.json
+            ${{ runner.temp }}/account-routing-proof-${{ github.run_id }}/frames/**/*.png
+            ${{ runner.temp }}/account-routing-proof-${{ github.run_id }}/hierarchies/
+          retention-days: 14
+          if-no-files-found: warn
