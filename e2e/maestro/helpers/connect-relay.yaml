@@ -4,10 +4,17 @@
 # HTTP is permitted explicitly for the isolated CI mock, never for a real account.
 appId: ${APP_ID}
 ---
+# COLD budget, not the steady 15s: this is the FIRST assertion after the caller's
+# `launchApp: {clearState: true}`, so it waits on the app's own cold launch and
+# first paint. That launch measured 25869ms on run 38853165349 (`warm-launch-base-app`,
+# rc0) and this wait failed at 15000ms while the rendered frame shows the screen HAD
+# drawn — the budget, not the app, was the defect. The value is the proof's derived
+# `capFor("coldAppLaunch")` (25869ms x 3, floored at 60s); a control asserts this
+# line and that derivation agree, so the two cannot drift apart.
 - extendedWaitUntil:
     visible:
       id: "welcome-screen"
-    timeout: 15000
+    timeout: 78000
 - tapOn:
     id: "welcome-custom-url"
 - extendedWaitUntil:

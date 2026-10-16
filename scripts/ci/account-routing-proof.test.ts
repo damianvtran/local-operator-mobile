@@ -38,6 +38,10 @@ import {
 } from "./account-routing-proof-contract.ts";
 import * as flow from "./account-routing-proof-flows.ts";
 import {
+	COLD_FIRST_WAIT_MS,
+	STEADY_WAIT_MS,
+} from "./account-routing-proof-flows.ts";
+import {
 	ProofHost,
 	timedOutMessage,
 	tolerableTeardown,
@@ -404,6 +408,47 @@ describe("staged proof source contract — mocks only, no mDNS/native/CI executi
 		// The measured spread is recorded, so a reader can see why a factor alone
 		// cannot bound the next run.
 		expect(record.spread?.ratio).toBeGreaterThan(5);
+	});
+	it("gives the first post-clearState wait a cold budget, later waits steady (R8)", () => {
+		// Run 38853165349's first evidence flow FAILED `id: welcome-screen is
+		// visible` on a flat 15000ms steady wait, while the rendered frame shows the
+		// app HAD drawn the Welcome screen after a clearState launch. The budget, not
+		// the app, was the defect. This control holds the helper's opening wait and
+		// the proof's derivation together so they cannot drift.
+		const helper = readFileSync(
+			new URL("../../e2e/maestro/helpers/connect-relay.yaml", import.meta.url),
+			"utf8",
+		);
+		const waits = [...helper.matchAll(/timeout:\s*(\d+)/g)].map((m) =>
+			Number(m[1]),
+		);
+		// The OPENING wait is the cold one and must clear the measured cold launch.
+		expect(waits[0]).toBe(COLD_FIRST_WAIT_MS);
+		expect(COLD_FIRST_WAIT_MS).toBe(capFor("coldAppLaunch") * 1000);
+		expect(COLD_FIRST_WAIT_MS).toBeGreaterThan(
+			observedMaxSeconds("coldAppLaunch") * 1000,
+		);
+		// Every LATER wait stays steady: a cold cost must not inflate them, or a
+		// genuine warm-path slowdown would hide behind a huge budget.
+		for (const later of waits.slice(1)) expect(later).toBe(STEADY_WAIT_MS);
+		expect(STEADY_WAIT_MS).toBe(15000);
+	});
+	it("requires a drawn app screen in the warm-up, not just a driver touch (R8)", () => {
+		// F4 warmed the driver; the first flow still carried the app's cold launch.
+		// The warm-up now proves the app has PAINTED before the first flow starts.
+		const source = readFileSync(
+			new URL("./account-routing-ios-proof.ts", import.meta.url),
+			"utf8",
+		);
+		expect(source).toContain("warm driver did not show a drawn app screen");
+		// The flow still launches with clearState and asserts for itself: the
+		// readiness gate must not have replaced the real path.
+		expect(source).toContain("flows.connectSettings(");
+		const flowsSource = readFileSync(
+			new URL("./account-routing-proof-flows.ts", import.meta.url),
+			"utf8",
+		);
+		expect(flowsSource).toContain("launchApp: { clearState: true }");
 	});
 	it("keeps every stage budget above the cold caps it can spend", () => {
 		// The stage clock and the op caps are one contract, not two: a budget below

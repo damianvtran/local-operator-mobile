@@ -124,6 +124,15 @@ export const OPERATION_OBSERVATIONS = {
 		{ run: 38845929163, ms: 354 },
 		{ run: 38844597781, ms: 261 },
 	],
+	// The app's own cold launch after `launchApp: {clearState: true}` on a freshly
+	// created simulator. Measured as `simctl launch` returning rc0 in 25869ms
+	// (run 38853165349, op `warm-launch-base-app`) — a LOWER bound on the flow's
+	// launch, which also wipes app data and must paint the first frame. Run
+	// 38853165349's first evidence flow then FAILED its opening assertion,
+	// `id: welcome-screen is visible`, on a flat 15000ms steady budget while the
+	// rendered frame shows the screen HAD drawn: the wait, not the app, was the
+	// defect (R8).
+	coldAppLaunch: [{ run: 38853165349, ms: 25869 }],
 	maestroCold: [{ run: 38844597781, ms: 121921, censored: true }],
 	maestroHelp: [
 		{ run: 38850837889, ms: 3009 },
@@ -321,6 +330,10 @@ export const COLD_OPERATION_FLOOR_SECONDS: Partial<
 	shutdown: 300,
 	delete: 120,
 	maestroCold: 420,
+	// A cold clearState launch plus first paint on a hosted runner. Floored at the
+	// manager's suggested 60s and, with the 3x factor over the 25.9s sample,
+	// deriving above it.
+	coldAppLaunch: 60,
 };
 
 /** A cold operation's factor over its largest observation, applied BEFORE the

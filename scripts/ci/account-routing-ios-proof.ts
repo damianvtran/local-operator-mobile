@@ -16,7 +16,7 @@ import { join, resolve } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 import { accountRoutingSchema } from "../../src/contracts/schemas.ts";
 import { accountRoutingCopy as copy } from "../../src/features/settings/account-routing-copy.ts";
-import { CONTROL, REGION } from "../../src/ui/a11y.ts";
+import { CONTROL, REGION, SCREEN } from "../../src/ui/a11y.ts";
 import {
 	type CanonicalPolicyFixture,
 	createCanonicalPolicyFixture,
@@ -91,6 +91,7 @@ export const DERIVED_OPS = [
 	"boot",
 	"installedSimulators",
 	"create",
+	"coldAppLaunch",
 	"maestroCold",
 ] as const;
 const markers = [
@@ -549,15 +550,33 @@ export class NativeProof {
 			["simctl", "launch", this.udid, this.baseline.bundleId],
 			capFor("selector"),
 		);
-		await this.host.run(
+		const driver = await this.host.run(
 			"warm-maestro-driver",
 			"maestro",
 			["--device", this.udid, "hierarchy"],
 			capFor("maestroCold"),
 		);
 		this.maestroWarm = true;
+		// A READINESS GATE, not just a driver touch: the same practice the repo
+		// documents for Android ("launch the installed app once so the first flow
+		// does not carry the cold start"). F4 warmed the DRIVER; run 38853165349
+		// showed the first flow still carried the APP's cold launch and lost its
+		// opening assertion to a steady 15s wait. Requiring the app's own first
+		// screen to be visible in the warm hierarchy means the first evidence flow
+		// starts from a PROVEN-drawn state, and it is read from the real hierarchy
+		// rather than assumed — the flow still does its own clearState launch and
+		// its own assertion, unweakened.
+		// A freshly launched app draws the Welcome screen (measured: its identifiers
+		// are present in the warm hierarchy of run 38853165349). Requiring one of the
+		// real identifiers means the first evidence flow starts from a proven-drawn
+		// state instead of a hoped-for one.
+		const warmShows = [SCREEN.welcome, SCREEN.home];
+		if (!warmShows.some((id) => driver.includes(id)))
+			throw new Error(
+				"warm driver did not show a drawn app screen before the first evidence flow",
+			);
 		this.receipt.driverWarmUp =
-			"PASS actual simctl launch + driver hierarchy before the first evidence flow";
+			"PASS actual simctl launch + driver hierarchy showing a drawn app screen before the first evidence flow";
 	}
 	private async flow(
 		name: string,

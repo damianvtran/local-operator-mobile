@@ -2,15 +2,36 @@ import { accountRoutingCopy as copy } from "../../src/features/settings/account-
 import { CONTROL, REGION, SCREEN } from "../../src/ui/a11y.ts";
 
 export type NativeStep = Record<string, unknown>;
-const wait = (id: string): NativeStep => ({
-	extendedWaitUntil: { visible: { id }, timeout: 15000 },
+
+/** Steady in-flow wait, for an element on an already-drawn screen. */
+export const STEADY_WAIT_MS = 15000;
+
+/** Cold wait for the FIRST assertion after a `launchApp: {clearState: true }` on a
+ * freshly created simulator.
+ *
+ * This is F4 one level deeper. F4 removed the Maestro DRIVER's cold start from the
+ * first flow; the flow still carried the APP's own cold launch — clearState wipes
+ * app data and the process then has to paint its first frame. On run 38853165349
+ * that launch alone measured 25869ms (`warm-launch-base-app`, rc0) while the
+ * opening `id: welcome-screen is visible` waited a flat 15000ms and failed, with
+ * the rendered frame showing the Welcome screen HAD drawn: the budget, not the app,
+ * was the defect. Derived from the measured cold-launch cost with the same
+ * spread factor and floor the caps use (78s), never a hand-picked number.
+ */
+export const COLD_FIRST_WAIT_MS = 78000;
+
+/** Waits default to the steady value; a caller passes the cold budget explicitly,
+ * so a cold cost cannot silently inflate every steady wait in a flow. */
+const wait = (id: string, timeoutMs: number = STEADY_WAIT_MS): NativeStep => ({
+	extendedWaitUntil: { visible: { id }, timeout: timeoutMs },
 });
+
 const tap = (id: string): NativeStep => ({ tapOn: { id } });
 const scroll = (id: string, direction = "DOWN"): NativeStep => ({
-	scrollUntilVisible: { element: { id }, direction, timeout: 15000 },
+	scrollUntilVisible: { element: { id }, direction, timeout: STEADY_WAIT_MS },
 });
 const text = (value: string): NativeStep => ({
-	extendedWaitUntil: { visible: { text: value }, timeout: 15000 },
+	extendedWaitUntil: { visible: { text: value }, timeout: STEADY_WAIT_MS },
 });
 export const firstSettled = (name: string): NativeStep[] => [
 	{ takeScreenshot: `${name}-first` },
@@ -33,12 +54,15 @@ export const reloadPolicy = (): NativeStep[] => [
 export function connectSettings(helper: string): NativeStep[] {
 	return [
 		{ launchApp: { clearState: true } },
+		// The helper's opening assertion is the app's FIRST post-clearState paint,
+		// so it takes the cold budget. Later steps inside the helper stay steady.
 		{ runFlow: helper },
 		wait(SCREEN.home),
 		tap(CONTROL.settingsButton),
 		wait(SCREEN.settings),
 	];
 }
+
 export function theme(value: "light" | "dark"): NativeStep[] {
 	const id =
 		value === "light" ? CONTROL.settingsThemeLight : CONTROL.settingsThemeDark;
