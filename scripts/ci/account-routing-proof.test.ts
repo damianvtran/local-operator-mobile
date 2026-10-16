@@ -214,6 +214,63 @@ describe("staged proof source contract — mocks only, no mDNS/native/CI executi
 					event === MANUAL && mode === ANDROID_PROOF_MODE,
 				);
 	});
+	it("every dispatchable proof mode has an arm in the Validate-proof-selection shell", async () => {
+		// WHY THIS EXISTS: the truth table above reads the JOB `if:` conditions, and
+		// the harness job's own `Validate proof selection` step is a SHELL `case` it
+		// never read — so adding a mode (inputs + job + contract) could leave that
+		// validator without an arm, which is exactly how run 38915672373 failed in 2s
+		// with `::error::unknown proof mode` before any emulator or build spend. The
+		// control below runs the ACTUAL shipped script text, not a copy, so a mode
+		// added without its arm fails here instead of on a dispatch.
+		const { spawnSync } = await import("node:child_process");
+		const workflow = source(".github/workflows/e2e.yml");
+		const step = workflow.split("- name: Validate proof selection")[1];
+		if (!step) throw new Error("missing validator step");
+		const script = step.split("\n        run: |\n")[1]?.split(/\n {6}- /)[0];
+		if (!script) throw new Error("missing validator script");
+		const modes: [string, string, boolean][] = [
+			// mode, stage, must the validator ACCEPT on a manual dispatch?
+			["full", "full", true],
+			["s15-proof", "full", true],
+			["account-routing-ios-proof", "full", true],
+			["account-routing-ios-proof", "preflight", true],
+			["account-routing-ios-proof", "setup", true],
+			["account-routing-android-proof", "full", true],
+			// Stage arguments that must be refused rather than silently accepted.
+			["account-routing-android-proof", "setup", false],
+			["account-routing-android-proof", "preflight", false],
+			["not-a-mode", "full", false],
+		];
+		for (const [mode, stage, accepted] of modes) {
+			const result = spawnSync("bash", ["-c", script], {
+				encoding: "utf8",
+				env: {
+					...process.env,
+					PROOF_MODE: mode,
+					PROOF_STAGE: stage,
+					GITHUB_EVENT_NAME: "workflow_dispatch",
+				},
+			});
+			expect(
+				result.status === 0,
+				`${mode}/${stage} on a manual dispatch (stderr: ${result.stderr.trim()})`,
+			).toBe(accepted);
+		}
+		// And the class guard itself: every mode the workflow offers must appear as an
+		// arm, so the next mode added cannot repeat this. The options list is the
+		// operator-facing source of truth.
+		const options =
+			workflow
+				.split("      proof_mode:")[1]
+				?.split("      proof_stage:")[0]
+				?.split("options:")[1]
+				?.split("\n")
+				.map((line) => line.trim().replace(/^-\s*/, ""))
+				.filter((line) => /^[a-z0-9-]+$/.test(line)) ?? [];
+		expect(options.length).toBeGreaterThan(0);
+		for (const mode of options)
+			expect(script, `arm for ${mode}`).toContain(`${mode})`);
+	});
 	it("the truth table catches the old !=s15 accidental fanout", () => {
 		expect(
 			evaluate("inputs.proof_mode != 's15-proof'", MANUAL, PROOF_MODE),

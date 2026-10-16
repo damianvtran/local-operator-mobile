@@ -106,6 +106,10 @@ jobs:
             full) test "$PROOF_STAGE" = full ;;
             s15-proof) test "$GITHUB_EVENT_NAME" = workflow_dispatch; test "$PROOF_STAGE" = full ;;
             account-routing-ios-proof) test "$GITHUB_EVENT_NAME" = workflow_dispatch; case "$PROOF_STAGE" in preflight|setup|full) ;; *) exit 1 ;; esac ;;
+            # The Android proof has NO stage: one bounded run, so any stage argument is
+            # an operator mistake rather than a request to run part of it. This mirrors
+            # the contract's `selectProof`, which rejects a stage for this mode.
+            account-routing-android-proof) test "$GITHUB_EVENT_NAME" = workflow_dispatch; test "$PROOF_STAGE" = full ;;
             *) echo "::error::unknown proof mode"; exit 1 ;;
           esac
 
@@ -139,6 +143,14 @@ jobs:
               node -e "process.exit(require('./package.json').scripts?.[process.argv[1]] ? 0 : 1)" "$script" || missing+=("package script $script")
             done
           fi
+          # The Android proof runs the SAME fixture/build seams through the existing
+          # package scripts; it needs the bootstrap/artifact helpers too, and it does
+          # not use `e2e:account-routing-proof` (that drives the iOS stages).
+          if [ "$PROOF_MODE" = account-routing-android-proof ]; then
+            for script in e2e:account-routing-artifact-tests e2e:account-routing-bootstrap-tests; do
+              node -e "process.exit(require('./package.json').scripts?.[process.argv[1]] ? 0 : 1)" "$script" || missing+=("package script $script")
+            done
+          fi
           if ! find e2e/maestro -name '*.yaml' -print -quit 2>/dev/null | grep -q .; then
             missing+=("e2e/maestro/**/*.yaml")
           fi
@@ -146,7 +158,7 @@ jobs:
             echo "## End-to-end harness"
             echo
             if [ ${#missing[@]} -eq 0 ]; then
-              if [ "$PROOF_MODE" = account-routing-ios-proof ]; then
+              if [ "$PROOF_MODE" = account-routing-ios-proof ] || [ "$PROOF_MODE" = account-routing-android-proof ]; then
                 echo "Targeted native proof only; this is NOT full E2E green."
               else
                 echo "Every piece of the harness is present; the suites below ran."
@@ -1161,7 +1173,12 @@ jobs:
           echo "LOH12_CORE_ROOT=$CORE" >> "$GITHUB_ENV"
           echo "LOH12_CORE_PYTHON=$RUNNER_TEMP/account-routing-android-proof/core-python/bin/python" >> "$GITHUB_ENV"
 
-      - name: The fixture's own source/socket gate, unchanged (also a negative control)
+      - name: The fixture's own source/socket gate (also a negative control)
+        # `LOCAL_OPERATOR_SCRATCHPAD` is what the gate requires as the owned root it
+        # may create fixture data under; the iOS job supplies it through its proof
+        # host, and this job calls the gate directly, so it must supply it here.
+        env:
+          LOCAL_OPERATOR_SCRATCHPAD: ${{ runner.temp }}/account-routing-android-proof
         run: node tools/mock-relay/verify-account-routing.ts
 
       - name: Build the APK the flow runs against
