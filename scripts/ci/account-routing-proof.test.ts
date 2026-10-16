@@ -5,8 +5,9 @@ import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { policyIdentity } from "../../tools/mock-relay/account-routing-identity.ts";
 import baseline from "./account-routing-e2e-baseline.json";
-import { NativeProof } from "./account-routing-ios-proof.ts";
+import { DERIVED_OPS, NativeProof } from "./account-routing-ios-proof.ts";
 import {
+	ARTIFACT_CENSORED_SAMPLES,
 	assertArchiveDigest,
 	assertArtifactMetadata,
 	assertBundleFacts,
@@ -18,17 +19,20 @@ import {
 	COLD_OPERATIONS,
 	capDerivation,
 	capFor,
+	capRestsOnCensoredSample,
 	deriveCapSeconds,
 	mdnsCommand,
 	OPERATION_OBSERVATIONS,
 	observedMaxSeconds,
 	PINS,
+	PRODUCER_BUDGET_SECONDS,
 	PROOF_MODE,
 	runProof,
 	STAGE_SECONDS,
 	STEADY_FLOW_CAP_SECONDS,
 	safeArchiveName,
 	selectProof,
+	UNOBSERVED_BUDGET_SECONDS,
 } from "./account-routing-proof-contract.ts";
 import * as flow from "./account-routing-proof-flows.ts";
 import {
@@ -578,6 +582,65 @@ describe("staged proof source contract — mocks only, no mDNS/native/CI executi
 			]);
 		},
 	);
+	it("flags every sample an artifact shows was killed, not measured (R6-1)", () => {
+		// The flag is written by hand and four samples have been wrong in this
+		// loop, each time in the direction that hides a bound. So the evidence is
+		// QUOTED from the runs' commands.json rather than remembered, and this
+		// control holds the table to it: a sample the artifact shows as
+		// `deadlineExceeded`/`rc:null` must carry `censored: true`.
+		for (const known of ARTIFACT_CENSORED_SAMPLES) {
+			const sample = OPERATION_OBSERVATIONS[known.operation].find(
+				(candidate) => candidate.run === known.run,
+			);
+			expect(
+				sample,
+				`run ${known.run} has no ${known.operation} sample`,
+			).toBeDefined();
+			expect(
+				(sample as { censored?: boolean }).censored,
+				`${known.operation} run ${known.run} was killed by its cap (${known.evidence}) but is not flagged censored`,
+			).toBe(true);
+		}
+		// The R6-1 regression, stated with its real numbers: bootReady's 91.7s is
+		// the censored kill, while the deciding bound is the genuine 92.6s sample
+		// and the cold floor — so the FLAG must not move the cap.
+		const boot = OPERATION_OBSERVATIONS.bootReady.find(
+			(candidate) => candidate.run === 38845929163,
+		);
+		expect((boot as { censored?: boolean }).censored).toBe(true);
+		expect(observedMaxSeconds("bootReady")).toBeCloseTo(92.562, 3);
+		expect(capFor("bootReady")).toBe(300);
+		// bootReady's deciding sample is the COMPLETED 92.6s one, so this stays
+		// false: the censored 91.7s is not the max and does not decide the bound.
+		expect(capRestsOnCensoredSample("bootReady")).toBe(false);
+		// Whereas the selector's deciding sample IS the censored kill.
+		expect(capRestsOnCensoredSample("selector")).toBe(true);
+	});
+	it("keeps exactly one source of truth per bound (R6-2)", () => {
+		// A table entry nothing reads is the inverse of a bare literal: the same
+		// bound with two sources that can disagree. Every OPERATION_OBSERVATIONS
+		// key must be reachable, and the two budget maps must stay disjoint from
+		// it AND from each other.
+		const source = readFileSync(
+			new URL("./account-routing-ios-proof.ts", import.meta.url),
+			"utf8",
+		);
+		const unread = (Object.keys(OPERATION_OBSERVATIONS) as string[]).filter(
+			(operation) =>
+				!source.includes(`capFor("${operation}")`) &&
+				!DERIVED_OPS.includes(operation as (typeof DERIVED_OPS)[number]),
+		);
+		expect(unread).toEqual([]);
+		const observations = new Set(Object.keys(OPERATION_OBSERVATIONS));
+		for (const budgets of [
+			PRODUCER_BUDGET_SECONDS,
+			UNOBSERVED_BUDGET_SECONDS,
+		]) {
+			for (const key of Object.keys(budgets)) {
+				expect(observations.has(key)).toBe(false);
+			}
+		}
+	});
 	it("isolates every git config source the child could inherit (R5-3)", () => {
 		// The proof host isolates the ambient git config so a runner's global
 		// config cannot change behaviour; assert the exact env contract rather

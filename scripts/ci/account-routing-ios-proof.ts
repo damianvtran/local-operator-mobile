@@ -82,7 +82,7 @@ const hash = (bytes: Uint8Array | string) =>
 const UDID_LINE = /^udid=(.+)$/m;
 const WORKSPACE_LINE = /^workspace=(.+)$/m;
 const SCHEME_LINE = /^scheme=(.+)$/m;
-const DERIVED_OPS = [
+export const DERIVED_OPS = [
 	"selector",
 	"bootReady",
 	"shutdown",

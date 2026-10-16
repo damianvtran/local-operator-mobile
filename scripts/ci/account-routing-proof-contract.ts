@@ -71,24 +71,12 @@ export const OPERATION_OBSERVATIONS = {
 		{ run: 38842647133, ms: 35 },
 		{ run: 38840447956, ms: 36 },
 	],
-	publicCoreClone: [{ run: 38840447956, ms: 1777 }],
-	publicCorePin: [{ run: 38840447956, ms: 7475 }],
 	publicCoreIdentity: [
 		{ run: 38847064654, ms: 25 },
 		{ run: 38845929163, ms: 8 },
 		{ run: 38844597781, ms: 41 },
 		{ run: 38842647133, ms: 15 },
 		{ run: 38840447956, ms: 19 },
-	],
-	// The bootstrap's first run resolves the pinned checkout's metadata from the
-	// index; the spread (0.5s warm-receipt to 22.8s cold) is the whole point of
-	// keeping samples rather than one number.
-	coreBaseBootstrap: [
-		{ run: 38847064654, ms: 524 },
-		{ run: 38845929163, ms: 505 },
-		{ run: 38844597781, ms: 1827 },
-		{ run: 38842647133, ms: 846 },
-		{ run: 38840447956, ms: 22771 },
 	],
 	// 4.5-19.1s across four completed runs. A 55s literal used to bind this site.
 	socketDoctor: [
@@ -144,11 +132,17 @@ export const OPERATION_OBSERVATIONS = {
 		{ run: 38845929163, ms: 2832 },
 		{ run: 38844597781, ms: 2419 },
 	],
-	// 91.7s and 92.6s, both completed with rc0: this is a genuine measurement, not
-	// the censored kill that run 38845929163 also recorded for it.
+	// Run 38844597781 booted in 92.6s and COMPLETED with rc0 — a genuine
+	// measurement. Run 38845929163's 91.7s is NOT comparable: that run's artifact
+	// records it as `{"rc":null,"deadlineExceeded":true,"capSeconds":90}`, so it
+	// is a CENSORED kill (and carries kill/reap latency on top of the boot), i.e.
+	// a lower bound rather than a completed observation. The deciding bound is
+	// unchanged by this flag: observedMax stays the genuine 92562ms, the 300s cold
+	// floor still binds, and capRestsOnCensoredSample must stay false for
+	// bootReady.
 	bootReady: [
 		{ run: 38844597781, ms: 92562 },
-		{ run: 38845929163, ms: 91663 },
+		{ run: 38845929163, ms: 91663, censored: true },
 	],
 	install: [{ run: 38844597781, ms: 24619 }],
 	// Killed at the 120s steady cap: a lower bound on the cold driver bring-up.
@@ -164,14 +158,20 @@ export const OPERATION_OBSERVATIONS = {
 		{ run: 38845929163, ms: 22002, censored: true },
 	],
 	installedContainer: [{ run: 38844597781, ms: 6590 }],
-	inspectInstalled: [{ run: 38844597781, ms: 858 }],
 } as const;
 
-/** Heavy PRODUCER steps that have never run in a recorded setup/preflight run, so
- * they have no observations to derive from. These keep their existing documented
- * stage budgets, labelled as budgets rather than measurements — recording a cap
- * as an "observation" would be fabricating the very data the derivation rests on.
- * When a real full run records them, they move into OPERATION_OBSERVATIONS. */
+/** Heavy PRODUCER steps whose bound is DELIBERATE rather than derived: either no
+ * recorded run has reached them, or the only samples are single preflight
+ * observations of a network/index operation, where one sample is not a
+ * distribution and deriving from it would size the bound to one lucky run.
+ *
+ * Observed so far, kept here as evidence rather than as a derivation: clone
+ * 1.777s and pin 7.475s (run 38840447956, when the Core checkout was absent);
+ * the bootstrap script 0.505-22.771s across five runs, where 0.5s is a warm
+ * receipt and 22.8s is a cold index resolve. A budget for these is a judgement,
+ * and it is labelled as one — recording it as an "observation" would fabricate
+ * the data the derivation rests on, and deriving from a single sample would
+ * under-size the bound (review R6-2). */
 export const PRODUCER_BUDGET_SECONDS = {
 	expoPrebuild: 180,
 	podInstall: 600,
@@ -212,6 +212,58 @@ export const UNOBSERVED_BUDGET_SECONDS = {
 } as const;
 
 export type BoundedOperation = keyof typeof OPERATION_OBSERVATIONS;
+
+/** Samples an ARTIFACT shows were killed by the cap in force, not completed.
+ *
+ * Each entry quotes the recorded command from that run's `commands.json`, and
+ * the control asserts the corresponding table sample carries `censored: true`.
+ * This exists because the flag is easy to get wrong in exactly the direction that
+ * hides a bound: `bootReady` shipped with 91663ms recorded as a completed rc0
+ * measurement while run 38845929163's own artifact says
+ * `{"rc":null,"deadlineExceeded":true,"capSeconds":90}` — the shipped comment
+ * asserted the reverse of the artifact (review R6-1). A hand-written flag cannot
+ * catch that; an artifact-derived list can, because the evidence is quoted here
+ * rather than remembered.
+ */
+export const ARTIFACT_CENSORED_SAMPLES = [
+	{
+		operation: "bootReady",
+		run: 38845929163,
+		evidence:
+			'{"rc":null,"elapsedMs":91663,"deadlineExceeded":true,"capSeconds":90}',
+	},
+	{
+		operation: "selector",
+		run: 38847064654,
+		evidence: '{"rc":null,"elapsedMs":15019,"deadlineExceeded":true}',
+	},
+	{
+		operation: "selector",
+		run: 38842647133,
+		evidence: '{"rc":128,"elapsedMs":60034}',
+	},
+	{
+		operation: "maestroCold",
+		run: 38844597781,
+		evidence: '{"rc":null,"elapsedMs":121921,"deadlineExceeded":true}',
+	},
+	{
+		operation: "shutdown",
+		run: 38845929163,
+		evidence:
+			'{"rc":null,"elapsedMs":23349,"deadlineExceeded":true,"capSeconds":20}',
+	},
+	{
+		operation: "delete",
+		run: 38845929163,
+		evidence:
+			'{"rc":null,"elapsedMs":22002,"deadlineExceeded":true,"capSeconds":20}',
+	},
+] as const satisfies readonly {
+	operation: BoundedOperation;
+	run: number;
+	evidence: string;
+}[];
 
 /** Operations whose FIRST call of a run pays a cold, unoutputted start
  * (CoreSimulator launch, XCUITest driver bring-up). These get a floor with real

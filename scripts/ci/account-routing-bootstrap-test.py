@@ -84,20 +84,37 @@ def write_pinned_checkout(root: Path, version: str = "9.9.9", deps: int = 23, uv
     if uv_lock:
         (core / "uv.lock").write_text("")
     # The cleanliness assertion reads `git status`, so the synthetic checkout needs
-    # a repository; committing isolates it from an inherited user/global config.
+    # a repository; committing isolates it from inherited config. BOTH config
+    # sources are blanked: a runner with a global `commit.gpgsign=true` failed
+    # every fixture commit with rc=128 (reproduced at this head, review R6-3) —
+    # the same ambient-config class as F2, one round later. The production
+    # ProofHost blanked both; this fixture is reached in the same jobs and must not
+    # be the one place a global config still gets through.
+    git_env = {
+        **os.environ,
+        "GIT_CONFIG_SYSTEM": os.devnull,
+        "GIT_CONFIG_GLOBAL": os.devnull,
+        "GIT_TERMINAL_PROMPT": "0",
+        "GIT_ASKPASS": "/bin/false",
+    }
     subprocess.run(
-        ["git", "-C", str(core), "init", "--quiet"], check=True,
-        env={**os.environ, "GIT_CONFIG_SYSTEM": os.devnull},
+        ["git", "-C", str(core), "init", "--quiet"], check=True, env=git_env
     )
-    subprocess.run(
-        ["git", "-C", str(core), "-c", "user.email=t@example.invalid",
-         "-c", "user.name=proof", "add", "-A"], check=True,
-    )
-    subprocess.run(
-        ["git", "-C", str(core), "-c", "user.email=t@example.invalid",
-         "-c", "user.name=proof", "commit", "--quiet", "-m", "fixture"],
-        check=True,
-    )
+    for verb in (["add", "-A"], ["commit", "--quiet", "-m", "fixture"]):
+        subprocess.run(
+            [
+                "git",
+                "-C",
+                str(core),
+                "-c",
+                "user.email=t@example.invalid",
+                "-c",
+                "user.name=proof",
+                *verb,
+            ],
+            check=True,
+            env=git_env,
+        )
     return core
 
 
