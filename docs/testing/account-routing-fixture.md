@@ -141,3 +141,30 @@ Before admitting the existing Android/iOS build pair and a bounded flow lane:
    interactions, pending/refused/uncertain/stale-A→B paths and actual light/dark
    phone frames/geometry. Do not substitute Node/schema checks or web stills for
    this evidence. Loading/unsupported/error/populated captures remain required.
+
+## Sizing a bound on a cold hosted runner
+
+**Cold steps on a shared hosted runner are variable, and a bound must be sized
+for the worst plausible run rather than for the largest one observed so far.**
+This is not a stylistic preference; it is the failure this proof kept
+rediscovering. Run 38850837889 was uniformly colder than every run before it —
+the simulator selector took 46.9s against a 15.0s prior maximum, `install-exact-base`
+47.8s against 24.6s, and `shutdown-owned-simulator` 63.5s against 23.3s — so a
+bound derived as a small multiple of the previous maximum was exceeded on four
+operations at once, one dispatch at a time.
+
+So the caps are derived from a **spread-based** factor with a hard per-operation
+floor (`scripts/ci/account-routing-proof-contract.ts`): a cold operation takes
+`max(observed) × 3` floored at 300s (selector, install, shutdown), 360s
+(bootReady), 420s (cold Maestro) or 120s (delete); an operation already inside a
+warm stage takes a tighter factor. Each cap records its samples, its measured
+spread, the factor and the resulting seconds in the run receipt, so a reader can
+see why a bound is what it is. The stage budgets are then derived from those
+caps, and a control fails if any stage budget drops to or below the sum of the
+cold caps its stage can spend — a stage clock below its own caps is how a
+legitimate cold step gets clamped and reported as a policy failure.
+
+The consequence for anyone reading a red run: **a `deadline exceeded` on a cold
+operation is a sizing bug to fix, not a flake to retry.** Re-running it spends
+hosted minutes to rediscover the same under-sized bound. Add the observed value
+to the table, let the derivation move the cap, and only then dispatch again.

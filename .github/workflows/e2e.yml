@@ -1071,7 +1071,14 @@ jobs:
     needs: harness
     if: github.event_name == 'workflow_dispatch' && inputs.proof_mode == 'account-routing-ios-proof'
     runs-on: macos-26
-    timeout-minutes: ${{ inputs.proof_stage == 'preflight' && 10 || inputs.proof_stage == 'setup' && 20 || 75 }}
+    # SIZED FROM THE DERIVED STAGE BUDGETS, not from a previous run's luck. The
+    # proof derives per-op caps for a worst-plausible cold hosted runner, and a
+    # stage clock below the sum of those caps would clamp a legitimate cold step
+    # and report it as a policy failure (run 38850837889 was colder on EVERY cold
+    # op than every prior run). The numbers mirror STAGE_SECONDS in
+    # scripts/ci/account-routing-proof-contract.ts, whose control asserts each
+    # budget exceeds the sum of the cold caps in that stage.
+    timeout-minutes: ${{ inputs.proof_stage == 'preflight' && 20 || inputs.proof_stage == 'setup' && 70 || 210 }}
     permissions:
       contents: read
       actions: read

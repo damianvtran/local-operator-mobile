@@ -16,10 +16,11 @@ import {
 	assertNativeOrigin,
 	assertProofCI,
 	type BoundedOperation,
-	COLD_OPERATIONS,
+	COLD_OPERATION_FLOOR_SECONDS,
 	capDerivation,
 	capFor,
 	capRestsOnCensoredSample,
+	coldStepSumSeconds,
 	deriveCapSeconds,
 	mdnsCommand,
 	OPERATION_OBSERVATIONS,
@@ -28,6 +29,7 @@ import {
 	PRODUCER_BUDGET_SECONDS,
 	PROOF_MODE,
 	runProof,
+	STAGE_PAYLOAD_SECONDS,
 	STAGE_SECONDS,
 	STEADY_FLOW_CAP_SECONDS,
 	safeArchiveName,
@@ -353,7 +355,7 @@ describe("staged proof source contract — mocks only, no mDNS/native/CI executi
 			const cap = capFor(operation);
 			const max = observedMaxSeconds(operation);
 			expect(cap).toBeGreaterThan(max);
-			if (COLD_OPERATIONS[operation] !== undefined)
+			if (COLD_OPERATION_FLOOR_SECONDS[operation] !== undefined)
 				expect(cap).toBeGreaterThanOrEqual(Math.ceil(max * 1.5));
 		}
 		// The exact regression, with its real numbers.
@@ -369,18 +371,23 @@ describe("staged proof source contract — mocks only, no mDNS/native/CI executi
 		// does not move, which would look like a constant. 90s exercises the
 		// derivation itself.
 		const before = deriveCapSeconds("selector");
+		// The injection must clear the op's FLOOR, or the floor masks it: the
+		// selector's cold floor is 300s, so a 90s sample derives 270s and does not
+		// move the cap, which would look like a constant. 200s derives 600s.
 		const injected = [
 			...OPERATION_OBSERVATIONS.selector,
-			{ run: 99999999999, ms: 90000 },
+			{ run: 99999999999, ms: 200000 },
 		];
-		const after = deriveCapSeconds("selector", 1.5, injected);
+		const after = deriveCapSeconds("selector", undefined, injected);
 		expect(after).toBeGreaterThan(before);
-		expect(after).toBeGreaterThanOrEqual(90);
+		expect(after).toBeGreaterThanOrEqual(600);
 		// The same proof against the RECORDED table, not a loose array: a bigger
 		// sample for a real operation must raise that operation's cap.
-		const bigger = deriveCapSeconds("install", 1.5, [
+		// Same rule for a cold op with a floor: install's floor is 300s, so the
+		// injection must derive above it (400s x 3 = 1200).
+		const bigger = deriveCapSeconds("install", undefined, [
 			...OPERATION_OBSERVATIONS.install,
-			{ run: 1, ms: 90000 },
+			{ run: 1, ms: 400000 },
 		]);
 		expect(bigger).toBeGreaterThan(deriveCapSeconds("install"));
 	});
@@ -393,7 +400,54 @@ describe("staged proof source contract — mocks only, no mDNS/native/CI executi
 		expect(record.maxObservedSeconds).toBeCloseTo(60.034, 3);
 		expect(record.restsOnCensoredSample).toBe(true);
 		expect(record.capSeconds).toBe(capFor("selector"));
-		expect(record.coldFloorSeconds).toBe(60);
+		expect(record.coldFloorSeconds).toBe(300);
+		// The measured spread is recorded, so a reader can see why a factor alone
+		// cannot bound the next run.
+		expect(record.spread?.ratio).toBeGreaterThan(5);
+	});
+	it("keeps every stage budget above the cold caps it can spend", () => {
+		// The stage clock and the op caps are one contract, not two: a budget below
+		// the sum of the caps a stage spends is how a legitimate cold step gets
+		// clamped and read as a policy failure. Run 38850837889 was colder on every
+		// cold op than every prior run, which is why the caps moved; the budgets
+		// must move with them.
+		for (const stage of ["setup", "full"] as const) {
+			const cold = coldStepSumSeconds(stage);
+			const payload = STAGE_PAYLOAD_SECONDS[stage] ?? 0;
+			expect(cold).toBeGreaterThan(0);
+			expect(payload).toBeGreaterThan(cold);
+			// The budget covers the stage's whole payload AND keeps headroom, so a
+			// slow-but-legitimate run is never clamped by its own clock.
+			expect(STAGE_SECONDS[stage]).toBeGreaterThan(payload);
+			expect(STAGE_SECONDS[stage] - payload).toBeGreaterThan(0.1 * payload);
+		}
+		// The `full` stage's payload is much larger than setup's: it adds the ONE
+		// candidate producer (xcodebuild dominates) and ~30 warm flows.
+		expect(STAGE_PAYLOAD_SECONDS.full ?? 0).toBeGreaterThan(
+			(STAGE_PAYLOAD_SECONDS.setup ?? 0) + 3000,
+		);
+		// The workflow's own timeout must mirror the derived budget, or the runner
+		// cancels the job before the proof's own clock ever reports anything.
+		const workflow = readFileSync(
+			new URL("../../.github/workflows/e2e.yml", import.meta.url),
+			"utf8",
+		);
+		expect(workflow).toContain("inputs.proof_stage == 'setup' && 70");
+		expect(workflow).toContain("210");
+		// A cold cap must clear its floor AND be a spread multiple of its max, not
+		// a fixed 1.5x over it.
+		for (const operation of Object.keys(
+			COLD_OPERATION_FLOOR_SECONDS,
+		) as BoundedOperation[]) {
+			expect(capFor(operation)).toBeGreaterThanOrEqual(
+				COLD_OPERATION_FLOOR_SECONDS[operation] ?? 0,
+			);
+		}
+		// The four ops run 38850837889 killed or nearly killed, with its numbers.
+		expect(capFor("install")).toBeGreaterThan(47.798);
+		expect(capFor("shutdown")).toBeGreaterThan(63.481);
+		expect(capFor("selector")).toBeGreaterThan(60.034);
+		expect(capFor("bootReady")).toBeGreaterThan(122.263);
 	});
 	it("gives every stage room for a cold simulator on its own clock", () => {
 		// Each stage is its own workflow step (own `timeout-minutes`), so a stage
@@ -409,11 +463,11 @@ describe("staged proof source contract — mocks only, no mDNS/native/CI executi
 	});
 	it("keeps the derived cold caps real, named bounds inside the stage budget", () => {
 		expect(capFor("selector")).toBeGreaterThanOrEqual(
-			COLD_OPERATIONS.selector ?? 0,
+			COLD_OPERATION_FLOOR_SECONDS.selector ?? 0,
 		);
 		expect(capFor("selector")).toBeGreaterThan(observedMaxSeconds("selector"));
 		expect(capFor("bootReady")).toBeGreaterThanOrEqual(
-			COLD_OPERATIONS.bootReady ?? 0,
+			COLD_OPERATION_FLOOR_SECONDS.bootReady ?? 0,
 		);
 		expect(capFor("bootReady")).toBeLessThan(0.5 * STAGE_SECONDS.setup);
 		expect(
@@ -608,8 +662,10 @@ describe("staged proof source contract — mocks only, no mDNS/native/CI executi
 			(candidate) => candidate.run === 38845929163,
 		);
 		expect((boot as { censored?: boolean }).censored).toBe(true);
-		expect(observedMaxSeconds("bootReady")).toBeCloseTo(92.562, 3);
-		expect(capFor("bootReady")).toBe(300);
+		// The max is now run 38850837889's COMPLETED 122.3s boot — colder than every
+		// prior run, and the reason the factor is spread-based rather than 1.5x.
+		expect(observedMaxSeconds("bootReady")).toBeCloseTo(122.263, 3);
+		expect(capFor("bootReady")).toBeGreaterThanOrEqual(360);
 		// bootReady's deciding sample is the COMPLETED 92.6s one, so this stays
 		// false: the censored 91.7s is not the max and does not decide the bound.
 		expect(capRestsOnCensoredSample("bootReady")).toBe(false);

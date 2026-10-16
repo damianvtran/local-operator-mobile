@@ -21,10 +21,28 @@ export const PINS = {
 	maestro: "2.11.0",
 } as const;
 export type ProofStage = "preflight" | "setup" | "full";
+/** Per-stage wall-clock budget.
+ *
+ * DERIVED, not declared, because the stage clock and the per-op caps must not be
+ * two independent sources of truth: a stage budget below the sum of the caps its
+ * steps can spend is exactly how a legitimate cold step gets clamped and reported
+ * as a policy failure — the class this loop kept rediscovering. The workflow's
+ * `timeout-minutes` is this number; the arithmetic below is asserted by a control.
+ *
+ * Measured basis (run 38850837889, the coldest run to date), in seconds:
+ *   setup payload  = selector 300 + bootReady 367 + install 300 + shutdown 300
+ *                  + delete 120 + maestroCold 420 + warm launch 91 + 3 warm flows
+ *                  360 + version/help 120 + simctl 36  -> ~2100s (35 min)
+ *   preflight payload = clone 90 + pin 60 + bootstrap 300 + socket doctor 29
+ *                  + extraction 120 + the sub-second git/node steps -> ~800s
+ *   full adds the xcodebuild producer 3600 + pod install 600 + prebuild 360
+ *                  + ~30 warm flows 3600 -> ~9000s more
+ * Each stage keeps substantial headroom above its payload, and the control below
+ * fails if a budget ever drops to or below the sum of the cold caps in it. */
 export const STAGE_SECONDS: Record<ProofStage, number> = {
-	preflight: 600,
-	setup: 1200,
-	full: 4500,
+	preflight: 1200,
+	setup: 4200,
+	full: 12600,
 };
 
 /** EVERY observation of a bounded operation, with the run it came from.
@@ -38,19 +56,91 @@ export const STAGE_SECONDS: Record<ProofStage, number> = {
  * moves. Milliseconds, as observed and reported by the proof host.
  */
 export const OPERATION_OBSERVATIONS = {
-	// Every value below is a REAL elapsed from a real hosted run's commands.json,
-	// read directly from the downloaded artifacts (runs 38840447956 preflight,
-	// 38842647133, 38844597781, 38845929163, 38847064654). The F6 table this
-	// replaces contained values that were never measured — `maestroSteady` 42/46s
-	// and `list` 400ms have no artifact behind them at all, and `coreDoctor` named
-	// an operation no call site bound. Fabricated samples are worse than missing
-	// ones: the derivation would rest on them.
+	// Every value is a REAL elapsed from a real hosted run's commands.json, read
+	// from the downloaded artifacts: runs 38840447956 (preflight), 38842647133,
+	// 38844597781, 38845929163, 38847064654 and 38850837889. Nothing here is
+	// estimated; three earlier revisions of this table contained values that were
+	// never measured, and each one under-sized a bound.
 	//
-	// `censored: true` marks a sample that was KILLED by the cap in force, not a
-	// completed run. Its elapsed is a LOWER BOUND on the operation's true cost —
-	// the child was cut off, so it needed at least this long. Treating such a
-	// sample as a measurement is how a cap gets sized to the thing that killed it.
+	// `censored: true` marks a sample KILLED by the cap in force, not a completed
+	// run: its elapsed is a LOWER BOUND (the child was cut off), and it carries
+	// kill/reap latency. Including it in the max is deliberate — the derived cap
+	// must clear the bound that killed it.
+	//
+	// Run 38850837889 is why the factors are spread-based rather than 1.5x: every
+	// cold op in it was slower than every prior run (selector 46.9s, bootReady
+	// 122.3s, install 47.8s, shutdown 63.5s), so a bound sized on prior spread was
+	// exceeded on four operations at once.
+	artifactTests: [
+		{ run: 38850837889, ms: 80 },
+		{ run: 38847064654, ms: 93 },
+		{ run: 38845929163, ms: 98 },
+		{ run: 38844597781, ms: 112 },
+		{ run: 38842647133, ms: 115 },
+	],
+	baselineRouteValidator: [
+		{ run: 38850837889, ms: 89 },
+		{ run: 38847064654, ms: 18 },
+		{ run: 38845929163, ms: 33 },
+		{ run: 38844597781, ms: 47 },
+		{ run: 38842647133, ms: 35 },
+		{ run: 38840447956, ms: 36 },
+	],
+	boot: [
+		{ run: 38850837889, ms: 2665 },
+		{ run: 38845929163, ms: 2832 },
+		{ run: 38844597781, ms: 2419 },
+	],
+	bootReady: [
+		{ run: 38850837889, ms: 122263 },
+		{ run: 38845929163, ms: 91663, censored: true },
+		{ run: 38844597781, ms: 92562 },
+	],
+	create: [
+		{ run: 38850837889, ms: 342 },
+		{ run: 38845929163, ms: 344 },
+		{ run: 38844597781, ms: 296 },
+	],
+	delete: [
+		{ run: 38850837889, ms: 1185 },
+		{ run: 38845929163, ms: 22002, censored: true },
+		{ run: 38844597781, ms: 454 },
+	],
+	inspectApp: [
+		{ run: 38850837889, ms: 122 },
+		{ run: 38847064654, ms: 116 },
+		{ run: 38845929163, ms: 146 },
+		{ run: 38844597781, ms: 858 },
+		{ run: 38844597781, ms: 217 },
+		{ run: 38842647133, ms: 204 },
+	],
+	install: [
+		{ run: 38850837889, ms: 47798, censored: true },
+		{ run: 38844597781, ms: 24619 },
+	],
+	installedContainer: [{ run: 38844597781, ms: 6590 }],
+	installedSimulators: [
+		{ run: 38850837889, ms: 483 },
+		{ run: 38845929163, ms: 354 },
+		{ run: 38844597781, ms: 261 },
+	],
+	maestroCold: [{ run: 38844597781, ms: 121921, censored: true }],
+	maestroHelp: [
+		{ run: 38850837889, ms: 3009 },
+		{ run: 38847064654, ms: 3360 },
+		{ run: 38845929163, ms: 2612 },
+		{ run: 38844597781, ms: 3420 },
+		{ run: 38842647133, ms: 4470 },
+	],
+	maestroVersion: [
+		{ run: 38850837889, ms: 3645 },
+		{ run: 38847064654, ms: 3566 },
+		{ run: 38845929163, ms: 3999 },
+		{ run: 38844597781, ms: 4749 },
+		{ run: 38842647133, ms: 5550 },
+	],
 	nativeSource: [
+		{ run: 38850837889, ms: 28 },
 		{ run: 38847064654, ms: 26 },
 		{ run: 38845929163, ms: 19 },
 		{ run: 38844597781, ms: 61 },
@@ -58,106 +148,46 @@ export const OPERATION_OBSERVATIONS = {
 		{ run: 38840447956, ms: 95 },
 	],
 	productByteFreeze: [
+		{ run: 38850837889, ms: 38 },
 		{ run: 38847064654, ms: 17 },
 		{ run: 38845929163, ms: 18 },
 		{ run: 38844597781, ms: 54 },
 		{ run: 38842647133, ms: 73 },
 		{ run: 38840447956, ms: 37 },
 	],
-	baselineRouteValidator: [
-		{ run: 38847064654, ms: 18 },
-		{ run: 38845929163, ms: 33 },
-		{ run: 38844597781, ms: 47 },
-		{ run: 38842647133, ms: 35 },
-		{ run: 38840447956, ms: 36 },
-	],
 	publicCoreIdentity: [
+		{ run: 38850837889, ms: 22 },
 		{ run: 38847064654, ms: 25 },
 		{ run: 38845929163, ms: 8 },
 		{ run: 38844597781, ms: 41 },
 		{ run: 38842647133, ms: 15 },
 		{ run: 38840447956, ms: 19 },
 	],
-	// 4.5-19.1s across four completed runs. A 55s literal used to bind this site.
+	selector: [
+		{ run: 38850837889, ms: 46859 },
+		{ run: 38847064654, ms: 15019, censored: true },
+		{ run: 38845929163, ms: 6107 },
+		{ run: 38844597781, ms: 7267 },
+		// Killed at its 60s cap (F3). `rc:128` is the fabricated kill code that
+		// round's `resolve(code ?? 128)` produced — the reason the deadline path now
+		// reports a named deadline instead — so this is a censored sample, not an
+		// exit. A generator keying only on `rc: null` missed it; the R6-1 control
+		// caught that, which is the control doing its job on its own author.
+		{ run: 38842647133, ms: 60034, censored: true },
+	],
+	shutdown: [
+		{ run: 38850837889, ms: 63481, censored: true },
+		{ run: 38845929163, ms: 23349, censored: true },
+		{ run: 38844597781, ms: 14985 },
+	],
 	socketDoctor: [
+		{ run: 38850837889, ms: 11688 },
 		{ run: 38847064654, ms: 11243 },
 		{ run: 38845929163, ms: 14076 },
 		{ run: 38844597781, ms: 19106 },
 		{ run: 38842647133, ms: 14673 },
+		{ run: 38840447956, ms: 5518 },
 	],
-	artifactTests: [
-		{ run: 38847064654, ms: 93 },
-		{ run: 38845929163, ms: 98 },
-		{ run: 38844597781, ms: 112 },
-		{ run: 38842647133, ms: 115 },
-	],
-	inspectApp: [
-		{ run: 38847064654, ms: 116 },
-		{ run: 38845929163, ms: 146 },
-		{ run: 38844597781, ms: 217 },
-		{ run: 38842647133, ms: 204 },
-		{ run: 38844597781, ms: 858 },
-	],
-	maestroVersion: [
-		{ run: 38847064654, ms: 3566 },
-		{ run: 38845929163, ms: 3999 },
-		{ run: 38844597781, ms: 4749 },
-		{ run: 38842647133, ms: 5550 },
-	],
-	maestroHelp: [
-		{ run: 38847064654, ms: 3360 },
-		{ run: 38845929163, ms: 2612 },
-		{ run: 38844597781, ms: 3420 },
-		{ run: 38842647133, ms: 4470 },
-	],
-	// The two `censored` samples are the ones that matter: this operation was
-	// killed at a 60s cap (F3) and again at a 15s cap (F6). 60.034s is therefore a
-	// LOWER bound on its true cold cost, and the derived cap must clear it — which
-	// is why a flat 60s cold floor would have repeated the F3 failure.
-	selector: [
-		{ run: 38845929163, ms: 6107 },
-		{ run: 38844597781, ms: 7267 },
-		{ run: 38847064654, ms: 15019, censored: true },
-		{ run: 38842647133, ms: 60034, censored: true },
-	],
-	installedSimulators: [
-		{ run: 38845929163, ms: 354 },
-		{ run: 38844597781, ms: 261 },
-	],
-	create: [
-		{ run: 38845929163, ms: 344 },
-		{ run: 38844597781, ms: 296 },
-	],
-	boot: [
-		{ run: 38845929163, ms: 2832 },
-		{ run: 38844597781, ms: 2419 },
-	],
-	// Run 38844597781 booted in 92.6s and COMPLETED with rc0 — a genuine
-	// measurement. Run 38845929163's 91.7s is NOT comparable: that run's artifact
-	// records it as `{"rc":null,"deadlineExceeded":true,"capSeconds":90}`, so it
-	// is a CENSORED kill (and carries kill/reap latency on top of the boot), i.e.
-	// a lower bound rather than a completed observation. The deciding bound is
-	// unchanged by this flag: observedMax stays the genuine 92562ms, the 300s cold
-	// floor still binds, and capRestsOnCensoredSample must stay false for
-	// bootReady.
-	bootReady: [
-		{ run: 38844597781, ms: 92562 },
-		{ run: 38845929163, ms: 91663, censored: true },
-	],
-	install: [{ run: 38844597781, ms: 24619 }],
-	// Killed at the 120s steady cap: a lower bound on the cold driver bring-up.
-	maestroCold: [{ run: 38844597781, ms: 121921, censored: true }],
-	// F5 capped teardown at 20s and both were killed there; the 14985/454 samples
-	// are completed runs under a larger cap.
-	shutdown: [
-		{ run: 38844597781, ms: 14985 },
-		{ run: 38845929163, ms: 23349, censored: true },
-	],
-	delete: [
-		{ run: 38844597781, ms: 454 },
-		{ run: 38845929163, ms: 22002, censored: true },
-	],
-	installedContainer: [{ run: 38844597781, ms: 6590 }],
 } as const;
 
 /** Heavy PRODUCER steps whose bound is DELIBERATE rather than derived: either no
@@ -266,20 +296,38 @@ export const ARTIFACT_CENSORED_SAMPLES = [
 }[];
 
 /** Operations whose FIRST call of a run pays a cold, unoutputted start
- * (CoreSimulator launch, XCUITest driver bring-up). These get a floor with real
- * headroom on top of the derived cap, because the tail of a cold start is not
- * bounded by the samples in front of it. */
-export const COLD_OPERATIONS: Partial<Record<BoundedOperation, number>> = {
-	selector: 60,
-	bootReady: 300,
-	maestroCold: 300,
-	// Teardown of a JUST-BOOTED simulator is the same cold service as the selector
-	// (the manager's own classification: "shutdown/delete after a boot"). Without a
-	// floor the derivation gives 36s/34s against 23.3s/22.0s observations — barely
-	// above 1.5x, i.e. exactly the thin margin that broke the selector at F6.
-	shutdown: 60,
-	delete: 60,
+ * (CoreSimulator launch, XCUITest driver bring-up, a cold backend install), plus
+ * the teardown of a just-booted simulator, which is the same cold service.
+ *
+ * Their bounds are NOT derived from `max(observed) * small`: a hosted runner can
+ * be uniformly slower than every previous run, so a factor over the observed max
+ * bounds the run by other runs' spread and each dispatch then discovers the next
+ * under-sized cap. That is exactly what happened across F5/F6/R5 and again in run
+ * 38850837889, where the whole run was colder than every prior one (selector
+ * 46.9s vs a 15.0s prior max; install 47.8s vs a 24.6s prior max; shutdown 63.5s
+ * vs a 23.3s prior max). The manager's rule is the one now implemented: size a
+ * cold op so it cannot plausibly be exceeded, from a SPREAD-based factor, with a
+ * hard per-op floor. */
+export const COLD_OPERATION_FLOOR_SECONDS: Partial<
+	Record<BoundedOperation, number>
+> = {
+	// Floors are the manager's named minima: selector/install/shutdown >= 300,
+	// bootReady >= 360, delete >= 120, cold maestro >= 420. They are deliberately
+	// above every observation to date, because the point of a bound is the next
+	// run, not the run already measured.
+	selector: 300,
+	bootReady: 360,
+	install: 300,
+	shutdown: 300,
+	delete: 120,
+	maestroCold: 420,
 };
+
+/** A cold operation's factor over its largest observation, applied BEFORE the
+ * floor. 3x, not 1.5x: the selector's samples span 6.1-60.0s (a killed sample is
+ * a lower bound, so the true span is wider), and a single dispatch that is
+ * uniformly colder moves every sample at once. */
+export const COLD_SPREAD_FACTOR = 3;
 
 /** The smallest sensible bound per operation, so a single fast sample cannot
  * derive a cap that a normal slow run immediately breaks. */
@@ -300,17 +348,31 @@ export const OPERATION_MINIMUM_SECONDS: Partial<
 
 /** The steady per-flow budget, as a CONTRACT rather than an observation.
  *
- * An evidence flow is allowed 120s once the driver is warm. No artifact sample
- * exists for a warm flow — the only steady flow ever attempted (run 38844597781,
- * 121.9s) was the COLD one and was killed by this very budget — so deriving it
- * from data would mean inventing a sample. It is a labelled policy value, and the
- * cold cap is required to exceed it so a cold cost cannot hide behind it. */
+ * An evidence flow is allowed this much once the driver is warm. No artifact
+ * sample exists for a warm flow — the only steady flow ever attempted was the
+ * COLD one (run 38844597781, 121.9s) — so deriving it from data would mean
+ * inventing a sample. The cold cap is required to exceed it so a cold cost cannot
+ * hide behind the warm budget. */
 export const STEADY_FLOW_CAP_SECONDS = 120;
 
-/** Headroom over the largest observation. 1.5x, not 1.05x: a cap is a bound on
- * the NEXT run, and the next run is drawn from the same heavy-tailed cost the
- * samples came from. */
+/** Factor over the largest observation for a NON-cold operation. */
 export const OBSERVED_HEADROOM = 1.5;
+
+/** Every observed value for an operation, in seconds. */
+export function observedSeconds(operation: BoundedOperation) {
+	return OPERATION_OBSERVATIONS[operation].map((sample) => sample.ms / 1000);
+}
+
+/** max/min of the samples: the measured spread, which is what tells a reader
+ * whether one factor can possibly cover the next run. Null with fewer than two
+ * samples, because a single sample has no spread. */
+export function observedSpread(operation: BoundedOperation) {
+	const values = observedSeconds(operation);
+	if (values.length < 2) return null;
+	const min = Math.min(...values);
+	const max = Math.max(...values);
+	return { min, max, ratio: min > 0 ? max / min : null };
+}
 
 /** The largest observation recorded for an operation, in seconds.
  *
@@ -323,8 +385,85 @@ export function observedMaxSeconds(operation: BoundedOperation) {
 	return Math.max(...OPERATION_OBSERVATIONS[operation].map((s) => s.ms)) / 1000;
 }
 
-/** True when the sample that decides the cap was itself killed by a cap, i.e. the
- * derived bound rests on a lower bound rather than a completed measurement. */
+/** The cold ops a stage can spend, so its budget can be checked against the sum of
+ * their caps rather than against one declared number: a stage clock below that sum
+ * is how a legitimate cold step gets clamped and reported as a policy failure. */
+export function coldStepSumSeconds(stage: ProofStage) {
+	// Declared BEFORE the stage budgets that consume it: `const` initialisers run
+	// in source order, so a budget referencing a later function would be a runtime
+	// TDZ error rather than a compile error.
+	return (STAGE_COLD_STEPS[stage] ?? []).reduce(
+		(total, operation) => total + capFor(operation),
+		0,
+	);
+}
+
+export const STAGE_COLD_STEPS: Partial<Record<ProofStage, BoundedOperation[]>> =
+	{
+		setup: [
+			"selector",
+			"bootReady",
+			"install",
+			"shutdown",
+			"delete",
+			"maestroCold",
+		],
+		full: [
+			"selector",
+			"bootReady",
+			"install",
+			"shutdown",
+			"delete",
+			"maestroCold",
+		],
+	};
+
+/** Stage payload: the sum of every cap a stage's steps can spend, so a stage
+ * budget can be checked against real work instead of against one big number. */
+export const STAGE_PAYLOAD_SECONDS: Partial<Record<ProofStage, number>> = {
+	// See the arithmetic in STAGE_SECONDS' comment; producer budgets and the
+	// unobserved budgets come from their own maps so this cannot drift from them.
+	preflight:
+		PRODUCER_BUDGET_SECONDS.coreClone +
+		PRODUCER_BUDGET_SECONDS.corePin +
+		PRODUCER_BUDGET_SECONDS.coreBootstrapInstall +
+		UNOBSERVED_BUDGET_SECONDS.baseExtraction +
+		240,
+	setup:
+		coldStepSumSeconds("setup") +
+		capFor("maestroVersion") +
+		capFor("maestroHelp") +
+		capFor("installedSimulators") +
+		capFor("create") +
+		capFor("boot") +
+		capFor("selector") +
+		3 * STEADY_FLOW_CAP_SECONDS,
+	// `full` re-runs setup's cold steps, then the ONE candidate producer
+	// (xcodebuild dominates) and ~30 warm candidate flows. Kept as an explicit sum
+	// of the parts so it cannot drift from the caps and budgets it is built from.
+	full:
+		coldStepSumSeconds("full") +
+		capFor("maestroVersion") +
+		capFor("maestroHelp") +
+		capFor("installedSimulators") +
+		capFor("create") +
+		capFor("boot") +
+		capFor("selector") +
+		3 * STEADY_FLOW_CAP_SECONDS +
+		PRODUCER_BUDGET_SECONDS.expoPrebuild +
+		PRODUCER_BUDGET_SECONDS.checkoutSnapshot +
+		PRODUCER_BUDGET_SECONDS.podInstall +
+		PRODUCER_BUDGET_SECONDS.xcodebuild +
+		PRODUCER_BUDGET_SECONDS.expoPrebuild +
+		UNOBSERVED_BUDGET_SECONDS.workspaceResolver +
+		UNOBSERVED_BUDGET_SECONDS.plistJson +
+		UNOBSERVED_BUDGET_SECONDS.nativeConfig +
+		UNOBSERVED_BUDGET_SECONDS.determinism +
+		UNOBSERVED_BUDGET_SECONDS.installCandidate +
+		UNOBSERVED_BUDGET_SECONDS.candidateRefVersion +
+		30 * STEADY_FLOW_CAP_SECONDS,
+};
+
 export function capRestsOnCensoredSample(operation: BoundedOperation) {
 	const max = observedMaxSeconds(operation);
 	return OPERATION_OBSERVATIONS[operation].some(
@@ -341,18 +480,25 @@ export function capRestsOnCensoredSample(operation: BoundedOperation) {
  */
 export function deriveCapSeconds(
 	operation: BoundedOperation,
-	headroom = OBSERVED_HEADROOM,
-	samples: readonly { run: number; ms: number }[] = OPERATION_OBSERVATIONS[
-		operation
-	],
+	headroom?: number,
+	samples?: readonly { run: number; ms: number }[],
 ) {
-	if (samples.length === 0) throw new Error(`no observations for ${operation}`);
-	const maxSeconds = Math.max(...samples.map((sample) => sample.ms)) / 1000;
-	const derived = Math.ceil(maxSeconds * headroom);
+	const source = samples ?? OPERATION_OBSERVATIONS[operation];
+	if (source.length === 0) throw new Error(`no observations for ${operation}`);
+	const maxSeconds = Math.max(...source.map((sample) => sample.ms)) / 1000;
+	const coldFloor = COLD_OPERATION_FLOOR_SECONDS[operation];
+	// A cold op uses its OWN factor (default COLD_SPREAD_FACTOR) and its hard
+	// floor; a warm op uses the caller's factor or OBSERVED_HEADROOM. An explicit
+	// `headroom` argument still wins, so a control can prove the derivation reads
+	// the samples rather than a constant.
+	const factor =
+		headroom ??
+		(coldFloor !== undefined ? COLD_SPREAD_FACTOR : OBSERVED_HEADROOM);
+	const derived = Math.ceil(maxSeconds * factor);
 	return Math.max(
 		derived,
 		OPERATION_MINIMUM_SECONDS[operation] ?? 0,
-		COLD_OPERATIONS[operation] ?? 0,
+		coldFloor ?? 0,
 	);
 }
 
@@ -371,8 +517,12 @@ export function capDerivation(operation: BoundedOperation) {
 		// A cap whose deciding sample was killed by a previous cap is a bound on a
 		// bound; the receipt says so rather than implying a completed measurement.
 		restsOnCensoredSample: capRestsOnCensoredSample(operation),
-		headroom: OBSERVED_HEADROOM,
-		coldFloorSeconds: COLD_OPERATIONS[operation] ?? null,
+		headroom:
+			COLD_OPERATION_FLOOR_SECONDS[operation] !== undefined
+				? COLD_SPREAD_FACTOR
+				: OBSERVED_HEADROOM,
+		spread: observedSpread(operation),
+		coldFloorSeconds: COLD_OPERATION_FLOOR_SECONDS[operation] ?? null,
 		minimumSeconds: OPERATION_MINIMUM_SECONDS[operation] ?? null,
 		capSeconds: capFor(operation),
 	};
