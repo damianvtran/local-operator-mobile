@@ -32,7 +32,7 @@ export type ProofStage = "preflight" | "setup" | "full";
  * The ENFORCED payloads are STAGE_PAYLOAD_SECONDS' values, computed from the caps
  * themselves so they cannot drift from them; the control below fails if a budget
  * drops to or below its payload. At this revision: preflight 810s, setup 2984s,
- * full 11744s, against budgets of 1200 / 4200 / 14400 — 48% / 41% / 23% headroom.
+ * full 11924s, against budgets of 1200 / 4200 / 14400 — 48% / 41% / 21% headroom.
  * The dominant terms are the cold caps in each stage, the ONE candidate producer
  * (xcodebuild 3600s) and the warm-flow budgets; see STAGE_PAYLOAD_SECONDS for the
  * exact sum rather than a prose approximation that can go stale. */
@@ -41,8 +41,8 @@ export const STAGE_SECONDS: Record<ProofStage, number> = {
 	setup: 4200,
 	// 14400s (240 min), raised from 12600 when the path-walking first flow's own
 	// derived cap (361s) joined the payload: the R7 rule is that a stage budget must
-	// clear its whole payload with real headroom, and 12600 left only 856s over a
-	// 11744s payload. A budget below its payload is how a cold step gets clamped and
+	// clear its whole payload with real headroom, and 12600 left only 676s over a
+	// 11924s payload. A budget below its payload is how a cold step gets clamped and
 	// reported as a policy failure, which is the class this whole loop kept hitting.
 	full: 14400,
 };

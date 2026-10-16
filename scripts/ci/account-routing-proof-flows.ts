@@ -1,5 +1,10 @@
 import { accountRoutingCopy as copy } from "../../src/features/settings/account-routing-copy.ts";
-import { CONTROL, REGION, SCREEN } from "../../src/ui/a11y.ts";
+import {
+	accountRoutingChoiceId,
+	CONTROL,
+	REGION,
+	SCREEN,
+} from "../../src/ui/a11y.ts";
 
 export type NativeStep = Record<string, unknown>;
 
@@ -84,7 +89,11 @@ export function baselineSettings(mode: "light" | "dark"): NativeStep[] {
 export function choose(value: string): NativeStep[] {
 	return [
 		...readyPolicy(),
-		tap(`${CONTROL.settingsAccountRoutingGroup}:${value}`),
+		// ONE spelling for the family: the same builder the settings section calls, so a
+		// flow and the row it taps cannot drift. The a11y scan roots
+		// (app/src/ui/src/features) exclude scripts/ci, so an inline copy here would be
+		// drift no control could see.
+		tap(accountRoutingChoiceId(value)),
 		text(copy("mobile.account_routing.unsaved")),
 		...firstSettled("draft-no-write"),
 	];
@@ -108,7 +117,7 @@ export function saved(value: string): NativeStep[] {
 		},
 		{
 			assertVisible: {
-				id: `${CONTROL.settingsAccountRoutingGroup}:${value}`,
+				id: accountRoutingChoiceId(value),
 				selected: true,
 			},
 		},
@@ -183,7 +192,7 @@ export function selected(value: string): NativeStep[] {
 		...readyPolicy(),
 		{
 			assertVisible: {
-				id: `${CONTROL.settingsAccountRoutingGroup}:${value}`,
+				id: accountRoutingChoiceId(value),
 				selected: true,
 			},
 		},
