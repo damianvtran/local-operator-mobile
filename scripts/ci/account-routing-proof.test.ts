@@ -26,6 +26,7 @@ import {
 	PROOF_MODE,
 	runProof,
 	STAGE_SECONDS,
+	STEADY_FLOW_CAP_SECONDS,
 	safeArchiveName,
 	selectProof,
 } from "./account-routing-proof-contract.ts";
@@ -316,12 +317,14 @@ describe("staged proof source contract — mocks only, no mDNS/native/CI executi
 		};
 		expect(typeof setup.warmDriver).toBe("function");
 		const cold = capFor("maestroCold");
-		const steady = capFor("maestroSteady");
+		// The steady value is a labelled CONTRACT (no artifact sample exists for a
+		// warm flow), so assert the constant, not a derivation readback.
+		const steady = STEADY_FLOW_CAP_SECONDS;
 		// Cold is derived above its own 123.17s observation AND above the steady
 		// contract, so a cold cost cannot hide behind the warm budget.
 		expect(cold).toBeGreaterThan(observedMaxSeconds("maestroCold"));
 		expect(cold).toBeGreaterThan(steady);
-		expect(steady).toBeGreaterThanOrEqual(120);
+		expect(steady).toBe(120);
 		expect(cold).toBeLessThan(STAGE_SECONDS.setup - 120);
 	});
 	it("orders the warm-up before the first evidence flow in the source", () => {
@@ -381,7 +384,10 @@ describe("staged proof source contract — mocks only, no mDNS/native/CI executi
 		const record = capDerivation("selector");
 		expect(record.operation).toBe("selector");
 		expect(record.observations.map((s) => s.run)).toContain(38847064654);
-		expect(record.maxObservedSeconds).toBeCloseTo(15.021, 3);
+		// The MAX is the censored 60s kill, not the 15s one: a killed child is a
+		// lower bound, and the derivation must clear the bound that censored it.
+		expect(record.maxObservedSeconds).toBeCloseTo(60.034, 3);
+		expect(record.restsOnCensoredSample).toBe(true);
 		expect(record.capSeconds).toBe(capFor("selector"));
 		expect(record.coldFloorSeconds).toBe(60);
 	});
@@ -572,6 +578,141 @@ describe("staged proof source contract — mocks only, no mDNS/native/CI executi
 			]);
 		},
 	);
+	it("isolates every git config source the child could inherit (R5-3)", () => {
+		// The proof host isolates the ambient git config so a runner's global
+		// config cannot change behaviour; assert the exact env contract rather
+		// than trusting it. The gitignored-artifact control (R5-1) lives in
+		// account-routing-bootstrap-test.py, where the fixture can carry the
+		// pinned checkout's real .gitignore bytes.
+		const probeRoot = mkdtempSync(join(tmpdir(), "host-env-"));
+		try {
+			const probe = new ProofHost(probeRoot, process.cwd(), 600, [], {
+				...hosted,
+			});
+			expect(probe.env.GIT_CONFIG_SYSTEM).toBe("/dev/null");
+			// R5-3: GIT_CONFIG_GLOBAL was missing, so a global `commit.gpgsign=true`
+			// or credential helper still reached the child (the F2 ambient class).
+			expect(probe.env.GIT_CONFIG_GLOBAL).toBe("/dev/null");
+			expect(probe.env.GIT_TERMINAL_PROMPT).toBe("0");
+			expect(probe.env.GIT_ASKPASS).toBe("/bin/false");
+		} finally {
+			rmSync(probeRoot, { recursive: true, force: true });
+		}
+	});
+	it("tolerates only the device-missing teardown shape, never a deadline (R5-4)", () => {
+		// The helper is on the real teardown path, so this control keeps it honest:
+		// simctl's own "already gone" wording is tolerated, a deadline is NOT, and
+		// an unrelated failure is not swept up in the tolerance.
+		expect(
+			tolerableTeardown(
+				new Error(
+					"shutdown-owned-simulator failed rc=149: Unable to find device",
+				),
+			),
+		).toBe(true);
+		expect(
+			tolerableTeardown(
+				new Error("delete-owned-simulator failed rc=149: Invalid device state"),
+			),
+		).toBe(true);
+		expect(
+			tolerableTeardown(
+				new Error(
+					"deadline exceeded (shutdown-owned-simulator, 60000ms, cap=60s)",
+				),
+			),
+		).toBe(false);
+		expect(tolerableTeardown(new Error("some unrelated rc=1 failure"))).toBe(
+			false,
+		);
+		expect(tolerableTeardown("not an error")).toBe(false);
+	});
+	it("reports the STAGE failure primary when cleanup also fails (R5-5)", async () => {
+		// The two-failure compose path: a prerequisite deadline AND a teardown
+		// failure. A reader must see the stage cause; cleanup is secondary. The
+		// reviewer's probe was this path's first execution, so it needs a control.
+		const operations = {
+			preflight: async () => {},
+			setupBase: async () => {
+				throw new Error(
+					"deadline exceeded (owned-boot-ready, 91663ms, cap=90s)",
+				);
+			},
+			produceCandidate: async () => {},
+			candidateFlows: async () => {},
+			cleanup: async () => {
+				throw new Error("cleanup failures: simulator-shutdown");
+			},
+		};
+		const failure = await runProof("setup", operations).catch(
+			(error: unknown) => error,
+		);
+		expect(failure).toBeInstanceOf(Error);
+		const message = (failure as Error).message;
+		expect(message).toContain("owned-boot-ready");
+		expect(message).toContain("(secondary)");
+		expect(message).toContain("simulator-shutdown");
+		// The stage cause must come FIRST: a reader skimming the message must not
+		// conclude the run failed on cleanup.
+		expect(message.indexOf("owned-boot-ready")).toBeLessThan(
+			message.indexOf("simulator-shutdown"),
+		);
+	});
+	it("binds every proof call site to a cap source, not a bare number (R5-2)", () => {
+		// The table-only control could not catch a NEW call site writing 55: the
+		// defect was in the call sites, not in the table. This reads the proof
+		// modules and asserts every `host.run(...)` cap argument is a named
+		// source — `capFor(...)`, a labelled budget, or a local `cap` variable.
+		const source = readFileSync(
+			new URL("./account-routing-ios-proof.ts", import.meta.url),
+			"utf8",
+		);
+		const literals: string[] = [];
+		const callPattern = /this\.host\.run\(/g;
+		for (const match of source.matchAll(callPattern)) {
+			const start = source.indexOf("(", match.index);
+			let depth = 0;
+			let end = start;
+			for (; end < source.length; end += 1) {
+				if (source[end] === "(") depth += 1;
+				else if (source[end] === ")") {
+					depth -= 1;
+					if (depth === 0) break;
+				}
+			}
+			const body = source.slice(start + 1, end);
+			// Top-level comma split, so a nested call's args do not confuse the index.
+			const parts: string[] = [];
+			let level = 0;
+			let current = "";
+			let quote: string | null = null;
+			for (const ch of body) {
+				if (quote) {
+					current += ch;
+					if (ch === quote) quote = null;
+					continue;
+				}
+				if (ch === '"' || ch === "'" || ch === "`") {
+					quote = ch;
+					current += ch;
+					continue;
+				}
+				if (ch === "(" || ch === "[" || ch === "{") level += 1;
+				else if (ch === ")" || ch === "]" || ch === "}") level -= 1;
+				if (ch === "," && level === 0) {
+					parts.push(current);
+					current = "";
+				} else current += ch;
+			}
+			parts.push(current);
+			const cap = (parts[3] ?? "").trim();
+			if (/^\d+$/.test(cap)) literals.push(cap);
+			// No 4th argument means the host's implicit default (60s) is the bound,
+			// which is exactly the invisible cap this guard exists to forbid.
+			if (cap === "") literals.push("<host default>");
+		}
+		expect(literals).toEqual([]);
+	});
 	it("drives public connection/consent and actual selected metadata IDs, not persisted-profile injection", () => {
 		const connect = JSON.stringify(
 			flow.connectSettings("/owned/connect-relay.yaml"),

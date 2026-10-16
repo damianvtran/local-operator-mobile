@@ -18,6 +18,7 @@ reintroduce the assumption being tested against.
 
 from __future__ import annotations
 
+import hashlib
 import importlib.util
 import os
 from pathlib import Path
@@ -54,9 +55,23 @@ def requirements_block(count: int) -> str:
     return f"dependencies = [\n{deps}\n]"
 
 
+# The pinned checkout's REAL .gitignore bytes (commit
+# c1b7083a5371d60aa4ad58dbb54fd30d1a25857c), embedded verbatim. A synthetic
+# checkout without them cannot exercise the cleanliness check honestly: the
+# production checkout ignores `*.egg-info/` and `build/`, so a plain
+# `git status --porcelain` is blind to exactly the artifacts the check exists
+# to catch. Reproducing the real bytes makes the control prove the shipped
+# behaviour rather than a fixture-only one (review R5-1).
+PINNED_GITIGNORE_SHA256 = (
+    "bb2a9f4e74c15072e59f7ac584b83caedb8ceede1afedf1000f16db227d2db5f"
+)
+PINNED_GITIGNORE = '# Ignore Python compiled files\n*.pyc\n__pycache__/\n.env\n# No trailing slash on purpose: `.venv/` matches only a directory, so a `.venv`\n# SYMLINK into a shared venv (how a throwaway worktree borrows one) slipped\n# past it and was committed by a `git add -A`. The slash-less spelling matches\n# a file, a symlink and a directory alike, so it is the one that covers this.\n.venv\n.DS_Store\ndist/\nnode_modules/\n# pnpm\'s content-addressable store. Normally it lives once under ~/Library or\n# ~/.local/share and never appears here — but pnpm hard-links from the store\n# into node_modules, and hard links cannot cross filesystems, so a checkout on\n# a DIFFERENT filesystem than the home store (a `git worktree add /tmp/...`,\n# which is how this repo is routinely worked) makes pnpm fall back to a local\n# store beside the package. That is 34 MB of regenerable cache that a\n# `git add -A` in such a worktree would otherwise commit.\n.pnpm-store/\nlocal-operator-extension.zip\n# google-github-actions/auth creates these only when credential-file export is\n# enabled; ignore them defensively so a local workflow experiment cannot commit\n# a short-lived credential alongside the extension artifact.\ngha-creds-*.json\n*.egg-info/\n.pytest_cache/\n.vscode/\n.coverage*\nhtmlcov/\nbuild/\n# pytest-textual-snapshot report artifact — regenerable, and it embeds the\n# environment (including secrets) in its HTML dump. Never commit it.\nsnapshot_report.html\n\n# `uv` resolution artifact. This project pins nothing through it: CI and the\n# documented install both run `pip install -e ".[dev]"` against pyproject, so a\n# committed lockfile is a second source of truth that nothing reads and no job\n# validates. It landed by accident in a TUI commit.\n#\n# EXCEPTION: an adapter distribution under `benchmarks/` IS a separately-locked\n# workspace — its `uv.lock` is the pinned dependency set the wheel and digests\n# are attested against, so those locks are committed deliberately.\nuv.lock\n!benchmarks/*/uv.lock\n\n# Throwaway validation aids: the tidy-tree prototype and the captured org-chart\n# screenshot matrix live here so the reviewer/designer can look at them, but\n# they are not shipped code — committing them would put the prototype (which is\n# deliberately not type-clean) under the pyright/black gate and re-bill the\n# SVGs as repo weight. The shipped code is the promoted `org_layout.py`.\nscratch/\n\n# The local measurement store for the `scripts/bench_*.py` harnesses: the\n# before/after JSON dumps and the tables built from them. It is regenerable\n# output, not source, so the evidence belongs on the PR that cites it and never\n# in the tree (`AGENTS.md`, "Evidence goes on the PR, never into the repository")\n# — committing it made every clone pay forever for numbers one PR cared about.\n# Ignored here so a re-run still has somewhere to write (`bench_info_snapshot.py`\n# creates the directory itself, because git does not materialise an ignored one);\n# the numbers that were committed are one `git show` away at `ba225070`, the\n# `main` this sweep branched from, where the whole store is still present.\nbench/\n\n# In-repo worktrees (one per parallel lane): untracked lane trees, never\n# part of the shipped package. Root-anchored (``/.worktrees/``): the lane\n# trees live at the repository root only, and an unanchored pattern would\n# demand a mirror rule in mobile/web/.gitignore (whose tree-mirror guard\n# requires it) for a rule that can never apply inside that subtree.\n/.worktrees/\n'
+
+
 def write_pinned_checkout(root: Path, version: str = "9.9.9", deps: int = 23, uv_lock: bool = False) -> Path:
     core = root / "core"
     (core / "local_operator" / "mobile").mkdir(parents=True)
+    (core / ".gitignore").write_text(PINNED_GITIGNORE)
     (core / "pyproject.toml").write_text(
         "[build-system]\n"
         'requires = ["setuptools>=61.0.0"]\n'
@@ -207,20 +222,38 @@ class BootstrapPortabilityControls(unittest.TestCase):
             self._build_requires(unreadable)
 
     def test_planted_stray_artifact_fails_the_cleanliness_assertion(self):
-        """R4-1: the pre-install check only covered `local_operator/`.
+        """R5-1: the gitignored build artifacts must actually be caught.
 
-        A build artifact landing anywhere else in the checkout must fail closed, so
-        the assertion reads whole-tree status rather than that one directory.
+        The fixture carries the pinned checkout's real .gitignore, so this proves
+        the SHIPPED behaviour: `*.egg-info/` and `build/` are ignored by that file,
+        and a plain `git status --porcelain` cannot see them. The assertion
+        therefore needs `--ignored=matching`, and this control fails if that flag
+        is ever dropped.
         """
         core = write_pinned_checkout(self.root / "stray")
         self.assertFalse(self._stray_artifacts(core))
-        # A real egg-info carries files; an EMPTY directory is invisible to
-        # `git status`, which is exactly how a bare mkdir would slip past.
+        # `--ignored=matching` reports an ignored path even when the directory is
+        # EMPTY — verified directly against git, which is stricter than plain
+        # porcelain and catches a bare `mkdir` too.
         stray = core / "local_operator.egg-info"
         stray.mkdir()
-        self.assertFalse(self._stray_artifacts(core))
+        self.assertTrue(self._stray_artifacts(core))
         (stray / "PKG-INFO").write_text("Name: local-operator\n")
         self.assertTrue(self._stray_artifacts(core))
+        # The backend's other artifact, and the one plain porcelain hides.
+        built = core / "build"
+        built.mkdir()
+        (built / "out.txt").write_text("backend output\n")
+        self.assertTrue(self._stray_artifacts(core))
+        # Proof this control is not vacuous: with the pre-R5-1 assertion (no
+        # --ignored=matching) the SAME tree reads clean, which is the defect.
+        plain = subprocess.check_output(
+            ["git", "-C", str(core), "status", "--porcelain"], text=True
+        ).strip()
+        self.assertEqual(plain, "")
+        # And the pinned bytes are the real ones, not a convenient stand-in.
+        digest = hashlib.sha256((core / ".gitignore").read_bytes()).hexdigest()
+        self.assertEqual(digest, PINNED_GITIGNORE_SHA256)
 
     def test_checkout_shape_guards_fail_before_any_facade_read(self):
         """Wrong dependency count or a uv.lock is refused without a real checkout."""
@@ -243,10 +276,23 @@ class BootstrapPortabilityControls(unittest.TestCase):
         return list(requires)
 
     def _stray_artifacts(self, core: Path) -> bool:
-        """Mirror the bootstrap's whole-checkout cleanliness assertion."""
+        """Mirror the bootstrap's whole-checkout cleanliness assertion.
+
+        ``--ignored=matching`` is part of the mirror, not an extra: without it
+        the assertion reads as passing while the gitignored build artifacts it
+        exists to catch are invisible (review R5-1).
+        """
         return bool(
             subprocess.check_output(
-                ["git", "-C", str(core), "status", "--porcelain"], text=True
+                [
+                    "git",
+                    "-C",
+                    str(core),
+                    "status",
+                    "--porcelain",
+                    "--ignored=matching",
+                ],
+                text=True,
             ).strip()
         )
 

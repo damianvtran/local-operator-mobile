@@ -43,7 +43,9 @@ import {
 	type ProofStage,
 	runProof,
 	STAGE_SECONDS,
+	STEADY_FLOW_CAP_SECONDS,
 	selectProof,
+	UNOBSERVED_BUDGET_SECONDS,
 } from "./account-routing-proof-contract.ts";
 import * as flows from "./account-routing-proof-flows.ts";
 import {
@@ -87,10 +89,9 @@ const DERIVED_OPS = [
 	"delete",
 	"install",
 	"boot",
-	"list",
+	"installedSimulators",
 	"create",
 	"maestroCold",
-	"maestroSteady",
 ] as const;
 const markers = [
 	REGION.settingsAccountRouting,
@@ -188,22 +189,26 @@ export class NativeProof {
 	}
 	async preflight() {
 		const head = (
-			await this.host.run("native-source", "git", ["rev-parse", "HEAD"])
+			await this.host.run(
+				"native-source",
+				"git",
+				["rev-parse", "HEAD"],
+				capFor("nativeSource"),
+			)
 		).trim();
 		if (head !== process.env.GITHUB_SHA)
 			throw new Error("checked-out candidate differs from workflow SHA");
-		await this.host.run("product-byte-freeze", "git", [
-			"diff",
-			"--exit-code",
-			PINS.product,
-			"HEAD",
-			"--",
-			...FROZEN_PATHS,
-		]);
+		await this.host.run(
+			"product-byte-freeze",
+			"git",
+			["diff", "--exit-code", PINS.product, "HEAD", "--", ...FROZEN_PATHS],
+			capFor("productByteFreeze"),
+		);
 		const baselineValidator = await this.host.run(
 			"baseline-route-validator",
 			"git",
 			["show", `${PINS.base}:src/connection/profile.ts`],
+			capFor("baselineRouteValidator"),
 		);
 		if (
 			hash(baselineValidator) !==
@@ -232,12 +237,12 @@ export class NativeProof {
 			);
 		}
 		const coreHead = (
-			await this.host.run("public-core-identity", "git", [
-				"-C",
-				this.core,
-				"rev-parse",
-				"HEAD",
-			])
+			await this.host.run(
+				"public-core-identity",
+				"git",
+				["-C", this.core, "rev-parse", "HEAD"],
+				capFor("publicCoreIdentity"),
+			)
 		).trim();
 		if (coreHead !== PINS.core) throw new Error("stale public Core checkout");
 		await this.host.run(
@@ -268,14 +273,14 @@ export class NativeProof {
 			"canonical-source-socket-doctor",
 			"node",
 			["tools/mock-relay/verify-account-routing.ts"],
-			55,
+			capFor("socketDoctor"),
 			fixtureEnv,
 		);
 		await this.host.run(
 			"archive-boundary-tests",
 			this.python,
 			["scripts/ci/account-routing-artifact-test.py"],
-			30,
+			capFor("artifactTests"),
 		);
 		this.receipt.artifact = assertArtifactMetadata(
 			await this.github(`actions/artifacts/${PINS.artifactId}`),
@@ -292,13 +297,18 @@ export class NativeProof {
 		assertArchiveDigest(readFileSync(zip));
 		const extraction = join(this.root, "base-extracted");
 		if (!existsSync(extraction)) {
-			const result = await this.host.run("base-safe-extraction", this.python, [
-				"scripts/ci/account-routing-artifact.py",
-				"extract",
-				zip,
-				extraction,
-				...markers,
-			]);
+			const result = await this.host.run(
+				"base-safe-extraction",
+				this.python,
+				[
+					"scripts/ci/account-routing-artifact.py",
+					"extract",
+					zip,
+					extraction,
+					...markers,
+				],
+				UNOBSERVED_BUDGET_SECONDS.baseExtraction,
+			);
 			writeFileSync(join(this.root, "base-bundle.json"), result);
 		}
 		const cachedBase: unknown = JSON.parse(
@@ -581,7 +591,7 @@ export class NativeProof {
 		// Cold vs steady: the FIRST Maestro call of a stage pays XCUITest driver
 		// bring-up, so it takes the cold cap; later flows stay on the steady one.
 		const cap = this.maestroWarm
-			? capFor("maestroSteady")
+			? STEADY_FLOW_CAP_SECONDS
 			: capFor("maestroCold");
 		this.maestroWarm = true;
 		await this.host.run(
@@ -609,7 +619,7 @@ export class NativeProof {
 			`hierarchy-${name}`,
 			"maestro",
 			["--device", this.udid, "hierarchy"],
-			30,
+			UNOBSERVED_BUDGET_SECONDS.hierarchy,
 		);
 		writeFileSync(join(this.root, "hierarchies", `${label}.txt`), hierarchy);
 		writeFileSync(
@@ -623,12 +633,12 @@ export class NativeProof {
 	}
 	private async inspectedApp(app: string, name: string) {
 		const value: unknown = JSON.parse(
-			await this.host.run(`inspect-${name}`, this.python, [
-				"scripts/ci/account-routing-artifact.py",
-				"inspect",
-				app,
-				...markers,
-			]),
+			await this.host.run(
+				`inspect-${name}`,
+				this.python,
+				["scripts/ci/account-routing-artifact.py", "inspect", app, ...markers],
+				capFor("inspectApp"),
+			),
 		);
 		if (!record(value)) throw new Error("invalid actual bundle identity");
 		const bundle = value as Bundle;
@@ -638,13 +648,12 @@ export class NativeProof {
 	private async installedMatches(bundle: Bundle, name: string) {
 		if (!this.udid) throw new Error("no owned simulator");
 		const path = (
-			await this.host.run(`installed-container-${name}`, "xcrun", [
-				"simctl",
-				"get_app_container",
-				this.udid,
-				bundle.bundleId,
-				"app",
-			])
+			await this.host.run(
+				`installed-container-${name}`,
+				"xcrun",
+				["simctl", "get_app_container", this.udid, bundle.bundleId, "app"],
+				capFor("installedContainer"),
+			)
 		).trim();
 		const installed = await this.inspectedApp(path, `installed-${name}`);
 		if (
@@ -656,10 +665,18 @@ export class NativeProof {
 	}
 	async setupBase() {
 		if (!this.baseline) throw new Error("artifact preflight absent");
-		const version = await this.host.run("maestro-version", "maestro", [
-			"--version",
-		]);
-		const help = await this.host.run("maestro-help", "maestro", ["--help"]);
+		const version = await this.host.run(
+			"maestro-version",
+			"maestro",
+			["--version"],
+			capFor("maestroVersion"),
+		);
+		const help = await this.host.run(
+			"maestro-help",
+			"maestro",
+			["--help"],
+			capFor("maestroHelp"),
+		);
 		assertMaestroHelp(version, help);
 		// The selector shells out to the FIRST `simctl` of this stage, which on a
 		// cold runner starts CoreSimulator and can take minutes.
@@ -672,13 +689,12 @@ export class NativeProof {
 		const selected = UDID_LINE.exec(selection)?.[1];
 		if (!selected) throw new Error("existing simulator selector gave no UDID");
 		const devices: unknown = JSON.parse(
-			await this.host.run("installed-simulators", "xcrun", [
-				"simctl",
-				"list",
-				"devices",
-				"available",
-				"--json",
-			]),
+			await this.host.run(
+				"installed-simulators",
+				"xcrun",
+				["simctl", "list", "devices", "available", "--json"],
+				capFor("installedSimulators"),
+			),
 		);
 		if (!record(devices) || !record(devices.devices))
 			throw new Error("installed runtime metadata unavailable");
@@ -785,7 +801,7 @@ export class NativeProof {
 			"candidate-ref-version",
 			"node",
 			["scripts/ci/version.ts", "--write"],
-			30,
+			UNOBSERVED_BUDGET_SECONDS.candidateRefVersion,
 			{
 				GITHUB_ENV: versionFile,
 				GITHUB_OUTPUT: join(this.root, "candidate-version-outputs"),
@@ -827,11 +843,12 @@ export class NativeProof {
 			["install", "--project-directory=ios"],
 			PRODUCER_BUDGET_SECONDS.podInstall,
 		);
-		const project = await this.host.run("existing-workspace-resolver", "node", [
-			"scripts/ci/ios-project.ts",
-			"--root",
-			"ios",
-		]);
+		const project = await this.host.run(
+			"existing-workspace-resolver",
+			"node",
+			["scripts/ci/ios-project.ts", "--root", "ios"],
+			UNOBSERVED_BUDGET_SECONDS.workspaceResolver,
+		);
 		const workspace = WORKSPACE_LINE.exec(project)?.[1];
 		const scheme = SCHEME_LINE.exec(project)?.[1];
 		if (!workspace || !scheme)
@@ -887,18 +904,24 @@ export class NativeProof {
 		)
 			throw new Error("ref version did not reach actual candidate Info.plist");
 		const infoJson = join(this.root, "candidate-info.json");
-		await this.host.run("candidate-actual-plist-json", "plutil", [
-			"-convert",
-			"json",
-			"-o",
-			infoJson,
-			join(this.candidate.app, "Info.plist"),
-		]);
-		await this.host.run("candidate-native-config", "node", [
-			"scripts/ci/native-config.ts",
-			"ios",
-			infoJson,
-		]);
+		await this.host.run(
+			"candidate-actual-plist-json",
+			"plutil",
+			[
+				"-convert",
+				"json",
+				"-o",
+				infoJson,
+				join(this.candidate.app, "Info.plist"),
+			],
+			UNOBSERVED_BUDGET_SECONDS.plistJson,
+		);
+		await this.host.run(
+			"candidate-native-config",
+			"node",
+			["scripts/ci/native-config.ts", "ios", infoJson],
+			UNOBSERVED_BUDGET_SECONDS.nativeConfig,
+		);
 		await this.host.run(
 			"candidate-prebuild-again",
 			"pnpm",
@@ -914,19 +937,24 @@ export class NativeProof {
 			PRODUCER_BUDGET_SECONDS.expoPrebuild,
 			versionEnv,
 		);
-		await this.host.run("candidate-determinism", "node", [
-			"scripts/ci/prebuild-determinism.ts",
-			"--built",
-			join(this.root, "ios-built"),
-			"--regenerated",
-			"ios",
-		]);
-		await this.host.run("install-candidate", "xcrun", [
-			"simctl",
-			"install",
-			this.udid,
-			this.candidate.app,
-		]);
+		await this.host.run(
+			"candidate-determinism",
+			"node",
+			[
+				"scripts/ci/prebuild-determinism.ts",
+				"--built",
+				join(this.root, "ios-built"),
+				"--regenerated",
+				"ios",
+			],
+			UNOBSERVED_BUDGET_SECONDS.determinism,
+		);
+		await this.host.run(
+			"install-candidate",
+			"xcrun",
+			["simctl", "install", this.udid, this.candidate.app],
+			UNOBSERVED_BUDGET_SECONDS.installCandidate,
+		);
 		await this.installedMatches(this.candidate, "Candidate");
 		this.receipt.candidate = this.candidate;
 		this.save();

@@ -194,6 +194,34 @@ def main() -> None:
         timeout=180,
         check=True,
     )
+    # BUILD FROM A PRISTINE COPY, NOT THE PINNED CHECKOUT.
+    #
+    # `pip install --no-deps --no-build-isolation <tree>` runs the setuptools
+    # backend with the source tree as its working directory, so it writes
+    # `build/` and `local_operator.egg-info/` INTO that tree — measured directly
+    # on this checkout: after the install both directories exist beside the
+    # source. The pinned checkout's own .gitignore lists `*.egg-info/` and
+    # `build/`, so a plain `git status --porcelain` reported NOTHING for exactly
+    # the artifacts the cleanliness check existed to catch (review R5-1); the
+    # check passed because git hid the pollution. Building in an isolated copy
+    # extracted from the pinned commit keeps the checkout genuinely untouched,
+    # and the assertion below is then a real one that can fail.
+    build_source = work / "core-build-source"
+    if build_source.exists():
+        raise ValueError("unreceipted build staging tree; no overwrite")
+    build_source.mkdir(parents=True)
+    archive = subprocess.check_output(
+        ["git", "-C", str(core), "archive", "--format=tar", CORE],
+        env=safe,
+        timeout=180,
+    )
+    subprocess.run(
+        ["tar", "-x", "-C", str(build_source)],
+        input=archive,
+        env=safe,
+        timeout=180,
+        check=True,
+    )
     subprocess.run(
         [
             str(executable),
@@ -203,17 +231,24 @@ def main() -> None:
             "--no-deps",
             "--no-build-isolation",
             "--disable-pip-version-check",
-            str(core),
+            str(build_source),
         ],
         env=safe,
         timeout=300,
         check=True,
     )
-    # The checkout must be untouched ANYWHERE after the build: an egg-info or
-    # build/ directory written by the backend is an install-time artifact, and the
-    # earlier check only covered `local_operator/` (R4-1).
+    # The pinned checkout must be untouched ANYWHERE after the build: an egg-info
+    # or build/ directory is an install-time artifact, and the earlier check only
+    # covered `local_operator/` (R4-1).
+    #
+    # `--ignored=matching` is REQUIRED, not belt-and-braces: the pinned checkout's
+    # .gitignore lists `*.egg-info/`, `build/` and `dist/`, so a plain
+    # `status --porcelain` reports NOTHING for exactly the artifacts this check
+    # exists to catch, and reports them only once it is asked about ignored paths.
     stray = subprocess.check_output(
-        ["git", "-C", str(core), "status", "--porcelain"], env=safe, text=True
+        ["git", "-C", str(core), "status", "--porcelain", "--ignored=matching"],
+        env=safe,
+        text=True,
     ).strip()
     if stray:
         raise ValueError(

@@ -38,33 +38,133 @@ export const STAGE_SECONDS: Record<ProofStage, number> = {
  * moves. Milliseconds, as observed and reported by the proof host.
  */
 export const OPERATION_OBSERVATIONS = {
+	// Every value below is a REAL elapsed from a real hosted run's commands.json,
+	// read directly from the downloaded artifacts (runs 38840447956 preflight,
+	// 38842647133, 38844597781, 38845929163, 38847064654). The F6 table this
+	// replaces contained values that were never measured — `maestroSteady` 42/46s
+	// and `list` 400ms have no artifact behind them at all, and `coreDoctor` named
+	// an operation no call site bound. Fabricated samples are worse than missing
+	// ones: the derivation would rest on them.
+	//
+	// `censored: true` marks a sample that was KILLED by the cap in force, not a
+	// completed run. Its elapsed is a LOWER BOUND on the operation's true cost —
+	// the child was cut off, so it needed at least this long. Treating such a
+	// sample as a measurement is how a cap gets sized to the thing that killed it.
+	nativeSource: [
+		{ run: 38847064654, ms: 26 },
+		{ run: 38845929163, ms: 19 },
+		{ run: 38844597781, ms: 61 },
+		{ run: 38842647133, ms: 32 },
+		{ run: 38840447956, ms: 95 },
+	],
+	productByteFreeze: [
+		{ run: 38847064654, ms: 17 },
+		{ run: 38845929163, ms: 18 },
+		{ run: 38844597781, ms: 54 },
+		{ run: 38842647133, ms: 73 },
+		{ run: 38840447956, ms: 37 },
+	],
+	baselineRouteValidator: [
+		{ run: 38847064654, ms: 18 },
+		{ run: 38845929163, ms: 33 },
+		{ run: 38844597781, ms: 47 },
+		{ run: 38842647133, ms: 35 },
+		{ run: 38840447956, ms: 36 },
+	],
+	publicCoreClone: [{ run: 38840447956, ms: 1777 }],
+	publicCorePin: [{ run: 38840447956, ms: 7475 }],
+	publicCoreIdentity: [
+		{ run: 38847064654, ms: 25 },
+		{ run: 38845929163, ms: 8 },
+		{ run: 38844597781, ms: 41 },
+		{ run: 38842647133, ms: 15 },
+		{ run: 38840447956, ms: 19 },
+	],
+	// The bootstrap's first run resolves the pinned checkout's metadata from the
+	// index; the spread (0.5s warm-receipt to 22.8s cold) is the whole point of
+	// keeping samples rather than one number.
+	coreBaseBootstrap: [
+		{ run: 38847064654, ms: 524 },
+		{ run: 38845929163, ms: 505 },
+		{ run: 38844597781, ms: 1827 },
+		{ run: 38842647133, ms: 846 },
+		{ run: 38840447956, ms: 22771 },
+	],
+	// 4.5-19.1s across four completed runs. A 55s literal used to bind this site.
+	socketDoctor: [
+		{ run: 38847064654, ms: 11243 },
+		{ run: 38845929163, ms: 14076 },
+		{ run: 38844597781, ms: 19106 },
+		{ run: 38842647133, ms: 14673 },
+	],
+	artifactTests: [
+		{ run: 38847064654, ms: 93 },
+		{ run: 38845929163, ms: 98 },
+		{ run: 38844597781, ms: 112 },
+		{ run: 38842647133, ms: 115 },
+	],
+	inspectApp: [
+		{ run: 38847064654, ms: 116 },
+		{ run: 38845929163, ms: 146 },
+		{ run: 38844597781, ms: 217 },
+		{ run: 38842647133, ms: 204 },
+		{ run: 38844597781, ms: 858 },
+	],
+	maestroVersion: [
+		{ run: 38847064654, ms: 3566 },
+		{ run: 38845929163, ms: 3999 },
+		{ run: 38844597781, ms: 4749 },
+		{ run: 38842647133, ms: 5550 },
+	],
+	maestroHelp: [
+		{ run: 38847064654, ms: 3360 },
+		{ run: 38845929163, ms: 2612 },
+		{ run: 38844597781, ms: 3420 },
+		{ run: 38842647133, ms: 4470 },
+	],
+	// The two `censored` samples are the ones that matter: this operation was
+	// killed at a 60s cap (F3) and again at a 15s cap (F6). 60.034s is therefore a
+	// LOWER bound on its true cold cost, and the derived cap must clear it — which
+	// is why a flat 60s cold floor would have repeated the F3 failure.
 	selector: [
 		{ run: 38845929163, ms: 6107 },
 		{ run: 38844597781, ms: 7267 },
-		{ run: 38847064654, ms: 15021 },
+		{ run: 38847064654, ms: 15019, censored: true },
+		{ run: 38842647133, ms: 60034, censored: true },
 	],
+	installedSimulators: [
+		{ run: 38845929163, ms: 354 },
+		{ run: 38844597781, ms: 261 },
+	],
+	create: [
+		{ run: 38845929163, ms: 344 },
+		{ run: 38844597781, ms: 296 },
+	],
+	boot: [
+		{ run: 38845929163, ms: 2832 },
+		{ run: 38844597781, ms: 2419 },
+	],
+	// 91.7s and 92.6s, both completed with rc0: this is a genuine measurement, not
+	// the censored kill that run 38845929163 also recorded for it.
 	bootReady: [
 		{ run: 38844597781, ms: 92562 },
 		{ run: 38845929163, ms: 91663 },
 	],
-	shutdown: [{ run: 38845929163, ms: 23349 }],
-	delete: [{ run: 38845929163, ms: 22002 }],
 	install: [{ run: 38844597781, ms: 24619 }],
-	boot: [
-		{ run: 38844597781, ms: 2400 },
-		{ run: 38845929163, ms: 2832 },
+	// Killed at the 120s steady cap: a lower bound on the cold driver bring-up.
+	maestroCold: [{ run: 38844597781, ms: 121921, censored: true }],
+	// F5 capped teardown at 20s and both were killed there; the 14985/454 samples
+	// are completed runs under a larger cap.
+	shutdown: [
+		{ run: 38844597781, ms: 14985 },
+		{ run: 38845929163, ms: 23349, censored: true },
 	],
-	list: [{ run: 38845929163, ms: 400 }],
-	create: [{ run: 38845929163, ms: 300 }],
-	maestroCold: [{ run: 38844597781, ms: 123170 }],
-	maestroSteady: [
-		{ run: 38844597781, ms: 42000 },
-		{ run: 38844597781, ms: 46000 },
+	delete: [
+		{ run: 38844597781, ms: 454 },
+		{ run: 38845929163, ms: 22002, censored: true },
 	],
-	coreDoctor: [{ run: 38845929163, ms: 14100 }],
-	coreBootstrap: [{ run: 38845929163, ms: 500 }],
-	maestroVersion: [{ run: 38845929163, ms: 4000 }],
-	maestroHelp: [{ run: 38845929163, ms: 2600 }],
+	installedContainer: [{ run: 38844597781, ms: 6590 }],
+	inspectInstalled: [{ run: 38844597781, ms: 858 }],
 } as const;
 
 /** Heavy PRODUCER steps that have never run in a recorded setup/preflight run, so
@@ -83,6 +183,32 @@ export const PRODUCER_BUDGET_SECONDS = {
 	// metadata from the index; the ONE recorded preflight saw 0.5s because the
 	// receipt was warm, which is a cache hit rather than the operation's cost.
 	coreBootstrapInstall: 300,
+} as const;
+
+/** Operations with NO observation in any recorded run: they have never been
+ * reached by a hosted run, so there is nothing to derive from and inventing a
+ * sample would fabricate the table's own input. They keep an explicitly labelled
+ * conservative budget, and move into OPERATION_OBSERVATIONS the moment a real run
+ * measures them. */
+export const UNOBSERVED_BUDGET_SECONDS = {
+	// One `maestro ... hierarchy` driver touch; steady driver commands are
+	// sub-5s, so this is a conservative bound, not a measurement.
+	hierarchy: 60,
+	// `node scripts/ci/version.ts --write`; a sub-second node step in practice.
+	candidateRefVersion: 60,
+	// Archive extraction is a python zip walk over a ~100MB bundle.
+	baseExtraction: 120,
+	// `node scripts/ci/ios-project.ts` — resolves the workspace/scheme.
+	workspaceResolver: 60,
+	// `plutil -convert json` on a built Info.plist.
+	plistJson: 60,
+	// `node scripts/ci/native-config.ts ios <info.json>`.
+	nativeConfig: 60,
+	// `node scripts/ci/prebuild-determinism.ts` over two prebuild trees.
+	determinism: 180,
+	// `simctl install` of the produced candidate — the same operation as
+	// `install-exact-base` (24.6s measured), but on the candidate build.
+	installCandidate: 120,
 } as const;
 
 export type BoundedOperation = keyof typeof OPERATION_OBSERVATIONS;
@@ -108,26 +234,51 @@ export const COLD_OPERATIONS: Partial<Record<BoundedOperation, number>> = {
 export const OPERATION_MINIMUM_SECONDS: Partial<
 	Record<BoundedOperation, number>
 > = {
-	list: 30,
 	create: 30,
-	coreBootstrap: 240,
-	coreDoctor: 120,
 	maestroVersion: 60,
 	maestroHelp: 60,
-	// The steady value is the flow CONTRACT, not an observation: evidence flows are
-	// budgeted at 120s once warm, so the derived cap is floored there and a couple
-	// of fast samples cannot derive a budget below what a flow is allowed.
-	maestroSteady: 120,
+	// Sub-second operations whose measured spread is tiny but whose REMOTE cousins
+	// (a cold node start, a cold git) are not: a floor stops a fast sample from
+	// deriving a bound a normal slow run immediately breaks.
+	nativeSource: 60,
+	productByteFreeze: 60,
+	baselineRouteValidator: 60,
+	publicCoreIdentity: 60,
 };
+
+/** The steady per-flow budget, as a CONTRACT rather than an observation.
+ *
+ * An evidence flow is allowed 120s once the driver is warm. No artifact sample
+ * exists for a warm flow — the only steady flow ever attempted (run 38844597781,
+ * 121.9s) was the COLD one and was killed by this very budget — so deriving it
+ * from data would mean inventing a sample. It is a labelled policy value, and the
+ * cold cap is required to exceed it so a cold cost cannot hide behind it. */
+export const STEADY_FLOW_CAP_SECONDS = 120;
 
 /** Headroom over the largest observation. 1.5x, not 1.05x: a cap is a bound on
  * the NEXT run, and the next run is drawn from the same heavy-tailed cost the
  * samples came from. */
 export const OBSERVED_HEADROOM = 1.5;
 
-/** The largest observation recorded for an operation, in seconds. */
+/** The largest observation recorded for an operation, in seconds.
+ *
+ * Censored samples (killed by the cap in force) are INCLUDED: they are lower
+ * bounds on the true cost, so a cap derived from them is a lower bound too, which
+ * is exactly the property that makes the bound safe against the failure that
+ * censored it.
+ */
 export function observedMaxSeconds(operation: BoundedOperation) {
 	return Math.max(...OPERATION_OBSERVATIONS[operation].map((s) => s.ms)) / 1000;
+}
+
+/** True when the sample that decides the cap was itself killed by a cap, i.e. the
+ * derived bound rests on a lower bound rather than a completed measurement. */
+export function capRestsOnCensoredSample(operation: BoundedOperation) {
+	const max = observedMaxSeconds(operation);
+	return OPERATION_OBSERVATIONS[operation].some(
+		(sample) =>
+			(sample as { censored?: boolean }).censored && sample.ms / 1000 === max,
+	);
 }
 
 /** A cap DERIVED from the samples: above every observation, above the cold floor
@@ -165,6 +316,9 @@ export function capDerivation(operation: BoundedOperation) {
 		operation,
 		observations: OPERATION_OBSERVATIONS[operation],
 		maxObservedSeconds: observedMaxSeconds(operation),
+		// A cap whose deciding sample was killed by a previous cap is a bound on a
+		// bound; the receipt says so rather than implying a completed measurement.
+		restsOnCensoredSample: capRestsOnCensoredSample(operation),
 		headroom: OBSERVED_HEADROOM,
 		coldFloorSeconds: COLD_OPERATIONS[operation] ?? null,
 		minimumSeconds: OPERATION_MINIMUM_SECONDS[operation] ?? null,

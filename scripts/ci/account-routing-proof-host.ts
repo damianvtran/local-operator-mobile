@@ -122,7 +122,12 @@ export class ProofHost {
 				env.COREPACK_HOME ?? join(env.HOME ?? "", ".cache/node/corepack"),
 			COREPACK_ENABLE_NETWORK: "0",
 			PNPM_CONFIG_VERIFY_DEPS_BEFORE_RUN: "error",
+			// All THREE git config sources are blanked, not just the system one:
+			// a runner with a global `commit.gpgsign=true` (or a credential helper)
+			// makes `git` fail rc=128 or reach for the keychain, which is the same
+			// ambient-config class as the F2 portability failure.
 			GIT_CONFIG_SYSTEM: "/dev/null",
+			GIT_CONFIG_GLOBAL: "/dev/null",
 			GIT_TERMINAL_PROMPT: "0",
 			GIT_ASKPASS: "/bin/false",
 			PYTHONDONTWRITEBYTECODE: "1",

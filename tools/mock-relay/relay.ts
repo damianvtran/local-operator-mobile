@@ -3033,7 +3033,8 @@ export function createRelay(options: RelayOptions = {}) {
 	/* ------------------------------------------------------------ the server -- */
 
 	const server = createServer(async (req, res) => {
-		if (policyFixture) res.once("finish", () => policyFixture.observeWire(req, res.statusCode));
+		if (policyFixture)
+			res.once("finish", () => policyFixture.observeWire(req, res.statusCode));
 		if (policyFixture && !policyFixture.acceptHost(req)) {
 			return sendJson(res, 403, { error: "fixture hostname boundary refused" });
 		}
