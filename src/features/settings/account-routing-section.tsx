@@ -118,7 +118,7 @@ const AccountRoutingEditor = ({ client }: { client: RelayEndpoints }) => {
 					) : null}
 					<Button
 						testID={CONTROL.settingsAccountRoutingRetry}
-						label={copy("mobile.account_routing.retry")}
+						label={copy("mobile.account_routing.reload")}
 						variant="outline"
 						size="sm"
 						onPress={() => void editor.reload()}

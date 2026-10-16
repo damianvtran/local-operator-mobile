@@ -13,8 +13,10 @@ const componentSource = readFileSync(
 );
 const COMMENTS = /\/\*[\s\S]*?\*\/|\/\/[^\n]*/g;
 const RAW_TEXT = /<Text\b[^>]*>\s*\p{L}[^<{]*<\/Text>/u;
+const RAW_TEXT_EXPRESSION =
+	/<Text\b[^>]*>\s*\{\s*(?:"[^"]*"|'[^']*'|`[^`$]*`)\s*\}\s*<\/Text>/;
 const LITERAL_LABEL =
-	/\b(?:label|accessibilityLabel|accessibilityHint|placeholder|title)\s*=\s*(?:"[^"]+"|'[^']+'|\{\s*["'][^"']+["']\s*\})/;
+	/\b(?:label|accessibilityLabel|accessibilityHint|placeholder|title)\s*=\s*(?:"[^"]+"|'[^']+'|\{\s*(?:["'][^"']+["']|`[^`$]*`)\s*\})/;
 const SOURCE_KEY = /["'](mobile\.account_routing\.[a-z_]+)["']/g;
 const SEGMENT = /<Segmented\b([\s\S]*?)\/>/g;
 const BUTTON = /<Button\b([\s\S]*?)\/>/g;
@@ -26,10 +28,13 @@ const CONTROL_ID = /\btestID\s*=\s*\{CONTROL\.([a-zA-Z0-9_]+)\}/;
  * native accessibility audit. Strip comments, bind the finite known keys and
  * actual primitive call sites, then prove each guard with source mutations.
  * TypeScript7 exposes no JS compiler AST; do not add another parser/runtime
- * dependency merely to scan this one small component. */
+ * dependency merely to scan this one small component. Direct quoted/plain
+ * template JSX expressions are covered; arbitrary computed concatenations are
+ * not claimed to be a complete language-level extraction/audit. */
 function assertFeatureCopy(input: string) {
 	const source = input.replace(COMMENTS, "");
-	if (RAW_TEXT.test(source)) throw new Error("raw JSX copy");
+	if (RAW_TEXT.test(source) || RAW_TEXT_EXPRESSION.test(source))
+		throw new Error("raw JSX copy");
 	if (LITERAL_LABEL.test(source)) throw new Error("literal accessible copy");
 	const seen = new Set(
 		[...source.matchAll(SOURCE_KEY)].map((match) => {
@@ -61,7 +66,7 @@ function assertFeatureCopy(input: string) {
 describe("finite account-routing English SOURCE seam", () => {
 	it("owns explicit keys/context without claiming core descriptors or translated eligibility", () => {
 		expect(ACCOUNT_ROUTING_SOURCE_LOCALE).toBe("en");
-		expect(Object.keys(ACCOUNT_ROUTING_COPY)).toHaveLength(13);
+		expect(Object.keys(ACCOUNT_ROUTING_COPY)).toHaveLength(14);
 		for (const [key, message] of Object.entries(ACCOUNT_ROUTING_COPY)) {
 			expect(key.startsWith("mobile.account_routing.")).toBe(true);
 			expect(message.source.trim().length).toBeGreaterThan(0);
@@ -106,6 +111,32 @@ describe("finite account-routing English SOURCE seam", () => {
 				),
 		],
 		[
+			"quoted JSX expression",
+			(source: string) =>
+				source.replace(
+					'{copy("mobile.account_routing.loading")}',
+					'{"Untracked status"}',
+				),
+		],
+		[
+			"plain template JSX expression",
+			(source: string) =>
+				source.replace(
+					'{copy("mobile.account_routing.loading")}',
+					"{`Untracked status`}",
+				),
+		],
+		[
+			"quoted accessible expression",
+			(source: string) =>
+				source.replace("label={row.label}", 'label={"Policy"}'),
+		],
+		[
+			"plain template accessible expression",
+			(source: string) =>
+				source.replace("label={row.label}", "label={`Policy`}"),
+		],
+		[
 			"literal accessible label",
 			(source: string) => source.replace("label={row.label}", 'label="Policy"'),
 		],
@@ -122,5 +153,21 @@ describe("finite account-routing English SOURCE seam", () => {
 		const changed = mutate(componentSource);
 		expect(changed).not.toBe(componentSource);
 		expect(() => assertFeatureCopy(changed)).toThrow();
+	});
+	it("names uncertain-save GET recovery separately from a failed initial read", () => {
+		const rowBoundary = componentSource.indexOf(
+			"const row = read.payload.setting",
+		);
+		expect(rowBoundary).toBeGreaterThan(0);
+		const readFailure = componentSource.slice(0, rowBoundary);
+		const saveFailure = componentSource.slice(
+			componentSource.indexOf('save === "error" || save === "rejected"'),
+		);
+		expect(readFailure).toContain('copy("mobile.account_routing.retry")');
+		expect(readFailure).not.toContain('copy("mobile.account_routing.reload")');
+		expect(saveFailure).toContain('copy("mobile.account_routing.reload")');
+		expect(accountRoutingCopy("mobile.account_routing.reload")).toBe(
+			"Reload policy",
+		);
 	});
 });

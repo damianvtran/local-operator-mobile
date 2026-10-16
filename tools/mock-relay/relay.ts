@@ -356,8 +356,13 @@ export interface RecordedRequest {
 	[key: string]: Json | undefined;
 }
 
+const ACCOUNT_POLICY_ROUTE = /^\/api\/settings\/account-routing$/;
+
 /** Everything `createRelay` accepts. */
 export interface RelayOptions {
+	/** Optional pinned-core, private policy adapter. Existing mock defaults stay
+	 * unchanged; fixture mode requires a per-run host/cookie namespace. */
+	accountRouting?: import("./account-routing.ts").CanonicalPolicyFixture;
 	fixturesDir?: string;
 	password?: string;
 	maxBodyBytes?: number;
@@ -595,6 +600,11 @@ export function createRelay(options: RelayOptions = {}) {
 	>();
 	let pushDeviceSeq = 0;
 	const password = options.password ?? DEFAULT_PASSWORD;
+	const policyFixture = options.accountRouting;
+	const cookieName = policyFixture?.cookieName ?? COOKIE_NAME;
+	// Bind synthetic sessions to this run/computer even when the login password
+	// is shared by the fixture cohort. Never trust a production-name cookie here.
+	const sessionKey = policyFixture?.sessionKey(password) ?? password;
 	/**
 	 * The bare relay has NO body ceiling: the 10 MiB cap belongs to the gateway and
 	 * the edge (`docs/relay/tunnel-edge.md`), and the real relay answers an 11 MiB
@@ -1879,8 +1889,10 @@ export function createRelay(options: RelayOptions = {}) {
 
 		// 3. The auth gate, with the relay's audience split.
 		if (!publicRoute) {
-			const cookie = readCookie(req.headers.cookie, COOKIE_NAME);
-			const authenticated = verifyCookie(cookie, password);
+			const cookie = readCookie(req.headers.cookie, cookieName);
+			const authenticated =
+				verifyCookie(cookie, sessionKey) &&
+				(!policyFixture || policyFixture.cookieUnambiguous(req.headers.cookie));
 			const verdict = authVerdict(pathname, { authenticated });
 			if (verdict.kind !== "allow") {
 				return verdict.json !== undefined
@@ -1922,6 +1934,15 @@ export function createRelay(options: RelayOptions = {}) {
 			}
 		}
 
+		if (pathname === "/api/settings/account-routing" && policyFixture) {
+			const reply = await policyFixture.respond(method, body);
+			if (reply.drop) return res.destroy();
+			res.writeHead(reply.status, {
+				"content-type": "application/json; charset=utf-8",
+			});
+			return res.end(JSON.stringify(reply.body));
+		}
+
 		/* ------------------------------------------------------------- public -- */
 
 		if (pathname === "/healthz") {
@@ -1934,8 +1955,12 @@ export function createRelay(options: RelayOptions = {}) {
 
 		if (pathname === "/login") {
 			if (method === "GET") {
-				const cookie = readCookie(req.headers.cookie, COOKIE_NAME);
-				if (verifyCookie(cookie, password)) {
+				const cookie = readCookie(req.headers.cookie, cookieName);
+				if (
+					verifyCookie(cookie, sessionKey) &&
+					(!policyFixture ||
+						policyFixture.cookieUnambiguous(req.headers.cookie))
+				) {
 					res.writeHead(303, { location: "/" });
 					return res.end();
 				}
@@ -1962,13 +1987,16 @@ export function createRelay(options: RelayOptions = {}) {
 				sendFixture(res, "login-wrong-password");
 				return;
 			}
-			const { value } = issueCookie(password);
+			const { value } = issueCookie(sessionKey);
 			// `Secure` only when the request arrived over TLS: a plain-loopback
 			// first run must still be able to set the cookie.
 			const overTls = req.headers["x-forwarded-proto"] === "https";
 			res.writeHead(303, {
 				location: "/",
-				"set-cookie": setCookieHeader(value, { secure: overTls }),
+				"set-cookie": setCookieHeader(value, { secure: overTls }).replace(
+					`${COOKIE_NAME}=`,
+					`${cookieName}=`,
+				),
 			});
 			return res.end();
 		}
@@ -1988,8 +2016,10 @@ export function createRelay(options: RelayOptions = {}) {
 			// cookie unambiguous.
 			res.writeHead(303, {
 				location: "/login",
-				"set-cookie": `${COOKIE_NAME}=""; Max-Age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT; Path=/; SameSite=lax`,
-				"clear-site-data": '"storage"',
+				"set-cookie": `${cookieName}=""; Max-Age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT; Path=/; SameSite=lax`,
+				// A shared-profile fixture may expire ONLY its own host-only cookie;
+				// it must not clear browser storage/cookies for the operator.
+				...(policyFixture ? {} : { "clear-site-data": '"storage"' }),
 			});
 			return res.end();
 		}
@@ -2003,8 +2033,11 @@ export function createRelay(options: RelayOptions = {}) {
 		}
 
 		if (pathname === "/") {
-			const cookie = readCookie(req.headers.cookie, COOKIE_NAME);
-			if (!verifyCookie(cookie, password)) {
+			const cookie = readCookie(req.headers.cookie, cookieName);
+			if (
+				!verifyCookie(cookie, sessionKey) ||
+				(policyFixture && !policyFixture.cookieUnambiguous(req.headers.cookie))
+			) {
 				res.writeHead(303, { location: "/login" });
 				return res.end();
 			}
@@ -2910,6 +2943,14 @@ export function createRelay(options: RelayOptions = {}) {
 	 * mishandled a method mistmatch could not be caught here.
 	 */
 	const ALLOWED_METHODS: Array<{ match: RegExp; methods: string[] }> = [
+		...(policyFixture
+			? [
+					{
+						match: ACCOUNT_POLICY_ROUTE,
+						methods: ["GET", "PATCH"],
+					},
+				]
+			: []),
 		// Session sub-routes first: `/command` is a POST-only path, so a GET on it
 		// is a 405 and not the generic 404 a coarser table produced.
 		{ match: /^\/api\/sessions\/[^/]+\/command$/, methods: ["POST"] },
@@ -2992,6 +3033,9 @@ export function createRelay(options: RelayOptions = {}) {
 	/* ------------------------------------------------------------ the server -- */
 
 	const server = createServer(async (req, res) => {
+		if (policyFixture && !policyFixture.acceptHost(req)) {
+			return sendJson(res, 403, { error: "fixture hostname boundary refused" });
+		}
 		if (!(req.url ?? "/").startsWith("/__mock")) state.requestsServed += 1;
 		const url = new URL(
 			req.url ?? "/",
@@ -3308,6 +3352,8 @@ export function createRelay(options: RelayOptions = {}) {
 		handler: server,
 		/** Listen on `host:port` (port 0 picks a free one) and resolve the handle. */
 		async listen({ host = "127.0.0.1", port = 0 } = {}) {
+			if (policyFixture && !["127.0.0.1", "::1", "localhost"].includes(host))
+				throw new Error("canonical policy fixture must bind loopback only");
 			/* Browsers talk to this server directly (the web target and both harnesses),
 			 * and they reuse an idle socket on their own schedule — minutes for Chrome —
 			 * while Node drops one after `keepAliveTimeout` (5 s by default). In the
@@ -3336,9 +3382,10 @@ export function createRelay(options: RelayOptions = {}) {
 			// Loopback aliases are included because the mock binds loopback only, and
 			// a foreign (non-loopback) origin still has no way in.
 			const ownHosts = new Set(
-				[host, "127.0.0.1", "localhost"].filter(
-					(candidate) => candidate !== "0.0.0.0" && candidate !== "::",
-				),
+				(policyFixture
+					? [policyFixture.hostname]
+					: [host, "127.0.0.1", "localhost"]
+				).filter((candidate) => candidate !== "0.0.0.0" && candidate !== "::"),
 			);
 			state.allowedOrigins = [
 				...(state.allowedOrigins ?? []),
@@ -3360,11 +3407,15 @@ export function createRelay(options: RelayOptions = {}) {
 				connections: () => server.closeAllConnections?.(),
 			});
 			log(
-				`mock-relay listening http://${host}:${actual}` +
+				`mock-relay listening http://${policyFixture?.hostname ?? host}:${actual}` +
 					` scenario=${state.scenario} faults=${summariseFaults(state.faults)}` +
 					` fixtures=${fixturesDir}`,
 			);
-			return { host, port: actual, url: `http://${host}:${actual}` };
+			return {
+				host,
+				port: actual,
+				url: `http://${policyFixture?.hostname ?? host}:${actual}`,
+			};
 		},
 	};
 }

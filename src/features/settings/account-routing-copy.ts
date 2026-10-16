@@ -62,6 +62,12 @@ export const ACCOUNT_ROUTING_COPY = {
 			"Retry a failed read; not a blind automatic retry of an uncertain save.",
 		role: "button",
 	},
+	"mobile.account_routing.reload": {
+		source: "Reload policy",
+		context:
+			"After an uncertain or rejected save: GET the computer's committed policy and replace the draft; never repeat the write blindly.",
+		role: "button",
+	},
 	"mobile.account_routing.unavailable": {
 		source:
 			"Account routing settings are unavailable on this relay. Update Local Operator on this computer.",
