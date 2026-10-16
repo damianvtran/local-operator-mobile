@@ -776,7 +776,15 @@ export class NativeProof {
 		await this.flow(
 			"base-real-form",
 			flows.connectSettings(
-				join(this.cwd, "e2e/maestro/helpers/connect-relay.yaml"),
+				// The PROOF-OWNED iOS variant, not the base helper: the base
+				// helper's `hideKeyboard` steps are Android-only and Maestro 2.11.0
+				// rejects them on iOS (run 38854849272 walked the real path, then
+				// failed there). Same ids, waits, opt-in and Connected verdict; the
+				// base asset is untouched so the Android lane keeps what it verifies.
+				join(
+					this.cwd,
+					"e2e/maestro/account-routing-proof/connect-relay-ios.yaml",
+				),
 			),
 		);
 		const wire = this.slot("a").fixture.wireTrace.slice(before);
@@ -985,7 +993,15 @@ export class NativeProof {
 		await this.flow(
 			"candidate-real-form",
 			flows.connectSettings(
-				join(this.cwd, "e2e/maestro/helpers/connect-relay.yaml"),
+				// The PROOF-OWNED iOS variant, not the base helper: the base
+				// helper's `hideKeyboard` steps are Android-only and Maestro 2.11.0
+				// rejects them on iOS (run 38854849272 walked the real path, then
+				// failed there). Same ids, waits, opt-in and Connected verdict; the
+				// base asset is untouched so the Android lane keeps what it verifies.
+				join(
+					this.cwd,
+					"e2e/maestro/account-routing-proof/connect-relay-ios.yaml",
+				),
 			),
 		);
 		const projection = await a.fixture.respond("GET", undefined);

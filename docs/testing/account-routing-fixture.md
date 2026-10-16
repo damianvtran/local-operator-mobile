@@ -168,3 +168,33 @@ The consequence for anyone reading a red run: **a `deadline exceeded` on a cold
 operation is a sizing bug to fix, not a flake to retry.** Re-running it spends
 hosted minutes to rediscover the same under-sized bound. Add the observed value
 to the table, let the derivation move the cap, and only then dispatch again.
+
+## Why the proof owns an iOS connect sequence
+
+The proof does **not** `runFlow` the base helper `e2e/maestro/helpers/connect-relay.yaml`.
+It generates and uses its own `e2e/maestro/account-routing-proof/connect-relay-ios.yaml`,
+which mirrors the base steps id-for-id but replaces each `hideKeyboard` with a tap
+on static, non-interactive text (the screen's own `"Your own tunnel"` title).
+
+The reason is a **base-repo iOS portability gap in a shared asset**, found by this
+lane rather than caused by it. The base helper (commit `193d79b`, PR #86) is
+consumed by eight base Android flows (`flows/02..09`), and the base repository runs
+Maestro on **Android only** — its iOS e2e job is explicitly deferred for cost. So the
+helper's two `hideKeyboard` steps had never run on iOS, where Maestro 2.11.0 does not
+support them. Run 38854849272 walked the real own-tunnel path correctly (welcome
+screen, custom-url tap, own-tunnel screen, URL input all COMPLETED) and then failed
+at `Hide Keyboard`, with Maestro's own message recommending a tap on a
+non-interactive element instead.
+
+Editing the base helper from here was rejected deliberately: it would change the
+asset the Android lane verifies, with a fix nothing on this machine can re-verify on
+Android. Everything real is preserved instead — same ids, same waits, same opt-in,
+both `Connected` verdict gates, and the flow still performs its own `clearState`
+launch and its own assertions. A control asserts the id sets match exactly, that the
+generated sequence contains no `hideKeyboard` step, and that the proof's call sites
+use this file rather than the base helper.
+
+**Upstream candidate, recorded deliberately:** once the base iOS e2e lane runs again
+and can re-verify on Android, the tap-on-static-text form should be folded back into
+`helpers/connect-relay.yaml` and this proof-owned file removed. It is a real base
+finding, not a duplicate we intend to keep.

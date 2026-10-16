@@ -409,14 +409,79 @@ describe("staged proof source contract — mocks only, no mDNS/native/CI executi
 		// cannot bound the next run.
 		expect(record.spread?.ratio).toBeGreaterThan(5);
 	});
+	it("keeps the proof's iOS connect sequence free of iOS-unsupported steps (R9)", () => {
+		// The base helper `e2e/maestro/helpers/connect-relay.yaml` is Android-only
+		// (its eight consuming flows run on the Android lane; base iOS e2e is
+		// deferred), so its `hideKeyboard` steps were never exercised on iOS, where
+		// Maestro 2.11.0 rejects them (run 38854849272). The proof owns an iOS
+		// variant instead; this control keeps it a faithful mirror minus that step.
+		const base = readFileSync(
+			new URL("../../e2e/maestro/helpers/connect-relay.yaml", import.meta.url),
+			"utf8",
+		);
+		const ios = readFileSync(
+			new URL(
+				"../../e2e/maestro/account-routing-proof/connect-relay-ios.yaml",
+				import.meta.url,
+			),
+			"utf8",
+		);
+		const ids = (text: string) =>
+			[...text.matchAll(/id:\s*"([^"]+)"/g)].map((m) => m[1]).sort();
+		// Every base id, nothing dropped and nothing invented.
+		expect(ids(ios)).toEqual(ids(base));
+		// No iOS-unsupported step. Asserted on STEP lines, not on prose: a comment
+		// may legitimately name `hideKeyboard` while explaining why it is absent.
+		const stepLines = (text: string) =>
+			text
+				.split("\n")
+				.map((line) => line.trim())
+				.filter((line) => line.startsWith("- "))
+				.map((line) => line.replace(/^- /, "").split(":")[0]);
+		expect(stepLines(base)).toContain("hideKeyboard");
+		expect(stepLines(ios)).not.toContain("hideKeyboard");
+		// The substitution is a tap on STATIC, non-interactive text, which is what
+		// Maestro's own iOS failure message recommends.
+		expect(ios).toContain('text: "Your own tunnel"');
+		// Both real `Connected` verdict gates survive: the flow still proves the
+		// real own-tunnel handshake instead of being weakened to pass.
+		expect([...ios.matchAll(/text: "Connected"/g)].length).toBe(2);
+		// And the proof's call sites actually use this file, not the base helper.
+		const proofSource = readFileSync(
+			new URL("./account-routing-ios-proof.ts", import.meta.url),
+			"utf8",
+		);
+		expect(proofSource).toContain(
+			"e2e/maestro/account-routing-proof/connect-relay-ios.yaml",
+		);
+		expect(proofSource).not.toContain(
+			'"e2e/maestro/helpers/connect-relay.yaml"',
+		);
+		// The BASE asset must be left exactly as the Android lane verifies it: its
+		// opening wait is still the base 15000ms, because the proof no longer depends
+		// on it. Editing it would change an asset only Android can re-check (R9's own
+		// constraint), and R8's cold-budget edit to it was superseded by this file.
+		const baseWaits = [...base.matchAll(/timeout:\s*(\d+)/g)].map((m) =>
+			Number(m[1]),
+		);
+		expect(baseWaits[0]).toBe(15000);
+		expect(baseWaits.every((value) => value === 15000)).toBe(true);
+	});
 	it("gives the first post-clearState wait a cold budget, later waits steady (R8)", () => {
 		// Run 38853165349's first evidence flow FAILED `id: welcome-screen is
 		// visible` on a flat 15000ms steady wait, while the rendered frame shows the
 		// app HAD drawn the Welcome screen after a clearState launch. The budget, not
 		// the app, was the defect. This control holds the helper's opening wait and
 		// the proof's derivation together so they cannot drift.
+		// The helper the proof ACTUALLY runs: its own iOS variant. R8 originally
+		// edited the base helper; R9 replaced that dependency, so the cold wait now
+		// lives in the proof-owned file and the base asset is left untouched (a
+		// control asserts that too, below).
 		const helper = readFileSync(
-			new URL("../../e2e/maestro/helpers/connect-relay.yaml", import.meta.url),
+			new URL(
+				"../../e2e/maestro/account-routing-proof/connect-relay-ios.yaml",
+				import.meta.url,
+			),
 			"utf8",
 		);
 		const waits = [...helper.matchAll(/timeout:\s*(\d+)/g)].map((m) =>
