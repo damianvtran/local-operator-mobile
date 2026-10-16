@@ -15,10 +15,40 @@ export type RunRecord = {
 	clampedByStageBudget?: boolean;
 };
 
+/** Last non-empty line of already-redacted child output, for the failure
+ * message. `simctl` reports an already-shutdown device on stderr, so a teardown
+ * tolerance needs the text without the caller reading a whole log. */
+function lastLine(output: string) {
+	const lines = output
+		.trimEnd()
+		.split("\n")
+		.filter((line) => line.trim());
+	return lines.at(-1)?.trim().slice(0, 300) ?? "no output";
+}
+
 /** A killed child has no exit code; naming the deadline (and what it had emitted)
  * is what keeps a slow cold start from reading as a tool failure. */
 export function timedOutMessage(name: string, elapsedMs: number, cap: number) {
 	return `deadline exceeded (${name}, ${elapsedMs}ms, cap=${cap}s)`;
+}
+
+/** Teardown that has nothing left to do is a SUCCESS, not a failure.
+ *
+ * `simctl shutdown` on an already-shutdown device and `simctl delete` on a
+ * device already removed both exit non-zero with a specific message. Treating
+ * those as cleanup failures would mark an otherwise clean run unreaped, so they
+ * are matched on the DEVICE-MISSING shape specifically — not a blanket "any
+ * error in teardown is fine", which would hide a genuinely stuck simulator.
+ */
+const TEARDOWN_NOTHING_TO_DO =
+	/Unable to find device|Invalid device(?: state)?|in current state:\s*shutdown|already (?:shut ?down|deleted)|is not (?:booted|shut ?down)/i;
+
+export function tolerableTeardown(error: unknown) {
+	if (!(error instanceof Error)) return false;
+	// Deployment-time wording lives in the child's flushed output, which the
+	// timeout/exit paths both surface; a deadline is never tolerated.
+	if (error.message.includes("deadline exceeded")) return false;
+	return TEARDOWN_NOTHING_TO_DO.test(error.message);
 }
 
 /** All real execution is behind the dedicated-host fence. Unit tests inject
@@ -285,7 +315,7 @@ export class ProofHost {
 			this.records.push({ name, command, rc, elapsedMs: Date.now() - started });
 			if (rc !== 0)
 				throw new Error(
-					`${name} failed rc=${rc}; see credential-free owned command log`,
+					`${name} failed rc=${rc}: ${lastLine(operation.output())}; see credential-free owned command log`,
 				);
 			return operation.output();
 		} finally {

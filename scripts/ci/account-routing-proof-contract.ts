@@ -45,6 +45,40 @@ export const COLD_MAESTRO_CAP_SECONDS = 300;
 
 /** Steady-state cap for an evidence flow once the driver is warm. */
 export const STEADY_MAESTRO_CAP_SECONDS = 120;
+
+/** Every bounded cap must sit ABOVE the observed cost of the operation it bounds.
+ *
+ * Measured on real hosted runs and recorded here as the justification, so a cap
+ * is never chosen below a measurement and then reported as a policy failure:
+ * run 38844597781 (setup, passed) and run 38845929163 (setup, killed by the 90s
+ * cap this table replaced). A cold simulator's first boot is the classic
+ * offender — ~92s of it is data migration, not the app's work.
+ *
+ * `simctl shutdown`/`delete` are also not 20s operations on a cold runner: the
+ * killed run measured 23.3s and 22.0s. They get their own entries rather than
+ * borrowing the simulator cap, because they are different operations with
+ * different observed costs.
+ */
+export const MEASURED_OPERATION_SECONDS = {
+	bootReady: 92.6,
+	shutdown: 23.3,
+	delete: 22.0,
+	install: 24.6,
+	selector: 7.3,
+	boot: 2.8,
+	list: 0.4,
+	create: 0.3,
+} as const;
+
+/** Headroom above a measured cost: covers run-to-run variance on a shared runner
+ * without turning the bound into no bound at all. */
+export const OBSERVED_HEADROOM = 2;
+
+/** A cap sized FROM its measurement: strictly greater than what the operation has
+ * actually cost, never below it. */
+export function capFor(operation: keyof typeof MEASURED_OPERATION_SECONDS) {
+	return Math.ceil(MEASURED_OPERATION_SECONDS[operation] * OBSERVED_HEADROOM);
+}
 const SHA = /^[a-f0-9]{40}$/;
 const HASH = /^[a-f0-9]{64}$/;
 const UDID = /^[a-fA-F0-9-]{36}$/;
@@ -282,14 +316,46 @@ export type ProofOperations = {
 	cleanup(): Promise<void>;
 };
 export async function runProof(stage: ProofStage, operations: ProofOperations) {
+	let stageFailure: unknown;
+	let stageDone = false;
 	try {
 		await operations.preflight();
-		if (stage === "preflight") return;
-		await operations.setupBase();
-		if (stage === "setup") return;
-		await operations.produceCandidate();
-		await operations.candidateFlows();
-	} finally {
-		await operations.cleanup();
+		if (stage === "preflight") stageDone = true;
+		else {
+			await operations.setupBase();
+			if (stage === "setup") stageDone = true;
+			else {
+				await operations.produceCandidate();
+				await operations.candidateFlows();
+				stageDone = true;
+			}
+		}
+	} catch (error) {
+		// Held, not swallowed: cleanup may itself fail, and the STAGE failure must
+		// stay the primary one reported to a reader (CI 38845929163 reported
+		// teardown while the real cause was a prerequisite deadline).
+		stageFailure = error;
 	}
+	// Cleanup runs OUTSIDE `finally`: throwing from a finally block discards the
+	// original completion (biome noUnsafeFinally), which is the very masking this
+	// change exists to prevent. Composing here keeps both failures intact.
+	let cleanupFailure: unknown;
+	try {
+		await operations.cleanup();
+	} catch (error) {
+		cleanupFailure = error;
+	}
+	if (stageFailure) {
+		const primary =
+			stageFailure instanceof Error
+				? stageFailure.message
+				: "targeted proof failed";
+		const secondary =
+			cleanupFailure instanceof Error ? cleanupFailure.message : cleanupFailure;
+		throw new Error(
+			cleanupFailure ? `${primary} (secondary) ${secondary}` : primary,
+		);
+	}
+	if (cleanupFailure) throw cleanupFailure;
+	if (!stageDone) throw new Error("targeted proof did not complete its stage");
 }

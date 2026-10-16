@@ -16,6 +16,8 @@ import {
 	assertProofCI,
 	COLD_MAESTRO_CAP_SECONDS,
 	COLD_SIMULATOR_CAP_SECONDS,
+	capFor,
+	MEASURED_OPERATION_SECONDS,
 	mdnsCommand,
 	PINS,
 	PROOF_MODE,
@@ -26,7 +28,11 @@ import {
 	selectProof,
 } from "./account-routing-proof-contract.ts";
 import * as flow from "./account-routing-proof-flows.ts";
-import { ProofHost, timedOutMessage } from "./account-routing-proof-host.ts";
+import {
+	ProofHost,
+	timedOutMessage,
+	tolerableTeardown,
+} from "./account-routing-proof-host.ts";
 
 const MANUAL = "workflow_" + "dispatch";
 const NONCE = "0123456789abcdef0123456789abcdef";
@@ -328,6 +334,114 @@ describe("staged proof source contract — mocks only, no mDNS/native/CI executi
 		expect(warm).toBeGreaterThan(-1);
 		expect(firstFlow).toBeGreaterThan(-1);
 		expect(warm).toBeLessThan(firstFlow);
+	});
+	it("sizes every measured cap ABOVE the cost it was measured at", () => {
+		// The F5 regression was a cap chosen BELOW its own measurement: boot-ready
+		// was 90s against a 91.7-92.6s observed cold boot, so a healthy run was
+		// killed and reported as a policy failure. This holds the rule the manager
+		// stated -- a cap must exceed the measurement it bounds -- for every entry.
+		for (const [operation, measured] of Object.entries(
+			MEASURED_OPERATION_SECONDS,
+		)) {
+			const cap = capFor(operation as keyof typeof MEASURED_OPERATION_SECONDS);
+			expect({ operation, cap, measured }).toMatchObject({
+				operation,
+				cap: expect.any(Number),
+				measured,
+			});
+			expect(cap).toBeGreaterThan(measured);
+		}
+		// The two that actually regressed, with their real recorded numbers.
+		expect(capFor("bootReady")).toBeGreaterThan(91.7);
+		expect(capFor("shutdown")).toBeGreaterThan(23.3);
+		expect(capFor("delete")).toBeGreaterThan(22.0);
+	});
+	it("tolerates an already-gone device but never a deadline", () => {
+		// Teardown with nothing left to do is a success; a stuck simulator is not.
+		expect(
+			tolerableTeardown(
+				new Error(
+					"delete-owned-simulator failed rc=164: Unable to find device",
+				),
+			),
+		).toBe(true);
+		expect(
+			tolerableTeardown(
+				new Error(
+					"shutdown-owned-simulator failed rc=149: Invalid device state",
+				),
+			),
+		).toBe(true);
+		// The exact wording `simctl shutdown`/`delete` emit for a device that is
+		// already in the requested state, which the tolerance must accept.
+		expect(
+			tolerableTeardown(
+				new Error(
+					"shutdown-owned-simulator failed rc=149: An error was encountered processing the command (domain=com.apple.CoreSimulator.SimError, code=405): Unable to shutdown device in current state: shutdown",
+				),
+			),
+		).toBe(true);
+		for (const message of [
+			"deadline exceeded (shutdown-owned-simulator, 60000ms, cap=47s)",
+			"delete-owned-simulator failed rc=1: something else went wrong",
+			"not an error",
+		])
+			expect(
+				tolerableTeardown(
+					message === "not an error" ? "x" : new Error(message),
+				),
+			).toBe(false);
+	});
+	it("reports the STAGE failure as primary when cleanup also fails", async () => {
+		// CI 38845929163 recorded `owned cleanup failed: simulator-shutdown,
+		// simulator-delete` while the real cause was the boot-ready deadline, so a
+		// reader could conclude the run failed on teardown.
+		const order = [
+			"preflight",
+			"setupBase",
+			"produceCandidate",
+			"candidateFlows",
+		] as const;
+		const operations = {
+			preflight: async () => {},
+			setupBase: async () => {
+				throw new Error(
+					"deadline exceeded (owned-boot-ready, 91663ms, cap=186s)",
+				);
+			},
+			produceCandidate: async () => {},
+			candidateFlows: async () => {},
+			cleanup: async () => {
+				throw new Error(
+					"cleanup failures: simulator-shutdown,simulator-delete",
+				);
+			},
+		};
+		const failure = await runProof("setup", operations).catch(
+			(error: unknown) => error,
+		);
+		expect(String(failure)).toContain("owned-boot-ready");
+		expect(String(failure)).toContain("(secondary)");
+		expect(String(failure).indexOf("owned-boot-ready")).toBeLessThan(
+			String(failure).indexOf("cleanup failures"),
+		);
+		expect(order.length).toBe(4);
+	});
+	it("still reports a lone cleanup failure when the stage itself succeeded", async () => {
+		const operations = {
+			preflight: async () => {},
+			setupBase: async () => {},
+			produceCandidate: async () => {},
+			candidateFlows: async () => {},
+			cleanup: async () => {
+				throw new Error("cleanup failures: simulator-delete");
+			},
+		};
+		const failure = await runProof("setup", operations).catch(
+			(error: unknown) => error,
+		);
+		expect(String(failure)).toContain("cleanup failures");
+		expect(String(failure)).not.toContain("(secondary)");
 	});
 	it("gives every stage room for a cold simulator on its own clock", () => {
 		// Each stage is its own workflow step (own `timeout-minutes`), so a stage

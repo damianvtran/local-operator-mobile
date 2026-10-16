@@ -34,6 +34,7 @@ import {
 	assertProofCI,
 	COLD_MAESTRO_CAP_SECONDS,
 	COLD_SIMULATOR_CAP_SECONDS,
+	capFor,
 	FROZEN_PATHS,
 	hierarchyFacts,
 	mdnsCommand,
@@ -45,7 +46,11 @@ import {
 	selectProof,
 } from "./account-routing-proof-contract.ts";
 import * as flows from "./account-routing-proof-flows.ts";
-import { type Lease, ProofHost } from "./account-routing-proof-host.ts";
+import {
+	type Lease,
+	ProofHost,
+	tolerableTeardown,
+} from "./account-routing-proof-host.ts";
 
 type Bundle = {
 	app: string;
@@ -647,7 +652,7 @@ export class NativeProof {
 			"existing-simulator-selector",
 			"node",
 			["scripts/ci/ios-simulator.ts", "--prefer", "iPhone 17"],
-			COLD_SIMULATOR_CAP_SECONDS,
+			capFor("selector"),
 		);
 		const selected = UDID_LINE.exec(selection)?.[1];
 		if (!selected) throw new Error("existing simulator selector gave no UDID");
@@ -685,7 +690,7 @@ export class NativeProof {
 					"create-owned-simulator",
 					"xcrun",
 					["simctl", "create", `LOH12-${randomUUID()}`, deviceType, runtime],
-					COLD_SIMULATOR_CAP_SECONDS,
+					capFor("create"),
 				)
 			).trim(),
 		);
@@ -699,19 +704,21 @@ export class NativeProof {
 			"boot-owned-simulator",
 			"xcrun",
 			["simctl", "boot", this.udid],
-			COLD_SIMULATOR_CAP_SECONDS,
+			capFor("boot"),
 		);
 		await this.host.run(
 			"owned-boot-ready",
 			"xcrun",
 			["simctl", "bootstatus", this.udid, "-b"],
-			90,
+			// Measured 92.6s / 91.7s across two real runs; the old 90 was BELOW
+			// the distribution and killed a healthy cold boot (CI 38845929163).
+			capFor("bootReady"),
 		);
 		await this.host.run(
 			"install-exact-base",
 			"xcrun",
 			["simctl", "install", this.udid, this.baseline.app],
-			COLD_SIMULATOR_CAP_SECONDS,
+			capFor("install"),
 		);
 		await this.installedMatches(this.baseline, "Base");
 		await this.warmDriver();
@@ -1113,25 +1120,24 @@ export class NativeProof {
 			}
 		}
 		if (this.udid) {
-			try {
-				await this.host.run(
+			// Measured 23.3s / 22.0s: both were capped at 20s, i.e. below their
+			// own observation. An already-shutdown or already-gone device is a
+			// tolerable success, not a deadline (verified against stderr, never
+			// by matching the process's exit text alone).
+			for (const [name, args, operation] of [
+				[
 					"shutdown-owned-simulator",
-					"xcrun",
 					["simctl", "shutdown", this.udid],
-					20,
-				);
-			} catch {
-				failures.push("simulator-shutdown");
-			}
-			try {
-				await this.host.run(
-					"delete-owned-simulator",
-					"xcrun",
-					["simctl", "delete", this.udid],
-					20,
-				);
-			} catch {
-				failures.push("simulator-delete");
+					"shutdown",
+				],
+				["delete-owned-simulator", ["simctl", "delete", this.udid], "delete"],
+			] as const) {
+				try {
+					await this.host.run(name, "xcrun", [...args], capFor(operation));
+				} catch (error) {
+					if (tolerableTeardown(error)) continue;
+					failures.push(`simulator-${operation}`);
+				}
 			}
 		}
 		try {
@@ -1145,8 +1151,11 @@ export class NativeProof {
 		};
 		this.receipt.completedAt = new Date().toISOString();
 		this.save();
+		// Structured detail lives in receipt.cleanup; runProof composes the
+		// reader-facing message so a STAGE failure stays primary (CI 38845929163
+		// reported teardown while the real cause was a prerequisite deadline).
 		if (failures.length)
-			throw new Error(`owned cleanup failed: ${failures.join(",")}`);
+			throw new Error(`cleanup failures: ${failures.join(",")}`);
 	}
 }
 
