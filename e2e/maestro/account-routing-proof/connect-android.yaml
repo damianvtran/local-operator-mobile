@@ -74,6 +74,17 @@ name: "Account routing policy on Android"
       selected: true
     timeout: 15000
 # Unsaved draft state: the section names it before a save is attempted.
+#
+# SCROLLED IN, deliberately: this status line sits BELOW the fold at the device
+# size the lane runs at — the frame captured a step earlier shows the form cut off
+# before it would paint — so a bare `assertVisible` failed against correct app
+# behaviour (run 38925920010, seq 37). Every neighbouring step already scrolls to
+# its target first; this one had diverged.
+- scrollUntilVisible:
+    element:
+      text: "Not saved yet."
+    direction: DOWN
+    timeout: 15000
 - assertVisible:
     text: "Not saved yet."
 - takeScreenshot: "12-01-account-routing-draft"
@@ -99,6 +110,16 @@ name: "Account routing policy on Android"
 - takeScreenshot: "12-02-account-routing-saved"
 # Switch to the OTHER non-default choice and save again: a second write proves the
 # control is not a one-shot, and the readback still gates the confirmation.
+#
+# RE-SCROLLED, not assumed: the save above can change the section's height (the
+# unsaved line is replaced by the saved one), so the segmented row's offset is not
+# the same as when `headroom` was tapped. A bare tap would depend on where the
+# previous step happened to leave the viewport.
+- scrollUntilVisible:
+    element:
+      id: "settings-account-routing-group:fair"
+    direction: DOWN
+    timeout: 15000
 - tapOn:
     id: "settings-account-routing-group:fair"
 - extendedWaitUntil:

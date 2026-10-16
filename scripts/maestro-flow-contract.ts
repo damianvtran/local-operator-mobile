@@ -480,6 +480,76 @@ export function checkEmulatorGate(workflow: string) {
  * re-running (the sibling's own comment says why: the gate is what turns "device
  * offline" into a bounded, loud wait), and it must not invent a `--retry` flag.
  */
+/**
+ * The proof flow must not `assertVisible`/`tapOn` a TEXT target without scrolling it
+ * into view first — unless it is an element the previous step already brought into
+ * view on the same screen.
+ *
+ * WHY: at the lane's device size the settings form is taller than the viewport, and
+ * `text:` targets sit below the fold. The neighbouring steps already scroll to their
+ * target; one diverged, and a bare assertion then failed against CORRECT app
+ * behaviour (run 38925920010, seq 37: `Assertion is false: "Not saved yet." is
+ * visible`). Same shape as the continuation bug: the surrounding pattern was right
+ * and a single step did not follow it, so the check is a test rather than a note.
+ *
+ * The allow-list holds the two cases that are genuinely in view by construction:
+ * `settings-button` is on the home screen the flow just asserted, and the three
+ * segmented choice targets share the ONE row that the flow scrolls to before
+ * selecting. Anything else must carry its own preceding scroll.
+ */
+const IN_VIEW_AFTER_REACHING: ReadonlySet<string> = new Set([
+	// The home screen was asserted immediately before this is tapped.
+	"settings-button",
+	// The segmented row itself, reached once by the flow before the first choice.
+	"settings-account-routing-group:headroom",
+]);
+
+export function checkProofFlowScrollsTextTargets(text: string) {
+	const documents = parseFlow(text);
+	assert.equal(
+		documents.length,
+		2,
+		"a flow needs a header and a commands document",
+	);
+	const steps = documents[1];
+	assert(Array.isArray(steps), "the commands document must be a sequence");
+	let lastScroll: string | null = null;
+	let screenShots = 0;
+	for (const [index, raw] of steps.entries()) {
+		const step = mapping(raw);
+		if (step.scrollUntilVisible !== undefined) {
+			const element = mapping(mapping(step.scrollUntilVisible).element);
+			lastScroll = String(element.text ?? element.id ?? "");
+			continue;
+		}
+		if (step.takeScreenshot !== undefined) {
+			screenShots += 1;
+			lastScroll = null;
+			continue;
+		}
+		if (step.runFlow !== undefined) {
+			lastScroll = null;
+			continue;
+		}
+		for (const kind of ["assertVisible", "tapOn"] as const) {
+			if (step[kind] === undefined) continue;
+			const target = mapping(step[kind]);
+			const text = target.text;
+			if (typeof text !== "string") continue;
+			const inView = IN_VIEW_AFTER_REACHING.has(text);
+			assert.ok(
+				inView || lastScroll === text,
+				`step ${index}: ${kind} text ${JSON.stringify(text)} must be scrolled into view first (or be an element already in view)`,
+			);
+			if (lastScroll === text) lastScroll = null;
+		}
+	}
+	assert.ok(
+		screenShots >= 3,
+		"the flow must still capture its rendered states",
+	);
+}
+
 export function checkProofFlowRetry(workflow: string) {
 	const lines = emulatorScriptLinesFor(
 		"account-routing-android-proof",
@@ -590,6 +660,32 @@ export function checkEmulatorScriptContinuations(workflow: string) {
 }
 
 export const maestroChecks: [string, () => void][] = [
+	[
+		"the Android proof scrolls every below-the-fold text target into view",
+		() => {
+			const flowPath = join(
+				workspace,
+				"account-routing-proof/connect-android.yaml",
+			);
+			const text = readFileSync(flowPath, "utf8");
+			checkProofFlowScrollsTextTargets(text);
+			// Discriminating: dropping the scroll the saved round-trip needs must fail,
+			// so the check cannot pass by finding no text targets at all.
+			const withoutScroll = text.replace(
+				`- scrollUntilVisible:\n    element:\n      text: "Not saved yet."\n    direction: DOWN\n    timeout: 15000\n`,
+				"",
+			);
+			assert.notEqual(
+				withoutScroll,
+				text,
+				"the probe must actually change the flow",
+			);
+			assert.throws(
+				() => checkProofFlowScrollsTextTargets(withoutScroll),
+				/must be scrolled into view first/,
+			);
+		},
+	],
 	[
 		"the Android proof carries exactly one re-gated flow retry (ADR 0004)",
 		() => {
