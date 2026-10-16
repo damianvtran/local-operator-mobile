@@ -467,6 +467,72 @@ export function checkEmulatorGate(workflow: string) {
 }
 
 /**
+ * The account-routing Android proof must carry EXACTLY ONE re-gated retry of its
+ * flow — the sibling `maestro-android` job's documented practice (ADR 0004), copied
+ * deliberately rather than dropped in the copy.
+ *
+ * WHY: Maestro 2.11.0's CLI has no retry option (`--retry` fails at argument
+ * parsing), and the documented device-offline flake
+ * (`DeviceServerDiedException: Device server died during 'deviceInfo'`) killed this
+ * lane's FIRST flow step before any assertion (run 38922359159) — so it produced no
+ * flow evidence. The sibling lane tolerates that flake with a retry; a copy without
+ * one fails outright on the same flake. The retry must RE-GATE the emulator before
+ * re-running (the sibling's own comment says why: the gate is what turns "device
+ * offline" into a bounded, loud wait), and it must not invent a `--retry` flag.
+ */
+export function checkProofFlowRetry(workflow: string) {
+	const lines = emulatorScriptLinesFor(
+		"account-routing-android-proof",
+		workflow,
+	);
+	const retries = lines.filter((line) => /run_flows \|\|/.test(line));
+	assert.equal(retries.length, 1, "exactly one re-gated flow retry");
+	const retry = retries[0] as string;
+	assert.match(
+		retry,
+		/run_flows \|\| \{[^}]*await-emulator-ready\.sh && run_flows; \}$/,
+		"the retry must re-gate the emulator before re-running the flow",
+	);
+	assert.match(
+		retry,
+		/::warning/,
+		"a flaked run must be reported as a warning",
+	);
+	assert.doesNotMatch(
+		workflow,
+		/maestro[^\n]*--retry/,
+		"Maestro 2.11.0 has no --retry flag; the retry is the script's own",
+	);
+}
+
+/** The `script:` lines of the emulator step inside ONE named job. */
+function emulatorScriptLinesFor(job: string, workflow: string): string[] {
+	const jobsSection = workflow.split("\njobs:\n")[1];
+	assert.ok(jobsSection, "workflow must declare jobs");
+	// A job header is EXACTLY two spaces + name + colon at the line start; `\n  `
+	// alone also matches the four-space body indent and would cut the body off at
+	// its first nested line.
+	const header = new RegExp(`\n  ${job}:\\n`);
+	const at = jobsSection.search(header);
+	assert.ok(at >= 0, `${job} must exist`);
+	const rest = jobsSection.slice(at + 1);
+	const others = [...rest.matchAll(/\n {2}[A-Za-z0-9_-]+:\s*\n/g)]
+		.map((m) => m.index)
+		.filter((index) => index > 0);
+	const end = others.length > 0 ? Math.min(...others) : rest.length;
+	const jobBody = rest.slice(0, end);
+	const lines = jobBody.split("\n");
+	const start = lines.findIndex((line) => /^ {10}script: \|\s*$/.test(line));
+	assert.ok(start >= 0, `${job} must carry an emulator script: block`);
+	const block: string[] = [];
+	for (const line of lines.slice(start + 1)) {
+		if (line.trim() !== "" && !line.startsWith(" ".repeat(12))) break;
+		block.push(line.trim());
+	}
+	return block.filter((line) => line !== "" && !line.startsWith("#"));
+}
+
+/**
  * EVERY `android-emulator-runner` `script:` block in the workflow must keep each
  * command on ONE line.
  *
@@ -524,6 +590,26 @@ export function checkEmulatorScriptContinuations(workflow: string) {
 }
 
 export const maestroChecks: [string, () => void][] = [
+	[
+		"the Android proof carries exactly one re-gated flow retry (ADR 0004)",
+		() => {
+			const workflow = readFileSync(
+				join(root, ".github/workflows/e2e.yml"),
+				"utf8",
+			);
+			checkProofFlowRetry(workflow);
+			// Discriminating: dropping the retry must fail, so the check cannot pass
+			// by finding nothing to inspect.
+			const withoutRetry = workflow
+				.split("\n")
+				.filter((line) => !/run_flows \|\|/.test(line))
+				.join("\n");
+			assert.throws(
+				() => checkProofFlowRetry(withoutRetry),
+				/exactly one re-gated flow retry/,
+			);
+		},
+	],
 	[
 		"every emulator script block keeps each command on one line",
 		() => {

@@ -1309,7 +1309,21 @@ jobs:
             # exist: .../\`). This is the same reason `maestro-android` above keeps
             # its own invocation on one line; scripts/maestro-flow-contract.ts pins
             # the rule for the copied job and a control below now pins it for this one.
-            maestro test --config e2e/maestro/config.yaml -e APP_ID="$APP_ID" -e RELAY_URL="$RELAY_URL_FOR_DEVICE" -e RELAY_PASSWORD="$(cat "$RUNNER_TEMP/relay-password")" --test-output-dir "$RUNNER_TEMP/maestro-screenshots" e2e/maestro/account-routing-proof/connect-android.yaml
+            # ONE RETRY, AND ONLY FOR THE FLOW (ADR 0004), mirroring the sibling
+            # `maestro-android` job exactly. Maestro 2.11.0's CLI has no retry option
+            # (`--retry` fails at argument parsing), so the run re-runs itself once and
+            # raises a `::warning` when it flaked: a flake stays visible as a flake, and
+            # a second failure is a failure — the line's exit code is the verdict.
+            #
+            # WHY THIS IS NOT OPTIONAL HERE: the documented device-offline flake
+            # (`DeviceServerDiedException: Device server died during 'deviceInfo'`,
+            # run 38922359159) killed the FIRST flow step before any assertion, so the
+            # lane produced no flow evidence at all. The sibling lane tolerates it with
+            # this retry; a copy without it fails outright on the same flake.
+            #
+            # STILL ONE LINE: the action runs `script:` one command per line, so the
+            # `{ …; }` group must not be split across lines either.
+            run_flows() { maestro test --config e2e/maestro/config.yaml -e APP_ID="$APP_ID" -e RELAY_URL="$RELAY_URL_FOR_DEVICE" -e RELAY_PASSWORD="$(cat "$RUNNER_TEMP/relay-password")" --test-output-dir "$RUNNER_TEMP/maestro-screenshots" e2e/maestro/account-routing-proof/connect-android.yaml; }; run_flows || { echo "::warning title=Maestro flaked once::the account-routing flow failed; re-running it once, per ADR 0004 — a second failure is a failure"; sh scripts/ci/await-emulator-ready.sh && run_flows; }
 
       - name: Record what the fixture served
         if: always()
