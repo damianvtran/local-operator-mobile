@@ -1291,6 +1291,16 @@ export const IDENTIFIERS: readonly string[] = [
 	]),
 ];
 
+/** A settings choice's identifier, keyed by the choice VALUE so a capture or a flow
+ *  can address one option without the screen spelling the family inline.
+ *
+ * It lives here because this file is the contract's single home: the a11y check
+ * rejects a `testID` written as a string or template literal in a rendering file,
+ * so a value-dependent id must be BUILT by the contract and CALLED by the renderer
+ * (the same shape `sessionRowId` and its siblings already use). */
+export const accountRoutingChoiceId = (value: string): string =>
+	`${CONTROL.settingsAccountRoutingGroup}:${value}`;
+
 /** A row's identifier, derived from the id it carries so a flow can address one
  *  row without the screen inventing a second naming scheme. */
 export const sessionRowId = (sessionId: string): string =>

@@ -7,7 +7,7 @@ import {
 	useConnectionState,
 } from "@/features/auth/connection-provider";
 import type { RelayEndpoints } from "@/relay";
-import { CONTROL, REGION } from "@/ui/a11y";
+import { accountRoutingChoiceId, CONTROL, REGION } from "@/ui/a11y";
 import { Button } from "@/ui/components/button";
 import { SectionHeader } from "@/ui/components/section-header";
 import { Segmented } from "@/ui/components/segmented";
@@ -69,7 +69,10 @@ const AccountRoutingEditor = ({ client }: { client: RelayEndpoints }) => {
 				options={row.choices.map((choice) => ({
 					value: choice.value,
 					label: choice.label,
-					testID: `${CONTROL.settingsAccountRoutingGroup}:${choice.value}`,
+					// The id is BUILT by the contract, never spelled inline: a template
+					// literal here is a second spelling of the family the a11y check
+					// (and the flows) must agree on — see a11y.ts's builder.
+					testID: accountRoutingChoiceId(choice.value),
 				}))}
 				value={draft}
 				disabled={save === "pending"}
