@@ -26,6 +26,14 @@ export const STAGE_SECONDS: Record<ProofStage, number> = {
 	setup: 1200,
 	full: 4500,
 };
+
+/** Bounded cap for the FIRST `xcrun simctl` call of a stage.
+ * A cold macOS runner starts CoreSimulator on that first call and routinely
+ * exceeds the old 60s default, which killed a legitimate command and reported
+ * it as `rc=128` (CI 38842647133). This stays a real bound: no retry loop and
+ * no unbounded wait — the cap is what a cold start is allowed, and hitting it
+ * is a named deadline failure rather than a fabricated exit code. */
+export const COLD_SIMULATOR_CAP_SECONDS = 180;
 const SHA = /^[a-f0-9]{40}$/;
 const HASH = /^[a-f0-9]{64}$/;
 const UDID = /^[a-fA-F0-9-]{36}$/;

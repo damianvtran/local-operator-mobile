@@ -1,5 +1,7 @@
 import { createHash } from "node:crypto";
-import { readFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { policyIdentity } from "../../tools/mock-relay/account-routing-identity.ts";
 import baseline from "./account-routing-e2e-baseline.json";
@@ -12,17 +14,34 @@ import {
 	assertMaestroHelp,
 	assertNativeOrigin,
 	assertProofCI,
+	COLD_SIMULATOR_CAP_SECONDS,
 	mdnsCommand,
 	PINS,
 	PROOF_MODE,
 	runProof,
+	STAGE_SECONDS,
 	safeArchiveName,
 	selectProof,
 } from "./account-routing-proof-contract.ts";
 import * as flow from "./account-routing-proof-flows.ts";
+import { ProofHost, timedOutMessage } from "./account-routing-proof-host.ts";
 
 const MANUAL = "workflow_" + "dispatch";
 const NONCE = "0123456789abcdef0123456789abcdef";
+const DEADLINE_KILL = /deadline exceeded \(slow-child, \d+ms, cap=\d+s\)/;
+const RC_128 = /rc=128/;
+const RC_3 = /exit-3 failed rc=3/;
+const hosted: NodeJS.ProcessEnv = {
+	NODE_ENV: "test",
+	GITHUB_ACTIONS: "true",
+	RUNNER_ENVIRONMENT: "github-hosted",
+	RUNNER_OS: "macOS",
+	LOH12_NATIVE_PROOF_ADMITTED: "1",
+	GITHUB_REPOSITORY: "damianvtran/local-operator-mobile",
+	GITHUB_EVENT_NAME: "workflow_" + "dispatch",
+	GITHUB_SHA: "0".repeat(40),
+	PROOF_MODE: "account-routing-ios-proof",
+};
 const root = new URL("../../", import.meta.url);
 const source = (path: string) => readFileSync(new URL(path, root), "utf8");
 const sha = (text: string) => createHash("sha256").update(text).digest("hex");
@@ -187,6 +206,105 @@ describe("staged proof source contract — mocks only, no mDNS/native/CI executi
 				"{{ runner.temp }}/account-routing-proof-" +
 				"$" +
 				"{{ github.run_id }}\n",
+		);
+	});
+	it("names a deadline kill instead of fabricating rc=128, flushing partial output", async () => {
+		// CI 38842647133: killing a cold child closed it, `code ?? 128` won the
+		// race, and a 60s deadline read as a tool failure with an empty log.
+		const root = mkdtempSync(join(tmpdir(), "loh12-host-"));
+		try {
+			const host = new ProofHost(root, process.cwd(), 600, ["owned-secret"], {
+				...hosted,
+			});
+			const failed = await host
+				.run(
+					"slow-child",
+					process.execPath,
+					[
+						"-e",
+						// `\\n` is a real newline for the CHILD's stdout, not an escape in
+						// this TS string: a bare `\n` here becomes a literal newline inside the
+						// child's single-quoted literal, which is a syntax error the child
+						// exits 1 on — a passing-looking test that proved nothing.
+						"process.stdout.write('partial-owned-output\\n');setTimeout(()=>process.exit(0),30000)",
+					],
+					1,
+				)
+				.catch((error: unknown) => error);
+			expect(failed).toBeInstanceOf(Error);
+			expect(String(failed)).toMatch(DEADLINE_KILL);
+			expect(String(failed)).not.toMatch(RC_128);
+			expect(host.records.at(-1)).toMatchObject({
+				name: "slow-child",
+				rc: null,
+				deadlineExceeded: true,
+			});
+			expect(
+				readFileSync(join(root, "commands", "1-slow-child.log"), "utf8"),
+			).toContain("partial-owned-output");
+		} finally {
+			rmSync(root, { recursive: true, force: true });
+		}
+	});
+	it("still reports a real non-zero exit as rc, and returns real zero-exit output", async () => {
+		const root = mkdtempSync(join(tmpdir(), "loh12-host-"));
+		try {
+			const host = new ProofHost(root, process.cwd(), 600, [], { ...hosted });
+			const exitThree = await host
+				.run("exit-3", process.execPath, ["-e", "process.exit(3)"], 20)
+				.catch((error: unknown) => error);
+			expect(String(exitThree)).toMatch(RC_3);
+			expect(host.records.at(-1)).toMatchObject({ name: "exit-3", rc: 3 });
+			expect(host.records.at(-1)?.deadlineExceeded).toBeUndefined();
+			const output = await host.run(
+				"writes-then-zero",
+				process.execPath,
+				["-e", "process.stdout.write('owned-result')"],
+				20,
+			);
+			expect(output).toBe("owned-result");
+		} finally {
+			rmSync(root, { recursive: true, force: true });
+		}
+	});
+	it("redacts owned credential values from a killed child's flushed output", async () => {
+		const root = mkdtempSync(join(tmpdir(), "loh12-host-"));
+		try {
+			// A secret split across two writes can straddle pipe chunks; the flush
+			// must redact the accumulated stream, not each chunk.
+			const host = new ProofHost(root, process.cwd(), 600, ["owned-secret"], {
+				...hosted,
+			});
+			await host
+				.run(
+					"splits-secret",
+					process.execPath,
+					[
+						"-e",
+						"process.stdout.write('owned-');setTimeout(()=>{process.stdout.write('secret')},50);setTimeout(()=>process.exit(0),30000)",
+					],
+					1,
+				)
+				.catch(() => undefined);
+			const log = readFileSync(
+				join(root, "commands", "1-splits-secret.log"),
+				"utf8",
+			);
+			expect(log).not.toContain("owned-secret");
+			expect(log).toContain("<owned-fixture-value-redacted>");
+		} finally {
+			rmSync(root, { recursive: true, force: true });
+		}
+	});
+	it("keeps the cold simulator cap a real, named bound above the old default", () => {
+		expect(COLD_SIMULATOR_CAP_SECONDS).toBeGreaterThan(60);
+		expect(COLD_SIMULATOR_CAP_SECONDS * 1000).toBeLessThan(
+			0.5 * STAGE_SECONDS.setup * 1000,
+		);
+		expect(
+			String(timedOutMessage("existing-simulator-selector", 60034, 180)),
+		).toBe(
+			"deadline exceeded (existing-simulator-selector, 60034ms, cap=180s)",
 		);
 	});
 	it("requires a dedicated admitted hosted runner before real constructor side effects", () => {

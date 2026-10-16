@@ -32,6 +32,7 @@ import {
 	assertNativeOrigin,
 	assertOwnedUdid,
 	assertProofCI,
+	COLD_SIMULATOR_CAP_SECONDS,
 	FROZEN_PATHS,
 	hierarchyFacts,
 	mdnsCommand,
@@ -598,10 +599,13 @@ export class NativeProof {
 		]);
 		const help = await this.host.run("maestro-help", "maestro", ["--help"]);
 		assertMaestroHelp(version, help);
+		// The selector shells out to the FIRST `simctl` of this stage, which on a
+		// cold runner starts CoreSimulator and can take minutes.
 		const selection = await this.host.run(
 			"existing-simulator-selector",
 			"node",
 			["scripts/ci/ios-simulator.ts", "--prefer", "iPhone 17"],
+			COLD_SIMULATOR_CAP_SECONDS,
 		);
 		const selected = UDID_LINE.exec(selection)?.[1];
 		if (!selected) throw new Error("existing simulator selector gave no UDID");
@@ -635,13 +639,12 @@ export class NativeProof {
 			);
 		this.udid = assertOwnedUdid(
 			(
-				await this.host.run("create-owned-simulator", "xcrun", [
-					"simctl",
-					"create",
-					`LOH12-${randomUUID()}`,
-					deviceType,
-					runtime,
-				])
+				await this.host.run(
+					"create-owned-simulator",
+					"xcrun",
+					["simctl", "create", `LOH12-${randomUUID()}`, deviceType, runtime],
+					COLD_SIMULATOR_CAP_SECONDS,
+				)
 			).trim(),
 		);
 		this.receipt.simulator = {
@@ -654,7 +657,7 @@ export class NativeProof {
 			"boot-owned-simulator",
 			"xcrun",
 			["simctl", "boot", this.udid],
-			60,
+			COLD_SIMULATOR_CAP_SECONDS,
 		);
 		await this.host.run(
 			"owned-boot-ready",
@@ -662,12 +665,12 @@ export class NativeProof {
 			["simctl", "bootstatus", this.udid, "-b"],
 			90,
 		);
-		await this.host.run("install-exact-base", "xcrun", [
-			"simctl",
-			"install",
-			this.udid,
-			this.baseline.app,
-		]);
+		await this.host.run(
+			"install-exact-base",
+			"xcrun",
+			["simctl", "install", this.udid, this.baseline.app],
+			COLD_SIMULATOR_CAP_SECONDS,
+		);
 		await this.installedMatches(this.baseline, "Base");
 		const before = this.slot("a").fixture.wireTrace.length;
 		await this.flow(
