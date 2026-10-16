@@ -78,6 +78,11 @@ export const PRODUCER_BUDGET_SECONDS = {
 	xcodebuild: 3600,
 	checkoutSnapshot: 60,
 	coreClone: 90,
+	corePin: 60,
+	// The bootstrap's first run resolves 23 wheels plus the pinned checkout's
+	// metadata from the index; the ONE recorded preflight saw 0.5s because the
+	// receipt was warm, which is a cache hit rather than the operation's cost.
+	coreBootstrapInstall: 300,
 } as const;
 
 export type BoundedOperation = keyof typeof OPERATION_OBSERVATIONS;

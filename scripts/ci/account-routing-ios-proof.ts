@@ -228,7 +228,7 @@ export class NativeProof {
 				"public-core-pin",
 				"git",
 				["-C", this.core, "checkout", "--detach", PINS.core],
-				60,
+				PRODUCER_BUDGET_SECONDS.corePin,
 			);
 		}
 		const coreHead = (
@@ -244,7 +244,7 @@ export class NativeProof {
 			"core-base-bootstrap",
 			"python3",
 			["scripts/ci/account-routing-bootstrap.py", this.core, this.root],
-			300,
+			PRODUCER_BUDGET_SECONDS.coreBootstrapInstall,
 		);
 		const bootstrap: unknown = JSON.parse(
 			readFileSync(join(this.root, "core-bootstrap.json"), "utf8"),
@@ -911,7 +911,7 @@ export class NativeProof {
 				"--clean",
 				"--no-install",
 			],
-			180,
+			PRODUCER_BUDGET_SECONDS.expoPrebuild,
 			versionEnv,
 		);
 		await this.host.run("candidate-determinism", "node", [
