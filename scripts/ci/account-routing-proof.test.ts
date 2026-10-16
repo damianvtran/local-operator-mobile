@@ -409,6 +409,39 @@ describe("staged proof source contract — mocks only, no mDNS/native/CI executi
 		// cannot bound the next run.
 		expect(record.spread?.ratio).toBeGreaterThan(5);
 	});
+	it("derives the path-walking first flow's cap from its own observations (R10)", () => {
+		// R10: the flow that walks the connect path measured 104115ms, 104569ms and
+		// then 120170ms KILLED, against a hand-set steady cap of exactly 120s — the
+		// last non-derived bound in the proof. It is now derived like every other op.
+		const cap = capFor("maestroFirstFlow");
+		// Above the observed max, and above the 3x factor for a cold op.
+		expect(cap).toBeGreaterThan(observedMaxSeconds("maestroFirstFlow"));
+		expect(cap).toBeGreaterThanOrEqual(
+			Math.ceil(observedMaxSeconds("maestroFirstFlow") * 3),
+		);
+		expect(cap).toBe(361);
+		// Strictly above the flow that was killed at 120s, with real headroom.
+		expect(cap).toBeGreaterThan(120.17);
+		// Every value is a real elapsed with its run id, and each is CENSORED: none
+		// of the three completed the path (two ended on an assertion, one was killed),
+		// so none is a full-cost measurement.
+		expect(
+			OPERATION_OBSERVATIONS.maestroFirstFlow.map((s) => s.run).sort(),
+		).toEqual([38853165349, 38854849272, 38857164876].sort());
+		for (const sample of OPERATION_OBSERVATIONS.maestroFirstFlow)
+			expect((sample as { censored?: boolean }).censored).toBe(true);
+		// The steady in-run contract is untouched, and is NOT what the first flow gets.
+		expect(STEADY_FLOW_CAP_SECONDS).toBe(120);
+		expect(capFor("maestroFirstFlow")).toBeGreaterThan(STEADY_FLOW_CAP_SECONDS);
+		// The selection itself must cover the first flow that WALKS the path, not just
+		// the driver touch: assert the proof keeps a flag distinct from `maestroWarm`.
+		const source = readFileSync(
+			new URL("./account-routing-ios-proof.ts", import.meta.url),
+			"utf8",
+		);
+		expect(source).toContain("private flowsWalkedPath = false");
+		expect(source).toContain('capFor("maestroFirstFlow")');
+	});
 	it("keeps the proof's iOS connect sequence free of iOS-unsupported steps (R9)", () => {
 		// The base helper `e2e/maestro/helpers/connect-relay.yaml` is Android-only
 		// (its eight consuming flows run on the Android lane; base iOS e2e is
@@ -543,7 +576,9 @@ describe("staged proof source contract — mocks only, no mDNS/native/CI executi
 			"utf8",
 		);
 		expect(workflow).toContain("inputs.proof_stage == 'setup' && 70");
-		expect(workflow).toContain("210");
+		expect(workflow).toContain("240");
+		// And the budget it mirrors, so the two cannot drift.
+		expect(STAGE_SECONDS.full).toBe(14400);
 		// A cold cap must clear its floor AND be a spread multiple of its max, not
 		// a fixed 1.5x over it.
 		for (const operation of Object.keys(

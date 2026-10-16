@@ -93,6 +93,7 @@ export const DERIVED_OPS = [
 	"create",
 	"coldAppLaunch",
 	"maestroCold",
+	"maestroFirstFlow",
 ] as const;
 const markers = [
 	REGION.settingsAccountRouting,
@@ -109,6 +110,9 @@ export class NativeProof {
 	private udid: string | undefined;
 	/** The first Maestro invocation of a stage pays driver bring-up. */
 	private maestroWarm = false;
+	// Distinct from `maestroWarm`: the driver can be warm while the first
+	// PATH-WALKING flow is still a cold app launch (R10).
+	private flowsWalkedPath = false;
 	private frames = 0;
 	private readonly secret = randomUUID();
 	readonly host: ProofHost;
@@ -607,12 +611,19 @@ export class NativeProof {
 			`appId: ${this.baseline.bundleId}\n---\n${JSON.stringify(scoped, null, 2)}\n`,
 		);
 		writeFileSync(config, JSON.stringify({ flows: [`flow-${label}.yaml`] }));
-		// Cold vs steady: the FIRST Maestro call of a stage pays XCUITest driver
-		// bring-up, so it takes the cold cap; later flows stay on the steady one.
+		// Cold vs steady. Two different cold costs live here, and R10 showed the
+		// selector was only covering the first: `warmDriver()` pays the XCUITest
+		// DRIVER bring-up (maestroCold), while the first flow that WALKS THE PATH
+		// still launches the app cold with clearState and runs the whole connect
+		// handshake (maestroFirstFlow). Run 38857164876 got the steady 120s for
+		// that flow and was killed at 120170ms.
 		const cap = this.maestroWarm
-			? STEADY_FLOW_CAP_SECONDS
+			? this.flowsWalkedPath
+				? STEADY_FLOW_CAP_SECONDS
+				: capFor("maestroFirstFlow")
 			: capFor("maestroCold");
 		this.maestroWarm = true;
+		this.flowsWalkedPath = true;
 		await this.host.run(
 			`maestro-${label}`,
 			"maestro",

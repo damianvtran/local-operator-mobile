@@ -42,7 +42,12 @@ export type ProofStage = "preflight" | "setup" | "full";
 export const STAGE_SECONDS: Record<ProofStage, number> = {
 	preflight: 1200,
 	setup: 4200,
-	full: 12600,
+	// 14400s (240 min), raised from 12600 when the path-walking first flow's own
+	// derived cap (361s) joined the payload: the R7 rule is that a stage budget must
+	// clear its whole payload with real headroom, and 12600 left only 856s over a
+	// 11744s payload. A budget below its payload is how a cold step gets clamped and
+	// reported as a policy failure, which is the class this whole loop kept hitting.
+	full: 14400,
 };
 
 /** EVERY observation of a bounded operation, with the run it came from.
@@ -62,10 +67,13 @@ export const OPERATION_OBSERVATIONS = {
 	// estimated; three earlier revisions of this table contained values that were
 	// never measured, and each one under-sized a bound.
 	//
-	// `censored: true` marks a sample KILLED by the cap in force, not a completed
-	// run: its elapsed is a LOWER BOUND (the child was cut off), and it carries
-	// kill/reap latency. Including it in the max is deliberate — the derived cap
-	// must clear the bound that killed it.
+	// `censored: true` marks a sample that did NOT complete the operation, so its
+	// elapsed is a LOWER BOUND rather than a measurement of the full cost. Two
+	// kinds are flagged, and the per-sample comment says which: a child KILLED by
+	// the cap in force (which also carries kill/reap latency), or a run that cut
+	// itself short — an assertion failure ends a Maestro flow exactly where the
+	// assertion was, so the flow never reached its later steps. Including these in
+	// the max is deliberate: the derived cap must clear the bound that censored it.
 	//
 	// Run 38850837889 is why the factors are spread-based rather than 1.5x: every
 	// cold op in it was slower than every prior run (selector 46.9s, bootReady
@@ -134,6 +142,22 @@ export const OPERATION_OBSERVATIONS = {
 	// defect (R8).
 	coldAppLaunch: [{ run: 38853165349, ms: 25869 }],
 	maestroCold: [{ run: 38844597781, ms: 121921, censored: true }],
+	// A flow that WALKS the connect path: it launches the app cold (clearState),
+	// waits for the real Welcome screen, taps through the own-tunnel form, runs the
+	// real login + sessions probe and only then reaches Settings. Three real runs
+	// of exactly this flow: 104115ms and 104569ms completed (both failed later on
+	// an assertion, so the FLOW ran to completion and the times are measurements),
+	// and 120170ms KILLED at the hand-set 120s steady cap (R10). Its cost is
+	// 104-120s while that cap sat exactly on top of the measurement — the last
+	// non-derived bound in the proof.
+	maestroFirstFlow: [
+		// Ended on the `Hide Keyboard` assertion (base-helper portability gap), so
+		// the flow stopped there and never reached the Connected gate.
+		{ run: 38853165349, ms: 104569, censored: true },
+		{ run: 38854849272, ms: 104115, censored: true },
+		// Killed by the hand-set 120s steady cap.
+		{ run: 38857164876, ms: 120170, censored: true },
+	],
 	maestroHelp: [
 		{ run: 38850837889, ms: 3009 },
 		{ run: 38847064654, ms: 3360 },
@@ -334,6 +358,9 @@ export const COLD_OPERATION_FLOOR_SECONDS: Partial<
 	// manager's suggested 60s and, with the 3x factor over the 25.9s sample,
 	// deriving above it.
 	coldAppLaunch: 60,
+	// A connect-walking flow is a cold app launch PLUS the whole path (form, login,
+	// sessions probe, Settings). Derived 120.170s x 3 = 361s; floored at 360s.
+	maestroFirstFlow: 360,
 };
 
 /** A cold operation's factor over its largest observation, applied BEFORE the
@@ -450,6 +477,7 @@ export const STAGE_PAYLOAD_SECONDS: Partial<Record<ProofStage, number>> = {
 		capFor("create") +
 		capFor("boot") +
 		capFor("selector") +
+		capFor("maestroFirstFlow") +
 		3 * STEADY_FLOW_CAP_SECONDS,
 	// `full` re-runs setup's cold steps, then the ONE candidate producer
 	// (xcodebuild dominates) and ~30 warm candidate flows. Kept as an explicit sum
@@ -462,6 +490,7 @@ export const STAGE_PAYLOAD_SECONDS: Partial<Record<ProofStage, number>> = {
 		capFor("create") +
 		capFor("boot") +
 		capFor("selector") +
+		capFor("maestroFirstFlow") +
 		3 * STEADY_FLOW_CAP_SECONDS +
 		PRODUCER_BUDGET_SECONDS.expoPrebuild +
 		PRODUCER_BUDGET_SECONDS.checkoutSnapshot +
