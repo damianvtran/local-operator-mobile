@@ -296,6 +296,18 @@ describe("staged proof source contract — mocks only, no mDNS/native/CI executi
 			rmSync(root, { recursive: true, force: true });
 		}
 	});
+	it("gives every stage room for a cold simulator on its own clock", () => {
+		// Each stage is its own workflow step (own `timeout-minutes`), so a stage
+		// clock must NOT inherit the previous step's wall time: charging setup the
+		// preflight runtime left it exactly the cold cap and no room to boot,
+		// install, connect and capture (found by arithmetic on the real constants).
+		for (const stage of ["preflight", "setup", "full"] as const) {
+			const budget = STAGE_SECONDS[stage] - 120;
+			expect(budget).toBeGreaterThan(COLD_SIMULATOR_CAP_SECONDS);
+			if (stage === "setup")
+				expect(budget - COLD_SIMULATOR_CAP_SECONDS).toBeGreaterThan(300);
+		}
+	});
 	it("keeps the cold simulator cap a real, named bound above the old default", () => {
 		expect(COLD_SIMULATOR_CAP_SECONDS).toBeGreaterThan(60);
 		expect(COLD_SIMULATOR_CAP_SECONDS * 1000).toBeLessThan(

@@ -1131,28 +1131,38 @@ async function main() {
 		throw new Error("unmarked existing proof root");
 	if (!existed) mkdirSync(root, { mode: 0o700 });
 	let startedAt = Date.now();
+	const stages: string[] = [];
 	if (existsSync(marker)) {
 		const previous: unknown = JSON.parse(readFileSync(marker, "utf8"));
 		if (
 			!record(previous) ||
 			previous.run !== process.env.GITHUB_RUN_ID ||
-			previous.source !== process.env.GITHUB_SHA ||
-			typeof previous.startedAt !== "number" ||
-			!Number.isFinite(previous.startedAt) ||
-			previous.startedAt > Date.now()
+			previous.source !== process.env.GITHUB_SHA
 		)
 			throw new Error("unowned/stale proof root");
-		startedAt = previous.startedAt;
-	} else
-		writeFileSync(
-			marker,
-			JSON.stringify({
-				run: process.env.GITHUB_RUN_ID,
-				source: process.env.GITHUB_SHA,
-				startedAt,
-			}),
-			{ flag: "wx", mode: 0o600 },
-		);
+		// Each stage is a SEPARATE workflow step with its own `timeout-minutes`.
+		// Charging setup the preflight step's wall time left it a budget equal to
+		// the cold-simulator cap alone (1200 - 900 - 120 = 180s) for a stage that
+		// must also boot, install, connect and capture — a legitimate run would
+		// then fail as a policy breach. The stage clock therefore starts at THIS
+		// invocation; the per-step timeout is the outer bound on total wall time,
+		// and the marker stays valuable as an owned-root/ordering record.
+		startedAt = Date.now();
+		if (Array.isArray(previous.stages))
+			for (const prior of previous.stages)
+				if (typeof prior === "string") stages.push(prior);
+	}
+	stages.push(stage);
+	writeFileSync(
+		marker,
+		JSON.stringify({
+			run: process.env.GITHUB_RUN_ID,
+			source: process.env.GITHUB_SHA,
+			startedAt,
+			stages,
+		}),
+		{ mode: 0o600 },
+	);
 	process.env.LOH12_PROOF_STARTED_AT = String(startedAt);
 	const proof = new NativeProof(root, process.cwd(), stage);
 	try {
