@@ -7,6 +7,7 @@ import { policyIdentity } from "../../tools/mock-relay/account-routing-identity.
 import baseline from "./account-routing-e2e-baseline.json";
 import { DERIVED_OPS, NativeProof } from "./account-routing-ios-proof.ts";
 import {
+	ANDROID_PROOF_MODE,
 	ARTIFACT_CENSORED_SAMPLES,
 	assertArchiveDigest,
 	assertArtifactMetadata,
@@ -164,7 +165,7 @@ describe("staged proof source contract — mocks only, no mDNS/native/CI executi
 	it("the actual workflow preserves every normal full/S15 job membership and body", () => {
 		const current = jobs(source(".github/workflows/e2e.yml"));
 		expect(Object.keys(current).sort()).toEqual(
-			[...Object.keys(baseline.jobs), PROOF_MODE].sort(),
+			[...Object.keys(baseline.jobs), PROOF_MODE, ANDROID_PROOF_MODE].sort(),
 		);
 		for (const [name, old] of Object.entries(baseline.jobs)) {
 			const job = current[name];
@@ -195,6 +196,22 @@ describe("staged proof source contract — mocks only, no mDNS/native/CI executi
 			for (const mode of ["", "full", "s15-proof", PROOF_MODE])
 				expect(evaluate(targeted.condition, event, mode)).toBe(
 					event === MANUAL && mode === PROOF_MODE,
+				);
+		// The Android proof job, in the SAME truth table: it fires only on a manual
+		// dispatch of ITS OWN mode, so adding it cannot fan out into any other event
+		// or mode — and an S15 or iOS dispatch must not start it.
+		const android = current[ANDROID_PROOF_MODE];
+		if (!android) throw new Error("missing android targeted job");
+		for (const event of ["pull_request", "push", "schedule", MANUAL])
+			for (const mode of [
+				"",
+				"full",
+				"s15-proof",
+				PROOF_MODE,
+				ANDROID_PROOF_MODE,
+			])
+				expect(evaluate(android.condition, event, mode)).toBe(
+					event === MANUAL && mode === ANDROID_PROOF_MODE,
 				);
 	});
 	it("the truth table catches the old !=s15 accidental fanout", () => {

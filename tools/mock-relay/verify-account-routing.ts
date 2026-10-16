@@ -162,6 +162,90 @@ try {
 	};
 	const aa = await start(a);
 	const bb = await start(b);
+	/* The Android emulator host allowance, exercised over real sockets.
+	 *
+	 * WHY IT IS CHECKED HERE: the allowance is a containment change to the fixture,
+	 * so the proof that it is SCOPED has to run the same real HTTP path the
+	 * strict-host checks above use — a predicate unit test would not show that the
+	 * branch is wired through `listen`/`setBoundPort` and the request handler.
+	 * Every "must still refuse" case is asserted, not described. */
+	const emulatorHost = (bound: Bound) => `10.0.2.2:${bound.port}`;
+	const emulatorWire = (
+		bound: Bound,
+		method: string,
+		route: string,
+		host: string,
+		extra: Record<string, string> = {},
+	) => wire(bound, method, route, undefined, { host, ...extra });
+	{
+		const admitted = createCanonicalPolicyFixture({
+			python,
+			coreRoot,
+			privateRoot,
+			profile: "a",
+			admitEmulatorHost: true,
+		});
+		const relay = createRelay({ password, accountRouting: admitted });
+		relays.push(relay);
+		const listener = await relay.listen();
+		const bound = { ...listener, hostname: admitted.hostname };
+		// The exact emulator host, no auth: admitted past the host gate, refused by
+		// auth — so the allowance opens the HOST boundary only, never the session.
+		assert.equal(
+			(await emulatorWire(bound, "GET", path, emulatorHost(bound))).status,
+			401,
+		);
+		// Wrong password on the admitted host: still 401, still no cookie.
+		const wrong = await emulatorWire(
+			bound,
+			"POST",
+			"/login",
+			emulatorHost(bound),
+			{
+				"content-type": "application/x-www-form-urlencoded",
+			},
+		);
+		assert.equal(wrong.status, 401);
+		assert.equal(wrong.headers["set-cookie"], undefined);
+		// Every other Host stays refused: a different emulator address, and the
+		// SAME address at a different port (the allowance is port-scoped).
+		for (const host of [
+			`10.0.2.3:${bound.port}`,
+			`10.0.2.2:${bound.port + 1}`,
+			`127.0.0.1:${bound.port}`,
+			"example.invalid",
+		])
+			assert.equal(
+				(await emulatorWire(bound, "GET", path, host)).status,
+				403,
+				`Host ${host} must stay refused`,
+			);
+		// The fixture's own hostname still works — the allowance adds a caller, it
+		// does not replace the boundary.
+		assert.equal((await wire(bound, "GET", path)).status, 401);
+		proof.emulatorHostAllowance =
+			"admitted 10.0.2.2 at the bound port (401 unauthenticated); refused other address, other port, loopback and a foreign name; own hostname unchanged";
+	}
+	{
+		// Flag ABSENT: the same emulator Host is refused outright, so an ordinary
+		// fixture is no more open than it was before this option existed.
+		const strict = createCanonicalPolicyFixture({
+			python,
+			coreRoot,
+			privateRoot,
+			profile: "b",
+		});
+		const relay = createRelay({ password, accountRouting: strict });
+		relays.push(relay);
+		const listener = await relay.listen();
+		const bound = { ...listener, hostname: strict.hostname };
+		assert.equal(
+			(await emulatorWire(bound, "GET", path, emulatorHost(bound))).status,
+			403,
+		);
+		proof.emulatorHostRefusedByDefault =
+			"a fixture without admitEmulatorHost refuses the emulator Host (403)";
+	}
 	const login = async (bound: Bound, fixture: typeof a) => {
 		assert.equal((await wire(bound, "GET", path)).status, 401);
 		assert.equal(

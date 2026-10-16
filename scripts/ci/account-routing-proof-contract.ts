@@ -7,6 +7,14 @@ import {
 } from "../../tools/mock-relay/account-routing-identity.ts";
 
 export const PROOF_MODE = "account-routing-ios-proof";
+/** The Android proof mode: the same policy surface driven on an emulator.
+ *
+ * A SECOND mode rather than a stage of the iOS one, because the two are different
+ * platforms with different jobs and no shared stage machinery — the iOS proof
+ * stages (preflight/setup/full) are about a producer/simulator sequence that
+ * Android does not have. It carries NO stage: an Android dispatch runs the one
+ * bounded flow or it runs nothing. */
+export const ANDROID_PROOF_MODE = "account-routing-android-proof";
 export const PINS = {
 	product: "c67e79b09c24c0776292e857cadf7e6973b0144e",
 	base: "34b8340da2baa764016896367f58d0fc4b3c51d3",
@@ -627,6 +635,13 @@ export function selectProof(
 	if (mode === "s15-proof") {
 		if (event !== "workflow_dispatch" || stage !== "full")
 			throw new Error("invalid S15 selection");
+		return null;
+	}
+	if (mode === ANDROID_PROOF_MODE) {
+		// No stage: the Android job is one bounded run. A stage argument is an
+		// operator mistake, not a request to run part of it.
+		if (event !== "workflow_dispatch" || stage !== "full")
+			throw new Error("invalid Android proof selection");
 		return null;
 	}
 	if (

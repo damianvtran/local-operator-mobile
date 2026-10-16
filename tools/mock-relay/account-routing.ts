@@ -27,6 +27,10 @@ const CORE_BLOB = "b08458247ac5babb43acd696c44bc3630e01d787";
 const FIXTURE_SHA256 =
 	"ff4f4b39f7f12cf8fa8bf546f0ef4aa7c91b3bd2e4ad63ce48cafbb22b8297a0";
 const MARKER = "loh12-canonical-account-routing-v1\n";
+/** The Android emulator's alias for the host machine's loopback. One literal,
+ *  never a pattern: an address form this file cannot enumerate is one it must
+ *  not admit. */
+const EMULATOR_HOST = "10.0.2.2";
 const BRIDGE = fileURLToPath(
 	new URL("./core-account-routing.py", import.meta.url),
 );
@@ -40,6 +44,20 @@ export type CanonicalPolicyOptions = {
 	profile: "a" | "b";
 	/** Explicit CI-native proof only; default/browser .localhost is unchanged. */
 	transport?: PolicyTransport;
+	/** Admit the Android emulator's HOST header, scoped to this fixture.
+	 *
+	 * WHY THIS IS AN OPTION AND NOT A DEFAULT: `acceptHost` is the fixture's own
+	 * containment seam — it makes the fixture reachable only under the per-run
+	 * hostname it minted. An emulator cannot use that name: it reaches the host
+	 * machine as the alias `10.0.2.2`, and the SHIPPED app validator
+	 * (`src/connection/profile.ts`) accepts a private ADDRESS but not a
+	 * `.localhost` name, so the name is not merely inconvenient, it is unusable
+	 * from the device. The allowance therefore admits exactly that one address,
+	 * at the port this run actually bound, and ONLY when a CI job has already
+	 * opted into the emulator path (`--allow-android-emulator-origin`). Every
+	 * other caller — the browser `.localhost` harness, the `.local` mDNS proof —
+	 * keeps the strict hostname boundary byte-identical. */
+	admitEmulatorHost?: boolean;
 };
 export type PolicyFixtureMode =
 	| "normal"
@@ -75,6 +93,7 @@ const record = (value: unknown): value is Record<string, unknown> =>
 export function createCanonicalPolicyFixture(options: CanonicalPolicyOptions) {
 	const transport = requirePolicyTransport(options.transport);
 	if (transport === "ci-native-mdns") assertDedicatedNativeCI(process.env);
+	const admitEmulatorHost = options.admitEmulatorHost === true;
 	if (options.profile !== "a" && options.profile !== "b")
 		throw new Error("unknown private computer profile");
 	const privateRoot = resolve(options.privateRoot);
@@ -184,6 +203,7 @@ export function createCanonicalPolicyFixture(options: CanonicalPolicyOptions) {
 		transport,
 	);
 	assertPolicyFixtureIdentity(hostname, cookieName, transport);
+	let boundPort: number | null = null;
 	const controls = {
 		mode: "normal" as PolicyFixtureMode,
 		readDelayMs: 0,
@@ -240,16 +260,35 @@ export function createCanonicalPolicyFixture(options: CanonicalPolicyOptions) {
 			});
 		},
 		sessionKey: (password: string) => `${password}:${cookieName}`,
+		/** The port this run bound, set by the relay AFTER `listen` resolves.
+		 *
+		 * It cannot be known earlier: `--port 0` lets the kernel pick, and
+		 * predicting a free port before bind would race other jobs. Until it is
+		 * set, the emulator branch admits nothing, so an unbound fixture is no
+		 * more open than it was. */
+		setBoundPort: (port: number) => {
+			boundPort = port;
+		},
 		acceptHost: (req: IncomingMessage) => {
 			try {
 				const site = new URL(`http://${req.headers.host ?? "invalid"}`);
+				if (
+					site.username !== "" ||
+					site.password !== "" ||
+					site.pathname !== "/" ||
+					site.search !== "" ||
+					site.hash !== ""
+				)
+					return false;
+				if (site.hostname === hostname) return true;
+				/* The emulator branch: the exact alias, at the exact bound port, and
+				 * only when the fixture was constructed for it. No wildcard, no
+				 * suffix match, no other address — an arbitrary Host is still refused. */
 				return (
-					site.hostname === hostname &&
-					site.username === "" &&
-					site.password === "" &&
-					site.pathname === "/" &&
-					site.search === "" &&
-					site.hash === ""
+					admitEmulatorHost &&
+					boundPort !== null &&
+					site.hostname === EMULATOR_HOST &&
+					site.port === String(boundPort)
 				);
 			} catch (error) {
 				// A malformed Host is an auth-boundary refusal, not an unhandled

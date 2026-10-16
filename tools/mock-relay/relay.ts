@@ -3378,6 +3378,11 @@ export function createRelay(options: RelayOptions = {}) {
 			const address = server.address();
 			const actual =
 				typeof address === "object" && address !== null ? address.port : 0;
+			/* The fixture's emulator allowance is scoped to the port this run ACTUALLY
+			 * bound, so it is armed here — after the kernel chose, before ready is
+			 * published. Without this call the branch admits nothing, which is what an
+			 * unbound fixture should do. */
+			policyFixture?.setBoundPort(actual);
 			// The relay's OWN origin is same-origin by the contract's own rule
 			// (`docs/relay/contract.md` §1.2) — "a foreign Origin is refused; a
 			// same-origin Origin is allowed" — and the mock has to know it to apply
@@ -3453,6 +3458,7 @@ export function createRelay(options: RelayOptions = {}) {
  */
 export function buildAccountRoutingFixture(
 	flags: Record<string, FlagValue>,
+	options: { admitEmulatorHost?: boolean } = {},
 ): import("./account-routing.ts").CanonicalPolicyFixture {
 	const coreRoot = str(flags, "account-routing-core-root");
 	const python = str(flags, "account-routing-python");
@@ -3482,6 +3488,7 @@ export function buildAccountRoutingFixture(
 		coreRoot,
 		privateRoot: join(scratch, `account-routing-fixture-${randomUUID()}`),
 		profile,
+		admitEmulatorHost: options.admitEmulatorHost === true,
 	});
 	fixture.controls.mode = mode;
 	return fixture;
@@ -3552,7 +3559,13 @@ if (import.meta.main) {
 	// opt-in rather than a second default: the fixture adapts a PINNED core checkout
 	// in a fresh process, and a job that has not bootstrapped one cannot serve it.
 	const accountRouting = bool(flags, "account-routing-fixture")
-		? buildAccountRoutingFixture(flags)
+		? buildAccountRoutingFixture(flags, {
+				// BOTH flags are required. The fixture flag alone serves policy to a
+				// hostname-scoped caller; only a job that has also opted into the
+				// emulator ORIGIN path gets the host allowance, so the two live and
+				// die together and neither is silently implied by the other.
+				admitEmulatorHost: bool(flags, "allow-android-emulator-origin"),
+			})
 		: undefined;
 	const relay = createRelay({
 		accountRouting,
