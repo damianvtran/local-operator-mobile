@@ -10,6 +10,8 @@ invented.
 | `tokens/tailwind-preset.js` | Generated. The same roles as Tailwind utilities — a `theme.extend` preset for NativeWind, plus `cssVariables()` / `themeBlock()` strings for Uniwind's CSS-only path |
 | `tokens/contrast-contract.mjs` | The executable gate: 1000+ assertions over both themes, exits non-zero on a violation |
 | `tokens/build-preset.mjs` | Regenerates the preset and the preview's CSS variables from `tokens.json` |
+| `tokens/upstream/` | The pinned design-kit slice (ADR 0007): byte copies of the kit's `app-family.json` and `divergences.json` at kit `v1.2.0`, with `design-kit.lock.json` at the repository root |
+| `tokens/check-upstream.mjs` | The upstream gate: the slice equals the kit at its pin, and `tokens.json`'s brand roles equal the slice |
 | `app-icon/` | The app icon, launcher, notification, splash and store assets, generated from the real mark |
 | `store-screenshots/` | Frame templates at the sizes App Store Connect and Google Play require |
 | `preview/` | The kit preview sheet and the headless-Chrome capture script |
@@ -20,14 +22,17 @@ spec.
 
 ## The gates and the generators
 
-The three `--check` commands are **gates**: each must exit 0, and each re-derives
-its artefact and compares it with the committed file, so a stale or damaged asset
-fails the run instead of passing quietly.
+Every gate here must exit 0, and each re-derives its
+claim and compares it with the committed file — or the pinned slice — so a
+stale or damaged asset fails the run instead of passing quietly. The three
+`--check` commands re-derive an artefact; `check-upstream.mjs` re-proves a pin.
 
 ```sh
 node design/tokens/contrast-contract.mjs           # gate: 1157 assertions over both themes
 node design/tokens/build-preset.mjs                # generate: the preset + the preview's CSS
 node design/tokens/build-preset.mjs --check        # gate: those two files match tokens.json
+node design/tokens/check-upstream.mjs              # gate: the slice == the kit at its pin, and tokens.json ==
+                                                   #   the slice (fetches the two slice files from raw.githubusercontent.com)
 node design/app-icon/build-icons.mjs               # generate: every icon/splash/store PNG + the SVG layers
 node design/app-icon/build-icons.mjs --check       # gate: re-renders all 33 files and compares them
 node design/preview/capture.mjs                    # generate: the preview sheet, both themes

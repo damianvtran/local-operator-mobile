@@ -270,9 +270,11 @@ pnpm export:web      # the web target bundles
 
 # The design kit's own gates, in the order design/README.md lists them. They are
 # plain `node` scripts with no dependencies, which is why this list needs no
-# install and no pnpm.
+# install and no pnpm — but the upstream check does need the network: it fetches
+# the kit at the ref `design-kit.lock.json` names.
 node design/tokens/contrast-contract.mjs
 node design/tokens/build-preset.mjs --check
+node design/tokens/check-upstream.mjs             # needs raw.githubusercontent.com
 node design/app-icon/build-icons.mjs --check      # needs rsvg-convert or ImageMagick
 node design/preview/capture.mjs --check           # needs Google Chrome
 ```
@@ -511,7 +513,7 @@ What that costs, concretely, and how each spend is gated:
 | Spend | Runner | Gated by |
 |---|---|---|
 | `checks` (types, tests, lint, web export) | `ubuntu-latest` | every pull request, every `main` push — it is the cheap early signal |
-| `design-kit` (asset re-render, contrast, styling layer) | `macos-26` + `brew install librsvg imagemagick` | the `changes` job: `design/**`, `docs/design/**`, `src/ui/**`, `scripts/**` or the configs; **always** on `main`, on the weekly sweep, and in a release gate |
+| `design-kit` (asset re-render, contrast, styling layer, kit pin) | `macos-26` + `brew install librsvg imagemagick` | the `changes` job: `design/**`, `docs/design/**`, `src/ui/**`, `scripts/**`, the kit pin (`design-kit.lock.json`) or the configs; **always** on `main`, on the weekly sweep, and in a release gate |
 | `android` (prebuild, debug APK, determinism) | `ubuntu-latest` | the `changes` job: anything that is not `docs/**` or `*.md` |
 | `ios` (prebuild, pods, simulator build, launch, frame) | `macos-26` | the same `changes` job |
 | `internal` (signed AAB/IPA, store uploads) | both | push to `main` only |
@@ -566,6 +568,7 @@ afternoon.
 | `design-kit` warns that the preview capture gate could not make its claim | The sheet renders with the shipped typefaces (Figtree, JetBrains Mono) from a sibling checkout's `public/fonts`, and those woff2 files are not in this repository. Without them the page falls back to the platform face and the five committed captures all differ (measured 2026-09-30: `0 of 5 committed captures verified`). The step turns into a hard failure on its own the moment the reference faces are reachable — a job that checks the sibling repo out before it, or the faces committed under `design/fonts/` (whose `OFL.txt` is already there) and `capture.mjs` pointed at them. That change belongs to the design kit, not to CI. |
 | `checks` fails in `pnpm lint` on files under `tools/**` or `e2e/**` | Those trees are the audit harness, which was written on a branch with no package manifest and so has never met biome. The errors are formatting and lint diagnostics in the harness's own files; the fix belongs to that stream, and `pnpm lint` is right to refuse a tree that does not pass it. |
 | `design-kit` fails on `build-preset.mjs --check` | `design/tokens/tokens.json` changed and `tailwind-preset.js` (and the preview's CSS) were not regenerated — run the generator without `--check`. |
+| `design-kit` fails on `check-upstream.mjs` | The failure line names which of the two checks fired. `(a)` the pin is lying: the slice or the lock disagrees with the kit at the locked ref — re-vendor the slice from `damianvtran/local-operator-design` at that ref, updating `design-kit.lock.json`'s `ref`, `commit` and hashes together. `(b)` a brand role moved: restore the value the slice carries, or — if the difference is deliberate — record it as a pin in the script with its reason (and in the kit's divergence register at its next release, if it should outlive this file). |
 | `android` fails at "Assert the native project regenerates identically" | Something edited the generated `android/` tree, or a config plugin is non-deterministic. Fix the plugin: the edit is what `prebuild --clean` discards. The step prints a bounded diff of every differing file, so which of the two it is is a reading rather than a guess. |
 | `android` fails at "Assert the release merged manifest keeps the local-network configuration", or `ios` at "Assert the built Info.plist carries the local-network configuration" | A declaration `app.config.ts` or a config plugin asks for did not reach the product. The step names the field it could not find (`scripts/ci/native-config.ts` prints one line per finding); fix the config or the plugin and re-run — never the generated native file, which the next `prebuild --clean` discards. |
 | `ios` fails on the same gate, and the diff is only identifiers | That is a **pass** unless the diff shows real content: Xcode addresses objects with 24-hex identifiers and Expo's generator mints fresh ones on every run, so `project.pbxproj` is compared with those normalized to `<object-id>` (measured, run 36737644701 — five font references and their Resources group differed in nothing else). A real difference inside the file still fails, and the printed diff shows it with the identifiers already normalized. |
