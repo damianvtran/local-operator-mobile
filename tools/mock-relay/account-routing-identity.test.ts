@@ -94,7 +94,7 @@ describe("strict proof transport identities (pure source, no mDNS)", () => {
 			["RUNNER_ENVIRONMENT", "self-hosted"],
 			["RUNNER_OS", "Linux"],
 			["LOH12_NATIVE_PROOF_ADMITTED", "0"],
-		])
+		] as const)
 			expect(() =>
 				assertDedicatedNativeCI({ ...hosted, [key]: value }),
 			).toThrow();

@@ -470,7 +470,8 @@ try {
 	);
 	assert.equal(legacyLogin.status, 303);
 	const legacyCookie = legacyLogin.headers["set-cookie"]?.[0]?.split(";")[0];
-	assert.ok(legacyCookie?.startsWith("lop_mobile="));
+	assert.ok(legacyCookie);
+	assert.ok(legacyCookie.startsWith("lop_mobile="));
 	assert.equal((await jsonWire(legacyBound, "GET", legacyCookie)).status, 404);
 	const legacyLogout = await wire(
 		legacyBound,
