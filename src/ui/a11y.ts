@@ -267,6 +267,9 @@ export const CONTROL = {
 	settingsTextScaleGroup: "settings-text-scale-group",
 	settingsRetryLastAction: "settings-retry-last-action",
 	settingsNotificationsEnable: "settings-notifications-enable",
+	settingsAccountRoutingGroup: "settings-account-routing-group",
+	settingsAccountRoutingSave: "settings-account-routing-save",
+	settingsAccountRoutingRetry: "settings-account-routing-retry",
 	refusalSignIn: "refusal-sign-in",
 	refusalRetry: "refusal-retry",
 	refusalAnotherAddress: "refusal-another-address",
@@ -815,6 +818,14 @@ export const IDENTIFIER_FAMILIES: readonly string[] = [
 	 *  (`supplement-file-<i>`) — the one stable name a flow has for a callout,
 	 *  because the path is data. */
 	"supplement-file-",
+	/* One identifier per account-routing choice, built by
+	 *  `accountRoutingChoiceId` and keyed by the choice VALUE
+	 *  (`settings-account-routing-group:<value>`). COLON-separated rather than
+	 *  dash-terminated because the value IS the backend's own enum member, so a
+	 *  dash would make `reset-soonest` ambiguous with the family's own text. The
+	 *  family is rendered: the settings section builds each option's id with the
+	 *  builder above, and the Android proof flow addresses a concrete member. */
+	"settings-account-routing-group:",
 ];
 
 /**
@@ -914,6 +925,7 @@ export const REGION = {
 	 *  (ADR 0006 §2.4, §5). The marker is the section's own region id so the
 	 *  capture can assert the section rendered. */
 	settingsNotifications: "settings-section-notifications",
+	settingsAccountRouting: "settings-section-account-routing",
 
 	/** The refusal surfaces (`docs/ux/flows.md` § 9, C5/C6/C7). Each id names a
 	 *  CAUSE the flow asserts by name, so a control or a sentence that goes missing
@@ -1286,6 +1298,16 @@ export const IDENTIFIERS: readonly string[] = [
 		...Object.values(STATE_MARKER).flatMap((states) => Object.values(states)),
 	]),
 ];
+
+/** A settings choice's identifier, keyed by the choice VALUE so a capture or a flow
+ *  can address one option without the screen spelling the family inline.
+ *
+ * It lives here because this file is the contract's single home: the a11y check
+ * rejects a `testID` written as a string or template literal in a rendering file,
+ * so a value-dependent id must be BUILT by the contract and CALLED by the renderer
+ * (the same shape `sessionRowId` and its siblings already use). */
+export const accountRoutingChoiceId = (value: string): string =>
+	`${CONTROL.settingsAccountRoutingGroup}:${value}`;
 
 /** A row's identifier, derived from the id it carries so a flow can address one
  *  row without the screen inventing a second naming scheme. */

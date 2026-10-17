@@ -1,0 +1,34 @@
+{
+	"source": "c67e79b09c24c0776292e857cadf7e6973b0144e",
+	"bodyHashNormalization": "strip outer whitespace and remove only job-level if lines",
+	"jobs": {
+		"harness": {
+			"condition": "",
+			"bodyWithoutConditionSha256": "07244bf7326ab9a508ee2934e254d0186fc59ab58069ddce528735159e6bca6b"
+		},
+		"mock-relay-contract": {
+			"condition": "inputs.proof_mode != 's15-proof'",
+			"bodyWithoutConditionSha256": "ee4b490502d15ae6e695a147b4806141495089c8a34f130c32dc4000d1bedea4"
+		},
+		"docs-commands": {
+			"condition": "(github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && inputs.proof_mode != 's15-proof'",
+			"bodyWithoutConditionSha256": "11b5dd9ea529728497d90ad2228798fdc2bfdc529c1a8d60319b965be5317f58"
+		},
+		"web-audit": {
+			"condition": "inputs.proof_mode != 's15-proof'",
+			"bodyWithoutConditionSha256": "345a0f1ce0f03874fb3cfc52e4b3335320f6e2741a768480254ed9a565b456c8"
+		},
+		"s15-proof": {
+			"condition": "github.event_name == 'workflow_dispatch' && inputs.proof_mode == 's15-proof'",
+			"bodyWithoutConditionSha256": "ae5a9d1c6c288a52ba7d03e57a692d7b30857ed56b2cd680813bcf098d451b9f"
+		},
+		"web-audit-core": {
+			"condition": "(github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && inputs.proof_mode != 's15-proof'",
+			"bodyWithoutConditionSha256": "c6be3f9cea30b50d250bd374e694ca98eec54e67eeb345cf0e6a703589bc49f5"
+		},
+		"maestro-android": {
+			"condition": "(github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && inputs.proof_mode != 's15-proof'",
+			"bodyWithoutConditionSha256": "bf8a19336c62bc69a040993c55a54e57e9d4058742051f3e576ac40bc24f4b49"
+		}
+	}
+}

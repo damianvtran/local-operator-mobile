@@ -27,6 +27,7 @@
  * own, so a `lop mobile` on 4098 keeps running untouched.
  */
 
+import { randomUUID } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { createServer } from "node:http";
@@ -38,9 +39,14 @@ import type {
 	SessionProjection,
 	SessionSummary,
 } from "../../docs/relay/types.ts";
+import type { FlagValue } from "../lib/args.ts";
 import { bool, list, num, parseArgs, str } from "../lib/args.ts";
 import type { Json } from "../lib/json.ts";
 import { asString, isRecord } from "../lib/json.ts";
+import {
+	createCanonicalPolicyFixture,
+	type PolicyFixtureMode,
+} from "./account-routing.ts";
 import type { FaultSet } from "./faults.ts";
 import { FAULT_NAMES, parseFaults, summariseFaults } from "./faults.ts";
 import type { FixtureResponseOverride } from "./fixtures.ts";
@@ -356,8 +362,13 @@ export interface RecordedRequest {
 	[key: string]: Json | undefined;
 }
 
+const ACCOUNT_POLICY_ROUTE = /^\/api\/settings\/account-routing$/;
+
 /** Everything `createRelay` accepts. */
 export interface RelayOptions {
+	/** Optional pinned-core, private policy adapter. Existing mock defaults stay
+	 * unchanged; fixture mode requires a per-run host/cookie namespace. */
+	accountRouting?: import("./account-routing.ts").CanonicalPolicyFixture;
 	fixturesDir?: string;
 	password?: string;
 	maxBodyBytes?: number;
@@ -595,6 +606,11 @@ export function createRelay(options: RelayOptions = {}) {
 	>();
 	let pushDeviceSeq = 0;
 	const password = options.password ?? DEFAULT_PASSWORD;
+	const policyFixture = options.accountRouting;
+	const cookieName = policyFixture?.cookieName ?? COOKIE_NAME;
+	// Bind synthetic sessions to this run/computer even when the login password
+	// is shared by the fixture cohort. Never trust a production-name cookie here.
+	const sessionKey = policyFixture?.sessionKey(password) ?? password;
 	/**
 	 * The bare relay has NO body ceiling: the 10 MiB cap belongs to the gateway and
 	 * the edge (`docs/relay/tunnel-edge.md`), and the real relay answers an 11 MiB
@@ -1879,8 +1895,10 @@ export function createRelay(options: RelayOptions = {}) {
 
 		// 3. The auth gate, with the relay's audience split.
 		if (!publicRoute) {
-			const cookie = readCookie(req.headers.cookie, COOKIE_NAME);
-			const authenticated = verifyCookie(cookie, password);
+			const cookie = readCookie(req.headers.cookie, cookieName);
+			const authenticated =
+				verifyCookie(cookie, sessionKey) &&
+				(!policyFixture || policyFixture.cookieUnambiguous(req.headers.cookie));
 			const verdict = authVerdict(pathname, { authenticated });
 			if (verdict.kind !== "allow") {
 				return verdict.json !== undefined
@@ -1922,6 +1940,15 @@ export function createRelay(options: RelayOptions = {}) {
 			}
 		}
 
+		if (pathname === "/api/settings/account-routing" && policyFixture) {
+			const reply = await policyFixture.respond(method, body);
+			if (reply.drop) return res.destroy();
+			res.writeHead(reply.status, {
+				"content-type": "application/json; charset=utf-8",
+			});
+			return res.end(JSON.stringify(reply.body));
+		}
+
 		/* ------------------------------------------------------------- public -- */
 
 		if (pathname === "/healthz") {
@@ -1934,8 +1961,12 @@ export function createRelay(options: RelayOptions = {}) {
 
 		if (pathname === "/login") {
 			if (method === "GET") {
-				const cookie = readCookie(req.headers.cookie, COOKIE_NAME);
-				if (verifyCookie(cookie, password)) {
+				const cookie = readCookie(req.headers.cookie, cookieName);
+				if (
+					verifyCookie(cookie, sessionKey) &&
+					(!policyFixture ||
+						policyFixture.cookieUnambiguous(req.headers.cookie))
+				) {
 					res.writeHead(303, { location: "/" });
 					return res.end();
 				}
@@ -1962,13 +1993,16 @@ export function createRelay(options: RelayOptions = {}) {
 				sendFixture(res, "login-wrong-password");
 				return;
 			}
-			const { value } = issueCookie(password);
+			const { value } = issueCookie(sessionKey);
 			// `Secure` only when the request arrived over TLS: a plain-loopback
 			// first run must still be able to set the cookie.
 			const overTls = req.headers["x-forwarded-proto"] === "https";
 			res.writeHead(303, {
 				location: "/",
-				"set-cookie": setCookieHeader(value, { secure: overTls }),
+				"set-cookie": setCookieHeader(value, { secure: overTls }).replace(
+					`${COOKIE_NAME}=`,
+					`${cookieName}=`,
+				),
 			});
 			return res.end();
 		}
@@ -1988,8 +2022,10 @@ export function createRelay(options: RelayOptions = {}) {
 			// cookie unambiguous.
 			res.writeHead(303, {
 				location: "/login",
-				"set-cookie": `${COOKIE_NAME}=""; Max-Age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT; Path=/; SameSite=lax`,
-				"clear-site-data": '"storage"',
+				"set-cookie": `${cookieName}=""; Max-Age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT; Path=/; SameSite=lax`,
+				// A shared-profile fixture may expire ONLY its own host-only cookie;
+				// it must not clear browser storage/cookies for the operator.
+				...(policyFixture ? {} : { "clear-site-data": '"storage"' }),
 			});
 			return res.end();
 		}
@@ -2003,8 +2039,11 @@ export function createRelay(options: RelayOptions = {}) {
 		}
 
 		if (pathname === "/") {
-			const cookie = readCookie(req.headers.cookie, COOKIE_NAME);
-			if (!verifyCookie(cookie, password)) {
+			const cookie = readCookie(req.headers.cookie, cookieName);
+			if (
+				!verifyCookie(cookie, sessionKey) ||
+				(policyFixture && !policyFixture.cookieUnambiguous(req.headers.cookie))
+			) {
 				res.writeHead(303, { location: "/login" });
 				return res.end();
 			}
@@ -2910,6 +2949,14 @@ export function createRelay(options: RelayOptions = {}) {
 	 * mishandled a method mistmatch could not be caught here.
 	 */
 	const ALLOWED_METHODS: Array<{ match: RegExp; methods: string[] }> = [
+		...(policyFixture
+			? [
+					{
+						match: ACCOUNT_POLICY_ROUTE,
+						methods: ["GET", "PATCH"],
+					},
+				]
+			: []),
 		// Session sub-routes first: `/command` is a POST-only path, so a GET on it
 		// is a 405 and not the generic 404 a coarser table produced.
 		{ match: /^\/api\/sessions\/[^/]+\/command$/, methods: ["POST"] },
@@ -2992,6 +3039,11 @@ export function createRelay(options: RelayOptions = {}) {
 	/* ------------------------------------------------------------ the server -- */
 
 	const server = createServer(async (req, res) => {
+		if (policyFixture)
+			res.once("finish", () => policyFixture.observeWire(req, res.statusCode));
+		if (policyFixture && !policyFixture.acceptHost(req)) {
+			return sendJson(res, 403, { error: "fixture hostname boundary refused" });
+		}
 		if (!(req.url ?? "/").startsWith("/__mock")) state.requestsServed += 1;
 		const url = new URL(
 			req.url ?? "/",
@@ -3308,6 +3360,8 @@ export function createRelay(options: RelayOptions = {}) {
 		handler: server,
 		/** Listen on `host:port` (port 0 picks a free one) and resolve the handle. */
 		async listen({ host = "127.0.0.1", port = 0 } = {}) {
+			if (policyFixture && !["127.0.0.1", "::1", "localhost"].includes(host))
+				throw new Error("canonical policy fixture must bind loopback only");
 			/* Browsers talk to this server directly (the web target and both harnesses),
 			 * and they reuse an idle socket on their own schedule — minutes for Chrome —
 			 * while Node drops one after `keepAliveTimeout` (5 s by default). In the
@@ -3324,6 +3378,11 @@ export function createRelay(options: RelayOptions = {}) {
 			const address = server.address();
 			const actual =
 				typeof address === "object" && address !== null ? address.port : 0;
+			/* The fixture's emulator allowance is scoped to the port this run ACTUALLY
+			 * bound, so it is armed here — after the kernel chose, before ready is
+			 * published. Without this call the branch admits nothing, which is what an
+			 * unbound fixture should do. */
+			policyFixture?.setBoundPort(actual);
 			// The relay's OWN origin is same-origin by the contract's own rule
 			// (`docs/relay/contract.md` §1.2) — "a foreign Origin is refused; a
 			// same-origin Origin is allowed" — and the mock has to know it to apply
@@ -3336,9 +3395,10 @@ export function createRelay(options: RelayOptions = {}) {
 			// Loopback aliases are included because the mock binds loopback only, and
 			// a foreign (non-loopback) origin still has no way in.
 			const ownHosts = new Set(
-				[host, "127.0.0.1", "localhost"].filter(
-					(candidate) => candidate !== "0.0.0.0" && candidate !== "::",
-				),
+				(policyFixture
+					? [policyFixture.hostname]
+					: [host, "127.0.0.1", "localhost"]
+				).filter((candidate) => candidate !== "0.0.0.0" && candidate !== "::"),
 			);
 			state.allowedOrigins = [
 				...(state.allowedOrigins ?? []),
@@ -3360,11 +3420,15 @@ export function createRelay(options: RelayOptions = {}) {
 				connections: () => server.closeAllConnections?.(),
 			});
 			log(
-				`mock-relay listening http://${host}:${actual}` +
+				`mock-relay listening http://${policyFixture?.hostname ?? host}:${actual}` +
 					` scenario=${state.scenario} faults=${summariseFaults(state.faults)}` +
 					` fixtures=${fixturesDir}`,
 			);
-			return { host, port: actual, url: `http://${host}:${actual}` };
+			return {
+				host,
+				port: actual,
+				url: `http://${policyFixture?.hostname ?? host}:${actual}`,
+			};
 		},
 	};
 }
@@ -3381,6 +3445,55 @@ export function createRelay(options: RelayOptions = {}) {
 // did print the password and then STARTED A LISTENING RELAY, keeping the event loop
 // alive forever: the command substitution never completed and the capture sat on it.
 // Importing a module must have no side effects; only the entry point runs the CLI.
+/** The canonical pinned-core policy fixture, built only when a CI job asks for it.
+ *
+ * WHY IT LIVES HERE AND NOT INSIDE `if (import.meta.main)`: the construction is the
+ * part worth testing, so it is exported and the CLI is a thin caller. The fixture
+ * needs a bootstrapped core checkout (scripts/ci/account-routing-bootstrap.py) and
+ * an owned scratch root; both come from the environment/flags, and a missing one
+ * fails loudly rather than serving a policy the app would wrongly trust.
+ *
+ * Source identity is asserted by `createCanonicalPolicyFixture` itself (the pinned
+ * CORE_HEAD + facade blob), never restated here: one pin, one place to update.
+ */
+export function buildAccountRoutingFixture(
+	flags: Record<string, FlagValue>,
+	options: { admitEmulatorHost?: boolean } = {},
+): import("./account-routing.ts").CanonicalPolicyFixture {
+	const coreRoot = str(flags, "account-routing-core-root");
+	const python = str(flags, "account-routing-python");
+	if (!coreRoot || !python)
+		throw new Error(
+			"--account-routing-fixture needs --account-routing-core-root and --account-routing-python",
+		);
+	const profile = str(flags, "account-routing-profile", "a");
+	if (profile !== "a" && profile !== "b")
+		throw new Error("--account-routing-profile must be a or b");
+	const mode = str(
+		flags,
+		"account-routing-mode",
+		"normal",
+	) as PolicyFixtureMode;
+	const scratch =
+		process.env.LOCAL_OPERATOR_SCRATCHPAD ??
+		(process.env.GITHUB_ACTIONS === "true"
+			? process.env.RUNNER_TEMP
+			: undefined);
+	if (!scratch)
+		throw new Error(
+			"the account-routing fixture needs an owned scratch root: set LOCAL_OPERATOR_SCRATCHPAD (CI: RUNNER_TEMP)",
+		);
+	const fixture = createCanonicalPolicyFixture({
+		python,
+		coreRoot,
+		privateRoot: join(scratch, `account-routing-fixture-${randomUUID()}`),
+		profile,
+		admitEmulatorHost: options.admitEmulatorHost === true,
+	});
+	fixture.controls.mode = mode;
+	return fixture;
+}
+
 if (import.meta.main) {
 	const { flags } = parseArgs(process.argv.slice(2));
 	if (bool(flags, "help")) {
@@ -3400,6 +3513,14 @@ if (import.meta.main) {
 				"                        relay's own origin is always allowed once listening.",
 				"  --allow-android-emulator-origin  admit http://10.0.2.2 at the actual bound port",
 				"                        isolated native CI only; off by default (no wildcard).",
+				"  --account-routing-fixture  serve the canonical pinned-core account-routing",
+				"                        policy facade. OFF by default, so every other job's",
+				"                        behaviour (nightly included) is byte-identical.",
+				"  --account-routing-core-root <dir>  the pinned core checkout the fixture",
+				"                        adapts (required with the flag).",
+				"  --account-routing-python <path>    that checkout's interpreter (required).",
+				"  --account-routing-profile <a|b>    private computer profile (default a).",
+				"  --account-routing-mode <name>      fixture mode (default normal).",
 				"  --print-port          print the chosen port alone on stdout",
 				"  --print-password      print the relay password alone on stdout and exit",
 				"  --list                print every scenario and exit",
@@ -3432,7 +3553,22 @@ if (import.meta.main) {
 	}
 
 	const recordDir = str(flags, "record", undefined);
+	// The canonical account-routing facade, OFF unless a job asks for it. Default
+	// behaviour stays byte-identical for every existing caller (the nightly relay
+	// serves no /api/settings/account-routing and must keep 404ing), so this is
+	// opt-in rather than a second default: the fixture adapts a PINNED core checkout
+	// in a fresh process, and a job that has not bootstrapped one cannot serve it.
+	const accountRouting = bool(flags, "account-routing-fixture")
+		? buildAccountRoutingFixture(flags, {
+				// BOTH flags are required. The fixture flag alone serves policy to a
+				// hostname-scoped caller; only a job that has also opted into the
+				// emulator ORIGIN path gets the host allowance, so the two live and
+				// die together and neither is silently implied by the other.
+				admitEmulatorHost: bool(flags, "allow-android-emulator-origin"),
+			})
+		: undefined;
 	const relay = createRelay({
+		accountRouting,
 		fixturesDir,
 		scenario: str(flags, "scenario", "idle"),
 		faults: list(flags, "fault"),

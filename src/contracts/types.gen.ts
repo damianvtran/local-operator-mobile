@@ -617,6 +617,23 @@ export interface UnreadBlock {
 
 /* --------------------------------------------- the config stream (slice D) */
 
+/** Narrow selected-computer policy projection, core account_routing.py.
+ * Labels/help/errors are backend TEXT, not message descriptors. Choice values
+ * deliberately remain server data: this phone does not define a routing enum. */
+export interface AccountRoutingPayload {
+	capability: "account-routing-v1";
+	setting: {
+		key: "retry.accountSelectionPolicy";
+		label: string;
+		help: string;
+		kind: "enum";
+		value: string;
+		default: string;
+		is_default: boolean;
+		choices: { value: string; label: string; description: string }[];
+	};
+}
+
 /**
  * `GET /api/config/events` — one `config` frame's payload (wave-5 slice D,
  * merged at `e5b3176447fa`, PR #2218). The same frame the desktop feed

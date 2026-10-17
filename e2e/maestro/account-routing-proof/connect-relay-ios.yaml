@@ -1,0 +1,105 @@
+# PROOF-OWNED iOS variant of `helpers/connect-relay.yaml`.
+#
+# WHY THIS FILE EXISTS. The base helper (commit 193d79b, PR #86) is consumed by
+# eight base Android flows (`flows/02..09`) and is exercised on ANDROID only —
+# the base iOS e2e job is explicitly deferred for cost. Its two `hideKeyboard`
+# steps therefore never ran on iOS, and Maestro 2.11.0 does not support
+# `hideKeyboard` on iOS at all. Our lane hit it first: run 38854849272 walked the
+# real own-tunnel path (welcome screen, custom-url tap, own-tunnel screen, URL
+# input ALL COMPLETED) and then failed `Hide Keyboard` with Maestro's own advice
+# — "Instead of hideKeyboard, try tapping on non-interactive element to hide
+# keyboard."
+#
+# So each `hideKeyboard` becomes a tap on static, NON-INTERACTIVE text: the
+# screen's own title, "Your own tunnel" — the element the page already draws, not
+# an invented control and not a shrunken/slept delay. Every id, wait, opt-in and
+# the real `Connected` verdict are unchanged from the base helper; the flow still
+# launches with clearState and still proves the real path end to end.
+#
+# UPSTREAM CANDIDATE. This is a real base-repo iOS portability gap, not ours to
+# silently duplicate forever: once the base iOS e2e lane runs again and can
+# re-verify on Android, the tap-on-static-text form should be folded back into
+# `helpers/connect-relay.yaml` and this file removed.
+appId: ${APP_ID}
+---
+# COLD budget (78000ms): this is the FIRST assertion after the caller's
+# `launchApp: {clearState: true}`, so it waits on the app's own cold launch and
+# first paint. Measured 25869ms for the launch alone (run 38853165349,
+# `warm-launch-base-app`, rc0 — run 38854849272 measured 23286ms for the same step);
+# it is the proof's derived `capFor("coldAppLaunch")`.
+- extendedWaitUntil:
+    visible:
+      id: "welcome-screen"
+    timeout: 78000
+- tapOn:
+    id: "welcome-custom-url"
+- extendedWaitUntil:
+    visible:
+      id: "own-tunnel-screen"
+    timeout: 15000
+# The command guide precedes the form. Scroll at the device's actual font scale;
+# shrinking accessibility text or sleeping would hide a real user-path failure.
+- scrollUntilVisible:
+    element:
+      id: "custom-url-field"
+    direction: DOWN
+    timeout: 15000
+- tapOn:
+    id: "custom-url-field"
+- inputText: ${RELAY_URL}
+# iOS keyboard dismissal: tap static title text, never `hideKeyboard` (unsupported
+# on iOS by Maestro 2.11.0 — see the file header).
+- tapOn:
+    text: "Your own tunnel"
+- scrollUntilVisible:
+    element:
+      id: "custom-password-field"
+    direction: DOWN
+    timeout: 15000
+- tapOn:
+    id: "custom-password-field"
+- inputText: ${RELAY_PASSWORD}
+- tapOn:
+    text: "Your own tunnel"
+- scrollUntilVisible:
+    element:
+      id: "custom-insecure-opt-in"
+    direction: DOWN
+    timeout: 15000
+- tapOn:
+    id: "custom-insecure-opt-in"
+- scrollUntilVisible:
+    element:
+      id: "own-tunnel-test"
+    direction: DOWN
+    timeout: 15000
+- tapOn:
+    id: "own-tunnel-test"
+# OwnTunnel disables Save until runTunnelTest admits the password and reads the
+# sessions endpoint. This verdict is its real success title, not a form label.
+- scrollUntilVisible:
+    element:
+      text: "Connected"
+    direction: DOWN
+    timeout: 15000
+- extendedWaitUntil:
+    visible:
+      text: "Connected"
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: "custom-connect"
+    direction: DOWN
+    timeout: 15000
+- extendedWaitUntil:
+    visible:
+      id: "custom-connect"
+      enabled: true
+    timeout: 15000
+- tapOn:
+    id: "custom-connect"
+    enabled: true
+- extendedWaitUntil:
+    visible:
+      id: "home-screen"
+    timeout: 15000

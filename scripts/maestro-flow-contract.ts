@@ -47,7 +47,7 @@ export function parseFlow(text: string): Value[] {
 				return raw.slice(1, -1).replaceAll("''", "'");
 			}
 			assert(
-				!/[#\[\]{}&*!|>]|:(?:\s|$)/.test(raw.replaceAll(/\$\{[^}]+\}/g, "")),
+				!/[#[\]{}&*!|>]|:(?:\s|$)/.test(raw.replaceAll(/\$\{[^}]+\}/g, "")),
 				`unsupported YAML scalar: ${raw}`,
 			);
 			if (raw === "true") return true;
@@ -466,7 +466,270 @@ export function checkEmulatorGate(workflow: string) {
 	);
 }
 
+/**
+ * The account-routing Android proof must carry EXACTLY ONE re-gated retry of its
+ * flow — the sibling `maestro-android` job's documented practice (ADR 0004), copied
+ * deliberately rather than dropped in the copy.
+ *
+ * WHY: Maestro 2.11.0's CLI has no retry option (`--retry` fails at argument
+ * parsing), and the documented device-offline flake
+ * (`DeviceServerDiedException: Device server died during 'deviceInfo'`) killed this
+ * lane's FIRST flow step before any assertion (run 38922359159) — so it produced no
+ * flow evidence. The sibling lane tolerates that flake with a retry; a copy without
+ * one fails outright on the same flake. The retry must RE-GATE the emulator before
+ * re-running (the sibling's own comment says why: the gate is what turns "device
+ * offline" into a bounded, loud wait), and it must not invent a `--retry` flag.
+ */
+/**
+ * The proof flow must not `assertVisible`/`tapOn` a TEXT target without scrolling it
+ * into view first — unless it is an element the previous step already brought into
+ * view on the same screen.
+ *
+ * WHY: at the lane's device size the settings form is taller than the viewport, and
+ * `text:` targets sit below the fold. The neighbouring steps already scroll to their
+ * target; one diverged, and a bare assertion then failed against CORRECT app
+ * behaviour (run 38925920010, seq 37: `Assertion is false: "Not saved yet." is
+ * visible`). Same shape as the continuation bug: the surrounding pattern was right
+ * and a single step did not follow it, so the check is a test rather than a note.
+ *
+ * The allow-list holds the two cases that are genuinely in view by construction:
+ * `settings-button` is on the home screen the flow just asserted, and the three
+ * segmented choice targets share the ONE row that the flow scrolls to before
+ * selecting. Anything else must carry its own preceding scroll.
+ */
+const IN_VIEW_AFTER_REACHING: ReadonlySet<string> = new Set([
+	// The home screen was asserted immediately before this is tapped.
+	"settings-button",
+	// The segmented row itself, reached once by the flow before the first choice.
+	"settings-account-routing-group:headroom",
+]);
+
+export function checkProofFlowScrollsTextTargets(text: string) {
+	const documents = parseFlow(text);
+	assert.equal(
+		documents.length,
+		2,
+		"a flow needs a header and a commands document",
+	);
+	const steps = documents[1];
+	assert(Array.isArray(steps), "the commands document must be a sequence");
+	let lastScroll: string | null = null;
+	let screenShots = 0;
+	for (const [index, raw] of steps.entries()) {
+		const step = mapping(raw);
+		if (step.scrollUntilVisible !== undefined) {
+			const element = mapping(mapping(step.scrollUntilVisible).element);
+			lastScroll = String(element.text ?? element.id ?? "");
+			continue;
+		}
+		if (step.takeScreenshot !== undefined) {
+			screenShots += 1;
+			lastScroll = null;
+			continue;
+		}
+		if (step.runFlow !== undefined) {
+			lastScroll = null;
+			continue;
+		}
+		for (const kind of ["assertVisible", "tapOn"] as const) {
+			if (step[kind] === undefined) continue;
+			const target = mapping(step[kind]);
+			const text = target.text;
+			if (typeof text !== "string") continue;
+			const inView = IN_VIEW_AFTER_REACHING.has(text);
+			assert.ok(
+				inView || lastScroll === text,
+				`step ${index}: ${kind} text ${JSON.stringify(text)} must be scrolled into view first (or be an element already in view)`,
+			);
+			if (lastScroll === text) lastScroll = null;
+		}
+	}
+	assert.ok(
+		screenShots >= 3,
+		"the flow must still capture its rendered states",
+	);
+}
+
+export function checkProofFlowRetry(workflow: string) {
+	const lines = emulatorScriptLinesFor(
+		"account-routing-android-proof",
+		workflow,
+	);
+	const retries = lines.filter((line) => /run_flows \|\|/.test(line));
+	assert.equal(retries.length, 1, "exactly one re-gated flow retry");
+	const retry = retries[0] as string;
+	assert.match(
+		retry,
+		/run_flows \|\| \{[^}]*await-emulator-ready\.sh && run_flows; \}$/,
+		"the retry must re-gate the emulator before re-running the flow",
+	);
+	assert.match(
+		retry,
+		/::warning/,
+		"a flaked run must be reported as a warning",
+	);
+	assert.doesNotMatch(
+		workflow,
+		/maestro[^\n]*--retry/,
+		"Maestro 2.11.0 has no --retry flag; the retry is the script's own",
+	);
+}
+
+/** The `script:` lines of the emulator step inside ONE named job. */
+function emulatorScriptLinesFor(job: string, workflow: string): string[] {
+	const jobsSection = workflow.split("\njobs:\n")[1];
+	assert.ok(jobsSection, "workflow must declare jobs");
+	// A job header is EXACTLY two spaces + name + colon at the line start; `\n  `
+	// alone also matches the four-space body indent and would cut the body off at
+	// its first nested line.
+	const header = new RegExp(`\n  ${job}:\\n`);
+	const at = jobsSection.search(header);
+	assert.ok(at >= 0, `${job} must exist`);
+	const rest = jobsSection.slice(at + 1);
+	const others = [...rest.matchAll(/\n {2}[A-Za-z0-9_-]+:\s*\n/g)]
+		.map((m) => m.index)
+		.filter((index) => index > 0);
+	const end = others.length > 0 ? Math.min(...others) : rest.length;
+	const jobBody = rest.slice(0, end);
+	const lines = jobBody.split("\n");
+	const start = lines.findIndex((line) => /^ {10}script: \|\s*$/.test(line));
+	assert.ok(start >= 0, `${job} must carry an emulator script: block`);
+	const block: string[] = [];
+	for (const line of lines.slice(start + 1)) {
+		if (line.trim() !== "" && !line.startsWith(" ".repeat(12))) break;
+		block.push(line.trim());
+	}
+	return block.filter((line) => line !== "" && !line.startsWith("#"));
+}
+
+/**
+ * EVERY `android-emulator-runner` `script:` block in the workflow must keep each
+ * command on ONE line.
+ *
+ * The action parses `script:` into one command per line and runs each through
+ * `/usr/bin/sh -c`, so a `\` continuation splits a command and the FIRST line runs
+ * alone — with a literal backslash where the continuation was. Measured: the
+ * account-routing Android proof job (run 38916253711) put its `maestro test`
+ * invocation across six lines and died in ~2s with
+ * `Flow path does not exist: .../local-operator-mobile/\`.
+ *
+ * WHY THIS IS A TEST AND NOT ONLY A COMMENT: the rule is documented in the very
+ * job the new one was copied from, and the copy still broke it. `emulatorScriptLines`
+ * above is scoped to the "Run the flows" step, so it could not see the new block;
+ * this check walks EVERY emulator step instead, which is what makes the class
+ * closed rather than the one instance.
+ */
+export function checkEmulatorScriptContinuations(workflow: string) {
+	const blocks: { name: string; lines: string[] }[] = [];
+	const marks = [...workflow.matchAll(/^ {6}- (?:uses|name):[^\n]*\n/gm)];
+	for (const mark of marks) {
+		const start = mark.index as number;
+		const next = marks.find((candidate) => (candidate.index as number) > start);
+		const step = workflow.slice(
+			start,
+			next ? (next.index as number) : undefined,
+		);
+		if (!/android-emulator-runner/.test(step)) continue;
+		const lines = step.split("\n");
+		const at = lines.findIndex((line) => /^ {10}script: \|\s*$/.test(line));
+		if (at < 0) continue;
+		const label =
+			step
+				.split("\n")
+				.find((line) => /^ {6}- name:/.test(line))
+				?.trim() ??
+			step.split("\n")[0]?.trim() ??
+			"emulator step";
+		const block: string[] = [];
+		for (const line of lines.slice(at + 1)) {
+			if (line.trim() !== "" && !line.startsWith(" ".repeat(12))) break;
+			block.push(line);
+		}
+		blocks.push({ name: label, lines: block });
+	}
+	assert.ok(
+		blocks.length > 0,
+		"at least one emulator `script:` block must exist",
+	);
+	for (const { name, lines } of blocks)
+		for (const [index, line] of lines.entries())
+			assert.ok(
+				!line.trimEnd().endsWith("\\"),
+				`${name}: line ${index + 1} ends in a backslash — the action runs one command per line, so a continuation splits it`,
+			);
+}
+
 export const maestroChecks: [string, () => void][] = [
+	[
+		"the Android proof scrolls every below-the-fold text target into view",
+		() => {
+			const flowPath = join(
+				workspace,
+				"account-routing-proof/connect-android.yaml",
+			);
+			const text = readFileSync(flowPath, "utf8");
+			checkProofFlowScrollsTextTargets(text);
+			// Discriminating: dropping the scroll the saved round-trip needs must fail,
+			// so the check cannot pass by finding no text targets at all.
+			const withoutScroll = text.replace(
+				`- scrollUntilVisible:\n    element:\n      text: "Not saved yet."\n    direction: DOWN\n    timeout: 15000\n`,
+				"",
+			);
+			assert.notEqual(
+				withoutScroll,
+				text,
+				"the probe must actually change the flow",
+			);
+			assert.throws(
+				() => checkProofFlowScrollsTextTargets(withoutScroll),
+				/must be scrolled into view first/,
+			);
+		},
+	],
+	[
+		"the Android proof carries exactly one re-gated flow retry (ADR 0004)",
+		() => {
+			const workflow = readFileSync(
+				join(root, ".github/workflows/e2e.yml"),
+				"utf8",
+			);
+			checkProofFlowRetry(workflow);
+			// Discriminating: dropping the retry must fail, so the check cannot pass
+			// by finding nothing to inspect.
+			const withoutRetry = workflow
+				.split("\n")
+				.filter((line) => !/run_flows \|\|/.test(line))
+				.join("\n");
+			assert.throws(
+				() => checkProofFlowRetry(withoutRetry),
+				/exactly one re-gated flow retry/,
+			);
+		},
+	],
+	[
+		"every emulator script block keeps each command on one line",
+		() => {
+			// `readFileSync`, not `read`: `read` is the Maestro FLOW parser, and the
+			// workflow is not a flow (it would reject `${{ … }}` scalars).
+			const workflow = readFileSync(
+				join(root, ".github/workflows/e2e.yml"),
+				"utf8",
+			);
+			checkEmulatorScriptContinuations(workflow);
+			// Discriminating: a block with a continuation must be rejected, so the
+			// check cannot pass by reading nothing.
+			assert.throws(
+				() =>
+					checkEmulatorScriptContinuations(
+						workflow.replace(
+							"            adb install -r android/app/build/outputs/apk/release/app-release.apk",
+							"            adb install -r android/app/build/outputs/apk/release/app-release.apk \\",
+						),
+					),
+				/ends in a backslash/,
+			);
+		},
+	],
 	[
 		"Settings scrolls to each target and remeasures appearance changes before captures",
 		() => {
