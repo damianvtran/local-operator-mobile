@@ -21,13 +21,21 @@ the sentence is the tiebreak.
 
 ### 0.1 What this kit is derived from, and what it is not
 
-Three artefacts already exist. This kit is a *port*, not a fourth opinion.
+Three artefacts stand behind this kit; since v1.2.0 a fourth upstream carries them.
+This kit is a *port*, not a fourth opinion.
 
 | Artefact | What it is | How this kit uses it |
 |---|---|---|
+| [`damianvtran/local-operator-design`](https://github.com/damianvtran/local-operator-design) | The public home of record for the shared brand register — the app-family palettes and the role contract as data (`app-family.json`) and the divergence register (`divergences.json`), split from the site's kit with its history followed | The **upstream**. Consumed as a pinned slice: byte copies under `design/tokens/upstream/` with `design-kit.lock.json` at this repository's root |
 | `~/local-operator-site/docs/design-kit/` | The marketing site's system: tokens, typography, components, motion, voice, and the executable `contrast-contract.mjs` | The **register** — the warm-paper grounds, the semantic triples, the two shadows, the motion durations and easings, the contrast floors, and the contract script's shape. Its light accent is the one value NOT taken, and § 2.1 gives the measurement |
 | `~/local-operator-ui/docs/branding.md` + `src/renderer/src/shared/themes/palettes/local-operator.ts` | The desktop app's 59-theme system and its two brand palettes, `localOperatorDark` and `localOperatorLight` | The **palette and the role names**, including the accent ramp in full. These are the app's own brand palettes and they ship here verbatim |
 | `~/local-operator/local_operator/mobile/web/src/` | The shipped phone web client (React + Tailwind v4) | The **phone-shaped decisions** — the touch floors, the 16pt input floor, the machine-voice split, the 44px control height, the streaming shimmer, the diff row tint |
+
+The fourth row supersedes the hand-port for the register, from kit v1.2.0: brand
+values are read from the kit's pinned slice and held to it by
+`design/tokens/check-upstream.mjs`. Two standing differences are pinned both ways
+in that check (`hairline-strong`, and the theme-invariant `scrim`); each moves
+only deliberately.
 
 The precedence rule, inherited from the desktop app and unchanged here: **on the
 brand the kit wins; on how a phone should behave this repository wins, because a

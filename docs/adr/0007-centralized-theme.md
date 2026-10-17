@@ -1,6 +1,6 @@
 # ADR 0007 — One source of truth for the brand theme
 
-- **Status:** Proposed (for implementation)
+- **Status:** **Accepted** — 2026-10-16. See the update below; implementation is in phases ("Migration plan").
 - **Date:** 2026-10-11
 - **Deciders:** the maintaining team; the extraction moves a document the site repository owns
   today, so the new home and its licence are the operator's call (see "Coordination items")
@@ -15,6 +15,16 @@
   hand-port it describes. The table is otherwise unchanged; § 2.1's mapping decision stands, and the
   `$meta.accentDivergence` measurement moves into the kit's divergence register when phase 2 lands
   (referenced from here, not restated).
+
+**Update, 2026-10-16 — accepted; phase 1 complete, phase 2 is this repository's pull request.**
+Status moves from Proposed to Accepted on the operator's timeout: the home is
+`damianvtran/local-operator-design` (public, MIT), as proposed under "Coordination items".
+**Phase 1 is complete:** that repository carries the kit split from the site with its history
+followed, plus `app-family.json` and `divergences.json`, and is tagged **v1.2.0** at
+`0e8f987d4f16916f0c2b844cda02d193563ca29f`; independent review rounds 1–2 are terminal.
+**Phase 2** is the pull request that added this line — the slice, `design-kit.lock.json`, the
+parity check and the design-kit CI step of § Decision 3. **Phases 3–5 follow**: the desktop
+app's handoff routes via the coordinator; the core and the site are separate changes.
 
 **Provenance.** Every cross-repository citation below is stated at a named revision and was resolved
 with `git show <ref>:<path>`, never from a working tree — the shared checkouts on the reference

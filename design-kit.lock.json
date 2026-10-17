@@ -1,0 +1,14 @@
+{
+	"kit": "damianvtran/local-operator-design",
+	"source": "https://github.com/damianvtran/local-operator-design",
+	"version": "1.2.0",
+	"ref": "v1.2.0",
+	"commit": "0e8f987d4f16916f0c2b844cda02d193563ca29f",
+	"algorithm": "sha256",
+	"slice": "design/tokens/upstream",
+	"note": "The slice is a byte copy of the kit's files at `ref`; each sha256 is the value the kit's own digests.json records at that ref (ADR 0007 § Decision 2, 'Consumption is a pinned slice plus a parity gate'). `design/tokens/check-upstream.mjs` re-proves slice == kit at this ref == these hashes, and this repository's brand roles == the slice. A pin bump is a deliberate change: update `version`, `ref`, `commit`, the slice and these hashes together.",
+	"files": {
+		"app-family.json": "c6b91c441ee09f70d869881d5c7053c3abb9ce2aa7016a7bb77eed4c5527c6e6",
+		"divergences.json": "d97bfbdb0dd5c2617cba6172de2348fdb58a57cbdb3bcdb0dee97bb25b6d35c7"
+	}
+}

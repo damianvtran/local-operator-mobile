@@ -119,17 +119,19 @@ jobs:
           # The inputs these gates read, and the generators that produce the
           # files they compare: the token source, the committed assets and
           # frames, the generated styling layer in `src/ui`, the theme generator,
-          # and the gate scripts themselves. A change confined to anything else
+          # the gate scripts themselves, and the kit pin (`design-kit.lock.json`
+          # is a parity-check input at the repository root, so a lock-only change
+          # — a pin bump — must run this job). A change confined to anything else
           # cannot alter a re-render.
           design=$(printf '%s\n' "$files" \
-            | grep -E '^(design/|docs/design/|src/ui/|scripts/|tailwind\.config\.|package\.json$|pnpm-lock\.yaml$|\.github/workflows/ci\.yml$)' \
+            | grep -E '^(design/|docs/design/|src/ui/|scripts/|tailwind\.config\.|package\.json$|pnpm-lock\.yaml$|design-kit\.lock\.json$|\.github/workflows/ci\.yml$)' \
             || true)
           if [ -n "$design" ]; then
             echo "design=true" >> "$GITHUB_OUTPUT"
             printf 'design surfaces touched:\n%s\n' "$(printf '%s\n' "$design" | head -20)"
           else
             echo "design=false" >> "$GITHUB_OUTPUT"
-            echo "nothing under design/, docs/design/, src/ui/, scripts/ or the configs changed — the macOS design job is skipped"
+            echo "nothing under design/, docs/design/, src/ui/, scripts/, the kit pin or the configs changed — the macOS design job is skipped"
           fi
 
   checks:
@@ -402,6 +404,17 @@ jobs:
 
       - name: Tailwind preset matches tokens.json
         run: node design/tokens/build-preset.mjs --check
+
+      - name: Upstream slice and parity (kit pin, brand roles)
+        # ADR 0007 § Decision 2. One command, two checks, two messages: the
+        # slice equals the kit at the locked ref (a public→public fetch from
+        # raw.githubusercontent.com — no credentials, so it is safe on fork
+        # pull requests), and `tokens.json`'s shared brand roles equal the
+        # slice (local, no network). The two known differences between this
+        # app and the app family are pinned in the script, both values, so a
+        # pin fails if either side moves — the same discipline the kit's
+        # divergence register uses.
+        run: pnpm upstream:check
 
       - name: Icons, launcher, splash and store assets re-render identically
         run: node design/app-icon/build-icons.mjs --check

@@ -23,6 +23,7 @@
 		"theme:check": "node scripts/build-theme.ts --check",
 		"contrast:check": "node design/tokens/contrast-contract.mjs",
 		"preset:check": "node design/tokens/build-preset.mjs --check",
+		"upstream:check": "node design/tokens/check-upstream.mjs",
 		"mock:relay": "node tools/mock-relay/relay.ts",
 		"e2e:relay": "node tools/mock-relay/verify.ts",
 		"e2e:canary": "node e2e/run-canary.ts",
