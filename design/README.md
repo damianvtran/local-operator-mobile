@@ -32,7 +32,7 @@ node design/tokens/contrast-contract.mjs           # gate: 1157 assertions over 
 node design/tokens/build-preset.mjs                # generate: the preset + the preview's CSS
 node design/tokens/build-preset.mjs --check        # gate: those two files match tokens.json
 node design/tokens/check-upstream.mjs              # gate: the slice == the kit at its pin, and tokens.json ==
-                                                   #   the slice (fetches raw.githubusercontent.com once)
+                                                   #   the slice (fetches the two slice files from raw.githubusercontent.com)
 node design/app-icon/build-icons.mjs               # generate: every icon/splash/store PNG + the SVG layers
 node design/app-icon/build-icons.mjs --check       # gate: re-renders all 33 files and compares them
 node design/preview/capture.mjs                    # generate: the preview sheet, both themes

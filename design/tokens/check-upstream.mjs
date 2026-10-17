@@ -23,7 +23,7 @@
  * THE STANDING DIFFERENCES. Two roles differ between this file and the app
  * family today. They are not drift to be quietly absorbed, and this check does
  * not wave them through: each is PINNED below with both values and a reason,
- * and a pin fails if either side moves. That is the same discipline the kit's
+ * and a pin fails if either side moves or drops the role. That is the same discipline the kit's
  * divergence register uses — a recorded difference is re-checked on every run
  * and cannot outlive the values it describes — applied at the point where this
  * repository can enforce it. A difference that should outlive this file belongs
@@ -148,6 +148,7 @@ function checkParity() {
 	const pinned = new Map(PINNED.map((p) => [p.role, p]));
 	const leaves = [...roleLeaves(tokens.color)];
 	const shipped = new Set(leaves.map(([p]) => camel(p.split("/").pop())));
+	const consulted = new Set();
 
 	let equal = 0;
 	const appOnly = [];
@@ -164,6 +165,7 @@ function checkParity() {
 
 		if (pin) {
 			/* a pinned difference: both sides must equal their pins */
+			consulted.add(name);
 			const appSide =
 				token.value !== undefined
 					? { value: token.value }
@@ -213,6 +215,31 @@ function checkParity() {
 	for (const key of Object.keys(light)) {
 		if (!shipped.has(key)) {
 			appOnly.push(key);
+		}
+	}
+
+	/* every pin must have been re-verified above: a pinned role that is no
+	   longer present on one side (renamed here, or renamed or dropped by a kit
+	   bump) must fail with a message that names it, not exit 0 with a stale
+	   record — the script's promise is that a pin cannot outlive the values it
+	   describes. */
+	for (const p of PINNED) {
+		if (consulted.has(p.role)) continue;
+		const key = camel(p.role);
+		const inApp = shipped.has(key);
+		const inSlice = key in light;
+		if (!inApp && !inSlice) {
+			bProblems.push(
+				`${p.role}: a pinned difference's role is gone from BOTH sides — remove the pin, or restore the role`,
+			);
+		} else if (!inApp) {
+			bProblems.push(
+				`${p.role}: a pinned difference's role is missing from this app's tokens.json (renamed or removed) — the pin cannot be re-verified; update the pin or restore the role`,
+			);
+		} else {
+			bProblems.push(
+				`${p.role}: a pinned difference's role is missing from the app family at this pin (renamed or dropped by the kit) — the pin is stale; update it in the same deliberate change as the pin bump`,
+			);
 		}
 	}
 
