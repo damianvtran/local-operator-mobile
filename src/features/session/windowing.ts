@@ -208,3 +208,48 @@ export const windowPolicy = (
 		estimatedMountedRows,
 	};
 };
+
+/**
+ * A changed distance alone is not reader intent: estimated content settling, streaming,
+ * and our own end clamp can all change it (D21). But geometry changing is not a blanket
+ * exemption either (R4-1): a reader scrolling UP200 while a row grows1pt must leave
+ * following. Content growth cannot explain any backwards clamp.
+ *
+ * A clamp can only reduce the offset when the scrollable end SHRANK. Its maximum
+ * explainable movement is bounded by both the reduction in the end and the part of the
+ * previous offset beyond the new end:
+ *   oldEnd = max(0, oldContent - oldViewport)
+ *   newEnd = max(0, content - viewport)
+ *   allowance = min(max(0, oldEnd - newEnd), max(0, oldOffset - newEnd))
+ * Any upward movement beyond that allowance (plus half a point of rounding) belongs to
+ * the reader, even if a stream/layout change happened in the same scroll event. Returning
+ * false also persists in scrollPlaces: later content/layout callbacks cannot pin them.
+ * A real backwards clamp lands at the new end; our own pin advances or clamps there.
+ * Neither is reader movement. No time-based ignore window or geometry-wide exemption.
+ * Snapshots are from the PREVIOUS scroll event, not refs overwritten by onLayout.
+ */
+export const nextAtTail = (input: {
+	wasAtTail: boolean;
+	distanceToEnd: number;
+	bandPt: number;
+	offsetY: number;
+	previousOffsetY: number;
+	viewportPt: number;
+	previousViewportPt: number;
+	contentPt: number;
+	previousContentPt: number;
+}): boolean => {
+	if (input.distanceToEnd < input.bandPt) return true;
+	if (!input.wasAtTail) return false;
+	const previousEnd = Math.max(
+		0,
+		input.previousContentPt - input.previousViewportPt,
+	);
+	const currentEnd = Math.max(0, input.contentPt - input.viewportPt);
+	const clampAllowance = Math.min(
+		Math.max(0, previousEnd - currentEnd),
+		Math.max(0, input.previousOffsetY - currentEnd),
+	);
+	const upwardMovement = input.previousOffsetY - input.offsetY;
+	return upwardMovement <= clampAllowance + 0.5;
+};

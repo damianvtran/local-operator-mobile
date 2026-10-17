@@ -1730,44 +1730,21 @@ export const U42_EXEMPTIONS: Array<{
 			"text size; flagged, not absorbed (§3.4). The fragment also covers the glyph's `path` " +
 			"child, which inherits the same box",
 	},
-	{
-		path: "div.css-g5y9jx.px-3>button.css-g5y9jx.r-1loqt21",
-		value: 10,
-		properties: ["padding-left", "padding-right"],
-		reason:
-			"#59's condensed-turn bar (`turn-bar.tsx` — the `px-2.5` on its Pressable) — the " +
-			"summary row this PR does not touch; measured on the ci run of 37563484274 as the " +
-			"check's only failures (padding-left and padding-right, every failing frame). " +
-			"deferred — align the turn bar in its own change, then drop this entry",
-	},
-	{
-		path: "div.css-g5y9jx.px-3>button.css-g5y9jx.r-1loqt21",
-		value: 6,
-		properties: ["row-gap", "column-gap"],
-		reason:
-			"#59's condensed-turn bar (`turn-bar.tsx` — the `gap-1.5` between its ✓ glyph, its " +
-			"text and its caret; row-gap and column-gap) — same surface and run as the entry " +
-			"above. deferred — align the turn bar in its own change, then drop this entry",
-	},
 ];
 
 /**
  * The U-41 exemption ledger, RECORDED rather than silently passed.
  *
- * U-41 judges every caret-bearing row's rail and caret geometry. #59's
- * condensed-turn bar (`turn-bar.tsx`) is such a row — its disclosure caret
- * sits at the trailing edge — but its geometry is its own surface's to keep
- * or change: the Pressable is a bordered, full-row control whose content is
- * inset by its own `px-2.5`, a leading ✓ glyph and `gap-1.5`, and whose caret
- * is centred on the 48 pt row (`items-center`) rather than on the first text
- * line. Measured on the ci run of 37563484274, that produces the check's only
- * failures — 60 rail rows and 60 caret rows, one pair of numbers (31.4 pt and
- * 20.6 pt) across three cells — and this PR touches neither `turn-bar.tsx`
- * nor the condensing model.
- *
- * The coupling is the safety, exactly as in `U42_EXEMPTIONS`: each record
- * carries the measured numbers, so a later change that moves the bar's inset
- * or re-seats its caret moves the reading off the record, the node FAILS on
+ * It is EMPTY, and kept as the mechanism rather than deleted: the one record it
+ * ever held — #59's condensed-turn bar (`turn-bar.tsx`), whose ✓ column and
+ * row-centred caret put the first line 31.4 pt inside the row and the caret 20.6 pt
+ * off line one — was retired when the bar was aligned (the glyph is now the first run
+ * of the label's own text and the caret keys to the first line). That record's
+ * coupling to measured numbers was also why it could not cover 150 %: it matched
+ * 31.4 / 20.6 at 135 % and 200 % and turned those rows into EXCEPTIONs, while at 150 %
+ * the same defect measured 27.8 / 15.9 and FAILED — a real defect hidden at two
+ * scales. A future entry follows the same rule: it carries the measured numbers, so
+ * a change that moves the geometry moves the reading off the record, the node FAILS on
  * the spot, and that red is the signal to delete the entry.
  *
  * `path` is matched as a SUBSTRING of the row's probe path.
@@ -1779,25 +1756,7 @@ export const U41_EXEMPTIONS: Array<{
 	/** The caret's centre offset from the first line's centre this record covers, at 0.05. */
 	caret?: number;
 	reason: string;
-}> = [
-	{
-		path: "div.css-g5y9jx.px-3>button.css-g5y9jx.r-1loqt21",
-		rail: 31.4,
-		caret: 20.6,
-		reason:
-			"#59's condensed-turn bar (`turn-bar.tsx`): its first text line starts 31.4 pt inside " +
-			"the bar's own box — the box is a bordered Pressable and the line follows its " +
-			"`px-2.5`, the leading ✓ glyph and `gap-1.5` — and its caret is centred on the 48 pt " +
-			"row (`items-center`) rather than on the first text line, 20.6 pt off. The same " +
-			"defect family as the operator's original caret complaint, on a surface this PR does " +
-			"not touch; measured on the ci run of 37563484274 — three cells (`S5/populated-long` " +
-			"and the two condensed-viewer `path:` cells) on iphone-se and tablet-landscape, both " +
-			"themes, all three scales. " +
-			"deferred — align the turn bar in its own change (rail: the first line back onto the " +
-			"transcript's rail; caret: within ±4 pt of the first line's centre), then drop this " +
-			"entry",
-	},
-];
+}> = [];
 
 /**
  * The deferral U-40 records for scrollers that are not a table's viewport.

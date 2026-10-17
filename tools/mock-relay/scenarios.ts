@@ -402,6 +402,50 @@ function projectionFrom(
 	return { ...structuredClone(fixture), ...overrides };
 }
 
+/**
+ * A subagent's OWN transcript, for the detail route (`/session/<id>/agent/<jobId>`).
+ *
+ * The roster fixtures carry `transcript: []`, so the loaded detail screen rendered its
+ * "no transcript rows of its own" notice and `S6/populated` and `S6/populated-long`
+ * could not differ from each other (or evidence a transcript at all). Rows are cloned
+ * from the corpus's own entry kinds, under ids prefixed `sa-<jobId>-` so they can never
+ * collide with the parent conversation's `tc-…` ids, and text-only: the mock has no
+ * bytes to serve for a fabricated image, and an unresolvable reference renders as the
+ * app's unloadable-image treatment in every frame.
+ */
+function subagentTranscript(
+	base: SessionProjection,
+	jobId: string,
+	steps: number,
+): SessionProjection["transcript"] {
+	const tool = base.transcript.find((entry) => entry.kind === "tool");
+	const answer = base.transcript.find((entry) => entry.kind === "assistant");
+	if (tool === undefined || answer === undefined) {
+		throw new Error("the subagent transcript base is missing a row to clone");
+	}
+	const rows: SessionProjection["transcript"] = [];
+	for (let step = 0; step < steps; step += 1) {
+		rows.push({
+			...structuredClone(tool),
+			id: `sa-${jobId}-tool-${String(step).padStart(2, "0")}`,
+			tool_call_id: `sa-${jobId}-${step}`,
+			tool_name: ["read", "grep", "edit", "bash"][step % 4] ?? "read",
+			tool_state: "done",
+			summary: `step ${step + 1}: checking the retry envelope in worker.ts`,
+			text: "",
+			images: [],
+			details: {},
+		});
+	}
+	rows.push({
+		...structuredClone(answer),
+		id: `sa-${jobId}-answer`,
+		text: "Three call sites retried without a backoff cap; all three are patched.",
+		images: [],
+	});
+	return rows;
+}
+
 const longName =
 	"Refactor the payment reconciliation worker and its retry envelope";
 const longCwd =
@@ -1668,6 +1712,11 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 		["S5/subagents", "S6/populated"],
 		() => {
 			const projection = structuredClone(everyKind);
+			/* The detail screen's loaded state needs rows of its own: a short transcript
+			 *  here, a long one in `subagent-completed`, so the two S6 cells are different
+			 *  states (a short child and a long one) rather than one frame twice. */
+			for (const row of projection.subagents)
+				row.transcript = subagentTranscript(everyKind, row.job_id, 4);
 			return {
 				projections: { [projection.session_id]: projection },
 				subagentDetail: "from-roster",
@@ -1678,7 +1727,7 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 	add(
 		"subagent-completed",
 		"A completed subagent carrying a result, with a blocked second child.",
-		["S6/populated", "S6/populated-long"],
+		["S6/populated-long"],
 		() => {
 			const base = structuredClone(everyKind);
 			const projection = projectionFrom(base, {
@@ -1686,6 +1735,7 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 					index === 0
 						? {
 								...row,
+								transcript: subagentTranscript(everyKind, row.job_id, 36),
 								status: "completed",
 								progress: "",
 								result_text: "Swept 214 files; 3 needed edits.",

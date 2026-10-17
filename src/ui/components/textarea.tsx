@@ -30,6 +30,16 @@ export type TextareaProps = {
 	placeholder?: string;
 	invalid?: boolean;
 	disabled?: boolean;
+	/** Keep the label as the field's ACCESSIBLE NAME only and do not paint it. For the
+	 *  short-landscape composer, where a visible "Message" line costs a whole text line
+	 *  of a 390 pt screen and the placeholder already says what the field is. The name
+	 *  is never removed: `accessibilityLabel` below still carries it. */
+	hideLabel?: boolean;
+	/** A HARD pixel ceiling on the field's height, applied on top of `maxLines`. For the
+	 *  short-landscape composer, whose budget is the screen's height and not a line count:
+	 *  past it the field scrolls itself, so the controls beside and below it never leave
+	 *  the screen. Unset, the line cap alone applies and nothing changes. */
+	maxHeightPx?: number;
 	/** Six lines by default; the composer may raise it, never remove it. */
 	maxLines?: number;
 	/** The most lines a WRAPPED placeholder may add to the field's resting height.
@@ -91,7 +101,9 @@ export const Textarea = ({
 	placeholder,
 	invalid = false,
 	disabled = false,
+	hideLabel = false,
 	maxLines = 6,
+	maxHeightPx,
 	placeholderMaxLines,
 	onSubmitEditing,
 	autoFocus,
@@ -110,7 +122,11 @@ export const Textarea = ({
 	 * and the minimum term in the height come from it, so the two states are equal
 	 * by construction at every scale — the invariant design §2.5 D1 asks for. */
 	const oneLineBox = BODY_LINE_PX * effectiveScale + FIELD_PAD_Y;
-	const cap = Math.min(maxLines * line, TEXTAREA_MAX_PX * effectiveScale);
+	const cap = Math.min(
+		maxLines * line,
+		TEXTAREA_MAX_PX * effectiveScale,
+		maxHeightPx ?? Number.POSITIVE_INFINITY,
+	);
 	const [contentHeight, setContentHeight] = useState(line);
 	/* The placeholder is not part of `contentSize`, so the floor has to come from its
 	 * own render: same typography, same width, measured in place inside a zero-height
@@ -174,7 +190,9 @@ export const Textarea = ({
 
 	return (
 		<View className="gap-1.5">
-			<Text className="text-body-sm text-ink-muted">{label}</Text>
+			{hideLabel ? null : (
+				<Text className="text-body-sm text-ink-muted">{label}</Text>
+			)}
 			{/* Only while it is the thing on screen: any value hides it, so it can never
 			 *  need room the content is already taking. Zero height and clipped, so it
 			 *  lays out and reports its own height without moving anything — which is why

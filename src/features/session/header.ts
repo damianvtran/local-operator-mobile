@@ -166,3 +166,27 @@ export const headerTitleChars = ({ width, height }: Viewport): number => {
 		Math.floor(available / DISPLAY_ADVANCE_PT),
 	);
 };
+
+/**
+ * The character budget for the COMPACT (short-landscape) header, where the title is ONE
+ * row at the `title` role (20 px) instead of the stacking `display` role (28 px).
+ *
+ * `headerTitleChars` assumes the display advance and, above the stack width, a title
+ * that never grows past one line at 100 %. In compact the title is scaled by the
+ * reader's text size and never stacks, so a budget that ignores both promised ~33
+ * characters on a 915 pt screen at 200 % where the row holds ~23: `middleTruncate` ran,
+ * then the row's own ellipsis clipped the end as well and the tail — which middle
+ * truncation exists to keep — was lost (design D4). The advance here is the display
+ * advance scaled by the role ratio (20/28) and by the text scale.
+ */
+const TITLE_TO_DISPLAY = 20 / 28;
+export const compactTitleChars = (
+	{ width, height }: Viewport,
+	effectiveScale: number,
+): number => {
+	const row = Math.min(width, maxColumnWidth({ width, height }) ?? width);
+	const available = row - HEADER_CHROME_PT;
+	const advance =
+		DISPLAY_ADVANCE_PT * TITLE_TO_DISPLAY * Math.max(1, effectiveScale);
+	return Math.max(MIN_HEADER_NAME_CHARS, Math.floor(available / advance));
+};

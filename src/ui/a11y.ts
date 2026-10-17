@@ -298,6 +298,10 @@ export const CONTROL = {
 	pendingRemember: "pending-remember",
 	pendingAskSubmit: "pending-ask-submit",
 	todosDisclosure: "todos-disclosure",
+	/** Short landscape only: closes the open panel once its own header has scrolled out
+	 *  of the secondary region, so the reader is never left inside a panel with no way
+	 *  back to the transcript. */
+	sessionPanelClose: "session-panel-close",
 	subagentsDisclosure: "subagents-disclosure",
 	/** The session header's subagents lever, which OPENS the roster panel.
 	 *  Deliberately not `subagentsDisclosure`: that one is the panel's own header
@@ -305,6 +309,10 @@ export const CONTROL = {
 	 *  controls on different surfaces and a flow reaching for one must not be able
 	 *  to land on the other. */
 	sessionSubagents: "session-subagents-chip",
+	/* ABSENT in short landscape (`compactChromeFor`): the status strip moves into the
+	 * secondary region and drops this chip, because the roster header carries the same
+	 * lever. A flow reaching the roster there taps `subagentsDisclosure` — no flow
+	 * references this id today (06-subagent-drilldown.yaml is still a SCENARIO stub). */
 	connectionRetry: "connection-retry",
 	connectionSignIn: "connection-sign-in",
 	connectionConsole: "connection-console",
@@ -537,6 +545,16 @@ export const SURFACE = {
 	projectMilestoneSlashNote: "project-milestone-slash-note",
 	sessionTranscript: "session-transcript",
 	sessionComposer: "session-composer",
+	/** The panels + working line, bounded and internally scrolling in short landscape
+	 *  (`compactChromeFor`); absent elsewhere, where they are plain siblings. */
+	sessionSecondaryChrome: "session-secondary-chrome",
+	/** The confirm dialog's body, a bounded scroller so a long body never pushes the
+	 *  actions off a short screen. */
+	dialogBody: "dialog-body",
+	/** The cue under the compact secondary region ("<what is below> · scroll ↓", or the
+	 *  neutral "more below · scroll ↓"), present only while the region overflows and is not
+	 *  scrolled to its end. It never carries a count. */
+	sessionSecondaryMore: "session-secondary-more",
 	/** The composer's attach sheet (one entry point, the sources each build kind
 	 *  actually has). Its rows are the `attach-option-` family below — the rows
 	 *  differ per build kind, the sheet does not. */
@@ -596,6 +614,11 @@ export const SURFACE = {
 	subagentRunning: "subagent-running",
 	pendingCard: "pending-card",
 	pendingCardBody: "pending-card-body",
+	/** Full destination in the scroll body; the pinned marker is only a bounded preview. */
+	pendingCardDestination: "pending-card-destination",
+	/** Compact only: the line between the bounded body and the actions that names what the
+	 *  body hides ("more below ↓", "choices below ↓"), on the meta line. */
+	pendingCardMore: "pending-card-more",
 	pendingCardDetail: "pending-card-detail",
 	pendingCardDestructiveMarker: "pending-card-destructive-marker",
 	pendingCardAnswer: "pending-card-answer",
@@ -1069,6 +1092,13 @@ export const STATE_MARKER = {
 		populated: "schedule-wake-row-",
 		truncated: SURFACE.schedulesWakesTruncated,
 		"read-error": SURFACE.schedulesWakesUnreadable,
+	},
+	/* The subagent detail route (S6). `populated` is the loaded transcript, rendered
+	 *  only once the child's detail resolved — never while loading and never on the
+	 *  "no longer available" empty, which is its own marker. */
+	subagent: {
+		populated: SURFACE.subagentTranscript,
+		empty: EMPTY.subagent,
 	},
 	computers: {
 		/** The refusal surface, which the set-up path does not render: the one

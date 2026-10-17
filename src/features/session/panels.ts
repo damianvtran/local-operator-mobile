@@ -79,3 +79,53 @@ export const rosterBody = (input: {
 		hiddenRows: Math.max(0, input.rowCount - visibleRows),
 	};
 };
+
+const COMPACT_CLAUSE_ORDER = [
+	"failed",
+	"parked",
+	"running",
+	"queued",
+	"completed",
+	"cancelled",
+] as const;
+/* `queued` is deliberately NOT collapsed-visible: at 200 % the fourth clause is what
+ *  wrapped the header onto a second line that the region then cut through (design D2).
+ *  Failed, parked and running are what a reader acts on; queued is announced in the
+ *  accessible name and shown once the panel is opened. */
+const COMPACT_ATTENTION = new Set<string>(["failed", "parked", "running"]);
+
+/**
+ * The subagents header's clauses for the compact (short-landscape) form.
+ *
+ * Order is by URGENCY, not by the wire's rank: failed, parked, running, queued, then the
+ * settled statuses. With `open` false only the ATTENTION three are listed (`queued`,
+ * `completed` and `cancelled` are not something a reader acts on from a status line);
+ * with `open` true every status is listed. The screen passes `false` today in both the
+ * closed and the opened state, because opened rows carry each child's own status and the
+ * accessible name always names all of them; `open` stays for a caller that wants the
+ * full summary. A clause is never clipped to fit: the region cuts on ROW boundaries
+ * instead (`snapRegion`).
+ */
+export const compactClauses = <T extends { status: string }>(
+	clauses: readonly T[],
+	open: boolean,
+): T[] =>
+	[...clauses]
+		.sort(
+			(left, right) =>
+				COMPACT_CLAUSE_ORDER.indexOf(
+					left.status as (typeof COMPACT_CLAUSE_ORDER)[number],
+				) -
+				COMPACT_CLAUSE_ORDER.indexOf(
+					right.status as (typeof COMPACT_CLAUSE_ORDER)[number],
+				),
+		)
+		.filter((clause) => open || COMPACT_ATTENTION.has(clause.status));
+
+/** A roster the reader must not miss: something failed or is parked. */
+export const rosterNeedsAttention = (
+	clauses: readonly { status: string }[],
+): boolean =>
+	clauses.some(
+		(clause) => clause.status === "failed" || clause.status === "parked",
+	);

@@ -1,6 +1,7 @@
 import {
 	Modal,
 	Pressable,
+	ScrollView,
 	Text,
 	useWindowDimensions,
 	View,
@@ -8,7 +9,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { ScopedVariables } from "uniwind";
-import { CONTROL, ROLE } from "@/ui/a11y";
+import { CONTROL, ROLE, SURFACE } from "@/ui/a11y";
 import { useTokenColor } from "@/ui/appearance";
 import { maxColumnWidth } from "@/ui/column";
 import { Button } from "@/ui/components/button";
@@ -32,6 +33,9 @@ import { DIALOG_SURFACE_CLASS } from "@/ui/variants";
  * rule from § 2 — where two actions are plausible, the reversible one is
  * primary — is what decides the order here.
  */
+/** The root's own breathing room above and below the surface, in pt (the `px-6` rhythm). */
+const DIALOG_EDGE = 24;
+
 export type DialogProps = {
 	visible: boolean;
 	title: string;
@@ -82,7 +86,9 @@ export const Dialog = ({
 	 *  same three widths for exactly this reason (§ 22: a line of prose does not run
 	 *  1,200 px wide); a dialog body is prose, so it takes the same cap. `null`
 	 *  means "no cap" — the phone in portrait — and is left alone. */
-	const maxWidth = maxColumnWidth(useWindowDimensions());
+	const windowDims = useWindowDimensions();
+	const windowHeight = windowDims.height;
+	const maxWidth = maxColumnWidth(windowDims);
 	/* A dialog raised while another modal is up stands down rather than painting a
 	 *  second full-viewport surface over it — `@/ui/modal-stack` carries the rule and
 	 *  why it is the primitive's job rather than a caller's prop. */
@@ -112,39 +118,69 @@ export const Dialog = ({
 							testID={CONTROL.dialogScrim}
 							onPress={onCancel}
 						/>
+						{/* THE SAFE-AREA BANDS ARE PADDING ON A WRAPPER, NOT A MARGIN ON THE SURFACE.
+						 *  The inset is a device fact (59 pt on a landscape phone), not a spacing
+						 *  decision, and U-42 reads a padding equal to the declared inset as the
+						 *  inset but a MARGIN of the same size as an off-scale step — 32 FAILs on
+						 *  the landscape delete/milestone confirms. So the inset lives on a
+						 *  full-width carrier whose only job is to keep the surface out of the
+						 *  bands, and the surface keeps nothing but its own token spacing. The
+						 *  carrier sits INSIDE the root, so `px-6` (the phone's own margin) is not
+						 *  overridden and the scrim — `absolute inset-0` on the root — still dims
+						 *  the bands. Plain RN styles: identical on web, iOS and Android. */}
+						{/* `box-none`: the carrier spans the whole width so it can hold the
+						 *  padding, but it is NOT a press target. As a hit-testable box it sat
+						 *  above the scrim and swallowed a tap beside the dialog (the old margin
+						 *  was not hit-testable, so that tap used to reach the scrim and
+						 *  dismiss). `box-none` hands the strip back to the scrim and keeps only
+						 *  the surface itself interactive. */}
 						<View
-							className={DIALOG_SURFACE_CLASS}
-							style={{
-								...shadow,
-								...(maxWidth === null ? {} : { maxWidth }),
-								/* A MARGIN on the surface, not padding on the modal's root. `px-6` on the
-								 *  root is the phone's own margin, and an inline `paddingLeft` would
-								 *  OVERRIDE it rather than add to it; padding the root would also move the
-								 *  scrim, which is `absolute inset-0` on that same box, and leave the
-								 *  band it no longer covers undimmed. The margin is outside the dialog, so
-								 *  both the surface and the band keep the meaning they had. */
-								marginLeft: insets.left,
-								marginRight: insets.right,
-							}}
+							pointerEvents="box-none"
+							className="w-full items-center"
+							style={{ paddingLeft: insets.left, paddingRight: insets.right }}
 						>
-							<Heading level={2} className="text-title text-ink">
-								{title}
-							</Heading>
-							<Text className="mt-2 text-body-sm text-ink-muted">{body}</Text>
-							<View className="mt-4 flex-row justify-end gap-2">
-								<Button
-									label="Cancel"
-									variant="quiet"
-									testID={CONTROL.dialogCancel}
-									onPress={onCancel}
-								/>
-								<Button
-									label={confirmLabel}
-									variant={destructive ? "danger" : "primary"}
-									loading={busy}
-									testID={CONTROL.dialogConfirm}
-									onPress={onConfirm}
-								/>
+							<View
+								className={DIALOG_SURFACE_CLASS}
+								style={{
+									...shadow,
+									...(maxWidth === null ? {} : { maxWidth }),
+									// BOUNDED: a long body must not push Cancel/Confirm off a short
+									// landscape screen (a 161-char body at 200 % text on 667x375 was
+									// unmeasured and the surface had no fallback). The surface may take
+									// the window less the vertical insets and the root's own margin; the
+									// body scrolls INSIDE it and the actions stay pinned beneath it.
+									maxHeight: Math.max(
+										160,
+										windowHeight - insets.top - insets.bottom - 2 * DIALOG_EDGE,
+									),
+								}}
+							>
+								<Heading level={2} className="text-title text-ink">
+									{title}
+								</Heading>
+								<ScrollView
+									style={{ flexShrink: 1 }}
+									testID={SURFACE.dialogBody}
+								>
+									<Text className="mt-2 text-body-sm text-ink-muted">
+										{body}
+									</Text>
+								</ScrollView>
+								<View className="mt-4 flex-row justify-end gap-2">
+									<Button
+										label="Cancel"
+										variant="quiet"
+										testID={CONTROL.dialogCancel}
+										onPress={onCancel}
+									/>
+									<Button
+										label={confirmLabel}
+										variant={destructive ? "danger" : "primary"}
+										loading={busy}
+										testID={CONTROL.dialogConfirm}
+										onPress={onConfirm}
+									/>
+								</View>
 							</View>
 						</View>
 					</View>

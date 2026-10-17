@@ -48,6 +48,13 @@ export type ScreenProps = {
 	 *  the sessions list's, which can carry two count badges — passes its own
 	 *  measured fit instead (`headerStackWidth`). */
 	stackBelowWidth?: number;
+	/** The short-landscape form (`compactChromeFor`, `size-class.ts`): ONE header row —
+	 *  back, title, controls — with the title at the `title` role instead of `display`.
+	 *  Never stacks, because the stacked header is what ate half of a 390 pt screen at
+	 *  200 % text. The role is a token step, so the reader's text size still scales it;
+	 *  only the step changes, never the preference. Opt-in: every other screen is
+	 *  byte-for-byte unchanged. */
+	compact?: boolean;
 	testID?: string;
 };
 
@@ -70,6 +77,7 @@ export const Screen = ({
 	scroll = true,
 	capColumn = true,
 	stackBelowWidth,
+	compact = false,
 	testID,
 }: ScreenProps) => {
 	const insets = useSafeAreaInsets();
@@ -108,6 +116,7 @@ export const Screen = ({
 	 * other screen passes a title — so the carve-out moves no other screen. */
 	const { effectiveScale } = useTextScale();
 	const stackHeader =
+		!compact &&
 		title !== undefined &&
 		headerStacks(effectiveScale, viewport.width, stackBelowWidth);
 	return (
@@ -131,7 +140,9 @@ export const Screen = ({
 				className={
 					stackHeader
 						? "min-h-14 justify-center gap-2 px-4 py-2"
-						: "min-h-14 flex-row items-center gap-2 px-4 py-2"
+						: compact
+							? "min-h-12 flex-row items-center gap-2 px-4"
+							: "min-h-14 flex-row items-center gap-2 px-4 py-2"
 				}
 				style={column}
 			>
@@ -169,7 +180,11 @@ export const Screen = ({
 						{title !== undefined ? (
 							<Heading
 								level={1}
-								className="flex-1 text-display text-ink"
+								className={
+									compact
+										? "flex-1 text-title text-ink"
+										: "flex-1 text-display text-ink"
+								}
 								numberOfLines={1}
 							>
 								{title}

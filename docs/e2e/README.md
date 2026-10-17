@@ -97,7 +97,7 @@ cells became capturable, and the audit now measures 252 rows and finds this. It 
 app finding, not a harness one, and it is named here so the `Web target` job's audit
 step is read as "the session view's composer fails contrast", never as a broken checker.
 
-The 9 declared skips are:
+The 7 declared skips are:
 
 - **5 computer cells** (`S2/empty`, `S3/empty`, `S3/populated`, `S13/loading`,
   `S13/degraded`) need something the relay cannot serve: the computer LIST comes
@@ -109,8 +109,11 @@ The 9 declared skips are:
   `S15/ended` and `S15/degraded-row` (the row receipts change copy and colour —
   "ended", "not answering" — but carry no `testID`). The list's loading state
   used to be a third; the panel carries `sidebar/loading` now (R-2).
-- **2 subagent cells** (`S6/populated`, `S6/populated-long`): the app declares no
-  `subagent` subject, so nothing in a frame can affirm them.
+- ~~**2 subagent cells**~~ (`S6/populated`, `S6/populated-long`) are no longer
+  declared skips: the app declares `subagent/populated` (the loaded transcript), the
+  cells open a job id the roster really carries (`job-run`), and the `subagent-*`
+  scenarios give each child transcript rows of its own (4 in `S6/populated`, 36 in
+  `S6/populated-long`) so the two are different states.
 
 The 21 session-view cells used to be in that list. They are not any more: the app now
 declares `session-populated` and the rest, and a declared skip is honoured only while the
@@ -660,7 +663,7 @@ node tools/visual/capture.ts --dir e2e/fixtures/audit-canary \
 #     from the composer, the harness reached a screen only by URL (`CELL_OPENERS` did not
 #     exist yet — see "How a cell reaches a state behind a control"), and the cell
 #     declared the session's own marker. It was removed from `models-ranked`'s `shows`.
-# A group made ONLY of DECLARED SKIPS is not reported at all — this head's 9 skips are
+# A group made ONLY of DECLARED SKIPS is not reported at all — this head's 7 skips are
 # one placeholder screen between them — but a group with ANY evidential cell in it is.
 # The text-scale guard is REPORTED, never blocking: `themeProblems` comes from
 # `verifyThemes` and the scale verdict does not feed it, so it cannot fail this run.

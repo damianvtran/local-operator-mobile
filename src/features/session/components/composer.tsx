@@ -48,6 +48,7 @@ import {
 	Textarea,
 } from "@/ui/components";
 import { TOUCH_FLOOR } from "@/ui/layout";
+import { composerBudget } from "@/ui/size-class";
 import { LARGE_TEXT_SCALE } from "@/ui/text-scale";
 import { useTextScale } from "@/ui/text-scale-provider";
 import { CONTROL_DISABLED_INK, cx } from "@/ui/variants";
@@ -216,6 +217,12 @@ export type ComposerProps = {
 	 *  home's New chat). The third mechanical prop beyond the spec's two chips:
 	 *  § 4.3 requires New chat to focus the composer, and focus needs a ref. */
 	fieldRef?: React.RefObject<TextInput | null>;
+	/** Short landscape (`compactChromeFor`): the label stops painting (the placeholder
+	 *  and the accessible name still say what the field is), the paddings tighten, and
+	 *  the composer is BOUNDED to `maxHeight` and scrolls internally — so a 200 % text
+	 *  size cannot push the composer, or the model and effort chips in it, off a 390 pt
+	 *  screen. Nothing is removed: every control stays in the one scrollable body. */
+	compact?: { maxHeight: number } | null;
 	testID: string;
 };
 
@@ -351,6 +358,7 @@ export const Composer = ({
 	slashQuery,
 	slashSheet,
 	fieldRef,
+	compact = null,
 	testID,
 }: ComposerProps) => {
 	const attachmentSummary = useMemo(
@@ -527,12 +535,47 @@ export const Composer = ({
 			</>
 		);
 
-	return (
-		<View
-			ref={rootRef}
-			className="border-t border-hairline px-4 pt-2 pb-2"
-			testID={testID}
-		>
+	/* The compact budget, spent in order of what must never leave the screen: the receipt
+	 *  line (chips), then the field's one-line floor, then whatever is left is the field's
+	 *  growth, and the extras scroller gets the rest. `compact.maxHeight` is the whole
+	 *  composer's share of the window (`COMPACT_COMPOSER_SHARE`). */
+	const [receiptHeight, setReceiptHeight] = useState(48);
+	/* The extras' natural height, from the scroller's own content size, so the budget can
+	 *  give them what they need and no more. */
+	const [extrasHeight, setExtrasHeight] = useState(0);
+	const COMPOSER_PAD = 8;
+	/* The same condition the row itself renders under, so the reserve and the row cannot
+	 *  disagree. `mb-2` is its bottom margin. */
+	const dictationShowing =
+		voice?.micVisible === true &&
+		(rowIsLive(voice.phase) || voice.status !== "");
+	const DICTATION_ROW_MARGIN_PX = 8;
+	const budget =
+		compact === null
+			? null
+			: composerBudget(
+					compact.maxHeight,
+					receiptHeight,
+					extrasHeight,
+					TOUCH_FLOOR,
+					COMPOSER_PAD,
+					dictationShowing
+						? dictationRowBox(effectiveScale) + DICTATION_ROW_MARGIN_PX
+						: 0,
+				);
+	const fieldMaxHeight = budget?.field;
+	const extrasMaxHeight = budget?.extras;
+
+	/* TWO fragments, one scroll owner. `extras` is everything ABOVE the field —
+	 *  attachments, the retained-instruction alert, the error, the disabled reason — and
+	 *  is the ONLY part that may scroll in the compact form. `main` is the field row, the
+	 *  dictation row, the receipt line (queued count + model/effort chips) and the
+	 *  sheets: it is never inside a scroller, so Attach, Send, Stop and both chips stay on
+	 *  screen however long the draft is (UX U1: with everything in one scroller a 3-line
+	 *  draft at 200 % pushed Send off a 390 pt screen). The FIELD scrolls itself, capped
+	 *  by `fieldMaxHeight` below. */
+	const extras = (
+		<>
 			<ComposerStateMarkers controls={controls} />
 			{/* Attachments, above the field: an attachment changes what send means, so it
 			    is read before the control that is pressed. */}
@@ -664,15 +707,21 @@ export const Composer = ({
 					{controls.disabledReason}
 				</Text>
 			) : null}
+		</>
+	);
 
+	const main = (
+		<>
 			<View className="flex-row items-end gap-2">
 				<View className="min-w-0 flex-1">
 					<Textarea
 						label="Message"
+						hideLabel={compact !== null}
 						value={draft}
 						onChangeText={onDraftChange}
 						placeholder={COMPOSER_COPY.placeholder}
 						maxLines={6}
+						maxHeightPx={fieldMaxHeight}
 						/* One line of placeholder, always (§2.5 D1): the field's resting height
 						 * must not grow with a wrapped placeholder, or the last transcript row is
 						 * pushed past the scroller at 200 % text (design round 1, D1/D2). */
@@ -839,7 +888,16 @@ export const Composer = ({
 			    (measured: `composer-effort-chip` 267.2 → 336.4 at 150 %, 335.6 → 419.2 at
 			    200 %) — a control no finger can reach. Wrapping costs a second line only
 			    at the scales that need one, and takes nothing away at 100 %. */}
-			<View className="flex-row flex-wrap items-center gap-2 pt-2">
+			<View
+				onLayout={(event) =>
+					setReceiptHeight(Math.round(event.nativeEvent.layout.height))
+				}
+				className={
+					compact === null
+						? "flex-row flex-wrap items-center gap-2 pt-2"
+						: "flex-row flex-wrap items-center gap-2 pt-1"
+				}
+			>
 				{leadingChip}
 				{queuedCount > 0 ? (
 					<Text
@@ -939,6 +997,44 @@ export const Composer = ({
 					)}
 				</View>
 			</Sheet>
+		</>
+	);
+
+	return (
+		<View
+			ref={rootRef}
+			className={
+				compact === null
+					? "border-t border-hairline px-4 pt-2 pb-2"
+					: "border-t border-hairline px-4 pt-1 pb-1"
+			}
+			testID={testID}
+		>
+			{/* ONE parent shape in both modes: the extras ScrollView is always here and only
+			    its style and `scrollEnabled` change. Switching between a fragment and a
+			    ScrollView on rotation would unmount the field, and with it the caret, the
+			    selection, focus, an open attach sheet and the dictation row. Wide: it has no
+			    height bound and `flexGrow/flexShrink: 0` keeps it EXACTLY the old plain
+			    column (a ScrollView defaults to `flexShrink: 1` on the web, which shrank the
+			    composer inside a short portrait column: bottom 1092 -> 857 at 390x844 /
+			    200 %). `nestedScrollEnabled` lets this and the field's own scroll coexist
+			    on Android. */}
+			<ScrollView
+				style={
+					compact === null
+						? { flexGrow: 0, flexShrink: 0 }
+						: { flexGrow: 0, flexShrink: 0, maxHeight: extrasMaxHeight }
+				}
+				scrollEnabled={compact !== null}
+				onContentSizeChange={(_width, height) =>
+					setExtrasHeight(Math.round(height))
+				}
+				nestedScrollEnabled
+				keyboardShouldPersistTaps="handled"
+			>
+				{extras}
+			</ScrollView>
+			{main}
 		</View>
 	);
 };

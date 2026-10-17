@@ -35,6 +35,7 @@ import {
 	type TranscriptItem,
 } from "@/features/session/turn-condensing";
 import {
+	nextAtTail,
 	rowLayout,
 	rowOffsets,
 	TAIL_CLAMP_OFFSET_PT,
@@ -377,6 +378,8 @@ export const TranscriptList = ({
 	const itemsRef = useRef<readonly TranscriptItem[]>(grouped.items);
 	itemsRef.current = grouped.items;
 	const viewportRef = useRef(0);
+	// Event snapshots must not be overwritten by onLayout before onScroll gets them.
+	const previousScrollGeometry = useRef({ viewport: 0, content: 0 });
 	viewportRef.current = viewportPt;
 	const onAnchorVisibleRef = useRef(onAnchorVisible);
 	onAnchorVisibleRef.current = onAnchorVisible;
@@ -668,23 +671,27 @@ export const TranscriptList = ({
 		recompute();
 	}, [recompute, anchorId, entries]);
 
-	const onLayout = useCallback(
-		(event: LayoutChangeEvent) => {
-			const height = event.nativeEvent.layout.height;
-			setViewportPt(height);
-			viewportRef.current = height;
-			recompute();
-		},
-		[recompute],
-	);
-
 	const onScroll = useCallback(
 		(event: NativeSyntheticEvent<NativeScrollEvent>) => {
 			const { contentOffset, contentSize, layoutMeasurement } =
 				event.nativeEvent;
 			const distance =
 				contentSize.height - contentOffset.y - layoutMeasurement.height;
-			const atEnd = distance < TAIL_BAND_PT;
+			const atEnd = nextAtTail({
+				wasAtTail: atTail.current,
+				distanceToEnd: distance,
+				bandPt: TAIL_BAND_PT,
+				offsetY: contentOffset.y,
+				previousOffsetY: factsRef.current.offsetY,
+				viewportPt: layoutMeasurement.height,
+				previousViewportPt: previousScrollGeometry.current.viewport,
+				contentPt: contentSize.height,
+				previousContentPt: previousScrollGeometry.current.content,
+			});
+			previousScrollGeometry.current = {
+				viewport: layoutMeasurement.height,
+				content: contentSize.height,
+			};
 			atTail.current = atEnd;
 			scrollPlaces.set(sessionId, {
 				offset: contentOffset.y,
@@ -721,6 +728,24 @@ export const TranscriptList = ({
 			animated: false,
 		});
 	}, []);
+	/* The viewport's own height changing is a reason to re-pin, but ONLY while the reader
+	 *  is at the tail. The composer growing (a 7-line draft in short landscape took the
+	 *  transcript from 118 to 66 pt) shrinks this viewport without any content change, and
+	 *  neither the item-count nor the content-size trigger fires, so the newest row's last
+	 *  38 pt slid below the fold (design D13, measured `gapToTail` 0.5 -> 38). A reader who
+	 *  has scrolled up is not at the tail (`atTail` is false), so their place is kept. */
+	const onLayout = useCallback(
+		(event: LayoutChangeEvent) => {
+			const height = event.nativeEvent.layout.height;
+			const changed = Math.abs(height - viewportRef.current) > 0.5;
+			setViewportPt(height);
+			viewportRef.current = height;
+			recompute();
+			if (changed && viewportRef.current > 0) pinTail();
+		},
+		[recompute, pinTail],
+	);
+
 	// biome-ignore lint/correctness/useExhaustiveDependencies: `grouped.items.length` is the trigger (a commit that brought rows); the body reads refs by design.
 	useLayoutEffect(() => {
 		if (openElsewhere) return;

@@ -905,8 +905,6 @@ export const PENDING_CELLS: Record<string, string> = {
 			"S5/subagents",
 			"S5/degraded",
 			"S5/error",
-			"S6/populated",
-			"S6/populated-long",
 			"S8/approval",
 			"S8/ask",
 			"S8/ask-multi",

@@ -1,12 +1,17 @@
 import { describe, expect, it } from "vitest";
 
 import {
+	compactChromeFor,
+	compactChromeShare,
+	composerBudget,
 	HEADER_STACK_WIDTH,
 	headerStacks,
 	headerStackWidth,
 	layoutFor,
+	regionOrder,
 	SPLIT_MIN_HEIGHT,
 	sidebarFooterScrolls,
+	snapRegion,
 } from "@/ui/size-class";
 import { LARGE_TEXT_SCALE } from "@/ui/text-scale";
 
@@ -161,5 +166,201 @@ describe("headerStackWidth", () => {
 	it("widens with further digits rather than clamping", () => {
 		expect(headerStackWidth(100, 99)).toBeGreaterThan(headerStackWidth(99, 99));
 		expect(headerStackWidth(9, 100)).toBeGreaterThan(headerStackWidth(9, 99));
+	});
+});
+
+describe("compactChromeFor", () => {
+	const screen = (width: number, height: number) => ({ width, height });
+
+	it("is on for a phone physically on its side, at every short landscape size", () => {
+		for (const [w, h] of [
+			[844, 390],
+			[915, 412],
+			[568, 320],
+		] as const) {
+			expect(
+				compactChromeFor({ window: screen(w, h), screen: screen(w, h) }),
+			).toBe(true);
+		}
+	});
+
+	it("stays off for portrait phones and portrait tablets", () => {
+		for (const [w, h] of [
+			[390, 844],
+			[320, 568],
+			[834, 1112],
+		] as const) {
+			expect(
+				compactChromeFor({ window: screen(w, h), screen: screen(w, h) }),
+			).toBe(false);
+		}
+	});
+
+	it("stays off for a landscape tablet that has the room", () => {
+		expect(
+			compactChromeFor({
+				window: screen(1112, 834),
+				screen: screen(1112, 834),
+			}),
+		).toBe(false);
+		expect(
+			compactChromeFor({
+				window: screen(1366, 1024),
+				screen: screen(1366, 1024),
+			}),
+		).toBe(false);
+	});
+
+	it("is NOT fooled by a keyboard-shortened portrait window", () => {
+		// 390x844 portrait with the keyboard up: the WINDOW is 390x300 (wider than
+		// tall) but the physical screen is still portrait. Deciding from the window
+		// would flip the whole screen to the landscape layout on every keystroke.
+		expect(
+			compactChromeFor({ window: screen(390, 300), screen: screen(390, 844) }),
+		).toBe(false);
+		expect(
+			compactChromeFor({ window: screen(320, 200), screen: screen(320, 568) }),
+		).toBe(false);
+	});
+
+	it("stays off for a portrait-SHAPED window even on a landscape screen (floating window)", () => {
+		expect(
+			compactChromeFor({ window: screen(400, 600), screen: screen(1112, 834) }),
+		).toBe(false);
+	});
+
+	it("keeps the compact form while a landscape keyboard shortens the window further", () => {
+		expect(
+			compactChromeFor({ window: screen(844, 200), screen: screen(844, 390) }),
+		).toBe(true);
+	});
+});
+
+describe("compact secondary region", () => {
+	it("shrinks its share as text grows, inside the 0.27-0.34 band", () => {
+		expect(compactChromeShare(1)).toBeCloseTo(0.34);
+		expect(compactChromeShare(1.5)).toBeCloseTo(0.305);
+		expect(compactChromeShare(2)).toBeCloseTo(0.27);
+		expect(compactChromeShare(3)).toBeCloseTo(0.27);
+		expect(compactChromeShare(0.5)).toBeCloseTo(0.34);
+	});
+
+	it("keeps the transcript at >= 96 pt at 844x390 for 100 %, 150 % and 200 % text", () => {
+		// header + composer measured on the rig: 157 / 161 / 177 pt, plus the 4 pt gap.
+		for (const [scale, fixed] of [
+			[1, 157],
+			[1.5, 161],
+			[2, 177],
+		] as const) {
+			const region = Math.round(390 * compactChromeShare(scale));
+			expect(390 - fixed - 4 - region).toBeGreaterThanOrEqual(96);
+		}
+	});
+
+	it("cuts on a row boundary and reports what is hidden", () => {
+		expect(snapRegion([49, 72, 52, 44], 400, 24)).toEqual({
+			height: 217,
+			hidden: 0,
+		});
+		expect(snapRegion([49, 72, 52, 44], 117, 24)).toEqual({
+			height: 49,
+			hidden: 3,
+		});
+		expect(snapRegion([49, 72, 52, 44], 150, 24)).toEqual({
+			height: 121,
+			hidden: 2,
+		});
+	});
+
+	it("shows the first row whole when the cap holds it, even if the cue then no longer fits", () => {
+		// a wrapped roster header (89 pt) in a 111 pt cap with a 48 pt cue: 111 - 48 = 63 < 89
+		expect(snapRegion([89, 44, 52], 111, 48)).toEqual({
+			height: 89,
+			hidden: 2,
+		});
+	});
+
+	it("shows neither region nor cue when the cap cannot hold a readable line (UX U3)", () => {
+		// the 7.4 pt sliver measured at a 200 pt keyboard-shortened window
+		expect(snapRegion([89, 44], 7, 38)).toEqual({ height: 0, hidden: 2 });
+		expect(snapRegion([89, 44], 39, 38)).toEqual({ height: 0, hidden: 2 });
+		// the 844x200 keyboard-shortened window: a 54 pt cap less the 38 pt cue is 16 pt
+		expect(snapRegion([49, 44], 54, 38)).toEqual({ height: 0, hidden: 2 });
+	});
+
+	it("only cuts a first row that is taller than the whole cap", () => {
+		expect(snapRegion([200, 40], 117, 24)).toEqual({ height: 117, hidden: 1 });
+	});
+
+	it("ignores rows that are not rendered", () => {
+		expect(snapRegion([0, 49, 0, 52], 117, 24)).toEqual({
+			height: 101,
+			hidden: 0,
+		});
+	});
+});
+
+describe("regionOrder", () => {
+	it("keeps the wide column's order exactly", () => {
+		expect(regionOrder(false, false)).toEqual([
+			"todos",
+			"subagents",
+			"working",
+		]);
+		expect(regionOrder(false, true)).toEqual(["todos", "subagents", "working"]);
+	});
+
+	it("leads the compact region with live work, the strip before the tasks list", () => {
+		expect(regionOrder(true, false)).toEqual([
+			"working",
+			"subagents",
+			"strip",
+			"todos",
+		]);
+	});
+
+	it("lifts a roster with a failed or parked child above the working line", () => {
+		expect(regionOrder(true, true)).toEqual([
+			"subagents",
+			"working",
+			"strip",
+			"todos",
+		]);
+	});
+});
+
+describe("composerBudget (UX U1: the actions never scroll away)", () => {
+	it("on a tight screen the field gets everything and the extras scroll in what is left", () => {
+		// 390 pt screen at 200 %: composer share 0.45 -> 175 pt; receipt line 52; padding 8.
+		// An error line (40 pt) is above the field.
+		const budget = composerBudget(175, 52, 40, 48, 8);
+		expect(budget).toEqual({ extras: 40, field: 75 });
+		// the controls (field row + receipt) never exceed the budget
+		expect(budget.field + budget.extras + 52 + 8).toBeLessThanOrEqual(175);
+	});
+
+	it("never takes the field's touch floor for the extras: they scroll instead", () => {
+		// 150 pt of attachments in 115 pt of room: the extras are capped, the field keeps 48
+		const budget = composerBudget(175, 52, 150, 48, 8);
+		expect(budget.field).toBe(48);
+		expect(budget.extras).toBe(115 - 48);
+	});
+
+	it("with nothing above the field the field takes the whole remainder", () => {
+		expect(composerBudget(175, 52, 0, 48, 8)).toEqual({
+			extras: 0,
+			field: 115,
+		});
+	});
+
+	it("reserves the dictation row so a recording take cannot push the composer past its share", () => {
+		// 175 pt share, 52 receipt, 8 pad, 49 + 8 dictation: only 58 pt left for the field
+		const budget = composerBudget(175, 52, 0, 48, 8, 57);
+		expect(budget.field).toBe(58);
+		expect(budget.field + 52 + 8 + 57).toBeLessThanOrEqual(175);
+	});
+
+	it("never shrinks the field below its touch floor, even if the budget is smaller", () => {
+		expect(composerBudget(90, 52, 30, 48, 8).field).toBe(48);
 	});
 });

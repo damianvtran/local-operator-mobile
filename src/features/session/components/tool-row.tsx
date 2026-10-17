@@ -213,8 +213,12 @@ export const ToolRow = ({ entry, testID }: ToolRowProps) => {
 			>
 				<View className="min-h-11 flex-row items-center gap-1.5">
 					<Text
+						/* LEFT-aligned in its fixed box, not centred: the delivery word (and the
+						 *  expansion's hint) start on the ROW's left edge, so a glyph centred in
+						 *  16 pt sat 2.6 pt to the right of line two at 150 % — U-41's "line 2
+						 *  starts off the row's rail". Left-aligned, the glyph is the rail. */
 						className={cx(
-							"w-4 text-center font-mono text-mono-sm",
+							"w-4 text-left font-mono text-mono-sm",
 							tone.inkClass,
 						)}
 						aria-hidden
