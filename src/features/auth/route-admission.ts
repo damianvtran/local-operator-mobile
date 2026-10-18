@@ -5,9 +5,13 @@
  * Keep this boundary free of React so request ordering can be exercised against
  * an actual HTTP listener without replacing the app's authentication policy.
  */
-import { type CustomRoute, signInToCustomRoute } from "@/connection";
+import type { CustomRoute } from "@/connection";
 import { RelayError } from "@/relay";
 import type { ConnectionStoreApi } from "@/state/connection-store";
+import {
+	type CustomRouteAuthentication,
+	customRouteAuthentication,
+} from "./authentication-lifecycle";
 
 export interface RouteAdmission {
 	isCurrent: () => boolean;
@@ -35,11 +39,15 @@ export const authenticateCustomRoute = async (
 	route: CustomRoute,
 	password: string,
 	admission: RouteAdmission,
-	signIn: typeof signInToCustomRoute = signInToCustomRoute,
+	authentication: CustomRouteAuthentication = customRouteAuthentication,
 ): Promise<boolean> => {
 	if (!admission.isCurrent()) return false;
-	const result = await signIn(route, password);
-	if (!admission.isCurrent()) return false;
+	const result = await authentication.signIn(
+		route,
+		password,
+		admission.isCurrent,
+	);
+	if (!result || !admission.isCurrent()) return false;
 	if (result.signedIn) return true;
 	// The canonical login boundary already verifies opaque redirects. Re-reading
 	// after a definite wrong password would be an unauthorized request, not proof.

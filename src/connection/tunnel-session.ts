@@ -449,6 +449,43 @@ export class TunnelSessionManager {
 	private remintInFlight: Promise<TunnelSession> | null = null;
 
 	private readonly deps: TunnelSessionManagerDeps;
+	private retired = false;
+	private retirement: Promise<void> | null = null;
+	private readonly mutations = new Set<Promise<unknown>>();
+	private readonly revoked = new Set<string>();
+
+	private track<T>(operation: Promise<T>): Promise<T> {
+		this.mutations.add(operation);
+		void operation.then(
+			() => this.mutations.delete(operation),
+			() => this.mutations.delete(operation),
+		);
+		return operation;
+	}
+
+	private async revokeSession(session: TunnelSession): Promise<void> {
+		if (this.revoked.has(session.refreshHandle)) return;
+		this.revoked.add(session.refreshHandle);
+		await revokeTunnelSession(session, this.deps);
+	}
+
+	/** Withdraw the manager immediately, then drain writes/mints before the
+	 * caller clears shared storage or lets another route read it. A late minted
+	 * session must be revoked even when there was no current session at logout.
+	 * `revokeCurrent=false` preserves an already-established credential across a
+	 * route switch/unmount (the restore contract); it never permits adoption or
+	 * persistence of a session whose mint/refresh response arrives after retirement. */
+	retire(revokeCurrent = true): Promise<void> {
+		if (this.retirement) return this.retirement;
+		this.retired = true;
+		const current = this.session;
+		this.session = null;
+		this.retirement = (async () => {
+			await Promise.allSettled([...this.mutations]);
+			if (current && revokeCurrent) await this.revokeSession(current);
+		})();
+		return this.retirement;
+	}
 
 	constructor(deps: TunnelSessionManagerDeps) {
 		this.deps = deps;
@@ -461,25 +498,42 @@ export class TunnelSessionManager {
 
 	/** Replaces the session (a fresh sign-in, a stored session restored at cold
 	 *  start). */
-	async adopt(session: TunnelSession): Promise<void> {
-		this.session = session;
-		await this.deps.persist?.(session);
+	adopt(session: TunnelSession): Promise<void> {
+		return this.track(
+			(async () => {
+				if (this.retired) {
+					await this.revokeSession(session);
+					throw new TunnelSessionError(
+						"rejected",
+						"The tunnel route has ended",
+					);
+				}
+				this.session = session;
+				await this.deps.persist?.(session);
+			})(),
+		);
 	}
 
 	/** Mints from scratch, using a fresh OAuth access token. */
-	async mint(input: {
-		tunnelId: string;
-		hostname: string;
-	}): Promise<TunnelSession> {
-		const token = await this.deps.oauthAccessToken();
-		if (!token)
-			throw new TunnelSessionError("oauth", "sign in with Radient again");
-		const session = await mintTunnelSession(
-			{ ...input, oauthAccessToken: token },
-			this.deps,
+	mint(input: { tunnelId: string; hostname: string }): Promise<TunnelSession> {
+		return this.track(
+			(async () => {
+				if (this.retired)
+					throw new TunnelSessionError(
+						"rejected",
+						"The tunnel route has ended",
+					);
+				const token = await this.deps.oauthAccessToken();
+				if (!token)
+					throw new TunnelSessionError("oauth", "sign in with Radient again");
+				const session = await mintTunnelSession(
+					{ ...input, oauthAccessToken: token },
+					this.deps,
+				);
+				await this.adopt(session);
+				return session;
+			})(),
 		);
-		await this.adopt(session);
-		return session;
 	}
 
 	/** Refreshes the grant, single-flight. Concurrent callers await the same
@@ -487,7 +541,7 @@ export class TunnelSessionManager {
 	async refresh(): Promise<TunnelSession> {
 		const current = this.requireSession();
 		if (this.refreshInFlight) return this.refreshInFlight;
-		this.refreshInFlight = this.runRefresh(current).finally(() => {
+		this.refreshInFlight = this.track(this.runRefresh(current)).finally(() => {
 			this.refreshInFlight = null;
 		});
 		return this.refreshInFlight;
@@ -532,7 +586,7 @@ export class TunnelSessionManager {
 	async remint(): Promise<TunnelSession> {
 		const current = this.requireSession();
 		if (this.remintInFlight) return this.remintInFlight;
-		this.remintInFlight = this.runRemint(current).finally(() => {
+		this.remintInFlight = this.track(this.runRemint(current)).finally(() => {
 			this.remintInFlight = null;
 		});
 		return this.remintInFlight;
@@ -590,6 +644,8 @@ export class TunnelSessionManager {
 	}
 
 	private requireSession(): TunnelSession {
+		if (this.retired)
+			throw new TunnelSessionError("rejected", "The tunnel route has ended");
 		if (!this.session) {
 			throw new TunnelSessionError(
 				"oauth",

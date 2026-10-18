@@ -5,7 +5,9 @@ import {
 	type CustomRoute,
 	createRelayClient,
 	signInToCustomRoute,
+	signOutOfCustomRoute,
 } from "@/connection";
+import { CustomRouteAuthentication } from "@/features/auth/authentication-lifecycle";
 import {
 	authenticateCustomRoute,
 	routeAdmission,
@@ -43,6 +45,14 @@ async function relay() {
 	let expired = false;
 	const server = createServer(async (request, response) => {
 		events.push(`${request.method} ${request.url}`);
+		if (request.url === "/logout") {
+			response.writeHead(303, {
+				"set-cookie": "lop_mobile=; Path=/",
+				location: "/login",
+			});
+			response.end();
+			return;
+		}
 		if (request.url === "/login") {
 			let body = "";
 			for await (const chunk of request) body += chunk;
@@ -109,7 +119,14 @@ async function relay() {
 		if (setCookie) cookie = setCookie.split(";")[0] ?? "";
 		return response;
 	};
+	const authentication = new CustomRouteAuthentication({
+		signIn: (route, password) =>
+			signInToCustomRoute(route, password, { fetchImpl: fetchWithJar }),
+		signOut: (route) =>
+			signOutOfCustomRoute(route, { fetchImpl: fetchWithJar }),
+	});
 	return {
+		authentication,
 		route,
 		events,
 		receivedLogin,
@@ -139,8 +156,7 @@ describe("session admission", () => {
 			mock.route,
 			"synthetic-password",
 			admission,
-			(route, password) =>
-				signInToCustomRoute(route, password, { fetchImpl: mock.fetchWithJar }),
+			mock.authentication,
 		);
 		await mock.receivedLogin.promise;
 		expect(source().reason).toBe("pending");
@@ -200,8 +216,7 @@ describe("session admission", () => {
 			mock.route,
 			"incorrect",
 			admission,
-			(route, password) =>
-				signInToCustomRoute(route, password, { fetchImpl: mock.fetchWithJar }),
+			mock.authentication,
 		).catch((error: unknown) => error);
 		await mock.receivedLogin.promise;
 		mock.releaseLogin.resolve();
@@ -226,8 +241,7 @@ describe("session admission", () => {
 			mock.route,
 			"synthetic-password",
 			admission,
-			(route, password) =>
-				signInToCustomRoute(route, password, { fetchImpl: mock.fetchWithJar }),
+			mock.authentication,
 		);
 		await mock.receivedLogin.promise;
 		mock.releaseLogin.resolve();
@@ -273,10 +287,7 @@ describe("session admission", () => {
 				mock.route,
 				"synthetic-password",
 				admission,
-				(route, password) =>
-					signInToCustomRoute(route, password, {
-						fetchImpl: mock.fetchWithJar,
-					}),
+				mock.authentication,
 			);
 			await mock.receivedLogin.promise;
 			if (action === "switch")
@@ -295,7 +306,11 @@ describe("session admission", () => {
 			).toBe(false);
 			expect(published).toBe(false);
 			expect(isUsable(store.getState())).toBe(false);
-			expect(mock.events).toEqual(["POST /login", "POST /login -> 303"]);
+			expect(mock.events).toEqual([
+				"POST /login",
+				"POST /login -> 303",
+				"GET /logout",
+			]);
 		},
 	);
 

@@ -55,8 +55,6 @@ import {
 	type RadientTokens,
 	type RouteProfile,
 	refreshRadientTokens,
-	revokeTunnelSession,
-	signOutOfCustomRoute,
 	TunnelSessionError,
 	TunnelSessionManager,
 	validateCustomBaseUrl,
@@ -87,9 +85,12 @@ import {
 	isUsable,
 } from "@/state/connection-store";
 import { createListStore, type ListSnapshot } from "@/state/list-store";
+import {
+	customRouteAuthentication,
+	nativeCredentialRetirement,
+} from "./authentication-lifecycle";
 import { type ConfigStreamHandle, startConfigStream } from "./config-stream";
 import { adoptableSession, carryOutRestore } from "./radient-restore";
-
 import { beginRadientSignIn, type SignInState } from "./radient-sign-in";
 import { type RefusalView, refusalFromError } from "./refusal";
 import {
@@ -278,6 +279,12 @@ export const ConnectionProvider = ({
 			streamRef.current?.stop();
 			configRef.current?.stop();
 			clientRef.current = null;
+			void nativeCredentialRetirement.retire(
+				managerRef.current,
+				undefined,
+				false,
+			);
+			managerRef.current = null;
 			connectionStore.getState().endRoute();
 		};
 	}, []);
@@ -462,6 +469,12 @@ export const ConnectionProvider = ({
 			stopStream();
 			stopConfig();
 			clientRef.current = null;
+			void nativeCredentialRetirement.retire(
+				managerRef.current,
+				undefined,
+				false,
+			);
+			managerRef.current = null;
 			listStore.getState().reset();
 			configStore.getState().reset();
 			setLastError(null);
@@ -667,6 +680,8 @@ export const ConnectionProvider = ({
 				}
 				admission = beginRoute(route);
 				connectionStore.getState().selectComputer(computer);
+				await nativeCredentialRetirement.settled();
+				if (!admission.isCurrent()) return;
 				const adopted = adoptableSession(
 					await readStoredTunnelSession(),
 					computer,
@@ -782,21 +797,18 @@ export const ConnectionProvider = ({
 		listStore.getState().reset();
 		configStore.getState().reset();
 		const revision = connectionStore.getState().revision;
+		// Enqueue both side effects before yielding. A new native selection waits
+		// for the clear; a new same-origin login queues behind the final logout.
+		const retired = nativeCredentialRetirement.retire(
+			manager,
+			clearStoredCredentials,
+		);
+		const loggedOut =
+			activeRoute?.mode === "custom"
+				? customRouteAuthentication.signOut(activeRoute)
+				: Promise.resolve();
 		try {
-			/* Capture the credentials before ending the route, but withdraw admission
-			 * immediately: a slow revocation must not leave commands enabled or allow a
-			 * pending login to resurrect the signed-out route. */
-			if (activeRoute?.mode === "radient" && manager?.current) {
-				await revokeTunnelSession(manager.current).catch(() => undefined);
-			}
-			if (activeRoute?.mode === "custom") {
-				await signOutOfCustomRoute(activeRoute).catch(() => undefined);
-			}
-			/* Every stored credential goes with the sign-out. `removeSavedTunnel` stays the
-			 *  NARROWER delete for a good reason: forgetting a tunnel must not take the
-			 *  Radient grant with it, and a lapsed grant must not take the 30-day handle. */
-			if (connectionStore.getState().revision === revision)
-				await clearStoredCredentials();
+			await Promise.all([retired, loggedOut]);
 			if (
 				mountedRef.current &&
 				connectionStore.getState().revision === revision
@@ -858,7 +870,7 @@ export const ConnectionProvider = ({
 			retryRef.current = null;
 			listStore.getState().reset();
 			configStore.getState().reset();
-			await signOutOfCustomRoute(active).catch(() => undefined);
+			await customRouteAuthentication.signOut(active);
 			if (mountedRef.current) setLastError(null);
 		}
 		await removeSavedTunnel();
@@ -961,6 +973,8 @@ export const ConnectionProvider = ({
 			},
 		});
 		try {
+			await customRouteAuthentication.settled(route);
+			if (!admission.isCurrent()) return;
 			await client.sessions();
 			await goLive(client, admission);
 		} catch (error) {
