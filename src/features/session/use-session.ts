@@ -1,11 +1,4 @@
-import {
-	useCallback,
-	useEffect,
-	useMemo,
-	useRef,
-	useState,
-	useSyncExternalStore,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AppState } from "react-native";
 import { useStore } from "zustand";
 
@@ -16,6 +9,10 @@ import type {
 	TranscriptEntry,
 } from "@/contracts";
 import {
+	useConnection,
+	useConnectionState,
+} from "@/features/auth/connection-provider";
+import {
 	type ConnectionView,
 	connectionView,
 	isRouteRefused,
@@ -25,13 +22,11 @@ import {
 	relaySentence,
 } from "@/features/session/connection-view";
 import {
-	pageOrigin,
 	relaySource,
 	type SessionRelaySource,
 } from "@/features/session/relay-source";
 import {
 	deviceOnline,
-	getActiveRoute,
 	INITIAL_STREAM_FACTS,
 	loadAttachments,
 	loadVideoSource,
@@ -40,7 +35,6 @@ import {
 	rowIdentity,
 	type StreamFacts,
 	sessions,
-	subscribeRoute,
 } from "@/features/session/runtime";
 import {
 	type SupplementBeat,
@@ -48,6 +42,7 @@ import {
 } from "@/features/session/supplements";
 import type { ImageBytes, RelayError } from "@/relay";
 import { readEntry } from "@/state";
+import { isUsable } from "@/state/connection-store";
 
 /**
  * Everything a session screen reads: the relay client, the projection stream, the
@@ -126,16 +121,18 @@ const isTransient = (error: RelayError): boolean =>
 	error.kind === "transport" || error.kind === "ambiguous-delivery";
 
 export const useSessionRuntime = (sessionId: string): SessionRuntime => {
-	// The route slot is a plain module value, so a change to it has to re-render
-	// this hook explicitly. `useSyncExternalStore` is the whole subscription: the
-	// store half of this app is zustand vanilla, and a second state library for one
-	// value would be a second answer to "which route is active".
-	const route = useSyncExternalStore(
-		subscribeRoute,
-		getActiveRoute,
-		getActiveRoute,
+	const providerConnection = useConnection();
+	const snapshot = useConnectionState((state) => state);
+	const route = snapshot.route;
+	const client = isUsable(snapshot) ? providerConnection.relay() : null;
+	const pending =
+		!providerConnection.coldStartSettled ||
+		snapshot.phase === "minting" ||
+		snapshot.phase === "discovering";
+	const source = useMemo(
+		() => relaySource(route, client, pending),
+		[route, client, pending],
 	);
-	const source = useMemo(() => relaySource(route, pageOrigin()), [route]);
 	const endpoints = source.endpoints;
 
 	const entry = useStore(sessions, () =>
@@ -188,7 +185,7 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 	useEffect(() => {
 		const connect = () => {
 			if (endpoints === null) {
-				setLoading(false);
+				setLoading(source.reason === "pending");
 				return;
 			}
 			// A reload replaces the stream: leaving the old one open would put two
@@ -287,7 +284,7 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 			streamRef.current = null;
 			sessions.getState().endStream(sessionId);
 		};
-	}, [endpoints, sessionId]);
+	}, [endpoints, sessionId, source.reason]);
 
 	/** Consecutive failed reconnects, for the backoff. Reset by any delivered frame,
 	 *  so one blip does not leave the next one waiting fifteen seconds. */
@@ -463,17 +460,19 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 
 	const connection = useMemo((): ConnectionView => {
 		const factsForView = {
-			// A null route with no origin means there is nothing to talk to; the
-			// screen renders its own "not connected" state for that rather than a
-			// connection state, so the derivation is not asked.
-			phase: isRouteRefused({ noRoute: source.reason === "no-route", error })
+			// Authentication failures belong to the provider even though this screen
+			// correctly sent no request of its own. Pending admission is not refusal.
+			phase: isRouteRefused({
+				noRoute: source.reason === "no-route",
+				error: error ?? providerConnection.lastError,
+			})
 				? ("refused" as const)
 				: ("live" as const),
 			stream: facts.state,
 			lastEnd: facts.lastEnd,
 			reconnectExpired: facts.overdue,
 			online: deviceOnline(),
-			error,
+			error: error ?? providerConnection.lastError,
 			entry,
 			ended: projection?.ended === true,
 			stale: entry.connected && projection?.degraded === true,
@@ -487,11 +486,23 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 			// The relay's own sentence only, never the runtime's prose: see
 			// `relaySentence`, which is the one place that decides what a failure is
 			// allowed to say.
-			phaseDetail: error === null ? null : (relaySentence(error) ?? null),
-			phaseSurface: error === null ? null : error.surface,
+			phaseDetail:
+				snapshot.detail ??
+				(error === null ? null : (relaySentence(error) ?? null)),
+			phaseSurface: snapshot.surface ?? (error === null ? null : error.surface),
 		};
 		return connectionView(factsForView);
-	}, [error, source.reason, facts, entry, projection, route]);
+	}, [
+		error,
+		source.reason,
+		facts,
+		entry,
+		projection,
+		route,
+		providerConnection.lastError,
+		snapshot.detail,
+		snapshot.surface,
+	]);
 
 	const loadImage = useCallback(
 		async (entryId: string, index: number): Promise<string | null> => {

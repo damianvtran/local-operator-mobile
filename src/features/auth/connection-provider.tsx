@@ -56,7 +56,6 @@ import {
 	type RouteProfile,
 	refreshRadientTokens,
 	revokeTunnelSession,
-	signInToCustomRoute,
 	signOutOfCustomRoute,
 	TunnelSessionError,
 	TunnelSessionManager,
@@ -85,6 +84,7 @@ import { createConfigStore } from "@/state/config-store";
 import {
 	type ConnectionSnapshot,
 	createConnectionStore,
+	isUsable,
 } from "@/state/connection-store";
 import { createListStore, type ListSnapshot } from "@/state/list-store";
 import { type ConfigStreamHandle, startConfigStream } from "./config-stream";
@@ -92,6 +92,11 @@ import { adoptableSession, carryOutRestore } from "./radient-restore";
 
 import { beginRadientSignIn, type SignInState } from "./radient-sign-in";
 import { type RefusalView, refusalFromError } from "./refusal";
+import {
+	authenticateCustomRoute,
+	type RouteAdmission,
+	routeAdmission,
+} from "./route-admission";
 
 /**
  * The three stores, as process-wide singletons.
@@ -272,6 +277,8 @@ export const ConnectionProvider = ({
 			mountedRef.current = false;
 			streamRef.current?.stop();
 			configRef.current?.stop();
+			clientRef.current = null;
+			connectionStore.getState().endRoute();
 		};
 	}, []);
 
@@ -324,13 +331,16 @@ export const ConnectionProvider = ({
 	 * screen — the cold-start rule, and the difference between stale and blank.
 	 */
 	const startStream = useCallback(
-		(client: ReturnType<typeof createRelayClient>, route: RouteProfile) => {
+		(
+			client: ReturnType<typeof createRelayClient>,
+			admission: RouteAdmission,
+		) => {
 			stopStream();
 			let stopped = false;
 			let _attempt = 0;
 
 			const run = () => {
-				if (stopped) return;
+				if (stopped || !admission.isCurrent()) return;
 				const stream = client.sessionsStream({
 					/* The flag goes to the STREAM as well as the REST read below, together:
 					 * the relay reads it once at connection open, so a repaint from a
@@ -338,6 +348,7 @@ export const ConnectionProvider = ({
 					 * GET painted — the flap the relay's contract warns about. */
 					includePeers: true,
 					onFrame: (frame) => {
+						if (!admission.isCurrent()) return;
 						if (frame.kind === "malformed") {
 							/* NOT SILENT (round 1, R1-1). This handler used to fall through for a
 							 *  frame the schema refused, so a relay answer this build cannot read
@@ -365,10 +376,11 @@ export const ConnectionProvider = ({
 						}
 					},
 					onState: (status) => {
+						if (!admission.isCurrent()) return;
 						if (mountedRef.current) setStreamHealth(healthFrom(status));
 					},
 					onError: (error) => {
-						if (stopped) return;
+						if (stopped || !admission.isCurrent()) return;
 						/* A surface the reader must act on ends the loop: retrying a
 						 * 401 or a revoked tunnel in a tight cycle is how a phone
 						 * burns a battery to annoy a gateway. */
@@ -419,9 +431,7 @@ export const ConnectionProvider = ({
 			};
 
 			run();
-			// The route is read for its label in diagnostics; kept in the closure so
-			// a later stream cannot be started against a route that has ended.
-			void route;
+			// A queued restart is inert once admission's revision has been revoked.
 			return () => {
 				stopped = true;
 			};
@@ -445,15 +455,36 @@ export const ConnectionProvider = ({
 		[stopConfig],
 	);
 
+	/** Retire the old client before publishing a provisional route. Its address
+	 * is useful for loading/refusal UI, but must not carry protected requests. */
+	const beginRoute = useCallback(
+		(route: RouteProfile) => {
+			stopStream();
+			stopConfig();
+			clientRef.current = null;
+			listStore.getState().reset();
+			configStore.getState().reset();
+			setLastError(null);
+			retryRef.current = null;
+			connectionStore.getState().startRoute(route);
+			return routeAdmission(connectionStore, () => mountedRef.current);
+		},
+		[stopStream, stopConfig],
+	);
+
 	/** Everything a route needs once its credentials are valid. */
 	const goLive = useCallback(
 		async (
 			client: ReturnType<typeof createRelayClient>,
-			route: RouteProfile,
+			admission: RouteAdmission,
 		): Promise<void> => {
-			clientRef.current = client;
-			connectionStore.getState().markLive({ accountLabel: null });
-			startStream(client, route);
+			if (
+				!admission.publish(() => {
+					clientRef.current = client;
+				})
+			)
+				return;
+			startStream(client, admission);
 			startConfig(client);
 			/* The first paint is the REST read, not the stream's seed: the cold-start
 			 * rule is that the list renders immediately, and a stream that opens in a
@@ -468,6 +499,7 @@ export const ConnectionProvider = ({
 				 *  loud and the list carries the same stale mark a dropped stream
 				 *  paints. */
 				(error: unknown) => {
+					if (!admission.isCurrent()) return null;
 					console.warn(
 						"[sessions] the cold-start list read could not be applied; the stream's seed frame is the fallback",
 						error,
@@ -476,7 +508,7 @@ export const ConnectionProvider = ({
 					return null;
 				},
 			);
-			if (frame) {
+			if (frame && admission.isCurrent()) {
 				listStore.getState().applyFrame({
 					sessions: frame.sessions,
 					degraded: frame.degraded,
@@ -491,6 +523,7 @@ export const ConnectionProvider = ({
 	const connectCustom = useCallback(
 		async ({ url, password, allowInsecure }: ConnectCustomInput) => {
 			setBusy(true);
+			let admission: RouteAdmission | null = null;
 			try {
 				const validated = validateCustomBaseUrl(url, { allowInsecure });
 				if (!validated.ok) {
@@ -506,12 +539,13 @@ export const ConnectionProvider = ({
 					return;
 				}
 				const route = validated.route;
-				connectionStore.getState().startRoute(route);
-				const signIn = await signInToCustomRoute(route, password);
+				admission = beginRoute(route);
+				if (!(await authenticateCustomRoute(route, password, admission)))
+					return;
 				const client = createRelayClient({
 					route,
 					onResponse: (facts) => {
-						if (facts.status === 401) {
+						if (admission?.isCurrent() && facts.status === 401) {
 							connectionStore.getState().noteFailure({
 								surface: "password",
 								displayableMessage: "",
@@ -520,51 +554,9 @@ export const ConnectionProvider = ({
 					},
 				});
 
-				if (!signIn.signedIn) {
-					if (signIn.failure !== null) {
-						/* The relay never got as far as judging the password: a dead tunnel, a
-						 *  502/503 from the gateway or the edge, a blocked request. Reporting
-						 *  "That password was not accepted." here sends the reader to fix the one
-						 *  thing that is not wrong, and hides the fault that needs action — so
-						 *  the taxonomy's own sentence and surface are used instead (D21).
-						 *
-						 *  The admission read below is deliberately NOT run: a tunnel refusing
-						 *  `/login` is refusing the list route too, so its verdict would only
-						 *  re-derive "not admitted" from a fault already classified. */
-						noteError(signIn.failure, () =>
-							connectCustom({ url, password, allowInsecure }),
-						);
-						return;
-					}
-					/* The status of a MANUAL redirect is not a reliable reading. The daemon
-					 * answers `303` on a successful form login, and `fetch` with
-					 * `redirect: 'manual'` may hand back an **opaque-redirect** response whose
-					 * status is `0` — the platform's choice, not the relay's answer. So the
-					 * outcome is VERIFIED rather than inferred: a wrong password leaves no
-					 * cookie and the list route then answers 401, while a right one reads.
-					 * One extra request on the failure path buys a login that works wherever
-					 * the response is filtered, and it cannot mask a real wrong password. */
-					const admitted = await client.sessions().then(
-						() => true,
-						() => false,
-					);
-					if (!admitted) {
-						connectionStore.getState().noteFailure({
-							surface: "password",
-							/* Deliberately NOT `signIn.detail`: when the response was filtered, that
-							 * sentence is a status reading (“HTTP 0”), and a status code is the one
-							 * thing the refusal surfaces are forbidden to show — the taxonomy's own
-							 * copy names the cause and the remedy instead, and a wrong password then
-							 * reads the same on every platform rather than differently on web. */
-							displayableMessage: "",
-						});
-						retryRef.current = () =>
-							connectCustom({ url, password, allowInsecure });
-						return;
-					}
-				}
-				await goLive(client, route);
+				await goLive(client, admission);
 			} catch (error) {
+				if (admission && !admission.isCurrent()) return;
 				if (error instanceof RelayError) {
 					noteError(error, () =>
 						connectCustom({ url, password, allowInsecure }),
@@ -573,10 +565,11 @@ export const ConnectionProvider = ({
 				}
 				throw error;
 			} finally {
-				if (mountedRef.current) setBusy(false);
+				if (mountedRef.current && (!admission || admission.isCurrent()))
+					setBusy(false);
 			}
 		},
-		[goLive, noteError],
+		[beginRoute, goLive, noteError],
 	);
 
 	const refreshComputers = useCallback(async () => {
@@ -661,6 +654,7 @@ export const ConnectionProvider = ({
 	const selectComputer = useCallback(
 		async (computer: DiscoveredComputer) => {
 			setBusy(true);
+			let admission: RouteAdmission | null = null;
 			try {
 				const route = routeForComputer(computer);
 				if (!route) {
@@ -671,12 +665,13 @@ export const ConnectionProvider = ({
 					});
 					return;
 				}
-				connectionStore.getState().startRoute(route);
+				admission = beginRoute(route);
 				connectionStore.getState().selectComputer(computer);
 				const adopted = adoptableSession(
 					await readStoredTunnelSession(),
 					computer,
 				);
+				if (!admission.isCurrent()) return;
 				const manager = new TunnelSessionManager({
 					oauthAccessToken: async () => tokensRef.current?.access ?? null,
 					initial: adopted,
@@ -695,6 +690,7 @@ export const ConnectionProvider = ({
 						hostname: computer.hostname,
 					});
 				}
+				if (!admission.isCurrent()) return;
 				const client = createRelayClient({
 					route,
 					tunnelSession: () => manager.current,
@@ -702,7 +698,7 @@ export const ConnectionProvider = ({
 						/* The edge's own 401 (with `X-Radient-Login`) is the re-auth
 						 * signal; the connection layer types it as `sign-in`, and this
 						 * only records it so the surface is decided once. */
-						if (facts.status === 401) {
+						if (admission?.isCurrent() && facts.status === 401) {
 							connectionStore.getState().noteFailure({
 								surface: "sign-in",
 								displayableMessage: "",
@@ -710,8 +706,9 @@ export const ConnectionProvider = ({
 						}
 					},
 				});
-				await goLive(client, route);
+				await goLive(client, admission);
 			} catch (error) {
+				if (admission && !admission.isCurrent()) return;
 				if (
 					error instanceof RelayError ||
 					error instanceof TunnelSessionError
@@ -733,10 +730,11 @@ export const ConnectionProvider = ({
 				}
 				throw error;
 			} finally {
-				if (mountedRef.current) setBusy(false);
+				if (mountedRef.current && (!admission || admission.isCurrent()))
+					setBusy(false);
 			}
 		},
-		[goLive, noteError],
+		[beginRoute, goLive, noteError],
 	);
 
 	const refreshList = useCallback(async () => {
@@ -764,44 +762,55 @@ export const ConnectionProvider = ({
 
 	const signOut = useCallback(async () => {
 		const activeRoute = connectionStore.getState().route;
+		const manager = managerRef.current;
+		cancelledRef.current = true;
+		setColdStartSettled(true);
 		setBusy(true);
+		stopStream();
+		stopConfig();
+		clientRef.current = null;
+		connectionStore.getState().endRoute();
+		tokensRef.current = null;
+		managerRef.current = null;
+		retryRef.current = null;
+		/* The landing latch goes with the session. It is a one-way latch otherwise:
+		 *  written where a stored credential is accepted and never cleared, so the
+		 *  NEXT arrival at `/` in this process (a back gesture, a `router.push`)
+		 *  would still route a signed-out reader to `/tunnels` ("Set up a
+		 *  computer") instead of the first-run surface (review round 4, M2). */
+		if (mountedRef.current) setRestoredAccount(false);
+		listStore.getState().reset();
+		configStore.getState().reset();
+		const revision = connectionStore.getState().revision;
 		try {
-			/* Revoke BEFORE the route ends: after `endRoute` there is nothing left to
-			 * authenticate the revocation with, and a session left live at the control
-			 * plane keeps a tunnel reachable from a phone that has forgotten it. */
-			const manager = managerRef.current;
+			/* Capture the credentials before ending the route, but withdraw admission
+			 * immediately: a slow revocation must not leave commands enabled or allow a
+			 * pending login to resurrect the signed-out route. */
 			if (activeRoute?.mode === "radient" && manager?.current) {
 				await revokeTunnelSession(manager.current).catch(() => undefined);
 			}
 			if (activeRoute?.mode === "custom") {
 				await signOutOfCustomRoute(activeRoute).catch(() => undefined);
 			}
-			stopStream();
-			stopConfig();
-			clientRef.current = null;
-			tokensRef.current = null;
-			managerRef.current = null;
-			retryRef.current = null;
-			/* The landing latch goes with the session. It is a one-way latch otherwise:
-			 *  written where a stored credential is accepted and never cleared, so the
-			 *  NEXT arrival at `/` in this process (a back gesture, a `router.push`)
-			 *  would still route a signed-out reader to `/tunnels` ("Set up a
-			 *  computer") instead of the first-run surface (review round 4, M2). */
-			if (mountedRef.current) setRestoredAccount(false);
-			listStore.getState().reset();
-			configStore.getState().reset();
-			connectionStore.getState().endRoute();
 			/* Every stored credential goes with the sign-out. `removeSavedTunnel` stays the
 			 *  NARROWER delete for a good reason: forgetting a tunnel must not take the
 			 *  Radient grant with it, and a lapsed grant must not take the 30-day handle. */
-			await clearStoredCredentials();
-			if (mountedRef.current) {
+			if (connectionStore.getState().revision === revision)
+				await clearStoredCredentials();
+			if (
+				mountedRef.current &&
+				connectionStore.getState().revision === revision
+			) {
 				setStreamHealth("idle");
 				setLastError(null);
 				setSignInState({ kind: "idle" });
 			}
 		} finally {
-			if (mountedRef.current) setBusy(false);
+			if (
+				mountedRef.current &&
+				connectionStore.getState().revision === revision
+			)
+				setBusy(false);
 		}
 	}, [stopStream, stopConfig]);
 
@@ -837,10 +846,11 @@ export const ConnectionProvider = ({
 		 * Clearing storage alone left Settings saying "Connected directly to
 		 * <the address you just removed>" until the reader navigated away — the screen
 		 * reads the live route, and the live route was still in the store (QA round 1).
-		 * Signing out first is the same order `signOut` uses: the relay's session is
-		 * closed politely before the route it belongs to disappears. */
+		 * Admission is withdrawn first, just as in `signOut`; revocation uses the
+		 * captured route so a slow response cannot leave requests enabled. */
 		if (active?.mode === "custom") {
-			await signOutOfCustomRoute(active).catch(() => undefined);
+			clientRef.current = null;
+			connectionStore.getState().endRoute();
 			stopStream();
 			stopConfig();
 			clientRef.current = null;
@@ -848,7 +858,7 @@ export const ConnectionProvider = ({
 			retryRef.current = null;
 			listStore.getState().reset();
 			configStore.getState().reset();
-			connectionStore.getState().endRoute();
+			await signOutOfCustomRoute(active).catch(() => undefined);
 			if (mountedRef.current) setLastError(null);
 		}
 		await removeSavedTunnel();
@@ -872,6 +882,7 @@ export const ConnectionProvider = ({
 	 * first-run screen as though they had never signed in.
 	 */
 	const restoreRadient = useCallback(async () => {
+		const revision = connectionStore.getState().revision;
 		/* The decision is `planRestore` and the carrying-out is `carryOutRestore`,
 		 *  both data/injectable and therefore testable; this wires them to the
 		 *  live storage, the live refresh and the list's own discovery. See that
@@ -893,7 +904,9 @@ export const ConnectionProvider = ({
 				 *  since. */
 				await refreshComputers();
 			},
-			isCancelled: () => cancelledRef.current,
+			isCancelled: () =>
+				cancelledRef.current ||
+				connectionStore.getState().revision !== revision,
 		});
 		/* One-way latch no more: any restore that does not end accepted clears it, so a
 		 *  later arrival at `/` cannot inherit a stale "signed in" landing. */
@@ -918,6 +931,44 @@ export const ConnectionProvider = ({
 		restoreRef.current = restoreRadient;
 	}, [restoreRadient]);
 
+	/** The relay-served web bundle may already hold a cookie. Verify it once as
+	 * admission, not in each screen; this path never runs again after sign-out. */
+	const restorePageRoute = useCallback(async () => {
+		const origin =
+			Platform.OS === "web" &&
+			typeof globalThis.location?.origin === "string" &&
+			(globalThis.location.protocol === "http:" ||
+				globalThis.location.protocol === "https:")
+				? globalThis.location.origin
+				: null;
+		if (
+			!origin ||
+			connectionStore.getState().route ||
+			connectionStore.getState().surface
+		)
+			return;
+		const validated = validateCustomBaseUrl(origin, { allowInsecure: true });
+		if (!validated.ok) return;
+		const route = validated.route;
+		const admission = beginRoute(route);
+		const client = createRelayClient({
+			route,
+			onResponse: (facts) => {
+				if (admission.isCurrent() && facts.status === 401)
+					connectionStore
+						.getState()
+						.noteFailure({ surface: "password", displayableMessage: "" });
+			},
+		});
+		try {
+			await client.sessions();
+			await goLive(client, admission);
+		} catch (error) {
+			if (admission.isCurrent() && error instanceof RelayError)
+				noteError(error);
+		}
+	}, [beginRoute, goLive, noteError]);
+
 	/* The cold start. On web an explicit `lo-relay` override wins; otherwise the saved
 	 * CUSTOM tunnel is resumed, and failing that a stored RADIENT credential is
 	 * restored.
@@ -937,11 +988,14 @@ export const ConnectionProvider = ({
 			return;
 		}
 		let cancelled = false;
+		const revision = connectionStore.getState().revision;
+		const interrupted = () =>
+			cancelled || connectionStore.getState().revision !== revision;
 		cancelledRef.current = false;
 		void (async () => {
 			try {
 				const stored = await readSavedTunnel();
-				if (cancelled) return;
+				if (interrupted()) return;
 				if (stored) {
 					setSavedTunnel(stored);
 					if (stored.password != null) {
@@ -954,7 +1008,8 @@ export const ConnectionProvider = ({
 					}
 				}
 				/* Nothing of the reader's own to dial: the RECOMMENDED path's turn. */
-				if (!cancelled) await restoreRadient();
+				if (!interrupted()) await restoreRadient();
+				if (!interrupted()) await restorePageRoute();
 			} catch {
 				/* The cold start is the APP's own setup, so a throw here is a bug in the app
 				 *  and not a fact about the reader's tunnel — which is exactly what the
@@ -987,7 +1042,7 @@ export const ConnectionProvider = ({
 			cancelled = true;
 			cancelledRef.current = true;
 		};
-	}, [connectCustom, restoreRadient]);
+	}, [connectCustom, restoreRadient, restorePageRoute]);
 
 	const surface = useConnectionState((state) => state.surface);
 	const detail = useConnectionState((state) => state.detail);
@@ -1035,7 +1090,8 @@ export const ConnectionProvider = ({
 			removeCustomRoute,
 			tunnelStoragePersistent,
 			retry,
-			relay: () => clientRef.current,
+			relay: () =>
+				isUsable(connectionStore.getState()) ? clientRef.current : null,
 			busy,
 			coldStartSettled,
 			streamHealth,
