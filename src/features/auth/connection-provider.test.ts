@@ -13,10 +13,18 @@ import {
 	connectionStore,
 	useConnection,
 } from "@/features/auth/connection-provider";
-
+import { sessions as sessionProjections } from "@/features/session/runtime";
+import {
+	sessionFactsFrom,
+	sessionStateFlags,
+} from "@/features/session/state-marker";
+import { useSessionRuntime } from "@/features/session/use-session";
 import { nativeCredentialRetirement } from "./authentication-lifecycle";
 
-vi.mock("react-native", () => ({ Platform: { OS: "web" } }));
+vi.mock("react-native", () => ({
+	Platform: { OS: "web" },
+	AppState: { addEventListener: () => ({ remove() {} }) },
+}));
 const durable = vi.hoisted(() => ({
 	oauth: null as RadientTokens | null,
 	session: null as TunnelSession | null,
@@ -59,9 +67,18 @@ vi.mock("@/features/auth/tunnel-storage", () => ({
 let root: ReturnType<typeof createRoot> | null = null;
 let latest: ReturnType<typeof useConnection>;
 const cleanup: Array<() => Promise<void>> = [];
+let observedSession: string | null = null;
+let sessionReading: ReturnType<typeof useSessionRuntime>;
+const wire: Array<{ method: string; path: string; status: number }> = [];
+function SessionCapture({ id }: { id: string }) {
+	sessionReading = useSessionRuntime(id);
+	return null;
+}
 function Capture() {
 	latest = useConnection();
-	return null;
+	return observedSession
+		? createElement(SessionCapture, { id: observedSession })
+		: null;
 }
 async function mount() {
 	const doc = {
@@ -153,6 +170,7 @@ async function relay(
 		holdToken?: boolean;
 		failStream?: boolean;
 		failLogout?: boolean;
+		refuseCatalogue?: boolean;
 	} = {},
 ) {
 	const events: string[] = [];
@@ -161,6 +179,8 @@ async function relay(
 	const tokenReceived = deferred();
 	const releaseLogin = deferred();
 	const releaseToken = deferred();
+	const refuseCatalogue = deferred();
+	let catalogueStreams = 0;
 	let loginCount = 0;
 	let tokenCount = 0;
 	let codeCount = 0;
@@ -241,6 +261,11 @@ async function relay(
 			return;
 		}
 		if (path === "/api/sessions/events") {
+			catalogueStreams += 1;
+			if (options.refuseCatalogue && catalogueStreams > 1) {
+				json({ detail: "Authentication required" }, 401);
+				return;
+			}
 			if (options.failStream && !failedStream) {
 				failedStream = true;
 				response.writeHead(503, { "content-type": "text/plain" });
@@ -250,6 +275,26 @@ async function relay(
 			response.writeHead(200, { "content-type": "text/event-stream" });
 			response.write(
 				`event: sessions\ndata: ${JSON.stringify(body("sessions-empty"))}\n\n`,
+			);
+			if (options.refuseCatalogue) {
+				await refuseCatalogue.promise;
+				response.end();
+			}
+			return;
+		}
+		if (path.startsWith("/api/sessions/") && path.endsWith("/events")) {
+			const seed = JSON.parse(
+				readFileSync(
+					new URL(
+						"../../../fixtures/relay/sse/sse-projection-checkpoints-empty.json",
+						import.meta.url,
+					),
+					"utf8",
+				),
+			).data;
+			response.writeHead(200, { "content-type": "text/event-stream" });
+			response.write(
+				`event: projection\ndata: ${JSON.stringify({ ...seed, session_id: observedSession })}\n\n`,
 			);
 			return;
 		}
@@ -271,6 +316,7 @@ async function relay(
 	cleanup.push(async () => {
 		releaseLogin.resolve();
 		releaseToken.resolve();
+		refuseCatalogue.resolve();
 		server.closeAllConnections();
 		await new Promise<void>((resolve) => server.close(() => resolve()));
 	});
@@ -284,6 +330,7 @@ async function relay(
 		tokenReceived,
 		releaseLogin,
 		releaseToken,
+		refuseCatalogue,
 		allowLogout: () => {
 			failLogout = false;
 		},
@@ -312,6 +359,11 @@ function transport(controlPlane?: string) {
 			if (init?.credentials !== "omit" && jars.has(url.origin))
 				headers.set("cookie", jars.get(url.origin) ?? "");
 			const response = await actualFetch(target, { ...init, headers });
+			wire.push({
+				method: init?.method ?? "GET",
+				path: url.pathname,
+				status: response.status,
+			});
 			const cookie = response.headers.get("set-cookie");
 			if (init?.credentials !== "omit" && cookie !== null)
 				jars.set(url.origin, cookie.split(";")[0] ?? "");
@@ -321,6 +373,9 @@ function transport(controlPlane?: string) {
 }
 
 beforeEach(() => {
+	observedSession = null;
+	wire.length = 0;
+	sessionProjections.getState().reset();
 	durable.oauth = null;
 	durable.session = null;
 	durable.events = [];
@@ -1007,6 +1062,60 @@ describe("mounted provider authentication retirement", () => {
 			expect(
 				mock.events.filter((event) => event === "GET /api/sessions/events"),
 			).toHaveLength(before);
+		},
+	);
+});
+
+describe("session runtime shared-route refusal", () => {
+	it.each([false, true])(
+		"publishes honest session state when catalogue refusal is %s",
+		async (refused) => {
+			const mock = await relay({ refuseCatalogue: refused });
+			observedSession = "synthetic-session";
+			transport();
+			await mount();
+			expect(sessionReading.error).toBeNull();
+			await act(async () => {
+				await latest.connectCustom({
+					url: mock.origin,
+					password: "test-only",
+					allowInsecure: true,
+				});
+			});
+			await until(() => sessionReading.projection !== null);
+			if (refused) {
+				// A real first session frame has landed. Refuse only the catalogue's
+				// reconnect, leaving the session channel healthy until route readiness
+				// withdraws it: the session consumer still owns the shared typed failure.
+				mock.refuseCatalogue.resolve();
+				await until(() => latest.lastError !== null);
+				expect(latest.lastError?.kind).toBe("relay-unauthorized");
+				expect(sessionReading.error).toMatchObject({
+					kind: "relay-unauthorized",
+				});
+				expect(sessionReading.source.endpoints).toBeNull();
+				expect(wire).toContainEqual({
+					method: "GET",
+					path: "/api/sessions/events",
+					status: 401,
+				});
+			} else {
+				expect(sessionReading.error).toBeNull();
+				expect(sessionReading.source.endpoints).not.toBeNull();
+			}
+			const flags = sessionStateFlags(
+				sessionFactsFrom({
+					projection: sessionReading.projection,
+					streaming: sessionReading.streaming,
+					error: sessionReading.error !== null,
+					entries: sessionReading.entries,
+					subagents: 0,
+					micVisible: false,
+				}),
+			);
+			expect(flags.error).toBe(refused);
+			// The ordinary cold-start gate remains intact for both success/refusal.
+			expect(wire[0]).toEqual({ method: "POST", path: "/login", status: 303 });
 		},
 	);
 });

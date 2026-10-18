@@ -617,7 +617,11 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 		models,
 		loading,
 		olderThanLoaded: olderRowClaim,
-		error,
+		// The shared route can be refused by its catalogue stream before this
+		// session's stream reports an error. Publish the same typed failure the
+		// banner already uses, so screen/composer facts cannot claim a healthy
+		// session while authenticated readiness has correctly been withdrawn.
+		error: error ?? providerConnection.lastError,
 		loadImage,
 		loadVideo,
 		loadAgent,
