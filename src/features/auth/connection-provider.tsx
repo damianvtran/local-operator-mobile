@@ -272,6 +272,9 @@ export const ConnectionProvider = ({
 	// operation independently so ordinary Sign out and diagnostic retry share
 	// the same origin even though the selected route has already become null.
 	const pendingSignOutRef = useRef<(() => Promise<boolean>) | null>(null);
+	// Keep completion identity even after remote success clears the pending
+	// callback: an outer durable-clear await must still detect a newer route.
+	const revocationOwnerRef = useRef<symbol | null>(null);
 	/** The latest revision of the cold-start restore, so the retry a network failure
 	 *  offers can re-run the very function that offered it — see `restoreRadient`. */
 	const restoreRef = useRef<() => Promise<void>>(async () => undefined);
@@ -282,6 +285,7 @@ export const ConnectionProvider = ({
 		return () => {
 			mountedRef.current = false;
 			pendingSignOutRef.current = null;
+			revocationOwnerRef.current = null;
 			streamRef.current?.stop();
 			configRef.current?.stop();
 			clientRef.current = null;
@@ -473,6 +477,7 @@ export const ConnectionProvider = ({
 	const beginRoute = useCallback(
 		(route: RouteProfile) => {
 			pendingSignOutRef.current = null;
+			revocationOwnerRef.current = null;
 			stopStream();
 			stopConfig();
 			clientRef.current = null;
@@ -791,9 +796,13 @@ export const ConnectionProvider = ({
 			revision: number,
 			retired: Promise<void>,
 		): Promise<boolean> => {
+			const owner = Symbol("revocation");
+			revocationOwnerRef.current = owner;
 			let inFlight: Promise<boolean> | null = null;
 			const isCurrent = () =>
-				mountedRef.current && connectionStore.getState().revision === revision;
+				mountedRef.current &&
+				revocationOwnerRef.current === owner &&
+				connectionStore.getState().revision === revision;
 			const attempt = (): Promise<boolean> => {
 				if (!isCurrent()) return Promise.resolve(false);
 				if (inFlight) return inFlight;
@@ -848,6 +857,7 @@ export const ConnectionProvider = ({
 
 	const signOut = useCallback(async () => {
 		if (pendingSignOutRef.current) {
+			const owner = revocationOwnerRef.current;
 			// The retained operation may originate from forgetting one custom route,
 			// which deliberately preserves OAuth. Ordinary Sign out still wipes all
 			// owned credentials, serialized before any newer native admission.
@@ -859,7 +869,15 @@ export const ConnectionProvider = ({
 				clear,
 				pendingSignOutRef.current(),
 			]);
-			return confirmed;
+			// Remote success may precede the additional clear. Validate ownership
+			// after BOTH complete; the store revision alone is not a stable token
+			// because successful refusal cleanup legitimately bumps it itself.
+			return (
+				confirmed &&
+				mountedRef.current &&
+				owner !== null &&
+				revocationOwnerRef.current === owner
+			);
 		}
 		const activeRoute = connectionStore.getState().route;
 		const manager = managerRef.current;

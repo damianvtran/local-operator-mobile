@@ -23,6 +23,8 @@ const durable = vi.hoisted(() => ({
 	events: [] as string[],
 	writeBlock: null as Promise<void> | null,
 	writesStarted: 0,
+	clearBlock: null as Promise<void> | null,
+	clearsStarted: 0,
 }));
 vi.mock("@/features/auth/tunnel-storage", () => ({
 	readSavedTunnel: async () => null,
@@ -35,6 +37,8 @@ vi.mock("@/features/auth/tunnel-storage", () => ({
 		durable.session = session;
 	},
 	clearStoredCredentials: async () => {
+		durable.clearsStarted += 1;
+		await durable.clearBlock;
 		durable.events.push("clear");
 		durable.oauth = null;
 		durable.session = null;
@@ -322,6 +326,8 @@ beforeEach(() => {
 	durable.events = [];
 	durable.writeBlock = null;
 	durable.writesStarted = 0;
+	durable.clearBlock = null;
+	durable.clearsStarted = 0;
 	jars = new Map();
 	connectionStore.getState().endRoute();
 });
@@ -857,6 +863,74 @@ describe("mounted provider authentication retirement", () => {
 		);
 		expect(latest.lastError?.kind).toBe("transport");
 	});
+
+	it.each(["replace", "retain", "failure"])(
+		"checks ownership after the final held durable clear: %s",
+		async (mode) => {
+			const old = await relay({ failLogout: true });
+			transport();
+			await mount();
+			await act(async () => {
+				await latest.connectCustom({
+					url: old.origin,
+					password: "test-only",
+					allowInsecure: true,
+				});
+			});
+			await act(async () => {
+				expect(await latest.signOut()).toBe(false);
+			});
+			const clear = deferred();
+			durable.clearBlock = clear.promise;
+			if (mode !== "failure") old.allowLogout();
+			let exiting!: Promise<boolean>;
+			let completed = false;
+			await act(async () => {
+				exiting = latest.signOut();
+				void exiting.then(() => {
+					completed = true;
+				});
+			});
+			await until(() => durable.clearsStarted === 2);
+			// The successful remote attempt has fully settled, not just been sent,
+			// while the outer API still waits on its separate durable-clear await.
+			await until(() =>
+				mode === "failure"
+					? old.events.filter((event) => event === "logout:503").length === 2
+					: latest.lastError === null,
+			);
+			expect(completed).toBe(false);
+			const current = mode === "retain" ? null : await relay();
+			if (current)
+				await act(async () => {
+					await latest.connectCustom({
+						url: current.origin,
+						password: "test-only",
+						allowInsecure: true,
+					});
+				});
+			const currentClient = latest.relay();
+			const currentCookie = current ? jars.get(current.origin) : null;
+			clear.resolve();
+			await act(async () => {
+				await exiting;
+			});
+			expect(await exiting).toBe(mode === "retain");
+			if (current) {
+				expect(latest.relay()).toBe(currentClient);
+				expect(currentClient).not.toBeNull();
+				expect(connectionStore.getState().route).toMatchObject({
+					baseUrl: current.origin,
+				});
+				expect(connectionStore.getState().phase).toBe("live");
+				expect(latest.lastError).toBeNull();
+				expect(jars.get(current.origin)).toBe(currentCookie);
+			} else {
+				expect(jars.get(old.origin)).toBe("lop_mobile=");
+				expect(latest.lastError).toBeNull();
+			}
+		},
+	);
 
 	it("does not let an old compensating logout clear a newer same-origin login", async () => {
 		const mock = await relay({ holdLogin: true });
