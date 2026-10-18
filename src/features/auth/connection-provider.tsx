@@ -165,7 +165,8 @@ export type Connection = {
 	restoredAccount: boolean;
 	selectComputer: (computer: DiscoveredComputer) => Promise<void>;
 	refreshList: () => Promise<void>;
-	signOut: () => Promise<void>;
+	/** False means remote sign-out was not confirmed: callers must not show a success toast. */
+	signOut: () => Promise<boolean>;
 	/** Persists the reader's own tunnel, so a self-hosted setup survives a
 	 *  restart. Storage is written HERE rather than by a screen: two screens can
 	 *  save a tunnel (setup, and Settings' edit), and the record has one owner. */
@@ -807,24 +808,52 @@ export const ConnectionProvider = ({
 			activeRoute?.mode === "custom"
 				? customRouteAuthentication.signOut(activeRoute)
 				: Promise.resolve();
-		try {
-			await Promise.all([retired, loggedOut]);
-			if (
-				mountedRef.current &&
-				connectionStore.getState().revision === revision
-			) {
-				setStreamHealth("idle");
-				setLastError(null);
-				setSignInState({ kind: "idle" });
+		const finish = async (logout: Promise<unknown>): Promise<boolean> => {
+			try {
+				await Promise.all([retired, logout]);
+				if (
+					mountedRef.current &&
+					connectionStore.getState().revision === revision
+				) {
+					setStreamHealth("idle");
+					setLastError(null);
+					setSignInState({ kind: "idle" });
+					retryRef.current = null;
+					setBusy(false);
+					// Clear a prior refusal only after confirmed logout. This ends no
+					// newer route: every continuation owns the original revision.
+					if (connectionStore.getState().surface !== null)
+						connectionStore.getState().endRoute();
+					return true;
+				}
+				return false;
+			} catch (error) {
+				if (
+					!mountedRef.current ||
+					connectionStore.getState().revision !== revision
+				)
+					return false;
+				if (!(error instanceof RelayError)) throw error;
+				// Keep the captured origin for an explicit retry. Calling signOut()
+				// again would see route=null and falsely clear the failed cleanup.
+				noteError(error, async () => {
+					await finish(
+						activeRoute?.mode === "custom"
+							? customRouteAuthentication.signOut(activeRoute)
+							: Promise.resolve(),
+					);
+				});
+				return false;
+			} finally {
+				if (
+					mountedRef.current &&
+					connectionStore.getState().revision === revision
+				)
+					setBusy(false);
 			}
-		} finally {
-			if (
-				mountedRef.current &&
-				connectionStore.getState().revision === revision
-			)
-				setBusy(false);
-		}
-	}, [stopStream, stopConfig]);
+		};
+		return await finish(loggedOut);
+	}, [noteError, stopStream, stopConfig]);
 
 	const retry = useCallback(async () => {
 		const pending = retryRef.current;
@@ -870,12 +899,26 @@ export const ConnectionProvider = ({
 			retryRef.current = null;
 			listStore.getState().reset();
 			configStore.getState().reset();
-			await customRouteAuthentication.signOut(active);
-			if (mountedRef.current) setLastError(null);
+			const revision = connectionStore.getState().revision;
+			try {
+				await customRouteAuthentication.signOut(active);
+				if (
+					mountedRef.current &&
+					connectionStore.getState().revision === revision
+				)
+					setLastError(null);
+			} catch (error) {
+				if (!(error instanceof RelayError)) throw error;
+				if (
+					mountedRef.current &&
+					connectionStore.getState().revision === revision
+				)
+					noteError(error);
+			}
 		}
 		await removeSavedTunnel();
 		setSavedTunnel(null);
-	}, [stopStream, stopConfig]);
+	}, [noteError, stopStream, stopConfig]);
 
 	const tunnelStoragePersistent = useCallback(
 		async () => Platform.OS !== "web",

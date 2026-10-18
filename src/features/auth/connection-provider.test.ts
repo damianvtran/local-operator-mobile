@@ -152,6 +152,7 @@ async function relay(
 	} = {},
 ) {
 	const events: string[] = [];
+	let failLogout = options.failLogout;
 	const loginReceived = deferred();
 	const tokenReceived = deferred();
 	const releaseLogin = deferred();
@@ -213,7 +214,8 @@ async function relay(
 			return;
 		}
 		if (path === "/logout") {
-			if (options.failLogout) {
+			if (failLogout) {
+				events.push("logout:503");
 				response.writeHead(503);
 				response.end("Synthetic logout unavailable");
 				return;
@@ -278,6 +280,9 @@ async function relay(
 		tokenReceived,
 		releaseLogin,
 		releaseToken,
+		allowLogout: () => {
+			failLogout = false;
+		},
 	};
 }
 
@@ -340,7 +345,7 @@ describe("mounted provider authentication retirement", () => {
 			connecting = latest.selectComputer(computer("a"));
 		});
 		await mock.tokenReceived.promise;
-		let exiting!: Promise<void>;
+		let exiting!: Promise<boolean>;
 		await act(async () => {
 			exiting = latest.signOut();
 		});
@@ -393,7 +398,7 @@ describe("mounted provider authentication retirement", () => {
 			connecting = latest.selectComputer(computer("a"));
 		});
 		await until(() => durable.writesStarted === 1);
-		let exiting!: Promise<void>;
+		let exiting!: Promise<boolean>;
 		await act(async () => {
 			exiting = latest.signOut();
 		});
@@ -436,7 +441,7 @@ describe("mounted provider authentication retirement", () => {
 			});
 		});
 		await mock.loginReceived.promise;
-		let exiting!: Promise<void>;
+		let exiting!: Promise<boolean>;
 		await act(async () => {
 			exiting = latest.signOut();
 		});
@@ -540,6 +545,152 @@ describe("mounted provider authentication retirement", () => {
 		expect(mock.events.slice(before)).toEqual([]);
 	});
 
+	it.each(["pending", "ready"])(
+		"an explicit logout failure remains refused across remount from %s login",
+		async (state) => {
+			const mock = await relay({
+				holdLogin: state === "pending",
+				failLogout: true,
+			});
+			transport();
+			await mount();
+			let connecting!: Promise<void>;
+			await act(async () => {
+				connecting = latest.connectCustom({
+					url: mock.origin,
+					password: "synthetic",
+					allowInsecure: true,
+				});
+			});
+			await mock.loginReceived.promise;
+			if (state === "ready")
+				await act(async () => {
+					await connecting;
+				});
+			let exiting!: Promise<boolean>;
+			await act(async () => {
+				exiting = latest.signOut();
+			});
+			mock.releaseLogin.resolve();
+			await act(async () => {
+				await Promise.all([connecting, exiting]);
+			});
+			expect(await exiting).toBe(false);
+			expect(
+				mock.events.filter((event) => event === "logout:503"),
+			).toHaveLength(state === "pending" ? 2 : 1);
+			const signoutFailure = latest.lastError;
+			expect(jars.get(mock.origin)).toBe("lop_mobile=synthetic-1");
+			await unmount();
+			const before = mock.events.length;
+			vi.stubGlobal("location", {
+				origin: mock.origin,
+				protocol: "http:",
+				search: "",
+			});
+			await mount();
+			expect(latest.relay()).toBeNull();
+			expect(connectionStore.getState().phase).toBe("refused");
+			expect(latest.coldStartSettled).toBe(true);
+			expect(mock.events.slice(before)).toEqual([]);
+			expect(signoutFailure?.kind).toBe("transport");
+			// A genuinely new explicit login may replace failed ownership. No old
+			// cleanup is allowed to run after it and erase the newly admitted cookie.
+			await act(async () => {
+				await latest.connectCustom({
+					url: mock.origin,
+					password: "new",
+					allowInsecure: true,
+				});
+			});
+			expect(latest.relay()).not.toBeNull();
+			expect(jars.get(mock.origin)).toBe("lop_mobile=synthetic-2");
+			mock.allowLogout();
+			await act(async () => {
+				expect(await latest.signOut()).toBe(true);
+			});
+			expect(latest.lastError).toBeNull();
+			expect(jars.get(mock.origin)).toBe("lop_mobile=");
+			await unmount();
+			const after = mock.events.length;
+			await mount();
+			expect(latest.relay()).toBeNull();
+			expect(mock.events.slice(after)).toEqual(["GET /api/sessions"]);
+		},
+	);
+
+	it("a successful explicit logout retry clears a failed cleanup barrier", async () => {
+		const mock = await relay({ failLogout: true });
+		transport();
+		await mount();
+		await act(async () => {
+			await latest.connectCustom({
+				url: mock.origin,
+				password: "synthetic",
+				allowInsecure: true,
+			});
+		});
+		await act(async () => {
+			await latest.signOut();
+		});
+		expect(latest.lastError?.kind).toBe("transport");
+		const attempts = mock.events.filter(
+			(event) => event === "logout:503",
+		).length;
+		await act(async () => {
+			await latest.retry();
+		});
+		expect(latest.lastError?.kind).toBe("transport");
+		expect(mock.events.filter((event) => event === "logout:503")).toHaveLength(
+			attempts + 1,
+		);
+		mock.allowLogout();
+		await act(async () => {
+			await latest.retry();
+		});
+		expect(latest.lastError).toBeNull();
+		expect(connectionStore.getState().phase).toBe("signed-out");
+		expect(jars.get(mock.origin)).toBe("lop_mobile=");
+		await unmount();
+		const before = mock.events.length;
+		vi.stubGlobal("location", {
+			origin: mock.origin,
+			protocol: "http:",
+			search: "",
+		});
+		await mount();
+		expect(latest.relay()).toBeNull();
+		expect(mock.events.slice(before)).toEqual(["GET /api/sessions"]);
+	});
+
+	it("consumes the typed logout failure when forgetting the active custom route", async () => {
+		const mock = await relay({ failLogout: true });
+		transport();
+		await mount();
+		await act(async () => {
+			await latest.connectCustom({
+				url: mock.origin,
+				password: "synthetic",
+				allowInsecure: true,
+			});
+		});
+		await act(async () => {
+			await latest.removeCustomRoute();
+		});
+		expect(latest.lastError?.kind).toBe("transport");
+		await unmount();
+		const before = mock.events.length;
+		vi.stubGlobal("location", {
+			origin: mock.origin,
+			protocol: "http:",
+			search: "",
+		});
+		await mount();
+		expect(latest.relay()).toBeNull();
+		expect(connectionStore.getState().phase).toBe("refused");
+		expect(mock.events.slice(before)).toEqual([]);
+	});
+
 	it("does not let an old compensating logout clear a newer same-origin login", async () => {
 		const mock = await relay({ holdLogin: true });
 		transport();
@@ -553,7 +704,7 @@ describe("mounted provider authentication retirement", () => {
 			});
 		});
 		await mock.loginReceived.promise;
-		let exiting!: Promise<void>;
+		let exiting!: Promise<boolean>;
 		let second!: Promise<void>;
 		await act(async () => {
 			exiting = latest.signOut();

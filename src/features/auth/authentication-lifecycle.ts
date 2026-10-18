@@ -61,7 +61,15 @@ export class CustomRouteAuthentication {
 	}
 
 	signOut(route: CustomRoute) {
-		return this.run(route, () => this.transport.signOut(route));
+		return this.run(route, async () => {
+			const result = await this.transport.signOut(route);
+			// The canonical boundary returns a verdict even on network/503 failure.
+			// Fulfillment is not proof of logout: clearing this tail would allow a
+			// remount to restore the very cookie whose retirement just failed.
+			if (!result.signedOut)
+				throw new RelayError("transport", "Sign-out could not be confirmed");
+			return result;
+		});
 	}
 
 	/** Admission reads must not overtake another mount's pending cookie cleanup. */

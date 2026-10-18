@@ -93,7 +93,9 @@ export default function Settings() {
 
 	const doSignOut = useCallback(async () => {
 		setConfirmSignOut(false);
-		await signOut();
+		// A failed remote logout keeps its refusal/retry on this screen; do not
+		// claim revocation or navigate away merely because local readiness ended.
+		if (!(await signOut())) return;
 		showToast("Signed out. The session was revoked on your computer.");
 		router.replace("/welcome");
 	}, [router, showToast, signOut]);
