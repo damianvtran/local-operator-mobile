@@ -268,6 +268,10 @@ export const ConnectionProvider = ({
 	const tokensRef = useRef<RadientTokens | null>(null);
 	const managerRef = useRef<TunnelSessionManager | null>(null);
 	const retryRef = useRef<(() => Promise<void>) | null>(null);
+	// Readiness is withdrawn before remote revocation. Keep the unresolved
+	// operation independently so ordinary Sign out and diagnostic retry share
+	// the same origin even though the selected route has already become null.
+	const pendingSignOutRef = useRef<(() => Promise<boolean>) | null>(null);
 	/** The latest revision of the cold-start restore, so the retry a network failure
 	 *  offers can re-run the very function that offered it — see `restoreRadient`. */
 	const restoreRef = useRef<() => Promise<void>>(async () => undefined);
@@ -277,6 +281,7 @@ export const ConnectionProvider = ({
 		mountedRef.current = true;
 		return () => {
 			mountedRef.current = false;
+			pendingSignOutRef.current = null;
 			streamRef.current?.stop();
 			configRef.current?.stop();
 			clientRef.current = null;
@@ -467,6 +472,7 @@ export const ConnectionProvider = ({
 	 * is useful for loading/refusal UI, but must not carry protected requests. */
 	const beginRoute = useCallback(
 		(route: RouteProfile) => {
+			pendingSignOutRef.current = null;
 			stopStream();
 			stopConfig();
 			clientRef.current = null;
@@ -776,7 +782,85 @@ export const ConnectionProvider = ({
 		}
 	}, [noteError]);
 
+	/** One owner for both explicit logout callers. A null selected route says
+	 * nothing about whether a prior remote cleanup succeeded. Retain this
+	 * operation until confirmation or replacement by a genuinely new route. */
+	const confirmRevocation = useCallback(
+		(
+			activeRoute: RouteProfile | null,
+			revision: number,
+			retired: Promise<void>,
+		): Promise<boolean> => {
+			let inFlight: Promise<boolean> | null = null;
+			const isCurrent = () =>
+				mountedRef.current && connectionStore.getState().revision === revision;
+			const attempt = (): Promise<boolean> => {
+				if (!isCurrent()) return Promise.resolve(false);
+				if (inFlight) return inFlight;
+				setBusy(true);
+				const loggedOut =
+					activeRoute?.mode === "custom"
+						? customRouteAuthentication.signOut(activeRoute)
+						: Promise.resolve();
+				const work = (async (): Promise<boolean> => {
+					try {
+						await Promise.all([retired, loggedOut]);
+						if (!isCurrent()) return false;
+						setStreamHealth("idle");
+						setLastError(null);
+						setSignInState({ kind: "idle" });
+						retryRef.current = null;
+						if (pendingSignOutRef.current === attempt)
+							pendingSignOutRef.current = null;
+						setBusy(false);
+						if (connectionStore.getState().surface !== null)
+							connectionStore.getState().endRoute();
+						return true;
+					} catch (error) {
+						if (!isCurrent()) return false;
+						if (!(error instanceof RelayError)) throw error;
+						noteError(error, async () => {
+							await attempt();
+						});
+						return false;
+					} finally {
+						if (isCurrent()) setBusy(false);
+					}
+				})();
+				inFlight = work;
+				// Coalesce concurrent confirmations, but a later explicit action may
+				// make one new attempt after a failure. No timer/automatic retry exists.
+				void work.then(
+					() => {
+						inFlight = null;
+					},
+					() => {
+						inFlight = null;
+					},
+				);
+				return work;
+			};
+			pendingSignOutRef.current = attempt;
+			return attempt();
+		},
+		[noteError],
+	);
+
 	const signOut = useCallback(async () => {
+		if (pendingSignOutRef.current) {
+			// The retained operation may originate from forgetting one custom route,
+			// which deliberately preserves OAuth. Ordinary Sign out still wipes all
+			// owned credentials, serialized before any newer native admission.
+			const clear = nativeCredentialRetirement.retire(
+				null,
+				clearStoredCredentials,
+			);
+			const [, confirmed] = await Promise.all([
+				clear,
+				pendingSignOutRef.current(),
+			]);
+			return confirmed;
+		}
 		const activeRoute = connectionStore.getState().route;
 		const manager = managerRef.current;
 		cancelledRef.current = true;
@@ -804,56 +888,8 @@ export const ConnectionProvider = ({
 			manager,
 			clearStoredCredentials,
 		);
-		const loggedOut =
-			activeRoute?.mode === "custom"
-				? customRouteAuthentication.signOut(activeRoute)
-				: Promise.resolve();
-		const finish = async (logout: Promise<unknown>): Promise<boolean> => {
-			try {
-				await Promise.all([retired, logout]);
-				if (
-					mountedRef.current &&
-					connectionStore.getState().revision === revision
-				) {
-					setStreamHealth("idle");
-					setLastError(null);
-					setSignInState({ kind: "idle" });
-					retryRef.current = null;
-					setBusy(false);
-					// Clear a prior refusal only after confirmed logout. This ends no
-					// newer route: every continuation owns the original revision.
-					if (connectionStore.getState().surface !== null)
-						connectionStore.getState().endRoute();
-					return true;
-				}
-				return false;
-			} catch (error) {
-				if (
-					!mountedRef.current ||
-					connectionStore.getState().revision !== revision
-				)
-					return false;
-				if (!(error instanceof RelayError)) throw error;
-				// Keep the captured origin for an explicit retry. Calling signOut()
-				// again would see route=null and falsely clear the failed cleanup.
-				noteError(error, async () => {
-					await finish(
-						activeRoute?.mode === "custom"
-							? customRouteAuthentication.signOut(activeRoute)
-							: Promise.resolve(),
-					);
-				});
-				return false;
-			} finally {
-				if (
-					mountedRef.current &&
-					connectionStore.getState().revision === revision
-				)
-					setBusy(false);
-			}
-		};
-		return await finish(loggedOut);
-	}, [noteError, stopStream, stopConfig]);
+		return await confirmRevocation(activeRoute, revision, retired);
+	}, [confirmRevocation, stopStream, stopConfig]);
 
 	const retry = useCallback(async () => {
 		const pending = retryRef.current;
@@ -899,26 +935,15 @@ export const ConnectionProvider = ({
 			retryRef.current = null;
 			listStore.getState().reset();
 			configStore.getState().reset();
-			const revision = connectionStore.getState().revision;
-			try {
-				await customRouteAuthentication.signOut(active);
-				if (
-					mountedRef.current &&
-					connectionStore.getState().revision === revision
-				)
-					setLastError(null);
-			} catch (error) {
-				if (!(error instanceof RelayError)) throw error;
-				if (
-					mountedRef.current &&
-					connectionStore.getState().revision === revision
-				)
-					noteError(error);
-			}
+			await confirmRevocation(
+				active,
+				connectionStore.getState().revision,
+				nativeCredentialRetirement.settled(),
+			);
 		}
 		await removeSavedTunnel();
 		setSavedTunnel(null);
-	}, [noteError, stopStream, stopConfig]);
+	}, [confirmRevocation, stopStream, stopConfig]);
 
 	const tunnelStoragePersistent = useCallback(
 		async () => Platform.OS !== "web",

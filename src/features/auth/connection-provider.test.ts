@@ -691,6 +691,173 @@ describe("mounted provider authentication retirement", () => {
 		expect(mock.events.slice(before)).toEqual([]);
 	});
 
+	it.each(["ready", "pending"])(
+		"ordinary repeated Sign out retains the failed revocation from %s login",
+		async (state) => {
+			const mock = await relay({
+				holdLogin: state === "pending",
+				failLogout: true,
+			});
+			transport();
+			await mount();
+			let connecting!: Promise<void>;
+			await act(async () => {
+				connecting = latest.connectCustom({
+					url: mock.origin,
+					password: "test-only",
+					allowInsecure: true,
+				});
+			});
+			await mock.loginReceived.promise;
+			if (state === "ready")
+				await act(async () => {
+					await connecting;
+				});
+			let first!: Promise<boolean>;
+			await act(async () => {
+				first = latest.signOut();
+			});
+			mock.releaseLogin.resolve();
+			await act(async () => {
+				await Promise.all([connecting, first]);
+			});
+			expect(await first).toBe(false);
+			const attempts = mock.events.filter(
+				(event) => event === "GET /logout",
+			).length;
+			await act(async () => {
+				expect(await latest.signOut()).toBe(false);
+			});
+			expect(
+				mock.events.filter((event) => event === "GET /logout"),
+			).toHaveLength(attempts + 1);
+			expect(latest.lastError?.kind).toBe("transport");
+			expect(connectionStore.getState().phase).toBe("refused");
+			expect(jars.get(mock.origin)).not.toBe("lop_mobile=");
+			mock.allowLogout();
+			await act(async () => {
+				expect(await latest.signOut()).toBe(true);
+			});
+			expect(mock.events.slice(-2)).toEqual([
+				"GET /logout",
+				"logout:cookie-cleared",
+			]);
+			expect(
+				mock.events.filter((event) => event === "GET /logout"),
+			).toHaveLength(attempts + 2);
+			expect(latest.lastError).toBeNull();
+			expect(jars.get(mock.origin)).toBe("lop_mobile=");
+			await unmount();
+			const before = mock.events.length;
+			vi.stubGlobal("location", {
+				origin: mock.origin,
+				protocol: "http:",
+				search: "",
+			});
+			await mount();
+			expect(latest.relay()).toBeNull();
+			expect(mock.events.slice(before)).toEqual(["GET /api/sessions"]);
+		},
+	);
+
+	it("a new origin replaces unresolved revocation ownership before ordinary Sign out", async () => {
+		const old = await relay({ failLogout: true });
+		const current = await relay();
+		transport();
+		await mount();
+		await act(async () => {
+			await latest.connectCustom({
+				url: old.origin,
+				password: "test-only",
+				allowInsecure: true,
+			});
+		});
+		await act(async () => {
+			expect(await latest.signOut()).toBe(false);
+		});
+		const retiredRequests = old.events.length;
+		await act(async () => {
+			await latest.connectCustom({
+				url: current.origin,
+				password: "test-only",
+				allowInsecure: true,
+			});
+		});
+		await act(async () => {
+			expect(await latest.signOut()).toBe(true);
+		});
+		expect(old.events).toHaveLength(retiredRequests);
+		expect(current.events.slice(-2)).toEqual([
+			"GET /logout",
+			"logout:cookie-cleared",
+		]);
+		expect(jars.get(current.origin)).toBe("lop_mobile=");
+	});
+
+	it("ordinary Sign out retries the retained revocation after forgetting a route", async () => {
+		const mock = await relay({ failLogout: true });
+		transport();
+		await mount();
+		await act(async () => {
+			await latest.connectCustom({
+				url: mock.origin,
+				password: "test-only",
+				allowInsecure: true,
+			});
+		});
+		durable.oauth = oauth;
+		await act(async () => {
+			await latest.removeCustomRoute();
+		});
+		expect(durable.oauth).toBe(oauth);
+		await act(async () => {
+			expect(await latest.signOut()).toBe(false);
+		});
+		expect(mock.events.filter((event) => event === "GET /logout")).toHaveLength(
+			2,
+		);
+		expect(latest.lastError?.kind).toBe("transport");
+		expect(durable.oauth).toBeNull();
+		mock.allowLogout();
+		await act(async () => {
+			expect(await latest.signOut()).toBe(true);
+		});
+		expect(jars.get(mock.origin)).toBe("lop_mobile=");
+	});
+
+	it("concurrent ordinary Sign out confirmations share their pending remote attempt", async () => {
+		const mock = await relay({ holdLogin: true, failLogout: true });
+		transport();
+		await mount();
+		let connecting!: Promise<void>;
+		await act(async () => {
+			connecting = latest.connectCustom({
+				url: mock.origin,
+				password: "test-only",
+				allowInsecure: true,
+			});
+		});
+		await mock.loginReceived.promise;
+		let first!: Promise<boolean>;
+		let second!: Promise<boolean>;
+		await act(async () => {
+			first = latest.signOut();
+			second = latest.signOut();
+		});
+		mock.releaseLogin.resolve();
+		await act(async () => {
+			await Promise.all([connecting, first, second]);
+		});
+		expect(await first).toBe(false);
+		expect(await second).toBe(false);
+		// One compensating logout plus one shared explicit logout, not an extra
+		// request per confirmation while that same operation remains in flight.
+		expect(mock.events.filter((event) => event === "GET /logout")).toHaveLength(
+			2,
+		);
+		expect(latest.lastError?.kind).toBe("transport");
+	});
+
 	it("does not let an old compensating logout clear a newer same-origin login", async () => {
 		const mock = await relay({ holdLogin: true });
 		transport();
