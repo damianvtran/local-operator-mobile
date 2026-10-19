@@ -471,17 +471,24 @@ jobs:
         run: pnpm audit:capture --dir dist --out "$RUNNER_TEMP/frames" --relay "$MOCK_RELAY_URL" --tier ci --consecutive --yes
 
       - name: Audit the frames against the rubric
-        timeout-minutes: 28
-        # BOUND DERIVED FROM THE CELL COUNT, not guessed. On run 37167390506 this
-        # step audited 250 of the ci tier's 256 cells in 312 s — 1.25 s/cell, with
-        # no FAIL row — so the tier as it stood then was 256 x 1.25 s = ~5.3 min. It
-        # plans 1128 cells today (1128 x 1.25 s = 1,410 s ≈ 23.5 min) and 28 gives ~1.19x
-        # headroom over that; 20 had fallen to ~1.2x, thinner than this bound has ever
-        # carried, and the fold's cells are what moved it; it moved 10 -> 15 with
-        # the capture above when `CI_SCALES` gained the boundary step, and 15 -> 20 with
-        # the lifecycle cells (504 -> 612), and 20 -> 25 with the fold's cells (756 ->
-        # 816) — kept at 25 by the mesh slice's seven (816 -> 900), the checkpoint
-        # fold's four (900 -> 948) and the supplement slice's five (948 -> 1008). At 5 it was killed with six cells to go: a bound below the
+        timeout-minutes: 35
+        # BOUND DERIVED FROM THE MEASURED RATE AT THIS PLAN SIZE, not from the rate
+        # the tier carried when it was small. Run 39315504735 (head 34e386a, job
+        # 118285708967) was killed by the 28 at ~1,680 s with `1090/1128 cells
+        # audited` — no FAIL row, just the bound — which is 1.54 s/cell at the
+        # 1128-cell `ci` plan: 1128 x 1.54 s = 1,738 s ≈ 28.9 min, ABOVE the 28 the
+        # step carried. The 1.25 s/cell the previous derivation used was measured on
+        # 250 of 256 cells (run 37167390506, 312 s) and did not hold at the size the
+        # tier reached; re-derive from a run at the CURRENT plan size, never by
+        # scaling a small-tier sample. 35 gives ~1.21x over 28.9 min — the same floor
+        # the other steps here carry, because a bound that fires every run stops
+        # being a signal. The raise history: it moved 10 -> 15 with the capture above
+        # when `CI_SCALES` gained the boundary step, 15 -> 20 with the lifecycle
+        # cells (504 -> 612), 20 -> 25 with the fold's cells (756 -> 816) — kept at
+        # 25 by the mesh slice's seven (816 -> 900), the checkpoint fold's four (900
+        # -> 948) and the supplement slice's five (948 -> 1008) — and 25 -> 28 at
+        # 1128; 28 -> 35 now that a run at 1128 measured the rate rather than
+        # inferring it. At 5 it was killed with six cells to go: a bound below the
         # work it contains, the same shape that made the capture's deadline derive
         # from its own plan. It is DERIVED, not COMPUTED at runtime: GitHub evaluates
         # `timeout-minutes` before any step runs, and the count that matters is the
