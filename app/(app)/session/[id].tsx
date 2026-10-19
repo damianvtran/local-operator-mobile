@@ -113,6 +113,15 @@ export default function Session() {
 	/* The relay's capability block, off the same list frame the screen already reads
 	 * below. Declared before the composer because the composer's mic gate needs it. */
 	const capabilities = useListState((state) => state.capabilities);
+	/* Whether the header may offer the assignment sheet at all: a LOCAL
+	 *  conversation whose relay advertises the routes. It is computed once so the
+	 *  header's presence and its press cannot disagree (review round 2, U8). The
+	 *  capability test is the tested helper, never a second comparison; a remote
+	 *  row stays read-only even when the relay offers the routes. */
+	const tagsAssignable =
+		listRow !== undefined &&
+		!isRemoteRow(listRow) &&
+		canAssignSessionTags(capabilities);
 	const composer = useComposer({
 		sessionId,
 		source: runtime.source,
@@ -520,19 +529,19 @@ export default function Session() {
 			 *  (review round 1, U1): the tags are already the subject, so the line is
 			 *  the control that opens their sheet. A remote row (or an older relay)
 			 *  keeps it read-only. The LIST frame carries the pair on every relay that
-			 *  has the field; an older relay defaults to `[]`, which paints no line. */
+			 *  has the field; an older relay defaults to `[]`, which paints no line.
+			 *
+			 *  The disclosure is present even when the assignment is EMPTY (review
+			 *  round 2, U8): gating the whole line on `tags.length` left an untagged
+			 *  local conversation with no visible route at all, and the long-press
+			 *  menu is not a route a reader can see. A read-only line keeps the old
+			 *  rule — badges with no assignment are a blank gap, not a fact. */
 			headerDetail={
-				(listRow?.tags?.length ?? 0) > 0 ? (
+				tagsAssignable || (listRow?.tags?.length ?? 0) > 0 ? (
 					<SessionTagLine
 						tags={listRow?.tags ?? []}
 						testID={sessionHeaderTagLineId(sessionId)}
-						onPress={
-							listRow !== undefined &&
-							!isRemoteRow(listRow) &&
-							canAssignSessionTags(capabilities)
-								? () => setTagsOpen(true)
-								: undefined
-						}
+						onPress={tagsAssignable ? () => setTagsOpen(true) : undefined}
 						actionTestID={CONTROL.sessionHeaderTagsAction}
 						accessibilityHint="Shows the tag choices for this conversation"
 					/>

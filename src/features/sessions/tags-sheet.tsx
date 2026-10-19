@@ -370,12 +370,22 @@ export const SessionTagsSheet = ({
 	 *  unmounting it there would also unmount the `Saving…` cue. */
 	const emptyCatalogue =
 		catalogue.kind === "ready" && catalogue.tags.length === 0;
+	/* Remove all is PINNED for every ready catalogue that has something to clear
+	 *  (review round 2, U9). In the body it followed the checkbox list, and at
+	 *  200 % on a 320 pt phone the last control was sliced at the sheet edge —
+	 *  half a danger box is not a reachable answer. The footer is outside the
+	 *  scroll region and already carries the hairline that separates it from the
+	 *  checkboxes, which stay the primary answer. A disabled render is skipped:
+	 *  with nothing assigned there is no action, and a grey control would claim
+	 *  otherwise. The in-flight write keeps it mounted after the optimistic draft
+	 *  empties, so `Saving…` is not unmounted mid-write. */
 	const removeAllPinned =
-		emptyCatalogue && (!nothingSelected || pending === "*" || removeAllQueued);
+		catalogue.kind === "ready" &&
+		(!nothingSelected || pending === "*" || removeAllQueued);
 	/* One destructive action, rendered in ONE place per state: pinned in the
-	 *  footer for an empty registry, above the alert when the catalogue failed
-	 *  (the sheet's remaining answer, and a control the 200 % frame must show
-	 *  without scrolling), and after the catalogue otherwise. */
+	 *  footer for every ready catalogue with an assignment to clear, above the
+	 *  alert when the catalogue failed (the sheet's remaining answer, and a
+	 *  control the 200 % frame must show without scrolling). */
 	const removeAllAction = (
 		<View className="gap-1">
 			<Button
@@ -437,13 +447,19 @@ export const SessionTagsSheet = ({
 				<View
 					className={cx(
 						"gap-3",
-						catalogue.kind === "error" || emptyCatalogue ? "" : "pb-6",
+						catalogue.kind === "error" || removeAllPinned ? "" : "pb-6",
 					)}
 				>
 					{refusal !== null ? (
+						/* The refusal is an ALERT, not decoration (review round 2, U10):
+						 *  a failed toggle must be announced, not only painted. The sentence
+						 *  stays visible where it is, beside the reverted row list; the role
+						 *  and live region carry it to assistive tech the way `Alert` does. */
 						<Text
 							className="text-body-sm text-danger"
 							testID={SURFACE.sessionTagsRefusal}
+							accessibilityRole="alert"
+							accessibilityLiveRegion="assertive"
 						>
 							{refusal}
 						</Text>
@@ -521,11 +537,12 @@ export const SessionTagsSheet = ({
 									<Pressable
 										key={tag.id}
 										accessibilityRole={ROLE.checkbox}
-										/* The name AND the state, in words: a checkbox's `checked`
-										 *  state is announced by the platform, but the label is what the
-										 *  reader hears first, and "Work" alone does not say whether
-										 *  pressing it selects or clears. */
-										accessibilityLabel={`${tag.name}, ${checked ? "checked" : "unchecked"}`}
+										/* The name is the NAME (review round 2, U11): the old
+										 *  "Work, checked" label carried the state a second time,
+										 *  and a reader heard it twice because the checkbox role
+										 *  already exposes `checked`. The state below is the one
+										 *  carrier; the label stays the category the reader sees. */
+										accessibilityLabel={tag.name}
 										accessibilityState={{ checked }}
 										/* react-native-web does not read `accessibilityState`: the AX tree
 										 *  reported this option `checked: false` after a press until the
@@ -583,16 +600,10 @@ export const SessionTagsSheet = ({
 						</>
 					)}
 
-					{/* Remove all is a DESTRUCTIVE body action, at the end of the catalogue
-					 *  and never the footer's strongest slot (review round 1, D3/D2). It is
-					 *  behind a confirm because clearing an assignment is not undoable from
-					 *  this phone; and it is offered even when the catalogue read failed, so
-					 *  a row that HAS tags can still be cleared while the registry is down.
-					 *  Not while the catalogue is loading: the control would appear and
-					 *  move under the thumb as the read settles. */}
-					{catalogue.kind === "ready" && !emptyCatalogue
-						? removeAllAction
-						: null}
+					{/* Remove all is NOT in the body any more (review round 2, U9): the
+					 *  pinned footer owns it for every ready state so the full control box
+					 *  is reachable at 200 % on a 320 pt phone. It stays behind a confirm
+					 *  because clearing an assignment is not undoable from this phone. */}
 				</View>
 			</Sheet>
 			<Dialog

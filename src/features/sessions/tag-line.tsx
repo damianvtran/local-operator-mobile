@@ -1,5 +1,6 @@
+import { ChevronDown } from "lucide-react-native";
 import { useState } from "react";
-import { Pressable, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 
 import type { TagRef } from "@/contracts";
 import {
@@ -8,6 +9,7 @@ import {
 	tagLineTargetHeightDp,
 } from "@/features/sessions/tags";
 import { ROLE } from "@/ui/a11y";
+import { useTokenColor } from "@/ui/appearance";
 import { Badge } from "@/ui/components/badge";
 import { TOUCH_FLOOR } from "@/ui/layout";
 import { useTextScale } from "@/ui/text-scale-provider";
@@ -28,8 +30,14 @@ import { useTextScale } from "@/ui/text-scale-provider";
  * the row's measured width (`onLayout`), the same measurement-not-second-copy
  * approach as `metaLineFor`. The `Badge` is then given only what already fits.
  *
- * The line is present ONLY when the row has tags. An empty line is a blank gap
- * inserted into every untagged row's geometry, and absence is the honest state.
+ * The line is present ONLY when the row has tags OR the line is the header's
+ * disclosure. An empty line is a blank gap inserted into every untagged row's
+ * geometry, and absence is the honest state for a READ-ONLY row. The disclosure
+ * is the exception (review round 2, U8): a local conversation with zero tags
+ * still needs a visible route to the sheet, so the interactive form paints a
+ * labelled `Tags` control and a chevron even when there is nothing to list. The
+ * label is what separates the action from the read-only `Badge` rows around it —
+ * a row of badges is a fact, a labelled control is a fact you can press.
  */
 export type SessionTagLineProps = {
 	tags: readonly TagRef[];
@@ -67,8 +75,13 @@ export const SessionTagLine = ({
 	/* The rendered scale, matching the row's own type maths: the paint happens at
 	 *  the platform's factor, so the fit must use the same one. */
 	const { effectiveScale } = useTextScale();
+	/* A fixed-size chevron, like every other icon in the kit: it marks the label
+	 *  as a disclosure without riding the text scale out of its row. */
+	const chevronInk = useTokenColor("ink-muted");
 
-	if (tags.length === 0) return null;
+	/* Absent for a READ-ONLY line with no tags. The interactive form is the
+	 *  header's always-present route, so it must survive an empty assignment. */
+	if (tags.length === 0 && onPress === undefined) return null;
 	const line = tagLineFor(tags, width, effectiveScale);
 
 	const content = (
@@ -98,20 +111,53 @@ export const SessionTagLine = ({
 	return (
 		<Pressable
 			accessibilityRole={ROLE.button}
-			accessibilityLabel={tagAnnouncement(tags)}
+			/* `Tags` alone when nothing is assigned: the label must not claim a
+			 *  state the reader cannot see. With tags it is the existing sentence,
+			 *  and the inner badges are hidden so the reader hears it once. */
+			accessibilityLabel={tags.length > 0 ? tagAnnouncement(tags) : "Tags"}
 			accessibilityHint={accessibilityHint}
 			/* A REAL 44+ dp box, not `hitSlop`: the badges are 22 dp tall, and
 			 *  react-native-web drops `Pressable` hitSlop, so the audit measures the
 			 *  painted box. The inner row keeps its own geometry; the target grows
-			 *  around it (review round 2, R2-3). */
+			 *  around it (review round 2, R2-3). `flex-start` keeps the label and the
+			 *  pills at the leading edge while the box itself spans the header column. */
 			style={{
 				minHeight: tagLineTargetHeightDp(TOUCH_FLOOR),
-				justifyContent: "center",
+				flexDirection: "row",
+				alignItems: "center",
+				justifyContent: "flex-start",
+				gap: 4,
 			}}
 			onPress={onPress}
 			testID={actionTestID ?? testID}
 		>
-			{content}
+			{/* The visible word is the disclosure's affordance (U8); a second
+			 *  `Tags:` name on the inner line would be the duplicate announcement
+			 *  this file already avoids for rows. */}
+			<Text
+				className="text-label font-semibold text-ink"
+				aria-hidden
+				accessibilityElementsHidden
+			>
+				Tags
+			</Text>
+			<ChevronDown size={14} strokeWidth={2.5} color={chevronInk} aria-hidden />
+			{tags.length > 0 ? (
+				/* The badges are the control's PAINTING, not a second stop: the
+				 *  accessible name already carries every tag, so the inner line is
+				 *  hidden from assistive tech on all three platforms (web, iOS,
+				 *  Android). Without this the AX tree exposed `Research` and
+				 *  `Work` as StaticText beside the button, which a reader could
+				 *  meet twice (review round 2, U8). */
+				<View
+					className="min-w-0 flex-1"
+					aria-hidden
+					accessibilityElementsHidden
+					importantForAccessibility="no-hide-descendants"
+				>
+					{content}
+				</View>
+			) : null}
 		</Pressable>
 	);
 };
