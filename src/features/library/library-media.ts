@@ -130,6 +130,9 @@ export function useLibraryMedia(
 		const seq = requestSeq.current + 1;
 		requestSeq.current = seq;
 		let cancelled = false;
+		/* The web player is handed an object URL, not bytes. Keep the handle so
+		 *  teardown can release it even when the fetch finishes after unmount. */
+		let objectUrl: string | null = null;
 		setState({ media: null, loading: true, error: null });
 
 		void (async () => {
@@ -144,15 +147,23 @@ export function useLibraryMedia(
 						uri: `data:${type ?? "image/png"};base64,${toBase64(bytes)}`,
 					};
 				} else if (kind === "audio" || kind === "video") {
-					const uri =
-						Platform.OS === "web"
-							? URL.createObjectURL(
-									new Blob([bytes as BlobPart], {
-										type:
-											type ?? (kind === "audio" ? "audio/mpeg" : "video/mp4"),
-									}),
-								)
-							: await cacheNativeBytes(asset.id, type, bytes);
+					let uri: string;
+					if (Platform.OS === "web") {
+						objectUrl = URL.createObjectURL(
+							new Blob([bytes as BlobPart], {
+								type: type ?? (kind === "audio" ? "audio/mpeg" : "video/mp4"),
+							}),
+						);
+						/* The effect was torn down while this fetch was in flight: no
+						 *  component will ever receive the URL, so release it here. */
+						if (cancelled || seq !== requestSeq.current) {
+							URL.revokeObjectURL(objectUrl);
+							return;
+						}
+						uri = objectUrl;
+					} else {
+						uri = await cacheNativeBytes(asset.id, type, bytes);
+					}
 					media = { kind, uri };
 				} else if (kind === "html") {
 					media = { kind: "html", html: decodeText(bytes) };
@@ -176,6 +187,7 @@ export function useLibraryMedia(
 			// The web player receives an object URL; releasing it here keeps a detail
 			// screen visited ten times from holding ten copies of a video in memory.
 			// Native cache files are the OS's to reclaim (runtime.ts's own posture).
+			if (objectUrl !== null) URL.revokeObjectURL(objectUrl);
 		};
 	}, [client, asset?.id, assetId, asset]);
 
