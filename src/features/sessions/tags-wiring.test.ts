@@ -184,9 +184,28 @@ describe("the tags sheet", () => {
 		expect(SHEET).toContain(
 			'catalogue.kind === "error" ? removeAllAction : null',
 		);
+		/* Exactly one render per state: the ready branch owns the normal
+		 *  placement, and the error branch owns the pinned one. A `loading`
+		 *  fallthrough used to emit a SECOND control beside the alert. */
 		expect(SHEET).toContain(
+			'catalogue.kind === "ready" ? removeAllAction : null',
+		);
+		expect(SHEET).not.toContain(
 			'catalogue.kind === "loading" ? null : removeAllAction',
 		);
+		expect(SHEET.split("? removeAllAction : null")).toHaveLength(3);
+	});
+
+	it("keeps an assigned tag selectable when the registry is empty", () => {
+		/* K, again at the render branch: the empty state keys on the OPTIONS
+		 *  the list actually offers, not on the raw catalogue, so an assigned
+		 *  tag from an empty registry still reaches a checkbox. The raw-empty
+		 *  case renders the same honest sentence above that list instead of
+		 *  short-circuiting it. */
+		expect(SHEET).toContain(") : options.length === 0 ? (");
+		expect(SHEET).not.toContain(") : catalogue.tags.length === 0 ? (");
+		expect(SHEET).toContain("catalogue.tags.length === 0 ? (");
+		expect(SHEET).toContain("remove this conversation's tags below.");
 	});
 
 	it("renders each catalogue tag as a checkbox with an ARIA checked state", () => {

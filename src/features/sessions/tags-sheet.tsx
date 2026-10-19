@@ -372,7 +372,7 @@ export const SessionTagsSheet = ({
 								see whether they're still there.
 							</Alert>
 						</View>
-					) : catalogue.tags.length === 0 ? (
+					) : options.length === 0 ? (
 						<EmptyState
 							headline="No categories yet."
 							next="Created in the desktop app. You can still remove this conversation's tags."
@@ -385,6 +385,21 @@ export const SessionTagsSheet = ({
 						/>
 					) : (
 						<>
+							{/* Assigned-but-uncatalogued tags are exactly why this branch
+							 *  cannot key on the raw catalogue length: `catalogueWithAssigned`
+							 *  appends them, and hiding the list behind an empty registry
+							 *  would leave an assignment with no way to clear it one tag at a
+							 *  time (K). The sentence still explains why the registry is
+							 *  empty, above a list it can no longer short-circuit. */}
+							{catalogue.tags.length === 0 ? (
+								<EmptyState
+									headline="No categories yet."
+									next="Created in the desktop app. You can still remove this conversation's tags below."
+									mark={false}
+									compact
+									testID={SURFACE.sessionTagsEmpty}
+								/>
+							) : null}
 							{/* Relay registry order, never re-sorted: `order` is the store's own
 							 *  and the desktop shows the same list. Assigned-but-uncatalogued
 							 *  tags are appended by `catalogueWithAssigned`. */}
@@ -466,7 +481,7 @@ export const SessionTagsSheet = ({
 					 *  a row that HAS tags can still be cleared while the registry is down.
 					 *  Not while the catalogue is loading: the control would appear and
 					 *  move under the thumb as the read settles. */}
-					{catalogue.kind === "loading" ? null : removeAllAction}
+					{catalogue.kind === "ready" ? removeAllAction : null}
 				</View>
 			</Sheet>
 			<Dialog

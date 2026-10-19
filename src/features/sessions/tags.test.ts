@@ -140,6 +140,15 @@ describe("the catalogue the checkboxes offer", () => {
 		expect(merged).toHaveLength(2);
 		expect(merged.map((tag) => tag.id)).toEqual([WORK.id, RESEARCH.id]);
 	});
+
+	it("offers an assigned tag when the whole registry is empty", () => {
+		/* The sheet branches its empty state on `options`, not on the raw
+		 *  catalogue: an empty registry plus one assignment is NOT an empty
+		 *  list (K). This is that derivation without the component. */
+		expect(catalogueWithAssigned([], [THIRD])).toEqual([
+			{ id: THIRD.id, name: THIRD.name, order: 0, conversations: 0 },
+		]);
+	});
 });
 
 describe("the row's accessible label", () => {
