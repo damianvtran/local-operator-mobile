@@ -474,6 +474,16 @@ export interface RelayState {
 	 */
 	supplementOps: Array<{ op: string; anchor: string; job: string; at: number }>;
 	seenTokens: Set<string>;
+	/**
+	 * Conversation-tag assignments written through this mock (LOH-11 S3), keyed by
+	 * session id. Part of the WORLD's mutable state, cleared on every pin: a cell
+	 * that toggles a tag must not leave it behind for the next cell's scenario,
+	 * the same rule the project and Library stores follow above.
+	 */
+	tagAssignments: Map<
+		string,
+		{ tags: string[]; primary: SessionSummary["primary"] }
+	>;
 	pins: Map<string, boolean>;
 	/**
 	 * The mesh half's own observations, on the mock's control surface.
@@ -656,6 +666,7 @@ export function createRelay(options: RelayOptions = {}) {
 		admitted: new Map(),
 		supplementOps: [],
 		seenTokens: new Set(),
+		tagAssignments: new Map(),
 		pins: new Map(),
 		transferDials: 0,
 		transferJournal: new Map(),
@@ -683,6 +694,7 @@ export function createRelay(options: RelayOptions = {}) {
 		 *  below carry. */
 		projects.reset();
 		library.reset();
+		state.tagAssignments = new Map();
 		state.scenarioStartedAt = Date.now();
 		/* A state's own faults are applied WITH it: `S5/error` is reachable only when the
 		 * stream comes up and THEN fails, so the scenario that models it carries the fault
@@ -1019,6 +1031,21 @@ export function createRelay(options: RelayOptions = {}) {
 			const row = rowFrom(projection, overrides);
 			const specific = perSession[projection.session_id];
 			if (specific !== undefined) Object.assign(row, specific);
+			/* A tag write through this mock OUTLIVES the scenario's seed overrides,
+			 *  the same way a pin or a seen receipt does: the next list frame (and
+			 *  the sheet's read-back) must paint the assignment the route accepted, or
+			 *  the harness would show an optimistic toggle that never settles. */
+			const assigned = state.tagAssignments.get(projection.session_id);
+			if (assigned !== undefined) {
+				const names = new Map(
+					(world.sessionTags?.catalogue ?? []).map((tag) => [tag.id, tag.name]),
+				);
+				row.tags = assigned.tags.map((id) => ({
+					id,
+					name: names.get(id) ?? id,
+				}));
+				row.primary = assigned.primary ?? null;
+			}
 			return row;
 		});
 		// The heartbeat flip is a *time* signal, not a flag: before
@@ -1085,11 +1112,21 @@ export function createRelay(options: RelayOptions = {}) {
 			 * REST read and the SSE frame cannot describe the mic differently — and the
 			 * scenario's own `voice` override is applied here rather than to a copy of
 			 * the frame, which is what lets `voice` advertise a path and
-			 * `voice-absent` omit the key entirely. */
-			capabilities: capabilityBlock(
-				fix.list("sessions-empty").capabilities,
-				world.voice,
-			),
+			 * `voice-absent` omit the key entirely.
+			 *
+			 * The tags block is the same rule: present only when the scenario serves
+			 * the tag routes. Absence is an older relay, and the app must render no
+			 * tag UI against one — so the mock cannot default it on. */
+			capabilities: (() => {
+				const capabilities = capabilityBlock(
+					fix.list("sessions-empty").capabilities,
+					world.voice,
+				);
+				if (world.sessionTags !== undefined) {
+					capabilities.session_tags = { available: true };
+				}
+				return capabilities;
+			})(),
 			unread,
 		};
 	};
@@ -2092,6 +2129,27 @@ export function createRelay(options: RelayOptions = {}) {
 			});
 		}
 
+		if (pathname === "/api/tags" && method === "GET") {
+			/* LOH-11 S3: the catalogue exists only when the scenario says so —
+			 *  absence is an older relay, whose app renders no tag UI at all. */
+			const tagRoutes = world.sessionTags;
+			if (tagRoutes === undefined) {
+				sendJson(res, 404, errorBody("not found"));
+				return;
+			}
+			/* The read that never answers: the sheet's skeleton cell. No body is
+			 *  written on purpose — the client's own timeout is the only bound. */
+			if (tagRoutes.holdCatalogue === true) return;
+			if (tagRoutes.failCatalogue !== undefined) {
+				sendJson(res, tagRoutes.failCatalogue.status, {
+					error: tagRoutes.failCatalogue.error,
+				});
+				return;
+			}
+			sendJson(res, 200, { tags: tagRoutes.catalogue });
+			return;
+		}
+
 		if (pathname === "/api/sessions/past" && method === "GET") {
 			if (Array.isArray(world.past)) {
 				sendJson(res, 200, { sessions: world.past, degraded: [] });
@@ -3029,6 +3087,67 @@ export function createRelay(options: RelayOptions = {}) {
 					return res.end(bytes);
 				}
 				sendJson(res, 404, errorBody("not found"));
+				return;
+			}
+
+			if (rest === "/tags" && method === "PUT") {
+				/* LOH-11 S3's write: EXACTLY `{tags, primary}`, both always read.
+				 *  A desired state, never a delta — the client sends the full set, so a
+				 *  retry is idempotent. Ids are checked against the catalogue and the
+				 *  primary against the requested set, because the real route's 422
+				 *  sentences are what the sheet renders. */
+				const tagRoutes = state.world.sessionTags;
+				if (tagRoutes === undefined) {
+					sendJson(res, 404, errorBody("not found"));
+					return;
+				}
+				if (!projection) {
+					sendJson(res, 404, errorBody("unknown session"));
+					return;
+				}
+				const requested = Array.isArray(body?.tags) ? body.tags : null;
+				const primaryRaw = body?.primary;
+				if (
+					requested === null ||
+					!(primaryRaw === null || typeof primaryRaw === "string")
+				) {
+					sendJson(res, 422, errorBody("tags and primary are required"));
+					return;
+				}
+				if (!requested.every((id): id is string => typeof id === "string")) {
+					sendJson(res, 422, errorBody("Unknown category id"));
+					return;
+				}
+				const byId = new Map(tagRoutes.catalogue.map((tag) => [tag.id, tag]));
+				if (requested.some((id) => !byId.has(id))) {
+					sendJson(res, 422, errorBody("Unknown category id"));
+					return;
+				}
+				/* The scenario's own refusal: a real answer from the route, after the
+				 *  request is valid, so the sheet's refusal path is driven by the wire
+				 *  rather than by a staged client state (`tags-sheet-refused`). */
+				if (tagRoutes.failWrite !== undefined) {
+					sendJson(res, tagRoutes.failWrite.status, {
+						error: tagRoutes.failWrite.error,
+					});
+					return;
+				}
+				if (primaryRaw !== null && !requested.includes(primaryRaw)) {
+					sendJson(res, 422, errorBody("primary must be one of tags"));
+					return;
+				}
+				state.tagAssignments.set(sessionId, {
+					tags: requested,
+					primary: primaryRaw,
+				});
+				sendJson(res, 200, {
+					session_id: sessionId,
+					tags: requested.map((id) => ({
+						id,
+						name: byId.get(id)?.name ?? id,
+					})),
+					primary: primaryRaw,
+				});
 				return;
 			}
 

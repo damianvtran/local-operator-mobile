@@ -306,6 +306,15 @@ export const Sheet = ({
 						</Animated.View>
 
 						<Animated.View
+							/* THE SURFACE IS THE DIALOG. `accessibilityViewIsModal` on the
+							 *  Modal keeps the app behind it out of the tree, but nothing
+							 *  named the dialog itself: a reader entered a surface whose
+							 *  heading was just the first text node. `role` (not
+							 *  `accessibilityRole` — RN's AccessibilityRole has no dialog)
+							 *  plus the title gives it the accessible name the title is
+							 *  already showing. */
+							role={ROLE.dialog}
+							aria-label={title}
 							className={SHEET_SURFACE_CLASS}
 							style={{
 								...shadow,

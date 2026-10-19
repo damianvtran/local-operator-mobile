@@ -113,6 +113,14 @@ export const Dialog = ({
 							onPress={onCancel}
 						/>
 						<View
+							/* Same accessible-name fix as `Sheet` (Q1):
+							 *  `accessibilityViewIsModal` keeps the app behind out of the
+							 *  tree, but the surface itself had no role or name — its heading
+							 *  was just the first text node. `role` (not
+							 *  `accessibilityRole`; RN has no dialog role) plus the title
+							 *  gives every confirm the name it already shows. */
+							role={ROLE.dialog}
+							aria-label={title}
 							className={DIALOG_SURFACE_CLASS}
 							style={{
 								...shadow,
