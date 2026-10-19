@@ -54,7 +54,13 @@ describe("the tag routes over the fixture relay", () => {
 			"http/tags-populated.json",
 		).body;
 
-		await expect(client.tags()).resolves.toEqual(expected);
+		const answer = await client.tags();
+		expect(answer).toEqual(expected);
+		/* Pinned independently of the fixture: a renamed or re-sorted capture
+		 * must not pass just because the assertion compared it to itself. */
+		expect(answer.tags.map((tag) => tag.name)).toEqual(["Work", "Research"]);
+		expect(answer.tags.map((tag) => tag.order)).toEqual([0, 1]);
+		expect(answer.tags.map((tag) => tag.conversations)).toEqual([1, 1]);
 		expect(relay.requests.at(-1)).toMatchObject({
 			method: "GET",
 			path: "/api/tags",
@@ -78,9 +84,17 @@ describe("the tag routes over the fixture relay", () => {
 			"http/session-tags-assigned.json",
 		).body;
 
-		await expect(
-			client.setSessionTags(SESSION_ID, [RESEARCH, WORK], WORK),
-		).resolves.toEqual(expected);
+		const answer = await client.setSessionTags(
+			SESSION_ID,
+			[RESEARCH, WORK],
+			WORK,
+		);
+		expect(answer).toEqual(expected);
+		/* The read-back's names/order/primary are pinned by hand as well as by
+		 * the capture, so a renamed fixture cannot agree with itself. */
+		expect(answer.tags.map((tag) => tag.name)).toEqual(["Research", "Work"]);
+		expect(answer.tags.map((tag) => tag.id)).toEqual([RESEARCH, WORK]);
+		expect(answer.primary).toBe(WORK);
 
 		const sent = relay.requests.at(-1);
 		expect(sent).toMatchObject({

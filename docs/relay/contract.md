@@ -34,11 +34,12 @@ rather than from prose.
 > `v0.66.2`, the first release carrying it. Both are qualified inline rather
 > than re-numbered.
 >
-> **Conversation tags carry a release ref.** §3.2's row fields and §4.14 are
-> written against local-operator **v0.82.3**, the first release carrying PR
-> #2625 (`GET /api/tags`, `PUT /api/sessions/{id}/tags`, and the per-row
-> `tags`/`primary` pair). The `daemon.py` line numbers in those passages are
-> that release's, not `fc851a94e`'s.
+> **Conversation tags carry a release ref.** The tag fields added to §3.2 and
+> all of §4.14 are written against local-operator **v0.82.3**, the first
+> release carrying PR #2625 (`GET /api/tags`, `PUT /api/sessions/{id}/tags`,
+> and the per-row `tags`/`primary` pair). The `daemon.py` line numbers in the
+> TAG passages are that release's; the pre-existing §3.2 citations remain
+> `fc851a94e`'s.
 
 Paths are relative to the local-operator repository root:
 `local_operator/mobile/daemon.py` → `daemon.py`; `local_operator/mobile/web/src/api.ts`

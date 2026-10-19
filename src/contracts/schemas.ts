@@ -2136,6 +2136,7 @@ export type {
 	SubagentDetail,
 	SubagentRow,
 	SupplementDocument,
+	TagsResponse,
 	TodoItem,
 	TodoPhase,
 	TranscriptEntry,

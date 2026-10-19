@@ -29,7 +29,7 @@ rather than typed here, so it cannot drift from them. (The previous line said
 143/131/12; the committed tree re-derived to 144/131/13, and the ten live
 tag samples added here make 154/141/13 — counted, not assumed.)
 
-**Six refs are represented, deliberately.** The bulk of the live captures were
+**Seven refs are represented, deliberately.** The bulk of the live captures were
 taken at local-operator `52c1df35`; the session-state receipts (`ended`,
 `degraded`) were added by #1784, so the captures that show them are taken at
 `fc851a94e`; and the push/ack-sync samples (the frame-level `unread` block, the
