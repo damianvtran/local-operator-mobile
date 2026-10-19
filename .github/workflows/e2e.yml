@@ -449,8 +449,8 @@ jobs:
         # the 50 only 2.6 min of room — so the bound moved 50 -> 55, keeping the same
         # ~1.5x over the measured cost (948 x 2.24 s ≈ 35.4 min). The supplement
         # slice's five S5 cells one more took it to 1128 — a derived deadline of
-        # 1128 x 3 s = 56.4 min, 3.6 min inside the 60 — so the bound stays 55,
-        # keeping the same ~1.3x over the measured cost (1128 x 2.24 s ≈ 42.1 min).
+        # 1128 x 3 s = 56.4 min, 3.6 min inside the 60 — so the bound moved 55 -> 60,
+        # keeping ~1.4x over the measured cost (1128 x 2.24 s ≈ 42.1 min).
         timeout-minutes: 60
         # THE DOCUMENTED INVOCATION, through the harness's own script
         # (`docs/e2e/ci-notes.md` §3). An earlier version derived the cell list here

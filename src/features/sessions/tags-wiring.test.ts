@@ -23,13 +23,18 @@ const PANE = source("./conversations-pane.tsx");
 const SHEET = source("./tags-sheet.tsx");
 const LINE = source("./tag-line.tsx");
 const PAST = source("../../features/past/past.tsx");
+/* Source-assertion regexes live at the top level so each literal is compiled
+ *  once (biome's useTopLevelRegex); they scan the source text, not a frame. */
+const TAGS_PANE_GATE = /\{tagsAssignable \? \(/;
+const NO_AVAILABLE_GATE = /session_tags\?\.available ===/;
+const TAGS_LABEL = />\s*Tags\s*<\/Text>/;
 const SESSION = source("../../../app/(app)/session/[id].tsx");
 
 describe("the conversations pane", () => {
 	it("gates the Tags action on the tested capability, not a second comparison", () => {
 		expect(PANE).toContain("const tagsAssignable = canAssignSessionTags(");
-		expect(PANE).toMatch(/\{tagsAssignable \? \(/);
-		expect(PANE).not.toMatch(/session_tags\?\.available ===/);
+		expect(PANE).toMatch(TAGS_PANE_GATE);
+		expect(PANE).not.toMatch(NO_AVAILABLE_GATE);
 	});
 
 	it("offers the action only from a local row's menu", () => {
@@ -123,7 +128,7 @@ describe("the tag line component", () => {
 		expect(LINE).toContain(
 			'accessibilityLabel={tags.length > 0 ? tagAnnouncement(tags) : "Tags"}',
 		);
-		expect(LINE).toMatch(/>\s*Tags\s*<\/Text>/);
+		expect(LINE).toMatch(TAGS_LABEL);
 		expect(LINE).toContain(
 			"<ChevronDown size={14} strokeWidth={2.5} color={chevronInk} aria-hidden />",
 		);
@@ -248,9 +253,6 @@ describe("the tags sheet", () => {
 		 *  it at all — that placement is what U9 measured as clipped. A `loading`
 		 *  fallthrough used to emit a SECOND control beside the alert. */
 		expect(SHEET).not.toContain(
-			'catalogue.kind === "ready" && !emptyCatalogue',
-		);
-		expect(SHEET).not.toContain(
 			'catalogue.kind === "loading" ? null : removeAllAction',
 		);
 		/* One `removeAllAction` element: the footer reference and the error-state
@@ -260,14 +262,11 @@ describe("the tags sheet", () => {
 		expect(SHEET).toContain(": removeAllPinned ? (");
 	});
 
-	it("keys the pinned action on the raw catalogue, not the merged options", () => {
+	it("keys the pinned action on the row's own assignment, not the merged options", () => {
 		/* `catalogueWithAssigned` merges the row's own tag into `options`, so the
 		 *  captured empty-catalogue state (a tagged row against an empty registry)
-		 *  has one checkbox and `options.length === 0` is FALSE. Keying the footer
-		 *  on it would leave that frame unfixed. */
-		expect(SHEET).toContain(
-			'catalogue.kind === "ready" && catalogue.tags.length === 0',
-		);
+		 *  has one checkbox and `options.length === 0` is FALSE. The footer keys on
+		 *  `nothingSelected` instead, so that frame still pins Remove all. */
 		expect(SHEET).toContain(
 			'(!nothingSelected || pending === "*" || removeAllQueued)',
 		);
@@ -302,7 +301,7 @@ describe("the tags sheet", () => {
 		expect(SHEET).toContain("sessionTagOptionId(tag.id)");
 		/* U11: the state is carried by `checked`, not repeated in the name. */
 		expect(SHEET).toContain("accessibilityLabel={tag.name}");
-		expect(SHEET).not.toContain(', ${checked ? "checked" : "unchecked"}');
+		expect(SHEET).not.toContain(", $" + '{checked ? "checked" : "unchecked"}');
 		/* Q1: react-native-web does not read `accessibilityState`, so the AX
 		 *  tree said checked:false until `aria-checked` was written beside it. */
 		expect(SHEET).toContain("accessibilityState={{ checked }}");

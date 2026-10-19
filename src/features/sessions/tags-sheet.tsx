@@ -357,19 +357,6 @@ export const SessionTagsSheet = ({
 	};
 
 	const nothingSelected = current.tags.length === 0;
-	/* An EMPTY REGISTRY is its own state: the sheet renders the explanatory empty
-	 *  state instead of a catalogue, and Remove all is the sheet's only
-	 *  sheet-level answer, so it belongs in the pinned footer (see `footer`).
-	 *  The test is the RAW catalogue, not `options.length`: `catalogueWithAssigned`
-	 *  merges the row's own assignment into `options`, so an empty registry on a
-	 *  tagged row still offers one checkbox (the captured `tags-empty-catalogue`
-	 *  state), and keying on `options` would leave exactly that frame unfixed.
-	 *  A disabled render is skipped rather than pinned — a row with nothing to
-	 *  clear has no action, and a grey control would claim otherwise. The
-	 *  in-flight write keeps it mounted after the optimistic draft empties:
-	 *  unmounting it there would also unmount the `Saving…` cue. */
-	const emptyCatalogue =
-		catalogue.kind === "ready" && catalogue.tags.length === 0;
 	/* Remove all is PINNED for every ready catalogue that has something to clear
 	 *  (review round 2, U9). In the body it followed the checkbox list, and at
 	 *  200 % on a 320 pt phone the last control was sliced at the sheet edge —
@@ -416,14 +403,13 @@ export const SessionTagsSheet = ({
 				/* The answering control is PINNED per state. The error state's
 				 *  "Try again" used to sit at the end of the scrolling body and fell
 				 *  below the fold at 200 % on both a 320 pt phone and the 390 pt one
-				 *  (review round 1, D1). A READY catalogue with options has no footer
-				 *  action — the checkboxes are the answer, and Remove all stays a
-				 *  destructive body action rather than the strongest slot. An EMPTY
-				 *  registry renders the explanation instead of a catalogue (at most
-				 *  the row's own merged assignment), so Remove all is its sheet-level
-				 *  answer and is pinned: in the body it followed the empty state, and
-				 *  the 200 % SE frame cut the sentence and pushed it under the fold
-				 *  (round 3). */
+				 *  (review round 1, D1). A READY catalogue with an assignment pins
+				 *  Remove all in the footer too (round 2, U9): in the body the last
+				 *  control was sliced at the sheet edge, while the checkboxes stay the
+				 *  primary answer above it. An EMPTY registry renders the explanation
+				 *  instead of a catalogue and pins the same action when the row's own
+				 *  merged assignment gives it something to clear; with nothing to clear
+				 *  there is no footer action. */
 				footer={
 					catalogue.kind === "error" ? (
 						<Button
@@ -470,10 +456,8 @@ export const SessionTagsSheet = ({
 
 					{/* Above the ALERT, not below it: when the catalogue failed this is
 					 *  the sheet's remaining answer and must not be the control the
-					 *  200 % frame pushes under the fold. The EMPTY state keeps the
-					 *  action last — its sentence is the information there, and the
-					 *  compact empty state is sized so the sentence is visible without
-					 *  scrolling. */}
+					 *  200 % frame pushes under the fold. The EMPTY state's action lives in
+					 *  the pinned footer, so the body never repeats it. */}
 					{catalogue.kind === "error" ? removeAllAction : null}
 
 					{catalogue.kind === "loading" ? (
