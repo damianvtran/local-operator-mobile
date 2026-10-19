@@ -2,9 +2,14 @@ import { useState } from "react";
 import { Pressable, View } from "react-native";
 
 import type { TagRef } from "@/contracts";
-import { tagAnnouncement, tagLineFor } from "@/features/sessions/tags";
+import {
+	tagAnnouncement,
+	tagLineFor,
+	tagLineTargetHeightDp,
+} from "@/features/sessions/tags";
 import { ROLE } from "@/ui/a11y";
 import { Badge } from "@/ui/components/badge";
+import { TOUCH_FLOOR } from "@/ui/layout";
 import { useTextScale } from "@/ui/text-scale-provider";
 
 /**
@@ -95,6 +100,14 @@ export const SessionTagLine = ({
 			accessibilityRole={ROLE.button}
 			accessibilityLabel={tagAnnouncement(tags)}
 			accessibilityHint={accessibilityHint}
+			/* A REAL 44+ dp box, not `hitSlop`: the badges are 22 dp tall, and
+			 *  react-native-web drops `Pressable` hitSlop, so the audit measures the
+			 *  painted box. The inner row keeps its own geometry; the target grows
+			 *  around it (review round 2, R2-3). */
+			style={{
+				minHeight: tagLineTargetHeightDp(TOUCH_FLOOR),
+				justifyContent: "center",
+			}}
 			onPress={onPress}
 			testID={actionTestID ?? testID}
 		>

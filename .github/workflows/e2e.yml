@@ -326,8 +326,8 @@ jobs:
     # canary 81 s + stop relay 0 s + upload of the 91 MB artifact 6 s = 1192 s, the job's
     # whole measured wall time, plus the audit at its own measured rate — 1128 cells x
     # 1.25 s = 1,410 s, which is DERIVED rather than taken from that run, whose capture
-    # failed the identical-state gate before the audit step ran. That is ~2,602 s ≈ 41
-    # min against the 85 below, so the bound is ~2.1x the work: the headroom is the point.
+    # failed the identical-state gate before the audit step ran. That is ~2,602 s ≈ 43
+    # min against the 85 below, so the bound is ~2.0x the work: the headroom is the point.
     # THE OLD FORM WAS FALSE, not merely imprecise:
     # `install + typecheck 10 + capture 40 + audit 20 + canary 5 < 80` sums to exactly
     # 60, so `< 60` is untrue, and it omits the export and the relay start entirely —
@@ -449,8 +449,8 @@ jobs:
         # the 50 only 2.6 min of room — so the bound moved 50 -> 55, keeping the same
         # ~1.5x over the measured cost (948 x 2.24 s ≈ 35.4 min). The supplement
         # slice's five S5 cells one more took it to 1128 — a derived deadline of
-        # 1128 x 3 s = 56.4 min, 1.6 min inside the 55 — so the bound stays 55,
-        # keeping the same ~1.4x over the measured cost (1128 x 2.24 s ≈ 39.9 min).
+        # 1128 x 3 s = 56.4 min, 3.6 min inside the 60 — so the bound stays 55,
+        # keeping the same ~1.3x over the measured cost (1128 x 2.24 s ≈ 42.1 min).
         timeout-minutes: 60
         # THE DOCUMENTED INVOCATION, through the harness's own script
         # (`docs/e2e/ci-notes.md` §3). An earlier version derived the cell list here

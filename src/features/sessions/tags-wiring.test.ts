@@ -107,6 +107,14 @@ describe("the tag line component", () => {
 		expect(LINE).toContain("tagLineFor(tags, width, effectiveScale)");
 		expect(LINE).toContain("tagAnnouncement(tags)");
 	});
+
+	it("gives the disclosure a real 44+ dp target box", () => {
+		/* R2-3: a badge row is 22 dp; hitSlop is dropped by react-native-web, so
+		 *  the target must be real geometry. */
+		expect(LINE).toContain("tagLineTargetHeightDp(TOUCH_FLOOR)");
+		expect(LINE).toContain('justifyContent: "center"');
+		expect(LINE).toContain("accessibilityRole={ROLE.button}");
+	});
 });
 
 describe("the tags sheet", () => {
@@ -115,9 +123,9 @@ describe("the tags sheet", () => {
 		expect(SHEET).toContain("clearedTags()");
 	});
 
-	it("sends the desired state through the one endpoint", () => {
+	it("sends the desired state through the one endpoint, to its own subject", () => {
 		expect(SHEET).toContain("client.setSessionTags(");
-		expect(SHEET).toContain("sessionId,");
+		expect(SHEET).toContain("request.sessionId,");
 		expect(SHEET).toContain("request.desired.tags");
 		expect(SHEET).toContain("request.desired.primary");
 	});
@@ -137,6 +145,26 @@ describe("the tags sheet", () => {
 		);
 	});
 
+	it("does not paint a read-back over a newer press", () => {
+		/* R2-2: the first answer used to uncheck the second, queued press until
+		 *  its own write settled. A newer queued press or a draft that no longer
+		 *  matches the request both stand the paint down. */
+		expect(SHEET).toContain("queueRef.current?.hasQueued() ?? false");
+		expect(SHEET).toContain(
+			"draftMatchesDesired(draftRef.current, request.desired)",
+		);
+	});
+
+	it("scopes queued writes to the subject they were pressed for", () => {
+		/* R2-1: one mounted sheet, a queue that outlives `visible=false`, and a
+		 *  `sessionId` that becomes "" on close. The request carries its subject,
+		 *  an old answer may not paint onto the next one, and a close/subject
+		 *  change cancels what is still queued. */
+		expect(SHEET).toContain("queue.push({ sessionId, desired, key: tag.id })");
+		expect(SHEET).toContain("request.sessionId !== subjectRef.current");
+		expect(SHEET).toContain("queue.reset();");
+	});
+
 	it("reverts and says the write did not save when the relay refuses", () => {
 		/* The revert is dropping the draft (falls back to the list row), and the
 		 *  sentence leads with the outcome before the relay's own body. */
@@ -150,7 +178,7 @@ describe("the tags sheet", () => {
 		/* U2: the old rule returned early and silently lost the press. The queue
 		 *  keeps every checkbox live and coalesces to the newest desired state. */
 		expect(SHEET).toContain("new TagWriteQueue(");
-		expect(SHEET).toContain("queue.push({ desired, key: tag.id })");
+		expect(SHEET).toContain("queue.push({ sessionId, desired, key: tag.id })");
 		expect(SHEET).not.toContain("if (pending !== null) return;");
 		expect(SHEET).not.toContain("disabled={busy}");
 	});

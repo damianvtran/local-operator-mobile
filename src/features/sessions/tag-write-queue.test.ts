@@ -9,6 +9,8 @@ import type { TagWrite } from "@/features/sessions/tags";
 
 const RESEARCH: TagRef = { id: "cb65004501", name: "Research" };
 const WORK: TagRef = { id: "d28b35a273", name: "Work" };
+const SESSION = "98a803224e43";
+const OTHER = "b7c6d5e4f3a2";
 
 const answer = (
 	tags: TagRef[],
@@ -67,10 +69,12 @@ describe("the tag write queue", () => {
 		 *  desired state is derived from the first's optimistic result, exactly
 		 *  as the sheet's `toggle` derives it from the draft. */
 		const one: TagWriteRequest = {
+			sessionId: SESSION,
 			desired: { tags: [RESEARCH.id], primary: RESEARCH.id },
 			key: RESEARCH.id,
 		};
 		const two: TagWriteRequest = {
+			sessionId: SESSION,
 			desired: { tags: [RESEARCH.id, WORK.id], primary: RESEARCH.id },
 			key: WORK.id,
 		};
@@ -106,15 +110,21 @@ describe("the tag write queue", () => {
 			onIdle: () => {},
 		});
 		const stuck: TagWriteRequest = {
+			sessionId: SESSION,
 			desired: { tags: [RESEARCH.id], primary: RESEARCH.id },
 			key: "first",
 		};
 		queue.push(stuck);
 		queue.push({
+			sessionId: SESSION,
 			desired: { tags: [RESEARCH.id, WORK.id], primary: RESEARCH.id },
 			key: "b",
 		});
-		queue.push({ desired: { tags: [WORK.id], primary: WORK.id }, key: "c" });
+		queue.push({
+			sessionId: SESSION,
+			desired: { tags: [WORK.id], primary: WORK.id },
+			key: "c",
+		});
 
 		first.resolve(answer([RESEARCH], RESEARCH.id));
 		await Promise.resolve();
@@ -150,10 +160,12 @@ describe("the tag write queue", () => {
 			},
 		});
 		queue.push({
+			sessionId: SESSION,
 			desired: { tags: [RESEARCH.id], primary: RESEARCH.id },
 			key: RESEARCH.id,
 		});
 		queue.push({
+			sessionId: SESSION,
 			desired: { tags: [RESEARCH.id, WORK.id], primary: RESEARCH.id },
 			key: WORK.id,
 		});
@@ -183,11 +195,89 @@ describe("the tag write queue", () => {
 			},
 		});
 		queue.push({
+			sessionId: SESSION,
 			desired: { tags: [], primary: null },
 			key: "*",
 		});
 		await Promise.resolve();
 		await Promise.resolve();
 		expect(idle).toBe(1);
+	});
+
+	it("drops a queued write when the subject changes or the sheet closes", async () => {
+		/* R2-1: the queue outlives `visible=false`. A queued press belongs to the
+		 *  conversation that was on screen; it must not be sent after close (to an
+		 *  empty id) or against whichever row opens next. */
+		const first = deferred<SessionTagsResponse>();
+		const calls: TagWriteRequest[] = [];
+		const settled: TagWriteRequest[] = [];
+		const queue = new TagWriteQueue({
+			send: (request) => {
+				calls.push(request);
+				return calls.length === 1
+					? first.promise
+					: Promise.resolve(answer([], null));
+			},
+			onStart: () => {},
+			onSettled: (request) => settled.push(request),
+			onRefused: () => {},
+			onIdle: () => {},
+		});
+		queue.push({
+			sessionId: SESSION,
+			desired: { tags: [RESEARCH.id], primary: RESEARCH.id },
+			key: RESEARCH.id,
+		});
+		queue.push({
+			sessionId: SESSION,
+			desired: { tags: [RESEARCH.id, WORK.id], primary: RESEARCH.id },
+			key: WORK.id,
+		});
+		expect(queue.hasQueued()).toBe(true);
+
+		queue.reset();
+		expect(queue.hasQueued()).toBe(false);
+
+		first.resolve(answer([RESEARCH], RESEARCH.id));
+		await Promise.resolve();
+		await Promise.resolve();
+
+		expect(calls.map((request) => request.sessionId)).toEqual([SESSION]);
+		expect(settled).toHaveLength(0);
+	});
+
+	it("sends a press made after a subject change to the new subject only", async () => {
+		const first = deferred<SessionTagsResponse>();
+		const calls: TagWriteRequest[] = [];
+		const queue = new TagWriteQueue({
+			send: (request) => {
+				calls.push(request);
+				return calls.length === 1
+					? first.promise
+					: Promise.resolve(answer([WORK], WORK.id));
+			},
+			onStart: () => {},
+			onSettled: () => {},
+			onRefused: () => {},
+			onIdle: () => {},
+		});
+		queue.push({
+			sessionId: SESSION,
+			desired: { tags: [RESEARCH.id], primary: RESEARCH.id },
+			key: RESEARCH.id,
+		});
+		/* Close and open another row while the first PUT is still unanswered. */
+		queue.reset();
+		queue.push({
+			sessionId: OTHER,
+			desired: { tags: [WORK.id], primary: WORK.id },
+			key: WORK.id,
+		});
+
+		first.resolve(answer([RESEARCH], RESEARCH.id));
+		await Promise.resolve();
+		await Promise.resolve();
+
+		expect(calls.map((request) => request.sessionId)).toEqual([SESSION, OTHER]);
 	});
 });

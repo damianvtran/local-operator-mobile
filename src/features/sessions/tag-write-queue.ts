@@ -23,6 +23,14 @@ import type { TagWrite } from "@/features/sessions/tags";
  * Node — the same reason `tags.ts` is a plain module.
  */
 export type TagWriteRequest = {
+	/**
+	 * The conversation this press belongs to. It is a REQUEST field, not the
+	 * sheet's current render: a queued write outlives the closing sheet, and
+	 * resolving the subject at send time sent one conversation's tags to
+	 * `/api/sessions//tags`, or to whichever row opened next (review round 2,
+	 * R2-1).
+	 */
+	sessionId: string;
 	/** The whole desired state (never a delta): the route's own contract. */
 	desired: TagWrite;
 	/**
@@ -49,8 +57,30 @@ export type TagWriteQueueHandlers = {
 export class TagWriteQueue {
 	private inFlight: TagWriteRequest | null = null;
 	private queued: TagWriteRequest | null = null;
+	/** Bumped by `reset`; an answer from an older generation is not reported. */
+	private generation = 0;
 
 	constructor(private readonly handlers: TagWriteQueueHandlers) {}
+
+	/**
+	 * Drop every write not yet sent and stop reporting the in-flight one.
+	 *
+	 * Called when the sheet's subject changes or it closes. The queued request
+	 * was pressed for a conversation that is no longer on screen; sending it to
+	 * the next subject would write one conversation's tags onto another, and
+	 * sending it after close would target an empty id (review round 2, R2-1).
+	 * The in-flight request is already on the wire and cannot be recalled, but
+	 * its answer is ignored rather than painted onto a different sheet.
+	 */
+	reset(): void {
+		this.generation += 1;
+		this.queued = null;
+	}
+
+	/** Whether a newer press is waiting behind the in-flight request. */
+	hasQueued(): boolean {
+		return this.queued !== null;
+	}
 
 	/**
 	 * Ask for a desired state. A press while one write is in flight replaces the
@@ -62,23 +92,30 @@ export class TagWriteQueue {
 			this.queued = request;
 			return;
 		}
-		void this.run(request);
+		void this.run(request, this.generation);
 	}
 
-	private async run(request: TagWriteRequest): Promise<void> {
+	private async run(
+		request: TagWriteRequest,
+		generation: number,
+	): Promise<void> {
 		this.inFlight = request;
 		this.handlers.onStart(request);
 		try {
 			const answer = await this.handlers.send(request);
-			this.handlers.onSettled(request, answer);
+			if (generation === this.generation) {
+				this.handlers.onSettled(request, answer);
+			}
 		} catch (error) {
-			this.handlers.onRefused(request, error);
+			if (generation === this.generation) {
+				this.handlers.onRefused(request, error);
+			}
 		} finally {
 			this.inFlight = null;
 			const next = this.queued;
 			this.queued = null;
 			if (next === null) this.handlers.onIdle();
-			else void this.run(next);
+			else void this.run(next, this.generation);
 		}
 	}
 }

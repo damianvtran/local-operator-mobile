@@ -635,8 +635,8 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 			TAG_WORK.id,
 		);
 		/* The 320 pt frame's subject: three categories on one row, beside a name
-		 *  long enough that the row title must truncate. It is inserted second in
-		 *  the listing so the narrow capture shows it without scrolling. */
+		 *  long enough that the row title must truncate. It is FIRST in the listing
+		 *  so the narrow capture shows it without scrolling. */
 		const three = taggedRow(
 			"tag-three-row",
 			"Three categories and a long conversation name",

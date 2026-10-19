@@ -679,8 +679,8 @@ export const UNSCROLLED_CONTROLS: readonly string[] = [
 	 *  one control the sheet owes the reader there. `Remove all` is deliberately
 	 *  NOT here: when the catalogue has entries it follows them and may scroll —
 	 *  the checkboxes, not the destructive action, are that state's answers. In
-	 *  the error and empty states it is painted ABOVE the state's message, which
-	 *  the frames of those cells show without scrolling. */
+	 *  the ERROR state it is painted ABOVE the alert; in the empty state it follows
+	 *  the empty message — both visible without scrolling in those capture cells. */
 	CONTROL.sessionTagsRetry,
 ];
 

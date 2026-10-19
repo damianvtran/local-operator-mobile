@@ -19,6 +19,7 @@ import {
 	catalogueWithAssigned,
 	clearedTags,
 	desiredTagWrite,
+	draftMatchesDesired,
 	settledPrimary,
 } from "@/features/sessions/tags";
 import { isRelayError, TRANSPORT_SENTENCE } from "@/relay";
@@ -66,6 +67,14 @@ import { cx } from "@/ui/variants";
  * presses to the newest desired state; each checkbox stays live. The old rule
  * disabled every row instead, and a press in that window silently did nothing —
  * review round 1, U2.
+ *
+ * EVERY REQUEST IS BOUND TO ITS SUBJECT. The sheet is one mounted instance and
+ * outlives `visible=false`, so a queued write cannot resolve its conversation
+ * from the current render: a close or a new row would send it to an empty id or
+ * onto another conversation. The request carries its `sessionId`, a close or
+ * subject change cancels what is queued, and an old answer may only paint while
+ * the sheet is still showing that subject (review round 2, R2-1). The same
+ * guard keeps an older read-back from repainting over a newer press (R2-2).
  *
  * No category creation or rename exists here — the desktop owns the registry
  * (`GET /api/tags` is read-only on this wire, and the route set has no PUT for
@@ -137,6 +146,8 @@ export const SessionTagsSheet = ({
 	}, []);
 	/** The tag id whose write is in flight, or `"*"` for Remove all. */
 	const [pending, setPending] = useState<string | null>(null);
+	/** Remove all is pressed but its write is still waiting behind another one. */
+	const [removeAllQueued, setRemoveAllQueued] = useState(false);
 	const [refusal, setRefusal] = useState<string | null>(null);
 	/** A read-back has been painted; the toggled capture cell's marker. */
 	const [readBack, setReadBack] = useState(false);
@@ -165,10 +176,27 @@ export const SessionTagsSheet = ({
 	 *  WeakMap is enough — the queue holds the only reference. */
 	const startedAt = useRef(new WeakMap<TagWriteRequest, number>());
 
+	/* The subject the sheet is painting RIGHT NOW. A request carries the subject
+	 *  it was pressed for; its answer may only paint while both still agree. A
+	 *  ref, not the render's `sessionId`, because an old queue's callback closes
+	 *  over the value from the render that built it — after a subject change it
+	 *  must see the CURRENT subject and stand down (review round 2, R2-1). */
+	const subjectRef = useRef(sessionId);
+	subjectRef.current = sessionId;
+
+	/* Set once the queue exists, so stable handlers can ask whether a newer
+	 *  press is waiting without being re-created with the queue itself. */
+	const queueRef = useRef<TagWriteQueue | null>(null);
+
 	const handleSettled = useCallback(
 		(request: TagWriteRequest, answer: SessionTagsResponse) => {
-			/* Do not repaint a read-back over a NEWER list frame: that frame is the
-			 *  relay's later answer and the next word on this assignment. */
+			/* An answer for another conversation, or for a state a newer press has
+			 *  already replaced, must not repaint this sheet (R2-1, R2-2). */
+			if (request.sessionId !== subjectRef.current) return;
+			if (queueRef.current?.hasQueued() ?? false) return;
+			if (!draftMatchesDesired(draftRef.current, request.desired)) return;
+			/* Do not repaint a read-back over a NEWER list frame either: that frame
+			 *  is the relay's later answer and the next word on this assignment. */
 			if (startedAt.current.get(request) === frameSeq.current) {
 				setDraft({
 					tags: answer.tags,
@@ -181,7 +209,13 @@ export const SessionTagsSheet = ({
 	);
 
 	const handleRefused = useCallback(
-		(error: unknown) => {
+		(request: TagWriteRequest, error: unknown) => {
+			/* Same two guards as the read-back: another subject's refusal is not
+			 *  this sheet's, and a newer press owns the draft — reverting it here
+			 *  would undo a change the reader made after this request (R2-2). */
+			if (request.sessionId !== subjectRef.current) return;
+			if (queueRef.current?.hasQueued() ?? false) return;
+			if (!draftMatchesDesired(draftRef.current, request.desired)) return;
 			/* Revert to the list row's state — the frame that was there before the
 			 *  press — and put the store's own sentence after the plain outcome. */
 			setDraft(null);
@@ -207,7 +241,7 @@ export const SessionTagsSheet = ({
 		const client = relayRef.current();
 		if (client === null) throw new Error(TRANSPORT_SENTENCE);
 		return client.setSessionTags(
-			sessionId,
+			request.sessionId,
 			request.desired.tags,
 			request.desired.primary,
 		);
@@ -219,20 +253,45 @@ export const SessionTagsSheet = ({
 				send: (request) => sendRef.current(request),
 				onStart: (request) => {
 					startedAt.current.set(request, frameSeq.current);
+					/* A request is now on the wire; Remove all's wait is over (its
+					 *  own start paints `pending === "*"` instead). */
+					setRemoveAllQueued(false);
 					setPending(request.key);
 					setRefusal(null);
 				},
 				onSettled: handleSettled,
-				onRefused: (_request, error) => handleRefused(error),
-				onIdle: () => setPending(null),
+				onRefused: handleRefused,
+				onIdle: () => {
+					setPending(null);
+					setRemoveAllQueued(false);
+				},
 			}),
 		[handleSettled, handleRefused],
 	);
+	queueRef.current = queue;
 
-	/* Opening resets everything the previous conversation left behind. The
-	 *  catalogue is re-read per open: the desktop may have created or renamed a
-	 *  category since, and a stale list of categories is a control that fails
-	 *  with "Unknown category id" for no reason the reader can see. */
+	/* Opening resets everything the previous conversation left behind, and a
+	 *  close or subject change CANCELS whatever is still queued: a request is
+	 *  scoped to the conversation it was pressed for, so it must never start
+	 *  after the sheet has moved to the next one (review round 2, R2-1). */
+	useEffect(() => {
+		/* `sessionId` and `visible` are TRIGGERS, not values this body reads:
+		 *  the effect must re-run when the subject changes or the sheet closes,
+		 *  and the lint needs the references to see they belong in the list. */
+		void sessionId;
+		void visible;
+		queue.reset();
+		setDraft(null);
+		setPending(null);
+		setRemoveAllQueued(false);
+		setRefusal(null);
+		setReadBack(false);
+		setConfirmRemoveAll(false);
+	}, [queue, sessionId, visible, setDraft]);
+
+	/* The catalogue read, per open. It is re-read because the desktop may have
+	 *  created or renamed a category since, and a stale list is a control that
+	 *  fails with "Unknown category id" for no reason the reader can see. */
 	useEffect(() => {
 		/* `reloadKey` is a TRIGGER, not a value this body reads: the retry control
 		 *  bumps it so the effect re-runs, and the lint needs the reference to see
@@ -287,13 +346,14 @@ export const SessionTagsSheet = ({
 			tags: draftTags(desired.tags, base.tags, options),
 			primary: desired.primary,
 		});
-		queue.push({ desired, key: tag.id });
+		queue.push({ sessionId, desired, key: tag.id });
 	};
 
 	const removeAll = () => {
 		const desired = clearedTags();
 		setDraft({ tags: [], primary: null });
-		queue.push({ desired, key: "*" });
+		setRemoveAllQueued(true);
+		queue.push({ sessionId, desired, key: "*" });
 	};
 
 	const nothingSelected = current.tags.length === 0;
@@ -302,7 +362,7 @@ export const SessionTagsSheet = ({
 	 *  the 200 % frame must show without scrolling — and after the catalogue or
 	 *  the empty state otherwise. */
 	const removeAllAction = (
-		<View className="pt-2">
+		<View className="gap-1 pt-2">
 			<Button
 				testID={CONTROL.sessionTagsRemoveAll}
 				label="Remove all tags"
@@ -311,6 +371,13 @@ export const SessionTagsSheet = ({
 				variant="danger"
 				size="sm"
 			/>
+			{/* U2's visible saving state covers this control too: `key: "*"` paints
+			 *  no row, so without this cue the sheet showed nothing between the
+			 *  confirm and the answer. It stays up while the write waits behind an
+			 *  older one, then `pending === "*"` takes over on the wire. */}
+			{pending === "*" || removeAllQueued ? (
+				<Text className="text-meta text-ink-dim">Saving…</Text>
+			) : null}
 		</View>
 	);
 
@@ -368,8 +435,8 @@ export const SessionTagsSheet = ({
 					) : catalogue.kind === "error" ? (
 						<View className="gap-3" testID={SURFACE.sessionTagsError}>
 							<Alert severity="error" title="Your categories didn't load">
-								We couldn't read the list of categories just now. Try again to
-								see whether they're still there.
+								We couldn't read the list of categories just now. Try again in a
+								moment.
 							</Alert>
 						</View>
 					) : options.length === 0 ? (

@@ -6,10 +6,13 @@ import {
 	catalogueWithAssigned,
 	clearedTags,
 	desiredTagWrite,
+	draftMatchesDesired,
 	settledPrimary,
+	TAG_LINE_TARGET_DP,
 	TAG_VISIBLE_LIMIT,
 	tagAnnouncement,
 	tagLineFor,
+	tagLineTargetHeightDp,
 } from "@/features/sessions/tags";
 import {
 	rowAccessibilityLabel,
@@ -104,6 +107,69 @@ describe("the row's tag line", () => {
 		expect(textWidthDp("Research", 1)).toBeGreaterThan(52);
 		expect(sansTextWidthDp("Research", 1)).toBeLessThanOrEqual(52);
 		expect(tagLineFor([RESEARCH], 70, 1).labels).toEqual(["Research"]);
+	});
+
+	it("lets a short label's slack rescue a longer neighbour", () => {
+		/* R2-m3, the second half of D5: equal shares gave each label half the row,
+		 *  so "Work" used ~50 of its 114 dp and the other 64 could not help the
+		 *  long name. The allocation now satisfies short labels first and hands
+		 *  the remainder to the one that needs it. */
+		const width = 232;
+		const line = tagLineFor([WORK, LONG], width, 1);
+		expect(line.labels[0]).toBe("Work");
+		const painted = line.labels[1] ?? "";
+		expect(painted.endsWith("…")).toBe(true);
+		const equalShare = Math.floor((width - 4) / 2);
+		expect(sansTextWidthDp(painted, 1) + 18).toBeGreaterThan(equalShare);
+		expect(sansTextWidthDp(painted, 1) + 18).toBeLessThanOrEqual(width);
+	});
+});
+
+describe("the disclosure's target", () => {
+	it("is a real 44 dp box, never the 22 dp badge row", () => {
+		/* R2-3: the badges are 22 dp tall, and react-native-web drops
+		 *  `Pressable` hitSlop, so the control needs real geometry. */
+		expect(TAG_LINE_TARGET_DP).toBeGreaterThanOrEqual(44);
+		expect(tagLineTargetHeightDp(44)).toBe(44);
+		expect(tagLineTargetHeightDp(48)).toBe(48);
+	});
+});
+
+describe("a settled answer's paint right", () => {
+	const afterFirstPress = { tags: [WORK], primary: WORK.id };
+	const afterSecondPress = {
+		tags: [WORK, RESEARCH],
+		primary: WORK.id,
+	};
+	const firstDesired = { tags: [WORK.id], primary: WORK.id };
+
+	it("does not paint the first answer over a newer second press", () => {
+		/* R2-2: the read-back for Work's answer is {Work}; the draft already
+		 *  holds Research too, so painting it would visibly uncheck that press
+		 *  until the queued write settled. */
+		expect(draftMatchesDesired(afterFirstPress, firstDesired)).toBe(true);
+		expect(draftMatchesDesired(afterSecondPress, firstDesired)).toBe(false);
+	});
+
+	it("paints the queued write's answer, which still matches the draft", () => {
+		expect(
+			draftMatchesDesired(afterSecondPress, {
+				tags: [WORK.id, RESEARCH.id],
+				primary: WORK.id,
+			}),
+		).toBe(true);
+	});
+
+	it("keeps a third press derived from the second press's draft", () => {
+		/* The wiped draft used to make this press omit Research and lose the
+		 *  queued change; deriving from the intact draft keeps it. */
+		expect(
+			desiredTagWrite(afterSecondPress.tags, afterSecondPress.primary, WORK.id),
+		).toEqual({ tags: [RESEARCH.id], primary: RESEARCH.id });
+	});
+
+	it("paints nothing when no draft remains", () => {
+		expect(draftMatchesDesired(null, firstDesired)).toBe(false);
 	});
 });
 

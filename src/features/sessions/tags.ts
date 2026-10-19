@@ -31,12 +31,66 @@ const BADGE_CHROME_DP = 18;
  *  `list-row-meta.ts` `META_GAP_DP`), so this does not follow the text scale. */
 const TAG_GAP_DP = 4;
 
+/**
+ * The kit's floor for an interactive target, in dp. WCAG 2.5.8 asks 24; this
+ * app's own floor is 44, so the header disclosure takes the larger one. It is a
+ * REAL box (`minHeight`), not `hitSlop`: react-native-web drops `Pressable`
+ * hitSlop, and the audit measures the painted box (review round 2, R2-3).
+ */
+export const TAG_LINE_TARGET_DP = 44;
+
+/** The disclosure's min height: the platform's floor, never under the kit's 44. */
+export const tagLineTargetHeightDp = (platformFloor: number): number =>
+	Math.max(TAG_LINE_TARGET_DP, platformFloor);
+
+/**
+ * Split `room` between labels, giving each one what it naturally needs before
+ * dividing the remainder.
+ *
+ * WHY NOT EQUAL SHARES: a short name beside a long one left part of the row
+ * unused — "Work" took its 50 dp of a 114 dp half and the other 64 dp could not
+ * rescue the neighbour, so the long name elided while 64 dp sat blank (review
+ * round 2, R2-m3, the second half of D5). Satisfied labels leave the pool, and
+ * the rest share what is left; the loop terminates because at least one label
+ * is satisfied per pass or every remaining label takes the equal share.
+ */
+const allocateLabelWidths = (
+	natural: readonly number[],
+	room: number,
+): number[] => {
+	const widths = natural.map(() => 0);
+	let open = natural.map((_, index) => index);
+	let remaining = Math.max(0, room);
+	while (open.length > 0) {
+		const share = Math.max(0, remaining / open.length);
+		const satisfied = open.filter((index) => (natural[index] ?? 0) <= share);
+		if (satisfied.length === 0) {
+			for (const index of open) widths[index] = share;
+			break;
+		}
+		for (const index of satisfied) {
+			widths[index] = natural[index] ?? 0;
+			remaining -= natural[index] ?? 0;
+		}
+		open = open.filter((index) => !satisfied.includes(index));
+	}
+	return widths;
+};
+
 export type TagLine = {
 	/** The labels to paint, in the relay's assignment order. Already fitted. */
 	labels: string[];
 	/** Tags beyond the visible limit, or 0 when every tag is shown. */
 	more: number;
 };
+
+/**
+ * Slack for float subtraction, in dp. Natural widths are measured WITH the
+ * badge chrome and the budget is obtained by subtracting the same constant, so
+ * an exactly-fitting name lands a few ulps away from its budget; without this
+ * it elides by 1e-15 dp. A hundredth of a dp is below any renderer's pixel.
+ */
+const FIT_EPSILON_DP = 0.01;
 
 /** The longest HEAD of `text` that fits `budgetDp` with an ellipsis appended:
  *  prose's direction, by code point so a surrogate pair is never split.
@@ -46,12 +100,15 @@ export type TagLine = {
  *  charged these labels 0.600 em per glyph, which elided them far too early —
  *  the measured `Resear…` with 43.7 dp still spare (review round 1, G). */
 const headFit = (text: string, budgetDp: number, scale: number): string => {
-	if (sansTextWidthDp(text, scale) <= budgetDp) return text;
+	if (sansTextWidthDp(text, scale) <= budgetDp + FIT_EPSILON_DP) return text;
 	const ellipsis = "…";
 	const ellipsisWidth = sansTextWidthDp(ellipsis, scale);
 	let painted = "";
 	for (const glyph of text) {
-		if (sansTextWidthDp(painted + glyph, scale) + ellipsisWidth > budgetDp)
+		if (
+			sansTextWidthDp(painted + glyph, scale) + ellipsisWidth >
+			budgetDp + FIT_EPSILON_DP
+		)
 			break;
 		painted += glyph;
 	}
@@ -93,11 +150,19 @@ export const tagLineFor = (
 	const cueWidth =
 		cue === null ? 0 : BADGE_CHROME_DP + sansTextWidthDp(cue, scale);
 	const room = Math.max(0, widthDp - cueWidth - gapCount * TAG_GAP_DP);
-	const share = Math.floor(room / visible.length);
-	const labelBudget = Math.max(0, share - BADGE_CHROME_DP);
+	const natural = visible.map(
+		(tag) => BADGE_CHROME_DP + sansTextWidthDp(tag.name, scale),
+	);
+	const widths = allocateLabelWidths(natural, room);
 
 	return {
-		labels: visible.map((tag) => headFit(tag.name, labelBudget, scale)),
+		labels: visible.map((tag, index) =>
+			headFit(
+				tag.name,
+				Math.max(0, (widths[index] ?? 0) - BADGE_CHROME_DP),
+				scale,
+			),
+		),
 		more,
 	};
 };
@@ -108,6 +173,29 @@ export const tagAnnouncement = (tags: readonly TagRef[]): string =>
 	`Tags: ${tags.map((tag) => tag.name).join(", ")}`;
 
 export type TagWrite = { tags: string[]; primary: string | null };
+
+/**
+ * Whether a settled answer may be painted: only while the sheet's draft is
+ * still exactly the state that request asked for.
+ *
+ * WHY: the read-back used to paint over a NEWER local press. Press Work, then
+ * Research while Work's PUT is slow, and Work's answer ({Work}) unchecked
+ * Research until the queued write settled; a third press in that window then
+ * derived from the wiped draft and dropped the queued change (review round 2,
+ * R2-2). The queue's `hasQueued` is checked too, because an older answer must
+ * not paint even when a later press happens to derive the SAME desired state.
+ */
+export const draftMatchesDesired = (
+	draft: {
+		readonly tags: readonly TagRef[];
+		readonly primary: string | null;
+	} | null,
+	desired: TagWrite,
+): boolean =>
+	draft !== null &&
+	draft.primary === desired.primary &&
+	draft.tags.length === desired.tags.length &&
+	draft.tags.every((tag, index) => tag.id === desired.tags[index]);
 
 /**
  * One toggle, as the FULL desired state the route takes.
