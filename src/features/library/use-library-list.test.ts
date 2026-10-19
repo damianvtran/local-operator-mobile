@@ -327,9 +327,10 @@ describe("useLibraryList stale pages", () => {
 		);
 		await settle();
 
-		// The save happens before the refresh starts, so the refresh owns the row.
+		// Both saves happen before the refresh starts, so the refresh owns both.
 		result?.applySaved([
 			{ asset: row("la_external_a", "Saved A"), epoch: nextEpoch() },
+			{ asset: row("la_external_b", "Saved B"), epoch: nextEpoch() },
 		]);
 		await settle();
 		result?.refresh();
@@ -339,21 +340,28 @@ describe("useLibraryList stale pages", () => {
 			listing(
 				[
 					row("la_external_a", "External newer A"),
-					row("la_external_b", "Old B"),
+					row("la_external_b", "External newer B"),
 				],
 				"cursor-refresh",
 			),
 		);
 		await settle();
-		expect(result?.rows[0]?.name).toBe("External newer A");
+		expect(result?.rows.map((asset) => asset.name)).toEqual([
+			"External newer A",
+			"External newer B",
+		]);
 
-		// Same rule on a new-query first page: a fetch started after the save
-		// returns the server's answer, not the saved overlay.
+		// Same rule on a new-query first page: a fetch started after the saves
+		// returns the server's answers, not the saved overlays.
 		result?.applySaved([
 			{ asset: row("la_external_a", "Saved again A"), epoch: nextEpoch() },
+			{ asset: row("la_external_b", "Saved again B"), epoch: nextEpoch() },
 		]);
 		await settle();
-		expect(result?.rows[0]?.name).toBe("Saved again A");
+		expect(result?.rows.map((asset) => asset.name)).toEqual([
+			"Saved again A",
+			"Saved again B",
+		]);
 
 		browse = { ...browse, query: "new" };
 		rt.clean();
@@ -362,10 +370,19 @@ describe("useLibraryList stale pages", () => {
 		await vi.advanceTimersByTimeAsync(300);
 		expect(calls).toHaveLength(3);
 		calls[2]?.resolve(
-			listing([row("la_external_a", "External newer A2")], "cursor-new"),
+			listing(
+				[
+					row("la_external_a", "External newer A2"),
+					row("la_external_b", "External newer B2"),
+				],
+				"cursor-new",
+			),
 		);
 		await settle();
-		expect(result?.rows[0]?.name).toBe("External newer A2");
+		expect(result?.rows.map((asset) => asset.name)).toEqual([
+			"External newer A2",
+			"External newer B2",
+		]);
 	});
 
 	it("clears a superseded refresh spinner across a query change", async () => {
