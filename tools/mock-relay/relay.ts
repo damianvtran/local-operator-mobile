@@ -2490,11 +2490,10 @@ export function createRelay(options: RelayOptions = {}) {
 					sendJson(res, 404, errorBody("library asset not found"));
 					return;
 				}
-				sendJson(res, 200, {
-					asset_id: assetId,
-					chat: null,
-					cleared: outcome.cleared,
-				});
+				/* #2624's phone plane, deliberately: a clear answers `{ok, cleared}`
+				 *  and carries no chat key, which is the shape the client's schema must
+				 *  read as `chat: null`. */
+				sendJson(res, 200, { ok: true, cleared: outcome.cleared });
 				return;
 			}
 			const body = parseJsonBody(rawBody ?? "");
@@ -2511,11 +2510,7 @@ export function createRelay(options: RelayOptions = {}) {
 				sendJson(res, 404, errorBody("library asset not found"));
 				return;
 			}
-			sendJson(res, 200, {
-				asset_id: assetId,
-				chat: row.chat,
-				cleared: false,
-			});
+			sendJson(res, 200, { chat: row.chat });
 			return;
 		}
 

@@ -291,7 +291,7 @@ export interface LibraryListRequest {
 	highlighted?: boolean;
 	organized?: boolean;
 	favorite?: boolean;
-	session_id?: string;
+	session?: string;
 	sort?: string;
 	order?: "asc" | "desc";
 	limit?: number;
@@ -621,7 +621,7 @@ export class RelayEndpoints {
 						: request.favorite
 							? "1"
 							: "0",
-				session_id: request.session_id,
+				session: request.session,
 				sort: request.sort,
 				order: request.order,
 				limit: wireLimit(request.limit, LIBRARY_LIMIT),

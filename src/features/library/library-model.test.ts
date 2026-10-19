@@ -13,12 +13,14 @@ import type {
 	Capabilities,
 	LibraryAsset,
 	LibraryListResponse,
+	LibraryTag,
 } from "@/contracts";
 import {
 	applyLibraryPage,
 	categoryForBrowse,
 	composerPrompt,
 	DEFAULT_BROWSE,
+	editorShouldReset,
 	formatBytes,
 	hasActiveFilters,
 	kindLabel,
@@ -26,8 +28,11 @@ import {
 	libraryListRequest,
 	previewKind,
 	promptImage,
+	saveAssetMetadata,
+	TAG_SAVE_FAILURE_COPY,
 	unsupportedReason,
 } from "@/features/library/library-model";
+import type { RelayEndpoints } from "@/relay";
 import { loadFixture } from "@/testing/fixtures";
 
 const asset = (overrides: Partial<LibraryAsset> = {}): LibraryAsset => {
@@ -183,5 +188,77 @@ describe("preview classification and copy", () => {
 		expect(formatBytes(1536)).toBe("1.5 KB");
 		expect(kindLabel("sound")).toBe("File");
 		expect(kindLabel("audio")).toBe("Audio");
+	});
+});
+
+/* ------------------------------------------------------------------ editor */
+
+const catalogueTag = (id: string, name: string): LibraryTag => ({
+	id,
+	name,
+	category: "topic",
+	created_by: "user",
+	count: 1,
+	created_at: 0,
+	updated_at: 0,
+});
+
+describe("metadata save reconciliation", () => {
+	it("keeps the intended tags and the refusal when only the tag PUT fails", async () => {
+		const patched = asset({
+			name: "New name",
+			description: "New description",
+			tags: [],
+		});
+		const client = {
+			patchLibraryAsset: async () => patched,
+			setLibraryAssetTags: async () => {
+				throw new Error("tag store unavailable");
+			},
+		} as unknown as RelayEndpoints;
+
+		const outcome = await saveAssetMetadata(client, {
+			asset: asset(),
+			name: "New name",
+			description: "New description",
+			assigned: ["0a1b2c3d4e"],
+			vocabulary: [catalogueTag("0a1b2c3d4e", "reference")],
+		});
+
+		expect(outcome.close).toBe(false);
+		expect(outcome.refusal).toBe(TAG_SAVE_FAILURE_COPY);
+		expect(outcome.asset.name).toBe("New name");
+		expect(outcome.assigned).toEqual(["0a1b2c3d4e"]);
+	});
+
+	it("closes on success and reconciles the server's tag set", async () => {
+		const patched = asset({ name: "New name", tags: [] });
+		const written = asset({
+			name: "New name",
+			tags: [{ id: "0a1b2c3d4e", name: "reference", category: "topic" }],
+		});
+		const client = {
+			patchLibraryAsset: async () => patched,
+			setLibraryAssetTags: async () => written,
+		} as unknown as RelayEndpoints;
+
+		const outcome = await saveAssetMetadata(client, {
+			asset: asset(),
+			name: "New name",
+			description: "",
+			assigned: ["0a1b2c3d4e"],
+			vocabulary: [catalogueTag("0a1b2c3d4e", "reference")],
+		});
+
+		expect(outcome.close).toBe(true);
+		expect(outcome.refusal).toBeNull();
+		expect(outcome.assigned).toEqual(["0a1b2c3d4e"]);
+		expect(outcome.vocabulary[0]?.count).toBe(1);
+	});
+
+	it("resets the sheet only on open, never on a parent row update", () => {
+		expect(editorShouldReset(true, undefined, "la_1")).toBe(true);
+		expect(editorShouldReset(true, "la_1", "la_1")).toBe(false);
+		expect(editorShouldReset(false, "la_1", "la_1")).toBe(false);
 	});
 });

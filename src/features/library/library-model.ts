@@ -16,8 +16,14 @@ import type {
 	Capabilities,
 	LibraryAsset,
 	LibraryListResponse,
+	LibraryTag,
+	LibraryTagRef,
 } from "@/contracts";
-import type { LibraryListRequest } from "@/relay";
+import {
+	isRelayError,
+	type LibraryListRequest,
+	type RelayEndpoints,
+} from "@/relay";
 
 /* --------------------------------------------------------------- vocabulary */
 
@@ -445,6 +451,116 @@ const toBase64 = (bytes: Uint8Array): string => {
 	}
 	return out;
 };
+
+/* ------------------------------------------------------------ metadata saves */
+
+/** The sentence a tag-half failure shows. Named so a test asserts the COPY the
+ *  reader sees, not a copy re-typed in the test. */
+export const TAG_SAVE_FAILURE_COPY =
+	"The name and description were saved, but the tags were not. Save again to retry the tags.";
+
+/** What one Save produced. `close` is false for a partial success: the sheet
+ *  stays open with the refusal and the intended tag set, so the reader can retry
+ *  instead of being told the whole save failed (review round 1, major 2). */
+export interface MetadataSaveOutcome {
+	asset: LibraryAsset;
+	vocabulary: LibraryTag[];
+	assigned: string[];
+	refusal: string | null;
+	close: boolean;
+}
+
+/** Tags arrive on an asset row as briefs (no count/provenance); the editor's
+ *  chips want the catalogue row. The missing fields are filled from what the
+ *  sheet already knows, never invented as a new count. */
+const asCatalogueTag = (
+	tag: LibraryTagRef,
+	vocabulary: LibraryTag[],
+): LibraryTag => ({
+	...tag,
+	count: vocabulary.find((known) => known.id === tag.id)?.count ?? 0,
+	created_by: "user",
+	created_at: 0,
+	updated_at: 0,
+});
+
+/** Merges tag rows by id, keeping the catalogue's name order. */
+export const mergeVocabulary = (
+	current: LibraryTag[],
+	incoming: LibraryTag[],
+): LibraryTag[] => {
+	const byId = new Map(current.map((tag) => [tag.id, tag]));
+	for (const tag of incoming) byId.set(tag.id, tag);
+	return [...byId.values()].sort((a, b) => a.name.localeCompare(b.name));
+};
+
+/**
+ * The editor resets when it OPENS, never when a parent row update arrives.
+ *
+ * The defect this guards: a successful PATCH answers with the row read back —
+ * which still carries the SERVER's tags. Updating the parent asset while the
+ * sheet was open re-ran the reset effect, cleared the reader's just-assigned
+ * tags and erased the refusal sentence, so the screen looked as if the tag write
+ * had never been attempted. `openedFor` is the asset id the sheet last reset
+ * for; `null` means closed.
+ */
+export const editorShouldReset = (
+	visible: boolean,
+	openedFor: string | undefined,
+	assetId: string,
+): boolean => visible && openedFor !== assetId;
+
+/**
+ * One Save: PATCH the metadata, then replace the tag assignment, and reconcile
+ * the outcome explicitly.
+ *
+ * A tag refusal keeps `assigned` as the reader intended and `close: false`; a
+ * success returns the server's own tag set as `assigned`, so the two cannot
+ * disagree after a retry. A PATCH refusal throws — nothing landed, and the
+ * caller shows its own sentence.
+ */
+export async function saveAssetMetadata(
+	client: RelayEndpoints,
+	input: {
+		asset: LibraryAsset;
+		name: string;
+		description: string;
+		assigned: string[];
+		vocabulary: LibraryTag[];
+	},
+): Promise<MetadataSaveOutcome> {
+	const updated = await client.patchLibraryAsset(input.asset.id, {
+		name: input.name,
+		description: input.description,
+	});
+	try {
+		const withTags = await client.setLibraryAssetTags(
+			input.asset.id,
+			input.assigned,
+			input.assigned[0],
+		);
+		return {
+			asset: withTags,
+			vocabulary: mergeVocabulary(
+				input.vocabulary,
+				withTags.tags.map((tag) => asCatalogueTag(tag, input.vocabulary)),
+			),
+			assigned: withTags.tags.map((tag) => tag.id),
+			refusal: null,
+			close: true,
+		};
+	} catch (failure) {
+		return {
+			asset: updated,
+			vocabulary: input.vocabulary,
+			assigned: input.assigned,
+			refusal: isRelayError(failure)
+				? (failure.displayableMessage ?? TAG_SAVE_FAILURE_COPY)
+				: TAG_SAVE_FAILURE_COPY,
+			close: false,
+		};
+	}
+}
 
 /* ---------------------------------------------------------------------- gate */
 

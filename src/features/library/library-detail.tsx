@@ -55,10 +55,13 @@ import { useLibraryMedia } from "@/features/library/library-media";
 import {
 	assetFacts,
 	composerPrompt,
+	editorShouldReset,
 	effectiveName,
 	libraryEnabled,
+	mergeVocabulary,
 	previewKind,
 	promptImage,
+	saveAssetMetadata,
 	unsupportedReason,
 } from "@/features/library/library-model";
 import { Markdown } from "@/features/session/components/markdown";
@@ -696,9 +699,18 @@ function MetadataEditor({
 	const [busy, setBusy] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [discard, setDiscard] = useState(false);
+	/* The asset id this sheet last reset for. `undefined` means closed. A PATCH
+	 *  answer updates the parent row while the sheet is open; that must not rerun
+	 *  the reset (review round 1, major 2). */
+	const openedFor = useRef<string | undefined>(undefined);
 
 	useEffect(() => {
-		if (!visible) return;
+		if (!visible) {
+			openedFor.current = undefined;
+			return;
+		}
+		if (!editorShouldReset(visible, openedFor.current, asset.id)) return;
+		openedFor.current = asset.id;
 		setName(asset.name);
 		setDescription(asset.description);
 		setAssigned(asset.tags.map((tag) => tag.id));
@@ -729,42 +741,21 @@ function MetadataEditor({
 		setError(null);
 		void (async () => {
 			try {
-				const updated = await client.patchLibraryAsset(asset.id, {
+				/* One Save reconciles the two writes explicitly: a tag refusal keeps
+				 *  the intended selection and the sheet OPEN, so the sentence and the
+				 *  retry are both reachable. */
+				const outcome = await saveAssetMetadata(client, {
+					asset,
 					name,
 					description,
+					assigned,
+					vocabulary: available,
 				});
-				try {
-					const withTags = await client.setLibraryAssetTags(
-						asset.id,
-						assigned,
-						assigned[0],
-					);
-					onSaved(
-						withTags,
-						mergeVocabulary(
-							available,
-							withTags.tags.map((tag) => ({
-								...tag,
-								count:
-									available.find((known) => known.id === tag.id)?.count ?? 0,
-								created_by: "user",
-								created_at: 0,
-								updated_at: 0,
-							})),
-						),
-					);
-				} catch (failure) {
-					// The metadata half DID land; keep that truth visible rather than
-					// rolling the sheet back and implying nothing was saved. The sheet
-					// STAYS OPEN (onPatched, not onSaved) so this sentence is readable.
-					onPatched(updated);
-					setError(
-						displaySentence(
-							failure,
-							"The name and description were saved, but the tags were not.",
-						),
-					);
-				}
+				setAvailable(outcome.vocabulary);
+				setAssigned(outcome.assigned);
+				setError(outcome.refusal);
+				if (outcome.close) onSaved(outcome.asset, outcome.vocabulary);
+				else onPatched(outcome.asset);
 			} catch (failure) {
 				setError(displaySentence(failure, "That did not save. Try again."));
 			} finally {
@@ -804,21 +795,27 @@ function MetadataEditor({
 				title="Edit details"
 				testID={SURFACE.libraryEditorSheet}
 				footer={
-					<View className="flex-row justify-end gap-2">
-						<Button
-							label="Cancel"
-							onPress={close}
-							variant="quiet"
-							disabled={busy}
-							testID={CONTROL.libraryCloseEditor}
-						/>
-						<Button
-							label="Save"
-							onPress={save}
-							loading={busy}
-							disabled={busy}
-							testID={CONTROL.libraryEditSave}
-						/>
+					<View className="gap-3">
+						{/* Pinned next to Save, not in the scrolling body: a partial
+						 *  failure's sentence and its retry must be reachable at every
+						 *  text size and scroll position (review round 1, major 2). */}
+						{error !== null ? <Alert severity="error">{error}</Alert> : null}
+						<View className="flex-row justify-end gap-2">
+							<Button
+								label="Cancel"
+								onPress={close}
+								variant="quiet"
+								disabled={busy}
+								testID={CONTROL.libraryCloseEditor}
+							/>
+							<Button
+								label="Save"
+								onPress={save}
+								loading={busy}
+								disabled={busy}
+								testID={CONTROL.libraryEditSave}
+							/>
+						</View>
 					</View>
 				}
 			>
@@ -888,7 +885,6 @@ function MetadataEditor({
 							/>
 						</View>
 					</View>
-					{error !== null ? <Alert severity="error">{error}</Alert> : null}
 				</View>
 			</Sheet>
 			<Dialog
@@ -908,17 +904,6 @@ function MetadataEditor({
 		</>
 	);
 }
-
-/** Merges one tag write's answer into the vocabulary the sheet shows, keeping
- *  the catalogue's order and replacing rather than duplicating by id. */
-const mergeVocabulary = (
-	current: LibraryTag[],
-	incoming: LibraryTag[],
-): LibraryTag[] => {
-	const byId = new Map(current.map((tag) => [tag.id, tag]));
-	for (const tag of incoming) byId.set(tag.id, tag);
-	return [...byId.values()].sort((a, b) => a.name.localeCompare(b.name));
-};
 
 /** The relay's own sentence when it gave one, else the screen's fallback. Never
  *  a status code and never a runtime's prose. */

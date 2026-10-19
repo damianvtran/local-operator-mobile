@@ -1625,7 +1625,11 @@ export const libraryTagResponseSchema = z.looseObject({
  *  `null` is the honest "this asset has no chat" — never an empty object. */
 export const libraryChatResponseSchema = z.looseObject({
 	asset_id: z.string().default(""),
-	chat: libraryChatSchema.nullable(),
+	/** The relay's two shapes both read here: the desktop route answers
+	 *  `{asset_id, chat, cleared}`, while the phone plane answers `{chat}` on a
+	 *  link and `{ok, cleared}` on a clear. An absent `chat` is the cleared
+	 *  state, never a parse failure. */
+	chat: libraryChatSchema.nullable().default(null),
 	/** True when a DELETE removed an existing link; false when there was none. */
 	cleared: z.boolean().default(false),
 });

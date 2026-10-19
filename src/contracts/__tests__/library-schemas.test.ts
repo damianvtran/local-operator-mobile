@@ -100,10 +100,29 @@ describe("library writes", () => {
 		expect(response.tags[0]?.created_by).toBe("librarian");
 	});
 
-	it("parses the chat receipt's cleared flag", () => {
-		const cleared = parsePayload("libraryChat", {
+	it("parses both chat answer shapes: desktop receipt and phone clear", () => {
+		const linked = parsePayload("libraryChat", {
 			asset_id: "la_0123456789abcdef",
-			chat: null,
+			chat: {
+				session_id: "a1b2c3d4e5f6",
+				title: "Design review",
+				updated_at: 1792000300.0,
+			},
+			cleared: false,
+		});
+		expect(linked.chat?.session_id).toBe("a1b2c3d4e5f6");
+
+		/* #2624's phone plane answers `{chat}` on a link and `{ok, cleared}` on a
+		 *  clear; the desktop receipt names the fields. Both must read as the same
+		 *  client value, or a clear on the phone looks like a frame error. */
+		const phoneLink = parsePayload("libraryChat", {
+			chat: { session_id: "a1b2c3d4e5f6", title: "", updated_at: 0 },
+		});
+		expect(phoneLink.chat?.session_id).toBe("a1b2c3d4e5f6");
+		expect(phoneLink.cleared).toBe(false);
+
+		const cleared = parsePayload("libraryChat", {
+			ok: true,
 			cleared: true,
 		});
 		expect(cleared.chat).toBeNull();

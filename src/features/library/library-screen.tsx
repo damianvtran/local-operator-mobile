@@ -149,6 +149,11 @@ export default function Library() {
 	const list = useLibraryList(client, browse, enabled);
 	const page = list.page;
 	const rows = list.rows;
+	/* The footer and the end-of-list fetch belong to the rows on screen. While a
+	 *  debounced browse is pending, the old page is still painted but its cursor
+	 *  is not loadable: pressing it would append the previous query under the new
+	 *  field. */
+	const pageIsCurrent = list.loadedWith === browse;
 
 	const filterCount = useMemo(
 		() =>
@@ -336,7 +341,9 @@ export default function Library() {
 									onRefresh={() => list.refresh()}
 								/>
 							}
-							onEndReached={() => list.loadMore()}
+							onEndReached={() => {
+								if (pageIsCurrent) list.loadMore();
+							}}
 							onEndReachedThreshold={0.4}
 							renderItem={({ item }) => (
 								<LibraryTile
@@ -346,6 +353,7 @@ export default function Library() {
 								/>
 							)}
 							ListFooterComponent={
+								pageIsCurrent &&
 								page?.next_cursor !== null &&
 								page?.next_cursor !== undefined ? (
 									<View className="items-center pt-2">

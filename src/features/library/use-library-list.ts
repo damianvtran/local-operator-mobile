@@ -24,6 +24,7 @@ import {
 	type LibraryBrowse,
 	libraryListRequest,
 } from "@/features/library/library-model";
+import { createLibraryRequestGate } from "@/features/library/library-request-gate";
 import type { RelayEndpoints } from "@/relay";
 
 export const LIBRARY_PAGE_SIZE = 24;
@@ -59,9 +60,15 @@ export function useLibraryList(
 	const [error, setError] = useState<string | null>(null);
 	const [loadedWith, setLoadedWith] = useState<LibraryBrowse | null>(null);
 
-	const seq = useRef(0);
-	/** The request body for the debounced browse. Kept in a ref so `loadMore`
-	 *  reads the browse the rows were loaded with, not the one being typed. */
+	const gate = useRef(createLibraryRequestGate()).current;
+	/** The browse this render is showing. A response for an older object must not
+	 *  paint, even if its ticket somehow survived: the screen replaces `browse`
+	 *  on every real filter change, so object identity is the narrowest proof
+	 *  that the answer still belongs to the field the reader sees. */
+	const browseRef = useRef(browse);
+	browseRef.current = browse;
+	/** The browse the CURRENT rows were loaded with. `loadMore` is refused unless
+	 *  this is still the live browse (review round 1, major 1). */
 	const loadedBrowse = useRef<LibraryBrowse>(browse);
 
 	const fetchPage = useCallback(
@@ -71,8 +78,7 @@ export function useLibraryList(
 			mode: "first" | "more" | "refresh",
 		) => {
 			if (client === null) return;
-			const ticket = seq.current + 1;
-			seq.current = ticket;
+			const ticket = gate.begin();
 			if (mode === "first") {
 				setLoading(true);
 				setError(null);
@@ -85,7 +91,7 @@ export function useLibraryList(
 				const answer = await client.libraryList({
 					...libraryListRequest(target, cursor, LIBRARY_PAGE_SIZE),
 				});
-				if (seq.current !== ticket) return;
+				if (!gate.accepts(ticket) || browseRef.current !== target) return;
 				/* Only a cursor page APPENDS. A focus refresh replaces: appending a fresh
 				 *  first page onto the rows it repeats would double every tile. */
 				const merged = applyLibraryPage(rows, answer, mode === "more");
@@ -95,7 +101,7 @@ export function useLibraryList(
 				setError(null);
 				loadedBrowse.current = target;
 			} catch (failure) {
-				if (seq.current !== ticket) return;
+				if (!gate.accepts(ticket) || browseRef.current !== target) return;
 				// Only the relay's own sentence is displayable; a transport failure
 				// gets the screen's retry sentence, never a status code.
 				setError(
@@ -104,14 +110,14 @@ export function useLibraryList(
 						: "We couldn't read your library just now.",
 				);
 			} finally {
-				if (seq.current === ticket) {
+				if (gate.accepts(ticket)) {
 					setLoading(false);
 					setLoadingMore(false);
 					setRefreshing(false);
 				}
 			}
 		},
-		[client, rows],
+		[client, gate, rows],
 	);
 
 	/** The debounced first page. `rows` is deliberately not a dependency: it
@@ -125,25 +131,27 @@ export function useLibraryList(
 			setLoading(true);
 			return;
 		}
-		const ticket = seq.current + 1;
-		seq.current = ticket;
+		const generation = gate.queryChanged();
 		setLoading(true);
 		setError(null);
 		const timer = setTimeout(() => {
-			if (seq.current !== ticket) return;
+			/* The browse moved while the debounce was pending: this start belongs
+			 *  to a query the reader has already left. */
+			if (gate.currentQuery() !== generation) return;
+			const ticket = gate.begin();
 			void (async () => {
 				try {
 					const answer = await client.libraryList({
-						...libraryListRequest(browse, undefined, LIBRARY_PAGE_SIZE),
+						...libraryListRequest(browse, void 0, LIBRARY_PAGE_SIZE),
 					});
-					if (seq.current !== ticket) return;
+					if (!gate.accepts(ticket) || browseRef.current !== browse) return;
 					setRows(answer.rows);
 					setPage(answer);
 					setLoadedWith(browse);
 					loadedBrowse.current = browse;
 					setError(null);
 				} catch (failure) {
-					if (seq.current !== ticket) return;
+					if (!gate.accepts(ticket) || browseRef.current !== browse) return;
 					setRows([]);
 					setPage(null);
 					setError(
@@ -152,27 +160,32 @@ export function useLibraryList(
 							: "We couldn't read your library just now.",
 					);
 				} finally {
-					if (seq.current === ticket) setLoading(false);
+					if (gate.accepts(ticket)) setLoading(false);
 				}
 			})();
 		}, SEARCH_DEBOUNCE_MS);
 		return () => clearTimeout(timer);
 		// `browse` is replaced only when a real filter changes (the screen memoises
 		// it); `client` is stable for a connection; `enabled` is the capability.
-	}, [browse, client, enabled]);
+	}, [browse, client, enabled, gate]);
 
 	const refresh = useCallback(() => {
-		void fetchPage(loadedBrowse.current, undefined, "refresh");
-	}, [fetchPage]);
+		void fetchPage(browse, void 0, "refresh");
+	}, [fetchPage, browse]);
 
 	const loadMore = useCallback(() => {
 		const cursor = page?.next_cursor;
-		if (cursor === null || cursor === undefined || loadingMore) return;
-		void fetchPage(loadedBrowse.current, cursor, "more");
-	}, [fetchPage, page?.next_cursor, loadingMore]);
+		if (cursor === null || cursor === void 0 || loadingMore) return;
+		/* A debounced search is pending or a different browse is on screen: the
+		 *  cursor belongs to rows the reader has left, and appending it would
+		 *  paint the old query under the new field. The debounced start owns the
+		 *  listing until it lands (review round 1, major 1). */
+		if (loadedBrowse.current !== browse) return;
+		void fetchPage(browse, cursor, "more");
+	}, [fetchPage, browse, page?.next_cursor, loadingMore]);
 
 	const retry = useCallback(() => {
-		void fetchPage(browse, undefined, "first");
+		void fetchPage(browse, void 0, "first");
 	}, [fetchPage, browse]);
 
 	return useMemo(
