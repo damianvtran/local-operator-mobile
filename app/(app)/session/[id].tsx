@@ -409,11 +409,17 @@ export default function Session() {
 
 	const transcript =
 		runtime.content === "disconnected" ? (
-			<EmptyState
-				headline="This session is not connected yet."
-				next="Open it from the session list once a computer is connected."
-				testID={EMPTY.session}
-			/>
+			<ScrollView
+				className="flex-1 min-h-0"
+				contentContainerStyle={{ flexGrow: 1 }}
+			>
+				<EmptyState
+					headline="This session is not connected yet."
+					next="Open it from the session list once a computer is connected."
+					testID={EMPTY.session}
+				/>
+				{connectionBanner}
+			</ScrollView>
 		) : runtime.content === "recovery" ? (
 			// With no owned frame, recovery is the content, not a fake empty chat.
 			// Its entire notice and action scroll together at enlarged text sizes;
@@ -432,9 +438,21 @@ export default function Session() {
 			// loading bars — measured at 200 % text, the composer's content ended 39 % of
 			// the way down the screen here against 99 % in `empty`/`populated`. A composer
 			// floating mid-screen is the first thing a reader notices.
-			<View className="flex-1 px-4 pt-3">
-				<Skeleton lines={3} testID={SURFACE.sessionLoading} />
-			</View>
+			runtime.connection.id === null ? (
+				<View className="flex-1 px-4 pt-3">
+					<Skeleton lines={3} testID={SURFACE.sessionLoading} />
+				</View>
+			) : (
+				<ScrollView
+					className="flex-1 min-h-0"
+					contentContainerStyle={{ flexGrow: 1 }}
+				>
+					<View className="px-4 pt-3">
+						<Skeleton lines={3} testID={SURFACE.sessionLoading} />
+					</View>
+					{connectionBanner}
+				</ScrollView>
+			)
 		) : (
 			/* The rail overlays the transcript's own area — its `flex-1` wrapper
 			 *  is what bounds the column to the transcript (the parent spans the
@@ -446,6 +464,7 @@ export default function Session() {
 					testID={SURFACE.sessionTranscript}
 					sessionId={sessionId}
 					entries={runtime.entries}
+					footer={connectionBanner}
 					streamingRowId={runtime.streamingRowId}
 					loadImage={runtime.loadImage}
 					onOpenAgent={openAgent}
@@ -653,7 +672,11 @@ export default function Session() {
 					    full width: on a tablet a composer 1366 pt wide sits under a 720 pt
 					    transcript and reads as a different surface (QA round 2, Q10). On a
 					    phone the measure is the screen, so nothing moves. */}
-					{runtime.content === "recovery" ? null : connectionBanner}
+					{/* The notice now occupies the transcript's permanent scroll footer,
+					    not scarce fixed chrome. Keep this empty sibling slot: Composer,
+					    FindBar, PendingCard and AskBar never change parents/positions on
+					    expiry. Reparenting TextInput would discard native IME state. */}
+					<View />
 
 					{/* The ask bar: the MINIMIZED affordance (§5.0), directly above the
 					    composer and BELOW the connection banner — when the relay is
