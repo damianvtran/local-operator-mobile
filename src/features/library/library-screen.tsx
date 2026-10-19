@@ -45,14 +45,13 @@ import {
 	View,
 } from "react-native";
 
-import type { LibraryAsset } from "@/contracts";
+import type { LibraryAsset, LibraryTag } from "@/contracts";
 import {
 	useConnection,
 	useListState,
 } from "@/features/auth/connection-provider";
 import { useLibraryThumbnail } from "@/features/library/library-media";
 import {
-	applyLibraryUpdate,
 	categoryForBrowse,
 	DEFAULT_BROWSE,
 	effectiveName,
@@ -153,45 +152,38 @@ export default function Library() {
 
 	const list = useLibraryList(client, browse, enabled);
 	const page = list.page;
-	/* A save made on the detail route. The list is still mounted underneath, so
-	 *  carrying its search/cursor across Back is just keeping this state; the
-	 *  saved row is patched in rather than refetching the page. */
-	const [saved, setSaved] = useState<{
-		update: LibraryUpdate;
+	/* A save made on the detail route. The canonical rows live in the hook, so
+	 *  the saved rows are reconciled there — a page-2 append keeps A's rename
+	 *  instead of layering one update over one page object. Only the global tag
+	 *  vocabulary stays page-tied: a later page carries a newer snapshot. */
+	const [savedTags, setSavedTags] = useState<{
+		tags: LibraryTag[] | null;
 		page: typeof page;
 	} | null>(null);
 	const seenRevision = useRef(libraryUpdateState().revision);
-	/* The page the focus handler saw. A focus effect with `[]` cannot read the
-	 *  latest render's page; this ref is how it records which page the save sits
-	 *  over. */
 	const pageRef = useRef(page);
 	pageRef.current = page;
+	const { applySaved } = list;
 	useFocusEffect(
 		useCallback(() => {
 			const state = libraryUpdateState();
 			if (state.revision === seenRevision.current) return;
 			seenRevision.current = state.revision;
-			if (state.update !== null) {
-				setSaved({ update: state.update, page: pageRef.current });
-			}
-		}, []),
+			/* Every saved row, not just the latest: two edits before Back must both
+			 *  survive, and an append must not drop either. */
+			applySaved(Object.values(state.updates).map((entry) => entry.asset));
+			setSavedTags({
+				tags: state.vocabulary,
+				page: pageRef.current,
+			});
+		}, [applySaved]),
 	);
-	/* A page that arrives after the save is the server's newer answer: the saved
-	 *  row is tied to the page it was applied over and stops counting the moment
-	 *  that page is replaced, without an effect that could clear it a render
-	 *  late. */
-	const activeSaved =
-		saved !== null && saved.page === page ? saved.update : null;
-	const rows = useMemo(
-		() =>
-			activeSaved === null
-				? list.rows
-				: applyLibraryUpdate(list.rows, activeSaved.asset),
-		[list.rows, activeSaved],
-	);
+	const activeTags =
+		savedTags !== null && savedTags.page === page ? savedTags.tags : null;
+	const rows = list.rows;
 	/* The save's fresh vocabulary wins over the page's snapshot until the next
 	 *  page lands; `null` means the save did not change tags. */
-	const vocabulary = activeSaved?.tags ?? page?.tags ?? [];
+	const vocabulary = activeTags ?? page?.tags ?? [];
 	/* The footer and the end-of-list fetch belong to the rows on screen. While a
 	 *  debounced browse is pending, the old page is still painted but its cursor
 	 *  is not loadable: pressing it would append the previous query under the new

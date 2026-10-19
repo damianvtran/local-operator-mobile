@@ -25,18 +25,29 @@ export interface LibraryUpdate {
 
 interface LibraryUpdatesState {
 	revision: number;
+	/** The latest save, used for the global tag vocabulary. */
 	update: LibraryUpdate | null;
+	/** Every saved row by asset id: page 2 appending must not drop asset A's
+	 *  rename, and a second save must not replace the first. */
+	updates: Record<string, LibraryUpdate>;
+	/** The latest tag vocabulary a save re-read, kept across metadata-only
+	 *  saves so a later rename cannot erase the earlier tag-count refresh. */
+	vocabulary: LibraryTag[] | null;
 }
 
 const store = createStore<LibraryUpdatesState>()(() => ({
 	revision: 0,
 	update: null,
+	updates: {},
+	vocabulary: null,
 }));
 
 export function publishLibraryUpdate(update: LibraryUpdate): void {
 	store.setState((state) => ({
 		revision: state.revision + 1,
 		update,
+		updates: { ...state.updates, [update.asset.id]: update },
+		vocabulary: update.tags ?? state.vocabulary,
 	}));
 }
 
@@ -46,5 +57,5 @@ export function libraryUpdateState(): LibraryUpdatesState {
 
 /** Tests only: the module store must not leak one case's save into the next. */
 export function resetLibraryUpdates(): void {
-	store.setState({ revision: 0, update: null });
+	store.setState({ revision: 0, update: null, updates: {}, vocabulary: null });
 }

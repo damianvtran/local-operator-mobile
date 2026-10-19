@@ -572,13 +572,14 @@ export async function saveAssetMetadata(
 	}
 }
 
-/** Applies one saved detail row to the rows the list already holds. Ids are
+/** Applies every saved detail row to the rows the list already holds. Ids are
  *  opaque, so this is the only join key; a row outside the loaded pages is left
- *  alone and appears on the next fetch. */
-export const applyLibraryUpdate = (
+ *  alone and appears on the next fetch. A Map keeps saves for different assets
+ *  independent, which an append cannot overwrite. */
+export const applyLibraryUpdates = (
 	rows: LibraryAsset[],
-	update: LibraryAsset,
-): LibraryAsset[] => rows.map((row) => (row.id === update.id ? update : row));
+	updates: ReadonlyMap<string, LibraryAsset>,
+): LibraryAsset[] => rows.map((row) => updates.get(row.id) ?? row);
 
 /* ---------------------------------------------------------------------- gate */
 

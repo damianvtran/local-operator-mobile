@@ -18,9 +18,10 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import type { LibraryListResponse } from "@/contracts";
+import type { LibraryAsset, LibraryListResponse } from "@/contracts";
 import {
 	applyLibraryPage,
+	applyLibraryUpdates,
 	type LibraryBrowse,
 	libraryListRequest,
 } from "@/features/library/library-model";
@@ -42,6 +43,9 @@ export interface LibraryListState {
 	error: string | null;
 	/** The browse that produced the current rows, so a marker can name it. */
 	loadedWith: LibraryBrowse | null;
+	/** Reconciles saved detail rows INTO the canonical rows, so a later cursor
+	 *  append cannot resurrect the pre-save row. */
+	applySaved: (assets: LibraryAsset[]) => void;
 	refresh: () => void;
 	loadMore: () => void;
 	retry: () => void;
@@ -59,7 +63,10 @@ export function useLibraryList(
 	const [refreshing, setRefreshing] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [loadedWith, setLoadedWith] = useState<LibraryBrowse | null>(null);
-
+	/** Persistent per-asset overrides. An append merges into `rows`, so applying
+	 *  the saved row only once to the page that was on screen would be lost the
+	 *  moment page 2 replaced `page`. */
+	const overrides = useRef(new Map<string, LibraryAsset>());
 	const gate = useRef(createLibraryRequestGate()).current;
 	/** The browse this render is showing. A response for an older object must not
 	 *  paint, even if its ticket somehow survived: the screen replaces `browse`
@@ -95,7 +102,7 @@ export function useLibraryList(
 				/* Only a cursor page APPENDS. A focus refresh replaces: appending a fresh
 				 *  first page onto the rows it repeats would double every tile. */
 				const merged = applyLibraryPage(rows, answer, mode === "more");
-				setRows(merged.rows);
+				setRows(applyLibraryUpdates(merged.rows, overrides.current));
 				setPage(answer);
 				setLoadedWith(target);
 				setError(null);
@@ -150,7 +157,7 @@ export function useLibraryList(
 						...libraryListRequest(browse, void 0, LIBRARY_PAGE_SIZE),
 					});
 					if (!gate.accepts(ticket) || browseRef.current !== browse) return;
-					setRows(answer.rows);
+					setRows(applyLibraryUpdates(answer.rows, overrides.current));
 					setPage(answer);
 					setLoadedWith(browse);
 					loadedBrowse.current = browse;
@@ -182,6 +189,11 @@ export function useLibraryList(
 		// it); `client` is stable for a connection; `enabled` is the capability.
 	}, [browse, client, enabled, gate]);
 
+	const applySaved = useCallback((assets: LibraryAsset[]) => {
+		for (const asset of assets) overrides.current.set(asset.id, asset);
+		setRows((current) => applyLibraryUpdates(current, overrides.current));
+	}, []);
+
 	const refresh = useCallback(() => {
 		void fetchPage(browse, void 0, "refresh");
 	}, [fetchPage, browse]);
@@ -210,6 +222,7 @@ export function useLibraryList(
 			refreshing,
 			error,
 			loadedWith,
+			applySaved,
 			refresh,
 			loadMore,
 			retry,
@@ -222,6 +235,7 @@ export function useLibraryList(
 			refreshing,
 			error,
 			loadedWith,
+			applySaved,
 			refresh,
 			loadMore,
 			retry,

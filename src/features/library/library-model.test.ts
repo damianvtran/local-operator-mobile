@@ -17,7 +17,7 @@ import type {
 } from "@/contracts";
 import {
 	applyLibraryPage,
-	applyLibraryUpdate,
+	applyLibraryUpdates,
 	categoryForBrowse,
 	composerPrompt,
 	DEFAULT_BROWSE,
@@ -274,31 +274,41 @@ describe("metadata save reconciliation", () => {
 });
 
 describe("a save is visible on the list after Back", () => {
-	it("applies the saved row to the rows the list already holds", () => {
+	it("keeps every saved row across an appended page", () => {
 		resetLibraryUpdates();
-		const old = asset({
+		const oldA = asset({
 			id: "la_0000000000000001",
-			name: "Old name",
+			name: "Old A",
 			tags: [{ id: "0a1b2c3d4e", name: "old", category: "topic" }],
 		});
-		const untouched = asset({ id: "la_0000000000000002", name: "Other" });
-		const updated = asset({
+		const oldB = asset({ id: "la_0000000000000002", name: "Old B" });
+		const pageTwo = asset({ id: "la_0000000000000003", name: "Page two" });
+		const savedA = asset({
 			id: "la_0000000000000001",
-			name: "New name",
+			name: "Saved A",
 			tags: [{ id: "1a2b3c4d5e", name: "new", category: "topic" }],
 		});
+		const savedB = asset({ id: "la_0000000000000002", name: "Saved B" });
 		const vocabulary = [catalogueTag("1a2b3c4d5e", "new")];
 
-		publishLibraryUpdate({ asset: updated, tags: vocabulary });
+		publishLibraryUpdate({ asset: savedA, tags: vocabulary });
+		publishLibraryUpdate({ asset: savedB, tags: null });
 		const state = libraryUpdateState();
-		const rows = applyLibraryUpdate(
-			[old, untouched],
-			state.update?.asset ?? old,
+		const saved = new Map(
+			Object.values(state.updates).map(
+				(entry) => [entry.asset.id, entry.asset] as const,
+			),
 		);
+		const rows = applyLibraryUpdates([oldA, oldB, pageTwo], saved);
 
-		expect(rows[0]?.name).toBe("New name");
+		expect(rows.map((row) => row.name)).toEqual([
+			"Saved A",
+			"Saved B",
+			"Page two",
+		]);
 		expect(rows[0]?.tags[0]?.name).toBe("new");
-		expect(rows[1]).toBe(untouched);
-		expect(state.update?.tags).toEqual(vocabulary);
+		expect(Object.keys(state.updates)).toHaveLength(2);
+		expect(state.updates.la_0000000000000001?.tags).toEqual(vocabulary);
+		expect(state.vocabulary).toEqual(vocabulary);
 	});
 });

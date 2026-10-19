@@ -262,6 +262,56 @@ describe("useLibraryList stale pages", () => {
 		expect(calls[3]?.request.cursor).toBe("cursor-new");
 	});
 
+	it("keeps two saved rows when a cursor page appends", async () => {
+		await vi.advanceTimersByTimeAsync(300);
+		calls[0]?.resolve(
+			listing(
+				[row("la_saved_a", "Old A"), row("la_saved_b", "Old B")],
+				"cursor-two",
+			),
+		);
+		await settle();
+
+		result?.applySaved([
+			row("la_saved_a", "Saved A"),
+			row("la_saved_b", "Saved B"),
+		]);
+		await settle();
+		expect(result?.rows.map((asset) => asset.name)).toEqual([
+			"Saved A",
+			"Saved B",
+		]);
+
+		/* A refresh landing with the pre-save rows must not resurrect them: the
+		 *  per-asset overrides are reapplied when the page replaces `rows`. */
+		result?.refresh();
+		await settle();
+		expect(calls).toHaveLength(2);
+		calls[1]?.resolve(
+			listing(
+				[row("la_saved_a", "Old A"), row("la_saved_b", "Old B")],
+				"cursor-two",
+			),
+		);
+		await settle();
+		expect(result?.rows.map((asset) => asset.name)).toEqual([
+			"Saved A",
+			"Saved B",
+		]);
+
+		result?.loadMore();
+		await settle();
+		expect(calls).toHaveLength(3);
+		calls[2]?.resolve(listing([row("la_page_two", "Page two")], null));
+		await settle();
+
+		expect(result?.rows.map((asset) => asset.name)).toEqual([
+			"Saved A",
+			"Saved B",
+			"Page two",
+		]);
+	});
+
 	it("clears a superseded refresh spinner across a query change", async () => {
 		await vi.advanceTimersByTimeAsync(300);
 		calls[0]?.resolve(listing([row("la_old_1", "old one")], "cursor-old"));
