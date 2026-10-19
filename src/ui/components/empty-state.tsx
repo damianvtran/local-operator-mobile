@@ -53,7 +53,13 @@ export const EmptyState = ({
 	const markColor = useTokenColor("ink-dim");
 	return (
 		<View
-			className={compact ? "items-center gap-2 px-4 py-2" : emptyStateClasses}
+			/* The compact form already lives inside a padded container (the sheet body
+			 *  is `px-4`), so its own `px-4` narrowed the column twice over: at 200 %
+			 *  on a 320 pt phone that was the difference between "No categories yet."
+			 *  on one line and hanging "yet." on a second (round 3). The tightened
+			 *  gap/pad is the same correction for the vertical axis, where the pinned
+			 *  footer took the room the sentence needed. */
+			className={compact ? "items-center gap-1 py-1" : emptyStateClasses}
 			testID={testID}
 		>
 			{mark ? <BrandMark size={48} color={markColor} /> : null}

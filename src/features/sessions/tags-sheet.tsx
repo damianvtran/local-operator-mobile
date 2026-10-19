@@ -357,12 +357,27 @@ export const SessionTagsSheet = ({
 	};
 
 	const nothingSelected = current.tags.length === 0;
-	/* One destructive action, rendered in ONE of two places: above the alert when
-	 *  the catalogue failed — the sheet's remaining answer there, and a control
-	 *  the 200 % frame must show without scrolling — and after the catalogue or
-	 *  the empty state otherwise. */
+	/* An EMPTY REGISTRY is its own state: the sheet renders the explanatory empty
+	 *  state instead of a catalogue, and Remove all is the sheet's only
+	 *  sheet-level answer, so it belongs in the pinned footer (see `footer`).
+	 *  The test is the RAW catalogue, not `options.length`: `catalogueWithAssigned`
+	 *  merges the row's own assignment into `options`, so an empty registry on a
+	 *  tagged row still offers one checkbox (the captured `tags-empty-catalogue`
+	 *  state), and keying on `options` would leave exactly that frame unfixed.
+	 *  A disabled render is skipped rather than pinned — a row with nothing to
+	 *  clear has no action, and a grey control would claim otherwise. The
+	 *  in-flight write keeps it mounted after the optimistic draft empties:
+	 *  unmounting it there would also unmount the `Saving…` cue. */
+	const emptyCatalogue =
+		catalogue.kind === "ready" && catalogue.tags.length === 0;
+	const removeAllPinned =
+		emptyCatalogue && (!nothingSelected || pending === "*" || removeAllQueued);
+	/* One destructive action, rendered in ONE place per state: pinned in the
+	 *  footer for an empty registry, above the alert when the catalogue failed
+	 *  (the sheet's remaining answer, and a control the 200 % frame must show
+	 *  without scrolling), and after the catalogue otherwise. */
 	const removeAllAction = (
-		<View className="gap-1 pt-2">
+		<View className="gap-1">
 			<Button
 				testID={CONTROL.sessionTagsRemoveAll}
 				label="Remove all tags"
@@ -391,9 +406,14 @@ export const SessionTagsSheet = ({
 				/* The answering control is PINNED per state. The error state's
 				 *  "Try again" used to sit at the end of the scrolling body and fell
 				 *  below the fold at 200 % on both a 320 pt phone and the 390 pt one
-				 *  (review round 1, D1). When the catalogue is ready there is no
-				 *  footer action: the checkboxes are the answer, and Remove all is a
-				 *  destructive body action rather than the strongest slot. */
+				 *  (review round 1, D1). A READY catalogue with options has no footer
+				 *  action — the checkboxes are the answer, and Remove all stays a
+				 *  destructive body action rather than the strongest slot. An EMPTY
+				 *  registry renders the explanation instead of a catalogue (at most
+				 *  the row's own merged assignment), so Remove all is its sheet-level
+				 *  answer and is pinned: in the body it followed the empty state, and
+				 *  the 200 % SE frame cut the sentence and pushed it under the fold
+				 *  (round 3). */
 				footer={
 					catalogue.kind === "error" ? (
 						<Button
@@ -402,10 +422,24 @@ export const SessionTagsSheet = ({
 							onPress={() => setReloadKey((key) => key + 1)}
 							variant="outline"
 						/>
+					) : removeAllPinned ? (
+						removeAllAction
 					) : undefined
 				}
 			>
-				<View className="gap-3 pb-6">
+				{/* The body's own bottom gutter is for the NO-FOOTER case. With a pinned
+				 *  footer the Sheet already spends 16 pt there, and the extra 24 made
+				 *  the content overflow the body by a hair in the empty registry — the
+				 *  cut-edge fade then painted over the last line of the explanation at
+				 *  200 % on a 320 pt phone (round 3). The error state has a footer too,
+				 *  so it takes the same branch; nothing moves, the cue just stops
+				 *  claiming there is more below. */}
+				<View
+					className={cx(
+						"gap-3",
+						catalogue.kind === "error" || emptyCatalogue ? "" : "pb-6",
+					)}
+				>
 					{refusal !== null ? (
 						<Text
 							className="text-body-sm text-danger"
@@ -442,7 +476,12 @@ export const SessionTagsSheet = ({
 					) : options.length === 0 ? (
 						<EmptyState
 							headline="No categories yet."
-							next="Created in the desktop app. You can still remove this conversation's tags."
+							/* The pinned footer IS the second line's action here, so the
+							 *  copy names only where categories come from: the old sentence
+							 *  repeated the button and was the line the 200 % SE frame cut
+							 *  (round 3). Nothing to clear has no button below, and the
+							 *  shorter copy is still the whole truth. */
+							next="Created on desktop."
 							/* The sheet at 200 % is ~300 pt tall; the mark is decorative and
 							 *  the full-surface centring pushes the sentence under the fold, so
 							 *  the sheet takes the inline form. */
@@ -461,7 +500,10 @@ export const SessionTagsSheet = ({
 							{catalogue.tags.length === 0 ? (
 								<EmptyState
 									headline="No categories yet."
-									next="Created in the desktop app. You can still remove this conversation's tags below."
+									/* Same short line as the other empty-registry branch: the pinned
+									 *  footer names the action, and the longer sentence was the copy
+									 *  the 200 % SE body could not show in full (round 3). */
+									next="Created on desktop."
 									mark={false}
 									compact
 									testID={SURFACE.sessionTagsEmpty}
@@ -548,7 +590,9 @@ export const SessionTagsSheet = ({
 					 *  a row that HAS tags can still be cleared while the registry is down.
 					 *  Not while the catalogue is loading: the control would appear and
 					 *  move under the thumb as the read settles. */}
-					{catalogue.kind === "ready" ? removeAllAction : null}
+					{catalogue.kind === "ready" && !emptyCatalogue
+						? removeAllAction
+						: null}
 				</View>
 			</Sheet>
 			<Dialog

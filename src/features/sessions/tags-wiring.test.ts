@@ -200,10 +200,11 @@ describe("the tags sheet", () => {
 		);
 	});
 
-	it("pins the catalogue error's answer in the footer and Remove all in the body", () => {
-		/* D1/D3: Try again is the answering control when the read failed; Remove
-		 *  all is a destructive body action behind a confirm, never the footer's
-		 *  strongest slot. */
+	it("pins each state's answering control and renders Remove all exactly once", () => {
+		/* D1/D3 + round 3: Try again answers a failed read; an EMPTY registry's
+		 *  only sheet-level answer is Remove all, pinned in the footer; a ready
+		 *  catalogue keeps Remove all as a destructive body action behind a
+		 *  confirm, never the footer's strongest slot. */
 		expect(SHEET).toContain('catalogue.kind === "error" ? (');
 		expect(SHEET).toContain("CONTROL.sessionTagsRetry");
 		expect(SHEET).toContain("<Dialog");
@@ -213,15 +214,36 @@ describe("the tags sheet", () => {
 			'catalogue.kind === "error" ? removeAllAction : null',
 		);
 		/* Exactly one render per state: the ready branch owns the normal
-		 *  placement, and the error branch owns the pinned one. A `loading`
-		 *  fallthrough used to emit a SECOND control beside the alert. */
-		expect(SHEET).toContain(
-			'catalogue.kind === "ready" ? removeAllAction : null',
-		);
+		 *  placement, the empty branch owns the pinned one, and the error branch
+		 *  owns the above-alert one. A `loading` fallthrough used to emit a
+		 *  SECOND control beside the alert. */
+		expect(SHEET).toContain('catalogue.kind === "ready" && !emptyCatalogue');
 		expect(SHEET).not.toContain(
 			'catalogue.kind === "loading" ? null : removeAllAction',
 		);
-		expect(SHEET.split("? removeAllAction : null")).toHaveLength(3);
+		/* One `removeAllAction` element, referenced from the footer and from the
+		 *  body branches — never rendered twice in one state. */
+		expect(SHEET.split("? removeAllAction : null")).toHaveLength(2);
+		expect(SHEET).toContain(": removeAllPinned ? (");
+	});
+
+	it("keys the pinned empty action on the raw catalogue, not the merged options", () => {
+		/* `catalogueWithAssigned` merges the row's own tag into `options`, so the
+		 *  captured empty-catalogue state (a tagged row against an empty registry)
+		 *  has one checkbox and `options.length === 0` is FALSE. Keying the footer
+		 *  on it would leave that frame unfixed. */
+		expect(SHEET).toContain(
+			'catalogue.kind === "ready" && catalogue.tags.length === 0',
+		);
+		expect(SHEET).toContain(
+			'emptyCatalogue && (!nothingSelected || pending === "*" || removeAllQueued)',
+		);
+		/* The body's own pb-6 is a no-footer gutter; with the pinned footer it
+		 *  made the content overflow by a hair and the cut-edge fade covered the
+		 *  explanation's last line at 200 % SE (round 3). */
+		expect(SHEET).toContain(
+			'catalogue.kind === "error" || emptyCatalogue ? "" : "pb-6"',
+		);
 	});
 
 	it("keeps an assigned tag selectable when the registry is empty", () => {
@@ -233,7 +255,9 @@ describe("the tags sheet", () => {
 		expect(SHEET).toContain(") : options.length === 0 ? (");
 		expect(SHEET).not.toContain(") : catalogue.tags.length === 0 ? (");
 		expect(SHEET).toContain("catalogue.tags.length === 0 ? (");
-		expect(SHEET).toContain("remove this conversation's tags below.");
+		/* Both empty-registry branches now name no action in the sentence: the
+		 *  pinned footer IS the action, and the longer copy was cut at 200 % SE. */
+		expect(SHEET.split('next="Created on desktop."')).toHaveLength(3);
 	});
 
 	it("renders each catalogue tag as a checkbox with an ARIA checked state", () => {
