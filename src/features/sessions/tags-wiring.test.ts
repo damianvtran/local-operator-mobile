@@ -64,6 +64,14 @@ describe("the past list", () => {
 		expect(PAST).toContain("pastTagLineId(item.id)");
 	});
 
+	it("announces the row's tags from the pressable that owns the label", () => {
+		/* The past row is one button; its tag line is inside it and cannot be a
+		 *  second stop, so the tags are folded into the row's own label — the
+		 *  same defect and fix as the conversations pane (D4/Q2). */
+		expect(PAST).toContain("tagAnnouncement(item.tags ?? [])");
+		expect(PAST).toContain("announce={false}");
+	});
+
 	it("offers no assignment path", () => {
 		expect(PAST).not.toContain("SessionTagsSheet");
 		expect(PAST).not.toContain("sessionTagsAction");
@@ -72,10 +80,21 @@ describe("the past list", () => {
 });
 
 describe("the session header", () => {
-	it("renders the read-only line from the list frame's row", () => {
+	it("renders the line from the list frame's row", () => {
 		expect(SESSION).toContain("headerDetail={");
 		expect(SESSION).toContain("sessionHeaderTagLineId(sessionId)");
 		expect(SESSION).toContain("useListState((state) =>");
+	});
+
+	it("opens the same sheet through a disclosed control on a local row", () => {
+		/* U1: the header showed the tags and exposed no control. The line is the
+		 *  disclosure, gated by the tested capability AND the row's locality, and
+		 *  it feeds the SAME sheet — no second write path. */
+		expect(SESSION).toContain("canAssignSessionTags(capabilities)");
+		expect(SESSION).toContain("isRemoteRow(listRow)");
+		expect(SESSION).toContain("CONTROL.sessionHeaderTagsAction");
+		expect(SESSION).toContain("<SessionTagsSheet");
+		expect(SESSION).toContain("listRow?.tags ?? []");
 	});
 });
 
@@ -92,42 +111,92 @@ describe("the tag line component", () => {
 
 describe("the tags sheet", () => {
 	it("derives the whole desired state through the tested function", () => {
-		expect(SHEET).toContain(
-			"desiredTagWrite(current.tags, current.primary, tag.id)",
-		);
+		expect(SHEET).toContain("desiredTagWrite(base.tags, base.primary, tag.id)");
 		expect(SHEET).toContain("clearedTags()");
 	});
 
 	it("sends the desired state through the one endpoint", () => {
 		expect(SHEET).toContain("client.setSessionTags(");
 		expect(SHEET).toContain("sessionId,");
-		expect(SHEET).toContain("desiredTags");
-		expect(SHEET).toContain("desiredPrimary");
+		expect(SHEET).toContain("request.desired.tags");
+		expect(SHEET).toContain("request.desired.primary");
 	});
 
 	it("settles on the read-back, defending the primary", () => {
+		expect(SHEET).toContain("tags: answer.tags,");
 		expect(SHEET).toContain(
-			"setDraft({\n\t\t\t\t\ttags: answer.tags,\n\t\t\t\t\tprimary: settledPrimary(answer.tags, answer.primary),\n\t\t\t\t});",
+			"primary: settledPrimary(answer.tags, answer.primary),",
 		);
 	});
 
-	it("reverts the toggle and shows the relay's own sentence on refusal", () => {
-		/* The catch is the revert: dropping the draft falls back to the list
-		 *  row, and `displayableMessage` is the `error` body rather than a
-		 *  re-worded status. */
-		expect(SHEET).toMatch(/catch \(error\) \{[\s\S]*?setDraft\(null\);/);
+	it("does not paint a read-back over a newer list frame", () => {
+		/* J: a frame that landed while the write was in flight is the relay's
+		 *  later answer; the older read-back must not overwrite it. */
+		expect(SHEET).toContain(
+			"startedAt.current.get(request) === frameSeq.current",
+		);
+	});
+
+	it("reverts and says the write did not save when the relay refuses", () => {
+		/* The revert is dropping the draft (falls back to the list row), and the
+		 *  sentence leads with the outcome before the relay's own body. */
+		expect(SHEET).toContain("onRefused:");
+		expect(SHEET).toContain("setDraft(null);");
+		expect(SHEET).toContain("That didn't save.");
 		expect(SHEET).toContain("error.displayableMessage");
 	});
 
-	it("holds one in-flight write at a time and disables every row meanwhile", () => {
-		expect(SHEET).toContain("if (pending !== null) return;");
-		expect(SHEET).toContain("accessibilityState={{ checked, disabled: busy }}");
+	it("queues a press made while one write is unanswered instead of dropping it", () => {
+		/* U2: the old rule returned early and silently lost the press. The queue
+		 *  keeps every checkbox live and coalesces to the newest desired state. */
+		expect(SHEET).toContain("new TagWriteQueue(");
+		expect(SHEET).toContain("queue.push({ desired, key: tag.id })");
+		expect(SHEET).not.toContain("if (pending !== null) return;");
+		expect(SHEET).not.toContain("disabled={busy}");
 	});
 
-	it("renders each catalogue tag as a checkbox with an id and a checked label", () => {
+	it("merges assigned tags into the checkbox list", () => {
+		/* K: a stale catalogue must not hide an assignment and make it
+		 *  un-unselectable. */
+		expect(SHEET).toContain(
+			"catalogueWithAssigned(catalogue.tags, current.tags)",
+		);
+	});
+
+	it("keys the catalogue read on the connection identity, not the relay function", () => {
+		/* I: `relay` is rebuilt on incidental renders; re-running the effect on
+		 *  its identity could clear the in-flight guard mid-press. */
+		expect(SHEET).toContain("const connectionIdentity = useConnectionState(");
+		expect(SHEET).toContain(
+			"}, [visible, reloadKey, connectionIdentity, setDraft]);",
+		);
+	});
+
+	it("pins the catalogue error's answer in the footer and Remove all in the body", () => {
+		/* D1/D3: Try again is the answering control when the read failed; Remove
+		 *  all is a destructive body action behind a confirm, never the footer's
+		 *  strongest slot. */
+		expect(SHEET).toContain('catalogue.kind === "error" ? (');
+		expect(SHEET).toContain("CONTROL.sessionTagsRetry");
+		expect(SHEET).toContain("<Dialog");
+		expect(SHEET).toContain("sessionTagsRemoveAllDialog");
+		expect(SHEET).toContain('title="Remove all tags?"');
+		expect(SHEET).toContain(
+			'catalogue.kind === "error" ? removeAllAction : null',
+		);
+		expect(SHEET).toContain(
+			'catalogue.kind === "loading" ? null : removeAllAction',
+		);
+	});
+
+	it("renders each catalogue tag as a checkbox with an ARIA checked state", () => {
 		expect(SHEET).toContain("accessibilityRole={ROLE.checkbox}");
 		expect(SHEET).toContain("sessionTagOptionId(tag.id)");
 		expect(SHEET).toContain('checked ? "checked" : "unchecked"');
+		/* Q1: react-native-web does not read `accessibilityState`, so the AX
+		 *  tree said checked:false until `aria-checked` was written beside it. */
+		expect(SHEET).toContain("accessibilityState={{ checked }}");
+		expect(SHEET).toContain("aria-checked={checked}");
 	});
 
 	it("has no local tag store: its state is the list frame plus the write in flight", () => {

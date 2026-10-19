@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { View } from "react-native";
+import { Pressable, View } from "react-native";
 
 import type { TagRef } from "@/contracts";
 import { tagAnnouncement, tagLineFor } from "@/features/sessions/tags";
@@ -30,9 +30,34 @@ export type SessionTagLineProps = {
 	tags: readonly TagRef[];
 	/** The caller's identifier: the row, header or past-row family it belongs to. */
 	testID: string;
+	/**
+	 * Present when this line OPENS the assignment sheet. The whole line becomes
+	 * one button — the session header's disclosure — and the label/hint below are
+	 * what make it discoverable: a row of badges with no role is a fact, not a
+	 * control.
+	 */
+	onPress?: () => void;
+	/** The control id for the interactive form (`CONTROL.sessionHeaderTagsAction`).
+	 *  The inner line keeps `testID`, so the capture marker and the flow selector
+	 *  are both addressable without a second paint. */
+	actionTestID?: string;
+	accessibilityHint?: string;
+	/**
+	 * Whether this line is its own accessibility element. Default true. A caller
+	 * that folds the announcement into an enclosing row or button passes false,
+	 * so the reader hears one sentence rather than the same tags twice.
+	 */
+	announce?: boolean;
 };
 
-export const SessionTagLine = ({ tags, testID }: SessionTagLineProps) => {
+export const SessionTagLine = ({
+	tags,
+	testID,
+	onPress,
+	actionTestID,
+	accessibilityHint,
+	announce = true,
+}: SessionTagLineProps) => {
 	const [width, setWidth] = useState(0);
 	/* The rendered scale, matching the row's own type maths: the paint happens at
 	 *  the platform's factor, so the fit must use the same one. */
@@ -41,16 +66,20 @@ export const SessionTagLine = ({ tags, testID }: SessionTagLineProps) => {
 	if (tags.length === 0) return null;
 	const line = tagLineFor(tags, width, effectiveScale);
 
-	return (
+	const content = (
 		<View
 			className="flex-row items-center gap-1"
 			onLayout={(event) => {
 				const measured = event.nativeEvent.layout.width;
 				if (measured !== width) setWidth(measured);
 			}}
-			accessible
-			accessibilityRole={ROLE.text}
-			accessibilityLabel={tagAnnouncement(tags)}
+			/* The enclosing control owns the announcement when there is one; the
+			 * badges are then a painting, not a second stop in the reader's path. */
+			accessible={onPress === undefined && announce}
+			accessibilityRole={onPress === undefined ? ROLE.text : undefined}
+			accessibilityLabel={
+				onPress === undefined && announce ? tagAnnouncement(tags) : undefined
+			}
 			testID={testID}
 		>
 			{line.labels.map((label, index) => (
@@ -58,5 +87,18 @@ export const SessionTagLine = ({ tags, testID }: SessionTagLineProps) => {
 			))}
 			{line.more > 0 ? <Badge label={`+${line.more}`} /> : null}
 		</View>
+	);
+
+	if (onPress === undefined) return content;
+	return (
+		<Pressable
+			accessibilityRole={ROLE.button}
+			accessibilityLabel={tagAnnouncement(tags)}
+			accessibilityHint={accessibilityHint}
+			onPress={onPress}
+			testID={actionTestID ?? testID}
+		>
+			{content}
+		</Pressable>
 	);
 };

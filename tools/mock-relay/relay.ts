@@ -3123,6 +3123,15 @@ export function createRelay(options: RelayOptions = {}) {
 					sendJson(res, 422, errorBody("Unknown category id"));
 					return;
 				}
+				/* The scenario's own refusal: a real answer from the route, after the
+				 *  request is valid, so the sheet's refusal path is driven by the wire
+				 *  rather than by a staged client state (`tags-sheet-refused`). */
+				if (tagRoutes.failWrite !== undefined) {
+					sendJson(res, tagRoutes.failWrite.status, {
+						error: tagRoutes.failWrite.error,
+					});
+					return;
+				}
 				if (primaryRaw !== null && !requested.includes(primaryRaw)) {
 					sendJson(res, 422, errorBody("primary must be one of tags"));
 					return;

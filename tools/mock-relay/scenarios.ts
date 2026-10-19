@@ -174,6 +174,13 @@ export interface ScenarioWorld {
 		catalogue: TagCatalogueEntry[];
 		holdCatalogue?: boolean;
 		failCatalogue?: { status: number; error: string };
+		/**
+		 * Every PUT is refused with this answer, after the request's shape and
+		 * catalogue are validated. It exists for the refusal CELL: the sheet must
+		 * paint the relay's own sentence and revert, and a real 422 is what makes
+		 * that a measurement rather than a staged overlay.
+		 */
+		failWrite?: { status: number; error: string };
 	};
 	/**
 	 * The armed-index surface this state pins (S17): the whole
@@ -627,9 +634,12 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 			[TAG_RESEARCH, TAG_WORK],
 			TAG_WORK.id,
 		);
+		/* The 320 pt frame's subject: three categories on one row, beside a name
+		 *  long enough that the row title must truncate. It is inserted second in
+		 *  the listing so the narrow capture shows it without scrolling. */
 		const three = taggedRow(
 			"tag-three-row",
-			"Three categories",
+			"Three categories and a long conversation name",
 			[TAG_WORK, TAG_RESEARCH, TAG_LONG],
 			TAG_RESEARCH.id,
 		);
@@ -645,12 +655,15 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 		});
 		return {
 			projections: {
+				/* FIRST on purpose: the 320 pt frame must show the three-tag row — and
+				 *  its `+1` — without a scroll, at 100 % AND at 200 % (where only one
+				 *  row fits). The unit tests pin the fit; this is the rendered proof. */
+				[three.projection.session_id]: three.projection,
 				[liveIdle.session_id]: projectionFrom(liveIdle, {
 					session_id: liveIdle.session_id,
 				}),
 				[one.projection.session_id]: one.projection,
 				[two.projection.session_id]: two.projection,
-				[three.projection.session_id]: three.projection,
 				[long.projection.session_id]: long.projection,
 				[untagged.session_id]: untagged,
 			},
@@ -929,8 +942,38 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 	add(
 		"tags",
 		"Conversation tags on the list, the session header and past sessions: rows carrying one, two and three categories, a long name, and an untagged neighbour so 'no tags means no line' is a frame rather than a claim.",
-		["S15/tags", "S15/tags-sheet"],
+		/* The READ surfaces share one world so the row, the header, the past list
+		 *  and the menu cannot disagree about an assignment. The sheet's write
+		 *  states below are their own scenarios because they differ in what the
+		 *  relay answers, not in what is assigned. */
+		[
+			"S15/tags",
+			"S15/tags-menu",
+			"S15/tags-sheet",
+			"S5/tags-header",
+			"S10/tags",
+		],
 		() => tagsWorld(),
+	);
+
+	add(
+		"tags-toggled",
+		"A tag toggled in the sheet and settled: the relay's read-back is the frame, with the newly selected category checked and the row's own state unchanged until the next frame. The cell presses a real checkbox against a real PUT.",
+		["S15/tags-sheet-toggled"],
+		() => tagsWorld(),
+	);
+
+	add(
+		"tags-refused",
+		"A tag toggle the relay refuses with its own 422 (`Unknown category id`): the checkbox reverts to the list's assignment and the sheet says `That didn't save.` before the relay's sentence.",
+		["S15/tags-sheet-refused"],
+		() => ({
+			...tagsWorld(),
+			sessionTags: {
+				catalogue: TAG_CATALOGUE,
+				failWrite: { status: 422, error: "Unknown category id" },
+			},
+		}),
 	);
 
 	add(

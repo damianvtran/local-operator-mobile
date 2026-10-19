@@ -48,7 +48,10 @@ import { useCompletionAck } from "@/features/session/use-completion-ack";
 import { draftSlashQuery, useComposer } from "@/features/session/use-composer";
 import { useFind } from "@/features/session/use-find";
 import { useSessionRuntime } from "@/features/session/use-session";
+import { isRemoteRow } from "@/features/sessions/session-projection";
 import { SessionTagLine } from "@/features/sessions/tag-line";
+import { canAssignSessionTags } from "@/features/sessions/tags";
+import { SessionTagsSheet } from "@/features/sessions/tags-sheet";
 import {
 	CONTROL,
 	EMPTY,
@@ -98,6 +101,13 @@ export default function Session() {
 		state.sessions.find((row) => row.session_id === sessionId),
 	);
 	const router = useRouter();
+	/* The header's tag line is a DISCLOSURE when this conversation is the local
+	 *  one and the relay offers the routes: it opens the same sheet the list
+	 *  row's menu does, fed by this same list frame. A remote row keeps the line
+	 *  read-only — its store is another device's, and this phone has no route to
+	 *  write it. One sheet, one write path; the alternative was a second state to
+	 *  reconcile against the same SSE frame. */
+	const [tagsOpen, setTagsOpen] = useState(false);
 
 	const runtime = useSessionRuntime(sessionId);
 	/* The relay's capability block, off the same list frame the screen already reads
@@ -505,16 +515,26 @@ export default function Session() {
 					icon={({ color, size }) => <Search color={color} size={size} />}
 				/>
 			}
-			/* The conversation's tags, in the header's own column. Read-only here:
-			 *  assignment is a list-row menu action (the pane owns the sheet), and a
-			 *  second write path on this screen would be a second state to reconcile
-			 *  against the same SSE frame. The LIST frame carries the pair on every
-			 *  relay that has the field; an older relay defaults to `[]`. */
+			/* The conversation's tags, in the header's own column. The line is a
+			 *  disclosure on a LOCAL conversation whose relay advertises the routes
+			 *  (review round 1, U1): the tags are already the subject, so the line is
+			 *  the control that opens their sheet. A remote row (or an older relay)
+			 *  keeps it read-only. The LIST frame carries the pair on every relay that
+			 *  has the field; an older relay defaults to `[]`, which paints no line. */
 			headerDetail={
 				(listRow?.tags?.length ?? 0) > 0 ? (
 					<SessionTagLine
 						tags={listRow?.tags ?? []}
 						testID={sessionHeaderTagLineId(sessionId)}
+						onPress={
+							listRow !== undefined &&
+							!isRemoteRow(listRow) &&
+							canAssignSessionTags(capabilities)
+								? () => setTagsOpen(true)
+								: undefined
+						}
+						actionTestID={CONTROL.sessionHeaderTagsAction}
+						accessibilityHint="Shows the tag choices for this conversation"
 					/>
 				) : undefined
 			}
@@ -761,6 +781,16 @@ export default function Session() {
 				onActivate={find.activate}
 				messages={find.messages}
 				older={runtime.olderThanLoaded}
+			/>
+
+			{/* The header's disclosure target: the SAME sheet the list row's menu
+			    opens, fed by the same list frame. One write path. */}
+			<SessionTagsSheet
+				visible={tagsOpen}
+				sessionId={sessionId}
+				tags={listRow?.tags ?? []}
+				primary={listRow?.primary ?? null}
+				onClose={() => setTagsOpen(false)}
 			/>
 
 			{/* The walked queue (§5.3): the aggregate route, so a sitting can clear

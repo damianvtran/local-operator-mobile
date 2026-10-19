@@ -5,6 +5,7 @@ import { FlatList, Pressable, RefreshControl, Text, View } from "react-native";
 import type { PastSession } from "@/contracts";
 import { useConnection } from "@/features/auth/connection-provider";
 import { SessionTagLine } from "@/features/sessions/tag-line";
+import { tagAnnouncement } from "@/features/sessions/tags";
 import {
 	CONTROL,
 	EMPTY,
@@ -247,7 +248,11 @@ export default function PastSessions() {
 					renderItem={({ item }) => (
 						<Pressable
 							accessibilityRole={ROLE.button}
-							accessibilityLabel={`${item.name || "untitled"}${item.forked ? ", a copy" : ""}`}
+							accessibilityLabel={`${item.name || "untitled"}${item.forked ? ", a copy" : ""}${
+								(item.tags?.length ?? 0) > 0
+									? `, ${tagAnnouncement(item.tags ?? [])}`
+									: ""
+							}`}
 							onPress={() => void resume(item)}
 							testID={pastRowId(item.id)}
 						>
@@ -266,6 +271,9 @@ export default function PastSessions() {
 									<SessionTagLine
 										tags={item.tags ?? []}
 										testID={pastTagLineId(item.id)}
+										/* The pressable row announces the tags; a second
+										 *  accessible node here would say them twice. */
+										announce={false}
 									/>
 									<View className="flex-row items-center gap-2">
 										<Text

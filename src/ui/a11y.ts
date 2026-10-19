@@ -40,6 +40,10 @@ export const ROLE = {
 	radio: "radio",
 	switch: "switch",
 	checkbox: "checkbox",
+	/* ARIA's modal surface. Spelled through the `role` prop (RN's
+	 *  `AccessibilityRole` union has no `dialog`), the same reason `status` is:
+	 *  a sheet must have an accessible name, and only a dialog role gives it one. */
+	dialog: "dialog",
 	progressbar: "progressbar",
 	summary: "summary",
 	none: "none",
@@ -249,7 +253,11 @@ export const CONTROL = {
 	 *  once (the drawer over the home); the action opens the sheet, whose one
 	 *  mutation control is `Remove all`. */
 	sessionTagsAction: "session-tags-action",
+	/* The session header's tag line when this conversation can be edited: the
+	 *  same sheet as the row menu, opened from the screen that shows the tags. */
+	sessionHeaderTagsAction: "session-header-tags-action",
 	sessionTagsRemoveAll: "session-tags-remove-all",
+	sessionTagsRemoveAllDialog: "session-tags-remove-all-dialog",
 	sessionTagsRetry: "session-tags-retry",
 	/* --- the move/offload sheet (the sessions-and-delegation half, S15's mesh
 	 *  states). `confirm` and `copy` are the two verbs of ONE destination
@@ -786,6 +794,10 @@ export const SURFACE = {
 	/** A write the relay refused, in the sheet's body: the relay's OWN sentence
 	 *  (`error` body), never a status code re-worded here. */
 	sessionTagsRefusal: "session-tags-refusal",
+	/** A read-back has been painted (`handleSettled` accepted it). Zero-size: it is
+	 *  the affirmative marker for the toggled cell, which is otherwise visually
+	 *  identical to the sheet's populated state. */
+	sessionTagsReadBack: "session-tags-read-back",
 	/* --- the move/offload sheet's states. Each is painted ONLY in its own state,
 	 *  because a frame asserting "the move is in progress" must not also satisfy
 	 *  "the receipt is up" — and the sheet is a state a person reaches by an
@@ -1346,6 +1358,17 @@ export const STATE_MARKER = {
 		"tags-sheet-empty": SURFACE.sessionTagsEmpty,
 		"tags-sheet-loading": SURFACE.sessionTagsLoading,
 		"tags-sheet-error": SURFACE.sessionTagsError,
+		/* The write states (round-1 remediation): a toggle whose read-back was
+		 *  painted, and a toggle the relay refused. Each has its own marker, so a
+		 *  refusal frame cannot satisfy the settled one. */
+		"tags-sheet-toggled": SURFACE.sessionTagsReadBack,
+		"tags-sheet-refused": SURFACE.sessionTagsRefusal,
+		/* The long-press menu from the TAGS world: the Tags… entry is painted only
+		 *  inside that menu, so its control id is the affirmative claim ("the held
+		 *  press opened the menu and offered the tag action"). Reusing the sheet's
+		 *  own id would collide with `menu-open` and make the zero-duplicate check
+		 *  vacuous. */
+		"tags-menu": CONTROL.sessionTagsAction,
 	},
 	/* The queued-ask surfaces (E2). `bar` is the one state a session screen
 	 *  carries while anything is outstanding — the marker must NOT paint in an

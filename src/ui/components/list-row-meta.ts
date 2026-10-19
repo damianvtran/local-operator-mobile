@@ -133,6 +133,67 @@ const glyphDp = (glyph: string, scale: number): number =>
 export const textWidthDp = (text: string, scale: number): number =>
 	[...text].reduce((dp, glyph) => dp + glyphDp(glyph, scale), 0);
 
+/**
+ * The shipped SANS face's advances, in em, for printable ASCII (U+0020–U+007E).
+ *
+ * WHY THIS TABLE EXISTS. A `Badge` is sans (`text-meta`, Figtree Medium), and
+ *  the row's tag line originally fitted its labels through `textWidthDp`, which
+ *  charges every glyph the MONO face's 0.600 em. Figtree's prose advances are
+ *  far narrower (0.219 em for `.`, 0.516 for `a`), so the fit believed a label
+ *  was wider than it is and elided it early — measured on the review's frame:
+ *  `Resear…` with 43.7 dp of its badge still empty. Charging a sans label the
+ *  mono advance is not a conservative estimate; it is the wrong face.
+ *
+ * THE NUMBERS ARE MEASURED FROM THE SHIPPED FILE, not chosen: they were read
+ *  from `design/fonts/Figtree-Medium.ttf` (weight 500, HHEA advances, 1000
+ *  units per em) on 2026-10-19, one entry per code point from 32 to 126. A
+ *  single AVERAGE advance would be cheaper and wrong in both directions — a
+ *  run of `W` (0.967 em) would overflow while `llll` would over-elide — so the
+ *  table stays per glyph. The one glyph outside ASCII that the fit itself
+ *  appends, the ellipsis, is stated beside it.
+ *
+ * A glyph the table does not cover is charged the fallback: 1 em for the wide
+ *  scripts `WIDE_GLYPH` names, and 0.7 em otherwise — near the face's widest
+ *  lowercase rather than its average, because an under-counted line is the one
+ *  the platform clamps, and `numberOfLines` is the mop-up rather than the plan.
+ */
+const SANS_ADVANCES_EM: readonly number[] = [
+	0.244, 0.302, 0.345, 0.629, 0.561, 0.793, 0.645, 0.212, 0.36, 0.36, 0.483,
+	0.626, 0.235, 0.414, 0.219, 0.401, 0.643, 0.416, 0.564, 0.547, 0.624, 0.576,
+	0.569, 0.542, 0.614, 0.569, 0.266, 0.271, 0.626, 0.626, 0.626, 0.506, 0.99,
+	0.687, 0.611, 0.722, 0.691, 0.591, 0.546, 0.756, 0.751, 0.276, 0.525, 0.625,
+	0.524, 0.849, 0.774, 0.779, 0.586, 0.782, 0.631, 0.612, 0.561, 0.706, 0.701,
+	0.967, 0.632, 0.616, 0.638, 0.329, 0.401, 0.329, 0.559, 0.437, 0.233, 0.516,
+	0.589, 0.542, 0.588, 0.548, 0.376, 0.591, 0.561, 0.24, 0.275, 0.5, 0.227,
+	0.857, 0.561, 0.58, 0.594, 0.581, 0.349, 0.466, 0.384, 0.561, 0.53, 0.798,
+	0.492, 0.54, 0.488, 0.388, 0.257, 0.388, 0.595,
+];
+
+/** U+2026, in the same face — the ellipsis `headFit` appends. */
+const SANS_ELLIPSIS_EM = 0.64;
+
+/** A glyph with no table entry: the face's widest lowercase advance, not its
+ *  average (see the table's comment). */
+const SANS_UNKNOWN_ADVANCE_EM = 0.7;
+
+/** `text` in dp, measured against the SANS face's advances rather than the mono
+ *  line's: the badge label's own face. Same per-glyph rule as `textWidthDp`. */
+export const sansTextWidthDp = (text: string, scale: number): number => {
+	const size = TYPE_STEPS.meta.size * scale;
+	return [...text].reduce((dp, glyph) => {
+		const code = glyph.codePointAt(0) ?? 0;
+		const em =
+			code >= 32 && code <= 126
+				? (SANS_ADVANCES_EM[code - 32] ?? SANS_UNKNOWN_ADVANCE_EM)
+				: code === 0x2026
+					? SANS_ELLIPSIS_EM
+					: WIDE_GLYPH.test(glyph)
+						? FALLBACK_ADVANCE_EM
+						: SANS_UNKNOWN_ADVANCE_EM;
+		return dp + size * em;
+	}, 0);
+};
+
 /** What the line should paint: `null` for a field the row has none of. */
 export type MetaLine = {
 	cwd: string | null;
@@ -314,3 +375,52 @@ export function metaLineFor({
 		model: painted.text,
 	};
 }
+
+/** What a list row announces, in words.
+ *
+ *  It lives in this pure module (not beside `ListRow`) so the label can be
+ *  asserted in Node: the row is ONE accessible element, and its label is where
+ *  every fact a sighted reader gets from the painted row has to arrive —
+ *  including the tag line, which is a child node and would otherwise be silent
+ *  (review round 1, D4/Q2). The caller passes the already-formatted tag
+ *  announcement, because `ui/components` may not import the contract layer.
+ */
+export const rowAccessibilityLabel = (options: {
+	title: string;
+	attention: "pending" | "streaming" | "unread" | "none";
+	attentionWord: "approval" | "question";
+	selected: boolean;
+	ended?: boolean;
+	degraded?: boolean;
+	/** The owning device, for a remote row: the visible line reads "On X",
+	 *  and a reader who cannot see it deserves the same fact. */
+	remoteDevice?: string;
+	remoteUnreachable?: boolean;
+	/** `tagAnnouncement(tags)` — "Tags: Work, Research". Undefined when the
+	 *  row has no tags, so an untagged row's label is unchanged. */
+	tagAnnouncement?: string;
+}): string => {
+	const parts = [options.title];
+	if (options.attention === "pending") {
+		parts.push(`${options.attentionWord} waiting`);
+	} else if (options.attention === "streaming") {
+		parts.push("working");
+	} else if (options.attention === "unread") {
+		parts.push("new");
+	}
+	/* Read in the same voice as the visible word: a reader who cannot see the muted
+	 * receipt still hears that this session ended or stopped answering. */
+	if (options.ended) parts.push("ended");
+	else if (options.degraded) parts.push("not answering");
+	/* EVERY assigned tag, including the ones the compact line hid behind `+N`:
+	 * the line caps its paint at two, and a label built from the painted badges
+	 * would lose the rest. */
+	if (options.tagAnnouncement !== undefined)
+		parts.push(options.tagAnnouncement);
+	if (options.remoteDevice !== undefined) {
+		parts.push(`on ${options.remoteDevice}`);
+		if (options.remoteUnreachable === true) parts.push("not reachable");
+	}
+	if (options.selected) parts.push("open");
+	return parts.join(", ");
+};

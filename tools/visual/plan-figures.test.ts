@@ -481,39 +481,39 @@ describe("the audit step bound holds the plan it audits", () => {
 		/* NEGATIVE CONTROLS: the capture bound rising, the cap falling and the
 		 * cap missing must all be refused, or the margin is prose again. */
 		const capture170 = workflow.replace(
-			"timeout-minutes: 161",
-			"timeout-minutes: 171",
+			"timeout-minutes: 175",
+			"timeout-minutes: 190",
 		);
 		expect(capture170).not.toBe(workflow);
 		expect(coreJobHeadroomProblem(capture170, cells)).not.toBeNull();
 		const capLowered = workflow.replace(
-			"    timeout-minutes: 241",
-			"    timeout-minutes: 231",
+			"    timeout-minutes: 270",
+			"    timeout-minutes: 250",
 		);
 		expect(capLowered).not.toBe(workflow);
 		expect(coreJobHeadroomProblem(capLowered, cells)).not.toBeNull();
-		const capMissing = workflow.replace("    timeout-minutes: 241\n", "");
+		const capMissing = workflow.replace("    timeout-minutes: 270\n", "");
 		expect(capMissing).not.toBe(workflow);
 		expect(coreJobHeadroomProblem(capMissing, cells)).not.toBeNull();
 		/* QA round 1, Q1: a comment is documentation, not a bound. 999 above
 		 * the real 95 changes nothing; it cannot rescue a real 70 either; and a
 		 * commented-out key is no bound at all. */
 		const commented = workflow.replace(
-			"        timeout-minutes: 95\n        run: pnpm audit:run",
-			"        # timeout-minutes: 999\n        timeout-minutes: 95\n        run: pnpm audit:run",
+			"        timeout-minutes: 105\n        run: pnpm audit:run",
+			"        # timeout-minutes: 999\n        timeout-minutes: 105\n        run: pnpm audit:run",
 		);
 		expect(commented).not.toBe(workflow);
-		expect(coreAuditBoundMinutes(commented)).toBe(95);
+		expect(coreAuditBoundMinutes(commented)).toBe(105);
 		const noisy70 = commented.replace(
-			"        timeout-minutes: 95\n",
+			"        timeout-minutes: 105\n",
 			"        timeout-minutes: 70\n",
 		);
 		const noisy70Bound = coreAuditBoundMinutes(noisy70);
 		expect(noisy70Bound).toBe(70);
 		expect(auditBoundProblem(cells, noisy70Bound)).not.toBeNull();
 		const muted = workflow.replace(
-			"        timeout-minutes: 95\n",
-			"        # timeout-minutes: 95\n",
+			"        timeout-minutes: 105\n",
+			"        # timeout-minutes: 105\n",
 		);
 		const mutedBound = coreAuditBoundMinutes(muted);
 		expect(mutedBound).toBeNull();

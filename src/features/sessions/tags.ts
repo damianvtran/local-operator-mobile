@@ -1,5 +1,5 @@
-import type { Capabilities, TagRef } from "@/contracts";
-import { textWidthDp } from "@/ui/components/list-row-meta";
+import type { Capabilities, TagCatalogueEntry, TagRef } from "@/contracts";
+import { sansTextWidthDp } from "@/ui/components/list-row-meta";
 
 /**
  * The pure half of conversation tags: how a row's assignment compresses into one
@@ -39,14 +39,20 @@ export type TagLine = {
 };
 
 /** The longest HEAD of `text` that fits `budgetDp` with an ellipsis appended:
- *  prose's direction, by code point so a surrogate pair is never split. */
+ *  prose's direction, by code point so a surrogate pair is never split.
+ *
+ *  The measurement is the SANS face's, because the painted label is a `Badge`
+ *  (`text-meta`, Figtree Medium). `textWidthDp` is the mono line's arithmetic and
+ *  charged these labels 0.600 em per glyph, which elided them far too early —
+ *  the measured `Resear…` with 43.7 dp still spare (review round 1, G). */
 const headFit = (text: string, budgetDp: number, scale: number): string => {
-	if (textWidthDp(text, scale) <= budgetDp) return text;
+	if (sansTextWidthDp(text, scale) <= budgetDp) return text;
 	const ellipsis = "…";
-	const ellipsisWidth = textWidthDp(ellipsis, scale);
+	const ellipsisWidth = sansTextWidthDp(ellipsis, scale);
 	let painted = "";
 	for (const glyph of text) {
-		if (textWidthDp(painted + glyph, scale) + ellipsisWidth > budgetDp) break;
+		if (sansTextWidthDp(painted + glyph, scale) + ellipsisWidth > budgetDp)
+			break;
 		painted += glyph;
 	}
 	return painted === "" ? ellipsis : `${painted}${ellipsis}`;
@@ -62,7 +68,7 @@ const headFit = (text: string, budgetDp: number, scale: number): string => {
  * Before the first layout (`widthDp` 0) the visible names paint whole: the
  * common row fits them, so its first frame is its settled frame, and the row
  * that does not settles within a frame. Fitting is arithmetic over the shipped
- * face's advances (`textWidthDp`), not an `ellipsizeMode` request —
+ * SANS face's advances (`sansTextWidthDp`), not an `ellipsizeMode` request —
  * react-native-web ignores the direction prop, which is the lesson
  * `list-row-meta.ts` records.
  *
@@ -84,7 +90,8 @@ export const tagLineFor = (
 	}
 
 	const gapCount = visible.length - 1 + (cue === null ? 0 : 1);
-	const cueWidth = cue === null ? 0 : BADGE_CHROME_DP + textWidthDp(cue, scale);
+	const cueWidth =
+		cue === null ? 0 : BADGE_CHROME_DP + sansTextWidthDp(cue, scale);
 	const room = Math.max(0, widthDp - cueWidth - gapCount * TAG_GAP_DP);
 	const share = Math.floor(room / visible.length);
 	const labelBudget = Math.max(0, share - BADGE_CHROME_DP);
@@ -131,6 +138,34 @@ export const desiredTagWrite = (
 
 /** `Remove all tags`: the route's exact clearing body. */
 export const clearedTags = (): TagWrite => ({ tags: [], primary: null });
+
+/**
+ * The catalogue with every ASSIGNED tag present, as a selectable entry.
+ *
+ * The registry read and the list frame are two answers that can disagree: a
+ * category deleted from the desktop still sits on a conversation until the
+ * relay prunes it, and a stale `GET /api/tags` must never hide an assignment —
+ * a checkbox list missing the row's own tag leaves that tag impossible to
+ * unselect individually. So the row's tags are merged in, in assignment order,
+ * with no count (the catalogue's `conversations` is the desktop's total, and a
+ * zero here would be a claim this screen cannot make). Selectable, not just
+ * listed: the point is that it can be unchecked.
+ */
+export const catalogueWithAssigned = (
+	catalogue: readonly TagCatalogueEntry[],
+	assigned: readonly TagRef[],
+): TagCatalogueEntry[] => {
+	const known = new Set(catalogue.map((tag) => tag.id));
+	const missing = assigned
+		.filter((tag) => !known.has(tag.id))
+		.map((tag, index) => ({
+			id: tag.id,
+			name: tag.name,
+			order: catalogue.length + index,
+			conversations: 0,
+		}));
+	return [...catalogue, ...missing];
+};
 
 /**
  * Whether this relay offers the assignment routes.

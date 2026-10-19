@@ -29,6 +29,17 @@ export type EmptyStateProps = {
 		testID: string;
 	};
 	testID?: string;
+	/** The decorative brand mark. Default true. A caller inside a SHEET at
+	 *  large text turns it off: the mark is the first thing to yield when the
+	 *  surface is ~300 pt tall, and the sentence beneath it is the information
+	 *  the state exists to deliver. */
+	mark?: boolean;
+	/** Inline rather than full-surface. A full-surface empty grows (`flex-1`)
+	 *  and centres in the space it is given; inside a sheet's scrolling body
+	 *  that space is the body, so the block floated to the middle and its second
+	 *  line — the sentence a reader needs — sat under the fold at 200 %. The
+	 *  compact form takes its own natural height, in reading order. */
+	compact?: boolean;
 };
 
 export const EmptyState = ({
@@ -36,11 +47,16 @@ export const EmptyState = ({
 	next,
 	action,
 	testID,
+	mark = true,
+	compact = false,
 }: EmptyStateProps) => {
 	const markColor = useTokenColor("ink-dim");
 	return (
-		<View className={emptyStateClasses} testID={testID}>
-			<BrandMark size={48} color={markColor} />
+		<View
+			className={compact ? "items-center gap-2 px-4 py-2" : emptyStateClasses}
+			testID={testID}
+		>
+			{mark ? <BrandMark size={48} color={markColor} /> : null}
 			<Text className="text-center text-body text-ink-muted">{headline}</Text>
 			<Text className="text-center text-body-sm text-ink-dim">{next}</Text>
 			{action ? (

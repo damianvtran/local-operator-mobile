@@ -25,7 +25,10 @@ import {
 	visiblePeers,
 } from "@/features/sessions/session-projection";
 import { SessionTagLine } from "@/features/sessions/tag-line";
-import { canAssignSessionTags } from "@/features/sessions/tags";
+import {
+	canAssignSessionTags,
+	tagAnnouncement,
+} from "@/features/sessions/tags";
 import { SessionTagsSheet } from "@/features/sessions/tags-sheet";
 import { homeShortened } from "@/lib/format";
 import { listLabel } from "@/lib/route-label";
@@ -596,8 +599,16 @@ export const ConversationsPane = ({
 									<SessionTagLine
 										tags={session.tags ?? []}
 										testID={sessionTagLineId(session.session_id)}
+										/* The ROW announces its tags as one label; the line
+										 *  itself must not be a second stop (D4/Q2). */
+										announce={false}
 									/>
 								) : undefined
+							}
+							tagAnnouncement={
+								(session.tags?.length ?? 0) > 0
+									? tagAnnouncement(session.tags ?? [])
+									: undefined
 							}
 							testID={sessionRowId(session.session_id)}
 						/>

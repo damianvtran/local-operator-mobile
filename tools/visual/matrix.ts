@@ -23,6 +23,7 @@ import {
 	imagegenCancelId,
 	projectMilestoneEditId,
 	sessionRowId,
+	sessionTagOptionId,
 } from "../../src/ui/a11y.ts";
 import type { Affordance } from "../lib/affordance.ts";
 
@@ -360,12 +361,12 @@ export function describeDeviceCoverage(coverage: {
  * The CI tier: the bounded sample the per-push capture job takes.
  *
  * WHY A THIRD TIER, AND WHY IT IS HERE RATHER THAN A `--devices` LIST IN YAML.
- * The `core` tier is 3204 cells: the whole declared cell list (89 cells) x 2 themes x
- * (3 phones x 4 scales + 2 tablets x 3 scales) — 84 x 2 x 18, the tier's 5 profiles —
- * and the CI job's capture step is bound at 55 minutes. Measured on the runner, that is
+ * The `core` tier is 3384 cells: the whole declared cell list (94 cells) x 2 themes x
+ * (3 phones x 4 scales + 2 tablets x 3 scales) — 94 x 2 x 18, the tier's 5 profiles —
+ * and the CI job's capture step is bound at 60 minutes. Measured on the runner, that is
  * 2.24 s/cell: 403 cells in 903 s (run 37098393675, a plan of 403 cells then), so a core
- * run needs ~120 minutes. The `core` job's own bound is 160 (see `.github/workflows/e2e.yml`,
- * `web-audit-core`), which is above the 9612 s deadline its plan derives for itself. The
+ * run needs ~126 minutes. The `core` job's own bound is 175 (see `.github/workflows/e2e.yml`,
+ * `web-audit-core`), which is above the 10152 s deadline its plan derives for itself. The
  * job's first real
  * run of this path
  * was therefore cut off by the harness's own 900 s deadline with 585 cells
@@ -395,11 +396,11 @@ export function describeDeviceCoverage(coverage: {
  *     `CI_SCALES` below for why the boundary earns the third slot and 150% does
  *     not. 150% stays in `core`, which sweeps every scale.
  *
- * That is 89 cells x 2 themes x (2 profiles x 3 scales) = 1068 cells, ~40 minutes at
+ * That is 94 cells x 2 themes x (2 profiles x 3 scales) = 1128 cells, ~42 minutes at
  * the measured rate: inside the step bound (raised with it, see `CI_SCALES`) with
  * the same headroom it always carried. `core` and `full` stay the
- * local and dispatched samples, so the full 3204-cell `core` matrix and the
- * 11748-cell `full` matrix remain runnable — nothing is only reachable through CI.
+ * local and dispatched samples, so the full 3384-cell `core` matrix and the
+ * 12408-cell `full` matrix remain runnable — nothing is only reachable through CI.
  */
 export const CI_DEVICES: string[] = ["iphone-se", "tablet-landscape"];
 
@@ -417,7 +418,7 @@ export const CI_DEVICES: string[] = ["iphone-se", "tablet-landscape"];
  * sweeps every scale, so nothing is lost by composing the two sets differently.
  *
  * WHAT IT COSTS, because it is NOT free and the two are one decision. Three scales on
- * both CI profiles is 1068 cells, +50 % over the two-scale 672, so the per-push capture
+ * both CI profiles is 1128 cells, +50 % over the two-scale 672, so the per-push capture
  * and audit bounds in `.github/workflows/e2e.yml` were raised with it — most recently to
  * capture 55 / audit 25 / job 85. That is this slice's ten cells (nine lifecycle surfaces
  * and the pane's long-press menu) on top of the base the branch was cut from, plus the
@@ -426,9 +427,9 @@ export const CI_DEVICES: string[] = ["iphone-se", "tablet-landscape"];
  * index's five states), the mesh slice's seven cells (the S15 remote rows, the
  * tap-reveal and the move sheet's five states), the checkpoint rail's four more,
  * and the supplement slice's five S5 cells (the Highlights block's states),
- * folded from main: the cell list is 89 and the sample is 1068, both re-derived from
+ * folded from main: the cell list is 94 and the sample is 1128, both re-derived from
  * this head's own `--plan` rather than scaled — still inside the 55-minute capture bound
- * (1068 cells x 3 s = 53.4 min). A bound that fires every run stops being a signal, so
+ * (1128 cells x 3 s = 56.4 min). A bound that fires every run stops being a signal, so
  * this list and that bound have to move together: reverting the bounds without
  * reverting this list makes the job red, and reverting this list without the bounds
  * wastes the budget it was sized for. */
@@ -673,10 +674,14 @@ export const UNSCROLLED_CONTROLS: readonly string[] = [
 	CONTROL.sessionMoveCopy,
 	CONTROL.sessionMoveWait,
 	CONTROL.sessionMoveCheck,
-	/* The tag sheet's clearing action is pinned in the same footer for the same
-	 *  reason: it is the surface's answer, and a regression that pushes it below
-	 *  the fold must fail its cell by name rather than pass by scrolling to it. */
-	CONTROL.sessionTagsRemoveAll,
+	/* The tag sheet's answering control (round-1 remediation): `Try again` is
+	 *  pinned in the footer only while the catalogue read failed, and it is the
+	 *  one control the sheet owes the reader there. `Remove all` is deliberately
+	 *  NOT here: when the catalogue has entries it follows them and may scroll —
+	 *  the checkboxes, not the destructive action, are that state's answers. In
+	 *  the error and empty states it is painted ABOVE the state's message, which
+	 *  the frames of those cells show without scrolling. */
+	CONTROL.sessionTagsRetry,
 ];
 
 /**
@@ -730,6 +735,28 @@ export const CELL_OPENERS: Record<string, Affordance[]> = {
 	"S15/tags-sheet-error": [
 		{ hold: { testID: sessionRowId("98a803224e43"), ms: 1200 } },
 		{ click: CONTROL.sessionTagsAction },
+	],
+	/* The sheet's two WRITE states (round-1 remediation). Same opener, then the
+	 *  press a reader makes: `Research` is unselected on the one-tag row (the
+	 *  settled frame shows it newly checked), and `Work` is selected (the refusal
+	 *  frame shows it back where the list had it, behind the relay's sentence).
+	 *  The states are the app's own — one real PUT each — not staged overlays. */
+	"S15/tags-sheet-toggled": [
+		{ hold: { testID: sessionRowId("98a803224e43"), ms: 1200 } },
+		{ click: CONTROL.sessionTagsAction },
+		{ click: sessionTagOptionId("cb65004501") },
+	],
+	"S15/tags-sheet-refused": [
+		{ hold: { testID: sessionRowId("98a803224e43"), ms: 1200 } },
+		{ click: CONTROL.sessionTagsAction },
+		{ click: sessionTagOptionId("d28b35a273") },
+	],
+	/* The menu itself with the Tags… entry, so the route review round 1 asked
+	 *  for ("a long-press menu frame showing the Tags… entry") is a frame. It
+	 *  needs the tags world, not `idle`, because the entry is gated on the
+	 *  capability and would otherwise be absent. */
+	"S15/tags-menu": [
+		{ hold: { testID: sessionRowId("98a803224e43"), ms: 1200 } },
 	],
 	/* --- the mesh sheet's states (S15, the sessions-and-delegation half) ---
 	 *

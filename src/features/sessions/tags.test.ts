@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { TagRef } from "@/contracts";
 import {
 	canAssignSessionTags,
+	catalogueWithAssigned,
 	clearedTags,
 	desiredTagWrite,
 	settledPrimary,
@@ -10,7 +11,11 @@ import {
 	tagAnnouncement,
 	tagLineFor,
 } from "@/features/sessions/tags";
-import { textWidthDp } from "@/ui/components/list-row-meta";
+import {
+	rowAccessibilityLabel,
+	sansTextWidthDp,
+	textWidthDp,
+} from "@/ui/components/list-row-meta";
 
 const RESEARCH: TagRef = { id: "cb65004501", name: "Research" };
 const WORK: TagRef = { id: "d28b35a273", name: "Work" };
@@ -57,7 +62,7 @@ describe("the row's tag line", () => {
 		/* The painted string plus badge chrome fits the row: `px-2` each side
 		 *  (16) and the 1 px border each side (2). Arithmetic, not a screenshot —
 		 *  the capture cells prove the pixels. */
-		expect(textWidthDp(painted, 1) + 18).toBeLessThanOrEqual(width);
+		expect(sansTextWidthDp(painted, 1) + 18).toBeLessThanOrEqual(width);
 	});
 
 	it("truncates both labels when two long names share the row", () => {
@@ -66,7 +71,7 @@ describe("the row's tag line", () => {
 		const share = Math.floor((width - 4) / 2);
 		for (const label of line.labels) {
 			expect(label.endsWith("…")).toBe(true);
-			expect(textWidthDp(label, 1) + 18).toBeLessThanOrEqual(share);
+			expect(sansTextWidthDp(label, 1) + 18).toBeLessThanOrEqual(share);
 		}
 	});
 
@@ -88,6 +93,83 @@ describe("the row's tag line", () => {
 		expect(tagAnnouncement([RESEARCH, WORK, THIRD])).toBe(
 			"Tags: Research, Work, Personal",
 		);
+	});
+
+	it("fits a badge with the SANS advance, not the mono line's", () => {
+		/* The regression this pins (review round 1, G): the label is a sans
+		 *  `Badge`, and charging it `textWidthDp` (0.600 em every glyph) elided
+		 *  "Research" when only 51.3 dp of a 52 dp budget was needed. The mono
+		 *  figure is asserted too, so a future edit cannot make this pass by
+		 *  swapping the helper back while the two faces happen to agree. */
+		expect(textWidthDp("Research", 1)).toBeGreaterThan(52);
+		expect(sansTextWidthDp("Research", 1)).toBeLessThanOrEqual(52);
+		expect(tagLineFor([RESEARCH], 70, 1).labels).toEqual(["Research"]);
+	});
+});
+
+describe("the catalogue the checkboxes offer", () => {
+	const catalogue = [
+		{ ...WORK, order: 0, conversations: 3 },
+		{ ...RESEARCH, order: 1, conversations: 2 },
+	];
+
+	it("keeps the registry's order and entries", () => {
+		expect(catalogueWithAssigned(catalogue, [])).toEqual(catalogue);
+	});
+
+	it("appends an assigned tag the registry omitted, so it can be unchecked", () => {
+		/* A category deleted from the desktop can still sit on a conversation;
+		 *  a stale `GET /api/tags` must not hide the assignment (review round 1,
+		 *  K). The appended entry is selectable, with no invented count. */
+		const merged = catalogueWithAssigned(catalogue, [THIRD]);
+		expect(merged.map((tag) => tag.id)).toEqual([
+			WORK.id,
+			RESEARCH.id,
+			THIRD.id,
+		]);
+		expect(merged[2]).toEqual({
+			id: THIRD.id,
+			name: THIRD.name,
+			order: 2,
+			conversations: 0,
+		});
+	});
+
+	it("does not duplicate an assigned tag that is already listed", () => {
+		const merged = catalogueWithAssigned(catalogue, [RESEARCH, WORK]);
+		expect(merged).toHaveLength(2);
+		expect(merged.map((tag) => tag.id)).toEqual([WORK.id, RESEARCH.id]);
+	});
+});
+
+describe("the row's accessible label", () => {
+	it("includes every tag, including the one behind +N", () => {
+		/* The tag line is a child node of a row that is ONE accessible element;
+		 *  without folding the announcement in, a reader heard the title and never
+		 *  the tags (review round 1, D4/Q2). The third tag is the one the compact
+		 *  line hid behind `+1`, so a label built from the painted badges would
+		 *  still fail this. */
+		const label = rowAccessibilityLabel({
+			title: "Three categories",
+			attention: "none",
+			attentionWord: "approval",
+			selected: false,
+			tagAnnouncement: tagAnnouncement([RESEARCH, WORK, THIRD]),
+		});
+		for (const tag of [RESEARCH, WORK, THIRD]) {
+			expect(label).toContain(tag.name);
+		}
+	});
+
+	it("leaves an untagged row's label unchanged", () => {
+		expect(
+			rowAccessibilityLabel({
+				title: "No categories",
+				attention: "none",
+				attentionWord: "approval",
+				selected: false,
+			}),
+		).toBe("No categories");
 	});
 });
 
