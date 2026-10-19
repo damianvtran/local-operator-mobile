@@ -64,6 +64,7 @@ import {
 	saveAssetMetadata,
 	unsupportedReason,
 } from "@/features/library/library-model";
+import { publishLibraryUpdate } from "@/features/library/library-updates";
 import { Markdown } from "@/features/session/components/markdown";
 import type { RelayEndpoints } from "@/relay";
 import { isRelayError } from "@/relay";
@@ -157,6 +158,7 @@ export default function LibraryDetail() {
 			try {
 				const updated = await client.patchLibraryAsset(asset.id, changes);
 				setAsset(updated);
+				publishLibraryUpdate({ asset: updated, tags: null });
 			} catch (failure) {
 				setError(
 					displaySentence(failure, "That change did not stick. Try again."),
@@ -244,13 +246,15 @@ export default function LibraryDetail() {
 							<LibraryPreview asset={asset} client={client} />
 
 							{!asset.exists ? (
-								<Alert severity="warning">
-									This file has moved or been deleted. Its name, tags and
-									description are still here.
-								</Alert>
+								<View className="px-4">
+									<Alert severity="warning">
+										This file has moved or been deleted. Its name, tags and
+										description are still here.
+									</Alert>
+								</View>
 							) : null}
 
-							<View className="gap-1">
+							<View className="gap-1 px-4">
 								<Text className="text-title text-ink">
 									{effectiveName(asset)}
 								</Text>
@@ -265,12 +269,12 @@ export default function LibraryDetail() {
 							</View>
 
 							{asset.description.trim() !== "" ? (
-								<Text className="text-body text-ink-muted">
+								<Text className="px-4 text-body text-ink-muted">
 									{asset.description}
 								</Text>
 							) : null}
 
-							<View className="flex-row flex-wrap gap-2">
+							<View className="flex-row flex-wrap gap-2 px-4">
 								<Button
 									label={asset.favorite ? "Favorited" : "Favorite"}
 									onPress={() => void patch({ favorite: !asset.favorite })}
@@ -313,7 +317,7 @@ export default function LibraryDetail() {
 							</View>
 
 							{asset.tags.length > 0 ? (
-								<View className="flex-row flex-wrap gap-2">
+								<View className="flex-row flex-wrap gap-2 px-4">
 									{asset.tags.map((tag) => (
 										<View
 											key={tag.id}
@@ -326,12 +330,12 @@ export default function LibraryDetail() {
 									))}
 								</View>
 							) : (
-								<Text className="text-body-sm text-ink-dim">
+								<Text className="px-4 text-body-sm text-ink-dim">
 									No tags yet. Edit the details to add one.
 								</Text>
 							)}
 
-							<View className="gap-2">
+							<View className="gap-2 px-4">
 								<Text className="text-body-sm text-ink-muted">Seen in</Text>
 								{asset.occurrences.length === 0 ? (
 									<Text className="text-body-sm text-ink-dim">
@@ -366,9 +370,11 @@ export default function LibraryDetail() {
 							</View>
 
 							{error !== null ? (
-								<Alert severity="error" testID={SURFACE.libraryError}>
-									{error}
-								</Alert>
+								<View className="px-4">
+									<Alert severity="error" testID={SURFACE.libraryError}>
+										{error}
+									</Alert>
+								</View>
 							) : null}
 						</ScrollView>
 
@@ -385,11 +391,17 @@ export default function LibraryDetail() {
 						vocabulary={tags}
 						client={client}
 						onClose={() => setEditorOpen(false)}
-						onPatched={(updated) => setAsset(updated)}
+						onPatched={(updated) => {
+							setAsset(updated);
+							/* The metadata half landed even though the tags did not;
+							 *  Back must still show the new name/description. */
+							publishLibraryUpdate({ asset: updated, tags: null });
+						}}
 						onSaved={(updated, nextTags) => {
 							setAsset(updated);
 							setTags(nextTags);
 							setEditorOpen(false);
+							publishLibraryUpdate({ asset: updated, tags: nextTags });
 						}}
 					/>
 				</KeyboardAvoidingView>

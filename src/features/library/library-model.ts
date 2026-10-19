@@ -539,12 +539,22 @@ export async function saveAssetMetadata(
 			input.assigned,
 			input.assigned[0],
 		);
+		/* The tag write changed the global counts, and the list paints those
+		 *  counts. Re-read the vocabulary here, before the sheet closes, so Back
+		 *  cannot show the pre-save numbers; a failed re-read keeps the merged
+		 *  local view rather than failing a save that already landed. */
+		let vocabulary = mergeVocabulary(
+			input.vocabulary,
+			withTags.tags.map((tag) => asCatalogueTag(tag, input.vocabulary)),
+		);
+		try {
+			vocabulary = (await client.libraryTags()).tags;
+		} catch {
+			// No count refresh; the rows and tag names are still correct.
+		}
 		return {
 			asset: withTags,
-			vocabulary: mergeVocabulary(
-				input.vocabulary,
-				withTags.tags.map((tag) => asCatalogueTag(tag, input.vocabulary)),
-			),
+			vocabulary,
 			assigned: withTags.tags.map((tag) => tag.id),
 			refusal: null,
 			close: true,
@@ -561,6 +571,14 @@ export async function saveAssetMetadata(
 		};
 	}
 }
+
+/** Applies one saved detail row to the rows the list already holds. Ids are
+ *  opaque, so this is the only join key; a row outside the loaded pages is left
+ *  alone and appears on the next fetch. */
+export const applyLibraryUpdate = (
+	rows: LibraryAsset[],
+	update: LibraryAsset,
+): LibraryAsset[] => rows.map((row) => (row.id === update.id ? update : row));
 
 /* ---------------------------------------------------------------------- gate */
 

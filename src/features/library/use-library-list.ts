@@ -133,6 +133,11 @@ export function useLibraryList(
 		}
 		const generation = gate.queryChanged();
 		setLoading(true);
+		/* A borrow from the previous browse must not keep its flag on screen: its
+		 *  own `finally` is rejected by the new generation, so the new browse owns
+		 *  resetting `loadingMore`/`refreshing` (review round 2). */
+		setLoadingMore(false);
+		setRefreshing(false);
 		setError(null);
 		const timer = setTimeout(() => {
 			/* The browse moved while the debounce was pending: this start belongs
@@ -160,7 +165,15 @@ export function useLibraryList(
 							: "We couldn't read your library just now.",
 					);
 				} finally {
-					if (gate.accepts(ticket)) setLoading(false);
+					if (gate.accepts(ticket)) {
+						/* The first page owns the whole listing. Any cursor or
+						 *  refresh ticket from the previous browse was rejected and
+						 *  will never clear its own flag; clear all three here or a
+						 *  stale `loadingMore` blocks every future page. */
+						setLoading(false);
+						setLoadingMore(false);
+						setRefreshing(false);
+					}
 				}
 			})();
 		}, SEARCH_DEBOUNCE_MS);

@@ -17,6 +17,7 @@ import type {
 } from "@/contracts";
 import {
 	applyLibraryPage,
+	applyLibraryUpdate,
 	categoryForBrowse,
 	composerPrompt,
 	DEFAULT_BROWSE,
@@ -32,6 +33,11 @@ import {
 	TAG_SAVE_FAILURE_COPY,
 	unsupportedReason,
 } from "@/features/library/library-model";
+import {
+	libraryUpdateState,
+	publishLibraryUpdate,
+	resetLibraryUpdates,
+} from "@/features/library/library-updates";
 import type { RelayEndpoints } from "@/relay";
 import { loadFixture } from "@/testing/fixtures";
 
@@ -240,6 +246,10 @@ describe("metadata save reconciliation", () => {
 		const client = {
 			patchLibraryAsset: async () => patched,
 			setLibraryAssetTags: async () => written,
+			/* The list paints counts, so success re-reads the vocabulary. */
+			libraryTags: async () => ({
+				tags: [{ ...catalogueTag("0a1b2c3d4e", "reference"), count: 5 }],
+			}),
 		} as unknown as RelayEndpoints;
 
 		const outcome = await saveAssetMetadata(client, {
@@ -253,12 +263,42 @@ describe("metadata save reconciliation", () => {
 		expect(outcome.close).toBe(true);
 		expect(outcome.refusal).toBeNull();
 		expect(outcome.assigned).toEqual(["0a1b2c3d4e"]);
-		expect(outcome.vocabulary[0]?.count).toBe(1);
+		expect(outcome.vocabulary[0]?.count).toBe(5);
 	});
 
 	it("resets the sheet only on open, never on a parent row update", () => {
 		expect(editorShouldReset(true, undefined, "la_1")).toBe(true);
 		expect(editorShouldReset(true, "la_1", "la_1")).toBe(false);
 		expect(editorShouldReset(false, "la_1", "la_1")).toBe(false);
+	});
+});
+
+describe("a save is visible on the list after Back", () => {
+	it("applies the saved row to the rows the list already holds", () => {
+		resetLibraryUpdates();
+		const old = asset({
+			id: "la_0000000000000001",
+			name: "Old name",
+			tags: [{ id: "0a1b2c3d4e", name: "old", category: "topic" }],
+		});
+		const untouched = asset({ id: "la_0000000000000002", name: "Other" });
+		const updated = asset({
+			id: "la_0000000000000001",
+			name: "New name",
+			tags: [{ id: "1a2b3c4d5e", name: "new", category: "topic" }],
+		});
+		const vocabulary = [catalogueTag("1a2b3c4d5e", "new")];
+
+		publishLibraryUpdate({ asset: updated, tags: vocabulary });
+		const state = libraryUpdateState();
+		const rows = applyLibraryUpdate(
+			[old, untouched],
+			state.update?.asset ?? old,
+		);
+
+		expect(rows[0]?.name).toBe("New name");
+		expect(rows[0]?.tags[0]?.name).toBe("new");
+		expect(rows[1]).toBe(untouched);
+		expect(state.update?.tags).toEqual(vocabulary);
 	});
 });

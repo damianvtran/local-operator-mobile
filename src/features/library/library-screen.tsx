@@ -22,7 +22,7 @@
  * 404 loop.
  */
 
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import {
 	Code,
 	File,
@@ -34,7 +34,7 @@ import {
 	Table,
 	Video,
 } from "lucide-react-native";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import {
 	FlatList,
 	Image,
@@ -52,6 +52,7 @@ import {
 } from "@/features/auth/connection-provider";
 import { useLibraryThumbnail } from "@/features/library/library-media";
 import {
+	applyLibraryUpdate,
 	categoryForBrowse,
 	DEFAULT_BROWSE,
 	effectiveName,
@@ -70,6 +71,10 @@ import {
 	libraryEnabled,
 	MORE_CATEGORIES,
 } from "@/features/library/library-model";
+import {
+	type LibraryUpdate,
+	libraryUpdateState,
+} from "@/features/library/library-updates";
 import { useLibraryList } from "@/features/library/use-library-list";
 import type { RelayEndpoints } from "@/relay";
 import {
@@ -148,7 +153,45 @@ export default function Library() {
 
 	const list = useLibraryList(client, browse, enabled);
 	const page = list.page;
-	const rows = list.rows;
+	/* A save made on the detail route. The list is still mounted underneath, so
+	 *  carrying its search/cursor across Back is just keeping this state; the
+	 *  saved row is patched in rather than refetching the page. */
+	const [saved, setSaved] = useState<{
+		update: LibraryUpdate;
+		page: typeof page;
+	} | null>(null);
+	const seenRevision = useRef(libraryUpdateState().revision);
+	/* The page the focus handler saw. A focus effect with `[]` cannot read the
+	 *  latest render's page; this ref is how it records which page the save sits
+	 *  over. */
+	const pageRef = useRef(page);
+	pageRef.current = page;
+	useFocusEffect(
+		useCallback(() => {
+			const state = libraryUpdateState();
+			if (state.revision === seenRevision.current) return;
+			seenRevision.current = state.revision;
+			if (state.update !== null) {
+				setSaved({ update: state.update, page: pageRef.current });
+			}
+		}, []),
+	);
+	/* A page that arrives after the save is the server's newer answer: the saved
+	 *  row is tied to the page it was applied over and stops counting the moment
+	 *  that page is replaced, without an effect that could clear it a render
+	 *  late. */
+	const activeSaved =
+		saved !== null && saved.page === page ? saved.update : null;
+	const rows = useMemo(
+		() =>
+			activeSaved === null
+				? list.rows
+				: applyLibraryUpdate(list.rows, activeSaved.asset),
+		[list.rows, activeSaved],
+	);
+	/* The save's fresh vocabulary wins over the page's snapshot until the next
+	 *  page lands; `null` means the save did not change tags. */
+	const vocabulary = activeSaved?.tags ?? page?.tags ?? [];
 	/* The footer and the end-of-list fetch belong to the rows on screen. While a
 	 *  debounced browse is pending, the old page is still painted but its cursor
 	 *  is not loadable: pressing it would append the previous query under the new
@@ -262,13 +305,13 @@ export default function Library() {
 								onPress={() => setSortOpen(true)}
 								testID={CONTROL.librarySort}
 							/>
-							{page !== null && page.tags.length > 0 ? (
+							{vocabulary.length > 0 ? (
 								<ScrollView
 									horizontal
 									showsHorizontalScrollIndicator={false}
 									contentContainerStyle={{ gap: 8 }}
 								>
-									{page.tags.slice(0, 12).map((tag) => (
+									{vocabulary.slice(0, 12).map((tag) => (
 										<Chip
 											key={tag.id}
 											label={`${tag.name} ${tag.count}`}
@@ -377,7 +420,7 @@ export default function Library() {
 				onClose={() => setFiltersOpen(false)}
 				status={browse.status}
 				onStatus={(status) => setBrowse((current) => ({ ...current, status }))}
-				tags={page?.tags ?? []}
+				tags={vocabulary}
 				tag={browse.tag}
 				onTag={(tag) => setBrowse((current) => ({ ...current, tag }))}
 			/>
