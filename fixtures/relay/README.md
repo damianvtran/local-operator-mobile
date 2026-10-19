@@ -76,7 +76,7 @@ The conversation-tag samples (`tags-empty`, `tags-populated`,
 `session-tags-assigned`, `session-tags-cleared`, `session-tags-unknown-tag`,
 `session-tags-unknown-session`, `list-with-tags`, `past-with-tags`,
 `search-with-tags`, `sessions-tags`) are a seventh: captured at the
-**installed local-operator 0.82.3 release**, the merge of PR #2625, from an
+**installed local-operator 0.82.3 release**, which carries PR #2625, from an
 isolated `lop mobile serve` (`HOME` + `LOCAL_OPERATOR_CONFIG_DIR` redirected,
 `LO_MOBILE_NO_DIAL=1`, own ephemeral port) with one durable conversation
 seeded on disk and its two categories written through the store's own
