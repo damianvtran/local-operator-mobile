@@ -27,7 +27,10 @@ import {
 	retireAuthoritativeOverrides,
 } from "@/features/library/library-model";
 import { createLibraryRequestGate } from "@/features/library/library-request-gate";
-import { nextEpoch } from "@/features/library/library-updates";
+import {
+	nextEpoch,
+	retireLibraryUpdate,
+} from "@/features/library/library-updates";
 import type { RelayEndpoints } from "@/relay";
 
 export const LIBRARY_PAGE_SIZE = 24;
@@ -49,7 +52,11 @@ export interface LibraryListState {
 	 *  append cannot resurrect the pre-save row. The epoch lets a later
 	 *  authoritative fetch retire an override the server has moved past. */
 	applySaved: (
-		updates: ReadonlyArray<{ asset: LibraryAsset; epoch: number }>,
+		updates: ReadonlyArray<{
+			asset: LibraryAsset;
+			epoch: number;
+			retired: boolean;
+		}>,
 	) => void;
 	refresh: () => void;
 	loadMore: () => void;
@@ -113,12 +120,14 @@ export function useLibraryList(
 				 *  a first page/refresh is, but only when it started AFTER the save.
 				 *  A response already in flight at save time keeps the override. */
 				if (mode !== "more") {
-					retireAuthoritativeOverrides(
+					for (const retired of retireAuthoritativeOverrides(
 						overrides.current,
 						overrideEpochs.current,
 						answer.rows,
 						requestEpoch,
-					);
+					)) {
+						retireLibraryUpdate(retired.assetId, retired.epoch);
+					}
 				}
 				setRows(applyLibraryUpdates(merged.rows, overrides.current));
 				setPage(answer);
@@ -176,12 +185,14 @@ export function useLibraryList(
 						...libraryListRequest(browse, void 0, LIBRARY_PAGE_SIZE),
 					});
 					if (!gate.accepts(ticket) || browseRef.current !== browse) return;
-					retireAuthoritativeOverrides(
+					for (const retired of retireAuthoritativeOverrides(
 						overrides.current,
 						overrideEpochs.current,
 						answer.rows,
 						requestEpoch,
-					);
+					)) {
+						retireLibraryUpdate(retired.assetId, retired.epoch);
+					}
 					setRows(applyLibraryUpdates(answer.rows, overrides.current));
 					setPage(answer);
 					setLoadedWith(browse);
@@ -215,8 +226,23 @@ export function useLibraryList(
 	}, [browse, client, enabled, gate]);
 
 	const applySaved = useCallback(
-		(updates: ReadonlyArray<{ asset: LibraryAsset; epoch: number }>) => {
+		(
+			updates: ReadonlyArray<{
+				asset: LibraryAsset;
+				epoch: number;
+				retired: boolean;
+			}>,
+		) => {
 			for (const update of updates) {
+				if (update.retired) {
+					/* This exact save was already replaced by an authoritative
+					 *  response. Replaying it on a later focus would resurrect it. */
+					overrides.current.delete(update.asset.id);
+					overrideEpochs.current.delete(update.asset.id);
+					continue;
+				}
+				const activeEpoch = overrideEpochs.current.get(update.asset.id);
+				if (activeEpoch !== void 0 && activeEpoch > update.epoch) continue;
 				overrides.current.set(update.asset.id, update.asset);
 				overrideEpochs.current.set(update.asset.id, update.epoch);
 			}

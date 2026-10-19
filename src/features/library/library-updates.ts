@@ -25,9 +25,13 @@ export interface LibraryUpdate {
 	 *  that STARTED after this value may retire this row's override; one that
 	 *  started before it must not. */
 	epoch: number;
+	/** Durable retirement: an authoritative fetch has already shown newer server
+	 *  values for this save. A later focus must not replay it just because
+	 *  another asset saved. */
+	retired: boolean;
 }
 
-export type LibraryUpdateInput = Omit<LibraryUpdate, "epoch">;
+export type LibraryUpdateInput = Omit<LibraryUpdate, "epoch" | "retired">;
 
 /**
  * One monotonic clock for saves and request starts.
@@ -62,7 +66,11 @@ const store = createStore<LibraryUpdatesState>()(() => ({
 }));
 
 export function publishLibraryUpdate(update: LibraryUpdateInput): void {
-	const stamped: LibraryUpdate = { ...update, epoch: nextEpoch() };
+	const stamped: LibraryUpdate = {
+		...update,
+		epoch: nextEpoch(),
+		retired: false,
+	};
 	store.setState((state) => ({
 		revision: state.revision + 1,
 		update: stamped,
@@ -73,6 +81,22 @@ export function publishLibraryUpdate(update: LibraryUpdateInput): void {
 
 export function libraryUpdateState(): LibraryUpdatesState {
 	return store.getState();
+}
+
+/** Marks the exact save an authoritative fetch has moved past. Retiring is
+ *  idempotent and does not bump `revision`: there is no new value to paint. */
+export function retireLibraryUpdate(assetId: string, epoch: number): void {
+	store.setState((state) => {
+		const current = state.updates[assetId];
+		if (current === undefined || current.epoch !== epoch) return state;
+		return {
+			...state,
+			updates: {
+				...state.updates,
+				[assetId]: { ...current, retired: true },
+			},
+		};
+	});
 }
 
 /** Tests only: the module store must not leak one case's save into the next. */

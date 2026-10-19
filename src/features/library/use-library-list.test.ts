@@ -113,9 +113,12 @@ vi.mock("react", () => rt.api);
 
 const { useLibraryList } = await import("@/features/library/use-library-list");
 const { DEFAULT_BROWSE } = await import("@/features/library/library-model");
-const { nextEpoch, resetLibraryUpdates } = await import(
-	"@/features/library/library-updates"
-);
+const {
+	libraryUpdateState,
+	nextEpoch,
+	publishLibraryUpdate,
+	resetLibraryUpdates,
+} = await import("@/features/library/library-updates");
 
 const sameDeps = (a: unknown[] | undefined, b: unknown[] | undefined) => {
 	if (a === undefined || b === undefined) return a === b;
@@ -283,8 +286,16 @@ describe("useLibraryList stale pages", () => {
 		expect(calls).toHaveLength(2);
 
 		result?.applySaved([
-			{ asset: row("la_saved_a", "Saved A"), epoch: nextEpoch() },
-			{ asset: row("la_saved_b", "Saved B"), epoch: nextEpoch() },
+			{
+				asset: row("la_saved_a", "Saved A"),
+				epoch: nextEpoch(),
+				retired: false,
+			},
+			{
+				asset: row("la_saved_b", "Saved B"),
+				epoch: nextEpoch(),
+				retired: false,
+			},
 		]);
 		await settle();
 		expect(result?.rows.map((asset) => asset.name)).toEqual([
@@ -329,8 +340,16 @@ describe("useLibraryList stale pages", () => {
 
 		// Both saves happen before the refresh starts, so the refresh owns both.
 		result?.applySaved([
-			{ asset: row("la_external_a", "Saved A"), epoch: nextEpoch() },
-			{ asset: row("la_external_b", "Saved B"), epoch: nextEpoch() },
+			{
+				asset: row("la_external_a", "Saved A"),
+				epoch: nextEpoch(),
+				retired: false,
+			},
+			{
+				asset: row("la_external_b", "Saved B"),
+				epoch: nextEpoch(),
+				retired: false,
+			},
 		]);
 		await settle();
 		result?.refresh();
@@ -354,8 +373,16 @@ describe("useLibraryList stale pages", () => {
 		// Same rule on a new-query first page: a fetch started after the saves
 		// returns the server's answers, not the saved overlays.
 		result?.applySaved([
-			{ asset: row("la_external_a", "Saved again A"), epoch: nextEpoch() },
-			{ asset: row("la_external_b", "Saved again B"), epoch: nextEpoch() },
+			{
+				asset: row("la_external_a", "Saved again A"),
+				epoch: nextEpoch(),
+				retired: false,
+			},
+			{
+				asset: row("la_external_b", "Saved again B"),
+				epoch: nextEpoch(),
+				retired: false,
+			},
 		]);
 		await settle();
 		expect(result?.rows.map((asset) => asset.name)).toEqual([
@@ -382,6 +409,76 @@ describe("useLibraryList stale pages", () => {
 		expect(result?.rows.map((asset) => asset.name)).toEqual([
 			"External newer A2",
 			"External newer B2",
+		]);
+	});
+
+	it("does not replay a retired save when another asset saves later", async () => {
+		await vi.advanceTimersByTimeAsync(300);
+		calls[0]?.resolve(
+			listing(
+				[row("la_replay_a", "Old A"), row("la_replay_b", "Old B")],
+				"cursor-replay",
+			),
+		);
+		await settle();
+
+		// Pre-save refresh: its answer is not authoritative for the edits.
+		result?.refresh();
+		await settle();
+		publishLibraryUpdate({ asset: row("la_replay_a", "Saved A"), tags: null });
+		publishLibraryUpdate({ asset: row("la_replay_b", "Saved B"), tags: null });
+		result?.applySaved(Object.values(libraryUpdateState().updates));
+		await settle();
+		calls[1]?.resolve(
+			listing(
+				[row("la_replay_a", "Old A"), row("la_replay_b", "Old B")],
+				"cursor-replay",
+			),
+		);
+		await settle();
+		expect(result?.rows.map((asset) => asset.name)).toEqual([
+			"Saved A",
+			"Saved B",
+		]);
+
+		result?.loadMore();
+		await settle();
+		calls[2]?.resolve(listing([row("la_replay_c", "Page two")], null));
+		await settle();
+		expect(result?.rows.map((asset) => asset.name)).toEqual([
+			"Saved A",
+			"Saved B",
+			"Page two",
+		]);
+
+		// A refresh started after both saves owns them; both retire.
+		result?.refresh();
+		await settle();
+		calls[3]?.resolve(
+			listing(
+				[
+					row("la_replay_a", "External newer A"),
+					row("la_replay_b", "External newer B"),
+				],
+				"cursor-replay",
+			),
+		);
+		await settle();
+		expect(result?.rows.map((asset) => asset.name)).toEqual([
+			"External newer A",
+			"External newer B",
+		]);
+
+		// Saving only B must not replay A's retired save from the store.
+		publishLibraryUpdate({
+			asset: row("la_replay_b", "Saved B again"),
+			tags: null,
+		});
+		result?.applySaved(Object.values(libraryUpdateState().updates));
+		await settle();
+		expect(result?.rows.map((asset) => asset.name)).toEqual([
+			"External newer A",
+			"Saved B again",
 		]);
 	});
 

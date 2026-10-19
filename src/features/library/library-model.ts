@@ -589,14 +589,17 @@ export const retireAuthoritativeOverrides = (
 	epochs: Map<string, number>,
 	returned: LibraryAsset[],
 	requestEpoch: number,
-): void => {
+): Array<{ assetId: string; epoch: number }> => {
+	const retired: Array<{ assetId: string; epoch: number }> = [];
 	for (const row of returned) {
 		const savedAt = epochs.get(row.id);
 		if (savedAt !== undefined && requestEpoch > savedAt) {
 			overrides.delete(row.id);
 			epochs.delete(row.id);
+			retired.push({ assetId: row.id, epoch: savedAt });
 		}
 	}
+	return retired;
 };
 
 /* ---------------------------------------------------------------------- gate */
