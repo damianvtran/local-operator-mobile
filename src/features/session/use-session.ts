@@ -140,12 +140,28 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 	);
 	const endpoints = source.endpoints;
 
-	const entry = useStore(sessions, () =>
+	const cachedEntry = useStore(sessions, () =>
 		readEntry(sessions.getState(), sessionId),
 	);
 
-	const [facts, setFacts] = useState<StreamFacts>(INITIAL_STREAM_FACTS);
-	const [history, setHistory] = useState<TranscriptEntry[]>([]);
+	// One identity scopes every reader value, not merely the transcript branch.
+	const identity = useMemo<ProjectionOwner>(
+		() => ({
+			revision: snapshot.revision,
+			tunnelId: snapshot.tunnelId,
+			sessionId,
+		}),
+		[snapshot.revision, snapshot.tunnelId, sessionId],
+	);
+
+	const [facts, setFacts] = useSessionValue<StreamFacts>(
+		identity,
+		INITIAL_STREAM_FACTS,
+	);
+	const [history, setHistory] = useSessionValue<TranscriptEntry[]>(
+		identity,
+		[],
+	);
 	/** Whether the last successful page read said the conversation runs deeper
 	 *  than the page's oldest row. The find caveat reads it together with the
 	 *  page's own rows (`history`), so the facts move with every successful page
@@ -153,20 +169,20 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 	 *  rather than keep it stale. A failed read leaves this false — and it is
 	 *  `historyRead` beside it, not this default, that keeps the failure from
 	 *  reading as completeness. */
-	const [pageHasMore, setPageHasMore] = useState(false);
+	const [pageHasMore, setPageHasMore] = useSessionValue(identity, false);
 	/** The last settled history read: `"ok"` once a page has landed, `"failed"`
 	 *  when the most recent attempt came back with nothing, `"unknown"` before
 	 *  any attempt settles (in flight, or no endpoints to read from). The find
 	 *  caveat's first fact: only `"ok"` may back its silence, because a capped
 	 *  projection (≤80 rows) cannot be told from a whole conversation without
 	 *  a read (reviewer MAJOR-2 residual / QA Q63-7). */
-	const [historyRead, setHistoryRead] = useState<"ok" | "failed" | "unknown">(
-		"unknown",
-	);
-	const [commands, setCommands] = useState<SlashCommand[]>([]);
-	const [models, setModels] = useState<ModelEntry[]>([]);
-	const [error, setError] = useState<RelayError | null>(null);
-	const [loading, setLoading] = useState(true);
+	const [historyRead, setHistoryRead] = useSessionValue<
+		"ok" | "failed" | "unknown"
+	>(identity, "unknown");
+	const [commands, setCommands] = useSessionValue<SlashCommand[]>(identity, []);
+	const [models, setModels] = useSessionValue<ModelEntry[]>(identity, []);
+	const [error, setError] = useSessionValue<RelayError | null>(identity, null);
+	const [loading, setLoading] = useSessionValue(identity, true);
 
 	/* `reload` is an ACT rather than a value in a dependency array.
 	 *
@@ -184,15 +200,8 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 	const lastFrameAt = useRef<number | null>(null);
 	/** Which session the current `lastFrameAt` reading belongs to, so a reconnect for
 	 *  the SAME session keeps it and a session change does not inherit it. */
-	const ageOwner = useRef<string | null>(null);
+	const ageOwner = useRef<ProjectionOwner | null>(null);
 
-	// Revision changes invalidate sign-out/switch ownership; tunnelId also changes
-	// when another computer is picked inside the same Radient route revision.
-	const identity: ProjectionOwner = {
-		revision: snapshot.revision,
-		tunnelId: snapshot.tunnelId,
-		sessionId,
-	};
 	const currentIdentity = useRef(identity);
 	currentIdentity.current = identity;
 	const projectionOwner = useRef<ProjectionOwner | null>(null);
@@ -206,6 +215,8 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 			sessionId,
 		};
 		const connect = () => {
+			if (!active || !sameProjectionOwner(owner, currentIdentity.current))
+				return;
 			if (endpoints === null) {
 				setLoading(source.reason === "pending");
 				return;
@@ -220,8 +231,8 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 			// stream that reconnects silently would otherwise reset the one reading `C3`
 			// fires on, so `C3` could never appear for the failure it exists for. A frame
 			// retires the age honestly, because a frame is news.
-			if (ageOwner.current !== sessionId) {
-				ageOwner.current = sessionId;
+			if (!sameProjectionOwner(ageOwner.current, owner)) {
+				ageOwner.current = owner;
 				lastFrameAt.current = null;
 			}
 			sessions.getState().beginStream(sessionId);
@@ -251,6 +262,8 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 					}));
 				},
 				onState: (status) => {
+					if (!active || !sameProjectionOwner(owner, currentIdentity.current))
+						return;
 					setFacts((current) => ({
 						...current,
 						state: status.state,
@@ -261,6 +274,8 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 					}));
 				},
 				onError: (streamError) => {
+					if (!active || !sameProjectionOwner(owner, currentIdentity.current))
+						return;
 					/* `sse.ts` stops its loop on ANY error, by design: "a caller that
 					 * wants to retry a transient failure restarts the loop itself", so a
 					 * persistent 401 cannot become an infinite reconnect. This is that
@@ -319,6 +334,9 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 		source.reason,
 		snapshot.revision,
 		snapshot.tunnelId,
+		setLoading,
+		setError,
+		setFacts,
 	]);
 
 	/** Consecutive failed reconnects, for the backoff. Reset by any delivered frame,
@@ -333,7 +351,7 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 			RECONNECT_DEADLINE_MS,
 		);
 		return () => clearTimeout(timer);
-	}, [facts.state]);
+	}, [facts.state, setFacts]);
 
 	/* ---------------------------------------------------------- the age ticker */
 	useEffect(() => {
@@ -348,7 +366,7 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 			);
 		}, 1000);
 		return () => clearInterval(tick);
-	}, []);
+	}, [setFacts]);
 
 	/* A screen that was backgrounded has a stale age and a possibly dead stream:
 	 * `beginStream` on return makes the next frame authoritative, which is the
@@ -365,17 +383,21 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 			rereadRef.current();
 		});
 		return () => subscription.remove();
-		// No `sessionId` here any more: the two refs already close over the session the
-		// screen is showing, and a listener that re-registered on every session change
-		// would be re-registering a subscription that never went stale.
-	}, []);
+		// The reload refs are current, but the setter also has an identity lease.
+		// Re-register on identity changes rather than using a retired setter.
+	}, [setFacts]);
 
 	/* ------------------------------------------------- the one-off read requests */
 	/* Also an act, for the same reason as the stream: these are the three requests a
 	 * refusal interrupted, and `Check again` has to be able to run them. */
 	useEffect(() => {
+		const owner = identity;
 		const read = () => {
-			if (endpoints === null) return;
+			if (
+				endpoints === null ||
+				!sameProjectionOwner(owner, currentIdentity.current)
+			)
+				return;
 			let cancelled = false;
 			setLoading(true);
 			/* The history read records its OUTCOME as well as its result: a failure is
@@ -423,18 +445,36 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 		};
 		const cancel = read();
 		return cancel;
-	}, [endpoints, sessionId]);
+	}, [
+		endpoints,
+		sessionId,
+		identity,
+		setLoading,
+		setHistory,
+		setPageHasMore,
+		setHistoryRead,
+		setCommands,
+		setModels,
+	]);
 
 	/* ------------------------------------------------------------- derivations */
+	// A cached entry is private to the frame owner. Filtering HERE protects the
+	// header, panels, pending/working facts and composer as well as the row list.
+	const ownsProjection =
+		route !== null && sameProjectionOwner(projectionOwner.current, identity);
+	const entry = ownsProjection
+		? cachedEntry
+		: readEntry({ entries: {} }, sessionId);
 	const projection = entry.projection;
+	const ownedHistory = ownsProjection ? history : EMPTY_HISTORY;
 	/* ONE list, from the first paint, out of both sources: the page's rows stay
 	 * held when the live frame lands, so the open paints its page and then GROWS
 	 * with the frame instead of being replaced by it (`mergeTranscript`). The
 	 * `holeBelowPage` fact rides along because the merge is the only place that
 	 * can see it, and the find caveat needs it (see `olderThanLoaded`). */
 	const merged = useMemo(
-		() => mergeTranscript(projection, history),
-		[projection, history],
+		() => mergeTranscript(projection, ownedHistory),
+		[projection, ownedHistory],
 	);
 	const entries = merged.rows;
 	/* The frame watch behind the find caveat's third proof (reviewer MAJOR-2):
@@ -452,16 +492,20 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 	 * `<message>:call-x` — the SAME row, re-labelled. Comparing raw ids read
 	 * that as a slide and made the caveat claim a row had left the window when
 	 * only its label had changed. Identity is what the claim is about. */
-	const heldIdsRef = useRef<{ sessionId: string; ids: Set<string> } | null>(
-		null,
+	const heldIdsRef = useRef<{
+		owner: ProjectionOwner;
+		ids: Set<string>;
+	} | null>(null);
+	const [slidUnderWindow, setSlidUnderWindow] = useSessionValue(
+		identity,
+		false,
 	);
-	const [slidUnderWindow, setSlidUnderWindow] = useState(false);
 	useEffect(() => {
 		const ids = new Set(entries.map(rowIdentity));
 		const before = heldIdsRef.current;
-		heldIdsRef.current = { sessionId, ids };
+		heldIdsRef.current = { owner: identity, ids };
 		if (before === null) return;
-		if (before.sessionId !== sessionId) {
+		if (!sameProjectionOwner(before.owner, identity)) {
 			// Another conversation's rows are not this one's: start clean.
 			setSlidUnderWindow(false);
 			return;
@@ -472,13 +516,13 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 				return;
 			}
 		}
-	}, [entries, sessionId]);
+	}, [entries, identity, setSlidUnderWindow]);
 	const olderRowClaim = useMemo(
 		() =>
 			olderThanLoaded({
 				hasMore: pageHasMore,
 				read: historyRead,
-				page: history,
+				page: ownedHistory,
 				entries,
 				slid: slidUnderWindow,
 				holeBelowPage: merged.holeBelowPage,
@@ -486,7 +530,7 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 		[
 			pageHasMore,
 			historyRead,
-			history,
+			ownedHistory,
 			entries,
 			slidUnderWindow,
 			merged.holeBelowPage,
@@ -654,8 +698,8 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 		streaming: projection?.streaming === true,
 		streamingRowId,
 		connection,
-		commands,
-		models,
+		commands: ownsProjection ? commands : [],
+		models: ownsProjection ? models : [],
 		loading,
 		olderThanLoaded: olderRowClaim,
 		// The shared route can be refused by its catalogue stream before this
@@ -678,3 +722,47 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 /** Exposed for the connection-state test: the window the `C3` rule is derived
  *  from, re-exported so a screen cannot quietly use a different one. */
 export { KEEPALIVE_GRACE_S };
+
+const EMPTY_HISTORY: TranscriptEntry[] = [];
+
+/** A route switch must withdraw accepted state in the very next render, before
+ * effects run. Tagging values also rejects late async completions (including a
+ * prior reload's history/catalogue callbacks); clearing state in an effect would
+ * briefly expose old rows and cannot stop a late promise from putting them back.
+ * Keeping the same owner preserves useful history/drafts through auth expiry. */
+function useSessionValue<T>(
+	owner: ProjectionOwner,
+	initial: T,
+): [T, (action: T | ((previous: T) => T)) => void] {
+	const seed = useRef(initial);
+	const currentOwner = useRef(owner);
+	currentOwner.current = owner;
+	const [stored, setStored] = useState({ owner, value: initial });
+	const setValue = useCallback(
+		(action: T | ((previous: T) => T)) => {
+			if (!sameProjectionOwner(owner, currentOwner.current)) return;
+			setStored((previous) => {
+				if (!sameProjectionOwner(owner, currentOwner.current)) return previous;
+				const value = sameProjectionOwner(previous.owner, owner)
+					? previous.value
+					: seed.current;
+				const next =
+					typeof action === "function"
+						? (action as (previous: T) => T)(value)
+						: action;
+				// Preserve React's normal no-op update bailout for this owner.
+				if (
+					sameProjectionOwner(previous.owner, owner) &&
+					Object.is(previous.value, next)
+				)
+					return previous;
+				return { owner, value: next };
+			});
+		},
+		[owner],
+	);
+	return [
+		sameProjectionOwner(stored.owner, owner) ? stored.value : seed.current,
+		setValue,
+	];
+}

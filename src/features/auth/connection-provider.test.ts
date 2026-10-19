@@ -172,6 +172,13 @@ async function relay(
 		failLogout?: boolean;
 		refuseCatalogue?: boolean;
 		holdFrame?: boolean;
+		holdHistory?: boolean;
+		holdReloadHistory?: boolean;
+		historyFailure?: boolean;
+		emptyHistory?: boolean;
+		privateHistory?: string;
+		emptyFrame?: boolean;
+		frameTitle?: string;
 	} = {},
 ) {
 	const events: string[] = [];
@@ -181,6 +188,8 @@ async function relay(
 	const releaseLogin = deferred();
 	const releaseToken = deferred();
 	const refuseCatalogue = deferred();
+	const releaseHistory = deferred();
+	let historyReads = 0;
 	let catalogueStreams = 0;
 	let loginCount = 0;
 	let tokenCount = 0;
@@ -296,6 +305,8 @@ async function relay(
 					"utf8",
 				),
 			).data;
+			if (options.emptyFrame) seed.entries = [];
+			if (options.frameTitle) seed.conversation_name = options.frameTitle;
 			response.writeHead(200, { "content-type": "text/event-stream" });
 			response.write(
 				`event: projection\ndata: ${JSON.stringify({ ...seed, session_id: observedSession })}\n\n`,
@@ -307,7 +318,28 @@ async function relay(
 			return;
 		}
 		if (path.endsWith("/history")) {
-			json(body("history-ok"));
+			historyReads += 1;
+			if (
+				options.holdHistory ||
+				(options.holdReloadHistory && historyReads > 1)
+			)
+				await releaseHistory.promise;
+			if (response.destroyed) return;
+			if (options.historyFailure) {
+				json({ detail: "History unavailable" }, 503);
+				return;
+			}
+			const page = body("history-ok");
+			if (options.emptyHistory || options.holdHistory) page.entries = [];
+			if (options.privateHistory)
+				page.entries = [
+					{
+						...page.entries[0],
+						id: "private-history-row",
+						text: options.privateHistory,
+					},
+				];
+			json(page);
 			return;
 		}
 		if (path === "/api/models") {
@@ -321,6 +353,7 @@ async function relay(
 		releaseLogin.resolve();
 		releaseToken.resolve();
 		refuseCatalogue.resolve();
+		releaseHistory.resolve();
 		server.closeAllConnections();
 		await new Promise<void>((resolve) => server.close(() => resolve()));
 	});
@@ -335,6 +368,7 @@ async function relay(
 		releaseLogin,
 		releaseToken,
 		refuseCatalogue,
+		releaseHistory,
 		allowLogout: () => {
 			failLogout = false;
 		},
@@ -1137,8 +1171,13 @@ describe("session runtime shared-route refusal", () => {
 					throw new Error("Expected retained selected route");
 				await act(async () => connectionStore.getState().startRoute(selected));
 				expect(sessionReading.content).toBe("loading");
+				expect(sessionReading.projection).toBeNull();
+				expect(sessionReading.entries).toEqual([]);
 				await act(async () => connectionStore.getState().endRoute());
 				expect(sessionReading.content).toBe("disconnected");
+				expect(sessionReading.projection).toBeNull();
+				expect(sessionReading.entries).toEqual([]);
+				expect(sessionReading.streaming).toBe(false);
 			}
 			// The ordinary cold-start gate remains intact for both success/refusal.
 			expect(wire[0]).toEqual({ method: "POST", path: "/login", status: 303 });
@@ -1159,9 +1198,12 @@ describe("session recovery without an owned frame", () => {
 				"utf8",
 			),
 		).data;
-		sessionProjections
-			.getState()
-			.applyFrame(observedSession, { ...cached, session_id: observedSession });
+		sessionProjections.getState().applyFrame(observedSession, {
+			...cached,
+			session_id: observedSession,
+			conversation_name: "PRIVATE_OLD_TITLE",
+			streaming: true,
+		});
 		transport();
 		await mount();
 		await act(async () => {
@@ -1171,11 +1213,21 @@ describe("session recovery without an owned frame", () => {
 				allowInsecure: true,
 			});
 		});
-		expect(sessionReading.projection).not.toBeNull();
+		expect(sessionReading.projection).toBeNull();
+		expect(sessionReading.entries).toEqual([]);
+		expect(sessionReading.streaming).toBe(false);
+		expect(sessionReading.streamingRowId).toBeNull();
+		expect(sessionReading.supplements).toEqual({});
+		expect(sessionReading.projectionPid).toBe(0);
+		expect(sessionReading.commands).toEqual([]);
+		expect(sessionReading.models).toEqual([]);
 		expect(sessionReading.content).toBe("loading");
 		mock.refuseCatalogue.resolve();
 		await until(() => latest.lastError !== null);
 		expect(sessionReading.content).toBe("recovery");
+		expect(sessionReading.projection).toBeNull();
+		expect(sessionReading.entries).toEqual([]);
+		expect(sessionReading.streaming).toBe(false);
 		expect(sessionReading.source.reason).toBe("refused");
 		expect(sessionReading.source.endpoints).toBeNull();
 		expect(sessionReading.error?.kind).toBe("relay-unauthorized");
@@ -1183,5 +1235,94 @@ describe("session recovery without an owned frame", () => {
 		await unmount();
 		await mount();
 		expect(sessionReading.content).not.toBe("transcript");
+		expect(sessionReading.projection).toBeNull();
+		expect(sessionReading.entries).toEqual([]);
+		expect(sessionReading.streaming).toBe(false);
 	});
+});
+
+describe("session ownership across routes", () => {
+	it.each(["held", "503", "empty", "late-A"])(
+		"never merges A history into an owned B frame while B history is %s",
+		async (mode) => {
+			const marker = "PRIVATE_A_HISTORY";
+			const a = await relay({
+				privateHistory: marker,
+				frameTitle: "PRIVATE_A_TITLE",
+				holdReloadHistory: mode === "late-A",
+			});
+			const b = await relay({
+				emptyFrame: true,
+				frameTitle: "CURRENT_B_TITLE",
+				emptyHistory: true,
+				holdHistory: mode === "held",
+				historyFailure: mode === "503",
+			});
+			observedSession = "shared-session-id";
+			transport();
+			await mount();
+			await act(async () => {
+				await latest.connectCustom({
+					url: a.origin,
+					password: "local-test-password",
+					allowInsecure: true,
+				});
+			});
+			await until(() =>
+				sessionReading.entries.some((row) => row.text.includes(marker)),
+			);
+			expect(sessionReading.content).toBe("transcript");
+			if (mode === "late-A") {
+				await act(async () => sessionReading.reload());
+				await until(
+					() =>
+						a.events.filter((event) => event.endsWith("/history")).length === 2,
+				);
+			}
+			await act(async () => {
+				await latest.connectCustom({
+					url: b.origin,
+					password: "local-test-password",
+					allowInsecure: true,
+				});
+			});
+			await until(
+				() =>
+					sessionReading.projection?.conversation_name === "CURRENT_B_TITLE",
+			);
+			expect(sessionReading.source.baseUrl).toBe(b.origin);
+			expect(sessionReading.content).toBe("transcript");
+			expect(sessionReading.entries).toEqual([]);
+			expect(JSON.stringify(sessionReading.projection)).not.toContain(
+				"PRIVATE_A",
+			);
+			if (mode === "held") b.releaseHistory.resolve();
+			if (mode === "late-A") {
+				a.releaseHistory.resolve();
+				// Observe the late A response itself, not just a quiet B render.
+				// A's initial page + B's page + the retired A reload must all arrive.
+				await until(
+					() =>
+						wire.filter(
+							(request) =>
+								request.path.endsWith("/history") && request.status === 200,
+						).length === 3,
+				);
+			}
+			await until(() => !sessionReading.loading);
+			await act(async () => {
+				await new Promise<void>((resolve) => setTimeout(resolve, 30));
+			});
+			expect(sessionReading.entries).toEqual([]);
+			expect(sessionReading.projection?.conversation_name).toBe(
+				"CURRENT_B_TITLE",
+			);
+			if (mode === "503")
+				expect(wire).toContainEqual({
+					method: "GET",
+					path: `/api/sessions/${observedSession}/history`,
+					status: 503,
+				});
+		},
+	);
 });
