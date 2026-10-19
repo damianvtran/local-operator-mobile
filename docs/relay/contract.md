@@ -33,6 +33,13 @@ rather than from prose.
 > names `ca0569855` (2026-10-03), the ref where the asks route landed, and
 > `v0.66.2`, the first release carrying it. Both are qualified inline rather
 > than re-numbered.
+>
+> **Conversation tags carry a release ref.** The tag fields added to §3.2 and
+> all of §4.14 are written against local-operator **v0.82.3**, the first
+> release carrying PR #2625 (`GET /api/tags`, `PUT /api/sessions/{id}/tags`,
+> and the per-row `tags`/`primary` pair). The `daemon.py` line numbers in the
+> TAG passages are that release's; the pre-existing §3.2 citations remain
+> `fc851a94e`'s.
 
 Paths are relative to the local-operator repository root:
 `local_operator/mobile/daemon.py` → `daemon.py`; `local_operator/mobile/web/src/api.ts`
@@ -165,6 +172,8 @@ The routes that *do* set cache headers are the SSE streams
 | GET | `/api/sessions/{id}/checkpoints` | gate | the rail manifest (D9), `daemon.py:4870-4911` (at `ae6c9eb6`) |
 | GET | `/api/asks` | gate | the queued-ask aggregate (§9), `daemon.py:5630` (`ca0569855`; first released in `v0.66.2`) |
 | GET | `/api/config/events` | gate | SSE, the resolved language (§10), `daemon.py:7250` (`e5b3176447fa`, PR #2218, merged 2026-10-11) |
+| GET | `/api/tags` | gate | the shared tag catalogue, read-only — `daemon.py:5766` at **v0.82.3** (PR #2625, §4.14) |
+| PUT | `/api/sessions/{id}/tags` | gate | desired-state assignment, `daemon.py:5802` at **v0.82.3** (PR #2625, §4.14) |
 
 There is **no `GET /api/sessions/{id}`** — a single session's state arrives only
 over its SSE stream or as a row of `/api/sessions`. A client that wants
@@ -211,7 +220,8 @@ transports** (`daemon.py:3485-3491`). The phone's home screen reads the SSE one.
   "degraded": [],                       // [] | ["sessions"] | ["attention"] | both
   "capabilities": {
     "features": { "auth": 1, "commands": 2, "session_catalogue": 3, ... },
-    "stt": { "available": false, "path": null, "reason": "..." }
+    "stt": { "available": false, "path": null, "reason": "..." },
+    "session_tags": { "available": true }   // v0.82.3; ABSENT on an older relay
   },
   "unread": {                           // S1 (ADR 0006 §1.1); absent on an older relay
     "count": 2,                         // conversations with unread completions; ABSENT when degraded
@@ -231,6 +241,15 @@ transports** (`daemon.py:3485-3491`). The phone's home screen reads the SSE one.
 - `capabilities.features` is a lazy, memoised flag dict; a missing key means
   "this build does not have it", never an error (`daemon.py:1496-1519`).
   Live sample: `fixtures/relay/http/sessions-empty.json`.
+- `capabilities.session_tags` is a **relay** capability (v0.82.3, #2625):
+  `{available: true}` when the relay serves §4.14's routes, and the key is
+  OMITTED by an older relay — absence means "no tag controls", and a client
+  must never default it to available. It is deliberately **not**
+  `features.session_tags`: that entry is core's build fact and is already `1`
+  on released relays that serve none of these routes, so it cannot gate a
+  client. The distinction is visible in one live frame:
+  `fixtures/relay/http/list-with-tags.json` carries BOTH
+  `features.session_tags: 1` and `capabilities.session_tags.available: true`.
 - `unread` is the machine's own aggregate (push/ack-sync S1), a TOP-LEVEL
   sibling of `degraded` — deliberately not a `capabilities` flag, because a
   missing key there means "this build does not have it" while an older relay's
@@ -270,6 +289,8 @@ transports** (`daemon.py:3485-3491`). The phone's home screen reads the SSE one.
 | `created_at` | float (epoch s) | optional on older relays |
 | `completion_kind` | string | `"complete" \| "error" \| "interrupted" \| "closed" \| "retired" \| ""` from the attention store |
 | `unseen` | bool | a completion landed that nobody has acknowledged; absence on an older relay means `false` |
+| `tags` | `[{id, name}]` | v0.82.3 (#2625): the conversation's assigned tags in ASSIGNMENT order, names from one registry snapshot; `[]` when untagged. Absent on an older relay, which the client reads as `[]` |
+| `primary` | `string \| null` | v0.82.3 (#2625): the store's settled primary id, or `null`; always one of `tags`' ids when non-null. Absent on an older relay, read as `null` |
 
 Ordering: rows come back **already ordered** by the shared catalogue rank
 (tier, wake band, birth, id); the client only groups them into
@@ -305,13 +326,17 @@ and keep the relay's last-in-bin order (`session/peer_rows._started_epoch`).
 
 ```json
 { "sessions": [ { "id": "6714def86197", "name": "Hello from the mock provider",
-                  "mtime": 1790727370.33, "forked": false } ],
+                  "mtime": 1790727370.33, "forked": false,
+                  "tags": [{ "id": "cb65004501", "name": "Research" }],
+                  "primary": "cb65004501" } ],
   "degraded": [] }
 ```
 
 - **The route takes no query parameters** — `limit` is fixed at 20 in the handler
   call (`daemon.py:4361-4371`), even though `_past_sessions(limit=20)` accepts
   one. A client cannot page this list.
+- `tags`/`primary` are the same pair as §3.2 (v0.82.3, #2625), always present
+  on a contract relay; live `fixtures/relay/http/past-with-tags.json`.
 - `forked: true` marks a fork still wearing its parent's title, so it and its
   parent are byte-identical rows separable only by id (`daemon.py:4756-4790`).
 - A durable store that cannot be walked answers `degraded: ["sessions"]`
@@ -323,9 +348,13 @@ and keep the relay's last-in-bin order (`session/peer_rows._started_epoch`).
 
 ```json
 { "sessions": [ { "id": "…", "name": "…", "mtime": 1.79e9,
-                  "body_match": false, "forked": false } ],
+                  "body_match": false, "forked": false,
+                  "tags": [], "primary": null } ],
   "query": "hello", "degraded": [] }
 ```
+
+- The same `tags`/`primary` pair rides search hits too (v0.82.3, #2625); live
+  `fixtures/relay/http/search-with-tags.json`.
 
 - `limit` default `40`, clamped to `1..200`; a non-numeric limit falls back to
   `40` rather than erroring (`daemon.py:4342-4346`).
@@ -931,6 +960,88 @@ move can read as "nothing changed" while the listing already shows the row
 moved — the read is the resolution for every move that ends badly, which is why
 the surface points at it even on a plain refusal.
 
+### 4.14 Conversation tags — `GET /api/tags` and `PUT /api/sessions/{id}/tags`
+
+> **Arrived after the pin, and carries its own ref.** Both routes and the
+> per-row `tags`/`primary` pair (§3.2, §3.3, §3.4) shipped in local-operator
+> **v0.82.3**, the first release carrying PR #2625. Citations here are that
+> release's `daemon.py` (`api_tags` at 5766, `api_session_tags` at 5802, routes
+> at 8404-8405), not the document-wide pin.
+
+Tags are a CROSS-SURFACE contract, not a phone feature: the registry and the
+per-conversation assignment live in `local_operator/session/session_tags.py`
+beside the desktop, the TUI and agent callers. The phone is one more reader.
+
+**`GET /api/tags`** — the catalogue, read-only:
+
+```json
+{ "tags": [ { "id": "d28b35a273", "name": "Work", "order": 0, "conversations": 1 } ] }
+```
+
+`order` is the registry's own order (the client must not re-sort by name).
+`conversations` is the store's count of distinct EXISTING session directories
+with the tag — archived/hidden included, deleted excluded — so it cannot
+disagree with the desktop's count for the same category. There is deliberately
+**no `PUT /api/tags`**: create/rename identity stays in the desktop and agent
+surfaces, and a second implementation is how two surfaces start disagreeing.
+The phone renders what they publish.
+
+**`PUT /api/sessions/{id}/tags`** — desired state, applied atomically:
+
+```json
+{ "tags": ["cb65004501", "d28b35a273"], "primary": "d28b35a273" }
+```
+
+→
+
+```json
+{ "session_id": "6714def86197",
+  "tags": [{ "id": "cb65004501", "name": "Research" },
+           { "id": "d28b35a273", "name": "Work" }],
+  "primary": "d28b35a273" }
+```
+
+- **EXACTLY two keys are required**: `tags` (a list of category ids) and
+  `primary` (an id or `null`). An absent `primary` or an unknown/extra key is
+  `422` rather than defaulted — a defaulted primary silently re-primaries the
+  conversation. `{"tags": [], "primary": null}` clears, and a retried request
+  lands on the same state.
+- `422` comes from the **store's own validation**, in its own sentence:
+  unknown id, duplicate ids, more than 8, or a primary outside `tags`; no file
+  is changed. The client renders that sentence rather than rewording it.
+- `404 {"error": "unknown session"}` for an unknown, badly shaped or REMOTE id,
+  and for a live entry with no durable `sessions/<id>/` directory — the tag
+  store prunes no orphans, so admitting one would store an assignment no
+  surface lists.
+- Success returns the **canonical read-back**: names resolved from ONE registry
+  snapshot after the write, orphan ids pruned, settled primary. The client
+  renders this answer instead of re-deriving the assignment.
+- Auth and the same-origin mutation gate are the pin route's. On success the
+  route invalidates the summaries cache and wakes the list stream, so the
+  writer sees the read-back immediately and every other client repaints.
+
+**The capability distinction matters.** `capabilities.session_tags =
+{"available": true}` on the list frame (`GET` and SSE alike) is a RELAY
+capability, like `i18n`. An older relay omits the key, and absence means "no
+controls" — never defaulted to available. It is deliberately **not**
+`features.session_tags`, which is core's build fact and is `1` on released
+relays that serve none of these routes (and is also `1` on a relay that does),
+so it cannot gate a client. `fixtures/relay/http/list-with-tags.json` carries
+both keys in one captured frame as the discriminator.
+
+Remote/mesh rows carry `tags: []` and `primary: null` explicitly: their
+assignment lives in the other device's store, and this relay has no local
+directory to write — hence a remote id earns the `404`, not a special flag.
+Writes from the desktop, the TUI, an agent or auto-tagging reach an open phone
+within one scan tick (~2 s) through an additive `tags/revision` equality marker
+(§6.1).
+
+Live samples (all captured at v0.82.3): `tags-empty.json`,
+`tags-populated.json`, `session-tags-assigned.json`, `session-tags-cleared.json`,
+`session-tags-unknown-tag.json` (422), `session-tags-unknown-session.json`
+(404), `list-with-tags.json`, `past-with-tags.json`, `search-with-tags.json`,
+and the `sessions` SSE seed in `sse/sessions-tags.json`.
+
 ---
 
 ## 5. Idempotency, the retry envelope, and what "already admitted" means
@@ -1029,7 +1140,9 @@ framing.
   `daemon.py:3602-3626`
 - Changes that wake it: a projection arriving from a runtime (which bumps a row's
   streaming/attention), a session appearing/disappearing, a pin written, a
-  `/seen` acknowledgement (`daemon.py:1050-1068,3593,3666`).
+  `/seen` acknowledgement, and a tag assignment written (§4.14's
+  `tags/revision` marker) (`daemon.py:1050-1068,3593,3666`; the tag marker's
+  read at v0.82.3 `daemon.py:648,671`).
 
 ### 6.2 `GET /api/sessions/{id}/events` — one session's projection
 

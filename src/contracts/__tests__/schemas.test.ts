@@ -213,6 +213,14 @@ function classifyHttp(rel: string, fixture: HttpFixture): Classification {
 	 *  prefix. */
 	if (route === "/api/schedules")
 		return { kind: "schema", schema: "schedules", value: body };
+	/* The conversation-tag routes (`local-operator` PR #2625, v0.82.3). The
+	 *  catalogue is its own exact route; the assignment answer is a PUT on the
+	 *  session-scoped path — asserted with the METHOD so a future GET on the same
+	 *  path cannot be misread as this write's read-back. */
+	if (route === "/api/tags")
+		return { kind: "schema", schema: "tags", value: body };
+	if (/^\/api\/sessions\/[^/]+\/tags$/.test(route) && method === "PUT")
+		return { kind: "schema", schema: "sessionTags", value: body };
 	/* The checkpoint manifest (the transcript rail's read): the route added at
 	 *  local-operator `ae6c9eb6`. Classified by its own suffix, like the
 	 *  session-scoped reads beside it. */
@@ -1575,6 +1583,105 @@ describe("a projection from a relay that predates an additive field", () => {
 		expect(parsed.ok).toBe(true);
 		if (!parsed.ok) return;
 		expect(parsed.data.cut_off).toBe(false);
+	});
+});
+
+/* --------------------------------------------------------- conversation tags */
+
+/**
+ * The tag contract (`local-operator` PR #2625, v0.82.3) as the client reads it.
+ *
+ * Two classes of failure matter here and neither is caught by "the fixture
+ * parses": an older relay that omits the pair must yield `[]`/`null` (so a
+ * render never branches on absence), and a RELAY capability must not be
+ * defaulted to available (a defaulted `{available: true}` advertises controls
+ * that 404 on every relay older than the contract).
+ */
+describe("conversation tags: the relay's registry projection, read faithfully", () => {
+	const untagged = {
+		session_id: "6714def86197",
+		section: "active" as const,
+		conversation_name: "Hello from the mock provider",
+		mtime: 1790727325.4,
+	};
+
+	it("gives an older relay's untagged row `[]` and null, not undefined", () => {
+		const parsed = parsePayload("sessionSummary", untagged);
+		expect(parsed.tags).toEqual([]);
+		expect(parsed.primary).toBeNull();
+	});
+
+	it("preserves a tagged row's assignment order, names and primary", () => {
+		const fixture = loadFixture<{ body: { sessions: unknown[] } }>(
+			"http/list-with-tags.json",
+		);
+		const parsed = parsePayload("sessionSummary", fixture.body.sessions[0]);
+		expect(parsed.tags.map((tag) => tag.name)).toEqual(["Research", "Work"]);
+		expect(parsed.tags.map((tag) => tag.id)).toEqual([
+			"cb65004501",
+			"d28b35a273",
+		]);
+		expect(parsed.primary).toBe("d28b35a273");
+	});
+
+	it("keeps the catalogue's registry order and the store's counts", () => {
+		const fixture = loadFixture<{ body: unknown }>("http/tags-populated.json");
+		const parsed = parsePayload("tags", fixture.body);
+		expect(parsed.tags.map((tag) => tag.name)).toEqual(["Work", "Research"]);
+		expect(parsed.tags.map((tag) => tag.order)).toEqual([0, 1]);
+		expect(parsed.tags.map((tag) => tag.conversations)).toEqual([1, 1]);
+	});
+
+	it("rejects an empty tag id or name instead of rendering a blank chip", () => {
+		for (const bad of [
+			{ id: "", name: "Work", order: 0, conversations: 0 },
+			{ id: "cb65004501", name: "", order: 0, conversations: 0 },
+		]) {
+			expect(safeParsePayload("tags", { tags: [bad] }).ok).toBe(false);
+		}
+		expect(
+			safeParsePayload("sessionTags", {
+				session_id: "6714def86197",
+				tags: [{ id: "", name: "Work" }],
+				primary: null,
+			}).ok,
+		).toBe(false);
+	});
+
+	it("reads an absent capability as unavailable and a stated one as available", () => {
+		const older = parsePayload("sessionListFrame", {
+			sessions: [],
+			degraded: [],
+			capabilities: {},
+		});
+		expect(older.capabilities.session_tags).toBeUndefined();
+
+		const current = parsePayload("sessionListFrame", {
+			sessions: [],
+			degraded: [],
+			capabilities: { session_tags: { available: true } },
+		});
+		expect(current.capabilities.session_tags).toEqual({ available: true });
+	});
+
+	it("accepts a remote row with an explicit empty pair", () => {
+		const parsed = parsePayload("sessionSummary", {
+			...untagged,
+			locality: "remote",
+			tags: [],
+			primary: null,
+		});
+		expect(parsed.tags).toEqual([]);
+		expect(parsed.primary).toBeNull();
+	});
+
+	it("parses the assignment read-back's null primary without coercing it", () => {
+		const fixture = loadFixture<{ body: unknown }>(
+			"http/session-tags-cleared.json",
+		);
+		const parsed = parsePayload("sessionTags", fixture.body);
+		expect(parsed.tags).toEqual([]);
+		expect(parsed.primary).toBeNull();
 	});
 });
 

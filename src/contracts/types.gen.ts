@@ -426,6 +426,17 @@ export interface SessionProjection {
 /* --------------------------------------------------------------- session list */
 
 /**
+ * One assigned tag, as the relay's shared registry projects it
+ * (`local-operator` PR #2625, v0.82.3): the store's identity plus the name from
+ * ONE registry snapshot per listing. Assignment ORDER is the store's record and
+ * is the primary fallback, so a client renders the array as received.
+ */
+export interface TagRef {
+	id: string;
+	name: string;
+}
+
+/**
  * One session-list row: a LOCAL conversation (this device's) or a REMOTE one
  * (another device's, appended only when the client asked `include_peers`).
  *
@@ -493,6 +504,20 @@ export interface SessionSummary {
 	 *  #903). */
 	created_at?: number;
 	completion_kind: string;
+	/**
+	 * The conversation's tags (`local-operator` PR #2625, v0.82.3). ALWAYS present
+	 * on a relay that carries the contract: untagged is `[]` and `null`, never
+	 * absence, so no render needs a presence check to tell "no tags" from "too
+	 * old to send them". An OLDER relay omits both, and the schema's defaults
+	 * (`[]`/`null`) are that older-relay reading — every row this build renders
+	 * then carries the pair.
+	 *
+	 * `primary` is the store's settled primary id, or `null`. It is a FILTER over
+	 * `tags`, not a category of its own. Remote/mesh rows carry `[]`/`null`
+	 * explicitly: their assignment lives in the other device's store.
+	 */
+	tags?: TagRef[];
+	primary?: string | null;
 	/* ------------------------------------------------ the remote row's own
 	 *
 	 * ABSENT ON A LOCAL ROW; present with real values on every remote one — the
@@ -580,6 +605,14 @@ export interface Capabilities {
 	features?: Record<string, unknown>;
 	/** An older relay omits this whole object; absence reads as `available:false`. */
 	stt?: SttCapability;
+	/**
+	 * The tag routes' RELAY capability (`local-operator` PR #2625, v0.82.3),
+	 * deliberately not `features.session_tags`: that entry is core's build fact and
+	 * is already `1` on released relays that serve none of these routes, so it
+	 * cannot gate a client. An older relay omits the key, and ABSENCE means the
+	 * routes cannot be served — never defaulted to available.
+	 */
+	session_tags?: { available: boolean };
 }
 
 export interface SessionListFrame {
@@ -663,6 +696,10 @@ export interface PastSession {
 	forked: boolean;
 	/** Present only on search results that matched what was said. */
 	body_match?: boolean;
+	/** The same pair `SessionSummary` carries (`local-operator` PR #2625,
+	 *  v0.82.3); older relays omit both and the schema defaults them. */
+	tags?: TagRef[];
+	primary?: string | null;
 }
 
 export interface PastSessionsResponse {
@@ -672,6 +709,31 @@ export interface PastSessionsResponse {
 
 export interface SearchSessionsResponse extends PastSessionsResponse {
 	query: string;
+}
+
+/** One entry of the shared tag catalogue (`GET /api/tags`, `local-operator`
+ *  PR #2625, v0.82.3). `order` is the registry's own order and `conversations`
+ *  the store's count of distinct EXISTING session directories assigned — not
+ *  rows on this phone's page. */
+export interface TagCatalogueEntry {
+	id: string;
+	name: string;
+	order: number;
+	conversations: number;
+}
+
+export interface TagsResponse {
+	tags: TagCatalogueEntry[];
+}
+
+/** The canonical read-back of `PUT /api/sessions/{id}/tags` (`local-operator`
+ *  PR #2625, v0.82.3): names resolved from one registry snapshot AFTER the
+ *  write, orphan ids pruned, and the settled primary — the client renders this
+ *  answer rather than re-deriving it. */
+export interface SessionTagsResponse {
+	session_id: string;
+	tags: TagRef[];
+	primary: string | null;
 }
 
 export interface HistoryResponse {
