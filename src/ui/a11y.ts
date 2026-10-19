@@ -78,6 +78,10 @@ export const SCREEN = {
 	 *  with no runtime running. One root: the two families are sections of one
 	 *  screen, and a capture must be able to tell it drew. */
 	schedules: "schedules-screen",
+	/** The Library: the catalogue list and its pushed detail. Two roots because
+	 *  the detail is a route of its own; a capture must tell which one drew. */
+	library: "library-screen",
+	libraryDetail: "library-detail-screen",
 	newSession: "new-session-screen",
 	settings: "settings-screen",
 	notFound: "not-found-screen",
@@ -102,6 +106,10 @@ export const EMPTY = {
 	 *  unreadable store can never produce it — the defect this surface exists
 	 *  to avoid. */
 	schedules: "schedules-empty",
+	/** The catalogue with nothing in it (as opposed to no MATCHES, which is the
+	 *  search-empty surface below). */
+	library: "library-empty",
+	librarySearch: "library-search-empty",
 	notFound: "not-found-empty",
 } as const;
 
@@ -393,6 +401,38 @@ export const CONTROL = {
 	 *  dice is the one remedy a read failure has). */
 	schedulesBack: "schedules-back",
 	schedulesRetry: "schedules-retry",
+	/* --- the Library (the catalogue slice). The footer entry is `sidebarLibrary`;
+	 *  the list's search/filter/sort controls and the detail's metadata and chat
+	 *  controls are named here once, and rendered once. */
+	sidebarLibrary: "sidebar-library",
+	libraryBack: "library-back",
+	librarySearchField: "library-search-field",
+	libraryFilters: "library-filters",
+	librarySort: "library-sort",
+	libraryMore: "library-more",
+	libraryRetry: "library-retry",
+	libraryLoadMore: "library-load-more",
+	libraryClearFilters: "library-clear-filters",
+	libraryDetailBack: "library-detail-back",
+	libraryDetailRetry: "library-detail-retry",
+	libraryEdit: "library-edit",
+	libraryOpenChat: "library-open-chat",
+	libraryFavorite: "library-favorite",
+	libraryLock: "library-lock",
+	libraryEditSave: "library-edit-save",
+	libraryNewTag: "library-new-tag",
+	libraryCloseEditor: "library-close-editor",
+	libraryDiscardDialog: "library-discard-dialog",
+	libraryComposeSend: "library-compose-send",
+	libraryComposeField: "library-compose-field",
+	libraryAudioPlay: "library-audio-play",
+	libraryEditName: "library-edit-name",
+	libraryEditDescription: "library-edit-description",
+	libraryNewTagAdd: "library-new-tag-add",
+	libraryFilterTagAny: "library-filter-tag-any",
+	libraryFiltersDone: "library-filters-done",
+	librarySortDone: "library-sort-done",
+	libraryMoreDone: "library-more-done",
 	/** The projects list's own controls (S16). The list and the pushed detail have
 	 *  a retry and a back; the listing's one write is the create route's entry
 	 *  point, and the detail's are named below. */
@@ -468,6 +508,20 @@ export const SURFACE = {
 	/** The wake listing was capped: "Showing N of M" — the sentence that keeps
 	 *  a bounded page from implying the store holds only what it sent. */
 	schedulesWakesTruncated: "schedules-wakes-truncated",
+	/* --- the Library's own surfaces. Loading is a skeleton; `building` is the
+	 *  scan's incremental state and is NOT an error; `error` is the retry strip.
+	 *  The unsupported preview names a designed absence rather than a blank pane. */
+	libraryLoading: "library-loading",
+	libraryBuilding: "library-building",
+	libraryError: "library-error",
+	libraryComposer: "library-composer",
+	libraryUnsupported: "library-unsupported-preview",
+	libraryDetailLoading: "library-detail-loading",
+	libraryDetailPopulated: "library-detail-populated",
+	libraryFilterSheet: "library-filter-sheet",
+	librarySortSheet: "library-sort-sheet",
+	libraryMoreSheet: "library-more-sheet",
+	libraryEditorSheet: "library-editor-sheet",
 	/** The wake index could NOT be read. A first-class state, never an empty
 	 *  list: "no wakes" and "this process could not read the store" are
 	 *  different claims, and this id is how a frame proves the distinction. */
@@ -765,6 +819,17 @@ export const IDENTIFIER_FAMILIES: readonly string[] = [
 	"transcript-video-",
 	"imagegen-cancel-",
 	"attach-option-",
+	/* The Library's parameterised identifiers: one tile per asset, one tag chip
+	 *  per catalogue tag (and one per assigned tag in the editor). */
+	"library-tile-",
+	"library-kind-",
+	"library-more-",
+	"library-origin-",
+	"library-status-",
+	"library-sort-",
+	"library-source-",
+	"library-tag-",
+	"library-detail-tag-",
 	"model-option-",
 	"effort-rung-",
 	"slash-command-",
@@ -892,6 +957,10 @@ export const state = (options: {
  * one of them is a place the flows and this file must agree.
  */
 export const REGION = {
+	/** The Library listing's grid and its origin tab strip: regions a flow
+	 *  asserts rather than controls it presses. */
+	libraryGrid: "library-grid",
+	libraryOrigins: "library-origins",
 	/** The conversations panel's list and its sections. `session-section-active`
 	 *  and `session-section-previous` retired WITH the list's move into the panel:
 	 *  the panel's vocabulary is the desktop's (Pinned · Running · Today · This
@@ -1081,6 +1150,25 @@ export const STATE_MARKER = {
 		populated: "schedule-wake-row-",
 		truncated: SURFACE.schedulesWakesTruncated,
 		"read-error": SURFACE.schedulesWakesUnreadable,
+	},
+	/* The Library list. `populated` is the tile family, `building` the scan's own
+	 *  banner — a state the grid renders UNDER, not instead of, so a frame can
+	 *  carry both. `empty` and `search-empty` are separate ids because "the
+	 *  catalogue holds nothing" and "this filter matched nothing" are different
+	 *  answers with different remedies. */
+	library: {
+		loading: SURFACE.libraryLoading,
+		empty: EMPTY.library,
+		"search-empty": EMPTY.librarySearch,
+		populated: "library-tile-",
+		building: SURFACE.libraryBuilding,
+		error: SURFACE.libraryError,
+	},
+	"library-detail": {
+		loading: SURFACE.libraryDetailLoading,
+		populated: SURFACE.libraryDetailPopulated,
+		unsupported: SURFACE.libraryUnsupported,
+		composer: SURFACE.libraryComposer,
 	},
 	computers: {
 		/** The refusal surface, which the set-up path does not render: the one
@@ -1353,6 +1441,31 @@ export const sessionMoveDestId = (to: string): string =>
  *  not at each call site (the `pastRowId` shape). */
 export const projectRowId = (projectId: string): string =>
 	`project-row-${projectId}`;
+
+/** One Library tile, by the asset's opaque id. The id is already URL-safe and
+ *  never a path, so it is the row's identity on the wire AND in the tree. */
+export const libraryTileId = (assetId: string): string =>
+	`library-tile-${assetId}`;
+
+/* The Library's option identifiers are BUILT from the filter's own value rather
+ *  than declared one constant per option: the screen renders the option tables
+ *  directly, and a hand-kept parallel list would be the drift this file exists to
+ *  stop. The families are declared above so the flow check can see them. */
+export const libraryKindOptionId = (value: string): string =>
+	`library-kind-${value}`;
+export const libraryMoreOptionId = (value: string): string =>
+	`library-more-${value}`;
+export const libraryOriginOptionId = (value: string): string =>
+	`library-origin-${value}`;
+export const libraryStatusOptionId = (value: string): string =>
+	`library-status-${value}`;
+export const librarySortOptionId = (value: string): string =>
+	`library-sort-${value}`;
+export const libraryTagId = (tagId: string): string => `library-tag-${tagId}`;
+export const libraryDetailTagId = (tagId: string): string =>
+	`library-detail-tag-${tagId}`;
+export const librarySourceId = (sessionId: string): string =>
+	`library-source-${sessionId}`;
 
 /**
  * The Schedules surface's row builders (S17), one per section — the same shape
