@@ -1,0 +1,21 @@
+{
+  "provenance": {
+    "kind": "live",
+    "relay_ref": "local-operator 64307c452",
+    "captured_at": "2026-10-19",
+    "how": "captured from an isolated `lop mobile serve` at the installed 0.82.3 release (redirected HOME + LOCAL_OPERATOR_CONFIG_DIR, LO_MOBILE_NO_DIAL=1, own ephemeral port, seeded durable conversation); see ../README.md",
+    "redactions": "isolated home shown as ~; portal password and cookie signatures absent",
+    "what": "the route's 404 for an id with no durable conversation directory"
+  },
+  "request": {
+    "method": "PUT",
+    "path": "/api/sessions/ffffffffffff/tags"
+  },
+  "status": 404,
+  "headers": {
+    "content-type": "application/json"
+  },
+  "body": {
+    "error": "unknown session"
+  }
+}

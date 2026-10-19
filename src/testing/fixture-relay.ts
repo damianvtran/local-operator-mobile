@@ -39,7 +39,7 @@ export function fixtureBody(rel: string): unknown {
 
 /* Hoisted: matched on every request the server handles. */
 const SESSION_ROUTE =
-	/^\/api\/sessions\/([^/]+)\/(events|command|history|seen)$/;
+	/^\/api\/sessions\/([^/]+)\/(events|command|history|seen|tags)$/;
 
 export const FIXTURE_SESSION_ID = "6714def86197";
 const PASSWORD = "correct horse";
@@ -90,6 +90,14 @@ export interface FixtureRelayOptions {
 	 *  cannot drift from the capture: a client that asks for the wrong path gets a
 	 *  404 here rather than a passing test. First match wins. */
 	replay?: readonly string[];
+	/** The conversation-tag routes' answers, as corpus fixture paths. Defaults to
+	 *  the two success captures (`tags-populated`, `session-tags-assigned`). A
+	 *  refusal test names the refusal capture so the server answers the corpus's
+	 *  own status and body, e.g. `{ assignment: "http/session-tags-unknown-tag.json" }`.
+	 *  These routes are modelled by hand (rather than left to `replay`) because the
+	 *  harness must accept ANY session id and record the exact PUT body for the
+	 *  test, while `replay` matches the captured id literally. */
+	tags?: { catalogue?: string; assignment?: string };
 }
 
 export interface FixtureRelay {
@@ -272,9 +280,35 @@ export async function startFixtureRelay(
 			]);
 			return;
 		}
+		if (path === "/api/tags") {
+			if (request.method !== "GET") {
+				json(response, 405, { error: "method not allowed" });
+				return;
+			}
+			json(
+				response,
+				200,
+				fixtureBody(options.tags?.catalogue ?? "http/tags-populated.json"),
+			);
+			return;
+		}
+
 		const sessionRoute = path.match(SESSION_ROUTE);
 		if (sessionRoute) {
 			const [, , action] = sessionRoute;
+			if (action === "tags") {
+				if (request.method !== "PUT") {
+					json(response, 405, { error: "method not allowed" });
+					return;
+				}
+				/* The assignment answer, recorded body included: a test asserts what the
+				 * CLIENT sent against the route's exact `{tags, primary}` contract. */
+				const file = loadFixture<{ status?: number; body?: unknown }>(
+					options.tags?.assignment ?? "http/session-tags-assigned.json",
+				);
+				json(response, file.status ?? 200, file.body);
+				return;
+			}
 			if (action === "events") {
 				openStream(request, response, path, (connection) =>
 					(options.projectionFrames

@@ -1,0 +1,21 @@
+{
+  "provenance": {
+    "kind": "live",
+    "relay_ref": "local-operator 64307c452",
+    "captured_at": "2026-10-19",
+    "how": "captured from an isolated `lop mobile serve` at the installed 0.82.3 release (redirected HOME + LOCAL_OPERATOR_CONFIG_DIR, LO_MOBILE_NO_DIAL=1, own ephemeral port, seeded durable conversation); see ../README.md",
+    "redactions": "isolated home shown as ~; portal password and cookie signatures absent",
+    "what": "the store's own 422 for an unknown category id"
+  },
+  "request": {
+    "method": "PUT",
+    "path": "/api/sessions/6714def86197/tags"
+  },
+  "status": 422,
+  "headers": {
+    "content-type": "application/json"
+  },
+  "body": {
+    "error": "Unknown category id"
+  }
+}

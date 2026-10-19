@@ -23,16 +23,11 @@ wrong wire.
 Read [`../../docs/relay/contract.md`](../../docs/relay/contract.md) for what each
 sample means; this file is only about provenance and reproduction.
 
-The tree is currently **143 fixtures — 131 live, 12 synthetic** — plus this
+The tree is currently **154 fixtures — 141 live, 13 synthetic** — plus this
 README. The split is counted from `provenance.kind` in the files themselves
-rather than typed here, so it cannot drift from them. (This count is re-derived
-at the fold that merged the checkpoint rail in: main's side recounted to
-138/131/7 when the twelve checkpoint samples landed, this branch sat at
-130/119/11, and the merged tree is 142/131/11 — counted, not assumed, as the
-mesh half's four synthetic samples (#2083) were. The earlier note stands as
-the reason the rule exists: a count before that was one short on the total and
-the synthetic half, `synthetic/sse-projection-tables.json` having arrived with
-#55 without the line being recounted.)
+rather than typed here, so it cannot drift from them. (The previous line said
+143/131/12; the committed tree re-derived to 144/131/13, and the ten live
+tag samples added here make 154/141/13 — counted, not assumed.)
 
 **Six refs are represented, deliberately.** The bulk of the live captures were
 taken at local-operator `52c1df35`; the session-state receipts (`ended`,
@@ -76,6 +71,19 @@ with the journal at mode `000` before its first scan) so no field of the
 manifest was written by hand. The `building` sample is a live in-flight scan
 caught by a second overlapping poll — it carries the PREVIOUS scan's 100
 entries, which is exactly what the wire documents for that state.
+
+The conversation-tag samples (`tags-empty`, `tags-populated`,
+`session-tags-assigned`, `session-tags-cleared`, `session-tags-unknown-tag`,
+`session-tags-unknown-session`, `list-with-tags`, `past-with-tags`,
+`search-with-tags`, `sessions-tags`) are a seventh: captured at the
+**installed local-operator 0.82.3 release**, the merge of PR #2625, from an
+isolated `lop mobile serve` (`HOME` + `LOCAL_OPERATOR_CONFIG_DIR` redirected,
+`LO_MOBILE_NO_DIAL=1`, own ephemeral port) with one durable conversation
+seeded on disk and its two categories written through the store's own
+`write_categories`. The `sessions-tags` frame is the `sessions` SSE seed from
+the same run. All ten are live; none needed a synthetic stand-in, because the
+route's refusals (the store's `422`, the unknown-session `404`) are reachable
+without a provider.
 
 ## Provenance
 
@@ -182,6 +190,9 @@ The notification-path samples are the same recipe plus two turns:
 | `seen-real-token.json`, `seen-missing-token.json`, `seen-unknown-session.json`, `seen-superseded.json` | `POST /api/sessions/{id}/seen` | 200 / 422 / 404 / 409 | the 409 is a REAL superseded token's refusal (`code: superseded_completion_token`) |
 | `push-conversation-ok.json`, `push-conversation-unknown.json` | `GET /api/push/conversation/{handle}` | 200 / 404 | the machine-minted handle → session id (S2); the 404 is the clean 'unknown conversation handle' |
 | `pin-true.json`, `pin-not-bool.json`, `pin-unknown.json` | `POST /api/sessions/{id}/pin` | 200 / 422 / 404 | read-back semantics |
+| `tags-empty.json`, `tags-populated.json` | `GET /api/tags` | 200 | the shared catalogue (empty, and registry order with `conversations` counts) |
+| `session-tags-assigned.json`, `session-tags-cleared.json`, `session-tags-unknown-tag.json`, `session-tags-unknown-session.json` | `PUT /api/sessions/{id}/tags` | 200 / 200 / 422 / 404 | the canonical read-back in assignment order; clearing is `{tags: [], primary: null}`; the 422 is the store's own sentence, the 404 is an id with no durable directory |
+| `list-with-tags.json`, `past-with-tags.json`, `search-with-tags.json` | `GET /api/sessions`, `/past`, `/search` | 200 | the same row's `tags`/`primary` pair on all three list surfaces |
 | `subagent-unknown.json`, `subagent-history-unknown.json` | `…/agents/{job}` | 404 | |
 | `command-prompt-ok.json`, `command-prompt-duplicate.json`, `command-prompt-tool.json`, `command-prompt-image.json`, `command-steer-queued.json`, `command-abort.json`, `command-no-origin-post.json` | `POST /api/sessions/{id}/command` | 200 | the receipt ladder |
 | `command-prompt-wake-durable.json` | `POST …/command` on a reaped conversation | 200 | the wake path |
@@ -217,6 +228,7 @@ The notification-path samples are the same recipe plus two turns:
 | File | Event | Notes |
 | --- | --- | --- |
 | `sse-list-frame.json` | `sessions` | a full list frame including `capabilities` and a row with `pending_kind: "approval"` |
+| `sessions-tags.json` | `sessions` | the tag contract's list seed at local-operator 0.82.3: the tagged row's `tags`/`primary` pair and `capabilities.session_tags: {available: true}` |
 | `sse-projection-seed.json` | `projection` | the frame a stream opens with (session start; empty transcript) |
 | `sse-projection-live-idle.json` | `projection` | live runtime, idle, after a completed turn |
 | `sse-projection-pending-approval.json` | `projection` | a real approval gate with a running `bash` tool row |

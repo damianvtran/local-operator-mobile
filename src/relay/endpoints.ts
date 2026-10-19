@@ -442,6 +442,20 @@ export class RelayEndpoints {
 		});
 	}
 
+	/**
+	 * `GET /api/tags` — the shared tag catalogue, READ-ONLY on the phone
+	 * (`local-operator` PR #2625, v0.82.3).
+	 *
+	 * There is deliberately no `PUT /api/tags`: category identity (create/rename)
+	 * lives in the desktop and agent surfaces, and a second implementation here is
+	 * how two surfaces start disagreeing. `order` is the registry's own order and
+	 * `conversations` its count of distinct existing session directories — neither
+	 * is recomputed on this side.
+	 */
+	async tags(): Promise<Payload<"tags">> {
+		return this.http.json("tags", { method: "GET", path: "/api/tags" });
+	}
+
 	/** The projects listing (`GET /api/projects`), in the relay's own board order —
 	 *  the sections are the relay's `STATUS_RANK`, not a client sort.
 	 *
@@ -1094,6 +1108,30 @@ export class RelayEndpoints {
 			method: "POST",
 			path: `/api/sessions/${encodeURIComponent(sessionId)}/pin`,
 			body: { pinned },
+		});
+	}
+
+	/**
+	 * `PUT /api/sessions/{id}/tags` — set ONE conversation's tags to a DESIRED
+	 * state (`local-operator` PR #2625, v0.82.3).
+	 *
+	 * EXACTLY two keys, both always sent: `tags` (the ids in the order the caller
+	 * wants them recorded) and `primary` (`null` or an id in `tags`). The route
+	 * refuses an absent `primary` and any extra key with a 422 rather than
+	 * defaulting — a defaulted primary silently re-primaries the conversation —
+	 * and a dropped response can be retried to the same state. The answer is the
+	 * CANONICAL read-back (names resolved after the write, orphans pruned, settled
+	 * primary), so callers render it instead of re-deriving the assignment.
+	 */
+	async setSessionTags(
+		sessionId: string,
+		tags: string[],
+		primary: string | null,
+	): Promise<Payload<"sessionTags">> {
+		return this.http.json("sessionTags", {
+			method: "PUT",
+			path: `/api/sessions/${encodeURIComponent(sessionId)}/tags`,
+			body: { tags, primary },
 		});
 	}
 

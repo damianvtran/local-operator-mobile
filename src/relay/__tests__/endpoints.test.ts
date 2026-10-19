@@ -255,6 +255,47 @@ describe("mutations send exactly the bodies the relay validates", () => {
 	});
 });
 
+describe("the conversation-tag routes", () => {
+	it("reads the catalogue with GET and assigns with PUT on the session path", async () => {
+		const catalogue = fixtureBody("http/tags-populated.json").body;
+		const assigned = fixtureBody("http/session-tags-assigned.json").body;
+		const { http, client } = endpoints((_request, schema) => ({
+			json: schema === "tags" ? catalogue : assigned,
+		}));
+
+		await client.tags();
+		await client.setSessionTags("6714def86197", ["cb65004501"], "cb65004501");
+
+		expect(http.requests[0]).toMatchObject({
+			method: "GET",
+			path: "/api/tags",
+		});
+		expect(http.requests[1]).toMatchObject({
+			method: "PUT",
+			path: "/api/sessions/6714def86197/tags",
+			body: { tags: ["cb65004501"], primary: "cb65004501" },
+		});
+	});
+
+	it("always sends `primary`, including null, and no other key", async () => {
+		const assigned = fixtureBody("http/session-tags-cleared.json").body;
+		const { http, client } = endpoints(() => ({ json: assigned }));
+
+		await client.setSessionTags("6714def86197", [], null);
+
+		const sent = http.requests[0]?.body as Record<string, unknown>;
+		expect(Object.keys(sent).sort()).toEqual(["primary", "tags"]);
+		expect(sent).toEqual({ tags: [], primary: null });
+	});
+
+	it("has no catalogue write — the phone cannot create or rename tags", () => {
+		const methods = Object.getOwnPropertyNames(RelayEndpoints.prototype);
+		for (const absent of ["createTag", "renameTag", "deleteTag"]) {
+			expect(methods).not.toContain(absent);
+		}
+	});
+});
+
 describe("an error from a real http client still arrives as one typed error", () => {
 	it("turns a 404 for an unknown session into a RelayError the caller can act on", async () => {
 		const unknown = fixtureBody("http/history-unknown.json");

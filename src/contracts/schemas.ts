@@ -88,12 +88,14 @@ import type {
 	SessionListFrame,
 	SessionProjection,
 	SessionSummary,
+	SessionTagsResponse,
 	SlashCommand,
 	SttCapability,
 	SubagentDetail,
 	SubagentRow,
 	/** One supplement component's assembled document, `{html}`. */
 	SupplementDocument,
+	TagsResponse,
 	TodoItem,
 	TodoPhase,
 	TranscriptEntry,
@@ -691,6 +693,55 @@ export const sessionProjectionSchema = z.looseObject({
 		.optional(),
 });
 
+/* ----------------------------------------------------- conversation tags */
+
+/**
+ * One assigned tag, as the relay projects the shared registry
+ * (`local-operator` PR #2625, v0.82.3). `id` is the store's 10-hex identity and
+ * `name` a registry name; both are non-empty because an empty one is not a tag
+ * this client can render or a PUT can address.
+ *
+ * Deliberately no shape check on the id beyond non-emptiness: the store owns
+ * identity, and rejecting a future id format at the boundary would blank a row
+ * over a registry detail the phone must merely display.
+ */
+export const tagRefSchema = z.looseObject({
+	id: nonEmpty,
+	name: z.string().min(1),
+});
+
+/** One catalogue entry (`GET /api/tags`). `order` is the registry's own order —
+ *  the client must not re-sort by name — and `conversations` the store's count of
+ *  distinct EXISTING session directories, archived/hidden included. */
+export const tagCatalogueEntrySchema = z.looseObject({
+	id: nonEmpty,
+	name: z.string().min(1),
+	order: z.number().int(),
+	conversations: z.number().int(),
+});
+
+export const tagsResponseSchema = z.looseObject({
+	tags: z.array(tagCatalogueEntrySchema),
+});
+
+/** The canonical read-back of `PUT /api/sessions/{id}/tags`: names resolved
+ *  after the write, orphans pruned, and the settled primary. `primary` may be
+ *  null and is never coerced to `""`. */
+export const sessionTagsResponseSchema = z.looseObject({
+	session_id: nonEmpty,
+	tags: z.array(tagRefSchema),
+	primary: z.string().nullable(),
+});
+
+/** The tag routes' RELAY capability. `available` is required when the object is
+ *  present: a key the relay published but cannot read is a protocol change, not
+ *  something to guess around. The OBJECT itself stays optional on
+ *  `capabilitiesSchema` — absence is the older relay, and it must never become
+ *  a defaulted `{available: true}`. */
+export const sessionTagsCapabilitySchema = z.looseObject({
+	available: z.boolean(),
+});
+
 export const sessionSummarySchema = z.looseObject({
 	session_id: nonEmpty,
 	section: z.enum(["active", "previous"]),
@@ -759,6 +810,12 @@ export const sessionSummarySchema = z.looseObject({
 	 *  none. Defaulted rather than required: `""` is exactly what "no completion"
 	 *  means, so an older relay that omits it is not an error. */
 	completion_kind: z.string().default(""),
+	/* The tags pair (`local-operator` PR #2625, v0.82.3). Untagged is `[]`/`null`
+	 *  on a contract relay, so the DEFAULTS are only the older-relay reading: every
+	 *  row this build renders then has both fields and no render branches on
+	 *  absence. Names/order are the relay's; nothing here re-sorts or invents one. */
+	tags: z.array(tagRefSchema).default([]),
+	primary: z.string().nullable().default(null),
 	/* ------------------------------------------------ the remote row's own
 	 *
 	 * ABSENT ON A LOCAL ROW, present with real values on every remote one — the
@@ -865,6 +922,10 @@ export const capabilitiesSchema = z.looseObject({
 	stt: sttCapabilitySchema.default(() =>
 		sttCapabilitySchema.parse({ available: false, path: null }),
 	),
+	/** The tag routes' relay capability, DELIBERATELY optional and never
+	 *  defaulted: absence is an older relay whose routes do not exist, while a
+	 *  default `{available: true}` would advertise controls that 404. */
+	session_tags: sessionTagsCapabilitySchema.optional(),
 });
 
 /** The frame-level unread aggregate (push/ack-sync S1, ADR 0006 §1.1).
@@ -905,6 +966,9 @@ export const pastSessionSchema = z.looseObject({
 	mtime: epochSeconds,
 	forked: z.boolean(),
 	body_match: z.boolean().optional(),
+	/** Same tags pair and same older-relay reading as `sessionSummarySchema`. */
+	tags: z.array(tagRefSchema).default([]),
+	primary: z.string().nullable().default(null),
 });
 
 export const pastSessionsResponseSchema = z.looseObject({
@@ -1646,6 +1710,11 @@ export const SCHEMAS = {
 	sessionProjection: sessionProjectionSchema,
 	pastSessions: pastSessionsResponseSchema,
 	searchSessions: searchSessionsResponseSchema,
+	/** The tag reads/write answers (`local-operator` PR #2625, v0.82.3): the
+	 *  catalogue and the canonical assignment read-back. Both are registered so
+	 *  their routes parse at the same boundary as every other payload. */
+	tags: tagsResponseSchema,
+	sessionTags: sessionTagsResponseSchema,
 	history: historyResponseSchema,
 	subagentRow: subagentRowSchema,
 	subagentDetail: subagentDetailSchema,
@@ -1811,6 +1880,13 @@ type WireMirror = {
 	sessionProjection: SessionProjection;
 	pastSessions: PastSessionsResponse;
 	searchSessions: SearchSessionsResponse;
+	/* The conversation-tag routes (`local-operator` PR #2625, v0.82.3): the
+	 *  catalogue and the canonical assignment read-back. Asserted like every read
+	 *  family around them — a schema whose output stops being assignable to these
+	 *  declarations trips `AssertAll` before a phone renders a tag the relay no
+	 *  longer sends. */
+	tags: TagsResponse;
+	sessionTags: SessionTagsResponse;
 	history: HistoryResponse;
 	subagentDetail: SubagentDetail;
 	commands: CommandsResponse;
@@ -2054,6 +2130,7 @@ export type {
 	SessionListFrame,
 	SessionProjection,
 	SessionSummary,
+	SessionTagsResponse,
 	SlashCommand,
 	SttCapability,
 	SubagentDetail,
