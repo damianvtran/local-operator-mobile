@@ -233,6 +233,12 @@ function classifyHttp(rel: string, fixture: HttpFixture): Classification {
 	if (/\/api\/sessions\/[^/]+\/agents\/[^/]+$/.test(route)) {
 		return { kind: "schema", schema: "subagentDetail", value: body };
 	}
+	/* The Library listing. The sibling routes (one asset, tags, content) are
+	 *  introduced by this client slice's own endpoint tests and the mock; this
+	 *  corpus holds the one hand-authored listing fixture they are seeded from. */
+	if (route === "/api/library/assets") {
+		return { kind: "schema", schema: "libraryList", value: body };
+	}
 
 	throw new Error(
 		`${rel}: unclassified http fixture (${fixture.request?.method ?? "?"} ${path} -> ${String(status)}). ` +
@@ -242,6 +248,17 @@ function classifyHttp(rel: string, fixture: HttpFixture): Classification {
 
 function classifyFixture(rel: string, value: unknown): Classification {
 	if (rel.startsWith("http/")) return classifyHttp(rel, value as HttpFixture);
+	/* The synthetic corpus holds SSE-shaped frames EXCEPT this one: the Library
+	 *  listing is a hand-authored HTTP answer because the relay routes it models
+	 *  had not shipped when the client slice was written. It is classified by its
+	 *  own name before the frame-shaped branch can misread it as an SSE payload. */
+	if (rel === "synthetic/library-listing.json") {
+		return {
+			kind: "schema",
+			schema: "libraryList",
+			value: (value as { body?: unknown }).body,
+		};
+	}
 
 	if (rel.startsWith("sse/") || rel.startsWith("synthetic/")) {
 		const frame = value as { event?: string; data?: unknown };

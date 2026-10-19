@@ -45,6 +45,11 @@ import type {
 	Directories,
 	HealthzResponse,
 	HistoryResponse,
+	LibraryAsset,
+	LibraryChatResponse,
+	LibraryListResponse,
+	LibraryTagResponse,
+	LibraryTagsResponse,
 	LinkedSession,
 	ModelEntry,
 	ModelsResponse,
@@ -1429,6 +1434,206 @@ export const gatewayRelayDownSchema = z.looseObject({
  * the type of `Registry` is derived from the map, so a name that is not a key is
  * a compile error rather than a runtime `undefined`.
  */
+
+/* ------------------------------------------------------------------- library */
+
+/**
+ * The Library wire (`docs/design/library.md` §4, relay projection).
+ *
+ * Every row is read through the same additive-evolution rule as the rest of this
+ * file: a field an older relay omits gets the defensible reading encoded as a
+ * default (an absent name is the empty string, an absent favorite is false), and
+ * `null` is kept where the contract says null is a fact — a chat that was never
+ * linked, a primary tag that was never set. The one absence that is NOT defaulted
+ * is the route itself: a relay without the Library capability omits
+ * `features.library`, and the footer entry is hidden rather than guessed at.
+ */
+/** The preview classifier. An unknown kind from a newer relay becomes `other`
+ *  rather than failing the whole page: a catalogue must not blank because one
+ *  row learned a new extension. */
+export const libraryKindSchema = z
+	.enum([
+		"image",
+		"audio",
+		"video",
+		"pdf",
+		"pptx",
+		"docx",
+		"markdown",
+		"html",
+		"spreadsheet",
+		"text",
+		"code",
+		"other",
+	])
+	.catch("other");
+
+export const libraryCategorySchema = z
+	.enum([
+		"image",
+		"sound",
+		"document",
+		"presentation",
+		"video",
+		"spreadsheet",
+		"code",
+		"other",
+	])
+	.catch("other");
+
+export const libraryOriginGroupSchema = z
+	.enum(["generated", "created", "mentioned"])
+	.catch("mentioned");
+
+export const libraryTagRefSchema = z.looseObject({
+	id: nonEmpty,
+	name: nonEmpty,
+	category: z.string().default("custom"),
+});
+
+/** A catalogue tag. `count` is the number of assets it names and is only
+ *  meaningful on the listing route; an asset's own tag list has no count, so
+ *  the default is `0` rather than an invented number. */
+export const libraryTagSchema = z.looseObject({
+	id: nonEmpty,
+	name: nonEmpty,
+	category: z.string().default("custom"),
+	created_by: z.string().default("user"),
+	/** The number of assets the tag names. Only the listing route fills it. */
+	count: z.number().int().default(0),
+	created_at: epochSeconds.default(0),
+	updated_at: epochSeconds.default(0),
+});
+
+export const libraryAssetRefSchema = z.looseObject({
+	type: z.enum(["path", "artifact"]),
+	/** The display form. The absolute path is deliberately absent from the phone
+	 *  projection (`display=True`), and a client never reconstructs one. */
+	display_path: z.string().default(""),
+	digest: z.string().nullable().default(null),
+	content_type: z.string().nullable().default(null),
+});
+
+export const libraryOccurrenceSchema = z.looseObject({
+	session_id: z.string().default(""),
+	session_title: z.string().default(""),
+	origin: z.string().default(""),
+	tool: z.string().default(""),
+	at: epochSeconds.default(0),
+	intent: z.string().nullable().default(null),
+	/** The journal sequence window; 0 when the scanner could not attribute one. */
+	first_seq: z.number().int().default(0),
+	last_seq: z.number().int().default(0),
+	child_id: z.string().nullable().default(null),
+	label: z.string().nullable().default(null),
+});
+
+export const libraryChatSchema = z.looseObject({
+	session_id: nonEmpty,
+	title: z.string().default(""),
+	updated_at: epochSeconds.default(0),
+});
+
+export const libraryPreviewSchema = z.looseObject({
+	state: z.enum(["ready", "unsupported"]).default("unsupported"),
+	mime_type: z.string().default(""),
+	pages: z.number().int().nullable().default(null),
+});
+
+export const libraryOrganizedSchema = z.looseObject({
+	at: epochSeconds.default(0),
+	by: z.string().default(""),
+	confidence: z.number().nullable().default(null),
+});
+
+export const libraryAssetSchema = z.looseObject({
+	id: nonEmpty,
+	ref: libraryAssetRefSchema,
+	name: z.string().default(""),
+	derived_name: z.string().default(""),
+	description: z.string().default(""),
+	kind: libraryKindSchema,
+	category: libraryCategorySchema,
+	origin: z.string().default(""),
+	origin_group: libraryOriginGroupSchema,
+	origins: z.array(z.string()).default([]),
+	tags: z.array(libraryTagRefSchema).default([]),
+	primary_tag: z.string().nullable().default(null),
+	/* Null is "not measured", never zero: the backend declares these nullable
+	 *  for exactly that reason, and a zero would paint a 0 B tile. */
+	size_bytes: z.number().nullable().default(null),
+	width: z.number().nullable().default(null),
+	height: z.number().nullable().default(null),
+	duration_s: z.number().nullable().default(null),
+	created_at: epochSeconds.default(0),
+	modified_at: epochSeconds.default(0),
+	last_seen_at: epochSeconds.default(0),
+	exists: z.boolean().default(false),
+	highlighted: z.boolean().default(false),
+	highlight_why: z.string().nullable().default(null),
+	occurrences: z.array(libraryOccurrenceSchema).default([]),
+	session_count: z.number().int().default(0),
+	chat: libraryChatSchema.nullable().default(null),
+	preview: libraryPreviewSchema.default(() => libraryPreviewSchema.parse({})),
+	organized: libraryOrganizedSchema.nullable().default(null),
+	locked: z.boolean().default(false),
+	favorite: z.boolean().default(false),
+	archived: z.boolean().default(false),
+});
+
+export const libraryCountsSchema = z.looseObject({
+	category: z.record(z.string(), z.number()).default(() => ({})),
+	origin_group: z.record(z.string(), z.number()).default(() => ({})),
+	kind: z.record(z.string(), z.number()).default(() => ({})),
+});
+
+export const libraryScanSchema = z.looseObject({
+	sessions_total: z.number().int().default(0),
+	sessions_scanned: z.number().int().default(0),
+});
+
+export const librarianStatusSchema = z.looseObject({
+	enabled: z.boolean().default(false),
+	session_id: z.string().default(""),
+	paused: z.boolean().default(false),
+	last_run_at: epochSeconds.default(0),
+	last_summary: z.string().default(""),
+});
+
+export const libraryListResponseSchema = z.looseObject({
+	state: z.enum(["ready", "building"]).default("ready"),
+	revision: z.number().int().default(0),
+	total: z.number().int().default(0),
+	counts: libraryCountsSchema.default(() => libraryCountsSchema.parse({})),
+	tags: z.array(libraryTagSchema).default([]),
+	rows: z.array(libraryAssetSchema),
+	next_cursor: z.string().nullable().default(null),
+	cursor_reset: z.boolean().default(false),
+	scan: libraryScanSchema.default(() => libraryScanSchema.parse({})),
+	librarian: librarianStatusSchema.nullable().default(null),
+});
+
+export const libraryTagsResponseSchema = z.looseObject({
+	tags: z.array(libraryTagSchema),
+});
+
+export const libraryTagResponseSchema = z.looseObject({
+	tag: libraryTagSchema,
+});
+
+/** The chat-link routes answer the asset's active link, or `null` after a clear.
+ *  `null` is the honest "this asset has no chat" — never an empty object. */
+export const libraryChatResponseSchema = z.looseObject({
+	asset_id: z.string().default(""),
+	/** The relay's two shapes both read here: the desktop route answers
+	 *  `{asset_id, chat, cleared}`, while the phone plane answers `{chat}` on a
+	 *  link and `{ok, cleared}` on a clear. An absent `chat` is the cleared
+	 *  state, never a parse failure. */
+	chat: libraryChatSchema.nullable().default(null),
+	/** True when a DELETE removed an existing link; false when there was none. */
+	cleared: z.boolean().default(false),
+});
+
 export const SCHEMAS = {
 	healthz: healthzResponseSchema,
 	sessionListFrame: sessionListFrameSchema,
@@ -1496,6 +1701,15 @@ export const SCHEMAS = {
 	configFrame: configFrameSchema,
 	configStreamFrame: configStreamFrameSchema,
 	gatewayRefusal: gatewayRefusalSchema,
+	/* The Library surfaces' reads and write answers. Registered because every
+	 *  route this build parses must have a schema at the boundary: an endpoint
+	 *  that returns a payload with no `SCHEMAS` entry is a typed lie, not a
+	 *  compile error. */
+	libraryList: libraryListResponseSchema,
+	libraryAsset: libraryAssetSchema,
+	libraryTags: libraryTagsResponseSchema,
+	libraryTag: libraryTagResponseSchema,
+	libraryChat: libraryChatResponseSchema,
 } as const;
 
 export type SchemaRegistry = typeof SCHEMAS;
@@ -1637,6 +1851,15 @@ type WireMirror = {
 	 *  reads `{html}` off this parse, so a field that stops being assignable
 	 *  reds `WireConformance` before a phone renders a blank frame. */
 	supplementDocument: SupplementDocument;
+	/* The Library reads: the listing, one asset, the tag catalogue, one tag write
+	 *  answer and the chat link. Asserted like every read family around it — a
+	 *  schema whose output stops being assignable to these declarations trips
+	 *  `AssertAll` before a phone can render a field the relay no longer sends. */
+	libraryList: LibraryListResponse;
+	libraryAsset: LibraryAsset;
+	libraryTags: LibraryTagsResponse;
+	libraryTag: LibraryTagResponse;
+	libraryChat: LibraryChatResponse;
 };
 
 /** `SCHEMAS` names deliberately outside the assertion, each the shape of a
@@ -1788,6 +2011,11 @@ export type {
 	Directories,
 	HealthzResponse,
 	HistoryResponse,
+	LibraryAsset,
+	LibraryChatResponse,
+	LibraryListResponse,
+	LibraryTagResponse,
+	LibraryTagsResponse,
 	LinkedSession,
 	ModelEntry,
 	ModelsResponse,

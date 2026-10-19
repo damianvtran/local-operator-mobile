@@ -51,6 +51,7 @@ import type { FaultSet } from "./faults.ts";
 import { FAULT_NAMES, parseFaults, summariseFaults } from "./faults.ts";
 import type { FixtureResponseOverride } from "./fixtures.ts";
 import { defaultFixturesDir, loadFixtures, textOf } from "./fixtures.ts";
+import { createLibraryStore } from "./library.ts";
 import { createProjectsStore, isProjectsRefusal } from "./projects.ts";
 import type { ScenarioWorld, StreamSpec, TransferScript } from "./scenarios.ts";
 import {
@@ -583,6 +584,11 @@ export function createRelay(options: RelayOptions = {}) {
 	 * create in one cell's scenario must not appear in the next one's.
 	 */
 	const projects = createProjectsStore(fix);
+	/** The Library store (see `library.ts`): seeded from the hand-authored
+	 *  `library-listing` fixture and mutated by the same writes the metadata store
+	 *  performs. Reset with the world so a tag/patch in one cell cannot leak into
+	 *  the next. */
+	const library = createLibraryStore(fix);
 	/* The push device registry (push/ack-sync S4, ADR 0006 §3.1). The corpus
 	 * holds no captures of these routes — they shipped after the last drain — so
 	 * the mock models them from the core's own source (`push_devices.py`: the
@@ -676,6 +682,7 @@ export function createRelay(options: RelayOptions = {}) {
 		 *  scenario, which is the same reasoning the faults and the expired latch
 		 *  below carry. */
 		projects.reset();
+		library.reset();
 		state.scenarioStartedAt = Date.now();
 		/* A state's own faults are applied WITH it: `S5/error` is reachable only when the
 		 * stream comes up and THEN fails, so the scenario that models it carries the fault
@@ -2353,6 +2360,225 @@ export function createRelay(options: RelayOptions = {}) {
 			return;
 		}
 
+		/* ------------------------------------------------------------ library -- */
+
+		if (pathname === "/api/library/assets" && method === "GET") {
+			const numberParam = (key: string): number | null => {
+				const raw = url.searchParams.get(key);
+				if (raw === null) return null;
+				const value = Number(raw);
+				return Number.isFinite(value) ? value : null;
+			};
+			/* Absent is "no opinion" (null), not "false": a false here would filter
+			 *  every organized/favorite/highlighted asset out of a plain listing. */
+			const flagParam = (key: string): boolean | null => {
+				const value = numberParam(key);
+				return value === null ? null : value === 1;
+			};
+			sendJson(
+				res,
+				200,
+				library.list({
+					q: url.searchParams.get("q") ?? "",
+					category: url.searchParams.get("category"),
+					kind: url.searchParams.get("kind"),
+					origin_group: url.searchParams.get("origin_group"),
+					tag: url.searchParams.get("tag"),
+					tag_mode: url.searchParams.get("tag_mode") === "any" ? "any" : "all",
+					highlighted: flagParam("highlighted"),
+					organized: flagParam("organized"),
+					favorite: flagParam("favorite"),
+					session_id: url.searchParams.get("session_id"),
+					sort: url.searchParams.get("sort") ?? "recent",
+					order: url.searchParams.get("order") === "asc" ? "asc" : null,
+					limit: numberParam("limit") ?? 24,
+					cursor: url.searchParams.get("cursor"),
+				}),
+			);
+			return;
+		}
+
+		if (pathname === "/api/library/tags" && method === "GET") {
+			sendJson(res, 200, { tags: library.tags() });
+			return;
+		}
+
+		if (pathname === "/api/library/tags" && method === "POST") {
+			const body = parseJsonBody(rawBody ?? "");
+			if (!isRecord(body)) {
+				sendJson(res, 400, errorBody("request body must be an object"));
+				return;
+			}
+			const name = asString(body.name);
+			if (name === undefined || !/^[a-z0-9][a-z0-9_-]{0,23}$/.test(name)) {
+				sendJson(
+					res,
+					422,
+					errorBody("tag names use lowercase letters, digits, '-' and '_'"),
+				);
+				return;
+			}
+			const category = asString(body.category) ?? "custom";
+			sendJson(res, 200, { tag: library.createTag(name, category) });
+			return;
+		}
+
+		const tagMerge = /^\/api\/library\/tags\/([^/]+)\/merge$/.exec(pathname);
+		if (tagMerge && method === "POST") {
+			const body = parseJsonBody(rawBody ?? "");
+			const into = isRecord(body) ? asString(body.into) : undefined;
+			const merged = library.mergeTag(
+				decodeURIComponent(tagMerge[1] ?? ""),
+				into ?? "",
+			);
+			if (merged === null) {
+				sendJson(res, 404, errorBody("library tag not found"));
+				return;
+			}
+			sendJson(res, 200, { tag: merged });
+			return;
+		}
+
+		const tagPatch = /^\/api\/library\/tags\/([^/]+)$/.exec(pathname);
+		if (tagPatch && method === "PATCH") {
+			const body = parseJsonBody(rawBody ?? "");
+			if (!isRecord(body)) {
+				sendJson(res, 400, errorBody("request body must be an object"));
+				return;
+			}
+			const renamed = library.renameTag(decodeURIComponent(tagPatch[1] ?? ""), {
+				name: asString(body.name),
+				category: asString(body.category),
+			});
+			if (renamed === null) {
+				sendJson(res, 404, errorBody("library tag not found"));
+				return;
+			}
+			sendJson(res, 200, { tag: renamed });
+			return;
+		}
+
+		const assetTags = /^\/api\/library\/assets\/([^/]+)\/tags$/.exec(pathname);
+		if (assetTags && method === "PUT") {
+			const body = parseJsonBody(rawBody ?? "");
+			if (!isRecord(body) || !Array.isArray(body.tags)) {
+				sendJson(res, 422, errorBody("tags must be a list of tag ids"));
+				return;
+			}
+			const tagIds = body.tags.filter(
+				(value): value is string => typeof value === "string",
+			);
+			const row = library.setTags(
+				decodeURIComponent(assetTags[1] ?? ""),
+				tagIds,
+				asString(body.primary) ?? null,
+			);
+			if (row === null) {
+				sendJson(res, 404, errorBody("library asset not found"));
+				return;
+			}
+			sendJson(res, 200, row);
+			return;
+		}
+
+		const assetChat = /^\/api\/library\/assets\/([^/]+)\/chat$/.exec(pathname);
+		if (assetChat && (method === "PUT" || method === "DELETE")) {
+			const assetId = decodeURIComponent(assetChat[1] ?? "");
+			if (method === "DELETE") {
+				const outcome = library.unlinkChat(assetId);
+				if (outcome.row === null) {
+					sendJson(res, 404, errorBody("library asset not found"));
+					return;
+				}
+				/* #2624's phone plane, deliberately: a clear answers `{ok, cleared}`
+				 *  and carries no chat key, which is the shape the client's schema must
+				 *  read as `chat: null`. */
+				sendJson(res, 200, { ok: true, cleared: outcome.cleared });
+				return;
+			}
+			const body = parseJsonBody(rawBody ?? "");
+			const sessionId = isRecord(body) ? asString(body.session_id) : undefined;
+			/* The real route verifies the session directory exists; the mock holds
+			 *  no such directory, so it enforces the shape the route enforces first
+			 *  (`^[a-f0-9]{12}$`) rather than accepting an id a phone invented. */
+			if (sessionId === undefined || !/^[a-f0-9]{12}$/.test(sessionId)) {
+				sendJson(res, 422, errorBody("session id is not valid"));
+				return;
+			}
+			const row = library.linkChat(assetId, sessionId);
+			if (row === null) {
+				sendJson(res, 404, errorBody("library asset not found"));
+				return;
+			}
+			sendJson(res, 200, { chat: row.chat });
+			return;
+		}
+
+		const assetContent = /^\/api\/library\/assets\/([^/]+)\/content$/.exec(
+			pathname,
+		);
+		if (assetContent && method === "GET") {
+			const content = library.content(
+				decodeURIComponent(assetContent[1] ?? ""),
+			);
+			if (content === null) {
+				sendJson(res, 404, errorBody("library asset not found"));
+				return;
+			}
+			res.writeHead(200, {
+				"content-type": content.mimeType,
+				"content-length": content.bytes.length,
+				"cache-control": "private, max-age=60",
+				"x-content-type-options": "nosniff",
+			});
+			res.end(content.bytes);
+			return;
+		}
+
+		const assetThumb = /^\/api\/library\/assets\/([^/]+)\/thumbnail$/.exec(
+			pathname,
+		);
+		if (assetThumb && method === "GET") {
+			const thumb = library.thumbnail(decodeURIComponent(assetThumb[1] ?? ""));
+			if (thumb === null) {
+				sendJson(res, 404, errorBody("no thumbnail for this asset"));
+				return;
+			}
+			res.writeHead(200, {
+				"content-type": thumb.mimeType,
+				"content-length": thumb.bytes.length,
+				"cache-control": "private, max-age=60",
+			});
+			res.end(thumb.bytes);
+			return;
+		}
+
+		const assetDetail = /^\/api\/library\/assets\/([^/]+)$/.exec(pathname);
+		if (assetDetail && (method === "GET" || method === "PATCH")) {
+			const assetId = decodeURIComponent(assetDetail[1] ?? "");
+			if (method === "GET") {
+				const row = library.detail(assetId);
+				if (row === null) {
+					sendJson(res, 404, errorBody("library asset not found"));
+					return;
+				}
+				sendJson(res, 200, row);
+				return;
+			}
+			const body = parseJsonBody(rawBody ?? "");
+			if (!isRecord(body)) {
+				sendJson(res, 400, errorBody("request body must be an object"));
+				return;
+			}
+			const row = library.patch(assetId, body);
+			if (row === null) {
+				sendJson(res, 404, errorBody("library asset not found"));
+				return;
+			}
+			sendJson(res, 200, row);
+			return;
+		}
+
 		if (pathname === "/api/projects" && method === "GET") {
 			/* The listing, from the mock's own STORE — which is seeded from the
 			 *  captured fixture and byte-identical to it until a write moves it (proved
@@ -3004,6 +3230,33 @@ export function createRelay(options: RelayOptions = {}) {
 		{ match: /^\/api\/projects\/[^/]+$/, methods: ["GET", "HEAD", "DELETE"] },
 		/* The armed index (S17) is read-only, like the relay's own route. */
 		{ match: /^\/api\/schedules$/, methods: ["GET", "HEAD"] },
+		/* The Library's two families. The sub-routes come before the row and the
+		 *  collection so a coarser pattern cannot swallow them. */
+		{
+			match: /^\/api\/library\/assets\/[^/]+\/(content|thumbnail)$/,
+			methods: ["GET", "HEAD"],
+		},
+		{
+			match: /^\/api\/library\/assets\/[^/]+\/(tags|chat)$/,
+			methods: ["PUT", "DELETE"],
+		},
+		{
+			match: /^\/api\/library\/tags\/[^/]+\/merge$/,
+			methods: ["POST"],
+		},
+		{
+			match: /^\/api\/library\/tags\/[^/]+$/,
+			methods: ["PATCH"],
+		},
+		{
+			match: /^\/api\/library\/tags$/,
+			methods: ["GET", "HEAD", "POST"],
+		},
+		{
+			match: /^\/api\/library\/assets\/[^/]+$/,
+			methods: ["GET", "HEAD", "PATCH"],
+		},
+		{ match: /^\/api\/library\/assets$/, methods: ["GET", "HEAD"] },
 		{ match: /^\/api\/pair$/, methods: ["POST"] },
 		{ match: /^\/healthz$/, methods: ["GET", "HEAD"] },
 		{ match: /^\/login$/, methods: ["GET", "POST"] },

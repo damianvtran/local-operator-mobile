@@ -1,0 +1,314 @@
+/**
+ * The Library's pure rules: filters, paging and the first context line.
+ *
+ * These are the facts a screen cannot re-derive safely. In particular the paging
+ * test pins `cursor_reset`, whose failure mode is silent: appending a restarted
+ * page shows the same rows twice, which looks like a catalog with duplicates
+ * rather than a client that ignored the revision.
+ */
+
+import { describe, expect, it } from "vitest";
+
+import type {
+	Capabilities,
+	LibraryAsset,
+	LibraryListResponse,
+	LibraryTag,
+} from "@/contracts";
+import {
+	applyLibraryPage,
+	applyLibraryUpdates,
+	categoryForBrowse,
+	composerPrompt,
+	DEFAULT_BROWSE,
+	editorShouldReset,
+	formatBytes,
+	hasActiveFilters,
+	kindLabel,
+	libraryEnabled,
+	libraryListRequest,
+	previewKind,
+	promptImage,
+	saveAssetMetadata,
+	TAG_SAVE_FAILURE_COPY,
+	unsupportedReason,
+} from "@/features/library/library-model";
+import {
+	libraryUpdateState,
+	publishLibraryUpdate,
+	resetLibraryUpdates,
+} from "@/features/library/library-updates";
+import type { RelayEndpoints } from "@/relay";
+import { loadFixture } from "@/testing/fixtures";
+
+const asset = (overrides: Partial<LibraryAsset> = {}): LibraryAsset => {
+	const fixture = loadFixture<{ body: { rows: LibraryAsset[] } }>(
+		"synthetic/library-listing.json",
+	).body.rows[0];
+	if (fixture === undefined) throw new Error("fixture has no rows");
+	return { ...fixture, ...overrides };
+};
+
+const listing = (
+	rows: LibraryAsset[],
+	extra: Partial<LibraryListResponse> = {},
+): LibraryListResponse => ({
+	state: "ready",
+	revision: 7,
+	total: rows.length,
+	counts: { category: {}, origin_group: {}, kind: {} },
+	tags: [],
+	rows,
+	next_cursor: null,
+	cursor_reset: false,
+	scan: { sessions_total: 12, sessions_scanned: 12 },
+	librarian: null,
+	...extra,
+});
+
+describe("filters map to the relay's own keys", () => {
+	it("asks for a category only when one is chosen", () => {
+		expect(libraryListRequest(DEFAULT_BROWSE).category).toBeUndefined();
+		expect(
+			libraryListRequest({ ...DEFAULT_BROWSE, segment: "image" }).category,
+		).toBe("image");
+		expect(
+			libraryListRequest({
+				...DEFAULT_BROWSE,
+				segment: "more",
+				moreCategory: "code",
+			}).category,
+		).toBe("code");
+		expect(
+			categoryForBrowse({ ...DEFAULT_BROWSE, segment: "all" }),
+		).toBeUndefined();
+	});
+
+	it("maps each status to the route's own boolean, not a client filter", () => {
+		expect(
+			libraryListRequest({ ...DEFAULT_BROWSE, status: "highlighted" })
+				.highlighted,
+		).toBe(true);
+		expect(
+			libraryListRequest({ ...DEFAULT_BROWSE, status: "unorganized" })
+				.organized,
+		).toBe(false);
+		expect(
+			libraryListRequest({ ...DEFAULT_BROWSE, status: "favorites" }).favorite,
+		).toBe(true);
+	});
+
+	it("omits a limit it was not given, so the relay's default applies", () => {
+		expect(libraryListRequest(DEFAULT_BROWSE).limit).toBeUndefined();
+		expect(libraryListRequest(DEFAULT_BROWSE, undefined, 24).limit).toBe(24);
+	});
+
+	it("counts an active query as a filter, so the empty state can differ", () => {
+		expect(hasActiveFilters(DEFAULT_BROWSE)).toBe(false);
+		expect(hasActiveFilters({ ...DEFAULT_BROWSE, query: "sunset" })).toBe(true);
+	});
+});
+
+describe("cursor paging", () => {
+	it("appends a later page and dedupes by id", () => {
+		const a = asset({ id: "la_0000000000000001" });
+		const b = asset({ id: "la_0000000000000002" });
+		const merged = applyLibraryPage(
+			[a],
+			listing([a, b], { next_cursor: "next" }),
+			true,
+		);
+		expect(merged.rows.map((row) => row.id)).toEqual([a.id, b.id]);
+		expect(merged.reset).toBe(false);
+	});
+
+	it("replaces when the relay restarted the walk", () => {
+		const a = asset({ id: "la_0000000000000001" });
+		const b = asset({ id: "la_0000000000000002" });
+		const merged = applyLibraryPage(
+			[a],
+			listing([b], { cursor_reset: true }),
+			true,
+		);
+		expect(merged.rows.map((row) => row.id)).toEqual([b.id]);
+		expect(merged.reset).toBe(true);
+	});
+});
+
+describe("the chat prompt", () => {
+	it("leads with the asset path, on its own line", () => {
+		const prompt = composerPrompt(asset(), "What changed here?");
+		expect(prompt.split("\n")[0]).toBe("Asset: ~/Pictures/library-sunset.png");
+		expect(prompt.endsWith("\n\nWhat changed here?")).toBe(true);
+	});
+
+	it("leads with the digest when the asset has no path", () => {
+		const prompt = composerPrompt(
+			asset({
+				ref: {
+					type: "artifact",
+					display_path: "digest:abc123",
+					digest: "abc123",
+					content_type: "image/png",
+				},
+			}),
+			"Describe it.",
+		);
+		expect(prompt.split("\n")[0]).toBe("Asset digest: abc123");
+	});
+
+	it("attaches image bytes and refuses audio bytes", () => {
+		const bytes = new Uint8Array([1, 2, 3]);
+		expect(promptImage(asset(), bytes)?.mime_type).toBe("image/png");
+		expect(promptImage(asset({ kind: "audio" }), bytes)).toBeNull();
+		expect(promptImage(asset(), null)).toBeNull();
+	});
+});
+
+describe("capability gate", () => {
+	const capabilities = (features: Record<string, unknown>): Capabilities =>
+		({ features }) as Capabilities;
+
+	it("hides the entry when an older relay omits the key", () => {
+		expect(libraryEnabled(capabilities({}))).toBe(false);
+		expect(libraryEnabled(capabilities({ library: 0 }))).toBe(false);
+		expect(libraryEnabled(capabilities({ library: false }))).toBe(false);
+	});
+	it("shows it for the relay's version-flag value", () => {
+		expect(libraryEnabled(capabilities({ library: 1 }))).toBe(true);
+		expect(libraryEnabled(capabilities({ library: 2 }))).toBe(true);
+	});
+});
+
+describe("preview classification and copy", () => {
+	it("names the kinds this build can render", () => {
+		expect(previewKind(asset())).toBe("image");
+		expect(previewKind(asset({ kind: "markdown" }))).toBe("markdown");
+		expect(previewKind(asset({ kind: "pdf" }))).toBe("unsupported");
+		expect(unsupportedReason(asset({ kind: "pptx" }))).toContain("desktop");
+	});
+
+	it("never prints a null byte count as a number", () => {
+		expect(formatBytes(null)).toBe("0 B");
+		expect(formatBytes(0)).toBe("0 B");
+		expect(formatBytes(1536)).toBe("1.5 KB");
+		expect(kindLabel("sound")).toBe("File");
+		expect(kindLabel("audio")).toBe("Audio");
+	});
+});
+
+/* ------------------------------------------------------------------ editor */
+
+const catalogueTag = (id: string, name: string): LibraryTag => ({
+	id,
+	name,
+	category: "topic",
+	created_by: "user",
+	count: 1,
+	created_at: 0,
+	updated_at: 0,
+});
+
+describe("metadata save reconciliation", () => {
+	it("keeps the intended tags and the refusal when only the tag PUT fails", async () => {
+		const patched = asset({
+			name: "New name",
+			description: "New description",
+			tags: [],
+		});
+		const client = {
+			patchLibraryAsset: async () => patched,
+			setLibraryAssetTags: async () => {
+				throw new Error("tag store unavailable");
+			},
+		} as unknown as RelayEndpoints;
+
+		const outcome = await saveAssetMetadata(client, {
+			asset: asset(),
+			name: "New name",
+			description: "New description",
+			assigned: ["0a1b2c3d4e"],
+			vocabulary: [catalogueTag("0a1b2c3d4e", "reference")],
+		});
+
+		expect(outcome.close).toBe(false);
+		expect(outcome.refusal).toBe(TAG_SAVE_FAILURE_COPY);
+		expect(outcome.asset.name).toBe("New name");
+		expect(outcome.assigned).toEqual(["0a1b2c3d4e"]);
+	});
+
+	it("closes on success and reconciles the server's tag set", async () => {
+		const patched = asset({ name: "New name", tags: [] });
+		const written = asset({
+			name: "New name",
+			tags: [{ id: "0a1b2c3d4e", name: "reference", category: "topic" }],
+		});
+		const client = {
+			patchLibraryAsset: async () => patched,
+			setLibraryAssetTags: async () => written,
+			/* The list paints counts, so success re-reads the vocabulary. */
+			libraryTags: async () => ({
+				tags: [{ ...catalogueTag("0a1b2c3d4e", "reference"), count: 5 }],
+			}),
+		} as unknown as RelayEndpoints;
+
+		const outcome = await saveAssetMetadata(client, {
+			asset: asset(),
+			name: "New name",
+			description: "",
+			assigned: ["0a1b2c3d4e"],
+			vocabulary: [catalogueTag("0a1b2c3d4e", "reference")],
+		});
+
+		expect(outcome.close).toBe(true);
+		expect(outcome.refusal).toBeNull();
+		expect(outcome.assigned).toEqual(["0a1b2c3d4e"]);
+		expect(outcome.vocabulary[0]?.count).toBe(5);
+	});
+
+	it("resets the sheet only on open, never on a parent row update", () => {
+		expect(editorShouldReset(true, undefined, "la_1")).toBe(true);
+		expect(editorShouldReset(true, "la_1", "la_1")).toBe(false);
+		expect(editorShouldReset(false, "la_1", "la_1")).toBe(false);
+	});
+});
+
+describe("a save is visible on the list after Back", () => {
+	it("keeps every saved row across an appended page", () => {
+		resetLibraryUpdates();
+		const oldA = asset({
+			id: "la_0000000000000001",
+			name: "Old A",
+			tags: [{ id: "0a1b2c3d4e", name: "old", category: "topic" }],
+		});
+		const oldB = asset({ id: "la_0000000000000002", name: "Old B" });
+		const pageTwo = asset({ id: "la_0000000000000003", name: "Page two" });
+		const savedA = asset({
+			id: "la_0000000000000001",
+			name: "Saved A",
+			tags: [{ id: "1a2b3c4d5e", name: "new", category: "topic" }],
+		});
+		const savedB = asset({ id: "la_0000000000000002", name: "Saved B" });
+		const vocabulary = [catalogueTag("1a2b3c4d5e", "new")];
+
+		publishLibraryUpdate({ asset: savedA, tags: vocabulary });
+		publishLibraryUpdate({ asset: savedB, tags: null });
+		const state = libraryUpdateState();
+		const saved = new Map(
+			Object.values(state.updates).map(
+				(entry) => [entry.asset.id, entry.asset] as const,
+			),
+		);
+		const rows = applyLibraryUpdates([oldA, oldB, pageTwo], saved);
+
+		expect(rows.map((row) => row.name)).toEqual([
+			"Saved A",
+			"Saved B",
+			"Page two",
+		]);
+		expect(rows[0]?.tags[0]?.name).toBe("new");
+		expect(Object.keys(state.updates)).toHaveLength(2);
+		expect(state.updates.la_0000000000000001?.tags).toEqual(vocabulary);
+		expect(state.vocabulary).toEqual(vocabulary);
+	});
+});

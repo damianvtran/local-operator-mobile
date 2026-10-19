@@ -90,7 +90,7 @@ export interface RelayHttpOptions {
 }
 
 export interface RelayRequest {
-	method: "GET" | "POST" | "PATCH" | "DELETE";
+	method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 	/** Path beginning with `/`, already escaped by the caller. Empty for a request
 	 *  addressed by `absoluteUrl` (the owner API is not the relay and shares no
 	 *  base with it). */

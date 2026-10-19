@@ -9,6 +9,7 @@ import {
 	useConnectionState,
 	useListState,
 } from "@/features/auth/connection-provider";
+import { libraryEnabled } from "@/features/library/library-model";
 import { SessionMoveSheet } from "@/features/sessions/move-sheet";
 import {
 	attentionWord,
@@ -131,6 +132,7 @@ export const ConversationsPane = ({
 	const frameCount = useListState((state) => state.frameCount);
 	const stale = useListState((state) => state.stale);
 	const lastFrameAt = useListState((state) => state.lastFrameAt);
+	const capabilities = useListState((state) => state.capabilities);
 	const computers = useConnectionState((state) => state.computers);
 	const tunnelId = useConnectionState((state) => state.tunnelId);
 	const route = useConnectionState((state) => state.route);
@@ -318,6 +320,24 @@ export const ConversationsPane = ({
 					testID={CONTROL.sidebarSchedules}
 				/>
 			</View>
+			{/* The fifth route, gated on the relay's own capability flag. An older
+			 *  relay omits `features.library`; showing the entry there would offer a
+			 *  control whose screen can only 404, so absence hides it. The gate is the
+			 *  relay's word, never a build-time assumption. */}
+			{libraryEnabled(capabilities) ? (
+				<View className="w-full">
+					<Button
+						label="Library"
+						onPress={() => {
+							onNavigate?.();
+							router.push("/library");
+						}}
+						variant="quiet"
+						size="sm"
+						testID={CONTROL.sidebarLibrary}
+					/>
+				</View>
+			) : null}
 		</View>
 	);
 

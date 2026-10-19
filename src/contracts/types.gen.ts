@@ -1393,3 +1393,197 @@ export interface CheckpointManifest {
 	index: CheckpointIndex;
 	checkpoints: CheckpointEntry[];
 }
+
+/* ------------------------------------------------------------------- library */
+
+/**
+ * The Library wire (`docs/design/library.md` §4 in `local-operator`).
+ *
+ * The relay serves the desktop route's semantics under `/api/library` with
+ * `display=True`: every path here is the DISPLAY form (`~/…`), and `ref.path`
+ * — the absolute path the desktop reads — is deliberately absent from this
+ * projection. A client that needs bytes asks the id-scoped content route rather
+ * than inventing a path, which is also what keeps the absolute path off a phone.
+ *
+ * These declarations are hand-authored from the frozen contract because the
+ * relay half had not landed when this client slice was written; the schemas in
+ * `schemas.ts` are the runtime reading, and the mock relay in
+ * `tools/mock-relay/library.ts` is the executable stand-in.
+ */
+export type LibraryKind =
+	| "image"
+	| "audio"
+	| "video"
+	| "pdf"
+	| "pptx"
+	| "docx"
+	| "markdown"
+	| "html"
+	| "spreadsheet"
+	| "text"
+	| "code"
+	| "other";
+
+/** The sidebar bucket, a projection of `kind` (many kinds share `document`). */
+export type LibraryCategory =
+	| "image"
+	| "sound"
+	| "document"
+	| "presentation"
+	| "video"
+	| "spreadsheet"
+	| "code"
+	| "other";
+
+export type LibraryOriginGroup = "generated" | "created" | "mentioned";
+
+export type LibrarySort =
+	| "recent"
+	| "name"
+	| "kind"
+	| "size"
+	| "created"
+	| "modified"
+	| "organized";
+
+export interface LibraryTagRef {
+	id: string;
+	name: string;
+	category: string;
+}
+
+/** A tag in the catalogue listing, carrying the number of assets it names. */
+export interface LibraryTag extends LibraryTagRef {
+	created_by: string;
+	count: number;
+	created_at: number;
+	updated_at: number;
+}
+
+export interface LibraryAssetRef {
+	type: "path" | "artifact";
+	/** The display form: `~/x.png`, or a digest label for artifact refs. */
+	display_path: string;
+	digest: string | null;
+	content_type: string | null;
+}
+
+export interface LibraryOccurrence {
+	session_id: string;
+	session_title: string;
+	origin: string;
+	tool: string;
+	at: number;
+	intent: string | null;
+	/** The journal sequence window the occurrence came from; 0 when the scanner
+	 *  could not attribute one. */
+	first_seq: number;
+	last_seq: number;
+	child_id: string | null;
+	label: string | null;
+}
+
+export interface LibraryChat {
+	session_id: string;
+	title: string;
+	updated_at: number;
+}
+
+export interface LibraryPreview {
+	state: "ready" | "unsupported";
+	mime_type: string;
+	pages: number | null;
+}
+
+export interface LibraryOrganized {
+	at: number;
+	by: string;
+	confidence: number | null;
+}
+
+export interface LibraryAsset {
+	id: string;
+	ref: LibraryAssetRef;
+	name: string;
+	derived_name: string;
+	description: string;
+	kind: LibraryKind;
+	category: LibraryCategory;
+	origin: string;
+	origin_group: LibraryOriginGroup;
+	origins: string[];
+	tags: LibraryTagRef[];
+	primary_tag: string | null;
+	/** Null is "the scanner has not measured it", never 0. */
+	size_bytes: number | null;
+	width: number | null;
+	height: number | null;
+	duration_s: number | null;
+	created_at: number;
+	modified_at: number;
+	last_seen_at: number;
+	/** False when the file the row names has disappeared since the scan. The row
+	 *  is retained on purpose (metadata survives), so the screen must say the
+	 *  bytes are gone rather than render a broken preview. */
+	exists: boolean;
+	highlighted: boolean;
+	highlight_why: string | null;
+	occurrences: LibraryOccurrence[];
+	session_count: number;
+	chat: LibraryChat | null;
+	preview: LibraryPreview;
+	organized: LibraryOrganized | null;
+	locked: boolean;
+	favorite: boolean;
+	archived: boolean;
+}
+
+export interface LibraryCounts {
+	category: Record<string, number>;
+	origin_group: Record<string, number>;
+	kind: Record<string, number>;
+}
+
+export interface LibraryScan {
+	sessions_total: number;
+	sessions_scanned: number;
+}
+
+export interface LibrarianStatus {
+	enabled: boolean;
+	session_id: string;
+	paused: boolean;
+	last_run_at: number;
+	last_summary: string;
+}
+
+export interface LibraryListResponse {
+	state: "ready" | "building";
+	revision: number;
+	total: number;
+	counts: LibraryCounts;
+	tags: LibraryTag[];
+	rows: LibraryAsset[];
+	next_cursor: string | null;
+	cursor_reset: boolean;
+	scan: LibraryScan;
+	/** Absent until the Librarian ships; `null` is the honest answer, not an
+	 *  invented "disabled" object. */
+	librarian: LibrarianStatus | null;
+}
+
+export interface LibraryTagsResponse {
+	tags: LibraryTag[];
+}
+
+export interface LibraryTagResponse {
+	tag: LibraryTag;
+}
+
+export interface LibraryChatResponse {
+	asset_id: string;
+	chat: LibraryChat | null;
+	/** True when a DELETE removed an existing link (a DELETE with nothing to
+	 *  remove answers `false`, not an error). */
+	cleared: boolean;
+}

@@ -321,6 +321,11 @@ export function capabilityBlock(
 	override: ScenarioWorld["voice"],
 ): Capabilities {
 	const next: Capabilities = structuredClone(base);
+	/* The mock serves the Library routes, so its capability bag must say so —
+	 *  otherwise the app's footer entry is hidden against the only relay this
+	 *  harness can drive. This is the mock's own claim, not a corpus field: the
+	 *  captured `/api/sessions` predates the Library. */
+	next.features = { ...(next.features ?? {}), library: 1 };
 	if (override === undefined) return next;
 	const stt = override.capability;
 	if (stt === null) {
