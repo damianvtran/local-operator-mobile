@@ -675,6 +675,7 @@ export const useComposer = (input: {
 	const controls = useMemo(
 		() =>
 			composerControls({
+				connected: endpoints !== null,
 				streaming,
 				hasDraft: draft.trim().length > 0,
 				hasImages: images.length > 0,
@@ -682,7 +683,7 @@ export const useComposer = (input: {
 				envelopePending: retained !== null,
 				ended,
 			}),
-		[streaming, draft, images.length, sending, retained, ended],
+		[streaming, draft, images.length, sending, retained, ended, endpoints],
 	);
 
 	return {

@@ -265,7 +265,7 @@ describe("session admission", () => {
 		expect(
 			relaySource(mock.route, isUsable(store.getState()) ? client : null, false)
 				.reason,
-		).toBe("no-route");
+		).toBe("refused");
 		expect(store.getState().surface).toBe("password");
 		expect(mock.events).toEqual([
 			"POST /login",

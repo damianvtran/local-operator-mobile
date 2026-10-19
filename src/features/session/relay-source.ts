@@ -11,7 +11,9 @@ export interface SessionRelaySource {
 	endpoints: RelayEndpoints | null;
 	baseUrl: string | null;
 	fromOrigin: boolean;
-	reason: "ok" | "no-route" | "pending";
+	/** A selected route losing admission is not an absent session: screens may
+	 * retain owned rows while still refusing every request through null endpoints. */
+	reason: "ok" | "no-route" | "pending" | "refused";
 }
 
 export const relaySource = (
@@ -28,5 +30,11 @@ export const relaySource = (
 				: route.baseUrl,
 	fromOrigin: false,
 	reason:
-		route !== null && client !== null ? "ok" : pending ? "pending" : "no-route",
+		route !== null && client !== null
+			? "ok"
+			: pending
+				? "pending"
+				: route !== null
+					? "refused"
+					: "no-route",
 });

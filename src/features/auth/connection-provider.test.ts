@@ -171,6 +171,7 @@ async function relay(
 		failStream?: boolean;
 		failLogout?: boolean;
 		refuseCatalogue?: boolean;
+		holdFrame?: boolean;
 	} = {},
 ) {
 	const events: string[] = [];
@@ -283,6 +284,9 @@ async function relay(
 			return;
 		}
 		if (path.startsWith("/api/sessions/") && path.endsWith("/events")) {
+			// Keep the wire open but deliver no frame: cache presence alone must
+			// not authorize a retained transcript for this new screen/identity.
+			if (options.holdFrame) return;
 			const seed = JSON.parse(
 				readFileSync(
 					new URL(
@@ -1083,6 +1087,7 @@ describe("session runtime shared-route refusal", () => {
 				});
 			});
 			await until(() => sessionReading.projection !== null);
+			expect(sessionReading.content).toBe("transcript");
 			if (refused) {
 				// A real first session frame has landed. Refuse only the catalogue's
 				// reconnect, leaving the session channel healthy until route readiness
@@ -1114,8 +1119,69 @@ describe("session runtime shared-route refusal", () => {
 				}),
 			);
 			expect(flags.error).toBe(refused);
+			expect(sessionReading.content).toBe("transcript");
+			if (refused) {
+				const count = wire.length;
+				await expect(
+					sessionReading.supplementCommand(
+						"cancel",
+						"synthetic-anchor",
+						"synthetic-job",
+					),
+				).rejects.toThrow("no relay route");
+				expect(wire).toHaveLength(count);
+				// Same-address re-selection is a NEW revision, not permission to
+				// reuse the old frame. Explicit sign-out never revives it either.
+				const selected = connectionStore.getState().route;
+				if (selected === null)
+					throw new Error("Expected retained selected route");
+				await act(async () => connectionStore.getState().startRoute(selected));
+				expect(sessionReading.content).toBe("loading");
+				await act(async () => connectionStore.getState().endRoute());
+				expect(sessionReading.content).toBe("disconnected");
+			}
 			// The ordinary cold-start gate remains intact for both success/refusal.
 			expect(wire[0]).toEqual({ method: "POST", path: "/login", status: 303 });
 		},
 	);
+});
+
+describe("session recovery without an owned frame", () => {
+	it("keeps refused first-load recovery honest even when process cache already contains rows", async () => {
+		const mock = await relay({ refuseCatalogue: true, holdFrame: true });
+		observedSession = "synthetic-session";
+		const cached = JSON.parse(
+			readFileSync(
+				new URL(
+					"../../../fixtures/relay/sse/sse-projection-checkpoints-empty.json",
+					import.meta.url,
+				),
+				"utf8",
+			),
+		).data;
+		sessionProjections
+			.getState()
+			.applyFrame(observedSession, { ...cached, session_id: observedSession });
+		transport();
+		await mount();
+		await act(async () => {
+			await latest.connectCustom({
+				url: mock.origin,
+				password: "synthetic-password",
+				allowInsecure: true,
+			});
+		});
+		expect(sessionReading.projection).not.toBeNull();
+		expect(sessionReading.content).toBe("loading");
+		mock.refuseCatalogue.resolve();
+		await until(() => latest.lastError !== null);
+		expect(sessionReading.content).toBe("recovery");
+		expect(sessionReading.source.reason).toBe("refused");
+		expect(sessionReading.source.endpoints).toBeNull();
+		expect(sessionReading.error?.kind).toBe("relay-unauthorized");
+		expect(sessionReading.connection.action).not.toBeNull();
+		await unmount();
+		await mount();
+		expect(sessionReading.content).not.toBe("transcript");
+	});
 });

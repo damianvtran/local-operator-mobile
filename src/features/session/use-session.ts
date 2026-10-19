@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AppState } from "react-native";
 import { useStore } from "zustand";
-
 import type {
 	ModelEntry,
 	SlashCommand,
@@ -43,6 +42,11 @@ import {
 import type { ImageBytes, RelayError } from "@/relay";
 import { readEntry } from "@/state";
 import { isUsable } from "@/state/connection-store";
+import {
+	type ProjectionOwner,
+	sameProjectionOwner,
+	sessionContent,
+} from "./session-content";
 
 /**
  * Everything a session screen reads: the relay client, the projection stream, the
@@ -62,6 +66,7 @@ import { isUsable } from "@/state/connection-store";
  */
 export interface SessionRuntime {
 	source: SessionRelaySource;
+	content: ReturnType<typeof sessionContent>;
 	projection: ReturnType<typeof readEntry>["projection"];
 	entries: TranscriptEntry[];
 	streaming: boolean;
@@ -181,8 +186,25 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 	 *  the SAME session keeps it and a session change does not inherit it. */
 	const ageOwner = useRef<string | null>(null);
 
+	// Revision changes invalidate sign-out/switch ownership; tunnelId also changes
+	// when another computer is picked inside the same Radient route revision.
+	const identity: ProjectionOwner = {
+		revision: snapshot.revision,
+		tunnelId: snapshot.tunnelId,
+		sessionId,
+	};
+	const currentIdentity = useRef(identity);
+	currentIdentity.current = identity;
+	const projectionOwner = useRef<ProjectionOwner | null>(null);
+
 	/* ------------------------------------------------------------- the stream */
 	useEffect(() => {
+		let active = true;
+		const owner: ProjectionOwner = {
+			revision: snapshot.revision,
+			tunnelId: snapshot.tunnelId,
+			sessionId,
+		};
 		const connect = () => {
 			if (endpoints === null) {
 				setLoading(source.reason === "pending");
@@ -206,7 +228,13 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 			setError(null);
 			const stream = endpoints.sessionStream(sessionId, {
 				onFrame: (frame) => {
-					if (frame.kind !== "projection") return;
+					if (
+						!active ||
+						frame.kind !== "projection" ||
+						!sameProjectionOwner(owner, currentIdentity.current)
+					)
+						return;
+					projectionOwner.current = owner;
 					lastFrameAt.current = Date.now();
 					retries.current = 0;
 					sessions.getState().applyFrame(sessionId, frame.data);
@@ -278,13 +306,20 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 		reconnectRef.current = connect;
 		connect();
 		return () => {
+			active = false;
 			if (retryTimer.current !== null) clearTimeout(retryTimer.current);
 			retryTimer.current = null;
 			streamRef.current?.stop();
 			streamRef.current = null;
 			sessions.getState().endStream(sessionId);
 		};
-	}, [endpoints, sessionId, source.reason]);
+	}, [
+		endpoints,
+		sessionId,
+		source.reason,
+		snapshot.revision,
+		snapshot.tunnelId,
+	]);
 
 	/** Consecutive failed reconnects, for the backoff. Reset by any delivered frame,
 	 *  so one blip does not leave the next one waiting fifteen seconds. */
@@ -608,6 +643,12 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 
 	return {
 		source,
+		content: sessionContent(
+			source.reason,
+			projection !== null &&
+				sameProjectionOwner(projectionOwner.current, identity),
+			error !== null || providerConnection.lastError !== null,
+		),
 		projection,
 		entries,
 		streaming: projection?.streaming === true,

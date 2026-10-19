@@ -2,7 +2,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { ArrowLeft, Search } from "lucide-react-native";
 import { useCallback, useMemo, useRef, useState } from "react";
 import type { TextInput } from "react-native";
-import { Text, useWindowDimensions, View } from "react-native";
+import { ScrollView, Text, useWindowDimensions, View } from "react-native";
 import { useListState } from "@/features/auth/connection-provider";
 import { blockingPending } from "@/features/session/asks";
 import { composerChipLabels } from "@/features/session/chip-labels";
@@ -393,14 +393,38 @@ export default function Session() {
 		</>
 	);
 
+	const connectionBanner = (
+		<ConnectionBanner
+			view={runtime.connection}
+			onAction={(action) => {
+				if (action.kind === "retry") runtime.reload();
+				// A sign-in and a console link are the route screens' work; this
+				// screen has nowhere to put a credential field, so it sends the
+				// reader to the screen that owns it rather than failing silently.
+				if (action.kind === "sign-in") router.push("/welcome");
+				if (action.kind === "console") router.push("/tunnels");
+			}}
+		/>
+	);
+
 	const transcript =
-		runtime.source.reason === "no-route" ? (
+		runtime.content === "disconnected" ? (
 			<EmptyState
 				headline="This session is not connected yet."
 				next="Open it from the session list once a computer is connected."
 				testID={EMPTY.session}
 			/>
-		) : runtime.entries.length === 0 && runtime.loading ? (
+		) : runtime.content === "recovery" ? (
+			// With no owned frame, recovery is the content, not a fake empty chat.
+			// Its entire notice and action scroll together at enlarged text sizes;
+			// the pinned composer cannot paint over required recovery guidance.
+			<ScrollView
+				className="flex-1 min-h-0"
+				contentContainerStyle={{ flexGrow: 1 }}
+			>
+				{connectionBanner}
+			</ScrollView>
+		) : runtime.content === "loading" ? (
 			// Loading is a skeleton, never a spinner over a blank column: the three bars
 			// reserve the shape the transcript will take. `flex-1` is load-bearing and not
 			// cosmetic (design round D18): the transcript branch is a `FlatList`, which
@@ -417,7 +441,7 @@ export default function Session() {
 			 *  panels and composer too), and the rail itself is ABSOLUTE, so it
 			 *  takes no layout width from the rows (the defect the web client's
 			 *  two-pane rail once was). */
-			<View className="flex-1">
+			<View className="flex-1 min-h-0">
 				<TranscriptList
 					testID={SURFACE.sessionTranscript}
 					sessionId={sessionId}
@@ -572,8 +596,8 @@ export default function Session() {
 			    STACK inside the measure instead of taking a rail beside it — at 640 pt
 			    a rail would leave ~280 pt of transcript, which is the squeezed column
 			    the cap exists to prevent. */}
-			<View className="flex-1">
-				<View className="flex-1" testID={SURFACE.sessionColumn}>
+			<View className="flex-1 min-h-0">
+				<View className="flex-1 min-h-0" testID={SURFACE.sessionColumn}>
 					{transcript}
 					{panels}
 					{working !== null ? (
@@ -629,17 +653,7 @@ export default function Session() {
 					    full width: on a tablet a composer 1366 pt wide sits under a 720 pt
 					    transcript and reads as a different surface (QA round 2, Q10). On a
 					    phone the measure is the screen, so nothing moves. */}
-					<ConnectionBanner
-						view={runtime.connection}
-						onAction={(action) => {
-							if (action.kind === "retry") runtime.reload();
-							// A sign-in and a console link are the route screens' work; this
-							// screen has nowhere to put a credential field, so it sends the
-							// reader to the screen that owns it rather than failing silently.
-							if (action.kind === "sign-in") router.push("/welcome");
-							if (action.kind === "console") router.push("/tunnels");
-						}}
-					/>
+					{runtime.content === "recovery" ? null : connectionBanner}
 
 					{/* The ask bar: the MINIMIZED affordance (§5.0), directly above the
 					    composer and BELOW the connection banner — when the relay is
