@@ -21,7 +21,26 @@ import type { LibraryAsset, LibraryTag } from "@/contracts";
 export interface LibraryUpdate {
 	asset: LibraryAsset;
 	tags: LibraryTag[] | null;
+	/** Logical save time, shared with request starts via `nextEpoch`. A fetch
+	 *  that STARTED after this value may retire this row's override; one that
+	 *  started before it must not. */
+	epoch: number;
 }
+
+export type LibraryUpdateInput = Omit<LibraryUpdate, "epoch">;
+
+/**
+ * One monotonic clock for saves and request starts.
+ *
+ * Timestamps in milliseconds are too coarse: a refresh issued immediately after
+ * Save can share its millisecond, and `>` would then preserve an override an
+ * authoritative answer had already replaced. A counter has no tie.
+ */
+let epoch = 0;
+export const nextEpoch = (): number => {
+	epoch += 1;
+	return epoch;
+};
 
 interface LibraryUpdatesState {
 	revision: number;
@@ -42,12 +61,13 @@ const store = createStore<LibraryUpdatesState>()(() => ({
 	vocabulary: null,
 }));
 
-export function publishLibraryUpdate(update: LibraryUpdate): void {
+export function publishLibraryUpdate(update: LibraryUpdateInput): void {
+	const stamped: LibraryUpdate = { ...update, epoch: nextEpoch() };
 	store.setState((state) => ({
 		revision: state.revision + 1,
-		update,
-		updates: { ...state.updates, [update.asset.id]: update },
-		vocabulary: update.tags ?? state.vocabulary,
+		update: stamped,
+		updates: { ...state.updates, [stamped.asset.id]: stamped },
+		vocabulary: stamped.tags ?? state.vocabulary,
 	}));
 }
 
@@ -57,5 +77,6 @@ export function libraryUpdateState(): LibraryUpdatesState {
 
 /** Tests only: the module store must not leak one case's save into the next. */
 export function resetLibraryUpdates(): void {
+	epoch = 0;
 	store.setState({ revision: 0, update: null, updates: {}, vocabulary: null });
 }

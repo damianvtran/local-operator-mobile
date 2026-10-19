@@ -171,7 +171,7 @@ export default function Library() {
 			seenRevision.current = state.revision;
 			/* Every saved row, not just the latest: two edits before Back must both
 			 *  survive, and an append must not drop either. */
-			applySaved(Object.values(state.updates).map((entry) => entry.asset));
+			applySaved(Object.values(state.updates));
 			setSavedTags({
 				tags: state.vocabulary,
 				page: pageRef.current,

@@ -581,6 +581,24 @@ export const applyLibraryUpdates = (
 	updates: ReadonlyMap<string, LibraryAsset>,
 ): LibraryAsset[] => rows.map((row) => updates.get(row.id) ?? row);
 
+/** Retires saved-row overrides a later authoritative fetch has moved past.
+ *  A fetch that STARTED after the save may replace the row; one that was already
+ *  in flight when the save happened must keep the local value. */
+export const retireAuthoritativeOverrides = (
+	overrides: Map<string, LibraryAsset>,
+	epochs: Map<string, number>,
+	returned: LibraryAsset[],
+	requestEpoch: number,
+): void => {
+	for (const row of returned) {
+		const savedAt = epochs.get(row.id);
+		if (savedAt !== undefined && requestEpoch > savedAt) {
+			overrides.delete(row.id);
+			epochs.delete(row.id);
+		}
+	}
+};
+
 /* ---------------------------------------------------------------------- gate */
 
 /**

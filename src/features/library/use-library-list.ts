@@ -24,8 +24,10 @@ import {
 	applyLibraryUpdates,
 	type LibraryBrowse,
 	libraryListRequest,
+	retireAuthoritativeOverrides,
 } from "@/features/library/library-model";
 import { createLibraryRequestGate } from "@/features/library/library-request-gate";
+import { nextEpoch } from "@/features/library/library-updates";
 import type { RelayEndpoints } from "@/relay";
 
 export const LIBRARY_PAGE_SIZE = 24;
@@ -44,8 +46,11 @@ export interface LibraryListState {
 	/** The browse that produced the current rows, so a marker can name it. */
 	loadedWith: LibraryBrowse | null;
 	/** Reconciles saved detail rows INTO the canonical rows, so a later cursor
-	 *  append cannot resurrect the pre-save row. */
-	applySaved: (assets: LibraryAsset[]) => void;
+	 *  append cannot resurrect the pre-save row. The epoch lets a later
+	 *  authoritative fetch retire an override the server has moved past. */
+	applySaved: (
+		updates: ReadonlyArray<{ asset: LibraryAsset; epoch: number }>,
+	) => void;
 	refresh: () => void;
 	loadMore: () => void;
 	retry: () => void;
@@ -67,6 +72,7 @@ export function useLibraryList(
 	 *  the saved row only once to the page that was on screen would be lost the
 	 *  moment page 2 replaced `page`. */
 	const overrides = useRef(new Map<string, LibraryAsset>());
+	const overrideEpochs = useRef(new Map<string, number>());
 	const gate = useRef(createLibraryRequestGate()).current;
 	/** The browse this render is showing. A response for an older object must not
 	 *  paint, even if its ticket somehow survived: the screen replaces `browse`
@@ -85,6 +91,7 @@ export function useLibraryList(
 			mode: "first" | "more" | "refresh",
 		) => {
 			if (client === null) return;
+			const requestEpoch = nextEpoch();
 			const ticket = gate.begin();
 			if (mode === "first") {
 				setLoading(true);
@@ -102,6 +109,17 @@ export function useLibraryList(
 				/* Only a cursor page APPENDS. A focus refresh replaces: appending a fresh
 				 *  first page onto the rows it repeats would double every tile. */
 				const merged = applyLibraryPage(rows, answer, mode === "more");
+				/* A cursor page is not authoritative for rows it did not replace;
+				 *  a first page/refresh is, but only when it started AFTER the save.
+				 *  A response already in flight at save time keeps the override. */
+				if (mode !== "more") {
+					retireAuthoritativeOverrides(
+						overrides.current,
+						overrideEpochs.current,
+						answer.rows,
+						requestEpoch,
+					);
+				}
 				setRows(applyLibraryUpdates(merged.rows, overrides.current));
 				setPage(answer);
 				setLoadedWith(target);
@@ -150,6 +168,7 @@ export function useLibraryList(
 			/* The browse moved while the debounce was pending: this start belongs
 			 *  to a query the reader has already left. */
 			if (gate.currentQuery() !== generation) return;
+			const requestEpoch = nextEpoch();
 			const ticket = gate.begin();
 			void (async () => {
 				try {
@@ -157,6 +176,12 @@ export function useLibraryList(
 						...libraryListRequest(browse, void 0, LIBRARY_PAGE_SIZE),
 					});
 					if (!gate.accepts(ticket) || browseRef.current !== browse) return;
+					retireAuthoritativeOverrides(
+						overrides.current,
+						overrideEpochs.current,
+						answer.rows,
+						requestEpoch,
+					);
 					setRows(applyLibraryUpdates(answer.rows, overrides.current));
 					setPage(answer);
 					setLoadedWith(browse);
@@ -189,10 +214,16 @@ export function useLibraryList(
 		// it); `client` is stable for a connection; `enabled` is the capability.
 	}, [browse, client, enabled, gate]);
 
-	const applySaved = useCallback((assets: LibraryAsset[]) => {
-		for (const asset of assets) overrides.current.set(asset.id, asset);
-		setRows((current) => applyLibraryUpdates(current, overrides.current));
-	}, []);
+	const applySaved = useCallback(
+		(updates: ReadonlyArray<{ asset: LibraryAsset; epoch: number }>) => {
+			for (const update of updates) {
+				overrides.current.set(update.asset.id, update.asset);
+				overrideEpochs.current.set(update.asset.id, update.epoch);
+			}
+			setRows((current) => applyLibraryUpdates(current, overrides.current));
+		},
+		[],
+	);
 
 	const refresh = useCallback(() => {
 		void fetchPage(browse, void 0, "refresh");

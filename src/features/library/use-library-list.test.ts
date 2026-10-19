@@ -113,6 +113,9 @@ vi.mock("react", () => rt.api);
 
 const { useLibraryList } = await import("@/features/library/use-library-list");
 const { DEFAULT_BROWSE } = await import("@/features/library/library-model");
+const { nextEpoch, resetLibraryUpdates } = await import(
+	"@/features/library/library-updates"
+);
 
 const sameDeps = (a: unknown[] | undefined, b: unknown[] | undefined) => {
 	if (a === undefined || b === undefined) return a === b;
@@ -213,6 +216,7 @@ describe("useLibraryList stale pages", () => {
 	beforeEach(() => {
 		vi.useFakeTimers();
 		rt.reset();
+		resetLibraryUpdates();
 		calls.length = 0;
 		browse = DEFAULT_BROWSE;
 		result = null;
@@ -272,9 +276,15 @@ describe("useLibraryList stale pages", () => {
 		);
 		await settle();
 
+		/* The refresh starts BEFORE the saves: its answer is not authoritative
+		 *  for rows the user edited while it was in flight. */
+		result?.refresh();
+		await settle();
+		expect(calls).toHaveLength(2);
+
 		result?.applySaved([
-			row("la_saved_a", "Saved A"),
-			row("la_saved_b", "Saved B"),
+			{ asset: row("la_saved_a", "Saved A"), epoch: nextEpoch() },
+			{ asset: row("la_saved_b", "Saved B"), epoch: nextEpoch() },
 		]);
 		await settle();
 		expect(result?.rows.map((asset) => asset.name)).toEqual([
@@ -282,11 +292,6 @@ describe("useLibraryList stale pages", () => {
 			"Saved B",
 		]);
 
-		/* A refresh landing with the pre-save rows must not resurrect them: the
-		 *  per-asset overrides are reapplied when the page replaces `rows`. */
-		result?.refresh();
-		await settle();
-		expect(calls).toHaveLength(2);
 		calls[1]?.resolve(
 			listing(
 				[row("la_saved_a", "Old A"), row("la_saved_b", "Old B")],
@@ -310,6 +315,57 @@ describe("useLibraryList stale pages", () => {
 			"Saved B",
 			"Page two",
 		]);
+	});
+
+	it("retires saved rows when a later refresh or new query returns newer values", async () => {
+		await vi.advanceTimersByTimeAsync(300);
+		calls[0]?.resolve(
+			listing(
+				[row("la_external_a", "Old A"), row("la_external_b", "Old B")],
+				"cursor-refresh",
+			),
+		);
+		await settle();
+
+		// The save happens before the refresh starts, so the refresh owns the row.
+		result?.applySaved([
+			{ asset: row("la_external_a", "Saved A"), epoch: nextEpoch() },
+		]);
+		await settle();
+		result?.refresh();
+		await settle();
+		expect(calls).toHaveLength(2);
+		calls[1]?.resolve(
+			listing(
+				[
+					row("la_external_a", "External newer A"),
+					row("la_external_b", "Old B"),
+				],
+				"cursor-refresh",
+			),
+		);
+		await settle();
+		expect(result?.rows[0]?.name).toBe("External newer A");
+
+		// Same rule on a new-query first page: a fetch started after the save
+		// returns the server's answer, not the saved overlay.
+		result?.applySaved([
+			{ asset: row("la_external_a", "Saved again A"), epoch: nextEpoch() },
+		]);
+		await settle();
+		expect(result?.rows[0]?.name).toBe("Saved again A");
+
+		browse = { ...browse, query: "new" };
+		rt.clean();
+		render();
+		await settle();
+		await vi.advanceTimersByTimeAsync(300);
+		expect(calls).toHaveLength(3);
+		calls[2]?.resolve(
+			listing([row("la_external_a", "External newer A2")], "cursor-new"),
+		);
+		await settle();
+		expect(result?.rows[0]?.name).toBe("External newer A2");
 	});
 
 	it("clears a superseded refresh spinner across a query change", async () => {
