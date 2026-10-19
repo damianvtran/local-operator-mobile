@@ -544,6 +544,23 @@ export interface SessionProjection {
 
 /* --------------------------------------------------------------- session list */
 
+/** One assigned conversation tag, as the relay projects the shared registry
+ *  (`local-operator` PR #2625, v0.82.3). `name` is resolved at read time; the
+ *  store's ten-hex `id` is the identity a write addresses. */
+export interface TagRef {
+  id: string;
+  name: string;
+}
+
+/** One catalogue entry (`GET /api/tags`). `order` is the registry's own order;
+ *  `conversations` counts distinct EXISTING session directories, not a page. */
+export interface TagCatalogueEntry {
+  id: string;
+  name: string;
+  order: number;
+  conversations: number;
+}
+
 /** One row of the list. Section is the SHARED `active` rule, not "a live entry
  *  exists" — a durable-only conversation with an unseen completion is Active on
  *  every surface (`daemon.py:958-964`, `daemon.py:351-463`).
@@ -615,6 +632,12 @@ export interface SessionSummary {
   created_at: number;
   /** The attention record's `kind` for this conversation (`""` when none). */
   completion_kind: string;
+  /** The conversation's tags in assignment order, and the store's settled
+   *  primary (`null` when unset). Untagged is `[]`/`null`; an older relay omits
+   *  both, and a client reads that exactly like untagged. Remote rows carry
+   *  `[]`/`null` — their assignment lives in the other device's store. */
+  tags?: TagRef[];
+  primary?: string | null;
   /* ------------------------------------------------ the remote row's own
    *
    * ABSENT on a local row; present with real values on every remote one
@@ -659,6 +682,9 @@ export interface SttCapability {
 export interface Capabilities {
   features?: Record<string, unknown>;
   stt?: SttCapability;
+  /** The conversation-tag routes. Optional and never defaulted: absence is an
+   *  older relay whose `/api/tags` and `/api/sessions/{id}/tags` do not exist. */
+  session_tags?: { available: boolean };
 }
 
 /** The payload of `GET /api/sessions` and of every `sessions` SSE frame —
@@ -774,6 +800,9 @@ export interface PastSession {
   /** Present only on search results: the row matched on what was SAID, not on
    *  its name/id (`daemon.py:4793-4839`). */
   body_match?: boolean;
+  /** The same pair a live row carries; an older relay omits both. */
+  tags?: TagRef[];
+  primary?: string | null;
 }
 
 export interface PastSessionsResponse {

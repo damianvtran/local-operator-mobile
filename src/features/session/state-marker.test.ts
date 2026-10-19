@@ -132,12 +132,20 @@ describe("sessionStateFlags", () => {
 			"rail-error",
 			"rail-empty",
 		];
+		/* The session HEADER's tag line (LOH-11 S3) is the fourth exception: its
+		 *  derivation is the LIST frame's row (`SessionSummary.tags`), not a
+		 *  projection fact — a turn does not decide the conversation's categories,
+		 *  and requiring a `sessionStateFlags` entry would make one layer speak for
+		 *  another. The header is where the state is painted; the row is where it is
+		 *  decided. */
+		const headerLevel = ["tags-header"];
 		const derived = Object.keys(STATE_MARKER.session)
 			.filter(
 				(state) =>
 					!screenLevel.includes(state) &&
 					!findLevel.includes(state) &&
-					!railLevel.includes(state),
+					!railLevel.includes(state) &&
+					!headerLevel.includes(state),
 			)
 			.sort();
 		expect(

@@ -24,6 +24,9 @@ import {
 	staleShortNote,
 	visiblePeers,
 } from "@/features/sessions/session-projection";
+import { SessionTagLine } from "@/features/sessions/tag-line";
+import { canAssignSessionTags } from "@/features/sessions/tags";
+import { SessionTagsSheet } from "@/features/sessions/tags-sheet";
 import { homeShortened } from "@/lib/format";
 import { listLabel } from "@/lib/route-label";
 import { useUiStore } from "@/state/ui-store";
@@ -36,6 +39,7 @@ import {
 	STATE_MARKER,
 	SURFACE,
 	sessionRowId,
+	sessionTagLineId,
 } from "@/ui/a11y";
 import { useTokenColor } from "@/ui/appearance";
 import { Banner } from "@/ui/components/banner";
@@ -145,6 +149,21 @@ export const ConversationsPane = ({
 	 *  another device's conversation); a local row reaches it through the
 	 *  long-press menu. */
 	const [moveTarget, setMoveTarget] = useState<SessionSummary | null>(null);
+	/* The tags sheet's subject. The row is kept FRESH from the list frames below:
+	 *  its `tags`/`primary` are the authoritative assignment, and a snapshot taken
+	 *  at open time would keep painting the pre-write state after the relay spoke. */
+	const [tagTarget, setTagTarget] = useState<SessionSummary | null>(null);
+	useEffect(() => {
+		if (tagTarget === null) return;
+		const fresh = sessions.find(
+			(session) => session.session_id === tagTarget.session_id,
+		);
+		if (fresh !== undefined && fresh !== tagTarget) setTagTarget(fresh);
+	}, [sessions, tagTarget]);
+
+	/* The tag routes are optional on the wire: absence is an older relay, never
+	 *  "available". The one comparison lives in `canAssignSessionTags`. */
+	const tagsAssignable = canAssignSessionTags(capabilities);
 
 	/* The devices the LOADED LIST reveals — the whole destination catalogue the
 	 *  phone has today (`visiblePeers` states the gap). Computed from the
@@ -561,7 +580,24 @@ export const ConversationsPane = ({
 								remote ? setMoveTarget(session) : setMenuTarget(session)
 							}
 							longPressAccessibilityHint={
-								remote ? "Move or copy" : "Pin or open"
+								remote
+									? "Move or copy"
+									: tagsAssignable
+										? "Pin, tag, or open"
+										: "Pin or open"
+							}
+							/* Read-only on a remote row: its tags live in the other device's
+							 *  store, and this phone has no route to write them. Today the relay
+							 *  sends `[]` for one, so the line is absent — the branch exists so a
+							 *  future relay that projects them renders them (the brief's rule)
+							 *  rather than silently dropping a fact. */
+							tagLine={
+								(session.tags?.length ?? 0) > 0 ? (
+									<SessionTagLine
+										tags={session.tags ?? []}
+										testID={sessionTagLineId(session.session_id)}
+									/>
+								) : undefined
 							}
 							testID={sessionRowId(session.session_id)}
 						/>
@@ -646,6 +682,21 @@ export const ConversationsPane = ({
 						}}
 						variant="outline"
 					/>
+					{/* Only a relay that advertises the routes gets the entry: an older
+					 *  relay has no `/api/sessions/{id}/tags`, and a control that 404s is
+					 *  the dead-control pattern this pane already rejects for move. */}
+					{tagsAssignable ? (
+						<Button
+							testID={CONTROL.sessionTagsAction}
+							label="Tags…"
+							onPress={() => {
+								const target = menuTarget;
+								setMenuTarget(null);
+								if (target) setTagTarget(target);
+							}}
+							variant="outline"
+						/>
+					) : null}
 					<Button
 						testID={CONTROL.sessionOpenPrevious}
 						label="Open"
@@ -667,6 +718,17 @@ export const ConversationsPane = ({
 				session={moveTarget}
 				peers={peers}
 				onClose={() => setMoveTarget(null)}
+			/>
+
+			{/* The assignment sheet, for a LOCAL row only (the menu never opens for a
+			 *  remote one). Its subject is kept fresh from the list frames above, so
+			 *  the next authoritative row retires the local draft. */}
+			<SessionTagsSheet
+				visible={tagTarget !== null}
+				sessionId={tagTarget?.session_id ?? ""}
+				tags={tagTarget?.tags ?? []}
+				primary={tagTarget?.primary ?? null}
+				onClose={() => setTagTarget(null)}
 			/>
 		</View>
 	);

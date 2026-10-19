@@ -244,6 +244,13 @@ export const CONTROL = {
 	sessionsDegradedBanner: "sessions-degraded-banner",
 	sessionOpenCurrent: "session-open-current",
 	sessionOpenPrevious: "session-open-previous",
+	/* --- conversation tags (LOH-11 S3). The row's tag line and the header's are
+	 *  separate families because a session screen and the pane can be mounted at
+	 *  once (the drawer over the home); the action opens the sheet, whose one
+	 *  mutation control is `Remove all`. */
+	sessionTagsAction: "session-tags-action",
+	sessionTagsRemoveAll: "session-tags-remove-all",
+	sessionTagsRetry: "session-tags-retry",
 	/* --- the move/offload sheet (the sessions-and-delegation half, S15's mesh
 	 *  states). `confirm` and `copy` are the two verbs of ONE destination
 	 *  choice; `wait` is the same-id claim the busy/unconfirmed states offer;
@@ -769,6 +776,16 @@ export const SURFACE = {
 	 * invisible to every gate because no action could hold a press).
 	 */
 	sessionMenuSheet: "session-menu-sheet",
+	/* --- the conversation-tags sheet (LOH-11 S3). One marker per state, because
+	 *  a frame asserting "the catalogue is empty" must not also satisfy "the
+	 *  catalogue is loading" or "the write was refused". */
+	sessionTagsSheet: "session-tags-sheet",
+	sessionTagsLoading: "session-tags-loading",
+	sessionTagsEmpty: "session-tags-empty",
+	sessionTagsError: "session-tags-error",
+	/** A write the relay refused, in the sheet's body: the relay's OWN sentence
+	 *  (`error` body), never a status code re-worded here. */
+	sessionTagsRefusal: "session-tags-refusal",
 	/* --- the move/offload sheet's states. Each is painted ONLY in its own state,
 	 *  because a frame asserting "the move is in progress" must not also satisfy
 	 *  "the receipt is up" — and the sheet is a state a person reaches by an
@@ -804,6 +821,12 @@ export const IDENTIFIER_FAMILIES: readonly string[] = [
 	 * the controls that carry them, which is what this list's own note asks for. */
 	"session-row-",
 	"past-row-",
+	/* Conversation tags (LOH-11 S3): one tag line per list row, one per session
+	 *  header, one per past row, and one selectable option per catalogue tag. */
+	"session-tags-line-",
+	"session-tags-header-",
+	"past-tags-line-",
+	"session-tags-option-",
 	"computer-row-",
 	"computer-row-status-",
 	"computer-row-reachability-",
@@ -1092,6 +1115,9 @@ export const STATE_MARKER = {
 	past: {
 		empty: EMPTY.past,
 		populated: "past-row-",
+		/* The read-only tag line (LOH-11 S3): past rows carry the same pair, and
+		 *  this family is the frame's affirmative claim that one drew. */
+		tags: "past-tags-line-",
 	},
 	/* The projects list and its pushed detail (S16). `populated` is the row family
 	 *  (`projectRowId`), which is what "the list drew rows" means. `refused` is the
@@ -1204,6 +1230,9 @@ export const STATE_MARKER = {
 		"find-empty": "session-find-empty",
 		"find-hit": "session-find-hit",
 		"find-caveat": "session-find-caveat",
+		/* The session header's conversation tags (LOH-11 S3): a family, because the
+		 *  marker must be present only when the header drew a line. */
+		"tags-header": "session-tags-header-",
 		/* The checkpoint rail (this slice): one marker per state a cell
 		 *  declares. `rail` — the manifest is `ready` and the rail draws at
 		 *  least one tick; `rail-deep` — a refinement of `rail` (a frame may
@@ -1308,6 +1337,15 @@ export const STATE_MARKER = {
 		"move-busy": SURFACE.sessionMoveBusy,
 		"move-unconfirmed": SURFACE.sessionMoveUnconfirmed,
 		"move-refused": SURFACE.sessionMoveRefused,
+		/* Conversation tags (LOH-11 S3). `tags` is the row family, present only
+		 *  when at least one row carries a tag line; the sheet's four states are
+		 *  each their own marker so an empty catalogue cannot satisfy a loading or
+		 *  refused frame. */
+		tags: "session-tags-line-",
+		"tags-sheet": SURFACE.sessionTagsSheet,
+		"tags-sheet-empty": SURFACE.sessionTagsEmpty,
+		"tags-sheet-loading": SURFACE.sessionTagsLoading,
+		"tags-sheet-error": SURFACE.sessionTagsError,
 	},
 	/* The queued-ask surfaces (E2). `bar` is the one state a session screen
 	 *  carries while anything is outstanding — the marker must NOT paint in an
@@ -1401,6 +1439,29 @@ export const accountRoutingChoiceId = (value: string): string =>
  *  row without the screen inventing a second naming scheme. */
 export const sessionRowId = (sessionId: string): string =>
 	`session-row-${sessionId}`;
+
+/** One conversation row's tag line (LOH-11 S3). The row's identity is the
+ *  session's, so a capture or flow addresses the line by the row it belongs to
+ *  rather than by position. */
+export const sessionTagLineId = (sessionId: string): string =>
+	`session-tags-line-${sessionId}`;
+
+/** The session header's tag line — a second family because the session screen
+ *  and the conversations pane can be mounted at once (the drawer over the
+ *  home), and two elements sharing one id would make the selector ambiguous. */
+export const sessionHeaderTagLineId = (sessionId: string): string =>
+	`session-tags-header-${sessionId}`;
+
+/** One past row's read-only tag line. Past rows have no assignment controls,
+ *  so this family is a region rather than a control — still addressed by the
+ *  row it annotates. */
+export const pastTagLineId = (sessionId: string): string =>
+	`past-tags-line-${sessionId}`;
+
+/** One catalogue tag's checkbox in the tags sheet, keyed by the store's tag id
+ *  (registry identity, not its name or registry order). */
+export const sessionTagOptionId = (tagId: string): string =>
+	`session-tags-option-${tagId}`;
 
 /**
  * A REMOTE (another device's) row's identifier — a second family beside

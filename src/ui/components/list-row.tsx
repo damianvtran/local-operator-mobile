@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 import {
 	ActivityIndicator,
@@ -99,6 +100,16 @@ export type ListRowProps = {
 		/** `remoteSessionRowId(id)` — built by the caller, which owns the id. */
 		indicatorTestID: string;
 	};
+	/**
+	 * The row's third line: the conversation's tag line (LOH-11 S3).
+	 *
+	 * A NODE rather than a `TagRef[]`, so the kit stays free of the contract
+	 * layer: `ui/components` may not import `@/contracts` (the same rule
+	 * `RefusalSurface` states), and the feature that owns tags owns the paint.
+	 * The row only gives it the line's position, inside the content column and
+	 * after the meta line. Undefined paints nothing — no reserved blank line.
+	 */
+	tagLine?: ReactNode;
 	onPress: () => void;
 	/** Keeps the existing pin/open sheet reachable from the conversations pane,
 	 *  where a swipe is not a gesture a list under a drawer should own. Optional:
@@ -130,6 +141,7 @@ export const ListRow = ({
 	onPress,
 	onLongPress,
 	longPressAccessibilityHint,
+	tagLine,
 	testID,
 }: ListRowProps) => {
 	const attention = listRowIndicator({
@@ -398,6 +410,7 @@ export const ListRow = ({
 								) : null}
 							</View>
 						) : null}
+						{tagLine}
 					</View>
 				</View>
 			)}

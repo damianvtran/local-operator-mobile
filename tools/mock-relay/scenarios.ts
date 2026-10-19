@@ -22,6 +22,8 @@ import type {
 	SessionProjection,
 	SessionSummary,
 	SttCapability,
+	TagCatalogueEntry,
+	TagRef,
 	TranscriptEntry,
 	TranscriptEntryDetails,
 } from "../../docs/relay/types.ts";
@@ -157,6 +159,22 @@ export interface ScenarioWorld {
 	 * by the relay's real body rather than one this mock wrote.
 	 */
 	projects?: { list?: Json | FixtureOverride; detail?: Json | FixtureOverride };
+	/**
+	 * The conversation-tag routes (LOH-11 S3), as one block because they are one
+	 * feature: a scenario that pins tags pins the capability, the catalogue and
+	 * the routes together. ABSENT is an older relay — no `session_tags`
+	 * capability, so the app renders no tag UI and offers no Tags action.
+	 *
+	 * `holdCatalogue` and `failCatalogue` are the catalogue read's two failure
+	 * shapes the sheet renders: a read that never answers (the skeleton) and a
+	 * refusal with the relay's own sentence.
+	 */
+	sessionTags?: {
+		/** `GET /api/tags`'s body, in the registry's own order. */
+		catalogue: TagCatalogueEntry[];
+		holdCatalogue?: boolean;
+		failCatalogue?: { status: number; error: string };
+	};
 	/**
 	 * The armed-index surface this state pins (S17): the whole
 	 * `GET /api/schedules` body, or a RECORDED RESPONSE (`FixtureOverride`)
@@ -555,6 +573,119 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 		projections: { [liveIdle.session_id]: structuredClone(liveIdle) },
 	});
 
+	/* ------------------------------------------------- conversation tags --
+	 *
+	 * LOH-11 S3's world. The catalogue ids/names/order are the S1 captures'
+	 * (`fixtures/relay/http/tags-populated.json`), plus one deliberately long
+	 * name so the row line's truncation is a frame rather than a claim. Rows
+	 * are tagged in the RELAY'S order (not sorted here), and the untagged rows
+	 * in the same world are what make "a row without tags keeps its geometry"
+	 * visible beside the tagged ones.
+	 */
+	const TAG_RESEARCH: TagRef = { id: "cb65004501", name: "Research" };
+	const TAG_WORK: TagRef = { id: "d28b35a273", name: "Work" };
+	const TAG_LONG: TagRef = {
+		id: "a1b2c3d4e5",
+		name: "Home projects and household admin",
+	};
+	const TAG_CATALOGUE: TagCatalogueEntry[] = [
+		{ ...TAG_WORK, order: 0, conversations: 3 },
+		{ ...TAG_RESEARCH, order: 1, conversations: 2 },
+		{ ...TAG_LONG, order: 2, conversations: 1 },
+	];
+
+	/** One tagged row: its projection (so the row and its stream agree) and the
+	 *  listing override that carries the assignment. */
+	const taggedRow = (
+		seed: string,
+		name: string,
+		tags: TagRef[],
+		primary: string | null,
+	) => {
+		const projection = projectionFrom(liveIdle, {
+			session_id: syntheticSessionId(seed),
+			conversation_name: name,
+		});
+		return {
+			projection,
+			override: { tags, primary } as Partial<SessionSummary>,
+		};
+	};
+
+	/** The populated tag world, shared by the list/header/past cells and the
+	 *  sheet cell so they cannot disagree about an assignment. */
+	const tagsWorld = () => {
+		const one = taggedRow(
+			"tag-one-row",
+			"Tagged once",
+			[TAG_WORK],
+			TAG_WORK.id,
+		);
+		const two = taggedRow(
+			"tag-two-row",
+			"Two categories",
+			[TAG_RESEARCH, TAG_WORK],
+			TAG_WORK.id,
+		);
+		const three = taggedRow(
+			"tag-three-row",
+			"Three categories",
+			[TAG_WORK, TAG_RESEARCH, TAG_LONG],
+			TAG_RESEARCH.id,
+		);
+		const long = taggedRow(
+			"tag-long-row",
+			"One long category",
+			[TAG_LONG],
+			TAG_LONG.id,
+		);
+		const untagged = projectionFrom(liveIdle, {
+			session_id: syntheticSessionId("tag-untagged-row"),
+			conversation_name: "No categories",
+		});
+		return {
+			projections: {
+				[liveIdle.session_id]: projectionFrom(liveIdle, {
+					session_id: liveIdle.session_id,
+				}),
+				[one.projection.session_id]: one.projection,
+				[two.projection.session_id]: two.projection,
+				[three.projection.session_id]: three.projection,
+				[long.projection.session_id]: long.projection,
+				[untagged.session_id]: untagged,
+			},
+			rowOverridesById: {
+				[liveIdle.session_id]: {
+					tags: [TAG_RESEARCH, TAG_WORK],
+					primary: TAG_WORK.id,
+				},
+				[one.projection.session_id]: one.override,
+				[two.projection.session_id]: two.override,
+				[three.projection.session_id]: three.override,
+				[long.projection.session_id]: long.override,
+			},
+			sessionTags: { catalogue: TAG_CATALOGUE },
+			past: [
+				{
+					id: "past-tag-one",
+					name: "Quarterly planning",
+					mtime: 1790727370,
+					forked: false,
+					tags: [TAG_WORK],
+					primary: TAG_WORK.id,
+				},
+				{
+					id: "past-tag-two",
+					name: "Notes on the migration",
+					mtime: 1790640000,
+					forked: false,
+					tags: [TAG_RESEARCH, TAG_WORK],
+					primary: TAG_WORK.id,
+				},
+			],
+		};
+	};
+
 	/** A synthetic computer registry — 32-hex labels, per the edge's own regex. */
 	const tunnels = [
 		{
@@ -793,6 +924,43 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 				},
 			};
 		},
+	);
+
+	add(
+		"tags",
+		"Conversation tags on the list, the session header and past sessions: rows carrying one, two and three categories, a long name, and an untagged neighbour so 'no tags means no line' is a frame rather than a claim.",
+		["S15/tags", "S15/tags-sheet"],
+		() => tagsWorld(),
+	);
+
+	add(
+		"tags-empty-catalogue",
+		"The tags sheet against a relay with no categories yet. The desktop creates them, so the phone says so instead of offering a control that cannot work.",
+		["S15/tags-sheet-empty"],
+		() => ({ ...tagsWorld(), sessionTags: { catalogue: [] } }),
+	);
+
+	add(
+		"tags-loading",
+		"The tags sheet's catalogue read never answers: the sheet's skeleton, distinct from an empty catalogue.",
+		["S15/tags-sheet-loading"],
+		() => ({
+			...tagsWorld(),
+			sessionTags: { catalogue: TAG_CATALOGUE, holdCatalogue: true },
+		}),
+	);
+
+	add(
+		"tags-error",
+		"The catalogue read is refused: the sheet's error state, carrying the relay's own sentence and a retry control.",
+		["S15/tags-sheet-error"],
+		() => ({
+			...tagsWorld(),
+			sessionTags: {
+				catalogue: TAG_CATALOGUE,
+				failCatalogue: { status: 500, error: "tag store unavailable" },
+			},
+		}),
 	);
 
 	add(

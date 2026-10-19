@@ -48,7 +48,14 @@ import { useCompletionAck } from "@/features/session/use-completion-ack";
 import { draftSlashQuery, useComposer } from "@/features/session/use-composer";
 import { useFind } from "@/features/session/use-find";
 import { useSessionRuntime } from "@/features/session/use-session";
-import { CONTROL, EMPTY, SCREEN, SURFACE } from "@/ui/a11y";
+import { SessionTagLine } from "@/features/sessions/tag-line";
+import {
+	CONTROL,
+	EMPTY,
+	SCREEN,
+	SURFACE,
+	sessionHeaderTagLineId,
+} from "@/ui/a11y";
 import {
 	Chip,
 	EmptyState,
@@ -83,6 +90,13 @@ import {
 export default function Session() {
 	const { id } = useLocalSearchParams<{ id: string }>();
 	const sessionId = typeof id === "string" ? id : "";
+	/* The header's tags come from the LIST frame, not the projection: the tag pair
+	 *  is the listing's own field (`SessionSummary.tags`), and the projection
+	 *  contract does not repeat it. The list stream carries it for every row the
+	 *  relay knows, so a deep link settles as soon as its first frame arrives. */
+	const listRow = useListState((state) =>
+		state.sessions.find((row) => row.session_id === sessionId),
+	);
 	const router = useRouter();
 
 	const runtime = useSessionRuntime(sessionId);
@@ -490,6 +504,19 @@ export default function Session() {
 					onPress={find.open}
 					icon={({ color, size }) => <Search color={color} size={size} />}
 				/>
+			}
+			/* The conversation's tags, in the header's own column. Read-only here:
+			 *  assignment is a list-row menu action (the pane owns the sheet), and a
+			 *  second write path on this screen would be a second state to reconcile
+			 *  against the same SSE frame. The LIST frame carries the pair on every
+			 *  relay that has the field; an older relay defaults to `[]`. */
+			headerDetail={
+				(listRow?.tags?.length ?? 0) > 0 ? (
+					<SessionTagLine
+						tags={listRow?.tags ?? []}
+						testID={sessionHeaderTagLineId(sessionId)}
+					/>
+				) : undefined
 			}
 		>
 			<SessionStateMarkers facts={stateFacts} />
