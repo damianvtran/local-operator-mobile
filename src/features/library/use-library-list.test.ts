@@ -261,4 +261,38 @@ describe("useLibraryList stale pages", () => {
 		expect(calls).toHaveLength(4);
 		expect(calls[3]?.request.cursor).toBe("cursor-new");
 	});
+
+	it("clears a superseded refresh spinner across a query change", async () => {
+		await vi.advanceTimersByTimeAsync(300);
+		calls[0]?.resolve(listing([row("la_old_1", "old one")], "cursor-old"));
+		await settle();
+
+		result?.refresh();
+		await settle();
+		expect(calls).toHaveLength(2);
+		expect(result?.refreshing).toBe(true);
+
+		browse = { ...browse, query: "new" };
+		rt.clean();
+		render();
+		await settle();
+		expect(result?.refreshing).toBe(false);
+
+		await vi.advanceTimersByTimeAsync(300);
+		calls[2]?.resolve(listing([row("la_new_1", "new one")], "cursor-new"));
+		await settle();
+		expect(result?.refreshing).toBe(false);
+		expect(result?.loading).toBe(false);
+
+		// The old refresh answer lands late; it must not repaint or leave a spinner.
+		calls[1]?.resolve(listing([row("la_old_1", "old one")], "cursor-old"));
+		await settle();
+		expect(result?.rows.map((asset) => asset.id)).toEqual(["la_new_1"]);
+		expect(result?.refreshing).toBe(false);
+
+		result?.refresh();
+		await settle();
+		expect(calls).toHaveLength(4);
+		expect(calls[3]?.request.q).toBe("new");
+	});
 });
