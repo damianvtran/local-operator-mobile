@@ -4,6 +4,7 @@ import { Mic, Square, X } from "lucide-react-native";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
 	Image,
+	type LayoutChangeEvent,
 	Platform,
 	Pressable,
 	ScrollView,
@@ -223,6 +224,8 @@ export type ComposerProps = {
 	 *  size cannot push the composer, or the model and effort chips in it, off a 390 pt
 	 *  screen. Nothing is removed: every control stays in the one scrollable body. */
 	compact?: { maxHeight: number } | null;
+	/** Measure the existing root without inserting an input-reparenting wrapper. */
+	onLayout?: (event: LayoutChangeEvent) => void;
 	testID: string;
 };
 
@@ -360,6 +363,7 @@ export const Composer = ({
 	fieldRef,
 	compact = null,
 	testID,
+	onLayout,
 }: ComposerProps) => {
 	const attachmentSummary = useMemo(
 		() => images.map(attachmentLabel).join(" · "),
@@ -1003,6 +1007,7 @@ export const Composer = ({
 	return (
 		<View
 			ref={rootRef}
+			onLayout={onLayout}
 			className={
 				compact === null
 					? "border-t border-hairline px-4 pt-2 pb-2"

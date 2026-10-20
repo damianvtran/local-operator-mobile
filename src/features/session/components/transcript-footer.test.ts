@@ -305,7 +305,7 @@ describe("session banner-only relocation structure", () => {
 		const list = all.find((node) => tag(node) === "TranscriptList");
 		if (!list) throw new Error("Missing list");
 		const attrs = text(opening(list));
-		expect(attrs).toContain("footer={connectionBanner}");
+		expect(attrs).toContain("footer={transcriptNotice}");
 		expect(attrs).toContain("entries={runtime.entries}");
 		expect(attrs).toContain(
 			"anchorId={attentionRecord(runtime.projection)?.anchor_id ?? null}",
@@ -326,7 +326,7 @@ describe("session banner-only relocation structure", () => {
 						find(ast(item));
 		}
 		find(tree);
-		expect(initializer.match(/connectionBanner/g)).toHaveLength(4);
+		expect(initializer.match(/transcriptNotice/g)).toHaveLength(4);
 		expect(initializer.match(/<ScrollView/g)).toHaveLength(3);
 		expect(initializer).not.toContain("<Composer");
 	});

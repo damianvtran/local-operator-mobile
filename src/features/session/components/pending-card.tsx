@@ -1,6 +1,5 @@
-import { useState } from "react";
+import { type ReactElement, useState } from "react";
 import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
-
 import {
 	type PendingView,
 	pendingBodyCue,
@@ -8,6 +7,10 @@ import {
 	pendingScrollFacts,
 	riskDestinationPreview,
 } from "@/features/session/pending";
+import {
+	PENDING_BODY_MIN_PT,
+	RECOVERY_FRAME_PADDING,
+} from "@/features/session/recovery-budget";
 import { CONTROL, ROLE, SURFACE, state } from "@/ui/a11y";
 import { Button } from "@/ui/components";
 import { TOUCH_FLOOR } from "@/ui/layout";
@@ -55,11 +58,14 @@ export type PendingCardProps = {
 	bodyMaxHeight?: number;
 	/** Actual space remaining above the composer; measured by the parent wrapper. */
 	maxHeight?: number;
+	/** One full notice in the existing body; never moves the pinned controls. */
+	bodyNotice?: ReactElement | null;
+	onPinnedLayout?: (region: "header" | "controls", height: number) => void;
 };
 
 /** The least a compact body may shrink to, in pt: about two lines of body text at 100 %.
  *  The pinned header, cue and actions are sized first; the body takes what is left, down to this. */
-export const PENDING_BODY_MIN_PT = 56;
+export { PENDING_BODY_MIN_PT } from "@/features/session/recovery-budget";
 
 /** The frame: `accent-wash` on `accent-border` at `radius.md`, the one card the
  *  kit paints in accent because it is the only thing that needs a decision. */
@@ -74,6 +80,8 @@ export const PendingCard = ({
 	onAnswer,
 	bodyMaxHeight,
 	maxHeight,
+	bodyNotice = null,
+	onPinnedLayout,
 }: PendingCardProps) => {
 	/** The typed answer. Seeded empty and NOT carried across a question: the screen
 	 *  remounts this component per question, which is what makes that true. */
@@ -207,7 +215,16 @@ export const PendingCard = ({
 			// RN's default `flexShrink` is 0, so without this the card kept its natural height
 			// and pushed the composer off a 390 pt window (measured: chips 439 of 390).
 			style={
-				compactBody ? { flexShrink: 1, minHeight: 0, maxHeight } : undefined
+				compactBody
+					? {
+							flexShrink: 1,
+							minHeight: 0,
+							maxHeight,
+							...(bodyNotice !== null
+								? { paddingVertical: RECOVERY_FRAME_PADDING }
+								: {}),
+						}
+					: undefined
 			}
 			testID={rootTestID}
 		>
@@ -216,7 +233,12 @@ export const PendingCard = ({
 			    meta, the body's cue and the badge; line two is the destructive marker. Putting
 			    the cue on this line costs no extra row (a separate cue line pushed the chips 49 pt
 			    off a 390 pt screen), and the marker can never be scrolled out of sight (UX U11). */}
-			<View className="shrink-0 pb-1">
+			<View
+				className="shrink-0 pb-1"
+				onLayout={(event) =>
+					onPinnedLayout?.("header", event.nativeEvent.layout.height)
+				}
+			>
 				<View className="flex-row items-center gap-2">
 					<Text
 						className="min-w-0 shrink text-meta text-accent"
@@ -287,6 +309,9 @@ export const PendingCard = ({
 					}))
 				}
 			>
+				{/* Permanent slot: recovery has priority in this EXISTING body viewport.
+				    The command/answer keep their parents and indices through expiry. */}
+				<View>{bodyNotice}</View>
 				{view.boundarySentence !== null ? (
 					/* The honest boundary. One sentence, no control: either the approval
 					   belongs to the reader's terminal, or the session is over. The
@@ -409,7 +434,12 @@ export const PendingCard = ({
 
 			{/* Region 3 — the controls, pinned BELOW the scroller so they can never
 			    scroll away from the decision they answer. */}
-			<View className="shrink-0 pt-2">
+			<View
+				className="shrink-0 pt-2"
+				onLayout={(event) =>
+					onPinnedLayout?.("controls", event.nativeEvent.layout.height)
+				}
+			>
 				{view.terminalOnly ? null : isApproval ? (
 					<>
 						<View className="flex-row gap-2">

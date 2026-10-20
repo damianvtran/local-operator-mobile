@@ -5,7 +5,7 @@ import { EMPTY, STATE_MARKER, SURFACE } from "@/ui/a11y";
 import { collapsePendingTranscript } from "./pending-layout";
 
 const COLLAPSE_CALL =
-	/collapsePendingTranscript\(\s*compact,\s*pendingViewProps !== null,\s*runtime\.connection\.id,?\s*\)/;
+	/collapsePendingTranscript\(\s*compact \|\| pendingRecovery,\s*pendingViewProps !== null,\s*pendingRecovery \? null : runtime\.connection\.id,?\s*\)/;
 const DUPLICATED_INSET = /marginLeft|marginRight|paddingLeft|paddingRight/;
 const COMPACT_DETAIL =
 	/compact\s*\? "text-title text-ink"\s*: "text-display text-ink"/;
@@ -55,7 +55,11 @@ describe("PR92/main semantic convergence", () => {
 	it("wires the collapse decision to typed banner state while retaining the full footer", () => {
 		const source = read("../../../app/(app)/session/[id].tsx");
 		expect(source).toMatch(COLLAPSE_CALL);
-		expect(source).toContain("footer={connectionBanner}");
+		expect(source).toContain("footer={transcriptNotice}");
+		expect(source).toContain("pendingRecovery ? undefined : connectionBanner");
+		expect(source).toContain(
+			"bodyNotice={pendingRecovery ? connectionBanner : null}",
+		);
 		expect(source).toContain('className="flex-1 min-h-0"');
 	});
 	it("keeps both S6 and Library state contracts, not one conflict side", () => {

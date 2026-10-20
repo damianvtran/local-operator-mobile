@@ -49,6 +49,10 @@ import {
 	projectTodos,
 	workingLine,
 } from "@/features/session/projection";
+import {
+	type RecoveryFacts,
+	recoveryBudget,
+} from "@/features/session/recovery-budget";
 import { sessionFactsFrom } from "@/features/session/state-marker";
 import { useAsksSheet } from "@/features/session/use-asks-sheet";
 import { useCheckpoints } from "@/features/session/use-checkpoints";
@@ -432,6 +436,19 @@ export default function Session() {
 	 * hiding a cue changes the viewport we are comparing to the content. */
 	const cueReserve = Math.round(19 * effectiveScale);
 	const [regionAtBottom, setRegionAtBottom] = useState(false);
+	const [recoveryFacts, setRecoveryFacts] = useState<RecoveryFacts>({});
+	const measureRecovery = useCallback(
+		(key: keyof RecoveryFacts, value: number) => {
+			if (!Number.isFinite(value) || value < 0) return;
+			setRecoveryFacts((previous) =>
+				previous[key] === value ? previous : { ...previous, [key]: value },
+			);
+		},
+		[],
+	);
+	const pendingRecovery =
+		pendingViewProps !== null && runtime.connection.id !== null;
+	const recoveryAllocation = recoveryBudget(recoveryFacts);
 	const [pendingAvailableHeight, setPendingAvailableHeight] =
 		useState<number>();
 	/* The region's last scroll offset and viewport, kept in refs so a CONTENT change
@@ -508,6 +525,9 @@ export default function Session() {
 		/>
 	);
 
+	// One notice owner: pending bodies already have a readable floor, whereas
+	// another list viewport cannot fit beside the pinned decision/composer.
+	const transcriptNotice = pendingRecovery ? undefined : connectionBanner;
 	const transcript =
 		runtime.content === "disconnected" ? (
 			<ScrollView
@@ -519,7 +539,7 @@ export default function Session() {
 					next="Open it from the session list once a computer is connected."
 					testID={EMPTY.session}
 				/>
-				{connectionBanner}
+				{transcriptNotice}
 			</ScrollView>
 		) : runtime.content === "recovery" ? (
 			// With no owned frame, recovery is the content, not a fake empty chat.
@@ -529,7 +549,7 @@ export default function Session() {
 				className="flex-1 min-h-0"
 				contentContainerStyle={{ flexGrow: 1 }}
 			>
-				{connectionBanner}
+				{transcriptNotice}
 			</ScrollView>
 		) : runtime.content === "loading" ? (
 			// Loading is a skeleton, never a spinner over a blank column: the three bars
@@ -551,7 +571,7 @@ export default function Session() {
 					<View className="px-4 pt-3">
 						<Skeleton lines={3} testID={SURFACE.sessionLoading} />
 					</View>
-					{connectionBanner}
+					{transcriptNotice}
 				</ScrollView>
 			)
 		) : (
@@ -564,11 +584,13 @@ export default function Session() {
 				className="flex-1 min-h-0"
 				// Keep the list mounted (and its historical offset), but do not show a 17 pt
 				// message sliver above an ask. The decision owns this short window (D22).
+				// During recovery the one notice is in PendingCard's existing body,
+				// so this list can yield in every orientation without hiding recovery.
 				style={
 					collapsePendingTranscript(
-						compact,
+						compact || pendingRecovery,
 						pendingViewProps !== null,
-						runtime.connection.id,
+						pendingRecovery ? null : runtime.connection.id,
 					)
 						? { height: 0, flex: 0, overflow: "hidden" }
 						: undefined
@@ -578,7 +600,7 @@ export default function Session() {
 					testID={SURFACE.sessionTranscript}
 					sessionId={sessionId}
 					entries={runtime.entries}
-					footer={connectionBanner}
+					footer={transcriptNotice}
 					streamingRowId={runtime.streamingRowId}
 					loadImage={runtime.loadImage}
 					onOpenAgent={openAgent}
@@ -878,7 +900,13 @@ export default function Session() {
 			    a rail would leave ~280 pt of transcript, which is the squeezed column
 			    the cap exists to prevent. */}
 			<View className="flex-1 min-h-0">
-				<View className="flex-1 min-h-0" testID={SURFACE.sessionColumn}>
+				<View
+					className="flex-1 min-h-0"
+					testID={SURFACE.sessionColumn}
+					onLayout={(event) =>
+						measureRecovery("column", event.nativeEvent.layout.height)
+					}
+				>
 					{transcript}
 					{/* SECONDARY CHROME. Wide: the panels and the working line are plain
 					    siblings, exactly the column this screen has always had. Short
@@ -998,23 +1026,40 @@ export default function Session() {
 						<View
 							className="px-4 pb-1"
 							// shrinkable in compact so the card can yield to the composer below
-							style={compact ? { flexShrink: 1, minHeight: 0 } : undefined}
-							onLayout={(event) =>
+							style={
+								compact || pendingRecovery
+									? { flexShrink: 1, minHeight: 0 }
+									: undefined
+							}
+							onLayout={(event) => {
+								measureRecovery("before", event.nativeEvent.layout.y);
 								setPendingAvailableHeight(
 									Math.max(0, event.nativeEvent.layout.height - 4),
-								)
-							}
+								);
+							}}
 						>
 							<PendingCard
 								view={pendingViewProps}
-								maxHeight={compact ? pendingAvailableHeight : undefined}
+								maxHeight={
+									pendingRecovery
+										? recoveryAllocation.card
+										: compact
+											? pendingAvailableHeight
+											: undefined
+								}
+								bodyNotice={pendingRecovery ? connectionBanner : null}
+								onPinnedLayout={(region, height) =>
+									measureRecovery(region, height)
+								}
 								bodyMaxHeight={
-									compact
-										? Math.max(
-												72,
-												Math.round(viewportHeight * COMPACT_PENDING_SHARE),
-											)
-										: undefined
+									pendingRecovery
+										? recoveryAllocation.body
+										: compact
+											? Math.max(
+													72,
+													Math.round(viewportHeight * COMPACT_PENDING_SHARE),
+												)
+											: undefined
 								}
 								busy={composer.sending}
 								error={composer.error}
@@ -1057,7 +1102,12 @@ export default function Session() {
 					    unreachable the bar's data is stale and saying so matters more.
 					    It renders itself away at zero outstanding, so its presence is
 					    the statement. */}
-					<View className="px-4 pb-1">
+					<View
+						className="px-4 pb-1"
+						onLayout={(event) =>
+							measureRecovery("after", event.nativeEvent.layout.height)
+						}
+					>
 						<AskBar
 							asks={projection?.asks}
 							onOpen={asksSheet.open}
@@ -1066,6 +1116,9 @@ export default function Session() {
 					</View>
 
 					<Composer
+						onLayout={(event) =>
+							measureRecovery("composer", event.nativeEvent.layout.height)
+						}
 						compact={
 							compact
 								? {
