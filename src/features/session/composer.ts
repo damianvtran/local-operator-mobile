@@ -119,6 +119,8 @@ export interface ComposerControls {
 }
 
 export interface ComposerControlInput {
+	/** Drafts survive refusal; their presence must not authorize a write without admission. */
+	connected?: boolean;
 	streaming: boolean;
 	hasDraft: boolean;
 	hasImages: boolean;
@@ -153,7 +155,12 @@ export const composerControls = (
 	 * `!hasContent`: but the primary is deliberately NOT that control. The retry
 	 * lives on its own control in the alert, so the primary stays disabled and its
 	 * hint says which act resolves it — one control, one meaning. */
-	const disabled = input.sending || blocked || input.ended || !hasContent;
+	const disabled =
+		input.connected === false ||
+		input.sending ||
+		blocked ||
+		input.ended ||
+		!hasContent;
 	return {
 		primary: {
 			kind: input.streaming ? "steer" : "send",
@@ -170,7 +177,7 @@ export const composerControls = (
 					? "Steer the running turn"
 					: "Send message",
 		},
-		stopVisible: input.streaming,
+		stopVisible: input.streaming && input.connected !== false,
 		sending: input.sending,
 		disabledReason: input.ended
 			? COMPOSER_COPY.endedSession
