@@ -929,13 +929,32 @@ export const maestroChecks: [string, () => void][] = [
 					`tag flow must assert ${id}`,
 				);
 			}
+			const refusalAt = steps.findIndex(
+				(step) =>
+					step.assertVisible !== undefined &&
+					mapping(step.assertVisible).id === "session-tags-refusal",
+			);
+			assert(refusalAt >= 0, "tag flow must assert the refusal marker");
 			assert(
 				steps.some(
 					(step) =>
 						step.assertVisible !== undefined &&
-						mapping(step.assertVisible).checked === false,
+						mapping(step.assertVisible).text ===
+							"That didn't save\\. At most 8 distinct tags are allowed",
 				),
-				"tag flow must assert the 422 revert's unchecked state",
+				"tag flow must assert the rendered refusal sentence",
+			);
+			const revertedAt = steps.findIndex(
+				(step, index) =>
+					index > refusalAt &&
+					step.assertVisible !== undefined &&
+					mapping(step.assertVisible).id ===
+						"session-tags-option-${TAG_CAP_NINE}" &&
+					mapping(step.assertVisible).checked === false,
+			);
+			assert(
+				revertedAt > refusalAt,
+				"tag flow must assert the 422 revert on the optimistic ninth option",
 			);
 			assert(
 				steps.some(

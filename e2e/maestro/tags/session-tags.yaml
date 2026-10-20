@@ -121,8 +121,15 @@ env:
     id: "session-tags-refusal"
 - assertVisible:
     text: "That didn't save\\. At most 8 distinct tags are allowed"
+# The 422 reverts the OPTIMISTIC ninth selection, not the stale pre-flow
+# assignment: `tags` still says Cap eight is checked, and Cap nine is the
+# option that flipped. Scroll back to Cap nine before asserting it reverted.
+- scrollUntilVisible:
+    element:
+      id: "session-tags-option-${TAG_CAP_NINE}"
+    direction: DOWN
 - assertVisible:
-    id: "session-tags-option-${TAG_CAP_EIGHT}"
+    id: "session-tags-option-${TAG_CAP_NINE}"
     checked: false
 - takeScreenshot: "tags-05-cap-refusal"
 # Remove all is two-step: the dialog must appear before anything is cleared.
