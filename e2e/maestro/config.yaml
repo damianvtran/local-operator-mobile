@@ -9,7 +9,7 @@
 # records how to invoke everything and what each artefact is.
 #
 # Flows are platform-parameterised. F1 walks the Radient browser hand-off only;
-# 02–09 use helpers/connect-relay.yaml to connect through the public own-tunnel
+# 02–10 use helpers/connect-relay.yaml to connect through the public own-tunnel
 # flow. They do not claim Radient OAuth or computer-discovery coverage.
 # Pass the values with `-e`:
 #

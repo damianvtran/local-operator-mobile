@@ -1,0 +1,188 @@
+# Conversation tags, in the app a reader uses.
+#
+# The mock relay's `tags-cap` scenario assigns EIGHT categories to this row and
+# offers a ninth. The flow drives the real controls: the row line, the long-press
+# menu, the Tags sheet, select/unselect, the relay's cap refusal, and the
+# two-step Remove all. No product code is staged for this flow — every state is
+# reached by a press.
+#
+# The row id is `syntheticSessionId("tag-cap-row")`; the tag ids are the
+# scenario's own. Keeping them literal here is the same choice the other flows
+# make: the id contract (`src/ui/a11y.ts`) is checked by `a11y.e2e.test.ts`, and
+# a flow is a consumer of that contract, not a second declaration of it.
+appId: ${APP_ID}
+name: "Conversation tags — line, sheet, cap refusal, remove all"
+env:
+  TAG_SESSION_ID: 81d2f374e513
+  TAG_WORK: d28b35a273
+  TAG_RESEARCH: cb65004501
+  TAG_CAP_EIGHT: c0de000008
+  TAG_CAP_NINE: c0de000009
+---
+- launchApp:
+    clearState: true
+- runFlow: ../helpers/connect-relay.yaml
+- extendedWaitUntil:
+    visible:
+      id: "home-screen"
+    timeout: 15000
+- tapOn:
+    id: "home-sidebar"
+- extendedWaitUntil:
+    visible:
+      id: "conversations-sidebar"
+    timeout: 10000
+- extendedWaitUntil:
+    visible:
+      id: "session-row-${TAG_SESSION_ID}"
+    timeout: 15000
+# The row line is the read-only surface: names and the +N cue, not a chip row.
+- assertVisible:
+    id: "session-tags-line-${TAG_SESSION_ID}"
+# Eight assigned, two fitted plus the remainder cue.
+- assertVisible:
+    text: "Work"
+- assertVisible:
+    text: "Research"
+- assertVisible:
+    text: "\\+6"
+- takeScreenshot: "tags-01-list-tagged-row"
+# The sheet is reachable only the way a reader reaches it: hold the row, then
+# choose Tags… in its menu. A direct sheet testID would prove a screen exists,
+# not that the route to it works.
+- longPressOn:
+    id: "session-row-${TAG_SESSION_ID}"
+- extendedWaitUntil:
+    visible:
+      id: "session-menu-sheet"
+    timeout: 10000
+- assertVisible:
+    id: "session-tags-action"
+- tapOn:
+    id: "session-tags-action"
+- extendedWaitUntil:
+    visible:
+      id: "session-tags-sheet"
+    timeout: 10000
+- assertVisible:
+    id: "session-tags-sheet"
+- takeScreenshot: "tags-02-sheet-populated"
+- assertVisible:
+    id: "session-tags-option-${TAG_WORK}"
+- assertVisible:
+    id: "session-tags-option-${TAG_RESEARCH}"
+# The options below the fold need a REAL swipe inside the sheet body.
+# `scrollUntilVisible` starts from the screen centre, which on the 320x640
+# AVD is the sheet header (7 px above the body), and its 20 attempts never
+# reach the list. Start and end inside the body's measured band
+# ([1,327][319,530]) instead: three short swipes expose rows 4-9.
+- swipe:
+    start: "50%, 75%"
+    end: "50%, 55%"
+    duration: 400
+- swipe:
+    start: "50%, 75%"
+    end: "50%, 55%"
+    duration: 400
+- swipe:
+    start: "50%, 75%"
+    end: "50%, 55%"
+    duration: 400
+- assertVisible:
+    id: "session-tags-option-${TAG_CAP_EIGHT}"
+- assertVisible:
+    id: "session-tags-option-${TAG_CAP_NINE}"
+# Unselect one of the eight: a successful write.
+- tapOn:
+    id: "session-tags-option-${TAG_CAP_EIGHT}"
+- assertVisible:
+    id: "session-tags-option-${TAG_CAP_EIGHT}"
+    checked: false
+- waitForAnimationToEnd
+- takeScreenshot: "tags-03-unselected"
+# Re-select the ninth: back to eight, another successful write.
+- tapOn:
+    id: "session-tags-option-${TAG_CAP_NINE}"
+- assertVisible:
+    id: "session-tags-option-${TAG_CAP_NINE}"
+    checked: true
+- waitForAnimationToEnd
+- takeScreenshot: "tags-04-reselected"
+# The cap: press the now-free eighth option (already on screen). Nine
+# requested; the relay refuses with its own sentence.
+- tapOn:
+    id: "session-tags-option-${TAG_CAP_EIGHT}"
+# Scroll back to the top of the list by swiping DOWN inside the body. The
+# refusal alert sits above the options, so the sheet centre cannot reach it.
+- swipe:
+    start: "50%, 55%"
+    end: "50%, 75%"
+    duration: 400
+- swipe:
+    start: "50%, 55%"
+    end: "50%, 75%"
+    duration: 400
+- swipe:
+    start: "50%, 55%"
+    end: "50%, 75%"
+    duration: 400
+- extendedWaitUntil:
+    visible:
+      id: "session-tags-refusal"
+    timeout: 10000
+- assertVisible:
+    id: "session-tags-refusal"
+- assertVisible:
+    text: "That didn't save\\. At most 8 distinct tags are allowed"
+- takeScreenshot: "tags-05-cap-refusal"
+# The 422 reverts the OPTIMISTIC ninth selection, not the stale pre-flow
+# assignment: `tags` still says Cap eight is checked, and Cap nine is the
+# option that flipped. Scroll back down to Cap nine before asserting it.
+- swipe:
+    start: "50%, 75%"
+    end: "50%, 55%"
+    duration: 400
+- swipe:
+    start: "50%, 75%"
+    end: "50%, 55%"
+    duration: 400
+- swipe:
+    start: "50%, 75%"
+    end: "50%, 55%"
+    duration: 400
+- assertVisible:
+    id: "session-tags-option-${TAG_CAP_NINE}"
+    checked: false
+- takeScreenshot: "tags-06-cap-reverted"
+# Remove all is two-step: the dialog must appear before anything is cleared.
+- assertVisible:
+    id: "session-tags-remove-all"
+- tapOn:
+    id: "session-tags-remove-all"
+- assertVisible:
+    id: "session-tags-remove-all-dialog"
+- tapOn:
+    id: "dialog-cancel"
+- assertNotVisible:
+    id: "session-tags-remove-all-dialog"
+- tapOn:
+    id: "session-tags-remove-all"
+- assertVisible:
+    id: "session-tags-remove-all-dialog"
+- tapOn:
+    id: "dialog-confirm"
+- waitForAnimationToEnd
+- takeScreenshot: "tags-07-cleared-sheet"
+- tapOn:
+    id: "sheet-close"
+# The sheet's write is HTTP; the list's frame is not pushed by the mock. Pull
+# to refresh the real control before asserting the cleared row.
+- swipe:
+    from:
+      id: "conversations-list"
+    direction: DOWN
+- extendedWaitUntil:
+    notVisible:
+      id: "session-tags-line-${TAG_SESSION_ID}"
+    timeout: 15000
+- takeScreenshot: "tags-08-cleared-row"

@@ -1,0 +1,39 @@
+# A relay without the conversation-tag routes must leave no tag UI behind.
+#
+# This flow runs in the normal `idle` Maestro pass, whose mock world has no
+# `session_tags` capability. The row exists; the tag line and the Tags… menu
+# entry must not. A control that opened a 404s sheet would be worse than no
+# control, so both halves are asserted.
+appId: ${APP_ID}
+name: "Conversation tags — absent capability leaves no control"
+env:
+  SESSION_ID: 6714def86197
+---
+- launchApp:
+    clearState: true
+- runFlow: ../helpers/connect-relay.yaml
+- extendedWaitUntil:
+    visible:
+      id: "home-screen"
+    timeout: 15000
+- tapOn:
+    id: "home-sidebar"
+- extendedWaitUntil:
+    visible:
+      id: "conversations-sidebar"
+    timeout: 10000
+- extendedWaitUntil:
+    visible:
+      id: "session-row-${SESSION_ID}"
+    timeout: 15000
+- assertNotVisible:
+    id: "session-tags-line-${SESSION_ID}"
+- longPressOn:
+    id: "session-row-${SESSION_ID}"
+- extendedWaitUntil:
+    visible:
+      id: "session-menu-sheet"
+    timeout: 10000
+- assertNotVisible:
+    id: "session-tags-action"
+- takeScreenshot: "tags-absent-no-control"

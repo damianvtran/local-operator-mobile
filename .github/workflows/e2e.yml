@@ -1067,6 +1067,9 @@ jobs:
             # raises a ::warning — a flake stays visible, a second failure is a
             # failure (the step's exit code).
             run_flows() { maestro test --config e2e/maestro/config.yaml -e APP_ID="$APP_ID" -e RELAY_URL="$RELAY_URL_FOR_DEVICE" -e RELAY_PASSWORD="$(cat "$RUNNER_TEMP/relay-password")" -e SESSION_ID=6714def86197 --test-output-dir "$RUNNER_TEMP/maestro-screenshots" e2e/maestro; }; run_flows || { echo "::warning title=Maestro flaked once::the flow set failed; re-running it once, per ADR 0003 — a second failure is a failure"; sh scripts/ci/await-emulator-ready.sh && run_flows; }
+            # The tag flow needs a different mock world. Run it after the normal
+            # set, on the same emulator and APK, in its own relay scenario.
+            bash scripts/ci/run-maestro-tags.sh
 
       - name: Stop the mock relay
         if: always()
@@ -1085,6 +1088,15 @@ jobs:
         with:
           name: maestro-screenshots
           path: ${{ runner.temp }}/maestro-screenshots
+          retention-days: 30
+
+
+      - name: Upload the tag-flow screenshots
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: maestro-tag-screenshots
+          path: ${{ runner.temp }}/maestro-tags-screenshots
           retention-days: 30
 
 

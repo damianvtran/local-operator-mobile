@@ -3118,6 +3118,18 @@ export function createRelay(options: RelayOptions = {}) {
 					sendJson(res, 422, errorBody("Unknown category id"));
 					return;
 				}
+				/* The real store's cap and identity rule: more than eight, or the same
+				 * category twice, is the same 422 sentence. Without it the mock accepted
+				 * a duplicate the store refuses and the flow could not tell the two
+				 * cap paths apart. Both are checked before the id lookup, as the store
+				 * validates the whole body first. */
+				if (
+					requested.length > 8 ||
+					new Set(requested).size !== requested.length
+				) {
+					sendJson(res, 422, errorBody("At most 8 distinct tags are allowed"));
+					return;
+				}
 				const byId = new Map(tagRoutes.catalogue.map((tag) => [tag.id, tag]));
 				if (requested.some((id) => !byId.has(id))) {
 					sendJson(res, 422, errorBody("Unknown category id"));

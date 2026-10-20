@@ -237,6 +237,26 @@ function checkPrerequisites(steps: Mapping[]) {
 	);
 }
 
+/**
+ * Maestro text selectors are regexes. A literal `+6` is an invalid regex
+ * (`PatternSyntaxException`) and never reaches the assertion; this keeps the
+ * tag flow's text selectors honest where the YAML validator cannot.
+ */
+function checkTextSelectors(value: Value) {
+	if (Array.isArray(value)) value.forEach(checkTextSelectors);
+	else if (value !== null && typeof value === "object") {
+		for (const [key, child] of Object.entries(value)) {
+			if (key === "text") {
+				assert.doesNotThrow(
+					() => new RegExp(String(child)),
+					`invalid text selector regex: ${child}`,
+				);
+			}
+			checkTextSelectors(child);
+		}
+	}
+}
+
 function checkIdentifiers(value: Value) {
 	if (Array.isArray(value)) value.forEach(checkIdentifiers);
 	else if (value !== null && typeof value === "object") {
@@ -852,15 +872,15 @@ export const maestroChecks: [string, () => void][] = [
 		},
 	],
 	[
-		"connected flows 02–09 establish a route after clearing credentials",
+		"connected flows 02–10 establish a route after clearing credentials",
 		() => {
 			const names = readdirSync(join(workspace, "flows")).filter((name) =>
-				/^0[2-9].*\.yaml$/.test(name),
+				/^(?:0[2-9]|10).*\.yaml$/.test(name),
 			);
 			assert.equal(
 				names.length,
-				8,
-				"all eight connected flows must remain covered",
+				9,
+				"all nine connected flows must remain covered",
 			);
 			for (const name of names) {
 				const path = join(workspace, "flows", name);
@@ -872,6 +892,78 @@ export const maestroChecks: [string, () => void][] = [
 					join(workspace, helperPath),
 				);
 			}
+		},
+	],
+	[
+		"the tag flow keeps the shipped interactions and selector contract",
+		() => {
+			const path = join(workspace, "tags/session-tags.yaml");
+			const documents = read(path);
+			documents.forEach(checkIdentifiers);
+			documents.forEach(checkTextSelectors);
+			const steps = commands(documents);
+			assert.equal(mapping(steps[0]?.launchApp).clearState, true);
+			checkPrerequisites(steps);
+			assert.equal(
+				resolve(dirname(path), String(steps[1]?.runFlow)),
+				join(workspace, helperPath),
+			);
+			// The flow must still drive the list line, the sheet route, select/
+			// unselect, the relay cap refusal and both halves of Remove all.
+			for (const id of [
+				"session-tags-line-${TAG_SESSION_ID}",
+				"session-tags-action",
+				"session-tags-sheet",
+				"session-tags-option-${TAG_CAP_EIGHT}",
+				"session-tags-option-${TAG_CAP_NINE}",
+				"session-tags-refusal",
+				"session-tags-remove-all",
+				"session-tags-remove-all-dialog",
+			]) {
+				assert(
+					steps.some(
+						(step) =>
+							step.assertVisible !== undefined &&
+							mapping(step.assertVisible).id === id,
+					),
+					`tag flow must assert ${id}`,
+				);
+			}
+			const refusalAt = steps.findIndex(
+				(step) =>
+					step.assertVisible !== undefined &&
+					mapping(step.assertVisible).id === "session-tags-refusal",
+			);
+			assert(refusalAt >= 0, "tag flow must assert the refusal marker");
+			assert(
+				steps.some(
+					(step) =>
+						step.assertVisible !== undefined &&
+						mapping(step.assertVisible).text ===
+							"That didn't save\\. At most 8 distinct tags are allowed",
+				),
+				"tag flow must assert the rendered refusal sentence",
+			);
+			const revertedAt = steps.findIndex(
+				(step, index) =>
+					index > refusalAt &&
+					step.assertVisible !== undefined &&
+					mapping(step.assertVisible).id ===
+						"session-tags-option-${TAG_CAP_NINE}" &&
+					mapping(step.assertVisible).checked === false,
+			);
+			assert(
+				revertedAt > refusalAt,
+				"tag flow must assert the 422 revert on the optimistic ninth option",
+			);
+			assert(
+				steps.some(
+					(step) =>
+						step.assertVisible !== undefined &&
+						mapping(step.assertVisible).text === "\\+6",
+				),
+				"tag flow must assert the escaped +6 remainder cue",
+			);
 		},
 	],
 	[
