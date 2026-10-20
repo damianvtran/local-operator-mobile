@@ -77,15 +77,15 @@ env:
 # reach the list. Start and end inside the body's measured band
 # ([1,327][319,530]) instead: three short swipes expose rows 4-9.
 - swipe:
-    start: "50%, 70%"
+    start: "50%, 75%"
     end: "50%, 55%"
     duration: 400
 - swipe:
-    start: "50%, 70%"
+    start: "50%, 75%"
     end: "50%, 55%"
     duration: 400
 - swipe:
-    start: "50%, 70%"
+    start: "50%, 75%"
     end: "50%, 55%"
     duration: 400
 - assertVisible:
@@ -116,15 +116,15 @@ env:
 # refusal alert sits above the options, so the sheet centre cannot reach it.
 - swipe:
     start: "50%, 55%"
-    end: "50%, 70%"
+    end: "50%, 75%"
     duration: 400
 - swipe:
     start: "50%, 55%"
-    end: "50%, 70%"
+    end: "50%, 75%"
     duration: 400
 - swipe:
     start: "50%, 55%"
-    end: "50%, 70%"
+    end: "50%, 75%"
     duration: 400
 - extendedWaitUntil:
     visible:
@@ -139,15 +139,15 @@ env:
 # assignment: `tags` still says Cap eight is checked, and Cap nine is the
 # option that flipped. Scroll back down to Cap nine before asserting it.
 - swipe:
-    start: "50%, 70%"
+    start: "50%, 75%"
     end: "50%, 55%"
     duration: 400
 - swipe:
-    start: "50%, 70%"
+    start: "50%, 75%"
     end: "50%, 55%"
     duration: 400
 - swipe:
-    start: "50%, 70%"
+    start: "50%, 75%"
     end: "50%, 55%"
     duration: 400
 - assertVisible:
