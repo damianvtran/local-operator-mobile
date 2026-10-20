@@ -45,7 +45,7 @@ env:
 - assertVisible:
     text: "Research"
 - assertVisible:
-    text: "+6"
+    text: "\\+6"
 - takeScreenshot: "tags-01-list-tagged-row"
 # The sheet is reachable only the way a reader reaches it: hold the row, then
 # choose Tags… in its menu. A direct sheet testID would prove a screen exists,
@@ -64,6 +64,8 @@ env:
     visible:
       id: "session-tags-sheet"
     timeout: 10000
+- assertVisible:
+    id: "session-tags-sheet"
 - takeScreenshot: "tags-02-sheet-populated"
 - assertVisible:
     id: "session-tags-option-${TAG_WORK}"
@@ -86,11 +88,17 @@ env:
 # Unselect one of the eight: a successful write.
 - tapOn:
     id: "session-tags-option-${TAG_CAP_EIGHT}"
+- assertVisible:
+    id: "session-tags-option-${TAG_CAP_EIGHT}"
+    checked: false
 - waitForAnimationToEnd
 - takeScreenshot: "tags-03-unselected"
 # Re-select the ninth: back to eight, another successful write.
 - tapOn:
     id: "session-tags-option-${TAG_CAP_NINE}"
+- assertVisible:
+    id: "session-tags-option-${TAG_CAP_NINE}"
+    checked: true
 - waitForAnimationToEnd
 - takeScreenshot: "tags-04-reselected"
 # The cap: press the now-free eighth option. Nine requested; the relay refuses
@@ -110,9 +118,16 @@ env:
       id: "session-tags-refusal"
     timeout: 10000
 - assertVisible:
-    text: "At most 8 distinct tags are allowed"
+    id: "session-tags-refusal"
+- assertVisible:
+    text: "That didn't save\\. At most 8 distinct tags are allowed"
+- assertVisible:
+    id: "session-tags-option-${TAG_CAP_EIGHT}"
+    checked: false
 - takeScreenshot: "tags-05-cap-refusal"
 # Remove all is two-step: the dialog must appear before anything is cleared.
+- assertVisible:
+    id: "session-tags-remove-all"
 - tapOn:
     id: "session-tags-remove-all"
 - assertVisible:
@@ -131,8 +146,14 @@ env:
 - takeScreenshot: "tags-06-cleared-sheet"
 - tapOn:
     id: "sheet-close"
+# The sheet's write is HTTP; the list's frame is not pushed by the mock. Pull
+# to refresh the real control before asserting the cleared row.
+- swipe:
+    from:
+      id: "conversations-list"
+    direction: DOWN
 - extendedWaitUntil:
     notVisible:
       id: "session-tags-line-${TAG_SESSION_ID}"
-    timeout: 10000
+    timeout: 15000
 - takeScreenshot: "tags-07-cleared-row"

@@ -166,9 +166,11 @@ the sample it is, and a green `ci` run cannot read as the whole matrix.
 
 Two things to wire deliberately:
 
-- **One mock relay per job, started with the scenario the flow needs**, on an
+- **One mock relay at a time, started with the scenario the flow needs**, on an
   ephemeral port, and stopped by pid at the end of the job. `--print-port` puts
-  the port alone on stdout; diagnostics go to stderr.
+  the port alone on stdout; diagnostics go to stderr. The tag proof deliberately
+  stops the normal relay and starts `tags-cap` on a second ephemeral port after
+  flows 01–10; `scripts/ci/run-maestro-tags.sh` owns that handoff.
 - **One re-run, not infinite.** Maestro 2.11.0's CLI has no retry option, so
   the CI invocation re-runs the set once on failure itself and raises a
   `::warning` when it flaked; a second failure is a failure (ADR 0003 allows
@@ -198,7 +200,7 @@ proved that F1 reaches its Radient hand-off, while 02–09 incorrectly expected
 Home or Computers without ever connecting. Increasing waits or reducing the
 OS font scale cannot fix that missing prerequisite.
 
-Flows 02–09 now call `e2e/maestro/helpers/connect-relay.yaml` after clearing state.
+Flows 02–10 now call `e2e/maestro/helpers/connect-relay.yaml` after clearing state.
 The helper is outside the workspace's `flows/*.yaml` selection, so it is not an
 extra standalone flow. It walks the actual guided own-tunnel screen:
 
@@ -309,6 +311,7 @@ job that is not cheap — nightly, not per push.
 | `frames/` (PNGs + `manifest.json` + `index.html`) | The design and UX rounds audit from these. `index.html` opens from the filesystem with no network dependency | 30 days, per ADR 0003's storage limit |
 | `audit-report.json` / `audit-report.md` | The review thread's `U`-findings cite rows from it | 30 days |
 | Maestro per-step screenshots and per-flow logs | F-9's evidence is a sequence, not a still | 30 days |
+| `maestro-tag-screenshots/` | LOH-11's native tag line, sheet, cap refusal and cleared-row sequence | 30 days |
 | The mock relay's `--record` transcript | Pins what the app actually sent, which is how a client-side bug is distinguished from a relay-side one | 30 days |
 
 **Frames go on the pull request, never into the repository** (ADR 0003 §"What the
