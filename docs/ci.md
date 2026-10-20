@@ -39,7 +39,7 @@ Maestro or account-routing proofs. The core commands, device plan, bounds and
 artifacts are unchanged; this is not a replacement for normal PR/full E2E gates.
 
 ```sh
-gh workflow run e2e.yml --ref <commit-or-branch> -f proof_mode=core-audit-only
+gh workflow run e2e.yml --ref <branch-or-tag> -f proof_mode=core-audit-only
 ```
 
 Only explicit dispatch accepts this mode, with `proof_stage=full` (the default).

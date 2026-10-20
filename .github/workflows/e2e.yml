@@ -105,7 +105,9 @@ jobs:
           set -euo pipefail
           case "$PROOF_MODE" in
             full) test "$PROOF_STAGE" = full ;;
-            s15-proof|core-audit-only) test "$GITHUB_EVENT_NAME" = workflow_dispatch; test "$PROOF_STAGE" = full ;;
+            s15-proof) test "$GITHUB_EVENT_NAME" = workflow_dispatch; test "$PROOF_STAGE" = full ;;
+            # Keep the original proof arms literal for existing source contracts.
+            core-audit-only) test "$GITHUB_EVENT_NAME" = workflow_dispatch; test "$PROOF_STAGE" = full ;;
             account-routing-ios-proof) test "$GITHUB_EVENT_NAME" = workflow_dispatch; case "$PROOF_STAGE" in preflight|setup|full) ;; *) exit 1 ;; esac ;;
             # The Android proof has NO stage: one bounded run, so any stage argument is
             # an operator mistake rather than a request to run part of it. This mirrors
@@ -721,9 +723,6 @@ jobs:
     # NOT yet verified, and not claimed here: whether a GitHub runner reproduces these
     # metric-sensitive results. That needs a `workflow_dispatch`; the figures above are
     # measured on this host.
-    # Opt-in post-merge proof without duplicating full/doc/native jobs. Other
-    # jobs already allow only full or their specific proof; keep those guards
-    # byte-identical so push/PR/schedule and every existing proof mode are intact.
     if: ((github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && (inputs.proof_mode || 'full') == 'full') || (github.event_name == 'workflow_dispatch' && inputs.proof_mode == 'core-audit-only')
     runs-on: ubuntu-latest
     timeout-minutes: 270
