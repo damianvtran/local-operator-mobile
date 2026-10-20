@@ -71,18 +71,25 @@ env:
     id: "session-tags-option-${TAG_WORK}"
 - assertVisible:
     id: "session-tags-option-${TAG_RESEARCH}"
-# The ninth option is below the sheet's fold on a phone. Scroll to it rather
-# than asking Maestro to tap a control that was never on screen.
-- scrollUntilVisible:
-    element:
-      id: "session-tags-option-${TAG_CAP_EIGHT}"
-    direction: DOWN
+# The options below the fold need a REAL swipe inside the sheet body.
+# `scrollUntilVisible` starts from the screen centre, which on the 320x640
+# AVD is the sheet header (7 px above the body), and its 20 attempts never
+# reach the list. Start and end inside the body's measured band
+# ([1,327][319,530]) instead: three short swipes expose rows 4-9.
+- swipe:
+    start: "50%, 70%"
+    end: "50%, 55%"
+    duration: 400
+- swipe:
+    start: "50%, 70%"
+    end: "50%, 55%"
+    duration: 400
+- swipe:
+    start: "50%, 70%"
+    end: "50%, 55%"
+    duration: 400
 - assertVisible:
     id: "session-tags-option-${TAG_CAP_EIGHT}"
-- scrollUntilVisible:
-    element:
-      id: "session-tags-option-${TAG_CAP_NINE}"
-    direction: DOWN
 - assertVisible:
     id: "session-tags-option-${TAG_CAP_NINE}"
 # Unselect one of the eight: a successful write.
@@ -101,18 +108,24 @@ env:
     checked: true
 - waitForAnimationToEnd
 - takeScreenshot: "tags-04-reselected"
-# The cap: press the now-free eighth option. Nine requested; the relay refuses
-# with its own sentence and the sheet must show it and revert.
-- scrollUntilVisible:
-    element:
-      id: "session-tags-option-${TAG_CAP_EIGHT}"
-    direction: UP
+# The cap: press the now-free eighth option (already on screen). Nine
+# requested; the relay refuses with its own sentence.
 - tapOn:
     id: "session-tags-option-${TAG_CAP_EIGHT}"
-- scrollUntilVisible:
-    element:
-      id: "session-tags-refusal"
-    direction: UP
+# Scroll back to the top of the list by swiping DOWN inside the body. The
+# refusal alert sits above the options, so the sheet centre cannot reach it.
+- swipe:
+    start: "50%, 55%"
+    end: "50%, 70%"
+    duration: 400
+- swipe:
+    start: "50%, 55%"
+    end: "50%, 70%"
+    duration: 400
+- swipe:
+    start: "50%, 55%"
+    end: "50%, 70%"
+    duration: 400
 - extendedWaitUntil:
     visible:
       id: "session-tags-refusal"
@@ -121,17 +134,26 @@ env:
     id: "session-tags-refusal"
 - assertVisible:
     text: "That didn't save\\. At most 8 distinct tags are allowed"
+- takeScreenshot: "tags-05-cap-refusal"
 # The 422 reverts the OPTIMISTIC ninth selection, not the stale pre-flow
 # assignment: `tags` still says Cap eight is checked, and Cap nine is the
-# option that flipped. Scroll back to Cap nine before asserting it reverted.
-- scrollUntilVisible:
-    element:
-      id: "session-tags-option-${TAG_CAP_NINE}"
-    direction: DOWN
+# option that flipped. Scroll back down to Cap nine before asserting it.
+- swipe:
+    start: "50%, 70%"
+    end: "50%, 55%"
+    duration: 400
+- swipe:
+    start: "50%, 70%"
+    end: "50%, 55%"
+    duration: 400
+- swipe:
+    start: "50%, 70%"
+    end: "50%, 55%"
+    duration: 400
 - assertVisible:
     id: "session-tags-option-${TAG_CAP_NINE}"
     checked: false
-- takeScreenshot: "tags-05-cap-refusal"
+- takeScreenshot: "tags-06-cap-reverted"
 # Remove all is two-step: the dialog must appear before anything is cleared.
 - assertVisible:
     id: "session-tags-remove-all"
@@ -150,7 +172,7 @@ env:
 - tapOn:
     id: "dialog-confirm"
 - waitForAnimationToEnd
-- takeScreenshot: "tags-06-cleared-sheet"
+- takeScreenshot: "tags-07-cleared-sheet"
 - tapOn:
     id: "sheet-close"
 # The sheet's write is HTTP; the list's frame is not pushed by the mock. Pull
@@ -163,4 +185,4 @@ env:
     notVisible:
       id: "session-tags-line-${TAG_SESSION_ID}"
     timeout: 15000
-- takeScreenshot: "tags-07-cleared-row"
+- takeScreenshot: "tags-08-cleared-row"
