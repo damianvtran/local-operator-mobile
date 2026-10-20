@@ -28,7 +28,7 @@
 		},
 		"maestro-android": {
 			"condition": "(github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && inputs.proof_mode != 's15-proof'",
-			"bodyWithoutConditionSha256": "bf8a19336c62bc69a040993c55a54e57e9d4058742051f3e576ac40bc24f4b49"
+			"bodyWithoutConditionSha256": "117fe6a7939edaf9770fec9a829afed21a8dc731a3411cb3bcb861728de1fa69"
 		}
 	}
 }
