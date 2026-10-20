@@ -3123,7 +3123,10 @@ export function createRelay(options: RelayOptions = {}) {
 				 * a duplicate the store refuses and the flow could not tell the two
 				 * cap paths apart. Both are checked before the id lookup, as the store
 				 * validates the whole body first. */
-				if (requested.length > 8 || new Set(requested).size !== requested.length) {
+				if (
+					requested.length > 8 ||
+					new Set(requested).size !== requested.length
+				) {
 					sendJson(res, 422, errorBody("At most 8 distinct tags are allowed"));
 					return;
 				}
