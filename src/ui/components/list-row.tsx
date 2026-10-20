@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 import {
 	ActivityIndicator,
@@ -10,7 +11,11 @@ import {
 import { countLabel } from "@/lib/format";
 import { ROLE, state } from "@/ui/a11y";
 import { useReducedMotion, useTokenColor } from "@/ui/appearance";
-import { metaLineFor, metaPathFloorDp } from "@/ui/components/list-row-meta";
+import {
+	metaLineFor,
+	metaPathFloorDp,
+	rowAccessibilityLabel,
+} from "@/ui/components/list-row-meta";
 import { listRowStatus } from "@/ui/components/list-row-status";
 import { Shimmer } from "@/ui/components/shimmer";
 import { LARGE_TEXT_SCALE } from "@/ui/text-scale";
@@ -99,6 +104,16 @@ export type ListRowProps = {
 		/** `remoteSessionRowId(id)` — built by the caller, which owns the id. */
 		indicatorTestID: string;
 	};
+	/**
+	 * The row's third line: the conversation's tag line (LOH-11 S3).
+	 *
+	 * A NODE rather than a `TagRef[]`, so the kit stays free of the contract
+	 * layer: `ui/components` may not import `@/contracts` (the same rule
+	 * `RefusalSurface` states), and the feature that owns tags owns the paint.
+	 * The row only gives it the line's position, inside the content column and
+	 * after the meta line. Undefined paints nothing — no reserved blank line.
+	 */
+	tagLine?: ReactNode;
 	onPress: () => void;
 	/** Keeps the existing pin/open sheet reachable from the conversations pane,
 	 *  where a swipe is not a gesture a list under a drawer should own. Optional:
@@ -107,6 +122,10 @@ export type ListRowProps = {
 	/** Announced after the label when a long press can do something — a gesture
 	 *  has no visible affordance, so the fact it exists must be spoken. */
 	longPressAccessibilityHint?: string;
+	/** The row's tag line in words (`tagAnnouncement(tags)`), folded into the
+	 *  row's single label: the line itself is a child node, so without this a
+	 *  reader hears the title and never the tags (review round 1, D4/Q2). */
+	tagAnnouncement?: string;
 	testID: string;
 };
 
@@ -130,6 +149,8 @@ export const ListRow = ({
 	onPress,
 	onLongPress,
 	longPressAccessibilityHint,
+	tagAnnouncement,
+	tagLine,
 	testID,
 }: ListRowProps) => {
 	const attention = listRowIndicator({
@@ -201,6 +222,7 @@ export const ListRow = ({
 				degraded,
 				remoteDevice: remote?.device,
 				remoteUnreachable,
+				tagAnnouncement,
 			})}
 			accessibilityState={state({ selected })}
 			accessibilityHint={longPressAccessibilityHint}
@@ -398,6 +420,7 @@ export const ListRow = ({
 								) : null}
 							</View>
 						) : null}
+						{tagLine}
 					</View>
 				</View>
 			)}
@@ -522,38 +545,4 @@ const Indicator = ({
 			) : null}
 		</View>
 	);
-};
-
-/** What a screen reader hears. Selection and attention are both stated, because
- * neither is carried by colour in this row's audio channel. */
-const rowAccessibilityLabel = (options: {
-	title: string;
-	attention: ReturnType<typeof listRowIndicator>;
-	attentionWord: "approval" | "question";
-	selected: boolean;
-	ended?: boolean;
-	degraded?: boolean;
-	/** The owning device, for a remote row: the visible line reads "On X",
-	 *  and a reader who cannot see it deserves the same fact. */
-	remoteDevice?: string;
-	remoteUnreachable?: boolean;
-}): string => {
-	const parts = [options.title];
-	if (options.attention === "pending") {
-		parts.push(`${options.attentionWord} waiting`);
-	} else if (options.attention === "streaming") {
-		parts.push("working");
-	} else if (options.attention === "unread") {
-		parts.push("new");
-	}
-	/* Read in the same voice as the visible word: a reader who cannot see the muted
-	 * receipt still hears that this session ended or stopped answering. */
-	if (options.ended) parts.push("ended");
-	else if (options.degraded) parts.push("not answering");
-	if (options.remoteDevice !== undefined) {
-		parts.push(`on ${options.remoteDevice}`);
-		if (options.remoteUnreachable === true) parts.push("not reachable");
-	}
-	if (options.selected) parts.push("open");
-	return parts.join(", ");
 };

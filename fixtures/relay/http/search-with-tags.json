@@ -1,0 +1,42 @@
+{
+  "provenance": {
+    "kind": "live",
+    "relay_ref": "local-operator 64307c452",
+    "captured_at": "2026-10-19",
+    "how": "captured from an isolated `lop mobile serve` at the installed 0.82.3 release (redirected HOME + LOCAL_OPERATOR_CONFIG_DIR, LO_MOBILE_NO_DIAL=1, own ephemeral port, seeded durable conversation); see ../README.md",
+    "redactions": "isolated home shown as ~; portal password and cookie signatures absent",
+    "what": "a search hit carrying the same tags pair"
+  },
+  "request": {
+    "method": "GET",
+    "path": "/api/sessions/search?q=hello&limit=5"
+  },
+  "status": 200,
+  "headers": {
+    "content-type": "application/json"
+  },
+  "body": {
+    "sessions": [
+      {
+        "id": "6714def86197",
+        "name": "Hello from the mock provider",
+        "mtime": 1792420990.6591165,
+        "body_match": false,
+        "forked": false,
+        "tags": [
+          {
+            "id": "cb65004501",
+            "name": "Research"
+          },
+          {
+            "id": "d28b35a273",
+            "name": "Work"
+          }
+        ],
+        "primary": "d28b35a273"
+      }
+    ],
+    "query": "hello",
+    "degraded": []
+  }
+}

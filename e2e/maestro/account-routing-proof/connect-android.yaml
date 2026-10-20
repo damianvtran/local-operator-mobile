@@ -1,0 +1,147 @@
+# The account-routing policy screen, driven on an Android emulator against the
+# pinned-core canonical fixture.
+#
+# WHY THIS EXISTS BESIDE THE iOS PROOF: the iOS lane cannot assert the settings
+# screen today (its own job is deferred), and this surface — the policy row, its
+# choices and its save — is shared React Native, so Android exercises the SAME
+# product source. It is evidence for the shared-RN surface, NOT an iOS-device
+# claim; the iOS proof remains the platform-specific half.
+#
+# WHY IT LIVES HERE AND NOT IN flows/ : the nightly relay (`pnpm mock:relay`) serves
+# NO /api/settings/account-routing (the CLI passes no fixture, so the app sees the
+# old-backend 404 path). A flow in flows/*.yaml would therefore fail every nightly.
+# This flow runs only in the job that starts the relay with
+# `--account-routing-fixture`, and `config.yaml`'s `flows:` glob does not reach
+# into this directory.
+#
+# IDENTIFIERS: every `id:` here is in `src/ui/a11y.ts` — the contract
+# `src/ui/a11y.e2e.test.ts` checks flows against. The per-choice ids are the
+# `settings-account-routing-group:` family, which the section BUILDS with
+# `accountRoutingChoiceId` (one spelling, shared with the proof flows).
+#
+# The connect leg is the BASE helper, unchanged: `hideKeyboard` IS supported on
+# Android (it is not on iOS, which is why the iOS proof owns a separate helper).
+#
+# CI-only: needs a KVM-enabled runner, a booted emulator, a Release APK and a
+# fixture-serving relay (ADR 0003, ADR 0004).
+appId: ${APP_ID}
+name: "Account routing policy on Android"
+---
+- launchApp:
+    clearState: true
+- runFlow: ../helpers/connect-relay.yaml
+- extendedWaitUntil:
+    visible:
+      id: "home-screen"
+    timeout: 15000
+- tapOn:
+    id: "settings-button"
+- extendedWaitUntil:
+    visible:
+      id: "settings-screen"
+    timeout: 15000
+# The routing section sits below Connection, above Appearance; a ready Settings
+# root is not a visible control, so walk the real ScrollView target.
+- scrollUntilVisible:
+    element:
+      id: "settings-section-account-routing"
+    direction: DOWN
+    timeout: 15000
+- assertVisible:
+    id: "settings-section-account-routing"
+- scrollUntilVisible:
+    element:
+      id: "settings-account-routing-group"
+    direction: DOWN
+    timeout: 15000
+- assertVisible:
+    id: "settings-account-routing-group"
+# The populated state: the fixture serves the canonical C1 payload, so the group
+# renders with `reset-soonest` selected and its choices labelled from the backend.
+- takeScreenshot: "12-00-account-routing-populated"
+# Select a NON-default policy choice. `reset-soonest` is the fixture default, so
+# `headroom` is a real change the save path must carry.
+- scrollUntilVisible:
+    element:
+      id: "settings-account-routing-group:headroom"
+    direction: DOWN
+    timeout: 15000
+- tapOn:
+    id: "settings-account-routing-group:headroom"
+- extendedWaitUntil:
+    visible:
+      id: "settings-account-routing-group:headroom"
+      selected: true
+    timeout: 15000
+# Unsaved draft state: the section names it before a save is attempted.
+#
+# SCROLLED IN, deliberately: this status line sits BELOW the fold at the device
+# size the lane runs at — the frame captured a step earlier shows the form cut off
+# before it would paint — so a bare `assertVisible` failed against correct app
+# behaviour (run 38925920010, seq 37). Every neighbouring step already scrolls to
+# its target first; this one had diverged.
+- scrollUntilVisible:
+    element:
+      text: "Not saved yet."
+    direction: DOWN
+    timeout: 15000
+- assertVisible:
+    text: "Not saved yet."
+- takeScreenshot: "12-01-account-routing-draft"
+- scrollUntilVisible:
+    element:
+      id: "settings-account-routing-save"
+    direction: DOWN
+    timeout: 15000
+- tapOn:
+    id: "settings-account-routing-save"
+# The saved state is the app's own confirmation, and only renders when the
+# selected value equals what the relay read back — so this asserts a real
+# round-trip through the fixture, not just a button press.
+- extendedWaitUntil:
+    visible:
+      text: "Saved on this computer."
+    timeout: 15000
+- extendedWaitUntil:
+    visible:
+      id: "settings-account-routing-group:headroom"
+      selected: true
+    timeout: 15000
+- takeScreenshot: "12-02-account-routing-saved"
+# Switch to the OTHER non-default choice and save again: a second write proves the
+# control is not a one-shot, and the readback still gates the confirmation.
+#
+# RE-SCROLLED, not assumed: the save above can change the section's height (the
+# unsaved line is replaced by the saved one), so the segmented row's offset is not
+# the same as when `headroom` was tapped. A bare tap would depend on where the
+# previous step happened to leave the viewport.
+- scrollUntilVisible:
+    element:
+      id: "settings-account-routing-group:fair"
+    direction: DOWN
+    timeout: 15000
+- tapOn:
+    id: "settings-account-routing-group:fair"
+- extendedWaitUntil:
+    visible:
+      id: "settings-account-routing-group:fair"
+      selected: true
+    timeout: 15000
+- takeScreenshot: "12-03-account-routing-switched"
+- scrollUntilVisible:
+    element:
+      id: "settings-account-routing-save"
+    direction: DOWN
+    timeout: 15000
+- tapOn:
+    id: "settings-account-routing-save"
+- extendedWaitUntil:
+    visible:
+      text: "Saved on this computer."
+    timeout: 15000
+- extendedWaitUntil:
+    visible:
+      id: "settings-account-routing-group:fair"
+      selected: true
+    timeout: 15000
+- takeScreenshot: "12-04-account-routing-resaved"

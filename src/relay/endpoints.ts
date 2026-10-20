@@ -220,6 +220,9 @@ export interface ImageBytes {
 export const HISTORY_LIMIT = { default: 80, min: 1, max: 200 } as const;
 export const SEARCH_LIMIT = { default: 40, min: 1, max: 200 } as const;
 
+/** The Library route's own page bound (`limit=1..200`). */
+export const LIBRARY_LIMIT = { default: 24, min: 1, max: 200 } as const;
+
 /**
  * A page size for the wire, or `undefined` to leave the parameter off.
  *
@@ -266,11 +269,67 @@ export interface RelayStream {
  * credential policy are the route (see `src/connection/client-factory.ts`), so a
  * route switch builds a new client rather than reconfiguring this one.
  */
+
+/**
+ * The Library listing's filters (`GET /api/library/assets`).
+ *
+ * The names are the desktop route's own query keys — the relay projection keeps
+ * the semantics — so an option added here must exist there first. `q` is the
+ * server's search (name, description, tag names, derived name, display path and
+ * source titles); the client never re-implements it.
+ *
+ * A limit the caller did not supply is omitted, like every other paged route in
+ * this file: the relay's default is its policy, not a value this build freezes.
+ */
+export interface LibraryListRequest {
+	q?: string;
+	category?: string;
+	kind?: string;
+	origin_group?: string;
+	tag?: string;
+	tag_mode?: "all" | "any";
+	highlighted?: boolean;
+	organized?: boolean;
+	favorite?: boolean;
+	session?: string;
+	sort?: string;
+	order?: "asc" | "desc";
+	limit?: number;
+	cursor?: string;
+}
+
+/** The metadata fields the PATCH route accepts. Every field is optional because
+ *  an absent key means "leave it alone" — the route is a patch, not a replace. */
+export interface LibraryAssetPatch {
+	name?: string;
+	description?: string;
+	favorite?: boolean;
+	locked?: boolean;
+	archived?: boolean;
+}
+
 export class RelayEndpoints {
 	private readonly http: RelayHttpClient;
 
 	constructor(http: RelayHttpClient) {
 		this.http = http;
+	}
+
+	/** The selected computer's canonical non-security setting projection.
+	 * No arbitrary key/path or local policy enum is accepted by this client. */
+	async accountRouting(): Promise<Payload<"accountRouting">> {
+		return this.http.json("accountRouting", {
+			method: "GET",
+			path: "/api/settings/account-routing",
+		});
+	}
+
+	async setAccountRouting(value: string): Promise<Payload<"accountRouting">> {
+		return this.http.json("accountRouting", {
+			method: "PATCH",
+			path: "/api/settings/account-routing",
+			body: { value },
+		});
 	}
 
 	/** The reachability probe. Public, no cookie, and `dist: false` is not a
@@ -381,6 +440,20 @@ export class RelayEndpoints {
 			method: "GET",
 			path: "/api/sessions/past",
 		});
+	}
+
+	/**
+	 * `GET /api/tags` — the shared tag catalogue, READ-ONLY on the phone
+	 * (`local-operator` PR #2625, v0.82.3).
+	 *
+	 * There is deliberately no `PUT /api/tags`: category identity (create/rename)
+	 * lives in the desktop and agent surfaces, and a second implementation here is
+	 * how two surfaces start disagreeing. `order` is the registry's own order and
+	 * `conversations` its count of distinct existing session directories — neither
+	 * is recomputed on this side.
+	 */
+	async tags(): Promise<Payload<"tags">> {
+		return this.http.json("tags", { method: "GET", path: "/api/tags" });
 	}
 
 	/** The projects listing (`GET /api/projects`), in the relay's own board order —
@@ -519,6 +592,208 @@ export class RelayEndpoints {
 
 	/** Full-text search over past conversations. `query` is echoed by the relay so
 	 *  a late answer can be matched to its request. */
+
+	/* ------------------------------------------------------------------ library */
+
+	/** The Library listing (`GET /api/library/assets`), one cursor page at a time.
+	 *
+	 *  `cursor_reset` is a fact the caller must honour: the relay mints cursors
+	 *  against a catalog revision, and a scan that moved restarts the walk at the
+	 *  top rather than skipping rows. `applyLibraryPage` in the feature layer is
+	 *  the one reader of that rule.
+	 *
+	 *  A refusal is the relay's own sentence (the route answers `{error}`), so the
+	 *  screen shows it verbatim rather than inventing a second wording. */
+	async libraryList(
+		request: LibraryListRequest = {},
+		signal?: AbortSignal,
+	): Promise<Payload<"libraryList">> {
+		return this.http.json("libraryList", {
+			method: "GET",
+			path: `/api/library/assets${query({
+				q: request.q,
+				category: request.category,
+				kind: request.kind,
+				origin_group: request.origin_group,
+				tag: request.tag,
+				tag_mode: request.tag_mode,
+				highlighted:
+					request.highlighted === undefined
+						? undefined
+						: request.highlighted
+							? "1"
+							: "0",
+				organized:
+					request.organized === undefined
+						? undefined
+						: request.organized
+							? "1"
+							: "0",
+				favorite:
+					request.favorite === undefined
+						? undefined
+						: request.favorite
+							? "1"
+							: "0",
+				session: request.session,
+				sort: request.sort,
+				order: request.order,
+				limit: wireLimit(request.limit, LIBRARY_LIMIT),
+				cursor: request.cursor,
+			})}`,
+			signal,
+		});
+	}
+
+	/** One asset, by its opaque `la_…` id. Never a path: the id is the only
+	 *  addressing this client may use, which is what keeps `ref.path` off a phone. */
+	async libraryAsset(
+		assetId: string,
+		signal?: AbortSignal,
+	): Promise<Payload<"libraryAsset">> {
+		return this.http.json("libraryAsset", {
+			method: "GET",
+			path: `/api/library/assets/${encodeURIComponent(assetId)}`,
+			signal,
+		});
+	}
+
+	/** The metadata PATCH. The answer is the row the relay READ BACK — not the
+	 *  patch echoed — so a screen can replace its copy instead of re-fetching. */
+	async patchLibraryAsset(
+		assetId: string,
+		patch: LibraryAssetPatch,
+	): Promise<Payload<"libraryAsset">> {
+		return this.http.json("libraryAsset", {
+			method: "PATCH",
+			path: `/api/library/assets/${encodeURIComponent(assetId)}`,
+			body: {
+				...(patch.name !== undefined ? { name: patch.name } : {}),
+				...(patch.description !== undefined
+					? { description: patch.description }
+					: {}),
+				...(patch.favorite !== undefined ? { favorite: patch.favorite } : {}),
+				...(patch.locked !== undefined ? { locked: patch.locked } : {}),
+				...(patch.archived !== undefined ? { archived: patch.archived } : {}),
+			},
+		});
+	}
+
+	/** Replaces an asset's whole tag assignment (`PUT`, not a delta): the caller
+	 *  sends the set it wants, which makes a retry idempotent. At most 12 tags;
+	 *  `primary` must be one of them when present. */
+	async setLibraryAssetTags(
+		assetId: string,
+		tagIds: string[],
+		primary?: string,
+	): Promise<Payload<"libraryAsset">> {
+		return this.http.json("libraryAsset", {
+			method: "PUT",
+			path: `/api/library/assets/${encodeURIComponent(assetId)}/tags`,
+			body: {
+				tags: tagIds,
+				...(primary !== undefined ? { primary } : {}),
+			},
+		});
+	}
+
+	/** The Library's own tag vocabulary, with the asset count each tag carries.
+	 *  Separate from conversation tags by design (the contract's §2.4). */
+	async libraryTags(signal?: AbortSignal): Promise<Payload<"libraryTags">> {
+		return this.http.json("libraryTags", {
+			method: "GET",
+			path: "/api/library/tags",
+			signal,
+		});
+	}
+
+	async createLibraryTag(
+		name: string,
+		category?: string,
+	): Promise<Payload<"libraryTag">> {
+		return this.http.json("libraryTag", {
+			method: "POST",
+			path: "/api/library/tags",
+			body: { name, ...(category !== undefined ? { category } : {}) },
+		});
+	}
+
+	async renameLibraryTag(
+		tagId: string,
+		patch: { name?: string; category?: string },
+	): Promise<Payload<"libraryTag">> {
+		return this.http.json("libraryTag", {
+			method: "PATCH",
+			path: `/api/library/tags/${encodeURIComponent(tagId)}`,
+			body: {
+				...(patch.name !== undefined ? { name: patch.name } : {}),
+				...(patch.category !== undefined ? { category: patch.category } : {}),
+			},
+		});
+	}
+
+	/** Merges one tag into another. The answer is the SURVIVING tag row — the
+	 *  desktop route's own shape — so a caller re-reads the catalogue when it
+	 *  needs the moved counts rather than reading them off this answer. */
+	async mergeLibraryTag(
+		tagId: string,
+		into: string,
+	): Promise<Payload<"libraryTag">> {
+		return this.http.json("libraryTag", {
+			method: "POST",
+			path: `/api/library/tags/${encodeURIComponent(tagId)}/merge`,
+			body: { into },
+		});
+	}
+
+	/** Records the session created/resumed for this asset (`PUT .../chat`). The
+	 *  caller owns the real session creation; this route only keeps the link. */
+	async linkLibraryChat(
+		assetId: string,
+		sessionId: string,
+	): Promise<Payload<"libraryChat">> {
+		return this.http.json("libraryChat", {
+			method: "PUT",
+			path: `/api/library/assets/${encodeURIComponent(assetId)}/chat`,
+			body: { session_id: sessionId },
+		});
+	}
+
+	async unlinkLibraryChat(assetId: string): Promise<Payload<"libraryChat">> {
+		return this.http.json("libraryChat", {
+			method: "DELETE",
+			path: `/api/library/assets/${encodeURIComponent(assetId)}/chat`,
+		});
+	}
+
+	/** The asset's bytes. Always resolved from the opaque id; the relay re-checks
+	 *  a path asset against its denylist and the indexed set on every read. */
+	async libraryContent(
+		assetId: string,
+	): Promise<{ status: number; mimeType: string | null; bytes: Uint8Array }> {
+		return this.http.bytes({
+			method: "GET",
+			path: `/api/library/assets/${encodeURIComponent(assetId)}/content`,
+		});
+	}
+
+	/** A best-effort, image-only thumbnail (`?w=`, relay-capped at 480). A kind
+	 *  with no thumbnail answers the route's own refusal; the grid draws its kind
+	 *  icon in that case rather than retrying. */
+	async libraryThumbnail(
+		assetId: string,
+		width = 480,
+	): Promise<{ status: number; mimeType: string | null; bytes: Uint8Array }> {
+		return this.http.bytes({
+			method: "GET",
+			path: `/api/library/assets/${encodeURIComponent(assetId)}/thumbnail${query(
+				{
+					w: Math.min(480, Math.max(1, Math.trunc(width))),
+				},
+			)}`,
+		});
+	}
+
 	async searchSessions(
 		request: SearchRequest,
 	): Promise<Payload<"searchSessions">> {
@@ -833,6 +1108,30 @@ export class RelayEndpoints {
 			method: "POST",
 			path: `/api/sessions/${encodeURIComponent(sessionId)}/pin`,
 			body: { pinned },
+		});
+	}
+
+	/**
+	 * `PUT /api/sessions/{id}/tags` — set ONE conversation's tags to a DESIRED
+	 * state (`local-operator` PR #2625, v0.82.3).
+	 *
+	 * EXACTLY two keys, both always sent: `tags` (the ids in the order the caller
+	 * wants them recorded) and `primary` (`null` or an id in `tags`). The route
+	 * refuses an absent `primary` and any extra key with a 422 rather than
+	 * defaulting — a defaulted primary silently re-primaries the conversation —
+	 * and a dropped response can be retried to the same state. The answer is the
+	 * CANONICAL read-back (names resolved after the write, orphans pruned, settled
+	 * primary), so callers render it instead of re-deriving the assignment.
+	 */
+	async setSessionTags(
+		sessionId: string,
+		tags: string[],
+		primary: string | null,
+	): Promise<Payload<"sessionTags">> {
+		return this.http.json("sessionTags", {
+			method: "PUT",
+			path: `/api/sessions/${encodeURIComponent(sessionId)}/tags`,
+			body: { tags, primary },
 		});
 	}
 

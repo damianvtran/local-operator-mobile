@@ -27,6 +27,7 @@
  * own, so a `lop mobile` on 4098 keeps running untouched.
  */
 
+import { randomUUID } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { createServer } from "node:http";
@@ -38,13 +39,19 @@ import type {
 	SessionProjection,
 	SessionSummary,
 } from "../../docs/relay/types.ts";
+import type { FlagValue } from "../lib/args.ts";
 import { bool, list, num, parseArgs, str } from "../lib/args.ts";
 import type { Json } from "../lib/json.ts";
 import { asString, isRecord } from "../lib/json.ts";
+import {
+	createCanonicalPolicyFixture,
+	type PolicyFixtureMode,
+} from "./account-routing.ts";
 import type { FaultSet } from "./faults.ts";
 import { FAULT_NAMES, parseFaults, summariseFaults } from "./faults.ts";
 import type { FixtureResponseOverride } from "./fixtures.ts";
 import { defaultFixturesDir, loadFixtures, textOf } from "./fixtures.ts";
+import { createLibraryStore } from "./library.ts";
 import { createProjectsStore, isProjectsRefusal } from "./projects.ts";
 import type { ScenarioWorld, StreamSpec, TransferScript } from "./scenarios.ts";
 import {
@@ -356,8 +363,13 @@ export interface RecordedRequest {
 	[key: string]: Json | undefined;
 }
 
+const ACCOUNT_POLICY_ROUTE = /^\/api\/settings\/account-routing$/;
+
 /** Everything `createRelay` accepts. */
 export interface RelayOptions {
+	/** Optional pinned-core, private policy adapter. Existing mock defaults stay
+	 * unchanged; fixture mode requires a per-run host/cookie namespace. */
+	accountRouting?: import("./account-routing.ts").CanonicalPolicyFixture;
 	fixturesDir?: string;
 	password?: string;
 	maxBodyBytes?: number;
@@ -462,6 +474,16 @@ export interface RelayState {
 	 */
 	supplementOps: Array<{ op: string; anchor: string; job: string; at: number }>;
 	seenTokens: Set<string>;
+	/**
+	 * Conversation-tag assignments written through this mock (LOH-11 S3), keyed by
+	 * session id. Part of the WORLD's mutable state, cleared on every pin: a cell
+	 * that toggles a tag must not leave it behind for the next cell's scenario,
+	 * the same rule the project and Library stores follow above.
+	 */
+	tagAssignments: Map<
+		string,
+		{ tags: string[]; primary: SessionSummary["primary"] }
+	>;
 	pins: Map<string, boolean>;
 	/**
 	 * The mesh half's own observations, on the mock's control surface.
@@ -572,6 +594,11 @@ export function createRelay(options: RelayOptions = {}) {
 	 * create in one cell's scenario must not appear in the next one's.
 	 */
 	const projects = createProjectsStore(fix);
+	/** The Library store (see `library.ts`): seeded from the hand-authored
+	 *  `library-listing` fixture and mutated by the same writes the metadata store
+	 *  performs. Reset with the world so a tag/patch in one cell cannot leak into
+	 *  the next. */
+	const library = createLibraryStore(fix);
 	/* The push device registry (push/ack-sync S4, ADR 0006 §3.1). The corpus
 	 * holds no captures of these routes — they shipped after the last drain — so
 	 * the mock models them from the core's own source (`push_devices.py`: the
@@ -595,6 +622,11 @@ export function createRelay(options: RelayOptions = {}) {
 	>();
 	let pushDeviceSeq = 0;
 	const password = options.password ?? DEFAULT_PASSWORD;
+	const policyFixture = options.accountRouting;
+	const cookieName = policyFixture?.cookieName ?? COOKIE_NAME;
+	// Bind synthetic sessions to this run/computer even when the login password
+	// is shared by the fixture cohort. Never trust a production-name cookie here.
+	const sessionKey = policyFixture?.sessionKey(password) ?? password;
 	/**
 	 * The bare relay has NO body ceiling: the 10 MiB cap belongs to the gateway and
 	 * the edge (`docs/relay/tunnel-edge.md`), and the real relay answers an 11 MiB
@@ -634,6 +666,7 @@ export function createRelay(options: RelayOptions = {}) {
 		admitted: new Map(),
 		supplementOps: [],
 		seenTokens: new Set(),
+		tagAssignments: new Map(),
 		pins: new Map(),
 		transferDials: 0,
 		transferJournal: new Map(),
@@ -660,6 +693,8 @@ export function createRelay(options: RelayOptions = {}) {
 		 *  scenario, which is the same reasoning the faults and the expired latch
 		 *  below carry. */
 		projects.reset();
+		library.reset();
+		state.tagAssignments = new Map();
 		state.scenarioStartedAt = Date.now();
 		/* A state's own faults are applied WITH it: `S5/error` is reachable only when the
 		 * stream comes up and THEN fails, so the scenario that models it carries the fault
@@ -996,6 +1031,21 @@ export function createRelay(options: RelayOptions = {}) {
 			const row = rowFrom(projection, overrides);
 			const specific = perSession[projection.session_id];
 			if (specific !== undefined) Object.assign(row, specific);
+			/* A tag write through this mock OUTLIVES the scenario's seed overrides,
+			 *  the same way a pin or a seen receipt does: the next list frame (and
+			 *  the sheet's read-back) must paint the assignment the route accepted, or
+			 *  the harness would show an optimistic toggle that never settles. */
+			const assigned = state.tagAssignments.get(projection.session_id);
+			if (assigned !== undefined) {
+				const names = new Map(
+					(world.sessionTags?.catalogue ?? []).map((tag) => [tag.id, tag.name]),
+				);
+				row.tags = assigned.tags.map((id) => ({
+					id,
+					name: names.get(id) ?? id,
+				}));
+				row.primary = assigned.primary ?? null;
+			}
 			return row;
 		});
 		// The heartbeat flip is a *time* signal, not a flag: before
@@ -1062,11 +1112,21 @@ export function createRelay(options: RelayOptions = {}) {
 			 * REST read and the SSE frame cannot describe the mic differently — and the
 			 * scenario's own `voice` override is applied here rather than to a copy of
 			 * the frame, which is what lets `voice` advertise a path and
-			 * `voice-absent` omit the key entirely. */
-			capabilities: capabilityBlock(
-				fix.list("sessions-empty").capabilities,
-				world.voice,
-			),
+			 * `voice-absent` omit the key entirely.
+			 *
+			 * The tags block is the same rule: present only when the scenario serves
+			 * the tag routes. Absence is an older relay, and the app must render no
+			 * tag UI against one — so the mock cannot default it on. */
+			capabilities: (() => {
+				const capabilities = capabilityBlock(
+					fix.list("sessions-empty").capabilities,
+					world.voice,
+				);
+				if (world.sessionTags !== undefined) {
+					capabilities.session_tags = { available: true };
+				}
+				return capabilities;
+			})(),
 			unread,
 		};
 	};
@@ -1879,8 +1939,10 @@ export function createRelay(options: RelayOptions = {}) {
 
 		// 3. The auth gate, with the relay's audience split.
 		if (!publicRoute) {
-			const cookie = readCookie(req.headers.cookie, COOKIE_NAME);
-			const authenticated = verifyCookie(cookie, password);
+			const cookie = readCookie(req.headers.cookie, cookieName);
+			const authenticated =
+				verifyCookie(cookie, sessionKey) &&
+				(!policyFixture || policyFixture.cookieUnambiguous(req.headers.cookie));
 			const verdict = authVerdict(pathname, { authenticated });
 			if (verdict.kind !== "allow") {
 				return verdict.json !== undefined
@@ -1922,6 +1984,15 @@ export function createRelay(options: RelayOptions = {}) {
 			}
 		}
 
+		if (pathname === "/api/settings/account-routing" && policyFixture) {
+			const reply = await policyFixture.respond(method, body);
+			if (reply.drop) return res.destroy();
+			res.writeHead(reply.status, {
+				"content-type": "application/json; charset=utf-8",
+			});
+			return res.end(JSON.stringify(reply.body));
+		}
+
 		/* ------------------------------------------------------------- public -- */
 
 		if (pathname === "/healthz") {
@@ -1934,8 +2005,12 @@ export function createRelay(options: RelayOptions = {}) {
 
 		if (pathname === "/login") {
 			if (method === "GET") {
-				const cookie = readCookie(req.headers.cookie, COOKIE_NAME);
-				if (verifyCookie(cookie, password)) {
+				const cookie = readCookie(req.headers.cookie, cookieName);
+				if (
+					verifyCookie(cookie, sessionKey) &&
+					(!policyFixture ||
+						policyFixture.cookieUnambiguous(req.headers.cookie))
+				) {
 					res.writeHead(303, { location: "/" });
 					return res.end();
 				}
@@ -1962,13 +2037,16 @@ export function createRelay(options: RelayOptions = {}) {
 				sendFixture(res, "login-wrong-password");
 				return;
 			}
-			const { value } = issueCookie(password);
+			const { value } = issueCookie(sessionKey);
 			// `Secure` only when the request arrived over TLS: a plain-loopback
 			// first run must still be able to set the cookie.
 			const overTls = req.headers["x-forwarded-proto"] === "https";
 			res.writeHead(303, {
 				location: "/",
-				"set-cookie": setCookieHeader(value, { secure: overTls }),
+				"set-cookie": setCookieHeader(value, { secure: overTls }).replace(
+					`${COOKIE_NAME}=`,
+					`${cookieName}=`,
+				),
 			});
 			return res.end();
 		}
@@ -1988,8 +2066,10 @@ export function createRelay(options: RelayOptions = {}) {
 			// cookie unambiguous.
 			res.writeHead(303, {
 				location: "/login",
-				"set-cookie": `${COOKIE_NAME}=""; Max-Age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT; Path=/; SameSite=lax`,
-				"clear-site-data": '"storage"',
+				"set-cookie": `${cookieName}=""; Max-Age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT; Path=/; SameSite=lax`,
+				// A shared-profile fixture may expire ONLY its own host-only cookie;
+				// it must not clear browser storage/cookies for the operator.
+				...(policyFixture ? {} : { "clear-site-data": '"storage"' }),
 			});
 			return res.end();
 		}
@@ -2003,8 +2083,11 @@ export function createRelay(options: RelayOptions = {}) {
 		}
 
 		if (pathname === "/") {
-			const cookie = readCookie(req.headers.cookie, COOKIE_NAME);
-			if (!verifyCookie(cookie, password)) {
+			const cookie = readCookie(req.headers.cookie, cookieName);
+			if (
+				!verifyCookie(cookie, sessionKey) ||
+				(policyFixture && !policyFixture.cookieUnambiguous(req.headers.cookie))
+			) {
 				res.writeHead(303, { location: "/login" });
 				return res.end();
 			}
@@ -2044,6 +2127,27 @@ export function createRelay(options: RelayOptions = {}) {
 				seed,
 				frames: () => null,
 			});
+		}
+
+		if (pathname === "/api/tags" && method === "GET") {
+			/* LOH-11 S3: the catalogue exists only when the scenario says so —
+			 *  absence is an older relay, whose app renders no tag UI at all. */
+			const tagRoutes = world.sessionTags;
+			if (tagRoutes === undefined) {
+				sendJson(res, 404, errorBody("not found"));
+				return;
+			}
+			/* The read that never answers: the sheet's skeleton cell. No body is
+			 *  written on purpose — the client's own timeout is the only bound. */
+			if (tagRoutes.holdCatalogue === true) return;
+			if (tagRoutes.failCatalogue !== undefined) {
+				sendJson(res, tagRoutes.failCatalogue.status, {
+					error: tagRoutes.failCatalogue.error,
+				});
+				return;
+			}
+			sendJson(res, 200, { tags: tagRoutes.catalogue });
+			return;
 		}
 
 		if (pathname === "/api/sessions/past" && method === "GET") {
@@ -2311,6 +2415,225 @@ export function createRelay(options: RelayOptions = {}) {
 			/* Idempotent in both directions: an id the registry does not hold is
 			 * still `{"ok": true}` — the app retries this on sign-out. */
 			sendJson(res, 200, { ok: true });
+			return;
+		}
+
+		/* ------------------------------------------------------------ library -- */
+
+		if (pathname === "/api/library/assets" && method === "GET") {
+			const numberParam = (key: string): number | null => {
+				const raw = url.searchParams.get(key);
+				if (raw === null) return null;
+				const value = Number(raw);
+				return Number.isFinite(value) ? value : null;
+			};
+			/* Absent is "no opinion" (null), not "false": a false here would filter
+			 *  every organized/favorite/highlighted asset out of a plain listing. */
+			const flagParam = (key: string): boolean | null => {
+				const value = numberParam(key);
+				return value === null ? null : value === 1;
+			};
+			sendJson(
+				res,
+				200,
+				library.list({
+					q: url.searchParams.get("q") ?? "",
+					category: url.searchParams.get("category"),
+					kind: url.searchParams.get("kind"),
+					origin_group: url.searchParams.get("origin_group"),
+					tag: url.searchParams.get("tag"),
+					tag_mode: url.searchParams.get("tag_mode") === "any" ? "any" : "all",
+					highlighted: flagParam("highlighted"),
+					organized: flagParam("organized"),
+					favorite: flagParam("favorite"),
+					session_id: url.searchParams.get("session_id"),
+					sort: url.searchParams.get("sort") ?? "recent",
+					order: url.searchParams.get("order") === "asc" ? "asc" : null,
+					limit: numberParam("limit") ?? 24,
+					cursor: url.searchParams.get("cursor"),
+				}),
+			);
+			return;
+		}
+
+		if (pathname === "/api/library/tags" && method === "GET") {
+			sendJson(res, 200, { tags: library.tags() });
+			return;
+		}
+
+		if (pathname === "/api/library/tags" && method === "POST") {
+			const body = parseJsonBody(rawBody ?? "");
+			if (!isRecord(body)) {
+				sendJson(res, 400, errorBody("request body must be an object"));
+				return;
+			}
+			const name = asString(body.name);
+			if (name === undefined || !/^[a-z0-9][a-z0-9_-]{0,23}$/.test(name)) {
+				sendJson(
+					res,
+					422,
+					errorBody("tag names use lowercase letters, digits, '-' and '_'"),
+				);
+				return;
+			}
+			const category = asString(body.category) ?? "custom";
+			sendJson(res, 200, { tag: library.createTag(name, category) });
+			return;
+		}
+
+		const tagMerge = /^\/api\/library\/tags\/([^/]+)\/merge$/.exec(pathname);
+		if (tagMerge && method === "POST") {
+			const body = parseJsonBody(rawBody ?? "");
+			const into = isRecord(body) ? asString(body.into) : undefined;
+			const merged = library.mergeTag(
+				decodeURIComponent(tagMerge[1] ?? ""),
+				into ?? "",
+			);
+			if (merged === null) {
+				sendJson(res, 404, errorBody("library tag not found"));
+				return;
+			}
+			sendJson(res, 200, { tag: merged });
+			return;
+		}
+
+		const tagPatch = /^\/api\/library\/tags\/([^/]+)$/.exec(pathname);
+		if (tagPatch && method === "PATCH") {
+			const body = parseJsonBody(rawBody ?? "");
+			if (!isRecord(body)) {
+				sendJson(res, 400, errorBody("request body must be an object"));
+				return;
+			}
+			const renamed = library.renameTag(decodeURIComponent(tagPatch[1] ?? ""), {
+				name: asString(body.name),
+				category: asString(body.category),
+			});
+			if (renamed === null) {
+				sendJson(res, 404, errorBody("library tag not found"));
+				return;
+			}
+			sendJson(res, 200, { tag: renamed });
+			return;
+		}
+
+		const assetTags = /^\/api\/library\/assets\/([^/]+)\/tags$/.exec(pathname);
+		if (assetTags && method === "PUT") {
+			const body = parseJsonBody(rawBody ?? "");
+			if (!isRecord(body) || !Array.isArray(body.tags)) {
+				sendJson(res, 422, errorBody("tags must be a list of tag ids"));
+				return;
+			}
+			const tagIds = body.tags.filter(
+				(value): value is string => typeof value === "string",
+			);
+			const row = library.setTags(
+				decodeURIComponent(assetTags[1] ?? ""),
+				tagIds,
+				asString(body.primary) ?? null,
+			);
+			if (row === null) {
+				sendJson(res, 404, errorBody("library asset not found"));
+				return;
+			}
+			sendJson(res, 200, row);
+			return;
+		}
+
+		const assetChat = /^\/api\/library\/assets\/([^/]+)\/chat$/.exec(pathname);
+		if (assetChat && (method === "PUT" || method === "DELETE")) {
+			const assetId = decodeURIComponent(assetChat[1] ?? "");
+			if (method === "DELETE") {
+				const outcome = library.unlinkChat(assetId);
+				if (outcome.row === null) {
+					sendJson(res, 404, errorBody("library asset not found"));
+					return;
+				}
+				/* #2624's phone plane, deliberately: a clear answers `{ok, cleared}`
+				 *  and carries no chat key, which is the shape the client's schema must
+				 *  read as `chat: null`. */
+				sendJson(res, 200, { ok: true, cleared: outcome.cleared });
+				return;
+			}
+			const body = parseJsonBody(rawBody ?? "");
+			const sessionId = isRecord(body) ? asString(body.session_id) : undefined;
+			/* The real route verifies the session directory exists; the mock holds
+			 *  no such directory, so it enforces the shape the route enforces first
+			 *  (`^[a-f0-9]{12}$`) rather than accepting an id a phone invented. */
+			if (sessionId === undefined || !/^[a-f0-9]{12}$/.test(sessionId)) {
+				sendJson(res, 422, errorBody("session id is not valid"));
+				return;
+			}
+			const row = library.linkChat(assetId, sessionId);
+			if (row === null) {
+				sendJson(res, 404, errorBody("library asset not found"));
+				return;
+			}
+			sendJson(res, 200, { chat: row.chat });
+			return;
+		}
+
+		const assetContent = /^\/api\/library\/assets\/([^/]+)\/content$/.exec(
+			pathname,
+		);
+		if (assetContent && method === "GET") {
+			const content = library.content(
+				decodeURIComponent(assetContent[1] ?? ""),
+			);
+			if (content === null) {
+				sendJson(res, 404, errorBody("library asset not found"));
+				return;
+			}
+			res.writeHead(200, {
+				"content-type": content.mimeType,
+				"content-length": content.bytes.length,
+				"cache-control": "private, max-age=60",
+				"x-content-type-options": "nosniff",
+			});
+			res.end(content.bytes);
+			return;
+		}
+
+		const assetThumb = /^\/api\/library\/assets\/([^/]+)\/thumbnail$/.exec(
+			pathname,
+		);
+		if (assetThumb && method === "GET") {
+			const thumb = library.thumbnail(decodeURIComponent(assetThumb[1] ?? ""));
+			if (thumb === null) {
+				sendJson(res, 404, errorBody("no thumbnail for this asset"));
+				return;
+			}
+			res.writeHead(200, {
+				"content-type": thumb.mimeType,
+				"content-length": thumb.bytes.length,
+				"cache-control": "private, max-age=60",
+			});
+			res.end(thumb.bytes);
+			return;
+		}
+
+		const assetDetail = /^\/api\/library\/assets\/([^/]+)$/.exec(pathname);
+		if (assetDetail && (method === "GET" || method === "PATCH")) {
+			const assetId = decodeURIComponent(assetDetail[1] ?? "");
+			if (method === "GET") {
+				const row = library.detail(assetId);
+				if (row === null) {
+					sendJson(res, 404, errorBody("library asset not found"));
+					return;
+				}
+				sendJson(res, 200, row);
+				return;
+			}
+			const body = parseJsonBody(rawBody ?? "");
+			if (!isRecord(body)) {
+				sendJson(res, 400, errorBody("request body must be an object"));
+				return;
+			}
+			const row = library.patch(assetId, body);
+			if (row === null) {
+				sendJson(res, 404, errorBody("library asset not found"));
+				return;
+			}
+			sendJson(res, 200, row);
 			return;
 		}
 
@@ -2767,6 +3090,67 @@ export function createRelay(options: RelayOptions = {}) {
 				return;
 			}
 
+			if (rest === "/tags" && method === "PUT") {
+				/* LOH-11 S3's write: EXACTLY `{tags, primary}`, both always read.
+				 *  A desired state, never a delta — the client sends the full set, so a
+				 *  retry is idempotent. Ids are checked against the catalogue and the
+				 *  primary against the requested set, because the real route's 422
+				 *  sentences are what the sheet renders. */
+				const tagRoutes = state.world.sessionTags;
+				if (tagRoutes === undefined) {
+					sendJson(res, 404, errorBody("not found"));
+					return;
+				}
+				if (!projection) {
+					sendJson(res, 404, errorBody("unknown session"));
+					return;
+				}
+				const requested = Array.isArray(body?.tags) ? body.tags : null;
+				const primaryRaw = body?.primary;
+				if (
+					requested === null ||
+					!(primaryRaw === null || typeof primaryRaw === "string")
+				) {
+					sendJson(res, 422, errorBody("tags and primary are required"));
+					return;
+				}
+				if (!requested.every((id): id is string => typeof id === "string")) {
+					sendJson(res, 422, errorBody("Unknown category id"));
+					return;
+				}
+				const byId = new Map(tagRoutes.catalogue.map((tag) => [tag.id, tag]));
+				if (requested.some((id) => !byId.has(id))) {
+					sendJson(res, 422, errorBody("Unknown category id"));
+					return;
+				}
+				/* The scenario's own refusal: a real answer from the route, after the
+				 *  request is valid, so the sheet's refusal path is driven by the wire
+				 *  rather than by a staged client state (`tags-sheet-refused`). */
+				if (tagRoutes.failWrite !== undefined) {
+					sendJson(res, tagRoutes.failWrite.status, {
+						error: tagRoutes.failWrite.error,
+					});
+					return;
+				}
+				if (primaryRaw !== null && !requested.includes(primaryRaw)) {
+					sendJson(res, 422, errorBody("primary must be one of tags"));
+					return;
+				}
+				state.tagAssignments.set(sessionId, {
+					tags: requested,
+					primary: primaryRaw,
+				});
+				sendJson(res, 200, {
+					session_id: sessionId,
+					tags: requested.map((id) => ({
+						id,
+						name: byId.get(id)?.name ?? id,
+					})),
+					primary: primaryRaw,
+				});
+				return;
+			}
+
 			if (rest === "/seen" && method === "POST") {
 				if (!projection) {
 					sendFixture(res, "seen-unknown-session");
@@ -2910,6 +3294,14 @@ export function createRelay(options: RelayOptions = {}) {
 	 * mishandled a method mistmatch could not be caught here.
 	 */
 	const ALLOWED_METHODS: Array<{ match: RegExp; methods: string[] }> = [
+		...(policyFixture
+			? [
+					{
+						match: ACCOUNT_POLICY_ROUTE,
+						methods: ["GET", "PATCH"],
+					},
+				]
+			: []),
 		// Session sub-routes first: `/command` is a POST-only path, so a GET on it
 		// is a 405 and not the generic 404 a coarser table produced.
 		{ match: /^\/api\/sessions\/[^/]+\/command$/, methods: ["POST"] },
@@ -2957,6 +3349,33 @@ export function createRelay(options: RelayOptions = {}) {
 		{ match: /^\/api\/projects\/[^/]+$/, methods: ["GET", "HEAD", "DELETE"] },
 		/* The armed index (S17) is read-only, like the relay's own route. */
 		{ match: /^\/api\/schedules$/, methods: ["GET", "HEAD"] },
+		/* The Library's two families. The sub-routes come before the row and the
+		 *  collection so a coarser pattern cannot swallow them. */
+		{
+			match: /^\/api\/library\/assets\/[^/]+\/(content|thumbnail)$/,
+			methods: ["GET", "HEAD"],
+		},
+		{
+			match: /^\/api\/library\/assets\/[^/]+\/(tags|chat)$/,
+			methods: ["PUT", "DELETE"],
+		},
+		{
+			match: /^\/api\/library\/tags\/[^/]+\/merge$/,
+			methods: ["POST"],
+		},
+		{
+			match: /^\/api\/library\/tags\/[^/]+$/,
+			methods: ["PATCH"],
+		},
+		{
+			match: /^\/api\/library\/tags$/,
+			methods: ["GET", "HEAD", "POST"],
+		},
+		{
+			match: /^\/api\/library\/assets\/[^/]+$/,
+			methods: ["GET", "HEAD", "PATCH"],
+		},
+		{ match: /^\/api\/library\/assets$/, methods: ["GET", "HEAD"] },
 		{ match: /^\/api\/pair$/, methods: ["POST"] },
 		{ match: /^\/healthz$/, methods: ["GET", "HEAD"] },
 		{ match: /^\/login$/, methods: ["GET", "POST"] },
@@ -2992,6 +3411,11 @@ export function createRelay(options: RelayOptions = {}) {
 	/* ------------------------------------------------------------ the server -- */
 
 	const server = createServer(async (req, res) => {
+		if (policyFixture)
+			res.once("finish", () => policyFixture.observeWire(req, res.statusCode));
+		if (policyFixture && !policyFixture.acceptHost(req)) {
+			return sendJson(res, 403, { error: "fixture hostname boundary refused" });
+		}
 		if (!(req.url ?? "/").startsWith("/__mock")) state.requestsServed += 1;
 		const url = new URL(
 			req.url ?? "/",
@@ -3308,6 +3732,8 @@ export function createRelay(options: RelayOptions = {}) {
 		handler: server,
 		/** Listen on `host:port` (port 0 picks a free one) and resolve the handle. */
 		async listen({ host = "127.0.0.1", port = 0 } = {}) {
+			if (policyFixture && !["127.0.0.1", "::1", "localhost"].includes(host))
+				throw new Error("canonical policy fixture must bind loopback only");
 			/* Browsers talk to this server directly (the web target and both harnesses),
 			 * and they reuse an idle socket on their own schedule — minutes for Chrome —
 			 * while Node drops one after `keepAliveTimeout` (5 s by default). In the
@@ -3324,6 +3750,11 @@ export function createRelay(options: RelayOptions = {}) {
 			const address = server.address();
 			const actual =
 				typeof address === "object" && address !== null ? address.port : 0;
+			/* The fixture's emulator allowance is scoped to the port this run ACTUALLY
+			 * bound, so it is armed here — after the kernel chose, before ready is
+			 * published. Without this call the branch admits nothing, which is what an
+			 * unbound fixture should do. */
+			policyFixture?.setBoundPort(actual);
 			// The relay's OWN origin is same-origin by the contract's own rule
 			// (`docs/relay/contract.md` §1.2) — "a foreign Origin is refused; a
 			// same-origin Origin is allowed" — and the mock has to know it to apply
@@ -3336,9 +3767,10 @@ export function createRelay(options: RelayOptions = {}) {
 			// Loopback aliases are included because the mock binds loopback only, and
 			// a foreign (non-loopback) origin still has no way in.
 			const ownHosts = new Set(
-				[host, "127.0.0.1", "localhost"].filter(
-					(candidate) => candidate !== "0.0.0.0" && candidate !== "::",
-				),
+				(policyFixture
+					? [policyFixture.hostname]
+					: [host, "127.0.0.1", "localhost"]
+				).filter((candidate) => candidate !== "0.0.0.0" && candidate !== "::"),
 			);
 			state.allowedOrigins = [
 				...(state.allowedOrigins ?? []),
@@ -3360,11 +3792,15 @@ export function createRelay(options: RelayOptions = {}) {
 				connections: () => server.closeAllConnections?.(),
 			});
 			log(
-				`mock-relay listening http://${host}:${actual}` +
+				`mock-relay listening http://${policyFixture?.hostname ?? host}:${actual}` +
 					` scenario=${state.scenario} faults=${summariseFaults(state.faults)}` +
 					` fixtures=${fixturesDir}`,
 			);
-			return { host, port: actual, url: `http://${host}:${actual}` };
+			return {
+				host,
+				port: actual,
+				url: `http://${policyFixture?.hostname ?? host}:${actual}`,
+			};
 		},
 	};
 }
@@ -3381,6 +3817,55 @@ export function createRelay(options: RelayOptions = {}) {
 // did print the password and then STARTED A LISTENING RELAY, keeping the event loop
 // alive forever: the command substitution never completed and the capture sat on it.
 // Importing a module must have no side effects; only the entry point runs the CLI.
+/** The canonical pinned-core policy fixture, built only when a CI job asks for it.
+ *
+ * WHY IT LIVES HERE AND NOT INSIDE `if (import.meta.main)`: the construction is the
+ * part worth testing, so it is exported and the CLI is a thin caller. The fixture
+ * needs a bootstrapped core checkout (scripts/ci/account-routing-bootstrap.py) and
+ * an owned scratch root; both come from the environment/flags, and a missing one
+ * fails loudly rather than serving a policy the app would wrongly trust.
+ *
+ * Source identity is asserted by `createCanonicalPolicyFixture` itself (the pinned
+ * CORE_HEAD + facade blob), never restated here: one pin, one place to update.
+ */
+export function buildAccountRoutingFixture(
+	flags: Record<string, FlagValue>,
+	options: { admitEmulatorHost?: boolean } = {},
+): import("./account-routing.ts").CanonicalPolicyFixture {
+	const coreRoot = str(flags, "account-routing-core-root");
+	const python = str(flags, "account-routing-python");
+	if (!coreRoot || !python)
+		throw new Error(
+			"--account-routing-fixture needs --account-routing-core-root and --account-routing-python",
+		);
+	const profile = str(flags, "account-routing-profile", "a");
+	if (profile !== "a" && profile !== "b")
+		throw new Error("--account-routing-profile must be a or b");
+	const mode = str(
+		flags,
+		"account-routing-mode",
+		"normal",
+	) as PolicyFixtureMode;
+	const scratch =
+		process.env.LOCAL_OPERATOR_SCRATCHPAD ??
+		(process.env.GITHUB_ACTIONS === "true"
+			? process.env.RUNNER_TEMP
+			: undefined);
+	if (!scratch)
+		throw new Error(
+			"the account-routing fixture needs an owned scratch root: set LOCAL_OPERATOR_SCRATCHPAD (CI: RUNNER_TEMP)",
+		);
+	const fixture = createCanonicalPolicyFixture({
+		python,
+		coreRoot,
+		privateRoot: join(scratch, `account-routing-fixture-${randomUUID()}`),
+		profile,
+		admitEmulatorHost: options.admitEmulatorHost === true,
+	});
+	fixture.controls.mode = mode;
+	return fixture;
+}
+
 if (import.meta.main) {
 	const { flags } = parseArgs(process.argv.slice(2));
 	if (bool(flags, "help")) {
@@ -3400,6 +3885,14 @@ if (import.meta.main) {
 				"                        relay's own origin is always allowed once listening.",
 				"  --allow-android-emulator-origin  admit http://10.0.2.2 at the actual bound port",
 				"                        isolated native CI only; off by default (no wildcard).",
+				"  --account-routing-fixture  serve the canonical pinned-core account-routing",
+				"                        policy facade. OFF by default, so every other job's",
+				"                        behaviour (nightly included) is byte-identical.",
+				"  --account-routing-core-root <dir>  the pinned core checkout the fixture",
+				"                        adapts (required with the flag).",
+				"  --account-routing-python <path>    that checkout's interpreter (required).",
+				"  --account-routing-profile <a|b>    private computer profile (default a).",
+				"  --account-routing-mode <name>      fixture mode (default normal).",
 				"  --print-port          print the chosen port alone on stdout",
 				"  --print-password      print the relay password alone on stdout and exit",
 				"  --list                print every scenario and exit",
@@ -3432,7 +3925,22 @@ if (import.meta.main) {
 	}
 
 	const recordDir = str(flags, "record", undefined);
+	// The canonical account-routing facade, OFF unless a job asks for it. Default
+	// behaviour stays byte-identical for every existing caller (the nightly relay
+	// serves no /api/settings/account-routing and must keep 404ing), so this is
+	// opt-in rather than a second default: the fixture adapts a PINNED core checkout
+	// in a fresh process, and a job that has not bootstrapped one cannot serve it.
+	const accountRouting = bool(flags, "account-routing-fixture")
+		? buildAccountRoutingFixture(flags, {
+				// BOTH flags are required. The fixture flag alone serves policy to a
+				// hostname-scoped caller; only a job that has also opted into the
+				// emulator ORIGIN path gets the host allowance, so the two live and
+				// die together and neither is silently implied by the other.
+				admitEmulatorHost: bool(flags, "allow-android-emulator-origin"),
+			})
+		: undefined;
 	const relay = createRelay({
+		accountRouting,
 		fixturesDir,
 		scenario: str(flags, "scenario", "idle"),
 		faults: list(flags, "fault"),

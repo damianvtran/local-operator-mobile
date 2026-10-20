@@ -40,6 +40,10 @@ export const ROLE = {
 	radio: "radio",
 	switch: "switch",
 	checkbox: "checkbox",
+	/* ARIA's modal surface. Spelled through the `role` prop (RN's
+	 *  `AccessibilityRole` union has no `dialog`), the same reason `status` is:
+	 *  a sheet must have an accessible name, and only a dialog role gives it one. */
+	dialog: "dialog",
 	progressbar: "progressbar",
 	summary: "summary",
 	none: "none",
@@ -78,6 +82,10 @@ export const SCREEN = {
 	 *  with no runtime running. One root: the two families are sections of one
 	 *  screen, and a capture must be able to tell it drew. */
 	schedules: "schedules-screen",
+	/** The Library: the catalogue list and its pushed detail. Two roots because
+	 *  the detail is a route of its own; a capture must tell which one drew. */
+	library: "library-screen",
+	libraryDetail: "library-detail-screen",
 	newSession: "new-session-screen",
 	settings: "settings-screen",
 	notFound: "not-found-screen",
@@ -102,6 +110,10 @@ export const EMPTY = {
 	 *  unreadable store can never produce it — the defect this surface exists
 	 *  to avoid. */
 	schedules: "schedules-empty",
+	/** The catalogue with nothing in it (as opposed to no MATCHES, which is the
+	 *  search-empty surface below). */
+	library: "library-empty",
+	librarySearch: "library-search-empty",
 	notFound: "not-found-empty",
 } as const;
 
@@ -236,6 +248,17 @@ export const CONTROL = {
 	sessionsDegradedBanner: "sessions-degraded-banner",
 	sessionOpenCurrent: "session-open-current",
 	sessionOpenPrevious: "session-open-previous",
+	/* --- conversation tags (LOH-11 S3). The row's tag line and the header's are
+	 *  separate families because a session screen and the pane can be mounted at
+	 *  once (the drawer over the home); the action opens the sheet, whose one
+	 *  mutation control is `Remove all`. */
+	sessionTagsAction: "session-tags-action",
+	/* The session header's tag line when this conversation can be edited: the
+	 *  same sheet as the row menu, opened from the screen that shows the tags. */
+	sessionHeaderTagsAction: "session-header-tags-action",
+	sessionTagsRemoveAll: "session-tags-remove-all",
+	sessionTagsRemoveAllDialog: "session-tags-remove-all-dialog",
+	sessionTagsRetry: "session-tags-retry",
 	/* --- the move/offload sheet (the sessions-and-delegation half, S15's mesh
 	 *  states). `confirm` and `copy` are the two verbs of ONE destination
 	 *  choice; `wait` is the same-id claim the busy/unconfirmed states offer;
@@ -267,6 +290,9 @@ export const CONTROL = {
 	settingsTextScaleGroup: "settings-text-scale-group",
 	settingsRetryLastAction: "settings-retry-last-action",
 	settingsNotificationsEnable: "settings-notifications-enable",
+	settingsAccountRoutingGroup: "settings-account-routing-group",
+	settingsAccountRoutingSave: "settings-account-routing-save",
+	settingsAccountRoutingRetry: "settings-account-routing-retry",
 	refusalSignIn: "refusal-sign-in",
 	refusalRetry: "refusal-retry",
 	refusalAnotherAddress: "refusal-another-address",
@@ -398,6 +424,38 @@ export const CONTROL = {
 	 *  dice is the one remedy a read failure has). */
 	schedulesBack: "schedules-back",
 	schedulesRetry: "schedules-retry",
+	/* --- the Library (the catalogue slice). The footer entry is `sidebarLibrary`;
+	 *  the list's search/filter/sort controls and the detail's metadata and chat
+	 *  controls are named here once, and rendered once. */
+	sidebarLibrary: "sidebar-library",
+	libraryBack: "library-back",
+	librarySearchField: "library-search-field",
+	libraryFilters: "library-filters",
+	librarySort: "library-sort",
+	libraryMore: "library-more",
+	libraryRetry: "library-retry",
+	libraryLoadMore: "library-load-more",
+	libraryClearFilters: "library-clear-filters",
+	libraryDetailBack: "library-detail-back",
+	libraryDetailRetry: "library-detail-retry",
+	libraryEdit: "library-edit",
+	libraryOpenChat: "library-open-chat",
+	libraryFavorite: "library-favorite",
+	libraryLock: "library-lock",
+	libraryEditSave: "library-edit-save",
+	libraryNewTag: "library-new-tag",
+	libraryCloseEditor: "library-close-editor",
+	libraryDiscardDialog: "library-discard-dialog",
+	libraryComposeSend: "library-compose-send",
+	libraryComposeField: "library-compose-field",
+	libraryAudioPlay: "library-audio-play",
+	libraryEditName: "library-edit-name",
+	libraryEditDescription: "library-edit-description",
+	libraryNewTagAdd: "library-new-tag-add",
+	libraryFilterTagAny: "library-filter-tag-any",
+	libraryFiltersDone: "library-filters-done",
+	librarySortDone: "library-sort-done",
+	libraryMoreDone: "library-more-done",
 	/** The projects list's own controls (S16). The list and the pushed detail have
 	 *  a retry and a back; the listing's one write is the create route's entry
 	 *  point, and the detail's are named below. */
@@ -473,6 +531,20 @@ export const SURFACE = {
 	/** The wake listing was capped: "Showing N of M" — the sentence that keeps
 	 *  a bounded page from implying the store holds only what it sent. */
 	schedulesWakesTruncated: "schedules-wakes-truncated",
+	/* --- the Library's own surfaces. Loading is a skeleton; `building` is the
+	 *  scan's incremental state and is NOT an error; `error` is the retry strip.
+	 *  The unsupported preview names a designed absence rather than a blank pane. */
+	libraryLoading: "library-loading",
+	libraryBuilding: "library-building",
+	libraryError: "library-error",
+	libraryComposer: "library-composer",
+	libraryUnsupported: "library-unsupported-preview",
+	libraryDetailLoading: "library-detail-loading",
+	libraryDetailPopulated: "library-detail-populated",
+	libraryFilterSheet: "library-filter-sheet",
+	librarySortSheet: "library-sort-sheet",
+	libraryMoreSheet: "library-more-sheet",
+	libraryEditorSheet: "library-editor-sheet",
 	/** The wake index could NOT be read. A first-class state, never an empty
 	 *  list: "no wakes" and "this process could not read the store" are
 	 *  different claims, and this id is how a frame proves the distinction. */
@@ -735,6 +807,20 @@ export const SURFACE = {
 	 * invisible to every gate because no action could hold a press).
 	 */
 	sessionMenuSheet: "session-menu-sheet",
+	/* --- the conversation-tags sheet (LOH-11 S3). One marker per state, because
+	 *  a frame asserting "the catalogue is empty" must not also satisfy "the
+	 *  catalogue is loading" or "the write was refused". */
+	sessionTagsSheet: "session-tags-sheet",
+	sessionTagsLoading: "session-tags-loading",
+	sessionTagsEmpty: "session-tags-empty",
+	sessionTagsError: "session-tags-error",
+	/** A write the relay refused, in the sheet's body: the relay's OWN sentence
+	 *  (`error` body), never a status code re-worded here. */
+	sessionTagsRefusal: "session-tags-refusal",
+	/** A read-back has been painted (`handleSettled` accepted it). Zero-size: it is
+	 *  the affirmative marker for the toggled cell, which is otherwise visually
+	 *  identical to the sheet's populated state. */
+	sessionTagsReadBack: "session-tags-read-back",
 	/* --- the move/offload sheet's states. Each is painted ONLY in its own state,
 	 *  because a frame asserting "the move is in progress" must not also satisfy
 	 *  "the receipt is up" — and the sheet is a state a person reaches by an
@@ -770,6 +856,12 @@ export const IDENTIFIER_FAMILIES: readonly string[] = [
 	 * the controls that carry them, which is what this list's own note asks for. */
 	"session-row-",
 	"past-row-",
+	/* Conversation tags (LOH-11 S3): one tag line per list row, one per session
+	 *  header, one per past row, and one selectable option per catalogue tag. */
+	"session-tags-line-",
+	"session-tags-header-",
+	"past-tags-line-",
+	"session-tags-option-",
 	"computer-row-",
 	"computer-row-status-",
 	"computer-row-reachability-",
@@ -785,6 +877,17 @@ export const IDENTIFIER_FAMILIES: readonly string[] = [
 	"transcript-video-",
 	"imagegen-cancel-",
 	"attach-option-",
+	/* The Library's parameterised identifiers: one tile per asset, one tag chip
+	 *  per catalogue tag (and one per assigned tag in the editor). */
+	"library-tile-",
+	"library-kind-",
+	"library-more-",
+	"library-origin-",
+	"library-status-",
+	"library-sort-",
+	"library-source-",
+	"library-tag-",
+	"library-detail-tag-",
 	"model-option-",
 	"effort-rung-",
 	"slash-command-",
@@ -838,6 +941,14 @@ export const IDENTIFIER_FAMILIES: readonly string[] = [
 	 *  (`supplement-file-<i>`) — the one stable name a flow has for a callout,
 	 *  because the path is data. */
 	"supplement-file-",
+	/* One identifier per account-routing choice, built by
+	 *  `accountRoutingChoiceId` and keyed by the choice VALUE
+	 *  (`settings-account-routing-group:<value>`). COLON-separated rather than
+	 *  dash-terminated because the value IS the backend's own enum member, so a
+	 *  dash would make `reset-soonest` ambiguous with the family's own text. The
+	 *  family is rendered: the settings section builds each option's id with the
+	 *  builder above, and the Android proof flow addresses a concrete member. */
+	"settings-account-routing-group:",
 ];
 
 /**
@@ -904,6 +1015,10 @@ export const state = (options: {
  * one of them is a place the flows and this file must agree.
  */
 export const REGION = {
+	/** The Library listing's grid and its origin tab strip: regions a flow
+	 *  asserts rather than controls it presses. */
+	libraryGrid: "library-grid",
+	libraryOrigins: "library-origins",
 	/** The conversations panel's list and its sections. `session-section-active`
 	 *  and `session-section-previous` retired WITH the list's move into the panel:
 	 *  the panel's vocabulary is the desktop's (Pinned · Running · Today · This
@@ -937,6 +1052,7 @@ export const REGION = {
 	 *  (ADR 0006 §2.4, §5). The marker is the section's own region id so the
 	 *  capture can assert the section rendered. */
 	settingsNotifications: "settings-section-notifications",
+	settingsAccountRouting: "settings-section-account-routing",
 
 	/** The refusal surfaces (`docs/ux/flows.md` § 9, C5/C6/C7). Each id names a
 	 *  CAUSE the flow asserts by name, so a control or a sentence that goes missing
@@ -1034,6 +1150,9 @@ export const STATE_MARKER = {
 	past: {
 		empty: EMPTY.past,
 		populated: "past-row-",
+		/* The read-only tag line (LOH-11 S3): past rows carry the same pair, and
+		 *  this family is the frame's affirmative claim that one drew. */
+		tags: "past-tags-line-",
 	},
 	/* The projects list and its pushed detail (S16). `populated` is the row family
 	 *  (`projectRowId`), which is what "the list drew rows" means. `refused` is the
@@ -1100,6 +1219,25 @@ export const STATE_MARKER = {
 		populated: SURFACE.subagentTranscript,
 		empty: EMPTY.subagent,
 	},
+	/* The Library list. `populated` is the tile family, `building` the scan's own
+	 *  banner — a state the grid renders UNDER, not instead of, so a frame can
+	 *  carry both. `empty` and `search-empty` are separate ids because "the
+	 *  catalogue holds nothing" and "this filter matched nothing" are different
+	 *  answers with different remedies. */
+	library: {
+		loading: SURFACE.libraryLoading,
+		empty: EMPTY.library,
+		"search-empty": EMPTY.librarySearch,
+		populated: "library-tile-",
+		building: SURFACE.libraryBuilding,
+		error: SURFACE.libraryError,
+	},
+	"library-detail": {
+		loading: SURFACE.libraryDetailLoading,
+		populated: SURFACE.libraryDetailPopulated,
+		unsupported: SURFACE.libraryUnsupported,
+		composer: SURFACE.libraryComposer,
+	},
 	computers: {
 		/** The refusal surface, which the set-up path does not render: the one
 		 *  state of this screen the relay can drive — the computer LIST comes from
@@ -1134,6 +1272,9 @@ export const STATE_MARKER = {
 		"find-empty": "session-find-empty",
 		"find-hit": "session-find-hit",
 		"find-caveat": "session-find-caveat",
+		/* The session header's conversation tags (LOH-11 S3): a family, because the
+		 *  marker must be present only when the header drew a line. */
+		"tags-header": "session-tags-header-",
 		/* The checkpoint rail (this slice): one marker per state a cell
 		 *  declares. `rail` — the manifest is `ready` and the rail draws at
 		 *  least one tick; `rail-deep` — a refinement of `rail` (a frame may
@@ -1238,6 +1379,26 @@ export const STATE_MARKER = {
 		"move-busy": SURFACE.sessionMoveBusy,
 		"move-unconfirmed": SURFACE.sessionMoveUnconfirmed,
 		"move-refused": SURFACE.sessionMoveRefused,
+		/* Conversation tags (LOH-11 S3). `tags` is the row family, present only
+		 *  when at least one row carries a tag line; the sheet's four states are
+		 *  each their own marker so an empty catalogue cannot satisfy a loading or
+		 *  refused frame. */
+		tags: "session-tags-line-",
+		"tags-sheet": SURFACE.sessionTagsSheet,
+		"tags-sheet-empty": SURFACE.sessionTagsEmpty,
+		"tags-sheet-loading": SURFACE.sessionTagsLoading,
+		"tags-sheet-error": SURFACE.sessionTagsError,
+		/* The write states (round-1 remediation): a toggle whose read-back was
+		 *  painted, and a toggle the relay refused. Each has its own marker, so a
+		 *  refusal frame cannot satisfy the settled one. */
+		"tags-sheet-toggled": SURFACE.sessionTagsReadBack,
+		"tags-sheet-refused": SURFACE.sessionTagsRefusal,
+		/* The long-press menu from the TAGS world: the Tags… entry is painted only
+		 *  inside that menu, so its control id is the affirmative claim ("the held
+		 *  press opened the menu and offered the tag action"). Reusing the sheet's
+		 *  own id would collide with `menu-open` and make the zero-duplicate check
+		 *  vacuous. */
+		"tags-menu": CONTROL.sessionTagsAction,
 	},
 	/* The queued-ask surfaces (E2). `bar` is the one state a session screen
 	 *  carries while anything is outstanding — the marker must NOT paint in an
@@ -1317,10 +1478,43 @@ export const IDENTIFIERS: readonly string[] = [
 	]),
 ];
 
+/** A settings choice's identifier, keyed by the choice VALUE so a capture or a flow
+ *  can address one option without the screen spelling the family inline.
+ *
+ * It lives here because this file is the contract's single home: the a11y check
+ * rejects a `testID` written as a string or template literal in a rendering file,
+ * so a value-dependent id must be BUILT by the contract and CALLED by the renderer
+ * (the same shape `sessionRowId` and its siblings already use). */
+export const accountRoutingChoiceId = (value: string): string =>
+	`${CONTROL.settingsAccountRoutingGroup}:${value}`;
+
 /** A row's identifier, derived from the id it carries so a flow can address one
  *  row without the screen inventing a second naming scheme. */
 export const sessionRowId = (sessionId: string): string =>
 	`session-row-${sessionId}`;
+
+/** One conversation row's tag line (LOH-11 S3). The row's identity is the
+ *  session's, so a capture or flow addresses the line by the row it belongs to
+ *  rather than by position. */
+export const sessionTagLineId = (sessionId: string): string =>
+	`session-tags-line-${sessionId}`;
+
+/** The session header's tag line — a second family because the session screen
+ *  and the conversations pane can be mounted at once (the drawer over the
+ *  home), and two elements sharing one id would make the selector ambiguous. */
+export const sessionHeaderTagLineId = (sessionId: string): string =>
+	`session-tags-header-${sessionId}`;
+
+/** One past row's read-only tag line. Past rows have no assignment controls,
+ *  so this family is a region rather than a control — still addressed by the
+ *  row it annotates. */
+export const pastTagLineId = (sessionId: string): string =>
+	`past-tags-line-${sessionId}`;
+
+/** One catalogue tag's checkbox in the tags sheet, keyed by the store's tag id
+ *  (registry identity, not its name or registry order). */
+export const sessionTagOptionId = (tagId: string): string =>
+	`session-tags-option-${tagId}`;
 
 /**
  * A REMOTE (another device's) row's identifier — a second family beside
@@ -1361,6 +1555,31 @@ export const sessionMoveDestId = (to: string): string =>
  *  not at each call site (the `pastRowId` shape). */
 export const projectRowId = (projectId: string): string =>
 	`project-row-${projectId}`;
+
+/** One Library tile, by the asset's opaque id. The id is already URL-safe and
+ *  never a path, so it is the row's identity on the wire AND in the tree. */
+export const libraryTileId = (assetId: string): string =>
+	`library-tile-${assetId}`;
+
+/* The Library's option identifiers are BUILT from the filter's own value rather
+ *  than declared one constant per option: the screen renders the option tables
+ *  directly, and a hand-kept parallel list would be the drift this file exists to
+ *  stop. The families are declared above so the flow check can see them. */
+export const libraryKindOptionId = (value: string): string =>
+	`library-kind-${value}`;
+export const libraryMoreOptionId = (value: string): string =>
+	`library-more-${value}`;
+export const libraryOriginOptionId = (value: string): string =>
+	`library-origin-${value}`;
+export const libraryStatusOptionId = (value: string): string =>
+	`library-status-${value}`;
+export const librarySortOptionId = (value: string): string =>
+	`library-sort-${value}`;
+export const libraryTagId = (tagId: string): string => `library-tag-${tagId}`;
+export const libraryDetailTagId = (tagId: string): string =>
+	`library-detail-tag-${tagId}`;
+export const librarySourceId = (sessionId: string): string =>
+	`library-source-${sessionId}`;
 
 /**
  * The Schedules surface's row builders (S17), one per section — the same shape

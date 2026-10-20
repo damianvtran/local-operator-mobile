@@ -15,11 +15,47 @@
  * same routes over a real socket; this file is the fast, field-naming half).
  */
 
-import { describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 import type { Json } from "../lib/json.ts";
 import { loadFixtures } from "./fixtures.ts";
 import { createProjectsStore, isProjectsRefusal } from "./projects.ts";
+
+/**
+ * THE CAPTURE'S OWN INSTANT, PINNED for the whole file.
+ *
+ * This file is a byte-parity lock against one moment, but the store derives a
+ * milestone's status against the LIVE clock (`projects.ts` → `milestoneStatus`
+ * → `today()`), which is right for the running mock and a time bomb for the
+ * lock: captured bytes + live recomputation means a date-derived field flips
+ * the moment the wall clock rolls past it.
+ *
+ * The corpus records the moment the lock is against. `projects-detail.json`
+ * carries `provenance.captured_at: "2026-10-05"`, and its own stamps place the
+ * capture at 2026-10-05T14:04:47Z: `created_at` 1791209087.1871512 is
+ * 14:04:47.187Z, and `updates[0].at` spells that second "2026-10-05T14:04:47Z".
+ * Ticking past the capture is exactly what happened — `cutover window`
+ * (`target_date: "2026-10-15"`) was captured `"upcoming"` and recomputes
+ * `"overdue"` from 2026-10-16 onward, reddening these reads and the `checks`
+ * job on every PR. The captures cannot be re-taken (the S16 frames were shot
+ * against these bytes, see the file header), so the clock is pinned to the
+ * capture's instant rather than the expectations moved to the clock's.
+ *
+ * Only `Date` is faked — no timers — so nothing else about the file's
+ * behaviour changes, and the write path's own `today()`/`Date.now()` stamps
+ * come out deterministic too. The pin is an absolute UTC instant, so the lock
+ * holds on any host timezone.
+ */
+const CAPTURED_AT = new Date("2026-10-05T14:04:47Z");
+
+beforeAll(() => {
+	vi.useFakeTimers({ toFake: ["Date"] });
+	vi.setSystemTime(CAPTURED_AT);
+});
+
+afterAll(() => {
+	vi.useRealTimers();
+});
 
 const store = () => createProjectsStore(loadFixtures());
 
@@ -47,6 +83,13 @@ const answerOf = (outcome: unknown): { status: number; json: Json } => {
 };
 
 describe("the mock's project store against the captured reads", () => {
+	it("runs on the capture's own clock, so a live clock cannot move the lock", () => {
+		/* The pin itself, asserted: if this ever fails, the fake clock stopped
+		 *  engaging and the byte-parity reads below are drifting against the wall
+		 *  clock again — a failure that names the cause instead of a time bomb. */
+		expect(new Date().toISOString()).toBe("2026-10-05T14:04:47.000Z");
+	});
+
 	it("answers the listing byte-for-byte as the corpus captured it", () => {
 		const fix = loadFixtures();
 		expect(JSON.stringify(store().list())).toBe(

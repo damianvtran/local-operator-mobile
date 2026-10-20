@@ -42,6 +42,7 @@ import { isRouteRefused } from "@/features/session/connection-view";
 import { compactTitleChars, headerTitleChars } from "@/features/session/header";
 import { rosterNeedsAttention } from "@/features/session/panels";
 import { pendingView } from "@/features/session/pending";
+import { collapsePendingTranscript } from "@/features/session/pending-layout";
 import {
 	middleTruncate,
 	projectSubagents,
@@ -55,7 +56,18 @@ import { useCompletionAck } from "@/features/session/use-completion-ack";
 import { draftSlashQuery, useComposer } from "@/features/session/use-composer";
 import { useFind } from "@/features/session/use-find";
 import { useSessionRuntime } from "@/features/session/use-session";
-import { CONTROL, EMPTY, ROLE, SCREEN, SURFACE } from "@/ui/a11y";
+import { isRemoteRow } from "@/features/sessions/session-projection";
+import { SessionTagLine } from "@/features/sessions/tag-line";
+import { canAssignSessionTags } from "@/features/sessions/tags";
+import { SessionTagsSheet } from "@/features/sessions/tags-sheet";
+import {
+	CONTROL,
+	EMPTY,
+	ROLE,
+	SCREEN,
+	SURFACE,
+	sessionHeaderTagLineId,
+} from "@/ui/a11y";
 import {
 	Chip,
 	EmptyState,
@@ -101,12 +113,35 @@ import { useTextScale } from "@/ui/text-scale-provider";
 export default function Session() {
 	const { id } = useLocalSearchParams<{ id: string }>();
 	const sessionId = typeof id === "string" ? id : "";
+	/* The header's tags come from the LIST frame, not the projection: the tag pair
+	 *  is the listing's own field (`SessionSummary.tags`), and the projection
+	 *  contract does not repeat it. The list stream carries it for every row the
+	 *  relay knows, so a deep link settles as soon as its first frame arrives. */
+	const listRow = useListState((state) =>
+		state.sessions.find((row) => row.session_id === sessionId),
+	);
 	const router = useRouter();
+	/* The header's tag line is a DISCLOSURE when this conversation is the local
+	 *  one and the relay offers the routes: it opens the same sheet the list
+	 *  row's menu does, fed by this same list frame. A remote row keeps the line
+	 *  read-only — its store is another device's, and this phone has no route to
+	 *  write it. One sheet, one write path; the alternative was a second state to
+	 *  reconcile against the same SSE frame. */
+	const [tagsOpen, setTagsOpen] = useState(false);
 
 	const runtime = useSessionRuntime(sessionId);
 	/* The relay's capability block, off the same list frame the screen already reads
 	 * below. Declared before the composer because the composer's mic gate needs it. */
 	const capabilities = useListState((state) => state.capabilities);
+	/* Whether the header may offer the assignment sheet at all: a LOCAL
+	 *  conversation whose relay advertises the routes. It is computed once so the
+	 *  header's presence and its press cannot disagree (review round 2, U8). The
+	 *  capability test is the tested helper, never a second comparison; a remote
+	 *  row stays read-only even when the relay offers the routes. */
+	const tagsAssignable =
+		listRow !== undefined &&
+		!isRemoteRow(listRow) &&
+		canAssignSessionTags(capabilities);
 	const composer = useComposer({
 		sessionId,
 		source: runtime.source,
@@ -459,14 +494,44 @@ export default function Session() {
 			/>
 		) : null;
 
+	const connectionBanner = (
+		<ConnectionBanner
+			view={runtime.connection}
+			onAction={(action) => {
+				if (action.kind === "retry") runtime.reload();
+				// A sign-in and a console link are the route screens' work; this
+				// screen has nowhere to put a credential field, so it sends the
+				// reader to the screen that owns it rather than failing silently.
+				if (action.kind === "sign-in") router.push("/welcome");
+				if (action.kind === "console") router.push("/tunnels");
+			}}
+		/>
+	);
+
 	const transcript =
-		runtime.source.reason === "no-route" ? (
-			<EmptyState
-				headline="This session is not connected yet."
-				next="Open it from the session list once a computer is connected."
-				testID={EMPTY.session}
-			/>
-		) : runtime.entries.length === 0 && runtime.loading ? (
+		runtime.content === "disconnected" ? (
+			<ScrollView
+				className="flex-1 min-h-0"
+				contentContainerStyle={{ flexGrow: 1 }}
+			>
+				<EmptyState
+					headline="This session is not connected yet."
+					next="Open it from the session list once a computer is connected."
+					testID={EMPTY.session}
+				/>
+				{connectionBanner}
+			</ScrollView>
+		) : runtime.content === "recovery" ? (
+			// With no owned frame, recovery is the content, not a fake empty chat.
+			// Its entire notice and action scroll together at enlarged text sizes;
+			// the pinned composer cannot paint over required recovery guidance.
+			<ScrollView
+				className="flex-1 min-h-0"
+				contentContainerStyle={{ flexGrow: 1 }}
+			>
+				{connectionBanner}
+			</ScrollView>
+		) : runtime.content === "loading" ? (
 			// Loading is a skeleton, never a spinner over a blank column: the three bars
 			// reserve the shape the transcript will take. `flex-1` is load-bearing and not
 			// cosmetic (design round D18): the transcript branch is a `FlatList`, which
@@ -474,9 +539,21 @@ export default function Session() {
 			// loading bars — measured at 200 % text, the composer's content ended 39 % of
 			// the way down the screen here against 99 % in `empty`/`populated`. A composer
 			// floating mid-screen is the first thing a reader notices.
-			<View className="flex-1 px-4 pt-3">
-				<Skeleton lines={3} testID={SURFACE.sessionLoading} />
-			</View>
+			runtime.connection.id === null ? (
+				<View className="flex-1 px-4 pt-3">
+					<Skeleton lines={3} testID={SURFACE.sessionLoading} />
+				</View>
+			) : (
+				<ScrollView
+					className="flex-1 min-h-0"
+					contentContainerStyle={{ flexGrow: 1 }}
+				>
+					<View className="px-4 pt-3">
+						<Skeleton lines={3} testID={SURFACE.sessionLoading} />
+					</View>
+					{connectionBanner}
+				</ScrollView>
+			)
 		) : (
 			/* The rail overlays the transcript's own area — its `flex-1` wrapper
 			 *  is what bounds the column to the transcript (the parent spans the
@@ -484,11 +561,15 @@ export default function Session() {
 			 *  takes no layout width from the rows (the defect the web client's
 			 *  two-pane rail once was). */
 			<View
-				className="flex-1"
+				className="flex-1 min-h-0"
 				// Keep the list mounted (and its historical offset), but do not show a 17 pt
 				// message sliver above an ask. The decision owns this short window (D22).
 				style={
-					compact && pendingViewProps !== null
+					collapsePendingTranscript(
+						compact,
+						pendingViewProps !== null,
+						runtime.connection.id,
+					)
 						? { height: 0, flex: 0, overflow: "hidden" }
 						: undefined
 				}
@@ -497,6 +578,7 @@ export default function Session() {
 					testID={SURFACE.sessionTranscript}
 					sessionId={sessionId}
 					entries={runtime.entries}
+					footer={connectionBanner}
 					streamingRowId={runtime.streamingRowId}
 					loadImage={runtime.loadImage}
 					onOpenAgent={openAgent}
@@ -749,6 +831,29 @@ export default function Session() {
 					icon={({ color, size }) => <Search color={color} size={size} />}
 				/>
 			}
+			/* The conversation's tags, in the header's own column. The line is a
+			 *  disclosure on a LOCAL conversation whose relay advertises the routes
+			 *  (review round 1, U1): the tags are already the subject, so the line is
+			 *  the control that opens their sheet. A remote row (or an older relay)
+			 *  keeps it read-only. The LIST frame carries the pair on every relay that
+			 *  has the field; an older relay defaults to `[]`, which paints no line.
+			 *
+			 *  The disclosure is present even when the assignment is EMPTY (review
+			 *  round 2, U8): gating the whole line on `tags.length` left an untagged
+			 *  local conversation with no visible route at all, and the long-press
+			 *  menu is not a route a reader can see. A read-only line keeps the old
+			 *  rule — badges with no assignment are a blank gap, not a fact. */
+			headerDetail={
+				tagsAssignable || (listRow?.tags?.length ?? 0) > 0 ? (
+					<SessionTagLine
+						tags={listRow?.tags ?? []}
+						testID={sessionHeaderTagLineId(sessionId)}
+						onPress={tagsAssignable ? () => setTagsOpen(true) : undefined}
+						actionTestID={CONTROL.sessionHeaderTagsAction}
+						accessibilityHint="Shows the tag choices for this conversation"
+					/>
+				) : undefined
+			}
 		>
 			<SessionStateMarkers facts={stateFacts} />
 			{/* The find states, asserted by the capture cells that declare them
@@ -772,8 +877,8 @@ export default function Session() {
 			    STACK inside the measure instead of taking a rail beside it — at 640 pt
 			    a rail would leave ~280 pt of transcript, which is the squeezed column
 			    the cap exists to prevent. */}
-			<View className="flex-1">
-				<View className="flex-1" testID={SURFACE.sessionColumn}>
+			<View className="flex-1 min-h-0">
+				<View className="flex-1 min-h-0" testID={SURFACE.sessionColumn}>
 					{transcript}
 					{/* SECONDARY CHROME. Wide: the panels and the working line are plain
 					    siblings, exactly the column this screen has always had. Short
@@ -941,17 +1046,11 @@ export default function Session() {
 					    full width: on a tablet a composer 1366 pt wide sits under a 720 pt
 					    transcript and reads as a different surface (QA round 2, Q10). On a
 					    phone the measure is the screen, so nothing moves. */}
-					<ConnectionBanner
-						view={runtime.connection}
-						onAction={(action) => {
-							if (action.kind === "retry") runtime.reload();
-							// A sign-in and a console link are the route screens' work; this
-							// screen has nowhere to put a credential field, so it sends the
-							// reader to the screen that owns it rather than failing silently.
-							if (action.kind === "sign-in") router.push("/welcome");
-							if (action.kind === "console") router.push("/tunnels");
-						}}
-					/>
+					{/* The notice now occupies the transcript's permanent scroll footer,
+					    not scarce fixed chrome. Keep this empty sibling slot: Composer,
+					    FindBar, PendingCard and AskBar never change parents/positions on
+					    expiry. Reparenting TextInput would discard native IME state. */}
+					<View />
 
 					{/* The ask bar: the MINIMIZED affordance (§5.0), directly above the
 					    composer and BELOW the connection banner — when the relay is
@@ -1055,6 +1154,16 @@ export default function Session() {
 				onActivate={find.activate}
 				messages={find.messages}
 				older={runtime.olderThanLoaded}
+			/>
+
+			{/* The header's disclosure target: the SAME sheet the list row's menu
+			    opens, fed by the same list frame. One write path. */}
+			<SessionTagsSheet
+				visible={tagsOpen}
+				sessionId={sessionId}
+				tags={listRow?.tags ?? []}
+				primary={listRow?.primary ?? null}
+				onClose={() => setTagsOpen(false)}
 			/>
 
 			{/* The walked queue (§5.3): the aggregate route, so a sitting can clear

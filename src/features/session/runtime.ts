@@ -1,26 +1,9 @@
 /**
- * The session screen's runtime: the relay client, the projection stream, and the
- * connection state that falls out of both.
- *
- * **Two module-level singletons, and both are deliberate.** The projection store
- * holds the last good frame per session so a navigation away and back does not
- * blank a transcript, and the route slot holds the active connection profile. Both
- * must outlive a screen mount; neither belongs in React state.
- *
- * **The route slot is a seam, not a second authority.** `setActiveRoute` is what
- * the app's connection provider calls when a computer is chosen (the provider
- * lands with the connection store — see `app/_layout.tsx`'s own note). Until then
- * the slot is empty, and on the WEB build an empty slot falls through to the page
- * origin (`relay-source.ts`). The slot is never consulted for anything else: a
- * screen cannot ask which computer it is talking to, because it is not a question a
- * screen has.
- *
- * No React in this file's data half — the store and the route slot are plain
- * objects, so `use-session.ts` is the only place that subscribes.
+ * Session projection and stream utilities. The projection store outlives screen
+ * mounts; route admission belongs exclusively to the connection provider/store.
  */
 
 import { Platform } from "react-native";
-import type { RouteProfile } from "@/connection";
 import type { SessionProjection, TranscriptEntry } from "@/contracts";
 import {
 	type ErrorSurface,
@@ -35,25 +18,6 @@ import { createProjectionStore } from "@/state";
 /** The app's projection store: one instance, because a second would hold a second
  *  answer to "what is the current frame". */
 export const sessions = createProjectionStore();
-
-/* ------------------------------------------------------------- the route slot */
-
-let activeRoute: RouteProfile | null = null;
-const routeListeners = new Set<() => void>();
-
-export const setActiveRoute = (route: RouteProfile | null): void => {
-	activeRoute = route;
-	for (const listener of routeListeners) listener();
-};
-
-export const getActiveRoute = (): RouteProfile | null => activeRoute;
-
-export const subscribeRoute = (listener: () => void): (() => void) => {
-	routeListeners.add(listener);
-	return () => {
-		routeListeners.delete(listener);
-	};
-};
 
 /* --------------------------------------------------------------- stream state */
 

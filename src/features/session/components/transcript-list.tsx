@@ -109,6 +109,9 @@ export type TranscriptListProps = {
 	empty?: React.ReactElement | null;
 	/** Rendered above the rows, inside the scroller: the status strip. */
 	header?: React.ReactNode;
+	/** Complete status/recovery content after the actual rows. An element, not a
+	 * component factory: changing notice props must not remount the list or input. */
+	footer?: React.ReactElement | null;
 	/** The entry id whose BOTTOM the ack gate watches — the completion
 	 *  attention's `anchor_id` (ADR 0006 §3.1). `null` when nothing is being
 	 *  watched. */
@@ -218,6 +221,7 @@ export const TranscriptList = ({
 	supplementClient,
 	empty,
 	header,
+	footer,
 	anchorId = null,
 	onAnchorVisible,
 	highlightId = null,
@@ -981,6 +985,10 @@ export const TranscriptList = ({
 					{header}
 				</>
 			}
+			// A permanent footer host lets recovery grow inside this scroller. It is
+			// not a transcript row/completion anchor; existing tail-vs-away policy
+			// receives the content-size change without forcing a non-tail reader down.
+			ListFooterComponent={<View>{footer}</View>}
 			ListEmptyComponent={empty ?? undefined}
 			// `removeClippedSubviews` is left OFF deliberately: it detaches rows that
 			// scroll out of view, and a detached row loses the open/closed state of its

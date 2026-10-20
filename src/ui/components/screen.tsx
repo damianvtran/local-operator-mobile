@@ -32,6 +32,17 @@ export type ScreenProps = {
 	headerAction?: ReactNode;
 	/** Left-aligned header control (a back affordance). */
 	headerLeading?: ReactNode;
+	/**
+	 * A line under the title, inside the title's own column (LOH-11 S3: the
+	 * session header's conversation tags). Optional and absent on every other
+	 * screen, so the header it does not touch renders byte-for-byte as before.
+	 *
+	 * It rides the TITLE column rather than the whole header so it starts at the
+	 * title's x and cannot push the action cluster — the width budget
+	 * (`headerTitleChars`) is unchanged, and the box grows in HEIGHT only, which
+	 * the header already allows (`min-h-14`, never `h-14`).
+	 */
+	headerDetail?: ReactNode;
 	/** Screens that own their own scrolling (the transcript) pass false. */
 	scroll?: boolean;
 	/** `false` leaves the readable-measure cap OFF, for a screen that owns a
@@ -74,6 +85,7 @@ export const Screen = ({
 	children,
 	headerAction,
 	headerLeading,
+	headerDetail,
 	scroll = true,
 	capColumn = true,
 	stackBelowWidth,
@@ -157,13 +169,26 @@ export const Screen = ({
 						 *  on 390 pt and two at 320). */}
 						<View className="flex-row items-center gap-2">{headerLeading}</View>
 						{title !== undefined ? (
-							<Heading
-								level={1}
-								className="text-display text-ink"
-								numberOfLines={2}
-							>
-								{title}
-							</Heading>
+							headerDetail === undefined ? (
+								<Heading
+									level={1}
+									className="text-display text-ink"
+									numberOfLines={2}
+								>
+									{title}
+								</Heading>
+							) : (
+								<View className="gap-1">
+									<Heading
+										level={1}
+										className="text-display text-ink"
+										numberOfLines={2}
+									>
+										{title}
+									</Heading>
+									{headerDetail}
+								</View>
+							)
 						) : null}
 						{/* `flex-wrap` and not a squeeze: the action cluster can hold a count
 						 *  badge, an icon button and an avatar, and at 200 % on a 320 pt phone
@@ -178,17 +203,32 @@ export const Screen = ({
 					<>
 						{headerLeading}
 						{title !== undefined ? (
-							<Heading
-								level={1}
-								className={
-									compact
-										? "flex-1 text-title text-ink"
-										: "flex-1 text-display text-ink"
-								}
-								numberOfLines={1}
-							>
-								{title}
-							</Heading>
+							headerDetail === undefined ? (
+								<Heading
+									level={1}
+									className={
+										compact
+											? "flex-1 text-title text-ink"
+											: "flex-1 text-display text-ink"
+									}
+									numberOfLines={1}
+								>
+									{title}
+								</Heading>
+							) : (
+								<View className="min-w-0 flex-1 gap-1">
+									<Heading
+										level={1}
+										className={
+											compact ? "text-title text-ink" : "text-display text-ink"
+										}
+										numberOfLines={1}
+									>
+										{title}
+									</Heading>
+									{headerDetail}
+								</View>
+							)
 						) : null}
 						{headerAction}
 					</>

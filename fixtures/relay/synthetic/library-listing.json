@@ -1,0 +1,336 @@
+{
+  "provenance": {
+    "kind": "synthetic",
+    "relay_ref": "local-operator 28c619662",
+    "modelled_on": "docs/design/library.md §4 (frozen 2026-10-18) and local_operator/server/models/desktop_library.py at 28c6196624",
+    "why": "The relay's Library routes had not landed when the mobile client slice was written, so this sample is what the mock relay serves and what the contract/logic tests read. Display paths only; no absolute path and no real account or device identifiers."
+  },
+  "request": {
+    "method": "GET",
+    "path": "/api/library/assets"
+  },
+  "status": 200,
+  "headers": {
+    "content-type": "application/json"
+  },
+  "body": {
+    "state": "ready",
+    "revision": 7,
+    "total": 4,
+    "counts": {
+      "category": {
+        "image": 1,
+        "sound": 1,
+        "document": 2
+      },
+      "origin_group": {
+        "generated": 1,
+        "created": 1,
+        "mentioned": 2
+      },
+      "kind": {
+        "image": 1,
+        "audio": 1,
+        "markdown": 1,
+        "pdf": 1
+      }
+    },
+    "tags": [
+      {
+        "id": "0a1b2c3d4e",
+        "name": "reference",
+        "category": "topic",
+        "created_by": "librarian",
+        "count": 2,
+        "created_at": 1791000000.0,
+        "updated_at": 1791000000.0
+      },
+      {
+        "id": "1a2b3c4d5e",
+        "name": "briefs",
+        "category": "project",
+        "created_by": "user",
+        "count": 1,
+        "created_at": 1791000000.0,
+        "updated_at": 1791000000.0
+      },
+      {
+        "id": "2a3b4c5d6e",
+        "name": "client-work",
+        "category": "custom",
+        "created_by": "user",
+        "count": 1,
+        "created_at": 1791000000.0,
+        "updated_at": 1791000000.0
+      }
+    ],
+    "rows": [
+      {
+        "id": "la_0123456789abcdef",
+        "ref": {
+          "type": "path",
+          "display_path": "~/Pictures/library-sunset.png",
+          "digest": null,
+          "content_type": "image/png"
+        },
+        "name": "Sunset over the bay",
+        "derived_name": "library-sunset.png",
+        "description": "A generated sunset used in the design review.",
+        "kind": "image",
+        "category": "image",
+        "origin": "generated",
+        "origin_group": "generated",
+        "origins": [
+          "generated"
+        ],
+        "tags": [
+          {
+            "id": "0a1b2c3d4e",
+            "name": "reference",
+            "category": "topic"
+          }
+        ],
+        "primary_tag": "0a1b2c3d4e",
+        "size_bytes": 48213,
+        "width": 1024,
+        "height": 768,
+        "duration_s": null,
+        "created_at": 1792000000.0,
+        "modified_at": 1792000200.0,
+        "last_seen_at": 1792000300.0,
+        "exists": true,
+        "highlighted": false,
+        "highlight_why": null,
+        "occurrences": [
+          {
+            "session_id": "a1b2c3d4e5f6",
+            "session_title": "Design review",
+            "origin": "generated",
+            "tool": "generate_image",
+            "at": 1792000000.0,
+            "intent": null,
+            "first_seq": 4,
+            "last_seq": 4,
+            "child_id": null,
+            "label": null
+          }
+        ],
+        "session_count": 1,
+        "chat": {
+          "session_id": "a1b2c3d4e5f6",
+          "title": "Design review",
+          "updated_at": 1792000300.0
+        },
+        "preview": {
+          "state": "ready",
+          "mime_type": "image/png",
+          "pages": null
+        },
+        "organized": {
+          "at": 1792000400.0,
+          "by": "librarian",
+          "confidence": 0.82
+        },
+        "locked": false,
+        "favorite": true,
+        "archived": false
+      },
+      {
+        "id": "la_abcdef0123456789",
+        "ref": {
+          "type": "path",
+          "display_path": "~/Documents/brief.md",
+          "digest": null,
+          "content_type": "text/markdown"
+        },
+        "name": "Launch brief",
+        "derived_name": "brief.md",
+        "description": "The short brief written during the launch conversation.",
+        "kind": "markdown",
+        "category": "document",
+        "origin": "written",
+        "origin_group": "created",
+        "origins": [
+          "written"
+        ],
+        "tags": [
+          {
+            "id": "0a1b2c3d4e",
+            "name": "reference",
+            "category": "topic"
+          },
+          {
+            "id": "1a2b3c4d5e",
+            "name": "briefs",
+            "category": "project"
+          }
+        ],
+        "primary_tag": "1a2b3c4d5e",
+        "size_bytes": 2048,
+        "width": null,
+        "height": null,
+        "duration_s": null,
+        "created_at": 1791900000.0,
+        "modified_at": 1791900100.0,
+        "last_seen_at": 1791900200.0,
+        "exists": true,
+        "highlighted": true,
+        "highlight_why": "selected in the transcript",
+        "occurrences": [
+          {
+            "session_id": "b2c3d4e5f6a7",
+            "session_title": "Launch planning",
+            "origin": "written",
+            "tool": "write_file",
+            "at": 1791900000.0,
+            "intent": null,
+            "first_seq": 2,
+            "last_seq": 2,
+            "child_id": null,
+            "label": null
+          }
+        ],
+        "session_count": 1,
+        "chat": null,
+        "preview": {
+          "state": "ready",
+          "mime_type": "text/markdown",
+          "pages": null
+        },
+        "organized": {
+          "at": 1791900300.0,
+          "by": "librarian",
+          "confidence": 0.71
+        },
+        "locked": false,
+        "favorite": false,
+        "archived": false
+      },
+      {
+        "id": "la_1111111111111111",
+        "ref": {
+          "type": "path",
+          "display_path": "~/Music/voice-note.m4a",
+          "digest": null,
+          "content_type": "audio/mp4"
+        },
+        "name": "Voice note",
+        "derived_name": "voice-note.m4a",
+        "description": "",
+        "kind": "audio",
+        "category": "sound",
+        "origin": "mentioned",
+        "origin_group": "mentioned",
+        "origins": [
+          "mentioned"
+        ],
+        "tags": [],
+        "primary_tag": null,
+        "size_bytes": 128000,
+        "width": null,
+        "height": null,
+        "duration_s": 12.4,
+        "created_at": 1791800000.0,
+        "modified_at": 1791800000.0,
+        "last_seen_at": 1791800400.0,
+        "exists": true,
+        "highlighted": false,
+        "highlight_why": null,
+        "occurrences": [
+          {
+            "session_id": "c3d4e5f6a7b8",
+            "session_title": "Field notes",
+            "origin": "mentioned",
+            "tool": "",
+            "at": 1791800400.0,
+            "intent": null,
+            "first_seq": 7,
+            "last_seq": 7,
+            "child_id": null,
+            "label": null
+          }
+        ],
+        "session_count": 1,
+        "chat": null,
+        "preview": {
+          "state": "ready",
+          "mime_type": "audio/mp4",
+          "pages": null
+        },
+        "organized": null,
+        "locked": false,
+        "favorite": false,
+        "archived": false
+      },
+      {
+        "id": "la_2222222222222222",
+        "ref": {
+          "type": "path",
+          "display_path": "~/Documents/contract.pdf",
+          "digest": null,
+          "content_type": "application/pdf"
+        },
+        "name": "Contract",
+        "derived_name": "contract.pdf",
+        "description": "The signed contract, mentioned in the client thread.",
+        "kind": "pdf",
+        "category": "document",
+        "origin": "mentioned",
+        "origin_group": "mentioned",
+        "origins": [
+          "mentioned"
+        ],
+        "tags": [
+          {
+            "id": "2a3b4c5d6e",
+            "name": "client-work",
+            "category": "custom"
+          }
+        ],
+        "primary_tag": "2a3b4c5d6e",
+        "size_bytes": 402100,
+        "width": null,
+        "height": null,
+        "duration_s": null,
+        "created_at": 1791700000.0,
+        "modified_at": 1791700000.0,
+        "last_seen_at": 1791700500.0,
+        "exists": true,
+        "highlighted": false,
+        "highlight_why": null,
+        "occurrences": [
+          {
+            "session_id": "d4e5f6a7b8c9",
+            "session_title": "Client work",
+            "origin": "mentioned",
+            "tool": "",
+            "at": 1791700500.0,
+            "intent": null,
+            "first_seq": 12,
+            "last_seq": 12,
+            "child_id": null,
+            "label": null
+          }
+        ],
+        "session_count": 1,
+        "chat": null,
+        "preview": {
+          "state": "ready",
+          "mime_type": "application/pdf",
+          "pages": 3
+        },
+        "organized": null,
+        "locked": false,
+        "favorite": false,
+        "archived": false
+      }
+    ],
+    "next_cursor": null,
+    "cursor_reset": false,
+    "scan": {
+      "sessions_total": 12,
+      "sessions_scanned": 12
+    },
+    "librarian": null
+  }
+}

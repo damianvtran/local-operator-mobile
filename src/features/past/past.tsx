@@ -4,7 +4,17 @@ import { FlatList, Pressable, RefreshControl, Text, View } from "react-native";
 
 import type { PastSession } from "@/contracts";
 import { useConnection } from "@/features/auth/connection-provider";
-import { CONTROL, EMPTY, pastRowId, REGION, ROLE, SCREEN } from "@/ui/a11y";
+import { SessionTagLine } from "@/features/sessions/tag-line";
+import { tagAnnouncement } from "@/features/sessions/tags";
+import {
+	CONTROL,
+	EMPTY,
+	pastRowId,
+	pastTagLineId,
+	REGION,
+	ROLE,
+	SCREEN,
+} from "@/ui/a11y";
 import { Alert } from "@/ui/components/alert";
 import { Button } from "@/ui/components/button";
 import { EmptyState } from "@/ui/components/empty-state";
@@ -238,7 +248,11 @@ export default function PastSessions() {
 					renderItem={({ item }) => (
 						<Pressable
 							accessibilityRole={ROLE.button}
-							accessibilityLabel={`${item.name || "untitled"}${item.forked ? ", a copy" : ""}`}
+							accessibilityLabel={`${item.name || "untitled"}${item.forked ? ", a copy" : ""}${
+								(item.tags?.length ?? 0) > 0
+									? `, ${tagAnnouncement(item.tags ?? [])}`
+									: ""
+							}`}
 							onPress={() => void resume(item)}
 							testID={pastRowId(item.id)}
 						>
@@ -251,6 +265,16 @@ export default function PastSessions() {
 									<Text className="text-body-sm text-ink" numberOfLines={1}>
 										{item.name.trim() || "untitled"}
 									</Text>
+									{/* Read-only: past rows carry the same `tags`/`primary` pair as a
+									 *  live row (the schema defaults an older relay to `[]`), and this
+									 *  screen has no assignment action — resuming is its only verb. */}
+									<SessionTagLine
+										tags={item.tags ?? []}
+										testID={pastTagLineId(item.id)}
+										/* The pressable row announces the tags; a second
+										 *  accessible node here would say them twice. */
+										announce={false}
+									/>
 									<View className="flex-row items-center gap-2">
 										<Text
 											className="flex-1 text-meta text-ink-dim"

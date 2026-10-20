@@ -1,0 +1,34 @@
+{
+  "provenance": {
+    "kind": "live",
+    "relay_ref": "local-operator 64307c452",
+    "captured_at": "2026-10-19",
+    "how": "captured from an isolated `lop mobile serve` at the installed 0.82.3 release (redirected HOME + LOCAL_OPERATOR_CONFIG_DIR, LO_MOBILE_NO_DIAL=1, own ephemeral port, seeded durable conversation); see ../README.md",
+    "redactions": "isolated home shown as ~; portal password and cookie signatures absent",
+    "what": "the catalogue after one conversation was assigned both tags (registry order, with the store's conversation counts)"
+  },
+  "request": {
+    "method": "GET",
+    "path": "/api/tags"
+  },
+  "status": 200,
+  "headers": {
+    "content-type": "application/json"
+  },
+  "body": {
+    "tags": [
+      {
+        "id": "d28b35a273",
+        "name": "Work",
+        "order": 0,
+        "conversations": 1
+      },
+      {
+        "id": "cb65004501",
+        "name": "Research",
+        "order": 1,
+        "conversations": 1
+      }
+    ]
+  }
+}

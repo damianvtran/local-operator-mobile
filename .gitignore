@@ -68,6 +68,10 @@ playwright-report/
 .maestro/output/
 maestro-output/
 
+# Python (the CI proof tooling is Python; bytecode is a build artefact)
+__pycache__/
+*.pyc
+
 # Logs
 *.log
 npm-debug.log*

@@ -140,6 +140,10 @@ export const Dialog = ({
 							style={{ paddingLeft: insets.left, paddingRight: insets.right }}
 						>
 							<View
+								// Name the actual surface, not its non-hit-testable inset carrier.
+								// Insets belong to that carrier once; adding margins here doubles them.
+								role={ROLE.dialog}
+								aria-label={title}
 								className={DIALOG_SURFACE_CLASS}
 								style={{
 									...shadow,
