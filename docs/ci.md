@@ -30,6 +30,23 @@ The only skip that can appear in a green run by design is the path-gated
 at all, and a run whose `harness` job fails is red, with the missing pieces named
 in the annotation.
 
+## Core device audit only (on demand)
+
+Dispatch `e2e.yml` with `proof_mode=core-audit-only` to run only the harness
+bootstrap and the **existing `web-audit-core` job**. This permits a post-merge
+five-device audit without repeating the per-push web sample, mock/docs sweeps,
+Maestro or account-routing proofs. The core commands, device plan, bounds and
+artifacts are unchanged; this is not a replacement for normal PR/full E2E gates.
+
+```sh
+gh workflow run e2e.yml --ref <branch-or-tag> -f proof_mode=core-audit-only
+```
+
+Only explicit dispatch accepts this mode, with `proof_stage=full` (the default).
+The default/full, push/PR/nightly and all existing targeted-proof behavior remain
+unchanged. Record the exact run SHA and URL; a targeted run proves only its core
+audit, not skipped native, account, documentation or per-push suites.
+
 ## Targeted S15 visual proof (not full E2E)
 
 `e2e.yml` has an optional `workflow_dispatch` input, `proof_mode=s15-proof`,
