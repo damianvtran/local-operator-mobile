@@ -1,7 +1,7 @@
 import { useState } from "react";
 
 import { Pressable, ScrollView, Text, View } from "react-native";
-import { rosterBody } from "@/features/session/panels";
+import { compactClauses, rosterBody } from "@/features/session/panels";
 import type { SubagentProjection } from "@/features/session/projection";
 import { CONTROL, ROLE, SURFACE, state } from "@/ui/a11y";
 import { cx } from "@/ui/variants";
@@ -27,6 +27,11 @@ export type SubagentsPanelProps = {
 	/** The viewport the panel is inside, so its roster body is bounded by a SHARE of
 	 *  the screen rather than by a constant (design round 2, D11/D12). */
 	viewportHeight: number;
+	/** Short landscape: the clauses share the summary line, in URGENCY order and (while
+	 *  collapsed) attention-only, and the opened body is a plain column of whole rows
+	 *  with NO scroller of its own — the secondary region owns the one scroll, so a
+	 *  thumb never has to choose between two nested scrollers. */
+	compact?: boolean;
 	testID: string;
 };
 
@@ -56,6 +61,7 @@ export const SubagentsPanel = ({
 	onToggle,
 	onOpenAgent,
 	viewportHeight,
+	compact = false,
 	testID,
 }: SubagentsPanelProps) => {
 	/* The first row's rendered height, so the body's cap lands BETWEEN rows. A row
@@ -74,6 +80,23 @@ export const SubagentsPanel = ({
 		// `undefined` before the first layout, where the estimate stands in.
 		rowPt: rowHeight ?? undefined,
 	});
+
+	/* Compact: urgency-ordered and attention-only, open or closed (`compactClauses`):
+	 *  opened, the body's rows already carry every child's own status, so repeating
+	 *  all six clauses in the header only wrapped it to three lines and pushed the
+	 *  first row under the fold. The accessible name below is built from
+	 *  `subagents.clauses`, so every status stays announced whatever the header paints. */
+	const shownClauses = compact
+		? compactClauses(subagents.clauses, false)
+		: subagents.clauses;
+	const clauseTexts = shownClauses.map((clause) => (
+		<Text
+			key={clause.status}
+			className={`shrink-0 text-meta ${clause.inkClass}`}
+		>
+			{clause.count} {clause.word}
+		</Text>
+	));
 
 	return (
 		<View className="border-t border-hairline" testID={testID}>
@@ -100,34 +123,40 @@ export const SubagentsPanel = ({
 				    clauses; `gap-y-1` keeps wrapped clause lines reading as one block. */}
 				<View className="min-h-11 gap-y-1 px-4 py-2">
 					<View className="flex-row items-start gap-2">
-						<View className="min-w-0 flex-1 flex-row flex-wrap items-center gap-2">
+						<View
+							className={
+								compact
+									? "min-w-0 flex-1 flex-row flex-wrap items-center gap-x-2 gap-y-1"
+									: "min-w-0 flex-1 flex-row flex-wrap items-center gap-2"
+							}
+						>
 							<Text className="text-mono-sm text-ink-dim">subagents</Text>
 							<Text className="text-mono-sm text-ink-muted">
 								{subagents.totalLabel}
 							</Text>
+							{compact ? clauseTexts : null}
 						</View>
 						<Text className="text-meta text-ink-dim" aria-hidden>
 							{open ? "▾" : "▸"}
 						</Text>
 					</View>
-					<View className="flex-row flex-wrap items-center gap-x-3 gap-y-1">
-						{subagents.clauses.map((clause) => (
-							<Text
-								key={clause.status}
-								className={`shrink-0 text-meta ${clause.inkClass}`}
-							>
-								{clause.count} {clause.word}
-							</Text>
-						))}
-					</View>
+					{compact ? null : (
+						<View className="flex-row flex-wrap items-center gap-x-3 gap-y-1">
+							{clauseTexts}
+						</View>
+					)}
 				</View>
 			</Pressable>
 			{open ? (
 				<ScrollView
 					// A whole number of rows, capped by a share of the viewport: the fixed
 					// 256 pt body pushed the composer off a 568 pt screen (D11) and cut the
-					// sixth row into a lone glyph (D12).
-					style={{ maxHeight: body.maxHeight }}
+					// sixth row into a lone glyph (D12). In compact the cap and the scroll
+					// move to the secondary region (one scroll owner, no nested scroller),
+					// and this stays a ScrollView so the tree does not change shape — and
+					// remount — when the device rotates.
+					style={compact ? undefined : { maxHeight: body.maxHeight }}
+					scrollEnabled={!compact}
 					testID={SURFACE.subagentsBody}
 				>
 					{subagents.rows.map((row, index) => (
@@ -188,7 +217,7 @@ export const SubagentsPanel = ({
 			{/* The cue: a bounded scroller whose last visible row is whole still has to
 			    say that more is below, or the reader counts five rows against a summary
 			    that promised six. */}
-			{open && body.hiddenRows > 0 ? (
+			{open && !compact && body.hiddenRows > 0 ? (
 				<Text className="px-4 pb-1 text-meta text-ink-dim">
 					+{body.hiddenRows} more
 				</Text>

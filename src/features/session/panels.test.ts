@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { ROSTER_ROW_PT, rosterBody } from "@/features/session/panels";
+import {
+	compactClauses,
+	ROSTER_ROW_PT,
+	rosterBody,
+	rosterNeedsAttention,
+} from "@/features/session/panels";
 
 /**
  * The roster body's bound, pinned at the case it exists for: a six-row roster on a
@@ -65,5 +70,49 @@ describe("the roster body's bound", () => {
 		expect(rosterBody({ viewportHeight: 568, rowCount: 1 }).visibleRows).toBe(
 			1,
 		);
+	});
+});
+
+describe("the compact subagents header", () => {
+	const clauses = [
+		{ status: "running", count: 1 },
+		{ status: "queued", count: 1 },
+		{ status: "parked", count: 1 },
+		{ status: "failed", count: 12 },
+		{ status: "completed", count: 1 },
+		{ status: "cancelled", count: 1 },
+	];
+
+	it("leads with the urgent statuses and drops the settled ones while collapsed", () => {
+		expect(compactClauses(clauses, false).map((c) => c.status)).toEqual([
+			"failed",
+			"parked",
+			"running",
+		]);
+	});
+
+	it("keeps every status, still urgency-ordered, once the panel is open", () => {
+		expect(compactClauses(clauses, true).map((c) => c.status)).toEqual([
+			"failed",
+			"parked",
+			"running",
+			"queued",
+			"completed",
+			"cancelled",
+		]);
+	});
+
+	it("never mutates the roster's own clause order", () => {
+		const before = clauses.map((c) => c.status);
+		compactClauses(clauses, true);
+		expect(clauses.map((c) => c.status)).toEqual(before);
+	});
+
+	it("flags a roster with a failed or parked child as needing attention", () => {
+		expect(rosterNeedsAttention(clauses)).toBe(true);
+		expect(
+			rosterNeedsAttention([{ status: "running" }, { status: "completed" }]),
+		).toBe(false);
+		expect(rosterNeedsAttention([])).toBe(false);
 	});
 });

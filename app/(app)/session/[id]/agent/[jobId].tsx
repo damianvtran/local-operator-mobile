@@ -166,7 +166,7 @@ export default function Subagent() {
 						className="border-b border-hairline px-4 py-2"
 						testID={SURFACE.subagentPrompt}
 					>
-						<Text className="pb-0.5 text-meta text-ink-dim">prompt</Text>
+						<Text className="pb-1 text-meta text-ink-dim">prompt</Text>
 						<Text className="text-body-sm text-ink-muted">{detail.prompt}</Text>
 					</View>
 				) : null}
@@ -190,7 +190,7 @@ export default function Subagent() {
 						header={
 							detail.result_text.length > 0 ? (
 								<View className="px-4 py-2">
-									<Text className="pb-0.5 text-meta text-ink-dim">result</Text>
+									<Text className="pb-1 text-meta text-ink-dim">result</Text>
 									<Text className="text-body-sm text-ink">
 										{detail.result_text}
 									</Text>

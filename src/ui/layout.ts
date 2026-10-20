@@ -1,6 +1,7 @@
-import { Platform, useWindowDimensions } from "react-native";
+import { useEffect, useState } from "react";
+import { Dimensions, Platform, useWindowDimensions } from "react-native";
 
-import { type Layout, layoutFor } from "@/ui/size-class";
+import { compactChromeFor, type Layout, layoutFor } from "@/ui/size-class";
 import { touchFloorFor } from "@/ui/variants";
 
 /**
@@ -59,6 +60,26 @@ export const TOUCH_FLOOR = touchFloorFor(
 export function useLayout(): Layout {
 	const { width, height } = useWindowDimensions();
 	return layoutFor(width, height);
+}
+
+/**
+ * Whether the session chrome takes its compact (short landscape) form.
+ *
+ * Reads the physical SCREEN for orientation and the WINDOW for height — see
+ * `compactChromeFor` for why a keyboard-shortened portrait window must not count.
+ * `useWindowDimensions` already re-renders on rotation; the screen is subscribed to
+ * separately because the hook does not carry it, and a rotation changes both.
+ */
+export function useCompactChrome(): boolean {
+	const windowDims = useWindowDimensions();
+	const [screen, setScreen] = useState(() => Dimensions.get("screen"));
+	useEffect(() => {
+		const subscription = Dimensions.addEventListener("change", (next) =>
+			setScreen(next.screen),
+		);
+		return () => subscription.remove();
+	}, []);
+	return compactChromeFor({ window: windowDims, screen });
 }
 
 /* Re-exported so a screen imports the vocabulary from one place whether it needs

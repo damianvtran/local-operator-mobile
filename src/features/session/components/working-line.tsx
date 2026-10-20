@@ -29,6 +29,10 @@ export type WorkingLineProps = {
 	/** Seconds the current phase has been running, or `null` when the server said
 	 *  it has no instant for it. */
 	startedS: number | null;
+	/** Short landscape: the same three parts on a tighter vertical pad, so the line
+	 *  stays whole (it is the one in-progress indicator) while giving a line of the
+	 *  screen back to the transcript. */
+	compact?: boolean;
 	testID?: string;
 };
 
@@ -41,6 +45,7 @@ const SPINNER_MS = 80;
 export const WorkingLine = ({
 	activity,
 	startedS,
+	compact = false,
 	testID,
 }: WorkingLineProps) => {
 	const [frame, setFrame] = useState(0);
@@ -82,7 +87,11 @@ export const WorkingLine = ({
 
 	return (
 		<View
-			className="flex-row items-center gap-2 px-4 py-2"
+			className={
+				compact
+					? "flex-row items-center gap-2 px-4 py-1"
+					: "flex-row items-center gap-2 px-4 py-2"
+			}
 			accessibilityRole="progressbar"
 			accessibilityLabel={
 				hasClock ? `${activity}, ${elapsedLabel(elapsed)}` : activity

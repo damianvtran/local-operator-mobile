@@ -266,7 +266,13 @@ async function relayState(
 /** Substitute the relay's session id (and a subagent job id) into a route path. */
 function resolvePath(path: string, state: RelayStateReply | null): string {
 	const sessionId = state?.sessionId ?? "6714def86197";
-	const jobId = state?.jobId ?? "job-1";
+	/* `job-run`, because that is a job id the corpus's roster really carries (the
+	 *  `subagent-*` scenarios' first row). The default used to be `job-1`, which no
+	 *  roster has, so `GET /agents/job-1` answered "unknown subagent" and every S6
+	 *  cell sat on the detail screen's empty state — a coverage gap that looked like
+	 *  an app gap. The plan-time `state.jobId` is read BEFORE a cell's scenario is
+	 *  pinned, so it cannot name a row of a roster that is not loaded yet. */
+	const jobId = state?.jobId ?? "job-run";
 	/* `{projectKey}` defaults to the row the captured corpus holds by NAME rather
 	 *  than by id: the mock relay's key-scoped route answers a case-insensitive id
 	 *  OR name (`tools/mock-relay/relay.ts`), and a name stays readable in a

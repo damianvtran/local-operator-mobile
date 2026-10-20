@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { headerTitleChars } from "@/features/session/header";
+import { compactTitleChars, headerTitleChars } from "@/features/session/header";
 import {
 	MIN_HEADER_NAME_CHARS,
 	middleTruncate,
@@ -131,5 +131,35 @@ describe("the header's title budget", () => {
 			expect(shown.startsWith(name.slice(0, 4)), `${width}px head`).toBe(true);
 			expect(shown.endsWith(name.slice(-4)), `${width}px tail`).toBe(true);
 		}
+	});
+});
+
+describe("compactTitleChars", () => {
+	it("shrinks with the reader's text size, so one truncation is enough", () => {
+		const at = (scale: number) =>
+			compactTitleChars({ width: 915, height: 412 }, scale);
+		expect(at(1)).toBeGreaterThan(at(1.5));
+		expect(at(1.5)).toBeGreaterThan(at(2));
+	});
+
+	it("is tighter than the display budget at 200 %, where the old one overflowed", () => {
+		// 915x412 at 200 %: the old budget promised more than the one-row title holds.
+		expect(compactTitleChars({ width: 915, height: 412 }, 2)).toBeLessThan(
+			headerTitleChars({ width: 915, height: 412 }) * 2,
+		);
+	});
+
+	it("never goes below the floor that keeps both ends of a name", () => {
+		// 200 pt of row minus the 144 pt of chrome leaves ~56 pt: well under the floor.
+		expect(compactTitleChars({ width: 200, height: 160 }, 3)).toBe(
+			MIN_HEADER_NAME_CHARS,
+		);
+	});
+
+	it("fits: a name cut to the budget times the compact advance stays inside the row", () => {
+		const viewport = { width: 915, height: 412 };
+		const chars = compactTitleChars(viewport, 2);
+		const advance = 14.06 * (20 / 28) * 2;
+		expect(chars * advance).toBeLessThanOrEqual(620 - 32 - 48 - 8 - 48 - 8);
 	});
 });

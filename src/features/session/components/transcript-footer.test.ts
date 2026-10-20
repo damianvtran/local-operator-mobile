@@ -177,6 +177,16 @@ describe("permanent transcript notice footer", () => {
 			await act(async () => {
 				props().onLayout({ nativeEvent: { layout: { height: 100 } } });
 				props().onContentSizeChange(320, 1000);
+				// A real initial tail scroll establishes the previous geometry.
+				// The next event can then represent an actual reader move UP;
+				// a first-ever offset300 from offset0 is down, not relinquishment.
+				props().onScroll({
+					nativeEvent: {
+						contentOffset: { y: 900 },
+						contentSize: { height: 1000 },
+						layoutMeasurement: { height: 100 },
+					},
+				});
 				props().onScroll({
 					nativeEvent: {
 						contentOffset: { y: atTail ? 900 : 300 },
@@ -270,12 +280,23 @@ function slot(name: string) {
 }
 describe("session banner-only relocation structure", () => {
 	it("leaves composer and documented pinned controls at their original sibling slots", () => {
-		expect(slot("Composer")).toEqual({ index: 7, key: undefined });
-		expect(slot("FindBar").index).toBe(3);
-		expect(slot("PendingCard").index).toBe(4);
-		expect(slot("AskBar").index).toBe(6);
-		expect(slot("WorkingLine").index).toBe(2);
-		expect(children[5] && jsx(children[5]) ? tag(children[5]) : null).toBe(
+		// PR92 adds a permanent close-panel conditional before FindBar; these
+		// are the original PR92 slots, not main's pre-integration indices.
+		expect(slot("Composer")).toEqual({ index: 8, key: undefined });
+		expect(slot("FindBar").index).toBe(4);
+		expect(slot("PendingCard").index).toBe(5);
+		expect(slot("AskBar").index).toBe(7);
+		// PR92's already-reviewed secondary region keeps working/panel nodes
+		// inside one permanently mounted scroller. It is not the composer host.
+		const secondary = children[1];
+		expect(secondary && jsx(secondary) ? tag(secondary) : null).toBe(
+			"ScrollView",
+		);
+		expect(secondary && text(secondary)).toContain("regionItems.map");
+		const composer = all.find((node) => tag(node) === "Composer");
+		if (!composer) throw new Error("Missing pinned composer");
+		expect(parent.get(composer)).toBe(column);
+		expect(children[6] && jsx(children[6]) ? tag(children[6]) : null).toBe(
 			"View",
 		);
 		expect(all.filter((node) => tag(node) === "Composer")).toHaveLength(1);
@@ -284,7 +305,7 @@ describe("session banner-only relocation structure", () => {
 		const list = all.find((node) => tag(node) === "TranscriptList");
 		if (!list) throw new Error("Missing list");
 		const attrs = text(opening(list));
-		expect(attrs).toContain("footer={connectionBanner}");
+		expect(attrs).toContain("footer={transcriptNotice}");
 		expect(attrs).toContain("entries={runtime.entries}");
 		expect(attrs).toContain(
 			"anchorId={attentionRecord(runtime.projection)?.anchor_id ?? null}",
@@ -305,7 +326,7 @@ describe("session banner-only relocation structure", () => {
 						find(ast(item));
 		}
 		find(tree);
-		expect(initializer.match(/connectionBanner/g)).toHaveLength(4);
+		expect(initializer.match(/transcriptNotice/g)).toHaveLength(4);
 		expect(initializer.match(/<ScrollView/g)).toHaveLength(3);
 		expect(initializer).not.toContain("<Composer");
 	});
