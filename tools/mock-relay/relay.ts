@@ -3118,6 +3118,14 @@ export function createRelay(options: RelayOptions = {}) {
 					sendJson(res, 422, errorBody("Unknown category id"));
 					return;
 				}
+				/* The real store's cap, refused before the id lookup just as the
+				 * store validates the whole body before writing. Without this the mock
+				 * accepted a ninth tag and the app's cap-refusal path had no wire to
+				 * exercise; the sentence is the store's own. */
+				if (requested.length > 8) {
+					sendJson(res, 422, errorBody("At most 8 distinct tags are allowed"));
+					return;
+				}
 				const byId = new Map(tagRoutes.catalogue.map((tag) => [tag.id, tag]));
 				if (requested.some((id) => !byId.has(id))) {
 					sendJson(res, 422, errorBody("Unknown category id"));

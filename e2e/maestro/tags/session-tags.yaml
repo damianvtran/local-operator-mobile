@@ -1,0 +1,138 @@
+# Conversation tags, in the app a reader uses.
+#
+# The mock relay's `tags-cap` scenario assigns EIGHT categories to this row and
+# offers a ninth. The flow drives the real controls: the row line, the long-press
+# menu, the Tags sheet, select/unselect, the relay's cap refusal, and the
+# two-step Remove all. No product code is staged for this flow — every state is
+# reached by a press.
+#
+# The row id is `syntheticSessionId("tag-cap-row")`; the tag ids are the
+# scenario's own. Keeping them literal here is the same choice the other flows
+# make: the id contract (`src/ui/a11y.ts`) is checked by `a11y.e2e.test.ts`, and
+# a flow is a consumer of that contract, not a second declaration of it.
+appId: ${APP_ID}
+name: "Conversation tags — line, sheet, cap refusal, remove all"
+env:
+  TAG_SESSION_ID: 81d2f374e513
+  TAG_WORK: d28b35a273
+  TAG_RESEARCH: cb65004501
+  TAG_CAP_EIGHT: c0de000008
+  TAG_CAP_NINE: c0de000009
+---
+- launchApp:
+    clearState: true
+- runFlow: ../helpers/connect-relay.yaml
+- extendedWaitUntil:
+    visible:
+      id: "home-screen"
+    timeout: 15000
+- tapOn:
+    id: "home-sidebar"
+- extendedWaitUntil:
+    visible:
+      id: "conversations-sidebar"
+    timeout: 10000
+- extendedWaitUntil:
+    visible:
+      id: "session-row-${TAG_SESSION_ID}"
+    timeout: 15000
+# The row line is the read-only surface: names and the +N cue, not a chip row.
+- assertVisible:
+    id: "session-tags-line-${TAG_SESSION_ID}"
+# Eight assigned, two fitted plus the remainder cue.
+- assertVisible:
+    text: "Work"
+- assertVisible:
+    text: "Research"
+- assertVisible:
+    text: "+6"
+- takeScreenshot: "tags-01-list-tagged-row"
+# The sheet is reachable only the way a reader reaches it: hold the row, then
+# choose Tags… in its menu. A direct sheet testID would prove a screen exists,
+# not that the route to it works.
+- longPressOn:
+    id: "session-row-${TAG_SESSION_ID}"
+- extendedWaitUntil:
+    visible:
+      id: "session-menu-sheet"
+    timeout: 10000
+- assertVisible:
+    id: "session-tags-action"
+- tapOn:
+    id: "session-tags-action"
+- extendedWaitUntil:
+    visible:
+      id: "session-tags-sheet"
+    timeout: 10000
+- takeScreenshot: "tags-02-sheet-populated"
+- assertVisible:
+    id: "session-tags-option-${TAG_WORK}"
+- assertVisible:
+    id: "session-tags-option-${TAG_RESEARCH}"
+# The ninth option is below the sheet's fold on a phone. Scroll to it rather
+# than asking Maestro to tap a control that was never on screen.
+- scrollUntilVisible:
+    element:
+      id: "session-tags-option-${TAG_CAP_EIGHT}"
+    direction: DOWN
+- assertVisible:
+    id: "session-tags-option-${TAG_CAP_EIGHT}"
+- scrollUntilVisible:
+    element:
+      id: "session-tags-option-${TAG_CAP_NINE}"
+    direction: DOWN
+- assertVisible:
+    id: "session-tags-option-${TAG_CAP_NINE}"
+# Unselect one of the eight: a successful write.
+- tapOn:
+    id: "session-tags-option-${TAG_CAP_EIGHT}"
+- waitForAnimationToEnd
+- takeScreenshot: "tags-03-unselected"
+# Re-select the ninth: back to eight, another successful write.
+- tapOn:
+    id: "session-tags-option-${TAG_CAP_NINE}"
+- waitForAnimationToEnd
+- takeScreenshot: "tags-04-reselected"
+# The cap: press the now-free eighth option. Nine requested; the relay refuses
+# with its own sentence and the sheet must show it and revert.
+- scrollUntilVisible:
+    element:
+      id: "session-tags-option-${TAG_CAP_EIGHT}"
+    direction: UP
+- tapOn:
+    id: "session-tags-option-${TAG_CAP_EIGHT}"
+- scrollUntilVisible:
+    element:
+      id: "session-tags-refusal"
+    direction: UP
+- extendedWaitUntil:
+    visible:
+      id: "session-tags-refusal"
+    timeout: 10000
+- assertVisible:
+    text: "At most 8 distinct tags are allowed"
+- takeScreenshot: "tags-05-cap-refusal"
+# Remove all is two-step: the dialog must appear before anything is cleared.
+- tapOn:
+    id: "session-tags-remove-all"
+- assertVisible:
+    id: "session-tags-remove-all-dialog"
+- tapOn:
+    id: "dialog-cancel"
+- assertNotVisible:
+    id: "session-tags-remove-all-dialog"
+- tapOn:
+    id: "session-tags-remove-all"
+- assertVisible:
+    id: "session-tags-remove-all-dialog"
+- tapOn:
+    id: "dialog-confirm"
+- waitForAnimationToEnd
+- takeScreenshot: "tags-06-cleared-sheet"
+- tapOn:
+    id: "sheet-close"
+- extendedWaitUntil:
+    notVisible:
+      id: "session-tags-line-${TAG_SESSION_ID}"
+    timeout: 10000
+- takeScreenshot: "tags-07-cleared-row"

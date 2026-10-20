@@ -956,6 +956,38 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 		() => tagsWorld(),
 	);
 
+	/* The Maestro cap probe's world. Nine categories, eight already assigned to
+	 * the row the flow opens; the ninth is the press the store refuses. Kept out
+	 * of the visual registry (no `shows` cell): its purpose is an interaction,
+	 * not a frame, and changing `tags` would move every existing tag capture. */
+	add(
+		"tags-cap",
+		"Nine conversation categories, eight assigned to one row: the world the Maestro flow uses to press the ninth and assert the relay's cap refusal, then clear the assignment.",
+		[],
+		() => {
+			const extra = [
+				{ id: "c0de000004", name: "Cap four", order: 3, conversations: 1 },
+				{ id: "c0de000005", name: "Cap five", order: 4, conversations: 1 },
+				{ id: "c0de000006", name: "Cap six", order: 5, conversations: 1 },
+				{ id: "c0de000007", name: "Cap seven", order: 6, conversations: 1 },
+				{ id: "c0de000008", name: "Cap eight", order: 7, conversations: 1 },
+				{ id: "c0de000009", name: "Cap nine", order: 8, conversations: 1 },
+			];
+			const catalogue = [...TAG_CATALOGUE, ...extra];
+			const eight = taggedRow(
+				"tag-cap-row",
+				"Eight categories",
+				catalogue.slice(0, 8),
+				TAG_WORK.id,
+			);
+			return {
+				projections: { [eight.projection.session_id]: eight.projection },
+				rowOverridesById: { [eight.projection.session_id]: eight.override },
+				sessionTags: { catalogue },
+			};
+		},
+	);
+
 	add(
 		"tags-toggled",
 		"A tag toggled in the sheet and settled: the relay's read-back is the frame, with the newly selected category checked and the row's own state unchanged until the next frame. The cell presses a real checkbox against a real PUT.",

@@ -2181,8 +2181,15 @@ async function main() {
 				`exit ${unready.status}`,
 			);
 			check(
-				"and the reason names the relay",
-				/no request to the mock relay/.test(unready.output),
+				"and the reason names the unready cell",
+				/* The marker leg is the one that fails in this environment: with
+				 * `--no-seed` the app may still reach the relay and render its
+				 * fallback, which does not carry `sessions-empty`. The relay leg is
+				 * therefore not owed by every refusal, and asserting its exact
+				 * sentence made a correct failure look like a test bug. What IS owed
+				 * is a cell-specific readiness verdict, not a crash or an empty log. */
+				/UNREADY CELLS/.test(unready.output) &&
+					/S15__empty__iphone-15__dark__100/.test(unready.output),
 				true,
 			);
 		} else {
@@ -2194,7 +2201,7 @@ async function main() {
 			// same in both states, and name the environment the pair needs.
 			for (const name of [
 				"a relay-backed cell the app never served is refused",
-				"and the reason names the relay",
+				"and the reason names the unready cell",
 			]) {
 				skip(name, NEEDS_APP_BUILD);
 			}
