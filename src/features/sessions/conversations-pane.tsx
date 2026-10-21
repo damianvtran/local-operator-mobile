@@ -187,7 +187,7 @@ export const ConversationsPane = ({
 
 	const { effectiveScale } = useTextScale();
 	const largeText = effectiveScale > LARGE_TEXT_SCALE;
-	const scrollFooter = sidebarFooterScrolls(useLayout());
+	const scrollFooter = sidebarFooterScrolls(useLayout(), effectiveScale);
 
 	/* The switcher's painted label. The text box's OWN width is the budget —
 	 *  measured on the line, so it cannot drift from the flex rules — and the
@@ -277,8 +277,8 @@ export const ConversationsPane = ({
 		openSession(session);
 	};
 
-	/* Keep one navigation tree in both placements: compact landscape gives the
-	 * list all remaining height; the four unchanged routes follow its rows. The
+	/* Keep one navigation tree in both placements: short landscape and compact
+	 * large text give the list room; secondary routes follow its rows. The
 	 * negative margin only cancels the list's px-4, preserving the footer width
 	 * (and its content-driven wrapping) from the pinned portrait layout. */
 	const footer = (

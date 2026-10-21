@@ -52,3 +52,26 @@ and notification preference changes persist across closing/reopening the sheet.
 Subsequent OAuth/push retirement-only changes do not alter the leaf list/thread
 layout or message rendering; these frames do not claim native or provider
 behaviour. Before frames remain labelled before, not current-head proof.
+
+## Follow-up: compact large-text navigation
+
+The required web capture at `4dd8d0f6c8e45b8dd324a3ea1bc0621b5f476280`
+(job119395910829) exposed a conversation-panel regression at320×568 /200%:
+its pinned secondary navigation consumed the list. This is evidence from the
+existing CI artifact, not a new local browser or native screenshot.
+
+- [Actual failing frame](navigation-large-text-before.png)
+- [Sanitized measured geometry and frame identity](navigation-large-text-before.json)
+
+Measured pane568px high /264px wide, footer449.78125px high, list client height0,
+visible rows0. The fix extends the existing shared-footer scroller policy to
+compact large text, using the existing `LARGE_TEXT_SCALE` threshold. It does not
+shrink text/targets, create another scroller or weaken the capture witness.
+Normal-scale portrait and roomy tablet policy remain unchanged.
+
+The policy test was observed failing before the fix, then the44 affected
+size-class/S15-flow/S15-proof tests and app TypeScript passed. **Rendered after
+geometry/interaction evidence and refreshed design/QA are still pending normal
+PR CI.** The browser host is unavailable; no alternate engine or local export
+was started. The existing targeted S15 workflow omits the affected iPhone SE,
+so it was not dispatched as a misleading substitute for the required capture.

@@ -27,6 +27,32 @@ import { LARGE_TEXT_SCALE } from "@/ui/text-scale";
  */
 
 describe("sidebarFooterScrolls", () => {
+	it("preserves conversation height on compact portrait at large text", () => {
+		for (const [width, height] of [
+			[320, 568],
+			[390, 844],
+		] as const) {
+			const layout = layoutFor(width, height);
+			expect(sidebarFooterScrolls(layout, 2)).toBe(true);
+			expect(sidebarFooterScrolls(layout)).toBe(false);
+			expect(sidebarFooterScrolls(layout, LARGE_TEXT_SCALE)).toBe(false);
+		}
+	});
+
+	it("keeps roomy tablet footers pinned even at large text", () => {
+		for (const [width, height] of [
+			[834, 1112],
+			[1112, 834],
+		] as const) {
+			expect(sidebarFooterScrolls(layoutFor(width, height), 2)).toBe(false);
+		}
+	});
+
+	it("preserves short-landscape scrolling at large text", () => {
+		expect(sidebarFooterScrolls(layoutFor(568, 320), 2)).toBe(true);
+		expect(sidebarFooterScrolls(layoutFor(844, 390), 2)).toBe(true);
+	});
+
 	it("preserves rows in short landscape without changing portrait or tablet flow", () => {
 		expect(sidebarFooterScrolls(layoutFor(844, 390))).toBe(true);
 		expect(sidebarFooterScrolls(layoutFor(568, 320))).toBe(true);
