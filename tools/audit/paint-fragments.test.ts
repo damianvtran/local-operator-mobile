@@ -23,6 +23,30 @@ const box = (x: number, y: number, w: number, h: number) => ({
 	right: x + w,
 	bottom: y + h,
 });
+// Complete neutral computed paint state, not an assumption that omitted CSS
+// properties mean no paint. Generated-style reads are supplied independently.
+const textStyle = () => ({
+	display: "inline",
+	content: "normal",
+	backgroundColor: "transparent",
+	backgroundImage: "none",
+	borderImageSource: "none",
+	boxShadow: "none",
+	textShadow: "none",
+	textDecorationLine: "none",
+	filter: "none",
+	backdropFilter: "none",
+	maskImage: "none",
+	textEmphasisStyle: "none",
+	outlineWidth: "0",
+	columnRuleWidth: "0",
+	webkitTextStrokeWidth: "0",
+	webkitBoxReflect: "none",
+	borderTopWidth: "0",
+	borderRightWidth: "0",
+	borderBottomWidth: "0",
+	borderLeftWidth: "0",
+});
 function node(
 	index: number,
 	rect: ReturnType<typeof box>,
@@ -156,17 +180,7 @@ describe("U08 exact paint rectangle sets", () => {
 		).toBe(true);
 	});
 	it("classifies actual pure-text probe eligibility conservatively for all four borders and other paint", () => {
-		const style = {
-			backgroundColor: "transparent",
-			backgroundImage: "none",
-			boxShadow: "none",
-			textShadow: "none",
-			textDecorationLine: "none",
-			borderTopWidth: "0",
-			borderRightWidth: "0",
-			borderBottomWidth: "0",
-			borderLeftWidth: "0",
-		};
+		const style = textStyle();
 		const el = {
 			closest: () => null,
 			matches: () => false,
@@ -174,7 +188,7 @@ describe("U08 exact paint rectangle sets", () => {
 		};
 		const eligible = runInNewContext(
 			`(${PURE_OWN_TEXT_SOURCE})`,
-			{},
+			{ getComputedStyle: () => ({ content: "none" }) },
 			{ timeout: 100 },
 		) as (
 			el: unknown,
@@ -205,6 +219,16 @@ describe("U08 exact paint rectangle sets", () => {
 			{ boxShadow: "0 0 1px black" },
 			{ textShadow: "1px 1px black" },
 			{ textDecorationLine: "underline" },
+			{ outlineWidth: "1" },
+			{ filter: "drop-shadow(1px 1px black)" },
+			{ maskImage: "url(mask)" },
+			{ borderImageSource: "url(border)" },
+			{ columnRuleWidth: "1" },
+			{ textEmphasisStyle: "filled" },
+			{ webkitTextStrokeWidth: "1" },
+			{ webkitBoxReflect: "below 0px" },
+			{ content: "url(image)" },
+			{ display: "list-item" },
 		])
 			expect(
 				eligible(
@@ -233,6 +257,128 @@ describe("U08 exact paint rectangle sets", () => {
 				Number.parseFloat,
 			),
 		).toBe(false);
+	});
+
+	it("executes classifier-to-policy boundaries for pseudo and non-media child paint without losing pure inline controls", () => {
+		const style = textStyle();
+		const leaf = {
+			closest: () => null,
+			matches: () => false,
+			querySelectorAll: (_selector: string): unknown[] => [],
+		};
+		const makeClassifier = (
+			readStyle: (_el: unknown, pseudo: string) => unknown,
+		) =>
+			runInNewContext(
+				`(${PURE_OWN_TEXT_SOURCE})`,
+				{ getComputedStyle: readStyle },
+				{ timeout: 100 },
+			) as (
+				el: unknown,
+				style: unknown,
+				text: string,
+				interactive: boolean,
+				px: (v: string) => number,
+			) => boolean;
+		const classify = (
+			n: AuditNode,
+			el: unknown = leaf,
+			readStyle: (_el: unknown, pseudo: string) => unknown = () => ({
+				content: "none",
+			}),
+		) => {
+			const eligible = makeClassifier(readStyle)(
+				el,
+				style,
+				n.ownText,
+				false,
+				Number.parseFloat,
+			);
+			return {
+				...n,
+				u08PaintFragments: eligible ? n.u08PaintFragments : undefined,
+			};
+		};
+		// Empty generated content can paint a box; generated nodes are absent from
+		// the canonical DOM list. Exercise the actual omission/fallback, not a flag.
+		for (const pseudo of ["::before", "::after", "::marker"]) {
+			const reads: string[] = [];
+			const owner = classify(
+				node(1, box(0, 100, 40, 18), [box(20, 100, 20, 18)]),
+				leaf,
+				(_el, kind) => {
+					reads.push(kind);
+					return {
+						content: kind === pseudo ? '""' : "none",
+						backgroundColor: kind === pseudo ? "red" : "transparent",
+					};
+				},
+			);
+			expect(reads).toEqual(["::before", "::after", "::marker"]);
+			expect(owner.u08PaintFragments).toBeUndefined();
+			expect(
+				rows([
+					owner,
+					classify(node(2, box(5, 100, 10, 18), [box(5, 100, 10, 18)])),
+				]).some((r) => r.verdict === "FAIL"),
+			).toBe(true);
+		}
+		const child = { backgroundColor: "red", ownText: "" };
+		const owner = classify(
+			node(1, box(0, 100, 100, 20), [box(0, 100, 10, 20)]),
+			{
+				...leaf,
+				querySelectorAll: (selector: string) =>
+					selector === "*" ? [child] : [],
+			},
+		);
+		expect(owner.u08PaintFragments).toBeUndefined();
+		const childNode = {
+			...node(3, box(50, 100, 10, 20)),
+			ownText: "",
+			ownBackground: "red",
+			ancestors: [1],
+		};
+		expect(
+			rows([
+				owner,
+				classify(node(2, box(50, 100, 10, 20), [box(50, 100, 10, 20)])),
+				childNode,
+			]).some((r) => r.verdict === "FAIL"),
+		).toBe(true);
+		for (const pseudo of ["::before", "::after", "::marker"]) {
+			for (const unreadable of [
+				() => null,
+				() => ({}),
+				() => {
+					throw new Error("unreadable pseudo");
+				},
+			]) {
+				const guarded = classify(
+					node(1, box(0, 100, 40, 18), [box(20, 100, 20, 18)]),
+					leaf,
+					(_el, kind) => (kind === pseudo ? unreadable() : { content: "none" }),
+				);
+				expect(guarded.u08PaintFragments).toBeUndefined();
+				expect(
+					rows([guarded, node(2, box(5, 100, 10, 18))]).some(
+						(r) => r.verdict === "FAIL",
+					),
+				).toBe(true);
+			}
+		}
+		const wrapped = incidentNodes().map((n) => classify(n));
+		expect(wrapped.every((n) => n.u08PaintFragments !== undefined)).toBe(true);
+		expect(
+			rows(wrapped).some((r) => r.measured?.includes(U08_SUPPRESSION.DISJOINT)),
+		).toBe(true);
+		expect(rows(wrapped).some((r) => r.verdict === "FAIL")).toBe(false);
+		const genuine = [
+			node(1, box(0, 100, 30, 20), [box(0, 100, 30, 20)]),
+			node(2, box(10, 100, 30, 20), [box(10, 100, 30, 20)]),
+		].map((n) => classify(n));
+		expect(genuine.every((n) => n.u08PaintFragments !== undefined)).toBe(true);
+		expect(rows(genuine).some((r) => r.verdict === "FAIL")).toBe(true);
 	});
 
 	it("retains real ancestry exclusions and modal/fixed-control semantics", () => {

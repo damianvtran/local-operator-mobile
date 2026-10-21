@@ -18,14 +18,33 @@ import type { AuditAxNode } from "./checks.ts";
 /** Shared by canonical U-08 extraction and diagnostic telemetry. Text belongs
  * inside the owner's overflow viewport; the ancestor helper intentionally starts
  * above the owner because it also serves element border/layout boxes. */
-export const PURE_OWN_TEXT_SOURCE = String.raw`(el,style,ownText,interactiveNode,px) => ownText.length > 0 && !interactiveNode
-      && (style.backgroundColor === 'rgba(0, 0, 0, 0)' || style.backgroundColor === 'transparent')
-      && (!style.backgroundImage || style.backgroundImage === 'none')
-      && ['Top','Right','Bottom','Left'].every(side => px(style['border'+side+'Width']) === 0)
-      && (!style.boxShadow || style.boxShadow === 'none') && (!style.textShadow || style.textShadow === 'none')
-      && (!style.textDecorationLine || style.textDecorationLine === 'none')
-      && !el.closest('svg') && !el.matches('img,canvas,video,audio,iframe,object,embed')
-      && el.querySelectorAll('img,svg,canvas,video,audio,iframe,object,embed').length === 0`;
+/** Fragments are an optimization only after proving there is no other paint.
+ * Generated boxes have no AuditNode; background-only children are not necessarily
+ * meaningful U-08 nodes either. Do not certify arbitrary subtrees from a media
+ * selector: any element descendant stays conservative, including unproven paint.
+ * Unreadable generated styles also retain the envelope rather than lose a real
+ * collision. Empty quoted pseudo content can still paint a background/border. */
+export const PURE_OWN_TEXT_SOURCE = String.raw`(el,style,ownText,interactiveNode,px) => {
+ try {
+  if (!ownText.length || interactiveNode || !style.display || style.display.includes('list-item')
+      || !['none','normal'].includes(style.content)
+      || !['rgba(0, 0, 0, 0)','transparent'].includes(style.backgroundColor)
+      || !['backgroundImage','borderImageSource','boxShadow','textShadow','textDecorationLine',
+           'filter','backdropFilter','maskImage','textEmphasisStyle'].every(key => style[key] === 'none')
+      || !['Top','Right','Bottom','Left'].every(side => px(style['border'+side+'Width']) === 0)
+      || px(style.outlineWidth) !== 0 || px(style.columnRuleWidth) !== 0
+      || (style.webkitTextStrokeWidth && px(style.webkitTextStrokeWidth) !== 0)
+      || (style.webkitBoxReflect && style.webkitBoxReflect !== 'none')
+      || el.closest('svg') || el.matches('img,canvas,video,audio,iframe,object,embed')
+      || el.querySelectorAll('*').length !== 0) return false;
+  const generated=['::before','::after','::marker'].map(pseudo => getComputedStyle(el,pseudo));
+  return generated.every(s => s && typeof s.content === 'string' && ['none','normal'].includes(s.content));
+ } catch {
+  // This is lack of a paint proof, not measured empty text. Omit fragments so
+  // the policy preserves the full box even on unsupported/unreadable pseudos.
+  return false;
+ }
+}`;
 
 export const OWN_TEXT_GEOMETRY_SOURCE = String.raw`(el,clip) => {
  const box=r=>({x:r.left,y:r.top,w:r.right-r.left,h:r.bottom-r.top});
