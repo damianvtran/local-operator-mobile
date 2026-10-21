@@ -1,3 +1,4 @@
+import { accountIdFromToken } from "@/connection/radient-identity";
 /**
  * The connection layer, as the screens see it: one route at a time, one list
  * stream, one place that can start or end either.
@@ -212,8 +213,14 @@ export type Connection = {
 	 * signed in.
 	 */
 	radientAccessToken: (options?: { force?: boolean }) => Promise<string | null>;
+	/** Sign-out-only bearer access: shares rotation without entering durable retirement. */
+	radientRetirementAccessToken: (options?: {
+		force?: boolean;
+	}) => Promise<string | null>;
 	/** True while a Radient grant is held in memory (a sign-in or a restore). */
 	radientSignedIn: boolean;
+	/** Stable account owner; rotating the same account token does not change it. */
+	radientAccountId: string | null;
 	streamHealth: StreamHealth;
 	signInState: SignInState;
 	/** The last typed failure, for the diagnostics row. Never a status code on a
@@ -289,6 +296,7 @@ export const ConnectionProvider = ({
 	 *  request paths read; this only lets a screen (the Team Bridge gate) re-render
 	 *  when a sign-in or a sign-out changes the answer. */
 	const [radientSignedIn, setRadientSignedIn] = useState(false);
+	const [radientAccountId, setRadientAccountId] = useState<string | null>(null);
 	const radientAccessRef = useRef<ReturnType<
 		typeof createRadientAccess
 	> | null>(null);
@@ -297,7 +305,10 @@ export const ConnectionProvider = ({
 			current: () => tokensRef.current,
 			publish: (tokens) => {
 				tokensRef.current = tokens;
-				if (mountedRef.current) setRadientSignedIn(tokens !== null);
+				if (mountedRef.current) {
+					setRadientSignedIn(tokens !== null);
+					setRadientAccountId(accountIdFromToken(tokens?.access ?? null));
+				}
 			},
 			refresh: refreshRadientTokens,
 			write: writeStoredOauth,
@@ -356,6 +367,13 @@ export const ConnectionProvider = ({
 	const radientAccessToken = useCallback(
 		(options?: { force?: boolean }) =>
 			radientAccessRef.current?.access(options) ?? Promise.resolve(null),
+		[],
+	);
+
+	const radientRetirementAccessToken = useCallback(
+		(options?: { force?: boolean }) =>
+			radientAccessRef.current?.retirementAccess(options) ??
+			Promise.resolve(null),
 		[],
 	);
 
@@ -1281,7 +1299,9 @@ export const ConnectionProvider = ({
 			relay: () =>
 				isUsable(connectionStore.getState()) ? clientRef.current : null,
 			radientAccessToken,
+			radientRetirementAccessToken,
 			radientSignedIn,
+			radientAccountId,
 			busy,
 			coldStartSettled,
 			streamHealth,
@@ -1305,7 +1325,9 @@ export const ConnectionProvider = ({
 			tunnelStoragePersistent,
 			retry,
 			radientAccessToken,
+			radientRetirementAccessToken,
 			radientSignedIn,
+			radientAccountId,
 			busy,
 			coldStartSettled,
 			streamHealth,

@@ -38,6 +38,11 @@ function fixture(
 	const clear = vi.fn(async () => {
 		durable = null;
 	});
+	const serialize = (operation: () => Promise<void>) => {
+		const next = tail.then(operation);
+		tail = next;
+		return next;
+	};
 	const manager = createRadientAccess({
 		current: () => current,
 		publish: (tokens) => {
@@ -47,15 +52,12 @@ function fixture(
 		write,
 		clear,
 		invalidGrant: (error) => error === invalid,
-		serialize: (operation) => {
-			const next = tail.then(operation);
-			tail = next;
-			return next;
-		},
+		serialize,
 		now: () => 10,
 	});
 	return {
 		manager,
+		serialize,
 		refresh,
 		write,
 		clear,
@@ -210,5 +212,113 @@ describe("Radient access ownership", () => {
 			"new-fresh",
 			"new-fresh",
 		]);
+	});
+});
+
+describe("retirement bearer access", () => {
+	it("refreshes an expired grant without publishing or writing it", async () => {
+		const f = fixture();
+		const held = f.current();
+		expect(await f.manager.retirementAccess()).toBe("fresh");
+		expect(f.current()).toBe(held);
+		expect(f.durable()).toBe(held);
+		expect(f.write).not.toHaveBeenCalled();
+		expect(f.clear).not.toHaveBeenCalled();
+	});
+
+	it("finishes removal while the real serial retirement barrier awaits it, sharing the normal raw refresh", async () => {
+		const refreshed = deferred<RadientTokens>();
+		const entered = deferred<void>();
+		const f = fixture({ refresh: () => refreshed.promise });
+		// Normal HTTP refresh starts first, but its persistence will queue behind
+		// sign-out's slot, exactly as NativeCredentialRetirement does in production.
+		const normal = f.manager.access();
+		const removing = f.manager.retirementAccess();
+		const retired = f.serialize(async () => {
+			entered.resolve();
+			expect(await removing).toBe("fresh");
+			f.manager.replace(null);
+			await f.clear();
+		});
+		await entered.promise;
+		refreshed.resolve(grant("fresh", 100));
+		await retired;
+		expect(await normal).toBeNull();
+		expect(f.refresh).toHaveBeenCalledTimes(1);
+		expect(f.write).not.toHaveBeenCalled();
+		expect(f.clear).toHaveBeenCalledTimes(1);
+		expect(f.durable()).toBeNull();
+	});
+
+	it("never queues invalid-grant clearing behind the retirement slot that awaits it", async () => {
+		const pending = deferred<RadientTokens>();
+		const entered = deferred<void>();
+		const f = fixture({ refresh: () => pending.promise });
+		const removing = f.manager.retirementAccess();
+		const retired = f.serialize(async () => {
+			entered.resolve();
+			expect(await removing).toBeNull();
+			expect(f.clear).not.toHaveBeenCalled();
+			f.manager.replace(null);
+			await f.clear();
+		});
+		await entered.promise;
+		pending.reject(invalid);
+		await retired;
+		expect(f.clear).toHaveBeenCalledTimes(1);
+		expect(f.write).not.toHaveBeenCalled();
+	});
+
+	it.each(["success", "invalid_grant"])(
+		"disowns a retirement %s when a replacement account signs in",
+		async (result) => {
+			const pending = deferred<RadientTokens>();
+			const f = fixture({ refresh: () => pending.promise });
+			const removing = f.manager.retirementAccess();
+			const replacement = grant("new-account", 100);
+			f.manager.replace(replacement);
+			await f.manager.persist(replacement);
+			if (result === "success")
+				pending.resolve(grant("old-account-fresh", 100));
+			else pending.reject(invalid);
+			expect(await removing).toBeNull();
+			expect(f.current()).toBe(replacement);
+			expect(f.durable()).toBe(replacement);
+			expect(f.clear).not.toHaveBeenCalled();
+			expect(f.write).toHaveBeenCalledTimes(1);
+		},
+	);
+
+	it("does not spend a retired rolling token again when normal access follows removal refresh", async () => {
+		const f = fixture();
+		expect(await f.manager.retirementAccess()).toBe("fresh");
+		expect(await f.manager.access()).toBe("fresh");
+		expect(f.refresh).toHaveBeenCalledTimes(1);
+		expect(f.write).toHaveBeenCalledTimes(1);
+	});
+
+	it("does not hand retirement a refreshed bearer that has already expired", async () => {
+		const f = fixture({ refresh: async () => grant("expired-rotation", 5) });
+		expect(await f.manager.retirementAccess()).toBeNull();
+		expect(f.write).not.toHaveBeenCalled();
+		expect(f.clear).not.toHaveBeenCalled();
+	});
+
+	it("returns only a live non-refreshable bearer and classifies transient refresh failures", async () => {
+		const f = fixture({
+			refresh: async () => {
+				throw new Error("offline");
+			},
+		});
+		await expect(f.manager.retirementAccess()).rejects.toBeInstanceOf(
+			RadientAccessError,
+		);
+		f.manager.replace({ ...grant(), refresh: null });
+		expect(await f.manager.retirementAccess()).toBeNull();
+		f.manager.replace({ ...grant("live", 100), refresh: null });
+		expect(await f.manager.retirementAccess()).toBe("live");
+		expect(await f.manager.retirementAccess({ force: true })).toBeNull();
+		expect(f.clear).not.toHaveBeenCalled();
+		expect(f.write).not.toHaveBeenCalled();
 	});
 });

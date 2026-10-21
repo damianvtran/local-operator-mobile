@@ -24,6 +24,10 @@ export function createRadientAccess(deps: {
 }) {
 	let generation = 0;
 	let inFlight: Promise<string | null> | null = null;
+	let rawRefresh: {
+		held: RadientTokens;
+		promise: Promise<RadientTokens>;
+	} | null = null;
 	const capture = () => {
 		const epoch = generation;
 		return () => epoch === generation;
@@ -31,6 +35,7 @@ export function createRadientAccess(deps: {
 	function replace(tokens: RadientTokens | null) {
 		generation += 1;
 		inFlight = null;
+		rawRefresh = null;
 		deps.publish(tokens);
 	}
 	function persist(tokens: RadientTokens, owned = capture()): Promise<void> {
@@ -43,6 +48,45 @@ export function createRadientAccess(deps: {
 		// Never skip an enqueued clear: a newer write queues behind this slot.
 		return deps.serialize(clear);
 	}
+	function refresh(held: RadientTokens): Promise<RadientTokens> {
+		// Rolling refresh tokens have one spender even when normal requests are
+		// waiting on storage and device retirement cannot join that storage queue.
+		if (rawRefresh?.held === held) return rawRefresh.promise;
+		const flight = { held, promise: deps.refresh(held) };
+		rawRefresh = flight;
+		void flight.promise.catch(() => {
+			if (rawRefresh === flight) rawRefresh = null;
+		});
+		return flight.promise;
+	}
+	/**
+	 * Device removal must not wait on the native retirement barrier that is itself
+	 * waiting for device removal. Borrow the raw refresh, never its write/clear
+	 * lifecycle; final sign-out owns durable cleanup even for invalid_grant.
+	 */
+	async function retirementAccess(options?: {
+		force?: boolean;
+	}): Promise<string | null> {
+		const held = deps.current();
+		if (!held) return null;
+		if (!options?.force && held.expires_at > (deps.now ?? Date.now)())
+			return held.access;
+		if (held.refresh === null) return null;
+		const owned = capture();
+		try {
+			const next = await refresh(held);
+			return owned() && next.expires_at > (deps.now ?? Date.now)()
+				? next.access
+				: null;
+		} catch (error) {
+			if (!owned() || deps.invalidGrant(error)) return null;
+			throw new RadientAccessError(
+				"Radient could not refresh the session. Please retry.",
+				{ cause: error },
+			);
+		}
+	}
+
 	async function access(options?: { force?: boolean }): Promise<string | null> {
 		const held = deps.current();
 		if (!held) return null;
@@ -54,7 +98,7 @@ export function createRadientAccess(deps: {
 		const request = (async () => {
 			let next: RadientTokens;
 			try {
-				next = await deps.refresh(held);
+				next = await refresh(held);
 			} catch (error) {
 				if (!owned()) return null;
 				if (deps.invalidGrant(error)) {
@@ -78,5 +122,5 @@ export function createRadientAccess(deps: {
 			if (inFlight === request) inFlight = null;
 		}
 	}
-	return { access, replace, persist, retire, capture };
+	return { access, retirementAccess, replace, persist, retire, capture };
 }

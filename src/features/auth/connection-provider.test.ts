@@ -169,6 +169,7 @@ async function relay(
 	options: {
 		holdLogin?: boolean;
 		rejectOauthRefresh?: boolean;
+		refreshOauth?: boolean;
 		holdToken?: boolean;
 		failStream?: boolean;
 		failLogout?: boolean;
@@ -207,6 +208,16 @@ async function relay(
 			response.writeHead(status, { "content-type": "application/json" });
 			response.end(JSON.stringify(value));
 		};
+		if (path === "/v1/auth/oauth/token" && options.refreshOauth) {
+			json({
+				access_token: "fresh-retirement",
+				refresh_token: "rotated",
+				expires_in: 3600,
+				token_type: "Bearer",
+				scope: "openid",
+			});
+			return;
+		}
 		if (path === "/v1/auth/oauth/token" && options.rejectOauthRefresh) {
 			json({ error: "invalid_grant" }, 400);
 			return;
@@ -1146,6 +1157,47 @@ describe("mounted provider authentication retirement", () => {
 			expect(latest.relay()).toBeNull();
 		} finally {
 			push.resolve();
+			unregister();
+		}
+	});
+
+	it("refreshes an expired retirement bearer while the actual native clear barrier awaits device removal", async () => {
+		const mock = await relay({ refreshOauth: true });
+		transport(mock.origin);
+		const held = { ...oauth, refresh: "rolling" };
+		durable.oauth = held;
+		await mount();
+		await act(async () => {
+			await latest.connectCustom({
+				url: mock.origin,
+				password: "old",
+				allowInsecure: true,
+			});
+		});
+		// Expiry occurs after restoration accepted the same provider-owned grant.
+		held.expires_at = 0;
+		let bearer: string | null | undefined;
+		const unregister = registerTeamBridgeRetirement(async () => {
+			bearer = await latest.radientRetirementAccessToken();
+			expect(durable.clearsStarted).toBe(0);
+		});
+		try {
+			let exiting!: Promise<boolean>;
+			await act(async () => {
+				exiting = latest.signOut();
+			});
+			// The normal accessor would deadlock behind the clear barrier until the
+			// five-second emergency timeout. Require progress before that fallback.
+			await until(() => bearer === "fresh-retirement");
+			await act(async () => {
+				expect(await exiting).toBe(true);
+			});
+			expect(
+				mock.events.filter((event) => event === "POST /v1/auth/oauth/token"),
+			).toHaveLength(1);
+			expect(durable.clearsStarted).toBe(1);
+			expect(durable.oauth).toBeNull();
+		} finally {
 			unregister();
 		}
 	});

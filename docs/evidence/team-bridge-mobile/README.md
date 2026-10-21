@@ -34,5 +34,21 @@ claimed. A fixture request-abort crash interrupted the initial QA session; the
 mock's cancellation boundary was fixed and the independent QA retried the
 interrupted preference cases successfully.
 
-After/remediation captures are added and identified separately after a fresh
-export. Do not label before frames as current-head proof.
+## Remediation after frames
+
+Fresh export at `15f1e5bc112c526f4ff0fefae8f65834e690bf6d`, web entry
+`entry-b0de988dfa49ba2fe6c6bc9959f79b8a.js`:
+
+- [Cold/warm after gallery, light/dark390 and dark320](after-cold-warm-gallery.png)
+- [Cold-entry before/after comparison](cold-entry-before-after.png)
+
+The independent designer opened and inspected these frames and posted terminal
+scoped design round2. Cold/direct and list entry now both resolve Ada/AD and
+Aida (Ben). Consecutive sampled phone crops were byte/pixel stable (0 changed
+pixels of740610 at390,607680 at320). The independent browser QA round2 also
+verified self has no borrowed unread, first/second sends share one created DM,
+and notification preference changes persist across closing/reopening the sheet.
+
+Subsequent OAuth/push retirement-only changes do not alter the leaf list/thread
+layout or message rendering; these frames do not claim native or provider
+behaviour. Before frames remain labelled before, not current-head proof.

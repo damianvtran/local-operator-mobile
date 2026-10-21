@@ -1,3 +1,7 @@
+import { accountIdFromToken } from "@/connection/radient-identity";
+
+export { accountIdFromToken } from "@/connection/radient-identity";
+
 /**
  * Team Bridge state: one store per process, shared by the list, the thread and
  * the navigation entry's badge.
@@ -105,36 +109,7 @@ export const initialTeamBridgeState = (): TeamBridgeState => ({
 /** A history page this size; the hub clamps it anyway. */
 export const PAGE_SIZE = 50;
 
-/**
- * The subject claim of a Radient access token: the caller's account id.
- *
- * WHY DECODE THE TOKEN. The hub's status payload carries no account id, and the
- * thread needs one to tell "mine" from "theirs" (alignment, a DM's title, the
- * People row marked "you"). The access token's `sub` IS the account id the hub
- * authorizes every request against (agent-server `auth_service.go`), so reading
- * it is reading the same identity, not inventing one. The signature is not
- * checked here because nothing is AUTHORIZED by this value: it only decides
- * which side of the thread a bubble sits on.
- */
-export function accountIdFromToken(token: string | null): string | null {
-	if (!token) return null;
-	const part = token.split(".")[1];
-	if (!part) return null;
-	try {
-		const padded = part.replace(/-/g, "+").replace(/_/g, "/");
-		const json =
-			typeof atob === "function"
-				? atob(padded + "=".repeat((4 - (padded.length % 4)) % 4))
-				: Buffer.from(padded, "base64").toString("utf8");
-		const claims = JSON.parse(json) as { sub?: unknown };
-		return typeof claims.sub === "string" && claims.sub.length > 0
-			? claims.sub
-			: null;
-	} catch {
-		return null;
-	}
-}
-
+/** Key each history by tenant as well as conversation identity. */
 export const threadKey = (tenantId: string, conversationId: string): string =>
 	`${tenantId}/${conversationId}`;
 

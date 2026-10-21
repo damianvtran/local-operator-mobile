@@ -25,6 +25,7 @@ import {
 	subscribeTeamBridgeTaps,
 	unregisterTeamBridgeDevice,
 } from "@/team-bridge/push";
+import { retirementAccessForAccount } from "@/team-bridge/push-account";
 import { createPushLifecycle } from "@/team-bridge/push-lifecycle";
 import { teamBridgeThreadPath } from "@/team-bridge/push-payload";
 import { registerTeamBridgeRetirement } from "@/team-bridge/retirement";
@@ -45,10 +46,24 @@ const Context = createContext<
 >(null);
 
 export function TeamBridgeProvider({ children }: { children: ReactNode }) {
+	const { radientAccountId } = useConnection();
+	// A different account gets a fresh store BEFORE its children render. A
+	// boolean signed-in effect would leave old messages visible for one paint
+	// when an already signed-in person replaces their account.
+	return (
+		<AccountTeamBridgeProvider key={radientAccountId ?? "signed-out"}>
+			{children}
+		</AccountTeamBridgeProvider>
+	);
+}
+
+function AccountTeamBridgeProvider({ children }: { children: ReactNode }) {
 	const connection = useConnection();
 	const router = useRouter();
 	const access = useRef(connection.radientAccessToken);
 	access.current = connection.radientAccessToken;
+	const retirementAccess = useRef(connection.radientRetirementAccessToken);
+	retirementAccess.current = connection.radientRetirementAccessToken;
 	const fixture = useMemo(() => teamBridgeFixture(), []);
 	useEffect(() => {
 		if (!fixture) return;
@@ -64,27 +79,42 @@ export function TeamBridgeProvider({ children }: { children: ReactNode }) {
 			accessToken,
 			...(fixture ? { baseUrl: fixture.baseUrl } : {}),
 		});
-		let registeredHub: HubClient | null = null;
-		const bindAccount = async () => {
-			const token = await accessToken();
+		let registeredHub: { hub: HubClient; token: string } | null = null;
+		const bindAccount = async (retiring = false) => {
+			const token = await (retiring && !fixture
+				? retirementAccess.current()
+				: accessToken());
 			if (!token) return null;
 			// Push cleanup must not accidentally DELETE under a replacement login.
 			// Pin this operation's grant; the general UI client remains refreshable.
-			return createHubClient({
-				accessToken: async () => token,
-				...(fixture ? { baseUrl: fixture.baseUrl } : {}),
-			});
+			return {
+				token,
+				hub: createHubClient({
+					accessToken: async () => token,
+					...(fixture ? { baseUrl: fixture.baseUrl } : {}),
+				}),
+			};
 		};
 		const pushes = createPushLifecycle({
 			register: async (isCurrent) => {
 				const bound = await bindAccount();
 				if (!bound || !isCurrent()) return;
 				registeredHub = bound;
-				await registerTeamBridgeDevice(bound, isCurrent);
+				await registerTeamBridgeDevice(bound.hub, isCurrent);
 			},
 			unregister: async () => {
-				const bound = registeredHub ?? (await bindAccount());
-				if (bound) await unregisterTeamBridgeDevice(bound);
+				const bound = registeredHub ?? (await bindAccount(true));
+				if (bound) {
+					const cleanup = createHubClient({
+						accessToken: retirementAccessForAccount(bound.token, (options) =>
+							fixture
+								? Promise.resolve(fixture.token)
+								: retirementAccess.current(options),
+						),
+						...(fixture ? { baseUrl: fixture.baseUrl } : {}),
+					});
+					await unregisterTeamBridgeDevice(cleanup);
+				}
 				registeredHub = null;
 			},
 		});
@@ -95,10 +125,13 @@ export function TeamBridgeProvider({ children }: { children: ReactNode }) {
 			registerPush: () => pushes.register(),
 		};
 	}, [fixture]);
-	useEffect(
-		() => registerTeamBridgeRetirement(() => value.pushes.retire()),
-		[value],
-	);
+	useEffect(() => {
+		const remove = registerTeamBridgeRetirement(() => value.pushes.retire());
+		return () => {
+			remove();
+			void value.pushes.retire().catch(() => undefined);
+		};
+	}, [value]);
 	useEffect(() => {
 		if (!connection.coldStartSettled && !fixture) return;
 		if (!connection.radientSignedIn && !fixture) {
