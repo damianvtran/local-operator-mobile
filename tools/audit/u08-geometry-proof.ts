@@ -31,6 +31,14 @@ export const RECORD: AuditRecord = {
 	openers: [],
 	ready: true,
 };
+// Original four rows persist this detail family, NOT node indices or own text.
+// The known fixture control scopes discovery; no glyph/caret identity is guessed.
+export const ORIGINAL_NODE_PATH =
+	"div.css-g5y9jx>div.css-g5y9jx.px-3>button.css-g5y9jx.r-1loqt21>div.css-g5y9jx.flex-row>div.css-146c3p1.min-w-0>span.css-1jxf684.font-mono";
+const ORIGINAL_DETAIL = `${ORIGINAL_NODE_PATH} ∩ ${ORIGINAL_NODE_PATH}`;
+// longConversation() in the source-pinned mock generates thirteen turns.
+// Which control contained the historical pair was NOT persisted.
+const FIXTURE_CONTROL = /^turn-bar-tc-conv-(?:0[0-9]|1[0-2])-user$/;
 const EXPECTED = "22x18pt overlap (100% of the smaller painted box)";
 const OBSERVER_LINE = /\n\s*state\.onU08Failure\?\.\(a\.index,\s*b\.index\);/;
 /** Refuse instrument drift before launch; the observer is not a policy edit. */
@@ -56,7 +64,45 @@ export function verifyOriginalInstrument() {
 	return hashes;
 }
 
+function assertOriginalScene(state: AuditState) {
+	const url = new URL(state.url);
+	if (
+		state.screen !== RECORD.screen ||
+		state.state !== RECORD.state ||
+		state.device !== RECORD.device ||
+		state.theme !== "dark" ||
+		state.scale !== "150" ||
+		Number(state.textScale) !== 1.5 ||
+		state.viewport.width !== 390 ||
+		state.viewport.height !== 844 ||
+		state.viewport.dpr !== 3 ||
+		state.insets.top !== 59 ||
+		state.insets.bottom !== 34 ||
+		state.insets.left !== 0 ||
+		state.insets.right !== 0 ||
+		url.pathname !== "/session/6714def86197" ||
+		url.searchParams.get("lo-scroll") !== "top" ||
+		url.searchParams.has("lo-expand")
+	)
+		throw new Error("NOT REPRODUCED: original canonical scene mismatch");
+}
+function originalControl(state: AuditState, index: number) {
+	const node = state.nodes.find((n) => n.index === index);
+	const nearest = node?.ancestors
+		.map((i) => state.nodes.find((n) => n.index === i))
+		.find((n) => n?.tag === "button");
+	if (
+		!nearest ||
+		!FIXTURE_CONTROL.test(nearest.testId ?? "") ||
+		!nearest.interactive
+	)
+		throw new Error(
+			"NOT REPRODUCED: pair outside canonical TurnBar pressable scope",
+		);
+	return nearest;
+}
 export function originalFailure(state: AuditState) {
+	assertOriginalScene(state);
 	const pairs: [number, number][] = [];
 	const rows = runChecks(
 		{
@@ -73,13 +119,26 @@ export function originalFailure(state: AuditState) {
 		},
 	);
 	const failed = rows.filter((row) => row.verdict === "FAIL");
-	const at = failed.findIndex((row) => row.measured === EXPECTED);
-	const pair = pairs[at];
-	if (at < 0 || !pair)
-		throw new Error(
-			"NOT REPRODUCED: original 22x18/100% U-08 candidate absent; no diagnosis claimed",
+	// A capped report cannot establish uniqueness among all observed failures.
+	const matching = failed
+		.map((row, at) => ({ row, pair: pairs[at] }))
+		.filter(
+			({ row }) => row.measured === EXPECTED && row.detail === ORIGINAL_DETAIL,
 		);
-	return { pair, row: failed[at] };
+	if (
+		pairs.length !== failed.length ||
+		matching.length !== 1 ||
+		!matching[0]?.pair
+	)
+		throw new Error(
+			"NOT REPRODUCED: missing or ambiguous original raw failure family",
+		);
+	const { pair, row } = matching[0];
+	// The old row also did not persist whether the two controls were identical.
+	// Validate both real fixture scopes; record their actual identities, don't guess.
+	originalControl(state, pair[0]);
+	originalControl(state, pair[1]);
+	return { pair, row };
 }
 export type Rect = { x: number; y: number; w: number; h: number };
 export function fragmentIntersections(a: Rect[], b: Rect[]): Rect[] {
@@ -254,9 +313,10 @@ async function main() {
 			clientRects: { clipped: Rect | null }[];
 			[key: string]: unknown;
 		};
-		const second = (await page.evaluate(
+		const observed = (await page.evaluate(
 			u08GeometryProbe(first.pair),
 		)) as AuditState & { u08Geometry: Geometry[] };
+		const second = { ...state, ...observed };
 		const next = originalFailure(second);
 		if (
 			JSON.stringify(first.pair) !== JSON.stringify(next.pair) ||
@@ -271,7 +331,10 @@ async function main() {
 		});
 		if (typeof png.data !== "string")
 			throw new Error("No associated screenshot");
-		const after = (await page.evaluate(EXTRACT_PROBE)) as AuditState;
+		const after = {
+			...state,
+			...((await page.evaluate(EXTRACT_PROBE)) as AuditState),
+		};
 		originalFailure(after);
 		if (fingerprint(second, next.pair) !== fingerprint(after, next.pair))
 			throw new Error(
@@ -280,6 +343,15 @@ async function main() {
 		const geometries = second.u08Geometry;
 		if (geometries.length !== 2)
 			throw new Error("Missing actual pair telemetry");
+		for (const g of geometries) {
+			const control = g.pressable as { index?: number; testId?: string } | null;
+			if (
+				!control ||
+				!FIXTURE_CONTROL.test(control.testId ?? "") ||
+				control.index !== originalControl(second, g.index).index
+			)
+				throw new Error("NOT REPRODUCED: actual DOM pressable scope mismatch");
+		}
 		const fragments = geometries.map((g) =>
 			g.textFragments.flatMap((f) => (f.clipped ? [f.clipped] : [])),
 		);
@@ -288,11 +360,17 @@ async function main() {
 			fragments[1] ?? [],
 		);
 		const receipt = {
-			kind: "EXPECTED ORIGINAL FAILURE REPRODUCED — diagnosis data, NOT audit PASS",
+			kind: "EXPECTED ORIGINAL FAILURE FAMILY REPRODUCED — diagnosis data, NOT audit PASS",
 			head,
 			originalHead: ORIGINAL_HEAD,
 			originalRun: ORIGINAL_RUN,
 			record: RECORD,
+			originalFamily: {
+				detail: ORIGINAL_DETAIL,
+				controlScope: FIXTURE_CONTROL.source,
+				originalIndicesAndOwnText:
+					"node/text/control identities not persisted; discovered here, not presumed",
+			},
 			insetsOverride: state.insetsOverride,
 			pair: next,
 			geometry: geometries,

@@ -49,7 +49,12 @@ The ordinary extraction string and U-08 decision arithmetic remain unchanged;
 a diagnostic-only observer after FAIL identifies actual nodes. Per-pair data
 includes original rectangles, ancestry, nearest pressable, element/text Range
 fragments and their canonical clipped intersections. A screenshot is associated
-with stable pair fingerprints before/after. Missing reproduction, unsupported
+with stable pair fingerprints before/after. Admission requires one unique match
+to the persisted raw detail family in the original scene and actual fixture
+TurnBar ancestry; matching dimensions alone are insufficient. Historical node,
+text and control identities were not persisted and are discovered, not guessed.
+Text fragments respect applicable owner overflow before the unchanged canonical
+ancestor clip walk; self-clipping styles/region are recorded. Missing reproduction, unsupported
 env() override, readiness/identity drift or data above 5 MiB fails explicitly.
 Only geometry JSON and one PNG (or a not-reproduced receipt) are retained 7 days.
 No overlap threshold, exemption, product layout or existing proof mode changes.

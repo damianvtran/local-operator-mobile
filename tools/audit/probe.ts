@@ -15,21 +15,31 @@ import type { AuditAxNode } from "./checks.ts";
  * reviewer can read the rule; a probe that decides is a probe nobody can audit.
  */
 
-const U08_GEOMETRY_SOURCE = String.raw`(indices, all, nodes, clip) => {
+export const U08_GEOMETRY_SOURCE = String.raw`(indices, all, nodes, clip) => {
  const box = r => ({x:r.left,y:r.top,w:r.right-r.left,h:r.bottom-r.top});
  return indices.map(index => {
   const el = all[index], node = nodes.find(n => n.index === index);
   if (!el || !node) throw new Error('Diagnostic node missing');
+  const style=getComputedStyle(el),self=el.getBoundingClientRect();
+  // The ancestor helper excludes el for its own BCR. Descendant text must also
+  // respect an applicable owner overflow box BEFORE that unchanged ancestor walk.
+  const applies=style.display!=='inline'&&style.display!=='contents';
+  const selfX=applies&&style.overflowX!=='visible',selfY=applies&&style.overflowY!=='visible';
+  const clipText=r=>{
+   const owned={left:selfX?Math.max(r.left,self.left):r.left,top:selfY?Math.max(r.top,self.top):r.top,right:selfX?Math.min(r.right,self.right):r.right,bottom:selfY?Math.min(r.bottom,self.bottom):r.bottom};
+   return owned.right>owned.left&&owned.bottom>owned.top?clip(el,owned):null;
+  };
   const fragments = [];
   for (const text of el.childNodes) {
    if (text.nodeType !== 3 || !text.textContent.trim()) continue;
    const range = document.createRange(); range.selectNodeContents(text);
-   for (const r of range.getClientRects()) { const c = clip(el,r); fragments.push({rect:box(r),clipped:c ? box(c) : null}); }
+   for (const r of range.getClientRects()) { const c = clipText(r); fragments.push({rect:box(r),clipped:c ? box(c) : null}); }
   }
   const control = el.closest('button,[role="button"]');
   return {index, ownText:node.ownText, path:node.path, rect:node.rect, visibleRect:node.visibleRect, ancestors:node.ancestors,
    ownInk:node.ownInk,ariaHidden:node.ariaHidden,interactive:node.interactive,clippedAway:node.clippedAway,escapedClip:node.escapedClip,
    pressable:control ? {index:all.indexOf(control),testId:control.getAttribute('data-testid'),label:control.getAttribute('aria-label'),rect:box(control.getBoundingClientRect())} : null,
+   selfClipping:{display:style.display,overflowX:style.overflowX,overflowY:style.overflowY,textOverflow:style.textOverflow,appliesX:selfX,appliesY:selfY,rect:box(self)},
    font:getComputedStyle(el).font, lineHeight:getComputedStyle(el).lineHeight, position:getComputedStyle(el).position,
    clientRects:[...el.getClientRects()].map(r => ({rect:box(r),clipped:(c => c ? box(c) : null)(clip(el,r))})), textFragments:fragments,
    clippingAncestors:node.ancestors.map(i => all[i]).filter(a => a && /(hidden|clip|auto|scroll)/.test(getComputedStyle(a).overflowX+' '+getComputedStyle(a).overflowY)).map(a => ({index:all.indexOf(a),tag:a.tagName,testId:a.getAttribute('data-testid'),rect:box(a.getBoundingClientRect()),overflow:getComputedStyle(a).overflow}))};

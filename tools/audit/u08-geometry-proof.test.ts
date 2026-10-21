@@ -5,10 +5,15 @@ import { resolve } from "node:path";
 import { runInNewContext, Script } from "node:vm";
 import { describe, expect, it } from "vitest";
 import type { AuditState } from "./checks.ts";
-import { EXTRACT_PROBE, u08GeometryProbe } from "./probe.ts";
+import {
+	EXTRACT_PROBE,
+	U08_GEOMETRY_SOURCE,
+	u08GeometryProbe,
+} from "./probe.ts";
 import {
 	assertRemote,
 	fragmentIntersections,
+	ORIGINAL_NODE_PATH,
 	originalFailure,
 	RECORD,
 	verifyOriginalInstrument,
@@ -29,29 +34,152 @@ function state(width = 22): AuditState {
 		bottom: 118,
 	};
 	return {
-		nodes: [1, 2].map((index) => ({
-			index,
-			tag: "span",
-			path: "same-truncated-path",
-			ancestors: [],
-			ownText: String(index),
-			text: String(index),
-			ownInk: true,
-			ariaHidden: false,
-			interactive: false,
-			clippedAway: false,
-			rect,
-			visibleRect: rect,
-			position: "static",
-			background: "transparent",
-			inModalDialog: false,
-		})),
+		nodes: [
+			{
+				index: 0,
+				tag: "button",
+				testId: "turn-bar-tc-conv-00-user",
+				interactive: true,
+				ownText: "",
+				ancestors: [],
+				position: "static",
+				rect,
+				visibleRect: rect,
+			},
+			...[1, 2].map((index) => ({
+				index,
+				tag: "span",
+				path: ORIGINAL_NODE_PATH,
+				ancestors: [0],
+				ownText: String(index),
+				text: String(index),
+				ownInk: true,
+				ariaHidden: false,
+				interactive: false,
+				clippedAway: false,
+				rect,
+				visibleRect: rect,
+				position: "static",
+				background: "transparent",
+				inModalDialog: false,
+			})),
+		],
+		screen: RECORD.screen,
+		state: RECORD.state,
+		device: RECORD.device,
+		theme: "dark",
+		textScale: "1.5",
+		url: "http://127.0.0.1/session/6714def86197?lo-scroll=top",
 		viewport: { width: 390, height: 844, dpr: 3 },
 		platform: "ios",
 		scale: "150",
 		insets: { top: 59, bottom: 34, left: 0, right: 0 },
 	} as unknown as AuditState;
 }
+/** Execute the actual collector and unchanged canonical ancestor helpers in Node.
+ * These supplied rectangles discriminate clipping ownership, not browser pixels. */
+function collectGeometry(
+	options: {
+		overflow?: string;
+		position?: string;
+		ancestorWidth?: number;
+		transform?: string;
+		display?: string;
+		textOverflow?: string;
+	} = {},
+) {
+	const rect = (w: number) => ({
+		left: 0,
+		top: 0,
+		right: w,
+		bottom: 18,
+		width: w,
+		height: 18,
+	});
+	const defaults = {
+		position: "static",
+		display: "block",
+		overflowX: "visible",
+		overflowY: "visible",
+		transform: "none",
+		filter: "none",
+		backdropFilter: "none",
+		perspective: "none",
+		willChange: "auto",
+		contain: "none",
+		textOverflow: "clip",
+		font: "18px monospace",
+		lineHeight: "18px",
+	};
+	const ancestor = {
+		nodeType: 1,
+		tagName: "DIV",
+		parentElement: null,
+		style: {
+			...defaults,
+			overflowX: "hidden",
+			overflowY: "hidden",
+			transform: options.transform ?? "none",
+		},
+		getBoundingClientRect: () => rect(options.ancestorWidth ?? 200),
+		getAttribute: () => null,
+	};
+	const owner = {
+		nodeType: 1,
+		parentElement: options.ancestorWidth === undefined ? null : ancestor,
+		childNodes: [{ nodeType: 3, textContent: "supplied text" }],
+		style: {
+			...defaults,
+			position: options.position ?? "static",
+			display: options.display ?? "block",
+			overflowX: options.overflow ?? "visible",
+			overflowY: options.overflow ?? "visible",
+			textOverflow: options.textOverflow ?? "clip",
+		},
+		getBoundingClientRect: () => rect(22),
+		getClientRects: () => [rect(22)],
+		closest: () => null,
+	};
+	const all = [owner, ancestor];
+	const nodes = [
+		{
+			index: 0,
+			ownText: "supplied text",
+			ancestors: options.ancestorWidth === undefined ? [] : [1],
+			rect: { x: 0, y: 0, w: 22, h: 18 },
+			visibleRect: { x: 0, y: 0, w: 22, h: 18 },
+		},
+	];
+	const start = EXTRACT_PROBE.indexOf("  const establishesContainingBlock"),
+		end = EXTRACT_PROBE.indexOf("  const insideHorizontalScroller");
+	if (start < 0 || end <= start)
+		throw new Error("Canonical clipping seam missing");
+	return runInNewContext(
+		`(()=>{${EXTRACT_PROBE.slice(start, end)};return (${U08_GEOMETRY_SOURCE})([0],all,nodes,clipIntersection);})()`,
+		{
+			all,
+			nodes,
+			getComputedStyle: (el: { style: unknown }) => el.style,
+			document: {
+				createRange: () => ({
+					selectNodeContents: () => {},
+					getClientRects: () => [rect(100)],
+				}),
+			},
+		},
+		{ timeout: 100 },
+	) as [
+		{
+			textFragments: { clipped: { w: number } | null }[];
+			selfClipping: {
+				overflowX: string;
+				textOverflow: string;
+				appliesX: boolean;
+			};
+		},
+	];
+}
+
 describe("remote U08 geometry diagnostic contract — no browser", () => {
 	it("retains the original probe byte-for-byte and original policy except a post-FAIL observer", () => {
 		expect(verifyOriginalInstrument().probeSHA256).toBe(sha(EXTRACT_PROBE));
@@ -74,6 +202,37 @@ describe("remote U08 geometry diagnostic contract — no browser", () => {
 			"NOT REPRODUCED",
 		);
 	});
+	it("rejects same-size wrong family, wrong control, scene drift and ambiguous matches", () => {
+		const otherFixtureTurn = state();
+		const observedControl = otherFixtureTurn.nodes[0];
+		if (!observedControl) throw new Error("Missing fixture control");
+		observedControl.testId = "turn-bar-tc-conv-03-user";
+		expect(originalFailure(otherFixtureTurn).pair).toEqual([1, 2]);
+		const wrong = state();
+		for (const n of wrong.nodes.filter((n) => n.tag === "span"))
+			n.path = "unrelated-toolbar>span";
+		expect(() => originalFailure(wrong)).toThrow("NOT REPRODUCED");
+		const control = state();
+		const firstControl = control.nodes[0];
+		if (!firstControl) throw new Error("Missing fixture control");
+		firstControl.testId = "turn-bar-tc-conv-99-user";
+		expect(() => originalFailure(control)).toThrow("pressable scope");
+		expect(() => originalFailure({ ...state(), state: "expanded" })).toThrow(
+			"scene mismatch",
+		);
+		expect(() =>
+			originalFailure({
+				...state(),
+				viewport: { width: 391, height: 844, dpr: 3 },
+			}),
+		).toThrow("scene mismatch");
+		const ambiguous = state();
+		const firstSpan = ambiguous.nodes[1];
+		if (!firstSpan) throw new Error("Missing fixture span");
+		ambiguous.nodes.push({ ...firstSpan, index: 3 });
+		expect(() => originalFailure(ambiguous)).toThrow("ambiguous");
+	});
+
 	it("computes diagnostic fragment intersections without changing the original verdict", () => {
 		expect(
 			fragmentIntersections(
@@ -89,6 +248,27 @@ describe("remote U08 geometry diagnostic contract — no browser", () => {
 		).toEqual([{ x: 0, y: 0, w: 22, h: 18 }]);
 		expect(originalFailure(state()).row?.verdict).toBe("FAIL");
 	});
+	it.each([
+		[{ overflow: "visible" }, 100],
+		[{ overflow: "hidden" }, 22],
+		[{ overflow: "clip" }, 22],
+		[{ overflow: "hidden", textOverflow: "ellipsis" }, 22],
+		[{ overflow: "hidden", display: "inline" }, 100],
+		[{ overflow: "hidden", ancestorWidth: 10 }, 10],
+		[{ position: "fixed", ancestorWidth: 10 }, 100],
+		[{ position: "fixed", overflow: "hidden", ancestorWidth: 10 }, 22],
+		[{ position: "fixed", ancestorWidth: 10, transform: "translateZ(0)" }, 10],
+	] as const)(
+		"clips actual collector text by applicable owner before canonical ancestors: %j",
+		(options, expected) => {
+			const result = collectGeometry(options)[0];
+			expect(result.textFragments[0]?.clipped?.w).toBe(expected);
+			expect(result.selfClipping.overflowX).toBe(
+				"overflow" in options ? options.overflow : "visible",
+			);
+		},
+	);
+
 	it("pins one canonical scene and refuses a local browser launch", () => {
 		expect(RECORD).toMatchObject({
 			viewport: { width: 390, height: 844, dpr: 3 },
