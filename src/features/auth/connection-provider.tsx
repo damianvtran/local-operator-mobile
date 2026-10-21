@@ -216,6 +216,7 @@ export type Connection = {
 	/** Sign-out-only bearer access: shares rotation without entering durable retirement. */
 	radientRetirementAccessToken: (options?: {
 		force?: boolean;
+		accountId?: string;
 	}) => Promise<string | null>;
 	/** True while a Radient grant is held in memory (a sign-in or a restore). */
 	radientSignedIn: boolean;
@@ -371,7 +372,7 @@ export const ConnectionProvider = ({
 	);
 
 	const radientRetirementAccessToken = useCallback(
-		(options?: { force?: boolean }) =>
+		(options?: { force?: boolean; accountId?: string }) =>
 			radientAccessRef.current?.retirementAccess(options) ??
 			Promise.resolve(null),
 		[],

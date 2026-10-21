@@ -79,10 +79,14 @@ function AccountTeamBridgeProvider({ children }: { children: ReactNode }) {
 			accessToken,
 			...(fixture ? { baseUrl: fixture.baseUrl } : {}),
 		});
+		// Captured by this account-keyed provider, not read from a later render.
+		const owner = connection.radientAccountId;
 		let registeredHub: { hub: HubClient; token: string } | null = null;
 		const bindAccount = async (retiring = false) => {
 			const token = await (retiring && !fixture
-				? retirementAccess.current()
+				? owner
+					? retirementAccess.current({ accountId: owner })
+					: null
 				: accessToken());
 			if (!token) return null;
 			// Push cleanup must not accidentally DELETE under a replacement login.
@@ -124,7 +128,7 @@ function AccountTeamBridgeProvider({ children }: { children: ReactNode }) {
 			pushes,
 			registerPush: () => pushes.register(),
 		};
-	}, [fixture]);
+	}, [fixture, connection.radientAccountId]);
 	useEffect(() => {
 		const remove = registerTeamBridgeRetirement(() => value.pushes.retire());
 		return () => {

@@ -23,13 +23,18 @@ function unexpired(token: string): boolean {
 /** A same-account fresh grant, or still-valid original grant during replacement. */
 export function retirementAccessForAccount(
 	original: string,
-	refresh: (options?: { force?: boolean }) => Promise<string | null>,
+	refresh: (options?: {
+		force?: boolean;
+		accountId?: string;
+	}) => Promise<string | null>,
 ) {
 	const owner = accountIdFromToken(original);
 	let held = original;
 	return async (options?: { force?: boolean }): Promise<string | null> => {
 		if (!owner) return null;
-		const current = await refresh(options);
+		// The raw accessor checks this owner before any forced refresh transport,
+		// not merely before returning a bearer to the HTTP client.
+		const current = await refresh({ ...options, accountId: owner });
 		if (current && accountIdFromToken(current) === owner) {
 			held = current;
 			return current;

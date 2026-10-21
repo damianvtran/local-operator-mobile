@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import type { RadientTokens } from "@/connection/radient-oauth";
+import { createRadientAccess } from "@/features/auth/radient-access";
 import { createHubClient } from "@/team-bridge/client";
 import { retirementAccessForAccount } from "@/team-bridge/push-account";
 
@@ -7,6 +9,62 @@ const jwt = (sub: string, exp: number) =>
 const future = () => Math.floor(Date.now() / 1000) + 300;
 
 describe("account-bound retirement credentials", () => {
+	it("old-account DELETE401 cannot spend the replacement account's rolling refresh token", async () => {
+		const original = jwt("account-a", future());
+		const replacement: RadientTokens = {
+			access: jwt("account-b", future()),
+			refresh: "rolling-b",
+			expires_at: Date.now() + 300000,
+			scope: "openid",
+			token_type: "Bearer",
+			account_label: null,
+		};
+		let held = replacement;
+		let durable = replacement;
+		let refreshes = 0,
+			writes = 0;
+		const manager = createRadientAccess({
+			current: () => held,
+			publish: (tokens) => {
+				if (tokens) held = tokens;
+			},
+			refresh: async () => {
+				refreshes++;
+				return { ...replacement, refresh: "rotated-b" };
+			},
+			write: async (tokens) => {
+				writes++;
+				durable = tokens;
+			},
+			clear: async () => {},
+			invalidGrant: () => false,
+			serialize: async (run) => run(),
+		});
+		const seen: string[] = [];
+		const hub = createHubClient({
+			accessToken: retirementAccessForAccount(
+				original,
+				manager.retirementAccess,
+			),
+			fetchImpl: (async (_url, init) => {
+				seen.push(new Headers(init?.headers).get("authorization") ?? "");
+				return new Response("{}", { status: 401 });
+			}) as typeof fetch,
+		});
+		await expect(hub.unregisterDevice("install-a", 200)).rejects.toMatchObject({
+			kind: "sign_in",
+		});
+		expect(seen).toEqual([`Bearer ${original}`, `Bearer ${original}`]);
+		expect(refreshes).toBe(0);
+		expect(writes).toBe(0);
+		expect(held).toBe(replacement);
+		expect(durable).toBe(replacement);
+		// Only B's own normal access may rotate and persist its rolling token.
+		await manager.access({ force: true });
+		expect(refreshes).toBe(1);
+		expect(writes).toBe(1);
+		expect(durable.refresh).toBe("rotated-b");
+	});
 	it("uses a fresh same-account bearer after the registered bearer expired", async () => {
 		const expired = jwt("account-a", 1);
 		const fresh = jwt("account-a", future());

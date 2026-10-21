@@ -1,3 +1,4 @@
+import { accountIdFromToken } from "@/connection/radient-identity";
 import type { RadientTokens } from "@/connection/radient-oauth";
 
 /** A transport failure is not evidence that a rolling grant was revoked. */
@@ -66,16 +67,28 @@ export function createRadientAccess(deps: {
 	 */
 	async function retirementAccess(options?: {
 		force?: boolean;
+		accountId?: string;
 	}): Promise<string | null> {
 		const held = deps.current();
 		if (!held) return null;
+		// Check the actual grant owner BEFORE spending its rolling refresh token.
+		// A post-refresh subject check would already have consumed a replacement
+		// account's token without publishing/persisting its rotated replacement.
+		if (
+			options?.accountId &&
+			accountIdFromToken(held.access) !== options.accountId
+		)
+			return null;
 		if (!options?.force && held.expires_at > (deps.now ?? Date.now)())
 			return held.access;
 		if (held.refresh === null) return null;
 		const owned = capture();
 		try {
 			const next = await refresh(held);
-			return owned() && next.expires_at > (deps.now ?? Date.now)()
+			return owned() &&
+				next.expires_at > (deps.now ?? Date.now)() &&
+				(!options?.accountId ||
+					accountIdFromToken(next.access) === options.accountId)
 				? next.access
 				: null;
 		} catch (error) {
