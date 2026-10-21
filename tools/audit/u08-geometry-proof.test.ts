@@ -23,7 +23,7 @@ const root = resolve(import.meta.dirname, "../..");
 const sha = (s: string) => createHash("sha256").update(s).digest("hex");
 const JOBS = /^ {2}([\w-]+):\n/m;
 const JOB_GUARD = /^ {4}if: (.+)$/m;
-const OBSERVER = /\n\s*state\.onU08Failure\?\.\(a\.index,\s*b\.index\);/;
+
 function state(width = 22): AuditState {
 	const rect = {
 		x: 10,
@@ -181,18 +181,24 @@ function collectGeometry(
 }
 
 describe("remote U08 geometry diagnostic contract — no browser", () => {
-	it("retains the original probe byte-for-byte and original policy except a post-FAIL observer", () => {
-		expect(verifyOriginalInstrument().probeSHA256).toBe(sha(EXTRACT_PROBE));
-		expect(sha(EXTRACT_PROBE)).toBe(
+	it("retains historical fingerprints and REFUSES the repaired instrument instead of repinning history", () => {
+		expect(() => verifyOriginalInstrument()).toThrow(
+			"Original probe/policy changed",
+		);
+		expect(sha(EXTRACT_PROBE)).not.toBe(
 			"2ef600e4b42640db7b921a3fba9f17b1f380701f92e7546beab07cf424e67c13",
 		);
-		const source = readFileSync(resolve(root, "tools/audit/checks.ts"), "utf8"),
-			at = source.indexOf("function u08Overlap("),
-			end = source.indexOf("\nfunction ", at + 1);
-		expect(sha(source.slice(at, end).replace(OBSERVER, ""))).toBe(
+		const source = readFileSync(
+			resolve(root, "tools/audit/u08-geometry-proof.ts"),
+			"utf8",
+		);
+		expect(source).toContain(
+			"2ef600e4b42640db7b921a3fba9f17b1f380701f92e7546beab07cf424e67c13",
+		);
+		expect(source).toContain(
 			"785138818c460fcdeeb2e3fcc4f2ff682b85c0572ab02ebf3fcf9e4f2547000d",
 		);
-		expect(u08GeometryProbe([1, 2])).toContain("clipIntersection");
+		expect(() => new Script(EXTRACT_PROBE)).not.toThrow();
 		expect(() => new Script(u08GeometryProbe([1, 2]))).not.toThrow();
 	});
 	it("requires the exact original failure, not any red row or an empty diagnosis", () => {

@@ -5,7 +5,7 @@ import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { parseArgs, str } from "../lib/args.ts";
+import { bool, parseArgs, str } from "../lib/args.ts";
 import { launchChrome } from "../lib/chrome.ts";
 import { freshPage, withDeadline } from "../lib/page.ts";
 import { reDriveMismatch } from "../lib/readiness.ts";
@@ -18,6 +18,11 @@ import { EXTRACT_PROBE, u08GeometryProbe } from "./probe.ts";
 
 export const ORIGINAL_HEAD = "c8d1d44c6b5bf53381d65c77f209d817d323ba74";
 export const ORIGINAL_RUN = "39483683151";
+export const ORIGINAL_PROBE_SHA256 =
+	"2ef600e4b42640db7b921a3fba9f17b1f380701f92e7546beab07cf424e67c13";
+export const ORIGINAL_POLICY_SHA256 =
+	"785138818c460fcdeeb2e3fcc4f2ff682b85c0572ab02ebf3fcf9e4f2547000d";
+export const REPAIR_BASE = "f28df58fc8eef450d0339610a1de9dd8f967be47";
 export const RECORD: AuditRecord = {
 	screen: "path:/session/{sessionId}?lo-scroll=top",
 	state: "condensed",
@@ -53,10 +58,8 @@ export function verifyOriginalInstrument() {
 		policySHA256: sha(source.slice(at, end).replace(OBSERVER_LINE, "")),
 	};
 	if (
-		hashes.probeSHA256 !==
-			"2ef600e4b42640db7b921a3fba9f17b1f380701f92e7546beab07cf424e67c13" ||
-		hashes.policySHA256 !==
-			"785138818c460fcdeeb2e3fcc4f2ff682b85c0572ab02ebf3fcf9e4f2547000d"
+		hashes.probeSHA256 !== ORIGINAL_PROBE_SHA256 ||
+		hashes.policySHA256 !== ORIGINAL_POLICY_SHA256
 	)
 		throw new Error(
 			"Original probe/policy changed: refusing noncanonical diagnosis",
@@ -181,9 +184,17 @@ export function assertRemote(env: NodeJS.ProcessEnv) {
 
 async function main() {
 	assertRemote(process.env);
-	const originalInstrument = verifyOriginalInstrument();
 	const { flags } = parseArgs(process.argv.slice(2));
-	if (Object.keys(flags).some((key) => !["web-dir", "out"].includes(key)))
+	const corrected = bool(flags, "verify-fragments", false);
+	// Historical proof must reject a changed instrument. Never repin its incident
+	// fingerprints just because the repaired instrument no longer reproduces FAIL.
+	const originalInstrument = corrected ? {} : verifyOriginalInstrument();
+	if (
+		Object.keys(flags).some(
+			(key) =>
+				!["web-dir", "out", "verify-fragments", "preflight-only"].includes(key),
+		)
+	)
 		throw new Error("Only the fixed single-cell proof is supported");
 	const out = resolve(str(flags, "out") ?? "u08-geometry"),
 		build = resolve(str(flags, "web-dir") ?? "dist");
@@ -198,10 +209,18 @@ async function main() {
 		"tools/audit/u08-geometry-proof.test.ts",
 		"scripts/ci/account-routing-proof.test.ts",
 		"tools/visual/core-audit-only.test.ts",
+		...(corrected
+			? [
+					"tools/audit/paint-fragments.ts",
+					"tools/audit/paint-fragments.test.ts",
+					"tools/audit/u08-fragment-verification.ts",
+					"tools/audit/u08-fragment-verification.test.ts",
+				]
+			: []),
 	]);
 	const changed = execFileSync(
 		"git",
-		["diff", "--name-only", ORIGINAL_HEAD, "HEAD"],
+		["diff", "--name-only", corrected ? REPAIR_BASE : ORIGINAL_HEAD, "HEAD"],
 		{ encoding: "utf8" },
 	)
 		.trim()
@@ -235,6 +254,7 @@ async function main() {
 		],
 		{ stdio: "pipe" },
 	);
+	if (bool(flags, "preflight-only", false)) return;
 	const relay = createRelay({ scenario: "long-transcript" });
 	let server: Awaited<ReturnType<typeof serveDir>> | undefined,
 		chrome: Awaited<ReturnType<typeof launchChrome>> | undefined;
@@ -264,6 +284,27 @@ async function main() {
 		const listening = await relay.listen();
 		server = await serveDir(build, { proxy: listening.url });
 		chrome = await launchChrome();
+		if (corrected) {
+			const { verifyFragments } = await import(
+				"./u08-fragment-verification.ts"
+			);
+			await verifyFragments({
+				chrome,
+				origin: server.url,
+				relay: listening.url,
+				out,
+				head,
+				baseRecord: RECORD,
+				nodePath: ORIGINAL_NODE_PATH,
+				historical: {
+					head: ORIGINAL_HEAD,
+					run: ORIGINAL_RUN,
+					probeSHA256: ORIGINAL_PROBE_SHA256,
+					policySHA256: ORIGINAL_POLICY_SHA256,
+				},
+			});
+			return;
+		}
 		const fresh = await freshPage(chrome, null, 30000);
 		if (!fresh.ok) throw new Error(fresh.reason);
 		const page = fresh.page;
@@ -403,7 +444,10 @@ async function main() {
 				head,
 				originalHead: ORIGINAL_HEAD,
 				originalRun: ORIGINAL_RUN,
-				error: error instanceof Error ? error.message : String(error),
+				error: (error instanceof Error ? error.message : String(error)).slice(
+					0,
+					1024,
+				),
 				diagnosed: false,
 			}),
 		);
