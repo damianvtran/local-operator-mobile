@@ -45,6 +45,7 @@ on:
           - full
           - s15-proof
           - core-audit-only
+          - u08-geometry-proof
           - account-routing-ios-proof
           - account-routing-android-proof
       proof_stage:
@@ -108,6 +109,7 @@ jobs:
             s15-proof) test "$GITHUB_EVENT_NAME" = workflow_dispatch; test "$PROOF_STAGE" = full ;;
             # Keep the original proof arms literal for existing source contracts.
             core-audit-only) test "$GITHUB_EVENT_NAME" = workflow_dispatch; test "$PROOF_STAGE" = full ;;
+            u08-geometry-proof) test "$GITHUB_EVENT_NAME" = workflow_dispatch; test "$PROOF_STAGE" = full ;;
             account-routing-ios-proof) test "$GITHUB_EVENT_NAME" = workflow_dispatch; case "$PROOF_STAGE" in preflight|setup|full) ;; *) exit 1 ;; esac ;;
             # The Android proof has NO stage: one bounded run, so any stage argument is
             # an operator mistake rather than a request to run part of it. This mirrors
@@ -1467,3 +1469,38 @@ jobs:
             ${{ runner.temp }}/account-routing-proof-${{ github.run_id }}/hierarchies/
           retention-days: 14
           if-no-files-found: warn
+  u08-geometry-proof:
+    name: Diagnostic only — reproduce one original U-08 geometry failure
+    if: github.event_name == 'workflow_dispatch' && inputs.proof_mode == 'u08-geometry-proof'
+    needs: harness
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - name: Install locked web dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Export unchanged application for canonical re-drive
+        run: pnpm export:web
+      # No core/matrix/native sweep. The canonical audit driver owns DPR/media/
+      # env() insets/readiness/fixture pinning; a local approximation cannot prove it.
+      - name: Reproduce one original failure and record pair geometry
+        timeout-minutes: 5
+        run: timeout --signal=TERM --kill-after=10s 290s node tools/audit/u08-geometry-proof.ts --web-dir dist --out "${{ runner.temp }}/u08-geometry"
+      - name: Keep bounded diagnosis (not audit PASS)
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: u08-geometry-proof-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/u08-geometry/geometry.json
+            ${{ runner.temp }}/u08-geometry/settled.png
+            ${{ runner.temp }}/u08-geometry/NOT-REPRODUCED.json
+          if-no-files-found: error
+          retention-days: 7

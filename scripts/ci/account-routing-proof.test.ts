@@ -165,7 +165,12 @@ describe("staged proof source contract — mocks only, no mDNS/native/CI executi
 	it("the actual workflow preserves every normal full/S15 job membership and body", () => {
 		const current = jobs(source(".github/workflows/e2e.yml"));
 		expect(Object.keys(current).sort()).toEqual(
-			[...Object.keys(baseline.jobs), PROOF_MODE, ANDROID_PROOF_MODE].sort(),
+			[
+				...Object.keys(baseline.jobs),
+				PROOF_MODE,
+				ANDROID_PROOF_MODE,
+				"u08-geometry-proof",
+			].sort(),
 		);
 		for (const [name, old] of Object.entries(baseline.jobs)) {
 			const job = current[name];
@@ -232,6 +237,10 @@ describe("staged proof source contract — mocks only, no mDNS/native/CI executi
 			// mode, stage, must the validator ACCEPT on a manual dispatch?
 			["full", "full", true],
 			["s15-proof", "full", true],
+			["core-audit-only", "full", true],
+			["u08-geometry-proof", "full", true],
+			["u08-geometry-proof", "setup", false],
+			["u08-geometry-proof", "preflight", false],
 			["account-routing-ios-proof", "full", true],
 			["account-routing-ios-proof", "preflight", true],
 			["account-routing-ios-proof", "setup", true],

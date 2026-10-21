@@ -1359,6 +1359,7 @@ function u08Overlap(state: AuditState): CheckRow[] {
 				measured: `${escaped === null ? "" : `painted over a clipping ancestor (${escaped.position}): `}${overlapW}x${overlapH}pt overlap (${round(pct * 100, 0)}% of the smaller painted box)`,
 				detail: `${a.path} ∩ ${b.path}${offscreenNote(a, state)}`,
 			});
+			state.onU08Failure?.(a.index, b.index);
 		}
 	}
 	if (failures.length === 0 && suppressed.length === 0) {
@@ -2744,6 +2745,8 @@ export interface AuditNode {
  * because a field was absent would pass an overflow check it should fail.
  */
 export interface AuditState {
+	/** Diagnostic observer AFTER an unchanged U-08 failure; never affects policy. */
+	onU08Failure?: (a: number, b: number) => void;
 	nodes: AuditNode[];
 	platform: string;
 	scale: string;
