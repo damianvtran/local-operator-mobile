@@ -9,7 +9,7 @@ import type {
 	DirectoryMember,
 	Message,
 	Status,
-} from "@/team-bridge/contract";
+} from "../contract";
 
 export const SELF = "acct_self_0001";
 export const ADA = "acct_ada_0002";
