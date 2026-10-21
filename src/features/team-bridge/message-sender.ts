@@ -57,7 +57,10 @@ export function createMessageSender(options: {
 				options.adopt(conversation);
 			}
 			if (!options.isCurrent()) return false;
-			await options.send(options.tenantId, id, body, attempt.ref, ids);
+			// Text-only keeps the exact pre-attachments call; ids ride only when present.
+			if (ids.length > 0)
+				await options.send(options.tenantId, id, body, attempt.ref, ids);
+			else await options.send(options.tenantId, id, body, attempt.ref);
 			attempt = null;
 			return true;
 		} finally {

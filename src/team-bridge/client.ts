@@ -132,7 +132,10 @@ export function hubErrorKind(
 	if (status === 403) return "refused";
 	if (status === 404) return "not_found";
 	if (status === 409) return "conflict";
-	if (status === 400 || status === 413 || status === 422) return "invalid";
+	// 415 joins 413/422: the attachment upload's "not PNG/JPEG" refusal is this
+	// client having sent something the hub will not take, not a server fault.
+	if (status === 400 || status === 413 || status === 415 || status === 422)
+		return "invalid";
 	if (status === 429) return "rate_limited";
 	if (status === 503 || code === "messaging_unavailable") return "unavailable";
 	return "server";
