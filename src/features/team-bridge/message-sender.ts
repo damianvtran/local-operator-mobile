@@ -20,20 +20,31 @@ export function createMessageSender(options: {
 		conversationId: string,
 		body: string,
 		clientRef: string,
+		attachmentIds?: string[],
 	) => Promise<Message>;
 	adopt: (conversation: Conversation) => void;
 	isCurrent: () => boolean;
 	clientRef?: () => string;
 }) {
 	let id = options.conversationId;
-	let attempt: { body: string; ref: string } | null = null;
+	/*
+	 * The idempotency key is reused only for the SAME payload. The hub compares
+	 * `(body_hash, attachments_hash)` on a `client_ref` replay, so changing the
+	 * text OR the image set must mint a new ref; reusing it would be refused as
+	 * `client_ref_conflict` rather than sending the edited message.
+	 */
+	let attempt: { key: string; ref: string } | null = null;
 	let busy = false;
-	return async (input: string) => {
+	return async (input: string, attachmentIds: readonly string[] = []) => {
 		const body = input.trim();
-		if (!body || busy || !options.isCurrent()) return false;
+		const ids = [...attachmentIds];
+		// Image-only is a valid message (`body: ""` with ids); nothing at all is not.
+		if ((!body && ids.length === 0) || busy || !options.isCurrent())
+			return false;
 		busy = true;
-		if (attempt?.body !== body)
-			attempt = { body, ref: (options.clientRef ?? newClientRef)() };
+		const key = JSON.stringify([body, ids]);
+		if (attempt?.key !== key)
+			attempt = { key, ref: (options.clientRef ?? newClientRef)() };
 		try {
 			if (!id) {
 				if (!options.target) throw new Error("Choose a message recipient.");
@@ -46,7 +57,7 @@ export function createMessageSender(options: {
 				options.adopt(conversation);
 			}
 			if (!options.isCurrent()) return false;
-			await options.send(options.tenantId, id, body, attempt.ref);
+			await options.send(options.tenantId, id, body, attempt.ref, ids);
 			attempt = null;
 			return true;
 		} finally {

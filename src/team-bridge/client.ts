@@ -28,6 +28,7 @@
 
 import { RADIENT_API_BASE } from "@/connection/discovery";
 import { resolveFetch } from "@/relay/platform-fetch";
+import { sniffAttachmentMime } from "@/team-bridge/attachments";
 import {
 	type AccountUnread,
 	accountUnreadSchema,
@@ -51,6 +52,8 @@ import {
 	readStateSchema,
 	type Status,
 	statusSchema,
+	type UploadedAttachment,
+	uploadedAttachmentSchema,
 } from "@/team-bridge/contract";
 
 const TRAILING_SLASHES = /\/+$/;
@@ -238,6 +241,13 @@ export function createHubClient(deps: HubClientDeps) {
 		query?: Query,
 		body?: unknown,
 		signal?: AbortSignal,
+		/*
+		 * Raw bytes instead of a JSON body (the attachment upload), and the
+		 * `accept` the caller reads back (`image/*` for the byte fetch). Kept on
+		 * the ONE request path so uploads and image reads get the same bearer,
+		 * timeout, abort and single-401-retry handling as every JSON call.
+		 */
+		raw?: { bytes: Uint8Array; accept?: string } | { accept: string },
 	): Promise<Response> {
 		const fetchImpl = resolveFetch(deps.fetchImpl);
 		/*
@@ -260,13 +270,20 @@ export function createHubClient(deps: HubClientDeps) {
 				{
 					method,
 					headers: {
-						accept: "application/json",
+						accept: raw?.accept ?? "application/json",
 						authorization: `Bearer ${token}`,
-						...(body === undefined
-							? {}
-							: { "content-type": "application/json" }),
+						...(raw && "bytes" in raw
+							? /* The hub sniffs the bytes and ignores this header. */
+								{ "content-type": "application/octet-stream" }
+							: body === undefined
+								? {}
+								: { "content-type": "application/json" }),
 					},
-					...(body === undefined ? {} : { body: JSON.stringify(body) }),
+					...(raw && "bytes" in raw
+						? { body: raw.bytes as unknown as BodyInit }
+						: body === undefined
+							? {}
+							: { body: JSON.stringify(body) }),
 					/* The hub is not a tunnel and owns no cookie the phone should send. */
 					credentials: "omit",
 					signal: controller.signal,
@@ -288,12 +305,19 @@ export function createHubClient(deps: HubClientDeps) {
 		}
 	}
 
-	async function request<T>(
+	type RequestOptions = {
+		query?: Query;
+		body?: unknown;
+		signal?: AbortSignal;
+		raw?: { bytes: Uint8Array; accept?: string } | { accept: string };
+	};
+
+	/** Token, one request, one forced refresh on 401, and the refusal class. */
+	async function authorized(
 		method: "GET" | "POST" | "PUT" | "DELETE",
 		path: string,
-		parse: ((value: unknown) => T) | null,
-		options: { query?: Query; body?: unknown; signal?: AbortSignal } = {},
-	): Promise<T> {
+		options: RequestOptions,
+	): Promise<Response> {
 		const access = async (force = false) => {
 			try {
 				return await deps.accessToken(force ? { force: true } : undefined);
@@ -320,6 +344,7 @@ export function createHubClient(deps: HubClientDeps) {
 			options.query,
 			options.body,
 			options.signal,
+			options.raw,
 		);
 		if (response.status === 401) {
 			/* One forced refresh, one retry. A token revoked server-side before its
@@ -339,9 +364,20 @@ export function createHubClient(deps: HubClientDeps) {
 				options.query,
 				options.body,
 				options.signal,
+				options.raw,
 			);
 		}
 		if (!response.ok) throw await errorFrom(response);
+		return response;
+	}
+
+	async function request<T>(
+		method: "GET" | "POST" | "PUT" | "DELETE",
+		path: string,
+		parse: ((value: unknown) => T) | null,
+		options: RequestOptions = {},
+	): Promise<T> {
+		const response = await authorized(method, path, options);
 		if (parse === null) return undefined as T;
 		let raw: unknown;
 		try {
@@ -484,7 +520,7 @@ export function createHubClient(deps: HubClientDeps) {
 		send(
 			tenantId: string,
 			conversationId: string,
-			input: { clientRef: string; body: string },
+			input: { clientRef: string; body: string; attachmentIds?: string[] },
 		): Promise<Message> {
 			return request(
 				"POST",
@@ -495,9 +531,106 @@ export function createHubClient(deps: HubClientDeps) {
 						tenant_id: tenantId,
 						client_ref: input.clientRef,
 						body: input.body,
+						/*
+						 * Sent ONLY when non-empty: an older hub decodes this DTO with
+						 * `DisallowUnknownFields`, so a text-only send must stay
+						 * byte-identical to before this field existed.
+						 */
+						...(input.attachmentIds?.length
+							? { attachment_ids: input.attachmentIds }
+							: {}),
 					},
 				},
 			);
+		},
+
+		/**
+		 * Stage one image (`POST /conversations/:cid/attachments`). The body is
+		 * the already-bounded PNG/JPEG bytes, raw: no multipart, no filename (the
+		 * hub never stores one). Staging is idempotent on the hub by content, so
+		 * a retry after a dropped response returns the same id.
+		 */
+		uploadAttachment(
+			tenantId: string,
+			conversationId: string,
+			bytes: Uint8Array,
+			signal?: AbortSignal,
+		): Promise<UploadedAttachment> {
+			return request(
+				"POST",
+				`/conversations/${encodeURIComponent(conversationId)}/attachments`,
+				(v) => uploadedAttachmentSchema.parse(v),
+				{ query: { tenant_id: tenantId }, raw: { bytes }, signal },
+			);
+		},
+
+		/** Drop a staged image the reader removed. Idempotent: gone is success. */
+		async deleteAttachment(
+			tenantId: string,
+			conversationId: string,
+			attachmentId: string,
+		): Promise<void> {
+			try {
+				await request(
+					"DELETE",
+					`/conversations/${encodeURIComponent(conversationId)}/attachments/${encodeURIComponent(attachmentId)}`,
+					null,
+					{ query: { tenant_id: tenantId } },
+				);
+			} catch (error) {
+				if (isHubError(error) && error.kind === "not_found") return;
+				throw error;
+			}
+		},
+
+		/**
+		 * One bound image's bytes, read as the signed-in member with the bearer.
+		 * There is no URL to hand to an image view: the route needs the token, so
+		 * the caller turns these bytes into an in-memory `data:` URI.
+		 *
+		 * FAIL CLOSED on content: the bytes must sniff as PNG or JPEG AND match
+		 * the served `Content-Type`. Anything else (an edge's HTML error page, a
+		 * type this build does not render) is `malformed`, never displayed.
+		 */
+		async attachmentBytes(
+			tenantId: string,
+			conversationId: string,
+			messageId: string,
+			attachmentId: string,
+			signal?: AbortSignal,
+		): Promise<{ mime: "image/png" | "image/jpeg"; bytes: Uint8Array }> {
+			const response = await authorized(
+				"GET",
+				`/conversations/${encodeURIComponent(conversationId)}/messages/${encodeURIComponent(messageId)}/attachments/${encodeURIComponent(attachmentId)}`,
+				{
+					query: { tenant_id: tenantId },
+					raw: { accept: "image/png, image/jpeg" },
+					signal,
+				},
+			);
+			let bytes: Uint8Array;
+			try {
+				bytes = new Uint8Array(await response.arrayBuffer());
+			} catch {
+				throw new HubError({
+					kind: "unreachable",
+					message: "The image could not be downloaded. Try again.",
+					status: response.status,
+				});
+			}
+			const sniffed = sniffAttachmentMime(bytes);
+			const declared = (response.headers.get("content-type") ?? "")
+				.split(";")[0]
+				?.trim()
+				.toLowerCase();
+			if (sniffed === null || (declared && declared !== sniffed)) {
+				throw new HubError({
+					kind: "malformed",
+					message: "Radient returned an image this app cannot show.",
+					status: response.status,
+				});
+			}
+			return { mime: sniffed, bytes };
 		},
 
 		/** Advance the read cursor (`$max` server-side, so a stale value never moves it back). */
