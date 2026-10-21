@@ -389,7 +389,7 @@ export function paletteProvenance(
  */
 
 /** One captured cell, as the audit reads it out of the manifest. */
-interface AuditRecord {
+export interface AuditRecord {
 	/** Whether the capture run judged this frame's text-scale pair live. */
 	scaleLive?: boolean | null;
 
@@ -547,7 +547,7 @@ function cellQuery(record: AuditRecord, seed: ResolvedSeed): string {
 	return query.toString();
 }
 
-async function auditCell(
+export async function auditCell(
 	page: CdpPage,
 	record: AuditRecord,
 	{

@@ -90,7 +90,10 @@ describe("core-audit-only dispatch isolation", () => {
 		expect(admits("workflow_dispatch", "unknown")).toBe(false);
 	});
 	it("preserves every old job predicate's result for every existing mode and event", () => {
-		expect([...guards.keys()]).toEqual(Object.keys(legacy));
+		expect(
+			[...guards.keys()].filter((name) => name !== "u08-geometry-proof"),
+		).toEqual(Object.keys(legacy));
+		expect(guards.get("u08-geometry-proof")).toBeTruthy();
 		for (const event of [
 			"push",
 			"pull_request",
@@ -104,6 +107,9 @@ describe("core-audit-only dispatch isolation", () => {
 				"account-routing-ios-proof",
 				"account-routing-android-proof",
 			]) {
+				expect(
+					selects(guards.get("u08-geometry-proof") ?? "true", event, mode),
+				).toBe(false);
 				for (const [name, old] of Object.entries(legacy))
 					expect(
 						selects(guards.get(name) ?? "false", event, mode),

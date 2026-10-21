@@ -30,6 +30,37 @@ The only skip that can appear in a green run by design is the path-gated
 at all, and a run whose `harness` job fails is red, with the missing pieces named
 in the annotation.
 
+## One-cell U-08 geometry diagnostic (remote CI only)
+
+`proof_mode=u08-geometry-proof` with default/full stage dispatches only the
+harness bootstrap plus one diagnostic job (30-minute total cap; under 5 minutes
+after web setup). It exports the unchanged application remotely, then reuses
+`auditCell`/`freshPage`, the canonical device/media/env() inset override, seed,
+scenario pin and readiness on the original dark/150% condensed long-transcript
+cell: 390×844, DPR 3, top 59/bottom 34. No local approximation or full core/native
+sweep is part of this proof.
+
+```sh
+gh workflow run e2e.yml --ref <branch-or-tag> -f proof_mode=u08-geometry-proof
+```
+
+**Success means the original 22×18/100% U-08 FAIL reproduced, not audit PASS.**
+The ordinary extraction string and U-08 decision arithmetic remain unchanged;
+a diagnostic-only observer after FAIL identifies actual nodes. Per-pair data
+includes original rectangles, ancestry, nearest pressable, element/text Range
+fragments and their canonical clipped intersections. A screenshot is associated
+with stable pair fingerprints before/after. Admission requires one unique match
+to the persisted raw detail family in the original scene and actual fixture
+TurnBar ancestry; matching dimensions alone are insufficient. Historical node,
+text and control identities were not persisted and are discovered, not guessed.
+Text fragments respect applicable owner overflow before the unchanged canonical
+ancestor clip walk; self-clipping styles/region are recorded. Missing reproduction, unsupported
+env() override, readiness/identity drift or data above 5 MiB fails explicitly.
+Only geometry JSON and one PNG (or a not-reproduced receipt) are retained 7 days.
+No overlap threshold, exemption, product layout or existing proof mode changes.
+Record the source/run SHA and inspect evidence before choosing a fix; these
+measurements do not decide in advance whether the failure is real or geometric.
+
 ## Core device audit only (on demand)
 
 Dispatch `e2e.yml` with `proof_mode=core-audit-only` to run only the harness
