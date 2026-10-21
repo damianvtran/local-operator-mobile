@@ -370,9 +370,10 @@ describe("hub client", () => {
 			expect(calls[1]?.url).toBe(
 				`https://hub.example/v1/messaging/conversations/c1/messages/m1/attachments/batt_1?tenant_id=${TENANT}`,
 			);
-			expect(
-				(calls[1]?.init.headers as Record<string, string>).authorization,
-			).toBe("Bearer token-b");
+			const retried = calls[1]?.init.headers as
+				| Record<string, string>
+				| undefined;
+			expect(retried?.authorization).toBe("Bearer token-b");
 		});
 
 		it("fails closed on bytes that are not PNG/JPEG or contradict the served type", async () => {

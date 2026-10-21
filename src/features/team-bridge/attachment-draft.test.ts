@@ -18,7 +18,10 @@ function setup(
 	const base = {
 		maxCount: 4,
 		prepare: vi.fn(async () => prepared()),
-		upload: vi.fn(async () => ({ id: `batt_${(n += 1)}` })),
+		upload: vi.fn(async () => {
+			n += 1;
+			return { id: `batt_${n}` };
+		}),
 		discard: vi.fn(async (_id: string) => undefined),
 		onChange: vi.fn(),
 	};
