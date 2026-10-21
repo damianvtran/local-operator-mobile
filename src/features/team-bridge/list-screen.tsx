@@ -11,6 +11,15 @@ import {
 import type { Conversation } from "@/team-bridge/contract";
 import * as model from "@/team-bridge/model";
 import { useTeamBridge, useTeamBridgeState } from "@/team-bridge/provider";
+import {
+	CONTROL,
+	SCREEN,
+	SURFACE,
+	teamBridgeChiefId,
+	teamBridgeConversationId,
+	teamBridgeOrganizationId,
+	teamBridgePersonId,
+} from "@/ui/a11y";
 import { useTokenColor } from "@/ui/appearance";
 import { Avatar, initialsOf } from "@/ui/components/avatar";
 import { Button } from "@/ui/components/button";
@@ -140,7 +149,7 @@ function ListContent() {
 					conversation={c}
 					detail={model.isPreview(c) ? "Preview · Join to read" : null}
 					onPress={() => existing(c)}
-					testID={`team-bridge-conversation-${c.id}`}
+					testID={teamBridgeConversationId(c.id)}
 				/>
 			))
 		) : empty ? (
@@ -162,18 +171,18 @@ function ListContent() {
 			title="Team Bridge"
 			headerLeading={<BridgeBack />}
 			scroll={false}
-			testID="team-bridge-list"
+			testID={SCREEN.teamBridgeList}
 		>
 			<View className="px-4 py-2">
 				<Button
 					label={`${selected?.name ?? "Choose organization"}${selected?.readOnly ? " · Read only" : ""}`}
 					variant="outline"
-					testID="team-bridge-org-switcher"
+					testID={CONTROL.teamBridgeOrgSwitcher}
 					onPress={() => setSwitching(true)}
 				/>
 			</View>
 			<ScrollView
-				testID="team-bridge-sections"
+				testID={SURFACE.teamBridgeSections}
 				contentContainerClassName="pb-8"
 				refreshControl={
 					<RefreshControl
@@ -198,7 +207,7 @@ function ListContent() {
 							!conversations.length && (
 								<Text
 									className="px-4 py-4 text-body text-ink-muted"
-									testID="team-bridge-conversations-loading"
+									testID={SURFACE.teamBridgeConversationsLoading}
 								>
 									Loading conversations…
 								</Text>
@@ -211,7 +220,7 @@ function ListContent() {
 								</Text>
 								<Button
 									label="Retry conversations"
-									testID="team-bridge-conversations-retry"
+									testID={CONTROL.teamBridgeConversationsRetry}
 									onPress={retry}
 								/>
 							</View>
@@ -235,12 +244,12 @@ function ListContent() {
 						{org?.peopleState === "error" && (
 							<View className="gap-2 px-4">
 								<Text accessibilityRole="alert" className="text-body text-ink">
-									The people directory could not load. Conversations are still
-									available.
+									The people directory could not load. Try again to load your
+									organization’s people.
 								</Text>
 								<Button
 									label="Retry people"
-									testID="team-bridge-people-retry"
+									testID={CONTROL.teamBridgePeopleRetry}
 									onPress={retry}
 								/>
 							</View>
@@ -270,7 +279,7 @@ function ListContent() {
 									}
 									conversation={dm}
 									disabled={rowState === "unavailable" || rowState === "self"}
-									testID={`team-bridge-person-${person.account_id}`}
+									testID={teamBridgePersonId(person.account_id)}
 									onPress={() =>
 										dm
 											? existing(dm)
@@ -307,7 +316,7 @@ function ListContent() {
 									label={chief.label}
 									detail={chief.paused ? "Paused" : "Chief of staff"}
 									conversation={dm}
-									testID={`team-bridge-chief-${chief.endpointId}`}
+									testID={teamBridgeChiefId(chief.endpointId)}
 									onPress={() =>
 										dm
 											? existing(dm)
@@ -338,7 +347,7 @@ function ListContent() {
 				visible={switching}
 				onClose={() => setSwitching(false)}
 				title="Organization"
-				testID="team-bridge-organizations"
+				testID={SURFACE.teamBridgeOrganizations}
 			>
 				<View className="gap-2 p-4">
 					{state.organizations.map((o) => (
@@ -346,7 +355,7 @@ function ListContent() {
 							key={o.tenantId}
 							variant="outline"
 							label={`${o.name}${o.readOnly ? " · Read only" : ""}${o.unread ? ` · ${o.unread} unread` : ""}`}
-							testID={`team-bridge-org-${o.tenantId}`}
+							testID={teamBridgeOrganizationId(o.tenantId)}
 							onPress={() => {
 								actions.selectOrganization(o.tenantId);
 								setSwitching(false);

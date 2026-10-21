@@ -281,6 +281,9 @@ describe("a person's row IS their DM", () => {
 });
 
 describe("people and chiefs of staff", () => {
+	it("the inert self row cannot borrow a colleague's DM unread", () => {
+		expect(dmWithPerson([dm(ADA, "Ada")], SELF, SELF)).toBeNull();
+	});
 	it("dims a bridge-off person with the reason; paused stays openable", () => {
 		expect(personRowState(person(ADA, "Ada"), SELF)).toBe("openable");
 		expect(

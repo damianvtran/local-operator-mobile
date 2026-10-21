@@ -677,3 +677,203 @@ describe("read rollback ownership", () => {
 		});
 	});
 });
+
+describe("tail refresh interval recovery", () => {
+	const range = (start: number, end: number) =>
+		Array.from({ length: end - start + 1 }, (_, offset) =>
+			message(start + offset, ADA, "x"),
+		);
+	it("bridges a deferred tail jump backwards to overlap without losing concurrently held pages", async () => {
+		const bridge = deferred<Awaited<ReturnType<HubClient["listMessages"]>>>();
+		const listMessages = vi
+			.fn<HubClient["listMessages"]>()
+			.mockResolvedValueOnce({ messages: range(1, 50), has_more: false })
+			.mockResolvedValueOnce({ messages: range(101, 150), has_more: true })
+			.mockImplementationOnce(() => bridge.promise)
+			.mockResolvedValueOnce({ messages: range(1, 50), has_more: false });
+		const { store, actions } = setup(
+			fakeHub({ listMessages, send: async () => message(151, SELF, "x") }),
+		);
+		await actions.loadThread(TENANT, "c1");
+		const tail = actions.loadThread(TENANT, "c1");
+		await Promise.resolve();
+		expect(
+			store.getState().threads[threadKey(TENANT, "c1")]?.messages,
+		).toHaveLength(50);
+		await actions.send(TENANT, "c1", "new", "ref");
+		bridge.resolve({ messages: range(51, 100), has_more: true });
+		await tail;
+		expect(listMessages).toHaveBeenNthCalledWith(3, TENANT, "c1", {
+			beforeSeq: 101,
+			limit: 50,
+		});
+		expect(listMessages).toHaveBeenNthCalledWith(4, TENANT, "c1", {
+			beforeSeq: 51,
+			limit: 50,
+		});
+		const thread = store.getState().threads[threadKey(TENANT, "c1")];
+		expect(thread?.messages.map((m) => m.seq)).toEqual(
+			range(1, 151).map((m) => m.seq),
+		);
+		expect(thread?.hasMore).toBe(false);
+	});
+
+	it("accepts legitimate sequence gaps once a backward page overlaps", async () => {
+		const listMessages = vi
+			.fn<HubClient["listMessages"]>()
+			.mockResolvedValueOnce({
+				messages: [message(1, ADA, "x"), message(50, ADA, "x")],
+				has_more: false,
+			})
+			.mockResolvedValueOnce({
+				messages: [message(101, ADA, "x")],
+				has_more: true,
+			})
+			.mockResolvedValueOnce({
+				messages: [message(50, ADA, "x"), message(90, ADA, "x")],
+				has_more: true,
+			});
+		const { store, actions } = setup(fakeHub({ listMessages }));
+		await actions.loadThread(TENANT, "c1");
+		await actions.loadThread(TENANT, "c1");
+		expect(
+			store
+				.getState()
+				.threads[threadKey(TENANT, "c1")]?.messages.map((m) => m.seq),
+		).toEqual([1, 50, 90, 101]);
+	});
+
+	it("retains the connected interval and exposes a failed bridge instead of publishing a hole", async () => {
+		const listMessages = vi
+			.fn<HubClient["listMessages"]>()
+			.mockResolvedValueOnce({ messages: range(1, 50), has_more: false })
+			.mockResolvedValueOnce({ messages: range(101, 150), has_more: true })
+			.mockResolvedValueOnce({ messages: [], has_more: false });
+		const { store, actions } = setup(fakeHub({ listMessages }));
+		await actions.loadThread(TENANT, "c1");
+		await actions.loadThread(TENANT, "c1");
+		expect(store.getState().threads[threadKey(TENANT, "c1")]).toMatchObject({
+			state: "error",
+			error: { kind: "malformed" },
+			hasMore: false,
+		});
+		expect(
+			store.getState().threads[threadKey(TENANT, "c1")]?.messages,
+		).toHaveLength(50);
+	});
+});
+
+describe("terminal authorization refusals", () => {
+	it.each([
+		"status",
+		"thread",
+		"older",
+		"organization",
+		"directory",
+		"unread",
+		"read",
+		"notify",
+		"send",
+	] as const)(
+		"gates an already open account after %s refuses its plan",
+		async (operation) => {
+			const hub = fakeHub();
+			const { store, actions } = setup(hub);
+			await actions.checkStatus();
+			await actions.loadOrganization(TENANT);
+			await actions.loadThread(TENANT, "c1");
+			const denied = async () => {
+				throw new HubError({
+					kind: "plan",
+					message: "Plan no longer eligible",
+				});
+			};
+			if (operation === "status") {
+				hub.status = denied;
+				await actions.checkStatus();
+			}
+			if (operation === "thread") {
+				hub.listMessages = denied;
+				await actions.loadThread(TENANT, "c1");
+			}
+			if (operation === "older") {
+				hub.listMessages = denied;
+				await actions.loadOlder(TENANT, "c1");
+			}
+			if (operation === "organization") {
+				hub.listConversations = denied;
+				await actions.loadOrganization(TENANT);
+			}
+			if (operation === "directory") {
+				hub.directory = denied;
+				await actions.loadOrganization(TENANT);
+			}
+			if (operation === "unread") {
+				hub.accountUnread = denied;
+				await actions.refreshUnread();
+			}
+			if (operation === "read") {
+				hub.markRead = denied;
+				await actions.markRead(TENANT, "bcv_channel_general", 4);
+			}
+			if (operation === "notify") {
+				hub.markRead = denied;
+				await expect(
+					actions.setNotify(TENANT, "bcv_channel_general", "mute"),
+				).rejects.toMatchObject({ kind: "plan" });
+			}
+			if (operation === "send") {
+				hub.send = denied;
+				await expect(
+					actions.send(TENANT, "c1", "hello", "ref"),
+				).rejects.toMatchObject({ kind: "plan" });
+			}
+			expect(store.getState().gate).toBe("plan_required");
+			const send = vi.fn<HubClient["send"]>();
+			hub.send = send;
+			await expect(
+				actions.send(TENANT, "c1", "no longer allowed", "ref2"),
+			).rejects.toMatchObject({ kind: "plan" });
+			expect(send).not.toHaveBeenCalled();
+		},
+	);
+
+	it.each(["thread", "older", "read", "send"] as const)(
+		"signs out and forgets prior-account state when %s refuses authentication",
+		async (operation) => {
+			const hub = fakeHub();
+			const { store, actions } = setup(hub);
+			await actions.checkStatus();
+			await actions.loadOrganization(TENANT);
+			await actions.loadThread(TENANT, "c1");
+			const denied = async () => {
+				throw new HubError({ kind: "sign_in", message: "Grant refused" });
+			};
+			if (operation === "thread") {
+				hub.listMessages = denied;
+				await actions.loadThread(TENANT, "c1");
+			}
+			if (operation === "older") {
+				hub.listMessages = denied;
+				await actions.loadOlder(TENANT, "c1");
+			}
+			if (operation === "read") {
+				hub.markRead = denied;
+				await actions.markRead(TENANT, "bcv_channel_general", 4);
+			}
+			if (operation === "send") {
+				hub.send = denied;
+				await expect(
+					actions.send(TENANT, "c1", "hello", "ref"),
+				).rejects.toMatchObject({ kind: "sign_in" });
+			}
+			expect(store.getState()).toMatchObject({
+				gate: "signed_out",
+				selfAccountId: null,
+				orgs: {},
+				threads: {},
+				totalUnread: 0,
+			});
+		},
+	);
+});

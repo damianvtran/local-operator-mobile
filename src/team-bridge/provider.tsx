@@ -16,6 +16,7 @@ import {
 import { AppState } from "react-native";
 import { useStore } from "zustand";
 import { useConnection } from "@/features/auth/connection-provider";
+import { loadNotifications } from "@/notifications/native";
 import { useUiStore } from "@/state/ui-store";
 import { createHubClient, type HubClient } from "@/team-bridge/client";
 import {
@@ -24,6 +25,7 @@ import {
 	subscribeTeamBridgeTaps,
 	unregisterTeamBridgeDevice,
 } from "@/team-bridge/push";
+import { createPushLifecycle } from "@/team-bridge/push-lifecycle";
 import { teamBridgeThreadPath } from "@/team-bridge/push-payload";
 import { registerTeamBridgeRetirement } from "@/team-bridge/retirement";
 import {
@@ -33,9 +35,14 @@ import {
 } from "@/team-bridge/store";
 import { teamBridgeFixture } from "@/testing/team-bridge-fixture";
 
-const Context = createContext<(TeamBridgeStore & { hub: HubClient }) | null>(
-	null,
-);
+const Context = createContext<
+	| (TeamBridgeStore & {
+			hub: HubClient;
+			registerPush: () => Promise<void>;
+			pushes: ReturnType<typeof createPushLifecycle>;
+	  })
+	| null
+>(null);
 
 export function TeamBridgeProvider({ children }: { children: ReactNode }) {
 	const connection = useConnection();
@@ -57,29 +64,74 @@ export function TeamBridgeProvider({ children }: { children: ReactNode }) {
 			accessToken,
 			...(fixture ? { baseUrl: fixture.baseUrl } : {}),
 		});
-		return { ...createTeamBridgeStore({ hub: () => hub, accessToken }), hub };
+		let registeredHub: HubClient | null = null;
+		const bindAccount = async () => {
+			const token = await accessToken();
+			if (!token) return null;
+			// Push cleanup must not accidentally DELETE under a replacement login.
+			// Pin this operation's grant; the general UI client remains refreshable.
+			return createHubClient({
+				accessToken: async () => token,
+				...(fixture ? { baseUrl: fixture.baseUrl } : {}),
+			});
+		};
+		const pushes = createPushLifecycle({
+			register: async (isCurrent) => {
+				const bound = await bindAccount();
+				if (!bound || !isCurrent()) return;
+				registeredHub = bound;
+				await registerTeamBridgeDevice(bound, isCurrent);
+			},
+			unregister: async () => {
+				const bound = registeredHub ?? (await bindAccount());
+				if (bound) await unregisterTeamBridgeDevice(bound);
+				registeredHub = null;
+			},
+		});
+		return {
+			...createTeamBridgeStore({ hub: () => hub, accessToken }),
+			hub,
+			pushes,
+			registerPush: () => pushes.register(),
+		};
 	}, [fixture]);
 	useEffect(
-		() =>
-			registerTeamBridgeRetirement(() => unregisterTeamBridgeDevice(value.hub)),
+		() => registerTeamBridgeRetirement(() => value.pushes.retire()),
 		[value],
 	);
 	useEffect(() => {
 		if (!connection.coldStartSettled && !fixture) return;
 		if (!connection.radientSignedIn && !fixture) {
+			value.pushes.suspend();
 			value.actions.reset();
 			void value.actions.checkStatus();
 			return;
 		}
+		value.pushes.activate();
 		const refresh = () => {
 			void value.actions.refreshUnread();
-			void registerTeamBridgeDevice(value.hub);
+			void value.registerPush().catch(() => undefined);
 		};
 		void value.actions.checkStatus().then(refresh);
 		const subscription = AppState.addEventListener("change", (state) => {
 			if (state === "active") refresh();
 		});
-		return () => subscription.remove();
+		let disposed = false;
+		let tokenSubscription: { remove: () => void } | undefined;
+		// Providers can rotate a token while the app is running, not just at launch.
+		void loadNotifications()
+			.then((module) => {
+				if (!module || disposed) return;
+				tokenSubscription = module.addPushTokenListener(() => {
+					void value.registerPush().catch(() => undefined);
+				});
+			})
+			.catch(() => undefined);
+		return () => {
+			disposed = true;
+			subscription.remove();
+			tokenSubscription?.remove();
+		};
 	}, [connection.coldStartSettled, connection.radientSignedIn, fixture, value]);
 
 	useEffect(() => {

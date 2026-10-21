@@ -81,7 +81,17 @@ string above. All FCM data values are strings. The native package's
 The device registers directly with the hub on launch/foreground when Radient is
 signed in and OS permission is already granted. The permission prompt stays an
 explicit Settings action, never a mount effect. Sign-out attempts deregistration
-before the OAuth grant is retired. Pushes for the currently watched, focused,
+before the OAuth grant is retired. Device PUT and DELETE requests carry a
+**persisted monotonic `generation`** (DELETE uses a query parameter). The hub
+retains a revocation/incarnation fence: an older authenticated PUT cannot
+recreate a row after a newer DELETE, even when the original HTTP outcome was
+unknown. The phone also serializes admitted registration before removal, pins
+cleanup to its original account, and refuses mutations when incarnation storage
+fails. Cleanup has a 35-second ceiling (up to two 15-second hub requests); a
+network failure is still best effort and must not be described as guaranteed
+provider revocation. Token rotation re-registers through the same queue.
+
+Pushes for the currently watched, focused,
 active thread are quiet; other Team Bridge messages may show a foreground
 banner. Non-Team-Bridge pushes retain expo's previous no-handler behaviour.
 

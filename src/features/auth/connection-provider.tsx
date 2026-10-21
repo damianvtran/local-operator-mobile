@@ -924,17 +924,25 @@ export const ConnectionProvider = ({
 	);
 
 	const signOut = useCallback(async () => {
-		// Deregistration still needs the current grant. A new sign-in during this
-		// bounded wait owns its credentials and must not be cleared by this sign-out.
+		// Reserve route logout and durable retirement synchronously: yielding here
+		// lets a newer same-origin login enter before this logout and lose its cookie.
+		// Only OAuth clearing waits for push deregistration, which still needs its grant.
 		const ownsGrant = radientAccessRef.current?.capture();
-		await retireTeamBridgeDevice();
-		if (!ownsGrant?.()) return false;
+		const deviceRetired = retireTeamBridgeDevice();
+		const clearCredentials = async () => {
+			await deviceRetired;
+			// A replacement sign-in wins; an unmount only withdrew the in-memory
+			// grant and must not cancel an already requested durable sign-out.
+			if (!ownsGrant?.() && tokensRef.current !== null) return;
+			holdRadientTokens(null);
+			await clearStoredCredentials();
+		};
 		if (pendingSignOutRef.current) {
 			const owner = revocationOwnerRef.current;
 			// The retained operation may originate from forgetting one custom route,
 			// which deliberately preserves OAuth. Ordinary Sign out still wipes all
 			// owned credentials, serialized before any newer native admission.
-			const clear = radientAccessRef.current?.retire(clearStoredCredentials);
+			const clear = nativeCredentialRetirement.retire(null, clearCredentials);
 			const [, confirmed] = await Promise.all([
 				clear,
 				pendingSignOutRef.current(),
@@ -958,7 +966,6 @@ export const ConnectionProvider = ({
 		stopConfig();
 		clientRef.current = null;
 		connectionStore.getState().endRoute();
-		holdRadientTokens(null);
 		managerRef.current = null;
 		retryRef.current = null;
 		/* The landing latch goes with the session. It is a one-way latch otherwise:
@@ -974,7 +981,7 @@ export const ConnectionProvider = ({
 		// for the clear; a new same-origin login queues behind the final logout.
 		const retired = nativeCredentialRetirement.retire(
 			manager,
-			clearStoredCredentials,
+			clearCredentials,
 		);
 		return await confirmRevocation(activeRoute, revision, retired);
 	}, [confirmRevocation, stopStream, stopConfig, holdRadientTokens]);

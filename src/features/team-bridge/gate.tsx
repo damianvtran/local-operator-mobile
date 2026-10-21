@@ -4,6 +4,7 @@ import { type ReactNode, useState } from "react";
 import { Platform, Text, View } from "react-native";
 import { useConnection } from "@/features/auth/connection-provider";
 import { useTeamBridge, useTeamBridgeState } from "@/team-bridge/provider";
+import { CONTROL, SURFACE, teamBridgeGateId } from "@/ui/a11y";
 import { Button } from "@/ui/components/button";
 import { Screen } from "@/ui/components/screen";
 
@@ -13,7 +14,7 @@ export function BridgeBack() {
 		<Button
 			label="Back"
 			variant="quiet"
-			testID="team-bridge-back"
+			testID={CONTROL.teamBridgeBack}
 			onPress={() => (router.canGoBack() ? router.back() : router.replace("/"))}
 		/>
 	);
@@ -40,7 +41,7 @@ export function BridgeGate({ children }: { children: ReactNode }) {
 		<Screen
 			title="Team Bridge"
 			headerLeading={<BridgeBack />}
-			testID={`team-bridge-gate-${gate}`}
+			testID={teamBridgeGateId(gate)}
 		>
 			<View className="gap-5 px-4 py-6">
 				<Text className="text-title text-ink" accessibilityRole="header">
@@ -50,7 +51,7 @@ export function BridgeGate({ children }: { children: ReactNode }) {
 					<View
 						accessibilityLabel="Loading Team Bridge"
 						className="gap-3"
-						testID="team-bridge-gate-skeleton"
+						testID={SURFACE.teamBridgeGateSkeleton}
 					>
 						<View className="h-6 rounded-sm bg-surface" />
 						<View className="h-6 rounded-sm bg-surface" />
@@ -73,7 +74,7 @@ export function BridgeGate({ children }: { children: ReactNode }) {
 						{Platform.OS === "web" ? (
 							<Button
 								label="Upgrade to Team"
-								testID="team-bridge-upgrade"
+								testID={CONTROL.teamBridgeUpgrade}
 								onPress={() => {
 									void WebBrowser.openBrowserAsync(
 										"https://console.radienthq.com/dashboard/team",
@@ -85,7 +86,7 @@ export function BridgeGate({ children }: { children: ReactNode }) {
 						) : (
 							<Text
 								className="text-body text-ink-muted"
-								testID="team-bridge-plan-console"
+								testID={SURFACE.teamBridgePlanConsole}
 							>
 								Manage your plan in the Radient console
 							</Text>
@@ -99,7 +100,7 @@ export function BridgeGate({ children }: { children: ReactNode }) {
 						</Text>
 						<Button
 							label="Sign in"
-							testID="team-bridge-sign-in"
+							testID={CONTROL.teamBridgeSignIn}
 							onPress={() => {
 								void connection
 									.signInWithRadient()
@@ -124,7 +125,7 @@ export function BridgeGate({ children }: { children: ReactNode }) {
 						</Text>
 						<Button
 							label="Retry"
-							testID="team-bridge-gate-retry"
+							testID={CONTROL.teamBridgeGateRetry}
 							onPress={() => {
 								void actions.checkStatus();
 							}}

@@ -214,6 +214,8 @@ export interface CreateConversationInput {
 
 export interface RegisterDeviceInput {
 	installId: string;
+	/** Persisted per-install incarnation, shared with DELETE to fence late PUTs. */
+	generation: number;
 	platform: "ios" | "android";
 	token: string;
 	/** iOS only: which APNs gateway the token belongs to. */
@@ -542,6 +544,7 @@ export function createHubClient(deps: HubClientDeps) {
 			return request("PUT", "/push/devices", (v) => pushDeviceSchema.parse(v), {
 				body: {
 					install_id: input.installId,
+					generation: input.generation,
 					platform: input.platform,
 					token: input.token,
 					...(input.environment ? { environment: input.environment } : {}),
@@ -551,12 +554,16 @@ export function createHubClient(deps: HubClientDeps) {
 		},
 
 		/** Sign-out deregistration. Idempotent: a device already gone is a success. */
-		async unregisterDevice(installId: string): Promise<void> {
+		async unregisterDevice(
+			installId: string,
+			generation: number,
+		): Promise<void> {
 			try {
 				await request(
 					"DELETE",
 					`/push/devices/${encodeURIComponent(installId)}`,
 					null,
+					{ query: { generation } },
 				);
 			} catch (error) {
 				if (isHubError(error) && error.kind === "not_found") return;

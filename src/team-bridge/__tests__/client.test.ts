@@ -233,19 +233,23 @@ describe("hub client", () => {
 		});
 		await client.registerDevice({
 			installId: "inst-1",
+			generation: 100,
 			platform: "ios",
 			token: "apns-token",
 			environment: "sandbox",
 		});
-		await client.unregisterDevice("inst-1");
+		await client.unregisterDevice("inst-1", 101);
 		expect(calls[0]?.init.method).toBe("PUT");
 		expect(JSON.parse(String(calls[0]?.init.body))).toEqual({
 			install_id: "inst-1",
+			generation: 100,
 			platform: "ios",
 			token: "apns-token",
 			environment: "sandbox",
 		});
 		expect(calls[1]?.init.method).toBe("DELETE");
-		expect(calls[1]?.url).toContain("/v1/messaging/push/devices/inst-1");
+		expect(calls[1]?.url).toContain(
+			"/v1/messaging/push/devices/inst-1?generation=101",
+		);
 	});
 });

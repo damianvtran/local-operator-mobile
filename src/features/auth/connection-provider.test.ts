@@ -19,6 +19,7 @@ import {
 	sessionStateFlags,
 } from "@/features/session/state-marker";
 import { useSessionRuntime } from "@/features/session/use-session";
+import { registerTeamBridgeRetirement } from "@/team-bridge/retirement";
 import { nativeCredentialRetirement } from "./authentication-lifecycle";
 
 vi.mock("react-native", () => ({
@@ -167,6 +168,7 @@ const oauth: RadientTokens = {
 async function relay(
 	options: {
 		holdLogin?: boolean;
+		rejectOauthRefresh?: boolean;
 		holdToken?: boolean;
 		failStream?: boolean;
 		failLogout?: boolean;
@@ -205,6 +207,10 @@ async function relay(
 			response.writeHead(status, { "content-type": "application/json" });
 			response.end(JSON.stringify(value));
 		};
+		if (path === "/v1/auth/oauth/token" && options.rejectOauthRefresh) {
+			json({ error: "invalid_grant" }, 400);
+			return;
+		}
 		if (path === "/v1/tunnels") {
 			json({ msg: "ok", result: [] });
 			return;
@@ -1057,6 +1063,91 @@ describe("mounted provider authentication retirement", () => {
 			mock.events.indexOf("login:2:cookie"),
 		);
 		expect(latest.relay()).not.toBeNull();
+	});
+
+	it("reserves route logout before a held push retirement without clearing OAuth early", async () => {
+		const mock = await relay();
+		transport();
+		await mount();
+		await act(async () => {
+			await latest.connectCustom({
+				url: mock.origin,
+				password: "old",
+				allowInsecure: true,
+			});
+		});
+		const push = deferred();
+		const unregister = registerTeamBridgeRetirement(() => push.promise);
+		try {
+			let exiting!: Promise<boolean>;
+			let second!: Promise<void>;
+			await act(async () => {
+				exiting = latest.signOut();
+				// Withdrawing route admission cannot wait for the push registry.
+				expect(latest.relay()).toBeNull();
+				expect(connectionStore.getState().route).toBeNull();
+				second = latest.connectCustom({
+					url: mock.origin,
+					password: "new",
+					allowInsecure: true,
+				});
+			});
+			await until(() => mock.events.includes("login:2:cookie"));
+			expect(durable.clearsStarted).toBe(0);
+			push.resolve();
+			await act(async () => {
+				await Promise.all([exiting, second]);
+			});
+			expect(durable.clearsStarted).toBe(1);
+			expect(jars.get(mock.origin)).toBe("lop_mobile=synthetic-2");
+			expect(mock.events.lastIndexOf("GET /logout")).toBeLessThan(
+				mock.events.indexOf("login:2:cookie"),
+			);
+			expect(latest.relay()).not.toBeNull();
+		} finally {
+			push.resolve();
+			unregister();
+		}
+	});
+
+	it("an invalid_grant during push retirement does not cancel the requested route and durable sign-out", async () => {
+		const mock = await relay({ rejectOauthRefresh: true });
+		transport(mock.origin);
+		durable.oauth = { ...oauth, refresh: "rolling" };
+		await mount();
+		await act(async () => {
+			await latest.connectCustom({
+				url: mock.origin,
+				password: "old",
+				allowInsecure: true,
+			});
+		});
+		const push = deferred();
+		const unregister = registerTeamBridgeRetirement(() => push.promise);
+		try {
+			let exiting!: Promise<boolean>;
+			let refreshing!: Promise<string | null>;
+			await act(async () => {
+				exiting = latest.signOut();
+				refreshing = latest.radientAccessToken({ force: true });
+			});
+			await until(() => !latest.radientSignedIn);
+			expect(durable.clearsStarted).toBe(0);
+			push.resolve();
+			await act(async () => {
+				await Promise.all([exiting, refreshing]);
+			});
+			expect(await exiting).toBe(true);
+			expect(await refreshing).toBeNull();
+			expect(mock.events).toContain("POST /v1/auth/oauth/token");
+			expect(mock.events).toContain("GET /logout");
+			expect(durable.clearsStarted).toBe(1);
+			expect(durable.oauth).toBeNull();
+			expect(latest.relay()).toBeNull();
+		} finally {
+			push.resolve();
+			unregister();
+		}
 	});
 
 	it.each(["sign-out", "unmount", "switch"])(

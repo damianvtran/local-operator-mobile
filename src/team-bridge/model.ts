@@ -283,6 +283,9 @@ export function dmWithPerson(
 	accountId: string,
 	selfAccountId: string | null,
 ): Conversation | null {
+	// The directory's inert "you" row is not a DM target. Otherwise its two
+	// predicates collapse and borrow whichever colleague's DM appears first.
+	if (accountId === selfAccountId) return null;
 	const hits = conversations.filter((conversation) => {
 		if (conversation.kind !== "dm" || conversation.status === "archived")
 			return false;

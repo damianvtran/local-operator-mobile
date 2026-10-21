@@ -107,179 +107,227 @@ const thread = [
 	}),
 ];
 let created = 0;
+const histories = new Map(
+	conversations.map((c) => [
+		c.id,
+		thread.map((m) => ({ ...m, conversation_id: c.id })),
+	]),
+);
+// No bodies, headers or tokens: these counters prove first-send behaviour.
+const requests: Array<{ method: string; path: string }> = [];
 const server = createServer(async (req, res) => {
-	const url = new URL(req.url ?? "/", `http://127.0.0.1:${port}`);
-	const send = (code: number, value: unknown) => {
-		res.writeHead(code, {
-			"content-type": "application/json",
-			"cache-control": "no-store",
-		});
-		res.end(JSON.stringify(value));
-	};
-	const ok = (result: unknown) => send(200, { msg: "Fixture answer", result });
-	if (url.pathname === "/__phone") {
-		const qaCase = url.searchParams.get("case") ?? "populated";
-		const theme = url.searchParams.get("theme") ?? "light";
-		const route =
-			url.searchParams.get("thread") === "1"
-				? `/team-bridge/${TENANT}/bcv_humans`
-				: "/team-bridge";
-		res.writeHead(200, { "content-type": "text/html" });
-		res.end(
-			`<!doctype html><meta name="viewport" content="width=device-width"><style>body{margin:0;background:#777;display:flex;justify-content:center;padding:8px}iframe{width:390px;height:844px;border:0;transform:scale(.75);transform-origin:top center}</style><iframe title="Phone viewport" src="${route}?tb-fixture=${encodeURIComponent(qaCase)}&tb-theme=${encodeURIComponent(theme)}"></iframe>`,
-		);
-		return;
-	}
-	const match = MOCK_ROUTE.exec(
-		url.pathname,
-	);
-	if (match) {
-		const qaCase = match[1];
-		const path = match[2] ?? "";
-		if (qaCase === "loading" && path !== "/status" && path !== "/unread")
-			await new Promise((r) => setTimeout(r, 12000));
-		if (path === "/status") {
-			if (qaCase === "unavailable") {
-				send(503, {
-					error: "Messaging is unavailable.",
+	try {
+		const url = new URL(req.url ?? "/", `http://127.0.0.1:${port}`);
+		const send = (code: number, value: unknown) => {
+			res.writeHead(code, {
+				"content-type": "application/json",
+				"cache-control": "no-store",
+			});
+			res.end(JSON.stringify(value));
+		};
+		const ok = (result: unknown) =>
+			send(200, { msg: "Fixture answer", result });
+		if (url.pathname === "/__phone") {
+			const qaCase = url.searchParams.get("case") ?? "populated";
+			const theme = url.searchParams.get("theme") ?? "light";
+			const requestedWidth = url.searchParams.get("width") ?? "390";
+			const phoneWidth = ["320", "390", "430"].includes(requestedWidth)
+				? requestedWidth
+				: "390";
+			const route =
+				url.searchParams.get("thread") === "1"
+					? `/team-bridge/${TENANT}/bcv_humans`
+					: "/team-bridge";
+			res.writeHead(200, { "content-type": "text/html" });
+			res.end(
+				`<!doctype html><meta name="viewport" content="width=device-width"><style>body{margin:0;background:#777;display:flex;justify-content:center;padding:8px}iframe{width:${phoneWidth}px;height:844px;border:0;transform:scale(.75);transform-origin:top center}</style><iframe title="Phone viewport" src="${route}?tb-fixture=${encodeURIComponent(qaCase)}&tb-theme=${encodeURIComponent(theme)}"></iframe><pre id="geometry" style="position:fixed;left:8px;top:8px;max-width:300px;white-space:pre-wrap;color:white;font:12px monospace"></pre><script>
+const frame=document.querySelector('iframe');
+setInterval(()=>{try{
+ const doc=frame.contentDocument, win=frame.contentWindow;
+ const controls=[...doc.querySelectorAll('[role="button"],button,input,textarea,[role="link"]')].map(e=>{const r=e.getBoundingClientRect();return {name:e.getAttribute('aria-label')||e.textContent?.trim().slice(0,45),width:Math.round(r.width),height:Math.round(r.height),disabled:e.getAttribute('aria-disabled')==='true'};});
+ document.getElementById('geometry').textContent=JSON.stringify({viewport:[win.innerWidth,win.innerHeight],root:[doc.documentElement.scrollWidth,doc.documentElement.scrollHeight],controls},null,2);
+}catch{}},1000);
+</script>`,
+			);
+			return;
+		}
+		if (url.pathname === "/__stats") {
+			ok({ created, requests });
+			return;
+		}
+		const match = MOCK_ROUTE.exec(url.pathname);
+		if (match) {
+			const qaCase = match[1];
+			const path = match[2] ?? "";
+			requests.push({ method: req.method ?? "GET", path });
+			if (qaCase === "loading" && path !== "/status" && path !== "/unread")
+				await new Promise((r) => setTimeout(r, 12000));
+			if (path === "/status") {
+				if (qaCase === "unavailable") {
+					send(503, {
+						error: "Messaging is unavailable.",
+						code: "messaging_unavailable",
+					});
+					return;
+				}
+				ok(
+					status({
+						api_version: qaCase === "update_required" ? "2" : "1",
+						available: qaCase !== "plan_required",
+						tenants: [
+							{
+								tenant_id: TENANT,
+								tenant_name: "Example Org",
+								eligible: qaCase !== "plan_required",
+							},
+							{
+								tenant_id: OTHER_TENANT,
+								tenant_name: "Research Lab",
+								eligible: qaCase !== "plan_required",
+							},
+						],
+					}),
+				);
+				return;
+			}
+			if (qaCase === "error") {
+				send(500, {
+					error: "Messaging could not be loaded.",
 					code: "messaging_unavailable",
 				});
 				return;
 			}
-			ok(
-				status({
-					api_version: qaCase === "update_required" ? "2" : "1",
-					available: qaCase !== "plan_required",
-					tenants: [
+			if (path === "/unread") {
+				ok({
+					total: 11,
+					organizations: [
 						{
 							tenant_id: TENANT,
 							tenant_name: "Example Org",
-							eligible: qaCase !== "plan_required",
-						},
-						{
-							tenant_id: OTHER_TENANT,
-							tenant_name: "Research Lab",
-							eligible: qaCase !== "plan_required",
+							eligible: true,
+							unread: 11,
 						},
 					],
-				}),
-			);
-			return;
-		}
-		if (qaCase === "error") {
-			send(500, {
-				error: "Messaging could not be loaded.",
-				code: "messaging_unavailable",
-			});
-			return;
-		}
-		if (path === "/unread") {
-			ok({
-				total: 11,
-				organizations: [
+				});
+				return;
+			}
+			if (path === "/directory") {
+				ok({
+					members:
+						qaCase === "empty" ||
+						url.searchParams.get("tenant_id") === OTHER_TENANT
+							? []
+							: people,
+				});
+				return;
+			}
+			if (path === "/conversations" && req.method === "GET") {
+				ok({
+					conversations:
+						qaCase === "empty" ||
+						url.searchParams.get("tenant_id") === OTHER_TENANT
+							? []
+							: conversations,
+					has_more: false,
+				});
+				return;
+			}
+			let raw = "";
+			for await (const part of req) raw += part;
+			const body = raw ? JSON.parse(raw) : {};
+			if (path === "/conversations" && req.method === "POST") {
+				created++;
+				const row = dm(
+					body.members?.[0]?.account_id ?? ADA,
+					body.members?.[0]?.display_label ?? "Ada",
+					{ id: `bcv_created_${created}`, latest_seq: 0, unread_count: 0 },
+				);
+				conversations.push(row);
+				histories.set(row.id, []);
+				ok(row);
+				return;
+			}
+			const id = path.split("/")[2];
+			const row = conversations.find((c) => c.id === id);
+			const history = histories.get(id ?? "") ?? [];
+			if (path.endsWith("/messages") && req.method === "GET") {
+				ok({
+					messages: qaCase === "empty" ? [] : history,
+					has_more: false,
+				});
+				return;
+			}
+			if (path.endsWith("/messages") && req.method === "POST") {
+				const msg = message(
+					history.length + 1,
+					SELF,
+					new Date().toISOString(),
 					{
-						tenant_id: TENANT,
-						tenant_name: "Example Org",
-						eligible: true,
-						unread: 11,
+						conversation_id: id,
+						body: body.body,
+						sender: { account_id: SELF, kind: "human", display_label: "Sam" },
 					},
-				],
+				);
+				history.push(msg);
+				histories.set(id ?? "", history);
+				ok(msg);
+				return;
+			}
+			if (path.endsWith("/read")) {
+				ok({
+					conversation_id: id,
+					last_read_seq: body.seq ?? 0,
+					unread_count: 0,
+					muted: body.notify === "mute",
+					notify: body.notify ?? "all",
+				});
+				return;
+			}
+			if (row) {
+				ok(row);
+				return;
+			}
+			send(404, {
+				error: "Conversation not found",
+				code: "conversation_not_found",
 			});
-			return;
-		}
-		if (path === "/directory") {
-			ok({ members: qaCase === "empty" ? [] : people });
-			return;
-		}
-		if (path === "/conversations" && req.method === "GET") {
-			ok({
-				conversations: qaCase === "empty" ? [] : conversations,
-				has_more: false,
-			});
-			return;
-		}
-		let raw = "";
-		for await (const part of req) raw += part;
-		const body = raw ? JSON.parse(raw) : {};
-		if (path === "/conversations" && req.method === "POST") {
-			created++;
-			const row = dm(
-				body.members?.[0]?.account_id ?? ADA,
-				body.members?.[0]?.display_label ?? "Ada",
-				{ id: `bcv_created_${created}`, latest_seq: 0, unread_count: 0 },
-			);
-			conversations.push(row);
-			ok(row);
-			return;
-		}
-		const id = path.split("/")[2];
-		const row = conversations.find((c) => c.id === id) ?? conversations[0];
-		if (path.endsWith("/messages") && req.method === "GET") {
-			ok({
-				messages:
-					qaCase === "empty"
-						? []
-						: thread.map((m) => ({ ...m, conversation_id: id })),
-				has_more: false,
-			});
-			return;
-		}
-		if (path.endsWith("/messages") && req.method === "POST") {
-			const msg = message(thread.length + 1, SELF, new Date().toISOString(), {
-				conversation_id: id,
-				body: body.body,
-				sender: { account_id: SELF, kind: "human", display_label: "Sam" },
-			});
-			thread.push(msg);
-			ok(msg);
-			return;
-		}
-		if (path.endsWith("/read")) {
-			ok({
-				conversation_id: id,
-				last_read_seq: body.seq ?? 0,
-				unread_count: 0,
-				muted: body.notify === "mute",
-				notify: body.notify ?? "all",
-			});
-			return;
-		}
-		if (row) {
-			ok(row);
-			return;
-		}
-		send(404, {
-			error: "Conversation not found",
-			code: "conversation_not_found",
-		});
-		return;
-	}
-	try {
-		let file = resolve(root, `.${decodeURIComponent(url.pathname)}`);
-		if (file !== root && !file.startsWith(root + sep)) {
-			send(403, { error: "Forbidden" });
 			return;
 		}
 		try {
-			if ((await stat(file)).isDirectory()) file = resolve(file, "index.html");
-			await stat(file);
+			let file = resolve(root, `.${decodeURIComponent(url.pathname)}`);
+			if (file !== root && !file.startsWith(root + sep)) {
+				send(403, { error: "Forbidden" });
+				return;
+			}
+			try {
+				if ((await stat(file)).isDirectory())
+					file = resolve(file, "index.html");
+				await stat(file);
+			} catch {
+				file = resolve(root, "index.html");
+			}
+			const types: Record<string, string> = {
+				".html": "text/html",
+				".js": "application/javascript",
+				".css": "text/css",
+				".png": "image/png",
+				".ttf": "font/ttf",
+			};
+			res.writeHead(200, {
+				"content-type": types[extname(file)] ?? "application/octet-stream",
+			});
+			res.end(await readFile(file));
 		} catch {
-			file = resolve(root, "index.html");
+			res.writeHead(500);
+			res.end("Fixture failed");
 		}
-		const types: Record<string, string> = {
-			".html": "text/html",
-			".js": "application/javascript",
-			".css": "text/css",
-			".png": "image/png",
-			".ttf": "font/ttf",
-		};
-		res.writeHead(200, {
-			"content-type": types[extname(file)] ?? "application/octet-stream",
-		});
-		res.end(await readFile(file));
 	} catch {
-		res.writeHead(500);
-		res.end("Fixture failed");
+		// Leaving a loading scene aborts its HTTP request. That is a normal
+		// browser cancellation, not an unhandled rejection that kills QA's hub.
+		if (!res.destroyed && !res.headersSent) {
+			res.writeHead(500, { "content-type": "application/json" });
+			res.end(JSON.stringify({ error: "Fixture request interrupted" }));
+		}
 	}
 });
 server.listen(port, "127.0.0.1", () =>

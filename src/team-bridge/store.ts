@@ -237,6 +237,23 @@ export function createTeamBridgeStore(deps: {
 		return next;
 	}
 
+	/** Entitlement/auth refusals retire every outstanding publication, not just this screen. */
+	function gateFailure(error: unknown): boolean {
+		if (!isHubError(error)) return false;
+		if (error.kind === "sign_in") {
+			actions.reset();
+			store.setState({ gate: "signed_out", gateError: error });
+			return true;
+		}
+		if (error.kind === "plan") {
+			generation += 1;
+			inFlight.clear();
+			store.setState({ gate: "plan_required", gateError: error });
+			return true;
+		}
+		return false;
+	}
+
 	const actions = {
 		/**
 		 * Read the hub's status and decide the gate. The status read is the ONE
@@ -251,6 +268,8 @@ export function createTeamBridgeStore(deps: {
 				try {
 					token = await deps.accessToken();
 				} catch (error) {
+					if (!owned()) return;
+					if (gateFailure(error)) return;
 					if (owned())
 						store.setState({
 							gate:
@@ -279,6 +298,7 @@ export function createTeamBridgeStore(deps: {
 					if (!owned()) return;
 				} catch (error) {
 					if (!owned()) return;
+					if (gateFailure(error)) return;
 					const hubError = isHubError(error) ? error : null;
 					if (hubError?.kind === "sign_in") read = { kind: "signed_out" };
 					else if (
@@ -346,7 +366,9 @@ export function createTeamBridgeStore(deps: {
 							unread: byTenant.get(o.tenantId) ?? o.unread,
 						})),
 					}));
-				} catch {
+				} catch (error) {
+					if (!owned()) return;
+					gateFailure(error);
 					/* The badge keeps its last value; the list's own read reports failures. */
 				}
 			});
@@ -422,14 +444,9 @@ export function createTeamBridgeStore(deps: {
 						});
 					} catch (error) {
 						if (!owned()) return;
+						if (gateFailure(error)) return;
 						const hubError = isHubError(error) ? error : null;
-						if (hubError?.kind === "sign_in") {
-							actions.reset();
-							store.setState({ gate: "signed_out" });
-							return;
-						}
-						if (hubError?.kind === "plan")
-							store.setState({ gate: "plan_required" });
+
 						/* A silent refresh that fails keeps the rows on screen. */
 						patchOrg(tenantId, {
 							conversationsState: "error",
@@ -449,6 +466,7 @@ export function createTeamBridgeStore(deps: {
 						});
 					} catch (error) {
 						if (!owned()) return;
+						if (gateFailure(error)) return;
 						patchOrg(tenantId, {
 							peopleState: "error",
 							peopleError: isHubError(error) ? error : null,
@@ -477,10 +495,61 @@ export function createTeamBridgeStore(deps: {
 						limit: PAGE_SIZE,
 					});
 					if (!owned()) return;
+					let incoming = page.messages;
+					const heldTail = held?.messages.at(-1)?.seq;
+					let oldestIncoming = incoming.reduce(
+						(min, message) => Math.min(min, message.seq),
+						Infinity,
+					);
+					let more = page.has_more;
+					// A tail refresh can jump over multiple pages. Bridge before publishing,
+					// otherwise older pagination walks the held head and can never reach the hole.
+					for (
+						let bridge = 0;
+						heldTail !== undefined &&
+						oldestIncoming > heldTail &&
+						Number.isFinite(oldestIncoming) &&
+						more;
+						bridge += 1
+					) {
+						if (bridge === 10)
+							throw new HubError({
+								kind: "unavailable",
+								message:
+									"More messages arrived than could be refreshed. Please retry.",
+							});
+						const previous = await client.listMessages(
+							tenantId,
+							conversationId,
+							{ beforeSeq: oldestIncoming, limit: PAGE_SIZE },
+						);
+						if (!owned()) return;
+						const nextOldest = previous.messages.reduce(
+							(min, message) => Math.min(min, message.seq),
+							Infinity,
+						);
+						if (nextOldest >= oldestIncoming)
+							throw new HubError({
+								kind: "malformed",
+								message: "Message history did not advance.",
+							});
+						incoming = mergeMessages(incoming, previous.messages);
+						oldestIncoming = nextOldest;
+						more = previous.has_more;
+					}
+					if (
+						heldTail !== undefined &&
+						Number.isFinite(oldestIncoming) &&
+						oldestIncoming > heldTail
+					)
+						throw new HubError({
+							kind: "unavailable",
+							message: "Message history could not be connected. Please retry.",
+						});
 					const current = store.getState().threads[key];
 					const first = !current || current.messages.length === 0;
 					patchThread(key, {
-						messages: mergeMessages(current?.messages ?? [], page.messages),
+						messages: mergeMessages(current?.messages ?? [], incoming),
 						state: "ready",
 						error: null,
 						/* Only the FIRST page decides whether older history exists; a
@@ -489,11 +558,11 @@ export function createTeamBridgeStore(deps: {
 					});
 				} catch (error) {
 					if (!owned()) return;
-					if (held?.state !== "ready")
-						patchThread(key, {
-							state: "error",
-							error: isHubError(error) ? error : null,
-						});
+					if (gateFailure(error)) return;
+					patchThread(key, {
+						state: "error",
+						error: isHubError(error) ? error : null,
+					});
 				}
 			});
 		},
@@ -522,6 +591,7 @@ export function createTeamBridgeStore(deps: {
 					});
 				} catch (error) {
 					if (!owned()) return;
+					if (gateFailure(error)) return;
 					store.setState((s) => ({
 						threads: {
 							...s.threads,
@@ -571,8 +641,9 @@ export function createTeamBridgeStore(deps: {
 						...(answer.notify ? { notify: answer.notify } : {}),
 					};
 				});
-			} catch {
+			} catch (error) {
 				if (epoch !== generation) return;
+				if (gateFailure(error)) return;
 				// Restore only our untouched optimistic row, never a newer receipt/refresh.
 				if (row && optimistic) {
 					const current = store
@@ -594,13 +665,25 @@ export function createTeamBridgeStore(deps: {
 
 		/** Change this conversation's notification policy. Throws so the menu can say so. */
 		async setNotify(tenantId: string, conversationId: string, notify: Notify) {
+			const gate = store.getState().gate;
+			if (gate === "plan_required" || gate === "signed_out")
+				throw new HubError({
+					kind: gate === "plan_required" ? "plan" : "sign_in",
+					message: "Team Bridge is not available for this account.",
+				});
 			const client = deps.hub();
 			if (!client)
 				throw new HubError({ kind: "sign_in", message: "Sign in to Radient." });
 			const epoch = generation;
-			const answer = await client.markRead(tenantId, conversationId, {
-				notify,
-			});
+			let answer: Awaited<ReturnType<HubClient["markRead"]>>;
+			try {
+				answer = await client.markRead(tenantId, conversationId, {
+					notify,
+				});
+			} catch (error) {
+				if (epoch === generation) gateFailure(error);
+				throw error;
+			}
 			if (epoch !== generation) return;
 			reconcileConversation(tenantId, conversationId, (c) => ({
 				...c,
@@ -626,14 +709,26 @@ export function createTeamBridgeStore(deps: {
 			body: string,
 			clientRef: string,
 		): Promise<Message> {
+			const gate = store.getState().gate;
+			if (gate === "plan_required" || gate === "signed_out")
+				throw new HubError({
+					kind: gate === "plan_required" ? "plan" : "sign_in",
+					message: "Team Bridge is not available for this account.",
+				});
 			const client = deps.hub();
 			if (!client)
 				throw new HubError({ kind: "sign_in", message: "Sign in to Radient." });
 			const epoch = generation;
-			const message = await client.send(tenantId, conversationId, {
-				clientRef,
-				body,
-			});
+			let message: Message;
+			try {
+				message = await client.send(tenantId, conversationId, {
+					clientRef,
+					body,
+				});
+			} catch (error) {
+				if (epoch === generation) gateFailure(error);
+				throw error;
+			}
 			if (epoch !== generation)
 				throw new HubError({
 					kind: "sign_in",

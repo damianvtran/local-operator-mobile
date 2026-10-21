@@ -14,7 +14,6 @@ import {
 } from "@/notifications/permission";
 import { isRelayMissing } from "@/relay";
 import { useTeamBridge } from "@/team-bridge/provider";
-import { registerTeamBridgeDevice } from "@/team-bridge/push";
 import { CONTROL, REGION } from "@/ui/a11y";
 import { Button } from "@/ui/components/button";
 import { SectionHeader } from "@/ui/components/section-header";
@@ -65,7 +64,7 @@ type DeviceListState =
 
 export const NotificationsSection = () => {
 	const { relay, radientSignedIn } = useConnection();
-	const { hub } = useTeamBridge();
+	const { registerPush } = useTeamBridge();
 	const [availability, setAvailability] = useState<PushAvailability | null>(
 		null,
 	);
@@ -120,12 +119,11 @@ export const NotificationsSection = () => {
 			setAvailability(permission);
 			// Permission is requested in context, not on mount. Once granted,
 			// register now rather than waiting for a subsequent app foreground.
-			if (permission === "granted" && radientSignedIn)
-				await registerTeamBridgeDevice(hub);
+			if (permission === "granted" && radientSignedIn) await registerPush();
 		} finally {
 			setRequesting(false);
 		}
-	}, [hub, radientSignedIn]);
+	}, [registerPush, radientSignedIn]);
 
 	return (
 		<View className="gap-2" testID={REGION.settingsNotifications}>

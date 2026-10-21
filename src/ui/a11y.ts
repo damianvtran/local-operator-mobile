@@ -57,6 +57,10 @@ export type A11yRole = (typeof ROLE)[keyof typeof ROLE];
  * rewrite.
  */
 export const SCREEN = {
+	/** Team Bridge is hub-owned: these selectors remain stable without a relay connection. */
+	teamBridgeList: "team-bridge-list",
+	teamBridgeThread: "team-bridge-thread",
+
 	welcome: "welcome-screen",
 	signIn: "sign-in-screen",
 	computers: "computers-screen",
@@ -138,6 +142,25 @@ export const EMPTY = {
  * identifier is typed as a literal where a constant exists.
  */
 export const CONTROL = {
+	/** Team Bridge is hub-owned: these selectors remain stable without a relay connection. */
+	teamBridgeBack: "team-bridge-back",
+	teamBridgeConversationsRetry: "team-bridge-conversations-retry",
+	teamBridgeGateRetry: "team-bridge-gate-retry",
+	teamBridgeJoin: "team-bridge-join",
+	teamBridgeLoadOlder: "team-bridge-load-older",
+	teamBridgeMessageInput: "team-bridge-message-input",
+	teamBridgeMessagesRetry: "team-bridge-messages-retry",
+	teamBridgeMetadataRetry: "team-bridge-metadata-retry",
+	teamBridgeNavigation: "team-bridge-navigation",
+	teamBridgeNotifications: "team-bridge-notifications",
+	teamBridgeOlderRetry: "team-bridge-older-retry",
+	teamBridgeOrgSwitcher: "team-bridge-org-switcher",
+	teamBridgePeopleRetry: "team-bridge-people-retry",
+	teamBridgeSend: "team-bridge-send",
+	teamBridgeSignIn: "team-bridge-sign-in",
+	teamBridgeThreadAccessRetry: "team-bridge-thread-access-retry",
+	teamBridgeUpgrade: "team-bridge-upgrade",
+
 	// Welcome: the shell route that renders an action.
 	notFoundHome: "not-found-home",
 
@@ -517,6 +540,21 @@ export const CONTROL = {
  * a state ("the certificate was rejected") without inventing a control for it.
  */
 export const SURFACE = {
+	/** Team Bridge is hub-owned: these selectors remain stable without a relay connection. */
+	teamBridgeChannelPreview: "team-bridge-channel-preview",
+	teamBridgeComposer: "team-bridge-composer",
+	teamBridgeConversationsLoading: "team-bridge-conversations-loading",
+	teamBridgeDayDivider: "team-bridge-day-divider",
+	teamBridgeGateSkeleton: "team-bridge-gate-skeleton",
+	teamBridgeMessages: "team-bridge-messages",
+	teamBridgeNotifySheet: "team-bridge-notify-sheet",
+	teamBridgeOrganizations: "team-bridge-organizations",
+	teamBridgePlanConsole: "team-bridge-plan-console",
+	teamBridgeSections: "team-bridge-sections",
+	teamBridgeSendError: "team-bridge-send-error",
+	teamBridgeThreadEmpty: "team-bridge-thread-empty",
+	teamBridgeThreadLoading: "team-bridge-thread-loading",
+
 	/** The Schedules screen's loading skeleton (S17). Its own id because the
 	 *  loading state must be distinguishable from the empty state — and on a
 	 *  320 pt phone the two frames once came out byte-identical on the
@@ -851,6 +889,14 @@ export const SURFACE = {
  * renderer is the drift the families exist to prevent.
  */
 export const IDENTIFIER_FAMILIES: readonly string[] = [
+	// Hub identities, never list indices, keep directory and thread selectors stable across refreshes.
+	"team-bridge-gate-",
+	"team-bridge-conversation-",
+	"team-bridge-person-",
+	"team-bridge-chief-",
+	"team-bridge-org-",
+	"team-bridge-message-",
+	"team-bridge-notify-",
 	/* The wave-2 slice's parameterised identifiers: one row per session or
 	 * computer, one copy action per command block. Declared in the same change as
 	 * the controls that carry them, which is what this list's own note asks for. */
@@ -1777,3 +1823,21 @@ export const askQuestionId = (index: number, total: number): string =>
 
 /** One answer option of an ask, by its position among the offered options. */
 export const askOptionId = (index: number): string => `ask-option-${index}`;
+
+/** The rendering modules call these builders rather than spelling a second copy
+ * of the registered family prefix. Recipient identities survive sorting/paging;
+ * gate and notification choices are keyed by their stable protocol values. */
+export const teamBridgeGateId = (value: string): string =>
+	`team-bridge-gate-${value}`;
+export const teamBridgeConversationId = (value: string): string =>
+	`team-bridge-conversation-${value}`;
+export const teamBridgePersonId = (value: string): string =>
+	`team-bridge-person-${value}`;
+export const teamBridgeChiefId = (value: string): string =>
+	`team-bridge-chief-${value}`;
+export const teamBridgeOrganizationId = (value: string): string =>
+	`team-bridge-org-${value}`;
+export const teamBridgeMessageId = (value: string): string =>
+	`team-bridge-message-${value}`;
+export const teamBridgeNotifyId = (value: string): string =>
+	`team-bridge-notify-${value}`;

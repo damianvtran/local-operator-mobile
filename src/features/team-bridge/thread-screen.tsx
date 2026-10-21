@@ -17,6 +17,13 @@ import * as model from "@/team-bridge/model";
 import { useTeamBridge, useTeamBridgeState } from "@/team-bridge/provider";
 import { setWatchedThread } from "@/team-bridge/push";
 import { threadKey } from "@/team-bridge/store";
+import {
+	CONTROL,
+	SCREEN,
+	SURFACE,
+	teamBridgeMessageId,
+	teamBridgeNotifyId,
+} from "@/ui/a11y";
 import { Avatar, initialsOf } from "@/ui/components/avatar";
 import { Button } from "@/ui/components/button";
 import { Screen } from "@/ui/components/screen";
@@ -104,6 +111,14 @@ function ThreadContent({
 		[thread?.messages],
 	);
 	const people = state.orgs[tenantId]?.people ?? [];
+	const directoryState = state.orgs[tenantId]?.peopleState;
+	useEffect(() => {
+		// Cold push/deep links bypass the list, so no directory has hydrated yet.
+		// Resolve live names on this path too instead of exposing stale labels or
+		// losing the agent's owner in "Aida (Ben)". The store coalesces this read.
+		if (organization && (!directoryState || directoryState === "idle"))
+			void actions.loadOrganization(tenantId, { silent: true });
+	}, [actions, organization, directoryState, tenantId]);
 	const title = conversation
 		? (model.conversationTitle(conversation, state.selfAccountId) ??
 			"Conversation")
@@ -260,7 +275,7 @@ function ThreadContent({
 				<Text
 					accessibilityRole="header"
 					className="px-4 py-4 text-center text-meta text-ink-muted"
-					testID="team-bridge-day-divider"
+					testID={SURFACE.teamBridgeDayDivider}
 				>
 					{item.label}
 				</Text>
@@ -269,7 +284,7 @@ function ThreadContent({
 		return (
 			<View
 				className={`flex-row gap-3 px-4 ${item.continuation ? "py-1" : "pt-4 pb-1"}`}
-				testID={`team-bridge-message-${item.message.id}`}
+				testID={teamBridgeMessageId(item.message.id)}
 			>
 				<View className="w-8">
 					{!item.continuation && (
@@ -306,13 +321,13 @@ function ThreadContent({
 					<Button
 						variant="quiet"
 						label="Notifications"
-						testID="team-bridge-notifications"
+						testID={CONTROL.teamBridgeNotifications}
 						onPress={() => setNotifyOpen(true)}
 					/>
 				) : undefined
 			}
 			scroll={false}
-			testID="team-bridge-thread"
+			testID={SCREEN.teamBridgeThread}
 		>
 			<KeyboardAvoidingView
 				className="flex-1"
@@ -325,7 +340,7 @@ function ThreadContent({
 						</Text>
 						<Button
 							label="Retry access"
-							testID="team-bridge-thread-access-retry"
+							testID={CONTROL.teamBridgeThreadAccessRetry}
 							onPress={() => {
 								void actions.checkStatus();
 							}}
@@ -336,7 +351,7 @@ function ThreadContent({
 						{metadataLoading && (
 							<Text
 								className="p-4 text-body text-ink-muted"
-								testID="team-bridge-thread-loading"
+								testID={SURFACE.teamBridgeThreadLoading}
 							>
 								Loading conversation…
 							</Text>
@@ -348,7 +363,7 @@ function ThreadContent({
 								</Text>
 								<Button
 									label="Retry conversation"
-									testID="team-bridge-metadata-retry"
+									testID={CONTROL.teamBridgeMetadataRetry}
 									onPress={() => {
 										void loadMetadata();
 									}}
@@ -362,7 +377,10 @@ function ThreadContent({
 							</Text>
 						)}
 						{preview ? (
-							<View className="gap-4 p-4" testID="team-bridge-channel-preview">
+							<View
+								className="gap-4 p-4"
+								testID={SURFACE.teamBridgeChannelPreview}
+							>
 								<Text className="text-title text-ink">{title}</Text>
 								{!!conversation?.topic && (
 									<Text className="text-body text-ink-muted">
@@ -375,7 +393,7 @@ function ThreadContent({
 								{!readOnly && (
 									<Button
 										label="Join channel"
-										testID="team-bridge-join"
+										testID={CONTROL.teamBridgeJoin}
 										loading={joining}
 										onPress={() => {
 											void join();
@@ -394,7 +412,7 @@ function ThreadContent({
 						) : admitted || validDraft ? (
 							<>
 								<FlatList
-									testID="team-bridge-messages"
+									testID={SURFACE.teamBridgeMessages}
 									className="flex-1"
 									data={items}
 									keyExtractor={(item) => item.key}
@@ -434,7 +452,7 @@ function ThreadContent({
 													}
 													variant="outline"
 													disabled={thread.loadingOlder}
-													testID="team-bridge-load-older"
+													testID={CONTROL.teamBridgeLoadOlder}
 													onPress={() => {
 														if (conversationId)
 															void actions.loadOlder(tenantId, conversationId);
@@ -451,7 +469,7 @@ function ThreadContent({
 													</Text>
 													<Button
 														label="Retry older messages"
-														testID="team-bridge-older-retry"
+														testID={CONTROL.teamBridgeOlderRetry}
 														onPress={() => {
 															if (conversationId)
 																void actions.loadOlder(
@@ -473,7 +491,7 @@ function ThreadContent({
 													</Text>
 													<Button
 														label="Retry messages"
-														testID="team-bridge-messages-retry"
+														testID={CONTROL.teamBridgeMessagesRetry}
 														onPress={reload}
 													/>
 												</>
@@ -483,7 +501,7 @@ function ThreadContent({
 									ListEmptyComponent={
 										<Text
 											className="p-4 text-body text-ink-muted"
-											testID="team-bridge-thread-empty"
+											testID={SURFACE.teamBridgeThreadEmpty}
 										>
 											{!conversationId
 												? "No messages yet. Your first send starts the conversation."
@@ -500,7 +518,7 @@ function ThreadContent({
 								<View
 									className="gap-3 border-t border-hairline px-4 pt-3"
 									style={{ paddingBottom: Math.max(insets.bottom, 12) }}
-									testID="team-bridge-composer"
+									testID={SURFACE.teamBridgeComposer}
 								>
 									{readOnly ? (
 										<Text className="text-body text-ink-muted">
@@ -515,7 +533,7 @@ function ThreadContent({
 												<Text
 													accessibilityRole="alert"
 													className="text-body text-ink"
-													testID="team-bridge-send-error"
+													testID={SURFACE.teamBridgeSendError}
 												>
 													{sendError}
 												</Text>
@@ -526,13 +544,13 @@ function ThreadContent({
 												value={draft}
 												onChangeText={setDraft}
 												disabled={sending}
-												testID="team-bridge-message-input"
+												testID={CONTROL.teamBridgeMessageInput}
 											/>
 											<Button
 												label={sendError ? "Retry send" : "Send"}
 												loading={sending}
 												disabled={!draft.trim() || sending}
-												testID="team-bridge-send"
+												testID={CONTROL.teamBridgeSend}
 												onPress={() => {
 													void send();
 												}}
@@ -549,7 +567,7 @@ function ThreadContent({
 				visible={notifyOpen}
 				onClose={() => setNotifyOpen(false)}
 				title="Conversation notifications"
-				testID="team-bridge-notify-sheet"
+				testID={SURFACE.teamBridgeNotifySheet}
 			>
 				<View className="gap-3 p-4">
 					<Text className="text-body text-ink-muted">
@@ -567,7 +585,7 @@ function ThreadContent({
 							label={text}
 							variant="outline"
 							disabled={notifyBusy}
-							testID={`team-bridge-notify-${value}`}
+							testID={teamBridgeNotifyId(value)}
 							onPress={() => {
 								void changeNotify(value);
 							}}

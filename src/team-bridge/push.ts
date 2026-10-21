@@ -34,7 +34,10 @@
 
 import Constants from "expo-constants";
 import { Platform } from "react-native";
-import { ensureInstallRecord } from "@/notifications/install-id";
+import {
+	ensureInstallRecord,
+	nextBridgePushGeneration,
+} from "@/notifications/install-id";
 import {
 	loadNotifications,
 	notificationsSupported,
@@ -62,6 +65,7 @@ export type RegistrationOutcome =
  */
 export async function registerTeamBridgeDevice(
 	hub: HubClient,
+	isCurrent: () => boolean = () => true,
 ): Promise<RegistrationOutcome> {
 	if (!notificationsSupported()) return "unsupported";
 	const module = await loadNotifications();
@@ -73,8 +77,14 @@ export async function registerTeamBridgeDevice(
 		if (typeof token.data !== "string" || token.data.length === 0)
 			return "no-token";
 		const install = await ensureInstallRecord();
+		// Permission/token/keystore reads may outlive sign-out. Do not start a
+		// new authenticated PUT once this account's registration lease retired.
+		if (!isCurrent()) return "failed";
+		const generation = await nextBridgePushGeneration();
+		if (!isCurrent()) return "failed";
 		await hub.registerDevice({
 			installId: install.install_id,
+			generation,
 			platform: token.type === "ios" ? "ios" : "android",
 			token: token.data,
 			/* A development build talks to the APNs sandbox; a release build to
@@ -101,7 +111,8 @@ export async function unregisterTeamBridgeDevice(
 	if (!notificationsSupported()) return;
 	try {
 		const install = await ensureInstallRecord();
-		await hub.unregisterDevice(install.install_id);
+		const generation = await nextBridgePushGeneration();
+		await hub.unregisterDevice(install.install_id, generation);
 	} catch {
 		/* The hub's 60-day unseen drop is the backstop; a sign-out never waits on it. */
 	}

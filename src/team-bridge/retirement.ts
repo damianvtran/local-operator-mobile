@@ -24,7 +24,9 @@ export async function retireTeamBridgeDevice(): Promise<void> {
 		await Promise.race([
 			run().catch(() => undefined),
 			new Promise<void>((resolve) => {
-				timer = setTimeout(resolve, 5000);
+				// The hub client bounds each request at 15s. Drain an admitted
+				// registration, then DELETE (up to 30s combined) before clearing OAuth.
+				timer = setTimeout(resolve, 35000);
 			}),
 		]);
 	} finally {
