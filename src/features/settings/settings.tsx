@@ -345,8 +345,9 @@ export default function Settings() {
 					<SectionHeader label="About" />
 					<DiagnosticRow label="Version" value={version} />
 					<Text className="text-body-sm text-ink-dim">
-						Local Operator is open source (MIT). Nothing from this phone is sent
-						anywhere except to the relay you are connected to.
+						Local Operator is open source (MIT). Agent sessions connect to your
+						relay. Team Bridge messages and notification registration connect
+						directly to Radient.
 					</Text>
 				</View>
 
