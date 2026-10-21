@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -1095,5 +1096,152 @@ describe("U-06 — an overrunning run inside a single-line ellipsis clip", () =>
 		expect(rows.map((r) => r.verdict)).toEqual(["EXCEPTION", "EXCEPTION"]);
 		expect(rows[0]?.detail).toContain("single-line ellipsis");
 		expect(rows[1]?.detail).toContain("overflow-x: auto|scroll");
+	});
+});
+
+/** Modal separation must answer the same painted-geometry question as U-08's
+ * final verdict. Clipped layout extends above the opaque sheet without painting
+ * there; requiring that unpainted band to be covered invents a collision. */
+describe("U-08 — actual browser modal clipping", () => {
+	it("recognizes the sheet covering both observed same-head app pairs", () => {
+		/* Preserve the actual DOM boxes, not a hand-adjusted approximation: the
+		 * underlying row and timestamp extend below the viewport, while the opaque
+		 * sheet covers every painted pixel they share with its Moving label.
+		 * This fixture deliberately records its web-only/inset limitations. */
+		const actual = JSON.parse(
+			readFileSync(
+				new URL(
+					"../../docs/evidence/team-bridge-mobile/navigation-modal-actual-dom.json",
+					import.meta.url,
+				),
+				"utf8",
+			),
+		) as {
+			nodes: AuditNode[];
+			viewport: AuditState["viewport"];
+			insets: AuditState["insets"];
+		};
+		const rows = run("U-08", state(actual));
+		expect(rows.filter((row) => row.verdict === "FAIL")).toEqual([]);
+		expect(
+			rows.filter(
+				(row) =>
+					row.verdict === "EXCEPTION" &&
+					row.measured?.includes("dialog's own opaque surface"),
+			),
+		).toHaveLength(2);
+	});
+});
+
+describe("U-08 — clipped modal separator coordinates", () => {
+	const box = (y: number, h: number, w = 100) => ({
+		x: 0,
+		y,
+		w,
+		h,
+		right: w,
+		bottom: y + h,
+	});
+	const fixture = (
+		surface: Partial<AuditNode> = {},
+		shared = false,
+	): AuditState =>
+		state({
+			nodes: [
+				node({
+					index: 1,
+					path: "button#under",
+					interactive: true,
+					inModalDialog: true,
+					ancestors: shared ? [3] : [],
+					rect: box(0, 200),
+					visibleRect: box(100, 100),
+				}),
+				node({
+					index: 2,
+					path: "p#over",
+					ownText: "Moving",
+					ownInk: true,
+					inModalDialog: true,
+					ancestors: [3],
+					rect: box(50, 200),
+					visibleRect: box(100, 100),
+				}),
+				node({
+					index: 3,
+					path: "div#surface",
+					inModalDialog: true,
+					background: "rgb(34, 32, 28)",
+					ownBackground: "rgb(34, 32, 28)",
+					rect: box(100, 100),
+					visibleRect: box(100, 100),
+					...surface,
+				}),
+			],
+		});
+	const failures = (s: AuditState) =>
+		run("U-08", s).filter((r) => r.verdict === "FAIL");
+
+	it("accepts an opaque one-side surface covering the entire painted intersection", () => {
+		const rows = run("U-08", fixture());
+		expect(rows.filter((r) => r.verdict === "FAIL")).toEqual([]);
+		expect(
+			rows.some(
+				(r) =>
+					r.verdict === "EXCEPTION" &&
+					r.measured?.includes("dialog's own opaque surface"),
+			),
+		).toBe(true);
+	});
+	it("still fails when the separator is narrower than the painted intersection", () => {
+		expect(
+			failures(
+				fixture({ rect: box(100, 100, 50), visibleRect: box(100, 100, 50) }),
+			),
+		).toHaveLength(1);
+	});
+	it("still fails when the separator is transparent", () => {
+		expect(
+			failures(
+				fixture({
+					background: "rgba(34, 32, 28, 0.5)",
+					ownBackground: "rgba(34, 32, 28, 0.5)",
+				}),
+			),
+		).toHaveLength(1);
+	});
+	it("still fails when the opaque surface is a shared ancestor behind both nodes", () => {
+		expect(failures(fixture({}, true))).toHaveLength(1);
+	});
+	it("does not invent a separator when one member paints nothing", () => {
+		const s = fixture();
+		s.nodes = s.nodes.map((n, index) =>
+			index === 0 ? { ...n, visibleRect: null } : n,
+		);
+		const rows = run("U-08", s);
+		expect(rows.filter((r) => r.verdict === "FAIL")).toEqual([]);
+		expect(
+			rows.some((r) => r.measured?.includes("dialog's own opaque surface")),
+		).toBe(false);
+	});
+	it("leaves disjoint painted boxes to the existing disjoint-region gate", () => {
+		const s = fixture();
+		s.nodes = s.nodes.map((n, index) =>
+			index === 0 ? { ...n, visibleRect: box(0, 50) } : n,
+		);
+		const rows = run("U-08", s);
+		expect(rows.filter((r) => r.verdict === "FAIL")).toEqual([]);
+		expect(
+			rows.some((r) =>
+				r.measured?.includes("painted regions do not intersect"),
+			),
+		).toBe(true);
+	});
+	it("still fails for uncovered controls inside the same modal dialog", () => {
+		const s = fixture();
+		s.nodes = s.nodes
+			.slice(0, 2)
+			.map((n) => ({ ...n, ancestors: [], interactive: true }));
+		expect(failures(s)).toHaveLength(1);
 	});
 });
