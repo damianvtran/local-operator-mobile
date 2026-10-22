@@ -45,6 +45,7 @@ import {
 import { TOUCH_FLOOR } from "@/ui/layout";
 import {
 	CHIP_STRIP_LAYOUT,
+	chipBadgeRects,
 	chipControlRects,
 	chipStateLabel,
 	type DraftChip,
@@ -596,6 +597,9 @@ export function ComposerAttachments({
 	const ink = useTokenColor("ink");
 	if (chips.length === 0) return null;
 	const rects = chipControlRects(CHIP_SIZE, TOUCH_FLOOR);
+	// Where each badge DRAWS inside its hit rect (D13), from the same helper the
+	// no-overlap test reads.
+	const badges = chipBadgeRects(CHIP_SIZE, TOUCH_FLOOR);
 	return (
 		<View>
 			{/* R4-02: the margin goes on the ScrollView, which GROWS its viewport by
@@ -672,11 +676,15 @@ export function ComposerAttachments({
 											top: rects.retry.y,
 											width: rects.retry.width,
 											height: rects.retry.height,
-											justifyContent: "center",
-											alignItems: "flex-start",
 										}}
 									>
-										<View className="ml-1.5 h-6 w-6 items-center justify-center rounded-full border border-border-control bg-elevated">
+										<View
+											className="absolute h-6 w-6 items-center justify-center rounded-full border border-border-control bg-elevated"
+											style={{
+												left: badges.retry.x - rects.retry.x,
+												top: badges.retry.y - rects.retry.y,
+											}}
+										>
 											<RotateCw color={ink} size={13} />
 										</View>
 									</Pressable>
@@ -693,11 +701,15 @@ export function ComposerAttachments({
 										top: rects.remove.y,
 										width: rects.remove.width,
 										height: rects.remove.height,
-										alignItems: "flex-end",
-										justifyContent: "flex-start",
 									}}
 								>
-									<View className="mt-1.5 mr-1.5 h-6 w-6 items-center justify-center rounded-full border border-border-control bg-elevated">
+									<View
+										className="absolute h-6 w-6 items-center justify-center rounded-full border border-border-control bg-elevated"
+										style={{
+											left: badges.remove.x - rects.remove.x,
+											top: badges.remove.y - rects.remove.y,
+										}}
+									>
 										<X color={ink} size={13} />
 									</View>
 								</Pressable>

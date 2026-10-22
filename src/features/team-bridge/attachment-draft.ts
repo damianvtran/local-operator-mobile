@@ -442,6 +442,40 @@ export function sendBlockedReason(
 export const CHIP_CONTROL_OUTSET = 6;
 
 /**
+ * The visible 24 pt badges inside those hit rects, and the state word's row,
+ * in chip coordinates (design D13). The hit rects stay 44 pt; only the drawn
+ * badge moves. Retry's badge sits on the thumbnail's bottom-left corner, top
+ * of its hit rect, so it ends 2 pt ABOVE the thumbnail's bottom edge and
+ * never draws over the state word ("Failed") centred in the row below.
+ * The label row is taken at full chip width: the word's own width varies
+ * with copy and text scale, and the badge must clear any of them.
+ */
+export const CHIP_BADGE_SIZE = 24;
+/** `pt-0.5` above the word, and `text-meta`'s 12 × 1.4 line box. */
+const CHIP_LABEL_TOP_GAP = 2;
+const CHIP_LABEL_LINE = 12 * 1.4;
+export function chipBadgeRects(chipSize: number, target: number) {
+	const hit = chipControlRects(chipSize, target);
+	const o = CHIP_CONTROL_OUTSET;
+	const s = CHIP_BADGE_SIZE;
+	return {
+		remove: {
+			x: hit.remove.x + target - o - s,
+			y: hit.remove.y + o,
+			width: s,
+			height: s,
+		},
+		retry: { x: hit.retry.x + o, y: hit.retry.y, width: s, height: s },
+		label: {
+			x: 0,
+			y: chipSize + CHIP_LABEL_TOP_GAP,
+			width: chipSize,
+			height: CHIP_LABEL_LINE,
+		},
+	};
+}
+
+/**
  * The strip's box model (R4-02). The margin is on the ScrollView, so its
  * viewport grows by the outset on every side; the padding is on the scroll
  * CONTENT, so the chips sit `outset` inside that viewport. Net chip position

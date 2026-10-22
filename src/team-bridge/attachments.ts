@@ -459,9 +459,11 @@ export function viewablePosition(
  *   animated `scrollTo`), and the early ticks still round to the OLD page, so
  *   following them would step the counter 2 → 1 → 2 (R4-01). A pending target
  *   therefore suppresses page-following until the offset reaches it. It is
- *   dropped early when the reader takes over (`onUserScroll`: a drag or touch
- *   start) or when a tick leaves the path between start and target (any other
- *   scroll that interrupted the animation), so a pager can never stay deaf.
+ *   dropped early when the reader takes over (`onUserScroll`: a touch start,
+ *   or a begin-drag on native; RNW never emits begin-drag), when a tick leaves
+ *   the path between start and target, or when a tick moves AWAY from the
+ *   target (a wheel/trackpad/keyboard scroll on desktop web, which has no
+ *   touch event at all, R5-01), so a pager never stays deaf.
  *   A second press while a target is pending steps from that target, so a
  *   quick double Next moves two pages instead of one.
  */
@@ -475,7 +477,13 @@ export function createViewerPager(deps: {
 	let opened = false;
 	let pageWidth = 0;
 	let lastOffset = 0;
-	let pending: { target: number; from: number } | null = null;
+	/*
+	 * `nearest` is the closest the in-flight scroll has come to the goal. A
+	 * button's animated scroll only ever closes in, so a tick FURTHER from the
+	 * goal than that is someone else scrolling (R5-01): a wheel, trackpad or
+	 * key on desktop web, which emits no touch or begin-drag event there.
+	 */
+	let pending: { target: number; from: number; nearest: number } | null = null;
 	const follow = (offsetX: number, width: number) => {
 		const page = pageAt(offsetX, width, deps.count);
 		if (page !== null && page !== deps.currentIndex()) deps.setIndex(page);
@@ -502,7 +510,13 @@ export function createViewerPager(deps: {
 				}
 				const lo = Math.min(pending.from, goal) - 1;
 				const hi = Math.max(pending.from, goal) + 1;
-				if (offsetX >= lo && offsetX <= hi) return;
+				const distance = Math.abs(offsetX - goal);
+				const onPath = offsetX >= lo && offsetX <= hi;
+				if (onPath && distance <= pending.nearest + 1) {
+					pending.nearest = Math.min(pending.nearest, distance);
+					return;
+				}
+				// Off the path, or moving away from the goal: not the button's scroll.
 				pending = null;
 			}
 			follow(offsetX, w);
@@ -516,7 +530,11 @@ export function createViewerPager(deps: {
 				if (target !== deps.currentIndex()) deps.setIndex(target);
 				return;
 			}
-			pending = { target, from: lastOffset };
+			pending = {
+				target,
+				from: lastOffset,
+				nearest: Math.abs(lastOffset - target * pageWidth),
+			};
 			deps.setIndex(target);
 			deps.scrollTo(target * pageWidth, true);
 		},

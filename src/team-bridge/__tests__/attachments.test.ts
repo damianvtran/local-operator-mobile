@@ -428,4 +428,16 @@ describe("viewer pager events, as react-native-web delivers them (R3-01)", () =>
 		r.pager.onScroll(800, 390); // a later swipe is followed normally
 		expect(r.index()).toBe(2);
 	});
+	it("R5-01: a desktop scroll that pulls back toward the start (no touch event) releases the target", () => {
+		const r = rig(1);
+		r.pager.onLayout(390);
+		r.pager.onScroll(390, 390);
+		r.pager.step(1); // 390 → 780, counter shows page 2
+		// The reviewer's repro: trackpad pull-back, CSS snap returns to `from`.
+		for (const x of [420, 500, 450, 400, 390]) r.pager.onScroll(x, 390);
+		expect(r.index()).toBe(1);
+		// And the next Next goes to page 2, not page 3.
+		r.pager.step(1);
+		expect(r.scrolls.at(-1)).toBe(780);
+	});
 });

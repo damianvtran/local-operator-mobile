@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it, vi } from "vitest";
 
 import { HubError } from "@/team-bridge/client";
@@ -5,6 +7,7 @@ import { HubError } from "@/team-bridge/client";
 import {
 	type AttachmentDraft,
 	CHIP_STRIP_LAYOUT,
+	chipBadgeRects,
 	chipControlRects,
 	chipStateLabel,
 	createAttachmentDraft,
@@ -432,8 +435,8 @@ describe("chip control targets (design D7/D12, code R3-02)", () => {
 		 * Box arithmetic in chip coordinates (first chip at 0,0 when unpadded).
 		 * Viewport edge = −(−margin) = how far the ScrollView grows past the
 		 * chips' original box; content padding then moves the chips back in.
-		 * The R3-02 version (both on one inner View) is the negative control:
-		 * its margin box cancels to a 0 outset, which this assertion fails.
+		 * This models the constant only; WHERE it is applied is asserted
+		 * structurally in the next test (R5-02).
 		 */
 		const viewportOutset = (scrollMargin: number) => -scrollMargin;
 		const chipShift = (scrollMargin: number, contentPadding: number) =>
@@ -446,10 +449,64 @@ describe("chip control targets (design D7/D12, code R3-02)", () => {
 			expect(r.y).toBeGreaterThanOrEqual(-edge);
 			expect(r.x + r.width).toBeLessThanOrEqual(64 + edge);
 		}
-		// Negative control: margin and padding cancelling on one View = 0 outset.
+		// A 0 outset (margin and padding cancelling) would clip Remove's top.
 		expect(remove.y).toBeLessThan(-viewportOutset(0));
 		// Retry's lower edge reaches into the chip's state-word row (64 + label),
 		// inside the column, which the strip's viewport also contains.
 		expect(retry.y + retry.height).toBeLessThanOrEqual(64 + 24);
+	});
+});
+
+const STRIP_ON_SCROLLVIEW =
+	/<ScrollView[^>]*style=\{CHIP_STRIP_LAYOUT\.scroll\}[^>]*contentContainerStyle=\{CHIP_STRIP_LAYOUT\.content\}/s;
+const STRIP_USES = /CHIP_STRIP_LAYOUT\.(scroll|content)/g;
+const INLINE_MARGIN = /margin:\s*-CHIP_CONTROL_OUTSET/;
+const INLINE_PADDING = /padding:\s*CHIP_CONTROL_OUTSET/;
+
+describe("strip layout is applied where the box model needs it (R5-02)", () => {
+	/*
+	 * Asserted over the SOURCE (the `textarea.test.ts` convention): the margin
+	 * must be the ScrollView's `style` and the padding its
+	 * `contentContainerStyle`. Moving both back onto one inner View (the R3-02
+	 * layout, which cancels and clips the targets) fails this test.
+	 */
+	const SOURCE = readFileSync(
+		fileURLToPath(new URL("./attachment-views.tsx", import.meta.url)),
+		"utf8",
+	);
+	it("puts the margin on the ScrollView and the padding on its content", () => {
+		expect(SOURCE).toMatch(STRIP_ON_SCROLLVIEW);
+		expect(SOURCE.match(STRIP_USES)).toHaveLength(2);
+		expect(SOURCE).not.toMatch(INLINE_MARGIN);
+		expect(SOURCE).not.toMatch(INLINE_PADDING);
+	});
+});
+
+describe("chip badges stay clear of the state word (design D13)", () => {
+	const { remove, retry, label } = chipBadgeRects(64, 44);
+	const hit = chipControlRects(64, 44);
+	type R = { x: number; y: number; width: number; height: number };
+	const intersects = (a: R, b: R) =>
+		a.x < b.x + b.width &&
+		b.x < a.x + a.width &&
+		a.y < b.y + b.height &&
+		b.y < a.y + a.height;
+	const inside = (a: R, b: R) =>
+		a.x >= b.x &&
+		a.y >= b.y &&
+		a.x + a.width <= b.x + b.width &&
+		a.y + a.height <= b.y + b.height;
+	it("neither badge's visual rect intersects the label row", () => {
+		expect(intersects(retry, label)).toBe(false);
+		expect(intersects(remove, label)).toBe(false);
+	});
+	it("each badge draws inside its own 44 pt hit rect, and the badges do not touch", () => {
+		expect(inside(retry, hit.retry)).toBe(true);
+		expect(inside(remove, hit.remove)).toBe(true);
+		expect(intersects(retry, remove)).toBe(false);
+	});
+	it("negative control: the round-4 badge (centred in its hit rect) did overlap", () => {
+		const centred = { ...retry, y: hit.retry.y + (44 - 24) / 2 };
+		expect(intersects(centred, label)).toBe(true);
 	});
 });
