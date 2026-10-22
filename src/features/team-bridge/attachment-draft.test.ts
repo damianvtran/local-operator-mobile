@@ -4,7 +4,7 @@ import { HubError } from "@/team-bridge/client";
 
 import {
 	type AttachmentDraft,
-	CHIP_CONTROL_OUTSET,
+	CHIP_STRIP_LAYOUT,
 	chipControlRects,
 	chipStateLabel,
 	createAttachmentDraft,
@@ -427,15 +427,29 @@ describe("chip control targets (design D7/D12, code R3-02)", () => {
 		]);
 		expect(overlap(remove, retry)).toBe(0);
 	});
-	it("stay inside the strip padding, so the ScrollView clips neither", () => {
-		const o = CHIP_CONTROL_OUTSET;
+	it("stay inside the ScrollView's viewport once margin AND padding are applied (R4-02)", () => {
+		/*
+		 * Box arithmetic in chip coordinates (first chip at 0,0 when unpadded).
+		 * Viewport edge = −(−margin) = how far the ScrollView grows past the
+		 * chips' original box; content padding then moves the chips back in.
+		 * The R3-02 version (both on one inner View) is the negative control:
+		 * its margin box cancels to a 0 outset, which this assertion fails.
+		 */
+		const viewportOutset = (scrollMargin: number) => -scrollMargin;
+		const chipShift = (scrollMargin: number, contentPadding: number) =>
+			scrollMargin + contentPadding;
+		const { scroll, content } = CHIP_STRIP_LAYOUT;
+		expect(chipShift(scroll.margin, content.padding)).toBe(0); // chips keep their place
+		const edge = viewportOutset(scroll.margin);
 		for (const r of [remove, retry]) {
-			expect(r.x).toBeGreaterThanOrEqual(-o);
-			expect(r.y).toBeGreaterThanOrEqual(-o);
-			expect(r.x + r.width).toBeLessThanOrEqual(64 + o);
+			expect(r.x).toBeGreaterThanOrEqual(-edge);
+			expect(r.y).toBeGreaterThanOrEqual(-edge);
+			expect(r.x + r.width).toBeLessThanOrEqual(64 + edge);
 		}
-		// Retry's lower edge may extend past the 64 pt thumbnail into the chip's
-		// state-word row; the chip column is 64 + label height, never clipped.
+		// Negative control: margin and padding cancelling on one View = 0 outset.
+		expect(remove.y).toBeLessThan(-viewportOutset(0));
+		// Retry's lower edge reaches into the chip's state-word row (64 + label),
+		// inside the column, which the strip's viewport also contains.
 		expect(retry.y + retry.height).toBeLessThanOrEqual(64 + 24);
 	});
 });

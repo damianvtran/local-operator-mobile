@@ -331,6 +331,7 @@ describe("viewer pager events, as react-native-web delivers them (R3-01)", () =>
 	const rig = (initialIndex: number, count = 4) => {
 		let index = initialIndex;
 		const scrolls: number[] = [];
+		const seen: number[] = [];
 		const pager = createViewerPager({
 			initialIndex,
 			count,
@@ -338,9 +339,10 @@ describe("viewer pager events, as react-native-web delivers them (R3-01)", () =>
 			currentIndex: () => index,
 			setIndex: (n) => {
 				index = n;
+				seen.push(n);
 			},
 		});
-		return { pager, scrolls, index: () => index };
+		return { pager, scrolls, seen, index: () => index };
 	};
 	it("opens on initialIndex by scrolling after the first real layout (web ignores contentOffset)", () => {
 		const r = rig(1);
@@ -361,7 +363,69 @@ describe("viewer pager events, as react-native-web delivers them (R3-01)", () =>
 		expect(r.index()).toBe(2);
 		r.pager.onScroll(1170, 390);
 		expect(r.index()).toBe(3);
-		r.pager.onScroll(0, 0); // web may omit layoutMeasurement: use the laid-out width
+		// A 0 width (no size yet) falls back to the laid-out width.
+		r.pager.onScroll(0, 0);
 		expect(r.index()).toBe(0);
+	});
+	/*
+	 * R4-01: a button's ANIMATED scroll ticks through intermediate offsets that
+	 * still round to the old page. The counter must go straight to the target
+	 * and stay there (the reviewer's repro was 2 → 1 → 2).
+	 */
+	it("Next: intermediate ticks never step the counter back", () => {
+		const r = rig(1);
+		r.pager.onLayout(390);
+		r.pager.onScroll(390, 390);
+		r.pager.step(1);
+		for (const x of [398, 470, 560, 620, 700, 780]) r.pager.onScroll(x, 390);
+		expect(r.seen).toEqual([2]);
+		expect(r.scrolls.at(-1)).toBe(780);
+	});
+	it("Previous: the same, in the other direction", () => {
+		const r = rig(2);
+		r.pager.onLayout(390);
+		r.pager.onScroll(780, 390);
+		r.pager.step(-1);
+		for (const x of [772, 700, 600, 500, 400, 390]) r.pager.onScroll(x, 390);
+		expect(r.seen).toEqual([1]);
+	});
+	it("a rapid double Next moves two pages, not one", () => {
+		const r = rig(0);
+		r.pager.onLayout(390);
+		r.pager.onScroll(0, 390);
+		r.pager.step(1);
+		r.pager.onScroll(60, 390);
+		r.pager.step(1); // pressed again mid-animation
+		for (const x of [120, 300, 500, 700, 780]) r.pager.onScroll(x, 390);
+		expect(r.seen).toEqual([1, 2]);
+		expect(r.index()).toBe(2);
+		expect(r.scrolls.slice(-2)).toEqual([390, 780]);
+	});
+	it("a swipe start drops the pending target, so the reader's drag is followed", () => {
+		const r = rig(0);
+		r.pager.onLayout(390);
+		r.pager.onScroll(0, 390);
+		r.pager.step(1);
+		r.pager.onScroll(100, 390);
+		r.pager.onUserScroll(); // reader grabs it and drags back
+		r.pager.onScroll(20, 390);
+		expect(r.index()).toBe(0);
+	});
+	it("a tick off the button's path (an interrupting scroll) also releases it", () => {
+		const r = rig(1);
+		r.pager.onLayout(390);
+		r.pager.onScroll(390, 390);
+		r.pager.step(1); // 390 → 780
+		r.pager.onScroll(1170, 390); // beyond the target: someone else scrolled
+		expect(r.index()).toBe(3);
+	});
+	it("Next at the last page is a no-op with nothing left pending", () => {
+		const r = rig(3);
+		r.pager.onLayout(390);
+		r.pager.onScroll(1170, 390);
+		r.pager.step(1);
+		expect(r.seen).toEqual([]);
+		r.pager.onScroll(800, 390); // a later swipe is followed normally
+		expect(r.index()).toBe(2);
 	});
 });

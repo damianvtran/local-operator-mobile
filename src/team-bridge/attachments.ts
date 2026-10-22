@@ -445,34 +445,87 @@ export function viewablePosition(
 
 /**
  * The viewer pager's event handling, platform-free so tests can feed it the
- * same layout/scroll events react-native-web and native deliver (R3-01).
+ * same layout/scroll/press events react-native-web and native deliver.
  *
  * - `onLayout(width)`: the FIRST layout with a real width jumps (unanimated)
- *   to `initialIndex`, because web ignores `contentOffset`; later layouts
- *   (rotation, resize) never jump again.
- * - `onScroll(offsetX, width)`: the page follows the scroll offset, which is
- *   the only scroll event web forwards; `setIndex` fires only on a change.
+ *   to `initialIndex`, because web ignores `contentOffset` (R3-01); later
+ *   layouts never jump again.
+ * - `onScroll(offsetX, width)`: the page follows the scroll offset, the one
+ *   scroll event web forwards (no end-of-drag or momentum events there).
+ *   `width` is 0 before the element has a size; the laid-out width covers it.
+ * - `goTo(page)`: the Previous/Next buttons. The counter moves at once and an
+ *   ANIMATED scroll follows. That scroll emits `onScroll` ticks on every
+ *   platform (RNW's first tick is immediate; iOS/Android tick during an
+ *   animated `scrollTo`), and the early ticks still round to the OLD page, so
+ *   following them would step the counter 2 → 1 → 2 (R4-01). A pending target
+ *   therefore suppresses page-following until the offset reaches it. It is
+ *   dropped early when the reader takes over (`onUserScroll`: a drag or touch
+ *   start) or when a tick leaves the path between start and target (any other
+ *   scroll that interrupted the animation), so a pager can never stay deaf.
+ *   A second press while a target is pending steps from that target, so a
+ *   quick double Next moves two pages instead of one.
  */
 export function createViewerPager(deps: {
 	initialIndex: number;
 	count: number;
-	scrollTo: (x: number) => void;
+	scrollTo: (x: number, animated: boolean) => void;
 	currentIndex: () => number;
 	setIndex: (index: number) => void;
 }) {
 	let opened = false;
 	let pageWidth = 0;
+	let lastOffset = 0;
+	let pending: { target: number; from: number } | null = null;
+	const follow = (offsetX: number, width: number) => {
+		const page = pageAt(offsetX, width, deps.count);
+		if (page !== null && page !== deps.currentIndex()) deps.setIndex(page);
+	};
 	return {
 		onLayout(width: number): void {
 			if (!(width > 0)) return;
 			pageWidth = width;
 			if (opened) return;
 			opened = true;
-			deps.scrollTo(deps.initialIndex * width);
+			lastOffset = deps.initialIndex * width;
+			deps.scrollTo(lastOffset, false);
 		},
 		onScroll(offsetX: number, width: number): void {
-			const page = pageAt(offsetX, width || pageWidth, deps.count);
-			if (page !== null && page !== deps.currentIndex()) deps.setIndex(page);
+			const w = width > 0 ? width : pageWidth;
+			lastOffset = offsetX;
+			if (pending && w > 0) {
+				const goal = pending.target * w;
+				// Within a pixel of the goal: the button's scroll has landed.
+				if (Math.abs(offsetX - goal) <= 1) {
+					pending = null;
+					return follow(offsetX, w);
+				}
+				const lo = Math.min(pending.from, goal) - 1;
+				const hi = Math.max(pending.from, goal) + 1;
+				if (offsetX >= lo && offsetX <= hi) return;
+				pending = null;
+			}
+			follow(offsetX, w);
+		},
+		goTo(page: number): void {
+			if (!(pageWidth > 0)) return;
+			const target = Math.min(Math.max(0, page), deps.count - 1);
+			// Already there: no scroll will tick, so no target to wait for.
+			if (Math.abs(lastOffset - target * pageWidth) <= 1) {
+				pending = null;
+				if (target !== deps.currentIndex()) deps.setIndex(target);
+				return;
+			}
+			pending = { target, from: lastOffset };
+			deps.setIndex(target);
+			deps.scrollTo(target * pageWidth, true);
+		},
+		/** Previous/Next step from the pending target, if a scroll is in flight. */
+		step(delta: number): void {
+			const base = pending ? pending.target : deps.currentIndex();
+			this.goTo(base + delta);
+		},
+		onUserScroll(): void {
+			pending = null;
 		},
 	};
 }

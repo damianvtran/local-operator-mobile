@@ -44,7 +44,7 @@ import {
 } from "@/ui/components/modal-stack-entry";
 import { TOUCH_FLOOR } from "@/ui/layout";
 import {
-	CHIP_CONTROL_OUTSET,
+	CHIP_STRIP_LAYOUT,
 	chipControlRects,
 	chipStateLabel,
 	type DraftChip,
@@ -368,16 +368,12 @@ function ImageViewer({
 	// Joins the app's modal stack like `Dialog`/`Sheet`, so a sheet raised
 	// over the viewer (or the viewer over one) never paints two full surfaces.
 	const { covered, scope } = useModalStackEntry(true);
-	const goTo = (next: number) => {
-		const clamped = Math.min(Math.max(0, next), images.length - 1);
-		setIndex(clamped);
-		pager.current?.scrollTo({ x: clamped * width, animated: true });
-	};
 	/*
-	 * R3-01: web ignores `contentOffset` and never fires the end-of-drag or
-	 * momentum events, so the pager opens with an explicit `scrollTo` after
-	 * layout and tracks the page from `onScroll` (`createViewerPager` has the
-	 * rules and the tests). Refs keep one controller across renders.
+	 * One controller owns the page (`createViewerPager` has the rules and the
+	 * tests): opening at `initialIndex` on web (R3-01), following `onScroll`,
+	 * and the buttons' pending target that keeps an animated scroll's early
+	 * ticks from stepping the counter backwards (R4-01). Refs keep one
+	 * controller across renders.
 	 */
 	const indexRef = useRef(index);
 	indexRef.current = index;
@@ -385,13 +381,15 @@ function ImageViewer({
 		createViewerPager({
 			initialIndex,
 			count: images.length,
-			scrollTo: (x) => pager.current?.scrollTo({ x, animated: false }),
+			scrollTo: (x, animated) => pager.current?.scrollTo({ x, animated }),
 			currentIndex: () => indexRef.current,
 			setIndex,
 		}),
 	).current;
 	const onPagerLayout = (event: LayoutChangeEvent) =>
 		pagerEvents.onLayout(event.nativeEvent.layout.width);
+	// A drag or touch start is the reader taking over from a button's scroll.
+	const onUserScroll = () => pagerEvents.onUserScroll();
 	const onScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) =>
 		pagerEvents.onScroll(
 			event.nativeEvent.contentOffset.x,
@@ -448,6 +446,8 @@ function ImageViewer({
 						contentOffset={{ x: initialIndex * width, y: 0 }}
 						onLayout={onPagerLayout}
 						onScroll={onScroll}
+						onScrollBeginDrag={onUserScroll}
+						onTouchStart={onUserScroll}
 						scrollEventThrottle={16}
 					>
 						{images.map((descriptor, page) => (
@@ -490,14 +490,14 @@ function ImageViewer({
 							{button(
 								"Previous image",
 								<ChevronLeft color={ink} size={22} />,
-								() => goTo(index - 1),
+								() => pagerEvents.step(-1),
 								teamBridgeViewerId("previous"),
 								index === 0,
 							)}
 							{button(
 								"Next image",
 								<ChevronRight color={ink} size={22} />,
-								() => goTo(index + 1),
+								() => pagerEvents.step(1),
 								teamBridgeViewerId("next"),
 								index === images.length - 1,
 							)}
@@ -598,16 +598,17 @@ export function ComposerAttachments({
 	const rects = chipControlRects(CHIP_SIZE, TOUCH_FLOOR);
 	return (
 		<View>
-			<ScrollView horizontal showsHorizontalScrollIndicator={false}>
-				{/* Padded by the controls' outset so a ScrollView never clips a target
-				    (R3-02). The negative margin keeps the chips' visual position. */}
-				<View
-					className="flex-row gap-3"
-					style={{
-						padding: CHIP_CONTROL_OUTSET,
-						margin: -CHIP_CONTROL_OUTSET,
-					}}
-				>
+			{/* R4-02: the margin goes on the ScrollView, which GROWS its viewport by
+			    the outset on every side, and the padding on its content, so the
+			    chips keep their place and no 44 pt target is clipped. (Both on the
+			    inner View cancel out: the content box shrinks back to the chips.) */}
+			<ScrollView
+				horizontal
+				showsHorizontalScrollIndicator={false}
+				style={CHIP_STRIP_LAYOUT.scroll}
+				contentContainerStyle={CHIP_STRIP_LAYOUT.content}
+			>
+				<View className="flex-row gap-3">
 					{chips.map((chip, index) => {
 						const n = index + 1;
 						const state = chipStateLabel(chip);

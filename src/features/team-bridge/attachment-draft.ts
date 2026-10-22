@@ -440,6 +440,18 @@ export function sendBlockedReason(
  * ScrollView (which clips on iOS, Android and web alike).
  */
 export const CHIP_CONTROL_OUTSET = 6;
+
+/**
+ * The strip's box model (R4-02). The margin is on the ScrollView, so its
+ * viewport grows by the outset on every side; the padding is on the scroll
+ * CONTENT, so the chips sit `outset` inside that viewport. Net chip position
+ * in the parent: margin + padding = 0, unchanged. Putting both on the same
+ * inner View cancels them (its margin box shrinks back to the chips).
+ */
+export const CHIP_STRIP_LAYOUT = {
+	scroll: { margin: -CHIP_CONTROL_OUTSET },
+	content: { padding: CHIP_CONTROL_OUTSET },
+} as const;
 export function chipControlRects(
 	chipSize: number,
 	target: number,
