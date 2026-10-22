@@ -17,7 +17,6 @@ import {
 	messageAttachments,
 	sendableAttachmentIds,
 } from "@/team-bridge/attachments";
-import { isHubError } from "@/team-bridge/client";
 import type { Notify } from "@/team-bridge/contract";
 import * as model from "@/team-bridge/model";
 import { useTeamBridge, useTeamBridgeState } from "@/team-bridge/provider";
@@ -37,8 +36,10 @@ import { Screen } from "@/ui/components/screen";
 import { Sheet } from "@/ui/components/sheet";
 import { Textarea } from "@/ui/components/textarea";
 import {
-	type AttachmentDraft,
 	createAttachmentDraft,
+	type HeldDraft,
+	sendFailureOf,
+	syncDraft,
 } from "./attachment-draft";
 import {
 	pasteTeamBridgeImage,
@@ -135,53 +136,42 @@ function ThreadContent({
 	const [, setDraftVersion] = useState(0);
 	const [attachOpen, setAttachOpen] = useState(false);
 	const [attachNotice, setAttachNotice] = useState<string | null>(null);
-	const draftImages = useRef<AttachmentDraft | null>(null);
-	const draftConversation = useRef<string | null>(null);
-	/*
-	 * Capability withdrawn while images are staged (a status refresh after a hub
-	 * rollback): the strip disappears, so its ids must go too. Otherwise a text
-	 * send would carry invisible `attachment_ids` that an older hub answers 400.
-	 */
-	if (!attachLimits && draftImages.current) {
-		draftImages.current.dispose();
-		draftImages.current = null;
-		draftConversation.current = null;
-	}
-	if (
-		attachLimits &&
-		conversationId &&
-		(!draftImages.current || draftConversation.current !== conversationId)
-	) {
-		draftImages.current?.dispose();
-		draftConversation.current = conversationId;
-		const uploadTo = conversationId;
-		draftImages.current = createAttachmentDraft({
-			maxCount: attachLimits.maxCount,
-			prepare: (raw) =>
-				prepareTeamBridgeImage(
-					raw as Parameters<typeof prepareTeamBridgeImage>[0],
-				),
-			upload: (bytes) => hub.uploadAttachment(tenantId, uploadTo, bytes),
-			discard: (attachmentId) =>
-				hub.deleteAttachment(tenantId, uploadTo, attachmentId),
-			releaseSource: (raw) => {
-				void releaseTeamBridgeSource(
-					raw as Parameters<typeof releaseTeamBridgeSource>[0],
-				);
-			},
-			onChange: () => {
-				if (mounted.current) setDraftVersion((n) => n + 1);
-			},
-		});
-	}
-	useEffect(() => () => draftImages.current?.dispose(), []);
+	const draftImages = useRef<HeldDraft | null>(null);
+	draftImages.current = syncDraft(
+		draftImages.current,
+		attachLimits,
+		conversationId,
+		(limits, uploadTo) =>
+			createAttachmentDraft({
+				maxCount: limits.maxCount,
+				prepare: (raw) =>
+					prepareTeamBridgeImage(
+						raw as Parameters<typeof prepareTeamBridgeImage>[0],
+					),
+				upload: (bytes) => hub.uploadAttachment(tenantId, uploadTo, bytes),
+				discard: (attachmentId) =>
+					hub.deleteAttachment(tenantId, uploadTo, attachmentId),
+				releaseSource: (raw) => {
+					void releaseTeamBridgeSource(
+						raw as Parameters<typeof releaseTeamBridgeSource>[0],
+					);
+				},
+				onChange: () => {
+					if (mounted.current) setDraftVersion((n) => n + 1);
+				},
+			}),
+	);
+	useEffect(() => () => draftImages.current?.draft.dispose(), []);
 	// One condition gates both what is shown and what a send carries.
-	const images = attachLimits && conversationId ? draftImages.current : null;
+	const images =
+		attachLimits && conversationId
+			? (draftImages.current?.draft ?? null)
+			: null;
 	const chips = images?.chips() ?? [];
 	const addImages = async (source: "library" | "paste") => {
 		setAttachOpen(false);
 		setAttachNotice(null);
-		const draft = draftImages.current;
+		const draft = images;
 		if (!draft) return;
 		const room = draft.remaining();
 		if (room === 0) {
@@ -329,12 +319,12 @@ function ThreadContent({
 			}
 		} catch (error) {
 			/*
-			 * With images attached, a 404 is the hub's uniform
-			 * `attachment_not_found`: a staged image expired or was already used.
-			 * Retrying the same ids would repeat it, so the chips say so and the
-			 * reader removes them; the text stays in the draft.
+			 * A staged image expired or was already used: retrying the same ids
+			 * repeats the 404, so the chips say so and the reader removes them;
+			 * the text stays in the draft. Every other failure keeps the safe-retry
+			 * copy (`sendFailureOf` has the code-level why).
 			 */
-			if (ids.length > 0 && isHubError(error) && error.kind === "not_found") {
+			if (sendFailureOf(error, ids) === "expired") {
 				images?.markExpired();
 				setSendError(
 					"An attached image expired before it was sent. Remove it, then send again.",

@@ -293,3 +293,57 @@ export function createAttachmentDraft(deps: {
 }
 
 export type AttachmentDraft = ReturnType<typeof createAttachmentDraft>;
+
+/**
+ * How the composer explains a failed send that carried images.
+ *
+ * `expired` ONLY for the hub's `attachment_not_found` (a staged image expired
+ * after 72 h, or was already bound). The same 404 status also carries
+ * `conversation_not_found` (the reader left or was removed, or the
+ * conversation is gone): calling that "image expired" would tell them to remove
+ * images that are not the problem, so it stays on the generic path.
+ */
+export function sendFailureOf(
+	error: unknown,
+	attachmentIds: readonly string[],
+): "expired" | "generic" {
+	return attachmentIds.length > 0 &&
+		isHubError(error) &&
+		error.code === "attachment_not_found"
+		? "expired"
+		: "generic";
+}
+
+export interface HeldDraft {
+	draft: AttachmentDraft;
+	conversationId: string;
+}
+
+/**
+ * The thread screen's one draft for the current capability and conversation.
+ *
+ * - Capability withdrawn (a status refresh after a hub rollback): the held
+ *   draft is DISPOSED (its staged ids released) and nothing is held. The strip
+ *   disappears with it, and a later text send can never carry invisible
+ *   `attachment_ids` that an older hub answers 400.
+ * - A different conversation: the old draft is disposed and a new one created.
+ * - No conversation yet (a draft DM before its first send): nothing is held;
+ *   an upload needs a conversation id.
+ */
+export function syncDraft(
+	held: HeldDraft | null,
+	limits: { maxCount: number } | null,
+	conversationId: string | null,
+	create: (
+		limits: { maxCount: number },
+		conversationId: string,
+	) => AttachmentDraft,
+): HeldDraft | null {
+	if (!limits || !conversationId) {
+		held?.draft.dispose();
+		return null;
+	}
+	if (held && held.conversationId === conversationId) return held;
+	held?.draft.dispose();
+	return { draft: create(limits, conversationId), conversationId };
+}

@@ -2,7 +2,13 @@ import { describe, expect, it, vi } from "vitest";
 
 import { HubError } from "@/team-bridge/client";
 
-import { createAttachmentDraft, type Prepared } from "./attachment-draft";
+import {
+	type AttachmentDraft,
+	createAttachmentDraft,
+	type Prepared,
+	sendFailureOf,
+	syncDraft,
+} from "./attachment-draft";
 
 const prepared = (): Prepared => ({
 	bytes: new Uint8Array([0xff, 0xd8, 0xff, 1]),
@@ -213,5 +219,68 @@ describe("composer attachment chips", () => {
 		finish(prepared());
 		await flush();
 		expect(releaseSource).toHaveBeenCalledTimes(2);
+	});
+});
+
+describe("send failure copy (R2-01)", () => {
+	const notFound = (code: string) =>
+		new HubError({ kind: "not_found", message: "x", status: 404, code });
+	it("only attachment_not_found with images attached is 'expired'", () => {
+		expect(sendFailureOf(notFound("attachment_not_found"), ["batt_1"])).toBe(
+			"expired",
+		);
+	});
+	it("conversation_not_found is NOT an expired image, even with images attached", () => {
+		expect(sendFailureOf(notFound("conversation_not_found"), ["batt_1"])).toBe(
+			"generic",
+		);
+		expect(sendFailureOf(notFound("not_a_member"), ["batt_1"])).toBe("generic");
+	});
+	it("a text-only send or a non-hub error stays generic", () => {
+		expect(sendFailureOf(notFound("attachment_not_found"), [])).toBe("generic");
+		expect(sendFailureOf(new Error("network"), ["batt_1"])).toBe("generic");
+	});
+});
+
+describe("thread-screen draft sync (R1-06 capability withdrawal)", () => {
+	const fake = () => {
+		const draft = { dispose: vi.fn() } as unknown as AttachmentDraft & {
+			dispose: ReturnType<typeof vi.fn>;
+		};
+		return draft;
+	};
+	it("creates one draft per conversation while the capability is advertised", () => {
+		const create = vi.fn(() => fake());
+		const held = syncDraft(null, { maxCount: 4 }, "c1", create);
+		expect(held?.conversationId).toBe("c1");
+		expect(syncDraft(held, { maxCount: 4 }, "c1", create)).toBe(held);
+		expect(create).toHaveBeenCalledTimes(1);
+	});
+	it("capability withdrawn: disposes the held draft (staged ids released) and holds nothing", () => {
+		const draft = fake();
+		const held = syncDraft(null, { maxCount: 4 }, "c1", () => draft);
+		expect(syncDraft(held, null, "c1", () => fake())).toBe(null);
+		expect(draft.dispose).toHaveBeenCalledTimes(1);
+	});
+	it("withdrawal end-to-end: a real draft's uploaded ids are DELETEd and none remain to send", async () => {
+		const { draft, deps } = setup();
+		draft.add(["a", "b"]);
+		await flush();
+		expect(draft.attachmentIds()).toEqual(["batt_1", "batt_2"]);
+		const held = syncDraft(null, { maxCount: 4 }, "c1", () => draft);
+		expect(syncDraft(held, null, "c1", () => draft)).toBe(null);
+		expect(deps.discard.mock.calls.map((c) => c[0])).toEqual([
+			"batt_1",
+			"batt_2",
+		]);
+		expect(draft.attachmentIds()).toEqual([]);
+	});
+	it("switching conversation disposes the old draft and creates a new one", () => {
+		const first = fake();
+		const second = fake();
+		const held = syncDraft(null, { maxCount: 4 }, "c1", () => first);
+		const next = syncDraft(held, { maxCount: 4 }, "c2", () => second);
+		expect(first.dispose).toHaveBeenCalledTimes(1);
+		expect(next?.draft).toBe(second);
 	});
 });
