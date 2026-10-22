@@ -142,6 +142,12 @@ attachments have their own opt-in cases, so the cases above keep a hub with no
 | `attachments_upload_refused` | uploads answer 415 | final failed chip, no Retry |
 | `attachments_send_expired` | a send with images answers 404 `attachment_not_found` | chips turn expired, send error names it |
 | `attachments_fetch_error` | byte reads answer 500 | "This image did not load." + Retry in each bubble |
+| `attachments_quota` | uploads answer 409 `attachment_quota_exceeded` | final failed chip naming the 8-image limit |
+
+With `case=attachments&thread=1`, message `bcm_8` is the 2×2 grid. Add
+`viewer=bcm_8:1` to `/__phone` (it becomes `tb-viewer=` on the app URL) to
+open the full-screen viewer on page 2 of 4; `viewer=bcm_7:0` opens a single
+image. That seam exists only in a fixture web build on loopback.
 
 Chips need a real image: on the web build "Add image" → "Photo Library" opens
 the browser's file chooser (any PNG/JPEG), and "Paste image" reads the
