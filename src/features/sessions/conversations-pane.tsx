@@ -2,7 +2,6 @@ import { useRouter } from "expo-router";
 import { Search, SquarePen, X } from "lucide-react-native";
 import { useEffect, useMemo, useState } from "react";
 import { FlatList, Pressable, RefreshControl, Text, View } from "react-native";
-
 import type { SessionSummary } from "@/contracts";
 import {
 	useConnection,
@@ -33,6 +32,7 @@ import { SessionTagsSheet } from "@/features/sessions/tags-sheet";
 import { homeShortened } from "@/lib/format";
 import { listLabel } from "@/lib/route-label";
 import { useUiStore } from "@/state/ui-store";
+import { TeamBridgeEntry } from "@/team-bridge/navigation";
 import {
 	CONTROL,
 	EMPTY,
@@ -187,7 +187,7 @@ export const ConversationsPane = ({
 
 	const { effectiveScale } = useTextScale();
 	const largeText = effectiveScale > LARGE_TEXT_SCALE;
-	const scrollFooter = sidebarFooterScrolls(useLayout());
+	const scrollFooter = sidebarFooterScrolls(useLayout(), effectiveScale);
 
 	/* The switcher's painted label. The text box's OWN width is the budget —
 	 *  measured on the line, so it cannot drift from the flex rules — and the
@@ -277,8 +277,8 @@ export const ConversationsPane = ({
 		openSession(session);
 	};
 
-	/* Keep one navigation tree in both placements: compact landscape gives the
-	 * list all remaining height; the four unchanged routes follow its rows. The
+	/* Keep one navigation tree in both placements: short landscape and compact
+	 * large text give the list room; secondary routes follow its rows. The
 	 * negative margin only cancels the list's px-4, preserving the footer width
 	 * (and its content-driven wrapping) from the pinned portrait layout. */
 	const footer = (
@@ -342,6 +342,7 @@ export const ConversationsPane = ({
 					testID={CONTROL.sidebarSchedules}
 				/>
 			</View>
+			<TeamBridgeEntry onNavigate={onNavigate} />
 			{/* The fifth route, gated on the relay's own capability flag. An older
 			 *  relay omits `features.library`; showing the entry there would offer a
 			 *  control whose screen can only 404, so absence hides it. The gate is the

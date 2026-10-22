@@ -12,6 +12,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { ConnectionProvider } from "@/features/auth/connection-provider";
 import { useDeepLinkResolution } from "@/features/deep-links/use-deep-link-resolution";
 import { useNotificationTapRouting } from "@/notifications/use-notification-taps";
+import { TeamBridgeProvider } from "@/team-bridge/provider";
 import { ThemeProvider, useTheme } from "@/ui/appearance";
 import { ToastHost } from "@/ui/components";
 import { TextScaleProvider } from "@/ui/text-scale-provider";
@@ -40,13 +41,15 @@ export default function RootLayout() {
 			<ThemeProvider>
 				<ConnectionProvider>
 					<TextScaleProvider>
-						<View className="flex-1 bg-canvas">
-							<ThemedStatusBar />
-							<DeepLinkResolution />
-							<NotificationTapRouting />
-							<Stack screenOptions={{ headerShown: false }} />
-							<ToastHost />
-						</View>
+						<TeamBridgeProvider>
+							<View className="flex-1 bg-canvas">
+								<ThemedStatusBar />
+								<DeepLinkResolution />
+								<NotificationTapRouting />
+								<Stack screenOptions={{ headerShown: false }} />
+								<ToastHost />
+							</View>
+						</TeamBridgeProvider>
 					</TextScaleProvider>
 				</ConnectionProvider>
 			</ThemeProvider>

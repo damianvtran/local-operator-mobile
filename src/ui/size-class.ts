@@ -93,12 +93,16 @@ export const sidebarWidthFor = (viewportWidth: number): number =>
 		Math.min(SIDEBAR_MOBILE_MAX, viewportWidth - SIDEBAR_SLIVER),
 	);
 
-/** In short landscape the stacked secondary routes cannot stay pinned without
- * taking the conversation list's height. Use the same height policy that rejects
- * a split pane there; portrait and roomy tablet layouts keep their pinned footer.
- * Scrolling the routes with the list preserves text scaling and target sizes. */
-export const sidebarFooterScrolls = (layout: Layout): boolean =>
-	layout.orientation === "landscape" && !layout.split;
+/** Short landscape and compact large text cannot afford pinned secondary routes:
+ * at 320×568 / 200% the expanded footer consumed the conversation list entirely.
+ * Share the existing list scroller rather than shrinking text or touch targets;
+ * ordinary portrait and roomy tablets retain their pinned navigation. */
+export const sidebarFooterScrolls = (
+	layout: Layout,
+	effectiveScale = 1,
+): boolean =>
+	(layout.orientation === "landscape" && !layout.split) ||
+	(layout.sizeClass === "compact" && effectiveScale > LARGE_TEXT_SCALE);
 
 /**
  * COMPACT SESSION CHROME: a phone held on its side, where the screen is shorter

@@ -1,7 +1,6 @@
 import { useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Pressable, Text, View } from "react-native";
-
 import type { ComputerStatus, DiscoveredComputer } from "@/connection";
 import {
 	connectionStore,
@@ -15,6 +14,7 @@ import {
 } from "@/features/auth/connector-wait";
 import { SetupComputer } from "@/features/auth/setup-computer";
 import { TunnelPaths } from "@/features/auth/tunnel-paths";
+import { TeamBridgeEntry } from "@/team-bridge/navigation";
 import { CONTROL, computerRowIds, REGION, ROLE, SCREEN } from "@/ui/a11y";
 import { Badge } from "@/ui/components/badge";
 import { Banner } from "@/ui/components/banner";
@@ -360,6 +360,7 @@ export default function Computers() {
 				) : null
 			}
 		>
+			<TeamBridgeEntry />
 			{refusal ? (
 				<RefusalSurface
 					kind={refusal.kind}
