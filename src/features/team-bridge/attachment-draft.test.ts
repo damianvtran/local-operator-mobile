@@ -4,9 +4,12 @@ import { HubError } from "@/team-bridge/client";
 
 import {
 	type AttachmentDraft,
+	chipStateLabel,
 	createAttachmentDraft,
 	type Prepared,
+	sendBlockedReason,
 	sendFailureOf,
+	stripSummary,
 	syncDraft,
 } from "./attachment-draft";
 
@@ -282,5 +285,99 @@ describe("thread-screen draft sync (R1-06 capability withdrawal)", () => {
 		const next = syncDraft(held, { maxCount: 4 }, "c2", () => second);
 		expect(first.dispose).toHaveBeenCalledTimes(1);
 		expect(next?.draft).toBe(second);
+	});
+});
+
+describe("quota refusal (QA Q1-02)", () => {
+	it("409 attachment_quota_exceeded is final and names the 8-image limit", async () => {
+		const upload = vi.fn().mockRejectedValue(
+			new HubError({
+				kind: "conflict",
+				message: "x",
+				status: 409,
+				code: "attachment_quota_exceeded",
+			}),
+		);
+		const { draft } = setup({ upload });
+		draft.add(["a"]);
+		await flush();
+		expect(draft.chips()[0]).toMatchObject({
+			status: "failed",
+			retryable: false,
+			error:
+				"You have 8 images waiting to send. Send or remove some, then add this one again.",
+		});
+		draft.retry(draft.chips()[0]?.key ?? "");
+		await flush();
+		expect(upload).toHaveBeenCalledTimes(1);
+	});
+	it("another 409 stays a retryable generic failure", async () => {
+		const upload = vi.fn().mockRejectedValue(
+			new HubError({
+				kind: "conflict",
+				message: "x",
+				status: 409,
+				code: "other",
+			}),
+		);
+		const { draft } = setup({ upload });
+		draft.add(["a"]);
+		await flush();
+		expect(draft.chips()[0]).toMatchObject({ retryable: true });
+	});
+});
+
+describe("visible chip state (design D1, D4)", () => {
+	const chip = (status: DraftChipStatus, retryable = true) => ({
+		status,
+		retryable,
+	});
+	type DraftChipStatus = "preparing" | "uploading" | "ready" | "failed";
+	it("the summary line counts failures first, then progress, then the plain count", () => {
+		expect(stripSummary([])).toBe("");
+		expect(stripSummary([chip("ready"), chip("ready")])).toBe(
+			"2 images attached",
+		);
+		expect(stripSummary([chip("ready"), chip("uploading")])).toBe(
+			"Uploading 1 image…",
+		);
+		expect(stripSummary([chip("failed"), chip("uploading")])).toBe(
+			"1 image didn't upload. Retry or remove it.",
+		);
+		expect(stripSummary([chip("failed", false), chip("failed", false)])).toBe(
+			"2 images didn't upload. Remove them to send.",
+		);
+		expect(stripSummary([chip("failed", false), chip("failed")])).toBe(
+			"2 images didn't upload. Retry or remove them.",
+		);
+	});
+	it("each non-ready chip carries a visible word, not colour alone", () => {
+		expect(chipStateLabel(chip("preparing"))).toBe("Preparing…");
+		expect(chipStateLabel(chip("uploading"))).toBe("Uploading…");
+		expect(chipStateLabel(chip("failed"))).toBe("Failed");
+		expect(chipStateLabel(chip("failed", false))).toBe("Can't send");
+		expect(chipStateLabel(chip("ready"))).toBe(null);
+	});
+	it("says why Send is off when images block it, and nothing otherwise", () => {
+		expect(sendBlockedReason([chip("ready")])).toBe(null);
+		expect(sendBlockedReason([])).toBe(null);
+		expect(sendBlockedReason([chip("uploading")])).toBe(
+			"Send is available when the images finish uploading.",
+		);
+		expect(sendBlockedReason([chip("failed")])).toBe(
+			"Retry or remove the images that didn't upload to send.",
+		);
+		expect(sendBlockedReason([chip("failed"), chip("failed", false)])).toBe(
+			"Remove the images that can't be sent to send this message.",
+		);
+	});
+	it("the expired-at-send chips block Send with a reason (so 'Retry send' is never shown)", async () => {
+		const { draft } = setup();
+		draft.add(["a"]);
+		await flush();
+		draft.markExpired();
+		expect(sendBlockedReason(draft.chips())).toBe(
+			"Remove the images that can't be sent to send this message.",
+		);
 	});
 });

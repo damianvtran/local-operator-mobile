@@ -1,124 +1,77 @@
 import { Image } from "expo-image";
-import { RotateCw, X } from "lucide-react-native";
-import { useEffect, useState } from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { ChevronLeft, ChevronRight, RotateCw, X } from "lucide-react-native";
+import { useCallback, useEffect, useRef, useState } from "react";
+import {
+	ActivityIndicator,
+	type LayoutChangeEvent,
+	Modal,
+	type NativeScrollEvent,
+	type NativeSyntheticEvent,
+	Pressable,
+	ScrollView,
+	Text,
+	useWindowDimensions,
+	View,
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import {
 	attachmentCacheKey,
 	attachmentView,
+	type Box,
+	cachedAttachment,
 	dataUri,
+	GRID_GAP,
+	gridCell,
 	loadAttachment,
+	singleImageBox,
 } from "@/team-bridge/attachments";
 import type { HubClient } from "@/team-bridge/client";
 import type { AttachmentDescriptor } from "@/team-bridge/contract";
 import {
 	ROLE,
+	SURFACE,
 	teamBridgeAttachmentChipId,
 	teamBridgeAttachmentId,
+	teamBridgeViewerId,
 } from "@/ui/a11y";
 import { useTokenColor } from "@/ui/appearance";
+import {
+	ModalScopeContext,
+	useModalStackEntry,
+} from "@/ui/components/modal-stack-entry";
 import { TOUCH_FLOOR } from "@/ui/layout";
-import type { DraftChip } from "./attachment-draft";
+import { chipStateLabel, type DraftChip } from "./attachment-draft";
 
-/*
- * Rendered images are fitted into this box. A phone column is ~340 pt wide;
- * 240 pt keeps a portrait photo from taking a whole screen of scroll, and the
- * descriptor's dimensions reserve the box BEFORE the bytes arrive, so a row
- * never jumps when its image loads.
- */
-const MAX_IMAGE_EDGE = 240;
-const PLACEHOLDER_HEIGHT = 96;
-
-function boxFor(descriptor: AttachmentDescriptor): {
-	width: number;
-	height: number;
-} {
-	const width = descriptor.width ?? 0;
-	const height = descriptor.height ?? 0;
-	if (!(width > 0 && height > 0))
-		return { width: MAX_IMAGE_EDGE, height: MAX_IMAGE_EDGE * 0.75 };
-	const scale = Math.min(1, MAX_IMAGE_EDGE / Math.max(width, height));
-	return {
-		width: Math.max(48, Math.round(width * scale)),
-		height: Math.max(48, Math.round(height * scale)),
-	};
-}
-
-/** The placeholder box for every state that shows no image. */
-function Placeholder({
-	text,
-	testID,
-	action,
-}: {
-	text: string;
-	testID: string;
-	action?: { label: string; onPress: () => void };
-}) {
-	return (
-		<View
-			testID={testID}
-			className="items-center justify-center gap-1 rounded-sm border border-hairline bg-elevated px-3"
-			style={{ width: MAX_IMAGE_EDGE, minHeight: PLACEHOLDER_HEIGHT }}
-		>
-			<Text className="text-meta text-ink-muted">{text}</Text>
-			{action ? (
-				<Pressable
-					accessibilityRole={ROLE.button}
-					accessibilityLabel={action.label}
-					onPress={action.onPress}
-					style={{ minHeight: TOUCH_FLOOR, justifyContent: "center" }}
-				>
-					<Text className="text-meta font-semibold text-ink">
-						{action.label}
-					</Text>
-				</Pressable>
-			) : null}
-		</View>
-	);
-}
-
-/**
- * One bound image, read with the reader's bearer and shown from memory.
- *
- * WHY NOT `source={{ uri, headers }}`. `expo-image` can send headers, but then
- * the token travels inside the image pipeline and the response lands in its
- * disk cache. Reading through `hub.attachmentBytes` keeps the bearer on the
- * client's one request path (refresh-once-on-401, timeouts, error classes),
- * checks the bytes are really PNG/JPEG before anything decodes them, and keeps
- * the image in this process's bounded cache only (cleared on sign-out).
- * `cachePolicy="none"` stops `expo-image` adding a copy of its own.
- */
-function RemoteImage({
-	hub,
-	tenantId,
-	conversationId,
-	messageId,
-	descriptor,
-	index,
-	count,
-}: {
+type Source = {
 	hub: HubClient;
 	tenantId: string;
 	conversationId: string;
 	messageId: string;
-	descriptor: AttachmentDescriptor;
-	index: number;
-	count: number;
-}) {
+};
+
+/**
+ * Bytes for one bound image through the app's bearer route and its bounded
+ * memory cache. Shared by the thread cell and the full-screen viewer, so
+ * opening the viewer never refetches what the thread already shows.
+ */
+function useAttachmentUri(source: Source, attachmentId: string) {
+	const { hub, tenantId, conversationId, messageId } = source;
 	const key = attachmentCacheKey(
 		tenantId,
 		conversationId,
 		messageId,
-		descriptor.id,
+		attachmentId,
 	);
-	const [uri, setUri] = useState<string | null>(null);
+	const [uri, setUri] = useState<string | null>(
+		() => cachedAttachment(key) ?? null,
+	);
 	const [state, setState] = useState<"loading" | "ready" | "error" | "gone">(
-		"loading",
+		() => (cachedAttachment(key) ? "ready" : "loading"),
 	);
 	const [attempt, setAttempt] = useState(0);
 	useEffect(() => {
 		let live = true;
-		setState("loading");
 		// `attempt` is read so a Retry press re-runs this effect.
 		void attempt;
 		loadAttachment(key, async () => {
@@ -126,7 +79,7 @@ function RemoteImage({
 				tenantId,
 				conversationId,
 				messageId,
-				descriptor.id,
+				attachmentId,
 			);
 			return dataUri(mime, bytes);
 		})
@@ -145,26 +98,94 @@ function RemoteImage({
 		return () => {
 			live = false;
 		};
-	}, [hub, key, tenantId, conversationId, messageId, descriptor.id, attempt]);
-	const label = count === 1 ? "Image" : `Image ${index + 1} of ${count}`;
+	}, [hub, key, tenantId, conversationId, messageId, attachmentId, attempt]);
+	const retry = useCallback(() => {
+		setState("loading");
+		setAttempt((n) => n + 1);
+	}, []);
+	return { uri, state, retry };
+}
+
+/**
+ * Every non-image state is drawn in the image's OWN box (design round 1, D5),
+ * so a failed load, an expiry or a purge never reflows the thread. The words
+ * carry the state; the box keeps the layout.
+ */
+function Placeholder({
+	text,
+	box,
+	testID,
+	action,
+}: {
+	text: string;
+	box: Box;
+	testID: string;
+	action?: { label: string; onPress: () => void };
+}) {
+	return (
+		<View
+			testID={testID}
+			className="items-center justify-center gap-1 overflow-hidden rounded-sm border border-border-control bg-elevated px-2"
+			style={box}
+		>
+			<Text className="text-center text-meta text-ink-muted">{text}</Text>
+			{action ? (
+				<Pressable
+					accessibilityRole={ROLE.button}
+					accessibilityLabel={action.label}
+					onPress={action.onPress}
+					// A full 44 pt target in both axes (D6), centred on the label.
+					style={{
+						minHeight: TOUCH_FLOOR,
+						minWidth: TOUCH_FLOOR,
+						alignItems: "center",
+						justifyContent: "center",
+					}}
+				>
+					<Text className="text-meta font-semibold text-ink">
+						{action.label}
+					</Text>
+				</Pressable>
+			) : null}
+		</View>
+	);
+}
+
+/** One bound image in the thread: tap opens the full-screen viewer (D2). */
+function ThreadImage({
+	source,
+	descriptor,
+	box,
+	label,
+	onOpen,
+}: {
+	source: Source;
+	descriptor: AttachmentDescriptor;
+	box: Box;
+	label: string;
+	onOpen: () => void;
+}) {
+	const { uri, state, retry } = useAttachmentUri(source, descriptor.id);
 	const testID = teamBridgeAttachmentId(descriptor.id);
 	if (state === "gone")
-		return <Placeholder text="Image unavailable" testID={testID} />;
+		return <Placeholder text="Image unavailable" box={box} testID={testID} />;
 	if (state === "error")
 		return (
 			<Placeholder
 				text="This image did not load."
+				box={box}
 				testID={testID}
-				action={{ label: "Retry", onPress: () => setAttempt((n) => n + 1) }}
+				action={{ label: "Retry", onPress: retry }}
 			/>
 		);
-	const box = boxFor(descriptor);
 	return (
-		<View
+		<Pressable
 			testID={testID}
-			accessible
-			accessibilityRole={ROLE.image}
+			accessibilityRole={ROLE.imagebutton}
 			accessibilityLabel={state === "ready" ? label : `${label}, loading`}
+			accessibilityHint="Opens the image full screen"
+			disabled={state !== "ready"}
+			onPress={onOpen}
 			className="overflow-hidden rounded-sm border border-hairline bg-elevated"
 			style={box}
 		>
@@ -174,12 +195,12 @@ function RemoteImage({
 					style={box}
 					contentFit="cover"
 					cachePolicy="none"
-					// The descriptor box is already reserved; no fade so the settled
-					// frame is the first frame.
+					// The box is already reserved; no fade, so the settled frame is the
+					// first frame.
 					transition={0}
 				/>
 			) : null}
-		</View>
+		</Pressable>
 	);
 }
 
@@ -188,6 +209,10 @@ function RemoteImage({
  * Rendered ONLY from the structured `attachments[]` list: an image link in the
  * body text stays alt text (`Markdown`), so a message cannot make this app
  * fetch a URL it names.
+ *
+ * Layout (D3): one image keeps its aspect in a 240 pt box; two or more are a
+ * two-column grid of square cells (2×2 for four), sized from the measured
+ * column so the block is never taller than it is wide.
  */
 export function MessageAttachments({
 	hub,
@@ -195,51 +220,310 @@ export function MessageAttachments({
 	conversationId,
 	messageId,
 	attachments,
+	initialViewerIndex,
 }: {
 	hub: HubClient;
 	tenantId: string;
 	conversationId: string;
 	messageId: string;
 	attachments: ReadonlyArray<AttachmentDescriptor | null>;
+	/** Fixture/QA seam: open the viewer at this image on mount. */
+	initialViewerIndex?: number;
 }) {
+	const [columnWidth, setColumnWidth] = useState(0);
+	const [viewerAt, setViewerAt] = useState<number | null>(
+		initialViewerIndex ?? null,
+	);
+	const onLayout = (event: LayoutChangeEvent) =>
+		setColumnWidth(Math.round(event.nativeEvent.layout.width));
 	if (attachments.length === 0) return null;
+	const source = { hub, tenantId, conversationId, messageId };
+	const count = attachments.length;
+	const cell = gridCell(count, columnWidth);
+	// Only bound images open in the viewer; its pages are those, in order.
+	const viewable = attachments.flatMap((d) =>
+		d !== null && attachmentView(d) === "image" ? [d] : [],
+	);
 	return (
-		<View className="flex-row flex-wrap gap-2 pt-1">
-			{attachments.map((descriptor, index) => {
-				const view = attachmentView(descriptor);
-				const fallbackId = teamBridgeAttachmentId(`${messageId}-${index}`);
-				// `view !== "image"` alone decides; `descriptor === null` is there
-				// only so TypeScript narrows `descriptor` for the branch below.
-				if (view !== "image" || descriptor === null)
-					return (
-						<Placeholder
-							key={descriptor?.id ?? fallbackId}
-							text={view === "expired" ? "Image expired" : "Image unavailable"}
-							testID={
-								descriptor ? teamBridgeAttachmentId(descriptor.id) : fallbackId
-							}
-						/>
-					);
-				return (
-					<RemoteImage
-						key={descriptor.id}
-						hub={hub}
-						tenantId={tenantId}
-						conversationId={conversationId}
-						messageId={messageId}
-						descriptor={descriptor}
-						index={index}
-						count={attachments.length}
-					/>
-				);
-			})}
+		<View onLayout={onLayout} className="pt-1">
+			{count > 1 && !cell ? null : (
+				<View
+					className="flex-row flex-wrap"
+					style={{
+						gap: GRID_GAP,
+						maxWidth: cell ? cell.width * 2 + GRID_GAP : undefined,
+					}}
+				>
+					{attachments.map((descriptor, index) => {
+						const view = attachmentView(descriptor);
+						const box =
+							cell ?? singleImageBox(descriptor?.width, descriptor?.height);
+						const fallbackId = teamBridgeAttachmentId(`${messageId}-${index}`);
+						// `view !== "image"` alone decides; `descriptor === null` is there
+						// only so TypeScript narrows `descriptor` for the branch below.
+						if (view !== "image" || descriptor === null)
+							return (
+								<Placeholder
+									key={descriptor?.id ?? fallbackId}
+									box={box}
+									text={
+										view === "expired" ? "Image expired" : "Image unavailable"
+									}
+									testID={
+										descriptor
+											? teamBridgeAttachmentId(descriptor.id)
+											: fallbackId
+									}
+								/>
+							);
+						return (
+							<ThreadImage
+								key={descriptor.id}
+								source={source}
+								descriptor={descriptor}
+								box={box}
+								label={count === 1 ? "Image" : `Image ${index + 1} of ${count}`}
+								onOpen={() =>
+									setViewerAt(viewable.findIndex((d) => d.id === descriptor.id))
+								}
+							/>
+						);
+					})}
+				</View>
+			)}
+			{viewerAt !== null && viewable.length > 0 ? (
+				<ImageViewer
+					source={source}
+					images={viewable}
+					initialIndex={Math.min(Math.max(0, viewerAt), viewable.length - 1)}
+					onClose={() => setViewerAt(null)}
+				/>
+			) : null}
 		</View>
+	);
+}
+
+/**
+ * The full-screen image viewer (design round 1, D2: Slack/Discord parity).
+ *
+ * - Paging: a horizontal `pagingEnabled` ScrollView, one page per bound image
+ *   of the message; swipe on touch, and Previous/Next buttons so it works with
+ *   a pointer, a keyboard and a screen reader too.
+ * - Zoom: each page is its own ScrollView with `maximumZoomScale` (native
+ *   pinch-zoom on iOS; Android and web show the image fitted). That costs no
+ *   gesture library and no new dependency; a full pan-zoom on every platform
+ *   would need reanimated/gesture-handler wiring and is not in this slice.
+ * - Close: a 44 pt button and the system back gesture (`onRequestClose`).
+ * - Privacy: pages read from the same in-memory cache as the thread; nothing
+ *   is saved or shared from here.
+ */
+function ImageViewer({
+	source,
+	images,
+	initialIndex,
+	onClose,
+}: {
+	source: Source;
+	images: readonly AttachmentDescriptor[];
+	initialIndex: number;
+	onClose: () => void;
+}) {
+	const { width, height } = useWindowDimensions();
+	const insets = useSafeAreaInsets();
+	const ink = useTokenColor("ink");
+	const pager = useRef<ScrollView>(null);
+	const [index, setIndex] = useState(initialIndex);
+	// Joins the app's modal stack like `Dialog`/`Sheet`, so a sheet raised
+	// over the viewer (or the viewer over one) never paints two full surfaces.
+	const { covered, scope } = useModalStackEntry(true);
+	const goTo = (next: number) => {
+		const clamped = Math.min(Math.max(0, next), images.length - 1);
+		setIndex(clamped);
+		pager.current?.scrollTo({ x: clamped * width, animated: true });
+	};
+	const onScrollEnd = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+		const page = Math.round(event.nativeEvent.contentOffset.x / width);
+		if (page !== index)
+			setIndex(Math.min(Math.max(0, page), images.length - 1));
+	};
+	const many = images.length > 1;
+	const position = many ? `${index + 1} of ${images.length}` : "";
+	const button = (
+		label: string,
+		icon: React.ReactNode,
+		onPress: () => void,
+		testID: string,
+		disabled = false,
+	) => (
+		<Pressable
+			accessibilityRole={ROLE.button}
+			accessibilityLabel={label}
+			accessibilityState={{ disabled }}
+			disabled={disabled}
+			onPress={onPress}
+			testID={testID}
+			className="items-center justify-center rounded-full bg-elevated"
+			style={{
+				width: TOUCH_FLOOR,
+				height: TOUCH_FLOOR,
+				opacity: disabled ? 0.4 : 1,
+			}}
+		>
+			{icon}
+		</Pressable>
+	);
+	return (
+		<ModalScopeContext.Provider value={scope}>
+			<Modal
+				visible={!covered}
+				transparent={false}
+				animationType="fade"
+				onRequestClose={onClose}
+				accessibilityViewIsModal
+				testID={SURFACE.teamBridgeImageViewer}
+			>
+				<View className="flex-1 bg-canvas">
+					<ScrollView
+						ref={pager}
+						horizontal
+						pagingEnabled
+						showsHorizontalScrollIndicator={false}
+						contentOffset={{ x: initialIndex * width, y: 0 }}
+						onMomentumScrollEnd={onScrollEnd}
+						onScrollEndDrag={onScrollEnd}
+					>
+						{images.map((descriptor, page) => (
+							<ViewerPage
+								key={descriptor.id}
+								source={source}
+								descriptor={descriptor}
+								width={width}
+								height={height}
+								label={many ? `Image ${page + 1} of ${images.length}` : "Image"}
+							/>
+						))}
+					</ScrollView>
+					<View
+						pointerEvents="box-none"
+						className="absolute right-0 left-0 flex-row items-center justify-between px-4"
+						style={{ top: insets.top + 8 }}
+					>
+						{button(
+							"Close image",
+							<X color={ink} size={20} />,
+							onClose,
+							teamBridgeViewerId("close"),
+						)}
+						{many ? (
+							<Text
+								role={ROLE.status}
+								className="rounded-full bg-elevated px-3 py-1 text-meta text-ink"
+							>
+								{position}
+							</Text>
+						) : null}
+					</View>
+					{many ? (
+						<View
+							pointerEvents="box-none"
+							className="absolute right-0 left-0 flex-row justify-between px-4"
+							style={{ bottom: insets.bottom + 16 }}
+						>
+							{button(
+								"Previous image",
+								<ChevronLeft color={ink} size={22} />,
+								() => goTo(index - 1),
+								teamBridgeViewerId("previous"),
+								index === 0,
+							)}
+							{button(
+								"Next image",
+								<ChevronRight color={ink} size={22} />,
+								() => goTo(index + 1),
+								teamBridgeViewerId("next"),
+								index === images.length - 1,
+							)}
+						</View>
+					) : null}
+				</View>
+			</Modal>
+		</ModalScopeContext.Provider>
+	);
+}
+
+function ViewerPage({
+	source,
+	descriptor,
+	width,
+	height,
+	label,
+}: {
+	source: Source;
+	descriptor: AttachmentDescriptor;
+	width: number;
+	height: number;
+	label: string;
+}) {
+	const { uri, state, retry } = useAttachmentUri(source, descriptor.id);
+	const box = { width, height };
+	if (state === "gone" || state === "error")
+		return (
+			<View style={box} className="items-center justify-center">
+				<Placeholder
+					box={{ width: Math.min(width - 32, 320), height: 160 }}
+					text={
+						state === "gone" ? "Image unavailable" : "This image did not load."
+					}
+					testID={teamBridgeViewerId(`page-${descriptor.id}`)}
+					action={
+						state === "error" ? { label: "Retry", onPress: retry } : undefined
+					}
+				/>
+			</View>
+		);
+	return (
+		<ScrollView
+			style={box}
+			contentContainerStyle={{
+				width,
+				height,
+				alignItems: "center",
+				justifyContent: "center",
+			}}
+			maximumZoomScale={4}
+			minimumZoomScale={1}
+			centerContent
+			showsHorizontalScrollIndicator={false}
+			showsVerticalScrollIndicator={false}
+			testID={teamBridgeViewerId(`page-${descriptor.id}`)}
+		>
+			{uri ? (
+				<Image
+					source={{ uri }}
+					style={box}
+					contentFit="contain"
+					cachePolicy="none"
+					transition={0}
+					accessible
+					accessibilityRole={ROLE.image}
+					accessibilityLabel={label}
+				/>
+			) : (
+				<ActivityIndicator accessibilityLabel={`${label}, loading`} />
+			)}
+		</ScrollView>
 	);
 }
 
 const CHIP_SIZE = 64;
 
-/** The composer's strip of staged images, each with remove and (on failure) retry. */
+/**
+ * The composer's strip of staged images. Each chip says its state in words
+ * under the thumbnail (D1), and the strip's summary line counts failures
+ * first. Controls sit in separate corners so their 44 pt targets never overlap
+ * (D7): Remove top-right, Retry bottom-left, each only as large as its own
+ * corner quadrant plus the gutter around the chip.
+ */
 export function ComposerAttachments({
 	chips,
 	summary,
@@ -256,27 +540,23 @@ export function ComposerAttachments({
 	return (
 		<View>
 			<ScrollView horizontal showsHorizontalScrollIndicator={false}>
-				<View className="flex-row gap-1.5">
+				<View className="flex-row gap-3">
 					{chips.map((chip, index) => {
 						const n = index + 1;
-						const status =
-							chip.status === "ready"
-								? "ready"
-								: chip.status === "failed"
-									? (chip.error ?? "failed")
-									: chip.status === "uploading"
-										? "uploading"
-										: "preparing";
+						const state = chipStateLabel(chip);
+						const failed = chip.status === "failed";
+						const busy =
+							chip.status === "preparing" || chip.status === "uploading";
 						return (
 							<View
 								key={chip.key}
 								testID={teamBridgeAttachmentChipId(String(index))}
-								accessible
-								accessibilityLabel={`Image ${n}, ${status}`}
-								className="relative"
+								style={{ width: CHIP_SIZE }}
 							>
 								<View
-									className={`items-center justify-center overflow-hidden rounded-sm border ${chip.status === "failed" ? "border-danger" : "border-border-control"} bg-elevated`}
+									accessible
+									accessibilityLabel={`Image ${n}, ${failed ? (chip.error ?? "failed") : (state ?? "ready")}`}
+									className={`items-center justify-center overflow-hidden rounded-sm border ${failed ? "border-danger" : "border-border-control"} bg-elevated`}
 									style={{ width: CHIP_SIZE, height: CHIP_SIZE }}
 								>
 									{chip.preview ? (
@@ -291,48 +571,61 @@ export function ComposerAttachments({
 											cachePolicy="none"
 											transition={0}
 										/>
-									) : (
-										<Text className="text-meta text-ink-muted">…</Text>
-									)}
+									) : null}
+									{busy ? (
+										<View className="absolute inset-0 items-center justify-center">
+											<ActivityIndicator color={ink} />
+										</View>
+									) : null}
 								</View>
-								{chip.status === "failed" && chip.retryable ? (
+								{state ? (
+									<Text
+										className={`pt-0.5 text-center text-meta ${failed ? "text-danger" : "text-ink-muted"}`}
+										numberOfLines={1}
+									>
+										{state}
+									</Text>
+								) : null}
+								{failed && chip.retryable ? (
 									<Pressable
 										accessibilityRole={ROLE.button}
 										accessibilityLabel={`Retry image ${n}`}
 										testID={teamBridgeAttachmentChipId(`${index}-retry`)}
 										onPress={() => onRetry(chip.key)}
+										// Bottom-left quadrant only: never under Remove (D7).
 										style={{
 											position: "absolute",
-											bottom: 0,
-											left: 0,
+											top: CHIP_SIZE / 2,
+											left: -6,
 											width: TOUCH_FLOOR,
 											height: TOUCH_FLOOR,
-											justifyContent: "flex-end",
+											justifyContent: "center",
+											alignItems: "flex-start",
 										}}
 									>
-										<View className="m-0.5 h-5 w-5 items-center justify-center rounded-full border border-border-control bg-elevated">
-											<RotateCw color={ink} size={12} />
+										<View className="ml-1.5 h-6 w-6 items-center justify-center rounded-full border border-border-control bg-elevated">
+											<RotateCw color={ink} size={13} />
 										</View>
 									</Pressable>
 								) : null}
-								{/* The one removal affordance, the session composer's shape: a
-								    visible badge with a real name and a 44 pt hit area. */}
 								<Pressable
 									accessibilityRole={ROLE.button}
 									accessibilityLabel={`Remove image ${n}`}
 									testID={teamBridgeAttachmentChipId(`${index}-remove`)}
 									onPress={() => onRemove(chip.key)}
+									// Top-right quadrant only: never over Retry (D7).
 									style={{
 										position: "absolute",
-										top: 0,
-										right: 0,
+										top: -6,
+										right: -6,
 										width: TOUCH_FLOOR,
 										height: TOUCH_FLOOR,
 										alignItems: "flex-end",
+										justifyContent: "flex-start",
 									}}
 								>
-									<View className="m-0.5 h-5 w-5 items-center justify-center rounded-full border border-border-control bg-elevated">
-										<X color={ink} size={12} />
+									<View className="mt-1.5 mr-1.5 h-6 w-6 items-center justify-center rounded-full border border-border-control bg-elevated">
+										<X color={ink} size={13} />
 									</View>
 								</Pressable>
 							</View>
@@ -340,7 +633,10 @@ export function ComposerAttachments({
 					})}
 				</View>
 			</ScrollView>
-			<Text className="pt-1 text-meta text-ink-dim" numberOfLines={1}>
+			<Text
+				role={ROLE.status}
+				className={`pt-1 text-meta ${chips.some((c) => c.status === "failed") ? "text-danger" : "text-ink-dim"}`}
+			>
 				{summary}
 			</Text>
 		</View>

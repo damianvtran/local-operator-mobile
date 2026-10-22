@@ -72,6 +72,22 @@ function failureOf(
 			error: "Too many images at once. Try again shortly.",
 			retryable: true,
 		};
+	/*
+	 * 409 `attachment_quota_exceeded`: this account already has 8 images
+	 * waiting to be sent in this organization (staged in other drafts too, for
+	 * up to 72 h). Retrying repeats the 409 until one of those is sent or
+	 * removed, so the chip is final and says what frees a slot.
+	 */
+	if (
+		kind === "conflict" &&
+		isHubError(error) &&
+		error.code === "attachment_quota_exceeded"
+	)
+		return {
+			error:
+				"You have 8 images waiting to send. Send or remove some, then add this one again.",
+			retryable: false,
+		};
 	if (kind === "not_found")
 		return {
 			error: "This conversation is no longer available. Remove the image.",
@@ -284,11 +300,8 @@ export function createAttachmentDraft(deps: {
 			snapshot = [];
 		},
 
-		/** The accessible summary of the strip ("2 images attached"). */
-		summary: (): string =>
-			entries.length === 0
-				? ""
-				: `${entries.length} ${entries.length === 1 ? "image" : "images"} attached`,
+		/** The strip's visible summary line; see `stripSummary`. */
+		summary: (): string => stripSummary(entries),
 	};
 }
 
@@ -346,4 +359,70 @@ export function syncDraft(
 	if (held && held.conversationId === conversationId) return held;
 	held?.draft.dispose();
 	return { draft: create(limits, conversationId), conversationId };
+}
+
+const images = (n: number) => `${n} ${n === 1 ? "image" : "images"}`;
+
+/**
+ * The strip's one visible line, in priority order: what needs the reader's
+ * hand first (failures), then what they are waiting on (progress), then the
+ * plain count. Colour and opacity on a 64 pt thumbnail are not enough on
+ * their own: this line says it in words (design round 1, D1).
+ */
+export function stripSummary(
+	chips: ReadonlyArray<Pick<DraftChip, "status" | "retryable">>,
+): string {
+	if (chips.length === 0) return "";
+	const failed = chips.filter((c) => c.status === "failed");
+	const busy = chips.filter(
+		(c) => c.status === "preparing" || c.status === "uploading",
+	).length;
+	if (failed.length > 0) {
+		const one = failed.length === 1;
+		const subject = one
+			? "1 image didn't upload."
+			: `${failed.length} images didn't upload.`;
+		const retry = failed.some((c) => c.retryable);
+		const action = retry
+			? one
+				? "Retry or remove it."
+				: "Retry or remove them."
+			: one
+				? "Remove it to send."
+				: "Remove them to send.";
+		return `${subject} ${action}`;
+	}
+	if (busy > 0) return `Uploading ${images(busy)}…`;
+	return `${images(chips.length)} attached`;
+}
+
+/**
+ * The short state word drawn ON a chip, under its thumbnail. The full sentence
+ * is the summary line and the chip's accessible label; this is what a sighted
+ * reader scanning the strip sees on each image.
+ */
+export function chipStateLabel(
+	chip: Pick<DraftChip, "status" | "retryable">,
+): string | null {
+	if (chip.status === "preparing") return "Preparing…";
+	if (chip.status === "uploading") return "Uploading…";
+	if (chip.status === "failed") return chip.retryable ? "Failed" : "Can't send";
+	return null;
+}
+
+/**
+ * Why Send is disabled, in words, or `null` when it is not blocked by images
+ * (design round 1, D4). Empty text with no images needs no sentence: the empty
+ * field already says it.
+ */
+export function sendBlockedReason(
+	chips: ReadonlyArray<Pick<DraftChip, "status" | "retryable">>,
+): string | null {
+	if (chips.some((c) => c.status === "failed"))
+		return chips.some((c) => c.status === "failed" && !c.retryable)
+			? "Remove the images that can't be sent to send this message."
+			: "Retry or remove the images that didn't upload to send.";
+	if (chips.some((c) => c.status === "preparing" || c.status === "uploading"))
+		return "Send is available when the images finish uploading.";
+	return null;
 }

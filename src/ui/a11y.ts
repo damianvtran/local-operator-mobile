@@ -543,6 +543,7 @@ export const CONTROL = {
 export const SURFACE = {
 	/** Team Bridge is hub-owned: these selectors remain stable without a relay connection. */
 	teamBridgeAttachSheet: "team-bridge-attach-sheet",
+	teamBridgeImageViewer: "team-bridge-image-viewer",
 	teamBridgeChannelPreview: "team-bridge-channel-preview",
 	teamBridgeComposer: "team-bridge-composer",
 	teamBridgeConversationsLoading: "team-bridge-conversations-loading",
@@ -554,6 +555,7 @@ export const SURFACE = {
 	teamBridgePlanConsole: "team-bridge-plan-console",
 	teamBridgeSections: "team-bridge-sections",
 	teamBridgeSendError: "team-bridge-send-error",
+	teamBridgeSendBlocked: "team-bridge-send-blocked",
 	teamBridgeThreadEmpty: "team-bridge-thread-empty",
 	teamBridgeThreadLoading: "team-bridge-thread-loading",
 
@@ -906,6 +908,8 @@ export const IDENTIFIER_FAMILIES: readonly string[] = [
 	"team-bridge-attachment-chip-",
 	"team-bridge-attachment-",
 	"team-bridge-attach-source-",
+	/* The full-screen image viewer's controls (close, previous, next). */
+	"team-bridge-viewer-",
 	/* The wave-2 slice's parameterised identifiers: one row per session or
 	 * computer, one copy action per command block. Declared in the same change as
 	 * the controls that carry them, which is what this list's own note asks for. */
@@ -1856,3 +1860,5 @@ export const teamBridgeAttachmentId = (value: string): string =>
 	`team-bridge-attachment-${value}`;
 export const teamBridgeAttachSourceId = (value: string): string =>
 	`team-bridge-attach-source-${value}`;
+export const teamBridgeViewerId = (value: string): string =>
+	`team-bridge-viewer-${value}`;

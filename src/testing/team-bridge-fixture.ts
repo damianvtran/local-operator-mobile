@@ -9,6 +9,24 @@ import { Platform } from "react-native";
 
 const VALID_CASE = /^[a-z_-]+$/;
 
+/**
+ * Design/QA capture seam for the image viewer: `tb-viewer=<messageId>:<index>`
+ * opens that message's viewer at that page on load, so a frame of "page 2 of
+ * 4" needs no scripted taps. Same gates as `teamBridgeFixture` (fixture build,
+ * web, loopback, a fixture case in the URL); `null` everywhere else.
+ */
+const VIEWER = /^([A-Za-z0-9_-]{1,64}):([0-9])$/;
+export function teamBridgeViewerFixture(): {
+	messageId: string;
+	index: number;
+} | null {
+	if (!teamBridgeFixture()) return null;
+	const match = VIEWER.exec(
+		new URLSearchParams(location.search).get("tb-viewer") ?? "",
+	);
+	return match ? { messageId: match[1] ?? "", index: Number(match[2]) } : null;
+}
+
 export function teamBridgeFixture(): {
 	baseUrl: string;
 	token: string | null;

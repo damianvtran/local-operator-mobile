@@ -135,6 +135,10 @@ const histories = new Map(
  * - `attachments_send_expired`: a send with images answers 404
  *   `attachment_not_found` (chips turn "expired", final).
  * - `attachments_fetch_error`: byte reads answer 500 ("did not load" + Retry).
+ * - `attachments_quota`: uploads answer 409 `attachment_quota_exceeded`
+ *   (final failed chip naming the 8-image limit).
+ * Viewer and grid frames use `attachments` with `thread=1`: bcm_8 is the 2×2
+ * grid, and `viewer=bcm_8:1` opens its viewer at page 2 of 4.
  */
 const crcTable = (() => {
 	const table = new Uint32Array(256);
@@ -266,9 +270,15 @@ const server = createServer(async (req, res) => {
 				url.searchParams.get("thread") === "1"
 					? `/team-bridge/${TENANT}/bcv_humans`
 					: "/team-bridge";
+			// `viewer=<messageId>:<index>` opens that message's image viewer on load
+			// (web fixture seam), e.g. `viewer=bcm_8:1` is page 2 of 4.
+			const viewer = url.searchParams.get("viewer");
+			const viewerParam = viewer
+				? `&tb-viewer=${encodeURIComponent(viewer)}`
+				: "";
 			res.writeHead(200, { "content-type": "text/html" });
 			res.end(
-				`<!doctype html><meta name="viewport" content="width=device-width"><style>body{margin:0;background:#777;display:flex;justify-content:center;padding:8px}iframe{width:${phoneWidth}px;height:844px;border:0;transform:scale(.75);transform-origin:top center}</style><iframe title="Phone viewport" src="${route}?tb-fixture=${encodeURIComponent(qaCase)}&tb-theme=${encodeURIComponent(theme)}"></iframe><pre id="geometry" style="position:fixed;left:8px;top:8px;max-width:300px;white-space:pre-wrap;color:white;font:12px monospace"></pre><script>
+				`<!doctype html><meta name="viewport" content="width=device-width"><style>body{margin:0;background:#777;display:flex;justify-content:center;padding:8px}iframe{width:${phoneWidth}px;height:844px;border:0;transform:scale(.75);transform-origin:top center}</style><iframe title="Phone viewport" src="${route}?tb-fixture=${encodeURIComponent(qaCase)}&tb-theme=${encodeURIComponent(theme)}${viewerParam}"></iframe><pre id="geometry" style="position:fixed;left:8px;top:8px;max-width:300px;white-space:pre-wrap;color:white;font:12px monospace"></pre><script>
 const frame=document.querySelector('iframe');
 setInterval(()=>{try{
  const doc=frame.contentDocument, win=frame.contentWindow;
@@ -285,7 +295,9 @@ setInterval(()=>{try{
 		}
 		const match = MOCK_ROUTE.exec(url.pathname);
 		if (match) {
-			const qaCase = match[1];
+			// The capture group always matches when the route does; `?? ""` only
+			// satisfies the harness tsconfig (`noUncheckedIndexedAccess`).
+			const qaCase = match[1] ?? "";
 			const path = match[2] ?? "";
 			requests.push({ method: req.method ?? "GET", path });
 			if (qaCase === "loading" && path !== "/status" && path !== "/unread")
@@ -302,6 +314,13 @@ setInterval(()=>{try{
 						send(503, {
 							error: "Messaging is unavailable.",
 							code: "messaging_unavailable",
+						});
+						return;
+					}
+					if (qaCase === "attachments_quota") {
+						send(409, {
+							error: "Too many images are waiting to be sent.",
+							code: "attachment_quota_exceeded",
 						});
 						return;
 					}

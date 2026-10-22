@@ -352,3 +352,51 @@ export async function boundToLimits(
 	}
 	throw new Error("the image is too large to send");
 }
+
+/* ------------------------------------------------------------- layout */
+
+/*
+ * Message image layout (design round 1, D3 and D5).
+ *
+ * One image keeps its aspect inside a 240 pt box: a lone screenshot or photo
+ * reads as itself. Two or more go into a two-column grid of square cells, so
+ * four images are a 2×2 block no taller than it is wide, the Slack/Discord
+ * shape, instead of a stack a screen and a half tall. Three is a 2+1 grid
+ * (the third cell sits under the first). The column width is measured by the
+ * caller; the cap keeps a tablet column from producing 500 pt cells.
+ *
+ * Every state of an image (loading, loaded, failed, expired, unavailable)
+ * uses the SAME box, so a failed load or a purge never reflows the thread
+ * under the reader.
+ */
+export const SINGLE_IMAGE_EDGE = 240;
+export const GRID_GAP = 4;
+const GRID_MAX_WIDTH = 320;
+const MIN_EDGE = 48;
+
+export interface Box {
+	width: number;
+	height: number;
+}
+
+/** A lone image's box from its descriptor (4:3 when dimensions are unknown). */
+export function singleImageBox(
+	width: number | undefined,
+	height: number | undefined,
+): Box {
+	if (!(width && height && width > 0 && height > 0))
+		return { width: SINGLE_IMAGE_EDGE, height: SINGLE_IMAGE_EDGE * 0.75 };
+	const scale = Math.min(1, SINGLE_IMAGE_EDGE / Math.max(width, height));
+	return {
+		width: Math.max(MIN_EDGE, Math.round(width * scale)),
+		height: Math.max(MIN_EDGE, Math.round(height * scale)),
+	};
+}
+
+/** Square grid cells for 2+ images, sized from the available column width. */
+export function gridCell(count: number, columnWidth: number): Box | null {
+	if (count < 2) return null;
+	const width = Math.min(GRID_MAX_WIDTH, Math.max(0, columnWidth));
+	const edge = Math.max(MIN_EDGE, Math.floor((width - GRID_GAP) / 2));
+	return { width: edge, height: edge };
+}

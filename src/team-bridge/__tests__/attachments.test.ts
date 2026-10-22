@@ -14,8 +14,11 @@ import {
 	canSend,
 	clearAttachmentCache,
 	fitWithin,
+	GRID_GAP,
+	gridCell,
 	loadAttachment,
 	sendableAttachmentIds,
+	singleImageBox,
 	sniffAttachmentMime,
 } from "@/team-bridge/attachments";
 import {
@@ -265,5 +268,28 @@ describe("in-memory image cache", () => {
 		await pending;
 		expect(cachedAttachment("late")).toBeUndefined();
 		expect(attachmentCacheSize()).toBe(0);
+	});
+});
+
+describe("message image layout (design D3, D5)", () => {
+	it("one image keeps its aspect inside 240 pt; unknown dimensions are 4:3", () => {
+		expect(singleImageBox(1024, 768)).toEqual({ width: 240, height: 180 });
+		expect(singleImageBox(768, 1024)).toEqual({ width: 180, height: 240 });
+		expect(singleImageBox(100, 50)).toEqual({ width: 100, height: 50 });
+		expect(singleImageBox(undefined, undefined)).toEqual({
+			width: 240,
+			height: 180,
+		});
+		expect(singleImageBox(4000, 10)).toEqual({ width: 240, height: 48 });
+	});
+	it("two or more images are square cells in two columns: four is a 2×2 block no taller than wide", () => {
+		expect(gridCell(1, 330)).toBe(null);
+		const cell = gridCell(4, 330);
+		expect(cell).toEqual({ width: 158, height: 158 });
+		const blockWidth = (cell?.width ?? 0) * 2 + GRID_GAP;
+		const blockHeight = (cell?.height ?? 0) * 2 + GRID_GAP;
+		expect(blockHeight).toBeLessThanOrEqual(blockWidth);
+		// Wide tablet columns are capped.
+		expect(gridCell(2, 900)).toEqual({ width: 158, height: 158 });
 	});
 });

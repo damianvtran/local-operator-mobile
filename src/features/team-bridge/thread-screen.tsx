@@ -22,8 +22,10 @@ import * as model from "@/team-bridge/model";
 import { useTeamBridge, useTeamBridgeState } from "@/team-bridge/provider";
 import { setWatchedThread } from "@/team-bridge/push";
 import { threadKey } from "@/team-bridge/store";
+import { teamBridgeViewerFixture } from "@/testing/team-bridge-fixture";
 import {
 	CONTROL,
+	ROLE,
 	SCREEN,
 	SURFACE,
 	teamBridgeAttachSourceId,
@@ -38,6 +40,7 @@ import { Textarea } from "@/ui/components/textarea";
 import {
 	createAttachmentDraft,
 	type HeldDraft,
+	sendBlockedReason,
 	sendFailureOf,
 	syncDraft,
 } from "./attachment-draft";
@@ -133,6 +136,8 @@ function ThreadContent({
 	 * with unsent images releases them on the hub.
 	 */
 	const attachLimits = state.attachments;
+	// Web fixture builds only (`null` everywhere else): opens a viewer on load.
+	const viewerFixture = useMemo(() => teamBridgeViewerFixture(), []);
 	const [, setDraftVersion] = useState(0);
 	const [attachOpen, setAttachOpen] = useState(false);
 	const [attachNotice, setAttachNotice] = useState<string | null>(null);
@@ -291,6 +296,8 @@ function ThreadContent({
 	}, [markRendered]);
 
 	const sendable = canSend(draft, chips);
+	// Why Send is off when images block it (D4); `null` when they do not.
+	const blockedBy = sendBlockedReason(chips);
 	const send = async () => {
 		const body = draft.trim();
 		if (
@@ -434,6 +441,11 @@ function ThreadContent({
 						conversationId={item.message.conversation_id}
 						messageId={item.message.id}
 						attachments={messageAttachments(item.message)}
+						initialViewerIndex={
+							viewerFixture?.messageId === item.message.id
+								? viewerFixture.index
+								: undefined
+						}
 					/>
 				</View>
 			</View>
@@ -680,6 +692,15 @@ function ThreadContent({
 													{attachNotice}
 												</Text>
 											)}
+											{blockedBy && (
+												<Text
+													role={ROLE.status}
+													className="text-meta text-ink-muted"
+													testID={SURFACE.teamBridgeSendBlocked}
+												>
+													{blockedBy}
+												</Text>
+											)}
 											<Textarea
 												label="Message"
 												placeholder={`Message ${title}`}
@@ -700,7 +721,11 @@ function ThreadContent({
 												) : null}
 												<View className="flex-1">
 													<Button
-														label={sendError ? "Retry send" : "Send"}
+														// "Retry send" only when pressing it can succeed: while
+														// images block the send, the button is plain "Send" (D4).
+														label={
+															sendError && !blockedBy ? "Retry send" : "Send"
+														}
 														loading={sending}
 														disabled={!sendable || sending}
 														testID={CONTROL.teamBridgeSend}
