@@ -14,8 +14,8 @@ import {
 	canSend,
 	clearAttachmentCache,
 	fitWithin,
-	imageSummary,
 	loadAttachment,
+	sendableAttachmentIds,
 	sniffAttachmentMime,
 } from "@/team-bridge/attachments";
 import {
@@ -140,9 +140,17 @@ describe("send rule and generic text", () => {
 		expect(canSend("hi", [{ status: "uploading" }])).toBe(false);
 		expect(canSend("hi", [{ status: "failed" }])).toBe(false);
 	});
-	it("image-only summary is generic (D7), never a name or size", () => {
-		expect(imageSummary(1)).toBe("Sent an image");
-		expect(imageSummary(3)).toBe("Sent 3 images");
+});
+
+describe("capability withdrawal (R1-06)", () => {
+	it("a send carries no ids once the capability is gone or before the conversation exists", () => {
+		expect(sendableAttachmentIds({ maxCount: 4 }, "c1", ["batt_1"])).toEqual([
+			"batt_1",
+		]);
+		expect(sendableAttachmentIds(null, "c1", ["batt_1"])).toEqual([]);
+		expect(sendableAttachmentIds({ maxCount: 4 }, null, ["batt_1"])).toEqual(
+			[],
+		);
 	});
 });
 

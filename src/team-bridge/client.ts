@@ -164,6 +164,13 @@ export interface HubClientDeps {
 }
 
 const DEFAULT_TIMEOUT_MS = 15_000;
+/*
+ * Image bytes in either direction. A bounded upload is up to 1 MiB: at 15 s
+ * that needs ~560 kbit/s sustained upstream, which weak cellular does not
+ * give, and every timed-out retry restarts from zero. 60 s keeps a bad link
+ * workable while still ending a hung transfer.
+ */
+const BYTES_TIMEOUT_MS = 60_000;
 
 type Query = Record<string, string | number | undefined>;
 
@@ -251,6 +258,7 @@ export function createHubClient(deps: HubClientDeps) {
 		 * timeout, abort and single-401-retry handling as every JSON call.
 		 */
 		raw?: { bytes: Uint8Array; accept?: string } | { accept: string },
+		limitMs: number = timeoutMs,
 	): Promise<Response> {
 		const fetchImpl = resolveFetch(deps.fetchImpl);
 		/*
@@ -263,7 +271,7 @@ export function createHubClient(deps: HubClientDeps) {
 		const timer = setTimeout(() => {
 			timedOut = true;
 			controller.abort();
-		}, timeoutMs);
+		}, limitMs);
 		const forward = () => controller.abort();
 		if (signal?.aborted) controller.abort();
 		else signal?.addEventListener("abort", forward, { once: true });
@@ -313,6 +321,7 @@ export function createHubClient(deps: HubClientDeps) {
 		body?: unknown;
 		signal?: AbortSignal;
 		raw?: { bytes: Uint8Array; accept?: string } | { accept: string };
+		timeoutMs?: number;
 	};
 
 	/** Token, one request, one forced refresh on 401, and the refusal class. */
@@ -348,6 +357,7 @@ export function createHubClient(deps: HubClientDeps) {
 			options.body,
 			options.signal,
 			options.raw,
+			options.timeoutMs,
 		);
 		if (response.status === 401) {
 			/* One forced refresh, one retry. A token revoked server-side before its
@@ -368,6 +378,7 @@ export function createHubClient(deps: HubClientDeps) {
 				options.body,
 				options.signal,
 				options.raw,
+				options.timeoutMs,
 			);
 		}
 		if (!response.ok) throw await errorFrom(response);
@@ -563,7 +574,12 @@ export function createHubClient(deps: HubClientDeps) {
 				"POST",
 				`/conversations/${encodeURIComponent(conversationId)}/attachments`,
 				(v) => uploadedAttachmentSchema.parse(v),
-				{ query: { tenant_id: tenantId }, raw: { bytes }, signal },
+				{
+					query: { tenant_id: tenantId },
+					raw: { bytes },
+					signal,
+					timeoutMs: BYTES_TIMEOUT_MS,
+				},
 			);
 		},
 
@@ -609,6 +625,7 @@ export function createHubClient(deps: HubClientDeps) {
 					query: { tenant_id: tenantId },
 					raw: { accept: "image/png, image/jpeg" },
 					signal,
+					timeoutMs: BYTES_TIMEOUT_MS,
 				},
 			);
 			let bytes: Uint8Array;
@@ -626,7 +643,9 @@ export function createHubClient(deps: HubClientDeps) {
 				.split(";")[0]
 				?.trim()
 				.toLowerCase();
-			if (sniffed === null || (declared && declared !== sniffed)) {
+			// A missing Content-Type is refused too: the hub always sends its
+			// stored sniffed type, so an answer without one did not come from it.
+			if (sniffed === null || declared !== sniffed) {
 				throw new HubError({
 					kind: "malformed",
 					message: "Radient returned an image this app cannot show.",

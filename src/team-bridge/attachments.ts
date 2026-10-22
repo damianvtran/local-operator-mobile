@@ -131,12 +131,17 @@ export const messageAttachments = (
 ): Array<AttachmentDescriptor | null> => message.attachments ?? [];
 
 /**
- * The generic words for an image-only message: a row's accessible label and
- * the line shown when the body is empty. Deliberately content-free (D7: the
- * same generic text the hub's push uses), never a filename or a size.
+ * The ids a send may carry: none unless the hub CURRENTLY advertises the
+ * capability and the conversation exists. The strip renders under the same
+ * condition, so a send can never carry an image the reader cannot see (a
+ * withdrawn capability would otherwise send ids an older hub answers 400).
  */
-export function imageSummary(count: number): string {
-	return count === 1 ? "Sent an image" : `Sent ${count} images`;
+export function sendableAttachmentIds(
+	limits: AttachmentLimits | null,
+	conversationId: string | null,
+	ids: readonly string[],
+): string[] {
+	return limits && conversationId ? [...ids] : [];
 }
 
 /**

@@ -388,6 +388,12 @@ describe("hub client", () => {
 						status: 200,
 						headers: { "content-type": "image/jpeg" },
 					}),
+				// R1-09: no Content-Type at all is refused, not trusted.
+				() => {
+					const r = new Response(PNG, { status: 200 });
+					r.headers.delete("content-type");
+					return r;
+				},
 			]) {
 				const { impl } = fakeFetch([response]);
 				const error = await client(impl)
@@ -415,6 +421,33 @@ describe("hub client", () => {
 			expect(calls[0]?.url).toBe(
 				`https://hub.example/v1/messaging/conversations/c1/attachments/batt_1?tenant_id=${TENANT}`,
 			);
+		});
+		it("R1-04: image bytes get a 60 s budget, JSON keeps 15 s", async () => {
+			vi.useFakeTimers();
+			try {
+				const hang = (_url: string | URL | Request, init?: RequestInit) =>
+					new Promise<Response>((_resolve, reject) => {
+						init?.signal?.addEventListener("abort", () =>
+							reject(new Error("aborted")),
+						);
+					});
+				const c = client(hang as unknown as typeof fetch);
+				let uploadSettled = false;
+				const upload = c
+					.uploadAttachment(TENANT, "c1", PNG)
+					.catch((e: unknown) => e)
+					.finally(() => {
+						uploadSettled = true;
+					});
+				const json = c.status().catch((e: unknown) => e);
+				await vi.advanceTimersByTimeAsync(15_001);
+				expect(((await json) as HubError).kind).toBe("unreachable");
+				expect(uploadSettled).toBe(false);
+				await vi.advanceTimersByTimeAsync(45_000);
+				expect(((await upload) as HubError).kind).toBe("unreachable");
+			} finally {
+				vi.useRealTimers();
+			}
 		});
 	});
 });

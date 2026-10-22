@@ -32,7 +32,7 @@ export interface PreparedImage {
 	height: number;
 }
 
-interface RawImage {
+export interface RawImage {
 	uri: string;
 	width: number;
 	height: number;
@@ -111,7 +111,18 @@ export async function prepareTeamBridgeImage(
 	});
 }
 
-/** Delete the manipulator's cache-directory output. Best effort, never logged. */
+/**
+ * Release a picked source's on-device copy. `expo-image-picker` copies every
+ * picked asset into the app cache (`Caches/ImagePicker/` on iOS, the cache
+ * directory on Android) at FULL resolution with its original EXIF/GPS; that
+ * copy must not outlive the bounded re-encode. A pasted image is a `data:` URL
+ * in memory and has nothing on disk.
+ */
+export async function releaseTeamBridgeSource(raw: RawImage): Promise<void> {
+	await removeTemp(raw.uri);
+}
+
+/** Delete one app-cache file. Best effort, never logged. */
 async function removeTemp(uri: string): Promise<void> {
 	if (Platform.OS === "web" || !uri.startsWith("file:")) return;
 	try {

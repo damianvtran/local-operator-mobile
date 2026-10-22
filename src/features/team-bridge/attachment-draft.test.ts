@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
+import { HubError } from "@/team-bridge/client";
+
 import { createAttachmentDraft, type Prepared } from "./attachment-draft";
 
 const prepared = (): Prepared => ({
@@ -132,5 +134,84 @@ describe("composer attachment chips", () => {
 			"batt_1",
 			"batt_2",
 		]);
+	});
+
+	it("R1-03: deterministic upload refusals are final; rate limits and transport stay retryable", async () => {
+		for (const [error, retryable, text] of [
+			[
+				new HubError({ kind: "invalid", message: "x", status: 415 }),
+				false,
+				"Radient cannot accept this image. Remove it.",
+			],
+			[
+				new HubError({ kind: "not_found", message: "x", status: 404 }),
+				false,
+				"This conversation is no longer available. Remove the image.",
+			],
+			[
+				new HubError({ kind: "rate_limited", message: "x", status: 429 }),
+				true,
+				"Too many images at once. Try again shortly.",
+			],
+			[
+				new HubError({ kind: "unreachable", message: "x" }),
+				true,
+				"This image did not upload.",
+			],
+		] as const) {
+			const upload = vi.fn().mockRejectedValue(error);
+			const { draft } = setup({ upload });
+			draft.add(["a"]);
+			await flush();
+			expect(draft.chips()[0]).toMatchObject({
+				status: "failed",
+				retryable,
+				error: text,
+			});
+			draft.retry(draft.chips()[0]?.key ?? "");
+			await flush();
+			expect(upload).toHaveBeenCalledTimes(retryable ? 2 : 1);
+		}
+	});
+
+	it("R1-03: a send's attachment_not_found marks ready chips expired and final", async () => {
+		const { draft } = setup();
+		draft.add(["a"]);
+		await flush();
+		draft.markExpired();
+		expect(draft.chips()[0]).toMatchObject({
+			status: "failed",
+			retryable: false,
+			error: "This image expired before it was sent. Remove it.",
+		});
+	});
+
+	it("R1-02: leaving during a send never deletes the ids that send is binding", async () => {
+		const { draft, deps } = setup();
+		draft.add(["a", "b"]);
+		await flush();
+		const settle = draft.beginSend(["batt_1"]);
+		draft.dispose();
+		expect(deps.discard.mock.calls.map((c) => c[0])).toEqual(["batt_2"]);
+		settle();
+	});
+
+	it("R1-05: the picked source copy is released after convert, and on remove before convert", async () => {
+		const releaseSource = vi.fn();
+		const { draft } = setup({ releaseSource });
+		draft.add(["picked-a"]);
+		await flush();
+		expect(releaseSource).toHaveBeenCalledWith("picked-a");
+		let finish: (p: Prepared) => void = () => undefined;
+		const slow = setup({
+			releaseSource,
+			prepare: vi.fn(() => new Promise<Prepared>((r) => (finish = r))),
+		});
+		slow.draft.add(["picked-b"]);
+		slow.draft.remove(slow.draft.chips()[0]?.key ?? "");
+		expect(releaseSource).toHaveBeenCalledWith("picked-b");
+		finish(prepared());
+		await flush();
+		expect(releaseSource).toHaveBeenCalledTimes(2);
 	});
 });

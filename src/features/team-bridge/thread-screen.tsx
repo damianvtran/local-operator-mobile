@@ -12,7 +12,12 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Markdown } from "@/features/session/components/markdown";
-import { canSend, messageAttachments } from "@/team-bridge/attachments";
+import {
+	canSend,
+	messageAttachments,
+	sendableAttachmentIds,
+} from "@/team-bridge/attachments";
+import { isHubError } from "@/team-bridge/client";
 import type { Notify } from "@/team-bridge/contract";
 import * as model from "@/team-bridge/model";
 import { useTeamBridge, useTeamBridgeState } from "@/team-bridge/provider";
@@ -39,6 +44,7 @@ import {
 	pasteTeamBridgeImage,
 	pickTeamBridgeImages,
 	prepareTeamBridgeImage,
+	releaseTeamBridgeSource,
 } from "./attachment-source";
 import { ComposerAttachments, MessageAttachments } from "./attachment-views";
 import { BridgeBack, BridgeGate } from "./gate";
@@ -131,6 +137,16 @@ function ThreadContent({
 	const [attachNotice, setAttachNotice] = useState<string | null>(null);
 	const draftImages = useRef<AttachmentDraft | null>(null);
 	const draftConversation = useRef<string | null>(null);
+	/*
+	 * Capability withdrawn while images are staged (a status refresh after a hub
+	 * rollback): the strip disappears, so its ids must go too. Otherwise a text
+	 * send would carry invisible `attachment_ids` that an older hub answers 400.
+	 */
+	if (!attachLimits && draftImages.current) {
+		draftImages.current.dispose();
+		draftImages.current = null;
+		draftConversation.current = null;
+	}
 	if (
 		attachLimits &&
 		conversationId &&
@@ -148,14 +164,20 @@ function ThreadContent({
 			upload: (bytes) => hub.uploadAttachment(tenantId, uploadTo, bytes),
 			discard: (attachmentId) =>
 				hub.deleteAttachment(tenantId, uploadTo, attachmentId),
+			releaseSource: (raw) => {
+				void releaseTeamBridgeSource(
+					raw as Parameters<typeof releaseTeamBridgeSource>[0],
+				);
+			},
 			onChange: () => {
 				if (mounted.current) setDraftVersion((n) => n + 1);
 			},
 		});
 	}
 	useEffect(() => () => draftImages.current?.dispose(), []);
-	const images = draftImages.current;
-	const chips = attachLimits && conversationId ? (images?.chips() ?? []) : [];
+	// One condition gates both what is shown and what a send carries.
+	const images = attachLimits && conversationId ? draftImages.current : null;
+	const chips = images?.chips() ?? [];
 	const addImages = async (source: "library" | "paste") => {
 		setAttachOpen(false);
 		setAttachNotice(null);
@@ -293,17 +315,37 @@ function ThreadContent({
 		sendingRef.current = true;
 		setSending(true);
 		setSendError(null);
+		const ids = sendableAttachmentIds(
+			attachLimits,
+			conversationId,
+			images?.attachmentIds() ?? [],
+		);
+		const settle = images?.beginSend(ids);
 		try {
-			if (await sender.current?.(body, images?.attachmentIds() ?? [])) {
+			if (await sender.current?.(body, ids)) {
 				setDraft("");
 				images?.clearSent();
 				setAttachNotice(null);
 			}
-		} catch {
-			setSendError(
-				"Your message was not confirmed. Your draft is saved here. Retry sends the same message safely.",
-			);
+		} catch (error) {
+			/*
+			 * With images attached, a 404 is the hub's uniform
+			 * `attachment_not_found`: a staged image expired or was already used.
+			 * Retrying the same ids would repeat it, so the chips say so and the
+			 * reader removes them; the text stays in the draft.
+			 */
+			if (ids.length > 0 && isHubError(error) && error.kind === "not_found") {
+				images?.markExpired();
+				setSendError(
+					"An attached image expired before it was sent. Remove it, then send again.",
+				);
+			} else {
+				setSendError(
+					"Your message was not confirmed. Your draft is saved here. Retry sends the same message safely.",
+				);
+			}
 		} finally {
+			settle?.();
 			sendingRef.current = false;
 			setSending(false);
 		}

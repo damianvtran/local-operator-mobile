@@ -208,7 +208,9 @@ export function MessageAttachments({
 			{attachments.map((descriptor, index) => {
 				const view = attachmentView(descriptor);
 				const fallbackId = teamBridgeAttachmentId(`${messageId}-${index}`);
-				if (view === "expired" || descriptor === null || view !== "image")
+				// `view !== "image"` alone decides; `descriptor === null` is there
+				// only so TypeScript narrows `descriptor` for the branch below.
+				if (view !== "image" || descriptor === null)
 					return (
 						<Placeholder
 							key={descriptor?.id ?? fallbackId}
@@ -293,7 +295,7 @@ export function ComposerAttachments({
 										<Text className="text-meta text-ink-muted">…</Text>
 									)}
 								</View>
-								{chip.status === "failed" ? (
+								{chip.status === "failed" && chip.retryable ? (
 									<Pressable
 										accessibilityRole={ROLE.button}
 										accessibilityLabel={`Retry image ${n}`}
