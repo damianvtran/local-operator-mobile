@@ -14,6 +14,7 @@
 import { readFile, stat } from "node:fs/promises";
 import { createServer } from "node:http";
 import { extname, resolve, sep } from "node:path";
+import { deflateSync } from "node:zlib";
 import {
 	ADA,
 	agentDm,
@@ -30,6 +31,10 @@ import {
 } from "../src/team-bridge/__tests__/fixtures.ts";
 
 const MOCK_ROUTE = /^\/mock-hub\/([a-z_-]+)\/v1\/messaging(.*)$/;
+/** Upload/delete (`/conversations/:cid/attachments[/:aid]`) and the byte read
+ *  (`/conversations/:cid/messages/:mid/attachments/:aid`). */
+const ATTACHMENT_ROUTE =
+	/^\/conversations\/[^/]+(\/messages\/[^/]+)?\/attachments(\/[^/]+)?$/;
 
 const root = resolve(process.argv[2] ?? "dist");
 const port = Number(process.argv[3] ?? 18743);
@@ -113,6 +118,133 @@ const histories = new Map(
 		thread.map((m) => ({ ...m, conversation_id: c.id })),
 	]),
 );
+/*
+ * IMAGE ATTACHMENTS (opt-in cases only: every case whose name starts with
+ * `attachments`). The other cases keep the pre-attachments hub exactly: no
+ * `status.attachments` block, so the composer offers no attach affordance and
+ * their frames do not move. Shapes mirror agent-server #170
+ * (`BridgeAttachmentView`, the upload/send/byte routes); bytes are generated
+ * PNGs held in memory, never read from or written to disk.
+ *
+ * - `attachments`: capability on; uploads stage, sends bind, bytes serve.
+ *   `thread=1` history adds a 1-image, a 4-image, an image-only, an expired and
+ *   an unavailable (unknown state) message.
+ * - `attachments_uploading`: uploads hang 30 s (chips stay "uploading").
+ * - `attachments_upload_failed`: uploads answer 503 (retryable failed chip).
+ * - `attachments_upload_refused`: uploads answer 415 (final failed chip).
+ * - `attachments_send_expired`: a send with images answers 404
+ *   `attachment_not_found` (chips turn "expired", final).
+ * - `attachments_fetch_error`: byte reads answer 500 ("did not load" + Retry).
+ * - `attachments_quota`: uploads answer 409 `attachment_quota_exceeded`
+ *   (final failed chip naming the 8-image limit).
+ * Viewer and grid frames use `attachments` with `thread=1`: bcm_8 is the 2×2
+ * grid, and `viewer=bcm_8:1` opens its viewer at page 2 of 4.
+ */
+const crcTable = (() => {
+	const table = new Uint32Array(256);
+	for (let n = 0; n < 256; n++) {
+		let c = n;
+		for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+		table[n] = c >>> 0;
+	}
+	return table;
+})();
+const pngChunk = (type: string, data: Buffer) => {
+	const length = Buffer.alloc(4);
+	length.writeUInt32BE(data.length);
+	const typed = Buffer.concat([Buffer.from(type), data]);
+	let c = 0xffffffff;
+	for (const byte of typed) c = (crcTable[(c ^ byte) & 255] ?? 0) ^ (c >>> 8);
+	const crc = Buffer.alloc(4);
+	crc.writeUInt32BE((c ^ 0xffffffff) >>> 0);
+	return Buffer.concat([length, typed, crc]);
+};
+/** A soft two-colour gradient PNG; `hue` keeps the four images distinct. */
+function fixturePng(width: number, height: number, hue: number): Buffer {
+	const header = Buffer.alloc(13);
+	header.writeUInt32BE(width, 0);
+	header.writeUInt32BE(height, 4);
+	header[8] = 8;
+	header[9] = 2;
+	const raw = Buffer.alloc((width * 3 + 1) * height);
+	for (let y = 0; y < height; y++) {
+		const row = y * (width * 3 + 1);
+		for (let x = 0; x < width; x++) {
+			const t = (x / width + y / height) / 2;
+			raw[row + 1 + x * 3] = Math.round(60 + 150 * t + hue) & 255;
+			raw[row + 2 + x * 3] = Math.round(110 + 80 * (1 - t)) & 255;
+			raw[row + 3 + x * 3] = Math.round(170 - 60 * t + hue / 2) & 255;
+		}
+	}
+	return Buffer.concat([
+		Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+		pngChunk("IHDR", header),
+		pngChunk("IDAT", deflateSync(raw)),
+		pngChunk("IEND", Buffer.alloc(0)),
+	]);
+}
+type Stored = {
+	bytes: Buffer;
+	width: number;
+	height: number;
+	mime: "image/png" | "image/jpeg";
+};
+const images = new Map<string, Stored>();
+const descriptor = (id: string, state?: string) => {
+	const image = images.get(id);
+	return {
+		id,
+		mime: image?.mime ?? "image/png",
+		size: image?.bytes.length ?? 0,
+		width: image?.width ?? 1024,
+		height: image?.height ?? 768,
+		sha256: "fixture",
+		state: state ?? "bound",
+		expires_at: at(60 * 24 * 400),
+	};
+};
+const seed = (id: string, width: number, height: number, hue: number) => {
+	images.set(id, {
+		bytes: fixturePng(width, height, hue),
+		width,
+		height,
+		mime: "image/png",
+	});
+	return id;
+};
+const showcase = () => [
+	message(7, ADA, at(14), {
+		sender: { account_id: ADA, kind: "human", display_label: "Ada" },
+		body: "Here is the new onboarding screen.",
+		attachments: [descriptor(seed("batt_one", 1024, 768, 0))],
+	}),
+	message(8, ADA, at(15), {
+		sender: { account_id: ADA, kind: "human", display_label: "Ada" },
+		body: "And the four variants we discussed:",
+		attachments: [
+			descriptor(seed("batt_four_a", 800, 800, 10)),
+			descriptor(seed("batt_four_b", 768, 1024, 40)),
+			descriptor(seed("batt_four_c", 1024, 576, 70)),
+			descriptor(seed("batt_four_d", 640, 640, 100)),
+		],
+	}),
+	message(9, SELF, at(16), {
+		sender: { account_id: SELF, kind: "human", display_label: "Sam" },
+		body: "",
+		attachments: [descriptor(seed("batt_image_only", 900, 600, 30))],
+	}),
+	message(10, ADA, at(17), {
+		sender: { account_id: ADA, kind: "human", display_label: "Ada" },
+		body: "Last year's version, for comparison.",
+		attachments: [descriptor("batt_expired", "expired")],
+	}),
+	message(11, BEN, at(18), {
+		sender: { account_id: BEN, kind: "human", display_label: "Ben" },
+		body: "This one is in a state this build does not know.",
+		attachments: [descriptor("batt_unknown", "quarantined")],
+	}),
+];
+let uploads = 0;
 // No bodies, headers or tokens: these counters prove first-send behaviour.
 const requests: Array<{ method: string; path: string }> = [];
 const server = createServer(async (req, res) => {
@@ -138,9 +270,15 @@ const server = createServer(async (req, res) => {
 				url.searchParams.get("thread") === "1"
 					? `/team-bridge/${TENANT}/bcv_humans`
 					: "/team-bridge";
+			// `viewer=<messageId>:<index>` opens that message's image viewer on load
+			// (web fixture seam), e.g. `viewer=bcm_8:1` is page 2 of 4.
+			const viewer = url.searchParams.get("viewer");
+			const viewerParam = viewer
+				? `&tb-viewer=${encodeURIComponent(viewer)}`
+				: "";
 			res.writeHead(200, { "content-type": "text/html" });
 			res.end(
-				`<!doctype html><meta name="viewport" content="width=device-width"><style>body{margin:0;background:#777;display:flex;justify-content:center;padding:8px}iframe{width:${phoneWidth}px;height:844px;border:0;transform:scale(.75);transform-origin:top center}</style><iframe title="Phone viewport" src="${route}?tb-fixture=${encodeURIComponent(qaCase)}&tb-theme=${encodeURIComponent(theme)}"></iframe><pre id="geometry" style="position:fixed;left:8px;top:8px;max-width:300px;white-space:pre-wrap;color:white;font:12px monospace"></pre><script>
+				`<!doctype html><meta name="viewport" content="width=device-width"><style>body{margin:0;background:#777;display:flex;justify-content:center;padding:8px}iframe{width:${phoneWidth}px;height:844px;border:0;transform:scale(.75);transform-origin:top center}</style><iframe title="Phone viewport" src="${route}?tb-fixture=${encodeURIComponent(qaCase)}&tb-theme=${encodeURIComponent(theme)}${viewerParam}"></iframe><pre id="geometry" style="position:fixed;left:8px;top:8px;max-width:300px;white-space:pre-wrap;color:white;font:12px monospace"></pre><script>
 const frame=document.querySelector('iframe');
 setInterval(()=>{try{
  const doc=frame.contentDocument, win=frame.contentWindow;
@@ -157,11 +295,90 @@ setInterval(()=>{try{
 		}
 		const match = MOCK_ROUTE.exec(url.pathname);
 		if (match) {
-			const qaCase = match[1];
+			// The capture group always matches when the route does; `?? ""` only
+			// satisfies the harness tsconfig (`noUncheckedIndexedAccess`).
+			const qaCase = match[1] ?? "";
 			const path = match[2] ?? "";
 			requests.push({ method: req.method ?? "GET", path });
 			if (qaCase === "loading" && path !== "/status" && path !== "/unread")
 				await new Promise((r) => setTimeout(r, 12000));
+			const withImages = qaCase.startsWith("attachments");
+			const attachmentRoute = ATTACHMENT_ROUTE.exec(path);
+			if (withImages && attachmentRoute) {
+				if (req.method === "POST") {
+					const parts: Buffer[] = [];
+					for await (const part of req) parts.push(part as Buffer);
+					if (qaCase === "attachments_uploading")
+						await new Promise((r) => setTimeout(r, 30000));
+					if (qaCase === "attachments_upload_failed") {
+						send(503, {
+							error: "Messaging is unavailable.",
+							code: "messaging_unavailable",
+						});
+						return;
+					}
+					if (qaCase === "attachments_quota") {
+						send(409, {
+							error: "Too many images are waiting to be sent.",
+							code: "attachment_quota_exceeded",
+						});
+						return;
+					}
+					if (qaCase === "attachments_upload_refused") {
+						send(415, {
+							error: "That image type is not supported.",
+							code: "attachment_type_unsupported",
+						});
+						return;
+					}
+					uploads++;
+					const id = `batt_upload_${uploads}`;
+					const bytes = Buffer.concat(parts);
+					// The phone already bounded it. A PNG's IHDR carries its true size;
+					// a JPEG's is not parsed here, so its chip/bubble uses the 4:3 default.
+					const isPng = bytes.length > 24 && bytes[0] === 0x89;
+					images.set(id, {
+						bytes,
+						width: isPng ? bytes.readUInt32BE(16) : 1024,
+						height: isPng ? bytes.readUInt32BE(20) : 768,
+						mime: isPng ? "image/png" : "image/jpeg",
+					});
+					res.writeHead(201, { "content-type": "application/json" });
+					res.end(
+						JSON.stringify({
+							msg: "Attachment staged",
+							result: { attachment: descriptor(id, "staged") },
+						}),
+					);
+					return;
+				}
+				if (req.method === "DELETE") {
+					res.writeHead(204);
+					res.end();
+					return;
+				}
+				const id = attachmentRoute[2]?.slice(1) ?? "";
+				const image = images.get(id);
+				if (qaCase === "attachments_fetch_error") {
+					send(500, { error: "Fixture byte read failed." });
+					return;
+				}
+				if (!image) {
+					send(404, {
+						error: "Attachment not found",
+						code: "attachment_not_found",
+					});
+					return;
+				}
+				// The real route's headers (agent-server #170 FetchHandlerEcho).
+				res.writeHead(200, {
+					"content-type": image.mime,
+					"x-content-type-options": "nosniff",
+					"cache-control": "private, no-store",
+				});
+				res.end(image.bytes);
+				return;
+			}
 			if (path === "/status") {
 				if (qaCase === "unavailable") {
 					send(503, {
@@ -172,6 +389,17 @@ setInterval(()=>{try{
 				}
 				ok(
 					status({
+						...(withImages
+							? {
+									attachments: {
+										enabled: true,
+										max_count: 4,
+										max_bytes: 5242880,
+										max_pixels: 16777216,
+										mime_types: ["image/png", "image/jpeg"],
+									},
+								}
+							: {}),
 						api_version: qaCase === "update_required" ? "2" : "1",
 						available: qaCase !== "plan_required",
 						tenants: [
@@ -251,13 +479,29 @@ setInterval(()=>{try{
 			const row = conversations.find((c) => c.id === id);
 			const history = histories.get(id ?? "") ?? [];
 			if (path.endsWith("/messages") && req.method === "GET") {
+				const shown =
+					withImages && id === "bcv_humans"
+						? [...history, ...showcase()]
+						: history;
 				ok({
-					messages: qaCase === "empty" ? [] : history,
+					messages: qaCase === "empty" ? [] : shown,
 					has_more: false,
 				});
 				return;
 			}
 			if (path.endsWith("/messages") && req.method === "POST") {
+				const ids: string[] = body.attachment_ids ?? [];
+				if (
+					withImages &&
+					ids.length > 0 &&
+					qaCase === "attachments_send_expired"
+				) {
+					send(404, {
+						error: "Attachment not found",
+						code: "attachment_not_found",
+					});
+					return;
+				}
 				const msg = message(
 					history.length + 1,
 					SELF,
@@ -266,6 +510,9 @@ setInterval(()=>{try{
 						conversation_id: id,
 						body: body.body,
 						sender: { account_id: SELF, kind: "human", display_label: "Sam" },
+						...(ids.length > 0
+							? { attachments: ids.map((aid) => descriptor(aid)) }
+							: {}),
 					},
 				);
 				history.push(msg);

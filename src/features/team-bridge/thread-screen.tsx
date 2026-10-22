@@ -12,15 +12,22 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Markdown } from "@/features/session/components/markdown";
+import {
+	canSend,
+	messageAttachments,
+	sendableAttachmentIds,
+} from "@/team-bridge/attachments";
 import type { Notify } from "@/team-bridge/contract";
 import * as model from "@/team-bridge/model";
 import { useTeamBridge, useTeamBridgeState } from "@/team-bridge/provider";
 import { setWatchedThread } from "@/team-bridge/push";
 import { threadKey } from "@/team-bridge/store";
+import { teamBridgeViewerFixture } from "@/testing/team-bridge-fixture";
 import {
 	CONTROL,
 	SCREEN,
 	SURFACE,
+	teamBridgeAttachSourceId,
 	teamBridgeMessageId,
 	teamBridgeNotifyId,
 } from "@/ui/a11y";
@@ -29,6 +36,20 @@ import { Button } from "@/ui/components/button";
 import { Screen } from "@/ui/components/screen";
 import { Sheet } from "@/ui/components/sheet";
 import { Textarea } from "@/ui/components/textarea";
+import {
+	createAttachmentDraft,
+	type HeldDraft,
+	sendBlockedReason,
+	sendFailureOf,
+	syncDraft,
+} from "./attachment-draft";
+import {
+	pasteTeamBridgeImage,
+	pickTeamBridgeImages,
+	prepareTeamBridgeImage,
+	releaseTeamBridgeSource,
+} from "./attachment-source";
+import { ComposerAttachments, MessageAttachments } from "./attachment-views";
 import { BridgeBack, BridgeGate } from "./gate";
 import { createMessageSender } from "./message-sender";
 
@@ -106,6 +127,74 @@ function ThreadContent({
 				setCreatedId(answer.id);
 			},
 		});
+	/*
+	 * Staged images. Offered only when the hub advertised `status.attachments`
+	 * (`state.attachments`), and only once the conversation exists: an upload is
+	 * addressed to a conversation id, and a draft DM has none until its first
+	 * send creates it. The controller lives for this mounted composer; leaving
+	 * with unsent images releases them on the hub.
+	 */
+	const attachLimits = state.attachments;
+	// Web fixture builds only (`null` everywhere else): opens a viewer on load.
+	const viewerFixture = useMemo(() => teamBridgeViewerFixture(), []);
+	const [, setDraftVersion] = useState(0);
+	const [attachOpen, setAttachOpen] = useState(false);
+	const [attachNotice, setAttachNotice] = useState<string | null>(null);
+	const draftImages = useRef<HeldDraft | null>(null);
+	draftImages.current = syncDraft(
+		draftImages.current,
+		attachLimits,
+		conversationId,
+		(limits, uploadTo) =>
+			createAttachmentDraft({
+				maxCount: limits.maxCount,
+				prepare: (raw) =>
+					prepareTeamBridgeImage(
+						raw as Parameters<typeof prepareTeamBridgeImage>[0],
+					),
+				upload: (bytes) => hub.uploadAttachment(tenantId, uploadTo, bytes),
+				discard: (attachmentId) =>
+					hub.deleteAttachment(tenantId, uploadTo, attachmentId),
+				releaseSource: (raw) => {
+					void releaseTeamBridgeSource(
+						raw as Parameters<typeof releaseTeamBridgeSource>[0],
+					);
+				},
+				onChange: () => {
+					if (mounted.current) setDraftVersion((n) => n + 1);
+				},
+			}),
+	);
+	useEffect(() => () => draftImages.current?.draft.dispose(), []);
+	// One condition gates both what is shown and what a send carries.
+	const images =
+		attachLimits && conversationId
+			? (draftImages.current?.draft ?? null)
+			: null;
+	const chips = images?.chips() ?? [];
+	const addImages = async (source: "library" | "paste") => {
+		setAttachOpen(false);
+		setAttachNotice(null);
+		const draft = images;
+		if (!draft) return;
+		const room = draft.remaining();
+		if (room === 0) {
+			setAttachNotice(draft.limitNotice());
+			return;
+		}
+		try {
+			if (source === "library") {
+				const picked = await pickTeamBridgeImages(room);
+				if (picked.length > 0) setAttachNotice(draft.add(picked));
+			} else {
+				const pasted = await pasteTeamBridgeImage();
+				if (pasted === null) setAttachNotice("No image was pasted.");
+				else setAttachNotice(draft.add([pasted]));
+			}
+		} catch {
+			setAttachNotice("That image could not be read.");
+		}
+	};
 	const items = useMemo(
 		() => model.threadItems(thread?.messages ?? [], new Date()),
 		[thread?.messages],
@@ -205,10 +294,16 @@ function ThreadContent({
 		markRendered();
 	}, [markRendered]);
 
+	const sendable = canSend(draft, chips);
+	/*
+	 * Whether images block Send. The WHY is the strip's single status line
+	 * (`stripSummary`, design D9): it always names what to do before Send works.
+	 */
+	const blockedBy = sendBlockedReason(chips);
 	const send = async () => {
 		const body = draft.trim();
 		if (
-			!body ||
+			!canSend(draft, chips) ||
 			sendingRef.current ||
 			readOnly ||
 			!organization ||
@@ -219,13 +314,36 @@ function ThreadContent({
 		sendingRef.current = true;
 		setSending(true);
 		setSendError(null);
+		const ids = sendableAttachmentIds(
+			attachLimits,
+			conversationId,
+			images?.attachmentIds() ?? [],
+		);
+		const settle = images?.beginSend(ids);
 		try {
-			if (await sender.current?.(body)) setDraft("");
-		} catch {
-			setSendError(
-				"Your message was not confirmed. Your draft is saved here. Retry sends the same message safely.",
-			);
+			if (await sender.current?.(body, ids)) {
+				setDraft("");
+				images?.clearSent();
+				setAttachNotice(null);
+			}
+		} catch (error) {
+			/*
+			 * A staged image expired or was already used: retrying the same ids
+			 * repeats the 404, so the chips say so and the reader removes them;
+			 * the text stays in the draft. Every other failure keeps the safe-retry
+			 * copy (`sendFailureOf` has the code-level why).
+			 */
+			if (sendFailureOf(error, ids) === "expired") {
+				// The chips carry the reason and the strip's one status line says
+				// it (design D9): no second send-error sentence for the same fix.
+				images?.markExpired();
+			} else {
+				setSendError(
+					"Your message was not confirmed. Your draft is saved here. Retry sends the same message safely.",
+				);
+			}
 		} finally {
+			settle?.();
 			sendingRef.current = false;
 			setSending(false);
 		}
@@ -304,9 +422,32 @@ function ThreadContent({
 						<Text className="text-body text-ink-muted">
 							Message body unavailable.
 						</Text>
+					) : item.message.body.trim() === "" ? (
+						/*
+						 * An image-only message has `body: ""`. With its images listed
+						 * below, the images ARE the message. With none (a kind of content
+						 * this build does not render), say so instead of an empty bubble.
+						 */
+						messageAttachments(item.message).length === 0 ? (
+							<Text className="text-body text-ink-muted">
+								This message has content this version of the app cannot show.
+							</Text>
+						) : null
 					) : (
 						<Markdown text={item.message.body} />
 					)}
+					<MessageAttachments
+						hub={hub}
+						tenantId={tenantId}
+						conversationId={item.message.conversation_id}
+						messageId={item.message.id}
+						attachments={messageAttachments(item.message)}
+						initialViewerIndex={
+							viewerFixture?.messageId === item.message.id
+								? viewerFixture.index
+								: undefined
+						}
+					/>
 				</View>
 			</View>
 		);
@@ -538,6 +679,20 @@ function ThreadContent({
 													{sendError}
 												</Text>
 											)}
+											<ComposerAttachments
+												chips={chips}
+												summary={images?.summary() ?? ""}
+												onRemove={(key) => images?.remove(key)}
+												onRetry={(key) => images?.retry(key)}
+											/>
+											{attachNotice && (
+												<Text
+													accessibilityRole="alert"
+													className="text-meta text-ink-muted"
+												>
+													{attachNotice}
+												</Text>
+											)}
 											<Textarea
 												label="Message"
 												placeholder={`Message ${title}`}
@@ -546,15 +701,32 @@ function ThreadContent({
 												disabled={sending}
 												testID={CONTROL.teamBridgeMessageInput}
 											/>
-											<Button
-												label={sendError ? "Retry send" : "Send"}
-												loading={sending}
-												disabled={!draft.trim() || sending}
-												testID={CONTROL.teamBridgeSend}
-												onPress={() => {
-													void send();
-												}}
-											/>
+											<View className="flex-row gap-2">
+												{images ? (
+													<Button
+														variant="outline"
+														label="Add image"
+														disabled={sending || images.remaining() === 0}
+														testID={CONTROL.teamBridgeAttach}
+														onPress={() => setAttachOpen(true)}
+													/>
+												) : null}
+												<View className="flex-1">
+													<Button
+														// "Retry send" only when pressing it can succeed: while
+														// images block the send, the button is plain "Send" (D4).
+														label={
+															sendError && !blockedBy ? "Retry send" : "Send"
+														}
+														loading={sending}
+														disabled={!sendable || sending}
+														testID={CONTROL.teamBridgeSend}
+														onPress={() => {
+															void send();
+														}}
+													/>
+												</View>
+											</View>
 										</>
 									)}
 								</View>
@@ -563,6 +735,31 @@ function ThreadContent({
 					</>
 				)}
 			</KeyboardAvoidingView>
+			<Sheet
+				visible={attachOpen}
+				onClose={() => setAttachOpen(false)}
+				title="Add image"
+				testID={SURFACE.teamBridgeAttachSheet}
+			>
+				<View className="gap-2">
+					<Button
+						variant="outline"
+						label="Photo Library"
+						testID={teamBridgeAttachSourceId("library")}
+						onPress={() => {
+							void addImages("library");
+						}}
+					/>
+					<Button
+						variant="outline"
+						label="Paste image"
+						testID={teamBridgeAttachSourceId("paste")}
+						onPress={() => {
+							void addImages("paste");
+						}}
+					/>
+				</View>
+			</Sheet>
 			<Sheet
 				visible={notifyOpen}
 				onClose={() => setNotifyOpen(false)}

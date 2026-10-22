@@ -143,6 +143,7 @@ export const EMPTY = {
  */
 export const CONTROL = {
 	/** Team Bridge is hub-owned: these selectors remain stable without a relay connection. */
+	teamBridgeAttach: "team-bridge-attach",
 	teamBridgeBack: "team-bridge-back",
 	teamBridgeConversationsRetry: "team-bridge-conversations-retry",
 	teamBridgeGateRetry: "team-bridge-gate-retry",
@@ -541,6 +542,8 @@ export const CONTROL = {
  */
 export const SURFACE = {
 	/** Team Bridge is hub-owned: these selectors remain stable without a relay connection. */
+	teamBridgeAttachSheet: "team-bridge-attach-sheet",
+	teamBridgeImageViewer: "team-bridge-image-viewer",
 	teamBridgeChannelPreview: "team-bridge-channel-preview",
 	teamBridgeComposer: "team-bridge-composer",
 	teamBridgeConversationsLoading: "team-bridge-conversations-loading",
@@ -897,6 +900,15 @@ export const IDENTIFIER_FAMILIES: readonly string[] = [
 	"team-bridge-org-",
 	"team-bridge-message-",
 	"team-bridge-notify-",
+	/* Image attachments: one composer chip per staged image (its remove/retry
+	 *  controls derive from it), one rendered image per message attachment, and
+	 *  the attach sheet's source rows. Keyed by position/attachment id, never by
+	 *  anything about the image itself. */
+	"team-bridge-attachment-chip-",
+	"team-bridge-attachment-",
+	"team-bridge-attach-source-",
+	/* The full-screen image viewer's controls (close, previous, next). */
+	"team-bridge-viewer-",
 	/* The wave-2 slice's parameterised identifiers: one row per session or
 	 * computer, one copy action per command block. Declared in the same change as
 	 * the controls that carry them, which is what this list's own note asks for. */
@@ -1841,3 +1853,11 @@ export const teamBridgeMessageId = (value: string): string =>
 	`team-bridge-message-${value}`;
 export const teamBridgeNotifyId = (value: string): string =>
 	`team-bridge-notify-${value}`;
+export const teamBridgeAttachmentChipId = (value: string): string =>
+	`team-bridge-attachment-chip-${value}`;
+export const teamBridgeAttachmentId = (value: string): string =>
+	`team-bridge-attachment-${value}`;
+export const teamBridgeAttachSourceId = (value: string): string =>
+	`team-bridge-attach-source-${value}`;
+export const teamBridgeViewerId = (value: string): string =>
+	`team-bridge-viewer-${value}`;

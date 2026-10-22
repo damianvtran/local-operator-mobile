@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { createHubClient, HubError, hubErrorKind } from "@/team-bridge/client";
 
-import { conversation, status, TENANT } from "./fixtures";
+import { conversation, message, status, TENANT } from "./fixtures";
 
 type Call = { url: string; init: RequestInit };
 
@@ -251,5 +251,203 @@ describe("hub client", () => {
 		expect(calls[1]?.url).toContain(
 			"/v1/messaging/push/devices/inst-1?generation=101",
 		);
+	});
+
+	describe("image attachments", () => {
+		const PNG = new Uint8Array([
+			0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 7,
+		]);
+		const client = (impl: typeof fetch) =>
+			createHubClient({
+				accessToken: async () => "token-a",
+				fetchImpl: impl,
+				baseUrl: "https://hub.example",
+			});
+
+		it("text-only send stays byte-identical (no attachment_ids for older hubs)", async () => {
+			const { impl, calls } = fakeFetch([() => ok(message(1, "a", "x"))]);
+			await client(impl).send(TENANT, "c1", { clientRef: "r", body: "hi" });
+			expect(JSON.parse(String(calls[0]?.init.body))).toEqual({
+				tenant_id: TENANT,
+				client_ref: "r",
+				body: "hi",
+			});
+			const again = fakeFetch([() => ok(message(1, "a", "x"))]);
+			await client(again.impl).send(TENANT, "c1", {
+				clientRef: "r",
+				body: "hi",
+				attachmentIds: [],
+			});
+			expect(JSON.parse(String(again.calls[0]?.init.body))).not.toHaveProperty(
+				"attachment_ids",
+			);
+		});
+
+		it("image-only send carries an empty body and the ids", async () => {
+			const { impl, calls } = fakeFetch([() => ok(message(1, "a", "x"))]);
+			await client(impl).send(TENANT, "c1", {
+				clientRef: "r",
+				body: "",
+				attachmentIds: ["batt_1", "batt_2"],
+			});
+			expect(JSON.parse(String(calls[0]?.init.body))).toEqual({
+				tenant_id: TENANT,
+				client_ref: "r",
+				body: "",
+				attachment_ids: ["batt_1", "batt_2"],
+			});
+		});
+
+		it("uploads raw bytes with the bearer to the conversation's attachments route", async () => {
+			const { impl, calls } = fakeFetch([
+				() =>
+					json(201, {
+						msg: "ok",
+						result: {
+							attachment: {
+								id: "batt_1",
+								mime: "image/png",
+								size: 9,
+								width: 1,
+								height: 1,
+								sha256: "h",
+								state: "staged",
+								expires_at: "2026-10-24T00:00:00Z",
+							},
+						},
+					}),
+			]);
+			const answer = await client(impl).uploadAttachment(TENANT, "c 1", PNG);
+			expect(answer).toMatchObject({ id: "batt_1", mime: "image/png" });
+			expect(calls[0]?.url).toBe(
+				`https://hub.example/v1/messaging/conversations/c%201/attachments?tenant_id=${TENANT}`,
+			);
+			expect(calls[0]?.init.method).toBe("POST");
+			expect(calls[0]?.init.body).toBe(PNG);
+			const headers = calls[0]?.init.headers as Record<string, string>;
+			expect(headers.authorization).toBe("Bearer token-a");
+			expect(headers["content-type"]).toBe("application/octet-stream");
+			expect(calls[0]?.init.credentials).toBe("omit");
+		});
+
+		it("classifies upload refusals: 413/415/422 invalid, 404 not_found, 429 rate_limited", async () => {
+			for (const [status, code, kind] of [
+				[413, "attachment_too_large", "invalid"],
+				[415, "attachment_type_unsupported", "invalid"],
+				[422, "attachment_invalid", "invalid"],
+				[404, "attachment_not_found", "not_found"],
+				[429, "rate_limited", "rate_limited"],
+			] as const) {
+				const { impl } = fakeFetch([() => json(status, { error: "no", code })]);
+				const error = await client(impl)
+					.uploadAttachment(TENANT, "c1", PNG)
+					.catch((e: unknown) => e);
+				expect(error).toBeInstanceOf(HubError);
+				expect((error as HubError).kind).toBe(kind);
+				expect((error as HubError).code).toBe(code);
+			}
+		});
+
+		it("fetches bytes with the bearer, retrying once on 401", async () => {
+			const tokens = vi.fn(async (o?: { force?: boolean }) =>
+				o?.force ? "token-b" : "token-a",
+			);
+			const { impl, calls } = fakeFetch([
+				() => json(401, { error: "expired" }),
+				() =>
+					new Response(PNG, {
+						status: 200,
+						headers: { "content-type": "image/png" },
+					}),
+			]);
+			const answer = await createHubClient({
+				accessToken: tokens,
+				fetchImpl: impl,
+				baseUrl: "https://hub.example",
+			}).attachmentBytes(TENANT, "c1", "m1", "batt_1");
+			expect(answer.mime).toBe("image/png");
+			expect(Array.from(answer.bytes)).toEqual(Array.from(PNG));
+			expect(calls[1]?.url).toBe(
+				`https://hub.example/v1/messaging/conversations/c1/messages/m1/attachments/batt_1?tenant_id=${TENANT}`,
+			);
+			const retried = calls[1]?.init.headers as
+				| Record<string, string>
+				| undefined;
+			expect(retried?.authorization).toBe("Bearer token-b");
+		});
+
+		it("fails closed on bytes that are not PNG/JPEG or contradict the served type", async () => {
+			for (const response of [
+				() =>
+					new Response("<html>edge</html>", {
+						status: 200,
+						headers: { "content-type": "text/html" },
+					}),
+				() =>
+					new Response(PNG, {
+						status: 200,
+						headers: { "content-type": "image/jpeg" },
+					}),
+				// R1-09: no Content-Type at all is refused, not trusted.
+				() => {
+					const r = new Response(PNG, { status: 200 });
+					r.headers.delete("content-type");
+					return r;
+				},
+			]) {
+				const { impl } = fakeFetch([response]);
+				const error = await client(impl)
+					.attachmentBytes(TENANT, "c1", "m1", "batt_1")
+					.catch((e: unknown) => e);
+				expect((error as HubError).kind).toBe("malformed");
+			}
+			const missing = fakeFetch([
+				() => json(404, { error: "not found", code: "attachment_not_found" }),
+			]);
+			const gone = await client(missing.impl)
+				.attachmentBytes(TENANT, "c1", "m1", "batt_x")
+				.catch((e: unknown) => e);
+			expect((gone as HubError).kind).toBe("not_found");
+		});
+
+		it("delete of a staged image is idempotent (404 is success)", async () => {
+			const { impl, calls } = fakeFetch([
+				() => json(404, { error: "gone", code: "attachment_not_found" }),
+			]);
+			await expect(
+				client(impl).deleteAttachment(TENANT, "c1", "batt_1"),
+			).resolves.toBeUndefined();
+			expect(calls[0]?.init.method).toBe("DELETE");
+			expect(calls[0]?.url).toBe(
+				`https://hub.example/v1/messaging/conversations/c1/attachments/batt_1?tenant_id=${TENANT}`,
+			);
+		});
+		it("R1-04: image bytes get a 60 s budget, JSON keeps 15 s", async () => {
+			vi.useFakeTimers();
+			try {
+				const hang = (_url: string | URL | Request, init?: RequestInit) =>
+					new Promise<Response>((_resolve, reject) => {
+						init?.signal?.addEventListener("abort", () =>
+							reject(new Error("aborted")),
+						);
+					});
+				const c = client(hang as unknown as typeof fetch);
+				let uploadSettled = false;
+				const upload = c
+					.uploadAttachment(TENANT, "c1", PNG)
+					.catch((e: unknown) => e)
+					.finally(() => {
+						uploadSettled = true;
+					});
+				const json = c.status().catch((e: unknown) => e);
+				await vi.advanceTimersByTimeAsync(15_001);
+				expect(((await json) as HubError).kind).toBe("unreachable");
+				expect(uploadSettled).toBe(false);
+				await vi.advanceTimersByTimeAsync(45_000);
+				expect(((await upload) as HubError).kind).toBe("unreachable");
+			} finally {
+				vi.useRealTimers();
+			}
+		});
 	});
 });

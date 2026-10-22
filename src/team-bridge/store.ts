@@ -23,6 +23,11 @@ export { accountIdFromToken } from "@/connection/radient-identity";
 
 import { createStore } from "zustand/vanilla";
 
+import {
+	type AttachmentLimits,
+	attachmentLimits,
+	clearAttachmentCache,
+} from "@/team-bridge/attachments";
 import { type HubClient, HubError, isHubError } from "@/team-bridge/client";
 import type {
 	Conversation,
@@ -71,6 +76,12 @@ export interface TeamBridgeState {
 	organizations: Organization[];
 	selectedTenantId: string | null;
 	totalUnread: number;
+	/**
+	 * What the composer may attach, from `status.attachments`. `null` until a
+	 * status read says otherwise, and whenever the hub has no attachment store:
+	 * no attach affordance is offered (`attachmentLimits`).
+	 */
+	attachments: AttachmentLimits | null;
 	orgs: Record<string, OrgData>;
 	threads: Record<string, ThreadData>;
 }
@@ -102,6 +113,7 @@ export const initialTeamBridgeState = (): TeamBridgeState => ({
 	organizations: [],
 	selectedTenantId: null,
 	totalUnread: 0,
+	attachments: null,
 	orgs: {},
 	threads: {},
 });
@@ -312,6 +324,7 @@ export function createTeamBridgeStore(deps: {
 					selfAccountId: accountIdFromToken(token),
 					organizations,
 					selectedTenantId: selected?.tenantId ?? null,
+					attachments: attachmentLimits(read.status.attachments),
 				});
 			});
 		},
@@ -683,6 +696,7 @@ export function createTeamBridgeStore(deps: {
 			conversationId: string,
 			body: string,
 			clientRef: string,
+			attachmentIds: string[] = [],
 		): Promise<Message> {
 			const gate = store.getState().gate;
 			if (gate === "plan_required" || gate === "signed_out")
@@ -699,6 +713,7 @@ export function createTeamBridgeStore(deps: {
 				message = await client.send(tenantId, conversationId, {
 					clientRef,
 					body,
+					attachmentIds,
 				});
 			} catch (error) {
 				if (epoch === generation) gateFailure(error);
@@ -749,6 +764,9 @@ export function createTeamBridgeStore(deps: {
 		reset() {
 			generation += 1;
 			inFlight.clear();
+			// Sign-out and account change both land here: the previous account's
+			// decoded images must not outlive it in this process.
+			clearAttachmentCache();
 			store.setState(initialTeamBridgeState());
 		},
 	};

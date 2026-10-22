@@ -130,7 +130,28 @@ node tools/mock-team-bridge.ts <session-scratch>/web-export 18743
 Use the harness browser tool at
 `http://127.0.0.1:18743/__phone?case=populated&theme=light`; `theme=dark` selects
 dark. Cases: `signed_out`, `update_required`, `unavailable`, `plan_required`,
-`empty`, `loading`, `error`, `populated`; add `thread=1` for history. The iframe
+`empty`, `loading`, `error`, `populated`; add `thread=1` for history. Image
+attachments have their own opt-in cases, so the cases above keep a hub with no
+`status.attachments` block (and no attach affordance):
+
+| Case (`case=` / `tb-fixture=`) | What the mock hub does | State it reaches |
+|---|---|---|
+| `attachments` | capability on; uploads stage, sends bind, bytes serve | Add image sheet, ready chips; with `thread=1` a 1-image, a 4-image, an image-only, an expired and an unavailable (unknown state) message |
+| `attachments_uploading` | uploads hang 30 s | chips stay "uploading" |
+| `attachments_upload_failed` | uploads answer 503 | failed chip with Retry |
+| `attachments_upload_refused` | uploads answer 415 | final failed chip, no Retry |
+| `attachments_send_expired` | a send with images answers 404 `attachment_not_found` | chips turn expired, send error names it |
+| `attachments_fetch_error` | byte reads answer 500 | "This image did not load." + Retry in each bubble |
+| `attachments_quota` | uploads answer 409 `attachment_quota_exceeded` | final failed chip naming the 8-image limit |
+
+With `case=attachments&thread=1`, message `bcm_8` is the 2×2 grid. Add
+`viewer=bcm_8:1` to `/__phone` (it becomes `tb-viewer=` on the app URL) to
+open the full-screen viewer on page 2 of 4; `viewer=bcm_7:0` opens a single
+image. That seam exists only in a fixture web build on loopback.
+
+Chips need a real image: on the web build "Add image" → "Photo Library" opens
+the browser's file chooser (any PNG/JPEG), and "Paste image" reads the
+clipboard. The bundled fixture images are generated in memory by the mock. The iframe
 is a real 390×844 CSS-pixel viewport, scaled for display in the capture host. The
 fixture path is compiled out unless explicitly enabled, refuses non-loopback
 origins and never reads the real OAuth accessor. Stop the owned server and close
