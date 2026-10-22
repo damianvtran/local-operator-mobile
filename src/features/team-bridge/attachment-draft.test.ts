@@ -3,6 +3,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it, vi } from "vitest";
 
 import { HubError } from "@/team-bridge/client";
+import { TOUCH_TARGET } from "@/ui/tokens.gen";
 
 import {
 	type AttachmentDraft,
@@ -482,31 +483,38 @@ describe("strip layout is applied where the box model needs it (R5-02)", () => {
 	});
 });
 
-describe("chip badges stay clear of the state word (design D13)", () => {
-	const { remove, retry, label } = chipBadgeRects(64, 44);
-	const hit = chipControlRects(64, 44);
-	type R = { x: number; y: number; width: number; height: number };
-	const intersects = (a: R, b: R) =>
-		a.x < b.x + b.width &&
-		b.x < a.x + a.width &&
-		a.y < b.y + b.height &&
-		b.y < a.y + a.height;
-	const inside = (a: R, b: R) =>
-		a.x >= b.x &&
-		a.y >= b.y &&
-		a.x + a.width <= b.x + b.width &&
-		a.y + a.height <= b.y + b.height;
-	it("neither badge's visual rect intersects the label row", () => {
-		expect(intersects(retry, label)).toBe(false);
-		expect(intersects(remove, label)).toBe(false);
-	});
-	it("each badge draws inside its own 44 pt hit rect, and the badges do not touch", () => {
-		expect(inside(retry, hit.retry)).toBe(true);
-		expect(inside(remove, hit.remove)).toBe(true);
-		expect(intersects(retry, remove)).toBe(false);
-	});
-	it("negative control: the round-4 badge (centred in its hit rect) did overlap", () => {
-		const centred = { ...retry, y: hit.retry.y + (44 - 24) / 2 };
-		expect(intersects(centred, label)).toBe(true);
-	});
-});
+describe.each([
+	["iOS", TOUCH_TARGET.ios],
+	["Android/web", TOUCH_TARGET.android],
+])(
+	"chip badges stay clear of the state word at the %s floor (design D13, R6-02)",
+	(_, floor) => {
+		const { remove, retry, label } = chipBadgeRects(64, floor);
+		const hit = chipControlRects(64, floor);
+		type R = { x: number; y: number; width: number; height: number };
+		const intersects = (a: R, b: R) =>
+			a.x < b.x + b.width &&
+			b.x < a.x + a.width &&
+			a.y < b.y + b.height &&
+			b.y < a.y + a.height;
+		const inside = (a: R, b: R) =>
+			a.x >= b.x &&
+			a.y >= b.y &&
+			a.x + a.width <= b.x + b.width &&
+			a.y + a.height <= b.y + b.height;
+		it("neither badge's visual rect intersects the label row", () => {
+			expect(intersects(retry, label)).toBe(false);
+			expect(intersects(remove, label)).toBe(false);
+		});
+		it("each badge draws inside its own hit rect, the hit rects are disjoint, and the badges do not touch", () => {
+			expect(inside(retry, hit.retry)).toBe(true);
+			expect(inside(remove, hit.remove)).toBe(true);
+			expect(intersects(hit.retry, hit.remove)).toBe(false);
+			expect(intersects(retry, remove)).toBe(false);
+		});
+		it("negative control: the round-4 badge (centred in its hit rect) did overlap", () => {
+			const centred = { ...retry, y: hit.retry.y + (floor - 24) / 2 };
+			expect(intersects(centred, label)).toBe(true);
+		});
+	},
+);

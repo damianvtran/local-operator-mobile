@@ -463,7 +463,8 @@ export function viewablePosition(
  *   or a begin-drag on native; RNW never emits begin-drag), when a tick leaves
  *   the path between start and target, or when a tick moves AWAY from the
  *   target (a wheel/trackpad/keyboard scroll on desktop web, which has no
- *   touch event at all, R5-01), so a pager never stays deaf.
+ *   touch event at all, R5-01), or when the scroll settles anywhere short of
+ *   the target (`onSettle`, R6-01), so a pager never stays deaf.
  *   A second press while a target is pending steps from that target, so a
  *   quick double Next moves two pages instead of one.
  */
@@ -545,6 +546,19 @@ export function createViewerPager(deps: {
 		},
 		onUserScroll(): void {
 			pending = null;
+		},
+		/**
+		 * The scroll came to rest (no tick for a settle interval, R6-01). A
+		 * button's scroll that has not reached its goal by now never will: an
+		 * interrupting wheel/key scroll can rest on a snap point ON the path
+		 * (a double Next cut short), which the away-moving rule cannot see.
+		 * Release and follow wherever it actually stopped.
+		 */
+		onSettle(): void {
+			if (!pending || !(pageWidth > 0)) return;
+			const atGoal = Math.abs(lastOffset - pending.target * pageWidth) <= 1;
+			pending = null;
+			if (!atGoal) follow(lastOffset, pageWidth);
 		},
 	};
 }

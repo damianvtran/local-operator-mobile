@@ -443,10 +443,13 @@ export const CHIP_CONTROL_OUTSET = 6;
 
 /**
  * The visible 24 pt badges inside those hit rects, and the state word's row,
- * in chip coordinates (design D13). The hit rects stay 44 pt; only the drawn
- * badge moves. Retry's badge sits on the thumbnail's bottom-left corner, top
- * of its hit rect, so it ends 2 pt ABOVE the thumbnail's bottom edge and
- * never draws over the state word ("Failed") centred in the row below.
+ * in chip coordinates (design D13). The hit rects keep the platform touch
+ * floor; only the drawn badge moves, to the TOP of its hit rect. Retry's
+ * badge therefore depends on the floor: at iOS's 44 pt it spans y 38–62,
+ * ending 2 pt above the thumbnail's bottom edge; at the 48 pt floor (Android,
+ * web) it spans y 42–66, 2 pt past the thumbnail and flush with the label
+ * row's top (0 pt clearance, no overlap). Neither draws over the state word
+ * ("Failed"); both floors are asserted.
  * The label row is taken at full chip width: the word's own width varies
  * with copy and text scale, and the badge must clear any of them.
  */

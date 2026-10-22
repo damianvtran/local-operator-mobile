@@ -440,4 +440,29 @@ describe("viewer pager events, as react-native-web delivers them (R3-01)", () =>
 		r.pager.step(1);
 		expect(r.scrolls.at(-1)).toBe(780);
 	});
+	it("R6-01: a double Next cut short by a forward wheel that settles on the path releases the target", () => {
+		const r = rig(0);
+		r.pager.onLayout(390);
+		r.pager.onScroll(0, 390);
+		r.pager.step(1);
+		r.pager.onScroll(60, 390);
+		r.pager.step(1); // target page 2 (780), from 60
+		// A forward wheel interrupts and rests on the 390 snap point: every
+		// tick still approaches the goal, so only the settle can release it.
+		for (const x of [120, 200, 300, 360, 390]) r.pager.onScroll(x, 390);
+		expect(r.index()).toBe(2); // still pending until the scroll settles
+		r.pager.onSettle();
+		expect(r.index()).toBe(1);
+		r.pager.step(1); // the next Next goes to page 2, not page 3
+		expect(r.scrolls.at(-1)).toBe(780);
+	});
+	it("a settle AT the goal just lands it (no extra page change)", () => {
+		const r = rig(1);
+		r.pager.onLayout(390);
+		r.pager.onScroll(390, 390);
+		r.pager.step(1);
+		r.pager.onScroll(780, 390);
+		r.pager.onSettle();
+		expect(r.seen).toEqual([2]);
+	});
 });

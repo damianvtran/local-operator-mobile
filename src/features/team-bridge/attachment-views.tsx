@@ -51,6 +51,9 @@ import {
 	type DraftChip,
 } from "./attachment-draft";
 
+/** Quiet interval after the last scroll tick that counts as "at rest". */
+const SETTLE_MS = 150;
+
 /** The message row's fixed horizontal gutters; see `MessageAttachments`. */
 const MESSAGE_ROW_GUTTERS = 76;
 
@@ -391,11 +394,26 @@ function ImageViewer({
 		pagerEvents.onLayout(event.nativeEvent.layout.width);
 	// A drag or touch start is the reader taking over from a button's scroll.
 	const onUserScroll = () => pagerEvents.onUserScroll();
-	const onScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) =>
+	/*
+	 * Settle detection for `onSettle` (R6-01): no tick for SETTLE_MS means the
+	 * scroll is at rest. A debounce rather than scroll-end events, because web
+	 * forwards none of those; it works the same on every platform.
+	 */
+	const settleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+	useEffect(
+		() => () => {
+			if (settleTimer.current) clearTimeout(settleTimer.current);
+		},
+		[],
+	);
+	const onScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
 		pagerEvents.onScroll(
 			event.nativeEvent.contentOffset.x,
 			event.nativeEvent.layoutMeasurement.width,
 		);
+		if (settleTimer.current) clearTimeout(settleTimer.current);
+		settleTimer.current = setTimeout(() => pagerEvents.onSettle(), SETTLE_MS);
+	};
 	const many = images.length > 1;
 	const position = many ? `${index + 1} of ${images.length}` : "";
 	const button = (
