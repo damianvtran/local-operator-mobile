@@ -20,11 +20,13 @@ import {
 	attachmentView,
 	type Box,
 	cachedAttachment,
+	createViewerPager,
 	dataUri,
 	GRID_GAP,
 	gridCell,
 	loadAttachment,
 	singleImageBox,
+	viewablePosition,
 } from "@/team-bridge/attachments";
 import type { HubClient } from "@/team-bridge/client";
 import type { AttachmentDescriptor } from "@/team-bridge/contract";
@@ -41,7 +43,24 @@ import {
 	useModalStackEntry,
 } from "@/ui/components/modal-stack-entry";
 import { TOUCH_FLOOR } from "@/ui/layout";
-import { chipStateLabel, type DraftChip } from "./attachment-draft";
+import {
+	CHIP_CONTROL_OUTSET,
+	chipControlRects,
+	chipStateLabel,
+	type DraftChip,
+} from "./attachment-draft";
+
+/** The message row's fixed horizontal gutters; see `MessageAttachments`. */
+const MESSAGE_ROW_GUTTERS = 76;
+
+/**
+ * One numbering for the thread and the viewer (R3-04): a bound image is
+ * counted among the message's viewable images only.
+ */
+const imageLabel = (position: { index: number; count: number } | null) =>
+	!position || position.count === 1
+		? "Image"
+		: `Image ${position.index + 1} of ${position.count}`;
 
 type Source = {
 	hub: HubClient;
@@ -230,12 +249,23 @@ export function MessageAttachments({
 	/** Fixture/QA seam: open the viewer at this image on mount. */
 	initialViewerIndex?: number;
 }) {
-	const [columnWidth, setColumnWidth] = useState(0);
+	const { width: windowWidth } = useWindowDimensions();
+	/*
+	 * Seeded from the window so the FIRST frame already draws grid cells at
+	 * their final size (R3-03): the message row spends 76 pt on fixed gutters
+	 * (16 + 16 padding, a 32 pt avatar column, a 12 pt gap). `onLayout` then
+	 * corrects it to the measured column, which on a phone is the same number.
+	 */
+	const [columnWidth, setColumnWidth] = useState(() =>
+		Math.max(0, windowWidth - MESSAGE_ROW_GUTTERS),
+	);
 	const [viewerAt, setViewerAt] = useState<number | null>(
 		initialViewerIndex ?? null,
 	);
-	const onLayout = (event: LayoutChangeEvent) =>
-		setColumnWidth(Math.round(event.nativeEvent.layout.width));
+	const onLayout = (event: LayoutChangeEvent) => {
+		const measured = Math.round(event.nativeEvent.layout.width);
+		if (measured > 0 && measured !== columnWidth) setColumnWidth(measured);
+	};
 	if (attachments.length === 0) return null;
 	const source = { hub, tenantId, conversationId, messageId };
 	const count = attachments.length;
@@ -282,9 +312,11 @@ export function MessageAttachments({
 								source={source}
 								descriptor={descriptor}
 								box={box}
-								label={count === 1 ? "Image" : `Image ${index + 1} of ${count}`}
+								label={imageLabel(viewablePosition(attachments, descriptor.id))}
 								onOpen={() =>
-									setViewerAt(viewable.findIndex((d) => d.id === descriptor.id))
+									setViewerAt(
+										viewablePosition(attachments, descriptor.id)?.index ?? 0,
+									)
 								}
 							/>
 						);
@@ -341,11 +373,30 @@ function ImageViewer({
 		setIndex(clamped);
 		pager.current?.scrollTo({ x: clamped * width, animated: true });
 	};
-	const onScrollEnd = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-		const page = Math.round(event.nativeEvent.contentOffset.x / width);
-		if (page !== index)
-			setIndex(Math.min(Math.max(0, page), images.length - 1));
-	};
+	/*
+	 * R3-01: web ignores `contentOffset` and never fires the end-of-drag or
+	 * momentum events, so the pager opens with an explicit `scrollTo` after
+	 * layout and tracks the page from `onScroll` (`createViewerPager` has the
+	 * rules and the tests). Refs keep one controller across renders.
+	 */
+	const indexRef = useRef(index);
+	indexRef.current = index;
+	const pagerEvents = useRef(
+		createViewerPager({
+			initialIndex,
+			count: images.length,
+			scrollTo: (x) => pager.current?.scrollTo({ x, animated: false }),
+			currentIndex: () => indexRef.current,
+			setIndex,
+		}),
+	).current;
+	const onPagerLayout = (event: LayoutChangeEvent) =>
+		pagerEvents.onLayout(event.nativeEvent.layout.width);
+	const onScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) =>
+		pagerEvents.onScroll(
+			event.nativeEvent.contentOffset.x,
+			event.nativeEvent.layoutMeasurement.width,
+		);
 	const many = images.length > 1;
 	const position = many ? `${index + 1} of ${images.length}` : "";
 	const button = (
@@ -382,15 +433,22 @@ function ImageViewer({
 				accessibilityViewIsModal
 				testID={SURFACE.teamBridgeImageViewer}
 			>
-				<View className="flex-1 bg-canvas">
+				{/* The dialog's accessible name (D12), the `Sheet` pattern: RN's
+				    AccessibilityRole has no dialog, so `role` + `aria-label`. */}
+				<View
+					role={ROLE.dialog}
+					aria-label="Image viewer"
+					className="flex-1 bg-canvas"
+				>
 					<ScrollView
 						ref={pager}
 						horizontal
 						pagingEnabled
 						showsHorizontalScrollIndicator={false}
 						contentOffset={{ x: initialIndex * width, y: 0 }}
-						onMomentumScrollEnd={onScrollEnd}
-						onScrollEndDrag={onScrollEnd}
+						onLayout={onPagerLayout}
+						onScroll={onScroll}
+						scrollEventThrottle={16}
 					>
 						{images.map((descriptor, page) => (
 							<ViewerPage
@@ -537,10 +595,19 @@ export function ComposerAttachments({
 }) {
 	const ink = useTokenColor("ink");
 	if (chips.length === 0) return null;
+	const rects = chipControlRects(CHIP_SIZE, TOUCH_FLOOR);
 	return (
 		<View>
 			<ScrollView horizontal showsHorizontalScrollIndicator={false}>
-				<View className="flex-row gap-3">
+				{/* Padded by the controls' outset so a ScrollView never clips a target
+				    (R3-02). The negative margin keeps the chips' visual position. */}
+				<View
+					className="flex-row gap-3"
+					style={{
+						padding: CHIP_CONTROL_OUTSET,
+						margin: -CHIP_CONTROL_OUTSET,
+					}}
+				>
 					{chips.map((chip, index) => {
 						const n = index + 1;
 						const state = chipStateLabel(chip);
@@ -579,7 +646,12 @@ export function ComposerAttachments({
 									) : null}
 								</View>
 								{state ? (
+									/* Hidden from assistive tech (R3-05): the chip's own
+									   label already says the full state sentence. */
 									<Text
+										accessibilityElementsHidden
+										aria-hidden
+										importantForAccessibility="no"
 										className={`pt-0.5 text-center text-meta ${failed ? "text-danger" : "text-ink-muted"}`}
 										numberOfLines={1}
 									>
@@ -592,13 +664,13 @@ export function ComposerAttachments({
 										accessibilityLabel={`Retry image ${n}`}
 										testID={teamBridgeAttachmentChipId(`${index}-retry`)}
 										onPress={() => onRetry(chip.key)}
-										// Bottom-left quadrant only: never under Remove (D7).
+										// The band below Remove's: disjoint by construction (D7).
 										style={{
 											position: "absolute",
-											top: CHIP_SIZE / 2,
-											left: -6,
-											width: TOUCH_FLOOR,
-											height: TOUCH_FLOOR,
+											left: rects.retry.x,
+											top: rects.retry.y,
+											width: rects.retry.width,
+											height: rects.retry.height,
 											justifyContent: "center",
 											alignItems: "flex-start",
 										}}
@@ -613,13 +685,13 @@ export function ComposerAttachments({
 									accessibilityLabel={`Remove image ${n}`}
 									testID={teamBridgeAttachmentChipId(`${index}-remove`)}
 									onPress={() => onRemove(chip.key)}
-									// Top-right quadrant only: never over Retry (D7).
+									// The top band, above Retry's: disjoint by construction (D7).
 									style={{
 										position: "absolute",
-										top: -6,
-										right: -6,
-										width: TOUCH_FLOOR,
-										height: TOUCH_FLOOR,
+										left: rects.remove.x,
+										top: rects.remove.y,
+										width: rects.remove.width,
+										height: rects.remove.height,
 										alignItems: "flex-end",
 										justifyContent: "flex-start",
 									}}

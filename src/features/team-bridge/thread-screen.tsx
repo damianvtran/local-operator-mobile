@@ -25,7 +25,6 @@ import { threadKey } from "@/team-bridge/store";
 import { teamBridgeViewerFixture } from "@/testing/team-bridge-fixture";
 import {
 	CONTROL,
-	ROLE,
 	SCREEN,
 	SURFACE,
 	teamBridgeAttachSourceId,
@@ -296,7 +295,10 @@ function ThreadContent({
 	}, [markRendered]);
 
 	const sendable = canSend(draft, chips);
-	// Why Send is off when images block it (D4); `null` when they do not.
+	/*
+	 * Whether images block Send. The WHY is the strip's single status line
+	 * (`stripSummary`, design D9): it always names what to do before Send works.
+	 */
 	const blockedBy = sendBlockedReason(chips);
 	const send = async () => {
 		const body = draft.trim();
@@ -332,10 +334,9 @@ function ThreadContent({
 			 * copy (`sendFailureOf` has the code-level why).
 			 */
 			if (sendFailureOf(error, ids) === "expired") {
+				// The chips carry the reason and the strip's one status line says
+				// it (design D9): no second send-error sentence for the same fix.
 				images?.markExpired();
-				setSendError(
-					"An attached image expired before it was sent. Remove it, then send again.",
-				);
 			} else {
 				setSendError(
 					"Your message was not confirmed. Your draft is saved here. Retry sends the same message safely.",
@@ -690,15 +691,6 @@ function ThreadContent({
 													className="text-meta text-ink-muted"
 												>
 													{attachNotice}
-												</Text>
-											)}
-											{blockedBy && (
-												<Text
-													role={ROLE.status}
-													className="text-meta text-ink-muted"
-													testID={SURFACE.teamBridgeSendBlocked}
-												>
-													{blockedBy}
 												</Text>
 											)}
 											<Textarea

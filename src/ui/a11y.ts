@@ -555,7 +555,6 @@ export const SURFACE = {
 	teamBridgePlanConsole: "team-bridge-plan-console",
 	teamBridgeSections: "team-bridge-sections",
 	teamBridgeSendError: "team-bridge-send-error",
-	teamBridgeSendBlocked: "team-bridge-send-blocked",
 	teamBridgeThreadEmpty: "team-bridge-thread-empty",
 	teamBridgeThreadLoading: "team-bridge-thread-loading",
 

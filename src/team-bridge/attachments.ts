@@ -395,8 +395,84 @@ export function singleImageBox(
 
 /** Square grid cells for 2+ images, sized from the available column width. */
 export function gridCell(count: number, columnWidth: number): Box | null {
-	if (count < 2) return null;
+	// `null` until a column width is known, so the caller draws nothing rather
+	// than 48 pt cells that grow after layout (a reflow on every row mount).
+	if (count < 2 || !(columnWidth > 0)) return null;
 	const width = Math.min(GRID_MAX_WIDTH, Math.max(0, columnWidth));
 	const edge = Math.max(MIN_EDGE, Math.floor((width - GRID_GAP) / 2));
 	return { width: edge, height: edge };
+}
+
+/* -------------------------------------------------------------- viewer */
+
+/**
+ * The page a horizontal pager is showing, from its scroll offset. Clamped, and
+ * `null` until the page width is known (a 0 width would divide to Infinity).
+ *
+ * WHY THE VIEWER NEEDS THIS. react-native-web 0.21 ignores `contentOffset` and
+ * drops `onMomentumScrollEnd`/`onScrollEndDrag` (they never reach the DOM), so
+ * a pager that relied on them opened on page 1 under a "2 of 4" counter and
+ * never updated after a swipe on web. `onScroll` IS forwarded on every
+ * platform, so the page is derived from it, and the opening page is reached
+ * with an explicit `scrollTo` once the pager has laid out.
+ */
+export function pageAt(
+	offsetX: number,
+	pageWidth: number,
+	count: number,
+): number | null {
+	if (!(pageWidth > 0) || count <= 0) return null;
+	return Math.min(Math.max(0, Math.round(offsetX / pageWidth)), count - 1);
+}
+
+/**
+ * Numbering shared by the thread and the viewer: a bound image's position
+ * among the message's VIEWABLE images. Expired/unavailable images are not
+ * numbered and do not open, so "Image 2 of 3" in the thread is page "2 of 3"
+ * in the viewer.
+ */
+export function viewablePosition(
+	attachments: ReadonlyArray<AttachmentDescriptor | null>,
+	attachmentId: string,
+): { index: number; count: number } | null {
+	const viewable = attachments.filter(
+		(d): d is AttachmentDescriptor =>
+			d !== null && attachmentView(d) === "image",
+	);
+	const index = viewable.findIndex((d) => d.id === attachmentId);
+	return index < 0 ? null : { index, count: viewable.length };
+}
+
+/**
+ * The viewer pager's event handling, platform-free so tests can feed it the
+ * same layout/scroll events react-native-web and native deliver (R3-01).
+ *
+ * - `onLayout(width)`: the FIRST layout with a real width jumps (unanimated)
+ *   to `initialIndex`, because web ignores `contentOffset`; later layouts
+ *   (rotation, resize) never jump again.
+ * - `onScroll(offsetX, width)`: the page follows the scroll offset, which is
+ *   the only scroll event web forwards; `setIndex` fires only on a change.
+ */
+export function createViewerPager(deps: {
+	initialIndex: number;
+	count: number;
+	scrollTo: (x: number) => void;
+	currentIndex: () => number;
+	setIndex: (index: number) => void;
+}) {
+	let opened = false;
+	let pageWidth = 0;
+	return {
+		onLayout(width: number): void {
+			if (!(width > 0)) return;
+			pageWidth = width;
+			if (opened) return;
+			opened = true;
+			deps.scrollTo(deps.initialIndex * width);
+		},
+		onScroll(offsetX: number, width: number): void {
+			const page = pageAt(offsetX, width || pageWidth, deps.count);
+			if (page !== null && page !== deps.currentIndex()) deps.setIndex(page);
+		},
+	};
 }

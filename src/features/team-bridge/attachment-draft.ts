@@ -364,13 +364,18 @@ export function syncDraft(
 const images = (n: number) => `${n} ${n === 1 ? "image" : "images"}`;
 
 /**
- * The strip's one visible line, in priority order: what needs the reader's
- * hand first (failures), then what they are waiting on (progress), then the
- * plain count. Colour and opacity on a 64 pt thumbnail are not enough on
- * their own: this line says it in words (design round 1, D1).
+ * The composer's ONE image status line (design D9, code R3-05): one sentence
+ * for one fix, and one live region, instead of a summary plus a separate
+ * reason line that a screen reader announced twice.
+ *
+ * Priority: what needs the reader's hand (failures), then what they wait on
+ * (uploads), then the plain count. A failure whose reason is final and shared
+ * by every failed chip is shown VERBATIM (design D8): the quota sentence, a
+ * refused type, an expired image. Those reasons are not "didn't upload, remove
+ * them", and the quota one is not fixed by removing these images at all.
  */
 export function stripSummary(
-	chips: ReadonlyArray<Pick<DraftChip, "status" | "retryable">>,
+	chips: ReadonlyArray<Pick<DraftChip, "status" | "retryable" | "error">>,
 ): string {
 	if (chips.length === 0) return "";
 	const failed = chips.filter((c) => c.status === "failed");
@@ -379,20 +384,19 @@ export function stripSummary(
 	).length;
 	if (failed.length > 0) {
 		const one = failed.length === 1;
-		const subject = one
-			? "1 image didn't upload."
-			: `${failed.length} images didn't upload.`;
-		const retry = failed.some((c) => c.retryable);
-		const action = retry
-			? one
-				? "Retry or remove it."
-				: "Retry or remove them."
-			: one
-				? "Remove it to send."
-				: "Remove them to send.";
-		return `${subject} ${action}`;
+		const reasons = new Set(failed.map((c) => c.error));
+		const shared = reasons.size === 1 ? [...reasons][0] : null;
+		if (shared && failed.every((c) => !c.retryable)) return shared;
+		if (failed.some((c) => c.retryable))
+			return one
+				? "1 image didn't upload. Retry or remove it."
+				: `${failed.length} images didn't upload. Retry or remove them.`;
+		return one
+			? "1 image can't be sent. Remove it to send."
+			: `${failed.length} images can't be sent. Remove them to send.`;
 	}
-	if (busy > 0) return `Uploading ${images(busy)}…`;
+	if (busy > 0)
+		return `Uploading ${images(busy)}… Send is available when ${busy === 1 ? "it finishes" : "they finish"}.`;
 	return `${images(chips.length)} attached`;
 }
 
@@ -425,4 +429,33 @@ export function sendBlockedReason(
 	if (chips.some((c) => c.status === "preparing" || c.status === "uploading"))
 		return "Send is available when the images finish uploading.";
 	return null;
+}
+
+/**
+ * Hit rectangles for a chip's two controls, relative to the chip's top-left
+ * (design D7/D12, code R3-02). Each is a full 44 pt square and the two are
+ * DISJOINT: Remove owns the top band (y < 38), Retry the band below it
+ * (y ≥ 38). `outset` is how far a target reaches past the chip edge; the strip
+ * pads its content by the same amount so no target is clipped by the
+ * ScrollView (which clips on iOS, Android and web alike).
+ */
+export const CHIP_CONTROL_OUTSET = 6;
+export function chipControlRects(
+	chipSize: number,
+	target: number,
+): {
+	remove: { x: number; y: number; width: number; height: number };
+	retry: { x: number; y: number; width: number; height: number };
+} {
+	const o = CHIP_CONTROL_OUTSET;
+	const removeBottom = -o + target;
+	return {
+		remove: {
+			x: chipSize + o - target,
+			y: -o,
+			width: target,
+			height: target,
+		},
+		retry: { x: -o, y: removeBottom, width: target, height: target },
+	};
 }

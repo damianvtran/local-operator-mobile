@@ -4,6 +4,8 @@ import { HubError } from "@/team-bridge/client";
 
 import {
 	type AttachmentDraft,
+	CHIP_CONTROL_OUTSET,
+	chipControlRects,
 	chipStateLabel,
 	createAttachmentDraft,
 	type Prepared,
@@ -328,28 +330,60 @@ describe("quota refusal (QA Q1-02)", () => {
 });
 
 describe("visible chip state (design D1, D4)", () => {
-	const chip = (status: DraftChipStatus, retryable = true) => ({
-		status,
-		retryable,
-	});
+	const chip = (
+		status: DraftChipStatus,
+		retryable = true,
+		error: string | null = status === "failed"
+			? "This image did not upload."
+			: null,
+	) => ({ status, retryable, error });
 	type DraftChipStatus = "preparing" | "uploading" | "ready" | "failed";
-	it("the summary line counts failures first, then progress, then the plain count", () => {
+	const QUOTA =
+		"You have 8 images waiting to send. Send or remove some, then add this one again.";
+	const REFUSED = "Radient cannot accept this image. Remove it.";
+	it("ONE line: failures first, then progress (saying when Send returns), then the count (D9)", () => {
 		expect(stripSummary([])).toBe("");
 		expect(stripSummary([chip("ready"), chip("ready")])).toBe(
 			"2 images attached",
 		);
 		expect(stripSummary([chip("ready"), chip("uploading")])).toBe(
-			"Uploading 1 image…",
+			"Uploading 1 image… Send is available when it finishes.",
+		);
+		expect(stripSummary([chip("uploading"), chip("preparing")])).toBe(
+			"Uploading 2 images… Send is available when they finish.",
 		);
 		expect(stripSummary([chip("failed"), chip("uploading")])).toBe(
 			"1 image didn't upload. Retry or remove it.",
 		);
-		expect(stripSummary([chip("failed", false), chip("failed", false)])).toBe(
-			"2 images didn't upload. Remove them to send.",
-		);
-		expect(stripSummary([chip("failed", false), chip("failed")])).toBe(
+		expect(stripSummary([chip("failed", false, REFUSED), chip("failed")])).toBe(
 			"2 images didn't upload. Retry or remove them.",
 		);
+	});
+	it("a final reason shared by every failed chip is shown verbatim (D8): quota, refusal, expiry", () => {
+		expect(
+			stripSummary([
+				chip("failed", false, QUOTA),
+				chip("failed", false, QUOTA),
+			]),
+		).toBe(QUOTA);
+		expect(stripSummary([chip("failed", false, REFUSED)])).toBe(REFUSED);
+		expect(
+			stripSummary([
+				chip(
+					"failed",
+					false,
+					"This image expired before it was sent. Remove it.",
+				),
+			]),
+		).toBe("This image expired before it was sent. Remove it.");
+	});
+	it("final failures with DIFFERENT reasons get a neutral, correct line (not 'didn't upload')", () => {
+		expect(
+			stripSummary([
+				chip("failed", false, QUOTA),
+				chip("failed", false, REFUSED),
+			]),
+		).toBe("2 images can't be sent. Remove them to send.");
 	});
 	it("each non-ready chip carries a visible word, not colour alone", () => {
 		expect(chipStateLabel(chip("preparing"))).toBe("Preparing…");
@@ -379,5 +413,29 @@ describe("visible chip state (design D1, D4)", () => {
 		expect(sendBlockedReason(draft.chips())).toBe(
 			"Remove the images that can't be sent to send this message.",
 		);
+	});
+});
+
+describe("chip control targets (design D7/D12, code R3-02)", () => {
+	const { remove, retry } = chipControlRects(64, 44);
+	const overlap = (a: typeof remove, b: typeof remove) =>
+		Math.max(0, Math.min(a.x + a.width, b.x + b.width) - Math.max(a.x, b.x)) *
+		Math.max(0, Math.min(a.y + a.height, b.y + b.height) - Math.max(a.y, b.y));
+	it("both are full 44 pt squares and do not overlap at all", () => {
+		expect([remove.width, remove.height, retry.width, retry.height]).toEqual([
+			44, 44, 44, 44,
+		]);
+		expect(overlap(remove, retry)).toBe(0);
+	});
+	it("stay inside the strip padding, so the ScrollView clips neither", () => {
+		const o = CHIP_CONTROL_OUTSET;
+		for (const r of [remove, retry]) {
+			expect(r.x).toBeGreaterThanOrEqual(-o);
+			expect(r.y).toBeGreaterThanOrEqual(-o);
+			expect(r.x + r.width).toBeLessThanOrEqual(64 + o);
+		}
+		// Retry's lower edge may extend past the 64 pt thumbnail into the chip's
+		// state-word row; the chip column is 64 + label height, never clipped.
+		expect(retry.y + retry.height).toBeLessThanOrEqual(64 + 24);
 	});
 });

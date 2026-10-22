@@ -13,13 +13,16 @@ import {
 	cachedAttachment,
 	canSend,
 	clearAttachmentCache,
+	createViewerPager,
 	fitWithin,
 	GRID_GAP,
 	gridCell,
 	loadAttachment,
+	pageAt,
 	sendableAttachmentIds,
 	singleImageBox,
 	sniffAttachmentMime,
+	viewablePosition,
 } from "@/team-bridge/attachments";
 import {
 	messageSchema,
@@ -284,6 +287,8 @@ describe("message image layout (design D3, D5)", () => {
 	});
 	it("two or more images are square cells in two columns: four is a 2×2 block no taller than wide", () => {
 		expect(gridCell(1, 330)).toBe(null);
+		// R3-03: no width yet → no cells (measure first, never draw 48 pt cells).
+		expect(gridCell(4, 0)).toBe(null);
 		const cell = gridCell(4, 330);
 		expect(cell).toEqual({ width: 158, height: 158 });
 		const blockWidth = (cell?.width ?? 0) * 2 + GRID_GAP;
@@ -291,5 +296,72 @@ describe("message image layout (design D3, D5)", () => {
 		expect(blockHeight).toBeLessThanOrEqual(blockWidth);
 		// Wide tablet columns are capped.
 		expect(gridCell(2, 900)).toEqual({ width: 158, height: 158 });
+	});
+});
+
+describe("viewer pager (R3-01)", () => {
+	it("derives the page from a scroll offset, clamped, and waits for a width", () => {
+		expect(pageAt(0, 390, 4)).toBe(0);
+		expect(pageAt(390, 390, 4)).toBe(1);
+		expect(pageAt(400, 390, 4)).toBe(1);
+		expect(pageAt(585, 390, 4)).toBe(2);
+		expect(pageAt(9999, 390, 4)).toBe(3);
+		expect(pageAt(-50, 390, 4)).toBe(0);
+		expect(pageAt(390, 0, 4)).toBe(null);
+		expect(pageAt(0, 390, 0)).toBe(null);
+	});
+});
+
+describe("one numbering for thread and viewer (R3-04)", () => {
+	it("counts only viewable images, so 'Image 2 of 3' opens page 2 of 3", () => {
+		const list = [
+			{ id: "gone", state: "expired" },
+			{ id: "a" },
+			null,
+			{ id: "b", state: "bound" },
+			{ id: "c" },
+		];
+		expect(viewablePosition(list, "a")).toEqual({ index: 0, count: 3 });
+		expect(viewablePosition(list, "b")).toEqual({ index: 1, count: 3 });
+		expect(viewablePosition(list, "gone")).toBe(null);
+	});
+});
+
+describe("viewer pager events, as react-native-web delivers them (R3-01)", () => {
+	const rig = (initialIndex: number, count = 4) => {
+		let index = initialIndex;
+		const scrolls: number[] = [];
+		const pager = createViewerPager({
+			initialIndex,
+			count,
+			scrollTo: (x) => scrolls.push(x),
+			currentIndex: () => index,
+			setIndex: (n) => {
+				index = n;
+			},
+		});
+		return { pager, scrolls, index: () => index };
+	};
+	it("opens on initialIndex by scrolling after the first real layout (web ignores contentOffset)", () => {
+		const r = rig(1);
+		r.pager.onLayout(0); // a zero-width layout is ignored
+		expect(r.scrolls).toEqual([]);
+		r.pager.onLayout(390);
+		expect(r.scrolls).toEqual([390]);
+		r.pager.onLayout(844); // rotation: no second jump
+		expect(r.scrolls).toEqual([390]);
+		expect(r.index()).toBe(1);
+	});
+	it("a swipe moves the counter from onScroll alone (no end events on web)", () => {
+		const r = rig(1);
+		r.pager.onLayout(390);
+		r.pager.onScroll(390, 390);
+		expect(r.index()).toBe(1);
+		r.pager.onScroll(600, 390);
+		expect(r.index()).toBe(2);
+		r.pager.onScroll(1170, 390);
+		expect(r.index()).toBe(3);
+		r.pager.onScroll(0, 0); // web may omit layoutMeasurement: use the laid-out width
+		expect(r.index()).toBe(0);
 	});
 });
