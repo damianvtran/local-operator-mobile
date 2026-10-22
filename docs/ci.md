@@ -30,7 +30,49 @@ The only skip that can appear in a green run by design is the path-gated
 at all, and a run whose `harness` job fails is red, with the missing pieces named
 in the annotation.
 
-## One-cell U-08 geometry diagnostic (remote CI only)
+## Corrected U-08 fragment verification (remote CI only)
+
+```sh
+gh workflow run e2e.yml --ref <branch-or-tag> -f proof_mode=u08-fragment-verification
+```
+
+This explicit mode reuses the existing bounded U-08 job: only bootstrap plus
+that job, 30 minutes including locked web setup, at most five minutes afterward,
+and at most 5 MiB total geometry/PNG output (with space reserved for failure
+receipts). No full core/matrix/native sweep is added. It re-drives exactly four
+original canonical cells: iPhone 15, 390×844/DPR 3, top 59/bottom 34, 150%,
+light/dark × condensed/expanded, synthetic long-transcript. Records are explicitly
+derived from the original matrix's two route hooks, not reconstructed old DOM
+fragments. Actual theme, scale, insets and expanded-control state are checked.
+
+Each cell must expose one original envelope-family candidate, actual fragment
+measurements and an explicit disjoint U-08 decision, with stable geometry around
+its PNG. Missing, ambiguous or capped evidence is not success. One existing
+canary control pair (`modal-collide-a`/`modal-collide-b`) must still FAIL under the
+same canonical metrics/env setup. Empty/partial coverage, an unexpected U-08
+failure or a missing positive collision fails the verification.
+
+The corrected probe uses direct-own-text Range fragments for pure text, including
+applicable owner-overflow clipping before the existing ancestor clip walk. U-08
+measures exact rectangle unions/intersections without filling envelope holes or
+double-counting fragments; the 25% and greater-than-1pt contact tolerances remain.
+Controls, backgrounds, borders, images/SVG and mixed paint retain conservative
+boxes. Missing legacy fragment data also retains its box; observed empty fragment
+sets mean no text paint. Other rules' `visibleRect` contract is unchanged. Range
+rectangles are typographic boxes, not exact raster glyph ink.
+
+Artifacts identify the corrected schema/current probe, policy-module and math
+hashes separately from the immutable historical incident fingerprints and hosted
+before proof. This verifies the four cases plus the positive control, not an
+all-matrix/app/native/IME clearance. Historical capture reports have no fragment
+sets and must not be retroactively relabelled green.
+
+## One-cell U-08 geometry diagnostic (historical instrument only)
+
+**The repaired instrument intentionally refuses this old mode before web export.**
+Its original probe/policy hash constants are retained, not repinned to the repair.
+The following documents the historical proof; the already retained hosted packet
+is the before evidence. Use the explicit corrected mode above for new validation.
 
 `proof_mode=u08-geometry-proof` with default/full stage dispatches only the
 harness bootstrap plus one diagnostic job (30-minute total cap; under 5 minutes
