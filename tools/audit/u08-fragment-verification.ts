@@ -1,7 +1,7 @@
 /** Corrected-instrument verification, never a claim to replay the old policy.
  * Four original matrix cells + one existing genuine collision, not a full audit. */
 import { createHash } from "node:crypto";
-import { readFileSync, writeFileSync } from "node:fs";
+import { readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import type { CdpPage } from "../lib/cdp.ts";
 import type { launchChrome } from "../lib/chrome.ts";
@@ -28,6 +28,162 @@ export function nextArtifactBytes(current: number, next: number) {
 	)
 		throw new Error("Corrected verification artifact budget exceeded");
 	return current + next;
+}
+
+export const TURN_CONTROL_ID = "turn-bar-tc-conv-00-user";
+/** RNW does not forward accessibilityState.expanded. The visible caret is
+ * rendered from the same open prop as the transcript plan; missing ARIA is
+ * recorded, never interpreted as false. Do not read private React internals. */
+export const TURN_CONTROL_SOURCE = `(() => {
+ const controlId=${JSON.stringify("turn-bar-tc-conv-00-user")};
+ const matches=document.querySelectorAll('[data-testid="'+controlId+'"]');
+ const control=matches.length===1?matches[0]:null;
+ const carets=control?Array.from(control.querySelectorAll('*'))
+  .filter(el=>el.childElementCount===0 && el.getClientRects().length>0)
+  .map(el=>el.textContent.trim()).filter(text=>text==='▸'||text==='▾'):[];
+ return {controlId,count:matches.length,ariaExpanded:control?control.getAttribute('aria-expanded'):null,
+  caretCount:carets.length,carets:carets.slice(0,16)};
+})()`;
+export interface TurnControlReading {
+	controlId: string;
+	count: number;
+	ariaExpanded: string | null;
+	caretCount: number;
+	carets: string[];
+}
+type CellIdentity = Pick<AuditRecord, "theme" | "state" | "path">;
+export function assertTurnControl(
+	record: CellIdentity,
+	reading: unknown,
+): asserts reading is TurnControlReading {
+	const r = reading as Partial<TurnControlReading> | null;
+	const expected = record.state === "expanded",
+		caret = expected ? "▾" : "▸";
+	if (
+		!["expanded", "condensed"].includes(record.state) ||
+		!r ||
+		r.controlId !== TURN_CONTROL_ID ||
+		r.count !== 1 ||
+		r.caretCount !== 1 ||
+		!Array.isArray(r.carets) ||
+		r.carets.length !== 1 ||
+		r.carets[0] !== caret ||
+		!(r.ariaExpanded === null || r.ariaExpanded === String(expected))
+	)
+		throw new Error(
+			`control-state theme=${record.theme} state=${record.state} path=${record.path} control=${TURN_CONTROL_ID} expected aria=${expected} caret=${caret}; observed=${String(JSON.stringify(reading)).slice(0, 768)}`,
+		);
+}
+export interface FailureContext {
+	head: string;
+	phase: string;
+	cell: CellIdentity | null;
+	completedKeys: string[];
+	readiness: Record<string, unknown> | null;
+	environment: Record<string, unknown> | null;
+	control: unknown;
+	error: string;
+}
+/** Failure evidence belongs inside the live-page lifetime. Keep normal outputs
+ * below the existing reserve, and use at most half of it for this context so
+ * the outer NOT-REPRODUCED receipt still fits. Screenshot failure never becomes
+ * a PASS, and never replaces the original cell failure. */
+export async function writeFailureEvidence(
+	out: string,
+	knownBytes: number,
+	context: FailureContext,
+	capture: (() => Promise<unknown>) | null,
+) {
+	let bytes = Math.max(
+		knownBytes,
+		readdirSync(out).reduce(
+			(n, name) => n + statSync(resolve(out, name)).size,
+			0,
+		),
+	);
+	let screenshot: { status: string; reason?: string } = {
+		status: "unavailable",
+		reason: "no live page",
+	};
+	if (capture) {
+		const result = await withDeadline(
+			Promise.resolve().then(capture),
+			1500,
+			"failure PNG",
+		);
+		if (!result.ok)
+			screenshot = {
+				status: "unavailable",
+				reason: result.reason.slice(0, 256),
+			};
+		else {
+			const data = (result.value as { data?: unknown } | null)?.data;
+			const image =
+				typeof data === "string"
+					? Buffer.from(data, "base64")
+					: Buffer.alloc(0);
+			if (
+				!image
+					.subarray(0, 8)
+					.equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))
+			)
+				screenshot = {
+					status: "unavailable",
+					reason: "invalid/missing PNG reply",
+				};
+			else if (
+				bytes + image.length >
+				ARTIFACT_LIMIT_BYTES - FAILURE_RESERVE_BYTES
+			)
+				screenshot = {
+					status: "unavailable",
+					reason: "aggregate artifact budget",
+				};
+			else {
+				writeFileSync(resolve(out, "failure.png"), image);
+				bytes += image.length;
+				screenshot = { status: "saved" };
+			}
+		}
+	}
+	const expectedControl =
+		context.cell && ["condensed", "expanded"].includes(context.cell.state)
+			? {
+					controlId: TURN_CONTROL_ID,
+					count: 1,
+					ariaExpanded: String(context.cell.state === "expanded"),
+					ariaMayBeAbsent: true,
+					caret: context.cell.state === "expanded" ? "▾" : "▸",
+				}
+			: null;
+	const receipt = {
+		...context,
+		kind: "FAILED CORRECTED VERIFICATION — NOT A GEOMETRY VERDICT",
+		schema: 1,
+		expectedControl,
+		diagnosed: false,
+		screenshot,
+	};
+	let json = Buffer.from(JSON.stringify(receipt, null, 2));
+	if (json.length > FAILURE_RESERVE_BYTES / 2) {
+		// Oversized protocol errors must not crowd out the cell/control identity.
+		receipt.error = context.error.slice(0, 256);
+		receipt.readiness = {
+			omitted: "context budget",
+			path: context.readiness?.path,
+		};
+		receipt.control = {
+			summary: String(JSON.stringify(context.control)).slice(0, 1024),
+		};
+		receipt.environment = { omitted: "context budget" };
+		json = Buffer.from(JSON.stringify(receipt, null, 2));
+	}
+	if (
+		json.length > FAILURE_RESERVE_BYTES / 2 ||
+		bytes + json.length > ARTIFACT_LIMIT_BYTES - 2048
+	)
+		throw new Error("Failure context exceeds reserved artifact budget");
+	writeFileSync(resolve(out, "failure.json"), json);
 }
 
 export function verificationRecords(base: AuditRecord): AuditRecord[] {
@@ -174,15 +330,37 @@ export async function verifyFragments(ctx: Context) {
 		bytes = total;
 	};
 	const cells: Record<string, unknown>[] = [];
+	const failure: FailureContext = {
+		head: ctx.head,
+		phase: "initializing",
+		cell: null,
+		completedKeys: [],
+		readiness: null,
+		environment: null,
+		control: null,
+		error: "",
+	};
 	async function observe(
 		record: AuditRecord,
 		origin: string,
 		relay: string | null,
 	) {
-		const fresh = await freshPage(ctx.chrome, page, 30000);
+		failure.cell = {
+			theme: record.theme,
+			state: record.state,
+			path: record.path,
+		};
+		failure.phase = "page-setup";
+		failure.readiness = null;
+		failure.environment = null;
+		failure.control = null;
+		const previous = page;
+		page = null; // Never label the previous cell's page as the failed fresh cell.
+		const fresh = await freshPage(ctx.chrome, previous, 30000);
 		if (!fresh.ok) throw new Error(fresh.reason);
 		page = fresh.page;
 		await page.send("Accessibility.enable");
+		failure.phase = "canonical-redrive";
 		const attempted = await withDeadline(
 			auditCell(page, record, {
 				origin,
@@ -199,6 +377,53 @@ export async function verifyFragments(ctx: Context) {
 			...attempted.value,
 			...((await page.evaluate(EXTRACT_PROBE)) as AuditState),
 		};
+		const reading = state.reading as
+			| { path?: unknown; testIds?: unknown; visibleTestIds?: unknown }
+			| undefined;
+		const ids = (value: unknown) =>
+			Array.isArray(value)
+				? value
+						.filter((v): v is string => typeof v === "string")
+						.slice(0, 8)
+						.map((v) => v.slice(0, 96))
+				: [];
+		failure.readiness = reading
+			? {
+					path:
+						typeof reading.path === "string"
+							? reading.path.split("?")[0]
+							: null,
+					testIds: ids(reading.testIds),
+					visibleTestIds: ids(reading.visibleTestIds),
+				}
+			: null;
+		failure.environment = {
+			viewport: state.viewport,
+			insets: state.insets,
+			theme: state.theme,
+			textScale: state.textScale,
+			insetsOverride: state.insetsOverride,
+		};
+		// Preserve actual target-subtree measurements even if the first geometry
+		// admission fails. These are observed candidates, never guessed old pair IDs.
+		const target = state.nodes.find((n) => n.testId === TURN_CONTROL_ID);
+		failure.environment.targetTextGeometry = target
+			? state.nodes
+					.filter((n) => n.ancestors.includes(target.index) && n.ownText)
+					.slice(0, 8)
+					.map((n) => ({
+						index: n.index,
+						ownText: n.ownText.slice(0, 80),
+						rect: n.rect,
+						visibleRect: n.visibleRect,
+						fragmentStatus:
+							n.u08PaintFragments === undefined
+								? "conservative/unobserved"
+								: "measured",
+						fragments: n.u08PaintFragments,
+					}))
+			: [];
+		failure.phase = "environment";
 		if (!state.insetsOverride.applied)
 			throw new Error("Canonical env() override unavailable");
 		if (
@@ -211,6 +436,7 @@ export async function verifyFragments(ctx: Context) {
 			state.theme !== record.theme
 		)
 			throw new Error("Canonical viewport/scale/insets mismatch");
+		failure.phase = "readiness";
 		const mismatch = reDriveMismatch({
 			screen: record.screen,
 			state: record.state,
@@ -220,200 +446,261 @@ export async function verifyFragments(ctx: Context) {
 		});
 		if (mismatch) throw new Error("Canonical state not reproduced");
 		if (relay) {
-			const expanded = await page.evaluate(
-				`document.querySelector('[data-testid="turn-bar-tc-conv-00-user"]')?.getAttribute('aria-expanded')`,
+			failure.phase = "control-state";
+			failure.control = await page.evaluate(TURN_CONTROL_SOURCE);
+			assertTurnControl(record, failure.control);
+			// Persist readiness separately before geometry adjudication can fail. This
+			// is evidence of control readiness, explicitly not a geometry PASS.
+			put(
+				`${record.theme}-${record.state}-ready.json`,
+				Buffer.from(
+					JSON.stringify(
+						{
+							...failure,
+							error: undefined,
+							phase: "control-verified-not-geometry",
+						},
+						null,
+						2,
+					),
+				),
 			);
-			if (expanded !== String(record.state === "expanded"))
-				throw new Error(
-					"Canonical expanded/condensed control state not reproduced",
-				);
 		}
 		return { page, state };
 	}
-	for (const record of verificationRecords(ctx.baseRecord)) {
-		const observed = await observe(record, ctx.origin, ctx.relay),
-			first = evaluateRepairedCell(observed.state, ctx.nodePath);
-		const raw = (await observed.page.evaluate(
-			u08GeometryProbe(first.pair),
-		)) as AuditState & {
-			u08Geometry: {
-				index: number;
-				pressable: { index: number; testId: string } | null;
-				textFragments: { clipped: PaintRect | null }[];
-			}[];
-		};
-		const state = { ...observed.state, ...raw };
-		if (
-			state.theme !== record.theme ||
-			Number(state.textScale) !== 1.5 ||
-			state.viewport.dpr !== 3
-		)
-			throw new Error("Actual cell environment drift");
-		const current = evaluateRepairedCell(state, ctx.nodePath);
-		if (
-			JSON.stringify(first.pair) !== JSON.stringify(current.pair) ||
-			fingerprint(observed.state, first.pair) !==
-				fingerprint(state, current.pair)
-		)
-			throw new Error("Pair drift during geometry capture");
-		if (
-			JSON.stringify(raw.u08Geometry.map((g) => g.index)) !==
-			JSON.stringify(current.pair)
-		)
-			throw new Error("Missing/duplicate actual pair telemetry");
-		for (const g of raw.u08Geometry) {
-			const node = state.nodes.find((n) => n.index === g.index);
-			if (
-				JSON.stringify(
-					g.textFragments.flatMap((f) => (f.clipped ? [f.clipped] : [])),
-				) !== JSON.stringify(node?.u08PaintFragments)
-			)
-				throw new Error(
-					"Diagnostic text fragments disagree with actual policy input",
-				);
-			const control = node?.ancestors
-				.map((i) => state.nodes.find((n) => n.index === i))
-				.find((n) => n?.tag === "button");
-			if (
-				!g.pressable ||
-				g.pressable.index !== control?.index ||
-				g.pressable.testId !== control?.testId
-			)
-				throw new Error("Actual DOM control identity mismatch");
-		}
-		if (raw.u08Geometry.length !== 2)
-			throw new Error("Missing actual pair telemetry");
-		const screenshot = await observed.page.send("Page.captureScreenshot", {
-			format: "png",
-			captureBeyondViewport: false,
-		});
-		if (typeof screenshot.data !== "string")
-			throw new Error("Missing corrected cell PNG");
-		const after = {
-			...observed.state,
-			...((await observed.page.evaluate(EXTRACT_PROBE)) as AuditState),
-		};
-		if (
-			after.theme !== record.theme ||
-			Number(after.textScale) !== 1.5 ||
-			after.viewport.dpr !== 3
-		)
-			throw new Error("Actual cell environment drift around screenshot");
-		evaluateRepairedCell(after, ctx.nodePath);
-		if (fingerprint(state, current.pair) !== fingerprint(after, current.pair))
-			throw new Error("Pair drift around screenshot");
-		const key = `${record.theme}-${record.state}`;
-		put(`${key}.png`, Buffer.from(screenshot.data, "base64"));
-		cells.push({
-			key,
-			record,
-			actualEnvironment: {
-				viewport: state.viewport,
-				insets: state.insets,
-				theme: state.theme,
-				textScale: state.textScale,
-				insetsOverride: state.insetsOverride,
-			},
-			pair: current.pair,
-			decision: current.verdict,
-			reason: current.reason,
-			overlap: current.geometry,
-			geometry: raw.u08Geometry,
-			screenshot: `${key}.png`,
-		});
-	}
-	// Reuse the existing canary's genuine two-control collision. Scroll that exact
-	// fixture into view; do not inject a collision into the product or run a matrix.
-	const canary = await serveDir(resolve("e2e/fixtures/audit-canary"));
-	let positive: Record<string, unknown> | undefined;
 	try {
-		const record: AuditRecord = {
-			...ctx.baseRecord,
-			screen: "path:/defects",
-			path: "/defects",
-			state: "defects",
-			pinnedScenario: null,
-			openers: [],
+		for (const record of verificationRecords(ctx.baseRecord)) {
+			const observed = await observe(record, ctx.origin, ctx.relay);
+			failure.phase = "geometry";
+			const first = evaluateRepairedCell(observed.state, ctx.nodePath);
+			failure.phase = "geometry-telemetry";
+			const raw = (await observed.page.evaluate(
+				u08GeometryProbe(first.pair),
+			)) as AuditState & {
+				u08Geometry: {
+					index: number;
+					pressable: { index: number; testId: string } | null;
+					textFragments: { clipped: PaintRect | null }[];
+				}[];
+			};
+			const state = { ...observed.state, ...raw };
+			if (
+				state.theme !== record.theme ||
+				Number(state.textScale) !== 1.5 ||
+				state.viewport.dpr !== 3
+			)
+				throw new Error("Actual cell environment drift");
+			const current = evaluateRepairedCell(state, ctx.nodePath);
+			if (
+				JSON.stringify(first.pair) !== JSON.stringify(current.pair) ||
+				fingerprint(observed.state, first.pair) !==
+					fingerprint(state, current.pair)
+			)
+				throw new Error("Pair drift during geometry capture");
+			if (
+				JSON.stringify(raw.u08Geometry.map((g) => g.index)) !==
+				JSON.stringify(current.pair)
+			)
+				throw new Error("Missing/duplicate actual pair telemetry");
+			for (const g of raw.u08Geometry) {
+				const node = state.nodes.find((n) => n.index === g.index);
+				if (
+					JSON.stringify(
+						g.textFragments.flatMap((f) => (f.clipped ? [f.clipped] : [])),
+					) !== JSON.stringify(node?.u08PaintFragments)
+				)
+					throw new Error(
+						"Diagnostic text fragments disagree with actual policy input",
+					);
+				const control = node?.ancestors
+					.map((i) => state.nodes.find((n) => n.index === i))
+					.find((n) => n?.tag === "button");
+				if (
+					!g.pressable ||
+					g.pressable.index !== control?.index ||
+					g.pressable.testId !== control?.testId
+				)
+					throw new Error("Actual DOM control identity mismatch");
+			}
+			if (raw.u08Geometry.length !== 2)
+				throw new Error("Missing actual pair telemetry");
+			failure.phase = "settled-png";
+			const screenshot = await observed.page.send("Page.captureScreenshot", {
+				format: "png",
+				captureBeyondViewport: false,
+			});
+			if (typeof screenshot.data !== "string")
+				throw new Error("Missing corrected cell PNG");
+			const after = {
+				...observed.state,
+				...((await observed.page.evaluate(EXTRACT_PROBE)) as AuditState),
+			};
+			if (
+				after.theme !== record.theme ||
+				Number(after.textScale) !== 1.5 ||
+				after.viewport.dpr !== 3
+			)
+				throw new Error("Actual cell environment drift around screenshot");
+			evaluateRepairedCell(after, ctx.nodePath);
+			if (fingerprint(state, current.pair) !== fingerprint(after, current.pair))
+				throw new Error("Pair drift around screenshot");
+			const key = `${record.theme}-${record.state}`;
+			put(`${key}.png`, Buffer.from(screenshot.data, "base64"));
+			cells.push({
+				key,
+				record,
+				control: failure.control,
+				readiness: failure.readiness,
+				actualEnvironment: {
+					viewport: state.viewport,
+					insets: state.insets,
+					theme: state.theme,
+					textScale: state.textScale,
+					insetsOverride: state.insetsOverride,
+				},
+				pair: current.pair,
+				decision: current.verdict,
+				reason: current.reason,
+				overlap: current.geometry,
+				geometry: raw.u08Geometry,
+				screenshot: `${key}.png`,
+			});
+			put(
+				`${key}.json`,
+				Buffer.from(
+					JSON.stringify(
+						{
+							kind: "PARTIAL CORRECTED CELL — NOT COMPLETE VERIFICATION",
+							head: ctx.head,
+							...cells.at(-1),
+						},
+						null,
+						2,
+					),
+				),
+			);
+			failure.completedKeys.push(key);
+		}
+		// Reuse the existing canary's genuine two-control collision. Scroll that exact
+		// fixture into view; do not inject a collision into the product or run a matrix.
+		const canary = await serveDir(resolve("e2e/fixtures/audit-canary"));
+		let positive: Record<string, unknown> | undefined;
+		try {
+			const record: AuditRecord = {
+				...ctx.baseRecord,
+				screen: "path:/defects",
+				path: "/defects",
+				state: "defects",
+				pinnedScenario: null,
+				openers: [],
+			};
+			const observed = await observe(record, canary.url, null);
+			failure.phase = "positive-control";
+			const pair = (await observed.page.evaluate(
+				`(()=>{const a=document.getElementById('modal-collide-a'),b=document.getElementById('modal-collide-b');if(!a||!b)throw new Error('Missing existing positive fixture');a.scrollIntoView({block:'center'});const all=[...document.querySelectorAll('body *')];return [all.indexOf(a),all.indexOf(b)];})()`,
+			)) as number[];
+			if (pair.length !== 2 || pair.some((i) => !Number.isInteger(i) || i < 0))
+				throw new Error("Invalid positive fixture identity");
+			const state = {
+				...observed.state,
+				...((await observed.page.evaluate(EXTRACT_PROBE)) as AuditState),
+			};
+			const events: { pair: number[]; verdict: string }[] = [];
+			runChecks(
+				{
+					...state,
+					onU08Decision: (a, b, verdict) =>
+						events.push({ pair: [a, b], verdict }),
+				},
+				{
+					floors: floorsFromTokens(null),
+					semantic: new Set(),
+					checks: ["U-08"],
+					scaleIsLive: true,
+				},
+			);
+			const event = events.find(
+				(e) =>
+					e.verdict === "FAIL" &&
+					e.pair.includes(pair[0] ?? -1) &&
+					e.pair.includes(pair[1] ?? -1),
+			);
+			if (!event) throw new Error("Specific genuine collision no longer FAILS");
+			const geometry = await observed.page.evaluate(u08GeometryProbe(pair));
+			const image = await observed.page.send("Page.captureScreenshot", {
+				format: "png",
+				captureBeyondViewport: false,
+			});
+			if (typeof image.data !== "string")
+				throw new Error("Missing positive PNG");
+			put("positive-control.png", Buffer.from(image.data, "base64"));
+			const after = {
+				...observed.state,
+				...((await observed.page.evaluate(EXTRACT_PROBE)) as AuditState),
+			};
+			if (fingerprint(state, pair) !== fingerprint(after, pair))
+				throw new Error("Positive control drift");
+			positive = {
+				fixture: "e2e/fixtures/audit-canary/index.html",
+				ids: POSITIVE_IDS,
+				pair,
+				verdict: event.verdict,
+				nodes: state.nodes.filter((n) => pair.includes(n.index)),
+				geometry: (geometry as { u08Geometry: unknown }).u08Geometry,
+				screenshot: "positive-control.png",
+			};
+		} finally {
+			await canary.close();
+		}
+		failure.phase = "coverage";
+		assertCoverage(cells as { key: string }[], positive !== undefined);
+		const sha = (source: string) =>
+			createHash("sha256").update(source).digest("hex");
+		const receipt = {
+			kind: "CORRECTED FRAGMENT VERIFICATION — NOT HISTORICAL REPRODUCTION OR FULL AUDIT",
+			head: ctx.head,
+			schema: 1,
+			historicalIncident: ctx.historical,
+			hostedBeforeProofRun: "39544082930",
+			recordDerivation:
+				"original canonical matrix: light/dark x condensed/expanded explicit route hooks; not recovered historical DOM fragments",
+			currentProbeSHA256: sha(EXTRACT_PROBE),
+			currentChecksSHA256: sha(
+				readFileSync(new URL("./checks.ts", import.meta.url), "utf8"),
+			),
+			currentMathSHA256: sha(
+				readFileSync(new URL("./paint-fragments.ts", import.meta.url), "utf8"),
+			),
+			cells,
+			positive,
 		};
-		const observed = await observe(record, canary.url, null);
-		const pair = (await observed.page.evaluate(
-			`(()=>{const a=document.getElementById('modal-collide-a'),b=document.getElementById('modal-collide-b');if(!a||!b)throw new Error('Missing existing positive fixture');a.scrollIntoView({block:'center'});const all=[...document.querySelectorAll('body *')];return [all.indexOf(a),all.indexOf(b)];})()`,
-		)) as number[];
-		if (pair.length !== 2 || pair.some((i) => !Number.isInteger(i) || i < 0))
-			throw new Error("Invalid positive fixture identity");
-		const state = {
-			...observed.state,
-			...((await observed.page.evaluate(EXTRACT_PROBE)) as AuditState),
-		};
-		const events: { pair: number[]; verdict: string }[] = [];
-		runChecks(
-			{
-				...state,
-				onU08Decision: (a, b, verdict) =>
-					events.push({ pair: [a, b], verdict }),
-			},
-			{
-				floors: floorsFromTokens(null),
-				semantic: new Set(),
-				checks: ["U-08"],
-				scaleIsLive: true,
-			},
+		failure.phase = "manifest-write";
+		put("verification.json", Buffer.from(JSON.stringify(receipt, null, 2)));
+		console.log(
+			"Corrected verification: four original-family cells disjoint; specific genuine collision remains FAIL. Not full audit PASS.",
 		);
-		const event = events.find(
-			(e) =>
-				e.verdict === "FAIL" &&
-				e.pair.includes(pair[0] ?? -1) &&
-				e.pair.includes(pair[1] ?? -1),
-		);
-		if (!event) throw new Error("Specific genuine collision no longer FAILS");
-		const geometry = await observed.page.evaluate(u08GeometryProbe(pair));
-		const image = await observed.page.send("Page.captureScreenshot", {
-			format: "png",
-			captureBeyondViewport: false,
-		});
-		if (typeof image.data !== "string") throw new Error("Missing positive PNG");
-		put("positive-control.png", Buffer.from(image.data, "base64"));
-		const after = {
-			...observed.state,
-			...((await observed.page.evaluate(EXTRACT_PROBE)) as AuditState),
-		};
-		if (fingerprint(state, pair) !== fingerprint(after, pair))
-			throw new Error("Positive control drift");
-		positive = {
-			fixture: "e2e/fixtures/audit-canary/index.html",
-			ids: POSITIVE_IDS,
-			pair,
-			verdict: event.verdict,
-			nodes: state.nodes.filter((n) => pair.includes(n.index)),
-			geometry: (geometry as { u08Geometry: unknown }).u08Geometry,
-			screenshot: "positive-control.png",
-		};
-	} finally {
-		await canary.close();
+	} catch (error) {
+		const message = `${failure.phase} theme=${failure.cell?.theme ?? "unknown"} state=${failure.cell?.state ?? "unknown"} path=${failure.cell?.path ?? "unknown"}: ${error instanceof Error ? error.message : String(error)}`;
+		failure.error = message.slice(0, 1024);
+		const livePage = page as CdpPage | null;
+		try {
+			await writeFailureEvidence(
+				ctx.out,
+				bytes,
+				failure,
+				livePage
+					? () =>
+							livePage.send("Page.captureScreenshot", {
+								format: "png",
+								captureBeyondViewport: false,
+							})
+					: null,
+			);
+		} catch (evidenceError) {
+			console.error(
+				`Failure evidence unavailable: ${evidenceError instanceof Error ? evidenceError.message : String(evidenceError)}`,
+			);
+		}
+		throw new Error(message, { cause: error });
 	}
-	assertCoverage(cells as { key: string }[], positive !== undefined);
-	const sha = (source: string) =>
-		createHash("sha256").update(source).digest("hex");
-	const receipt = {
-		kind: "CORRECTED FRAGMENT VERIFICATION — NOT HISTORICAL REPRODUCTION OR FULL AUDIT",
-		head: ctx.head,
-		schema: 1,
-		historicalIncident: ctx.historical,
-		hostedBeforeProofRun: "39544082930",
-		recordDerivation:
-			"original canonical matrix: light/dark x condensed/expanded explicit route hooks; not recovered historical DOM fragments",
-		currentProbeSHA256: sha(EXTRACT_PROBE),
-		currentChecksSHA256: sha(
-			readFileSync(new URL("./checks.ts", import.meta.url), "utf8"),
-		),
-		currentMathSHA256: sha(
-			readFileSync(new URL("./paint-fragments.ts", import.meta.url), "utf8"),
-		),
-		cells,
-		positive,
-	};
-	put("verification.json", Buffer.from(JSON.stringify(receipt, null, 2)));
-	console.log(
-		"Corrected verification: four original-family cells disjoint; specific genuine collision remains FAIL. Not full audit PASS.",
-	);
 }
