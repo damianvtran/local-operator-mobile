@@ -34,22 +34,78 @@ export const TURN_CONTROL_ID = "turn-bar-tc-conv-00-user";
 /** RNW does not forward accessibilityState.expanded. The visible caret is
  * rendered from the same open prop as the transcript plan; missing ARIA is
  * recorded, never interpreted as false. Do not read private React internals. */
+/** A client-rect entry proves layout, not readable paint. Inspect the target
+ * and each glyph through the complete style ancestry; parent opacity multiplies
+ * rather than inherits. Only the target/glyph need their own positive-area box:
+ * display:contents and zero-box overflow-visible ancestors can have visible
+ * descendants. Canonical audit geometry still owns clipping/collision verdicts. */
 export const TURN_CONTROL_SOURCE = `(() => {
- const controlId=${JSON.stringify("turn-bar-tc-conv-00-user")};
+ const controlId=${JSON.stringify(TURN_CONTROL_ID)};
  const matches=document.querySelectorAll('[data-testid="'+controlId+'"]');
  const control=matches.length===1?matches[0]:null;
- const carets=control?Array.from(control.querySelectorAll('*'))
-  .filter(el=>el.childElementCount===0 && el.getClientRects().length>0)
-  .map(el=>el.textContent.trim()).filter(text=>text==='▸'||text==='▾'):[];
+ const inspect=(element,requireTarget)=>{
+  const trace=[],rects=[];let failure=null,effectiveOpacity=1,tiedToTarget=false;
+  const fail=(property,depth,value)=>{if(!failure)failure={property,depth,value:String(value).slice(0,160)};};
+  try {
+   for(const r of element.getClientRects())if(Number.isFinite(r.width)&&Number.isFinite(r.height)&&r.width>0&&r.height>0)
+    rects.push({x:r.x,y:r.y,width:r.width,height:r.height});
+   if(!rects.length)fail('rect-area',0,'no positive-area client rect');
+  }catch(error){fail('client-rects',0,error instanceof Error?error.message:error);}
+  let node=element,depth=0;
+  for(;node&&depth<64;node=node.parentElement,depth++){
+   if(node===control)tiedToTarget=true;
+   try {
+    const style=getComputedStyle(node),opacity=Number(style.opacity);
+    effectiveOpacity*=opacity;
+    trace.push({depth,tag:node.tagName,display:style.display,visibility:style.visibility,opacity:style.opacity,effectiveOpacity});
+    if(typeof style.display!=='string'||!style.display||style.display==='none')fail('display',depth,style.display);
+    if(style.visibility!=='visible')fail('visibility',depth,style.visibility);
+    if(typeof style.opacity!=='string'||!style.opacity.trim()||!Number.isFinite(opacity)||opacity<=0||opacity>1)fail('opacity',depth,style.opacity);
+    if(!Number.isFinite(effectiveOpacity)||effectiveOpacity<=0)fail('effective-opacity',depth,effectiveOpacity);
+    if(style.contentVisibility==='hidden')fail('content-visibility',depth,style.contentVisibility);
+   }catch(error){fail('computed-style',depth,error instanceof Error?error.message:error);}
+  }
+  if(node)fail('ancestor-proof',depth,'ancestry exceeds bounded inspection');
+  if(requireTarget&&!tiedToTarget)fail('control-ancestry',0,'glyph is not inside target');
+  return {readable:failure===null,failure,rects:rects.slice(0,8),trace,effectiveOpacity};
+ };
+ const controlVisibility=control?inspect(control,false):null;
+ const candidates=control?Array.from(control.querySelectorAll('*')).filter(el=>el.childElementCount===0)
+  .map(el=>({element:el,glyph:el.textContent.trim()})).filter(c=>c.glyph==='▸'||c.glyph==='▾'):[];
+ const caretVisibility=candidates.slice(0,16).map(c=>({glyph:c.glyph,visibility:inspect(c.element,true)}));
+ const carets=controlVisibility?.readable&&candidates.length<=16?caretVisibility.filter(c=>c.visibility.readable).map(c=>c.glyph):[];
  return {controlId,count:matches.length,ariaExpanded:control?control.getAttribute('aria-expanded'):null,
-  caretCount:carets.length,carets:carets.slice(0,16)};
+  caretCount:carets.length,carets,controlVisibility,caretVisibility,candidateCount:candidates.length};
 })()`;
+interface ControlVisibility {
+	readable: boolean;
+	failure: { property: string; depth: number; value: string } | null;
+	trace: Record<string, unknown>[];
+}
+
 export interface TurnControlReading {
 	controlId: string;
 	count: number;
 	ariaExpanded: string | null;
 	caretCount: number;
 	carets: string[];
+	controlVisibility: ControlVisibility | null;
+	caretVisibility: { glyph: string; visibility: ControlVisibility }[];
+	candidateCount: number;
+}
+function controlFailure(reading: unknown) {
+	const r = reading as Partial<TurnControlReading> | null;
+	const witness = r?.controlVisibility?.failure
+		? r.controlVisibility
+		: Array.isArray(r?.caretVisibility)
+			? r.caretVisibility.find((c) => c?.visibility?.failure)?.visibility
+			: null;
+	return witness?.failure
+		? {
+				...witness.failure,
+				style: witness.trace?.find((t) => t.depth === witness.failure?.depth),
+			}
+		: null;
 }
 type CellIdentity = Pick<AuditRecord, "theme" | "state" | "path">;
 export function assertTurnControl(
@@ -59,11 +115,23 @@ export function assertTurnControl(
 	const r = reading as Partial<TurnControlReading> | null;
 	const expected = record.state === "expanded",
 		caret = expected ? "▾" : "▸";
+	const visibleWitnesses = Array.isArray(r?.caretVisibility)
+		? r.caretVisibility.filter((c) => c?.visibility?.readable === true)
+		: [];
 	if (
 		!["expanded", "condensed"].includes(record.state) ||
 		!r ||
 		r.controlId !== TURN_CONTROL_ID ||
 		r.count !== 1 ||
+		r.controlVisibility?.readable !== true ||
+		!Number.isInteger(r.candidateCount) ||
+		r.candidateCount === undefined ||
+		r.candidateCount < 1 ||
+		r.candidateCount > 16 ||
+		!Array.isArray(r.caretVisibility) ||
+		r.caretVisibility.length !== r.candidateCount ||
+		visibleWitnesses.length !== 1 ||
+		visibleWitnesses[0]?.glyph !== caret ||
 		r.caretCount !== 1 ||
 		!Array.isArray(r.carets) ||
 		r.carets.length !== 1 ||
@@ -71,7 +139,7 @@ export function assertTurnControl(
 		!(r.ariaExpanded === null || r.ariaExpanded === String(expected))
 	)
 		throw new Error(
-			`control-state theme=${record.theme} state=${record.state} path=${record.path} control=${TURN_CONTROL_ID} expected aria=${expected} caret=${caret}; observed=${String(JSON.stringify(reading)).slice(0, 768)}`,
+			`control-state theme=${record.theme} state=${record.state} path=${record.path} control=${TURN_CONTROL_ID} expected aria=${expected} caret=${caret}; unreadable=${JSON.stringify(controlFailure(reading))}; observed=${String(JSON.stringify(reading)).slice(0, 512)}`,
 		);
 }
 export interface FailureContext {
@@ -161,6 +229,7 @@ export async function writeFailureEvidence(
 		kind: "FAILED CORRECTED VERIFICATION — NOT A GEOMETRY VERDICT",
 		schema: 1,
 		expectedControl,
+		readabilityFailure: controlFailure(context.control),
 		diagnosed: false,
 		screenshot,
 	};

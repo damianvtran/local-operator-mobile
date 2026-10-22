@@ -39,7 +39,13 @@ The web adapter does not forward the app's native `accessibilityState.expanded`:
 [run39698089334](https://github.com/damianvtran/local-operator-mobile/actions/runs/39698089334)
 failed on that unsupported attribute assumption before any geometry verdict.
 Missing/ambiguous controls, missing/wrong carets and contradictory ARIA still
-refuse verification. The separate pre-existing web ARIA omission is not repaired
+refuse verification. A nonempty client-rect list alone is not readable paint:
+the target and glyph require positive-area boxes, and computed display,
+visibility and opacity are inspected through every ancestor. Hidden/transparent,
+unreadable or unknown styles, collapsed target/glyph boxes and zero accumulated
+opacity refuse. The failed property, ancestor depth, measured value and bounded
+style trace accompany the control diagnostics; missing ARIA still stays null.
+This is a control-readability gate, not raster/occlusion or geometry clearance. The separate pre-existing web ARIA omission is not repaired
 by this harness change; native app semantics are unchanged.
 
 Each ready cell and completed geometry record is persisted separately, so later

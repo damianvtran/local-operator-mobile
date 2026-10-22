@@ -41,6 +41,75 @@ const cell = {
 	state: "condensed",
 	path: "/session/6714def86197?lo-scroll=top",
 };
+interface PaintNode {
+	tagName: string;
+	parentElement: PaintNode | null;
+	childElementCount: number;
+	textContent: string;
+	style: {
+		display: string;
+		visibility: string;
+		opacity: string;
+		contentVisibility: string;
+	};
+	getClientRects: () => {
+		x: number;
+		y: number;
+		width: number;
+		height: number;
+	}[];
+	getAttribute: (name: string) => string | null;
+	querySelectorAll: () => PaintNode[];
+}
+function controlFixture(glyph = "▸", aria: string | null = null) {
+	const make = (
+		tagName: string,
+		parentElement: PaintNode | null,
+		textContent = "",
+	): PaintNode => ({
+		tagName,
+		parentElement,
+		textContent,
+		childElementCount: 0,
+		style: {
+			display: "block",
+			visibility: "visible",
+			opacity: "1",
+			contentVisibility: "visible",
+		},
+		getClientRects: () => [{ x: 0, y: 100, width: 12, height: 18 }],
+		getAttribute: () => null,
+		querySelectorAll: () => [],
+	});
+	const ancestor = make("BODY", null),
+		control = make("BUTTON", ancestor),
+		leaf = make("SPAN", control, glyph);
+	control.childElementCount = 1;
+	control.style.display = "flex";
+	leaf.style.display = "inline";
+	control.getAttribute = (name) => (name === "aria-expanded" ? aria : null);
+	control.querySelectorAll = () => [leaf];
+	let styleReads = 0;
+	const collect = (
+		controls: PaintNode[] = [control],
+		readStyle = (node: PaintNode) => node.style,
+	) => {
+		styleReads = 0;
+		const reading = runInNewContext(
+			TURN_CONTROL_SOURCE,
+			{
+				document: { querySelectorAll: () => controls },
+				getComputedStyle: (node: PaintNode) => {
+					styleReads++;
+					return readStyle(node);
+				},
+			},
+			{ timeout: 100 },
+		);
+		return { reading, styleReads };
+	};
+	return { ancestor, control, leaf, collect };
+}
 const png = Buffer.from(
 	"iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jwXcAAAAASUVORK5CYII=",
 	"base64",
@@ -95,14 +164,18 @@ describe("hosted control contract and live-lifetime failure evidence", () => {
 					),
 				);
 				const carets = [...html.matchAll(/>(▸|▾)</gu)].map((m) => m[1]);
-				const reading = {
-					controlId: TURN_CONTROL_ID,
-					count: [...html.matchAll(/data-testid="turn-bar-tc-conv-00-user"/g)]
-						.length,
-					ariaExpanded: html.match(/aria-expanded="([^"]*)"/)?.[1] ?? null,
-					caretCount: carets.length,
-					carets,
-				};
+				expect([
+					...html.matchAll(/data-testid="turn-bar-tc-conv-00-user"/g),
+				]).toHaveLength(1);
+				expect(carets).toEqual([expanded ? "▾" : "▸"]);
+				// Markup is actually rendered by RNW; style/layout facts below are explicit
+				// supplied logical controls, not claimed SSR/browser measurements.
+				const fixture = controlFixture(
+					carets[0],
+					html.match(/aria-expanded="([^"]*)"/)?.[1] ?? null,
+				);
+				const { reading, styleReads } = fixture.collect();
+				expect(styleReads).toBeGreaterThan(0);
 				expect(reading.ariaExpanded).toBe(explicit ? String(expanded) : null);
 				expect(reading.ariaExpanded === String(expanded)).toBe(explicit); // Old guard fails on the same real RNW output.
 				expect(reading.count).toBe(1);
@@ -116,43 +189,29 @@ describe("hosted control contract and live-lifetime failure evidence", () => {
 			}
 	});
 	it("executes the real collector and refuses missing, duplicate, wrong-caret, hidden or contradictory state", () => {
-		const leaf = {
-			childElementCount: 0,
-			textContent: "▸",
-			getClientRects: () => [{}],
-		};
-		const control = {
-			getAttribute: () => null,
-			querySelectorAll: () => [leaf],
-		};
-		const collect = (controls: unknown[]) =>
-			runInNewContext(
-				TURN_CONTROL_SOURCE,
-				{ document: { querySelectorAll: () => controls } },
-				{ timeout: 100 },
-			);
+		const fixture = controlFixture();
+		const { control } = fixture;
+		const collect = (controls: PaintNode[]) =>
+			fixture.collect(controls).reading;
 		const good = collect([control]);
 		expect(() => assertTurnControl(cell, good)).not.toThrow();
 		expect(good.ariaExpanded).toBeNull();
 		for (const reading of [
 			collect([]),
-			collect([control, control]),
-			collect([
-				{ ...control, querySelectorAll: () => [{ ...leaf, textContent: "▾" }] },
-			]),
-			collect([
-				{
-					...control,
-					querySelectorAll: () => [{ ...leaf, getClientRects: () => [] }],
-				},
-			]),
+			collect([control, controlFixture().control]),
+			controlFixture("▾").collect().reading,
+			(() => {
+				const hidden = controlFixture();
+				hidden.leaf.getClientRects = () => [];
+				return hidden.collect().reading;
+			})(),
 			{ ...good, ariaExpanded: "true" },
 			{ ...good, ariaExpanded: undefined },
 			{ ...good, carets: ["▸", "▸"], caretCount: 2 },
 			undefined,
 		]) {
 			expect(() => assertTurnControl(cell, reading)).toThrow(
-				/control-state theme=dark state=condensed path=.*control=turn-bar.*expected aria=false caret=▸; observed=/,
+				/control-state theme=dark state=condensed path=.*control=turn-bar.*expected aria=false caret=▸; unreadable=.*; observed=/,
 			);
 		}
 		expect(() =>
@@ -162,6 +221,156 @@ describe("hosted control contract and live-lifetime failure evidence", () => {
 			),
 		).toThrow("expected aria=true");
 	});
+	it("refuses non-painted and collapsed caret/control witnesses through the actual probe and guard", () => {
+		type Fixture = ReturnType<typeof controlFixture>;
+		const cases: [string, (f: Fixture) => void, string][] = [
+			[
+				"own visibility",
+				(f) => {
+					f.leaf.style.visibility = "hidden";
+				},
+				"visibility",
+			],
+			[
+				"own opacity",
+				(f) => {
+					f.leaf.style.opacity = "0";
+				},
+				"opacity",
+			],
+			[
+				"control visibility",
+				(f) => {
+					f.control.style.visibility = "hidden";
+				},
+				"visibility",
+			],
+			[
+				"control opacity",
+				(f) => {
+					f.control.style.opacity = "0";
+				},
+				"opacity",
+			],
+			[
+				"ancestor visibility",
+				(f) => {
+					f.ancestor.style.visibility = "hidden";
+				},
+				"visibility",
+			],
+			[
+				"ancestor opacity",
+				(f) => {
+					f.ancestor.style.opacity = "0";
+				},
+				"opacity",
+			],
+			[
+				"caret zero area",
+				(f) => {
+					f.leaf.getClientRects = () => [{ x: 0, y: 100, width: 0, height: 0 }];
+				},
+				"rect-area",
+			],
+			[
+				"control zero area",
+				(f) => {
+					f.control.getClientRects = () => [
+						{ x: 0, y: 100, width: 0, height: 18 },
+					];
+				},
+				"rect-area",
+			],
+			[
+				"display none",
+				(f) => {
+					f.leaf.style.display = "none";
+					f.leaf.getClientRects = () => [];
+				},
+				"rect-area",
+			],
+			[
+				"ancestor display none",
+				(f) => {
+					f.ancestor.style.display = "none";
+				},
+				"display",
+			],
+			[
+				"effective opacity zero",
+				(f) => {
+					f.control.style.opacity = "1e-200";
+					f.ancestor.style.opacity = "1e-200";
+				},
+				"effective-opacity",
+			],
+			[
+				"unknown opacity",
+				(f) => {
+					f.leaf.style.opacity = "not-a-number";
+				},
+				"opacity",
+			],
+			[
+				"unreadable style",
+				(f) => {
+					Object.defineProperty(f.leaf.style, "visibility", {
+						get() {
+							throw new Error("unreadable computed visibility");
+						},
+					});
+				},
+				"computed-style",
+			],
+		];
+		for (const [name, mutate, property] of cases) {
+			const f = controlFixture();
+			mutate(f);
+			const { reading, styleReads } = f.collect();
+			expect(styleReads, name).toBeGreaterThan(0);
+			expect(() => assertTurnControl(cell, reading), name).toThrow(property);
+			expect(reading.caretCount, name).toBe(0);
+		}
+		const visible = controlFixture();
+		visible.leaf.style.opacity = "0.5";
+		visible.control.style.opacity = "0.5";
+		visible.ancestor.style.opacity = "0.5";
+		const { reading } = visible.collect();
+		expect(() => assertTurnControl(cell, reading)).not.toThrow();
+		expect(reading.caretVisibility[0].visibility.effectiveOpacity).toBe(0.125);
+	});
+	it("retains the failing computed property and measured style trace in failure diagnostics", async () => {
+		const f = controlFixture();
+		f.ancestor.style.opacity = "0";
+		const { reading } = f.collect();
+		const out = outputDir();
+		try {
+			await writeFailureEvidence(
+				out,
+				0,
+				{ ...failureContext(), control: reading },
+				null,
+			);
+			const saved = JSON.parse(
+				readFileSync(resolve(out, "failure.json"), "utf8"),
+			);
+			expect(saved.readabilityFailure).toMatchObject({
+				property: "opacity",
+				value: "0",
+				style: { tag: "BODY", opacity: "0", effectiveOpacity: 0 },
+			});
+			expect(
+				saved.control.controlVisibility.trace.some(
+					(t: { opacity: string }) => t.opacity === "0",
+				),
+			).toBe(true);
+			expect(saved.diagnosed).toBe(false);
+		} finally {
+			rmSync(out, { recursive: true, force: true });
+		}
+	});
+
 	it("writes actual partial-context and PNG bytes before caller teardown, preserving prior cell records", async () => {
 		const out = outputDir();
 		let alive = true;
